@@ -34,6 +34,18 @@ cc_library(
 )
 
 cc_library(
+  name = "tokens",
+  srcs = ["tokens.cc"],
+  hdrs = ["tokens.h"],
+  deps = [
+    ":text-tokenizer",
+    "//base",
+    "//frame:object",
+    "//frame:store",
+  ],
+)
+
+cc_library(
   name = "fingerprinter",
   srcs = ["fingerprinter.cc"],
   hdrs = ["fingerprinter.h"],
@@ -42,6 +54,18 @@ cc_library(
     "//string:text",
     "//util:fingerprint",
     "//util:unicode",
+  ],
+)
+
+cc_library(
+  name = "phrase-tokenizer",
+  srcs = ["phrase-tokenizer.cc"],
+  hdrs = ["phrase-tokenizer.h"],
+  deps = [
+    ":fingerprinter",
+    ":text-tokenizer",
+    "//base",
+    "//string:text",
   ],
 )
 
