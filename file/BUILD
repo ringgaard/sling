@@ -26,3 +26,48 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "embed",
+  srcs = ["embed.cc"],
+  hdrs = ["embed.h"],
+  deps = [
+    ":file",
+    "//base",
+  ],
+  alwayslink = 1,
+)
+
+# File utility libraries.
+
+cc_library(
+  name = "recordio",
+  srcs = ["recordio.cc"],
+  hdrs = ["recordio.h"],
+  deps = [
+    ":file",
+    "//base",
+    "//util:snappy",
+    "//util:varint",
+  ],
+)
+
+cc_library(
+  name = "textmap",
+  srcs = ["textmap.cc"],
+  hdrs = ["textmap.h"],
+  deps = [
+    ":file",
+    "//base",
+  ],
+)
+
+cc_library(
+  name = "repository",
+  srcs = ["repository.cc"],
+  hdrs = ["repository.h"],
+  deps = [
+    ":file",
+    "//base",
+  ],
+)
+

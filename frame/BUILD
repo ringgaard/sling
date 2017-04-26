@@ -112,6 +112,19 @@ cc_library(
 )
 
 cc_library(
+  name = "json",
+  srcs = ["json.cc"],
+  hdrs = ["json.h"],
+  deps = [
+    ":object",
+    ":store",
+    "//base",
+    "//stream:output",
+    "//string:numbers",
+  ],
+)
+
+cc_library(
   name = "serialization",
   srcs = ["serialization.cc"],
   hdrs = ["serialization.h"],

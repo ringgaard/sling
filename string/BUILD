@@ -3,12 +3,29 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
   name = "string",
   deps = [
+    ":charset",
     ":ctype",
     ":memutil",
     ":numbers",
     ":printf",
+    ":split",
     ":strcat",
+    ":strip",
     ":text",
+  ],
+)
+
+cc_library(
+  name = "charset",
+  hdrs = ["charset.h"],
+  srcs = ["charset.cc"],
+  deps = [
+    ":text",
+    "//base",
+  ],
+  copts = [
+    "-Wno-sign-compare",
+    "-Wno-deprecated",
   ],
 )
 
@@ -61,6 +78,24 @@ cc_library(
 )
 
 cc_library(
+  name = "split",
+  hdrs = ["split.h"],
+  srcs = [
+    "split.cc",
+  ],
+  deps = [
+    ":charset",
+    ":text",
+    ":strip",
+    "//base",
+  ],
+  copts = [
+    "-Wno-sign-compare",
+    "-Wno-deprecated",
+  ],
+)
+
+cc_library(
   name = "strcat",
   hdrs = ["strcat.h"],
   srcs = ["strcat.cc"],
@@ -69,6 +104,20 @@ cc_library(
     ":numbers",
     ":text",
     "//base",
+  ],
+  copts = [
+    "-Wno-sign-compare",
+    "-Wno-deprecated",
+  ],
+)
+
+cc_library(
+  name = "strip",
+  hdrs = ["strip.h"],
+  srcs = ["strip.cc"],
+  deps = [
+    ":ctype",
+    ":text",
   ],
   copts = [
     "-Wno-sign-compare",

@@ -1,9 +1,46 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+  name = "bits",
+  hdrs = ["bits.h"],
+  deps = [
+    "//base",
+  ],
+)
+
+cc_library(
   name = "varint",
   hdrs = ["varint.h"],
   srcs = ["varint.cc"],
+  deps = [
+    "//base",
+  ],
+)
+
+cc_library(
+  name = "snappy",
+  srcs = [
+    "snappy.cc",
+    "snappy-sinksource.cc",
+  ],
+  hdrs = [
+    "snappy.h",
+    "snappy-sinksource.h",
+  ],
+  deps = [
+    ":bits",
+    ":endian",
+    ":varint",
+    "//base",
+  ],
+  copts = [
+    "-Wno-sign-compare",
+  ],
+)
+
+cc_library(
+  name = "endian",
+  hdrs = ["endian.h"],
   deps = [
     "//base",
   ],
@@ -44,6 +81,41 @@ cc_library(
   ],
   deps = [
     "//base",
+  ],
+)
+
+cc_library(
+  name = "thread",
+  srcs = ["thread.cc"],
+  hdrs = [
+    "thread.h",
+  ],
+  deps = [
+    "//base",
+  ],
+  copts = [
+    "-pthread",
+  ],
+)
+
+cc_library(
+  name = "threadpool",
+  srcs = ["threadpool.cc"],
+  hdrs = ["threadpool.h"],
+  deps = [
+    "//base",
+    ":thread",
+  ],
+  copts = [
+    "-pthread",
+  ],
+)
+
+cc_library(
+  name = "mutex",
+  hdrs = ["mutex.h"],
+  copts = [
+    "-pthread",
   ],
 )
 
