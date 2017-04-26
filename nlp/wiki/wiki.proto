@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+message WikiMapping {
+  enum ItemType {
+    ARTICLE        = 0;
+    DISAMBIGUATION = 1;
+    CATEGORY       = 2;
+    LIST           = 3;
+    TEMPLATE       = 4;
+    INFOBOX        = 5;
+  }
+
+  string wikidata_id = 1;
+  string wikipedia_id = 2;
+  ItemType type = 3;
+}
+
