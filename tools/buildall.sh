@@ -11,6 +11,7 @@ bazel build -c opt \
   nlp/parser:* \
   nlp/web:* \
   nlp/wiki:* \
+  schema:* \
   stream:* \
   string:* \
   task:* \
