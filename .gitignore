@@ -1,4 +1,3 @@
-app
 bazel-bin
 bazel-genfiles
 bazel-sling
