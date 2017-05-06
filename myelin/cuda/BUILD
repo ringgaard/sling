@@ -12,11 +12,33 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "cuda",
+  srcs = ["cuda.cc"],
+  hdrs = ["cuda.h"],
+  deps = [
+    ":cuda-api",
+    "//base",
+    "//string:printf",
+  ],
+)
+
+cc_library(
+  name = "cuda-runtime",
+  srcs = ["cuda-runtime.cc"],
+  hdrs = ["cuda-runtime.h"],
+  deps = [
+    ":cuda",
+    "//base",
+    "//myelin:compute",
+  ],
+)
+
 cc_binary(
   name = "cuda-test",
   srcs = ["cuda-test.cc"],
   deps = [
-    ":cuda-api",
+    ":cuda",
     "//base",
     "//base:clock",
   ],

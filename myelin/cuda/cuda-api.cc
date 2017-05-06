@@ -11,6 +11,7 @@ namespace myelin {
 void *cuda_lib = nullptr;
 
 // CUDA driver API functions.
+CUresult (*cuDriverGetVersion)(int *version);
 CUresult (*cuInit)(unsigned int flags);
 CUresult (*cuDeviceGetCount)(int *count);
 CUresult (*cuDeviceGet)(CUdevice *device, int ordinal);
@@ -22,7 +23,7 @@ CUresult (*cuDeviceTotalMem)(size_t *bytes, CUdevice dev);
 CUresult (*cuDeviceGetAttribute)(int *pi,
                                  CUdevice_attribute attrib,
                                  CUdevice dev);
-CUresult (*cuCtxCreate)(CUcontext *pctx, 
+CUresult (*cuCtxCreate)(CUcontext *pctx,
                         unsigned int flags,
                         CUdevice dev);
 CUresult (*cuCtxDetach)(CUcontext ctx);
@@ -69,6 +70,7 @@ bool LoadCUDALibrary() {
   if (cuda_lib == nullptr) return false;
 
   // Resolve library functions.
+  LOAD_CUDA_FUNCTION(cuDriverGetVersion, "");
   LOAD_CUDA_FUNCTION(cuInit, "");
   LOAD_CUDA_FUNCTION(cuDeviceGetCount, "");
   LOAD_CUDA_FUNCTION(cuDeviceGet, "");
@@ -81,7 +83,7 @@ bool LoadCUDALibrary() {
   LOAD_CUDA_FUNCTION(cuModuleLoadDataEx, "");
   LOAD_CUDA_FUNCTION(cuModuleUnload, "");
   LOAD_CUDA_FUNCTION(cuModuleGetFunction, "");
-  LOAD_CUDA_FUNCTION(cuFuncGetAttribute, "");  
+  LOAD_CUDA_FUNCTION(cuFuncGetAttribute, "");
   LOAD_CUDA_FUNCTION(cuMemAlloc, "_v2");
   LOAD_CUDA_FUNCTION(cuMemFree, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyHtoD, "_v2");

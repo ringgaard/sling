@@ -203,13 +203,14 @@ enum  CUfunction_attribute {
   CU_FUNC_ATTRIBUTE_MAX
 };
 
-// CUDA cubin fallbatch strategies.
+// CUDA cubin fallback strategies.
 enum CUjit_fallback {
   CU_PREFER_PTX = 0,
   CU_PREFER_BINARY,
 };
 
 // CUDA driver API functions.
+extern CUresult (*cuDriverGetVersion)(int *version);
 extern CUresult (*cuInit)(unsigned int flags);
 extern CUresult (*cuDeviceGetCount)(int *count);
 extern CUresult (*cuDeviceGet)(CUdevice *device, int ordinal);
@@ -221,7 +222,7 @@ extern CUresult (*cuDeviceTotalMem)(size_t *bytes, CUdevice dev);
 extern CUresult (*cuDeviceGetAttribute)(int *pi,
                                         CUdevice_attribute attrib,
                                         CUdevice dev);
-extern CUresult (*cuCtxCreate)(CUcontext *pctx, 
+extern CUresult (*cuCtxCreate)(CUcontext *pctx,
                                unsigned int flags,
                                CUdevice dev);
 extern CUresult (*cuCtxDetach)(CUcontext ctx);

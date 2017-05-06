@@ -39,6 +39,9 @@ enum Order {ANY_ORDER, ROW_MAJOR, COLUMN_MAJOR, CONFLICTING_ORDER};
 // Task state.
 enum TaskState {PENDING, ACTIVE, COMPLETED};
 
+// Placement for data and code execution.
+enum Placement {HOST, DEVICE};
+
 // Minimum data alignment.
 static const int kMinDataAlignment = sizeof(void *);
 
