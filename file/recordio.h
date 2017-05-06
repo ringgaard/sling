@@ -37,7 +37,7 @@ class RecordBuffer : public snappy::Sink, public snappy::Source {
  public:
   ~RecordBuffer();
 
-  // Check is the buffer is empty.
+  // Check if the buffer is empty.
   bool empty() { return begin_ == end_; }
 
   // Returns the number of used bytes in the buffer.

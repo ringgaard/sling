@@ -41,7 +41,7 @@ Elf::Section *Elf::AddSection(const char *name, Elf64_Word type) {
   // Allocate new section.
   Section *section = new Section(sections_.size());
   sections_.push_back(section);
-  
+
   // Set section name.
   int namelen = strlen(name);
   section->hdr.sh_name = section_names_.size();
@@ -63,7 +63,7 @@ Elf::Symbol *Elf::AddSymbol(const char *name) {
   // Allocate new symbol.
   Symbol *symbol = new Symbol(symbols_.size());
   symbols_.push_back(symbol);
-  
+
   // Set symbol name.
   int namelen = strlen(name);
   if (namelen == 0 && !symbol_names_.empty()) {
@@ -76,8 +76,8 @@ Elf::Symbol *Elf::AddSymbol(const char *name) {
   return symbol;
 }
 
-Elf::Symbol *Elf::AddSymbol(const char *name, Section *section, 
-                       int bind, int type, int size) {
+Elf::Symbol *Elf::AddSymbol(const char *name, Section *section,
+                            int bind, int type, int size) {
   Symbol *symbol = AddSymbol(name);
   symbol->sym.st_info = ELF64_ST_INFO(bind, type);
   if (section != nullptr) {
@@ -127,7 +127,7 @@ void Elf::Write(const char *filename) {
     perror(filename);
     abort();
   }
-  
+
   // Write ELF header.
   fwrite(&ehdr_, 1, sizeof(Elf64_Ehdr), f);
 
@@ -147,7 +147,7 @@ void Elf::Write(const char *filename) {
       fwrite(section->data, 1, section->hdr.sh_size, f);
     }
   }
-  
+
   // Close output file.
   fclose(f);
 }

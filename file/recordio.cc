@@ -241,7 +241,7 @@ Status RecordReader::Read(Record *record) {
         input_.resize(hdr.record_size);
       }
 
-      // Read more data input input buffer.
+      // Read more data into input buffer.
       Status s = Fill();
       if (!s.ok()) return s;
 

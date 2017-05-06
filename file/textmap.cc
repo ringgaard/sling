@@ -92,7 +92,6 @@ int TextMapInput::Fill() {
   return *next_++;
 }
 
-
 bool TextMapInput::Read(int *index, string *name, int64 *count) {
   if (!Next()) return false;
   if (index != nullptr) *index = id();
