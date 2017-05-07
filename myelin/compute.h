@@ -164,6 +164,18 @@ class Runtime {
 
   // Remove constant tensor from device.
   virtual void RemoveTensorFromDevice(Tensor *tensor) {}
+
+  // Generate code for copying tensor from host to device.
+  virtual void EmitCopyTensorToDevice(Tensor *tensor,
+                                      Cell *cell,
+                                      int taskidx,
+                                      MacroAssembler *masm) {}
+
+  // Generate code for copying tensor from device to host.
+  virtual void EmitCopyTensorFromDevice(Tensor *tensor,
+                                        Cell *cell,
+                                        int taskidx,
+                                        MacroAssembler *masm) {}
 };
 
 // A tensor is a multi-dimensional array that can be used for constants and
@@ -279,6 +291,11 @@ class Tensor {
     placement_ = static_cast<Placement>(placement_ | place);
   }
 
+  // Add new location for curent placement.
+  void AddNewPlace(Placement place) {
+    current_placement_ = static_cast<Placement>(current_placement_ | place);
+  }
+
   // Return scalar value.
   template<typename T> T value() const { return *reinterpret_cast<T *>(data_); }
 
@@ -380,6 +397,9 @@ class Tensor {
   // Current placement of tensor in compilation.
   Placement current_placement_ = NOWHERE;
 
+  // Deferred placement for outputs from asynchronous steps.
+  Placement deferred_placement_ = NOWHERE;
+
   friend class Network;
 };
 
@@ -424,6 +444,12 @@ class Step {
   // operation is supported, i.e. the operation must be the only consumer of
   // the input.
   bool AllowInPlace(int input, int output);
+
+  // A step in the main task that runs on the host but depends on inputs
+  // produced on the device needs to be synchronized to ensure that the inputs
+  // are ready before executing the task. This method checks if a step needs
+  // to be synchronized before execution.
+  bool NeedsSynchronization();
 
  private:
    // Step name from flow operation.

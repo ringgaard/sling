@@ -44,9 +44,19 @@ class CUDARuntime : public Runtime {
   // Allocate CUDA instance in data instance block.
   int ExtraInstanceData(Cell *cell) override { return sizeof(CUDAInstance); }
 
-  // Constant tensors.
+  // Constant tensor copying.
   DevicePtr CopyTensorToDevice(Tensor *tensor) override;
   void RemoveTensorFromDevice(Tensor *tensor) override;
+
+  // Instance tensor copying.
+  void EmitCopyTensorToDevice(Tensor *tensor,
+                              Cell *cell,
+                              int taskidx,
+                              MacroAssembler *masm) override;
+  void EmitCopyTensorFromDevice(Tensor *tensor,
+                                Cell *cell,
+                                int taskidx,
+                                MacroAssembler *masm) override;
 
  private:
   // CUDA device for computations.

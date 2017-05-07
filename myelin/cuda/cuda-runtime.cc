@@ -1,10 +1,17 @@
 #include "myelin/cuda/cuda-runtime.h"
 
 #include "base/logging.h"
+#include "myelin/compute.h"
+#include "myelin/macro-assembler.h"
 #include "myelin/cuda/cuda.h"
 
 namespace sling {
 namespace myelin {
+
+using namespace jit;
+
+// Base register used for data instance.
+static Register datareg = rbp;
 
 CUDARuntime::CUDARuntime(int device_number) {
   // Check that CUDA is supported.
@@ -124,6 +131,64 @@ DevicePtr CUDARuntime::CopyTensorToDevice(Tensor *tensor) {
 
 void CUDARuntime::RemoveTensorFromDevice(Tensor *tensor) {
   CHECK_CUDA(cuMemFree(tensor->device_data()));
+}
+
+void CUDARuntime::EmitCopyTensorToDevice(Tensor *tensor,
+                                         Cell *cell,
+                                         int taskidx,
+                                         MacroAssembler *masm) {
+  // Set source host address.
+  masm->LoadTensorAddress(arg_reg_1, tensor);
+
+  // Set destination device address.
+  masm->movq(arg_reg_2, Operand(datareg, offsetof(CUDAInstance, data)));
+  masm->addq(arg_reg_2, Immediate(tensor->device_offset()));
+
+  // Set stream for task.
+  int ofs;
+  if (taskidx == -1) {
+    // Main task stream is stored in runtime block.
+    ofs = offsetof(CUDAInstance, mainstream);
+  } else {
+    // Parallel task stream is stored in task block.
+    ofs = cell->task_offset(taskidx) + offsetof(Task, state);
+  }
+  masm->movq(arg_reg_3, Operand(datareg, ofs));
+
+  // Call cuMemcpyHtoDAsync(src, dst, stream).
+  Register acc = masm->rr().alloc();
+  masm->movp(acc, reinterpret_cast<void *>(cuMemcpyHtoDAsync));
+  masm->call(acc);
+  masm->rr().release(acc);
+}
+
+void CUDARuntime::EmitCopyTensorFromDevice(Tensor *tensor,
+                                           Cell *cell,
+                                           int taskidx,
+                                           MacroAssembler *masm) {
+  // Set source device address.
+  masm->movq(arg_reg_1, Operand(datareg, offsetof(CUDAInstance, data)));
+  masm->addq(arg_reg_1, Immediate(tensor->device_offset()));
+
+  // Set destination device address.
+  masm->LoadTensorAddress(arg_reg_2, tensor);
+
+  // Set stream for task.
+  int ofs;
+  if (taskidx == -1) {
+    // Main task stream is stored in runtime block.
+    ofs = offsetof(CUDAInstance, mainstream);
+  } else {
+    // Parallel task stream is stored in task block.
+    ofs = cell->task_offset(taskidx) + offsetof(Task, state);
+  }
+  masm->movq(arg_reg_3, Operand(datareg, ofs));
+
+  // Call cuMemcpyDtoHAsync(src, dst, stream).
+  Register acc = masm->rr().alloc();
+  masm->movp(acc, reinterpret_cast<void *>(cuMemcpyDtoHAsync));
+  masm->call(acc);
+  masm->rr().release(acc);
 }
 
 }  // namespace myelin

@@ -349,6 +349,24 @@ bool Step::AllowInPlace(int input, int output) {
   return true;
 }
 
+bool Step::NeedsSynchronization() {
+  // Only steps running on the host need synchronization.
+  if (placement() != HOST) return false;
+
+  // Only steps running in the main task need synchronization.
+  if (task_index_ != -1) return false;
+
+  // Check if any of the inputs has been produced on the device.
+  for (Tensor *input : inputs_) {
+    Step *producer = input->producer();
+    if (producer == nullptr) continue;
+    if (producer->placement() == HOST) continue;
+    if (producer->task_index_ != -1) continue;
+    return true;
+  }
+  return false;
+}
+
 Network::Network() {
   runtime_ = &default_runtime;
 }
@@ -848,11 +866,13 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       return false;
     }
     tensor->data_ = data;
+    tensor->AddNewPlace(HOST);
 
     // Copy constant to device if needed.
     if (tensor->placement_ & DEVICE) {
       tensor->device_data_ = runtime_->CopyTensorToDevice(tensor);
       CHECK(tensor->device_data_ != DEVICE_NULL);
+      tensor->AddNewPlace(DEVICE);
     }
   }
 
@@ -878,6 +898,25 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (profiling_) {
       // Invocation counter is the first element of the timing block.
       masm.IncrementInvocations(cell->profile()->offset());
+    }
+
+    // Copy input variables that do not have the needed placement.
+    bool sync = false;
+    for (Tensor *tensor : parameters_) {
+      if (tensor->cell_ != cell) continue;
+      if (tensor->placement_ == EVERYWHERE) {
+        if (tensor->current_placement_ == HOST) {
+          // Copy parameter tensor from host to device.
+          runtime_->EmitCopyTensorToDevice(tensor, cell, -1, &masm);
+          tensor->AddNewPlace(DEVICE);
+          sync = true;
+        } else if (tensor->current_placement_ == DEVICE) {
+          // Copy parameter tensor from device to host.
+          runtime_->EmitCopyTensorFromDevice(tensor, cell, -1, &masm);
+          tensor->AddNewPlace(HOST);
+          sync = true;
+        }
+      }
     }
 
     // Let kernels generate code for each step.
@@ -908,6 +947,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
           }
         }
 
+        // Synchronize main task if needed before executing step.
+        if (sync && step->NeedsSynchronization()) {
+          masm.FlushMainTask();
+          sync = false;
+        }
+
         // Generate code for step.
         step->kernel_->Generate(step, &masm);
 
@@ -915,6 +960,24 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         // allocation.
         masm.rr().reset();
         masm.mm().reset();
+
+        // Copy outputs that do not have the needed placement.
+        for (Tensor *output : step->outputs_) {
+          output->AddNewPlace(step->placement());
+          if (output->placement_ == EVERYWHERE) {
+            if (output->current_placement_ == HOST) {
+              // Copy output from host to device.
+              runtime_->EmitCopyTensorToDevice(output, cell, -1, &masm);
+              output->AddNewPlace(DEVICE);
+              sync = true;
+            } else if (output->current_placement_ == DEVICE) {
+              // Copy output from device to host.
+              runtime_->EmitCopyTensorFromDevice(output, cell, -1, &masm);
+              output->AddNewPlace(HOST);
+              sync = true;
+            }
+          }
+        }
 
         // Profile step.
         if (profiling_) {
@@ -927,6 +990,13 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         auto &t = cell->tasks_[tidx];
         CHECK(t.state != COMPLETED) << cell->name_ << " task " << t.task;
         if (t.state == PENDING) {
+          // Flush asynchronous operations.
+          if (sync) {
+            masm.FlushMainTask();
+            sync = false;
+          }
+
+          // Start parallel task.
           masm.StartTask(t.offset, t.task, step->task_index_, &t.entry);
           t.state = ACTIVE;
 
@@ -935,6 +1005,22 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             int timing = cell->profile()->offset();
             int slot = 1 + cell->steps_.size() + tidx * 2;
             masm.TimeStep(timing + slot * sizeof(int64));
+          }
+        }
+
+        // Update output placements.
+        for (Tensor *output : step->outputs_) {
+          output->AddNewPlace(step->placement());
+          if (output->placement_ == EVERYWHERE) {
+            if (output->current_placement_ == HOST) {
+              // Set deferred copy from host to device.
+              output->deferred_placement_ = DEVICE;
+              output->AddNewPlace(DEVICE);
+            } else if (output->current_placement_ == DEVICE) {
+              // Set deferred copy from device to host.
+              output->deferred_placement_ = HOST;
+              output->AddNewPlace(HOST);
+            }
           }
         }
       }
@@ -948,6 +1034,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         task.state = COMPLETED;
       }
     }
+    if (sync) masm.FlushMainTask();
 
     // Generate epilog for main cell computation.
     masm.Epilog();
@@ -972,6 +1059,19 @@ bool Network::Compile(const Flow &flow, const Library &library) {
           // allocation.
           masm.rr().reset();
           masm.mm().reset();
+
+          // Copy outputs that do not have the needed placement.
+          for (Tensor *output : step->outputs_) {
+            if (output->deferred_placement_ == DEVICE) {
+              // Copy output from host to device.
+              runtime_->EmitCopyTensorToDevice(
+                  output, cell, task_index, &masm);
+            } else if (output->deferred_placement_ == HOST) {
+              // Copy output from device to host.
+              runtime_->EmitCopyTensorFromDevice(
+                  output, cell, task_index, &masm);
+            }
+          }
 
           // Profile step.
           if (profiling_) {

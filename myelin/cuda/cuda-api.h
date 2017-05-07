@@ -15,7 +15,6 @@ typedef int CUdevice;
 typedef struct CUctx_st *CUcontext;
 typedef struct CUmod_st *CUmodule;
 typedef struct CUfunc_st *CUfunction;
-typedef struct CUevent_st *CUevent;
 typedef struct CUstream_st *CUstream;
 
 // CUDA error codes.
@@ -252,6 +251,14 @@ extern CUresult (*cuMemcpyHtoD)(CUdeviceptr dst,
 extern CUresult (*cuMemcpyDtoH)(void *dst,
                                 CUdeviceptr src,
                                 size_t size);
+extern CUresult (*cuMemcpyHtoDAsync)(CUdeviceptr dst,
+                                     const void *src,
+                                     size_t size,
+                                     CUstream hstream);
+extern CUresult (*cuMemcpyDtoHAsync)(void *dst,
+                                     CUdeviceptr src,
+                                     size_t size,
+                                     CUstream hstream);
 extern CUresult (*cuStreamCreate)(CUstream *hstream, unsigned int flags);
 extern CUresult (*cuStreamDestroy)(CUstream hstream);
 extern CUresult (*cuStreamSynchronize)(CUstream hstream);

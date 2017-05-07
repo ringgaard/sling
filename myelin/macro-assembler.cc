@@ -353,6 +353,18 @@ void MacroAssembler::WaitForTask(int offset) {
   rr_.release(acc);
 }
 
+void MacroAssembler::FlushMainTask() {
+  // Check if runtime needs synchronization.
+  if (runtime_->SyncMainFunc() == nullptr) return;
+
+  // Call runtime to sync the main task.
+  Register acc = rr_.alloc();
+  movq(arg_reg_1, datareg);
+  movp(acc, reinterpret_cast<void *>(runtime_->SyncMainFunc()));
+  call(acc);
+  rr_.release(acc);
+}
+
 void MacroAssembler::IncrementInvocations(int offset) {
   incq(Operand(datareg, offset));
 }
