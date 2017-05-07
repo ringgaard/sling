@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "base/types.h"
 #include "myelin/flow.h"
 #include "string/printf.h"
 #include "third_party/jit/code.h"
@@ -32,6 +33,7 @@ class Network;
 class Cell;
 class Step;
 class Instance;
+class Tensor;
 
 // Element order.
 enum Order {ANY_ORDER, ROW_MAJOR, COLUMN_MAJOR, CONFLICTING_ORDER};
@@ -40,7 +42,11 @@ enum Order {ANY_ORDER, ROW_MAJOR, COLUMN_MAJOR, CONFLICTING_ORDER};
 enum TaskState {PENDING, ACTIVE, COMPLETED};
 
 // Placement for data and code execution.
-enum Placement {HOST, DEVICE};
+enum Placement {NOWHERE = 0x0, HOST = 0x1, DEVICE = 0x2, EVERYWHERE = 0x3};
+
+// Pointer to data in device memory.
+typedef uint64 DevicePtr;
+#define DEVICE_NULL 0
 
 // Minimum data alignment.
 static const int kMinDataAlignment = sizeof(void *);
@@ -50,8 +56,11 @@ class Kernel {
  public:
   virtual ~Kernel() = default;
 
-  // Returns descriptive name for kernel.
+  // Return descriptive name for kernel.
   virtual string Name() = 0;
+
+  // Return location of kernel computation.
+  virtual Placement Location() { return HOST; }
 
   // Return name of operation support by kernel.
   virtual string Operation() = 0;
@@ -117,8 +126,12 @@ struct Task {
 class Runtime {
  public:
   typedef void (*TaskFunc)(Task *);
+  typedef void (*InstanceFunc)(void *);
 
   virtual ~Runtime() = default;
+
+  // Return runtime description.
+  virtual string Description() { return ""; }
 
   // Allocate and initialize instance data.
   virtual void AllocateInstance(Instance *instance) = 0;
@@ -137,6 +150,20 @@ class Runtime {
 
   // Return runtime function for waiting for task completion.
   virtual TaskFunc WaitTaskFunc() = 0;
+
+  // Return runtime function for synchronizing the main task execution. This
+  // can return null if no synchronization is needed.
+  virtual InstanceFunc SyncMainFunc() { return nullptr; }
+
+  // Return the size of extra instance data needed by runtime. This extra data
+  // will be allocated at the beginning of the instance block at offset 0.
+  virtual int ExtraInstanceData(Cell *cell) { return 0; }
+
+  // Copy constant tensor to device.
+  virtual DevicePtr CopyTensorToDevice(Tensor *tensor) { return DEVICE_NULL; }
+
+  // Remove constant tensor from device.
+  virtual void RemoveTensorFromDevice(Tensor *tensor) {}
 };
 
 // A tensor is a multi-dimensional array that can be used for constants and
@@ -218,11 +245,19 @@ class Tensor {
   // Value for constant tensor. Returns null for parameters.
   char *data() const { return data_; }
 
+  // Pointer to constant tensor on device.
+  DevicePtr device_data() const { return device_data_; }
+
   // Size (in bytes) of elements in tensor.
   int element_size() const { return TypeTraits::of(type_).size(); }
 
-  // Offset in data instance block. Returns -1 for constants.
+  // Offset in data instance block. Returns -1 for constants and tensors that
+  // are not stored on the host.
   int offset() const { return offset_; }
+
+  // Offset in device data instance block. Returns -1 for constants and tensors
+  // that are not stored on the device.
+  int device_offset() const { return device_offset_; }
 
   // Number of bytes allocated for tensor in instance. This takes references
   // into account so these only take up space for one pointer.
@@ -238,6 +273,11 @@ class Tensor {
 
   // Check if tensor is a constant.
   bool IsConstant() const { return data_ != nullptr; }
+
+  // Add location for placement.
+  void AddPlace(Placement place) {
+    placement_ = static_cast<Placement>(placement_ | place);
+  }
 
   // Return scalar value.
   template<typename T> T value() const { return *reinterpret_cast<T *>(data_); }
@@ -259,8 +299,11 @@ class Tensor {
   Tensor *link() const { return link_; }
   void set_link(Tensor *link) { link_ = link; }
 
-  // Number of consumers.
-  int consumers() const { return consumers_; }
+  // Step that produces tensor.
+  Step *producer() const { return producer_; }
+
+  // List of steps that uses tensor.
+  const std::vector<Step *> consumers() const { return consumers_; }
 
   // Cell that tensor belongs to.
   Cell *cell() const { return cell_; }
@@ -271,6 +314,9 @@ class Tensor {
  private:
   // Offset in data instance block.
   int offset_ = -1;
+
+  // Offset in device data instance block.
+  int device_offset_ = -1;
 
   // Tensor name for parameter or constant.
   string name_;
@@ -312,17 +358,27 @@ class Tensor {
   // Optional other tensor that this tensor shares alignment requirements with.
   Tensor *link_ = nullptr;
 
-  // Number of consumers.
-  int consumers_ = 0;
-
   // Value for constant tensor (not owned).
   char *data_ = nullptr;
+
+  // Pointer to constant tensor data on device. This is only set for constant
+  // tensors that need to be access from the device.
+  DevicePtr device_data_ = DEVICE_NULL;
 
   // Cell that tensor is part of. Constant tensors can be shared.
   Cell *cell_ = nullptr;
 
-  // Index for task that produces tensor value.
-  int producer_task_ = -1;
+  // Step that produces tensor.
+  Step *producer_ = nullptr;
+
+  // Steps that consume tensor.
+  std::vector<Step *> consumers_;
+
+  // Placement of tensor.
+  Placement placement_ = NOWHERE;
+
+  // Current placement of tensor in compilation.
+  Placement current_placement_ = NOWHERE;
 
   friend class Network;
 };
@@ -354,6 +410,9 @@ class Step {
 
   // Task index in cell for computing the step.
   int task_index() const { return task_index_; }
+
+  // Device placement for kernel computation.
+  Placement placement() const { return kernel_->Location(); }
 
   // Declare the number of general-purpose registers needed by step.
   void SetRegisterUsage(int regs);
@@ -551,7 +610,7 @@ class Instance {
   const Cell *cell_;
 };
 
-// A cell contains generated code for executing a computation.
+// A cell contains generated code for executing computation of a function.
 class Cell {
  public:
   // Cell name from flow function.
@@ -576,10 +635,14 @@ class Cell {
   inline Runtime *runtime() const;
 
   // Size of data instance for cell.
-  int instance_size() const { return  instance_size_; }
+  int instance_size() const { return instance_size_; }
+
+  // Size of device data instance for cell.
+  int device_instance_size() const { return device_instance_size_; }
 
   // Instance alignment.
   int instance_alignment() const { return instance_alignment_; }
+  int device_instance_alignment() const { return device_instance_alignment_; }
 
   // Number of auxiliary tasks used by cell.
   int num_tasks() const { return tasks_.size(); }
@@ -601,16 +664,17 @@ class Cell {
   struct TaskInfo {
     TaskInfo(int task) : task(task) {}
 
-    int task;                    // task id in flow
-    TaskState state = PENDING;   // task state at current point in compilation
-    jit::Label entry;            // entry point for task function
-    int offset = 0;              // instance offset for task structure
+    int task;                       // task id in flow
+    TaskState state = PENDING;      // task state at current compilation point
+    jit::Label entry;               // entry point for task function
+    int offset = 0;                 // instance offset for task structure
+    Placement placement = NOWHERE;  // placement of task computation
   };
 
-  // Network that function is part of.
+  // Network that cell is part of.
   Network *network_;
 
-  // Network name.
+  // Cell name.
   string name_;
 
   // Steps for cell in order of execution (owned by network).
@@ -628,8 +692,12 @@ class Cell {
   // Size of data instance for cell.
   int instance_size_ = 0;
 
+  // Size of device data instance for cell.
+  int device_instance_size_ = 0;
+
   // Instance alignment.
   int instance_alignment_ = kMinDataAlignment;
+  int device_instance_alignment_ = kMinDataAlignment;
 
   // Tensor with profiling information.
   Tensor *profile_ = nullptr;

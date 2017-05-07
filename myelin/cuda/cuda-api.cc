@@ -47,6 +47,9 @@ CUresult (*cuMemcpyHtoD)(CUdeviceptr dst,
 CUresult (*cuMemcpyDtoH)(void *dst,
                          CUdeviceptr src,
                          size_t size);
+CUresult (*cuStreamCreate)(CUstream *hstream, unsigned int flags);
+CUresult (*cuStreamDestroy)(CUstream hstream);
+CUresult (*cuStreamSynchronize)(CUstream hstream);
 CUresult (*cuLaunchKernel)(CUfunction f,
                            unsigned int grid_dim_x,
                            unsigned int grid_dim_y,
@@ -88,6 +91,9 @@ bool LoadCUDALibrary() {
   LOAD_CUDA_FUNCTION(cuMemFree, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyHtoD, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyDtoH, "_v2");
+  LOAD_CUDA_FUNCTION(cuStreamCreate, "");
+  LOAD_CUDA_FUNCTION(cuStreamDestroy, "_v2");
+  LOAD_CUDA_FUNCTION(cuStreamSynchronize, "");
   LOAD_CUDA_FUNCTION(cuLaunchKernel, "");
 
   return true;

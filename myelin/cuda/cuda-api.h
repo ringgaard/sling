@@ -209,6 +209,12 @@ enum CUjit_fallback {
   CU_PREFER_BINARY,
 };
 
+// CUDA stream creation flags.
+enum CUstream_flags {
+  CU_STREAM_DEFAULT      = 0x0,
+  CU_STREAM_NON_BLOCKING = 0x1,
+};
+
 // CUDA driver API functions.
 extern CUresult (*cuDriverGetVersion)(int *version);
 extern CUresult (*cuInit)(unsigned int flags);
@@ -246,6 +252,9 @@ extern CUresult (*cuMemcpyHtoD)(CUdeviceptr dst,
 extern CUresult (*cuMemcpyDtoH)(void *dst,
                                 CUdeviceptr src,
                                 size_t size);
+extern CUresult (*cuStreamCreate)(CUstream *hstream, unsigned int flags);
+extern CUresult (*cuStreamDestroy)(CUstream hstream);
+extern CUresult (*cuStreamSynchronize)(CUstream hstream);
 extern CUresult (*cuLaunchKernel)(CUfunction f,
                                   unsigned int grid_dim_x,
                                   unsigned int grid_dim_y,

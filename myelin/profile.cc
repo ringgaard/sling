@@ -71,7 +71,14 @@ string Profile::ASCIIReport() const {
   if (jit::CPU::Enabled(jit::AVX)) report.append(" AVX");
   if (jit::CPU::Enabled(jit::AVX2)) report.append(" AVX2");
   if (jit::CPU::Enabled(jit::FMA3)) report.append(" FMA3");
-  report.append("\n\n");
+  report.append("\n");
+  string runtime_info = instance_->cell()->runtime()->Description();
+  if (!runtime_info.empty()) {
+    report.append("Runtime: ");
+    report.append(runtime_info);
+    report.append("\n");
+  }
+  report.append("\n");
 
   // Output header.
   report.append(divider);

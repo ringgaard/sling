@@ -39,6 +39,9 @@ static const Order combined_order[4][4] = {
   {CONFLICTING_ORDER, CONFLICTING_ORDER, CONFLICTING_ORDER, CONFLICTING_ORDER},
 };
 
+// Placement names.
+const char *placename[] = {"nowhere", "host", "device", "everywhere"};
+
 static bool IsPowerOfTwo32(int value) {
   return value && !(value & (value - 1));
 }
@@ -338,7 +341,7 @@ bool Step::AllowInPlace(int input, int output) {
   DCHECK_LT(output, outputs_.size());
   Tensor *in = inputs_[input];
   Tensor *out = outputs_[output];
-  if (in->consumers() != 1) return false;
+  if (in->consumers().size() != 1) return false;
   if (in->ref() != out->ref()) return false;
   if (out->shared()) return false;
   out->set_shared(in);
@@ -353,7 +356,12 @@ Network::Network() {
 Network::~Network() {
   for (auto *m : memory_) FreeMemory(m);
   for (auto *t : parameters_) delete t;
-  for (auto *t : constants_) delete t;
+  for (auto *t : constants_) {
+    if (t->device_data_ != DEVICE_NULL) {
+      runtime_->RemoveTensorFromDevice(t);
+    }
+    delete t;
+  }
   for (auto *c : cells_) delete c;
   for (auto *s : steps_) delete s;
   for (auto *c : connectors_) delete c;
@@ -392,7 +400,15 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     tensor->alignment_.fill(var->rank(), 1);
     tensor->stride_.fill(var->rank(), 0);
     tensor->byte_alignment_ = TypeTraits::of(var->type).size();
-    tensor->consumers_ = var->consumers.size();
+
+    // Input variables are initially placed in host memory.
+    if (var->in) {
+      tensor->current_placement_ = HOST;
+      tensor->placement_ = HOST;
+    }
+
+    // Output variables must be available on the host after the computation.
+    if (var->out) tensor->placement_ = HOST;
   }
 
   // Create connectors between variables.
@@ -411,7 +427,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     Tensor *t = new Tensor();
     t->name_ = cnx->name;
     t->required_order_ = ROW_MAJOR;
-    t->consumers_ = cnx->links.size();
     connector->type_ = t;
     tensors[connector] = t;
 
@@ -458,6 +473,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       Tensor *tensor = tensors[input];
       CHECK(tensor != nullptr);
       step->inputs_.push_back(tensor);
+      tensor->consumers_.push_back(step);
 
       // Assign input parameter to cell.
       if (step->cell_ != nullptr && !tensor->IsConstant()) {
@@ -475,6 +491,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       Tensor *tensor = tensors[output];
       CHECK(tensor != nullptr);
       step->outputs_.push_back(tensor);
+      CHECK(tensor->producer_ == nullptr);
+      tensor->producer_ = step;
 
       // Assign output parameter to cell.
       if (step->cell_ != nullptr && !tensor->IsConstant()) {
@@ -503,18 +521,34 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         cell->tasks_.emplace_back(op->task);
       }
       step->task_index_ = taskidx;
-      for (Tensor *output : step->outputs_) {
-        output->producer_task_ = taskidx;
-      }
     }
 
     // Find kernel for implementing the operation.
     for (Kernel *kernel : library.Lookup(step->type())) {
       if (kernel->Supports(step)) {
-        step->kernel_ = kernel;
-        break;
+        // Check that kernel location is compatible with task placement.
+        bool compatible = true;
+        if (step->task_index_ != -1) {
+          auto &task = cell->tasks_[step->task_index_];
+          if (task.placement == NOWHERE) {
+            // Task has not been placed yet. Use the kernel location for
+            // placement.
+            task.placement = kernel->Location();
+          } else if (task.placement != kernel->Location()) {
+            // Kernel location is incompatible with task placement.
+            VLOG(7) << kernel->Name() << " cannot run on "
+                    << placename[task.placement];
+            compatible = false;
+          }
+        }
+
+        if (compatible) {
+          step->kernel_ = kernel;
+          break;
+        }
+      } else {
+        VLOG(7) << kernel->Name() << " does not support " << step->name();
       }
-      VLOG(7) << kernel->Name() << " does not support " << step->name();
     }
     if (step->kernel_ == nullptr) {
       LOG(ERROR) << "No kernel supports " << step->name()
@@ -543,6 +577,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       profile->aligned_ = profile->shape_;
       profile->alignment_.assign(sizeof(int64));
       profile->stride_.fill(sizeof(int64));
+      profile->placement_ = HOST;
+      profile->current_placement_ = HOST;
       parameters_.push_back(profile);
       cell->profile_ = profile;
     }
@@ -667,13 +703,25 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
     tensor->size_ = size;
     tensor->space_ = tensor->ref() ? sizeof(void *) : size;
+
+    // Determine placement for tensor based on producer and consumer locations.
+    if (tensor->producer_ != nullptr) {
+      // Tensor is available in the place it is produced.
+      tensor->AddPlace(tensor->producer_->placement());
+    }
+    for (Step *consumer : tensor->consumers_) {
+      // Tensor must be made available in the places it is consumed.
+      tensor->AddPlace(consumer->placement());
+    }
+
     VLOG(5) << "Tensor " << tensor->name_ << ": " << tensor->TypeString()
             << " alignment " << tensor->alignment_.ToString()
             << ":" << tensor->byte_alignment_
             << " aligned " << tensor->aligned_.ToString()
             << " size " << tensor->space_
             << " stride " << tensor->stride_.ToString()
-            << " order " << tensor->order_;
+            << " order " << tensor->order_
+            << " placement " << placename[tensor->placement_];
   }
 
   // Compute size and alignment for connectors.
@@ -704,6 +752,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       cell->instance_alignment_ = jit::CPU::CacheLineSize();
     }
 
+    // Allocate space for runtime data at the beginning of the instance block.
+    cell->instance_size_ = runtime_->ExtraInstanceData(cell);
+
     // Allocate task structures in instance.
     for (auto &t : cell->tasks_) {
       t.offset = cell->instance_size_;
@@ -715,25 +766,48 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   for (Tensor *tensor : parameters_) {
     if (tensor->cell_ != nullptr) {
       Cell *c = tensor->cell_;
+      int align = tensor->ref_ ? kMinDataAlignment : tensor->byte_alignment_;
 
       // Set offset for tensor in instance.
       CHECK_GE(tensor->space(), 0) << tensor->name() << " " << tensor->space();
-      if (tensor->shared_ != nullptr) {
-        tensor->offset_ = tensor->shared_->offset_;
-        VLOG(5) << "Share " << tensor->name() << " with "
-                << tensor->shared()->name();
-      } else {
-        // Ensure alignment of tensor in instance.
-        int a = tensor->ref_ ? kMinDataAlignment : tensor->byte_alignment_;
-        c->instance_size_ = Align(c->instance_size_, a);
+      if (tensor->placement_ & HOST) {
+        if (tensor->shared_ != nullptr) {
+          tensor->offset_ = tensor->shared_->offset_;
+          VLOG(5) << "Share " << tensor->name() << " with "
+                  << tensor->shared()->name();
+        } else {
+          // Ensure alignment of tensor in instance.
+          c->instance_size_ = Align(c->instance_size_, align);
 
-        // Assign offset to tensor and update instance size.
-        tensor->offset_ = c->instance_size_;
-        c->instance_size_ += tensor->space();
+          // Assign offset to tensor and update instance size.
+          tensor->offset_ = c->instance_size_;
+          c->instance_size_ += tensor->space();
 
-        // Ensure that instance has at least the same aligment as the tensor.
-        if (tensor->byte_alignment_ > c->instance_alignment_) {
-          c->instance_alignment_ = tensor->byte_alignment_;
+          // Ensure that instance has at least the same aligment as the tensor.
+          if (tensor->byte_alignment_ > c->instance_alignment_) {
+            c->instance_alignment_ = tensor->byte_alignment_;
+          }
+        }
+      }
+
+      // Set offset for tensor in device instance.
+      if (tensor->placement_ & DEVICE) {
+        if (tensor->shared_ != nullptr) {
+          tensor->device_offset_ = tensor->shared_->device_offset_;
+          VLOG(5) << "Share " << tensor->name() << " with "
+                  << tensor->shared()->name() << " on device";
+        } else {
+          // Ensure alignment of tensor in device instance.
+          c->device_instance_size_ = Align(c->device_instance_size_, align);
+
+          // Assign offset to tensor and update device instance size.
+          tensor->device_offset_ = c->device_instance_size_;
+          c->device_instance_size_ += tensor->space();
+
+          // Ensure that instance has at least the same aligment as the tensor.
+          if (tensor->byte_alignment_ > c->device_instance_alignment_) {
+            c->device_instance_alignment_ = tensor->byte_alignment_;
+          }
         }
       }
     }
@@ -774,6 +848,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       return false;
     }
     tensor->data_ = data;
+
+    // Copy constant to device if needed.
+    if (tensor->placement_ & DEVICE) {
+      tensor->device_data_ = runtime_->CopyTensorToDevice(tensor);
+      CHECK(tensor->device_data_ != DEVICE_NULL);
+    }
   }
 
   // Compile each cell computation.
@@ -806,21 +886,24 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       if (step->task_index_ == -1) {
         // Wait for completion of all inputs.
         for (Tensor *input : step->inputs_) {
-          if (input->producer_task_ != -1) {
-            int tidx = input->producer_task_;
-            auto &t = cell->tasks_[tidx];
-            CHECK(t.state != PENDING) << cell->name_ << " task " << t.task;
-            if (t.state == ACTIVE) {
-              // Wait for parallel task to complete.
-              masm.WaitForTask(t.offset);
-              t.state = COMPLETED;
+          // Check if input is produced by parallel task.
+          if (input->producer() == nullptr) continue;
+          int tidx = input->producer()->task_index();
+          if (tidx == -1) continue;
 
-              // Profile task start.
-              if (profiling_) {
-                int timing = cell->profile()->offset();
-                int slot = 1 + cell->steps_.size() + tidx * 2 + 1;
-                masm.TimeStep(timing + slot * sizeof(int64));
-              }
+          // Wait for producing task to complete.
+          auto &t = cell->tasks_[tidx];
+          CHECK(t.state != PENDING) << cell->name_ << " task " << t.task;
+          if (t.state == ACTIVE) {
+            // Wait for parallel task to complete.
+            masm.WaitForTask(t.offset);
+            t.state = COMPLETED;
+
+            // Profile task wait.
+            if (profiling_) {
+              int timing = cell->profile()->offset();
+              int slot = 1 + cell->steps_.size() + tidx * 2 + 1;
+              masm.TimeStep(timing + slot * sizeof(int64));
             }
           }
         }
@@ -847,7 +930,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
           masm.StartTask(t.offset, t.task, step->task_index_, &t.entry);
           t.state = ACTIVE;
 
-          // Profile task wait.
+          // Profile task start.
           if (profiling_) {
             int timing = cell->profile()->offset();
             int slot = 1 + cell->steps_.size() + tidx * 2;
