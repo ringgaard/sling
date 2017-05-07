@@ -24,7 +24,9 @@ class CUDARuntime : public Runtime {
   // -1 the runtime tried to selected the best GPU device for computations.
   CUDARuntime(int device_number = -1);
   ~CUDARuntime();
+
   string Description() override;
+  CUDADevice *Device() override { return device_; }
 
   // Instance data allocation.
   void AllocateInstance(Instance *instance) override;

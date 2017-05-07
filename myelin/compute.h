@@ -34,6 +34,7 @@ class Cell;
 class Step;
 class Instance;
 class Tensor;
+class CUDADevice;
 
 // Element order.
 enum Order {ANY_ORDER, ROW_MAJOR, COLUMN_MAJOR, CONFLICTING_ORDER};
@@ -176,6 +177,9 @@ class Runtime {
                                         Cell *cell,
                                         int taskidx,
                                         MacroAssembler *masm) {}
+
+  // Return CUDA device used by runtime.
+  virtual CUDADevice *Device() { return nullptr; }
 };
 
 // A tensor is a multi-dimensional array that can be used for constants and
