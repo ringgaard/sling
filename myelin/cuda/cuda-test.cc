@@ -16,45 +16,42 @@ const char *ptx_code = R"(
 .address_size 64
 
 .visible .entry vectoradd(
-  .param .u64 param_0,
-  .param .u64 param_1,
-  .param .u64 param_2,
-  .param .u32 param_3
+  .param .u64 A,
+  .param .u64 B,
+  .param .u64 C,
+  .param .u32 N
 ) {
-  .reg .pred   %p<2>;
-  .reg .f32    %f<4>;
-  .reg .b32    %r<6>;
-  .reg .b64    %rd<11>;
+  .reg .pred   outside;
+  .reg .b64    a, b, c;
+  .reg .b32    n;
+  .reg .b32    blkdim, blkidx, thridx, idx;
+  .reg .b64    ofs, aptr, bptr, cptr;
+  .reg .f32    aval, bval, cval;
 
-  ld.param.u64   %rd1, [param_0];
-  ld.param.u64   %rd2, [param_1];
-  ld.param.u64   %rd3, [param_2];
-  ld.param.u32   %r2, [param_3];
+  ld.param.u64   a, [A];
+  ld.param.u64   b, [B];
+  ld.param.u64   c, [C];
+  ld.param.u32   n, [N];
 
-  mov.u32   %r3, %ntid.x;
-  mov.u32   %r4, %ctaid.x;
-  mov.u32   %r5, %tid.x;
+  mov.u32   blkdim, %ntid.x;
+  mov.u32   thridx, %ctaid.x;
+  mov.u32   blkidx, %tid.x;
 
-  mad.lo.s32   %r1, %r4, %r3, %r5;
-  setp.ge.s32  %p1, %r1, %r2;
-  @%p1 bra   L0;
+  mad.lo.s32   idx, thridx, blkdim, blkidx;
+  setp.ge.s32  outside, idx, n;
+  @outside bra   done;
 
-  cvta.to.global.u64   %rd4, %rd1;
-  mul.wide.s32   %rd5, %r1, 4;
-  add.s64   %rd6, %rd4, %rd5;
+  mul.wide.s32   ofs, idx, 4;
+  add.s64   aptr, a, ofs;
+  add.s64   bptr, b, ofs;
+  add.s64   cptr, c, ofs;
 
-  cvta.to.global.u64   %rd7, %rd2;
-  add.s64   %rd8, %rd7, %rd5;
+  ld.global.f32   aval, [aptr];
+  ld.global.f32   bval, [bptr];
+  add.f32   cval, bval, aval;
+  st.global.f32   [cptr], cval;
 
-  ld.global.f32   %f1, [%rd8];
-  ld.global.f32   %f2, [%rd6];
-  add.f32   %f3, %f2, %f1;
-
-  cvta.to.global.u64   %rd9, %rd3;
-  add.s64   %rd10, %rd9, %rd5;
-  st.global.f32   [%rd10], %f3;
-
-L0:
+done:
   ret;
 }
 
@@ -115,10 +112,10 @@ int main(int argc, char *argv[]) {
 
   // Run tests.
   bool profile = true;
-  bool test1 = false;
+  bool test1 = true;
   bool test2 = false;
   bool test3 = false;
-  bool test4 = true;
+  bool test4 = false;
 
   // TEST 1: sync copy on each iteration.
   if (test1) {

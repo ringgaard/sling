@@ -57,7 +57,14 @@ CUDADevice::CUDADevice(int number) : number_(number) {
 }
 
 CUDADevice::~CUDADevice() {
+  for (auto *m : modules_) delete m;
   CHECK_CUDA(cuCtxDetach(context_));
+}
+
+CUDAModule *CUDADevice::Compile(const char *ptx) {
+  CUDAModule *module = new CUDAModule(ptx);
+  modules_.push_back(module);
+  return module;
 }
 
 int CUDADevice::CoresPerSM() const {

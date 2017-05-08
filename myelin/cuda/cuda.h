@@ -2,6 +2,7 @@
 #define MYELIN_CUDA_CUDA_H_
 
 #include <string>
+#include <vector>
 
 #include "base/logging.h"
 #include "base/types.h"
@@ -9,6 +10,8 @@
 
 namespace sling {
 namespace myelin {
+
+class CUDAModule;
 
 // Check that CUDA call is successful.
 #define CHECK_CUDA(op) CHECK_EQ((op), CUDA_SUCCESS)
@@ -42,6 +45,10 @@ class CUDADevice {
 
   // Return context for device.
   CUcontext context() const { return context_; }
+
+  // Compile PTX code and return module. The module is owned by the device
+  // object and is destroyed together with the device object.
+  CUDAModule *Compile(const char *ptx);
 
   // Return compute capability for device.
   int capability() const { return capability_; }
@@ -105,6 +112,9 @@ class CUDADevice {
 
   // Compute capabilities.
   int capability_;
+
+  // List of modules owned by device.
+  std::vector<CUDAModule *> modules_;
 };
 
 // CUDA module.
