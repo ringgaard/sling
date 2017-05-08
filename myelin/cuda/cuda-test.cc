@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "binary_version=" << vectoradd.binary_version();
 
   // Allocate host vectors.
-  int num_elements = 50000;
+  int num_elements = 500000;
   size_t size = num_elements * sizeof(float);
   float *h_a = (float *) CHECK_NOTNULL(malloc(size));
   float *h_b = (float *) CHECK_NOTNULL(malloc(size));
@@ -106,38 +106,131 @@ int main(int argc, char *argv[]) {
     h_a[i] = rand() / (float) RAND_MAX;
   }
 
-  int iterations = 10000;
-  Clock clock;
-  clock.start();
+  CHECK_CUDA(cuMemcpyHtoD(d_a, h_a, size));
+  CHECK_CUDA(cuMemcpyHtoD(d_b, h_b, size));
 
-  for (int run = 0; run < iterations; ++run) {
-    // Copy the host input vectors A and B in host memory to the device input
-    // vectors in device memory.
-    CHECK_CUDA(cuMemcpyHtoD(d_a, h_a, size));
-    CHECK_CUDA(cuMemcpyHtoD(d_b, h_b, size));
+  int iterations = 1000;
+  float ops = num_elements;
+  ops *= iterations;
 
-    // Launch the vectoradd CUDA kernel.
-    void *args[4] = {&d_a, &d_b, &d_c, &num_elements};
-    CHECK_CUDA(cuLaunchKernel(vectoradd.handle(),
-                              blocks_per_grid, 1, 1,
-                              threads_per_block, 1, 1,
-                              0, 0, args, nullptr));
+  // Run tests.
+  bool profile = true;
+  bool test1 = false;
+  bool test2 = false;
+  bool test3 = false;
+  bool test4 = true;
 
-    // Copy the device result vector in device memory to the host result vector
-    // in host memory.
-    CHECK_CUDA(cuMemcpyDtoH(h_c, d_c, size));
+  // TEST 1: sync copy on each iteration.
+  if (test1) {
+    if (profile) CHECK_CUDA(cuProfilerStart());
+    Clock clock;
+    clock.start();
+    for (int run = 0; run < iterations; ++run) {
+      // Copy the host input vectors A and B in host memory to the device input
+      // vectors in device memory.
+      CHECK_CUDA(cuMemcpyHtoD(d_a, h_a, size));
+      CHECK_CUDA(cuMemcpyHtoD(d_b, h_b, size));
+
+      // Launch the vectoradd CUDA kernel.
+      void *args[4] = {&d_a, &d_b, &d_c, &num_elements};
+      CHECK_CUDA(cuLaunchKernel(vectoradd.handle(),
+                                blocks_per_grid, 1, 1,
+                                threads_per_block, 1, 1,
+                                0, 0, args, nullptr));
+
+      // Copy the device result vector in device memory to the host result vector
+      // in host memory.
+      CHECK_CUDA(cuMemcpyDtoH(h_c, d_c, size));
+    }
+    clock.stop();
+    if (profile) CHECK_CUDA(cuProfilerStop());
+    LOG(INFO) << "sync: " << clock.cycles() / iterations << " cycles, "
+              << clock.us() / iterations << " us "
+              << (ops / clock.ns()) << " GFLOPS";
   }
 
-  clock.stop();
-  float ops = num_elements * iterations;
-  LOG(INFO) << clock.cycles() / iterations << " cycles, "
-            << clock.us() / iterations << " us "
-            << (ops / clock.secs() / 1e9) << " GFLOPS";
+  // TEST 2: no copy
+  if (test2) {
+    if (profile) CHECK_CUDA(cuProfilerStart());
+    Clock clock;
+    clock.start();
+    for (int run = 0; run < iterations; ++run) {
+      // Launch the vectoradd CUDA kernel.
+      void *args[4] = {&d_a, &d_b, &d_c, &num_elements};
+      CHECK_CUDA(cuLaunchKernel(vectoradd.handle(),
+                                blocks_per_grid, 1, 1,
+                                threads_per_block, 1, 1,
+                                0, 0, args, nullptr));
+    }
+    clock.stop();
+    if (profile) CHECK_CUDA(cuProfilerStop());
+    LOG(INFO) << "nocopy: " << clock.cycles() / iterations << " cycles, "
+              << clock.us() / iterations << " us "
+              << (ops / clock.ns()) << " GFLOPS";
+  }
+
+  // TEST 3: async
+  if (test3) {
+    CUstream stream;
+    CHECK_CUDA(cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING));
+    if (profile) CHECK_CUDA(cuProfilerStart());
+    Clock clock;
+    clock.start();
+    for (int run = 0; run < iterations; ++run) {
+      // Launch the vectoradd CUDA kernel.
+      void *args[4] = {&d_a, &d_b, &d_c, &num_elements};
+      CHECK_CUDA(cuLaunchKernel(vectoradd.handle(),
+                                blocks_per_grid, 1, 1,
+                                threads_per_block, 1, 1,
+                                1024, stream, args, nullptr));
+    }
+    CHECK_CUDA(cuStreamSynchronize(stream));
+    clock.stop();
+    if (profile) CHECK_CUDA(cuProfilerStop());
+    CHECK_CUDA(cuStreamDestroy(stream));
+    LOG(INFO) << "sync: " << clock.cycles() / iterations << " cycles, "
+              << clock.us() / iterations << " us "
+              << (ops / clock.ns()) << " GFLOPS";
+  }
+
+  // TEST 4: multi
+  if (test4) {
+    const int num_streams = 8;
+    CUstream streams[num_streams];
+    for (int i = 0; i < num_streams; ++i) {
+      CHECK_CUDA(cuStreamCreate(&streams[i], CU_STREAM_NON_BLOCKING));
+    }
+    if (profile) CHECK_CUDA(cuProfilerStart());
+    Clock clock;
+    clock.start();
+    for (int run = 0; run < iterations; ++run) {
+      // Launch the vectoradd CUDA kernel.
+      void *args[4] = {&d_a, &d_b, &d_c, &num_elements};
+      CHECK_CUDA(cuLaunchKernel(vectoradd.handle(),
+                                blocks_per_grid, 1, 1,
+                                threads_per_block, 1, 1,
+                                0, streams[run % num_streams], args, nullptr));
+    }
+    for (int i = 0; i < num_streams; ++i) {
+      CHECK_CUDA(cuStreamSynchronize(streams[i]));
+    }
+    clock.stop();
+    if (profile) CHECK_CUDA(cuProfilerStop());
+    for (int i = 0; i < num_streams; ++i) {
+      CHECK_CUDA(cuStreamDestroy(streams[i]));
+    }
+
+    LOG(INFO) << "multi: " << clock.cycles() / iterations << " cycles, "
+              << clock.us() / iterations << " us "
+              << (ops / clock.ns()) << " GFLOPS";
+  }
 
   // Verify that the result vector is correct.
-  for (int i = 0; i < num_elements; ++i) {
-    if (fabs(h_a[i] + h_b[i] - h_c[i]) > 1e-5) {
-      LOG(FATAL) << "Result verification failed at element " << i;
+  if (test1) {
+    for (int i = 0; i < num_elements; ++i) {
+      if (fabs(h_a[i] + h_b[i] - h_c[i]) > 1e-5) {
+        LOG(FATAL) << "Result verification failed at element " << i;
+      }
     }
   }
 

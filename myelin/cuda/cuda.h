@@ -58,14 +58,19 @@ class CUDADevice {
     return GetAttribute(CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT);
   }
 
-  // Return GPU clock rate in MHz.
-  int clock_rate() const {
-    return GetAttribute(CU_DEVICE_ATTRIBUTE_CLOCK_RATE) / 1000;
+  // Return GPU clock rate in Hz.
+  int64 clock_rate() const {
+    return 1000LL * GetAttribute(CU_DEVICE_ATTRIBUTE_CLOCK_RATE);
   }
 
-  // Return GPU memory transfer rate in MHz.
-  int memory_transfer_rate() const {
-    return GetAttribute(CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE) / 1000;
+  // Return GPU memory transfer rate in Hz.
+  int64 memory_transfer_rate() const {
+    return 1000LL * GetAttribute(CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE);
+  }
+
+  // Return global memory bus width in bits.
+  int bus_width() const {
+    return GetAttribute(CU_DEVICE_ATTRIBUTE_GLOBAL_MEMORY_BUS_WIDTH);
   }
 
   // Return L2 cache size.

@@ -69,6 +69,11 @@ CUresult (*cuLaunchKernel)(CUfunction f,
                            CUstream hstream,
                            void **kernelParams,
                            void **extra);
+CUresult (*cuProfilerInitialize)(const char *config_file,
+                                 const char *output_file,
+                                 CUoutput_mode output_mode);
+CUresult (*cuProfilerStart)();
+CUresult (*cuProfilerStop)();
 
 #define LOAD_CUDA_FUNCTION(name, version) \
   name = reinterpret_cast<decltype(name)>(dlsym(cuda_lib , #name version)); \
@@ -78,9 +83,12 @@ bool LoadCUDALibrary() {
   // Try to load CUDA library.
   CHECK(cuda_lib == nullptr) << "CUDA library already loaded";
   cuda_lib = dlopen("libcuda.so", RTLD_LAZY);
+  if (cuda_lib == nullptr) {
+    cuda_lib = dlopen("/usr/lib/x86_64-linux-gnu/libcuda.so.1", RTLD_LAZY);
+  }
   if (cuda_lib == nullptr) return false;
 
-  // Resolve library functions.
+  // Resolve library qfunctions.
   LOAD_CUDA_FUNCTION(cuDriverGetVersion, "");
   LOAD_CUDA_FUNCTION(cuInit, "");
   LOAD_CUDA_FUNCTION(cuDeviceGetCount, "");
@@ -105,6 +113,9 @@ bool LoadCUDALibrary() {
   LOAD_CUDA_FUNCTION(cuStreamDestroy, "_v2");
   LOAD_CUDA_FUNCTION(cuStreamSynchronize, "");
   LOAD_CUDA_FUNCTION(cuLaunchKernel, "");
+  LOAD_CUDA_FUNCTION(cuProfilerInitialize, "");
+  LOAD_CUDA_FUNCTION(cuProfilerStart, "");
+  LOAD_CUDA_FUNCTION(cuProfilerStop, "");
 
   return true;
 }

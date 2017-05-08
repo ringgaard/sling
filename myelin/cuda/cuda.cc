@@ -48,7 +48,7 @@ CUDADevice::CUDADevice(int number) : number_(number) {
   CHECK_CUDA(cuDeviceGet(&handle_, number));
 
   // Create context for device.
-  CHECK_CUDA(cuCtxCreate(&context_, 0, handle_));
+  CHECK_CUDA(cuCtxCreate(&context_, CU_CTX_SCHED_SPIN, handle_));
 
   // Get compute capabilities.
   int minor, major;
@@ -97,14 +97,21 @@ string CUDADevice::ToString() const {
   CHECK_CUDA(cuDriverGetVersion(&version));
   string name = Name();
   size_t memory = TotalMemory();
+  int64 bandwidth = memory_transfer_rate() * (bus_width() / 8);
   string str;
-  StringAppendF(&str, "%s, SM %d.%d, %lu MB RAM, %d cores, "
-                "%d MHz clock rate, %d Mhz transfer rate, "
-                "%d KB L2 cache, API version %d.%d",
+  StringAppendF(&str, "%s, SM %d.%d, %lu MB RAM, "
+                "%d cores @ %lld MHz, "
+                "%lld GB/s bandwidth (%lld Mhz %d-bits), "
+                "%d KB L2 cache, "
+                "CUDA v%d.%d",
                 name.c_str(),
                 capability_ / 10, capability_ % 10,
-                memory >> 20, cores(),
-                clock_rate(), memory_transfer_rate(),
+                memory >> 20,
+                cores(),
+                clock_rate() / 1000000,
+                bandwidth / 1000000000,
+                memory_transfer_rate() / 1000000,
+                bus_width(),
                 l2_cache_size() >> 10,
                 version / 1000, version % 1000);
   return str;

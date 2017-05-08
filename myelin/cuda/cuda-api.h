@@ -208,10 +208,29 @@ enum CUjit_fallback {
   CU_PREFER_BINARY,
 };
 
+// CUDA context creation flags.
+enum CUctx_flags {
+  CU_CTX_SCHED_AUTO          = 0x00,
+  CU_CTX_SCHED_SPIN          = 0x01,
+  CU_CTX_SCHED_YIELD         = 0x02,
+  CU_CTX_SCHED_BLOCKING_SYNC = 0x04,
+  CU_CTX_SCHED_MASK          = 0x07,
+
+  CU_CTX_MAP_HOST            = 0x08,
+  CU_CTX_LMEM_RESIZE_TO_MAX  = 0x10,
+  CU_CTX_FLAGS_MASK          = 0x1f,
+};
+
 // CUDA stream creation flags.
 enum CUstream_flags {
   CU_STREAM_DEFAULT      = 0x0,
   CU_STREAM_NON_BLOCKING = 0x1,
+};
+
+// CUDA profiler output mode.
+enum CUoutput_mode {
+  CU_OUT_KEY_VALUE_PAIR  = 0x00,
+  CU_OUT_CSV             = 0x01,
 };
 
 // CUDA driver API functions.
@@ -273,6 +292,11 @@ extern CUresult (*cuLaunchKernel)(CUfunction f,
                                   CUstream hstream,
                                   void **kernelParams,
                                   void **extra);
+extern CUresult (*cuProfilerInitialize)(const char *config_file,
+                                       const char *output_file,
+                                       CUoutput_mode output_mode);
+extern CUresult (*cuProfilerStart)();
+extern CUresult (*cuProfilerStop)();
 
 // Load CUDA library. Return false if CUDA library not found.
 bool LoadCUDALibrary();
