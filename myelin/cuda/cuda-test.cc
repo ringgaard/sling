@@ -9,63 +9,82 @@
 using namespace sling;
 using namespace sling::myelin;
 
-const char *ptx_code = R"(
+void VectorAdd(PTXAssembler *ptx) {
+  // Declare parameters.
+  ptx_param(u64, A);
+  ptx_param(u64, B);
+  ptx_param(u64, C);
+  ptx_param(u32, N);
 
-.version 4.3
-.target sm_21
-.address_size 64
+  // Declare registers.
+  ptx_decl(pred, outside);
+  ptx_decl(b64, a);
+  ptx_decl(b64, b);
+  ptx_decl(b64, c);
+  ptx_decl(b32, n);
 
-.visible .entry vectoradd(
-  .param .u64 A,
-  .param .u64 B,
-  .param .u64 C,
-  .param .u32 N
-) {
-  .reg .pred   outside;
-  .reg .b64    a, b, c;
-  .reg .b32    n;
-  .reg .b32    blkdim, blkidx, thridx, idx;
-  .reg .b64    ofs, aptr, bptr, cptr;
-  .reg .f32    aval, bval, cval;
+  ptx_decl(b32, blkdim);
+  ptx_decl(b32, blkidx);
+  ptx_decl(b32, thridx);
+  ptx_decl(b32, idx);
 
-  ld.param.u64   a, [A];
-  ld.param.u64   b, [B];
-  ld.param.u64   c, [C];
-  ld.param.u32   n, [N];
+  ptx_decl(b64, ofs);
+  ptx_decl(b64, aptr);
+  ptx_decl(b64, bptr);
+  ptx_decl(b64, cptr);
 
-  mov.u32   blkdim, %ntid.x;
-  mov.u32   thridx, %ctaid.x;
-  mov.u32   blkidx, %tid.x;
+  ptx_decl(f32, aval);
+  ptx_decl(f32, bval);
+  ptx_decl(f32, cval);
 
-  mad.lo.s32   idx, thridx, blkdim, blkidx;
-  setp.ge.s32  outside, idx, n;
-  @outside bra   done;
+  // Load parameters.
+  ptx_emit(ld_param_u64, a, PTXAddr(A));
+  ptx_emit(ld_param_u64, b, PTXAddr(B));
+  ptx_emit(ld_param_u64, c, PTXAddr(C));
+  ptx_emit(ld_param_u32, n, PTXAddr(N));
 
-  mul.wide.s32   ofs, idx, 4;
-  add.s64   aptr, a, ofs;
-  add.s64   bptr, b, ofs;
-  add.s64   cptr, c, ofs;
+  // Get grid location.
+  ptx_emit(mov.u32, blkdim, PTXLiteral("%ntid.x"));
+  ptx_emit(mov.u32, thridx, PTXLiteral("%ctaid.x"));
+  ptx_emit(mov.u32, blkidx, PTXLiteral("%tid.x"));
 
-  ld.global.f32   aval, [aptr];
-  ld.global.f32   bval, [bptr];
-  add.f32   cval, bval, aval;
-  st.global.f32   [cptr], cval;
+  // Check bounds.
+  ptx_emit(mad_lo_s32, idx, thridx, blkdim, blkidx);
+  ptx_emit(setp_ge_s32, outside, idx, n);
+  ptx_pemit(outside, bra, PTXLiteral("done"));
 
-done:
-  ret;
+  // Compute vector addresses.
+  ptx_emit(mul_wide_s32, ofs, idx, PTXImm(4));
+  ptx_emit(add_s64, aptr, a, ofs);
+  ptx_emit(add_s64, bptr, b, ofs);
+  ptx_emit(add_s64, cptr, c, ofs);
+
+  // Compute c = a + b.
+  ptx_emit(ld_global_f32, aval, PTXAddr(aptr));
+  ptx_emit(ld_global_f32, bval, PTXAddr(bptr));
+  ptx_emit(add_f32, cval, bval, aval);
+  ptx_emit(st_global_f32, PTXAddr(cptr), cval);
+
+  // Done.
+  ptx_label(done);
+  ptx_ret();
 }
-
-)";
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
+
+  PTXAssembler ptx("vectoradd");
+  VectorAdd(&ptx);
+  string code;
+  ptx.Generate(&code);
+  std::cout << "PTX:\n" << code << "\n";
 
   LOG(INFO) << "Initialize CUDA";
   CUDADevice device(0);
   LOG(INFO) << "CUDA device: " << device.ToString();
 
   LOG(INFO) << "Load CUDA module";
-  CUDAModule module(ptx_code);
+  CUDAModule module(code.c_str());
 
   LOG(INFO) << "Get function";
   CUDAFunction vectoradd(module, "vectoradd");
@@ -135,8 +154,8 @@ int main(int argc, char *argv[]) {
                                 threads_per_block, 1, 1,
                                 0, 0, args, nullptr));
 
-      // Copy the device result vector in device memory to the host result vector
-      // in host memory.
+      // Copy the device result vector in device memory to the host result
+      // vector in host memory.
       CHECK_CUDA(cuMemcpyDtoH(h_c, d_c, size));
     }
     clock.stop();

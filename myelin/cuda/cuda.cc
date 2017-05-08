@@ -172,6 +172,107 @@ CUDAFunction::CUDAFunction(const CUDAModule &module, const char *name) {
   CHECK_CUDA(cuModuleGetFunction(&handle_, module.handle(), name));
 }
 
+void PTXLiteral::Generate(string *code) const {
+  code->append(arg_);
+}
+
+void PTXImm::Generate(string *code) const {
+  code->append(std::to_string(number_));
+}
+
+void PTXReg::Generate(string *code) const {
+  code->append(name_);
+  if (index_ != -1) code->append(std::to_string(index_));
+}
+
+void PTXAddr::Generate(string *code) const {
+  code->append("[");
+  reg_.Generate(code);
+  if (ofs_ > 0) {
+    code->append("+");
+    code->append(std::to_string(ofs_));
+  } else if (ofs_ < 0) {
+    code->append("-");
+    code->append(std::to_string(-ofs_));
+  }
+  code->append("]");
+}
+
+void PTXAssembler::Generate(string *ptx) {
+  // Generate directives.
+  ptx->clear();
+  ptx->append(".version 4.3\n");
+  ptx->append(".target sm_");
+  ptx->append(std::to_string(target_));
+  ptx->append("\n");
+  ptx->append(".address_size 64\n");
+
+  // Generate function header.
+  ptx->append(".visible .entry ");
+  ptx->append(name_);
+  ptx->append("(");
+  bool first = true;
+  for (auto &p : parameters_) {
+    if (!first) ptx->append(", ");
+    ptx->append(".param .");
+    ptx->append(p.type());
+    ptx->append(" ");
+    ptx->append(p.name());
+    if (p.index() != -1) ptx->append(std::to_string(p.index()));
+    first = false;
+  }
+  ptx->append(") {\n");
+
+  // Generate register declarations.
+  for (auto &r : registers_) {
+    ptx->append(".reg .");
+    ptx->append(r.type());
+    ptx->append(" ");
+    ptx->append(r.name());
+    if (r.index() != -1) ptx->append(std::to_string(r.index()));
+    ptx->append(";\n");
+  }
+
+  // Add code instructions.
+  ptx->append(code_);
+  ptx->append("}\n");
+}
+
+void PTXAssembler::EmitPredicate(const PTXReg &pred) {
+  code_.push_back('@');
+  pred.Generate(&code_);
+  EmitSpace();
+}
+
+void PTXAssembler::EmitInstruction(const char *instr) {
+  for (const char *p = instr; *p; ++p) {
+    code_.push_back(*p == '_' ? '.' : *p);
+  }
+  EmitSpace();
+}
+
+void PTXAssembler::EmitArg(const PTXArg &arg) {
+  arg.Generate(&code_);
+}
+
+void PTXAssembler::EmitLabel(const char *name) {
+  code_.append(name);
+  code_.append(":\n");
+}
+
+void PTXAssembler::EmitLineEnd() {
+  code_.push_back(';');
+  code_.push_back('\n');
+}
+
+void PTXAssembler::EmitSpace() {
+  code_.push_back(' ');
+}
+
+void PTXAssembler::EmitComma() {
+  code_.push_back(',');
+}
+
 }  // namespace myelin
 }  // namespace sling
 

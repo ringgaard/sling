@@ -1,6 +1,7 @@
 #ifndef MYELIN_CUDA_CUDA_H_
 #define MYELIN_CUDA_CUDA_H_
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -196,8 +197,254 @@ class CUDAFunction {
   }
 
  private:
+  // CUDA function handle.
   CUfunction handle_;
 };
+
+// PTX assembler instruction argument.
+class PTXArg {
+ public:
+  ~PTXArg() = default;
+  virtual void Generate(string *code) const = 0;
+};
+
+// PTX literal argument.
+class PTXLiteral : public PTXArg {
+ public:
+  PTXLiteral(const char *arg) : arg_(arg) {}
+
+  void Generate(string *code) const override;
+
+ private:
+  const char *arg_;
+};
+
+// PTX immediate argument.
+class PTXImm : public PTXArg {
+ public:
+  PTXImm(int number) : number_(number) {}
+
+  void Generate(string *code) const override;
+
+ private:
+  int number_;
+};
+
+// PTX register argument.
+class PTXReg : public PTXArg {
+ public:
+  PTXReg(const char *type, const char *name)
+      : type_(type), name_(name), index_(-1) {}
+  PTXReg(const char *type, const char *name, int index)
+      : type_(type), name_(name), index_(index) {}
+
+  void Generate(string *code) const override;
+
+  const char *type() const { return type_; }
+  const char *name() const { return name_; }
+  int index() const { return index_; }
+
+ private:
+  const char *type_;  // register type
+  const char *name_;  // register name
+  int index_;         // index for register arrays
+};
+
+// PTX address indirection argument.
+class PTXAddr : public PTXArg {
+ public:
+  PTXAddr(const PTXReg &reg) : reg_(reg), ofs_(0) {}
+  PTXAddr(const PTXReg &reg, int ofs) : reg_(reg), ofs_(ofs) {}
+
+  void Generate(string *code) const override;
+
+ private:
+  const PTXReg &reg_;
+  int ofs_;
+};
+
+// PTX assemlber for generating code for CUDA kernels.
+class PTXAssembler {
+ public:
+  // Initialize PTX assembler for generating code for function.
+  PTXAssembler(const string &name) : name_(name) {}
+
+  // Generate PTX code for function.
+  void Generate(string *ptx);
+
+  // Declare register.
+  PTXReg reg(const char *type, const char *name) {
+    registers_.emplace_back(type, name);
+    return registers_.back();
+  }
+
+  PTXReg reg(const char *type, const char *name, int index) {
+    registers_.emplace_back(type, name, index);
+    return registers_.back();
+  }
+
+  // Declare parameter.
+  PTXReg param(const char *type, const char *name) {
+    parameters_.emplace_back(type, name);
+    return parameters_.back();
+  }
+
+  // Emit instruction with no arguments.
+  void emit(const char *instr) {
+    EmitInstruction(instr);
+    EmitLineEnd();
+  }
+
+  // Emit instruction with one argument.
+  void emit(const char *instr, const PTXArg &arg1) {
+    EmitInstruction(instr);
+    EmitArg(arg1);
+    EmitLineEnd();
+  }
+
+  // Emit instruction with two arguments.
+  void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2) {
+    EmitInstruction(instr);
+    EmitArg(arg1);
+    EmitComma();
+    EmitArg(arg2);
+    EmitLineEnd();
+  }
+
+  // Emit instruction with three arguments.
+  void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2,
+            const PTXArg &arg3) {
+    EmitInstruction(instr);
+    EmitArg(arg1);
+    EmitComma();
+    EmitArg(arg2);
+    EmitComma();
+    EmitArg(arg3);
+    EmitLineEnd();
+  }
+
+  // Emit instruction with four arguments.
+  void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2,
+            const PTXArg &arg3, const PTXArg &arg4) {
+    EmitInstruction(instr);
+    EmitArg(arg1);
+    EmitComma();
+    EmitArg(arg2);
+    EmitComma();
+    EmitArg(arg3);
+    EmitComma();
+    EmitArg(arg4);
+    EmitLineEnd();
+  }
+
+  // Emit predicated instruction with no arguments.
+  void emit(const PTXReg &pred, const char *instr) {
+    EmitPredicate(pred);
+    EmitInstruction(instr);
+    EmitLineEnd();
+  }
+
+  // Emit predicated instruction with one argument.
+  void emit(const PTXReg &pred, const char *instr, const PTXArg &arg1) {
+    EmitPredicate(pred);
+    EmitInstruction(instr);
+    EmitArg(arg1);
+    EmitLineEnd();
+  }
+
+  // Emit predicated instruction with two arguments.
+  void emit(const PTXReg &pred, const char *instr, const PTXArg &arg1,
+            const PTXArg &arg2) {
+    EmitPredicate(pred);
+    EmitInstruction(instr);
+    EmitArg(arg1);
+    EmitComma();
+    EmitArg(arg2);
+    EmitLineEnd();
+  }
+
+  // Emit predicated instruction with three arguments.
+  void emit(const PTXReg &pred, const char *instr, const PTXArg &arg1,
+            const PTXArg &arg2, const PTXArg &arg3) {
+    EmitPredicate(pred);
+    EmitInstruction(instr);
+    EmitArg(arg1);
+    EmitComma();
+    EmitArg(arg2);
+    EmitComma();
+    EmitArg(arg3);
+    EmitLineEnd();
+  }
+
+  // Emit predicated instruction with four arguments.
+  void emit(const PTXReg &pred, const char *instr, const PTXArg &arg1,
+            const PTXArg &arg2, const PTXArg &arg3, const PTXArg &arg4) {
+    EmitPredicate(pred);
+    EmitInstruction(instr);
+    EmitArg(arg1);
+    EmitComma();
+    EmitArg(arg2);
+    EmitComma();
+    EmitArg(arg3);
+    EmitComma();
+    EmitArg(arg4);
+    EmitLineEnd();
+  }
+
+  // Declare label.
+  void label(const char *name) {
+    EmitLabel(name);
+  }
+
+  // CUDA SM target architecture.
+  int target() const { return target_; }
+  void set_target(int target) { target_ = target; }
+
+ private:
+  // Emit predicate.
+  void EmitPredicate(const PTXReg &pred);
+
+  // Emit instruction name. Underscores are replaced by periods.
+  void EmitInstruction(const char *instr);
+
+  // Emit instruction argument.
+  void EmitArg(const PTXArg &arg);
+
+  // Emit label declaration.
+  void EmitLabel(const char *name);
+
+  // Emit line termination with semicolon.
+  void EmitLineEnd();
+
+  // Emit a space character.
+  void EmitSpace();
+
+  // Emit a comma.
+  void EmitComma();
+
+  // Function name.
+  string name_;
+
+  // Target architecture.
+  int target_ = 21;
+
+  // Function parameters.
+  std::vector<PTXReg> parameters_;
+
+  // Declared registers.
+  std::vector<PTXReg> registers_;
+
+  // PTX code instruction buffer.
+  string code_;
+};
+
+// Utility macros for emitting PTX code.
+#define ptx_decl(type, name) PTXReg name = ptx->reg(#type, #name)
+#define ptx_param(type, name) PTXReg name = ptx->param(#type, #name)
+#define ptx_emit(instr, ...) ptx->emit(#instr, __VA_ARGS__)
+#define ptx_pemit(pred, instr, ...) ptx->emit(pred, #instr, __VA_ARGS__)
+#define ptx_label(name) ptx->label(#name)
+#define ptx_ret() ptx->emit("ret")
 
 }  // namespace myelin
 }  // namespace sling
