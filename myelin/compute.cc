@@ -898,6 +898,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (profiling_) {
       // Invocation counter is the first element of the timing block.
       masm.IncrementInvocations(cell->profile()->offset());
+
+      // Start runtime profiler.
+      masm.CallInstanceFunction(runtime_->StartProfilerFunc());
     }
 
     // Copy input variables that do not have the needed placement.
@@ -949,7 +952,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
         // Synchronize main task if needed before executing step.
         if (sync && step->NeedsSynchronization()) {
-          masm.FlushMainTask();
+          masm.CallInstanceFunction(runtime_->SyncMainFunc());
           sync = false;
         }
 
@@ -992,7 +995,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         if (t.state == PENDING) {
           // Flush asynchronous operations.
           if (sync) {
-            masm.FlushMainTask();
+            masm.CallInstanceFunction(runtime_->SyncMainFunc());
             sync = false;
           }
 
@@ -1034,7 +1037,14 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         task.state = COMPLETED;
       }
     }
-    if (sync) masm.FlushMainTask();
+    if (sync) {
+      masm.CallInstanceFunction(runtime_->SyncMainFunc());
+    }
+
+    // Stop runtime profiler.
+    if (profiling_) {
+      masm.CallInstanceFunction(runtime_->StopProfilerFunc());
+    }
 
     // Generate epilog for main cell computation.
     masm.Epilog();

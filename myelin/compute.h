@@ -180,6 +180,12 @@ class Runtime {
 
   // Return CUDA device used by runtime.
   virtual CUDADevice *Device() { return nullptr; }
+
+  // Return runtime function for starting profiler.
+  virtual InstanceFunc StartProfilerFunc() { return nullptr; }
+
+  // Return runtime function for stopping profiler.
+  virtual InstanceFunc StopProfilerFunc() { return nullptr; }
 };
 
 // A tensor is a multi-dimensional array that can be used for constants and
