@@ -142,7 +142,12 @@ void CUDARuntime::EmitCopyTensorToDevice(Tensor *tensor,
 
   // Set destination device address.
   masm->movq(arg_reg_2, Operand(datareg, offsetof(CUDAInstance, data)));
-  masm->addq(arg_reg_2, Immediate(tensor->device_offset()));
+  if (tensor->device_offset() != 0) {
+    masm->addq(arg_reg_2, Immediate(tensor->device_offset()));
+  }
+
+  // Set size.
+  masm->movq(arg_reg_3, Immediate(tensor->size()));
 
   // Set stream for task.
   int ofs;
@@ -153,9 +158,9 @@ void CUDARuntime::EmitCopyTensorToDevice(Tensor *tensor,
     // Parallel task stream is stored in task block.
     ofs = cell->task_offset(taskidx) + offsetof(Task, state);
   }
-  masm->movq(arg_reg_3, Operand(datareg, ofs));
+  masm->movq(arg_reg_4, Operand(datareg, ofs));
 
-  // Call cuMemcpyHtoDAsync(src, dst, stream).
+  // Call cuMemcpyHtoDAsync(src, dst, size, stream).
   Register acc = masm->rr().alloc();
   masm->movp(acc, reinterpret_cast<void *>(cuMemcpyHtoDAsync));
   masm->call(acc);
@@ -168,10 +173,15 @@ void CUDARuntime::EmitCopyTensorFromDevice(Tensor *tensor,
                                            MacroAssembler *masm) {
   // Set source device address.
   masm->movq(arg_reg_1, Operand(datareg, offsetof(CUDAInstance, data)));
-  masm->addq(arg_reg_1, Immediate(tensor->device_offset()));
+  if (tensor->device_offset() != 0) {
+    masm->addq(arg_reg_1, Immediate(tensor->device_offset()));
+  }
 
   // Set destination device address.
   masm->LoadTensorAddress(arg_reg_2, tensor);
+
+  // Set size.
+  masm->movq(arg_reg_3, Immediate(tensor->size()));
 
   // Set stream for task.
   int ofs;
@@ -182,9 +192,9 @@ void CUDARuntime::EmitCopyTensorFromDevice(Tensor *tensor,
     // Parallel task stream is stored in task block.
     ofs = cell->task_offset(taskidx) + offsetof(Task, state);
   }
-  masm->movq(arg_reg_3, Operand(datareg, ofs));
+  masm->movq(arg_reg_4, Operand(datareg, ofs));
 
-  // Call cuMemcpyDtoHAsync(src, dst, stream).
+  // Call cuMemcpyDtoHAsync(src, dst, size, stream).
   Register acc = masm->rr().alloc();
   masm->movp(acc, reinterpret_cast<void *>(cuMemcpyDtoHAsync));
   masm->call(acc);

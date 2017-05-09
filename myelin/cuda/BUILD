@@ -34,6 +34,17 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "cuda-kernel",
+  srcs = ["cuda-kernel.cc"],
+  hdrs = ["cuda-kernel.h"],
+  deps = [
+    ":cuda",
+    "//base",
+    "//myelin:compute",
+  ],
+)
+
 cc_binary(
   name = "cuda-test",
   srcs = ["cuda-test.cc"],

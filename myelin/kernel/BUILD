@@ -41,6 +41,20 @@ cc_library(
 )
 
 cc_library(
+  name = "cuda",
+  srcs = [
+    "cuda.cc",
+    "cuda-matmul.cc",
+    "cuda-operators.cc",
+  ],
+  hdrs = ["cuda.h"],
+  deps = [
+    "//myelin:compute",
+    "//myelin/cuda:cuda-kernel",
+  ],
+)
+
+cc_library(
   name = "dragnn",
   srcs = ["dragnn.cc"],
   hdrs = ["dragnn.h"],

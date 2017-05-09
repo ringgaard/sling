@@ -108,7 +108,7 @@ string CUDADevice::ToString() const {
   string str;
   StringAppendF(&str, "%s, SM %d.%d, %lu MB RAM, "
                 "%d cores @ %lld MHz, "
-                "%lld GB/s bandwidth (%lld Mhz %d-bits), "
+                "%lld GB/s bandwidth (%d-bits @ %lld Mhz), "
                 "%d KB L2 cache, "
                 "CUDA v%d.%d",
                 name.c_str(),
@@ -117,8 +117,8 @@ string CUDADevice::ToString() const {
                 cores(),
                 clock_rate() / 1000000,
                 bandwidth / 1000000000,
-                memory_transfer_rate() / 1000000,
                 bus_width(),
+                memory_transfer_rate() / 1000000,
                 l2_cache_size() >> 10,
                 version / 1000, version % 1000);
   return str;
@@ -176,6 +176,10 @@ void PTXLiteral::Generate(string *code) const {
   code->append(arg_);
 }
 
+void PTXLabel::Generate(string *code) const {
+  code->append(name_);
+}
+
 void PTXImm::Generate(string *code) const {
   code->append(std::to_string(number_));
 }
@@ -207,7 +211,19 @@ void PTXAssembler::Generate(string *ptx) {
   ptx->append("\n");
   ptx->append(".address_size 64\n");
 
-  // Generate function header.
+  // Generate source file index.
+  if (generate_line_info_) {
+    for (int i = 0; i < source_files_.size(); ++i) {
+      ptx->append(".file ");
+      ptx->append(std::to_string(i));
+      ptx->push_back(' ');
+      ptx->push_back('"');
+      ptx->append(source_files_[i]);
+      ptx->push_back('"');
+      ptx->push_back('\n');
+    }
+  }
+
   ptx->append(".visible .entry ");
   ptx->append(name_);
   ptx->append("(");
@@ -215,21 +231,32 @@ void PTXAssembler::Generate(string *ptx) {
   for (auto &p : parameters_) {
     if (!first) ptx->append(", ");
     ptx->append(".param .");
-    ptx->append(p.type());
+    ptx->append(p.reg.type());
     ptx->append(" ");
-    ptx->append(p.name());
-    if (p.index() != -1) ptx->append(std::to_string(p.index()));
+    ptx->append(p.reg.name());
+    if (p.reg.index() != -1) {
+      ptx->append(std::to_string(p.reg.index()));
+    }
     first = false;
   }
   ptx->append(") {\n");
 
   // Generate register declarations.
   for (auto &r : registers_) {
+    if (r.source != -1 && r.line != -1) {
+      ptx->append(".loc ");
+      ptx->append(std::to_string(r.source));
+      ptx->push_back(' ');
+      ptx->append(std::to_string(r.line));
+      ptx->append(" 0\n");
+    }
     ptx->append(".reg .");
-    ptx->append(r.type());
+    ptx->append(r.reg.type());
     ptx->append(" ");
-    ptx->append(r.name());
-    if (r.index() != -1) ptx->append(std::to_string(r.index()));
+    ptx->append(r.reg.name());
+    if (r.reg.index() != -1) {
+      ptx->append(std::to_string(r.reg.index()));
+    }
     ptx->append(";\n");
   }
 
@@ -238,9 +265,22 @@ void PTXAssembler::Generate(string *ptx) {
   ptx->append("}\n");
 }
 
-void PTXAssembler::EmitPredicate(const PTXReg &pred) {
+void PTXAssembler::EmitLoc(const char *source, int line) {
+  int fileno = SourceIndex(source);
+  if (fileno != -1 && line != -1) {
+    code_.append(".loc ");
+    code_.append(std::to_string(fileno));
+    code_.push_back(' ');
+    code_.append(std::to_string(line));
+    code_.append(" 0\n");
+  }
+}
+
+void PTXAssembler::EmitPredicate() {
+  if (predicate_.name() == nullptr) return;
   code_.push_back('@');
-  pred.Generate(&code_);
+  if (!condition_) code_.push_back('!');
+  predicate_.Generate(&code_);
   EmitSpace();
 }
 
@@ -271,6 +311,16 @@ void PTXAssembler::EmitSpace() {
 
 void PTXAssembler::EmitComma() {
   code_.push_back(',');
+}
+
+int PTXAssembler::SourceIndex(const char *source) {
+  if (source == nullptr) return -1;
+  if (!generate_line_info_) return -1;
+  for (int i = 0; i < source_files_.size(); ++i) {
+    if (source == source_files_[i]) return i;
+  }
+  source_files_.push_back(source);
+  return source_files_.size() - 1;
 }
 
 }  // namespace myelin

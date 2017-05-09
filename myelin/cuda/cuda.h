@@ -86,6 +86,25 @@ class CUDADevice {
     return GetAttribute(CU_DEVICE_ATTRIBUTE_L2_CACHE_SIZE);
   }
 
+  // Maximum number of threads in a block.
+  int max_threads_per_block() const {
+    return GetAttribute(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK);
+  }
+
+  // Maximum block dimensions supported by device.
+  void max_block_dim(int dims[3]) const {
+    dims[0] = GetAttribute(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X);
+    dims[1] = GetAttribute(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y);
+    dims[2] = GetAttribute(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z);
+  }
+
+  // Maximum grid dimensions supported by device.
+  void max_grid_dim(int dims[3]) const {
+    dims[0] = GetAttribute(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X);
+    dims[1] = GetAttribute(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y);
+    dims[2] = GetAttribute(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z);
+  }
+
   // Return number of cores per processor.
   int CoresPerSM() const;
 
@@ -219,6 +238,17 @@ class PTXLiteral : public PTXArg {
   const char *arg_;
 };
 
+// PTX label argument.
+class PTXLabel : public PTXArg {
+ public:
+  PTXLabel(const char *name) : name_(name) {}
+
+  void Generate(string *code) const override;
+
+ private:
+  const char *name_;
+};
+
 // PTX immediate argument.
 class PTXImm : public PTXArg {
  public:
@@ -233,6 +263,7 @@ class PTXImm : public PTXArg {
 // PTX register argument.
 class PTXReg : public PTXArg {
  public:
+  PTXReg() : type_(nullptr), name_(nullptr), index_(-1) {}
   PTXReg(const char *type, const char *name)
       : type_(type), name_(name), index_(-1) {}
   PTXReg(const char *type, const char *name, int index)
@@ -263,7 +294,7 @@ class PTXAddr : public PTXArg {
   int ofs_;
 };
 
-// PTX assemlber for generating code for CUDA kernels.
+// PTX assembler for generating code for CUDA kernels.
 class PTXAssembler {
  public:
   // Initialize PTX assembler for generating code for function.
@@ -273,37 +304,49 @@ class PTXAssembler {
   void Generate(string *ptx);
 
   // Declare register.
-  PTXReg reg(const char *type, const char *name) {
-    registers_.emplace_back(type, name);
-    return registers_.back();
+  PTXReg reg(const char *type, const char *name,
+             const char *source = nullptr, int line = -1) {
+    registers_.emplace_back(type, name, SourceIndex(source), line);
+    return registers_.back().reg;
   }
 
-  PTXReg reg(const char *type, const char *name, int index) {
-    registers_.emplace_back(type, name, index);
-    return registers_.back();
+  PTXReg reg(const char *type, const char *name, int index,
+             const char *source = nullptr, int line = -1) {
+    registers_.emplace_back(type, name, index, SourceIndex(source), line);
+    return registers_.back().reg;
   }
 
   // Declare parameter.
-  PTXReg param(const char *type, const char *name) {
-    parameters_.emplace_back(type, name);
-    return parameters_.back();
+  PTXReg param(const char *type, const char *name,
+               const char *source = nullptr, int line = -1) {
+    parameters_.emplace_back(type, name, SourceIndex(source), line);
+    return parameters_.back().reg;
   }
 
   // Emit instruction with no arguments.
-  void emit(const char *instr) {
+  void emit(const char *instr,
+            const char *source = nullptr, int line = -1) {
+    EmitLoc(source, line);
+    EmitPredicate();
     EmitInstruction(instr);
     EmitLineEnd();
   }
 
   // Emit instruction with one argument.
-  void emit(const char *instr, const PTXArg &arg1) {
+  void emit(const char *instr, const PTXArg &arg1,
+            const char *source = nullptr, int line = -1) {
+    EmitLoc(source, line);
+    EmitPredicate();
     EmitInstruction(instr);
     EmitArg(arg1);
     EmitLineEnd();
   }
 
   // Emit instruction with two arguments.
-  void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2) {
+  void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2,
+            const char *source = nullptr, int line = -1) {
+    EmitLoc(source, line);
+    EmitPredicate();
     EmitInstruction(instr);
     EmitArg(arg1);
     EmitComma();
@@ -313,7 +356,10 @@ class PTXAssembler {
 
   // Emit instruction with three arguments.
   void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2,
-            const PTXArg &arg3) {
+            const PTXArg &arg3,
+            const char *source = nullptr, int line = -1) {
+    EmitLoc(source, line);
+    EmitPredicate();
     EmitInstruction(instr);
     EmitArg(arg1);
     EmitComma();
@@ -325,61 +371,10 @@ class PTXAssembler {
 
   // Emit instruction with four arguments.
   void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2,
-            const PTXArg &arg3, const PTXArg &arg4) {
-    EmitInstruction(instr);
-    EmitArg(arg1);
-    EmitComma();
-    EmitArg(arg2);
-    EmitComma();
-    EmitArg(arg3);
-    EmitComma();
-    EmitArg(arg4);
-    EmitLineEnd();
-  }
-
-  // Emit predicated instruction with no arguments.
-  void emit(const PTXReg &pred, const char *instr) {
-    EmitPredicate(pred);
-    EmitInstruction(instr);
-    EmitLineEnd();
-  }
-
-  // Emit predicated instruction with one argument.
-  void emit(const PTXReg &pred, const char *instr, const PTXArg &arg1) {
-    EmitPredicate(pred);
-    EmitInstruction(instr);
-    EmitArg(arg1);
-    EmitLineEnd();
-  }
-
-  // Emit predicated instruction with two arguments.
-  void emit(const PTXReg &pred, const char *instr, const PTXArg &arg1,
-            const PTXArg &arg2) {
-    EmitPredicate(pred);
-    EmitInstruction(instr);
-    EmitArg(arg1);
-    EmitComma();
-    EmitArg(arg2);
-    EmitLineEnd();
-  }
-
-  // Emit predicated instruction with three arguments.
-  void emit(const PTXReg &pred, const char *instr, const PTXArg &arg1,
-            const PTXArg &arg2, const PTXArg &arg3) {
-    EmitPredicate(pred);
-    EmitInstruction(instr);
-    EmitArg(arg1);
-    EmitComma();
-    EmitArg(arg2);
-    EmitComma();
-    EmitArg(arg3);
-    EmitLineEnd();
-  }
-
-  // Emit predicated instruction with four arguments.
-  void emit(const PTXReg &pred, const char *instr, const PTXArg &arg1,
-            const PTXArg &arg2, const PTXArg &arg3, const PTXArg &arg4) {
-    EmitPredicate(pred);
+            const PTXArg &arg3, const PTXArg &arg4,
+            const char *source = nullptr, int line = -1) {
+    EmitLoc(source, line);
+    EmitPredicate();
     EmitInstruction(instr);
     EmitArg(arg1);
     EmitComma();
@@ -392,17 +387,58 @@ class PTXAssembler {
   }
 
   // Declare label.
-  void label(const char *name) {
+  void label(const char *name,
+             const char *source = nullptr, int line = -1) {
+    EmitLoc(source, line);
     EmitLabel(name);
+  }
+
+  // Set instruction predicate.
+  void pred(const PTXReg &predicate, bool condition = true) {
+    predicate_ = predicate;
+    condition_ = condition;
+  }
+
+  // Negate predicate condition.
+  void negate() {
+    condition_ = !condition_;
+  }
+
+  // Clear instruction predicate.
+  void clear() {
+    predicate_ = PTXReg();
+    condition_ = true;
   }
 
   // CUDA SM target architecture.
   int target() const { return target_; }
   void set_target(int target) { target_ = target; }
 
+  // Enable generation of source code line information in PTX code.
+  void EnableSourceLineInfo() { generate_line_info_ = true; }
+
  private:
+  // Return source index for source file name. If the source file is not in the
+  // index it will be added.
+  int SourceIndex(const char *source);
+
+  // Parameter or variable declaration.
+  struct Declaration {
+    Declaration(const char *type, const char *name, int source, int line)
+        : reg(type, name), source(source), line(line) {}
+    Declaration(const char *type, const char *name, int index,
+                int source, int line)
+        : reg(type, name, index), source(source), line(line) {}
+    PTXReg reg;
+    int source;
+    int line;
+  };
+
+  // Emit source location info.
+  void EmitLoc(const char *source, int line);
+
   // Emit predicate.
-  void EmitPredicate(const PTXReg &pred);
+  void EmitPredicate();
 
   // Emit instruction name. Underscores are replaced by periods.
   void EmitInstruction(const char *instr);
@@ -429,22 +465,43 @@ class PTXAssembler {
   int target_ = 21;
 
   // Function parameters.
-  std::vector<PTXReg> parameters_;
+  std::vector<Declaration> parameters_;
 
   // Declared registers.
-  std::vector<PTXReg> registers_;
+  std::vector<Declaration> registers_;
+
+  // Current predicate.
+  PTXReg predicate_;
+
+  // Predicate condition.
+  bool condition_ = true;
+
+  // Whether source line information is generated in PTX code.
+  bool generate_line_info_ = false;
+
+  // Source files.
+  std::vector<const char *> source_files_;
 
   // PTX code instruction buffer.
   string code_;
 };
 
 // Utility macros for emitting PTX code.
-#define ptx_decl(type, name) PTXReg name = ptx->reg(#type, #name)
-#define ptx_param(type, name) PTXReg name = ptx->param(#type, #name)
-#define ptx_emit(instr, ...) ptx->emit(#instr, __VA_ARGS__)
-#define ptx_pemit(pred, instr, ...) ptx->emit(pred, #instr, __VA_ARGS__)
-#define ptx_label(name) ptx->label(#name)
-#define ptx_ret() ptx->emit("ret")
+#define ptx_decl(type, name) PTXReg \
+  name = ptx->reg(#type, #name, __FILE__, __LINE__)
+#define ptx_param(type, name) \
+  PTXReg name = ptx->param(#type, #name, __FILE__, __LINE__)
+#define ptx_emit(instr, ...) \
+  ptx->emit(#instr, __VA_ARGS__, __FILE__, __LINE__)
+#define ptx_label(name) \
+  ptx->label(#name, __FILE__, __LINE__)
+#define ptx_ret() \
+  ptx->emit("ret", __FILE__, __LINE__)
+
+#define ptx_if(p) ptx->pred(p)
+#define ptx_ifnot(p) ptx->pred(p, false)
+#define ptx_else() ptx->negate()
+#define ptx_endif() ptx->clear()
 
 }  // namespace myelin
 }  // namespace sling

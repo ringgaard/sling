@@ -870,6 +870,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Copy constant to device if needed.
     if (tensor->placement_ & DEVICE) {
+      VLOG(5) << "Copy tensor " << tensor->name() << " to device";
       tensor->device_data_ = runtime_->CopyTensorToDevice(tensor);
       CHECK(tensor->device_data_ != DEVICE_NULL);
       tensor->AddNewPlace(DEVICE);

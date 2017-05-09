@@ -233,6 +233,9 @@ enum CUoutput_mode {
   CU_OUT_CSV             = 0x01,
 };
 
+// Per-block dynamic shared memory mapping function.
+typedef size_t (*CUoccupancyB2DSize)(int block_size);
+
 // CUDA driver API functions.
 extern CUresult (*cuDriverGetVersion)(int *version);
 extern CUresult (*cuInit)(unsigned int flags);
@@ -262,6 +265,12 @@ extern CUresult (*cuModuleGetFunction)(CUfunction *hfunc,
 extern CUresult (*cuFuncGetAttribute)(int *pi,
                                       CUfunction_attribute attrib,
                                       CUfunction hfunc);
+extern CUresult (*cuOccupancyMaxPotentialBlockSize)(int *min_grid_size,
+                                                    int *block_size,
+                                                    CUfunction func,
+                                                    CUoccupancyB2DSize msfunc,
+                                                    size_t dynamic_smem_size,
+                                                    int block_size_limit);
 extern CUresult (*cuMemAlloc)(CUdeviceptr *dptr, size_t size);
 extern CUresult (*cuMemFree)(CUdeviceptr dptr);
 extern CUresult (*cuMemcpyHtoD)(CUdeviceptr dst,

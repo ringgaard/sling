@@ -51,7 +51,9 @@ void VectorAdd(PTXAssembler *ptx) {
   // Check bounds.
   ptx_emit(mad_lo_s32, idx, thridx, blkdim, blkidx);
   ptx_emit(setp_ge_s32, outside, idx, n);
-  ptx_pemit(outside, bra, PTXLiteral("done"));
+  ptx_if(outside);
+  ptx_emit(bra, PTXLabel("done"));
+  ptx_endif();
 
   // Compute vector addresses.
   ptx_emit(mul_wide_s32, ofs, idx, PTXImm(4));
@@ -73,15 +75,17 @@ void VectorAdd(PTXAssembler *ptx) {
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
+  LOG(INFO) << "Initialize CUDA";
+  CUDADevice device(0);
+  LOG(INFO) << "CUDA device: " << device.ToString();
+
+  LOG(INFO) << "Compile PTX code";
   PTXAssembler ptx("vectoradd");
+  //ptx.EnableSourceLineInfo();
   VectorAdd(&ptx);
   string code;
   ptx.Generate(&code);
   std::cout << "PTX:\n" << code << "\n";
-
-  LOG(INFO) << "Initialize CUDA";
-  CUDADevice device(0);
-  LOG(INFO) << "CUDA device: " << device.ToString();
 
   LOG(INFO) << "Load CUDA module";
   CUDAModule module(code.c_str());

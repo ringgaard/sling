@@ -39,6 +39,12 @@ CUresult (*cuModuleGetFunction)(CUfunction *hfunc,
 CUresult (*cuFuncGetAttribute)(int *pi,
                                CUfunction_attribute attrib,
                                CUfunction hfunc);
+CUresult (*cuOccupancyMaxPotentialBlockSize)(int *min_grid_size,
+                                             int *block_size,
+                                             CUfunction func,
+                                             CUoccupancyB2DSize msfunc,
+                                             size_t dynamic_smem_size,
+                                             int block_size_limit);
 CUresult (*cuMemAlloc)(CUdeviceptr *dptr, size_t size);
 CUresult (*cuMemFree)(CUdeviceptr dptr);
 CUresult (*cuMemcpyHtoD)(CUdeviceptr dst,
@@ -103,6 +109,7 @@ bool LoadCUDALibrary() {
   LOAD_CUDA_FUNCTION(cuModuleUnload, "");
   LOAD_CUDA_FUNCTION(cuModuleGetFunction, "");
   LOAD_CUDA_FUNCTION(cuFuncGetAttribute, "");
+  LOAD_CUDA_FUNCTION(cuOccupancyMaxPotentialBlockSize, "");
   LOAD_CUDA_FUNCTION(cuMemAlloc, "_v2");
   LOAD_CUDA_FUNCTION(cuMemFree, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyHtoD, "_v2");
