@@ -21,9 +21,12 @@
 namespace sling {
 namespace myelin {
 
-static const char *divider = "+---------+-------------+------------+------"
-                             "----------------------+---+-------------------\n";
-static const char *header = "| percent |     time    |     cycles | kernel"
+static const char *divider = "+---------+-------------+------------+--------"
+                             "+----------------------------"
+                             "+---+------------------------\n";
+
+static const char *header = "| percent |     time    |     cycles | gflops |"
+                            " kernel"
                             "                     | t | step\n";
 
 Profile::Profile(Instance *instance) : instance_(instance) {
@@ -34,11 +37,16 @@ Profile::Profile(Instance *instance) : instance_(instance) {
     invocations_ = *data;
     timing_ = data + 1;
     total_ = 0;
-    for (int i = 0; i < steps(); ++i) total_ += timing_[i];
+    total_complexity_ = 0;
+    for (int i = 0; i < steps(); ++i) {
+      total_ += timing_[i];
+      total_complexity_ += complexity(i);
+    }
     tasks_ = reinterpret_cast<TaskTiming *>(timing_ + steps());
   } else {
     invocations_ = 0;
     total_ = 0;
+    total_complexity_ = 0;
     timing_ = nullptr;
     tasks_ = nullptr;
   }
@@ -52,9 +60,10 @@ string Profile::ASCIIReport() const {
   jit::ProcessorInformation cpu;
   string report;
   StringAppendF(&report,
-      "Profile for %lld invocations of %s\n",
+      "Profile for %lld invocations of %s with %lld operations\n",
       invocations_,
-      instance_->cell()->name().c_str());
+      instance_->cell()->name().c_str(),
+      complexity());
   StringAppendF(&report, "CPU model: %s\n", cpu.brand());
   StringAppendF(&report,
       "CPU architecture: %s (family %02x model %02x stepping %02x)\n",
@@ -84,8 +93,9 @@ string Profile::ASCIIReport() const {
     if (step(i)->task_index() != -1) {
       tid = StringPrintf("%2d", step(i)->cell()->task(step(i)->task_index()));
     }
-    StringAppendF(&report, "| %6.2f%% | %8.3f us | %10lld | %-27s|%-2s | %s\n",
-                  percent(i), time(i), cycles(i),
+    StringAppendF(&report,
+                  "| %6.2f%% | %8.3f us | %10lld | %6.3f | %-27s|%-2s | %s\n",
+                  percent(i), time(i), cycles(i), gigaflops(i),
                   step(i)->kernel()->Name().c_str(),
                   tid.c_str(),
                   step(i)->name().c_str());
@@ -94,8 +104,8 @@ string Profile::ASCIIReport() const {
   // Output totals.
   report.append(divider);
   StringAppendF(&report,
-                "| 100.00%% | %8.3f us | %10lld | %-27s|   |\n",
-                time(), cycles(), "TOTAL");
+                "| 100.00%% | %8.3f us | %10lld | %6.3f | %-27s|   |\n",
+                time(), cycles(), gigaflops(), "TOTAL");
   report.append(divider);
 
   // Output task timing.
@@ -139,6 +149,28 @@ string Profile::ASCIIReport() const {
   }
 
   return report;
+}
+
+int64 Profile::Complexity(const Step *step) {
+  // Check if the kernel can compute the number of operations for step.
+  int64 ops = step->complexity();
+
+  // If the kernel does not support complexity calculation the number of
+  // operations are estimated using the largest input or output.
+  if (ops == -1) {
+    ops = 1;
+    for (auto &input : step->inputs()) {
+      int size = input->elements();
+      if (size > ops) ops = size;
+    }
+    for (auto &output : step->outputs()) {
+      int size = output->elements();
+      if (size > ops) ops = size;
+    }
+    LOG(WARNING) << "Estimated complexity for step " << step->name();
+  }
+
+  return ops;
 }
 
 }  // namespace myelin
