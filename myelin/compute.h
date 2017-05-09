@@ -74,6 +74,9 @@ class Kernel {
 
   // Generate code for step.
   virtual void Generate(Step *step, MacroAssembler *masm) = 0;
+
+  // Number of numeric operations kernel performs for step.
+  virtual int Complexity(const Step *step) { return -1; }
 };
 
 // Library of kernels for implemeting operations.
@@ -434,6 +437,9 @@ class Step {
 
   // Kernel used for generating code for step.
   Kernel *kernel() const { return kernel_; }
+
+  // Return the complexity of the cell, i.e. number of numeric operations.
+  int complexity() const { return kernel_->Complexity(this); }
 
   // Cell that this step belongs to.
   Cell *cell() const { return cell_; }
