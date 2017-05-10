@@ -40,6 +40,7 @@ cc_library(
   hdrs = ["cuda-kernel.h"],
   deps = [
     ":cuda",
+    ":cuda-runtime",
     "//base",
     "//myelin:compute",
   ],

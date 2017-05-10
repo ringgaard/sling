@@ -31,13 +31,18 @@ class CUDAFltBinaryOperator : public CUDAKernel {
     if (c->type() != DT_FLOAT) return false;
 
     // Input and output must have same number of elements.
-    if (a->shape().elements() != c->shape().elements()) return false;
-    if (b->shape().elements() != c->shape().elements()) return false;
+    if (a->elements() != c->elements()) return false;
+    if (b->elements() != c->elements()) return false;
 
     return true;
   }
 
   void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
+    Tensor *a = step->input(0);
+    //Tensor *b = step->input(1);
+    //Tensor *c = step->output(0);
+
+    ptx->set_grid_dim(0, a->elements());
     ptx_ret();
   }
 

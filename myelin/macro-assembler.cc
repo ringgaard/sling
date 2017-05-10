@@ -173,7 +173,7 @@ void MacroAssembler::LoopStart(jit::Label *label) {
 
 void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor) {
   if (tensor->IsConstant()) {
-    movp(dst, static_cast<void *>(tensor->data()));
+    movp(dst, tensor->data());
     if (tensor->ref()) {
       movq(dst, Operand(dst));
     }

@@ -15,6 +15,9 @@ class PTXMacroAssembler : public PTXAssembler {
  public:
   PTXMacroAssembler(const string &name);
 
+  // Parameter register for data parameter.
+  const PTXReg &data() const { return data_; }
+
   // Grid size for kernel.
   int grid_dim(int d) const { return grid_dim_[d]; }
   void set_grid_dim(int d, int size) { grid_dim_[d] = size; }
@@ -23,6 +26,9 @@ class PTXMacroAssembler : public PTXAssembler {
   int grid_size() const { return grid_dim_[0] * grid_dim_[1] * grid_dim_[2]; }
 
  private:
+  // Data instance parameter.
+  PTXReg data_;
+
   // Grid size for x, y, and z dimension.
   int grid_dim_[3];
 };

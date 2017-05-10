@@ -137,14 +137,14 @@ void CUDARuntime::EmitCopyTensorToDevice(Tensor *tensor,
                                          Cell *cell,
                                          int taskidx,
                                          MacroAssembler *masm) {
-  // Set source host address.
-  masm->LoadTensorAddress(arg_reg_1, tensor);
-
   // Set destination device address.
-  masm->movq(arg_reg_2, Operand(datareg, offsetof(CUDAInstance, data)));
+  masm->movq(arg_reg_1, Operand(datareg, offsetof(CUDAInstance, data)));
   if (tensor->device_offset() != 0) {
-    masm->addq(arg_reg_2, Immediate(tensor->device_offset()));
+    masm->addq(arg_reg_1, Immediate(tensor->device_offset()));
   }
+
+  // Set source host address.
+  masm->LoadTensorAddress(arg_reg_2, tensor);
 
   // Set size.
   masm->movq(arg_reg_3, Immediate(tensor->size()));
@@ -171,14 +171,14 @@ void CUDARuntime::EmitCopyTensorFromDevice(Tensor *tensor,
                                            Cell *cell,
                                            int taskidx,
                                            MacroAssembler *masm) {
-  // Set source device address.
-  masm->movq(arg_reg_1, Operand(datareg, offsetof(CUDAInstance, data)));
-  if (tensor->device_offset() != 0) {
-    masm->addq(arg_reg_1, Immediate(tensor->device_offset()));
-  }
-
   // Set destination device address.
-  masm->LoadTensorAddress(arg_reg_2, tensor);
+  masm->LoadTensorAddress(arg_reg_1, tensor);
+
+  // Set source device address.
+  masm->movq(arg_reg_2, Operand(datareg, offsetof(CUDAInstance, data)));
+  if (tensor->device_offset() != 0) {
+    masm->addq(arg_reg_2, Immediate(tensor->device_offset()));
+  }
 
   // Set size.
   masm->movq(arg_reg_3, Immediate(tensor->size()));

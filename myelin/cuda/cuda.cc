@@ -205,7 +205,7 @@ void PTXAddr::Generate(string *code) const {
 void PTXAssembler::Generate(string *ptx) {
   // Generate directives.
   ptx->clear();
-  ptx->append(".version 4.3\n");
+  ptx->append(".version 5.0\n");
   ptx->append(".target sm_");
   ptx->append(std::to_string(target_));
   ptx->append("\n");
