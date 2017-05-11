@@ -165,6 +165,7 @@ void CUDARuntime::EmitCopyTensorToDevice(Tensor *tensor,
   masm->movp(acc, reinterpret_cast<void *>(cuMemcpyHtoDAsync));
   masm->call(acc);
   masm->rr().release(acc);
+  EmitStatusCheck("cuMemcpyHtoDAsync", masm);
 }
 
 void CUDARuntime::EmitCopyTensorFromDevice(Tensor *tensor,
@@ -199,6 +200,25 @@ void CUDARuntime::EmitCopyTensorFromDevice(Tensor *tensor,
   masm->movp(acc, reinterpret_cast<void *>(cuMemcpyDtoHAsync));
   masm->call(acc);
   masm->rr().release(acc);
+  EmitStatusCheck("cuMemcpyDtoHAsync", masm);
+}
+
+void CUDAErrorHandler(int error, const char *msg) {
+  LOG(FATAL) << "CUDA error " << error << ": " << msg;
+}
+
+void CUDARuntime::EmitStatusCheck(const char *msg, MacroAssembler *masm) {
+#if !defined(NDEBUG)
+  // Return code from CUDA function is in rax.
+  Label l;
+  masm->cmpq(rax, Immediate(0));
+  masm->j(equal, &l);
+  masm->movq(arg_reg_1, rax);
+  masm->movp(arg_reg_2, const_cast<char *>(msg));
+  masm->movp(r10, reinterpret_cast<void *>(CUDAErrorHandler));
+  masm->call(r10);
+  masm->bind(&l);
+#endif
 }
 
 }  // namespace myelin

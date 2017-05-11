@@ -133,6 +133,7 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
   __ movp(tmpreg, reinterpret_cast<void *>(cuLaunchKernel));
   __ call(tmpreg);
   __ addq(rsp, Immediate(7 * 8));
+  CUDARuntime::EmitStatusCheck("cuLaunchKernel", masm);
 }
 
 }  // namespace myelin

@@ -60,6 +60,9 @@ class CUDARuntime : public Runtime {
                                 int taskidx,
                                 MacroAssembler *masm) override;
 
+  // Emit code for CUDA status check. This is only done for debug builds.
+  static void EmitStatusCheck(const char *msg, MacroAssembler *masm);
+
  private:
   // CUDA device for computations.
   CUDADevice *device_;
