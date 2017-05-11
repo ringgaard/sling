@@ -314,6 +314,10 @@ class Tensor {
     current_placement_ = static_cast<Placement>(current_placement_ | place);
   }
 
+  // Return the task index for consumers of this tensor or -1 if tensor is
+  // consumed by operations in multiple tasks.
+  int ConsumerTask() const;
+
   // Return scalar value.
   template<typename T> T value() const { return *reinterpret_cast<T *>(data_); }
 

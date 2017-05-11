@@ -199,6 +199,19 @@ bool Tensor::HasSameShape(const Tensor *other) const {
   return shape() == other->shape();
 }
 
+int Tensor::ConsumerTask() const {
+  int consumer_task = -2;
+  for (Step *step : consumers_) {
+    if (consumer_task == -2) {
+      consumer_task = step->task_index();
+    } else if (consumer_task != step->task_index()) {
+      // Tensor is consumed by steps in different tasks.
+      return -1;
+    }
+  }
+  return consumer_task == -2 ? -1 : consumer_task;
+}
+
 string Tensor::TypeString() const {
   string str;
   if (ref_) str.append("&");
@@ -904,22 +917,23 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       masm.CallInstanceFunction(runtime_->StartProfilerFunc());
     }
 
-    // Copy input variables that do not have the needed placement.
+    // Copy input variables that do not have the placement required by the
+    // consumers.
     bool sync = false;
     for (Tensor *tensor : parameters_) {
       if (tensor->cell_ != cell) continue;
       if (tensor->placement_ == EVERYWHERE) {
+        int task = tensor->ConsumerTask();
         if (tensor->current_placement_ == HOST) {
           // Copy parameter tensor from host to device.
-          runtime_->EmitCopyTensorToDevice(tensor, cell, -1, &masm);
+          runtime_->EmitCopyTensorToDevice(tensor, cell, task, &masm);
           tensor->AddNewPlace(DEVICE);
-          sync = true;
         } else if (tensor->current_placement_ == DEVICE) {
           // Copy parameter tensor from device to host.
-          runtime_->EmitCopyTensorFromDevice(tensor, cell, -1, &masm);
+          runtime_->EmitCopyTensorFromDevice(tensor, cell, task, &masm);
           tensor->AddNewPlace(HOST);
-          sync = true;
         }
+        if (task == -1) sync = true;
       }
     }
 
@@ -965,21 +979,22 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         masm.rr().reset();
         masm.mm().reset();
 
-        // Copy outputs that do not have the needed placement.
+        // Copy outputs that do not have the placement required by the
+        // consumers.
         for (Tensor *output : step->outputs_) {
           output->AddNewPlace(step->placement());
           if (output->placement_ == EVERYWHERE) {
+            int task = output->ConsumerTask();
             if (output->current_placement_ == HOST) {
               // Copy output from host to device.
-              runtime_->EmitCopyTensorToDevice(output, cell, -1, &masm);
+              runtime_->EmitCopyTensorToDevice(output, cell, task, &masm);
               output->AddNewPlace(DEVICE);
-              sync = true;
             } else if (output->current_placement_ == DEVICE) {
               // Copy output from device to host.
-              runtime_->EmitCopyTensorFromDevice(output, cell, -1, &masm);
+              runtime_->EmitCopyTensorFromDevice(output, cell, task, &masm);
               output->AddNewPlace(HOST);
-              sync = true;
             }
+            if (task == -1) sync = true;
           }
         }
 
@@ -1071,7 +1086,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
           masm.rr().reset();
           masm.mm().reset();
 
-          // Copy outputs that do not have the needed placement.
+          // Copy outputs that do not have the placement required by the
+          // consumers.
           for (Tensor *output : step->outputs_) {
             if (output->deferred_placement_ == DEVICE) {
               // Copy output from host to device.
