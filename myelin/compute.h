@@ -297,7 +297,12 @@ class Tensor {
   int index(int r, int c) const { return offset(r, c) / element_size(); }
 
   // Check if tensor is a constant.
-  bool IsConstant() const { return data_ != nullptr; }
+  bool IsConstant() const {
+    return data_ != nullptr || device_data_ != DEVICE_NULL;
+  }
+
+  // Return tensor placement.
+  Placement placement() const { return placement_; }
 
   // Add location for placement.
   void AddPlace(Placement place) {

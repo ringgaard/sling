@@ -23,7 +23,9 @@ static Register tmpreg = r10;
 PTXMacroAssembler::PTXMacroAssembler(const string &name): PTXAssembler(name) {
   // Kernel functions take one parameter with the address of the device data
   // instance block.
-  data_ = param("u64", "data");
+  PTXReg instance = param("b64", "instance");
+  data_ = reg("b64", "data");
+  emit("ld_param_b64", data_, PTXAddr(instance));
 
   // Grid size for kernel.
   grid_dim_[0] = 1;
@@ -48,6 +50,7 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
   GeneratePTX(step, &ptx);
   string code;
   ptx.Generate(&code);
+  VLOG(6) << step->name() << " PTX code:\n" << code;
 
   // Compile PTX into a CUDA module.
   CUDAModule *module = device->Compile(code.c_str());

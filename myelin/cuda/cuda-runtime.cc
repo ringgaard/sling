@@ -147,7 +147,7 @@ void CUDARuntime::EmitCopyTensorToDevice(Tensor *tensor,
   masm->LoadTensorAddress(arg_reg_2, tensor);
 
   // Set size.
-  masm->movq(arg_reg_3, Immediate(tensor->size()));
+  masm->movq(arg_reg_3, Immediate(tensor->space()));
 
   // Set stream for task.
   int ofs;
@@ -181,7 +181,7 @@ void CUDARuntime::EmitCopyTensorFromDevice(Tensor *tensor,
   }
 
   // Set size.
-  masm->movq(arg_reg_3, Immediate(tensor->size()));
+  masm->movq(arg_reg_3, Immediate(tensor->space()));
 
   // Set stream for task.
   int ofs;

@@ -38,11 +38,79 @@ class CUDAFltBinaryOperator : public CUDAKernel {
   }
 
   void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
+    // Get input and output tensors.
     Tensor *a = step->input(0);
-    //Tensor *b = step->input(1);
-    //Tensor *c = step->output(0);
+    Tensor *b = step->input(1);
+    Tensor *c = step->output(0);
+    int n = a->elements();
 
-    ptx->set_grid_dim(0, a->elements());
+    // Set grid size. Use one thread for each element.
+    ptx->set_grid_dim(0, n);
+
+    // Get grid location.
+    ptx_decl(b32, blkdim);
+    ptx_decl(b32, blkidx);
+    ptx_decl(b32, thridx);
+    ptx_emit(mov.u32, blkdim, PTXLiteral("%ntid.x"));
+    ptx_emit(mov.u32, thridx, PTXLiteral("%ctaid.x"));
+    ptx_emit(mov.u32, blkidx, PTXLiteral("%tid.x"));
+    ptx_decl(b32, idx);
+    ptx_emit(mad_lo_s32, idx, thridx, blkdim, blkidx);
+
+    // Check bounds.
+    ptx_decl(pred, outside);
+    ptx_emit(setp_ge_s32, outside, idx, PTXImm(n));
+    ptx_if(outside);
+    ptx_emit(bra, PTXLabel("done"));
+    ptx_endif();
+
+    // Compute element address.
+    ptx_decl(u64, addr);
+    ptx_emit(mad_wide_s32, addr, idx, PTXImm(sizeof(float)), ptx->data());
+
+    // Read value from a.
+    ptx_decl(f32, aval);
+    if (a->IsConstant()) {
+      ptx_decl(u64, aptr);
+      ptx_emit(mad_wide_s32, aptr, idx, PTXImm(sizeof(float)),
+               PTXImm(a->device_data()));
+      ptx_emit(ld_global_f32, aval, PTXAddr(aptr));
+    } else {
+      ptx_emit(ld_global_f32, aval, PTXAddr(addr, a->device_offset()));
+    }
+
+    // Read value from b.
+    ptx_decl(f32, bval);
+    if (b->IsConstant()) {
+      ptx_decl(u64, bptr);
+      ptx_emit(mad_wide_s32, bptr, idx, PTXImm(sizeof(float)),
+               PTXImm(b->device_data()));
+      ptx_emit(ld_global_f32, bval, PTXAddr(bptr));
+    } else {
+      ptx_emit(ld_global_f32, bval, PTXAddr(addr, b->device_offset()));
+    }
+
+    // Compute c = f(a, b).
+    ptx_decl(f32, cval);
+    switch (op_) {
+      case ADD:
+        ptx_emit(add_f32, cval, aval, bval);
+        break;
+
+      case SUB:
+        ptx_emit(sub_f32, cval, aval, bval);
+        break;
+
+      case MUL:
+        ptx_emit(mul_f32, cval, aval, bval);
+        break;
+    }
+
+    // Store result in c.
+    ptx_emit(st_global_f32, PTXAddr(addr, c->device_offset()), cval);
+
+    // Done.
+    ptx_label(done);
     ptx_ret();
   }
 
@@ -95,8 +163,7 @@ class CUDAIntBinaryOperator : public CUDAKernel {
     Tensor *c = step->output(0);
 
     // Check type.
-    if (a->type() != DT_INT8 &&
-        a->type() != DT_INT16 &&
+    if (a->type() != DT_INT16 &&
         a->type() != DT_INT32 &&
         a->type() != DT_INT64) {
       return false;
@@ -108,13 +175,88 @@ class CUDAIntBinaryOperator : public CUDAKernel {
     if (a->shape().elements() != c->shape().elements()) return false;
     if (b->shape().elements() != c->shape().elements()) return false;
 
-    // Only add and subtract supported.
-    if (op_ != ADD && op_ != SUB) return false;
-
     return true;
   }
 
   void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
+    // Get input and output tensors.
+    Tensor *a = step->input(0);
+    Tensor *b = step->input(1);
+    Tensor *c = step->output(0);
+    int n = a->elements();
+    Type type = a->type();
+    const TypeTraits &traits = TypeTraits::of(type);
+
+    // Set grid size. Use one thread for each element.
+    ptx->set_grid_dim(0, n);
+
+    // Get grid location.
+    ptx_decl(b32, blkdim);
+    ptx_decl(b32, blkidx);
+    ptx_decl(b32, thridx);
+    ptx_emit(mov.u32, blkdim, PTXLiteral("%ntid.x"));
+    ptx_emit(mov.u32, thridx, PTXLiteral("%ctaid.x"));
+    ptx_emit(mov.u32, blkidx, PTXLiteral("%tid.x"));
+    ptx_decl(b32, idx);
+    ptx_emit(mad_lo_s32, idx, thridx, blkdim, blkidx);
+
+    // Check bounds.
+    ptx_decl(pred, outside);
+    ptx_emit(setp_ge_s32, outside, idx, PTXImm(n));
+    ptx_if(outside);
+    ptx_emit(bra, PTXLabel("done"));
+    ptx_endif();
+
+    // Compute element address.
+    ptx_decl(u64, addr);
+    ptx_emit(mad_wide_s32, addr, idx, PTXImm(traits.size()), ptx->data());
+
+    // Read value from a.
+    PTXReg aval = ptx->reg(traits.ptx(), "aval");
+    if (a->IsConstant()) {
+      ptx_decl(u64, aptr);
+      ptx_emit(mad_wide_s32, aptr, idx, PTXImm(sizeof(float)),
+               PTXImm(a->device_data()));
+      ptx->emit(PTXInstr("ld_global", traits.ptx()), aval, PTXAddr(aptr));
+    } else {
+      ptx->emit(PTXInstr("ld_global", traits.ptx()), aval,
+                PTXAddr(addr, a->device_offset()));
+    }
+
+    // Read value from b.
+    PTXReg bval = ptx->reg(traits.ptx(), "bval");
+    if (b->IsConstant()) {
+      ptx_decl(u64, bptr);
+      ptx_emit(mad_wide_s32, bptr, idx, PTXImm(sizeof(float)),
+               PTXImm(b->device_data()));
+      ptx->emit(PTXInstr("ld_global", traits.ptx()), bval, PTXAddr(bptr));
+    } else {
+      ptx->emit(PTXInstr("ld_global", traits.ptx()), bval,
+                PTXAddr(addr, b->device_offset()));
+    }
+
+    // Compute c = f(a, b).
+    PTXReg cval = ptx->reg(traits.ptx(), "cval");
+    switch (op_) {
+      case ADD:
+        ptx->emit(PTXInstr("add", traits.ptx()), cval, aval, bval);
+        break;
+
+      case SUB:
+        ptx->emit(PTXInstr("sub", traits.ptx()), cval, aval, bval);
+        break;
+
+      case MUL:
+        ptx->emit(PTXInstr("mul", traits.ptx()), cval, aval, bval);
+        break;
+    }
+
+    // Store result in c.
+    ptx->emit(PTXInstr("st_global", traits.ptx()),
+              PTXAddr(addr, c->device_offset()), cval);
+
+    // Done.
+    ptx_label(done);
     ptx_ret();
   }
 
@@ -142,6 +284,14 @@ class CUDAIntSub : public CUDAIntBinaryOperator {
   string Operation() override { return "Sub"; }
 };
 
+// Element-wise integer multiply using CUDA.
+class CUDAIntMul : public CUDAIntBinaryOperator {
+ public:
+  CUDAIntMul() : CUDAIntBinaryOperator(SUB) {}
+  string Name() override { return "CUDAIntMul"; }
+  string Operation() override { return "Mul"; }
+};
+
 void RegisterCUDAOperators(Library *library) {
   // Computes  : c = a + b element-wise
   // Input     : a: float32[d1,...,dn]
@@ -165,18 +315,25 @@ void RegisterCUDAOperators(Library *library) {
   library->Register(new CUDAFltMul());
 
   // Computes  : c = a + b element-wise
-  // Input     : a: int8/16/32/64[d1,...,dn]
-  //             b: int8/16/32/64[d1,...,dn]
-  // Output    : c: int8/16/32/64[d1,...,dn]
+  // Input     : a: int16/32/64[d1,...,dn]
+  //             b: int16/32/64[d1,...,dn]
+  // Output    : c: int16/32/64[d1,...,dn]
   // Requires  : CUDA
   library->Register(new CUDAIntAdd());
 
   // Computes  : c = a - b element-wise
-  // Input     : a: int8/16/32/64[d1,...,dn]
-  //             b: int8/16/32/64[d1,...,dn]
-  // Output    : c: int8/16/32/64[d1,...,dn]
+  // Input     : a: int16/32/64[d1,...,dn]
+  //             b: int16/32/64[d1,...,dn]
+  // Output    : c: int16/32/64[d1,...,dn]
   // Requires  : CUDA
   library->Register(new CUDAIntSub());
+
+  // Computes  : c = a * b element-wise
+  // Input     : a: int16/32/64[d1,...,dn]
+  //             b: int16/32/64[d1,...,dn]
+  // Output    : c: int16/32/64[d1,...,dn]
+  // Requires  : CUDA
+  library->Register(new CUDAIntMul());
 }
 
 }  // namespace myelin

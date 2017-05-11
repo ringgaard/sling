@@ -191,13 +191,19 @@ void PTXReg::Generate(string *code) const {
 
 void PTXAddr::Generate(string *code) const {
   code->append("[");
-  reg_.Generate(code);
-  if (ofs_ > 0) {
-    code->append("+");
-    code->append(std::to_string(ofs_));
-  } else if (ofs_ < 0) {
-    code->append("-");
-    code->append(std::to_string(-ofs_));
+  if (reg_.none()) {
+    // Absolute address.
+    code->append(std::to_string(static_cast<uint64>(disp_)));
+  } else {
+    // Register addressing with optional displacement.
+    reg_.Generate(code);
+    if (disp_ > 0) {
+      code->append("+");
+      code->append(std::to_string(disp_));
+    } else if (disp_ < 0) {
+      code->append("-");
+      code->append(std::to_string(-disp_));
+    }
   }
   code->append("]");
 }
@@ -284,9 +290,13 @@ void PTXAssembler::EmitPredicate() {
   EmitSpace();
 }
 
-void PTXAssembler::EmitInstruction(const char *instr) {
-  for (const char *p = instr; *p; ++p) {
+void PTXAssembler::EmitInstruction(const PTXInstr &instr) {
+  for (const char *p = instr.op(); *p; ++p) {
     code_.push_back(*p == '_' ? '.' : *p);
+  }
+  if (instr.type() != nullptr) {
+    code_.push_back('.');
+    code_.append(instr.type());
   }
   EmitSpace();
 }

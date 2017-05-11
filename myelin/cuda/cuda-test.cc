@@ -11,57 +11,52 @@ using namespace sling::myelin;
 
 void VectorAdd(PTXAssembler *ptx) {
   // Declare parameters.
-  ptx_param(u64, A);
-  ptx_param(u64, B);
-  ptx_param(u64, C);
+  ptx_param(b64, A);
+  ptx_param(b64, B);
+  ptx_param(b64, C);
   ptx_param(u32, N);
 
-  // Declare registers.
-  ptx_decl(pred, outside);
+  // Load parameters.
   ptx_decl(b64, a);
   ptx_decl(b64, b);
   ptx_decl(b64, c);
   ptx_decl(b32, n);
-
-  ptx_decl(b32, blkdim);
-  ptx_decl(b32, blkidx);
-  ptx_decl(b32, thridx);
-  ptx_decl(b32, idx);
-
-  ptx_decl(b64, ofs);
-  ptx_decl(b64, aptr);
-  ptx_decl(b64, bptr);
-  ptx_decl(b64, cptr);
-
-  ptx_decl(f32, aval);
-  ptx_decl(f32, bval);
-  ptx_decl(f32, cval);
-
-  // Load parameters.
-  ptx_emit(ld_param_u64, a, PTXAddr(A));
-  ptx_emit(ld_param_u64, b, PTXAddr(B));
-  ptx_emit(ld_param_u64, c, PTXAddr(C));
+  ptx_emit(ld_param_b64, a, PTXAddr(A));
+  ptx_emit(ld_param_b64, b, PTXAddr(B));
+  ptx_emit(ld_param_b64, c, PTXAddr(C));
   ptx_emit(ld_param_u32, n, PTXAddr(N));
 
   // Get grid location.
+  ptx_decl(b32, blkdim);
+  ptx_decl(b32, blkidx);
+  ptx_decl(b32, thridx);
   ptx_emit(mov.u32, blkdim, PTXLiteral("%ntid.x"));
   ptx_emit(mov.u32, thridx, PTXLiteral("%ctaid.x"));
   ptx_emit(mov.u32, blkidx, PTXLiteral("%tid.x"));
 
   // Check bounds.
+  ptx_decl(b32, idx);
   ptx_emit(mad_lo_s32, idx, thridx, blkdim, blkidx);
+  ptx_decl(pred, outside);
   ptx_emit(setp_ge_s32, outside, idx, n);
   ptx_if(outside);
   ptx_emit(bra, PTXLabel("done"));
   ptx_endif();
 
   // Compute vector addresses.
+  ptx_decl(b64, ofs);
   ptx_emit(mul_wide_s32, ofs, idx, PTXImm(4));
+  ptx_decl(b64, aptr);
   ptx_emit(add_s64, aptr, a, ofs);
+  ptx_decl(b64, bptr);
   ptx_emit(add_s64, bptr, b, ofs);
+  ptx_decl(b64, cptr);
   ptx_emit(add_s64, cptr, c, ofs);
 
   // Compute c = a + b.
+  ptx_decl(f32, aval);
+  ptx_decl(f32, bval);
+  ptx_decl(f32, cval);
   ptx_emit(ld_global_f32, aval, PTXAddr(aptr));
   ptx_emit(ld_global_f32, bval, PTXAddr(bptr));
   ptx_emit(add_f32, cval, bval, aval);

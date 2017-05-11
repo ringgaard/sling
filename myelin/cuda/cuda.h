@@ -220,6 +220,20 @@ class CUDAFunction {
   CUfunction handle_;
 };
 
+// PTX assembler instruction.
+class PTXInstr {
+ public:
+  PTXInstr(const char *op) : op_(op), type_(nullptr) {}
+  PTXInstr(const char *op, const char *type) : op_(op), type_(type) {}
+
+  const char *op() const { return op_; }
+  const char *type() const { return type_; }
+
+ private:
+  const char *op_;
+  const char *type_;
+};
+
 // PTX assembler instruction argument.
 class PTXArg {
  public:
@@ -252,12 +266,12 @@ class PTXLabel : public PTXArg {
 // PTX immediate argument.
 class PTXImm : public PTXArg {
  public:
-  PTXImm(int number) : number_(number) {}
+  PTXImm(int64 number) : number_(number) {}
 
   void Generate(string *code) const override;
 
  private:
-  int number_;
+  int64 number_;
 };
 
 // PTX register argument.
@@ -274,6 +288,7 @@ class PTXReg : public PTXArg {
   const char *type() const { return type_; }
   const char *name() const { return name_; }
   int index() const { return index_; }
+  bool none() const { return name_ == nullptr; }
 
  private:
   const char *type_;  // register type
@@ -284,14 +299,15 @@ class PTXReg : public PTXArg {
 // PTX address indirection argument.
 class PTXAddr : public PTXArg {
  public:
-  PTXAddr(const PTXReg &reg) : reg_(reg), ofs_(0) {}
-  PTXAddr(const PTXReg &reg, int ofs) : reg_(reg), ofs_(ofs) {}
+  PTXAddr(const PTXReg &reg) : reg_(reg), disp_(0) {}
+  PTXAddr(const PTXReg &reg, int64 disp) : reg_(reg), disp_(disp) {}
+  PTXAddr(int64 disp) : reg_(), disp_(disp) {}
 
   void Generate(string *code) const override;
 
  private:
-  const PTXReg &reg_;
-  int ofs_;
+  const PTXReg reg_;
+  int64 disp_;
 };
 
 // PTX assembler for generating code for CUDA kernels.
@@ -324,7 +340,7 @@ class PTXAssembler {
   }
 
   // Emit instruction with no arguments.
-  void emit(const char *instr,
+  void emit(const PTXInstr &instr,
             const char *source = nullptr, int line = -1) {
     EmitLoc(source, line);
     EmitPredicate();
@@ -333,7 +349,7 @@ class PTXAssembler {
   }
 
   // Emit instruction with one argument.
-  void emit(const char *instr, const PTXArg &arg1,
+  void emit(const PTXInstr &instr, const PTXArg &arg1,
             const char *source = nullptr, int line = -1) {
     EmitLoc(source, line);
     EmitPredicate();
@@ -343,7 +359,7 @@ class PTXAssembler {
   }
 
   // Emit instruction with two arguments.
-  void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2,
+  void emit(const PTXInstr &instr, const PTXArg &arg1, const PTXArg &arg2,
             const char *source = nullptr, int line = -1) {
     EmitLoc(source, line);
     EmitPredicate();
@@ -355,7 +371,7 @@ class PTXAssembler {
   }
 
   // Emit instruction with three arguments.
-  void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2,
+  void emit(const PTXInstr &instr, const PTXArg &arg1, const PTXArg &arg2,
             const PTXArg &arg3,
             const char *source = nullptr, int line = -1) {
     EmitLoc(source, line);
@@ -370,7 +386,7 @@ class PTXAssembler {
   }
 
   // Emit instruction with four arguments.
-  void emit(const char *instr, const PTXArg &arg1, const PTXArg &arg2,
+  void emit(const PTXInstr &instr, const PTXArg &arg1, const PTXArg &arg2,
             const PTXArg &arg3, const PTXArg &arg4,
             const char *source = nullptr, int line = -1) {
     EmitLoc(source, line);
@@ -441,7 +457,7 @@ class PTXAssembler {
   void EmitPredicate();
 
   // Emit instruction name. Underscores are replaced by periods.
-  void EmitInstruction(const char *instr);
+  void EmitInstruction(const PTXInstr &instr);
 
   // Emit instruction argument.
   void EmitArg(const PTXArg &arg);

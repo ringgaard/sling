@@ -40,7 +40,7 @@ static const Order combined_order[4][4] = {
 };
 
 // Placement names.
-const char *placename[] = {"nowhere", "host", "device", "everywhere"};
+const char *placename[] = {"nowhere", "host", "device", "host and device"};
 
 static bool IsPowerOfTwo32(int value) {
   return value && !(value & (value - 1));
@@ -1168,17 +1168,36 @@ string Cell::ToString() const {
 
   int prev_offset = -1;
   for (Tensor *t : fields) {
-    if (t->offset() == prev_offset) {
-      str.append("    union ");
-    } else {
-      str.append("  var ");
+    if (t->placement() & HOST) {
+      if (t->offset() == prev_offset) {
+        str.append("    union ");
+      } else {
+        str.append("  var ");
+      }
+      StringAppendF(&str, "%s: %s  // offset %d size %d\n",
+                    t->name().c_str(),
+                    t->TypeString().c_str(),
+                    t->offset(),
+                    t->space());
+      prev_offset = t->offset();
     }
-    StringAppendF(&str, "%s: %s  // offset %d size %d\n",
-                  t->name().c_str(),
-                  t->TypeString().c_str(),
-                  t->offset(),
-                  t->space());
-    prev_offset = t->offset();
+  }
+
+  prev_offset = -1;
+  for (Tensor *t : fields) {
+    if (t->placement() & DEVICE) {
+      if (t->device_offset() == prev_offset) {
+        str.append("    union ");
+      } else {
+        str.append("  device var ");
+      }
+      StringAppendF(&str, "%s: %s  // offset %d size %d\n",
+                    t->name().c_str(),
+                    t->TypeString().c_str(),
+                    t->device_offset(),
+                    t->space());
+      prev_offset = t->device_offset();
+    }
   }
 
   // Output constants used by cell.
@@ -1193,7 +1212,12 @@ string Cell::ToString() const {
   if (!constants.empty()) {
     str.append("\n");
     for (Tensor *t : constants) {
-      StringAppendF(&str, "  const %s: %s   // size %d\n",
+      str.append("  ");
+      if (t->placement() != HOST) {
+        str.append(placename[t->placement()]);
+        str.append(" ");
+      }
+      StringAppendF(&str, "const %s: %s   // size %d\n",
                     t->name().c_str(),
                     t->TypeString().c_str(),
                     t->size());
@@ -1226,6 +1250,8 @@ string Cell::ToString() const {
         first = false;
       }
       str.append(")");
+
+      if (step->placement() & DEVICE) str.append(" on device");
 
       str.append("\n");
     }
