@@ -513,7 +513,7 @@ class NoOpReshape : public Kernel {
     Tensor *y = step->output(0);
     if (x->type() != y->type()) return false;
     if (x->shape().elements() != y->shape().elements()) return false;
-    if (x->consumers() != 1) return false;
+    if (x->consumers().size() != 1) return false;
     return true;
   }
 
