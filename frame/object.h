@@ -181,6 +181,7 @@ class Object : public Root {
   // Object type checking.
   bool IsInt() const { return handle_.IsInt(); }
   bool IsFloat() const { return handle_.IsFloat(); }
+  bool IsNumber() const { return handle_.IsNumber(); }
   bool IsRef() const { return handle_.IsRef(); }
   bool IsGlobal() const { return handle_.IsGlobalRef(); }
   bool IsLocal() const { return handle_.IsLocalRef(); }
