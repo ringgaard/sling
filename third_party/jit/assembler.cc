@@ -115,7 +115,6 @@ Operand::Operand(Label *label) : rex_(0), len_(1) {
   set_disp64(reinterpret_cast<intptr_t>(label));
 }
 
-
 Operand::Operand(const Operand &operand, int32_t offset) {
   DCHECK(operand.len_ >= 1);
   // Operand encodes REX ModR/M [SIB] [Disp].
@@ -221,7 +220,6 @@ void Assembler::emit_operand(int code, const Operand &adr) {
     for (unsigned i = 1; i < length; i++) *pc_++ = adr.buf_[i];
   }
 }
-
 
 void Assembler::arithmetic_op(byte opcode,
                               Register reg,
@@ -565,7 +563,6 @@ void Assembler::call(Register adr) {
   emit(0xFF);
   emit_modrm(0x2, adr);
 }
-
 
 void Assembler::call(const Operand &op) {
   EnsureSpace ensure_space(this);
@@ -2473,7 +2470,6 @@ void Assembler::movsd(const Operand &dst, XMMRegister src) {
   emit_sse_operand(src, dst);
 }
 
-
 void Assembler::movsd(XMMRegister dst, XMMRegister src) {
   DCHECK(Enabled(MMX));
   EnsureSpace ensure_space(this);
@@ -2483,7 +2479,6 @@ void Assembler::movsd(XMMRegister dst, XMMRegister src) {
   emit(0x10);  // load
   emit_sse_operand(dst, src);
 }
-
 
 void Assembler::movsd(XMMRegister dst, const Operand &src) {
   DCHECK(Enabled(MMX));
@@ -4151,22 +4146,18 @@ void Assembler::emit_sse_operand(XMMRegister reg, const Operand &adr) {
   emit_operand(ireg, adr);
 }
 
-
 void Assembler::emit_sse_operand(Register reg, const Operand &adr) {
   Register ireg = {reg.code()};
   emit_operand(ireg, adr);
 }
 
-
 void Assembler::emit_sse_operand(XMMRegister dst, XMMRegister src) {
   emit(0xC0 | (dst.low_bits() << 3) | src.low_bits());
 }
 
-
 void Assembler::emit_sse_operand(XMMRegister dst, Register src) {
   emit(0xC0 | (dst.low_bits() << 3) | src.low_bits());
 }
-
 
 void Assembler::emit_sse_operand(Register dst, XMMRegister src) {
   emit(0xC0 | (dst.low_bits() << 3) | src.low_bits());
