@@ -26,6 +26,7 @@ namespace sling {
 namespace myelin {
 
 class Typer;
+class Transformer;
 
 // Data types.
 enum Type {
@@ -139,6 +140,11 @@ class Transformations {
     combinations_.emplace_back(first, second, replacement);
   }
 
+  // Register flow transformation component. Transfers ownership from caller.
+  void RegisterTransformer(Transformer *transformer) {
+    transformers_.emplace_back(transformer);
+  }
+
   // Register type inference component. Transfers ownership from caller.
   void RegisterTyper(Typer *typer) {
     typers_.emplace_back(typer);
@@ -150,6 +156,11 @@ class Transformations {
   // Pairs of operations that can be combined.
   const std::vector<Combination> &combinations() const { return combinations_; }
 
+  // Flow transformation components.
+  const std::vector<Transformer *> transformers() const {
+    return transformers_;
+  }
+
   // Type inference components.
   const std::vector<Typer *> typers() const { return typers_; }
 
@@ -159,6 +170,9 @@ class Transformations {
 
   // Pairs of operations that can be combined.
   std::vector<Combination> combinations_;
+
+  // Flow transformation components.
+  std::vector<Transformer *> transformers_;
 
   // Type inference components.
   std::vector<Typer *> typers_;
@@ -263,6 +277,9 @@ class Flow {
       size = len;
     }
 
+    // Check if variable has a dependency on some operation.
+    bool DependsOn(const Operation *op) const;
+
     string name;                         // variable name
     std::vector<string> aliases;         // additional aliases for variable
 
@@ -296,6 +313,27 @@ class Flow {
     // Get attribute value.
     const string &GetAttr(const string &name);
     int GetAttr(const string &name, int defval);
+
+    // Set attribute.
+    void SetAttr(const string &name, const string &value);
+
+    // Check if variable is an input to the operation.
+    bool IsInput(const Variable *var) const;
+
+    // Check if variable is an output from the operation.
+    bool IsOutput(const Variable *var) const;
+
+    // Remove input variable from operation.
+    void RemoveInput(Variable *var);
+
+    // Remove output variable from operation.
+    void RemoveOutput(Variable *var);
+
+    // Move input variable to another operation.
+    void MoveInput(Variable *var, Operation *op);
+
+    // Move output variable to another operation.
+    void MoveOutput(Variable *var, Operation *op);
 
     // Return in and out degree.
     int indegree() const { return inputs.size(); }
@@ -407,6 +445,12 @@ class Flow {
   int batch_size() const { return batch_size_; }
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
 
+  // Fuse two operations into a combined op.
+  Operation *Fuse(Operation *first, Operation *second, const string &combined);
+
+  // Check flow graph consistency.
+  bool IsConsistent() const;
+
  private:
   // Infer which variables are inputs and outputs to functions.
   void InferInputsAndOutputs();
@@ -415,7 +459,7 @@ class Flow {
   void Transform(const Transformations &transformations);
 
   // Combine two op types to a single combined op type.
-  void Combine(const string &first,
+  bool Combine(const string &first,
                const string &second,
                const string &combined);
 
@@ -460,6 +504,16 @@ class Typer {
   // Return true if the type of the outputs of the operations has been
   // inferred.
   virtual bool InferTypes(Flow::Operation *op) = 0;
+};
+
+// Component type for applying transformations to a flow.
+class Transformer {
+ public:
+  virtual ~Transformer() = default;
+
+  // Apply transformations to flow and return true is any transformations were
+  // applied.
+  virtual bool Transform(Flow *flow) = 0;
 };
 
 }  // namespace myelin

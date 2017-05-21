@@ -10,7 +10,21 @@ cc_library(
   ],
   hdrs = ["generic.h"],
   deps = [
+    "//base",
     "//myelin:compute",
+  ],
+)
+
+cc_library(
+  name = "calculate",
+  srcs = [
+    "calculate.cc",
+  ],
+  hdrs = ["calculate.h"],
+  deps = [
+    "//base",
+    "//myelin:compute",
+    "//myelin:expression",
   ],
 )
 
@@ -22,6 +36,7 @@ cc_library(
   ],
   hdrs = ["sse.h"],
   deps = [
+    "//base",
     "//myelin:compute",
   ],
 )
@@ -36,6 +51,7 @@ cc_library(
   ],
   hdrs = ["avx.h"],
   deps = [
+    "//base",
     "//myelin:compute",
   ],
 )
@@ -45,6 +61,7 @@ cc_library(
   srcs = ["dragnn.cc"],
   hdrs = ["dragnn.h"],
   deps = [
+    "//base",
     "//myelin:compute",
   ],
 )
