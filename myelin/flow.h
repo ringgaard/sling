@@ -317,6 +317,9 @@ class Flow {
     // Set attribute.
     void SetAttr(const string &name, const string &value);
 
+    // Check if operation has attribute.
+    bool HasAttr(const string &name) const;
+
     // Check if variable is an input to the operation.
     bool IsInput(const Variable *var) const;
 
@@ -446,7 +449,14 @@ class Flow {
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
 
   // Fuse two operations into a combined op.
-  Operation *Fuse(Operation *first, Operation *second, const string &combined);
+  Operation *Fuse(Operation *first,
+                  Operation *second,
+                  const string &combined,
+                  bool merge_inputs = false);
+
+  // Find sequences of ops in flow graph. This only matches the first output
+  // for each op in the sequence.
+  std::vector<Operation *> Find(const std::vector<string> &ops);
 
   // Check flow graph consistency.
   bool IsConsistent() const;

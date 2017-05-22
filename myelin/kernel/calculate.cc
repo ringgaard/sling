@@ -29,7 +29,6 @@ static bool IsCalculateOp(Flow::Operation *op) {
     "BiasAdd",
     "Calculate",
     "Div",
-    "FloorMod",
     "Minimum",
     "Maximum"
     "Mod",
@@ -123,7 +122,7 @@ class ExpressionTransformer : public Transformer {
     string fused_recipe = FuseExpressions(first, second);
 
     // Fuse the two ops and set expression recipe for the fused Calculate op.
-    Flow::Operation *fused = flow->Fuse(first, second, "Calculate");
+    Flow::Operation *fused = flow->Fuse(first, second, "Calculate", true);
     fused->SetAttr("expr", fused_recipe);
 
     return true;

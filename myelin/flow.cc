@@ -256,6 +256,13 @@ void Flow::Operation::SetAttr(const string &name, const string &value) {
   attrs.emplace_back(name, value);
 }
 
+bool Flow::Operation::HasAttr(const string &name) const{
+  for (auto &attr : attrs) {
+    if (attr.name == name) return true;
+  }
+  return false;
+}
+
 bool Flow::Operation::IsInput(const Variable *var) const {
   for (const Variable *input : inputs) {
     if (var == input) return true;
@@ -644,11 +651,12 @@ Flow::Operation *Flow::Merge(Operation *first,
 
 Flow::Operation *Flow::Fuse(Operation *first,
                             Operation *second,
-                            const string &combined) {
+                            const string &combined,
+                            bool merge_inputs) {
   // Move inputs from the second op to the first/combined op.
   while (!second->inputs.empty()) {
     Variable *v = second->inputs.front();
-    if (first->IsInput(v)) {
+    if (merge_inputs && first->IsInput(v)) {
       // Shared input.
       second->RemoveInput(v);
     } else if (first->IsOutput(v)) {
@@ -693,10 +701,52 @@ Flow::Operation *Flow::Fuse(Operation *first,
   // Set operation type for the first to the combined type.
   first->type = combined;
 
+  // Add attributes from second op to first op.
+  for (auto &attr : second->attrs) {
+    if (!first->HasAttr(attr.name)) {
+      first->SetAttr(attr.name, attr.value);
+    }
+  }
+
   // Delete second operation.
   DeleteOperation(second);
 
   return first;
+}
+
+std::vector<Flow::Operation *> Flow::Find(const std::vector<string> &ops) {
+  CHECK(!ops.empty());
+  std::vector<Operation *> matches;
+  const string &last = ops.back();
+  for (Operation *op : ops_) {
+    // Look for ops which match the last op in the sequence.
+    if (op->type != last) continue;
+
+    // Check for match by traversing backwards though the first input of each
+    // op in the sequence.
+    Operation *current = op;
+    bool match = true;
+    for (int i = ops.size() - 2; i >= 0; --i) {
+      // Follow producer chain.
+      if (current->inputs.empty()) {
+        match = false;
+        break;
+      }
+      current = current->inputs[0]->producer;
+      if (current == nullptr) {
+        match = false;
+        break;
+      }
+
+      // Check if op type matches.
+      if (current->type != ops[i]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) matches.push_back(op);
+  }
+  return matches;
 }
 
 void Flow::Eliminate(Operation *op) {

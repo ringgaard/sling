@@ -66,3 +66,13 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "wavenet",
+  srcs = ["wavenet.cc"],
+  hdrs = ["wavenet.h"],
+  deps = [
+    "//base",
+    "//myelin:compute",
+  ],
+)
+
