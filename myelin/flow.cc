@@ -202,6 +202,24 @@ string Flow::Variable::TypeString() const {
   return str;
 }
 
+bool Flow::Variable::DependsOn(const Operation *op) const {
+  std::vector<const Variable *> queue;
+  std::unordered_set<const Operation *> visited;
+  queue.push_back(this);
+  while (!queue.empty()) {
+    const Variable *v = queue.back();
+    queue.pop_back();
+    if (v->producer != nullptr && visited.count(v->producer) == 0) {
+      if (v->producer == op) return true;
+      visited.insert(v->producer);
+      for (const Variable *input : v->producer->inputs) {
+        queue.push_back(input);
+      }
+    }
+  }
+  return false;
+}
+
 void Flow::Operation::AddInput(Variable *var) {
   inputs.push_back(var);
   var->consumers.push_back(this);
@@ -226,6 +244,92 @@ int Flow::Operation::GetAttr(const string &name, int defval) {
     if (attr.name == name) return atoi(attr.value.c_str());
   }
   return defval;
+}
+
+void Flow::Operation::SetAttr(const string &name, const string &value) {
+  for (auto &attr : attrs) {
+    if (attr.name == name) {
+      attr.value = value;
+      return;
+    }
+  }
+  attrs.emplace_back(name, value);
+}
+
+bool Flow::Operation::HasAttr(const string &name) const{
+  for (auto &attr : attrs) {
+    if (attr.name == name) return true;
+  }
+  return false;
+}
+
+bool Flow::Operation::IsInput(const Variable *var) const {
+  for (const Variable *input : inputs) {
+    if (var == input) return true;
+  }
+  return false;
+}
+
+bool Flow::Operation::IsOutput(const Variable *var) const {
+  for (const Variable *output : outputs) {
+    if (var == output) return true;
+  }
+  return false;
+}
+
+void Flow::Operation::RemoveInput(Variable *var) {
+  // Remove operation as consumer of variable.
+  auto fc = std::find(var->consumers.begin(), var->consumers.end(), this);
+  CHECK(fc != var->consumers.end());
+  var->consumers.erase(fc);
+
+  // Remove variable from inputs.
+  auto fi = std::find(inputs.begin(), inputs.end(), var);
+  CHECK(fi != inputs.end());
+  inputs.erase(fi);
+}
+
+void Flow::Operation::RemoveOutput(Variable *var) {
+  // Remove operation as producer of variable.
+  CHECK(var->producer == this);
+  var->producer = nullptr;
+
+  // Remove variable from outputs.
+  auto f = std::find(outputs.begin(), outputs.end(), var);
+  CHECK(f != inputs.end());
+  outputs.erase(f);
+}
+
+void Flow::Operation::MoveInput(Variable *var, Operation *op) {
+  // Remove variable as input to this operation.
+  auto f = std::find(inputs.begin(), inputs.end(), var);
+  CHECK(f != inputs.end());
+  inputs.erase(f);
+
+  // Add variable as input to other operation.
+  op->inputs.push_back(var);
+
+  // Update variable consumers.
+  for (int i = 0; i < var->consumers.size(); ++i) {
+    if (var->consumers[i] == this) {
+      var->consumers[i] = op;
+      break;
+    }
+  }
+}
+
+void Flow::Operation::MoveOutput(Variable *var, Operation *op) {
+  // Remove variable as output from this operation.
+  auto f = std::find(outputs.begin(), outputs.end(), var);
+  CHECK(f != outputs.end());
+  outputs.erase(f);
+
+  // Add variable as output from other operation.
+  op->outputs.push_back(var);
+
+  // Update variable producer.
+  CHECK(var->producer == this);
+  var->producer = op;
 }
 
 void Flow::Function::AddOperation(Operation *op) {
@@ -454,44 +558,54 @@ void Flow::InferInputsAndOutputs() {
 }
 
 void Flow::Transform(const Transformations &transformations) {
-  // Eliminate Identity ops by moving the inputs to the output.
-  std::vector<Operation *> noops;
-  for (const string &identity : transformations.noops()) {
-    for (Operation *op : ops_) {
-      if (op->type == identity) noops.push_back(op);
-    }
-  }
-
-  // Remove no-ops from the flow and eliminate the intermediate variables.
-  for (Operation *op : noops) {
-    Eliminate(op);
-  }
-
-  // Combine ops.
-  for (const auto &c : transformations.combinations()) {
-    Combine(c.first, c.second, c.replacement);
-  }
-}
-
-void Flow::Combine(const string &first,
-                   const string &second,
-                   const string &combined) {
-  // Find operations that can be combined.
+  // Keep transforming flow until no more transformations can be applied.
   bool again = true;
   while (again) {
     again = false;
-    for (Operation *op : ops_) {
-      if (op->type != first) continue;
-      if (op->outputs.size() != 1) continue;
-      Variable *var = op->outputs[0];
-      if (var->consumers.size() != 1) continue;
-      if (var->consumers[0]->type != second) continue;
-      if (var->consumers[0]->task != op->task) continue;
 
-      Merge(op, var->consumers[0], combined);
+    // Eliminate Identity ops by moving the inputs to the output.
+    std::vector<Operation *> noops;
+    for (const string &identity : transformations.noops()) {
+      for (Operation *op : ops_) {
+        if (op->type == identity) noops.push_back(op);
+      }
+    }
+
+    // Remove no-ops from the flow and eliminate the intermediate variables.
+    for (Operation *op : noops) {
+      Eliminate(op);
       again = true;
     }
+
+    // Combine ops.
+    for (const auto &c : transformations.combinations()) {
+      if (Combine(c.first, c.second, c.replacement)) again = true;
+    }
+
+    // Run flow transformers.
+    for (Transformer *transformer : transformations.transformers()) {
+      if (transformer->Transform(this)) again = true;
+    }
   }
+}
+
+bool Flow::Combine(const string &first,
+                   const string &second,
+                   const string &combined) {
+  // Find operations that can be combined.
+  bool again = false;
+  for (Operation *op : ops_) {
+    if (op->type != first) continue;
+    if (op->outputs.size() != 1) continue;
+    Variable *var = op->outputs[0];
+    if (var->consumers.size() != 1) continue;
+    if (var->consumers[0]->type != second) continue;
+    if (var->consumers[0]->task != op->task) continue;
+
+    Merge(op, var->consumers[0], combined);
+    again = true;
+  }
+  return again;
 }
 
 Flow::Operation *Flow::Merge(Operation *first,
@@ -535,6 +649,106 @@ Flow::Operation *Flow::Merge(Operation *first,
   return first;
 }
 
+Flow::Operation *Flow::Fuse(Operation *first,
+                            Operation *second,
+                            const string &combined,
+                            bool merge_inputs) {
+  // Move inputs from the second op to the first/combined op.
+  while (!second->inputs.empty()) {
+    Variable *v = second->inputs.front();
+    if (merge_inputs && first->IsInput(v)) {
+      // Shared input.
+      second->RemoveInput(v);
+    } else if (first->IsOutput(v)) {
+      // Input from first op. Eliminate variable if it is only used as an
+      // intermediate result between the first and second op.
+      second->RemoveInput(v);
+      if (v->consumers.empty()) {
+        first->RemoveOutput(v);
+        DeleteVariable(v);
+        for (Connector *cnx : cnxs_) cnx->RemoveLink(v);
+      }
+    } else {
+      // Additional input.
+      second->MoveInput(v, first);
+    }
+  }
+
+  // Move outputs from the second op to the first/combined op.
+  while (!second->outputs.empty()) {
+    Variable *v = second->outputs.front();
+    if (first->IsInput(v)) {
+      // Input from second op. Eliminate variable if it is only used as an
+      // intermediate result between the first and second op.
+      if (v->consumers.size() == 1) {
+        first->RemoveInput(v);
+        second->RemoveOutput(v);
+        DeleteVariable(v);
+        for (Connector *cnx : cnxs_) cnx->RemoveLink(v);
+      } else {
+        first->RemoveInput(v);
+        second->MoveOutput(v, first);
+      }
+    } else if (first->IsOutput(v)) {
+      // Shared output.
+      second->RemoveOutput(v);
+    } else {
+      // Additional output.
+      second->MoveOutput(v, first);
+    }
+  }
+
+  // Set operation type for the first to the combined type.
+  first->type = combined;
+
+  // Add attributes from second op to first op.
+  for (auto &attr : second->attrs) {
+    if (!first->HasAttr(attr.name)) {
+      first->SetAttr(attr.name, attr.value);
+    }
+  }
+
+  // Delete second operation.
+  DeleteOperation(second);
+
+  return first;
+}
+
+std::vector<Flow::Operation *> Flow::Find(const std::vector<string> &ops) {
+  CHECK(!ops.empty());
+  std::vector<Operation *> matches;
+  const string &last = ops.back();
+  for (Operation *op : ops_) {
+    // Look for ops which match the last op in the sequence.
+    if (op->type != last) continue;
+
+    // Check for match by traversing backwards though the first input of each
+    // op in the sequence.
+    Operation *current = op;
+    bool match = true;
+    for (int i = ops.size() - 2; i >= 0; --i) {
+      // Follow producer chain.
+      if (current->inputs.empty()) {
+        match = false;
+        break;
+      }
+      current = current->inputs[0]->producer;
+      if (current == nullptr) {
+        match = false;
+        break;
+      }
+
+      // Check if op type matches.
+      if (current->type != ops[i]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) matches.push_back(op);
+  }
+  return matches;
+}
+
 void Flow::Eliminate(Operation *op) {
   if (op->inputs.size() > 0) {
     // Update all usages of output to use the input variable instead.
@@ -542,8 +756,12 @@ void Flow::Eliminate(Operation *op) {
     CHECK_EQ(op->outputs.size(), 1);
     Variable *input = op->inputs[0];
     Variable *output = op->outputs[0];
-    CHECK_EQ(input->type, output->type);
-    CHECK(input->shape == output->shape);
+    if (input->type != DT_INVALID && output->type != DT_INVALID) {
+      CHECK_EQ(input->type, output->type);
+    }
+    if (!input->shape.undefined() && !output->shape.undefined()) {
+      CHECK(input->shape == output->shape);
+    }
     if (output->in) input->in = true;
     if (output->out) input->out = true;
     for (Operation *target : ops_) {
@@ -860,6 +1078,80 @@ void Flow::DeleteOperation(Operation *op) {
   auto f = std::find(ops_.begin(), ops_.end(), op);
   if (f != ops_.end()) ops_.erase(f);
   delete op;
+}
+
+bool Flow::IsConsistent() const {
+  // Check operations.
+  for (const Operation *op : ops_) {
+    for (const Variable *input : op->inputs) {
+      // Check that input variable is in flow.
+      if (std::find(vars_.begin(), vars_.end(), input) == vars_.end()) {
+        LOG(WARNING) << "Input to " << op->name << " is not in flow";
+        return false;
+      }
+
+      // Check that op is a consumer of the variable.
+      if (std::find(input->consumers.begin(), input->consumers.end(), op) ==
+          input->consumers.end()) {
+        LOG(WARNING) << "Operation " << op->name << " is not a consumer of "
+                     << input->name;
+        return false;
+      }
+    }
+
+    for (const Variable *output : op->outputs) {
+      // Check that output variable is in flow.
+      if (std::find(vars_.begin(), vars_.end(), output) == vars_.end()) {
+        LOG(WARNING) << "Output from " << op->name << " is not in flow";
+        return false;
+      }
+
+      // Check that op is the producer of the variable.
+      if (output->producer != op) {
+        LOG(WARNING) << "Operation " << op->name << " is not the producer of "
+                     << output->name;
+        return false;
+      }
+    }
+  }
+
+  // Check variables.
+  for (const Variable *var : vars_) {
+    // Check that producer is in flow.
+    const Operation *producer = var->producer;
+    if (producer != nullptr) {
+      if (std::find(ops_.begin(), ops_.end(), producer) == ops_.end()) {
+        LOG(WARNING) << "Producer for " << var->name << " is not in flow";
+        return false;
+      }
+
+      // Check that variable is an output of the producer.
+      if (std::find(producer->outputs.begin(), producer->outputs.end(), var) ==
+          producer->outputs.end()) {
+        LOG(WARNING) << "Variable " << var->name << " is not an output of "
+                     << "the producer " << producer->name;
+        return false;
+      }
+    }
+
+    for (const Operation *consumer : var->consumers) {
+      // Check that consumer is in flow.
+      if (std::find(ops_.begin(), ops_.end(), consumer) == ops_.end()) {
+        LOG(WARNING) << "Consumer of " << var->name << " is not in flow";
+        return false;
+      }
+
+      // Check that variable is an input of the consumer.
+      if (std::find(consumer->inputs.begin(), consumer->inputs.end(), var) ==
+          consumer->inputs.end()) {
+        LOG(WARNING) << "Variable " << var->name << " is not an input of "
+                     << "the consumer " << consumer->name;
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 string Flow::ToString() const {

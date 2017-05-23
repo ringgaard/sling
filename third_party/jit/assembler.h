@@ -1778,7 +1778,6 @@ class Assembler : public CodeGenerator {
     vinstr(0x7c, dst, src1, src2, k66, k0F38, kW0);
   }
 
-
   void vhaddps(XMMRegister dst, XMMRegister src1, XMMRegister src2) {
     vinstr(0x7c, dst, src1, src2, kF2, k0F, kW0);
   }

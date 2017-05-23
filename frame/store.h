@@ -244,6 +244,7 @@ struct Handle {
   // Value type checking.
   bool IsInt() const { return tag() == kIntTag; }
   bool IsFloat() const { return tag() == kFloatTag; }
+  bool IsNumber() const { return (bits & kNumber) != 0; }
   bool IsRef() const { return (bits & kNumber) == 0; }
   bool IsGlobalRef() const { return tag() == kGlobalTag; }
   bool IsLocalRef() const { return tag() == kLocalTag; }
@@ -272,8 +273,8 @@ struct Handle {
 
   // Returns value as floating-point number.
   float AsFloat() const {
-    DCHECK(IsFloat());
-    return  bit_cast<float>(bits & ~kTagMask);
+    DCHECK(IsNumber());
+    return IsFloat() ? bit_cast<float>(bits & ~kTagMask) : AsInt();
   }
 
   // Returns raw handle value.

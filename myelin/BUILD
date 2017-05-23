@@ -54,6 +54,15 @@ cc_library(
 )
 
 cc_library(
+  name = "expression",
+  srcs = ["expression.cc"],
+  hdrs = ["expression.h"],
+  deps = [
+    "//base",
+  ],
+)
+
+cc_library(
   name = "compare-kernels",
   srcs = [
     "compare-kernels.cc",
