@@ -181,7 +181,7 @@ class ExpressionTransformer : public Transformer {
     // Merge second expression into the first one.
     expr1.Merge(&expr2, mapping);
 
-    // Eliminate common subepressions.
+    // Eliminate common subexpressions.
     expr1.EliminateCommonSubexpressions();
 
     // Return merged recipe.
