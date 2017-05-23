@@ -228,7 +228,7 @@ class AVXFltTanh : public Kernel {
     __ j(less, &l);
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->elements() * (5 + 6 * 3 + 3 * 3);
   }
 };
@@ -425,7 +425,7 @@ class AVXFltExpBase : public Kernel {
     // TODO: set padding elements to zero because sigmoid(0)=0.5 and exp(0)=1.
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->elements() * (16 + 5 * 2 + (sigmoid_ ? 3 : 0));
   }
 

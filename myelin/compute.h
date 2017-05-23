@@ -76,7 +76,7 @@ class Kernel {
   virtual void Generate(Step *step, MacroAssembler *masm) = 0;
 
   // Number of numeric operations kernel performs for step.
-  virtual int Complexity(const Step *step) { return -1; }
+  virtual int64 Complexity(const Step *step) { return -1; }
 };
 
 // Library of kernels for implemeting operations.
@@ -262,7 +262,7 @@ class Tensor {
   int padding(int d) const { return (aligned(d) - dim(d)) * stride(d); }
 
   // Total size (in bytes) for tensor instance.
-  int size() const { return size_; }
+  size_t size() const { return size_; }
 
   // Number of elements in tensor.
   int elements() const { return shape_.elements(); }
@@ -278,23 +278,43 @@ class Tensor {
 
   // Offset in data instance block. Returns -1 for constants and tensors that
   // are not stored on the host.
-  int offset() const { return offset_; }
+  size_t offset() const { return offset_; }
 
   // Offset in device data instance block. Returns -1 for constants and tensors
   // that are not stored on the device.
-  int device_offset() const { return device_offset_; }
+  size_t device_offset() const { return device_offset_; }
 
   // Number of bytes allocated for tensor in instance. This takes references
   // into account so these only take up space for one pointer.
-  int space() const { return space_; }
+  size_t space() const { return space_; }
 
   // Byte offset of element in tensor.
-  int offset(int r) const { return r * stride(0); }
-  int offset(int r, int c) const { return r * stride(0) + c * stride(1); }
+  size_t offset(int r) const {
+    return r * stride(0);
+  }
+  size_t offset(int r, int c) const {
+    return r * stride(0) + c * stride(1);
+  }
+  size_t offset(int r, int c, int k) const {
+    return r * stride(0) + c * stride(1) + k * stride(2);
+  }
+  size_t offset(int r, int c, int k, int l) const {
+    return r * stride(0) + c * stride(1) + k * stride(2) + l * stride(3);
+  }
 
   // Index of element in tensor.
-  int index(int r) const { return offset(r) / element_size(); }
-  int index(int r, int c) const { return offset(r, c) / element_size(); }
+  int index(int r) const {
+    return offset(r) / element_size();
+  }
+  int index(int r, int c) const {
+    return offset(r, c) / element_size();
+  }
+  int index(int r, int c, int k) const {
+    return offset(r, c, k) / element_size();
+  }
+  int index(int r, int c, int k, int l) const {
+    return offset(r, c, k, l) / element_size();
+  }
 
   // Check if tensor is a constant.
   bool IsConstant() const {
@@ -352,10 +372,10 @@ class Tensor {
 
  private:
   // Offset in data instance block.
-  int offset_ = -1;
+  size_t offset_ = -1;
 
   // Offset in device data instance block.
-  int device_offset_ = -1;
+  size_t device_offset_ = -1;
 
   // Tensor name for parameter or constant.
   string name_;
@@ -379,10 +399,10 @@ class Tensor {
   Shape stride_;
 
   // Total size (in bytes) for tensor instance.
-  int size_ = 0;
+  size_t size_ = 0;
 
   // Number of bytes allocated for tensor in instance.
-  int space_ = 0;
+  size_t space_ = 0;
 
   // Minimum alignment (in bytes) for tensor instance.
   int byte_alignment_ = 1;
@@ -448,7 +468,7 @@ class Step {
   Kernel *kernel() const { return kernel_; }
 
   // Return the complexity of the cell, i.e. number of numeric operations.
-  int complexity() const { return kernel_->Complexity(this); }
+  int64 complexity() const { return kernel_->Complexity(this); }
 
   // Cell that this step belongs to.
   Cell *cell() const { return cell_; }
@@ -514,7 +534,7 @@ class Connector {
   Tensor *type() const { return type_; }
 
   // Size of one element.
-  int size() const { return type_->size(); }
+  size_t size() const { return type_->size(); }
 
   // Connector array alignment (in bytes).
   int alignment() const { return alignment_; }
@@ -648,7 +668,7 @@ class Instance {
   inline Task *task(int index) const;
 
   // Return instance size.
-  inline int size() const;
+  inline size_t size() const;
 
   // Return instance alignment.
   inline int alignment() const;
@@ -686,10 +706,10 @@ class Cell {
   inline Runtime *runtime() const;
 
   // Size of data instance for cell.
-  int instance_size() const { return instance_size_; }
+  size_t instance_size() const { return instance_size_; }
 
   // Size of device data instance for cell.
-  int device_instance_size() const { return device_instance_size_; }
+  size_t device_instance_size() const { return device_instance_size_; }
 
   // Instance alignment.
   int instance_alignment() const { return instance_alignment_; }
@@ -702,7 +722,7 @@ class Cell {
   int task(int index) const { return tasks_[index].task; }
 
   // Get offset of task structure in instance data block.
-  int task_offset(int index) const { return tasks_[index].offset; }
+  size_t task_offset(int index) const { return tasks_[index].offset; }
 
   // Tensor with profiling information.
   Tensor *profile() const { return profile_; }
@@ -718,7 +738,7 @@ class Cell {
     int task;                       // task id in flow
     TaskState state = PENDING;      // task state at current compilation point
     jit::Label entry;               // entry point for task function
-    int offset = 0;                 // instance offset for task structure
+    size_t offset = 0;              // instance offset for task structure
     Placement placement = NOWHERE;  // placement of task computation
   };
 
@@ -741,10 +761,10 @@ class Cell {
   jit::Code code_;
 
   // Size of data instance for cell.
-  int instance_size_ = 0;
+  size_t instance_size_ = 0;
 
   // Size of device data instance for cell.
-  int device_instance_size_ = 0;
+  size_t device_instance_size_ = 0;
 
   // Instance alignment.
   int instance_alignment_ = kMinDataAlignment;
@@ -803,6 +823,9 @@ class Network {
   const std::vector<Tensor *> parameters() const { return parameters_; }
 
  private:
+  // Allocate aligned tensor from data in standard order.
+  char *AllocateTensor(Tensor *tensor);
+
   // Network cells.
   std::vector<Cell *> cells_;
 
@@ -859,7 +882,7 @@ inline Task *Instance::task(int index) const {
   return reinterpret_cast<Task *>(data_ + cell_->task_offset(index));
 }
 
-inline int Instance::size() const {
+inline size_t Instance::size() const {
   return cell_->instance_size();
 }
 

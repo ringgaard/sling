@@ -213,11 +213,27 @@ class ConstantFolding : public Transformer {
   }
 };
 
+// Stub for Calculate.
+class Calculate : public Kernel {
+ public:
+  string Name() override { return "DummyCalculate"; }
+  string Operation() override { return "Calculate"; }
+
+  bool Supports(Step *step) override {
+    return true;
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+  }
+};
+
 // Register expression calculation kernels.
 void RegisterCalculateKernels(Library *library) {
   library->RegisterTransformer(new ConstantFolding());
   library->RegisterTransformer(new ExpressionTransformer());
   // TODO: convert Shape ops to constants if type is known
+
+  library->Register(new Calculate());
 }
 
 }  // namespace myelin

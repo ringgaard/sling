@@ -102,8 +102,8 @@ class AVXVecMatMulBase : public Kernel {
     }
   }
 
-  int Complexity(const Step *step) override {
-    int ops = step->input(1)->elements() * 2;
+  int64 Complexity(const Step *step) override {
+    int64 ops = step->input(1)->elements() * 2;
     if (bias_) ops += step->input(2)->elements();
     if (relu_) ops += step->output(0)->elements();
     return ops;
@@ -750,7 +750,7 @@ class AVXFltMatMatMul : public Kernel {
     __ j(less, &l1);
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->dim(0) * step->input(1)->elements() * 2;
   }
 };

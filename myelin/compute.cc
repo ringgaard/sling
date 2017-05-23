@@ -598,7 +598,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       // by one element for each step in the cell computation for storing the
       // cycle counts. If the cell has parallel tasks, two additional cycle
       // counters are stored for each task.
-      int size = 1 + cell->steps_.size() + 2 * cell->tasks_.size();
+      size_t size = 1 + cell->steps_.size() + 2 * cell->tasks_.size();
       Tensor *profile = new Tensor();
       profile->name_ = "timing/" + cell->name_;
       profile->cell_ = cell;
@@ -712,7 +712,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Compute stride size for each dimension.
-    int size = TypeTraits::of(tensor->type()).size();
+    size_t size = TypeTraits::of(tensor->type()).size();
     if (tensor->order_ == ROW_MAJOR) {
       for (int d = tensor->rank() - 1; d >= 0; --d) {
         tensor->stride_.set(d, size);
@@ -846,39 +846,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
   // Copy and align constants.
   for (Tensor *tensor : constants_) {
-    // Determine alignment for tensor.
-    int alignment = tensor->byte_alignment_;
-    if (alignment < kMinDataAlignment) alignment = kMinDataAlignment;
-    if (alignment < jit::CPU::CacheLineSize()) {
-      alignment = jit::CPU::CacheLineSize();
-    }
-
-    // Allocate memory for tensor.
-    char *data = AllocateMemory(tensor->size_, alignment);
-    memory_.push_back(data);
-    memset(data, 0, tensor->size_);
-
-    // Copy data.
-    if (tensor->rank() == 0 || tensor->rank() == 1) {
-      // Vectors and scalars can just be copied regardless of alignment and
-      // order.
-      memcpy(data, tensor->data_, tensor->size_);
-    } else if (tensor->rank() == 2) {
-      // Copy matrix one element at a time.
-      char *src = tensor->data_;
-      int element_size = tensor->element_size();
-      for (int r = 0; r < tensor->dim(0); ++r) {
-        for (int c = 0; c < tensor->dim(1); ++c) {
-          memcpy(data + tensor->offset(r, c), src, element_size);
-          src += element_size;
-        }
-      }
-    } else {
-      LOG(ERROR) << tensor->rank() << "D tensor not supported: "
-                 << tensor->name();
-      return false;
-    }
-    tensor->data_ = data;
+    // Allocate aligned tensor and copy data.
+    tensor->data_ = AllocateTensor(tensor);
+    if (tensor->data_ == nullptr) return false;
     tensor->AddNewPlace(HOST);
 
     // Copy constant to device if needed.
@@ -1117,7 +1087,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Allocate executable code object for generated code.
     cell->code_.Allocate(&masm);
-    VLOG(7) << cell->name()
+    VLOG(5) << cell->name()
             << " entry address: " << cell->code_.entry()
             << " code size: " << cell->code_.size()
             << " data size: " << cell->instance_size();
@@ -1139,6 +1109,67 @@ bool Network::Compile(const string &flowfile, const Library &library) {
 
   // Generate code for flow.
   return Compile(flow, library);
+}
+
+char *Network::AllocateTensor(Tensor *tensor) {
+  // Determine alignment for tensor.
+  int alignment = tensor->byte_alignment_;
+  if (alignment < kMinDataAlignment) alignment = kMinDataAlignment;
+  if (alignment < jit::CPU::CacheLineSize()) {
+    alignment = jit::CPU::CacheLineSize();
+  }
+
+  // Allocate memory for tensor.
+  char *data = AllocateMemory(tensor->size_, alignment);
+  memory_.push_back(data);
+  memset(data, 0, tensor->size_);
+
+  // Copy data.
+  if (tensor->rank() == 0 || tensor->rank() == 1) {
+    // Vectors and scalars can just be copied regardless of alignment and
+    // order.
+    memcpy(data, tensor->data_, tensor->size_);
+  } else if (tensor->rank() == 2) {
+    // Copy matrix one element at a time.
+    char *src = tensor->data_;
+    int element_size = tensor->element_size();
+    for (int r = 0; r < tensor->dim(0); ++r) {
+      for (int c = 0; c < tensor->dim(1); ++c) {
+        memcpy(data + tensor->offset(r, c), src, element_size);
+        src += element_size;
+      }
+    }
+  } else if (tensor->rank() == 3) {
+    char *src = tensor->data_;
+    int element_size = tensor->element_size();
+    for (int r = 0; r < tensor->dim(0); ++r) {
+      for (int c = 0; c < tensor->dim(1); ++c) {
+        for (int k = 0; k < tensor->dim(2); ++k) {
+          memcpy(data + tensor->offset(r, c, k), src, element_size);
+          src += element_size;
+        }
+      }
+    }
+  } else if (tensor->rank() == 4) {
+    char *src = tensor->data_;
+    int element_size = tensor->element_size();
+    for (int r = 0; r < tensor->dim(0); ++r) {
+      for (int c = 0; c < tensor->dim(1); ++c) {
+        for (int k = 0; k < tensor->dim(2); ++k) {
+          for (int l = 0; l < tensor->dim(3); ++l) {
+            memcpy(data + tensor->offset(r, c, k, l), src, element_size);
+            src += element_size;
+          }
+        }
+      }
+    }
+  } else {
+    LOG(ERROR) << tensor->rank() << "D tensor not supported: "
+               << tensor->name();
+    return nullptr;
+  }
+
+  return data;
 }
 
 Cell *Network::GetCell(const string &name) const {
@@ -1173,7 +1204,7 @@ static bool Contains(const std::vector<Tensor *> &v, Tensor *t) {
 
 string Cell::ToString() const {
   string str;
-  StringAppendF(&str, "cell %s {  // size %d\n", name_.c_str(), instance_size_);
+  StringAppendF(&str, "cell %s {  // size %lu\n", name_.c_str(), instance_size_);
 
   // Output instance data fields.
   std::vector<Tensor *> fields;
@@ -1190,7 +1221,7 @@ string Cell::ToString() const {
       } else {
         str.append("  var ");
       }
-      StringAppendF(&str, "%s: %s  // offset %d size %d\n",
+      StringAppendF(&str, "%s: %s  // offset %lu size %lu\n",
                     t->name().c_str(),
                     t->TypeString().c_str(),
                     t->offset(),
@@ -1207,7 +1238,7 @@ string Cell::ToString() const {
       } else {
         str.append("  device var ");
       }
-      StringAppendF(&str, "%s: %s  // offset %d size %d\n",
+      StringAppendF(&str, "%s: %s  // offset %lu size %lu\n",
                     t->name().c_str(),
                     t->TypeString().c_str(),
                     t->device_offset(),
@@ -1233,7 +1264,7 @@ string Cell::ToString() const {
         str.append(placename[t->placement()]);
         str.append(" ");
       }
-      StringAppendF(&str, "const %s: %s   // size %d\n",
+      StringAppendF(&str, "const %s: %s   // size %lu\n",
                     t->name().c_str(),
                     t->TypeString().c_str(),
                     t->size());

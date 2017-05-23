@@ -123,7 +123,7 @@ class AVXFltBinaryOperator : public Kernel {
     __ j(less, &l);
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->elements();
   }
 
@@ -275,7 +275,7 @@ class AVXIntBinaryOperator : public Kernel {
     __ j(less, &l);
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->elements();
   }
 
@@ -390,7 +390,7 @@ class AVXFltConstSub : public Kernel {
     // TODO: set padding elements to zero.
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(1)->elements();
   }
 };
@@ -477,7 +477,7 @@ class AVXFltMulTwoAdd : public Kernel {
     __ j(less, &l);
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->elements() * 3;
   }
 };

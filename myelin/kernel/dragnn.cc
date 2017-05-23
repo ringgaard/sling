@@ -142,7 +142,7 @@ class DragnnCollect : public Kernel {
     }
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return 0;
   }
 };
@@ -244,7 +244,7 @@ class DragnnLookup : public Kernel {
     __ j(not_equal, &l1);
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->elements() * step->output(0)->elements();
   }
 };
@@ -316,7 +316,7 @@ class DragnnLookupSingle : public Kernel {
     __ movq(Operand(masm->instance(), v->offset()), acc);
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return 0;
   }
 };
@@ -445,7 +445,7 @@ class DragnnLookupUnrolled : public Kernel {
     }
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->elements() * step->output(0)->elements();
   }
 };
@@ -493,7 +493,7 @@ class DragnnConcat : public Kernel {
     CHECK_EQ(offset, step->output(0)->size());
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return 0;
   }
 };
@@ -527,7 +527,7 @@ class NoOpReshape : public Kernel {
     CHECK(step->input(0)->SharedWith(step->output(0)));
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return 0;
   }
 };
