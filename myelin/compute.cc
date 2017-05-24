@@ -46,12 +46,12 @@ static bool IsPowerOfTwo32(int value) {
   return value && !(value & (value - 1));
 }
 
-static int Align(int n, int align) {
+static size_t Align(size_t n, int align) {
   DCHECK(IsPowerOfTwo32(align));
   return (n + align - 1) & ~(align - 1);
 }
 
-static char *AllocateMemory(int size, int alignment) {
+static char *AllocateMemory(size_t size, int alignment) {
   DCHECK(IsPowerOfTwo32(alignment));
   DCHECK_GE(alignment, sizeof(void *));
   char *data;
@@ -150,7 +150,7 @@ void Tensor::Align(const Shape &align) {
 }
 
 void Tensor::AlignLast(int align) {
-  if (align > alignment_.dim(rank() - 1)) {
+  if (rank() > 0 && align > alignment_.dim(rank() - 1)) {
     alignment_.set(rank() - 1, align);
   }
 }

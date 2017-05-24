@@ -26,9 +26,11 @@ class WaveNetTransformer : public Transformer {
       Flow::Operation *squeeze = bias_add->inputs[0]->producer;
       Flow::Operation *conv2d = squeeze->inputs[0]->producer;
       Flow::Operation *expand_dims = conv2d->inputs[0]->producer;
+      string name = conv2d->name;
       flow->Fuse(expand_dims, conv2d, "");
       flow->Fuse(expand_dims, squeeze, "");
       flow->Fuse(expand_dims, bias_add, "Conv1DAdd");
+      expand_dims->name = name;
       combines++;
     }
 
@@ -39,8 +41,10 @@ class WaveNetTransformer : public Transformer {
       Flow::Operation *squeeze = op;
       Flow::Operation *conv2d = squeeze->inputs[0]->producer;
       Flow::Operation *expand_dims = conv2d->inputs[0]->producer;
+      string name = conv2d->name;
       flow->Fuse(expand_dims, conv2d, "");
       flow->Fuse(expand_dims, squeeze, "Conv1D");
+      expand_dims->name = name;
       combines++;
     }
 
