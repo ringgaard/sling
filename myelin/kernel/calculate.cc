@@ -2,7 +2,7 @@
 
 #include <map>
 #include <string>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 #include "base/logging.h"
@@ -21,23 +21,27 @@ using namespace jit;
 // Mapping from flow variables to expression variables.
 typedef std::map<Flow::Variable *, Expression::Var *> VarMap;
 
-// Check if operation is eligible for inclusion in Calculate op.
-static bool IsCalculateOp(Flow::Operation *op) {
+// Convert operation type to expression op.
+static Expression::OpType OpType(Flow::Operation *op) {
   // Operations that can be fused into Calculate operations.
-  static std::unordered_set<string> calculate_ops{
-    "Add",
-    "BiasAdd",
-    "Calculate",
-    "Div",
-    "Minimum",
-    "Maximum"
-    "Mod",
-    "Mul",
-    "Relu",
-    "Sub",
+  static std::unordered_map<string, Expression::OpType> ops {
+    {"Add", Expression::ADD},
+    {"BiasAdd", Expression::ADD},
+    {"Div", Expression::DIV},
+    {"Minimum", Expression::MIN},
+    {"Maximum", Expression::MAX},
+    {"Mod", Expression::MOD},
+    {"Mul", Expression::MUL},
+    {"Sub", Expression::SUB},
   };
 
-  return calculate_ops.count(op->type) > 0;
+  auto f = ops.find(op->type);
+  return f == ops.end() ? Expression::INVALID : f->second;
+}
+
+// Check if operation is a candidate for Calculate ops.
+static bool IsCalculateOp(Flow::Operation *op) {
+  return op->type == "Calculate" || OpType(op) != Expression::INVALID;
 }
 
 // Initialize expression for flow operation.
@@ -49,7 +53,7 @@ static void InitExpression(Flow::Operation *op, Expression *expr) {
   } else {
     // Add op with inputs and outputs.
     CHECK_EQ(op->outputs.size(), 1);
-    Expression::Op *func = expr->Operation(op->type);
+    Expression::Op *func = expr->Operation(OpType(op));
     for (int i = 0; i < op->inputs.size(); ++i) {
       func->AddArgument(expr->Variable(Expression::INPUT, i));
     }
