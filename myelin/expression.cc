@@ -18,7 +18,7 @@ class VariableMap {
     if (m == nullptr) {
       auto &vars = expr_->vars();
       if (std::find(vars.begin(), vars.end(), var) != vars.end()) {
-        // Existing variabel in expression.
+        // Existing variable in expression.
         return var;
       }
 
@@ -31,6 +31,64 @@ class VariableMap {
  private:
   Expression *expr_;
   std::map<Expression::Var *, Expression::Var *> mapping_;
+};
+
+// Register allocator.
+class Registers {
+ public:
+  // Allocate register for variable.
+  int Allocate(Expression::Var *var) {
+    // Check if a register has already been allocated.
+    int regno = -1;
+    for (int r = 0; r < reg_.size(); ++r) {
+      if (reg_[r] == var) return r;
+      if (regno == -1 && reg_[r] == nullptr) regno = r;
+    }
+
+    if (regno == -1) {
+      // Allocate new register.
+      regno = reg_.size();
+      reg_.push_back(var);
+    } else {
+      // Assign unused register to variable.
+      reg_[regno] = var;
+    }
+
+    return regno;
+  }
+
+  // Transfer register from one variable to another. Return the transferred
+  // register.
+  int Transfer(Expression::Var *src, Expression::Var *dst) {
+    for (int r = 0; r < reg_.size(); ++r) {
+      if (reg_[r] == src) {
+        reg_[r] = dst;
+        return r;
+      }
+    }
+    return -1;
+  }
+
+  // Get register allocated for variable. Return -1 if no register is allocated.
+  int Get(Expression::Var *var) const {
+    for (int r = 0; r < reg_.size(); ++r) {
+      if (reg_[r] == var) return r;
+    }
+    return -1;
+  }
+
+  // Free register used by variable.
+  void Free(Expression::Var *var) {
+    for (int r = 0; r < reg_.size(); ++r) {
+      if (reg_[r] == var) reg_[r] = nullptr;
+    }
+  }
+
+  // Return the maximum number of register allocated.
+  int max() const { return reg_.size(); }
+
+ private:
+  std::vector<Expression::Var *> reg_;
 };
 
 // Mapping from operation name to operation type.
@@ -585,6 +643,7 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
     Var *source2 = nullptr;
     Var *source3 = nullptr;
     Var *destination = nullptr;
+    bool first_is_dest = false;
 
     // Rewrite operation.
     if (op->arity() == 1 && type == MOV) {
@@ -639,7 +698,6 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
             // operation is commutative.
             if (model.op_reg_reg_mem && op->commutative() &&
                 args[0]->type != TEMP && args[1]->type == TEMP) {
-              LOG(INFO) << "Swap " << op->AsString();
               std::swap(args[0], args[1]);
             }
 
@@ -663,11 +721,11 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
           } else if (model.op_reg_reg) {
             // Two-operand instruction.
             Var *dest = result;
+            first_is_dest = true;
 
             // Try to put the memory operand last if operation is commutative.
             if (model.op_reg_mem && op->commutative() &&
                 args[0]->type != TEMP && args[1]->type == TEMP) {
-              LOG(INFO) << "Swap " << op->AsString();
               std::swap(args[0], args[1]);
             }
 
@@ -736,6 +794,7 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
     } else if (op->arity() == 3 && model.fm_reg_reg_reg) {
       // Fused multiply instruction.
       Var *dest = result;
+      first_is_dest = true;
 
       // Try to put memory operand last.
       if (model.fm_reg_reg_mem) {
@@ -824,7 +883,7 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
       args[1] = source2;
     }
 
-    // Assign thrird argument to source3.
+    // Assign third argument to source3.
     if (source3 != nullptr) {
       if (!model.mov_reg_mem) success = false;
       Op *mov = rewritten->Operation(MOV);
@@ -835,6 +894,7 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
 
     // Translate operation.
     Op *instr = rewritten->Operation(type);
+    instr->first_is_dest = first_is_dest;
     if (result != nullptr) {
       if (destination != nullptr) {
         // Use destination as temporary for result.
@@ -855,6 +915,72 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
 
   rewritten->CompactTempVars();
   return success;
+}
+
+int Expression::AllocateRegisters() {
+  Registers regs;
+  for (Op *op : ops_) {
+    if (op->type == MOV) {
+      // Allocate destination register for move op.
+      if (op->result->type == TEMP) {
+        if (op->result->first == op) {
+          if (op->type == MOV &&
+              op->args[0]->type == TEMP &&
+              op->args[0]->last == op) {
+            // Steal register from source.
+            op->dst = op->src = regs.Transfer(op->args[0], op->result);
+          } else {
+            // Allocate register for destination.
+            CHECK(op->result->last != nullptr);
+            op->dst = regs.Allocate(op->result);
+          }
+        } else {
+          op->dst = regs.Get(op->result);
+        }
+        CHECK(op->dst != -1);
+      }
+
+      // Get source register for move op.
+      if (op->args[0]->type == TEMP && op->src == -1) {
+        op->src = regs.Get(op->args[0]);
+        CHECK(op->src != -1);
+      }
+    } else {
+      // Allocate register for result.
+      if (op->result->type == TEMP) {
+        if (op->result->first == op) {
+          // Allocate register for result.
+          CHECK(op->result->last != nullptr);
+          op->dst = regs.Allocate(op->result);
+        } else {
+          op->dst = regs.Get(op->result);
+        }
+        CHECK(op->dst != -1);
+      }
+
+      // Get registers for source operands.
+      int first = op->first_is_dest ? 1 : 0;
+      int second = first + 1;
+      if (op->arity() > first && op->args[first]->type == TEMP) {
+        op->src = regs.Get(op->args[first]);
+        CHECK(op->src != -1);
+      }
+      if (op->arity() > second && op->args[second]->type == TEMP) {
+        op->src2 = regs.Get(op->args[second]);
+        CHECK(op->src2 != -1);
+      }
+
+      // Free unused registers.
+      if (op->arity() > first && op->args[first]->type == TEMP) {
+        if (op->args[first]->last == op) regs.Free(op->args[first]);
+      }
+      if (op->arity() > second && op->args[second]->type == TEMP) {
+        if (op->args[second]->last == op) regs.Free(op->args[second]);
+      }
+    }
+  }
+
+  return regs.max();
 }
 
 void Expression::Var::Redirect(Var *other) {
@@ -907,35 +1033,32 @@ string Expression::Op::AsString() const {
 string Expression::Op::AsInstruction() const {
   // Opcode.
   string str;
-  str.append(type == MOV ? "Mov" : OpName(type));
-  str.push_back(' ');
+  if (type == MOV) {
+    str.append("Mov ");
+  } else {
+    str.append(OpName(type));
+    str.push_back(' ');
+  }
 
   // Destination operand.
-  if (arity() >= 1) {
-    if (result == args[0]) {
-      if (dst != -1) {
-        str.push_back('r');
-        str.append(std::to_string(dst));
-      } else {
-        result->GetRecipe(&str);
-      }
-    } else {
-      result->GetRecipe(&str);
-      str.push_back(',');
-      args[0]->GetRecipe(&str);
-    }
+  if (dst != -1) {
+    str.push_back('r');
+    str.append(std::to_string(dst));
   } else {
-    str.append("???");
+    result->GetRecipe(&str);
   }
+
+  int first = first_is_dest ? 1 : 0;
+  int second = first + 1;
 
   // Source operand.
   if (src != -1) {
     str.push_back(',');
     str.push_back('r');
     str.append(std::to_string(src));
-  } else if (arity() >= 2) {
+  } else if (arity() > first) {
     str.push_back(',');
-    args[1]->GetRecipe(&str);
+    args[first]->GetRecipe(&str);
   }
 
   // Second source operand.
@@ -943,9 +1066,9 @@ string Expression::Op::AsInstruction() const {
     str.push_back(',');
     str.push_back('r');
     str.append(std::to_string(src2));
-  } else if (arity() >= 3) {
+  } else if (arity() > second) {
     str.push_back(',');
-    args[2]->GetRecipe(&str);
+    args[second]->GetRecipe(&str);
   }
 
   return str;

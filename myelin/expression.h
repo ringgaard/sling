@@ -93,6 +93,9 @@ class Expression {
       return type == ADD || type == MUL || type == MIN || type == MAX;
     }
 
+    // Check if operation is a no-op.
+    bool nop() const { return type == MOV && dst != -1 && src == dst; }
+
     // Operation is computing result = type(args...).
     OpType type;                  // operation type
     Var *result = nullptr;        // variable where result is stored
@@ -102,6 +105,7 @@ class Expression {
     int dst = -1;                 // register for first operand
     int src = -1;                 // register for second operand
     int src2 = -1;                // register for third operand
+    bool first_is_dest = false;   // first argument is also destination
   };
 
   // Instruction model with instruction forms supported by target architecture
@@ -207,6 +211,9 @@ class Expression {
   // to the rewritten expression so only the supported instruction form are
   // needed for evaluating the expression.
   bool Rewrite(const Model &model, Expression *rewritten) const;
+
+  // Allocate registers for operands. Return the number of registers used.
+  int AllocateRegisters();
 
   // Variables.
   const std::vector<Var *> vars() const { return vars_; }
