@@ -629,9 +629,6 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
   // Mapping from original variables to variables in rewritten expression.
   VariableMap varmap(rewritten);
 
-  // Current register assignment.
-  std::vector<Var *> assignment;
-
   // Translate all ops to conform to target model.
   bool success = true;
   for (Op *op : ops_) {
