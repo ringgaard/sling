@@ -945,6 +945,11 @@ int Expression::AllocateRegisters() {
         op->src = regs.Get(op->args[0]);
         CHECK(op->src != -1);
       }
+
+      // Free source register if it is no longer needed.
+      if (op->args[0]->type == TEMP && op->args[0]->last == op) {
+        regs.Free(op->args[0]);
+      }
     } else {
       // Allocate register for result.
       if (op->result->type == TEMP) {
