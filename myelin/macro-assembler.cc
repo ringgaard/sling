@@ -106,8 +106,28 @@ int SIMDRegisters::alloc() {
   return -1;
 }
 
+void StaticData::Add(void *buffer, int size) {
+  uint8 *ptr = static_cast<uint8 *>(buffer);
+  data_.insert(data_.end(), ptr, ptr + size);
+}
+
+void StaticData::Generate(MacroAssembler *masm) {
+  // Align output.
+  masm->DataAlign(alignment_);
+
+  // Bind label to the address of the generated data block.
+  masm->bind(&location_);
+
+  // Emit data block.
+  for (uint8 byte : data_) masm->db(byte);
+}
+
 MacroAssembler::MacroAssembler(void *buffer, int buffer_size)
     : Assembler(buffer, buffer_size) {}
+
+MacroAssembler::~MacroAssembler() {
+  for (auto *d : data_blocks_) delete d;
+}
 
 Register MacroAssembler::instance() const {
   return datareg;
@@ -163,6 +183,18 @@ void MacroAssembler::Epilog() {
   if (timing_) {
     rr_.release(tsreg);
     rr_.free(tsreg);
+  }
+}
+
+StaticData *MacroAssembler::CreateDataBlock(int alignment) {
+  StaticData *data = new StaticData(alignment);
+  data_blocks_.push_back(data);
+  return data;
+}
+
+void MacroAssembler::GenerateDataBlocks() {
+  for (StaticData *data : data_blocks_) {
+    data->Generate(this);
   }
 }
 

@@ -1085,6 +1085,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       task_index++;
     }
 
+    // Generate static data blocks.
+    masm.GenerateDataBlocks();
+
     // Allocate executable code object for generated code.
     cell->code_.Allocate(&masm);
     VLOG(5) << cell->name()

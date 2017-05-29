@@ -130,16 +130,49 @@ class SIMDRegisters {
   int used_regs_ = 0;
 };
 
+// Static data blocks are generated at the end of the code block. The location
+// label can be used for referencing the data.
+class StaticData {
+ public:
+  // Create new static data block.
+  StaticData(int alignment = 1) : alignment_(alignment), address_(&location_) {}
+
+  // Add data to data block.
+  void Add(void *buffer, int size);
+
+  // Generate data blocks and fix up references to it.
+  void Generate(MacroAssembler *masm);
+
+  // Location of data block.
+  jit::Label *location() { return &location_; }
+
+  // Address of data block as operand.
+  const jit::Operand address() const { return address_; }
+
+ private:
+  int alignment_;            // required alignment for data
+  std::vector<uint8> data_;  // data in data block
+  jit::Label location_;      // location of data in generated code block
+  jit::Operand address_;     // pc-relative address of data in code block
+};
+
 // Macro assembler for generating code for computations.
 class MacroAssembler : public jit::Assembler {
  public:
   MacroAssembler(void *buffer, int buffer_size);
+  ~MacroAssembler();
 
   // Generate function prolog.
   void Prolog();
 
   // Generate function prolog.
   void Epilog();
+
+  // Create new static data block.
+  StaticData *CreateDataBlock(int alignment = 1);
+
+  // Generate static data blocks in the code buffer.
+  void GenerateDataBlocks();
 
   // Load address of tensor.
   void LoadTensorAddress(jit::Register dst, Tensor *tensor);
@@ -202,6 +235,9 @@ class MacroAssembler : public jit::Assembler {
   // Register allocation.
   Registers rr_;
   SIMDRegisters mm_;
+
+  // Static data blocks.
+  std::vector<StaticData *> data_blocks_;
 
   // Timing measurements using timestamp counter.
   bool timing_ = false;
