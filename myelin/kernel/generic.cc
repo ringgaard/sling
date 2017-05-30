@@ -17,6 +17,9 @@
 namespace sling {
 namespace myelin {
 
+// array.cc
+void RegisterArrayKernels(Library *library);
+
 // generic-math.cc
 void RegisterGenericMath(Library *library);
 
@@ -144,7 +147,6 @@ void RegisterGenericTransformations(Library *library) {
   library->RegisterIdentityOp("VariableV2");
   library->RegisterIdentityOp("Placeholder");
   library->RegisterIdentityOp("Enter");
-  library->RegisterIdentityOp("FeatureVector");
 
   // Register combined ops.
   library->RegisterCombinedOp("MatMul", "Add", "MatMulAdd");
@@ -158,6 +160,7 @@ void RegisterGenericTransformations(Library *library) {
 
 // Register generic kernels.
 void RegisterGenericKernels(Library *library) {
+  RegisterArrayKernels(library);
   RegisterGenericMath(library);
   RegisterGenericMatMul(library);
   RegisterGenericOperators(library);

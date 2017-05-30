@@ -530,8 +530,8 @@ class Step {
 
   // Allow in-place operation between input and output. Return true if in-place
   // operation is supported, i.e. the operation must be the only consumer of
-  // the input.
-  bool AllowInPlace(int input, int output);
+  // a non-preserved the input.
+  bool AllowInPlace(int input, int output, bool preserved = false);
 
   // A step in the main task that runs on the host but depends on inputs
   // produced on the device needs to be synchronized to ensure that the inputs

@@ -63,6 +63,7 @@ class RandomUniform : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 };
 
@@ -80,6 +81,7 @@ class Conv1D : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 
   int64 Complexity(const Step *step) override {
@@ -119,6 +121,7 @@ class Conv1DAdd : public Conv1D {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 };
 
@@ -133,6 +136,7 @@ class Conv2DBackpropInput : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 };
 
@@ -147,6 +151,7 @@ class Add : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 
   int64 Complexity(const Step *step) override {
@@ -166,6 +171,7 @@ class BiasAdd : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 
   int64 Complexity(const Step *step) override {
@@ -185,6 +191,7 @@ class Mul : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 
   int64 Complexity(const Step *step) override {
@@ -204,6 +211,7 @@ class StridedSlice : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 };
 
@@ -219,48 +227,7 @@ class Pad : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-  }
-};
-
-// Stub for ExpandDims.
-class ExpandDims : public Kernel {
- public:
-  string Name() override { return "DummyExpandDims"; }
-  string Operation() override { return "ExpandDims"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-  }
-};
-
-// Stub for SpaceToBatchND.
-class SpaceToBatchND : public Kernel {
- public:
-  string Name() override { return "DummySpaceToBatchND"; }
-  string Operation() override { return "SpaceToBatchND"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-  }
-};
-
-// Stub for BatchToSpaceND.
-class BatchToSpaceND : public Kernel {
- public:
-  string Name() override { return "DummyBatchToSpaceND"; }
-  string Operation() override { return "BatchToSpaceND"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 };
 
@@ -275,6 +242,7 @@ class Pack : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 };
 
@@ -289,6 +257,7 @@ class Split : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 };
 
@@ -305,9 +274,6 @@ void RegisterWaveNetKernels(Library *library) {
 
   library->Register(new StridedSlice());
   library->Register(new Pad());
-  library->Register(new ExpandDims());
-  library->Register(new SpaceToBatchND());
-  library->Register(new BatchToSpaceND());
   library->Register(new Pack());
   library->Register(new Split());
 

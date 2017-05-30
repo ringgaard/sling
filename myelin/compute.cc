@@ -399,7 +399,7 @@ void Step::SetPreservedRegisterUsage(int regs) {
   SetRegisterUsage(8 + regs);
 }
 
-bool Step::AllowInPlace(int input, int output) {
+bool Step::AllowInPlace(int input, int output, bool preserved) {
   // Get input and output that should be shared.
   DCHECK_GE(input, 0);
   DCHECK_LT(input, inputs_.size());
@@ -407,7 +407,7 @@ bool Step::AllowInPlace(int input, int output) {
   DCHECK_LT(output, outputs_.size());
   Tensor *in = inputs_[input];
   Tensor *out = outputs_[output];
-  if (in->consumers().size() != 1) return false;
+  if (!preserved && in->consumers().size() != 1) return false;
   if (in->ref() != out->ref()) return false;
   if (out->shared()) return false;
   out->set_shared(in);
@@ -441,10 +441,12 @@ Network::~Network() {
   for (auto *m : memory_) FreeMemory(m);
   for (auto *t : parameters_) delete t;
   for (auto *t : constants_) {
-    if (t->device_data_ != DEVICE_NULL) {
-      runtime_->RemoveTensorFromDevice(t);
+    if (t->shared() == nullptr) {
+      if (t->device_data_ != DEVICE_NULL) {
+        runtime_->RemoveTensorFromDevice(t);
+      }
+      delete t;
     }
-    delete t;
   }
   for (auto *c : cells_) delete c;
   for (auto *s : steps_) delete s;
@@ -855,6 +857,20 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             << " order " << t->order_;
   }
 
+  // Move all variables that are shared with a constant to the constant pool.
+  for (auto it = parameters_.begin(); it != parameters_.end();) {
+    // Check if tensor is shared with a constant.
+    Tensor *t = *it;
+    if (t->shared_ != nullptr && t->shared_->IsConstant()) {
+      // Move variable to constant pool.
+      LOG(INFO) << "Convert " << t->name() << " to constant";
+      it = parameters_.erase(it);
+      constants_.push_back(t);
+    } else {
+      ++it;
+    }
+  }
+
   // Initialize instance blocks.
   for (Cell *cell : cells_) {
     // Adjust instance to cache lines.
@@ -925,17 +941,28 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
   // Copy and align constants.
   for (Tensor *tensor : constants_) {
-    // Allocate aligned tensor and copy data.
-    tensor->data_ = AllocateTensor(tensor);
-    if (tensor->data_ == nullptr) return false;
-    tensor->AddNewPlace(HOST);
+    if (tensor->shared_ != nullptr) {
+      // Shared constant. Copy reference to data.
+      CHECK(tensor->shared_->IsConstant());
+      tensor->data_ = tensor->shared_->data_;
+      tensor->AddNewPlace(HOST);
+      if (tensor->placement_ & DEVICE) {
+        tensor->device_data_ = tensor->shared_->device_data_;
+        tensor->AddNewPlace(DEVICE);
+      }
+    } else {
+      // Allocate aligned tensor and copy data.
+      tensor->data_ = AllocateTensor(tensor);
+      if (tensor->data_ == nullptr) return false;
+      tensor->AddNewPlace(HOST);
 
-    // Copy constant to device if needed.
-    if (tensor->placement_ & DEVICE) {
-      VLOG(5) << "Copy tensor " << tensor->name() << " to device";
-      tensor->device_data_ = runtime_->CopyTensorToDevice(tensor);
-      CHECK(tensor->device_data_ != DEVICE_NULL);
-      tensor->AddNewPlace(DEVICE);
+      // Copy constant to device if needed.
+      if (tensor->placement_ & DEVICE) {
+        VLOG(5) << "Copy tensor " << tensor->name() << " to device";
+        tensor->device_data_ = runtime_->CopyTensorToDevice(tensor);
+        CHECK(tensor->device_data_ != DEVICE_NULL);
+        tensor->AddNewPlace(DEVICE);
+      }
     }
   }
 
@@ -1361,6 +1388,7 @@ string Cell::ToString() const {
   if (!steps_.empty()) {
     str.append("\n");
     for (Step *step : steps_) {
+      if (step->noop()) continue;
       str.append("  ");
 
       if (!step->outputs().empty()) {
