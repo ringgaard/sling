@@ -34,7 +34,9 @@ class Cell;
 class Step;
 class Instance;
 class Tensor;
+class TensorData;
 class CUDADevice;
+class CustomKernel;
 
 // Element order.
 enum Order {ANY_ORDER, ROW_MAJOR, COLUMN_MAJOR, CONFLICTING_ORDER};
@@ -89,6 +91,26 @@ class Library : public Transformations {
   // Registers kernel. Ownership is transferred to the library.
   void Register(Kernel *kernel);
 
+  // Register custom kernel.
+  CustomKernel &Register(const string &op, const string &name,
+                         void (*func)(const TensorData &arg,
+                                      TensorData *output));
+  CustomKernel &Register(const string &op, const string &name,
+                         void (*func)(const TensorData &arg1,
+                                      const TensorData &arg2,
+                                      TensorData *output));
+  CustomKernel &Register(const string &op, const string &name,
+                         void (*func)(const TensorData &arg1,
+                                      const TensorData &arg2,
+                                      const TensorData &arg3,
+                                      TensorData *output));
+  CustomKernel &Register(const string &op, const string &name,
+                         void (*func)(const TensorData &arg1,
+                                      const TensorData &arg2,
+                                      const TensorData &arg3,
+                                      const TensorData &arg4,
+                                      TensorData *output));
+
   // Find kernels implementing operation.
   const Kernels &Lookup(const string &op) const;
 
@@ -99,6 +121,10 @@ class Library : public Transformations {
                  Library *singleton) const;
 
  private:
+  // Register custom kernel.
+  CustomKernel &RegisterCustomKernel(const string &op, const string &name,
+                                     void *func, int indegree, int outdegree);
+
   // Map from op name to kernels implemeting the op.
   std::unordered_map<string, Kernels> kernels_;
 
@@ -274,7 +300,7 @@ class Tensor {
   // Number of elements in tensor.
   int elements() const { return shape_.elements(); }
 
-  // Value for constant tensor. Returns null for parameters.
+  // Value for constant tensor. Return null for parameters.
   char *data() const { return data_; }
 
   // Pointer to constant tensor on device.
@@ -283,16 +309,16 @@ class Tensor {
   // Size (in bytes) of elements in tensor.
   int element_size() const { return TypeTraits::of(type_).size(); }
 
-  // Offset in data instance block. Returns -1 for constants and tensors that
+  // Offset in data instance block. Return -1 for constants and tensors that
   // are not stored on the host.
   size_t offset() const { return offset_; }
 
-  // Offset in device data instance block. Returns -1 for constants and tensors
+  // Offset in device data instance block. Return -1 for constants and tensors
   // that are not stored on the device.
   size_t device_offset() const { return device_offset_; }
 
-  // Number Alignof bytes allocated for tensor in instance. This takes references
-  // into account so these only take up space for one pointer.
+  // Number bytes allocated for tensor in instance. This takes references into
+  // account so these only take up space for one pointer.
   size_t space() const { return space_; }
 
   // Byte offset of element in tensor.
@@ -618,6 +644,69 @@ class Channel {
   const Connector *connector_;
 };
 
+// A tensor data objects is a reference to a tensor value. It does not own the
+// underlying storage for the tensor.
+class TensorData {
+ public:
+  TensorData(const TensorData &other)
+      : data_(other.data_), format_(other.format_) {}
+  TensorData(char *data, Tensor *format)
+      : data_(data), format_(format) {}
+
+  // Tensor element access.
+  template<typename T> T &at(int r) {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<T *>(data_ + format_->offset(r));
+  }
+  template<typename T> const T &at(int r) const {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<const T *>(data_ + format_->offset(r));
+  }
+  template<typename T> T &at(int r, int c) {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<T *>(data_ + format_->offset(r, c));
+  }
+  template<typename T> const T &at(int r, int c) const {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<const T *>(data_ + format_->offset(r, c));
+  }
+  template<typename T> T &at(int r, int c, int k) {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<T *>(data_ + format_->offset(r, c, k));
+  }
+  template<typename T> const T &at(int r, int c, int k) const {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<const T *>(data_ + format_->offset(r, c, k));
+  }
+  template<typename T> T &at(int r, int c, int k, int l) {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<T *>(data_ + format_->offset(r, c, k, l));
+  }
+  template<typename T> const T &at(int r, int c, int k, int l) const {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<const T *>(data_ + format_->offset(r, c, k, l));
+  }
+
+  // Return tensor type.
+  Type type() const { return format_->type(); }
+
+  // Return tensor shape.
+  const Shape &shape() const { return format_->shape(); }
+
+  // Return tensor rank.
+  int rank() const { return format_->rank(); }
+
+  // Return size of tensor dimension.
+  int dim(int d) const { return format_->dim(d); }
+
+  // Return tensor format.
+  const Tensor &format() const { return *format_; }
+
+ private:
+  char *data_;      // data for tensor
+  Tensor *format_;  // tensor format
+};
+
 // An instance holds all the input, output, and intermediate parameters of a
 // cell.
 class Instance {
@@ -661,6 +750,12 @@ class Instance {
   void Set(Tensor *param, Channel *channel, int index = 0) {
     *reinterpret_cast<char **>(data_ + param->offset()) = channel->at(index);
   }
+
+  // Return tensor data object for parameter in instance.
+  TensorData operator[](Tensor *param) {
+    return TensorData(data_ + param->offset(), param);
+  }
+  inline TensorData operator[](const string &name);
 
   // Return parameter as string.
   string ToString(Tensor *param) const;
@@ -879,6 +974,40 @@ class Network {
   friend class Instance;
 };
 
+// A custom kernel allows implementation of kernels in C++. The kernel function
+// is called at runtime with the input and output parameters.
+class CustomKernel : public Kernel {
+ public:
+  // Input or output parameter constraints.
+  struct Param {
+    Type type = DT_INVALID;  // parameter type
+    int rank = -1;           // parameter rank
+  };
+
+  // Create custom kernel.
+  CustomKernel(const string &op, const string &name, void *func,
+               int indegree, int outdegree);
+
+  // Set type and rank for input.
+  CustomKernel &Input(int index, Type type, int rank);
+
+  // Set type and rank for output.
+  CustomKernel &Output(int index, Type type, int rank);
+
+  // Kernel interface.
+  string Name() override;
+  string Operation() override;
+  bool Supports(Step *step) override;
+  void Generate(Step *step, MacroAssembler *masm) override;
+
+ private:
+  string op_;                   // operation supported by kernel
+  string name_;                 // kernel name
+  void *func_;                  // function implementing kernel operation
+  std::vector<Param> inputs_;   // input parameter constraints
+  std::vector<Param> outputs_;  // output parameter constraints
+};
+
 inline Runtime *Cell::runtime() const {
   return network_->runtime();
 }
@@ -905,6 +1034,12 @@ inline size_t Instance::size() const {
 
 inline int Instance::alignment() const {
   return cell_->instance_alignment();
+}
+
+inline TensorData Instance::operator[](const string &name) {
+  Tensor *param = cell_->GetParameter(name);
+  DCHECK(param != nullptr) << "Unknown parameter: " << name;
+  return TensorData(data_ + param->offset(), param);
 }
 
 }  // namespace myelin

@@ -31,6 +31,8 @@ namespace myelin {
 #error Myelin requires 64-bit x86
 #endif
 
+#define __ masm->
+
 // Combined tensor order.
 static const Order combined_order[4][4] = {
   {ANY_ORDER,         ROW_MAJOR,         COLUMN_MAJOR,      CONFLICTING_ORDER},
@@ -113,8 +115,48 @@ Library::~Library() {
 }
 
 void Library::Register(Kernel *kernel) {
-  VLOG(7) << "Add " << kernel->Name() << " for " << kernel->Operation();
+  VLOG(7) << "Register " << kernel->Name() << " for " << kernel->Operation();
   kernels_[kernel->Operation()].push_back(kernel);
+}
+
+CustomKernel &Library::Register(const string &op, const string &name,
+                                void (*func)(const TensorData &arg,
+                                             TensorData *output)) {
+  return RegisterCustomKernel(op, name, reinterpret_cast<void *>(func), 1, 1);
+}
+
+CustomKernel &Library::Register(const string &op, const string &name,
+                                 void (*func)(const TensorData &arg1,
+                                              const TensorData &arg2,
+                                    TensorData *output)) {
+  return RegisterCustomKernel(op, name, reinterpret_cast<void *>(func), 2, 1);
+}
+
+CustomKernel &Library::Register(const string &op, const string &name,
+                                void (*func)(const TensorData &arg1,
+                                             const TensorData &arg2,
+                                             const TensorData &arg3,
+                                             TensorData *output)) {
+  return RegisterCustomKernel(op, name, reinterpret_cast<void *>(func), 3, 1);
+}
+
+CustomKernel &Library::Register(const string &op, const string &name,
+                                void (*func)(const TensorData &arg1,
+                                             const TensorData &arg2,
+                                             const TensorData &arg3,
+                                             const TensorData &arg4,
+                                             TensorData *output)) {
+  return RegisterCustomKernel(op, name, reinterpret_cast<void *>(func), 4, 1);
+}
+
+CustomKernel &Library::RegisterCustomKernel(const string &op,
+                                            const string &name,
+                                            void *func,
+                                            int indegree,
+                                            int outdegree) {
+  CustomKernel *kernel = new CustomKernel(op, name, func, indegree, outdegree);
+  Register(kernel);
+  return *kernel;
 }
 
 const Library::Kernels &Library::Lookup(const string &op) const {
@@ -1346,6 +1388,101 @@ string Cell::ToString() const {
 
   str.append("}\n");
   return str;
+}
+
+CustomKernel::CustomKernel(const string &op, const string &name, void *func,
+                           int indegree, int outdegree)
+    : op_(op), name_(name), func_(func) {
+  inputs_.resize(indegree);
+  outputs_.resize(outdegree);
+}
+
+CustomKernel &CustomKernel::Input(int index, Type type, int rank) {
+  CHECK_GE(index, 0);
+  CHECK_LT(index, inputs_.size());
+  inputs_[index].type = type;
+  inputs_[index].rank = rank;
+  return *this;
+}
+
+CustomKernel &CustomKernel::Output(int index, Type type, int rank) {
+  CHECK_GE(index, 0);
+  CHECK_LT(index, outputs_.size());
+  outputs_[index].type = type;
+  outputs_[index].rank = rank;
+  return *this;
+}
+
+string CustomKernel::Name() {
+  return name_;
+}
+
+string CustomKernel::Operation() {
+  return op_;
+}
+
+bool CustomKernel::Supports(Step *step) {
+  // Check that number of inputs and outputs matches.
+  if (step->indegree() != inputs_.size()) return false;
+  if (step->outdegree() != outputs_.size()) return false;
+
+  // Check input type and rank constraints.
+  for (int i = 0; i < inputs_.size(); ++i) {
+    const Param &p = inputs_[i];
+    if (p.type != DT_INVALID && p.type != step->input(i)->type()) return false;
+    if (p.rank != -1 && p.rank != step->input(i)->rank()) return false;
+  }
+
+  // Check output type and rank constraints.
+  for (int i = 0; i < outputs_.size(); ++i) {
+    const Param &p = outputs_[i];
+    if (p.type != DT_INVALID && p.type != step->output(i)->type()) return false;
+    if (p.rank != -1 && p.rank != step->output(i)->rank()) return false;
+  }
+
+  return true;
+}
+
+void CustomKernel::Generate(Step *step, MacroAssembler *masm) {
+  using namespace jit;
+  CHECK_EQ(sizeof(TensorData), sizeof(void *) * 2);
+
+  // Allocate space on stack for tensor data objects.
+  int args = step->indegree() + step->outdegree();
+  __ subq(rsp, Immediate(args * sizeof(TensorData)));
+
+  // Build tensor data structures on stack and set up arguments to kernel
+  // function.
+  Register tmp = masm->rr().alloc_temp();
+  int offset = 0;
+  int argnum = 1;
+  for (int i = 0; i < step->inputs().size(); ++i) {
+    // Build input tensor data structure on stack.
+    __ LoadTensorAddress(tmp, step->input(i));
+    __ movq(Operand(rsp, offset), tmp);
+    __ movp(tmp, step->input(i));
+    __ movq(Operand(rsp, offset + sizeof(void *)), tmp);
+
+    // Put address of input tensor data structure into argument register.
+    __ leaq(masm->rr().arg(argnum++), Operand(rsp, offset));
+    offset += sizeof(TensorData);
+  }
+  for (int i = 0; i < step->outputs().size(); ++i) {
+    // Build output tensor data structure on stack.
+    __ LoadTensorAddress(tmp, step->output(i));
+    __ movq(Operand(rsp, offset), tmp);
+    __ movp(tmp, step->output(i));
+    __ movq(Operand(rsp, offset + sizeof(void *)), tmp);
+
+    // Put address of output tensor data structure into argument register.
+    __ leaq(masm->rr().arg(argnum++), Operand(rsp, offset));
+    offset += sizeof(TensorData);
+  }
+
+  // Call kernel function.
+  __ movp(tmp, func_);
+  __ call(tmp);
+  __ addq(rsp, Immediate(args * sizeof(TensorData)));
 }
 
 }  // namespace myelin

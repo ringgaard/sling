@@ -68,6 +68,28 @@ Register Registers::alloc_fixed(Register r) {
   return r;
 }
 
+Register Registers::alloc_temp() {
+  if (!used(r10)) return alloc_fixed(r10);
+  if (!used(r11)) return alloc_fixed(r11);
+  LOG(FATAL) << "Temp register overflow";
+  return no_reg;
+}
+
+Register Registers::arg(int n) {
+  Register r;
+  switch (n) {
+    case 0: r = rax; break;
+    case 1: r = arg_reg_1; break;
+    case 2: r = arg_reg_2; break;
+    case 3: r = arg_reg_3; break;
+    case 4: r = arg_reg_4; break;
+    case 5: r = arg_reg_5; break;
+    case 6: r = arg_reg_6; break;
+    default: LOG(FATAL) << "Only six argument registers";
+  }
+  return alloc_fixed(r);
+}
+
 void Registers::reserve(int r) {
   CHECK(!saved(r)) << r;
   CHECK(used(r)) << r;

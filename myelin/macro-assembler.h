@@ -39,6 +39,13 @@ class Registers {
   // Allocate fixed register.
   jit::Register alloc_fixed(jit::Register r);
 
+  // Allocate temporary register that is neither preserved or used as an
+  // argument register.
+  jit::Register alloc_temp();
+
+  // Allocate argument register (1-6) or return register (0).
+  jit::Register arg(int n);
+
   // Mark register as being in use.
   void use(int r) { used_regs_ |= (1 << r); }
   void use(jit::Register r) { use(r.code()); }
