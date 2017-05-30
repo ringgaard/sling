@@ -477,6 +477,10 @@ class Step {
   // Kernel used for generating code for step.
   Kernel *kernel() const { return kernel_; }
 
+  // Kernel variant.
+  const string &variant() const { return variant_; }
+  void set_variant(const string &variant) { variant_ = variant; }
+
   // Return the complexity of the cell, i.e. number of numeric operations.
   int64 complexity() const { return kernel_->Complexity(this); }
 
@@ -527,6 +531,9 @@ class Step {
 
   // Kernel used for generating code for step (owned by library).
   Kernel *kernel_ = nullptr;
+
+  // Kernel variant. Only used for display purposes.
+  string variant_;
 
   friend class Network;
 };
