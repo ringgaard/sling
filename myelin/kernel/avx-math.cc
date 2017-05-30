@@ -138,9 +138,9 @@ class AVXFltTanh : public Kernel {
   void Adjust(Step *step) override {
     Tensor *x = step->input(0);
     Tensor *y = step->output(0);
-    x->AlignLast(8);
+    x->MinAlignLast(8);
     x->SetMiniumAlignment(8 * sizeof(float));
-    y->AlignLast(8);
+    y->MinAlignLast(8);
     y->SetMiniumAlignment(8 * sizeof(float));
     x->SameAlign(y);
     step->AllowInPlace(0, 0);
@@ -268,9 +268,9 @@ class AVXFltExpBase : public Kernel {
   void Adjust(Step *step) override {
     Tensor *x = step->input(0);
     Tensor *y = step->output(0);
-    x->AlignLast(8);
+    x->MinAlignLast(8);
     x->SetMiniumAlignment(8 * sizeof(float));
-    y->AlignLast(8);
+    y->MinAlignLast(8);
     y->SetMiniumAlignment(8 * sizeof(float));
     step->AllowInPlace(0, 0);
   }

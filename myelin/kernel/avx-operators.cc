@@ -61,11 +61,11 @@ class AVXFltBinaryOperator : public Kernel {
     Tensor *b = step->input(1);
     Tensor *c = step->output(0);
 
-    a->AlignLast(8);
+    a->MinAlignLast(8);
     a->SetMiniumAlignment(8 * sizeof(float));
-    b->AlignLast(8);
+    b->MinAlignLast(8);
     b->SetMiniumAlignment(8 * sizeof(float));
-    c->AlignLast(8);
+    c->MinAlignLast(8);
     c->SetMiniumAlignment(8 * sizeof(float));
     a->CompatibleAlign(c);
     b->CompatibleAlign(c);
@@ -198,11 +198,11 @@ class AVXIntBinaryOperator : public Kernel {
 
     int regsize = 32;
     int align = regsize / a->element_size();
-    a->AlignLast(align);
+    a->MinAlignLast(align);
     a->SetMiniumAlignment(regsize);
-    b->AlignLast(align);
+    b->MinAlignLast(align);
     b->SetMiniumAlignment(regsize);
-    c->AlignLast(align);
+    c->MinAlignLast(align);
     c->SetMiniumAlignment(regsize);
     a->CompatibleAlign(c);
     b->CompatibleAlign(c);
@@ -332,9 +332,9 @@ class AVXFltConstSub : public Kernel {
     Tensor *x = step->input(1);
     Tensor *y = step->output(0);
 
-    x->AlignLast(8);
+    x->MinAlignLast(8);
     x->SetMiniumAlignment(8 * sizeof(float));
-    y->AlignLast(8);
+    y->MinAlignLast(8);
     y->SetMiniumAlignment(8 * sizeof(float));
     x->CompatibleAlign(y);
     step->AllowInPlace(1, 0);
@@ -427,10 +427,10 @@ class AVXFltMulTwoAdd : public Kernel {
   }
 
   void Adjust(Step *step) override {
-    step->output(0)->AlignLast(8);
+    step->output(0)->MinAlignLast(8);
     step->output(0)->SetMiniumAlignment(8 * sizeof(float));
     for (int i = 0; i < 4; ++i) {
-      step->input(i)->AlignLast(8);
+      step->input(i)->MinAlignLast(8);
       step->input(i)->SetMiniumAlignment(8 * sizeof(float));
       step->input(i)->SameAlign(step->output(0));
     }

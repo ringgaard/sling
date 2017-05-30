@@ -81,10 +81,10 @@ class SSEFltVecMatMulBase : public Kernel {
 
     int alignment = 4 * sizeof(float);
 
-    x->Align({1, 4});
+    x->MinAlign({1, 4});
     x->SetMiniumAlignment(alignment);
 
-    W->Align({4, 1});
+    W->MinAlign({4, 1});
     W->SetMiniumAlignment(alignment);
     W->SetRequiredOrder(COLUMN_MAJOR);
   }

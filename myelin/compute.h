@@ -195,11 +195,14 @@ class Runtime {
 // parameters.
 class Tensor {
  public:
-  // Set alignment constraints for tensor.
-  void Align(const Shape &align);
+  // Set minimum alignment constraints for tensor.
+  void MinAlign(const Shape &align);
 
-  // Set alignment constraint for last dimension of tensor.
-  void AlignLast(int align);
+  // Set maximum alignment constraints for tensor.
+  void MaxAlign(const Shape &align);
+
+  // Set minimum alignment constraint for last dimension of tensor.
+  void MinAlignLast(int align);
 
   // Ensure same alignment as other tensor.
   void SameAlign(Tensor *other);
@@ -246,9 +249,13 @@ class Tensor {
   int rank() const { return shape_.rank(); }
   int dim(int d) const { return shape_.dim(d); }
 
-  // Alignment requirement for each dimension.
-  const Shape &alignment() const { return alignment_; }
-  int alignment(int d) const { return alignment_.dim(d); }
+  // Minumum alignment requirement for each dimension.
+  const Shape &minalign() const { return minalign_; }
+  int minalign(int d) const { return minalign_.dim(d); }
+
+  // Maimum alignment allowed for each dimension.
+  const Shape &maxalign() const { return maxalign_; }
+  int maxalign(int d) const { return maxalign_.dim(d); }
 
   // Tensor shape after alignment.
   const Shape &aligned() const { return aligned_; }
@@ -284,7 +291,7 @@ class Tensor {
   // that are not stored on the device.
   size_t device_offset() const { return device_offset_; }
 
-  // Number of bytes allocated for tensor in instance. This takes references
+  // Number Alignof bytes allocated for tensor in instance. This takes references
   // into account so these only take up space for one pointer.
   size_t space() const { return space_; }
 
@@ -389,8 +396,11 @@ class Tensor {
   // Tensor shape.
   Shape shape_;
 
-  // Alignment requirement for each dimension.
-  Shape alignment_;
+  // Minimum alignment requirement for each dimension.
+  Shape minalign_;
+
+  // Maximum alignment requirement for each dimension.
+  Shape maxalign_;
 
   // Tensor shape after alignment.
   Shape aligned_;

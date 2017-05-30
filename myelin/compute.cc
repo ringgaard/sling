@@ -142,31 +142,42 @@ bool Library::Singleton(const string &op,
   return false;
 }
 
-void Tensor::Align(const Shape &align) {
-  CHECK_LE(align.rank(), alignment_.rank());
+void Tensor::MinAlign(const Shape &align) {
+  CHECK_LE(align.rank(), minalign_.rank());
   for (int d = 0; d < align.rank(); ++d) {
-    if (align.dim(d) > alignment_.dim(d)) alignment_.set(d, align.dim(d));
+    if (align.dim(d) > minalign_.dim(d)) minalign_.set(d, align.dim(d));
   }
 }
 
-void Tensor::AlignLast(int align) {
-  if (rank() > 0 && align > alignment_.dim(rank() - 1)) {
-    alignment_.set(rank() - 1, align);
+void Tensor::MaxAlign(const Shape &align) {
+  CHECK_LE(align.rank(), maxalign_.rank());
+  for (int d = 0; d < align.rank(); ++d) {
+    if (align.dim(d) != 0 &&  align.dim(d) < maxalign_.dim(d)) {
+      maxalign_.set(d, align.dim(d));
+    }
+  }
+}
+
+void Tensor::MinAlignLast(int align) {
+  if (rank() > 0 && align > minalign_.dim(rank() - 1)) {
+    minalign_.set(rank() - 1, align);
   }
 }
 
 void Tensor::SameAlign(Tensor *other) {
-  Align(other->alignment_);
-  other->Align(alignment_);
+  MinAlign(other->minalign_);
+  other->MinAlign(minalign_);
+  MaxAlign(other->maxalign_);
+  other->MaxAlign(maxalign_);
 }
 
 void Tensor::CompatibleAlign(Tensor *other) {
   int d1 = rank() - 1;
   int d2 = other->rank() - 1;
   while (d1 >= 0 && d2 >= 0) {
-    int align = std::max(alignment_.dim(d1), other->alignment_.dim(d2));
-    alignment_.set(d1--, align);
-    other->alignment_.set(d2--, align);
+    int align = std::max(minalign_.dim(d1), other->minalign_.dim(d2));
+    minalign_.set(d1--, align);
+    other->minalign_.set(d2--, align);
   }
 }
 
@@ -428,7 +439,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     tensor->ref_ = var->ref;
     tensor->shape_ = var->shape;
     tensor->aligned_ = var->shape;
-    tensor->alignment_.fill(var->rank(), 1);
+    tensor->minalign_.fill(var->rank(), 1);
+    tensor->maxalign_.fill(var->rank(), 0);
     tensor->stride_.fill(var->rank(), 0);
     tensor->byte_alignment_ = TypeTraits::of(var->type).size();
 
@@ -466,7 +478,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     t->type_ = prototype->type_;
     t->shape_ = prototype->shape_;
     t->shape_.set(0, -1);
-    t->alignment_ = prototype->alignment_;
+    t->minalign_ = prototype->minalign_;
+    t->maxalign_ = prototype->maxalign_;
     t->aligned_ = prototype->aligned_;
     t->stride_ = prototype->stride_;
     t->byte_alignment_ = prototype->byte_alignment_;
@@ -606,7 +619,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       profile->shape_.assign(size);
       profile->size_ = profile->space_ = size * sizeof(int64);
       profile->aligned_ = profile->shape_;
-      profile->alignment_.assign(sizeof(int64));
+      profile->minalign_.assign(sizeof(int64));
+      profile->maxalign_.assign(0);
       profile->stride_.fill(sizeof(int64));
       profile->placement_ = HOST;
       profile->current_placement_ = HOST;
@@ -652,17 +666,29 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
 
       // Propagate alignment.
-      Shape &at = t->alignment_;
-      Shape &al = l->alignment_;
+      Shape &mint = t->minalign_;
+      Shape &maxt = t->maxalign_;
+      Shape &minl = l->minalign_;
+      Shape &maxl = l->minalign_;
       int dt = t->rank() - 1;
       int dl = l->rank() - 1;
       while (dt >= 0 && dl >= 0) {
         if (t->dim(dt) != -1 && l->dim(dl) != -1) {
-          if (at.dim(dt) > al.dim(dl)) {
-            al.set(dl, at.dim(dt));
+          // Propagate minimum alignment in both directions.
+          if (mint.dim(dt) > minl.dim(dl)) {
+            minl.set(dl, mint.dim(dt));
             again = true;
-          } else if (at.dim(dt) < al.dim(dl)) {
-            at.set(dt, al.dim(dl));
+          } else if (mint.dim(dt) < minl.dim(dl)) {
+            mint.set(dt, minl.dim(dl));
+            again = true;
+          }
+
+          // Propagate maximum alignment in both directions.
+          if (maxt.dim(dt) > maxl.dim(dl)) {
+            maxl.set(dl, maxl.dim(dt));
+            again = true;
+          } else if (maxt.dim(dt) < maxl.dim(dl)) {
+            maxt.set(dt, maxl.dim(dl));
             again = true;
           }
         }
@@ -711,6 +737,15 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         return false;
     }
 
+    // Check for conflicting alignment requirements.
+    for (int d = 0; d < tensor->rank(); ++d) {
+      if (tensor->maxalign(d) > tensor->minalign(d)) {
+        LOG(ERROR) << "Conflicting alignment requirements for "
+                   << tensor->name();
+        return false;
+      }
+    }
+
     // Compute stride size for each dimension.
     size_t size = TypeTraits::of(tensor->type()).size();
     if (tensor->order_ == ROW_MAJOR) {
@@ -718,7 +753,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         tensor->stride_.set(d, size);
         int dim = tensor->shape_.dim(d);
         if (dim == -1) dim = 1;
-        int align = Align(dim, tensor->alignment_.dim(d));
+        int align = Align(dim, tensor->minalign_.dim(d));
         tensor->aligned_.set(d, align);
         size *= align;
       }
@@ -727,7 +762,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         tensor->stride_.set(d, size);
         int dim = tensor->shape_.dim(d);
         if (dim == -1) dim = 1;
-        int align = Align(dim, tensor->alignment_.dim(d));
+        int align = Align(dim, tensor->minalign_.dim(d));
         tensor->aligned_.set(d, align);
         size *= align;
       }
@@ -746,7 +781,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     VLOG(5) << "Tensor " << tensor->name_ << ": " << tensor->TypeString()
-            << " alignment " << tensor->alignment_.ToString()
+            << " min " << tensor->minalign_.ToString()
+            << " max " << tensor->maxalign_.ToString()
             << ":" << tensor->byte_alignment_
             << " aligned " << tensor->aligned_.ToString()
             << " size " << tensor->space_
@@ -768,7 +804,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     VLOG(5) << "Connector " << connector->name() << ": " << t->TypeString()
-            << " alignment " << t->alignment_.ToString()
+            << " min " << t->minalign_.ToString()
+            << " max " << t->maxalign_.ToString()
             << ":" << connector->alignment_
             << " aligned " << t->aligned_.ToString()
             << " size " << t->size_

@@ -359,9 +359,9 @@ class DragnnLookupUnrolled : public Kernel {
   void Adjust(Step *step) override {
     // Align embeddings and output.
     int align = kBlockSize * sizeof(float);
-    step->input(1)->Align({1, kBlockSize});
+    step->input(1)->MinAlign({1, kBlockSize});
     step->input(1)->SetMiniumAlignment(align);
-    step->output(0)->Align({1, kBlockSize});
+    step->output(0)->MinAlign({1, kBlockSize});
     step->output(0)->SetMiniumAlignment(align);
 
     // Embedding matrix must be row-major.
