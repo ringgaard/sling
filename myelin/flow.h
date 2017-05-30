@@ -271,6 +271,9 @@ class Flow {
     // Return type as string.
     string TypeString() const;
 
+    // Return data in text format.
+    string DataString() const;
+
     // Set data for variable. The storage is not owned by the variable.
     void SetData(void *buffer, int len) {
       data = static_cast<char *>(buffer);

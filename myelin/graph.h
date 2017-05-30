@@ -14,7 +14,8 @@ struct GraphOptions {
   const char *fontname = "arial";
   bool op_type_as_label = true;
   bool types_in_labels = true;
-  bool constants = true;
+  bool include_constants = true;
+  int max_value_size = 16;
 
   const char *op_shape = "box";
   const char *op_style = "rounded,filled";

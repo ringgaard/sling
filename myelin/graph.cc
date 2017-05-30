@@ -65,7 +65,7 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
 
   // Output DOT graph nodes and edges for inputs, outputs, and constants.
   for (Flow::Variable *var : flow.vars()) {
-    if (!options.constants && var->data != nullptr) continue;
+    if (!options.include_constants && var->data != nullptr) continue;
     if (var->in || var->out) {
       AppendVarId(&str, var);
       str.append(" [");
@@ -79,6 +79,13 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
       if (options.types_in_labels) {
         str.append("\\n");
         str.append(var->TypeString());
+      }
+      if (options.max_value_size > 0 && var->data != nullptr) {
+        int elements = var->elements();
+        if (elements > 0 && elements <= options.max_value_size) {
+          str.append("\\n");
+          str.append(var->DataString());
+        }
       }
       str.append("\" ");
       if (var->data != nullptr) {

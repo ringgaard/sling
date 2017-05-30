@@ -202,6 +202,71 @@ string Flow::Variable::TypeString() const {
   return str;
 }
 
+string Flow::Variable::DataString() const {
+  // Locate data.
+  char *p  = data;
+  if (ref) {
+    if (p == nullptr) return "null";
+    p = *reinterpret_cast<char **>(p);
+  }
+  if (shape.partial()) return "*";
+
+  // Get type traits for elements.
+  const TypeTraits &traits = TypeTraits::of(type);
+
+  // Output tensor as string.
+  string str;
+  if (rank() == 0) {
+    // Scalar.
+    str = traits.str(p);
+  } else if (rank() == 1) {
+    // Vector.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) str.append(",");
+      str.append(traits.str(p));
+      p += traits.size();
+    }
+    str.append("]");
+  } else if (rank() == 2) {
+    // Matrix.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) str.append(",");
+      str.append("[");
+      for (int c = 0; c < dim(1); ++c) {
+        if (c > 0) str.append(",");
+        str.append(traits.str(p));
+        p += traits.size();
+      }
+      str.append("]");
+    }
+    str.append("]");
+  } else if (rank() == 3) {
+    // Tensor.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) str.append(",");
+      str.append("[");
+      for (int c = 0; c < dim(1); ++c) {
+        if (c > 0) str.append(",");
+        str.append("[");
+        for (int k = 0; k < dim(2); ++k) {
+          if (k > 0) str.append(",");
+          str.append(traits.str(p));
+          p += traits.size();
+        }
+      }
+      str.append("]");
+    }
+    str.append("]");
+  } else {
+    str = "<<" + std::to_string(rank()) + "D tensor>>";
+  }
+
+  return str;
+}
+
 bool Flow::Variable::DependsOn(const Operation *op) const {
   std::vector<const Variable *> queue;
   std::unordered_set<const Operation *> visited;
