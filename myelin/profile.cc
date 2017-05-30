@@ -96,6 +96,7 @@ string Profile::ASCIIReport() const {
 
   // Output profile for each step.
   for (int i = 0; i < steps(); ++i) {
+    if (step(i)->noop()) continue;
     string tid;
     if (step(i)->task_index() != -1) {
       tid = StringPrintf("%2d", step(i)->cell()->task(step(i)->task_index()));

@@ -1021,7 +1021,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         }
 
         // Generate code for step.
+        auto pc = masm.pc();
         step->kernel_->Generate(step, &masm);
+        if (masm.pc() == pc) step->noop_ = true;
 
         // No registers are preserved between steps, so reset register
         // allocation.
@@ -1048,7 +1050,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         }
 
         // Profile step.
-        if (profiling_) {
+        if (profiling_ && !step->noop_) {
           int timing = cell->profile()->offset();
           masm.TimeStep(timing + (stepnum + 1) * sizeof(int64));
         }
@@ -1128,7 +1130,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       for (Step *step : cell->steps_) {
         if (step->task_index_ == task_index) {
           // Generate code for step.
+          auto pc = masm.pc();
           step->kernel_->Generate(step, &masm);
+          if (masm.pc() == pc) step->noop_ = true;
 
           // No registers are preserved between steps, so reset register
           // allocation.
@@ -1150,7 +1154,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
           }
 
           // Profile step.
-          if (profiling_) {
+          if (profiling_ && !step->noop_) {
             int timing = cell->profile()->offset();
             masm.TimeStep(timing + (stepnum + 1) * sizeof(int64));
           }

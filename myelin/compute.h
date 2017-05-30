@@ -507,8 +507,11 @@ class Step {
   const string &variant() const { return variant_; }
   void set_variant(const string &variant) { variant_ = variant; }
 
+  // Whether step does not do any computation.
+  bool noop() const { return noop_; }
+
   // Return the complexity of the cell, i.e. number of numeric operations.
-  int64 complexity() const { return kernel_->Complexity(this); }
+  int64 complexity() const { return noop_ ? 0 : kernel_->Complexity(this); }
 
   // Cell that this step belongs to.
   Cell *cell() const { return cell_; }
@@ -560,6 +563,9 @@ class Step {
 
   // Kernel variant. Only used for display purposes.
   string variant_;
+
+  // Whether step is a no-op.
+  bool noop_ = false;
 
   friend class Network;
 };
