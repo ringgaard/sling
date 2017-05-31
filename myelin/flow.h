@@ -61,7 +61,7 @@ class TypeTraits {
 
   Type type() const { return type_; }
   const string &name() const { return name_; }
-  int size() const { return size_; }
+  size_t size() const { return size_; }
   bool valid() const { return type_ != DT_INVALID; }
   const char *ptx() const { return ptx_; }
   string str(void *data) const;
@@ -75,7 +75,7 @@ class TypeTraits {
  private:
   Type type_;        // basic type
   string name_;      // type name
-  int size_;         // size in bytes
+  size_t size_;      // size in bytes
   const char *ptx_;  // ptx type
 };
 

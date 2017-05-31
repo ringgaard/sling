@@ -1,6 +1,7 @@
 #ifndef MYELIN_GRAPH_H_
 #define MYELIN_GRAPH_H_
 
+#include <map>
 #include <string>
 
 #include "base/types.h"
@@ -9,33 +10,41 @@
 namespace sling {
 namespace myelin {
 
+// Options for node in Graphviz DOT graph.
+struct GraphNodeOptions {
+  const char *shape = nullptr;
+  const char *style = nullptr;
+  const char *color = nullptr;
+  const char *fillcolor = nullptr;
+  int penwidth = 0;
+
+  // Append attributes to string.
+  void Append(string *str) const;
+};
+
 // Options for Graphviz DOT graph.
 struct GraphOptions {
+  GraphOptions();
+
+  // Graph generation options.
   const char *fontname = "arial";
   bool op_type_as_label = true;
   bool types_in_labels = true;
   bool include_constants = true;
   int max_value_size = 16;
+  float edge_thickness_scalar = 0.0;
 
-  const char *op_shape = "box";
-  const char *op_style = "rounded,filled";
-  const char *op_color = "#a79776";
-  const char *op_fillcolor = "#efd8a9";
+  // Options for operations, inputs, outputs, and constants.
+  GraphNodeOptions ops;
+  GraphNodeOptions inputs;
+  GraphNodeOptions outputs;
+  GraphNodeOptions consts;
 
-  const char *input_shape = "ellipse";
-  const char *input_style = "filled";
-  const char *input_color = "#899e7f";
-  const char *input_fillcolor = "#c5e2b6";
+  // Options for individual op nodes.
+  std::map<string, GraphNodeOptions> custom_ops;
 
-  const char *output_shape = "ellipse";
-  const char *output_style = "filled";
-  const char *output_color = "#828a9a";
-  const char *output_fillcolor = "#bbc6dd";
-
-  const char *const_shape = "box";
-  const char *const_style = "filled";
-  const char *const_color = "#eeeeee";
-  const char *const_fillcolor = "#a6a6a6";
+  // Options for individual var nodes.
+  std::map<string, GraphNodeOptions> custom_vars;
 };
 
 // Convert flow to DOT graph.

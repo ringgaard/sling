@@ -1,5 +1,7 @@
 #include "myelin/graph.h"
 
+#include <math.h>
+
 #include "base/types.h"
 #include "file/file.h"
 #include "string/printf.h"
@@ -20,6 +22,46 @@ static void AppendVarId(string *str, const Flow::Variable *var) {
   str->push_back('"');
 }
 
+static void AppendPenWidth(string *str,
+                           const Flow::Variable *var,
+                           const GraphOptions &options) {
+  if (options.edge_thickness_scalar == 0) return;
+  size_t size = TypeTraits::of(var->type).size() * var->shape.elements();
+  int width = log(size) * options.edge_thickness_scalar;
+  if (width < 1) width = 1;
+  StringAppendF(str, " [penwidth=%d]", width);
+}
+
+void GraphNodeOptions::Append(string *str) const {
+  if (shape != nullptr) StringAppendF(str, "shape=%s ", shape);
+  if (style != nullptr) StringAppendF(str, "style=\"%s\" ", style);
+  if (color != nullptr) StringAppendF(str, "color=\"%s\" ", color);
+  if (fillcolor != nullptr) StringAppendF(str, "fillcolor=\"%s\" ", fillcolor);
+  if (penwidth != 0) StringAppendF(str, "penwidth=%d ", penwidth);
+}
+
+GraphOptions::GraphOptions() {
+  ops.shape = "box";
+  ops.style = "rounded,filled";
+  ops.color = "#A79776";
+  ops.fillcolor = "#EFD8A9";
+
+  inputs.shape = "ellipse";
+  inputs.style = "filled";
+  inputs.color = "#899E7F";
+  inputs.fillcolor = "#C5E2B6";
+
+  outputs.shape = "ellipse";
+  outputs.style = "filled";
+  outputs.color = "#828A9A";
+  outputs.fillcolor = "#bbc6dd";
+
+  consts.shape = "box";
+  consts.style = "filled";
+  consts.color = "#A6A6A6";
+  consts.fillcolor = "#EEEEEE";
+}
+
 string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
   string str;
 
@@ -34,7 +76,11 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
 
     str.append("label=\"");
     if (options.op_type_as_label) {
-      str.append(op->type);
+      if (op->HasAttr("expr")) {
+        str.append(op->GetAttr("expr"));
+      } else {
+        str.append(op->type);
+      }
     } else {
       str.append(op->name);
     }
@@ -43,11 +89,12 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
       str.append(op->outputs[0]->TypeString());
     }
     str.append("\" ");
-
-    StringAppendF(&str, "shape=%s ", options.op_shape);
-    StringAppendF(&str, "style=\"%s\" ", options.op_style);
-    StringAppendF(&str, "color=\"%s\" ", options.op_color);
-    StringAppendF(&str, "fillcolor=\"%s\" ", options.op_fillcolor);
+    auto f = options.custom_ops.find(op->name);
+    if (f != options.custom_ops.end()) {
+      f->second.Append(&str);
+    } else {
+      options.ops.Append(&str);
+    }
     str.append("];\n");
   }
 
@@ -58,6 +105,7 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
         AppendOpId(&str, input->producer);
         str.append(" -> ");
         AppendOpId(&str, op);
+        AppendPenWidth(&str, input, options);
         str.append(";\n");
       }
     }
@@ -88,20 +136,16 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
         }
       }
       str.append("\" ");
-      if (var->data != nullptr) {
-        StringAppendF(&str, "shape=%s ", options.const_shape);
-        StringAppendF(&str, "style=\"%s\" ", options.const_style);
-        StringAppendF(&str, "color=\"%s\" ", options.const_color);
-        StringAppendF(&str, "fillcolor=\"%s\" ", options.const_fillcolor);
+
+      auto f = options.custom_vars.find(var->name);
+      if (f != options.custom_vars.end()) {
+        f->second.Append(&str);
+      } else if (var->data != nullptr) {
+        options.consts.Append(&str);
       } else if (var->in) {
-        StringAppendF(&str, "shape=%s ", options.input_shape);
-        StringAppendF(&str, "style=\"%s\" ", options.input_style);
-        StringAppendF(&str, "color=\"%s\" ", options.input_color);
-        StringAppendF(&str, "fillcolor=\"%s\" ", options.input_fillcolor);
+        options.inputs.Append(&str);
       } else {
-        StringAppendF(&str, "shape=%s ", options.output_shape);
-        StringAppendF(&str, "style=\"%s\" ", options.output_style);
-        StringAppendF(&str, "fillcolor=\"%s\" ", options.output_fillcolor);
+        options.outputs.Append(&str);
       }
       str.append("];\n");
     }
@@ -110,6 +154,7 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
         AppendVarId(&str, var);
         str.append(" -> ");
         AppendOpId(&str, consumer);
+        AppendPenWidth(&str, var, options);
         str.append(";\n");
       }
     }
@@ -117,6 +162,7 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
         AppendOpId(&str, var->producer);
         str.append(" -> ");
         AppendVarId(&str, var);
+        AppendPenWidth(&str, var, options);
         str.append(";\n");
     }
   }

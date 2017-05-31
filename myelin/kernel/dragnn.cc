@@ -499,8 +499,6 @@ void RegisterDragnnKernels(Library *library) {
   library->Register(new DragnnLookupUnrolled());
   library->Register(new DragnnLookup());
   library->Register(new DragnnCollect());
-  library->Register(new DragnnConcat());
-  library->Register(new NoOpReshape());
   library->RegisterTyper(new DragnnTyper());
   library->RegisterIdentityOp("FeatureVector");
 }
