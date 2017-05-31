@@ -98,10 +98,8 @@ static std::map<string, Expression::OpType> optypes = {
   {"Sub", Expression::SUB},
   {"Mul", Expression::MUL},
   {"Div", Expression::DIV},
-  {"Mod", Expression::MOD},
   {"Min", Expression::MIN},
   {"Max", Expression::MAX},
-  {"Abs", Expression::ABS},
   {"Relu", Expression::RELU},
   {"MulAdd132", Expression::MULADD132},
   {"MulAdd213", Expression::MULADD213},
@@ -113,9 +111,9 @@ static std::map<string, Expression::OpType> optypes = {
 
 static const string opname[] = {
   "Id",
-  "Add", "Sub", "Mul", "Div", "Mod",
+  "Add", "Sub", "Mul", "Div",
   "Min", "Max",
-  "Abs", "Relu",
+  "Relu",
   "MulAdd132", "MulAdd213", "MulAdd231",
   "MulSub132", "MulSub213", "MulSub231",
   "???",
@@ -381,6 +379,14 @@ int Expression::NumVars(VarType type) const {
   int n = 0;
   for (Var *v : vars_) {
     if (v->type == type) n++;
+  }
+  return n;
+}
+
+int Expression::NumOps(OpType type) const {
+  int n = 0;
+  for (Op *op : ops_) {
+    if (op->type == type) n++;
   }
   return n;
 }

@@ -21,19 +21,22 @@ using namespace jit;
 // Mapping from flow variables to expression variables.
 typedef std::map<Flow::Variable *, Expression::Var *> VarMap;
 
+// Error handler for unreachable code.
+static void unreachable() {
+  LOG(FATAL) << "Unreachable";
+}
+
 // Convert operation type to expression op.
 static Expression::OpType OpType(Flow::Operation *op) {
   // Operations that can be fused into Calculate operations.
   static std::unordered_map<string, Expression::OpType> ops {
     {"Add", Expression::ADD},
     {"BiasAdd", Expression::ADD},
+    {"Sub", Expression::SUB},
+    {"Mul", Expression::MUL},
     {"Div", Expression::DIV},
     {"Minimum", Expression::MIN},
     {"Maximum", Expression::MAX},
-    {"Mod", Expression::MOD},
-    {"Mul", Expression::MUL},
-    {"Sub", Expression::SUB},
-    {"Abs", Expression::ABS},
     {"Relu", Expression::RELU},
   };
 
@@ -219,6 +222,112 @@ class ConstantFolding : public Transformer {
   }
 };
 
+class LoopGenerator {
+ public:
+  LoopGenerator(Step *step, MacroAssembler *masm, int vecsize) {
+    // Set up loop to iterate over all the output in vector-sized increments.
+    vecsize_ = vecsize;
+    size_ = step->output(0)->size();
+    single_ = size_ <= vecsize_;
+
+    // Allocate register for offset.
+    Registers &rr = masm->rr();
+    if (!single_) ofs_ = rr.alloc();
+    instance_ = masm->instance();
+
+    // Allocate iterators for all inputs and outputs.
+    input_.resize(step->indegree());
+    for (int i = 0; i < step->indegree(); ++i) {
+      Tensor *var = step->input(i);
+      input_[i].var = var;
+      if (var->offset() == -1 || var->ref()) {
+        input_[i].base = rr.alloc();
+        __ LoadTensorAddress(input_[i].base, var);
+      }
+    }
+    output_.resize(step->outdegree());
+    for (int i = 0; i < step->outdegree(); ++i) {
+      Tensor *var = step->output(i);
+      output_[i].var = var;
+      if (var->offset() == -1 || var->ref()) {
+        output_[i].base = rr.alloc();
+        __ LoadTensorAddress(output_[i].base, var);
+      }
+    }
+  }
+
+  void begin(MacroAssembler *masm) {
+    if (!single_) {
+      __ xorq(ofs_, ofs_);
+      __ bind(&begin_);
+    }
+  }
+
+  void end(MacroAssembler *masm) {
+    if (!single_) {
+      __ addq(ofs_, Immediate(vecsize_));
+      __ cmpq(ofs_, Immediate(size_));
+      __ j(less, &begin_);
+    }
+  }
+
+  Operand addr(Expression::Var *var) {
+    CHECK(valid(var));
+    Iterator &it =
+        var->type == Expression::OUTPUT ? output_[var->id] : input_[var->id];
+    if (single_) {
+      if (it.base.is_valid()) {
+        return Operand(it.base);
+      } else {
+        return Operand(instance_, it.var->offset());
+      }
+    } else {
+      if (it.base.is_valid()) {
+        return Operand(it.base, ofs_);
+      } else {
+        return Operand(instance_, ofs_, times_1, it.var->offset());
+      }
+    }
+  }
+
+  bool valid(Expression::Var *var) {
+    if (var->type == Expression::OUTPUT) {
+      return var->id >= 0 && var->id < output_.size();
+    } else {
+      return var->id >= 0 && var->id < input_.size();
+    }
+  }
+
+ private:
+  // Iterator for looping over (vector) elements in tensor.
+  struct Iterator {
+    Tensor *var;              // tensor that is being iterated
+    Register base = no_reg;   // base register for tensor
+  };
+
+  // Vector size.
+  int vecsize_;
+
+  // Output size.
+  int size_;
+
+  // Loop begin label.
+  Label begin_;
+
+  // Instance pointer register.
+  Register instance_;
+
+  // Main loop register.
+  Register ofs_;
+
+  // Whether only one iteration is needed.
+  bool single_;
+
+  // Input and output iterators.
+  std::vector<Iterator> input_;
+  std::vector<Iterator> output_;
+};
+
 // Kernel for computing arithmetic expressions.
 class Calculate : public Kernel {
  public:
@@ -262,10 +371,9 @@ class Calculate : public Kernel {
     model.mov_reg_mem = true;
     model.mov_mem_reg = true;
     model.op_reg_reg = true;
-    model.op_reg_imm = false;
     model.op_reg_mem = true;
-    model.op_mem_reg = false;
-    model.op_mem_imm = false;
+    model.func_reg_reg = true;
+    model.func_reg_mem = true;
 
     // Convert expression to instructions.
     Expression instructions;
@@ -275,36 +383,260 @@ class Calculate : public Kernel {
     LOG(INFO) << num_regs << " registers used";
 
     // Allocate registers for each input and output and load the tensors.
-    Registers &rr = masm->rr();
-    Register ofs = rr.alloc();
-    std::vector<Register> input(step->indegree());
-    for (int i = 0; i < step->indegree(); ++i) {
-      input[i] = rr.alloc();
-      __ LoadTensorAddress(input[i], step->input(i));
-    }
-    std::vector<Register> output(step->outdegree());
-    for (int i = 0; i < step->outdegree(); ++i) {
-      output[i] = rr.alloc();
-      __ LoadTensorAddress(output[i], step->output(i));
-    }
+    Tensor *result = step->output(0);
+    Type type = result->type();
+    LoopGenerator loop(step, masm, result->element_size());
+
+    // Allocate XMM registers for temp results.
+    SIMDRegisters &mm = masm->mm();
+    std::vector<XMMRegister> reg(num_regs);
+    for (int i = 0; i < num_regs; ++i) reg[i] = mm.allocx();
 
     // Loop over all outputs.
-    Tensor *result = step->output(0);
-    Label loop;
-    __ xorq(ofs, ofs);
-    __ bind(&loop);
+    loop.begin(masm);
 
     // Emit instructions for computing expression.
-    for (Expression::Op *instr : instructions.ops()) {
+    for (Expression::Op *i : instructions.ops()) {
       // Skip no-ops.
-      if (instr->nop()) continue;
-      LOG(INFO) << "  " << instr->AsInstruction();
+      if (i->nop()) continue;
+      LOG(INFO) << "  " << i->AsInstruction()
+                << " ; " << i->result->AsString() << "=" << i->AsString();
+
+      switch (i->type) {
+        case Expression::MOV:
+          if (i->dst != -1 && i->src != -1) {
+            // MOV reg,reg
+            switch (type) {
+              case DT_FLOAT:
+                __ movss(reg[i->dst], reg[i->src]);
+                break;
+              case DT_DOUBLE:
+                __ movsd(reg[i->dst], reg[i->src]);
+                break;
+              default: unreachable();
+            }
+          } else if (i->dst != -1 && i->src == -1) {
+            // MOV reg,[mem]
+            switch (type) {
+              case DT_FLOAT:
+                __ movss(reg[i->dst], loop.addr(i->args[0]));
+                break;
+              case DT_DOUBLE:
+                __ movsd(reg[i->dst], loop.addr(i->args[0]));
+                break;
+              default: unreachable();
+            }
+          } else if (i->dst == -1 && i->src != -1) {
+            // MOV [mem],reg
+            switch (type) {
+              case DT_FLOAT:
+                __ movss(loop.addr(i->result), reg[i->src]);
+                break;
+              case DT_DOUBLE:
+                __ movsd(loop.addr(i->result), reg[i->src]);
+                break;
+              default: unreachable();
+            }
+          } else {
+            unreachable();
+          }
+          break;
+        case Expression::ADD:
+          if (i->dst != -1 && i->src != -1) {
+            // ADD reg,reg
+            switch (type) {
+              case DT_FLOAT:
+                __ addss(reg[i->dst], reg[i->src]);
+                break;
+              case DT_DOUBLE:
+                __ addsd(reg[i->dst], reg[i->src]);
+                break;
+              default: unreachable();
+            }
+          } else if (i->dst != -1 && i->src == -1) {
+            // ADD reg,[mem]
+            switch (type) {
+              case DT_FLOAT:
+                __ addss(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              case DT_DOUBLE:
+                __ addsd(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              default: unreachable();
+            }
+          } else {
+            unreachable();
+          }
+          break;
+        case Expression::SUB:
+          if (i->dst != -1 && i->src != -1) {
+            // SUB reg,reg
+            switch (type) {
+              case DT_FLOAT:
+                __ subss(reg[i->dst], reg[i->src]);
+                break;
+              case DT_DOUBLE:
+                __ subsd(reg[i->dst], reg[i->src]);
+                break;
+              default: unreachable();
+            }
+          } else if (i->dst != -1 && i->src == -1) {
+            // SUB reg,[mem]
+            switch (type) {
+              case DT_FLOAT:
+                __ subss(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              case DT_DOUBLE:
+                __ subsd(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              default: unreachable();
+            }
+          } else {
+            unreachable();
+          }
+          break;
+        case Expression::MUL:
+          if (i->dst != -1 && i->src != -1) {
+            // MUL reg,reg
+            switch (type) {
+              case DT_FLOAT:
+                __ mulss(reg[i->dst], reg[i->src]);
+                break;
+              case DT_DOUBLE:
+                __ mulsd(reg[i->dst], reg[i->src]);
+                break;
+              default: unreachable();
+            }
+          } else if (i->dst != -1 && i->src == -1) {
+            // MUL reg,[mem]
+            switch (type) {
+              case DT_FLOAT:
+                __ mulss(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              case DT_DOUBLE:
+                __ mulsd(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              default: unreachable();
+            }
+          } else {
+            unreachable();
+          }
+          break;
+        case Expression::DIV:
+          if (i->dst != -1 && i->src != -1) {
+            // DIV reg,reg
+            switch (type) {
+              case DT_FLOAT:
+                __ divss(reg[i->dst], reg[i->src]);
+                break;
+              case DT_DOUBLE:
+                __ divsd(reg[i->dst], reg[i->src]);
+                break;
+              default: unreachable();
+            }
+          } else if (i->dst != -1 && i->src == -1) {
+            // DIV reg,[mem]
+            switch (type) {
+              case DT_FLOAT:
+                __ divss(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              case DT_DOUBLE:
+                __ divsd(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              default: unreachable();
+            }
+          } else {
+            unreachable();
+          }
+          break;
+        case Expression::MIN:
+          if (i->dst != -1 && i->src != -1) {
+            // MIN reg,reg
+            switch (type) {
+              case DT_FLOAT:
+                __ minss(reg[i->dst], reg[i->src]);
+                break;
+              case DT_DOUBLE:
+                __ minsd(reg[i->dst], reg[i->src]);
+                break;
+              default: unreachable();
+            }
+          } else if (i->dst != -1 && i->src == -1) {
+            // MIN reg,[mem]
+            switch (type) {
+              case DT_FLOAT:
+                __ minss(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              case DT_DOUBLE:
+                __ minsd(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              default: unreachable();
+            }
+          } else {
+            unreachable();
+          }
+          break;
+        case Expression::MAX:
+          if (i->dst != -1 && i->src != -1) {
+            // MAX reg,reg
+            switch (type) {
+              case DT_FLOAT:
+                __ maxss(reg[i->dst], reg[i->src]);
+                break;
+              case DT_DOUBLE:
+                __ maxsd(reg[i->dst], reg[i->src]);
+                break;
+              default: unreachable();
+            }
+          } else if (i->dst != -1 && i->src == -1) {
+            // MAX reg,[mem]
+            switch (type) {
+              case DT_FLOAT:
+                __ maxss(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              case DT_DOUBLE:
+                __ maxsd(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              default: unreachable();
+            }
+          } else {
+            unreachable();
+          }
+          break;
+        case Expression::RELU:
+          __ pxor(reg[i->dst], reg[i->dst]);
+          if (i->dst != -1 && i->src != -1) {
+            // RELU reg,reg
+            switch (type) {
+              case DT_FLOAT:
+                __ maxss(reg[i->dst], reg[i->src]);
+                break;
+              case DT_DOUBLE:
+                __ maxsd(reg[i->dst], reg[i->src]);
+                break;
+              default: unreachable();
+            }
+          } else if (i->dst != -1 && i->src == -1) {
+            // RELU reg,[mem]
+            switch (type) {
+              case DT_FLOAT:
+                __ maxss(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              case DT_DOUBLE:
+                __ maxsd(reg[i->dst], loop.addr(i->args[1]));
+                break;
+              default: unreachable();
+            }
+          } else {
+            unreachable();
+          }
+          break;
+        default: unreachable();
+      }
     }
 
     // Next element.
-    __ addq(ofs, Immediate(result->element_size()));
-    __ cmpq(ofs, Immediate(result->size()));
-    __ j(less, &loop);
+    loop.end(masm);
   }
 };
 

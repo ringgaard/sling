@@ -28,11 +28,9 @@ class Expression {
     SUB,        // subtraction, r=a-b
     MUL,        // multiplication, r=a*b
     DIV,        // division, r=a/b
-    MOD,        // modulo/remainder, r=a%b
     MIN,        // minimum, r=max(a,b)
     MAX,        // maximum, r=min(a,b)
 
-    ABS,        // absolute value, r=abs(a)
     RELU,       // rectified linear unit, r=max(0,a)
 
     MULADD132,  // fused multiply/add, r=a*c+b
@@ -188,6 +186,9 @@ class Expression {
 
   // Count the number of variable of a certain type.
   int NumVars(VarType type) const;
+
+  // Count the number of ops of a certain type.
+  int NumOps(OpType type) const;
 
   // Compact temporary variable ids and return the number of temporary variable.
   int CompactTempVars();
