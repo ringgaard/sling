@@ -173,6 +173,68 @@ class BatchToSpace : public Kernel {
   }
 };
 
+// Packs an array of rank-R tensors into one rank-(R+1) tensor.
+class Pack : public Kernel {
+ public:
+  string Name() override { return "Pack"; }
+  string Operation() override { return "Pack"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 1 || step->outdegree() != 1) return false;
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    if (x->type() != y->type()) return false;
+    if (x->shape().elements() != y->shape().elements()) return false;
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    step->output(0)->set_ref(step->input(0)->ref());
+    CHECK(step->AllowInPlace(0, 0, true));
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Operation is a no-op.
+    CHECK(step->input(0)->SharedWith(step->output(0)));
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
+// Unpacks an array of a rank-R tensor into rank-(R-1) tensors.
+class Unpack : public Kernel {
+ public:
+  string Name() override { return "Unpack"; }
+  string Operation() override { return "Unpack"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    if (x->type() != y->type()) return false;
+    if (x->shape().elements() != y->shape().elements()) return false;
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    step->output(0)->set_ref(step->input(0)->ref());
+    CHECK(step->AllowInPlace(0, 0, true));
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Operation is a no-op.
+    CHECK(step->input(0)->SharedWith(step->output(0)));
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 // Output concatenation of input tensors.
 class SimpleConcat : public Kernel {
  public:
@@ -229,6 +291,8 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new ExpandDims());
   library->Register(new SpaceToBatch());
   library->Register(new BatchToSpace());
+  library->Register(new Pack());
+  library->Register(new Unpack());
   library->Register(new SimpleConcat());
 }
 

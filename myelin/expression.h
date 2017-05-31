@@ -32,6 +32,9 @@ class Expression {
     MIN,        // minimum, r=max(a,b)
     MAX,        // maximum, r=min(a,b)
 
+    ABS,        // absolute value, r=abs(a)
+    RELU,       // rectified linear unit, r=max(0,a)
+
     MULADD132,  // fused multiply/add, r=a*c+b
     MULADD213,  // fused multiply/add, r=b*a+c
     MULADD231,  // fused multiply/add, r=b*c+a
@@ -127,6 +130,13 @@ class Expression {
     // Three-operand instruction formats.
     bool op_reg_reg_reg = false;    // dst = op(src1, src2)
     bool op_reg_reg_mem = false;    // dst = op(src, [mem])
+
+    // Unary function instruction formats.
+    bool func_reg_reg = false;      // dst = op(src)
+    bool func_reg_imm = false;      // dst = op(imm)
+    bool func_reg_mem = false;      // dst = op([mem])
+    bool func_mem_reg = false;      // [mem] = op(src)
+    bool func_mem_imm = false;      // [mem] = op(imm)
 
     // Fused multiply instruction formats.
     bool fm_reg_reg_reg = false;    // dst = op(dst, src1, src2)

@@ -231,21 +231,6 @@ class Pad : public Kernel {
   }
 };
 
-// Stub for Pack.
-class Pack : public Kernel {
- public:
-  string Name() override { return "DummyPack"; }
-  string Operation() override { return "Pack"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
-  }
-};
-
 // Stub for Split.
 class Split : public Kernel {
  public:
@@ -274,7 +259,6 @@ void RegisterWaveNetKernels(Library *library) {
 
   library->Register(new StridedSlice());
   library->Register(new Pad());
-  library->Register(new Pack());
   library->Register(new Split());
 
   library->RegisterTransformer(new WaveNetTransformer());

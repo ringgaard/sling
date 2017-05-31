@@ -33,6 +33,8 @@ static Expression::OpType OpType(Flow::Operation *op) {
     {"Mod", Expression::MOD},
     {"Mul", Expression::MUL},
     {"Sub", Expression::SUB},
+    {"Abs", Expression::ABS},
+    {"Relu", Expression::RELU},
   };
 
   auto f = ops.find(op->type);
@@ -228,6 +230,7 @@ class Calculate : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 };
 

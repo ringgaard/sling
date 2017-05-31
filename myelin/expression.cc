@@ -101,6 +101,8 @@ static std::map<string, Expression::OpType> optypes = {
   {"Mod", Expression::MOD},
   {"Min", Expression::MIN},
   {"Max", Expression::MAX},
+  {"Abs", Expression::ABS},
+  {"Relu", Expression::RELU},
   {"MulAdd132", Expression::MULADD132},
   {"MulAdd213", Expression::MULADD213},
   {"MulAdd231", Expression::MULADD231},
@@ -113,6 +115,7 @@ static const string opname[] = {
   "Id",
   "Add", "Sub", "Mul", "Div", "Mod",
   "Min", "Max",
+  "Abs", "Relu",
   "MulAdd132", "MulAdd213", "MulAdd231",
   "MulSub132", "MulSub213", "MulSub231",
   "???",
@@ -643,50 +646,123 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
     bool first_is_dest = false;
 
     // Rewrite operation.
-    if (op->arity() == 1 && type == MOV) {
-      switch (result->type) {
-        case TEMP:
-          // Move value into register.
-          switch (args[0]->type) {
-            case INPUT:
-            case OUTPUT:
-              if (!model.mov_reg_mem) success = false;
-              break;
-            case TEMP:
-              if (!model.mov_reg_reg) success = false;
-              break;
-            case CONST:
-              if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
-              break;
-          }
-          break;
+    if (op->arity() == 1) {
+      if (type == MOV) {
+        // Move operations.
+        switch (result->type) {
+          case TEMP:
+            // Move value into register.
+            switch (args[0]->type) {
+              case INPUT:
+              case OUTPUT:
+                if (!model.mov_reg_mem) success = false;
+                break;
+              case TEMP:
+                if (!model.mov_reg_reg) success = false;
+                break;
+              case CONST:
+                if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
+                break;
+            }
+            break;
 
-        case OUTPUT:
-          // Move value into output variable.
-          switch (args[0]->type) {
-            case INPUT:
-              // Add temp variable for input.
-              source = rewritten->Variable(TEMP, -1);
-              break;
-            case OUTPUT:
-              // Add temp variable for output.
-              destination = rewritten->Variable(TEMP, -1);
-              break;
-            case TEMP:
-              if (!model.mov_reg_reg) success = false;
-              break;
-            case CONST:
-              if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
-              break;
-          }
-          break;
+          case OUTPUT:
+            // Move value into output variable.
+            switch (args[0]->type) {
+              case INPUT:
+                // Add temp variable for input.
+                source = rewritten->Variable(TEMP, -1);
+                break;
+              case OUTPUT:
+                // Add temp variable for output.
+                destination = rewritten->Variable(TEMP, -1);
+                break;
+              case TEMP:
+                if (!model.mov_reg_reg) success = false;
+                break;
+              case CONST:
+                if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
+                break;
+            }
+            break;
 
-        case INPUT:
-        case CONST:
-          // Assignment to inputs and constants not allowed.
-          success = false;
+          case INPUT:
+          case CONST:
+            // Assignment to inputs and constants not allowed.
+            success = false;
+        }
+      } else {
+        // Unary operator.
+        switch (result->type) {
+          case TEMP:
+            switch (args[0]->type) {
+              case INPUT:
+              case OUTPUT:
+                if (!model.func_reg_mem) {
+                  // Add temp variable for input.
+                  source = rewritten->Variable(TEMP, -1);
+                  if (!model.func_reg_reg) success = false;
+                }
+                break;
+              case TEMP:
+                if (!model.func_reg_reg) success = false;
+                break;
+              case CONST:
+                if (!model.func_reg_imm) {
+                  // Add temp variable for input.
+                  source = rewritten->Variable(TEMP, -1);
+                  if (!model.func_reg_reg) success = false;
+                }
+                break;
+            }
+            break;
+
+          case OUTPUT:
+            switch (args[0]->type) {
+              case INPUT:
+              case OUTPUT:
+                if (model.func_reg_mem) {
+                  // Add temp variable for output.
+                  destination = rewritten->Variable(TEMP, -1);
+                } else if (model.func_mem_reg) {
+                  // Add temp variable for input.
+                  source = rewritten->Variable(TEMP, -1);
+                } else {
+                  // Add temp variables for input and output.
+                  destination = rewritten->Variable(TEMP, -1);
+                  source = rewritten->Variable(TEMP, -1);
+                  if (!model.func_reg_reg) success = false;
+                }
+                break;
+              case TEMP:
+                if (!model.func_mem_reg) {
+                  // Add temp variable for output.
+                  destination = rewritten->Variable(TEMP, -1);
+                  if (!model.func_reg_reg) success = false;
+                }
+                break;
+              case CONST:
+                if (!model.func_mem_imm) {
+                  // Add temp variable for output.
+                  destination = rewritten->Variable(TEMP, -1);
+                  if (!model.func_reg_imm) {
+                    // Add temp variable for input.
+                    source = rewritten->Variable(TEMP, -1);
+                    if (!model.func_reg_reg) success = false;
+                  }
+                }
+                break;
+            }
+            break;
+
+          case INPUT:
+          case CONST:
+            // Assignment to inputs and constants not allowed.
+            success = false;
+        }
       }
     } else if (op->arity() == 2 && type != MOV) {
+      // Binary operator.
       switch (result->type) {
         case TEMP:
         case OUTPUT:
