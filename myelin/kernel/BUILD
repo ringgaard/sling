@@ -17,11 +17,11 @@ cc_library(
 )
 
 cc_library(
-  name = "calculate",
+  name = "arithmetic",
   srcs = [
-    "calculate.cc",
+    "arithmetic.cc",
   ],
-  hdrs = ["calculate.h"],
+  hdrs = ["arithmetic.h"],
   deps = [
     "//base",
     "//myelin:compute",

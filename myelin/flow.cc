@@ -184,6 +184,38 @@ class Parser {
   char *end_;  // end of input buffer
 };
 
+const string &Attributes::Get(const string &name) const {
+  static string empty;
+  for (auto &attr : *this) {
+    if (attr.name == name) return attr.value;
+  }
+  return empty;
+}
+
+int Attributes::Get(const string &name, int defval) const {
+  for (auto &attr : *this) {
+    if (attr.name == name) return atoi(attr.value.c_str());
+  }
+  return defval;
+}
+
+bool Attributes::Has(const string &name) const {
+  for (auto &attr : *this) {
+    if (attr.name == name) return true;
+  }
+  return false;
+}
+
+void Attributes::Set(const string &name, const string &value) {
+  for (auto &attr : *this) {
+    if (attr.name == name) {
+      attr.value = value;
+      return;
+    }
+  }
+  emplace_back(name, value);
+}
+
 void Flow::Variable::AddAlias(const string &alias) {
   if (std::find(aliases.begin(), aliases.end(), alias) == aliases.end()) {
     aliases.push_back(alias);
@@ -294,38 +326,6 @@ void Flow::Operation::AddOutput(Variable *var) {
   outputs.push_back(var);
   CHECK(var->producer == nullptr);
   var->producer = this;
-}
-
-const string &Flow::Operation::GetAttr(const string &name) {
-  static string empty;
-  for (auto &attr : attrs) {
-    if (attr.name == name) return attr.value;
-  }
-  return empty;
-}
-
-int Flow::Operation::GetAttr(const string &name, int defval) {
-  for (auto &attr : attrs) {
-    if (attr.name == name) return atoi(attr.value.c_str());
-  }
-  return defval;
-}
-
-void Flow::Operation::SetAttr(const string &name, const string &value) {
-  for (auto &attr : attrs) {
-    if (attr.name == name) {
-      attr.value = value;
-      return;
-    }
-  }
-  attrs.emplace_back(name, value);
-}
-
-bool Flow::Operation::HasAttr(const string &name) const{
-  for (auto &attr : attrs) {
-    if (attr.name == name) return true;
-  }
-  return false;
 }
 
 bool Flow::Operation::IsInput(const Variable *var) const {
@@ -531,7 +531,7 @@ Status Flow::Load(const string &filename) {
     for (int j = 0; j < num_attrs; ++j) {
       string name = parser.GetString();
       string value = parser.GetString();
-      op->attrs.emplace_back(name, value);
+      op->SetAttr(name, value);
       if (name == "task") op->task = std::stoi(value);
     }
   }

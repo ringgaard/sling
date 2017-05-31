@@ -543,6 +543,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     steps_.push_back(step);
     step->name_ = op->name;
     step->type_ = op->type;
+    step->attributes_ = op->attrs;
 
     // Set or create cell for step.
     Cell *cell = cells[op->func];

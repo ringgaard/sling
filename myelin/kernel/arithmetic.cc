@@ -1,4 +1,4 @@
-#include "myelin/kernel/calculate.h"
+#include "myelin/kernel/arithmetic.h"
 
 #include <map>
 #include <string>
@@ -219,10 +219,10 @@ class ConstantFolding : public Transformer {
   }
 };
 
-// Stub for Calculate.
+// Kernel for computing arithmetic expressions.
 class Calculate : public Kernel {
  public:
-  string Name() override { return "DummyCalculate"; }
+  string Name() override { return "Calculate"; }
   string Operation() override { return "Calculate"; }
 
   bool Supports(Step *step) override {
@@ -230,15 +230,88 @@ class Calculate : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
+    // Compile expression to be computed.
+    Expression expr;
+    expr.Parse(step->GetAttr("expr"));
+    expr.EliminateCommonSubexpressions();
+    expr.CacheResults();
+
+    // Determine which generator to use.
+    Type type = step->output(0)->type();
+    //const Shape &shape = step->output(0)->shape();
+    switch (type) {
+      case DT_FLOAT:
+      case DT_DOUBLE:
+        if (CPU::Enabled(SSE)) {
+          GenerateMMX(step, expr, masm);
+        } else {
+          LOG(FATAL) << "No generator for float expression";
+        }
+        break;
+
+      default:
+       LOG(FATAL) << "No generator for expression";
+    }
+  }
+
+  void GenerateMMX(Step *step, const Expression &expr, MacroAssembler *masm) {
+    // Set up model for generating MMX/SSE instructions.
+    Expression::Model model;
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
+    model.op_reg_reg = true;
+    model.op_reg_imm = false;
+    model.op_reg_mem = true;
+    model.op_mem_reg = false;
+    model.op_mem_imm = false;
+
+    // Convert expression to instructions.
+    Expression instructions;
+    CHECK(expr.Rewrite(model, &instructions));
+    instructions.ComputeLiveRanges();
+    int num_regs = instructions.AllocateRegisters();
+    LOG(INFO) << num_regs << " registers used";
+
+    // Allocate registers for each input and output and load the tensors.
+    Registers &rr = masm->rr();
+    Register ofs = rr.alloc();
+    std::vector<Register> input(step->indegree());
+    for (int i = 0; i < step->indegree(); ++i) {
+      input[i] = rr.alloc();
+      __ LoadTensorAddress(input[i], step->input(i));
+    }
+    std::vector<Register> output(step->outdegree());
+    for (int i = 0; i < step->outdegree(); ++i) {
+      output[i] = rr.alloc();
+      __ LoadTensorAddress(output[i], step->output(i));
+    }
+
+    // Loop over all outputs.
+    Tensor *result = step->output(0);
+    Label loop;
+    __ xorq(ofs, ofs);
+    __ bind(&loop);
+
+    // Emit instructions for computing expression.
+    for (Expression::Op *instr : instructions.ops()) {
+      // Skip no-ops.
+      if (instr->nop()) continue;
+      LOG(INFO) << "  " << instr->AsInstruction();
+    }
+
+    // Next element.
+    __ addq(ofs, Immediate(result->element_size()));
+    __ cmpq(ofs, Immediate(result->size()));
+    __ j(less, &loop);
   }
 };
 
-// Register expression calculation kernels.
-void RegisterCalculateKernels(Library *library) {
+// Register arithmetic kernels.
+void RegisterArithmeticKernels(Library *library) {
   library->RegisterTransformer(new ConstantFolding());
   library->RegisterTransformer(new ExpressionTransformer());
-  // TODO: convert Shape ops to constants if type is known
 
   library->Register(new Calculate());
 }

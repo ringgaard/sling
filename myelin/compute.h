@@ -500,6 +500,24 @@ class Step {
   Tensor *output(int index) const { return outputs_[index]; }
   int outdegree() const { return outputs_.size(); }
 
+  // Get attribute value.
+  const string &GetAttr(const string &name) const {
+    return attributes_.Get(name);
+  };
+  int GetAttr(const string &name, int defval) const {
+    return attributes_.Get(name, defval);
+  }
+
+  // Check if step has attribute.
+  bool HasAttr(const string &name) const {
+    return attributes_.Has(name);
+  }
+
+  // Set attribute.
+  void SetAttr(const string &name, const string &value) {
+    attributes_.Set(name, value);
+  }
+
   // Kernel used for generating code for step.
   Kernel *kernel() const { return kernel_; }
 
@@ -557,6 +575,9 @@ class Step {
 
   // Outputs from step.
   std::vector<Tensor *> outputs_;
+
+  // Attributes.
+  Attributes attributes_;
 
   // Kernel used for generating code for step (owned by library).
   Kernel *kernel_ = nullptr;
