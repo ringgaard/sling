@@ -146,6 +146,8 @@ class StaticData {
 
   // Add data to data block.
   void Add(void *buffer, int size);
+  void Add(float value, int n = 1);
+  void Add(double value, int n = 1);
 
   // Generate data blocks and fix up references to it.
   void Generate(MacroAssembler *masm);

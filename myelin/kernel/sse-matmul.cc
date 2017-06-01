@@ -150,7 +150,7 @@ class SSEFltVecMatMulBase : public Kernel {
     __ LoopStart(&l1);
     __ xorq(row, row);
     if (bias_) {
-      __ movss(sum[0], Operand(vector, col, times_4));
+      __ movaps(sum[0], Operand(vector, col, times_4));
     }
     for (int i = (bias_ ? 1 : 0); i < adders; ++i) {
        __ xorps(sum[i], sum[i]);
@@ -191,11 +191,11 @@ class SSEFltVecMatMulBase : public Kernel {
 
     // Compute relu.
     if (relu_) {
-      __ maxss(sum[0], zero);
+      __ maxps(sum[0], zero);
     }
 
     // Save to y[col].
-    __ movss(Operand(output, col, times_4), sum[0]);
+    __ movaps(Operand(output, col, times_4), sum[0]);
     __ addq(col, Immediate(1));
 
     // Move to next column.

@@ -21,10 +21,12 @@ using namespace jit;
 // Mapping from flow variables to expression variables.
 typedef std::map<Flow::Variable *, Expression::Var *> VarMap;
 
-// Error handler for unreachable code.
-static void unreachable() {
-  LOG(FATAL) << "Unreachable";
+// Error handler for unsupported operations.
+static void Unsupported(const char *file, int line) {
+  LOG(FATAL) << "Unsupported operation (" << file << " line " << line << ")";
 }
+
+#define UNSUPPORTED Unsupported(__FILE__, __LINE__);
 
 // Convert operation type to expression op.
 static Expression::OpType OpType(Flow::Operation *op) {
@@ -331,6 +333,28 @@ class LoopGenerator {
 // Kernel for computing arithmetic expressions.
 class Calculate : public Kernel {
  public:
+  // Register sizes in bytes.
+  const static int XMMRegSize = 16;
+  const static int YMMRegSize = 32;
+
+  // Assembler instruction methods for different instruction formats.
+  typedef void (Assembler::*XMMRegReg)(XMMRegister,
+                                       XMMRegister);
+  typedef void (Assembler::*XMMRegMem)(XMMRegister,
+                                       const Operand &);
+  typedef void (Assembler::*XMMRegRegReg)(XMMRegister,
+                                          XMMRegister,
+                                          XMMRegister);
+  typedef void (Assembler::*XMMRegRegMem)(XMMRegister,
+                                          XMMRegister,
+                                          const Operand &);
+  typedef void (Assembler::*YMMRegRegReg)(YMMRegister,
+                                          YMMRegister,
+                                          YMMRegister);
+  typedef void (Assembler::*YMMRegRegMem)(YMMRegister,
+                                          YMMRegister,
+                                          const Operand &);
+
   string Name() override { return "Calculate"; }
   string Operation() override { return "Calculate"; }
 
@@ -339,20 +363,58 @@ class Calculate : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    // Determine output type and shape from the first output.
+    Type type = step->output(0)->type();
+    const Shape &shape = step->output(0)->shape();
+    int elements = shape.elements();
+
     // Compile expression to be computed.
     Expression expr;
     expr.Parse(step->GetAttr("expr"));
     expr.EliminateCommonSubexpressions();
+    if (CPU::Enabled(AVX) && CPU::Enabled(FMA3)) {
+      expr.FuseMulAdd();
+      expr.FuseMulSub();
+    }
     expr.CacheResults();
 
     // Determine which generator to use.
-    Type type = step->output(0)->type();
-    //const Shape &shape = step->output(0)->shape();
     switch (type) {
       case DT_FLOAT:
+        if (CPU::Enabled(AVX)) {
+          if (elements > 1 && elements % 8 == 0) {
+            GenerateVectorFltAVX256(step, expr, masm);
+          } else if (elements > 1 && elements % 4 == 0) {
+            GenerateVectorFltAVX128(step, expr, masm);
+          } else {
+            GenerateScalarFltAVX(step, expr, masm);
+          }
+        } else if (CPU::Enabled(SSE)) {
+          if (elements > 1 && elements % 4 == 0) {
+            GenerateVectorFltSSE(step, expr, masm);
+          } else {
+            GenerateScalarFltSSE(step, expr, masm);
+          }
+        } else {
+          LOG(FATAL) << "No generator for float expression";
+        }
+        break;
+
       case DT_DOUBLE:
-        if (CPU::Enabled(SSE)) {
-          GenerateMMX(step, expr, masm);
+        if (CPU::Enabled(AVX)) {
+          if (elements > 1 && elements % 4 == 0) {
+            GenerateVectorFltAVX256(step, expr, masm);
+          } else if (elements > 1 && elements % 2 == 0) {
+            GenerateVectorFltAVX128(step, expr, masm);
+          } else {
+            GenerateScalarFltAVX(step, expr, masm);
+          }
+        } else if (CPU::Enabled(SSE)) {
+          if (CPU::Enabled(SSE2) && elements > 1 && elements % 2 == 0) {
+            GenerateVectorFltSSE(step, expr, masm);
+          } else {
+            GenerateScalarFltSSE(step, expr, masm);
+          }
         } else {
           LOG(FATAL) << "No generator for float expression";
         }
@@ -363,8 +425,272 @@ class Calculate : public Kernel {
     }
   }
 
-  void GenerateMMX(Step *step, const Expression &expr, MacroAssembler *masm) {
-    // Set up model for generating MMX/SSE instructions.
+  // Generate XMM scalar float move.
+  void GenerateScalarFltMove(
+      Type type, Expression::Op *i,
+      std::vector<XMMRegister> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1) {
+      // MOV reg,reg
+      switch (type) {
+        case DT_FLOAT:
+          __ movss(reg[i->dst], reg[i->src]);
+          break;
+        case DT_DOUBLE:
+          __ movsd(reg[i->dst], reg[i->src]);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst != -1 && i->src == -1) {
+      // MOV reg,[mem]
+      switch (type) {
+        case DT_FLOAT:
+          __ movss(reg[i->dst], loop.addr(i->args[0]));
+          break;
+        case DT_DOUBLE:
+          __ movsd(reg[i->dst], loop.addr(i->args[0]));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst == -1 && i->src != -1) {
+      // MOV [mem],reg
+      switch (type) {
+        case DT_FLOAT:
+          __ movss(loop.addr(i->result), reg[i->src]);
+          break;
+        case DT_DOUBLE:
+          __ movsd(loop.addr(i->result), reg[i->src]);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate XMM vector float move.
+  void GenerateVectorFltMove(
+      Type type, Expression::Op *i,
+      std::vector<XMMRegister> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1) {
+      // MOV reg,reg
+      switch (type) {
+        case DT_FLOAT:
+          if (CPU::Enabled(AVX)) {
+            __ vmovaps(reg[i->dst], reg[i->src]);
+          } else {
+            __ movaps(reg[i->dst], reg[i->src]);
+          }
+          break;
+        case DT_DOUBLE:
+          if (CPU::Enabled(AVX)) {
+            __ vmovapd(reg[i->dst], reg[i->src]);
+          } else if (CPU::Enabled(SSE2)) {
+            __ movapd(reg[i->dst], reg[i->src]);
+          } else {
+            UNSUPPORTED;
+          }
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst != -1 && i->src == -1) {
+      // MOV reg,[mem]
+      switch (type) {
+        case DT_FLOAT:
+          if (CPU::Enabled(AVX)) {
+            __ vmovaps(reg[i->dst], loop.addr(i->args[0]));
+          } else {
+            __ movaps(reg[i->dst], loop.addr(i->args[0]));
+          }
+          break;
+        case DT_DOUBLE:
+          if (CPU::Enabled(AVX)) {
+            __ vmovapd(reg[i->dst], loop.addr(i->args[0]));
+          } else if (CPU::Enabled(SSE2)) {
+            __ movapd(reg[i->dst], loop.addr(i->args[0]));
+          } else {
+            UNSUPPORTED;
+          }
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst == -1 && i->src != -1) {
+      // MOV [mem],reg
+      switch (type) {
+        case DT_FLOAT:
+          if (CPU::Enabled(AVX)) {
+            __ vmovaps(loop.addr(i->result), reg[i->src]);
+          } else {
+            __ movaps(loop.addr(i->result), reg[i->src]);
+          }
+          break;
+        case DT_DOUBLE:
+          if (CPU::Enabled(AVX)) {
+            __ vmovapd(loop.addr(i->result), reg[i->src]);
+          } else if (CPU::Enabled(SSE2)) {
+            __ movapd(loop.addr(i->result), reg[i->src]);
+          } else {
+            UNSUPPORTED;
+          }
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate YMM vector float move.
+  void GenerateVectorFltMove(
+      Type type, Expression::Op *i,
+      std::vector<YMMRegister> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1) {
+      // MOV reg,reg
+      switch (type) {
+        case DT_FLOAT:
+          __ vmovaps(reg[i->dst], reg[i->src]);
+          break;
+        case DT_DOUBLE:
+          __ vmovapd(reg[i->dst], reg[i->src]);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst != -1 && i->src == -1) {
+      // MOV reg,[mem]
+      switch (type) {
+        case DT_FLOAT:
+          __ vmovaps(reg[i->dst], loop.addr(i->args[0]));
+          break;
+        case DT_DOUBLE:
+          __ vmovapd(reg[i->dst], loop.addr(i->args[0]));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst == -1 && i->src != -1) {
+      // MOV [mem],reg
+      switch (type) {
+        case DT_FLOAT:
+          __ vmovaps(loop.addr(i->result), reg[i->src]);
+          break;
+        case DT_DOUBLE:
+          __ vmovapd(loop.addr(i->result), reg[i->src]);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate two-operand XMM float op.
+  void GenerateXMMFltOp(
+      Type type, Expression::Op *i,
+      XMMRegReg fltopreg, XMMRegReg dblopreg,
+      XMMRegMem fltopmem, XMMRegMem dblopmem,
+      std::vector<XMMRegister> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1) {
+      // OP reg,reg
+      switch (type) {
+        case DT_FLOAT:
+          (masm->*fltopreg)(reg[i->dst], reg[i->src]);
+          break;
+        case DT_DOUBLE:
+          (masm->*dblopreg)(reg[i->dst], reg[i->src]);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst != -1 && i->src == -1) {
+      // OP reg,[mem]
+      switch (type) {
+        case DT_FLOAT:
+          (masm->*fltopmem)(reg[i->dst], loop.addr(i->args[1]));
+          break;
+        case DT_DOUBLE:
+          (masm->*dblopmem)(reg[i->dst], loop.addr(i->args[1]));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate three-operand XMM float op.
+  void GenerateXMMFltOp(
+      Type type, Expression::Op *i,
+      XMMRegRegReg fltopreg, XMMRegRegReg dblopreg,
+      XMMRegRegMem fltopmem, XMMRegRegMem dblopmem,
+      std::vector<XMMRegister> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1 && i->src2 != -1) {
+      // OP reg,reg,reg
+      switch (type) {
+        case DT_FLOAT:
+          (masm->*fltopreg)(reg[i->dst], reg[i->src], reg[i->src2]);
+          break;
+        case DT_DOUBLE:
+          (masm->*dblopreg)(reg[i->dst], reg[i->src], reg[i->src2]);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst != -1 && i->src != -1 && i->src2 == -1) {
+      // OP reg,reg,[mem]
+      switch (type) {
+        case DT_FLOAT:
+          (masm->*fltopmem)(reg[i->dst], reg[i->src], loop.addr(i->args[1]));
+          break;
+        case DT_DOUBLE:
+          (masm->*dblopmem)(reg[i->dst], reg[i->src], loop.addr(i->args[1]));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate three-operand YMM float op.
+  void GenerateYMMFltOp(
+      Type type, Expression::Op *i,
+      YMMRegRegReg fltopreg, YMMRegRegReg dblopreg,
+      YMMRegRegMem fltopmem, YMMRegRegMem dblopmem,
+      std::vector<YMMRegister> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1 && i->src2 != -1) {
+      // OP reg,reg,reg
+      switch (type) {
+        case DT_FLOAT:
+          (masm->*fltopreg)(reg[i->dst], reg[i->src], reg[i->src2]);
+          break;
+        case DT_DOUBLE:
+          (masm->*dblopreg)(reg[i->dst], reg[i->src], reg[i->src2]);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst != -1 && i->src != -1 && i->src2 == -1) {
+      // OP reg,reg,[mem]
+      switch (type) {
+        case DT_FLOAT:
+          (masm->*fltopmem)(reg[i->dst], reg[i->src], loop.addr(i->args[1]));
+          break;
+        case DT_DOUBLE:
+          (masm->*dblopmem)(reg[i->dst], reg[i->src], loop.addr(i->args[1]));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate scalar float expression using SSE and XMM registers.
+  void GenerateScalarFltSSE(Step *step,
+                            const Expression &expr,
+                            MacroAssembler *masm) {
+    // Set up model for generating scalar float SSE instructions.
     Expression::Model model;
     model.mov_reg_reg = true;
     model.mov_reg_imm = true;
@@ -380,7 +706,6 @@ class Calculate : public Kernel {
     CHECK(expr.Rewrite(model, &instructions));
     instructions.ComputeLiveRanges();
     int num_regs = instructions.AllocateRegisters();
-    LOG(INFO) << num_regs << " registers used";
 
     // Allocate registers for each input and output and load the tensors.
     Tensor *result = step->output(0);
@@ -404,234 +729,684 @@ class Calculate : public Kernel {
 
       switch (i->type) {
         case Expression::MOV:
-          if (i->dst != -1 && i->src != -1) {
-            // MOV reg,reg
-            switch (type) {
-              case DT_FLOAT:
-                __ movss(reg[i->dst], reg[i->src]);
-                break;
-              case DT_DOUBLE:
-                __ movsd(reg[i->dst], reg[i->src]);
-                break;
-              default: unreachable();
-            }
-          } else if (i->dst != -1 && i->src == -1) {
-            // MOV reg,[mem]
-            switch (type) {
-              case DT_FLOAT:
-                __ movss(reg[i->dst], loop.addr(i->args[0]));
-                break;
-              case DT_DOUBLE:
-                __ movsd(reg[i->dst], loop.addr(i->args[0]));
-                break;
-              default: unreachable();
-            }
-          } else if (i->dst == -1 && i->src != -1) {
-            // MOV [mem],reg
-            switch (type) {
-              case DT_FLOAT:
-                __ movss(loop.addr(i->result), reg[i->src]);
-                break;
-              case DT_DOUBLE:
-                __ movsd(loop.addr(i->result), reg[i->src]);
-                break;
-              default: unreachable();
-            }
-          } else {
-            unreachable();
-          }
+          GenerateScalarFltMove(type, i, reg, loop, masm);
           break;
         case Expression::ADD:
-          if (i->dst != -1 && i->src != -1) {
-            // ADD reg,reg
-            switch (type) {
-              case DT_FLOAT:
-                __ addss(reg[i->dst], reg[i->src]);
-                break;
-              case DT_DOUBLE:
-                __ addsd(reg[i->dst], reg[i->src]);
-                break;
-              default: unreachable();
-            }
-          } else if (i->dst != -1 && i->src == -1) {
-            // ADD reg,[mem]
-            switch (type) {
-              case DT_FLOAT:
-                __ addss(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              case DT_DOUBLE:
-                __ addsd(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              default: unreachable();
-            }
-          } else {
-            unreachable();
-          }
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::addss, &Assembler::addsd,
+              &Assembler::addss, &Assembler::addsd,
+              reg, loop, masm);
           break;
         case Expression::SUB:
-          if (i->dst != -1 && i->src != -1) {
-            // SUB reg,reg
-            switch (type) {
-              case DT_FLOAT:
-                __ subss(reg[i->dst], reg[i->src]);
-                break;
-              case DT_DOUBLE:
-                __ subsd(reg[i->dst], reg[i->src]);
-                break;
-              default: unreachable();
-            }
-          } else if (i->dst != -1 && i->src == -1) {
-            // SUB reg,[mem]
-            switch (type) {
-              case DT_FLOAT:
-                __ subss(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              case DT_DOUBLE:
-                __ subsd(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              default: unreachable();
-            }
-          } else {
-            unreachable();
-          }
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::subss, &Assembler::subsd,
+              &Assembler::subss, &Assembler::subsd,
+              reg, loop, masm);
           break;
         case Expression::MUL:
-          if (i->dst != -1 && i->src != -1) {
-            // MUL reg,reg
-            switch (type) {
-              case DT_FLOAT:
-                __ mulss(reg[i->dst], reg[i->src]);
-                break;
-              case DT_DOUBLE:
-                __ mulsd(reg[i->dst], reg[i->src]);
-                break;
-              default: unreachable();
-            }
-          } else if (i->dst != -1 && i->src == -1) {
-            // MUL reg,[mem]
-            switch (type) {
-              case DT_FLOAT:
-                __ mulss(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              case DT_DOUBLE:
-                __ mulsd(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              default: unreachable();
-            }
-          } else {
-            unreachable();
-          }
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::mulss, &Assembler::mulsd,
+              &Assembler::mulss, &Assembler::mulsd,
+              reg, loop, masm);
           break;
         case Expression::DIV:
-          if (i->dst != -1 && i->src != -1) {
-            // DIV reg,reg
-            switch (type) {
-              case DT_FLOAT:
-                __ divss(reg[i->dst], reg[i->src]);
-                break;
-              case DT_DOUBLE:
-                __ divsd(reg[i->dst], reg[i->src]);
-                break;
-              default: unreachable();
-            }
-          } else if (i->dst != -1 && i->src == -1) {
-            // DIV reg,[mem]
-            switch (type) {
-              case DT_FLOAT:
-                __ divss(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              case DT_DOUBLE:
-                __ divsd(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              default: unreachable();
-            }
-          } else {
-            unreachable();
-          }
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::divss, &Assembler::divsd,
+              &Assembler::divss, &Assembler::divsd,
+              reg, loop, masm);
           break;
         case Expression::MIN:
-          if (i->dst != -1 && i->src != -1) {
-            // MIN reg,reg
-            switch (type) {
-              case DT_FLOAT:
-                __ minss(reg[i->dst], reg[i->src]);
-                break;
-              case DT_DOUBLE:
-                __ minsd(reg[i->dst], reg[i->src]);
-                break;
-              default: unreachable();
-            }
-          } else if (i->dst != -1 && i->src == -1) {
-            // MIN reg,[mem]
-            switch (type) {
-              case DT_FLOAT:
-                __ minss(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              case DT_DOUBLE:
-                __ minsd(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              default: unreachable();
-            }
-          } else {
-            unreachable();
-          }
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::minss, &Assembler::minsd,
+              &Assembler::minss, &Assembler::minsd,
+              reg, loop, masm);
           break;
         case Expression::MAX:
-          if (i->dst != -1 && i->src != -1) {
-            // MAX reg,reg
-            switch (type) {
-              case DT_FLOAT:
-                __ maxss(reg[i->dst], reg[i->src]);
-                break;
-              case DT_DOUBLE:
-                __ maxsd(reg[i->dst], reg[i->src]);
-                break;
-              default: unreachable();
-            }
-          } else if (i->dst != -1 && i->src == -1) {
-            // MAX reg,[mem]
-            switch (type) {
-              case DT_FLOAT:
-                __ maxss(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              case DT_DOUBLE:
-                __ maxsd(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              default: unreachable();
-            }
-          } else {
-            unreachable();
-          }
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::maxss, &Assembler::maxsd,
+              &Assembler::maxss, &Assembler::maxsd,
+              reg, loop, masm);
           break;
         case Expression::RELU:
-          __ pxor(reg[i->dst], reg[i->dst]);
-          if (i->dst != -1 && i->src != -1) {
-            // RELU reg,reg
-            switch (type) {
-              case DT_FLOAT:
-                __ maxss(reg[i->dst], reg[i->src]);
-                break;
-              case DT_DOUBLE:
-                __ maxsd(reg[i->dst], reg[i->src]);
-                break;
-              default: unreachable();
-            }
-          } else if (i->dst != -1 && i->src == -1) {
-            // RELU reg,[mem]
-            switch (type) {
-              case DT_FLOAT:
-                __ maxss(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              case DT_DOUBLE:
-                __ maxsd(reg[i->dst], loop.addr(i->args[1]));
-                break;
-              default: unreachable();
-            }
+          if (CPU::Enabled(SSE2)) {
+            __ pxor(reg[i->dst], reg[i->dst]);
+          } else if (type == DT_FLOAT) {
+            float zero = 0;
+            auto *data = masm->CreateDataBlock(sizeof(float));
+            data->Add(zero);
+            __ movss(reg[i->dst], data->address());
+          } else if (type == DT_DOUBLE) {
+            double zero = 0;
+            auto *data = masm->CreateDataBlock(sizeof(double));
+            data->Add(zero);
+            __ movsd(reg[i->dst], data->address());
           } else {
-            unreachable();
+            UNSUPPORTED;
+          }
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::maxss, &Assembler::maxsd,
+              &Assembler::maxss, &Assembler::maxsd,
+              reg, loop, masm);
+          break;
+        default: UNSUPPORTED;
+      }
+    }
+
+    // Next element.
+    loop.end(masm);
+  }
+
+  // Generate scalar float expression using AVX and XMM registers.
+  void GenerateScalarFltAVX(Step *step,
+                            const Expression &expr,
+                            MacroAssembler *masm) {
+    // Set up model for generating scalar float XMM AVX instructions.
+    Expression::Model model;
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
+    model.op_reg_reg_reg = true;
+    model.op_reg_reg_mem = true;
+    model.func_reg_reg = true;
+    model.func_reg_mem = true;
+    if (CPU::Enabled(FMA3)) {
+      model.fm_reg_reg_reg = true;
+      model.fm_reg_reg_mem = true;
+    }
+
+    // Convert expression to instructions.
+    Expression instructions;
+    CHECK(expr.Rewrite(model, &instructions));
+    instructions.ComputeLiveRanges();
+    int num_regs = instructions.AllocateRegisters();
+
+    // Allocate registers for each input and output and load the tensors.
+    Tensor *result = step->output(0);
+    Type type = result->type();
+    LoopGenerator loop(step, masm, result->element_size());
+
+    // Allocate XMM registers for temp results.
+    SIMDRegisters &mm = masm->mm();
+    std::vector<XMMRegister> reg(num_regs);
+    for (int i = 0; i < num_regs; ++i) reg[i] = mm.allocx();
+
+    // Loop over all outputs.
+    loop.begin(masm);
+
+    // Emit instructions for computing expression.
+    for (Expression::Op *i : instructions.ops()) {
+      // Skip no-ops.
+      if (i->nop()) continue;
+      LOG(INFO) << "  " << i->AsInstruction()
+                << " ; " << i->result->AsString() << "=" << i->AsString();
+
+      switch (i->type) {
+        case Expression::MOV:
+          GenerateScalarFltMove(type, i, reg, loop, masm);
+          break;
+        case Expression::ADD:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vaddss, &Assembler::vaddsd,
+              &Assembler::vaddss, &Assembler::vaddsd,
+              reg, loop, masm);
+          break;
+        case Expression::SUB:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vsubss, &Assembler::vsubsd,
+              &Assembler::vsubss, &Assembler::vsubsd,
+              reg, loop, masm);
+          break;
+        case Expression::MUL:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vmulss, &Assembler::vmulsd,
+              &Assembler::vmulss, &Assembler::vmulsd,
+              reg, loop, masm);
+          break;
+        case Expression::DIV:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vdivss, &Assembler::vdivsd,
+              &Assembler::vdivss, &Assembler::vdivsd,
+              reg, loop, masm);
+          break;
+        case Expression::MIN:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vminss, &Assembler::vminsd,
+              &Assembler::vminss, &Assembler::vminsd,
+              reg, loop, masm);
+          break;
+        case Expression::MAX:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vmaxss, &Assembler::vmaxsd,
+              &Assembler::vmaxss, &Assembler::vmaxsd,
+              reg, loop, masm);
+          break;
+        case Expression::RELU:
+          __ vpxor(reg[i->dst], reg[i->dst], reg[i->dst]);
+          switch (type) {
+            case DT_FLOAT:
+              if (i->dst != -1 && i->src != -1) {
+                __ vmaxss(reg[i->dst], reg[i->dst], reg[i->src]);
+              } else if (i->dst != -1 && i->src == -1) {
+                __ vmaxss(reg[i->dst], reg[i->dst], loop.addr(i->args[1]));
+              } else {
+                UNSUPPORTED;
+              }
+              break;
+            case DT_DOUBLE:
+              if (i->dst != -1 && i->src != -1) {
+                __ vmaxsd(reg[i->dst], reg[i->dst], reg[i->src]);
+              } else if (i->dst != -1 && i->src == -1) {
+                __ vmaxsd(reg[i->dst], reg[i->dst], loop.addr(i->args[1]));
+              } else {
+                UNSUPPORTED;
+              }
+              break;
+            default: UNSUPPORTED;
           }
           break;
-        default: unreachable();
+        case Expression::MULADD132:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmadd132ss, &Assembler::vfmadd132sd,
+              &Assembler::vfmadd132ss, &Assembler::vfmadd132sd,
+              reg, loop, masm);
+          break;
+        case Expression::MULADD213:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmadd213ss, &Assembler::vfmadd213sd,
+              &Assembler::vfmadd213ss, &Assembler::vfmadd213sd,
+              reg, loop, masm);
+          break;
+        case Expression::MULADD231:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmadd231ss, &Assembler::vfmadd231sd,
+              &Assembler::vfmadd231ss, &Assembler::vfmadd231sd,
+              reg, loop, masm);
+          break;
+        case Expression::MULSUB132:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmsub132ss, &Assembler::vfmsub132sd,
+              &Assembler::vfmsub132ss, &Assembler::vfmsub132sd,
+              reg, loop, masm);
+          break;
+        case Expression::MULSUB213:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmsub213ss, &Assembler::vfmsub213sd,
+              &Assembler::vfmsub213ss, &Assembler::vfmsub213sd,
+              reg, loop, masm);
+          break;
+        case Expression::MULSUB231:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmsub231ss, &Assembler::vfmsub231sd,
+              &Assembler::vfmsub231ss, &Assembler::vfmsub231sd,
+              reg, loop, masm);
+          break;
+        default: UNSUPPORTED;
+      }
+    }
+
+    // Next element.
+    loop.end(masm);
+  }
+
+  // Generate vector float expression using SSE and XMM registers.
+  void GenerateVectorFltSSE(Step *step,
+                            const Expression &expr,
+                            MacroAssembler *masm) {
+    // Set up model for generating vector float SSE instructions.
+    Expression::Model model;
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
+    model.op_reg_reg = true;
+    model.op_reg_mem = true;
+    model.func_reg_reg = true;
+    model.func_reg_mem = true;
+
+    // Convert expression to instructions.
+    Expression instructions;
+    CHECK(expr.Rewrite(model, &instructions));
+    instructions.ComputeLiveRanges();
+    int num_regs = instructions.AllocateRegisters();
+
+    // Allocate registers for each input and output and load the tensors.
+    Tensor *result = step->output(0);
+    Type type = result->type();
+    LoopGenerator loop(step, masm, XMMRegSize);
+
+    // Allocate XMM registers for temp results.
+    SIMDRegisters &mm = masm->mm();
+    std::vector<XMMRegister> reg(num_regs);
+    for (int i = 0; i < num_regs; ++i) reg[i] = mm.allocx();
+
+    // Loop over all outputs.
+    loop.begin(masm);
+
+    // Emit instructions for computing expression.
+    for (Expression::Op *i : instructions.ops()) {
+      // Skip no-ops.
+      if (i->nop()) continue;
+      LOG(INFO) << "  " << i->AsInstruction()
+                << " ; " << i->result->AsString() << "=" << i->AsString();
+
+      switch (i->type) {
+        case Expression::MOV:
+          GenerateVectorFltMove(type, i, reg, loop, masm);
+          break;
+        case Expression::ADD:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::addps, &Assembler::addpd,
+              &Assembler::addps, &Assembler::addpd,
+              reg, loop, masm);
+          break;
+        case Expression::SUB:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::subps, &Assembler::subpd,
+              &Assembler::subps, &Assembler::subpd,
+              reg, loop, masm);
+          break;
+        case Expression::MUL:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::mulps, &Assembler::mulpd,
+              &Assembler::mulps, &Assembler::mulpd,
+              reg, loop, masm);
+          break;
+        case Expression::DIV:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::divps, &Assembler::divpd,
+              &Assembler::divps, &Assembler::divpd,
+              reg, loop, masm);
+          break;
+        case Expression::MIN:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::minps, &Assembler::minpd,
+              &Assembler::minps, &Assembler::minpd,
+              reg, loop, masm);
+          break;
+        case Expression::MAX:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::maxps, &Assembler::maxpd,
+              &Assembler::maxps, &Assembler::maxpd,
+              reg, loop, masm);
+          break;
+        case Expression::RELU:
+          if (CPU::Enabled(SSE2)) {
+            if (type == DT_FLOAT) {
+              __ xorps(reg[i->dst], reg[i->dst]);
+            } else if (type == DT_DOUBLE) {
+              __ xorpd(reg[i->dst], reg[i->dst]);
+            } else {
+              UNSUPPORTED;
+            }
+          } else if (type == DT_FLOAT) {
+            float zero = 0;
+            auto *data = masm->CreateDataBlock(sizeof(float));
+            data->Add(zero);
+            __ movss(reg[i->dst], data->address());
+          } else {
+            UNSUPPORTED;
+          }
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::maxps, &Assembler::maxpd,
+              &Assembler::maxps, &Assembler::maxpd,
+              reg, loop, masm);
+          break;
+        default: UNSUPPORTED;
+      }
+    }
+
+    // Next element.
+    loop.end(masm);
+  }
+
+  // Generate vector float expression using AVX and XMM registers.
+  void GenerateVectorFltAVX128(Step *step,
+                               const Expression &expr,
+                               MacroAssembler *masm) {
+    // Set up model for generating vector float AVX instructions.
+    Expression::Model model;
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
+    model.op_reg_reg_reg = true;
+    model.op_reg_reg_mem = true;
+    model.func_reg_reg = true;
+    model.func_reg_mem = true;
+    if (CPU::Enabled(FMA3)) {
+      model.fm_reg_reg_reg = true;
+      model.fm_reg_reg_mem = true;
+    }
+
+    // Convert expression to instructions.
+    Expression instructions;
+    CHECK(expr.Rewrite(model, &instructions));
+    instructions.ComputeLiveRanges();
+    int num_regs = instructions.AllocateRegisters();
+
+    // Allocate registers for each input and output and load the tensors.
+    Tensor *result = step->output(0);
+    Type type = result->type();
+    LoopGenerator loop(step, masm, XMMRegSize);
+
+    // Allocate XMM registers for temp results.
+    SIMDRegisters &mm = masm->mm();
+    std::vector<XMMRegister> reg(num_regs);
+    for (int i = 0; i < num_regs; ++i) reg[i] = mm.allocx();
+
+    // Loop over all outputs.
+    loop.begin(masm);
+
+    // Emit instructions for computing expression.
+    for (Expression::Op *i : instructions.ops()) {
+      // Skip no-ops.
+      if (i->nop()) continue;
+      LOG(INFO) << "  " << i->AsInstruction()
+                << " ; " << i->result->AsString() << "=" << i->AsString();
+
+      switch (i->type) {
+        case Expression::MOV:
+          GenerateVectorFltMove(type, i, reg, loop, masm);
+          break;
+        case Expression::ADD:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vaddps, &Assembler::vaddpd,
+              &Assembler::vaddps, &Assembler::vaddpd,
+              reg, loop, masm);
+          break;
+        case Expression::SUB:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vsubps, &Assembler::vsubpd,
+              &Assembler::vsubps, &Assembler::vsubpd,
+              reg, loop, masm);
+          break;
+        case Expression::MUL:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vmulps, &Assembler::vmulpd,
+              &Assembler::vmulps, &Assembler::vmulpd,
+              reg, loop, masm);
+          break;
+        case Expression::DIV:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vdivps, &Assembler::vdivpd,
+              &Assembler::vdivps, &Assembler::vdivpd,
+              reg, loop, masm);
+          break;
+        case Expression::MIN:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vminps, &Assembler::vminpd,
+              &Assembler::vminps, &Assembler::vminpd,
+              reg, loop, masm);
+          break;
+        case Expression::MAX:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vmaxps, &Assembler::vmaxpd,
+              &Assembler::vmaxps, &Assembler::vmaxpd,
+              reg, loop, masm);
+          break;
+        case Expression::RELU:
+          if (type == DT_FLOAT) {
+            __ vxorps(reg[i->dst], reg[i->dst], reg[i->dst]);
+            if (i->dst != -1 && i->src != -1) {
+              __ vmaxps(reg[i->dst], reg[i->dst], reg[i->src]);
+            } else if (i->dst != -1 && i->src == -1) {
+              __ vmaxps(reg[i->dst], reg[i->dst], loop.addr(i->args[1]));
+            } else {
+              UNSUPPORTED;
+            }
+          } else if (type == DT_DOUBLE) {
+            __ vxorpd(reg[i->dst], reg[i->dst], reg[i->dst]);
+            if (i->dst != -1 && i->src != -1) {
+              __ vmaxpd(reg[i->dst], reg[i->dst], reg[i->src]);
+            } else if (i->dst != -1 && i->src == -1) {
+              __ vmaxpd(reg[i->dst], reg[i->dst], loop.addr(i->args[1]));
+            } else {
+              UNSUPPORTED;
+            }
+          } else {
+            UNSUPPORTED;
+          }
+          break;
+        case Expression::MULADD132:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmadd132ps, &Assembler::vfmadd132pd,
+              &Assembler::vfmadd132ps, &Assembler::vfmadd132pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULADD213:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmadd213ps, &Assembler::vfmadd213pd,
+              &Assembler::vfmadd213ps, &Assembler::vfmadd213pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULADD231:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmadd231ps, &Assembler::vfmadd231pd,
+              &Assembler::vfmadd231ps, &Assembler::vfmadd231pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULSUB132:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmsub132ps, &Assembler::vfmsub132pd,
+              &Assembler::vfmsub132ps, &Assembler::vfmsub132pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULSUB213:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmsub213ps, &Assembler::vfmsub213pd,
+              &Assembler::vfmsub213ps, &Assembler::vfmsub213pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULSUB231:
+          GenerateXMMFltOp(
+              type, i,
+              &Assembler::vfmsub231ps, &Assembler::vfmsub231pd,
+              &Assembler::vfmsub231ps, &Assembler::vfmsub231pd,
+              reg, loop, masm);
+          break;
+        default: UNSUPPORTED;
+      }
+    }
+
+    // Next element.
+    loop.end(masm);
+  }
+
+  // Generate vector float expression using AVX and YMM registers.
+  void GenerateVectorFltAVX256(Step *step,
+                               const Expression &expr,
+                               MacroAssembler *masm) {
+    // Set up model for generating vector float AVX instructions.
+    Expression::Model model;
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
+    model.op_reg_reg_reg = true;
+    model.op_reg_reg_mem = true;
+    model.func_reg_reg = true;
+    model.func_reg_mem = true;
+    if (CPU::Enabled(FMA3)) {
+      model.fm_reg_reg_reg = true;
+      model.fm_reg_reg_mem = true;
+    }
+
+    // Convert expression to instructions.
+    Expression instructions;
+    CHECK(expr.Rewrite(model, &instructions));
+    instructions.ComputeLiveRanges();
+    int num_regs = instructions.AllocateRegisters();
+
+    // Allocate registers for each input and output and load the tensors.
+    Tensor *result = step->output(0);
+    Type type = result->type();
+    LoopGenerator loop(step, masm, YMMRegSize);
+
+    // Allocate YMM registers for temp results.
+    SIMDRegisters &mm = masm->mm();
+    std::vector<YMMRegister> reg(num_regs);
+    for (int i = 0; i < num_regs; ++i) reg[i] = mm.allocy();
+
+    // Loop over all outputs.
+    loop.begin(masm);
+
+    // Emit instructions for computing expression.
+    for (Expression::Op *i : instructions.ops()) {
+      // Skip no-ops.
+      if (i->nop()) continue;
+      LOG(INFO) << "  " << i->AsInstruction()
+                << " ; " << i->result->AsString() << "=" << i->AsString();
+
+      switch (i->type) {
+        case Expression::MOV:
+          GenerateVectorFltMove(type, i, reg, loop, masm);
+          break;
+        case Expression::ADD:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vaddps, &Assembler::vaddpd,
+              &Assembler::vaddps, &Assembler::vaddpd,
+              reg, loop, masm);
+          break;
+        case Expression::SUB:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vsubps, &Assembler::vsubpd,
+              &Assembler::vsubps, &Assembler::vsubpd,
+              reg, loop, masm);
+          break;
+        case Expression::MUL:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vmulps, &Assembler::vmulpd,
+              &Assembler::vmulps, &Assembler::vmulpd,
+              reg, loop, masm);
+          break;
+        case Expression::DIV:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vdivps, &Assembler::vdivpd,
+              &Assembler::vdivps, &Assembler::vdivpd,
+              reg, loop, masm);
+          break;
+        case Expression::MIN:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vminps, &Assembler::vminpd,
+              &Assembler::vminps, &Assembler::vminpd,
+              reg, loop, masm);
+          break;
+        case Expression::MAX:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vmaxps, &Assembler::vmaxpd,
+              &Assembler::vmaxps, &Assembler::vmaxpd,
+              reg, loop, masm);
+          break;
+        case Expression::RELU:
+          if (type == DT_FLOAT) {
+            __ vxorps(reg[i->dst], reg[i->dst], reg[i->dst]);
+            if (i->dst != -1 && i->src != -1) {
+              __ vmaxps(reg[i->dst], reg[i->dst], reg[i->src]);
+            } else if (i->dst != -1 && i->src == -1) {
+              __ vmaxps(reg[i->dst], reg[i->dst], loop.addr(i->args[1]));
+            } else {
+              UNSUPPORTED;
+            }
+          } else if (type == DT_DOUBLE) {
+            __ vxorpd(reg[i->dst], reg[i->dst], reg[i->dst]);
+            if (i->dst != -1 && i->src != -1) {
+              __ vmaxpd(reg[i->dst], reg[i->dst], reg[i->src]);
+            } else if (i->dst != -1 && i->src == -1) {
+              __ vmaxpd(reg[i->dst], reg[i->dst], loop.addr(i->args[1]));
+            } else {
+              UNSUPPORTED;
+            }
+          } else {
+            UNSUPPORTED;
+          }
+          break;
+        case Expression::MULADD132:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vfmadd132ps, &Assembler::vfmadd132pd,
+              &Assembler::vfmadd132ps, &Assembler::vfmadd132pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULADD213:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vfmadd213ps, &Assembler::vfmadd213pd,
+              &Assembler::vfmadd213ps, &Assembler::vfmadd213pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULADD231:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vfmadd231ps, &Assembler::vfmadd231pd,
+              &Assembler::vfmadd231ps, &Assembler::vfmadd231pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULSUB132:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vfmsub132ps, &Assembler::vfmsub132pd,
+              &Assembler::vfmsub132ps, &Assembler::vfmsub132pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULSUB213:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vfmsub213ps, &Assembler::vfmsub213pd,
+              &Assembler::vfmsub213ps, &Assembler::vfmsub213pd,
+              reg, loop, masm);
+          break;
+        case Expression::MULSUB231:
+          GenerateYMMFltOp(
+              type, i,
+              &Assembler::vfmsub231ps, &Assembler::vfmsub231pd,
+              &Assembler::vfmsub231ps, &Assembler::vfmsub231pd,
+              reg, loop, masm);
+          break;
+        default: UNSUPPORTED;
       }
     }
 

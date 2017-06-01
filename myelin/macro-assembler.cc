@@ -133,6 +133,14 @@ void StaticData::Add(void *buffer, int size) {
   data_.insert(data_.end(), ptr, ptr + size);
 }
 
+void StaticData::Add(float value, int n) {
+  for (int i = 0; i < n; ++i) Add(&value, sizeof(float));
+}
+
+void StaticData::Add(double value, int n) {
+  for (int i = 0; i < n; ++i) Add(&value, sizeof(double));
+}
+
 void StaticData::Generate(MacroAssembler *masm) {
   // Align output.
   masm->DataAlign(alignment_);
