@@ -868,9 +868,11 @@ class Assembler : public CodeGenerator {
   void movsd(const Operand &dst, XMMRegister src);
   void movsd(XMMRegister dst, const Operand &src);
 
+  void movdqa(XMMRegister dst, XMMRegister src);
   void movdqa(const Operand &dst, XMMRegister src);
   void movdqa(XMMRegister dst, const Operand &src);
 
+  void movdqu(XMMRegister dst, XMMRegister src);
   void movdqu(const Operand &dst, XMMRegister src);
   void movdqu(XMMRegister dst, const Operand &src);
 
@@ -2728,7 +2730,7 @@ class Assembler : public CodeGenerator {
     immediate_arithmetic_op(0x7, dst, src, size);
   }
 
-  // Compare {al,ax,eax,rax} with src.  If equal, set ZF and write dst into
+  // Compare {al,ax,eax,rax} with src. If equal, set ZF and write dst into
   // src. Otherwise clear ZF and write src into {al,ax,eax,rax}.  This
   // operation is only atomic if prefixed by the lock instruction.
   void emit_cmpxchg(const Operand &dst, Register src, int size);
@@ -2736,11 +2738,13 @@ class Assembler : public CodeGenerator {
   void emit_dec(Register dst, int size);
   void emit_dec(const Operand &dst, int size);
 
-  // Divide rdx:rax by src.  Quotient in rax, remainder in rdx when size is 64.
-  // Divide edx:eax by lower 32 bits of src.  Quotient in eax, remainder in edx
+  // Divide rdx:rax by src. Quotient in rax, remainder in rdx when size is 64.
+  // Divide edx:eax by lower 32 bits of src. Quotient in eax, remainder in edx
   // when size is 32.
   void emit_idiv(Register src, int size);
+  void emit_idiv(const Operand &src, int size);
   void emit_div(Register src, int size);
+  void emit_div(const Operand &src, int size);
 
   // Signed multiply instructions.
   // rdx:rax = rax * src when size is 64 or edx:eax = eax * src when size is 32.

@@ -338,22 +338,28 @@ class Calculate : public Kernel {
   const static int YMMRegSize = 32;
 
   // Assembler instruction methods for different instruction formats.
-  typedef void (Assembler::*XMMRegReg)(XMMRegister,
-                                       XMMRegister);
-  typedef void (Assembler::*XMMRegMem)(XMMRegister,
-                                       const Operand &);
-  typedef void (Assembler::*XMMRegRegReg)(XMMRegister,
-                                          XMMRegister,
-                                          XMMRegister);
-  typedef void (Assembler::*XMMRegRegMem)(XMMRegister,
-                                          XMMRegister,
-                                          const Operand &);
-  typedef void (Assembler::*YMMRegRegReg)(YMMRegister,
-                                          YMMRegister,
-                                          YMMRegister);
-  typedef void (Assembler::*YMMRegRegMem)(YMMRegister,
-                                          YMMRegister,
-                                          const Operand &);
+  typedef void (Assembler::*OpReg)(Register);
+  typedef void (Assembler::*OpMem)(const Operand &);
+  typedef void (Assembler::*OpRegReg)(Register,
+                                      Register);
+  typedef void (Assembler::*OpRegMem)(Register,
+                                    const Operand &);
+  typedef void (Assembler::*OpXMMRegReg)(XMMRegister,
+                                         XMMRegister);
+  typedef void (Assembler::*OpXMMRegMem)(XMMRegister,
+                                         const Operand &);
+  typedef void (Assembler::*OpXMMRegRegReg)(XMMRegister,
+                                            XMMRegister,
+                                            XMMRegister);
+  typedef void (Assembler::*OpXMMRegRegMem)(XMMRegister,
+                                            XMMRegister,
+                                            const Operand &);
+  typedef void (Assembler::*OpYMMRegRegReg)(YMMRegister,
+                                            YMMRegister,
+                                            YMMRegister);
+  typedef void (Assembler::*OpYMMRegRegMem)(YMMRegister,
+                                            YMMRegister,
+                                            const Operand &);
 
   string Name() override { return "Calculate"; }
   string Operation() override { return "Calculate"; }
@@ -372,7 +378,8 @@ class Calculate : public Kernel {
     Expression expr;
     expr.Parse(step->GetAttr("expr"));
     expr.EliminateCommonSubexpressions();
-    if (CPU::Enabled(AVX) && CPU::Enabled(FMA3)) {
+    if (CPU::Enabled(AVX) && CPU::Enabled(FMA3) &&
+        (type == DT_FLOAT || type == DT_DOUBLE)) {
       expr.FuseMulAdd();
       expr.FuseMulSub();
     }
@@ -417,6 +424,39 @@ class Calculate : public Kernel {
           }
         } else {
           LOG(FATAL) << "No generator for float expression";
+        }
+        break;
+
+      case DT_INT8:
+      case DT_UINT8:
+        if (CPU::Enabled(SSE2) && elements > 1 && elements % 16  == 0) {
+          GenerateVectorIntSSE(step, expr, masm);
+        } else {
+          GenerateScalarInt(step, expr, masm);
+        }
+        break;
+
+      case DT_INT16:
+        if (CPU::Enabled(SSE2) && elements > 1 && elements % 8  == 0) {
+          GenerateVectorIntSSE(step, expr, masm);
+        } else {
+          GenerateScalarInt(step, expr, masm);
+        }
+        break;
+
+      case DT_INT32:
+        if (CPU::Enabled(SSE2) && elements > 1 && elements % 4  == 0) {
+          GenerateVectorIntSSE(step, expr, masm);
+        } else {
+          GenerateScalarInt(step, expr, masm);
+        }
+        break;
+
+      case DT_INT64:
+        if (CPU::Enabled(SSE2) && elements > 1 && elements % 2  == 0) {
+          GenerateVectorIntSSE(step, expr, masm);
+        } else {
+          GenerateScalarInt(step, expr, masm);
         }
         break;
 
@@ -584,11 +624,139 @@ class Calculate : public Kernel {
     }
   }
 
+  // Generate XMM vector int move.
+  void GenerateVectorIntMove(
+      Type type, Expression::Op *i,
+      std::vector<XMMRegister> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1) {
+      // MOV reg,reg
+      if (CPU::Enabled(AVX)) {
+        __ vmovdqa(reg[i->dst], reg[i->src]);
+      } else if (CPU::Enabled(SSE2)) {
+        __ movdqa(reg[i->dst], reg[i->src]);
+      } else {
+        __ movaps(reg[i->dst], reg[i->src]);
+      }
+    } else if (i->dst != -1 && i->src == -1) {
+      // MOV reg,[mem]
+      if (CPU::Enabled(AVX)) {
+        __ vmovdqa(reg[i->dst], loop.addr(i->args[0]));
+      } else if (CPU::Enabled(SSE2)) {
+        __ movdqa(reg[i->dst], loop.addr(i->args[0]));
+      } else {
+        __ movaps(reg[i->dst], loop.addr(i->args[0]));
+      }
+    } else if (i->dst == -1 && i->src != -1) {
+      // MOV [mem],reg
+      if (CPU::Enabled(AVX)) {
+        __ vmovdqa(loop.addr(i->result), reg[i->src]);
+      } else if (CPU::Enabled(SSE2)) {
+        __ movdqa(loop.addr(i->result), reg[i->src]);
+      } else {
+        __ movaps(loop.addr(i->result), reg[i->src]);
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate move of x64 operand to register.
+  void GenerateIntMoveMemToReg(Type type,
+                               Register dst, const Operand &src,
+                               MacroAssembler *masm) {
+    switch (type) {
+      case DT_INT8:
+        __ movsxbq(dst, src);
+        break;
+      case DT_UINT8:
+        __ movzxbq(dst, src);
+        break;
+      case DT_INT16:
+        __ movsxwq(dst, src);
+        break;
+      case DT_INT32:
+        __ movsxlq(dst, src);
+        break;
+      case DT_INT64:
+        __ movq(dst, src);
+        break;
+      default: UNSUPPORTED;
+    }
+  }
+
+  // Generate move of x64 register to operand.
+  void GenerateIntMoveRegToMem(Type type,
+                               const Operand &dst, Register src,
+                               MacroAssembler *masm) {
+    switch (type) {
+      case DT_INT8:
+      case DT_UINT8:
+        __ movb(dst, src);
+        break;
+      case DT_INT16:
+        __ movw(dst, src);
+        break;
+      case DT_INT32:
+        __ movl(dst, src);
+        break;
+      case DT_INT64:
+        __ movq(dst, src);
+        break;
+      default: UNSUPPORTED;
+    }
+  }
+
+  // Generate x64 scalar int move.
+  void GenerateScalarIntMove(
+      Type type, Expression::Op *i,
+      std::vector<Register> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1) {
+      // MOV reg,reg
+      __ movq(reg[i->dst], reg[i->src]);
+    } else if (i->dst != -1 && i->src == -1) {
+      // MOV reg,[mem]
+      GenerateIntMoveMemToReg(type, reg[i->dst], loop.addr(i->args[0]), masm);
+    } else if (i->dst == -1 && i->src != -1) {
+      // MOV [mem],reg
+      GenerateIntMoveRegToMem(type, loop.addr(i->result), reg[i->src], masm);
+    }
+  }
+
+  // Generate x64 scalar int move from first argument to register.
+  void GenerateScalarIntMoveArgToReg(
+      Type type, Register dst, Expression::Op *i,
+      std::vector<Register> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->src != -1) {
+      // MOV reg,reg
+      __ movq(dst, reg[i->src]);
+    } else {
+      // MOV reg,[mem]
+      GenerateIntMoveMemToReg(type, dst, loop.addr(i->args[0]), masm);
+    }
+  }
+
+  // Generate x64 scalar int move from register to result.
+  void GenerateScalarIntMoveRegToResult(
+      Type type, Register src, Expression::Op *i,
+      std::vector<Register> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1) {
+      // MOV reg,reg
+      __ movq(reg[i->dst], src);
+    } else {
+      // MOV [mem],reg
+      GenerateIntMoveRegToMem(type, loop.addr(i->result), src, masm);
+    }
+  }
+
   // Generate two-operand XMM float op.
   void GenerateXMMFltOp(
       Type type, Expression::Op *i,
-      XMMRegReg fltopreg, XMMRegReg dblopreg,
-      XMMRegMem fltopmem, XMMRegMem dblopmem,
+      OpXMMRegReg fltopreg, OpXMMRegReg dblopreg,
+      OpXMMRegMem fltopmem, OpXMMRegMem dblopmem,
       std::vector<XMMRegister> &reg, LoopGenerator &loop,
       MacroAssembler *masm) {
     if (i->dst != -1 && i->src != -1) {
@@ -621,8 +789,8 @@ class Calculate : public Kernel {
   // Generate three-operand XMM float op.
   void GenerateXMMFltOp(
       Type type, Expression::Op *i,
-      XMMRegRegReg fltopreg, XMMRegRegReg dblopreg,
-      XMMRegRegMem fltopmem, XMMRegRegMem dblopmem,
+      OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
+      OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
       std::vector<XMMRegister> &reg, LoopGenerator &loop,
       MacroAssembler *masm) {
     if (i->dst != -1 && i->src != -1 && i->src2 != -1) {
@@ -655,8 +823,8 @@ class Calculate : public Kernel {
   // Generate three-operand YMM float op.
   void GenerateYMMFltOp(
       Type type, Expression::Op *i,
-      YMMRegRegReg fltopreg, YMMRegRegReg dblopreg,
-      YMMRegRegMem fltopmem, YMMRegRegMem dblopmem,
+      OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
+      OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
       std::vector<YMMRegister> &reg, LoopGenerator &loop,
       MacroAssembler *masm) {
     if (i->dst != -1 && i->src != -1 && i->src2 != -1) {
@@ -681,6 +849,88 @@ class Calculate : public Kernel {
           break;
         default: UNSUPPORTED;
       }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate two-operand XMM int op.
+  void GenerateXMMIntOp(
+      Type type, Expression::Op *i,
+      OpXMMRegReg opregb, OpXMMRegMem opmemb,
+      OpXMMRegReg opregw, OpXMMRegMem opmemw,
+      OpXMMRegReg opregd, OpXMMRegMem opmemd,
+      OpXMMRegReg opregq, OpXMMRegMem opmemq,
+      std::vector<XMMRegister> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1) {
+      // OP reg,reg
+      switch (type) {
+        case DT_INT8:
+        case DT_UINT8:
+          (masm->*opregb)(reg[i->dst], reg[i->src]);
+          break;
+        case DT_INT16:
+          (masm->*opregw)(reg[i->dst], reg[i->src]);
+          break;
+        case DT_INT32:
+          (masm->*opregd)(reg[i->dst], reg[i->src]);
+          break;
+        case DT_INT64:
+          (masm->*opregq)(reg[i->dst], reg[i->src]);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (i->dst != -1 && i->src == -1) {
+      // OP reg,[mem]
+      switch (type) {
+        case DT_INT8:
+        case DT_UINT8:
+          (masm->*opmemb)(reg[i->dst], loop.addr(i->args[1]));
+          break;
+        case DT_INT16:
+          (masm->*opmemw)(reg[i->dst], loop.addr(i->args[1]));
+          break;
+        case DT_INT32:
+          (masm->*opmemd)(reg[i->dst], loop.addr(i->args[1]));
+          break;
+        case DT_INT64:
+          (masm->*opmemq)(reg[i->dst], loop.addr(i->args[1]));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate one-operand x64 int op.
+  void GenerateIntUnaryOp(
+      Type type, Expression::Op *i,
+      OpReg opreg, OpMem opmem,
+      std::vector<Register> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->src != -1) {
+      // OP reg
+      (masm->*opreg)(reg[i->src]);
+    } else {
+      // OP [mem]
+      (masm->*opmem)(loop.addr(i->args[1]));
+    }
+  }
+
+  // Generate two-operand x64 int op.
+  void GenerateIntBinaryOp(
+      Type type, Expression::Op *i,
+      OpRegReg opreg, OpRegMem opmem,
+      std::vector<Register> &reg, LoopGenerator &loop,
+      MacroAssembler *masm) {
+    if (i->dst != -1 && i->src != -1) {
+      // OP reg,reg
+      (masm->*opreg)(reg[i->dst], reg[i->src]);
+    } else if (i->dst != -1 && i->src == -1) {
+      // OP reg,[mem]
+      (masm->*opmem)(reg[i->dst], loop.addr(i->args[1]));
     } else {
       UNSUPPORTED;
     }
@@ -774,18 +1024,14 @@ class Calculate : public Kernel {
               reg, loop, masm);
           break;
         case Expression::RELU:
-          if (CPU::Enabled(SSE2)) {
-            __ pxor(reg[i->dst], reg[i->dst]);
-          } else if (type == DT_FLOAT) {
-            float zero = 0;
-            auto *data = masm->CreateDataBlock(sizeof(float));
-            data->Add(zero);
-            __ movss(reg[i->dst], data->address());
+          if (type == DT_FLOAT) {
+            __ xorps(reg[i->dst], reg[i->dst]);
           } else if (type == DT_DOUBLE) {
-            double zero = 0;
-            auto *data = masm->CreateDataBlock(sizeof(double));
-            data->Add(zero);
-            __ movsd(reg[i->dst], data->address());
+            if (CPU::Enabled(SSE2)) {
+              __ xorpd(reg[i->dst], reg[i->dst]);
+            } else {
+              __ xorps(reg[i->dst], reg[i->dst]);
+            }
           } else {
             UNSUPPORTED;
           }
@@ -1405,6 +1651,191 @@ class Calculate : public Kernel {
               &Assembler::vfmsub231ps, &Assembler::vfmsub231pd,
               &Assembler::vfmsub231ps, &Assembler::vfmsub231pd,
               reg, loop, masm);
+          break;
+        default: UNSUPPORTED;
+      }
+    }
+
+    // Next element.
+    loop.end(masm);
+  }
+
+
+
+
+  // Generate scalar int expression using x64 registers.
+  void GenerateScalarInt(Step *step,
+                         const Expression &expr,
+                         MacroAssembler *masm) {
+    // Set up model for generating scalar int x64 instructions.
+    Expression::Model model;
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
+    model.op_reg_reg = true;
+    model.op_reg_mem = true;
+    model.func_reg_reg = true;
+    model.func_reg_mem = true;
+
+    // Convert expression to instructions.
+    Expression instructions;
+    CHECK(expr.Rewrite(model, &instructions));
+    instructions.ComputeLiveRanges();
+    int num_regs = instructions.AllocateRegisters();
+
+    // Allocate x64 registers for temp results.
+    Registers &rr = masm->rr();
+    if (instructions.NumOps(Expression::DIV) > 0) {
+      // Reserve rax and rdx for integer division.
+      rr.alloc_fixed(rax);
+      rr.alloc_fixed(rdx);
+    }
+    std::vector<Register> reg(num_regs);
+    for (int i = 0; i < num_regs; ++i) reg[i] = rr.alloc();
+
+    // Allocate registers for each input and output and load the tensors.
+    Tensor *result = step->output(0);
+    Type type = result->type();
+    LoopGenerator loop(step, masm, result->element_size());
+
+    // Loop over all outputs.
+    loop.begin(masm);
+
+    // Emit instructions for computing expression.
+    // TODO: make sure the mem op have the correct size, i.e. addw vs addq.
+    for (Expression::Op *i : instructions.ops()) {
+      // Skip no-ops.
+      if (i->nop()) continue;
+      LOG(INFO) << "  " << i->AsInstruction()
+                << " ; " << i->result->AsString() << "=" << i->AsString();
+
+      switch (i->type) {
+        case Expression::MOV:
+          GenerateScalarIntMove(type, i, reg, loop, masm);
+          break;
+        case Expression::ADD:
+          GenerateIntBinaryOp(
+              type, i,
+              &Assembler::addq, &Assembler::addq,
+              reg, loop, masm);
+          break;
+        case Expression::SUB:
+          GenerateIntBinaryOp(
+              type, i,
+              &Assembler::subq, &Assembler::subq,
+              reg, loop, masm);
+          break;
+        case Expression::MUL:
+          GenerateIntBinaryOp(
+              type, i,
+              &Assembler::imulq, &Assembler::imulq,
+              reg, loop, masm);
+          break;
+        case Expression::DIV:
+          GenerateScalarIntMoveArgToReg(type, rax, i, reg, loop, masm);
+          GenerateIntUnaryOp(
+              type, i,
+              &Assembler::idivq, &Assembler::idivq,
+              reg, loop, masm);
+          GenerateScalarIntMoveRegToResult(type, rax, i, reg, loop, masm);
+          break;
+        case Expression::MIN:
+          UNSUPPORTED;
+          break;
+        case Expression::MAX:
+          UNSUPPORTED;
+          break;
+        case Expression::RELU:
+          UNSUPPORTED;
+          break;
+        default: UNSUPPORTED;
+      }
+    }
+
+    // Next element.
+    loop.end(masm);
+  }
+
+
+
+  // Generate vector int expression using SSE and XMM registers.
+  void GenerateVectorIntSSE(Step *step,
+                            const Expression &expr,
+                            MacroAssembler *masm) {
+    // Set up model for generating vector float SSE instructions.
+    Expression::Model model;
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
+    model.op_reg_reg = true;
+    model.op_reg_mem = true;
+    model.func_reg_reg = true;
+    model.func_reg_mem = true;
+
+    // Convert expression to instructions.
+    Expression instructions;
+    CHECK(expr.Rewrite(model, &instructions));
+    instructions.ComputeLiveRanges();
+    int num_regs = instructions.AllocateRegisters();
+
+    // Allocate registers for each input and output and load the tensors.
+    Tensor *result = step->output(0);
+    Type type = result->type();
+    LoopGenerator loop(step, masm, XMMRegSize);
+
+    // Allocate XMM registers for temp results.
+    SIMDRegisters &mm = masm->mm();
+    std::vector<XMMRegister> reg(num_regs);
+    for (int i = 0; i < num_regs; ++i) reg[i] = mm.allocx();
+
+    // Loop over all outputs.
+    loop.begin(masm);
+
+    // Emit instructions for computing expression.
+    for (Expression::Op *i : instructions.ops()) {
+      // Skip no-ops.
+      if (i->nop()) continue;
+      LOG(INFO) << "  " << i->AsInstruction()
+                << " ; " << i->result->AsString() << "=" << i->AsString();
+
+      switch (i->type) {
+        case Expression::MOV:
+          GenerateVectorIntMove(type, i, reg, loop, masm);
+          break;
+        case Expression::ADD:
+          GenerateXMMIntOp(
+              type, i,
+              &Assembler::paddb, &Assembler::paddb,
+              &Assembler::paddw, &Assembler::paddw,
+              &Assembler::paddd, &Assembler::paddd,
+              &Assembler::paddq, &Assembler::paddq,
+              reg, loop, masm);
+          break;
+        case Expression::SUB:
+          GenerateXMMIntOp(
+              type, i,
+              &Assembler::psubb, &Assembler::psubb,
+              &Assembler::psubw, &Assembler::psubw,
+              &Assembler::psubd, &Assembler::psubd,
+              &Assembler::psubq, &Assembler::psubq,
+              reg, loop, masm);
+          break;
+        case Expression::MUL:
+          UNSUPPORTED;
+          break;
+        case Expression::DIV:
+          UNSUPPORTED;
+          break;
+        case Expression::MIN:
+          UNSUPPORTED;
+          break;
+        case Expression::MAX:
+          UNSUPPORTED;
+          break;
+        case Expression::RELU:
+          UNSUPPORTED;
           break;
         default: UNSUPPORTED;
       }

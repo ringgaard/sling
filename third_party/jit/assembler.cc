@@ -767,11 +767,25 @@ void Assembler::emit_idiv(Register src, int size) {
   emit_modrm(0x7, src);
 }
 
+void Assembler::emit_idiv(const Operand &src, int size) {
+  EnsureSpace ensure_space(this);
+  emit_rex(src, size);
+  emit(0xF7);
+  emit_operand(0x7, src);
+}
+
 void Assembler::emit_div(Register src, int size) {
   EnsureSpace ensure_space(this);
   emit_rex(src, size);
   emit(0xF7);
   emit_modrm(0x6, src);
+}
+
+void Assembler::emit_div(const Operand &src, int size) {
+  EnsureSpace ensure_space(this);
+  emit_rex(src, size);
+  emit(0xF7);
+  emit_operand(0x6, src);
 }
 
 void Assembler::emit_imul(Register src, int size) {
@@ -2406,7 +2420,18 @@ void Assembler::movq(XMMRegister dst, XMMRegister src) {
   }
 }
 
+void Assembler::movdqa(XMMRegister dst, XMMRegister src) {
+  DCHECK(Enabled(SSE2));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0x6f);
+  emit_sse_operand(dst, src);
+}
+
 void Assembler::movdqa(const Operand &dst, XMMRegister src) {
+  DCHECK(Enabled(SSE2));
   EnsureSpace ensure_space(this);
   emit(0x66);
   emit_rex_64(src, dst);
@@ -2416,11 +2441,22 @@ void Assembler::movdqa(const Operand &dst, XMMRegister src) {
 }
 
 void Assembler::movdqa(XMMRegister dst, const Operand &src) {
+  DCHECK(Enabled(SSE2));
   EnsureSpace ensure_space(this);
   emit(0x66);
   emit_rex_64(dst, src);
   emit(0x0F);
   emit(0x6F);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::movdqu(XMMRegister dst, XMMRegister src) {
+  DCHECK(Enabled(SSE2));
+  EnsureSpace ensure_space(this);
+  emit(0xf3);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0x6f);
   emit_sse_operand(dst, src);
 }
 
