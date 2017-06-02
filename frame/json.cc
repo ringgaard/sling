@@ -166,7 +166,7 @@ void JSONWriter::WriteSymbol(const SymbolDatum *symbol) {
 }
 
 void JSONWriter::WriteLink(Handle handle, bool reference) {
-  // Determine if only a link to the object shoud be output.
+  // Determine if only a link to the object should be output.
   if (handle.IsRef() && !handle.IsNil()) {
     const Datum *datum = store_->GetObject(handle);
     if (datum->IsFrame()) {

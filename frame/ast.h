@@ -262,7 +262,7 @@ class AST {
     Expression *right_ = nullptr;
   };
 
-  // Unnary operator node.
+  // Unary operator node.
   class Unary : public Expression {
    public:
     enum Type {
