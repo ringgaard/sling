@@ -340,15 +340,12 @@ class Assembler : public CodeGenerator {
   void cmpb(Register dst, Register src) {
     arithmetic_op_8(0x3A, dst, src);
   }
-
   void cmpb(Register dst, const Operand &src) {
     arithmetic_op_8(0x3A, dst, src);
   }
-
   void cmpb(const Operand &dst, Register src) {
     arithmetic_op_8(0x38, src, dst);
   }
-
   void cmpb(const Operand &dst, Immediate src) {
     immediate_arithmetic_op_8(0x7, dst, src);
   }
@@ -356,19 +353,15 @@ class Assembler : public CodeGenerator {
   void cmpw(const Operand &dst, Immediate src) {
     immediate_arithmetic_op_16(0x7, dst, src);
   }
-
   void cmpw(Register dst, Immediate src) {
     immediate_arithmetic_op_16(0x7, dst, src);
   }
-
   void cmpw(Register dst, const Operand &src) {
     arithmetic_op_16(0x3B, dst, src);
   }
-
   void cmpw(Register dst, Register src) {
     arithmetic_op_16(0x3B, dst, src);
   }
-
   void cmpw(const Operand &dst, Register src) {
     arithmetic_op_16(0x39, src, dst);
   }
@@ -453,9 +446,37 @@ class Assembler : public CodeGenerator {
 
   void store_rax(void *dst);
 
-  void subb(Register dst, Immediate src) {
-    immediate_arithmetic_op_8(0x5, dst, src);
-  }
+  void addb(Register dst, Register src) { emit_add(dst, src, 1); }
+  void addb(Register dst, const Operand &src) { emit_add(dst, src, 1); }
+  void addb(const Operand &dst, Register src) { emit_add(dst, src, 1); }
+  void addb(const Operand &dst, Immediate src) { emit_add(dst, src, 1); }
+
+  void addw(Register dst, Register src) { emit_add(dst, src, 2); }
+  void addw(Register dst, const Operand &src) { emit_add(dst, src, 2); }
+  void addw(const Operand &dst, Register src) { emit_add(dst, src, 2); }
+  void addw(const Operand &dst, Immediate src) { emit_add(dst, src, 2); }
+
+  void subb(Register dst, Register src) { emit_sub(dst, src, 1); }
+  void subb(Register dst, const Operand &src) { emit_sub(dst, src, 1); }
+  void subb(const Operand &dst, Register src) { emit_sub(dst, src, 1); }
+  void subb(const Operand &dst, Immediate src) { emit_sub(dst, src, 1); }
+
+  void subw(Register dst, Register src) { emit_sub(dst, src, 2); }
+  void subw(Register dst, const Operand &src) { emit_sub(dst, src, 2); }
+  void subw(const Operand &dst, Register src) { emit_sub(dst, src, 2); }
+  void subw(const Operand &dst, Immediate src) { emit_sub(dst, src, 2); }
+
+  void imulb(Register src) { emit_imul(src, 1); }
+  void imulb(const Operand &src) { emit_imul(src, 1); }
+  void imulw(Register src) { emit_imul(src, 2); }
+  void imulw(const Operand &src) { emit_imul(src, 2); }
+  void imulw(Register dst, Register src) { emit_imul(dst, src, 2); }
+  void imulw(Register dst, const Operand &src) { emit_imul(dst, src, 2); }
+
+  void idivb(Register src) { emit_idiv(src, 1); }
+  void idivb(const Operand &src) { emit_idiv(src, 1); }
+  void idivw(Register src) { emit_idiv(src, 2); }
+  void idivw(const Operand &src) { emit_idiv(src, 2); }
 
   void testb(Register dst, Register src);
   void testb(Register reg, Immediate mask);
@@ -745,12 +766,16 @@ class Assembler : public CodeGenerator {
   void pextrw(const Operand &dst, XMMRegister src, int8_t imm8);
   void pextrd(Register dst, XMMRegister src, int8_t imm8);
   void pextrd(const Operand &dst, XMMRegister src, int8_t imm8);
+  void pextrq(Register dst, XMMRegister src, int8_t imm8);
+  void pextrq(const Operand &dst, XMMRegister src, int8_t imm8);
   void pinsrb(XMMRegister dst, Register src, int8_t imm8);
   void pinsrb(XMMRegister dst, const Operand &src, int8_t imm8);
   void pinsrw(XMMRegister dst, Register src, int8_t imm8);
   void pinsrw(XMMRegister dst, const Operand &src, int8_t imm8);
   void pinsrd(XMMRegister dst, Register src, int8_t imm8);
   void pinsrd(XMMRegister dst, const Operand &src, int8_t imm8);
+  void pinsrq(XMMRegister dst, Register src, int8_t imm8);
+  void pinsrq(XMMRegister dst, const Operand &src, int8_t imm8);
 
   void roundss(XMMRegister dst, XMMRegister src, RoundingMode mode);
   void roundsd(XMMRegister dst, XMMRegister src, RoundingMode mode);
@@ -1480,15 +1505,6 @@ class Assembler : public CodeGenerator {
     vinstr(0x14, src, xmm0, dst, k66, k0F3A, kW0);
     emit(imm8);
   }
-  void vpextrb(Register dst, YMMRegister src, int8_t imm8) {
-    YMMRegister idst = {dst.code()};
-    vinstr(0x14, src, ymm0, idst, k66, k0F3A, kW0);
-    emit(imm8);
-  }
-  void vpextrb(const Operand &dst, YMMRegister src, int8_t imm8) {
-    vinstr(0x14, src, ymm0, dst, k66, k0F3A, kW0);
-    emit(imm8);
-  }
 
   void vpextrw(Register dst, XMMRegister src, int8_t imm8) {
     XMMRegister idst = {dst.code()};
@@ -1497,15 +1513,6 @@ class Assembler : public CodeGenerator {
   }
   void vpextrw(const Operand &dst, XMMRegister src, int8_t imm8) {
     vinstr(0x15, src, xmm0, dst, k66, k0F3A, kW0);
-    emit(imm8);
-  }
-  void vpextrw(Register dst, YMMRegister src, int8_t imm8) {
-    YMMRegister idst = {dst.code()};
-    vinstr(0xc5, idst, ymm0, src, k66, k0F, kW0);
-    emit(imm8);
-  }
-  void vpextrw(const Operand &dst, YMMRegister src, int8_t imm8) {
-    vinstr(0x15, src, ymm0, dst, k66, k0F3A, kW0);
     emit(imm8);
   }
 
@@ -1518,13 +1525,14 @@ class Assembler : public CodeGenerator {
     vinstr(0x16, src, xmm0, dst, k66, k0F3A, kW0);
     emit(imm8);
   }
-  void vpextrd(Register dst, YMMRegister src, int8_t imm8) {
-    YMMRegister idst = {dst.code()};
-    vinstr(0x16, src, ymm0, idst, k66, k0F3A, kW0);
+
+  void vpextrq(Register dst, XMMRegister src, int8_t imm8) {
+    XMMRegister idst = {dst.code()};
+    vinstr(0x16, src, xmm0, idst, k66, k0F3A, kW1);
     emit(imm8);
   }
-  void vpextrd(const Operand &dst, YMMRegister src, int8_t imm8) {
-    vinstr(0x16, src, ymm0, dst, k66, k0F3A, kW0);
+  void vpextrq(const Operand &dst, XMMRegister src, int8_t imm8) {
+    vinstr(0x16, src, xmm0, dst, k66, k0F3A, kW1);
     emit(imm8);
   }
 
@@ -1534,16 +1542,6 @@ class Assembler : public CodeGenerator {
     emit(imm8);
   }
   void vpinsrb(XMMRegister dst, XMMRegister src1, const Operand &src2,
-               int8_t imm8) {
-    vinstr(0x20, dst, src1, src2, k66, k0F3A, kW0);
-    emit(imm8);
-  }
-  void vpinsrb(YMMRegister dst, YMMRegister src1, Register src2, int8_t imm8) {
-    YMMRegister isrc = {src2.code()};
-    vinstr(0x20, dst, src1, isrc, k66, k0F3A, kW0);
-    emit(imm8);
-  }
-  void vpinsrb(YMMRegister dst, YMMRegister src1, const Operand &src2,
                int8_t imm8) {
     vinstr(0x20, dst, src1, src2, k66, k0F3A, kW0);
     emit(imm8);
@@ -1559,16 +1557,6 @@ class Assembler : public CodeGenerator {
     vinstr(0xc4, dst, src1, src2, k66, k0F, kW0);
     emit(imm8);
   }
-  void vpinsrw(YMMRegister dst, YMMRegister src1, Register src2, int8_t imm8) {
-    YMMRegister isrc = {src2.code()};
-    vinstr(0xc4, dst, src1, isrc, k66, k0F, kW0);
-    emit(imm8);
-  }
-  void vpinsrw(YMMRegister dst, YMMRegister src1, const Operand &src2,
-               int8_t imm8) {
-    vinstr(0xc4, dst, src1, src2, k66, k0F, kW0);
-    emit(imm8);
-  }
 
   void vpinsrd(XMMRegister dst, XMMRegister src1, Register src2, int8_t imm8) {
     XMMRegister isrc = {src2.code()};
@@ -1580,14 +1568,15 @@ class Assembler : public CodeGenerator {
     vinstr(0x22, dst, src1, src2, k66, k0F3A, kW0);
     emit(imm8);
   }
-  void vpinsrd(YMMRegister dst, YMMRegister src1, Register src2, int8_t imm8) {
-    YMMRegister isrc = {src2.code()};
-    vinstr(0x22, dst, src1, isrc, k66, k0F3A, kW0);
+
+  void vpinsrq(XMMRegister dst, XMMRegister src1, Register src2, int8_t imm8) {
+    XMMRegister isrc = {src2.code()};
+    vinstr(0x22, dst, src1, isrc, k66, k0F3A, kW1);
     emit(imm8);
   }
-  void vpinsrd(YMMRegister dst, YMMRegister src1, const Operand &src2,
+  void vpinsrq(XMMRegister dst, XMMRegister src1, const Operand &src2,
                int8_t imm8) {
-    vinstr(0x22, dst, src1, src2, k66, k0F3A, kW0);
+    vinstr(0x22, dst, src1, src2, k66, k0F3A, kW1);
     emit(imm8);
   }
 
@@ -2669,7 +2658,7 @@ class Assembler : public CodeGenerator {
 
   void emit_farith(int b1, int b2, int i);
 
-  // Arithmetics
+  // Arithmetics.
   void emit_add(Register dst, Register src, int size) {
     arithmetic_op(0x03, dst, src, size);
   }

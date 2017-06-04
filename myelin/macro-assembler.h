@@ -145,9 +145,10 @@ class StaticData {
   StaticData(int alignment = 1) : alignment_(alignment), address_(&location_) {}
 
   // Add data to data block.
-  void Add(void *buffer, int size);
-  void Add(float value, int n = 1);
-  void Add(double value, int n = 1);
+  void AddData(void *buffer, int size);
+  template<typename T> void Add(T value, int n = 1) {
+    for (int i = 0; i < n; ++i) AddData(&value, sizeof(T));
+  }
 
   // Generate data blocks and fix up references to it.
   void Generate(MacroAssembler *masm);
@@ -179,6 +180,13 @@ class MacroAssembler : public jit::Assembler {
 
   // Create new static data block.
   StaticData *CreateDataBlock(int alignment = 1);
+
+  // Create new static data block with (repeated) constant.
+  template<typename T> StaticData *Constant(T value, int n = 1) {
+    StaticData *data = CreateDataBlock(n * sizeof(T));
+    data->Add(value, n);
+    return data;
+  }
 
   // Generate static data blocks in the code buffer.
   void GenerateDataBlocks();

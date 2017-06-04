@@ -190,6 +190,9 @@ class Expression {
   // Count the number of ops of a certain type.
   int NumOps(OpType type) const;
 
+  // Check if expression has node of a certain type.
+  bool Has(OpType type) const { return NumOps(type) > 0; }
+
   // Compact temporary variable ids and return the number of temporary variable.
   int CompactTempVars();
 
