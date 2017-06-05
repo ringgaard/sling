@@ -34,7 +34,7 @@ class VariableMap {
 };
 
 // Register allocator.
-class Registers {
+class RegisterAllocator {
  public:
   // Allocate register for variable.
   int Allocate(Expression::Var *var) {
@@ -514,6 +514,42 @@ int Expression::MaxActiveTemps() const {
     }
   }
   return max_active;
+}
+
+void Expression::Copy(const Expression &other) {
+  // Expression must be empty.
+  CHECK(vars_.empty());
+  CHECK(ops_.empty());
+  vars_.reserve(other.vars().size());
+  ops_.reserve(other.ops().size());
+
+  // Copy variables.
+  std::map<Var *, Var *> varmap;
+  for (Var *var : other.vars()) {
+    Var *v = new Var(*var);
+    vars_.push_back(v);
+    varmap[var] = v;
+  }
+
+  // Copy operations.
+  std::map<Op *, Op *> opmap;
+  for (Op *op : other.ops()) {
+    Op *o = new Op(*op);
+    ops_.push_back(o);
+    opmap[op] = o;
+  }
+
+  // Map pointers.
+  for (Var *var : vars_) {
+    var->producer = opmap[var->producer];
+    for (Op *&op : var->consumers) op = opmap[op];
+    var->first = opmap[var->first];
+    var->last = opmap[var->last];
+  }
+  for (Op *op : ops_) {
+    op->result = varmap[op->result];
+    for (Var *&var : op->args) var = varmap[var];
+  }
 }
 
 void Expression::Merge(Expression *other, const Map &varmap) {
@@ -997,7 +1033,7 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
 }
 
 int Expression::AllocateRegisters() {
-  Registers regs;
+  RegisterAllocator regs;
   for (Op *op : ops_) {
     if (op->type == MOV) {
       // Allocate destination register for move op.
@@ -1065,6 +1101,16 @@ int Expression::AllocateRegisters() {
   }
 
   return regs.max();
+}
+
+int Expression::NumRegs() const {
+  int num_regs = 0;
+  for (auto *op : ops_) {
+    if (op->dst != -1 && op->dst + 1 > num_regs) num_regs = op->dst + 1;
+    if (op->src != -1 && op->src + 1 > num_regs) num_regs = op->src + 1;
+    if (op->src2 != -1 && op->src2 + 1 > num_regs) num_regs = op->src2 + 1;
+  }
+  return num_regs;
 }
 
 void Expression::Var::Redirect(Var *other) {

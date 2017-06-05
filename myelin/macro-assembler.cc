@@ -31,26 +31,36 @@ static Register tsreg = r15;
 // Use base register for data instance.
 static Register datareg = rbp;
 
-Register Registers::alloc() {
+Register Registers::try_alloc() {
   for (int r = 0; r < kNumRegisters; ++r) {
     if (!used(r)) {
       use(r);
       return Register::from_code(r);
     }
   }
-  LOG(FATAL) << "Register overflow";
   return no_reg;
 }
 
-Register Registers::alloc_preserved() {
+Register Registers::alloc() {
+  Register r = try_alloc();
+  CHECK(r.is_valid()) << "Register overflow";
+  return r;
+}
+
+Register Registers::try_alloc_preserved() {
   for (int r = 0; r < kNumRegisters; ++r) {
     if (!used(r) && preserved(r)) {
       use(r);
       return Register::from_code(r);
     }
   }
-  LOG(FATAL) << "Preserved register overflow";
   return no_reg;
+}
+
+Register Registers::alloc_preserved() {
+  Register r = try_alloc_preserved();
+  CHECK(r.is_valid()) << "Register overflow";
+  return r;
 }
 
 Register Registers::alloc_preferred(Register r) {
@@ -117,15 +127,28 @@ bool Registers::usage(int n) {
   return false;
 }
 
-int SIMDRegisters::alloc() {
+int Registers::num_free() const {
+  int n = 0;
+  for (int r = 0; r < kNumRegisters; ++r) {
+    if (!used(r)) n++;
+  }
+  return n;
+}
+
+int SIMDRegisters::try_alloc() {
   for (int r = 0; r < kNumRegisters; ++r) {
     if ((used_regs_ & (1 << r)) == 0) {
       use(r);
       return r;
     }
   }
-  LOG(FATAL) << "SIMD register overflow";
   return -1;
+}
+
+int SIMDRegisters::alloc() {
+  int r = try_alloc();
+  CHECK(r != -1) << "SIMD register overflow";
+  return r;
 }
 
 void StaticData::AddData(void *buffer, int size) {

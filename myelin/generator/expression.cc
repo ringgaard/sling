@@ -1,0 +1,771 @@
+#include "myelin/flow.h"
+#include "myelin/generator/expression.h"
+
+#define __ masm->
+
+namespace sling {
+namespace myelin {
+
+using namespace jit;
+
+// Expression generator factory methods.
+ExpressionGenerator *CreateScalarFltSSEGenerator();
+ExpressionGenerator *CreateVectorFltSSEGenerator();
+ExpressionGenerator *CreateScalarFltAVXGenerator();
+ExpressionGenerator *CreateVectorFltAVX128Generator();
+ExpressionGenerator *CreateVectorFltAVX256Generator();
+ExpressionGenerator *CreateScalarIntGenerator();
+ExpressionGenerator *CreateVectorIntSSEGenerator();
+ExpressionGenerator *CreateVectorIntAVX128Generator();
+ExpressionGenerator *CreateVectorIntAVX256Generator();
+
+void ExpressionGenerator::Initalize(const Expression &expression,
+                                    Type type,
+                                    IndexGenerator *index) {
+  // Copy expression.
+  expression_.Copy(expression);
+  type_ = type;
+  index_ = index;
+
+  // Eliminate common subexpressions.
+  expression_.EliminateCommonSubexpressions();
+
+  // Fuse operations if supported by instruction model.
+  if (model_.fm_reg_reg_reg) {
+    expression_.FuseMulAdd();
+    expression_.FuseMulSub();
+  }
+
+  // Cache inputs and results used in multiple ops in temporary variables.
+  expression_.CacheResults();
+
+  // Convert expression to instructions using instruction model.
+  CHECK(expression_.Rewrite(model_, &instructions_));
+
+  // Compute live ranges for all variables.
+  instructions_.ComputeLiveRanges();
+
+  // Allocate registers for temporary variables.
+  instructions_.AllocateRegisters();
+
+  // Reserve variables.
+  Reserve();
+}
+
+void ExpressionGenerator::Generate(MacroAssembler *masm) {
+  for (Expression::Op *instr : instructions_.ops()) {
+    if (instr->nop()) continue;
+    Generate(instr, masm);
+  }
+}
+
+ExpressionGenerator *ExpressionGenerator::Select(const Expression &expr,
+                                                 Type type, int size) {
+  ExpressionGenerator *generator = nullptr;
+  switch (type) {
+    case DT_FLOAT:
+      if (CPU::Enabled(AVX)) {
+        if (IsVector(size, 8)) {
+          generator = CreateVectorFltAVX256Generator();
+        } else if (IsVector(size, 4)) {
+          generator = CreateVectorFltAVX128Generator();
+        } else {
+          generator = CreateScalarFltAVXGenerator();
+        }
+      } else if (CPU::Enabled(SSE)) {
+        if (IsVector(size, 4)) {
+          generator = CreateVectorFltSSEGenerator();
+        } else {
+          generator = CreateScalarFltSSEGenerator();
+        }
+      }
+      break;
+
+    case DT_DOUBLE:
+      if (CPU::Enabled(AVX)) {
+        if (IsVector(size, 4)) {
+          generator = CreateVectorFltAVX256Generator();
+        } else if (IsVector(size, 2)) {
+          generator = CreateVectorFltAVX128Generator();
+        } else {
+          generator = CreateScalarFltAVXGenerator();
+        }
+      } else if (CPU::Enabled(SSE)) {
+        if (CPU::Enabled(SSE2) && IsVector(size, 2)) {
+          generator = CreateVectorFltSSEGenerator();
+        } else {
+          generator = CreateScalarFltSSEGenerator();
+        }
+      }
+      break;
+
+    case DT_INT8:
+      if (expr.Has(Expression::DIV)) {
+        generator = CreateScalarIntGenerator();
+      } else if (CPU::Enabled(AVX2) && IsVector(size, 32)) {
+        generator = CreateVectorIntAVX256Generator();
+      } else if (CPU::Enabled(AVX) && IsVector(size, 16)) {
+        generator = CreateVectorIntAVX128Generator();
+      } else if (CPU::Enabled(SSE4_1) && IsVector(size, 16)) {
+        generator = CreateVectorIntSSEGenerator();
+      } else {
+        generator = CreateScalarIntGenerator();
+      }
+      break;
+
+    case DT_INT16:
+      if (expr.Has(Expression::DIV)) {
+        generator = CreateScalarIntGenerator();
+      } else if (CPU::Enabled(AVX2) && IsVector(size, 16)) {
+        generator = CreateVectorIntAVX256Generator();
+      } else if (CPU::Enabled(AVX) && IsVector(size, 8)) {
+        generator = CreateVectorIntAVX128Generator();
+      } else if (CPU::Enabled(SSE4_1) && IsVector(size, 8)) {
+        generator = CreateVectorIntSSEGenerator();
+      } else {
+        generator = CreateScalarIntGenerator();
+      }
+      break;
+
+    case DT_INT32:
+      if (expr.Has(Expression::DIV)) {
+        generator = CreateScalarIntGenerator();
+      } else if (CPU::Enabled(AVX2) && IsVector(size, 8)) {
+        generator = CreateVectorIntAVX256Generator();
+      } else if (CPU::Enabled(AVX) && IsVector(size, 4)) {
+        generator = CreateVectorIntAVX128Generator();
+      } else if (CPU::Enabled(SSE4_1) && IsVector(size, 4)) {
+        generator = CreateVectorIntSSEGenerator();
+      } else {
+        generator = CreateScalarIntGenerator();
+      }
+      break;
+
+    case DT_INT64:
+      if (expr.Has(Expression::DIV)) {
+        generator = CreateScalarIntGenerator();
+      } else if (CPU::Enabled(AVX) && IsVector(size, 2)) {
+        generator = CreateVectorIntAVX128Generator();
+      } else if (CPU::Enabled(SSE4_1) && IsVector(size, 2)) {
+        generator = CreateVectorIntSSEGenerator();
+      } else {
+        generator = CreateScalarIntGenerator();
+      }
+      break;
+
+    default:
+      generator = nullptr;
+  }
+
+  return generator;
+}
+
+void ExpressionGenerator::GenerateXMMScalarFltMove(
+    Expression::Op *instr,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // MOV reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        __ movss(xmm(instr->dst), xmm(instr->src));
+        break;
+      case DT_DOUBLE:
+        __ movsd(xmm(instr->dst), xmm(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // MOV reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        __ movss(xmm(instr->dst), addr(instr->args[0]));
+        break;
+      case DT_DOUBLE:
+        __ movsd(xmm(instr->dst), addr(instr->args[0]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst == -1 && instr->src != -1) {
+    // MOV [mem],reg
+    switch (type_) {
+      case DT_FLOAT:
+        __ movss(addr(instr->result), xmm(instr->src));
+        break;
+      case DT_DOUBLE:
+        __ movsd(addr(instr->result), xmm(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateXMMVectorMove(
+    Expression::Op *instr,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // MOV reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        if (CPU::Enabled(AVX)) {
+          __ vmovaps(xmm(instr->dst), xmm(instr->src));
+        } else {
+          __ movaps(xmm(instr->dst), xmm(instr->src));
+        }
+        break;
+      case DT_DOUBLE:
+        if (CPU::Enabled(AVX)) {
+          __ vmovapd(xmm(instr->dst), xmm(instr->src));
+        } else if (CPU::Enabled(SSE2)) {
+          __ movapd(xmm(instr->dst), xmm(instr->src));
+        } else {
+          UNSUPPORTED;
+        }
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // MOV reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        if (CPU::Enabled(AVX)) {
+          __ vmovaps(xmm(instr->dst), addr(instr->args[0]));
+        } else {
+          __ movaps(xmm(instr->dst), addr(instr->args[0]));
+        }
+        break;
+      case DT_DOUBLE:
+        if (CPU::Enabled(AVX)) {
+          __ vmovapd(xmm(instr->dst), addr(instr->args[0]));
+        } else if (CPU::Enabled(SSE2)) {
+          __ movapd(xmm(instr->dst), addr(instr->args[0]));
+        } else {
+          UNSUPPORTED;
+        }
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst == -1 && instr->src != -1) {
+    // MOV [mem],reg
+    switch (type_) {
+      case DT_FLOAT:
+        if (CPU::Enabled(AVX)) {
+          __ vmovaps(addr(instr->result), xmm(instr->src));
+        } else {
+          __ movaps(addr(instr->result), xmm(instr->src));
+        }
+        break;
+      case DT_DOUBLE:
+        if (CPU::Enabled(AVX)) {
+          __ vmovapd(addr(instr->result), xmm(instr->src));
+        } else if (CPU::Enabled(SSE2)) {
+          __ movapd(addr(instr->result), xmm(instr->src));
+        } else {
+          UNSUPPORTED;
+        }
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+// Generate YMM vector move.
+void ExpressionGenerator::GenerateYMMVectorMove(
+    Expression::Op *instr,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // MOV reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        __ vmovaps(ymm(instr->dst), ymm(instr->src));
+        break;
+      case DT_DOUBLE:
+        __ vmovapd(ymm(instr->dst), ymm(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // MOV reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        __ vmovaps(ymm(instr->dst), addr(instr->args[0]));
+        break;
+      case DT_DOUBLE:
+        __ vmovapd(ymm(instr->dst), addr(instr->args[0]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst == -1 && instr->src != -1) {
+    // MOV [mem],reg
+    switch (type_) {
+      case DT_FLOAT:
+        __ vmovaps(addr(instr->result), ymm(instr->src));
+        break;
+      case DT_DOUBLE:
+        __ vmovapd(addr(instr->result), ymm(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateIntMoveMemToReg(
+    Register dst, const Operand &src,
+    MacroAssembler *masm) {
+  switch (type_) {
+    case DT_INT8:
+      __ movb(dst, src);
+      break;
+    case DT_INT16:
+      __ movw(dst, src);
+      break;
+    case DT_INT32:
+      __ movl(dst, src);
+      break;
+    case DT_INT64:
+      __ movq(dst, src);
+      break;
+    default: UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateIntMoveRegToMem(
+    const Operand &dst, Register src,
+    MacroAssembler *masm) {
+  switch (type_) {
+    case DT_INT8:
+      __ movb(dst, src);
+      break;
+    case DT_INT16:
+      __ movw(dst, src);
+      break;
+    case DT_INT32:
+      __ movl(dst, src);
+      break;
+    case DT_INT64:
+      __ movq(dst, src);
+      break;
+    default: UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateScalarIntMove(
+    Expression::Op *instr,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // MOV reg,reg
+    __ movq(reg(instr->dst), reg(instr->src));
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // MOV reg,[mem]
+    GenerateIntMoveMemToReg(reg(instr->dst), addr(instr->args[0]), masm);
+  } else if (instr->dst == -1 && instr->src != -1) {
+    // MOV [mem],reg
+    GenerateIntMoveRegToMem(addr(instr->result), reg(instr->src), masm);
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateXMMVectorIntMove(
+    Expression::Op *instr,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // MOV reg,reg
+    if (CPU::Enabled(AVX)) {
+      __ vmovdqa(xmm(instr->dst), xmm(instr->src));
+    } else if (CPU::Enabled(SSE2)) {
+      __ movdqa(xmm(instr->dst), xmm(instr->src));
+    } else {
+      __ movaps(xmm(instr->dst), xmm(instr->src));
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // MOV reg,[mem]
+    if (CPU::Enabled(AVX)) {
+      __ vmovdqa(xmm(instr->dst), addr(instr->args[0]));
+    } else if (CPU::Enabled(SSE2)) {
+      __ movdqa(xmm(instr->dst), addr(instr->args[0]));
+    } else {
+      __ movaps(xmm(instr->dst), addr(instr->args[0]));
+    }
+  } else if (instr->dst == -1 && instr->src != -1) {
+    // MOV [mem],reg
+    if (CPU::Enabled(AVX)) {
+      __ vmovdqa(addr(instr->result), xmm(instr->src));
+    } else if (CPU::Enabled(SSE2)) {
+      __ movdqa(addr(instr->result), xmm(instr->src));
+    } else {
+      __ movaps(addr(instr->result), xmm(instr->src));
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateYMMVectorIntMove(
+    Expression::Op *instr,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // MOV reg,reg
+    __ vmovdqa(ymm(instr->dst), ymm(instr->src));
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // MOV reg,[mem]
+    __ vmovdqa(ymm(instr->dst), addr(instr->args[0]));
+  } else if (instr->dst == -1 && instr->src != -1) {
+    // MOV [mem],reg
+    __ vmovdqa(addr(instr->result), ymm(instr->src));
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateXMMFltOp(
+    Expression::Op *instr,
+    OpXMMRegReg fltopreg, OpXMMRegReg dblopreg,
+    OpXMMRegMem fltopmem, OpXMMRegMem dblopmem,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(xmm(instr->dst), xmm(instr->src));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(xmm(instr->dst), xmm(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(xmm(instr->dst), addr(instr->args[1]));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(xmm(instr->dst), addr(instr->args[1]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateXMMFltOp(
+    Expression::Op *instr,
+    OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
+    OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1 && instr->src2 != -1) {
+    // OP reg,reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(xmm(instr->dst), xmm(instr->src), xmm(instr->src2));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(xmm(instr->dst), xmm(instr->src), xmm(instr->src2));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src != -1 && instr->src2 == -1) {
+    // OP reg,reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(xmm(instr->dst), xmm(instr->src),
+                          addr(instr->args[1]));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(xmm(instr->dst), xmm(instr->src),
+                          addr(instr->args[1]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateYMMFltOp(
+    Expression::Op *instr,
+    OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
+    OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1 && instr->src2 != -1) {
+    // OP reg,reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(ymm(instr->dst), ymm(instr->src), ymm(instr->src2));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(ymm(instr->dst), ymm(instr->src), ymm(instr->src2));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src != -1 && instr->src2 == -1) {
+    // OP reg,reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(ymm(instr->dst), ymm(instr->src),
+                          addr(instr->args[1]));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(ymm(instr->dst), ymm(instr->src),
+                          addr(instr->args[1]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateIntUnaryOp(
+    Expression::Op *instr,
+    OpReg opregb, OpMem opmemb,
+    OpReg opregw, OpMem opmemw,
+    OpReg opregd, OpMem opmemd,
+    OpReg opregq, OpMem opmemq,
+    MacroAssembler *masm, int argnum) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opregb)(reg(instr->src));
+        break;
+      case DT_INT16:
+        (masm->*opregw)(reg(instr->src));
+        break;
+      case DT_INT32:
+        (masm->*opregd)(reg(instr->src));
+        break;
+      case DT_INT64:
+        (masm->*opregq)(reg(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,[mem]
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opmemb)(addr(instr->args[argnum]));
+        break;
+      case DT_INT16:
+        (masm->*opmemw)(addr(instr->args[argnum]));
+        break;
+      case DT_INT32:
+        (masm->*opmemd)(addr(instr->args[argnum]));
+        break;
+      case DT_INT64:
+        (masm->*opmemq)(addr(instr->args[argnum]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateIntBinaryOp(
+    Expression::Op *instr,
+    OpRegReg opregb, OpRegMem opmemb,
+    OpRegReg opregw, OpRegMem opmemw,
+    OpRegReg opregd, OpRegMem opmemd,
+    OpRegReg opregq, OpRegMem opmemq,
+    MacroAssembler *masm, int argnum) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opregb)(reg(instr->dst), reg(instr->src));
+        break;
+      case DT_INT16:
+        (masm->*opregw)(reg(instr->dst), reg(instr->src));
+        break;
+      case DT_INT32:
+        (masm->*opregd)(reg(instr->dst), reg(instr->src));
+        break;
+      case DT_INT64:
+        (masm->*opregq)(reg(instr->dst), reg(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,[mem]
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opmemb)(reg(instr->dst), addr(instr->args[argnum]));
+        break;
+      case DT_INT16:
+        (masm->*opmemw)(reg(instr->dst), addr(instr->args[argnum]));
+        break;
+      case DT_INT32:
+        (masm->*opmemd)(reg(instr->dst), addr(instr->args[argnum]));
+        break;
+      case DT_INT64:
+        (masm->*opmemq)(reg(instr->dst), addr(instr->args[argnum]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+// Generate two-operand XMM int op.
+void ExpressionGenerator::GenerateXMMIntOp(
+    Expression::Op *instr,
+    OpXMMRegReg opregb, OpXMMRegMem opmemb,
+    OpXMMRegReg opregw, OpXMMRegMem opmemw,
+    OpXMMRegReg opregd, OpXMMRegMem opmemd,
+    OpXMMRegReg opregq, OpXMMRegMem opmemq,
+    MacroAssembler *masm, int argnum) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opregb)(xmm(instr->dst), xmm(instr->src));
+        break;
+      case DT_INT16:
+        (masm->*opregw)(xmm(instr->dst), xmm(instr->src));
+        break;
+      case DT_INT32:
+        (masm->*opregd)(xmm(instr->dst), xmm(instr->src));
+        break;
+      case DT_INT64:
+        (masm->*opregq)(xmm(instr->dst), xmm(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,[mem]
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opmemb)(xmm(instr->dst), addr(instr->args[argnum]));
+        break;
+      case DT_INT16:
+        (masm->*opmemw)(xmm(instr->dst), addr(instr->args[argnum]));
+        break;
+      case DT_INT32:
+        (masm->*opmemd)(xmm(instr->dst), addr(instr->args[argnum]));
+        break;
+      case DT_INT64:
+        (masm->*opmemq)(xmm(instr->dst), addr(instr->args[argnum]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateXMMIntOp(
+    Expression::Op *instr,
+    OpXMMRegRegReg opregb, OpXMMRegRegMem opmemb,
+    OpXMMRegRegReg opregw, OpXMMRegRegMem opmemw,
+    OpXMMRegRegReg opregd, OpXMMRegRegMem opmemd,
+    OpXMMRegRegReg opregq, OpXMMRegRegMem opmemq,
+    MacroAssembler *masm, int argnum) {
+  if (instr->dst != -1 && instr->src != -1 && instr->src2 != -1) {
+    // OP reg,reg,reg
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opregb)(xmm(instr->dst), xmm(instr->src), xmm(instr->src2));
+        break;
+      case DT_INT16:
+        (masm->*opregw)(xmm(instr->dst), xmm(instr->src), xmm(instr->src2));
+        break;
+      case DT_INT32:
+        (masm->*opregd)(xmm(instr->dst), xmm(instr->src), xmm(instr->src2));
+        break;
+      case DT_INT64:
+        (masm->*opregq)(xmm(instr->dst), xmm(instr->src), xmm(instr->src2));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src != -1 && instr->src2 == -1) {
+    // OP reg,reg,[mem]
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opmemb)(xmm(instr->dst), xmm(instr->src),
+                        addr(instr->args[argnum]));
+        break;
+      case DT_INT16:
+        (masm->*opmemw)(xmm(instr->dst), xmm(instr->src),
+                        addr(instr->args[argnum]));
+        break;
+      case DT_INT32:
+        (masm->*opmemd)(xmm(instr->dst), xmm(instr->src),
+                        addr(instr->args[argnum]));
+        break;
+      case DT_INT64:
+        (masm->*opmemq)(xmm(instr->dst), xmm(instr->src),
+                        addr(instr->args[argnum]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateYMMIntOp(
+    Expression::Op *instr,
+    OpYMMRegRegReg opregb, OpYMMRegRegMem opmemb,
+    OpYMMRegRegReg opregw, OpYMMRegRegMem opmemw,
+    OpYMMRegRegReg opregd, OpYMMRegRegMem opmemd,
+    OpYMMRegRegReg opregq, OpYMMRegRegMem opmemq,
+    MacroAssembler *masm, int argnum) {
+  if (instr->dst != -1 && instr->src != -1 && instr->src2 != -1) {
+    // OP reg,reg,reg
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opregb)(ymm(instr->dst), ymm(instr->src), ymm(instr->src2));
+        break;
+      case DT_INT16:
+        (masm->*opregw)(ymm(instr->dst), ymm(instr->src), ymm(instr->src2));
+        break;
+      case DT_INT32:
+        (masm->*opregd)(ymm(instr->dst), ymm(instr->src), ymm(instr->src2));
+        break;
+      case DT_INT64:
+        (masm->*opregq)(ymm(instr->dst), ymm(instr->src), ymm(instr->src2));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src != -1 && instr->src2 == -1) {
+    // OP reg,reg,[mem]
+    switch (type_) {
+      case DT_INT8:
+        (masm->*opmemb)(ymm(instr->dst), ymm(instr->src),
+                        addr(instr->args[argnum]));
+        break;
+      case DT_INT16:
+        (masm->*opmemw)(ymm(instr->dst), ymm(instr->src),
+                        addr(instr->args[argnum]));
+        break;
+      case DT_INT32:
+        (masm->*opmemd)(ymm(instr->dst), ymm(instr->src),
+                        addr(instr->args[argnum]));
+        break;
+      case DT_INT64:
+        (masm->*opmemq)(ymm(instr->dst), ymm(instr->src),
+                        addr(instr->args[argnum]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void UnsupportedOperation(const char *file, int line) {
+  LOG(FATAL) << "Unsupported operation (" << file << " line " << line << ")";
+}
+
+}  // namespace myelin
+}  // namespace sling
+

@@ -26,6 +26,8 @@ cc_library(
     "//base",
     "//myelin:compute",
     "//myelin:expression",
+    "//myelin/generator:elementwise",
+    "//myelin/generator:expression",
   ],
 )
 

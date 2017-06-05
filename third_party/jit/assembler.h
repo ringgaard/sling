@@ -2486,8 +2486,6 @@ class Assembler : public CodeGenerator {
   void emit_rex(int size) {
     if (size == kInt64Size) {
       emit_rex_64();
-    } else {
-      DCHECK(size == kInt32Size);
     }
   }
 
@@ -2496,7 +2494,6 @@ class Assembler : public CodeGenerator {
     if (size == kInt64Size) {
       emit_rex_64(p1);
     } else {
-      DCHECK(size == kInt32Size);
       emit_optional_rex_32(p1);
     }
   }
@@ -2506,7 +2503,6 @@ class Assembler : public CodeGenerator {
     if (size == kInt64Size) {
       emit_rex_64(p1, p2);
     } else {
-      DCHECK(size == kInt32Size);
       emit_optional_rex_32(p1, p2);
     }
   }

@@ -974,7 +974,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     masm.set_runtime(runtime_);
 
     // Declare the number of registers needed by the cell.
-    masm.rr().usage(cell->register_usage_);
+    if (!masm.rr().usage(cell->register_usage_)) return false;
 
     // Enable timing measurement instrumentation if profiling is active.
     if (profiling_) masm.set_timing(true);

@@ -27,10 +27,23 @@ class Registers {
   // An x64 CPU has 16 general 64-bit registers.
   static const int kNumRegisters = 16;
 
+  // Initialize registers.
+  Registers()
+      : used_regs_(kPreservedRegisters), saved_regs_(0) {}
+  Registers(const Registers &rr)
+      : used_regs_(rr.used_regs_), saved_regs_(rr.saved_regs_) {}
+  Registers &operator=(const Registers &rr) {
+    used_regs_ = rr.used_regs_;
+    saved_regs_ = rr.saved_regs_;
+    return *this;
+  }
+
   // Allocate register.
+  jit::Register try_alloc();
   jit::Register alloc();
 
   // Allocate preserved register.
+  jit::Register try_alloc_preserved();
   jit::Register alloc_preserved();
 
   // Allocate register with preference.
@@ -81,6 +94,9 @@ class Registers {
   static bool preserved(int r) { return ((1 << r) & kPreservedRegisters) != 0; }
   static bool preserved(jit::Register r) { return preserved(r.code()); }
 
+  // Return the number of free registers.
+  int num_free() const;
+
  private:
   // Preserved registers.
   static const int kPreservedRegisters =
@@ -93,10 +109,10 @@ class Registers {
     1 << jit::Register::kCode_r15;
 
   // Bit mask of register that are in use.
-  int used_regs_ = kPreservedRegisters;
+  int used_regs_;
 
   // Bit mask of registers that should be saved by callee.
-  int saved_regs_ = 0;
+  int saved_regs_;
 };
 
 // SIMD register allocation.
@@ -105,13 +121,28 @@ class SIMDRegisters {
   // An x64 CPU has up to 16 SIMD registers.
   static const int kNumRegisters = 16;
 
+  // Initialize SIMD registers.
+  SIMDRegisters() : used_regs_(0) {}
+  SIMDRegisters(const SIMDRegisters &mm) : used_regs_(mm.used_regs_) {}
+  SIMDRegisters &operator=(const SIMDRegisters &mm) {
+    used_regs_ = mm.used_regs_;
+    return *this;
+  }
+
   // Allocate 128-bit XMM register.
   jit::XMMRegister allocx() { return jit::XMMRegister::from_code(alloc()); }
+  jit::XMMRegister try_allocx() {
+    return jit::XMMRegister::from_code(try_alloc());
+  }
 
   // Allocate 256-bit YMM register.
   jit::YMMRegister allocy() { return jit::YMMRegister::from_code(alloc()); }
+  jit::YMMRegister try_allocy() {
+    return jit::YMMRegister::from_code(try_alloc());
+  }
 
   // Allocate SIMD register.
+  int try_alloc();
   int alloc();
 
   // Mark register as being in use.
@@ -134,7 +165,7 @@ class SIMDRegisters {
 
  private:
   // Bit mask of register that are in use.
-  int used_regs_ = 0;
+  int used_regs_;
 };
 
 // Static data blocks are generated at the end of the code block. The location

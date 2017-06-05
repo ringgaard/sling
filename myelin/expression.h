@@ -48,6 +48,7 @@ class Expression {
 
   // Variable in expression.
   struct Var {
+    Var(const Var &other) = default;
     Var(VarType type, int id) : type(type), id(id), producer(nullptr) {}
     string AsString() const;
     void GetRecipe(string *recipe) const;
@@ -71,6 +72,7 @@ class Expression {
 
   // Operation in expression.
   struct Op {
+    Op(const Op &other) = default;
     Op(OpType type) : type(type) {}
     string AsString() const;
     void GetRecipe(string *recipe) const;
@@ -208,6 +210,9 @@ class Expression {
   // Return maximum number of active temp variables.
   int MaxActiveTemps() const;
 
+  // Copy operations and variables from another expression.
+  void Copy(const Expression &other);
+
   // Merge variable and operations from another expression into this
   // expression. The variables are mapped through the mapping which maps
   // variables in the other expression to variables in this expression.
@@ -228,6 +233,9 @@ class Expression {
 
   // Allocate registers for operands. Return the number of registers used.
   int AllocateRegisters();
+
+  // Returns the number of register used by expression.
+  int NumRegs() const;
 
   // Variables.
   const std::vector<Var *> vars() const { return vars_; }
