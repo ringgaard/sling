@@ -114,8 +114,7 @@ static BasicRuntime default_runtime;
 class InstanceAllocator {
  public:
   // Initialize instance allocator for cell and placement.
-  InstanceAllocator(Cell *cell, Placement placement)
-      : placement_(placement) {
+  InstanceAllocator(Cell *cell, Placement placement) : placement_(placement) {
     if (placement == HOST) {
       instance_size_ = &cell->instance_size_;
       instance_alignment_ = &cell->instance_alignment_;
