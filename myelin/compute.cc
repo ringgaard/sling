@@ -122,13 +122,13 @@ void Library::Register(Kernel *kernel) {
 CustomKernel &Library::Register(const string &op, const string &name,
                                 void (*func)(const TensorData &arg,
                                              TensorData *output)) {
-  return RegisterCustomKernel(op, name, reinterpret_cast<void *>(func), 1, 1);
+  return RegisterCustomKernel(op, name,reinterpret_cast<void *>(func), 1, 1);
 }
 
 CustomKernel &Library::Register(const string &op, const string &name,
-                                 void (*func)(const TensorData &arg1,
-                                              const TensorData &arg2,
-                                    TensorData *output)) {
+                                void (*func)(const TensorData &arg1,
+                                             const TensorData &arg2,
+                                             TensorData *output)) {
   return RegisterCustomKernel(op, name, reinterpret_cast<void *>(func), 2, 1);
 }
 
@@ -1423,9 +1423,11 @@ string Cell::ToString() const {
   return str;
 }
 
+static bool Always(Step *step) { return true; }
+
 CustomKernel::CustomKernel(const string &op, const string &name, void *func,
                            int indegree, int outdegree)
-    : op_(op), name_(name), func_(func) {
+    : op_(op), name_(name), func_(func), criterion_(Always) {
   inputs_.resize(indegree);
   outputs_.resize(outdegree);
 }
@@ -1443,6 +1445,11 @@ CustomKernel &CustomKernel::Output(int index, Type type, int rank) {
   CHECK_LT(index, outputs_.size());
   outputs_[index].type = type;
   outputs_[index].rank = rank;
+  return *this;
+}
+
+CustomKernel &CustomKernel::Select(Criterion criterion) {
+  criterion_ = criterion;
   return *this;
 }
 
@@ -1472,6 +1479,9 @@ bool CustomKernel::Supports(Step *step) {
     if (p.type != DT_INVALID && p.type != step->output(i)->type()) return false;
     if (p.rank != -1 && p.rank != step->output(i)->rank()) return false;
   }
+
+  // Check custom selection criterion.
+  if (!criterion_(step)) return false;
 
   return true;
 }

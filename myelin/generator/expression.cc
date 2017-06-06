@@ -272,7 +272,6 @@ void ExpressionGenerator::GenerateXMMVectorMove(
   }
 }
 
-// Generate YMM vector move.
 void ExpressionGenerator::GenerateYMMVectorMove(
     Expression::Op *instr,
     MacroAssembler *masm) {
@@ -615,7 +614,6 @@ void ExpressionGenerator::GenerateIntBinaryOp(
   }
 }
 
-// Generate two-operand XMM int op.
 void ExpressionGenerator::GenerateXMMIntOp(
     Expression::Op *instr,
     OpXMMRegReg opregb, OpXMMRegMem opmemb,

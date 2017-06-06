@@ -19,11 +19,11 @@ class ExpressionGenerator {
   typedef jit::XMMRegister XMMRegister;
   typedef jit::YMMRegister YMMRegister;
 
-  virtual ~ExpressionGenerator() = default;
-
   // Register sizes in bytes.
   const static int XMMRegSize = 16;
   const static int YMMRegSize = 32;
+
+  virtual ~ExpressionGenerator() = default;
 
   // Return generator name.
   virtual string Name() = 0;

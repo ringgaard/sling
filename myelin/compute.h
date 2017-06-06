@@ -1005,6 +1005,9 @@ class Network {
 // is called at runtime with the input and output parameters.
 class CustomKernel : public Kernel {
  public:
+  // Selection criterion function.
+  typedef bool (*Criterion)(Step *step);
+
   // Input or output parameter constraints.
   struct Param {
     Type type = DT_INVALID;  // parameter type
@@ -1021,6 +1024,9 @@ class CustomKernel : public Kernel {
   // Set type and rank for output.
   CustomKernel &Output(int index, Type type, int rank);
 
+  // Set selection criterion.
+  CustomKernel &Select(Criterion criterion);
+
   // Kernel interface.
   string Name() override;
   string Operation() override;
@@ -1033,6 +1039,7 @@ class CustomKernel : public Kernel {
   void *func_;                  // function implementing kernel operation
   std::vector<Param> inputs_;   // input parameter constraints
   std::vector<Param> outputs_;  // output parameter constraints
+  Criterion criterion_;         // selection criterion
 };
 
 inline Runtime *Cell::runtime() const {
