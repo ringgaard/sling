@@ -115,13 +115,11 @@ class InstanceAllocator {
  public:
   // Initialize instance allocator for cell and placement.
   InstanceAllocator(Cell *cell, Placement placement)
-      : placement_(placement), compact_(true) {
+      : placement_(placement) {
     if (placement == HOST) {
-      start_ = cell->instance_size_;
       instance_size_ = &cell->instance_size_;
       instance_alignment_ = &cell->instance_alignment_;
     } else {
-      start_ = cell->device_instance_size_;
       instance_size_ = &cell->device_instance_size_;
       instance_alignment_ = &cell->device_instance_alignment_;
     }
@@ -139,39 +137,123 @@ class InstanceAllocator {
       return;
     }
 
-    // Determine alignment.
+    // Determine size and alignment.
+    size_t size = var->space();
     int align = var->ref_ ? kMinDataAlignment : var->byte_alignment_;
 
-    // Ensure alignment of variable in instance.
-    *instance_size_ = Align(*instance_size_, align);
+    // Try to find free space in the instance block.
+    size_t offset = -1;
+    for (auto it = freelist_.begin(); it != freelist_.end(); ++it) {
+      if (it->first + size > it->second) continue;
+      int aligned = Align(it->first, align);
+      if (aligned + size > it->second) continue;
 
-    // Assign offset to tensor and update instance size.
-    if (placement_ == HOST) {
-      var->offset_ = *instance_size_;
-    } else {
-      var->device_offset_ = *instance_size_;
+      // Free block found.
+      offset = aligned;
+
+      // Remove block from free list and add back the alignment padding in front
+      // and the excess data back to the free list.
+      int padding = aligned - it->first;
+      int excess = it->second - aligned - size;
+      if (padding == 0 && excess == 0) {
+        freelist_.erase(it);
+      } else if (padding == 0) {
+        it->first = offset + size;
+      } else if (excess == 0) {
+        it->second = offset;
+      } else {
+        it->second = offset;
+        Insert(offset + size, it->second);
+      }
+      break;
     }
-    *instance_size_ += var->space();
+
+    if (offset == -1) {
+      // No free space in instance block. Extend the instance block and add new
+      // variable at the end. First, ensure alignment of variable in instance.
+      size_t aligned = Align(*instance_size_, align);
+      if (aligned > *instance_size_) {
+        // Insert alignment padding in free list.
+        Insert(*instance_size_, aligned);
+        *instance_size_ = aligned;
+      }
+
+      // Allocate variable at the end of the instance block.
+      offset = *instance_size_;
+      *instance_size_ += size;
+    }
 
     // Ensure that instance has at least the same aligment as the tensor.
     if (var->byte_alignment_ > *instance_alignment_) {
       *instance_alignment_ = var->byte_alignment_;
     }
+
+    // Assign offset to tensor.
+    if (placement_ == HOST) {
+      var->offset_ = offset;
+    } else {
+      var->device_offset_ = offset;
+    }
   }
 
   // Release space used by variable in instance data block.
-  void Release(Tensor *var) {}
+  void Release(Tensor *var) {
+    // Shared variables are allocated together.
+    if (var->shared_ != nullptr) return;
+
+    // Get offset and size.
+    size_t offset = placement_ == HOST  ? var->offset_ : var->device_offset_;
+    size_t size = var->space();
+
+    // Insert block in free list.
+    Insert(offset, offset + size);
+  }
+
+  void DumpFreeList() const {
+    for (auto &e : freelist_) {
+      size_t offset = e.first;
+      size_t size = e.second - e.first;
+      LOG(INFO) << "Free list entry at " << offset << " size " << size;
+    }
+  }
 
  private:
+  // Insert element in free list.
+  void Insert(size_t start, size_t end) {
+    // Find first entry after the block or the first entry ending at the start
+    // of the block.
+    auto it = freelist_.begin();
+    while (it != freelist_.end() &&
+           it->second < start &&
+           it->first < end) {
+      ++it;
+    }
+
+    if (it == freelist_.end()) {
+      // Add new free list entry at the end.
+      freelist_.emplace_back(start, end);
+    } else if (it->second == start) {
+      // Append block to current entry.
+      it->second = end;
+
+      // Check if it can be merged with the next entry.
+      auto &prev = it;
+      if (++it != freelist_.end() && it->first == end) {
+        prev->second = it->second;
+        freelist_.erase(it);
+      }
+    } else if (it->first == end) {
+      // Prepend block to current entry.
+      it->first = start;
+    } else {
+      // Insert new entry before the current entry.
+      freelist_.emplace(it, start, end);
+    }
+  }
+
   // Instance data is allocated in either the host instance data block or the
   // device instance data block.
   Placement placement_;
-
-  // The instance is compact as long as no data has been released.
-  bool compact_;
-
-  // Start offset of allocated data.
-  size_t start_;
 
   // Current instance size.
   size_t *instance_size_;
@@ -179,8 +261,8 @@ class InstanceAllocator {
   // Current instance alignment.
   int *instance_alignment_;
 
-  // List of live variables ordered by their memory layout.
-  std::list<Tensor *> live_;
+  // List of free blocks (start,end) in instance.
+  std::list<std::pair<size_t, size_t>> freelist_;
 };
 
 Library::~Library() {
@@ -1006,6 +1088,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
       s++;
     }
+    host_allocator.DumpFreeList();
   }
 
   // Copy and align constants.
