@@ -20,16 +20,33 @@ class WaveNetTransformer : public Transformer {
     for (Flow::Operation *op : flow->Find({"ExpandDims",
                                            "Conv2D",
                                            "Squeeze",
-                                           "BiasAdd"})) {
+                                           "Add"})) {
       VLOG(5) << "Convert to Conv1DAdd " << op->name;
-      Flow::Operation *bias_add = op;
-      Flow::Operation *squeeze = bias_add->inputs[0]->producer;
+      Flow::Operation *add = op;
+      Flow::Operation *squeeze = add->inputs[0]->producer;
       Flow::Operation *conv2d = squeeze->inputs[0]->producer;
       Flow::Operation *expand_dims = conv2d->inputs[0]->producer;
       string name = conv2d->name;
       flow->Fuse(expand_dims, conv2d, "");
       flow->Fuse(expand_dims, squeeze, "");
-      flow->Fuse(expand_dims, bias_add, "Conv1DAdd");
+      flow->Fuse(expand_dims, add, "Conv1DAdd");
+      expand_dims->name = name;
+      combines++;
+    }
+
+    for (Flow::Operation *op : flow->Find({"ExpandDims",
+                                           "Conv2D",
+                                           "Squeeze",
+                                           "BiasAdd"})) {
+      VLOG(5) << "Convert to Conv1DAdd " << op->name;
+      Flow::Operation *add = op;
+      Flow::Operation *squeeze = add->inputs[0]->producer;
+      Flow::Operation *conv2d = squeeze->inputs[0]->producer;
+      Flow::Operation *expand_dims = conv2d->inputs[0]->producer;
+      string name = conv2d->name;
+      flow->Fuse(expand_dims, conv2d, "");
+      flow->Fuse(expand_dims, squeeze, "");
+      flow->Fuse(expand_dims, add, "Conv1DAdd");
       expand_dims->name = name;
       combines++;
     }
@@ -150,24 +167,13 @@ class Add : public Kernel {
     return true;
   }
 
-  void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
-  }
-
-  int64 Complexity(const Step *step) override {
-    CHECK_EQ(step->indegree(), 2);
-    return std::max(step->input(0)->elements(), step->input(1)->elements());
-  }
-};
-
-// Stub for BiasAdd.
-class BiasAdd : public Kernel {
- public:
-  string Name() override { return "DummyBiasAdd"; }
-  string Operation() override { return "BiasAdd"; }
-
-  bool Supports(Step *step) override {
-    return true;
+  void Adjust(Step *step) override {
+    int a = step->input(0)->elements();
+    int b = step->input(1)->elements();
+    int c = step->output(0)->elements();
+    bool shared = false;
+    if (a == c) shared = step->AllowInPlace(0, 0);
+    if (!shared && b == c) step->AllowInPlace(1, 0);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -255,7 +261,6 @@ void RegisterWaveNetKernels(Library *library) {
 
   library->Register(new Add());
   library->Register(new Mul());
-  library->Register(new BiasAdd());
 
   library->Register(new StridedSlice());
   library->Register(new Pad());

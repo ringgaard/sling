@@ -16,8 +16,9 @@
 
 #include <stdlib.h>
 #include <algorithm>
-#include <unordered_map>
+#include <list>
 #include <string>
+#include <unordered_map>
 
 #include "base/logging.h"
 #include "base/types.h"
@@ -105,6 +106,82 @@ class BasicRuntime : public Runtime {
 };
 
 static BasicRuntime default_runtime;
+
+// An instance allocator allocates space for variables in an instance data
+// block. It keeps track of which parts of the block is in use and tries to
+// allocate space by reusing free parts of the instance block that is no longer
+// in use.
+class InstanceAllocator {
+ public:
+  // Initialize instance allocator for cell and placement.
+  InstanceAllocator(Cell *cell, Placement placement)
+      : placement_(placement), compact_(true) {
+    if (placement == HOST) {
+      start_ = cell->instance_size_;
+      instance_size_ = &cell->instance_size_;
+      instance_alignment_ = &cell->instance_alignment_;
+    } else {
+      start_ = cell->device_instance_size_;
+      instance_size_ = &cell->device_instance_size_;
+      instance_alignment_ = &cell->device_instance_alignment_;
+    }
+  }
+
+  // Allocate space for variable in instance data block.
+  void Allocate(Tensor *var) {
+    // Shared variables shares offset.
+    if (var->shared_ != nullptr) {
+      if (placement_ == HOST) {
+        var->offset_ = var->shared_->offset_;
+      } else {
+        var->device_offset_ = var->shared_->device_offset_;
+      }
+      return;
+    }
+
+    // Determine alignment.
+    int align = var->ref_ ? kMinDataAlignment : var->byte_alignment_;
+
+    // Ensure alignment of variable in instance.
+    *instance_size_ = Align(*instance_size_, align);
+
+    // Assign offset to tensor and update instance size.
+    if (placement_ == HOST) {
+      var->offset_ = *instance_size_;
+    } else {
+      var->device_offset_ = *instance_size_;
+    }
+    *instance_size_ += var->space();
+
+    // Ensure that instance has at least the same aligment as the tensor.
+    if (var->byte_alignment_ > *instance_alignment_) {
+      *instance_alignment_ = var->byte_alignment_;
+    }
+  }
+
+  // Release space used by variable in instance data block.
+  void Release(Tensor *var) {}
+
+ private:
+  // Instance data is allocated in either the host instance data block or the
+  // device instance data block.
+  Placement placement_;
+
+  // The instance is compact as long as no data has been released.
+  bool compact_;
+
+  // Start offset of allocated data.
+  size_t start_;
+
+  // Current instance size.
+  size_t *instance_size_;
+
+  // Current instance alignment.
+  int *instance_alignment_;
+
+  // List of live variables ordered by their memory layout.
+  std::list<Tensor *> live_;
+};
 
 Library::~Library() {
   if (owns_kernels_) {
@@ -489,12 +566,14 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     tensor->byte_alignment_ = TypeTraits::of(var->type).size();
 
     // Input variables are initially placed in host memory.
+    tensor->in_ = var->in;
     if (var->in) {
       tensor->current_placement_ = HOST;
       tensor->placement_ = HOST;
     }
 
     // Output variables must be available on the host after the computation.
+    tensor->out_ = var->out;
     if (var->out) tensor->placement_ = HOST;
   }
 
@@ -872,9 +951,20 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
   }
 
-  // Initialize instance blocks.
+  // Compute live ranges for all variables.
+  ComputeLiveRanges();
+  std::vector<std::pair<int, Tensor *>> enter;
+  std::vector<std::pair<int, Tensor *>> leave;
+  for (Tensor *var : parameters_) {
+    if (var->first_ != -1) enter.emplace_back(var->first_, var);
+    if (var->last_ != -1) leave.emplace_back(var->last_, var);
+  }
+  std::sort(enter.begin(), enter.end());
+  std::sort(leave.begin(), leave.end());
+
+  // Compute cell instance size and offset of each parameter.
   for (Cell *cell : cells_) {
-    // Adjust instance to cache lines.
+    // Adjust cell instance to cache lines.
     if (cell->instance_alignment_ < jit::CPU::CacheLineSize()) {
       cell->instance_alignment_ = jit::CPU::CacheLineSize();
     }
@@ -887,56 +977,34 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       t.offset = cell->instance_size_;
       cell->instance_size_ += sizeof(Task);
     }
-  }
 
-  // Compute cell instance size and offset of each parameter.
-  for (Tensor *tensor : parameters_) {
-    if (tensor->cell_ != nullptr) {
-      Cell *c = tensor->cell_;
-      int align = tensor->ref_ ? kMinDataAlignment : tensor->byte_alignment_;
-
-      // Set offset for tensor in instance.
-      CHECK_GE(tensor->space(), 0) << tensor->name() << " " << tensor->space();
-      if (tensor->placement_ & HOST) {
-        if (tensor->shared_ != nullptr) {
-          tensor->offset_ = tensor->shared_->offset_;
-          VLOG(5) << "Share " << tensor->name() << " with "
-                  << tensor->shared()->name();
-        } else {
-          // Ensure alignment of tensor in instance.
-          c->instance_size_ = Align(c->instance_size_, align);
-
-          // Assign offset to tensor and update instance size.
-          tensor->offset_ = c->instance_size_;
-          c->instance_size_ += tensor->space();
-
-          // Ensure that instance has at least the same aligment as the tensor.
-          if (tensor->byte_alignment_ > c->instance_alignment_) {
-            c->instance_alignment_ = tensor->byte_alignment_;
-          }
+    // Allocate space for variables in instance data blocks.
+    InstanceAllocator host_allocator(cell, HOST);
+    InstanceAllocator device_allocator(cell, DEVICE);
+    int e = 0;
+    int l = dynamic_allocation_ ? 0 : leave.size();
+    int s = 0;
+    while (e < enter.size() || l < leave.size()) {
+      // Allocate space for new variables produced by step.
+      while (e < enter.size() && enter[e].first <= s) {
+        Tensor *var = enter[e].second;
+        if (var->cell_ == cell) {
+          if (var->placement_ & HOST) host_allocator.Allocate(var);
+          if (var->placement_ & DEVICE) device_allocator.Allocate(var);
         }
+        e++;
       }
 
-      // Set offset for tensor in device instance.
-      if (tensor->placement_ & DEVICE) {
-        if (tensor->shared_ != nullptr) {
-          tensor->device_offset_ = tensor->shared_->device_offset_;
-          VLOG(5) << "Share " << tensor->name() << " with "
-                  << tensor->shared()->name() << " on device";
-        } else {
-          // Ensure alignment of tensor in device instance.
-          c->device_instance_size_ = Align(c->device_instance_size_, align);
-
-          // Assign offset to tensor and update device instance size.
-          tensor->device_offset_ = c->device_instance_size_;
-          c->device_instance_size_ += tensor->space();
-
-          // Ensure that instance has at least the same aligment as the tensor.
-          if (tensor->byte_alignment_ > c->device_instance_alignment_) {
-            c->device_instance_alignment_ = tensor->byte_alignment_;
-          }
+      // Release space for variables that are no longer needed after step.
+      while (l < leave.size() && leave[l].first <= s) {
+        Tensor *var = leave[l].second;
+        if (var->cell_ == cell) {
+          if (var->placement_ & HOST) host_allocator.Release(var);
+          if (var->placement_ & DEVICE) device_allocator.Release(var);
         }
+        l++;
       }
+      s++;
     }
   }
 
@@ -1223,6 +1291,44 @@ bool Network::Compile(const string &flowfile, const Library &library) {
 
   // Generate code for flow.
   return Compile(flow, library);
+}
+
+void Network::ComputeLiveRanges() {
+  // Check that the network is not empty.
+  if (steps_.empty()) return;
+
+  // All inputs and outputs from the network must be alive before and after the
+  // computation.
+  for (Tensor *t : parameters_) {
+    if (t->in_ || t->out_) {
+      t->first_ = 0;
+      t->last_ = steps_.size() - 1;
+    } else {
+      t->first_ = -1;
+      t->last_ = -1;
+    }
+  }
+
+  // Find first and last use of each variable.
+  for (int i = 0; i < steps_.size(); ++i) {
+    Step *step = steps_[i];
+    for (Tensor *input : step->inputs_) {
+      if (input->first_ == -1) input->first_ = i;
+      if (!input->in_ && !input->out_) input->last_ = i;
+    }
+    for (Tensor *output : step->outputs_) {
+      if (output->first_ == -1) output->first_ = i;
+      if (!output->in_ && !output->out_) output->last_ = i;
+    }
+  }
+
+  // Extend live range for all shared variables.
+  for (Tensor *t : parameters_) {
+    if (t->shared_ != nullptr) {
+      if (t->first_ < t->shared_->first_) t->shared_->first_ = t->first_;
+      if (t->last_ > t->shared_->last_) t->shared_->last_ = t->last_;
+    }
+  }
 }
 
 char *Network::AllocateTensor(Tensor *tensor) {

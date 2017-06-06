@@ -29,6 +29,23 @@ void RegisterGenericMatMul(Library *library);
 // generic-operators.cc
 void RegisterGenericOperators(Library *library);
 
+// Rename operations with aliases.
+class RenameTransformer : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    // Rename BiasAdd to Add.
+    int renames = 0;
+    for (Flow::Operation *op : flow->ops()) {
+      if (op->type == "BiasAdd") {
+        op->type = "Add";
+        renames++;
+      }
+    }
+
+    return renames > 0;
+  }
+};
+
 // Type inference for standard ops.
 class StandardTyper : public Typer {
  public:
@@ -140,6 +157,9 @@ class StandardTyper : public Typer {
 
 // Register generic transformations.
 void RegisterGenericTransformations(Library *library) {
+  // Register transformations.
+  library->RegisterTransformer(new RenameTransformer());
+
   // Register identity ops.
   library->RegisterIdentityOp("Identity");
   library->RegisterIdentityOp("Const");

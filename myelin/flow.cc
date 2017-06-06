@@ -288,6 +288,7 @@ string Flow::Variable::DataString() const {
           str.append(traits.str(p));
           p += traits.size();
         }
+        str.append("]");
       }
       str.append("]");
     }

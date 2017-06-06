@@ -69,7 +69,7 @@ class AVXFltBinaryOperator : public Kernel {
     c->SetMiniumAlignment(8 * sizeof(float));
     a->CompatibleAlign(c);
     b->CompatibleAlign(c);
-    step->AllowInPlace(0, 0);
+    if (!step->AllowInPlace(0, 0)) step->AllowInPlace(1, 0);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -92,6 +92,8 @@ class AVXFltBinaryOperator : public Kernel {
     __ LoadTensorAddress(input2, b);
     if (a->SharedWith(c)) {
       output = input1;
+    } else if (b->SharedWith(c)) {
+      output = input2;
     } else {
       __ LoadTensorAddress(output, c);
     }

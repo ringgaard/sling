@@ -37,6 +37,7 @@ class Tensor;
 class TensorData;
 class CUDADevice;
 class CustomKernel;
+class InstanceAllocator;
 
 // Element order.
 enum Order {ANY_ORDER, ROW_MAJOR, COLUMN_MAJOR, CONFLICTING_ORDER};
@@ -469,6 +470,14 @@ class Tensor {
   // Steps that consume tensor.
   std::vector<Step *> consumers_;
 
+  // Input and output flags.
+  bool in_ = false;
+  bool out_ = false;
+
+  // Live range for tensor, i.e. index of first and last step using the tensor.
+  int first_ = -1;
+  int last_ = -1;
+
   // Placement of tensor.
   Placement placement_ = NOWHERE;
 
@@ -479,6 +488,7 @@ class Tensor {
   Placement deferred_placement_ = NOWHERE;
 
   friend class Network;
+  friend class InstanceAllocator;
 };
 
 // A step represents an operation that is part of a cell.
@@ -914,6 +924,7 @@ class Cell {
 
   friend class Network;
   friend class Step;
+  friend class InstanceAllocator;
 };
 
 // A network is a collection of cells and variables that are compiled as a unit.
@@ -952,6 +963,10 @@ class Network {
   // Enable profiling by instrumenting code with timestamp timing code.
   void set_profiling(bool profiling) { profiling_ = profiling; }
 
+  // Enable dynamic instance allocation which allows instance variables to
+  // overlap in the instance data block.
+  void set_dynamic_allocation(bool dynamic) { dynamic_allocation_ = dynamic; }
+
   // Network cells.
   const std::vector<Cell *> cells() const { return cells_; }
 
@@ -962,6 +977,9 @@ class Network {
   const std::vector<Tensor *> parameters() const { return parameters_; }
 
  private:
+  // Compute live ranges for all the variables.
+  void ComputeLiveRanges();
+
   // Allocate aligned tensor from data in standard order.
   char *AllocateTensor(Tensor *tensor);
 
@@ -989,14 +1007,11 @@ class Network {
   // Runtime support.
   Runtime *runtime_;
 
-  // Element order for parameters.
-  Order parameter_element_order_ = ROW_MAJOR;
-
-  // Debug mode.
-  bool debug_ = false;
-
-  // Profiling mode.
-  bool profiling_ = false;
+  // Compiler options.
+  Order parameter_element_order_ = ROW_MAJOR; // element order for parameters
+  bool debug_ = false;                        // insert breakpoint in cell
+  bool profiling_ = false;                    // enable profiling
+  bool dynamic_allocation_ = false;           // dynamic instance allocation
 
   friend class Instance;
 };

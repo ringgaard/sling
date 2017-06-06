@@ -28,7 +28,6 @@ static Expression::OpType OpType(Flow::Operation *op) {
   // Operations that can be fused into Calculate operations.
   static std::unordered_map<string, Expression::OpType> ops {
     {"Add", Expression::ADD},
-    {"BiasAdd", Expression::ADD},
     {"Sub", Expression::SUB},
     {"Mul", Expression::MUL},
     {"Div", Expression::DIV},
@@ -227,6 +226,14 @@ class Calculate : public Kernel {
 
   bool Supports(Step *step) override {
     return true;
+  }
+
+  void Adjust(Step *step) override {
+    for (int i = 0; i < step->indegree(); ++i) {
+      for (int j = 0; j < step->outdegree(); ++j) {
+        if (step->AllowInPlace(i, j)) break;
+      }
+    }
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
