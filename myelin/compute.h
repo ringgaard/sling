@@ -401,6 +401,10 @@ class Tensor {
   // Cell that tensor belongs to.
   Cell *cell() const { return cell_; }
 
+  // Input and output flags.
+  bool in() const { return in_; }
+  bool out() const { return out_; }
+
   // Return tensor type as string.
   string TypeString() const;
 

@@ -114,8 +114,7 @@ static BasicRuntime default_runtime;
 class InstanceAllocator {
  public:
   // Initialize instance allocator for cell and placement.
-  InstanceAllocator(Cell *cell, Placement placement)
-      : placement_(placement) {
+  InstanceAllocator(Cell *cell, Placement placement) : placement_(placement) {
     if (placement == HOST) {
       instance_size_ = &cell->instance_size_;
       instance_alignment_ = &cell->instance_alignment_;
@@ -153,6 +152,7 @@ class InstanceAllocator {
 
       // Remove block from free list and add back the alignment padding in front
       // and the excess data back to the free list.
+      DCHECK(FreeListConsistent());
       int padding = aligned - it->first;
       int excess = it->second - aligned - size;
       if (padding == 0 && excess == 0) {
@@ -163,8 +163,9 @@ class InstanceAllocator {
         it->second = offset;
       } else {
         it->second = offset;
-        Insert(offset + size, it->second);
+        Insert(offset + size, offset + size + excess);
       }
+      DCHECK(FreeListConsistent());
       break;
     }
 
@@ -209,11 +210,52 @@ class InstanceAllocator {
     Insert(offset, offset + size);
   }
 
-  void DumpFreeList() const {
+  // Check consistency of free list.
+  bool FreeListConsistent() const {
+    size_t offset = 0;
+    bool first = true;
     for (auto &e : freelist_) {
-      size_t offset = e.first;
+      const char *error = nullptr;
+      if (e.second <= e.first) {
+        error = "Invalid free list entry";
+      } else if (e.first == e.second) {
+        error = "Zero-sized free list entry";
+      } else if (e.first < offset) {
+        error = "Free list entry out of order";
+      } else if (!first && e.first == offset) {
+        error = "Non-consolidated free list entry";
+      }
+
+      if (error != nullptr) {
+        DumpFreeList();
+        LOG(ERROR) << error << " at " << e.first << ", free list:";
+        return false;
+      }
+      offset = e.second;
+      first = false;
+    }
+    return true;
+  }
+
+  // Return size of free list.
+  size_t Free() const {
+    size_t free = 0;
+    for (auto &e : freelist_) free+= e.second - e.first;
+    return free;
+  }
+
+  // Dump free list to log.
+  void DumpFreeList() const {
+    size_t prev = 0;
+    for (auto &e : freelist_) {
       size_t size = e.second - e.first;
-      LOG(INFO) << "Free list entry at " << offset << " size " << size;
+      size_t gap = e.first - prev;
+      prev = e.second;
+      LOG(INFO) << "  at " << e.first
+                << " end " <<  e.second
+                << " size " << size
+                << " gap " << gap;
+      prev = e.second;
     }
   }
 
@@ -222,6 +264,8 @@ class InstanceAllocator {
   void Insert(size_t start, size_t end) {
     // Find first entry after the block or the first entry ending at the start
     // of the block.
+    DCHECK_LT(start, end);
+    DCHECK(FreeListConsistent());
     auto it = freelist_.begin();
     while (it != freelist_.end() &&
            it->second < start &&
@@ -237,7 +281,7 @@ class InstanceAllocator {
       it->second = end;
 
       // Check if it can be merged with the next entry.
-      auto &prev = it;
+      auto prev = it;
       if (++it != freelist_.end() && it->first == end) {
         prev->second = it->second;
         freelist_.erase(it);
@@ -249,6 +293,7 @@ class InstanceAllocator {
       // Insert new entry before the current entry.
       freelist_.emplace(it, start, end);
     }
+    DCHECK(FreeListConsistent());
   }
 
   // Instance data is allocated in either the host instance data block or the
@@ -566,7 +611,10 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   DCHECK_LT(output, outputs_.size());
   Tensor *in = inputs_[input];
   Tensor *out = outputs_[output];
-  if (!preserved && in->consumers().size() != 1) return false;
+  if (!preserved) {
+    if (in->IsConstant()) return false;
+    if (in->consumers().size() != 1) return false;
+  }
   if (in->ref() != out->ref()) return false;
   if (out->shared()) return false;
   out->set_shared(in);
@@ -1088,7 +1136,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
       s++;
     }
-    host_allocator.DumpFreeList();
   }
 
   // Copy and align constants.
@@ -1519,10 +1566,13 @@ string Cell::ToString() const {
   int prev_offset = -1;
   for (Tensor *t : fields) {
     if (t->placement() & HOST) {
+      str.append("  ");
       if (t->offset() == prev_offset) {
-        str.append("    union ");
+        str.append("  union ");
       } else {
-        str.append("  var ");
+        if (t->in()) str.append("input ");
+        if (t->out()) str.append("output ");
+        str.append("var ");
       }
       StringAppendF(&str, "%s: %s  // offset %lu size %lu\n",
                     t->name().c_str(),
@@ -1537,9 +1587,11 @@ string Cell::ToString() const {
   for (Tensor *t : fields) {
     if (t->placement() & DEVICE) {
       if (t->device_offset() == prev_offset) {
-        str.append("    union ");
+        str.append("  union ");
       } else {
-        str.append("  device var ");
+        if (t->in()) str.append("input ");
+        if (t->out()) str.append("output ");
+        str.append("device var ");
       }
       StringAppendF(&str, "%s: %s  // offset %lu size %lu\n",
                     t->name().c_str(),
