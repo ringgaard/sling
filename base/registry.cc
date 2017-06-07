@@ -21,7 +21,7 @@ void RegistryMetadata::GetComponents(
     std::vector<const ComponentMetadata *> *components) const {
   components->clear();
   ComponentMetadata *meta = *components_;
-  while (meta != NULL) {
+  while (meta != nullptr) {
     components->push_back(meta);
     meta = meta->link();
   }
@@ -46,7 +46,7 @@ void RegistryMetadata::GetRegistries(
     std::vector<const RegistryMetadata *> *registries) {
   registries->clear();
   RegistryMetadata *meta = global_registry_list;
-  while (meta != NULL) {
+  while (meta != nullptr) {
     registries->push_back(meta);
     meta = meta->next();
   }
