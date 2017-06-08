@@ -878,6 +878,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       profile->stride_.fill(sizeof(int64));
       profile->placement_ = HOST;
       profile->current_placement_ = HOST;
+      profile->in_ = false;
+      profile->out_ = true;
       parameters_.push_back(profile);
       cell->profile_ = profile;
     }

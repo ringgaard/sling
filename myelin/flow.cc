@@ -815,6 +815,77 @@ std::vector<Flow::Operation *> Flow::Find(const std::vector<string> &ops) {
   return matches;
 }
 
+Flow::Function *Flow::Extract(const string &name,
+                              const std::vector<Variable *> &inputs,
+                              const std::vector<Variable *> &outputs,
+                              Flow *subflow) {
+  // Create new function in the sub-flow.
+  Function *func = subflow->AddFunction(name);
+
+  // Start from the output and keep copying variables and operations traversing
+  // dependencies until an is input is reached.
+  std::vector<Variable *> queue = outputs;
+  std::unordered_map<Variable *, Variable *> varmap;
+  std::unordered_map<Operation *, Operation *> opmap;
+  while (!queue.empty()) {
+    // Get next variable in the queue.
+    Variable *var = queue.back();
+    queue.pop_back();
+    if (varmap[var] != nullptr) continue;
+
+    // Create new variable.
+    Variable *newvar = new Variable(*var);
+    varmap[var] = newvar;
+    subflow->vars_.push_back(newvar);
+
+    // Stop traversing if variable is an input.
+    if (std::find(inputs.begin(), inputs.end(), var) != inputs.end()) {
+      continue;
+    }
+
+    // Copy producer of variable.
+    Operation *op = var->producer;
+    if (op == nullptr || opmap[op] != nullptr) continue;
+    Operation *newop = new Operation(*op);
+    newop->priority = 3;
+    newop->func = nullptr;
+    subflow->ops_.push_back(newop);
+    func->AddOperation(newop);
+    opmap[op] = newop;
+
+    // Add new input and output variables to queue.
+    for (Variable *input : op->inputs) {
+      if (varmap[input] == nullptr) queue.push_back(input);
+    }
+    for (Variable *output : op->outputs) {
+      if (varmap[output] == nullptr) queue.push_back(output);
+    }
+  }
+
+  // Map producers and consumers.
+  for (auto &it : varmap) {
+    Variable *var = it.second;
+    if (var == nullptr) continue;
+    var->producer = opmap[var->producer];
+    for (auto &consumer : var->consumers) consumer = opmap[consumer];
+
+    // Remove unmapped consumers.
+    var->consumers.erase(
+        std::remove(var->consumers.begin(), var->consumers.end(), nullptr),
+        var->consumers.end());
+  }
+
+  // Map inputs and outputs.
+  for (auto &it : opmap) {
+    Operation *op = it.second;
+    if (op == nullptr) continue;
+    for (auto &input : op->inputs) input = varmap[input];
+    for (auto &output : op->outputs) output = varmap[output];
+  }
+
+  return func;
+}
+
 void Flow::Eliminate(Operation *op) {
   if (op->inputs.size() > 0) {
     // Update all usages of output to use the input variable instead.
@@ -1212,6 +1283,24 @@ bool Flow::IsConsistent() const {
           consumer->inputs.end()) {
         LOG(WARNING) << "Variable " << var->name << " is not an input of "
                      << "the consumer " << consumer->name;
+        return false;
+      }
+    }
+  }
+
+  // Check functions.
+  for (const Function *func : funcs_) {
+    for (const Operation *op : func->ops) {
+      // Check that function operation is in flow.
+      if (std::find(ops_.begin(), ops_.end(), op) == ops_.end()) {
+          LOG(WARNING) << "Operation " << op->name << " is not in flow";
+          return false;
+        }
+
+      // Check operation belongs to function.
+      if (op->func != func) {
+        LOG(WARNING) << "Operation " << op->name << " does not belong to "
+                     << "function " << func->name;
         return false;
       }
     }

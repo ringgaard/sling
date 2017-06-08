@@ -484,6 +484,15 @@ class Flow {
   // for each op in the sequence.
   std::vector<Operation *> Find(const std::vector<string> &ops);
 
+  // Extract sub-flow from flow. A new function will be added to the subflow and
+  // will contain all the dependencies of the outputs excluding the dependencies
+  // of the inputs. The extracted flow may contain pointers to data blocks in
+  // the original flow.
+  Function *Extract(const string &name,
+                    const std::vector<Variable *> &inputs,
+                    const std::vector<Variable *> &outputs,
+                    Flow *subflow);
+
   // Check flow graph consistency.
   bool IsConsistent() const;
 
