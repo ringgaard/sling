@@ -102,12 +102,32 @@ class RegistryMetadata : public ComponentMetadata {
       : ComponentMetadata(name, class_name, file, line),
         components_(components) {}
 
+  // Returns a list of components in the registry.
+  void GetComponents(std::vector<const ComponentMetadata *> *components) const;
+
+  // Returns meta data for component in registry. Returns null if not found.
+  const ComponentMetadata *GetComponent(const string &name) const;
+
+  // Returns the next registry in the registry list.
+  RegistryMetadata *next() const {
+    return static_cast<RegistryMetadata *>(link());
+  }
+
   // Registers a component registry in the master registry.
   static void Register(RegistryMetadata *registry);
+
+  // Returns list of all registries.
+  static void GetRegistries(std::vector<const RegistryMetadata *> *registries);
+
+  // Returns registry for component type or null if it is not found.
+  static const RegistryMetadata *GetRegistry(const string &name);
 
  private:
   // Location of list of components in registry.
   ComponentMetadata **components_;
+
+  // List of all component registries.
+  static RegistryMetadata *global_registry_list;
 };
 
 // Registry for components. An object can be registered with a type name in the
