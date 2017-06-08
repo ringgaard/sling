@@ -261,6 +261,7 @@ void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor) {
       movq(dst, datareg);
     }
   } else {
+    DCHECK(tensor->offset() != -1) << tensor->name();
     if (tensor->ref()) {
       movq(dst, Operand(datareg, tensor->offset()));
     } else {

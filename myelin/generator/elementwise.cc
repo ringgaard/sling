@@ -92,9 +92,17 @@ Operand ElementwiseIndexGenerator::addr(Expression::Var *var) {
     }
   } else {
     if (it.base.is_valid()) {
-      return Operand(it.base, offset_);
+      if (it.scalar()) {
+        return Operand(it.base);
+      } else {
+        return Operand(it.base, offset_);
+      }
     } else {
-      return Operand(instance_, offset_, times_1, it.var->offset());
+      if (it.scalar()) {
+        return Operand(instance_, offset_);
+      } else {
+        return Operand(instance_, offset_, times_1, it.var->offset());
+      }
     }
   }
 }

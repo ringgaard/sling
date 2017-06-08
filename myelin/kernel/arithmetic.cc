@@ -267,6 +267,19 @@ class Calculate : public Kernel {
 
     delete generator;
   }
+
+  int64 Complexity(const Step *step) {
+    // Determine shape from the first output.
+    const Shape &shape = step->output(0)->shape();
+    int elements = shape.elements();
+
+    // Compile expression to be computed.
+    Expression expr;
+    expr.Parse(step->GetAttr("expr"));
+
+    // The number of operations is the number of ops times the output size.
+    return expr.ops().size() * elements;
+  }
 };
 
 // Register arithmetic kernels.

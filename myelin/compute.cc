@@ -129,8 +129,10 @@ class InstanceAllocator {
     // Shared variables shares offset.
     if (var->shared_ != nullptr) {
       if (placement_ == HOST) {
+        DCHECK(var->shared_->offset_ != -1) << var->name();
         var->offset_ = var->shared_->offset_;
       } else {
+        DCHECK(var->shared_->device_offset_ != -1) << var->name();
         var->device_offset_ = var->shared_->device_offset_;
       }
       return;
@@ -611,6 +613,7 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   DCHECK_LT(output, outputs_.size());
   Tensor *in = inputs_[input];
   Tensor *out = outputs_[output];
+  while (in->shared() != nullptr) in = in->shared();
   if (!preserved) {
     if (in->IsConstant()) return false;
     if (in->consumers().size() != 1) return false;
@@ -1044,7 +1047,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             << " size " << tensor->space_
             << " stride " << tensor->stride_.ToString()
             << " order " << tensor->order_
-            << " placement " << placename[tensor->placement_];
+            << " on " << placename[tensor->placement_];
   }
 
   // Compute size and alignment for connectors.

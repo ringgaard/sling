@@ -35,6 +35,9 @@ class ElementwiseIndexGenerator : public IndexGenerator {
 
   // Iterator for looping over (vector) elements in tensor.
   struct Iterator {
+    // Check for single element tensor.
+    bool scalar() const { return var->elements() == 1; }
+
     Tensor *var;                       // tensor that is being iterated
     jit::Register base = jit::no_reg;  // base register for tensor
   };
