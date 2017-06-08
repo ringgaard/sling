@@ -5,11 +5,11 @@
 #include "base/init.h"
 #include "base/logging.h"
 #include "file/file.h"
-#include "myelin/compare-kernels.h"
 #include "myelin/compute.h"
 #include "myelin/kernel/sse.h"
 #include "myelin/kernel/generic.h"
 #include "myelin/kernel/avx.h"
+#include "myelin/tests/compare-kernels.h"
 #include "third_party/jit/cpu.h"
 
 using namespace sling;

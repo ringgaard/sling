@@ -74,32 +74,3 @@ cc_library(
   ],
 )
 
-cc_library(
-  name = "compare-kernels",
-  srcs = [
-    "compare-kernels.cc",
-  ],
-  hdrs = [
-    "compare-kernels.h",
-  ],
-  deps = [
-    ":compute",
-    ":flow",
-    "//base",
-    "//file",
-  ],
-)
-
-cc_binary(
-  name = "kernel-test",
-  srcs = ["kernel-test.cc"],
-  deps = [
-    ":compare-kernels",
-    "//base",
-    "//file:posix",
-    "//myelin/kernel:avx",
-    "//myelin/kernel:generic",
-    "//myelin/kernel:sse",
-  ],
-)
-

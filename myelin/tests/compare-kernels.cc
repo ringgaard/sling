@@ -1,4 +1,4 @@
-#include "myelin/compare-kernels.h"
+#include "myelin/tests/compare-kernels.h"
 
 #include <math.h>
 #include <random>
