@@ -1040,10 +1040,10 @@ class CustomKernel : public Kernel {
                int indegree, int outdegree);
 
   // Set type and rank for input.
-  CustomKernel &Input(int index, Type type, int rank);
+  CustomKernel &Input(int index, Type type, int rank = -1);
 
   // Set type and rank for output.
-  CustomKernel &Output(int index, Type type, int rank);
+  CustomKernel &Output(int index, Type type, int rank = -1);
 
   // Set selection criterion.
   CustomKernel &Select(Criterion criterion);

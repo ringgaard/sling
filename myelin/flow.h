@@ -410,6 +410,9 @@ class Flow {
   Flow();
   ~Flow();
 
+  // Allocate memory that is owned by the flow.
+  char *AllocateMemory(size_t size);
+
   // Load flow from file.
   Status Load(const string &filename);
 

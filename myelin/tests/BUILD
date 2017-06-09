@@ -29,3 +29,23 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "wavenet-test",
+  srcs = ["wavenet-test.cc"],
+  deps = [
+    "//base",
+    "//base:clock",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
+    "//myelin:profile",
+    "//myelin/kernel:avx",
+    "//myelin/kernel:generic",
+    "//myelin/kernel:sse",
+    "//myelin/kernel:dragnn",
+    "//myelin/kernel:arithmetic",
+    "//myelin/kernel:wavenet",
+  ],
+)
+

@@ -436,6 +436,12 @@ Flow::~Flow() {
   for (auto *ptr : memory_) free(ptr);
 }
 
+char *Flow::AllocateMemory(size_t size) {
+  char *data = static_cast<char *>(malloc(size));
+  memory_.push_back(data);
+  return data;
+}
+
 Status Flow::Load(const string &filename) {
   // Load flow file into memory.
   File *file;
@@ -443,8 +449,7 @@ Status Flow::Load(const string &filename) {
   if (!st.ok()) return st;
   uint64 size;
   CHECK_OK(file->GetSize(&size));
-  char *data = static_cast<char *>(malloc(size));
-  memory_.push_back(data);
+  char *data = AllocateMemory(size);
   file->ReadOrDie(data, size);
   CHECK_OK(file->Close());
 

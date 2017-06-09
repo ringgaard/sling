@@ -1,6 +1,7 @@
 #include "myelin/kernel/wavenet.h"
 
 #include <algorithm>
+#include <random>
 
 #include "myelin/compute.h"
 #include "myelin/macro-assembler.h"
@@ -66,21 +67,6 @@ class WaveNetTransformer : public Transformer {
     }
 
     return combines > 0;
-  }
-};
-
-// Stub for RandomUniform.
-class RandomUniform : public Kernel {
- public:
-  string Name() override { return "DummyRandomUniform"; }
-  string Operation() override { return "RandomUniform"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
   }
 };
 
@@ -252,9 +238,27 @@ class Split : public Kernel {
   }
 };
 
+// Random generator for generating noise.
+static void RandomGenerator(const TensorData &shape,
+                            const TensorData &seed,
+                            TensorData *result) {
+  int elements = result->shape().elements();
+  int64 prng_seed = seed.at<int64>(0);
+  float *random = &result->at<float>(0);
+  std::mt19937_64 prng(prng_seed);
+  std::uniform_real_distribution<float> unit(0.0, 1.0);
+  for (int i = 0; i < elements; ++i) {
+    random[i] = unit(prng);
+  }
+}
+
 // Register WaveNet kernels.
 void RegisterWaveNetKernels(Library *library) {
-  library->Register(new RandomUniform());
+  library->Register("RandomUniform", "RandomGenerator", RandomGenerator)
+     .Input(0, DT_INT32, 1)
+     .Input(1, DT_INT64, 0)
+     .Output(0, DT_FLOAT);
+
   library->Register(new Conv1D());
   library->Register(new Conv1DAdd());
   library->Register(new Conv2DBackpropInput());
