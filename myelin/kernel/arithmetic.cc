@@ -24,7 +24,7 @@ using namespace jit;
 typedef std::map<Flow::Variable *, Expression::Var *> VarMap;
 
 // Convert operation type to expression op.
-static Expression::OpType OpType(Flow::Operation *op) {
+static Expression::OpType OpType(const string &op) {
   // Operations that can be fused into Calculate operations.
   static std::unordered_map<string, Expression::OpType> ops {
     {"Add", Expression::ADD},
@@ -36,13 +36,13 @@ static Expression::OpType OpType(Flow::Operation *op) {
     {"Relu", Expression::RELU},
   };
 
-  auto f = ops.find(op->type);
+  auto f = ops.find(op);
   return f == ops.end() ? Expression::INVALID : f->second;
 }
 
 // Check if operation is a candidate for Calculate ops.
 static bool IsCalculateOp(Flow::Operation *op) {
-  return op->type == "Calculate" || OpType(op) != Expression::INVALID;
+  return op->type == "Calculate" || OpType(op->type) != Expression::INVALID;
 }
 
 // Initialize expression for flow operation.
@@ -53,9 +53,26 @@ static void InitExpression(Flow::Operation *op, Expression *expr) {
     if (!recipe.empty()) expr->Parse(recipe);
   } else {
     // Add op with inputs and outputs.
-    CHECK_EQ(op->outputs.size(), 1);
-    Expression::Op *func = expr->Operation(OpType(op));
-    for (int i = 0; i < op->inputs.size(); ++i) {
+    CHECK_EQ(op->outdegree(), 1);
+    Expression::Op *func = expr->Operation(OpType(op->type));
+    for (int i = 0; i < op->indegree(); ++i) {
+      func->AddArgument(expr->Variable(Expression::INPUT, i));
+    }
+    func->Assign(expr->Variable(Expression::OUTPUT, 0));
+  }
+}
+
+// Initialize expression for step.
+static void InitExpression(const Step *step, Expression *expr) {
+  if (step->type() == "Calculate") {
+    // Build expression from expression recipe attribute on op.
+    const string &recipe = step->GetAttr("expr");
+    if (!recipe.empty()) expr->Parse(recipe);
+  } else {
+    // Add op with inputs and outputs.
+    CHECK_EQ(step->outdegree(), 1);
+    Expression::Op *func = expr->Operation(OpType(step->type()));
+    for (int i = 0; i < step->indegree(); ++i) {
       func->AddArgument(expr->Variable(Expression::INPUT, i));
     }
     func->Assign(expr->Variable(Expression::OUTPUT, 0));
@@ -65,12 +82,12 @@ static void InitExpression(Flow::Operation *op, Expression *expr) {
 // Build mapping from flow variables to expression variables.
 static void MapVars(Flow::Operation *op, Expression *expr, VarMap *varmap) {
   // Map input variables.
-  for (int i = 0; i < op->inputs.size(); ++i) {
+  for (int i = 0; i < op->indegree(); ++i) {
     (*varmap)[op->inputs[i]] = expr->Variable(Expression::INPUT, i);
   }
 
   // Map output variables.
-  for (int i = 0; i < op->outputs.size(); ++i) {
+  for (int i = 0; i < op->outdegree(); ++i) {
     (*varmap)[op->outputs[i]] = expr->Variable(Expression::OUTPUT, i);
   }
 }
@@ -221,14 +238,36 @@ class ConstantFolding : public Transformer {
 // Kernel for computing arithmetic expressions.
 class Calculate : public Kernel {
  public:
-  string Name() override { return "Calculate"; }
-  string Operation() override { return "Calculate"; }
+  Calculate(const string &name, const string &operation)
+      : name_(name), operation_(operation) {}
+
+  string Name() override { return name_; }
+  string Operation() override { return operation_; }
 
   bool Supports(Step *step) override {
-    return true;
+    return step->type() == operation_;
   }
 
   void Adjust(Step *step) override {
+    // Set the alignment requirements based on the vector size.
+    Type type = step->output(0)->type();
+    int elements = step->output(0)->elements();
+    Expression expr;
+    InitExpression(step, &expr);
+    ElementwiseIndexGenerator index(step);
+    auto *generator = ExpressionGenerator::Select(expr, type, elements);
+    CHECK(generator != nullptr);
+    int alignment = generator->VectorSize();
+    delete generator;
+
+    for (auto *input : step->inputs()) {
+      input->SetMiniumAlignment(alignment);
+    }
+    for (auto *output : step->outputs()) {
+      output->SetMiniumAlignment(alignment);
+    }
+
+    // Enable sharing of inputs and outputs.
     for (int i = 0; i < step->indegree(); ++i) {
       for (int j = 0; j < step->outdegree(); ++j) {
         if (step->input(i)->shape() == step->output(j)->shape()) {
@@ -246,7 +285,7 @@ class Calculate : public Kernel {
 
     // Compile expression to be computed.
     Expression expr;
-    expr.Parse(step->GetAttr("expr"));
+    InitExpression(step, &expr);
 
     // Create element-wise index generator.
     ElementwiseIndexGenerator index(step);
@@ -277,11 +316,15 @@ class Calculate : public Kernel {
 
     // Compile expression to be computed.
     Expression expr;
-    expr.Parse(step->GetAttr("expr"));
+    InitExpression(step, &expr);
 
     // The number of operations is the number of ops times the output size.
     return expr.ops().size() * elements;
   }
+
+ private:
+  const string name_;       // kernel name
+  const string operation_;  // kernel operation
 };
 
 // Register arithmetic kernels.
@@ -289,7 +332,14 @@ void RegisterArithmeticKernels(Library *library) {
   library->RegisterTransformer(new ConstantFolding());
   library->RegisterTransformer(new ExpressionTransformer());
 
-  library->Register(new Calculate());
+  library->Register(new Calculate("Calculate", "Calculate"));
+  library->Register(new Calculate("AddExpr", "Add"));
+  library->Register(new Calculate("SubExpr", "Sub"));
+  library->Register(new Calculate("MulExpr", "Mul"));
+  library->Register(new Calculate("DivExpr", "Div"));
+  library->Register(new Calculate("MaxExpr", "Maximum"));
+  library->Register(new Calculate("MinExpr", "Minimum"));
+  library->Register(new Calculate("ReluExpr", "Relu"));
 }
 
 }  // namespace myelin
