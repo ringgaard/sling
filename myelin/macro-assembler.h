@@ -177,9 +177,12 @@ class StaticData {
 
   // Add data to data block.
   void AddData(void *buffer, int size);
-  template<typename T> void Add(T value, int n = 1) {
-    for (int i = 0; i < n; ++i) AddData(&value, sizeof(T));
+  template<typename T> void Add(T value, int repeat = 1) {
+    for (int n = 0; n < repeat; ++n) AddData(&value, sizeof(T));
   }
+
+  // Check if data block is equal to (repeated) constant.
+  bool Equals(void *data, int size, int repeat) const;
 
   // Generate data blocks and fix up references to it.
   void Generate(MacroAssembler *masm);
@@ -212,10 +215,23 @@ class MacroAssembler : public jit::Assembler {
   // Create new static data block.
   StaticData *CreateDataBlock(int alignment = 1);
 
+  // Find existing static data block.
+  StaticData *FindDataBlock(void *data, int size, int repeat);
+
   // Create new static data block with (repeated) constant.
-  template<typename T> StaticData *Constant(T value, int n = 1) {
-    StaticData *data = CreateDataBlock(n * sizeof(T));
-    data->Add(value, n);
+  template<typename T> StaticData *Constant(T value, int repeat = 1) {
+    StaticData *data = CreateDataBlock(repeat * sizeof(T));
+    data->Add(value, repeat);
+    return data;
+  }
+
+  // Find existing static data block with repeated constant or create a new one.
+  template<typename T> StaticData *GetConstant(T value, int repeat = 1) {
+    StaticData *data = FindDataBlock(&value, sizeof(T), repeat);
+    if (data == nullptr) {
+      data = CreateDataBlock(repeat * sizeof(T));
+      data->Add(value, repeat);
+    }
     return data;
   }
 

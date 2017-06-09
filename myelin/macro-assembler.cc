@@ -156,6 +156,16 @@ void StaticData::AddData(void *buffer, int size) {
   data_.insert(data_.end(), ptr, ptr + size);
 }
 
+bool StaticData::Equals(void *data, int size, int repeat) const {
+  if (size * repeat != data_.size()) return false;
+  uint8 *ptr = static_cast<uint8 *>(data);
+  for (int n = 0; n < repeat; ++n) {
+    if (memcmp(ptr, &data_.at(n * repeat), size) != 0) return false;
+    ptr += size;
+  }
+  return true;
+}
+
 void StaticData::Generate(MacroAssembler *masm) {
   // Align output.
   masm->DataAlign(alignment_);
@@ -235,6 +245,13 @@ StaticData *MacroAssembler::CreateDataBlock(int alignment) {
   StaticData *data = new StaticData(alignment);
   data_blocks_.push_back(data);
   return data;
+}
+
+StaticData *MacroAssembler::FindDataBlock(void *data, int size, int repeat) {
+  for (StaticData *data : data_blocks_) {
+    if (data->Equals(data, size, repeat)) return data;
+  }
+  return nullptr;
 }
 
 void MacroAssembler::GenerateDataBlocks() {
