@@ -30,10 +30,7 @@ class Reshape : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    if (!step->input(0)->SharedWith(step->output(0))) {
-      LOG(WARNING) << "Cannot share " << step->name();
-      __ nop();
-    }
+    CHECK(step->input(0)->SharedWith(step->output(0)));
   }
 
   int64 Complexity(const Step *step) override {
@@ -64,10 +61,7 @@ class Squeeze : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    if (!step->input(0)->SharedWith(step->output(0))) {
-      LOG(WARNING) << "Cannot share " << step->name();
-      __ nop();
-    }
+    CHECK(step->input(0)->SharedWith(step->output(0)));
   }
 
   int64 Complexity(const Step *step) override {
@@ -98,10 +92,7 @@ class ExpandDims : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    if (!step->input(0)->SharedWith(step->output(0))) {
-      LOG(WARNING) << "Cannot share " << step->name();
-      __ nop();
-    }
+    CHECK(step->input(0)->SharedWith(step->output(0)));
   }
 
   int64 Complexity(const Step *step) override {
@@ -135,10 +126,7 @@ class SpaceToBatch : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    if (!step->input(0)->SharedWith(step->output(0))) {
-      LOG(WARNING) << "Cannot share " << step->name();
-      __ nop();
-    }
+    CHECK(step->input(0)->SharedWith(step->output(0)));
   }
 
   int64 Complexity(const Step *step) override {
@@ -172,10 +160,7 @@ class BatchToSpace : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    if (!step->input(0)->SharedWith(step->output(0))) {
-      LOG(WARNING) << "Cannot share " << step->name();
-      __ nop();
-    }
+    CHECK(step->input(0)->SharedWith(step->output(0)));
   }
 
   int64 Complexity(const Step *step) override {
@@ -205,10 +190,7 @@ class Pack : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    if (!step->input(0)->SharedWith(step->output(0))) {
-      LOG(WARNING) << "Cannot share " << step->name();
-      __ nop();
-    }
+    CHECK(step->input(0)->SharedWith(step->output(0)));
   }
 
   int64 Complexity(const Step *step) override {
@@ -238,10 +220,7 @@ class Unpack : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    if (!step->input(0)->SharedWith(step->output(0))) {
-      LOG(WARNING) << "Cannot share " << step->name();
-      __ nop();
-    }
+    CHECK(step->input(0)->SharedWith(step->output(0)));
   }
 
   int64 Complexity(const Step *step) override {

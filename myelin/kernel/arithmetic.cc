@@ -231,7 +231,9 @@ class Calculate : public Kernel {
   void Adjust(Step *step) override {
     for (int i = 0; i < step->indegree(); ++i) {
       for (int j = 0; j < step->outdegree(); ++j) {
-        if (step->AllowInPlace(i, j)) break;
+        if (step->input(i)->shape() == step->output(j)->shape()) {
+          if (step->AllowInPlace(i, j)) break;
+        }
       }
     }
   }

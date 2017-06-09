@@ -385,7 +385,9 @@ class Tensor {
 
   // Check if tensor shares the underlying storage with another tensor.
   bool SharedWith(Tensor *other) const {
-    return shared_ == other || other->shared_ == this;
+    return shared_ == other ||
+           other->shared_ == this ||
+           (shared_ != nullptr && shared_ == other->shared_);
   }
 
   // Other tensor that this tensor shares alignment requirements with.
