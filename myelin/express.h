@@ -169,6 +169,7 @@ class Express {
 
     // Three-operand instruction formats.
     bool op_reg_reg_reg = false;    // dst = op(src1, src2)
+    bool op_reg_reg_imm = false;    // dst = op(src, imm)
     bool op_reg_reg_mem = false;    // dst = op(src, [mem])
 
     // Unary function instruction formats.
@@ -180,6 +181,7 @@ class Express {
 
     // Fused multiply instruction formats.
     bool fm_reg_reg_reg = false;    // dst = op(dst, src1, src2)
+    bool fm_reg_reg_imm = false;    // dst = op(dst, src, imm)
     bool fm_reg_reg_mem = false;    // dst = op(dst, src, [mem])
   };
 

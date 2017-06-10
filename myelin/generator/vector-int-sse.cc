@@ -16,8 +16,10 @@ class VectorIntSSEGenerator : public ExpressionGenerator {
     model_.mov_reg_mem = true;
     model_.mov_mem_reg = true;
     model_.op_reg_reg = true;
+    model_.op_reg_imm = true;
     model_.op_reg_mem = true;
     model_.func_reg_reg = true;
+    model_.func_reg_imm = true;
     model_.func_reg_mem = true;
   }
 

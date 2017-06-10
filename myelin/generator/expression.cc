@@ -458,7 +458,7 @@ void ExpressionGenerator::GenerateXMMFltOp(
     Express::Op *instr,
     OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
     OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
-    MacroAssembler *masm) {
+    MacroAssembler *masm, int argnum) {
   if (instr->dst != -1 && instr->src != -1 && instr->src2 != -1) {
     // OP reg,reg,reg
     switch (type_) {
@@ -475,11 +475,11 @@ void ExpressionGenerator::GenerateXMMFltOp(
     switch (type_) {
       case DT_FLOAT:
         (masm->*fltopmem)(xmm(instr->dst), xmm(instr->src),
-                          addr(instr->args[1]));
+                          addr(instr->args[argnum]));
         break;
       case DT_DOUBLE:
         (masm->*dblopmem)(xmm(instr->dst), xmm(instr->src),
-                          addr(instr->args[1]));
+                          addr(instr->args[argnum]));
         break;
       default: UNSUPPORTED;
     }
@@ -492,7 +492,7 @@ void ExpressionGenerator::GenerateYMMFltOp(
     Express::Op *instr,
     OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
     OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
-    MacroAssembler *masm) {
+    MacroAssembler *masm, int argnum) {
   if (instr->dst != -1 && instr->src != -1 && instr->src2 != -1) {
     // OP reg,reg,reg
     switch (type_) {
@@ -509,11 +509,11 @@ void ExpressionGenerator::GenerateYMMFltOp(
     switch (type_) {
       case DT_FLOAT:
         (masm->*fltopmem)(ymm(instr->dst), ymm(instr->src),
-                          addr(instr->args[1]));
+                          addr(instr->args[argnum]));
         break;
       case DT_DOUBLE:
         (masm->*dblopmem)(ymm(instr->dst), ymm(instr->src),
-                          addr(instr->args[1]));
+                          addr(instr->args[argnum]));
         break;
       default: UNSUPPORTED;
     }

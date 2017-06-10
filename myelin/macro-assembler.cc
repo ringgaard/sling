@@ -151,9 +151,11 @@ int SIMDRegisters::alloc() {
   return r;
 }
 
-void StaticData::AddData(void *buffer, int size) {
+void StaticData::AddData(void *buffer, int size, int repeat) {
   uint8 *ptr = static_cast<uint8 *>(buffer);
-  data_.insert(data_.end(), ptr, ptr + size);
+  for (int n = 0; n < repeat; ++n) {
+    data_.insert(data_.end(), ptr, ptr + size);
+  }
 }
 
 bool StaticData::Equals(void *data, int size, int repeat) const {

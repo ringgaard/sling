@@ -126,7 +126,7 @@ class InstanceAllocator {
 
   // Allocate space for variable in instance data block.
   void Allocate(Tensor *var) {
-    // Shared variables shares offset.
+    // Shared variables share offsets.
     if (var->shared_ != nullptr) {
       if (placement_ == HOST) {
         DCHECK(var->shared_->offset_ != -1) << var->name();
@@ -620,6 +620,7 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   }
   if (in->ref() != out->ref()) return false;
   if (out->shared()) return false;
+  if (out->out()) return false;
   out->set_shared(in);
   if (out->shape() == in->shape()) out->set_link(in);
   return true;

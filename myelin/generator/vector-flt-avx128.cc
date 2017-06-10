@@ -16,11 +16,14 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
     model_.mov_reg_mem = true;
     model_.mov_mem_reg = true;
     model_.op_reg_reg_reg = true;
+    model_.op_reg_reg_imm = true;
     model_.op_reg_reg_mem = true;
     model_.func_reg_reg = true;
+    model_.func_reg_imm = true;
     model_.func_reg_mem = true;
     if (CPU::Enabled(FMA3)) {
       model_.fm_reg_reg_reg = true;
+      model_.fm_reg_reg_imm = true;
       model_.fm_reg_reg_mem = true;
     }
   }
@@ -82,37 +85,37 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
         GenerateXMMFltOp(instr,
             &Assembler::vfmadd132ps, &Assembler::vfmadd132pd,
             &Assembler::vfmadd132ps, &Assembler::vfmadd132pd,
-            masm);
+            masm, 2);
         break;
       case Express::MULADD213:
         GenerateXMMFltOp(instr,
             &Assembler::vfmadd213ps, &Assembler::vfmadd213pd,
             &Assembler::vfmadd213ps, &Assembler::vfmadd213pd,
-            masm);
+            masm, 2);
         break;
       case Express::MULADD231:
         GenerateXMMFltOp(instr,
             &Assembler::vfmadd231ps, &Assembler::vfmadd231pd,
             &Assembler::vfmadd231ps, &Assembler::vfmadd231pd,
-            masm);
+            masm, 2);
         break;
       case Express::MULSUB132:
         GenerateXMMFltOp(instr,
             &Assembler::vfmsub132ps, &Assembler::vfmsub132pd,
             &Assembler::vfmsub132ps, &Assembler::vfmsub132pd,
-            masm);
+            masm, 2);
         break;
       case Express::MULSUB213:
         GenerateXMMFltOp(instr,
             &Assembler::vfmsub213ps, &Assembler::vfmsub213pd,
             &Assembler::vfmsub213ps, &Assembler::vfmsub213pd,
-            masm);
+            masm, 2);
         break;
       case Express::MULSUB231:
         GenerateXMMFltOp(instr,
             &Assembler::vfmsub231ps, &Assembler::vfmsub231pd,
             &Assembler::vfmsub231ps, &Assembler::vfmsub231pd,
-            masm);
+            masm, 2);
         break;
       default: UNSUPPORTED;
     }

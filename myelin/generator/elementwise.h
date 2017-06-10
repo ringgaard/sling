@@ -38,6 +38,9 @@ class ElementwiseIndexGenerator : public IndexGenerator {
     // Check for single element tensor.
     bool scalar() const { return var->elements() == 1; }
 
+    // Check for constant tensor.
+    bool constant() const { return var->IsConstant(); }
+
     Tensor *var;                       // tensor that is being iterated
     jit::Register base = jit::no_reg;  // base register for tensor
   };
@@ -63,6 +66,9 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   // Input and output iterators.
   std::vector<Iterator> input_;
   std::vector<Iterator> output_;
+
+  // Assembler for generating code and data.
+  MacroAssembler *masm_ = nullptr;
 };
 
 }  // namespace myelin

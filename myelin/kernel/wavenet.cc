@@ -243,7 +243,7 @@ static void RandomGenerator(const TensorData &shape,
                             const TensorData &seed,
                             TensorData *result) {
   int elements = result->shape().elements();
-  int64 prng_seed = seed.at<int64>(0);
+  int64 prng_seed = seed.value<int64>();
   float *random = &result->at<float>(0);
   std::mt19937_64 prng(prng_seed);
   std::uniform_real_distribution<float> unit(0.0, 1.0);

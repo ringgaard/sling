@@ -697,6 +697,14 @@ class TensorData {
       : data_(data), format_(format) {}
 
   // Tensor element access.
+  template<typename T> T &value() {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<T *>(data_);
+  }
+  template<typename T> const T &value() const {
+    DCHECK_EQ(Traits<T>().type(), type());
+    return *reinterpret_cast<T *>(data_);
+  }
   template<typename T> T &at(int r) {
     DCHECK_EQ(Traits<T>().type(), type());
     return *reinterpret_cast<T *>(data_ + format_->offset(r));

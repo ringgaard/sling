@@ -37,6 +37,7 @@ bool ElementwiseIndexGenerator::AllocateRegisters(MacroAssembler *masm) {
 
   // Allocate registers for iterators.
   for (auto &it : input_) {
+    if (it.scalar() && it.constant()) continue;
     if (it.var->offset() == -1 || it.var->ref()) {
       it.base = rr.try_alloc();
       if (!it.base.is_valid()) return false;
@@ -70,6 +71,9 @@ void ElementwiseIndexGenerator::BeginLoop(MacroAssembler *masm) {
     __ xorq(offset_, offset_);
     __ bind(&begin_);
   }
+
+  // Save macro assembler for constant generation.
+  masm_ = masm;
 }
 
 void ElementwiseIndexGenerator::EndLoop(MacroAssembler *masm) {
@@ -84,25 +88,39 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
   DCHECK(Valid(var));
   Iterator &it =
       var->type == Express::OUTPUT ? output_[var->id] : input_[var->id];
-  if (single_) {
-    if (it.base.is_valid()) {
+
+  if (it.scalar()) {
+    // Scalar variable.
+    if (var->type == Express::CONST) {
+      // Scalar constant in code block, vectorized if needed.
+      CHECK(it.constant());
+      int size = it.var->element_size();
+      int repeat = vecsize_ / size;
+      return masm_->GetData(it.var->data(), size, repeat)->address();
+    } else if (it.base.is_valid()) {
+      // Index scalar using base register.
       return Operand(it.base);
     } else {
+      // Index scalar using offset in instance.
+      return Operand(instance_, it.var->offset());
+    }
+  } else if (single_) {
+    // Single iteration.
+    if (it.base.is_valid()) {
+      // Index single element using base register.
+      return Operand(it.base);
+    } else {
+      // Index single element using offset in instance.
       return Operand(instance_, it.var->offset());
     }
   } else {
+    // Multiple iterations.
     if (it.base.is_valid()) {
-      if (it.scalar()) {
-        return Operand(it.base);
-      } else {
-        return Operand(it.base, offset_);
-      }
+      // Index element using base register and index.
+      return Operand(it.base, offset_);
     } else {
-      if (it.scalar()) {
-        return Operand(instance_, offset_);
-      } else {
-        return Operand(instance_, offset_, times_1, it.var->offset());
-      }
+      // Index element using offset in instance and index.
+      return Operand(instance_, offset_, times_1, it.var->offset());
     }
   }
 }

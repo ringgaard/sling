@@ -272,7 +272,7 @@ class RecipeParser {
   bool isupper() const { return more() && *ptr_ >= 'A' && *ptr_ <= 'Z'; }
   bool islower() const { return more() && *ptr_ >= 'a' && *ptr_ <= 'z'; }
   bool isletter() const { return isupper() || islower(); }
-  bool isvar() const { return is('%') || is('@') || is('$'); }
+  bool isvar() const { return is('%') || is('@') || is('$') || is('#'); }
 
   // Check if the whole expression has been parsed.
   bool more() const { return ptr_ < end_; }
@@ -842,8 +842,14 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
             // Put second argument into a register if memory operands are not
             // supported.
-            if (args[1]->type != TEMP && !model.op_reg_reg_mem) {
-              source2 = rewritten->Variable(TEMP, -1);
+            if (args[1]->type == CONST) {
+              if (!model.op_reg_reg_imm) {
+                source2 = rewritten->Variable(TEMP, -1);
+              }
+            } else if (args[1]->type != TEMP) {
+              if (!model.op_reg_reg_mem) {
+                source2 = rewritten->Variable(TEMP, -1);
+              }
             }
 
             success = true;
@@ -986,8 +992,14 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
       }
 
       // Make third argument available for instruction.
-      if (args[2]->type != TEMP && !model.fm_reg_reg_mem) {
-        source3 = rewritten->Variable(TEMP, -1);
+      if (args[2]->type == CONST) {
+        if (!model.fm_reg_reg_imm) {
+          source3 = rewritten->Variable(TEMP, -1);
+        }
+      } else if (args[2]->type != TEMP) {
+        if (!model.fm_reg_reg_mem) {
+          source3 = rewritten->Variable(TEMP, -1);
+        }
       }
     } else {
       LOG(WARNING) << "Unsupported op: " << op->AsString();

@@ -23,10 +23,6 @@ using namespace sling::myelin;
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
-  //jit::CPU::Enable(jit::AVX);
-  //jit::CPU::Enable(jit::AVX2);
-  //jit::CPU::Enable(jit::FMA3);
-
   // Set up kernel library.
   Library library;
   RegisterGenericTransformations(&library);
@@ -150,8 +146,10 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << shared << " shared";
   LOG(INFO) << distil->instance_size() << " bytes instance";
 
-  //std::cout << distil->ToString();
-  //std::cout.flush();
+#if 1
+  std::cout << distil->ToString();
+  std::cout.flush();
+#endif
 
   // Convert to DOT graph.
   // To convert to SVG use:

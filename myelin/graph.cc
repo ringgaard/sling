@@ -29,7 +29,7 @@ static void AppendPenWidth(string *str,
   size_t size = TypeTraits::of(var->type).size() * var->shape.elements();
   int width = log(size) * options.edge_thickness_scalar;
   if (width < 1) width = 1;
-  StringAppendF(str, " [penwidth=%d]", width);
+  StringAppendF(str, "penwidth=%d", width);
 }
 
 void GraphNodeOptions::Append(string *str) const {
@@ -105,8 +105,12 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
         AppendOpId(&str, input->producer);
         str.append(" -> ");
         AppendOpId(&str, op);
+        str.append(" [");
+        str.append("tooltip=\"");
+        str.append(input->name);
+        str.append("\" ");
         AppendPenWidth(&str, input, options);
-        str.append(";\n");
+        str.append("];\n");
       }
     }
   }
@@ -154,16 +158,24 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
         AppendVarId(&str, var);
         str.append(" -> ");
         AppendOpId(&str, consumer);
+        str.append(" [");
+        str.append("tooltip=\"");
+        str.append(var->name);
+        str.append("\" ");
         AppendPenWidth(&str, var, options);
-        str.append(";\n");
+        str.append("];\n");
       }
     }
     if (var->out && var->producer != nullptr) {
         AppendOpId(&str, var->producer);
         str.append(" -> ");
         AppendVarId(&str, var);
+        str.append(" [");
+        str.append("tooltip=\"");
+        str.append(var->name);
+        str.append("\" ");
         AppendPenWidth(&str, var, options);
-        str.append(";\n");
+        str.append("];\n");
     }
   }
 

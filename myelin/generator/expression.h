@@ -130,14 +130,14 @@ class ExpressionGenerator {
       Express::Op *instr,
       OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
       OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
-      MacroAssembler *masm);
+      MacroAssembler *masm, int argnum = 1);
 
   // Generate three-operand YMM float op.
   void GenerateYMMFltOp(
       Express::Op *instr,
       OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
       OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
-      MacroAssembler *masm);
+      MacroAssembler *masm, int argnum = 1);
 
   // Generate one-operand x64 int op.
   void GenerateIntUnaryOp(

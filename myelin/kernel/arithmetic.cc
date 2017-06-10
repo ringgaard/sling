@@ -60,6 +60,13 @@ static void InitExpression(Flow::Operation *op, Express *expr) {
     }
     func->Assign(expr->Variable(Express::OUTPUT, 0));
   }
+
+  // Mark constant inputs.
+  for (int i = 0; i < op->indegree(); ++i) {
+    if (op->inputs[i]->data != nullptr) {
+      expr->Variable(Express::INPUT, i)->type = Express::CONST;
+    }
+  }
 }
 
 // Initialize expression for step.
@@ -77,13 +84,22 @@ static void InitExpression(const Step *step, Express *expr) {
     }
     func->Assign(expr->Variable(Express::OUTPUT, 0));
   }
+
+  // Mark constant inputs.
+  for (int i = 0; i < step->indegree(); ++i) {
+    if (step->input(i)->IsConstant()) {
+      expr->Variable(Express::INPUT, i)->type = Express::CONST;
+    }
+  }
 }
 
 // Build mapping from flow variables to expression variables.
 static void MapVars(Flow::Operation *op, Express *expr, VarMap *varmap) {
   // Map input variables.
   for (int i = 0; i < op->indegree(); ++i) {
-    (*varmap)[op->inputs[i]] = expr->Variable(Express::INPUT, i);
+    Express::VarType type =
+        op->inputs[i]->constant() ? Express::CONST : Express::INPUT;
+      (*varmap)[op->inputs[i]] = expr->Variable(type, i);
   }
 
   // Map output variables.
@@ -191,7 +207,8 @@ class ExpressionTransformer : public Transformer {
         mapping[vars2[v]] = vars1[v];
       } else {
         // Map input from second op to a new input in the merged expression.
-        mapping[vars2[v]] = expr1.Variable(Express::INPUT, next_input++);
+        Express::VarType type = v->constant() ? Express::CONST : Express::INPUT;
+        mapping[vars2[v]] = expr1.Variable(type, next_input++);
       }
     }
     for (Flow::Variable *v : second->outputs) {
@@ -202,9 +219,6 @@ class ExpressionTransformer : public Transformer {
 
     // Merge second expression into the first one.
     expr1.Merge(&expr2, mapping);
-
-    // Eliminate common subexpressions.
-    expr1.EliminateCommonSubexpressions();
 
     // Return merged recipe.
     return expr1.AsRecipe();
@@ -332,7 +346,7 @@ class ConstantFolding : public Transformer {
         // Check if all inputs are constants.
         bool constant = true;
         for (auto *input : op->inputs) {
-          if (input->data == nullptr) {
+          if (!input->constant()) {
             constant = false;
             break;
           }
@@ -341,7 +355,6 @@ class ConstantFolding : public Transformer {
 
         // Compute op and replace with new constant variable. First extract
         // the constant operation into a separate sub-flow.
-        LOG(INFO) << "Constant op " << op->type << " " << op->name;
         Flow subflow;
         flow->Extract("compute", op->inputs, op->outputs, &subflow);
 
@@ -349,7 +362,6 @@ class ConstantFolding : public Transformer {
         Library library;
         RegisterCalculate(&library);
         subflow.Analyze(library);
-        LOG(INFO) << subflow.ToString();
         Network network;
         CHECK(network.Compile(subflow, library));
         auto *cell = network.GetCell("compute");

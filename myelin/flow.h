@@ -290,6 +290,9 @@ class Flow {
     // Return the number of elements in the variable tensor.
     int elements() const { return shape.elements(); }
 
+    // Check if variable is a constant.
+    bool constant() const { return data != nullptr; }
+
     // Return type as string.
     string TypeString() const;
 
