@@ -211,30 +211,6 @@ class ExpressionTransformer : public Transformer {
   }
 };
 
-// Replace ops with constant input variables with new computed constant
-// variables.
-class ConstantFolding : public Transformer {
- public:
-  bool Transform(Flow *flow) override {
-    for (Flow::Operation *op : flow->ops()) {
-      // Check if all inputs are constants.
-      bool constant = true;
-      for (auto *input : op->inputs) {
-        if (input->data == nullptr) {
-          constant = false;
-          break;
-        }
-      }
-      if (constant) {
-        // TODO: compute op and replace with new constant variable.
-        VLOG(3) << "Constant op " << op->type << " "
-                << op->outputs[0]->TypeString() << " " << op->name;
-      }
-    }
-    return false;
-  }
-};
-
 // Kernel for computing arithmetic expressions.
 class Calculate : public Kernel {
  public:
@@ -327,11 +303,9 @@ class Calculate : public Kernel {
   const string operation_;  // kernel operation
 };
 
-// Register arithmetic kernels.
-void RegisterArithmeticKernels(Library *library) {
-  library->RegisterTransformer(new ConstantFolding());
+// Register calculation kernels in library.
+static void RegisterCalculate(Library *library) {
   library->RegisterTransformer(new ExpressionTransformer());
-
   library->Register(new Calculate("Calculate", "Calculate"));
   library->Register(new Calculate("AddExpr", "Add"));
   library->Register(new Calculate("SubExpr", "Sub"));
@@ -340,6 +314,83 @@ void RegisterArithmeticKernels(Library *library) {
   library->Register(new Calculate("MaxExpr", "Maximum"));
   library->Register(new Calculate("MinExpr", "Minimum"));
   library->Register(new Calculate("ReluExpr", "Relu"));
+}
+
+// Replace ops with constant input variables with new computed constant
+// variables.
+class ConstantFolding : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    std::vector<Flow::Operation *> remove;
+    bool again = true;
+    while (again) {
+      again = false;
+      for (Flow::Operation *op : flow->ops()) {
+        // Operation must have both inputs and outputs.
+        if (op->inputs.empty() || op->outputs.empty()) continue;
+
+        // Check if all inputs are constants.
+        bool constant = true;
+        for (auto *input : op->inputs) {
+          if (input->data == nullptr) {
+            constant = false;
+            break;
+          }
+        }
+        if (!constant || !IsCalculateOp(op)) continue;
+
+        // Compute op and replace with new constant variable. First extract
+        // the constant operation into a separate sub-flow.
+        LOG(INFO) << "Constant op " << op->type << " " << op->name;
+        Flow subflow;
+        flow->Extract("compute", op->inputs, op->outputs, &subflow);
+
+        // Analyze, compile and execute sub-flow to compute constant value.
+        Library library;
+        RegisterCalculate(&library);
+        subflow.Analyze(library);
+        LOG(INFO) << subflow.ToString();
+        Network network;
+        CHECK(network.Compile(subflow, library));
+        auto *cell = network.GetCell("compute");
+        Instance data(cell);
+        data.Compute();
+
+        // Extract results and change output variables to constants.
+        for (auto *output : op->outputs) {
+          // Allocate space for constant in flow.
+          auto *result = cell->GetParameter(output->name);
+          size_t size = result->space();
+          char *buffer = flow->AllocateMemory(size);
+          memcpy(buffer, data.GetAddress(result), size);
+
+          // Change variable to a constant.
+          output->data = buffer;
+          output->size = size;
+          output->in = true;
+        }
+
+        // Mark constant op for removal.
+        while (!op->inputs.empty()) op->RemoveInput(op->inputs[0]);
+        while (!op->outputs.empty()) op->RemoveOutput(op->outputs[0]);
+        remove.push_back(op);
+        again = true;
+      }
+    }
+
+    // Remove constant ops.
+    if (remove.empty()) return false;
+    for (Flow::Operation *op : remove) {
+      flow->DeleteOperation(op);
+    }
+    return true;
+  }
+};
+
+// Register arithmetic kernels.
+void RegisterArithmeticKernels(Library *library) {
+  library->RegisterTransformer(new ConstantFolding());
+  RegisterCalculate(library);
 }
 
 }  // namespace myelin

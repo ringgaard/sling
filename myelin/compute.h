@@ -766,6 +766,13 @@ class Instance {
   // Run cell computation on instance.
   inline void Compute();
 
+  // Get raw pointer to location of parameter in instance memory.
+  char *GetAddress(Tensor *param) {
+    DCHECK(param != nullptr);
+    DCHECK(!param->IsConstant());
+    return data_ + param->offset();
+  }
+
   // Get pointer to location of parameter in instance memory.
   template<typename T> T *Get(Tensor *param) {
     DCHECK(param != nullptr);

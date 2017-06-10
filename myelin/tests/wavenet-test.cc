@@ -24,6 +24,8 @@ int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
   //jit::CPU::Enable(jit::AVX);
+  //jit::CPU::Enable(jit::AVX2);
+  //jit::CPU::Enable(jit::FMA3);
 
   // Set up kernel library.
   Library library;
@@ -227,7 +229,7 @@ int main(int argc, char *argv[]) {
 #if 1
   // Run instance
   Instance data(distil);
-  for (int i = 0; i < 10000; ++i) {
+  for (int i = 0; i < 1000; ++i) {
     data.Compute();
   }
 
