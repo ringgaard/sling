@@ -30,71 +30,76 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     index_->ReserveXMMRegisters(instructions_.NumRegs());
   }
 
-  void Generate(Expression::Op *instr, MacroAssembler *masm) override {
+  void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
-      case Expression::MOV:
+      case Express::MOV:
         GenerateXMMVectorMove(instr, masm);
         break;
-      case Expression::ADD:
+      case Express::ADD:
         GenerateXMMFltOp(instr,
             &Assembler::addps, &Assembler::addpd,
             &Assembler::addps, &Assembler::addpd,
             masm);
         break;
-      case Expression::SUB:
+      case Express::SUB:
         GenerateXMMFltOp(instr,
             &Assembler::subps, &Assembler::subpd,
             &Assembler::subps, &Assembler::subpd,
             masm);
         break;
-      case Expression::MUL:
+      case Express::MUL:
         GenerateXMMFltOp(instr,
             &Assembler::mulps, &Assembler::mulpd,
             &Assembler::mulps, &Assembler::mulpd,
             masm);
         break;
-      case Expression::DIV:
+      case Express::DIV:
         GenerateXMMFltOp(instr,
             &Assembler::divps, &Assembler::divpd,
             &Assembler::divps, &Assembler::divpd,
             masm);
         break;
-      case Expression::MIN:
+      case Express::MIN:
         GenerateXMMFltOp(instr,
             &Assembler::minps, &Assembler::minpd,
             &Assembler::minps, &Assembler::minpd,
             masm);
         break;
-      case Expression::MAX:
+      case Express::MAX:
         GenerateXMMFltOp(instr,
             &Assembler::maxps, &Assembler::maxpd,
             &Assembler::maxps, &Assembler::maxpd,
             masm);
         break;
-      case Expression::RELU:
-        if (CPU::Enabled(SSE2)) {
-          if (type_ == DT_FLOAT) {
-            __ xorps(xmm(instr->dst), xmm(instr->dst));
-          } else if (type_ == DT_DOUBLE) {
-            __ xorpd(xmm(instr->dst), xmm(instr->dst));
-          } else {
-            UNSUPPORTED;
-          }
-        } else if (type_ == DT_FLOAT) {
-          float zero = 0;
-          auto *data = masm->CreateDataBlock(sizeof(float));
-          data->Add(zero);
-          __ movss(xmm(instr->dst), data->address());
-        } else {
-          UNSUPPORTED;
-        }
-        GenerateXMMFltOp(instr,
-            &Assembler::maxps, &Assembler::maxpd,
-            &Assembler::maxps, &Assembler::maxpd,
-            masm);
+      case Express::RELU:
+        GenerateRelu(instr, masm);
         break;
       default: UNSUPPORTED;
     }
+  }
+
+  // Generate relu.
+  void GenerateRelu(Express::Op *instr, MacroAssembler *masm) {
+    if (CPU::Enabled(SSE2)) {
+      if (type_ == DT_FLOAT) {
+        __ xorps(xmm(instr->dst), xmm(instr->dst));
+      } else if (type_ == DT_DOUBLE) {
+        __ xorpd(xmm(instr->dst), xmm(instr->dst));
+      } else {
+        UNSUPPORTED;
+      }
+    } else if (type_ == DT_FLOAT) {
+      float zero = 0;
+      auto *data = masm->CreateDataBlock(sizeof(float));
+      data->Add(zero);
+      __ movss(xmm(instr->dst), data->address());
+    } else {
+      UNSUPPORTED;
+    }
+    GenerateXMMFltOp(instr,
+        &Assembler::maxps, &Assembler::maxpd,
+        &Assembler::maxps, &Assembler::maxpd,
+        masm);
   }
 };
 

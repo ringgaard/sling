@@ -25,7 +25,7 @@ cc_library(
   deps = [
     "//base",
     "//myelin:compute",
-    "//myelin:expression",
+    "//myelin:express",
     "//myelin/generator:elementwise",
     "//myelin/generator:expression",
   ],

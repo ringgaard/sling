@@ -66,9 +66,9 @@ cc_library(
 )
 
 cc_library(
-  name = "expression",
-  srcs = ["expression.cc"],
-  hdrs = ["expression.h"],
+  name = "express",
+  srcs = ["express.cc"],
+  hdrs = ["express.h"],
   deps = [
     "//base",
   ],

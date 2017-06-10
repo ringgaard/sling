@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "myelin/compute.h"
-#include "myelin/expression.h"
+#include "myelin/express.h"
 #include "myelin/macro-assembler.h"
 
 namespace sling {
@@ -18,7 +18,7 @@ class IndexGenerator {
   virtual bool AllocateRegisters(MacroAssembler *masm);
 
   // Return operand for accessing memory variable.
-  virtual jit::Operand addr(Expression::Var *var) = 0;
+  virtual jit::Operand addr(Express::Var *var) = 0;
 
   // Return register for accessing temporary variable.
   jit::Register reg(int idx) { return regs_[idx]; }

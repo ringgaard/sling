@@ -1,5 +1,19 @@
-#ifndef MYELIN_EXPRESSION_H_
-#define MYELIN_EXPRESSION_H_
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef MYELIN_EXPRESS_H_
+#define MYELIN_EXPRESS_H_
 
 #include <map>
 #include <string>
@@ -11,9 +25,35 @@
 namespace sling {
 namespace myelin {
 
-// An expression is a sequence of operations computing output variables from
-// input variables using intermediate temporary variables.
-class Expression {
+// Express is an intermediate representation (IR) of lists of expressions. An
+// expression is a computation of outputs from inputs using a fixed set of
+// functions. Express uses single static assignment (SSA) form to represent the
+// computations as sequence of operations on variables. The following kinds of
+// variables are supported:
+//
+//   %n: input variable
+//   #n: constant variable
+//   @n: output variable
+//   $n: temporary variable
+//
+// An Express recipe is a text format for representing computations over
+// inputs variables to produce the output variables. A recipe has the following
+// grammar:
+//
+//   <recipe> := <assignment> | <assignment> ';' <recipe>
+//   <assignment> := <variable> '=' <expression>
+//   <expression> := <variable> | <operation>
+//   <operation> := <name> '(' <arg list> ')'
+//   <arg list> := <arg> | <arg> ',' <arg list>
+//   <arg> := <variable> | <expression>
+//   <variable> := <input variable> | <constant> |
+//                 <output variable> | <temp variable>
+//   <input variable> := '%' <number>
+//   <constant> := '#' <number>
+//   <output variable> := '@' <number>
+//   <temp variable> := '$' <number>
+//
+class Express {
  public:
   struct Var;
   struct Op;
@@ -143,28 +183,9 @@ class Expression {
     bool fm_reg_reg_mem = false;    // dst = op(dst, src, [mem])
   };
 
-  ~Expression();
+  ~Express();
 
-  // Parse an expression recipe and add it to the expression. A recipe is a
-  // sequence of assignment expressions with the following types of variables:
-  //   %n: input variable
-  //   #n: constant variable
-  //   @n: output variable
-  //   $n: temporary variable
-  //
-  // A recipe has the following grammar:
-  //   <recipe> := <assignment> | <assignment> ';' <recipe>
-  //   <assignment> := <variable> '=' <expression>
-  //   <expression> := <variable> | <operation>
-  //   <operation> := <name> '(' <arg list> ')'
-  //   <arg list> := <arg> | <arg> ',' <arg list>
-  //   <arg> := <variable> | <expression>
-  //   <variable> := <input variable> | <constant> |
-  //                 <output variable> | <temp variable>
-  //   <input variable> := '%' <number>
-  //   <constant> := '#' <number>
-  //   <output variable> := '@' <number>
-  //   <temp variable> := '$' <number>
+  // Parse an expression recipe and add it to the expression.
   void Parse(const string &recipe);
 
   // Return recipe for expression.
@@ -211,12 +232,12 @@ class Expression {
   int MaxActiveTemps() const;
 
   // Copy operations and variables from another expression.
-  void Copy(const Expression &other);
+  void Copy(const Express &other);
 
   // Merge variable and operations from another expression into this
   // expression. The variables are mapped through the mapping which maps
   // variables in the other expression to variables in this expression.
-  void Merge(Expression *other, const Map &varmap);
+  void Merge(Express *other, const Map &varmap);
 
   // Fuse operations. All occurrences of outer(inner(a,b),c) are changed to
   // left(a,b,c) and all occurrences of outer(a,inner(b,c)) to right(a,b,c).
@@ -229,7 +250,7 @@ class Expression {
   // form. The expression is rewritten by adding additional temporary variables
   // to the rewritten expression so only the supported instruction form are
   // needed for evaluating the expression.
-  bool Rewrite(const Model &model, Expression *rewritten) const;
+  bool Rewrite(const Model &model, Express *rewritten) const;
 
   // Allocate registers for operands. Return the number of registers used.
   int AllocateRegisters();
@@ -276,5 +297,5 @@ class Expression {
 }  // namespace myelin
 }  // namespace sling
 
-#endif  // MYELIN_EXPRESSION_H_
+#endif  // MYELIN_EXPRESS_H_
 

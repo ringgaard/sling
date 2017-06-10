@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "myelin/compute.h"
-#include "myelin/expression.h"
+#include "myelin/express.h"
 #include "myelin/generator/index.h"
 
 namespace sling {
@@ -35,10 +35,10 @@ class ExpressionGenerator {
   virtual void Reserve() = 0;
 
   // Generate code for instruction.
-  virtual void Generate(Expression::Op *instr, MacroAssembler *masm) = 0;
+  virtual void Generate(Express::Op *instr, MacroAssembler *masm) = 0;
 
   // Initialize expression generator.
-  void Initalize(const Expression &expression,
+  void Initalize(const Express &expression,
                  Type type,
                  IndexGenerator *index);
 
@@ -46,7 +46,7 @@ class ExpressionGenerator {
   void Generate(MacroAssembler *masm);
 
   // Select expression generator for expression that is supported by the CPU.
-  static ExpressionGenerator *Select(const Expression &expr,
+  static ExpressionGenerator *Select(const Express &expr,
                                      Type type, int size);
 
  protected:
@@ -80,7 +80,7 @@ class ExpressionGenerator {
   }
 
   // Return operand for accessing memory variable.
-  Operand addr(Expression::Var *var) { return index_->addr(var); }
+  Operand addr(Express::Var *var) { return index_->addr(var); }
 
   // Return register for temporary variable.
   Register reg(int idx) { return index_->reg(idx); }
@@ -93,13 +93,13 @@ class ExpressionGenerator {
   YMMRegister ymmaux(int idx) { return index_->ymmaux(idx); }
 
   // Generate XMM scalar float move.
-  void GenerateXMMScalarFltMove(Expression::Op *instr, MacroAssembler *masm);
+  void GenerateXMMScalarFltMove(Express::Op *instr, MacroAssembler *masm);
 
   // Generate XMM vector move.
-  void GenerateXMMVectorMove(Expression::Op *instr, MacroAssembler *masm);
+  void GenerateXMMVectorMove(Express::Op *instr, MacroAssembler *masm);
 
   // Generate YMM vector move.
-  void GenerateYMMVectorMove(Expression::Op *instr, MacroAssembler *masm);
+  void GenerateYMMVectorMove(Express::Op *instr, MacroAssembler *masm);
 
   // Generate move of x64 operand to register.
   void GenerateIntMoveMemToReg(Register dst, const Operand &src,
@@ -110,38 +110,38 @@ class ExpressionGenerator {
                                MacroAssembler *masm);
 
   // Generate x64 scalar int move.
-  void GenerateScalarIntMove(Expression::Op *instr, MacroAssembler *masm);
+  void GenerateScalarIntMove(Express::Op *instr, MacroAssembler *masm);
 
   // Generate XMM vector int move.
-  void GenerateXMMVectorIntMove(Expression::Op *instr, MacroAssembler *masm);
+  void GenerateXMMVectorIntMove(Express::Op *instr, MacroAssembler *masm);
 
   // Generate YMM vector int move.
-  void GenerateYMMVectorIntMove(Expression::Op *instr, MacroAssembler *masm);
+  void GenerateYMMVectorIntMove(Express::Op *instr, MacroAssembler *masm);
 
   // Generate two-operand XMM float op.
   void GenerateXMMFltOp(
-    Expression::Op *instr,
+    Express::Op *instr,
     OpXMMRegReg fltopreg, OpXMMRegReg dblopreg,
     OpXMMRegMem fltopmem, OpXMMRegMem dblopmem,
     MacroAssembler *masm);
 
   // Generate three-operand XMM float op.
   void GenerateXMMFltOp(
-      Expression::Op *instr,
+      Express::Op *instr,
       OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
       OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
       MacroAssembler *masm);
 
   // Generate three-operand YMM float op.
   void GenerateYMMFltOp(
-      Expression::Op *instr,
+      Express::Op *instr,
       OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
       OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
       MacroAssembler *masm);
 
   // Generate one-operand x64 int op.
   void GenerateIntUnaryOp(
-      Expression::Op *instr,
+      Express::Op *instr,
       OpReg opregb, OpMem opmemb,
       OpReg opregw, OpMem opmemw,
       OpReg opregd, OpMem opmemd,
@@ -150,7 +150,7 @@ class ExpressionGenerator {
 
   // Generate two-operand x64 int op.
   void GenerateIntBinaryOp(
-      Expression::Op *instr,
+      Express::Op *instr,
       OpRegReg opregb, OpRegMem opmemb,
       OpRegReg opregw, OpRegMem opmemw,
       OpRegReg opregd, OpRegMem opmemd,
@@ -159,7 +159,7 @@ class ExpressionGenerator {
 
   // Generate two-operand XMM int op.
   void GenerateXMMIntOp(
-      Expression::Op *instr,
+      Express::Op *instr,
       OpXMMRegReg opregb, OpXMMRegMem opmemb,
       OpXMMRegReg opregw, OpXMMRegMem opmemw,
       OpXMMRegReg opregd, OpXMMRegMem opmemd,
@@ -168,7 +168,7 @@ class ExpressionGenerator {
 
   // Generate three-operand XMM int op.
   void GenerateXMMIntOp(
-      Expression::Op *instr,
+      Express::Op *instr,
       OpXMMRegRegReg opregb, OpXMMRegRegMem opmemb,
       OpXMMRegRegReg opregw, OpXMMRegRegMem opmemw,
       OpXMMRegRegReg opregd, OpXMMRegRegMem opmemd,
@@ -177,7 +177,7 @@ class ExpressionGenerator {
 
   // Generate three-operand YMM int op.
   void GenerateYMMIntOp(
-      Expression::Op *instr,
+      Express::Op *instr,
       OpYMMRegRegReg opregb, OpYMMRegRegMem opmemb,
       OpYMMRegRegReg opregw, OpYMMRegRegMem opmemw,
       OpYMMRegRegReg opregd, OpYMMRegRegMem opmemd,
@@ -191,13 +191,13 @@ class ExpressionGenerator {
   Type type_;
 
   // Instruction model for instruction set used by generator.
-  Expression::Model model_;
+  Express::Model model_;
 
   // Expression that should be generated.
-  Expression expression_;
+  Express expression_;
 
   // Instructions for generating expression.
-  Expression instructions_;
+  Express instructions_;
 };
 
 // Error handler for unsupported operations.

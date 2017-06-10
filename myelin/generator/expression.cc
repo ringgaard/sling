@@ -19,7 +19,7 @@ ExpressionGenerator *CreateVectorIntSSEGenerator();
 ExpressionGenerator *CreateVectorIntAVX128Generator();
 ExpressionGenerator *CreateVectorIntAVX256Generator();
 
-void ExpressionGenerator::Initalize(const Expression &expression,
+void ExpressionGenerator::Initalize(const Express &expression,
                                     Type type,
                                     IndexGenerator *index) {
   // Copy expression.
@@ -53,13 +53,13 @@ void ExpressionGenerator::Initalize(const Expression &expression,
 }
 
 void ExpressionGenerator::Generate(MacroAssembler *masm) {
-  for (Expression::Op *instr : instructions_.ops()) {
+  for (Express::Op *instr : instructions_.ops()) {
     if (instr->nop()) continue;
     Generate(instr, masm);
   }
 }
 
-ExpressionGenerator *ExpressionGenerator::Select(const Expression &expr,
+ExpressionGenerator *ExpressionGenerator::Select(const Express &expr,
                                                  Type type, int size) {
   ExpressionGenerator *generator = nullptr;
   switch (type) {
@@ -100,7 +100,7 @@ ExpressionGenerator *ExpressionGenerator::Select(const Expression &expr,
       break;
 
     case DT_INT8:
-      if (expr.Has(Expression::DIV)) {
+      if (expr.Has(Express::DIV)) {
         generator = CreateScalarIntGenerator();
       } else if (CPU::Enabled(AVX2) && IsVector(size, 32)) {
         generator = CreateVectorIntAVX256Generator();
@@ -114,7 +114,7 @@ ExpressionGenerator *ExpressionGenerator::Select(const Expression &expr,
       break;
 
     case DT_INT16:
-      if (expr.Has(Expression::DIV)) {
+      if (expr.Has(Express::DIV)) {
         generator = CreateScalarIntGenerator();
       } else if (CPU::Enabled(AVX2) && IsVector(size, 16)) {
         generator = CreateVectorIntAVX256Generator();
@@ -128,7 +128,7 @@ ExpressionGenerator *ExpressionGenerator::Select(const Expression &expr,
       break;
 
     case DT_INT32:
-      if (expr.Has(Expression::DIV)) {
+      if (expr.Has(Express::DIV)) {
         generator = CreateScalarIntGenerator();
       } else if (CPU::Enabled(AVX2) && IsVector(size, 8)) {
         generator = CreateVectorIntAVX256Generator();
@@ -142,7 +142,7 @@ ExpressionGenerator *ExpressionGenerator::Select(const Expression &expr,
       break;
 
     case DT_INT64:
-      if (expr.Has(Expression::DIV)) {
+      if (expr.Has(Express::DIV)) {
         generator = CreateScalarIntGenerator();
       } else if (CPU::Enabled(AVX) && IsVector(size, 2)) {
         generator = CreateVectorIntAVX128Generator();
@@ -161,7 +161,7 @@ ExpressionGenerator *ExpressionGenerator::Select(const Expression &expr,
 }
 
 void ExpressionGenerator::GenerateXMMScalarFltMove(
-    Expression::Op *instr,
+    Express::Op *instr,
     MacroAssembler *masm) {
   if (instr->dst != -1 && instr->src != -1) {
     // MOV reg,reg
@@ -202,7 +202,7 @@ void ExpressionGenerator::GenerateXMMScalarFltMove(
 }
 
 void ExpressionGenerator::GenerateXMMVectorMove(
-    Expression::Op *instr,
+    Express::Op *instr,
     MacroAssembler *masm) {
   if (instr->dst != -1 && instr->src != -1) {
     // MOV reg,reg
@@ -273,7 +273,7 @@ void ExpressionGenerator::GenerateXMMVectorMove(
 }
 
 void ExpressionGenerator::GenerateYMMVectorMove(
-    Expression::Op *instr,
+    Express::Op *instr,
     MacroAssembler *masm) {
   if (instr->dst != -1 && instr->src != -1) {
     // MOV reg,reg
@@ -354,7 +354,7 @@ void ExpressionGenerator::GenerateIntMoveRegToMem(
 }
 
 void ExpressionGenerator::GenerateScalarIntMove(
-    Expression::Op *instr,
+    Express::Op *instr,
     MacroAssembler *masm) {
   if (instr->dst != -1 && instr->src != -1) {
     // MOV reg,reg
@@ -371,7 +371,7 @@ void ExpressionGenerator::GenerateScalarIntMove(
 }
 
 void ExpressionGenerator::GenerateXMMVectorIntMove(
-    Expression::Op *instr,
+    Express::Op *instr,
     MacroAssembler *masm) {
   if (instr->dst != -1 && instr->src != -1) {
     // MOV reg,reg
@@ -406,7 +406,7 @@ void ExpressionGenerator::GenerateXMMVectorIntMove(
 }
 
 void ExpressionGenerator::GenerateYMMVectorIntMove(
-    Expression::Op *instr,
+    Express::Op *instr,
     MacroAssembler *masm) {
   if (instr->dst != -1 && instr->src != -1) {
     // MOV reg,reg
@@ -423,7 +423,7 @@ void ExpressionGenerator::GenerateYMMVectorIntMove(
 }
 
 void ExpressionGenerator::GenerateXMMFltOp(
-    Expression::Op *instr,
+    Express::Op *instr,
     OpXMMRegReg fltopreg, OpXMMRegReg dblopreg,
     OpXMMRegMem fltopmem, OpXMMRegMem dblopmem,
     MacroAssembler *masm) {
@@ -455,7 +455,7 @@ void ExpressionGenerator::GenerateXMMFltOp(
 }
 
 void ExpressionGenerator::GenerateXMMFltOp(
-    Expression::Op *instr,
+    Express::Op *instr,
     OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
     OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
     MacroAssembler *masm) {
@@ -489,7 +489,7 @@ void ExpressionGenerator::GenerateXMMFltOp(
 }
 
 void ExpressionGenerator::GenerateYMMFltOp(
-    Expression::Op *instr,
+    Express::Op *instr,
     OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
     OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
     MacroAssembler *masm) {
@@ -523,7 +523,7 @@ void ExpressionGenerator::GenerateYMMFltOp(
 }
 
 void ExpressionGenerator::GenerateIntUnaryOp(
-    Expression::Op *instr,
+    Express::Op *instr,
     OpReg opregb, OpMem opmemb,
     OpReg opregw, OpMem opmemw,
     OpReg opregd, OpMem opmemd,
@@ -569,7 +569,7 @@ void ExpressionGenerator::GenerateIntUnaryOp(
 }
 
 void ExpressionGenerator::GenerateIntBinaryOp(
-    Expression::Op *instr,
+    Express::Op *instr,
     OpRegReg opregb, OpRegMem opmemb,
     OpRegReg opregw, OpRegMem opmemw,
     OpRegReg opregd, OpRegMem opmemd,
@@ -615,7 +615,7 @@ void ExpressionGenerator::GenerateIntBinaryOp(
 }
 
 void ExpressionGenerator::GenerateXMMIntOp(
-    Expression::Op *instr,
+    Express::Op *instr,
     OpXMMRegReg opregb, OpXMMRegMem opmemb,
     OpXMMRegReg opregw, OpXMMRegMem opmemw,
     OpXMMRegReg opregd, OpXMMRegMem opmemd,
@@ -661,7 +661,7 @@ void ExpressionGenerator::GenerateXMMIntOp(
 }
 
 void ExpressionGenerator::GenerateXMMIntOp(
-    Expression::Op *instr,
+    Express::Op *instr,
     OpXMMRegRegReg opregb, OpXMMRegRegMem opmemb,
     OpXMMRegRegReg opregw, OpXMMRegRegMem opmemw,
     OpXMMRegRegReg opregd, OpXMMRegRegMem opmemd,
@@ -711,7 +711,7 @@ void ExpressionGenerator::GenerateXMMIntOp(
 }
 
 void ExpressionGenerator::GenerateYMMIntOp(
-    Expression::Op *instr,
+    Express::Op *instr,
     OpYMMRegRegReg opregb, OpYMMRegRegMem opmemb,
     OpYMMRegRegReg opregw, OpYMMRegRegMem opmemw,
     OpYMMRegRegReg opregd, OpYMMRegRegMem opmemd,

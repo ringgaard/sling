@@ -1,4 +1,18 @@
-#include "myelin/expression.h"
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "myelin/express.h"
 
 #include <algorithm>
 #include <map>
@@ -11,10 +25,10 @@ namespace myelin {
 // Variable mapping.
 class VariableMap {
  public:
-  VariableMap(Expression *expr) : expr_(expr) {}
+  VariableMap(Express *expr) : expr_(expr) {}
 
-  Expression::Var *operator[](Expression::Var *var) {
-    Expression::Var *&m = mapping_[var];
+  Express::Var *operator[](Express::Var *var) {
+    Express::Var *&m = mapping_[var];
     if (m == nullptr) {
       auto &vars = expr_->vars();
       if (std::find(vars.begin(), vars.end(), var) != vars.end()) {
@@ -29,15 +43,15 @@ class VariableMap {
   }
 
  private:
-  Expression *expr_;
-  std::map<Expression::Var *, Expression::Var *> mapping_;
+  Express *expr_;
+  std::map<Express::Var *, Express::Var *> mapping_;
 };
 
 // Register allocator.
 class RegisterAllocator {
  public:
   // Allocate register for variable.
-  int Allocate(Expression::Var *var) {
+  int Allocate(Express::Var *var) {
     // Check if a register has already been allocated.
     int regno = -1;
     for (int r = 0; r < reg_.size(); ++r) {
@@ -59,7 +73,7 @@ class RegisterAllocator {
 
   // Transfer register from one variable to another. Return the transferred
   // register.
-  int Transfer(Expression::Var *src, Expression::Var *dst) {
+  int Transfer(Express::Var *src, Express::Var *dst) {
     for (int r = 0; r < reg_.size(); ++r) {
       if (reg_[r] == src) {
         reg_[r] = dst;
@@ -70,7 +84,7 @@ class RegisterAllocator {
   }
 
   // Get register allocated for variable. Return -1 if no register is allocated.
-  int Get(Expression::Var *var) const {
+  int Get(Express::Var *var) const {
     for (int r = 0; r < reg_.size(); ++r) {
       if (reg_[r] == var) return r;
     }
@@ -78,7 +92,7 @@ class RegisterAllocator {
   }
 
   // Free register used by variable.
-  void Free(Expression::Var *var) {
+  void Free(Express::Var *var) {
     for (int r = 0; r < reg_.size(); ++r) {
       if (reg_[r] == var) reg_[r] = nullptr;
     }
@@ -88,25 +102,25 @@ class RegisterAllocator {
   int max() const { return reg_.size(); }
 
  private:
-  std::vector<Expression::Var *> reg_;
+  std::vector<Express::Var *> reg_;
 };
 
 // Mapping from operation name to operation type.
-static std::map<string, Expression::OpType> optypes = {
-  {"Id", Expression::MOV},
-  {"Add", Expression::ADD},
-  {"Sub", Expression::SUB},
-  {"Mul", Expression::MUL},
-  {"Div", Expression::DIV},
-  {"Min", Expression::MIN},
-  {"Max", Expression::MAX},
-  {"Relu", Expression::RELU},
-  {"MulAdd132", Expression::MULADD132},
-  {"MulAdd213", Expression::MULADD213},
-  {"MulAdd231", Expression::MULADD231},
-  {"MulSub132", Expression::MULSUB132},
-  {"MulSub213", Expression::MULSUB213},
-  {"MulSub231", Expression::MULSUB231},
+static std::map<string, Express::OpType> optypes = {
+  {"Id", Express::MOV},
+  {"Add", Express::ADD},
+  {"Sub", Express::SUB},
+  {"Mul", Express::MUL},
+  {"Div", Express::DIV},
+  {"Min", Express::MIN},
+  {"Max", Express::MAX},
+  {"Relu", Express::RELU},
+  {"MulAdd132", Express::MULADD132},
+  {"MulAdd213", Express::MULADD213},
+  {"MulAdd231", Express::MULADD231},
+  {"MulSub132", Express::MULSUB132},
+  {"MulSub213", Express::MULSUB213},
+  {"MulSub231", Express::MULSUB231},
 };
 
 static const string opname[] = {
@@ -123,7 +137,7 @@ static const string opname[] = {
 class RecipeParser {
  public:
   // Initialize parser.
-  RecipeParser(const string &recipe, Expression *expr) {
+  RecipeParser(const string &recipe, Express *expr) {
     recipe_ = ptr_ = recipe.data();
     end_ = ptr_ + recipe.size();
     expr_ = expr;
@@ -148,8 +162,8 @@ class RecipeParser {
   // Parse assignment expression.
   void ParseAssignment() {
     // Parse assignment variable.
-    Expression::Var *var = ParseVariable();
-    if (var->type == Expression::INPUT) {
+    Express::Var *var = ParseVariable();
+    if (var->type == Express::INPUT) {
       Error("Cannot assign to input variable");
     }
 
@@ -158,14 +172,14 @@ class RecipeParser {
     next();
 
     // Parse expression.
-    Expression::Op *expr = ParseExpression();
+    Express::Op *expr = ParseExpression();
 
     // Assign expression to variable.
     expr->Assign(var);
   }
 
   // Parse expression.
-  Expression::Op *ParseExpression() {
+  Express::Op *ParseExpression() {
     // Parse operation name.
     if (!isletter()) Error("Operation name expected in expression");
     const char *start = ptr_;
@@ -175,7 +189,7 @@ class RecipeParser {
     // Parse argument list.
     if (current() != '(') Error("Expected '(' in expression");
     next();
-    std::vector<Expression::Var *> args;
+    std::vector<Express::Var *> args;
     args.push_back(ParseArgument());
     while (current() == ',') {
       next();
@@ -185,41 +199,41 @@ class RecipeParser {
     next();
 
     // Create new operation.
-    Expression::OpType optype = Expression::Lookup(opname);
-    CHECK(optype != Expression::INVALID) << opname;
-    Expression::Op *op = expr_->Operation(optype);
+    Express::OpType optype = Express::Lookup(opname);
+    CHECK(optype != Express::INVALID) << opname;
+    Express::Op *op = expr_->Operation(optype);
     for (auto *arg : args) op->AddArgument(arg);
 
     return op;
   }
 
   // Parse argument.
-  Expression::Var *ParseArgument() {
+  Express::Var *ParseArgument() {
     if (isvar()) {
       // Return variable as argument.
       return ParseVariable();
     } else {
       // Parse expression and assign to intermediate variable. The intermediate
       // variable is assigned a unique negative id which will later be fixed up.
-      Expression::Op *expr = ParseExpression();
-      Expression::Var *var = expr_->NewTemp();
+      Express::Op *expr = ParseExpression();
+      Express::Var *var = expr_->NewTemp();
       expr->Assign(var);
       return var;
     }
   }
 
   // Parse variable name.
-  Expression::Var *ParseVariable() {
+  Express::Var *ParseVariable() {
     // Parse variable type.
-    Expression::VarType type;
+    Express::VarType type;
     if (is('%')) {
-      type = Expression::INPUT;
+      type = Express::INPUT;
     } else if (is('#')) {
-      type = Expression::CONST;
+      type = Express::CONST;
     } else if (is('@')) {
-      type = Expression::OUTPUT;
+      type = Express::OUTPUT;
     } else if (is('$')) {
-      type = Expression::TEMP;
+      type = Express::TEMP;
     } else {
       Error("Unknown variable type in expression");
     }
@@ -268,29 +282,29 @@ class RecipeParser {
   const char *recipe_;         // expression recipe
   const char *ptr_;            // current position for parser
   const char *end_;            // end of parsed recipe
-  Expression *expr_;           // target expression
+  Express *expr_;              // target expression
 };
 
-Expression::OpType Expression::Lookup(const string &opname) {
+Express::OpType Express::Lookup(const string &opname) {
   auto f = optypes.find(opname);
   return f == optypes.end() ? INVALID : f->second;
 }
 
-const string &Expression::OpName(OpType type) {
+const string &Express::OpName(OpType type) {
   return opname[type];
 }
 
-void Expression::Parse(const string &recipe) {
+void Express::Parse(const string &recipe) {
   RecipeParser parser(recipe, this);
   parser.Parse();
 }
 
-Expression::~Expression() {
+Express::~Express() {
   for (auto *v : vars_) delete v;
   for (auto *o : ops_) delete o;
 }
 
-void Expression::GetRecipe(string *recipe) const {
+void Express::GetRecipe(string *recipe) const {
   bool first = true;
   for (Op *op : ops_) {
     if (!op->result->inlined()) {
@@ -303,7 +317,7 @@ void Expression::GetRecipe(string *recipe) const {
   }
 }
 
-Expression::Var *Expression::Variable(VarType type, int id) {
+Express::Var *Express::Variable(VarType type, int id) {
   // Look for existing variable.
   if (id != -1) {
     for (Var *v : vars_) {
@@ -317,13 +331,13 @@ Expression::Var *Expression::Variable(VarType type, int id) {
   return v;
 }
 
-Expression::Op *Expression::Operation(OpType type) {
+Express::Op *Express::Operation(OpType type) {
   Op *op = new Op(type);
   ops_.push_back(op);
   return op;
 }
 
-Expression::Op *Expression::OperationBefore(Op *pos, OpType type) {
+Express::Op *Express::OperationBefore(Op *pos, OpType type) {
   Op *op = new Op(type);
   auto f = std::find(ops_.begin(), ops_.end(), pos);
   CHECK(f != ops_.end());
@@ -331,7 +345,7 @@ Expression::Op *Expression::OperationBefore(Op *pos, OpType type) {
   return op;
 }
 
-Expression::Op *Expression::OperationAfter(Op *pos, OpType type) {
+Express::Op *Express::OperationAfter(Op *pos, OpType type) {
   Op *op = new Op(type);
   auto f = std::find(ops_.begin(), ops_.end(), pos);
   CHECK(f != ops_.end());
@@ -339,14 +353,14 @@ Expression::Op *Expression::OperationAfter(Op *pos, OpType type) {
   return op;
 }
 
-Expression::Var *Expression::NewTemp() {
+Express::Var *Express::NewTemp() {
   // Add new temporary variable.
   Var *v = new Var(TEMP, -1);
   vars_.push_back(v);
   return v;
 }
 
-void Expression::RemoveVar(Var *var) {
+void Express::RemoveVar(Var *var) {
   // Check that variable is unused.
   DCHECK(var->producer == nullptr);
   DCHECK(var->consumers.empty());
@@ -358,7 +372,7 @@ void Expression::RemoveVar(Var *var) {
   delete var;
 }
 
-void Expression::RemoveOp(Op *op) {
+void Express::RemoveOp(Op *op) {
   // Remove operation as producer of result.
   if (op->result != nullptr) {
     DCHECK(op == op->result->producer);
@@ -375,7 +389,7 @@ void Expression::RemoveOp(Op *op) {
   delete op;
 }
 
-int Expression::NumVars(VarType type) const {
+int Express::NumVars(VarType type) const {
   int n = 0;
   for (Var *v : vars_) {
     if (v->type == type) n++;
@@ -383,7 +397,7 @@ int Expression::NumVars(VarType type) const {
   return n;
 }
 
-int Expression::NumOps(OpType type) const {
+int Express::NumOps(OpType type) const {
   int n = 0;
   for (Op *op : ops_) {
     if (op->type == type) n++;
@@ -391,7 +405,7 @@ int Expression::NumOps(OpType type) const {
   return n;
 }
 
-int Expression::CompactTempVars() {
+int Express::CompactTempVars() {
   int n = 0;
   for (Var *v : vars_) {
     if (v->type == TEMP) v->id = n++;
@@ -399,7 +413,7 @@ int Expression::CompactTempVars() {
   return n;
 }
 
-void Expression::EliminateCommonSubexpressions() {
+void Express::EliminateCommonSubexpressions() {
   // Keep trying to eliminate ops until no more can be removed.
   int iterations = 0;
   while (TryToEliminateOps()) iterations++;
@@ -408,7 +422,7 @@ void Expression::EliminateCommonSubexpressions() {
   if (iterations > 0) CompactTempVars();
 }
 
-bool Expression::TryToEliminateOps() {
+bool Express::TryToEliminateOps() {
   // Find matching ops.
   for (int i = 0; i < ops_.size(); ++i) {
     Op *op1 = ops_[i];
@@ -444,7 +458,7 @@ bool Expression::TryToEliminateOps() {
   return false;
 }
 
-void Expression::CacheResults() {
+void Express::CacheResults() {
   int cached_vars = 0;
   for (int n = 0; n < vars_.size(); ++n) {
     Var *var = vars_[n];
@@ -492,7 +506,7 @@ void Expression::CacheResults() {
   if (cached_vars > 0) CompactTempVars();
 }
 
-void Expression::ComputeLiveRanges() {
+void Express::ComputeLiveRanges() {
   for (Op *op : ops_) {
     if (op->result->first == nullptr) op->result->first = op;
     op->result->last = op;
@@ -503,7 +517,7 @@ void Expression::ComputeLiveRanges() {
   }
 }
 
-int Expression::MaxActiveTemps() const {
+int Express::MaxActiveTemps() const {
   int active = 0;
   int max_active = 0;
   for (Op *op : ops_) {
@@ -516,7 +530,7 @@ int Expression::MaxActiveTemps() const {
   return max_active;
 }
 
-void Expression::Copy(const Expression &other) {
+void Express::Copy(const Express &other) {
   // Expression must be empty.
   CHECK(vars_.empty());
   CHECK(ops_.empty());
@@ -552,7 +566,7 @@ void Expression::Copy(const Expression &other) {
   }
 }
 
-void Expression::Merge(Expression *other, const Map &varmap) {
+void Express::Merge(Express *other, const Map &varmap) {
   // Move variables that are not mapped.
   bool temps_moved = false;
   for (Var *var : other->vars_) {
@@ -590,7 +604,7 @@ void Expression::Merge(Expression *other, const Map &varmap) {
   if (temps_moved) CompactTempVars();
 }
 
-void Expression::Fuse(OpType outer, OpType inner, OpType left, OpType right) {
+void Express::Fuse(OpType outer, OpType inner, OpType left, OpType right) {
   bool again = true;
   while (again) {
     again = false;
@@ -607,7 +621,7 @@ void Expression::Fuse(OpType outer, OpType inner, OpType left, OpType right) {
   }
 }
 
-bool Expression::TryFuseFirst(Op *op, OpType type, OpType combined) {
+bool Express::TryFuseFirst(Op *op, OpType type, OpType combined) {
   // Check if combined op is supported.
   if (combined == INVALID) return false;
 
@@ -637,7 +651,7 @@ bool Expression::TryFuseFirst(Op *op, OpType type, OpType combined) {
   return true;
 }
 
-bool Expression::TryFuseSecond(Op *op, OpType type, OpType combined) {
+bool Express::TryFuseSecond(Op *op, OpType type, OpType combined) {
   // Check if combined op is supported.
   if (combined == INVALID) return false;
 
@@ -667,7 +681,7 @@ bool Expression::TryFuseSecond(Op *op, OpType type, OpType combined) {
   return true;
 }
 
-bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
+bool Express::Rewrite(const Model &model, Express *rewritten) const {
   // Target expression must be empty.
   CHECK_EQ(rewritten->vars().size(), 0);
 
@@ -1032,7 +1046,7 @@ bool Expression::Rewrite(const Model &model, Expression *rewritten) const {
   return success;
 }
 
-int Expression::AllocateRegisters() {
+int Express::AllocateRegisters() {
   RegisterAllocator regs;
   for (Op *op : ops_) {
     if (op->type == MOV) {
@@ -1103,7 +1117,7 @@ int Expression::AllocateRegisters() {
   return regs.max();
 }
 
-int Expression::NumRegs() const {
+int Express::NumRegs() const {
   int num_regs = 0;
   for (auto *op : ops_) {
     if (op->dst != -1 && op->dst + 1 > num_regs) num_regs = op->dst + 1;
@@ -1113,7 +1127,7 @@ int Expression::NumRegs() const {
   return num_regs;
 }
 
-void Expression::Var::Redirect(Var *other) {
+void Express::Var::Redirect(Var *other) {
   // Update all consumers to use the other variable.
   for (Op *consumer : consumers) {
     for (int i = 0; i < consumer->args.size(); ++i) {
@@ -1124,7 +1138,7 @@ void Expression::Var::Redirect(Var *other) {
   consumers.clear();
 }
 
-string Expression::Var::AsString() const {
+string Express::Var::AsString() const {
   switch (type) {
     case INPUT: return "%" + std::to_string(id);
     case CONST: return "#" + std::to_string(id);
@@ -1134,7 +1148,7 @@ string Expression::Var::AsString() const {
   return "???";
 }
 
-void Expression::Var::GetRecipe(string *recipe) const {
+void Express::Var::GetRecipe(string *recipe) const {
   char ch;
   switch (type) {
     case INPUT: ch = '%'; break;
@@ -1147,7 +1161,7 @@ void Expression::Var::GetRecipe(string *recipe) const {
   recipe->append(std::to_string(id));
 }
 
-string Expression::Op::AsString() const {
+string Express::Op::AsString() const {
   string str;
   str.append(OpName(type));
   bool first = true;
@@ -1160,7 +1174,7 @@ string Expression::Op::AsString() const {
   return str;
 }
 
-string Expression::Op::AsInstruction() const {
+string Express::Op::AsInstruction() const {
   // Opcode.
   string str;
   if (type == MOV) {
@@ -1204,7 +1218,7 @@ string Expression::Op::AsInstruction() const {
   return str;
 }
 
-void Expression::Op::GetRecipe(string *recipe) const {
+void Express::Op::GetRecipe(string *recipe) const {
   recipe->append(OpName(type));
   recipe->push_back('(');
   bool first = true;
@@ -1220,7 +1234,7 @@ void Expression::Op::GetRecipe(string *recipe) const {
   recipe->push_back(')');
 }
 
-void Expression::Op::Assign(Var *var, bool reassign) {
+void Express::Op::Assign(Var *var, bool reassign) {
   // Remove any previous assignment.
   if (result != nullptr) result->producer = nullptr;
 
@@ -1230,12 +1244,12 @@ void Expression::Op::Assign(Var *var, bool reassign) {
   var->producer = this;
 }
 
-void Expression::Op::AddArgument(Var *arg) {
+void Express::Op::AddArgument(Var *arg) {
   arg->consumers.push_back(this);
   args.push_back(arg);
 }
 
-void Expression::Op::ClearArguments() {
+void Express::Op::ClearArguments() {
   // Remove operation as consumer of argument variables.
   for (Var *arg : args) {
     auto f = std::find(arg->consumers.begin(), arg->consumers.end(), this);
@@ -1245,7 +1259,7 @@ void Expression::Op::ClearArguments() {
   args.clear();
 }
 
-bool Expression::Op::EqualTo(Op *other) const {
+bool Express::Op::EqualTo(Op *other) const {
   if (type != other->type) return false;
   if (arity() != other->arity()) return false;
   for (int i = 0; i < args.size(); ++i) {

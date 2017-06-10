@@ -8,7 +8,7 @@
 #include "base/logging.h"
 #include "base/types.h"
 #include "myelin/compute.h"
-#include "myelin/expression.h"
+#include "myelin/express.h"
 #include "myelin/macro-assembler.h"
 #include "myelin/generator/elementwise.h"
 #include "myelin/generator/expression.h"
@@ -21,32 +21,32 @@ namespace myelin {
 using namespace jit;
 
 // Mapping from flow variables to expression variables.
-typedef std::map<Flow::Variable *, Expression::Var *> VarMap;
+typedef std::map<Flow::Variable *, Express::Var *> VarMap;
 
 // Convert operation type to expression op.
-static Expression::OpType OpType(const string &op) {
+static Express::OpType OpType(const string &op) {
   // Operations that can be fused into Calculate operations.
-  static std::unordered_map<string, Expression::OpType> ops {
-    {"Add", Expression::ADD},
-    {"Sub", Expression::SUB},
-    {"Mul", Expression::MUL},
-    {"Div", Expression::DIV},
-    {"Minimum", Expression::MIN},
-    {"Maximum", Expression::MAX},
-    {"Relu", Expression::RELU},
+  static std::unordered_map<string, Express::OpType> ops {
+    {"Add", Express::ADD},
+    {"Sub", Express::SUB},
+    {"Mul", Express::MUL},
+    {"Div", Express::DIV},
+    {"Minimum", Express::MIN},
+    {"Maximum", Express::MAX},
+    {"Relu", Express::RELU},
   };
 
   auto f = ops.find(op);
-  return f == ops.end() ? Expression::INVALID : f->second;
+  return f == ops.end() ? Express::INVALID : f->second;
 }
 
 // Check if operation is a candidate for Calculate ops.
 static bool IsCalculateOp(Flow::Operation *op) {
-  return op->type == "Calculate" || OpType(op->type) != Expression::INVALID;
+  return op->type == "Calculate" || OpType(op->type) != Express::INVALID;
 }
 
 // Initialize expression for flow operation.
-static void InitExpression(Flow::Operation *op, Expression *expr) {
+static void InitExpression(Flow::Operation *op, Express *expr) {
   if (op->type == "Calculate") {
     // Build expression from expression recipe attribute on op.
     const string &recipe = op->GetAttr("expr");
@@ -54,16 +54,16 @@ static void InitExpression(Flow::Operation *op, Expression *expr) {
   } else {
     // Add op with inputs and outputs.
     CHECK_EQ(op->outdegree(), 1);
-    Expression::Op *func = expr->Operation(OpType(op->type));
+    Express::Op *func = expr->Operation(OpType(op->type));
     for (int i = 0; i < op->indegree(); ++i) {
-      func->AddArgument(expr->Variable(Expression::INPUT, i));
+      func->AddArgument(expr->Variable(Express::INPUT, i));
     }
-    func->Assign(expr->Variable(Expression::OUTPUT, 0));
+    func->Assign(expr->Variable(Express::OUTPUT, 0));
   }
 }
 
 // Initialize expression for step.
-static void InitExpression(const Step *step, Expression *expr) {
+static void InitExpression(const Step *step, Express *expr) {
   if (step->type() == "Calculate") {
     // Build expression from expression recipe attribute on op.
     const string &recipe = step->GetAttr("expr");
@@ -71,24 +71,24 @@ static void InitExpression(const Step *step, Expression *expr) {
   } else {
     // Add op with inputs and outputs.
     CHECK_EQ(step->outdegree(), 1);
-    Expression::Op *func = expr->Operation(OpType(step->type()));
+    Express::Op *func = expr->Operation(OpType(step->type()));
     for (int i = 0; i < step->indegree(); ++i) {
-      func->AddArgument(expr->Variable(Expression::INPUT, i));
+      func->AddArgument(expr->Variable(Express::INPUT, i));
     }
-    func->Assign(expr->Variable(Expression::OUTPUT, 0));
+    func->Assign(expr->Variable(Express::OUTPUT, 0));
   }
 }
 
 // Build mapping from flow variables to expression variables.
-static void MapVars(Flow::Operation *op, Expression *expr, VarMap *varmap) {
+static void MapVars(Flow::Operation *op, Express *expr, VarMap *varmap) {
   // Map input variables.
   for (int i = 0; i < op->indegree(); ++i) {
-    (*varmap)[op->inputs[i]] = expr->Variable(Expression::INPUT, i);
+    (*varmap)[op->inputs[i]] = expr->Variable(Express::INPUT, i);
   }
 
   // Map output variables.
   for (int i = 0; i < op->outdegree(); ++i) {
-    (*varmap)[op->outputs[i]] = expr->Variable(Expression::OUTPUT, i);
+    (*varmap)[op->outputs[i]] = expr->Variable(Express::OUTPUT, i);
   }
 }
 
@@ -152,20 +152,20 @@ class ExpressionTransformer : public Transformer {
 
   string FuseExpressions(Flow::Operation *first, Flow::Operation *second) {
     // Build first expression.
-    Expression expr1;
+    Express expr1;
     InitExpression(first, &expr1);
     VarMap vars1;
     MapVars(first, &expr1, &vars1);
 
     // Build second expression.
-    Expression expr2;
+    Express expr2;
     InitExpression(second, &expr2);
     VarMap vars2;
     MapVars(second, &expr2, &vars2);
 
     // Build expression variable mapping for mapping variables in the second
     // expression to variables in the first expression.
-    Expression::Map mapping;
+    Express::Map mapping;
     int next_input = first->inputs.size();
     int next_output = first->outputs.size();
     for (Flow::Variable *v : second->inputs) {
@@ -176,12 +176,12 @@ class ExpressionTransformer : public Transformer {
         if (v->consumers.size() == 1) {
           // Second op is the only consumer of the output from the first op,
           // so it can be turned into a temporary variable.
-          vars1[v]->type = Expression::TEMP;
+          vars1[v]->type = Express::TEMP;
           next_output--;
 
           // Adjust numbering of output variables from the first op.
           for (auto *o : expr1.vars()) {
-            if (o->type == Expression::OUTPUT && o->id > vars1[v]->id) {
+            if (o->type == Express::OUTPUT && o->id > vars1[v]->id) {
               o->id--;
             }
           }
@@ -191,12 +191,12 @@ class ExpressionTransformer : public Transformer {
         mapping[vars2[v]] = vars1[v];
       } else {
         // Map input from second op to a new input in the merged expression.
-        mapping[vars2[v]] = expr1.Variable(Expression::INPUT, next_input++);
+        mapping[vars2[v]] = expr1.Variable(Express::INPUT, next_input++);
       }
     }
     for (Flow::Variable *v : second->outputs) {
       // Map output from second op to a new output in the merged expression.
-      mapping[vars2[v]] = expr1.Variable(Expression::OUTPUT, next_output++);
+      mapping[vars2[v]] = expr1.Variable(Express::OUTPUT, next_output++);
     }
     expr2.CompactTempVars();
 
@@ -228,7 +228,7 @@ class Calculate : public Kernel {
     // Set the alignment requirements based on the vector size.
     Type type = step->output(0)->type();
     int elements = step->output(0)->elements();
-    Expression expr;
+    Express expr;
     InitExpression(step, &expr);
     ElementwiseIndexGenerator index(step);
     auto *generator = ExpressionGenerator::Select(expr, type, elements);
@@ -260,7 +260,7 @@ class Calculate : public Kernel {
     int elements = shape.elements();
 
     // Compile expression to be computed.
-    Expression expr;
+    Express expr;
     InitExpression(step, &expr);
 
     // Create element-wise index generator.
@@ -291,7 +291,7 @@ class Calculate : public Kernel {
     int elements = shape.elements();
 
     // Compile expression to be computed.
-    Expression expr;
+    Express expr;
     InitExpression(step, &expr);
 
     // The number of operations is the number of ops times the output size.

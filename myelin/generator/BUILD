@@ -7,7 +7,7 @@ cc_library(
   deps = [
     "//base",
     "//myelin:compute",
-    "//myelin:expression",
+    "//myelin:express",
   ],
 )
 
@@ -39,7 +39,7 @@ cc_library(
     ":index",
     "//base",
     "//myelin:compute",
-    "//myelin:expression",
+    "//myelin:express",
   ],
 )
 

@@ -23,7 +23,7 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   bool AllocateRegisters(MacroAssembler *masm) override;
 
   // Return operand for accessing memory variable.
-  jit::Operand addr(Expression::Var *var) override;
+  jit::Operand addr(Express::Var *var) override;
 
   // Generate start and end of loop.
   void BeginLoop(MacroAssembler *masm);
@@ -31,7 +31,7 @@ class ElementwiseIndexGenerator : public IndexGenerator {
 
  private:
   // Check if variable is a valid index.
-  bool Valid(Expression::Var *var) const;
+  bool Valid(Express::Var *var) const;
 
   // Iterator for looping over (vector) elements in tensor.
   struct Iterator {

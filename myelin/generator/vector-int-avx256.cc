@@ -31,18 +31,18 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
 
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
-    if (instructions_.Has(Expression::MUL) && type_ == DT_INT8) {
+    if (instructions_.Has(Express::MUL) && type_ == DT_INT8) {
       num_mm_aux = std::max(num_mm_aux, 2);
     }
     index_->ReserveAuxYMMRegisters(num_mm_aux);
   }
 
-  void Generate(Expression::Op *instr, MacroAssembler *masm) override {
+  void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
-      case Expression::MOV:
+      case Express::MOV:
         GenerateYMMVectorIntMove(instr, masm);
         break;
-      case Expression::ADD:
+      case Express::ADD:
         GenerateYMMIntOp(instr,
             &Assembler::vpaddb, &Assembler::vpaddb,
             &Assembler::vpaddw, &Assembler::vpaddw,
@@ -50,7 +50,7 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
             &Assembler::vpaddq, &Assembler::vpaddq,
             masm);
         break;
-      case Expression::SUB:
+      case Express::SUB:
         GenerateYMMIntOp(instr,
             &Assembler::vpsubb, &Assembler::vpsubb,
             &Assembler::vpsubw, &Assembler::vpsubw,
@@ -58,34 +58,10 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
             &Assembler::vpsubq, &Assembler::vpsubq,
             masm);
         break;
-      case Expression::MUL:
+      case Express::MUL:
         switch (type_) {
           case DT_INT8:
-            // Multiply even and odd bytes and merge results.
-            // See https://stackoverflow.com/a/29155682 for the details.
-            // First load operands.
-            CHECK(instr->dst != -1);
-            CHECK(instr->src != -1);
-            if (instr->src2 != -1) {
-              __ vmovdqa(ymmaux(1), ymm(instr->src2));
-            } else {
-              __ vmovdqa(ymmaux(1), addr(instr->args[1]));
-            }
-
-            // Multiply even bytes.
-            __ vpmullw(ymm(instr->dst), ymm(instr->src), ymmaux(1));
-
-            // Multiply odd bytes.
-            __ vpsraw(ymmaux(0), ymm(instr->src), 8);
-            __ vpsraw(ymmaux(1), ymmaux(1), 8);
-            __ vpmullw(ymmaux(0), ymmaux(0), ymmaux(1));
-            __ vpsllw(ymmaux(0), ymmaux(0), 8);
-
-            // Combine even and odd results.
-            __ vpcmpeqw(ymmaux(1), ymmaux(1), ymmaux(1));
-            __ vpsrlw(ymmaux(1), ymmaux(1), 8);  // constant 8 times 0x00FF
-            __ vpand(ymm(instr->dst), ymm(instr->dst), ymmaux(1));
-            __ vpor(ymm(instr->dst), ymm(instr->dst), ymmaux(0));
+            GenerateMulInt8(instr, masm);
             break;
           case DT_INT16:
           case DT_INT32:
@@ -103,10 +79,10 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
             UNSUPPORTED;
         }
         break;
-      case Expression::DIV:
+      case Express::DIV:
         UNSUPPORTED;
         break;
-      case Expression::MIN:
+      case Express::MIN:
         if (type_ == DT_INT64) {
           UNSUPPORTED;
         } else {
@@ -118,7 +94,7 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
               masm);
         }
         break;
-      case Expression::MAX:
+      case Express::MAX:
         if (type_ == DT_INT64) {
           UNSUPPORTED;
         } else {
@@ -130,7 +106,7 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
               masm);
         }
         break;
-      case Expression::RELU:
+      case Express::RELU:
         if (type_ == DT_INT64) {
           UNSUPPORTED;
         } else {
@@ -145,6 +121,35 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
         break;
       default: UNSUPPORTED;
     }
+  }
+
+  // Generate 8-bit multiply.
+  void GenerateMulInt8(Express::Op *instr, MacroAssembler *masm) {
+    // Multiply even and odd bytes and merge results.
+    // See https://stackoverflow.com/a/29155682 for the details.
+    // First load operands.
+    CHECK(instr->dst != -1);
+    CHECK(instr->src != -1);
+    if (instr->src2 != -1) {
+      __ vmovdqa(ymmaux(1), ymm(instr->src2));
+    } else {
+      __ vmovdqa(ymmaux(1), addr(instr->args[1]));
+    }
+
+    // Multiply even bytes.
+    __ vpmullw(ymm(instr->dst), ymm(instr->src), ymmaux(1));
+
+    // Multiply odd bytes.
+    __ vpsraw(ymmaux(0), ymm(instr->src), 8);
+    __ vpsraw(ymmaux(1), ymmaux(1), 8);
+    __ vpmullw(ymmaux(0), ymmaux(0), ymmaux(1));
+    __ vpsllw(ymmaux(0), ymmaux(0), 8);
+
+    // Combine even and odd results.
+    __ vpcmpeqw(ymmaux(1), ymmaux(1), ymmaux(1));
+    __ vpsrlw(ymmaux(1), ymmaux(1), 8);  // constant 8 times 0x00FF
+    __ vpand(ymm(instr->dst), ymm(instr->dst), ymmaux(1));
+    __ vpor(ymm(instr->dst), ymm(instr->dst), ymmaux(0));
   }
 };
 

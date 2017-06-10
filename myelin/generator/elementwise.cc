@@ -80,10 +80,10 @@ void ElementwiseIndexGenerator::EndLoop(MacroAssembler *masm) {
   }
 }
 
-Operand ElementwiseIndexGenerator::addr(Expression::Var *var) {
+Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
   DCHECK(Valid(var));
   Iterator &it =
-      var->type == Expression::OUTPUT ? output_[var->id] : input_[var->id];
+      var->type == Express::OUTPUT ? output_[var->id] : input_[var->id];
   if (single_) {
     if (it.base.is_valid()) {
       return Operand(it.base);
@@ -107,8 +107,8 @@ Operand ElementwiseIndexGenerator::addr(Expression::Var *var) {
   }
 }
 
-bool ElementwiseIndexGenerator::Valid(Expression::Var *var) const {
-  if (var->type == Expression::OUTPUT) {
+bool ElementwiseIndexGenerator::Valid(Express::Var *var) const {
+  if (var->type == Express::OUTPUT) {
     return var->id >= 0 && var->id < output_.size();
   } else {
     return var->id >= 0 && var->id < input_.size();

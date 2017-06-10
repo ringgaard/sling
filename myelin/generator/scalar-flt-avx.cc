@@ -32,106 +32,111 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
     index_->ReserveXMMRegisters(instructions_.NumRegs());
   }
 
-  void Generate(Expression::Op *instr, MacroAssembler *masm) override {
+  void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
-      case Expression::MOV:
+      case Express::MOV:
         GenerateXMMScalarFltMove(instr, masm);
         break;
-      case Expression::ADD:
+      case Express::ADD:
         GenerateXMMFltOp(instr,
             &Assembler::vaddss, &Assembler::vaddsd,
             &Assembler::vaddss, &Assembler::vaddsd,
             masm);
         break;
-      case Expression::SUB:
+      case Express::SUB:
         GenerateXMMFltOp(instr,
             &Assembler::vsubss, &Assembler::vsubsd,
             &Assembler::vsubss, &Assembler::vsubsd,
             masm);
         break;
-      case Expression::MUL:
+      case Express::MUL:
         GenerateXMMFltOp(instr,
             &Assembler::vmulss, &Assembler::vmulsd,
             &Assembler::vmulss, &Assembler::vmulsd,
             masm);
         break;
-      case Expression::DIV:
+      case Express::DIV:
         GenerateXMMFltOp(instr,
             &Assembler::vdivss, &Assembler::vdivsd,
             &Assembler::vdivss, &Assembler::vdivsd,
             masm);
         break;
-      case Expression::MIN:
+      case Express::MIN:
         GenerateXMMFltOp(instr,
             &Assembler::vminss, &Assembler::vminsd,
             &Assembler::vminss, &Assembler::vminsd,
             masm);
         break;
-      case Expression::MAX:
+      case Express::MAX:
         GenerateXMMFltOp(instr,
             &Assembler::vmaxss, &Assembler::vmaxsd,
             &Assembler::vmaxss, &Assembler::vmaxsd,
             masm);
         break;
-      case Expression::RELU:
-        __ vpxor(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
-        switch (type_) {
-          case DT_FLOAT:
-            if (instr->dst != -1 && instr->src != -1) {
-              __ vmaxss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
-            } else if (instr->dst != -1 && instr->src == -1) {
-              __ vmaxss(xmm(instr->dst), xmm(instr->dst), addr(instr->args[1]));
-            } else {
-              UNSUPPORTED;
-            }
-            break;
-          case DT_DOUBLE:
-            if (instr->dst != -1 && instr->src != -1) {
-              __ vmaxsd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
-            } else if (instr->dst != -1 && instr->src == -1) {
-              __ vmaxsd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[1]));
-            } else {
-              UNSUPPORTED;
-            }
-            break;
-          default: UNSUPPORTED;
+      case Express::RELU:
+        GenerateRelu(instr, masm);
+        break;
+      case Express::MULADD132:
+        GenerateXMMFltOp(instr,
+            &Assembler::vfmadd132ss, &Assembler::vfmadd132sd,
+            &Assembler::vfmadd132ss, &Assembler::vfmadd132sd,
+            masm);
+        break;
+      case Express::MULADD213:
+        GenerateXMMFltOp(instr,
+            &Assembler::vfmadd213ss, &Assembler::vfmadd213sd,
+            &Assembler::vfmadd213ss, &Assembler::vfmadd213sd,
+            masm);
+        break;
+      case Express::MULADD231:
+        GenerateXMMFltOp(instr,
+            &Assembler::vfmadd231ss, &Assembler::vfmadd231sd,
+            &Assembler::vfmadd231ss, &Assembler::vfmadd231sd,
+            masm);
+        break;
+      case Express::MULSUB132:
+        GenerateXMMFltOp(instr,
+            &Assembler::vfmsub132ss, &Assembler::vfmsub132sd,
+            &Assembler::vfmsub132ss, &Assembler::vfmsub132sd,
+            masm);
+        break;
+      case Express::MULSUB213:
+        GenerateXMMFltOp(instr,
+            &Assembler::vfmsub213ss, &Assembler::vfmsub213sd,
+            &Assembler::vfmsub213ss, &Assembler::vfmsub213sd,
+            masm);
+        break;
+      case Express::MULSUB231:
+        GenerateXMMFltOp(instr,
+            &Assembler::vfmsub231ss, &Assembler::vfmsub231sd,
+            &Assembler::vfmsub231ss, &Assembler::vfmsub231sd,
+            masm);
+        break;
+      default: UNSUPPORTED;
+    }
+  }
+
+  // Generate relu(x) = max(0,x).
+  void GenerateRelu(Express::Op *instr, MacroAssembler *masm) {
+    __ vpxor(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+    switch (type_) {
+      case DT_FLOAT:
+        if (instr->dst != -1 && instr->src != -1) {
+          __ vmaxss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+        } else if (instr->dst != -1 && instr->src == -1) {
+          __ vmaxss(xmm(instr->dst), xmm(instr->dst), addr(instr->args[1]));
+        } else {
+          UNSUPPORTED;
         }
         break;
-      case Expression::MULADD132:
-        GenerateXMMFltOp(instr,
-            &Assembler::vfmadd132ss, &Assembler::vfmadd132sd,
-            &Assembler::vfmadd132ss, &Assembler::vfmadd132sd,
-            masm);
-        break;
-      case Expression::MULADD213:
-        GenerateXMMFltOp(instr,
-            &Assembler::vfmadd213ss, &Assembler::vfmadd213sd,
-            &Assembler::vfmadd213ss, &Assembler::vfmadd213sd,
-            masm);
-        break;
-      case Expression::MULADD231:
-        GenerateXMMFltOp(instr,
-            &Assembler::vfmadd231ss, &Assembler::vfmadd231sd,
-            &Assembler::vfmadd231ss, &Assembler::vfmadd231sd,
-            masm);
-        break;
-      case Expression::MULSUB132:
-        GenerateXMMFltOp(instr,
-            &Assembler::vfmsub132ss, &Assembler::vfmsub132sd,
-            &Assembler::vfmsub132ss, &Assembler::vfmsub132sd,
-            masm);
-        break;
-      case Expression::MULSUB213:
-        GenerateXMMFltOp(instr,
-            &Assembler::vfmsub213ss, &Assembler::vfmsub213sd,
-            &Assembler::vfmsub213ss, &Assembler::vfmsub213sd,
-            masm);
-        break;
-      case Expression::MULSUB231:
-        GenerateXMMFltOp(instr,
-            &Assembler::vfmsub231ss, &Assembler::vfmsub231sd,
-            &Assembler::vfmsub231ss, &Assembler::vfmsub231sd,
-            masm);
+      case DT_DOUBLE:
+        if (instr->dst != -1 && instr->src != -1) {
+          __ vmaxsd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+        } else if (instr->dst != -1 && instr->src == -1) {
+          __ vmaxsd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[1]));
+        } else {
+          UNSUPPORTED;
+        }
         break;
       default: UNSUPPORTED;
     }
