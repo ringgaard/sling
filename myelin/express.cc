@@ -125,6 +125,17 @@ static std::map<string, Express::OpType> optypes = {
   {"MulSub132", Express::MULSUB132},
   {"MulSub213", Express::MULSUB213},
   {"MulSub231", Express::MULSUB231},
+  {"CmpEqOQ", Express::CMPEQOQ},
+  {"CmpLtOQ", Express::CMPLTOQ},
+  {"CmpGtOQ", Express::CMPGTOQ},
+  {"CmpNgeUQ", Express::CMPNGEUQ},
+  {"Shr23", Express::SHR23},
+  {"Shl23", Express::SHL23},
+  {"And", Express::AND},
+  {"Or", Express::OR},
+  {"AndNot", Express::ANDNOT},
+  {"Floor", Express::FLOOR},
+  {"CvtFltInt", Express::CVTFLTINT},
 };
 
 static const string opname[] = {
@@ -134,13 +145,84 @@ static const string opname[] = {
   "Relu", "Log", "Exp", "Sigmoid", "Tanh",
   "MulAdd132", "MulAdd213", "MulAdd231",
   "MulSub132", "MulSub213", "MulSub231",
+  "CmpEqOQ", "CmpLtOQ", "CmpGtOQ", "CmpNgeUQ",
+  "Shr23", "Shl23",
+  "And", "Or", "AndNot",
+  "Floor", "CvtFltInt",
   "???",
 };
 
+template <class Dest, class Source>
+inline Dest bit_cast(const Source& source) {
+  Dest dest;
+  memcpy(&dest, &source, sizeof(dest));
+  return dest;
+}
+
+#define FLT_FROM_INT(x) bit_cast<float>(x)
+#define DBL_FROM_INT(x) bit_cast<double>(x)
+
 // System-defined numeric constants.
-double Express::constants[] = {
-  0.0f,  // ZERO
-  1.0f,  // ONE
+#define FLTCONST(x) {x##f, x}
+#define INTCONST(f) {FLT_FROM_INT(f), DBL_FROM_INT(f)}
+Express::Constant Express::constants[] = {
+  FLTCONST(0.0),    // ZERO
+  FLTCONST(1.0),    // ONE
+  FLTCONST(-1.0),   // N1
+  FLTCONST(0.5),    // HALF
+  FLTCONST(0.125),  // QUARTER
+  FLTCONST(9.0),    // P9
+  FLTCONST(-9.0),   // N9
+  FLTCONST(126.0),  // P126
+  FLTCONST(127.0),  // P127
+
+  FLTCONST(-0.6931471805599453),   // NLN2
+  
+  INTCONST(0xff800000),   // MINUS_INF
+  INTCONST(0x00800000),   // MIN_NORM_POS
+  INTCONST(~0x7f800000),  // INV_MANT_MASK
+
+  // Polynomial coefficients for natural logarithm.
+  FLTCONST(0.707106781186547524),  // CEPHES_SQRTHF
+  FLTCONST(7.0376836292E-2),       // CEPHES_LOG_P0
+  FLTCONST(-1.1514610310E-1),      // CEPHES_LOG_P1
+  FLTCONST(1.1676998740E-1),       // CEPHES_LOG_P2
+  FLTCONST(-1.2420140846E-1),      // CEPHES_LOG_P3
+  FLTCONST(+1.4249322787E-1),      // CEPHES_LOG_P4
+  FLTCONST(-1.6668057665E-1),      // CEPHES_LOG_P5
+  FLTCONST(+2.0000714765E-1),      // CEPHES_LOG_P6
+  FLTCONST(-2.4999993993E-1),      // CEPHES_LOG_P7
+  FLTCONST(+3.3333331174E-1),      // CEPHES_LOG_P8
+  FLTCONST(-2.12194440E-4),        // CEPHES_LOG_Q1
+  FLTCONST(0.693359375),           // CEPHES_LOG_Q2
+
+  // Clamping interval for exponential function.
+  FLTCONST(88.3762626647950),      // EXP_HI
+  FLTCONST(-88.3762626647949),     // EXP_LO
+
+  // Polynomial coefficients for exponential function.
+  FLTCONST(1.44269504088896341),   // CEPHES_LOG2EF
+  FLTCONST(1.9875691500E-4),       // CEPHES_EXP_P0
+  FLTCONST(1.3981999507E-3),       // CEPHES_EXP_P1
+  FLTCONST(8.3334519073E-3),       // CEPHES_EXP_P2
+  FLTCONST(4.1665795894E-2),       // CEPHES_EXP_P3
+  FLTCONST(1.6666665459E-1),       // CEPHES_EXP_P4
+  FLTCONST(5.0000001201E-1),       // CEPHES_EXP_P5
+
+  // Monomial coefficients of the numerator polynomial for tanh (odd).
+  FLTCONST(-2.76076847742355e-16),  // ALPHA_1
+  FLTCONST(2.00018790482477e-13),   // ALPHA_3
+  FLTCONST(-8.60467152213735e-11),  // ALPHA_5
+  FLTCONST(5.12229709037114e-08),   // ALPHA_7
+  FLTCONST(1.48572235717979e-05),   // ALPHA_9
+  FLTCONST(6.37261928875436e-04),   // ALPHA_11
+  FLTCONST(4.89352455891786e-03),   // ALPHA_13
+
+  // Monomial coefficients of the denominator polynomial for tanh (even).
+  FLTCONST(1.19825839466702e-06),  // BETA_0
+  FLTCONST(1.18534705686654e-04),  // BETA_2
+  FLTCONST(2.26843463243900e-03),  // BETA_4
+  FLTCONST(4.89352518554385e-03),  // BETA_6
 };
 
 // Recipe parser for converting a string to an expression.
@@ -1196,20 +1278,140 @@ int Express::NumRegs() const {
   return num_regs;
 }
 
+// Natural logarithm.
+// Computes log(x) as log(2^e * m) = C*e + log(m), where the constant C=log(2)
+// and m is in the range [sqrt(1/2),sqrt(2)). In this range, the logarithm can
+// be easily approximated by a polynomial centered on m=1 for stability.
+// See also: https://git.io/vHyVR
 Express::Var *Express::Log(Var *x) {
-  return Do(LOG, x);
+  // Make valid and zero mask.
+  Var *invalid_mask = Do(CMPNGEUQ, x, Number(ZERO));
+  Var *iszero_mask = Do(CMPEQOQ, x, Number(ZERO));
+
+  // Truncate input values to the minimum positive normal.
+  x = Max(x, Number(MIN_NORM_POS));
+  Var *emm0 = Do(SHR23, x);
+  Var *e = Sub(emm0, Number(P126));
+
+  // Set the exponents to -1, i.e. x are in the range [0.5,1).
+  x = Do(AND, x, Number(INV_MANT_MASK));
+  x = Do(OR, Number(HALF));
+
+  // Shift the inputs from the range [0.5,1) to [sqrt(1/2),sqrt(2)) and shift
+  // by -1. The values are then centered around 0, which improves the stability
+  // of the polynomial evaluation.
+  //   if( x < SQRTHF ) {
+  //     e -= 1;
+  //     x = x + x - 1.0;
+  //   } else {
+  //     x = x - 1.0;
+  //   }
+  Var *mask = Do(CMPLTOQ, x, Number(CEPHES_SQRTHF));
+  Var *tmp = Do(AND, x, mask);
+  x = Sub(x, Number(ONE));
+  e = Sub(e, Do(AND, Number(ONE), mask));
+  x = Add(x, tmp);
+
+  Var *x2 = Mul(x, x);
+  Var *x3 = Mul(x2, x);
+
+  // Evaluate the polynomial approximant of degree 8 in three parts.
+  Var *y, *y1, *y2;
+  y = MulAdd(Number(CEPHES_LOG_P0), x, Number(CEPHES_LOG_P1));
+  y1 = MulAdd(Number(CEPHES_LOG_P3), x, Number(CEPHES_LOG_P4));
+  y2 = MulAdd(Number(CEPHES_LOG_P6), x, Number(CEPHES_LOG_P7));
+  y = MulAdd(y, x, Number(CEPHES_LOG_P2));
+  y1 = MulAdd(y1, x, Number(CEPHES_LOG_P5));
+  y2 = MulAdd(y2, x, Number(CEPHES_LOG_P8));
+  y = MulAdd(y, x3, y1);
+  y = MulAdd(y, x3, y2);
+  y = Mul(y, x3);
+
+  // Add the logarithm of the exponent back to the result of the interpolation.
+  y1 = Mul(e, Number(CEPHES_LOG_Q1));
+  tmp = Mul(x2, Number(HALF));
+  y = Add(y, y1);
+  x = Sub(x, tmp);
+  y2 = Mul(e, Number(CEPHES_LOG_Q2));
+  x = Add(x, y);
+  x = Add(x, y2);
+
+  // Filter out invalid inputs, i.e. negative arg will be NAN, 0 will be -INF.
+  return Do(OR, 
+            Do(ANDNOT, iszero_mask, Do(OR, x, invalid_mask)), 
+            Do(AND, iszero_mask, Number(MINUS_INF)));
 }
 
+// Exponential function.
+// Works by writing x = m*log(2) + r, where m = floor(x/log(2)+1/2)  and r is
+// the remainder. The result is then exp(x) = 2^m*exp(r), where exp(r) is in the
+// range [-1,1).
+// See also: https://git.io/vHyVR
 Express::Var *Express::Exp(Var *x) {
-  return Do(EXP, x);
+  // Clamp x.
+  Var *original_x = x;
+  x = Max(Min(x, Number(EXP_HI)), Number(EXP_LO));
+
+  // Express exp(x) as exp(m*ln(2) + r), start by extracting
+  // m = floor(x/ln(2) + 0.5).
+  Var *m = Do(FLOOR, MulAdd(x, Number(CEPHES_LOG2EF), Number(HALF)));
+
+  // Compute r = x - m*ln(2).
+  Var *r = MulAdd(m, Number(NLN2), x);
+
+  // Compute r^2.
+  Var *r2 = Mul(r, r);
+
+  // Compute polynomial.
+  Var *y = Number(CEPHES_EXP_P0);
+  y = MulAdd(y, r, Number(CEPHES_EXP_P1));
+  y = MulAdd(y, r, Number(CEPHES_EXP_P2));
+  y = MulAdd(y, r, Number(CEPHES_EXP_P3));
+  y = MulAdd(y, r, Number(CEPHES_EXP_P4));
+  y = MulAdd(y, r, Number(CEPHES_EXP_P5));
+  y = MulAdd(y, r2, r);
+  y = Add(y, Number(ONE));
+
+  // Build emm0 = 2^m.
+  Var *emm0 = Do(SHL23, Do(CVTFLTINT, Add(m, Number(P127))));
+
+  // Return 2^m * exp(r).
+  return Max(Mul(y, emm0), original_x);
 }
 
+// Sigmoid function. Compute y = 1/(1+exp(-x)).
 Express::Var *Express::Sigmoid(Var *x) {
-  return Do(SIGMOID, x);
+  return Div(Number(ONE), Add(Number(ONE), Exp(Sub(Number(ZERO), x))));
 }
 
+// Hyperbolic tangent function.
+// Compute 13/6-degree rational interpolant which is accurate up to a couple of
+// ulp in the range [-9, 9], outside of which the fl(tanh(x)) = +/-1.
+// See: https://git.io/vHyiz
 Express::Var *Express::Tanh(Var *x) {
-  return Do(TANH, x);
+  // Clamp the inputs to the range [-9, 9] since anything outside this range
+  // is +/-1.0.
+  x = Max(Min(x, Number(P9)), Number(N9));
+
+  // Since the polynomials are odd/even, we need x^2.
+  Var *x2 = Mul(x, x);
+
+  // Evaluate the numerator polynomial p.
+  Var *p = MulAdd(x2, Number(ALPHA_13), Number(ALPHA_11));
+  p = MulAdd(x2, p, Number(ALPHA_9));
+  p = MulAdd(x2, p, Number(ALPHA_7));
+  p = MulAdd(x2, p, Number(ALPHA_5));
+  p = MulAdd(x2, p, Number(ALPHA_3));
+  p = MulAdd(x2, p, Number(ALPHA_1));
+  p = Mul(x, p);
+
+  // Evaluate the denominator polynomial q.
+  Var *q = MulAdd(x2, Number(BETA_6), Number(BETA_4));
+  q = MulAdd(x2, q, Number(BETA_2));
+  q = MulAdd(x2, q, Number(BETA_0));
+
+  // Divide the numerator by the denominator.
+  return Div(p, q);
 }
 
 void Express::Var::Redirect(Var *other) {

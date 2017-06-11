@@ -9,30 +9,46 @@ using namespace sling;
 using namespace sling::myelin;
 
 void Test(const string &str) {
+  bool three_arg_ops = true;
+  
   Express::Model model;
-  model.mov_reg_reg = true;
-  model.mov_reg_imm = true;
-  model.mov_reg_mem = true;
-  model.mov_mem_reg = true;
+  bool fma;
+  if (three_arg_ops) {
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
 
-  model.op_reg_reg = true;
-  model.op_reg_imm = true;
-  model.op_reg_mem = true;
-  model.op_mem_reg = true;
-  model.op_mem_imm = false;
+    model.op_reg_reg = true;
+    model.op_reg_imm = true;
+    model.op_reg_mem = true;
+    model.op_mem_reg = true;
+    model.op_mem_imm = false;
 
-  model.op_reg_reg_reg = true;
-  model.op_reg_reg_imm = true;
-  model.op_reg_reg_mem = true;
-  model.op_mem_reg_reg = true;
+    model.op_reg_reg_reg = true;
+    model.op_reg_reg_imm = true;
+    model.op_reg_reg_mem = true;
+    model.op_mem_reg_reg = true;
 
-  model.func_reg_reg = true;
-  model.func_reg_imm = true;
-  model.func_reg_mem = true;
-  model.func_mem_reg = true;
-  model.func_mem_imm = false;
-
-  bool fma = true;
+    model.func_reg_reg = true;
+    model.func_reg_imm = true;
+    model.func_reg_mem = true;
+    model.func_mem_reg = true;
+    model.func_mem_imm = false;
+    fma = true;
+  } else {
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
+    model.op_reg_reg = true;
+    model.op_reg_imm = true;
+    model.op_reg_mem = true;
+    model.func_reg_reg = true;
+    model.func_reg_imm = true;
+    model.func_reg_mem = true;
+    fma = false;
+  }
 
   LOG(INFO) << "Expression: " << str;
   Express expr;
@@ -102,10 +118,14 @@ int main(int argc, char *argv[]) {
   Test("@0=Add(Mul(%0,%1),Mul(%0,%1))");
   Test("@0=Add(Mul(%0,#1),#2);@1=Sub(#3,@0)");
 
+  Test("@0=Add(%0,_13)");
+  Test("@0=Log(%0)");
   Test("$0=Add(Mul(%0,#1),#2);@0=Mul(Log($0),Log(Sub(#3,$0)))");
   Test("@0=Mul(Log(Add(Mul(%0,#1),#2)),Log(Sub(#3,Add(Mul(%0,#1),#2))))");
-  Test("@0=Add(%0,_13)");
+  Test("@0=Exp(%0)");
+  Test("@0=Sigmoid(%0)");
   Test("@0=Tanh(%0)");
+  Test("@0=Mul(Sigmoid(%0),Tanh(%0))");
 
   return 0;
 }

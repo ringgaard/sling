@@ -28,7 +28,7 @@ namespace myelin {
 // Express is an intermediate representation (IR) of lists of expressions. An
 // expression is a computation of outputs from inputs using a fixed set of
 // functions. Express uses single static assignment (SSA) form to represent the
-// computations as sequence of operations on variables. The following kinds of
+// computations as a sequence of operations on variables. The following kinds of
 // variables are supported:
 //
 //   %n: input variable
@@ -86,13 +86,34 @@ class Express {
     MULSUB213,  // fused multiply/sub, r=b*a-c
     MULSUB231,  // fused multiply/sub, r=b*c-a
 
+    CMPEQOQ,    // compare equal
+    CMPLTOQ,    // compare less than
+    CMPGTOQ,    // compare greater than
+    CMPNGEUQ,   // compare not greater or equal
+    SHR23,      // shift right 23 bits
+    SHL23,      // shift left 23 bits
+    AND,        // logical and
+    OR,         // logical or
+    ANDNOT,     // logical and not
+    FLOOR,      // floor function
+    CVTFLTINT,  // float to integer conversion
+
     INVALID,    // invalid operation
   };
 
   // System-defined numeric constants.
   enum NumberType {
-    ZERO,
-    ONE,
+    ZERO, ONE, N1, HALF, QUARTER, P9, N9, P126, P127, NLN2,
+    MINUS_INF, MIN_NORM_POS, INV_MANT_MASK,
+    CEPHES_SQRTHF,
+    CEPHES_LOG_P0, CEPHES_LOG_P1, CEPHES_LOG_P2, CEPHES_LOG_P3, CEPHES_LOG_P4,
+    CEPHES_LOG_P5, CEPHES_LOG_P6, CEPHES_LOG_P7, CEPHES_LOG_P8,
+    CEPHES_LOG_Q1, CEPHES_LOG_Q2,
+    EXP_HI, EXP_LO,
+    CEPHES_LOG2EF, CEPHES_EXP_P0, CEPHES_EXP_P1, CEPHES_EXP_P2, CEPHES_EXP_P3,
+    CEPHES_EXP_P4, CEPHES_EXP_P5,
+    ALPHA_1, ALPHA_3, ALPHA_5, ALPHA_7, ALPHA_9, ALPHA_11, ALPHA_13,
+    BETA_0, BETA_2, BETA_4, BETA_6,
   };
 
   // Variable mapping.
@@ -318,18 +339,19 @@ class Express {
   Var *Mul(Var *x, Var *y) { return Do(MUL, x, y); }
   Var *Div(Var *x, Var *y) { return Do(DIV, x, y); }
   Var *Min(Var *x, Var *y) { return Do(MIN, x, y); }
-  Var *Max(Var *x, Var *y) { return Do(MIN, x, y); }
+  Var *Max(Var *x, Var *y) { return Do(MAX, x, y); }
   Var *Relu(Var *x) { return Do(RELU, x); }
 
   // Build expressions for intrincic functions.
+  Var *MulAdd(Var *x, Var *y, Var *c) { return Add(Mul(x, y), c); }
   Var *Log(Var *x);
   Var *Exp(Var *x);
   Var *Sigmoid(Var *x);
   Var *Tanh(Var *x);
   
   // Return value for system-defined numeric constant.
-  float NumericFlt32(int number) const { return constants[number]; }
-  double NumericFlt64(int number) const { return constants[number]; }
+  float NumericFlt32(int number) const { return constants[number].flt; }
+  double NumericFlt64(int number) const { return constants[number].dbl; }
   
  private:
   // Try to eliminate identical operations from expression. Return true if any
@@ -355,7 +377,8 @@ class Express {
   std::vector<Op *> ops_;
 
   // System-defined numeric constants.
-  static double constants[];
+  struct Constant { float flt; double dbl; };
+  static Constant constants[];
 };
 
 }  // namespace myelin
