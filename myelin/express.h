@@ -35,6 +35,7 @@ namespace myelin {
 //   #n: constant variable
 //   @n: output variable
 //   $n: temporary variable
+//   _n: number
 //
 // An Express recipe is a text format for representing computations over
 // inputs variables to produce the output variables. A recipe has the following
@@ -47,11 +48,12 @@ namespace myelin {
 //   <arg list> := <arg> | <arg> ',' <arg list>
 //   <arg> := <variable> | <expression>
 //   <variable> := <input variable> | <constant> |
-//                 <output variable> | <temp variable>
-//   <input variable> := '%' <number>
-//   <constant> := '#' <number>
-//   <output variable> := '@' <number>
-//   <temp variable> := '$' <number>
+//                 <output variable> | <temp variable> | <number>
+//   <input variable> := '%' <integer>
+//   <constant> := '#' <integer>
+//   <output variable> := '@' <integer>
+//   <temp variable> := '$' <integer>
+//   <number> := '_' <integer>
 //
 class Express {
  public:
@@ -59,7 +61,7 @@ class Express {
   struct Op;
 
   // Variable type.
-  enum VarType {INPUT, CONST, OUTPUT, TEMP};
+  enum VarType {INPUT, CONST, OUTPUT, TEMP, NUMBER};
 
   // Operation type.
   enum OpType {
@@ -72,6 +74,10 @@ class Express {
     MAX,        // maximum, r=min(a,b)
 
     RELU,       // rectified linear unit, r=max(0,a)
+    LOG,        // logarithm, r=log(a)
+    EXP,        // exponential function, r=exp(a)
+    SIGMOID,    // sigmoid function, r=1/(1+exp(-a))
+    TANH,       // hyperbolic tangent, r=tanh(a)
 
     MULADD132,  // fused multiply/add, r=a*c+b
     MULADD213,  // fused multiply/add, r=b*a+c
@@ -81,6 +87,12 @@ class Express {
     MULSUB231,  // fused multiply/sub, r=b*c-a
 
     INVALID,    // invalid operation
+  };
+
+  // System-defined numeric constants.
+  enum NumberType {
+    ZERO,
+    ONE,
   };
 
   // Variable mapping.
@@ -171,6 +183,7 @@ class Express {
     bool op_reg_reg_reg = false;    // dst = op(src1, src2)
     bool op_reg_reg_imm = false;    // dst = op(src, imm)
     bool op_reg_reg_mem = false;    // dst = op(src, [mem])
+    bool op_mem_reg_reg = false;    // [mem} = op(src, src2)
 
     // Unary function instruction formats.
     bool func_reg_reg = false;      // dst = op(src)
@@ -187,8 +200,9 @@ class Express {
 
   ~Express();
 
-  // Parse an expression recipe and add it to the expression.
-  void Parse(const string &recipe);
+  // Parse an expression recipe and add it to the expression. Intrinsic
+  // functions can be expanded into basic operations.
+  void Parse(const string &recipe, bool expand = false);
 
   // Return recipe for expression.
   void GetRecipe(string *recipe) const;
@@ -208,6 +222,9 @@ class Express {
 
   // Add new temp variable to expression.
   Var *NewTemp();
+
+  // Add new number variable.
+  Var *Number(NumberType number);
 
   // Count the number of variable of a certain type.
   int NumVars(VarType type) const;
@@ -272,6 +289,48 @@ class Express {
   // Return op name for op type.
   static const string &OpName(OpType type);
 
+  // Expression building.
+  Var *Do(OpType type, Var *x) {
+    Op *op = Operation(type);
+    op->AddArgument(x);
+    op->Assign(NewTemp());
+    return op->result;
+  }
+  Var *Do(OpType type, Var *x, Var *y) {
+    Op *op = Operation(type);
+    op->AddArgument(x);
+    op->AddArgument(y);
+    op->Assign(NewTemp());
+    return op->result;
+  }
+  Var *Do(OpType type, Var *x, Var *y, Var *z) {
+    Op *op = Operation(type);
+    op->AddArgument(x);
+    op->AddArgument(y);
+    op->AddArgument(z);
+    op->Assign(NewTemp());
+    return op->result;
+  }
+
+  // Build expressions for simple operations.
+  Var *Add(Var *x, Var *y) { return Do(ADD, x, y); }
+  Var *Sub(Var *x, Var *y) { return Do(SUB, x, y); }
+  Var *Mul(Var *x, Var *y) { return Do(MUL, x, y); }
+  Var *Div(Var *x, Var *y) { return Do(DIV, x, y); }
+  Var *Min(Var *x, Var *y) { return Do(MIN, x, y); }
+  Var *Max(Var *x, Var *y) { return Do(MIN, x, y); }
+  Var *Relu(Var *x) { return Do(RELU, x); }
+
+  // Build expressions for intrincic functions.
+  Var *Log(Var *x);
+  Var *Exp(Var *x);
+  Var *Sigmoid(Var *x);
+  Var *Tanh(Var *x);
+  
+  // Return value for system-defined numeric constant.
+  float NumericFlt32(int number) const { return constants[number]; }
+  double NumericFlt64(int number) const { return constants[number]; }
+  
  private:
   // Try to eliminate identical operations from expression. Return true if any
   // operations were removed.
@@ -294,6 +353,9 @@ class Express {
 
   // Operations in expression.
   std::vector<Op *> ops_;
+
+  // System-defined numeric constants.
+  static double constants[];
 };
 
 }  // namespace myelin

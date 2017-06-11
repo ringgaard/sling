@@ -115,6 +115,10 @@ static std::map<string, Express::OpType> optypes = {
   {"Min", Express::MIN},
   {"Max", Express::MAX},
   {"Relu", Express::RELU},
+  {"Log", Express::LOG},
+  {"Exp", Express::EXP},
+  {"Sigmoid", Express::SIGMOID},
+  {"Tanh", Express::TANH},
   {"MulAdd132", Express::MULADD132},
   {"MulAdd213", Express::MULADD213},
   {"MulAdd231", Express::MULADD231},
@@ -127,20 +131,27 @@ static const string opname[] = {
   "Id",
   "Add", "Sub", "Mul", "Div",
   "Min", "Max",
-  "Relu",
+  "Relu", "Log", "Exp", "Sigmoid", "Tanh",
   "MulAdd132", "MulAdd213", "MulAdd231",
   "MulSub132", "MulSub213", "MulSub231",
   "???",
+};
+
+// System-defined numeric constants.
+double Express::constants[] = {
+  0.0f,  // ZERO
+  1.0f,  // ONE
 };
 
 // Recipe parser for converting a string to an expression.
 class RecipeParser {
  public:
   // Initialize parser.
-  RecipeParser(const string &recipe, Express *expr) {
+  RecipeParser(const string &recipe, Express *expr, bool expand) {
     recipe_ = ptr_ = recipe.data();
     end_ = ptr_ + recipe.size();
     expr_ = expr;
+    expand_ = expand;
   }
 
   // Parse recipe.
@@ -198,9 +209,30 @@ class RecipeParser {
     if (current() != ')') Error("Expected ')' in expression");
     next();
 
-    // Create new operation.
+    // Expand intrinsic functions.
     Express::OpType optype = Express::Lookup(opname);
     CHECK(optype != Express::INVALID) << opname;
+    if (expand_ && args.size() == 1) {
+      Express::Var *result;
+      switch (optype) {
+        case Express::LOG: result = expr_->Log(args[0]); break;
+        case Express::EXP: result = expr_->Exp(args[0]); break;
+        case Express::SIGMOID: result = expr_->Sigmoid(args[0]); break;
+        case Express::TANH: result = expr_->Tanh(args[0]); break;
+        default:
+          // Operation does not support expansion.
+          result = nullptr;
+      }
+
+      // Create result node.
+      if (result != nullptr) {
+        Express::Op *op = expr_->Operation(Express::MOV);
+        op->AddArgument(result);
+        return op;
+      }
+    }
+
+    // Create new operation.
     Express::Op *op = expr_->Operation(optype);
     for (auto *arg : args) op->AddArgument(arg);
 
@@ -234,6 +266,8 @@ class RecipeParser {
       type = Express::OUTPUT;
     } else if (is('$')) {
       type = Express::TEMP;
+    } else if (is('_')) {
+      type = Express::NUMBER;
     } else {
       Error("Unknown variable type in expression");
     }
@@ -272,7 +306,9 @@ class RecipeParser {
   bool isupper() const { return more() && *ptr_ >= 'A' && *ptr_ <= 'Z'; }
   bool islower() const { return more() && *ptr_ >= 'a' && *ptr_ <= 'z'; }
   bool isletter() const { return isupper() || islower(); }
-  bool isvar() const { return is('%') || is('@') || is('$') || is('#'); }
+  bool isvar() const {
+    return is('%') || is('@') || is('$') || is('#') || is('_');
+  }
 
   // Check if the whole expression has been parsed.
   bool more() const { return ptr_ < end_; }
@@ -283,6 +319,7 @@ class RecipeParser {
   const char *ptr_;            // current position for parser
   const char *end_;            // end of parsed recipe
   Express *expr_;              // target expression
+  bool expand_;                // expand intrinsic function into basic ops
 };
 
 Express::OpType Express::Lookup(const string &opname) {
@@ -294,8 +331,8 @@ const string &Express::OpName(OpType type) {
   return opname[type];
 }
 
-void Express::Parse(const string &recipe) {
-  RecipeParser parser(recipe, this);
+void Express::Parse(const string &recipe, bool expand) {
+  RecipeParser parser(recipe, this, expand);
   parser.Parse();
 }
 
@@ -356,6 +393,13 @@ Express::Op *Express::OperationAfter(Op *pos, OpType type) {
 Express::Var *Express::NewTemp() {
   // Add new temporary variable.
   Var *v = new Var(TEMP, -1);
+  vars_.push_back(v);
+  return v;
+}
+
+Express::Var *Express::Number(NumberType number) {
+  // Add number variable.
+  Var *v = new Var(NUMBER, number);
   vars_.push_back(v);
   return v;
 }
@@ -717,6 +761,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 if (!model.mov_reg_reg) success = false;
                 break;
               case CONST:
+              case NUMBER:
                 if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
                 break;
             }
@@ -737,6 +782,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 if (!model.mov_reg_reg) success = false;
                 break;
               case CONST:
+              case NUMBER:
                 if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
                 break;
             }
@@ -744,6 +790,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
           case INPUT:
           case CONST:
+          case NUMBER:
             // Assignment to inputs and constants not allowed.
             success = false;
         }
@@ -764,6 +811,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 if (!model.func_reg_reg) success = false;
                 break;
               case CONST:
+              case NUMBER:
                 if (!model.func_reg_imm) {
                   // Add temp variable for input.
                   source = rewritten->Variable(TEMP, -1);
@@ -798,6 +846,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 }
                 break;
               case CONST:
+              case NUMBER:
                 if (!model.func_mem_imm) {
                   // Add temp variable for output.
                   destination = rewritten->Variable(TEMP, -1);
@@ -813,6 +862,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
           case INPUT:
           case CONST:
+          case NUMBER:
             // Assignment to inputs and constants not allowed.
             success = false;
         }
@@ -830,11 +880,6 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               std::swap(args[0], args[1]);
             }
 
-            // Destination must be a register.
-            if (result->type == OUTPUT) {
-              destination = rewritten->Variable(TEMP, -1);
-            }
-
             // Put first argument into a register.
             if (args[0]->type != TEMP) {
               source = rewritten->Variable(TEMP, -1);
@@ -842,7 +887,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
             // Put second argument into a register if memory operands are not
             // supported.
-            if (args[1]->type == CONST) {
+            if (args[1]->type == CONST || args[1]->type == NUMBER) {
               if (!model.op_reg_reg_imm) {
                 source2 = rewritten->Variable(TEMP, -1);
               }
@@ -850,6 +895,14 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               if (!model.op_reg_reg_mem) {
                 source2 = rewritten->Variable(TEMP, -1);
               }
+            }
+
+            // Put destination into a register if memory destinations are not
+            // supported or if second argument is not in a register.
+            bool arg1_in_reg = args[1]->type == TEMP || source2 != nullptr;
+            if (result->type == OUTPUT && 
+                (!arg1_in_reg || !model.op_mem_reg_reg)) {
+              destination = rewritten->Variable(TEMP, -1);
             }
 
             success = true;
@@ -884,6 +937,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                   if (!model.mov_reg_reg) success = false;
                   break;
                 case CONST:
+                case NUMBER:
                   if (!model.mov_reg_imm) success = false;
                   break;
               }
@@ -903,6 +957,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               case TEMP:
                 break;
               case CONST:
+              case NUMBER:
                 // Put second operand into register if immediate operands are
                 // not supported.
                 if (dest->type == TEMP) {
@@ -923,6 +978,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
         case INPUT:
         case CONST:
+        case NUMBER:
           // Assignment to inputs and constants not allowed.
           success = false;
       }
@@ -980,6 +1036,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             if (!model.mov_reg_reg) success = false;
             break;
           case CONST:
+          case NUMBER:
             if (!model.mov_reg_imm) success = false;
             break;
         }
@@ -992,7 +1049,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
       }
 
       // Make third argument available for instruction.
-      if (args[2]->type == CONST) {
+      if (args[2]->type == CONST || args[2]->type == NUMBER) {
         if (!model.fm_reg_reg_imm) {
           source3 = rewritten->Variable(TEMP, -1);
         }
@@ -1139,6 +1196,22 @@ int Express::NumRegs() const {
   return num_regs;
 }
 
+Express::Var *Express::Log(Var *x) {
+  return Do(LOG, x);
+}
+
+Express::Var *Express::Exp(Var *x) {
+  return Do(EXP, x);
+}
+
+Express::Var *Express::Sigmoid(Var *x) {
+  return Do(SIGMOID, x);
+}
+
+Express::Var *Express::Tanh(Var *x) {
+  return Do(TANH, x);
+}
+
 void Express::Var::Redirect(Var *other) {
   // Update all consumers to use the other variable.
   for (Op *consumer : consumers) {
@@ -1156,6 +1229,7 @@ string Express::Var::AsString() const {
     case CONST: return "#" + std::to_string(id);
     case OUTPUT: return "@" + std::to_string(id);
     case TEMP:  return "$" + std::to_string(id);
+    case NUMBER:  return "_" + std::to_string(id);
   }
   return "???";
 }
@@ -1167,6 +1241,7 @@ void Express::Var::GetRecipe(string *recipe) const {
     case CONST: ch = '#'; break;
     case OUTPUT: ch = '@'; break;
     case TEMP: ch = '$'; break;
+    case NUMBER: ch = '_'; break;
     default: ch = '?';
   }
   recipe->push_back(ch);
@@ -1176,9 +1251,10 @@ void Express::Var::GetRecipe(string *recipe) const {
 string Express::Op::AsString() const {
   string str;
   str.append(OpName(type));
+  str.push_back('(');
   bool first = true;
   for (auto *arg : args) {
-    str.push_back(first ? '(' : ',');
+    if (!first) str.push_back(',');
     str.append(arg->AsString());
     first = false;
   }

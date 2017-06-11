@@ -30,6 +30,15 @@ cc_binary(
 )
 
 cc_binary(
+  name = "express-test",
+  srcs = ["express-test.cc"],
+  deps = [
+    "//base",
+    "//myelin:express",
+  ],
+)
+
+cc_binary(
   name = "wavenet-test",
   srcs = ["wavenet-test.cc"],
   deps = [

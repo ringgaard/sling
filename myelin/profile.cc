@@ -101,7 +101,7 @@ string Profile::ASCIIReport() const {
     if (step(i)->task_index() != -1) {
       tid = StringPrintf("%2d", step(i)->cell()->task(step(i)->task_index()));
     }
-    string name = step(i)->name();
+    string name = step(i)->kernel()->Name();
     if (!step(i)->variant().empty()) {
       name.push_back('[');
       name.append(step(i)->variant());
@@ -110,9 +110,9 @@ string Profile::ASCIIReport() const {
     StringAppendF(&report,
                   "| %6.2f%% | %8.3f μs | %10lld |%8.3f | %-27s|%-2s | %s\n",
                   percent(i), time(i), cycles(i), gigaflops(i),
-                  step(i)->kernel()->Name().c_str(),
+                  name.c_str(),
                   tid.c_str(),
-                  name.c_str());
+                  step(i)->name().c_str());
   }
 
   // Output totals.

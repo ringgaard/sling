@@ -248,6 +248,7 @@ class Calculate : public Kernel {
     auto *generator = ExpressionGenerator::Select(expr, type, elements);
     CHECK(generator != nullptr);
     int alignment = generator->VectorSize();
+    step->set_variant(generator->Name());
     delete generator;
 
     for (auto *input : step->inputs()) {
