@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   RegisterWaveNetKernels(&library);
   RegisterGenericKernels(&library);
 
-#if 1
+#if 0
   // Load model.
   Flow mainflow;
   CHECK_OK(mainflow.Load(FLAGS_input));
@@ -55,6 +55,10 @@ int main(int argc, char *argv[]) {
   // Load model.
   Flow flow;
   CHECK_OK(flow.Load(FLAGS_input));
+
+  // Add seed to random generator.
+  auto *seed = flow.AddVariable("input_seed", DT_INT64, {});
+  flow.Op("random_uniform/RandomUniform")->AddInput(seed);
 #endif
 
   // Analyze flow.
@@ -227,7 +231,7 @@ int main(int argc, char *argv[]) {
 #if 1
   // Run instance
   Instance data(distil);
-  for (int i = 0; i < 1000; ++i) {
+  for (int i = 0; i < 10; ++i) {
     data.Compute();
   }
 

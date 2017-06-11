@@ -247,6 +247,7 @@ class Calculate : public Kernel {
     ElementwiseIndexGenerator index(step);
     auto *generator = ExpressionGenerator::Select(expr, type, elements);
     CHECK(generator != nullptr);
+    generator->Initalize(expr, type, &index);
     int alignment = generator->VectorSize();
     step->set_variant(generator->Name());
     delete generator;

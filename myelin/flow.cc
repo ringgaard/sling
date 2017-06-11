@@ -39,6 +39,7 @@ std::unordered_map<string, Type> typemap = {
   {"int16", DT_INT16},
   {"int32", DT_INT32},
   {"int64", DT_INT64},
+  {"int", DT_INT32},
   {"uint8", DT_UINT8},
   {"uint16", DT_UINT16},
   {"bool", DT_BOOL},
