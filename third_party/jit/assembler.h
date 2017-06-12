@@ -641,6 +641,9 @@ class Assembler : public CodeGenerator {
   void minss(XMMRegister dst, XMMRegister src);
   void minss(XMMRegister dst, const Operand &src);
 
+  void cmpss(XMMRegister dst, XMMRegister src, int8_t cmp);
+  void cmpss(XMMRegister dst, const Operand &src, int8_t cmp);
+
   void sqrtss(XMMRegister dst, XMMRegister src);
   void sqrtss(XMMRegister dst, const Operand &src);
 
@@ -672,6 +675,8 @@ class Assembler : public CodeGenerator {
   void orps(XMMRegister dst, const Operand &src);
   void xorps(XMMRegister dst, XMMRegister src);
   void xorps(XMMRegister dst, const Operand &src);
+  void andnps(XMMRegister dst, XMMRegister src);
+  void andnps(XMMRegister dst, const Operand &src);
 
   void addps(XMMRegister dst, XMMRegister src);
   void addps(XMMRegister dst, const Operand &src);
@@ -782,12 +787,8 @@ class Assembler : public CodeGenerator {
 
   void cmpps(XMMRegister dst, XMMRegister src, int8_t cmp);
   void cmpps(XMMRegister dst, const Operand &src, int8_t cmp);
-  void cmpps(YMMRegister dst, YMMRegister src, int8_t cmp);
-  void cmpps(YMMRegister dst, const Operand &src, int8_t cmp);
   void cmppd(XMMRegister dst, XMMRegister src, int8_t cmp);
   void cmppd(XMMRegister dst, const Operand &src, int8_t cmp);
-  void cmppd(YMMRegister dst, YMMRegister src, int8_t cmp);
-  void cmppd(YMMRegister dst, const Operand &src, int8_t cmp);
 
 #define SSE_CMP_P(instr, imm8)                                                \
   void instr##ps(XMMRegister dst, XMMRegister src) {                          \
@@ -951,6 +952,9 @@ class Assembler : public CodeGenerator {
   void divsd(XMMRegister dst, XMMRegister src);
   void divsd(XMMRegister dst, const Operand &src);
 
+  void cmpsd(XMMRegister dst, XMMRegister src, int8_t cmp);
+  void cmpsd(XMMRegister dst, const Operand &src, int8_t cmp);
+
   void maxsd(XMMRegister dst, XMMRegister src);
   void maxsd(XMMRegister dst, const Operand &src);
   void minsd(XMMRegister dst, XMMRegister src);
@@ -962,6 +966,9 @@ class Assembler : public CodeGenerator {
   void orpd(XMMRegister dst, const Operand &src);
   void xorpd(XMMRegister dst, XMMRegister src);
   void xorpd(XMMRegister dst, const Operand &src);
+  void andnpd(XMMRegister dst, XMMRegister src);
+  void andnpd(XMMRegister dst, const Operand &src);
+
   void sqrtsd(XMMRegister dst, XMMRegister src);
   void sqrtsd(XMMRegister dst, const Operand &src);
 
@@ -1343,6 +1350,26 @@ class Assembler : public CodeGenerator {
   void vmovmskpd(Register dst, YMMRegister src) {
     YMMRegister idst = {dst.code()};
     vpd(0x50, idst, ymm0, src);
+  }
+
+  void vcmpss(XMMRegister dst, XMMRegister src1, XMMRegister src2, int8_t cmp) {
+    vss(0xC2, dst, src1, src2);
+    emit(cmp);
+  }
+  void vcmpss(XMMRegister dst, XMMRegister src1, const Operand &src2,
+              int8_t cmp) {
+    vss(0xC2, dst, src1, src2);
+    emit(cmp);
+  }
+
+  void vcmpsd(XMMRegister dst, XMMRegister src1, XMMRegister src2, int8_t cmp) {
+    vsd(0xC2, dst, src1, src2);
+    emit(cmp);
+  }
+  void vcmpsd(XMMRegister dst, XMMRegister src1, const Operand &src2,
+              int8_t cmp) {
+    vsd(0xC2, dst, src1, src2);
+    emit(cmp);
   }
 
   void vcmpps(XMMRegister dst, XMMRegister src1, XMMRegister src2, int8_t cmp) {

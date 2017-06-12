@@ -74,6 +74,46 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
       case Express::RELU:
         GenerateRelu(instr, masm);
         break;
+      case Express::CMPEQOQ:
+        GenerateCompare(instr, masm, 0);
+        break;
+      case Express::CMPLTOQ:
+        GenerateCompare(instr, masm, 17);
+        break;
+      case Express::CMPGTOQ:
+        GenerateCompare(instr, masm, 30);
+        break;
+      case Express::CMPNGEUQ:
+        GenerateCompare(instr, masm, 4);
+        break;
+      case Express::AND:
+        GenerateXMMFltOp(instr,
+            &Assembler::andps, &Assembler::andpd,
+            &Assembler::andps, &Assembler::andpd,
+            masm);
+        break;
+      case Express::OR:
+        GenerateXMMFltOp(instr,
+            &Assembler::orps, &Assembler::orpd,
+            &Assembler::orps, &Assembler::orpd,
+            masm);
+        break;
+      case Express::ANDNOT:
+        if (CPU::Enabled(SSE2)) {
+          GenerateXMMFltOp(instr,
+              &Assembler::andnps, &Assembler::andnpd,
+              &Assembler::andnps, &Assembler::andnpd,
+              masm);
+        } else {
+          UNSUPPORTED;
+        }
+        break;
+      case Express::SHR23:
+        GenerateShift(instr, masm, false, 23);
+        break;
+      case Express::SHL23:
+        GenerateShift(instr, masm, true, 23);
+        break;
       default: UNSUPPORTED;
     }
   }
@@ -95,6 +135,61 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         &Assembler::maxss, &Assembler::maxsd,
         &Assembler::maxss, &Assembler::maxsd,
         masm);
+  }
+
+  // Generate left/right shift.
+  void GenerateShift(Express::Op *instr, MacroAssembler *masm,
+                     int left, int bits) {
+    // Move argument to destination register
+    CHECK(instr->dst != -1);
+    if (instr->src != -1) {
+      __ movapd(xmm(instr->dst), xmm(instr->src));
+    } else {
+      switch (type_) {
+        case DT_FLOAT:
+          __ movaps(xmm(instr->dst), addr(instr->args[0]));
+          break;
+        case DT_DOUBLE:
+          __ movapd(xmm(instr->dst), addr(instr->args[0]));
+          break;
+        default: UNSUPPORTED;
+      }
+    }
+
+    // Shift xmm register.
+    switch (type_) {
+      case DT_FLOAT:
+        if (CPU::Enabled(SSE2)) {
+          if (left) {
+            __ pslld(xmm(instr->dst), bits);
+          } else {
+            __ psrld(xmm(instr->dst), bits);
+          }
+        } else {
+          UNSUPPORTED;
+        }
+        break;
+      case DT_DOUBLE:
+        if (CPU::Enabled(SSE2)) {
+          if (left) {
+            __ psllq(xmm(instr->dst), bits);
+          } else {
+            __ psrlq(xmm(instr->dst), bits);
+          }
+        } else {
+          UNSUPPORTED;
+        }
+        break;
+      default: UNSUPPORTED;
+    }
+  }
+
+  // Generate compare.
+  void GenerateCompare(Express::Op *instr, MacroAssembler *masm, int8 code) {
+    GenerateXMMFltOp(instr,
+        &Assembler::cmpss, &Assembler::cmpsd,
+        &Assembler::cmpss, &Assembler::cmpsd,
+        code, masm);
   }
 };
 

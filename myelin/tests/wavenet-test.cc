@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 
   // Create sub-model.
   Flow flow;
-  mainflow.Extract("distil", {}, {mainflow.Var("mul")}, &flow);
+  mainflow.Extract("distil", {}, {mainflow.Var("sub_1")}, &flow);
   DCHECK(flow.IsConsistent());
 
 #else
@@ -248,7 +248,7 @@ int main(int argc, char *argv[]) {
 #if 1
   // Run instance
   Instance data(distil);
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10000; ++i) {
     data.Compute();
   }
 
