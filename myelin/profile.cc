@@ -190,7 +190,7 @@ int64 Profile::Complexity(const Step *step) {
       int size = output->elements();
       if (size > ops) ops = size;
     }
-    LOG(WARNING) << "Estimated complexity for step " << step->name();
+    VLOG(8) << "Estimated complexity for step " << step->name();
   }
 
   return ops;

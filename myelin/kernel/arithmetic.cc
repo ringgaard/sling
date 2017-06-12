@@ -34,6 +34,10 @@ static Express::OpType OpType(const string &op) {
     {"Minimum", Express::MIN},
     {"Maximum", Express::MAX},
     {"Relu", Express::RELU},
+    {"Log", Express::LOG},
+    //{"Exp", Express::EXP},
+    //{"Sigmoid", Express::SIGMOID},
+    //{"Tanh", Express::TANH},
   };
 
   auto f = ops.find(op);
@@ -46,11 +50,11 @@ static bool IsCalculateOp(Flow::Operation *op) {
 }
 
 // Initialize expression for flow operation.
-static void InitExpression(Flow::Operation *op, Express *expr) {
+static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
   if (op->type == "Calculate") {
     // Build expression from expression recipe attribute on op.
     const string &recipe = op->GetAttr("expr");
-    if (!recipe.empty()) expr->Parse(recipe);
+    if (!recipe.empty()) expr->Parse(recipe, expand);
   } else {
     // Add op with inputs and outputs.
     CHECK_EQ(op->outdegree(), 1);
@@ -70,11 +74,11 @@ static void InitExpression(Flow::Operation *op, Express *expr) {
 }
 
 // Initialize expression for step.
-static void InitExpression(const Step *step, Express *expr) {
+static void InitExpression(const Step *step, Express *expr, bool expand) {
   if (step->type() == "Calculate") {
     // Build expression from expression recipe attribute on op.
     const string &recipe = step->GetAttr("expr");
-    if (!recipe.empty()) expr->Parse(recipe);
+    if (!recipe.empty()) expr->Parse(recipe, expand);
   } else {
     // Add op with inputs and outputs.
     CHECK_EQ(step->outdegree(), 1);
@@ -169,13 +173,13 @@ class ExpressionTransformer : public Transformer {
   string FuseExpressions(Flow::Operation *first, Flow::Operation *second) {
     // Build first expression.
     Express expr1;
-    InitExpression(first, &expr1);
+    InitExpression(first, &expr1, false);
     VarMap vars1;
     MapVars(first, &expr1, &vars1);
 
     // Build second expression.
     Express expr2;
-    InitExpression(second, &expr2);
+    InitExpression(second, &expr2, false);
     VarMap vars2;
     MapVars(second, &expr2, &vars2);
 
@@ -243,7 +247,7 @@ class Calculate : public Kernel {
     Type type = step->output(0)->type();
     int elements = step->output(0)->elements();
     Express expr;
-    InitExpression(step, &expr);
+    InitExpression(step, &expr, false);
     ElementwiseIndexGenerator index(step);
     auto *generator = ExpressionGenerator::Select(expr, type, elements);
     CHECK(generator != nullptr);
@@ -277,7 +281,7 @@ class Calculate : public Kernel {
 
     // Compile expression to be computed.
     Express expr;
-    InitExpression(step, &expr);
+    InitExpression(step, &expr, true);
 
     // Create element-wise index generator.
     ElementwiseIndexGenerator index(step);
@@ -308,7 +312,7 @@ class Calculate : public Kernel {
 
     // Compile expression to be computed.
     Express expr;
-    InitExpression(step, &expr);
+    InitExpression(step, &expr, true);
 
     // The number of operations is the number of ops times the output size.
     return expr.ops().size() * elements;

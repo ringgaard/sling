@@ -10,6 +10,7 @@ using namespace jit;
 ElementwiseIndexGenerator::ElementwiseIndexGenerator(Step *step) {
   // Get size from first output.
   CHECK_GE(step->outdegree(), 1);
+  type_ = step->output(0)->type();
   size_ = step->output(0)->size();
 
   // Allocate iterators for all inputs and outputs.
@@ -85,42 +86,62 @@ void ElementwiseIndexGenerator::EndLoop(MacroAssembler *masm) {
 }
 
 Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
-  DCHECK(Valid(var));
-  Iterator &it =
-      var->type == Express::OUTPUT ? output_[var->id] : input_[var->id];
-
-  if (it.scalar()) {
-    // Scalar variable.
-    if (var->type == Express::CONST) {
-      // Scalar constant in code block, vectorized if needed.
-      CHECK(it.constant());
-      int size = it.var->element_size();
-      int repeat = vecsize_ / size;
-      return masm_->GetData(it.var->data(), size, repeat)->address();
-    } else if (it.base.is_valid()) {
-      // Index scalar using base register.
-      return Operand(it.base);
-    } else {
-      // Index scalar using offset in instance.
-      return Operand(instance_, it.var->offset());
-    }
-  } else if (single_) {
-    // Single iteration.
-    if (it.base.is_valid()) {
-      // Index single element using base register.
-      return Operand(it.base);
-    } else {
-      // Index single element using offset in instance.
-      return Operand(instance_, it.var->offset());
+  if (var->type == Express::NUMBER) {
+    // System-defined constant.
+    switch (type_) {
+      case DT_FLOAT: {
+        float number = Express::NumericFlt32(var->id);
+        int repeat = vecsize_ / sizeof(float);
+        return masm_->GetConstant(number, repeat)->address();
+      }
+      case DT_DOUBLE: {
+        double number = Express::NumericFlt64(var->id);
+        int repeat = vecsize_ / sizeof(double);
+        return masm_->GetConstant(number, repeat)->address();
+      }
+      default:
+        LOG(FATAL) << "Unsupported constant type";
+        return Operand(rbp);
     }
   } else {
-    // Multiple iterations.
-    if (it.base.is_valid()) {
-      // Index element using base register and index.
-      return Operand(it.base, offset_);
+    // Load input or output.
+    DCHECK(Valid(var));
+    Iterator &it =
+        var->type == Express::OUTPUT ? output_[var->id] : input_[var->id];
+
+    if (it.scalar()) {
+      // Scalar variable.
+      if (var->type == Express::CONST) {
+        // Scalar constant in code block, vectorized if needed.
+        CHECK(it.constant());
+        int size = it.var->element_size();
+        int repeat = vecsize_ / size;
+        return masm_->GetData(it.var->data(), size, repeat)->address();
+      } else if (it.base.is_valid()) {
+        // Index scalar using base register.
+        return Operand(it.base);
+      } else {
+        // Index scalar using offset in instance.
+        return Operand(instance_, it.var->offset());
+      }
+    } else if (single_) {
+      // Single iteration.
+      if (it.base.is_valid()) {
+        // Index single element using base register.
+        return Operand(it.base);
+      } else {
+        // Index single element using offset in instance.
+        return Operand(instance_, it.var->offset());
+      }
     } else {
-      // Index element using offset in instance and index.
-      return Operand(instance_, offset_, times_1, it.var->offset());
+      // Multiple iterations.
+      if (it.base.is_valid()) {
+        // Index element using base register and index.
+        return Operand(it.base, offset_);
+      } else {
+        // Index element using offset in instance and index.
+        return Operand(instance_, offset_, times_1, it.var->offset());
+      }
     }
   }
 }

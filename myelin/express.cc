@@ -177,7 +177,7 @@ Express::Constant Express::constants[] = {
   FLTCONST(127.0),  // P127
 
   FLTCONST(-0.6931471805599453),   // NLN2
-  
+
   INTCONST(0xff800000),   // MINUS_INF
   INTCONST(0x00800000),   // MIN_NORM_POS
   INTCONST(~0x7f800000),  // INV_MANT_MASK
@@ -982,7 +982,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             // Put destination into a register if memory destinations are not
             // supported or if second argument is not in a register.
             bool arg1_in_reg = args[1]->type == TEMP || source2 != nullptr;
-            if (result->type == OUTPUT && 
+            if (result->type == OUTPUT &&
                 (!arg1_in_reg || !model.op_mem_reg_reg)) {
               destination = rewritten->Variable(TEMP, -1);
             }
@@ -1295,7 +1295,7 @@ Express::Var *Express::Log(Var *x) {
 
   // Set the exponents to -1, i.e. x are in the range [0.5,1).
   x = Do(AND, x, Number(INV_MANT_MASK));
-  x = Do(OR, Number(HALF));
+  x = Do(OR, x, Number(HALF));
 
   // Shift the inputs from the range [0.5,1) to [sqrt(1/2),sqrt(2)) and shift
   // by -1. The values are then centered around 0, which improves the stability
@@ -1337,8 +1337,8 @@ Express::Var *Express::Log(Var *x) {
   x = Add(x, y2);
 
   // Filter out invalid inputs, i.e. negative arg will be NAN, 0 will be -INF.
-  return Do(OR, 
-            Do(ANDNOT, iszero_mask, Do(OR, x, invalid_mask)), 
+  return Do(OR,
+            Do(ANDNOT, iszero_mask, Do(OR, x, invalid_mask)),
             Do(AND, iszero_mask, Number(MINUS_INF)));
 }
 

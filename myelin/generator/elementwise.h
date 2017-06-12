@@ -45,6 +45,9 @@ class ElementwiseIndexGenerator : public IndexGenerator {
     jit::Register base = jit::no_reg;  // base register for tensor
   };
 
+  // Output type.
+  Type type_;
+
   // Output size.
   size_t size_;
 

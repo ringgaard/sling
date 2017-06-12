@@ -23,16 +23,24 @@ using namespace sling::myelin;
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
+  // Select CPU features.
+  //jit::CPU::Disable(jit::SSE2);
+  //jit::CPU::Disable(jit::SSE3);
+  //jit::CPU::Disable(jit::SSE4_1);
+  //jit::CPU::Disable(jit::AVX);
+  //jit::CPU::Disable(jit::AVX2);
+  //jit::CPU::Disable(jit::FMA3);
+
   // Set up kernel library.
   Library library;
   RegisterGenericTransformations(&library);
   RegisterArithmeticKernels(&library);
   RegisterAVXKernels(&library);
   RegisterSSEKernels(&library);
-  RegisterWaveNetKernels(&library);
   RegisterGenericKernels(&library);
+  RegisterWaveNetKernels(&library);
 
-#if 0
+#if 1
   // Load model.
   Flow mainflow;
   CHECK_OK(mainflow.Load(FLAGS_input));
@@ -48,7 +56,7 @@ int main(int argc, char *argv[]) {
 
   // Create sub-model.
   Flow flow;
-  mainflow.Extract("distil", {}, {mainflow.Var("sub_1")}, &flow);
+  mainflow.Extract("distil", {}, {mainflow.Var("mul")}, &flow);
   DCHECK(flow.IsConsistent());
 
 #else
@@ -56,9 +64,18 @@ int main(int argc, char *argv[]) {
   Flow flow;
   CHECK_OK(flow.Load(FLAGS_input));
 
+  // Set input and output names.
+  flow.Var("input_log_f0:0")->name = "input_log_f0";
+  flow.Var("input_linguistic:0")->name = "input_linguistic";
+  flow.Var("output_waveform:0")->name = "output_waveform";
+
   // Add seed to random generator.
   auto *seed = flow.AddVariable("input_seed", DT_INT64, {});
   flow.Op("random_uniform/RandomUniform")->AddInput(seed);
+
+  //GraphOptions opts;
+  //FlowToDotGraphFile(flow, opts, "/tmp/raw-wavenet.dot");
+
 #endif
 
   // Analyze flow.
@@ -68,7 +85,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << flow.ops().size() << " ops";
   LOG(INFO) << flow.vars().size() << " vars";
 
-#if 1
+#if 0
   std::cout << flow.ToString();
   std::cout.flush();
 #endif
@@ -150,7 +167,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << shared << " shared";
   LOG(INFO) << distil->instance_size() << " bytes instance";
 
-#if 1
+#if 0
   std::cout << distil->ToString();
   std::cout.flush();
 #endif

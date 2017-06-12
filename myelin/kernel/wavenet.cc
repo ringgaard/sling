@@ -66,6 +66,19 @@ class WaveNetTransformer : public Transformer {
       combines++;
     }
 
+    // Convert split sigmoid and tanh to combined ops.
+    for (Flow::Operation *op : flow->Find({"Split", "Tanh", "Mul"})) {
+      VLOG(5) << "Convert to TanhMulSigmoid " << op->name;
+      Flow::Operation *mul = op;
+      Flow::Operation *tanh = mul->inputs[0]->producer;
+      Flow::Operation *sigmoid = mul->inputs[1]->producer;
+      Flow::Operation *split = tanh->inputs[0]->producer;
+      if (sigmoid->inputs[0]->producer != split) continue;
+      flow->Fuse(mul, tanh, "");
+      flow->Fuse(mul, sigmoid, "");
+      flow->Fuse(mul, split, "TanhMulSigmoid");
+    }
+
     return combines > 0;
   }
 };
@@ -136,6 +149,26 @@ class Conv2DBackpropInput : public Kernel {
 
   bool Supports(Step *step) override {
     return true;
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
+  }
+};
+
+
+// Stub for ZigZagTanhMulSigmoid.
+class ZigZagTanhMulSigmoid : public Kernel {
+ public:
+  string Name() override { return "ZigZagTanhMulSigmoid"; }
+  string Operation() override { return "TanhMulSigmoid"; }
+
+  bool Supports(Step *step) override {
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    CHECK(step->AllowInPlace(1, 0, false));
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -238,6 +271,19 @@ class Split : public Kernel {
   }
 };
 
+// Simple random generator for generating noise.
+static void SimpleRandomGenerator(const TensorData &shape,
+                                  const TensorData &seed,
+                                  TensorData *result) {
+  int elements = result->shape().elements();
+  uint32 prng = seed.value<int64>();
+  float *random = &result->at<float>(0);
+  for (int i = 0; i < elements; ++i) {
+    int32 rnd = (((prng = prng * 214013L + 2531011L) >> 16) & 0x7fff);
+    random[i] = rnd / 327678.0;
+  }
+}
+
 // Random generator for generating noise.
 static void RandomGenerator(const TensorData &shape,
                             const TensorData &seed,
@@ -245,6 +291,8 @@ static void RandomGenerator(const TensorData &shape,
   int elements = result->shape().elements();
   int64 prng_seed = seed.value<int64>();
   float *random = &result->at<float>(0);
+
+
   std::mt19937_64 prng(prng_seed);
   std::uniform_real_distribution<float> unit(0.0, 1.0);
   for (int i = 0; i < elements; ++i) {
@@ -254,6 +302,11 @@ static void RandomGenerator(const TensorData &shape,
 
 // Register WaveNet kernels.
 void RegisterWaveNetKernels(Library *library) {
+  library->Register("RandomUniform", "SRandGenerator", SimpleRandomGenerator)
+     .Input(0, DT_INT32, 1)
+     .Input(1, DT_INT64, 0)
+     .Output(0, DT_FLOAT);
+
   library->Register("RandomUniform", "RandomGenerator", RandomGenerator)
      .Input(0, DT_INT32, 1)
      .Input(1, DT_INT64, 0)
@@ -262,6 +315,7 @@ void RegisterWaveNetKernels(Library *library) {
   library->Register(new Conv1D());
   library->Register(new Conv1DAdd());
   library->Register(new Conv2DBackpropInput());
+  library->Register(new ZigZagTanhMulSigmoid());
 
   library->Register(new Add());
   library->Register(new Mul());

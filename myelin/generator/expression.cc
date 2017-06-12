@@ -456,6 +456,39 @@ void ExpressionGenerator::GenerateXMMFltOp(
 
 void ExpressionGenerator::GenerateXMMFltOp(
     Express::Op *instr,
+    OpXMMRegRegImm fltopreg, OpXMMRegRegImm dblopreg,
+    OpXMMRegMemImm fltopmem, OpXMMRegMemImm dblopmem,
+    int8 imm,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(xmm(instr->dst), xmm(instr->src), imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(xmm(instr->dst), xmm(instr->src), imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(xmm(instr->dst), addr(instr->args[1]), imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(xmm(instr->dst), addr(instr->args[1]), imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateXMMFltOp(
+    Express::Op *instr,
     OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
     OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
     MacroAssembler *masm, int argnum) {
@@ -480,6 +513,43 @@ void ExpressionGenerator::GenerateXMMFltOp(
       case DT_DOUBLE:
         (masm->*dblopmem)(xmm(instr->dst), xmm(instr->src),
                           addr(instr->args[argnum]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateXMMFltOp(
+    Express::Op *instr,
+    OpXMMRegRegRegImm fltopreg, OpXMMRegRegRegImm dblopreg,
+    OpXMMRegRegMemImm fltopmem, OpXMMRegRegMemImm dblopmem,
+    int8 imm,
+    MacroAssembler *masm, int argnum) {
+  if (instr->dst != -1 && instr->src != -1 && instr->src2 != -1) {
+    // OP reg,reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(xmm(instr->dst), xmm(instr->src), xmm(instr->src2),
+                          imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(xmm(instr->dst), xmm(instr->src), xmm(instr->src2),
+                          imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src != -1 && instr->src2 == -1) {
+    // OP reg,reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(xmm(instr->dst), xmm(instr->src),
+                          addr(instr->args[argnum]), imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(xmm(instr->dst), xmm(instr->src),
+                          addr(instr->args[argnum]), imm);
         break;
       default: UNSUPPORTED;
     }
@@ -518,6 +588,45 @@ void ExpressionGenerator::GenerateYMMFltOp(
       default: UNSUPPORTED;
     }
   } else {
+    LOG(INFO) << instr->AsInstruction();
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateYMMFltOp(
+    Express::Op *instr,
+    OpYMMRegRegRegImm fltopreg, OpYMMRegRegRegImm dblopreg,
+    OpYMMRegRegMemImm fltopmem, OpYMMRegRegMemImm dblopmem,
+    int8 imm,
+    MacroAssembler *masm, int argnum) {
+  if (instr->dst != -1 && instr->src != -1 && instr->src2 != -1) {
+    // OP reg,reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(ymm(instr->dst), ymm(instr->src), ymm(instr->src2),
+                          imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(ymm(instr->dst), ymm(instr->src), ymm(instr->src2),
+                          imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src != -1 && instr->src2 == -1) {
+    // OP reg,reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(ymm(instr->dst), ymm(instr->src),
+                          addr(instr->args[argnum]), imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(ymm(instr->dst), ymm(instr->src),
+                          addr(instr->args[argnum]), imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    LOG(INFO) << instr->AsInstruction();
     UNSUPPORTED;
   }
 }

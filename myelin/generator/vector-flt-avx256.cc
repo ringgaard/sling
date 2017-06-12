@@ -35,6 +35,15 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
   void Reserve() override {
     // Reserve YMM registers.
     index_->ReserveYMMRegisters(instructions_.NumRegs());
+
+    // Allocate auxiliary registers.
+    int num_mm_aux = 0;
+    if (!CPU::Enabled(AVX2) &&
+        (instructions_.Has(Express::SHR23) ||
+         instructions_.Has(Express::SHL23))) {
+      num_mm_aux = std::max(num_mm_aux, 1);
+    }
+    index_->ReserveAuxYMMRegisters(num_mm_aux);
   }
 
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
@@ -117,7 +126,44 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
             &Assembler::vfmsub231ps, &Assembler::vfmsub231pd,
             masm, 2);
         break;
-      default: UNSUPPORTED;
+      case Express::CMPEQOQ:
+        GenerateCompare(instr, masm, 0);
+        break;
+      case Express::CMPLTOQ:
+        GenerateCompare(instr, masm, 17);
+        break;
+      case Express::CMPGTOQ:
+        GenerateCompare(instr, masm, 30);
+        break;
+      case Express::CMPNGEUQ:
+        GenerateCompare(instr, masm, 4);
+        break;
+      case Express::AND:
+        GenerateYMMFltOp(instr,
+            &Assembler::vandps, &Assembler::vandpd,
+            &Assembler::vandps, &Assembler::vandpd,
+            masm);
+        break;
+      case Express::OR:
+        GenerateYMMFltOp(instr,
+            &Assembler::vorps, &Assembler::vorpd,
+            &Assembler::vorps, &Assembler::vorpd,
+            masm);
+        break;
+      case Express::ANDNOT:
+        GenerateYMMFltOp(instr,
+            &Assembler::vandnps, &Assembler::vandnpd,
+            &Assembler::vandnps, &Assembler::vandnpd,
+            masm);
+        break;
+      case Express::SHR23:
+        GenerateShift(instr, masm, false, 23);
+        break;
+      case Express::SHL23:
+        GenerateShift(instr, masm, true, 23);
+        break;
+      default:
+        UNSUPPORTED;
     }
   }
 
@@ -144,6 +190,66 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
     } else {
       UNSUPPORTED;
     }
+  }
+
+  // Generate left/right shift.
+  void GenerateShift(Express::Op *instr, MacroAssembler *masm,
+                     int left, int bits) {
+    // Make sure source is in a register.
+    CHECK(instr->dst != -1);
+    int src = instr->src;
+    if (instr->src == -1) {
+      switch (type_) {
+        case DT_FLOAT:
+          __ vmovaps(ymm(instr->dst), addr(instr->args[0]));
+          break;
+        case DT_DOUBLE:
+          __ vmovapd(ymm(instr->dst), addr(instr->args[0]));
+          break;
+        default: UNSUPPORTED;
+      }
+      src = instr->dst;
+    }
+
+    if (CPU::Enabled(AVX2)) {
+      // Shift ymm register.
+      switch (type_) {
+        case DT_FLOAT:
+          if (left) {
+            __ vpslld(ymm(instr->dst), ymm(src), bits);
+          } else {
+            __ vpsrld(ymm(instr->dst), ymm(src), bits);
+          }
+          break;
+        case DT_DOUBLE:
+          if (left) {
+            __ vpsllq(ymm(instr->dst), ymm(src), bits);
+          } else {
+            __ vpsrlq(ymm(instr->dst), ymm(src), bits);
+          }
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      // Shift ymm register by shifting lo and hi xmm registers.
+      __ vextractf128(xmmaux(0), ymm(src), 1);
+      if (left) {
+        __ vpslld(xmmaux(0), xmmaux(0), bits);
+        __ vpslld(xmm(instr->dst), xmm(src), bits);
+      } else {
+        __ vpsrld(xmmaux(0), xmmaux(0), bits);
+        __ vpsrld(xmm(instr->dst), xmm(src), bits);
+      }
+      __ vinsertf128(ymm(instr->dst), ymm(instr->dst), xmmaux(0), 1);
+    }
+  }
+
+  // Generate compare.
+  void GenerateCompare(Express::Op *instr, MacroAssembler *masm, int8 code) {
+    GenerateYMMFltOp(instr,
+        &Assembler::vcmpps, &Assembler::vcmppd,
+        &Assembler::vcmpps, &Assembler::vcmppd,
+        code, masm);
   }
 };
 

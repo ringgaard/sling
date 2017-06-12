@@ -53,26 +53,49 @@ class ExpressionGenerator {
   // Assembler instruction methods for different instruction formats.
   typedef void (Assembler::*OpReg)(Register);
   typedef void (Assembler::*OpMem)(const Operand &);
-  typedef void (Assembler::*OpRegReg)(Register,
-                                      Register);
-  typedef void (Assembler::*OpRegMem)(Register,
-                                    const Operand &);
+  typedef void (Assembler::*OpRegReg)(Register, Register);
+  typedef void (Assembler::*OpRegMem)(Register, const Operand &);
+
   typedef void (Assembler::*OpXMMRegReg)(XMMRegister,
                                          XMMRegister);
+  typedef void (Assembler::*OpXMMRegRegImm)(XMMRegister,
+                                            XMMRegister,
+                                            int8);
   typedef void (Assembler::*OpXMMRegMem)(XMMRegister,
                                          const Operand &);
+  typedef void (Assembler::*OpXMMRegMemImm)(XMMRegister,
+                                            const Operand &,
+                                            int8);
+
   typedef void (Assembler::*OpXMMRegRegReg)(XMMRegister,
                                             XMMRegister,
                                             XMMRegister);
+  typedef void (Assembler::*OpXMMRegRegRegImm)(XMMRegister,
+                                               XMMRegister,
+                                               XMMRegister,
+                                               int8);
   typedef void (Assembler::*OpXMMRegRegMem)(XMMRegister,
                                             XMMRegister,
                                             const Operand &);
+  typedef void (Assembler::*OpXMMRegRegMemImm)(XMMRegister,
+                                               XMMRegister,
+                                               const Operand &,
+                                               int8);
+
   typedef void (Assembler::*OpYMMRegRegReg)(YMMRegister,
                                             YMMRegister,
                                             YMMRegister);
+  typedef void (Assembler::*OpYMMRegRegRegImm)(YMMRegister,
+                                               YMMRegister,
+                                               YMMRegister,
+                                               int8);
   typedef void (Assembler::*OpYMMRegRegMem)(YMMRegister,
                                             YMMRegister,
                                             const Operand &);
+  typedef void (Assembler::*OpYMMRegRegMemImm)(YMMRegister,
+                                               YMMRegister,
+                                               const Operand &,
+                                               int8);
 
   // Check if size is a multiple of the vector size.
   static bool IsVector(int size, int vecsize) {
@@ -125,6 +148,14 @@ class ExpressionGenerator {
     OpXMMRegMem fltopmem, OpXMMRegMem dblopmem,
     MacroAssembler *masm);
 
+  // Generate two-operand XMM float op with immediate.
+  void GenerateXMMFltOp(
+    Express::Op *instr,
+    OpXMMRegRegImm fltopreg, OpXMMRegRegImm dblopreg,
+    OpXMMRegMemImm fltopmem, OpXMMRegMemImm dblopmem,
+    int8 imm,
+    MacroAssembler *masm);
+
   // Generate three-operand XMM float op.
   void GenerateXMMFltOp(
       Express::Op *instr,
@@ -132,11 +163,27 @@ class ExpressionGenerator {
       OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
       MacroAssembler *masm, int argnum = 1);
 
+  // Generate three-operand XMM float op with immediate.
+  void GenerateXMMFltOp(
+      Express::Op *instr,
+      OpXMMRegRegRegImm fltopreg, OpXMMRegRegRegImm dblopreg,
+      OpXMMRegRegMemImm fltopmem, OpXMMRegRegMemImm dblopmem,
+      int8 imm,
+      MacroAssembler *masm, int argnum = 1);
+
   // Generate three-operand YMM float op.
   void GenerateYMMFltOp(
       Express::Op *instr,
       OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
       OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
+      MacroAssembler *masm, int argnum = 1);
+
+  // Generate three-operand YMM float op with immediate.
+  void GenerateYMMFltOp(
+      Express::Op *instr,
+      OpYMMRegRegRegImm fltopreg, OpYMMRegRegRegImm dblopreg,
+      OpYMMRegRegMemImm fltopmem, OpYMMRegRegMemImm dblopmem,
+      int8 imm,
       MacroAssembler *masm, int argnum = 1);
 
   // Generate one-operand x64 int op.

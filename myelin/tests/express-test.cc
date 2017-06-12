@@ -10,9 +10,9 @@ using namespace sling::myelin;
 
 void Test(const string &str) {
   bool three_arg_ops = true;
-  
+  bool fma = false;
+
   Express::Model model;
-  bool fma;
   if (three_arg_ops) {
     model.mov_reg_reg = true;
     model.mov_reg_imm = true;
@@ -35,7 +35,6 @@ void Test(const string &str) {
     model.func_reg_mem = true;
     model.func_mem_reg = true;
     model.func_mem_imm = false;
-    fma = true;
   } else {
     model.mov_reg_reg = true;
     model.mov_reg_imm = true;
@@ -80,7 +79,7 @@ void Test(const string &str) {
 
   bool raw_instruction = false;
   if (raw_instruction) {
-    LOG(INFO) << "Instructions: " << (success ? "OK" : "FAIL") << ", " 
+    LOG(INFO) << "Instructions: " << (success ? "OK" : "FAIL") << ", "
               << instructions.MaxActiveTemps() << " temps";
     for (auto *instr : instructions.ops()) {
       LOG(INFO) << "  " << instr->AsInstruction() << " ; "
@@ -126,6 +125,7 @@ int main(int argc, char *argv[]) {
   Test("@0=Sigmoid(%0)");
   Test("@0=Tanh(%0)");
   Test("@0=Mul(Sigmoid(%0),Tanh(%0))");
+  Test("$0=Add(Mul(%0,#1),#2);@0=Sub(Log($0),Log(Sub(#3,$0)))");
 
   return 0;
 }

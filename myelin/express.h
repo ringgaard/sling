@@ -348,11 +348,11 @@ class Express {
   Var *Exp(Var *x);
   Var *Sigmoid(Var *x);
   Var *Tanh(Var *x);
-  
+
   // Return value for system-defined numeric constant.
-  float NumericFlt32(int number) const { return constants[number].flt; }
-  double NumericFlt64(int number) const { return constants[number].dbl; }
-  
+  static float NumericFlt32(int number) { return constants[number].flt; }
+  static float NumericFlt64(int number) { return constants[number].dbl; }
+
  private:
   // Try to eliminate identical operations from expression. Return true if any
   // operations were removed.
