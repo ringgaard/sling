@@ -111,7 +111,7 @@ class Sorter : public Processor {
 
     // Create temp dir if not already done.
     if (tmpdir_.empty()) {
-      CHECK_OK(File::CreateLocalTempDir(&tmpdir_));
+      CHECK(File::CreateLocalTempDir(&tmpdir_));
     }
 
     // Write messages to next merge file.
@@ -121,10 +121,10 @@ class Sorter : public Processor {
     RecordFileOptions options;
     RecordWriter writer(MergeFileName(fileno), options);
     for (Message *message : messages_) {
-      CHECK_OK(writer.Write(message->key(), message->value()));
+      CHECK(writer.Write(message->key(), message->value()));
       delete message;
     }
-    CHECK_OK(writer.Close());
+    CHECK(writer.Close());
 
     // Clear sort buffer.
     messages_.clear();
@@ -167,7 +167,7 @@ class Sorter : public Processor {
 
       // Add first record to sort queue.
       if (!item.reader->Done()) {
-        CHECK_OK(item.reader->Read(&item.record));
+        CHECK(item.reader->Read(&item.record));
         merger.push(&item);
       }
     }
@@ -185,7 +185,7 @@ class Sorter : public Processor {
 
       // Get next item from merge file and add it to queue.
       if (!item->reader->Done()) {
-        CHECK_OK(item->reader->Read(&item->record));
+        CHECK(item->reader->Read(&item->record));
         merger.push(item);
       }
     }
@@ -193,7 +193,7 @@ class Sorter : public Processor {
     // Close merge file readers.
     VLOG(3) << "Close merge files";
     for (auto &item : items) {
-      CHECK_OK(item.reader->Close());
+      CHECK(item.reader->Close());
       delete item.reader;
     }
   }

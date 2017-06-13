@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 #if 1
   // Load model.
   Flow mainflow;
-  CHECK_OK(mainflow.Load(FLAGS_input));
+  CHECK(mainflow.Load(FLAGS_input));
 
   // Set input and output names.
   mainflow.Var("input_log_f0:0")->name = "input_log_f0";
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 #else
   // Load model.
   Flow flow;
-  CHECK_OK(flow.Load(FLAGS_input));
+  CHECK(flow.Load(FLAGS_input));
 
   // Set input and output names.
   flow.Var("input_log_f0:0")->name = "input_log_f0";

@@ -48,7 +48,7 @@ std::vector<Resource *> Container::CreateResources(const string &filename,
   bool sharded = false;
   if (filename.find('?') != -1 || filename.find('*') != -1) {
     // Match file name pattern.
-    CHECK_OK(File::Match(filename, &filenames));
+    CHECK(File::Match(filename, &filenames));
     if (filenames.empty()) {
       filenames.push_back(filename);
     } else {

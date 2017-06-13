@@ -39,7 +39,7 @@ class RecordFileReader : public Process {
     Record record;
     while (!reader.Done()) {
       // Read record.
-      CHECK_OK(reader.Read(&record))
+      CHECK(reader.Read(&record))
           << ", file: " << input->resource()->name()
           << ", position: " << reader.Tell();
 
@@ -54,7 +54,7 @@ class RecordFileReader : public Process {
     }
 
     // Close reader.
-    CHECK_OK(reader.Close());
+    CHECK(reader.Close());
 
     // Close output channel.
     output->Close();

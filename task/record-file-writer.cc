@@ -27,7 +27,7 @@ class RecordFileWriter : public Processor {
     MutexLock lock(&mu_);
 
     // Write message to record file.
-    CHECK_OK(writer_->Write(message->key(), message->value()));
+    CHECK(writer_->Write(message->key(), message->value()));
     delete message;
   }
 
@@ -36,7 +36,7 @@ class RecordFileWriter : public Processor {
 
     // Close writer.
     if (writer_ != nullptr) {
-      CHECK_OK(writer_->Close());
+      CHECK(writer_->Close());
       delete writer_;
       writer_ = nullptr;
     }

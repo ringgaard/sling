@@ -167,7 +167,7 @@ RecordReader::RecordReader(File *file, const RecordFileOptions &options)
   input_.resize(options.buffer_size);
 
   // Read record file header.
-  CHECK_OK(Fill());
+  CHECK(Fill());
   CHECK_GE(input_.size(), sizeof(FileHeader))
       << "Record file truncated: " << file->filename();
   memcpy(&info_, input_.begin(), sizeof(FileHeader));
@@ -175,7 +175,7 @@ RecordReader::RecordReader(File *file, const RecordFileOptions &options)
       << "Not a record file: " << file->filename();
   input_.consumed(sizeof(FileHeader));
   position_ = sizeof(FileHeader);
-  CHECK_OK(file_->GetSize(&size_));
+  CHECK(file_->GetSize(&size_));
 }
 
 RecordReader::RecordReader(const string &filename,
@@ -189,7 +189,7 @@ RecordReader::RecordReader(const string &filename)
     : RecordReader(filename, default_options) {}
 
 RecordReader::~RecordReader() {
-  CHECK_OK(Close());
+  CHECK(Close());
 }
 
 Status RecordReader::Close() {
@@ -339,7 +339,7 @@ RecordWriter::RecordWriter(const string &filename)
     : RecordWriter(filename, default_options) {}
 
 RecordWriter::~RecordWriter() {
-  CHECK_OK(Close());
+  CHECK(Close());
 }
 
 Status RecordWriter::Close() {

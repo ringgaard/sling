@@ -189,7 +189,7 @@ void FlowToDotGraphFile(const Flow &flow,
                         const GraphOptions &options,
                         const string &filename) {
   string dot = FlowToDotGraph(flow, options);
-  CHECK_OK(File::WriteContents(filename, dot));
+  CHECK(File::WriteContents(filename, dot));
 }
 
 }  // namespace myelin

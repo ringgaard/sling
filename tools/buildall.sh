@@ -8,6 +8,7 @@ bazel build -c opt \
   myelin:* \
   myelin/kernel:* \
   myelin/generator:* \
+  myelin/tests:* \
   nlp/document:* \
   nlp/kb:* \
   nlp/parser:* \
