@@ -189,7 +189,7 @@ void Assembler::CodeTargetAlign() {
   Align(16);  // preferred alignment of jump targets on x64
 }
 
-void Assembler::emit_operand(int code, const Operand &adr) {
+void Assembler::emit_operand(int code, const Operand &adr, int sl) {
   DCHECK(is_uint3(code));
   const unsigned length = adr.len_;
   DCHECK(length > 0);
@@ -201,18 +201,19 @@ void Assembler::emit_operand(int code, const Operand &adr) {
   // Recognize RIP relative addressing.
   if (adr.buf_[0] == 5) {
     DCHECK_EQ(9u, length);
+    CHECK(sl == 0 || sl == 1);
     Label *label = *bit_cast<Label *const *>(&adr.buf_[1]);
     if (label->is_bound()) {
-      int offset = label->pos() - pc_offset() - sizeof(int32_t);
+      int offset = label->pos() - (pc_offset() + sl) - sizeof(int32_t);
       DCHECK_GE(0, offset);
       emitl(offset);
     } else if (label->is_linked()) {
-      emitl(label->pos());
+      emitl(sl == 1 ? -label->pos() : label->pos());
       label->link_to(pc_offset() - sizeof(int32_t));
     } else {
       DCHECK(label->is_unused());
       int32_t current = pc_offset();
-      emitl(current);
+      emitl(sl == 1 ? -current : current);
       label->link_to(current);
     }
   } else {
@@ -359,11 +360,11 @@ void Assembler::immediate_arithmetic_op(byte subcode,
     emit_rex(dst, size);
     if (is_int8(src.value_)) {
       emit(0x83);
-      emit_operand(subcode, dst);
+      emit_operand(subcode, dst, 1);
       emit(src.value_);
     } else {
       emit(0x81);
-      emit_operand(subcode, dst);
+      emit_operand(subcode, dst, 4);
       emit(src);
     }
   }
@@ -397,11 +398,11 @@ void Assembler::immediate_arithmetic_op_16(byte subcode,
   emit_optional_rex_32(dst);
   if (is_int8(src.value_)) {
     emit(0x83);
-    emit_operand(subcode, dst);
+    emit_operand(subcode, dst, 1);
     emit(src.value_);
   } else {
     emit(0x81);
-    emit_operand(subcode, dst);
+    emit_operand(subcode, dst, 4);
     emitw(src.value_);
   }
 }
@@ -413,7 +414,7 @@ void Assembler::immediate_arithmetic_op_8(byte subcode,
   emit_optional_rex_32(dst);
   DCHECK(is_int8(src.value_) || is_uint8(src.value_));
   emit(0x80);
-  emit_operand(subcode, dst);
+  emit_operand(subcode, dst, 1);
   emit(src.value_);
 }
 
@@ -462,7 +463,7 @@ void Assembler::shift(Operand dst, Immediate shift_amount, int subcode,
   } else {
     emit_rex(dst, size);
     emit(0xC1);
-    emit_operand(subcode, dst);
+    emit_operand(subcode, dst, 1);
     emit(shift_amount.value_);
   }
 }
@@ -876,11 +877,11 @@ void Assembler::emit_imul(Register dst, const Operand &src, Immediate imm,
   emit_rex(dst, src, size);
   if (is_int8(imm.value_)) {
     emit(0x6B);
-    emit_operand(dst, src);
+    emit_operand(dst, src, 1);
     emit(imm.value_);
   } else {
     emit(0x69);
-    emit_operand(dst, src);
+    emit_operand(dst, src, 4);
     emitl(imm.value_);
   }
 }
@@ -1081,7 +1082,7 @@ void Assembler::movb(const Operand &dst, Immediate imm) {
   EnsureSpace ensure_space(this);
   emit_optional_rex_32(dst);
   emit(0xC6);
-  emit_operand(0x0, dst);
+  emit_operand(0x0, dst, 1);
   emit(static_cast<byte>(imm.value_));
 }
 
@@ -1106,7 +1107,7 @@ void Assembler::movw(const Operand &dst, Immediate imm) {
   emit(0x66);
   emit_optional_rex_32(dst);
   emit(0xC7);
-  emit_operand(0x0, dst);
+  emit_operand(0x0, dst, 2);
   emit(static_cast<byte>(imm.value_ & 0xff));
   emit(static_cast<byte>(imm.value_ >> 8));
 }
@@ -1155,7 +1156,7 @@ void Assembler::emit_mov(const Operand &dst, Immediate value, int size) {
   EnsureSpace ensure_space(this);
   emit_rex(dst, size);
   emit(0xC7);
-  emit_operand(0x0, dst);
+  emit_operand(0x0, dst, 1);
   emit(value);
 }
 
@@ -1183,7 +1184,7 @@ void Assembler::movl(const Operand &dst, Label *src) {
   EnsureSpace ensure_space(this);
   emit_optional_rex_32(dst);
   emit(0xC7);
-  emit_operand(0, dst);
+  emit_operand(0, dst, 4);
   if (src->is_bound()) {
     int offset = src->pos() - pc_offset() - sizeof(int32_t);
     DCHECK(offset <= 0);
@@ -1691,7 +1692,7 @@ void Assembler::testb(const Operand &op, Immediate mask) {
   EnsureSpace ensure_space(this);
   emit_optional_rex_32(rax, op);
   emit(0xF6);
-  emit_operand(rax, op);  // operation code 0
+  emit_operand(rax, op, 1);  // operation code 0
   emit(mask.value_);  // low byte emitted
 }
 
@@ -1740,7 +1741,7 @@ void Assembler::testw(const Operand &op, Immediate mask) {
   emit(0x66);
   emit_optional_rex_32(rax, op);
   emit(0xF7);
-  emit_operand(rax, op);
+  emit_operand(rax, op, 2);
   emitw(mask.value_);
 }
 
@@ -1793,7 +1794,7 @@ void Assembler::emit_test(const Operand &op, Immediate mask, int size) {
   EnsureSpace ensure_space(this);
   emit_rex(rax, op, size);
   emit(0xF7);
-  emit_operand(rax, op);  // operation code 0
+  emit_operand(rax, op, 1);  // operation code 0
   emit(mask);
 }
 
@@ -2567,7 +2568,7 @@ void Assembler::pextrb(const Operand &dst, XMMRegister src, int8_t imm8) {
   emit(0x0F);
   emit(0x3A);
   emit(0x14);
-  emit_sse_operand(src, dst);
+  emit_sse_operand(src, dst, 1);
   emit(imm8);
 }
 
@@ -2591,7 +2592,7 @@ void Assembler::pinsrb(XMMRegister dst, const Operand &src, int8_t imm8) {
   emit(0x0F);
   emit(0x3A);
   emit(0x20);
-  emit_sse_operand(dst, src);
+  emit_sse_operand(dst, src, 1);
   emit(imm8);
 }
 
@@ -2613,7 +2614,7 @@ void Assembler::pinsrw(XMMRegister dst, const Operand &src, int8_t imm8) {
   emit_optional_rex_32(dst, src);
   emit(0x0F);
   emit(0xC4);
-  emit_sse_operand(dst, src);
+  emit_sse_operand(dst, src, 1);
   emit(imm8);
 }
 
@@ -2637,7 +2638,7 @@ void Assembler::pextrw(const Operand &dst, XMMRegister src, int8_t imm8) {
   emit(0x0F);
   emit(0x3A);
   emit(0x15);
-  emit_sse_operand(src, dst);
+  emit_sse_operand(src, dst, 1);
   emit(imm8);
 }
 
@@ -2661,7 +2662,7 @@ void Assembler::pextrd(const Operand &dst, XMMRegister src, int8_t imm8) {
   emit(0x0F);
   emit(0x3A);
   emit(0x16);
-  emit_sse_operand(src, dst);
+  emit_sse_operand(src, dst, 1);
   emit(imm8);
 }
 
@@ -2685,7 +2686,7 @@ void Assembler::pinsrd(XMMRegister dst, const Operand &src, int8_t imm8) {
   emit(0x0F);
   emit(0x3A);
   emit(0x22);
-  emit_sse_operand(dst, src);
+  emit_sse_operand(dst, src, 1);
   emit(imm8);
 }
 
@@ -2709,7 +2710,7 @@ void Assembler::pextrq(const Operand &dst, XMMRegister src, int8_t imm8) {
   emit(0x0F);
   emit(0x3A);
   emit(0x16);
-  emit_sse_operand(src, dst);
+  emit_sse_operand(src, dst, 1);
   emit(imm8);
 }
 
@@ -2733,7 +2734,7 @@ void Assembler::pinsrq(XMMRegister dst, const Operand &src, int8_t imm8) {
   emit(0x0F);
   emit(0x3A);
   emit(0x22);
-  emit_sse_operand(dst, src);
+  emit_sse_operand(dst, src, 1);
   emit(imm8);
 }
 
@@ -3027,7 +3028,7 @@ void Assembler::cmpss(XMMRegister dst, const Operand &src, int8_t cmp) {
   emit(0xF3);
   emit(0x0F);
   emit(0xC2);
-  emit_sse_operand(dst, src);
+  emit_sse_operand(dst, src, 1);
   emit(cmp);
 }
 
@@ -3193,7 +3194,7 @@ void Assembler::cmpps(XMMRegister dst, const Operand &src, int8_t cmp) {
   emit_optional_rex_32(dst, src);
   emit(0x0F);
   emit(0xC2);
-  emit_sse_operand(dst, src);
+  emit_sse_operand(dst, src, 1);
   emit(cmp);
 }
 
@@ -3213,7 +3214,7 @@ void Assembler::cmppd(XMMRegister dst, const Operand &src, int8_t cmp) {
   emit(0x66);
   emit(0x0F);
   emit(0xC2);
-  emit_sse_operand(dst, src);
+  emit_sse_operand(dst, src, 1);
   emit(cmp);
 }
 
@@ -3524,7 +3525,7 @@ void Assembler::cmpsd(XMMRegister dst, const Operand &src, int8_t cmp) {
   emit(0xF2);
   emit(0x0F);
   emit(0xC2);
-  emit_sse_operand(dst, src);
+  emit_sse_operand(dst, src, 1);
   emit(cmp);
 }
 
@@ -3908,12 +3909,12 @@ void Assembler::vinstr(byte op, XMMRegister dst, XMMRegister src1,
 
 void Assembler::vinstr(byte op, XMMRegister dst, XMMRegister src1,
                        const Operand &src2, SIMDPrefix pp, LeadingOpcode m,
-                       VexW w) {
+                       VexW w, int sl) {
   DCHECK(Enabled(AVX));
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst, src1, src2, kL128, pp, m, w);
   emit(op);
-  emit_sse_operand(dst, src2);
+  emit_sse_operand(dst, src2, sl);
 }
 
 void Assembler::vinstr(byte op, YMMRegister dst, YMMRegister src1,
@@ -3928,12 +3929,12 @@ void Assembler::vinstr(byte op, YMMRegister dst, YMMRegister src1,
 
 void Assembler::vinstr(byte op, YMMRegister dst, YMMRegister src1,
                        const Operand &src2, SIMDPrefix pp, LeadingOpcode m,
-                       VexW w) {
+                       VexW w, int sl) {
   DCHECK(Enabled(AVX));
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst.xmm(), src1.xmm(), src2, kL256, pp, m, w);
   emit(op);
-  emit_sse_operand(dst.xmm(), src2);
+  emit_sse_operand(dst.xmm(), src2, sl);
 }
 
 void Assembler::vps(byte op, XMMRegister dst, XMMRegister src1,
@@ -3946,12 +3947,12 @@ void Assembler::vps(byte op, XMMRegister dst, XMMRegister src1,
 }
 
 void Assembler::vps(byte op, XMMRegister dst, XMMRegister src1,
-                    const Operand &src2) {
+                    const Operand &src2, int sl) {
   DCHECK(Enabled(AVX));
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst, src1, src2, kL128, kNone, k0F, kWIG);
   emit(op);
-  emit_sse_operand(dst, src2);
+  emit_sse_operand(dst, src2, sl);
 }
 
 void Assembler::vps(byte op, YMMRegister dst, YMMRegister src1,
@@ -3964,12 +3965,12 @@ void Assembler::vps(byte op, YMMRegister dst, YMMRegister src1,
 }
 
 void Assembler::vps(byte op, YMMRegister dst, YMMRegister src1,
-                    const Operand &src2) {
+                    const Operand &src2, int sl) {
   DCHECK(Enabled(AVX));
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst.xmm(), src1.xmm(), src2, kL256, kNone, k0F, kWIG);
   emit(op);
-  emit_sse_operand(dst.xmm(), src2);
+  emit_sse_operand(dst.xmm(), src2, sl);
 }
 
 void Assembler::vpd(byte op, XMMRegister dst, XMMRegister src1,
@@ -3982,12 +3983,12 @@ void Assembler::vpd(byte op, XMMRegister dst, XMMRegister src1,
 }
 
 void Assembler::vpd(byte op, XMMRegister dst, XMMRegister src1,
-                    const Operand &src2) {
+                    const Operand &src2, int sl) {
   DCHECK(Enabled(AVX));
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst, src1, src2, kL128, k66, k0F, kWIG);
   emit(op);
-  emit_sse_operand(dst, src2);
+  emit_sse_operand(dst, src2, sl);
 }
 
 void Assembler::vpd(byte op, YMMRegister dst, YMMRegister src1,
@@ -4000,12 +4001,12 @@ void Assembler::vpd(byte op, YMMRegister dst, YMMRegister src1,
 }
 
 void Assembler::vpd(byte op, YMMRegister dst, YMMRegister src1,
-                    const Operand &src2) {
+                    const Operand &src2, int sl) {
   DCHECK(Enabled(AVX2));
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst.xmm(), src1.xmm(), src2, kL256, k66, k0F, kWIG);
   emit(op);
-  emit_sse_operand(dst.xmm(), src2);
+  emit_sse_operand(dst.xmm(), src2, sl);
 }
 
 void Assembler::vss(byte op, XMMRegister dst, XMMRegister src1,
@@ -4018,12 +4019,12 @@ void Assembler::vss(byte op, XMMRegister dst, XMMRegister src1,
 }
 
 void Assembler::vss(byte op, XMMRegister dst, XMMRegister src1,
-                    const Operand &src2) {
+                    const Operand &src2, int sl) {
   DCHECK(Enabled(AVX));
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst, src1, src2, kL128, kF3, k0F, kWIG);
   emit(op);
-  emit_sse_operand(dst, src2);
+  emit_sse_operand(dst, src2, sl);
 }
 
 void Assembler::vss(byte op, YMMRegister dst, YMMRegister src1,
@@ -4036,12 +4037,12 @@ void Assembler::vss(byte op, YMMRegister dst, YMMRegister src1,
 }
 
 void Assembler::vss(byte op, YMMRegister dst, YMMRegister src1,
-                    const Operand &src2) {
+                    const Operand &src2, int sl) {
   DCHECK(Enabled(AVX));
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst.xmm(), src1.xmm(), src2, kL256, kF3, k0F, kWIG);
   emit(op);
-  emit_sse_operand(dst.xmm(), src2);
+  emit_sse_operand(dst.xmm(), src2, sl);
 }
 
 void Assembler::vucomiss(XMMRegister dst, XMMRegister src) {
@@ -4266,7 +4267,7 @@ void Assembler::rorxq(Register dst, const Operand &src, byte imm8) {
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst, vreg, src, kLZ, kF2, k0F3A, kW1);
   emit(0xF0);
-  emit_operand(dst, src);
+  emit_operand(dst, src, 1);
   emit(imm8);
 }
 
@@ -4288,7 +4289,7 @@ void Assembler::rorxl(Register dst, const Operand &src, byte imm8) {
   EnsureSpace ensure_space(this);
   emit_vex_prefix(dst, vreg, src, kLZ, kF2, k0F3A, kW0);
   emit(0xF0);
-  emit_operand(dst, src);
+  emit_operand(dst, src, 1);
   emit(imm8);
 }
 
@@ -4516,14 +4517,14 @@ void Assembler::pshufd(XMMRegister dst, const Operand &src, uint8_t shuffle) {
   emit(shuffle);
 }
 
-void Assembler::emit_sse_operand(XMMRegister reg, const Operand &adr) {
+void Assembler::emit_sse_operand(XMMRegister reg, const Operand &adr, int sl) {
   Register ireg = { reg.code() };
-  emit_operand(ireg, adr);
+  emit_operand(ireg, adr, sl);
 }
 
-void Assembler::emit_sse_operand(Register reg, const Operand &adr) {
+void Assembler::emit_sse_operand(Register reg, const Operand &adr, int sl) {
   Register ireg = {reg.code()};
-  emit_operand(ireg, adr);
+  emit_operand(ireg, adr, sl);
 }
 
 void Assembler::emit_sse_operand(XMMRegister dst, XMMRegister src) {
