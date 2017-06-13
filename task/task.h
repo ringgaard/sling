@@ -206,7 +206,7 @@ class Channel {
 
 // A task processor reads input from input resources and message from input
 // channels and produces output resources and messages on output channels.
-class Processor : public RegisterableClass<Processor> {
+class Processor : public Component<Processor> {
  public:
   virtual ~Processor() = default;
 
@@ -241,7 +241,7 @@ class Processor : public RegisterableClass<Processor> {
 };
 
 #define REGISTER_TASK_PROCESSOR(type, component) \
-    REGISTER_CLASS_COMPONENT(task::Processor, type, component)
+    REGISTER_COMPONENT_TYPE(sling::task::Processor, type, component)
 
 // A task is a node in the container computation graph. A processor is used
 // for processing the input data and producing the output data.

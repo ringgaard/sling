@@ -3,7 +3,7 @@
 #include "base/logging.h"
 #include "string/numbers.h"
 
-REGISTER_CLASS_REGISTRY("task processor", sling::task::Processor);
+REGISTER_COMPONENT_REGISTRY("task processor", sling::task::Processor);
 
 namespace sling {
 namespace task {

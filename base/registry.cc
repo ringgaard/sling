@@ -14,6 +14,8 @@
 
 #include "base/registry.h"
 
+namespace sling {
+
 // Global list of all component registries.
 RegistryMetadata *RegistryMetadata::global_registry_list = nullptr;
 
@@ -60,4 +62,6 @@ const RegistryMetadata *RegistryMetadata::GetRegistry(const string &name) {
   }
   return nullptr;
 }
+
+}  // namespace sling
 
