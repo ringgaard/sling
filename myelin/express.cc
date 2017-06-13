@@ -531,6 +531,28 @@ int Express::NumOps(OpType type) const {
   return n;
 }
 
+int Express::Complexity() const {
+  int n = 0;
+  for (Op *op : ops_) {
+    switch (op->type) {
+      case MOV:
+        break;
+      case MULADD132:
+      case MULADD213:
+      case MULADD231:
+      case MULSUB132:
+      case MULSUB213:
+      case MULSUB231:
+      case ANDNOT:
+        n += 2;
+        break;
+      default:
+        n += 1;
+    }
+  }
+  return n;
+}
+
 int Express::CompactTempVars() {
   int n = 0;
   for (Var *v : vars_) {

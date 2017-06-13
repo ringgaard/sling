@@ -298,6 +298,11 @@ class Express {
   // Returns the number of register used by expression.
   int NumRegs() const;
 
+  // Computes the complexity of the expression. This counts the number of
+  // operations needed to compute the expression. This does not include move
+  // operations.
+  int Complexity() const;
+
   // Variables.
   const std::vector<Var *> vars() const { return vars_; }
 

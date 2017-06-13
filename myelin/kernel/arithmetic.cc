@@ -308,14 +308,13 @@ class Calculate : public Kernel {
   int64 Complexity(const Step *step) {
     // Determine shape from the first output.
     const Shape &shape = step->output(0)->shape();
-    int elements = shape.elements();
 
     // Compile expression to be computed.
     Express expr;
     InitExpression(step, &expr, true);
 
     // The number of operations is the number of ops times the output size.
-    return expr.ops().size() * elements;
+    return shape.elements() * expr.Complexity();
   }
 
  private:
