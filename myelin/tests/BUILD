@@ -58,3 +58,22 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "tagger-test",
+  srcs = ["tagger-test.cc"],
+  deps = [
+    "//base",
+    "//base:clock",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
+    "//myelin:profile",
+    "//myelin/kernel:avx",
+    "//myelin/kernel:generic",
+    "//myelin/kernel:sse",
+    "//myelin/kernel:dragnn",
+    "//myelin/kernel:arithmetic",
+  ],
+)
+

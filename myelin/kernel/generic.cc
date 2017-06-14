@@ -75,7 +75,8 @@ class StandardTyper : public Typer {
         op->type == "Sub" ||
         op->type == "Tanh" ||
         op->type == "Sigmoid" ||
-        op->type == "Relu") {
+        op->type == "Relu" ||
+        op->type == "Calculate") {
       if (op->indegree() > 0 && op->outdegree() == 1) {
         // Determine output rank.
         Flow::Variable *out = op->outputs[0];
