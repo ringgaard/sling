@@ -10,6 +10,7 @@
 #include "myelin/compute.h"
 #include "myelin/flow.h"
 #include "myelin/graph.h"
+#include "myelin/profile.h"
 #include "myelin/kernel/avx.h"
 #include "myelin/kernel/arithmetic.h"
 #include "myelin/kernel/dragnn.h"
@@ -50,6 +51,9 @@ class FixedDragnnTyper : public Typer {
 
 class RNN {
  public:
+  // Profiling flag.
+  static const bool profile = true;
+
   // Loads and initialize parser model.
   void Load(const string &filename);
 
@@ -66,6 +70,9 @@ class RNN {
 
   // Extracts features for LR LSTM.
   void ExtractFeaturesLR(RNNInstance *instance, int current) const;
+
+  // Output profile.
+  void OutputProfile() const;
 
  private:
   // Looks up cells, connectors, and parameters.
@@ -128,13 +135,17 @@ void RNN::Load(const string &filename) {
   // Load and analyze parser flow file.
   Flow flow;
   CHECK(flow.Load(filename));
+  flow.Var("tagger/h_out")->out = true;
+  flow.Var("tagger/c_out")->out = true;
   flow.Analyze(library_);
 
   // Output graph.
   GraphOptions gopts;
   FlowToDotGraphFile(flow, gopts, "/tmp/tagger.dot");
+  //std::cout << flow.ToString() << "\n";
 
   // Compile parser flow.
+  if (profile) network_.set_profiling(true);
   CHECK(network_.Compile(flow, library_));
 
   // Get computation for each function.
@@ -207,39 +218,49 @@ int RNN::LookupWord(const string &word) const {
 
 void RNN::Execute(const std::vector<string> &tokens,
                   std::vector<int> *predictions) const {
-  RNNInstance data(lr_, lr_c_, lr_h_, 0, tokens.size());
+  static const int repeats = 10000;
 
-  // Look up words in vocabulary.
-  for (int i = 0; i < tokens.size(); ++i) {
-    int word = LookupWord(tokens[i]);
-    data.words[i] = word;
+  RNNInstance data(lr_, lr_c_, lr_h_, 0, tokens.size());
+  for (int r = 0; r < repeats; ++r) {
+    predictions->clear();
+
+    // Look up words in vocabulary.
+    for (int i = 0; i < tokens.size(); ++i) {
+      int word = LookupWord(tokens[i]);
+      data.words[i] = word;
+    }
+
+    // Compute left-to-right LSTM.
+    for (int i = 0; i < tokens.size(); ++i) {
+      // Attach hidden and control layers.
+      //data.lr.Clear();
+      int in = i > 0 ? i - 1 : tokens.size();
+      int out = i;
+      AttachLR(&data, in, out);
+
+      // Extract features.
+      ExtractFeaturesLR(&data, out);
+
+      // Compute LSTM cell.
+      data.lr.Compute();
+
+      float *output = data.lr.Get<float>(ff_output_);
+      int prediction = 0;
+      float max_score = -std::numeric_limits<float>::infinity();
+
+      for (int a = 0; a < ff_output_->dim(1); ++a) {
+        if (output[a] > max_score) {
+          prediction = a;
+          max_score = output[a];
+        }
+      }
+      predictions->push_back(prediction);
+    }
   }
 
-  // Compute left-to-right LSTM.
-  for (int i = 0; i < tokens.size(); ++i) {
-    // Attach hidden and control layers.
-    data.lr.Clear();
-    int in = i > 0 ? i - 1 : tokens.size();
-    int out = i;
-    AttachLR(&data, in, out);
-
-    // Extract features.
-    ExtractFeaturesLR(&data, out);
-
-    // Compute LSTM cell.
-    data.lr.Compute();
-
-    float *output = data.lr.Get<float>(ff_output_);
-    int prediction = 0;
-    float max_score = -std::numeric_limits<float>::infinity();
-
-    for (int a = 0; a < ff_output_->dim(1); ++a) {
-      if (output[a] > max_score) {
-        prediction = a;
-        max_score = output[a];
-      }
-    }
-    predictions->push_back(prediction);
+  if (profile) {
+    Profile profile(&data.lr);
+    std::cout << profile.ASCIIReport() << "\n";
   }
 }
 

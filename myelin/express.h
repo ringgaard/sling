@@ -102,7 +102,7 @@ class Express {
   };
 
   // System-defined numeric constants.
-  enum NumberType {
+  enum ConstantNumber {
     ZERO, ONE, N1, HALF, QUARTER, P9, N9, P126, P127, NLN2,
     MINUS_INF, MIN_NORM_POS, INV_MANT_MASK,
     CEPHES_SQRTHF,
@@ -245,7 +245,7 @@ class Express {
   Var *NewTemp();
 
   // Add new number variable.
-  Var *Number(NumberType number);
+  Var *Number(ConstantNumber number);
 
   // Count the number of variable of a certain type.
   int NumVars(VarType type) const;

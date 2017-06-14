@@ -82,6 +82,16 @@ class ExpressionGenerator {
                                                const Operand &,
                                                int8);
 
+  typedef void (Assembler::*OpYMMRegReg)(YMMRegister,
+                                         YMMRegister);
+  typedef void (Assembler::*OpYMMRegMem)(YMMRegister,
+                                         const Operand &);
+  typedef void (Assembler::*OpYMMRegRegImm)(YMMRegister,
+                                            YMMRegister,
+                                            int8);
+  typedef void (Assembler::*OpYMMRegMemImm)(YMMRegister,
+                                            const Operand &,
+                                            int8);
   typedef void (Assembler::*OpYMMRegRegReg)(YMMRegister,
                                             YMMRegister,
                                             YMMRegister);
@@ -171,6 +181,21 @@ class ExpressionGenerator {
       int8 imm,
       MacroAssembler *masm, int argnum = 1);
 
+  // Generate two-operand YMM float op.
+  void GenerateYMMFltOp(
+      Express::Op *instr,
+      OpYMMRegReg fltopreg, OpYMMRegReg dblopreg,
+      OpYMMRegMem fltopmem, OpYMMRegMem dblopmem,
+      MacroAssembler *masm, int argnum = 0);
+
+  // Generate two-operand YMM float op with immediate.
+  void GenerateYMMFltOp(
+      Express::Op *instr,
+      OpYMMRegRegImm fltopreg, OpYMMRegRegImm dblopreg,
+      OpYMMRegMemImm fltopmem, OpYMMRegMemImm dblopmem,
+      int8 imm,
+      MacroAssembler *masm, int argnum = 0);
+
   // Generate three-operand YMM float op.
   void GenerateYMMFltOp(
       Express::Op *instr,
@@ -230,6 +255,14 @@ class ExpressionGenerator {
       OpYMMRegRegReg opregd, OpYMMRegRegMem opmemd,
       OpYMMRegRegReg opregq, OpYMMRegRegMem opmemq,
       MacroAssembler *masm, int argnum = 1);
+
+  // Check if instruction is MOV reg,0 (i.e. clear register).
+  static bool IsClear(Express::Op *instr) {
+    return instr->type == Express::MOV &&
+           instr->dst != -1 &&
+           instr->args[0]->type == Express::NUMBER &&
+           instr->args[0]->id == Express::ZERO;
+  }
 
   // Index generator for expression.
   IndexGenerator *index_ = nullptr;

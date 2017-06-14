@@ -35,9 +35,9 @@ static Express::OpType OpType(const string &op) {
     {"Maximum", Express::MAX},
     {"Relu", Express::RELU},
     {"Log", Express::LOG},
-    //{"Exp", Express::EXP},
-    //{"Sigmoid", Express::SIGMOID},
-    //{"Tanh", Express::TANH},
+    {"Exp", Express::EXP},
+    {"Sigmoid", Express::SIGMOID},
+    {"Tanh", Express::TANH},
   };
 
   auto f = ops.find(op);

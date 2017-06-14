@@ -35,7 +35,20 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        GenerateXMMVectorMove(instr, masm);
+        if (IsClear(instr)) {
+          // Use XOR to zero register instead of loading constant from memory.
+          switch (type_) {
+            case DT_FLOAT:
+              __ xorps(xmm(instr->dst), xmm(instr->dst));
+              break;
+            case DT_DOUBLE:
+              __ xorpd(xmm(instr->dst), xmm(instr->dst));
+              break;
+            default: UNSUPPORTED;
+          }
+        } else {
+          GenerateXMMVectorMove(instr, masm);
+        }
         break;
       case Express::ADD:
         GenerateXMMFltOp(instr,
@@ -116,7 +129,15 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
       case Express::SHL23:
         GenerateShift(instr, masm, true, 23);
         break;
-      default: UNSUPPORTED;
+      case Express::FLOOR:
+        GenerateFloor(instr, masm);
+        break;
+      case Express::CVTFLTINT:
+        GenerateFltToInt(instr, masm);
+        break;
+      default:
+        LOG(INFO) << "Unsupported: " << instr->AsInstruction();
+        UNSUPPORTED;
     }
   }
 
@@ -188,6 +209,30 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         }
         break;
       default: UNSUPPORTED;
+    }
+  }
+
+  // Generate floor rounding.
+  void GenerateFloor(Express::Op *instr, MacroAssembler *masm) {
+    if (CPU::Enabled(SSE4_1)) {
+      GenerateXMMFltOp(instr,
+          &Assembler::roundps, &Assembler::roundpd,
+          &Assembler::roundps, &Assembler::roundpd,
+          kRoundDown, masm);
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate float to integer conversion.
+  void GenerateFltToInt(Express::Op *instr, MacroAssembler *masm) {
+    if (CPU::Enabled(SSE2)) {
+      GenerateXMMFltOp(instr,
+          &Assembler::cvttps2dq, &Assembler::cvttpd2dq,
+          &Assembler::cvttps2dq, &Assembler::cvttpd2dq,
+          masm);
+    } else {
+      UNSUPPORTED;
     }
   }
 

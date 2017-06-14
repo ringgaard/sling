@@ -42,7 +42,12 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        GenerateYMMVectorIntMove(instr, masm);
+        if (IsClear(instr)) {
+          // Use XOR to zero register instead of loading constant from memory.
+          __ vpxor(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
+        } else {
+          GenerateYMMVectorIntMove(instr, masm);
+        }
         break;
       case Express::ADD:
         GenerateYMMIntOp(instr,

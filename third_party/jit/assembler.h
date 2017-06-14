@@ -669,6 +669,11 @@ class Assembler : public CodeGenerator {
   void cvtlsi2ss(XMMRegister dst, const Operand &src);
   void cvtlsi2ss(XMMRegister dst, Register src);
 
+  void cvttps2dq(XMMRegister dst, XMMRegister src);
+  void cvttps2dq(XMMRegister dst, const Operand &src);
+  void cvttpd2dq(XMMRegister dst, XMMRegister src);
+  void cvttpd2dq(XMMRegister dst, const Operand &src);
+
   void andps(XMMRegister dst, XMMRegister src);
   void andps(XMMRegister dst, const Operand &src);
   void orps(XMMRegister dst, XMMRegister src);
@@ -782,8 +787,15 @@ class Assembler : public CodeGenerator {
   void pinsrq(XMMRegister dst, Register src, int8_t imm8);
   void pinsrq(XMMRegister dst, const Operand &src, int8_t imm8);
 
-  void roundss(XMMRegister dst, XMMRegister src, RoundingMode mode);
-  void roundsd(XMMRegister dst, XMMRegister src, RoundingMode mode);
+  void roundss(XMMRegister dst, const Operand &src, int8_t mode);
+  void roundss(XMMRegister dst, XMMRegister src, int8_t mode);
+  void roundsd(XMMRegister dst, XMMRegister src, int8_t mode);
+  void roundsd(XMMRegister dst, const Operand &src, int8_t mode);
+
+  void roundps(XMMRegister dst, const Operand &src, int8_t mode);
+  void roundps(XMMRegister dst, XMMRegister src, int8_t mode);
+  void roundpd(XMMRegister dst, XMMRegister src, int8_t mode);
+  void roundpd(XMMRegister dst, const Operand &src, int8_t mode);
 
   void cmpps(XMMRegister dst, XMMRegister src, int8_t cmp);
   void cmpps(XMMRegister dst, const Operand &src, int8_t cmp);
@@ -1152,32 +1164,59 @@ class Assembler : public CodeGenerator {
   }
 
   void vroundss(XMMRegister dst, XMMRegister src1, XMMRegister src2,
-                RoundingMode mode) {
+                int8_t mode) {
     vinstr(0x0a, dst, src1, src2, k66, k0F3A, kWIG);
-    emit(static_cast<byte>(mode) | 0x8);  // mask precision exception
+    emit(mode | 0x8);  // mask precision exception
+  }
+  void vroundss(XMMRegister dst, XMMRegister src1, const Operand &src2,
+                int8_t mode) {
+    vinstr(0x0a, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mode | 0x8);  // mask precision exception
   }
 
   void vroundsd(XMMRegister dst, XMMRegister src1, XMMRegister src2,
-                RoundingMode mode) {
+                int8_t mode) {
     vinstr(0x0b, dst, src1, src2, k66, k0F3A, kWIG);
-    emit(static_cast<byte>(mode) | 0x8);  // mask precision exception
+    emit(mode | 0x8);  // mask precision exception
+  }
+  void vroundsd(XMMRegister dst, XMMRegister src1, const Operand &src2,
+                int8_t mode) {
+    vinstr(0x0b, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mode | 0x8);  // mask precision exception
   }
 
-  void vroundps(XMMRegister dst, XMMRegister src, RoundingMode mode) {
+  void vroundps(XMMRegister dst, XMMRegister src, int8_t mode) {
     vinstr(0x08, dst, xmm0, src, k66, k0F3A, kWIG);
-    emit(static_cast<byte>(mode));
+    emit(mode);
   }
-  void vroundps(XMMRegister dst, const Operand &src, RoundingMode mode) {
+  void vroundps(XMMRegister dst, const Operand &src, int8_t mode) {
     vinstr(0x08, dst, xmm0, src, k66, k0F3A, kWIG, 1);
-    emit(static_cast<byte>(mode));
+    emit(mode);
   }
-  void vroundps(YMMRegister dst, YMMRegister src, RoundingMode mode) {
+  void vroundps(YMMRegister dst, YMMRegister src, int8_t mode) {
     vinstr(0x08, dst, ymm0, src, k66, k0F3A, kWIG);
-    emit(static_cast<byte>(mode));
+    emit(mode);
   }
-  void vroundps(YMMRegister dst, const Operand &src, RoundingMode mode) {
+  void vroundps(YMMRegister dst, const Operand &src, int8_t mode) {
     vinstr(0x08, dst, ymm0, src, k66, k0F3A, kWIG, 1);
-    emit(static_cast<byte>(mode));
+    emit(mode);
+  }
+
+  void vroundpd(XMMRegister dst, XMMRegister src, int8_t mode) {
+    vinstr(0x09, dst, xmm0, src, k66, k0F3A, kWIG);
+    emit(mode);
+  }
+  void vroundpd(XMMRegister dst, const Operand &src, int8_t mode) {
+    vinstr(0x09, dst, xmm0, src, k66, k0F3A, kWIG, 1);
+    emit(mode);
+  }
+  void vroundpd(YMMRegister dst, YMMRegister src, int8_t mode) {
+    vinstr(0x09, dst, ymm0, src, k66, k0F3A, kWIG);
+    emit(mode);
+  }
+  void vroundpd(YMMRegister dst, const Operand &src, int8_t mode) {
+    vinstr(0x09, dst, ymm0, src, k66, k0F3A, kWIG, 1);
+    emit(mode);
   }
 
   void vsd(byte op, XMMRegister dst, XMMRegister src1, XMMRegister src2) {
@@ -1829,6 +1868,19 @@ class Assembler : public CodeGenerator {
   }
   void vhaddps(YMMRegister dst, YMMRegister src1, const Operand &src2) {
     vinstr(0x7c, dst, src1, src2, kF2, k0F, kW0);
+  }
+
+  void vcvttpd2dq(XMMRegister dst, XMMRegister src) {
+    vinstr(0x6e, dst, xmm0, src, k66, k0F, kWIG);
+  }
+  void vcvttpd2dq(XMMRegister dst, const Operand &src) {
+    vinstr(0x6e, dst, xmm0, src, k66, k0F, kWIG);
+  }
+  void vcvttpd2dq(YMMRegister dst, YMMRegister src) {
+    vinstr(0x6e, dst, ymm0, src, k66, k0F, kWIG);
+  }
+  void vcvttpd2dq(YMMRegister dst, const Operand &src) {
+    vinstr(0x6e, dst, ymm0, src, k66, k0F, kWIG);
   }
 
   void vcvttps2dq(XMMRegister dst, XMMRegister src) {

@@ -479,7 +479,7 @@ Express::Var *Express::NewTemp() {
   return v;
 }
 
-Express::Var *Express::Number(NumberType number) {
+Express::Var *Express::Number(ConstantNumber number) {
   // Add number variable.
   Var *v = new Var(NUMBER, number);
   vars_.push_back(v);

@@ -3437,6 +3437,46 @@ void Assembler::cvtsd2siq(Register dst, XMMRegister src) {
   emit_sse_operand(dst, src);
 }
 
+void Assembler::cvttps2dq(XMMRegister dst, XMMRegister src) {
+  DCHECK(Enabled(SSE2));
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0x5B);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::cvttps2dq(XMMRegister dst, const Operand &src) {
+  DCHECK(Enabled(SSE2));
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0x5B);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::cvttpd2dq(XMMRegister dst, XMMRegister src) {
+  DCHECK(Enabled(SSE2));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0xE6);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::cvttpd2dq(XMMRegister dst, const Operand &src) {
+  DCHECK(Enabled(SSE2));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0xE6);
+  emit_sse_operand(dst, src);
+}
+
 void Assembler::addsd(XMMRegister dst, XMMRegister src) {
   EnsureSpace ensure_space(this);
   emit(0xF2);
@@ -3689,7 +3729,7 @@ void Assembler::cmpltsd(XMMRegister dst, XMMRegister src) {
   emit(0x01);  // LT == 1
 }
 
-void Assembler::roundss(XMMRegister dst, XMMRegister src, RoundingMode mode) {
+void Assembler::roundss(XMMRegister dst, XMMRegister src, int8_t mode) {
   DCHECK(Enabled(SSE4_1));
   EnsureSpace ensure_space(this);
   emit(0x66);
@@ -3699,10 +3739,23 @@ void Assembler::roundss(XMMRegister dst, XMMRegister src, RoundingMode mode) {
   emit(0x0a);
   emit_sse_operand(dst, src);
   // Mask precision exception.
-  emit(static_cast<byte>(mode) | 0x8);
+  emit(mode | 0x8);
 }
 
-void Assembler::roundsd(XMMRegister dst, XMMRegister src, RoundingMode mode) {
+void Assembler::roundss(XMMRegister dst, const Operand &src, int8_t mode) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0a);
+  emit_sse_operand(dst, src, 1);
+  // Mask precision exception.
+  emit(mode | 0x8);
+}
+
+void Assembler::roundsd(XMMRegister dst, XMMRegister src, int8_t mode) {
   DCHECK(Enabled(SSE4_1));
   EnsureSpace ensure_space(this);
   emit(0x66);
@@ -3712,7 +3765,72 @@ void Assembler::roundsd(XMMRegister dst, XMMRegister src, RoundingMode mode) {
   emit(0x0b);
   emit_sse_operand(dst, src);
   // Mask precision exception.
-  emit(static_cast<byte>(mode) | 0x8);
+  emit(mode | 0x8);
+}
+
+void Assembler::roundsd(XMMRegister dst, const Operand &src, int8_t mode) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0b);
+  emit_sse_operand(dst, src, 1);
+  // Mask precision exception.
+  emit(mode | 0x8);
+}
+
+void Assembler::roundps(XMMRegister dst, XMMRegister src, int8_t mode) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x08);
+  emit_sse_operand(dst, src);
+  // Mask precision exception.
+  emit(mode | 0x8);
+}
+
+void Assembler::roundps(XMMRegister dst, const Operand &src, int8_t mode) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x08);
+  emit_sse_operand(dst, src, 1);
+  // Mask precision exception.
+  emit(mode | 0x8);
+}
+
+void Assembler::roundpd(XMMRegister dst, XMMRegister src, int8_t mode) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x09);
+  emit_sse_operand(dst, src);
+  // Mask precision exception.
+  emit(mode | 0x8);
+}
+
+void Assembler::roundpd(XMMRegister dst, const Operand &src, int8_t mode) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x09);
+  emit_sse_operand(dst, src, 1);
+  // Mask precision exception.
+  emit(mode | 0x8);
 }
 
 void Assembler::movmskpd(Register dst, XMMRegister src) {

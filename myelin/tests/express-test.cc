@@ -10,7 +10,7 @@ using namespace sling::myelin;
 
 void Test(const string &str) {
   bool three_arg_ops = true;
-  bool fma = false;
+  bool fma = true;
 
   Express::Model model;
   if (three_arg_ops) {
@@ -126,6 +126,10 @@ int main(int argc, char *argv[]) {
   Test("@0=Tanh(%0)");
   Test("@0=Mul(Sigmoid(%0),Tanh(%0))");
   Test("$0=Add(Mul(%0,#1),#2);@0=Sub(Log($0),Log(Sub(#3,$0)))");
+
+  Test("$2=Sigmoid(Add(%2,#3));"
+       "@0=Add(Mul($2,Tanh(Add(%0,#1))),Mul(Sub(#4,$2),%5));"
+       "@1=Tanh(@0)");
 
   return 0;
 }

@@ -560,6 +560,71 @@ void ExpressionGenerator::GenerateXMMFltOp(
 
 void ExpressionGenerator::GenerateYMMFltOp(
     Express::Op *instr,
+    OpYMMRegReg fltopreg, OpYMMRegReg dblopreg,
+    OpYMMRegMem fltopmem, OpYMMRegMem dblopmem,
+    MacroAssembler *masm, int argnum) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(ymm(instr->dst), ymm(instr->src));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(ymm(instr->dst), ymm(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(ymm(instr->dst), addr(instr->args[argnum]));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(ymm(instr->dst), addr(instr->args[argnum]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateYMMFltOp(
+    Express::Op *instr,
+    OpYMMRegRegImm fltopreg, OpYMMRegRegImm dblopreg,
+    OpYMMRegMemImm fltopmem, OpYMMRegMemImm dblopmem,
+    int8 imm,
+    MacroAssembler *masm, int argnum) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg,imm
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(ymm(instr->dst), ymm(instr->src), imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(ymm(instr->dst), ymm(instr->src), imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(ymm(instr->dst), addr(instr->args[argnum]), imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(ymm(instr->dst), addr(instr->args[argnum]), imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateYMMFltOp(
+    Express::Op *instr,
     OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
     OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
     MacroAssembler *masm, int argnum) {
@@ -588,7 +653,6 @@ void ExpressionGenerator::GenerateYMMFltOp(
       default: UNSUPPORTED;
     }
   } else {
-    LOG(INFO) << instr->AsInstruction();
     UNSUPPORTED;
   }
 }
@@ -626,7 +690,6 @@ void ExpressionGenerator::GenerateYMMFltOp(
       default: UNSUPPORTED;
     }
   } else {
-    LOG(INFO) << instr->AsInstruction();
     UNSUPPORTED;
   }
 }

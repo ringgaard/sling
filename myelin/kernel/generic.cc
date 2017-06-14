@@ -77,23 +77,28 @@ class StandardTyper : public Typer {
         op->type == "Sigmoid" ||
         op->type == "Relu" ||
         op->type == "Calculate") {
-      if (op->indegree() > 0 && op->outdegree() == 1) {
+      if (op->indegree() > 0 && op->outdegree() > 0) {
         // Determine output rank.
-        Flow::Variable *out = op->outputs[0];
+        Shape shape;
         int rank = 0;
         for (Flow::Variable *in : op->inputs) {
           if (in->rank() > rank) rank = in->rank();
         }
-        out->shape.fill(rank, 1);
+        shape.fill(rank, 1);
 
         // Determine output shape based on broadcast semantics.
         for (Flow::Variable *in : op->inputs) {
           int depth = rank - in->rank();
           for (int d = 0; d < in->rank(); ++d) {
-            if (out->dim(d + depth) < in->dim(d)) {
-              out->shape.set(d + depth, in->dim(d));
+            if (shape.dim(d + depth) < in->dim(d)) {
+              shape.set(d + depth, in->dim(d));
             }
           }
+        }
+
+        // Set shape for outputs.
+        for (Flow::Variable *out : op->outputs) {
+          out->shape = shape;
         }
         return true;
       }

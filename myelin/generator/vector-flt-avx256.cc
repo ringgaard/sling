@@ -49,7 +49,20 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        GenerateYMMVectorMove(instr, masm);
+        if (IsClear(instr)) {
+          // Use XOR to zero register instead of loading constant from memory.
+          switch (type_) {
+            case DT_FLOAT:
+              __ vxorps(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
+              break;
+            case DT_DOUBLE:
+              __ vxorpd(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
+              break;
+            default: UNSUPPORTED;
+          }
+        } else {
+          GenerateYMMVectorMove(instr, masm);
+        }
         break;
       case Express::ADD:
         GenerateYMMFltOp(instr,
@@ -161,6 +174,18 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         break;
       case Express::SHL23:
         GenerateShift(instr, masm, true, 23);
+        break;
+      case Express::FLOOR:
+        GenerateYMMFltOp(instr,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            kRoundDown, masm);
+        break;
+      case Express::CVTFLTINT:
+        GenerateYMMFltOp(instr,
+            &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
+            &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
+            masm);
         break;
       default:
         UNSUPPORTED;

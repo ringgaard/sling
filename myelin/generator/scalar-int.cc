@@ -45,7 +45,12 @@ class ScalarIntGenerator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        GenerateScalarIntMove(instr, masm);
+        if (IsClear(instr)) {
+          // Use XOR to zero register instead of loading constant from memory.
+          __ xorq(reg(instr->dst), reg(instr->dst));
+        } else {
+          GenerateScalarIntMove(instr, masm);
+        }
         break;
       case Express::ADD:
         GenerateIntBinaryOp(instr,
@@ -126,7 +131,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
       GenerateIntMoveMemToReg(rax, addr(instr->args[1]), masm);
     }
     switch (type_) {
-      case DT_INT8: __ cmpb(rax, reg(instr->dst)); break;
+      case DT_INT8:  __ cmpb(rax, reg(instr->dst)); break;
       case DT_INT16: __ cmpw(rax, reg(instr->dst)); break;
       case DT_INT32: __ cmpl(rax, reg(instr->dst)); break;
       case DT_INT64: __ cmpq(rax, reg(instr->dst)); break;

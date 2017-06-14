@@ -38,7 +38,20 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        GenerateXMMScalarFltMove(instr, masm);
+        if (IsClear(instr)) {
+          // Use XOR to zero register instead of loading constant from memory.
+          switch (type_) {
+            case DT_FLOAT:
+              __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+              break;
+            case DT_DOUBLE:
+              __ vxorpd(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+              break;
+            default: UNSUPPORTED;
+          }
+        } else {
+          GenerateXMMScalarFltMove(instr, masm);
+        }
         break;
       case Express::ADD:
         GenerateXMMFltOp(instr,
@@ -150,6 +163,18 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         break;
       case Express::SHL23:
         GenerateShift(instr, masm, true, 23);
+        break;
+      case Express::FLOOR:
+        GenerateXMMFltOp(instr,
+            &Assembler::vroundss, &Assembler::vroundsd,
+            &Assembler::vroundss, &Assembler::vroundsd,
+            kRoundDown, masm);
+        break;
+      case Express::CVTFLTINT:
+        GenerateXMMFltOp(instr,
+            &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
+            &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
+            masm);
         break;
       default: UNSUPPORTED;
     }
