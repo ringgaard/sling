@@ -99,7 +99,7 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         GenerateCompare(instr, masm, 30);
         break;
       case Express::CMPNGEUQ:
-        GenerateCompare(instr, masm, 4);
+        GenerateCompare(instr, masm, 25);
         break;
       case Express::AND:
         GenerateXMMFltOp(instr,
@@ -134,6 +134,15 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         break;
       case Express::CVTFLTINT:
         GenerateFltToInt(instr, masm);
+        break;
+      case Express::CVTINTFLT:
+        GenerateIntToFlt(instr, masm);
+        break;
+      case Express::SUBINT:
+        GenerateXMMFltOp(instr,
+            &Assembler::psubd, &Assembler::psubq,
+            &Assembler::psubd, &Assembler::psubq,
+            masm);
         break;
       default:
         LOG(INFO) << "Unsupported: " << instr->AsInstruction();
@@ -230,6 +239,18 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
       GenerateXMMFltOp(instr,
           &Assembler::cvttps2dq, &Assembler::cvttpd2dq,
           &Assembler::cvttps2dq, &Assembler::cvttpd2dq,
+          masm);
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate integer to float conversion.
+  void GenerateIntToFlt(Express::Op *instr, MacroAssembler *masm) {
+    if (CPU::Enabled(SSE2)) {
+      GenerateXMMFltOp(instr,
+          &Assembler::cvtdq2ps, &Assembler::cvtdq2pd,
+          &Assembler::cvtdq2ps, &Assembler::cvtdq2pd,
           masm);
     } else {
       UNSUPPORTED;

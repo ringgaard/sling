@@ -97,21 +97,27 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         GenerateCompare(instr, masm, 30);
         break;
       case Express::CMPNGEUQ:
-        GenerateCompare(instr, masm, 4);
+        GenerateCompare(instr, masm, 25);
         break;
       case Express::AND:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
         GenerateXMMFltOp(instr,
             &Assembler::andps, &Assembler::andpd,
             &Assembler::andps, &Assembler::andpd,
             masm);
         break;
       case Express::OR:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
         GenerateXMMFltOp(instr,
             &Assembler::orps, &Assembler::orpd,
             &Assembler::orps, &Assembler::orpd,
             masm);
         break;
       case Express::ANDNOT:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
         if (CPU::Enabled(SSE2)) {
           GenerateXMMFltOp(instr,
               &Assembler::andnps, &Assembler::andnpd,
@@ -132,6 +138,17 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         break;
       case Express::CVTFLTINT:
         GenerateFltToInt(instr, masm);
+        break;
+      case Express::CVTINTFLT:
+        GenerateIntToFlt(instr, masm);
+        break;
+      case Express::SUBINT:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
+        GenerateXMMFltOp(instr,
+            &Assembler::psubd, &Assembler::psubq,
+            &Assembler::psubd, &Assembler::psubq,
+            masm);
         break;
       default: UNSUPPORTED;
     }
@@ -166,10 +183,10 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
     } else {
       switch (type_) {
         case DT_FLOAT:
-          __ movaps(xmm(instr->dst), addr(instr->args[0]));
+          __ movss(xmm(instr->dst), addr(instr->args[0]));
           break;
         case DT_DOUBLE:
-          __ movapd(xmm(instr->dst), addr(instr->args[0]));
+          __ movsd(xmm(instr->dst), addr(instr->args[0]));
           break;
         default: UNSUPPORTED;
       }
@@ -218,9 +235,25 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
   // Generate float to integer conversion.
   void GenerateFltToInt(Express::Op *instr, MacroAssembler *masm) {
     if (CPU::Enabled(SSE2)) {
+      // TODO: use dword address for mem operands.
+      CHECK(instr->dst != -1 && instr->src != -1);
       GenerateXMMFltOp(instr,
           &Assembler::cvttps2dq, &Assembler::cvttpd2dq,
           &Assembler::cvttps2dq, &Assembler::cvttpd2dq,
+          masm);
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate integer to float conversion.
+  void GenerateIntToFlt(Express::Op *instr, MacroAssembler *masm) {
+    if (CPU::Enabled(SSE2)) {
+      // TODO: use dword address for mem operands.
+      CHECK(instr->dst != -1 && instr->src != -1);
+      GenerateXMMFltOp(instr,
+          &Assembler::cvtdq2ps, &Assembler::cvtdq2pd,
+          &Assembler::cvtdq2ps, &Assembler::cvtdq2pd,
           masm);
     } else {
       UNSUPPORTED;

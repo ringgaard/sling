@@ -4475,6 +4475,24 @@ void Assembler::cvtdq2ps(XMMRegister dst, const Operand &src) {
   emit_sse_operand(dst, src);
 }
 
+void Assembler::cvtdq2pd(XMMRegister dst, XMMRegister src) {
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0xE6);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::cvtdq2pd(XMMRegister dst, const Operand &src) {
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0xE6);
+  emit_sse_operand(dst, src);
+}
+
 void Assembler::movups(XMMRegister dst, XMMRegister src) {
   EnsureSpace ensure_space(this);
   if (src.low_bits() == 4) {

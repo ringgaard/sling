@@ -23,6 +23,7 @@ cc_binary(
     ":compare-kernels",
     "//base",
     "//file:posix",
+    "//myelin/kernel:arithmetic",
     "//myelin/kernel:avx",
     "//myelin/kernel:generic",
     "//myelin/kernel:sse",

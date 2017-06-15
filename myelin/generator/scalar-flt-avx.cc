@@ -138,21 +138,27 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         GenerateCompare(instr, masm, 30);
         break;
       case Express::CMPNGEUQ:
-        GenerateCompare(instr, masm, 4);
+        GenerateCompare(instr, masm, 25);
         break;
       case Express::AND:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
         GenerateXMMFltOp(instr,
             &Assembler::vandps, &Assembler::vandpd,
             &Assembler::vandps, &Assembler::vandpd,
             masm);
         break;
       case Express::OR:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
         GenerateXMMFltOp(instr,
             &Assembler::vorps, &Assembler::vorpd,
             &Assembler::vorps, &Assembler::vorpd,
             masm);
         break;
       case Express::ANDNOT:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
         GenerateXMMFltOp(instr,
             &Assembler::vandnps, &Assembler::vandnpd,
             &Assembler::vandnps, &Assembler::vandnpd,
@@ -171,9 +177,27 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
             kRoundDown, masm);
         break;
       case Express::CVTFLTINT:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
         GenerateXMMFltOp(instr,
             &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
             &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
+            masm);
+        break;
+      case Express::CVTINTFLT:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
+        GenerateXMMFltOp(instr,
+            &Assembler::vcvtdq2ps, &Assembler::vcvtdq2pd,
+            &Assembler::vcvtdq2ps, &Assembler::vcvtdq2pd,
+            masm);
+        break;
+      case Express::SUBINT:
+        // TODO: use dword address for mem operands.
+        CHECK(instr->dst != -1 && instr->src != -1);
+        GenerateXMMFltOp(instr,
+            &Assembler::vpsubd, &Assembler::vpsubq,
+            &Assembler::vpsubd, &Assembler::vpsubq,
             masm);
         break;
       default: UNSUPPORTED;
@@ -215,10 +239,10 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
     if (instr->src == -1) {
       switch (type_) {
         case DT_FLOAT:
-          __ vmovaps(xmm(instr->dst), addr(instr->args[0]));
+          __ movss(xmm(instr->dst), addr(instr->args[0]));
           break;
         case DT_DOUBLE:
-          __ vmovapd(xmm(instr->dst), addr(instr->args[0]));
+          __ movsd(xmm(instr->dst), addr(instr->args[0]));
           break;
         default: UNSUPPORTED;
       }

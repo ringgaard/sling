@@ -6,6 +6,7 @@
 #include "base/logging.h"
 #include "file/file.h"
 #include "myelin/compute.h"
+#include "myelin/kernel/arithmetic.h"
 #include "myelin/kernel/sse.h"
 #include "myelin/kernel/generic.h"
 #include "myelin/kernel/avx.h"
@@ -16,9 +17,13 @@ using namespace sling;
 using namespace sling::jit;
 using namespace sling::myelin;
 
-DEFINE_bool(disable_fma3, false, "Disable FMA3 support");
-DEFINE_bool(disable_avx2, false, "Disable AVX2 support");
-DEFINE_bool(disable_sse41, false, "Disable SSE 4.1 support");
+DEFINE_bool(sse, true, "SSE support");
+DEFINE_bool(sse2, true, "SSE2 support");
+DEFINE_bool(sse3, true, "SSE3 support");
+DEFINE_bool(sse41, true, "SSE 4.1 support");
+DEFINE_bool(avx, true, "AVX support");
+DEFINE_bool(avx2, true, "AVX2 support");
+DEFINE_bool(fma3, true, "FMA3 support");
 
 Library library;
 
@@ -81,11 +86,12 @@ void CheckFltMatMatMul(const string &test, const string &base) {
 
 void CheckFltFunc(const string &func,
                   const string &test,
-                  const string &base) {
+                  const string &base,
+                  bool negative = true) {
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator comp(library, func, test, base);
-  comp.AddInput("x", {10}, -10.0, 10.0);
-  comp.AddOutput("y", {10}, 1e-6);
+  comp.AddInput("x", {16}, negative ? -10.0 : 0.0, 10.0);
+  comp.AddOutput("y", {16}, 1e-6);
   CHECK(comp.Check(100));
 }
 
@@ -156,16 +162,27 @@ void CheckIntBinOp(const string &func,
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
-  if (FLAGS_disable_sse41) CPU::Disable(SSE4_1);
-  if (FLAGS_disable_fma3) CPU::Disable(FMA3);
-  if (FLAGS_disable_avx2) CPU::Disable(AVX2);
+  if (!FLAGS_sse) CPU::Disable(SSE);
+  if (!FLAGS_sse2) CPU::Disable(SSE2);
+  if (!FLAGS_sse3) CPU::Disable(SSE3);
+  if (!FLAGS_sse41) CPU::Disable(SSE4_1);
+  if (!FLAGS_avx) CPU::Disable(AVX);
+  if (!FLAGS_avx2) CPU::Disable(AVX2);
+  if (!FLAGS_fma3) CPU::Disable(FMA3);
 
   RegisterAVXKernels(&library);
   RegisterSSEKernels(&library);
+  RegisterArithmeticKernels(&library);
   RegisterGenericKernels(&library);
   RegisterGenericTransformations(&library);
 
   if (CPU::Enabled(SSE4_1)) {
+    CheckFltFunc("Log", "LogExpr", "GenFltLog", false);
+    CheckFltFunc("Exp", "ExpExpr", "GenFltExp");
+    CheckFltFunc("Sigmoid", "SigmoidExpr", "GenFltSigmoid");
+    CheckFltFunc("Tanh", "TanhExpr", "GenFltTanh");
+
+    CheckFltMatMul("GenFltVecMatMul", "GenFltVecMatMul");
     CheckFltMatMul("SSEFltVecMatMul", "GenFltVecMatMul");
     CheckFltMatMulAdd("SSEFltVecMatMulAdd", "GenFltVecMatMulAdd");
     CheckFltMatMulRelu("SSEFltVecMatMulRelu", "GenFltVecMatMulRelu");
@@ -186,9 +203,9 @@ int main(int argc, char *argv[]) {
 
     CheckFltMatMatMul("AVXFltMatMatMul", "GenFltMatMatMul");
 
-    CheckFltFunc("Tanh", "AVXFltTanh", "GenFltTanh");
     CheckFltFunc("Exp", "AVXFltExp", "GenFltExp");
     CheckFltFunc("Sigmoid", "AVXFltSigmoid", "GenFltSigmoid");
+    CheckFltFunc("Tanh", "AVXFltTanh", "GenFltTanh");
 
     CheckFltBinOp("Add", "AVXFltAdd", "GenFltAdd");
     CheckFltBinOp("Mul", "AVXFltMul", "GenFltMul");

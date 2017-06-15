@@ -97,6 +97,8 @@ class Express {
     ANDNOT,     // logical and not
     FLOOR,      // floor function
     CVTFLTINT,  // float to integer conversion
+    CVTINTFLT,  // integer to float conversion
+    SUBINT,     // integer subtraction
 
     INVALID,    // invalid operation
   };
@@ -104,7 +106,7 @@ class Express {
   // System-defined numeric constants.
   enum ConstantNumber {
     ZERO, ONE, N1, HALF, QUARTER, P9, N9, P126, P127, NLN2,
-    MINUS_INF, MIN_NORM_POS, INV_MANT_MASK,
+    MINUS_INF, MIN_NORM_POS, INV_MANT_MASK, INT127,
     CEPHES_SQRTHF,
     CEPHES_LOG_P0, CEPHES_LOG_P1, CEPHES_LOG_P2, CEPHES_LOG_P3, CEPHES_LOG_P4,
     CEPHES_LOG_P5, CEPHES_LOG_P6, CEPHES_LOG_P7, CEPHES_LOG_P8,
@@ -166,7 +168,9 @@ class Express {
 
     // Check if operation is commutative.
     bool commutative() const {
-      return type == ADD || type == MUL || type == MIN || type == MAX;
+      return type == ADD || type == MUL ||
+             type == MIN || type == MAX ||
+             type == AND || type == OR;
     }
 
     // Check if operation is a no-op.
@@ -237,6 +241,10 @@ class Express {
   Op *Operation(OpType type);
   Op *OperationBefore(Op *pos, OpType type);
   Op *OperationAfter(Op *pos, OpType type);
+
+  // Add function with with optional intrinsics expansion. The result variable
+  // is not set for the returned op.
+  Op *Function(OpType type, std::vector<Var *> &args, bool expand = false);
 
   // Lookup variable in expression or add a new variable if it does not exist.
   Var *Variable(VarType type, int id);
@@ -309,12 +317,6 @@ class Express {
   // Operations.
   const std::vector<Op *> ops() const { return ops_; }
 
-  // Look up op type for op name. Return INVALID for unknown op name.
-  static OpType Lookup(const string &opname);
-
-  // Return op name for op type.
-  static const string &OpName(OpType type);
-
   // Expression building.
   Var *Do(OpType type, Var *x) {
     Op *op = Operation(type);
@@ -353,6 +355,12 @@ class Express {
   Var *Exp(Var *x);
   Var *Sigmoid(Var *x);
   Var *Tanh(Var *x);
+
+  // Look up op type for op name. Return INVALID for unknown op name.
+  static OpType Lookup(const string &opname);
+
+  // Return op name for op type.
+  static const string &OpName(OpType type);
 
   // Return value for system-defined numeric constant.
   static float NumericFlt32(int number) { return constants[number].flt; }

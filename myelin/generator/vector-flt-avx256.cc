@@ -149,7 +149,7 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         GenerateCompare(instr, masm, 30);
         break;
       case Express::CMPNGEUQ:
-        GenerateCompare(instr, masm, 4);
+        GenerateCompare(instr, masm, 25);
         break;
       case Express::AND:
         GenerateYMMFltOp(instr,
@@ -185,6 +185,18 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         GenerateYMMFltOp(instr,
             &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
             &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
+            masm);
+        break;
+      case Express::CVTINTFLT:
+        GenerateYMMFltOp(instr,
+            &Assembler::vcvtdq2ps, &Assembler::vcvtdq2pd,
+            &Assembler::vcvtdq2ps, &Assembler::vcvtdq2pd,
+            masm);
+        break;
+      case Express::SUBINT:
+        GenerateYMMFltOp(instr,
+            &Assembler::vpsubd, &Assembler::vpsubq,
+            &Assembler::vpsubd, &Assembler::vpsubq,
             masm);
         break;
       default:

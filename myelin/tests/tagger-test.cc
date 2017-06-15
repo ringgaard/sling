@@ -218,7 +218,7 @@ int RNN::LookupWord(const string &word) const {
 
 void RNN::Execute(const std::vector<string> &tokens,
                   std::vector<int> *predictions) const {
-  static const int repeats = 10000;
+  static const int repeats = 1;
 
   RNNInstance data(lr_, lr_c_, lr_h_, 0, tokens.size());
   for (int r = 0; r < repeats; ++r) {
@@ -320,21 +320,25 @@ int main(int argc, char *argv[]) {
   const string testdata = "local/tagger_rnn.flow";
   rnn.Load(testdata);
 
+  std::vector<string> sentence = {
+    "John", "hit", "the", "ball", "with", "a", "bat",
+  };
+  std::vector<int> golden = {
+    2, 10, 3, 0, 1, 3, 0,
+  };
+
   std::vector<int> predictions;
-  rnn.Execute({"John", "hit", "the", "ball", "with", "a", "bat"}, &predictions);
+  rnn.Execute(sentence, &predictions);
 
   for (int i = 0; i < predictions.size(); ++i) {
     LOG(INFO) << "pred: " << predictions[i];
   }
 
-  CHECK_EQ(predictions.size(), 7);
-  CHECK_EQ(predictions[0], 2);
-  CHECK_EQ(predictions[1], 10);
-  CHECK_EQ(predictions[2], 3);
-  CHECK_EQ(predictions[3], 0);
-  CHECK_EQ(predictions[4], 1);
-  CHECK_EQ(predictions[5], 3);
-  CHECK_EQ(predictions[6], 0);
+  CHECK_EQ(predictions.size(), sentence.size());
+  for (int i = 0; i < predictions.size(); ++i) {
+    CHECK_EQ(golden[i], predictions[i])
+        << i << " gold: " << golden[i] << " predicted: " << predictions[i];
+  }
 
   return 0;
 }

@@ -181,6 +181,7 @@ Express::Constant Express::constants[] = {
   INTCONST(0xff800000),   // MINUS_INF
   INTCONST(0x00800000),   // MIN_NORM_POS
   INTCONST(~0x7f800000),  // INV_MANT_MASK
+  INTCONST(0x7f),         // INT127
 
   // Polynomial coefficients for natural logarithm.
   FLTCONST(0.707106781186547524),  // CEPHES_SQRTHF
@@ -291,34 +292,10 @@ class RecipeParser {
     if (current() != ')') Error("Expected ')' in expression");
     next();
 
-    // Expand intrinsic functions.
+    // Create operation.
     Express::OpType optype = Express::Lookup(opname);
     CHECK(optype != Express::INVALID) << opname;
-    if (expand_ && args.size() == 1) {
-      Express::Var *result;
-      switch (optype) {
-        case Express::LOG: result = expr_->Log(args[0]); break;
-        case Express::EXP: result = expr_->Exp(args[0]); break;
-        case Express::SIGMOID: result = expr_->Sigmoid(args[0]); break;
-        case Express::TANH: result = expr_->Tanh(args[0]); break;
-        default:
-          // Operation does not support expansion.
-          result = nullptr;
-      }
-
-      // Create result node.
-      if (result != nullptr) {
-        Express::Op *op = expr_->Operation(Express::MOV);
-        op->AddArgument(result);
-        return op;
-      }
-    }
-
-    // Create new operation.
-    Express::Op *op = expr_->Operation(optype);
-    for (auto *arg : args) op->AddArgument(arg);
-
-    return op;
+    return expr_->Function(optype, args, expand_);
   }
 
   // Parse argument.
@@ -469,6 +446,34 @@ Express::Op *Express::OperationAfter(Op *pos, OpType type) {
   auto f = std::find(ops_.begin(), ops_.end(), pos);
   CHECK(f != ops_.end());
   ops_.insert(f + 1, op);
+  return op;
+}
+
+Express::Op *Express::Function(OpType type,
+                               std::vector<Var *> &args,
+                               bool expand) {
+  // Expand intrinsics.
+  if (expand && args.size() == 1) {
+    Express::Var *result;
+    switch (type) {
+      case Express::LOG: result = Log(args[0]); break;
+      case Express::EXP: result = Exp(args[0]); break;
+      case Express::SIGMOID: result = Sigmoid(args[0]); break;
+      case Express::TANH: result = Tanh(args[0]); break;
+      default: result = nullptr;
+    }
+
+    // Create result node.
+    if (result != nullptr) {
+      Express::Op *op = Operation(Express::MOV);
+      op->AddArgument(result);
+      return op;
+    }
+  }
+
+  // Create new op with arguments.
+  Express::Op *op = Operation(type);
+  for (Var *arg : args) op->AddArgument(arg);
   return op;
 }
 
@@ -1301,28 +1306,27 @@ int Express::NumRegs() const {
 }
 
 // Natural logarithm.
-// Computes log(x) as log(2^e * m) = C*e + log(m), where the constant C=log(2)
-// and m is in the range [sqrt(1/2),sqrt(2)). In this range, the logarithm can
-// be easily approximated by a polynomial centered on m=1 for stability.
-// See also: https://git.io/vHyVR
+// See also: http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
 Express::Var *Express::Log(Var *x) {
   // Make valid and zero mask.
   Var *invalid_mask = Do(CMPNGEUQ, x, Number(ZERO));
-  Var *iszero_mask = Do(CMPEQOQ, x, Number(ZERO));
 
   // Truncate input values to the minimum positive normal.
   x = Max(x, Number(MIN_NORM_POS));
-  Var *emm0 = Do(SHR23, x);
-  Var *e = Sub(emm0, Number(P126));
 
-  // Set the exponents to -1, i.e. x are in the range [0.5,1).
+  // Part 1: x = frexpf(x, e).
+  Var *emm0 = Do(SHR23, x);
+  emm0 = Do(SUBINT, emm0, Number(INT127));
+  Var *e = Add(Do(CVTINTFLT, emm0), Number(ONE));
+
+  // Keep only the fractional part.
   x = Do(AND, x, Number(INV_MANT_MASK));
   x = Do(OR, x, Number(HALF));
 
-  // Shift the inputs from the range [0.5,1) to [sqrt(1/2),sqrt(2)) and shift
-  // by -1. The values are then centered around 0, which improves the stability
-  // of the polynomial evaluation.
-  //   if( x < SQRTHF ) {
+  // Part 2: Shift the inputs from the range [0.5,1) to [sqrt(1/2),sqrt(2)) and
+  // shift by -1. The values are then centered around 0, which improves the
+  // stability of the polynomial evaluation.
+  //   if (x < SQRTHF) {
   //     e -= 1;
   //     x = x + x - 1.0;
   //   } else {
@@ -1333,35 +1337,32 @@ Express::Var *Express::Log(Var *x) {
   x = Sub(x, Number(ONE));
   e = Sub(e, Do(AND, Number(ONE), mask));
   x = Add(x, tmp);
+  Var *z = Mul(x, x);
 
-  Var *x2 = Mul(x, x);
-  Var *x3 = Mul(x2, x);
-
-  // Evaluate the polynomial approximant of degree 8 in three parts.
-  Var *y, *y1, *y2;
-  y = MulAdd(Number(CEPHES_LOG_P0), x, Number(CEPHES_LOG_P1));
-  y1 = MulAdd(Number(CEPHES_LOG_P3), x, Number(CEPHES_LOG_P4));
-  y2 = MulAdd(Number(CEPHES_LOG_P6), x, Number(CEPHES_LOG_P7));
+  // Part 3: Compute the polynomial approximation.
+  Var *y = Number(CEPHES_LOG_P0);
+  y = MulAdd(y, x, Number(CEPHES_LOG_P1));
   y = MulAdd(y, x, Number(CEPHES_LOG_P2));
-  y1 = MulAdd(y1, x, Number(CEPHES_LOG_P5));
-  y2 = MulAdd(y2, x, Number(CEPHES_LOG_P8));
-  y = MulAdd(y, x3, y1);
-  y = MulAdd(y, x3, y2);
-  y = Mul(y, x3);
+  y = MulAdd(y, x, Number(CEPHES_LOG_P3));
+  y = MulAdd(y, x, Number(CEPHES_LOG_P4));
+  y = MulAdd(y, x, Number(CEPHES_LOG_P5));
+  y = MulAdd(y, x, Number(CEPHES_LOG_P6));
+  y = MulAdd(y, x, Number(CEPHES_LOG_P7));
+  y = MulAdd(y, x, Number(CEPHES_LOG_P8));
+  y = Mul(y, x);
+  y = Mul(y, z);
 
-  // Add the logarithm of the exponent back to the result of the interpolation.
-  y1 = Mul(e, Number(CEPHES_LOG_Q1));
-  tmp = Mul(x2, Number(HALF));
-  y = Add(y, y1);
-  x = Sub(x, tmp);
-  y2 = Mul(e, Number(CEPHES_LOG_Q2));
+  tmp = Mul(e, Number(CEPHES_LOG_Q1));
+  y = Add(y, tmp);
+  tmp = Mul(z, Number(HALF));
+  y = Sub(y, tmp);
+  tmp = Mul(e, Number(CEPHES_LOG_Q2));
   x = Add(x, y);
-  x = Add(x, y2);
+  x = Add(x, tmp);
 
-  // Filter out invalid inputs, i.e. negative arg will be NAN, 0 will be -INF.
-  return Do(OR,
-            Do(ANDNOT, iszero_mask, Do(OR, x, invalid_mask)),
-            Do(AND, iszero_mask, Number(MINUS_INF)));
+  x = Do(OR, x, invalid_mask);  // negative arg will be NAN
+
+  return x;
 }
 
 // Exponential function.
@@ -1419,18 +1420,20 @@ Express::Var *Express::Tanh(Var *x) {
   Var *x2 = Mul(x, x);
 
   // Evaluate the numerator polynomial p.
-  Var *p = MulAdd(x2, Number(ALPHA_13), Number(ALPHA_11));
-  p = MulAdd(x2, p, Number(ALPHA_9));
-  p = MulAdd(x2, p, Number(ALPHA_7));
-  p = MulAdd(x2, p, Number(ALPHA_5));
+  Var *p = Do(MOV, Number(ALPHA_1));
   p = MulAdd(x2, p, Number(ALPHA_3));
-  p = MulAdd(x2, p, Number(ALPHA_1));
+  p = MulAdd(x2, p, Number(ALPHA_5));
+  p = MulAdd(x2, p, Number(ALPHA_7));
+  p = MulAdd(x2, p, Number(ALPHA_9));
+  p = MulAdd(x2, p, Number(ALPHA_11));
+  p = MulAdd(x2, p, Number(ALPHA_13));
   p = Mul(x, p);
 
   // Evaluate the denominator polynomial q.
-  Var *q = MulAdd(x2, Number(BETA_6), Number(BETA_4));
+  Var *q = Do(MOV, Number(BETA_0));
   q = MulAdd(x2, q, Number(BETA_2));
-  q = MulAdd(x2, q, Number(BETA_0));
+  q = MulAdd(x2, q, Number(BETA_4));
+  q = MulAdd(x2, q, Number(BETA_6));
 
   // Divide the numerator by the denominator.
   return Div(p, q);

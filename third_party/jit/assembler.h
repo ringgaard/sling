@@ -839,6 +839,8 @@ class Assembler : public CodeGenerator {
   void pshufd(XMMRegister dst, const Operand &src, uint8_t shuffle);
   void cvtdq2ps(XMMRegister dst, XMMRegister src);
   void cvtdq2ps(XMMRegister dst, const Operand &src);
+  void cvtdq2pd(XMMRegister dst, XMMRegister src);
+  void cvtdq2pd(XMMRegister dst, const Operand &src);
 
   // AVX instructions.
   void vinstr(byte op, XMMRegister dst, XMMRegister src1, XMMRegister src2,
@@ -1894,6 +1896,32 @@ class Assembler : public CodeGenerator {
   }
   void vcvttps2dq(YMMRegister dst, const Operand &src) {
     vinstr(0x5b, dst, ymm0, src, kF3, k0F, kWIG);
+  }
+
+  void vcvtdq2pd(XMMRegister dst, XMMRegister src) {
+    vinstr(0x6e, dst, xmm0, src, kF3, k0F, kWIG);
+  }
+  void vcvtdq2pd(XMMRegister dst, const Operand &src) {
+    vinstr(0x6e, dst, xmm0, src, kF3, k0F, kWIG);
+  }
+  void vcvtdq2pd(YMMRegister dst, YMMRegister src) {
+    vinstr(0x6e, dst, ymm0, src, kF3, k0F, kWIG);
+  }
+  void vcvtdq2pd(YMMRegister dst, const Operand &src) {
+    vinstr(0x6e, dst, ymm0, src, kF3, k0F, kWIG);
+  }
+
+  void vcvtdq2ps(XMMRegister dst, XMMRegister src) {
+    vinstr(0x5b, dst, xmm0, src, kNone, k0F, kWIG);
+  }
+  void vcvtdq2ps(XMMRegister dst, const Operand &src) {
+    vinstr(0x5b, dst, xmm0, src, kNone, k0F, kWIG);
+  }
+  void vcvtdq2ps(YMMRegister dst, YMMRegister src) {
+    vinstr(0x5b, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+  void vcvtdq2ps(YMMRegister dst, const Operand &src) {
+    vinstr(0x5b, dst, ymm0, src, kNone, k0F, kWIG);
   }
 
   void vzeroall();

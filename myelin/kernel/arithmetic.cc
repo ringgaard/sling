@@ -56,13 +56,15 @@ static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
     const string &recipe = op->GetAttr("expr");
     if (!recipe.empty()) expr->Parse(recipe, expand);
   } else {
-    // Add op with inputs and outputs.
+    // Add op with inputs and output.
     CHECK_EQ(op->outdegree(), 1);
-    Express::Op *func = expr->Operation(OpType(op->type));
+    std::vector<Express::Var *> args(op->indegree());
     for (int i = 0; i < op->indegree(); ++i) {
-      func->AddArgument(expr->Variable(Express::INPUT, i));
+      args[i] = expr->Variable(Express::INPUT, i);
     }
+    Express::Op *func = expr->Function(OpType(op->type), args, expand);
     func->Assign(expr->Variable(Express::OUTPUT, 0));
+    expr->CompactTempVars();
   }
 
   // Mark constant inputs.
@@ -80,13 +82,15 @@ static void InitExpression(const Step *step, Express *expr, bool expand) {
     const string &recipe = step->GetAttr("expr");
     if (!recipe.empty()) expr->Parse(recipe, expand);
   } else {
-    // Add op with inputs and outputs.
+    // Add op with inputs and output.
     CHECK_EQ(step->outdegree(), 1);
-    Express::Op *func = expr->Operation(OpType(step->type()));
+    std::vector<Express::Var *> args(step->indegree());
     for (int i = 0; i < step->indegree(); ++i) {
-      func->AddArgument(expr->Variable(Express::INPUT, i));
+      args[i] = expr->Variable(Express::INPUT, i);
     }
+    Express::Op *func = expr->Function(OpType(step->type()), args, expand);
     func->Assign(expr->Variable(Express::OUTPUT, 0));
+    expr->CompactTempVars();
   }
 
   // Mark constant inputs.
@@ -333,6 +337,10 @@ static void RegisterCalculate(Library *library) {
   library->Register(new Calculate("MaxExpr", "Maximum"));
   library->Register(new Calculate("MinExpr", "Minimum"));
   library->Register(new Calculate("ReluExpr", "Relu"));
+  library->Register(new Calculate("LogExpr", "Log"));
+  library->Register(new Calculate("ExpExpr", "Exp"));
+  library->Register(new Calculate("SigmoidExpr", "Sigmoid"));
+  library->Register(new Calculate("TanhExpr", "Tanh"));
 }
 
 // Replace ops with constant input variables with new computed constant
