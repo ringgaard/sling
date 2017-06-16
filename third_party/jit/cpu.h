@@ -186,7 +186,7 @@ class CPU {
   // Cache line size.
   static unsigned cache_line_size;
 
-  // VZEROUPPER needed on 128/256 bit transitions.
+  // VZEROUPPER needed on AVX/SSE transitions.
   static bool vzero_needed;
 
   // CPU features are only probed once.

@@ -191,6 +191,12 @@ Register MacroAssembler::instance() const {
 }
 
 void MacroAssembler::Prolog() {
+  // Zero upper part of YMM register if CPU needs it to avoid AVX-SSE transition
+  // penalties.
+  if (CPU::VZeroNeeded()) {
+    vzeroupper();
+  }
+
   // Reserve timestamp register.
   if (timing_) {
     rr_.reserve(tsreg);
@@ -207,11 +213,6 @@ void MacroAssembler::Prolog() {
   if (rr_.saved(r13)) pushq(r13);
   if (rr_.saved(r14)) pushq(r14);
   if (rr_.saved(r15)) pushq(r15);
-
-  // Zero upper part of YMM register if CPU needs it.
-  if (CPU::VZeroNeeded()) {
-    vzeroupper();
-  }
 
   // Get initial timestamp counter if timing instrumentation is active.
   if (timing_) {
@@ -232,6 +233,12 @@ void MacroAssembler::Epilog() {
 
   // Restore instance data register.
   popq(datareg);
+
+  // Zero upper part of YMM register if CPU needs it to avoid AVX-SSE transition
+  // penalties.
+  if (CPU::VZeroNeeded()) {
+    vzeroupper();
+  }
 
   // Generate return instruction.
   ret(0);

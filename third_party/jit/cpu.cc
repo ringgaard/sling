@@ -263,10 +263,11 @@ void CPU::Initialize() {
 
   cache_line_size = cpu.cache_line_size();
 
-  if (cpu.has_avx2()) {
-    vzero_needed = cpu.family() == 6 && cpu.model() < 0x5E;
-  } else {
-    vzero_needed = false;
+  vzero_needed = false;
+  if (cpu.has_avx()) {
+#ifndef __AVX__
+    vzero_needed = true;
+#endif
   }
 }
 
