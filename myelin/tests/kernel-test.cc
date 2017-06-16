@@ -17,6 +17,11 @@ using namespace sling;
 using namespace sling::jit;
 using namespace sling::myelin;
 
+DEFINE_string(test, "", "Kernel to be tested");
+DEFINE_bool(ignore_errors, false, "Ignore test errors");
+DEFINE_double(matmul_accuracy, 1e-2, "Maximum error on matmul operations");
+DEFINE_double(func_accuracy, 1e-6, "Maximum error on function operations");
+
 DEFINE_bool(sse, true, "SSE support");
 DEFINE_bool(sse2, true, "SSE2 support");
 DEFINE_bool(sse3, true, "SSE3 support");
@@ -27,49 +32,58 @@ DEFINE_bool(fma3, true, "FMA3 support");
 
 Library library;
 
+void CheckTest(bool success) {
+  if (!FLAGS_ignore_errors) CHECK(success);
+}
+
 void CheckFltMatMul(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = 1; d <= 128; ++d) {
     for (int w = 1; w <= 128; ++w) {
       FltKernelComparator matmul(library, "MatMul", test, base);
       matmul.AddInput("x", {1, d}, -100.0, 100.0);
       matmul.AddInput("W", {d, w}, -100.0, 100.0);
-      matmul.AddOutput("y", {1, w}, 0.1);
-      CHECK(matmul.Check(3)) << "MatMul " << d << " " << w;
+      matmul.AddOutput("y", {1, w}, FLAGS_matmul_accuracy);
+      CheckTest(matmul.Check(3));
     }
   }
 }
 
 void CheckFltMatMulAdd(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulAdd", test, base);
   matmul.AddInput("x", {1, 10}, -10.0, 10.0);
   matmul.AddInput("W", {10, 100}, -10.0, 10.0);
   matmul.AddInput("b", {100}, -10.0, 10.0);
-  matmul.AddOutput("y", {1, 100}, 1e-2);
-  CHECK(matmul.Check(100));
+  matmul.AddOutput("y", {1, 100}, FLAGS_matmul_accuracy);
+  CheckTest(matmul.Check(100));
 }
 
 void CheckFltMatMulRelu(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulRelu", test, base);
   matmul.AddInput("x", {1, 10}, -10.0, 10.0);
   matmul.AddInput("W", {10, 100}, -10.0, 10.0);
-  matmul.AddOutput("y", {1, 100}, 1e-2);
-  CHECK(matmul.Check(100));
+  matmul.AddOutput("y", {1, 100}, FLAGS_matmul_accuracy);
+  CheckTest(matmul.Check(100));
 }
 
 void CheckFltMatMulAddRelu(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulAddRelu", test, base);
   matmul.AddInput("x", {1, 10}, -10.0, 10.0);
   matmul.AddInput("W", {10, 100}, -10.0, 10.0);
   matmul.AddInput("b", {100}, -10.0, 10.0);
-  matmul.AddOutput("y", {1, 100}, 1e-2);
-  CHECK(matmul.Check(100));
+  matmul.AddOutput("y", {1, 100}, FLAGS_matmul_accuracy);
+  CheckTest(matmul.Check(100));
 }
 
 void CheckFltMatMatMul(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int i = 1; i <= 64; ++i) {
     for (int j = 1; j <= 64; ++j) {
@@ -77,8 +91,8 @@ void CheckFltMatMatMul(const string &test, const string &base) {
         FltKernelComparator matmul(library, "MatMul", test, base);
         matmul.AddInput("A", {i, j}, -10.0, 10.0);
         matmul.AddInput("B", {j, k}, -10.0, 10.0);
-        matmul.AddOutput("C", {i, k}, 1e-2);
-        CHECK(matmul.Check(2));
+        matmul.AddOutput("C", {i, k}, FLAGS_matmul_accuracy);
+        CheckTest(matmul.Check(2));
       }
     }
   }
@@ -88,74 +102,79 @@ void CheckFltFunc(const string &func,
                   const string &test,
                   const string &base,
                   bool negative = true) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator comp(library, func, test, base);
   comp.AddInput("x", {16}, negative ? -10.0 : 0.0, 10.0);
-  comp.AddOutput("y", {16}, 1e-6);
-  CHECK(comp.Check(100));
+  comp.AddOutput("y", {16}, FLAGS_func_accuracy);
+  CheckTest(comp.Check(100));
 }
 
 void CheckFltBinOp(const string &func,
                    const string &test,
                    const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator comp(library, func, test, base);
   comp.AddInput("a", {10}, -10.0, 10.0);
   comp.AddInput("b", {10}, -10.0, 10.0);
-  comp.AddOutput("c", {10}, 1e-6);
-  CHECK(comp.Check(100));
+  comp.AddOutput("c", {10}, FLAGS_func_accuracy);
+  CheckTest(comp.Check(100));
 }
 
 void CheckMulTwoAdd(const string &func,
                     const string &test,
                     const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator comp(library, func, test, base);
   comp.AddInput("x0", {10}, -10.0, 10.0);
   comp.AddInput("x1", {10}, -10.0, 10.0);
   comp.AddInput("x2", {10}, -10.0, 10.0);
   comp.AddInput("x3", {10}, -10.0, 10.0);
-  comp.AddOutput("y", {10}, 1e-6);
-  CHECK(comp.Check(100));
+  comp.AddOutput("y", {10}, FLAGS_func_accuracy);
+  CheckTest(comp.Check(100));
 }
 
 void CheckIntMatMul(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   IntKernelComparator matmul(library, "MatMul", test, base);
   matmul.AddInput("x", {1, 10}, DT_INT8);
   matmul.AddInput("W", {10, 100}, DT_INT8);
   matmul.AddOutput("y", {1, 100}, DT_INT16);
-  CHECK(matmul.Check(100));
+  CheckTest(matmul.Check(100));
 }
 
 void CheckIntBinOp(const string &func,
                    const string &test,
                    const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int w = 1; w <= 128; ++w) {
     IntKernelComparator comp8(library, func, test, base);
     comp8.AddInput("a", {w}, DT_INT8);
     comp8.AddInput("b", {w}, DT_INT8);
     comp8.AddOutput("c", {w}, DT_INT8);
-    CHECK(comp8.Check(10));
+    CheckTest(comp8.Check(10));
 
     IntKernelComparator comp16(library, func, test, base);
     comp16.AddInput("a", {w}, DT_INT16);
     comp16.AddInput("b", {w}, DT_INT16);
     comp16.AddOutput("c", {w}, DT_INT16);
-    CHECK(comp16.Check(10));
+    CheckTest(comp16.Check(10));
 
     IntKernelComparator comp32(library, func, test, base);
     comp32.AddInput("a", {w}, DT_INT32);
     comp32.AddInput("b", {w}, DT_INT32);
     comp32.AddOutput("c", {w}, DT_INT32);
-    CHECK(comp32.Check(10));
+    CheckTest(comp32.Check(10));
 
     IntKernelComparator comp64(library, func, test, base);
     comp64.AddInput("a", {w}, DT_INT64);
     comp64.AddInput("b", {w}, DT_INT64);
     comp64.AddOutput("c", {w}, DT_INT64);
-    CHECK(comp64.Check(10));
+    CheckTest(comp64.Check(10));
   }
 }
 

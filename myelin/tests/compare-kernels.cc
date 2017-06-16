@@ -33,9 +33,9 @@ class FloatPRNG {
     if (FLAGS_intrand) {
       val = round(val);
     } else if (val >  0.0 && val < kMinimum) {
-      val = kMinimum;
+      val = 0;
     } else if (val <  0.0 && val > -kMinimum) {
-      val = -kMinimum;
+      val = 0;
     }
     return val;
   }
