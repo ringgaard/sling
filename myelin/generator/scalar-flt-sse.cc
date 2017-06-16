@@ -28,6 +28,19 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
   void Reserve() override {
     // Reserve XMM registers.
     index_->ReserveXMMRegisters(instructions_.NumRegs());
+
+    // Allocate auxiliary registers.
+    int num_mm_aux = 0;
+    if (instructions_.Has(Express::AND) ||
+        instructions_.Has(Express::OR) ||
+        instructions_.Has(Express::ANDNOT) ||
+        instructions_.Has(Express::CVTFLTINT) ||
+        instructions_.Has(Express::CVTINTFLT) ||
+        instructions_.Has(Express::SUBINT)) {
+      num_mm_aux = std::max(num_mm_aux, 1);
+    }
+
+    index_->ReserveAuxXMMRegisters(num_mm_aux);
   }
 
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
@@ -100,29 +113,12 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         GenerateCompare(instr, masm, 25);
         break;
       case Express::AND:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
-        GenerateXMMFltOp(instr,
-            &Assembler::andps, &Assembler::andpd,
-            &Assembler::andps, &Assembler::andpd,
-            masm);
-        break;
       case Express::OR:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
-        GenerateXMMFltOp(instr,
-            &Assembler::orps, &Assembler::orpd,
-            &Assembler::orps, &Assembler::orpd,
-            masm);
+        GenerateRegisterOp(instr, masm);
         break;
       case Express::ANDNOT:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
         if (CPU::Enabled(SSE2)) {
-          GenerateXMMFltOp(instr,
-              &Assembler::andnps, &Assembler::andnpd,
-              &Assembler::andnps, &Assembler::andnpd,
-              masm);
+          GenerateRegisterOp(instr, masm);
         } else {
           UNSUPPORTED;
         }
@@ -134,21 +130,25 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         GenerateShift(instr, masm, true, 23);
         break;
       case Express::FLOOR:
-        GenerateFloor(instr, masm);
+        if (CPU::Enabled(SSE4_1)) {
+          GenerateXMMFltOp(instr,
+              &Assembler::roundss, &Assembler::roundsd,
+              &Assembler::roundss, &Assembler::roundsd,
+              kRoundDown, masm);
+        } else {
+          UNSUPPORTED;
+        }
         break;
       case Express::CVTFLTINT:
-        GenerateFltToInt(instr, masm);
-        break;
       case Express::CVTINTFLT:
-        GenerateIntToFlt(instr, masm);
+        if (CPU::Enabled(SSE2)) {
+          GenerateRegisterOp(instr, masm);
+        } else {
+          UNSUPPORTED;
+        }
         break;
       case Express::SUBINT:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
-        GenerateXMMFltOp(instr,
-            &Assembler::psubd, &Assembler::psubq,
-            &Assembler::psubd, &Assembler::psubq,
-            masm);
+        GenerateRegisterOp(instr, masm);
         break;
       default: UNSUPPORTED;
     }
@@ -220,52 +220,56 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
     }
   }
 
-  // Generate floor rounding.
-  void GenerateFloor(Express::Op *instr, MacroAssembler *masm) {
-    if (CPU::Enabled(SSE4_1)) {
-      GenerateXMMFltOp(instr,
-          &Assembler::roundss, &Assembler::roundsd,
-          &Assembler::roundss, &Assembler::roundsd,
-          kRoundDown, masm);
-    } else {
-      UNSUPPORTED;
-    }
-  }
-
-  // Generate float to integer conversion.
-  void GenerateFltToInt(Express::Op *instr, MacroAssembler *masm) {
-    if (CPU::Enabled(SSE2)) {
-      // TODO: use dword address for mem operands.
-      CHECK(instr->dst != -1 && instr->src != -1);
-      GenerateXMMFltOp(instr,
-          &Assembler::cvttps2dq, &Assembler::cvttpd2dq,
-          &Assembler::cvttps2dq, &Assembler::cvttpd2dq,
-          masm);
-    } else {
-      UNSUPPORTED;
-    }
-  }
-
-  // Generate integer to float conversion.
-  void GenerateIntToFlt(Express::Op *instr, MacroAssembler *masm) {
-    if (CPU::Enabled(SSE2)) {
-      // TODO: use dword address for mem operands.
-      CHECK(instr->dst != -1 && instr->src != -1);
-      GenerateXMMFltOp(instr,
-          &Assembler::cvtdq2ps, &Assembler::cvtdq2pd,
-          &Assembler::cvtdq2ps, &Assembler::cvtdq2pd,
-          masm);
-    } else {
-      UNSUPPORTED;
-    }
-  }
-
   // Generate compare.
   void GenerateCompare(Express::Op *instr, MacroAssembler *masm, int8 code) {
     GenerateXMMFltOp(instr,
         &Assembler::cmpss, &Assembler::cmpsd,
         &Assembler::cmpss, &Assembler::cmpsd,
         code, masm);
+  }
+
+  // Generate scalar op that loads memory operands into a register first.
+  void GenerateRegisterOp(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->dst != -1);
+    XMMRegister dst = xmm(instr->dst);
+    XMMRegister src;
+    if (instr->src != -1) {
+      src = xmm(instr->src);
+    } else {
+      src = xmmaux(0);
+    }
+
+    switch (type_) {
+      case DT_FLOAT:
+        if (instr->src == -1) {
+          __ movss(src, addr(instr->args[1]));
+        }
+        switch (instr->type) {
+          case Express::AND: __ andps(dst, src); break;
+          case Express::OR: __ orps(dst, src); break;
+          case Express::ANDNOT: __ andnps(dst, src); break;
+          case Express::CVTFLTINT: __ cvttps2dq(dst, src); break;
+          case Express::CVTINTFLT: __ cvtdq2ps(dst, src); break;
+          case Express::SUBINT: __ psubd(dst, src); break;
+          default: UNSUPPORTED;
+        }
+        break;
+      case DT_DOUBLE:
+        if (instr->src == -1) {
+          __ movsd(src, addr(instr->args[1]));
+        }
+        switch (instr->type) {
+          case Express::AND: __ andpd(dst, src); break;
+          case Express::OR: __ orpd(dst, src); break;
+          case Express::ANDNOT: __ andnpd(dst, src); break;
+          case Express::CVTFLTINT: __ cvttpd2dq(dst, src); break;
+          case Express::CVTINTFLT: __ cvtdq2pd(dst, src); break;
+          case Express::SUBINT: __ psubq(dst, src); break;
+          default: UNSUPPORTED;
+        }
+        break;
+      default: UNSUPPORTED;
+    }
   }
 };
 

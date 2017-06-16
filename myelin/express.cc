@@ -136,6 +136,8 @@ static std::map<string, Express::OpType> optypes = {
   {"AndNot", Express::ANDNOT},
   {"Floor", Express::FLOOR},
   {"CvtFltInt", Express::CVTFLTINT},
+  {"CvtIntFlt", Express::CVTINTFLT},
+  {"SubInt", Express::SUBINT},
 };
 
 static const string opname[] = {
@@ -148,7 +150,7 @@ static const string opname[] = {
   "CmpEqOQ", "CmpLtOQ", "CmpGtOQ", "CmpNgeUQ",
   "Shr23", "Shl23",
   "And", "Or", "AndNot",
-  "Floor", "CvtFltInt",
+  "Floor", "CvtFltInt", "CvtIntFlt", "SubInt",
   "???",
 };
 
