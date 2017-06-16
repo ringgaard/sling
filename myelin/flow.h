@@ -157,12 +157,12 @@ class Transformations {
   const std::vector<Combination> &combinations() const { return combinations_; }
 
   // Flow transformation components.
-  const std::vector<Transformer *> transformers() const {
+  const std::vector<Transformer *> &transformers() const {
     return transformers_;
   }
 
   // Type inference components.
-  const std::vector<Typer *> typers() const { return typers_; }
+  const std::vector<Typer *> &typers() const { return typers_; }
 
  private:
   // Identity operations.

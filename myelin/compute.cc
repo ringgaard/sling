@@ -669,8 +669,8 @@ Tensor *Network::GetParameter(const string &name) const {
   return f == names_.end() ? nullptr : f->second;
 }
 
-bool CompareUsage(const std::pair<int, Tensor *> &a,
-                  const std::pair<int, Tensor *> &b) {
+static bool CompareUsage(const std::pair<int, Tensor *> &a,
+                         const std::pair<int, Tensor *> &b) {
   if (a.first == b.first) {
     // Inputs are sorted before outputs.
     Tensor *va = a.second;

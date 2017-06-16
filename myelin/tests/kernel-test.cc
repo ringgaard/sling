@@ -41,6 +41,7 @@ void CheckFltMatMul(const string &test, const string &base) {
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = 1; d <= 128; ++d) {
     for (int w = 1; w <= 128; ++w) {
+      VLOG(3) << "Testing " << d << "x" << w;
       FltKernelComparator matmul(library, "MatMul", test, base);
       matmul.AddInput("x", {1, d}, -100.0, 100.0);
       matmul.AddInput("W", {d, w}, -100.0, 100.0);
