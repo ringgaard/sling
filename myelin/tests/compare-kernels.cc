@@ -24,6 +24,56 @@ namespace myelin {
 static const float kEpsilon = 1e-6;
 static const float kMinimum = 1e-3;
 
+static const int redzone_size = 128;
+static char redzone[redzone_size] =
+  "<- START *REDZONE* Don't overwrite this region of memory!"
+  "Memory checked on deallocation. Achtung! *REDZONE* END ->";
+
+// Debug runtime with memory checking.
+class DebugRuntime : public Runtime {
+ public:
+  void AllocateInstance(Instance *instance) override {
+    // Allocate space for redzone on both sides of instance buffer.
+    int alignment = instance->alignment();
+    CHECK(redzone_size % alignment == 0);
+    int size = instance->size() + 2 * redzone_size;
+    char *data;
+    int rc = posix_memalign(reinterpret_cast<void **>(&data), alignment, size);
+    CHECK_EQ(rc, 0) << "Cannot allocate memory, size: " << size
+                  << " alignment: " << alignment;
+
+    // Initialize redzones.
+    memcpy(data, redzone, redzone_size);
+    memset(data + redzone_size, 0, instance->size());
+    memcpy(data + redzone_size + instance->size(), redzone, redzone_size);
+
+    // Return data buffer between the redzones.
+    instance->set_data(data + redzone_size);
+  }
+
+  void FreeInstance(Instance *instance) override {
+    // Check redzones.
+    char *front = instance->data() - redzone_size;
+    char *back = instance->data() + instance->size();
+    CHECK(memcmp(front, redzone, redzone_size) == 0) << "Data corruption";
+    CHECK(memcmp(back, redzone, redzone_size) == 0) << "Data corruption";
+    free(front);
+  }
+
+  void ClearInstance(Instance *instance) override {
+    memset(instance->data(), 0, instance->size());
+  }
+
+  bool SupportsAsync() override { return false; }
+  TaskFunc StartTaskFunc() override { return StartTask; }
+  TaskFunc WaitTaskFunc() override { return WaitTask; }
+
+  static void StartTask(Task *task) { task->func(task->arg); }
+  static void WaitTask(Task *task) {}
+};
+
+static DebugRuntime debug_runtime;
+
 class FloatPRNG {
  public:
   FloatPRNG() : unit_(0.0, 1.0) {}
@@ -56,6 +106,7 @@ struct KernelCompiler {
       LOG(ERROR) << "Unknown kernel: " << kernel;
       return false;
     }
+    network.set_runtime(&debug_runtime);
     network.set_parameter_element_order(ANY_ORDER);
     if (debug) network.set_debug(true);
     if (!network.Compile(flow, singleton)) {
@@ -284,6 +335,7 @@ static int64 GetInt(Instance *data, Tensor *t, int r) {
     default:
       LOG(FATAL) << "Unsupported type " << t->type();
   }
+  return 0;
 }
 
 static int64 GetInt(Instance *data, Tensor *t, int r, int c) {
@@ -295,6 +347,7 @@ static int64 GetInt(Instance *data, Tensor *t, int r, int c) {
     default:
       LOG(FATAL) << "Unsupported type " << t->type();
   }
+  return 0;
 }
 
 static void SetInt(Instance *data, Tensor *t, int r, int64 value) {
