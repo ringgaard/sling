@@ -114,7 +114,7 @@ class CUDAFltBinaryOperator : public CUDAKernel {
     ptx_ret();
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->elements();
   }
 
@@ -260,7 +260,7 @@ class CUDAIntBinaryOperator : public CUDAKernel {
     ptx_ret();
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->elements();
   }
 

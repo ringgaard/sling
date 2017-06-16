@@ -54,7 +54,7 @@ class CUDAFltVecMatMulBase : public CUDAKernel {
     ptx_ret();
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     int ops = step->input(1)->elements() * 2;
     if (bias_) ops += step->input(2)->elements();
     if (relu_) ops += step->output(0)->elements();
