@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
   string wikitext;
-  CHECK_OK(File::ReadContents(FLAGS_input, &wikitext));
+  CHECK(File::ReadContents(FLAGS_input, &wikitext));
 
   WikiParser parser(wikitext.c_str());
   parser.Parse();

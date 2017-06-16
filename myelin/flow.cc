@@ -39,6 +39,7 @@ std::unordered_map<string, Type> typemap = {
   {"int16", DT_INT16},
   {"int32", DT_INT32},
   {"int64", DT_INT64},
+  {"int", DT_INT32},
   {"uint8", DT_UINT8},
   {"uint16", DT_UINT16},
   {"bool", DT_BOOL},
@@ -184,6 +185,38 @@ class Parser {
   char *end_;  // end of input buffer
 };
 
+const string &Attributes::Get(const string &name) const {
+  static string empty;
+  for (auto &attr : *this) {
+    if (attr.name == name) return attr.value;
+  }
+  return empty;
+}
+
+int Attributes::Get(const string &name, int defval) const {
+  for (auto &attr : *this) {
+    if (attr.name == name) return atoi(attr.value.c_str());
+  }
+  return defval;
+}
+
+bool Attributes::Has(const string &name) const {
+  for (auto &attr : *this) {
+    if (attr.name == name) return true;
+  }
+  return false;
+}
+
+void Attributes::Set(const string &name, const string &value) {
+  for (auto &attr : *this) {
+    if (attr.name == name) {
+      attr.value = value;
+      return;
+    }
+  }
+  emplace_back(name, value);
+}
+
 void Flow::Variable::AddAlias(const string &alias) {
   if (std::find(aliases.begin(), aliases.end(), alias) == aliases.end()) {
     aliases.push_back(alias);
@@ -199,6 +232,72 @@ string Flow::Variable::TypeString() const {
     str.append(shape.ToString());
     str.append("]");
   }
+  return str;
+}
+
+string Flow::Variable::DataString() const {
+  // Locate data.
+  char *p  = data;
+  if (ref) {
+    if (p == nullptr) return "null";
+    p = *reinterpret_cast<char **>(p);
+  }
+  if (shape.partial()) return "*";
+
+  // Get type traits for elements.
+  const TypeTraits &traits = TypeTraits::of(type);
+
+  // Output tensor as string.
+  string str;
+  if (rank() == 0) {
+    // Scalar.
+    str = traits.str(p);
+  } else if (rank() == 1) {
+    // Vector.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) str.append(",");
+      str.append(traits.str(p));
+      p += traits.size();
+    }
+    str.append("]");
+  } else if (rank() == 2) {
+    // Matrix.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) str.append(",");
+      str.append("[");
+      for (int c = 0; c < dim(1); ++c) {
+        if (c > 0) str.append(",");
+        str.append(traits.str(p));
+        p += traits.size();
+      }
+      str.append("]");
+    }
+    str.append("]");
+  } else if (rank() == 3) {
+    // Tensor.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) str.append(",");
+      str.append("[");
+      for (int c = 0; c < dim(1); ++c) {
+        if (c > 0) str.append(",");
+        str.append("[");
+        for (int k = 0; k < dim(2); ++k) {
+          if (k > 0) str.append(",");
+          str.append(traits.str(p));
+          p += traits.size();
+        }
+        str.append("]");
+      }
+      str.append("]");
+    }
+    str.append("]");
+  } else {
+    str = "<<" + std::to_string(rank()) + "D tensor>>";
+  }
+
   return str;
 }
 
@@ -229,38 +328,6 @@ void Flow::Operation::AddOutput(Variable *var) {
   outputs.push_back(var);
   CHECK(var->producer == nullptr);
   var->producer = this;
-}
-
-const string &Flow::Operation::GetAttr(const string &name) {
-  static string empty;
-  for (auto &attr : attrs) {
-    if (attr.name == name) return attr.value;
-  }
-  return empty;
-}
-
-int Flow::Operation::GetAttr(const string &name, int defval) {
-  for (auto &attr : attrs) {
-    if (attr.name == name) return atoi(attr.value.c_str());
-  }
-  return defval;
-}
-
-void Flow::Operation::SetAttr(const string &name, const string &value) {
-  for (auto &attr : attrs) {
-    if (attr.name == name) {
-      attr.value = value;
-      return;
-    }
-  }
-  attrs.emplace_back(name, value);
-}
-
-bool Flow::Operation::HasAttr(const string &name) const{
-  for (auto &attr : attrs) {
-    if (attr.name == name) return true;
-  }
-  return false;
 }
 
 bool Flow::Operation::IsInput(const Variable *var) const {
@@ -339,7 +406,7 @@ void Flow::Function::AddOperation(Operation *op) {
 }
 
 void Flow::Connector::AddLink(Variable *var) {
-  if (std::find(links.begin(), links.end(), var) != links.end()) {
+  if (std::find(links.begin(), links.end(), var) == links.end()) {
     links.push_back(var);
   }
 }
@@ -370,17 +437,22 @@ Flow::~Flow() {
   for (auto *ptr : memory_) free(ptr);
 }
 
+char *Flow::AllocateMemory(size_t size) {
+  char *data = static_cast<char *>(malloc(size));
+  memory_.push_back(data);
+  return data;
+}
+
 Status Flow::Load(const string &filename) {
   // Load flow file into memory.
   File *file;
   Status st = File::Open(filename, "r", &file);
   if (!st.ok()) return st;
   uint64 size;
-  CHECK_OK(file->GetSize(&size));
-  char *data = static_cast<char *>(malloc(size));
-  memory_.push_back(data);
+  CHECK(file->GetSize(&size));
+  char *data = AllocateMemory(size);
   file->ReadOrDie(data, size);
-  CHECK_OK(file->Close());
+  CHECK(file->Close());
 
   // Read header.
   Parser parser(data, data + size);
@@ -466,7 +538,7 @@ Status Flow::Load(const string &filename) {
     for (int j = 0; j < num_attrs; ++j) {
       string name = parser.GetString();
       string value = parser.GetString();
-      op->attrs.emplace_back(name, value);
+      op->SetAttr(name, value);
       if (name == "task") op->task = std::stoi(value);
     }
   }
@@ -747,6 +819,77 @@ std::vector<Flow::Operation *> Flow::Find(const std::vector<string> &ops) {
     if (match) matches.push_back(op);
   }
   return matches;
+}
+
+Flow::Function *Flow::Extract(const string &name,
+                              const std::vector<Variable *> &inputs,
+                              const std::vector<Variable *> &outputs,
+                              Flow *subflow) {
+  // Create new function in the sub-flow.
+  Function *func = subflow->AddFunction(name);
+
+  // Start from the output and keep copying variables and operations traversing
+  // dependencies until an is input is reached.
+  std::vector<Variable *> queue = outputs;
+  std::unordered_map<Variable *, Variable *> varmap;
+  std::unordered_map<Operation *, Operation *> opmap;
+  while (!queue.empty()) {
+    // Get next variable in the queue.
+    Variable *var = queue.back();
+    queue.pop_back();
+    if (varmap[var] != nullptr) continue;
+
+    // Create new variable.
+    Variable *newvar = new Variable(*var);
+    varmap[var] = newvar;
+    subflow->vars_.push_back(newvar);
+
+    // Stop traversing if variable is an input.
+    if (std::find(inputs.begin(), inputs.end(), var) != inputs.end()) {
+      continue;
+    }
+
+    // Copy producer of variable.
+    Operation *op = var->producer;
+    if (op == nullptr || opmap[op] != nullptr) continue;
+    Operation *newop = new Operation(*op);
+    newop->priority = 3;
+    newop->func = nullptr;
+    subflow->ops_.push_back(newop);
+    func->AddOperation(newop);
+    opmap[op] = newop;
+
+    // Add new input and output variables to queue.
+    for (Variable *input : op->inputs) {
+      if (varmap[input] == nullptr) queue.push_back(input);
+    }
+    for (Variable *output : op->outputs) {
+      if (varmap[output] == nullptr) queue.push_back(output);
+    }
+  }
+
+  // Map producers and consumers.
+  for (auto &it : varmap) {
+    Variable *var = it.second;
+    if (var == nullptr) continue;
+    var->producer = opmap[var->producer];
+    for (auto &consumer : var->consumers) consumer = opmap[consumer];
+
+    // Remove unmapped consumers.
+    var->consumers.erase(
+        std::remove(var->consumers.begin(), var->consumers.end(), nullptr),
+        var->consumers.end());
+  }
+
+  // Map inputs and outputs.
+  for (auto &it : opmap) {
+    Operation *op = it.second;
+    if (op == nullptr) continue;
+    for (auto &input : op->inputs) input = varmap[input];
+    for (auto &output : op->outputs) output = varmap[output];
+  }
+
+  return func;
 }
 
 void Flow::Eliminate(Operation *op) {
@@ -1146,6 +1289,24 @@ bool Flow::IsConsistent() const {
           consumer->inputs.end()) {
         LOG(WARNING) << "Variable " << var->name << " is not an input of "
                      << "the consumer " << consumer->name;
+        return false;
+      }
+    }
+  }
+
+  // Check functions.
+  for (const Function *func : funcs_) {
+    for (const Operation *op : func->ops) {
+      // Check that function operation is in flow.
+      if (std::find(ops_.begin(), ops_.end(), op) == ops_.end()) {
+          LOG(WARNING) << "Operation " << op->name << " is not in flow";
+          return false;
+        }
+
+      // Check operation belongs to function.
+      if (op->func != func) {
+        LOG(WARNING) << "Operation " << op->name << " does not belong to "
+                     << "function " << func->name;
         return false;
       }
     }

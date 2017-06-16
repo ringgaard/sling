@@ -42,7 +42,7 @@ Repository::~Repository()  {
 
   // Close repository file.
   if (file_ != nullptr) {
-    CHECK_OK(file_->Close());
+    CHECK(file_->Close());
   }
 }
 
@@ -56,7 +56,7 @@ void Repository::Open(const string &filename) {
   // Read header from file.
   Header header;
   uint64 bytes;
-  CHECK_OK(file_->PRead(0, &header, sizeof(Header), &bytes));
+  CHECK(file_->PRead(0, &header, sizeof(Header), &bytes));
   CHECK_EQ(bytes, sizeof(Header))
     << "Unable to read entity repository file header: " << filename;
 
@@ -68,9 +68,9 @@ void Repository::Open(const string &filename) {
 
   // Read repository directory.
   char *directory = static_cast<char *>(malloc(header.directory_size));
-  CHECK_OK(file_->PRead(header.directory_position,
-                        directory,
-                        header.directory_size, &bytes));
+  CHECK(file_->PRead(header.directory_position,
+                     directory,
+                     header.directory_size, &bytes));
   CHECK_EQ(bytes, header.directory_size)
     << "Unable to read entity repository directory: " << filename;
 
@@ -89,7 +89,7 @@ void Repository::Open(const string &filename) {
 
 void Repository::Close() {
   if (file_ != nullptr) {
-    CHECK_OK(file_->Close());
+    CHECK(file_->Close());
     file_ = nullptr;
   }
 }
@@ -124,7 +124,7 @@ bool Repository::LoadBlock(const string &name) {
   VLOG(3) << "Reading block " << name << " (" << block.size << " bytes)";
   CHECK(file_ != nullptr);
   uint64 bytes;
-  CHECK_OK(file_->PRead(block.position, block.data, block.size, &bytes));
+  CHECK(file_->PRead(block.position, block.data, block.size, &bytes));
   CHECK_EQ(bytes, block.size)
     << "Could not read block " << name << " from repository";
 
@@ -194,11 +194,11 @@ void Repository::Write(const string &filename) {
     } else if (block.file != nullptr) {
       // Copy block from temporary file.
       static const int kBufferSize = 8192;
-      CHECK_OK(block.file->Seek(0));
+      CHECK(block.file->Seek(0));
       char buffer[kBufferSize];
       uint64 bytes;
       for (;;) {
-        CHECK_OK(block.file->Read(buffer, kBufferSize, &bytes));
+        CHECK(block.file->Read(buffer, kBufferSize, &bytes));
         if (bytes == 0) break;
         output->WriteOrDie(buffer, bytes);
       }
@@ -210,7 +210,7 @@ void Repository::Write(const string &filename) {
   free(directory);
 
   // Close output file.
-  CHECK_OK(output->Close());
+  CHECK(output->Close());
 }
 
 void Repository::AddBlock(const string &name,

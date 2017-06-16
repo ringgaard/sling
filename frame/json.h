@@ -18,7 +18,7 @@ namespace sling {
 // The JSON writer outputs objects in JSON format.
 class JSONWriter {
  public:
-  // Intializes writer with store and output.
+  // Initializes writer with store and output.
   JSONWriter(const Store *store, Output *output)
       : store_(store), output_(output), global_(store->globals() == nullptr) {}
 

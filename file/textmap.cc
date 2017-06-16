@@ -37,7 +37,7 @@ TextMapInput::~TextMapInput() {
   free(buffer_);
 
   // Close current input file.
-  if (file_ != nullptr) CHECK_OK(file_->Close());
+  if (file_ != nullptr) CHECK(file_->Close());
 }
 
 bool TextMapInput::Next() {
@@ -64,7 +64,7 @@ bool TextMapInput::Next() {
 
       if (c == -1 && key_.empty() && value_.empty()) {
         // No more lines in file. Switch to next file.
-        CHECK_OK(file_->Close());
+        CHECK(file_->Close());
         file_ = nullptr;
         current_file_++;
       } else {

@@ -44,6 +44,18 @@ cc_library(
 )
 
 cc_library(
+  name = "graph",
+  srcs = ["graph.cc"],
+  hdrs = ["graph.h"],
+  deps = [
+    ":flow",
+    "//base",
+    "//file",
+    "//string:printf",
+  ],
+)
+
+cc_library(
   name = "multi-process",
   srcs = ["multi-process.cc"],
   hdrs = ["multi-process.h"],
@@ -54,40 +66,11 @@ cc_library(
 )
 
 cc_library(
-  name = "expression",
-  srcs = ["expression.cc"],
-  hdrs = ["expression.h"],
+  name = "express",
+  srcs = ["express.cc"],
+  hdrs = ["express.h"],
   deps = [
     "//base",
-  ],
-)
-
-cc_library(
-  name = "compare-kernels",
-  srcs = [
-    "compare-kernels.cc",
-  ],
-  hdrs = [
-    "compare-kernels.h",
-  ],
-  deps = [
-    ":compute",
-    ":flow",
-    "//base",
-    "//file",
-  ],
-)
-
-cc_binary(
-  name = "kernel-test",
-  srcs = ["kernel-test.cc"],
-  deps = [
-    ":compare-kernels",
-    "//base",
-    "//file:posix",
-    "//myelin/kernel:avx",
-    "//myelin/kernel:generic",
-    "//myelin/kernel:sse",
   ],
 )
 

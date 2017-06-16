@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
   kb.Load(FLAGS_kb, FLAGS_names);
   kb.Register(&http);
 
-  CHECK_OK(http.Start());
+  CHECK(http.Start());
 
   LOG(INFO) << "HTTP server running";
   http.Wait();

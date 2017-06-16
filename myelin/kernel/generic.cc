@@ -17,6 +17,9 @@
 namespace sling {
 namespace myelin {
 
+// array.cc
+void RegisterArrayKernels(Library *library);
+
 // generic-math.cc
 void RegisterGenericMath(Library *library);
 
@@ -25,6 +28,23 @@ void RegisterGenericMatMul(Library *library);
 
 // generic-operators.cc
 void RegisterGenericOperators(Library *library);
+
+// Rename operations with aliases.
+class RenameTransformer : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    // Rename BiasAdd to Add.
+    int renames = 0;
+    for (Flow::Operation *op : flow->ops()) {
+      if (op->type == "BiasAdd") {
+        op->type = "Add";
+        renames++;
+      }
+    }
+
+    return renames > 0;
+  }
+};
 
 // Type inference for standard ops.
 class StandardTyper : public Typer {
@@ -55,24 +75,30 @@ class StandardTyper : public Typer {
         op->type == "Sub" ||
         op->type == "Tanh" ||
         op->type == "Sigmoid" ||
-        op->type == "Relu") {
-      if (op->indegree() > 0 && op->outdegree() == 1) {
+        op->type == "Relu" ||
+        op->type == "Calculate") {
+      if (op->indegree() > 0 && op->outdegree() > 0) {
         // Determine output rank.
-        Flow::Variable *out = op->outputs[0];
+        Shape shape;
         int rank = 0;
         for (Flow::Variable *in : op->inputs) {
           if (in->rank() > rank) rank = in->rank();
         }
-        out->shape.fill(rank, 1);
+        shape.fill(rank, 1);
 
         // Determine output shape based on broadcast semantics.
         for (Flow::Variable *in : op->inputs) {
           int depth = rank - in->rank();
           for (int d = 0; d < in->rank(); ++d) {
-            if (out->dim(d + depth) < in->dim(d)) {
-              out->shape.set(d + depth, in->dim(d));
+            if (shape.dim(d + depth) < in->dim(d)) {
+              shape.set(d + depth, in->dim(d));
             }
           }
+        }
+
+        // Set shape for outputs.
+        for (Flow::Variable *out : op->outputs) {
+          out->shape = shape;
         }
         return true;
       }
@@ -137,6 +163,9 @@ class StandardTyper : public Typer {
 
 // Register generic transformations.
 void RegisterGenericTransformations(Library *library) {
+  // Register transformations.
+  library->RegisterTransformer(new RenameTransformer());
+
   // Register identity ops.
   library->RegisterIdentityOp("Identity");
   library->RegisterIdentityOp("Const");
@@ -144,7 +173,6 @@ void RegisterGenericTransformations(Library *library) {
   library->RegisterIdentityOp("VariableV2");
   library->RegisterIdentityOp("Placeholder");
   library->RegisterIdentityOp("Enter");
-  library->RegisterIdentityOp("FeatureVector");
 
   // Register combined ops.
   library->RegisterCombinedOp("MatMul", "Add", "MatMulAdd");
@@ -158,6 +186,7 @@ void RegisterGenericTransformations(Library *library) {
 
 // Register generic kernels.
 void RegisterGenericKernels(Library *library) {
+  RegisterArrayKernels(library);
   RegisterGenericMath(library);
   RegisterGenericMatMul(library);
   RegisterGenericOperators(library);

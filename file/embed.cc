@@ -249,7 +249,7 @@ class EmbedFileSystem : public FileSystem {
   bool FileExists(const string &filename) override {
     File *file = LookupFile(filename);
     if (file != nullptr) {
-      CHECK_OK(file->Close());
+      CHECK(file->Close());
       return true;
     } else {
       return false;
@@ -259,8 +259,8 @@ class EmbedFileSystem : public FileSystem {
   Status GetFileSize(const string &filename, uint64 *size) override {
     File *file = LookupFile(filename);
     if (file == nullptr) return Status(ENOENT, "File not found", filename);
-    CHECK_OK(file->GetSize(size));
-    CHECK_OK(file->Close());
+    CHECK(file->GetSize(size));
+    CHECK(file->Close());
     return Status::OK;
   }
 
@@ -271,8 +271,8 @@ class EmbedFileSystem : public FileSystem {
   Status Stat(const string &filename, FileStat *stat) {
     File *file = LookupFile(filename);
     if (file == nullptr) return Status(ENOENT, "File not found", filename);
-    CHECK_OK(file->Stat(stat));
-    CHECK_OK(file->Close());
+    CHECK(file->Stat(stat));
+    CHECK(file->Close());
     return Status::OK;
   }
 

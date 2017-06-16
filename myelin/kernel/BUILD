@@ -3,6 +3,7 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
   name = "generic",
   srcs = [
+    "array.cc",
     "generic.cc",
     "generic-math.cc",
     "generic-matmul.cc",
@@ -16,15 +17,17 @@ cc_library(
 )
 
 cc_library(
-  name = "calculate",
+  name = "arithmetic",
   srcs = [
-    "calculate.cc",
+    "arithmetic.cc",
   ],
-  hdrs = ["calculate.h"],
+  hdrs = ["arithmetic.h"],
   deps = [
     "//base",
     "//myelin:compute",
-    "//myelin:expression",
+    "//myelin:express",
+    "//myelin/generator:elementwise",
+    "//myelin/generator:expression",
   ],
 )
 

@@ -42,7 +42,7 @@ characters from The Simpsons, e.g.:
 SLING is inspired by [frame semantics](http://www.icsi.berkeley.edu/pubs/ai/framesemantics76.pdf),
 which is a theory of linguistic meaning developed by [Charles Fillmore](https://en.wikipedia.org/wiki/Charles_J._Fillmore)
 (1929 – 2014) of University of California, Berkeley. Frame semantics relates
-linguistic semantics to encyclopaedic knowledge and the basic idea is that one
+linguistic semantics to encyclopedic knowledge and the basic idea is that one
 cannot understand the meaning of a word without access to all the essential
 knowledge that relates to that word. For example, one would not be able to
 understand the word "sell" without knowing anything about the situation of a

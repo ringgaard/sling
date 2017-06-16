@@ -1,4 +1,4 @@
-#include "myelin/compare-kernels.h"
+#include "myelin/tests/compare-kernels.h"
 
 #include <math.h>
 #include <random>
@@ -22,6 +22,28 @@ namespace sling {
 namespace myelin {
 
 static const float kEpsilon = 1e-6;
+static const float kMinimum = 1e-3;
+
+class FloatPRNG {
+ public:
+  FloatPRNG() : unit_(0.0, 1.0) {}
+
+  float Random(float scale, float bias) {
+    float val = unit_(prng_) * scale + bias;
+    if (FLAGS_intrand) {
+      val = round(val);
+    } else if (val >  0.0 && val < kMinimum) {
+      val = 0;
+    } else if (val <  0.0 && val > -kMinimum) {
+      val = 0;
+    }
+    return val;
+  }
+
+ private:
+  std::mt19937 prng_;
+  std::uniform_real_distribution<float> unit_;
+};
 
 struct KernelCompiler {
   bool Compile(const Library &library,
@@ -106,8 +128,7 @@ bool FltKernelComparator::Check(int iterations) {
   }
 
   // Compare kernels on random sampled inputs.
-  std::mt19937 prng;
-  std::uniform_real_distribution<float> unit(0.0, 1.0);
+  FloatPRNG prng;
   int num_errors = 0;
   int num_inexact = 0;
   float max_error = 0.0;
@@ -127,8 +148,7 @@ bool FltKernelComparator::Check(int iterations) {
       float scale = high_[i] - low_[i];
       if (var->rank() == 1) {
         for (int r = 0; r < var->dim(0); ++r) {
-          float val = unit(prng) * scale + bias;
-          if (FLAGS_intrand) val = round(val);
+          float val = prng.Random(scale, bias);
           *base_data.Get<float>(b, r) = val;
           *test_data.Get<float>(t, r) = val;
           if (FLAGS_log_input_tensors) {
@@ -138,8 +158,7 @@ bool FltKernelComparator::Check(int iterations) {
       } else if (var->rank() == 2) {
         for (int r = 0; r < var->dim(0); ++r) {
           for (int c = 0; c < var->dim(1); ++c) {
-            float val = unit(prng) * scale + bias;
-            if (FLAGS_intrand) val = round(val);
+            float val = prng.Random(scale, bias);
             *base_data.Get<float>(b, r, c) = val;
             *test_data.Get<float>(t, r, c) = val;
             if (FLAGS_log_input_tensors) {

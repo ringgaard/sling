@@ -6,9 +6,13 @@ bazel build -c opt \
   frame:* \
   http:* \
   myelin:* \
+  myelin/kernel:* \
+  myelin/generator:* \
+  myelin/tests:* \
   nlp/document:* \
   nlp/kb:* \
   nlp/parser:* \
+  nlp/parser/trainer:* \
   nlp/web:* \
   nlp/wiki:* \
   schema:* \

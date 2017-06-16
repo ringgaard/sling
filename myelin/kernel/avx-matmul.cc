@@ -78,32 +78,29 @@ class AVXVecMatMulBase : public Kernel {
 
     // Align to one ymm register (256 bits, 32 bytes).
     int byte_alignment = 256 / 8;
+    x->SetMiniumAlignment(byte_alignment);
+    W->SetMiniumAlignment(byte_alignment);
+    y->SetMiniumAlignment(byte_alignment);
+    if (bias_) b->SetMiniumAlignment(byte_alignment);
+
     int input_batch = byte_alignment / TypeTraits::of(itype_).size();
     int output_batch = byte_alignment / TypeTraits::of(otype_).size();
-
-    x->Align({1, input_batch});
-    x->SetMiniumAlignment(byte_alignment);
-
+    x->MinAlign({1, input_batch});
     if (order_ == ROW_MAJOR) {
-      W->Align({output_batch, input_batch});
+      W->MinAlign({output_batch, input_batch});
     } else {
-      W->Align({input_batch, 1});
+      W->MinAlign({input_batch, 1});
     }
-    W->SetMiniumAlignment(byte_alignment);
     W->SetRequiredOrder(order_);
 
     if (order_ == ROW_MAJOR) {
-      if (bias_) {
-        b->Align({input_batch});
-        b->SetMiniumAlignment(byte_alignment);
-      }
-      y->Align({1, output_batch});
-      y->SetMiniumAlignment(byte_alignment);
+      if (bias_) b->MinAlign({input_batch});
+      y->MinAlign({1, output_batch});
     }
   }
 
-  int Complexity(const Step *step) override {
-    int ops = step->input(1)->elements() * 2;
+  int64 Complexity(const Step *step) override {
+    int64 ops = step->input(1)->elements() * 2;
     if (bias_) ops += step->input(2)->elements();
     if (relu_) ops += step->output(0)->elements();
     return ops;
@@ -410,6 +407,23 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
   AVXFltVecMatMulHBase(bool bias, bool relu)
       : AVXVecMatMulBase(bias, relu, COLUMN_MAJOR, DT_FLOAT, DT_FLOAT) {}
 
+  void Adjust(Step *step) override {
+    // Get input and output tensors.
+    Tensor *x = step->input(0);
+    Tensor *W = step->input(1);
+    Tensor *b = bias_ ? step->input(2) : nullptr;
+    Tensor *y = step->output(0);
+
+    // Align to one ymm register (256 bits, 32 bytes).
+    int byte_alignment = 256 / 8;
+
+    x->SetMiniumAlignment(byte_alignment);
+    W->SetMiniumAlignment(byte_alignment);
+    y->SetMiniumAlignment(byte_alignment);
+    if (bias_) b->SetMiniumAlignment(byte_alignment);
+    W->SetRequiredOrder(COLUMN_MAJOR);
+  }
+
   void Generate(Step *step, MacroAssembler *masm) override {
     Registers &rr = masm->rr();
     SIMDRegisters &mm = masm->mm();
@@ -424,14 +438,18 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
     // Get matrix dimensions.
     int rows = W->dim(0);
     int cols = W->dim(1);
+    int main_rows = (rows  / 8) * 8;
+    int remaining_rows = rows - main_rows;
     int row_size = W->stride(1);
 
     // Compute the number of unrolls and adders.
-    int unrolls = 1;
-    for (int i = 2; i <= kMaxUnrolls; ++i) {
-      if (W->aligned(0) % (i * 8) == 0) unrolls = i;
+    int unrolls = 0;
+    for (int i = 1; i <= kMaxUnrolls; ++i) {
+      int batch_size = i * 8;
+      if (main_rows >= batch_size && main_rows % batch_size == 0) unrolls = i;
     }
     int adders = unrolls;
+    if (adders < 1) adders = 1;
     if (adders > kMaxAdders) adders = kMaxAdders;
 
     // Allocate general registers.
@@ -444,7 +462,7 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
 
     // Allocate SIMD registers.
     std::vector<YMMRegister> elem;
-    for (int i = 0; i < unrolls; ++i) {
+    for (int i = 0; i < std::max(unrolls, 1); ++i) {
       elem.push_back(mm.allocy());
     }
     std::vector<YMMRegister> sum;
@@ -468,60 +486,121 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
 
     // Outer loop over columns.
     __ LoopStart(&l1);
-    __ xorq(row, row);
-    if (bias_) {
-      __ vmovss(sum[0], Operand(vector, col, times_4));
-    }
-    for (int i = (bias_ ? 1 : 0); i < adders; ++i) {
-      __ vxorps(sum[i], sum[i], sum[i]);
-    }
 
-    // Inner loop over rows.
-    __ LoopStart(&l2);
-
-    for (int i = 0; i < unrolls; ++i) {
-      // Load x[row:row+8].
-      int disp = 8 * i * sizeof(float);
-      __ vmovaps(elem[i], Operand(input, row, times_4, disp));
-    }
-
-    for (int i = 0; i < unrolls; ++i) {
-      int disp = 8 * i * sizeof(float);
-      if (masm->Enabled(FMA3)) {
-        // Multiply x[row:row+8] with W[row:row+8,col] and add to sum.
-        __ vfmadd231ps(sum[i % adders], elem[i],
-                       Operand(matrix, row, times_4, disp));
+    if (unrolls == 0) {
+      // Unroll dot product for small rows up to seven elements.
+      XMMRegister s = sum[0].xmm();
+      XMMRegister e = elem[0].xmm();
+      if (bias_) {
+        __ vmovss(s, Operand(vector, col, times_4));
       } else {
-        // Multiply x[row:row+8] with W[row:row+8,col].
-        __ vmulps(elem[i], elem[i], Operand(matrix, row, times_4, disp));
-
-        // Sum dot product in parallel.
-        __ vaddps(sum[i % adders], sum[i % adders], elem[i]);
+        __ vmovss(e, Operand(input));
+        __ vmulss(s, e, Operand(matrix));
       }
-    }
-
-    // Move to next row.
-    __ addq(row, Immediate(8 * unrolls));
-    __ cmpq(row, Immediate(rows));
-
-    __ j(less, &l2);
-
-    // Sum adders in sum[0].
-    if (adders == 4) {
-      __ vaddps(sum[0], sum[0], sum[2]);
-      __ vaddps(sum[1], sum[1], sum[3]);
-      __ vaddps(sum[0], sum[0], sum[1]);
+      for (int r = (bias_ ? 0 : 1); r < rows; ++r) {
+        int disp = r * sizeof(float);
+        __ vmovss(e, Operand(input, disp));
+        if (masm->Enabled(FMA3)) {
+          __ vfmadd231ss(s, e, Operand(matrix, disp));
+        } else {
+          __ vmulss(e, e, Operand(matrix, disp));
+          __ vaddss(s, s, e);
+        }
+      }
     } else {
-      for (int i = 1; i < adders; ++i) {
-        __ vaddps(sum[0], sum[0], sum[i]);
+      // Inner loop over main rows.
+      __ xorq(row, row);
+      if (bias_) {
+        __ vmovss(sum[0], Operand(vector, col, times_4));
       }
-    }
+      for (int i = (bias_ ? 1 : 0); i < adders; ++i) {
+        __ vxorps(sum[i], sum[i], sum[i]);
+      }
 
-    // Add elements in sum[0] horizontally.
-    __ vperm2f128(acc, sum[0], sum[0], 1);
-    __ vhaddps(sum[0], sum[0], acc);
-    __ vhaddps(sum[0], sum[0], sum[0]);
-    __ vhaddps(sum[0], sum[0], sum[0]);
+      __ LoopStart(&l2);
+      for (int i = 0; i < unrolls; ++i) {
+        // Load x[row:row+8].
+        int disp = 8 * i * sizeof(float);
+        __ vmovaps(elem[i], Operand(input, row, times_4, disp));
+      }
+      for (int i = 0; i < unrolls; ++i) {
+        int disp = 8 * i * sizeof(float);
+        if (masm->Enabled(FMA3)) {
+          // Multiply x[row:row+8] with W[row:row+8,col] and add to sum.
+          __ vfmadd231ps(sum[i % adders], elem[i],
+                         Operand(matrix, row, times_4, disp));
+        } else {
+          // Multiply x[row:row+8] with W[row:row+8,col].
+          __ vmulps(elem[i], elem[i], Operand(matrix, row, times_4, disp));
+
+          // Sum dot product in parallel.
+          __ vaddps(sum[i % adders], sum[i % adders], elem[i]);
+        }
+      }
+
+      // Move to next row batch.
+      if (main_rows > 8 || remaining_rows > 0) {
+        __ addq(row, Immediate(8 * unrolls));
+        __ cmpq(row, Immediate(main_rows));
+      }
+      if (main_rows > 8 * unrolls) {
+        __ j(less, &l2);
+      }
+
+      // Add remaining rows.
+      if (remaining_rows > 0) {
+        XMMRegister s = acc.xmm();
+        XMMRegister e = elem[0].xmm();
+        int disp = 0;
+        int left = remaining_rows;
+
+        // Add first four remaining elements using SSE.
+        if (left >= 4) {
+          __ vmovaps(s, Operand(input, row, times_4));
+          __ vmulps(s, s, Operand(matrix, row, times_4));
+          __ vaddps(sum[0], sum[0], acc);
+          left -= 4;
+          disp += 4 * sizeof(float);
+        }
+
+        // Add up to three remaining elements as scalars.
+        if (left > 0) {
+          __ vmovss(s, Operand(input, row, times_4, disp));
+          __ vmulss(s, s, Operand(matrix, row, times_4, disp));
+          left--;
+          disp += sizeof(float);
+          while (left > 0) {
+            __ vmovss(e, Operand(input, row, times_4, disp));
+            if (masm->Enabled(FMA3)) {
+              __ vfmadd231ss(s, e, Operand(matrix, row, times_4, disp));
+            } else {
+              __ vmulss(e, e, Operand(matrix, row, times_4, disp));
+              __ vaddss(s, s, e);
+            }
+            left--;
+            disp += sizeof(float);
+          }
+          __ vaddps(sum[0], sum[0], acc);
+        }
+      }
+
+      // Sum adders in sum[0].
+      if (adders == 4) {
+        __ vaddps(sum[0], sum[0], sum[2]);
+        __ vaddps(sum[1], sum[1], sum[3]);
+        __ vaddps(sum[0], sum[0], sum[1]);
+      } else {
+        for (int i = 1; i < adders; ++i) {
+          __ vaddps(sum[0], sum[0], sum[i]);
+        }
+      }
+
+      // Add elements in sum[0] horizontally.
+      __ vperm2f128(acc, sum[0], sum[0], 1);
+      __ vhaddps(sum[0], sum[0], acc);
+      __ vhaddps(sum[0], sum[0], sum[0]);
+      __ vhaddps(sum[0], sum[0], sum[0]);
+    }
 
     // Compute relu.
     if (relu_) {
@@ -530,12 +609,14 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
 
     // Save to y[col].
     __ vmovss(Operand(output, col, times_4), sum[0]);
-    __ addq(col, Immediate(1));
 
     // Move to next column.
-    __ addq(matrix, Immediate(row_size));
-    __ cmpq(col, Immediate(cols));
-    __ j(less, &l1);
+    if (cols > 1) {
+      __ addq(col, Immediate(1));
+      __ addq(matrix, Immediate(row_size));
+      __ cmpq(col, Immediate(cols));
+      __ j(less, &l1);
+    }
   }
 };
 
@@ -617,9 +698,9 @@ class AVXFltMatMatMul : public Kernel {
     Tensor *C = step->output(0);
 
     // Set alignment requirements.
-    A->Align({1, 8});
+    A->MinAlign({1, 8});
     A->SetMiniumAlignment(32);
-    B->Align({8, 1});
+    B->MinAlign({8, 1});
     B->SetMiniumAlignment(32);
 
     // Set order requirements.
@@ -750,7 +831,7 @@ class AVXFltMatMatMul : public Kernel {
     __ j(less, &l1);
   }
 
-  int Complexity(const Step *step) override {
+  int64 Complexity(const Step *step) override {
     return step->input(0)->dim(0) * step->input(1)->elements() * 2;
   }
 };
