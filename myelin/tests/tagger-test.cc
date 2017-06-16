@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "base/init.h"
+#include "base/flags.h"
 #include "base/logging.h"
 
 #include "myelin/compute.h"
@@ -16,6 +17,12 @@
 #include "myelin/kernel/dragnn.h"
 #include "myelin/kernel/generic.h"
 #include "myelin/kernel/sse.h"
+
+DEFINE_int32(repeat, 1, "Number of times test is repeated");
+DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
+DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
+DEFINE_bool(dump_graph, true, "Dump dot graph");
+DEFINE_bool(dump_code, true, "Dump generated code");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -62,7 +69,6 @@ class RNN {
                std::vector<int> *predictions) const;
 
   // Looks up word in the lexicon.
-  // FIXME: Use external feature extractors.
   int LookupWord(const string &word) const;
 
   // Attaches connectors for LR LSTM.
@@ -140,9 +146,15 @@ void RNN::Load(const string &filename) {
   flow.Analyze(library_);
 
   // Output graph.
-  GraphOptions gopts;
-  FlowToDotGraphFile(flow, gopts, "/tmp/tagger.dot");
-  //std::cout << flow.ToString() << "\n";
+  if (FLAGS_dump_graph) {
+    GraphOptions gopts;
+    FlowToDotGraphFile(flow, gopts, "/tmp/tagger.dot");
+  }
+
+  if (FLAGS_dump_flow) {
+    std::cout << flow.ToString() << "\n";
+    std::cout.flush();
+  }
 
   // Compile parser flow.
   if (profile) network_.set_profiling(true);
@@ -150,7 +162,14 @@ void RNN::Load(const string &filename) {
 
   // Get computation for each function.
   lr_ = GetCell("tagger");
-  lr_->WriteCodeToFile("/tmp/tagger.bin");
+
+  if (FLAGS_dump_code) {
+    lr_->WriteCodeToFile("/tmp/tagger.bin");
+  }
+  if (FLAGS_dump_cell) {
+    std::cout << lr_->ToString() << "\n";
+    std::cout.flush();
+  }
 
   // Get connectors.
   lr_c_ = GetConnector("tagger_c");
@@ -183,8 +202,6 @@ void RNN::Load(const string &filename) {
     }
     pos = next + 1;
   }
-
-  std::cout << lr_->ToString() << "\n";
 }
 
 int RNN::LookupWord(const string &word) const {
@@ -218,10 +235,8 @@ int RNN::LookupWord(const string &word) const {
 
 void RNN::Execute(const std::vector<string> &tokens,
                   std::vector<int> *predictions) const {
-  static const int repeats = 1;
-
   RNNInstance data(lr_, lr_c_, lr_h_, 0, tokens.size());
-  for (int r = 0; r < repeats; ++r) {
+  for (int r = 0; r < FLAGS_repeat; ++r) {
     predictions->clear();
 
     // Look up words in vocabulary.

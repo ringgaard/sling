@@ -195,6 +195,14 @@ int main(int argc, char *argv[]) {
   RegisterGenericKernels(&library);
   RegisterGenericTransformations(&library);
 
+  CheckFltBinOp("Add", "AddExpr", "GenFltAdd");
+  CheckFltBinOp("Sub", "SubExpr", "GenFltSub");
+  CheckFltBinOp("Mul", "MulExpr", "GenFltMul");
+
+  CheckIntBinOp("Add", "AddExpr", "GenIntAdd");
+  CheckIntBinOp("Sub", "SubExpr", "GenIntSub");
+  CheckIntBinOp("Sub", "SubExpr", "GenIntSub");
+
   if (CPU::Enabled(SSE4_1)) {
     CheckFltFunc("Log", "LogExpr", "GenFltLog", false);
     CheckFltFunc("Exp", "ExpExpr", "GenFltExp");
@@ -227,6 +235,7 @@ int main(int argc, char *argv[]) {
     CheckFltFunc("Tanh", "AVXFltTanh", "GenFltTanh");
 
     CheckFltBinOp("Add", "AVXFltAdd", "GenFltAdd");
+    CheckFltBinOp("Sub", "AVXFltSub", "GenFltSub");
     CheckFltBinOp("Mul", "AVXFltMul", "GenFltMul");
 
     CheckMulTwoAdd("MulTwoAdd", "AVXFltMulTwoAdd", "GenFltMulTwoAdd");
