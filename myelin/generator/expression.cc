@@ -272,6 +272,21 @@ void ExpressionGenerator::GenerateXMMVectorMove(
   }
 }
 
+void ExpressionGenerator::GenerateYMMMoveMemToReg(
+    YMMRegister dst,
+    const Operand &src,
+    MacroAssembler *masm) {
+  switch (type_) {
+    case DT_FLOAT:
+      __ vmovaps(dst, src);
+      break;
+    case DT_DOUBLE:
+      __ vmovapd(dst, src);
+      break;
+    default: UNSUPPORTED;
+  }
+}
+
 void ExpressionGenerator::GenerateYMMVectorMove(
     Express::Op *instr,
     MacroAssembler *masm) {
@@ -288,15 +303,7 @@ void ExpressionGenerator::GenerateYMMVectorMove(
     }
   } else if (instr->dst != -1 && instr->src == -1) {
     // MOV reg,[mem]
-    switch (type_) {
-      case DT_FLOAT:
-        __ vmovaps(ymm(instr->dst), addr(instr->args[0]));
-        break;
-      case DT_DOUBLE:
-        __ vmovapd(ymm(instr->dst), addr(instr->args[0]));
-        break;
-      default: UNSUPPORTED;
-    }
+    GenerateYMMMoveMemToReg(ymm(instr->dst), addr(instr->args[0]), masm);
   } else if (instr->dst == -1 && instr->src != -1) {
     // MOV [mem],reg
     switch (type_) {

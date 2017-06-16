@@ -38,10 +38,14 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
 
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
-    if (!CPU::Enabled(AVX2) &&
-        (instructions_.Has(Express::SHR23) ||
-         instructions_.Has(Express::SHL23))) {
-      num_mm_aux = std::max(num_mm_aux, 1);
+    if (!CPU::Enabled(AVX2)) {
+      if (instructions_.Has(Express::SHR23) ||
+         instructions_.Has(Express::SHL23)) {
+        num_mm_aux = std::max(num_mm_aux, 1);
+      }
+      if (instructions_.Has(Express::SUBINT)) {
+        num_mm_aux = std::max(num_mm_aux, 3);
+      }
     }
     index_->ReserveAuxYMMRegisters(num_mm_aux);
   }
@@ -194,10 +198,7 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
             masm);
         break;
       case Express::SUBINT:
-        GenerateYMMFltOp(instr,
-            &Assembler::vpsubd, &Assembler::vpsubq,
-            &Assembler::vpsubd, &Assembler::vpsubq,
-            masm);
+        GenerateIntegerSubtract(instr, masm);
         break;
       default:
         UNSUPPORTED;
@@ -236,15 +237,7 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
     CHECK(instr->dst != -1);
     int src = instr->src;
     if (instr->src == -1) {
-      switch (type_) {
-        case DT_FLOAT:
-          __ vmovaps(ymm(instr->dst), addr(instr->args[0]));
-          break;
-        case DT_DOUBLE:
-          __ vmovapd(ymm(instr->dst), addr(instr->args[0]));
-          break;
-        default: UNSUPPORTED;
-      }
+      GenerateYMMMoveMemToReg(ymm(instr->dst), addr(instr->args[0]), masm);
       src = instr->dst;
     }
 
@@ -278,6 +271,42 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         __ vpsrld(xmm(instr->dst), xmm(src), bits);
       }
       __ vinsertf128(ymm(instr->dst), ymm(instr->dst), xmmaux(0), 1);
+    }
+  }
+
+  // Generate integer subtract.
+  void GenerateIntegerSubtract(Express::Op *instr, MacroAssembler *masm) {
+    if (CPU::Enabled(AVX2)) {
+      GenerateYMMFltOp(instr,
+          &Assembler::vpsubd, &Assembler::vpsubq,
+          &Assembler::vpsubd, &Assembler::vpsubq,
+          masm);
+    } else {
+      // Move second operand to register.
+      CHECK(instr->dst != -1);
+      YMMRegister src2;
+      if (instr->src2 != -1) {
+        src2 = ymm(instr->src2);
+      } else {
+        GenerateYMMMoveMemToReg(ymmaux(0), addr(instr->args[1]), masm);
+        src2 = ymmaux(0);
+      }
+
+      // Subtract upper and lower parts separately.
+      __ vextractf128(xmmaux(1), ymm(instr->src), 1);
+      __ vextractf128(xmmaux(2), src2, 1);
+      switch (type_) {
+        case DT_FLOAT:
+          __ vpsubd(xmmaux(1), xmmaux(1), xmmaux(2));
+          __ vpsubd(xmm(instr->dst), xmm(instr->src), src2.xmm());
+          break;
+        case DT_DOUBLE:
+          __ vpsubq(xmmaux(1), xmmaux(1), xmmaux(2));
+          __ vpsubq(xmm(instr->dst), xmm(instr->src), src2.xmm());
+          break;
+        default: UNSUPPORTED;
+      }
+      __ vinsertf128(ymm(instr->dst), ymm(instr->dst), xmmaux(1), 1);
     }
   }
 

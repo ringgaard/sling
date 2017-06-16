@@ -131,6 +131,10 @@ class ExpressionGenerator {
   // Generate XMM vector move.
   void GenerateXMMVectorMove(Express::Op *instr, MacroAssembler *masm);
 
+  // Generate move of YMM vector operand to register. (NEW)
+  void GenerateYMMMoveMemToReg(YMMRegister dst, const Operand &src,
+                               MacroAssembler *masm);
+
   // Generate YMM vector move.
   void GenerateYMMVectorMove(Express::Op *instr, MacroAssembler *masm);
 
