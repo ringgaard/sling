@@ -7,9 +7,11 @@
 #include "base/logging.h"
 #include "file/file.h"
 #include "myelin/compute.h"
+#include "myelin/macro-assembler.h"
 
 DEFINE_bool(debug_base, false, "Debug base kernel");
 DEFINE_bool(debug_test, false, "Debug test kernel");
+DEFINE_bool(scramble_registers, false, "Scramble registers on entry");
 DEFINE_bool(log_input_tensors, false, "Dump input tensors");
 DEFINE_bool(log_output_tensors, false, "Dump output tensors");
 DEFINE_string(test_code_output, "", "File for generated test code");
@@ -18,8 +20,12 @@ DEFINE_bool(intrand, false, "Use integers for random number generation");
 DEFINE_int32(minint, -64, "Minimum integer for random number generation");
 DEFINE_int32(maxint, 64, "Maximum integer for random number generation");
 
+#define __ masm->
+
 namespace sling {
 namespace myelin {
+
+using namespace jit;
 
 static const float kEpsilon = 1e-6;
 static const float kMinimum = 1e-3;
@@ -62,6 +68,30 @@ class DebugRuntime : public Runtime {
 
   void ClearInstance(Instance *instance) override {
     memset(instance->data(), 0, instance->size());
+  }
+
+  void GenerateProlog(Cell *cell, MacroAssembler *masm) override {
+    if (FLAGS_scramble_registers) {
+      // Use time stamp counter for scrambling registers on entry.
+      __ rdtsc();
+      __ shlq(rdx, Immediate(32));
+      __ orq(rax, rdx);
+      __ movq(xmm0, rax);
+      __ shufps(xmm0, xmm0, 0);
+
+      if (masm->Enabled(AVX)) {
+        __ vinsertf128(ymm0, ymm0, xmm0, 1);
+        for (int r = 1; r < 16; r++) {
+          YMMRegister reg = {r};
+          __ vmovdqa(reg, ymm0);
+        }
+      } else {
+        for (int r = 1; r < 16; r++) {
+          XMMRegister reg = {r};
+          __ movdqa(reg, xmm0);
+        }
+      }
+    }
   }
 
   bool SupportsAsync() override { return false; }

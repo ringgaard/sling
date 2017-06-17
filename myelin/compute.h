@@ -173,6 +173,12 @@ class Runtime {
   // Clear instance data.
   virtual void ClearInstance(Instance *instance) = 0;
 
+  // Generate prolog for cell function.
+  virtual void GenerateProlog(Cell *cell, MacroAssembler *masm) {}
+
+  // Generate epilog for cell function.
+  virtual void GenerateEpilog(Cell *cell, MacroAssembler *masm) {}
+
   // Check if runtime supports asynchronous execution of steps.
   virtual bool SupportsAsync() = 0;
 

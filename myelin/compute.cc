@@ -1204,6 +1204,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Generate prolog for main cell computation.
     masm.Prolog();
+    runtime_->GenerateProlog(cell, &masm);
 
     // Increment the invocation counter.
     if (profiling_) {
@@ -1362,6 +1363,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Generate epilog for main cell computation.
+    runtime_->GenerateEpilog(cell, &masm);
     masm.Epilog();
 
     // Generate code for parallel tasks.
