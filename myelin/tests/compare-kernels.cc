@@ -294,11 +294,11 @@ bool FltKernelComparator::Check(int iterations) {
 
   if (max_error != 0 || error != 0.0 || num_inexact != 0) {
     double avg_error = error / num_elements;
-    LOG(WARNING) << num_inexact << "/" << num_elements
-                 << " inexact values in  comparison between "
-                 << test_kernel_name_ << " and " << base_kernel_name_
-                 << " (max. error: " << max_error << ", "
-                 << "avg. error: " << avg_error << ")";
+    VLOG(1) << num_inexact << "/" << num_elements
+            << " inexact values in comparison between "
+            << test_kernel_name_ << " and " << base_kernel_name_
+            << " (max. error: " << max_error << ", "
+            << "avg. error: " << avg_error << ")";
   }
 
   if (num_errors != 0) {

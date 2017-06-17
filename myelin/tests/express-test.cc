@@ -52,6 +52,15 @@ void Test(const string &str) {
   LOG(INFO) << "Expression: " << str;
   Express expr;
   expr.Parse(str, true);
+
+  bool raw = false;
+  if (raw) {
+    LOG(INFO) << "Raw:";
+    for (auto *op : expr.ops()) {
+      LOG(INFO) << "  " << op->result->AsString() << " := " << op->AsString();
+    }
+  }
+
   expr.EliminateCommonSubexpressions();
 
   if (fma) {

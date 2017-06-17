@@ -291,7 +291,7 @@ class Express {
   // left(a,b,c) and all occurrences of outer(a,inner(b,c)) to right(a,b,c).
   void Fuse(OpType outer, OpType inner, OpType left, OpType right);
   void FuseMulAdd() { Fuse(ADD, MUL, MULADD213, MULADD231); }
-  void FuseMulSub() { Fuse(SUB, MUL, MULSUB213, MULSUB231); }
+  void FuseMulSub() { Fuse(SUB, MUL, MULSUB213, INVALID); }
 
   // Rewrite expression to match instruction forms supported by target
   // architecture. The expression is assumed to be on static single assignment
@@ -350,7 +350,7 @@ class Express {
   Var *Relu(Var *x) { return Do(RELU, x); }
 
   // Build expressions for intrincic functions.
-  Var *MulAdd(Var *x, Var *y, Var *c) { return Add(Mul(x, y), c); }
+  Var *MulAdd(Var *x, Var *y, Var *z) { return Add(Mul(x, y), z); }
   Var *Log(Var *x);
   Var *Exp(Var *x);
   Var *Sigmoid(Var *x);
