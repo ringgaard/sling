@@ -40,6 +40,19 @@ DEFINE_bool(fma3, true, "FMA3 support");
 
 Library library;
 
+void BaselineMatMatMul(const TensorData &A, const TensorData &B,
+                       TensorData *C) {
+  for (int i = 0; i < A.dim(0); ++i) {
+    for (int j = 0; j < B.dim(1); ++j) {
+      float sum = 0.0;
+      for (int k = 0; k < A.dim(1); ++k) {
+        sum += A.at<float>(i, k) * B.at<float>(k, j);
+      }
+      C->at<float>(i, j) = sum;
+    }
+  }
+}
+
 void CheckTest(bool success) {
   if (!FLAGS_ignore_errors) CHECK(success);
 }
@@ -228,6 +241,13 @@ int main(int argc, char *argv[]) {
   RegisterArithmeticKernels(&library);
   RegisterGenericKernels(&library);
   RegisterGenericTransformations(&library);
+  library.Register("MatMul", "BaselineMatMatMul", BaselineMatMatMul)
+     .Input(0, DT_FLOAT, 2)
+     .Input(1, DT_FLOAT, 2)
+     .Output(0, DT_FLOAT, 2);
+
+  // Test GenFltVecMatMul against baseline.
+  CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul");
 
   // Test GenFltVecMatMul against itself to test the kernel comparator.
   CheckFltMatMul("GenFltVecMatMul", "GenFltVecMatMul");
