@@ -539,11 +539,9 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
       }
 
       // Move to next row batch.
-      if (main_rows > 8 || remaining_rows > 0) {
+      if (main_rows > 8 * unrolls) {
         __ addq(row, Immediate(8 * unrolls));
         __ cmpq(row, Immediate(main_rows));
-      }
-      if (main_rows > 8 * unrolls) {
         __ j(less, &l2);
       }
 
@@ -551,13 +549,13 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
       if (remaining_rows > 0) {
         XMMRegister s = acc.xmm();
         XMMRegister e = elem[0].xmm();
-        int disp = 0;
+        int disp = main_rows * sizeof(float);
         int left = remaining_rows;
 
         // Add first four remaining elements using SSE.
         if (left >= 4) {
-          __ vmovaps(s, Operand(input, row, times_4));
-          __ vmulps(s, s, Operand(matrix, row, times_4));
+          __ vmovaps(s, Operand(input, disp));
+          __ vmulps(s, s, Operand(matrix, disp));
           __ vaddps(sum[0], sum[0], acc);
           left -= 4;
           disp += 4 * sizeof(float);
@@ -565,21 +563,22 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
 
         // Add up to three remaining elements as scalars.
         if (left > 0) {
-          __ vmovss(s, Operand(input, row, times_4, disp));
-          __ vmulss(s, s, Operand(matrix, row, times_4, disp));
+          __ vmovss(s, Operand(input, disp));
+          __ vmulss(s, s, Operand(matrix, disp));
           left--;
           disp += sizeof(float);
           while (left > 0) {
-            __ vmovss(e, Operand(input, row, times_4, disp));
+            __ vmovss(e, Operand(input, disp));
             if (masm->Enabled(FMA3)) {
-              __ vfmadd231ss(s, e, Operand(matrix, row, times_4, disp));
+              __ vfmadd231ss(s, e, Operand(matrix, disp));
             } else {
-              __ vmulss(e, e, Operand(matrix, row, times_4, disp));
+              __ vmulss(e, e, Operand(matrix, disp));
               __ vaddss(s, s, e);
             }
             left--;
             disp += sizeof(float);
           }
+          __ vperm2f128(acc, acc, acc, 0x80);
           __ vaddps(sum[0], sum[0], acc);
         }
       }

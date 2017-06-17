@@ -176,13 +176,13 @@ class StaticData {
   StaticData(int alignment = 1) : alignment_(alignment), address_(&location_) {}
 
   // Add data to data block.
-  void AddData(void *buffer, int size, int repeat = 1);
+  void AddData(const void *buffer, int size, int repeat = 1);
   template<typename T> void Add(T value, int repeat = 1) {
     AddData(&value, sizeof(T), repeat);
   }
 
   // Check if data block is equal to (repeated) constant.
-  bool Equals(void *data, int size, int repeat) const;
+  bool Equals(const void *data, int size, int repeat) const;
 
   // Generate data blocks and fix up references to it.
   void Generate(MacroAssembler *masm);
@@ -216,7 +216,7 @@ class MacroAssembler : public jit::Assembler {
   StaticData *CreateDataBlock(int alignment = 1);
 
   // Find existing static data block.
-  StaticData *FindDataBlock(void *data, int size, int repeat);
+  StaticData *FindDataBlock(const void *data, int size, int repeat);
 
   // Create new static data block with (repeated) constant.
   template<typename T> StaticData *Constant(T value, int repeat = 1) {
@@ -236,7 +236,7 @@ class MacroAssembler : public jit::Assembler {
   }
 
   // Get static data block for value.
-  StaticData *GetData(void *value, int size, int repeat = 1) {
+  StaticData *GetData(const void *value, int size, int repeat = 1) {
     StaticData *data = FindDataBlock(value, size, repeat);
     if (data == nullptr) {
       data = CreateDataBlock(size * repeat);

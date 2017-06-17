@@ -119,6 +119,9 @@ struct KernelCompiler {
       return false;
     }
     if (!binfile.empty()) func->WriteCodeToFile(binfile);
+    if (!func->steps().empty() && !func->steps()[0]->variant().empty()) {
+      VLOG(2) << kernel << " variant " << func->steps()[0]->variant();
+    }
 
     return true;
   }

@@ -135,6 +135,11 @@ class Express {
     // Redirect all consumers of variable to another variable.
     void Redirect(Var *other);
 
+    // Check if variable is a register, memory, or immediate variable.
+    bool IsReg() const { return type == TEMP; }
+    bool IsMem() const { return type != TEMP; }
+    bool IsImm() const { return type == CONST || type == NUMBER; }
+
     VarType type;                 // variable type
     int id;                       // variable id (-1 for unassigned temps)
     Op *producer;                 // operation producing value for variable

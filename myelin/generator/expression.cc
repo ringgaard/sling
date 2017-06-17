@@ -167,10 +167,18 @@ void ExpressionGenerator::GenerateXMMScalarFltMove(
     // MOV reg,reg
     switch (type_) {
       case DT_FLOAT:
-        __ movss(xmm(instr->dst), xmm(instr->src));
+        if (CPU::Enabled(AVX)) {
+          __ vmovss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+        } else {
+          __ movss(xmm(instr->dst), xmm(instr->src));
+        }
         break;
       case DT_DOUBLE:
-        __ movsd(xmm(instr->dst), xmm(instr->src));
+        if (CPU::Enabled(AVX)) {
+          __ vmovsd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+        } else {
+          __ movsd(xmm(instr->dst), xmm(instr->src));
+        }
         break;
       default: UNSUPPORTED;
     }
@@ -178,10 +186,18 @@ void ExpressionGenerator::GenerateXMMScalarFltMove(
     // MOV reg,[mem]
     switch (type_) {
       case DT_FLOAT:
-        __ movss(xmm(instr->dst), addr(instr->args[0]));
+        if (CPU::Enabled(AVX)) {
+          __ vmovss(xmm(instr->dst), addr(instr->args[0]));
+        } else {
+          __ movss(xmm(instr->dst), addr(instr->args[0]));
+        }
         break;
       case DT_DOUBLE:
-        __ movsd(xmm(instr->dst), addr(instr->args[0]));
+        if (CPU::Enabled(AVX)) {
+          __ vmovsd(xmm(instr->dst), addr(instr->args[0]));
+        } else {
+          __ movsd(xmm(instr->dst), addr(instr->args[0]));
+        }
         break;
       default: UNSUPPORTED;
     }
@@ -189,10 +205,18 @@ void ExpressionGenerator::GenerateXMMScalarFltMove(
     // MOV [mem],reg
     switch (type_) {
       case DT_FLOAT:
-        __ movss(addr(instr->result), xmm(instr->src));
+        if (CPU::Enabled(AVX)) {
+          __ vmovss(addr(instr->result), xmm(instr->src));
+        } else {
+          __ movss(addr(instr->result), xmm(instr->src));
+        }
         break;
       case DT_DOUBLE:
-        __ movsd(addr(instr->result), xmm(instr->src));
+        if (CPU::Enabled(AVX)) {
+          __ vmovsd(addr(instr->result), xmm(instr->src));
+        } else {
+          __ movsd(addr(instr->result), xmm(instr->src));
+        }
         break;
       default: UNSUPPORTED;
     }
