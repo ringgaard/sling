@@ -16,10 +16,13 @@ ElementwiseIndexGenerator::ElementwiseIndexGenerator(Step *step) {
   // Allocate iterators for all inputs and outputs.
   input_.resize(step->indegree());
   for (int i = 0; i < step->indegree(); ++i) {
+    CHECK(step->input(i)->type() == type_);
     input_[i].var = step->input(i);
   }
   output_.resize(step->outdegree());
   for (int i = 0; i < step->outdegree(); ++i) {
+    CHECK(step->input(i)->type() == type_);
+    CHECK(step->output(i)->shape() == step->output(0)->shape());
     output_[i].var = step->output(i);
   }
 }

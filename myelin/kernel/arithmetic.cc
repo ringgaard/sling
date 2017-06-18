@@ -159,6 +159,28 @@ class ExpressionTransformer : public Transformer {
   }
 
   bool Combine(Flow *flow, Flow::Operation *first, Flow::Operation *second) {
+    // Check that ops have the same types and output shapes.
+    if (first->indegree() < 1 || first->outdegree() < 1) return false;
+    if (second->indegree() < 1 || second->outdegree() < 1) return false;
+    Type type = first->outputs[0]->type;
+    const Shape &shape = first->outputs[0]->shape;
+    for (auto *input : first->inputs) {
+      if (input->type != type) return false;
+      // TODO: check that input shape is compatible with the output shape.
+    }
+    for (auto *input : second->inputs) {
+      if (input->type != type) return false;
+      // TODO: check that input shape is compatible with the output shape.
+    }
+    for (auto *output : first->outputs) {
+      if (output->type != type) return false;
+      if (output->shape != shape) return false;
+    }
+    for (auto *output : second->outputs) {
+      if (output->type != type) return false;
+      if (output->shape != shape) return false;
+    }
+
     // Check for indirect dependencies between ops.
     for (auto *v : second->inputs) {
       if (v->producer != first && v->DependsOn(first)) return false;
@@ -243,7 +265,23 @@ class Calculate : public Kernel {
   string Operation() override { return operation_; }
 
   bool Supports(Step *step) override {
-    return step->type() == operation_;
+    // Check that operation is compatible.
+    if (step->type() != operation_) return false;
+
+    // Check that inputs and outputs have the compatible types and shapes.
+    if (step->indegree() < 1 || step->outdegree() < 1) return false;
+    Type type = step->output(0)->type();
+    const Shape &shape = step->output(0)->shape();
+    for (auto *input : step->inputs()) {
+      if (input->type() != type) return false;
+      // TODO: check that input shape is compatible with the output shape.
+    }
+    for (auto *output : step->outputs()) {
+      if (output->type() != type) return false;
+      if (output->shape() != shape) return false;
+    }
+
+    return true;
   }
 
   void Adjust(Step *step) override {
@@ -266,6 +304,8 @@ class Calculate : public Kernel {
     for (auto *output : step->outputs()) {
       output->SetMiniumAlignment(alignment);
     }
+
+    // TODO: require compact row-major encoding.
 
     // Enable sharing of inputs and outputs.
     for (int i = 0; i < step->indegree(); ++i) {
