@@ -240,6 +240,10 @@ class Shape {
   bool operator==(const Shape &other) const { return IsSameSize(other); }
   bool operator!=(const Shape &other) const { return !IsSameSize(other); }
 
+  // Return the common size between this shape and another shape. The common
+  // size is the product of all the shared suffix dimensions.
+  int CommonSize(const Shape &other) const;
+
   // Return shape as string.
   string ToString() const;
 

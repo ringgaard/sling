@@ -14,6 +14,9 @@ class IndexGenerator {
  public:
   virtual ~IndexGenerator() = default;
 
+  // Initialize index generator.
+  virtual void Initialize(size_t vecsize) = 0;
+
   // Allocate registers. Return false in case of register overflow.
   virtual bool AllocateRegisters(MacroAssembler *masm);
 

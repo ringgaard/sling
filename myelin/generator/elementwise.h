@@ -10,14 +10,12 @@ namespace myelin {
 
 class ElementwiseIndexGenerator : public IndexGenerator {
  public:
-  // Initialize element-wise index generator for step.
+  // Create element-wise index generator for step.
   ElementwiseIndexGenerator(Step *step);
+  ~ElementwiseIndexGenerator();
 
-  // Set the vector step size (in bytes).
-  void SetVectorSize(size_t vecsize) {
-    vecsize_ = vecsize;
-    single_ = size_ <= vecsize_;
-  }
+  // Initialize index generator for vector size.
+  void Initialize(size_t vecsize) override;
 
   // Allocate registers. Return false in case of register overflow.
   bool AllocateRegisters(MacroAssembler *masm) override;
@@ -30,26 +28,54 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   void EndLoop(MacroAssembler *masm);
 
  private:
+  enum IteratorType {SIMPLE, SCALAR, CONST, REPEAT, BROADCAST};
+  struct Locator;
+  struct Iterator;
+
+  // Initialize locator for variable.
+  bool InitializeLocator(Tensor *var, Locator *loc);
+
+  // Allocate registers for locator.
+  bool AllocateLocatorRegisters(Locator *loc, MacroAssembler *masm);
+
+  // Get locator for variable.
+  Locator *GetLocator(Express::Var *var) {
+    return var->type == Express::OUTPUT ? &output_[var->id] : &input_[var->id];
+  }
+
   // Check if variable is a valid index.
   bool Valid(Express::Var *var) const;
 
+  // Create new iterator.
+  Iterator *NewIterator(IteratorType type) {
+    Iterator *it = new Iterator(type);
+    iterators_.push_back(it);
+    return it;
+  }
+
   // Iterator for looping over (vector) elements in tensor.
   struct Iterator {
-    // Check for single element tensor.
-    bool scalar() const { return var->elements() == 1; }
+    Iterator(IteratorType type) : type(type) {}
 
-    // Check for constant tensor.
-    bool constant() const { return var->IsConstant(); }
+    IteratorType type;                   // iterator type
+    size_t size = 0;                     // number of elements to iterate over
+    size_t broadcast = 0;                // broadcast iterations
+    jit::Register offset = jit::no_reg;  // offset from base
+    jit::Register repeat = jit::no_reg;  // broadcast counter
+  };
 
-    Tensor *var;                       // tensor that is being iterated
-    jit::Register base = jit::no_reg;  // base register for tensor
+  // Locator for generating address operands for variables.
+  struct Locator {
+    Tensor *var;                        // variable to iterate over
+    jit::Register base = jit::no_reg;   // base address register
+    Iterator *iterator = nullptr;       // iterator for iterating over elements
   };
 
   // Output type.
   Type type_;
 
-  // Output size.
-  size_t size_;
+  // Output shape.
+  Shape shape_;
 
   // Vector size.
   size_t vecsize_ = 1;
@@ -60,15 +86,18 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   // Instance pointer register.
   jit::Register instance_;
 
-  // Main loop register.
+  // Output offset register.
   jit::Register offset_;
 
   // Whether only one iteration is needed.
   bool single_ = false;
 
-  // Input and output iterators.
-  std::vector<Iterator> input_;
-  std::vector<Iterator> output_;
+  // Input and output locators.
+  std::vector<Locator> input_;
+  std::vector<Locator> output_;
+
+  // Iterators.
+  std::vector<Iterator *> iterators_;
 
   // Assembler for generating code and data.
   MacroAssembler *masm_ = nullptr;

@@ -88,6 +88,19 @@ bool Shape::IsSameSize(const Shape &other) const {
   return true;
 }
 
+int Shape::CommonSize(const Shape &other) const {
+  int n = 1;
+  int d1 = rank() - 1;
+  int d2 = other.rank() - 1;
+  while (d1 >= 0 && d2 >= 0) {
+    int n1 = dim(d1--);
+    int n2 = other.dim(d2--);
+    if (n1 != n2) break;
+    n *= n1;
+  }
+  return n;
+}
+
 string Shape::ToString() const {
   string str;
   for (int d = 0; d < rank(); ++d) {

@@ -48,7 +48,10 @@ void ExpressionGenerator::Initalize(const Express &expression,
   // Allocate registers for temporary variables.
   instructions_.AllocateRegisters();
 
-  // Reserve variables.
+  // Initialize index generator.
+  index->Initialize(VectorSize());
+
+  // Reserve registers.
   Reserve();
 }
 

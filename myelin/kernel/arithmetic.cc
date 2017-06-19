@@ -258,8 +258,8 @@ class ExpressionTransformer : public Transformer {
 // Kernel for computing arithmetic expressions.
 class Calculate : public Kernel {
  public:
-  Calculate(const string &name, const string &operation)
-      : name_(name), operation_(operation) {}
+  Calculate(const string &name, const string &operation, int arity = -1)
+      : name_(name), operation_(operation), arity_(arity) {}
 
   string Name() override { return name_; }
   string Operation() override { return operation_; }
@@ -267,6 +267,7 @@ class Calculate : public Kernel {
   bool Supports(Step *step) override {
     // Check that operation is compatible.
     if (step->type() != operation_) return false;
+    if (arity_ != -1 && step->indegree() != arity_) return false;
 
     // Check that inputs and outputs have the compatible types and shapes.
     if (step->indegree() < 1 || step->outdegree() < 1) return false;
@@ -285,17 +286,25 @@ class Calculate : public Kernel {
   }
 
   void Adjust(Step *step) override {
+    // Compute the maximum common size between inputs and outputs.
+    DCHECK_GE(step->outdegree(), 1);
+    Tensor *output = step->output(0);
+    Type type = output->type();
+    int elements = output->elements();
+    for (auto *input : step->inputs()) {
+      int common = output->shape().CommonSize(input->shape());
+      if (common < elements) elements = common;
+    }
+
     // Set the alignment requirements based on the vector size.
-    Type type = step->output(0)->type();
-    int elements = step->output(0)->elements();
     Express expr;
     InitExpression(step, &expr, false);
     ElementwiseIndexGenerator index(step);
     auto *generator = ExpressionGenerator::Select(expr, type, elements);
     CHECK(generator != nullptr);
     generator->Initalize(expr, type, &index);
-    int alignment = generator->VectorSize();
     step->set_variant(generator->Name());
+    int alignment = generator->VectorSize();
     delete generator;
 
     for (auto *input : step->inputs()) {
@@ -319,9 +328,16 @@ class Calculate : public Kernel {
 
   void Generate(Step *step, MacroAssembler *masm) override {
     // Determine output type and shape from the first output.
-    Type type = step->output(0)->type();
-    const Shape &shape = step->output(0)->shape();
-    int elements = shape.elements();
+    Tensor *output = step->output(0);
+    Type type = output->type();
+
+    // Compute the maximum common size between inputs and outputs.
+    DCHECK_GE(step->outdegree(), 1);
+    int elements = output->elements();
+    for (auto *input : step->inputs()) {
+      int common = output->shape().CommonSize(input->shape());
+      if (common < elements) elements = common;
+    }
 
     // Compile expression to be computed.
     Express expr;
@@ -336,7 +352,6 @@ class Calculate : public Kernel {
 
     // Initialize expression and index generators.
     generator->Initalize(expr, type, &index);
-    index.SetVectorSize(generator->VectorSize());
 
     // Allocate registers.
     CHECK(index.AllocateRegisters(masm)) << "Register overflow";
@@ -351,6 +366,7 @@ class Calculate : public Kernel {
 
   int64 Complexity(const Step *step) {
     // Determine shape from the first output.
+    DCHECK_GE(step->outdegree(), 1);
     const Shape &shape = step->output(0)->shape();
 
     // Compile expression to be computed.
@@ -364,23 +380,24 @@ class Calculate : public Kernel {
  private:
   const string name_;       // kernel name
   const string operation_;  // kernel operation
+  int arity_;               // number of inputs
 };
 
 // Register calculation kernels in library.
 static void RegisterCalculate(Library *library) {
   library->RegisterTransformer(new ExpressionTransformer());
   library->Register(new Calculate("Calculate", "Calculate"));
-  library->Register(new Calculate("AddExpr", "Add"));
-  library->Register(new Calculate("SubExpr", "Sub"));
-  library->Register(new Calculate("MulExpr", "Mul"));
-  library->Register(new Calculate("DivExpr", "Div"));
-  library->Register(new Calculate("MaxExpr", "Maximum"));
-  library->Register(new Calculate("MinExpr", "Minimum"));
-  library->Register(new Calculate("ReluExpr", "Relu"));
-  library->Register(new Calculate("LogExpr", "Log"));
-  library->Register(new Calculate("ExpExpr", "Exp"));
-  library->Register(new Calculate("SigmoidExpr", "Sigmoid"));
-  library->Register(new Calculate("TanhExpr", "Tanh"));
+  library->Register(new Calculate("AddExpr", "Add", 2));
+  library->Register(new Calculate("SubExpr", "Sub", 2));
+  library->Register(new Calculate("MulExpr", "Mul", 2));
+  library->Register(new Calculate("DivExpr", "Div", 2));
+  library->Register(new Calculate("MaxExpr", "Maximum", 2));
+  library->Register(new Calculate("MinExpr", "Minimum", 2));
+  library->Register(new Calculate("ReluExpr", "Relu", 1));
+  library->Register(new Calculate("LogExpr", "Log", 1));
+  library->Register(new Calculate("ExpExpr", "Exp", 1));
+  library->Register(new Calculate("SigmoidExpr", "Sigmoid", 1));
+  library->Register(new Calculate("TanhExpr", "Tanh", 1));
 }
 
 // Replace ops with constant input variables with new computed constant
