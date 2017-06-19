@@ -140,9 +140,14 @@ bool ElementwiseIndexGenerator::AllocateLocatorRegisters(
       if (!loc->iterator->offset.is_valid()) return false;
       break;
     case BROADCAST:
-      // TODO: add support for broadcast.
-      LOG(FATAL) << "BROADCAST not yet implemented";
-      return false;
+      // Allocate block, index, and broadcast registers.
+      loc->iterator->block = rr.try_alloc();
+      if (!loc->iterator->block.is_valid()) return false;
+      loc->iterator->offset = rr.try_alloc();
+      if (!loc->iterator->offset.is_valid()) return false;
+      loc->iterator->repeat = rr.try_alloc();
+      if (!loc->iterator->repeat.is_valid()) return false;
+      break;
     default:
       return false;
   };
@@ -151,10 +156,19 @@ bool ElementwiseIndexGenerator::AllocateLocatorRegisters(
 }
 
 void ElementwiseIndexGenerator::BeginLoop(MacroAssembler *masm) {
-  // Load tensor addresses.
+  // Load tensor addresses and initialize index registers.
   for (auto &loc : input_) {
     if (loc.base.is_valid()) {
       __ LoadTensorAddress(loc.base, loc.var);
+    }
+    if (loc.iterator->block.is_valid()) {
+      __ LoadTensorAddress(loc.iterator->block, loc.var);
+    }
+    if (!single_ && loc.iterator->offset.is_valid()) {
+      __ xorq(loc.iterator->offset, loc.iterator->offset);
+    }
+    if (loc.iterator->repeat.is_valid()) {
+      __ xorq(loc.iterator->repeat, loc.iterator->repeat);
     }
   }
   for (auto &loc : output_) {
@@ -175,8 +189,50 @@ void ElementwiseIndexGenerator::BeginLoop(MacroAssembler *masm) {
 
 void ElementwiseIndexGenerator::EndLoop(MacroAssembler *masm) {
   if (!single_) {
-    size_t size = TypeTraits::of(type_).size() * shape_.elements();
+    // Move to next output element.
     __ addq(offset_, Immediate(vecsize_));
+
+    // Update iterators.
+    for (Iterator *it : iterators_) {
+      if (it->type == REPEAT) {
+        size_t repeat_size = element_size() * it->size;
+        if ((repeat_size & (repeat_size - 1)) == 0) {
+          // The repeat block size is a power of two, so the index can be
+          // computed using masking.
+          __ movq(it->offset, offset_);
+          __ andq(it->offset, Immediate(repeat_size - 1));
+        } else {
+          // Increment offset and reset at end of repeat.
+          Label l;
+          __ addq(it->offset, Immediate(vecsize_));
+          __ cmpq(it->offset, Immediate(repeat_size));
+          __ j(less, &l);
+          __ xorq(it->offset, it->offset);
+          __ bind(&l);
+        }
+      } else if (it->type == BROADCAST) {
+        size_t block_size = element_size() * it->size;
+        Label l;
+        // Move to next inner element block.
+        __ addq(it->offset, Immediate(vecsize_));
+        __ cmpq(it->offset, Immediate(block_size));
+        __ j(less, &l);
+
+        // Next repetition of block.
+        __ xorq(it->offset, it->offset);   // at end of block, reset index
+        __ incq(it->repeat);               // increment block repeat
+        __ cmpq(it->repeat, Immediate(it->broadcast));
+        __ j(less, &l);
+
+        // Move to next block.
+        __ xorq(it->repeat, it->repeat);  // move to next block
+        __ addq(it->block, Immediate(block_size));
+        __ bind(&l);
+      }
+    }
+
+    // Check if we have reached the end of the output.
+    size_t size = element_size() * shape_.elements();
     __ cmpq(offset_, Immediate(size));
     __ j(less, &begin_);
   }
@@ -205,7 +261,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
     DCHECK(Valid(var));
     Locator *loc = GetLocator(var);
 
-    // Return operand for adressing variable.
+    // Return operand for accessing variable.
     switch (loc->iterator->type) {
       case SIMPLE:
         if (single_) {
@@ -243,13 +299,29 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
         return masm_->GetData(loc->var->data(), size, repeat)->address();
       }
       case REPEAT:
-        LOG(FATAL) << "REPEAT not yet implemented";
-        return Operand(rbp);
-        break;
+        if (single_) {
+          // Single iteration.
+          if (loc->base.is_valid()) {
+            // Index single element using base register.
+            return Operand(loc->base);
+          } else {
+            // Index single element using offset in instance.
+            return Operand(instance_, loc->var->offset());
+          }
+        } else {
+          // Multiple iterations.
+          if (loc->base.is_valid()) {
+            // Index element using base register and index.
+            return Operand(loc->base, loc->iterator->offset);
+          } else {
+            // Index element using offset in instance and index.
+            return Operand(instance_, loc->iterator->offset, times_1,
+                           loc->var->offset());
+          }
+        }
       case BROADCAST:
-        LOG(FATAL) << "BROADCAST not yet implemented";
-        return Operand(rbp);
-        break;
+        // Return block base plus block offset.
+        return Operand(loc->iterator->block, loc->iterator->offset);
       default:
         LOG(FATAL) << "Unsupported iterator type";
         return Operand(rbp);

@@ -46,6 +46,11 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   // Check if variable is a valid index.
   bool Valid(Express::Var *var) const;
 
+  // Return the output element size.
+  size_t element_size() const {
+    return TypeTraits::of(type_).size();
+  }
+
   // Create new iterator.
   Iterator *NewIterator(IteratorType type) {
     Iterator *it = new Iterator(type);
@@ -60,6 +65,7 @@ class ElementwiseIndexGenerator : public IndexGenerator {
     IteratorType type;                   // iterator type
     size_t size = 0;                     // number of elements to iterate over
     size_t broadcast = 0;                // broadcast iterations
+    jit::Register block = jit::no_reg;   // block base
     jit::Register offset = jit::no_reg;  // offset from base
     jit::Register repeat = jit::no_reg;  // broadcast counter
   };

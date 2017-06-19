@@ -271,7 +271,7 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-#if 0
+#if 1
   // Run instance
   Instance data(distil);
   for (int i = 0; i < 10; ++i) {

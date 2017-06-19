@@ -292,6 +292,7 @@ class Calculate : public Kernel {
     Type type = output->type();
     int elements = output->elements();
     for (auto *input : step->inputs()) {
+      if (input->IsConstant() && input->elements() == 1) continue;
       int common = output->shape().CommonSize(input->shape());
       if (common < elements) elements = common;
     }
@@ -335,6 +336,7 @@ class Calculate : public Kernel {
     DCHECK_GE(step->outdegree(), 1);
     int elements = output->elements();
     for (auto *input : step->inputs()) {
+      if (input->IsConstant() && input->elements() == 1) continue;
       int common = output->shape().CommonSize(input->shape());
       if (common < elements) elements = common;
     }
