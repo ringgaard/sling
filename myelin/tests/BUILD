@@ -65,6 +65,7 @@ cc_binary(
   deps = [
     "//base",
     "//base:clock",
+    "//file",
     "//file:posix",
     "//myelin:compute",
     "//myelin:flow",

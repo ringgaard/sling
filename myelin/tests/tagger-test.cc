@@ -7,7 +7,7 @@
 #include "base/init.h"
 #include "base/flags.h"
 #include "base/logging.h"
-
+#include "file/file.h"
 #include "myelin/compute.h"
 #include "myelin/flow.h"
 #include "myelin/graph.h"
@@ -80,6 +80,9 @@ class RNN {
   // Output profile.
   void OutputProfile() const;
 
+  // Loop up tag name.
+  const string &tag(int index) const { return tags_[index]; }
+
  private:
   // Looks up cells, connectors, and parameters.
   Cell *GetCell(const string &name);
@@ -108,6 +111,7 @@ class RNN {
   // Lexicon.
   std::unordered_map<string, int> vocabulary_;
   int oov_ = -1;
+  std::vector<string> tags_;
 };
 
 // RNN state for running an instance of the parser on a document.
@@ -200,6 +204,17 @@ void RNN::Load(const string &filename) {
     } else {
       vocabulary_[word] = index++;
     }
+    pos = next + 1;
+  }
+  string tagdata;
+  CHECK(File::ReadContents("local/tag-map", &tagdata));
+  pos = 0;
+  string tag;
+  for (;;) {
+    int next = tagdata.find('\n', pos);
+    if (next == -1) break;
+    tag.assign(tagdata, pos, next - pos);
+    tags_.push_back(tag);
     pos = next + 1;
   }
 }
@@ -346,13 +361,14 @@ int main(int argc, char *argv[]) {
   rnn.Execute(sentence, &predictions);
 
   for (int i = 0; i < predictions.size(); ++i) {
-    LOG(INFO) << "pred: " << predictions[i];
+    LOG(INFO) << sentence[i] << " " << rnn.tag(predictions[i]);
   }
 
   CHECK_EQ(predictions.size(), sentence.size());
   for (int i = 0; i < predictions.size(); ++i) {
     CHECK_EQ(golden[i], predictions[i])
-        << i << " gold: " << golden[i] << " predicted: " << predictions[i];
+        << i << " gold: " << rnn.tag(golden[i])
+        << " predicted: " << rnn.tag(predictions[i]);
   }
 
   return 0;
