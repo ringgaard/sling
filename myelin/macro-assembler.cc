@@ -160,10 +160,12 @@ void StaticData::AddData(const void *buffer, int size, int repeat) {
 
 bool StaticData::Equals(const void *data, int size, int repeat) const {
   if (size * repeat != data_.size()) return false;
-  const uint8 *ptr = static_cast<const uint8 *>(data);
-  for (int n = 0; n < repeat; ++n) {
-    if (memcmp(ptr, &data_.at(n * repeat), size) != 0) return false;
-    ptr += size;
+  const uint8 *p1 = data_.data();
+  for (int i = 0; i < repeat; ++i) {
+    const uint8 *p2 = static_cast<const uint8 *>(data);
+    for (int j = 0; j < size; ++j) {
+      if (*p1++ != *p2++) return false;
+    }
   }
   return true;
 }
@@ -258,15 +260,15 @@ StaticData *MacroAssembler::CreateDataBlock(int alignment) {
 
 StaticData *MacroAssembler::FindDataBlock(
     const void *data, int size, int repeat) {
-  for (StaticData *data : data_blocks_) {
-    if (data->Equals(data, size, repeat)) return data;
+  for (StaticData *sd : data_blocks_) {
+    if (sd->Equals(data, size, repeat)) return sd;
   }
   return nullptr;
 }
 
 void MacroAssembler::GenerateDataBlocks() {
-  for (StaticData *data : data_blocks_) {
-    data->Generate(this);
+  for (StaticData *sd : data_blocks_) {
+    sd->Generate(this);
   }
 }
 
