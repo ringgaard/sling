@@ -17,12 +17,21 @@
 #include "myelin/kernel/dragnn.h"
 #include "myelin/kernel/generic.h"
 #include "myelin/kernel/sse.h"
+#include "third_party/jit/cpu.h"
 
 DEFINE_int32(repeat, 1, "Number of times test is repeated");
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
 DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
 DEFINE_bool(dump_graph, true, "Dump dot graph");
 DEFINE_bool(dump_code, true, "Dump generated code");
+
+DEFINE_bool(sse, true, "SSE support");
+DEFINE_bool(sse2, true, "SSE2 support");
+DEFINE_bool(sse3, true, "SSE3 support");
+DEFINE_bool(sse41, true, "SSE 4.1 support");
+DEFINE_bool(avx, true, "AVX support");
+DEFINE_bool(avx2, true, "AVX2 support");
+DEFINE_bool(fma3, true, "FMA3 support");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -345,6 +354,14 @@ void RNN::ExtractFeaturesLR(RNNInstance *instance, int current) const {
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
+
+  if (!FLAGS_sse) jit::CPU::Disable(jit::SSE);
+  if (!FLAGS_sse2) jit::CPU::Disable(jit::SSE2);
+  if (!FLAGS_sse3) jit::CPU::Disable(jit::SSE3);
+  if (!FLAGS_sse41) jit::CPU::Disable(jit::SSE4_1);
+  if (!FLAGS_avx) jit::CPU::Disable(jit::AVX);
+  if (!FLAGS_avx2) jit::CPU::Disable(jit::AVX2);
+  if (!FLAGS_fma3) jit::CPU::Disable(jit::FMA3);
 
   RNN rnn;
   const string testdata = "local/tagger_rnn.flow";

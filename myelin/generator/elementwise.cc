@@ -87,7 +87,7 @@ bool ElementwiseIndexGenerator::InitializeLocator(Tensor *var, Locator *loc) {
 
 void ElementwiseIndexGenerator::Initialize(size_t vecsize) {
   vecsize_ = vecsize;
-  single_ = shape_.elements() <= vecsize_;
+  single_ = shape_.elements() * element_size() == vecsize_;
 }
 
 bool ElementwiseIndexGenerator::AllocateRegisters(MacroAssembler *masm) {

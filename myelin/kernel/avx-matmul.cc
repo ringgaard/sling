@@ -56,7 +56,7 @@ class AVXVecMatMulBase : public Kernel {
     // Check bias vector.
     if (bias_) {
       Tensor *b = step->input(2);
-      if (b->type() != itype_) return false;
+      if (b->type() != otype_) return false;
       if (b->rank() == 1) {
         if (b->dim(0) != y->dim(1)) return false;
       } else if (b->rank() == 2) {
@@ -67,36 +67,6 @@ class AVXVecMatMulBase : public Kernel {
     }
 
     return true;
-  }
-
-  void Adjust(Step *step) override {
-    // Get input and output tensors.
-    Tensor *x = step->input(0);
-    Tensor *W = step->input(1);
-    Tensor *b = bias_ ? step->input(2) : nullptr;
-    Tensor *y = step->output(0);
-
-    // Align to one ymm register (256 bits, 32 bytes).
-    int byte_alignment = 256 / 8;
-    x->SetMiniumAlignment(byte_alignment);
-    W->SetMiniumAlignment(byte_alignment);
-    y->SetMiniumAlignment(byte_alignment);
-    if (bias_) b->SetMiniumAlignment(byte_alignment);
-
-    int input_batch = byte_alignment / TypeTraits::of(itype_).size();
-    int output_batch = byte_alignment / TypeTraits::of(otype_).size();
-    x->MinAlign({1, input_batch});
-    if (order_ == ROW_MAJOR) {
-      W->MinAlign({output_batch, input_batch});
-    } else {
-      W->MinAlign({input_batch, 1});
-    }
-    W->SetRequiredOrder(order_);
-
-    if (order_ == ROW_MAJOR) {
-      if (bias_) b->MinAlign({input_batch});
-      y->MinAlign({1, output_batch});
-    }
   }
 
   int64 Complexity(const Step *step) override {
@@ -119,25 +89,32 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
   // Maximum number of loop unrolls.
   static const int kMaxUnrolls = 8;
 
-  // Maximum number of adder registers.
-  static const int kMaxAdders = 4;
-
   AVXFltVecMatMulVBase(bool bias, bool relu)
       : AVXVecMatMulBase(bias, relu, ROW_MAJOR, DT_FLOAT, DT_FLOAT) {}
 
+  void Adjust(Step *step) override {
+    // Get input and output tensors.
+    Tensor *x = step->input(0);
+    Tensor *W = step->input(1);
+    Tensor *b = bias_ ? step->input(2) : nullptr;
+    Tensor *y = step->output(0);
+
+    // Align to one ymm register (256 bits, 32 bytes).
+    int byte_alignment = 256 / 8;
+    x->SetMiniumAlignment(byte_alignment);
+    W->SetMiniumAlignment(byte_alignment);
+    y->SetMiniumAlignment(byte_alignment);
+    if (bias_) b->SetMiniumAlignment(byte_alignment);
+
+    // Rows must be aligned to ymm boundaries to support unaligned loads.
+    W->MinAlign({8, 1});
+    W->SetRequiredOrder(ROW_MAJOR);
+  }
+
   void Generate(Step *step, MacroAssembler *masm) override {
-    Tensor *W = step->input(1);
-    if (W->aligned(0) % 16 == 0) {
-      GenerateUnrolling(step, masm);
-    } else {
-      GenerateLooping(step, masm);
-    }
-  }
-
-  void GenerateLooping(Step *step, MacroAssembler *masm) {
     Registers &rr = masm->rr();
     SIMDRegisters &mm = masm->mm();
-    Label l1, l2;
+    Label l1, l2, l3;
 
     // Get input and output tensors.
     Tensor *x = step->input(0);
@@ -145,130 +122,35 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
     Tensor *b = bias_ ? step->input(2) : nullptr;
     Tensor *y = step->output(0);
 
-    // Compute dimensions.
-    int row_size = W->aligned(0) * sizeof(float);
-    int col_size = W->aligned(1) * sizeof(float);
-    if (bias_ && col_size > b->size()) col_size = b->size();
-    if (col_size > y->size()) col_size = y->size();
-    int mat_skip = W->aligned(1) * sizeof(float);
+    // Get matrix dimensions.
+    int rows = W->dim(0);
+    int cols = W->dim(1);
+    int main_cols = (cols  / 8) * 8;
+    int remaining_cols = cols - main_cols;
+
+    // Compute the number of unrolls.
+    int unrolls = 0;
+    for (int i = 1; i <= kMaxUnrolls; ++i) {
+      int batch_size = i * 8;
+      if (main_cols >= batch_size && main_cols % batch_size == 0) unrolls = i;
+    }
 
     // Allocate general registers.
     Register rowofs = rr.alloc();
     Register colofs = rr.alloc();
-    Register matofs = rr.alloc();
-
+    Register m = rr.alloc();
     Register matrix = rr.alloc();
     Register input = rr.alloc();
     Register output = rr.alloc();
     Register vector = bias_ ? rr.alloc() : no_reg;
 
     // Allocate SIMD registers.
-    YMMRegister elem = mm.allocy();
-    YMMRegister sum = mm.allocy();
-    YMMRegister zero = relu_ ? mm.allocy() : no_ymm_reg;
-
-    // Load tensor locations.
-    __ LoadTensorAddress(input, x);
-    __ LoadTensorAddress(matrix, W);
-    if (bias_) {
-      __ LoadTensorAddress(vector, b);
-    }
-    __ LoadTensorAddress(output, y);
-
-    // Clear column offset.
-    __ xorq(colofs, colofs);
-
-    // Initialize SIMD register to zero for relu.
-    if (relu_) {
-      __ vxorps(zero, zero, zero);
-    }
-
-    // Outer loop over matrix columns, 8 floats at a time.
-    __ LoopStart(&l1);
-    if (bias_) {
-      __ vmovaps(sum, Operand(vector, colofs));
-    } else {
-      __ vxorps(sum, sum, sum);
-    }
-    __ movq(matofs, colofs);
-    __ xorq(rowofs, rowofs);
-
-    // Inner loop over rows.
-    __ LoopStart(&l2);
-
-    // Load x[row].
-    __ vbroadcastss(elem, Operand(input, rowofs));
-    __ addq(rowofs, Immediate(sizeof(float)));
-
-    // Multiply with W.
-    __ vmulps(elem, elem, Operand(matrix, matofs));
-    __ addq(matofs, Immediate(mat_skip));
-
-    // Add to sum.
-    __ vaddps(sum, sum, elem);
-
-    __ cmpq(rowofs, Immediate(row_size));
-    __ j(not_equal, &l2);
-
-    // Compute relu.
-    if (relu_) {
-      __ vmaxps(sum, sum, zero);
-    }
-
-    // Save to y[col].
-    __ vmovaps(Operand(output, colofs), sum);
-
-    __ addq(colofs, Immediate(8 * sizeof(float)));
-    __ cmpq(colofs, Immediate(col_size));
-    __ j(not_equal, &l1);
-  }
-
-  void GenerateUnrolling(Step *step, MacroAssembler *masm) {
-    Registers &rr = masm->rr();
-    SIMDRegisters &mm = masm->mm();
-    Label l1, l2;
-
-    // Get input and output tensors.
-    Tensor *x = step->input(0);
-    Tensor *W = step->input(1);
-    Tensor *b = bias_ ? step->input(2) : nullptr;
-    Tensor *y = step->output(0);
-
-    // Compute the number of unrolls and adders.
-    int unrolls = 2;
-    for (int i = 3; i <= kMaxUnrolls; ++i) {
-      if (W->aligned(0) % (i * 8) == 0) unrolls = i;
-    }
-    int adders = unrolls / 2;
-    if (adders > kMaxAdders) adders = kMaxAdders;
-
-    // Compute dimensions.
-    int row_size = x->dim(1) * sizeof(float);
-    int col_size = W->aligned(1) * sizeof(float);
-    if (bias_ && col_size > b->size()) col_size = b->size();
-    if (col_size > y->size()) col_size = y->size();
-    int mat_skip = W->aligned(1) * sizeof(float);
-
-    // Allocate general registers.
-    Register rowofs = rr.alloc();
-    Register colofs = rr.alloc();
-    Register matofs = rr.alloc();
-
-    Register matrix = rr.alloc();
-    Register input = rr.alloc();
-    Register output = rr.alloc();
-    Register vector = bias_ ? rr.alloc() : no_reg;
-
-    // Allocate SIMD registers.
-    YMMRegister vec = unrolls == 8 ? mm.allocy() : no_ymm_reg;
-    std::vector<YMMRegister> elem;
-    for (int i = 0; i < unrolls; ++i) {
-      elem.push_back(mm.allocy());
-    }
     std::vector<YMMRegister> sum;
-    for (int i = 0; i < adders; ++i) {
+    for (int i = 0; i < std::max(unrolls, 4); ++i) {
       sum.push_back(mm.allocy());
     }
+    YMMRegister elem = mm.allocy();
+    YMMRegister acc = mm.allocy();
     YMMRegister zero = relu_ ? mm.allocy() : no_ymm_reg;
 
     // Load tensor locations.
@@ -279,87 +161,161 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
     }
     __ LoadTensorAddress(output, y);
 
-    // Clear column offset.
-    __ xorq(colofs, colofs);
-
     // Initialize SIMD register to zero for relu.
     if (relu_) {
       __ vxorps(zero, zero, zero);
     }
 
-    // Outer loop over matrix columns, 8 floats at a time.
-    __  CodeTargetAlign();
-    __ LoopStart(&l1);
-    if (bias_) {
-      __ vmovaps(sum[0], Operand(vector, colofs));
-    }
-    for (int i = (bias_ ? 1 : 0); i < adders; ++i) {
-       __ vxorps(sum[i], sum[i], sum[i]);
-    }
-    __ movq(matofs, colofs);
-    __ xorq(rowofs, rowofs);
+    // Compute main columns.
+    if (unrolls > 0) {
+      // Outer loop over matrix column blocks.
+      __ xorq(colofs, colofs);
+      __ LoopStart(&l1);
 
-    // Inner loop over rows.
-    __  CodeTargetAlign();
-    __ LoopStart(&l2);
-
-    if (unrolls == 8 && CPU::Enabled(AVX2)) {
-      // Load x[row:row+8].
-      __ vmovaps(vec, Operand(input, rowofs));
-
-      // Multiply x[row:row+8] with W[row:row+8,col:col+8].
+      // Initialize block with bias or zero.
       for (int i = 0; i < unrolls; ++i) {
-        if (i == 0) {
-          __ vbroadcastss(elem[i], vec);
-        } else if (i == 4) {
-          __ vperm2f128(vec, vec, vec, 1);
-          __ vbroadcastss(elem[i], vec);
+        if (bias_) {
+          __ vmovaps(sum[i], Operand(vector, colofs, times_1, i * 32));
         } else {
-          __ vpermilps(elem[i], vec, i % 4);
-          __ vbroadcastss(elem[i], elem[i]);
+          __ vxorps(sum[i], sum[i], sum[i]);
         }
-
-        int disp = i * mat_skip;
-        __ vmulps(elem[i], elem[i], Operand(matrix, matofs, times_1, disp));
       }
-    } else {
-      // Load x[row] and multiply with W.
+      __ movq(m, matrix);
+      __ xorq(rowofs, rowofs);
+
+      // Inner loop over rows.
+      __ LoopStart(&l2);
+
+      // Load x[row].
+      __ vbroadcastss(elem, Operand(input, rowofs));
+
+      // Multiply x[row] with W[row,col:col+n] and add to sum.
       for (int i = 0; i < unrolls; ++i) {
-        int disp1 = i * sizeof(float);
-        int disp2 = i * mat_skip;
-        __ vbroadcastss(elem[i], Operand(input, rowofs, times_1, disp1));
-        __ vmulps(elem[i], elem[i], Operand(matrix, matofs, times_1, disp2));
+        if (masm->Enabled(FMA3)) {
+          __ vfmadd231ps(sum[i], elem, Operand(m, i * 32));
+        } else {
+          __ vmulps(acc, elem, Operand(m, i * 32));
+          __ vaddps(sum[i], sum[i], acc);
+        }
+      }
+
+      // Next row.
+      if (rows > 1) {
+        __ addq(m, Immediate(W->stride(0)));
+        __ addq(rowofs, Immediate(sizeof(float)));
+        __ cmpq(rowofs, Immediate(rows * sizeof(float)));
+        __ j(less, &l2);
+      }
+
+      // Save to y[col:col+n].
+      for (int i = 0; i < unrolls; ++i) {
+        // Compute relu.
+        if (relu_) {
+          __ vmaxps(sum[i], sum[i], zero);
+        }
+        __ vmovaps(Operand(output, colofs, times_1, i * 32), sum[i]);
+      }
+
+      // Next matrix column block.
+      if (main_cols > unrolls * 8 || remaining_cols > 0) {
+        __ addq(matrix, Immediate(unrolls * 32));
+      }
+      if (main_cols > unrolls * 8) {
+        __ addq(colofs, Immediate(unrolls * 32));
+        __ cmpq(colofs, Immediate(main_cols * sizeof(float)));
+        __ j(less, &l1);
       }
     }
 
-    // Increment offsets.
-    __ addq(rowofs, Immediate(unrolls * sizeof(float)));
-    __ addq(matofs, Immediate(unrolls * mat_skip));
+    // Compute remaining columns.
+    if (remaining_cols > 0) {
+      CHECK_LE(remaining_cols, 7);
+      // Initialize remaining columns with bias or zero.
+      int coldisp = main_cols * sizeof(float);
+      if (remaining_cols & 4) {
+        if (bias_) {
+          __ vmovaps(sum[0].xmm(), Operand(vector, coldisp));
+        } else {
+          __ vxorps(sum[0].xmm(), sum[0].xmm(), sum[0].xmm());
+        }
+        coldisp += 4 * sizeof(float);
+      }
+      for (int i = 0; i < (remaining_cols & 3); ++i) {
+        int reg = i + 1;
+        if (bias_) {
+          __ vmovss(sum[reg].xmm(), Operand(vector, coldisp));
+        } else {
+          __ vxorps(sum[reg].xmm(), sum[reg].xmm(), sum[reg].xmm());
+        }
+        coldisp += sizeof(float);
+      }
 
-    // Add element products to sum registers.
-    for (int i = 0; i < unrolls; ++i) {
-       __ vaddps(sum[i % adders], sum[i % adders], elem[i]);
+      // Loop over rows.
+      __ movq(m, matrix);
+      __ xorq(rowofs, rowofs);
+      __ LoopStart(&l3);
+
+      // Load x[row].
+      if (remaining_cols & 4) {
+        __ vbroadcastss(elem, Operand(input, rowofs));
+      } else {
+        __ vmovss(elem, Operand(input, rowofs));
+      }
+
+      // Compute first four remaining columns using SSE.
+      int left = remaining_cols;
+      int disp = 0;
+      if (left >= 4) {
+        if (masm->Enabled(FMA3)) {
+          __ vfmadd231ps(sum[0].xmm(), elem.xmm(), Operand(m, disp));
+        } else {
+          __ vmulps(acc.xmm(), elem.xmm(), Operand(m, disp));
+          __ vaddps(sum[0].xmm(), sum[0].xmm(), acc.xmm());
+        }
+        left -= 4;
+        disp += 4 * sizeof(float);
+      }
+
+      // Compute up to three remaining columns as scalars.
+      int reg = 1;
+      while (left > 0) {
+        if (masm->Enabled(FMA3)) {
+          __ vfmadd231ss(sum[reg].xmm(), elem.xmm(), Operand(m, disp));
+        } else {
+          __ vmulss(acc.xmm(), elem.xmm(), Operand(m, disp));
+          __ vaddss(sum[reg].xmm(), sum[reg].xmm(), acc.xmm());
+        }
+        left--;
+        reg++;
+        disp += sizeof(float);
+      }
+
+      // Next row.
+      if (rows > 1) {
+        __ addq(m, Immediate(W->stride(0)));
+        __ addq(rowofs, Immediate(sizeof(float)));
+        __ cmpq(rowofs, Immediate(rows * sizeof(float)));
+        __ j(less, &l3);
+      }
+
+      // Compute relu and save remaining columns.
+      coldisp = main_cols * sizeof(float);
+      if (remaining_cols & 4) {
+        if (relu_) {
+          __ vmaxps(sum[0].xmm(), sum[0].xmm(), zero.xmm());
+        }
+        __ vmovaps(Operand(output, coldisp), sum[0].xmm());
+        coldisp += 4 * sizeof(float);
+      }
+      for (int i = 0; i < (remaining_cols & 3); ++i) {
+        int reg = i + 1;
+        if (relu_) {
+          __ vmaxss(sum[reg].xmm(), sum[reg].xmm(), zero.xmm());
+        }
+        __ vmovss(Operand(output, coldisp), sum[reg].xmm());
+        coldisp += sizeof(float);
+      }
     }
-
-    __ cmpq(rowofs, Immediate(row_size));
-    __ j(less, &l2);
-
-    // Sum adders.
-    for (int i = 1; i < adders; ++i) {
-       __ vaddps(sum[0], sum[0], sum[i]);
-    }
-
-    // Compute relu.
-    if (relu_) {
-      __ vmaxps(sum[0], sum[0], zero);
-    }
-
-    // Save to y[col:col+8].
-    __ vmovaps(Operand(output, colofs), sum[0]);
-
-    __ addq(colofs, Immediate(8 * sizeof(float)));
-    __ cmpq(colofs, Immediate(col_size));
-    __ j(less, &l1);
   }
 };
 
@@ -416,11 +372,11 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
 
     // Align to one ymm register (256 bits, 32 bytes).
     int byte_alignment = 256 / 8;
-
     x->SetMiniumAlignment(byte_alignment);
     W->SetMiniumAlignment(byte_alignment);
     y->SetMiniumAlignment(byte_alignment);
     if (bias_) b->SetMiniumAlignment(byte_alignment);
+
     W->SetRequiredOrder(COLUMN_MAJOR);
   }
 
@@ -847,6 +803,25 @@ class AVXIntVecMatMulHBase : public AVXVecMatMulBase {
     return AVXVecMatMulBase::Supports(step);
   }
 
+  void Adjust(Step *step) override {
+    // Get input and output tensors.
+    Tensor *x = step->input(0);
+    Tensor *W = step->input(1);
+    Tensor *b = bias_ ? step->input(2) : nullptr;
+    Tensor *y = step->output(0);
+
+    // Align to one ymm register (256 bits, 32 bytes).
+    int byte_alignment = 256 / 8;
+    x->SetMiniumAlignment(byte_alignment);
+    W->SetMiniumAlignment(byte_alignment);
+    y->SetMiniumAlignment(byte_alignment);
+    if (bias_) b->SetMiniumAlignment(byte_alignment);
+
+    W->SetRequiredOrder(COLUMN_MAJOR);
+    x->MinAlign({1, 32});
+    W->MinAlign({32, 1});
+  }
+
   void Generate(Step *step, MacroAssembler *masm) override {
     Registers &rr = masm->rr();
     SIMDRegisters &mm = masm->mm();
@@ -1023,6 +998,36 @@ class AVXIntVecMatMulAddReluH : public AVXIntVecMatMulHBase {
 void RegisterAVXMatMul(Library *library) {
   // Computes  : y = x * W
   // Input     : x: float32[1,n]
+  //             W: float32[n,m] row-major
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulV());
+
+  // Computes  : y = x * W + b
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] row-major
+  //             b: float32[1,n]
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulAddV());
+
+  // Computes  : y = max(0, x * W)
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] row-major
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulReluV());
+
+  // Computes  : y = max(0, x * W + b)
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] row-major
+  //             b: float32[1,n]
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulAddReluV());
+
+  // Computes  : y = x * W
+  // Input     : x: float32[1,n]
   //             W: float32[n,m] column-major
   // Output    : y: float32[1,m]
   // Requires  : AVX
@@ -1054,36 +1059,6 @@ void RegisterAVXMatMul(Library *library) {
   // Requires  : AVX
   // Supports  : FMA3
   library->Register(new AVXFltVecMatMulAddReluH());
-
-  // Computes  : y = x * W
-  // Input     : x: float32[1,n]
-  //             W: float32[n,m] row-major
-  // Output    : y: float32[1,m]
-  // Requires  : AVX
-  library->Register(new AVXFltVecMatMulV());
-
-  // Computes  : y = x * W + b
-  // Input     : x: float32[1,n]
-  //             W: float32[n,m] row-major
-  //             b: float32[1,n]
-  // Output    : y: float32[1,m]
-  // Requires  : AVX
-  library->Register(new AVXFltVecMatMulAddV());
-
-  // Computes  : y = max(0, x * W)
-  // Input     : x: float32[1,n]
-  //             W: float32[n,m] row-major
-  // Output    : y: float32[1,m]
-  // Requires  : AVX
-  library->Register(new AVXFltVecMatMulReluV());
-
-  // Computes  : y = max(0, x * W + b)
-  // Input     : x: float32[1,n]
-  //             W: float32[n,m] row-major
-  //             b: float32[1,n]
-  // Output    : y: float32[1,m]
-  // Requires  : AVX
-  library->Register(new AVXFltVecMatMulAddReluV());
 
   // Computes  : C = A * B
   // Input     : A: float32[k,n] row-major

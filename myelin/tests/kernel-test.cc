@@ -24,11 +24,17 @@ DEFINE_bool(ignore_errors, false, "Ignore test errors");
 DEFINE_double(matmul_accuracy, 1e-2, "Maximum error on matmul operations");
 DEFINE_double(func_accuracy, 1e-6, "Maximum error on function operations");
 
+DEFINE_int32(d, -1, "Vector dimension for tests");
 DEFINE_int32(dmin, 1, "Minimum vector dimension for tests");
 DEFINE_int32(dmax, 128, "Maximum vector dimension for tests");
+
+DEFINE_int32(w, -1, "Matrix width for tests");
 DEFINE_int32(wmin, 1, "Minimum matrix width for tests");
 DEFINE_int32(wmax, 128, "Maximum matrix width for tests");
-DEFINE_int32(matmax, 32, "Maximum dimension for matrix multiplication tests");
+
+DEFINE_int32(m, -1, "Dimension for matrix multiplication tests");
+DEFINE_int32(mmin, 1, "Minimum dimension for matrix multiplication tests");
+DEFINE_int32(mmax, 32, "Maximum dimension for matrix multiplication tests");
 
 DEFINE_bool(sse, true, "SSE support");
 DEFINE_bool(sse2, true, "SSE2 support");
@@ -63,7 +69,7 @@ void CheckFltMatMul(const string &test, const string &base) {
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; ++d) {
     for (int w = FLAGS_wmin; w <= FLAGS_wmax; ++w) {
-      VLOG(3) << "Testing " << d << "x" << w;
+      VLOG(2) << "Testing " << d << "x" << w;
       FltKernelComparator matmul(library, "MatMul", test, base);
       matmul.AddInput("x", {1, d}, -100.0, 100.0);
       matmul.AddInput("W", {d, w}, -100.0, 100.0);
@@ -112,9 +118,9 @@ void CheckFltMatMatMul(const string &test, const string &base) {
   if (!FLAGS_test.empty() && FLAGS_test != test) return;
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
-  for (int i = 1; i <= FLAGS_matmax; ++i) {
-    for (int j = 1; j <= FLAGS_matmax; ++j) {
-      for (int k = 1; k <= FLAGS_matmax; ++k) {
+  for (int i = FLAGS_mmin; i <= FLAGS_mmax; ++i) {
+    for (int j = FLAGS_mmin; j <= FLAGS_mmax; ++j) {
+      for (int k = FLAGS_mmin; k <= FLAGS_mmax; ++k) {
         FltKernelComparator matmul(library, "MatMul", test, base);
         matmul.AddInput("A", {i, j}, -10.0, 10.0);
         matmul.AddInput("B", {j, k}, -10.0, 10.0);
@@ -135,7 +141,7 @@ void CheckFltFunc(const string &func,
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; d++) {
     if (modulo != 0 && d % modulo != 0) continue;
-    VLOG(3) << "Testing " << d;
+    VLOG(2) << "Testing " << d;
     FltKernelComparator comp(library, func, test, base);
     comp.AddInput("x", {d}, negative ? -10.0 : 1e-3, 10.0);
     comp.AddOutput("y", {d}, FLAGS_func_accuracy);
@@ -152,7 +158,7 @@ void CheckFltBinOp(const string &func,
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; d++) {
     if (modulo != 0 && d % modulo != 0) continue;
-    VLOG(3) << "Testing " << d;
+    VLOG(2) << "Testing " << d;
     FltKernelComparator comp(library, func, test, base);
     comp.AddInput("a", {d}, -100.0, 100.0);
     comp.AddInput("b", {d}, -100.0, 100.0);
@@ -196,7 +202,7 @@ void CheckIntBinOp(const string &func,
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; ++d) {
     if (modulo != 0 && d % modulo != 0) continue;
-    VLOG(3) << "Testing " << d;
+    VLOG(2) << "Testing " << d;
     IntKernelComparator comp8(library, func, test, base);
     comp8.AddInput("a", {d}, DT_INT8);
     comp8.AddInput("b", {d}, DT_INT8);
@@ -225,6 +231,9 @@ void CheckIntBinOp(const string &func,
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
+  if (FLAGS_w != -1) FLAGS_wmin = FLAGS_wmax = FLAGS_w;
+  if (FLAGS_d != -1) FLAGS_dmin = FLAGS_dmax = FLAGS_d;
+  if (FLAGS_m != -1) FLAGS_mmin = FLAGS_mmax = FLAGS_m;
 
   // Disable selected CPU features.
   if (!FLAGS_sse) CPU::Disable(SSE);
