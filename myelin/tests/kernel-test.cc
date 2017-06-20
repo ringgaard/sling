@@ -21,7 +21,7 @@ DEFINE_string(base, "", "Kernel to be tested against");
 DEFINE_string(test, "", "Kernel to be tested");
 
 DEFINE_bool(ignore_errors, false, "Ignore test errors");
-DEFINE_double(matmul_accuracy, 1e-2, "Maximum error on matmul operations");
+DEFINE_double(matmul_accuracy, 1e-6, "Maximum error on matmul operations");
 DEFINE_double(func_accuracy, 1e-6, "Maximum error on function operations");
 
 DEFINE_int32(d, -1, "Vector dimension for tests");
@@ -35,6 +35,9 @@ DEFINE_int32(wmax, 128, "Maximum matrix width for tests");
 DEFINE_int32(m, -1, "Dimension for matrix multiplication tests");
 DEFINE_int32(mmin, 1, "Minimum dimension for matrix multiplication tests");
 DEFINE_int32(mmax, 32, "Maximum dimension for matrix multiplication tests");
+
+DEFINE_double(minmat, 1.0, "Minimum value for matrix ops");
+DEFINE_double(maxmat, 100.0, "Maximum value for matrix ops");
 
 DEFINE_bool(sse, true, "SSE support");
 DEFINE_bool(sse2, true, "SSE2 support");
@@ -104,8 +107,8 @@ void CheckFltMatMul(const string &test, const string &base) {
     for (int w = FLAGS_wmin; w <= FLAGS_wmax; ++w) {
       VLOG(2) << "Testing " << d << "x" << w;
       FltKernelComparator matmul(library, "MatMul", test, base);
-      matmul.AddInput("x", {1, d}, -100.0, 100.0);
-      matmul.AddInput("W", {d, w}, -100.0, 100.0);
+      matmul.AddInput("x", {1, d}, FLAGS_minmat, 100.0);
+      matmul.AddInput("W", {d, w}, FLAGS_minmat, 100.0);
       matmul.AddOutput("y", {1, w}, FLAGS_matmul_accuracy);
       CheckTest(matmul.Check(3));
     }
@@ -117,8 +120,8 @@ void CheckFltMatMulAdd(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulAdd", test, base);
-  matmul.AddInput("x", {1, 10}, -10.0, 10.0);
-  matmul.AddInput("W", {10, 100}, -10.0, 10.0);
+  matmul.AddInput("x", {1, 10}, FLAGS_minmat, FLAGS_maxmat);
+  matmul.AddInput("W", {10, 100}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("b", {100}, -10.0, 10.0);
   matmul.AddOutput("y", {1, 100}, FLAGS_matmul_accuracy);
   CheckTest(matmul.Check(100));
@@ -129,8 +132,8 @@ void CheckFltMatMulRelu(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulRelu", test, base);
-  matmul.AddInput("x", {1, 10}, -10.0, 10.0);
-  matmul.AddInput("W", {10, 100}, -10.0, 10.0);
+  matmul.AddInput("x", {1, 10}, FLAGS_minmat, FLAGS_maxmat);
+  matmul.AddInput("W", {10, 100}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddOutput("y", {1, 100}, FLAGS_matmul_accuracy);
   CheckTest(matmul.Check(100));
 }
@@ -140,9 +143,9 @@ void CheckFltMatMulAddRelu(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulAddRelu", test, base);
-  matmul.AddInput("x", {1, 10}, -10.0, 10.0);
-  matmul.AddInput("W", {10, 100}, -10.0, 10.0);
-  matmul.AddInput("b", {100}, -10.0, 10.0);
+  matmul.AddInput("x", {1, 10}, FLAGS_minmat, FLAGS_maxmat);
+  matmul.AddInput("W", {10, 100}, FLAGS_minmat, FLAGS_maxmat);
+  matmul.AddInput("b", {100}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddOutput("y", {1, 100}, FLAGS_matmul_accuracy);
   CheckTest(matmul.Check(100));
 }
@@ -155,8 +158,8 @@ void CheckFltMatMatMul(const string &test, const string &base) {
     for (int j = FLAGS_mmin; j <= FLAGS_mmax; ++j) {
       for (int k = FLAGS_mmin; k <= FLAGS_mmax; ++k) {
         FltKernelComparator matmul(library, "MatMul", test, base);
-        matmul.AddInput("A", {i, j}, -10.0, 10.0);
-        matmul.AddInput("B", {j, k}, -10.0, 10.0);
+        matmul.AddInput("A", {i, j}, FLAGS_minmat, FLAGS_maxmat);
+        matmul.AddInput("B", {j, k}, FLAGS_minmat, FLAGS_maxmat);
         matmul.AddOutput("C", {i, k}, FLAGS_matmul_accuracy);
         CheckTest(matmul.Check(2));
       }
