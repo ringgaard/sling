@@ -46,6 +46,7 @@ DEFINE_bool(fma3, true, "FMA3 support");
 
 Library library;
 
+// Baseline implemetation of float matrix multiplication.
 void BaselineMatMatMul(const TensorData &A, const TensorData &B,
                        TensorData *C) {
   for (int i = 0; i < A.dim(0); ++i) {
@@ -53,6 +54,38 @@ void BaselineMatMatMul(const TensorData &A, const TensorData &B,
       float sum = 0.0;
       for (int k = 0; k < A.dim(1); ++k) {
         sum += A.at<float>(i, k) * B.at<float>(k, j);
+      }
+      C->at<float>(i, j) = sum;
+    }
+  }
+}
+
+// Baseline implemetation of float matrix multiplication with double precision
+// adder.
+void BaselineMatMatMul1(const TensorData &A, const TensorData &B,
+                        TensorData *C) {
+  for (int i = 0; i < A.dim(0); ++i) {
+    for (int j = 0; j < B.dim(1); ++j) {
+      double sum = 0.0;
+      for (int k = 0; k < A.dim(1); ++k) {
+        sum += A.at<float>(i, k) * B.at<float>(k, j);
+      }
+      C->at<float>(i, j) = sum;
+    }
+  }
+}
+
+// Baseline implemetation of float matrix multiplication with double precision
+// multiplication and adder.
+void BaselineMatMatMul2(const TensorData &A, const TensorData &B,
+                        TensorData *C) {
+  for (int i = 0; i < A.dim(0); ++i) {
+    for (int j = 0; j < B.dim(1); ++j) {
+      double sum = 0.0;
+      for (int k = 0; k < A.dim(1); ++k) {
+        double a = A.at<float>(i, k);
+        double b = B.at<float>(k, j);
+        sum += a * b;
       }
       C->at<float>(i, j) = sum;
     }
@@ -254,12 +287,27 @@ int main(int argc, char *argv[]) {
      .Input(0, DT_FLOAT, 2)
      .Input(1, DT_FLOAT, 2)
      .Output(0, DT_FLOAT, 2);
-
-  // Test GenFltVecMatMul against baseline.
-  CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul");
+  library.Register("MatMul", "BaselineMatMatMul1", BaselineMatMatMul1)
+     .Input(0, DT_FLOAT, 2)
+     .Input(1, DT_FLOAT, 2)
+     .Output(0, DT_FLOAT, 2);
+  library.Register("MatMul", "BaselineMatMatMul2", BaselineMatMatMul2)
+     .Input(0, DT_FLOAT, 2)
+     .Input(1, DT_FLOAT, 2)
+     .Output(0, DT_FLOAT, 2);
 
   // Test GenFltVecMatMul against itself to test the kernel comparator.
   CheckFltMatMul("GenFltVecMatMul", "GenFltVecMatMul");
+
+  // Test baselines against each other.
+  CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul1");
+  CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul2");
+
+  // Test GenFltVecMatMul against baseline.
+  CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul");
+  CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul1");
+  CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul2");
+
 
   // Check expression kernels.
   CheckFltBinOp("Add", "AddExpr", "GenFltAdd");
@@ -289,14 +337,25 @@ int main(int argc, char *argv[]) {
   if (CPU::Enabled(AVX)) {
     // Test AVX float matrix multiplication.
     CheckFltMatMul("AVXFltVecMatMulV", "GenFltVecMatMul");
-    CheckFltMatMul("AVXFltVecMatMulH", "GenFltVecMatMul");
     CheckFltMatMulAdd("AVXFltVecMatMulAddV", "GenFltVecMatMulAdd");
-    CheckFltMatMulAdd("AVXFltVecMatMulAddH", "GenFltVecMatMulAdd");
     CheckFltMatMulRelu("AVXFltVecMatMulReluV", "GenFltVecMatMulRelu");
-    CheckFltMatMulRelu("AVXFltVecMatMulReluH", "GenFltVecMatMulRelu");
     CheckFltMatMulAddRelu("AVXFltVecMatMulAddReluV", "GenFltVecMatMulAddRelu");
+
+    CheckFltMatMul("AVXFltVecMatMulH", "GenFltVecMatMul");
+    CheckFltMatMulAdd("AVXFltVecMatMulAddH", "GenFltVecMatMulAdd");
+    CheckFltMatMulRelu("AVXFltVecMatMulReluH", "GenFltVecMatMulRelu");
     CheckFltMatMulAddRelu("AVXFltVecMatMulAddReluH", "GenFltVecMatMulAddRelu");
 
+    // Compare AVX float matrix multiplication to baseline.
+    CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul");
+    CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul1");
+    CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul2");
+
+    CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul");
+    CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul1");
+    CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul2");
+
+    // Compare AVX matrix-matrix multiplication.
     CheckFltMatMatMul("AVXFltMatMatMul", "GenFltMatMatMul");
 
     // Test AVX math functions.

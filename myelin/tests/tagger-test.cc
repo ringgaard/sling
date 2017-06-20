@@ -33,6 +33,8 @@ DEFINE_bool(avx, true, "AVX support");
 DEFINE_bool(avx2, true, "AVX2 support");
 DEFINE_bool(fma3, true, "FMA3 support");
 
+DEFINE_bool(ccompat, false, "C compatible MatMul mode");
+
 using namespace sling;
 using namespace sling::myelin;
 
@@ -156,6 +158,10 @@ void RNN::Load(const string &filename) {
   CHECK(flow.Load(filename));
   flow.Var("tagger/h_out")->out = true;
   flow.Var("tagger/c_out")->out = true;
+  if (FLAGS_ccompat) {
+    for (auto *op : flow.Find({"MatMul"})) op->SetAttr("ccompat", "1");
+  }
+
   flow.Analyze(library_);
 
   // Output graph.

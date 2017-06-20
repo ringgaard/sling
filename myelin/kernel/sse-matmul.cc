@@ -72,6 +72,10 @@ class SSEFltVecMatMulBase : public Kernel {
       }
     }
 
+    // Horizontal float vector-matrix multiplication is not C compatible
+    // because of the horizontal summing.
+    if (step->GetAttr("ccompat") == "1") return false;
+
     return true;
   }
 
@@ -268,7 +272,7 @@ void RegisterSSEMatMul(Library *library) {
   // Input     : x: float32[1,n]
   //             W: float32[n,m] column-major
   // Output    : y: float32[1,m]
-  // Requires  : AVX
+  // Requires  : SSE3
   library->Register(new SSEFltVecMatMulRelu());
 
   // Computes  : y = max(0, x * W + b)

@@ -122,6 +122,15 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
     Tensor *b = bias_ ? step->input(2) : nullptr;
     Tensor *y = step->output(0);
 
+    // Check for C compatibility mode. In C compatibility mode FMA is not used
+    // even if it is present to keep compatibility with matrix multiplication
+    // code written in standard C.
+    bool fma = masm->Enabled(FMA3);
+    if (step->GetAttr("ccompat") == "1") {
+      fma = false;
+      step->set_variant("C");
+    }
+
     // Get matrix dimensions.
     int rows = W->dim(0);
     int cols = W->dim(1);
@@ -149,8 +158,11 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
     for (int i = 0; i < std::max(unrolls, 4); ++i) {
       sum.push_back(mm.allocy());
     }
+    std::vector<YMMRegister> acc;
+    for (int i = 0; i < 4; ++i) {
+      acc.push_back(mm.allocy());
+    }
     YMMRegister elem = mm.allocy();
-    YMMRegister acc = mm.allocy();
     YMMRegister zero = relu_ ? mm.allocy() : no_ymm_reg;
 
     // Load tensor locations.
@@ -191,11 +203,11 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
 
       // Multiply x[row] with W[row,col:col+n] and add to sum.
       for (int i = 0; i < unrolls; ++i) {
-        if (masm->Enabled(FMA3)) {
+        if (fma) {
           __ vfmadd231ps(sum[i], elem, Operand(m, i * 32));
         } else {
-          __ vmulps(acc, elem, Operand(m, i * 32));
-          __ vaddps(sum[i], sum[i], acc);
+          __ vmulps(acc[i % 4], elem, Operand(m, i * 32));
+          __ vaddps(sum[i], sum[i], acc[i % 4]);
         }
       }
 
@@ -266,11 +278,11 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
       int left = remaining_cols;
       int disp = 0;
       if (left >= 4) {
-        if (masm->Enabled(FMA3)) {
+        if (fma) {
           __ vfmadd231ps(sum[0].xmm(), elem.xmm(), Operand(m, disp));
         } else {
-          __ vmulps(acc.xmm(), elem.xmm(), Operand(m, disp));
-          __ vaddps(sum[0].xmm(), sum[0].xmm(), acc.xmm());
+          __ vmulps(acc[0].xmm(), elem.xmm(), Operand(m, disp));
+          __ vaddps(sum[0].xmm(), sum[0].xmm(), acc[0].xmm());
         }
         left -= 4;
         disp += 4 * sizeof(float);
@@ -279,11 +291,11 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
       // Compute up to three remaining columns as scalars.
       int reg = 1;
       while (left > 0) {
-        if (masm->Enabled(FMA3)) {
+        if (fma) {
           __ vfmadd231ss(sum[reg].xmm(), elem.xmm(), Operand(m, disp));
         } else {
-          __ vmulss(acc.xmm(), elem.xmm(), Operand(m, disp));
-          __ vaddss(sum[reg].xmm(), sum[reg].xmm(), acc.xmm());
+          __ vmulss(acc[0].xmm(), elem.xmm(), Operand(m, disp));
+          __ vaddss(sum[reg].xmm(), sum[reg].xmm(), acc[0].xmm());
         }
         left--;
         reg++;
@@ -362,6 +374,16 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
 
   AVXFltVecMatMulHBase(bool bias, bool relu)
       : AVXVecMatMulBase(bias, relu, COLUMN_MAJOR, DT_FLOAT, DT_FLOAT) {}
+
+  bool Supports(Step *step) override {
+    if (!AVXVecMatMulBase::Supports(step)) return false;
+
+    // Horizontal float vector-matrix multiplication is not C compatible
+    // because of the horizontal summing.
+    if (step->GetAttr("ccompat") == "1") return false;
+
+    return true;
+  }
 
   void Adjust(Step *step) override {
     // Get input and output tensors.

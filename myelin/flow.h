@@ -521,11 +521,6 @@ class Flow {
   // Remove operation from flow.
   void Eliminate(Operation *op);
 
-  // Merge two operations into a combined op.
-  Operation *Merge(Operation *first,
-                   Operation *second,
-                   const string &combined);
-
   // Sort operations in topological order of computation.
   void Sort();
 

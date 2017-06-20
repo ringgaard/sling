@@ -687,51 +687,10 @@ bool Flow::Combine(const string &first,
     if (var->consumers[0]->type != second) continue;
     if (var->consumers[0]->task != op->task) continue;
 
-    Merge(op, var->consumers[0], combined);
+    Fuse(op, var->consumers[0], combined);
     again = true;
   }
   return again;
-}
-
-Flow::Operation *Flow::Merge(Operation *first,
-                             Operation *second,
-                             const string &combined) {
-  // Check that ops can be merged.
-  CHECK_EQ(first->outputs.size(), 1);
-  Variable *var = first->outputs[0];
-  CHECK_EQ(var->consumers.size(), 1);
-  CHECK(var->consumers[0] == second);
-
-  // Add inputs for second op to the first/combined op.
-  for (Variable *v : second->inputs) {
-    if (v != var) {
-      first->inputs.push_back(v);
-      for (Operation *&c : v->consumers) {
-        if (c == second) c = first;
-      }
-    }
-  }
-
-  // Add outputs from second op to the first/combined op.
-  first->outputs.clear();
-  for (Variable *v : second->outputs) {
-    first->outputs.push_back(v);
-    v->producer = first;
-  }
-
-  // Update connectors removing the intermediate variable.
-  for (Connector *cnx : cnxs_) cnx->RemoveLink(var);
-
-  // Set operation type for the first to the combined type.
-  first->type = combined;
-
-  // Delete second operation.
-  DeleteOperation(second);
-
-  // Delete intermediate variable.
-  DeleteVariable(var);
-
-  return first;
 }
 
 Flow::Operation *Flow::Fuse(Operation *first,
