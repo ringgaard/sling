@@ -110,6 +110,16 @@ bool ElementwiseIndexGenerator::AllocateRegisters(MacroAssembler *masm) {
     if (!AllocateLocatorRegisters(&loc, masm)) return false;
   }
 
+  // Try to allocate extra base registers as an optimization.
+  if (!single_) {
+    for (auto &loc : input_) {
+      if (loc.base.is_valid()) continue;
+      if (loc.iterator->type == SIMPLE || loc.iterator->type == REPEAT) {
+        loc.base = rr.try_alloc();
+      }
+    }
+  }
+
   return true;
 }
 
@@ -296,6 +306,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
         DCHECK(loc->var->IsConstant());
         int size = loc->var->element_size();
         int repeat = vecsize_ / size;
+        DCHECK_EQ(repeat * size, vecsize_);
         return masm_->GetData(loc->var->data(), size, repeat)->address();
       }
       case REPEAT:

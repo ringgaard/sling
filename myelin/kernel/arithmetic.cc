@@ -69,7 +69,7 @@ static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
 
   // Mark constant inputs.
   for (int i = 0; i < op->indegree(); ++i) {
-    if (op->inputs[i]->data != nullptr) {
+    if (op->inputs[i]->data != nullptr && op->inputs[i]->elements() == 1) {
       expr->Variable(Express::INPUT, i)->type = Express::CONST;
     }
   }
@@ -95,7 +95,7 @@ static void InitExpression(const Step *step, Express *expr, bool expand) {
 
   // Mark constant inputs.
   for (int i = 0; i < step->indegree(); ++i) {
-    if (step->input(i)->IsConstant()) {
+    if (step->input(i)->IsConstant() && step->input(i)->elements() == 1) {
       expr->Variable(Express::INPUT, i)->type = Express::CONST;
     }
   }
