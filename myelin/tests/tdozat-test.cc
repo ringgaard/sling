@@ -32,12 +32,18 @@ int main(int argc, char *argv[]) {
   Flow flow;
   flow.set_batch_size(1);
   CHECK(flow.Load(FLAGS_input));
+  string prefix = "RNN0_2/RNN/while/time_step/rnn_step/LSTMCell/";
+  flow.Var(prefix + "hidden_in/hidden_tm1:0")->data = nullptr;
+  flow.Var(prefix + "hidden_in/cell_tm1:0")->data = nullptr;
+  flow.Var(prefix + "inputs:0")->data = nullptr;
+  flow.Var(prefix + "input_gate/Linear/Add:0")->out = true;
+  flow.Var(prefix + "input_gate/Linear/Add:0")->name = prefix + "control_out:0";
 
   // Analyze flow.
   flow.Analyze(library);
   DCHECK(flow.IsConsistent());
 
-#if 0
+#if 1
   std::cout << flow.ToString();
 #endif
 
