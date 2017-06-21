@@ -53,7 +53,6 @@ cc_binary(
     "//myelin/kernel:avx",
     "//myelin/kernel:generic",
     "//myelin/kernel:sse",
-    "//myelin/kernel:dragnn",
     "//myelin/kernel:arithmetic",
     "//myelin/kernel:wavenet",
   ],
@@ -75,6 +74,24 @@ cc_binary(
     "//myelin/kernel:generic",
     "//myelin/kernel:sse",
     "//myelin/kernel:dragnn",
+    "//myelin/kernel:arithmetic",
+  ],
+)
+
+cc_binary(
+  name = "tdozat-test",
+  srcs = ["tdozat-test.cc"],
+  deps = [
+    "//base",
+    "//base:clock",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
+    "//myelin:profile",
+    "//myelin/kernel:avx",
+    "//myelin/kernel:generic",
+    "//myelin/kernel:sse",
     "//myelin/kernel:arithmetic",
   ],
 )
