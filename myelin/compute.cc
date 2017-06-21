@@ -108,7 +108,7 @@ class BasicRuntime : public Runtime {
 static BasicRuntime default_runtime;
 
 // An instance allocator allocates space for variables in an instance data
-// block. It keeps track of which parts of the block is in use and tries to
+// block. It keeps track of which parts of the block are in use and tries to
 // allocate space by reusing free parts of the instance block that is no longer
 // in use.
 class InstanceAllocator {
@@ -126,7 +126,7 @@ class InstanceAllocator {
 
   // Allocate space for variable in instance data block.
   void Allocate(Tensor *var) {
-    // Shared variables share offsets.
+    // Shared variables share offset.
     if (var->shared_ != nullptr) {
       if (placement_ == HOST) {
         DCHECK(var->shared_->offset_ != -1) << var->name();
@@ -218,7 +218,7 @@ class InstanceAllocator {
     bool first = true;
     for (auto &e : freelist_) {
       const char *error = nullptr;
-      if (e.second <= e.first) {
+      if (e.second < e.first) {
         error = "Invalid free list entry";
       } else if (e.first == e.second) {
         error = "Zero-sized free list entry";
@@ -620,7 +620,6 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   }
   if (in->ref() != out->ref()) return false;
   if (out->shared()) return false;
-  if (out->out()) return false;
   out->set_shared(in);
   if (out->shape() == in->shape()) out->set_link(in);
   return true;
@@ -667,22 +666,6 @@ Network::~Network() {
 Tensor *Network::GetParameter(const string &name) const {
   auto f = names_.find(name);
   return f == names_.end() ? nullptr : f->second;
-}
-
-static bool CompareUsage(const std::pair<int, Tensor *> &a,
-                         const std::pair<int, Tensor *> &b) {
-  if (a.first == b.first) {
-    // Inputs are sorted before outputs.
-    Tensor *va = a.second;
-    Tensor *vb = b.second;
-    for (auto *op : va->consumers()) {
-      if (op == vb->producer()) return true;
-    }
-    for (auto *op : vb->consumers()) {
-      if (op == va->producer()) return false;
-    }
-  }
-  return a.first < b.first;
 }
 
 bool Network::Compile(const Flow &flow, const Library &library) {
@@ -1111,8 +1094,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (var->first_ != -1) enter.emplace_back(var->first_, var);
     if (var->last_ != -1) leave.emplace_back(var->last_, var);
   }
-  std::sort(enter.begin(), enter.end(), CompareUsage);
-  std::sort(leave.begin(), leave.end(), CompareUsage);
+  std::sort(enter.begin(), enter.end());
+  std::sort(leave.begin(), leave.end());
 
   // Compute cell instance size and offset of each parameter.
   for (Cell *cell : cells_) {
@@ -1204,7 +1187,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Generate prolog for main cell computation.
     masm.Prolog();
-    runtime_->GenerateProlog(cell, &masm);
 
     // Increment the invocation counter.
     if (profiling_) {
@@ -1363,7 +1345,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Generate epilog for main cell computation.
-    runtime_->GenerateEpilog(cell, &masm);
     masm.Epilog();
 
     // Generate code for parallel tasks.
