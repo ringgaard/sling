@@ -668,6 +668,22 @@ Tensor *Network::GetParameter(const string &name) const {
   return f == names_.end() ? nullptr : f->second;
 }
 
+static bool CompareUsage(const std::pair<int, Tensor *> &a,
+                         const std::pair<int, Tensor *> &b) {
+  if (a.first == b.first) {
+    // Inputs are sorted before outputs.
+    Tensor *va = a.second;
+    Tensor *vb = b.second;
+    for (auto *op : va->consumers()) {
+      if (op == vb->producer()) return true;
+    }
+    for (auto *op : vb->consumers()) {
+      if (op == va->producer()) return false;
+    }
+  }
+  return a.first < b.first;
+}
+
 bool Network::Compile(const Flow &flow, const Library &library) {
   // Fetch information about the CPU we are running on.
   jit::CPU::Probe();
@@ -1093,9 +1109,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   for (Tensor *var : parameters_) {
     if (var->first_ != -1) enter.emplace_back(var->first_, var);
     if (var->last_ != -1) leave.emplace_back(var->last_, var);
+    LOG(INFO) << var->name() << " first: " << var->first_ << " last: " << var->last_;
   }
-  std::sort(enter.begin(), enter.end());
-  std::sort(leave.begin(), leave.end());
+  std::sort(enter.begin(), enter.end(), CompareUsage);
+  std::sort(leave.begin(), leave.end(), CompareUsage);
 
   // Compute cell instance size and offset of each parameter.
   for (Cell *cell : cells_) {
@@ -1187,6 +1204,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Generate prolog for main cell computation.
     masm.Prolog();
+    runtime_->GenerateProlog(cell, &masm);
 
     // Increment the invocation counter.
     if (profiling_) {
@@ -1345,6 +1363,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Generate epilog for main cell computation.
+    runtime_->GenerateEpilog(cell, &masm);
     masm.Epilog();
 
     // Generate code for parallel tasks.
