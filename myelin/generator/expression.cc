@@ -21,6 +21,7 @@ ExpressionGenerator *CreateVectorIntAVX256Generator();
 
 void ExpressionGenerator::Initalize(const Express &expression,
                                     Type type,
+                                    int spare_regs,
                                     IndexGenerator *index) {
   // Copy expression.
   expression_.Copy(expression);
@@ -35,6 +36,9 @@ void ExpressionGenerator::Initalize(const Express &expression,
     expression_.FuseMulAdd();
     expression_.FuseMulSub();
   }
+
+  // Use spare registers to hoist constants outside the loop.
+  if (spare_regs > 0) expression_.CacheConstants(spare_regs);
 
   // Cache inputs and results used in multiple ops in temporary variables.
   expression_.CacheResults();
@@ -55,10 +59,19 @@ void ExpressionGenerator::Initalize(const Express &expression,
   Reserve();
 }
 
-void ExpressionGenerator::Generate(MacroAssembler *masm) {
-  for (Express::Op *instr : instructions_.ops()) {
-    if (instr->nop()) continue;
-    Generate(instr, masm);
+void ExpressionGenerator::GenerateInit(MacroAssembler *masm) {
+  auto &ops = instructions_.ops();
+  int body = instructions_.body();
+  for (int i = 0; i < body; ++i) {
+    if (!ops[i]->nop()) Generate(ops[i], masm);
+  }
+}
+
+void ExpressionGenerator::GenerateBody(MacroAssembler *masm) {
+  auto &ops = instructions_.ops();
+  int body = instructions_.body();
+  for (int i = body; i < ops.size(); ++i) {
+    if (!ops[i]->nop()) Generate(ops[i], masm);
   }
 }
 

@@ -128,9 +128,12 @@ class Express {
     string AsString() const;
     void GetRecipe(string *recipe) const;
 
+    // Return the number of usages of variable.
+    int usages() const { return consumers.size(); }
+
     // An inlined variable is a temporary variable that is only needed in a
     // single context.
-    bool inlined() const { return type == TEMP && consumers.size() == 1; }
+    bool inlined() const { return type == TEMP && usages() == 1; }
 
     // Redirect all consumers of variable to another variable.
     void Redirect(Var *other);
@@ -275,6 +278,11 @@ class Express {
   // Eliminate common subexpressions.
   void EliminateCommonSubexpressions();
 
+  // Cache constants and move the loads outside the body of the code. Each
+  // cached constant takes up an additional register, so the number of cached
+  // constants is limited to the number of spare registers.
+  void CacheConstants(int limit);
+
   // Cache inputs and results used in multiple ops in temporary variables.
   void CacheResults();
 
@@ -321,6 +329,9 @@ class Express {
 
   // Operations.
   const std::vector<Op *> ops() const { return ops_; }
+
+  // First operation in the body. All instructions before are loop invariant.
+  int body() const { return body_; }
 
   // Expression building.
   Var *Do(OpType type, Var *x) {
@@ -393,6 +404,9 @@ class Express {
 
   // Operations in expression.
   std::vector<Op *> ops_;
+
+  // First operation in the body. All instructions before are loop invariant.
+  int body_ = 0;
 
   // System-defined numeric constants.
   struct Constant { float flt; double dbl; };

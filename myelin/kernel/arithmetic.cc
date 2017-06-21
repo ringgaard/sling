@@ -31,6 +31,7 @@ static Express::OpType OpType(const string &op) {
     {"Sub", Express::SUB},
     {"Mul", Express::MUL},
     {"Div", Express::DIV},
+    {"RealDiv", Express::DIV},
     {"Minimum", Express::MIN},
     {"Maximum", Express::MAX},
     {"Relu", Express::RELU},
@@ -115,6 +116,67 @@ static void MapVars(Flow::Operation *op, Express *expr, VarMap *varmap) {
     (*varmap)[op->outputs[i]] = expr->Variable(Express::OUTPUT, i);
   }
 }
+
+// Expression code generator for element-wise operations.
+struct Expression {
+  // Initialize expression.
+  Expression(const Step *step, int spare_regs = 0) : index(step) {
+    // Determine output type and shape from the first output.
+    output = step->output(0);
+    Type type = output->type();
+
+    // Compute the maximum common size between inputs and outputs.
+    DCHECK_GE(step->outdegree(), 1);
+    int elements = output->elements();
+    for (auto *input : step->inputs()) {
+      if (input->IsConstant() && input->elements() == 1) continue;
+      int common = output->shape().CommonSize(input->shape());
+      if (common < elements) elements = common;
+    }
+
+    // Compile expression to be computed.
+    InitExpression(step, &expr, true);
+
+    // Select expression generator.
+    generator = ExpressionGenerator::Select(expr, type, elements);
+    CHECK(generator != nullptr);
+
+    // Initialize expression and index generators.
+    generator->Initalize(expr, type, spare_regs, &index);
+  }
+
+  ~Expression() { delete generator; }
+
+  // Allocate registers.
+  bool AllocateRegisters(MacroAssembler *masm) {
+    return index.AllocateRegisters(masm);
+  }
+
+  // Generate code for expression loop.
+  void Generate(MacroAssembler *masm) {
+    generator->GenerateInit(masm);
+    index.BeginLoop(masm);
+    generator->GenerateBody(masm);
+    index.EndLoop(masm);
+  }
+
+  // Compute complexity.
+  int64 Complexity() {
+    return output->shape().elements() * expr.Complexity();
+  }
+
+  // Representative output from expression.
+  Tensor *output;
+
+  // Expression to be compiled.
+  Express expr;
+
+  // Index generator for elemement-wise operation.
+  ElementwiseIndexGenerator index;
+
+  // Code generator for expression.
+  ExpressionGenerator *generator;
+};
 
 // Combine arithmetic operators into expressions that can be computed by a
 // Calculate kernel.
@@ -286,28 +348,11 @@ class Calculate : public Kernel {
   }
 
   void Adjust(Step *step) override {
-    // Compute the maximum common size between inputs and outputs.
-    DCHECK_GE(step->outdegree(), 1);
-    Tensor *output = step->output(0);
-    Type type = output->type();
-    int elements = output->elements();
-    for (auto *input : step->inputs()) {
-      if (input->IsConstant() && input->elements() == 1) continue;
-      int common = output->shape().CommonSize(input->shape());
-      if (common < elements) elements = common;
-    }
+    Expression expression(step);
+    step->set_variant(expression.generator->Name());
 
-    // Set the alignment requirements based on the vector size.
-    Express expr;
-    InitExpression(step, &expr, false);
-    ElementwiseIndexGenerator index(step);
-    auto *generator = ExpressionGenerator::Select(expr, type, elements);
-    CHECK(generator != nullptr);
-    generator->Initalize(expr, type, &index);
-    step->set_variant(generator->Name());
-    int alignment = generator->VectorSize();
-    delete generator;
-
+    // Set alignment.
+    int alignment = expression.generator->VectorSize();
     for (auto *input : step->inputs()) {
       input->SetMiniumAlignment(alignment);
     }
@@ -328,55 +373,33 @@ class Calculate : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    // Determine output type and shape from the first output.
-    Tensor *output = step->output(0);
-    Type type = output->type();
+    // Check how many spare register we have for hoisting constant out of the
+    // loop body. This is only done for floating-point operations to avoid
+    // register pressure on the regular x64 integer registers which are also
+    // used for the loop indexing.
+    int spare_regs = 0;
+    Type type = step->output(0)->type();
+    if (type == DT_FLOAT || type == DT_DOUBLE) {
+      // Perform dryrun to estimate the number of SIMD registers needed.
+      MacroAssembler dryrun_masm(nullptr, 0);
+      Expression dryrun_expr(step, 0);
+      CHECK(dryrun_expr.AllocateRegisters(&dryrun_masm)) << "Register overflow";
 
-    // Compute the maximum common size between inputs and outputs.
-    DCHECK_GE(step->outdegree(), 1);
-    int elements = output->elements();
-    for (auto *input : step->inputs()) {
-      if (input->IsConstant() && input->elements() == 1) continue;
-      int common = output->shape().CommonSize(input->shape());
-      if (common < elements) elements = common;
+      // Count the number of spare SIMD registers.
+      if (!dryrun_expr.index.single()) {
+        while (dryrun_masm.mm().try_alloc() != -1) spare_regs++;
+      }
     }
 
-    // Compile expression to be computed.
-    Express expr;
-    InitExpression(step, &expr, true);
-
-    // Create element-wise index generator.
-    ElementwiseIndexGenerator index(step);
-
-    // Select expression generator.
-    auto *generator = ExpressionGenerator::Select(expr, type, elements);
-    CHECK(generator != nullptr);
-
-    // Initialize expression and index generators.
-    generator->Initalize(expr, type, &index);
-
-    // Allocate registers.
-    CHECK(index.AllocateRegisters(masm)) << "Register overflow";
-
-    // Generate expression loop.
-    index.BeginLoop(masm);
-    generator->Generate(masm);
-    index.EndLoop(masm);
-
-    delete generator;
+    // Generate code for element-wise expression evaluation.
+    Expression expression(step, spare_regs);
+    CHECK(expression.AllocateRegisters(masm)) << "Register overflow";
+    expression.Generate(masm);
   }
 
   int64 Complexity(const Step *step) {
-    // Determine shape from the first output.
-    DCHECK_GE(step->outdegree(), 1);
-    const Shape &shape = step->output(0)->shape();
-
-    // Compile expression to be computed.
-    Express expr;
-    InitExpression(step, &expr, true);
-
-    // The number of operations is the number of ops times the output size.
-    return shape.elements() * expr.Complexity();
+    Expression expression(step);
+    return expression.Complexity();
   }
 
  private:

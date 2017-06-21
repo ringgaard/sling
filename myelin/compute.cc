@@ -1094,7 +1094,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     Tensor *t = *it;
     if (t->shared_ != nullptr && t->shared_->IsConstant()) {
       // Move variable to constant pool.
-      LOG(INFO) << "Convert " << t->name() << " to constant";
+      VLOG(5) << "Convert " << t->name() << " to constant";
       it = parameters_.erase(it);
       constants_.push_back(t);
     } else {
@@ -1109,7 +1109,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   for (Tensor *var : parameters_) {
     if (var->first_ != -1) enter.emplace_back(var->first_, var);
     if (var->last_ != -1) leave.emplace_back(var->last_, var);
-    LOG(INFO) << var->name() << " first: " << var->first_ << " last: " << var->last_;
   }
   std::sort(enter.begin(), enter.end(), CompareUsage);
   std::sort(leave.begin(), leave.end(), CompareUsage);

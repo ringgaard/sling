@@ -11,7 +11,7 @@ namespace myelin {
 class ElementwiseIndexGenerator : public IndexGenerator {
  public:
   // Create element-wise index generator for step.
-  ElementwiseIndexGenerator(Step *step);
+  ElementwiseIndexGenerator(const Step *step);
   ~ElementwiseIndexGenerator();
 
   // Initialize index generator for vector size.
@@ -26,6 +26,9 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   // Generate start and end of loop.
   void BeginLoop(MacroAssembler *masm);
   void EndLoop(MacroAssembler *masm);
+
+  // Whether only one iteration is needed.
+  bool single() const { return single_; }
 
  private:
   enum IteratorType {SIMPLE, SCALAR, CONST, REPEAT, BROADCAST};

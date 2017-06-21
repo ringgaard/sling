@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -613,6 +614,51 @@ bool Express::TryToEliminateOps() {
   return false;
 }
 
+void Express::CacheConstants(int limit) {
+  // Collect all existing cached variables.
+  std::set<Var *> cached;
+  for (int i = 0; i < body_; ++i) {
+    cached.insert(ops_[i]->result);
+  }
+
+  // Hoist const loads outside the body until limit reached.
+  for (int r = 0; r < limit; ++r) {
+    // Find constant or number variable with the most usages.
+    Var *candidate = nullptr;
+    for (Var *v : vars_) {
+      if (v->type == CONST || v->type == NUMBER) {
+        if (cached.count(v) == 0) {
+          if (candidate == nullptr || v->usages() > candidate->usages()) {
+            candidate = v;
+          }
+        }
+      }
+    }
+
+    // Stop if no candidate for hoisting was found.
+    if (candidate == nullptr) break;
+
+    // Allocate temp for constant and update all usages.
+    Var *temp = NewTemp();
+    candidate->consumers.swap(temp->consumers);
+    for (Op *o : ops_) {
+      for (int i = 0; i < o->args.size(); ++i) {
+        if (o->args[i] == candidate) {
+          o->args[i] = temp;
+        }
+      }
+    }
+
+    // Assign constant to temp variable.
+    Op *assign = OperationBefore(ops_[body_], MOV);
+    assign->Assign(temp);
+    assign->AddArgument(candidate);
+    body_++;
+    cached.insert(candidate);
+  }
+  if (!cached.empty()) CompactTempVars();
+}
+
 void Express::CacheResults() {
   int cached_vars = 0;
   for (int n = 0; n < vars_.size(); ++n) {
@@ -636,7 +682,7 @@ void Express::CacheResults() {
       assign->Assign(var);
       assign->AddArgument(temp);
       cached_vars++;
-    } else if (var->type != TEMP && var->consumers.size() > 1) {
+    } else if (var->type == INPUT && var->consumers.size() > 1) {
       // Make temp variable and update all usages to use this instead.
       Var *temp = NewTemp();
       var->consumers.swap(temp->consumers);
@@ -662,12 +708,20 @@ void Express::CacheResults() {
 }
 
 void Express::ComputeLiveRanges() {
+  // All variables assined before the start of the body need to have their live
+  // range extended to the end.
+  Op *end = ops_.back();
+  for (int i = 0; i < body_; ++i) {
+    ops_[i]->result->last = end;
+  }
+
+  // Compute live ranges for the remaining variables.
   for (Op *op : ops_) {
     if (op->result->first == nullptr) op->result->first = op;
-    op->result->last = op;
+    if (op->result->last != end) op->result->last = op;
     for (Var *arg : op->args) {
       if (arg->first == nullptr) arg->first = op;
-      arg->last = op;
+      if (arg->last != end) arg->last = op;
     }
   }
 }
@@ -691,6 +745,7 @@ void Express::Copy(const Express &other) {
   CHECK(ops_.empty());
   vars_.reserve(other.vars().size());
   ops_.reserve(other.ops().size());
+  body_ = other.body_;
 
   // Copy variables.
   std::map<Var *, Var *> varmap;
@@ -855,6 +910,9 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
     Var *source3 = nullptr;
     Var *destination = nullptr;
     bool first_is_dest = false;
+
+    // Keep track of the beginning of the body.
+    if (op == ops_[body_]) rewritten->body_ = rewritten->ops_.size();
 
     // Rewrite operation.
     if (op->arity() == 1) {

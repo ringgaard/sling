@@ -7,7 +7,7 @@ namespace myelin {
 
 using namespace jit;
 
-ElementwiseIndexGenerator::ElementwiseIndexGenerator(Step *step) {
+ElementwiseIndexGenerator::ElementwiseIndexGenerator(const Step *step) {
   // Get size from first output.
   CHECK_GE(step->outdegree(), 1);
   type_ = step->output(0)->type();
@@ -120,6 +120,9 @@ bool ElementwiseIndexGenerator::AllocateRegisters(MacroAssembler *masm) {
     }
   }
 
+  // Save macro assembler for constant generation.
+  masm_ = masm;
+
   return true;
 }
 
@@ -192,9 +195,6 @@ void ElementwiseIndexGenerator::BeginLoop(MacroAssembler *masm) {
     __ xorq(offset_, offset_);
     __ bind(&begin_);
   }
-
-  // Save macro assembler for constant generation.
-  masm_ = masm;
 }
 
 void ElementwiseIndexGenerator::EndLoop(MacroAssembler *masm) {

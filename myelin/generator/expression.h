@@ -40,10 +40,14 @@ class ExpressionGenerator {
   // Initialize expression generator.
   void Initalize(const Express &expression,
                  Type type,
+                 int spare_regs,
                  IndexGenerator *index);
 
-  // Generate code for expression.
-  void Generate(MacroAssembler *masm);
+  // Generate code for loop-invariant part of expression.
+  void GenerateInit(MacroAssembler *masm);
+
+  // Generate code for loop body.
+  void GenerateBody(MacroAssembler *masm);
 
   // Select expression generator for expression that is supported by the CPU.
   static ExpressionGenerator *Select(const Express &expr,

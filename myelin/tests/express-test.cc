@@ -72,33 +72,38 @@ void Test(const string &str) {
   }
 
   expr.CacheResults();
+  expr.CacheConstants(9);
   for (auto *op : expr.ops()) {
-    if (op->result != nullptr) {
-      LOG(INFO) << "  " << op->result->AsString() << " := " << op->AsString();
+    if (expr.body() > 0 && op == expr.ops()[expr.body()]) {
+      LOG(INFO) << "body:";
     }
+    LOG(INFO) << "  " << op->result->AsString() << " := " << op->AsString();
   }
 
-  Express instructions;
-  bool success = expr.Rewrite(model, &instructions);
+  Express instrs;
+  bool success = expr.Rewrite(model, &instrs);
   if (!success) {
     LOG(ERROR) << "Rewrite failed";
     return;
   }
-  instructions.ComputeLiveRanges();
+  instrs.ComputeLiveRanges();
 
   bool raw_instruction = false;
   if (raw_instruction) {
     LOG(INFO) << "Instructions: " << (success ? "OK" : "FAIL") << ", "
-              << instructions.MaxActiveTemps() << " temps";
-    for (auto *instr : instructions.ops()) {
+              << instrs.MaxActiveTemps() << " temps";
+    for (auto *instr : instrs.ops()) {
       LOG(INFO) << "  " << instr->AsInstruction() << " ; "
                 << instr->result->AsString() << "=" << instr->AsString();
     }
   }
 
-  int regs = instructions.AllocateRegisters();
+  int regs = instrs.AllocateRegisters();
   LOG(INFO) << "Final: " << regs << " registers";
-  for (auto *instr : instructions.ops()) {
+  for (auto *instr : instrs.ops()) {
+    if (instrs.body() > 0 && instr == instrs.ops()[instrs.body()]) {
+      LOG(INFO) << "body:";
+    }
     if (!instr->nop()) LOG(INFO) << "  " << instr->AsInstruction();
   }
 }
@@ -140,6 +145,9 @@ int main(int argc, char *argv[]) {
        "@1=Tanh(@0)");
 
   Test("@0=Log(%0)");
+  Test("@0=Mul(Add(%0,#1),#1)");
+  Test("@0=Mul(Add(%0,_1),_1)");
+  Test("@0=Add(Mul(%0,_1),_2)");
 
   return 0;
 }
