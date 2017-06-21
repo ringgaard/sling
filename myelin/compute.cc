@@ -1201,9 +1201,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     // Insert break point in the beginning of the generated code in debug mode.
     if (debug_) masm.Breakpoint();
 
-    // Generate prolog for main cell computation.
-    masm.Prolog();
-    runtime_->GenerateProlog(cell, &masm);
+    // Generate prologue for main cell computation.
+    masm.Prologue();
+    runtime_->GeneratePrologue(cell, &masm);
 
     // Increment the invocation counter.
     if (profiling_) {
@@ -1361,9 +1361,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       masm.CallInstanceFunction(runtime_->StopProfilerFunc());
     }
 
-    // Generate epilog for main cell computation.
-    runtime_->GenerateEpilog(cell, &masm);
-    masm.Epilog();
+    // Generate epilogue for main cell computation.
+    runtime_->GenerateEpilogue(cell, &masm);
+    masm.Epilogue();
 
     // Generate code for parallel tasks.
     int task_index = 0;
@@ -1371,8 +1371,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       // Set entry for task function.
       masm.bind(&task.entry);
 
-      // Generate parallel task prolog.
-      masm.Prolog();
+      // Generate parallel task prologue.
+      masm.Prologue();
 
       // Let kernels generate code for each step.
       int stepnum = 0;
@@ -1411,8 +1411,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         stepnum++;
       }
 
-      // Generate parallel task epilog.
-      masm.Epilog();
+      // Generate parallel task epilogue.
+      masm.Epilogue();
 
       task_index++;
     }

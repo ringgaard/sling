@@ -192,7 +192,7 @@ Register MacroAssembler::instance() const {
   return datareg;
 }
 
-void MacroAssembler::Prolog() {
+void MacroAssembler::Prologue() {
   // Zero upper part of YMM register if CPU needs it to avoid AVX-SSE transition
   // penalties.
   if (CPU::VZeroNeeded()) {
@@ -225,7 +225,7 @@ void MacroAssembler::Prolog() {
   }
 }
 
-void MacroAssembler::Epilog() {
+void MacroAssembler::Epilogue() {
   // Restore preserved registers from stack.
   if (rr_.saved(r15)) popq(r15);
   if (rr_.saved(r14)) popq(r14);

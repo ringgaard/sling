@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   flow.Analyze(library);
   DCHECK(flow.IsConsistent());
 
-#if 1
+#if 0
   std::cout << flow.ToString();
 #endif
 
@@ -51,17 +51,18 @@ int main(int argc, char *argv[]) {
   network.set_profiling(true);
   CHECK(network.Compile(flow, library));
 
-  // Inspect with: objdump -D -Mintel,x86-64 -b binary -m i386 /tmp/distil.bin
   Cell *classifier = network.GetCell("classifier");
 
+  // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn /tmp/tdozat.bin
   classifier->WriteCodeToFile("/tmp/tdozat.bin");
 
+  // dot -Granksep=1.5 -Gnodesep=0.3 -Grankdir=BT /tmp/tdozat.dot -Tsvg
   GraphOptions opts;
   FlowToDotGraphFile(flow, opts, "/tmp/tdozat.dot");
 
   // Run instance
   Instance data(classifier);
-  for (int i = 0; i < 100000; ++i) {
+  for (int i = 0; i < 1000000; ++i) {
     data.Compute();
   }
 

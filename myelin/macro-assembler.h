@@ -206,11 +206,11 @@ class MacroAssembler : public jit::Assembler {
   MacroAssembler(void *buffer, int buffer_size);
   ~MacroAssembler();
 
-  // Generate function prolog.
-  void Prolog();
+  // Generate function prologue.
+  void Prologue();
 
-  // Generate function prolog.
-  void Epilog();
+  // Generate function epilogue.
+  void Epilogue();
 
   // Create new static data block.
   StaticData *CreateDataBlock(int alignment = 1);

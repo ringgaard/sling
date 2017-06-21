@@ -70,7 +70,7 @@ class DebugRuntime : public Runtime {
     memset(instance->data(), 0, instance->size());
   }
 
-  void GenerateProlog(Cell *cell, MacroAssembler *masm) override {
+  void GeneratePrologue(Cell *cell, MacroAssembler *masm) override {
     if (FLAGS_scramble_registers) {
       // Use time stamp counter for scrambling registers on entry.
       __ rdtsc();
