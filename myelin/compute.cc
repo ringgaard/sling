@@ -613,10 +613,13 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   DCHECK_LT(output, outputs_.size());
   Tensor *in = inputs_[input];
   Tensor *out = outputs_[output];
-  while (in->shared() != nullptr) in = in->shared();
-  if (!preserved) {
-    if (in->IsConstant()) return false;
-    if (in->consumers().size() != 1) return false;
+  while (in->shared() != nullptr) {
+    if (!preserved) {
+      if (in->IsConstant()) return false;
+      if (in->consumers().size() != 1) return false;
+    }
+    if (in->ref() != out->ref()) return false;
+    in = in->shared();
   }
   if (in->ref() != out->ref()) return false;
   if (out->shared()) return false;
@@ -896,7 +899,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       profile->aligned_ = profile->shape_;
       profile->minalign_.assign(sizeof(int64));
       profile->maxalign_.assign(0);
-      profile->stride_.fill(sizeof(int64));
+      profile->stride_.assign(sizeof(int64));
       profile->placement_ = HOST;
       profile->current_placement_ = HOST;
       profile->in_ = false;
@@ -1272,9 +1275,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         }
 
         // Generate code for step.
-        auto pc = masm.pc();
+        auto pc = masm.pc_offset();
+        VLOG(8) << step->name() << " @ " << reinterpret_cast<uint64 *>(pc);
         step->kernel_->Generate(step, &masm);
-        if (masm.pc() == pc) step->noop_ = true;
+        if (masm.pc_offset() == pc) step->noop_ = true;
 
         // No registers are preserved between steps, so reset register
         // allocation.
@@ -1381,9 +1385,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       for (Step *step : cell->steps_) {
         if (step->task_index_ == task_index) {
           // Generate code for step.
-          auto pc = masm.pc();
+          auto pc = masm.pc_offset();
+          VLOG(8) << step->name() << " @ " << reinterpret_cast<uint64 *>(pc);
           step->kernel_->Generate(step, &masm);
-          if (masm.pc() == pc) step->noop_ = true;
+          if (masm.pc_offset() == pc) step->noop_ = true;
 
           // No registers are preserved between steps, so reset register
           // allocation.

@@ -9,6 +9,9 @@ namespace myelin {
 // Register arithmetic library.
 void RegisterArithmeticLibrary(Library *library);
 
+// Register arithmetic transforms.
+void RegisterArithmeticTransforms(Library *library);
+
 }  // namespace myelin
 }  // namespace sling
 

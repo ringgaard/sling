@@ -408,9 +408,8 @@ class Calculate : public Kernel {
   int arity_;               // number of inputs
 };
 
-// Register element-wise expression calculation kernels in library.
-static void RegisterCalculate(Library *library) {
-  library->RegisterTransformer(new ExpressionTransformer());
+// Register arithmetic library.
+void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("AddExpr", "Add", 2));
   library->Register(new Calculate("SubExpr", "Sub", 2));
   library->Register(new Calculate("MulExpr", "Mul", 2));
@@ -455,7 +454,7 @@ class ConstantFolding : public Transformer {
 
         // Analyze, compile and execute sub-flow to compute constant value.
         Library library;
-        RegisterCalculate(&library);
+        RegisterArithmeticLibrary(&library);
         subflow.Analyze(library);
         Network network;
         CHECK(network.Compile(subflow, library));
@@ -494,10 +493,10 @@ class ConstantFolding : public Transformer {
   }
 };
 
-// Register arithmetic library.
-void RegisterArithmeticLibrary(Library *library) {
+// Register arithmetic transforms.
+void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new ConstantFolding());
-  RegisterCalculate(library);
+  library->RegisterTransformer(new ExpressionTransformer());
 }
 
 }  // namespace myelin

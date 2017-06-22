@@ -25,6 +25,7 @@ namespace myelin {
 
 // Register Tensorflow library.
 void RegisterTensorflowLibrary(Library *library) {
+  RegisterArithmeticTransforms(library);
   RegisterGenericLibrary(library);
   RegisterSSELibrary(library);
   RegisterAVXLibrary(library);
