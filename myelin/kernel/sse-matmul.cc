@@ -72,9 +72,8 @@ class SSEFltVecMatMulBase : public Kernel {
       }
     }
 
-    // Horizontal float vector-matrix multiplication is not C compatible
-    // because of the horizontal summing.
-    if (step->GetAttr("ccompat") == "1") return false;
+    // Horizontal summation is not strict math compatible.
+    if (step->GetAttr("strict", false)) return false;
 
     return true;
   }

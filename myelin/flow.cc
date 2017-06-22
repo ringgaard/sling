@@ -213,6 +213,15 @@ int Attributes::Get(const string &name, int defval) const {
   return defval;
 }
 
+bool Attributes::Get(const string &name, bool defval) const {
+  for (auto &attr : *this) {
+    if (attr.name == name) {
+      return attr.value == "1" || attr.value == "T" || attr.value == "true";
+    }
+  }
+  return defval;
+}
+
 bool Attributes::Has(const string &name) const {
   for (auto &attr : *this) {
     if (attr.name == name) return true;
@@ -228,6 +237,18 @@ void Attributes::Set(const string &name, const string &value) {
     }
   }
   emplace_back(name, value);
+}
+
+void Attributes::Set(const string &name, const char *value) {
+  Set(name, string(value));
+}
+
+void Attributes::Set(const string &name, int value) {
+  Set(name, std::to_string(value));
+}
+
+void Attributes::Set(const string &name, bool value) {
+  Set(name, value ? "1" : "0");
 }
 
 void Flow::Variable::AddAlias(const string &alias) {

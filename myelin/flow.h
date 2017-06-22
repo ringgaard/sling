@@ -266,12 +266,16 @@ class Attributes : public std::vector<Attribute> {
   // Get attribute value.
   const string &Get(const string &name) const;
   int Get(const string &name, int defval) const;
+  bool Get(const string &name, bool defval) const;
 
   // Check if attribute exists.
   bool Has(const string &name) const;
 
   // Set attribute.
   void Set(const string &name, const string &value);
+  void Set(const string &name, const char *value);
+  void Set(const string &name, int value);
+  void Set(const string &name, bool value);
 };
 
 // Flow graph for computation.
@@ -342,6 +346,9 @@ class Flow {
     int GetAttr(const string &name, int defval) const {
       return attrs.Get(name, defval);
     }
+    bool GetAttr(const string &name, bool defval) const {
+      return attrs.Get(name, defval);
+    }
 
     // Check if operation has attribute.
     bool HasAttr(const string &name) const {
@@ -350,6 +357,15 @@ class Flow {
 
     // Set attribute.
     void SetAttr(const string &name, const string &value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, const char *value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, int value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, bool value) {
       attrs.Set(name, value);
     }
 

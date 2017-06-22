@@ -122,13 +122,11 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
     Tensor *b = bias_ ? step->input(2) : nullptr;
     Tensor *y = step->output(0);
 
-    // Check for C compatibility mode. In C compatibility mode FMA is not used
-    // even if it is present to keep compatibility with matrix multiplication
-    // code written in standard C.
+    // FMA is not strict math compatible.
     bool fma = masm->Enabled(FMA3);
-    if (step->GetAttr("ccompat") == "1") {
+    if (step->GetAttr("strict", false)) {
       fma = false;
-      step->set_variant("C");
+      step->set_variant("strict");
     }
 
     // Get matrix dimensions.
@@ -378,9 +376,8 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
   bool Supports(Step *step) override {
     if (!AVXVecMatMulBase::Supports(step)) return false;
 
-    // Horizontal float vector-matrix multiplication is not C compatible
-    // because of the horizontal summing.
-    if (step->GetAttr("ccompat") == "1") return false;
+    // Horizontal summation is not strict math compatible.
+    if (step->GetAttr("strict", false)) return false;
 
     return true;
   }

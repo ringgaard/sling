@@ -19,6 +19,7 @@ DEFINE_string(base_code_output, "", "File for generated base code");
 DEFINE_bool(intrand, false, "Use integers for random number generation");
 DEFINE_int32(minint, -64, "Minimum integer for random number generation");
 DEFINE_int32(maxint, 64, "Maximum integer for random number generation");
+DEFINE_bool(strict, false, "Strict math mode");
 
 #define __ masm->
 
@@ -171,6 +172,7 @@ KernelComparator::KernelComparator(
       base_kernel_name_(base_kernel_name) {
   Flow::Function *func = flow_.AddFunction("benchmark");
   op_ = flow_.AddOperation("test", operation_name);
+  if (FLAGS_strict) op_->SetAttr("strict", true);
   func->AddOperation(op_);
 }
 
