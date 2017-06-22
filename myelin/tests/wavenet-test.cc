@@ -9,10 +9,7 @@
 #include "myelin/flow.h"
 #include "myelin/graph.h"
 #include "myelin/profile.h"
-#include "myelin/kernel/avx.h"
-#include "myelin/kernel/generic.h"
-#include "myelin/kernel/sse.h"
-#include "myelin/kernel/arithmetic.h"
+#include "myelin/kernel/tensorflow.h"
 #include "myelin/kernel/wavenet.h"
 
 DEFINE_string(input, "local/wavenet.flow", "input file with flow model");
@@ -49,12 +46,8 @@ int main(int argc, char *argv[]) {
 
   // Set up kernel library.
   Library library;
-  RegisterGenericTransformations(&library);
-  RegisterArithmeticKernels(&library);
-  RegisterAVXKernels(&library);
-  RegisterSSEKernels(&library);
-  RegisterGenericKernels(&library);
-  RegisterWaveNetKernels(&library);
+  RegisterTensorflowLibrary(&library);
+  RegisterWaveNetLibrary(&library);
 
 #if 0
   // Load model.

@@ -6,10 +6,7 @@
 #include "base/logging.h"
 #include "file/file.h"
 #include "myelin/compute.h"
-#include "myelin/kernel/arithmetic.h"
-#include "myelin/kernel/sse.h"
-#include "myelin/kernel/generic.h"
-#include "myelin/kernel/avx.h"
+#include "myelin/kernel/tensorflow.h"
 #include "myelin/tests/compare-kernels.h"
 #include "third_party/jit/cpu.h"
 
@@ -281,11 +278,7 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_fma3) CPU::Disable(FMA3);
 
   // Register kernels.
-  RegisterAVXKernels(&library);
-  RegisterSSEKernels(&library);
-  RegisterArithmeticKernels(&library);
-  RegisterGenericKernels(&library);
-  RegisterGenericTransformations(&library);
+  RegisterTensorflowLibrary(&library);
   library.Register("MatMul", "BaselineMatMatMul", BaselineMatMatMul)
      .Input(0, DT_FLOAT, 2)
      .Input(1, DT_FLOAT, 2)

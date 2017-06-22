@@ -288,6 +288,9 @@ class MacroAssembler : public jit::Assembler {
   // Wait for task to complete.
   void WaitForTask(int offset);
 
+  // Reset register usage.
+  void ResetRegisterUsage();
+
   // General purpose register allocation.
   Registers &rr() { return rr_; }
 

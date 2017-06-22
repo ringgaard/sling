@@ -23,10 +23,7 @@ cc_binary(
     ":compare-kernels",
     "//base",
     "//file:posix",
-    "//myelin/kernel:arithmetic",
-    "//myelin/kernel:avx",
-    "//myelin/kernel:generic",
-    "//myelin/kernel:sse",
+    "//myelin/kernel:tensorflow",
   ],
 )
 
@@ -50,10 +47,7 @@ cc_binary(
     "//myelin:flow",
     "//myelin:graph",
     "//myelin:profile",
-    "//myelin/kernel:avx",
-    "//myelin/kernel:generic",
-    "//myelin/kernel:sse",
-    "//myelin/kernel:arithmetic",
+    "//myelin/kernel:tensorflow",
     "//myelin/kernel:wavenet",
   ],
 )
@@ -70,11 +64,8 @@ cc_binary(
     "//myelin:flow",
     "//myelin:graph",
     "//myelin:profile",
-    "//myelin/kernel:avx",
-    "//myelin/kernel:generic",
-    "//myelin/kernel:sse",
+    "//myelin/kernel:tensorflow",
     "//myelin/kernel:dragnn",
-    "//myelin/kernel:arithmetic",
   ],
 )
 
@@ -90,10 +81,7 @@ cc_binary(
     "//myelin:graph",
     "//myelin:multi-process",
     "//myelin:profile",
-    "//myelin/kernel:avx",
-    "//myelin/kernel:generic",
-    "//myelin/kernel:sse",
-    "//myelin/kernel:arithmetic",
+    "//myelin/kernel:tensorflow",
   ],
 )
 

@@ -6,8 +6,8 @@
 namespace sling {
 namespace myelin {
 
-// Register arithmetic kernels.
-void RegisterArithmeticKernels(Library *library);
+// Register arithmetic library.
+void RegisterArithmeticLibrary(Library *library);
 
 }  // namespace myelin
 }  // namespace sling

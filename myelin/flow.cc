@@ -667,51 +667,13 @@ void Flow::Transform(const Transformations &transformations) {
   // Keep transforming flow until no more transformations can be applied.
   bool again = true;
   while (again) {
-    again = false;
-
-    // Eliminate Identity ops by moving the inputs to the output.
-    std::vector<Operation *> noops;
-    for (const string &identity : transformations.noops()) {
-      for (Operation *op : ops_) {
-        if (op->type == identity) noops.push_back(op);
-      }
-    }
-
-    // Remove no-ops from the flow and eliminate the intermediate variables.
-    for (Operation *op : noops) {
-      Eliminate(op);
-      again = true;
-    }
-
-    // Combine ops.
-    for (const auto &c : transformations.combinations()) {
-      if (Combine(c.first, c.second, c.replacement)) again = true;
-    }
-
     // Run flow transformers.
-    for (Transformer *transformer : transformations.transformers()) {
-      if (transformer->Transform(this)) again = true;
+    auto &transformers = transformations.transformers();
+    again = false;
+    for (int t = transformers.size() -1; t >= 0; --t) {
+      if (transformers[t]->Transform(this)) again = true;
     }
   }
-}
-
-bool Flow::Combine(const string &first,
-                   const string &second,
-                   const string &combined) {
-  // Find operations that can be combined.
-  bool again = false;
-  for (Operation *op : ops_) {
-    if (op->type != first) continue;
-    if (op->outputs.size() != 1) continue;
-    Variable *var = op->outputs[0];
-    if (var->consumers.size() != 1) continue;
-    if (var->consumers[0]->type != second) continue;
-    if (var->consumers[0]->task != op->task) continue;
-
-    Fuse(op, var->consumers[0], combined);
-    again = true;
-  }
-  return again;
 }
 
 Flow::Operation *Flow::Fuse(Operation *first,
@@ -1116,7 +1078,9 @@ bool Flow::InferTypes(const Transformations &transformations) {
     if (!infer) continue;
 
     // Try to infer type and shape for operation outputs.
-    for (Typer *typer : transformations.typers()) {
+    auto &typers = transformations.typers();
+    for (int t = typers.size() -1; t >= 0; --t) {
+      Typer *typer = typers[t];
       bool done = typer->InferTypes(op);
       if (done) break;
     }

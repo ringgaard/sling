@@ -176,55 +176,6 @@ class ZigZagTanhMulSigmoid : public Kernel {
   }
 };
 
-// Stub for Add.
-class Add : public Kernel {
- public:
-  string Name() override { return "DummyAdd"; }
-  string Operation() override { return "Add"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Adjust(Step *step) override {
-    int a = step->input(0)->elements();
-    int b = step->input(1)->elements();
-    int c = step->output(0)->elements();
-    bool shared = false;
-    if (a == c) shared = step->AllowInPlace(0, 0);
-    if (!shared && b == c) step->AllowInPlace(1, 0);
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
-  }
-
-  int64 Complexity(const Step *step) override {
-    CHECK_EQ(step->indegree(), 2);
-    return std::max(step->input(0)->elements(), step->input(1)->elements());
-  }
-};
-
-// Stub for Mul.
-class Mul : public Kernel {
- public:
-  string Name() override { return "DummyMul"; }
-  string Operation() override { return "Mul"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
-  }
-
-  int64 Complexity(const Step *step) override {
-    CHECK_EQ(step->indegree(), 2);
-    return std::max(step->input(0)->elements(), step->input(1)->elements());
-  }
-};
-
 // Stub for StridedSlice.
 class StridedSlice : public Kernel {
  public:
@@ -239,7 +190,6 @@ class StridedSlice : public Kernel {
     __ nop();
   }
 };
-
 
 // Stub for Pad.
 class Pad : public Kernel {
@@ -300,14 +250,14 @@ static void RandomGenerator(const TensorData &shape,
   }
 }
 
-// Register WaveNet kernels.
-void RegisterWaveNetKernels(Library *library) {
-  library->Register("RandomUniform", "SRandGenerator", SimpleRandomGenerator)
+// Register WaveNet library.
+void RegisterWaveNetLibrary(Library *library) {
+  library->Register("RandomUniform", "RandomGenerator", RandomGenerator)
      .Input(0, DT_INT32, 1)
      .Input(1, DT_INT64, 0)
      .Output(0, DT_FLOAT);
 
-  library->Register("RandomUniform", "RandomGenerator", RandomGenerator)
+  library->Register("RandomUniform", "SRandGenerator", SimpleRandomGenerator)
      .Input(0, DT_INT32, 1)
      .Input(1, DT_INT64, 0)
      .Output(0, DT_FLOAT);
@@ -316,9 +266,6 @@ void RegisterWaveNetKernels(Library *library) {
   library->Register(new Conv1DAdd());
   library->Register(new Conv2DBackpropInput());
   library->Register(new ZigZagTanhMulSigmoid());
-
-  library->Register(new Add());
-  library->Register(new Mul());
 
   library->Register(new StridedSlice());
   library->Register(new Pad());

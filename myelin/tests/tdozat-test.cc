@@ -9,10 +9,7 @@
 #include "myelin/graph.h"
 #include "myelin/profile.h"
 #include "myelin/multi-process.h"
-#include "myelin/kernel/avx.h"
-#include "myelin/kernel/generic.h"
-#include "myelin/kernel/sse.h"
-#include "myelin/kernel/arithmetic.h"
+#include "myelin/kernel/tensorflow.h"
 
 DEFINE_string(input, "local/tdozat.flow", "input file with flow model");
 DEFINE_int32(repeat, 100, "Number of times test is repeated");
@@ -27,11 +24,7 @@ int main(int argc, char *argv[]) {
 
   // Set up kernel library.
   Library library;
-  RegisterGenericTransformations(&library);
-  RegisterArithmeticKernels(&library);
-  RegisterAVXKernels(&library);
-  RegisterSSEKernels(&library);
-  RegisterGenericKernels(&library);
+  RegisterTensorflowLibrary(&library);
 
   // Load model.
   Flow flow;

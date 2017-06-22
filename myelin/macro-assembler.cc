@@ -496,6 +496,12 @@ void MacroAssembler::TimeStep(int offset) {
   movq(tsreg, rax);
 }
 
+void MacroAssembler::ResetRegisterUsage() {
+  rr_.reset();
+  mm_.reset();
+  if (timing_) rr_.use(tsreg);
+}
+
 }  // namespace myelin
 }  // namespace sling
 

@@ -12,11 +12,8 @@
 #include "myelin/flow.h"
 #include "myelin/graph.h"
 #include "myelin/profile.h"
-#include "myelin/kernel/avx.h"
-#include "myelin/kernel/arithmetic.h"
+#include "myelin/kernel/tensorflow.h"
 #include "myelin/kernel/dragnn.h"
-#include "myelin/kernel/generic.h"
-#include "myelin/kernel/sse.h"
 #include "third_party/jit/cpu.h"
 
 DEFINE_int32(repeat, 1, "Number of times test is repeated");
@@ -144,14 +141,11 @@ struct RNNInstance {
 
 void RNN::Load(const string &filename) {
   // Register kernels for implementing parser ops.
-  RegisterAVXKernels(&library_);
-  RegisterSSEKernels(&library_);
-  RegisterDragnnKernels(&library_);
+  RegisterTensorflowLibrary(&library_);
+  RegisterDragnnLibrary(&library_);
+
   library_.Register(new FixedDragnnInitializer());
   library_.RegisterTyper(new FixedDragnnTyper());
-  RegisterArithmeticKernels(&library_);
-  RegisterGenericKernels(&library_);
-  RegisterGenericTransformations(&library_);
 
   // Load and analyze parser flow file.
   Flow flow;

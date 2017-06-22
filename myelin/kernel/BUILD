@@ -60,6 +60,19 @@ cc_library(
 )
 
 cc_library(
+  name = "tensorflow",
+  srcs = ["tensorflow.cc"],
+  hdrs = ["tensorflow.h"],
+  deps = [
+    ":arithmetic",
+    ":avx",
+    ":generic",
+    ":sse",
+    "//myelin:compute",
+  ],
+)
+
+cc_library(
   name = "dragnn",
   srcs = ["dragnn.cc"],
   hdrs = ["dragnn.h"],

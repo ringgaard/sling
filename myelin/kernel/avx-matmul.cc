@@ -1015,35 +1015,13 @@ class AVXIntVecMatMulAddReluH : public AVXIntVecMatMulHBase {
 };
 
 void RegisterAVXMatMul(Library *library) {
-  // Computes  : y = x * W
-  // Input     : x: float32[1,n]
-  //             W: float32[n,m] row-major
-  // Output    : y: float32[1,m]
+  // Computes  : C = A * B
+  // Input     : A: float32[k,n] row-major
+  //             B: float32[n,m] column-major
+  // Output    : C: float32[k,m] row-major
   // Requires  : AVX
-  library->Register(new AVXFltVecMatMulV());
-
-  // Computes  : y = x * W + b
-  // Input     : x: float32[1,n]
-  //             W: float32[n,m] row-major
-  //             b: float32[1,n]
-  // Output    : y: float32[1,m]
-  // Requires  : AVX
-  library->Register(new AVXFltVecMatMulAddV());
-
-  // Computes  : y = max(0, x * W)
-  // Input     : x: float32[1,n]
-  //             W: float32[n,m] row-major
-  // Output    : y: float32[1,m]
-  // Requires  : AVX
-  library->Register(new AVXFltVecMatMulReluV());
-
-  // Computes  : y = max(0, x * W + b)
-  // Input     : x: float32[1,n]
-  //             W: float32[n,m] row-major
-  //             b: float32[1,n]
-  // Output    : y: float32[1,m]
-  // Requires  : AVX
-  library->Register(new AVXFltVecMatMulAddReluV());
+  // Supports  : FMA3
+  library->Register(new AVXFltMatMatMul());
 
   // Computes  : y = x * W
   // Input     : x: float32[1,n]
@@ -1079,13 +1057,35 @@ void RegisterAVXMatMul(Library *library) {
   // Supports  : FMA3
   library->Register(new AVXFltVecMatMulAddReluH());
 
-  // Computes  : C = A * B
-  // Input     : A: float32[k,n] row-major
-  //             B: float32[n,m] column-major
-  // Output    : C: float32[k,m] row-major
+  // Computes  : y = x * W
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] row-major
+  // Output    : y: float32[1,m]
   // Requires  : AVX
-  // Supports  : FMA3
-  library->Register(new AVXFltMatMatMul());
+  library->Register(new AVXFltVecMatMulV());
+
+  // Computes  : y = x * W + b
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] row-major
+  //             b: float32[1,n]
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulAddV());
+
+  // Computes  : y = max(0, x * W)
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] row-major
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulReluV());
+
+  // Computes  : y = max(0, x * W + b)
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] row-major
+  //             b: float32[1,n]
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulAddReluV());
 
   // Computes  : y = x * W
   // Input     : x: int8[1,n]

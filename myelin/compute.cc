@@ -841,7 +841,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Find kernel for implementing the operation.
-    for (Kernel *kernel : library.Lookup(step->type())) {
+    auto &kernels = library.Lookup(step->type());
+    for (int k = kernels.size() - 1; k >= 0; --k) {
+      Kernel *kernel = kernels[k];
       if (kernel->Supports(step)) {
         // Check that kernel location is compatible with task placement.
         bool compatible = true;
@@ -1276,8 +1278,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
         // No registers are preserved between steps, so reset register
         // allocation.
-        masm.rr().reset();
-        masm.mm().reset();
+        masm.ResetRegisterUsage();
 
         // Copy outputs that do not have the placement required by the
         // consumers.
@@ -1386,8 +1387,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
           // No registers are preserved between steps, so reset register
           // allocation.
-          masm.rr().reset();
-          masm.mm().reset();
+          masm.ResetRegisterUsage();
 
           // Copy outputs that do not have the placement required by the
           // consumers.

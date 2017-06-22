@@ -408,10 +408,9 @@ class Calculate : public Kernel {
   int arity_;               // number of inputs
 };
 
-// Register calculation kernels in library.
+// Register element-wise expression calculation kernels in library.
 static void RegisterCalculate(Library *library) {
   library->RegisterTransformer(new ExpressionTransformer());
-  library->Register(new Calculate("Calculate", "Calculate"));
   library->Register(new Calculate("AddExpr", "Add", 2));
   library->Register(new Calculate("SubExpr", "Sub", 2));
   library->Register(new Calculate("MulExpr", "Mul", 2));
@@ -423,6 +422,7 @@ static void RegisterCalculate(Library *library) {
   library->Register(new Calculate("ExpExpr", "Exp", 1));
   library->Register(new Calculate("SigmoidExpr", "Sigmoid", 1));
   library->Register(new Calculate("TanhExpr", "Tanh", 1));
+  library->Register(new Calculate("Calculate", "Calculate"));
 }
 
 // Replace ops with constant input variables with new computed constant
@@ -494,8 +494,8 @@ class ConstantFolding : public Transformer {
   }
 };
 
-// Register arithmetic kernels.
-void RegisterArithmeticKernels(Library *library) {
+// Register arithmetic library.
+void RegisterArithmeticLibrary(Library *library) {
   library->RegisterTransformer(new ConstantFolding());
   RegisterCalculate(library);
 }
