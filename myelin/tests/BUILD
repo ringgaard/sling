@@ -74,12 +74,25 @@ cc_binary(
   srcs = ["tdozat-test.cc"],
   deps = [
     "//base",
-    "//base:clock",
     "//file:posix",
     "//myelin:compute",
     "//myelin:flow",
     "//myelin:graph",
     "//myelin:multi-process",
+    "//myelin:profile",
+    "//myelin/kernel:tensorflow",
+  ],
+)
+
+cc_binary(
+  name = "mnist-test",
+  srcs = ["mnist-test.cc"],
+  deps = [
+    "//base",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
     "//myelin:profile",
     "//myelin/kernel:tensorflow",
   ],
