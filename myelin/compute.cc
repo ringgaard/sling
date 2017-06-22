@@ -1130,6 +1130,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Allocate space for variables in instance data blocks.
+    cell->data_start_ = cell->instance_size_;
     InstanceAllocator host_allocator(cell, HOST);
     InstanceAllocator device_allocator(cell, DEVICE);
     int e = 0;

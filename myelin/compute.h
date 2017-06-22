@@ -900,6 +900,9 @@ class Cell {
   // Get offset of task structure in instance data block.
   size_t task_offset(int index) const { return tasks_[index].offset; }
 
+  // Start of data in instance block.
+  size_t data_start() const { return data_start_; }
+
   // Tensor with profiling information.
   Tensor *profile() const { return profile_; }
 
@@ -941,6 +944,9 @@ class Cell {
 
   // Size of device data instance for cell.
   size_t device_instance_size_ = 0;
+
+  // Start of data in instance block.
+  size_t data_start_ = 0;
 
   // Instance alignment.
   int instance_alignment_ = kMinDataAlignment;

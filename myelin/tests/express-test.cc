@@ -148,6 +148,11 @@ int main(int argc, char *argv[]) {
   Test("@0=Mul(Add(%0,#1),#1)");
   Test("@0=Mul(Add(%0,_1),_1)");
   Test("@0=Add(Mul(%0,_1),_2)");
+  Test("@0=Log(Sigmoid(%0))");
+  Test("@0=Sub(_0,Log(Add(Exp(Sub(_0,%0)),_1)))");
+  Test("@0=Add(Mul(Div(Add(Tanh(%9),#10),#11),Tanh(%8)),"
+       "Mul(Sub(#6,Div(Add(Tanh(%3),#4),#5)),%7));"
+       "@1=Mul(Tanh(@0),Div(Add(Tanh(%0),#1),#2))");
 
   return 0;
 }

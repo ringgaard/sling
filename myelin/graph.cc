@@ -81,6 +81,7 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
 
   // Output DOT graph header.
   str.append("digraph flow {\n");
+  StringAppendF(&str, "graph [rankdir=%s]\n", options.direction);
   StringAppendF(&str, "node [fontname=\"%s\"]\n", options.fontname);
 
   // Output DOT graph nodes for ops.

@@ -88,6 +88,7 @@ cc_binary(
     "//myelin:compute",
     "//myelin:flow",
     "//myelin:graph",
+    "//myelin:multi-process",
     "//myelin:profile",
     "//myelin/kernel:avx",
     "//myelin/kernel:generic",

@@ -42,6 +42,7 @@ struct GraphOptions {
 
   // Graph generation options.
   const char *fontname = "arial";
+  const char *direction = "BT";
   bool op_type_as_label = true;
   bool types_in_labels = true;
   bool include_constants = true;
