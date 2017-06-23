@@ -3014,8 +3014,8 @@ void Assembler::minss(XMMRegister dst, const Operand &src) {
 
 void Assembler::cmpss(XMMRegister dst, XMMRegister src, int8_t cmp) {
   EnsureSpace ensure_space(this);
-  emit_optional_rex_32(dst, src);
   emit(0xF3);
+  emit_optional_rex_32(dst, src);
   emit(0x0F);
   emit(0xC2);
   emit_sse_operand(dst, src);
@@ -3024,8 +3024,8 @@ void Assembler::cmpss(XMMRegister dst, XMMRegister src, int8_t cmp) {
 
 void Assembler::cmpss(XMMRegister dst, const Operand &src, int8_t cmp) {
   EnsureSpace ensure_space(this);
-  emit_optional_rex_32(dst, src);
   emit(0xF3);
+  emit_optional_rex_32(dst, src);
   emit(0x0F);
   emit(0xC2);
   emit_sse_operand(dst, src, 1);
