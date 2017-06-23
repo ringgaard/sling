@@ -16,6 +16,8 @@
 #include "myelin/kernel/dragnn.h"
 #include "third_party/jit/cpu.h"
 
+DEFINE_string(model, "local/tagger_rnn.flow", "Flow model for tagger");
+
 DEFINE_int32(repeat, 1, "Number of times test is repeated");
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
 DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
@@ -90,6 +92,15 @@ class RNN {
 
   // Loop up tag name.
   const string &tag(int index) const { return tags_[index]; }
+
+  // Get tag id for tag name.
+  int tagid(const string &tag) const {
+    for (int i = 0; i < tags_.size(); ++i) {
+      if (tag == tags_[i]) return i;
+    }
+    LOG(FATAL) << "Unknown tag name: " << tag;
+    return -1;
+  }
 
  private:
   // Looks up cells, connectors, and parameters.
@@ -215,6 +226,8 @@ void RNN::Load(const string &filename) {
     }
     pos = next + 1;
   }
+  LOG(INFO) << "vocabulary size: " << index;
+  LOG(INFO) << "oov: " << oov_;
   string tagdata;
   CHECK(File::ReadContents("local/tag-map", &tagdata));
   pos = 0;
@@ -267,6 +280,7 @@ void RNN::Execute(const std::vector<string> &tokens,
     for (int i = 0; i < tokens.size(); ++i) {
       int word = LookupWord(tokens[i]);
       data.words[i] = word;
+      LOG(INFO) << tokens[i] << " = " << word;
     }
 
     // Compute left-to-right LSTM.
@@ -352,6 +366,24 @@ void RNN::ExtractFeaturesLR(RNNInstance *instance, int current) const {
   *instance->lr.Get<int>(lr_feature_words_) = word;
 }
 
+void ReadSentence(const string &sentence,
+                  std::vector<string> *tokens,
+                  std::vector<string> *tags) {
+  int p = 0;
+  for (;;) {
+    int slash = sentence.find('/', p);
+    CHECK(slash != -1);
+    string token = sentence.substr(p, slash - p);
+    p = sentence.find(' ', slash + 1);
+    int space = (p == -1) ? sentence.size() : p;
+    string tag = sentence.substr(slash + 1, space - slash - 1);
+    tokens->push_back(token);
+    tags->push_back(tag);
+    if (p == -1) break;
+    p = space + 1;
+  }
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
@@ -364,24 +396,38 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_fma3) jit::CPU::Disable(jit::FMA3);
 
   RNN rnn;
-  const string testdata = "local/tagger_rnn.flow";
-  rnn.Load(testdata);
+  rnn.Load(FLAGS_model);
 
-  std::vector<string> sentence = {
-    "John", "hit", "the", "ball", "with", "a", "bat",
-  };
-  std::vector<int> golden = {
-    2, 10, 3, 0, 1, 3, 0,
-  };
+  string s;
 
-  std::vector<int> predictions;
-  rnn.Execute(sentence, &predictions);
+  s = "John/NNP hit/VBD the/DT ball/NN with/IN a/DT bat/NN ./.";
+  //s = "He/PRP was/VBD right/RB ./.";
+  //s = "Such/JJ family/NN reunions/NN would/MD be/VB the/DT second/JJ "
+  //    "since/IN 1945/CD ./.";
+  //s = "Skipper/NNP 's/POS said/VBD the/DT merger/NN will/MD help/VB "
+  //    "finance/VB remodeling/VBG and/CC future/JJ growth/NN ./.";
+  //s = "I/RP much/RB prefer/VBP money/NN I/PRP can/MD put/VB my/PRP$ hands/NN "
+  //    "on/IN ./. ''/''";
 
-  for (int i = 0; i < predictions.size(); ++i) {
-    LOG(INFO) << sentence[i] << " " << rnn.tag(predictions[i]);
+  std::vector<string> tokens;
+  std::vector<string> tags;
+  ReadSentence(s, &tokens, &tags);
+
+  std::vector<int> golden;
+  for (int i = 0; i < tokens.size(); ++i) {
+    int t = rnn.tagid(tags[i]);
+    CHECK(t != -1);
+    golden.push_back(t);
   }
 
-  CHECK_EQ(predictions.size(), sentence.size());
+  std::vector<int> predictions;
+  rnn.Execute(tokens, &predictions);
+
+  for (int i = 0; i < predictions.size(); ++i) {
+    LOG(INFO) << tokens[i] << " " << rnn.tag(predictions[i]);
+  }
+
+  CHECK_EQ(tokens.size(), tokens.size());
   for (int i = 0; i < predictions.size(); ++i) {
     CHECK_EQ(golden[i], predictions[i])
         << i << " gold: " << rnn.tag(golden[i])
