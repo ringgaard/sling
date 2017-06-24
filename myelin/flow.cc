@@ -690,7 +690,7 @@ Flow::Operation *Flow::Fuse(Operation *first,
       // Input from first op. Eliminate variable if it is only used as an
       // intermediate result between the first and second op.
       second->RemoveInput(v);
-      if (v->consumers.empty()) {
+      if (v->consumers.empty() && !v->out) {
         first->RemoveOutput(v);
         DeleteVariable(v);
         for (Connector *cnx : cnxs_) cnx->RemoveLink(v);
@@ -707,7 +707,7 @@ Flow::Operation *Flow::Fuse(Operation *first,
     if (first->IsInput(v)) {
       // Input from second op. Eliminate variable if it is only used as an
       // intermediate result between the first and second op.
-      if (v->consumers.size() == 1) {
+      if (v->consumers.size() == 1 && !v->out) {
         first->RemoveInput(v);
         second->RemoveOutput(v);
         DeleteVariable(v);

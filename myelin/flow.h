@@ -81,36 +81,27 @@ class TypeTraits {
 
 // Look up traits from type.
 template<typename T> inline const TypeTraits &Traits();
-template<> inline const TypeTraits &Traits<float>() {
-  return TypeTraits::of(DT_FLOAT);
-}
-template<> inline const TypeTraits &Traits<double>() {
-  return TypeTraits::of(DT_DOUBLE);
-}
-template<> inline const TypeTraits &Traits<int32_t>() {
-  return TypeTraits::of(DT_INT32);
-}
-template<> inline const TypeTraits &Traits<uint8_t>() {
-  return TypeTraits::of(DT_UINT8);
-}
-template<> inline const TypeTraits &Traits<int16_t>() {
-  return TypeTraits::of(DT_INT16);
-}
-template<> inline const TypeTraits &Traits<int8_t>() {
-  return TypeTraits::of(DT_INT8);
-}
-template<> inline const TypeTraits &Traits<int64_t>() {
-  return TypeTraits::of(DT_INT64);
-}
-template<> inline const TypeTraits &Traits<int64>() {
-  return TypeTraits::of(DT_INT64);
-}
-template<> inline const TypeTraits &Traits<bool>() {
-  return TypeTraits::of(DT_BOOL);
-}
-template<> inline const TypeTraits &Traits<uint16_t>() {
-  return TypeTraits::of(DT_UINT16);
-}
+
+#define TYPE_TRAIT(type, dt) \
+  template<> inline const TypeTraits &Traits<type>() { \
+    return TypeTraits::of(dt); \
+  } \
+  template<> inline const TypeTraits &Traits<type *>() { \
+    return TypeTraits::of(dt); \
+  } \
+
+TYPE_TRAIT(float, DT_FLOAT);
+TYPE_TRAIT(double, DT_DOUBLE);
+TYPE_TRAIT(uint8_t, DT_UINT8);
+TYPE_TRAIT(uint16_t, DT_UINT16);
+TYPE_TRAIT(int8_t, DT_INT8);
+TYPE_TRAIT(int16_t, DT_INT16);
+TYPE_TRAIT(int32_t, DT_INT32);
+TYPE_TRAIT(int64_t, DT_INT64);
+TYPE_TRAIT(int64, DT_INT64);
+TYPE_TRAIT(bool, DT_BOOL);
+
+#undef TYPE_TRAIT
 
 // Flow graph transformations.
 class Transformations {
