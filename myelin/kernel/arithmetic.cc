@@ -199,18 +199,21 @@ class ExpressionTransformer : public Transformer {
       for (int i = 0; i < candidates.size(); ++i) {
         Flow::Operation *op = candidates[i];
         if (op == nullptr) continue;
+        if (op->GetAttr("strict", false)) continue;
 
         // Check if producer of one of the inputs is also a candidate.
         for (auto *input : op->inputs) {
-          if (input->producer != nullptr && IsCalculateOp(input->producer)) {
-            // Try to combine op with producer.
-            if (Combine(flow, input->producer, op)) {
-              // Remove op from candidate list and try again.
-              candidates[i] = nullptr;
-              num_combines++;
-              again = true;
-              break;
-            }
+          if (input->producer == nullptr) continue;
+          if (!IsCalculateOp(input->producer)) continue;
+          if (input->producer->GetAttr("strict", false)) continue;
+
+          // Try to combine op with producer.
+          if (Combine(flow, input->producer, op)) {
+            // Remove op from candidate list and try again.
+            candidates[i] = nullptr;
+            num_combines++;
+            again = true;
+            break;
           }
         }
       }
@@ -343,6 +346,9 @@ class Calculate : public Kernel {
       if (output->type() != type) return false;
       if (output->shape() != shape) return false;
     }
+
+    // Strict math not supported.
+    if (step->GetAttr("strict", false)) return false;
 
     return true;
   }

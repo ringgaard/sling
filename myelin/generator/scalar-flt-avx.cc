@@ -28,7 +28,7 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
     }
   }
 
-  string Name() override { return "ScalarFltAVX"; }
+  string Name() override { return "FltAVX"; }
 
   void Reserve() override {
     // Reserve XMM registers.

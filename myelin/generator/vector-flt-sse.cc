@@ -23,7 +23,7 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     model_.func_reg_mem = true;
   }
 
-  string Name() override { return "VectorFltSSE"; }
+  string Name() override { return "VFltSSE"; }
 
   int VectorSize() override { return XMMRegSize; }
 

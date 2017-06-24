@@ -23,7 +23,7 @@ class VectorIntSSEGenerator : public ExpressionGenerator {
     model_.func_reg_mem = true;
   }
 
-  string Name() override { return "VectorIntSSE"; }
+  string Name() override { return "VIntSSE"; }
 
   int VectorSize() override { return XMMRegSize; }
 

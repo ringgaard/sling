@@ -23,7 +23,7 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
     model_.func_reg_mem = true;
   }
 
-  string Name() override { return "VectorIntAVX256"; }
+  string Name() override { return "VIntAVX256"; }
 
   int VectorSize() override { return YMMRegSize; }
 

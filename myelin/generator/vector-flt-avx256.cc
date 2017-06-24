@@ -28,7 +28,7 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
     }
   }
 
-  string Name() override { return "VectorFltAVX256"; }
+  string Name() override { return "VFltAVX256"; }
 
   int VectorSize() override { return YMMRegSize; }
 

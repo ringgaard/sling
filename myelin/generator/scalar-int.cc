@@ -21,7 +21,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
     model_.func_reg_mem = true;
   }
 
-  string Name() override { return "ScalarInt"; }
+  string Name() override { return "Int"; }
 
   void Reserve() override {
     // Reserve registers for temps.

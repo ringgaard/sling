@@ -118,6 +118,12 @@ bool ElementwiseIndexGenerator::AllocateRegisters(MacroAssembler *masm) {
         loc.base = rr.try_alloc();
       }
     }
+    for (auto &loc : output_) {
+      if (loc.base.is_valid()) continue;
+      if (loc.iterator->type == SIMPLE) {
+        loc.base = rr.try_alloc();
+      }
+    }
   }
 
   // Save macro assembler for constant generation.

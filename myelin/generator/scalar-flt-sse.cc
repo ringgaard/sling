@@ -23,7 +23,7 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
     model_.func_reg_mem = true;
   }
 
-  string Name() override { return "ScalarFltSSE"; }
+  string Name() override { return "FltSSE"; }
 
   void Reserve() override {
     // Reserve XMM registers.
