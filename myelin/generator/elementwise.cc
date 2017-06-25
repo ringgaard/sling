@@ -21,7 +21,7 @@ ElementwiseIndexGenerator::ElementwiseIndexGenerator(const Step *step) {
   }
   output_.resize(step->outdegree());
   for (int i = 0; i < step->outdegree(); ++i) {
-    CHECK(step->input(i)->type() == type_);
+    CHECK(step->output(i)->type() == type_);
     CHECK(step->output(i)->shape() == step->output(0)->shape());
     CHECK(InitializeLocator(step->output(i), &output_[i]));
   }

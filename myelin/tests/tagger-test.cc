@@ -27,7 +27,7 @@ DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
 DEFINE_bool(dump_graph, true, "Dump dot graph");
 DEFINE_bool(dump_code, true, "Dump generated code");
 DEFINE_bool(debug, false, "Debug mode");
-DEFINE_double(epsilon, 0, "Epsilon for floating point comparison");
+DEFINE_double(epsilon, 1e-5, "Epsilon for floating point comparison");
 
 DEFINE_bool(sse, true, "SSE support");
 DEFINE_bool(sse2, true, "SSE2 support");
@@ -37,7 +37,7 @@ DEFINE_bool(avx, true, "AVX support");
 DEFINE_bool(avx2, true, "AVX2 support");
 DEFINE_bool(fma3, true, "FMA3 support");
 
-DEFINE_bool(strict, false, "Strict math mode");
+DEFINE_int32(strict, 0, "Strict math mode (0=relaxed,1=strict matmul,2=strict");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -419,8 +419,10 @@ void RNN::Load(const string &filename) {
   CHECK(flow.Load(filename));
   flow.Var("tagger/h_out")->out = true;
   flow.Var("tagger/c_out")->out = true;
-  if (FLAGS_strict) {
+  if (FLAGS_strict > 0) {
     for (auto *op : flow.Find({"MatMul"})) op->SetAttr("strict", true);
+  }
+  if (FLAGS_strict > 1) {
     for (auto *op : flow.Find({"Tanh"})) op->SetAttr("strict", true);
     for (auto *op : flow.Find({"Sigmoid"})) op->SetAttr("strict", true);
   }
