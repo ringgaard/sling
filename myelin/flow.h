@@ -242,6 +242,10 @@ class Flow {
   struct Operation;
   struct Function;
 
+  // Flow file version
+  static const int kVersion = 3;
+  static const int kMagic = 0x776f6c66;
+
   // Flow variable.
   struct Variable {
     // Add alias for variable.
@@ -396,6 +400,9 @@ class Flow {
 
   // Load flow from file.
   Status Load(const string &filename);
+
+  // Save flot to file.
+  void Save(const string &filename, int version = kVersion) const;
 
   // Analyze flow.
   void Analyze(const Transformations &transformations);

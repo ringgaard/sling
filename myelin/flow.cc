@@ -198,6 +198,45 @@ class Parser {
   char *end_;  // end of input buffer
 };
 
+// Flow file writer.
+class FlowFileWriter {
+ public:
+  // Open flow file for writing.
+  explicit FlowFileWriter(const string &filename)
+      : file_(File::OpenOrDie(filename, "w")) {
+  }
+
+  // Close output file.
+  ~FlowFileWriter() {
+    CHECK(file_->Close());
+  }
+
+  // Write data to output file.
+  void Write(const void *data, size_t size) {
+    CHECK(file_->Write(data, size));
+  }
+
+  // Write integer to output file.
+  void WriteInt(int32 n) {
+    Write(&n, sizeof(int32));
+  }
+
+  // Write 64-bit integer to output file.
+  void WriteInt64(int64 n) {
+    Write(&n, sizeof(int64));
+  }
+
+  // Write length-prefixed string to output file.
+  void WriteString(const string &str) {
+    WriteInt(str.size());
+    Write(str.data(), str.size());
+  }
+
+ private:
+  // Output file.
+  File *file_;
+};
+
 const string &Attributes::Get(const string &name) const {
   static string empty;
   for (auto &attr : *this) {
@@ -491,9 +530,9 @@ Status Flow::Load(const string &filename) {
   // Read header.
   Parser parser(data, data + size);
   int magic = parser.GetInt();
-  CHECK_EQ(magic, 0x776f6c66) << filename << " is not a flow file";
+  CHECK_EQ(magic, kMagic) << filename << " is not a flow file";
   int version = parser.GetInt();
-  CHECK_EQ(version, 3) << "unsupported flow file version";
+  CHECK_EQ(version, kVersion) << "unsupported flow file version";
 
   // Read variables.
   int num_vars = parser.GetInt();
@@ -618,6 +657,95 @@ Status Flow::Load(const string &filename) {
   }
 
   return Status::OK;
+}
+
+void Flow::Save(const string &filename, int version) const {
+  // Open output file.
+  FlowFileWriter file(filename);
+
+  // Write header (magic and version).
+  CHECK_EQ(version, kVersion);
+  file.WriteInt(kMagic);
+  file.WriteInt(3);
+
+  // Write variables.
+  file.WriteInt(vars_.size());
+  for (const Variable *var : vars_) {
+    // Write name.
+    file.WriteString(var->name);
+
+    // Write aliases.
+    file.WriteInt(var->aliases.size());
+    for (const string &alias : var->aliases) {
+      file.WriteString(alias);
+    }
+
+    // Write type.
+    file.WriteString(TypeTraits::of(var->type).name());
+
+    // Write shape.
+    file.WriteInt(var->shape.rank());
+    for (int d = 0; d < var->shape.rank(); ++d) {
+      file.WriteInt(var->shape.dim(d));
+    }
+
+    // Write size.
+    file.WriteInt64(var->size);
+
+    // Write data.
+    if (var->data != nullptr) {
+      file.Write(var->data, var->size);
+    }
+  }
+
+  // Write operations.
+  file.WriteInt(ops_.size());
+  for (Operation *op : ops_) {
+    // Write name.
+    file.WriteString(op->name);
+
+    // Write type.
+    file.WriteString(op->type);
+
+    // Write inputs.
+    file.WriteInt(op->inputs.size());
+    for (const Variable *input : op->inputs) {
+      file.WriteString(input->name);
+    }
+
+    // Write outputs.
+    file.WriteInt(op->outputs.size());
+    for (const Variable *output : op->outputs) {
+      file.WriteString(output->name);
+    }
+
+    // Write attributes.
+    file.WriteInt(op->attrs.size());
+    for (const auto &attr : op->attrs) {
+      file.WriteString(attr.name);
+      file.WriteString(attr.value);
+    }
+  }
+
+  // Write functions.
+  file.WriteInt(funcs_.size());
+  for (const Function *func : funcs_) {
+    file.WriteString(func->name);
+    file.WriteInt(func->ops.size());
+    for (const Operation *op : func->ops) {
+      file.WriteString(op->name);
+    }
+  }
+
+  // Write connectors.
+  file.WriteInt(cnxs_.size());
+  for (const Connector *cnx : cnxs_) {
+    file.WriteString(cnx->name);
+    file.WriteInt(cnx->links.size());
+    for (const Variable *link : cnx->links) {
+      file.WriteString(link->name);
+    }
+  }
 }
 
 void Flow::Analyze(const Transformations &transformations) {
