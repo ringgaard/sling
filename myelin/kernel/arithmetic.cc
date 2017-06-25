@@ -102,21 +102,6 @@ static void InitExpression(const Step *step, Express *expr, bool expand) {
   }
 }
 
-// Build mapping from flow variables to expression variables.
-static void MapVars(Flow::Operation *op, Express *expr, VarMap *varmap) {
-  // Map input variables.
-  for (int i = 0; i < op->indegree(); ++i) {
-    Express::VarType type =
-        op->inputs[i]->constant() ? Express::CONST : Express::INPUT;
-      (*varmap)[op->inputs[i]] = expr->Variable(type, i);
-  }
-
-  // Map output variables.
-  for (int i = 0; i < op->outdegree(); ++i) {
-    (*varmap)[op->outputs[i]] = expr->Variable(Express::OUTPUT, i);
-  }
-}
-
 // Expression code generator for element-wise operations.
 struct Expression {
   // Initialize expression.
@@ -186,7 +171,7 @@ class ExpressionTransformer : public Transformer {
     // Make list of ops that can potentially be included in Calculate ops.
     std::vector<Flow::Operation *> candidates;
     for (Flow::Operation *op : flow->ops()) {
-      if (IsCalculateOp(op)) {
+      if (IsCalculateOp(op) && !op->GetAttr("strict", false)) {
         candidates.push_back(op);
       }
     }
@@ -199,7 +184,6 @@ class ExpressionTransformer : public Transformer {
       for (int i = 0; i < candidates.size(); ++i) {
         Flow::Operation *op = candidates[i];
         if (op == nullptr) continue;
-        if (op->GetAttr("strict", false)) continue;
 
         // Check if producer of one of the inputs is also a candidate.
         for (auto *input : op->inputs) {
@@ -220,7 +204,7 @@ class ExpressionTransformer : public Transformer {
     }
     VLOG(3) << num_combines << " of " << candidates.size() << " ops combined";
 
-    return false;
+    return num_combines > 0;
   }
 
   bool Combine(Flow *flow, Flow::Operation *first, Flow::Operation *second) {
@@ -284,13 +268,14 @@ class ExpressionTransformer : public Transformer {
         // Map input from second op to input from first op.
         mapping[vars2[v]] = vars1[v];
       } else if (first->IsOutput(v)) {
-        if (v->consumers.size() == 1) {
+        if (v->consumers.size() == 1 && !v->out) {
           // Second op is the only consumer of the output from the first op,
           // so it can be turned into a temporary variable.
           vars1[v]->type = Express::TEMP;
-          next_output--;
+          vars1[v]->id = -1;
 
           // Adjust numbering of output variables from the first op.
+          next_output--;
           for (auto *o : expr1.vars()) {
             if (o->type == Express::OUTPUT && o->id > vars1[v]->id) {
               o->id--;
@@ -302,8 +287,7 @@ class ExpressionTransformer : public Transformer {
         mapping[vars2[v]] = vars1[v];
       } else {
         // Map input from second op to a new input in the merged expression.
-        Express::VarType type = v->constant() ? Express::CONST : Express::INPUT;
-        mapping[vars2[v]] = expr1.Variable(type, next_input++);
+        mapping[vars2[v]] = expr1.Variable(InputType(v), next_input++);
       }
     }
     for (Flow::Variable *v : second->outputs) {
@@ -317,6 +301,28 @@ class ExpressionTransformer : public Transformer {
 
     // Return merged recipe.
     return expr1.AsRecipe();
+  }
+
+  // Build mapping from flow variables to expression variables.
+  static void MapVars(Flow::Operation *op, Express *expr, VarMap *varmap) {
+    // Map input variables.
+    for (int i = 0; i < op->indegree(); ++i) {
+      (*varmap)[op->inputs[i]] = expr->Variable(InputType(op->inputs[i]), i);
+    }
+
+    // Map output variables.
+    for (int i = 0; i < op->outdegree(); ++i) {
+      (*varmap)[op->outputs[i]] = expr->Variable(Express::OUTPUT, i);
+    }
+  }
+
+  // Determine input variable type.
+  static Express::VarType InputType(Flow::Variable *var) {
+    if (var->constant() && var->elements() == 1) {
+      return Express::CONST;
+    } else {
+      return Express::INPUT;
+    }
   }
 };
 

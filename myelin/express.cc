@@ -1601,6 +1601,7 @@ void Express::Op::GetRecipe(string *recipe) const {
     if (!first) recipe->push_back(',');
     first = false;
     if (arg->inlined()) {
+      CHECK(arg->producer != nullptr);
       arg->producer->GetRecipe(recipe);
     } else {
       arg->GetRecipe(recipe);

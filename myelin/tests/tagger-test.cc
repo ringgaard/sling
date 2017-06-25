@@ -272,7 +272,7 @@ struct LSTMTagger {
 
 // Compare two vectors.
 bool Equals(float *a, float *b, int n, const char *name = "vector") {
-  book equal = true;
+  bool equal = true;
   for (int i = 0; i < n; ++i) {
     bool same = FLAGS_epsilon == 0.0 ? a[i] == b[i]
                                      : fabs(a[i] - b[i]) < FLAGS_epsilon;
@@ -424,21 +424,22 @@ void RNN::Load(const string &filename) {
     for (auto *op : flow.Find({"Tanh"})) op->SetAttr("strict", true);
     for (auto *op : flow.Find({"Sigmoid"})) op->SetAttr("strict", true);
   }
-  if (FLAGS_intermadiate) {
+  if (FLAGS_intermediate) {
     for (auto *var : flow.vars()) var->out = true;
   }
 
   flow.Analyze(library_);
 
+  // Output flow.
+  if (FLAGS_dump_flow) {
+    std::cout << flow.ToString() << "\n";
+    std::cout.flush();
+  }
+
   // Output graph.
   if (FLAGS_dump_graph) {
     GraphOptions gopts;
     FlowToDotGraphFile(flow, gopts, "/tmp/tagger.dot");
-  }
-
-  if (FLAGS_dump_flow) {
-    std::cout << flow.ToString() << "\n";
-    std::cout.flush();
   }
 
   // Compile parser flow.
@@ -501,7 +502,9 @@ void RNN::Load(const string &filename) {
   }
 
   // Load baseline tagger.
-  if (FLAGS_baseline) baseline_.Load(filename);
+  if (FLAGS_baseline) {
+    baseline_.Load(filename);
+  }
 }
 
 int RNN::LookupWord(const string &word) const {
@@ -611,6 +614,7 @@ void RNN::Execute(const std::vector<string> &tokens,
           Equals(data.Get("tagger/xw_plus_b/MatMul"), baseline_.xw, odim, "xw");
         }
         Equals(data.Get("tagger/xw_plus_b"), logits, odim, "logits");
+
         baseline_.Clear();
       }
     }
