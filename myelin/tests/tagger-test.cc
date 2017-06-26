@@ -47,19 +47,14 @@ struct RNNInstance;
 // Baseline LSTM tagger.
 struct LSTMTagger {
   void Load(const string &filename) {
-    // Initialize library.
-    RegisterTensorflowLibrary(&library);
-    RegisterDragnnLibrary(&library);
-
     // Load flow.
     CHECK(flow.Load(filename));
-    flow.Analyze(library);
 
     // Initialize dimensions.
     vocab_size = Var("tagger/fixed_embedding_matrix_0")->dim(0);
     embed_dim = Var("tagger/fixed_embedding_matrix_0")->dim(1);
     lstm_dim = Var("tagger/h2c")->dim(0);
-    output_dim = Var("tagger/xw_plus_b")->dim(1);
+    output_dim = Var("tagger/bias_softmax")->dim(0);
 
     // Initialize parameters.
     embeddings = GetData("tagger/fixed_embedding_matrix_0");
@@ -159,9 +154,7 @@ struct LSTMTagger {
   // Look up element in embedding.
   float *Lookup(float *embedding, int index, int n) {
     float *x = Vector(n);
-    for (int i = 0; i < n; ++i) {
-      x[i] = embedding[index * n + i];
-    }
+    for (int i = 0; i < n; ++i) x[i] = embedding[index * n + i];
     return x;
   }
 
@@ -170,6 +163,9 @@ struct LSTMTagger {
                float *c_in, float *h_in,
                float **c_out, float **h_out,
                float **logits) {
+    // The c_in and h_in inputs seem to be swapped around!!!
+    std::swap(c_in, h_in);
+
     // Embedding lookup.
     int index = word == -1 ? vocab_size - 1 : word;
     x = Lookup(embeddings, index, embed_dim);
@@ -179,13 +175,8 @@ struct LSTMTagger {
     //         tf.matmul(i_h_tm1, h2i) +
     //         tf.matmul(i_c_tm1, c2i) + bi
     i_x = MatMul(x, x2i, embed_dim, lstm_dim);
-#if 0
     i_h = MatMul(h_in, h2i, lstm_dim, lstm_dim);
     i_c = MatMul(c_in, c2i, lstm_dim, lstm_dim);
-#else
-    i_h = MatMul(h_in, c2i, lstm_dim, lstm_dim);
-    i_c = MatMul(c_in, h2i, lstm_dim, lstm_dim);
-#endif
     i_ait = Add(Add(Add(i_c, i_x, lstm_dim), i_h, lstm_dim), bi, lstm_dim);
 
     // i_it = tf.sigmoid(i_ait)
@@ -196,33 +187,19 @@ struct LSTMTagger {
 
     // write memory cell -- tanh(affine(x_t, h_{t-1}))
     c_x = MatMul(x, x2c, embed_dim, lstm_dim);
-#if 0
     c_h = MatMul(h_in, h2c, lstm_dim, lstm_dim);
-#else
-    c_h = MatMul(c_in, h2c, lstm_dim, lstm_dim);
-#endif
     i_awt = Add(Add(c_h, c_x, lstm_dim), bc, lstm_dim);
     i_wt = Tanh(i_awt, lstm_dim);
 
     // c_t = f_t \odot c_{t-1} + i_t \odot tanh(affine(x_t, h_{t-1}))
-#if 0
     *c_out = Add(Mul(i_it, i_wt, lstm_dim),
                  Mul(i_ft, c_in, lstm_dim),
                  lstm_dim);
-#else
-    *c_out = Add(Mul(i_it, i_wt, lstm_dim),
-                 Mul(i_ft, h_in, lstm_dim),
-                 lstm_dim);
-#endif
 
     // output -- o_t = sigmoid(affine(x_t, h_{t-1}, c_t))
     o_x = MatMul(x, x2o, embed_dim, lstm_dim);
     o_c = MatMul(*c_out, c2o, lstm_dim, lstm_dim);
-#if 0
     o_h = MatMul(h_in, h2o, lstm_dim, lstm_dim);
-#else
-    o_h = MatMul(c_in, h2o, lstm_dim, lstm_dim);
-#endif
     i_aot = Add(Add(Add(o_x, o_c, lstm_dim), o_h, lstm_dim), bo, lstm_dim);
 
     i_ot = Sigmoid(i_aot, lstm_dim);
@@ -237,7 +214,6 @@ struct LSTMTagger {
   }
 
   // Flow with LSTM parameters.
-  Library library;
   Flow flow;
 
   // LSTM dimensions.
@@ -602,8 +578,8 @@ void RNN::Execute(const std::vector<string> &tokens,
           Equals(data.Get("tagger/fixed_embedding_words/Lookup"), baseline_.x,
                           edim, "x");
           Equals(data.Get("tagger/MatMul"), baseline_.i_x, ldim, "i_x");
-          Equals(data.Get("tagger/MatMul_2"), baseline_.i_h, ldim, "i_h");
-          Equals(data.Get("tagger/MatMul_1"), baseline_.i_c, ldim, "i_c");
+          Equals(data.Get("tagger/MatMul_1"), baseline_.i_h, ldim, "i_h");
+          Equals(data.Get("tagger/MatMul_2"), baseline_.i_c, ldim, "i_c");
           Equals(data.Get("tagger/add_2"), baseline_.i_ait, ldim, "i_ait");
           Equals(data.Get("tagger/Sigmoid"), baseline_.i_it, ldim, "i_it");
           Equals(data.Get("tagger/sub_2"), baseline_.i_ft, ldim, "i_ft");
