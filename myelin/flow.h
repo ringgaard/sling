@@ -427,7 +427,7 @@ class Flow {
   // Load flow from file.
   Status Load(const string &filename);
 
-  // Save flot to file.
+  // Save flow to file.
   void Save(const string &filename, int version = kVersion) const;
 
   // Analyze flow.

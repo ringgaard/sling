@@ -159,6 +159,7 @@ string TypeTraits::str(void *data) const {
 }
 
 Transformations::~Transformations() {
+  for (auto *t : transformers_) delete t;
   for (auto *t : typers_) delete t;
 }
 
