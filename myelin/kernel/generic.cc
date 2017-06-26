@@ -125,7 +125,7 @@ class StandardTyper : public Typer {
         Flow::Variable *b = op->inputs[1];
         Flow::Variable *c = op->outputs[0];
 
-        // Matrix multipled by matrix.
+        // Matrix multiplied by matrix.
         if (a->rank() == 2 && b->rank() == 2 && a->dim(1) == b->dim(0)) {
           c->shape.assign(a->dim(0), b->dim(1));
           return true;

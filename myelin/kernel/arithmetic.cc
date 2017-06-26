@@ -156,7 +156,7 @@ struct Expression {
   // Expression to be compiled.
   Express expr;
 
-  // Index generator for elemement-wise operation.
+  // Index generator for element-wise operation.
   ElementwiseIndexGenerator index;
 
   // Code generator for expression.
@@ -393,7 +393,7 @@ class Calculate : public Kernel {
     int spare_regs = 0;
     Type type = step->output(0)->type();
     if (type == DT_FLOAT || type == DT_DOUBLE) {
-      // Perform dryrun to estimate the number of SIMD registers needed.
+      // Perform dry-run to estimate the number of SIMD registers needed.
       MacroAssembler dryrun_masm(nullptr, 0);
       Expression dryrun_expr(step, 0);
       CHECK(dryrun_expr.AllocateRegisters(&dryrun_masm)) << "Register overflow";

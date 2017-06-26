@@ -186,7 +186,7 @@ class Flow:
     return o
 
   def cnx(self, name):
-    """Add connectos to flow."""
+    """Add connectors to flow."""
     c = self.cnxs.get(name, None)
     if c == None:
       c = Connector(name)

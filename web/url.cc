@@ -38,7 +38,7 @@ void URL::Split() {
   scheme_.assign(s, p - s);
   if (p < end) p++;
 
-  // Parse authority part (username, password, host, and port).
+  // Parse authority part (user name, password, host, and port).
   if (end - p >= 2 && p[0] == '/' && p[1] == '/') {
     // Parse host (or user).
     p += 2;

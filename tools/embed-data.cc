@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
-       
+
 #include "tools/elf-writer.h"
 
-// Package files as embeded data in an ELF object file.
+// Package files as embedded data in an ELF object file.
 class EmbeddedData {
  public:
   EmbeddedData(const char *regfunc) : regfunc_(regfunc) {}
@@ -77,11 +77,11 @@ class EmbeddedData {
     // Emit: mov esi, #files
     startup_.Add8(0xbe);
     startup_.Add32(num_files_);
-    
+
     // Emit: mov edi, table
     startup_.Add8(0xbf);
     startup_.AddPtr32(&data_, 0);
-    
+
     // Emit: jmpf register_embedded_files
     startup_.Add8(0xe9);
     startup_.AddReloc(regfunc, R_X86_64_PC32, -4);
@@ -89,7 +89,7 @@ class EmbeddedData {
 
     // Add init function to init array section.
     init_.AddPtr(&startup_, 0);
-    
+
     // Update sections.
     data_.Update();
     strdata_.Update();

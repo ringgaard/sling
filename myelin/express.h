@@ -365,7 +365,7 @@ class Express {
   Var *Max(Var *x, Var *y) { return Do(MAX, x, y); }
   Var *Relu(Var *x) { return Do(RELU, x); }
 
-  // Build expressions for intrincic functions.
+  // Build expressions for intrinsic functions.
   Var *MulAdd(Var *x, Var *y, Var *z) { return Add(Mul(x, y), z); }
   Var *Log(Var *x);
   Var *Exp(Var *x);

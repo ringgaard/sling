@@ -33,7 +33,7 @@ class ProfileAliasExtractor : public task::FrameProcessor {
           a.Add(n_profile_alias_, alias);
         }
       } else if (s.name == n_instance_of_) {
-        // Discard categories, disambiguations, infoboxes and templates.
+        // Discard categories, disambiguations, info boxes and templates.
         if (s.value == n_category_ ||
             s.value == n_disambiguation_ ||
             s.value == n_infobox_ ||

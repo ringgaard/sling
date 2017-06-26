@@ -249,7 +249,7 @@ class RecipeParser {
       ParseAssignment();
     }
 
-    // Check that all the input has been comsumed.
+    // Check that all the input has been consumed.
     if (more()) Error("Syntax error in expression");
 
     // Assign ids to intermediate variables.
@@ -708,7 +708,7 @@ void Express::CacheResults() {
 }
 
 void Express::ComputeLiveRanges() {
-  // All variables assined before the start of the body need to have their live
+  // All variables assigned before the start of the body need to have their live
   // range extended to the end.
   Op *end = ops_.back();
   for (int i = 0; i < body_; ++i) {

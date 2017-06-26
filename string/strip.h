@@ -87,7 +87,7 @@ int StripDupCharacters(string *s, char dup_char, int start_pos);
 //    is that anyChar could be char, const char, w_char, const w_char,
 //    unicode_char, or any other character type we want.  However, we
 //    just provided a version for char and const char.  C++ is
-//    inconvenient, but correct, here.  Ask Amit is you want to know
+//    inconvenient, but correct, here.  Ask Amit if you want to know
 //    the type safety details.
 // ----------------------------------------------------------------------
 void StripWhiteSpace(const char **str, int *len);
@@ -180,10 +180,6 @@ void StripBrackets(char left, char right, string *s);
 //    brackets.
 //    This is used for stripping strings of markup; e.g. going from
 //    "the quick <b>brown</b> fox" to "the quick brown fox."
-//    If you want to skip entire sections of markup (e.g. the word "brown"
-//    too in that example), see webutil/pageutil/pageutil.h .
-//    This function was designed for stripping the bold tags (inserted by the
-//    docservers) from the titles of news stories being returned by RSS.
 //    This implementation DOES NOT cover all cases in html documents
 //    like tags that contain quoted angle-brackets, or HTML comment.
 //    For example <IMG SRC = "foo.gif" ALT = "A > B">

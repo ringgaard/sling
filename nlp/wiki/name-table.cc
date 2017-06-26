@@ -67,7 +67,7 @@ void NameTable::LookupPrefix(Text prefix,
     index++;
   }
 
-  // Sort matching entities by descreasing frequency.
+  // Sort matching entities by decreasing frequency.
   std::vector<std::pair<uint32, const EntityItem *>> matching_entities;
   for (auto it : entities) {
     matching_entities.emplace_back(it.second, it.first);

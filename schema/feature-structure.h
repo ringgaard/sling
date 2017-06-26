@@ -213,7 +213,7 @@ class FeatureStructure {
                   Slot *types2, Slot *end2,
                   int result);
 
-  // Prunes aliased roles in a node. This wil only keep the most specific role
+  // Prunes aliased roles in a node. This will only keep the most specific role
   // of the aliased roles. The role values are assumed to be unified through
   // constraints for inherited roles.
   void PruneRoles(int node);
@@ -228,7 +228,7 @@ class FeatureStructure {
   void RebuildDirectory();
 
   // Transfers node from this graph to another graph recursively. This updates
-  // the reference pointers in the nodes, so this opeartion is destructive.
+  // the reference pointers in the nodes, so this operation is destructive.
   // Returns the node index in the target graph.
   int Transfer(int node, Slots *target);
 

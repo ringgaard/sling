@@ -231,7 +231,7 @@ class WikipediaXMLParser : public XMLParser {
   // Field mapping.
   std::unordered_map<string, Field> element_map_;
 
-  // Currect field.
+  // Current field.
   Field field_ = NONE;
   bool in_revision_ = false;
 

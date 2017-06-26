@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
   Task *wikidata_pruner = wf.CreateTask("wikidata-pruner", "wikidata-pruner");
   item_reader.Connect(&wf, wikidata_pruner);
 
-  // Collect property calatalog.
+  // Collect property catalog.
   Task *property_collector = wf.CreateTask("wikidata-property-collector",
                                            "property-collector");
   property_reader.Connect(&wf, property_collector);

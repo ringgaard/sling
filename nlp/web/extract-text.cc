@@ -12,7 +12,7 @@
 
 DEFINE_bool(html, false, "Output HTML tags in extracted text");
 
-DEFINE_int32(max, -1, "Maximum extracted arcticles");
+DEFINE_int32(max, -1, "Maximum extracted articles");
 
 DEFINE_bool(debug, false, "Output debug annotations");
 

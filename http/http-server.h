@@ -108,7 +108,7 @@ class HTTPSocketAddress {
   struct sockaddr_in address_;
 };
 
-// HTTP server configuation.
+// HTTP server configuration.
 struct HTTPServerOptions {
   // Number of worker threads.
   int num_workers = 5;
@@ -335,7 +335,7 @@ class HTTPRequest {
   // HTTP content type.
   const char *content_type() const { return content_type_; }
 
-  // HTTP content lenght or -1 if missing.
+  // HTTP content length or -1 if missing.
   int content_length() const { return content_length_; }
 
   // HTTP keep-alive flag.

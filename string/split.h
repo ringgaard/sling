@@ -451,9 +451,6 @@ class Splitter {
   const Iterator &begin() const { return begin_; }
   const Iterator &end() const { return end_; }
 
-// This use of default template arguments on a function template was approved
-// by tgs and sanjay on behalf of the c-style-arbiters in email thread
-//
 // All compiler flags are first saved with a diagnostic push and restored with a
 // diagnostic pop below.
 #pragma GCC diagnostic push
@@ -649,7 +646,7 @@ class Literal {
   const string delimiter_;
 };
 
-// A traits-like metafunction for selecting the default Delimiter object type
+// A traits-like meta function for selecting the default Delimiter object type
 // for a particular Delimiter type. The base case simply exposes type Delimiter
 // itself as the delimiter's Type. However, there are specializations for
 // string-like objects that map them to the Literal delimiter object. This
@@ -799,7 +796,7 @@ struct SkipWhitespace {
 };
 
 // Definitions of the main Split() function. The use of SelectDelimiter<> allows
-// these functions to be called with a Delimiter template paramter that is an
+// these functions to be called with a Delimiter template parameter that is an
 // actual Delimiter object (e.g., Literal or AnyOf), OR called with a
 // string-like delimiter argument, (e.g., ","), in which case the delimiter used
 // will default to Literal.

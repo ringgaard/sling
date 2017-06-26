@@ -34,7 +34,7 @@ void register_embedded_files(EmbeddedFile *files, int count);
 }
 
 // This function is called from the init function in each embedded data object
-// file. It is called with an arrray of embedded file structures.
+// file. It is called with an array of embedded file structures.
 void register_embedded_files(EmbeddedFile *files, int count) {
   if (registered_files == nullptr) {
     registered_files = new std::vector<EmbeddedFile *>;
@@ -68,11 +68,11 @@ class EmbedFile : public File {
   }
 
   Status PWrite(uint64 pos, const void *buffer, size_t size) override {
-    return Status(EACCES, "File readonly", file_->name);
+    return Status(EACCES, "File read-only", file_->name);
   }
 
   Status Write(const void *buffer, size_t size) override {
-    return Status(EACCES, "File readonly", file_->name);
+    return Status(EACCES, "File read only", file_->name);
   }
 
   Status Seek(uint64 pos) override {

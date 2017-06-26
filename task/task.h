@@ -20,7 +20,7 @@ class Processor;
 // Format specifier.
 class Format {
  public:
-  // Create format for format speficier:
+  // Create format for format specifier:
   //   <file format>
   //   <file format>/<value format>
   //   <file format>/<key format>:<value format>
@@ -100,7 +100,7 @@ class Resource {
   // Resource name, e.g. a file name.
   string name_;
 
-  // Resoure shard.
+  // Resource shard.
   Shard shard_;
 
   // Format for resource.

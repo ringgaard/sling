@@ -684,7 +684,7 @@ bool FeatureStructure::Trim(int node) {
   Node &hdr = NodeHeader(node);
   if (hdr.type != Handle::Integer(CONTENT)) return false;
 
-  // Mark slot as being trimmmed.
+  // Mark slot as being trimmed.
   hdr.type = Handle::Integer(TRIMMING);
 
   // Trim slots.

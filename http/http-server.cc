@@ -957,7 +957,7 @@ HTTPRequest::HTTPRequest(HTTPConnection *conn, HTTPBuffer *hdr) : conn_(conn) {
     headers_.emplace_back(l, s);
   }
 
-  // HTTP header succesfully parsed.
+  // HTTP header successfully parsed.
   valid_ = true;
 }
 
