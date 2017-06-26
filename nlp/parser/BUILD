@@ -57,8 +57,8 @@ cc_library(
     "//frame:store",
     "//myelin:compute",
     "//myelin:flow",
-    "//myelin/kernel:tensorflow",
     "//myelin/kernel:dragnn",
+    "//myelin/kernel:tensorflow",
     "//nlp/document",
   ],
 )
