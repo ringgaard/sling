@@ -472,6 +472,38 @@ void Flow::Operation::MoveOutput(Variable *var, Operation *op) {
   var->producer = op;
 }
 
+void Flow::Operation::ReplaceInput(Variable *var, Variable *replacement) {
+  for (Variable *&input : inputs) {
+    if (input == var) {
+      // Remove op as consumer of input.
+      auto fc = std::find(var->consumers.begin(), var->consumers.end(), this);
+      CHECK(fc != var->consumers.end());
+      var->consumers.erase(fc);
+
+      // Add op as consumer of replacement.
+      replacement->consumers.push_back(this);
+
+      // Update input.
+      input = replacement;
+    }
+  }
+}
+
+void Flow::Operation::ReplaceOutput(Variable *var, Variable *replacement) {
+  for (Variable *&output : outputs) {
+    if (output == var) {
+      // Update producer.
+      DCHECK(var->producer == this);
+      CHECK(replacement->producer == nullptr);
+      var->producer = nullptr;
+      replacement->producer = this;
+
+      // Update output.
+      output = replacement;
+    }
+  }
+}
+
 void Flow::Function::AddOperation(Operation *op) {
   CHECK(op->func == nullptr);
   op->func = this;

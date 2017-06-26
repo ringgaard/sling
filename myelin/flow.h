@@ -192,6 +192,26 @@ class Shape {
   // Check for partial shape, i.e. some dimensions have unspecifed (-1) size.
   bool partial() const { return elements() == -1; }
 
+  // Return the number of outer elements relative to dimension.
+  int outer(int d) const {
+    int n = 1;
+    for (int i = 0; i < d; ++i) {
+      n *= dims_[i];
+      if (n < 0) return -1;
+    }
+    return n;
+  }
+
+  // Return the number of inner elements relative to dimension.
+  int inner(int d) const {
+    int n = 1;
+    for (int i = d; i < dims_.size(); ++i) {
+      n *= dims_[i];
+      if (n < 0) return -1;
+    }
+    return n;
+  }
+
   // Check if shape is the same as another shape. Undefined dimensions are
   // not compared.
   bool IsSameSize(const Shape &other) const;
@@ -348,6 +368,12 @@ class Flow {
 
     // Move output variable to another operation.
     void MoveOutput(Variable *var, Operation *op);
+
+    // Replace input variable with another variable.
+    void ReplaceInput(Variable *var, Variable *replacement);
+
+    // Replace output variable with another variable.
+    void ReplaceOutput(Variable *var, Variable *replacement);
 
     // Return in and out degree.
     int indegree() const { return inputs.size(); }
