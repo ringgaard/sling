@@ -11,31 +11,45 @@
 #include "myelin/multi-process.h"
 #include "myelin/kernel/tensorflow.h"
 
-DEFINE_string(input, "local/tdozat.flow", "input file with flow model");
+DEFINE_string(model, "local/tdozat-step1.flow", "input file with flow model");
 DEFINE_int32(repeat, 100, "Number of times test is repeated");
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
+DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
 DEFINE_bool(parallel, false, "Run matmuls in parallel");
 
 using namespace sling;
 using namespace sling::myelin;
+
+void DummyGather(const TensorData &embeddings, const TensorData &indices,
+                       TensorData *lookup) {
+}
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
   // Set up kernel library.
   Library library;
+  library.Register("Gather", "DummyGather", DummyGather)
+     .Input(0, DT_FLOAT, 2)
+     .Input(1, DT_INT32, 2)
+     .Output(0, DT_FLOAT, 3);
   RegisterTensorflowLibrary(&library);
 
   // Load model.
   Flow flow;
   flow.set_batch_size(1);
-  CHECK(flow.Load(FLAGS_input));
+  CHECK(flow.Load(FLAGS_model));
+
   string prefix = "RNN0_2/RNN/while/time_step/rnn_step/LSTMCell/";
   flow.Var(prefix + "hidden_in/hidden_tm1:0")->data = nullptr;
   flow.Var(prefix + "hidden_in/cell_tm1:0")->data = nullptr;
   flow.Var(prefix + "inputs:0")->data = nullptr;
   flow.Var(prefix + "hidden_t/h_out:0")->out = true;
   flow.Var(prefix + "c_out:0")->out = true;
+
+  flow.Var("strided_slice_11:0")->name = "word1";
+  flow.Var("strided_slice_12:0")->name = "word2";
+  flow.Var("strided_slice_13:0")->name = "pos";
 
   if (FLAGS_parallel) {
     int t = 0;
@@ -62,10 +76,17 @@ int main(int argc, char *argv[]) {
   if (FLAGS_parallel) network.set_runtime(&mprt);
   CHECK(network.Compile(flow, library));
 
-  Cell *classifier = network.GetCell("classifier");
+  Cell *lookup = network.GetCell("lookup");
+  Cell *lstmfw = network.GetCell("lstmfw");
+  CHECK(lookup != nullptr);
+  CHECK(lstmfw != nullptr);
+  if (FLAGS_dump_cell) {
+    std::cout << lookup->ToString();
+    std::cout << lstmfw->ToString();
+  }
 
   // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn /tmp/tdozat.bin
-  classifier->WriteCodeToFile("/tmp/tdozat.bin");
+  lstmfw->WriteCodeToFile("/tmp/tdozat.bin");
 
   // dot -Granksep=1.5 -Gnodesep=0.3 /tmp/tdozat.dot -Tsvg
   GraphOptions opts;
@@ -74,14 +95,24 @@ int main(int argc, char *argv[]) {
   // Test model.
   if (FLAGS_repeat > 0) {
     LOG(INFO) << "Profile model";
-    Instance data(classifier);
-    data.Clear();
+
+    Instance data1(lookup);
+    data1.Clear();
     for (int i = 0; i < FLAGS_repeat; ++i) {
-      data.Compute();
+      data1.Compute();
     }
 
-    Profile profile(&data);
-    std::cout << profile.ASCIIReport() << "\n";
+    Profile profile1(&data1);
+    std::cout << profile1.ASCIIReport() << "\n";
+
+    Instance data2(lstmfw);
+    data2.Clear();
+    for (int i = 0; i < FLAGS_repeat; ++i) {
+      data2.Compute();
+    }
+
+    Profile profile2(&data2);
+    std::cout << profile2.ASCIIReport() << "\n";
   }
 
   return 0;
