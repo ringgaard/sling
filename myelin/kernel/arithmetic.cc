@@ -270,14 +270,15 @@ class ExpressionTransformer : public Transformer {
       } else if (first->IsOutput(v)) {
         if (v->consumers.size() == 1 && !v->out) {
           // Second op is the only consumer of the output from the first op,
-          // so it can be turned into a temporary variable.
+          // so the input can be turned into a temporary variable.
+          int id = vars1[v]->id;
           vars1[v]->type = Express::TEMP;
           vars1[v]->id = -1;
 
           // Adjust numbering of output variables from the first op.
           next_output--;
           for (auto *o : expr1.vars()) {
-            if (o->type == Express::OUTPUT && o->id > vars1[v]->id) {
+            if (o->type == Express::OUTPUT && o->id > id) {
               o->id--;
             }
           }
