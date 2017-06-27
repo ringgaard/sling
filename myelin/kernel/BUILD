@@ -60,6 +60,17 @@ cc_library(
 )
 
 cc_library(
+  name = "precompute",
+  srcs = ["precompute.cc"],
+  hdrs = ["precompute.h"],
+  deps = [
+    ":arithmetic",
+    ":generic",
+    "//myelin:compute",
+  ],
+)
+
+cc_library(
   name = "tensorflow",
   srcs = ["tensorflow.cc"],
   hdrs = ["tensorflow.h"],
@@ -67,6 +78,7 @@ cc_library(
     ":arithmetic",
     ":avx",
     ":generic",
+    ":precompute",
     ":sse",
     "//myelin:compute",
   ],

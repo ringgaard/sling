@@ -24,38 +24,9 @@ void DummyGather(const TensorData &embeddings, const TensorData &indices,
                        TensorData *lookup) {
 }
 
-void StridedSlice(const TensorData &input,
-                  const TensorData &begin,
-                  const TensorData &end,
-                  const TensorData &strides,
-                  TensorData *result) {
-  int *r = &result->value<int>();
-  for (int i = begin.at<int>(0); i < end.at<int>(0); ++i) {
-    *r++ = input.at<int>(i);
-  }
-}
-
-void Pack3(const TensorData &a,
-           const TensorData &b,
-           const TensorData &c,
-           TensorData *result) {
-}
-
-void Pack4(const TensorData &a,
-           const TensorData &b,
-           const TensorData &c,
-           const TensorData &d,
-           TensorData *result) {
-}
-
-void Fill1(const TensorData &dims,
-           const TensorData &value,
-           TensorData *result) {
-}
-
-void Dot(const TensorData &a,
-         const TensorData &b,
-         TensorData *result) {
+void DummyDot(const TensorData &a,
+              const TensorData &b,
+              TensorData *result) {
 }
 
 int main(int argc, char *argv[]) {
@@ -67,28 +38,7 @@ int main(int argc, char *argv[]) {
      .Input(0, DT_FLOAT, 2)
      .Input(1, DT_INT32, 2)
      .Output(0, DT_FLOAT, 3);
-  library.Register("StridedSlice", "StridedSlice", StridedSlice)
-     .Input(0, DT_INT32)
-     .Input(1, DT_INT32, 1)
-     .Input(2, DT_INT32, 1)
-     .Input(3, DT_INT32, 1)
-     .Output(0, DT_INT32);
-  library.Register("Pack", "Pack3", Pack3)
-     .Input(0, DT_INT32, 0)
-     .Input(1, DT_INT32, 0)
-     .Input(2, DT_INT32, 0)
-     .Output(0, DT_INT32, 1);
-  library.Register("Pack", "Pack4", Pack4)
-     .Input(0, DT_INT32, 0)
-     .Input(1, DT_INT32, 0)
-     .Input(2, DT_INT32, 0)
-     .Input(3, DT_INT32, 0)
-     .Output(0, DT_INT32, 1);
-  library.Register("Fill", "Fill1", Fill1)
-     .Input(0, DT_INT32, 1)
-     .Input(1, DT_FLOAT, 0)
-     .Output(0, DT_FLOAT);
-  library.Register("BatchMatMul", "Dot", Dot)
+  library.Register("BatchMatMul", "DummyDot", DummyDot)
      .Input(0, DT_FLOAT, 3)
      .Input(1, DT_FLOAT, 3)
      .Output(0, DT_FLOAT, 3);

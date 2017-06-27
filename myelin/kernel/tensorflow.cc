@@ -19,6 +19,7 @@
 #include "myelin/kernel/avx.h"
 #include "myelin/kernel/generic.h"
 #include "myelin/kernel/sse.h"
+#include "myelin/kernel/precompute.h"
 
 namespace sling {
 namespace myelin {
@@ -30,6 +31,7 @@ void RegisterTensorflowLibrary(Library *library) {
   RegisterSSELibrary(library);
   RegisterAVXLibrary(library);
   RegisterArithmeticLibrary(library);
+  RegisterPrecomputeLibrary(library);
 }
 
 }  // namespace myelin
