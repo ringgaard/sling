@@ -24,6 +24,40 @@ void DummyGather(const TensorData &embeddings, const TensorData &indices,
                        TensorData *lookup) {
 }
 
+void StridedSlice(const TensorData &input,
+                  const TensorData &begin,
+                  const TensorData &end,
+                  const TensorData &strides,
+                  TensorData *result) {
+  int *r = &result->value<int>();
+  for (int i = begin.at<int>(0); i < end.at<int>(0); ++i) {
+    *r++ = input.at<int>(i);
+  }
+}
+
+void Pack3(const TensorData &a,
+           const TensorData &b,
+           const TensorData &c,
+           TensorData *result) {
+}
+
+void Pack4(const TensorData &a,
+           const TensorData &b,
+           const TensorData &c,
+           const TensorData &d,
+           TensorData *result) {
+}
+
+void Fill1(const TensorData &dims,
+           const TensorData &value,
+           TensorData *result) {
+}
+
+void Dot(const TensorData &a,
+         const TensorData &b,
+         TensorData *result) {
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
@@ -32,6 +66,31 @@ int main(int argc, char *argv[]) {
   library.Register("Gather", "DummyGather", DummyGather)
      .Input(0, DT_FLOAT, 2)
      .Input(1, DT_INT32, 2)
+     .Output(0, DT_FLOAT, 3);
+  library.Register("StridedSlice", "StridedSlice", StridedSlice)
+     .Input(0, DT_INT32)
+     .Input(1, DT_INT32, 1)
+     .Input(2, DT_INT32, 1)
+     .Input(3, DT_INT32, 1)
+     .Output(0, DT_INT32);
+  library.Register("Pack", "Pack3", Pack3)
+     .Input(0, DT_INT32, 0)
+     .Input(1, DT_INT32, 0)
+     .Input(2, DT_INT32, 0)
+     .Output(0, DT_INT32, 1);
+  library.Register("Pack", "Pack4", Pack4)
+     .Input(0, DT_INT32, 0)
+     .Input(1, DT_INT32, 0)
+     .Input(2, DT_INT32, 0)
+     .Input(3, DT_INT32, 0)
+     .Output(0, DT_INT32, 1);
+  library.Register("Fill", "Fill1", Fill1)
+     .Input(0, DT_INT32, 1)
+     .Input(1, DT_FLOAT, 0)
+     .Output(0, DT_FLOAT);
+  library.Register("BatchMatMul", "Dot", Dot)
+     .Input(0, DT_FLOAT, 3)
+     .Input(1, DT_FLOAT, 3)
      .Output(0, DT_FLOAT, 3);
   RegisterTensorflowLibrary(&library);
 
@@ -51,6 +110,10 @@ int main(int argc, char *argv[]) {
   flow.Var("strided_slice_12:0")->name = "word2";
   flow.Var("strided_slice_13:0")->name = "pos";
 
+  flow.Var("recur_out_2:0")->in = true;
+  flow.Var("recur_out_2:0")->data = nullptr;
+  flow.Var("recur_out_2:0")->size = 0;
+
   if (FLAGS_parallel) {
     int t = 0;
     for (auto *matmul : flow.Find({"MatMul"})) {
@@ -69,6 +132,10 @@ int main(int argc, char *argv[]) {
     std::cout << flow.ToString();
   }
 
+  // dot -Granksep=1.5 -Gnodesep=0.3 /tmp/tdozat.dot -Tsvg
+  GraphOptions opts;
+  FlowToDotGraphFile(flow, opts, "/tmp/tdozat.dot");
+
   // Compile model.
   Network network;
   MultiProcessorRuntime mprt;
@@ -78,8 +145,10 @@ int main(int argc, char *argv[]) {
 
   Cell *lookup = network.GetCell("lookup");
   Cell *lstmfw = network.GetCell("lstmfw");
+  Cell *mlps = network.GetCell("mlps");
   CHECK(lookup != nullptr);
   CHECK(lstmfw != nullptr);
+  CHECK(mlps != nullptr);
   if (FLAGS_dump_cell) {
     std::cout << lookup->ToString();
     std::cout << lstmfw->ToString();
@@ -87,10 +156,6 @@ int main(int argc, char *argv[]) {
 
   // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn /tmp/tdozat.bin
   lstmfw->WriteCodeToFile("/tmp/tdozat.bin");
-
-  // dot -Granksep=1.5 -Gnodesep=0.3 /tmp/tdozat.dot -Tsvg
-  GraphOptions opts;
-  FlowToDotGraphFile(flow, opts, "/tmp/tdozat.dot");
 
   // Test model.
   if (FLAGS_repeat > 0) {
@@ -113,6 +178,15 @@ int main(int argc, char *argv[]) {
 
     Profile profile2(&data2);
     std::cout << profile2.ASCIIReport() << "\n";
+
+    Instance data3(mlps);
+    data3.Clear();
+    for (int i = 0; i < FLAGS_repeat; ++i) {
+      data3.Compute();
+    }
+
+    Profile profile3(&data3);
+    std::cout << profile3.ASCIIReport() << "\n";
   }
 
   return 0;

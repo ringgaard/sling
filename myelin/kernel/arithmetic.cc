@@ -1,6 +1,7 @@
 #include "myelin/kernel/arithmetic.h"
 
 #include <map>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -441,6 +442,74 @@ void RegisterArithmeticLibrary(Library *library) {
 // variables.
 class ConstantFolding : public Transformer {
  public:
+  // Additional operations that can be pre-computed.
+  std::set<string> constops = {
+    "StridedSlice", "Pack",
+  };
+
+  static void StridedSlice(const TensorData &input,
+                           const TensorData &begin,
+                           const TensorData &end,
+                           const TensorData &strides,
+                           TensorData *result) {
+    int *r = &result->value<int>();
+    for (int i = begin.at<int>(0); i < end.at<int>(0); ++i) {
+      *r++ = input.at<int>(i);
+    }
+  }
+
+  static void Pack3(const TensorData &a,
+                    const TensorData &b,
+                    const TensorData &c,
+                    TensorData *result) {
+    int *r = &result->value<int>();
+    *r++ = a.value<int>();
+    *r++ = b.value<int>();
+    *r++ = c.value<int>();
+  }
+
+  static void Pack4(const TensorData &a,
+                    const TensorData &b,
+                    const TensorData &c,
+                    const TensorData &d,
+                    TensorData *result) {
+    int *r = &result->value<int>();
+    *r++ = a.value<int>();
+    *r++ = b.value<int>();
+    *r++ = c.value<int>();
+    *r++ = d.value<int>();
+  }
+
+  static void Fill1(const TensorData &dims,
+                    const TensorData &value,
+                    TensorData *result) {
+  }
+
+  bool CanFold(Flow::Operation *op) const {
+    return IsCalculateOp(op) || constops.count(op->type) > 0;
+  }
+
+  void RegisterConstantKernels(Library *library) {
+    RegisterArithmeticLibrary(library);
+    library->Register("StridedSlice", "StridedSlice", StridedSlice)
+       .Input(0, DT_INT32)
+       .Input(1, DT_INT32, 1)
+       .Input(2, DT_INT32, 1)
+       .Input(3, DT_INT32, 1)
+       .Output(0, DT_INT32);
+    library->Register("Pack", "Pack3", Pack3)
+       .Input(0, DT_INT32, 0)
+       .Input(1, DT_INT32, 0)
+       .Input(2, DT_INT32, 0)
+       .Output(0, DT_INT32, 1);
+    library->Register("Pack", "Pack4", Pack4)
+       .Input(0, DT_INT32, 0)
+       .Input(1, DT_INT32, 0)
+       .Input(2, DT_INT32, 0)
+       .Input(3, DT_INT32, 0)
+       .Output(0, DT_INT32, 1);
+  }
+
   bool Transform(Flow *flow) override {
     std::vector<Flow::Operation *> remove;
     bool again = true;
@@ -450,6 +519,47 @@ class ConstantFolding : public Transformer {
         // Operation must have both inputs and outputs.
         if (op->inputs.empty() || op->outputs.empty()) continue;
 
+        // Shape, Type, and Size can be pre-computed.
+        if ((op->type == "Shape" || op->type == "Rank" || op->type == "Size") &&
+             !op->inputs[0]->shape.partial()) {
+          // Get input and output.
+          CHECK_EQ(op->indegree(), 1);
+          CHECK_EQ(op->outdegree(), 1);
+          Flow::Variable *input = op->inputs[0];
+          Flow::Variable *output = op->outputs[0];
+          Shape &shape = input->shape;
+          CHECK_EQ(output->type, DT_INT32);
+
+          // Allocate space for shape constant in flow.
+          if (op->type == "Shape") {
+            CHECK_EQ(shape.rank(), output->elements());
+            output->size = shape.rank() * sizeof(int32);
+          } else {
+            output->size = sizeof(int32);
+          }
+          output->data = flow->AllocateMemory(output->size);
+          output->in = true;
+          int32 *result = reinterpret_cast<int32 *>(output->data);
+
+          // Create constant variable with the pre-computed value.
+          if (op->type == "Shape") {
+            for (int d = 0; d < shape.rank(); ++d) {
+              result[d] = shape.dim(d);
+            }
+          } else if (op->type == "Rank") {
+            result[0] = shape.rank();
+          } else if (op->type == "Size") {
+            result[0] = shape.elements();
+          }
+
+          // Mark Shape op for removal.
+          op->RemoveInput(input);
+          op->RemoveOutput(output);
+          remove.push_back(op);
+          again = true;
+          continue;
+        }
+
         // Check if all inputs are constants.
         bool constant = true;
         for (auto *input : op->inputs) {
@@ -458,7 +568,7 @@ class ConstantFolding : public Transformer {
             break;
           }
         }
-        if (!constant || !IsCalculateOp(op)) continue;
+        if (!constant || !CanFold(op)) continue;
 
         // Compute op and replace with new constant variable. First extract
         // the constant operation into a separate sub-flow.
@@ -467,7 +577,7 @@ class ConstantFolding : public Transformer {
 
         // Analyze, compile and execute sub-flow to compute constant value.
         Library library;
-        RegisterArithmeticLibrary(&library);
+        RegisterConstantKernels(&library);
         subflow.Analyze(library);
         Network network;
         CHECK(network.Compile(subflow, library));
