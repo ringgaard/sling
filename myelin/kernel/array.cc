@@ -271,18 +271,54 @@ class BasicConcat : public Kernel {
     int n = step->GetAttr("N", step->indegree() - 1);
 
     // Allocate registers.
-    Register src = masm->rr().alloc_preferred(r8);
-    Register dst = masm->rr().alloc_preferred(r9);
+    Register src = masm->rr().alloc_fixed(rsi);
+    Register dst = masm->rr().alloc_fixed(rdi);
+    Register cnt = masm->rr().alloc_fixed(rcx);
+    Register acc = masm->rr().alloc_fixed(rax);
+    Register in = masm->rr().alloc();
+    Register out = masm->rr().alloc();
 
     // Load output tensor.
-    __ LoadTensorAddress(dst, step->output(0));
+    __ LoadTensorAddress(out, step->output(0));
 
     // Copy input tensors to output.
     int offset = 0;
     for (int i = 0; i < n; ++i) {
       int size = step->input(i)->size();
-      __ LoadTensorAddress(src, step->input(i));
-      __ Copy(dst, offset, src, 0, size);
+      if (size > 0 && size < 16) {
+        __ LoadTensorAddress(in, step->input(i));
+        int disp = offset;
+        int left = size;
+        while (left >= 8) {
+          __ movq(acc, Operand(in, disp));
+          __ movq(Operand(out, disp), acc);
+          disp += 8;
+          left -= 8;
+        }
+        while (left >= 4) {
+          __ movl(acc, Operand(in, disp));
+          __ movl(Operand(out, disp), acc);
+          disp += 4;
+          left -= 4;
+        }
+        while (left >= 2) {
+          __ movw(acc, Operand(in, disp));
+          __ movw(Operand(out, disp), acc);
+          disp += 2;
+          left -= 2;
+        }
+        while (left >= 1) {
+          __ movb(acc, Operand(in, disp));
+          __ movb(Operand(out, disp), acc);
+          disp += 1;
+          left -= 1;
+        }
+      } else {
+        __ LoadTensorAddress(src, step->input(i));
+        __ leaq(dst, Operand(out, offset));
+        __ movq(cnt, Immediate(size));
+        __ repmovsb();
+      }
       offset += size;
     }
     CHECK_EQ(offset, step->output(0)->size());
