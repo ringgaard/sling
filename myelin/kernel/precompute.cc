@@ -122,7 +122,7 @@ class ConstantFolding : public Transformer {
           Shape &shape = input->shape;
           CHECK_EQ(output->type, DT_INT32);
 
-          // Allocate space for shape constant in flow.
+          // Allocate space for constant in flow.
           if (op->type == "Shape") {
             CHECK_EQ(shape.rank(), output->elements());
             output->size = shape.rank() * sizeof(int32);
@@ -198,33 +198,35 @@ class ConstantFolding : public Transformer {
           Flow subflow;
           flow->Extract("compute", op->inputs, op->outputs, &subflow);
 
-          // Analyze, compile and execute sub-flow to compute constant value.
+          // Analyze and compile sub-flow.
           subflow.Analyze(library_);
           Network network;
-          CHECK(network.Compile(subflow, library_));
-          auto *cell = network.GetCell("compute");
-          Instance data(cell);
-          data.Compute();
+          if (network.Compile(subflow, library_)) {
+            //  Execute sub-flow to compute constant value
+            auto *cell = network.GetCell("compute");
+            Instance data(cell);
+            data.Compute();
 
-          // Extract results and change output variables to constants.
-          for (auto *output : op->outputs) {
-            // Allocate space for constant in flow.
-            auto *result = cell->GetParameter(output->name);
-            size_t size = result->space();
-            char *buffer = flow->AllocateMemory(size);
-            memcpy(buffer, data.GetAddress(result), size);
+            // Extract results and change output variables to constants.
+            for (auto *output : op->outputs) {
+              // Allocate space for constant in flow.
+              auto *result = cell->GetParameter(output->name);
+              size_t size = result->space();
+              char *buffer = flow->AllocateMemory(size);
+              memcpy(buffer, data.GetAddress(result), size);
 
-            // Change variable to a constant.
-            output->data = buffer;
-            output->size = size;
-            output->in = true;
+              // Change variable to a constant.
+              output->data = buffer;
+              output->size = size;
+              output->in = true;
+            }
+
+            // Mark constant op for removal.
+            while (!op->inputs.empty()) op->RemoveInput(op->inputs[0]);
+            while (!op->outputs.empty()) op->RemoveOutput(op->outputs[0]);
+            remove.push_back(op);
+            again = true;
           }
-
-          // Mark constant op for removal.
-          while (!op->inputs.empty()) op->RemoveInput(op->inputs[0]);
-          while (!op->outputs.empty()) op->RemoveOutput(op->outputs[0]);
-          remove.push_back(op);
-          again = true;
         }
       }
     }

@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     std::cout << flow.ToString();
   }
 
-  // dot -Granksep=1.5 -Gnodesep=0.3 /tmp/tdozat.dot -Tsvg
+  // dot /tmp/tdozat.dot -Tsvg
   GraphOptions opts;
   FlowToDotGraphFile(flow, opts, "/tmp/tdozat.dot");
 
@@ -104,39 +104,25 @@ int main(int argc, char *argv[]) {
     std::cout << lstmfw->ToString();
   }
 
-  // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn /tmp/tdozat.bin
-  lstmfw->WriteCodeToFile("/tmp/tdozat.bin");
+  // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn /tmp/xxx.bin
+  lookup->WriteCodeToFile("/tmp/lookup.bin");
+  lstmfw->WriteCodeToFile("/tmp/lstmfw.bin");
+  mlps->WriteCodeToFile("/tmp/mlps.bin");
 
   // Test model.
   if (FLAGS_repeat > 0) {
     LOG(INFO) << "Profile model";
+    std::vector<Cell *> cells = {lookup, lstmfw, mlps};
+    for (Cell *cell : cells) {
+      Instance data(cell);
+      data.Clear();
+      for (int i = 0; i < FLAGS_repeat; ++i) {
+        data.Compute();
+      }
 
-    Instance data1(lookup);
-    data1.Clear();
-    for (int i = 0; i < FLAGS_repeat; ++i) {
-      data1.Compute();
+      Profile profile(&data);
+      std::cout << profile.ASCIIReport() << "\n";
     }
-
-    Profile profile1(&data1);
-    std::cout << profile1.ASCIIReport() << "\n";
-
-    Instance data2(lstmfw);
-    data2.Clear();
-    for (int i = 0; i < FLAGS_repeat; ++i) {
-      data2.Compute();
-    }
-
-    Profile profile2(&data2);
-    std::cout << profile2.ASCIIReport() << "\n";
-
-    Instance data3(mlps);
-    data3.Clear();
-    for (int i = 0; i < FLAGS_repeat; ++i) {
-      data3.Compute();
-    }
-
-    Profile profile3(&data3);
-    std::cout << profile3.ASCIIReport() << "\n";
   }
 
   return 0;
