@@ -361,6 +361,12 @@ class Tensor {
     return data_ != nullptr || device_data_ != DEVICE_NULL;
   }
 
+  // Local variables are allocated in the instance block.
+  bool IsGlobal() const {
+    return data_ != nullptr || device_data_ != DEVICE_NULL;
+  }
+  bool IsLocal() const { return !IsGlobal(); }
+
   // Return tensor placement.
   Placement placement() const { return placement_; }
 

@@ -443,6 +443,159 @@ class GeneralConcat : public Kernel {
   }
 };
 
+// Look up single embedding.
+class SingleGather : public Kernel {
+ public:
+  string Name() override { return "SingleGather"; }
+  string Operation() override { return "Gather"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+
+    // Check types.
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *v = step->output(0);
+    int r = f->rank();
+    if (f->type() != DT_INT32 || f->elements() != 1) return false;
+    if (M->type() != DT_FLOAT || M->rank() != 2) return false;
+    if (v->type() != DT_FLOAT || v->rank() != r + 1) return false;
+    if (v->shape().outer(r) != 1 || v->dim(r) != M->dim(1)) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    // Make output a reference into the embedding matrix.
+    step->output(0)->set_ref(true);
+    step->output(0)->set_link(step->input(0));
+
+    // Embedding matrix must be row-major.
+    step->input(0)->SetRequiredOrder(ROW_MAJOR);
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get inputs and outputs.
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *v = step->output(0);
+    CHECK(f->IsLocal());
+    CHECK(v->IsLocal());
+
+    // Allocate registers.
+    Register acc = masm->rr().alloc();
+    Register addr = masm->rr().alloc();
+    Register embeddings = masm->rr().alloc();
+
+    // Get feature index.
+    if (f->ref()) {
+      __ movq(addr, Operand(masm->instance(), f->offset()));
+      __ movsxlq(acc, Operand(addr));
+    } else {
+      __ movsxlq(acc, Operand(masm->instance(), f->offset()));
+    }
+
+    // Compute offset in embedding.
+    __ Multiply(acc, M->stride(0));
+
+    // Lookup element in embedding.
+    __ LoadTensorAddress(embeddings, M);
+    __ addq(acc, embeddings);
+
+    // Save reference to embedding vector.
+    if (f->ref()) {
+      __ movq(addr, Operand(masm->instance(), v->offset()));
+      __ movsxlq(acc, Operand(addr));
+    } else {
+      __ movq(Operand(masm->instance(), v->offset()), acc);
+    }
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
+// Look up multiple features in embedding.
+class MultiGather : public Kernel {
+ public:
+  string Name() override { return "MultiGather"; }
+  string Operation() override { return "Gather"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+
+    // Check types.
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *v = step->output(0);
+    int r = f->rank();
+    int n = f->elements();
+    if (f->type() != DT_INT32) return false;
+    if (M->type() != DT_FLOAT || M->rank() != 2) return false;
+    if (v->type() != DT_FLOAT || v->rank() != r + 1) return false;
+    if (v->shape().outer(r) != n || v->dim(r) != M->dim(1)) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    // Embedding matrix must be row-major.
+    step->input(0)->SetRequiredOrder(ROW_MAJOR);
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get inputs and outputs.
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *v = step->output(0);
+    CHECK(f->IsLocal());
+    CHECK(v->IsLocal());
+
+    // Allocate registers.
+    Register src = masm->rr().alloc_fixed(rsi);
+    Register dst = masm->rr().alloc_fixed(rdi);
+    Register cnt = masm->rr().alloc_fixed(rcx);
+    Register acc = masm->rr().alloc();
+    Register index = masm->rr().alloc();
+    Register input = masm->rr().alloc();
+    Register embeddings = masm->rr().alloc();
+
+    // Load tensor locations.
+    __ LoadTensorAddress(embeddings, M);
+    __ LoadTensorAddress(input, f);
+    __ LoadTensorAddress(dst, v);
+
+    // Loop over all feature indices.
+    Label l;
+    __ xorq(index, index);
+    __ bind(&l);
+
+    // Get feature index.
+    __ movsxlq(acc, Operand(input, index, times_4));
+
+    // Compute address in embedding.
+    __ movq(src, embeddings);
+    __ Multiply(acc, M->stride(0));
+    __ addq(src, acc);
+
+    // Copy embedding vector to output.
+    __ movq(cnt, Immediate(M->stride(0)));
+    __ repmovsb();
+
+    // Next feature index.
+    __ incq(index);
+    __ cmpq(index, Immediate(f->elements()));
+    __ j(less, &l);
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 // Register array kernels.
 void RegisterArrayKernels(Library *library) {
   library->Register(new Reshape());
@@ -454,6 +607,8 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new Unpack());
   library->Register(new GeneralConcat());
   library->Register(new BasicConcat());
+  library->Register(new MultiGather());
+  library->Register(new SingleGather());
 }
 
 }  // namespace myelin

@@ -20,10 +20,6 @@ DEFINE_bool(parallel, false, "Run matmuls in parallel");
 using namespace sling;
 using namespace sling::myelin;
 
-void DummyGather(const TensorData &embeddings, const TensorData &indices,
-                       TensorData *lookup) {
-}
-
 void DummyDot(const TensorData &a,
               const TensorData &b,
               TensorData *result) {
@@ -34,15 +30,11 @@ int main(int argc, char *argv[]) {
 
   // Set up kernel library.
   Library library;
-  library.Register("Gather", "DummyGather", DummyGather)
-     .Input(0, DT_FLOAT, 2)
-     .Input(1, DT_INT32, 2)
-     .Output(0, DT_FLOAT, 3);
+  RegisterTensorflowLibrary(&library);
   library.Register("BatchMatMul", "DummyDot", DummyDot)
      .Input(0, DT_FLOAT, 3)
      .Input(1, DT_FLOAT, 3)
      .Output(0, DT_FLOAT, 3);
-  RegisterTensorflowLibrary(&library);
 
   // Load model.
   Flow flow;
@@ -93,27 +85,20 @@ int main(int argc, char *argv[]) {
   if (FLAGS_parallel) network.set_runtime(&mprt);
   CHECK(network.Compile(flow, library));
 
-  Cell *lookup = network.GetCell("lookup");
-  Cell *lstmfw = network.GetCell("lstmfw");
-  Cell *mlps = network.GetCell("mlps");
-  CHECK(lookup != nullptr);
-  CHECK(lstmfw != nullptr);
-  CHECK(mlps != nullptr);
-  if (FLAGS_dump_cell) {
-    std::cout << lookup->ToString();
-    std::cout << lstmfw->ToString();
-  }
+  std::vector<string> cell_names = {"lookup", "lstmfw", "mlps"};
+  for (const string &cell_name : cell_names) {
+    Cell *cell = network.GetCell(cell_name);
+    CHECK(cell != nullptr);
+    if (FLAGS_dump_cell) {
+      std::cout << cell->ToString();
+    }
 
-  // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn /tmp/xxx.bin
-  lookup->WriteCodeToFile("/tmp/lookup.bin");
-  lstmfw->WriteCodeToFile("/tmp/lstmfw.bin");
-  mlps->WriteCodeToFile("/tmp/mlps.bin");
+    // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn /tmp/xxx.bin
+    cell->WriteCodeToFile("/tmp/" + cell_name + ".bin");
 
-  // Test model.
-  if (FLAGS_repeat > 0) {
-    LOG(INFO) << "Profile model";
-    std::vector<Cell *> cells = {lookup, lstmfw, mlps};
-    for (Cell *cell : cells) {
+    // Test model.
+    if (FLAGS_repeat > 0) {
+      LOG(INFO) << "Profile " << cell_name;
       Instance data(cell);
       data.Clear();
       for (int i = 0; i < FLAGS_repeat; ++i) {
