@@ -473,10 +473,31 @@ class Assembler : public CodeGenerator {
   void imulw(Register dst, Register src) { emit_imul(dst, src, 2); }
   void imulw(Register dst, const Operand &src) { emit_imul(dst, src, 2); }
 
+  void imulw(Register dst, const Operand &src, Immediate imm) {
+    emit_imul(dst, src, 2);
+  }
+  void imull(Register dst, const Operand &src, Immediate imm) {
+    emit_imul(dst, src, 4);
+  }
+  void imulq(Register dst, const Operand &src, Immediate imm) {
+    emit_imul(dst, src, 8);
+  }
+
   void idivb(Register src) { emit_idiv(src, 1); }
   void idivb(const Operand &src) { emit_idiv(src, 1); }
   void idivw(Register src) { emit_idiv(src, 2); }
   void idivw(const Operand &src) { emit_idiv(src, 2); }
+
+  void incb(Register src) { emit_inc(src, 1); }
+  void incb(const Operand &src) { emit_inc(src, 1); }
+  void incw(Register src) { emit_inc(src, 2); }
+  void incw(const Operand &src) { emit_inc(src, 2); }
+
+  void decw(Register src) { emit_dec(src, 2); }
+  void decw(const Operand &src) { emit_dec(src, 2); }
+
+  void shlw(Register dst, Immediate imm8) { shift(dst, imm8, 0x4, 2); }
+  void shlw(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x4, 2); }
 
   void testb(Register dst, Register src);
   void testb(Register reg, Immediate mask);
@@ -2839,9 +2860,6 @@ class Assembler : public CodeGenerator {
   // operation is only atomic if prefixed by the lock instruction.
   void emit_cmpxchg(const Operand &dst, Register src, int size);
 
-  void emit_dec(Register dst, int size);
-  void emit_dec(const Operand &dst, int size);
-
   // Divide rdx:rax by src. Quotient in rax, remainder in rdx when size is 64.
   // Divide edx:eax by lower 32 bits of src. Quotient in eax, remainder in edx
   // when size is 32.
@@ -2861,6 +2879,8 @@ class Assembler : public CodeGenerator {
 
   void emit_inc(Register dst, int size);
   void emit_inc(const Operand &dst, int size);
+  void emit_dec(Register dst, int size);
+  void emit_dec(const Operand &dst, int size);
 
   void emit_lea(Register dst, const Operand &src, int size);
 

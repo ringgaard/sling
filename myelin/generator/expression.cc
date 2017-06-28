@@ -38,7 +38,9 @@ void ExpressionGenerator::Initalize(const Express &expression,
   }
 
   // Use spare registers to hoist constants outside the loop.
-  if (spare_regs > 0) expression_.CacheConstants(spare_regs);
+  if (spare_regs > 0 && !ImmediateOperands()) {
+    expression_.CacheConstants(spare_regs);
+  }
 
   // Cache inputs and results used in multiple ops in temporary variables.
   expression_.CacheResults();

@@ -9,8 +9,9 @@ using namespace sling;
 using namespace sling::myelin;
 
 void Test(const string &str) {
-  bool three_arg_ops = true;
-  bool fma = true;
+  bool three_arg_ops = false;
+  bool fma = false;
+  bool hoist = 0;
 
   Express::Model model;
   if (three_arg_ops) {
@@ -72,7 +73,7 @@ void Test(const string &str) {
   }
 
   expr.CacheResults();
-  expr.CacheConstants(9);
+  if (hoist > 0) expr.CacheConstants(hoist);
   for (auto *op : expr.ops()) {
     if (expr.body() > 0 && op == expr.ops()[expr.body()]) {
       LOG(INFO) << "body:";
@@ -153,6 +154,9 @@ int main(int argc, char *argv[]) {
   Test("@0=Add(Mul(Div(Add(Tanh(%9),#10),#11),Tanh(%8)),"
        "Mul(Sub(#6,Div(Add(Tanh(%3),#4),#5)),%7));"
        "@1=Mul(Tanh(@0),Div(Add(Tanh(%0),#1),#2))");
+
+  Test("@0=Add(%0,#1)");
+  Test("@0=Id(#0)");
 
   return 0;
 }

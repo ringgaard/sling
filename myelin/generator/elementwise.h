@@ -23,6 +23,9 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   // Return operand for accessing memory variable.
   jit::Operand addr(Express::Var *var) override;
 
+  // Return pointer to constant data.
+  void *data(Express::Var *var) override;
+
   // Generate start and end of loop.
   void BeginLoop(MacroAssembler *masm);
   void EndLoop(MacroAssembler *masm);

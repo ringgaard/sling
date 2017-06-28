@@ -346,6 +346,13 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
   }
 }
 
+void *ElementwiseIndexGenerator::data(Express::Var *var) {
+  DCHECK_EQ(var->type, Express::CONST);
+  Locator *loc = GetLocator(var);
+  DCHECK(loc->var->IsConstant());
+  return loc->var->data();
+}
+
 bool ElementwiseIndexGenerator::Valid(Express::Var *var) const {
   if (var->type == Express::OUTPUT) {
     return var->id >= 0 && var->id < output_.size();

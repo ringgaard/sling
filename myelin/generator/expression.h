@@ -16,6 +16,7 @@ class ExpressionGenerator {
   typedef jit::Assembler Assembler;
   typedef jit::Operand Operand;
   typedef jit::Register Register;
+  typedef jit::Immediate Immediate;
   typedef jit::XMMRegister XMMRegister;
   typedef jit::YMMRegister YMMRegister;
 
@@ -30,6 +31,9 @@ class ExpressionGenerator {
 
   // Return vector size in bytes.
   virtual int VectorSize() { return TypeTraits::of(type_).size(); }
+
+  // Whether instruction model supports immediate operands.
+  virtual bool ImmediateOperands() { return false; }
 
   // Reserve all the registers needed by the generator.
   virtual void Reserve() = 0;
@@ -59,6 +63,7 @@ class ExpressionGenerator {
   typedef void (Assembler::*OpMem)(const Operand &);
   typedef void (Assembler::*OpRegReg)(Register, Register);
   typedef void (Assembler::*OpRegMem)(Register, const Operand &);
+  typedef void (Assembler::*OpRegImm)(Register, Immediate);
 
   typedef void (Assembler::*OpXMMRegReg)(XMMRegister,
                                          XMMRegister);
@@ -118,6 +123,14 @@ class ExpressionGenerator {
 
   // Return operand for accessing memory variable.
   Operand addr(Express::Var *var) { return index_->addr(var); }
+
+  // Return pointer to constant data.
+  void *data(Express::Var *var) { return index_->data(var); }
+
+  // Return constant variable value.
+  template<typename T> T value(Express::Var *var) {
+    return *reinterpret_cast<T *>(data(var));
+  }
 
   // Return register for temporary variable.
   Register reg(int idx) { return index_->reg(idx); }
