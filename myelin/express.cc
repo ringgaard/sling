@@ -115,7 +115,14 @@ static std::map<string, Express::OpType> optypes = {
   {"Div", Express::DIV},
   {"Min", Express::MIN},
   {"Max", Express::MAX},
+  {"Neg", Express::NEG},
+  {"Abs", Express::ABS},
   {"Relu", Express::RELU},
+  {"Softsign", Express::SOFTSIGN},
+  {"Softplus", Express::SOFTPLUS},
+  {"LogSigmoid", Express::LOGSIGMOID},
+  {"Reciprocal", Express::RECIPROCAL},
+  {"Square", Express::SQUARE},
   {"Log", Express::LOG},
   {"Exp", Express::EXP},
   {"Sigmoid", Express::SIGMOID},
@@ -145,7 +152,9 @@ static const string opname[] = {
   "Id",
   "Add", "Sub", "Mul", "Div",
   "Min", "Max",
-  "Relu", "Log", "Exp", "Sigmoid", "Tanh",
+  "Neg", "Abs", "Relu", "Softsign", "Softplus", "LogSigmoid",
+  "Reciprocal", "Square",
+  "Log", "Exp", "Sigmoid", "Tanh",
   "MulAdd132", "MulAdd213", "MulAdd231",
   "MulSub132", "MulSub213", "MulSub231",
   "CmpEqOQ", "CmpLtOQ", "CmpGtOQ", "CmpNgeUQ",
@@ -171,17 +180,13 @@ inline Dest bit_cast(const Source& source) {
 Express::Constant Express::constants[] = {
   FLTCONST(0.0),    // ZERO
   FLTCONST(1.0),    // ONE
-  FLTCONST(-1.0),   // N1
   FLTCONST(0.5),    // HALF
-  FLTCONST(0.125),  // QUARTER
   FLTCONST(9.0),    // P9
   FLTCONST(-9.0),   // N9
-  FLTCONST(126.0),  // P126
   FLTCONST(127.0),  // P127
 
   FLTCONST(-0.6931471805599453),   // NLN2
 
-  INTCONST(0xff800000),   // MINUS_INF
   INTCONST(0x00800000),   // MIN_NORM_POS
   INTCONST(~0x7f800000),  // INV_MANT_MASK
   INTCONST(0x7f),         // INT127
@@ -459,10 +464,19 @@ Express::Op *Express::Function(OpType type,
   if (expand && args.size() == 1) {
     Express::Var *result;
     switch (type) {
+      case Express::NEG: result = Neg(args[0]); break;
+      case Express::ABS: result = Abs(args[0]); break;
+      case Express::RELU: result = Relu(args[0]); break;
+      case Express::SOFTSIGN: result = Softsign(args[0]); break;
+      case Express::SOFTPLUS: result = Softplus(args[0]); break;
+      case Express::LOGSIGMOID: result = LogSigmoid(args[0]); break;
+      case Express::RECIPROCAL: result = Reciprocal(args[0]); break;
+      case Express::SQUARE: result = Square(args[0]); break;
       case Express::LOG: result = Log(args[0]); break;
       case Express::EXP: result = Exp(args[0]); break;
       case Express::SIGMOID: result = Sigmoid(args[0]); break;
       case Express::TANH: result = Tanh(args[0]); break;
+
       default: result = nullptr;
     }
 

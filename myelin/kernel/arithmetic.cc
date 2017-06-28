@@ -35,11 +35,20 @@ static Express::OpType OpType(const string &op) {
     {"RealDiv", Express::DIV},
     {"Minimum", Express::MIN},
     {"Maximum", Express::MAX},
-    {"Relu", Express::RELU},
+
     {"Log", Express::LOG},
     {"Exp", Express::EXP},
     {"Sigmoid", Express::SIGMOID},
     {"Tanh", Express::TANH},
+
+    {"Negate", Express::NEG},
+    {"Abs", Express::ABS},
+    {"Relu", Express::RELU},
+    {"Softsign", Express::SOFTSIGN},
+    {"Softplus", Express::SOFTPLUS},
+    {"LogSigmoid", Express::LOGSIGMOID},
+    {"Reciprocal", Express::RECIPROCAL},
+    {"Square", Express::SQUARE},
   };
 
   auto f = ops.find(op);
@@ -430,12 +439,21 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("DivExpr", "Div", 2));
   library->Register(new Calculate("MaxExpr", "Maximum", 2));
   library->Register(new Calculate("MinExpr", "Minimum", 2));
-  library->Register(new Calculate("ReluExpr", "Relu", 1));
+
   library->Register(new Calculate("LogExpr", "Log", 1));
   library->Register(new Calculate("ExpExpr", "Exp", 1));
   library->Register(new Calculate("SigmoidExpr", "Sigmoid", 1));
   library->Register(new Calculate("TanhExpr", "Tanh", 1));
   library->Register(new Calculate("Calculate", "Calculate"));
+
+  library->Register(new Calculate("NegateExpr", "Negate", 1));
+  library->Register(new Calculate("AbsExpr", "Abs", 1));
+  library->Register(new Calculate("ReluExpr", "Relu", 1));
+  library->Register(new Calculate("SoftsignExpr", "Softsign", 1));
+  library->Register(new Calculate("SoftplusExpr", "Softplus", 1));
+  library->Register(new Calculate("LogSigmoidExpr", "LogSigmoid", 1));
+  library->Register(new Calculate("ReciprocalExpr", "Reciprocal", 1));
+  library->Register(new Calculate("SquareExpr", "Square", 1));
 }
 
 // Register arithmetic transforms.

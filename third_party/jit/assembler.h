@@ -374,9 +374,6 @@ class Assembler : public CodeGenerator {
     immediate_arithmetic_op_8(0x4, dst, src);
   }
 
-  void decb(Register dst);
-  void decb(const Operand &dst);
-
   // Lock prefix.
   void lock();
 
@@ -488,16 +485,25 @@ class Assembler : public CodeGenerator {
   void idivw(Register src) { emit_idiv(src, 2); }
   void idivw(const Operand &src) { emit_idiv(src, 2); }
 
-  void incb(Register src) { emit_inc(src, 1); }
-  void incb(const Operand &src) { emit_inc(src, 1); }
-  void incw(Register src) { emit_inc(src, 2); }
-  void incw(const Operand &src) { emit_inc(src, 2); }
+  void incb(Register dst) { emit_inc(dst, 1); }
+  void incb(const Operand &dst) { emit_inc(dst, 1); }
+  void incw(Register dst) { emit_inc(dst, 2); }
+  void incw(const Operand &dst) { emit_inc(dst, 2); }
 
-  void decw(Register src) { emit_dec(src, 2); }
-  void decw(const Operand &src) { emit_dec(src, 2); }
+  void decb(Register dst);
+  void decb(const Operand &dst);
+  void decw(Register dst) { emit_dec(dst, 2); }
+  void decw(const Operand &dst) { emit_dec(dst, 2); }
 
+  void shlb(Register dst, Immediate imm8) { shift(dst, imm8, 0x4, 1); }
+  void shlb(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x4, 1); }
   void shlw(Register dst, Immediate imm8) { shift(dst, imm8, 0x4, 2); }
   void shlw(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x4, 2); }
+
+  void shrb(Register dst, Immediate imm8) { shift(dst, imm8, 0x5, 1); }
+  void shrb(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x5, 1); }
+  void shrw(Register dst, Immediate imm8) { shift(dst, imm8, 0x5, 2); }
+  void shrw(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x5, 2); }
 
   void testb(Register dst, Register src);
   void testb(Register reg, Immediate mask);

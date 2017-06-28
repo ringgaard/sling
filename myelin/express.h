@@ -65,48 +65,56 @@ class Express {
 
   // Operation type.
   enum OpType {
-    MOV,        // identity operation, r=a
-    ADD,        // addition, r=a+b
-    SUB,        // subtraction, r=a-b
-    MUL,        // multiplication, r=a*b
-    DIV,        // division, r=a/b
-    MIN,        // minimum, r=max(a,b)
-    MAX,        // maximum, r=min(a,b)
+    MOV,         // identity operation, r=a
+    ADD,         // addition, r=a+b
+    SUB,         // subtraction, r=a-b
+    MUL,         // multiplication, r=a*b
+    DIV,         // division, r=a/b
+    MIN,         // minimum, r=max(a,b)
+    MAX,         // maximum, r=min(a,b)
 
-    RELU,       // rectified linear unit, r=max(0,a)
-    LOG,        // logarithm, r=log(a)
-    EXP,        // exponential function, r=exp(a)
-    SIGMOID,    // sigmoid function, r=1/(1+exp(-a))
-    TANH,       // hyperbolic tangent, r=tanh(a)
+    NEG,         // negative, r=-x
+    ABS,         // absolute value, r=|x|=max(x,neg(x))
+    RELU,        // rectified linear unit, r=max(0,a)
+    SOFTSIGN,    // softsign, r=x/(|x|+1)
+    SOFTPLUS,    // softplus, r=log(exp(x)+1)
+    LOGSIGMOID,  // log sigmoid, r=log(1/(1+exp(-x)))=-softplus(-x))
+    RECIPROCAL,  // reciprocal value, r=1/x
+    SQUARE,      // square, r=x*x
 
-    MULADD132,  // fused multiply/add, r=a*c+b
-    MULADD213,  // fused multiply/add, r=b*a+c
-    MULADD231,  // fused multiply/add, r=b*c+a
-    MULSUB132,  // fused multiply/sub, r=a*c-b
-    MULSUB213,  // fused multiply/sub, r=b*a-c
-    MULSUB231,  // fused multiply/sub, r=b*c-a
+    LOG,         // logarithm, r=log(a)
+    EXP,         // exponential function, r=exp(a)
+    SIGMOID,     // sigmoid function, r=1/(1+exp(-a))
+    TANH,        // hyperbolic tangent, r=tanh(a)
 
-    CMPEQOQ,    // compare equal
-    CMPLTOQ,    // compare less than
-    CMPGTOQ,    // compare greater than
-    CMPNGEUQ,   // compare not greater or equal
-    SHR23,      // shift right 23 bits
-    SHL23,      // shift left 23 bits
-    AND,        // logical and
-    OR,         // logical or
-    ANDNOT,     // logical and not
-    FLOOR,      // floor function
-    CVTFLTINT,  // float to integer conversion
-    CVTINTFLT,  // integer to float conversion
-    SUBINT,     // integer subtraction
+    MULADD132,   // fused multiply/add, r=a*c+b
+    MULADD213,   // fused multiply/add, r=b*a+c
+    MULADD231,   // fused multiply/add, r=b*c+a
+    MULSUB132,   // fused multiply/sub, r=a*c-b
+    MULSUB213,   // fused multiply/sub, r=b*a-c
+    MULSUB231,   // fused multiply/sub, r=b*c-a
 
-    INVALID,    // invalid operation
+    CMPEQOQ,     // compare equal
+    CMPLTOQ,     // compare less than
+    CMPGTOQ,     // compare greater than
+    CMPNGEUQ,    // compare not greater or equal
+    SHR23,       // shift right 23 bits
+    SHL23,       // shift left 23 bits
+    AND,         // logical and
+    OR,          // logical or
+    ANDNOT,      // logical and not
+    FLOOR,       // floor function
+    CVTFLTINT,   // float to integer conversion
+    CVTINTFLT,   // integer to float conversion
+    SUBINT,      // integer subtraction
+
+    INVALID,     // invalid operation
   };
 
   // System-defined numeric constants.
   enum ConstantNumber {
-    ZERO, ONE, N1, HALF, QUARTER, P9, N9, P126, P127, NLN2,
-    MINUS_INF, MIN_NORM_POS, INV_MANT_MASK, INT127,
+    ZERO, ONE, HALF, P9, N9, P127, NLN2,
+    MIN_NORM_POS, INV_MANT_MASK, INT127,
     CEPHES_SQRTHF,
     CEPHES_LOG_P0, CEPHES_LOG_P1, CEPHES_LOG_P2, CEPHES_LOG_P3, CEPHES_LOG_P4,
     CEPHES_LOG_P5, CEPHES_LOG_P6, CEPHES_LOG_P7, CEPHES_LOG_P8,
@@ -363,14 +371,23 @@ class Express {
   Var *Div(Var *x, Var *y) { return Do(DIV, x, y); }
   Var *Min(Var *x, Var *y) { return Do(MIN, x, y); }
   Var *Max(Var *x, Var *y) { return Do(MAX, x, y); }
-  Var *Relu(Var *x) { return Do(RELU, x); }
 
   // Build expressions for intrinsic functions.
-  Var *MulAdd(Var *x, Var *y, Var *z) { return Add(Mul(x, y), z); }
   Var *Log(Var *x);
   Var *Exp(Var *x);
   Var *Sigmoid(Var *x);
   Var *Tanh(Var *x);
+
+  // Build expressions for composite functions.
+  Var *MulAdd(Var *x, Var *y, Var *z) { return Add(Mul(x, y), z); }
+  Var *Neg(Var *x) { return Sub(Number(ZERO), x); }
+  Var *Abs(Var *x) { return Max(x, Neg(x)); }
+  Var *Relu(Var *x) { return Max(x, Number(ZERO)); }
+  Var *Softsign(Var *x) { return Div(x, Add(Abs(x), Number(ONE))); }
+  Var *Softplus(Var *x) { return Log(Add(Exp(x), Number(ONE))); }
+  Var *LogSigmoid(Var *x) { return Neg(Softplus(Neg(x))); }
+  Var *Reciprocal(Var *x) { return Div(Number(ONE),x); }
+  Var *Square(Var *x) { return Mul(x, x); }
 
   // Look up op type for op name. Return INVALID for unknown op name.
   static OpType Lookup(const string &opname);

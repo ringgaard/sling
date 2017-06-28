@@ -16,8 +16,10 @@ class ScalarIntGenerator : public ExpressionGenerator {
     model_.mov_reg_mem = true;
     model_.mov_mem_reg = true;
     model_.op_reg_reg = true;
+    model_.op_reg_imm = true;
     model_.op_reg_mem = true;
     model_.func_reg_reg = true;
+    model_.func_reg_imm = true;
     model_.func_reg_mem = true;
   }
 
@@ -36,8 +38,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
       // Reserve al for int8 multiplication.
       index_->ReserveFixedRegister(rax);
     } else if (instructions_.Has(Express::MIN) ||
-               instructions_.Has(Express::MAX) ||
-               instructions_.Has(Express::RELU)) {
+               instructions_.Has(Express::MAX)) {
       // Reserve rax for as aux register.
       index_->ReserveFixedRegister(rax);
     }
@@ -57,7 +58,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
         }
         break;
       case Express::ADD:
-        if (instr->dst != -1 && instr->args[0]->type == Express::CONST) {
+        if (instr->dst != -1 && instr->args[1]->type == Express::CONST) {
           GenerateAddImm(instr, masm);
         } else {
           GenerateIntBinaryOp(instr,
@@ -69,7 +70,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
         }
         break;
       case Express::SUB:
-        if (instr->dst != -1 && instr->args[0]->type == Express::CONST) {
+        if (instr->dst != -1 && instr->args[1]->type == Express::CONST) {
           GenerateSubImm(instr, masm);
         } else {
           GenerateIntBinaryOp(instr,
@@ -83,7 +84,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
       case Express::MUL:
         if (type_ == DT_INT8) {
           GenerateMulInt8(instr, masm);
-        } else if (instr->dst != -1 && instr->args[0]->type == Express::CONST) {
+        } else if (instr->dst != -1 && instr->args[1]->type == Express::CONST) {
           GenerateMulImm(instr, masm);
         } else {
           GenerateIntBinaryOp(instr,
@@ -99,7 +100,6 @@ class ScalarIntGenerator : public ExpressionGenerator {
         break;
       case Express::MIN:
       case Express::MAX:
-      case Express::RELU:
         GenerateMinMax(instr, masm);
         break;
       default: UNSUPPORTED;
@@ -155,7 +155,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
 
   // Add immediate to register. Adding 0 is a no-op.
   void GenerateAddImm(Express::Op *instr, MacroAssembler *masm) {
-    int64 imm = GetConstant(instr->args[0]);
+    int64 imm = GetConstant(instr->args[1]);
     Register dst = reg(instr->dst);
     if (imm == 1) {
       GenerateInc(dst, masm);
@@ -174,7 +174,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
 
   // Subtract immediate from register. Subtracting 0 is a no-op.
   void GenerateSubImm(Express::Op *instr, MacroAssembler *masm) {
-    int64 imm = GetConstant(instr->args[0]);
+    int64 imm = GetConstant(instr->args[1]);
     Register dst = reg(instr->dst);
     if (imm == 1) {
       GenerateDec(dst, masm);
@@ -193,7 +193,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
 
   // Multiply register with immediate. Multiplying with 1 is a no-op.
   void GenerateMulImm(Express::Op *instr, MacroAssembler *masm) {
-    int64 imm = GetConstant(instr->args[0]);
+    int64 imm = GetConstant(instr->args[1]);
     Register dst = reg(instr->dst);
     if (imm != 1) {
       // Shift instead of multiply if immediate is a power of two.
@@ -236,6 +236,32 @@ class ScalarIntGenerator : public ExpressionGenerator {
   // Generate division.
   void GenerateDiv(Express::Op *instr, MacroAssembler *masm) {
     CHECK(instr->dst != -1);
+    if (instr->args[1]->type == Express::CONST) {
+      // Division by one is a no-op.
+      int64 imm = GetConstant(instr->args[1]);
+      if (imm == 1) return;
+      if (imm == 0) LOG(WARNING) << "Division by zero";
+
+      // Shift instead of divide if immediate is a power of two.
+      int shift = 0;
+      int64 value = 1;
+      while (value < imm) {
+        value <<= 1;
+        shift++;
+      }
+      if (value == imm) {
+        Register dst = reg(instr->dst);
+        switch (type_) {
+          case DT_INT8:  __ shrb(dst, Immediate(shift)); break;
+          case DT_INT16: __ shrw(dst, Immediate(shift)); break;
+          case DT_INT32: __ shrl(dst, Immediate(shift)); break;
+          case DT_INT64: __ shrq(dst, Immediate(shift)); break;
+          default: UNSUPPORTED;
+        }
+        return;
+      }
+    }
+
     __ movq(rax, reg(instr->dst));
     if (type_ != DT_INT8) {
       __ xorq(rdx, rdx);
@@ -249,11 +275,12 @@ class ScalarIntGenerator : public ExpressionGenerator {
     __ movq(reg(instr->dst), rax);
   }
 
-  // Generate min/max/relu.
+  // Generate min/max.
   void GenerateMinMax(Express::Op *instr, MacroAssembler *masm) {
     CHECK(instr->dst != -1);
-    if (instr->type == Express::RELU) {
-      __ xorq(rax, rax);
+    if (instr->args[1]->type == Express::CONST) {
+      int64 imm = GetConstant(instr->args[1]);
+      __ movq(rax, Immediate(imm));
     } else if (instr->src != -1) {
       __ movq(rax, reg(instr->src));
     } else {

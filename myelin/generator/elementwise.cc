@@ -274,7 +274,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
     }
   } else {
     // Get locator.
-    DCHECK(Valid(var));
+    CHECK(Valid(var));
     Locator *loc = GetLocator(var);
 
     // Return operand for accessing variable.

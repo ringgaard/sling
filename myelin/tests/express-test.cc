@@ -158,6 +158,17 @@ int main(int argc, char *argv[]) {
   Test("@0=Add(%0,#1)");
   Test("@0=Id(#0)");
 
+  Test("@0=Neg(%1)");
+  Test("@0=Abs(%1)");
+  Test("@0=Relu(%1)");
+  Test("@0=Softsign(%1)");
+  Test("@0=Softplus(%1)");
+  Test("@0=LogSigmoid(%1)");
+  Test("@0=Reciprocal(%1)");
+  Test("@0=Square(%1)");
+
+  Test("@0=Mul(%0,#1)");
+
   return 0;
 }
 

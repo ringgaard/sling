@@ -37,6 +37,19 @@ cc_binary(
 )
 
 cc_binary(
+  name = "exprgen-test",
+  srcs = ["exprgen-test.cc"],
+  deps = [
+    "//base",
+    "//file",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin/kernel:tensorflow",
+  ],
+)
+
+cc_binary(
   name = "wavenet-test",
   srcs = ["wavenet-test.cc"],
   deps = [
