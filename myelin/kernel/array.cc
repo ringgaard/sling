@@ -242,7 +242,7 @@ class Unpack : public Kernel {
   }
 };
 
-// Output concatenation of input tensors.
+// Output concatenation of input tensors along first dimension.
 class BasicConcat : public Kernel {
  public:
   string Name() override { return "BasicConcat"; }
@@ -257,8 +257,8 @@ class BasicConcat : public Kernel {
     if (step->indegree() < n + 1) return false;
     Tensor *axis = step->input(n);
     if (!axis->IsConstant()) return false;
-    int dim = axis->value<int32>();
-    if (step->output(0)->shape().outer(dim) != 1) return false;
+    int a = axis->value<int32>();
+    if (step->output(0)->shape().outer(a) != 1) return false;
 
     return true;
   }
@@ -329,6 +329,120 @@ class BasicConcat : public Kernel {
   }
 };
 
+// Output concatenation of input tensors along any axis.
+class GeneralConcat : public Kernel {
+ public:
+  string Name() override { return "GeneralConcat"; }
+  string Operation() override { return "ConcatV2"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() < 2 || step->outdegree() != 1) return false;
+
+    // Check concatenation axis.
+    int n = step->GetAttr("N", step->indegree() - 1);
+    if (step->indegree() < n + 1) return false;
+    if (!step->input(n)->IsConstant()) return false;
+    int axis = step->input(n)->value<int32>();
+
+    // Check outer prefix has same size for all inputs.
+    Tensor *output = step->output(0);
+    if (output->rank() < axis) return false;
+    int prefix = output->shape().outer(axis);
+    for (int i = 0; i < n; ++i) {
+      Tensor *input = step->input(i);
+      if (input->rank() < axis) return false;
+      if (input->shape().outer(axis) != prefix) return false;
+      if (input->type() != output->type()) return false;
+    }
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get the number of tensors to concatenate.
+    int n = step->GetAttr("N", step->indegree() - 1);
+
+    // Allocate registers.
+    Register src = masm->rr().alloc_fixed(rsi);
+    Register dst = masm->rr().alloc_fixed(rdi);
+    Register cnt = masm->rr().alloc_fixed(rcx);
+    Register acc = masm->rr().alloc_fixed(rax);
+    Register out = masm->rr().alloc();
+    Register idx = masm->rr().alloc();
+    std::vector<Register> in(n);
+    for (int i = 0; i < n; ++i) in[n] = masm->rr().alloc();
+
+    // Load input tensors.
+    for (int i = 0; i < n; ++i) {
+      __ LoadTensorAddress(in[i], step->input(i));
+    }
+
+    // Load output tensor.
+    __ LoadTensorAddress(out, step->output(0));
+    __ xorq(idx, idx);
+
+    // Loop over outer prefix.
+    Label l;
+    int axis = step->input(n)->value<int32>();
+    int prefix = step->output(0)->shape().outer(axis);
+    int element_size = step->output(0)->element_size();
+    __ bind(&l);
+
+    // Copy input tensors to output.
+    for (int i = 0; i < n; ++i) {
+      int size = step->input(i)->stride(axis) * element_size;
+      if (size > 0 && size < 16) {
+        int disp = 0;
+        int left = size;
+        while (left >= 8) {
+          __ movq(acc, Operand(in[i], disp));
+          __ movq(Operand(out, disp), acc);
+          disp += 8;
+          left -= 8;
+        }
+        while (left >= 4) {
+          __ movl(acc, Operand(in[i], disp));
+          __ movl(Operand(out, disp), acc);
+          disp += 4;
+          left -= 4;
+        }
+        while (left >= 2) {
+          __ movw(acc, Operand(in[i], disp));
+          __ movw(Operand(out, disp), acc);
+          disp += 2;
+          left -= 2;
+        }
+        while (left >= 1) {
+          __ movb(acc, Operand(in[i], disp));
+          __ movb(Operand(out, disp), acc);
+          disp += 1;
+          left -= 1;
+        }
+      } else {
+        __ movq(src, in[i]);
+        __ movq(dst, out);
+        __ movq(cnt, Immediate(size));
+        __ repmovsb();
+      }
+      __ addq(in[i], Immediate(size));
+    }
+
+    // Next chunk.
+    __ addq(out, Immediate(step->output(0)->stride(axis) * element_size));
+    __ incq(idx);
+    __ cmpq(idx, Immediate(prefix));
+    __ j(less, &l);
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 // Register array kernels.
 void RegisterArrayKernels(Library *library) {
   library->Register(new Reshape());
@@ -338,6 +452,7 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new BatchToSpace());
   library->Register(new Pack());
   library->Register(new Unpack());
+  library->Register(new GeneralConcat());
   library->Register(new BasicConcat());
 }
 
