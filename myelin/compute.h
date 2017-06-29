@@ -571,6 +571,10 @@ class Step {
   // Return the complexity of the cell, i.e. number of numeric operations.
   int64 complexity() const { return noop_ ? 0 : kernel_->Complexity(this); }
 
+  // Allocate auxiliary memory for kernel.
+  char *AllocateKernelMemory(size_t size, int alignment);
+  char *kernel_memory() const { return kernel_memory_; }
+
   // Cell that this step belongs to.
   Cell *cell() const { return cell_; }
 
@@ -621,6 +625,10 @@ class Step {
 
   // Kernel used for generating code for step (owned by library).
   Kernel *kernel_ = nullptr;
+
+  // Auxiliary memory for kernel. This memory is owned by the memory pool for
+  // the network.
+  char *kernel_memory_ = nullptr;
 
   // Kernel variant. Only used for display purposes.
   string variant_;
@@ -998,6 +1006,9 @@ class Network {
 
   // Get parameter.
   Tensor *GetParameter(const string &name) const;
+
+  // Allocate memory in memory pool.
+  char *AllocateMemory(size_t size, int alignment);
 
   // Runtime support functions.
   Runtime *runtime() const { return runtime_; }

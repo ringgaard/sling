@@ -32,13 +32,13 @@ void Test(const string &expression) {
   Flow flow;
   auto *func = flow.AddFunction("test");
 
-  Type dt = DT_INT64;
-  int64 yval = FLAGS_n;
+  Type dt = DT_INT8;
 
   auto *x = flow.AddVariable("x", dt, {});
   auto *y = flow.AddVariable("y", dt, {});
   auto *z = flow.AddVariable("z", dt, {});
 
+  int8 yval = FLAGS_n;
   y->SetData(&yval, sizeof(yval));
 
   auto *op = flow.AddOperation(func, "expr", "Calculate", {x, y}, {z});
@@ -61,7 +61,8 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_avx2) jit::CPU::Disable(jit::AVX2);
   if (!FLAGS_fma3) jit::CPU::Disable(jit::FMA3);
 
-  Test("@0=Sub(%0,#1)");
+  Test("@0=Div(Mul(Sub(Add(%0,#1),#1),#1),#1)");
+  //Test("@0=Sub(Add(Mul(Div(%0,%1),%1),%1),%1)");
 
   return 0;
 }

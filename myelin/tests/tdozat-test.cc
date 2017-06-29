@@ -11,7 +11,7 @@
 #include "myelin/multi-process.h"
 #include "myelin/kernel/tensorflow.h"
 
-DEFINE_string(model, "local/tdozat-step1.flow", "input file with flow model");
+DEFINE_string(model, "local/tdozat-step2.flow", "input file with flow model");
 DEFINE_int32(repeat, 100, "Number of times test is repeated");
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
 DEFINE_bool(dump_cell, false, "Dump network cell to stdout");

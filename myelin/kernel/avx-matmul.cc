@@ -84,6 +84,7 @@ class AVXVecMatMulBase : public Kernel {
   Type otype_;   // output type
 };
 
+// Vertical float vector-matrix multiplication for CPUs with AVX.
 class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
  public:
   // Maximum number of loop unrolls.
@@ -141,6 +142,11 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
     for (int i = 1; i <= kMaxUnrolls; ++i) {
       int batch_size = i * 8;
       if (main_cols >= batch_size && main_cols % batch_size == 0) unrolls = i;
+    }
+    if (step->variant().empty()) {
+      string variant = "U" + std::to_string(unrolls);
+      if (remaining_cols > 0) variant += "R" + std::to_string(remaining_cols);
+      step->set_variant(variant);
     }
 
     // Allocate general registers.
@@ -373,6 +379,205 @@ class AVXFltVecMatMulAddReluV : public AVXFltVecMatMulVBase {
   string Operation() override { return "MatMulAddRelu"; }
 };
 
+///////////////////////////////////////////////////////////////////////////////
+
+// Block float vector-matrix multiplication for CPUs with AVX.
+class AVXFltVecMatMulBBase : public AVXVecMatMulBase {
+ public:
+  // Sub-matrix block size.
+  static const int kBlockColSize = 64;
+  static const int kBlockRowSize = 1;
+
+  AVXFltVecMatMulBBase(bool bias, bool relu)
+      : AVXVecMatMulBase(bias, relu, ROW_MAJOR, DT_FLOAT, DT_FLOAT) {}
+
+  bool Supports(Step *step) override {
+    if (!AVXVecMatMulBase::Supports(step)) return false;
+
+    // Matrix and bias vector must be constants.
+    Tensor *W = step->input(1);
+    Tensor *b = bias_ ? step->input(2) : nullptr;
+    if (!W->IsConstant()) return false;
+    if (b != nullptr && !b->IsConstant()) return false;
+
+    // The matrix must be a whole number of blocks.
+    if (W->dim(0) % kBlockRowSize != 0) return false;
+    if (W->dim(1) % kBlockColSize != 0) return false;
+
+    // Block mode is not strict math compatible.
+    if (step->GetAttr("strict", false)) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    // Get input and output tensors.
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+
+    // Align to one ymm register (256 bits, 32 bytes).
+    int byte_alignment = 256 / 8;
+    x->SetMiniumAlignment(byte_alignment);
+    y->SetMiniumAlignment(byte_alignment);
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get tensors.
+    Tensor *x = step->input(0);
+    Tensor *W = step->input(1);
+    Tensor *b = bias_ ? step->input(2) : nullptr;
+    Tensor *y = step->output(0);
+    int rows = W->dim(0);
+    int cols = W->dim(1);
+
+    // Allocate kernel memory for matrix and bias.
+    size_t size = W->size();
+    if (b != nullptr) size += b->size();
+    int alignment = kBlockColSize * sizeof(float);
+    float *dptr =
+        reinterpret_cast<float *>(step->AllocateKernelMemory(size, alignment));
+
+    // Layout data in element access order.
+    float *bptr = nullptr;
+    if (b != nullptr) bptr = reinterpret_cast<float *>(b->data());
+    for (int c = 0; c < cols; c += kBlockColSize) {
+      // Copy bias block.
+      if (bptr != nullptr) {
+        for (int k = 0; k < kBlockColSize; ++k) *dptr++ = *bptr++;
+      }
+
+      // Copy matrix block.
+      for (int r = 0; r < rows; ++r) {
+        char *mptr = W->data() + r * W->stride(0) + c * W->stride(1);
+        float *p = reinterpret_cast<float *>(mptr);
+        for (int k = 0; k < kBlockColSize; ++k) *dptr++ = *p++;
+      }
+    }
+
+    // Allocate general registers.
+    Registers &rr = masm->rr();
+    Register input = rr.alloc();
+    Register output = rr.alloc();
+    Register data = rr.alloc();
+    Register row = rr.alloc();
+    Register col = rr.alloc();
+
+    // Allocate SIMD registers.
+    SIMDRegisters &mm = masm->mm();
+    std::vector<YMMRegister> sum;
+    for (int i = 0; i < kBlockColSize / 8; ++i) {
+      sum.push_back(mm.allocy());
+    }
+    YMMRegister elem = mm.allocy();
+    YMMRegister acc = mm.allocy();
+    YMMRegister zero = relu_ ? mm.allocy() : no_ymm_reg;
+
+    // Load tensor locations.
+    __ LoadTensorAddress(input, x);
+    __ LoadTensorAddress(output, y);
+
+    // Initialize data block pointer.
+    __ movp(data, step->kernel_memory());
+    if (relu_) {
+      __ vxorps(zero, zero, zero);
+    }
+
+    // Loop over column blocks.
+    Label l1;
+    __ xorq(col, col);
+    __ bind(&l1);
+
+    // Initialize block with bias or zero.
+    if (bias_) {
+      for (int i = 0; i < kBlockColSize / 8; ++i) {
+        __ vmovaps(sum[i], Operand(data, i * 32));
+      }
+      __ addq(data, Immediate(kBlockColSize * sizeof(float)));
+    } else {
+      for (int i = 0; i < kBlockColSize / 8; ++i) {
+        __ vxorps(sum[i], sum[i], sum[i]);
+      }
+    }
+
+    // Loop over row blocks.
+    Label l2;
+    __ xorq(row, row);
+    __ bind(&l2);
+
+    // Fetch next input vector element.
+    __ vbroadcastss(elem, Operand(input, row, times_4));
+
+    // Multiply block and add to sum.
+    for (int i = 0; i < kBlockColSize / 8; ++i) {
+      if (masm->Enabled(FMA3)) {
+        __ vmovaps(acc, Operand(data, i * 32));
+        __ vfmadd231ps(sum[i], elem, acc);
+      } else {
+        __ vmulps(acc, elem, Operand(data, i * 32));
+        __ vaddps(sum[i], sum[i], acc);
+      }
+    }
+
+    // Next row block.
+    __ addq(data, Immediate(kBlockColSize * sizeof(float)));
+    if (rows > kBlockRowSize) {
+      __ addq(row, Immediate(kBlockRowSize));
+      __ cmpq(row, Immediate(rows));
+      __ j(less, &l2);
+    }
+
+    // Save to output.
+    for (int i = 0; i < kBlockColSize / 8; ++i) {
+      // Compute relu.
+      if (relu_) {
+        __ vmaxps(sum[i], sum[i], zero);
+      }
+      __ vmovaps(Operand(output, col, times_4, i * 32), sum[i]);
+    }
+
+    // Next column block.
+    if (cols > kBlockColSize) {
+      __ addq(col, Immediate(kBlockColSize));
+      __ cmpq(col, Immediate(cols));
+      __ j(less, &l1);
+    }
+  }
+};
+
+class AVXFltVecMatMulB : public AVXFltVecMatMulBBase {
+ public:
+  AVXFltVecMatMulB() : AVXFltVecMatMulBBase(false, false) {}
+
+  string Name() override { return "AVXFltVecMatMulB"; }
+  string Operation() override { return "MatMul"; }
+};
+
+class AVXFltVecMatMulAddB : public AVXFltVecMatMulBBase {
+ public:
+  AVXFltVecMatMulAddB() : AVXFltVecMatMulBBase(true, false) {}
+
+  string Name() override { return "AVXFltVecMatMulAddB"; }
+  string Operation() override { return "MatMulAdd"; }
+};
+
+class AVXFltVecMatMulReluB : public AVXFltVecMatMulBBase {
+ public:
+  AVXFltVecMatMulReluB() : AVXFltVecMatMulBBase(false, true) {}
+
+  string Name() override { return "AVXFltVecMatMulReluB"; }
+  string Operation() override { return "MatMulRelu"; }
+};
+
+class AVXFltVecMatMulAddReluB : public AVXFltVecMatMulBBase {
+ public:
+  AVXFltVecMatMulAddReluB() : AVXFltVecMatMulBBase(true, true) {}
+
+  string Name() override { return "AVXFltVecMatMulAddReluB"; }
+  string Operation() override { return "MatMulAddRelu"; }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
 // Horizontal float vector-matrix multiplication for CPUs with AVX.
 class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
  public:
@@ -438,6 +643,10 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
     int adders = unrolls;
     if (adders < 1) adders = 1;
     if (adders > kMaxAdders) adders = kMaxAdders;
+    string variant = "U" + std::to_string(unrolls);
+    variant += "A" + std::to_string(adders);
+    if (remaining_rows > 0) variant += "R" + std::to_string(remaining_rows);
+    step->set_variant(variant);
 
     // Allocate general registers.
     Register row = rr.alloc();
@@ -1098,6 +1307,38 @@ void RegisterAVXMatMul(Library *library) {
   // Output    : y: float32[1,m]
   // Requires  : AVX
   library->Register(new AVXFltVecMatMulAddReluV());
+
+#ifdef USE_BLOCK_MATMUL
+  // Computes  : y = x * W
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] constant
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulB());
+
+  // Computes  : y = x * W + b
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] constant
+  //             b: float32[1,n] constant
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulAddB());
+
+  // Computes  : y = max(0, x * W)
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] constant
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulReluB());
+
+  // Computes  : y = max(0, x * W + b)
+  // Input     : x: float32[1,n]
+  //             W: float32[n,m] constant
+  //             b: float32[1,n] constant
+  // Output    : y: float32[1,m]
+  // Requires  : AVX
+  library->Register(new AVXFltVecMatMulAddReluB());
+#endif
 
   // Computes  : y = x * W
   // Input     : x: int8[1,n]
