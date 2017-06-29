@@ -61,8 +61,10 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_avx2) jit::CPU::Disable(jit::AVX2);
   if (!FLAGS_fma3) jit::CPU::Disable(jit::FMA3);
 
-  Test("@0=Div(Mul(Sub(Add(%0,#1),#1),#1),#1)");
+  //Test("@0=Sub(Add(%0,#1),#1)");
+  //Test("@0=Div(Mul(Sub(Add(%0,#1),#1),#1),#1)");
   //Test("@0=Sub(Add(Mul(Div(%0,%1),%1),%1),%1)");
+  Test("@0=Max(Add(Mul(%0,#1),#1),#1)");
 
   return 0;
 }

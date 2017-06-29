@@ -73,7 +73,7 @@ enum ScaleFactor {
 class Operand {
  public:
   // [base + disp/r]
-  Operand(Register base, int32_t disp = 0);
+  explicit Operand(Register base, int32_t disp = 0);
 
   // [base + index*scale + disp/r]
   Operand(Register base,
@@ -290,6 +290,7 @@ class Assembler : public CodeGenerator {
   // Move the low 16 bits of a 64-bit register value to a 16-bit
   // memory location.
   void movw(Register dst, const Operand &src);
+  void movw(Register dst, Immediate imm);
   void movw(const Operand &dst, Register src);
   void movw(const Operand &dst, Immediate imm);
 
@@ -447,21 +448,25 @@ class Assembler : public CodeGenerator {
   void addb(Register dst, const Operand &src) { emit_add(dst, src, 1); }
   void addb(const Operand &dst, Register src) { emit_add(dst, src, 1); }
   void addb(const Operand &dst, Immediate src) { emit_add(dst, src, 1); }
+  void addb(Register dst, Immediate src) { emit_add(dst, src, 1); }
 
   void addw(Register dst, Register src) { emit_add(dst, src, 2); }
   void addw(Register dst, const Operand &src) { emit_add(dst, src, 2); }
   void addw(const Operand &dst, Register src) { emit_add(dst, src, 2); }
   void addw(const Operand &dst, Immediate src) { emit_add(dst, src, 2); }
+  void addw(Register dst, Immediate src) { emit_add(dst, src, 2); }
 
   void subb(Register dst, Register src) { emit_sub(dst, src, 1); }
   void subb(Register dst, const Operand &src) { emit_sub(dst, src, 1); }
   void subb(const Operand &dst, Register src) { emit_sub(dst, src, 1); }
   void subb(const Operand &dst, Immediate src) { emit_sub(dst, src, 1); }
+  void subb(Register dst, Immediate src) { emit_sub(dst, src, 1); }
 
   void subw(Register dst, Register src) { emit_sub(dst, src, 2); }
   void subw(Register dst, const Operand &src) { emit_sub(dst, src, 2); }
   void subw(const Operand &dst, Register src) { emit_sub(dst, src, 2); }
   void subw(const Operand &dst, Immediate src) { emit_sub(dst, src, 2); }
+  void subw(Register dst, Immediate src) { emit_sub(dst, src, 2); }
 
   void imulb(Register src) { emit_imul(src, 1); }
   void imulb(const Operand &src) { emit_imul(src, 1); }
@@ -470,14 +475,23 @@ class Assembler : public CodeGenerator {
   void imulw(Register dst, Register src) { emit_imul(dst, src, 2); }
   void imulw(Register dst, const Operand &src) { emit_imul(dst, src, 2); }
 
+  void imulw(Register dst, Register src, Immediate imm) {
+    emit_imul(dst, src, imm, 2);
+  }
   void imulw(Register dst, const Operand &src, Immediate imm) {
-    emit_imul(dst, src, 2);
+    emit_imul(dst, src, imm, 2);
+  }
+  void imull(Register dst, Register src, Immediate imm) {
+    emit_imul(dst, src, imm, 4);
   }
   void imull(Register dst, const Operand &src, Immediate imm) {
-    emit_imul(dst, src, 4);
+    emit_imul(dst, src, imm, 4);
+  }
+  void imulq(Register dst, Register src, Immediate imm) {
+    emit_imul(dst, src, imm, 8);
   }
   void imulq(Register dst, const Operand &src, Immediate imm) {
-    emit_imul(dst, src, 8);
+    emit_imul(dst, src, imm, 8);
   }
 
   void idivb(Register src) { emit_idiv(src, 1); }
@@ -2767,6 +2781,7 @@ class Assembler : public CodeGenerator {
                      Register reg,
                      const Operand &rm_reg,
                      int size);
+
   // Operate on a byte in memory or register.
   void immediate_arithmetic_op_8(byte subcode,
                                  Register dst,
@@ -2774,6 +2789,7 @@ class Assembler : public CodeGenerator {
   void immediate_arithmetic_op_8(byte subcode,
                                  const Operand &dst,
                                  Immediate src);
+
   // Operate on a word in memory or register.
   void immediate_arithmetic_op_16(byte subcode,
                                   Register dst,
@@ -2781,7 +2797,9 @@ class Assembler : public CodeGenerator {
   void immediate_arithmetic_op_16(byte subcode,
                                   const Operand &dst,
                                   Immediate src);
-  // Operate on operands/registers with pointer size, 32-bit or 64-bit size.
+
+  // Operate on operands/registers with any size, 8-bit, 16-bit, 32-bit or
+  // 64-bit size.
   void immediate_arithmetic_op(byte subcode,
                                Register dst,
                                Immediate src,
@@ -2965,13 +2983,7 @@ class Assembler : public CodeGenerator {
   void emit_xchg(Register dst, const Operand &src, int size);
 
   void emit_xor(Register dst, Register src, int size) {
-    if (size == kInt64Size && dst.code() == src.code()) {
-    // 32 bit operations zero the top 32 bits of 64 bit registers. Therefore
-    // there is no need to make this a 64 bit operation.
-      arithmetic_op(0x33, dst, src, kInt32Size);
-    } else {
-      arithmetic_op(0x33, dst, src, size);
-    }
+    arithmetic_op(0x33, dst, src, size);
   }
 
   void emit_xor(Register dst, const Operand &src, int size) {

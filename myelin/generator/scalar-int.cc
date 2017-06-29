@@ -82,10 +82,10 @@ class ScalarIntGenerator : public ExpressionGenerator {
         }
         break;
       case Express::MUL:
-        if (type_ == DT_INT8) {
-          GenerateMulInt8(instr, masm);
-        } else if (instr->dst != -1 && instr->args[1]->type == Express::CONST) {
+        if (instr->dst != -1 && instr->args[1]->type == Express::CONST) {
           GenerateMulImm(instr, masm);
+        } else if (type_ == DT_INT8) {
+          GenerateMulInt8(instr, masm);
         } else {
           GenerateIntBinaryOp(instr,
               &Assembler::imulw, &Assembler::imulw,  // dummy
@@ -205,6 +205,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
       }
       if (value == imm) {
         switch (type_) {
+          case DT_INT8:  __ shlb(dst, Immediate(shift)); break;
           case DT_INT16: __ shlw(dst, Immediate(shift)); break;
           case DT_INT32: __ shll(dst, Immediate(shift)); break;
           case DT_INT64: __ shlq(dst, Immediate(shift)); break;
@@ -212,9 +213,19 @@ class ScalarIntGenerator : public ExpressionGenerator {
         }
       } else {
         switch (type_) {
-          case DT_INT16: __ imulw(dst, dst, Immediate(imm)); break;
-          case DT_INT32: __ imull(dst, dst, Immediate(imm)); break;
-          case DT_INT64: __ imulq(dst, dst, Immediate(imm)); break;
+          case DT_INT8:
+            __ movsxbq(dst, dst);
+            __ imulw(dst, dst, Immediate(imm));
+            break;
+          case DT_INT16:
+            __ imulw(dst, dst, Immediate(imm));
+            break;
+          case DT_INT32:
+            __ imull(dst, dst, Immediate(imm));
+            break;
+          case DT_INT64:
+            __ imulq(dst, dst, Immediate(imm));
+            break;
           default: UNSUPPORTED;
         }
       }

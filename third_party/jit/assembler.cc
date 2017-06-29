@@ -326,7 +326,7 @@ void Assembler::immediate_arithmetic_op(byte subcode,
                                         Immediate src,
                                         int size) {
   if (size == 1) {
-    immediate_arithmetic_op_8(subcode - 1, dst, src);
+    immediate_arithmetic_op_8(subcode, dst, src);
   } else if (size == 2) {
     immediate_arithmetic_op_16(subcode, dst, src);
   } else {
@@ -1092,6 +1092,15 @@ void Assembler::movw(Register dst, const Operand &src) {
   emit_optional_rex_32(dst, src);
   emit(0x8B);
   emit_operand(dst, src);
+}
+
+void Assembler::movw(Register dst, Immediate imm) {
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst);
+  emit(0xB8 + dst.low_bits());
+  emit(static_cast<byte>(imm.value_ & 0xff));
+  emit(static_cast<byte>(imm.value_ >> 8));
 }
 
 void Assembler::movw(const Operand &dst, Register src) {
