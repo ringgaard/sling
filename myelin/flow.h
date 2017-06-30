@@ -498,6 +498,9 @@ class Flow {
                   bool merge_inputs = false);
 
   // Remove operation from flow.
+  void RemoveOperation(Operation *op);
+
+  // Eliminate no-op from flow by moving input to output.
   void Eliminate(Operation *op);
 
   // Find sequences of ops in flow graph. This only matches the first output

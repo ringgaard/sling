@@ -1331,14 +1331,35 @@ void Flow::DeleteVariable(Variable *var) {
 }
 
 void Flow::DeleteOperation(Operation *op) {
+  // Remove op from function.
   Function *func = op->func;
   if (func != nullptr) {
     auto f = std::find(func->ops.begin(), func->ops.end(), op);
     if (f != func->ops.end()) func->ops.erase(f);
   }
+
+  // Remove op from flow.
   auto f = std::find(ops_.begin(), ops_.end(), op);
   if (f != ops_.end()) ops_.erase(f);
   delete op;
+}
+
+void Flow::RemoveOperation(Operation *op) {
+  // Remove inputs.
+  for (Flow::Variable *input : op->inputs) {
+    auto fc = std::find(input->consumers.begin(), input->consumers.end(), op);
+    CHECK(fc != input->consumers.end());
+    input	->consumers.erase(fc);
+  }
+
+  // Remove outputs.
+  for (Flow::Variable *output : op->outputs) {
+    CHECK(output->producer == op);
+    output->producer = nullptr;
+  }
+
+  // Delete op.
+  DeleteOperation(op);
 }
 
 bool Flow::IsConsistent() const {

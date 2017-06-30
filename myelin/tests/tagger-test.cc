@@ -527,7 +527,6 @@ void RNN::Execute(const std::vector<string> &tokens,
     }
 
     // Compute left-to-right LSTM.
-    data.lr.Clear();
     for (int i = 0; i < tokens.size(); ++i) {
       // Attach hidden and control layers.
       int in = i > 0 ? i - 1 : tokens.size();
