@@ -303,7 +303,10 @@ class ScalarIntGenerator : public ExpressionGenerator {
   // Generate min/max.
   void GenerateMinMax(Express::Op *instr, MacroAssembler *masm) {
     CHECK(instr->dst != -1);
-    if (instr->args[1]->type == Express::CONST) {
+    if (instr->args[1]->type == Express::NUMBER) {
+      int64 imm = Express::NumericFlt32(instr->args[1]->id);
+      __ movq(rax, Immediate(imm));
+    } else if (instr->args[1]->type == Express::CONST) {
       int64 imm = GetConstant(instr->args[1]);
       __ movq(rax, Immediate(imm));
     } else if (instr->src != -1) {

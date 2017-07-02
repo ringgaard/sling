@@ -282,6 +282,26 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
         int repeat = vecsize_ / sizeof(double);
         return masm_->GetConstant(number, repeat)->address();
       }
+      case DT_INT8: {
+        int8 number = Express::NumericFlt32(var->id);
+        int repeat = vecsize_ / sizeof(int8);
+        return masm_->GetConstant(number, repeat)->address();
+      }
+      case DT_INT16: {
+        int16 number = Express::NumericFlt32(var->id);
+        int repeat = vecsize_ / sizeof(int16);
+        return masm_->GetConstant(number, repeat)->address();
+      }
+      case DT_INT32: {
+        int32 number = Express::NumericFlt32(var->id);
+        int repeat = vecsize_ / sizeof(int32);
+        return masm_->GetConstant(number, repeat)->address();
+      }
+      case DT_INT64: {
+        int64 number = Express::NumericFlt32(var->id);
+        int repeat = vecsize_ / sizeof(int64);
+        return masm_->GetConstant(number, repeat)->address();
+      }
       default:
         LOG(FATAL) << "Unsupported constant type";
         return Operand(rbp);

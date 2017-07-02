@@ -32,13 +32,13 @@ void Test(const string &expression) {
   Flow flow;
   auto *func = flow.AddFunction("test");
 
-  Type dt = DT_INT8;
+  Type dt = DT_INT32;
 
   auto *x = flow.AddVariable("x", dt, {});
   auto *y = flow.AddVariable("y", dt, {});
   auto *z = flow.AddVariable("z", dt, {});
 
-  int8 yval = FLAGS_n;
+  int32 yval = FLAGS_n;
   y->SetData(&yval, sizeof(yval));
 
   auto *op = flow.AddOperation(func, "expr", "Calculate", {x, y}, {z});
@@ -64,7 +64,8 @@ int main(int argc, char *argv[]) {
   //Test("@0=Sub(Add(%0,#1),#1)");
   //Test("@0=Div(Mul(Sub(Add(%0,#1),#1),#1),#1)");
   //Test("@0=Sub(Add(Mul(Div(%0,%1),%1),%1),%1)");
-  Test("@0=Max(Add(Mul(%0,#1),#1),#1)");
+  //Test("@0=Max(Add(Mul(%0,#1),#1),#1)");
+  Test("@0=Relu(Add(%0,%1))");
 
   return 0;
 }
