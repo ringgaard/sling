@@ -937,18 +937,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     step->kernel_->Adjust(step);
   }
 
-  // Propagate alignment for shared tensors.
-  for (auto it : tensors) {
-    Tensor *tensor = it.second;
-    Tensor *next = tensor->shared_;
-    while (next != nullptr) {
-      if (next->byte_alignment_ < tensor->byte_alignment_) {
-        next->byte_alignment_ = tensor->byte_alignment_;
-      }
-      next = next->shared_;
-    }
-  }
-
   // Propagate alignment between linked tensors.
   bool again = true;
   while (again) {
@@ -1092,6 +1080,21 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             << " stride " << tensor->stride_.ToString()
             << " order " << tensor->order_
             << " on " << placename[tensor->placement_];
+  }
+
+  // Propagate size and alignment for shared tensors.
+  for (auto it : tensors) {
+    Tensor *tensor = it.second;
+    Tensor *next = tensor->shared_;
+    while (next != nullptr) {
+      if (next->size_ < tensor->size_) {
+        next->size_ = tensor->size_;
+      }
+      if (next->byte_alignment_ < tensor->byte_alignment_) {
+        next->byte_alignment_ = tensor->byte_alignment_;
+      }
+      next = next->shared_;
+    }
   }
 
   // Compute size and alignment for connectors.
