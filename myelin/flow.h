@@ -503,8 +503,9 @@ class Flow {
   // Eliminate no-op from flow by moving input to output.
   void Eliminate(Operation *op);
 
-  // Find sequences of ops in flow graph. This only matches the first output
-  // for each op in the sequence.
+  // Find sequences of ops in flow graph matching the operation types in ops.
+  // Each element in ops is an operation type optionally followed by colon and
+  // input number.
   std::vector<Operation *> Find(const std::vector<string> &ops);
 
   // Extract sub-flow from flow. A new function will be added to the subflow and

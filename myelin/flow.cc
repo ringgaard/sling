@@ -903,31 +903,50 @@ Flow::Operation *Flow::Fuse(Operation *first,
 }
 
 std::vector<Flow::Operation *> Flow::Find(const std::vector<string> &ops) {
+  // Get the last op and input number in the sequence.
   CHECK(!ops.empty());
+  string last = ops.back();
+  int last_input = 0;
+  int colon = last.find(':');
+  if (colon != -1) {
+    last_input = std::stoi(last.substr(colon + 1));
+    last.resize(colon);
+  }
+
   std::vector<Operation *> matches;
-  const string &last = ops.back();
   for (Operation *op : ops_) {
     // Look for ops which match the last op in the sequence.
     if (op->type != last) continue;
 
-    // Check for match by traversing backwards though the first input of each
-    // op in the sequence.
+    // Check for match by traversing backwards through the specified input of
+    // each op in the sequence.
     Operation *current = op;
     bool match = true;
+    int input = last_input;
     for (int i = ops.size() - 2; i >= 0; --i) {
       // Follow producer chain.
-      if (current->inputs.empty()) {
+      if (input >= current->inputs.size()) {
         match = false;
         break;
       }
-      current = current->inputs[0]->producer;
+      current = current->inputs[input]->producer;
       if (current == nullptr) {
         match = false;
         break;
       }
 
+      // Next op in sequence.
+      string opname = ops[i];
+      int colon = opname.find(':');
+      if (colon != -1) {
+        input = std::stoi(opname.substr(colon + 1));
+        opname.resize(colon);
+      } else {
+        input = 0;
+      }
+
       // Check if op type matches.
-      if (current->type != ops[i]) {
+      if (current->type != opname) {
         match = false;
         break;
       }
