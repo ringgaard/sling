@@ -17,22 +17,6 @@ DEFINE_string(input, "local/wavenet.flow", "input file with flow model");
 using namespace sling;
 using namespace sling::myelin;
 
-bool IsSimpleBroadcast(const Shape &shape1, const Shape &shape2) {
-  if (shape1.scalar()) return true;
-  if (shape2.scalar()) return true;
-
-  int d1 = shape1.rank() - 1;
-  int d2 = shape2.rank() - 1;
-  while (d1 >= 0 && d2 >= 0) {
-    int s1 = shape1.dim(d1--);
-    int s2 = shape2.dim(d2--);
-    //if (s1 == 1) continue;
-    //if (d2 == 1) continue;
-    if (s1 != s2) return false;
-  }
-  return true;
-}
-
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
@@ -85,52 +69,6 @@ int main(int argc, char *argv[]) {
   //GraphOptions opts;
   //FlowToDotGraphFile(flow, opts, "/tmp/raw-wavenet.dot");
 
-#endif
-
-#if 1
-  std::set<string> ewops {
-    "Add", "Sub", "Mul", "Div", "Mod",
-    "BiasAdd", "Relu",
-    "Minimum", "Maximum",
-    "Sigmoid", "Log", "Tanh",
-  };
-  for (auto *op : flow.ops()) {
-    if (ewops.count(op->type) > 0) {
-      bool bcast = false;
-      bool simple = true;
-      for (auto *in : op->inputs) {
-        for (auto *out : op->outputs) {
-          if (in->shape != out->shape) {
-            bcast = true;
-            if (!IsSimpleBroadcast(in->shape, out->shape)) simple = false;
-          }
-        }
-      }
-      if (bcast && !simple) {
-        string inputs;
-        for (auto *in : op->inputs) {
-          inputs.append(" ");
-          if (in->shape.scalar()) {
-            inputs.append("scalar");
-          } else {
-            inputs.append(in->shape.ToString());
-          }
-        }
-        string outputs;
-        for (auto *out : op->outputs) {
-          outputs.append(" ");
-          if (out->shape.scalar()) {
-            outputs.append("scalar");
-          } else {
-            outputs.append(out->shape.ToString());
-          }
-        }
-        LOG(INFO) << "OP: " << op->type << " " << op->name
-                  << " in:" << inputs << " out:" << outputs;
-
-      }
-    }
-  }
 #endif
 
   // Analyze flow.

@@ -66,6 +66,24 @@ class WaveNetTransformer : public Transformer {
       combines++;
     }
 
+    // Fuse padding op to convolution.
+    for (Flow::Operation *op : flow->Find({"Conv1D", "Pad"})) {
+      VLOG(5) << "Add padding Conv1D " << op->name;
+      Flow::Operation *pad = op;
+      Flow::Operation *conv1d = pad->inputs[0]->producer;
+      flow->Fuse(conv1d, pad, "Conv1D");
+      combines++;
+    }
+
+    // Convert concat into shift op.
+    for (Flow::Operation *op : flow->Find({"ConcatV2", "StridedSlice"})) {
+      VLOG(5) << "Convert to Shift " << op->name;
+      Flow::Operation *slice = op;
+      Flow::Operation *concat = slice->inputs[0]->producer;
+      flow->Fuse(concat, slice, "Shift");
+      combines++;
+    }
+
     // Convert split sigmoid and tanh to combined ops.
     for (Flow::Operation *op : flow->Find({"Split", "Tanh", "Mul"})) {
       VLOG(5) << "Convert to TanhMulSigmoid " << op->name;
@@ -176,41 +194,11 @@ class ZigZagTanhMulSigmoid : public Kernel {
   }
 };
 
-// Stub for StridedSlice.
-class StridedSlice : public Kernel {
+// Stub for Shift.
+class Shift : public Kernel {
  public:
-  string Name() override { return "DummyStridedSlice"; }
-  string Operation() override { return "StridedSlice"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
-  }
-};
-
-// Stub for Pad.
-class Pad : public Kernel {
- public:
-  string Name() override { return "DummyPad"; }
-  string Operation() override { return "Pad"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
-  }
-};
-
-// Stub for Split.
-class Split : public Kernel {
- public:
-  string Name() override { return "DummySplit"; }
-  string Operation() override { return "Split"; }
+  string Name() override { return "DummyShift"; }
+  string Operation() override { return "Shift"; }
 
   bool Supports(Step *step) override {
     return true;
@@ -266,10 +254,7 @@ void RegisterWaveNetLibrary(Library *library) {
   library->Register(new Conv1DAdd());
   library->Register(new Conv2DBackpropInput());
   library->Register(new ZigZagTanhMulSigmoid());
-
-  library->Register(new StridedSlice());
-  library->Register(new Pad());
-  library->Register(new Split());
+  library->Register(new Shift());
 
   library->RegisterTransformer(new WaveNetTransformer());
 }
