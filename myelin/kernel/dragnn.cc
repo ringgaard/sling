@@ -535,8 +535,8 @@ class PrecomputedEmbeddings : public Transformer {
       Flow::Variable *precomputed =
         flow->AddVariable(name, transform->type,
                           {embedding->dim(0), transform->dim(1)});
-        flow->AddOperation(lookup->func, name + "/Precompute", "MatMul",
-                           {embedding, transform}, {precomputed});
+      flow->AddOperation(lookup->func, name + "/Precompute", "MatMul",
+                         {embedding, transform}, {precomputed});
 
       // Convert the MatMul to a Lookup on the precomputed embeddings.
       matmul->type = "Lookup";

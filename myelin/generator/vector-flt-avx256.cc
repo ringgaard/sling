@@ -67,7 +67,7 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        if (IsClear(instr)) {
+        if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
           switch (type_) {
             case DT_FLOAT:
@@ -117,9 +117,6 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
             &Assembler::vmaxps, &Assembler::vmaxpd,
             &Assembler::vmaxps, &Assembler::vmaxpd,
             masm);
-        break;
-      case Express::RELU:
-        GenerateRelu(instr, masm);
         break;
       case Express::MULADD132:
         GenerateYMMFltOp(instr,
@@ -216,31 +213,6 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         break;
       default:
         UNSUPPORTED;
-    }
-  }
-
-  // Generate relu.
-  void GenerateRelu(Express::Op *instr, MacroAssembler *masm) {
-    if (type_ == DT_FLOAT) {
-      __ vxorps(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
-      if (instr->dst != -1 && instr->src != -1) {
-        __ vmaxps(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
-      } else if (instr->dst != -1 && instr->src == -1) {
-        __ vmaxps(ymm(instr->dst), ymm(instr->dst), addr(instr->args[1]));
-      } else {
-        UNSUPPORTED;
-      }
-    } else if (type_ == DT_DOUBLE) {
-      __ vxorpd(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
-      if (instr->dst != -1 && instr->src != -1) {
-        __ vmaxpd(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
-      } else if (instr->dst != -1 && instr->src == -1) {
-        __ vmaxpd(ymm(instr->dst), ymm(instr->dst), addr(instr->args[1]));
-      } else {
-        UNSUPPORTED;
-      }
-    } else {
-      UNSUPPORTED;
     }
   }
 

@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "base/clock.h"
 #include "base/init.h"
 #include "base/flags.h"
 #include "base/logging.h"
@@ -22,6 +23,7 @@ DEFINE_bool(baseline, false, "Compare with baseline tagger result");
 DEFINE_bool(intermediate, false, "Compare intermediate with baseline tagger");
 
 DEFINE_int32(repeat, 1, "Number of times test is repeated");
+DEFINE_bool(profile, false, "Profile computation");
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
 DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
 DEFINE_bool(dump_graph, true, "Dump dot graph");
@@ -290,9 +292,6 @@ class FixedDragnnTyper : public Typer {
 
 class RNN {
  public:
-  // Profiling flag.
-  static const bool profile = true;
-
   // Loads and initialize parser model.
   void Load(const string &filename);
 
@@ -308,9 +307,6 @@ class RNN {
 
   // Extracts features for LR LSTM.
   void ExtractFeaturesLR(RNNInstance *instance, int current) const;
-
-  // Output profile.
-  void OutputProfile() const;
 
   // Loop up tag name.
   const string &tag(int index) const { return tags_[index]; }
@@ -421,7 +417,7 @@ void RNN::Load(const string &filename) {
   }
 
   // Compile parser flow.
-  if (profile) network_.set_profiling(true);
+  if (FLAGS_profile) network_.set_profiling(true);
   if (FLAGS_debug) network_.set_debug(true);
   CHECK(network_.Compile(flow, library_));
 
@@ -517,19 +513,21 @@ int RNN::LookupWord(const string &word) const {
 void RNN::Execute(const std::vector<string> &tokens,
                   std::vector<int> *predictions) {
   RNNInstance data(lr_, lr_c_, lr_h_, 0, tokens.size());
+
+  // Look up words in vocabulary.
+  for (int i = 0; i < tokens.size(); ++i) {
+    int word = LookupWord(tokens[i]);
+    data.words[i] = word;
+  }
+
+  Clock clock;
+  clock.start();
   for (int r = 0; r < FLAGS_repeat; ++r) {
-    predictions->clear();
-
-    // Look up words in vocabulary.
-    for (int i = 0; i < tokens.size(); ++i) {
-      int word = LookupWord(tokens[i]);
-      data.words[i] = word;
-    }
-
     // Compute left-to-right LSTM.
+    predictions->clear();
     for (int i = 0; i < tokens.size(); ++i) {
       // Attach hidden and control layers.
-      int in = i > 0 ? i - 1 : tokens.size();
+      int in = i > 0 ? i - 1 : tokens.size() - 1;
       int out = i;
       AttachLR(&data, in, out);
 
@@ -596,8 +594,11 @@ void RNN::Execute(const std::vector<string> &tokens,
       }
     }
   }
+  clock.stop();
+  int64 n = FLAGS_repeat * tokens.size();
+  LOG(INFO) << clock.cycles() / n << " cycles, " << clock.us() / n << " us";
 
-  if (profile) {
+  if (FLAGS_profile) {
     Profile profile(&data.lr);
     std::cout << profile.ASCIIReport() << "\n";
   }
@@ -635,9 +636,9 @@ RNNInstance::RNNInstance(Cell *lr,
   int length = end - begin;
   words.resize(length);
 
-  // Add one extra element to LSTM activations for boundary element.
-  this->lr_c.resize(length + 1);
-  this->lr_h.resize(length + 1);
+  // Allocate channels for LSTM activations.
+  this->lr_c.resize(length);
+  this->lr_h.resize(length);
 }
 
 void RNN::AttachLR(RNNInstance *instance, int input, int output) const {
@@ -681,6 +682,7 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_avx2) jit::CPU::Disable(jit::AVX2);
   if (!FLAGS_fma3) jit::CPU::Disable(jit::FMA3);
 
+  LOG(INFO) << "Compile tagger";
   RNN rnn;
   rnn.Load(FLAGS_model);
 
@@ -706,8 +708,10 @@ int main(int argc, char *argv[]) {
     golden.push_back(t);
   }
 
+  LOG(INFO) << "Run tagger";
   std::vector<int> predictions;
   rnn.Execute(tokens, &predictions);
+  LOG(INFO) << "Done";
 
   for (int i = 0; i < predictions.size(); ++i) {
     LOG(INFO) << tokens[i] << " " << rnn.tag(predictions[i]);

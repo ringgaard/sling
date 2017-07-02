@@ -49,7 +49,7 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        if (IsClear(instr)) {
+        if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
           switch (type_) {
             case DT_FLOAT:
@@ -99,9 +99,6 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
             &Assembler::maxps, &Assembler::maxpd,
             &Assembler::maxps, &Assembler::maxpd,
             masm);
-        break;
-      case Express::RELU:
-        GenerateRelu(instr, masm);
         break;
       case Express::CMPEQOQ:
         GenerateCompare(instr, masm, 0);
@@ -162,30 +159,6 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         LOG(INFO) << "Unsupported: " << instr->AsInstruction();
         UNSUPPORTED;
     }
-  }
-
-  // Generate relu.
-  void GenerateRelu(Express::Op *instr, MacroAssembler *masm) {
-    if (CPU::Enabled(SSE2)) {
-      if (type_ == DT_FLOAT) {
-        __ xorps(xmm(instr->dst), xmm(instr->dst));
-      } else if (type_ == DT_DOUBLE) {
-        __ xorpd(xmm(instr->dst), xmm(instr->dst));
-      } else {
-        UNSUPPORTED;
-      }
-    } else if (type_ == DT_FLOAT) {
-      float zero = 0;
-      auto *data = masm->CreateDataBlock(sizeof(float));
-      data->Add(zero);
-      __ movss(xmm(instr->dst), data->address());
-    } else {
-      UNSUPPORTED;
-    }
-    GenerateXMMFltOp(instr,
-        &Assembler::maxps, &Assembler::maxpd,
-        &Assembler::maxps, &Assembler::maxpd,
-        masm);
   }
 
   // Generate left/right shift.

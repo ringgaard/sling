@@ -291,12 +291,20 @@ class ExpressionGenerator {
       OpYMMRegRegReg opregq, OpYMMRegRegMem opmemq,
       MacroAssembler *masm, int argnum = 1);
 
-  // Check if instruction is MOV reg,0 (i.e. clear register).
-  static bool IsClear(Express::Op *instr) {
+  // Check if instruction is MOV reg,0.
+  static bool IsLoadZero(Express::Op *instr) {
     return instr->type == Express::MOV &&
            instr->dst != -1 &&
            instr->args[0]->type == Express::NUMBER &&
            instr->args[0]->id == Express::ZERO;
+  }
+
+  // Check if instruction is MOV reg,1.
+  static bool IsLoadOne(Express::Op *instr) {
+    return instr->type == Express::MOV &&
+           instr->dst != -1 &&
+           instr->args[0]->type == Express::NUMBER &&
+           instr->args[0]->id == Express::ONE;
   }
 
   // Index generator for expression.

@@ -56,7 +56,7 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        if (IsClear(instr)) {
+        if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
           __ vpxor(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
         } else {
@@ -125,19 +125,6 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
               &Assembler::vpmaxsd, &Assembler::vpmaxsd,
               &Assembler::vpmaxsd, &Assembler::vpmaxsd,  // dummy
               masm);
-        }
-        break;
-      case Express::RELU:
-        if (type_ == DT_INT64) {
-          UNSUPPORTED;
-        } else {
-          __ vpxor(ymm(instr->src), ymm(instr->src), ymm(instr->src));
-          GenerateYMMIntOp(instr,
-              &Assembler::vpmaxsb, &Assembler::vpmaxsb,
-              &Assembler::vpmaxsw, &Assembler::vpmaxsw,
-              &Assembler::vpmaxsd, &Assembler::vpmaxsd,
-              &Assembler::vpmaxsd, &Assembler::vpmaxsd,  // dummy
-              masm, 0);
         }
         break;
       default: UNSUPPORTED;

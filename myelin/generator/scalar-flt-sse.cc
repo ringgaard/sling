@@ -60,7 +60,7 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        if (IsClear(instr)) {
+        if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
           switch (type_) {
             case DT_FLOAT:
@@ -110,9 +110,6 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
             &Assembler::maxss, &Assembler::maxsd,
             &Assembler::maxss, &Assembler::maxsd,
             masm);
-        break;
-      case Express::RELU:
-        GenerateRelu(instr, masm);
         break;
       case Express::CMPEQOQ:
         GenerateCompare(instr, masm, 0);
@@ -166,25 +163,6 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         break;
       default: UNSUPPORTED;
     }
-  }
-
-  // Generate relu(x) = max(0,x).
-  void GenerateRelu(Express::Op *instr, MacroAssembler *masm) {
-    if (type_ == DT_FLOAT) {
-      __ xorps(xmm(instr->dst), xmm(instr->dst));
-    } else if (type_ == DT_DOUBLE) {
-      if (CPU::Enabled(SSE2)) {
-        __ xorpd(xmm(instr->dst), xmm(instr->dst));
-      } else {
-        __ xorps(xmm(instr->dst), xmm(instr->dst));
-      }
-    } else {
-      UNSUPPORTED;
-    }
-    GenerateXMMFltOp(instr,
-        &Assembler::maxss, &Assembler::maxsd,
-        &Assembler::maxss, &Assembler::maxsd,
-        masm);
   }
 
   // Generate left/right shift.

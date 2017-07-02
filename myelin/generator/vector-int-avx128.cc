@@ -58,8 +58,7 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
       }
     }
     if (instructions_.Has(Express::MIN) ||
-        instructions_.Has(Express::MAX) ||
-        instructions_.Has(Express::RELU)) {
+        instructions_.Has(Express::MAX)) {
       if (type_ == DT_INT64) {
         num_rr_aux = std::max(num_rr_aux, 2);
       }
@@ -71,7 +70,7 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        if (IsClear(instr)) {
+        if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
           __ vpxor(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
         } else {
@@ -140,19 +139,6 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
               &Assembler::vpmaxsd, &Assembler::vpmaxsd,
               &Assembler::vpmaxsd, &Assembler::vpmaxsd,  // dummy
               masm);
-        }
-        break;
-      case Express::RELU:
-        if (type_ == DT_INT64) {
-          GenerateReluInt64(instr, masm);
-        } else {
-          __ vpxor(xmm(instr->src), xmm(instr->src), xmm(instr->src));
-          GenerateXMMIntOp(instr,
-              &Assembler::vpmaxsb, &Assembler::vpmaxsb,
-              &Assembler::vpmaxsw, &Assembler::vpmaxsw,
-              &Assembler::vpmaxsd, &Assembler::vpmaxsd,
-              &Assembler::vpmaxsd, &Assembler::vpmaxsd,  // dummy
-              masm, 0);
         }
         break;
       default: UNSUPPORTED;
@@ -244,26 +230,6 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
       __ vpextrq(aux(1), src2, n);
       __ cmpq(aux(0), aux(1));
       __ cmovq(less, aux(0), aux(1));
-      __ vpinsrq(xmm(instr->dst), xmm(instr->dst), aux(0), n);
-    }
-  }
-
-  // Generate 64-bit relu.
-  void GenerateReluInt64(Express::Op *instr, MacroAssembler *masm) {
-    CHECK(instr->dst != -1);
-    XMMRegister src;
-    if (instr->src != -1) {
-      src = xmm(instr->src);
-    } else {
-      src = xmm(instr->dst);
-      __ vmovdqa(src, addr(instr->args[1]));
-    }
-    Register zero = aux(1);
-    __ xorq(zero, zero);
-    for (int n = 0; n < 2; ++n) {
-      __ vpextrq(aux(0), src, n);
-      __ testq(aux(0), aux(0));
-      __ cmovq(positive, aux(0), zero);
       __ vpinsrq(xmm(instr->dst), xmm(instr->dst), aux(0), n);
     }
   }

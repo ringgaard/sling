@@ -64,32 +64,7 @@ static bool os_has_avx_support() {
   return (feature_mask & 0x6) == 0x6;
 }
 
-ProcessorInformation::ProcessorInformation()
-    : stepping_(0),
-      model_(0),
-      ext_model_(0),
-      family_(0),
-      ext_family_(0),
-      type_(0),
-      cache_line_size_(UNKNOWN_CACHE_LINE_SIZE),
-      has_fpu_(false),
-      has_cmov_(false),
-      has_sahf_(false),
-      has_mmx_(false),
-      has_sse_(false),
-      has_sse2_(false),
-      has_sse3_(false),
-      has_ssse3_(false),
-      has_sse41_(false),
-      has_sse42_(false),
-      has_osxsave_(false),
-      has_avx_(false),
-      has_avx2_(false),
-      has_fma3_(false),
-      has_bmi1_(false),
-      has_bmi2_(false),
-      has_lzcnt_(false),
-      has_popcnt_(false) {
+ProcessorInformation::ProcessorInformation() {
   memcpy(vendor_, "Unknown", 8);
   memcpy(brand_, "Unknown", 8);
   int cpu_info[4];
@@ -169,6 +144,12 @@ ProcessorInformation::ProcessorInformation()
     has_sahf_ = (cpu_info[2] & 0x00000001) != 0;
   }
 
+  // Sandy Bridge and later have fast zero idiom (PXORx reg,reg).
+  if (family_model() >= 0x062A) has_zero_idiom_ = true;
+
+  // Skylake and later have fast one idiom (PCMPEQx reg,reg).
+  if (family_model() >= 0x065E) has_one_idiom_ = true;
+
   // Get cache line size.
   if (strcmp(vendor_, "GenuineIntel") == 0) {
     __cpuid(cpu_info, 0x00000001);
@@ -182,7 +163,7 @@ ProcessorInformation::ProcessorInformation()
 }
 
 const char *ProcessorInformation::architecture() {
-  switch ((family_ << 8) | model_) {
+  switch (family_model()) {
     case 0x065E:
       return "Skylake";
 
@@ -260,6 +241,9 @@ void CPU::Initialize() {
   if (cpu.has_bmi2()) features |= 1u << BMI2;
   if (cpu.has_lzcnt()) features |= 1u << LZCNT;
   if (cpu.has_popcnt()) features |= 1u << POPCNT;
+
+  if (cpu.has_zero_idiom()) features |= 1u << ZEROIDIOM;
+  if (cpu.has_one_idiom()) features |= 1u << ONEIDIOM;
 
   cache_line_size = cpu.cache_line_size();
 

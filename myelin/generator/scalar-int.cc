@@ -61,7 +61,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        if (IsClear(instr)) {
+        if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
           __ xorq(reg(instr->dst), reg(instr->dst));
         } else if (instr->dst != -1 && instr->args[0]->type == Express::CONST) {
