@@ -26,7 +26,7 @@ namespace myelin {
 
 // An index generator implements a loop structure with indexing of the
 // input and output variables in an expression. It also handles register
-// allocation for temporary and auxilliary variables.
+// allocation for temporary and auxiliary variables.
 class IndexGenerator {
  public:
   virtual ~IndexGenerator() = default;
