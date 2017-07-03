@@ -22,9 +22,10 @@
 
 namespace sling {
 
-ZipFileReader::ZipFileReader(const string &filename) {
+ZipFileReader::ZipFileReader(const string &filename, int block_size) {
   // Open ZIP file for reading.
   file_ = File::OpenOrDie(filename, "r");
+  block_size_ = block_size;
 
   // Read EOCD record.
   uint64 size = file_->Size();
@@ -85,13 +86,13 @@ InputStream *ZipFileReader::Read(const Entry &entry) {
 
   // Set up input pipeline.
   InputPipeline *pipeline = new InputPipeline();
-  pipeline->Add(new FileInputStream(file_, false));
+  pipeline->Add(new FileInputStream(file_, false, block_size_));
   pipeline->Add(new BoundedInputStream(pipeline->last(), entry.compressed));
   switch (entry.method) {
     case STORED:
       break;
     case DEFLATE:
-      pipeline->Add(new GZipDecompressor(pipeline->last()));
+      pipeline->Add(new GZipDecompressor(pipeline->last(), block_size_, -15));
       break;
     case UNSUPPORTED:
       LOG(FATAL) << "Unsupported compression type";

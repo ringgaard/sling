@@ -41,7 +41,7 @@ class ZipFileReader {
   };
 
   // Open and read ZIP file catalog.
-  explicit ZipFileReader(const string &filename);
+  explicit ZipFileReader(const string &filename, int block_size = 1 << 16);
   ~ZipFileReader();
 
   // Return list of files in archive.
@@ -101,6 +101,9 @@ class ZipFileReader {
 
   // ZIP file.
   File *file_;
+
+  // Block size.
+  int block_size_;
 
   // List of files in ZIP archive.
   std::vector<Entry> files_;
