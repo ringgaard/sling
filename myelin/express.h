@@ -94,10 +94,11 @@ class Express {
     MULSUB213,   // fused multiply/sub, r=b*a-c
     MULSUB231,   // fused multiply/sub, r=b*c-a
 
-    CMPEQOQ,     // compare equal
-    CMPLTOQ,     // compare less than
-    CMPGTOQ,     // compare greater than
-    CMPNGEUQ,    // compare not greater or equal
+    CMPEQOQ,     // compare equal (ordered, non-signaling)
+    CMPLTOQ,     // compare less than (ordered, non-signaling)
+    CMPGTOQ,     // compare greater than (ordered, non-signaling)
+    CMPNGEUQ,    // compare not greater or equal (unordered, non-signaling)
+
     SHR23,       // shift right 23 bits
     SHL23,       // shift left 23 bits
     AND,         // logical and
@@ -124,6 +125,7 @@ class Express {
     CEPHES_EXP_P4, CEPHES_EXP_P5,
     ALPHA_1, ALPHA_3, ALPHA_5, ALPHA_7, ALPHA_9, ALPHA_11, ALPHA_13,
     BETA_0, BETA_2, BETA_4, BETA_6,
+    NUM_CONSTANTS,
   };
 
   // Variable mapping.
@@ -145,11 +147,6 @@ class Express {
 
     // Redirect all consumers of variable to another variable.
     void Redirect(Var *other);
-
-    // Check if variable is a register, memory, or immediate variable.
-    bool IsReg() const { return type == TEMP; }
-    bool IsMem() const { return type != TEMP; }
-    bool IsImm() const { return type == CONST || type == NUMBER; }
 
     VarType type;                 // variable type
     int id;                       // variable id (-1 for unassigned temps)
@@ -266,7 +263,7 @@ class Express {
   Var *Variable(VarType type, int id);
 
   // Add new temp variable to expression.
-  Var *NewTemp();
+  Var *Temp() { return Variable(TEMP, -1); }
 
   // Add new number variable.
   Var *Number(ConstantNumber number);
@@ -345,14 +342,14 @@ class Express {
   Var *Do(OpType type, Var *x) {
     Op *op = Operation(type);
     op->AddArgument(x);
-    op->Assign(NewTemp());
+    op->Assign(Temp());
     return op->result;
   }
   Var *Do(OpType type, Var *x, Var *y) {
     Op *op = Operation(type);
     op->AddArgument(x);
     op->AddArgument(y);
-    op->Assign(NewTemp());
+    op->Assign(Temp());
     return op->result;
   }
   Var *Do(OpType type, Var *x, Var *y, Var *z) {
@@ -360,7 +357,7 @@ class Express {
     op->AddArgument(x);
     op->AddArgument(y);
     op->AddArgument(z);
-    op->Assign(NewTemp());
+    op->Assign(Temp());
     return op->result;
   }
 
@@ -371,23 +368,25 @@ class Express {
   Var *Div(Var *x, Var *y) { return Do(DIV, x, y); }
   Var *Min(Var *x, Var *y) { return Do(MIN, x, y); }
   Var *Max(Var *x, Var *y) { return Do(MAX, x, y); }
+  Var *Zero() { return Number(ZERO); }
+  Var *One() { return Number(ONE); }
 
   // Build expressions for intrinsic functions.
   Var *Log(Var *x);
   Var *Exp(Var *x);
-  Var *Sigmoid(Var *x);
   Var *Tanh(Var *x);
 
   // Build expressions for composite functions.
   Var *MulAdd(Var *x, Var *y, Var *z) { return Add(Mul(x, y), z); }
-  Var *Neg(Var *x) { return Sub(Number(ZERO), x); }
+  Var *Neg(Var *x) { return Sub(Zero(), x); }
   Var *Abs(Var *x) { return Max(x, Neg(x)); }
-  Var *Relu(Var *x) { return Max(x, Number(ZERO)); }
-  Var *Softsign(Var *x) { return Div(x, Add(Abs(x), Number(ONE))); }
-  Var *Softplus(Var *x) { return Log(Add(Exp(x), Number(ONE))); }
+  Var *Relu(Var *x) { return Max(x, Zero()); }
+  Var *Softsign(Var *x) { return Div(x, Add(Abs(x), One())); }
+  Var *Softplus(Var *x) { return Log(Add(Exp(x), One())); }
   Var *LogSigmoid(Var *x) { return Neg(Softplus(Neg(x))); }
-  Var *Reciprocal(Var *x) { return Div(Number(ONE),x); }
+  Var *Reciprocal(Var *x) { return Div(One(), x); }
   Var *Square(Var *x) { return Mul(x, x); }
+  Var *Sigmoid(Var *x) { return Reciprocal(Add(One(), Exp(Neg(x)))); }
 
   // Look up op type for op name. Return INVALID for unknown op name.
   static OpType Lookup(const string &opname);
@@ -427,7 +426,7 @@ class Express {
 
   // System-defined numeric constants.
   struct Constant { float flt; double dbl; };
-  static Constant constants[];
+  static Constant constants[NUM_CONSTANTS];
 };
 
 }  // namespace myelin

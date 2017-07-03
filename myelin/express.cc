@@ -177,7 +177,7 @@ inline Dest bit_cast(const Source& source) {
 // System-defined numeric constants.
 #define FLTCONST(x) {x##f, x}
 #define INTCONST(f) {FLT_FROM_INT(f), DBL_FROM_INT(f)}
-Express::Constant Express::constants[] = {
+Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
   FLTCONST(0.0),    // ZERO
   FLTCONST(1.0),    // ONE
   FLTCONST(0.5),    // HALF
@@ -315,7 +315,7 @@ class RecipeParser {
       // Parse expression and assign to intermediate variable. The intermediate
       // variable is assigned a unique negative id which will later be fixed up.
       Express::Op *expr = ParseExpression();
-      Express::Var *var = expr_->NewTemp();
+      Express::Var *var = expr_->Temp();
       expr->Assign(var);
       return var;
     }
@@ -494,13 +494,6 @@ Express::Op *Express::Function(OpType type,
   return op;
 }
 
-Express::Var *Express::NewTemp() {
-  // Add new temporary variable.
-  Var *v = new Var(TEMP, -1);
-  vars_.push_back(v);
-  return v;
-}
-
 Express::Var *Express::Number(ConstantNumber number) {
   // Add number variable.
   Var *v = new Var(NUMBER, number);
@@ -615,7 +608,7 @@ bool Express::TryToEliminateOps() {
           RemoveVar(v2);
           return true;
         } else {
-          // Two output variable. Change second op to move op.
+          // Two output variables. Change second op to move op.
           v2->Redirect(v1);
           op2->type = MOV;
           op2->ClearArguments();
@@ -653,7 +646,7 @@ void Express::CacheConstants(int limit) {
     if (candidate == nullptr) break;
 
     // Allocate temp for constant and update all usages.
-    Var *temp = NewTemp();
+    Var *temp = Temp();
     candidate->consumers.swap(temp->consumers);
     for (Op *o : ops_) {
       for (int i = 0; i < o->args.size(); ++i) {
@@ -682,7 +675,7 @@ void Express::CacheResults() {
       Op *op = var->producer;
       CHECK(op != nullptr);
       var->producer = nullptr;
-      Var *temp = NewTemp();
+      Var *temp = Temp();
       op->result = temp;
       var->consumers.swap(temp->consumers);
       for (Op *o : ops_) {
@@ -698,7 +691,7 @@ void Express::CacheResults() {
       cached_vars++;
     } else if (var->type == INPUT && var->consumers.size() > 1) {
       // Make temp variable and update all usages to use this instead.
-      Var *temp = NewTemp();
+      Var *temp = Temp();
       var->consumers.swap(temp->consumers);
       Op *first = nullptr;
       for (Op *o : ops_) {
@@ -945,7 +938,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 break;
               case CONST:
               case NUMBER:
-                if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
+                if (!model.mov_reg_imm) success = false;
                 break;
             }
             break;
@@ -955,18 +948,18 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             switch (args[0]->type) {
               case INPUT:
                 // Add temp variable for input.
-                source = rewritten->Variable(TEMP, -1);
+                source = rewritten->Temp();
                 break;
               case OUTPUT:
                 // Add temp variable for output.
-                destination = rewritten->Variable(TEMP, -1);
+                destination = rewritten->Temp();
                 break;
               case TEMP:
                 if (!model.mov_reg_reg) success = false;
                 break;
               case CONST:
               case NUMBER:
-                if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
+                if (!model.mov_reg_imm) success = false;
                 break;
             }
             break;
@@ -986,7 +979,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               case OUTPUT:
                 if (!model.func_reg_mem) {
                   // Add temp variable for input.
-                  source = rewritten->Variable(TEMP, -1);
+                  source = rewritten->Temp();
                   if (!model.func_reg_reg) success = false;
                 }
                 break;
@@ -997,7 +990,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               case NUMBER:
                 if (!model.func_reg_imm) {
                   // Add temp variable for input.
-                  source = rewritten->Variable(TEMP, -1);
+                  source = rewritten->Temp();
                   if (!model.func_reg_reg) success = false;
                 }
                 break;
@@ -1010,21 +1003,21 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               case OUTPUT:
                 if (model.func_reg_mem) {
                   // Add temp variable for output.
-                  destination = rewritten->Variable(TEMP, -1);
+                  destination = rewritten->Temp();
                 } else if (model.func_mem_reg) {
                   // Add temp variable for input.
-                  source = rewritten->Variable(TEMP, -1);
+                  source = rewritten->Temp();
                 } else {
                   // Add temp variables for input and output.
-                  destination = rewritten->Variable(TEMP, -1);
-                  source = rewritten->Variable(TEMP, -1);
+                  destination = rewritten->Temp();
+                  source = rewritten->Temp();
                   if (!model.func_reg_reg) success = false;
                 }
                 break;
               case TEMP:
                 if (!model.func_mem_reg) {
                   // Add temp variable for output.
-                  destination = rewritten->Variable(TEMP, -1);
+                  destination = rewritten->Temp();
                   if (!model.func_reg_reg) success = false;
                 }
                 break;
@@ -1032,10 +1025,10 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               case NUMBER:
                 if (!model.func_mem_imm) {
                   // Add temp variable for output.
-                  destination = rewritten->Variable(TEMP, -1);
+                  destination = rewritten->Temp();
                   if (!model.func_reg_imm) {
                     // Add temp variable for input.
-                    source = rewritten->Variable(TEMP, -1);
+                    source = rewritten->Temp();
                     if (!model.func_reg_reg) success = false;
                   }
                 }
@@ -1065,18 +1058,18 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
             // Put first argument into a register.
             if (args[0]->type != TEMP) {
-              source = rewritten->Variable(TEMP, -1);
+              source = rewritten->Temp();
             }
 
             // Put second argument into a register if memory operands are not
             // supported.
             if (args[1]->type == CONST || args[1]->type == NUMBER) {
               if (!model.op_reg_reg_imm) {
-                source2 = rewritten->Variable(TEMP, -1);
+                source2 = rewritten->Temp();
               }
             } else if (args[1]->type != TEMP) {
               if (!model.op_reg_reg_mem) {
-                source2 = rewritten->Variable(TEMP, -1);
+                source2 = rewritten->Temp();
               }
             }
 
@@ -1085,7 +1078,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             bool arg1_in_reg = args[1]->type == TEMP || source2 != nullptr;
             if (result->type == OUTPUT &&
                 (!arg1_in_reg || !model.op_mem_reg_reg)) {
-              destination = rewritten->Variable(TEMP, -1);
+              destination = rewritten->Temp();
             }
 
             success = true;
@@ -1104,7 +1097,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             if (result != args[0] || !model.op_mem_reg) {
               // Put result in temp register if result is an output.
               if (result->type == OUTPUT) {
-                dest = destination = rewritten->Variable(TEMP, -1);
+                dest = destination = rewritten->Temp();
               }
 
               // Move first argument to destination.
@@ -1134,7 +1127,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 // Put second operand into register if memory operands are not
                 // supported.
                 if (dest->type != TEMP || !model.op_reg_mem) {
-                  source2 = rewritten->Variable(TEMP, -1);
+                  source2 = rewritten->Temp();
                 }
                 break;
               case TEMP:
@@ -1145,11 +1138,11 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 // not supported.
                 if (dest->type == TEMP) {
                   if (!model.op_reg_imm) {
-                    source2 = rewritten->Variable(TEMP, -1);
+                    source2 = rewritten->Temp();
                   }
                 } else {
                   if (!model.op_mem_imm) {
-                    source2 = rewritten->Variable(TEMP, -1);
+                    source2 = rewritten->Temp();
                   }
                 }
                 break;
@@ -1203,7 +1196,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
       if (result != args[0]) {
         // Put result in temp register if result is an output.
         if (result->type == OUTPUT) {
-          dest = destination = rewritten->Variable(TEMP, -1);
+          dest = destination = rewritten->Temp();
         }
 
         // Move first argument to destination.
@@ -1228,17 +1221,17 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
       // Make sure second operand is in register.
       if (args[1]->type != TEMP) {
-        source2 = rewritten->Variable(TEMP, -1);
+        source2 = rewritten->Temp();
       }
 
       // Make third argument available for instruction.
       if (args[2]->type == CONST || args[2]->type == NUMBER) {
         if (!model.fm_reg_reg_imm) {
-          source3 = rewritten->Variable(TEMP, -1);
+          source3 = rewritten->Temp();
         }
       } else if (args[2]->type != TEMP) {
         if (!model.fm_reg_reg_mem) {
-          source3 = rewritten->Variable(TEMP, -1);
+          source3 = rewritten->Temp();
         }
       }
     } else {
@@ -1476,11 +1469,6 @@ Express::Var *Express::Exp(Var *x) {
   return Max(Mul(y, emm0), original_x);
 }
 
-// Sigmoid function. Compute y = 1/(1+exp(-x)).
-Express::Var *Express::Sigmoid(Var *x) {
-  return Div(Number(ONE), Add(Number(ONE), Exp(Sub(Number(ZERO), x))));
-}
-
 // Hyperbolic tangent function.
 // Compute 13/6-degree rational interpolant which is accurate up to a couple of
 // ulp in the range [-9, 9], outside of which the fl(tanh(x)) = +/-1.
@@ -1494,7 +1482,7 @@ Express::Var *Express::Tanh(Var *x) {
   Var *x2 = Mul(x, x);
 
   // Evaluate the numerator polynomial p.
-  Var *p = Do(MOV, Number(ALPHA_1));
+  Var *p = Number(ALPHA_1);
   p = MulAdd(x2, p, Number(ALPHA_3));
   p = MulAdd(x2, p, Number(ALPHA_5));
   p = MulAdd(x2, p, Number(ALPHA_7));
@@ -1504,7 +1492,7 @@ Express::Var *Express::Tanh(Var *x) {
   p = Mul(x, p);
 
   // Evaluate the denominator polynomial q.
-  Var *q = Do(MOV, Number(BETA_0));
+  Var *q = Number(BETA_0);
   q = MulAdd(x2, q, Number(BETA_2));
   q = MulAdd(x2, q, Number(BETA_4));
   q = MulAdd(x2, q, Number(BETA_6));
@@ -1652,6 +1640,12 @@ void Express::Op::ClearArguments() {
 bool Express::Op::EqualTo(Op *other) const {
   if (type != other->type) return false;
   if (arity() != other->arity()) return false;
+  if (commutative() && args.size() == 2) {
+    if (args[0] == other->args[1] &&
+        args[1] == other->args[0]) {
+      return true;
+    }
+  }
   for (int i = 0; i < args.size(); ++i) {
     if (args[i] != other->args[i]) return false;
   }
