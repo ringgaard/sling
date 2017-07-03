@@ -22,6 +22,15 @@
 namespace sling {
 namespace myelin {
 
+// Index generator for element-wise operations. It supports operations over
+// multiple inputs and outputs. All the outputs must have the same size and
+// type. The inputs must be broadcast compatible with the output. This index
+// generator has optimized versions for different kinds of input:
+//  - SIMPLE (iterator with the same size as the output)
+//  - SCALAR (scalar input broadcast over all the elemements)
+//  - CONST (scalar constant input broadcast over all the elemements)
+//  - REPEAT (iterator repeated over all the elements)
+//  - BROADCAST (general broadcast iterator with one broadcast dimension)
 class ElementwiseIndexGenerator : public IndexGenerator {
  public:
   // Create element-wise index generator for step.
