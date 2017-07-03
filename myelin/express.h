@@ -259,14 +259,11 @@ class Express {
   // is not set for the returned op.
   Op *Function(OpType type, std::vector<Var *> &args, bool expand = false);
 
-  // Add new variable to expression.
+  // Lookup variable in expression or add a new variable if it does not exist.
   Var *Variable(VarType type, int id);
 
-  // Look up variable. Return null if variable does not exist.
-  Var *LookupVariable(VarType type, int id);
-
   // Add new temp variable to expression.
-  Var *NewTemp() { return Variable(TEMP, -1); }
+  Var *Temp() { return Variable(TEMP, -1); }
 
   // Add new number variable.
   Var *Number(ConstantNumber number);
@@ -345,14 +342,14 @@ class Express {
   Var *Do(OpType type, Var *x) {
     Op *op = Operation(type);
     op->AddArgument(x);
-    op->Assign(NewTemp());
+    op->Assign(Temp());
     return op->result;
   }
   Var *Do(OpType type, Var *x, Var *y) {
     Op *op = Operation(type);
     op->AddArgument(x);
     op->AddArgument(y);
-    op->Assign(NewTemp());
+    op->Assign(Temp());
     return op->result;
   }
   Var *Do(OpType type, Var *x, Var *y, Var *z) {
@@ -360,7 +357,7 @@ class Express {
     op->AddArgument(x);
     op->AddArgument(y);
     op->AddArgument(z);
-    op->Assign(NewTemp());
+    op->Assign(Temp());
     return op->result;
   }
 
