@@ -69,33 +69,31 @@ class RegisterAllocator {
       reg_[regno] = var;
     }
 
+    var->reg = regno;
     return regno;
   }
 
   // Transfer register from one variable to another. Return the transferred
   // register.
   int Transfer(Express::Var *src, Express::Var *dst) {
-    for (int r = 0; r < reg_.size(); ++r) {
-      if (reg_[r] == src) {
-        reg_[r] = dst;
-        return r;
-      }
-    }
-    return -1;
+    int r = src->reg;
+    if (r == -1)  return -1;
+    dst->reg = r;
+    src->reg = -1;
+    reg_[r] = dst;
+    return r;
   }
 
   // Get register allocated for variable. Return -1 if no register is allocated.
   int Get(Express::Var *var) const {
-    for (int r = 0; r < reg_.size(); ++r) {
-      if (reg_[r] == var) return r;
-    }
-    return -1;
+    return var->reg;
   }
 
   // Free register used by variable.
   void Free(Express::Var *var) {
-    for (int r = 0; r < reg_.size(); ++r) {
-      if (reg_[r] == var) reg_[r] = nullptr;
+    if (var->reg != -1) {
+      reg_[var->reg] = nullptr;
+      var->reg = -1;
     }
   }
 
@@ -327,6 +325,8 @@ class RecipeParser {
     Express::VarType type;
     if (is('%')) {
       type = Express::INPUT;
+    } else if (is('!')) {
+      type = Express::REGISTER;
     } else if (is('#')) {
       type = Express::CONST;
     } else if (is('@')) {
@@ -374,7 +374,7 @@ class RecipeParser {
   bool islower() const { return more() && *ptr_ >= 'a' && *ptr_ <= 'z'; }
   bool isletter() const { return isupper() || islower(); }
   bool isvar() const {
-    return is('%') || is('@') || is('$') || is('#') || is('_');
+    return is('%') || is('!') || is('@') || is('$') || is('#') || is('_');
   }
 
   // Check if the whole expression has been parsed.
@@ -570,6 +570,9 @@ int Express::Complexity() const {
 
 int Express::CompactTempVars() {
   int n = 0;
+  for (Var *v : vars_) {
+    if (v->type == REGISTER) n = v->id + 1;
+  }
   for (Var *v : vars_) {
     if (v->type == TEMP) v->id = n++;
   }
@@ -934,6 +937,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 if (!model.mov_reg_mem) success = false;
                 break;
               case TEMP:
+              case REGISTER:
                 if (!model.mov_reg_reg) success = false;
                 break;
               case CONST:
@@ -955,16 +959,18 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 destination = rewritten->Temp();
                 break;
               case TEMP:
-                if (!model.mov_reg_reg) success = false;
+              case REGISTER:
+                if (!model.mov_mem_reg) success = false;
                 break;
               case CONST:
               case NUMBER:
-                if (!model.mov_reg_imm) success = false;
+                if (!model.mov_mem_imm) success = false;
                 break;
             }
             break;
 
           case INPUT:
+          case REGISTER:
           case CONST:
           case NUMBER:
             // Assignment to inputs and constants not allowed.
@@ -984,6 +990,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 }
                 break;
               case TEMP:
+              case REGISTER:
                 if (!model.func_reg_reg) success = false;
                 break;
               case CONST:
@@ -1015,6 +1022,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 }
                 break;
               case TEMP:
+              case REGISTER:
                 if (!model.func_mem_reg) {
                   // Add temp variable for output.
                   destination = rewritten->Temp();
@@ -1037,6 +1045,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             break;
 
           case INPUT:
+          case REGISTER:
           case CONST:
           case NUMBER:
             // Assignment to inputs and constants not allowed.
@@ -1057,7 +1066,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             }
 
             // Put first argument into a register.
-            if (args[0]->type != TEMP) {
+            if (!args[0]->IsRegister()) {
               source = rewritten->Temp();
             }
 
@@ -1067,7 +1076,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               if (!model.op_reg_reg_imm) {
                 source2 = rewritten->Temp();
               }
-            } else if (args[1]->type != TEMP) {
+            } else if (!args[1]->IsRegister()) {
               if (!model.op_reg_reg_mem) {
                 source2 = rewritten->Temp();
               }
@@ -1110,6 +1119,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                   if (!model.mov_reg_mem) success = false;
                   break;
                 case TEMP:
+                case REGISTER:
                   if (!model.mov_reg_reg) success = false;
                   break;
                 case CONST:
@@ -1131,6 +1141,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 }
                 break;
               case TEMP:
+              case REGISTER:
                 break;
               case CONST:
               case NUMBER:
@@ -1153,6 +1164,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
           break;
 
         case INPUT:
+        case REGISTER:
         case CONST:
         case NUMBER:
           // Assignment to inputs and constants not allowed.
@@ -1209,6 +1221,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             if (!model.mov_reg_mem) success = false;
             break;
           case TEMP:
+          case REGISTER:
             if (!model.mov_reg_reg) success = false;
             break;
           case CONST:
@@ -1229,7 +1242,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
         if (!model.fm_reg_reg_imm) {
           source3 = rewritten->Temp();
         }
-      } else if (args[2]->type != TEMP) {
+      } else if (!args[2]->IsRegister()) {
         if (!model.fm_reg_reg_mem) {
           source3 = rewritten->Temp();
         }
@@ -1293,6 +1306,9 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
 int Express::AllocateRegisters() {
   RegisterAllocator regs;
+  for (Var *var : vars_) {
+    if (var->type == REGISTER) regs.Allocate(var);
+  }
   for (Op *op : ops_) {
     if (op->type == MOV) {
       // Allocate destination register for move op.
@@ -1315,7 +1331,7 @@ int Express::AllocateRegisters() {
       }
 
       // Get source register for move op.
-      if (op->args[0]->type == TEMP && op->src == -1) {
+      if (op->args[0]->IsRegister() && op->src == -1) {
         op->src = regs.Get(op->args[0]);
         CHECK(op->src != -1);
       }
@@ -1340,11 +1356,11 @@ int Express::AllocateRegisters() {
       // Get registers for source operands.
       int first = op->first_is_dest ? 1 : 0;
       int second = first + 1;
-      if (op->arity() > first && op->args[first]->type == TEMP) {
+      if (op->arity() > first && op->args[first]->IsRegister()) {
         op->src = regs.Get(op->args[first]);
         CHECK(op->src != -1);
       }
-      if (op->arity() > second && op->args[second]->type == TEMP) {
+      if (op->arity() > second && op->args[second]->IsRegister()) {
         op->src2 = regs.Get(op->args[second]);
         CHECK(op->src2 != -1);
       }
@@ -1364,6 +1380,9 @@ int Express::AllocateRegisters() {
 
 int Express::NumRegs() const {
   int num_regs = 0;
+  for (auto *var : vars_) {
+    if (var->reg != -1 && var->reg + 1 > num_regs) num_regs = var->reg + 1;
+  }
   for (auto *op : ops_) {
     if (op->dst != -1 && op->dst + 1 > num_regs) num_regs = op->dst + 1;
     if (op->src != -1 && op->src + 1 > num_regs) num_regs = op->src + 1;
@@ -1515,6 +1534,7 @@ void Express::Var::Redirect(Var *other) {
 string Express::Var::AsString() const {
   switch (type) {
     case INPUT: return "%" + std::to_string(id);
+    case REGISTER: return "!" + std::to_string(id);
     case CONST: return "#" + std::to_string(id);
     case OUTPUT: return "@" + std::to_string(id);
     case TEMP:  return "$" + std::to_string(id);
@@ -1527,6 +1547,7 @@ void Express::Var::GetRecipe(string *recipe) const {
   char ch;
   switch (type) {
     case INPUT: ch = '%'; break;
+    case REGISTER: ch = '!'; break;
     case CONST: ch = '#'; break;
     case OUTPUT: ch = '@'; break;
     case TEMP: ch = '$'; break;
