@@ -811,6 +811,7 @@ class Assembler : public CodeGenerator {
   // SSE 4.1 instructions.
   void insertps(XMMRegister dst, XMMRegister src, byte imm8);
   void extractps(Register dst, XMMRegister src, byte imm8);
+
   void pextrb(Register dst, XMMRegister src, int8_t imm8);
   void pextrb(const Operand &dst, XMMRegister src, int8_t imm8);
   void pextrw(Register dst, XMMRegister src, int8_t imm8);
@@ -827,6 +828,11 @@ class Assembler : public CodeGenerator {
   void pinsrd(XMMRegister dst, const Operand &src, int8_t imm8);
   void pinsrq(XMMRegister dst, Register src, int8_t imm8);
   void pinsrq(XMMRegister dst, const Operand &src, int8_t imm8);
+
+  void blendps(XMMRegister dst, const Operand &src, int8_t mask);
+  void blendps(XMMRegister dst, XMMRegister src, int8_t mask);
+  void blendpd(XMMRegister dst, XMMRegister src, int8_t mask);
+  void blendpd(XMMRegister dst, const Operand &src, int8_t mask);
 
   void roundss(XMMRegister dst, const Operand &src, int8_t mode);
   void roundss(XMMRegister dst, XMMRegister src, int8_t mode);
@@ -1260,6 +1266,48 @@ class Assembler : public CodeGenerator {
   void vroundpd(YMMRegister dst, const Operand &src, int8_t mode) {
     vinstr(0x09, dst, ymm0, src, k66, k0F3A, kWIG, 1);
     emit(mode);
+  }
+
+  void vblendps(XMMRegister dst, XMMRegister src1, XMMRegister src2,
+                int8_t mask) {
+    vinstr(0x0C, dst, src1, src2, k66, k0F3A, kWIG);
+    emit(mask);
+  }
+  void vblendps(XMMRegister dst, XMMRegister src1, const Operand &src2,
+                int8_t mask) {
+    vinstr(0x0C, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mask);
+  }
+  void vblendps(YMMRegister dst, YMMRegister src1, YMMRegister src2,
+                int8_t mask) {
+    vinstr(0x0C, dst, src1, src2, k66, k0F3A, kWIG);
+    emit(mask);
+  }
+  void vblendps(YMMRegister dst, YMMRegister src1, const Operand &src2,
+                int8_t mask) {
+    vinstr(0x0C, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mask);
+  }
+
+  void vblendpd(XMMRegister dst, XMMRegister src1, XMMRegister src2,
+                int8_t mask) {
+    vinstr(0x0D, dst, src1, src2, k66, k0F3A, kWIG);
+    emit(mask);
+  }
+  void vblendpd(XMMRegister dst, XMMRegister src1, const Operand &src2,
+                int8_t mask) {
+    vinstr(0x0D, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mask);
+  }
+  void vblendpd(YMMRegister dst, YMMRegister src1, YMMRegister src2,
+                int8_t mask) {
+    vinstr(0x0D, dst, src1, src2, k66, k0F3A, kWIG);
+    emit(mask);
+  }
+  void vblendpd(YMMRegister dst, YMMRegister src1, const Operand &src2,
+                int8_t mask) {
+    vinstr(0x0D, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mask);
   }
 
   void vsd(byte op, XMMRegister dst, XMMRegister src1, XMMRegister src2) {
@@ -1729,6 +1777,15 @@ class Assembler : public CodeGenerator {
   void vshufps(YMMRegister dst, YMMRegister src1, const Operand &src2,
                int8_t imm8) {
     vinstr(0xc6, dst, src1, src2, k66, k0F, kWIG, 1);
+    emit(imm8);
+  }
+
+  void vpermq(YMMRegister dst, YMMRegister src, int8_t imm8) {
+    vinstr(0x00, dst, ymm0, src, k66, k0F3A, kW1);
+    emit(imm8);
+  }
+  void vpermq(YMMRegister dst, const Operand &src, int8_t imm8) {
+    vinstr(0x00, dst, ymm0, src, k66, k0F3A, kW1, 1);
     emit(imm8);
   }
 

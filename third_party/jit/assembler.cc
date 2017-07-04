@@ -3842,6 +3842,54 @@ void Assembler::roundpd(XMMRegister dst, const Operand &src, int8_t mode) {
   emit(mode | 0x8);
 }
 
+void Assembler::blendps(XMMRegister dst, XMMRegister src, int8_t mask) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0c);
+  emit_sse_operand(dst, src);
+  emit(mask);
+}
+
+void Assembler::blendps(XMMRegister dst, const Operand &src, int8_t mask) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0c);
+  emit_sse_operand(dst, src, 1);
+  emit(mask);
+}
+
+void Assembler::blendpd(XMMRegister dst, XMMRegister src, int8_t mask) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0d);
+  emit_sse_operand(dst, src);
+  emit(mask);
+}
+
+void Assembler::blendpd(XMMRegister dst, const Operand &src, int8_t mask) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0d);
+  emit_sse_operand(dst, src, 1);
+  emit(mask);
+}
+
 void Assembler::movmskpd(Register dst, XMMRegister src) {
   EnsureSpace ensure_space(this);
   emit(0x66);

@@ -434,7 +434,7 @@ class Calculate : public Kernel {
     expression.Generate(masm);
   }
 
-  int64 Complexity(const Step *step) {
+  int64 Complexity(const Step *step) override {
     Expression expression(step);
     return expression.Complexity();
   }

@@ -5,6 +5,8 @@
 
 #include "myelin/compute.h"
 #include "myelin/macro-assembler.h"
+#include "myelin/generator/index.h"
+#include "myelin/generator/expression.h"
 
 #define __ masm->
 
@@ -167,13 +169,134 @@ class Conv2DBackpropInput : public Kernel {
 };
 
 
-// Stub for ZigZagTanhMulSigmoid.
+// Zigzag index generator for computing expression over even and odd elements.
+class ZigZag : public IndexGenerator {
+ public:
+  ZigZag(Tensor *x, Tensor *y) : x_(x), y_(y) {}
+
+  void Initialize(size_t vecsize) override {
+    vecsize_ = vecsize;
+    ReserveAuxYMMRegisters(4);
+  }
+
+  bool AllocateRegisters(MacroAssembler *masm) override {
+    // Allocate temp vars.
+    if (!IndexGenerator::AllocateRegisters(masm)) return false;
+
+    // Allocate loop registers.
+    input_ = masm->rr().try_alloc();
+    if (!input_.is_valid()) return false;
+    output_ = masm->rr().try_alloc();
+    if (!output_.is_valid()) return false;
+    count_ = masm->rr().try_alloc();
+    if (!count_.is_valid()) return false;
+
+    // Save macro assembler for constant generation.
+    masm_ = masm;
+
+    return true;
+  }
+
+  Operand addr(Express::Var *var) override {
+    if (var->type == Express::NUMBER) {
+      float number = Express::NumericFlt32(var->id);
+      int repeat = vecsize_ / sizeof(float);
+      return masm_->GetConstant(number, repeat)->address();
+    } else if (var->type == Express::OUTPUT) {
+      return Operand(output_);
+    } else {
+      UNSUPPORTED;
+      return Operand(rbp);
+    }
+  }
+
+  void *data(Express::Var *var) override {
+    return nullptr;
+  }
+
+  void BeginLoop(MacroAssembler *masm) {
+    // Load input and output tensors.
+    __ LoadTensorAddress(input_, x_);
+    __ LoadTensorAddress(output_, y_);
+
+    // Initialize loop.
+    __ xorq(count_, count_);
+    __ bind(&loop_);
+
+    // Read next two vectors from input and split into even and odd elements.
+    if (CPU::Enabled(AVX2) && vecsize_ == 32) {
+      YMMRegister a0 = ymmaux(0);
+      YMMRegister a1 = ymmaux(1);
+      YMMRegister b0 = ymmaux(2);
+      YMMRegister b1 = ymmaux(3);
+      YMMRegister tan = ymm(0);
+      YMMRegister sig = ymm(1);
+
+      __ vmovaps(a0, Operand(input_));      // [0 1 2 3 | 4 5 6 7]
+      __ vmovaps(b0, Operand(input_, 32));  // [8 9 A B | C D E F]
+
+      __ vpermq(a1, a0, 0x4E);         // [4 5 6 7 | 0 1 2 3] 01001110b = 0x4E
+      __ vpermilps(a0, a0, 0xD8);      // [0 2 1 3 | 4 6 5 7] 11011000b = 0xD8
+      __ vpermilps(a1, a1, 0x8D);      // [5 7 4 6 | 1 3 0 2] 10001101b = 0x8D
+      __ vblendps(a0, a0, a1, 0x3C);   // [0 2 4 6 | 1 3 5 7] 00111100b = 0x3C
+      __ vpermq(a1, a0, 0x4E);         // [1 3 5 7 | 0 2 4 6]
+
+      __ vpermq(b1, b0, 0x4E);         // [C D E F | 8 9 A B]
+      __ vpermilps(b0, b0, 0xD8);      // [8 A 9 B | C E D F]
+      __ vpermilps(b1, b1, 0x8D);      // [D F C E | 9 B 8 A]
+      __ vblendps(b0, b0, b1, 0x3C);   // [8 A C E | 9 B D F]
+      __ vpermq(b1, b0, 0x4E);         // [9 B D F | 8 A C E]
+
+      __ vblendps(tan, a0, b1, 0xF0);  // [0 2 4 6 | 8 A C E]
+      __ vblendps(sig, a1, b0, 0xF0);  // [1 3 5 7 | 9 B D F]
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  void EndLoop(MacroAssembler *masm) {
+    __ addq(input_, Immediate(2 * vecsize_));
+    __ addq(output_, Immediate(vecsize_));
+    __ addq(count_, Immediate(vecsize_));
+    __ cmpq(count_, Immediate(y_->size()));
+    __ j(less, &loop_);
+  }
+
+ private:
+  // Input and output.
+  Tensor *x_;
+  Tensor *y_;
+
+  // Vector size.
+  int vecsize_ = 1;
+
+  // Loop registers.
+  Register input_;
+  Register output_;
+  Register count_;
+
+  // Loop label.
+  Label loop_;
+
+  // Assembler for generating code and data.
+  MacroAssembler *masm_ = nullptr;
+};
+
+// ZigZagTanhMulSigmoid for computing Mul(Tanh(Even(x)), Sigmoid(Odd(x))).
 class ZigZagTanhMulSigmoid : public Kernel {
  public:
   string Name() override { return "ZigZagTanhMulSigmoid"; }
   string Operation() override { return "TanhMulSigmoid"; }
 
   bool Supports(Step *step) override {
+    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+    Tensor *input = step->input(1);
+    Tensor *output = step->output(0);
+    if (input->type() != DT_FLOAT) return false;
+    if (output->type() != DT_FLOAT) return false;
+    if (input->elements() != output->elements() * 2) return false;
+    if (input->elements() % 16 != 0) return false;
+    if (!CPU::Enabled(AVX2)) return false;
     return true;
   }
 
@@ -182,22 +305,80 @@ class ZigZagTanhMulSigmoid : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
+    // Compile expression.
+    Express expr;
+    expr.Parse("@0=Mul(Tanh(!0),Sigmoid(!1))", true);
+
+    // Initialize zigzag index generator.
+    Tensor *input = step->input(1);
+    Tensor *output = step->output(0);
+    ZigZag zigzag(input, output);
+
+    // Select expression generator.
+    Type type = output->type();
+    int elements = output->elements();
+    ExpressionGenerator *generator =
+        ExpressionGenerator::Select(expr, type, elements);
+    CHECK(generator != nullptr);
+
+    // Initialize expression and index generators.
+    generator->Initalize(expr, type, 0, &zigzag);
+    zigzag.AllocateRegisters(masm);
+
+    // Generate loop.
+    generator->GenerateInit(masm);
+    zigzag.BeginLoop(masm);
+    generator->GenerateBody(masm);
+    zigzag.EndLoop(masm);
+
+    delete generator;
+  }
+
+  int64 Complexity(const Step *step) override {
+    Express expr;
+    expr.Parse("@0=Mul(Tanh(!0),Sigmoid(!1))", true);
+    return step->output(0)->elements() * expr.Complexity();
   }
 };
 
-// Stub for Shift.
+// Shift input.
 class Shift : public Kernel {
  public:
-  string Name() override { return "DummyShift"; }
+  string Name() override { return "Shift"; }
   string Operation() override { return "Shift"; }
 
   bool Supports(Step *step) override {
+    if (step->indegree() != 6 || step->outdegree() != 1) return false;
+    Tensor *input = step->input(1);
+    Tensor *output = step->output(0);
+    if (input->type() != DT_FLOAT) return false;
+    if (output->type() != DT_FLOAT) return false;
+    if (input->elements() != output->elements()) return false;
+
     return true;
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
+    // Get input and output.
+    Tensor *input = step->input(1);
+    Tensor *output = step->output(0);
+
+    // Allocate registers.
+    Register src = masm->rr().alloc_fixed(rsi);
+    Register dst = masm->rr().alloc_fixed(rdi);
+    Register cnt = masm->rr().alloc_fixed(rcx);
+
+    // Load output tensor.
+    __ LoadTensorAddress(dst, output);
+
+    // Append zero element to output.
+    __ movl(Operand(dst), Immediate(0));
+    __ addq(dst, Immediate(sizeof(float)));
+
+    // Append input except last element to output.
+    __ LoadTensorAddress(src, input);
+    __ movq(cnt, Immediate(input->size() - sizeof(float)));
+    __ repmovsb();
   }
 };
 

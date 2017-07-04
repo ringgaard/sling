@@ -101,6 +101,8 @@ cc_library(
   deps = [
     "//base",
     "//myelin:compute",
+    "//myelin/generator:index",
+    "//myelin/generator:expression",
   ],
 )
 
