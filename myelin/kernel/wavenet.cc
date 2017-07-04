@@ -224,7 +224,7 @@ class ZigZag : public IndexGenerator {
     __ bind(&loop_);
 
     // Read next two vectors from input and split into even and odd elements.
-    if (CPU::Enabled(AVX2) && vecsize_ == 32) {
+    if (CPU::Enabled(AVX) && vecsize_ == 32) {
       YMMRegister a0 = ymmaux(0);
       YMMRegister a1 = ymmaux(1);
       YMMRegister b0 = ymmaux(2);
@@ -235,20 +235,30 @@ class ZigZag : public IndexGenerator {
       __ vmovaps(a0, Operand(input_));      // [0 1 2 3 | 4 5 6 7]
       __ vmovaps(b0, Operand(input_, 32));  // [8 9 A B | C D E F]
 
-      __ vpermq(a1, a0, 0x4E);         // [4 5 6 7 | 0 1 2 3] 01001110b = 0x4E
-      __ vpermilps(a0, a0, 0xD8);      // [0 2 1 3 | 4 6 5 7] 11011000b = 0xD8
-      __ vpermilps(a1, a1, 0x8D);      // [5 7 4 6 | 1 3 0 2] 10001101b = 0x8D
-      __ vblendps(a0, a0, a1, 0x3C);   // [0 2 4 6 | 1 3 5 7] 00111100b = 0x3C
-      __ vpermq(a1, a0, 0x4E);         // [1 3 5 7 | 0 2 4 6]
+      __ vperm2f128(a1, a0, a0, 1);         // [4 5 6 7 | 0 1 2 3]
+      __ vpermilps(a0, a0, 0xD8);           // [0 2 1 3 | 4 6 5 7]
+      __ vpermilps(a1, a1, 0x8D);           // [5 7 4 6 | 1 3 0 2]
+      __ vblendps(a0, a0, a1, 0x3C);        // [0 2 4 6 | 1 3 5 7]
 
-      __ vpermq(b1, b0, 0x4E);         // [C D E F | 8 9 A B]
-      __ vpermilps(b0, b0, 0xD8);      // [8 A 9 B | C E D F]
-      __ vpermilps(b1, b1, 0x8D);      // [D F C E | 9 B 8 A]
-      __ vblendps(b0, b0, b1, 0x3C);   // [8 A C E | 9 B D F]
-      __ vpermq(b1, b0, 0x4E);         // [9 B D F | 8 A C E]
+      __ vperm2f128(b1, b0, b0, 1);         // [C D E F | 8 9 A B]
+      __ vpermilps(b0, b0, 0xD8);           // [8 A 9 B | C E D F]
+      __ vpermilps(b1, b1, 0x8D);           // [D F C E | 9 B 8 A]
+      __ vblendps(b0, b0, b1, 0x3C);        // [8 A C E | 9 B D F]
 
-      __ vblendps(tan, a0, b1, 0xF0);  // [0 2 4 6 | 8 A C E]
-      __ vblendps(sig, a1, b0, 0xF0);  // [1 3 5 7 | 9 B D F]
+      __ vperm2f128(tan, a0, b0, 0x20);     // [0 2 4 6 | 8 A C E]
+      __ vperm2f128(sig, a0, b0, 0x31);     // [1 3 5 7 | 9 B D F]
+    } else if (CPU::Enabled(SSE) && vecsize_ == 16) {
+      XMMRegister a = xmmaux(0);
+      XMMRegister b = xmmaux(1);
+      XMMRegister tan = xmm(0);
+      XMMRegister sig = xmm(1);
+
+      __ movaps(a, Operand(input_));        // [0 1 2 3]
+      __ movaps(b, Operand(input_, 16));    // [4 5 6 7]
+      __ movaps(tan, a);                    // [0 1 2 3]
+      __ shufps(tan, b, 0x88);              // [0 2 4 6]
+      __ movaps(sig, a);                    // [0 1 2 3]
+      __ shufps(sig, b, 0xDD);              // [1 3 5 7]
     } else {
       UNSUPPORTED;
     }
@@ -296,7 +306,6 @@ class ZigZagTanhMulSigmoid : public Kernel {
     if (output->type() != DT_FLOAT) return false;
     if (input->elements() != output->elements() * 2) return false;
     if (input->elements() % 16 != 0) return false;
-    if (!CPU::Enabled(AVX2)) return false;
     return true;
   }
 

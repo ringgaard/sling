@@ -21,12 +21,13 @@ using namespace sling;
 using namespace sling::jit;
 using namespace sling::myelin;
 
-class ZigZag16 : public Kernel {
+class ZigZagAVX : public Kernel {
  public:
-  string Name() override { return "ZigZag16"; }
-  string Operation() override { return "ZigZag16"; }
+  string Name() override { return "ZigZagAVX"; }
+  string Operation() override { return "ZigZag"; }
 
   bool Supports(Step *step) override {
+    if (step->input(0)->elements() % 16 != 0) return false;
     return true;
   }
 
@@ -49,50 +50,109 @@ class ZigZag16 : public Kernel {
     __ vmovaps(a0, Operand(input));      // [0 1 2 3 | 4 5 6 7]
     __ vmovaps(b0, Operand(input, 32));  // [8 9 A B | C D E F]
 
-    __ vpermq(a1, a0, 0x4E);        // [4 5 6 7 | 0 1 2 3]   01001110b = 0x4E
+    __ vperm2f128(a1, a0, a0, 1);   // [4 5 6 7 | 0 1 2 3]   01001110b = 0x4E
     __ vpermilps(a0, a0, 0xD8);     // [0 2 1 3 | 4 6 5 7]   11011000b = 0xD8
     __ vpermilps(a1, a1, 0x8D);     // [5 7 4 6 | 1 3 0 2]   10001101b = 0x8D
     __ vblendps(a0, a0, a1, 0x3C);  // [0 2 4 6 | 1 3 5 7]   00111100b = 0x3C
-    __ vpermq(a1, a0, 0x4E);        // [1 3 5 7 | 0 2 4 6]
 
-    __ vpermq(b1, b0, 0x4E);        // [C D E F | 8 9 A B]
+    __ vperm2f128(b1, b0, b0, 1);   // [C D E F | 8 9 A B]
     __ vpermilps(b0, b0, 0xD8);     // [8 A 9 B | C E D F]
     __ vpermilps(b1, b1, 0x8D);     // [D F C E | 9 B 8 A]
     __ vblendps(b0, b0, b1, 0x3C);  // [8 A C E | 9 B D F]
-    __ vpermq(b1, b0, 0x4E);        // [9 B D F | 8 A C E]
 
-    __ vblendps(a2, a0, b1, 0xF0);  // [0 2 4 6 | 8 A C E]
-    __ vblendps(b2, a1, b0, 0xF0);  // [1 3 5 7 | 9 B D F]
+    __ vperm2f128(a2, a0, b0, 0x20);   // [0 2 4 6 | 8 A C E]
+    __ vperm2f128(b2, a0, b0, 0x31);   // [1 3 5 7 | 9 B D F]
 
     __ vmovaps(Operand(output), a2);
     __ vmovaps(Operand(output, 32), b2);
   }
 };
 
+class ZigZagSSE : public Kernel {
+ public:
+  string Name() override { return "ZigZagSSE"; }
+  string Operation() override { return "ZigZag"; }
+
+  bool Supports(Step *step) override {
+    if (step->input(0)->elements() % 8 != 0) return false;
+    return true;
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+
+    Register input = masm->rr().alloc();
+    Register output = masm->rr().alloc();
+    XMMRegister a0 = masm->mm().allocx();
+    XMMRegister a1 = masm->mm().allocx();
+    XMMRegister b0 = masm->mm().allocx();
+    XMMRegister b1 = masm->mm().allocx();
+
+    __ LoadTensorAddress(input, x);
+    __ LoadTensorAddress(output, y);
+
+    __ movaps(a0, Operand(input));      // [0 1 2 3]
+    __ movaps(b0, Operand(input, 16));  // [4 5 6 7]
+
+    __ movaps(a1, a0);                  // [0 1 2 3]
+    __ shufps(a1, b0, 0x88);            // [0 2 4 6]
+
+    __ movaps(b1, a0);                  // [0 1 2 3]
+    __ shufps(b1, b0, 0xDD);            // [1 3 5 7]
+
+    __ movaps(Operand(output), a1);
+    __ movaps(Operand(output, 16), b1);
+  }
+};
 
 void ZigZagTest() {
   Library library;
-  library.Register(new ZigZag16());
+  library.Register(new ZigZagSSE());
+  library.Register(new ZigZagAVX());
 
-  Flow flow;
-  auto *x = flow.AddVariable("x", DT_FLOAT, {16});
-  auto *y = flow.AddVariable("y", DT_FLOAT, {16});
+  if (CPU::Enabled(AVX)) {
+    Flow flow;
+    auto *x = flow.AddVariable("x", DT_FLOAT, {16});
+    auto *y = flow.AddVariable("y", DT_FLOAT, {16});
+    auto *func = flow.AddFunction("test");
+    flow.AddOperation(func, "zigzag", "ZigZag", {x}, {y});
 
-  auto *func = flow.AddFunction("test");
-  flow.AddOperation(func, "zigzag", "ZigZag16", {x}, {y});
+    Network network;
+    CHECK(network.Compile(flow, library));
+    Cell *cell = network.GetCell("test");
+    cell->WriteCodeToFile("/tmp/zigzag256.bin");
 
-  Network network;
-  CHECK(network.Compile(flow, library));
-  Cell *cell = network.GetCell("test");
-  cell->WriteCodeToFile("/tmp/zigzag.bin");
+    Instance data(cell);
+    auto xval = data[cell->GetParameter("x")];
+    auto yval = data[cell->GetParameter("y")];
+    for (int i = 0; i < 16; ++i) xval.at<float>(i) = i;
+    data.Compute();
+    for (int i = 0; i < 16; ++i) {
+      LOG(INFO) << xval.at<float>(i) << " " << yval.at<float>(i);
+    }
+  }
 
-  Instance data(cell);
-  auto xval = data[cell->GetParameter("x")];
-  auto yval = data[cell->GetParameter("y")];
-  for (int i = 0; i < 16; ++i) xval.at<float>(i) = i;
-  data.Compute();
-  for (int i = 0; i < 16; ++i) {
-    LOG(INFO) << xval.at<float>(i) << " " << yval.at<float>(i);
+  if (CPU::Enabled(SSE)) {
+    Flow flow;
+    auto *x = flow.AddVariable("x", DT_FLOAT, {8});
+    auto *y = flow.AddVariable("y", DT_FLOAT, {8});
+    auto *func = flow.AddFunction("test");
+    flow.AddOperation(func, "zigzag", "ZigZag", {x}, {y});
+
+    Network network;
+    CHECK(network.Compile(flow, library));
+    Cell *cell = network.GetCell("test");
+    cell->WriteCodeToFile("/tmp/zigzag128.bin");
+
+    Instance data(cell);
+    auto xval = data[cell->GetParameter("x")];
+    auto yval = data[cell->GetParameter("y")];
+    for (int i = 0; i < 8; ++i) xval.at<float>(i) = i;
+    data.Compute();
+    for (int i = 0; i < 8; ++i) {
+      LOG(INFO) << xval.at<float>(i) << " " << yval.at<float>(i);
+    }
   }
 }
 
@@ -107,7 +167,7 @@ int main(int argc, char *argv[]) {
   //jit::CPU::Disable(jit::AVX2);
   //jit::CPU::Disable(jit::FMA3);
 
-  //ZigZagTest();
+  ZigZagTest();
 
   // Set up kernel library.
   Library library;
