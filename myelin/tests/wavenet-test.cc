@@ -33,26 +33,6 @@ int main(int argc, char *argv[]) {
   RegisterTensorflowLibrary(&library);
   RegisterWaveNetLibrary(&library);
 
-#if 0
-  // Load model.
-  Flow mainflow;
-  CHECK(mainflow.Load(FLAGS_input));
-
-  // Set input and output names.
-  mainflow.Var("input_log_f0:0")->name = "input_log_f0";
-  mainflow.Var("input_linguistic:0")->name = "input_linguistic";
-  mainflow.Var("output_waveform:0")->name = "output_waveform";
-
-  // Add seed to random generator.
-  auto *seed = mainflow.AddVariable("input_seed", DT_INT64, {});
-  mainflow.Op("random_uniform/RandomUniform")->AddInput(seed);
-
-  // Create sub-model.
-  Flow flow;
-  mainflow.Extract("distil", {}, {mainflow.Var("sub_1")}, &flow);
-  DCHECK(flow.IsConsistent());
-
-#else
   // Load model.
   Flow flow;
   CHECK(flow.Load(FLAGS_input));
@@ -66,9 +46,9 @@ int main(int argc, char *argv[]) {
   auto *seed = flow.AddVariable("input_seed", DT_INT64, {});
   flow.Op("random_uniform/RandomUniform")->AddInput(seed);
 
-  //GraphOptions opts;
-  //FlowToDotGraphFile(flow, opts, "/tmp/raw-wavenet.dot");
-
+#if 0
+  GraphOptions ropts;
+  FlowToDotGraphFile(flow, ropts, "/tmp/raw-wavenet.dot");
 #endif
 
   // Analyze flow.
@@ -81,16 +61,6 @@ int main(int argc, char *argv[]) {
 #if 0
   std::cout << flow.ToString();
   std::cout.flush();
-#endif
-
-#if 0
-  std::unordered_map<string, int> nodes;
-  for (auto *op : flow.ops()) {
-    nodes[op->type] += 1;
-  }
-  for (auto &it : nodes) {
-    std::cout << it.second << "\t" << it.first << "\n";
-  }
 #endif
 
   Network network;

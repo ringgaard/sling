@@ -418,6 +418,14 @@ class Flow {
     std::vector<Variable *> links;    // variables linked to connector
   };
 
+  // Path in flow graph.
+  struct Node {
+    int input = 0;                    // operation input
+    string type;                      // operation type
+    int output = 0;                   // operation output
+  };
+  typedef std::vector<Node> Path;
+
   Flow();
   ~Flow();
 
@@ -503,10 +511,14 @@ class Flow {
   // Eliminate no-op from flow by moving input to output.
   void Eliminate(Operation *op);
 
-  // Find sequences of ops in flow graph matching the operation types in ops.
-  // Each element in ops is an operation type optionally followed by colon and
-  // input number.
-  std::vector<Operation *> Find(const std::vector<string> &ops);
+  // Find sequences of ops in flow graph matching a path expression. A path
+  // expression is a list of nodes separated by '|'. Each node is a node type
+  // with optional input and ouput numbers, i.e. {<input>:}<type>{:<output>}.
+  std::vector<Operation *> Find(const string &pathexpr);
+  std::vector<Operation *> Find(const std::vector<string> &nodes);
+  std::vector<Operation *> Find(std::initializer_list<string> nodes);
+  std::vector<Operation *> Find(const Path &path);
+  static void ParsePath(const string &pathexpr, Path *path);
 
   // Extract sub-flow from flow. A new function will be added to the subflow and
   // will contain all the dependencies of the outputs excluding the dependencies

@@ -18,10 +18,7 @@ class WaveNetTransformer : public Transformer {
   bool Transform(Flow *flow) override {
     // Convert 2D convolution to 1D convolution.
     int combines = 0;
-    for (Flow::Operation *op : flow->Find({"ExpandDims",
-                                           "Conv2D",
-                                           "Squeeze",
-                                           "Add"})) {
+    for (Flow::Operation *op : flow->Find("ExpandDims|Conv2D|Squeeze|Add")) {
       VLOG(5) << "Convert to Conv1DAdd " << op->name;
       Flow::Operation *add = op;
       Flow::Operation *squeeze = add->inputs[0]->producer;
@@ -35,10 +32,7 @@ class WaveNetTransformer : public Transformer {
       combines++;
     }
 
-    for (Flow::Operation *op : flow->Find({"ExpandDims",
-                                           "Conv2D",
-                                           "Squeeze",
-                                           "BiasAdd"})) {
+    for (Flow::Operation *op : flow->Find("ExpandDims|Conv2D|Squeeze|Add")) {
       VLOG(5) << "Convert to Conv1DAdd " << op->name;
       Flow::Operation *add = op;
       Flow::Operation *squeeze = add->inputs[0]->producer;
@@ -52,9 +46,7 @@ class WaveNetTransformer : public Transformer {
       combines++;
     }
 
-    for (Flow::Operation *op : flow->Find({"ExpandDims",
-                                           "Conv2D",
-                                           "Squeeze"})) {
+    for (Flow::Operation *op : flow->Find("ExpandDims|Conv2D|Squeeze")) {
       VLOG(5) << "Convert to Conv1D " << op->name;
       Flow::Operation *squeeze = op;
       Flow::Operation *conv2d = squeeze->inputs[0]->producer;
@@ -67,7 +59,7 @@ class WaveNetTransformer : public Transformer {
     }
 
     // Fuse padding op to convolution.
-    for (Flow::Operation *op : flow->Find({"Conv1D", "Pad"})) {
+    for (Flow::Operation *op : flow->Find("Conv1D|Pad")) {
       VLOG(5) << "Add padding Conv1D " << op->name;
       Flow::Operation *pad = op;
       Flow::Operation *conv1d = pad->inputs[0]->producer;
@@ -76,7 +68,7 @@ class WaveNetTransformer : public Transformer {
     }
 
     // Convert concat into shift op.
-    for (Flow::Operation *op : flow->Find({"ConcatV2", "StridedSlice"})) {
+    for (Flow::Operation *op : flow->Find("ConcatV2|StridedSlice")) {
       VLOG(5) << "Convert to Shift " << op->name;
       Flow::Operation *slice = op;
       Flow::Operation *concat = slice->inputs[0]->producer;
@@ -85,7 +77,7 @@ class WaveNetTransformer : public Transformer {
     }
 
     // Convert split sigmoid and tanh to combined ops.
-    for (Flow::Operation *op : flow->Find({"Split", "Tanh", "Mul"})) {
+    for (Flow::Operation *op : flow->Find("Split|Tanh|Mul")) {
       VLOG(5) << "Convert to TanhMulSigmoid " << op->name;
       Flow::Operation *mul = op;
       Flow::Operation *tanh = mul->inputs[0]->producer;

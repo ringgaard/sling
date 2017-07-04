@@ -902,58 +902,99 @@ Flow::Operation *Flow::Fuse(Operation *first,
   return first;
 }
 
-std::vector<Flow::Operation *> Flow::Find(const std::vector<string> &ops) {
-  // Get the last op and input number in the sequence.
-  CHECK(!ops.empty());
-  string last = ops.back();
-  int last_input = 0;
-  int colon = last.find(':');
-  if (colon != -1) {
-    last_input = std::stoi(last.substr(colon + 1));
-    last.resize(colon);
-  }
+std::vector<Flow::Operation *> Flow::Find(const string &pathexpr) {
+  Path path;
+  ParsePath(pathexpr, &path);
+  return Find(path);
+}
+
+std::vector<Flow::Operation *> Flow::Find(const std::vector<string> &nodes) {
+  Path path;
+  for (auto &node : nodes) ParsePath(node, &path);
+  return Find(path);
+}
+
+std::vector<Flow::Operation *> Flow::Find(std::initializer_list<string> nodes) {
+  Path path;
+  for (auto &node : nodes) ParsePath(node, &path);
+  return Find(path);
+}
+
+std::vector<Flow::Operation *> Flow::Find(const Path &path) {
+  // Get the last node in the path.
+  CHECK(!path.empty());
+  const Node &last = path.back();
 
   std::vector<Operation *> matches;
   for (Operation *op : ops_) {
-    // Look for ops which match the last op in the sequence.
-    if (op->type != last) continue;
+    // Look for ops which match the last node in the path.
+    if (op->type != last.type) continue;
 
-    // Check for match by traversing backwards through the specified input of
-    // each op in the sequence.
+    // Check for match by traversing backwards.
     Operation *current = op;
     bool match = true;
-    int input = last_input;
-    for (int i = ops.size() - 2; i >= 0; --i) {
+    int input = last.input;
+    for (int i = path.size() - 2; i >= 0; --i) {
+      const Node &node = path[i];
+
       // Follow producer chain.
       if (input >= current->inputs.size()) {
         match = false;
         break;
       }
-      current = current->inputs[input]->producer;
-      if (current == nullptr) {
+      Variable *var = current->inputs[node.input];
+      Operation *next = var->producer;
+      if (next == nullptr) {
         match = false;
         break;
       }
-
-      // Next op in sequence.
-      string opname = ops[i];
-      int colon = opname.find(':');
-      if (colon != -1) {
-        input = std::stoi(opname.substr(colon + 1));
-        opname.resize(colon);
-      } else {
-        input = 0;
+      if (node.output >= next->outputs.size() ||
+          next->outputs[node.output] != var) {
+        match = false;
+        break;
       }
+      current = next;
+      input = node.input;
 
       // Check if op type matches.
-      if (current->type != opname) {
+      if (current->type != node.type) {
         match = false;
         break;
       }
+
     }
     if (match) matches.push_back(op);
   }
+
   return matches;
+}
+
+void Flow::ParsePath(const string &pathexpr, Path *path) {
+  int pos = 0;
+  while (pos < pathexpr.size()) {
+    // Get end of next node.
+    int next = pathexpr.find('|', pos);
+    if (next == -1) next = pathexpr.size();
+
+    // Parse next node in path {<input>:}<type>{:<output>}.
+    Node node;
+    int begin = pos;
+    int end = next;
+    int colon = pathexpr.find(':', begin);
+    if (colon > begin && colon < end) {
+      node.input = std::stoi(pathexpr.substr(begin, colon - begin));
+      begin = colon + 1;
+    }
+    colon = pathexpr.rfind(':', end);
+    if (colon > begin && colon < end) {
+      node.output = std::stoi(pathexpr.substr(colon + 1, end - (colon + 1)));
+      end = colon - 1;
+    }
+    node.type = pathexpr.substr(begin, end - begin);
+
+    path->push_back(node);
+    pos = next + 1;
+  }
 }
 
 Flow::Function *Flow::Extract(const string &name,
