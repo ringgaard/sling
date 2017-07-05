@@ -11,8 +11,9 @@
 #include "myelin/multi-process.h"
 #include "myelin/kernel/tensorflow.h"
 
-DEFINE_string(model, "local/tdozat-step2.flow", "input file with flow model");
+DEFINE_string(model, "local/tdozat-step4.flow", "input file with flow model");
 DEFINE_int32(repeat, 100, "Number of times test is repeated");
+DEFINE_bool(dump_raw_flow, false, "Dump raw flow to stdout");
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
 DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
 DEFINE_bool(parallel, false, "Run matmuls in parallel");
@@ -41,6 +42,10 @@ int main(int argc, char *argv[]) {
   flow.set_batch_size(1);
   CHECK(flow.Load(FLAGS_model));
 
+  if (FLAGS_dump_raw_flow) {
+    std::cout << flow.ToString();
+  }
+
   string prefix = "RNN0_2/RNN/while/time_step/rnn_step/LSTMCell/";
   flow.Var(prefix + "hidden_in/hidden_tm1:0")->data = nullptr;
   flow.Var(prefix + "hidden_in/cell_tm1:0")->data = nullptr;
@@ -52,9 +57,9 @@ int main(int argc, char *argv[]) {
   flow.Var("strided_slice_12:0")->name = "word2";
   flow.Var("strided_slice_13:0")->name = "pos";
 
-  flow.Var("recur_out_2:0")->in = true;
-  flow.Var("recur_out_2:0")->data = nullptr;
-  flow.Var("recur_out_2:0")->size = 0;
+  flow.Var("recur_nob_2:0")->in = true;
+  flow.Var("recur_nob_2:0")->data = nullptr;
+  flow.Var("recur_nob_2:0")->size = 0;
 
   if (FLAGS_parallel) {
     int t = 0;

@@ -16,6 +16,7 @@
 #define __ masm->
 
 DEFINE_string(input, "local/wavenet.flow", "input file with flow model");
+DEFINE_bool(zigzag, false, "Test ZigZag kernels");
 
 using namespace sling;
 using namespace sling::jit;
@@ -167,7 +168,8 @@ int main(int argc, char *argv[]) {
   //jit::CPU::Disable(jit::AVX2);
   //jit::CPU::Disable(jit::FMA3);
 
-  ZigZagTest();
+  // Test ZigZag kernels.
+  if (FLAGS_zigzag) ZigZagTest();
 
   // Set up kernel library.
   Library library;

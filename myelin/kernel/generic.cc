@@ -103,6 +103,11 @@ class CombineTransformer : public Transformer {
       if (var->consumers[0]->type != second) continue;
       if (var->consumers[0]->task != op->task) continue;
       if (var->out) continue;
+      if (op->indegree() >= 1) {
+        // Only combine for vector inputs.
+        Flow::Variable *input = op->inputs[0];
+        if (input->rank() == 2 && input->dim(0) > 1) continue;
+      }
 
       flow->Fuse(op, var->consumers[0], combined);
       return true;

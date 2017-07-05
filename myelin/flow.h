@@ -167,6 +167,11 @@ class Shape {
   // Add dimension to shape.
   void add(int size) { dims_.push_back(size); }
 
+  // Transpose shape.
+  void transpose() {
+    if (rank() >= 2) std::swap(dims_[0], dims_[1]);
+  }
+
   // Return the rank of the shape, i.e. the number of dimensions.
   int rank() const  { return dims_.size(); }
 

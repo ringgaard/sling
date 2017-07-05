@@ -374,7 +374,7 @@ class GeneralConcat : public Kernel {
     Register out = masm->rr().alloc();
     Register idx = masm->rr().alloc();
     std::vector<Register> in(n);
-    for (int i = 0; i < n; ++i) in[n] = masm->rr().alloc();
+    for (int i = 0; i < n; ++i) in[i] = masm->rr().alloc();
 
     // Load input tensors.
     for (int i = 0; i < n; ++i) {
@@ -389,12 +389,14 @@ class GeneralConcat : public Kernel {
     Label l;
     int axis = step->input(n)->value<int32>();
     int prefix = step->output(0)->shape().outer(axis);
-    int element_size = step->output(0)->element_size();
+    LOG(INFO) << "Prefix size " << prefix;
     __ bind(&l);
 
     // Copy input tensors to output.
+    Tensor *output = step->output(0);
     for (int i = 0; i < n; ++i) {
-      int size = step->input(i)->stride(axis) * element_size;
+      Tensor *input = step->input(i);
+      int size = axis > 0 ? input->stride(axis - 1) : input->size();
       if (size > 0 && size < 16) {
         int disp = 0;
         int left = size;
@@ -432,7 +434,8 @@ class GeneralConcat : public Kernel {
     }
 
     // Next chunk.
-    __ addq(out, Immediate(step->output(0)->stride(axis) * element_size));
+    int size = axis > 0 ? output->stride(axis - 1) : output->size();
+    __ addq(out, Immediate(size));
     __ incq(idx);
     __ cmpq(idx, Immediate(prefix));
     __ j(less, &l);
