@@ -20,34 +20,6 @@ class WaveNetTransformer : public Transformer {
   bool Transform(Flow *flow) override {
     // Convert 2D convolution to 1D convolution.
     int combines = 0;
-    for (Flow::Operation *op : flow->Find("ExpandDims|Conv2D|Squeeze|Add")) {
-      VLOG(5) << "Convert to Conv1DAdd " << op->name;
-      Flow::Operation *add = op;
-      Flow::Operation *squeeze = add->inputs[0]->producer;
-      Flow::Operation *conv2d = squeeze->inputs[0]->producer;
-      Flow::Operation *expand_dims = conv2d->inputs[0]->producer;
-      string name = conv2d->name;
-      flow->Fuse(expand_dims, conv2d, "");
-      flow->Fuse(expand_dims, squeeze, "");
-      flow->Fuse(expand_dims, add, "Conv1DAdd");
-      expand_dims->name = name;
-      combines++;
-    }
-
-    for (Flow::Operation *op : flow->Find("ExpandDims|Conv2D|Squeeze|Add")) {
-      VLOG(5) << "Convert to Conv1DAdd " << op->name;
-      Flow::Operation *add = op;
-      Flow::Operation *squeeze = add->inputs[0]->producer;
-      Flow::Operation *conv2d = squeeze->inputs[0]->producer;
-      Flow::Operation *expand_dims = conv2d->inputs[0]->producer;
-      string name = conv2d->name;
-      flow->Fuse(expand_dims, conv2d, "");
-      flow->Fuse(expand_dims, squeeze, "");
-      flow->Fuse(expand_dims, add, "Conv1DAdd");
-      expand_dims->name = name;
-      combines++;
-    }
-
     for (Flow::Operation *op : flow->Find("ExpandDims|Conv2D|Squeeze")) {
       VLOG(5) << "Convert to Conv1D " << op->name;
       Flow::Operation *squeeze = op;
@@ -95,21 +67,177 @@ class WaveNetTransformer : public Transformer {
   }
 };
 
-// Stub for Conv1D.
+// 1D convolution.
 class Conv1D : public Kernel {
  public:
-  Conv1D() : bias_(false) {}
-  Conv1D(bool bias) : bias_(bias) {}
+  // Maximum number of loop unrolls.
+  static const int kMaxUnrolls = 8;
 
-  string Name() override { return "DummyConv1D"; }
+  string Name() override { return "WNConv1D"; }
   string Operation() override { return "Conv1D"; }
 
   bool Supports(Step *step) override {
+    // Requires CPU with AVX support.
+    if (!CPU::Enabled(AVX)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() != 3 && step->indegree() != 4) return false;
+    if (step->outdegree() != 1) return false;
+
+    Tensor *in = step->input(0);
+    Tensor *filter = step->input(2);
+    Tensor *out = step->output(0);
+
+    if (in->rank() != 3) return false;
+    if (filter->rank() != 4) return false;
+    if (out->rank() != 3) return false;
+
+    if (in->dim(0) != out->dim(0)) return false;
+    if (in->dim(1) != out->dim(1)) return false;
+    if (in->dim(2) != filter->dim(2)) return false;
+    if (out->dim(2) != filter->dim(3)) return false;
+
+    if (in->type() != DT_FLOAT) return false;
+    if (filter->type() != DT_FLOAT) return false;
+    if (out->type() != DT_FLOAT) return false;
+
+    // Output filter size must be a one or a multiple of 8.
+    if (out->dim(2) != 1 && out->dim(2) % 8 != 0) return false;
+
     return true;
   }
 
+  void Adjust(Step *step) override {
+    Tensor *in = step->input(0);
+    Tensor *filter = step->input(2);
+    Tensor *out = step->output(0);
+
+    // Align to one ymm register (256 bits, 32 bytes).
+    int byte_alignment = 256 / 8;
+    in->SetMiniumAlignment(byte_alignment);
+    filter->SetMiniumAlignment(byte_alignment);
+    out->SetMiniumAlignment(byte_alignment);
+
+    in->SetRequiredOrder(ROW_MAJOR);
+    filter->SetRequiredOrder(ROW_MAJOR);
+    out->SetRequiredOrder(ROW_MAJOR);
+  }
+
   void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
+    // Get inputs and outputs.
+    Tensor *in = step->input(0);
+    Tensor *filter = step->input(2);
+    Tensor *out = step->output(0);
+
+    // Compute sizes.
+    int64 batches = in->dim(0);
+    int64 in_width = in->dim(1);
+    int64 out_width = out->dim(1);
+    int64 filter_width = filter->dim(0) * filter->dim(1);
+    int64 in_channels = filter->dim(2);
+    int64 out_channels = filter->dim(3);
+    int64 in_size = in_width * in_channels;
+    int64 out_size = out_width * out_channels;
+
+    if (out_channels == 1) {
+      LOG(INFO) << "Size 1 filter not yet implemented";
+      __ nop();
+      return;
+    }
+
+    // Compute the number of unrolls.
+    int unrolls = out_channels / 8;
+    if (unrolls > kMaxUnrolls) unrolls = kMaxUnrolls;
+
+    LOG(INFO) << "Batches " << batches
+              << " in size: " << in_size
+              << " out size: " << out_size
+              << " filter size: " << filter_width
+              << " unrolls: " << unrolls;
+
+    // Allocate registers.
+    Registers &rr = masm->rr();
+    SIMDRegisters &mm = masm->mm();
+    Register input = rr.alloc();
+    Register output = rr.alloc();
+    Register batch = rr.alloc();
+    Register colofs = rr.alloc();
+    Register rowofs = rr.alloc();
+    Register filt = rr.alloc();
+    Register fstart = rr.alloc();
+    Register fptr = rr.alloc();
+    YMMRegister elem = mm.allocy();
+    YMMRegister acc = mm.allocy();
+    std::vector<YMMRegister> sum;
+    for (int i = 0; i < unrolls; ++i) {
+      sum.push_back(mm.allocy());
+    }
+
+    // Load tensor locations.
+    __ LoadTensorAddress(input, in);
+    __ LoadTensorAddress(output, out);
+    __ LoadTensorAddress(filt, filter);
+
+    // Loop over batches.
+    Label l1;
+    if (batches > 0) {
+      __ xorq(batch, batch);
+      __ bind(&l1);
+    }
+
+    // Loop over filter column blocks.
+    Label l2;
+    __ movq(fstart, filt);
+    __ xorq(colofs, colofs);
+    __ bind(&l2);
+
+    // Initialize block with zero.
+    for (int i = 0; i < unrolls; ++i) {
+      __ vxorps(sum[i], sum[i], sum[i]);
+    }
+    __ movq(fptr, fstart);
+    __ xorq(rowofs, rowofs);
+
+    // Inner loop over filter rows.
+    Label l3;
+    __ bind(&l3);
+
+    // Load x[row].
+    __ vbroadcastss(elem, Operand(input, rowofs));
+
+    // Multiply x[row] with f[row,col:col+n] and add to sum.
+    for (int i = 0; i < unrolls; ++i) {
+      if (masm->Enabled(FMA3)) {
+        __ vfmadd231ps(sum[i], elem, Operand(fptr, i * 32));
+      } else {
+        __ vmulps(acc, elem, Operand(fptr, i * 32));
+        __ vaddps(sum[i], sum[i], acc);
+      }
+    }
+
+    // Next filter row.
+    __ addq(fptr, Immediate(filter->stride(0)));
+    __ addq(rowofs, Immediate(sizeof(float)));
+    __ cmpq(rowofs, Immediate(in_size * sizeof(float)));
+    __ j(less, &l3);
+
+    // Save to y[col:col+n].
+    for (int i = 0; i < unrolls; ++i) {
+      __ vmovaps(Operand(output, colofs, times_1, i * 32), sum[i]);
+    }
+
+    // Next filter column block.
+    __ addq(fstart, Immediate(unrolls * 32));
+    __ addq(colofs, Immediate(unrolls * 32));
+    __ cmpq(colofs, Immediate(out_channels * sizeof(float)));
+    __ j(less, &l2);
+
+    // Next batch.
+    if (batches > 0) {
+      __ incq(batch);
+      __ cmpq(batch, Immediate(batches));
+      __ j(less, &l1);
+    }
   }
 
   int64 Complexity(const Step *step) override {
@@ -118,38 +246,10 @@ class Conv1D : public Kernel {
     Tensor *out = step->output(0);
     int64 batch = in->dim(0);
     int64 out_width = out->dim(1);
-    int64 filter_width, in_channels, out_channels;
-    if (filter->rank() == 4) {
-      filter_width = filter->dim(0) * filter->dim(1);
-      in_channels = filter->dim(2);
-      out_channels = filter->dim(3);
-    } else {
-      filter_width = filter->dim(0);
-      in_channels = filter->dim(1);
-      out_channels = filter->dim(2);
-    }
-    int64 bias = bias_ ? out_width : 0;
-    return batch * out_width * filter_width * in_channels * out_channels + bias;
-  }
-
- private:
-  bool bias_;
-};
-
-// Stub for Conv1DAdd.
-class Conv1DAdd : public Conv1D {
- public:
-  Conv1DAdd() : Conv1D(true) {}
-
-  string Name() override { return "DummyConv1DAdd"; }
-  string Operation() override { return "Conv1DAdd"; }
-
-  bool Supports(Step *step) override {
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
+    int64 filter_width = filter->dim(0) * filter->dim(1);
+    int64 in_channels = filter->dim(2);
+    int64 out_channels = filter->dim(3);
+    return batch * out_width * filter_width * in_channels * out_channels;
   }
 };
 
@@ -433,7 +533,7 @@ void RegisterWaveNetLibrary(Library *library) {
      .Output(0, DT_FLOAT);
 
   library->Register(new Conv1D());
-  library->Register(new Conv1DAdd());
+  //library->Register(new Conv1DAdd());
   library->Register(new Conv2DBackpropInput());
   library->Register(new ZigZagTanhMulSigmoid());
   library->Register(new Shift());

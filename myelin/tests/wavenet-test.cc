@@ -260,7 +260,6 @@ int main(int argc, char *argv[]) {
 #endif
 
 #if 1
-
   GraphNodeOptions shared_options = options.ops;
   shared_options.fillcolor = "#BDDBDB";
   shared_options.color = "#849999";
@@ -282,15 +281,6 @@ int main(int argc, char *argv[]) {
   }
   LOG(INFO) << size << " bytes total";
   LOG(INFO) << elems << " elements total";
-#endif
-
-#if 0
-  std::cout << "Name\tKernel\tComplexity\n";
-  for (Step *step : distil->steps()) {
-    std::cout << step->name() << "\t";
-    std::cout << step->kernel()->Name() << "\t";
-    std::cout << Profile::Complexity(step) << "\n";
-  }
 #endif
 
 #if 0
@@ -318,7 +308,7 @@ int main(int argc, char *argv[]) {
 #if 1
   // Run instance
   Instance data(distil);
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 1; ++i) {
     data.Compute();
   }
 
