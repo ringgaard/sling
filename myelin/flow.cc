@@ -565,7 +565,8 @@ Status Flow::Load(const string &filename) {
   int magic = parser.GetInt();
   CHECK_EQ(magic, kMagic) << filename << " is not a flow file";
   int version = parser.GetInt();
-  CHECK_EQ(version, kVersion) << "unsupported flow file version";
+  CHECK(version >= 3 && version <= 4)
+      << "unsupported flow file version " << version;
 
   // Read variables.
   int num_vars = parser.GetInt();
@@ -689,6 +690,32 @@ Status Flow::Load(const string &filename) {
     }
   }
 
+  // Read data blocks.
+  if (version >= 4) {
+    int num_blobs = parser.GetInt();
+    for (int i = 0; i < num_blobs; ++i) {
+      // Create new blob.
+      Blob *blob = new Blob;
+      blobs_.push_back(blob);
+
+      // Get blob name and type.
+      blob->name = parser.GetString();
+      blob->type = parser.GetString();
+
+      // Get attributes.
+      int num_attrs = parser.GetInt();
+      for (int j = 0; j < num_attrs; ++j) {
+        string name = parser.GetString();
+        string value = parser.GetString();
+        blob->attrs.Set(name, value);
+      }
+
+      // Get data.
+      blob->size = parser.GetLong();
+      if (blob->size != 0) blob->data = parser.Get(blob->size);
+    }
+  }
+
   return Status::OK;
 }
 
@@ -777,6 +804,24 @@ void Flow::Save(const string &filename, int version) const {
     file.WriteInt(cnx->links.size());
     for (const Variable *link : cnx->links) {
       file.WriteString(link->name);
+    }
+  }
+
+  // Write data blocks.
+  if (version >= 4) {
+    file.WriteInt(blobs_.size());
+    for (const Blob *blob : blobs_) {
+      file.WriteString(blob->name);
+      file.WriteString(blob->type);
+      file.WriteInt(blob->attrs.size());
+      for (const auto &attr : blob->attrs) {
+        file.WriteString(attr.name);
+        file.WriteString(attr.value);
+      }
+      file.WriteInt64(blob->size);
+      if (blob->data != nullptr) {
+        file.Write(blob->data, blob->size);
+      }
     }
   }
 }
@@ -1382,6 +1427,13 @@ Flow::Connector *Flow::AddConnector(const string &name) {
   cnxs_.push_back(cnx);
   cnx->name = name;
   return cnx;
+}
+
+Flow::Blob *Flow::AddBlob(const string &name) {
+  Blob *blob = new Blob;
+  blobs_.push_back(blob);
+  blob->name = name;
+  return blob;
 }
 
 void Flow::DeleteVariable(Variable *var) {

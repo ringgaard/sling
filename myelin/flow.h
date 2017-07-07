@@ -268,7 +268,7 @@ class Flow {
   struct Function;
 
   // Flow file version
-  static const int kVersion = 3;
+  static const int kVersion = 4;
   static const int kMagic = 0x776f6c66;
 
   // Flow variable.
@@ -423,6 +423,15 @@ class Flow {
     std::vector<Variable *> links;    // variables linked to connector
   };
 
+  // Blob for storing auxiliary data blocks in flow files.
+  struct Blob {
+    string name;                      // name of data block
+    string type;                      // data block type
+    Attributes attrs;                 // attributes for data block
+    char *data = nullptr;             // data for blob
+    uint64_t size = 0;                // size of data for blob
+  };
+
   // Path in flow graph.
   struct Node {
     int input = 0;                    // operation input
@@ -470,6 +479,9 @@ class Flow {
   // Add connector.
   Connector *AddConnector(const string &name);
 
+  // Add data block.
+  Blob *AddBlob(const string &name);
+
   // Delete variable.
   void DeleteVariable(Variable *var);
 
@@ -499,6 +511,9 @@ class Flow {
 
   // Return all connectors.
   const std::vector<Connector *> &cnxs() const { return cnxs_; }
+
+  // Return all data blocks.
+  const std::vector<Blob *> &blobs() const { return blobs_; }
 
   // Batch size.
   int batch_size() const { return batch_size_; }
@@ -561,6 +576,9 @@ class Flow {
 
   // Connectors.
   std::vector<Connector *> cnxs_;
+
+  // Blobs.
+  std::vector<Blob *> blobs_;
 
   // Data areas owned by flow.
   std::vector<char *> memory_;
