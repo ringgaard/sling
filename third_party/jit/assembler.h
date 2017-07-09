@@ -323,6 +323,13 @@ class Assembler : public CodeGenerator {
   void repmovsl() { emit_repmovs(kInt32Size); }
   void repmovsq() { emit_repmovs(kInt64Size); }
 
+  // Repeated stores.
+  void repstosb();
+  void repstosw();
+  void repstosp() { emit_repstos(kPointerSize); }
+  void repstosl() { emit_repstos(kInt32Size); }
+  void repstosq() { emit_repstos(kInt64Size); }
+
   // Instruction to load from an immediate 64-bit pointer into RAX.
   void load_rax(void *ptr);
 
@@ -3003,6 +3010,7 @@ class Assembler : public CodeGenerator {
   }
 
   void emit_repmovs(int size);
+  void emit_repstos(int size);
 
   void emit_sbb(Register dst, Register src, int size) {
     arithmetic_op(0x1b, dst, src, size);

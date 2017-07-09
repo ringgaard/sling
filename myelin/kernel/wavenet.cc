@@ -561,7 +561,6 @@ void RegisterWaveNetLibrary(Library *library) {
      .Output(0, DT_FLOAT);
 
   library->Register(new Conv1D());
-  //library->Register(new Conv1DAdd());
   library->Register(new Conv2DBackpropInput());
   library->Register(new ZigZagTanhMulSigmoid());
   library->Register(new Shift());

@@ -1357,6 +1357,26 @@ void Assembler::emit_repmovs(int size) {
   emit(0xA5);
 }
 
+void Assembler::repstosb() {
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit(0xAA);
+}
+
+void Assembler::repstosw() {
+  EnsureSpace ensure_space(this);
+  emit(0x66);  // operand size override
+  emit(0xF3);
+  emit(0xAA);
+}
+
+void Assembler::emit_repstos(int size) {
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit_rex(size);
+  emit(0xAB);
+}
+
 void Assembler::mull(Register src) {
   EnsureSpace ensure_space(this);
   emit_optional_rex_32(src);
