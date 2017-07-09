@@ -24,6 +24,8 @@ DEFINE_bool(intermediate, false, "Compare intermediate with baseline tagger");
 
 DEFINE_int32(repeat, 1, "Number of times test is repeated");
 DEFINE_bool(profile, false, "Profile computation");
+DEFINE_bool(data_profile, false, "Output data instance profile");
+DEFINE_bool(dynamic, false, "Dynamic instance allocation");
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
 DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
 DEFINE_bool(dump_graph, true, "Dump dot graph");
@@ -419,6 +421,7 @@ void RNN::Load(const string &filename) {
   // Compile parser flow.
   if (FLAGS_profile) network_.set_profiling(true);
   if (FLAGS_debug) network_.set_debug(true);
+  if (FLAGS_dynamic) network_.set_dynamic_allocation(true);
   CHECK(network_.Compile(flow, library_));
 
   // Get computation for each function.
@@ -430,6 +433,10 @@ void RNN::Load(const string &filename) {
   if (FLAGS_dump_cell) {
     std::cout << lr_->ToString() << "\n";
     std::cout.flush();
+  }
+  if (FLAGS_data_profile) {
+    DataProfile dprof(lr_);
+    File::WriteContents("/tmp/tagger-data.svg", dprof.AsSVG());
   }
 
   // Get connectors.
