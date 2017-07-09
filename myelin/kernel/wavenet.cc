@@ -131,13 +131,11 @@ class Conv1D : public Kernel {
 
     // Compute sizes.
     int64 batches = in->dim(0);
-    int64 in_width = in->dim(1);
-    int64 out_width = out->dim(1);
-    int64 filter_width = filter->dim(0) * filter->dim(1);
+    int64 in_size = in->dim(1);
+    int64 out_size = out->dim(1);
+    int64 filter_size = filter->dim(0) * filter->dim(1);
     int64 in_channels = filter->dim(2);
     int64 out_channels = filter->dim(3);
-    int64 in_size = in_width * in_channels;
-    int64 out_size = out_width * out_channels;
 
     if (out_channels == 1) {
       LOG(INFO) << "Size 1 filter not yet implemented";
@@ -146,26 +144,27 @@ class Conv1D : public Kernel {
     }
 
     // Compute the number of unrolls.
-    int unrolls = out_channels / 8;
-    if (unrolls > kMaxUnrolls) unrolls = kMaxUnrolls;
+    int unrolls = 1;
+    for (int i = 2; i <= kMaxUnrolls; ++i) {
+      if (out_channels % (i * 8) == 0) unrolls = i;
+    }
+    int blocks = out_channels / (unrolls * 8);
 
     LOG(INFO) << "Batches " << batches
               << " in size: " << in_size
               << " out size: " << out_size
-              << " filter size: " << filter_width
-              << " unrolls: " << unrolls;
+              << " filter size: " << filter_size
+              << " in channels: " << in_channels
+              << " out channels: " << out_channels
+              << " unrolls: " << unrolls
+              << " blocks: " << blocks;
+    step->set_variant(std::to_string(unrolls) + "*" +
+                      std::to_string(blocks) + " " +
+                      std::to_string(filter->size() / 1024) + "k");
 
     // Allocate registers.
     Registers &rr = masm->rr();
     SIMDRegisters &mm = masm->mm();
-    Register input = rr.alloc();
-    Register output = rr.alloc();
-    Register batch = rr.alloc();
-    Register colofs = rr.alloc();
-    Register rowofs = rr.alloc();
-    Register filt = rr.alloc();
-    Register fstart = rr.alloc();
-    Register fptr = rr.alloc();
     YMMRegister elem = mm.allocy();
     YMMRegister acc = mm.allocy();
     std::vector<YMMRegister> sum;
@@ -174,36 +173,58 @@ class Conv1D : public Kernel {
     }
 
     // Load tensor locations.
+    Register input = rr.alloc();
+    Register output = rr.alloc();
+    Register filt = rr.alloc();
     __ LoadTensorAddress(input, in);
     __ LoadTensorAddress(output, out);
     __ LoadTensorAddress(filt, filter);
 
+    // Compute filter end address.
+    Register fend = rr.alloc();
+    int filter_bytes = filter_size * in_channels * out_channels * sizeof(float);
+    __ leaq(fend, Operand(filt, filter_bytes));
+
     // Loop over batches.
-    Label l1;
+    Register batch = rr.alloc();
+    Label batch_loop;
     if (batches > 0) {
       __ xorq(batch, batch);
-      __ bind(&l1);
+      __ bind(&batch_loop);
     }
 
+    // Loop over input rows.
+    Register row = rr.alloc();
+    Label row_loop;
+    __ xorq(row, row);
+    __ bind(&row_loop);
+
     // Loop over filter column blocks.
-    Label l2;
-    __ movq(fstart, filt);
-    __ xorq(colofs, colofs);
-    __ bind(&l2);
+    Label filter_block_loop;
+    Register fptr = rr.alloc();
+    Register col = rr.alloc();
+    if (blocks > 1) {
+      __ xorq(col, col);
+      __ bind(&filter_block_loop);
+      __ leaq(fptr, Operand(filt, col, times_4));
+    } else {
+      __ movq(fptr, filt);
+    }
 
     // Initialize block with zero.
+    Register inptr = rr.alloc();
+      __ movq(inptr, input);
     for (int i = 0; i < unrolls; ++i) {
       __ vxorps(sum[i], sum[i], sum[i]);
     }
-    __ movq(fptr, fstart);
-    __ xorq(rowofs, rowofs);
 
     // Inner loop over filter rows.
-    Label l3;
-    __ bind(&l3);
+    Label filter_row_loop;
+    __ bind(&filter_row_loop);
 
     // Load x[row].
-    __ vbroadcastss(elem, Operand(input, rowofs));
+    __ vbroadcastss(elem, Operand(inptr));
+    __ addq(inptr, Immediate(sizeof(float)));
 
     // Multiply x[row] with f[row,col:col+n] and add to sum.
     for (int i = 0; i < unrolls; ++i) {
@@ -216,27 +237,34 @@ class Conv1D : public Kernel {
     }
 
     // Next filter row.
-    __ addq(fptr, Immediate(filter->stride(0)));
-    __ addq(rowofs, Immediate(sizeof(float)));
-    __ cmpq(rowofs, Immediate(in_size * sizeof(float)));
-    __ j(less, &l3);
+    __ addq(fptr, Immediate(filter->stride(2)));
+    __ cmpq(fptr, fend);
+    __ j(less, &filter_row_loop);
 
     // Save to y[col:col+n].
     for (int i = 0; i < unrolls; ++i) {
-      __ vmovaps(Operand(output, colofs, times_1, i * 32), sum[i]);
+      __ vmovaps(Operand(output, i * 32), sum[i]);
     }
+    __ addq(output, Immediate(unrolls * 32));
 
     // Next filter column block.
-    __ addq(fstart, Immediate(unrolls * 32));
-    __ addq(colofs, Immediate(unrolls * 32));
-    __ cmpq(colofs, Immediate(out_channels * sizeof(float)));
-    __ j(less, &l2);
+    if (blocks > 1) {
+      __ addq(col, Immediate(unrolls * 32));
+      __ cmpq(col, Immediate(out_channels * sizeof(float)));
+      __ j(less, &filter_block_loop);
+    }
+
+    // Next input row.
+    __ incq(row);
+    __ addq(input, Immediate(in->stride(1)));
+    __ cmpq(row, Immediate(in_size));
+    __ j(less, &row_loop);
 
     // Next batch.
     if (batches > 0) {
       __ incq(batch);
       __ cmpq(batch, Immediate(batches));
-      __ j(less, &l1);
+      __ j(less, &batch_loop);
     }
   }
 
@@ -245,11 +273,11 @@ class Conv1D : public Kernel {
     Tensor *filter = step->input(2);
     Tensor *out = step->output(0);
     int64 batch = in->dim(0);
-    int64 out_width = out->dim(1);
-    int64 filter_width = filter->dim(0) * filter->dim(1);
+    int64 out_size = out->dim(1);
+    int64 filter_size = filter->dim(0) * filter->dim(1);
     int64 in_channels = filter->dim(2);
     int64 out_channels = filter->dim(3);
-    return batch * out_width * filter_width * in_channels * out_channels;
+    return batch * out_size * filter_size * in_channels * out_channels * 2;
   }
 };
 

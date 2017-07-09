@@ -5,6 +5,7 @@
 
 #include "base/init.h"
 #include "base/logging.h"
+#include "file/file.h"
 #include "myelin/compute.h"
 #include "myelin/flow.h"
 #include "myelin/graph.h"
@@ -216,6 +217,9 @@ int main(int argc, char *argv[]) {
 
   distil->WriteCodeToFile("/tmp/distil.bin");
 
+  DataProfile dprof(distil);
+  File::WriteContents("/tmp/distil-data.svg", dprof.AsSVG());
+
   int noops = 0;
   for (auto *step : distil->steps()) {
     if (step->noop()) noops++;
@@ -312,7 +316,7 @@ int main(int argc, char *argv[]) {
     data.Compute();
   }
 
-  Profile profile(&data);
+  Profile profile(&data, Profile::COMPLEXITY);
   std::cout << profile.ASCIIReport() << "\n";
 #endif
 
