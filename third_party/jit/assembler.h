@@ -560,6 +560,11 @@ class Assembler : public CodeGenerator {
   void setcc(Condition cc, Register reg);
   void rdtsc();
 
+  void prefetcht0(const Operand &src) { emit_prefetch(src, 1); }
+  void prefetcht1(const Operand &src) { emit_prefetch(src, 2); }
+  void prefetcht2(const Operand &src) { emit_prefetch(src, 3); }
+  void prefetchnta(const Operand &src) { emit_prefetch(src, 0); }
+
   // Label operations & relative jumps (PPUM Appendix D)
   //
   // Takes a branch opcode (cc) and a label (L) and generates
@@ -3066,6 +3071,8 @@ class Assembler : public CodeGenerator {
   void emit_xor(const Operand &dst, Register src, int size) {
     arithmetic_op(0x31, src, dst, size);
   }
+
+  void emit_prefetch(const Operand &src, int subcode);
 
   // Most BMI instructions are similiar.
   void bmi1q(byte op, Register reg, Register vreg, Register rm);

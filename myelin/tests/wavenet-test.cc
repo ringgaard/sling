@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << flow.ops().size() << " ops";
   LOG(INFO) << flow.vars().size() << " vars";
 
-#if 1
+#if 0
   std::cout << flow.ToString();
   std::cout.flush();
 #endif
@@ -241,7 +241,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << shared << " shared";
   LOG(INFO) << distil->instance_size() << " bytes instance";
 
-#if 1
+#if 0
   std::cout << distil->ToString();
   std::cout.flush();
 #endif

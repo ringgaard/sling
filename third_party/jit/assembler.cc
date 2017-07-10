@@ -1834,6 +1834,13 @@ void Assembler::emit_test(const Operand &op, Register reg, int size) {
   emit_operand(reg, op);
 }
 
+void Assembler::emit_prefetch(const Operand &src, int subcode) {
+  EnsureSpace ensure_space(this);
+  emit(0x0F);
+  emit(0x18);
+  emit_operand(subcode, src);
+}
+
 // FPU instructions.
 
 void Assembler::fld(int i) {

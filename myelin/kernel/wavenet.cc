@@ -70,10 +70,6 @@ class WaveNetTransformer : public Transformer {
 // 1D convolution.
 class Conv1D : public Kernel {
  public:
-  // Maximum number of loop unrolls.
-  static const int kMaxUnrolls = 8;
-
-  string Name() override { return "WNConv1D"; }
   string Operation() override { return "Conv1D"; }
 
   bool Supports(Step *step) override {
@@ -101,9 +97,6 @@ class Conv1D : public Kernel {
     if (filter->type() != DT_FLOAT) return false;
     if (out->type() != DT_FLOAT) return false;
 
-    // Output filter size must be a one or a multiple of 8.
-    if (out->dim(2) != 1 && out->dim(2) % 8 != 0) return false;
-
     return true;
   }
 
@@ -123,6 +116,36 @@ class Conv1D : public Kernel {
     out->SetRequiredOrder(ROW_MAJOR);
   }
 
+  int64 Complexity(const Step *step) override {
+    Tensor *in = step->input(0);
+    Tensor *filter = step->input(2);
+    Tensor *out = step->output(0);
+    int64 batch = in->dim(0);
+    int64 out_size = out->dim(1);
+    int64 filter_size = filter->dim(0) * filter->dim(1);
+    int64 in_channels = filter->dim(2);
+    int64 out_channels = filter->dim(3);
+    return batch * out_size * filter_size * in_channels * out_channels * 2;
+  }
+};
+
+// Vertical 1D convolution where output filter size is a multiple of 8.
+class Conv1DV : public Conv1D {
+ public:
+  // Maximum number of loop unrolls.
+  static const int kMaxUnrolls = 8;
+
+  string Name() override { return "WNConv1DV"; }
+
+  bool Supports(Step *step) override {
+    if (!Conv1D::Supports(step)) return false;
+
+    // Output filter size must be a multiple of 8.
+    if (step->output(0)->dim(2) % 8 != 0) return false;
+
+    return true;
+  }
+
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get inputs and outputs.
     Tensor *in = step->input(0);
@@ -132,16 +155,9 @@ class Conv1D : public Kernel {
     // Compute sizes.
     int64 batches = in->dim(0);
     int64 in_size = in->dim(1);
-    int64 out_size = out->dim(1);
     int64 filter_size = filter->dim(0) * filter->dim(1);
     int64 in_channels = filter->dim(2);
     int64 out_channels = filter->dim(3);
-
-    if (out_channels == 1) {
-      LOG(INFO) << "Size 1 filter not yet implemented";
-      __ nop();
-      return;
-    }
 
     // Compute the number of unrolls.
     int unrolls = 1;
@@ -150,14 +166,6 @@ class Conv1D : public Kernel {
     }
     int blocks = out_channels / (unrolls * 8);
 
-    LOG(INFO) << "Batches " << batches
-              << " in size: " << in_size
-              << " out size: " << out_size
-              << " filter size: " << filter_size
-              << " in channels: " << in_channels
-              << " out channels: " << out_channels
-              << " unrolls: " << unrolls
-              << " blocks: " << blocks;
     step->set_variant(std::to_string(unrolls) + "*" +
                       std::to_string(blocks) + " " +
                       std::to_string(filter->size() / 1024) + "k");
@@ -188,7 +196,7 @@ class Conv1D : public Kernel {
     // Loop over batches.
     Register batch = rr.alloc();
     Label batch_loop;
-    if (batches > 0) {
+    if (batches > 1) {
       __ xorq(batch, batch);
       __ bind(&batch_loop);
     }
@@ -261,23 +269,160 @@ class Conv1D : public Kernel {
     __ j(less, &row_loop);
 
     // Next batch.
-    if (batches > 0) {
+    if (batches > 1) {
       __ incq(batch);
       __ cmpq(batch, Immediate(batches));
       __ j(less, &batch_loop);
     }
   }
+};
 
-  int64 Complexity(const Step *step) override {
-    Tensor *in = step->input(0);
+// Horizontal 1D convolution where output filter size is 1.
+class Conv1DH1 : public Conv1D {
+ public:
+  // Maximum number of loop unrolls.
+  static const int kMaxUnrolls = 8;
+
+  // Maximum number of adder registers.
+  static const int kMaxAdders = 4;
+
+  string Name() override { return "WNConv1DH1"; }
+
+  bool Supports(Step *step) override {
+    if (!Conv1D::Supports(step)) return false;
+
+    // Output filter size must be 1.
     Tensor *filter = step->input(2);
-    Tensor *out = step->output(0);
-    int64 batch = in->dim(0);
-    int64 out_size = out->dim(1);
     int64 filter_size = filter->dim(0) * filter->dim(1);
     int64 in_channels = filter->dim(2);
     int64 out_channels = filter->dim(3);
-    return batch * out_size * filter_size * in_channels * out_channels * 2;
+    if (filter_size != 1 || out_channels != 1) return false;
+    if (in_channels % 8 != 0) return false;
+
+    return true;
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get inputs and outputs.
+    Tensor *in = step->input(0);
+    Tensor *filter = step->input(2);
+    Tensor *out = step->output(0);
+
+    // Compute sizes.
+    int64 batches = in->dim(0);
+    int64 in_size = in->dim(1);
+    int64 in_channels = filter->dim(2);
+
+    // Compute the number of unrolls.
+    int unrolls = 1;
+    for (int i = 2; i <= kMaxUnrolls; ++i) {
+      if (in_channels % (i * 8) == 0) unrolls = i;
+    }
+    int blocks = in_channels / (unrolls * 8);
+    int adders = unrolls;
+    if (adders > kMaxAdders) adders = kMaxAdders;
+
+    // Allocate registers.
+    Registers &rr = masm->rr();
+    SIMDRegisters &mm = masm->mm();
+    std::vector<YMMRegister> elem;
+    for (int i = 0; i < unrolls; ++i) {
+      elem.push_back(mm.allocy());
+    }
+    std::vector<YMMRegister> sum;
+    for (int i = 0; i < adders; ++i) {
+      sum.push_back(mm.allocy());
+    }
+
+    // Load tensor locations.
+    Register input = rr.alloc();
+    Register output = rr.alloc();
+    Register filt = rr.alloc();
+    __ LoadTensorAddress(input, in);
+    __ LoadTensorAddress(output, out);
+    __ LoadTensorAddress(filt, filter);
+    Register fend = rr.alloc();
+    if (blocks > 1) {
+      __ leaq(fend, Operand(filt, filter->size()));
+    }
+
+    // Loop over batches.
+    Register batch = rr.alloc();
+    Label batch_loop;
+    if (batches > 1) {
+      __ xorq(batch, batch);
+      __ bind(&batch_loop);
+    }
+
+    // Loop over input rows.
+    Register row = rr.alloc();
+    Label row_loop;
+    __ xorq(row, row);
+    __ bind(&row_loop);
+
+    // Compute dot product of input and filter.
+    for (int i = 0; i < adders; ++i) {
+      __ vxorps(sum[i], sum[i], sum[i]);
+    }
+    Register fptr = rr.alloc();
+    __ movq(fptr, filt);
+
+    Label block_loop;
+    __ bind(&block_loop);
+
+    // Compute dot product for block.
+    for (int i = 0; i < unrolls; ++i) {
+      int disp = 8 * i * sizeof(float);
+      __ vmovaps(elem[i], Operand(input, disp));
+      if (masm->Enabled(FMA3)) {
+        __ vfmadd231ps(sum[i % adders], elem[i], Operand(fptr, disp));
+      } else {
+        __ vmulps(elem[i], elem[i], Operand(fptr, disp));
+        __ vaddps(sum[i % adders], sum[i % adders], elem[i]);
+      }
+    }
+
+    // Move to next block.
+      __ addq(input, Immediate(32 * unrolls));
+    if (blocks > 1) {
+      __ addq(fptr, Immediate(32 * unrolls));
+      __ cmpq(fptr, fend);
+      __ j(less, &block_loop);
+    }
+
+    // Sum adders in sum[0].
+    if (adders == 4) {
+      __ vaddps(sum[0], sum[0], sum[2]);
+      __ vaddps(sum[1], sum[1], sum[3]);
+      __ vaddps(sum[0], sum[0], sum[1]);
+    } else {
+      for (int i = 1; i < adders; ++i) {
+        __ vaddps(sum[0], sum[0], sum[i]);
+      }
+    }
+
+    // Add elements in sum[0] horizontally.
+    YMMRegister acc = mm.allocy();
+    __ vperm2f128(acc, sum[0], sum[0], 1);
+    __ vhaddps(sum[0], sum[0], acc);
+    __ vhaddps(sum[0], sum[0], sum[0]);
+    __ vhaddps(sum[0], sum[0], sum[0]);
+
+    // Save result in output.
+    __ vmovss(Operand(output, row, times_4), sum[0]);
+
+    // Next input row.
+    __ incq(row);
+    __ addq(input, Immediate(in->stride(1)));
+    __ cmpq(row, Immediate(in_size));
+    __ j(less, &row_loop);
+
+    // Next batch.
+    if (batches > 1) {
+      __ incq(batch);
+      __ cmpq(batch, Immediate(batches));
+      __ j(less, &batch_loop);
+    }
   }
 };
 
@@ -560,7 +705,8 @@ void RegisterWaveNetLibrary(Library *library) {
      .Input(1, DT_INT64, 0)
      .Output(0, DT_FLOAT);
 
-  library->Register(new Conv1D());
+  library->Register(new Conv1DV());
+  library->Register(new Conv1DH1());
   library->Register(new Conv2DBackpropInput());
   library->Register(new ZigZagTanhMulSigmoid());
   library->Register(new Shift());
