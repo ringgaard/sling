@@ -445,27 +445,25 @@ class Conv2DBackpropInput : public Kernel {
 // Zigzag index generator for computing expression over even and odd elements.
 class ZigZag : public IndexGenerator {
  public:
-  ZigZag(Tensor *x, Tensor *y) : x_(x), y_(y) {}
+  ZigZag(Tensor *x, Tensor *y, MacroAssembler *masm)
+      : IndexGenerator(masm), x_(x), y_(y) {}
 
   void Initialize(size_t vecsize) override {
     vecsize_ = vecsize;
     ReserveAuxYMMRegisters(4);
   }
 
-  bool AllocateRegisters(MacroAssembler *masm) override {
+  bool AllocateRegisters() override {
     // Allocate temp vars.
-    if (!IndexGenerator::AllocateRegisters(masm)) return false;
+    if (!IndexGenerator::AllocateRegisters()) return false;
 
     // Allocate loop registers.
-    input_ = masm->rr().try_alloc();
+    input_ = masm_->rr().try_alloc();
     if (!input_.is_valid()) return false;
-    output_ = masm->rr().try_alloc();
+    output_ = masm_->rr().try_alloc();
     if (!output_.is_valid()) return false;
-    count_ = masm->rr().try_alloc();
+    count_ = masm_->rr().try_alloc();
     if (!count_.is_valid()) return false;
-
-    // Save macro assembler for constant generation.
-    masm_ = masm;
 
     return true;
   }
@@ -487,7 +485,9 @@ class ZigZag : public IndexGenerator {
     return nullptr;
   }
 
-  void BeginLoop(MacroAssembler *masm) {
+  void BeginLoop() {
+    MacroAssembler *masm = masm_;
+
     // Load input and output tensors.
     __ LoadTensorAddress(input_, x_);
     __ LoadTensorAddress(output_, y_);
@@ -537,7 +537,9 @@ class ZigZag : public IndexGenerator {
     }
   }
 
-  void EndLoop(MacroAssembler *masm) {
+  void EndLoop() {
+    MacroAssembler *masm = masm_;
+
     __ addq(input_, Immediate(2 * vecsize_));
     __ addq(output_, Immediate(vecsize_));
     __ addq(count_, Immediate(vecsize_));
@@ -560,9 +562,6 @@ class ZigZag : public IndexGenerator {
 
   // Loop label.
   Label loop_;
-
-  // Assembler for generating code and data.
-  MacroAssembler *masm_ = nullptr;
 };
 
 // ZigZagTanhMulSigmoid for computing Mul(Tanh(Even(x)), Sigmoid(Odd(x))).
@@ -594,7 +593,7 @@ class ZigZagTanhMulSigmoid : public Kernel {
     // Initialize zigzag index generator.
     Tensor *input = step->input(1);
     Tensor *output = step->output(0);
-    ZigZag zigzag(input, output);
+    ZigZag zigzag(input, output, masm);
 
     // Select expression generator.
     Type type = output->type();
@@ -605,13 +604,13 @@ class ZigZagTanhMulSigmoid : public Kernel {
 
     // Initialize expression and index generators.
     generator->Initalize(expr, type, 0, &zigzag);
-    zigzag.AllocateRegisters(masm);
+    zigzag.AllocateRegisters();
 
     // Generate loop.
     generator->GenerateInit(masm);
-    zigzag.BeginLoop(masm);
+    zigzag.BeginLoop();
     generator->GenerateBody(masm);
-    zigzag.EndLoop(masm);
+    zigzag.EndLoop();
 
     delete generator;
   }
