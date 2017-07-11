@@ -139,7 +139,16 @@ class Resize : public Kernel {
     bool shared = x->SharedWith(y);
     bool pad = y->size() > x->size();
     bool crop = y->size() < x->size();
-    if (shared && !pad && !crop) return;
+    if (shared && !pad && !crop) {
+      step->set_variant("nop");
+      return;
+    } else if (!shared) {
+      step->set_variant("copy");
+    } else if (pad) {
+      step->set_variant("pad");
+    } else if (crop) {
+      step->set_variant("crop");
+    }
 
     // Allocate registers.
     Register src = masm->rr().alloc_fixed(rsi);

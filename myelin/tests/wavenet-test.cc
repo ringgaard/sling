@@ -312,7 +312,7 @@ int main(int argc, char *argv[]) {
 #if 1
   // Run instance
   Instance data(distil);
-  for (int i = 0; i < 1; ++i) {
+  for (int i = 0; i < 10; ++i) {
     data.Compute();
   }
 

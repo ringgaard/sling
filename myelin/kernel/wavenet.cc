@@ -372,7 +372,7 @@ class Conv1DH1 : public Conv1D {
 
     // Compute dot product for block.
     for (int i = 0; i < unrolls; ++i) {
-      int disp = 8 * i * sizeof(float);
+      int disp = i * 32;
       __ vmovaps(elem[i], Operand(input, disp));
       if (masm->Enabled(FMA3)) {
         __ vfmadd231ps(sum[i % adders], elem[i], Operand(fptr, disp));
@@ -383,7 +383,7 @@ class Conv1DH1 : public Conv1D {
     }
 
     // Move to next block.
-      __ addq(input, Immediate(32 * unrolls));
+    __ addq(input, Immediate(32 * unrolls));
     if (blocks > 1) {
       __ addq(fptr, Immediate(32 * unrolls));
       __ cmpq(fptr, fend);
