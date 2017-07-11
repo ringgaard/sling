@@ -47,11 +47,31 @@ int main(int argc, char *argv[]) {
   }
 
   string prefix = "RNN0_2/RNN/while/time_step/rnn_step/LSTMCell/";
-  flow.Var(prefix + "hidden_in/hidden_tm1:0")->data = nullptr;
-  flow.Var(prefix + "hidden_in/cell_tm1:0")->data = nullptr;
+
+  Flow::Connector *lstm_h = flow.AddConnector("lstm_h");
+  Flow::Connector *lstm_c = flow.AddConnector("lstm_c");
+
+  auto *c_in = flow.Var(prefix + "hidden_in/cell_tm1:0");
+  auto *h_in = flow.Var(prefix + "hidden_in/hidden_tm1:0");
+  auto *c_out = flow.Var(prefix + "c_out:0");
+  auto *h_out = flow.Var(prefix + "hidden_t/h_out:0");
+
+  h_in->data = nullptr;
+  h_in->ref = true;
+  h_out->data = nullptr;
+  h_out->ref = true;
+
+  c_in->data = nullptr;
+  c_in->ref = true;
+  c_out->data = nullptr;
+  c_out->ref = true;
+
+  lstm_h->AddLink(h_in);
+  lstm_h->AddLink(h_out);
+  lstm_c->AddLink(c_in);
+  lstm_c->AddLink(c_out);
+
   flow.Var(prefix + "inputs:0")->data = nullptr;
-  flow.Var(prefix + "hidden_t/h_out:0")->out = true;
-  flow.Var(prefix + "c_out:0")->out = true;
 
   flow.Var("strided_slice_11:0")->name = "word1";
   flow.Var("strided_slice_12:0")->name = "word2";
@@ -105,9 +125,23 @@ int main(int argc, char *argv[]) {
     if (FLAGS_repeat > 0) {
       LOG(INFO) << "Profile " << cell_name;
       Instance data(cell);
-      data.Clear();
-      for (int i = 0; i < FLAGS_repeat; ++i) {
-        data.Compute();
+      if (cell_name == "lstmfw") {
+        Channel control(network.GetConnector("lstm_c"));
+        control.resize(2);
+        data.Set(cell->GetParameter(c_in->name), &control, 0);
+        data.Set(cell->GetParameter(c_out->name), &control, 1);
+        Channel hidden(network.GetConnector("lstm_h"));
+        hidden.resize(2);
+        data.Set(cell->GetParameter(h_in->name), &hidden, 0);
+        data.Set(cell->GetParameter(h_out->name), &hidden, 1);
+
+        for (int i = 0; i < FLAGS_repeat; ++i) {
+          data.Compute();
+        }
+      } else {
+        for (int i = 0; i < FLAGS_repeat; ++i) {
+          data.Compute();
+        }
       }
 
       Profile profile(&data);
