@@ -56,9 +56,8 @@ bool ElementwiseIndexGenerator::InitializeLocator(Tensor *var, Locator *loc) {
   } else if (var->shape() == shape_) {
     // Variable has same shape as output; use simple iterator.
     loc->iterator = NewIterator(SIMPLE);
-  } else {
+  } else if (var->rank() <= shape_.rank()) {
     // Find common suffix between variable and output.
-    CHECK_LE(var->rank(), shape_.rank());
     int n = 1;
     int d1 = var->rank() - 1;
     int d2 = shape_.rank() - 1;
@@ -82,9 +81,9 @@ bool ElementwiseIndexGenerator::InitializeLocator(Tensor *var, Locator *loc) {
         loc->iterator = NewIterator(REPEAT);
         loc->iterator->size = n;
       }
-    } else if (d1 >= 0 && d2 >= 0 && var->dim(d1) == 1) {
-      // Create broadcast iterator.
-      CHECK_EQ(var->elements() * shape_.dim(d2), shape_.elements());
+    } else if (d1 >= 0 && d2 >= 0 && var->dim(d1) == 1 &&
+               var->elements() * shape_.dim(d2) == shape_.elements()) {
+      // Create broadcast iterator over one dimension.
       loc->iterator = NewIterator(BROADCAST);
       loc->iterator->size = n;
       loc->iterator->broadcast = shape_.dim(d2);
@@ -94,6 +93,8 @@ bool ElementwiseIndexGenerator::InitializeLocator(Tensor *var, Locator *loc) {
                    << " output: " << shape_.ToString();
       return false;
     }
+  } else {
+    return false;
   }
 
   return true;

@@ -21,20 +21,6 @@ namespace myelin {
 
 using namespace jit;
 
-bool IndexGenerator::RegisterOverflow(int *usage) {
-  // Set up macro assembler for collecting register allocations.
-  static const int kMaxRegisterUsage = 12;
-  MacroAssembler masm(nullptr, 0);
-  masm.rr().usage(kMaxRegisterUsage);
-
-  // Let index generator allocate registers.
-  if (!AllocateRegisters(&masm)) return false;
-
-  // Compute the number of register used.
-  *usage = kMaxRegisterUsage - masm.rr().num_free();
-  return true;
-}
-
 bool IndexGenerator::AllocateRegisters(MacroAssembler *masm) {
   // Allocate fixed registers.
   bool ok = true;

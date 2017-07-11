@@ -51,6 +51,7 @@ class IndexGenerator {
   jit::YMMRegister ymm(int idx) {
     return jit::YMMRegister::from_code(mmregs_[idx]);
   }
+
   // Return auxiliary register.
   jit::Register aux(int idx) { return aux_[idx]; }
   jit::XMMRegister xmmaux(int idx) {
@@ -60,17 +61,20 @@ class IndexGenerator {
     return jit::YMMRegister::from_code(mmaux_[idx]);
   }
 
-  // Reserve registers.
+  // Reserve fixed register for generating instructions that operate on
+  // special registers.
   void ReserveFixedRegister(jit::Register reg);
+
+  // Reserve registers used for holding intermediate values in expressions.
   void ReserveRegisters(int count);
-  void ReserveAuxRegisters(int count);
   void ReserveXMMRegisters(int count);
-  void ReserveAuxXMMRegisters(int count);
-  void ReserveYMMRegisters(int count);
   void ReserveAuxYMMRegisters(int count);
 
-  // Check if generator will cause register overflow.
-  bool RegisterOverflow(int *usage);
+  // Reserve auxiliary registers for expression generators that need extra
+  // registers for compiling expression operations.
+  void ReserveAuxRegisters(int count);
+  void ReserveAuxXMMRegisters(int count);
+  void ReserveYMMRegisters(int count);
 
  private:
   std::vector<jit::Register> fixed_;  // reserved fixed registers
