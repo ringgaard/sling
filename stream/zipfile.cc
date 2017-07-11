@@ -31,19 +31,19 @@ ZipFileReader::ZipFileReader(const string &filename, int block_size) {
   uint64 size = file_->Size();
   CHECK_GE(size, sizeof(EOCDRecord));
   CHECK(file_->Seek(size - sizeof(EOCDRecord)));
-  EOCDRecord eodc;
-  CHECK_EQ(file_->ReadOrDie(&eodc, sizeof(EOCDRecord)), sizeof(EOCDRecord));
-  CHECK_EQ(eodc.signature, 0x06054b50);
-  CHECK_LE(eodc.dirofs + eodc.dirsize, size);
+  EOCDRecord eocd;
+  CHECK_EQ(file_->ReadOrDie(&eocd, sizeof(EOCDRecord)), sizeof(EOCDRecord));
+  CHECK_EQ(eocd.signature, 0x06054b50);
+  CHECK_LE(eocd.dirofs + eocd.dirsize, size);
 
   // Read file directory.
-  char *directory = new char[eodc.dirsize];
-  CHECK(file_->Seek(eodc.dirofs));
-  CHECK_EQ(file_->ReadOrDie(directory, eodc.dirsize), eodc.dirsize);
+  char *directory = new char[eocd.dirsize];
+  CHECK(file_->Seek(eocd.dirofs));
+  CHECK_EQ(file_->ReadOrDie(directory, eocd.dirsize), eocd.dirsize);
   char *dirptr = directory;
-  char *dirend = dirptr + eodc.dirsize;
-  files_.resize(eodc.numrecs);
-  for (int i = 0; i < eodc.numrecs; ++i) {
+  char *dirend = dirptr + eocd.dirsize;
+  files_.resize(eocd.numrecs);
+  for (int i = 0; i < eocd.numrecs; ++i) {
     // Get next entry in directory.
     CHECK_LE(dirptr + sizeof(CDFile), dirend);
     CDFile *entry = reinterpret_cast<CDFile *>(dirptr);
