@@ -72,6 +72,42 @@ class ExpressionGenerator {
                                      Type type, int size);
 
  protected:
+  // Comparison types. These are Intel comparison predicates used by CMPSS.
+  enum Comparison {
+    CMP_EQ_OQ    = 0,
+    CMP_LT_OS    = 1,
+    CMP_LE_OS    = 2,
+    CMP_UNORD_Q  = 3,
+    CMP_NEQ_UQ   = 4,
+    CMP_NLT_US   = 5,
+    CMP_NLE_US   = 6,
+    CMP_ORD_Q    = 7,
+    CMP_EQ_UQ    = 8,
+    CMP_NGE_US   = 9,
+    CMP_NGT_US   = 10,
+    CMP_FALSE_OQ = 11,
+    CMP_NEQ_OQ   = 12,
+    CMP_GE_OS    = 13,
+    CMP_GT_OS    = 14,
+    CMP_TRUE_UQ  = 15,
+    CMP_EQ_OS    = 16,
+    CMP_LT_OQ    = 17,
+    CMP_LE_OQ    = 18,
+    CMP_UNORD_S  = 19,
+    CMP_NEQ_US   = 20,
+    CMP_NLT_UQ   = 21,
+    CMP_NLE_UQ   = 22,
+    CMP_ORD_S    = 23,
+    CMP_EQ_US    = 24,
+    CMP_NGE_UQ    = 25,
+    CMP_NGT_UQ    = 26,
+    CMP_FALSE_OS  = 27,
+    CMP_NEQ_OS    = 28,
+    CMP_GE_OQ     = 29,
+    CMP_GT_OQ     = 30,
+    CMP_TRUE_US   = 31,
+  };
+
   // Assembler instruction methods for different instruction formats.
   typedef void (Assembler::*OpReg)(Register);
   typedef void (Assembler::*OpMem)(const Operand &);

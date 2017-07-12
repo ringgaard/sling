@@ -67,6 +67,8 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
       case Express::MOV:
         if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
+          // This uses the floating point version of xor to avoid bypass delays
+          // between integer and floating point units.
           switch (type_) {
             case DT_FLOAT:
               __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
@@ -153,16 +155,16 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
             masm, 2);
         break;
       case Express::CMPEQOQ:
-        GenerateCompare(instr, masm, 0);
+        GenerateCompare(instr, masm, CMP_EQ_OQ);
         break;
       case Express::CMPLTOQ:
-        GenerateCompare(instr, masm, 17);
+        GenerateCompare(instr, masm, CMP_LT_OQ);
         break;
       case Express::CMPGTOQ:
-        GenerateCompare(instr, masm, 30);
+        GenerateCompare(instr, masm, CMP_GT_OQ);
         break;
       case Express::CMPNGEUQ:
-        GenerateCompare(instr, masm, 25);
+        GenerateCompare(instr, masm, CMP_NGE_UQ);
         break;
       case Express::AND:
       case Express::OR:
@@ -191,7 +193,7 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
 
   // Generate left/right shift.
   void GenerateShift(Express::Op *instr, MacroAssembler *masm,
-                     int left, int bits) {
+                     bool left, int bits) {
     // Make sure source is in a register.
     CHECK(instr->dst != -1);
     int src = instr->src;
@@ -228,7 +230,9 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
     }
   }
 
-  // Generate rounding op.
+  // Generate rounding op. Please notice that GenerateXMMFltOp cannot be used
+  // here because it is a three register op but the arguments are in dst and
+  // src and not src1 and src2.
   void GenerateRound(Express::Op *instr, MacroAssembler *masm, int8 code) {
     if (instr->dst != -1 && instr->src != -1) {
       switch (type_) {

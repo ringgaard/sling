@@ -51,6 +51,8 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
       case Express::MOV:
         if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
+          // This uses the floating point version of xor to avoid bypass delays
+          // between integer and floating point units.
           switch (type_) {
             case DT_FLOAT:
               __ xorps(xmm(instr->dst), xmm(instr->dst));
@@ -101,16 +103,16 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
             masm);
         break;
       case Express::CMPEQOQ:
-        GenerateCompare(instr, masm, 0);
+        GenerateCompare(instr, masm, CMP_EQ_OQ);
         break;
       case Express::CMPLTOQ:
-        GenerateCompare(instr, masm, 17);
+        GenerateCompare(instr, masm, CMP_LT_OQ);
         break;
       case Express::CMPGTOQ:
-        GenerateCompare(instr, masm, 30);
+        GenerateCompare(instr, masm, CMP_GT_OQ);
         break;
       case Express::CMPNGEUQ:
-        GenerateCompare(instr, masm, 25);
+        GenerateCompare(instr, masm, CMP_NGE_UQ);
         break;
       case Express::AND:
         GenerateXMMFltOp(instr,
@@ -163,7 +165,7 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
 
   // Generate left/right shift.
   void GenerateShift(Express::Op *instr, MacroAssembler *masm,
-                     int left, int bits) {
+                     bool left, int bits) {
     // Move argument to destination register
     CHECK(instr->dst != -1);
     if (instr->src != -1) {
