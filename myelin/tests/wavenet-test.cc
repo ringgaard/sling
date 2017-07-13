@@ -18,6 +18,10 @@
 
 DEFINE_string(input, "local/wavenet.flow", "input file with flow model");
 DEFINE_bool(zigzag, false, "Test ZigZag kernels");
+DEFINE_bool(dump_flow, false, "Dump flow");
+DEFINE_bool(dump_cell, false, "Dump cell");
+DEFINE_bool(profile, false, "Profile benchmark");
+DEFINE_int32(repeat, 1, "Number of times benchmark is repeated");
 
 using namespace sling;
 using namespace sling::jit;
@@ -161,14 +165,6 @@ void ZigZagTest() {
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
-  // Select CPU features.
-  //jit::CPU::Disable(jit::SSE2);
-  //jit::CPU::Disable(jit::SSE3);
-  //jit::CPU::Disable(jit::SSE4_1);
-  //jit::CPU::Disable(jit::AVX);
-  //jit::CPU::Disable(jit::AVX2);
-  //jit::CPU::Disable(jit::FMA3);
-
   // Test ZigZag kernels.
   if (FLAGS_zigzag) ZigZagTest();
 
@@ -190,11 +186,6 @@ int main(int argc, char *argv[]) {
   auto *seed = flow.AddVariable("input_seed", DT_INT64, {});
   flow.Op("random_uniform/RandomUniform")->AddInput(seed);
 
-#if 0
-  GraphOptions ropts;
-  FlowToDotGraphFile(flow, ropts, "/tmp/raw-wavenet.dot");
-#endif
-
   // Analyze flow.
   flow.Analyze(library);
   DCHECK(flow.IsConsistent());
@@ -202,14 +193,14 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << flow.ops().size() << " ops";
   LOG(INFO) << flow.vars().size() << " vars";
 
-#if 0
-  std::cout << flow.ToString();
-  std::cout.flush();
-#endif
+  if (FLAGS_dump_flow) {
+    std::cout << flow.ToString();
+    std::cout.flush();
+  }
 
   Network network;
   network.set_dynamic_allocation(true);
-  network.set_profiling(true);
+  if (FLAGS_profile) network.set_profiling(true);
   CHECK(network.Compile(flow, library));
 
   // Inspect with: objdump -D -Mintel,x86-64 -b binary -m i386 /tmp/distil.bin
@@ -241,29 +232,15 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << shared << " shared";
   LOG(INFO) << distil->instance_size() << " bytes instance";
 
-#if 0
-  std::cout << distil->ToString();
-  std::cout.flush();
-#endif
+  if (FLAGS_dump_cell) {
+    std::cout << distil->ToString();
+    std::cout.flush();
+  }
 
   // Convert to DOT graph.
   // To convert to SVG use:
   // dot -Gnslimit=10 /tmp/wavenet.dot -Tsvg > /tmp/wavenet.svg
   GraphOptions options;
-  //options.edge_thickness_scalar = 0.3;
-
-#if 0
-  GraphNodeOptions noop_options = options.ops;
-  noop_options.fillcolor = "#BDDBDB";
-  noop_options.color = "#849999";
-  for (auto *step : distil->steps()) {
-    if (step->noop()) {
-      options.custom_ops[step->name()] = noop_options;
-    }
-  }
-#endif
-
-#if 1
   GraphNodeOptions shared_options = options.ops;
   shared_options.fillcolor = "#BDDBDB";
   shared_options.color = "#849999";
@@ -272,53 +249,19 @@ int main(int argc, char *argv[]) {
       options.custom_ops[step->name()] = shared_options;
     }
   }
-#endif
-
   FlowToDotGraphFile(flow, options, "/tmp/wavenet.dot");
 
-#if 0
-  size_t size = 0;
-  size_t elems = 0;
-  for (Tensor *var : network.parameters()) {
-    size += var->size();
-    elems += var->elements();
-  }
-  LOG(INFO) << size << " bytes total";
-  LOG(INFO) << elems << " elements total";
-#endif
-
-#if 0
-  for (Step *step : distil->steps()) {
-    if (step->type() == "Conv1D") {
-      std::cout << "Conv1D    " << step->complexity() << " "
-                << step->input(0)->shape().ToString() << " "
-                << step->input(2)->shape().ToString() << " "
-                << step->output(0)->shape().ToString() << " "
-                << step->name() << " "
-                << "\n";
-    }
-    if (step->type() == "Conv1DAdd") {
-      std::cout << "Conv1DAdd " << step->complexity() << " "
-                << step->input(0)->shape().ToString() << " "
-                << step->input(2)->shape().ToString() << " "
-                << step->input(3)->shape().ToString() << " "
-                << step->output(0)->shape().ToString() << " "
-                << step->name() << " "
-                << "\n";
-    }
-  }
-#endif
-
-#if 1
   // Run instance
   Instance data(distil);
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < FLAGS_repeat; ++i) {
     data.Compute();
   }
 
-  Profile profile(&data, Profile::COMPLEXITY);
-  std::cout << profile.ASCIIReport() << "\n";
-#endif
+  if (FLAGS_profile) {
+    Profile profile(&data, Profile::COMPLEXITY);
+    std::cout << profile.ASCIIReport() << "\n";
+  }
 
   return 0;
 }
+
