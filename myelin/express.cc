@@ -163,7 +163,7 @@ static const string opname[] = {
 };
 
 template <class Dest, class Source>
-inline Dest bit_cast(const Source& source) {
+inline Dest bit_cast(const Source &source) {
   static_assert(sizeof(Dest) == sizeof(Source), "size error");
   Dest dest;
   memcpy(&dest, &source, sizeof(dest));

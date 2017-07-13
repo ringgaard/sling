@@ -47,7 +47,7 @@ namespace jit {
 // bit_cast<Dest,Source> is a template function that implements the
 // equivalent of "*reinterpret_cast<Dest*>(&source)".
 template <class Dest, class Source>
-inline Dest bit_cast(const Source& source) {
+inline Dest bit_cast(const Source &source) {
   static_assert(sizeof(Dest) == sizeof(Source),
                 "Source and destination types should have equal sizes.");
 

@@ -65,7 +65,7 @@ void StripString(char *str, Text remove, char replacewith) {
 }
 
 void StripString(char *str, int len, Text remove, char replacewith) {
-  char* end = str + len;
+  char *end = str + len;
   for (; str < end; ++str) {
     if (remove.find(*str) != Text::npos) {
       *str = replacewith;
@@ -273,7 +273,7 @@ void RemoveExtraWhitespace(string *s) {
 // See comment in header file for a complete description.
 //------------------------------------------------------------------------
 void StripLeadingWhiteSpace(string *str) {
-  char const* const leading = StripLeadingWhiteSpace(
+  char const *const leading = StripLeadingWhiteSpace(
       const_cast<char*>(str->c_str()));
   if (leading != nullptr) {
     string const tmp(leading);
@@ -283,7 +283,7 @@ void StripLeadingWhiteSpace(string *str) {
   }
 }
 
-void StripTrailingWhitespace(string * const s) {
+void StripTrailingWhitespace(string *const s) {
   string::size_type i;
   for (i = s->size(); i > 0 && ascii_isspace((*s)[i - 1]); --i) {}
   s->resize(i);
