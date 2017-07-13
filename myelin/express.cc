@@ -164,6 +164,7 @@ static const string opname[] = {
 
 template <class Dest, class Source>
 inline Dest bit_cast(const Source& source) {
+  static_assert(sizeof(Dest) == sizeof(Source), "size error");
   Dest dest;
   memcpy(&dest, &source, sizeof(dest));
   return dest;
@@ -174,7 +175,7 @@ inline Dest bit_cast(const Source& source) {
 
 // System-defined numeric constants.
 #define FLTCONST(x) {x##f, x}
-#define INTCONST(f) {FLT_FROM_INT(f), DBL_FROM_INT(f)}
+#define INTCONST(a, b) {FLT_FROM_INT(a), DBL_FROM_INT(b)}
 Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
   FLTCONST(0.0),    // ZERO
   FLTCONST(1.0),    // ONE
@@ -185,9 +186,9 @@ Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
 
   FLTCONST(-0.6931471805599453),   // NLN2
 
-  INTCONST(0x00800000),   // MIN_NORM_POS
-  INTCONST(~0x7f800000),  // INV_MANT_MASK
-  INTCONST(0x7f),         // INT127
+  INTCONST(0x00800000, 0x0010000000000000LL),   // MIN_NORM_POS
+  INTCONST(~0x7f800000, ~0x7FF0000000000000LL),  // INV_MANT_MASK
+  INTCONST(0x7f, 0x7ffLL),         // MAX_MANT
 
   // Polynomial coefficients for natural logarithm.
   FLTCONST(0.707106781186547524),  // CEPHES_SQRTHF
@@ -1402,7 +1403,7 @@ Express::Var *Express::Log(Var *x) {
 
   // Part 1: x = frexpf(x, e).
   Var *emm0 = Do(SHR23, x);
-  emm0 = Do(SUBINT, emm0, Number(INT127));
+  emm0 = Do(SUBINT, emm0, Number(MAX_MANT));
   Var *e = Add(Do(CVTINTFLT, emm0), Number(ONE));
 
   // Keep only the fractional part.

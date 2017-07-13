@@ -171,9 +171,7 @@ class Resize : public Kernel {
       __ LoadTensorAddress(dst, y);
 
       // Copy input to output.
-      int size = y->size();
-      if (x->size() < y->size()) size = x->size();
-      __ movq(cnt, Immediate(size));
+      __ movq(cnt, Immediate(std::min(x->size(), y->size())));
       __ repmovsb();
 
       // Pad output if needed.
