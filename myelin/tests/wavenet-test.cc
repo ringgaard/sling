@@ -21,6 +21,8 @@ DEFINE_bool(zigzag, false, "Test ZigZag kernels");
 DEFINE_bool(dump_flow, false, "Dump flow");
 DEFINE_bool(dump_cell, false, "Dump cell");
 DEFINE_bool(profile, false, "Profile benchmark");
+DEFINE_bool(opstat, false, "Output operation statistics");
+DEFINE_bool(custom_deconv, false, "Custom deconvolution kernel");
 DEFINE_int32(repeat, 1, "Number of times benchmark is repeated");
 
 using namespace sling;
@@ -162,6 +164,15 @@ void ZigZagTest() {
   }
 }
 
+void Deconv1D(const TensorData &input,
+              const TensorData &filter,
+              TensorData *output) {
+  LOG(INFO) << "Deconv1D:"
+            << " input: " << input.shape().ToString()
+            << " filter: " << filter.shape().ToString()
+            << " output: " << output->shape().ToString();
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
@@ -172,6 +183,9 @@ int main(int argc, char *argv[]) {
   Library library;
   RegisterTensorflowLibrary(&library);
   RegisterWaveNetLibrary(&library);
+  if (FLAGS_custom_deconv) {
+    library.Register("Deconv1D", "CostumDeconv1D", Deconv1D);
+  }
 
   // Load model.
   Flow flow;
@@ -190,14 +204,13 @@ int main(int argc, char *argv[]) {
   flow.Analyze(library);
   DCHECK(flow.IsConsistent());
 
-  LOG(INFO) << flow.ops().size() << " ops";
-  LOG(INFO) << flow.vars().size() << " vars";
-
+  // Dump flow.
   if (FLAGS_dump_flow) {
     std::cout << flow.ToString();
     std::cout.flush();
   }
 
+  // Compile network.
   Network network;
   network.set_dynamic_allocation(true);
   if (FLAGS_profile) network.set_profiling(true);
@@ -206,47 +219,56 @@ int main(int argc, char *argv[]) {
   // Inspect with: objdump -D -Mintel,x86-64 -b binary -m i386 /tmp/distil.bin
   Cell *distil = network.GetCell("distil");
 
+  // Write generated code.
   distil->WriteCodeToFile("/tmp/distil.bin");
 
-  DataProfile dprof(distil);
-  File::WriteContents("/tmp/distil-data.svg", dprof.AsSVG());
-
-  int noops = 0;
-  for (auto *step : distil->steps()) {
-    if (step->noop()) noops++;
-  }
-  LOG(INFO) << noops << " noops";
-
-  int consts = network.constants().size();
-  int params = 0;
-  int shared = 0;
-  for (auto *t : network.parameters()) {
-    if (t->shared() != nullptr) {
-      shared++;
-    } else {
-      params++;
-    }
-  }
-  LOG(INFO) << consts << " constants";
-  LOG(INFO) << params << " parameters";
-  LOG(INFO) << shared << " shared";
-  LOG(INFO) << distil->instance_size() << " bytes instance";
-
+  // Dump cell.
   if (FLAGS_dump_cell) {
     std::cout << distil->ToString();
     std::cout.flush();
   }
 
+  // Output operation statistics.
+  if (FLAGS_opstat) {
+    LOG(INFO) << flow.ops().size() << " ops";
+    LOG(INFO) << flow.vars().size() << " vars";
+
+    int noops = 0;
+    for (auto *step : distil->steps()) {
+      if (step->noop()) noops++;
+    }
+    LOG(INFO) << noops << " noops";
+
+    int consts = network.constants().size();
+    int params = 0;
+    int shared = 0;
+    for (auto *t : network.parameters()) {
+      if (t->shared() != nullptr) {
+        shared++;
+      } else {
+        params++;
+      }
+    }
+    LOG(INFO) << consts << " constants";
+    LOG(INFO) << params << " parameters";
+    LOG(INFO) << shared << " shared";
+    LOG(INFO) << distil->instance_size() << " bytes instance";
+  }
+
+  // Output data instance diagram.
+  DataProfile dprof(distil);
+  File::WriteContents("/tmp/distil-data.svg", dprof.AsSVG());
+
   // Convert to DOT graph.
   // To convert to SVG use:
   // dot -Gnslimit=10 /tmp/wavenet.dot -Tsvg > /tmp/wavenet.svg
   GraphOptions options;
-  GraphNodeOptions shared_options = options.ops;
-  shared_options.fillcolor = "#BDDBDB";
-  shared_options.color = "#849999";
+  GraphNodeOptions noop = options.ops;
+  noop.fillcolor = "#BDDBDB";
+  noop.color = "#849999";
   for (auto *step : distil->steps()) {
-    if (step->outdegree() > 0 && step->output(0)->shared() != nullptr) {
-      options.custom_ops[step->name()] = shared_options;
+    if (step->noop()) {
+      options.custom_ops[step->name()] = noop;
     }
   }
   FlowToDotGraphFile(flow, options, "/tmp/wavenet.dot");

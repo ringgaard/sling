@@ -995,7 +995,7 @@ std::vector<Flow::Operation *> Flow::Find(const Path &path) {
         match = false;
         break;
       }
-      Variable *var = current->inputs[node.input];
+      Variable *var = current->inputs[input];
       Operation *next = var->producer;
       if (next == nullptr) {
         match = false;

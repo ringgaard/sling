@@ -41,6 +41,23 @@ class WaveNetTransformer : public Transformer {
       combines++;
     }
 
+    // Convert Conv2DBackpropInput to Deconv1D.
+    for (Flow::Operation *op :
+         flow->Find("Reshape|2:Conv2DBackpropInput|Reshape")) {
+      VLOG(5) << "Convert to Deconv1D " << op->name;
+      Flow::Operation *reshape2 = op;
+      Flow::Operation *conv2d = reshape2->inputs[0]->producer;
+      Flow::Operation *reshape1 = conv2d->inputs[2]->producer;
+      string name = conv2d->name;
+      flow->Fuse(reshape1, conv2d, "");
+      flow->Fuse(reshape1, reshape2, "Deconv1D");
+      reshape1->name = name;
+      reshape1->RemoveInput(reshape1->inputs[4]);
+      reshape1->RemoveInput(reshape1->inputs[2]);
+      reshape1->RemoveInput(reshape1->inputs[1]);
+      combines++;
+    }
+
     // Convert concat into shift op.
     for (Flow::Operation *op : flow->Find("ConcatV2|StridedSlice")) {
       VLOG(5) << "Convert to Shift " << op->name;
@@ -140,7 +157,7 @@ class Conv1DV : public Conv1D {
   bool Supports(Step *step) override {
     if (!Conv1D::Supports(step)) return false;
 
-    // Output filter size must be a multiple of 8.
+    // Output channels must be a multiple of 8.
     if (step->output(0)->dim(2) % 8 != 0) return false;
 
     return true;
@@ -426,21 +443,199 @@ class Conv1DH1 : public Conv1D {
   }
 };
 
-// Stub for Conv2DBackpropInput.
-class Conv2DBackpropInput : public Kernel {
+// Deconvolution, i.e. transposed convolution, with stride 2.
+class Deconv1DStride2 : public Kernel {
  public:
-  string Name() override { return "DummyConv2DBackpropInput"; }
-  string Operation() override { return "Conv2DBackpropInput"; }
+  // Maximum number of loop unrolls.
+  static const int kMaxUnrolls = 8;
+
+  // Fractional input stride.
+  static const int kStride = 2;
+
+  string Name() override { return "WVDeconvStride2"; }
+  string Operation() override { return "Deconv1D"; }
 
   bool Supports(Step *step) override {
+    // Requires CPU with AVX support.
+    if (!CPU::Enabled(AVX)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() != 2) return false;
+    if (step->outdegree() != 1) return false;
+
+    Tensor *in = step->input(0);
+    Tensor *filter = step->input(1);
+    Tensor *out = step->output(0);
+
+    if (in->rank() != 3) return false;
+    if (filter->rank() != 4) return false;
+    if (out->rank() != 3) return false;
+
+    if (in->dim(0) != out->dim(0)) return false;
+    if (in->dim(1) * 2 != out->dim(1)) return false;
+    if (in->dim(2) != filter->dim(2)) return false;
+    if (out->dim(2) != filter->dim(3)) return false;
+
+    if (in->type() != DT_FLOAT) return false;
+    if (filter->type() != DT_FLOAT) return false;
+    if (out->type() != DT_FLOAT) return false;
+
+    // Output channels must be a multiple of 8.
+    if (step->output(0)->dim(2) % 8 != 0) return false;
+
+    // Batch size must be one.
+    if (in->dim(0) != 1) return false;
+
+    // Filter size must be even.
+    if (filter->dim(0) * filter->dim(1) % kStride != 0) return false;
+
+    // Stride must be two.
+    if (step->GetAttr("strides") != "1,2,1,1") return false;
+
     return true;
   }
 
+  void Adjust(Step *step) override {
+    Tensor *in = step->input(0);
+    Tensor *filter = step->input(1);
+    Tensor *out = step->output(0);
+
+    // Align to one ymm register (256 bits, 32 bytes).
+    int byte_alignment = 256 / 8;
+    in->SetMiniumAlignment(byte_alignment);
+    filter->SetMiniumAlignment(byte_alignment);
+    out->SetMiniumAlignment(byte_alignment);
+
+    in->SetRequiredOrder(ROW_MAJOR);
+    filter->SetRequiredOrder(ROW_MAJOR);
+    out->SetRequiredOrder(ROW_MAJOR);
+  }
+
   void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
+    // Get inputs and outputs.
+    Tensor *in = step->input(0);
+    Tensor *filter = step->input(1);
+    Tensor *out = step->output(0);
+
+    // Compute sizes.
+    int64 in_size = in->dim(1);
+    int64 filter_size = filter->dim(0) * filter->dim(1);
+    int64 in_channels = filter->dim(2);
+    int64 out_channels = filter->dim(3);
+
+    // Compute the number of unrolls.
+    int unrolls = 1;
+    for (int i = 2; i <= kMaxUnrolls; ++i) {
+      if (out_channels % (i * 8) == 0) unrolls = i;
+    }
+    int blocks = out_channels / (unrolls * 8);
+
+    step->set_variant(std::to_string(unrolls) + "*" +
+                      std::to_string(blocks) + " " +
+                      std::to_string(filter->size() / 1024) + "k");
+
+    // Allocate registers.
+    Registers &rr = masm->rr();
+    SIMDRegisters &mm = masm->mm();
+    YMMRegister elem = mm.allocy();
+    YMMRegister acc = mm.allocy();
+    std::vector<YMMRegister> sum;
+    for (int i = 0; i < unrolls; ++i) {
+      sum.push_back(mm.allocy());
+    }
+
+    // Load tensor locations.
+    Register input = rr.alloc();
+    Register output = rr.alloc();
+    Register filt = rr.alloc();
+    __ LoadTensorAddress(input, in);
+    __ LoadTensorAddress(output, out);
+    __ LoadTensorAddress(filt, filter);
+
+    // Compute filter end address.
+    Register fend = rr.alloc();
+    int filter_row_bytes = out_channels * sizeof(float);
+    int filter_bytes = filter_size * in_channels * filter_row_bytes;
+    __ leaq(fend, Operand(filt, filter_bytes));
+
+    // Loop over input rows.
+    Register row = rr.alloc();
+    Label row_loop;
+    __ xorq(row, row);
+    __ bind(&row_loop);
+
+    // Compute even and odd output.
+    Register fptr = rr.alloc();
+    Register col = rr.alloc();
+    Register inptr = rr.alloc();
+    for (int stride = 0; stride < kStride; ++stride) {
+      // Loop over filter column blocks.
+      Label filter_block_loop;
+      __ xorq(col, col);
+      __ bind(&filter_block_loop);
+      __ leaq(fptr, Operand(filt, col, times_4, stride * filter_row_bytes));
+
+      // Initialize block with zero.
+        __ movq(inptr, input);
+      for (int i = 0; i < unrolls; ++i) {
+        __ vxorps(sum[i], sum[i], sum[i]);
+      }
+
+      // Inner loop over filter rows.
+      Label filter_row_loop;
+      __ bind(&filter_row_loop);
+
+      // Load x[row].
+      __ vbroadcastss(elem, Operand(inptr));
+      __ addq(inptr, Immediate(sizeof(float)));
+
+      // Multiply x[row] with f[row,col:col+n] and add to sum.
+      for (int i = 0; i < unrolls; ++i) {
+        if (masm->Enabled(FMA3)) {
+          __ vfmadd231ps(sum[i], elem, Operand(fptr, i * 32));
+        } else {
+          __ vmulps(acc, elem, Operand(fptr, i * 32));
+          __ vaddps(sum[i], sum[i], acc);
+        }
+      }
+
+      // Next filter row.
+      __ addq(fptr, Immediate(kStride * filter->stride(2)));
+      __ cmpq(fptr, fend);
+      __ j(less, &filter_row_loop);
+
+      // Save to y[col:col+n].
+      for (int i = 0; i < unrolls; ++i) {
+        __ vmovaps(Operand(output, i * 32), sum[i]);
+      }
+      __ addq(output, Immediate(unrolls * 32));
+
+      // Next filter column block.
+      __ addq(col, Immediate(unrolls * 32));
+      __ cmpq(col, Immediate(out_channels * sizeof(float)));
+      __ j(less, &filter_block_loop);
+    }
+
+    // Next input row.
+    __ incq(row);
+    __ addq(input, Immediate(in->stride(1)));
+    __ cmpq(row, Immediate(in_size));
+    __ j(less, &row_loop);
+
+  }
+
+  int64 Complexity(const Step *step) override {
+    Tensor *in = step->input(0);
+    Tensor *filter = step->input(1);
+    Tensor *out = step->output(0);
+    int64 batch = in->dim(0);
+    int64 out_size = out->dim(1);
+    int64 filter_size = filter->dim(0) * filter->dim(1);
+    int64 in_channels = filter->dim(2);
+    int64 out_channels = filter->dim(3);
+    return batch * out_size * filter_size * in_channels * out_channels * 2;
   }
 };
-
 
 // Zigzag index generator for computing expression over even and odd elements.
 class ZigZag : public IndexGenerator {
@@ -706,7 +901,7 @@ void RegisterWaveNetLibrary(Library *library) {
 
   library->Register(new Conv1DV());
   library->Register(new Conv1DH1());
-  library->Register(new Conv2DBackpropInput());
+  library->Register(new Deconv1DStride2());
   library->Register(new ZigZagTanhMulSigmoid());
   library->Register(new Shift());
 
