@@ -452,7 +452,7 @@ class Deconv1DStride2 : public Kernel {
   // Fractional input stride.
   static const int kStride = 2;
 
-  string Name() override { return "WVDeconvStride2"; }
+  string Name() override { return "WNDeconvStride2"; }
   string Operation() override { return "Deconv1D"; }
 
   bool Supports(Step *step) override {
