@@ -15,7 +15,7 @@ def _genembed_impl(ctx):
     progress_message = "Embedding %s" % ctx.label.name,
     executable = ctx.executable._embed_data_compiler
   )
-  
+
 genembed = rule(
   implementation = _genembed_impl,
   attrs = {
@@ -40,7 +40,7 @@ def embed_data(name, srcs):
   )
   native.cc_library(
     name = name,
-    srcs = [embed_pkg.label()],
+    srcs = [name + "_genembed"],
     alwayslink = True,
     linkstatic = True,
   )
