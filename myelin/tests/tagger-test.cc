@@ -87,8 +87,8 @@ struct LSTMTagger {
   }
 
   // Get parameter data.
-  float *GetData(const string &name) {
-    float *data = reinterpret_cast<float *>(Var(name)->data);
+  const float *GetData(const string &name) {
+    const float *data = reinterpret_cast<const float *>(Var(name)->data);
     CHECK(data != nullptr) << name;
     return data;
   }
@@ -108,28 +108,28 @@ struct LSTMTagger {
   }
 
   // Add two vectors.
-  float *Add(float *a, float *b, int n) {
+  float *Add(const float *a, const float *b, int n) {
     float *c = Vector(n);
     for (int i = 0; i < n; ++i) c[i] = a[i] + b[i];
     return c;
   }
 
   // Subtract constant and vector.
-  float *Sub(float a, float *b, int n) {
+  float *Sub(const float a, const float *b, int n) {
     float *c = Vector(n);
     for (int i = 0; i < n; ++i) c[i] = a - b[i];
     return c;
   }
 
   // Multiply two vectors element-wise.
-  float *Mul(float *a, float *b, int n) {
+  float *Mul(const float *a, const float *b, int n) {
     float *c = Vector(n);
     for (int i = 0; i < n; ++i) c[i] = a[i] * b[i];
     return c;
   }
 
   // Multiply vector with matrix.
-  float *MatMul(float *x, float *w, int n, int m) {
+  float *MatMul(const float *x, const float *w, int n, int m) {
     float *y = Vector(m);
     for (int i = 0; i < m; ++i) {
       float sum = 0.0;
@@ -142,21 +142,21 @@ struct LSTMTagger {
   }
 
   // Compute sigmoid element-wise.
-  float *Sigmoid(float *x, int n) {
+  float *Sigmoid(const float *x, int n) {
     float *y = Vector(n);
     for (int i = 0; i < n; ++i) y[i] = 1.0 / (1.0 + expf(-x[i]));
     return y;
   }
 
   // Compute hyperbolic tangent element-wise.
-  float *Tanh(float *x, int n) {
+  float *Tanh(const float *x, int n) {
     float *y = Vector(n);
     for (int i = 0; i < n; ++i) y[i] = tanhf(x[i]);
     return y;
   }
 
   // Look up element in embedding.
-  float *Lookup(float *embedding, int index, int n) {
+  float *Lookup(const float *embedding, int index, int n) {
     float *x = Vector(n);
     for (int i = 0; i < n; ++i) x[i] = embedding[index * n + i];
     return x;
@@ -227,13 +227,13 @@ struct LSTMTagger {
   int output_dim;
 
   // LSTM parameter weights.
-  float *embeddings;
-  float *x2i, *h2i, *c2i;
-  float *bc, *bi, *bo;
-  float *h2c, *x2c;
-  float *c2o, *x2o, *h2o;
-  float *bias_softmax;
-  float *weights_softmax;
+  const float *embeddings;
+  const float *x2i, *h2i, *c2i;
+  const float *bc, *bi, *bo;
+  const float *h2c, *x2c;
+  const float *c2o, *x2o, *h2o;
+  const float *bias_softmax;
+  const float *weights_softmax;
 
   // Intermediate results.
   float *x;

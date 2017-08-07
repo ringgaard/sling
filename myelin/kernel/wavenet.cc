@@ -676,7 +676,7 @@ class ZigZag : public IndexGenerator {
     }
   }
 
-  void *data(Express::Var *var) override {
+  const void *data(Express::Var *var) override {
     return nullptr;
   }
 

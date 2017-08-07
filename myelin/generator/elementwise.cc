@@ -380,7 +380,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
   }
 }
 
-void *ElementwiseIndexGenerator::data(Express::Var *var) {
+const void *ElementwiseIndexGenerator::data(Express::Var *var) {
   DCHECK_EQ(var->type, Express::CONST);
   Locator *loc = GetLocator(var);
   DCHECK(loc->var->IsConstant());
