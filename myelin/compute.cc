@@ -557,8 +557,8 @@ string Instance::ToString(Tensor *param) const {
   // Locate parameter in instance.
   char *p  = data_ + param->offset();
   if (param->ref()) {
-    if (p == nullptr) return "null";
     p = *reinterpret_cast<char **>(p);
+    if (p == nullptr) return "null";
   }
   if (param->shape().partial()) return "*";
 

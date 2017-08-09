@@ -311,10 +311,11 @@ string Flow::Variable::TypeString() const {
 
 string Flow::Variable::DataString() const {
   // Locate data.
-  const char *p  = data;
+  const char *p = data;
+  if (p == nullptr) return "∅";
   if (ref) {
-    if (p == nullptr) return "null";
     p = *reinterpret_cast<const char * const *>(p);
+    if (p == nullptr) return "null";
   }
   if (shape.partial()) return "*";
 

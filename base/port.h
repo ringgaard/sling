@@ -219,8 +219,8 @@ inline void *memrchr(const void *bytes, int find_char, size_t len) {
 
 // Prevent the compiler from complaining about or optimizing away variables
 // that appear unused.
-#undef ATTRIBUTE_UNUSED
-#define ATTRIBUTE_UNUSED __attribute__ ((unused))
+#undef ABSL_ATTRIBUTE_UNUSED
+#define ABSL_ATTRIBUTE_UNUSED __attribute__ ((unused))
 
 // For functions we want to force inline or not inline.
 #define ABSL_ATTRIBUTE_ALWAYS_INLINE  __attribute__ ((always_inline))
