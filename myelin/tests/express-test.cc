@@ -9,8 +9,8 @@ using namespace sling;
 using namespace sling::myelin;
 
 void Test(const string &str) {
-  bool three_arg_ops = false;
-  bool fma = false;
+  bool three_arg_ops = true;
+  bool fma = true;
   bool hoist = 0;
 
   Express::Model model;
@@ -73,7 +73,7 @@ void Test(const string &str) {
   }
 
   expr.CacheResults();
-  if (hoist > 0) expr.CacheConstants(hoist);
+  if (hoist > 0) expr.HoistConstants(hoist);
   for (auto *op : expr.ops()) {
     if (expr.body() > 0 && op == expr.ops()[expr.body()]) {
       LOG(INFO) << "body:";
@@ -112,6 +112,7 @@ void Test(const string &str) {
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
+#if 0
   Test("@0=Add(%0,%1)");
   Test("@0=Add(%2,Mul(%0,%1))");
   Test("$0=Max(%1,%2);$1=Min(%3,%4);@0=Mul($0,$1)");
@@ -168,6 +169,17 @@ int main(int argc, char *argv[]) {
   Test("@0=Square(%1)");
 
   Test("@0=Mul(%0,#1)");
+
+  Test("@0=Add(Mul(Div(Add(Tanh(%9),#10),#11),Tanh(%8)),Mul(Sub(#6,Div(Add(Tanh(%3),#4),#5)),%7));"
+       "@1=Mul(Tanh(@0),Div(Add(Tanh(%0),#1),#2))");
+
+  Test("$3=Tanh(%9);"
+       "@0=Add(Mul(Div(Add(Tanh(%10),#11),#12),$3),Mul(Sub(#8,Tanh(%3)),%7));"
+       "@1=Mul(Add(Mul(Div(Add(Tanh(%10),#13),#14),$3),Mul(Sub(#6,Div(Add(Tanh(%3),#4),#5)),%7)),Div(Add(Tanh(%0),#1),#2))");
+
+#endif
+
+  Test("@0=Tanh(%0)");
 
   return 0;
 }

@@ -18,7 +18,7 @@
 #include "myelin/kernel/dragnn.h"
 #include "third_party/jit/cpu.h"
 
-DEFINE_string(model, "local/tagger_rnn.flow", "Flow model for tagger");
+DEFINE_string(model, "local/tagger-rnn.flow", "Flow model for tagger");
 DEFINE_bool(baseline, false, "Compare with baseline tagger result");
 DEFINE_bool(intermediate, false, "Compare intermediate with baseline tagger");
 
@@ -32,6 +32,7 @@ DEFINE_bool(dump_graph, true, "Dump dot graph");
 DEFINE_bool(dump_code, true, "Dump generated code");
 DEFINE_bool(debug, false, "Debug mode");
 DEFINE_double(epsilon, 1e-5, "Epsilon for floating point comparison");
+DEFINE_bool(twisted, false, "Swap hidden and control in LSTMs");
 
 DEFINE_bool(sse, true, "SSE support");
 DEFINE_bool(sse2, true, "SSE2 support");
@@ -167,8 +168,8 @@ struct LSTMTagger {
                float *c_in, float *h_in,
                float **c_out, float **h_out,
                float **logits) {
-    // The c_in and h_in inputs seem to be swapped around!!!
-    std::swap(c_in, h_in);
+    // Swap control and hidden if LSTM is twisted.
+    if (FLAGS_twisted) std::swap(c_in, h_in);
 
     // Embedding lookup.
     int index = word == -1 ? vocab_size - 1 : word;
@@ -388,7 +389,7 @@ void RNN::Load(const string &filename) {
   library_.Register(new FixedDragnnInitializer());
   library_.RegisterTyper(new FixedDragnnTyper());
 
-  // Load and analyze parser flow file.
+  // Load and patch flow file.
   Flow flow;
   CHECK(flow.Load(filename));
   flow.Var("tagger/h_out")->out = true;
@@ -404,6 +405,16 @@ void RNN::Load(const string &filename) {
     for (auto *var : flow.vars()) var->out = true;
   }
 
+  // Zero out the last embedding vector (used for oov).
+  Flow::Variable *embedding = flow.Var("tagger/fixed_embedding_matrix_0");
+  CHECK(embedding != nullptr);
+  float *emb_data =
+      const_cast<float *>(reinterpret_cast<const float *>(embedding->data));
+  for (int i = 0; i < embedding->dim(1); i++) {
+    emb_data[embedding->elements() - 1 - i] = 0.0;
+  }
+
+  // Analyze flow.
   flow.Analyze(library_);
 
   // Output flow.
@@ -470,6 +481,9 @@ void RNN::Load(const string &filename) {
     }
     pos = next + 1;
   }
+  if (oov_ == -1) oov_ = index - 1;
+
+  // Load tag map.
   string tagdata;
   CHECK(File::ReadContents("local/tag-map", &tagdata));
   pos = 0;
@@ -558,6 +572,7 @@ void RNN::Execute(const std::vector<string> &tokens,
 
       // Compare with baseline.
       if (FLAGS_baseline) {
+        LOG(INFO) << "Token " << i << ": " << tokens[i] << " " << data.words[i];
         float *c_in = data.Get("tagger/c_in");
         float *h_in = data.Get("tagger/h_in");
         float *c_out, *h_out, *logits;

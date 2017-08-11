@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
   //Test("@0=Sub(Add(Mul(Div(%0,%1),%1),%1),%1)");
   //Test("@0=Max(Add(Mul(%0,#1),#1),#1)");
   //Test("@0=Relu(Add(!0,!1))");
-  Test("@0=Mul(Tanh(!0),Sigmoid(!1))");
+  //Test("@0=Mul(Tanh(!0),Sigmoid(!1))");
 
   return 0;
 }
