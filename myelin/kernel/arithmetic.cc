@@ -94,8 +94,30 @@ static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
 
   // Mark constant inputs.
   for (int i = 0; i < op->indegree(); ++i) {
-    if (op->inputs[i]->data != nullptr && op->inputs[i]->elements() == 1) {
-      expr->Variable(Express::INPUT, i)->type = Express::CONST;
+    auto *input = op->inputs[i];
+    if (input->constant() && input->elements() == 1) {
+      int const_id = -1;
+      if (input->type == DT_FLOAT) {
+        float value = *reinterpret_cast<const float *>(input->data);
+        if (value == 0.0) {
+          const_id = Express::ZERO;
+        } else if (value == 1.0) {
+          const_id = Express::ONE;
+        } else if (value == 0.5) {
+          const_id = Express::HALF;
+        } else if (value == 2.0) {
+          const_id = Express::TWO;
+        } else if (value == -1.0) {
+          const_id = Express::N1;
+        }
+      }
+      auto *var = expr->Variable(Express::INPUT, i);
+      if (const_id != -1) {
+        var->type = Express::NUMBER;
+        var->id = const_id;
+      } else {
+        expr->Variable(Express::INPUT, i)->type = Express::CONST;
+      }
     }
   }
 }
@@ -186,6 +208,33 @@ struct Expression {
 
   // Code generator for expression.
   ExpressionGenerator *generator;
+};
+
+// Convert division with constant c to multiplication with constant 1/c to
+// take advantage of mul being much faster than div.
+class DivToMulTransformer : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    int updates = 0;
+    for (Flow::Operation *op : flow->ops()) {
+      // Look for Div(x, c) where c is a non-shared scalar float constant.
+      if (op->type != "Div" && op->type != "RealDiv") continue;
+      if (op->indegree() != 2) continue;
+      Flow::Variable *second = op->inputs[1];
+      if (second->type != DT_FLOAT || second->elements() != 1) continue;
+      if (!second->constant() || second->consumers.size() != 1) continue;
+
+      // Change Div(x,c) to Mul(x,1/c).
+      CHECK_EQ(second->size, sizeof(float));
+      op->type = "Mul";
+      float multiplier = 1.0 / *reinterpret_cast<const float *>(second->data);
+      char *buffer = flow->AllocateMemory(sizeof(float));
+      *reinterpret_cast<float *>(buffer) = multiplier;
+      second->data = buffer;
+      updates++;
+    }
+    return updates > 0;
+  }
 };
 
 // Combine arithmetic operators into expressions that can be computed by a
@@ -474,6 +523,7 @@ void RegisterArithmeticLibrary(Library *library) {
 // Register arithmetic transforms.
 void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new ExpressionTransformer());
+  library->RegisterTransformer(new DivToMulTransformer());
 }
 
 }  // namespace myelin
