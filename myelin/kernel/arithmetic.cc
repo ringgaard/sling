@@ -369,6 +369,7 @@ class ExpressionTransformer : public Transformer {
       // Map output from second op to a new output in the merged expression.
       mapping[vars2[v]] = expr1.Variable(Express::OUTPUT, next_output++);
     }
+    expr1.CompactTempVars();
     expr2.CompactTempVars();
 
     // Merge second expression into the first one.
