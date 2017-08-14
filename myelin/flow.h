@@ -484,13 +484,16 @@ class Flow {
   Connector *AddConnector(const string &name);
 
   // Add data block.
-  Blob *AddBlob(const string &name);
+  Blob *AddBlob(const string &name, const string &type);
 
   // Delete variable.
   void DeleteVariable(Variable *var);
 
   // Delete operation.
   void DeleteOperation(Operation *op);
+
+  // Delete function.
+  void DeleteFunction(Function *func);
 
   // Look up variable by name.
   Variable *Var(const string &name);
@@ -500,6 +503,9 @@ class Flow {
 
   // Look up function by name.
   Function *Func(const string &name);
+
+  // Look up blob by name.
+  Blob *DataBlock(const string &name);
 
   // Return flow in text format.
   string ToString() const;

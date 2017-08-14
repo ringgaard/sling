@@ -29,7 +29,7 @@ namespace sling {
 namespace myelin {
 
 std::unordered_map<string, Type> typemap = {
-  {"", DT_INVALID},
+  {"void", DT_INVALID},
   {"float16", DT_HALF},
   {"float32", DT_FLOAT},
   {"float64", DT_DOUBLE},
@@ -601,7 +601,7 @@ void Flow::Read(const char *data, size_t size) {
         type.erase(0, 1);
       }
       const TypeTraits &t = TypeTraits::of(type);
-      CHECK(t.valid()) << "Unknown type: " << type;
+      CHECK(t.valid() || type == "void") << "Unknown type: " << type;
       var->type = t.type();
     }
 
@@ -729,9 +729,10 @@ void Flow::Save(const string &filename, int version) const {
   FlowFileWriter file(filename);
 
   // Write header (magic and version).
-  CHECK_EQ(version, kVersion);
+  CHECK_GE(version, 3);
+  CHECK_LE(version, kVersion);
   file.WriteInt(kMagic);
-  file.WriteInt(3);
+  file.WriteInt(version);
 
   // Write variables.
   file.WriteInt(vars_.size());
@@ -746,7 +747,11 @@ void Flow::Save(const string &filename, int version) const {
     }
 
     // Write type.
-    file.WriteString(TypeTraits::of(var->type).name());
+    if (var->ref) {
+      file.WriteString("&" + TypeTraits::of(var->type).name());
+    } else {
+      file.WriteString(TypeTraits::of(var->type).name());
+    }
 
     // Write shape.
     file.WriteInt(var->shape.rank());
@@ -1442,10 +1447,11 @@ Flow::Connector *Flow::AddConnector(const string &name) {
   return cnx;
 }
 
-Flow::Blob *Flow::AddBlob(const string &name) {
+Flow::Blob *Flow::AddBlob(const string &name, const string &type) {
   Blob *blob = new Blob;
   blobs_.push_back(blob);
   blob->name = name;
+  blob->type = type;
   return blob;
 }
 
@@ -1467,6 +1473,12 @@ void Flow::DeleteOperation(Operation *op) {
   auto f = std::find(ops_.begin(), ops_.end(), op);
   if (f != ops_.end()) ops_.erase(f);
   delete op;
+}
+
+void Flow::DeleteFunction(Function *func) {
+  auto f = std::find(funcs_.begin(), funcs_.end(), func);
+  if (f != funcs_.end()) funcs_.erase(f);
+  delete func;
 }
 
 void Flow::RemoveOperation(Operation *op) {
@@ -1620,7 +1632,7 @@ string Flow::ToString() const {
                     output->TypeString().c_str());
     }
     for (const Attribute &attr : op->attrs) {
-      if (attr.value.size() > 128) {
+      if (attr.value.size() > 512) {
         StringAppendF(&str, "  %s = <<%lu bytes>>\n",
                       attr.name.c_str(),
                       attr.value.size());
@@ -1650,6 +1662,19 @@ string Flow::ToString() const {
     StringAppendF(&str, "}\n\n");
   }
 
+  for (const Blob *blob : blobs_) {
+    StringAppendF(&str, "blob %s : %s { %lu bytes\n",
+                  blob->name.c_str(),
+                  blob->type.c_str(),
+                  blob->size);
+    for (const Attribute &attr : blob->attrs) {
+      StringAppendF(&str, "  %s = %s\n",
+                    attr.name.c_str(),
+                    attr.value.c_str());
+    }
+    StringAppendF(&str, "}\n\n");
+  }
+
   return str;
 }
 
@@ -1673,6 +1698,13 @@ Flow::Operation *Flow::Op(const string &name) {
 Flow::Function *Flow::Func(const string &name) {
   for (Function *func : funcs_) {
     if (func->name == name) return func;
+  }
+  return nullptr;
+}
+
+Flow::Blob *Flow::DataBlock(const string &name) {
+  for (Blob *blob : blobs_) {
+    if (blob->name == name) return blob;
   }
   return nullptr;
 }
