@@ -17,9 +17,17 @@
 
 #include "base/types.h"
 #include "myelin/flow.h"
+#include "third_party/jit/code.h"
 
 namespace sling {
 namespace myelin {
+
+struct DictionaryItem {
+  uint64 hash;
+  int64 value;
+};
+
+typedef DictionaryItem *DictionaryBucket;
 
 class Dictionary {
  public:
@@ -29,20 +37,18 @@ class Dictionary {
   void Init(Flow::Blob *lexicon);
 
   // Lookup word in dictionary.
-  int64 Lookup(const string &word) const;
+  int64 Lookup(const string &word) const {
+    return lookup_.Execute(word.data(), word.size());
+  }
+  int64 LookupSlow(const string &word) const;
 
  private:
-  struct Item {
-    uint64 hash;
-    int64 value;
-  };
-  typedef Item *Bucket;
-
-  Bucket *buckets_ = nullptr;
-  Item *items_ = nullptr;
+  DictionaryBucket *buckets_ = nullptr;
+  DictionaryItem *items_ = nullptr;
   int num_buckets_ = 0;
   int size_ = 0;
   int64 oov_ = -1;
+  jit::Code lookup_;
 };
 
 }  // namespace myelin

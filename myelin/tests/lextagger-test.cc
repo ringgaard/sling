@@ -74,6 +74,9 @@ class RNN {
     return -1;
   }
 
+  void TestLexicon();
+  std::vector<string> words;
+
  private:
   // Looks up cells, connectors, and parameters.
   Cell *GetCell(const string &name);
@@ -210,6 +213,7 @@ void RNN::Load(const string &filename) {
     } else {
       vocabulary_[word] = index++;
     }
+    words.push_back(word);
     vocab = nl + 1;
   }
   if (oov_ == -1) oov_ = index - 1;
@@ -228,6 +232,55 @@ void RNN::Load(const string &filename) {
     tags_.push_back(tag);
     tags = nl + 1;
   }
+}
+
+void RNN::TestLexicon() {
+  const int repeat = 1000;
+
+  LOG(INFO) << "Compare lookups";
+  for (const string &word : words) {
+    int slow = lexicon_.LookupSlow(word);
+    int fast = lexicon_.Lookup(word);
+    if (fast != slow) {
+      LOG(ERROR) << "word " << word << " " << slow << " vs " << fast;
+    }
+  }
+
+  Clock clock;
+  double time;
+  
+  LOG(INFO) << "Benchmark hashmap";
+  clock.start();
+  for (int r = 0; r < repeat; ++r) {
+    for (const string &word : words) {
+      LookupWord(word);
+    }
+  }
+  clock.stop();
+  time = clock.ns() / (repeat * words.size());
+  std::cout << "hashmap: " << time << " ns/lookup\n";
+
+  LOG(INFO) << "Benchmark slow dictionary";
+  clock.start();
+  for (int r = 0; r < repeat; ++r) {
+    for (const string &word : words) {
+      lexicon_.LookupSlow(word);
+    }
+  }
+  clock.stop();
+  time = clock.ns() / (repeat * words.size());
+  std::cout << "slow dictionary: " << time << " ns/lookup\n";
+
+  LOG(INFO) << "Benchmark fast dictionary";
+  clock.start();
+  for (int r = 0; r < repeat; ++r) {
+    for (const string &word : words) {
+      lexicon_.Lookup(word);
+    }
+  }
+  clock.stop();
+  time = clock.ns() / (repeat * words.size());
+  std::cout << "fast dictionary: " << time << " ns/lookup\n";
 }
 
 int RNN::LookupWord(const string &word) const {
@@ -392,6 +445,9 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "Compile tagger";
   RNN rnn;
   rnn.Load(FLAGS_model);
+
+  //LOG(INFO) << "Test lexicon";
+  //rnn.TestLexicon();
 
   string s;
 
