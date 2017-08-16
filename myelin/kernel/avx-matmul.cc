@@ -691,6 +691,20 @@ class AVXFltMatMatMul : public Kernel {
     if (a.dim(1) != b.dim(0)) return false;
     if (b.dim(1) != c.dim(1)) return false;
 
+    // Check alignment.
+    LOG(INFO) << "A alignment " << A->minalign().ToString();
+    LOG(INFO) << "B alignment " << B->minalign().ToString();
+    if (transpose_a) {
+      if (!A->SupportsAlignment({8, 1})) return false;
+    } else {
+      if (!A->SupportsAlignment({1, 8})) return false;
+    }
+    if (transpose_b) {
+      if (!B->SupportsAlignment({1, 8})) return false;
+    } else {
+      if (!B->SupportsAlignment({8, 1})) return false;
+    }
+
     // Check order.
     if (!A->SupportsOrder(transpose_a ? COLUMN_MAJOR : ROW_MAJOR)) return false;
     if (!B->SupportsOrder(transpose_b ? ROW_MAJOR : COLUMN_MAJOR)) return false;

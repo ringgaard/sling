@@ -88,6 +88,19 @@ bool Shape::IsSameSize(const Shape &other) const {
   return true;
 }
 
+bool Shape::IsCompatible(const Shape &other) const {
+  int d1 = rank() - 1;
+  int d2 = other.rank() - 1;
+  while (d1 >= 0 && d2 >= 0) {
+    int s1 = dim(d1--);
+    int s2 = other.dim(d2--);
+    if (s1 == -1 || s1 == 1) continue;
+    if (s2 == -1 || d2 == 1) continue;
+    if (s1 != s2) return false;
+  }
+  return true;
+}
+
 int Shape::CommonSize(const Shape &other) const {
   int n = 1;
   int d1 = rank() - 1;

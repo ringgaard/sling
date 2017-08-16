@@ -289,11 +289,11 @@ class ExpressionTransformer : public Transformer {
     const Shape &shape = first->outputs[0]->shape;
     for (auto *input : first->inputs) {
       if (input->type != type) return false;
-      // TODO: check that input shape is compatible with the output shape.
+      if (!input->shape.IsCompatible(shape)) return false;
     }
     for (auto *input : second->inputs) {
       if (input->type != type) return false;
-      // TODO: check that input shape is compatible with the output shape.
+      if (!input->shape.IsCompatible(shape)) return false;
     }
     for (auto *output : first->outputs) {
       if (output->type != type) return false;
@@ -422,7 +422,7 @@ class Calculate : public Kernel {
     const Shape &shape = step->output(0)->shape();
     for (auto *input : step->inputs()) {
       if (input->type() != type) return false;
-      // TODO: check that input shape is compatible with the output shape.
+      if (!input->Compatible(step->output(0))) return false;
     }
     for (auto *output : step->outputs()) {
       if (output->type() != type) return false;
@@ -431,6 +431,10 @@ class Calculate : public Kernel {
 
     // Strict math not supported.
     if (step->GetAttr("strict", false)) return false;
+
+    // Dense encoding required.
+    for (auto *input : step->inputs()) input->RequireDense();
+    for (auto *output : step->outputs()) output->RequireDense();
 
     return true;
   }
@@ -443,12 +447,14 @@ class Calculate : public Kernel {
     int alignment = expression.generator->VectorSize();
     for (auto *input : step->inputs()) {
       input->SetMiniumAlignment(alignment);
+      input->RequireDense();
+      input->RequireStandardOrder();
     }
     for (auto *output : step->outputs()) {
       output->SetMiniumAlignment(alignment);
+      output->RequireDense();
+      output->RequireStandardOrder();
     }
-
-    // TODO: require compact row-major encoding.
 
     // Enable sharing of inputs and outputs.
     for (int i = 0; i < step->indegree(); ++i) {

@@ -231,9 +231,6 @@ class Tensor {
   // Set minimum alignment constraints for tensor.
   void MinAlign(const Shape &align);
 
-  // Set maximum alignment constraints for tensor.
-  void MaxAlign(const Shape &align);
-
   // Set minimum alignment constraint for last dimension of tensor.
   void MinAlignLast(int align);
 
@@ -242,6 +239,9 @@ class Tensor {
 
   // Ensure compatible alignment modulo broadcasting with other tensor.
   void CompatibleAlign(Tensor *other);
+
+  // Check if alignment is conflicting with other requirements.
+  bool SupportsAlignment(const Shape &align) const;
 
   // Check if tensor can support order.
   bool SupportsOrder(Order order);
@@ -252,10 +252,18 @@ class Tensor {
   // Set minimum byte alignment for tensor.
   void SetMiniumAlignment(int alignment);
 
+  // Require dense encoding with no padding of dimensions.
+  void RequireDense() { require_dense_ = true; }
+
+  // Require standard row-major order.
+  void RequireStandardOrder() {
+    if (rank() > 1 && dim(0) > 1) SetRequiredOrder(ROW_MAJOR);
+  }
+
   // Check if tensor has the same shape as another tensor.
   bool HasSameShape(const Tensor *other) const;
 
-  // Check if tensor shape that is broadcast compatible with another tensor.
+  // Check if tensor shape is broadcast compatible with another tensor.
   bool Compatible(const Tensor *other) const;
 
   // Check if tensor is a scalar.
@@ -285,10 +293,6 @@ class Tensor {
   // Minimum alignment requirement for each dimension.
   const Shape &minalign() const { return minalign_; }
   int minalign(int d) const { return minalign_.dim(d); }
-
-  // Maximum alignment allowed for each dimension.
-  const Shape &maxalign() const { return maxalign_; }
-  int maxalign(int d) const { return maxalign_.dim(d); }
 
   // Tensor shape after alignment.
   const Shape &aligned() const { return aligned_; }
@@ -453,8 +457,8 @@ class Tensor {
   // Minimum alignment requirement for each dimension.
   Shape minalign_;
 
-  // Maximum alignment requirement for each dimension.
-  Shape maxalign_;
+  // Require dense encoding with no padding of dimensions.
+  bool require_dense_ = false;
 
   // Tensor shape after alignment.
   Shape aligned_;
