@@ -13,8 +13,8 @@ licenses(["notice"])
 cc_library(
   name = "dragnn",
   includes = [
-      "syntaxnet",
-      "syntaxnet/bazel-genfiles",
+    "syntaxnet",
+    "syntaxnet/bazel-genfiles",
   ],
   linkopts = [
     "-lpython2.7",

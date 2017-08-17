@@ -12,19 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <iostream>
-#include <string>
 #include "base/init.h"
+#include "base/logging.h"
 
-// Wrapper around InitProgram that is automatically called when an object is
-// constructed. One such object is the global variable below.
-class MyInit {
+namespace sling {
+
+// Class for intializing program modules.
+class LibraryInitializer {
  public:
-  MyInit() {
-    int argc = 0;
-    sling::InitProgram(&argc, NULL);
-  }
+  LibraryInitializer() {
+    InitSharedLibrary();
+    google::LogToStderr();
+  };
 };
 
-// Calls MyInit() automatically.
-MyInit _my_init_;
+// The initialization priority should be set higher than the priority of the
+// module initializers in init.h.
+static LibraryInitializer init __attribute__((init_priority(2000)));
+
+}  // namespace sling
+
