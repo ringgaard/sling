@@ -49,7 +49,7 @@ cc_binary(
     "//nlp/document:document",
     "//nlp/document:document-source",
     "//string:strcat",
-    "//third_party/dragnn:dragnn",
+    "//third_party/syntaxnet",
   ],
 )
 
@@ -59,7 +59,7 @@ cc_library(
   deps = [
     "//frame:store",
     "//nlp/document:document",
-    "//third_party/dragnn:dragnn",
+    "//third_party/syntaxnet",
   ],
 )
 
@@ -73,7 +73,7 @@ cc_library(
     "//frame:serialization",
     "//frame:store",
     "//nlp/document:document",
-    "//third_party/dragnn:dragnn",
+    "//third_party/syntaxnet",
   ],
 )
 
@@ -90,7 +90,7 @@ cc_library(
     "//nlp/document:document",
     "//nlp/parser:parser-action",
     "//nlp/parser:parser-state",
-    "//third_party/dragnn:dragnn",
+    "//third_party/syntaxnet",
   ],
 )
 
@@ -120,7 +120,7 @@ cc_library(
     "//frame:serialization",
     "//nlp/document:document-source",
     "//string:numbers",
-    "//third_party/dragnn:dragnn",
+    "//third_party/syntaxnet",
   ],
   alwayslink = 1,
 )
@@ -134,7 +134,7 @@ cc_library(
     "//file",
     "//stream:file-input",
     "//string:strcat",
-    "//third_party/dragnn:dragnn",
+    "//third_party/syntaxnet",
   ],
   alwayslink = 1,
 )
@@ -146,7 +146,7 @@ cc_library(
   deps = [
     ":feature",
     "//string:strcat",
-    "//third_party/dragnn:dragnn",
+    "//third_party/syntaxnet",
   ],
   alwayslink = 1,
 )
@@ -166,7 +166,7 @@ cc_library(
     "//nlp/parser:action-table",
     "//nlp/parser:parser-action",
     "//nlp/parser:parser-state",
-    "//third_party/dragnn:dragnn",
+    "//third_party/syntaxnet",
   ],
   alwayslink = 1,
 )
