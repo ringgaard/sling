@@ -172,17 +172,17 @@ cc_library(
 )
 
 cc_binary(
-  name = "sempar-component-dragnn.so",
-  linkopts = ["-lm"],
-  linkshared = 1,
-  linkstatic = 1,
+  name = "sempar.so",
   deps = [
     ":fixed-features",
     ":link-features",
     ":sempar-component",
     "//base:libinit",
     "//file:posix",
+    "//third_party/syntaxnet:dragnn-ops",
   ],
+  linkshared = 1,
+  linkstatic = 1,
 )
 
 cc_library(
