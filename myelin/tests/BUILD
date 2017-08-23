@@ -140,3 +140,17 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "sempar-test",
+  srcs = ["sempar-test.cc"],
+  deps = [
+    "//base",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
+    "//myelin:profile",
+    "//myelin/kernel:tensorflow",
+  ],
+)
+

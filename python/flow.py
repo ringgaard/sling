@@ -272,13 +272,33 @@ class FlowBuilder:
       self.vars.append(var)
       v = self.flow.var(var.name)
       v.type = var.dtype.base_dtype.name
-      for d in var.get_shape().as_list():
-        v.shape.append(d if d != None else -1)
-      if var.op.type in ["Const", "ConstV2", "Variable", "VariableV2"]:
+
+      # Get data for constants and variables.
+      if var.op.type in ["Const", "ConstV2"]:
+        v.data = tf.contrib.util.constant_value(var)
+      elif var.op.type in ["Variable", "VariableV2"]:
         if self.feed is None:
           v.data = var.eval(session=self.sess)
         else:
           v.data = self.sess.run(var, feed_dict=self.feed)
+
+      # Get shape.
+      if v.data is not None:
+        for d in v.data.shape:
+          v.shape.append(d)
+      else:
+        shape = var.get_shape()
+        if shape.dims != None:
+          undef = True
+          for d in shape.dims:
+            if d != None:
+              v.shape.append(d)
+              undef = False
+            else:
+              v.shape.append(0)
+          if undef: v.shape = [0] * len(shape.dims)
+        else:
+          v.shape = [0]
 
       if not var in inputs:
         op = var.op
