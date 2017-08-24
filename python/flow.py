@@ -124,7 +124,7 @@ class Operation:
 
   def add_attr(self, name, value):
     """Add operation attribute."""
-    self.attrs[name] = value
+    self.attrs[name] = str(value)
 
 
 class Function:
@@ -243,8 +243,8 @@ class Flow:
     for name in self.cnxs:
       cnx = self.cnxs[name]
       f.write_string(cnx.name)
-      f.write_int(len(cnxs.links))
-      for link in cnxs.links:
+      f.write_int(len(cnx.links))
+      for link in cnx.links:
         f.write_string(link.name)
 
     f.close()

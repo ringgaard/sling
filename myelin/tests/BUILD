@@ -150,6 +150,7 @@ cc_binary(
     "//myelin:flow",
     "//myelin:graph",
     "//myelin:profile",
+    "//myelin/kernel:dragnn",
     "//myelin/kernel:tensorflow",
   ],
 )

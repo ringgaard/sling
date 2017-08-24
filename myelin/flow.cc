@@ -850,10 +850,20 @@ void Flow::Save(const string &filename, int version) const {
 }
 
 void Flow::Analyze(const Transformations &transformations) {
+  // Infer input and output variables.
   InferInputsAndOutputs();
+
+  // Run first round of transformations.
   Transform(transformations);
+
+  // Sort ops and vars in dependency order.
   Sort();
+
+  // Infer missing types and shapes for variables.
   InferTypes(transformations);
+
+  // Run second round of transformations.
+  Transform(transformations);
 }
 
 void Flow::InferInputsAndOutputs() {
