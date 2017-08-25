@@ -193,6 +193,27 @@ class Flow:
       self.cnxs[name] = c
     return c
 
+  def rename_prefix(self, prefix, replacement):
+    """Replace prefix in all names."""
+    for mapping in [self.vars, self.ops, self.funcs, self.cnxs]:
+      for name in mapping.keys():
+        if name.startswith(prefix):
+          element = mapping.pop(name)
+          newname = replacement + name[len(prefix):]
+          element.name = newname
+          mapping[newname] = element
+
+  def rename_suffix(self, suffix, replacement):
+    """Replace suffix in all names."""
+    for mapping in [self.vars, self.ops, self.funcs, self.cnxs]:
+      for name in mapping.keys():
+        if name.endswith(suffix):
+          element = mapping.pop(name)
+          newname = name[:-len(suffix)] + replacement
+          element.name = newname
+          mapping[newname] = element
+
+
   def save(self, filename):
     """Write flow to file."""
 

@@ -47,7 +47,12 @@ FF_OUTPUT = "logits"
 FF_FV = "concat"
 
 FIXED_EMBEDDING = "/embedding_lookup/Enter"
+LINKED_EMBEDDING = "/MatMul/Enter"
+
 GET_SESSION = "annotation/ComputeSession/GetSession"
+
+# Fixed feature input sizes.
+feature_input_size = {"words": 1, "roles": 32}
 
 def lookup(elements, name):
   for element in elements:
@@ -55,7 +60,7 @@ def lookup(elements, name):
   return None
 
 class Component:
-  def __init__(self, spec, builder):
+  def __init__(self, spec, builder, connectors):
     self.spec = spec
     self.name = spec.name
     self.builder = builder
@@ -63,7 +68,8 @@ class Component:
     self.sess = builder.sess
     self.func = self.flow.func(self.name)
     self.features = None
-    self.steps = None
+    self.connectors = connectors
+    self.links = {}
 
   def path(self):
     return "annotation/inference_" + self.name + "/" + self.name
@@ -114,7 +120,10 @@ class Component:
 
     # Set the number of feature inputs.
     if self.features != None:
+      one = np.array(1, dtype=np.int32)
+      axis = self.newvar(feature.name + "/axis", "int32", [], one)
       self.features.add_attr("N", len(self.features.inputs))
+      self.features.add_input(axis)
 
   def extract_lstm(self):
     # The LSTM cell has inputs and outputs for the hidden and control channels
@@ -149,6 +158,7 @@ class Component:
     c_cnx.add(c_in)
     c_cnx.add(c_out)
 
+    self.connectors[self.name] = h_cnx
     for v in [h_in, h_out, c_in, c_out]:
       v.type = "&" + v.type
       v.shape = [1, dims]
@@ -182,6 +192,9 @@ class Component:
     step_cnx.add(self.flowvar(FF_HIDDEN))
     step_cnx.add(self.steps)
 
+    self.connectors[self.name] = step_cnx
+    self.links[self.name] = self.steps
+
   def add_feature_concatenation(self, output):
     """Add concat op that the features can be fed into."""
     self.features = self.flowop("concat")
@@ -190,13 +203,13 @@ class Component:
     self.func.add(self.features)
 
   def extract_fixed_feature(self, feature):
-
     print "Fixed feature:", feature.name, "dim:", feature.embedding_dim, "size:", feature.size, "vocab:", feature.vocabulary_size
 
     # Create feature input variable.
+    input_size = feature_input_size[feature.name]
     input = self.flow.var(self.path() + "/" + feature.name)
     input.type = "int32"
-    input.shape = [1, feature.size]
+    input.shape = [1, feature.size * input_size]
 
     # Extract embedding matrix.
     prefix = "fixed_embedding_" + feature.name
@@ -212,7 +225,6 @@ class Component:
 
     # Reshape embedded feature output.
     shape = np.array([1, feature.size * feature.embedding_dim], dtype=np.int32)
-    print "shape", shape
     reshape, reshaped = self.newop(feature.name + "/Reshape", "Reshape")
     reshape.add_input(embedded)
     reshape.add_input(self.newvar(feature.name + "/shape", "int32", [2], shape))
@@ -222,6 +234,54 @@ class Component:
 
   def extract_linked_feature(self, feature):
     print "Linked feature:", feature.name, "dim:", feature.embedding_dim, "size:", feature.size
+
+    # Create feature input variable.
+    input = self.flow.var(self.path() + "/" + feature.name)
+    input.type = "int32"
+    input.shape = [1, feature.size]
+
+    # A recurrent feature takes activations from its own cell as input.
+    source = feature.source_component
+    recurrent = source == self.spec.name
+    if recurrent:
+      prefix = "activation_lookup_recurrent_" + feature.name
+    else:
+      prefix = "activation_lookup_other_" + feature.name
+
+    # Extract embedding matrix.
+    embedding_name = prefix + LINKED_EMBEDDING
+    tf_embedding = self.tfvar(embedding_name)
+    self.builder.add(self.func, [], [tf_embedding])
+    embedding = self.flowvar(embedding_name)
+
+    # Get or create link variable for activation lookup.
+    link = self.links.get(source, None)
+    if link is None:
+      cnx = self.connectors[source]
+      link = self.flow.var(self.path() + "/link/" + source)
+      link.type = "&float32"
+      link.shape = [-1] + cnx.links[0].shape[1:]
+      self.links[source] = link
+      cnx.add(link)
+
+    # Collect activation vectors for features.
+    collect, activations = self.newop(feature.name + "/Collect", "Collect")
+    collect.add_input(input)
+    collect.add_input(link)
+
+    # Multiply activation vectors with embedding matrix.
+    matmul, embedded = self.newop(feature.name + "/MatMul", "MatMul")
+    matmul.add_input(activations)
+    matmul.add_input(embedding)
+
+    # Reshape embedded feature output.
+    shape = np.array([1, feature.size * feature.embedding_dim], dtype=np.int32)
+    reshape, reshaped = self.newop(feature.name + "/Reshape", "Reshape")
+    reshape.add_input(embedded)
+    reshape.add_input(self.newvar(feature.name + "/shape", "int32", [2], shape))
+
+    # Add features to feature vector.
+    self.features.add_input(reshaped)
 
 def main(argv):
   # Load Tensorflow checkpoint for sempar model.
@@ -245,13 +305,22 @@ def main(argv):
 
   # Extract components.
   print "Create components"
-  lr = Component(lookup(master_spec.component, "lr_lstm"), builder)
-  rl = Component(lookup(master_spec.component, "rl_lstm"), builder)
-  ff = Component(lookup(master_spec.component, "ff"), builder)
+  connectors = {}
+  lr = Component(lookup(master_spec.component, "lr_lstm"), builder, connectors)
+  rl = Component(lookup(master_spec.component, "rl_lstm"), builder, connectors)
+  ff = Component(lookup(master_spec.component, "ff"), builder, connectors)
+  components = [lr, rl, ff]
+  for c in components: c.extract()
 
-  for component in [lr, rl, ff]:
-    print "===================="
-    component.extract()
+  # Sanitize names.
+  for c in components: flow.rename_prefix(c.path() + "/", c.name + "/")
+  flow.rename_suffix("/ExponentialMovingAverage:0", "")
+  flow.rename_suffix(LSTM_H_IN + ":0", "h_in")
+  flow.rename_suffix(LSTM_H_OUT + ":0", "h_out")
+  flow.rename_suffix(LSTM_C_IN + ":0", "c_in")
+  flow.rename_suffix(LSTM_C_OUT + ":0", "c_out")
+  flow.rename_suffix(FF_HIDDEN + ":0", "hidden")
+  flow.rename_suffix(FF_OUTPUT + ":0", "output")
 
   # Write flow.
   print "Write flow to", FLAGS.output

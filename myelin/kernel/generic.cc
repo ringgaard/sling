@@ -67,19 +67,25 @@ class IdentityTransformer : public Transformer {
       } else if (op->type == "Reshape") {
         // Eliminate reshaping if input and output shapes are equal.
         if (op->indegree() == 2 && op->outdegree() == 1) {
-          Shape &in = op->inputs[0]->shape;
-          Shape &out = op->outputs[0]->shape;
-          if (!in.undefined() && !out.undefined() && in == out) {
-            // Remove shape input.
+          Flow::Variable *in = op->inputs[0];
+          Flow::Variable *out = op->outputs[0];
+          if (!in->shape.undefined() &&
+              !out->shape.undefined() &&
+              in->shape == out->shape &&
+              in->type == out->type) {
             Flow::Variable *shape = op->inputs[1];
             op->RemoveInput(shape);
-            if (shape->consumers.empty()) flow->DeleteVariable(shape);
             noops.push_back(op);
           }
         }
       } else if (op->type == "Concat" || op->type == "ConcatV2") {
         // Eliminate concatenations with only one input.
-        if (op->inputs.size() == 1) noops.push_back(op);
+        int n = op->GetAttr("N", 0);
+        if (n == 1) {
+          Flow::Variable *axis = op->inputs[n];
+          op->RemoveInput(axis);
+          noops.push_back(op);
+        }
       }
     }
 

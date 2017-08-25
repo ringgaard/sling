@@ -569,7 +569,8 @@ class Flow {
   // Infer which variables are inputs and outputs to functions.
   void InferInputsAndOutputs();
 
-  // Apply transformations to flow graph.
+  // Apply transformations to flow graph. Returns fals if no transformations
+  // were applied.
   bool Transform(const Transformations &transformations);
 
   // Sort operations in topological order of computation.

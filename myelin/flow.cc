@@ -414,7 +414,7 @@ void Flow::Operation::AddInput(Variable *var) {
 
 void Flow::Operation::AddOutput(Variable *var) {
   outputs.push_back(var);
-  CHECK(var->producer == nullptr);
+  CHECK(var->producer == nullptr) << var->name;
   var->producer = this;
 }
 
@@ -860,12 +860,12 @@ void Flow::Analyze(const Transformations &transformations) {
   Sort();
 
   // Infer missing types and shapes for variables.
-  if (InferTypes(transformations)) {
-    // Run second round of transformations after types have been resolved.
-    if (Transform(transformations)) {
-      // Make sure ops are still sorted after second round of transformations.
-      Sort();
-    }
+  InferTypes(transformations);
+
+  // Run second round of transformations after types have been resolved.
+  if (Transform(transformations)) {
+    // Make sure ops are still sorted after second round of transformations.
+    Sort();
   }
 }
 
