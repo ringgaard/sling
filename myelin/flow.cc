@@ -860,10 +860,13 @@ void Flow::Analyze(const Transformations &transformations) {
   Sort();
 
   // Infer missing types and shapes for variables.
-  InferTypes(transformations);
-
-  // Run second round of transformations.
-  Transform(transformations);
+  if (InferTypes(transformations)) {
+    // Run second round of transformations after types have been resolved.
+    if (Transform(transformations)) {
+      // Make sure ops are still sorted after second round of transformations.
+      Sort();
+    }
+  }
 }
 
 void Flow::InferInputsAndOutputs() {
@@ -910,17 +913,22 @@ void Flow::InferInputsAndOutputs() {
   }
 }
 
-void Flow::Transform(const Transformations &transformations) {
+bool Flow::Transform(const Transformations &transformations) {
   // Keep transforming flow until no more transformations can be applied.
   bool again = true;
+  bool transformed = false;
   while (again) {
     // Run flow transformers.
     auto &transformers = transformations.transformers();
     again = false;
     for (int t = transformers.size() -1; t >= 0; --t) {
-      if (transformers[t]->Transform(this)) again = true;
+      if (transformers[t]->Transform(this)) {
+        transformed = true;
+        again = true;
+      }
     }
   }
+  return transformed;
 }
 
 Flow::Operation *Flow::Fuse(Operation *first,

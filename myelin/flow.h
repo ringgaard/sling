@@ -570,7 +570,7 @@ class Flow {
   void InferInputsAndOutputs();
 
   // Apply transformations to flow graph.
-  void Transform(const Transformations &transformations);
+  bool Transform(const Transformations &transformations);
 
   // Sort operations in topological order of computation.
   void Sort();
