@@ -54,11 +54,6 @@ GET_SESSION = "annotation/ComputeSession/GetSession"
 # Fixed feature input sizes.
 feature_input_size = {"words": 1, "roles": 32}
 
-def lookup(elements, name):
-  for element in elements:
-    if element.name == name: return element
-  return None
-
 class Component:
   def __init__(self, spec, builder, connectors):
     self.spec = spec
@@ -100,9 +95,7 @@ class Component:
 
   def extract(self):
     # Extract cell ops for component.
-    print "Component", self.name
     component_type = self.spec.network_unit.registered_name
-    print "Type:", component_type
     if component_type == 'LSTMNetwork':
       self.extract_lstm()
     elif component_type == 'FeedForwardNetwork':
@@ -164,7 +157,7 @@ class Component:
       v.shape = [1, dims]
 
   def extract_feed_forward(self):
-    # The FF cell produce outputs logits as well as step activations from the
+    # The FF cell produces output logits as well as step activations from the
     # hidden layer. The input features are collected into a concatenated dense
     # feature vector. First, extract FF cell ops excluding feature inputs.
     tf_hidden = self.tfvar(FF_HIDDEN)
@@ -176,8 +169,8 @@ class Component:
     # The activations from the hidden layer is output to a connector channel in
     # each step and fed back into the cell through the feature functions. A
     # reference variable that points to the channel with all the previous step
-    # activations is added to the cell so these can be used by the feature
-    # functions to look up activations from previous steps.
+    # activations is added to the cell so these can be used by the recurrent
+    # feature functions to look up activations from previous steps.
     dims = int(self.spec.network_unit.parameters["hidden_layer_sizes"])
 
     activation = self.flowvar(FF_HIDDEN)
@@ -203,10 +196,8 @@ class Component:
     self.func.add(self.features)
 
   def extract_fixed_feature(self, feature):
-    print "Fixed feature:", feature.name, "dim:", feature.embedding_dim, "size:", feature.size, "vocab:", feature.vocabulary_size
-
     # Create feature input variable.
-    input_size = feature_input_size[feature.name]
+    input_size = feature_input_size.get(feature.name, 1)
     input = self.flow.var(self.path() + "/" + feature.name)
     input.type = "int32"
     input.shape = [1, feature.size * input_size]
@@ -233,8 +224,6 @@ class Component:
     self.features.add_input(reshaped)
 
   def extract_linked_feature(self, feature):
-    print "Linked feature:", feature.name, "dim:", feature.embedding_dim, "size:", feature.size
-
     # Create feature input variable.
     input = self.flow.var(self.path() + "/" + feature.name)
     input.type = "int32"
@@ -283,33 +272,19 @@ class Component:
     # Add features to feature vector.
     self.features.add_input(reshaped)
 
-def main(argv):
-  # Load Tensorflow checkpoint for sempar model.
-  print "Create session"
-  sess = tf.Session()
-  saver = tf.train.import_meta_graph(FLAGS.input + "/checkpoints/best.meta")
-  saver.restore(sess, FLAGS.input + "/checkpoints/best")
-
-  print "Model loaded"
-
-  # Read master spec.
-  print "Get master spec"
-  master = sess.graph.get_operation_by_name(GET_SESSION)
-  master_spec = spec_pb2.MasterSpec()
-  master_spec.ParseFromString(master.get_attr("master_spec"))
-
+def convert_model(master_spec, sess):
   # Create flow.
-  print "Create flow"
   flow = Flow()
   builder = FlowBuilder(sess, flow)
 
-  # Extract components.
-  print "Create components"
+  # Get components.
+  components = []
   connectors = {}
-  lr = Component(lookup(master_spec.component, "lr_lstm"), builder, connectors)
-  rl = Component(lookup(master_spec.component, "rl_lstm"), builder, connectors)
-  ff = Component(lookup(master_spec.component, "ff"), builder, connectors)
-  components = [lr, rl, ff]
+  for c in master_spec.component:
+    component = Component(c, builder, connectors)
+    components.append(component)
+
+  # Extract components.
   for c in components: c.extract()
 
   # Sanitize names.
@@ -322,11 +297,25 @@ def main(argv):
   flow.rename_suffix(FF_HIDDEN + ":0", "hidden")
   flow.rename_suffix(FF_OUTPUT + ":0", "output")
 
-  # Write flow.
-  print "Write flow to", FLAGS.output
-  flow.save(FLAGS.output)
+  return flow
 
-  print "Done"
+def main(argv):
+  # Load Tensorflow checkpoint for sempar model.
+  sess = tf.Session()
+  saver = tf.train.import_meta_graph(FLAGS.input + "/checkpoints/best.meta")
+  saver.restore(sess, input + "/checkpoints/best")
+
+  # Read master spec.
+  master = sess.graph.get_operation_by_name(GET_SESSION)
+  master_spec = spec_pb2.MasterSpec()
+  master_spec.ParseFromString(master.get_attr("master_spec"))
+
+  # Convert model to flow.
+  flow = convert_model(master_spec, sess)
+
+  # Write flow.
+  flow.save(output)
+
 if __name__ == '__main__':
   FLAGS.alsologtostderr = True
   tf.app.run()
