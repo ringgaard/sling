@@ -24,4 +24,5 @@ DATA=local/sempar
   --moving_average=true \
   --grad_clip_norm=1.0 \
   --report_every=100 \
+  --flow=$DATA/sempar.flow
 

@@ -82,6 +82,9 @@ class File:
     """Write array to flow file."""
     if a is None:
       self.write_long(0)
+    elif isinstance(a, str):
+      self.write_long(len(a))
+      self.f.write(a)
     else:
       self.write_long(a.nbytes)
       a.tofile(self.f)
@@ -139,6 +142,7 @@ class Function:
     """Add operation to function."""
     self.ops.append(op)
 
+
 class Connector:
   """Flow connector with linked variables."""
 
@@ -151,6 +155,22 @@ class Connector:
     """Add linked variable to connector."""
     self.links.append(var)
 
+
+class Blob:
+  """Blob for storing extra data like lexicons and feature maps."""
+
+  def __init__(self, name):
+    """Initialize new blob."""
+    self.name = name
+    self.type = ""
+    self.data = None
+    self.attrs = {}
+
+  def add_attr(self, name, value):
+    """Add blob attribute."""
+    self.attrs[name] = str(value)
+
+
 class Flow:
   """Flow with variables, operations, and functions."""
 
@@ -160,6 +180,7 @@ class Flow:
     self.ops = {}
     self.funcs = {}
     self.cnxs = {}
+    self.blobs = {}
 
   def func(self, name):
     """Add function to flow."""
@@ -186,12 +207,20 @@ class Flow:
     return o
 
   def cnx(self, name):
-    """Add connectors to flow."""
+    """Add connector to flow."""
     c = self.cnxs.get(name, None)
     if c == None:
       c = Connector(name)
       self.cnxs[name] = c
     return c
+
+  def blob(self, name):
+    """Add blob to flow."""
+    b = self.blobs.get(name, None)
+    if b == None:
+      b = Blob(name)
+      self.blobs[name] = b
+    return b
 
   def rename_prefix(self, prefix, replacement):
     """Replace prefix in all names."""
@@ -220,7 +249,7 @@ class Flow:
     # Write flow file header
     f = File(filename)
     f.write('flow')
-    f.write_int(3)
+    f.write_int(4)
 
     # Write variables.
     f.write_int(len(self.vars))
@@ -268,7 +297,20 @@ class Flow:
       for link in cnx.links:
         f.write_string(link.name)
 
+    # Write blobs.
+    f.write_int(len(self.blobs))
+    for name in self.blobs:
+      blob = self.blobs[name]
+      f.write_string(blob.name)
+      f.write_string(blob.type)
+      f.write_int(len(blob.attrs))
+      for a in blob.attrs:
+        f.write_string(a)
+        f.write_string(blob.attrs[a])
+      f.write_array(blob.data)
+
     f.close()
+
 
 class FlowBuilder:
   """Extract myelin flow from tensorflow graph."""

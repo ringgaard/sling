@@ -54,6 +54,12 @@ GET_SESSION = "annotation/ComputeSession/GetSession"
 # Fixed feature input sizes.
 feature_input_size = {"words": 1, "roles": 32}
 
+def read_file(filename):
+  fin = open(filename, "r")
+  data = fin.read()
+  fin.close()
+  return data
+
 class Component:
   def __init__(self, spec, builder, connectors):
     self.spec = spec
@@ -297,24 +303,57 @@ def convert_model(master_spec, sess):
   flow.rename_suffix(FF_HIDDEN + ":0", "hidden")
   flow.rename_suffix(FF_OUTPUT + ":0", "output")
 
+  # Get external resources.
+  lexicon_file = None
+  commons_file = None
+  actions_file = None
+  for c in master_spec.component:
+    for r in c.resource:
+      if r.name == "word-vocab":
+        lexicon_file = r.part[0].file_pattern
+      elif r.name == "commons":
+        commons_file = r.part[0].file_pattern
+      elif r.name == "action-table":
+        actions_file = r.part[0].file_pattern
+
+  # Add lexicon to flow.
+  if lexicon_file != None:
+    lexicon = flow.blob("lexicon")
+    lexicon.type = "dict"
+    lexicon.add_attr("delimiter", 10)
+    lexicon.data = read_file(lexicon_file)
+
+  # Add commons to flow.
+  if commons_file != None:
+    commons = flow.blob("commons")
+    commons.type = "frames"
+    commons.data = read_file(commons_file)
+
+  # Add action table to flow.
+  if actions_file != None:
+    actions = flow.blob("actions")
+    actions.type = "frames"
+    actions.data = read_file(actions_file)
+
   return flow
 
 def main(argv):
   # Load Tensorflow checkpoint for sempar model.
   sess = tf.Session()
   saver = tf.train.import_meta_graph(FLAGS.input + "/checkpoints/best.meta")
-  saver.restore(sess, input + "/checkpoints/best")
+  saver.restore(sess, FLAGS.input + "/checkpoints/best")
 
   # Read master spec.
   master = sess.graph.get_operation_by_name(GET_SESSION)
   master_spec = spec_pb2.MasterSpec()
   master_spec.ParseFromString(master.get_attr("master_spec"))
+  print master_spec
 
   # Convert model to flow.
   flow = convert_model(master_spec, sess)
 
   # Write flow.
-  flow.save(output)
+  flow.save(FLAGS.output)
 
 if __name__ == '__main__':
   FLAGS.alsologtostderr = True
