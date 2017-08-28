@@ -321,6 +321,8 @@ def convert_model(master_spec, sess):
     lexicon = flow.blob("lexicon")
     lexicon.type = "dict"
     lexicon.add_attr("delimiter", 10)
+    lexicon.add_attr("oov", 0)
+    lexicon.add_attr("normalize_digits", 1)
     lexicon.data = read_file(lexicon_file)
 
   # Add commons to flow.
@@ -347,7 +349,6 @@ def main(argv):
   master = sess.graph.get_operation_by_name(GET_SESSION)
   master_spec = spec_pb2.MasterSpec()
   master_spec.ParseFromString(master.get_attr("master_spec"))
-  print master_spec
 
   # Convert model to flow.
   flow = convert_model(master_spec, sess)
