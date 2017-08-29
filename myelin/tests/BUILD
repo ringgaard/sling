@@ -94,24 +94,6 @@ cc_binary(
 )
 
 cc_binary(
-  name = "lextagger-test",
-  srcs = ["lextagger-test.cc"],
-  deps = [
-    "//base",
-    "//base:clock",
-    "//file",
-    "//file:posix",
-    "//myelin:compute",
-    "//myelin:dictionary",
-    "//myelin:flow",
-    "//myelin:graph",
-    "//myelin:profile",
-    "//myelin/kernel:tensorflow",
-    "//myelin/kernel:dragnn",
-  ],
-)
-
-cc_binary(
   name = "tdozat-test",
   srcs = ["tdozat-test.cc"],
   deps = [

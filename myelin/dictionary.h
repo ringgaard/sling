@@ -17,18 +17,18 @@
 
 #include "base/types.h"
 #include "myelin/flow.h"
-#include "third_party/jit/code.h"
 
 namespace sling {
 namespace myelin {
 
-struct DictionaryItem {
-  uint64 hash;
-  int64 value;
-};
-
-typedef DictionaryItem *DictionaryBucket;
-
+// Read-only dictionary for looking lexicon ids for words. This uses a compact
+// memory layout with a bucket array and an item array. This is more compact and
+// faster that a traditional hash table like std::ordered_map. Only the 64-bit
+// hash of the word is stored so there could in principle be collisions,
+// although these would be rare.
+// The dictionary is initialized from a Flow blob which contains a list of
+// strings. Each stringis  terminted by a nul character, or any other character
+// specified in the "delimiter" attribute of the blob.
 class Dictionary {
  public:
   ~Dictionary();
@@ -36,19 +36,36 @@ class Dictionary {
   // Initialize dictionary from lexicon blob.
   void Init(Flow::Blob *lexicon);
 
-  // Lookup word in dictionary.
+  // Lookup word in dictionary. Returns OOV (default zero) if word is not found.
+  int64 Lookup(const char *data, size_t size) const;
   int64 Lookup(const string &word) const {
-    return lookup_.Execute(word.data(), word.size());
+    return Lookup(word.data(), word.size());
   }
-  int64 LookupSlow(const string &word) const;
 
  private:
-  DictionaryBucket *buckets_ = nullptr;
-  DictionaryItem *items_ = nullptr;
+  // Item in dictionary.
+  struct Item {
+    uint64 hash;
+    int64 value;
+  };
+
+  typedef Item *Bucket;
+
+  // Hash buckets for dictionary. There is one additional sentinel element in
+  // the bucket array.
+  Bucket *buckets_ = nullptr;
+
+  // Dictionary items sorted in bucket order.
+  Item *items_ = nullptr;
+
+  // Number of buckets.
   int num_buckets_ = 0;
+
+  // Number of elements in dictionary.
   int size_ = 0;
+
+  // Out-of-vocabulary id returned if word is not in dictionary.
   int64 oov_ = -1;
-  jit::Code lookup_;
 };
 
 }  // namespace myelin
