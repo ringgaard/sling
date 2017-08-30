@@ -110,6 +110,7 @@ void Parser::Load(Store *store, const string &model) {
   store_ = store;
   actions_.Init(store);
   num_actions_ = actions_.NumActions();
+  CHECK_GT(num_actions_, 0);
 
   // Get the set of roles that connect two frames.
   for (int i = 0; i < num_actions_; ++i) {

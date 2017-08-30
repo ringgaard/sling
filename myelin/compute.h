@@ -228,10 +228,12 @@ class Runtime {
 // parameters.
 class Tensor {
  public:
-  // Set minimum alignment constraints for tensor.
+  // Update minimum alignment constraints for tensor by combining new alignment
+  // with existing constraints.
   void MinAlign(const Shape &align);
 
-  // Set minimum alignment constraint for last dimension of tensor.
+  // Update minimum alignment constraint for last dimension of tensor by
+  // combining new alignment with existing constraints.
   void MinAlignLast(int align);
 
   // Ensure same alignment as other tensor.
@@ -249,7 +251,8 @@ class Tensor {
   // Set required element order.
   void SetRequiredOrder(Order order);
 
-  // Set minimum byte alignment for tensor.
+  // Update minimum byte alignment for tensor by combining new alignment
+  // with existing constraints.
   void SetMiniumAlignment(int alignment);
 
   // Require dense encoding with no padding of dimensions.

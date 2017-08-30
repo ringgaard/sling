@@ -116,7 +116,7 @@ static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
         var->type = Express::NUMBER;
         var->id = const_id;
       } else {
-        expr->Variable(Express::INPUT, i)->type = Express::CONST;
+        var->type = Express::CONST;
       }
     }
   }

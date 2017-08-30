@@ -21,13 +21,13 @@
 namespace sling {
 namespace myelin {
 
-// Read-only dictionary for looking lexicon ids for words. This uses a compact
-// memory layout with a bucket array and an item array. This is more compact and
-// faster that a traditional hash table like std::ordered_map. Only the 64-bit
-// hash of the word is stored so there could in principle be collisions,
-// although these would be rare.
+// Read-only dictionary for looking up lexicon ids for words. This uses a
+// compact memory layout with a bucket array and an item array. This is more
+// compact and faster that a traditional hash table like std::unordered_map.
+// Only the 64-bit hash of the word is stored so there could in principle be
+// collisions, although these would be rare.
 // The dictionary is initialized from a Flow blob which contains a list of
-// strings. Each stringis  terminted by a nul character, or any other character
+// strings. Each string is terminated by a nul character, or any other character
 // specified in the "delimiter" attribute of the blob.
 class Dictionary {
  public:

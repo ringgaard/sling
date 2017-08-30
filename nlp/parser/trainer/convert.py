@@ -120,7 +120,7 @@ class Component:
     # Set the number of feature inputs.
     if self.features != None:
       one = np.array(1, dtype=np.int32)
-      axis = self.newvar(feature.name + "/axis", "int32", [], one)
+      axis = self.newvar("axis", "int32", [], one)
       self.features.add_attr("N", len(self.features.inputs))
       self.features.add_input(axis)
 

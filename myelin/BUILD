@@ -91,7 +91,6 @@ cc_library(
   deps = [
     ":flow",
     "//base",
-    "//third_party/jit:assembler",
   ],
 )
 

@@ -69,10 +69,9 @@ class IdentityTransformer : public Transformer {
         if (op->indegree() == 2 && op->outdegree() == 1) {
           Flow::Variable *in = op->inputs[0];
           Flow::Variable *out = op->outputs[0];
-          if (!in->shape.undefined() &&
-              !out->shape.undefined() &&
-              in->shape == out->shape &&
-              in->type == out->type) {
+          if (!in->shape.undefined() && !in->shape.partial() &&
+              !out->shape.undefined() && !out->shape.partial() &&
+              in->shape == out->shape &&in->type == out->type) {
             Flow::Variable *shape = op->inputs[1];
             op->RemoveInput(shape);
             noops.push_back(op);
