@@ -69,9 +69,10 @@ class IdentityTransformer : public Transformer {
         if (op->indegree() == 2 && op->outdegree() == 1) {
           Flow::Variable *in = op->inputs[0];
           Flow::Variable *out = op->outputs[0];
-          if (!in->shape.undefined() && !in->shape.partial() &&
-              !out->shape.undefined() && !out->shape.partial() &&
-              in->shape == out->shape &&in->type == out->type) {
+          if (in->shape.defined() &&
+              out->shape.defined() &&
+              in->shape == out->shape &&
+              in->type == out->type) {
             Flow::Variable *shape = op->inputs[1];
             op->RemoveInput(shape);
             noops.push_back(op);
@@ -122,7 +123,7 @@ class CombineTransformer : public Transformer {
       if (var->consumers[0]->type != second) continue;
       if (var->consumers[0]->task != op->task) continue;
       if (var->out) continue;
-      if (var->shape.undefined()) continue;
+      if (!var->shape.defined()) continue;
       if (op->indegree() >= 1) {
         // Only combine for vector inputs.
         Flow::Variable *input = op->inputs[0];
@@ -204,13 +205,8 @@ class StandardTyper : public Typer {
     if (op->type == "ConcatV2") {
       int n = op->GetAttr("N", 0);
       if (n > op->indegree()) return false;
-      int axis = 0;
-      if (op->indegree() == n + 1) {
-        Flow::Variable *a = op->inputs[n];
-        if (a->type == DT_INT32 && a->rank() == 0 && a->data != nullptr) {
-          axis = *reinterpret_cast<const int *>(a->data);
-        }
-      }
+      int axis;
+      if (op->indegree() != n + 1 || !op->inputs[n]->GetData(&axis)) axis = 0;
 
       if (n > 0 && op->outdegree() == 1) {
         Flow::Variable *result = op->outputs[0];
@@ -242,11 +238,8 @@ class StandardTyper : public Typer {
       if (op->indegree() == 2 && op->outdegree() == 1) {
         Flow::Variable *shape = op->inputs[1];
         Flow::Variable *result = op->outputs[0];
-        if (shape->type == DT_INT32 &&
-            shape->rank() == 1 &&
-            shape->data != nullptr) {
-          // The output shape is constant.
-          const int *dims = reinterpret_cast<const int *>(shape->data);
+        std::vector<int> dims;
+        if (shape->GetData(&dims)) {
           result->shape.clear();
           for (int d = 0; d < shape->dim(0); ++d) {
             result->shape.add(dims[d] == -1 ? 1 : dims[d]);
