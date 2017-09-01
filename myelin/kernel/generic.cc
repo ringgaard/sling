@@ -14,6 +14,7 @@
 
 #include "myelin/kernel/generic.h"
 
+#include <algorithm>
 #include <vector>
 
 #include "myelin/compute.h"
@@ -137,6 +138,102 @@ class CombineTransformer : public Transformer {
   }
 };
 
+// Flattens nested concatenations, if possible.  E.g.,
+// tf.concat([a, tf.concat([b, c], 1), d], 1) = tf.concat([a, b, c, d], 1)
+class FlattenConcatTransformer : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    bool transformed = false;
+    while (TryFlattenOnce(flow)) transformed = true;
+    return transformed;
+  }
+
+ private:
+  // Returns true if the operation is a concatenation.
+  static bool IsConcat(const Flow::Operation &operation) {
+    if (operation.type != "ConcatV2") return false;
+    if (!operation.HasAttr("N")) return false;
+    const int num_to_concat = operation.GetAttr("N", -1);
+    if (num_to_concat <= 0) return false;
+    if (operation.indegree() != num_to_concat + 1) return false;
+    if (operation.outdegree() != 1) return false;
+    return true;
+  }
+
+  // Flattens one nested concatenation and returns true, if possible.
+  static bool TryFlattenOnce(Flow *flow) {
+    // Search for a parent and child concat, where both have the same axis and
+    // the result of the child concat is only used by the parent concat.
+    for (Flow::Operation *child : flow->ops()) {
+      if (!IsConcat(*child)) continue;
+
+      // The child should have only one consumer, the parent.
+      Flow::Variable *child_result = child->outputs[0];
+      if (child_result->consumers.size() != 1) continue;
+      Flow::Operation *parent = child_result->consumers[0];
+      if (!IsConcat(*parent)) continue;
+
+      // The axes (i.e., final inputs) should match.
+      int parent_axis = 0, child_axis = 0;
+      if (!parent->inputs.back()->GetData(&parent_axis)) continue;
+      if (!child->inputs.back()->GetData(&child_axis)) continue;
+      if (parent_axis != child_axis) continue;
+
+      // The child axis will be pruned, so it should have no other dependencies.
+      if (child->inputs.back()->consumers.size() != 1) continue;
+      if (child->inputs.back()->producer != nullptr) continue;
+
+      Flatten(flow, parent, child);
+      return true;
+    }
+
+    return false;
+  }
+
+  // Flattens the child concatenation into the parent concatenation by replacing
+  // the child with the inputs it concatenates.
+  static void Flatten(Flow *flow, Flow::Operation *parent,
+                      Flow::Operation *child) {
+    VLOG(9) << "Flattening " << child->type << " (" << child->name << ") into "
+            << parent->type << " (" << parent->name << ")";
+
+    // Find the index of the child among the parent's inputs.  This is where the
+    // child's inputs should be inserted.
+    Flow::Variable *child_result = child->outputs[0];
+    const int child_index =
+        std::find(parent->inputs.begin(), parent->inputs.end(), child_result) -
+        parent->inputs.begin();
+    CHECK_LT(child_index, parent->inputs.size())
+        << "parent=" << parent->name << " child=" << child->name;
+
+    // Discard the child's axis; it is redundant with the parent's axis.
+    Flow::Variable *child_axis = child->inputs.back();
+    child->RemoveInput(child_axis);
+    flow->DeleteVariable(child_axis);
+
+    // Discard the child's result; it will be replaced with the child's inputs.
+    child->RemoveOutput(child_result);
+    parent->RemoveInput(child_result);
+    flow->DeleteVariable(child_result);
+
+    // Move the child's inputs to the parent.
+    while (!child->inputs.empty()) {
+      Flow::Variable *input = child->inputs.back();  // iterate back to front
+      child->MoveInput(input, parent);
+
+      // MoveInput() appends to the parent's input list, so pop and reinsert it
+      // at the proper location.  Since we iterate the child's inputs backwards,
+      // it suffices to repeatedly insert at the same index.
+      CHECK_EQ(input, parent->inputs.back());
+      parent->inputs.pop_back();
+      parent->inputs.insert(parent->inputs.begin() + child_index, input);
+    }
+
+    flow->DeleteOperation(child);
+    parent->SetAttr("N", static_cast<int>(parent->inputs.size() - 1));
+  }
+};
+
 // Type inference for standard ops.
 class StandardTyper : public Typer {
  public:
@@ -241,8 +338,11 @@ class StandardTyper : public Typer {
         std::vector<int> dims;
         if (shape->GetData(&dims)) {
           result->shape.clear();
-          for (int d = 0; d < shape->dim(0); ++d) {
-            result->shape.add(dims[d] == -1 ? 1 : dims[d]);
+          for (int dim : dims) {
+            // Unspecified dimensions (-1) typically correspond to to the input
+            // sequence length.  Since Myelin cells process one input element at
+            // a time, -1 can be replaced with 1.
+            result->shape.add(dim == -1 ? 1 : dim);
           }
           if (op->outputs[0]->type == DT_INVALID) {
             op->outputs[0]->type = op->inputs[0]->type;
@@ -282,6 +382,7 @@ void RegisterGenericLibrary(Library *library) {
   library->RegisterTransformer(new RenameTransformer());
   library->RegisterTransformer(new IdentityTransformer());
   library->RegisterTransformer(new CombineTransformer());
+  library->RegisterTransformer(new FlattenConcatTransformer());
 
   // Register type inference.
   library->RegisterTyper(new StandardTyper());
@@ -295,4 +396,3 @@ void RegisterGenericLibrary(Library *library) {
 
 }  // namespace myelin
 }  // namespace sling
-
