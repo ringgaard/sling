@@ -1,0 +1,30 @@
+// Protocol buffers for serializing lexicons.
+
+syntax = "proto2";
+
+package sling.nlp;
+
+// Affix table entry, for serialization of the affix tables.
+message AffixTableEntry {
+  // Nested message for serializing a single affix.
+  message AffixEntry {
+    // The affix as a string.
+    required string form = 1;
+
+    // The length of the affix (this is non-trivial to compute due to UTF-8).
+    required int32 length = 2;
+
+    // The ID of the affix that is one character shorter, or -1 if none exists.
+    required int32 shorter_id = 3;
+  }
+
+  // The type of affix table, as a string.
+  required string type = 1;
+
+  // The maximum affix length.
+  required int32 max_length = 2;
+
+  // The list of affixes, in order of affix ID.
+  repeated AffixEntry affix = 3;
+}
+

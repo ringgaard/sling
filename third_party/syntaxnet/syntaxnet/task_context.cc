@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "syntaxnet/task_context.h"
 
+#include "syntaxnet/utils.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/platform/env.h"
 

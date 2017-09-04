@@ -177,11 +177,6 @@ int ComputeSessionImpl::GetInputFeatures(
                          channel_id);
 }
 
-int ComputeSessionImpl::BulkGetInputFeatures(
-    const string &component_name, const BulkFeatureExtractor &extractor) {
-  return GetReadiedComponent(component_name)->BulkGetFixedFeatures(extractor);
-}
-
 std::vector<LinkFeatures> ComputeSessionImpl::GetTranslatedLinkFeatures(
     const string &component_name, int channel_id) {
   auto *component = GetReadiedComponent(component_name);

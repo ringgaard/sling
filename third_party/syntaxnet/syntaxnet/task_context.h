@@ -19,8 +19,8 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "syntaxnet/base.h"
 #include "syntaxnet/task_spec.pb.h"
-#include "syntaxnet/utils.h"
 
 namespace syntaxnet {
 

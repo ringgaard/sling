@@ -1,36 +1,27 @@
-/* Copyright 2016 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+#include "nlp/document/affix.h"
 
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
-#include "syntaxnet/affix.h"
-
-#include <ctype.h>
-#include <string.h>
-#include <functional>
 #include <string>
 
-#include "syntaxnet/shared_store.h"
-#include "syntaxnet/task_context.h"
-#include "syntaxnet/term_frequency_map.h"
-#include "syntaxnet/utils.h"
-#include "syntaxnet/workspace.h"
-#include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/platform/env.h"
-//#include "tensorflow/core/platform/regexp.h"
-#include "util/utf8/unicodetext.h"
+#include "base/logging.h"
+#include "util/fingerprint.h"
+#include "util/unicode.h"
 
-namespace syntaxnet {
+namespace sling {
+namespace nlp {
 
 // Initial number of buckets in term and affix hash maps. This must be a power
 // of two.
@@ -39,16 +30,8 @@ static const int kInitialBuckets = 1024;
 // Fill factor for term and affix hash maps.
 static const int kFillFactor = 2;
 
-int TermHash(const string &term) {
-  return utils::Hash32(term.data(), term.size(), 0xDECAF);
-}
-
-// Copies a substring of a Unicode text to a string.
-static void UnicodeSubstring(const UnicodeText::const_iterator &start,
-                             const UnicodeText::const_iterator &end,
-                             string *result) {
-  result->clear();
-  result->append(start.utf8_data(), end.utf8_data() - start.utf8_data());
+static int TermHash(const string &term) {
+  return Fingerprint(term.data(), term.size());
 }
 
 AffixTable::AffixTable(Type type, int max_length) {
@@ -103,12 +86,6 @@ void AffixTable::Read(const AffixTableEntry &table_entry) {
   }
 }
 
-void AffixTable::Read(ProtoRecordReader *reader) {
-  AffixTableEntry table_entry;
-  TF_CHECK_OK(reader->Read(&table_entry));
-  Read(table_entry);
-}
-
 void AffixTable::Write(AffixTableEntry *table_entry) const {
   table_entry->Clear();
   table_entry->set_type(type_ == PREFIX ? "PREFIX" : "SUFFIX");
@@ -122,18 +99,22 @@ void AffixTable::Write(AffixTableEntry *table_entry) const {
   }
 }
 
-void AffixTable::Write(ProtoRecordWriter *writer) const {
+void AffixTable::Serialize(string *data) const {
   AffixTableEntry table_entry;
   Write(&table_entry);
-  writer->Write(table_entry);
+  *data = table_entry.SerializeAsString();
+}
+
+void AffixTable::Deserialize(const string &data) {
+  AffixTableEntry table_entry;
+  CHECK(table_entry.ParseFromString(data));
+  Read(table_entry);
 }
 
 Affix *AffixTable::AddAffixesForWord(const char *word, size_t size) {
   // The affix length is measured in characters and not bytes so we need to
   // determine the length in characters.
-  UnicodeText text;
-  text.PointToUTF8(word, size);
-  int length = text.size();
+  int length = UTF8::Length(word, size);
 
   // Determine longest affix.
   int affix_len = length;
@@ -141,13 +122,14 @@ Affix *AffixTable::AddAffixesForWord(const char *word, size_t size) {
   if (affix_len == 0) return nullptr;
 
   // Find start and end of longest affix.
-  UnicodeText::const_iterator start, end;
+  const char *start;
+  const char *end;
   if (type_ == PREFIX) {
-    start = end = text.begin();
-    for (int i = 0; i < affix_len; ++i) ++end;
+    start = end = word;
+    for (int i = 0; i < affix_len; ++i) end = UTF8::Next(end);
   } else {
-    start = end = text.end();
-    for (int i = 0; i < affix_len; ++i) --start;
+    start = end = word + size;
+    for (int i = 0; i < affix_len; ++i) start = UTF8::Previous(start);
   }
 
   // Try to find successively shorter affixes.
@@ -156,7 +138,7 @@ Affix *AffixTable::AddAffixesForWord(const char *word, size_t size) {
   string s;
   while (affix_len > 0) {
     // Try to find affix in table.
-    UnicodeSubstring(start, end, &s);
+    s.assign(start, end - start);
     Affix *affix = FindAffix(s);
     if (affix == nullptr) {
       // Affix not found, add new one to table.
@@ -175,9 +157,9 @@ Affix *AffixTable::AddAffixesForWord(const char *word, size_t size) {
 
     // Next affix.
     if (type_ == PREFIX) {
-      --end;
+      end = UTF8::Previous(end);
     } else {
-      ++start;
+      start = UTF8::Next(start);
     }
 
     affix_len--;
@@ -261,4 +243,6 @@ void AffixTable::Resize(int size_hint) {
   }
 }
 
-}  // namespace syntaxnet
+}  // namespace nlp
+}  // namespace sling
+

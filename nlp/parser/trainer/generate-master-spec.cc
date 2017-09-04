@@ -35,7 +35,6 @@
 #include "base/init.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "dragnn/protos/spec.pb.h"
 #include "file/file.h"
 #include "frame/object.h"
 #include "frame/serialization.h"
@@ -46,14 +45,10 @@
 #include "nlp/parser/trainer/feature.h"
 #include "nlp/parser/trainer/shared-resources.h"
 #include "string/strcat.h"
-#include "syntaxnet/affix.h"
 #include "syntaxnet/dictionary.pb.h"
 #include "syntaxnet/proto_io.h"
 #include "syntaxnet/task_context.h"
 #include "syntaxnet/task_spec.pb.h"
-#include "syntaxnet/term_frequency_map.h"
-#include "syntaxnet/utils.h"
-#include "tensorflow/core/lib/strings/str_util.h"
 
 using sling::File;
 using sling::FileDecoder;
@@ -108,6 +103,21 @@ string FullName(const string &basename) {
   CHECK(!s.empty());
   if (s.back() == '/') s.pop_back();
   return sling::StrCat(s, "/", basename);
+}
+
+// Splits the given string on every occurrence of the given delimiter char.
+std::vector<string> Split(const string &text, char delim) {
+  std::vector<string> result;
+  int token_start = 0;
+  if (!text.empty()) {
+    for (size_t i = 0; i < text.size() + 1; i++) {
+      if (i == text.size() || text[i] == delim) {
+        result.push_back(string(text.data() + token_start, i - token_start));
+        token_start = i + 1;
+      }
+    }
+  }
+  return result;
 }
 
 void OutputActionTable(Artifacts *artifacts) {
@@ -199,7 +209,7 @@ void AddLinkedFeature(ComponentSpec *component,
   f->set_source_component(source);
   f->set_source_translator(translator);
   f->set_source_layer("layer_0");
-  std::vector<string> parts = syntaxnet::utils::Split(fml, ' ');
+  std::vector<string> parts = Split(fml, ' ');
   f->set_size(parts.size());
 }
 
