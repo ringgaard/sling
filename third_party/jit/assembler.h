@@ -1098,7 +1098,6 @@ class Assembler : public CodeGenerator {
     impl(opcode, dst, src1, src2);                                     \
   }
 
-  AVX_SP_3(vsqrt, 0x51);
   AVX_SP_3(vadd, 0x58);
   AVX_SP_3(vsub, 0x5c);
   AVX_SP_3(vmul, 0x59);
@@ -2032,6 +2031,19 @@ class Assembler : public CodeGenerator {
   }
   void vcvtdq2ps(YMMRegister dst, const Operand &src) {
     vinstr(0x5b, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+
+  void vrcpps(XMMRegister dst, XMMRegister src) {
+    vinstr(0x53, dst, xmm0, src, kNone, k0F, kWIG);
+  }
+  void vrcpps(XMMRegister dst, const Operand &src) {
+    vinstr(0x53, dst, xmm0, src, kNone, k0F, kWIG);
+  }
+  void vrcpps(YMMRegister dst, YMMRegister src) {
+    vinstr(0x53, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+  void vrcpps(YMMRegister dst, const Operand &src) {
+    vinstr(0x53, dst, ymm0, src, kNone, k0F, kWIG);
   }
 
   void vzeroall();
