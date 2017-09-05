@@ -88,10 +88,10 @@ bool FeatureStructure::Atomic(Handle handle) {
   // Numbers and nil values are atomic.
   if (!handle.IsRef() || handle.IsNil()) return true;
 
-  // Only private or anonymous frames are non-atomic.
+  // Only anonymous frames are non-atomic.
   Datum *datum = store_->GetObject(handle);
   if (!datum->IsFrame()) return true;
-  if (datum->AsFrame()->IsPublic()) return true;
+  if (datum->AsFrame()->IsNamed()) return true;
   return false;
 }
 
@@ -107,7 +107,7 @@ bool FeatureStructure::Empty(int node) {
       if (!datum->IsFrame()) return false;
       FrameDatum *frame = datum->AsFrame();
       if (frame->IsProxy()) return true;
-      if (frame->IsPublic()) return false;
+      if (frame->IsNamed()) return false;
       for (Slot *s = frame->begin(); s < frame->end(); ++s) {
         if (s->name != Handle::id()) return false;
       }

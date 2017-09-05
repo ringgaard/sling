@@ -39,7 +39,7 @@ class WikidataPropertyCollector : public FrameProcessor {
  public:
   void Process(Slice key, const Frame &frame) override {
     // Save property id.
-    properties_.push_back(frame.Id());
+    properties_.push_back(frame.Id().str());
 
     // Output property.
     Output(frame);

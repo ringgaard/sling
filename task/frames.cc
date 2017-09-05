@@ -119,7 +119,7 @@ Message *CreateMessage(Text key, const Object &object, bool shallow) {
 }
 
 Message *CreateMessage(const Frame &frame, bool shallow) {
-  return CreateMessage(frame.IdStr(), frame, shallow);
+  return CreateMessage(frame.Id(), frame, shallow);
 }
 
 Frame DecodeMessage(Store *store, Message *message) {

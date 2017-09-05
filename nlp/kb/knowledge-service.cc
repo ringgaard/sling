@@ -357,7 +357,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
 
 void KnowledgeService::GetStandardProperties(const Frame &item,
                                              Builder *builder) const {
-  builder->Add(n_ref_, item.IdStr());
+  builder->Add(n_ref_, item.Id());
   Handle name = item.GetHandle(n_name_);
   if (!name.IsNil()) builder->Add(n_text_, name);
   Handle description = item.GetHandle(n_description_);

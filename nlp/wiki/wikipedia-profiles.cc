@@ -96,8 +96,8 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
   void Process(Slice key, const Frame &frame) override {
     // Look up Wikidata page information in mapping.
     WikipediaMap::PageInfo page;
-    if (!wikimap_.GetPageInfo(frame.IdStr(), &page)) {
-      VLOG(4) << "Unknown page: " << frame.IdStr();
+    if (!wikimap_.GetPageInfo(frame.Id(), &page)) {
+      VLOG(4) << "Unknown page: " << frame.Id();
       num_unknown_pages_->Increment();
       return;
     }
@@ -126,7 +126,7 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
         break;
 
       default:
-        VLOG(3) << "Unexpected page: " << page.type << " " << frame.IdStr();
+        VLOG(3) << "Unexpected page: " << page.type << " " << frame.Id();
         num_unexpected_pages_->Increment();
     }
   }
@@ -259,7 +259,7 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
 
   // Output alias for article title.
   void OutputTitleAlias(const Frame &document) {
-    string qid = document.GetFrame(n_page_qid_).Id();
+    string qid = document.GetFrame(n_page_qid_).Id().str();
     string title = document.GetString(n_page_title_);
     string name;
     string disambiguation;
@@ -278,7 +278,7 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
       string anchor = tokens.Phrase(begin, begin + length);
       for (const Slot &e : mention) {
         if (e.name != n_phrase_evokes_) continue;
-        Text qid = Frame(document.store(), e.value).IdStr();
+        Text qid = Frame(document.store(), e.value).Id();
         OutputAlias(qid, anchor, SRC_WIKIPEDIA_ANCHOR);
       }
     }
@@ -296,7 +296,7 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
       Frame mention(document.store(), s.value);
       for (const Slot &e : mention) {
         if (e.name != n_phrase_evokes_) continue;
-        Text qid = Frame(document.store(), e.value).IdStr();
+        Text qid = Frame(document.store(), e.value).Id();
         OutputAlias(qid, name, SRC_WIKIPEDIA_DISAMBIGUATION);
       }
     }

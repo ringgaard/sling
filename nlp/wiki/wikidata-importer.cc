@@ -208,7 +208,7 @@ class WikidataImporter : public task::Processor {
         Frame site = sitelinks.GetFrame(it.second.wikisite);
         if (site.valid()) {
           string title = site.GetString(s_title_);
-          string lang = Frame(&store, it.first).Id();
+          string lang = Frame(&store, it.first).Id().str();
           if (!title.empty()) {
             string wiki_id = Wiki::Id(lang, title);
             sites.AddLink(it.second.language, wiki_id);

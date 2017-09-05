@@ -298,13 +298,8 @@ class Symbol : public Object {
 
   // Returns symbol name as string.
   string name() const {
-    SymbolDatum *sym = symbol();
-    if (sym->numeric()) {
-      return StrCat("#", sym->name.AsInt());
-    } else {
-      StringDatum *symstr = store()->GetString(symbol()->name);
-      return string(symstr->data(), symstr->size());
-    }
+    StringDatum *symname = store()->GetString(symbol()->name);
+    return string(symname->data(), symname->size());
   }
 
   // Checks if symbol is bound.
@@ -376,11 +371,8 @@ class Frame : public Object {
   // Checks if frame is a proxy.
   bool IsProxy() const { return frame()->IsProxy(); }
 
-  // Checks if frame has a public id.
-  bool IsPublic() const { return frame()->IsPublic(); }
-
-  // Checks if frame has a private id.
-  bool IsPrivate() const { return frame()->IsPrivate(); }
+  // Checks if frame has an id.
+  bool IsNamed() const { return frame()->IsNamed(); }
 
   // Checks if frame is anonymous, i.e. has no ids.
   bool IsAnonymous() const { return frame()->IsAnonymous(); }
@@ -409,8 +401,7 @@ class Frame : public Object {
   }
 
   // Returns the (first) id as a string.
-  string Id() const;
-  Text IdStr() const;
+  Text Id() const;
 
   // Checks if frame has named slot.
   bool Has(Handle name) const;
@@ -810,9 +801,7 @@ class Builder : public External {
   void AddLink(Text name, Text symbol);
   void AddLink(Text symbol);
 
-  // Adds id: slot to frame. If no argument is provided, a new unique symbol is
-  // generated.
-  Handle AddId();
+  // Adds id: slot to frame.
   void AddId(Handle id);
   void AddId(const Object &id);
   void AddId(Text id);

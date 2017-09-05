@@ -40,7 +40,7 @@ class WikiIdMapper : public Processor {
       Frame key = wikipedia.Get(n_language_).AsFrame();
       if (key.valid()) {
         // Update key in message.
-        message->set_key(key.Id());
+        message->set_key(key.Id().slice());
         discard = false;
       }
     }

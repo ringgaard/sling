@@ -563,7 +563,7 @@ class FrameRolesFeature : public SemparFeature {
         if (roles_.find(action.role) == roles_.end()) {
           int index = roles_.size();
           roles_[action.role] = index;
-          role_ids_.emplace_back(Frame(global, action.role).Id());
+          role_ids_.emplace_back(Frame(global, action.role).Id().str());
         }
       }
     }
