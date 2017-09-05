@@ -18,10 +18,10 @@
 #include <algorithm>
 #include <utility>
 
+#include "base/registry.h"
 #include "dragnn/protos/data.pb.h"
 #include "dragnn/protos/spec.pb.h"
 #include "dragnn/protos/trace.pb.h"
-#include "syntaxnet/registry.h"
 #include "tensorflow/core/platform/logging.h"
 
 namespace syntaxnet {

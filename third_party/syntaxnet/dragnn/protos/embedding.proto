@@ -1,8 +1,8 @@
-// Protocol buffers for serializing string<=>index dictionaries.
+// Protocol buffer for serializing embeddings.
 
 syntax = "proto2";
 
-package syntaxnet;
+package syntaxnet.dragnn;
 
 // A light-weight proto to store vectors in binary format.
 message TokenEmbedding {

@@ -18,12 +18,13 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-#include "syntaxnet/base.h"
-#include "syntaxnet/dictionary.pb.h"
-#include "syntaxnet/proto_io.h"
+#include "base/types.h"
+#include "dragnn/core/proto_io.h"
+#include "dragnn/protos/embedding.pb.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/tensor_shape.h"
+#include "tensorflow/core/lib/strings/stringprintf.h"
 
 using tensorflow::OpKernel;
 using tensorflow::OpKernelConstruction;

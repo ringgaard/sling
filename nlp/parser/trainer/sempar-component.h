@@ -30,7 +30,6 @@
 #include "nlp/parser/trainer/transition-state.h"
 #include "nlp/parser/trainer/transition-system-type.h"
 #include "nlp/parser/trainer/workspace.h"
-#include "syntaxnet/registry.h"
 
 namespace sling {
 namespace nlp {

@@ -25,8 +25,6 @@
 #include "file/file.h"
 #include "nlp/parser/trainer/document-batch.h"
 #include "string/strcat.h"
-#include "syntaxnet/task_context.h"
-#include "syntaxnet/task_spec.pb.h"
 
 namespace sling {
 namespace nlp {

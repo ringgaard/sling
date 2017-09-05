@@ -45,10 +45,8 @@
 #include "nlp/parser/trainer/feature.h"
 #include "nlp/parser/trainer/shared-resources.h"
 #include "string/strcat.h"
-#include "syntaxnet/dictionary.pb.h"
-#include "syntaxnet/proto_io.h"
-#include "syntaxnet/task_context.h"
-#include "syntaxnet/task_spec.pb.h"
+#include "dragnn/core/proto_io.h"
+#include "dragnn/protos/embedding.pb.h"
 
 using sling::File;
 using sling::FileDecoder;
@@ -285,8 +283,8 @@ void TrainFeatures(Artifacts *artifacts, ComponentSpec *spec) {
 void CheckWordEmbeddingsDimensionality() {
   if (FLAGS_word_embeddings.empty()) return;
 
-  syntaxnet::ProtoRecordReader reader(FLAGS_word_embeddings);
-  syntaxnet::TokenEmbedding embedding;
+  syntaxnet::dragnn::ProtoRecordReader reader(FLAGS_word_embeddings);
+  syntaxnet::dragnn::TokenEmbedding embedding;
   CHECK_EQ(reader.Read(&embedding), tensorflow::Status::OK());
   int size = embedding.vector().values_size();
   CHECK_EQ(size, FLAGS_word_embeddings_dim)

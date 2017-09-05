@@ -18,16 +18,16 @@
 
 #include <vector>
 
+#include "base/registry.h"
 #include "dragnn/core/input_batch_cache.h"
 #include "dragnn/core/interfaces/transition_state.h"
 #include "dragnn/protos/spec.pb.h"
 #include "dragnn/protos/trace.pb.h"
-#include "syntaxnet/registry.h"
 
 namespace syntaxnet {
 namespace dragnn {
 
-class Component : public RegisterableClass<Component> {
+class Component : public sling::Component<Component> {
  public:
   virtual ~Component() {}
 

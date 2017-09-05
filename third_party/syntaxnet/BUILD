@@ -21,13 +21,8 @@ proto_library(
 )
 
 proto_library(
-  name = "dictionary-proto",
-  srcs = ["syntaxnet/dictionary.proto"],
-)
-
-proto_library(
-  name = "task-spec-proto",
-  srcs = ["syntaxnet/task_spec.proto"],
+  name = "embedding-proto",
+  srcs = ["dragnn/protos/embedding.proto"],
 )
 
 cc_proto_library(
@@ -46,22 +41,14 @@ cc_proto_library(
 )
 
 cc_proto_library(
-  name = "dictionary",
-  deps = ["dictionary-proto"],
-)
-
-cc_proto_library(
-  name = "task-spec",
-  deps = ["task-spec-proto"],
+  name = "embedding",
+  deps = ["embedding-proto"],
 )
 
 cc_library(
   name = "syntaxnet",
   srcs = [
     "dragnn/core/component_registry.cc",
-    "syntaxnet/registry.cc",
-    "syntaxnet/task_context.cc",
-    "syntaxnet/utils.cc",
   ],
   hdrs = [
     "dragnn/core/component_registry.h",
@@ -69,18 +56,15 @@ cc_library(
     "dragnn/core/interfaces/component.h",
     "dragnn/core/interfaces/input_batch.h",
     "dragnn/core/interfaces/transition_state.h",
-    "syntaxnet/base.h",
-    "syntaxnet/proto_io.h",
-    "syntaxnet/task_context.h",
-    "syntaxnet/registry.h",
-    "syntaxnet/utils.h",
+    "dragnn/core/proto_io.h",
   ],
   deps = [
     ":data",
-    ":dictionary",
+    ":embedding",
     ":spec",
-    ":task-spec",
     ":trace",
+    "//base",
+    "//base:registry",
     "//third_party/tensorflow",
   ],
   includes = ["."],
@@ -108,6 +92,7 @@ cc_library(
   ],
   deps = [
     ":syntaxnet",
+    "//base",
     "//third_party/tensorflow",
   ],
   alwayslink = 1,

@@ -13,16 +13,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef SYNTAXNET_PROTO_IO_H_
-#define SYNTAXNET_PROTO_IO_H_
+#ifndef SYNTAXNET_DRAGNN_CORE_PROTO_IO_H_
+#define SYNTAXNET_DRAGNN_CORE_PROTO_IO_H_
 
 #include <string>
 
-#include "syntaxnet/base.h"
+#include "base/types.h"
 #include "tensorflow/core/lib/io/record_reader.h"
 #include "tensorflow/core/lib/io/record_writer.h"
 
 namespace syntaxnet {
+namespace dragnn {
 
 // A convenience wrapper to read protos with a RecordReader.
 class ProtoRecordReader {
@@ -83,6 +84,7 @@ class ProtoRecordWriter {
   std::unique_ptr<tensorflow::WritableFile> file_;
 };
 
+}  // namespace dragnn
 }  // namespace syntaxnet
 
-#endif  // SYNTAXNET_PROTO_IO_H_
+#endif  // SYNTAXNET_DRAGNN_CORE_PROTO_IO_H_
