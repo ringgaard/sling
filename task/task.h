@@ -204,8 +204,8 @@ class Channel {
   Counter *output_value_bytes_ = nullptr;
 };
 
-// A task processor reads input from input resources and message from input
-// channels and produces output resources and messages on output channels.
+// A task processor reads input from input resources and message from source
+// channels and produces output resources and messages on sink channels.
 class Processor : public Component<Processor> {
  public:
   virtual ~Processor() = default;

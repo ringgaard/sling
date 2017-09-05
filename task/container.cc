@@ -219,6 +219,7 @@ void Container::Run() {
 
   // Start all tasks.
   // Start in reverse to "ensure" that dependent tasks are ready to receive.
+  // TODO: sort tasks in dependency order.
   for (int i = tasks_.size() - 1; i >= 0; --i) {
     LOG(INFO) << "Start " << tasks_[i]->ToString();
     tasks_[i]->Start();

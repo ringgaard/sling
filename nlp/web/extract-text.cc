@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Analyze web pages.
-  int num_articles = argc - 1;
+  int num_articles = 0;
   for (int i = 1; i < argc; ++i) {
     WARCFile warc(argv[i]);
     while (warc.Next()) {
@@ -84,6 +84,7 @@ int main(int argc, char *argv[]) {
       headers.Parse(&input);
       WebPageAnalyzer analyzer(&analysis);
       analyzer.Parse(&input);
+      num_articles++;
     }
   }
   analysis.Finalize();
