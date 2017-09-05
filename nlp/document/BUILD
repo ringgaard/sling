@@ -1,15 +1,5 @@
 package(default_visibility = ["//visibility:public"])
 
-proto_library(
-  name = "lexicon-proto",
-  srcs = ["lexicon.proto"],
-)
-
-cc_proto_library(
-  name = "lexicon",
-  deps = ["lexicon-proto"],
-)
-
 cc_library(
   name = "token-breaks",
   hdrs = ["token-breaks.h"],
@@ -113,8 +103,9 @@ cc_library(
   srcs = ["affix.cc"],
   hdrs = ["affix.h"],
   deps = [
-    ":lexicon",
     "//base",
+    "//stream:input",
+    "//stream:output",
     "//util:fingerprint",
     "//util:unicode",
   ],

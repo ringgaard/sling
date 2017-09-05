@@ -17,6 +17,7 @@
 #include "file/file.h"
 #include "nlp/document/affix.h"
 #include "nlp/parser/trainer/workspace.h"
+#include "stream/file.h"
 #include "stream/file-input.h"
 #include "string/strcat.h"
 #include "util/unicode.h"
@@ -203,9 +204,10 @@ class PrefixFeature : public PrecomputedFeature {
   }
 
   int TrainFinish(ComponentSpec *spec) override {
-    string data;
-    affixes_->Serialize(&data);
-    CHECK(File::WriteContents(vocabulary_file_, data));
+    // Write affix table to file.
+    FileOutputStream output(vocabulary_file_);
+    affixes_->Write(&output);
+    CHECK(output.Close());
 
     // Add path to the vocabulary to the spec.
     AddResourceToSpec(VocabularyName(), vocabulary_file_, spec);
@@ -214,14 +216,13 @@ class PrefixFeature : public PrecomputedFeature {
   }
 
   void Init(const ComponentSpec &spec, SharedResources *resources) override {
-    string filename = GetResource(spec, VocabularyName());
-    CHECK(!filename.empty()) << spec.DebugString();
+    vocabulary_file_ = GetResource(spec, VocabularyName());
+    CHECK(!vocabulary_file_.empty()) << spec.DebugString();
 
     length_ = GetIntParam("length", 3);
     affixes_ = new AffixTable(AffixType(), length_);
-    string data;
-    CHECK(File::ReadContents(filename, &data));
-    affixes_->Deserialize(data);
+    FileInputStream input(vocabulary_file_);
+    affixes_->Read(&input);
     oov_ = affixes_->size();
   }
 

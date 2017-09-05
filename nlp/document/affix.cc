@@ -15,8 +15,11 @@
 #include "nlp/document/affix.h"
 
 #include <string>
+#include <vector>
 
 #include "base/logging.h"
+#include "stream/input.h"
+#include "stream/output.h"
 #include "util/fingerprint.h"
 #include "util/unicode.h"
 
@@ -53,62 +56,77 @@ void AffixTable::Reset(int max_length) {
   Resize(0);
 }
 
-void AffixTable::Read(const AffixTableEntry &table_entry) {
-  CHECK_EQ(table_entry.type(), type_ == PREFIX ? "PREFIX" : "SUFFIX");
-  CHECK_GE(table_entry.max_length(), 0);
-  Reset(table_entry.max_length());
+void AffixTable::Read(InputStream *stream) {
+  Input input(stream);
 
-  // First, create all affixes.
-  for (int affix_id = 0; affix_id < table_entry.affix_size(); ++affix_id) {
-    const auto &affix_entry = table_entry.affix(affix_id);
-    CHECK_GE(affix_entry.length(), 0);
-    CHECK_LE(affix_entry.length(), max_length_);
-    CHECK(FindAffix(affix_entry.form()) == nullptr);  // forbid duplicates
-    Affix *affix = AddNewAffix(affix_entry.form(), affix_entry.length());
-    CHECK_EQ(affix->id(), affix_id);
+  // Read affix table type.
+  uint32 type;
+  CHECK(input.ReadVarint32(&type));
+  CHECK_EQ(type_, type);
+
+  // Read max affix length.
+  uint32 max_length;
+  CHECK(input.ReadVarint32(&max_length));
+  Reset(max_length);
+
+  // Read affix table size.
+  uint32 size;
+  CHECK(input.ReadVarint32(&size));
+
+  // Read affixes.
+  string form;
+  std::vector<int> link(size, -1);
+  for (int affix_id = 0; affix_id < size; ++affix_id) {
+    form.clear();
+    uint32 bytes, length, shorter;
+
+    CHECK(input.ReadVarint32(&bytes));
+    CHECK(input.ReadString(bytes, &form));
+    CHECK(input.ReadVarint32(&length));
+    if (length > 1) {
+      CHECK(input.ReadVarint32(&shorter));
+      link[affix_id] = shorter;
+    }
+
+    DCHECK_LE(length, max_length_);
+    DCHECK(FindAffix(form) == nullptr);
+    Affix *affix = AddNewAffix(form, length);
+    DCHECK_EQ(affix->id(), affix_id);
   }
-  CHECK_EQ(affixes_.size(), table_entry.affix_size());
+  DCHECK_EQ(size, affixes_.size());
 
-  // Next, link the shorter affixes.
-  for (int affix_id = 0; affix_id < table_entry.affix_size(); ++affix_id) {
-    const auto &affix_entry = table_entry.affix(affix_id);
-    if (affix_entry.shorter_id() == -1) {
-      CHECK_EQ(affix_entry.length(), 1);
+  // Link affixes.
+  for (int affix_id = 0; affix_id < size; ++affix_id) {
+    if (link[affix_id] == -1) {
+      DCHECK_EQ(affixes_[affix_id]->length(), 1);
       continue;
     }
-    CHECK_GT(affix_entry.length(), 1);
-    CHECK_GE(affix_entry.shorter_id(), 0);
-    CHECK_LT(affix_entry.shorter_id(), affixes_.size());
+
     Affix *affix = affixes_[affix_id];
-    Affix *shorter = affixes_[affix_entry.shorter_id()];
-    CHECK_EQ(affix->length(), shorter->length() + 1);
+    DCHECK_GT(affix->length(), 1);
+    DCHECK_GE(link[affix_id], 0);
+    DCHECK_LT(link[affix_id], size);
+
+    Affix *shorter = affixes_[link[affix_id]];
+    DCHECK_EQ(affix->length(), shorter->length() + 1);
     affix->set_shorter(shorter);
   }
 }
 
-void AffixTable::Write(AffixTableEntry *table_entry) const {
-  table_entry->Clear();
-  table_entry->set_type(type_ == PREFIX ? "PREFIX" : "SUFFIX");
-  table_entry->set_max_length(max_length_);
+void AffixTable::Write(OutputStream *stream) {
+  Output output(stream);
+  output.WriteVarint32(type_);
+  output.WriteVarint32(max_length_);
+  output.WriteVarint32(affixes_.size());
   for (const Affix *affix : affixes_) {
-    auto *affix_entry = table_entry->add_affix();
-    affix_entry->set_form(affix->form());
-    affix_entry->set_length(affix->length());
-    affix_entry->set_shorter_id(
-        affix->shorter() == nullptr ? -1 : affix->shorter()->id());
+    output.WriteVarint32(affix->form().size());
+    output.Write(affix->form());
+    output.WriteVarint32(affix->length());
+    if (affix->length() > 1) {
+      CHECK(affix->shorter() != nullptr);
+      output.WriteVarint32(affix->shorter()->id());
+    }
   }
-}
-
-void AffixTable::Serialize(string *data) const {
-  AffixTableEntry table_entry;
-  Write(&table_entry);
-  *data = table_entry.SerializeAsString();
-}
-
-void AffixTable::Deserialize(const string &data) {
-  AffixTableEntry table_entry;
-  CHECK(table_entry.ParseFromString(data));
-  Read(table_entry);
 }
 
 Affix *AffixTable::AddAffixesForWord(const char *word, size_t size) {
@@ -197,7 +215,7 @@ int AffixTable::AffixId(const string &form) const {
 Affix *AffixTable::AddNewAffix(const string &form, int length) {
   int hash = TermHash(form);
   int id = affixes_.size();
-  if (id > static_cast<int>(buckets_.size()) * kFillFactor) Resize(id);
+  if (id > buckets_.size() * kFillFactor) Resize(id);
   int b = hash & (buckets_.size() - 1);
 
   // Create new affix object.

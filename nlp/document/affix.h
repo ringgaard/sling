@@ -20,7 +20,7 @@
 
 #include "base/macros.h"
 #include "base/types.h"
-#include "nlp/document/lexicon.pb.h"
+#include "stream/stream.h"
 
 namespace sling {
 namespace nlp {
@@ -78,7 +78,7 @@ class Affix {
 class AffixTable {
  public:
   // Affix table type.
-  enum Type { PREFIX, SUFFIX };
+  enum Type { PREFIX = 0, SUFFIX = 1 };
 
   AffixTable(Type type, int max_length);
   ~AffixTable();
@@ -87,17 +87,11 @@ class AffixTable {
   // maximum length specified.
   void Reset(int max_length);
 
-  // Read this from proto.
-  void Read(const AffixTableEntry &table_entry);
+  // Read affix table from input stream.
+  void Read(InputStream *stream);
 
-  // Write this to proto.
-  void Write(AffixTableEntry *table_entry) const;
-
-  // Serializes this to string.
-  void Serialize(string *data) const;
-
-  // De-serializes this from string.
-  void Deserialize(const string &data);
+  // Write affix table to output stream.
+  void Write(OutputStream *stream);
 
   // Adds all prefixes/suffixes of the word up to the maximum length to the
   // table. The longest affix is returned. The pointers in the affix can be

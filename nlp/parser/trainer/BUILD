@@ -146,6 +146,7 @@ cc_library(
     ":workspace",
     "//file",
     "//nlp/document:affix",
+    "//stream:file",
     "//stream:file-input",
     "//string:strcat",
     "//third_party/syntaxnet",
