@@ -58,7 +58,7 @@ DEV_NOGOLD_FILEPATTERN=${SEM}/dev.without-gold.zip
 WORD_EMBEDDINGS_DIM=32
 PRETRAINED_WORD_EMBEDDINGS=$SEM/word2vec-embedding-bi-true-32.tf.recordio
 OOV_FEATURES=true
-FLOW=
+FLOW=${SEM}/sempar.flow
 
 # Training hyperparameters.
 BATCH_SIZE=8
