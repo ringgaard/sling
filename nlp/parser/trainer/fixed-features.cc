@@ -283,7 +283,7 @@ class SuffixFeature : public PrefixFeature {
       p = UTF8::Previous(p, start);
       n++;
     }
-    if (n > 0) return oov_;
+    if (n < length_) return oov_;
 
     string affix(p, end - p);
     int affix_id = affixes_->AffixId(affix);

@@ -138,7 +138,7 @@ class WorkspaceSet {
 
  private:
   // The set of workspaces, indexed as workspaces_[typeid][index].
-  std::unordered_map<std::type_index, std::vector<Workspace *> > workspaces_;
+  std::unordered_map<std::type_index, std::vector<Workspace *>> workspaces_;
 };
 
 // A workspace that wraps around a single int.
@@ -210,7 +210,7 @@ class VectorVectorIntWorkspace : public Workspace {
 
  private:
   // The enclosed vector of vector of elements.
-  std::vector<std::vector<int> > elements_;
+  std::vector<std::vector<int>> elements_;
 };
 
 }  // namespace nlp
