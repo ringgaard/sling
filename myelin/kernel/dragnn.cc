@@ -457,9 +457,10 @@ class DragnnTyper : public Typer {
     // Infer shape for lookup operation.
     if (op->type == "Lookup") {
       if (op->indegree() == 2 && op->outdegree() == 1) {
+        Flow::Variable *features = op->inputs[0];
         Flow::Variable *embeddings = op->inputs[1];
         Flow::Variable *result = op->outputs[0];
-        if (embeddings->rank() == 2) {
+        if (features->rank() == 2 && embeddings->rank() == 2) {
           result->shape.assign(1, embeddings->dim(1));
           return true;
         }
