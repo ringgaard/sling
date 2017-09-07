@@ -35,10 +35,10 @@ void Parser::Load(Store *store, const string &model) {
   // Compile parser flow.
   CHECK(network_.Compile(flow, library_));
 
-  // Initialize cell.s
-  InitLSTM("lr_lstm", &lr_);
-  InitLSTM("rl_lstm", &rl_);
-  InitFF(&ff_);
+  // Initialize cells.
+  InitLSTM("lr_lstm", &lr_, false);
+  InitLSTM("rl_lstm", &rl_, true);
+  InitFF("ff", &ff_);
 
   // Get attention depth.
   attention_depth_ = ff_.feature_lr_attention->elements();
@@ -112,50 +112,51 @@ void Parser::Load(Store *store, const string &model) {
   labeled_link_offset_ = unlabeled_link_offset_ + frame_limit_ * frame_limit_;
 }
 
-void Parser::InitLSTM(const string &scope, LSTM *lstm) {
+void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
   // Get cell.
-  lstm->cell = GetCell(scope);
+  lstm->cell = GetCell(name);
+  lstm->reverse = reverse;
 
   // Get connectors.
-  lstm->control = GetConnector(scope + "/control");
-  lstm->hidden = GetConnector(scope + "/hidden");
+  lstm->control = GetConnector(name + "/control");
+  lstm->hidden = GetConnector(name + "/hidden");
 
   // Get feature inputs.
-  lstm->feature_words = GetParam(scope + "/words", true);
-  lstm->feature_prefix = GetParam(scope + "/prefix", true);
-  lstm->feature_suffix = GetParam(scope + "/suffix", true);
-  lstm->feature_shape = GetParam(scope + "/shape", true);
+  lstm->feature_words = GetParam(name + "/words", true);
+  lstm->feature_prefix = GetParam(name + "/prefix", true);
+  lstm->feature_suffix = GetParam(name + "/suffix", true);
+  lstm->feature_shape = GetParam(name + "/shape", true);
 
   // Get links.
-  lstm->c_in = GetParam(scope + "/c_in");
-  lstm->c_out = GetParam(scope + "/c_out");
-  lstm->h_in = GetParam(scope + "/h_in");
-  lstm->h_out = GetParam(scope + "/h_out");
+  lstm->c_in = GetParam(name + "/c_in");
+  lstm->c_out = GetParam(name + "/c_out");
+  lstm->h_in = GetParam(name + "/h_in");
+  lstm->h_out = GetParam(name + "/h_out");
 }
 
-void Parser::InitFF(FeedForward *ff) {
+void Parser::InitFF(const string &name, FF *ff) {
   // Get cell.
-  ff->cell = GetCell("ff");
+  ff->cell = GetCell(name);
 
   // Get connector for recurrence.
-  ff->step = GetConnector("ff/step");
+  ff->step = GetConnector(name + "/step");
 
   // Get feature inputs.
-  ff->feature_lr_focus = GetParam("ff/lr", true);
-  ff->feature_rl_focus = GetParam("ff/rl", true);
-  ff->feature_lr_attention = GetParam("ff/frame-end-lr", true);
-  ff->feature_rl_attention = GetParam("ff/frame-end-rl", true);
-  ff->feature_frame_create = GetParam("ff/frame-creation-steps", true);
-  ff->feature_frame_focus = GetParam("ff/frame-focus-steps", true);
-  ff->feature_history = GetParam("ff/history", true);
-  ff->feature_roles = GetParam("ff/roles", true);
+  ff->feature_lr_focus = GetParam(name + "/lr", true);
+  ff->feature_rl_focus = GetParam(name + "/rl", true);
+  ff->feature_lr_attention = GetParam(name + "/frame-end-lr", true);
+  ff->feature_rl_attention = GetParam(name + "/frame-end-rl", true);
+  ff->feature_frame_create = GetParam(name + "/frame-creation-steps", true);
+  ff->feature_frame_focus = GetParam(name + "/frame-focus-steps", true);
+  ff->feature_history = GetParam(name + "/history", true);
+  ff->feature_roles = GetParam(name + "/roles", true);
 
   // Get links.
-  ff->lr_lstm = GetParam("ff/link/lr_lstm");
-  ff->rl_lstm = GetParam("ff/link/rl_lstm");
-  ff->steps = GetParam("ff/steps");
-  ff->hidden = GetParam("ff/hidden");
-  ff->output = GetParam("ff/output");
+  ff->lr_lstm = GetParam(name + "/link/lr_lstm");
+  ff->rl_lstm = GetParam(name + "/link/rl_lstm");
+  ff->steps = GetParam(name + "/steps");
+  ff->hidden = GetParam(name + "/hidden");
+  ff->output = GetParam(name + "/output");
 }
 
 int Parser::LookupWord(const string &word) const {
@@ -431,8 +432,8 @@ void ParserInstance::ExtractFeaturesFF(int step) {
   }
 
   // Compute role features.
-  int *roles = ff_.Get<int>(parser_->ff_.feature_roles);
-  int r = 0;
+  int *r = ff_.Get<int>(parser_->ff_.feature_roles);
+  int *rend = r + parser_->max_roles_;
   for (const auto &kv : frame_to_attention) {
     // Attention index of the source frame.
     int source = kv.second;
@@ -445,44 +446,41 @@ void ParserInstance::ExtractFeaturesFF(int step) {
     for (const Slot *slot = frame->begin(); slot < frame->end(); ++slot) {
       const auto &it = parser_->roles_.find(slot->name);
       if (it == parser_->roles_.end()) continue;
-
       int role = it->second;
-      if (r < parser_->max_roles_) {
+
+      if (r < rend) {
         // (source, role).
-        roles[r++] = outlink_base + role;
+        *r++ = outlink_base + role;
       }
       if (slot->value.IsIndex()) {
         const auto &it2 = frame_to_attention.find(slot->value.AsIndex());
         if (it2 != frame_to_attention.end()) {
           // Attention index of the target frame.
           int target = it2->second;
-          if (r < parser_->max_roles_) {
+          if (r < rend) {
             // (role, target)
-            roles[r++] =
-                parser_->inlink_offset_ +
-                target * parser_->roles_.size() +
-                role;
+            *r++ = parser_->inlink_offset_ +
+                   target * parser_->roles_.size() +
+                   role;
           }
-          if (r < parser_->max_roles_) {
+          if (r < rend) {
             // (source, target)
-            roles[r++] =
-                parser_->unlabeled_link_offset_ +
-                source * parser_->frame_limit_ +
-                target;
+            *r++ = parser_->unlabeled_link_offset_ +
+                   source * parser_->frame_limit_ +
+                   target;
           }
-          if (r < parser_->max_roles_) {
+          if (r < rend) {
             // (source, role, target)
-            roles[r++] =
-                parser_->labeled_link_offset_ +
-                source * parser_->frame_limit_ * parser_->roles_.size() +
-                target * parser_->roles_.size() +
-                role;
+            *r++ = parser_->labeled_link_offset_ +
+                   source * parser_->frame_limit_ * parser_->roles_.size() +
+                   target * parser_->roles_.size() +
+                   role;
           }
         }
       }
     }
   }
-  while (r < parser_->max_roles_) roles[r++] = -2;
+  while (r < rend) *r++ = -2;
 }
 
 }  // namespace nlp

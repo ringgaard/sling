@@ -71,10 +71,11 @@ class Parser {
   };
 
   // Feed-forward cell.
-  struct FeedForward {
+  struct FF {
     myelin::Cell *cell;                      // feed-forward cell
     myelin::Connector *step;                 // FF step hidden activations
 
+    // Features.
     myelin::Tensor *feature_lr_focus;        // LR LSTM input focus feature
     myelin::Tensor *feature_rl_focus;        // RL LSTM input focus feature
 
@@ -87,6 +88,7 @@ class Parser {
     myelin::Tensor *feature_history;         // history feature
     myelin::Tensor *feature_roles;           // roles feature
 
+    // Links.
     myelin::Tensor *lr_lstm;                 // link to LR LSTM hidden layer
     myelin::Tensor *rl_lstm;                 // link to RL LSTM hidden layer
     myelin::Tensor *steps;                   // link to FF step hidden layer
@@ -95,10 +97,10 @@ class Parser {
   };
 
   // Initialize LSTM cell.
-  void InitLSTM(const string &scope, LSTM *lstm);
+  void InitLSTM(const string &name, LSTM *lstm, bool reverse);
 
   // Initialize FF cell.
-  void InitFF(FeedForward *ff);
+  void InitFF(const string &name, FF *ff);
 
   // Lookup cells, connectors, and parameters.
   myelin::Cell *GetCell(const string &name);
@@ -115,7 +117,7 @@ class Parser {
   // Cells.
   LSTM lr_;                                  // left-to-right LSTM cell
   LSTM rl_;                                  // right-to-left LSTM cell
-  FeedForward ff_;                           // feed-forward cell
+  FF ff_;                                    // feed-forward cell
 
   // Number of attention features.
   int attention_depth_;
@@ -135,8 +137,8 @@ class Parser {
   int oov_ = -1;
 
   // Prefix and suffix tables.
-  AffixTable prefixes_;
-  AffixTable suffixes_;
+  AffixTable prefixes_{AffixTable::PREFIX, 0};
+  AffixTable suffixes_{AffixTable::SUFFIX, 0};
 
   // Global store for parser.
   Store *store_ = nullptr;
