@@ -23,10 +23,6 @@ cc_library(
     ":text",
     "//base",
   ],
-  copts = [
-    "-Wno-sign-compare",
-    "-Wno-deprecated",
-  ],
 )
 
 cc_library(
@@ -46,10 +42,6 @@ cc_library(
     ":ctype",
     "//base",
   ],
-  copts = [
-    "-Wno-sign-compare",
-    "-Wno-deprecated",
-  ],
 )
 
 cc_library(
@@ -60,11 +52,6 @@ cc_library(
     ":ctype",
     ":printf",
     "//base",
-  ],
-  copts = [
-    "-Wno-narrowing",
-    "-Wno-sign-compare",
-    "-Wno-deprecated",
   ],
 )
 
@@ -89,10 +76,6 @@ cc_library(
     ":strip",
     "//base",
   ],
-  copts = [
-    "-Wno-sign-compare",
-    "-Wno-deprecated",
-  ],
 )
 
 cc_library(
@@ -105,10 +88,6 @@ cc_library(
     ":text",
     "//base",
   ],
-  copts = [
-    "-Wno-sign-compare",
-    "-Wno-deprecated",
-  ],
 )
 
 cc_library(
@@ -118,10 +97,6 @@ cc_library(
   deps = [
     ":ctype",
     ":text",
-  ],
-  copts = [
-    "-Wno-sign-compare",
-    "-Wno-deprecated",
   ],
 )
 
@@ -133,10 +108,6 @@ cc_library(
     ":memutil",
     "//base",
     "//util:hash",
-  ],
-  copts = [
-    "-Wno-deprecated",
-    "-Wno-sign-compare",
   ],
 )
 

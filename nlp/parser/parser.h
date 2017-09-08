@@ -27,8 +27,8 @@
 #include "myelin/compute.h"
 #include "myelin/dictionary.h"
 #include "myelin/flow.h"
-#include "nlp/document/affix.h"
 #include "nlp/document/document.h"
+#include "nlp/document/lexicon.h"
 #include "nlp/parser/action-table.h"
 #include "nlp/parser/parser-state.h"
 
@@ -107,9 +107,6 @@ class Parser {
   myelin::Connector *GetConnector(const string &name);
   myelin::Tensor *GetParam(const string &name, bool optional = false);
 
-  // Look up word in vocabulary. Return OOV for unknown words.
-  int LookupWord(const string &word) const;
-
   // Parser network.
   myelin::Library library_;
   myelin::Network network_;
@@ -132,13 +129,7 @@ class Parser {
   int num_actions_;
 
   // Lexicon.
-  myelin::Dictionary lexicon_;
-  bool normalize_digits_ = false;
-  int oov_ = -1;
-
-  // Prefix and suffix tables.
-  AffixTable prefixes_{AffixTable::PREFIX, 0};
-  AffixTable suffixes_{AffixTable::SUFFIX, 0};
+  Lexicon lexicon_;
 
   // Global store for parser.
   Store *store_ = nullptr;

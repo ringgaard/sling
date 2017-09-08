@@ -62,8 +62,7 @@ cc_library(
     "//myelin/kernel:dragnn",
     "//myelin/kernel:tensorflow",
     "//nlp/document",
-    "//nlp/document:affix",
-    "//stream:memory",
+    "//nlp/document:lexicon",
   ],
 )
 

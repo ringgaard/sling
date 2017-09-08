@@ -111,3 +111,15 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "lexicon",
+  srcs = ["lexicon.cc"],
+  hdrs = ["lexicon.h"],
+  deps = [
+    ":affix",
+    "//base",
+    "//stream:memory",
+    "//util:vocabulary",
+  ],
+)
+

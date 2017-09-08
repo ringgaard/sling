@@ -55,20 +55,20 @@ void Parser::Load(Store *store, const string &model) {
   // Load lexicon.
   myelin::Flow::Blob *vocabulary = flow.DataBlock("lexicon");
   CHECK(vocabulary != nullptr);
-  lexicon_.Init(vocabulary);
-  normalize_digits_ = vocabulary->attrs.Get("normalize_digits", false);
-  oov_ = vocabulary->attrs.Get("oov", -1);
+  lexicon_.InitWords(vocabulary->data, vocabulary->size);
+  bool normalize = vocabulary->attrs.Get("normalize_digits", false);
+  int oov = vocabulary->attrs.Get("oov", -1);
+  lexicon_.set_normalize_digits(normalize);
+  lexicon_.set_oov(oov);
 
   // Load affix tables.
   myelin::Flow::Blob *prefix_table = flow.DataBlock("prefixes");
   if (prefix_table != nullptr) {
-    ArrayInputStream stream(prefix_table->data, prefix_table->size);
-    prefixes_.Read(&stream);
+    lexicon_.InitPrefixes(prefix_table->data, prefix_table->size);
   }
   myelin::Flow::Blob *suffix_table = flow.DataBlock("suffixes");
   if (suffix_table != nullptr) {
-    ArrayInputStream stream(suffix_table->data, suffix_table->size);
-    suffixes_.Read(&stream);
+    lexicon_.InitSuffixes(suffix_table->data, suffix_table->size);
   }
 
   // Load commons and action stores.
@@ -159,26 +159,6 @@ void Parser::InitFF(const string &name, FF *ff) {
   ff->output = GetParam(name + "/output");
 }
 
-int Parser::LookupWord(const string &word) const {
-  // Lookup word in vocabulary.
-  int id = lexicon_.Lookup(word);
-
-  if (id == oov_ && normalize_digits_) {
-    // Check if word has digits.
-    bool has_digits = false;
-    for (char c : word) if (c >= '0' && c <= '9') has_digits = true;
-
-    if (has_digits) {
-      // Normalize digits and lookup the normalized word.
-      string normalized = word;
-      for (char &c : normalized) if (c >= '0' && c <= '9') c = '9';
-      id = lexicon_.Lookup(normalized);
-    }
-  }
-
-  return id;
-}
-
 void Parser::Parse(Document *document) const {
   // Parse each sentence of the document.
   for (SentenceIterator s(document); s.more(); s.next()) {
@@ -188,7 +168,7 @@ void Parser::Parse(Document *document) const {
 
     // Look up words in vocabulary.
     for (int i = s.begin(); i < s.end(); ++i) {
-      int word = LookupWord(document->token(i).text());
+      int word = lexicon_.LookupWord(document->token(i).text());
       data.words_[i - s.begin()] = word;
     }
 
