@@ -38,11 +38,17 @@ class Lexicon {
   // Look up word in vocabulary. Return OOV if word is not found.
   int LookupWord(const string &word) const;
 
-  // Return words in vocabulary.
-  const std::vector<string> &words() const { return words_; }
+  // Return number of words in vocabulary.
+  size_t size() const { return words_.size(); }
 
   // Return word in vocabulary.
-  const string &word(int index) const { return words_[index]; }
+  const string &word(int index) const { return words_[index].word; }
+
+  // Get longest prefix for known word.
+  Affix *prefix(int index) const { return words_[index].prefix; }
+
+  // Get longest suffix for known word.
+  Affix *suffix(int index) const { return words_[index].suffix; }
 
   // Get affix tables.
   const AffixTable &prefixes() const { return prefixes_; }
@@ -57,13 +63,20 @@ class Lexicon {
   void set_normalize_digits(bool normalize) { normalize_digits_ = normalize; }
 
  private:
+  // Lexicon entry.
+  struct Entry {
+    string word;                // lexical word form
+    Affix *prefix = nullptr;    // longest known prefix for word
+    Affix *suffix = nullptr;    // longest known suffix for word
+  };
+
   // Mapping from words to ids.
   Vocabulary vocabulary_;
   bool normalize_digits_ = false;
   int oov_ = -1;
 
-  // Mapping ids to words.
-  std::vector<string> words_;
+  // Lexicon entries.
+  std::vector<Entry> words_;
 
   // Word prefixes.
   AffixTable prefixes_{AffixTable::PREFIX, 0};

@@ -39,7 +39,7 @@ void Lexicon::InitWords(const char *data, size_t size) {
     if (next == end) break;
 
     // Initialize item for word.
-    words_[index].assign(current, next - current);
+    words_[index].word.assign(current, next - current);
 
     current = next + 1;
     index++;
@@ -47,13 +47,25 @@ void Lexicon::InitWords(const char *data, size_t size) {
 }
 
 void Lexicon::InitPrefixes(const char *data, size_t size) {
+  // Read prefixes.
   ArrayInputStream stream(data, size);
   prefixes_.Read(&stream);
+
+  // Pre-compute the longest prefix for all words in lexicon.
+  for (Entry &entry : words_) {
+    entry.prefix = prefixes_.GetLongestAffix(entry.word);
+  }
 }
 
 void Lexicon::InitSuffixes(const char *data, size_t size) {
+  // Read suffixes.
   ArrayInputStream stream(data, size);
   suffixes_.Read(&stream);
+
+  // Pre-compute the longest suffix for all words in lexicon.
+  for (Entry &entry : words_) {
+    entry.prefix = prefixes_.GetLongestAffix(entry.word);
+  }
 }
 
 int Lexicon::LookupWord(const string &word) const {
