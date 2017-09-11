@@ -577,7 +577,7 @@ string Instance::ToString(Tensor *param) const {
     p = *reinterpret_cast<char **>(p);
     if (p == nullptr) return "null";
   }
-  if (param->shape().partial()) return "*";
+  if (!param->shape().defined()) return "*";
 
   // Get type traits for elements.
   const TypeTraits &traits = TypeTraits::of(param->type());

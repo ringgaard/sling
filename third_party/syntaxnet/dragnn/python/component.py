@@ -143,7 +143,7 @@ class ComponentBuilderBase(object):
       return network_units.NetworkUnitInterface.Create(network_type, self)
 
   @abstractmethod
-  def build_greedy_training(self, state, network_states):
+  def build_training(self, state, network_states):
     """Builds a training graph for this component.
 
     Two assumptions are made about the resulting graph:
@@ -162,34 +162,8 @@ class ComponentBuilderBase(object):
     """
     pass
 
-  def build_structured_training(self, state, network_states):
-    """Builds a beam search based training loop for this component.
-
-    The default implementation builds a dummy graph and raises a
-    TensorFlow runtime exception to indicate that structured training
-    is not implemented.
-
-    Args:
-      state: MasterState from the 'AdvanceMaster' op that advances the
-        underlying master to this component.
-      network_states: dictionary of component NetworkState objects.
-
-    Returns:
-      (handle, cost, correct, total) -- These are TF ops corresponding
-      to the final handle after unrolling, the total cost, and the
-      total number of actions. Since the number of correctly predicted
-      actions is not applicable in the structured training setting, a
-      dummy value should returned.
-    """
-    del network_states  # Unused.
-    with tf.control_dependencies([tf.Assert(False, ['Not implemented.'])]):
-      handle = tf.identity(state.handle)
-    cost = tf.constant(0.)
-    correct, total = tf.constant(0), tf.constant(0)
-    return handle, cost, correct, total
-
   @abstractmethod
-  def build_greedy_inference(self, state, network_states,
+  def build_inference(self, state, network_states,
                              during_training=False):
     """Builds an inference graph for this component.
 
@@ -231,11 +205,11 @@ class ComponentBuilderBase(object):
         return tf.constant(0, tf.float32)
 
     summaries = []
-    summaries.append(tf.summary.scalar('%s step' % self.name, self._step))
-    summaries.append(tf.summary.scalar('%s total' % self.name, self._total))
+    summaries.append(tf.summary.scalar('%s_step' % self.name, self._step))
+    summaries.append(tf.summary.scalar('%s_total' % self.name, self._total))
     if self.network.params:
       summaries.append(
-          tf.summary.scalar('%s parameter Norm' % self.name,
+          tf.summary.scalar('%s_parameter_Norm' % self.name,
                             combine_norm(self.network.params)))
       slot_names = self.master.optimizer.get_slot_names()
       for name in slot_names:
@@ -243,13 +217,13 @@ class ComponentBuilderBase(object):
             self.master.optimizer.get_slot(p, name) for p in self.network.params
         ]
         summaries.append(
-            tf.summary.scalar('%s %s Norm' % (self.name, name),
+            tf.summary.scalar('%s_%s_Norm' % (self.name, name),
                               combine_norm(slot_params)))
 
       # Construct moving average.
       if self.master.hyperparams.use_moving_average:
         summaries.append(
-            tf.summary.scalar('%s avg Norm' % self.name,
+            tf.summary.scalar('%s_avg_Norm' % self.name,
                               combine_norm([
                                   self.moving_average.average(p)
                                   for p in self.network.params
@@ -371,7 +345,7 @@ class DynamicComponentBuilder(ComponentBuilderBase):
   so fixed and linked features can be recurrent.
   """
 
-  def build_greedy_training(self, state, network_states):
+  def build_training(self, state, network_states):
     """Builds a training loop for this component.
 
     This loop repeatedly evaluates the network and computes the loss, but it
@@ -484,8 +458,7 @@ class DynamicComponentBuilder(ComponentBuilderBase):
     with tf.control_dependencies([x.flow for x in arrays]):
       return tf.identity(state.handle), cost, correct, total
 
-  def build_greedy_inference(self, state, network_states,
-                             during_training=False):
+  def build_inference(self, state, network_states, during_training=False):
     """Builds an inference loop for this component.
 
     Repeatedly evaluates the network and advances the underlying state according

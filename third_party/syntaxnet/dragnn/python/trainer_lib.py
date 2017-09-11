@@ -30,18 +30,6 @@ from tensorflow.python.platform import gfile
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-
-def calculate_component_accuracies(eval_res_values):
-  """Transforms the DRAGNN eval_res output to float accuracies of components."""
-  # The structure of eval_res_values is
-  # [comp1_total, comp1_correct, comp2_total, comp2_correct, ...]
-  return [
-      1.0 * eval_res_values[2 * i + 1] / eval_res_values[2 * i]
-      if eval_res_values[2 * i] > 0 else float('nan')
-      for i in xrange(len(eval_res_values) // 2)
-  ]
-
-
 def write_summary(summary_writer, label, value, step):
   """Write a summary for a certain evaluation."""
   summary = Summary(value=[Summary.Value(tag=label, simple_value=float(value))])
@@ -65,25 +53,12 @@ def annotate_dataset(sess, annotator, eval_corpus):
   return processed
 
 
-def get_summary_writer(tensorboard_dir):
-  """Creates a directory for writing summaries and returns a writer."""
-  tf.logging.info('TensorBoard directory: %s', tensorboard_dir)
-  tf.logging.info('Deleting prior data if exists...')
-  try:
-    gfile.DeleteRecursively(tensorboard_dir)
-  except errors.OpError as err:
-    tf.logging.error('Directory did not exist? Error: %s', err)
-  tf.logging.info('Deleted! Creating the directory again...')
-  gfile.MakeDirs(tensorboard_dir)
-  tf.logging.info('Created! Instatiating SummaryWriter...')
-  summary_writer = tf.summary.FileWriter(tensorboard_dir)
-  return summary_writer
-
-
 def run_training_step(sess, trainer, train_corpus, batch_size):
-  """Runs a single iteration of train_op on a randomly sampled batch."""
+  """Runs a single iteration of train_op on a  sampled batch."""
   batch = random.sample(train_corpus, batch_size)
-  sess.run(trainer['run'], feed_dict={trainer['input_batch']: batch})
+  cost, _ = sess.run([trainer['cost'], trainer['run']],
+                     feed_dict={trainer['input_batch']: batch})
+  return cost
 
 
 def run_training(sess, trainers, annotator, evaluator, pretrain_steps,
@@ -140,13 +115,14 @@ def run_training(sess, trainers, annotator, evaluator, pretrain_steps,
   tf.logging.info('Starting training...')
   actual_step = sum(checkpoint_stats[1:])
   for step, target_idx in enumerate(target_for_step):
-    run_training_step(sess, trainers[target_idx], train_corpus, batch_size)
+    cost = run_training_step(
+        sess, trainers[target_idx], train_corpus, batch_size)
     checkpoint_stats[target_idx + 1] += 1
-    if step % 100 == 0:
-      tf.logging.info('training step: %d, actual: %d', step, actual_step + step)
+    if step == 0:
+      tf.logging.info('Initial cost at step = 0: %f', cost)
     if step % report_every == 0 and step > 0:
-      tf.logging.info('finished step: %d, actual: %d', step, actual_step + step)
-
+      tf.logging.info('finished step: %d, actual: %d, cost : %f',
+                      step, actual_step + step, cost)
       annotated = annotate_dataset(sess, annotator, eval_corpus)
       summaries = evaluator(eval_gold, annotated)
       for label, metric in summaries.iteritems():
