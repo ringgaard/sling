@@ -192,12 +192,6 @@ class Shape {
   }
 
   // Check if shape is fully defined, i.e. all dimensions have specified sizes.
-  bool defined() const {
-    for (int d : dims_) if (d <= 0) return false;
-    return true;
-  }
-
-  // Check if shape is fully defined, i.e. all dimensions have specified sizes.
   // Please notice that defined := !undefined && !patial.
   bool defined() const {
     for (int d : dims_) if (d <= 0) return false;
