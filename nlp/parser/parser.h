@@ -25,7 +25,6 @@
 #include "file/file.h"
 #include "frame/store.h"
 #include "myelin/compute.h"
-#include "myelin/dictionary.h"
 #include "myelin/flow.h"
 #include "nlp/document/document.h"
 #include "nlp/document/lexicon.h"

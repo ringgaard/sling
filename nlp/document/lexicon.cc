@@ -64,7 +64,7 @@ void Lexicon::InitSuffixes(const char *data, size_t size) {
 
   // Pre-compute the longest suffix for all words in lexicon.
   for (Entry &entry : words_) {
-    entry.prefix = prefixes_.GetLongestAffix(entry.word);
+    entry.suffix = suffixes_.GetLongestAffix(entry.word);
   }
 }
 
@@ -75,12 +75,16 @@ int Lexicon::LookupWord(const string &word) const {
   if (id == -1 && normalize_digits_) {
     // Check if word has digits.
     bool has_digits = false;
-    for (char c : word) if (c >= '0' && c <= '9') has_digits = true;
+    for (char c : word) {
+      if (c >= '0' && c <= '9') has_digits = true;
+    }
 
     if (has_digits) {
       // Normalize digits and lookup the normalized word.
       string normalized = word;
-      for (char &c : normalized) if (c >= '0' && c <= '9') c = '9';
+      for (char &c : normalized) {
+        if (c >= '0' && c <= '9') c = '9';
+      }
       id = vocabulary_.Lookup(normalized);
     }
   }
