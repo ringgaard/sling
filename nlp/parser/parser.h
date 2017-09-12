@@ -27,9 +27,11 @@
 #include "myelin/compute.h"
 #include "myelin/flow.h"
 #include "nlp/document/document.h"
+#include "nlp/document/features.h"
 #include "nlp/document/lexicon.h"
 #include "nlp/parser/action-table.h"
 #include "nlp/parser/parser-state.h"
+#include "nlp/parser/roles.h"
 
 namespace sling {
 namespace nlp {
@@ -60,7 +62,11 @@ class Parser {
     myelin::Tensor *feature_words;           // word feature
     myelin::Tensor *feature_prefix;          // prefix feature
     myelin::Tensor *feature_suffix;          // suffix feature
-    myelin::Tensor *feature_shape;           // shape feature
+    myelin::Tensor *feature_hyphen;          // hyphenation feature
+    myelin::Tensor *feature_caps;            // capitalization feature
+    myelin::Tensor *feature_punct;           // punctuation feature
+    myelin::Tensor *feature_quote;           // quote feature
+    myelin::Tensor *feature_digit;           // digit feature
 
     // Links.
     myelin::Tensor *c_in;                    // link to LSTM control input
@@ -152,7 +158,7 @@ class Parser {
   int labeled_link_offset_;
 
   // Set of roles considered.
-  HandleMap<int> roles_;
+  RoleSet roles_;
 
   // Symbols.
   Names names_;
@@ -177,16 +183,21 @@ class ParserInstance {
   // Attach connectors for FF.
   void AttachFF(int output);
 
-  // Extract features for LR LSTM.
-  void ExtractFeaturesLR(int current);
-
-  // Extract features for RL LSTM.
-  void ExtractFeaturesRL(int current);
+  // Extract features for LSTM.
+  void ExtractFeaturesLSTM(int token,
+                           const DocumentFeatures &features,
+                           const Parser::LSTM &lstm,
+                           myelin::Instance *data);
 
   // Extract features for FF.
   void ExtractFeaturesFF(int step);
 
  private:
+  // Get feature vector for FF.
+  int *GetFF(myelin::Tensor *type) {
+    return type ? ff_.Get<int>(type) : nullptr;
+  }
+
   // Parser model.
   const Parser *parser_;
 
@@ -204,9 +215,6 @@ class ParserInstance {
   myelin::Channel rl_c_;
   myelin::Channel rl_h_;
   myelin::Channel ff_step_;
-
-  // Word ids.
-  std::vector<int> words_;
 
   // Frame creation and focus steps.
   std::vector<int> create_step_;

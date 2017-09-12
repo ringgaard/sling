@@ -369,6 +369,18 @@ void ParserState::GetFocus(int k, std::vector<int> *center) const {
   }
 }
 
+int ParserState::AttentionIndex(int index, int k) const {
+  if (k < 0) {
+    k = attention_.size();
+  } else if (k > attention_.size()) {
+    k = attention_.size();
+  }
+  for (int i = attention_.size() - 1; i >= 0; --i) {
+    if (attention_[i] == index) return attention_.size() - i - 1;
+  }
+  return -1;
+}
+
 void ParserState::GetFrames(Handles *frames) {
   // Allocate new frames for all the frames in the frame buffer.
   frames->resize(frames_.size());
