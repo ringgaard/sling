@@ -94,7 +94,7 @@ class RoleGraph {
     int target;
   };
 
-  // Frame limit for the role matrix.
+  // The maximum number of frame to use from the attention buffer.
   int limit_;
 
   // Number of roles in role set.

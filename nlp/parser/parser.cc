@@ -20,7 +20,6 @@
 #include "nlp/document/document.h"
 #include "nlp/document/features.h"
 #include "nlp/document/lexicon.h"
-#include "stream/memory.h"
 
 namespace sling {
 namespace nlp {
@@ -42,31 +41,6 @@ void Parser::Load(Store *store, const string &model) {
   InitLSTM("lr_lstm", &lr_, false);
   InitLSTM("rl_lstm", &rl_, true);
   InitFF("ff", &ff_);
-
-  // Get attention depth.
-  attention_depth_ = 0;
-  std::vector<myelin::Tensor *> attention_features {
-    ff_.feature_lr_attention,
-    ff_.feature_rl_attention,
-    ff_.feature_frame_create,
-    ff_.feature_frame_focus
-  };
-  for (auto *f : attention_features) {
-    if (!f) continue;
-    if (f->elements() > attention_depth_) {
-      attention_depth_ = f->elements();
-    }
-  }
-  for (auto *f : attention_features) {
-    if (!f) continue;
-    CHECK_EQ(attention_depth_, f->elements());
-  }
-
-  // Get history size.
-  history_size_ = ff_.feature_history->elements();
-
-  // Get maximum number of role features.
-  max_roles_ = ff_.feature_roles->elements();
 
   // Load lexicon.
   myelin::Flow::Blob *vocabulary = flow.DataBlock("lexicon");
@@ -105,15 +79,6 @@ void Parser::Load(Store *store, const string &model) {
   num_actions_ = actions_.NumActions();
   CHECK_GT(num_actions_, 0);
   roles_.Init(actions_);
-
-  // Compute the offsets for the four types of role features. These are laid
-  // out in this order: all (i, r) features, all (r, j) features, all (i, j)
-  // features, all (i, r, j) features.
-  int combinations = frame_limit_ * roles_.size();
-  outlink_offset_ = 0;
-  inlink_offset_ = outlink_offset_ + combinations;
-  unlabeled_link_offset_ = inlink_offset_ + combinations;
-  labeled_link_offset_ = unlabeled_link_offset_ + frame_limit_ * frame_limit_;
 }
 
 void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
@@ -126,14 +91,14 @@ void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
   lstm->hidden = GetConnector(name + "/hidden");
 
   // Get feature inputs.
-  lstm->feature_words = GetParam(name + "/words", true);
-  lstm->feature_prefix = GetParam(name + "/prefix", true);
-  lstm->feature_suffix = GetParam(name + "/suffix", true);
-  lstm->feature_hyphen = GetParam(name + "/hyphen", true);
-  lstm->feature_caps = GetParam(name + "/caps", true);
-  lstm->feature_punct = GetParam(name + "/punct", true);
-  lstm->feature_quote = GetParam(name + "/quote", true);
-  lstm->feature_digit = GetParam(name + "/digit", true);
+  lstm->word_feature = GetParam(name + "/words", true);
+  lstm->prefix_feature = GetParam(name + "/prefix", true);
+  lstm->suffix_feature = GetParam(name + "/suffix", true);
+  lstm->hyphen_feature = GetParam(name + "/hyphen", true);
+  lstm->caps_feature = GetParam(name + "/caps", true);
+  lstm->punct_feature = GetParam(name + "/punct", true);
+  lstm->quote_feature = GetParam(name + "/quote", true);
+  lstm->digit_feature = GetParam(name + "/digit", true);
 
   // Get links.
   lstm->c_in = GetParam(name + "/c_in");
@@ -150,14 +115,50 @@ void Parser::InitFF(const string &name, FF *ff) {
   ff->step = GetConnector(name + "/step");
 
   // Get feature inputs.
-  ff->feature_lr_focus = GetParam(name + "/lr", true);
-  ff->feature_rl_focus = GetParam(name + "/rl", true);
-  ff->feature_lr_attention = GetParam(name + "/frame-end-lr", true);
-  ff->feature_rl_attention = GetParam(name + "/frame-end-rl", true);
-  ff->feature_frame_create = GetParam(name + "/frame-creation-steps", true);
-  ff->feature_frame_focus = GetParam(name + "/frame-focus-steps", true);
-  ff->feature_history = GetParam(name + "/history", true);
-  ff->feature_roles = GetParam(name + "/roles", true);
+  ff->lr_focus_feature = GetParam(name + "/lr", true);
+  ff->rl_focus_feature = GetParam(name + "/rl", true);
+  ff->lr_attention_feature = GetParam(name + "/frame-end-lr", true);
+  ff->rl_attention_feature = GetParam(name + "/frame-end-rl", true);
+  ff->frame_create_feature = GetParam(name + "/frame-creation-steps", true);
+  ff->frame_focus_feature = GetParam(name + "/frame-focus-steps", true);
+  ff->history_feature = GetParam(name + "/history", true);
+  ff->out_roles_feature = GetParam(name + "/out-roles", true);
+  ff->in_roles_feature = GetParam(name + "/in-roles", true);
+  ff->unlabeled_roles_feature = GetParam(name + "/unlabeled-roles", true);
+  ff->labeled_roles_feature = GetParam(name + "/labeled-roles", true);
+
+  // Get feature sizes.
+  std::vector<myelin::Tensor *> attention_features {
+    ff->lr_attention_feature,
+    ff->rl_attention_feature,
+    ff->frame_create_feature,
+    ff->frame_focus_feature,
+  };
+  for (auto *f : attention_features) {
+    if (!f) continue;
+    if (f->elements() > ff->attention_depth) {
+      ff->attention_depth = f->elements();
+    }
+  }
+  for (auto *f : attention_features) {
+    if (!f) continue;
+    CHECK_EQ(ff->attention_depth, f->elements());
+  }
+  if (ff->history_feature != nullptr) {
+    ff->history_size = ff->history_feature->elements();
+  }
+  if (ff->out_roles_feature != nullptr) {
+    ff->out_roles_size = ff->out_roles_feature->elements();
+  }
+  if (ff->in_roles_feature != nullptr) {
+    ff->in_roles_size = ff->in_roles_feature->elements();
+  }
+  if (ff->unlabeled_roles_feature != nullptr) {
+    ff->unlabeled_roles_size = ff->unlabeled_roles_feature->elements();
+  }
+  if (ff->labeled_roles_feature != nullptr) {
+    ff->labeled_roles_size = ff->labeled_roles_feature->elements();
+  }
 
   // Get links.
   ff->lr_lstm = GetParam(name + "/link/lr_lstm");
@@ -354,14 +355,14 @@ void ParserInstance::ExtractFeaturesLSTM(int token,
                                          const Parser::LSTM &lstm,
                                          myelin::Instance *data) {
   // Extact word feature.
-  if (lstm.feature_words) {
-    *data->Get<int>(lstm.feature_words) = features.word(token);
+  if (lstm.word_feature) {
+    *data->Get<int>(lstm.word_feature) = features.word(token);
   }
 
   // Extact prefix feature.
-  if (lstm.feature_prefix) {
+  if (lstm.prefix_feature) {
     Affix *affix = features.prefix(token);
-    int *a = data->Get<int>(lstm.feature_prefix);
+    int *a = data->Get<int>(lstm.prefix_feature);
     while (affix != nullptr) {
       *a++ = affix->id();
       affix = affix->shorter();
@@ -369,9 +370,9 @@ void ParserInstance::ExtractFeaturesLSTM(int token,
   }
 
   // Extact suffix feature.
-  if (lstm.feature_suffix) {
+  if (lstm.suffix_feature) {
     Affix *affix = features.suffix(token);
-    int *a = data->Get<int>(lstm.feature_suffix);
+    int *a = data->Get<int>(lstm.suffix_feature);
     while (affix != nullptr) {
       *a++ = affix->id();
       affix = affix->shorter();
@@ -379,47 +380,48 @@ void ParserInstance::ExtractFeaturesLSTM(int token,
   }
 
   // Extact hyphen feature.
-  if (lstm.feature_hyphen) {
-    *data->Get<int>(lstm.feature_hyphen) = features.hyphen(token);
+  if (lstm.hyphen_feature) {
+    *data->Get<int>(lstm.hyphen_feature) = features.hyphen(token);
   }
 
   // Extact capitalization feature.
-  if (lstm.feature_caps) {
-    *data->Get<int>(lstm.feature_caps) = features.capitalization(token);
+  if (lstm.caps_feature) {
+    *data->Get<int>(lstm.caps_feature) = features.capitalization(token);
   }
 
   // Extact punctuation feature.
-  if (lstm.feature_punct) {
-    *data->Get<int>(lstm.feature_punct) = features.punctuation(token);
+  if (lstm.punct_feature) {
+    *data->Get<int>(lstm.punct_feature) = features.punctuation(token);
   }
 
   // Extact quote feature.
-  if (lstm.feature_quote) {
-    *data->Get<int>(lstm.feature_quote) = features.quote(token);
+  if (lstm.quote_feature) {
+    *data->Get<int>(lstm.quote_feature) = features.quote(token);
   }
 
   // Extact digit feature.
-  if (lstm.feature_digit) {
-    *data->Get<int>(lstm.feature_digit) = features.digit(token);
+  if (lstm.digit_feature) {
+    *data->Get<int>(lstm.digit_feature) = features.digit(token);
   }
 }
 
 void ParserInstance::ExtractFeaturesFF(int step) {
-  // Compute LSTM focus features.
+  // Extact LSTM focus features.
+  const Parser::FF &ff = parser_->ff_;
   int current = state_.current() - state_.begin();
   if (current == state_.end()) current = -1;
-  int *lr_focus = GetFF(parser_->ff_.feature_lr_focus);
-  int *rl_focus = GetFF(parser_->ff_.feature_lr_focus);
-  if (lr_focus) *lr_focus = current;
-  if (rl_focus) *rl_focus = current;
+  int *lr_focus = GetFF(ff.lr_focus_feature);
+  int *rl_focus = GetFF(ff.lr_focus_feature);
+  if (lr_focus != nullptr) *lr_focus = current;
+  if (rl_focus != nullptr) *rl_focus = current;
 
-  // Compute frame attention, create, and focus features.
-  if (parser_->attention_depth_ > 0) {
-    int *lr = GetFF(parser_->ff_.feature_lr_attention);
-    int *rl = GetFF(parser_->ff_.feature_rl_attention);
-    int *create = GetFF(parser_->ff_.feature_frame_create);
-    int *focus = GetFF(parser_->ff_.feature_frame_focus);
-    for (int d = 0; d < parser_->attention_depth_; ++d) {
+  // Extact frame attention, create, and focus features.
+  if (ff.attention_depth > 0) {
+    int *lr = GetFF(ff.lr_attention_feature);
+    int *rl = GetFF(ff.rl_attention_feature);
+    int *create = GetFF(ff.frame_create_feature);
+    int *focus = GetFF(ff.frame_focus_feature);
+    for (int d = 0; d < ff.attention_depth; ++d) {
       int att = -2;
       int created = -2;
       int focused = -2;
@@ -439,81 +441,67 @@ void ParserInstance::ExtractFeaturesFF(int step) {
           focused = focus_step_[frame];
         }
       }
-      if (lr) lr[d] = att;
-      if (rl) rl[d] = att;
-      if (create) create[d] = created;
-      if (focus) focus[d] = focused;
+      if (lr != nullptr) lr[d] = att;
+      if (rl != nullptr) rl[d] = att;
+      if (create != nullptr) create[d] = created;
+      if (focus != nullptr) focus[d] = focused;
     }
   }
 
-  // Compute history feature.
-  int *history = GetFF(parser_->ff_.feature_history);
-  if (history) {
+  // Extact history feature.
+  int *history = GetFF(ff.history_feature);
+  if (history != nullptr) {
     int h = 0;
     int s = step - 1;
-    while (h < parser_->history_size_ && s >= 0) history[h++] = s--;
-    while (h < parser_->history_size_) history[h++] = -2;
+    while (h < ff.history_size && s >= 0) history[h++] = s--;
+    while (h < ff.history_size) history[h++] = -2;
   }
 
-  // Construct a mapping from absolute frame index -> attention index.
-  std::unordered_map<int, int> frame_to_attention;
-  for (int i = 0; i < parser_->frame_limit_; ++i) {
-    if (i < state_.AttentionSize()) {
-      frame_to_attention[state_.Attention(i)] = i;
-    } else {
-      break;
+  // Extact role features.
+  if (parser_->frame_limit_ > 0) {
+    // Construct role graph for center of attention.
+    RoleGraph graph(state_, parser_->frame_limit_, parser_->roles_);
+
+    // Extact out roles.
+    int *out = GetFF(ff.out_roles_feature);
+    if (out != nullptr) {
+      int *end = out + ff.out_roles_size;
+      graph.out([&out, end](int f) {
+        if (out < end) *out++ = f;
+      });
+      while (out < end) *out++ = -2;
+    }
+
+    // Extact in roles.
+    int *in = GetFF(ff.in_roles_feature);
+    if (in != nullptr) {
+      int *end = in + ff.in_roles_size;
+      graph.out([&out, end](int f) {
+        if (out < end) *out++ = f;
+      });
+      while (in < end) *out++ = -2;
+    }
+
+    // Extact unlabeled roles.
+    int *unlabeled = GetFF(ff.unlabeled_roles_feature);
+    if (unlabeled != nullptr) {
+      int *end = unlabeled + ff.unlabeled_roles_size;
+      graph.out([&unlabeled, end](int f) {
+        if (unlabeled < end) *unlabeled++ = f;
+      });
+      while (unlabeled < end) *unlabeled++ = -2;
+    }
+
+    // Extact labeled roles.
+    int *labeled = GetFF(ff.labeled_roles_feature);
+    if (labeled != nullptr) {
+      int *end = labeled + ff.labeled_roles_size;
+      graph.out([&labeled, end](int f) {
+        if (labeled < end) *labeled++ = f;
+      });
+      while (labeled < end) *labeled++ = -2;
     }
   }
-
-  // Compute role features.
-  int *r = GetFF(parser_->ff_.feature_roles);
-  int *rend = r + parser_->max_roles_;
-  for (const auto &kv : frame_to_attention) {
-    // Attention index of the source frame.
-    int source = kv.second;
-    int outlink_base = parser_->outlink_offset_ +
-                       source * parser_->roles_.size();
-
-    // Go over each slot of the source frame.
-    Handle handle = state_.frame(kv.first);
-    const FrameDatum *frame = state_.store()->GetFrame(handle);
-    for (const Slot *slot = frame->begin(); slot < frame->end(); ++slot) {
-      int role = parser_->roles_.Lookup(slot->name);
-      if (role == -1) continue;
-
-      if (r < rend) {
-        // (source, role).
-        *r++ = outlink_base + role;
-      }
-      if (slot->value.IsIndex()) {
-        const auto &it2 = frame_to_attention.find(slot->value.AsIndex());
-        if (it2 != frame_to_attention.end()) {
-          // Attention index of the target frame.
-          int target = it2->second;
-          if (r < rend) {
-            // (role, target)
-            *r++ = parser_->inlink_offset_ +
-                   target * parser_->roles_.size() +
-                   role;
-          }
-          if (r < rend) {
-            // (source, target)
-            *r++ = parser_->unlabeled_link_offset_ +
-                   source * parser_->frame_limit_ +
-                   target;
-          }
-          if (r < rend) {
-            // (source, role, target)
-            *r++ = parser_->labeled_link_offset_ +
-                   source * parser_->frame_limit_ * parser_->roles_.size() +
-                   target * parser_->roles_.size() +
-                   role;
-          }
-        }
-      }
-    }
-  }
-  while (r < rend) *r++ = -2;
 }
 
 }  // namespace nlp
