@@ -128,9 +128,9 @@ class Parser {
   myelin::Network network_;
 
   // Cells.
-  LSTM lr_;                                  // left-to-right LSTM cell
-  LSTM rl_;                                  // right-to-left LSTM cell
-  FF ff_;                                    // feed-forward cell
+  LSTM lr_;                                   // left-to-right LSTM cell
+  LSTM rl_;                                   // right-to-left LSTM cell
+  FF ff_;                                     // feed-forward cell
 
   // Number of output actions.
   int num_actions_;
