@@ -295,17 +295,10 @@ class Symbol : public Object {
   // Returns symbol value.
   Object GetValue() const;
 
-<<<<<<< HEAD
-  // Returns symbol name as string.
-  string name() const {
-    StringDatum *symname = store()->GetString(symbol()->name);
-    return string(symname->data(), symname->size());
-=======
   // Returns symbol name as text.
   Text name() const {
     StringDatum *symname = store()->GetString(symbol()->name);
     return Text(symname->data(), symname->size());
->>>>>>> upstream/master
   }
 
   // Checks if symbol is bound.
@@ -406,11 +399,7 @@ class Frame : public Object {
     return IsProxy() ? Object(store_, value(0)) : Get(Handle::id());
   }
 
-<<<<<<< HEAD
-  // Returns the (first) id as a string.
-=======
   // Returns the (first) id as a text.
->>>>>>> upstream/master
   Text Id() const;
 
   // Checks if frame has named slot.

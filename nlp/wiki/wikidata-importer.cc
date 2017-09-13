@@ -10,6 +10,7 @@
 #include "nlp/wiki/wiki.h"
 #include "stream/input.h"
 #include "stream/output.h"
+#include "string/strcat.h"
 #include "string/numbers.h"
 #include "string/text.h"
 #include "task/frames.h"
