@@ -7,4 +7,10 @@ bazel-testlogs
 examples
 local
 *.pyc
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.pdf
 

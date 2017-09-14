@@ -1,0 +1,172 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[hyperref]{acl2017}
+\usepackage{url}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{amsmath}
+
+\aclfinalcopy
+
+% type user-defined commands here
+
+\title{SLING: A framework for frame semantic parsing}
+
+\author{
+Michael Ringgaard \\ Google Inc. \\ {\tt ringgaard@google.com} \\\And
+Rahul Gupta \\ Google Inc. \\ {\tt grahul@google.com} \\
+}
+
+\date{September 13, 2017}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This technical report describes SLING, which is a framework for building
+parsers for annotating text with frame semantic annotations. It is
+trained on an annotated corpus using Tensorflow and Dragnn.
+\end{abstract}
+
+\section{Introduction}
+We have used DRAGNN \cite{dragnn} and Tensorflow \cite{tensorflow} for training the
+parser.
+
+\section{Transition system}
+
+\section{Parser runtime}
+
+Myelin is a neural network JIT compiler... TBD
+
+\section{Frame semantics}
+
+While frames in SLING are not tied to any particular frame semantic theory or
+knowledge ontology, they are inspired by \emph{frame semantics}, which is a
+theory of linguistic meaning developed by Charles Fillmore \cite{fillmore1982}.
+Frame semantics connects linguistic semantics to encyclopedic knowledge and the
+central idea is that understanding the meaning of a word requires access to all
+the essential knowledge that relates to that word. A word \emph{evokes} a frame
+of semantic knowledge relating to the specific concept it refers to.
+
+A semantic frame is a collection of facts that specify "characteristic
+features, attributes, and functions of a denotatum, and its characteristic
+interactions with things necessarily or typically associated with it." \cite{alan2001}.
+A semantic frame can also be defined as a coherent structure of related concepts
+that are related such that knowledge of all of them is required to have
+complete knowledge of any one.
+
+Frame semantics is not only related to individual concepts, but can be generalized
+to phrases, entities, constructions, and other larger and more complex linguistic
+and ontological units. Semantic frames can be also used in information modeling
+for constructing knowledge bases of world knowledge and common sense, and frame
+semantics can also form the basis for reasoning about metaphors, metonymy,
+actions, perspective, etc.
+
+At a more technical level, a SLING frame consists of a list of slots, where each
+slot has a name (role) and a value. The slot values can be literals like numbers
+and strings, or links to other frames. The frames essentially form a graph where
+the frames are the (typed) nodes and the slots are the labeled edges. A frame
+graph can also be viewed as a feature structure \cite{carpenter2005} and
+unification can be used for induction of new frames from existing frames.
+Sometimes it is also useful to use frames for representing more basic data
+structures like a C struct with fields, a JSON object, or a record in a
+database.\footnote{See the \href{https://github.com/google/sling/blob/master/frame/README.md}{SLING Guide}
+for a detailed description of the SLING frame store implementation.}
+
+SLING frames live inside a \emph{frame store}. A store is a container that
+tracks the all the frames that have been allocated in the store, and serves as a
+memory allocation arena for the allocated frames. When making a new frame, you
+specify the store that the frame should be allocated in. The frame will live in
+this store until its store is deleted or the frame is garbage collected because
+there are no references to it.
+
+\section{Transition system}
+
+In the parsing litteratur, \emph{transition systems} have been
+used to construct dependency parse trees from a sequence of state-action pairs
+$(s_i,a_i)$. A transition system takes a state $s_i$ and an action $a_i$ and
+constructs a new state $s_{i+1}$. This allows you to build a tree structure by
+predicting a sequence of actions. For example, the \emph{arc-standard}
+transition system \cite{nivre2006} uses {\bf SHIFT}, {\bf LEFT-ARC(label)}, and
+{\bf RIGHT-ARC(label)} actions to construct a dependency parse tree from a
+sequence of these actions.
+
+We are using the same core idea to construct a frame graph where frames can be
+evoked by phrases in the input. Instead of using a stack, we have an
+\emph{attention buffer}, which keeps track of the most salient frames in the
+discourse. The actions in the transition system both builds up the frame graph
+as well as maintaining the attention buffer.
+
+\begin{itemize}
+  \item {\bf SHIFT} -- Skips the next input token. Only valid when not at the
+        end of the input buffer.
+
+  \item {\bf STOP} --- Signals that we have reach the end of the parse. This is
+        only valid when at the end of the input buffer. Multiple STOP actions
+        can be added to the transition sequence, e.g. to make all sequences in a
+        beam have the same length.
+
+  \item {\bf EVOKE(type, n)} -- Evokes frame of with type {\bf type} from
+        the next {\bf n} tokens in the input. The new frame will become the
+        center of attention.
+
+  \item {\bf REFER(frame, n)} -- Makes a new mention the next {\bf n} tokens in
+        the input of evoking an existing frame in the attention buffer. This
+        frame will become the new center of attention.
+
+  \item {\bf CONNECT(source, role, target)} -- Adds slot to {\bf source} frame
+        in the attention buffer with name {\bf role} and value {\bf target}
+        where {\bf target} is an existing frame in the attention buffer. The
+        {\bf source} frame become the new center of attention.
+
+  \item {\bf ASSIGN(frame, role, value)} -- Adds slot to {\bf source} frame in
+        the attention buffer  with name {\bf role} and value {\bf value} and
+        moves the frame to the center of attention.
+
+  \item {\bf EMBED(target, role, type)} -- Creates a new frame with
+        type {\bf type} and add a slot to it with name {\bf role} and value
+        {\bf target} where {\bf target} is an existing frame in the attention
+        buffer. The new frame becomes the new center of attention.
+
+  \item {\bf ELABORATE(source, role, type)} -- Creates a new frame with type
+        {\bf type} and adds a slot to an existing frame {\bf source} in the
+        attention buffer with {\bf role} set to the new frame. The new frame
+        becomes the new center of attention.
+\end{itemize}
+
+\section{OntoNotes corpus}
+
+Descibe how the OntoNotes-based training and testing corpus was constructed...
+
+\section{Evaluation}
+
+An annotated document consists of a number of connected frames and as well as
+phrases, i.e. token spans, evoking these frames. We evaluate the accuracy of the
+annotations by comparing the generated frames with the gold standard frame
+annotations from the evaluation corpus.
+
+The documents are matched by constructing a virtual graph where the document
+is the start node. The document node is then connected to the spans and the
+spans are connected to the frames that the spans evoke. This graph is then
+extended by following the frame-to-frame links from the roles. Accuracy is
+computed by aligning the golden and predicted graphs and computing precision,
+recall, and F1. The accuracy is computed for spans, frames, types, roles, and
+labels.
+
+An annotated document consists of a number of connected frames and phrases, i.e.
+token spans, evoking the frames. We evaluate the accuracy of the annotations
+by comparing the generated frames with the gold standard frame annotations from
+the corpus.
+
+\section{Furture work}
+
+Cascading action classifier to speed up computations of logits... TBD
+
+Knowledge-based inference... TBD
+
+\section{Acknowledgments}
+
+\bibliography{sling}
+\bibliographystyle{acl_natbib}
+
+\end{document}
+
