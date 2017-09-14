@@ -67,21 +67,27 @@ class RoleGraph {
   // Emit (role, target) features.
   void in(Emit emit) const {
     for (const Edge &e : edges_) {
-      emit(e.target * num_roles_ + e.role);
+      if (e.target != -1) {
+        emit(e.target * num_roles_ + e.role);
+      }
     }
   }
 
   // Emit (source, target) features.
   void unlabeled(Emit emit) const {
     for (const Edge &e : edges_) {
-      emit(e.source + e.target * limit_);
+      if (e.target != -1) {
+        emit(e.source + e.target * limit_);
+      }
     }
   }
 
   // Emit (source, role, target) features.
   void labeled(Emit emit) const {
     for (const Edge &e : edges_) {
-      emit(e.source * limit_ * num_roles_ + e.target * num_roles_ + e.role);
+      if (e.target != -1) {
+        emit(e.source * limit_ * num_roles_ + e.target * num_roles_ + e.role);
+      }
     }
   }
 

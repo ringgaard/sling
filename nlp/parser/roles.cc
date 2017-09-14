@@ -21,6 +21,7 @@ void RoleSet::Init(const ActionTable &actions) {
   for (int i = 0; i < actions.NumActions(); ++i) {
     const auto &action = actions.Action(i);
     if (action.type == ParserAction::CONNECT ||
+        action.type == ParserAction::ASSIGN ||
         action.type == ParserAction::EMBED ||
         action.type == ParserAction::ELABORATE) {
       if (roles_.find(action.role) == roles_.end()) {
@@ -38,13 +39,14 @@ RoleGraph::RoleGraph(const ParserState &state,
   int k = limit_;
   if (k > state.AttentionSize()) k = state.AttentionSize();
   for (int source = 0; source < k; ++source) {
-    Handle handle = state.frame(source);
+    Handle handle = state.frame(state.Attention(source));
     const FrameDatum *frame = state.store()->GetFrame(handle);
     for (const Slot *slot = frame->begin(); slot < frame->end(); ++slot) {
-      if (!slot->value.IsIndex()) continue;
-
-      int target = state.AttentionIndex(slot->value.AsIndex(), k);
-      if (target == -1) continue;
+      int target = -1;
+      if (slot->value.IsIndex()) {
+        target = state.AttentionIndex(slot->value.AsIndex(), k);
+        if (target == -1) continue;
+      }
 
       int role = roles.Lookup(slot->name);
       if (role == -1) continue;

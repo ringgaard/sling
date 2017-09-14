@@ -354,12 +354,12 @@ void ParserInstance::ExtractFeaturesLSTM(int token,
                                          const DocumentFeatures &features,
                                          const Parser::LSTM &lstm,
                                          myelin::Instance *data) {
-  // Extact word feature.
+  // Extract word feature.
   if (lstm.word_feature) {
     *data->Get<int>(lstm.word_feature) = features.word(token);
   }
 
-  // Extact prefix feature.
+  // Extract prefix feature.
   if (lstm.prefix_feature) {
     Affix *affix = features.prefix(token);
     int *a = data->Get<int>(lstm.prefix_feature);
@@ -369,7 +369,7 @@ void ParserInstance::ExtractFeaturesLSTM(int token,
     }
   }
 
-  // Extact suffix feature.
+  // Extract suffix feature.
   if (lstm.suffix_feature) {
     Affix *affix = features.suffix(token);
     int *a = data->Get<int>(lstm.suffix_feature);
@@ -379,34 +379,34 @@ void ParserInstance::ExtractFeaturesLSTM(int token,
     }
   }
 
-  // Extact hyphen feature.
+  // Extract hyphen feature.
   if (lstm.hyphen_feature) {
     *data->Get<int>(lstm.hyphen_feature) = features.hyphen(token);
   }
 
-  // Extact capitalization feature.
+  // Extract capitalization feature.
   if (lstm.caps_feature) {
     *data->Get<int>(lstm.caps_feature) = features.capitalization(token);
   }
 
-  // Extact punctuation feature.
+  // Extract punctuation feature.
   if (lstm.punct_feature) {
     *data->Get<int>(lstm.punct_feature) = features.punctuation(token);
   }
 
-  // Extact quote feature.
+  // Extract quote feature.
   if (lstm.quote_feature) {
     *data->Get<int>(lstm.quote_feature) = features.quote(token);
   }
 
-  // Extact digit feature.
+  // Extract digit feature.
   if (lstm.digit_feature) {
     *data->Get<int>(lstm.digit_feature) = features.digit(token);
   }
 }
 
 void ParserInstance::ExtractFeaturesFF(int step) {
-  // Extact LSTM focus features.
+  // Extract LSTM focus features.
   const Parser::FF &ff = parser_->ff_;
   int current = state_.current() - state_.begin();
   if (current == state_.end()) current = -1;
@@ -415,7 +415,7 @@ void ParserInstance::ExtractFeaturesFF(int step) {
   if (lr_focus != nullptr) *lr_focus = current;
   if (rl_focus != nullptr) *rl_focus = current;
 
-  // Extact frame attention, create, and focus features.
+  // Extract frame attention, create, and focus features.
   if (ff.attention_depth > 0) {
     int *lr = GetFF(ff.lr_attention_feature);
     int *rl = GetFF(ff.rl_attention_feature);
@@ -434,12 +434,8 @@ void ParserInstance::ExtractFeaturesFF(int step) {
         if (att != -1) att -= state_.begin() + 1;
 
         // Get the step numbers that created and focused the frame.
-        if (frame < create_step_.size()) {
-          created = create_step_[frame];
-        }
-        if (frame < focus_step_.size()) {
-          focused = focus_step_[frame];
-        }
+        created = create_step_[frame];
+        focused = focus_step_[frame];
       }
       if (lr != nullptr) lr[d] = att;
       if (rl != nullptr) rl[d] = att;
@@ -448,7 +444,7 @@ void ParserInstance::ExtractFeaturesFF(int step) {
     }
   }
 
-  // Extact history feature.
+  // Extract history feature.
   int *history = GetFF(ff.history_feature);
   if (history != nullptr) {
     int h = 0;
@@ -457,12 +453,12 @@ void ParserInstance::ExtractFeaturesFF(int step) {
     while (h < ff.history_size) history[h++] = -2;
   }
 
-  // Extact role features.
+  // Extract role features.
   if (parser_->frame_limit_ > 0) {
     // Construct role graph for center of attention.
     RoleGraph graph(state_, parser_->frame_limit_, parser_->roles_);
 
-    // Extact out roles.
+    // Extract out roles.
     int *out = GetFF(ff.out_roles_feature);
     if (out != nullptr) {
       int *end = out + ff.out_roles_size;
@@ -472,31 +468,31 @@ void ParserInstance::ExtractFeaturesFF(int step) {
       while (out < end) *out++ = -2;
     }
 
-    // Extact in roles.
+    // Extract in roles.
     int *in = GetFF(ff.in_roles_feature);
     if (in != nullptr) {
       int *end = in + ff.in_roles_size;
-      graph.out([&out, end](int f) {
-        if (out < end) *out++ = f;
+      graph.in([&in, end](int f) {
+        if (in < end) *in++ = f;
       });
-      while (in < end) *out++ = -2;
+      while (in < end) *in++ = -2;
     }
 
-    // Extact unlabeled roles.
+    // Extract unlabeled roles.
     int *unlabeled = GetFF(ff.unlabeled_roles_feature);
     if (unlabeled != nullptr) {
       int *end = unlabeled + ff.unlabeled_roles_size;
-      graph.out([&unlabeled, end](int f) {
+      graph.unlabeled([&unlabeled, end](int f) {
         if (unlabeled < end) *unlabeled++ = f;
       });
       while (unlabeled < end) *unlabeled++ = -2;
     }
 
-    // Extact labeled roles.
+    // Extract labeled roles.
     int *labeled = GetFF(ff.labeled_roles_feature);
     if (labeled != nullptr) {
       int *end = labeled + ff.labeled_roles_size;
-      graph.out([&labeled, end](int f) {
+      graph.labeled([&labeled, end](int f) {
         if (labeled < end) *labeled++ = f;
       });
       while (labeled < end) *labeled++ = -2;
