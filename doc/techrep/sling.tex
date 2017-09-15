@@ -4,6 +4,10 @@
 \usepackage{times}
 \usepackage{latexsym}
 \usepackage{amsmath}
+\usepackage{float}
+
+\floatstyle{boxed}
+\restylefloat{figure}
 
 \aclfinalcopy
 
@@ -23,19 +27,60 @@ Rahul Gupta \\ Google Inc. \\ {\tt grahul@google.com} \\
 
 \begin{abstract}
 This technical report describes SLING, which is a framework for building
-parsers for annotating text with frame semantic annotations. It is
-trained on an annotated corpus using Tensorflow and Dragnn.
+parsers for annotating text with semantic frames.
+The parser is a general transition-based frame semantic parser using
+bi-directional LSTMs for input encoding and a Transition Based Recurrent
+Unit (TBRU) for output decoding.
+It is a jointly trained model using only the text tokens as input and the
+transition system has been designed to output frame graphs directly without
+any intervening representation.
+The SLING framework includes an efficient and scalable frame store
+implementation as well as a neural network JIT compiler for fast parsing at
+runtime.
+The SLING framework is implemented in C++ and it is available for download
+on GitHub.
 \end{abstract}
 
 \section{Introduction}
+
+Recent advances in machines learning has enabled us to use deep learning to
+train recurrent multi-level neural network classifiers. This has allowed us to
+reconsider how to best design and implement systems for natural language
+understanding (NLU).
+
+Traditionally, natural language processing (NLP) systems have used a cascade of
+NLP modules for syntatic and semantic annotation of text.
+These systems typically first do part-of-speech (POS) tagging, followed by
+constituency or dependency parsing for syntactic analysis.
+Using the POS tags and parse trees as feature inputs, you could then do other
+NLP tasks like mention chunking, entity type tagging, coreference resolution,
+semantic role labeling (SRL), etc.
+
+Pipelined systems often use a simple 1-best feed forward strategy \cite{finkel2006}
+where they greedily take the best output of each stage and pass it on to the
+next stage.
+While it is simple to build such an architecture, errors can accumulate
+throughout the pipeline making it much harder for the system to perform
+correctly, e.g. F1 on SRL drops by more than 10\% when going from gold to
+automatic parse trees \cite{toutanova2005}.
+
+Often, applications do not need the intermediate annotations produced
+by the lower levels in the NLP stack, so it would be preferable if these systems
+could be trained jointly to optimize an objective based on the output
+annotations needed for a particular application.
+
+Classic NLP systems are also often trained using linear classifiers.
+Because of the simplicity of these, very complex and elaborate feature
+extraction with many different types of features as well as many kinds
+of combinations of these features are often required for good accuracy.
+With deep learning you can use embeddings, multiple layers, and recurrent
+network connections instead, and this will often remove the need for complex
+feature designs. The internal learned representations in the hidden layers of
+the models can be used instead of the hand-crafted intermediate representations
+in pipelined systems.
+
 We have used DRAGNN \cite{dragnn} and Tensorflow \cite{tensorflow} for training the
 parser.
-
-\section{Transition system}
-
-\section{Parser runtime}
-
-Myelin is a neural network JIT compiler... TBD
 
 \section{Frame semantics}
 
@@ -45,16 +90,16 @@ theory of linguistic meaning developed by Charles Fillmore \cite{fillmore1982}.
 Frame semantics connects linguistic semantics to encyclopedic knowledge and the
 central idea is that understanding the meaning of a word requires access to all
 the essential knowledge that relates to that word. A word \emph{evokes} a frame
-of semantic knowledge relating to the specific concept it refers to.
+repesenting the specific concept it refers to.
 
-A semantic frame is a collection of facts that specify "characteristic
+A semantic frame is a set of facts that specify "characteristic
 features, attributes, and functions of a denotatum, and its characteristic
 interactions with things necessarily or typically associated with it." \cite{alan2001}.
-A semantic frame can also be defined as a coherent structure of related concepts
+A semantic frame can also be vieved as a coherent structure of related concepts
 that are related such that knowledge of all of them is required to have
 complete knowledge of any one.
 
-Frame semantics is not only related to individual concepts, but can be generalized
+Frame semantics is not only for individual concepts, but can be generalized
 to phrases, entities, constructions, and other larger and more complex linguistic
 and ontological units. Semantic frames can be also used in information modeling
 for constructing knowledge bases of world knowledge and common sense, and frame
@@ -69,15 +114,49 @@ graph can also be viewed as a feature structure \cite{carpenter2005} and
 unification can be used for induction of new frames from existing frames.
 Sometimes it is also useful to use frames for representing more basic data
 structures like a C struct with fields, a JSON object, or a record in a
-database.\footnote{See the \href{https://github.com/google/sling/blob/master/frame/README.md}{SLING Guide}
-for a detailed description of the SLING frame store implementation.}
+database.
 
 SLING frames live inside a \emph{frame store}. A store is a container that
 tracks the all the frames that have been allocated in the store, and serves as a
 memory allocation arena for the allocated frames. When making a new frame, you
 specify the store that the frame should be allocated in. The frame will live in
 this store until its store is deleted or the frame is garbage collected because
-there are no references to it.
+there are no references to it.\footnote{See the \href{https://github.com/google/sling/blob/master/frame/README.md}{SLING Guide}
+for a detailed description of the SLING frame store implementation.}
+
+\begin{figure*}[t]
+  \begin{verbatim}{
+  :/s/document
+  /s/document/text: "John hit the ball"
+  /s/document/tokens: [
+    {/s/token/text: "John" /s/token/start: 0  /s/token/length: 4},
+    {/s/token/text: "hit"  /s/token/start: 5  /s/token/length: 3},
+    {/s/token/text: "the"  /s/token/start: 9  /s/token/length: 3},
+    {/s/token/text: "ball" /s/token/start: 13 /s/token/length: 4}
+  ]
+  /s/document/mention: {
+    :/s/phrase /s/phrase/begin: 0
+    /s/phrase/evokes: {=#1 :/s/person }
+  }
+  /s/document/mention: {
+    :/s/phrase /s/phrase/begin: 1
+    /s/phrase/evokes: {
+      :/pb/hit-01
+      /pb/arg0: #1
+      /pb/arg1: #2
+    }
+  }
+  /s/document/mention: {
+    :/s/phrase /s/phrase/begin: 3
+    /s/phrase/evokes: {=#2 :/s/consumer_good }
+  }
+}\end{verbatim}
+  \caption{The text "John hit the ball" in SLING frame notation. The document
+  itself is represented by a frame that has the text, an array of tokens and
+  the mentions that evoke frames. There are three frames: a person frame (John),
+  a consumer good frame (bat) and a hit-01 frame. The hit frame has the person
+  frame as the agent (arg0) and the ball frame as the object (arg1).}
+\end{figure*}
 
 \section{Transition system}
 
@@ -133,6 +212,10 @@ as well as maintaining the attention buffer.
         becomes the new center of attention.
 \end{itemize}
 
+\section{Parser runtime}
+
+Myelin is a neural network JIT compiler... TBD
+
 \section{OntoNotes corpus}
 
 Descibe how the OntoNotes-based training and testing corpus was constructed...
@@ -159,9 +242,9 @@ the corpus.
 
 \section{Furture work}
 
-Cascading action classifier to speed up computations of logits... TBD
+% Cascading action classifier to speed up computations of logits... TBD
 
-Knowledge-based inference... TBD
+% Knowledge-based inference... TBD
 
 \section{Acknowledgments}
 
