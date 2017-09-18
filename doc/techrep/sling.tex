@@ -11,8 +11,6 @@
 
 \aclfinalcopy
 
-% type user-defined commands here
-
 \title{SLING: A framework for frame semantic parsing}
 
 \author{
@@ -20,7 +18,7 @@ Michael Ringgaard \\ Google Inc. \\ {\tt ringgaard@google.com} \\\And
 Rahul Gupta \\ Google Inc. \\ {\tt grahul@google.com} \\
 }
 
-\date{September 13, 2017}
+\date{}
 
 \begin{document}
 \maketitle
@@ -33,7 +31,7 @@ bi-directional LSTMs for input encoding and a Transition Based Recurrent
 Unit (TBRU) for output decoding.
 It is a jointly trained model using only the text tokens as input and the
 transition system has been designed to output frame graphs directly without
-any intervening representation.
+any intervening symbolic representation.
 The SLING framework includes an efficient and scalable frame store
 implementation as well as a neural network JIT compiler for fast parsing at
 runtime.
@@ -79,10 +77,32 @@ feature designs. The internal learned representations in the hidden layers of
 the models can be used instead of the hand-crafted intermediate representations
 in pipelined systems.
 
-We have used DRAGNN \cite{dragnn} and Tensorflow \cite{tensorflow} for training the
-parser.
+To address these problems, we have made the SLING parser. It is a
+transition-based parser that outputs frame graphs directly without any
+intervening symbolic representation (see Section~\ref{sec:ts}). Transition-based
+parsing is often associated with dependency parsing, but we have designed a
+specialized transition system that outputs frame graphs instead of dependency
+trees.
+
+We use a recurrent feed-forward unit for predicting the actions in the
+transition sequence, where the hidden activations from precting each transition
+step is feed back into the subsequent steps.
+We use a bidirectional LSTM for encoding the input, where we have both a
+left-to-right and a right-to-left LSTM. This neural network architecture
+has been implemented using DRAGNN \cite{dragnn} and Tensorflow \cite{tensorflow}.
+
+We have made the SLING parsing framework available as open source and the code
+for the parser described in this paper can be found on GitHub.\footnote{\url{https://github.com/google/sling}}
+
+In Section~\ref{sec:framesem} we introduce \emph{frame semantics}, which is the
+underlying linguistic theory, as well as the SLING frame store, which is our
+C++ framework for repesenting, storing, inspecting, manipulating, and
+transporting semantic frames compactly and efficiently.
+Section~\ref{sec:ts} describes the transition system used for producing the
+frame graphs and Section~\ref{sec:features} describes the features used by the parser.
 
 \section{Frame semantics}
+\label{sec:framesem}
 
 While frames in SLING are not tied to any particular frame semantic theory or
 knowledge ontology, they are inspired by \emph{frame semantics}, which is a
@@ -124,8 +144,12 @@ this store until its store is deleted or the frame is garbage collected because
 there are no references to it.\footnote{See the \href{https://github.com/google/sling/blob/master/frame/README.md}{SLING Guide}
 for a detailed description of the SLING frame store implementation.}
 
+Documents are also represented using frames, where the document frame has slots
+for the document text, the tokens, and the mention phrases and the frames they
+evoke. See Figure~\ref{fig:slingdoc} for an example.
+
 \begin{figure*}[t]
-  \begin{verbatim}{
+  \begin{verbatim}
   :/s/document
   /s/document/text: "John hit the ball"
   /s/document/tokens: [
@@ -150,15 +174,17 @@ for a detailed description of the SLING frame store implementation.}
     :/s/phrase /s/phrase/begin: 3
     /s/phrase/evokes: {=#2 :/s/consumer_good }
   }
-}\end{verbatim}
+\end{verbatim}
   \caption{The text "John hit the ball" in SLING frame notation. The document
   itself is represented by a frame that has the text, an array of tokens and
   the mentions that evoke frames. There are three frames: a person frame (John),
   a consumer good frame (bat) and a hit-01 frame. The hit frame has the person
   frame as the agent (arg0) and the ball frame as the object (arg1).}
+  \label{fig:slingdoc}
 \end{figure*}
 
 \section{Transition system}
+\label{sec:ts}
 
 In the parsing litteratur, \emph{transition systems} have been
 used to construct dependency parse trees from a sequence of state-action pairs
@@ -172,49 +198,108 @@ sequence of these actions.
 We are using the same core idea to construct a frame graph where frames can be
 evoked by phrases in the input. Instead of using a stack, we have an
 \emph{attention buffer}, which keeps track of the most salient frames in the
-discourse. The actions in the transition system both builds up the frame graph
-as well as maintaining the attention buffer.
+discourse. The front of the attention buffer serves as the short-term memory of
+the parser and the parser actions operate on these frames. The actions in the
+transition system both builds up the frame graph as well as maintaining the
+attention buffer.
 
 \begin{itemize}
   \item {\bf SHIFT} -- Skips the next input token. Only valid when not at the
         end of the input buffer.
-
-  \item {\bf STOP} --- Signals that we have reach the end of the parse. This is
+  \item {\bf STOP} -- Signals that we have reach the end of the parse. This is
         only valid when at the end of the input buffer. Multiple STOP actions
         can be added to the transition sequence, e.g. to make all sequences in a
         beam have the same length.
-
   \item {\bf EVOKE(type, n)} -- Evokes frame of with type {\bf type} from
         the next {\bf n} tokens in the input. The new frame will become the
         center of attention.
-
-  \item {\bf REFER(frame, n)} -- Makes a new mention the next {\bf n} tokens in
-        the input of evoking an existing frame in the attention buffer. This
+  \item {\bf REFER(frame, n)} -- Makes a new mention of the next {\bf n} tokens
+        in the input evoking an existing frame in the attention buffer. This
         frame will become the new center of attention.
-
   \item {\bf CONNECT(source, role, target)} -- Adds slot to {\bf source} frame
         in the attention buffer with name {\bf role} and value {\bf target}
         where {\bf target} is an existing frame in the attention buffer. The
         {\bf source} frame become the new center of attention.
-
   \item {\bf ASSIGN(frame, role, value)} -- Adds slot to {\bf source} frame in
         the attention buffer  with name {\bf role} and value {\bf value} and
         moves the frame to the center of attention.
-
   \item {\bf EMBED(target, role, type)} -- Creates a new frame with
         type {\bf type} and add a slot to it with name {\bf role} and value
         {\bf target} where {\bf target} is an existing frame in the attention
         buffer. The new frame becomes the new center of attention.
-
   \item {\bf ELABORATE(source, role, type)} -- Creates a new frame with type
         {\bf type} and adds a slot to an existing frame {\bf source} in the
         attention buffer with {\bf role} set to the new frame. The new frame
         becomes the new center of attention.
 \end{itemize}
 
+This transition system can generate any connected frame graph, where the frames
+are either directly on indirectly evoked by mention phrases in the text. A frame
+can be evoked by multiple mentions and the graph can have cycles.
+
+Multiple transition sequences can generate the same frame annotations, but we
+have implemented an oracle sequence generator that takes a sentence and converts
+it to a canonical transition sequence in a similar way to how this is done
+for transition-based dependency parsing \cite{nivre2006}, e.g. the sentence
+"John hit the ball" will generate the following transition sequence:
+\begin{verbatim}
+  EVOKE(/s/person, 1)
+  SHIFT
+  EVOKE(/s/hit-01, 1)
+  CONNECT(0, /pb/arg0, 1)
+  SHIFT
+  SHIFT
+  EVOKE(/s/consumer_good, 1)
+  CONNECT(1, /pb/arg1, 0)
+\end{verbatim}
+
+\section{Features}
+\label{sec:features}
+
+The LSTMs only uses lexical features based on the current input word:
+
+\begin{itemize}
+  \item The current word is mapped through pre-trained word embeddings
+  \cite{mikolov2013} for all the words known in the vocabulary from the
+  training data.
+  \item The prefixes and suffixes of the current input word. Currently only
+  prefixes up to three characters are used.
+  \item Word shape features based on the characters in the current input word:
+  hyphenation, capitalization, punctuation, quotes, and digits.
+\end{itemize}
+
+The feed-forward unit takes the hidden activation from the LSTMs as well as the
+activations in the hidden layer of the feed-forward unit from the previous steps
+as input features and uses these to compute the following input features:
+
+\begin{itemize}
+  \item The hidden activations from the left-to-right and right-to-left LSTMs
+  for the current token in the parser state.
+  \item The attention feature looks at the top-5 frames in the attention buffer
+  and tracks the phrases in the text that evoked them. The activations from the
+  left-to-right and right-to-left LSTMs for the end token in these phrase are
+  added as input features. These serve as the lexical representation of the top
+  frames in the attention buffer.
+  \item The transition steps which evoked or re-evoked the top-5 frames in the
+  attention buffer are used as the semantic context representation for these
+  frames. The hidden activations in the feed-forward unit at these steps are
+  input as features to the current step in the feed-forward unit.
+  \item The history feature uses the hidden activations in the feed-forward
+  unit from the previous five step as feature inputs to the current step.
+  \item The roles features extract the role edges between the top-5 frames in
+  the attention buffer. These are triples of the form $(s_i, r_i, t_i)$ meaining
+  that the frame at position $s_i$ in the attention buffer has a role $r_i$ with
+  the frame at position $t_i$ in the attention buffer as its value. Back-off
+  features are added for the source roles $(s_i,r_i)$, target role $(r_i, t_i)$,
+  and unlabeled roles $(s_i,t_i)$.
+\end{itemize}
+
 \section{Parser runtime}
 
-Myelin is a neural network JIT compiler... TBD
+Myelin is a neural network JIT compiler...
+
+At training time, we use Tensorflow for computing and updating the neural
+network.
 
 \section{OntoNotes corpus}
 
@@ -234,11 +319,6 @@ extended by following the frame-to-frame links from the roles. Accuracy is
 computed by aligning the golden and predicted graphs and computing precision,
 recall, and F1. The accuracy is computed for spans, frames, types, roles, and
 labels.
-
-An annotated document consists of a number of connected frames and phrases, i.e.
-token spans, evoking the frames. We evaluate the accuracy of the annotations
-by comparing the generated frames with the gold standard frame annotations from
-the corpus.
 
 \section{Furture work}
 
