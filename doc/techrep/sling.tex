@@ -14,7 +14,7 @@
 \restylefloat{figure}
 
 %\aclfinalcopy
-\def\confidential{Draft copy.  DO NOT DISTRIBUTE.}
+\def\confidential{DRAFT COPY.  DO NOT DISTRIBUTE.}
 
 \title{SLING: A framework for frame semantic parsing}
 
@@ -163,8 +163,21 @@ for a detailed description of the SLING frame store implementation.}
 The SLING text format is a superset of JSON that allows you to have references
 between frames (i.e. JSON objects) using the {\tt \#n} syntax. The frames can be
 assigned ids using the {\tt=\#n} syntax. SLING frames can have both numeric and
-named ids. Where JSON objects can only represent trees, SLING frames can be used
-for representing arbitrary graphs.
+named ids and both slot names and values can be frame references. Where JSON
+objects can only represent trees, SLING frames can be used for representing
+arbitrary graphs. SLING has special syntax for built-in slot names:
+
+\begin{table}[h!]
+\begin{tabular}{|l|l|l|}
+\hline
+Syntax & Symbol & RDF \\
+\hline
+=name & id:name & rdf:ID \\
+:name & isa:name & rdf:InstanceOf \\
++name & is:name & owl:sameAs/rdfs:subClassOf \\
+\hline
+\end{tabular}
+\end{table}
 
 Documents are also represented using frames, where the document frame has slots
 for the document text, the tokens, and the mention phrases and the frames they
