@@ -8,7 +8,10 @@
 
 \usepackage{svg}
 
-% Please remember to include --shell-escape when using pdflatex
+% Please remember to install inkscape include --shell-escape when
+% using pdflatex:
+% sudo apt-get install inkscape
+% pdflatex --shell-escape sling
 
 \floatstyle{boxed}
 \restylefloat{figure}
@@ -220,6 +223,41 @@ evoke. See Figure~\ref{fig:slingdoc} for an example.
   \label{fig:slingdoc}
 \end{figure*}
 
+\section{Attention}
+\label{sec:att}
+
+The SLING parser is essentially a sequence-to-sequence model where the LSTM
+encoder takes the input text and produces an internal representation of the
+stimuli, i.e. the input text.
+The decoder then takes this internal representation and uses a transition-based
+feed-forward unit to predict the sequence of actions for updating the transition
+system state (Figure~\ref{fig:network}).
+
+Sequence-to-sequence models often use an ``attention" mechanism to focus
+the decoder on the important parts of the input for producing the next output
+symbol. In this model, ``attention" refers to focusing on certain parts of the
+input as relevant for producing the next output.
+
+We use a somewhat different notion of \emph{attention} that is closer to
+recent neuroscience research in attention and awareness in the brain
+\cite{nelson2017} and \cite{graziano2013}.
+Our attention model is expressed in terms of the semantic frames inferred from
+the text so far.
+This is different from neural attention models in sequence-to-sequence models
+since we model attention in terms of semantic frames evoked from the text rather
+than (encodings of) the text itself.
+
+As part of the transition system state, we maintain an \emph{attention buffer}.
+This is a prioritized list of semantic frames where the frames that are closest
+to the center of attention is at the front of the list. The transition actions
+maintains the attention buffer and moves frames to the front whenever a frame
+is evoked or re-evoked by the input text. When a new frame is evoked, it will
+merge the concept and its roles into a new coherent chunk of meaning, which is
+represented by the new frame and it relations to other frames, and this will
+become the new center of attention. The hypothesis is that by maintaining this
+attention mechanism, we only need to look at a few recent frames brought into
+attention in order to build up the desired frame graph.
+
 \section{Transition system}
 \label{sec:ts}
 
@@ -337,16 +375,16 @@ as input features and uses these to compute the following input features:
   and unlabeled roles $(s_i,t_i)$.
 \end{itemize}
 
-\section{Parser runtime}
+\section{Experiments}
 
-Myelin is a neural network JIT compiler...
-
-At training time, we use Tensorflow for computing and updating the neural
-network.
-
-\section{OntoNotes corpus}
-
-Descibe how the OntoNotes-based training and testing corpus was constructed...
+We have used the OntoNotes corpus \cite{ontonotes2006} to construct a corpus
+with frame semantic annotations for evaluation the parser. We have taken the
+PropBank SRL layer \cite{palmer2005} and converted the predicate-argument
+structures into frame annotations. We have also annotated the corpus with
+entity mentions with entity types using a state-of-the-art entity tagger.
+We have determined the head token of each argument span and if this coincides
+with an entity mention, we have used this as the evoking span for the argument
+frame, otherwise we have just used the head token.
 
 \section{Evaluation}
 
@@ -362,6 +400,13 @@ extended by following the frame-to-frame links from the roles. Accuracy is
 computed by aligning the golden and predicted graphs and computing precision,
 recall, and F1. The accuracy is computed for spans, frames, types, roles, and
 labels.
+
+\section{Parser runtime}
+
+Myelin is a neural network JIT compiler...
+
+At training time, we use Tensorflow for computing and updating the neural
+network.
 
 \section{Furture work}
 
