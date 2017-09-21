@@ -10,7 +10,7 @@ bi-directional LSTMs for input encoding and a Transition Based Recurrent Unit
 tokens as input and the transition system has been designed to output frame
 graphs directly without any intervening symbolic representation.
 
-![SLING neural network architecture.](./doc/techrep/network.svg)
+![SLING neural network architecture.](./doc/report/network.svg)
 
 The SLING framework includes an efficient and scalable frame store
 implementation as well as a neural network JIT compiler for fast parsing at
