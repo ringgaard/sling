@@ -187,7 +187,7 @@ Syntax & Symbol & RDF \\
 \hline
 =name & id:name & rdf:ID \\
 :name & isa:name & rdf:InstanceOf \\
-+name & is:name & owl:sameAs/rdfs:subClassOf \\
++name & is:name & rdfs:subClassOf \\
 \hline
 \end{tabular}
 \end{table}
@@ -249,7 +249,7 @@ symbol. In this model, ``attention" refers to focusing on certain parts of the
 input as relevant for producing the next output.
 
 We use a somewhat different notion of \emph{attention} that is closer to
-recent neuroscience research in attention and awareness in the brain
+recent neuroscience research on attention and awareness in the brain
 \cite{nelson2017} and \cite{graziano2013}.
 Our attention model is expressed in terms of the semantic frames inferred from
 the text so far.
@@ -347,6 +347,8 @@ for transition-based dependency parsing \cite{nivre2006}, e.g. the sentence
   SHIFT
   EVOKE(/s/consumer_good, 1)
   CONNECT(1, /pb/arg1, 0)
+  SHIFT
+  STOP
 \end{verbatim}
 
 \section{Features}
