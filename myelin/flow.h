@@ -192,10 +192,15 @@ class Shape {
   }
 
   // Check if shape is fully defined, i.e. all dimensions have specified sizes.
-  // Please notice that defined := !undefined && !patial.
   bool defined() const {
     for (int d : dims_) if (d <= 0) return false;
     return true;
+  }
+
+  // Check if shape is missing, .e.g. some dimensions are zero.
+  bool missing() const {
+    for (int d : dims_) if (d == 0) return true;
+    return false;
   }
 
   // Return the number of outer elements relative to dimension.

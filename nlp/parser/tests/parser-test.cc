@@ -7,7 +7,7 @@
 #include "nlp/document/document-tokenizer.h"
 #include "nlp/parser/parser.h"
 
-DEFINE_string(parser, "local/parser.flow", "input file with flow model");
+DEFINE_string(parser, "local/sempar.flow", "input file with flow model");
 DEFINE_string(text, "John hit the ball with a bat.", "Text to parse");
 
 using namespace sling;

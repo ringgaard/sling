@@ -95,8 +95,8 @@ void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
   lstm->prefix_feature = GetParam(name + "/prefix", true);
   lstm->suffix_feature = GetParam(name + "/suffix", true);
   lstm->hyphen_feature = GetParam(name + "/hyphen", true);
-  lstm->caps_feature = GetParam(name + "/caps", true);
-  lstm->punct_feature = GetParam(name + "/punct", true);
+  lstm->caps_feature = GetParam(name + "/capitalization", true);
+  lstm->punct_feature = GetParam(name + "/punctuation", true);
   lstm->quote_feature = GetParam(name + "/quote", true);
   lstm->digit_feature = GetParam(name + "/digit", true);
 
@@ -411,7 +411,7 @@ void ParserInstance::ExtractFeaturesFF(int step) {
   int current = state_.current() - state_.begin();
   if (current == state_.end()) current = -1;
   int *lr_focus = GetFF(ff.lr_focus_feature);
-  int *rl_focus = GetFF(ff.lr_focus_feature);
+  int *rl_focus = GetFF(ff.rl_focus_feature);
   if (lr_focus != nullptr) *lr_focus = current;
   if (rl_focus != nullptr) *rl_focus = current;
 
@@ -456,7 +456,8 @@ void ParserInstance::ExtractFeaturesFF(int step) {
   // Extract role features.
   if (parser_->frame_limit_ > 0) {
     // Construct role graph for center of attention.
-    RoleGraph graph(state_, parser_->frame_limit_, parser_->roles_);
+    RoleGraph graph;
+    graph.Compute(state_, parser_->frame_limit_, parser_->roles_);
 
     // Extract out roles.
     int *out = GetFF(ff.out_roles_feature);

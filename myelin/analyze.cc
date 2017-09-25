@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
       // Dump generated code to file. The file can be viewed with objdump:
       // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn <binfn>
       if (!FLAGS_code.empty()) {
-        string binfn = FLAGS_cell + cell->name() + ".bin";
+        string binfn = FLAGS_code + cell->name() + ".bin";
         LOG(INFO) << "Writing code for " << cell->name() << " to " << binfn;
         cell->WriteCodeToFile(binfn);
       }
