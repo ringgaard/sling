@@ -1,5 +1,7 @@
 #include <python2.7/Python.h>
 
+#include "api/frames.h"
+
 namespace sling {
 
 // hello.cc
@@ -10,9 +12,14 @@ static PyMethodDef py_funcs[] = {
   {nullptr, nullptr, 0, nullptr}
 };
 
+static void RegisterModule() {
+  PyObject *module = Py_InitModule3("sling", sling::py_funcs, "SLING API");
+  PyStore::Define(module);
+}
+
 }  // namespace sling
 
 extern "C" void initsling() {
-  Py_InitModule3("sling", sling::py_funcs, "SLING API");
+  sling::RegisterModule();
 }
 

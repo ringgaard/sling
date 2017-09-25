@@ -14,6 +14,7 @@ cc_library(
   hdrs = ["frames.h"],
   deps = [
     "//base",
+    "//frame:store",
   ],
 )
 
@@ -21,6 +22,7 @@ cc_binary(
   name = "sling.so",
   srcs = ["api.cc"],
   deps = [
+    ":frames",
     ":hello",
     "//base:libinit",
     "//file:posix",
