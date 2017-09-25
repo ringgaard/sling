@@ -29,7 +29,7 @@ namespace sling {
 namespace myelin {
 
 std::unordered_map<string, Type> typemap = {
-  {"", DT_INVALID},
+  {"void", DT_INVALID},
   {"float16", DT_HALF},
   {"float32", DT_FLOAT},
   {"float64", DT_DOUBLE},
@@ -88,6 +88,32 @@ bool Shape::IsSameSize(const Shape &other) const {
   return true;
 }
 
+bool Shape::IsCompatible(const Shape &other) const {
+  int d1 = rank() - 1;
+  int d2 = other.rank() - 1;
+  while (d1 >= 0 && d2 >= 0) {
+    int s1 = dim(d1--);
+    int s2 = other.dim(d2--);
+    if (s1 == -1 || s1 == 1) continue;
+    if (s2 == -1 || d2 == 1) continue;
+    if (s1 != s2) return false;
+  }
+  return true;
+}
+
+int Shape::CommonSize(const Shape &other) const {
+  int n = 1;
+  int d1 = rank() - 1;
+  int d2 = other.rank() - 1;
+  while (d1 >= 0 && d2 >= 0) {
+    int n1 = dim(d1--);
+    int n2 = other.dim(d2--);
+    if (n1 != n2) break;
+    n *= n1;
+  }
+  return n;
+}
+
 string Shape::ToString() const {
   string str;
   for (int d = 0; d < rank(); ++d) {
@@ -110,35 +136,35 @@ const TypeTraits &TypeTraits::of(string &name) {
   return f != typemap.end() ? typetraits[f->second] : typetraits[DT_INVALID];
 }
 
-string TypeTraits::str(void *data) const {
+string TypeTraits::str(const void *data) const {
   if (data == nullptr) return "null";
   switch (type_) {
     case DT_INT8:
-      return std::to_string(*reinterpret_cast<int8 *>(data));
+      return std::to_string(*reinterpret_cast<const int8 *>(data));
 
     case DT_INT16:
-      return std::to_string(*reinterpret_cast<int16 *>(data));
+      return std::to_string(*reinterpret_cast<const int16 *>(data));
 
     case DT_INT32:
-      return std::to_string(*reinterpret_cast<int32 *>(data));
+      return std::to_string(*reinterpret_cast<const int32 *>(data));
 
     case DT_INT64:
-      return std::to_string(*reinterpret_cast<int64 *>(data));
+      return std::to_string(*reinterpret_cast<const int64 *>(data));
 
     case DT_UINT8:
-      return std::to_string(*reinterpret_cast<uint8 *>(data));
+      return std::to_string(*reinterpret_cast<const uint8 *>(data));
 
     case DT_UINT16:
-      return std::to_string(*reinterpret_cast<uint16 *>(data));
+      return std::to_string(*reinterpret_cast<const uint16 *>(data));
 
     case DT_FLOAT:
-      return std::to_string(*reinterpret_cast<float *>(data));
+      return std::to_string(*reinterpret_cast<const float *>(data));
 
     case DT_DOUBLE:
-      return std::to_string(*reinterpret_cast<double *>(data));
+      return std::to_string(*reinterpret_cast<const double *>(data));
 
     case DT_BOOL:
-      return (*reinterpret_cast<bool *>(data)) ? "true" : "false";
+      return (*reinterpret_cast<const bool *>(data)) ? "true" : "false";
 
     default:
       return "???";
@@ -146,6 +172,7 @@ string TypeTraits::str(void *data) const {
 }
 
 Transformations::~Transformations() {
+  for (auto *t : transformers_) delete t;
   for (auto *t : typers_) delete t;
 }
 
@@ -153,36 +180,75 @@ Transformations::~Transformations() {
 class Parser {
  public:
   // Initialize parser with input buffer.
-  Parser(char *ptr, char *end) : ptr_(ptr), end_(end) {}
+  Parser(const char *ptr, const char *end) : ptr_(ptr), end_(end) {}
 
   // Get data buffer from input and advance the current input pointer.
-  char *Get(int len) {
+  const char *Get(int len) {
     CHECK_LE(len, end_ - ptr_) << "Unexpected end of input";
-    char *p = ptr_;
+    const char *p = ptr_;
     ptr_ += len;
     return p;
   }
 
   // Get next integer from input.
   int GetInt() {
-    return *reinterpret_cast<int *>(Get(4));
+    return *reinterpret_cast<const int *>(Get(4));
   }
 
   // Get next 64-bit integer from input.
   uint64_t GetLong() {
-    return *reinterpret_cast<uint64_t *>(Get(8));
+    return *reinterpret_cast<const uint64_t *>(Get(8));
   }
 
   // Get next length-prefixed string from input.
   string GetString() {
     int len = GetInt();
-    char *str = Get(len);
+    const char *str = Get(len);
     return string(str, len);
   }
 
  private:
-  char *ptr_;  // current position
-  char *end_;  // end of input buffer
+  const char *ptr_;  // current position
+  const char *end_;  // end of input buffer
+};
+
+// Flow file writer.
+class FlowFileWriter {
+ public:
+  // Open flow file for writing.
+  explicit FlowFileWriter(const string &filename)
+      : file_(File::OpenOrDie(filename, "w")) {
+  }
+
+  // Close output file.
+  ~FlowFileWriter() {
+    CHECK(file_->Close());
+  }
+
+  // Write data to output file.
+  void Write(const void *data, size_t size) {
+    CHECK(file_->Write(data, size));
+  }
+
+  // Write integer to output file.
+  void WriteInt(int32 n) {
+    Write(&n, sizeof(int32));
+  }
+
+  // Write 64-bit integer to output file.
+  void WriteInt64(int64 n) {
+    Write(&n, sizeof(int64));
+  }
+
+  // Write length-prefixed string to output file.
+  void WriteString(const string &str) {
+    WriteInt(str.size());
+    Write(str.data(), str.size());
+  }
+
+ private:
+  // Output file.
+  File *file_;
 };
 
 const string &Attributes::Get(const string &name) const {
@@ -196,6 +262,15 @@ const string &Attributes::Get(const string &name) const {
 int Attributes::Get(const string &name, int defval) const {
   for (auto &attr : *this) {
     if (attr.name == name) return atoi(attr.value.c_str());
+  }
+  return defval;
+}
+
+bool Attributes::Get(const string &name, bool defval) const {
+  for (auto &attr : *this) {
+    if (attr.name == name) {
+      return attr.value == "1" || attr.value == "T" || attr.value == "true";
+    }
   }
   return defval;
 }
@@ -215,6 +290,18 @@ void Attributes::Set(const string &name, const string &value) {
     }
   }
   emplace_back(name, value);
+}
+
+void Attributes::Set(const string &name, const char *value) {
+  Set(name, string(value));
+}
+
+void Attributes::Set(const string &name, int value) {
+  Set(name, std::to_string(value));
+}
+
+void Attributes::Set(const string &name, bool value) {
+  Set(name, value ? "1" : "0");
 }
 
 void Flow::Variable::AddAlias(const string &alias) {
@@ -237,12 +324,13 @@ string Flow::Variable::TypeString() const {
 
 string Flow::Variable::DataString() const {
   // Locate data.
-  char *p  = data;
+  const char *p = data;
+  if (p == nullptr) return "∅";
   if (ref) {
+    p = *reinterpret_cast<const char * const *>(p);
     if (p == nullptr) return "null";
-    p = *reinterpret_cast<char **>(p);
   }
-  if (shape.partial()) return "*";
+  if (!shape.defined()) return "*";
 
   // Get type traits for elements.
   const TypeTraits &traits = TypeTraits::of(type);
@@ -326,7 +414,7 @@ void Flow::Operation::AddInput(Variable *var) {
 
 void Flow::Operation::AddOutput(Variable *var) {
   outputs.push_back(var);
-  CHECK(var->producer == nullptr);
+  CHECK(var->producer == nullptr) << var->name;
   var->producer = this;
 }
 
@@ -363,7 +451,7 @@ void Flow::Operation::RemoveOutput(Variable *var) {
 
   // Remove variable from outputs.
   auto f = std::find(outputs.begin(), outputs.end(), var);
-  CHECK(f != inputs.end());
+  CHECK(f != outputs.end());
   outputs.erase(f);
 }
 
@@ -397,6 +485,38 @@ void Flow::Operation::MoveOutput(Variable *var, Operation *op) {
   // Update variable producer.
   CHECK(var->producer == this);
   var->producer = op;
+}
+
+void Flow::Operation::ReplaceInput(Variable *var, Variable *replacement) {
+  for (Variable *&input : inputs) {
+    if (input == var) {
+      // Remove op as consumer of input.
+      auto fc = std::find(var->consumers.begin(), var->consumers.end(), this);
+      CHECK(fc != var->consumers.end());
+      var->consumers.erase(fc);
+
+      // Add op as consumer of replacement.
+      replacement->consumers.push_back(this);
+
+      // Update input.
+      input = replacement;
+    }
+  }
+}
+
+void Flow::Operation::ReplaceOutput(Variable *var, Variable *replacement) {
+  for (Variable *&output : outputs) {
+    if (output == var) {
+      // Update producer.
+      DCHECK(var->producer == this);
+      CHECK(replacement->producer == nullptr);
+      var->producer = nullptr;
+      replacement->producer = this;
+
+      // Update output.
+      output = replacement;
+    }
+  }
 }
 
 void Flow::Function::AddOperation(Operation *op) {
@@ -452,14 +572,21 @@ Status Flow::Load(const string &filename) {
   CHECK(file->GetSize(&size));
   char *data = AllocateMemory(size);
   file->ReadOrDie(data, size);
-  CHECK(file->Close());
+  st = file->Close();
+  if (!st.ok()) return st;
 
+  Read(data, size);
+  return Status::OK;
+}
+
+void Flow::Read(const char *data, size_t size) {
   // Read header.
   Parser parser(data, data + size);
   int magic = parser.GetInt();
-  CHECK_EQ(magic, 0x776f6c66) << filename << " is not a flow file";
+  CHECK_EQ(magic, kMagic) << "not a flow file";
   int version = parser.GetInt();
-  CHECK_EQ(version, 3) << "unsupported flow file version";
+  CHECK(version >= 3 && version <= 4)
+      << "unsupported flow file version " << version;
 
   // Read variables.
   int num_vars = parser.GetInt();
@@ -487,7 +614,7 @@ Status Flow::Load(const string &filename) {
         type.erase(0, 1);
       }
       const TypeTraits &t = TypeTraits::of(type);
-      CHECK(t.valid()) << "Unknown type: " << type;
+      CHECK(t.valid() || type == "void") << "Unknown type: " << type;
       var->type = t.type();
     }
 
@@ -583,17 +710,174 @@ Status Flow::Load(const string &filename) {
     }
   }
 
-  return Status::OK;
+  // Read data blocks.
+  if (version >= 4) {
+    int num_blobs = parser.GetInt();
+    for (int i = 0; i < num_blobs; ++i) {
+      // Create new blob.
+      Blob *blob = new Blob;
+      blobs_.push_back(blob);
+
+      // Get blob name and type.
+      blob->name = parser.GetString();
+      blob->type = parser.GetString();
+
+      // Get attributes.
+      int num_attrs = parser.GetInt();
+      for (int j = 0; j < num_attrs; ++j) {
+        string name = parser.GetString();
+        string value = parser.GetString();
+        blob->attrs.Set(name, value);
+      }
+
+      // Get data.
+      blob->size = parser.GetLong();
+      if (blob->size != 0) blob->data = parser.Get(blob->size);
+    }
+  }
+}
+
+void Flow::Save(const string &filename, int version) const {
+  // Open output file.
+  FlowFileWriter file(filename);
+
+  // Write header (magic and version).
+  CHECK_GE(version, 3);
+  CHECK_LE(version, kVersion);
+  file.WriteInt(kMagic);
+  file.WriteInt(version);
+
+  // Write variables.
+  file.WriteInt(vars_.size());
+  for (const Variable *var : vars_) {
+    // Write name.
+    file.WriteString(var->name);
+
+    // Write aliases.
+    file.WriteInt(var->aliases.size());
+    for (const string &alias : var->aliases) {
+      file.WriteString(alias);
+    }
+
+    // Write type.
+    if (var->ref) {
+      file.WriteString("&" + TypeTraits::of(var->type).name());
+    } else {
+      file.WriteString(TypeTraits::of(var->type).name());
+    }
+
+    // Write shape.
+    file.WriteInt(var->shape.rank());
+    for (int d = 0; d < var->shape.rank(); ++d) {
+      file.WriteInt(var->shape.dim(d));
+    }
+
+    // Write size.
+    file.WriteInt64(var->size);
+
+    // Write data.
+    if (var->data != nullptr) {
+      file.Write(var->data, var->size);
+    }
+  }
+
+  // Write operations.
+  file.WriteInt(ops_.size());
+  for (Operation *op : ops_) {
+    // Write name.
+    file.WriteString(op->name);
+
+    // Write type.
+    file.WriteString(op->type);
+
+    // Write inputs.
+    file.WriteInt(op->inputs.size());
+    for (const Variable *input : op->inputs) {
+      file.WriteString(input->name);
+    }
+
+    // Write outputs.
+    file.WriteInt(op->outputs.size());
+    for (const Variable *output : op->outputs) {
+      file.WriteString(output->name);
+    }
+
+    // Write attributes.
+    file.WriteInt(op->attrs.size());
+    for (const auto &attr : op->attrs) {
+      file.WriteString(attr.name);
+      file.WriteString(attr.value);
+    }
+  }
+
+  // Write functions.
+  file.WriteInt(funcs_.size());
+  for (const Function *func : funcs_) {
+    file.WriteString(func->name);
+    file.WriteInt(func->ops.size());
+    for (const Operation *op : func->ops) {
+      file.WriteString(op->name);
+    }
+  }
+
+  // Write connectors.
+  file.WriteInt(cnxs_.size());
+  for (const Connector *cnx : cnxs_) {
+    file.WriteString(cnx->name);
+    file.WriteInt(cnx->links.size());
+    for (const Variable *link : cnx->links) {
+      file.WriteString(link->name);
+    }
+  }
+
+  // Write data blocks.
+  if (version >= 4) {
+    file.WriteInt(blobs_.size());
+    for (const Blob *blob : blobs_) {
+      file.WriteString(blob->name);
+      file.WriteString(blob->type);
+      file.WriteInt(blob->attrs.size());
+      for (const auto &attr : blob->attrs) {
+        file.WriteString(attr.name);
+        file.WriteString(attr.value);
+      }
+      file.WriteInt64(blob->size);
+      if (blob->data != nullptr) {
+        file.Write(blob->data, blob->size);
+      }
+    }
+  }
 }
 
 void Flow::Analyze(const Transformations &transformations) {
+  // Infer input and output variables.
   InferInputsAndOutputs();
+
+  // Run first round of transformations.
   Transform(transformations);
+
+  // Sort ops and vars in dependency order.
   Sort();
+
+  // Infer missing types and shapes for variables.
   InferTypes(transformations);
+
+  // Run second round of transformations after types have been resolved.
+  if (Transform(transformations)) {
+    // Make sure ops are still sorted after second round of transformations.
+    Sort();
+  }
 }
 
 void Flow::InferInputsAndOutputs() {
+  // Connector links are considered both inputs and outputs.
+  for (Connector *cnx : cnxs_) {
+    for (Variable *link : cnx->links) {
+      link->in = true;
+      link->out = true;
+    }
+  }
+
   for (Variable *var : vars_) {
     // Check the input and output attributes of the producing op.
     bool input_set = false;
@@ -629,96 +913,22 @@ void Flow::InferInputsAndOutputs() {
   }
 }
 
-void Flow::Transform(const Transformations &transformations) {
+bool Flow::Transform(const Transformations &transformations) {
   // Keep transforming flow until no more transformations can be applied.
   bool again = true;
+  bool transformed = false;
   while (again) {
-    again = false;
-
-    // Eliminate Identity ops by moving the inputs to the output.
-    std::vector<Operation *> noops;
-    for (const string &identity : transformations.noops()) {
-      for (Operation *op : ops_) {
-        if (op->type == identity) noops.push_back(op);
-      }
-    }
-
-    // Remove no-ops from the flow and eliminate the intermediate variables.
-    for (Operation *op : noops) {
-      Eliminate(op);
-      again = true;
-    }
-
-    // Combine ops.
-    for (const auto &c : transformations.combinations()) {
-      if (Combine(c.first, c.second, c.replacement)) again = true;
-    }
-
     // Run flow transformers.
-    for (Transformer *transformer : transformations.transformers()) {
-      if (transformer->Transform(this)) again = true;
-    }
-  }
-}
-
-bool Flow::Combine(const string &first,
-                   const string &second,
-                   const string &combined) {
-  // Find operations that can be combined.
-  bool again = false;
-  for (Operation *op : ops_) {
-    if (op->type != first) continue;
-    if (op->outputs.size() != 1) continue;
-    Variable *var = op->outputs[0];
-    if (var->consumers.size() != 1) continue;
-    if (var->consumers[0]->type != second) continue;
-    if (var->consumers[0]->task != op->task) continue;
-
-    Merge(op, var->consumers[0], combined);
-    again = true;
-  }
-  return again;
-}
-
-Flow::Operation *Flow::Merge(Operation *first,
-                             Operation *second,
-                             const string &combined) {
-  // Check that ops can be merged.
-  CHECK_EQ(first->outputs.size(), 1);
-  Variable *var = first->outputs[0];
-  CHECK_EQ(var->consumers.size(), 1);
-  CHECK(var->consumers[0] == second);
-
-  // Add inputs for second op to the first/combined op.
-  for (Variable *v : second->inputs) {
-    if (v != var) {
-      first->inputs.push_back(v);
-      for (Operation *&c : v->consumers) {
-        if (c == second) c = first;
+    auto &transformers = transformations.transformers();
+    again = false;
+    for (int t = transformers.size() -1; t >= 0; --t) {
+      if (transformers[t]->Transform(this)) {
+        transformed = true;
+        again = true;
       }
     }
   }
-
-  // Add outputs from second op to the first/combined op.
-  first->outputs.clear();
-  for (Variable *v : second->outputs) {
-    first->outputs.push_back(v);
-    v->producer = first;
-  }
-
-  // Update connectors removing the intermediate variable.
-  for (Connector *cnx : cnxs_) cnx->RemoveLink(var);
-
-  // Set operation type for the first to the combined type.
-  first->type = combined;
-
-  // Delete second operation.
-  DeleteOperation(second);
-
-  // Delete intermediate variable.
-  DeleteVariable(var);
-
-  return first;
+  return transformed;
 }
 
 Flow::Operation *Flow::Fuse(Operation *first,
@@ -735,7 +945,7 @@ Flow::Operation *Flow::Fuse(Operation *first,
       // Input from first op. Eliminate variable if it is only used as an
       // intermediate result between the first and second op.
       second->RemoveInput(v);
-      if (v->consumers.empty()) {
+      if (v->consumers.empty() && !v->out) {
         first->RemoveOutput(v);
         DeleteVariable(v);
         for (Connector *cnx : cnxs_) cnx->RemoveLink(v);
@@ -752,7 +962,7 @@ Flow::Operation *Flow::Fuse(Operation *first,
     if (first->IsInput(v)) {
       // Input from second op. Eliminate variable if it is only used as an
       // intermediate result between the first and second op.
-      if (v->consumers.size() == 1) {
+      if (v->consumers.size() == 1 && !v->out) {
         first->RemoveInput(v);
         second->RemoveOutput(v);
         DeleteVariable(v);
@@ -786,39 +996,99 @@ Flow::Operation *Flow::Fuse(Operation *first,
   return first;
 }
 
-std::vector<Flow::Operation *> Flow::Find(const std::vector<string> &ops) {
-  CHECK(!ops.empty());
-  std::vector<Operation *> matches;
-  const string &last = ops.back();
-  for (Operation *op : ops_) {
-    // Look for ops which match the last op in the sequence.
-    if (op->type != last) continue;
+std::vector<Flow::Operation *> Flow::Find(const string &pathexpr) {
+  Path path;
+  ParsePath(pathexpr, &path);
+  return Find(path);
+}
 
-    // Check for match by traversing backwards though the first input of each
-    // op in the sequence.
+std::vector<Flow::Operation *> Flow::Find(const std::vector<string> &nodes) {
+  Path path;
+  for (auto &node : nodes) ParsePath(node, &path);
+  return Find(path);
+}
+
+std::vector<Flow::Operation *> Flow::Find(std::initializer_list<string> nodes) {
+  Path path;
+  for (auto &node : nodes) ParsePath(node, &path);
+  return Find(path);
+}
+
+std::vector<Flow::Operation *> Flow::Find(const Path &path) {
+  // Get the last node in the path.
+  CHECK(!path.empty());
+  const Node &last = path.back();
+
+  std::vector<Operation *> matches;
+  for (Operation *op : ops_) {
+    // Look for ops which match the last node in the path.
+    if (op->type != last.type) continue;
+
+    // Check for match by traversing backwards.
     Operation *current = op;
     bool match = true;
-    for (int i = ops.size() - 2; i >= 0; --i) {
+    int input = last.input;
+    for (int i = path.size() - 2; i >= 0; --i) {
+      const Node &node = path[i];
+
       // Follow producer chain.
-      if (current->inputs.empty()) {
+      if (input >= current->inputs.size()) {
         match = false;
         break;
       }
-      current = current->inputs[0]->producer;
-      if (current == nullptr) {
+      Variable *var = current->inputs[input];
+      Operation *next = var->producer;
+      if (next == nullptr) {
+        match = false;
+        break;
+      }
+      if (node.output >= next->outputs.size() ||
+          next->outputs[node.output] != var) {
+        match = false;
+        break;
+      }
+      current = next;
+      input = node.input;
+
+      // Check if op type matches.
+      if (current->type != node.type) {
         match = false;
         break;
       }
 
-      // Check if op type matches.
-      if (current->type != ops[i]) {
-        match = false;
-        break;
-      }
     }
     if (match) matches.push_back(op);
   }
+
   return matches;
+}
+
+void Flow::ParsePath(const string &pathexpr, Path *path) {
+  int pos = 0;
+  while (pos < pathexpr.size()) {
+    // Get end of next node.
+    int next = pathexpr.find('|', pos);
+    if (next == -1) next = pathexpr.size();
+
+    // Parse next node in path {<input>:}<type>{:<output>}.
+    Node node;
+    int begin = pos;
+    int end = next;
+    int colon = pathexpr.find(':', begin);
+    if (colon > begin && colon < end) {
+      node.input = std::stoi(pathexpr.substr(begin, colon - begin));
+      begin = colon + 1;
+    }
+    colon = pathexpr.rfind(':', end);
+    if (colon > begin && colon < end) {
+      node.output = std::stoi(pathexpr.substr(colon + 1, end - (colon + 1)));
+      end = colon - 1;
+    }
+    node.type = pathexpr.substr(begin, end - begin);
+
+    path->push_back(node);
+    pos = next + 1;
+  }
 }
 
 Flow::Function *Flow::Extract(const string &name,
@@ -902,11 +1172,12 @@ void Flow::Eliminate(Operation *op) {
     if (input->type != DT_INVALID && output->type != DT_INVALID) {
       CHECK_EQ(input->type, output->type);
     }
-    if (!input->shape.undefined() && !output->shape.undefined()) {
+    if (input->shape.defined() && output->shape.defined()) {
       CHECK(input->shape == output->shape);
     }
     if (output->in) input->in = true;
     if (output->out) input->out = true;
+    if (output->ref) input->ref = true;
     for (Operation *target : ops_) {
       for (int i = 0; i < target->inputs.size(); ++i) {
         if (target->inputs[i] == output) {
@@ -954,7 +1225,7 @@ static bool CompareOpOrder(Flow::Operation *o1, Flow::Operation *o2) {
 struct PriorityComparator {
   bool operator ()(Flow::Operation *o1, Flow::Operation *o2) {
     if (o1->priority == o2->priority) {
-      return o1->order < o2->order;
+      return o1->order > o2->order;
     } else {
       return o1->priority > o2->priority;
     }
@@ -1103,7 +1374,7 @@ bool Flow::InferTypes(const Transformations &transformations) {
                      << " because input " << input->name
                      << " is missing type";
       }
-      if (input->shape.undefined()) {
+      if (input->shape.missing()) {
         missing = true;
         LOG(WARNING) << "Skipping type inference for " << op->name
                      << " because input " << input->name
@@ -1118,12 +1389,14 @@ bool Flow::InferTypes(const Transformations &transformations) {
     // Check if any of the outputs are missing type or shape information.
     bool infer = false;
     for (Variable *output : op->outputs) {
-      if (output->type == DT_INVALID || output->shape.undefined()) infer = true;
+      if (output->type == DT_INVALID || output->shape.missing()) infer = true;
     }
     if (!infer) continue;
 
     // Try to infer type and shape for operation outputs.
-    for (Typer *typer : transformations.typers()) {
+    auto &typers = transformations.typers();
+    for (int t = typers.size() -1; t >= 0; --t) {
+      Typer *typer = typers[t];
       bool done = typer->InferTypes(op);
       if (done) break;
     }
@@ -1135,7 +1408,7 @@ bool Flow::InferTypes(const Transformations &transformations) {
         LOG(WARNING) << "Variable " << output->name << " is missing type";
         resolved = false;
       }
-      if (output->shape.undefined()) {
+      if (output->shape.missing()) {
         LOG(WARNING) << "Variable " << output->name << " is missing shape";
         resolved = false;
       }
@@ -1206,6 +1479,14 @@ Flow::Connector *Flow::AddConnector(const string &name) {
   return cnx;
 }
 
+Flow::Blob *Flow::AddBlob(const string &name, const string &type) {
+  Blob *blob = new Blob;
+  blobs_.push_back(blob);
+  blob->name = name;
+  blob->type = type;
+  return blob;
+}
+
 void Flow::DeleteVariable(Variable *var) {
   auto f = std::find(vars_.begin(), vars_.end(), var);
   if (f != vars_.end()) vars_.erase(f);
@@ -1213,14 +1494,41 @@ void Flow::DeleteVariable(Variable *var) {
 }
 
 void Flow::DeleteOperation(Operation *op) {
+  // Remove op from function.
   Function *func = op->func;
   if (func != nullptr) {
     auto f = std::find(func->ops.begin(), func->ops.end(), op);
     if (f != func->ops.end()) func->ops.erase(f);
   }
+
+  // Remove op from flow.
   auto f = std::find(ops_.begin(), ops_.end(), op);
   if (f != ops_.end()) ops_.erase(f);
   delete op;
+}
+
+void Flow::DeleteFunction(Function *func) {
+  auto f = std::find(funcs_.begin(), funcs_.end(), func);
+  if (f != funcs_.end()) funcs_.erase(f);
+  delete func;
+}
+
+void Flow::RemoveOperation(Operation *op) {
+  // Remove inputs.
+  for (Flow::Variable *input : op->inputs) {
+    auto fc = std::find(input->consumers.begin(), input->consumers.end(), op);
+    CHECK(fc != input->consumers.end());
+    input	->consumers.erase(fc);
+  }
+
+  // Remove outputs.
+  for (Flow::Variable *output : op->outputs) {
+    CHECK(output->producer == op);
+    output->producer = nullptr;
+  }
+
+  // Delete op.
+  DeleteOperation(op);
 }
 
 bool Flow::IsConsistent() const {
@@ -1356,7 +1664,7 @@ string Flow::ToString() const {
                     output->TypeString().c_str());
     }
     for (const Attribute &attr : op->attrs) {
-      if (attr.value.size() > 128) {
+      if (attr.value.size() > 512) {
         StringAppendF(&str, "  %s = <<%lu bytes>>\n",
                       attr.name.c_str(),
                       attr.value.size());
@@ -1386,6 +1694,19 @@ string Flow::ToString() const {
     StringAppendF(&str, "}\n\n");
   }
 
+  for (const Blob *blob : blobs_) {
+    StringAppendF(&str, "blob %s : %s { %lu bytes\n",
+                  blob->name.c_str(),
+                  blob->type.c_str(),
+                  blob->size);
+    for (const Attribute &attr : blob->attrs) {
+      StringAppendF(&str, "  %s = %s\n",
+                    attr.name.c_str(),
+                    attr.value.c_str());
+    }
+    StringAppendF(&str, "}\n\n");
+  }
+
   return str;
 }
 
@@ -1409,6 +1730,13 @@ Flow::Operation *Flow::Op(const string &name) {
 Flow::Function *Flow::Func(const string &name) {
   for (Function *func : funcs_) {
     if (func->name == name) return func;
+  }
+  return nullptr;
+}
+
+Flow::Blob *Flow::DataBlock(const string &name) {
+  for (Blob *blob : blobs_) {
+    if (blob->name == name) return blob;
   }
   return nullptr;
 }

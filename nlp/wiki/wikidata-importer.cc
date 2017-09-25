@@ -10,6 +10,7 @@
 #include "nlp/wiki/wiki.h"
 #include "stream/input.h"
 #include "stream/output.h"
+#include "string/strcat.h"
 #include "string/numbers.h"
 #include "string/text.h"
 #include "task/frames.h"
@@ -95,7 +96,7 @@ class WikidataImporter : public task::Processor {
 
     //LOG(INFO) << ToText(obj, 2);
 
-    // Get top-level item attibutes.
+    // Get top-level item attributes.
     Frame item = obj.AsFrame();
     string id = item.GetString(s_id_);
     string type = item.GetString(s_type_);
@@ -208,7 +209,7 @@ class WikidataImporter : public task::Processor {
         Frame site = sitelinks.GetFrame(it.second.wikisite);
         if (site.valid()) {
           string title = site.GetString(s_title_);
-          string lang = Frame(&store, it.first).Id();
+          string lang = Frame(&store, it.first).Id().str();
           if (!title.empty()) {
             string wiki_id = Wiki::Id(lang, title);
             sites.AddLink(it.second.language, wiki_id);
@@ -237,7 +238,7 @@ class WikidataImporter : public task::Processor {
   }
 
  private:
-  // Check if string matches format with wildcards.
+  // Check if string matches format with wild cards.
   static bool MatchesFormat(Text str, Text format) {
     if (str.length() != format.length()) return false;
     const char *s = str.data();

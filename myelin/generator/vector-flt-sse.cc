@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "myelin/generator/expression.h"
 
 #define __ masm->
@@ -23,7 +37,7 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     model_.func_reg_mem = true;
   }
 
-  string Name() override { return "VectorFltSSE"; }
+  string Name() override { return "VFltSSE"; }
 
   int VectorSize() override { return XMMRegSize; }
 
@@ -35,8 +49,10 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        if (IsClear(instr)) {
+        if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
+          // This uses the floating point version of xor to avoid bypass delays
+          // between integer and floating point units.
           switch (type_) {
             case DT_FLOAT:
               __ xorps(xmm(instr->dst), xmm(instr->dst));
@@ -86,20 +102,17 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
             &Assembler::maxps, &Assembler::maxpd,
             masm);
         break;
-      case Express::RELU:
-        GenerateRelu(instr, masm);
-        break;
       case Express::CMPEQOQ:
-        GenerateCompare(instr, masm, 0);
+        GenerateCompare(instr, masm, CMP_EQ_OQ);
         break;
       case Express::CMPLTOQ:
-        GenerateCompare(instr, masm, 17);
+        GenerateCompare(instr, masm, CMP_LT_OQ);
         break;
       case Express::CMPGTOQ:
-        GenerateCompare(instr, masm, 30);
+        GenerateCompare(instr, masm, CMP_GT_OQ);
         break;
       case Express::CMPNGEUQ:
-        GenerateCompare(instr, masm, 25);
+        GenerateCompare(instr, masm, CMP_NGE_UQ);
         break;
       case Express::AND:
         GenerateXMMFltOp(instr,
@@ -150,33 +163,9 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     }
   }
 
-  // Generate relu.
-  void GenerateRelu(Express::Op *instr, MacroAssembler *masm) {
-    if (CPU::Enabled(SSE2)) {
-      if (type_ == DT_FLOAT) {
-        __ xorps(xmm(instr->dst), xmm(instr->dst));
-      } else if (type_ == DT_DOUBLE) {
-        __ xorpd(xmm(instr->dst), xmm(instr->dst));
-      } else {
-        UNSUPPORTED;
-      }
-    } else if (type_ == DT_FLOAT) {
-      float zero = 0;
-      auto *data = masm->CreateDataBlock(sizeof(float));
-      data->Add(zero);
-      __ movss(xmm(instr->dst), data->address());
-    } else {
-      UNSUPPORTED;
-    }
-    GenerateXMMFltOp(instr,
-        &Assembler::maxps, &Assembler::maxpd,
-        &Assembler::maxps, &Assembler::maxpd,
-        masm);
-  }
-
   // Generate left/right shift.
   void GenerateShift(Express::Op *instr, MacroAssembler *masm,
-                     int left, int bits) {
+                     bool left, int bits) {
     // Move argument to destination register
     CHECK(instr->dst != -1);
     if (instr->src != -1) {

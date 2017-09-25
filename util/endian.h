@@ -130,10 +130,10 @@ class LittleEndian {
   //
   // For speed reasons this function does not work for len == 0.
   // The caller needs to guarantee that 1 <= len <= 8.
-  static uint64 Load64VariableLength(const void * const p, int len) {
+  static uint64 Load64VariableLength(const void *const p, int len) {
     DCHECK_GE(len, 1);
     DCHECK_LE(len, 8);
-    const char * const buf = static_cast<const char * const>(p);
+    const char *const buf = static_cast<const char *const>(p);
     uint64 val = 0;
     --len;
     do {

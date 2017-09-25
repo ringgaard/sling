@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "myelin/generator/expression.h"
 
 #define __ masm->
@@ -28,18 +42,33 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
     }
   }
 
-  string Name() override { return "ScalarFltAVX"; }
+  string Name() override { return "FltAVX"; }
 
   void Reserve() override {
     // Reserve XMM registers.
     index_->ReserveXMMRegisters(instructions_.NumRegs());
+
+    // Allocate auxiliary registers.
+    int num_mm_aux = 0;
+    if (instructions_.Has(Express::AND) ||
+        instructions_.Has(Express::OR) ||
+        instructions_.Has(Express::ANDNOT) ||
+        instructions_.Has(Express::CVTFLTINT) ||
+        instructions_.Has(Express::CVTINTFLT) ||
+        instructions_.Has(Express::SUBINT)) {
+      num_mm_aux = std::max(num_mm_aux, 1);
+    }
+
+    index_->ReserveAuxXMMRegisters(num_mm_aux);
   }
 
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        if (IsClear(instr)) {
+        if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
+          // This uses the floating point version of xor to avoid bypass delays
+          // between integer and floating point units.
           switch (type_) {
             case DT_FLOAT:
               __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
@@ -89,80 +118,58 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
             &Assembler::vmaxss, &Assembler::vmaxsd,
             masm);
         break;
-      case Express::RELU:
-        GenerateRelu(instr, masm);
-        break;
       case Express::MULADD132:
         GenerateXMMFltOp(instr,
             &Assembler::vfmadd132ss, &Assembler::vfmadd132sd,
             &Assembler::vfmadd132ss, &Assembler::vfmadd132sd,
-            masm);
+            masm, 2);
         break;
       case Express::MULADD213:
         GenerateXMMFltOp(instr,
             &Assembler::vfmadd213ss, &Assembler::vfmadd213sd,
             &Assembler::vfmadd213ss, &Assembler::vfmadd213sd,
-            masm);
+            masm, 2);
         break;
       case Express::MULADD231:
         GenerateXMMFltOp(instr,
             &Assembler::vfmadd231ss, &Assembler::vfmadd231sd,
             &Assembler::vfmadd231ss, &Assembler::vfmadd231sd,
-            masm);
+            masm, 2);
         break;
       case Express::MULSUB132:
         GenerateXMMFltOp(instr,
             &Assembler::vfmsub132ss, &Assembler::vfmsub132sd,
             &Assembler::vfmsub132ss, &Assembler::vfmsub132sd,
-            masm);
+            masm, 2);
         break;
       case Express::MULSUB213:
         GenerateXMMFltOp(instr,
             &Assembler::vfmsub213ss, &Assembler::vfmsub213sd,
             &Assembler::vfmsub213ss, &Assembler::vfmsub213sd,
-            masm);
+            masm, 2);
         break;
       case Express::MULSUB231:
         GenerateXMMFltOp(instr,
             &Assembler::vfmsub231ss, &Assembler::vfmsub231sd,
             &Assembler::vfmsub231ss, &Assembler::vfmsub231sd,
-            masm);
+            masm, 2);
         break;
       case Express::CMPEQOQ:
-        GenerateCompare(instr, masm, 0);
+        GenerateCompare(instr, masm, CMP_EQ_OQ);
         break;
       case Express::CMPLTOQ:
-        GenerateCompare(instr, masm, 17);
+        GenerateCompare(instr, masm, CMP_LT_OQ);
         break;
       case Express::CMPGTOQ:
-        GenerateCompare(instr, masm, 30);
+        GenerateCompare(instr, masm, CMP_GT_OQ);
         break;
       case Express::CMPNGEUQ:
-        GenerateCompare(instr, masm, 25);
+        GenerateCompare(instr, masm, CMP_NGE_UQ);
         break;
       case Express::AND:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
-        GenerateXMMFltOp(instr,
-            &Assembler::vandps, &Assembler::vandpd,
-            &Assembler::vandps, &Assembler::vandpd,
-            masm);
-        break;
       case Express::OR:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
-        GenerateXMMFltOp(instr,
-            &Assembler::vorps, &Assembler::vorpd,
-            &Assembler::vorps, &Assembler::vorpd,
-            masm);
-        break;
       case Express::ANDNOT:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
-        GenerateXMMFltOp(instr,
-            &Assembler::vandnps, &Assembler::vandnpd,
-            &Assembler::vandnps, &Assembler::vandnpd,
-            masm);
+        GenerateRegisterOp(instr, masm);
         break;
       case Express::SHR23:
         GenerateShift(instr, masm, false, 23);
@@ -171,60 +178,14 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         GenerateShift(instr, masm, true, 23);
         break;
       case Express::FLOOR:
-        GenerateXMMFltOp(instr,
-            &Assembler::vroundss, &Assembler::vroundsd,
-            &Assembler::vroundss, &Assembler::vroundsd,
-            kRoundDown, masm);
+        GenerateRound(instr, masm, kRoundDown);
         break;
       case Express::CVTFLTINT:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
-        GenerateXMMFltOp(instr,
-            &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
-            &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
-            masm);
-        break;
       case Express::CVTINTFLT:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
-        GenerateXMMFltOp(instr,
-            &Assembler::vcvtdq2ps, &Assembler::vcvtdq2pd,
-            &Assembler::vcvtdq2ps, &Assembler::vcvtdq2pd,
-            masm);
+        GenerateRegisterOp(instr, masm, true);
         break;
       case Express::SUBINT:
-        // TODO: use dword address for mem operands.
-        CHECK(instr->dst != -1 && instr->src != -1);
-        GenerateXMMFltOp(instr,
-            &Assembler::vpsubd, &Assembler::vpsubq,
-            &Assembler::vpsubd, &Assembler::vpsubq,
-            masm);
-        break;
-      default: UNSUPPORTED;
-    }
-  }
-
-  // Generate relu(x) = max(0,x).
-  void GenerateRelu(Express::Op *instr, MacroAssembler *masm) {
-    __ vpxor(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
-    switch (type_) {
-      case DT_FLOAT:
-        if (instr->dst != -1 && instr->src != -1) {
-          __ vmaxss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
-        } else if (instr->dst != -1 && instr->src == -1) {
-          __ vmaxss(xmm(instr->dst), xmm(instr->dst), addr(instr->args[1]));
-        } else {
-          UNSUPPORTED;
-        }
-        break;
-      case DT_DOUBLE:
-        if (instr->dst != -1 && instr->src != -1) {
-          __ vmaxsd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
-        } else if (instr->dst != -1 && instr->src == -1) {
-          __ vmaxsd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[1]));
-        } else {
-          UNSUPPORTED;
-        }
+        GenerateRegisterOp(instr, masm);
         break;
       default: UNSUPPORTED;
     }
@@ -232,7 +193,7 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
 
   // Generate left/right shift.
   void GenerateShift(Express::Op *instr, MacroAssembler *masm,
-                     int left, int bits) {
+                     bool left, int bits) {
     // Make sure source is in a register.
     CHECK(instr->dst != -1);
     int src = instr->src;
@@ -269,12 +230,103 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
     }
   }
 
+  // Generate rounding op. Please notice that GenerateXMMFltOp cannot be used
+  // here because it is a three register op but the arguments are in dst and
+  // src and not src1 and src2.
+  void GenerateRound(Express::Op *instr, MacroAssembler *masm, int8 code) {
+    if (instr->dst != -1 && instr->src != -1) {
+      switch (type_) {
+        case DT_FLOAT:
+          __ vroundss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src), code);
+          break;
+        case DT_DOUBLE:
+          __ vroundsd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src), code);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (instr->dst != -1 && instr->src == -1) {
+      switch (type_) {
+        case DT_FLOAT:
+          __ vroundss(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]),
+                      code);
+          break;
+        case DT_DOUBLE:
+          __ vroundsd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]),
+                      code);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
   // Generate compare.
   void GenerateCompare(Express::Op *instr, MacroAssembler *masm, int8 code) {
     GenerateXMMFltOp(instr,
         &Assembler::vcmpss, &Assembler::vcmpsd,
         &Assembler::vcmpss, &Assembler::vcmpsd,
         code, masm);
+  }
+
+  // Generate scalar op that loads memory operands into a register first.
+  void GenerateRegisterOp(Express::Op *instr, MacroAssembler *masm,
+                          bool unary = false) {
+    CHECK(instr->dst != -1);
+    XMMRegister dst = xmm(instr->dst);
+    XMMRegister src;
+    XMMRegister src2;
+    if (unary) {
+      if (instr->src != -1) {
+        src = xmm(instr->src);
+      } else {
+        src = xmmaux(0);
+      }
+    } else {
+      CHECK(instr->src != -1);
+      src = xmm(instr->src);
+      if (instr->src2 != -1) {
+        src2 = xmm(instr->src2);
+      } else {
+        src2 = xmmaux(0);
+      }
+    }
+
+    switch (type_) {
+      case DT_FLOAT:
+        if (unary && instr->src == -1) {
+          __ vmovss(src, addr(instr->args[0]));
+        } else if (!unary && instr->src2 == -1) {
+          __ vmovss(src2, addr(instr->args[1]));
+        }
+        switch (instr->type) {
+          case Express::AND: __ vandps(dst, src, src2); break;
+          case Express::OR: __ vorps(dst, src, src2); break;
+          case Express::ANDNOT: __ vandnps(dst, src, src2); break;
+          case Express::CVTFLTINT: __ vcvttps2dq(dst, src); break;
+          case Express::CVTINTFLT: __ vcvtdq2ps(dst, src); break;
+          case Express::SUBINT: __ vpsubd(dst, src, src2); break;
+          default: UNSUPPORTED;
+        }
+        break;
+      case DT_DOUBLE:
+        if (unary && instr->src == -1) {
+          __ vmovsd(src, addr(instr->args[0]));
+        } else if (!unary && instr->src2 == -1) {
+          __ vmovsd(src2, addr(instr->args[1]));
+        }
+        switch (instr->type) {
+          case Express::AND: __ vandpd(dst, src, src2); break;
+          case Express::OR: __ vorpd(dst, src, src2); break;
+          case Express::ANDNOT: __ vandnpd(dst, src, src2); break;
+          case Express::CVTFLTINT: __ vcvttpd2dq(dst, src); break;
+          case Express::CVTINTFLT: __ vcvtdq2pd(dst, src); break;
+          case Express::SUBINT: __ vpsubq(dst, src, src2); break;
+          default: UNSUPPORTED;
+        }
+        break;
+      default: UNSUPPORTED;
+    }
   }
 };
 

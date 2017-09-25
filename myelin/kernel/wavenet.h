@@ -7,7 +7,7 @@ namespace sling {
 namespace myelin {
 
 // Register WaveNet kernels.
-void RegisterWaveNetKernels(Library *library);
+void RegisterWaveNetLibrary(Library *library);
 
 }  // namespace myelin
 }  // namespace sling

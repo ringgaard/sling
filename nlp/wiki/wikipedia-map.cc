@@ -72,7 +72,7 @@ Text WikipediaMap::Lookup(Text id) {
   Frame frame(&store_, h);
   Frame qid = frame.GetFrame(n_qid_);
   if (qid.invalid()) return Text();
-  return qid.IdStr();
+  return qid.Id();
 }
 
 bool WikipediaMap::GetPageInfo(Text id, PageInfo *info) {
@@ -81,17 +81,17 @@ bool WikipediaMap::GetPageInfo(Text id, PageInfo *info) {
   if (item.invalid() || item.IsProxy()) return false;
 
   // Resolve redirects.
-  info->source_id = item.IdStr();
+  info->source_id = item.Id();
   if (item.IsA(n_redirect_)) {
    info->title = item.GetText(n_redirect_title_);
    item = Frame(&store_, Resolve(item.handle()));
   }
 
   // Return page information from target item.
-  info->target_id = item.IdStr();
+  info->target_id = item.Id();
   auto f = typemap_.find(item.GetHandle(n_kind_));
   info->type = f == typemap_.end() ? UNKNOWN : f->second;
-  info->qid = item.Get(n_qid_).AsFrame().IdStr();
+  info->qid = item.Get(n_qid_).AsFrame().Id();
 
   return true;
 }
@@ -114,21 +114,21 @@ void WikipediaMap::GetRedirectInfo(Handle redirect, PageInfo *info) {
   Frame item(&store_, redirect);
 
   // Resolve redirects.
-  info->source_id = item.IdStr();
+  info->source_id = item.Id();
   if (item.IsA(n_redirect_)) {
    info->title = item.GetText(n_redirect_title_);
    item = Frame(&store_, Resolve(item.handle()));
   }
 
   // Return page information from target item.
-  info->target_id = item.IdStr();
+  info->target_id = item.Id();
   if (item.IsA(n_redirect_)) {
     info->type = REDIRECT;
   } else {
     auto f = typemap_.find(item.GetHandle(n_kind_));
     info->type = f == typemap_.end() ? UNKNOWN : f->second;
   }
-  info->qid = item.Get(n_qid_).AsFrame().IdStr();
+  info->qid = item.Get(n_qid_).AsFrame().Id();
 }
 
 Text WikipediaMap::LookupLink(Text lang, Text link) {

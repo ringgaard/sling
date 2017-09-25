@@ -69,10 +69,10 @@ void ActionTableGenerator::GetUnknownSymbols(const Document &document) {
           Frame name = Object(store, slot2.name).AsFrame();
           Frame value = Object(store, slot2.value).AsFrame();
           if (name.valid() && name.IsProxy()) {
-            unknown_[name.Id()]++;
+            unknown_[name.Id().str()]++;
           }
           if (slot2.name.IsIsA() && value.valid() && value.IsProxy()) {
-            unknown_[value.Id()]++;
+            unknown_[value.Id().str()]++;
           }
         }
       }
@@ -96,8 +96,8 @@ void ActionTableGenerator::OutputUnknownSymbols(const string &filename) const {
 
 void ActionTableGenerator::Process(
     const Document &document, int start, int end) {
-  GoldTransitionSequence gold_sequence;
-  GoldTransitionGenerator::Report report;
+  TransitionSequence gold_sequence;
+  TransitionGenerator::Report report;
   generator_.Generate(
       document, start, end, &gold_sequence, &report);
 

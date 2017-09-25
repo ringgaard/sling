@@ -47,7 +47,7 @@ namespace jit {
 // bit_cast<Dest,Source> is a template function that implements the
 // equivalent of "*reinterpret_cast<Dest*>(&source)".
 template <class Dest, class Source>
-inline Dest bit_cast(const Source& source) {
+inline Dest bit_cast(const Source &source) {
   static_assert(sizeof(Dest) == sizeof(Source),
                 "Source and destination types should have equal sizes.");
 
@@ -326,7 +326,7 @@ void Assembler::immediate_arithmetic_op(byte subcode,
                                         Immediate src,
                                         int size) {
   if (size == 1) {
-    immediate_arithmetic_op_8(subcode - 1, dst, src);
+    immediate_arithmetic_op_8(subcode, dst, src);
   } else if (size == 2) {
     immediate_arithmetic_op_16(subcode, dst, src);
   } else {
@@ -1022,7 +1022,7 @@ void Assembler::emit_lea(Register dst, const Operand &src, int size) {
   emit_operand(dst, src);
 }
 
-void Assembler::load_rax(void *value) {
+void Assembler::load_rax(const void *value) {
   EnsureSpace ensure_space(this);
   if (kPointerSize == kInt64Size) {
     emit(0x48);  // REX.W
@@ -1094,6 +1094,15 @@ void Assembler::movw(Register dst, const Operand &src) {
   emit_operand(dst, src);
 }
 
+void Assembler::movw(Register dst, Immediate imm) {
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst);
+  emit(0xB8 + dst.low_bits());
+  emit(static_cast<byte>(imm.value_ & 0xff));
+  emit(static_cast<byte>(imm.value_ >> 8));
+}
+
 void Assembler::movw(const Operand &dst, Register src) {
   EnsureSpace ensure_space(this);
   emit(0x66);
@@ -1160,7 +1169,7 @@ void Assembler::emit_mov(const Operand &dst, Immediate value, int size) {
   emit(value);
 }
 
-void Assembler::movp(Register dst, void *value) {
+void Assembler::movp(Register dst, const void *value) {
   EnsureSpace ensure_space(this);
   emit_rex(dst, kPointerSize);
   emit(0xB8 | dst.low_bits());
@@ -1346,6 +1355,26 @@ void Assembler::emit_repmovs(int size) {
   emit(0xF3);
   emit_rex(size);
   emit(0xA5);
+}
+
+void Assembler::repstosb() {
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit(0xAA);
+}
+
+void Assembler::repstosw() {
+  EnsureSpace ensure_space(this);
+  emit(0x66);  // operand size override
+  emit(0xF3);
+  emit(0xAA);
+}
+
+void Assembler::emit_repstos(int size) {
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit_rex(size);
+  emit(0xAB);
 }
 
 void Assembler::mull(Register src) {
@@ -1637,7 +1666,7 @@ void Assembler::emit_xchg(Register dst, const Operand &src, int size) {
   emit_operand(dst, src);
 }
 
-void Assembler::store_rax(void *dst) {
+void Assembler::store_rax(const void *dst) {
   EnsureSpace ensure_space(this);
   if (kPointerSize == kInt64Size) {
     emit(0x48);  // REX.W
@@ -1803,6 +1832,13 @@ void Assembler::emit_test(const Operand &op, Register reg, int size) {
   emit_rex(reg, op, size);
   emit(0x85);
   emit_operand(reg, op);
+}
+
+void Assembler::emit_prefetch(const Operand &src, int subcode) {
+  EnsureSpace ensure_space(this);
+  emit(0x0F);
+  emit(0x18);
+  emit_operand(subcode, src);
 }
 
 // FPU instructions.
@@ -3014,8 +3050,8 @@ void Assembler::minss(XMMRegister dst, const Operand &src) {
 
 void Assembler::cmpss(XMMRegister dst, XMMRegister src, int8_t cmp) {
   EnsureSpace ensure_space(this);
-  emit_optional_rex_32(dst, src);
   emit(0xF3);
+  emit_optional_rex_32(dst, src);
   emit(0x0F);
   emit(0xC2);
   emit_sse_operand(dst, src);
@@ -3024,8 +3060,8 @@ void Assembler::cmpss(XMMRegister dst, XMMRegister src, int8_t cmp) {
 
 void Assembler::cmpss(XMMRegister dst, const Operand &src, int8_t cmp) {
   EnsureSpace ensure_space(this);
-  emit_optional_rex_32(dst, src);
   emit(0xF3);
+  emit_optional_rex_32(dst, src);
   emit(0x0F);
   emit(0xC2);
   emit_sse_operand(dst, src, 1);
@@ -3831,6 +3867,54 @@ void Assembler::roundpd(XMMRegister dst, const Operand &src, int8_t mode) {
   emit_sse_operand(dst, src, 1);
   // Mask precision exception.
   emit(mode | 0x8);
+}
+
+void Assembler::blendps(XMMRegister dst, XMMRegister src, int8_t mask) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0c);
+  emit_sse_operand(dst, src);
+  emit(mask);
+}
+
+void Assembler::blendps(XMMRegister dst, const Operand &src, int8_t mask) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0c);
+  emit_sse_operand(dst, src, 1);
+  emit(mask);
+}
+
+void Assembler::blendpd(XMMRegister dst, XMMRegister src, int8_t mask) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0d);
+  emit_sse_operand(dst, src);
+  emit(mask);
+}
+
+void Assembler::blendpd(XMMRegister dst, const Operand &src, int8_t mask) {
+  DCHECK(Enabled(SSE4_1));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit_optional_rex_32(dst, src);
+  emit(0x0f);
+  emit(0x3a);
+  emit(0x0d);
+  emit_sse_operand(dst, src, 1);
+  emit(mask);
 }
 
 void Assembler::movmskpd(Register dst, XMMRegister src) {

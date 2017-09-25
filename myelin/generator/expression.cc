@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "myelin/flow.h"
 #include "myelin/generator/expression.h"
 
@@ -21,6 +35,7 @@ ExpressionGenerator *CreateVectorIntAVX256Generator();
 
 void ExpressionGenerator::Initalize(const Express &expression,
                                     Type type,
+                                    int spare_regs,
                                     IndexGenerator *index) {
   // Copy expression.
   expression_.Copy(expression);
@@ -36,6 +51,11 @@ void ExpressionGenerator::Initalize(const Express &expression,
     expression_.FuseMulSub();
   }
 
+  // Use spare registers to hoist constants outside the loop.
+  if (spare_regs > 0 && !ImmediateOperands()) {
+    expression_.HoistConstants(spare_regs);
+  }
+
   // Cache inputs and results used in multiple ops in temporary variables.
   expression_.CacheResults();
 
@@ -48,14 +68,26 @@ void ExpressionGenerator::Initalize(const Express &expression,
   // Allocate registers for temporary variables.
   instructions_.AllocateRegisters();
 
-  // Reserve variables.
+  // Initialize index generator.
+  index->Initialize(VectorSize());
+
+  // Reserve registers.
   Reserve();
 }
 
-void ExpressionGenerator::Generate(MacroAssembler *masm) {
-  for (Express::Op *instr : instructions_.ops()) {
-    if (instr->nop()) continue;
-    Generate(instr, masm);
+void ExpressionGenerator::GenerateInit(MacroAssembler *masm) {
+  auto &ops = instructions_.ops();
+  int body = instructions_.body();
+  for (int i = 0; i < body; ++i) {
+    if (!ops[i]->nop()) Generate(ops[i], masm);
+  }
+}
+
+void ExpressionGenerator::GenerateBody(MacroAssembler *masm) {
+  auto &ops = instructions_.ops();
+  int body = instructions_.body();
+  for (int i = body; i < ops.size(); ++i) {
+    if (!ops[i]->nop()) Generate(ops[i], masm);
   }
 }
 
@@ -167,10 +199,18 @@ void ExpressionGenerator::GenerateXMMScalarFltMove(
     // MOV reg,reg
     switch (type_) {
       case DT_FLOAT:
-        __ movss(xmm(instr->dst), xmm(instr->src));
+        if (CPU::Enabled(AVX)) {
+          __ vmovss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+        } else {
+          __ movss(xmm(instr->dst), xmm(instr->src));
+        }
         break;
       case DT_DOUBLE:
-        __ movsd(xmm(instr->dst), xmm(instr->src));
+        if (CPU::Enabled(AVX)) {
+          __ vmovsd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+        } else {
+          __ movsd(xmm(instr->dst), xmm(instr->src));
+        }
         break;
       default: UNSUPPORTED;
     }
@@ -178,10 +218,18 @@ void ExpressionGenerator::GenerateXMMScalarFltMove(
     // MOV reg,[mem]
     switch (type_) {
       case DT_FLOAT:
-        __ movss(xmm(instr->dst), addr(instr->args[0]));
+        if (CPU::Enabled(AVX)) {
+          __ vmovss(xmm(instr->dst), addr(instr->args[0]));
+        } else {
+          __ movss(xmm(instr->dst), addr(instr->args[0]));
+        }
         break;
       case DT_DOUBLE:
-        __ movsd(xmm(instr->dst), addr(instr->args[0]));
+        if (CPU::Enabled(AVX)) {
+          __ vmovsd(xmm(instr->dst), addr(instr->args[0]));
+        } else {
+          __ movsd(xmm(instr->dst), addr(instr->args[0]));
+        }
         break;
       default: UNSUPPORTED;
     }
@@ -189,10 +237,18 @@ void ExpressionGenerator::GenerateXMMScalarFltMove(
     // MOV [mem],reg
     switch (type_) {
       case DT_FLOAT:
-        __ movss(addr(instr->result), xmm(instr->src));
+        if (CPU::Enabled(AVX)) {
+          __ vmovss(addr(instr->result), xmm(instr->src));
+        } else {
+          __ movss(addr(instr->result), xmm(instr->src));
+        }
         break;
       case DT_DOUBLE:
-        __ movsd(addr(instr->result), xmm(instr->src));
+        if (CPU::Enabled(AVX)) {
+          __ vmovsd(addr(instr->result), xmm(instr->src));
+        } else {
+          __ movsd(addr(instr->result), xmm(instr->src));
+        }
         break;
       default: UNSUPPORTED;
     }

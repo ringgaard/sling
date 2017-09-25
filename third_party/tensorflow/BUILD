@@ -5,6 +5,7 @@
 #
 # sudo apt-get install python-pip python-dev
 # pip install tensorflow
+# https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-1.3.0-cp27-none-linux_x86_64.whl
 
 package(default_visibility = ["//visibility:public"])
 
@@ -17,7 +18,7 @@ cc_library(
   ],
   linkopts = [
     "-lpython2.7",
-    "-l:/usr/local/lib/python2.7/dist-packages/tensorflow/python/_pywrap_tensorflow.so",
+    "-l:/usr/local/lib/python2.7/dist-packages/tensorflow/python/_pywrap_tensorflow_internal.so",
   ],
 )
 

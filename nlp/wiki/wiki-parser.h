@@ -12,7 +12,7 @@ namespace sling {
 namespace nlp {
 
 // Parse wiki text and convert to abstract syntax tree (AST). The plain text as
-// well as strutured information can then be extracted from the AST.
+// well as structured information can then be extracted from the AST.
 class WikiParser {
  public:
   // Wiki AST node type.

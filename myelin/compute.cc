@@ -45,6 +45,23 @@ static const Order combined_order[4][4] = {
 // Placement names.
 const char *placename[] = {"nowhere", "host", "device", "host and device"};
 
+static int LeastCommonMultiple(int n, int m) {
+  int a = n;
+  int b = m;
+  while (a != b) {
+    if (a < b) {
+      a += n;
+    } else {
+      b += m;
+    }
+  }
+  return a;
+}
+
+static void EnsureAlignment(int *m, int n) {
+  *m = LeastCommonMultiple(*m, n);
+}
+
 static bool IsPowerOfTwo32(int value) {
   return value && !(value & (value - 1));
 }
@@ -54,7 +71,7 @@ static size_t Align(size_t n, int align) {
   return (n + align - 1) & ~(align - 1);
 }
 
-static char *AllocateMemory(size_t size, int alignment) {
+static char *MemAlloc(size_t size, int alignment) {
   DCHECK(IsPowerOfTwo32(alignment));
   DCHECK_GE(alignment, sizeof(void *));
   char *data;
@@ -64,7 +81,7 @@ static char *AllocateMemory(size_t size, int alignment) {
   return data;
 }
 
-static void FreeMemory(char *data) {
+static void MemFree(char *data) {
   free(data);
 }
 
@@ -72,13 +89,13 @@ static void FreeMemory(char *data) {
 class BasicRuntime : public Runtime {
  public:
   void AllocateInstance(Instance *instance) override {
-    char *data = AllocateMemory(instance->size(), instance->alignment());
+    char *data = MemAlloc(instance->size(), instance->alignment());
     memset(data, 0, instance->size());
     instance->set_data(data);
   }
 
   void FreeInstance(Instance *instance) override {
-    FreeMemory(instance->data());
+    MemFree(instance->data());
   }
 
   void ClearInstance(Instance *instance) override {
@@ -108,7 +125,7 @@ class BasicRuntime : public Runtime {
 static BasicRuntime default_runtime;
 
 // An instance allocator allocates space for variables in an instance data
-// block. It keeps track of which parts of the block is in use and tries to
+// block. It keeps track of which parts of the block are in use and tries to
 // allocate space by reusing free parts of the instance block that is no longer
 // in use.
 class InstanceAllocator {
@@ -116,23 +133,26 @@ class InstanceAllocator {
   // Initialize instance allocator for cell and placement.
   InstanceAllocator(Cell *cell, Placement placement) : placement_(placement) {
     if (placement == HOST) {
-      instance_size_ = &cell->instance_size_;
+      max_instance_size_ = &cell->instance_size_;
       instance_alignment_ = &cell->instance_alignment_;
     } else {
-      instance_size_ = &cell->device_instance_size_;
+      max_instance_size_ = &cell->device_instance_size_;
       instance_alignment_ = &cell->device_instance_alignment_;
     }
+    current_instance_size_ = *max_instance_size_;
   }
 
   // Allocate space for variable in instance data block.
   void Allocate(Tensor *var) {
-    // Shared variables share offsets.
+    // Shared variables share offset.
     if (var->shared_ != nullptr) {
       if (placement_ == HOST) {
-        DCHECK(var->shared_->offset_ != -1) << var->name();
+        CHECK(var->shared_->offset_ != -1)
+            << var->name() << " " << var->shared_->name();
         var->offset_ = var->shared_->offset_;
       } else {
-        DCHECK(var->shared_->device_offset_ != -1) << var->name();
+        CHECK(var->shared_->device_offset_ != -1)
+            << var->name() << " " << var->shared_->name();
         var->device_offset_ = var->shared_->device_offset_;
       }
       return;
@@ -173,20 +193,21 @@ class InstanceAllocator {
 
     if (offset == -1) {
       // No free space in instance block. Extend the instance block and add new
-      // variable at the end. First, ensure alignment of variable in instance.
-      size_t aligned = Align(*instance_size_, align);
-      if (aligned > *instance_size_) {
-        // Insert alignment padding in free list.
-        Insert(*instance_size_, aligned);
-        *instance_size_ = aligned;
+      // variable at the end.
+      size_t end = current_instance_size_;
+      size_t aligned = Align(end, align);
+      offset = aligned;
+      current_instance_size_ = aligned + size;
+      if (current_instance_size_ > *max_instance_size_) {
+        *max_instance_size_ = current_instance_size_;
       }
-
-      // Allocate variable at the end of the instance block.
-      offset = *instance_size_;
-      *instance_size_ += size;
+      if (aligned > end) {
+        // Insert alignment padding in free list.
+        Insert(end, aligned);
+      }
     }
 
-    // Ensure that instance has at least the same aligment as the tensor.
+    // Ensure that instance has at least the same alignment as the tensor.
     if (var->byte_alignment_ > *instance_alignment_) {
       *instance_alignment_ = var->byte_alignment_;
     }
@@ -218,7 +239,7 @@ class InstanceAllocator {
     bool first = true;
     for (auto &e : freelist_) {
       const char *error = nullptr;
-      if (e.second <= e.first) {
+      if (e.second < e.first) {
         error = "Invalid free list entry";
       } else if (e.first == e.second) {
         error = "Zero-sized free list entry";
@@ -295,6 +316,17 @@ class InstanceAllocator {
       // Insert new entry before the current entry.
       freelist_.emplace(it, start, end);
     }
+
+    // Remove last free list entry if this extends to the end of the current
+    // instance block.
+    if (!freelist_.empty()) {
+      auto &last = freelist_.back();
+      if (last.second == current_instance_size_) {
+        current_instance_size_ = last.first;
+        freelist_.pop_back();
+      }
+    }
+
     DCHECK(FreeListConsistent());
   }
 
@@ -302,11 +334,14 @@ class InstanceAllocator {
   // device instance data block.
   Placement placement_;
 
-  // Current instance size.
-  size_t *instance_size_;
+  // Maximum size of instance.
+  size_t *max_instance_size_;
 
-  // Current instance alignment.
+  // Maximum instance alignment.
   int *instance_alignment_;
+
+  // Current instance size.
+  size_t current_instance_size_;
 
   // List of free blocks (start,end) in instance.
   std::list<std::pair<size_t, size_t>> freelist_;
@@ -393,39 +428,29 @@ bool Library::Singleton(const string &op,
 void Tensor::MinAlign(const Shape &align) {
   CHECK_LE(align.rank(), minalign_.rank());
   for (int d = 0; d < align.rank(); ++d) {
-    if (align.dim(d) > minalign_.dim(d)) minalign_.set(d, align.dim(d));
-  }
-}
-
-void Tensor::MaxAlign(const Shape &align) {
-  CHECK_LE(align.rank(), maxalign_.rank());
-  for (int d = 0; d < align.rank(); ++d) {
-    if (align.dim(d) != 0 &&  align.dim(d) < maxalign_.dim(d)) {
-      maxalign_.set(d, align.dim(d));
-    }
+    minalign_.set(d, LeastCommonMultiple(minalign_.dim(d), align.dim(d)));
   }
 }
 
 void Tensor::MinAlignLast(int align) {
-  if (rank() > 0 && align > minalign_.dim(rank() - 1)) {
-    minalign_.set(rank() - 1, align);
+  if (rank() > 0) {
+    int d = rank() - 1;
+    minalign_.set(d, LeastCommonMultiple(minalign_.dim(d), align));
   }
 }
 
 void Tensor::SameAlign(Tensor *other) {
   MinAlign(other->minalign_);
   other->MinAlign(minalign_);
-  MaxAlign(other->maxalign_);
-  other->MaxAlign(maxalign_);
 }
 
 void Tensor::CompatibleAlign(Tensor *other) {
   int d1 = rank() - 1;
   int d2 = other->rank() - 1;
   while (d1 >= 0 && d2 >= 0) {
-    int align = std::max(minalign_.dim(d1), other->minalign_.dim(d2));
-    minalign_.set(d1--, align);
-    other->minalign_.set(d2--, align);
+    int lcm = LeastCommonMultiple(minalign_.dim(d1), other->minalign_.dim(d2));
+    minalign_.set(d1--, lcm);
+    other->minalign_.set(d2--, lcm);
   }
 }
 
@@ -442,6 +467,16 @@ bool Tensor::Compatible(const Tensor *other) const {
   return true;
 }
 
+bool Tensor::SupportsAlignment(const Shape &align) const {
+  if (align.rank() != rank()) return false;
+  if (require_dense_) {
+    for (int d = 0; d < align.rank(); ++d) {
+      if (dim(d) % align.dim(d) != 0) return false;
+    }
+  }
+  return true;
+}
+
 bool Tensor::SupportsOrder(Order order) {
   return combined_order[required_order_][order] != CONFLICTING_ORDER;
 }
@@ -451,7 +486,7 @@ void Tensor::SetRequiredOrder(Order order) {
 }
 
 void Tensor::SetMiniumAlignment(int alignment) {
-  if (alignment > byte_alignment_) byte_alignment_ = alignment;
+  EnsureAlignment(&byte_alignment_, alignment);
 }
 
 bool Tensor::HasSameShape(const Tensor *other) const {
@@ -484,7 +519,7 @@ string Tensor::TypeString() const {
 }
 
 Channel::~Channel() {
-  FreeMemory(data_);
+  MemFree(data_);
 }
 
 void Channel::resize(int n) {
@@ -511,13 +546,12 @@ void Channel::reserve(int n) {
   if (n == capacity_) return;
 
   // Allocate new data buffer.
-  char *buffer =
-    AllocateMemory(n * connector_->size(), connector_->alignment());
+  char *buffer = MemAlloc(n * connector_->size(), connector_->alignment());
 
   // Copy existing data to new buffer.
   if (data_ != nullptr) {
     memcpy(buffer, data_, size_ * connector_->size());
-    FreeMemory(data_);
+    MemFree(data_);
   }
 
   // Set new data buffer.
@@ -540,10 +574,10 @@ string Instance::ToString(Tensor *param) const {
   // Locate parameter in instance.
   char *p  = data_ + param->offset();
   if (param->ref()) {
-    if (p == nullptr) return "null";
     p = *reinterpret_cast<char **>(p);
+    if (p == nullptr) return "null";
   }
-  if (param->shape().partial()) return "*";
+  if (!param->shape().defined()) return "*";
 
   // Get type traits for elements.
   const TypeTraits &traits = TypeTraits::of(param->type());
@@ -613,14 +647,24 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   DCHECK_LT(output, outputs_.size());
   Tensor *in = inputs_[input];
   Tensor *out = outputs_[output];
-  while (in->shared() != nullptr) in = in->shared();
-  if (!preserved) {
-    if (in->IsConstant()) return false;
-    if (in->consumers().size() != 1) return false;
+
+  // Check if input can be shared.
+  Tensor *t = in;
+  while (t != nullptr) {
+    if (!preserved) {
+      if (t->IsConstant()) return false;
+      if (t->consumers().size() != 1) return false;
+      if (t->out()) return false;
+    }
+    if (t->ref() != out->ref()) return false;
+    in = t;
+    t = t->shared();
   }
-  if (in->ref() != out->ref()) return false;
+
+  // Check if output can be shared.
   if (out->shared()) return false;
-  if (out->out()) return false;
+
+  // Share input and output.
   out->set_shared(in);
   if (out->shape() == in->shape()) out->set_link(in);
   return true;
@@ -644,12 +688,19 @@ bool Step::NeedsSynchronization() {
   return false;
 }
 
+char *Step::AllocateKernelMemory(size_t size, int alignment) {
+  CHECK(kernel_memory_ == nullptr);
+  CHECK(cell_ != nullptr);
+  kernel_memory_ = cell_->network()->AllocateMemory(size, alignment);
+  return kernel_memory_;
+}
+
 Network::Network() {
   runtime_ = &default_runtime;
 }
 
 Network::~Network() {
-  for (auto *m : memory_) FreeMemory(m);
+  for (auto *m : memory_) MemFree(m);
   for (auto *t : parameters_) delete t;
   for (auto *t : constants_) {
     if (t->shared() == nullptr) {
@@ -667,6 +718,12 @@ Network::~Network() {
 Tensor *Network::GetParameter(const string &name) const {
   auto f = names_.find(name);
   return f == names_.end() ? nullptr : f->second;
+}
+
+char *Network::AllocateMemory(size_t size, int alignment) {
+  char *data = MemAlloc(size, alignment);
+  memory_.push_back(data);
+  return data;
 }
 
 static bool CompareUsage(const std::pair<int, Tensor *> &a,
@@ -711,7 +768,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     tensor->shape_ = var->shape;
     tensor->aligned_ = var->shape;
     tensor->minalign_.fill(var->rank(), 1);
-    tensor->maxalign_.fill(var->rank(), 0);
     tensor->stride_.fill(var->rank(), 0);
     tensor->byte_alignment_ = TypeTraits::of(var->type).size();
 
@@ -752,7 +808,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     t->shape_ = prototype->shape_;
     t->shape_.set(0, -1);
     t->minalign_ = prototype->minalign_;
-    t->maxalign_ = prototype->maxalign_;
     t->aligned_ = prototype->aligned_;
     t->stride_ = prototype->stride_;
     t->byte_alignment_ = prototype->byte_alignment_;
@@ -842,7 +897,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Find kernel for implementing the operation.
-    for (Kernel *kernel : library.Lookup(step->type())) {
+    auto &kernels = library.Lookup(step->type());
+    for (int k = kernels.size() - 1; k >= 0; --k) {
+      Kernel *kernel = kernels[k];
       if (kernel->Supports(step)) {
         // Check that kernel location is compatible with task placement.
         bool compatible = true;
@@ -894,13 +951,13 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       profile->size_ = profile->space_ = size * sizeof(int64);
       profile->aligned_ = profile->shape_;
       profile->minalign_.assign(sizeof(int64));
-      profile->maxalign_.assign(0);
-      profile->stride_.fill(sizeof(int64));
+      profile->stride_.assign(sizeof(int64));
       profile->placement_ = HOST;
       profile->current_placement_ = HOST;
-      profile->in_ = false;
+      profile->in_ = true;
       profile->out_ = true;
       parameters_.push_back(profile);
+      tensors[profile] = profile;
       cell->profile_ = profile;
     }
   }
@@ -908,18 +965,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   // Let kernels adjust the input and output data alignment requirements.
   for (Step *step : steps_) {
     step->kernel_->Adjust(step);
-  }
-
-  // Propagate alignment for shared tensors.
-  for (auto it : tensors) {
-    Tensor *tensor = it.second;
-    Tensor *next = tensor->shared_;
-    while (next != nullptr) {
-      if (next->byte_alignment_ < tensor->byte_alignment_) {
-        next->byte_alignment_ = tensor->byte_alignment_;
-      }
-      next = next->shared_;
-    }
   }
 
   // Propagate alignment between linked tensors.
@@ -943,28 +988,19 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
       // Propagate alignment.
       Shape &mint = t->minalign_;
-      Shape &maxt = t->maxalign_;
       Shape &minl = l->minalign_;
-      Shape &maxl = l->minalign_;
       int dt = t->rank() - 1;
       int dl = l->rank() - 1;
       while (dt >= 0 && dl >= 0) {
         if (t->dim(dt) != -1 && l->dim(dl) != -1) {
           // Propagate minimum alignment in both directions.
-          if (mint.dim(dt) > minl.dim(dl)) {
-            minl.set(dl, mint.dim(dt));
-            again = true;
-          } else if (mint.dim(dt) < minl.dim(dl)) {
-            mint.set(dt, minl.dim(dl));
+          int align = LeastCommonMultiple(mint.dim(dt), minl.dim(dl));
+          if (mint.dim(dt) != align) {
+            mint.set(dt, align);
             again = true;
           }
-
-          // Propagate maximum alignment in both directions.
-          if (maxt.dim(dt) > maxl.dim(dl)) {
-            maxl.set(dl, maxl.dim(dt));
-            again = true;
-          } else if (maxt.dim(dt) < maxl.dim(dl)) {
-            maxt.set(dt, maxl.dim(dl));
+          if (minl.dim(dl) != align) {
+            minl.set(dl, align);
             again = true;
           }
         }
@@ -983,11 +1019,13 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
 
       // Propagate byte alignment.
-      if (t->byte_alignment_ < l->byte_alignment_) {
-        t->byte_alignment_ = l->byte_alignment_;
+      int align = LeastCommonMultiple(t->byte_alignment_, l->byte_alignment_);
+      if (t->byte_alignment_ != align) {
+        t->byte_alignment_ = align;
         again = true;
-      } else if (t->byte_alignment_ > l->byte_alignment_) {
-        l->byte_alignment_ = t->byte_alignment_;
+      }
+      if (t->byte_alignment_ != align) {
+        l->byte_alignment_ = align;
         again = true;
       }
     }
@@ -1013,12 +1051,16 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         return false;
     }
 
-    // Check for conflicting alignment requirements.
-    for (int d = 0; d < tensor->rank(); ++d) {
-      if (tensor->maxalign(d) > tensor->minalign(d)) {
-        LOG(ERROR) << "Conflicting alignment requirements for "
-                   << tensor->name();
-        return false;
+    // Check for dense encoding conflicts.
+    if (tensor->require_dense_) {
+      for (int d = 0; d < tensor->rank(); ++d) {
+        if (tensor->dim(d) % tensor->minalign(d) != 0) {
+          LOG(ERROR) << "Conflicting dense encoding requirements for "
+                     << tensor->name()
+                     << " shape " << tensor->shape().ToString()
+                     << " align " << tensor->minalign().ToString();
+          return false;
+        }
       }
     }
 
@@ -1057,8 +1099,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     VLOG(5) << "Tensor " << tensor->name_ << ": " << tensor->TypeString()
-            << " min " << tensor->minalign_.ToString()
-            << " max " << tensor->maxalign_.ToString()
+            << " align " << tensor->minalign_.ToString()
             << ":" << tensor->byte_alignment_
             << " aligned " << tensor->aligned_.ToString()
             << " size " << tensor->space_
@@ -1067,21 +1108,29 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             << " on " << placename[tensor->placement_];
   }
 
-  // Compute size and alignment for connectors.
+  // Propagate size and alignment for shared tensors.
+  for (auto it : tensors) {
+    Tensor *tensor = it.second;
+    Tensor *next = tensor->shared_;
+    while (next != nullptr) {
+      if (next->size_ < tensor->size_) {
+        next->size_ = tensor->size_;
+      }
+      if (next->byte_alignment_ < tensor->byte_alignment_) {
+        next->byte_alignment_ = tensor->byte_alignment_;
+      }
+      next = next->shared_;
+    }
+  }
+
+  // Compute alignment for connectors.
   for (Connector *connector : connectors_) {
     Tensor *t = connector->type_;
-
-    if (connector->alignment_ < t->byte_alignment_) {
-      connector->alignment_ = t->byte_alignment_;
-    }
-
-    if (connector->alignment_ < jit::CPU::CacheLineSize()) {
-      connector->alignment_ = jit::CPU::CacheLineSize();
-    }
+    EnsureAlignment(&connector->alignment_, t->byte_alignment_);
+    EnsureAlignment(&connector->alignment_, jit::CPU::CacheLineSize());
 
     VLOG(5) << "Connector " << connector->name() << ": " << t->TypeString()
             << " min " << t->minalign_.ToString()
-            << " max " << t->maxalign_.ToString()
             << ":" << connector->alignment_
             << " aligned " << t->aligned_.ToString()
             << " size " << t->size_
@@ -1095,7 +1144,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     Tensor *t = *it;
     if (t->shared_ != nullptr && t->shared_->IsConstant()) {
       // Move variable to constant pool.
-      LOG(INFO) << "Convert " << t->name() << " to constant";
+      VLOG(5) << "Convert " << t->name() << " to constant";
       it = parameters_.erase(it);
       constants_.push_back(t);
     } else {
@@ -1117,9 +1166,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   // Compute cell instance size and offset of each parameter.
   for (Cell *cell : cells_) {
     // Adjust cell instance to cache lines.
-    if (cell->instance_alignment_ < jit::CPU::CacheLineSize()) {
-      cell->instance_alignment_ = jit::CPU::CacheLineSize();
-    }
+    EnsureAlignment(&cell->instance_alignment_, jit::CPU::CacheLineSize());
 
     // Allocate space for runtime data at the beginning of the instance block.
     cell->instance_size_ = runtime_->ExtraInstanceData(cell);
@@ -1131,6 +1178,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Allocate space for variables in instance data blocks.
+    cell->data_start_ = cell->instance_size_;
     InstanceAllocator host_allocator(cell, HOST);
     InstanceAllocator device_allocator(cell, DEVICE);
     int e = 0;
@@ -1202,8 +1250,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     // Insert break point in the beginning of the generated code in debug mode.
     if (debug_) masm.Breakpoint();
 
-    // Generate prolog for main cell computation.
-    masm.Prolog();
+    // Generate prologue for main cell computation.
+    masm.Prologue();
+    runtime_->GeneratePrologue(cell, &masm);
 
     // Increment the invocation counter.
     if (profiling_) {
@@ -1269,14 +1318,14 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         }
 
         // Generate code for step.
-        auto pc = masm.pc();
+        auto pc = masm.pc_offset();
+        VLOG(8) << step->name() << " @ " << reinterpret_cast<uint64 *>(pc);
         step->kernel_->Generate(step, &masm);
-        if (masm.pc() == pc) step->noop_ = true;
+        if (masm.pc_offset() == pc) step->noop_ = true;
 
         // No registers are preserved between steps, so reset register
         // allocation.
-        masm.rr().reset();
-        masm.mm().reset();
+        masm.ResetRegisterUsage();
 
         // Copy outputs that do not have the placement required by the
         // consumers.
@@ -1361,8 +1410,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       masm.CallInstanceFunction(runtime_->StopProfilerFunc());
     }
 
-    // Generate epilog for main cell computation.
-    masm.Epilog();
+    // Generate epilogue for main cell computation.
+    runtime_->GenerateEpilogue(cell, &masm);
+    masm.Epilogue();
 
     // Generate code for parallel tasks.
     int task_index = 0;
@@ -1370,22 +1420,22 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       // Set entry for task function.
       masm.bind(&task.entry);
 
-      // Generate parallel task prolog.
-      masm.Prolog();
+      // Generate parallel task prologue.
+      masm.Prologue();
 
       // Let kernels generate code for each step.
       int stepnum = 0;
       for (Step *step : cell->steps_) {
         if (step->task_index_ == task_index) {
           // Generate code for step.
-          auto pc = masm.pc();
+          auto pc = masm.pc_offset();
+          VLOG(8) << step->name() << " @ " << reinterpret_cast<uint64 *>(pc);
           step->kernel_->Generate(step, &masm);
-          if (masm.pc() == pc) step->noop_ = true;
+          if (masm.pc_offset() == pc) step->noop_ = true;
 
           // No registers are preserved between steps, so reset register
           // allocation.
-          masm.rr().reset();
-          masm.mm().reset();
+          masm.ResetRegisterUsage();
 
           // Copy outputs that do not have the placement required by the
           // consumers.
@@ -1410,8 +1460,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         stepnum++;
       }
 
-      // Generate parallel task epilog.
-      masm.Epilog();
+      // Generate parallel task epilogue.
+      masm.Epilogue();
 
       task_index++;
     }
@@ -1452,13 +1502,8 @@ void Network::ComputeLiveRanges() {
   // All inputs and outputs from the network must be alive before and after the
   // computation.
   for (Tensor *t : parameters_) {
-    if (t->in_ || t->out_) {
-      t->first_ = 0;
-      t->last_ = steps_.size() - 1;
-    } else {
-      t->first_ = -1;
-      t->last_ = -1;
-    }
+    t->first_ = t->in_ ? 0 : -1;
+    t->last_ = t->out_ ? steps_.size() - 1 : -1;
   }
 
   // Find first and last use of each variable.
@@ -1466,11 +1511,11 @@ void Network::ComputeLiveRanges() {
     Step *step = steps_[i];
     for (Tensor *input : step->inputs_) {
       if (input->first_ == -1) input->first_ = i;
-      if (!input->in_ && !input->out_) input->last_ = i;
+      if (!input->out_) input->last_ = i;
     }
     for (Tensor *output : step->outputs_) {
       if (output->first_ == -1) output->first_ = i;
-      if (!output->in_ && !output->out_) output->last_ = i;
+      if (!output->out_) output->last_ = i;
     }
   }
 
@@ -1493,7 +1538,6 @@ char *Network::AllocateTensor(Tensor *tensor) {
 
   // Allocate memory for tensor.
   char *data = AllocateMemory(tensor->size_, alignment);
-  memory_.push_back(data);
   memset(data, 0, tensor->size_);
 
   // Copy data.
@@ -1503,7 +1547,7 @@ char *Network::AllocateTensor(Tensor *tensor) {
     memcpy(data, tensor->data_, tensor->size_);
   } else if (tensor->rank() == 2) {
     // Copy matrix one element at a time.
-    char *src = tensor->data_;
+    const char *src = tensor->data_;
     int element_size = tensor->element_size();
     for (int r = 0; r < tensor->dim(0); ++r) {
       for (int c = 0; c < tensor->dim(1); ++c) {
@@ -1512,7 +1556,7 @@ char *Network::AllocateTensor(Tensor *tensor) {
       }
     }
   } else if (tensor->rank() == 3) {
-    char *src = tensor->data_;
+    const char *src = tensor->data_;
     int element_size = tensor->element_size();
     for (int r = 0; r < tensor->dim(0); ++r) {
       for (int c = 0; c < tensor->dim(1); ++c) {
@@ -1523,7 +1567,7 @@ char *Network::AllocateTensor(Tensor *tensor) {
       }
     }
   } else if (tensor->rank() == 4) {
-    char *src = tensor->data_;
+    const char *src = tensor->data_;
     int element_size = tensor->element_size();
     for (int r = 0; r < tensor->dim(0); ++r) {
       for (int c = 0; c < tensor->dim(1); ++c) {
@@ -1788,6 +1832,8 @@ void CustomKernel::Generate(Step *step, MacroAssembler *masm) {
   // Call kernel function.
   __ movp(tmp, func_);
   __ call(tmp);
+
+  // Remove kernel arguments from stack.
   __ addq(rsp, Immediate(args * sizeof(TensorData)));
 }
 

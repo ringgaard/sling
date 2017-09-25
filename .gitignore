@@ -6,4 +6,12 @@ bazel-out
 bazel-testlogs
 examples
 local
+*.pyc
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.pdf
+*.pdf_tex
 

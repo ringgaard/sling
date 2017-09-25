@@ -11,6 +11,7 @@ using namespace sling::myelin;
 void Test(const string &str) {
   bool three_arg_ops = true;
   bool fma = true;
+  bool hoist = 0;
 
   Express::Model model;
   if (three_arg_ops) {
@@ -52,6 +53,15 @@ void Test(const string &str) {
   LOG(INFO) << "Expression: " << str;
   Express expr;
   expr.Parse(str, true);
+
+  bool raw = false;
+  if (raw) {
+    LOG(INFO) << "Raw:";
+    for (auto *op : expr.ops()) {
+      LOG(INFO) << "  " << op->result->AsString() << " := " << op->AsString();
+    }
+  }
+
   expr.EliminateCommonSubexpressions();
 
   if (fma) {
@@ -63,33 +73,38 @@ void Test(const string &str) {
   }
 
   expr.CacheResults();
+  if (hoist > 0) expr.HoistConstants(hoist);
   for (auto *op : expr.ops()) {
-    if (op->result != nullptr) {
-      LOG(INFO) << "  " << op->result->AsString() << " := " << op->AsString();
+    if (expr.body() > 0 && op == expr.ops()[expr.body()]) {
+      LOG(INFO) << "body:";
     }
+    LOG(INFO) << "  " << op->result->AsString() << " := " << op->AsString();
   }
 
-  Express instructions;
-  bool success = expr.Rewrite(model, &instructions);
+  Express instrs;
+  bool success = expr.Rewrite(model, &instrs);
   if (!success) {
     LOG(ERROR) << "Rewrite failed";
     return;
   }
-  instructions.ComputeLiveRanges();
+  instrs.ComputeLiveRanges();
 
   bool raw_instruction = false;
   if (raw_instruction) {
     LOG(INFO) << "Instructions: " << (success ? "OK" : "FAIL") << ", "
-              << instructions.MaxActiveTemps() << " temps";
-    for (auto *instr : instructions.ops()) {
+              << instrs.MaxActiveTemps() << " temps";
+    for (auto *instr : instrs.ops()) {
       LOG(INFO) << "  " << instr->AsInstruction() << " ; "
                 << instr->result->AsString() << "=" << instr->AsString();
     }
   }
 
-  int regs = instructions.AllocateRegisters();
+  int regs = instrs.AllocateRegisters();
   LOG(INFO) << "Final: " << regs << " registers";
-  for (auto *instr : instructions.ops()) {
+  for (auto *instr : instrs.ops()) {
+    if (instrs.body() > 0 && instr == instrs.ops()[instrs.body()]) {
+      LOG(INFO) << "body:";
+    }
     if (!instr->nop()) LOG(INFO) << "  " << instr->AsInstruction();
   }
 }
@@ -97,6 +112,7 @@ void Test(const string &str) {
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
+#if 0
   Test("@0=Add(%0,%1)");
   Test("@0=Add(%2,Mul(%0,%1))");
   Test("$0=Max(%1,%2);$1=Min(%3,%4);@0=Mul($0,$1)");
@@ -131,6 +147,39 @@ int main(int argc, char *argv[]) {
        "@1=Tanh(@0)");
 
   Test("@0=Log(%0)");
+  Test("@0=Mul(Add(%0,#1),#1)");
+  Test("@0=Mul(Add(%0,_1),_1)");
+  Test("@0=Add(Mul(%0,_1),_2)");
+  Test("@0=Log(Sigmoid(%0))");
+  Test("@0=Sub(_0,Log(Add(Exp(Sub(_0,%0)),_1)))");
+  Test("@0=Add(Mul(Div(Add(Tanh(%9),#10),#11),Tanh(%8)),"
+       "Mul(Sub(#6,Div(Add(Tanh(%3),#4),#5)),%7));"
+       "@1=Mul(Tanh(@0),Div(Add(Tanh(%0),#1),#2))");
+
+  Test("@0=Add(%0,#1)");
+  Test("@0=Id(#0)");
+
+  Test("@0=Neg(%1)");
+  Test("@0=Abs(%1)");
+  Test("@0=Relu(%1)");
+  Test("@0=Softsign(%1)");
+  Test("@0=Softplus(%1)");
+  Test("@0=LogSigmoid(%1)");
+  Test("@0=Reciprocal(%1)");
+  Test("@0=Square(%1)");
+
+  Test("@0=Mul(%0,#1)");
+
+  Test("@0=Add(Mul(Div(Add(Tanh(%9),#10),#11),Tanh(%8)),Mul(Sub(#6,Div(Add(Tanh(%3),#4),#5)),%7));"
+       "@1=Mul(Tanh(@0),Div(Add(Tanh(%0),#1),#2))");
+
+  Test("$3=Tanh(%9);"
+       "@0=Add(Mul(Div(Add(Tanh(%10),#11),#12),$3),Mul(Sub(#8,Tanh(%3)),%7));"
+       "@1=Mul(Add(Mul(Div(Add(Tanh(%10),#13),#14),$3),Mul(Sub(#6,Div(Add(Tanh(%3),#4),#5)),%7)),Div(Add(Tanh(%0),#1),#2))");
+
+#endif
+
+  Test("@0=Tanh(%0)");
 
   return 0;
 }

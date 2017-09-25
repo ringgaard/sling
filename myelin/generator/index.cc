@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "myelin/generator/index.h"
 
 #define __ masm->
@@ -7,45 +21,33 @@ namespace myelin {
 
 using namespace jit;
 
-bool IndexGenerator::RegisterOverflow(int *usage) {
-  // Set up macro assembler for collecting register allocations.
-  static const int kMaxRegisterUsage = 12;
-  MacroAssembler masm(nullptr, 0);
-  masm.rr().usage(kMaxRegisterUsage);
+bool IndexGenerator::AllocateRegisters() {
+  CHECK(masm_ != nullptr);
 
-  // Let index generator allocate registers.
-  if (!AllocateRegisters(&masm)) return false;
-
-  // Compute the number of register used.
-  *usage = kMaxRegisterUsage - masm.rr().num_free();
-  return true;
-}
-
-bool IndexGenerator::AllocateRegisters(MacroAssembler *masm) {
   // Allocate fixed registers.
   bool ok = true;
   for (auto r : fixed_) {
-    ok |= !masm->rr().used(r);
-    masm->rr().alloc_fixed(r);
+    ok |= !masm_->rr().used(r);
+    masm_->rr().alloc_fixed(r);
   }
 
   // Allocate temporary registers.
   for (auto &r : regs_) {
-    r = masm->rr().try_alloc();
+    r = masm_->rr().try_alloc();
     if (!r.is_valid()) ok = false;
   }
   for (auto &m : mmregs_) {
-    m = masm->mm().try_alloc();
+    m = masm_->mm().try_alloc();
     if (m == -1) ok = false;
   }
 
   // Allocate auxiliary registers.
   for (auto &r : aux_) {
-    r = masm->rr().try_alloc();
+    r = masm_->rr().try_alloc();
     if (!r.is_valid()) ok = false;
   }
   for (auto &m : mmaux_) {
-    m = masm->mm().try_alloc();
+    m = masm_->mm().try_alloc();
     if (m == -1) ok = false;
   }
 

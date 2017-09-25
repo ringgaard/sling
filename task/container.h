@@ -33,7 +33,7 @@ class Container : public Environment {
   // Create a new resource in the container.
   Resource *CreateResource(const string &filename, const Format &format);
 
-  // Create new resources in the container. If the filename contains wildcards
+  // Create new resources in the container. If the filename contains wild cards
   // or has a @n specifier, a set of sharded resources are returned.
   std::vector<Resource *> CreateResources(const string &filename,
                                           const Format &format);

@@ -83,3 +83,55 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "document-source",
+  srcs = ["document-source.cc"],
+  hdrs = ["document-source.h"],
+  deps = [
+    ":document",
+    "//base",
+    "//frame:object",
+    "//frame:serialization",
+    "//frame:store",
+    "//string",
+    "//util:zip-iterator",
+  ],
+)
+
+cc_library(
+  name = "affix",
+  srcs = ["affix.cc"],
+  hdrs = ["affix.h"],
+  deps = [
+    "//base",
+    "//stream:input",
+    "//stream:output",
+    "//string:text",
+    "//util:fingerprint",
+    "//util:unicode",
+  ],
+)
+
+cc_library(
+  name = "lexicon",
+  srcs = ["lexicon.cc"],
+  hdrs = ["lexicon.h"],
+  deps = [
+    ":affix",
+    "//base",
+    "//stream:memory",
+    "//util:vocabulary",
+  ],
+)
+
+cc_library(
+  name = "features",
+  srcs = ["features.cc"],
+  hdrs = ["features.h"],
+  deps = [
+    ":document",
+    ":lexicon",
+    "//util:unicode",
+  ],
+)
+

@@ -12,7 +12,7 @@ namespace sling {
 
 using namespace task;
 
-// Read WARC files and output web pages to channel. The mesage key is the WARC
+// Read WARC files and output web pages to channel. The message key is the WARC
 // header and the message value is the web page content.
 class WARCReader : public Process {
  public:

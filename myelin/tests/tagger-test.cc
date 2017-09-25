@@ -1,33 +1,270 @@
+#include <math.h>
 #include <limits>
 #include <string>
 #include <iostream>
 #include <unordered_map>
 #include <vector>
 
+#include "base/clock.h"
 #include "base/init.h"
 #include "base/flags.h"
 #include "base/logging.h"
-
+#include "file/file.h"
 #include "myelin/compute.h"
 #include "myelin/flow.h"
 #include "myelin/graph.h"
 #include "myelin/profile.h"
-#include "myelin/kernel/avx.h"
-#include "myelin/kernel/arithmetic.h"
+#include "myelin/kernel/tensorflow.h"
 #include "myelin/kernel/dragnn.h"
-#include "myelin/kernel/generic.h"
-#include "myelin/kernel/sse.h"
+#include "third_party/jit/cpu.h"
+
+DEFINE_string(model, "local/tagger-rnn.flow", "Flow model for tagger");
+DEFINE_bool(baseline, false, "Compare with baseline tagger result");
+DEFINE_bool(intermediate, false, "Compare intermediate with baseline tagger");
 
 DEFINE_int32(repeat, 1, "Number of times test is repeated");
+DEFINE_bool(profile, false, "Profile computation");
+DEFINE_bool(data_profile, false, "Output data instance profile");
+DEFINE_bool(dynamic, false, "Dynamic instance allocation");
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
 DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
 DEFINE_bool(dump_graph, true, "Dump dot graph");
 DEFINE_bool(dump_code, true, "Dump generated code");
+DEFINE_bool(debug, false, "Debug mode");
+DEFINE_double(epsilon, 1e-5, "Epsilon for floating point comparison");
+DEFINE_bool(twisted, false, "Swap hidden and control in LSTMs");
+
+DEFINE_bool(sse, true, "SSE support");
+DEFINE_bool(sse2, true, "SSE2 support");
+DEFINE_bool(sse3, true, "SSE3 support");
+DEFINE_bool(sse41, true, "SSE 4.1 support");
+DEFINE_bool(avx, true, "AVX support");
+DEFINE_bool(avx2, true, "AVX2 support");
+DEFINE_bool(fma3, true, "FMA3 support");
+
+DEFINE_int32(strict, 0, "Strict math mode (0=relaxed,1=strict matmul,2=strict");
 
 using namespace sling;
 using namespace sling::myelin;
 
 struct RNNInstance;
+
+// Baseline LSTM tagger.
+struct LSTMTagger {
+  void Load(const string &filename) {
+    // Load flow.
+    CHECK(flow.Load(filename));
+
+    // Initialize dimensions.
+    vocab_size = Var("tagger/fixed_embedding_matrix_0")->dim(0);
+    embed_dim = Var("tagger/fixed_embedding_matrix_0")->dim(1);
+    lstm_dim = Var("tagger/h2c")->dim(0);
+    output_dim = Var("tagger/bias_softmax")->dim(0);
+
+    // Initialize parameters.
+    embeddings = GetData("tagger/fixed_embedding_matrix_0");
+    x2i = GetData("tagger/x2i");
+    h2i = GetData("tagger/h2i");
+    c2i = GetData("tagger/c2i");
+    bc = GetData("tagger/bc");
+    bi = GetData("tagger/bi");
+    bo = GetData("tagger/bo");
+    h2c = GetData("tagger/h2c");
+    x2c = GetData("tagger/x2c");
+    c2o = GetData("tagger/c2o");
+    x2o = GetData("tagger/x2o");
+    h2o = GetData("tagger/h2o");
+    bo = GetData("tagger/bo");
+    bias_softmax = GetData("tagger/bias_softmax");
+    weights_softmax = GetData("tagger/weights_softmax");
+  }
+
+  ~LSTMTagger() { Clear(); }
+
+  // Clear all temporary vectors.
+  void Clear() {
+    for (auto *v : vectors) delete [] v;
+    vectors.clear();
+  }
+
+  // Get parameter data.
+  const float *GetData(const string &name) {
+    const float *data = reinterpret_cast<const float *>(Var(name)->data);
+    CHECK(data != nullptr) << name;
+    return data;
+  }
+
+  // Get flow variable.
+  Flow::Variable *Var(const string &name) {
+    Flow::Variable *var = flow.Var(name);
+    CHECK(var != nullptr) << name;
+    return var;
+  }
+
+  // Allocate new temporary vector.
+  float *Vector(int size) {
+    float *vec = new float[size];
+    vectors.push_back(vec);
+    return vec;
+  }
+
+  // Add two vectors.
+  float *Add(const float *a, const float *b, int n) {
+    float *c = Vector(n);
+    for (int i = 0; i < n; ++i) c[i] = a[i] + b[i];
+    return c;
+  }
+
+  // Subtract constant and vector.
+  float *Sub(const float a, const float *b, int n) {
+    float *c = Vector(n);
+    for (int i = 0; i < n; ++i) c[i] = a - b[i];
+    return c;
+  }
+
+  // Multiply two vectors element-wise.
+  float *Mul(const float *a, const float *b, int n) {
+    float *c = Vector(n);
+    for (int i = 0; i < n; ++i) c[i] = a[i] * b[i];
+    return c;
+  }
+
+  // Multiply vector with matrix.
+  float *MatMul(const float *x, const float *w, int n, int m) {
+    float *y = Vector(m);
+    for (int i = 0; i < m; ++i) {
+      float sum = 0.0;
+      for (int j = 0; j < n; ++j) {
+        sum += x[j] * w[j * m + i];
+      }
+      y[i] = sum;
+    }
+    return y;
+  }
+
+  // Compute sigmoid element-wise.
+  float *Sigmoid(const float *x, int n) {
+    float *y = Vector(n);
+    for (int i = 0; i < n; ++i) y[i] = 1.0 / (1.0 + expf(-x[i]));
+    return y;
+  }
+
+  // Compute hyperbolic tangent element-wise.
+  float *Tanh(const float *x, int n) {
+    float *y = Vector(n);
+    for (int i = 0; i < n; ++i) y[i] = tanhf(x[i]);
+    return y;
+  }
+
+  // Look up element in embedding.
+  float *Lookup(const float *embedding, int index, int n) {
+    float *x = Vector(n);
+    for (int i = 0; i < n; ++i) x[i] = embedding[index * n + i];
+    return x;
+  }
+
+  // Compute LSTM cell.
+  void Compute(int word,
+               float *c_in, float *h_in,
+               float **c_out, float **h_out,
+               float **logits) {
+    // Swap control and hidden if LSTM is twisted.
+    if (FLAGS_twisted) std::swap(c_in, h_in);
+
+    // Embedding lookup.
+    int index = word == -1 ? vocab_size - 1 : word;
+    x = Lookup(embeddings, index, embed_dim);
+
+    // input --  i_t = sigmoid(affine(x_t, h_{t-1}, c_{t-1}))
+    // i_ait = tf.matmul(input_tensor, x2i) +
+    //         tf.matmul(i_h_tm1, h2i) +
+    //         tf.matmul(i_c_tm1, c2i) + bi
+    i_x = MatMul(x, x2i, embed_dim, lstm_dim);
+    i_h = MatMul(h_in, h2i, lstm_dim, lstm_dim);
+    i_c = MatMul(c_in, c2i, lstm_dim, lstm_dim);
+    i_ait = Add(Add(Add(i_c, i_x, lstm_dim), i_h, lstm_dim), bi, lstm_dim);
+
+    // i_it = tf.sigmoid(i_ait)
+    i_it = Sigmoid(i_ait, lstm_dim);
+
+    // forget -- f_t = 1 - i_t
+    i_ft = Sub(1.0, i_it, lstm_dim);
+
+    // write memory cell -- tanh(affine(x_t, h_{t-1}))
+    c_x = MatMul(x, x2c, embed_dim, lstm_dim);
+    c_h = MatMul(h_in, h2c, lstm_dim, lstm_dim);
+    i_awt = Add(Add(c_h, c_x, lstm_dim), bc, lstm_dim);
+    i_wt = Tanh(i_awt, lstm_dim);
+
+    // c_t = f_t \odot c_{t-1} + i_t \odot tanh(affine(x_t, h_{t-1}))
+    *c_out = Add(Mul(i_it, i_wt, lstm_dim),
+                 Mul(i_ft, c_in, lstm_dim),
+                 lstm_dim);
+
+    // output -- o_t = sigmoid(affine(x_t, h_{t-1}, c_t))
+    o_x = MatMul(x, x2o, embed_dim, lstm_dim);
+    o_c = MatMul(*c_out, c2o, lstm_dim, lstm_dim);
+    o_h = MatMul(h_in, h2o, lstm_dim, lstm_dim);
+    i_aot = Add(Add(Add(o_x, o_c, lstm_dim), o_h, lstm_dim), bo, lstm_dim);
+
+    i_ot = Sigmoid(i_aot, lstm_dim);
+
+    // ht = o_t \odot tanh(ct)
+    ph_t = Tanh(*c_out, lstm_dim);
+    *h_out = Mul(i_ot, ph_t, lstm_dim);
+
+    // logits
+    xw = MatMul(*h_out, weights_softmax, lstm_dim, output_dim);
+    *logits = Add(xw, bias_softmax, output_dim);
+  }
+
+  // Flow with LSTM parameters.
+  Flow flow;
+
+  // LSTM dimensions.
+  int vocab_size;
+  int embed_dim;
+  int lstm_dim;
+  int output_dim;
+
+  // LSTM parameter weights.
+  const float *embeddings;
+  const float *x2i, *h2i, *c2i;
+  const float *bc, *bi, *bo;
+  const float *h2c, *x2c;
+  const float *c2o, *x2o, *h2o;
+  const float *bias_softmax;
+  const float *weights_softmax;
+
+  // Intermediate results.
+  float *x;
+  float *i_x, *i_h, *i_c;
+  float *i_ait, *i_it, *i_ft;
+  float *c_x, *c_h;
+  float *i_awt, *i_wt;
+  float *o_x, *o_c, *o_h;
+  float *i_aot, *i_ot;
+  float *ph_t;
+  float *xw;
+
+  // Temporary allocated vectors.
+  std::vector<float *> vectors;
+};
+
+// Compare two vectors.
+bool Equals(float *a, float *b, int n, const char *name = "vector") {
+  bool equal = true;
+  for (int i = 0; i < n; ++i) {
+    bool same = FLAGS_epsilon == 0.0 ? a[i] == b[i]
+                                     : fabs(a[i] - b[i]) < FLAGS_epsilon;
+    if (!same) {
+      LOG(INFO) << name << "[" << i << "] a=" << a[i] << " b=" << b[i]
+                << " delta=" << fabs(a[i] - b[i]);
+      equal = false;
+    }
+  }
+  return equal;
+}
 
 // Stub for Dragnn initializer.
 class FixedDragnnInitializer : public Kernel {
@@ -58,15 +295,12 @@ class FixedDragnnTyper : public Typer {
 
 class RNN {
  public:
-  // Profiling flag.
-  static const bool profile = true;
-
   // Loads and initialize parser model.
   void Load(const string &filename);
 
   // Executes RNN over strings.
   void Execute(const std::vector<string> &tokens,
-               std::vector<int> *predictions) const;
+               std::vector<int> *predictions);
 
   // Looks up word in the lexicon.
   int LookupWord(const string &word) const;
@@ -77,8 +311,17 @@ class RNN {
   // Extracts features for LR LSTM.
   void ExtractFeaturesLR(RNNInstance *instance, int current) const;
 
-  // Output profile.
-  void OutputProfile() const;
+  // Loop up tag name.
+  const string &tag(int index) const { return tags_[index]; }
+
+  // Get tag id for tag name.
+  int tagid(const string &tag) const {
+    for (int i = 0; i < tags_.size(); ++i) {
+      if (tag == tags_[i]) return i;
+    }
+    LOG(FATAL) << "Unknown tag name: " << tag;
+    return -1;
+  }
 
  private:
   // Looks up cells, connectors, and parameters.
@@ -108,6 +351,10 @@ class RNN {
   // Lexicon.
   std::unordered_map<string, int> vocabulary_;
   int oov_ = -1;
+  std::vector<string> tags_;
+
+  // Baseline tagger.
+  LSTMTagger baseline_;
 };
 
 // RNN state for running an instance of the parser on a document.
@@ -115,6 +362,13 @@ struct RNNInstance {
  public:
   RNNInstance(Cell *lr, Connector *lr_c,
               Connector *lr_h, int begin, int end);
+
+  // Return tensor data.
+  float *Get(const string &name) {
+    Tensor *t = lr.cell()->GetParameter(name);
+    CHECK(t != nullptr) << name;
+    return t->ref() ? *lr.Get<float *>(t) : lr.Get<float>(t);
+  }
 
   // Instances for network computations.
   Instance lr;
@@ -129,21 +383,43 @@ struct RNNInstance {
 
 void RNN::Load(const string &filename) {
   // Register kernels for implementing parser ops.
-  RegisterAVXKernels(&library_);
-  RegisterSSEKernels(&library_);
-  RegisterDragnnKernels(&library_);
+  RegisterTensorflowLibrary(&library_);
+  RegisterDragnnLibrary(&library_);
+
   library_.Register(new FixedDragnnInitializer());
   library_.RegisterTyper(new FixedDragnnTyper());
-  RegisterArithmeticKernels(&library_);
-  RegisterGenericKernels(&library_);
-  RegisterGenericTransformations(&library_);
 
-  // Load and analyze parser flow file.
+  // Load and patch flow file.
   Flow flow;
   CHECK(flow.Load(filename));
-  flow.Var("tagger/h_out")->out = true;
-  flow.Var("tagger/c_out")->out = true;
+  if (FLAGS_strict > 0) {
+    for (auto *op : flow.Find({"MatMul"})) op->SetAttr("strict", true);
+  }
+  if (FLAGS_strict > 1) {
+    for (auto *op : flow.Find({"Tanh"})) op->SetAttr("strict", true);
+    for (auto *op : flow.Find({"Sigmoid"})) op->SetAttr("strict", true);
+  }
+  if (FLAGS_intermediate) {
+    for (auto *var : flow.vars()) var->out = true;
+  }
+
+  // Zero out the last embedding vector (used for oov).
+  Flow::Variable *embedding = flow.Var("tagger/fixed_embedding_matrix_0");
+  CHECK(embedding != nullptr);
+  float *emb_data =
+      const_cast<float *>(reinterpret_cast<const float *>(embedding->data));
+  for (int i = 0; i < embedding->dim(1); i++) {
+    emb_data[embedding->elements() - 1 - i] = 0.0;
+  }
+
+  // Analyze flow.
   flow.Analyze(library_);
+
+  // Output flow.
+  if (FLAGS_dump_flow) {
+    std::cout << flow.ToString() << "\n";
+    std::cout.flush();
+  }
 
   // Output graph.
   if (FLAGS_dump_graph) {
@@ -151,13 +427,10 @@ void RNN::Load(const string &filename) {
     FlowToDotGraphFile(flow, gopts, "/tmp/tagger.dot");
   }
 
-  if (FLAGS_dump_flow) {
-    std::cout << flow.ToString() << "\n";
-    std::cout.flush();
-  }
-
   // Compile parser flow.
-  if (profile) network_.set_profiling(true);
+  if (FLAGS_profile) network_.set_profiling(true);
+  if (FLAGS_debug) network_.set_debug(true);
+  if (FLAGS_dynamic) network_.set_dynamic_allocation(true);
   CHECK(network_.Compile(flow, library_));
 
   // Get computation for each function.
@@ -169,6 +442,10 @@ void RNN::Load(const string &filename) {
   if (FLAGS_dump_cell) {
     std::cout << lr_->ToString() << "\n";
     std::cout.flush();
+  }
+  if (FLAGS_data_profile) {
+    DataProfile dprof(lr_);
+    File::WriteContents("/tmp/tagger-data.svg", dprof.AsSVG());
   }
 
   // Get connectors.
@@ -202,6 +479,25 @@ void RNN::Load(const string &filename) {
     }
     pos = next + 1;
   }
+  if (oov_ == -1) oov_ = index - 1;
+
+  // Load tag map.
+  string tagdata;
+  CHECK(File::ReadContents("local/tag-map", &tagdata));
+  pos = 0;
+  string tag;
+  for (;;) {
+    int next = tagdata.find('\n', pos);
+    if (next == -1) break;
+    tag.assign(tagdata, pos, next - pos);
+    tags_.push_back(tag);
+    pos = next + 1;
+  }
+
+  // Load baseline tagger.
+  if (FLAGS_baseline) {
+    baseline_.Load(filename);
+  }
 }
 
 int RNN::LookupWord(const string &word) const {
@@ -234,22 +530,23 @@ int RNN::LookupWord(const string &word) const {
 }
 
 void RNN::Execute(const std::vector<string> &tokens,
-                  std::vector<int> *predictions) const {
+                  std::vector<int> *predictions) {
   RNNInstance data(lr_, lr_c_, lr_h_, 0, tokens.size());
+
+  // Look up words in vocabulary.
+  for (int i = 0; i < tokens.size(); ++i) {
+    int word = LookupWord(tokens[i]);
+    data.words[i] = word;
+  }
+
+  Clock clock;
+  clock.start();
   for (int r = 0; r < FLAGS_repeat; ++r) {
-    predictions->clear();
-
-    // Look up words in vocabulary.
-    for (int i = 0; i < tokens.size(); ++i) {
-      int word = LookupWord(tokens[i]);
-      data.words[i] = word;
-    }
-
     // Compute left-to-right LSTM.
+    predictions->clear();
     for (int i = 0; i < tokens.size(); ++i) {
       // Attach hidden and control layers.
-      //data.lr.Clear();
-      int in = i > 0 ? i - 1 : tokens.size();
+      int in = i > 0 ? i - 1 : tokens.size() - 1;
       int out = i;
       AttachLR(&data, in, out);
 
@@ -270,10 +567,58 @@ void RNN::Execute(const std::vector<string> &tokens,
         }
       }
       predictions->push_back(prediction);
+
+      // Compare with baseline.
+      if (FLAGS_baseline) {
+        LOG(INFO) << "Token " << i << ": " << tokens[i] << " " << data.words[i];
+        float *c_in = data.Get("tagger/c_in");
+        float *h_in = data.Get("tagger/h_in");
+        float *c_out, *h_out, *logits;
+        baseline_.Compute(data.words[i], c_in, h_in, &c_out, &h_out, &logits);
+
+        int best = 0;
+        float max_score = -std::numeric_limits<float>::infinity();
+        for (int a = 0; a < ff_output_->dim(1); ++a) {
+          if (logits[a] > max_score) {
+            best = a;
+            max_score = logits[a];
+          }
+        }
+        if (prediction != best) {
+          LOG(INFO) << "prediction: " << prediction << " baseline: " << best;
+        }
+
+        int ldim = baseline_.lstm_dim;
+        int edim = baseline_.embed_dim;
+        int odim = baseline_.output_dim;
+        if (FLAGS_intermediate) {
+          Equals(data.Get("tagger/fixed_embedding_words/Lookup"), baseline_.x,
+                          edim, "x");
+          Equals(data.Get("tagger/MatMul"), baseline_.i_x, ldim, "i_x");
+          Equals(data.Get("tagger/MatMul_1"), baseline_.i_h, ldim, "i_h");
+          Equals(data.Get("tagger/MatMul_2"), baseline_.i_c, ldim, "i_c");
+          Equals(data.Get("tagger/add_2"), baseline_.i_ait, ldim, "i_ait");
+          Equals(data.Get("tagger/Sigmoid"), baseline_.i_it, ldim, "i_it");
+          Equals(data.Get("tagger/sub_2"), baseline_.i_ft, ldim, "i_ft");
+          Equals(data.Get("tagger/Tanh"), baseline_.i_wt, ldim, "i_wt");
+          Equals(data.Get("tagger/c_out"), c_out, ldim, "c_out");
+          Equals(data.Get("tagger/add_7"), baseline_.i_aot, ldim, "i_aot");
+          Equals(data.Get("tagger/Sigmoid_1"), baseline_.i_ot, ldim, "i_ot");
+          Equals(data.Get("tagger/Tanh_1"), baseline_.ph_t, ldim, "ph_t");
+          Equals(data.Get("tagger/h_out"), h_out, ldim, "h_out");
+          Equals(data.Get("tagger/xw_plus_b/MatMul"), baseline_.xw, odim, "xw");
+        }
+        Equals(data.Get("tagger/xw_plus_b"), logits, odim, "logits");
+
+        baseline_.Clear();
+      }
     }
   }
+  clock.stop();
+  int64 n = FLAGS_repeat * tokens.size();
+  LOG(INFO) << clock.cycles() / n << " cycles, " << clock.us() / n << " us";
 
-  if (profile) {
+  if (FLAGS_profile) {
     Profile profile(&data.lr);
     std::cout << profile.ASCIIReport() << "\n";
   }
@@ -311,9 +656,9 @@ RNNInstance::RNNInstance(Cell *lr,
   int length = end - begin;
   words.resize(length);
 
-  // Add one extra element to LSTM activations for boundary element.
-  this->lr_c.resize(length + 1);
-  this->lr_h.resize(length + 1);
+  // Allocate channels for LSTM activations.
+  this->lr_c.resize(length);
+  this->lr_h.resize(length);
 }
 
 void RNN::AttachLR(RNNInstance *instance, int input, int output) const {
@@ -328,31 +673,75 @@ void RNN::ExtractFeaturesLR(RNNInstance *instance, int current) const {
   *instance->lr.Get<int>(lr_feature_words_) = word;
 }
 
+void ReadSentence(const string &sentence,
+                  std::vector<string> *tokens,
+                  std::vector<string> *tags) {
+  int p = 0;
+  for (;;) {
+    int slash = sentence.find('/', p);
+    CHECK(slash != -1);
+    string token = sentence.substr(p, slash - p);
+    p = sentence.find(' ', slash + 1);
+    int space = (p == -1) ? sentence.size() : p;
+    string tag = sentence.substr(slash + 1, space - slash - 1);
+    tokens->push_back(token);
+    tags->push_back(tag);
+    if (p == -1) break;
+    p = space + 1;
+  }
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
+  if (!FLAGS_sse) jit::CPU::Disable(jit::SSE);
+  if (!FLAGS_sse2) jit::CPU::Disable(jit::SSE2);
+  if (!FLAGS_sse3) jit::CPU::Disable(jit::SSE3);
+  if (!FLAGS_sse41) jit::CPU::Disable(jit::SSE4_1);
+  if (!FLAGS_avx) jit::CPU::Disable(jit::AVX);
+  if (!FLAGS_avx2) jit::CPU::Disable(jit::AVX2);
+  if (!FLAGS_fma3) jit::CPU::Disable(jit::FMA3);
+
+  LOG(INFO) << "Compile tagger";
   RNN rnn;
-  const string testdata = "local/tagger_rnn.flow";
-  rnn.Load(testdata);
+  rnn.Load(FLAGS_model);
 
-  std::vector<string> sentence = {
-    "John", "hit", "the", "ball", "with", "a", "bat",
-  };
-  std::vector<int> golden = {
-    2, 10, 3, 0, 1, 3, 0,
-  };
+  string s;
 
-  std::vector<int> predictions;
-  rnn.Execute(sentence, &predictions);
+  s = "John/NNP hit/VBD the/DT ball/NN with/IN a/DT bat/NN ./.";
+  //s = "He/PRP was/VBD right/RB ./.";
+  //s = "Such/JJ family/NN reunions/NN would/MD be/VB the/DT second/JJ "
+  //    "since/IN 1945/CD ./.";
+  //s = "Skipper/NNP 's/POS said/VBD the/DT merger/NN will/MD help/VB "
+  //    "finance/VB remodeling/VBG and/CC future/JJ growth/NN ./.";
+  //s = "I/RP much/RB prefer/VBP money/NN I/PRP can/MD put/VB my/PRP$ hands/NN "
+  //    "on/IN ./. ''/''";
 
-  for (int i = 0; i < predictions.size(); ++i) {
-    LOG(INFO) << "pred: " << predictions[i];
+  std::vector<string> tokens;
+  std::vector<string> tags;
+  ReadSentence(s, &tokens, &tags);
+
+  std::vector<int> golden;
+  for (int i = 0; i < tokens.size(); ++i) {
+    int t = rnn.tagid(tags[i]);
+    CHECK(t != -1);
+    golden.push_back(t);
   }
 
-  CHECK_EQ(predictions.size(), sentence.size());
+  LOG(INFO) << "Run tagger";
+  std::vector<int> predictions;
+  rnn.Execute(tokens, &predictions);
+  LOG(INFO) << "Done";
+
+  for (int i = 0; i < predictions.size(); ++i) {
+    LOG(INFO) << tokens[i] << " " << rnn.tag(predictions[i]);
+  }
+
+  CHECK_EQ(tokens.size(), tokens.size());
   for (int i = 0; i < predictions.size(); ++i) {
     CHECK_EQ(golden[i], predictions[i])
-        << i << " gold: " << golden[i] << " predicted: " << predictions[i];
+        << i << " gold: " << rnn.tag(golden[i])
+        << " predicted: " << rnn.tag(predictions[i]);
   }
 
   return 0;

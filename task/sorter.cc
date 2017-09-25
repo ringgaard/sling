@@ -51,7 +51,7 @@ class Sorter : public Processor {
   void Receive(Channel *channel, Message *message) override {
     MutexLock lock(&mu_);
 
-    // Add message to bufer.
+    // Add message to buffer.
     messages_.push_back(message);
     buffer_bytes_ += message->key().size() + message->value().size();
 

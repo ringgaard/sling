@@ -30,7 +30,7 @@ namespace sling {
 Repository::Repository()  {}
 
 Repository::~Repository()  {
-  // Delete all memory blocks amd temporary files.
+  // Delete all memory blocks and temporary files.
   for (Block &block : blocks_) {
     free(block.data);
     if (block.file != nullptr) {
@@ -138,7 +138,7 @@ void Repository::Read(const string &filename) {
   // Load all blocks.
   LoadAll();
 
-  // Close reposiory file.
+  // Close repository file.
   Close();
 }
 

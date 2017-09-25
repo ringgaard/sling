@@ -39,7 +39,7 @@ class WikidataPropertyCollector : public FrameProcessor {
  public:
   void Process(Slice key, const Frame &frame) override {
     // Save property id.
-    properties_.push_back(frame.Id());
+    properties_.push_back(frame.Id().str());
 
     // Output property.
     Output(frame);
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
   Task *wikidata_pruner = wf.CreateTask("wikidata-pruner", "wikidata-pruner");
   item_reader.Connect(&wf, wikidata_pruner);
 
-  // Collect property calatalog.
+  // Collect property catalog.
   Task *property_collector = wf.CreateTask("wikidata-property-collector",
                                            "property-collector");
   property_reader.Connect(&wf, property_collector);

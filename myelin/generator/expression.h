@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef MYELIN_GENERATOR_EXPRESSION_H_
 #define MYELIN_GENERATOR_EXPRESSION_H_
 
@@ -16,6 +30,7 @@ class ExpressionGenerator {
   typedef jit::Assembler Assembler;
   typedef jit::Operand Operand;
   typedef jit::Register Register;
+  typedef jit::Immediate Immediate;
   typedef jit::XMMRegister XMMRegister;
   typedef jit::YMMRegister YMMRegister;
 
@@ -31,6 +46,9 @@ class ExpressionGenerator {
   // Return vector size in bytes.
   virtual int VectorSize() { return TypeTraits::of(type_).size(); }
 
+  // Whether instruction model supports immediate operands.
+  virtual bool ImmediateOperands() { return false; }
+
   // Reserve all the registers needed by the generator.
   virtual void Reserve() = 0;
 
@@ -40,21 +58,62 @@ class ExpressionGenerator {
   // Initialize expression generator.
   void Initalize(const Express &expression,
                  Type type,
+                 int spare_regs,
                  IndexGenerator *index);
 
-  // Generate code for expression.
-  void Generate(MacroAssembler *masm);
+  // Generate code for loop-invariant part of expression.
+  void GenerateInit(MacroAssembler *masm);
+
+  // Generate code for loop body.
+  void GenerateBody(MacroAssembler *masm);
 
   // Select expression generator for expression that is supported by the CPU.
   static ExpressionGenerator *Select(const Express &expr,
                                      Type type, int size);
 
  protected:
+  // Comparison types. These are Intel comparison predicates used by CMPSS.
+  enum Comparison {
+    CMP_EQ_OQ    = 0,
+    CMP_LT_OS    = 1,
+    CMP_LE_OS    = 2,
+    CMP_UNORD_Q  = 3,
+    CMP_NEQ_UQ   = 4,
+    CMP_NLT_US   = 5,
+    CMP_NLE_US   = 6,
+    CMP_ORD_Q    = 7,
+    CMP_EQ_UQ    = 8,
+    CMP_NGE_US   = 9,
+    CMP_NGT_US   = 10,
+    CMP_FALSE_OQ = 11,
+    CMP_NEQ_OQ   = 12,
+    CMP_GE_OS    = 13,
+    CMP_GT_OS    = 14,
+    CMP_TRUE_UQ  = 15,
+    CMP_EQ_OS    = 16,
+    CMP_LT_OQ    = 17,
+    CMP_LE_OQ    = 18,
+    CMP_UNORD_S  = 19,
+    CMP_NEQ_US   = 20,
+    CMP_NLT_UQ   = 21,
+    CMP_NLE_UQ   = 22,
+    CMP_ORD_S    = 23,
+    CMP_EQ_US    = 24,
+    CMP_NGE_UQ    = 25,
+    CMP_NGT_UQ    = 26,
+    CMP_FALSE_OS  = 27,
+    CMP_NEQ_OS    = 28,
+    CMP_GE_OQ     = 29,
+    CMP_GT_OQ     = 30,
+    CMP_TRUE_US   = 31,
+  };
+
   // Assembler instruction methods for different instruction formats.
   typedef void (Assembler::*OpReg)(Register);
   typedef void (Assembler::*OpMem)(const Operand &);
   typedef void (Assembler::*OpRegReg)(Register, Register);
   typedef void (Assembler::*OpRegMem)(Register, const Operand &);
+  typedef void (Assembler::*OpRegImm)(Register, Immediate);
 
   typedef void (Assembler::*OpXMMRegReg)(XMMRegister,
                                          XMMRegister);
@@ -115,6 +174,14 @@ class ExpressionGenerator {
   // Return operand for accessing memory variable.
   Operand addr(Express::Var *var) { return index_->addr(var); }
 
+  // Return pointer to constant data.
+  const void *data(Express::Var *var) { return index_->data(var); }
+
+  // Return constant variable value.
+  template<typename T> const T value(Express::Var *var) {
+    return *reinterpret_cast<const T *>(data(var));
+  }
+
   // Return register for temporary variable.
   Register reg(int idx) { return index_->reg(idx); }
   XMMRegister xmm(int idx) { return index_->xmm(idx); }
@@ -131,7 +198,7 @@ class ExpressionGenerator {
   // Generate XMM vector move.
   void GenerateXMMVectorMove(Express::Op *instr, MacroAssembler *masm);
 
-  // Generate move of YMM vector operand to register. (NEW)
+  // Generate move of YMM vector operand to register.
   void GenerateYMMMoveMemToReg(YMMRegister dst, const Operand &src,
                                MacroAssembler *masm);
 
@@ -260,12 +327,20 @@ class ExpressionGenerator {
       OpYMMRegRegReg opregq, OpYMMRegRegMem opmemq,
       MacroAssembler *masm, int argnum = 1);
 
-  // Check if instruction is MOV reg,0 (i.e. clear register).
-  static bool IsClear(Express::Op *instr) {
+  // Check if instruction is MOV reg,0.
+  static bool IsLoadZero(Express::Op *instr) {
     return instr->type == Express::MOV &&
            instr->dst != -1 &&
            instr->args[0]->type == Express::NUMBER &&
            instr->args[0]->id == Express::ZERO;
+  }
+
+  // Check if instruction is MOV reg,1.
+  static bool IsLoadOne(Express::Op *instr) {
+    return instr->type == Express::MOV &&
+           instr->dst != -1 &&
+           instr->args[0]->type == Express::NUMBER &&
+           instr->args[0]->id == Express::ONE;
   }
 
   // Index generator for expression.

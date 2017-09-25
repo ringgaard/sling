@@ -82,7 +82,7 @@ class Kernel {
   virtual int64 Complexity(const Step *step) { return -1; }
 };
 
-// Library of kernels for implemeting operations.
+// Library of kernels for implementing operations.
 class Library : public Transformations {
  public:
   typedef std::vector<Kernel *> Kernels;
@@ -126,7 +126,7 @@ class Library : public Transformations {
   CustomKernel &RegisterCustomKernel(const string &op, const string &name,
                                      void *func, int indegree, int outdegree);
 
-  // Map from op name to kernels implemeting the op.
+  // Map from op name to kernels implementing the op.
   std::unordered_map<string, Kernels> kernels_;
 
   // Whether kernels are owned by library.
@@ -172,6 +172,12 @@ class Runtime {
 
   // Clear instance data.
   virtual void ClearInstance(Instance *instance) = 0;
+
+  // Generate prologue for cell function.
+  virtual void GeneratePrologue(Cell *cell, MacroAssembler *masm) {}
+
+  // Generate epilogue for cell function.
+  virtual void GenerateEpilogue(Cell *cell, MacroAssembler *masm) {}
 
   // Check if runtime supports asynchronous execution of steps.
   virtual bool SupportsAsync() = 0;
@@ -222,13 +228,12 @@ class Runtime {
 // parameters.
 class Tensor {
  public:
-  // Set minimum alignment constraints for tensor.
+  // Update minimum alignment constraints for tensor by combining new alignment
+  // with existing constraints.
   void MinAlign(const Shape &align);
 
-  // Set maximum alignment constraints for tensor.
-  void MaxAlign(const Shape &align);
-
-  // Set minimum alignment constraint for last dimension of tensor.
+  // Update minimum alignment constraint for last dimension of tensor by
+  // combining new alignment with existing constraints.
   void MinAlignLast(int align);
 
   // Ensure same alignment as other tensor.
@@ -237,19 +242,31 @@ class Tensor {
   // Ensure compatible alignment modulo broadcasting with other tensor.
   void CompatibleAlign(Tensor *other);
 
+  // Check if alignment is conflicting with other requirements.
+  bool SupportsAlignment(const Shape &align) const;
+
   // Check if tensor can support order.
   bool SupportsOrder(Order order);
 
   // Set required element order.
   void SetRequiredOrder(Order order);
 
-  // Set minimum byte alignment for tensor.
+  // Update minimum byte alignment for tensor by combining new alignment
+  // with existing constraints.
   void SetMiniumAlignment(int alignment);
+
+  // Require dense encoding with no padding of dimensions.
+  void RequireDense() { require_dense_ = true; }
+
+  // Require standard row-major order.
+  void RequireStandardOrder() {
+    if (rank() > 1 && dim(0) > 1) SetRequiredOrder(ROW_MAJOR);
+  }
 
   // Check if tensor has the same shape as another tensor.
   bool HasSameShape(const Tensor *other) const;
 
-  // Check if tensor shape that is broadcast compatible with another tensor.
+  // Check if tensor shape is broadcast compatible with another tensor.
   bool Compatible(const Tensor *other) const;
 
   // Check if tensor is a scalar.
@@ -276,13 +293,9 @@ class Tensor {
   int rank() const { return shape_.rank(); }
   int dim(int d) const { return shape_.dim(d); }
 
-  // Minumum alignment requirement for each dimension.
+  // Minimum alignment requirement for each dimension.
   const Shape &minalign() const { return minalign_; }
   int minalign(int d) const { return minalign_.dim(d); }
-
-  // Maimum alignment allowed for each dimension.
-  const Shape &maxalign() const { return maxalign_; }
-  int maxalign(int d) const { return maxalign_.dim(d); }
 
   // Tensor shape after alignment.
   const Shape &aligned() const { return aligned_; }
@@ -302,7 +315,7 @@ class Tensor {
   int elements() const { return shape_.elements(); }
 
   // Value for constant tensor. Return null for parameters.
-  char *data() const { return data_; }
+  const char *data() const { return data_; }
 
   // Pointer to constant tensor on device.
   DevicePtr device_data() const { return device_data_; }
@@ -355,6 +368,12 @@ class Tensor {
     return data_ != nullptr || device_data_ != DEVICE_NULL;
   }
 
+  // Local variables are allocated in the instance block.
+  bool IsGlobal() const {
+    return data_ != nullptr || device_data_ != DEVICE_NULL;
+  }
+  bool IsLocal() const { return !IsGlobal(); }
+
   // Return tensor placement.
   Placement placement() const { return placement_; }
 
@@ -373,7 +392,9 @@ class Tensor {
   int ConsumerTask() const;
 
   // Return scalar value.
-  template<typename T> T value() const { return *reinterpret_cast<T *>(data_); }
+  template<typename T> const T value() const {
+    return *reinterpret_cast<const T *>(data_);
+  }
 
   // Element order.
   Order order() const { return order_; }
@@ -407,6 +428,13 @@ class Tensor {
   bool in() const { return in_; }
   bool out() const { return out_; }
 
+  // Live range for tensor.
+  int first() const { return first_; }
+  int last() const { return last_; }
+
+  // Byte alignment.
+  int byte_alignment() const { return byte_alignment_; }
+
   // Return tensor type as string.
   string TypeString() const;
 
@@ -432,8 +460,8 @@ class Tensor {
   // Minimum alignment requirement for each dimension.
   Shape minalign_;
 
-  // Maximum alignment requirement for each dimension.
-  Shape maxalign_;
+  // Require dense encoding with no padding of dimensions.
+  bool require_dense_ = false;
 
   // Tensor shape after alignment.
   Shape aligned_;
@@ -461,7 +489,7 @@ class Tensor {
   Tensor *link_ = nullptr;
 
   // Value for constant tensor (not owned).
-  char *data_ = nullptr;
+  const char *data_ = nullptr;
 
   // Pointer to constant tensor data on device. This is only set for constant
   // tensors that need to be access from the device.
@@ -523,6 +551,9 @@ class Step {
   int GetAttr(const string &name, int defval) const {
     return attributes_.Get(name, defval);
   }
+  bool GetAttr(const string &name, bool defval) const {
+    return attributes_.Get(name, defval);
+  }
 
   // Check if step has attribute.
   bool HasAttr(const string &name) const {
@@ -531,6 +562,15 @@ class Step {
 
   // Set attribute.
   void SetAttr(const string &name, const string &value) {
+    attributes_.Set(name, value);
+  }
+  void SetAttr(const string &name, const char *value) {
+    attributes_.Set(name, value);
+  }
+  void SetAttr(const string &name, int value) {
+    attributes_.Set(name, value);
+  }
+  void SetAttr(const string &name, bool value) {
     attributes_.Set(name, value);
   }
 
@@ -546,6 +586,10 @@ class Step {
 
   // Return the complexity of the cell, i.e. number of numeric operations.
   int64 complexity() const { return noop_ ? 0 : kernel_->Complexity(this); }
+
+  // Allocate auxiliary memory for kernel.
+  char *AllocateKernelMemory(size_t size, int alignment);
+  char *kernel_memory() const { return kernel_memory_; }
 
   // Cell that this step belongs to.
   Cell *cell() const { return cell_; }
@@ -564,7 +608,7 @@ class Step {
 
   // Allow in-place operation between input and output. Return true if in-place
   // operation is supported, i.e. the operation must be the only consumer of
-  // a non-preserved the input.
+  // a non-preserved input.
   bool AllowInPlace(int input, int output, bool preserved = false);
 
   // A step in the main task that runs on the host but depends on inputs
@@ -597,6 +641,10 @@ class Step {
 
   // Kernel used for generating code for step (owned by library).
   Kernel *kernel_ = nullptr;
+
+  // Auxiliary memory for kernel. This memory is owned by the memory pool for
+  // the network.
+  char *kernel_memory_ = nullptr;
 
   // Kernel variant. Only used for display purposes.
   string variant_;
@@ -687,7 +735,7 @@ class Channel {
   const Connector *connector_;
 };
 
-// A tensor data objects is a reference to a tensor value. It does not own the
+// A tensor data object is a reference to a tensor value. It does not own the
 // underlying storage for the tensor.
 class TensorData {
  public:
@@ -777,36 +825,49 @@ class Instance {
   // Get raw pointer to location of parameter in instance memory.
   char *GetAddress(Tensor *param) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsConstant());
+    DCHECK(!param->IsConstant()) << param->name();
     return data_ + param->offset();
   }
 
   // Get pointer to location of parameter in instance memory.
   template<typename T> T *Get(Tensor *param) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsConstant());
-    DCHECK_EQ(Traits<T>().type(), param->type());
+    DCHECK(!param->IsConstant()) << param->name();
+    DCHECK(!param->ref()) << param->name();
+    DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(data_ + param->offset());
   }
 
   // Get pointer to location of element of parameter in instance memory.
   template<typename T> T *Get(Tensor *param, int r) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsConstant());
-    DCHECK_EQ(Traits<T>().type(), param->type());
+    DCHECK(!param->IsConstant()) << param->name();
+    DCHECK(!param->ref()) << param->name();
+    DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(data_ + param->offset() + param->offset(r));
   }
   template<typename T> T *Get(Tensor *param, int r, int c) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsConstant());
-    DCHECK_EQ(Traits<T>().type(), param->type());
+    DCHECK(!param->IsConstant()) << param->name();
+    DCHECK(!param->ref()) << param->name();
+    DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(
         data_ + param->offset() + param->offset(r, c));
   }
 
   // Set link to element in connector channel.
   void Set(Tensor *param, Channel *channel, int index = 0) {
+    DCHECK(param->ref()) << param->name();
     *reinterpret_cast<char **>(data_ + param->offset()) = channel->at(index);
+  }
+
+  // Sets a reference parameter to an address.  Caller is responsible for
+  // ensuring proper alignment and any other constraints.
+  void SetReference(Tensor *param, char *address) {
+    DCHECK(param != nullptr);
+    DCHECK(!param->IsConstant()) << param->name();
+    DCHECK(param->ref()) << param->name();
+    *reinterpret_cast<char **>(data_ + param->offset()) = address;
   }
 
   // Return tensor data object for parameter in instance.
@@ -894,6 +955,9 @@ class Cell {
   // Get offset of task structure in instance data block.
   size_t task_offset(int index) const { return tasks_[index].offset; }
 
+  // Start of data in instance block.
+  size_t data_start() const { return data_start_; }
+
   // Tensor with profiling information.
   Tensor *profile() const { return profile_; }
 
@@ -936,6 +1000,9 @@ class Cell {
   // Size of device data instance for cell.
   size_t device_instance_size_ = 0;
 
+  // Start of data in instance block.
+  size_t data_start_ = 0;
+
   // Instance alignment.
   int instance_alignment_ = kMinDataAlignment;
   int device_instance_alignment_ = kMinDataAlignment;
@@ -969,6 +1036,9 @@ class Network {
   // Get parameter.
   Tensor *GetParameter(const string &name) const;
 
+  // Allocate memory in memory pool.
+  char *AllocateMemory(size_t size, int alignment);
+
   // Runtime support functions.
   Runtime *runtime() const { return runtime_; }
   void set_runtime(Runtime *runtime) { runtime_ = runtime; }
@@ -996,6 +1066,9 @@ class Network {
 
   // Network parameters.
   const std::vector<Tensor *> parameters() const { return parameters_; }
+
+  // Network steps.
+  const std::vector<Step *> &steps() const { return steps_; }
 
  private:
   // Compute live ranges for all the variables.

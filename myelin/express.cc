@@ -16,11 +16,72 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
 namespace sling {
 namespace myelin {
+
+namespace {
+
+// Mapping from operation name to operation type.
+static std::map<string, Express::OpType> optypes = {
+  {"Id", Express::MOV},
+  {"Add", Express::ADD},
+  {"Sub", Express::SUB},
+  {"Mul", Express::MUL},
+  {"Div", Express::DIV},
+  {"Min", Express::MIN},
+  {"Max", Express::MAX},
+  {"Neg", Express::NEG},
+  {"Abs", Express::ABS},
+  {"Relu", Express::RELU},
+  {"Softsign", Express::SOFTSIGN},
+  {"Softplus", Express::SOFTPLUS},
+  {"LogSigmoid", Express::LOGSIGMOID},
+  {"Reciprocal", Express::RECIPROCAL},
+  {"Square", Express::SQUARE},
+  {"Log", Express::LOG},
+  {"Exp", Express::EXP},
+  {"Sigmoid", Express::SIGMOID},
+  {"Tanh", Express::TANH},
+  {"MulAdd132", Express::MULADD132},
+  {"MulAdd213", Express::MULADD213},
+  {"MulAdd231", Express::MULADD231},
+  {"MulSub132", Express::MULSUB132},
+  {"MulSub213", Express::MULSUB213},
+  {"MulSub231", Express::MULSUB231},
+  {"CmpEqOQ", Express::CMPEQOQ},
+  {"CmpLtOQ", Express::CMPLTOQ},
+  {"CmpGtOQ", Express::CMPGTOQ},
+  {"CmpNgeUQ", Express::CMPNGEUQ},
+  {"Shr23", Express::SHR23},
+  {"Shl23", Express::SHL23},
+  {"And", Express::AND},
+  {"Or", Express::OR},
+  {"AndNot", Express::ANDNOT},
+  {"Floor", Express::FLOOR},
+  {"CvtFltInt", Express::CVTFLTINT},
+  {"CvtIntFlt", Express::CVTINTFLT},
+  {"SubInt", Express::SUBINT},
+};
+
+static const string opname[] = {
+  "Id",
+  "Add", "Sub", "Mul", "Div",
+  "Min", "Max",
+  "Neg", "Abs", "Relu", "Softsign", "Softplus", "LogSigmoid",
+  "Reciprocal", "Square",
+  "Log", "Exp", "Sigmoid", "Tanh",
+  "MulAdd132", "MulAdd213", "MulAdd231",
+  "MulSub132", "MulSub213", "MulSub231",
+  "CmpEqOQ", "CmpLtOQ", "CmpGtOQ", "CmpNgeUQ",
+  "Shr23", "Shl23",
+  "And", "Or", "AndNot",
+  "Floor", "CvtFltInt", "CvtIntFlt", "SubInt",
+  "???",
+};
 
 // Variable mapping.
 class VariableMap {
@@ -68,33 +129,31 @@ class RegisterAllocator {
       reg_[regno] = var;
     }
 
+    var->reg = regno;
     return regno;
   }
 
   // Transfer register from one variable to another. Return the transferred
   // register.
   int Transfer(Express::Var *src, Express::Var *dst) {
-    for (int r = 0; r < reg_.size(); ++r) {
-      if (reg_[r] == src) {
-        reg_[r] = dst;
-        return r;
-      }
-    }
-    return -1;
+    int r = src->reg;
+    if (r == -1)  return -1;
+    dst->reg = r;
+    src->reg = -1;
+    reg_[r] = dst;
+    return r;
   }
 
   // Get register allocated for variable. Return -1 if no register is allocated.
   int Get(Express::Var *var) const {
-    for (int r = 0; r < reg_.size(); ++r) {
-      if (reg_[r] == var) return r;
-    }
-    return -1;
+    return var->reg;
   }
 
   // Free register used by variable.
   void Free(Express::Var *var) {
-    for (int r = 0; r < reg_.size(); ++r) {
-      if (reg_[r] == var) reg_[r] = nullptr;
+    if (var->reg != -1) {
+      reg_[var->reg] = nullptr;
+      var->reg = -1;
     }
   }
 
@@ -105,126 +164,13 @@ class RegisterAllocator {
   std::vector<Express::Var *> reg_;
 };
 
-// Mapping from operation name to operation type.
-static std::map<string, Express::OpType> optypes = {
-  {"Id", Express::MOV},
-  {"Add", Express::ADD},
-  {"Sub", Express::SUB},
-  {"Mul", Express::MUL},
-  {"Div", Express::DIV},
-  {"Min", Express::MIN},
-  {"Max", Express::MAX},
-  {"Relu", Express::RELU},
-  {"Log", Express::LOG},
-  {"Exp", Express::EXP},
-  {"Sigmoid", Express::SIGMOID},
-  {"Tanh", Express::TANH},
-  {"MulAdd132", Express::MULADD132},
-  {"MulAdd213", Express::MULADD213},
-  {"MulAdd231", Express::MULADD231},
-  {"MulSub132", Express::MULSUB132},
-  {"MulSub213", Express::MULSUB213},
-  {"MulSub231", Express::MULSUB231},
-  {"CmpEqOQ", Express::CMPEQOQ},
-  {"CmpLtOQ", Express::CMPLTOQ},
-  {"CmpGtOQ", Express::CMPGTOQ},
-  {"CmpNgeUQ", Express::CMPNGEUQ},
-  {"Shr23", Express::SHR23},
-  {"Shl23", Express::SHL23},
-  {"And", Express::AND},
-  {"Or", Express::OR},
-  {"AndNot", Express::ANDNOT},
-  {"Floor", Express::FLOOR},
-  {"CvtFltInt", Express::CVTFLTINT},
-};
-
-static const string opname[] = {
-  "Id",
-  "Add", "Sub", "Mul", "Div",
-  "Min", "Max",
-  "Relu", "Log", "Exp", "Sigmoid", "Tanh",
-  "MulAdd132", "MulAdd213", "MulAdd231",
-  "MulSub132", "MulSub213", "MulSub231",
-  "CmpEqOQ", "CmpLtOQ", "CmpGtOQ", "CmpNgeUQ",
-  "Shr23", "Shl23",
-  "And", "Or", "AndNot",
-  "Floor", "CvtFltInt",
-  "???",
-};
-
 template <class Dest, class Source>
-inline Dest bit_cast(const Source& source) {
+inline Dest bit_cast(const Source &source) {
+  static_assert(sizeof(Dest) == sizeof(Source), "size error");
   Dest dest;
   memcpy(&dest, &source, sizeof(dest));
   return dest;
 }
-
-#define FLT_FROM_INT(x) bit_cast<float>(x)
-#define DBL_FROM_INT(x) bit_cast<double>(x)
-
-// System-defined numeric constants.
-#define FLTCONST(x) {x##f, x}
-#define INTCONST(f) {FLT_FROM_INT(f), DBL_FROM_INT(f)}
-Express::Constant Express::constants[] = {
-  FLTCONST(0.0),    // ZERO
-  FLTCONST(1.0),    // ONE
-  FLTCONST(-1.0),   // N1
-  FLTCONST(0.5),    // HALF
-  FLTCONST(0.125),  // QUARTER
-  FLTCONST(9.0),    // P9
-  FLTCONST(-9.0),   // N9
-  FLTCONST(126.0),  // P126
-  FLTCONST(127.0),  // P127
-
-  FLTCONST(-0.6931471805599453),   // NLN2
-
-  INTCONST(0xff800000),   // MINUS_INF
-  INTCONST(0x00800000),   // MIN_NORM_POS
-  INTCONST(~0x7f800000),  // INV_MANT_MASK
-  INTCONST(0x7f),         // INT127
-
-  // Polynomial coefficients for natural logarithm.
-  FLTCONST(0.707106781186547524),  // CEPHES_SQRTHF
-  FLTCONST(7.0376836292E-2),       // CEPHES_LOG_P0
-  FLTCONST(-1.1514610310E-1),      // CEPHES_LOG_P1
-  FLTCONST(1.1676998740E-1),       // CEPHES_LOG_P2
-  FLTCONST(-1.2420140846E-1),      // CEPHES_LOG_P3
-  FLTCONST(+1.4249322787E-1),      // CEPHES_LOG_P4
-  FLTCONST(-1.6668057665E-1),      // CEPHES_LOG_P5
-  FLTCONST(+2.0000714765E-1),      // CEPHES_LOG_P6
-  FLTCONST(-2.4999993993E-1),      // CEPHES_LOG_P7
-  FLTCONST(+3.3333331174E-1),      // CEPHES_LOG_P8
-  FLTCONST(-2.12194440E-4),        // CEPHES_LOG_Q1
-  FLTCONST(0.693359375),           // CEPHES_LOG_Q2
-
-  // Clamping interval for exponential function.
-  FLTCONST(88.3762626647950),      // EXP_HI
-  FLTCONST(-88.3762626647949),     // EXP_LO
-
-  // Polynomial coefficients for exponential function.
-  FLTCONST(1.44269504088896341),   // CEPHES_LOG2EF
-  FLTCONST(1.9875691500E-4),       // CEPHES_EXP_P0
-  FLTCONST(1.3981999507E-3),       // CEPHES_EXP_P1
-  FLTCONST(8.3334519073E-3),       // CEPHES_EXP_P2
-  FLTCONST(4.1665795894E-2),       // CEPHES_EXP_P3
-  FLTCONST(1.6666665459E-1),       // CEPHES_EXP_P4
-  FLTCONST(5.0000001201E-1),       // CEPHES_EXP_P5
-
-  // Monomial coefficients of the numerator polynomial for tanh (odd).
-  FLTCONST(-2.76076847742355e-16),  // ALPHA_1
-  FLTCONST(2.00018790482477e-13),   // ALPHA_3
-  FLTCONST(-8.60467152213735e-11),  // ALPHA_5
-  FLTCONST(5.12229709037114e-08),   // ALPHA_7
-  FLTCONST(1.48572235717979e-05),   // ALPHA_9
-  FLTCONST(6.37261928875436e-04),   // ALPHA_11
-  FLTCONST(4.89352455891786e-03),   // ALPHA_13
-
-  // Monomial coefficients of the denominator polynomial for tanh (even).
-  FLTCONST(1.19825839466702e-06),  // BETA_0
-  FLTCONST(1.18534705686654e-04),  // BETA_2
-  FLTCONST(2.26843463243900e-03),  // BETA_4
-  FLTCONST(4.89352518554385e-03),  // BETA_6
-};
 
 // Recipe parser for converting a string to an expression.
 class RecipeParser {
@@ -246,7 +192,7 @@ class RecipeParser {
       ParseAssignment();
     }
 
-    // Check that all the input has been comsumed.
+    // Check that all the input has been consumed.
     if (more()) Error("Syntax error in expression");
 
     // Assign ids to intermediate variables.
@@ -307,7 +253,7 @@ class RecipeParser {
       // Parse expression and assign to intermediate variable. The intermediate
       // variable is assigned a unique negative id which will later be fixed up.
       Express::Op *expr = ParseExpression();
-      Express::Var *var = expr_->NewTemp();
+      Express::Var *var = expr_->Temp();
       expr->Assign(var);
       return var;
     }
@@ -319,6 +265,8 @@ class RecipeParser {
     Express::VarType type;
     if (is('%')) {
       type = Express::INPUT;
+    } else if (is('!')) {
+      type = Express::REGISTER;
     } else if (is('#')) {
       type = Express::CONST;
     } else if (is('@')) {
@@ -366,7 +314,7 @@ class RecipeParser {
   bool islower() const { return more() && *ptr_ >= 'a' && *ptr_ <= 'z'; }
   bool isletter() const { return isupper() || islower(); }
   bool isvar() const {
-    return is('%') || is('@') || is('$') || is('#') || is('_');
+    return is('%') || is('!') || is('@') || is('$') || is('#') || is('_');
   }
 
   // Check if the whole expression has been parsed.
@@ -379,6 +327,73 @@ class RecipeParser {
   const char *end_;            // end of parsed recipe
   Express *expr_;              // target expression
   bool expand_;                // expand intrinsic function into basic ops
+};
+
+}  // namespace
+
+#define FLT_FROM_INT(x) bit_cast<float>(x)
+#define DBL_FROM_INT(x) bit_cast<double>(x)
+
+// System-defined numeric constants.
+#define FLTCONST(x) {x##f, x}
+#define INTCONST(a, b) {FLT_FROM_INT(a), DBL_FROM_INT(b)}
+Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
+  FLTCONST(0.0),    // ZERO
+  FLTCONST(1.0),    // ONE
+  FLTCONST(0.5),    // HALF
+  FLTCONST(2.0),    // TWO
+  FLTCONST(-1.0),   // N1
+  FLTCONST(9.0),    // P9
+  FLTCONST(-9.0),   // N9
+  FLTCONST(127.0),  // P127
+
+  FLTCONST(-0.6931471805599453),   // NLN2
+
+  INTCONST(0x00800000, 0x0010000000000000LL),   // MIN_NORM_POS
+  INTCONST(~0x7f800000, ~0x7FF0000000000000LL),  // INV_MANT_MASK
+  INTCONST(0x7f, 0x7ffLL),         // MAX_MANT
+
+  // Polynomial coefficients for natural logarithm.
+  FLTCONST(0.707106781186547524),  // CEPHES_SQRTHF
+  FLTCONST(7.0376836292E-2),       // CEPHES_LOG_P0
+  FLTCONST(-1.1514610310E-1),      // CEPHES_LOG_P1
+  FLTCONST(1.1676998740E-1),       // CEPHES_LOG_P2
+  FLTCONST(-1.2420140846E-1),      // CEPHES_LOG_P3
+  FLTCONST(+1.4249322787E-1),      // CEPHES_LOG_P4
+  FLTCONST(-1.6668057665E-1),      // CEPHES_LOG_P5
+  FLTCONST(+2.0000714765E-1),      // CEPHES_LOG_P6
+  FLTCONST(-2.4999993993E-1),      // CEPHES_LOG_P7
+  FLTCONST(+3.3333331174E-1),      // CEPHES_LOG_P8
+  FLTCONST(-2.12194440E-4),        // CEPHES_LOG_Q1
+  FLTCONST(0.693359375),           // CEPHES_LOG_Q2
+
+  // Clamping interval for exponential function.
+  FLTCONST(88.3762626647950),      // EXP_HI
+  FLTCONST(-88.3762626647949),     // EXP_LO
+
+  // Polynomial coefficients for exponential function.
+  FLTCONST(1.44269504088896341),   // CEPHES_LOG2EF
+  FLTCONST(1.9875691500E-4),       // CEPHES_EXP_P0
+  FLTCONST(1.3981999507E-3),       // CEPHES_EXP_P1
+  FLTCONST(8.3334519073E-3),       // CEPHES_EXP_P2
+  FLTCONST(4.1665795894E-2),       // CEPHES_EXP_P3
+  FLTCONST(1.6666665459E-1),       // CEPHES_EXP_P4
+  FLTCONST(5.0000001201E-1),       // CEPHES_EXP_P5
+
+  // Monomial coefficients of the numerator polynomial for tanh (odd).
+  FLTCONST(-2.76076847742355e-16),  // ALPHA_1
+  FLTCONST(2.00018790482477e-13),   // ALPHA_3
+  FLTCONST(-8.60467152213735e-11),  // ALPHA_5
+  FLTCONST(5.12229709037114e-08),   // ALPHA_7
+  FLTCONST(1.48572235717979e-05),   // ALPHA_9
+  FLTCONST(6.37261928875436e-04),   // ALPHA_11
+  FLTCONST(4.89352455891786e-03),   // ALPHA_13
+
+  // Monomial coefficients of the denominator polynomial for tanh (even).
+  FLTCONST(1.19825839466702e-06),  // BETA_0
+  FLTCONST(1.18534705686654e-04),  // BETA_2
+  FLTCONST(2.26843463243900e-03),  // BETA_4
+  FLTCONST(4.89352518554385e-03),  // BETA_6
 };
 
 Express::OpType Express::Lookup(const string &opname) {
@@ -456,10 +471,19 @@ Express::Op *Express::Function(OpType type,
   if (expand && args.size() == 1) {
     Express::Var *result;
     switch (type) {
+      case Express::NEG: result = Neg(args[0]); break;
+      case Express::ABS: result = Abs(args[0]); break;
+      case Express::RELU: result = Relu(args[0]); break;
+      case Express::SOFTSIGN: result = Softsign(args[0]); break;
+      case Express::SOFTPLUS: result = Softplus(args[0]); break;
+      case Express::LOGSIGMOID: result = LogSigmoid(args[0]); break;
+      case Express::RECIPROCAL: result = Reciprocal(args[0]); break;
+      case Express::SQUARE: result = Square(args[0]); break;
       case Express::LOG: result = Log(args[0]); break;
       case Express::EXP: result = Exp(args[0]); break;
       case Express::SIGMOID: result = Sigmoid(args[0]); break;
       case Express::TANH: result = Tanh(args[0]); break;
+
       default: result = nullptr;
     }
 
@@ -475,13 +499,6 @@ Express::Op *Express::Function(OpType type,
   Express::Op *op = Operation(type);
   for (Var *arg : args) op->AddArgument(arg);
   return op;
-}
-
-Express::Var *Express::NewTemp() {
-  // Add new temporary variable.
-  Var *v = new Var(TEMP, -1);
-  vars_.push_back(v);
-  return v;
 }
 
 Express::Var *Express::Number(ConstantNumber number) {
@@ -561,12 +578,31 @@ int Express::Complexity() const {
 int Express::CompactTempVars() {
   int n = 0;
   for (Var *v : vars_) {
+    if (v->type == REGISTER) n = v->id + 1;
+  }
+  for (Var *v : vars_) {
     if (v->type == TEMP) v->id = n++;
   }
   return n;
 }
 
 void Express::EliminateCommonSubexpressions() {
+  // Coalesce system constant variables.
+  std::map<int, Var *> sysvars;
+  std::vector<Var *> unused;
+  for (Var *v : vars_) {
+    if (v->type == NUMBER) {
+      auto f = sysvars.find(v->id);
+      if (f == sysvars.end()) {
+        sysvars[v->id] = v;
+      } else {
+        v->Redirect(f->second);
+        unused.push_back(v);
+      }
+    }
+  }
+  for (Var *v : unused) RemoveVar(v);
+
   // Keep trying to eliminate ops until no more can be removed.
   int iterations = 0;
   while (TryToEliminateOps()) iterations++;
@@ -598,7 +634,7 @@ bool Express::TryToEliminateOps() {
           RemoveVar(v2);
           return true;
         } else {
-          // Two output variable. Change second op to move op.
+          // Two output variables. Change second op to move op.
           v2->Redirect(v1);
           op2->type = MOV;
           op2->ClearArguments();
@@ -611,6 +647,51 @@ bool Express::TryToEliminateOps() {
   return false;
 }
 
+void Express::HoistConstants(int limit) {
+  // Collect all existing cached variables.
+  std::set<Var *> cached;
+  for (int i = 0; i < body_; ++i) {
+    cached.insert(ops_[i]->result);
+  }
+
+  // Hoist const loads outside the body until limit reached.
+  for (int r = 0; r < limit; ++r) {
+    // Find constant or number variable with the most usages.
+    Var *candidate = nullptr;
+    for (Var *v : vars_) {
+      if (v->type == CONST || v->type == NUMBER) {
+        if (cached.count(v) == 0) {
+          if (candidate == nullptr || v->usages() > candidate->usages()) {
+            candidate = v;
+          }
+        }
+      }
+    }
+
+    // Stop if no candidate for hoisting was found.
+    if (candidate == nullptr) break;
+
+    // Allocate temp for constant and update all usages.
+    Var *temp = Temp();
+    candidate->consumers.swap(temp->consumers);
+    for (Op *o : ops_) {
+      for (int i = 0; i < o->args.size(); ++i) {
+        if (o->args[i] == candidate) {
+          o->args[i] = temp;
+        }
+      }
+    }
+
+    // Assign constant to temp variable.
+    Op *assign = OperationBefore(ops_[body_], MOV);
+    assign->Assign(temp);
+    assign->AddArgument(candidate);
+    body_++;
+    cached.insert(candidate);
+  }
+  if (!cached.empty()) CompactTempVars();
+}
+
 void Express::CacheResults() {
   int cached_vars = 0;
   for (int n = 0; n < vars_.size(); ++n) {
@@ -620,7 +701,7 @@ void Express::CacheResults() {
       Op *op = var->producer;
       CHECK(op != nullptr);
       var->producer = nullptr;
-      Var *temp = NewTemp();
+      Var *temp = Temp();
       op->result = temp;
       var->consumers.swap(temp->consumers);
       for (Op *o : ops_) {
@@ -634,9 +715,9 @@ void Express::CacheResults() {
       assign->Assign(var);
       assign->AddArgument(temp);
       cached_vars++;
-    } else if (var->type != TEMP && var->consumers.size() > 1) {
+    } else if (var->type == INPUT && var->consumers.size() > 1) {
       // Make temp variable and update all usages to use this instead.
-      Var *temp = NewTemp();
+      Var *temp = Temp();
       var->consumers.swap(temp->consumers);
       Op *first = nullptr;
       for (Op *o : ops_) {
@@ -660,12 +741,20 @@ void Express::CacheResults() {
 }
 
 void Express::ComputeLiveRanges() {
+  // All variables assigned before the start of the body need to have their live
+  // range extended to the end.
+  Op *end = ops_.back();
+  for (int i = 0; i < body_; ++i) {
+    ops_[i]->result->last = end;
+  }
+
+  // Compute live ranges for the remaining variables.
   for (Op *op : ops_) {
     if (op->result->first == nullptr) op->result->first = op;
-    op->result->last = op;
+    if (op->result->last != end) op->result->last = op;
     for (Var *arg : op->args) {
       if (arg->first == nullptr) arg->first = op;
-      arg->last = op;
+      if (arg->last != end) arg->last = op;
     }
   }
 }
@@ -689,6 +778,7 @@ void Express::Copy(const Express &other) {
   CHECK(ops_.empty());
   vars_.reserve(other.vars().size());
   ops_.reserve(other.ops().size());
+  body_ = other.body_;
 
   // Copy variables.
   std::map<Var *, Var *> varmap;
@@ -854,6 +944,9 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
     Var *destination = nullptr;
     bool first_is_dest = false;
 
+    // Keep track of the beginning of the body.
+    if (op == ops_[body_]) rewritten->body_ = rewritten->ops_.size();
+
     // Rewrite operation.
     if (op->arity() == 1) {
       if (type == MOV) {
@@ -867,11 +960,12 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 if (!model.mov_reg_mem) success = false;
                 break;
               case TEMP:
+              case REGISTER:
                 if (!model.mov_reg_reg) success = false;
                 break;
               case CONST:
               case NUMBER:
-                if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
+                if (!model.mov_reg_imm) success = false;
                 break;
             }
             break;
@@ -881,23 +975,25 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             switch (args[0]->type) {
               case INPUT:
                 // Add temp variable for input.
-                source = rewritten->Variable(TEMP, -1);
+                source = rewritten->Temp();
                 break;
               case OUTPUT:
                 // Add temp variable for output.
-                destination = rewritten->Variable(TEMP, -1);
+                destination = rewritten->Temp();
                 break;
               case TEMP:
-                if (!model.mov_reg_reg) success = false;
+              case REGISTER:
+                if (!model.mov_mem_reg) success = false;
                 break;
               case CONST:
               case NUMBER:
-                if (!model.mov_reg_imm && !model.mov_reg_mem) success = false;
+                if (!model.mov_mem_imm) success = false;
                 break;
             }
             break;
 
           case INPUT:
+          case REGISTER:
           case CONST:
           case NUMBER:
             // Assignment to inputs and constants not allowed.
@@ -912,18 +1008,19 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               case OUTPUT:
                 if (!model.func_reg_mem) {
                   // Add temp variable for input.
-                  source = rewritten->Variable(TEMP, -1);
+                  source = rewritten->Temp();
                   if (!model.func_reg_reg) success = false;
                 }
                 break;
               case TEMP:
+              case REGISTER:
                 if (!model.func_reg_reg) success = false;
                 break;
               case CONST:
               case NUMBER:
                 if (!model.func_reg_imm) {
                   // Add temp variable for input.
-                  source = rewritten->Variable(TEMP, -1);
+                  source = rewritten->Temp();
                   if (!model.func_reg_reg) success = false;
                 }
                 break;
@@ -936,21 +1033,22 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               case OUTPUT:
                 if (model.func_reg_mem) {
                   // Add temp variable for output.
-                  destination = rewritten->Variable(TEMP, -1);
+                  destination = rewritten->Temp();
                 } else if (model.func_mem_reg) {
                   // Add temp variable for input.
-                  source = rewritten->Variable(TEMP, -1);
+                  source = rewritten->Temp();
                 } else {
                   // Add temp variables for input and output.
-                  destination = rewritten->Variable(TEMP, -1);
-                  source = rewritten->Variable(TEMP, -1);
+                  destination = rewritten->Temp();
+                  source = rewritten->Temp();
                   if (!model.func_reg_reg) success = false;
                 }
                 break;
               case TEMP:
+              case REGISTER:
                 if (!model.func_mem_reg) {
                   // Add temp variable for output.
-                  destination = rewritten->Variable(TEMP, -1);
+                  destination = rewritten->Temp();
                   if (!model.func_reg_reg) success = false;
                 }
                 break;
@@ -958,10 +1056,10 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               case NUMBER:
                 if (!model.func_mem_imm) {
                   // Add temp variable for output.
-                  destination = rewritten->Variable(TEMP, -1);
+                  destination = rewritten->Temp();
                   if (!model.func_reg_imm) {
                     // Add temp variable for input.
-                    source = rewritten->Variable(TEMP, -1);
+                    source = rewritten->Temp();
                     if (!model.func_reg_reg) success = false;
                   }
                 }
@@ -970,6 +1068,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             break;
 
           case INPUT:
+          case REGISTER:
           case CONST:
           case NUMBER:
             // Assignment to inputs and constants not allowed.
@@ -990,19 +1089,19 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             }
 
             // Put first argument into a register.
-            if (args[0]->type != TEMP) {
-              source = rewritten->Variable(TEMP, -1);
+            if (!args[0]->IsRegister()) {
+              source = rewritten->Temp();
             }
 
             // Put second argument into a register if memory operands are not
             // supported.
             if (args[1]->type == CONST || args[1]->type == NUMBER) {
               if (!model.op_reg_reg_imm) {
-                source2 = rewritten->Variable(TEMP, -1);
+                source2 = rewritten->Temp();
               }
-            } else if (args[1]->type != TEMP) {
+            } else if (!args[1]->IsRegister()) {
               if (!model.op_reg_reg_mem) {
-                source2 = rewritten->Variable(TEMP, -1);
+                source2 = rewritten->Temp();
               }
             }
 
@@ -1011,7 +1110,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             bool arg1_in_reg = args[1]->type == TEMP || source2 != nullptr;
             if (result->type == OUTPUT &&
                 (!arg1_in_reg || !model.op_mem_reg_reg)) {
-              destination = rewritten->Variable(TEMP, -1);
+              destination = rewritten->Temp();
             }
 
             success = true;
@@ -1030,7 +1129,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             if (result != args[0] || !model.op_mem_reg) {
               // Put result in temp register if result is an output.
               if (result->type == OUTPUT) {
-                dest = destination = rewritten->Variable(TEMP, -1);
+                dest = destination = rewritten->Temp();
               }
 
               // Move first argument to destination.
@@ -1043,6 +1142,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                   if (!model.mov_reg_mem) success = false;
                   break;
                 case TEMP:
+                case REGISTER:
                   if (!model.mov_reg_reg) success = false;
                   break;
                 case CONST:
@@ -1060,10 +1160,11 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 // Put second operand into register if memory operands are not
                 // supported.
                 if (dest->type != TEMP || !model.op_reg_mem) {
-                  source2 = rewritten->Variable(TEMP, -1);
+                  source2 = rewritten->Temp();
                 }
                 break;
               case TEMP:
+              case REGISTER:
                 break;
               case CONST:
               case NUMBER:
@@ -1071,11 +1172,11 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 // not supported.
                 if (dest->type == TEMP) {
                   if (!model.op_reg_imm) {
-                    source2 = rewritten->Variable(TEMP, -1);
+                    source2 = rewritten->Temp();
                   }
                 } else {
                   if (!model.op_mem_imm) {
-                    source2 = rewritten->Variable(TEMP, -1);
+                    source2 = rewritten->Temp();
                   }
                 }
                 break;
@@ -1086,6 +1187,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
           break;
 
         case INPUT:
+        case REGISTER:
         case CONST:
         case NUMBER:
           // Assignment to inputs and constants not allowed.
@@ -1129,7 +1231,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
       if (result != args[0]) {
         // Put result in temp register if result is an output.
         if (result->type == OUTPUT) {
-          dest = destination = rewritten->Variable(TEMP, -1);
+          dest = destination = rewritten->Temp();
         }
 
         // Move first argument to destination.
@@ -1142,6 +1244,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             if (!model.mov_reg_mem) success = false;
             break;
           case TEMP:
+          case REGISTER:
             if (!model.mov_reg_reg) success = false;
             break;
           case CONST:
@@ -1154,17 +1257,17 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
       // Make sure second operand is in register.
       if (args[1]->type != TEMP) {
-        source2 = rewritten->Variable(TEMP, -1);
+        source2 = rewritten->Temp();
       }
 
       // Make third argument available for instruction.
       if (args[2]->type == CONST || args[2]->type == NUMBER) {
         if (!model.fm_reg_reg_imm) {
-          source3 = rewritten->Variable(TEMP, -1);
+          source3 = rewritten->Temp();
         }
-      } else if (args[2]->type != TEMP) {
+      } else if (!args[2]->IsRegister()) {
         if (!model.fm_reg_reg_mem) {
-          source3 = rewritten->Variable(TEMP, -1);
+          source3 = rewritten->Temp();
         }
       }
     } else {
@@ -1226,6 +1329,9 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
 int Express::AllocateRegisters() {
   RegisterAllocator regs;
+  for (Var *var : vars_) {
+    if (var->type == REGISTER) regs.Allocate(var);
+  }
   for (Op *op : ops_) {
     if (op->type == MOV) {
       // Allocate destination register for move op.
@@ -1248,7 +1354,7 @@ int Express::AllocateRegisters() {
       }
 
       // Get source register for move op.
-      if (op->args[0]->type == TEMP && op->src == -1) {
+      if (op->args[0]->IsRegister() && op->src == -1) {
         op->src = regs.Get(op->args[0]);
         CHECK(op->src != -1);
       }
@@ -1273,11 +1379,11 @@ int Express::AllocateRegisters() {
       // Get registers for source operands.
       int first = op->first_is_dest ? 1 : 0;
       int second = first + 1;
-      if (op->arity() > first && op->args[first]->type == TEMP) {
+      if (op->arity() > first && op->args[first]->IsRegister()) {
         op->src = regs.Get(op->args[first]);
         CHECK(op->src != -1);
       }
-      if (op->arity() > second && op->args[second]->type == TEMP) {
+      if (op->arity() > second && op->args[second]->IsRegister()) {
         op->src2 = regs.Get(op->args[second]);
         CHECK(op->src2 != -1);
       }
@@ -1297,6 +1403,9 @@ int Express::AllocateRegisters() {
 
 int Express::NumRegs() const {
   int num_regs = 0;
+  for (auto *var : vars_) {
+    if (var->reg != -1 && var->reg + 1 > num_regs) num_regs = var->reg + 1;
+  }
   for (auto *op : ops_) {
     if (op->dst != -1 && op->dst + 1 > num_regs) num_regs = op->dst + 1;
     if (op->src != -1 && op->src + 1 > num_regs) num_regs = op->src + 1;
@@ -1316,7 +1425,7 @@ Express::Var *Express::Log(Var *x) {
 
   // Part 1: x = frexpf(x, e).
   Var *emm0 = Do(SHR23, x);
-  emm0 = Do(SUBINT, emm0, Number(INT127));
+  emm0 = Do(SUBINT, emm0, Number(MAX_MANT));
   Var *e = Add(Do(CVTINTFLT, emm0), Number(ONE));
 
   // Keep only the fractional part.
@@ -1402,11 +1511,6 @@ Express::Var *Express::Exp(Var *x) {
   return Max(Mul(y, emm0), original_x);
 }
 
-// Sigmoid function. Compute y = 1/(1+exp(-x)).
-Express::Var *Express::Sigmoid(Var *x) {
-  return Div(Number(ONE), Add(Number(ONE), Exp(Sub(Number(ZERO), x))));
-}
-
 // Hyperbolic tangent function.
 // Compute 13/6-degree rational interpolant which is accurate up to a couple of
 // ulp in the range [-9, 9], outside of which the fl(tanh(x)) = +/-1.
@@ -1420,7 +1524,7 @@ Express::Var *Express::Tanh(Var *x) {
   Var *x2 = Mul(x, x);
 
   // Evaluate the numerator polynomial p.
-  Var *p = Do(MOV, Number(ALPHA_1));
+  Var *p = Number(ALPHA_1);
   p = MulAdd(x2, p, Number(ALPHA_3));
   p = MulAdd(x2, p, Number(ALPHA_5));
   p = MulAdd(x2, p, Number(ALPHA_7));
@@ -1430,7 +1534,7 @@ Express::Var *Express::Tanh(Var *x) {
   p = Mul(x, p);
 
   // Evaluate the denominator polynomial q.
-  Var *q = Do(MOV, Number(BETA_0));
+  Var *q = Number(BETA_0);
   q = MulAdd(x2, q, Number(BETA_2));
   q = MulAdd(x2, q, Number(BETA_4));
   q = MulAdd(x2, q, Number(BETA_6));
@@ -1453,6 +1557,7 @@ void Express::Var::Redirect(Var *other) {
 string Express::Var::AsString() const {
   switch (type) {
     case INPUT: return "%" + std::to_string(id);
+    case REGISTER: return "!" + std::to_string(id);
     case CONST: return "#" + std::to_string(id);
     case OUTPUT: return "@" + std::to_string(id);
     case TEMP:  return "$" + std::to_string(id);
@@ -1465,6 +1570,7 @@ void Express::Var::GetRecipe(string *recipe) const {
   char ch;
   switch (type) {
     case INPUT: ch = '%'; break;
+    case REGISTER: ch = '!'; break;
     case CONST: ch = '#'; break;
     case OUTPUT: ch = '@'; break;
     case TEMP: ch = '$'; break;
@@ -1541,6 +1647,7 @@ void Express::Op::GetRecipe(string *recipe) const {
     if (!first) recipe->push_back(',');
     first = false;
     if (arg->inlined()) {
+      CHECK(arg->producer != nullptr);
       arg->producer->GetRecipe(recipe);
     } else {
       arg->GetRecipe(recipe);
@@ -1577,6 +1684,12 @@ void Express::Op::ClearArguments() {
 bool Express::Op::EqualTo(Op *other) const {
   if (type != other->type) return false;
   if (arity() != other->arity()) return false;
+  if (commutative() && args.size() == 2) {
+    if (args[0] == other->args[1] &&
+        args[1] == other->args[0]) {
+      return true;
+    }
+  }
   for (int i = 0; i < args.size(); ++i) {
     if (args[i] != other->args[i]) return false;
   }

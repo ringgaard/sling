@@ -43,8 +43,8 @@ class Schemata : public TypeSystem {
 
   // Projects the input frame through a mapping and returns the output frame.
   // Returns nil if the projection failed. In non-destructive mode, no existing
-  // frames are overwritte, where as in destructive mode, frames are replaced by
-  // the output of the projection.
+  // frames are overwritten, where as in destructive mode, frames are replaced
+  // by the output of the projection.
   Handle Project(Handle mapping, Handle input, bool destructive);
 
   // Checks if supertype subsumes the subtype.
@@ -56,7 +56,7 @@ class Schemata : public TypeSystem {
   Handle ResolveNamedRole(Handle schema, Text name);
 
   // Finds named role in schema. Returns nil if no role is found. This does not
-  // seach the parent schemas for matches.
+  // search the parent schemas for matches.
   Handle GetNamedRole(Handle schema, Text name);
 
   // Returns the role mapping for the type.
@@ -143,7 +143,7 @@ class SchemaCompiler : public TypeSystem {
   explicit SchemaCompiler(Store *store);
 
   // Pre-computes schema information for schema families in catalog. It uses
-  // the precompute roles in the schema familes to determine what type of
+  // the precompute roles in the schema families to determine what type of
   // pre-computation to do for each schema family.
   void PreCompute();
   void PreCompute(Handle catalog);

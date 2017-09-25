@@ -242,6 +242,14 @@ class Code {
   void Execute(void *arg) const {
     reinterpret_cast<void (*)(void *)>(entry())(arg);
   }
+  uint64_t Execute(uint64_t arg1, uint64_t arg2) const {
+    return reinterpret_cast<uint64_t (*)(uint64_t, uint64_t)>(
+        entry())(arg1, arg2);
+  }
+  uint64_t Execute(const char *arg1, uint64_t arg2) const {
+    return reinterpret_cast<uint64_t (*)(const char *arg1, uint64_t)>(
+        entry())(arg1, arg2);
+  }
 
  private:
   // Memory block for code block.

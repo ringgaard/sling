@@ -60,6 +60,31 @@ cc_library(
 )
 
 cc_library(
+  name = "precompute",
+  srcs = ["precompute.cc"],
+  hdrs = ["precompute.h"],
+  deps = [
+    ":arithmetic",
+    ":generic",
+    "//myelin:compute",
+  ],
+)
+
+cc_library(
+  name = "tensorflow",
+  srcs = ["tensorflow.cc"],
+  hdrs = ["tensorflow.h"],
+  deps = [
+    ":arithmetic",
+    ":avx",
+    ":generic",
+    ":precompute",
+    ":sse",
+    "//myelin:compute",
+  ],
+)
+
+cc_library(
   name = "cuda",
   srcs = [
     "cuda.cc",
@@ -90,6 +115,8 @@ cc_library(
   deps = [
     "//base",
     "//myelin:compute",
+    "//myelin/generator:index",
+    "//myelin/generator:expression",
   ],
 )
 

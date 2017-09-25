@@ -160,7 +160,7 @@ bool WebPageAnalyzer::StartElement(const XMLElement &e) {
   }
   if (!in_body_) return true;
 
-  // Skip stylesheets and scripts.
+  // Skip style sheets and scripts.
   if (TagEqual(e.name, "style")) in_style_ = true;
   if (TagEqual(e.name, "script")) in_script_ = true;
 
@@ -202,7 +202,7 @@ bool WebPageAnalyzer::EndElement(const char *name) {
   if (!in_body_ || nesting_.empty()) return true;
   TagInfo &taginfo = nesting_.back();
 
-  // Discard stylesheets and scripts.
+  // Discard style sheets and scripts.
   if (in_style_) {
     taginfo.keep = false;
     if (TagEqual(name, "style")) in_style_ = false;
@@ -272,7 +272,7 @@ bool WebPageAnalyzer::Text(const char *str) {
   // Skip text in header.
   if (!in_body_ || nesting_.empty()) return true;
 
-  // Skip stylesheets and scripts.
+  // Skip style sheets and scripts.
   if (in_style_ || in_script_) return true;
 
   // Skip whitespace.
@@ -356,7 +356,7 @@ bool WebPageTextExtractor::StartElement(const XMLElement &e) {
   }
   if (!in_body_) return true;
 
-  // Skip stylesheets and scripts.
+  // Skip style sheets and scripts.
   if (TagEqual(e.name, "style")) in_style_ = true;
   if (TagEqual(e.name, "script")) in_script_ = true;
 
@@ -404,7 +404,7 @@ bool WebPageTextExtractor::EndElement(const char *name) {
   // Skip content in header.
   if (!in_body_ || nesting_.empty()) return true;
 
-  // Discard stylesheets and scripts.
+  // Discard style sheets and scripts.
   if (in_style_) {
     if (TagEqual(name, "style")) in_style_ = false;
   } else if (in_script_) {
@@ -435,7 +435,7 @@ bool WebPageTextExtractor::Text(const char *str) {
   // Skip text in header.
   if (!in_body_ || nesting_.empty()) return true;
 
-  // Skip stylesheets and scripts.
+  // Skip style sheets and scripts.
   if (in_style_ || in_script_) return true;
 
   if (debug_) {

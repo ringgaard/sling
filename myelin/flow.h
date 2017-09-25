@@ -64,7 +64,7 @@ class TypeTraits {
   size_t size() const { return size_; }
   bool valid() const { return type_ != DT_INVALID; }
   const char *ptx() const { return ptx_; }
-  string str(void *data) const;
+  string str(const void *data) const;
 
   // Look up traits from type code.
   static const TypeTraits &of(Type type);
@@ -81,64 +81,32 @@ class TypeTraits {
 
 // Look up traits from type.
 template<typename T> inline const TypeTraits &Traits();
-template<> inline const TypeTraits &Traits<float>() {
-  return TypeTraits::of(DT_FLOAT);
-}
-template<> inline const TypeTraits &Traits<double>() {
-  return TypeTraits::of(DT_DOUBLE);
-}
-template<> inline const TypeTraits &Traits<int32_t>() {
-  return TypeTraits::of(DT_INT32);
-}
-template<> inline const TypeTraits &Traits<uint8_t>() {
-  return TypeTraits::of(DT_UINT8);
-}
-template<> inline const TypeTraits &Traits<int16_t>() {
-  return TypeTraits::of(DT_INT16);
-}
-template<> inline const TypeTraits &Traits<int8_t>() {
-  return TypeTraits::of(DT_INT8);
-}
-template<> inline const TypeTraits &Traits<int64_t>() {
-  return TypeTraits::of(DT_INT64);
-}
-template<> inline const TypeTraits &Traits<int64>() {
-  return TypeTraits::of(DT_INT64);
-}
-template<> inline const TypeTraits &Traits<bool>() {
-  return TypeTraits::of(DT_BOOL);
-}
-template<> inline const TypeTraits &Traits<uint16_t>() {
-  return TypeTraits::of(DT_UINT16);
-}
+
+#define TYPE_TRAIT(type, dt) \
+  template<> inline const TypeTraits &Traits<type>() { \
+    return TypeTraits::of(dt); \
+  } \
+  template<> inline const TypeTraits &Traits<type *>() { \
+    return TypeTraits::of(dt); \
+  } \
+
+TYPE_TRAIT(float, DT_FLOAT);
+TYPE_TRAIT(double, DT_DOUBLE);
+TYPE_TRAIT(uint8_t, DT_UINT8);
+TYPE_TRAIT(uint16_t, DT_UINT16);
+TYPE_TRAIT(int8_t, DT_INT8);
+TYPE_TRAIT(int16_t, DT_INT16);
+TYPE_TRAIT(int32_t, DT_INT32);
+TYPE_TRAIT(int64_t, DT_INT64);
+TYPE_TRAIT(int64, DT_INT64);
+TYPE_TRAIT(bool, DT_BOOL);
+
+#undef TYPE_TRAIT
 
 // Flow graph transformations.
 class Transformations {
  public:
   ~Transformations();
-
-  // Combination of operations that can be replaced with a combined operation.
-  struct Combination {
-    Combination(const string &first,
-                const string &second,
-                const string &replacement)
-        : first(first), second(second), replacement(replacement) {}
-    string first;        // first operation
-    string second;       // second operation
-    string replacement;  // replacement operation
-  };
-
-  // Register identity operation.
-  void RegisterIdentityOp(const string &noop) {
-    noops_.push_back(noop);
-  }
-
-  // Register operation combination.
-  void RegisterCombinedOp(const string &first,
-                          const string &second,
-                          const string &replacement) {
-    combinations_.emplace_back(first, second, replacement);
-  }
 
   // Register flow transformation component. Transfers ownership from caller.
   void RegisterTransformer(Transformer *transformer) {
@@ -150,27 +118,17 @@ class Transformations {
     typers_.emplace_back(typer);
   }
 
-  // Identity operations.
-  const std::vector<string> &noops() const { return noops_; }
-
-  // Pairs of operations that can be combined.
-  const std::vector<Combination> &combinations() const { return combinations_; }
-
   // Flow transformation components.
   const std::vector<Transformer *> &transformers() const {
     return transformers_;
   }
 
   // Type inference components.
-  const std::vector<Typer *> &typers() const { return typers_; }
+  const std::vector<Typer *> &typers() const {
+    return typers_;
+  }
 
  private:
-  // Identity operations.
-  std::vector<string> noops_;
-
-  // Pairs of operations that can be combined.
-  std::vector<Combination> combinations_;
-
   // Flow transformation components.
   std::vector<Transformer *> transformers_;
 
@@ -209,6 +167,11 @@ class Shape {
   // Add dimension to shape.
   void add(int size) { dims_.push_back(size); }
 
+  // Transpose shape.
+  void transpose() {
+    if (rank() >= 2) std::swap(dims_[0], dims_[1]);
+  }
+
   // Return the rank of the shape, i.e. the number of dimensions.
   int rank() const  { return dims_.size(); }
 
@@ -228,17 +191,50 @@ class Shape {
     return n;
   }
 
-  // Check for undefined shape, i.e. some dimensions have zero size.
-  bool undefined() const { return elements() == 0; }
+  // Check if shape is fully defined, i.e. all dimensions have specified sizes.
+  bool defined() const {
+    for (int d : dims_) if (d <= 0) return false;
+    return true;
+  }
 
-  // Check for partial shape, i.e. some dimensions have unspecifed (-1) size.
-  bool partial() const { return elements() == -1; }
+  // Check if shape is missing, .e.g. some dimensions are zero.
+  bool missing() const {
+    for (int d : dims_) if (d == 0) return true;
+    return false;
+  }
+
+  // Return the number of outer elements relative to dimension.
+  int outer(int d) const {
+    int n = 1;
+    for (int i = 0; i < d; ++i) {
+      n *= dims_[i];
+      if (n < 0) return -1;
+    }
+    return n;
+  }
+
+  // Return the number of inner elements relative to dimension.
+  int inner(int d) const {
+    int n = 1;
+    for (int i = d; i < dims_.size(); ++i) {
+      n *= dims_[i];
+      if (n < 0) return -1;
+    }
+    return n;
+  }
 
   // Check if shape is the same as another shape. Undefined dimensions are
   // not compared.
   bool IsSameSize(const Shape &other) const;
   bool operator==(const Shape &other) const { return IsSameSize(other); }
   bool operator!=(const Shape &other) const { return !IsSameSize(other); }
+
+  // Check if shape is broadcast compatible with another shape.
+  bool IsCompatible(const Shape &other) const;
+
+  // Return the common size between this shape and another shape. The common
+  // size is the product of all the shared suffix dimensions.
+  int CommonSize(const Shape &other) const;
 
   // Return shape as string.
   string ToString() const;
@@ -262,12 +258,16 @@ class Attributes : public std::vector<Attribute> {
   // Get attribute value.
   const string &Get(const string &name) const;
   int Get(const string &name, int defval) const;
+  bool Get(const string &name, bool defval) const;
 
   // Check if attribute exists.
   bool Has(const string &name) const;
 
   // Set attribute.
   void Set(const string &name, const string &value);
+  void Set(const string &name, const char *value);
+  void Set(const string &name, int value);
+  void Set(const string &name, bool value);
 };
 
 // Flow graph for computation.
@@ -275,6 +275,10 @@ class Flow {
  public:
   struct Operation;
   struct Function;
+
+  // Flow file version
+  static const int kVersion = 4;
+  static const int kMagic = 0x776f6c66;
 
   // Flow variable.
   struct Variable {
@@ -300,9 +304,30 @@ class Flow {
     string DataString() const;
 
     // Set data for variable. The storage is not owned by the variable.
-    void SetData(void *buffer, int len) {
-      data = static_cast<char *>(buffer);
+    void SetData(const void *buffer, int len) {
+      data = static_cast<const char *>(buffer);
       size = len;
+    }
+
+    // Get data as scalar. Return false if types do not match.
+    template <typename T> bool GetData(T *value) const {
+      if (data == nullptr) return false;
+      auto &traits = Traits<T>();
+      if (type != traits.type() || size != traits.size()) return false;
+      *value = *reinterpret_cast<const T *>(data);
+      return true;
+    }
+
+    // Get data as vector. Return false if types do not match.
+    template <typename T> bool GetData(std::vector<T> *value) const {
+      if (data == nullptr) return false;
+      auto &traits = Traits<T>();
+      if (type != traits.type()) return false;
+      int elements = size / traits.size();
+      if (elements * traits.size() != size) return false;
+      const T *array = reinterpret_cast<const T *>(data);
+      value->assign(array, array + elements);
+      return true;
     }
 
     // Check if variable has a dependency on some operation.
@@ -314,7 +339,7 @@ class Flow {
     Type type = DT_INVALID;              // element type for variable
     bool ref = false;                    // is variable a reference?
     Shape shape;                         // variable shape
-    char *data = nullptr;                // data for constants (owned by flow)
+    const char *data = nullptr;          // data for constants (owned by flow)
     uint64_t size = 0;                   // size of data in bytes
     bool in = false;                     // is variable a function input?
     bool out = false;                    // is variable a function output?
@@ -338,6 +363,9 @@ class Flow {
     int GetAttr(const string &name, int defval) const {
       return attrs.Get(name, defval);
     }
+    bool GetAttr(const string &name, bool defval) const {
+      return attrs.Get(name, defval);
+    }
 
     // Check if operation has attribute.
     bool HasAttr(const string &name) const {
@@ -346,6 +374,15 @@ class Flow {
 
     // Set attribute.
     void SetAttr(const string &name, const string &value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, const char *value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, int value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, bool value) {
       attrs.Set(name, value);
     }
 
@@ -366,6 +403,12 @@ class Flow {
 
     // Move output variable to another operation.
     void MoveOutput(Variable *var, Operation *op);
+
+    // Replace input variable with another variable.
+    void ReplaceInput(Variable *var, Variable *replacement);
+
+    // Replace output variable with another variable.
+    void ReplaceOutput(Variable *var, Variable *replacement);
 
     // Return in and out degree.
     int indegree() const { return inputs.size(); }
@@ -410,6 +453,23 @@ class Flow {
     std::vector<Variable *> links;    // variables linked to connector
   };
 
+  // Blob for storing auxiliary data blocks in flow files.
+  struct Blob {
+    string name;                      // name of data block
+    string type;                      // data block type
+    Attributes attrs;                 // attributes for data block
+    const char *data = nullptr;       // data for blob
+    uint64_t size = 0;                // size of data for blob
+  };
+
+  // Path in flow graph.
+  struct Node {
+    int input = 0;                    // operation input
+    string type;                      // operation type
+    int output = 0;                   // operation output
+  };
+  typedef std::vector<Node> Path;
+
   Flow();
   ~Flow();
 
@@ -418,6 +478,13 @@ class Flow {
 
   // Load flow from file.
   Status Load(const string &filename);
+
+  // Read flow from buffer. This does not take ownership of the buffer and it
+  // must outlive the flow.
+  void Read(const char *data, size_t size);
+
+  // Save flow to file.
+  void Save(const string &filename, int version = kVersion) const;
 
   // Analyze flow.
   void Analyze(const Transformations &transformations);
@@ -446,11 +513,17 @@ class Flow {
   // Add connector.
   Connector *AddConnector(const string &name);
 
+  // Add data block.
+  Blob *AddBlob(const string &name, const string &type);
+
   // Delete variable.
   void DeleteVariable(Variable *var);
 
   // Delete operation.
   void DeleteOperation(Operation *op);
+
+  // Delete function.
+  void DeleteFunction(Function *func);
 
   // Look up variable by name.
   Variable *Var(const string &name);
@@ -460,6 +533,9 @@ class Flow {
 
   // Look up function by name.
   Function *Func(const string &name);
+
+  // Look up blob by name.
+  Blob *DataBlock(const string &name);
 
   // Return flow in text format.
   string ToString() const;
@@ -476,6 +552,9 @@ class Flow {
   // Return all connectors.
   const std::vector<Connector *> &cnxs() const { return cnxs_; }
 
+  // Return all data blocks.
+  const std::vector<Blob *> &blobs() const { return blobs_; }
+
   // Batch size.
   int batch_size() const { return batch_size_; }
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
@@ -486,9 +565,20 @@ class Flow {
                   const string &combined,
                   bool merge_inputs = false);
 
-  // Find sequences of ops in flow graph. This only matches the first output
-  // for each op in the sequence.
-  std::vector<Operation *> Find(const std::vector<string> &ops);
+  // Remove operation from flow.
+  void RemoveOperation(Operation *op);
+
+  // Eliminate no-op from flow by moving input to output.
+  void Eliminate(Operation *op);
+
+  // Find sequences of ops in flow graph matching a path expression. A path
+  // expression is a list of nodes separated by '|'. Each node is a node type
+  // with optional input and ouput numbers, i.e. {<input>:}<type>{:<output>}.
+  std::vector<Operation *> Find(const string &pathexpr);
+  std::vector<Operation *> Find(const std::vector<string> &nodes);
+  std::vector<Operation *> Find(std::initializer_list<string> nodes);
+  std::vector<Operation *> Find(const Path &path);
+  static void ParsePath(const string &pathexpr, Path *path);
 
   // Extract sub-flow from flow. A new function will be added to the subflow and
   // will contain all the dependencies of the outputs excluding the dependencies
@@ -506,21 +596,9 @@ class Flow {
   // Infer which variables are inputs and outputs to functions.
   void InferInputsAndOutputs();
 
-  // Apply transformations to flow graph.
-  void Transform(const Transformations &transformations);
-
-  // Combine two op types to a single combined op type.
-  bool Combine(const string &first,
-               const string &second,
-               const string &combined);
-
-  // Remove operation from flow.
-  void Eliminate(Operation *op);
-
-  // Merge two operations into a combined op.
-  Operation *Merge(Operation *first,
-                   Operation *second,
-                   const string &combined);
+  // Apply transformations to flow graph. Returns false if no transformations
+  // were applied.
+  bool Transform(const Transformations &transformations);
 
   // Sort operations in topological order of computation.
   void Sort();
@@ -539,6 +617,9 @@ class Flow {
 
   // Connectors.
   std::vector<Connector *> cnxs_;
+
+  // Blobs.
+  std::vector<Blob *> blobs_;
 
   // Data areas owned by flow.
   std::vector<char *> memory_;

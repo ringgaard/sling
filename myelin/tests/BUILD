@@ -23,10 +23,7 @@ cc_binary(
     ":compare-kernels",
     "//base",
     "//file:posix",
-    "//myelin/kernel:arithmetic",
-    "//myelin/kernel:avx",
-    "//myelin/kernel:generic",
-    "//myelin/kernel:sse",
+    "//myelin/kernel:tensorflow",
   ],
 )
 
@@ -36,6 +33,19 @@ cc_binary(
   deps = [
     "//base",
     "//myelin:express",
+  ],
+)
+
+cc_binary(
+  name = "exprgen-test",
+  srcs = ["exprgen-test.cc"],
+  deps = [
+    "//base",
+    "//file",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin/kernel:tensorflow",
   ],
 )
 
@@ -50,11 +60,7 @@ cc_binary(
     "//myelin:flow",
     "//myelin:graph",
     "//myelin:profile",
-    "//myelin/kernel:avx",
-    "//myelin/kernel:generic",
-    "//myelin/kernel:sse",
-    "//myelin/kernel:dragnn",
-    "//myelin/kernel:arithmetic",
+    "//myelin/kernel:tensorflow",
     "//myelin/kernel:wavenet",
   ],
 )
@@ -65,16 +71,69 @@ cc_binary(
   deps = [
     "//base",
     "//base:clock",
+    "//file",
     "//file:posix",
     "//myelin:compute",
     "//myelin:flow",
     "//myelin:graph",
     "//myelin:profile",
-    "//myelin/kernel:avx",
-    "//myelin/kernel:generic",
-    "//myelin/kernel:sse",
+    "//myelin/kernel:tensorflow",
     "//myelin/kernel:dragnn",
-    "//myelin/kernel:arithmetic",
+  ],
+)
+
+cc_binary(
+  name = "convert-tagger-flow",
+  srcs = ["convert-tagger-flow.cc"],
+  deps = [
+    "//base",
+    "//file",
+    "//file:posix",
+    "//myelin:flow",
+  ],
+)
+
+cc_binary(
+  name = "tdozat-test",
+  srcs = ["tdozat-test.cc"],
+  deps = [
+    "//base",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
+    "//myelin:multi-process",
+    "//myelin:profile",
+    "//myelin/kernel:tensorflow",
+  ],
+)
+
+cc_binary(
+  name = "mnist-test",
+  srcs = ["mnist-test.cc"],
+  deps = [
+    "//base",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
+    "//myelin:profile",
+    "//myelin/kernel:tensorflow",
+  ],
+)
+
+cc_binary(
+  name = "sempar-test",
+  srcs = ["sempar-test.cc"],
+  deps = [
+    "//base",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
+    "//myelin:profile",
+    "//myelin/kernel:dragnn",
+    "//myelin/kernel:tensorflow",
   ],
 )
 

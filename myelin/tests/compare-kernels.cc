@@ -7,9 +7,11 @@
 #include "base/logging.h"
 #include "file/file.h"
 #include "myelin/compute.h"
+#include "myelin/macro-assembler.h"
 
 DEFINE_bool(debug_base, false, "Debug base kernel");
 DEFINE_bool(debug_test, false, "Debug test kernel");
+DEFINE_bool(scramble_registers, false, "Scramble registers on entry");
 DEFINE_bool(log_input_tensors, false, "Dump input tensors");
 DEFINE_bool(log_output_tensors, false, "Dump output tensors");
 DEFINE_string(test_code_output, "", "File for generated test code");
@@ -17,12 +19,91 @@ DEFINE_string(base_code_output, "", "File for generated base code");
 DEFINE_bool(intrand, false, "Use integers for random number generation");
 DEFINE_int32(minint, -64, "Minimum integer for random number generation");
 DEFINE_int32(maxint, 64, "Maximum integer for random number generation");
+DEFINE_bool(strict, false, "Strict math mode");
+
+#define __ masm->
 
 namespace sling {
 namespace myelin {
 
+using namespace jit;
+
 static const float kEpsilon = 1e-6;
 static const float kMinimum = 1e-3;
+
+static const int redzone_size = 128;
+static char redzone[redzone_size] =
+  "<- START *REDZONE* Don't overwrite this region of memory!"
+  "Memory checked on deallocation. Achtung! *REDZONE* END ->";
+
+// Debug runtime with memory checking.
+class DebugRuntime : public Runtime {
+ public:
+  void AllocateInstance(Instance *instance) override {
+    // Allocate space for redzone on both sides of instance buffer.
+    int alignment = instance->alignment();
+    CHECK(redzone_size % alignment == 0);
+    int size = instance->size() + 2 * redzone_size;
+    char *data;
+    int rc = posix_memalign(reinterpret_cast<void **>(&data), alignment, size);
+    CHECK_EQ(rc, 0) << "Cannot allocate memory, size: " << size
+                  << " alignment: " << alignment;
+
+    // Initialize redzones.
+    memcpy(data, redzone, redzone_size);
+    memset(data + redzone_size, 0, instance->size());
+    memcpy(data + redzone_size + instance->size(), redzone, redzone_size);
+
+    // Return data buffer between the redzones.
+    instance->set_data(data + redzone_size);
+  }
+
+  void FreeInstance(Instance *instance) override {
+    // Check redzones.
+    char *front = instance->data() - redzone_size;
+    char *back = instance->data() + instance->size();
+    CHECK(memcmp(front, redzone, redzone_size) == 0) << "Data corruption";
+    CHECK(memcmp(back, redzone, redzone_size) == 0) << "Data corruption";
+    free(front);
+  }
+
+  void ClearInstance(Instance *instance) override {
+    memset(instance->data(), 0, instance->size());
+  }
+
+  void GeneratePrologue(Cell *cell, MacroAssembler *masm) override {
+    if (FLAGS_scramble_registers) {
+      // Use time stamp counter for scrambling registers on entry.
+      __ rdtsc();
+      __ shlq(rdx, Immediate(32));
+      __ orq(rax, rdx);
+      __ movq(xmm0, rax);
+      __ shufps(xmm0, xmm0, 0);
+
+      if (masm->Enabled(AVX)) {
+        __ vinsertf128(ymm0, ymm0, xmm0, 1);
+        for (int r = 1; r < 16; r++) {
+          YMMRegister reg = {r};
+          __ vmovdqa(reg, ymm0);
+        }
+      } else {
+        for (int r = 1; r < 16; r++) {
+          XMMRegister reg = {r};
+          __ movdqa(reg, xmm0);
+        }
+      }
+    }
+  }
+
+  bool SupportsAsync() override { return false; }
+  TaskFunc StartTaskFunc() override { return StartTask; }
+  TaskFunc WaitTaskFunc() override { return WaitTask; }
+
+  static void StartTask(Task *task) { task->func(task->arg); }
+  static void WaitTask(Task *task) {}
+};
+
+static DebugRuntime debug_runtime;
 
 class FloatPRNG {
  public:
@@ -56,6 +137,7 @@ struct KernelCompiler {
       LOG(ERROR) << "Unknown kernel: " << kernel;
       return false;
     }
+    network.set_runtime(&debug_runtime);
     network.set_parameter_element_order(ANY_ORDER);
     if (debug) network.set_debug(true);
     if (!network.Compile(flow, singleton)) {
@@ -68,6 +150,9 @@ struct KernelCompiler {
       return false;
     }
     if (!binfile.empty()) func->WriteCodeToFile(binfile);
+    if (!func->steps().empty() && !func->steps()[0]->variant().empty()) {
+      VLOG(2) << kernel << " variant " << func->steps()[0]->variant();
+    }
 
     return true;
   }
@@ -87,6 +172,7 @@ KernelComparator::KernelComparator(
       base_kernel_name_(base_kernel_name) {
   Flow::Function *func = flow_.AddFunction("benchmark");
   op_ = flow_.AddOperation("test", operation_name);
+  if (FLAGS_strict) op_->SetAttr("strict", true);
   func->AddOperation(op_);
 }
 
@@ -98,6 +184,7 @@ void FltKernelComparator::AddInput(const string &name,
   inputs_.push_back(input);
   low_.push_back(low);
   high_.push_back(high);
+  input->in = true;
 }
 
 void FltKernelComparator::AddOutput(const string &name,
@@ -107,6 +194,7 @@ void FltKernelComparator::AddOutput(const string &name,
   op_->AddOutput(output);
   outputs_.push_back(output);
   tolerance_.push_back(tolerance);
+  output->out = true;
 }
 
 bool FltKernelComparator::Check(int iterations) {
@@ -243,11 +331,11 @@ bool FltKernelComparator::Check(int iterations) {
 
   if (max_error != 0 || error != 0.0 || num_inexact != 0) {
     double avg_error = error / num_elements;
-    LOG(WARNING) << num_inexact << "/" << num_elements
-                 << " inexact values in  comparison between "
-                 << test_kernel_name_ << " and " << base_kernel_name_
-                 << " (max. error: " << max_error << ", "
-                 << "avg. error: " << avg_error << ")";
+    VLOG(1) << num_inexact << "/" << num_elements
+            << " inexact values in comparison between "
+            << test_kernel_name_ << " and " << base_kernel_name_
+            << " (max. error: " << max_error << ", "
+            << "avg. error: " << avg_error << ")";
   }
 
   if (num_errors != 0) {
@@ -265,6 +353,7 @@ void IntKernelComparator::AddInput(const string &name,
   Flow::Variable *input = flow_.AddVariable(name, type, shape);
   op_->AddInput(input);
   inputs_.push_back(input);
+  input->in = true;
 }
 
 void IntKernelComparator::AddOutput(const string &name,
@@ -273,6 +362,7 @@ void IntKernelComparator::AddOutput(const string &name,
   Flow::Variable *output = flow_.AddVariable(name, type, shape);
   op_->AddOutput(output);
   outputs_.push_back(output);
+  output->out = true;
 }
 
 static int64 GetInt(Instance *data, Tensor *t, int r) {
@@ -284,6 +374,7 @@ static int64 GetInt(Instance *data, Tensor *t, int r) {
     default:
       LOG(FATAL) << "Unsupported type " << t->type();
   }
+  return 0;
 }
 
 static int64 GetInt(Instance *data, Tensor *t, int r, int c) {
@@ -295,6 +386,7 @@ static int64 GetInt(Instance *data, Tensor *t, int r, int c) {
     default:
       LOG(FATAL) << "Unsupported type " << t->type();
   }
+  return 0;
 }
 
 static void SetInt(Instance *data, Tensor *t, int r, int64 value) {

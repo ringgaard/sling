@@ -33,27 +33,44 @@ ModuleInitializer::ModuleInitializer(const char *n, Handler h)
   last = this;
 }
 
+static void RunModuleInitializers(bool silent) {
+  ModuleInitializer *initializer = ModuleInitializer::first;
+  while (initializer != nullptr) {
+    if (!silent) VLOG(2) << "Initializing " << initializer->name << " module";
+    initializer->handler();
+    initializer = initializer->next;
+  }
+}
+
 void InitProgram(int *argc, char ***argv) {
   // Install signal handlers for dumping crash information.
   google::InstallFailureSignalHandler();
 
   // Initialize logging.
-  google::InitGoogleLogging((*argv)[0]);
+  google::InitGoogleLogging(*argc == 0 ? "program" : (*argv)[0]);
 
-  // Intialize command line flags.
-  string usage;
-  usage.append((*argv)[0]);
-  usage.append(" [OPTIONS]");
-  gflags::SetUsageMessage(usage);
-  gflags::ParseCommandLineFlags(argc, argv, true);
+  // Initialize command line flags.
+  if (*argc > 0) {
+    string usage;
+    usage.append((*argv)[0]);
+    usage.append(" [OPTIONS]");
+    gflags::SetUsageMessage(usage);
+    gflags::ParseCommandLineFlags(argc, argv, true);
+  }
 
   // Run module initializers.
-  ModuleInitializer *initializer = ModuleInitializer::first;
-  while (initializer != nullptr) {
-    VLOG(2) << "Initializing " << initializer->name << " module";
-    initializer->handler();
-    initializer = initializer->next;
-  }
+  RunModuleInitializers(false);
+}
+
+void InitSharedLibrary() {
+  // Install signal handlers for dumping crash information.
+  google::InstallFailureSignalHandler();
+
+  // Initialize logging.
+  google::InitGoogleLogging("library");
+
+  // Run module initializers.
+  RunModuleInitializers(true);
 }
 
 }  // namespace sling

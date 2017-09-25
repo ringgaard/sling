@@ -119,7 +119,7 @@ class WebPageAnalyzer : public HTMLParser {
     // Whether any child tags have contents.
     bool keep_children = false;
 
-    // Wether we should keep text contents from tag.
+    // Whether we should keep text contents from tag.
     bool keep = false;
 
     // Whether this tag has been manually blocked.
@@ -174,7 +174,7 @@ class WebPageTextExtractor : public HTMLParser {
   bool debug() const { return debug_; }
   void set_debug(bool debug) { debug_ = debug; }
 
-  // Exracted text.
+  // Extracted text.
   const string text() const { return text_; }
 
  private:
@@ -224,7 +224,7 @@ class WebPageTextExtractor : public HTMLParser {
   // Output HTML tags in extracted text.
   bool html_output_ = false;
 
-  // In deug more all text is extracted but annotated with debug information.
+  // In debug mode, all text is extracted but annotated with debug information.
   bool debug_ = false;
 };
 

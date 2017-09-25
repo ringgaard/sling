@@ -20,7 +20,7 @@ const char *kAliasSourceName[kNumAliasSources] = {
   "wikidata_alias",
   "wikipedia_title",
   "wikipedia_redirect",
-  "wikipedia_achor",
+  "wikipedia_anchor",
   "wikipedia_disambiguation",
 };
 

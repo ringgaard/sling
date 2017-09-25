@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "myelin/generator/expression.h"
 
 #define __ masm->
@@ -23,7 +37,7 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
     model_.func_reg_mem = true;
   }
 
-  string Name() override { return "VectorIntAVX256"; }
+  string Name() override { return "VIntAVX256"; }
 
   int VectorSize() override { return YMMRegSize; }
 
@@ -42,7 +56,7 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
   void Generate(Express::Op *instr, MacroAssembler *masm) override {
     switch (instr->type) {
       case Express::MOV:
-        if (IsClear(instr)) {
+        if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
           __ vpxor(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
         } else {
@@ -111,19 +125,6 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
               &Assembler::vpmaxsd, &Assembler::vpmaxsd,
               &Assembler::vpmaxsd, &Assembler::vpmaxsd,  // dummy
               masm);
-        }
-        break;
-      case Express::RELU:
-        if (type_ == DT_INT64) {
-          UNSUPPORTED;
-        } else {
-          __ vpxor(ymm(instr->src), ymm(instr->src), ymm(instr->src));
-          GenerateYMMIntOp(instr,
-              &Assembler::vpmaxsb, &Assembler::vpmaxsb,
-              &Assembler::vpmaxsw, &Assembler::vpmaxsw,
-              &Assembler::vpmaxsd, &Assembler::vpmaxsd,
-              &Assembler::vpmaxsd, &Assembler::vpmaxsd,  // dummy
-              masm, 0);
         }
         break;
       default: UNSUPPORTED;

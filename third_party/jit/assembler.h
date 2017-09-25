@@ -73,7 +73,7 @@ enum ScaleFactor {
 class Operand {
  public:
   // [base + disp/r]
-  Operand(Register base, int32_t disp = 0);
+  explicit Operand(Register base, int32_t disp = 0);
 
   // [base + index*scale + disp/r]
   Operand(Register base,
@@ -290,6 +290,7 @@ class Assembler : public CodeGenerator {
   // Move the low 16 bits of a 64-bit register value to a 16-bit
   // memory location.
   void movw(Register dst, const Operand &src);
+  void movw(Register dst, Immediate imm);
   void movw(const Operand &dst, Register src);
   void movw(const Operand &dst, Immediate imm);
 
@@ -298,7 +299,7 @@ class Assembler : public CodeGenerator {
   void movl(const Operand &dst, Label *src);
 
   // Loads a pointer into a register.
-  void movp(Register dst, void *ptr);
+  void movp(Register dst, const void *ptr);
 
   // Loads a 64-bit immediate into a register.
   void movq(Register dst, int64_t value);
@@ -322,8 +323,15 @@ class Assembler : public CodeGenerator {
   void repmovsl() { emit_repmovs(kInt32Size); }
   void repmovsq() { emit_repmovs(kInt64Size); }
 
+  // Repeated stores.
+  void repstosb();
+  void repstosw();
+  void repstosp() { emit_repstos(kPointerSize); }
+  void repstosl() { emit_repstos(kInt32Size); }
+  void repstosq() { emit_repstos(kInt64Size); }
+
   // Instruction to load from an immediate 64-bit pointer into RAX.
-  void load_rax(void *ptr);
+  void load_rax(const void *ptr);
 
   // Conditional moves.
   void cmovq(Condition cc, Register dst, Register src);
@@ -373,9 +381,6 @@ class Assembler : public CodeGenerator {
   void andb(Register dst, Immediate src) {
     immediate_arithmetic_op_8(0x4, dst, src);
   }
-
-  void decb(Register dst);
-  void decb(const Operand &dst);
 
   // Lock prefix.
   void lock();
@@ -444,27 +449,31 @@ class Assembler : public CodeGenerator {
   // Shifts src:dst right by cl bits, affecting only dst.
   void shrd(Register dst, Register src);
 
-  void store_rax(void *dst);
+  void store_rax(const void *dst);
 
   void addb(Register dst, Register src) { emit_add(dst, src, 1); }
   void addb(Register dst, const Operand &src) { emit_add(dst, src, 1); }
   void addb(const Operand &dst, Register src) { emit_add(dst, src, 1); }
   void addb(const Operand &dst, Immediate src) { emit_add(dst, src, 1); }
+  void addb(Register dst, Immediate src) { emit_add(dst, src, 1); }
 
   void addw(Register dst, Register src) { emit_add(dst, src, 2); }
   void addw(Register dst, const Operand &src) { emit_add(dst, src, 2); }
   void addw(const Operand &dst, Register src) { emit_add(dst, src, 2); }
   void addw(const Operand &dst, Immediate src) { emit_add(dst, src, 2); }
+  void addw(Register dst, Immediate src) { emit_add(dst, src, 2); }
 
   void subb(Register dst, Register src) { emit_sub(dst, src, 1); }
   void subb(Register dst, const Operand &src) { emit_sub(dst, src, 1); }
   void subb(const Operand &dst, Register src) { emit_sub(dst, src, 1); }
   void subb(const Operand &dst, Immediate src) { emit_sub(dst, src, 1); }
+  void subb(Register dst, Immediate src) { emit_sub(dst, src, 1); }
 
   void subw(Register dst, Register src) { emit_sub(dst, src, 2); }
   void subw(Register dst, const Operand &src) { emit_sub(dst, src, 2); }
   void subw(const Operand &dst, Register src) { emit_sub(dst, src, 2); }
   void subw(const Operand &dst, Immediate src) { emit_sub(dst, src, 2); }
+  void subw(Register dst, Immediate src) { emit_sub(dst, src, 2); }
 
   void imulb(Register src) { emit_imul(src, 1); }
   void imulb(const Operand &src) { emit_imul(src, 1); }
@@ -473,10 +482,49 @@ class Assembler : public CodeGenerator {
   void imulw(Register dst, Register src) { emit_imul(dst, src, 2); }
   void imulw(Register dst, const Operand &src) { emit_imul(dst, src, 2); }
 
+  void imulw(Register dst, Register src, Immediate imm) {
+    emit_imul(dst, src, imm, 2);
+  }
+  void imulw(Register dst, const Operand &src, Immediate imm) {
+    emit_imul(dst, src, imm, 2);
+  }
+  void imull(Register dst, Register src, Immediate imm) {
+    emit_imul(dst, src, imm, 4);
+  }
+  void imull(Register dst, const Operand &src, Immediate imm) {
+    emit_imul(dst, src, imm, 4);
+  }
+  void imulq(Register dst, Register src, Immediate imm) {
+    emit_imul(dst, src, imm, 8);
+  }
+  void imulq(Register dst, const Operand &src, Immediate imm) {
+    emit_imul(dst, src, imm, 8);
+  }
+
   void idivb(Register src) { emit_idiv(src, 1); }
   void idivb(const Operand &src) { emit_idiv(src, 1); }
   void idivw(Register src) { emit_idiv(src, 2); }
   void idivw(const Operand &src) { emit_idiv(src, 2); }
+
+  void incb(Register dst) { emit_inc(dst, 1); }
+  void incb(const Operand &dst) { emit_inc(dst, 1); }
+  void incw(Register dst) { emit_inc(dst, 2); }
+  void incw(const Operand &dst) { emit_inc(dst, 2); }
+
+  void decb(Register dst);
+  void decb(const Operand &dst);
+  void decw(Register dst) { emit_dec(dst, 2); }
+  void decw(const Operand &dst) { emit_dec(dst, 2); }
+
+  void shlb(Register dst, Immediate imm8) { shift(dst, imm8, 0x4, 1); }
+  void shlb(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x4, 1); }
+  void shlw(Register dst, Immediate imm8) { shift(dst, imm8, 0x4, 2); }
+  void shlw(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x4, 2); }
+
+  void shrb(Register dst, Immediate imm8) { shift(dst, imm8, 0x5, 1); }
+  void shrb(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x5, 1); }
+  void shrw(Register dst, Immediate imm8) { shift(dst, imm8, 0x5, 2); }
+  void shrw(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x5, 2); }
 
   void testb(Register dst, Register src);
   void testb(Register reg, Immediate mask);
@@ -511,6 +559,11 @@ class Assembler : public CodeGenerator {
   void ud2();
   void setcc(Condition cc, Register reg);
   void rdtsc();
+
+  void prefetcht0(const Operand &src) { emit_prefetch(src, 1); }
+  void prefetcht1(const Operand &src) { emit_prefetch(src, 2); }
+  void prefetcht2(const Operand &src) { emit_prefetch(src, 3); }
+  void prefetchnta(const Operand &src) { emit_prefetch(src, 0); }
 
   // Label operations & relative jumps (PPUM Appendix D)
   //
@@ -770,6 +823,7 @@ class Assembler : public CodeGenerator {
   // SSE 4.1 instructions.
   void insertps(XMMRegister dst, XMMRegister src, byte imm8);
   void extractps(Register dst, XMMRegister src, byte imm8);
+
   void pextrb(Register dst, XMMRegister src, int8_t imm8);
   void pextrb(const Operand &dst, XMMRegister src, int8_t imm8);
   void pextrw(Register dst, XMMRegister src, int8_t imm8);
@@ -786,6 +840,11 @@ class Assembler : public CodeGenerator {
   void pinsrd(XMMRegister dst, const Operand &src, int8_t imm8);
   void pinsrq(XMMRegister dst, Register src, int8_t imm8);
   void pinsrq(XMMRegister dst, const Operand &src, int8_t imm8);
+
+  void blendps(XMMRegister dst, const Operand &src, int8_t mask);
+  void blendps(XMMRegister dst, XMMRegister src, int8_t mask);
+  void blendpd(XMMRegister dst, XMMRegister src, int8_t mask);
+  void blendpd(XMMRegister dst, const Operand &src, int8_t mask);
 
   void roundss(XMMRegister dst, const Operand &src, int8_t mode);
   void roundss(XMMRegister dst, XMMRegister src, int8_t mode);
@@ -1039,7 +1098,6 @@ class Assembler : public CodeGenerator {
     impl(opcode, dst, src1, src2);                                     \
   }
 
-  AVX_SP_3(vsqrt, 0x51);
   AVX_SP_3(vadd, 0x58);
   AVX_SP_3(vsub, 0x5c);
   AVX_SP_3(vmul, 0x59);
@@ -1219,6 +1277,48 @@ class Assembler : public CodeGenerator {
   void vroundpd(YMMRegister dst, const Operand &src, int8_t mode) {
     vinstr(0x09, dst, ymm0, src, k66, k0F3A, kWIG, 1);
     emit(mode);
+  }
+
+  void vblendps(XMMRegister dst, XMMRegister src1, XMMRegister src2,
+                int8_t mask) {
+    vinstr(0x0C, dst, src1, src2, k66, k0F3A, kWIG);
+    emit(mask);
+  }
+  void vblendps(XMMRegister dst, XMMRegister src1, const Operand &src2,
+                int8_t mask) {
+    vinstr(0x0C, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mask);
+  }
+  void vblendps(YMMRegister dst, YMMRegister src1, YMMRegister src2,
+                int8_t mask) {
+    vinstr(0x0C, dst, src1, src2, k66, k0F3A, kWIG);
+    emit(mask);
+  }
+  void vblendps(YMMRegister dst, YMMRegister src1, const Operand &src2,
+                int8_t mask) {
+    vinstr(0x0C, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mask);
+  }
+
+  void vblendpd(XMMRegister dst, XMMRegister src1, XMMRegister src2,
+                int8_t mask) {
+    vinstr(0x0D, dst, src1, src2, k66, k0F3A, kWIG);
+    emit(mask);
+  }
+  void vblendpd(XMMRegister dst, XMMRegister src1, const Operand &src2,
+                int8_t mask) {
+    vinstr(0x0D, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mask);
+  }
+  void vblendpd(YMMRegister dst, YMMRegister src1, YMMRegister src2,
+                int8_t mask) {
+    vinstr(0x0D, dst, src1, src2, k66, k0F3A, kWIG);
+    emit(mask);
+  }
+  void vblendpd(YMMRegister dst, YMMRegister src1, const Operand &src2,
+                int8_t mask) {
+    vinstr(0x0D, dst, src1, src2, k66, k0F3A, kWIG, 1);
+    emit(mask);
   }
 
   void vsd(byte op, XMMRegister dst, XMMRegister src1, XMMRegister src2) {
@@ -1691,6 +1791,15 @@ class Assembler : public CodeGenerator {
     emit(imm8);
   }
 
+  void vpermq(YMMRegister dst, YMMRegister src, int8_t imm8) {
+    vinstr(0x00, dst, ymm0, src, k66, k0F3A, kW1);
+    emit(imm8);
+  }
+  void vpermq(YMMRegister dst, const Operand &src, int8_t imm8) {
+    vinstr(0x00, dst, ymm0, src, k66, k0F3A, kW1, 1);
+    emit(imm8);
+  }
+
   void vbroadcastss(XMMRegister dst, XMMRegister src) {
     vinstr(0x18, dst, xmm0, src, k66, k0F38, kW0);
   }
@@ -1922,6 +2031,19 @@ class Assembler : public CodeGenerator {
   }
   void vcvtdq2ps(YMMRegister dst, const Operand &src) {
     vinstr(0x5b, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+
+  void vrcpps(XMMRegister dst, XMMRegister src) {
+    vinstr(0x53, dst, xmm0, src, kNone, k0F, kWIG);
+  }
+  void vrcpps(XMMRegister dst, const Operand &src) {
+    vinstr(0x53, dst, xmm0, src, kNone, k0F, kWIG);
+  }
+  void vrcpps(YMMRegister dst, YMMRegister src) {
+    vinstr(0x53, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+  void vrcpps(YMMRegister dst, const Operand &src) {
+    vinstr(0x53, dst, ymm0, src, kNone, k0F, kWIG);
   }
 
   void vzeroall();
@@ -2448,7 +2570,7 @@ class Assembler : public CodeGenerator {
     pc_ += sizeof(uint32_t);
   }
 
-  void emitp(void *x) {
+  void emitp(const void *x) {
     uintptr_t value = reinterpret_cast<uintptr_t>(x);
     Memory::uintptr_at(pc_) = value;
     pc_ += sizeof(uintptr_t);
@@ -2740,6 +2862,7 @@ class Assembler : public CodeGenerator {
                      Register reg,
                      const Operand &rm_reg,
                      int size);
+
   // Operate on a byte in memory or register.
   void immediate_arithmetic_op_8(byte subcode,
                                  Register dst,
@@ -2747,6 +2870,7 @@ class Assembler : public CodeGenerator {
   void immediate_arithmetic_op_8(byte subcode,
                                  const Operand &dst,
                                  Immediate src);
+
   // Operate on a word in memory or register.
   void immediate_arithmetic_op_16(byte subcode,
                                   Register dst,
@@ -2754,7 +2878,9 @@ class Assembler : public CodeGenerator {
   void immediate_arithmetic_op_16(byte subcode,
                                   const Operand &dst,
                                   Immediate src);
-  // Operate on operands/registers with pointer size, 32-bit or 64-bit size.
+
+  // Operate on operands/registers with any size, 8-bit, 16-bit, 32-bit or
+  // 64-bit size.
   void immediate_arithmetic_op(byte subcode,
                                Register dst,
                                Immediate src,
@@ -2839,9 +2965,6 @@ class Assembler : public CodeGenerator {
   // operation is only atomic if prefixed by the lock instruction.
   void emit_cmpxchg(const Operand &dst, Register src, int size);
 
-  void emit_dec(Register dst, int size);
-  void emit_dec(const Operand &dst, int size);
-
   // Divide rdx:rax by src. Quotient in rax, remainder in rdx when size is 64.
   // Divide edx:eax by lower 32 bits of src. Quotient in eax, remainder in edx
   // when size is 32.
@@ -2861,6 +2984,8 @@ class Assembler : public CodeGenerator {
 
   void emit_inc(Register dst, int size);
   void emit_inc(const Operand &dst, int size);
+  void emit_dec(Register dst, int size);
+  void emit_dec(const Operand &dst, int size);
 
   void emit_lea(Register dst, const Operand &src, int size);
 
@@ -2902,6 +3027,7 @@ class Assembler : public CodeGenerator {
   }
 
   void emit_repmovs(int size);
+  void emit_repstos(int size);
 
   void emit_sbb(Register dst, Register src, int size) {
     arithmetic_op(0x1b, dst, src, size);
@@ -2939,13 +3065,7 @@ class Assembler : public CodeGenerator {
   void emit_xchg(Register dst, const Operand &src, int size);
 
   void emit_xor(Register dst, Register src, int size) {
-    if (size == kInt64Size && dst.code() == src.code()) {
-    // 32 bit operations zero the top 32 bits of 64 bit registers. Therefore
-    // there is no need to make this a 64 bit operation.
-      arithmetic_op(0x33, dst, src, kInt32Size);
-    } else {
-      arithmetic_op(0x33, dst, src, size);
-    }
+    arithmetic_op(0x33, dst, src, size);
   }
 
   void emit_xor(Register dst, const Operand &src, int size) {
@@ -2963,6 +3083,8 @@ class Assembler : public CodeGenerator {
   void emit_xor(const Operand &dst, Register src, int size) {
     arithmetic_op(0x31, src, dst, size);
   }
+
+  void emit_prefetch(const Operand &src, int subcode);
 
   // Most BMI instructions are similiar.
   void bmi1q(byte op, Register reg, Register vreg, Register rm);

@@ -177,7 +177,7 @@ class NameTableBuilder : public task::FrameProcessor {
   task::Counter *num_entities_ = nullptr;
   task::Counter *num_aliases_ = nullptr;
 
-  // Mutex for serializaring access to repository.
+  // Mutex for serializing access to repository.
   Mutex mu_;
 };
 

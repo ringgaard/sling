@@ -20,7 +20,7 @@ class Processor;
 // Format specifier.
 class Format {
  public:
-  // Create format for format speficier:
+  // Create format for format specifier:
   //   <file format>
   //   <file format>/<value format>
   //   <file format>/<key format>:<value format>
@@ -100,7 +100,7 @@ class Resource {
   // Resource name, e.g. a file name.
   string name_;
 
-  // Resoure shard.
+  // Resource shard.
   Shard shard_;
 
   // Format for resource.
@@ -204,8 +204,8 @@ class Channel {
   Counter *output_value_bytes_ = nullptr;
 };
 
-// A task processor reads input from input resources and message from input
-// channels and produces output resources and messages on output channels.
+// A task processor reads input from input resources and message from source
+// channels and produces output resources and messages on sink channels.
 class Processor : public Component<Processor> {
  public:
   virtual ~Processor() = default;

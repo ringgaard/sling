@@ -45,6 +45,10 @@ class GenericFltVecMatMulBase : public Kernel {
     if (W->rank() != 2 || W->type() != DT_FLOAT) return false;
     if (y->rank() != 2 || y->type() != DT_FLOAT) return false;
 
+    // Transpose not supported.
+    if (step->GetAttr("transpose_a", false)) return false;
+    if (step->GetAttr("transpose_b", false)) return false;
+
     // Check shape. First input must be a row vector.
     if (x->dim(0) != 1 || x->dim(1) != W->dim(0)) return false;
     if (y->dim(0) != x->dim(0) || y->dim(1) != W->dim(1)) return false;
@@ -97,6 +101,9 @@ class GenericFltVecMatMulBase : public Kernel {
     XMMRegister sum = mm.allocx();
     XMMRegister zero = relu_ ? mm.allocx() : no_xmm_reg;
 
+    bool strict = step->GetAttr("strict", false);
+    if (strict) step->set_variant("strict");
+
     __ LoadTensorAddress(input, x);
     __ LoadTensorAddress(matrix, W);
     if (bias_) {
@@ -109,7 +116,7 @@ class GenericFltVecMatMulBase : public Kernel {
     }
 
     __ LoopStart(&l1);
-    if (bias_) {
+    if (bias_ && !strict) {
       __ movss(sum, Operand(vector, col, times_4));
     } else {
       __ xorps(sum, sum);
@@ -123,6 +130,10 @@ class GenericFltVecMatMulBase : public Kernel {
     __ cmpq(row, Immediate(rows));
     __ addss(sum, elem);
     __ j(not_equal, &l2);
+
+    if (bias_ && strict) {
+      __ addss(sum, Operand(vector, col, times_4));
+    }
 
     if (relu_) {
       __ maxss(sum, zero);
@@ -199,21 +210,31 @@ class GenericFltMatMatMul : public Kernel {
     if (C->rank() != 2 || C->type() != DT_FLOAT) return false;
 
     // Check shape.
-    if (A->dim(0) != C->dim(0)) return false;
-    if (A->dim(1) != B->dim(0)) return false;
-    if (B->dim(1) != C->dim(1)) return false;
+    bool transpose_a = step->GetAttr("transpose_a", false);
+    bool transpose_b = step->GetAttr("transpose_b", false);
+    Shape a = A->shape();
+    Shape b = B->shape();
+    Shape c = C->shape();
+    if (transpose_a) a.transpose();
+    if (transpose_b) b.transpose();
+
+    if (a.dim(0) != c.dim(0)) return false;
+    if (a.dim(1) != b.dim(0)) return false;
+    if (b.dim(1) != c.dim(1)) return false;
 
     // Check order.
-    if (!A->SupportsOrder(ROW_MAJOR)) return false;
-    if (!B->SupportsOrder(COLUMN_MAJOR)) return false;
+    if (!A->SupportsOrder(transpose_a ? COLUMN_MAJOR : ROW_MAJOR)) return false;
+    if (!B->SupportsOrder(transpose_b ? ROW_MAJOR : COLUMN_MAJOR)) return false;
     if (!C->SupportsOrder(ROW_MAJOR)) return false;
 
     return true;
   }
 
   void Adjust(Step *step) override {
-    step->input(0)->SetRequiredOrder(ROW_MAJOR);
-    step->input(1)->SetRequiredOrder(COLUMN_MAJOR);
+    bool transpose_a = step->GetAttr("transpose_a", false);
+    bool transpose_b = step->GetAttr("transpose_b", false);
+    step->input(0)->SetRequiredOrder(transpose_a ? COLUMN_MAJOR : ROW_MAJOR);
+    step->input(1)->SetRequiredOrder(transpose_b ? ROW_MAJOR : COLUMN_MAJOR);
     step->output(0)->SetRequiredOrder(ROW_MAJOR);
   }
 
@@ -222,10 +243,20 @@ class GenericFltMatMatMul : public Kernel {
     SIMDRegisters &mm = masm->mm();
     Label l1, l2, l3;
 
+    // Get inputs and outputs.
     Tensor *A = step->input(0);
     Tensor *B = step->input(1);
     Tensor *C = step->output(0);
 
+    // Get dimensions for matrices.
+    bool transpose_a = step->GetAttr("transpose_a", false);
+    bool transpose_b = step->GetAttr("transpose_b", false);
+    int a_row_dim = transpose_a ? 1 : 0;
+    int a_col_dim = transpose_a ? 0 : 1;
+    int b_col_dim = transpose_b ? 0 : 1;
+    int c_col_dim = 1;
+
+    // Allocate registers.
     Register a = rr.alloc();
     Register b = rr.alloc();
     Register b_row = rr.alloc();
@@ -236,16 +267,6 @@ class GenericFltMatMatMul : public Kernel {
 
     XMMRegister elem = mm.allocx();
     XMMRegister sum = mm.allocx();
-
-    //  for (int i = 0; i < R1; ++i) {
-    //    for (int j = 0; j < C2; ++j) {
-    //      float sum = 0.0;
-    //      for (int k = 0; k < C1; ++k) {
-    //        sum += A[i][k] * B[k][j];
-    //      }
-    //      C[i][j] = sum;
-    //    }
-    //  }
 
     // Load tensor addresses.
     __ LoadTensorAddress(a, A);
@@ -273,25 +294,25 @@ class GenericFltMatMatMul : public Kernel {
     __ movss(elem, Operand(a, k, times_4));
     __ mulss(elem, Operand(b_row, k, times_4));
     __ addq(k, Immediate(1));
-    __ cmpq(k, Immediate(A->dim(1)));
+    __ cmpq(k, Immediate(A->dim(a_col_dim)));
     __ addss(sum, elem);
     __ j(not_equal, &l3);
 
     // Store result in C.
     __ movss(Operand(c), sum);
-    __ addq(c, Immediate(C->stride(1)));
+    __ addq(c, Immediate(C->stride(c_col_dim)));
 
     // Move to next column in B
-    __ addq(b_row, Immediate(B->stride(1)));
+    __ addq(b_row, Immediate(B->stride(b_col_dim)));
     __ cmpq(b_row, b_end);
     __ j(not_equal, &l2);
 
     // Move to next row in A.
-    __ addq(a, Immediate(A->stride(0)));
+    __ addq(a, Immediate(A->stride(a_row_dim)));
 
     // Move to next row in C.
     if (C->padding(1) != 0) {
-      __ addq(c, Immediate(C->padding(1)));
+      __ addq(c, Immediate(C->padding(c_col_dim)));
     }
     __ cmpq(c, c_end);
     __ j(not_equal, &l1);
@@ -302,7 +323,7 @@ class GenericFltMatMatMul : public Kernel {
   }
 };
 
-// Generic interger vector matrix multiplication, y = Relu(x * W + b).
+// Generic integer vector matrix multiplication, y = Relu(x * W + b).
 class GenericIntVecMatMulBase : public Kernel {
  public:
   GenericIntVecMatMulBase(bool bias, bool relu) : bias_(bias), relu_(relu) {}
@@ -498,6 +519,12 @@ class GenericIntVecMatMulAddRelu : public GenericIntVecMatMulBase {
 };
 
 void RegisterGenericMatMul(Library *library) {
+  // Computes  : C = A * B
+  // Input     : A: float32[k,n] row-major
+  //             B: float32[n,m] column-major
+  // Output    : C: float32[k,m] row-major
+  library->Register(new GenericFltMatMatMul());
+
   // Computes  : y = x * W
   // Input     : x: float32[1,n]
   //             W: float32[n,m] column-major
@@ -523,12 +550,6 @@ void RegisterGenericMatMul(Library *library) {
   //             b: float32[1,n]
   // Output    : y: float32[1,m]
   library->Register(new GenericFltVecMatMulAddRelu());
-
-  // Computes  : C = A * B
-  // Input     : A: float32[k,n] row-major
-  //             B: float32[n,m] column-major
-  // Output    : C: float32[k,m] row-major
-  library->Register(new GenericFltMatMatMul());
 
   // Computes  : y = x * W
   // Input     : x: int8/16/32/64[1,n]

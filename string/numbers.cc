@@ -463,7 +463,7 @@ bool safe_strto32_base(const char *str, int32 *value, int base) {
   return *str != '\0' && *endptr == '\0' && errno == 0;
 }
 
-bool safe_strto64_base(const char *str, int64* value, int base) {
+bool safe_strto64_base(const char *str, int64 *value, int base) {
   char *endptr;
   errno = 0;  // errno only gets set on errors
   *value = strto64(str, &endptr, base);
@@ -816,7 +816,7 @@ char *FastInt32ToBufferLeft(int32 i, char *buffer) {
   if (i < 0) {
     *buffer++ = '-';
     // We need to do the negation in modular (i.e., "unsigned")
-    // arithmetic; MSVC++ apprently warns for plain "-u", so
+    // arithmetic; MSVC++ apparently warns for plain "-u", so
     // we write the equivalent expression "0 - u" instead.
     u = 0 - u;
   }

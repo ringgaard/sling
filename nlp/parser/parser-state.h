@@ -30,7 +30,7 @@ namespace nlp {
 // Parser state that represents the state of the transition-based parser.
 class ParserState {
  public:
-  // Inializes parse state.
+  // Initializes parse state.
   ParserState(Store *store, int begin, int end);
 
   // Clones parse state.
@@ -67,6 +67,11 @@ class ParserState {
   // attention in the order of attention. There might be less than k frames if
   // there are fewer elements in the attention buffer.
   void GetFocus(int k, std::vector<int> *center) const;
+
+  // Return the position in the attention buffer of a frame in the frame index
+  // or -1 if the frame is not in the attention buffer. The search can be
+  // limited to the top-k frames that are closest to the center of attention.
+  int AttentionIndex(int index, int k = -1) const;
 
   // Creates final set of frames that the parse has generated.
   void GetFrames(Handles *frames);

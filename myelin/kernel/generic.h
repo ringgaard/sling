@@ -20,11 +20,8 @@
 namespace sling {
 namespace myelin {
 
-// Register generic flow transformations.
-void RegisterGenericTransformations(Library *library);
-
-// Register generic kernels.
-void RegisterGenericKernels(Library *library);
+// Register generic library.
+void RegisterGenericLibrary(Library *library);
 
 }  // namespace myelin
 }  // namespace sling
