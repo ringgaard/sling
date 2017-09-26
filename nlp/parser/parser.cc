@@ -422,9 +422,9 @@ void ParserInstance::ExtractFeaturesFF(int step) {
     int *create = GetFF(ff.frame_create_feature);
     int *focus = GetFF(ff.frame_focus_feature);
     for (int d = 0; d < ff.attention_depth; ++d) {
-      int att = -2;
-      int created = -2;
-      int focused = -2;
+      int att = -1;
+      int created = -1;
+      int focused = -1;
       if (d < state_.AttentionSize()) {
         // Get frame from attention buffer.
         int frame = state_.Attention(d);
@@ -450,7 +450,7 @@ void ParserInstance::ExtractFeaturesFF(int step) {
     int h = 0;
     int s = step - 1;
     while (h < ff.history_size && s >= 0) history[h++] = s--;
-    while (h < ff.history_size) history[h++] = -2;
+    while (h < ff.history_size) history[h++] = -1;
   }
 
   // Extract role features.
