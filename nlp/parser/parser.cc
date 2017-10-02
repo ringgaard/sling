@@ -42,6 +42,9 @@ void Parser::Load(Store *store, const string &model) {
   InitLSTM("rl_lstm", &rl_, true);
   InitFF("ff", &ff_);
 
+  // Initialize profiling.
+  if (ff_.cell->profile()) profile_ = new Profile(this);
+
   // Load lexicon.
   myelin::Flow::Blob *vocabulary = flow.DataBlock("lexicon");
   CHECK(vocabulary != nullptr);
@@ -192,6 +195,7 @@ void Parser::Parse(Document *document) const {
 
       // Compute LSTM cell.
       data.lr_.Compute();
+      if (profile_) profile_->lr.Update(&data.lr_);
     }
 
     // Compute right-to-left LSTM.
@@ -207,6 +211,7 @@ void Parser::Parse(Document *document) const {
 
       // Compute LSTM cell.
       data.rl_.Compute();
+      if (profile_) profile_->rl.Update(&data.rl_);
     }
 
     // Run FF to predict transitions.
@@ -226,6 +231,7 @@ void Parser::Parse(Document *document) const {
 
       // Predict next action.
       data.ff_.Compute();
+      if (profile_) profile_->ff.Update(&data.ff_);
       float *output = data.ff_.Get<float>(ff_.output);
       int prediction = 0;
       float max_score = -INFINITY;
