@@ -43,31 +43,9 @@ static string TimeStr(float us) {
   }
 }
 
-ProfileSummary::ProfileSummary(Cell *cell) : cell_(cell) {
-  if (cell->profile() != nullptr) {
-    size_ = cell->profile()->elements();
-    data_ = new int64[size_];
-    for (int i = 0; i < size_; ++i) data_[i] = 0;
-  }
-}
-
-ProfileSummary::~ProfileSummary() {
-  delete [] data_;
-}
-
-void ProfileSummary::Update(Instance *instance) {
-  DCHECK(instance->cell() == cell_);
-  if (data_ != nullptr) {
-    const int64 *data = instance->Get<int64>(cell_->profile());
-    for (int i = 0; i < size_; ++i) data_[i] += data[i];
-  }
-}
-
 Profile::Profile(ProfileSummary *summary, Order order)
     : cell_(summary->cell()) {
-  if (cell_->profile() != nullptr) {
-    Initialize(summary->data(), order);
-  }
+  Initialize(summary->data(), order);
 }
 
 Profile::Profile(Instance *instance, Order order) : cell_(instance->cell()) {

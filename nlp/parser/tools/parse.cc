@@ -211,8 +211,10 @@ int main(int argc, char *argv[]) {
   if (FLAGS_profile) {
     myelin::Profile lr(&parser.profile()->lr);
     std::cout << lr.ASCIIReport() << "\n";
+
     myelin::Profile rl(&parser.profile()->rl);
     std::cout << lr.ASCIIReport() << "\n";
+
     myelin::Profile ff(&parser.profile()->ff);
     std::cout << ff.ASCIIReport() << "\n";
   }

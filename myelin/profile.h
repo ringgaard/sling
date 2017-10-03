@@ -25,24 +25,6 @@
 namespace sling {
 namespace myelin {
 
-class ProfileSummary {
- public:
-  ProfileSummary(Cell *cell);
-  ~ProfileSummary();
-
-  // Update profile summary by adding profile information from an instance.
-  void Update(Instance *instance);
-
-  // Accessors.
-  Cell *cell() const { return cell_; }
-  int64 *data() const { return data_; }
-
- private:
-  Cell *cell_;              // cell being profiled
-  int64 *data_ = nullptr;   // profile data summary.
-  size_t size_ = 0;         // size of profile data buffer
-};
-
 class Profile {
  public:
   // Sort order for steps.

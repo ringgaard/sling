@@ -61,7 +61,10 @@ class Parser {
   void Parse(Document *document) const;
 
   // Enable profiling. Must be called before Load().
-  void EnableProfiling() { network_.set_profiling(true); }
+  void EnableProfiling() {
+    network_.options().profiling = true;
+    network_.options().external_profiler = true;
+  }
 
   // Return profile summary for parser.
   Profile *profile() const { return profile_; }
@@ -72,6 +75,7 @@ class Parser {
     // Cell.
     myelin::Cell *cell;                       // LSTM cell
     bool reverse;                             // LSTM direction
+    myelin::Tensor *profile;                  // LSTM profiling block
 
     // Connectors.
     myelin::Connector *control;               // LSTM control layer
@@ -98,6 +102,7 @@ class Parser {
   struct FF {
     myelin::Cell *cell;                       // feed-forward cell
     myelin::Connector *step;                  // FF step hidden activations
+    myelin::Tensor *profile;                  // FF profiling block
 
     // Features.
     myelin::Tensor *lr_focus_feature;         // LR LSTM input focus feature

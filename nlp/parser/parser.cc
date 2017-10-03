@@ -88,6 +88,7 @@ void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
   // Get cell.
   lstm->cell = GetCell(name);
   lstm->reverse = reverse;
+  lstm->profile = lstm->cell->profile();
 
   // Get connectors.
   lstm->control = GetConnector(name + "/control");
@@ -113,6 +114,7 @@ void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
 void Parser::InitFF(const string &name, FF *ff) {
   // Get cell.
   ff->cell = GetCell(name);
+  ff->profile = ff->cell->profile();
 
   // Get connector for recurrence.
   ff->step = GetConnector(name + "/step");
@@ -194,8 +196,8 @@ void Parser::Parse(Document *document) const {
       data.ExtractFeaturesLSTM(s.begin() + out, features, lr_, &data.lr_);
 
       // Compute LSTM cell.
+      if (profile_) data.lr_.set_profile(&profile_->lr);
       data.lr_.Compute();
-      if (profile_) profile_->lr.Update(&data.lr_);
     }
 
     // Compute right-to-left LSTM.
@@ -210,8 +212,8 @@ void Parser::Parse(Document *document) const {
       data.ExtractFeaturesLSTM(s.begin() + out, features, rl_, &data.rl_);
 
       // Compute LSTM cell.
+      if (profile_) data.rl_.set_profile(&profile_->rl);
       data.rl_.Compute();
-      if (profile_) profile_->rl.Update(&data.rl_);
     }
 
     // Run FF to predict transitions.
@@ -230,8 +232,8 @@ void Parser::Parse(Document *document) const {
       data.ExtractFeaturesFF(step);
 
       // Predict next action.
+      if (profile_) data.ff_.set_profile(&profile_->ff);
       data.ff_.Compute();
-      if (profile_) profile_->ff.Update(&data.ff_);
       float *output = data.ff_.Get<float>(ff_.output);
       int prediction = 0;
       float max_score = -INFINITY;
