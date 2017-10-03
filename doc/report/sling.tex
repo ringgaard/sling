@@ -5,7 +5,6 @@
 \usepackage{latexsym}
 \usepackage{amsmath}
 \usepackage{float}
-
 \usepackage{svg}
 
 % Please remember to install inkscape and include --shell-escape when
@@ -438,34 +437,44 @@ The Myelin-based SLING parser runs at 2500 tokens per CPU second, which is more
 than ten times faster than the TensorFlow-based SLING parser
 (Table~\ref{tab:runtime}).
 
-\begin{table*}[!t]
+\begin{table}[!t]
 \centering
 \begin{tabular}{|l|r|r|r|}
 \hline
-Parser                  & Speed            & Runtime size & Load time \\
+Runtime    & Speed     & Runtime      & Load      \\
+           &           & size         & time      \\
 \hline
-TensorFlow-based parser &  200 tokens/sec  & 37.000 KB    & 10 secs   \\
-Myelin-based parser     & 2500 tokens/sec  &    500 KB    & 0.5 secs  \\
+TF         &  200 TPS  & 37.000 KB    & 10 secs   \\
+Myelin     & 2500 TPS  &    500 KB    & 0.5 secs  \\
 \hline
 \end{tabular}
 \caption{Comparison between TensorFlow-based SLING parser runtime and the
 Myelin-based parser runtime using JIT compilation.
-Speed is measured as tokens parsed per CPU second, i.e. real+sys in time(1).}
+Speed is measured as tokens parsed per CPU second, i.e. user+sys in time(1).}
 \label{tab:runtime}
-\end{table*}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includesvg[width = 200pt]{runtime}
+  \caption{Runtime profile for running the Myelin-based SLING parser with the
+  left-to-right LSTM (LR LSTM), right-to-left LSTM (RL LSTM), Feed-forward
+  excluding logits (FF), Logits for output actions (LOGITS), and transition
+  system and feature extraction (TS).}
+  \label{fig:runtime}
+\end{figure}
 
 The Myelin-based SLING parser is independent of TensorFlow so it only needs to
 link with the Myelin runtime (less than 500 KB) instead of the TensorFlow
 runtime library (37 MB), and it is also much faster to initialize (0.5 seconds
 including compilation time) than the TensorFlow-based parser (10 seconds).
 
-\section{Future work}
-
-% Cascading action classifier to speed up computations of logits... TBD
-
-% Knowledge-based inference... TBD
-
-\section{Acknowledgments}
+Figure~\ref{fig:runtime} shows a breakdown of the CPU time for the Myelin-based
+parser runtime. Half the time is spent computing the logits for the output
+actions. This is expensive because the OntoNotes-based corpus has 6968 actions,
+where the vast majority of the actions are of the form
+{\bf EVOKE(/pb/\textless{}predicate\textgreater, 1)}, one for each PropBank
+roleset predicate in the training data.
 
 \bibliography{sling}
 \bibliographystyle{acl_natbib}
