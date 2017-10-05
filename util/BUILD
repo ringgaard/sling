@@ -154,3 +154,15 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "embeddings",
+  srcs = ["embeddings.cc"],
+  hdrs = ["embeddings.h"],
+  deps = [
+    "//base",
+    "//stream:file",
+    "//stream:input",
+    "//stream:output",
+  ],
+)
+
