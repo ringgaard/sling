@@ -27,6 +27,7 @@ bazel-bin/nlp/parser/tools/build-store -o /tmp/commons \
   data/nlp/schemas/meta-schema.sling \
   data/nlp/schemas/document-schema.sling \
   data/nlp/schemas/propbank-schema.sling \
+  data/nlp/schemas/saft-schema.sling \
   data/nlp/schemas/catalog.sling \
   /tmp/propbank.sling \
 

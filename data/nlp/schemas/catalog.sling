@@ -9,5 +9,6 @@
   catalog_schema_family: /schema/propbank
   catalog_schema_family: /schema/vn_meta
   catalog_schema_family: /schema/verbnet
+  catalog_schema_family: /schema/saft
 }
 
