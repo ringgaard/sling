@@ -270,12 +270,18 @@ transition system \cite{nivre2006} uses {\bf SHIFT}, {\bf LEFT-ARC(label)}, and
 sequence of those actions.
 
 We use the same idea to construct a frame graph where frames can be
-evoked by phrases in the input. Instead of using a stack, we have the attention buffer introducted
-in the previous section, which keeps track of the most salient frames in the
-discourse. The front of the attention buffer serves as the working memory for
-the parser, which operates on those frames. The transition system simultaneously
-build the frame graph and maintain the attention buffer.
-The current transition system consists of the following actions:
+evoked by phrases in the input. Instead of using a stack, we have the attention
+buffer introduced in the previous section, which keeps track of the most salient
+frames in the discourse.
+
+The attention buffer is an prioritized list of all the
+frames evoked so far. The front of the attention buffer serves as the working
+memory for the parser, and the actions operates on those frames. The transition
+system simultaneously builds the frame graph and maintains the attention buffer
+by moving the frame involved involved in an action to the front of the attention
+buffer.
+
+The transition system consists of the following actions:
 
 \begin{itemize}
   \item {\bf SHIFT} -- Moves to next input token. Only valid when not at the
@@ -287,10 +293,12 @@ The current transition system consists of the following actions:
         permitted except more STOP actions.
   \item {\bf EVOKE(type, n)} -- Evokes frame of with type {\bf type} from
         the next {\bf n} tokens in the input. The evoked frame becomes the new
-        center of attention.
+        center of attention, i.e. is inserted at the front of the attention
+        buffer.
   \item {\bf REFER(frame, n)} -- Makes a new mention of the next {\bf n} tokens
         in the input evoking an existing frame in the attention buffer. This
-        frame will become the new center of attention.
+        frame is moved to the front of the attention buffer and will become the
+        new center of attention.
   \item {\bf CONNECT(source, role, target)} -- Adds slot to {\bf source} frame
         in the attention buffer with name {\bf role} and value {\bf target}
         where {\bf target} is an existing frame in the attention buffer. The
@@ -507,10 +515,10 @@ the frame-frame link, including the label of the link. Some error analysis is re
 to ascertain the aspect(s) of frame-frame links missed by the model. Also note that
 currently the {\em roles} feature is the only one that captures inter-frame link information.
 Augmenting this with more features should help improve ROLE accuracy, and we shall
-consider investigating this in our future work. 
+consider investigating this in our future work.
 
 Finally, we take the best checkpoint (with SLOT F1 $= 79.95\%$ at $110,000$ steps),
-and evaluate it over the test corpus. 
+and evaluate it over the test corpus.
 Table~\ref{tab:eval} lists the accuracy of this model on the test and dev corpora.
 With the except of LABEL accuracies, all the other metrics exhibit less than half a percent
 difference between the test and dev corpora. This illustrates that despite the lack of
@@ -583,10 +591,10 @@ Combined & Precision & 87.56 & 87.31 \\
 
 \section{Parser runtime}
 
-The SLING parser is trained using TensorFlow~\cite{tensorflow} but it also
+The SLING parser uses TensorFlow~\cite{tensorflow} for training but it also
 supports annotating text with frame annotations at runtime. It can take
 advantage of batching and multi-threading to speed up parsing. However, in
-practical applications of the parser, it is often not convenient to having to
+practical applications of the parser, it is often not convenient to have to
 batch documents for processing, so in order to have a realistic benchmark, we
 set the batch size to one at runtime. In this configuration, the
 TensorFlow-based SLING parser runs at 200 tokens per CPU second.
@@ -596,7 +604,7 @@ just-in-time compiler for neural networks. It compiles the network cells into
 x64 machine code at runtime. The generated code takes the CPU features of the
 machine into account when generating the code and can take advantage of
 specialized features like SSE, AVX, and FMA3.
-Also, at runtime, the tensor shapes as well as the parameters of the model are
+At runtime, the tensor shapes as well as the parameters of the model are
 fixed.
 This allows us to make transformations of the network, fold constants, unroll
 loops, pre-compute embeddings, etc. The JIT compiler can also fix the data
@@ -637,13 +645,18 @@ The Myelin-based SLING parser is independent of TensorFlow so it only needs to
 link with the Myelin runtime (less than 500 KB) instead of the TensorFlow
 runtime library (37 MB), and it is also much faster to initialize (0.5 seconds
 including compilation time) than the TensorFlow-based parser (10 seconds).
-
 Figure~\ref{fig:runtime} shows a breakdown of the CPU time for the Myelin-based
-parser runtime. Half the time is spent computing the logits for the output
+parser runtime.
+
+Half the time is spent computing the logits for the output
 actions. This is expensive because the OntoNotes-based corpus has 6968 actions,
-where the vast majority of the actions are of the form
-{\bf EVOKE(/pb/\textless{}predicate\textgreater, 1)}, one for each PropBank
-roleset predicate in the training data.
+where the vast majority of the actions are of a form like
+{\bf EVOKE(/pb/hit-01, 1)}, one for each PropBank roleset predicate in the
+training data. Table~\ref{tab:action-table} shows that only about 26\% of all the
+actions are EVOKE actions. The output layer of the FF unit could be turned into
+a cascaded classifier, where if the first classifier predicts a generic
+{\bf EVOKE(/pb/predicate, 1)} action, it would use a secondary classifier to
+predict the predicate type. This could almost double the speed of the parser.
 
 \bibliography{sling}
 \bibliographystyle{acl_natbib}
