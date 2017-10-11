@@ -338,7 +338,7 @@ class EmbedFileSystem : public FileSystem {
   static EmbedFileSystem *instance;
 };
 
-REGISTER_FILE_SYSTEM("intern", EmbedFileSystem);
+REGISTER_FILE_SYSTEM_TYPE("intern", EmbedFileSystem);
 
 EmbedFileSystem *EmbedFileSystem::instance = nullptr;
 
