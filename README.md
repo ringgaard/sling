@@ -14,7 +14,15 @@ graphs directly without any intervening symbolic representation.
 
 The SLING framework includes an efficient and scalable frame store
 implementation as well as a neural network JIT compiler for fast parsing at
-runtime.
+runtime. 
+
+A more detailed description of the SLING parser can be found in this paper:
+
+<p style='margin-left:30px;'>
+Michael Ringgaard, Rahul Gupta, and Fernando C. N. Pereira. 2017.
+<a href='doc/report/sling.tex'><em>SLING: A framework for frame semantic parsing</em></a>.
+To be publised in arXiv preprint.
+</span>
 
 ## Installation
 
@@ -350,6 +358,7 @@ training.
 frames.
 * The action table with all the transition actions.
 
+A pre-trained model can be download from [here](http://www.jbox.dk/sling/sempar.flow) (NB: not final model!!!).
 The model can be loaded and initialized in the following way:
 
 ```c++
@@ -471,11 +480,11 @@ This tool takes the following commandline arguments:
 
    ```shell
     bazel-bin/nlp/parser/tools/parse --logtostderr \
-      --parser=parser.flow --corpus=dev.gold.zip -benchmark --maxdocs=200
+      --parser=sempar.flow --corpus=dev.zip -benchmark --maxdocs=200
 
-    I0927 14:45:36.634670 30934 parse.cc:127] Load parser from parser.flow
+    I0927 14:45:36.634670 30934 parse.cc:127] Load parser from sempar.flow
     I0927 14:45:37.307870 30934 parse.cc:135] 565.077 ms loading parser
-    I0927 14:45:37.307922 30934 parse.cc:161] Benchmarking parser on dev.gold.zip
+    I0927 14:45:37.307922 30934 parse.cc:161] Benchmarking parser on dev.zip
     I0927 14:45:39.059257 30934 parse.cc:184] 200 documents, 3369 tokens, 2289.91 tokens/sec
    ```
 
@@ -490,11 +499,11 @@ This tool takes the following commandline arguments:
    documents.
    ```shell
    bazel-bin/nlp/parser/tools/parse --logtostderr \
-     --evaluate --parser=parser.flow --corpus=dev.gold.zip --maxdocs=200
+     --evaluate --parser=sempar.flow --corpus=dev.zip --maxdocs=200
 
-   I0927 14:51:39.542151 31336 parse.cc:127] Load parser from parser.flow
+   I0927 14:51:39.542151 31336 parse.cc:127] Load parser from sempar.flow
    I0927 14:51:40.211920 31336 parse.cc:135] 562.249 ms loading parser
-   I0927 14:51:40.211973 31336 parse.cc:194] Evaluating parser on dev.gold.zip
+   I0927 14:51:40.211973 31336 parse.cc:194] Evaluating parser on dev.zip
    SPAN_P+ 1442
    SPAN_P- 93
    SPAN_R+ 1442
