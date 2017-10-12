@@ -76,13 +76,13 @@ bool EmbeddingWriter::Close() {
 }
 
 void EmbeddingWriter::Write(const string &word,
-                            std::vector<float> &embedding) {
+                            const std::vector<float> &embedding) {
   // Write word.
   output_.Write(word);
   output_.WriteChar(' ');
 
   // Write embedding vector.
-  char *data = reinterpret_cast<char *>(embedding.data());
+  const char *data = reinterpret_cast<const char *>(embedding.data());
   int size = embedding.size() * sizeof(float);
   output_.Write(data, size);
   output_.WriteChar('\n');

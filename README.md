@@ -187,10 +187,6 @@ string encoded = Encode(doc.top());
 Use the converter to create the following corpora:
 + Training corpus of annotated SLING documents.
 + Dev corpus of annotated SLING documents.
-+ A version of the dev corpus without any annotations, i.e. a SLING
-  document in this corpus will only have token and text information.
-  The documents in this corpus should be in the same order as in the
-  annotated dev corpus.
 
   The default corpus format is zip, where the zip file contains one file
   per document, and the file for a document is just its encoded document
@@ -207,16 +203,14 @@ the input data are:
 + `--commons`: File path of the commons store built in the previous step.
 + `--train`: Path to the training corpus built in the previous step.
 + `--dev`: Path to the annotated dev corpus built in the previous step.
-+ `--dev_without_gold`: Path to the dev corpus without annotations built
-  in the previous step.
 + `--output` or `--output_dir`: Output folder where checkpoints, master spec,
   temporary files, and the final model will be saved.
 
 Then we have the various training options and hyperparameters:
 + `--oov_features`: Whether fallback lexical features should be used in the LSTMs.
-+ `--word_embeddings`: Empty or path to pretrained word embeddings in
-  Tensorflow's RecordIO format. If supplied, these are used to initialize
-  the embeddings for word features.
++ `--word_embeddings`: Empty, or path to pretrained word embeddings in
+  [Mikolov's word2vec format](https://github.com/tmikolov/word2vec/blob/master/word2vec.c).
+  If supplied, these are used to initialize the embeddings for word features.
 + `--word_embeddings_dim`: Dimensionality of embeddings for word features.
   Should be the same as the pretrained embeddings, if they are supplied.
 + `--batch`: Batch size used during training.
@@ -527,30 +521,28 @@ An alternative to running the Myelin-based parsing tool is to run the tf-parse
 Python script that executes the annotation part of the Tensorflow graph over the
 input documents. It takes the following arguments:
 
-*  `--input`: This should be the directory where the trained model is saved.
+*  `--parser_dir`: This should be the directory where the trained model is saved.
 *  `--commons`: Path to the commons store. Should be the same as the one used in training.
-*  `--corpus`: Corpus of frame-less documents that will be annotated with the model.
+*  `--corpus`: Corpus of documents that will be annotated with the model.
 *  `--batch`: Batch size. Higher batch sizes are efficient but only if all the batch
     documents are roughly of similar length.
 *  `--threads` : Number of threads to use in Tensorflow. This drives Tensorflow's
     inter-op and intra-op parallelism. Making this very high will lead to inefficiencies
     due to inter-thread CPU contention.
 *  `--output`: (Optional) File name where the annotated corpus will be saved.
-*  `--eval`: (Optional) If true, then it will evaluate the annotated corpus vs
-    the gold corpus. If set, then it expects `--output` and `--gold` to be set as well.
-*  `--gold`: (Optional) Path to the gold corpus. Used if `--eval` is set.
+*  `--evaluate`: (Optional) If true, then it will evaluate the annotated corpus vs
+    the gold corpus (specified via --corpus).
 
 Sample Usage:
 ```shell
 python nlp/parser/tools/tf-parse.py \
-  --input=/path/to/training/script/output/folder \
+  --parser_dir=/path/to/training/script/output/folder \
   --commons=/path/to/commons \
-  --corpus=/path/to/frameless/document/corpus \
+  --corpus=/path/to/gold/eval/corpus \
   --batch=512 \
   --threads=4 \
   --output=annotated.zip \
-  --gold=/path/to/gold/frame/corpora \
-  --eval
+  --evaluate
 ```
 
 ## Credits

@@ -77,7 +77,7 @@ class EmbeddingWriter {
   EmbeddingWriter(const string &filename, int num_words, int dim);
 
   // Write next embedding.
-  void Write(const string &word, std::vector<float> &embedding);
+  void Write(const string &word, const std::vector<float> &embedding);
 
   // Flush and close output.
   bool Close();

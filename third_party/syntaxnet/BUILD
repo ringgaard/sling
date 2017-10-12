@@ -16,7 +16,7 @@ cc_proto_library(
 
 # Until Bazel supports python protocol buffer compilation, this step
 # needs to be done manually by running the following command:
-# bazel-bin/third_party/protobuf/protoc third_party/syntaxnet/dragnn/protos/spec.proto --python_out=.
+# bazel-out/host/bin/external/com_google_protobuf/protoc third_party/syntaxnet/dragnn/protos/spec.proto --python_out=.
 #
 #py_proto_library(
 #  name = "pyspec",
