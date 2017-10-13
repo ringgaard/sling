@@ -347,6 +347,16 @@ diagnostic information, which we describe below.
   the Tensorflow graph generation step, and will use the pre-generated spec
   etc. from the same output folder.
 
+We have made a synthetic training and evaluation corpus available for trying out the parser
+trainer:
+
+```
+curl -o /tmp/conll-2003-sempar.tar.gz http://www.jbox.dk/sling/conll-2003-sempar.tar.gz
+tar -xvf /tmp/conll-2003-sempar.tar.gz
+```
+
+See [local/conll2003/README.md](local/conll2003/README.md) for instructions on how to train a parser.
+
 ## Parsing
 
 The trained parser model is stored in a [Myelin](myelin/README.md) flow file,
