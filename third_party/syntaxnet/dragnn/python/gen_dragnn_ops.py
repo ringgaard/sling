@@ -222,16 +222,19 @@ _ExtractLinkFeaturesOutput = _collections.namedtuple("ExtractLinkFeatures",
                                                      _extract_link_features_outputs)
 
 
-def extract_link_features(handle, component, channel_id, name=None):
+def extract_link_features(handle, batch_size, component,
+                          channel_id, channel_size, name=None):
   r"""Given a ComputeSession, Component, and a channel index, outputs link features.
 
   Output indices have shape {batch_size * channel_size}.
 
   Args:
     handle: A `Tensor` of type `string`. A handle to a ComputeSession.
+    batch_size: an `int`. The current batch size.
     component: A `string`.
       The name of a Component instance, matching the ComponentSpec.name.
     channel_id: An `int`. The feature channel to extract features for.
+    channel_size: An `int`. Channel size of channel_id.
     name: A name for the operation (optional).
 
   Returns:
@@ -240,7 +243,9 @@ def extract_link_features(handle, component, channel_id, name=None):
     idx: A `Tensor` of type `int32`. indices The index within a step to read the activations from.
   """
   result = _op_def_lib.apply_op("ExtractLinkFeatures", handle=handle,
+                                batch_size=batch_size,
                                 component=component, channel_id=channel_id,
+                                channel_size=channel_size,
                                 name=name)
   return _ExtractLinkFeaturesOutput._make(result)
 
@@ -273,22 +278,27 @@ _ops.RegisterShape("GetSession")(None)
 _init_component_data_outputs = ["output_handle"]
 
 
-def init_component_data(handle, component, name=None):
+def init_component_data(
+    handle, component, clear_existing_annotations, name=None):
   r"""Initialize a component for a given ComputeSession.
 
   Args:
     handle: A `Tensor` of type `string`. A handle to a ComputeSession.
     component: A `string`.
       The name of a Component instance, matching the ComponentSpec.name.
+    clear_existing_annotations: Bool that says whether to clear existing
+      annotations in the input documents.
     name: A name for the operation (optional).
 
   Returns:
     A `Tensor` of type `string`.
     The handle to the same ComputeSession after initialization.
   """
-  result = _op_def_lib.apply_op("InitComponentData", handle=handle,
-                                component=component,
-                                name=name)
+  result = _op_def_lib.apply_op(
+      "InitComponentData", handle=handle,
+      component=component,
+      clear_existing_annotations=clear_existing_annotations,
+      name=name)
   return result
 
 
@@ -533,6 +543,10 @@ op {
     name: "handle"
     type: DT_STRING
   }
+  input_arg {
+    name: "batch_size"
+    type: DT_INT32
+  }
   output_arg {
     name: "step_idx"
     type: DT_INT32
@@ -547,6 +561,10 @@ op {
   }
   attr {
     name: "channel_id"
+    type: "int"
+  }
+  attr {
+    name: "channel_size"
     type: "int"
   }
 }
@@ -583,6 +601,10 @@ op {
   attr {
     name: "component"
     type: "string"
+  }
+  attr {
+    name: "clear_existing_annotations"
+    type: "bool"
   }
 }
 op {

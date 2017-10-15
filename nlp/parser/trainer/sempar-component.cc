@@ -31,27 +31,7 @@ namespace nlp {
 
 using syntaxnet::dragnn::ComponentSpec;
 using syntaxnet::dragnn::InputBatchCache;
-using syntaxnet::dragnn::LinkFeatures;
 using syntaxnet::dragnn::TransitionState;
-
-namespace {
-
-// Splits the given string on every occurrence of the given delimiter char.
-std::vector<string> Split(const string &text, char delim) {
-  std::vector<string> result;
-  int token_start = 0;
-  if (!text.empty()) {
-    for (size_t i = 0; i < text.size() + 1; i++) {
-      if (i == text.size() || text[i] == delim) {
-        result.push_back(string(text.data() + token_start, i - token_start));
-        token_start = i + 1;
-      }
-    }
-  }
-  return result;
-}
-
-}  // namespace
 
 SemparComponent::~SemparComponent() {
   for (SemparState *state : batch_) delete state;
@@ -78,6 +58,10 @@ void SemparComponent::InitializeComponent(const ComponentSpec &spec) {
   LOG(INFO) << name << ": loaded " << lexicon.size() << " words";
   LOG(INFO) << name << ": loaded " << lexicon.prefixes().size() << " prefixes";
   LOG(INFO) << name << ": loaded " << lexicon.suffixes().size() << " suffixes";
+  if (lexicon.size() > 0) {
+    LOG(INFO) << "Lexicon OOV: " << lexicon.oov();
+    LOG(INFO) << "Lexicon normalize digits: " << lexicon.normalize_digits();
+  }
 
   // Determine if processing will be done left to right or not.
   left_to_right_ = true;
@@ -97,12 +81,13 @@ void SemparComponent::InitializeComponent(const ComponentSpec &spec) {
   gold_transition_generator_.Init(resources_.global);
 }
 
-void SemparComponent::InitializeData(InputBatchCache *input_data) {
+void SemparComponent::InitializeData(
+    InputBatchCache *input_data, bool clear_existing_annotations) {
   // Save off the input data object.
   input_data_ = input_data;
 
   DocumentBatch *input = input_data->GetAs<DocumentBatch>();
-  input->Decode(resources_.global);
+  input->Decode(resources_.global, clear_existing_annotations);
 
   // Get rid of the previous batch.
   for (SemparState *old : batch_) delete old;
@@ -204,31 +189,18 @@ void SemparComponent::GetFixedFeatures(int channel_id, int64 *output) const {
   }
 }
 
-std::vector<LinkFeatures> SemparComponent::GetRawLinkFeatures(
-    int channel_id) const {
-  std::vector<LinkFeatures> output;
-  std::vector<int> values;
-
+void SemparComponent::GetRawLinkFeatures(
+    int channel_id, int *steps, int *batch) const {
   int channel_size = link_feature_extractor_.ChannelSize(channel_id);
-  int size = batch_.size() * channel_size;
-  values.resize(size, -1);
-  output.resize(size);
   for (int batch_idx = 0; batch_idx < batch_.size(); ++batch_idx) {
     SemparState *state = batch_[batch_idx];
     int base = batch_idx * channel_size;
-    link_feature_extractor_.Extract(channel_id, state, values.data() + base);
+    link_feature_extractor_.Extract(channel_id, state, steps + base);
 
     for (int i = base; i < base + channel_size; ++i) {
-      output[i].set_batch_idx(batch_idx);
-      if (values[i] == -1) {
-        output[i].clear_feature_value();
-      } else {
-        output[i].set_feature_value(values[i]);
-      }
+      batch[i] = batch_idx;
     }
   }
-
-  return output;
 }
 
 std::vector<int> SemparComponent::GetOracleLabels() const {

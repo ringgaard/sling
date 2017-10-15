@@ -47,8 +47,7 @@
 #include "nlp/parser/trainer/shared-resources.h"
 #include "stream/file.h"
 #include "string/strcat.h"
-#include "dragnn/core/proto_io.h"
-#include "dragnn/protos/embedding.pb.h"
+#include "util/embeddings.h"
 
 using sling::File;
 using sling::FileDecoder;
@@ -56,6 +55,7 @@ using sling::Object;
 using sling::Store;
 using sling::StrAppend;
 using sling::StrCat;
+using sling::EmbeddingReader;
 using sling::nlp::ActionTable;
 using sling::nlp::AffixTable;
 using sling::nlp::ActionTableGenerator;
@@ -108,6 +108,9 @@ struct Artifacts {
   int num_words = 0;
   int num_prefixes = 0;
   int num_suffixes = 0;
+
+  // OOV word id.
+  int lexicon_oov = 0;
 
   // Generated master spec and its file.
   MasterSpec spec;
@@ -251,10 +254,12 @@ void OutputResources(Artifacts *artifacts) {
 
   int count = 0;
   artifacts->train_corpus->Rewind();
+
   std::unordered_set<string> words;
   std::vector<string> id_to_word;
   words.insert("<UNKNOWN>");
   id_to_word.emplace_back("<UNKNOWN>");
+  artifacts->lexicon_oov = 0;
   while (true) {
     Store store(artifacts->global());
     Document *document = artifacts->train_corpus->Next(&store);
@@ -307,12 +312,9 @@ void OutputResources(Artifacts *artifacts) {
 void CheckWordEmbeddingsDimensionality() {
   if (FLAGS_word_embeddings.empty()) return;
 
-  syntaxnet::dragnn::ProtoRecordReader reader(FLAGS_word_embeddings);
-  syntaxnet::dragnn::TokenEmbedding embedding;
-  CHECK_EQ(reader.Read(&embedding), tensorflow::Status::OK());
-  int size = embedding.vector().values_size();
-  CHECK_EQ(size, FLAGS_word_embeddings_dim)
-      << "Pretrained embeddings have dim=" << size
+  EmbeddingReader reader(FLAGS_word_embeddings);
+  CHECK_EQ(reader.dim(), FLAGS_word_embeddings_dim)
+      << "Pretrained embeddings have dim=" << reader.dim()
       << ", but specified word embedding dim=" << FLAGS_word_embeddings_dim;
 }
 
@@ -322,7 +324,10 @@ void OutputMasterSpec(Artifacts *artifacts) {
   // Left to right LSTM.
   auto *lr_lstm = AddComponent(
       "lr_lstm", "SemparComponent", "LSTMNetwork", "shift-only", artifacts);
-  SetParam(lr_lstm->mutable_transition_system(), "left_to_right", "true");
+  auto *system = lr_lstm->mutable_transition_system();
+  SetParam(system, "left_to_right", "true");
+  SetParam(system, "lexicon_oov", StrCat(artifacts->lexicon_oov));
+  SetParam(system, "lexicon_normalize_digits", "true");
   SetParam(lr_lstm->mutable_network_unit(), "hidden_layer_sizes", "256");
   lr_lstm->set_num_actions(1);
   AddResource(lr_lstm, "commons", artifacts->commons_filename);

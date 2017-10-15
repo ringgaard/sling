@@ -2,7 +2,7 @@
 
 SLING is a parser for annotating text with frame semantic annotations. It is
 trained on an annotated corpus using [Tensorflow](https://www.tensorflow.org/)
-and [Dragnn](https://github.com/tensorflow/models/blob/master/syntaxnet/g3doc/DRAGNN.md).
+and [Dragnn](https://github.com/tensorflow/models/blob/master/research/syntaxnet/g3doc/DRAGNN.md).
 
 The parser is a general transition-based frame semantic parser using
 bi-directional LSTMs for input encoding and a Transition Based Recurrent Unit
@@ -14,13 +14,30 @@ graphs directly without any intervening symbolic representation.
 
 The SLING framework includes an efficient and scalable frame store
 implementation as well as a neural network JIT compiler for fast parsing at
-runtime.
+runtime. 
+
+A more detailed description of the SLING parser can be found in this paper:
+
+<p style='margin-left:30px;'>
+Michael Ringgaard, Rahul Gupta, and Fernando C. N. Pereira. 2017.
+<a href='doc/report/sling.tex'><em>SLING: A framework for frame semantic parsing</em></a>.
+To be publised in arXiv preprint.
+</span>
 
 ## Installation
 
+First, make sure that the repository is cloned with `--recursive`, so that you
+get all the submodules.
+
+```shell
+git clone --recursive https://github.com/google/sling.git
+```
+
 The parser trainer uses Tensorflow for training. SLING uses the Python 2.7
 distribution of Tensorflow, so this needs to be installed. The installed version
-of protocol buffers needs to match the version used by Tensorflow.
+of protocol buffers needs to match the version used by Tensorflow. Finally,
+SLING uses [Bazel](https://bazel.build/) as the build system, so you need to
+install Bazel in order to build the SLING parser.
 
 ```shell
 sudo pip install -U protobuf==3.3.0
@@ -34,12 +51,19 @@ Languages: C++, Python 2.7, assembler<br>
 CPU: Intel x64 or compatible<br>
 Build system: Bazel<br>
 
-SLING uses [Bazel](https://bazel.build/) as build system, so you need to install
-Bazel in order to build the SLING parser.
+You can test your installation by building a few important targets.
 
 ```shell
-bazel build -c opt nlp/parser
+bazel build -c opt nlp/parser nlp/parser/tools:all
 ```
+
+**NOTE:** In case you get compile errors complaining about missing Tensorflow
+includes, try the following:
+*  Recreate [this soft
+   link](https://github.com/google/sling/blob/master/third_party/tensorflow/include) to point to your Tensorflow include folder.
+*  Change [this
+   dependency](https://github.com/google/sling/blob/04d6f28269bdc7d29c71d8dc24d74fe39641f589/third_party/tensorflow/BUILD#L21) to point to your Tensorflow's pywrap library.
+
 
 ## Training
 
@@ -52,8 +76,19 @@ detail.
 
 The first step consists of preparing the commons store (also called global store). This has frame and
 schema definitions for all types and roles of interest, e.g.
-`/s/person` or `/pb/love-01` or `/pb/arg0`. More details on store
-creation can be found [here (TBD)](TBD).
+`/saft/person` or `/pb/love-01` or `/pb/arg0`. In order to build the commons store
+for the OntoNotes-based parser you need to checkout PropBank in a directory
+parallel to the SLING directory:
+
+```shell
+cd ..
+git clone https://github.com/propbank/propbank-frames.git propbank
+cd sling
+nlp/parser/tools/build-commons.sh
+```
+
+This will build a SLING store with all the schemas needed and put it into 
+`/tmp/commons`.
 
 Next, write a converter to convert documents in your existing format to
 [SLING documents](https://github.com/google/sling/blob/master/nlp/document/document.h). A SLING document is just a
@@ -90,7 +125,7 @@ can be seen below. It is best to create one SLING document per input sentence.
   /s/document/mention: {=#1
     :/s/phrase
     /s/phrase/begin: 0
-    /s/phrase/evokes: {=#2 :/s/person }
+    /s/phrase/evokes: {=#2 :/saft/person }
   }
   /s/document/mention: {=#3
     :/s/phrase
@@ -98,7 +133,7 @@ can be seen below. It is best to create one SLING document per input sentence.
     /s/phrase/evokes: {=#4
       :/pb/love-01
       /pb/arg0: #2
-      /pb/arg1: {=#5 :/s/person }
+      /pb/arg1: {=#5 :/saft/person }
     }
   }
   /s/document/mention: {=#6
@@ -116,7 +151,7 @@ Store global;
 // Read global store from a file via LoadStore().
 
 // Lookup handles in advance.
-Handle h_person = global.Lookup("/s/person");
+Handle h_person = global.Lookup("/saft/person");
 Handle h_love01 = global.Lookup("/pb/love-01");
 Handle h_arg0 = global.Lookup("/pb/arg0");
 Handle h_arg1 = global.Lookup("/pb/arg1");
@@ -160,36 +195,30 @@ string encoded = Encode(doc.top());
 Use the converter to create the following corpora:
 + Training corpus of annotated SLING documents.
 + Dev corpus of annotated SLING documents.
-+ A version of the dev corpus without any annotations, i.e. a SLING
-  document in this corpus will only have token and text information.
-  The documents in this corpus should be in the same order as in the
-  annotated dev corpus.
 
   The default corpus format is zip, where the zip file contains one file
   per document, and the file for a document is just its encoded document
   frame. An alternate format is to have a folder with one file per
   document. More formats can be added by modifying the reader code
-[here](https://github.com/google/sling/blob/88771ebb771d2e32a2f481d3523c4747303047e0/nlp/document/document-source.cc#L107) and [here](https://github.com/google/sling/blob/88771ebb771d2e32a2f481d3523c4747303047e0/nlp/parser/trainer/train.py#L57).
+[here](https://github.com/google/sling/blob/88771ebb771d2e32a2f481d3523c4747303047e0/nlp/document/document-source.cc#L107) and [here](https://github.com/google/sling/blob/0c8ec1dcc4057c64eac8f8d5939b128a10750c63/nlp/parser/tools/train.py#L57).
 
 ### Specify training options and hyperparameters:
 
 Once the commons store and the corpora have been built, you are ready for training
-a model. For this, use the supplied [training script](https://github.com/google/sling/blob/master/nlp/parser/trainer/train.sh).
+a model. For this, use the supplied [training script](https://github.com/google/sling/blob/master/nlp/parser/tools/train.sh).
 The script provides various commandline arguments. The ones that specify
 the input data are:
 + `--commons`: File path of the commons store built in the previous step.
 + `--train`: Path to the training corpus built in the previous step.
 + `--dev`: Path to the annotated dev corpus built in the previous step.
-+ `--dev_without_gold`: Path to the dev corpus without annotations built
-  in the previous step.
 + `--output` or `--output_dir`: Output folder where checkpoints, master spec,
   temporary files, and the final model will be saved.
 
 Then we have the various training options and hyperparameters:
 + `--oov_features`: Whether fallback lexical features should be used in the LSTMs.
-+ `--word_embeddings`: Empty or path to pretrained word embeddings in
-  Tensorflow's RecordIO format. If supplied, these are used to initialize
-  the embeddings for word features.
++ `--word_embeddings`: Empty, or path to pretrained word embeddings in
+  [Mikolov's word2vec format](https://github.com/tmikolov/word2vec/blob/master/word2vec.c).
+  If supplied, these are used to initialize the embeddings for word features.
 + `--word_embeddings_dim`: Dimensionality of embeddings for word features.
   Should be the same as the pretrained embeddings, if they are supplied.
 + `--batch`: Batch size used during training.
@@ -206,17 +235,24 @@ Then we have the various training options and hyperparameters:
 + `--seed`, `--seed2`: Randomization seeds used for initializing embedding matrices.
 
 The script comes with reasonable defaults for the hyperparameters for
-training a semantic parser model, but it would be a good idea to hard
-code your favorite arguments [directly in the
-script](https://github.com/google/sling/blob/88771ebb771d2e32a2f481d3523c4747303047e0/nlp/parser/trainer/train.sh#L53)
+training a semantic parser model, but it would be a good idea to hardcode
+your favorite arguments [directly in the
+script](https://github.com/google/sling/blob/0c8ec1dcc4057c64eac8f8d5939b128a10750c63/nlp/parser/tools/train.sh#L51)
 to avoid supplying them again and again on the commandline.
 
 ### Run the training script
+
+To test your training setup, you can kick off a small training run:
 ```shell
-./nlp/parser/trainer/train.sh --report_every=1000 --train_steps=100000
+./nlp/parser/tools/train.sh --report_every=500 --train_steps=1000
 ```
 
-As training proceeds, it produces a lot of useful
+This training run should be over in 10-20 minutes, and should checkpoint and
+evaluate after every 500 steps. For a full-training run, we suggest increasing
+the number of steps to something like 100,000 and decreasing the checkpoint
+frequency to something like every 2000-5000 steps.
+
+As training proceeds, the training script produces a lot of useful
 diagnostic information, which we describe below.
 
 * The script begins by constructing an action table, which is a list of all
@@ -299,12 +335,10 @@ diagnostic information, which we describe below.
 
   Note that graph matching is an intrinsic evaluation, so if you wish to swap
   it with an extrinsic evaluation, then just replace the binary
-  [here](https://github.com/google/sling/blob/88771ebb771d2e32a2f481d3523c4747303047e0/nlp/parser/trainer/train.py#L97) with your evaluation binary.
+  [here](https://github.com/google/sling/blob/0c8ec1dcc4057c64eac8f8d5939b128a10750c63/nlp/parser/tools/train.py#L97) with your evaluation binary.
 
-* Finally, if `--flow` is specified, then the best performing checkpoint
-  will be converted into a Myelin flow file (more on Myelin and its flows
-  in the next section).
-  This will enable its use in a fast Myelin-based parser runtime.
+* Finally, the best performing checkpoint will be converted into a Myelin flow file
+  in `$OUTPUT_FOLDER/sempar.flow`.
 
   **NOTE:** A common use-case is that one often wants to play around with
   different training options without really wanting to change the spec,
@@ -313,29 +347,39 @@ diagnostic information, which we describe below.
   the Tensorflow graph generation step, and will use the pre-generated spec
   etc. from the same output folder.
 
+We have made a synthetic training and evaluation corpus available for trying out the parser
+trainer:
+
+```
+curl -o /tmp/conll-2003-sempar.tar.gz http://www.jbox.dk/sling/conll-2003-sempar.tar.gz
+tar -xvf /tmp/conll-2003-sempar.tar.gz
+```
+
+See [local/conll2003/README.md](local/conll2003/README.md) for instructions on how to train a parser.
+
 ## Parsing
 
-The parser needs a frame store and a parser model. The [frame store](frame/README.md)
-contains the the schemas for the frames and an action table produced by the
-parser trainer. The parser model contains the trained neural network for the
-model. The parser model is stored in a [Myelin](myelin/README.md) flow file.
+The trained parser model is stored in a [Myelin](myelin/README.md) flow file,
+e.g. `sempar.flow`. It contains all the information needed for parsing text:
+* The neural network units (LR, RL, FF) with the parameters learned from
+training.
+* Feature maps for the lexicon and affixes.
+* The commons store is a [SLING store](frame/README.md) with the schemas for the
+frames.
+* The action table with all the transition actions.
 
+A pre-trained model can be download from [here](http://www.jbox.dk/sling/sempar.flow).
 The model can be loaded and initialized in the following way:
 
 ```c++
 #include "frame/store.h"
-#include "frame/serialization.h"
 #include "nlp/document/document-tokenizer.h"
 #include "nlp/parser/parser.h"
 
-// Initialize global frame store.
-sling::Store commons;
-sling::FileDecoder decoder(&commons, "/tmp/parser.sling");
-decoder.DecodeAll();
-
 // Load parser model.
+sling::Store commons;
 sling::nlp::Parser parser;
-parser.Load(&commons, "/tmp/parser.flow");
+parser.Load(&commons, "/tmp/sempar.flow");
 commons.Freeze();
 
 // Create document tokenizer.
@@ -360,6 +404,164 @@ document.Update();
 
 // Output document annotations.
 std::cout << sling::ToText(document.top(), 2);
+```
+
+## Annotation Tools
+
+SLING comes with utility tools for annotating a corpus of documents with frames
+using a parser model, benchmarking this annotation process, and optionally
+evaluating the annotated frames against supplied gold frames.
+
+We provide two such tools -- a
+[tf-parse](https://github.com/google/sling/blob/master/nlp/parser/tools/tf-parse.py) Python script, and a [Myelin-based
+parser tool](https://github.com/google/sling/blob/master/nlp/parser/tools/parse.cc).
+Given the same trained parser model, both these tools should produce
+the same annotated frames and evaluation numbers. However the Myelin-based
+parser is significantly faster than Tensorflow-based tf-parse ([3x-10x in our
+experiments](http://www.jbox.dk/sling/sempar-profile.htm)).
+
+### Myelin-based parser tool
+
+This tool takes the following commandline arguments:
+
+*  `--parser` : This should point to a Myelin flow, e.g. one created by the
+   training script.
+*  If `--text` is specified then the parser is run over the supplied text, and
+   prints the annotated frame(s) in text mode. The indentation of the text
+   output can be controlled by `--indent`. E.g.
+   ```shell
+   bazel build -c opt nlp/parser/tools:parse
+   bazel-bin/nlp/parser/tools/parse --logtostderr \
+      --parser=<path to flow file> --text="John loves Mary" --indent=2
+
+   {=#1 
+     :/s/document
+     /s/document/text: "John loves Mary"
+     /s/document/tokens: [{=#2 
+       :/s/token
+       /s/token/index: 0
+       /s/token/text: "John"
+       /s/token/start: 0
+       /s/token/length: 4
+       /s/token/break: 0
+     }, {=#3 
+       :/s/token
+       /s/token/index: 1
+       /s/token/text: "loves"
+       /s/token/start: 5
+       /s/token/length: 5
+     }, {=#4 
+       :/s/token
+       /s/token/index: 2
+       /s/token/text: "Mary"
+       /s/token/start: 11
+       /s/token/length: 4
+     }]
+     /s/document/mention: {=#5 
+       :/s/phrase
+       /s/phrase/begin: 0
+       /s/phrase/evokes: {=#6 
+         :/saft/person
+       }
+     }
+     /s/document/mention: {=#7 
+       :/s/phrase
+       /s/phrase/begin: 1
+       /s/phrase/evokes: {=#8 
+         :/pb/love-01
+         /pb/arg0: #6
+         /pb/arg1: {=#9 
+           :/saft/person
+         }
+       }
+     }
+     /s/document/mention: {=#10 
+       :/s/phrase
+       /s/phrase/begin: 2
+       /s/phrase/evokes: #9
+     }
+   }
+   I0927 14:44:25.705880 30901 parse.cc:154] 823.732 tokens/sec
+   ```
+*  If `--benchmark` is specified then the parser is run on the document
+   corpus specified via `--corpus`. This corpus should be prepared similarly to
+   how the training/dev corpora were created. The processing can be limited to
+   the first N documents by specifying `--maxdocs=N`.
+
+   ```shell
+    bazel-bin/nlp/parser/tools/parse --logtostderr \
+      --parser=sempar.flow --corpus=dev.zip -benchmark --maxdocs=200
+
+    I0927 14:45:36.634670 30934 parse.cc:127] Load parser from sempar.flow
+    I0927 14:45:37.307870 30934 parse.cc:135] 565.077 ms loading parser
+    I0927 14:45:37.307922 30934 parse.cc:161] Benchmarking parser on dev.zip
+    I0927 14:45:39.059257 30934 parse.cc:184] 200 documents, 3369 tokens, 2289.91 tokens/sec
+   ```
+
+   If `--profile` is specified, the parser will run with profiling 
+   instrumentation enabled and output a detailed profile report with execution
+   timing for each operation in the neural network.
+
+*  If `--evaluate` is specified then the tool expects `--corpora` to specify
+   a corpora with gold frames. It then runs the parser model over a frame-less
+   version of this corpora and evaluates the annotated frames vs the gold
+   frames. Again, one can use `--maxdocs` to limit the evaluation to the first N
+   documents.
+   ```shell
+   bazel-bin/nlp/parser/tools/parse --logtostderr \
+     --evaluate --parser=sempar.flow --corpus=dev.zip --maxdocs=200
+
+   I0927 14:51:39.542151 31336 parse.cc:127] Load parser from sempar.flow
+   I0927 14:51:40.211920 31336 parse.cc:135] 562.249 ms loading parser
+   I0927 14:51:40.211973 31336 parse.cc:194] Evaluating parser on dev.zip
+   SPAN_P+ 1442
+   SPAN_P- 93
+   SPAN_R+ 1442
+   SPAN_R- 133
+   SPAN_Precision  93.941368078175884
+   SPAN_Recall     91.555555555555557
+   SPAN_F1 92.733118971061089
+   ...
+   <snip>
+   ...
+   SLOT_F1 78.398993883366586
+   COMBINED_P+     4920
+   COMBINED_P-     633
+   COMBINED_R+     4923
+   COMBINED_R-     901
+   COMBINED_Precision      88.60075634792004
+   COMBINED_Recall 84.529532967032978
+   COMBINED_F1     86.517276488704127
+   ```
+
+### Tensorflow-based parser tool
+
+An alternative to running the Myelin-based parsing tool is to run the tf-parse
+Python script that executes the annotation part of the Tensorflow graph over the
+input documents. It takes the following arguments:
+
+*  `--parser_dir`: This should be the directory where the trained model is saved.
+*  `--commons`: Path to the commons store. Should be the same as the one used in training.
+*  `--corpus`: Corpus of documents that will be annotated with the model.
+*  `--batch`: Batch size. Higher batch sizes are efficient but only if all the batch
+    documents are roughly of similar length.
+*  `--threads` : Number of threads to use in Tensorflow. This drives Tensorflow's
+    inter-op and intra-op parallelism. Making this very high will lead to inefficiencies
+    due to inter-thread CPU contention.
+*  `--output`: (Optional) File name where the annotated corpus will be saved.
+*  `--evaluate`: (Optional) If true, then it will evaluate the annotated corpus vs
+    the gold corpus (specified via --corpus).
+
+Sample Usage:
+```shell
+python nlp/parser/tools/tf-parse.py \
+  --parser_dir=/path/to/training/script/output/folder \
+  --commons=/path/to/commons \
+  --corpus=/path/to/gold/eval/corpus \
+  --batch=512 \
+  --threads=4 \
+  --output=annotated.zip \
+  --evaluate
 ```
 
 ## Credits

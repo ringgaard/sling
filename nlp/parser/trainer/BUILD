@@ -51,6 +51,7 @@ cc_binary(
     "//third_party/syntaxnet",
     "//third_party/zlib:miniunzip",
     "//third_party/zlib:zlib",
+    "//util:embeddings",
   ],
 )
 
@@ -177,18 +178,6 @@ cc_library(
     "//nlp/document:document",
     "//nlp/document:document-source",
     "//string:strcat",
-  ],
-)
-
-cc_binary(
-  name = "evaluate-frames",
-  srcs = ["evaluate-frames.cc"],
-  deps = [
-    ":frame-evaluation",
-    "//base",
-    "//file:posix",
-    "//third_party/zlib:miniunzip",
-    "//third_party/zlib:zlib",
   ],
 )
 

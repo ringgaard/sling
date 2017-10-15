@@ -19,7 +19,6 @@
 #include <utility>
 
 #include "base/registry.h"
-#include "dragnn/protos/data.pb.h"
 #include "dragnn/protos/spec.pb.h"
 #include "tensorflow/core/platform/logging.h"
 
@@ -104,7 +103,8 @@ void ComputeSession::Init(const MasterSpec &master_spec,
   VLOG(2) << "Initialization complete.";
 }
 
-void ComputeSession::InitializeComponentData(const string &component_name) {
+void ComputeSession::InitializeComponentData(const string &component_name,
+                                             bool clear_existing_annotations) {
   CHECK(input_data_ != nullptr) << "Attempted to access a component without "
                                    "providing input data for this session.";
   Component *component = GetComponent(component_name);
@@ -117,7 +117,7 @@ void ComputeSession::InitializeComponentData(const string &component_name) {
     CHECK(source->IsTerminal()) << "Source is not terminal for component '"
                                 << component_name << "'. Exiting.";
   }
-  component->InitializeData(input_data_.get());
+  component->InitializeData(input_data_.get(), clear_existing_annotations);
 }
 
 int ComputeSession::BatchSize(const string &component_name) const {
@@ -150,26 +150,27 @@ void ComputeSession::GetInputFeatures(
   GetReadiedComponent(component_name)->GetFixedFeatures(channel_id, output);
 }
 
-std::vector<LinkFeatures> ComputeSession::GetTranslatedLinkFeatures(
-    const string &component_name, int channel_id) {
+void ComputeSession::GetTranslatedLinkFeatures(
+    const string &component_name, int channel_id, int size,
+    int *steps, int *batch) {
   auto *component = GetReadiedComponent(component_name);
-  auto features = component->GetRawLinkFeatures(channel_id);
+  component->GetRawLinkFeatures(channel_id, steps, batch);
 
   IndexTranslator *translator = GetTranslators(component_name).at(channel_id);
-  for (int i = 0; i < features.size(); ++i) {
-    LinkFeatures &feature = features[i];
-    if (feature.has_feature_value()) {
-      VLOG(2) << "Raw feature[" << i << "]: " << feature.ShortDebugString();
-      IndexTranslator::Index index = translator->Translate(
-          feature.batch_idx(), feature.feature_value());
-      feature.set_step_idx(index.step_index);
-      feature.set_batch_idx(index.batch_index);
+  for (int i = 0; i < size; ++i) {
+    if (steps[i] >= 0) {
+      VLOG(2) << "Raw feature[" << i << "] step: " << steps[i];
+      IndexTranslator::Index index = translator->Translate(batch[i], steps[i]);
+      steps[i] = index.step_index;
+      batch[i] = index.batch_index;
+      VLOG(2) << "Translated feature[" << i << "] step: " << steps[i];
     } else {
+      // Clip missing steps to -1 and their batch index to 0.
+      steps[i] = -1;
+      batch[i] = 0;
       VLOG(2) << "Raw feature[" << i << "]: PADDING (empty proto)";
     }
   }
-
-  return features;
 }
 
 std::vector<int> ComputeSession::EmitOracleLabels(

@@ -45,12 +45,15 @@ handle: A handle to a ComputeSession that will be returned to the backing pool.
 REGISTER_OP("InitComponentData")
     .Input("handle: string")
     .Attr("component: string")
+    .Attr("clear_existing_annotations: bool")
     .Output("output_handle: string")
     .Doc(R"doc(
 Initialize a component for a given ComputeSession.
 
 handle: A handle to a ComputeSession.
 component: The name of a Component instance, matching the ComponentSpec.name.
+clear_existing_annotations: Bool that says whether to clear existing annotations
+    in the input documents.
 output_handle: The handle to the same ComputeSession after initialization.
 )doc");
 
@@ -131,20 +134,24 @@ max_num_ids: An `int`. Maximum number of output feature ids per batch item.
 
 REGISTER_OP("ExtractLinkFeatures")
     .Input("handle: string")
+    .Input("batch_size: int32")
     .Output("step_idx: int32")
     .Output("idx: int32")
     .Attr("component: string")
     .Attr("channel_id: int")
+    .Attr("channel_size: int")
     .Doc(R"doc(
 Given a ComputeSession, Component, and a channel index, outputs link features.
 
 Output indices have shape {batch_size * channel_size}.
 
 handle: A handle to a ComputeSession.
+batch_size: The current batch size.
 step_idx: The step indices to read activations from.
 idx: indices The index within a step to read the activations from.
 component: The name of a Component instance, matching the ComponentSpec.name.
 channel_id: The feature channel to extract features for.
+channel_size: An `int`. Channel size of channel_id.
 )doc");
 
 REGISTER_OP("EmitOracleLabels")

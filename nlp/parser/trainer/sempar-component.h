@@ -21,7 +21,6 @@
 #include "dragnn/core/input_batch_cache.h"
 #include "dragnn/core/interfaces/component.h"
 #include "dragnn/core/interfaces/transition_state.h"
-#include "dragnn/protos/data.pb.h"
 #include "dragnn/protos/spec.pb.h"
 #include "nlp/parser/trainer/feature-extractor.h"
 #include "nlp/parser/trainer/sempar-instance.h"
@@ -44,7 +43,8 @@ class SemparComponent : public syntaxnet::dragnn::Component {
 
   // Provides input data to the component.
   void InitializeData(
-      syntaxnet::dragnn::InputBatchCache *input_data) override;
+      syntaxnet::dragnn::InputBatchCache *input_data,
+      bool clear_existing_annotations) override;
 
   // Returns true if the component has had InitializeData called on it since
   // the last time it was reset.
@@ -82,10 +82,9 @@ class SemparComponent : public syntaxnet::dragnn::Component {
   // Extracts and populates the fixed features for the specified channel.
   void GetFixedFeatures(int channel_id, int64 *output) const override;
 
-  // Extracts and returns the vector of LinkFeatures for the specified
-  // channel. Note: these are NOT translated.
-  std::vector<syntaxnet::dragnn::LinkFeatures> GetRawLinkFeatures(
-      int channel_id) const override;
+  // Returns the linked features for the specified channel.
+  void GetRawLinkFeatures(int channel_id, int *steps, int *batch)
+      const override;
 
   // Returns a vector of oracle labels for each batch element.
   std::vector<int> GetOracleLabels() const override;

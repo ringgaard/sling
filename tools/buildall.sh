@@ -12,6 +12,7 @@ bazel build -c opt \
   nlp/document:* \
   nlp/kb:* \
   nlp/parser:* \
+  nlp/parser/tools:* \
   nlp/parser/trainer:* \
   nlp/web:* \
   nlp/wiki:* \

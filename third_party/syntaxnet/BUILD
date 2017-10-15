@@ -5,23 +5,8 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])  # Apache 2.0
 
 proto_library(
-  name = "data-proto",
-  srcs = ["dragnn/protos/data.proto"],
-)
-
-proto_library(
   name = "spec-proto",
   srcs = ["dragnn/protos/spec.proto"],
-)
-
-proto_library(
-  name = "embedding-proto",
-  srcs = ["dragnn/protos/embedding.proto"],
-)
-
-cc_proto_library(
-  name = "data",
-  deps = ["data-proto"],
 )
 
 cc_proto_library(
@@ -29,10 +14,14 @@ cc_proto_library(
   deps = ["spec-proto"],
 )
 
-cc_proto_library(
-  name = "embedding",
-  deps = ["embedding-proto"],
-)
+# Until Bazel supports python protocol buffer compilation, this step
+# needs to be done manually by running the following command:
+# bazel-out/host/bin/external/com_google_protobuf/protoc third_party/syntaxnet/dragnn/protos/spec.proto --python_out=.
+#
+#py_proto_library(
+#  name = "pyspec",
+#  deps = ["spec-proto"],
+#)
 
 cc_library(
   name = "syntaxnet",
@@ -45,11 +34,8 @@ cc_library(
     "dragnn/core/interfaces/component.h",
     "dragnn/core/interfaces/input_batch.h",
     "dragnn/core/interfaces/transition_state.h",
-    "dragnn/core/proto_io.h",
   ],
   deps = [
-    ":data",
-    ":embedding",
     ":spec",
     "//base",
     "//base:registry",
@@ -61,7 +47,6 @@ cc_library(
 cc_library(
   name = "dragnn-ops",
   srcs = [
-    "dragnn/core/reader_ops.cc",
     "dragnn/core/compute_session_pool.cc",
     "dragnn/core/compute_session.cc",
     "dragnn/core/index_translator.cc",
@@ -69,6 +54,7 @@ cc_library(
     "dragnn/core/ops/dragnn_ops.cc",
     "dragnn/core/ops/dragnn_op_kernels.cc",
     "dragnn/core/ops/embedding_ops.cc",
+    "dragnn/core/ops/embedding_op_kernels.cc",
   ],
   hdrs = [
     "dragnn/core/compute_session.h",
@@ -81,6 +67,7 @@ cc_library(
     ":syntaxnet",
     "//base",
     "//third_party/tensorflow",
+    "//util:embeddings",
   ],
   alwayslink = 1,
 )

@@ -70,6 +70,9 @@ class ActionTable {
                const std::vector<uint64> &fingerprints,
                std::vector<bool> *allowed) const;
 
+  // Checks if actions is beyond bounds.
+  bool Beyond(int index) const { return beyond_bounds_[index]; }
+
   // Returns the integer index of 'action'.
   int Index(const ParserAction &action) const {
     const auto &it = index_.find(action);
@@ -184,7 +187,7 @@ class ActionTable {
     string xaxis_;
 
     // Bin -> Count. Assumes small bin values.
-    std::vector<int> counts_;
+    std::vector<int64> counts_;
 
     // Total count across bins.
     int total_ = 0;

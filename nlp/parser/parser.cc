@@ -42,6 +42,9 @@ void Parser::Load(Store *store, const string &model) {
   InitLSTM("rl_lstm", &rl_, true);
   InitFF("ff", &ff_);
 
+  // Initialize profiling.
+  if (ff_.cell->profile()) profile_ = new Profile(this);
+
   // Load lexicon.
   myelin::Flow::Blob *vocabulary = flow.DataBlock("lexicon");
   CHECK(vocabulary != nullptr);
@@ -85,6 +88,7 @@ void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
   // Get cell.
   lstm->cell = GetCell(name);
   lstm->reverse = reverse;
+  lstm->profile = lstm->cell->profile();
 
   // Get connectors.
   lstm->control = GetConnector(name + "/control");
@@ -100,6 +104,14 @@ void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
   lstm->quote_feature = GetParam(name + "/quote", true);
   lstm->digit_feature = GetParam(name + "/digit", true);
 
+  // Get feature sizes.
+  if (lstm->prefix_feature != nullptr) {
+    lstm->prefix_size = lstm->prefix_feature->elements();
+  }
+  if (lstm->suffix_feature != nullptr) {
+    lstm->suffix_size = lstm->suffix_feature->elements();
+  }
+
   // Get links.
   lstm->c_in = GetParam(name + "/c_in");
   lstm->c_out = GetParam(name + "/c_out");
@@ -110,6 +122,7 @@ void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
 void Parser::InitFF(const string &name, FF *ff) {
   // Get cell.
   ff->cell = GetCell(name);
+  ff->profile = ff->cell->profile();
 
   // Get connector for recurrence.
   ff->step = GetConnector(name + "/step");
@@ -191,6 +204,7 @@ void Parser::Parse(Document *document) const {
       data.ExtractFeaturesLSTM(s.begin() + out, features, lr_, &data.lr_);
 
       // Compute LSTM cell.
+      if (profile_) data.lr_.set_profile(&profile_->lr);
       data.lr_.Compute();
     }
 
@@ -206,6 +220,7 @@ void Parser::Parse(Document *document) const {
       data.ExtractFeaturesLSTM(s.begin() + out, features, rl_, &data.rl_);
 
       // Compute LSTM cell.
+      if (profile_) data.rl_.set_profile(&profile_->rl);
       data.rl_.Compute();
     }
 
@@ -225,6 +240,7 @@ void Parser::Parse(Document *document) const {
       data.ExtractFeaturesFF(step);
 
       // Predict next action.
+      if (profile_) data.ff_.set_profile(&profile_->ff);
       data.ff_.Compute();
       float *output = data.ff_.Get<float>(ff_.output);
       int prediction = 0;
@@ -232,7 +248,7 @@ void Parser::Parse(Document *document) const {
       for (int a = 0; a < num_actions_; ++a) {
         if (output[a] > max_score) {
           const ParserAction &action = actions_.Action(a);
-          if (state.CanApply(action)) {
+          if (state.CanApply(action) && !actions_.Beyond(a)) {
             prediction = a;
             max_score = output[a];
           }
@@ -363,9 +379,13 @@ void ParserInstance::ExtractFeaturesLSTM(int token,
   if (lstm.prefix_feature) {
     Affix *affix = features.prefix(token);
     int *a = data->Get<int>(lstm.prefix_feature);
-    while (affix != nullptr) {
-      *a++ = affix->id();
-      affix = affix->shorter();
+    for (int n = 0; n < lstm.prefix_size; ++n) {
+      if (affix != nullptr) {
+        *a++ = affix->id();
+        affix = affix->shorter();
+      } else {
+        *a++ = -2;
+      }
     }
   }
 
@@ -373,9 +393,13 @@ void ParserInstance::ExtractFeaturesLSTM(int token,
   if (lstm.suffix_feature) {
     Affix *affix = features.suffix(token);
     int *a = data->Get<int>(lstm.suffix_feature);
-    while (affix != nullptr) {
-      *a++ = affix->id();
-      affix = affix->shorter();
+    for (int n = 0; n < lstm.suffix_size; ++n) {
+      if (affix != nullptr) {
+        *a++ = affix->id();
+        affix = affix->shorter();
+      } else {
+        *a++ = -2;
+      }
     }
   }
 
@@ -422,9 +446,9 @@ void ParserInstance::ExtractFeaturesFF(int step) {
     int *create = GetFF(ff.frame_create_feature);
     int *focus = GetFF(ff.frame_focus_feature);
     for (int d = 0; d < ff.attention_depth; ++d) {
-      int att = -2;
-      int created = -2;
-      int focused = -2;
+      int att = -1;
+      int created = -1;
+      int focused = -1;
       if (d < state_.AttentionSize()) {
         // Get frame from attention buffer.
         int frame = state_.Attention(d);
@@ -450,7 +474,7 @@ void ParserInstance::ExtractFeaturesFF(int step) {
     int h = 0;
     int s = step - 1;
     while (h < ff.history_size && s >= 0) history[h++] = s--;
-    while (h < ff.history_size) history[h++] = -2;
+    while (h < ff.history_size) history[h++] = -1;
   }
 
   // Extract role features.

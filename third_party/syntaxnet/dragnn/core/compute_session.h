@@ -43,7 +43,10 @@ class ComputeSession {
   // Initialize a component with data.
   // Note that attempting to initialize a component that depends on
   // another component that has not yet finished will cause a CHECK failure.
-  void InitializeComponentData(const string &component_name);
+  // If 'clear_existing_annotations' is true then the component should remove
+  // any existing (e.g. gold) annotations from the data.
+  void InitializeComponentData(
+      const string &component_name, bool clear_existing_annotations);
 
   // Return the batch size for the given component.
   int BatchSize(const string &component_name) const;
@@ -59,18 +62,17 @@ class ComputeSession {
                              const float score_matrix[],
                              int score_matrix_length);
 
-  // Get the input features for the given component and channel. This passes
+  // Get the fixed features for the given component and channel. This passes
   // through to the relevant Component's GetFixedFeatures() call.
   void GetInputFeatures(
       const string &component_name,
       int channel_id,
       int64 *output) const;
 
-  // Get the input features for the given component and channel. This function
-  // can return empty LinkFeatures protos, which represent unused padding slots
-  // in the output weight tensor.
-  std::vector<LinkFeatures> GetTranslatedLinkFeatures(
-      const string &component_name, int channel_id);
+  // Get the linked features for the given component and channel.i
+  void GetTranslatedLinkFeatures(
+      const string &component_name, int channel_id, int output_size,
+      int *steps, int *batch);
 
   // Get the oracle labels for the given component.
   std::vector<int> EmitOracleLabels(const string &component_name);
