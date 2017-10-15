@@ -94,7 +94,7 @@ bool LoadCUDALibrary() {
   }
   if (cuda_lib == nullptr) return false;
 
-  // Resolve library qfunctions.
+  // Resolve library functions.
   LOAD_CUDA_FUNCTION(cuDriverGetVersion, "");
   LOAD_CUDA_FUNCTION(cuInit, "");
   LOAD_CUDA_FUNCTION(cuDeviceGetCount, "");
