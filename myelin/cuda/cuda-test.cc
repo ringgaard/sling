@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "binary_version=" << vectoradd.binary_version();
 
   // Allocate host vectors.
-  int num_elements = 500000;
+  int num_elements = 256 * 256;
   size_t size = num_elements * sizeof(float);
   float *h_a = (float *) CHECK_NOTNULL(malloc(size));
   float *h_b = (float *) CHECK_NOTNULL(malloc(size));
@@ -124,16 +124,16 @@ int main(int argc, char *argv[]) {
   CHECK_CUDA(cuMemcpyHtoD(d_a, h_a, size));
   CHECK_CUDA(cuMemcpyHtoD(d_b, h_b, size));
 
-  int iterations = 1000;
+  int iterations = 1000000;
   float ops = num_elements;
   ops *= iterations;
 
   // Run tests.
-  bool profile = true;
-  bool test1 = true;
-  bool test2 = false;
-  bool test3 = false;
-  bool test4 = false;
+  bool profile = false;
+  bool test1 = false;
+  bool test2 = true;
+  bool test3 = true;
+  bool test4 = true;
 
   // TEST 1: sync copy on each iteration.
   if (test1) {
@@ -203,7 +203,7 @@ int main(int argc, char *argv[]) {
     clock.stop();
     if (profile) CHECK_CUDA(cuProfilerStop());
     CHECK_CUDA(cuStreamDestroy(stream));
-    LOG(INFO) << "sync: " << clock.cycles() / iterations << " cycles, "
+    LOG(INFO) << "async: " << clock.cycles() / iterations << " cycles, "
               << clock.us() / iterations << " us "
               << (ops / clock.ns()) << " GFLOPS";
   }

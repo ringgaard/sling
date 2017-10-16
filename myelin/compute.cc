@@ -629,7 +629,9 @@ string Instance::ToString(Tensor *param) const {
 string Instance::ToString() const {
   string str;
   for (Tensor *t : cell()->network()->parameters()) {
-    if (t->cell() == cell() && t->shared() == nullptr) {
+    if (t->cell() == cell() &&
+        t->shared() == nullptr &&
+        t->placement() & HOST) {
       str.append(t->name());
       str.append(" = ");
       str.append(ToString(t));

@@ -137,3 +137,20 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "cuda-test",
+  srcs = ["cuda-test.cc"],
+  deps = [
+    "//base",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
+    "//myelin:profile",
+    "//myelin:builder",
+    "//myelin/cuda:cuda-runtime",
+    "//myelin/kernel:cuda",
+    "//myelin/kernel:tensorflow",
+  ],
+)
+

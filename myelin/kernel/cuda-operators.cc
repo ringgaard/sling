@@ -292,7 +292,7 @@ class CUDAIntMul : public CUDAIntBinaryOperator {
   string Operation() override { return "Mul"; }
 };
 
-void RegisterCUDAOperators(Library *library) {
+void RegisterCUDAOperatorLibrary(Library *library) {
   // Computes  : c = a + b element-wise
   // Input     : a: float32[d1,...,dn]
   //             b: float32[d1,...,dn]

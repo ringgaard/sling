@@ -98,7 +98,7 @@ class CUDAFltVecMatMulAddRelu : public CUDAFltVecMatMulBase {
   string Operation() override { return "MatMulAddRelu"; }
 };
 
-void RegisterCUDAMatMul(Library *library) {
+void RegisterCUDAMatMulLibrary(Library *library) {
   // Computes  : y = x * W
   // Input     : x: float32[1,n]
   //             W: float32[n,m] column-major
