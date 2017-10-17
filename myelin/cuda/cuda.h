@@ -14,6 +14,10 @@ namespace myelin {
 
 class CUDAModule;
 
+// Pointer to data in device memory.
+typedef uint64 DevicePtr;
+#define DEVICE_NULL 0
+
 // Check that CUDA call is successful.
 #define CHECK_CUDA(op) CHECK_EQ((op), CUDA_SUCCESS)
 
@@ -274,6 +278,17 @@ class PTXImm : public PTXArg {
   int64 number_;
 };
 
+// PTX floating point number argument.
+class PTXFloat : public PTXArg {
+ public:
+  PTXFloat(float number) : number_(number) {}
+
+  void Generate(string *code) const override;
+
+ private:
+  float number_;
+};
+
 // PTX register argument.
 class PTXReg : public PTXArg {
  public:
@@ -302,6 +317,8 @@ class PTXAddr : public PTXArg {
   PTXAddr(const PTXReg &reg) : reg_(reg), disp_(0) {}
   PTXAddr(const PTXReg &reg, int64 disp) : reg_(reg), disp_(disp) {}
   PTXAddr(int64 disp) : reg_(), disp_(disp) {}
+  PTXAddr(DevicePtr addr) : reg_(), disp_(addr) {}
+  PTXAddr(DevicePtr addr, PTXReg &ofs) : reg_(ofs), disp_(addr) {}
 
   void Generate(string *code) const override;
 

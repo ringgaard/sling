@@ -21,6 +21,11 @@ class PTXMacroAssembler : public PTXAssembler {
   // Grid size for kernel.
   int grid_dim(int d) const { return grid_dim_[d]; }
   void set_grid_dim(int d, int size) { grid_dim_[d] = size; }
+  void set_grid_dims(int x = 1, int y = 1, int z = 1) {
+    grid_dim_[0] = x;
+    grid_dim_[1] = y;
+    grid_dim_[2] = z;
+  }
 
   // Return grid size for kernel.
   int grid_size() const { return grid_dim_[0] * grid_dim_[1] * grid_dim_[2]; }

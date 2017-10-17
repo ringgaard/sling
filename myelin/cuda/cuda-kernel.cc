@@ -56,6 +56,12 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
   CUDAModule *module = device->Compile(code.c_str());
   CUDAFunction func(*module, name.c_str());
 
+  VLOG(6) << step->name() << " PTX usage: "
+          << func.shared_size() << " shared, "
+          << func.const_size() << " const, "
+          << func.local_size() << " local, "
+          << func.num_regs() << " regs";
+
   // Compute kernel block size.
   int grid_size = ptx.grid_size();
   int min_grid_size;

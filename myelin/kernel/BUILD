@@ -89,7 +89,6 @@ cc_library(
   srcs = [
     "cuda.cc",
     "cuda-matmul.cc",
-    "cuda-operators.cc",
     "cuda-arithmetic.cc",
   ],
   hdrs = ["cuda.h"],
