@@ -11,6 +11,7 @@
 
 DEFINE_bool(debug_base, false, "Debug base kernel");
 DEFINE_bool(debug_test, false, "Debug test kernel");
+DEFINE_bool(memory_check, false, "Check for memory overwrites");
 DEFINE_bool(scramble_registers, false, "Scramble registers on entry");
 DEFINE_bool(log_input_tensors, false, "Dump input tensors");
 DEFINE_bool(log_output_tensors, false, "Dump output tensors");
@@ -137,7 +138,11 @@ struct KernelCompiler {
       LOG(ERROR) << "Unknown kernel: " << kernel;
       return false;
     }
-    network.set_runtime(&debug_runtime);
+    if (runtime != nullptr) {
+      network.set_runtime(runtime);
+    } else if (FLAGS_memory_check || FLAGS_scramble_registers) {
+      network.set_runtime(&debug_runtime);
+    }
     network.set_parameter_element_order(ANY_ORDER);
     if (debug) network.set_debug(true);
     if (!network.Compile(flow, singleton)) {
@@ -157,6 +162,7 @@ struct KernelCompiler {
     return true;
   }
 
+  Runtime *runtime = nullptr;
   Library singleton;
   Network network;
   Cell *func = nullptr;
@@ -210,6 +216,7 @@ bool FltKernelComparator::Check(int iterations) {
 
   // Compile computation for base kernel.
   KernelCompiler test;
+  test.runtime = runtime_;
   if (!test.Compile(library_, flow_, op_->type, test_kernel_name_,
       FLAGS_test_code_output, FLAGS_debug_test)) {
     return false;
@@ -424,6 +431,7 @@ bool IntKernelComparator::Check(int iterations) {
 
   // Compile computation for base kernel.
   KernelCompiler test;
+  test.runtime = runtime_;
   if (!test.Compile(library_, flow_, op_->type, test_kernel_name_,
       FLAGS_test_code_output, FLAGS_debug_test)) {
     return false;

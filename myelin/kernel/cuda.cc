@@ -10,7 +10,7 @@ void RegisterCUDAMatMulLibrary(Library *library);
 void RegisterCUDAArithmeticLibrary(Library *library);
 
 // Register CUDA kernels.
-void RegisterCUDAKernels(Library *library) {
+void RegisterCUDALibrary(Library *library) {
   RegisterCUDAMatMulLibrary(library);
   RegisterCUDAArithmeticLibrary(library);
 }

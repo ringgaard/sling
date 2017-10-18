@@ -7,7 +7,7 @@ namespace sling {
 namespace myelin {
 
 // Register CUDA kernels.
-void RegisterCUDAKernels(Library *library);
+void RegisterCUDALibrary(Library *library);
 
 }  // namespace myelin
 }  // namespace sling

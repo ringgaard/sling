@@ -23,7 +23,9 @@ cc_binary(
     ":compare-kernels",
     "//base",
     "//file:posix",
+    "//myelin/cuda:cuda-runtime",
     "//myelin/kernel:tensorflow",
+    "//myelin/kernel:cuda",
   ],
 )
 

@@ -155,7 +155,7 @@ class CUDACalculate : public CUDAKernel {
     // Generate code for each instruction in expression.
     for (auto *instr : instrs.ops()) {
       if (instr->nop()) continue;
-      LOG(INFO) << "  " << instr->AsInstruction();
+      //LOG(INFO) << "  " << instr->AsInstruction();
       switch (instr->type) {
         case Express::MOV:
           if (instr->dst != -1 && instr->src != -1) {
@@ -183,7 +183,7 @@ class CUDACalculate : public CUDAKernel {
           break;
         case Express::DIV:
           if (IsFloat(comp.dtype)) {
-            GenerateBinaryOp("div.rnd", instr, &comp);
+            GenerateBinaryOp("div.approx", instr, &comp);
           } else {
             GenerateBinaryOp("div", instr, &comp);
           }

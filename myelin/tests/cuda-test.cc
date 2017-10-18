@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   // Set up kernel library.
   Library library;
   RegisterTensorflowLibrary(&library);
-  RegisterCUDAKernels(&library);
+  RegisterCUDALibrary(&library);
 
   // Set up CUDA runtime.
   CUDARuntime cudart;
