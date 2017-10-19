@@ -472,7 +472,9 @@ decoder.
 grid search with a dev corpus was: $\mbox{learning\_rate} = 0.0005$,
 $\mbox{optimizer} = \mbox{Adam}$~\cite{kingma2014} with $\beta_1 = 0.01$, $\beta_2 = 0.999$,
 $\epsilon = 1e-5$, no dropout, gradient clipping at $1.0$, exponential moving
-average, no layer normalization, and a training batch size of $8$.
+average, no layer normalization, and a training batch size of $8$. We use
+$32$ dimensional word embeddings, single layer LSTMs with $256$ dimensions,
+and a $128$ dimensional hidden layer in the feed-forward unit.
 
 We stopped training after $120,000$ steps, where each step corresponds to
 processing one training batch, and evaluated on the dev corpus
@@ -529,7 +531,7 @@ that captures inter-frame link information.
 Augmenting this with more features should help improve ROLE quality, as we will
 investigate in future work.
 
-Finally, we took the best checkpoint, with SLOT F1 $= 79.95\%$ at $118,000$ steps),
+Finally, we took the best checkpoint, with SLOT F1 $= 79.95\%$ at $118,000$ steps,
 and evaluated it on the test corpus.
 Table~\ref{tab:eval} lists the quality of this model on the test and dev
 corpora.
@@ -537,7 +539,7 @@ With the exception of LABEL accuracies, all the other metrics exhibit less than
 half a percent difference between the test and dev corpora. This illustrates
 that despite the lack of dropout, the model generalizes well to unseen text.
 As for the disparity on LABEL F1 ($95.73$ on dev
-against $92.79$ on test), we observe from Figure~\ref{fig:dev-eval}
+against $92.81$ on test), we observe from Figure~\ref{fig:dev-eval}
 that the LABEL accuracies follow a different improvement pattern
 during training. On the dev set, LABEL F1 peaked at $96.18$ at $100,000$ steps,
 and started degrading slightly from there on to $95.73$ at $118,000$ steps,
@@ -553,47 +555,47 @@ Tokens & & 291,746  & 216,473  \\
 Sentences &   & 15,084 & 11,623  \\
 \hline
 \hline
-Span & Precision & 93.42  & 92.93 \\
+Span & Precision & 93.42  & 93.04 \\
 \hline
-& Recall & 94.21 & 93.97 \\
+& Recall & 94.21 & 94.34 \\
 \hline
-& F1 & 93.81 & 93.45 \\
+& F1 & 93.81 & 93.69 \\
 \hline
-Frame & Precision & 93.47 & 93.10 \\
+Frame & Precision & 93.47 & 93.20 \\
 \hline
-& Recall & 94.16 & 93.71 \\
+& Recall & 94.16 & 94.08 \\
 \hline
-& F1 & 93.81 & 93.40\\
+& F1 & 93.81 & 93.64\\
 \hline
-Type & Precision & 85.56  & 85.52 \\
+Type & Precision & 85.56  & 85.67 \\
 \hline
-& Recall & 86.20 & 86.10 \\
+& Recall & 86.20 & 86.49 \\
 \hline
-& F1 & 85.88 & 85.81 \\
+& F1 & 85.88 & 86.08 \\
 \hline
-Role & Precision & 70.21 & 68.97 \\
+Role & Precision & 70.21 & 69.59 \\
 \hline
-& Recall & 69.11 & 68.55 \\
+& Recall & 69.11 & 69.20 \\
 \hline
-& F1 & 69.65 & 68.76 \\
+& F1 & 69.65 & 69.39 \\
 \hline
-Label & Precision & 96.51 & 93.87 \\
+Label & Precision & 96.51 & 95.02 \\
 \hline
-& Recall & 94.97 & 91.74 \\
+& Recall & 94.97 & 90.70 \\
 \hline
-& F1 & 95.73 & 92.79 \\
+& F1 & 95.73 & 92.81 \\
 \hline
-Slot & Precision & 80.00 & 79.48 \\
+Slot & Precision & 80.00 & 79.81 \\
 \hline
-& Recall & 79.90 & 79.62 \\
+& Recall & 79.90 & 80.10 \\
 \hline
-& F1 & 79.95 & 79.55 \\
+& F1 & 79.95 & 79.96 \\
 \hline
-Combined & Precision & 87.46 & 86.99 \\
+Combined & Precision & 87.46 & 87.20 \\
 \hline
-& Recall & 87.79 & 87.49 \\
+& Recall & 87.79 & 87.91 \\
 \hline
-& F1 & 87.63 & 87.24 \\
+& F1 & 87.63 & 87.55 \\
 \hline
 \end{tabular}
 \caption{Evaluation on dev and test corpora, model
@@ -601,6 +603,8 @@ chosen on the Slot-F1 metric on dev corpus.}
 \label{tab:eval}
 \end{table}
 
+We have tried increasing the sizes of the LSTM dimensions, hidden layers,
+and embeddings, but this did not improve the results significantly.
 
 \section{Parser runtime}
 \label{sec:runtime}
@@ -669,6 +673,28 @@ actions are EVOKE actions. The output layer of the FF unit could be turned into
 a cascaded classifier, where if the first classifier predicts a generic
 {\bf EVOKE(/pb/predicate, 1)} action, it would use a secondary classifier to
 predict the predicate type. This could almost double the speed of the parser.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have described SLING, a framework for parsing natural language into
+semantic frames. Our experiments show that it is feasible to build a
+semantic parser that outputs frame graphs directly without any intervening
+symbolic representation, only using the tokens as inputs.
+We illustrated this on the joint task of predicting entity mentions, entity types,
+measures, and semantic role labeling.
+While the LSTMs and TBRUs are expensive to compute, we can achieve acceptable
+parsing speed using the Myelin JIT compiler.
+We hope to make use of SLING in the future for further exploration into
+semantic parsing.
+
+\section*{Acknowledgements}
+\label{sec:ack}
+
+We would like to thank Google for supporting us in this project and allowing us
+to make SLING available to the public community. We would also like to thank the
+Tensorflow and DRAGNN teams for making their systems publicly available.
+Without it, we could not have made SLING open source.
 
 \bibliography{sling}
 \bibliographystyle{acl_natbib}
