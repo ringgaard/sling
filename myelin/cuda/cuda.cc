@@ -1,8 +1,7 @@
 #include "myelin/cuda/cuda.h"
 
-#include <iomanip>
+#include <stdio.h>
 #include <mutex>
-#include <sstream>
 
 #include "base/logging.h"
 #include "myelin/cuda/cuda-api.h"
@@ -198,10 +197,11 @@ void PTXImm::Generate(string *code) const {
 }
 
 void PTXFloat::Generate(string *code) const {
-  std::ostringstream out;
-  out.setf(std::ios_base::showpoint);
-  out << std::setprecision(15) << number_;
-  code->append(out.str());
+  uint32 bits;
+  memcpy(&bits, &number_, sizeof(float));
+  char str[16];
+  sprintf(str, "0f%08x", bits);
+  code->append(str);
 }
 
 void PTXReg::Generate(string *code) const {

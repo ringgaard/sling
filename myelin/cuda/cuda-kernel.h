@@ -30,6 +30,9 @@ class PTXMacroAssembler : public PTXAssembler {
   // Return grid size for kernel.
   int grid_size() const { return grid_dim_[0] * grid_dim_[1] * grid_dim_[2]; }
 
+  // Load address of tensor into register.
+  void LoadTensorAddress(const PTXReg &reg, Tensor *tensor);
+
  private:
   // Data instance parameter.
   PTXReg data_;

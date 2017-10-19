@@ -520,8 +520,8 @@ class PTXAssembler {
 };
 
 // Utility macros for emitting PTX code.
-#define ptx_decl(type, name) PTXReg \
-  name = ptx->reg(#type, #name, __FILE__, __LINE__)
+#define ptx_decl(type, name) \
+  PTXReg name = ptx->reg(#type, #name, __FILE__, __LINE__)
 #define ptx_param(type, name) \
   PTXReg name = ptx->param(#type, #name, __FILE__, __LINE__)
 #define ptx_emit(instr, ...) \

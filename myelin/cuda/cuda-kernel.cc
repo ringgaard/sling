@@ -33,6 +33,19 @@ PTXMacroAssembler::PTXMacroAssembler(const string &name): PTXAssembler(name) {
   grid_dim_[2] = 1;
 }
 
+void PTXMacroAssembler::LoadTensorAddress(const PTXReg &reg, Tensor *tensor) {
+  if (tensor->IsConstant()) {
+    // Read from constant tensor.
+    emit("mov.u64", reg, PTXImm(tensor->device_data()));
+  } else if (tensor->ref()) {
+    // Read from reference tensor.
+    emit("ld.global.u64", reg, PTXAddr(data(), tensor->device_offset()));
+  } else {
+    // Read from instance tensor.
+    emit("add.u64", reg, data(), PTXImm(tensor->device_offset()));
+  }
+}
+
 bool CUDAKernel::Supports(Step *step) {
   CUDADevice *device = step->cell()->runtime()->Device();
   return device != nullptr;
