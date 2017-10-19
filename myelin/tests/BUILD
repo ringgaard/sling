@@ -23,7 +23,9 @@ cc_binary(
     ":compare-kernels",
     "//base",
     "//file:posix",
+    "//myelin/cuda:cuda-runtime",
     "//myelin/kernel:tensorflow",
+    "//myelin/kernel:cuda",
   ],
 )
 
@@ -133,6 +135,23 @@ cc_binary(
     "//myelin:graph",
     "//myelin:profile",
     "//myelin/kernel:dragnn",
+    "//myelin/kernel:tensorflow",
+  ],
+)
+
+cc_binary(
+  name = "cuda-test",
+  srcs = ["cuda-test.cc"],
+  deps = [
+    "//base",
+    "//file:posix",
+    "//myelin:compute",
+    "//myelin:flow",
+    "//myelin:graph",
+    "//myelin:profile",
+    "//myelin:builder",
+    "//myelin/cuda:cuda-runtime",
+    "//myelin/kernel:cuda",
     "//myelin/kernel:tensorflow",
   ],
 )

@@ -4,15 +4,15 @@ namespace sling {
 namespace myelin {
 
 // cuda-matmul.cc
-void RegisterCUDAMatMul(Library *library);
+void RegisterCUDAMatMulLibrary(Library *library);
 
-// cuda-operators.cc
-void RegisterCUDAOperators(Library *library);
+// cuda-arithmetic.cc
+void RegisterCUDAArithmeticLibrary(Library *library);
 
 // Register CUDA kernels.
-void RegisterCUDAKernels(Library *library) {
-  RegisterCUDAMatMul(library);
-  RegisterCUDAOperators(library);
+void RegisterCUDALibrary(Library *library) {
+  RegisterCUDAMatMulLibrary(library);
+  RegisterCUDAArithmeticLibrary(library);
 }
 
 }  // namespace myelin

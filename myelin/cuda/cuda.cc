@@ -1,6 +1,8 @@
 #include "myelin/cuda/cuda.h"
 
+#include <iomanip>
 #include <mutex>
+#include <sstream>
 
 #include "base/logging.h"
 #include "myelin/cuda/cuda-api.h"
@@ -151,7 +153,18 @@ CUDAModule::CUDAModule(const char *ptx) {
 
   CUresult res = cuModuleLoadDataEx(&handle_, ptx, num_options, option, value);
   if (res != CUDA_SUCCESS) {
-    LOG(FATAL) << "PTX compile error " << res << ": " << errors;
+    LOG(ERROR) << "PTX compile error " << res << ": " << errors;
+    const char *line = ptx;
+    int lineno = 1;
+    for (;;) {
+      const char *end = strchr(line, '\n');
+      if (end == nullptr) end = line + strlen(line);
+      LOG(INFO) << lineno++ << ": " << string(line, end - line);
+      if (*end == 0) break;
+      line = end + 1;
+      if (lineno > 100) break;
+    }
+    LOG(FATAL) << "Error compiling PTX code";
   }
   if (strlen(log) > 0) {
     LOG(INFO) << log;
@@ -182,6 +195,13 @@ void PTXLabel::Generate(string *code) const {
 
 void PTXImm::Generate(string *code) const {
   code->append(std::to_string(number_));
+}
+
+void PTXFloat::Generate(string *code) const {
+  std::ostringstream out;
+  out.setf(std::ios_base::showpoint);
+  out << std::setprecision(15) << number_;
+  code->append(out.str());
 }
 
 void PTXReg::Generate(string *code) const {

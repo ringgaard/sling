@@ -16,6 +16,7 @@
 #define MYELIN_KERNEL_ARITHMETIC_H_
 
 #include "myelin/compute.h"
+#include "myelin/express.h"
 
 namespace sling {
 namespace myelin {
@@ -25,6 +26,9 @@ void RegisterArithmeticLibrary(Library *library);
 
 // Register arithmetic transforms.
 void RegisterArithmeticTransforms(Library *library);
+
+// Initialize expression for step.
+void InitExpression(const Step *step, Express *expr, bool expand);
 
 }  // namespace myelin
 }  // namespace sling

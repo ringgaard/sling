@@ -6,6 +6,9 @@
 #include "base/logging.h"
 #include "file/file.h"
 #include "myelin/compute.h"
+#include "myelin/cuda/cuda.h"
+#include "myelin/cuda/cuda-runtime.h"
+#include "myelin/kernel/cuda.h"
 #include "myelin/kernel/tensorflow.h"
 #include "myelin/tests/compare-kernels.h"
 #include "third_party/jit/cpu.h"
@@ -19,7 +22,7 @@ DEFINE_string(test, "", "Kernel to be tested");
 
 DEFINE_bool(ignore_errors, false, "Ignore test errors");
 DEFINE_double(matmul_accuracy, 1e-6, "Maximum error on matmul operations");
-DEFINE_double(func_accuracy, 1e-6, "Maximum error on function operations");
+DEFINE_double(func_accuracy, 1e-5, "Maximum error on function operations");
 
 DEFINE_int32(d, -1, "Vector dimension for tests");
 DEFINE_int32(dmin, 1, "Minimum vector dimension for tests");
@@ -45,6 +48,7 @@ DEFINE_bool(avx2, true, "AVX2 support");
 DEFINE_bool(fma3, true, "FMA3 support");
 
 Library library;
+CUDARuntime *cudart = nullptr;
 
 // Baseline implementation of float matrix multiplication.
 void BaselineMatMatMul(const TensorData &A, const TensorData &B,
@@ -176,6 +180,7 @@ void CheckFltFunc(const string &func,
     if (modulo != 0 && d % modulo != 0) continue;
     VLOG(2) << "Testing " << d;
     FltKernelComparator comp(library, func, test, base);
+    if (cudart) comp.set_runtime(cudart);
     comp.AddInput("x", {d}, negative ? -10.0 : 1e-3, 10.0);
     comp.AddOutput("y", {d}, FLAGS_func_accuracy);
     CheckTest(comp.Check(10));
@@ -193,6 +198,7 @@ void CheckFltBinOp(const string &func,
     if (modulo != 0 && d % modulo != 0) continue;
     VLOG(2) << "Testing " << d;
     FltKernelComparator comp(library, func, test, base);
+    if (cudart) comp.set_runtime(cudart);
     comp.AddInput("a", {d}, -100.0, 100.0);
     comp.AddInput("b", {d}, -100.0, 100.0);
     comp.AddOutput("c", {d}, FLAGS_func_accuracy);
@@ -236,25 +242,30 @@ void CheckIntBinOp(const string &func,
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; ++d) {
     if (modulo != 0 && d % modulo != 0) continue;
     VLOG(2) << "Testing " << d;
-    IntKernelComparator comp8(library, func, test, base);
-    comp8.AddInput("a", {d}, DT_INT8);
-    comp8.AddInput("b", {d}, DT_INT8);
-    comp8.AddOutput("c", {d}, DT_INT8);
-    CheckTest(comp8.Check(10));
+    if (!cudart) {
+      IntKernelComparator comp8(library, func, test, base);
+      comp8.AddInput("a", {d}, DT_INT8);
+      comp8.AddInput("b", {d}, DT_INT8);
+      comp8.AddOutput("c", {d}, DT_INT8);
+      CheckTest(comp8.Check(10));
+    }
 
     IntKernelComparator comp16(library, func, test, base);
+    if (cudart) comp16.set_runtime(cudart);
     comp16.AddInput("a", {d}, DT_INT16);
     comp16.AddInput("b", {d}, DT_INT16);
     comp16.AddOutput("c", {d}, DT_INT16);
     CheckTest(comp16.Check(10));
 
     IntKernelComparator comp32(library, func, test, base);
+    if (cudart) comp32.set_runtime(cudart);
     comp32.AddInput("a", {d}, DT_INT32);
     comp32.AddInput("b", {d}, DT_INT32);
     comp32.AddOutput("c", {d}, DT_INT32);
     CheckTest(comp32.Check(10));
 
     IntKernelComparator comp64(library, func, test, base);
+    if (cudart) comp64.set_runtime(cudart);
     comp64.AddInput("a", {d}, DT_INT64);
     comp64.AddInput("b", {d}, DT_INT64);
     comp64.AddOutput("c", {d}, DT_INT64);
@@ -279,6 +290,7 @@ int main(int argc, char *argv[]) {
 
   // Register kernels.
   RegisterTensorflowLibrary(&library);
+  RegisterCUDALibrary(&library);
   library.Register("MatMul", "BaselineMatMatMul", BaselineMatMatMul)
      .Input(0, DT_FLOAT, 2)
      .Input(1, DT_FLOAT, 2)
@@ -303,7 +315,6 @@ int main(int argc, char *argv[]) {
   CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul");
   CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul1");
   CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul2");
-
 
   // Check expression kernels.
   CheckFltBinOp("Add", "AddExpr", "GenFltAdd");
@@ -378,6 +389,41 @@ int main(int argc, char *argv[]) {
     CheckIntMatMul("AVXIntVecMatMulH", "GenIntVecMatMul");
   } else {
     LOG(WARNING) << "CPU does not support AVX2, skipping AVX2 tests";
+  }
+
+  if (CUDA::Supported()) {
+    cudart = new CUDARuntime();
+    LOG(INFO) << cudart->Description();
+
+    // Test CUDA floating point operators.
+    CheckFltBinOp("Add", "CUDAAdd", "AddExpr");
+    CheckFltBinOp("Sub", "CUDASub", "SubExpr");
+    CheckFltBinOp("Mul", "CUDAMul", "MulExpr");
+    CheckFltBinOp("Div", "CUDADiv", "DivExpr");
+    CheckFltBinOp("Maximum", "CUDAMax", "MaxExpr");
+    CheckFltBinOp("Minimum", "CUDAMin", "MinExpr");
+
+    // Test CUDA integer operators.
+    CheckIntBinOp("Add", "CUDAAdd", "GenIntAdd");
+    CheckIntBinOp("Sub", "CUDASub", "GenIntSub");
+    CheckIntBinOp("Mul", "CUDAMul", "GenIntMul");
+
+    // Test CUDA functions.
+    CheckFltFunc("Log", "CUDALog", "GenFltLog", 0, false);
+    CheckFltFunc("Exp", "CUDAExp", "GenFltExp");
+    CheckFltFunc("Sigmoid", "CUDASigmoid", "GenFltSigmoid");
+    CheckFltFunc("Tanh", "CUDATanh", "GenFltTanh");
+
+    CheckFltFunc("Negate", "CUDANegate", "NegateExpr");
+    CheckFltFunc("Abs", "CUDAAbs", "AbsExpr");
+    CheckFltFunc("Relu", "CUDARelu", "ReluExpr");
+    CheckFltFunc("Reciprocal", "CUDAReciprocal", "ReciprocalExpr");
+    CheckFltFunc("Square", "CUDASquare", "SquareExpr");
+
+    delete cudart;
+    cudart = nullptr;
+  } else {
+    LOG(WARNING) << "No GPU, skipping CUDA tests";
   }
 
   return 0;

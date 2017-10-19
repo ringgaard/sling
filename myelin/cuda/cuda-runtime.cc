@@ -97,7 +97,9 @@ void CUDARuntime::FreeInstance(Instance *instance) {
 }
 
 void CUDARuntime::ClearInstance(Instance *instance) {
-  memset(instance->data(), 0, instance->size());
+  // Do not clear task data at the start of the instance block.
+  memset(instance->data() + instance->cell()->data_start(), 0,
+         instance->size() - instance->cell()->data_start());
 }
 
 void CUDARuntime::StartTask(Task *task) {
