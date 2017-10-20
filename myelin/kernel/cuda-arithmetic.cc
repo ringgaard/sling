@@ -122,14 +122,8 @@ class CUDACalculate : public CUDAKernel {
     int regs = instrs.AllocateRegisters();
 
     // Get grid location.
-    ptx_decl(b32, blkdim);
-    ptx_decl(b32, blkidx);
-    ptx_decl(b32, thridx);
-    ptx_emit(mov.u32, blkdim, PTXLiteral("%ntid.x"));
-    ptx_emit(mov.u32, thridx, PTXLiteral("%ctaid.x"));
-    ptx_emit(mov.u32, blkidx, PTXLiteral("%tid.x"));
     ptx_decl(b32, idx);
-    ptx_emit(mad.lo.u32, idx, thridx, blkdim, blkidx);
+    ptx->GetThreadIndex(idx, 0);
 
     // Check bounds.
     ptx_decl(pred, outside);

@@ -1,4 +1,3 @@
-#include <iostream>
 #include <string>
 
 #include "base/flags.h"
@@ -97,7 +96,9 @@ void BaselineMatMatMul2(const TensorData &A, const TensorData &B,
 }
 
 void CheckTest(bool success) {
-  if (!FLAGS_ignore_errors) CHECK(success);
+  if (!FLAGS_ignore_errors && !success) {
+    LOG(FATAL) << "Test failed, aborting";
+  }
 }
 
 void CheckFltMatMul(const string &test, const string &base) {
@@ -108,6 +109,7 @@ void CheckFltMatMul(const string &test, const string &base) {
     for (int w = FLAGS_wmin; w <= FLAGS_wmax; ++w) {
       VLOG(2) << "Testing " << d << "x" << w;
       FltKernelComparator matmul(library, "MatMul", test, base);
+      if (cudart) matmul.set_runtime(cudart);
       matmul.AddInput("x", {1, d}, FLAGS_minmat, 100.0);
       matmul.AddInput("W", {d, w}, FLAGS_minmat, 100.0);
       matmul.AddOutput("y", {1, w}, FLAGS_matmul_accuracy);
@@ -121,6 +123,7 @@ void CheckFltMatMulAdd(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulAdd", test, base);
+  if (cudart) matmul.set_runtime(cudart);
   matmul.AddInput("x", {1, 10}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("W", {10, 100}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("b", {100}, -10.0, 10.0);
@@ -133,6 +136,7 @@ void CheckFltMatMulRelu(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulRelu", test, base);
+  if (cudart) matmul.set_runtime(cudart);
   matmul.AddInput("x", {1, 10}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("W", {10, 100}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddOutput("y", {1, 100}, FLAGS_matmul_accuracy);
@@ -144,6 +148,7 @@ void CheckFltMatMulAddRelu(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulAddRelu", test, base);
+  if (cudart) matmul.set_runtime(cudart);
   matmul.AddInput("x", {1, 10}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("W", {10, 100}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("b", {100}, FLAGS_minmat, FLAGS_maxmat);
@@ -159,6 +164,7 @@ void CheckFltMatMatMul(const string &test, const string &base) {
     for (int j = FLAGS_mmin; j <= FLAGS_mmax; ++j) {
       for (int k = FLAGS_mmin; k <= FLAGS_mmax; ++k) {
         FltKernelComparator matmul(library, "MatMul", test, base);
+        if (cudart) matmul.set_runtime(cudart);
         matmul.AddInput("A", {i, j}, FLAGS_minmat, FLAGS_maxmat);
         matmul.AddInput("B", {j, k}, FLAGS_minmat, FLAGS_maxmat);
         matmul.AddOutput("C", {i, k}, FLAGS_matmul_accuracy);
@@ -226,9 +232,16 @@ void CheckIntMatMul(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   IntKernelComparator matmul(library, "MatMul", test, base);
-  matmul.AddInput("x", {1, 10}, DT_INT8);
-  matmul.AddInput("W", {10, 100}, DT_INT8);
-  matmul.AddOutput("y", {1, 100}, DT_INT16);
+  if (cudart) {
+    matmul.set_runtime(cudart);
+    matmul.AddInput("x", {1, 10}, DT_INT32);
+    matmul.AddInput("W", {10, 100}, DT_INT32);
+    matmul.AddOutput("y", {1, 100}, DT_INT32);
+  } else {
+    matmul.AddInput("x", {1, 10}, DT_INT8);
+    matmul.AddInput("W", {10, 100}, DT_INT8);
+    matmul.AddOutput("y", {1, 100}, DT_INT16);
+  }
   CheckTest(matmul.Check(100));
 }
 
@@ -419,6 +432,14 @@ int main(int argc, char *argv[]) {
     CheckFltFunc("Relu", "CUDARelu", "ReluExpr");
     CheckFltFunc("Reciprocal", "CUDAReciprocal", "ReciprocalExpr");
     CheckFltFunc("Square", "CUDASquare", "SquareExpr");
+
+    // Test CUDA matrix mulplication.
+    CheckFltMatMul("CUDAMatMul", "GenFltVecMatMul");
+    CheckFltMatMulAdd("CUDAMatMulAdd", "GenFltVecMatMulAdd");
+    CheckFltMatMulRelu("CUDAMatMulRelu", "GenFltVecMatMulRelu");
+    CheckFltMatMulAddRelu("CUDAMatMulAddRelu", "GenFltVecMatMulAddRelu");
+    CheckFltMatMatMul("CUDAMatMul", "GenFltMatMatMul");
+    CheckIntMatMul("CUDAMatMul", "GenIntVecMatMul");
 
     delete cudart;
     cudart = nullptr;

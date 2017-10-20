@@ -82,55 +82,54 @@ class CUDAMatMulBase : public CUDAKernel {
     const TypeTraits &traits = TypeTraits::of(dtype);
     const char *type = traits.ptx();
     bool fp = dtype == DT_FLOAT || dtype == DT_DOUBLE || dtype == DT_HALF;
+    bool vec = height == 1;
     int dsize = traits.size();
 
     // Set grid size. Use one thread for each output element in C.
     ptx->set_grid_dims(width, height);
 
-    // Get output column in C.
-    ptx_decl(b32, xblkdim);
-    ptx_decl(b32, xblkidx);
-    ptx_decl(b32, xthridx);
-    ptx_emit(mov.u32, xblkdim, PTXLiteral("%ntid.x"));
-    ptx_emit(mov.u32, xthridx, PTXLiteral("%ctaid.x"));
-    ptx_emit(mov.u32, xblkidx, PTXLiteral("%tid.x"));
+    // Get output row and column in C.
     ptx_decl(b32, col);
-    ptx_emit(mad.lo.u32, col, xthridx, xblkdim, xblkidx);
-
-    // Get output row in C.
-    ptx_decl(b32, yblkdim);
-    ptx_decl(b32, yblkidx);
-    ptx_decl(b32, ythridx);
-    ptx_emit(mov.u32, yblkdim, PTXLiteral("%ntid.y"));
-    ptx_emit(mov.u32, ythridx, PTXLiteral("%ctaid.y"));
-    ptx_emit(mov.u32, yblkidx, PTXLiteral("%tid.y"));
+    ptx->GetThreadIndex(col, 0);
     ptx_decl(b32, row);
-    ptx_emit(mad.lo.u32, row, ythridx, yblkdim, yblkidx);
+    if (!vec) {
+      ptx->GetThreadIndex(row, 1);
+    }
 
     // Check bounds.
-    ptx_decl(pred, outside_col);
-    ptx_emit(setp.ge.u32, outside_col, col, PTXImm(width));
-    ptx_decl(pred, outside_row);
-    ptx_emit(setp.ge.u32, outside_row, row, PTXImm(height));
-    ptx_decl(pred, outside);
-    ptx_emit(or.pred, outside, outside_col, outside_row);
-    ptx_if(outside);
-    ptx_emit(bra, PTXLabel("done"));
-    ptx_endif();
+    if (vec) {
+      ptx_decl(pred, outside);
+      ptx_emit(setp.ge.u32, outside, col, PTXImm(width));
+      ptx_if(outside);
+      ptx_emit(bra, PTXLabel("done"));
+      ptx_endif();
+    } else {
+      ptx_decl(pred, outside_col);
+      ptx_emit(setp.ge.u32, outside_col, col, PTXImm(width));
+      ptx_decl(pred, outside_row);
+      ptx_emit(setp.ge.u32, outside_row, row, PTXImm(height));
+      ptx_decl(pred, outside);
+      ptx_emit(or.pred, outside, outside_col, outside_row);
+      ptx_if(outside);
+      ptx_emit(bra, PTXLabel("done"));
+      ptx_endif();
+    }
 
     // Compute address of row in A.
     ptx_decl(b64, aptr);
     ptx->LoadTensorAddress(aptr, A);
-    ptx_emit(mad.wide.u64, aptr, row, PTXImm(A->stride(0)), aptr);
+    if (!vec) {
+      ptx_emit(mad.wide.u32, aptr, row, PTXImm(A->stride(0)), aptr);
+    }
 
     // Compute address of column in B.
     ptx_decl(b64, bptr);
     ptx->LoadTensorAddress(bptr, B);
-    ptx_emit(mad.wide.u64, bptr, col, PTXImm(B->stride(1)), bptr);
+    ptx_emit(mad.wide.u32, bptr, col, PTXImm(B->stride(1)), bptr);
 
     // Compute dot product.
     ptx_decl(u32, idx);
-    ptx_emit(idx, PTXImm(0));
+    ptx_emit(mov.u32, idx, PTXImm(0));
     PTXReg sum = ptx->reg(type, "sum");
     if (fp) {
       ptx->emit(PTXInstr("mov", type), sum, PTXFloat(0));
@@ -144,7 +143,7 @@ class CUDAMatMulBase : public CUDAKernel {
     ptx->emit(PTXInstr("ld.global", type), a, PTXAddr(aptr));
     PTXReg b = ptx->reg(type, "b");
     ptx->emit(PTXInstr("ld.global", type), b, PTXAddr(bptr));
-    ptx->emit(PTXInstr(fp ? "fma.rn" : "fma", type), sum, a, b, sum);
+    ptx->emit(PTXInstr(fp ? "fma.rn" : "mad.lo", type), sum, a, b, sum);
 
     // Next element.
     ptx_emit(add.u32, idx, idx, PTXImm(1));
@@ -154,55 +153,41 @@ class CUDAMatMulBase : public CUDAKernel {
     ptx_decl(pred, more);
     ptx_emit(setp.lt.u32, more, idx, PTXImm(depth));
     ptx_if(more);
-    ptx_emit(bra, PTXLabel("more"));
+    ptx_emit(bra, PTXLabel("loop"));
     ptx_endif();
 
     // Optionally add bias.
     if (bias_) {
       ptx_decl(b64, vptr);
       ptx->LoadTensorAddress(vptr, v);
-      ptx_emit(mad.wide.u64, vptr, col, PTXImm(dsize), vptr);
+      ptx_emit(mad.wide.u32, vptr, col, PTXImm(dsize), vptr);
       PTXReg bias = ptx->reg(type, "bias");
       ptx->emit(PTXInstr("ld.global", type), bias, PTXAddr(vptr));
-      ptx->emit(PTXInstr("add", type), sum, bias);
+      ptx->emit(PTXInstr("add", type), sum, sum, bias);
     }
 
     // Optionally compute relu.
     if (relu_) {
       if (fp) {
-        ptx->emit(PTXInstr("max", type), sum, PTXFloat(0));
+        ptx->emit(PTXInstr("max", type), sum, sum, PTXFloat(0));
       } else {
-        ptx->emit(PTXInstr("max", type), sum, PTXImm(0));
+        ptx->emit(PTXInstr("max", type), sum, sum, PTXImm(0));
       }
     }
 
     // Save result in C[row,col].
     ptx_decl(b64, cptr);
     ptx->LoadTensorAddress(cptr, C);
-    ptx_emit(mad.wide.u64, cptr, row, PTXImm(C->stride(0)), cptr);
-    ptx_emit(mad.wide.u64, cptr, col, PTXImm(C->stride(1)), cptr);
+    if (!vec) {
+      ptx_emit(mad.wide.u32, cptr, row, PTXImm(C->stride(0)), cptr);
+    }
+    ptx_emit(mad.wide.u32, cptr, col, PTXImm(C->stride(1)), cptr);
     ptx->emit(PTXInstr("st.global", type), PTXAddr(cptr), sum);
 
     // Done.
     ptx_label(done);
     ptx_ret();
   }
-
-#if 0
-// Matrix multiplication kernel called by MatMul()
-__global__ void MatMulKernel(Matrix A, Matrix B, Matrix C) {
-  // Each thread computes one element of C
-  // by accumulating results into Cvalue
-  float Cvalue = 0.0;
-  int row = blockIdx.y * blockDim.y + threadIdx.y;
-  int col = blockIdx.x * blockDim.x + threadIdx.x;
-  if (row > A.height || col > B.width) return;
-  for (int e = 0; e < A.width; ++e) {
-    Cvalue += (A.elements[row * A.width + e]) * (B.elements[e * B.width + col]);
-  }
-  C.elements[row * C.width + col] = Cvalue;
-}
-#endif
 
   int64 Complexity(const Step *step) override {
     int ops = step->input(0)->dim(0) * step->input(1)->elements() * 2;

@@ -40,10 +40,30 @@ void PTXMacroAssembler::LoadTensorAddress(const PTXReg &reg, Tensor *tensor) {
   } else if (tensor->ref()) {
     // Read from reference tensor.
     emit("ld.global.u64", reg, PTXAddr(data(), tensor->device_offset()));
+  } else if (tensor->device_offset() == 0) {
+    // Read from first instance tensor.
+    emit("mov.u64", reg, data());
   } else {
     // Read from instance tensor.
     emit("add.u64", reg, data(), PTXImm(tensor->device_offset()));
   }
+}
+
+void PTXMacroAssembler::GetThreadIndex(const PTXReg &idx, int d) {
+  static const char *blkdim[] = {"blkdimx", "blkdimy", "blkdimz"};
+  static const char *thridx[] = {"thridxx", "thridxy", "thridxz"};
+  static const char *blkidx[] = {"blkidxx", "blkidxy", "blkidxz"};
+  static const char *ntid[] = {"%ntid.x", "%ntid.y", "%ntid.z"};
+  static const char *ctaid[] = {"%ctaid.x", "%ctaid.y", "%ctaid.z"};
+  static const char *tid[] = {"%tid.x", "%tid.y", "%tid.z"};
+
+  PTXReg bdim = reg("b32", blkdim[d]);
+  PTXReg tidx = reg("b32", thridx[d]);
+  PTXReg bidx = reg("b32", blkidx[d]);
+  emit("mov.u32", bdim, PTXLiteral(ntid[d]));
+  emit("mov.u32", tidx, PTXLiteral(ctaid[d]));
+  emit("mov.u32", bidx, PTXLiteral(tid[d]));
+  emit("mad.lo.u32", idx, tidx, bdim, bidx);
 }
 
 bool CUDAKernel::Supports(Step *step) {

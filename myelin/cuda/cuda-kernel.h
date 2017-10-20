@@ -33,6 +33,9 @@ class PTXMacroAssembler : public PTXAssembler {
   // Load address of tensor into register.
   void LoadTensorAddress(const PTXReg &reg, Tensor *tensor);
 
+  // Compute the kernel thread index for dimension.
+  void GetThreadIndex(const PTXReg &idx, int d);
+
  private:
   // Data instance parameter.
   PTXReg data_;
