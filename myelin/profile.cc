@@ -358,8 +358,14 @@ string DataProfile::AsSVG() {
   for (int i = 0; i < tensors.size(); ++i) {
     Tensor *t = tensors[i];
     string color = Rainbow(i * color_range);
-    int first = stepmap[cell_->network()->steps()[t->first()]];
-    int last = stepmap[cell_->network()->steps()[t->last()]];
+
+    Step *f = cell_->network()->steps()[t->first()];
+    Step *l = cell_->network()->steps()[t->last()];
+    auto ff = stepmap.find(f);
+    int first = ff != stepmap.end() ? ff->second : 0;
+    auto fl = stepmap.find(l);
+    int last = fl != stepmap.end() ? fl->second : cell_->steps().size() - 1;
+
     float x1 = t->offset() * byte_width;
     float x2 = (t->offset() + t->space()) * byte_width;
     float y1 = (first + (t->in() ? 0.0 : 0.5)) * step_height;
@@ -371,11 +377,14 @@ string DataProfile::AsSVG() {
     if (tile_width > 1.0) tile_width -= 1.0;
     float tile_height = y2 - y1;
     if (tile_height > 1.0) tile_height -= 1.0;
+    string type = t->TypeString();
+    if (t->in()) type.append(" in");
+    if (t->out()) type.append(" out");
     StringAppendF(&svg,
         "<title>%s\n%s\noffset: %lu\nsize: %lu\nalign: %d</title>\n"
         "<rect x=\"%f\" y=\"%f\" width=\"%f\" height=\"%f\" "
         "fill=\"%s\" stroke=\"%s\"/>\n",
-        Escape(t->name()).c_str(), Escape(t->TypeString()).c_str(),
+        Escape(t->name()).c_str(), Escape(type).c_str(),
         t->offset(), t->space(), t->byte_alignment(),
         x1, y1, tile_width, tile_height, color.c_str(), color.c_str());
 
