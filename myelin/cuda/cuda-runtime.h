@@ -51,19 +51,25 @@ class CUDARuntime : public Runtime {
   void RemoveTensorFromDevice(Tensor *tensor) override;
 
   // Instance tensor copying.
-  void EmitCopyTensorToDevice(Tensor *tensor,
-                              Cell *cell,
-                              int taskidx,
-                              MacroAssembler *masm) override;
-  void EmitCopyTensorFromDevice(Tensor *tensor,
-                                Cell *cell,
-                                int taskidx,
-                                MacroAssembler *masm) override;
+  void EmitTensorTransfers(const Transfers &xfers,
+                           Cell *cell,
+                           MacroAssembler *masm) override;
 
   // Emit code for CUDA status check. This is only done for debug builds.
   static void EmitStatusCheck(const char *msg, MacroAssembler *masm);
 
  private:
+  // Instance data block.
+  struct Block {
+    size_t host_offset;
+    size_t device_offset;
+    size_t size;
+    int taskidx;
+  };
+
+  // Coalesce transfers of consecutive data blocks.
+  static std::vector<Block> MergedTransfers(const std::vector<Transfer> &xfers);
+
   // CUDA device for computations.
   CUDADevice *device_;
 };

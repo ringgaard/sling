@@ -1,5 +1,7 @@
 #include "myelin/cuda/cuda-runtime.h"
 
+#include <algorithm>
+
 #include "base/logging.h"
 #include "myelin/compute.h"
 #include "myelin/macro-assembler.h"
@@ -135,74 +137,114 @@ void CUDARuntime::RemoveTensorFromDevice(Tensor *tensor) {
   CHECK_CUDA(cuMemFree(tensor->device_data()));
 }
 
-void CUDARuntime::EmitCopyTensorToDevice(Tensor *tensor,
-                                         Cell *cell,
-                                         int taskidx,
-                                         MacroAssembler *masm) {
-  // Set destination device address.
-  masm->movq(arg_reg_1, Operand(datareg, offsetof(CUDAInstance, data)));
-  if (tensor->device_offset() != 0) {
-    masm->addq(arg_reg_1, Immediate(tensor->device_offset()));
+void CUDARuntime::EmitTensorTransfers(const Transfers &xfers,
+                                      Cell *cell,
+                                      MacroAssembler *masm) {
+  // Host to device transfers.
+  if (!xfers.host_to_device.empty()) {
+    for (Block &blk : MergedTransfers(xfers.host_to_device)) {
+      // Set destination device address.
+      masm->movq(arg_reg_1, Operand(datareg, offsetof(CUDAInstance, data)));
+      if (blk.device_offset != 0) {
+        masm->addq(arg_reg_1, Immediate(blk.device_offset));
+      }
+
+      // Set source host address.
+      masm->leaq(arg_reg_2, Operand(datareg, blk.host_offset));
+
+      // Set size.
+      masm->movq(arg_reg_3, Immediate(blk.size));
+
+      // Set stream for task.
+      int ofs;
+      if (blk.taskidx == -1) {
+        // Main task stream is stored in runtime block.
+        ofs = offsetof(CUDAInstance, mainstream);
+      } else {
+        // Parallel task stream is stored in task block.
+        ofs = cell->task_offset(blk.taskidx) + offsetof(Task, state);
+      }
+      masm->movq(arg_reg_4, Operand(datareg, ofs));
+
+      // Call cuMemcpyHtoDAsync(src, dst, size, stream).
+      Register acc = masm->rr().alloc();
+      masm->movp(acc, reinterpret_cast<void *>(cuMemcpyHtoDAsync));
+      masm->call(acc);
+      masm->rr().release(acc);
+      EmitStatusCheck("cuMemcpyHtoDAsync", masm);
+    }
   }
 
-  // Set source host address.
-  masm->LoadTensorAddress(arg_reg_2, tensor);
+  // Device to host transfers.
+  if (!xfers.device_to_host.empty()) {
+    for (Block &blk : MergedTransfers(xfers.device_to_host)) {
+      // Set destination device address.
+      masm->leaq(arg_reg_1, Operand(datareg, blk.host_offset));
 
-  // Set size.
-  masm->movq(arg_reg_3, Immediate(tensor->space()));
+      // Set source device address.
+      masm->movq(arg_reg_2, Operand(datareg, offsetof(CUDAInstance, data)));
+      if (blk.device_offset != 0) {
+        masm->addq(arg_reg_2, Immediate(blk.device_offset));
+      }
 
-  // Set stream for task.
-  int ofs;
-  if (taskidx == -1) {
-    // Main task stream is stored in runtime block.
-    ofs = offsetof(CUDAInstance, mainstream);
-  } else {
-    // Parallel task stream is stored in task block.
-    ofs = cell->task_offset(taskidx) + offsetof(Task, state);
+      // Set size.
+      masm->movq(arg_reg_3, Immediate(blk.size));
+
+      // Set stream for task.
+      int ofs;
+      if (blk.taskidx == -1) {
+        // Main task stream is stored in runtime block.
+        ofs = offsetof(CUDAInstance, mainstream);
+      } else {
+        // Parallel task stream is stored in task block.
+        ofs = cell->task_offset(blk.taskidx) + offsetof(Task, state);
+      }
+      masm->movq(arg_reg_4, Operand(datareg, ofs));
+
+      // Call cuMemcpyDtoHAsync(src, dst, size, stream).
+      Register acc = masm->rr().alloc();
+      masm->movp(acc, reinterpret_cast<void *>(cuMemcpyDtoHAsync));
+      masm->call(acc);
+      masm->rr().release(acc);
+      EmitStatusCheck("cuMemcpyDtoHAsync", masm);
+    }
   }
-  masm->movq(arg_reg_4, Operand(datareg, ofs));
-
-  // Call cuMemcpyHtoDAsync(src, dst, size, stream).
-  Register acc = masm->rr().alloc();
-  masm->movp(acc, reinterpret_cast<void *>(cuMemcpyHtoDAsync));
-  masm->call(acc);
-  masm->rr().release(acc);
-  EmitStatusCheck("cuMemcpyHtoDAsync", masm);
 }
 
-void CUDARuntime::EmitCopyTensorFromDevice(Tensor *tensor,
-                                           Cell *cell,
-                                           int taskidx,
-                                           MacroAssembler *masm) {
-  // Set destination device address.
-  masm->LoadTensorAddress(arg_reg_1, tensor);
+std::vector<CUDARuntime::Block> CUDARuntime::MergedTransfers(
+    const std::vector<Transfer> &xfers) {
+  // Sort transfers in task and instance offset order.
+  std::vector<Transfer> t = xfers;
+  std::sort(t.begin(), t.end(), [](const Transfer &a, const Transfer &b) {
+    if (a.taskidx == a.taskidx) {
+      return a.tensor->offset() < b.tensor->offset();
+    } else {
+      return a.taskidx < b.taskidx;
+    }
+  });
 
-  // Set source device address.
-  masm->movq(arg_reg_2, Operand(datareg, offsetof(CUDAInstance, data)));
-  if (tensor->device_offset() != 0) {
-    masm->addq(arg_reg_2, Immediate(tensor->device_offset()));
+  // Merge consecutive blocks.
+  std::vector<Block> blocks;
+  int start = 0;
+  while (start < t.size()) {
+    Block blk;
+    blk.taskidx = t[start].taskidx;
+    blk.size = t[start].tensor->space();
+    blk.host_offset = t[start].tensor->offset();
+    blk.device_offset = t[start].tensor->device_offset();
+    int end = start + 1;
+    while (end < t.size() &&
+           t[end].taskidx == blk.taskidx &&
+           t[end].tensor->offset() == blk.host_offset + blk.size &&
+           t[end].tensor->device_offset() == blk.device_offset + blk.size) {
+      blk.size += t[end].tensor->space();
+      end++;
+    }
+    blocks.push_back(blk);
+    start = end;
   }
 
-  // Set size.
-  masm->movq(arg_reg_3, Immediate(tensor->space()));
-
-  // Set stream for task.
-  int ofs;
-  if (taskidx == -1) {
-    // Main task stream is stored in runtime block.
-    ofs = offsetof(CUDAInstance, mainstream);
-  } else {
-    // Parallel task stream is stored in task block.
-    ofs = cell->task_offset(taskidx) + offsetof(Task, state);
-  }
-  masm->movq(arg_reg_4, Operand(datareg, ofs));
-
-  // Call cuMemcpyDtoHAsync(src, dst, size, stream).
-  Register acc = masm->rr().alloc();
-  masm->movp(acc, reinterpret_cast<void *>(cuMemcpyDtoHAsync));
-  masm->call(acc);
-  masm->rr().release(acc);
-  EmitStatusCheck("cuMemcpyDtoHAsync", masm);
+  return blocks;
 }
 
 void CUDAErrorHandler(int error, const char *msg) {

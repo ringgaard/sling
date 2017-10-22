@@ -751,6 +751,8 @@ static bool CompareUsage(const std::pair<int, Tensor *> &a,
     for (auto *op : vb->consumers()) {
       if (op == va->producer()) return false;
     }
+    if (va->in() && !vb->in()) return true;
+    if (vb->in() && !va->in()) return false;
   }
   return a.first < b.first;
 }
@@ -1277,22 +1279,25 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     // Copy input variables that do not have the placement required by the
     // consumers.
     bool sync = false;
+    Transfers xfers;
     for (Tensor *tensor : parameters_) {
       if (tensor->cell_ != cell) continue;
-      if (tensor->placement_ == EVERYWHERE) {
-        int task = tensor->ConsumerTask();
-        if (tensor->current_placement_ == HOST) {
-          // Copy parameter tensor from host to device.
-          runtime_->EmitCopyTensorToDevice(tensor, cell, task, &masm);
-          tensor->AddNewPlace(DEVICE);
-        } else if (tensor->current_placement_ == DEVICE) {
-          // Copy parameter tensor from device to host.
-          runtime_->EmitCopyTensorFromDevice(tensor, cell, task, &masm);
-          tensor->AddNewPlace(HOST);
-        }
+      if (!tensor->in_) continue;
+      if (tensor->placement_ != EVERYWHERE) continue;
+
+      int task = tensor->ConsumerTask();
+      if (tensor->current_placement_ == HOST) {
+        // Copy parameter tensor from host to device.
+        xfers.add_host_to_device(tensor, task);
+        tensor->AddNewPlace(DEVICE);
+      } else if (tensor->current_placement_ == DEVICE) {
+        // Copy parameter tensor from device to host.
+        xfers.add_device_to_host(tensor, task);
+        tensor->AddNewPlace(HOST);
         if (task == -1) sync = true;
       }
     }
+    runtime_->EmitTensorTransfers(xfers, cell, &masm);
 
     // Let kernels generate code for each step.
     int stepnum = 0;
@@ -1340,22 +1345,24 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
         // Copy outputs that do not have the placement required by the
         // consumers.
+        Transfers xfers;
         for (Tensor *output : step->outputs_) {
           output->AddNewPlace(step->placement());
           if (output->placement_ == EVERYWHERE) {
             int task = output->ConsumerTask();
             if (output->current_placement_ == HOST) {
               // Copy output from host to device.
-              runtime_->EmitCopyTensorToDevice(output, cell, task, &masm);
+              xfers.add_host_to_device(output, task);
               output->AddNewPlace(DEVICE);
             } else if (output->current_placement_ == DEVICE) {
               // Copy output from device to host.
-              runtime_->EmitCopyTensorFromDevice(output, cell, task, &masm);
+              xfers.add_device_to_host(output, task);
               output->AddNewPlace(HOST);
+              if (task == -1) sync = true;
             }
-            if (task == -1) sync = true;
           }
         }
+        runtime_->EmitTensorTransfers(xfers, cell, &masm);
 
         // Profile step.
         if (options_.profiling && !step->noop_) {
@@ -1450,17 +1457,17 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
           // Copy outputs that do not have the placement required by the
           // consumers.
+          Transfers xfers;
           for (Tensor *output : step->outputs_) {
             if (output->deferred_placement_ == DEVICE) {
               // Copy output from host to device.
-              runtime_->EmitCopyTensorToDevice(
-                  output, cell, task_index, &masm);
+              xfers.add_host_to_device(output, task_index);
             } else if (output->deferred_placement_ == HOST) {
               // Copy output from device to host.
-              runtime_->EmitCopyTensorFromDevice(
-                  output, cell, task_index, &masm);
+              xfers.add_device_to_host(output, task_index);
             }
           }
+          runtime_->EmitTensorTransfers(xfers, cell, &masm);
 
           // Profile step.
           if (options_.profiling && !step->noop_) {

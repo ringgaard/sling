@@ -154,6 +154,30 @@ struct Task {
   int32 index;
 };
 
+// Data transfer between host and device.
+struct Transfer {
+  Transfer(Tensor *tensor, int taskidx) : tensor(tensor), taskidx(taskidx) {}
+
+  Tensor *tensor;  // tensor to be transferred
+  int taskidx;     // index of task for performing the transfer
+};
+
+// List of data transfers between host and device.
+struct Transfers {
+  // Add transfer from host to device.
+  void add_host_to_device(Tensor *tensor, int taskidx) {
+    host_to_device.emplace_back(tensor, taskidx);
+  }
+
+  // Add transfer from device to host.
+  void add_device_to_host(Tensor *tensor, int taskidx) {
+    device_to_host.emplace_back(tensor, taskidx);
+  }
+
+  std::vector<Transfer> host_to_device;  // transfers from host to device
+  std::vector<Transfer> device_to_host;  // transfers from device to host
+};
+
 // Runtime support for network.
 class Runtime {
  public:
@@ -203,17 +227,10 @@ class Runtime {
   // Remove constant tensor from device.
   virtual void RemoveTensorFromDevice(Tensor *tensor) {}
 
-  // Generate code for copying tensor from host to device.
-  virtual void EmitCopyTensorToDevice(Tensor *tensor,
-                                      Cell *cell,
-                                      int taskidx,
-                                      MacroAssembler *masm) {}
-
-  // Generate code for copying tensor from device to host.
-  virtual void EmitCopyTensorFromDevice(Tensor *tensor,
-                                        Cell *cell,
-                                        int taskidx,
-                                        MacroAssembler *masm) {}
+  // Generate code for transferring data between host and device.
+  virtual void EmitTensorTransfers(const Transfers &xfers,
+                                   Cell *cell,
+                                   MacroAssembler *masm) {}
 
   // Return CUDA device used by runtime.
   virtual CUDADevice *Device() { return nullptr; }
