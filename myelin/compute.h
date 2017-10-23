@@ -198,6 +198,21 @@ class Runtime {
   // Clear instance data.
   virtual void ClearInstance(Instance *instance) = 0;
 
+  // Allocate or reallocate channel.
+  virtual char *AllocateChannel(char *data,
+                                size_t old_size,
+                                size_t new_size,
+                                size_t alignment,
+                                Placement placement) = 0;
+
+  // Clear elements in channel.
+  virtual void ClearChannel(char *data, size_t pos,
+                            size_t size,
+                            Placement placement) = 0;
+
+  // Deallocate channel.
+  virtual void FreeChannel(char *data, Placement placement) = 0;
+
   // Generate prologue for cell function.
   virtual void GeneratePrologue(Cell *cell, MacroAssembler *masm) {}
 
@@ -677,6 +692,7 @@ class Step {
 // connections.
 class Connector {
  public:
+  Connector(Network *network) : network_(network) {}
   ~Connector() { delete type_; }
 
   // Connector name.
@@ -691,10 +707,24 @@ class Connector {
   // Connector array alignment (in bytes).
   int alignment() const { return alignment_; }
 
+  // Return connector placement.
+  Placement placement() const { return placement_; }
+
+  // Add location for placement.
+  void AddPlace(Placement place) {
+    placement_ = static_cast<Placement>(placement_ | place);
+  }
+
   // Tensors linked to the connector.
   const std::vector<Tensor *> &links() const { return links_; }
 
+  // Network that connector belongs to.
+  Network *network() const { return network_; }
+
  private:
+  // Network that connector belongs to.
+  Network *network_;
+
   // Tensor for connector type.
   Tensor *type_ = nullptr;
 
@@ -703,6 +733,9 @@ class Connector {
 
   // Connector array alignment (in bytes).
   int alignment_ = kMinDataAlignment;
+
+  // Placement of connector.
+  Placement placement_ = NOWHERE;
 
   friend class Network;
 };
@@ -738,6 +771,9 @@ class Channel {
 
   // Return the number of elements in the channel.
   int size() const { return size_; }
+
+  // Return runtime for channel.
+  inline Runtime *runtime() const;
 
  private:
   // Data for the channel.
@@ -1209,6 +1245,10 @@ inline Runtime *Cell::runtime() const {
 
 inline Runtime *Instance::runtime() const {
   return cell_->runtime();
+}
+
+inline Runtime *Channel::runtime() const {
+  return connector_->network()->runtime();
 }
 
 inline void Instance::Compute() {

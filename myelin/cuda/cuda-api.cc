@@ -8,7 +8,7 @@ namespace sling {
 namespace myelin {
 
 // Handle to CUDA library.
-void *cuda_lib = nullptr;
+static void *cuda_lib = nullptr;
 
 // CUDA driver API functions.
 CUresult (*cuDriverGetVersion)(int *version);
@@ -47,6 +47,7 @@ CUresult (*cuOccupancyMaxPotentialBlockSize)(int *min_grid_size,
                                              int block_size_limit);
 CUresult (*cuMemAlloc)(CUdeviceptr *dptr, size_t size);
 CUresult (*cuMemFree)(CUdeviceptr dptr);
+CUresult (*cuMemsetD8)(CUdeviceptr dptr, unsigned char uc, size_t n);
 CUresult (*cuMemcpyHtoD)(CUdeviceptr dst,
                          const void *src,
                          size_t size);
@@ -61,6 +62,7 @@ CUresult (*cuMemcpyDtoHAsync)(void *dst,
                               CUdeviceptr src,
                               size_t size,
                               CUstream hstream);
+CUresult (*cuMemcpyDtoD)(CUdeviceptr dst, CUdeviceptr src, size_t size);
 CUresult (*cuStreamCreate)(CUstream *hstream, unsigned int flags);
 CUresult (*cuStreamDestroy)(CUstream hstream);
 CUresult (*cuStreamSynchronize)(CUstream hstream);
@@ -112,10 +114,12 @@ bool LoadCUDALibrary() {
   LOAD_CUDA_FUNCTION(cuOccupancyMaxPotentialBlockSize, "");
   LOAD_CUDA_FUNCTION(cuMemAlloc, "_v2");
   LOAD_CUDA_FUNCTION(cuMemFree, "_v2");
+  LOAD_CUDA_FUNCTION(cuMemsetD8, "");
   LOAD_CUDA_FUNCTION(cuMemcpyHtoD, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyDtoH, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyHtoDAsync, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyDtoHAsync, "_v2");
+  LOAD_CUDA_FUNCTION(cuMemcpyDtoD, "");
   LOAD_CUDA_FUNCTION(cuStreamCreate, "");
   LOAD_CUDA_FUNCTION(cuStreamDestroy, "_v2");
   LOAD_CUDA_FUNCTION(cuStreamSynchronize, "");

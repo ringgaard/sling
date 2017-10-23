@@ -104,6 +104,52 @@ void CUDARuntime::ClearInstance(Instance *instance) {
          instance->size() - instance->cell()->data_start());
 }
 
+char *CUDARuntime::AllocateChannel(char *data,
+                                   size_t old_size,
+                                   size_t new_size,
+                                   size_t alignment,
+                                   Placement placement) {
+  if (placement == DEVICE) {
+    // Allocate channel in device memory.
+    if (new_size == 0) return nullptr;
+    DevicePtr buffer;
+    CHECK_CUDA(cuMemAlloc(&buffer, new_size));
+    if (data != nullptr) {
+      CHECK_CUDA(cuMemcpyDtoD(buffer, reinterpret_cast<DevicePtr>(data),
+                              old_size));
+    }
+    return reinterpret_cast<char *>(buffer);
+  } else {
+    // Allocate channel in host memory.
+    void *buffer;
+    CHECK_EQ(posix_memalign(&buffer, alignment, new_size), 0);
+    if (data != nullptr) {
+      memcpy(buffer, data, old_size);
+      free(data);
+    }
+    return reinterpret_cast<char *>(buffer);
+  }
+}
+
+void CUDARuntime::ClearChannel(char *data, size_t pos,
+                               size_t size, Placement placement) {
+  if (placement == DEVICE) {
+      CHECK_CUDA(cuMemsetD8(reinterpret_cast<DevicePtr>(data + pos), 0, size));
+  } else {
+    memset(data + pos, 0, size);
+  }
+}
+
+void CUDARuntime::FreeChannel(char *data, Placement placement) {
+  if (placement == DEVICE) {
+    if (data != nullptr) {
+      CHECK_CUDA(cuMemFree(reinterpret_cast<DevicePtr>(data)));
+    }
+  } else {
+    free(data);
+  }
+}
+
 void CUDARuntime::StartTask(Task *task) {
   // The task is run in the calling thread. All the CUDA kernels in the task
   // will be launched asynchronously so they might not yet have completed when

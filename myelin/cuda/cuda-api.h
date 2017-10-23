@@ -273,6 +273,7 @@ extern CUresult (*cuOccupancyMaxPotentialBlockSize)(int *min_grid_size,
                                                     int block_size_limit);
 extern CUresult (*cuMemAlloc)(CUdeviceptr *dptr, size_t size);
 extern CUresult (*cuMemFree)(CUdeviceptr dptr);
+extern CUresult (*cuMemsetD8)(CUdeviceptr dptr, unsigned char uc, size_t n);
 extern CUresult (*cuMemcpyHtoD)(CUdeviceptr dst,
                                 const void *src,
                                 size_t size);
@@ -287,6 +288,7 @@ extern CUresult (*cuMemcpyDtoHAsync)(void *dst,
                                      CUdeviceptr src,
                                      size_t size,
                                      CUstream hstream);
+extern CUresult (*cuMemcpyDtoD)(CUdeviceptr dst, CUdeviceptr src, size_t size);
 extern CUresult (*cuStreamCreate)(CUstream *hstream, unsigned int flags);
 extern CUresult (*cuStreamDestroy)(CUstream hstream);
 extern CUresult (*cuStreamSynchronize)(CUstream hstream);
@@ -302,8 +304,8 @@ extern CUresult (*cuLaunchKernel)(CUfunction f,
                                   void **kernelParams,
                                   void **extra);
 extern CUresult (*cuProfilerInitialize)(const char *config_file,
-                                       const char *output_file,
-                                       CUoutput_mode output_mode);
+                                        const char *output_file,
+                                        CUoutput_mode output_mode);
 extern CUresult (*cuProfilerStart)();
 extern CUresult (*cuProfilerStop)();
 

@@ -96,6 +96,20 @@ class DebugRuntime : public Runtime {
     }
   }
 
+  char *AllocateChannel(char *data, size_t old_size, size_t new_size,
+                        size_t alignment, Placement placement) override {
+    LOG(FATAL) << "Channels not supported";
+  }
+
+  void ClearChannel(char *data, size_t pos, size_t size,
+                    Placement placement) override {
+    LOG(FATAL) << "Channels not supported";
+  }
+
+  void FreeChannel(char *data, Placement placement) override {
+    LOG(FATAL) << "Channels not supported";
+  }
+
   bool SupportsAsync() override { return false; }
   TaskFunc StartTaskFunc() override { return StartTask; }
   TaskFunc WaitTaskFunc() override { return WaitTask; }

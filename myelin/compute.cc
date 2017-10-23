@@ -102,6 +102,25 @@ class BasicRuntime : public Runtime {
     memset(instance->data(), 0, instance->size());
   }
 
+  char *AllocateChannel(char *data, size_t old_size, size_t new_size,
+                        size_t alignment, Placement placement) override {
+    char *buffer = MemAlloc(new_size, alignment);
+    if (data != nullptr) {
+      memcpy(buffer, data, old_size);
+      MemFree(data);
+    }
+    return buffer;
+  }
+
+  void ClearChannel(char *data, size_t pos, size_t size,
+                    Placement placement) override {
+    memset(data + pos, 0, size);
+  }
+
+  void FreeChannel(char *data, Placement placement) override {
+    MemFree(data);
+  }
+
   bool SupportsAsync() override {
     return false;
   }
@@ -519,7 +538,7 @@ string Tensor::TypeString() const {
 }
 
 Channel::~Channel() {
-  MemFree(data_);
+  runtime()->FreeChannel(data_, connector_->placement());
 }
 
 void Channel::resize(int n) {
@@ -533,7 +552,9 @@ void Channel::resize(int n) {
 
   // Clear new elements.
   if (n > size_) {
-    memset(at(size_), 0, (n - size_) * connector_->size());
+    size_t pos = size_ * connector_->size();
+    size_t bytes = (n - size_) * connector_->size();
+    runtime()->ClearChannel(data_, pos, bytes, connector_->placement());
   }
 
   // Change size.
@@ -545,17 +566,12 @@ void Channel::reserve(int n) {
   if (n < size_) return;
   if (n == capacity_) return;
 
-  // Allocate new data buffer.
-  char *buffer = MemAlloc(n * connector_->size(), connector_->alignment());
-
-  // Copy existing data to new buffer.
-  if (data_ != nullptr) {
-    memcpy(buffer, data_, size_ * connector_->size());
-    MemFree(data_);
-  }
-
-  // Set new data buffer.
-  data_ = buffer;
+  // Allocate or reallocate data buffer.
+  data_ = runtime()->AllocateChannel(data_,
+                                     capacity_ * connector_->size(),
+                                     n * connector_->size(),
+                                     connector_->alignment(),
+                                     connector_->placement());
 }
 
 ProfileSummary::ProfileSummary(Cell *cell) : cell_(cell) {
@@ -807,7 +823,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Create new connector.
-    Connector *connector = new Connector();
+    Connector *connector = new Connector(this);
     connectors_.push_back(connector);
 
     // Create tensor for connector.
@@ -1139,11 +1155,21 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
   }
 
-  // Compute alignment for connectors.
+  // Compute alignment and placement for connectors.
   for (Connector *connector : connectors_) {
     Tensor *t = connector->type_;
     EnsureAlignment(&connector->alignment_, t->byte_alignment_);
     EnsureAlignment(&connector->alignment_, jit::CPU::CacheLineSize());
+
+    for (Tensor *link : connector->links_) {
+      connector->AddPlace(link->placement_);
+    }
+
+    if (connector->placement_ == EVERYWHERE) {
+      LOG(ERROR) << "Connector " << connector->name()
+                 << " crosses host/device boundary";
+      return false;
+    }
 
     VLOG(5) << "Connector " << connector->name() << ": " << t->TypeString()
             << " min " << t->minalign_.ToString()
@@ -1151,7 +1177,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             << " aligned " << t->aligned_.ToString()
             << " size " << t->size_
             << " stride " << t->stride_.ToString()
-            << " order " << t->order_;
+            << " order " << t->order_
+            << " on " << placename[connector->placement_];
   }
 
   // Move all variables that are shared with a constant to the constant pool.
