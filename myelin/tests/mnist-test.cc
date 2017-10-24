@@ -8,11 +8,15 @@
 #include "myelin/flow.h"
 #include "myelin/graph.h"
 #include "myelin/profile.h"
+#include "myelin/cuda/cuda-runtime.h"
+#include "myelin/kernel/cuda.h"
 #include "myelin/kernel/tensorflow.h"
 
 DEFINE_string(input, "/tmp/mnist.flow", "input file with flow model");
 DEFINE_int32(repeat, 100, "Number of times test is repeated");
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
+DEFINE_bool(dump_cell, false, "Dump network cell to stdout");
+DEFINE_bool(gpu, false, "Run on GPU");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -23,6 +27,7 @@ int main(int argc, char *argv[]) {
   // Set up kernel library.
   Library library;
   RegisterTensorflowLibrary(&library);
+  if (FLAGS_gpu) RegisterCUDALibrary(&library);
 
   // Load model.
   Flow flow;
@@ -43,11 +48,15 @@ int main(int argc, char *argv[]) {
   // Compile model.
   Network network;
   if (FLAGS_repeat > 0) network.set_profiling(true);
+  if (FLAGS_gpu) network.set_runtime(new CUDARuntime());
   CHECK(network.Compile(flow, library));
 
   Cell *classifier = network.GetCell("classifier");
+  if (FLAGS_dump_cell) {
+    std::cout << classifier->ToString();
+  }
 
-  // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn /tmp/tdozat.bin
+  // objdump -D -Mintel,x86-64 -bbinary -mi386 --no-show-raw-insn /tmp/mnist.bin
   classifier->WriteCodeToFile("/tmp/mnist.bin");
 
   // dot -Granksep=1.5 -Gnodesep=0.3 /tmp/tdozat.dot -Tsvg
@@ -70,3 +79,4 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
+

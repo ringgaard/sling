@@ -50,20 +50,22 @@ void PTXMacroAssembler::LoadTensorAddress(const PTXReg &reg, Tensor *tensor) {
 }
 
 void PTXMacroAssembler::GetThreadIndex(const PTXReg &idx, int d) {
-  static const char *blkdim[] = {"blkdimx", "blkdimy", "blkdimz"};
   static const char *thridx[] = {"thridxx", "thridxy", "thridxz"};
-  static const char *blkidx[] = {"blkidxx", "blkidxy", "blkidxz"};
-  static const char *ntid[] = {"%ntid.x", "%ntid.y", "%ntid.z"};
-  static const char *ctaid[] = {"%ctaid.x", "%ctaid.y", "%ctaid.z"};
   static const char *tid[] = {"%tid.x", "%tid.y", "%tid.z"};
 
-  PTXReg bdim = reg("b32", blkdim[d]);
+  static const char *blkidx[] = {"blkidxx", "blkidxy", "blkidxz"};
+  static const char *ctaid[] = {"%ctaid.x", "%ctaid.y", "%ctaid.z"};
+
+  static const char *blkdim[] = {"blkdimx", "blkdimy", "blkdimz"};
+  static const char *ntid[] = {"%ntid.x", "%ntid.y", "%ntid.z"};
+
   PTXReg tidx = reg("b32", thridx[d]);
   PTXReg bidx = reg("b32", blkidx[d]);
+  PTXReg bdim = reg("b32", blkdim[d]);
+  emit("mov.u32", tidx, PTXLiteral(tid[d]));
+  emit("mov.u32", bidx, PTXLiteral(ctaid[d]));
   emit("mov.u32", bdim, PTXLiteral(ntid[d]));
-  emit("mov.u32", tidx, PTXLiteral(ctaid[d]));
-  emit("mov.u32", bidx, PTXLiteral(tid[d]));
-  emit("mad.lo.u32", idx, tidx, bdim, bidx);
+  emit("mad.lo.u32", idx, bidx, bdim, tidx);
 }
 
 bool CUDAKernel::Supports(Step *step) {
@@ -131,10 +133,10 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
 
   VLOG(5) << step->name() << ", block size " << block_size << ", thread ("
           << x << "," << y << "," << z
-          << "), block ("
-          << block_dim_x << "," << block_dim_y << "," << block_dim_z
           << "), grid ("
-          <<  grid_dim_x << "," << grid_dim_y << "," << grid_dim_z << ")";
+          << grid_dim_x << "," << grid_dim_y << "," << grid_dim_z
+          << "), block ("
+          << block_dim_x << "," << block_dim_y << "," << block_dim_z << ")";
 
   // Get offset of stream in data instance block.
   int streamofs;

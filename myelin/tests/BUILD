@@ -120,6 +120,8 @@ cc_binary(
     "//myelin:flow",
     "//myelin:graph",
     "//myelin:profile",
+    "//myelin/cuda:cuda-runtime",
+    "//myelin/kernel:cuda",
     "//myelin/kernel:tensorflow",
   ],
 )

@@ -89,9 +89,9 @@ class CUDAMatMulBase : public CUDAKernel {
     ptx->set_grid_dims(width, height);
 
     // Get output row and column in C.
-    ptx_decl(b32, col);
+    ptx_decl(u32, col);
     ptx->GetThreadIndex(col, 0);
-    ptx_decl(b32, row);
+    ptx_decl(u32, row);
     if (!vec) {
       ptx->GetThreadIndex(row, 1);
     }

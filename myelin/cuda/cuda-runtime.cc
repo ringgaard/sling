@@ -173,6 +173,9 @@ DevicePtr CUDARuntime::CopyTensorToDevice(Tensor *tensor) {
   DevicePtr dest;
   CHECK_CUDA(cuMemAlloc(&dest, tensor->space()));
 
+  LOG(INFO) << "Allocate tensor " << tensor->name() << " on device at "
+            << dest << ", " << tensor->space() << " bytes";
+
   // Copy tensor data to device.
   CHECK_CUDA(cuMemcpyHtoD(dest, tensor->data(), tensor->space()));
 
@@ -218,6 +221,9 @@ void CUDARuntime::EmitTensorTransfers(const Transfers &xfers,
       masm->call(acc);
       masm->rr().release(acc);
       EmitStatusCheck("cuMemcpyHtoDAsync", masm);
+
+      VLOG(5) << "Copy " << blk.host_offset << "->" << blk.device_offset
+              << " size " << blk.size << " from host to device";
     }
   }
 
@@ -253,6 +259,9 @@ void CUDARuntime::EmitTensorTransfers(const Transfers &xfers,
       masm->call(acc);
       masm->rr().release(acc);
       EmitStatusCheck("cuMemcpyDtoHAsync", masm);
+
+      VLOG(5) << "Copy " << blk.device_offset << "->" << blk.host_offset
+              << " size " << blk.size << " from device to host";
     }
   }
 }

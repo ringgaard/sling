@@ -1665,7 +1665,11 @@ static bool Contains(const std::vector<Tensor *> &v, Tensor *t) {
 
 string Cell::ToString() const {
   string str;
-  StringAppendF(&str, "cell %s {  // size %lu\n", name_.c_str(), instance_size_);
+  StringAppendF(&str, "cell %s {  // size %lu", name_.c_str(), instance_size_);
+  if (device_instance_size_ > 0) {
+    StringAppendF(&str, ", device size %lu", device_instance_size_);
+  }
+  str.append("\n");
 
   // Output instance data fields.
   std::vector<Tensor *> fields;
@@ -1697,6 +1701,7 @@ string Cell::ToString() const {
   prev_offset = -1;
   for (Tensor *t : fields) {
     if (t->placement() & DEVICE) {
+      str.append("  ");
       if (t->device_offset() == prev_offset) {
         str.append("  union ");
       } else {
