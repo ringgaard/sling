@@ -443,6 +443,10 @@ class PTXAssembler {
     condition_ = true;
   }
 
+  // Emit printf call.
+  void vprintf(const char *fmt, va_list args);
+  void printf(const char *fmt, ...);
+
   // CUDA SM target architecture.
   int target() const { return target_; }
   void set_target(int target) { target_ = target; }
@@ -517,6 +521,12 @@ class PTXAssembler {
 
   // PTX code instruction buffer.
   string code_;
+
+  // Number of printf calls.
+  int num_printf_calls_ = 0;
+
+  // Maximum number of printf arguments.
+  int max_printf_args_ = 0;
 };
 
 // Utility macros for emitting PTX code.

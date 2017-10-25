@@ -250,6 +250,12 @@ void PTXAssembler::Generate(string *ptx) {
     }
   }
 
+  // Generate external references.
+  if (num_printf_calls_ > 0) {
+    ptx->append(".extern .func (.param.s32 status) vprintf ("
+                ".param.b64 format, .param.b64 valist);\n");
+  }
+
   ptx->append(".visible .entry ");
   ptx->append(name_);
   ptx->append("(");
@@ -284,6 +290,18 @@ void PTXAssembler::Generate(string *ptx) {
       ptx->append(std::to_string(r.reg.index()));
     }
     ptx->append(";\n");
+  }
+
+  if (num_printf_calls_ > 0) {
+    ptx->append(".param .b64 param0;\n");
+    ptx->append(".param .b64 param1;\n");
+    ptx->append(".reg .b64 fmtptr;\n");
+    ptx->append(".reg .b64 vaptr;\n");
+    if (max_printf_args_ > 0) {
+      ptx->append(".local .align 8 .b8 argbuf[");
+      ptx->append(std::to_string(max_printf_args_ * 8));
+      ptx->append("];\n");
+   }
   }
 
   // Add code instructions.
@@ -341,6 +359,67 @@ void PTXAssembler::EmitSpace() {
 
 void PTXAssembler::EmitComma() {
   code_.push_back(',');
+}
+
+void PTXAssembler::vprintf(const char *fmt, va_list args) {
+  // Generate format string.
+  int idx = num_printf_calls_++;
+  code_.append(".global .align 4 .b8 fmtstr");
+  code_.append(std::to_string(idx));
+  code_.append("[");
+  code_.append(std::to_string(strlen(fmt) + 1));
+  code_.append("]={");
+  int num_args = 0;
+  bool pct_seen = false;
+  const char *p = fmt;
+  while (*p) {
+    code_.append(std::to_string(*p));
+    code_.append(",");
+
+    if (*p == '%') {
+      pct_seen = !pct_seen;
+    } else {
+      if (pct_seen) num_args++;
+      pct_seen = false;
+    }
+
+    p++;
+  }
+  code_.append("0};\n");
+  if (num_args > max_printf_args_) max_printf_args_ = num_args;
+
+  code_.append("cvta.global.u64 fmtptr,fmtstr");
+  code_.append(std::to_string(idx));
+  code_.append(";\n");
+  code_.append("st.param.b64 [param0],fmtptr;\n");
+
+  // Generate argument aray.
+  if (num_args > 0) {
+    for (int i = 0; i < num_args; ++i) {
+      PTXReg *reg = va_arg(args, PTXReg *);
+      code_.append("st.local.");
+      code_.append(reg->type());
+      code_.append(" [argbuf+");
+      code_.append(std::to_string(i * 8));
+      code_.append("],");
+      reg->Generate(&code_);
+      code_.append(";\n");
+    }
+    code_.append("cvta.local.u64 vaptr,argbuf;\n");
+  } else {
+    code_.append("cvta.global.u64 vaptr,0;\n");
+  }
+  code_.append("st.param.b64 [param1],vaptr;\n");
+
+  // Call vprintf.
+  code_.append("call.uni (_), vprintf, (param0, param1);\n");
+}
+
+void PTXAssembler::printf(const char *fmt, ...) {
+ va_list args;
+ va_start(args, fmt);
+ vprintf(fmt, args);
+ va_end(args);
 }
 
 int PTXAssembler::SourceIndex(const char *source) {

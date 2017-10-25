@@ -161,6 +161,8 @@ class CUDAMatMulBase : public CUDAKernel {
       ptx_decl(b64, vptr);
       ptx->LoadTensorAddress(vptr, v);
       ptx_emit(mad.wide.u32, vptr, col, PTXImm(dsize), vptr);
+      //ptx->printf("col %d vptr %lld\n", &col, &vptr);
+
       PTXReg bias = ptx->reg(type, "bias");
       ptx->emit(PTXInstr("ld.global", type), bias, PTXAddr(vptr));
       ptx->emit(PTXInstr("add", type), sum, sum, bias);
