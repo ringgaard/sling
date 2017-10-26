@@ -256,6 +256,7 @@ void PTXAssembler::Generate(string *ptx) {
                 ".param.b64 format, .param.b64 valist);\n");
   }
 
+  // Generate entry point.
   ptx->append(".visible .entry ");
   ptx->append(name_);
   ptx->append("(");

@@ -173,11 +173,11 @@ DevicePtr CUDARuntime::CopyTensorToDevice(Tensor *tensor) {
   DevicePtr dest;
   CHECK_CUDA(cuMemAlloc(&dest, tensor->space()));
 
-  LOG(INFO) << "Allocate tensor " << tensor->name() << " on device at "
-            << dest << ", " << tensor->space() << " bytes";
-
   // Copy tensor data to device.
   CHECK_CUDA(cuMemcpyHtoD(dest, tensor->data(), tensor->space()));
+
+  VLOG(5) << "Allocate tensor " << tensor->name() << " on device at "
+          << dest << ", " << tensor->space() << " bytes";
 
   return dest;
 }

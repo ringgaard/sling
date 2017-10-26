@@ -36,8 +36,7 @@ PTXMacroAssembler::PTXMacroAssembler(const string &name): PTXAssembler(name) {
 void PTXMacroAssembler::LoadTensorAddress(const PTXReg &reg, Tensor *tensor) {
   if (tensor->IsConstant()) {
     // Read from constant tensor.
-    //emit("mov.u64", reg, PTXImm(tensor->device_data()));
-    emit("cvta.global.u64", reg, PTXImm(tensor->device_data()));
+    emit("mov.u64", reg, PTXImm(tensor->device_data()));
   } else if (tensor->ref()) {
     // Read from reference tensor.
     emit("ld.global.u64", reg, PTXAddr(data(), tensor->device_offset()));
