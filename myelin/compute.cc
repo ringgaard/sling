@@ -936,11 +936,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         bool compatible = true;
         if (step->task_index_ != -1) {
           auto &task = cell->tasks_[step->task_index_];
+          Placement location = kernel->Location();
           if (task.placement == NOWHERE) {
             // Task has not been placed yet. Use the kernel location for
             // placement.
-            task.placement = kernel->Location();
-          } else if (task.placement != kernel->Location()) {
+            task.placement = location;
+          } else if (task.placement != location && location != NOWHERE) {
             // Kernel location is incompatible with task placement.
             VLOG(7) << kernel->Name() << " cannot run on "
                     << placename[task.placement];

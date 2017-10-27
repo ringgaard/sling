@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 
   // Set up CUDA runtime.
   CUDARuntime cudart;
-  CHECK(cudart.Device() != nullptr) << "No CUDA GPU device";
+  cudart.Connect();
   LOG(INFO) << cudart.Description();
 
   // Set up workflow.

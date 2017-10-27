@@ -47,7 +47,7 @@ DEFINE_bool(avx2, true, "AVX2 support");
 DEFINE_bool(fma3, true, "FMA3 support");
 
 Library library;
-CUDARuntime *cudart = nullptr;
+CUDARuntime cudart;
 
 // Baseline implementation of float matrix multiplication.
 void BaselineMatMatMul(const TensorData &A, const TensorData &B,
@@ -109,7 +109,7 @@ void CheckFltMatMul(const string &test, const string &base) {
     for (int w = FLAGS_wmin; w <= FLAGS_wmax; ++w) {
       VLOG(2) << "Testing " << d << "x" << w;
       FltKernelComparator matmul(library, "MatMul", test, base);
-      if (cudart) matmul.set_runtime(cudart);
+      if (cudart.connected()) matmul.set_runtime(&cudart);
       matmul.AddInput("x", {1, d}, FLAGS_minmat, 100.0);
       matmul.AddInput("W", {d, w}, FLAGS_minmat, 100.0);
       matmul.AddOutput("y", {1, w}, FLAGS_matmul_accuracy);
@@ -123,7 +123,7 @@ void CheckFltMatMulAdd(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulAdd", test, base);
-  if (cudart) matmul.set_runtime(cudart);
+  if (cudart.connected()) matmul.set_runtime(&cudart);
   matmul.AddInput("x", {1, 10}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("W", {10, 100}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("b", {100}, -10.0, 10.0);
@@ -136,7 +136,7 @@ void CheckFltMatMulRelu(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulRelu", test, base);
-  if (cudart) matmul.set_runtime(cudart);
+  if (cudart.connected()) matmul.set_runtime(&cudart);
   matmul.AddInput("x", {1, 10}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("W", {10, 100}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddOutput("y", {1, 100}, FLAGS_matmul_accuracy);
@@ -148,7 +148,7 @@ void CheckFltMatMulAddRelu(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   FltKernelComparator matmul(library, "MatMulAddRelu", test, base);
-  if (cudart) matmul.set_runtime(cudart);
+  if (cudart.connected()) matmul.set_runtime(&cudart);
   matmul.AddInput("x", {1, 10}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("W", {10, 100}, FLAGS_minmat, FLAGS_maxmat);
   matmul.AddInput("b", {100}, FLAGS_minmat, FLAGS_maxmat);
@@ -164,7 +164,7 @@ void CheckFltMatMatMul(const string &test, const string &base) {
     for (int j = FLAGS_mmin; j <= FLAGS_mmax; ++j) {
       for (int k = FLAGS_mmin; k <= FLAGS_mmax; ++k) {
         FltKernelComparator matmul(library, "MatMul", test, base);
-        if (cudart) matmul.set_runtime(cudart);
+        if (cudart.connected()) matmul.set_runtime(&cudart);
         matmul.AddInput("A", {i, j}, FLAGS_minmat, FLAGS_maxmat);
         matmul.AddInput("B", {j, k}, FLAGS_minmat, FLAGS_maxmat);
         matmul.AddOutput("C", {i, k}, FLAGS_matmul_accuracy);
@@ -186,7 +186,7 @@ void CheckFltFunc(const string &func,
     if (modulo != 0 && d % modulo != 0) continue;
     VLOG(2) << "Testing " << d;
     FltKernelComparator comp(library, func, test, base);
-    if (cudart) comp.set_runtime(cudart);
+    if (cudart.connected()) comp.set_runtime(&cudart);
     comp.AddInput("x", {d}, negative ? -10.0 : 1e-3, 10.0);
     comp.AddOutput("y", {d}, FLAGS_func_accuracy);
     CheckTest(comp.Check(10));
@@ -204,7 +204,7 @@ void CheckFltBinOp(const string &func,
     if (modulo != 0 && d % modulo != 0) continue;
     VLOG(2) << "Testing " << d;
     FltKernelComparator comp(library, func, test, base);
-    if (cudart) comp.set_runtime(cudart);
+    if (cudart.connected()) comp.set_runtime(&cudart);
     comp.AddInput("a", {d}, -100.0, 100.0);
     comp.AddInput("b", {d}, -100.0, 100.0);
     comp.AddOutput("c", {d}, FLAGS_func_accuracy);
@@ -232,8 +232,8 @@ void CheckIntMatMul(const string &test, const string &base) {
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   IntKernelComparator matmul(library, "MatMul", test, base);
-  if (cudart) {
-    matmul.set_runtime(cudart);
+  if (cudart.connected()) {
+    matmul.set_runtime(&cudart);
     matmul.AddInput("x", {1, 10}, DT_INT32);
     matmul.AddInput("W", {10, 100}, DT_INT32);
     matmul.AddOutput("y", {1, 100}, DT_INT32);
@@ -255,7 +255,7 @@ void CheckIntBinOp(const string &func,
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; ++d) {
     if (modulo != 0 && d % modulo != 0) continue;
     VLOG(2) << "Testing " << d;
-    if (!cudart) {
+    if (!cudart.connected()) {
       IntKernelComparator comp8(library, func, test, base);
       comp8.AddInput("a", {d}, DT_INT8);
       comp8.AddInput("b", {d}, DT_INT8);
@@ -264,21 +264,21 @@ void CheckIntBinOp(const string &func,
     }
 
     IntKernelComparator comp16(library, func, test, base);
-    if (cudart) comp16.set_runtime(cudart);
+    if (cudart.connected()) comp16.set_runtime(&cudart);
     comp16.AddInput("a", {d}, DT_INT16);
     comp16.AddInput("b", {d}, DT_INT16);
     comp16.AddOutput("c", {d}, DT_INT16);
     CheckTest(comp16.Check(10));
 
     IntKernelComparator comp32(library, func, test, base);
-    if (cudart) comp32.set_runtime(cudart);
+    if (cudart.connected()) comp32.set_runtime(&cudart);
     comp32.AddInput("a", {d}, DT_INT32);
     comp32.AddInput("b", {d}, DT_INT32);
     comp32.AddOutput("c", {d}, DT_INT32);
     CheckTest(comp32.Check(10));
 
     IntKernelComparator comp64(library, func, test, base);
-    if (cudart) comp64.set_runtime(cudart);
+    if (cudart.connected()) comp64.set_runtime(&cudart);
     comp64.AddInput("a", {d}, DT_INT64);
     comp64.AddInput("b", {d}, DT_INT64);
     comp64.AddOutput("c", {d}, DT_INT64);
@@ -405,8 +405,8 @@ int main(int argc, char *argv[]) {
   }
 
   if (CUDA::Supported()) {
-    cudart = new CUDARuntime();
-    LOG(INFO) << cudart->Description();
+    cudart.Connect();
+    LOG(INFO) << cudart.Description();
 
     // Test CUDA floating point operators.
     CheckFltBinOp("Add", "CUDAAdd", "AddExpr");
@@ -441,8 +441,7 @@ int main(int argc, char *argv[]) {
     CheckFltMatMatMul("CUDAMatMul", "GenFltMatMatMul");
     CheckIntMatMul("CUDAMatMul", "GenIntVecMatMul");
 
-    delete cudart;
-    cudart = nullptr;
+    cudart.Disconnect();
   } else {
     LOG(WARNING) << "No GPU, skipping CUDA tests";
   }

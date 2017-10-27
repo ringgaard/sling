@@ -21,6 +21,8 @@ DEFINE_bool(gpu, false, "Run on GPU");
 using namespace sling;
 using namespace sling::myelin;
 
+CUDARuntime cudart;
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
@@ -48,7 +50,10 @@ int main(int argc, char *argv[]) {
   // Compile model.
   Network network;
   if (FLAGS_repeat > 0) network.set_profiling(true);
-  if (FLAGS_gpu) network.set_runtime(new CUDARuntime());
+  if (FLAGS_gpu) {
+    cudart.Connect();
+    network.set_runtime(&cudart);
+  }
   CHECK(network.Compile(flow, library));
 
   Cell *classifier = network.GetCell("classifier");

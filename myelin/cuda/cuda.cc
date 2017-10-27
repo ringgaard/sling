@@ -59,7 +59,7 @@ CUDADevice::CUDADevice(int number) : number_(number) {
 
 CUDADevice::~CUDADevice() {
   for (auto *m : modules_) delete m;
-  CHECK_CUDA(cuCtxDetach(context_));
+  cuCtxDetach(context_);
 }
 
 CUDAModule *CUDADevice::Compile(const char *ptx) {
@@ -171,7 +171,7 @@ CUDAModule::CUDAModule(const char *ptx) {
 }
 
 CUDAModule::~CUDAModule() {
-  CHECK_CUDA(cuModuleUnload(handle_));
+  cuModuleUnload(handle_);
 }
 
 CUfunction CUDAModule::function(const char *name) {

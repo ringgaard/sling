@@ -15,12 +15,17 @@ using namespace jit;
 // Base register used for data instance.
 static Register datareg = rbp;
 
-CUDARuntime::CUDARuntime(int device_number) {
-  // Check that CUDA is supported.
-  CHECK(CUDA::Supported());
+CUDARuntime::~CUDARuntime() {
+  Disconnect();
+}
 
-  // Initialize CUDA device.
-  if (device_number == -1) {
+void CUDARuntime::Connect(int device_number) {
+  // Check if device is already connected to another device.
+  if (device_ != nullptr) {
+    if (device_number != -1 && device_->number() != device_number) {
+      LOG(FATAL) << "CUDA runtime already connect to device";
+    }
+  } else if (device_number == -1) {
     // Select the CUDA device with the most cores.
     device_ = new CUDADevice(0);
     for (int d = 1; d < CUDA::Devices(); ++d) {
@@ -33,18 +38,23 @@ CUDARuntime::CUDARuntime(int device_number) {
       }
     }
   } else {
+    // Initialize CUDA device.
     device_ = new CUDADevice(device_number);
   }
 }
 
-CUDARuntime::~CUDARuntime() {
-  // Close device.
+void CUDARuntime::Disconnect() {
   delete device_;
+  device_ = nullptr;
 }
 
 string CUDARuntime::Description() {
-  return "CUDA device " + std::to_string(device_->number()) +
-         ": " + device_->ToString();
+  if (device_ != nullptr) {
+    return "CUDA device " + std::to_string(device_->number()) +
+           ": " + device_->ToString();
+  } else {
+    return "No CUDA device";
+  }
 }
 
 void CUDARuntime::AllocateInstance(Instance *instance) {

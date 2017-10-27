@@ -20,13 +20,23 @@ struct CUDAInstance {
 // Runtime for executing kernels on GPUs using the Nvidia CUDA API.
 class CUDARuntime : public Runtime {
  public:
-  // Initialize runtime for running ops on CUDA devices. If the device number is
-  // -1 the runtime tried to selected the best GPU device for computations.
-  CUDARuntime(int device_number = -1);
   ~CUDARuntime();
 
+  // Connect runtime to CUDA devices. If the device number is -1 the runtime
+  // tries to selected the best GPU device for computations.
+  void Connect(int device_number = -1);
+
+  // Disconnect runtime from device.
+  void Disconnect();
+
+  // Return description of the CPU device.
   string Description() override;
+
+  // Return CUDA device for runtime.
   CUDADevice *Device() override { return device_; }
+
+  // Check if runtime has been connected to a device.
+  bool connected() const { return device_ != nullptr; }
 
   // Instance data allocation.
   void AllocateInstance(Instance *instance) override;
@@ -82,7 +92,7 @@ class CUDARuntime : public Runtime {
   static std::vector<Block> MergedTransfers(const std::vector<Transfer> &xfers);
 
   // CUDA device for computations.
-  CUDADevice *device_;
+  CUDADevice *device_ = nullptr;
 };
 
 }  // namespace myelin
