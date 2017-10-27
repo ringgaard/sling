@@ -846,6 +846,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     // Link tensors to connector.
     for (Flow::Variable *link : cnx->links) {
       CHECK(link->ref);
+      connector->links_.push_back(tensors[link]);
       tensors[link]->link_ = t;
     }
   }
@@ -1000,7 +1001,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     step->kernel_->Adjust(step);
   }
 
-  // Propagate alignment between linked tensors.
+  // Propagate constraints between linked tensors.
   bool again = true;
   while (again) {
     // Keep propagating alignment constraints until there are no more
@@ -1059,6 +1060,13 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
       if (t->byte_alignment_ != align) {
         l->byte_alignment_ = align;
+        again = true;
+      }
+
+      // Propagate placement.
+      if (t->placement_ != l->placement_) {
+        t->AddPlace(l->placement_);
+        l->AddPlace(t->placement_);
         again = true;
       }
     }
@@ -1163,7 +1171,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     EnsureAlignment(&connector->alignment_, jit::CPU::CacheLineSize());
 
     for (Tensor *link : connector->links_) {
-      connector->AddPlace(link->placement_);
+      if (link->producer_ != nullptr) {
+        connector->AddPlace(link->producer_->placement());
+      }
+      for (Step *consumer : link->consumers_) {
+        connector->AddPlace(consumer->placement());
+      }
     }
 
     if (connector->placement_ == EVERYWHERE) {
@@ -1357,13 +1370,16 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
         // Synchronize main task if needed before executing step.
         if (sync && step->NeedsSynchronization()) {
+          VLOG(8) << "Sync main task";
           masm.CallInstanceFunction(runtime_->SyncMainFunc());
           sync = false;
         }
 
         // Generate code for step.
         auto pc = masm.pc_offset();
-        VLOG(8) << step->name() << " @ " << reinterpret_cast<uint64 *>(pc);
+        VLOG(8) << "Generate " << step->name() << " @ "
+                << reinterpret_cast<uint64 *>(pc)
+                << " on " << placename[step->placement()];
         step->kernel_->Generate(step, &masm);
         if (masm.pc_offset() == pc) step->noop_ = true;
 
@@ -1427,10 +1443,14 @@ bool Network::Compile(const Flow &flow, const Library &library) {
           if (output->placement_ == EVERYWHERE) {
             if (output->current_placement_ == HOST) {
               // Set deferred copy from host to device.
+              VLOG(8) << "Deferred transfer " << output->name()
+                      << " from host to device";
               output->deferred_placement_ = DEVICE;
               output->AddNewPlace(DEVICE);
             } else if (output->current_placement_ == DEVICE) {
               // Set deferred copy from device to host.
+              VLOG(8) << "Deferred transfer " << output->name()
+                      << " from device to host";
               output->deferred_placement_ = HOST;
               output->AddNewPlace(HOST);
             }
@@ -1448,6 +1468,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
     }
     if (sync) {
+      VLOG(8) << "Sync main task";
       masm.CallInstanceFunction(runtime_->SyncMainFunc());
     }
 

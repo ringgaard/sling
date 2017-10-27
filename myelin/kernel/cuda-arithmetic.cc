@@ -48,13 +48,15 @@ class CUDACalculate : public CUDAKernel {
     for (auto *input : step->inputs()) {
       if (input->type() != type) return false;
       if (!input->Compatible(step->output(0))) return false;
-      // NB: broadcasting not yet supported.
-      if (input->elements() != shape.elements()) return false;
+
+      // NB: general broadcasting not yet supported.
+      if (input->elements() != shape.elements() && input->elements() != 1) {
+        return false;
+      }
     }
     for (auto *output : step->outputs()) {
       if (output->type() != type) return false;
       if (output->shape() != shape) return false;
-      // NB: broadcasting not yet supported.
       if (output->elements() != shape.elements()) return false;
     }
 
@@ -112,7 +114,6 @@ class CUDACalculate : public CUDAKernel {
 
     // Optimize expression.
     expr.EliminateCommonSubexpressions();
-    expr.FuseMulAdd();
     expr.CacheResults();
 
     // Rewrite expression.
@@ -149,7 +150,6 @@ class CUDACalculate : public CUDAKernel {
     // Generate code for each instruction in expression.
     for (auto *instr : instrs.ops()) {
       if (instr->nop()) continue;
-      //LOG(INFO) << "  " << instr->AsInstruction();
       switch (instr->type) {
         case Express::MOV:
           if (instr->dst != -1 && instr->src != -1) {
@@ -232,20 +232,32 @@ class CUDACalculate : public CUDAKernel {
         Tensor *input = comp->step->input(instr->args[0]->id);
         if (input->IsConstant()) {
           // Load from constant tensor.
-          ptx->emit(PTXInstr("ld.global", comp->type), dst,
-                    PTXAddr(input->device_data(), comp->offset));
+          if (input->elements() != 1) {
+            ptx->emit(PTXInstr("ld.global", comp->type), dst,
+                      PTXAddr(input->device_data(), comp->offset));
+          } else {
+            ptx->emit(PTXInstr("ld.global", comp->type), dst,
+                      PTXAddr(input->device_data()));
+          }
         } else if (input->ref()) {
           // Load from reference tensor.
           ptx->emit("ld.global.u64", comp->addr,
                     PTXAddr(ptx->data(), input->device_offset()));
-          ptx->emit("add.u64", comp->addr, comp->addr, comp->offset);
+          if (input->elements() != 1) {
+            ptx->emit("add.u64", comp->addr, comp->addr, comp->offset);
+          }
           ptx->emit(PTXInstr("ld.global", comp->type), dst,
                     PTXAddr(comp->addr));
         } else {
           // Load from instance tensor.
-          ptx->emit("add.u64", comp->addr, ptx->data(), comp->offset);
-          ptx->emit(PTXInstr("ld.global", comp->type), dst,
-                    PTXAddr(comp->addr, input->device_offset()));
+          if (input->elements() == 1) {
+            ptx->emit(PTXInstr("ld.global", comp->type), dst,
+                      PTXAddr(ptx->data(), input->device_offset()));
+          } else {
+            ptx->emit("add.u64", comp->addr, ptx->data(), comp->offset);
+            ptx->emit(PTXInstr("ld.global", comp->type), dst,
+                      PTXAddr(comp->addr, input->device_offset()));
+          }
         }
       }
       break;

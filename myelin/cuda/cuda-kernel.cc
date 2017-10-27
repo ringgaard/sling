@@ -85,13 +85,13 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
   GeneratePTX(step, &ptx);
   string code;
   ptx.Generate(&code);
-  VLOG(6) << step->name() << " PTX code:\n" << code;
+  VLOG(9) << step->name() << " PTX code:\n" << code;
 
   // Compile PTX into a CUDA module.
   CUDAModule *module = device->Compile(code.c_str());
   CUDAFunction func(*module, name.c_str());
 
-  VLOG(6) << step->name() << " PTX usage: "
+  VLOG(9) << step->name() << " PTX usage: "
           << func.shared_size() << " shared, "
           << func.const_size() << " const, "
           << func.local_size() << " local, "

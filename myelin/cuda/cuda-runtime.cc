@@ -213,6 +213,9 @@ void CUDARuntime::EmitTensorTransfers(const Transfers &xfers,
                                       MacroAssembler *masm) {
   // Host to device transfers.
   if (!xfers.host_to_device.empty()) {
+    for (auto &t : xfers.host_to_device) {
+      VLOG(8) << "Transfer " << t.tensor->name() << " from host to device";
+    }
     for (Block &blk : MergedTransfers(xfers.host_to_device)) {
       // Set destination device address.
       masm->movq(arg_reg_1, Operand(datareg, offsetof(CUDAInstance, data)));
@@ -251,6 +254,9 @@ void CUDARuntime::EmitTensorTransfers(const Transfers &xfers,
 
   // Device to host transfers.
   if (!xfers.device_to_host.empty()) {
+    for (auto &t : xfers.device_to_host) {
+      VLOG(8) << "Transfer " << t.tensor->name() << " from device to host";
+    }
     for (Block &blk : MergedTransfers(xfers.device_to_host)) {
       // Set destination device address.
       masm->leaq(arg_reg_1, Operand(datareg, blk.host_offset));

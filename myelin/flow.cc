@@ -1734,6 +1734,13 @@ Flow::Function *Flow::Func(const string &name) {
   return nullptr;
 }
 
+Flow::Connector *Flow::Cnx(const string &name) {
+  for (Connector *cnx : cnxs_) {
+    if (cnx->name == name) return cnx;
+  }
+  return nullptr;
+}
+
 Flow::Blob *Flow::DataBlock(const string &name) {
   for (Blob *blob : blobs_) {
     if (blob->name == name) return blob;

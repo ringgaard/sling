@@ -14,6 +14,8 @@
 #include "myelin/flow.h"
 #include "myelin/graph.h"
 #include "myelin/profile.h"
+#include "myelin/cuda/cuda-runtime.h"
+#include "myelin/kernel/cuda.h"
 #include "myelin/kernel/tensorflow.h"
 #include "myelin/kernel/dragnn.h"
 #include "third_party/jit/cpu.h"
@@ -41,6 +43,7 @@ DEFINE_bool(sse41, true, "SSE 4.1 support");
 DEFINE_bool(avx, true, "AVX support");
 DEFINE_bool(avx2, true, "AVX2 support");
 DEFINE_bool(fma3, true, "FMA3 support");
+DEFINE_bool(gpu, false, "Run on GPU");
 
 DEFINE_int32(strict, 0, "Strict math mode (0=relaxed,1=strict matmul,2=strict");
 
@@ -48,6 +51,8 @@ using namespace sling;
 using namespace sling::myelin;
 
 struct RNNInstance;
+
+CUDARuntime cudart;
 
 // Baseline LSTM tagger.
 struct LSTMTagger {
@@ -385,6 +390,7 @@ void RNN::Load(const string &filename) {
   // Register kernels for implementing parser ops.
   RegisterTensorflowLibrary(&library_);
   RegisterDragnnLibrary(&library_);
+  if (FLAGS_gpu) RegisterCUDALibrary(&library_);
 
   library_.Register(new FixedDragnnInitializer());
   library_.RegisterTyper(new FixedDragnnTyper());
@@ -431,6 +437,11 @@ void RNN::Load(const string &filename) {
   if (FLAGS_profile) network_.set_profiling(true);
   if (FLAGS_debug) network_.set_debug(true);
   if (FLAGS_dynamic) network_.set_dynamic_allocation(true);
+  if (FLAGS_gpu) {
+    cudart.Connect();
+    network_.set_runtime(&cudart);
+  }
+
   CHECK(network_.Compile(flow, library_));
 
   // Get computation for each function.

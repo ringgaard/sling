@@ -79,8 +79,10 @@ cc_binary(
     "//myelin:flow",
     "//myelin:graph",
     "//myelin:profile",
-    "//myelin/kernel:tensorflow",
+    "//myelin/cuda:cuda-runtime",
+    "//myelin/kernel:cuda",
     "//myelin/kernel:dragnn",
+    "//myelin/kernel:tensorflow",
   ],
 )
 
