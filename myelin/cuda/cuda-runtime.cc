@@ -13,7 +13,10 @@ namespace myelin {
 using namespace jit;
 
 // Base register used for data instance.
-static Register datareg = rbp;
+static const Register datareg = rbp;
+
+// Use pinned memory for instance data.
+static const bool pinned_memory = true;
 
 CUDARuntime::~CUDARuntime() {
   Disconnect();
@@ -58,10 +61,15 @@ string CUDARuntime::Description() {
 }
 
 void CUDARuntime::AllocateInstance(Instance *instance) {
-  // Allocate host memory for instance.
+  // Allocate pinned host memory for instance.
   void *data;
-  int rc = posix_memalign(&data, instance->alignment(), instance->size());
-  CHECK_EQ(rc, 0);
+  if (pinned_memory) {
+    CHECK_CUDA(cuMemAllocHost(&data, instance->size()));
+    CHECK_EQ(reinterpret_cast<uint64>(data) % instance->alignment(), 0);
+  } else {
+    int rc = posix_memalign(&data, instance->alignment(), instance->size());
+    CHECK_EQ(rc, 0);
+  }
   instance->set_data(reinterpret_cast<char *>(data));
 
   // Set up CUDA runtime instance block which is located at the start of the
@@ -105,7 +113,11 @@ void CUDARuntime::FreeInstance(Instance *instance) {
   }
 
   // Deallocate host memory for instance.
-  free(instance->data());
+  if (pinned_memory) {
+    cuMemFreeHost(instance->data());
+  } else {
+    free(instance->data());
+  }
 }
 
 void CUDARuntime::ClearInstance(Instance *instance) {
@@ -144,7 +156,7 @@ char *CUDARuntime::AllocateChannel(char *data,
 void CUDARuntime::ClearChannel(char *data, size_t pos,
                                size_t size, Placement placement) {
   if (placement == DEVICE) {
-      CHECK_CUDA(cuMemsetD8(reinterpret_cast<DevicePtr>(data + pos), 0, size));
+    CHECK_CUDA(cuMemsetD8(reinterpret_cast<DevicePtr>(data + pos), 0, size));
   } else {
     memset(data + pos, 0, size);
   }

@@ -47,6 +47,8 @@ CUresult (*cuOccupancyMaxPotentialBlockSize)(int *min_grid_size,
                                              int block_size_limit);
 CUresult (*cuMemAlloc)(CUdeviceptr *dptr, size_t size);
 CUresult (*cuMemFree)(CUdeviceptr dptr);
+CUresult (*cuMemAllocHost)(void **pdata, size_t size);
+CUresult (*cuMemFreeHost)(void *ptr);
 CUresult (*cuMemsetD8)(CUdeviceptr dptr, unsigned char uc, size_t n);
 CUresult (*cuMemcpyHtoD)(CUdeviceptr dst,
                          const void *src,
@@ -114,12 +116,14 @@ bool LoadCUDALibrary() {
   LOAD_CUDA_FUNCTION(cuOccupancyMaxPotentialBlockSize, "");
   LOAD_CUDA_FUNCTION(cuMemAlloc, "_v2");
   LOAD_CUDA_FUNCTION(cuMemFree, "_v2");
-  LOAD_CUDA_FUNCTION(cuMemsetD8, "");
+  LOAD_CUDA_FUNCTION(cuMemAllocHost, "_v2");
+  LOAD_CUDA_FUNCTION(cuMemFreeHost, "");
+  LOAD_CUDA_FUNCTION(cuMemsetD8, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyHtoD, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyDtoH, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyHtoDAsync, "_v2");
   LOAD_CUDA_FUNCTION(cuMemcpyDtoHAsync, "_v2");
-  LOAD_CUDA_FUNCTION(cuMemcpyDtoD, "");
+  LOAD_CUDA_FUNCTION(cuMemcpyDtoD, "_v2");
   LOAD_CUDA_FUNCTION(cuStreamCreate, "");
   LOAD_CUDA_FUNCTION(cuStreamDestroy, "_v2");
   LOAD_CUDA_FUNCTION(cuStreamSynchronize, "");

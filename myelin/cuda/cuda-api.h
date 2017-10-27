@@ -273,6 +273,8 @@ extern CUresult (*cuOccupancyMaxPotentialBlockSize)(int *min_grid_size,
                                                     int block_size_limit);
 extern CUresult (*cuMemAlloc)(CUdeviceptr *dptr, size_t size);
 extern CUresult (*cuMemFree)(CUdeviceptr dptr);
+extern CUresult (*cuMemAllocHost)(void **pdata, size_t size);
+extern CUresult (*cuMemFreeHost)(void *ptr);
 extern CUresult (*cuMemsetD8)(CUdeviceptr dptr, unsigned char uc, size_t n);
 extern CUresult (*cuMemcpyHtoD)(CUdeviceptr dst,
                                 const void *src,
