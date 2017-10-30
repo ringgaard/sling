@@ -1,11 +1,11 @@
 #include "myelin/cuda/cuda.h"
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <mutex>
 
 #include "base/logging.h"
 #include "myelin/cuda/cuda-api.h"
-#include "string/printf.h"
 
 namespace sling {
 namespace myelin {
@@ -106,22 +106,22 @@ string CUDADevice::ToString() const {
   string name = Name();
   size_t memory = TotalMemory();
   int64 bandwidth = memory_transfer_rate() * (bus_width() / 8);
-  string str;
-  StringAppendF(&str, "%s, SM %d.%d, %lu MB RAM, "
-                "%d cores @ %lld MHz, "
-                "%lld GB/s bandwidth (%d-bits @ %lld Mhz), "
-                "%d KB L2 cache, "
-                "CUDA v%d.%d",
-                name.c_str(),
-                capability_ / 10, capability_ % 10,
-                memory >> 20,
-                cores(),
-                clock_rate() / 1000000,
-                bandwidth / 1000000000,
-                bus_width(),
-                memory_transfer_rate() / 1000000,
-                l2_cache_size() >> 10,
-                version / 1000, version % 1000);
+  char str[256];
+  snprintf(str, sizeof(str), "%s, SM %d.%d, %lu MB RAM, "
+           "%d cores @ %lld MHz, "
+           "%lld GB/s bandwidth (%d-bits @ %lld Mhz), "
+           "%d KB L2 cache, "
+           "CUDA v%d.%d",
+           name.c_str(),
+           capability_ / 10, capability_ % 10,
+           memory >> 20,
+           cores(),
+           clock_rate() / 1000000,
+           bandwidth / 1000000000,
+           bus_width(),
+           memory_transfer_rate() / 1000000,
+           l2_cache_size() >> 10,
+           version / 1000, version % 1000);
   return str;
 }
 
@@ -200,7 +200,7 @@ void PTXFloat::Generate(string *code) const {
   uint32 bits;
   memcpy(&bits, &number_, sizeof(float));
   char str[16];
-  sprintf(str, "0f%08x", bits);
+  snprintf(str, sizeof(str), "0f%08x", bits);
   code->append(str);
 }
 
@@ -292,6 +292,15 @@ void PTXAssembler::Generate(string *ptx) {
     }
     ptx->append(";\n");
   }
+  for (int i = 0; i < addresses_.size(); ++i) {
+    ptx->append(".const .b64 abs");
+    ptx->append(std::to_string(i));
+    ptx->append(" = ");
+    char str[32];
+    snprintf(str, sizeof(str), "0x%llx", addresses_[i]);
+    ptx->append(str);
+    ptx->append(";\n");
+  }
 
   if (num_printf_calls_ > 0) {
     ptx->append(".param .b64 param0;\n");
@@ -360,6 +369,21 @@ void PTXAssembler::EmitSpace() {
 
 void PTXAssembler::EmitComma() {
   code_.push_back(',');
+}
+
+PTXReg PTXAssembler::abs(DevicePtr ptr) {
+  int idx = -1;
+  for (int i = 0; i < addresses_.size(); ++i) {
+    if (addresses_[i] == ptr) {
+      idx = i;
+      break;
+    }
+  }
+  if (idx == -1) {
+    idx = addresses_.size();
+    addresses_.push_back(ptr);
+  }
+  return PTXReg("b64", "abs", idx);
 }
 
 void PTXAssembler::vprintf(const char *fmt, va_list args) {

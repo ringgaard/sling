@@ -9,10 +9,14 @@ void RegisterCUDAMatMulLibrary(Library *library);
 // cuda-arithmetic.cc
 void RegisterCUDAArithmeticLibrary(Library *library);
 
+// cuda-array.cc
+void RegisterCUDAArrayLibrary(Library *library);
+
 // Register CUDA kernels.
 void RegisterCUDALibrary(Library *library) {
   RegisterCUDAMatMulLibrary(library);
   RegisterCUDAArithmeticLibrary(library);
+  RegisterCUDAArrayLibrary(library);
 }
 
 }  // namespace myelin

@@ -971,11 +971,18 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   if (options_.profiling) {
     for (Cell *cell : cells_) {
       // Allocate tensor for storing profiling information. The tensor is an
-      // int64 vector where the first element is the invocation counter followed
-      // by one element for each step in the cell computation for storing the
-      // cycle counts. If the cell has parallel tasks, two additional cycle
-      // counters are stored for each task.
-      size_t size = 1 + cell->steps_.size() + 2 * cell->tasks_.size();
+      // int64 vector with the following layout:
+      //   struct TaskTiming {
+      //     int64 start;
+      //     int 64 wait;
+      //   };
+      //   struct CellTiming {
+      //     int64 invocations;
+      //     int64 overhead;
+      //     int64 steptime[#steps];
+      //     taskprofiling tasktime[#tasks];
+      //   };
+      size_t size = 2 + cell->steps_.size() + 2 * cell->tasks_.size();
       Tensor *profile = new Tensor();
       profile->name_ = "timing/" + cell->name_;
       profile->cell_ = cell;
@@ -1340,6 +1347,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
     runtime_->EmitTensorTransfers(xfers, cell, &masm);
 
+    // Profile entry overhead.
+    if (options_.profiling) {
+      int timing = cell->profile()->offset();
+      masm.TimeStep(timing, 1 * sizeof(int64));
+    }
+
     // Let kernels generate code for each step.
     int stepnum = 0;
     for (Step *step : cell->steps_) {
@@ -1362,14 +1375,14 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             // Profile task wait.
             if (options_.profiling) {
               int timing = cell->profile()->offset();
-              int slot = 1 + cell->steps_.size() + tidx * 2 + 1;
+              int slot = 2 + cell->steps_.size() + tidx * 2 + 1;
               masm.TimeStep(timing, slot * sizeof(int64));
             }
           }
         }
 
         // Synchronize main task if needed before executing step.
-        if (sync && step->NeedsSynchronization()) {
+        if (options_.sync_steps || (sync && step->NeedsSynchronization())) {
           VLOG(8) << "Sync main task";
           masm.CallInstanceFunction(runtime_->SyncMainFunc());
           sync = false;
@@ -1411,7 +1424,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         // Profile step.
         if (options_.profiling && !step->noop_) {
           int timing = cell->profile()->offset();
-          masm.TimeStep(timing, (stepnum + 1) * sizeof(int64));
+          masm.TimeStep(timing, (stepnum + 2) * sizeof(int64));
         }
       } else {
         // Parallel step.
@@ -1432,7 +1445,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
           // Profile task start.
           if (options_.profiling) {
             int timing = cell->profile()->offset();
-            int slot = 1 + cell->steps_.size() + tidx * 2;
+            int slot = 2 + cell->steps_.size() + tidx * 2;
             masm.TimeStep(timing, slot * sizeof(int64));
           }
         }
@@ -1475,6 +1488,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     // Stop runtime profiler.
     if (options_.profiling) {
       masm.CallInstanceFunction(runtime_->StopProfilerFunc());
+    }
+
+    // Profile exit overhead.
+    if (options_.profiling) {
+      int timing = cell->profile()->offset();
+      masm.TimeStep(timing, 1 * sizeof(int64));
     }
 
     // Generate epilogue for main cell computation.
@@ -1521,7 +1540,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
           // Profile step.
           if (options_.profiling && !step->noop_) {
             int timing = cell->profile()->offset();
-            masm.TimeStep(timing, (stepnum + 1) * sizeof(int64));
+            masm.TimeStep(timing, (stepnum + 2) * sizeof(int64));
           }
         }
         stepnum++;

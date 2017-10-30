@@ -10,6 +10,9 @@ namespace myelin {
 // Matrix multiplication using CUDA.
 class CUDAMatMulBase : public CUDAKernel {
  public:
+  // Maximum number of loop unrolls.
+  static const int kMaxUnrolls = 8;
+
   CUDAMatMulBase(bool bias, bool relu) : bias_(bias), relu_(relu) {}
 
   bool Supports(Step *step) override {
@@ -85,6 +88,16 @@ class CUDAMatMulBase : public CUDAKernel {
     bool vec = height == 1;
     int dsize = traits.size();
 
+    // Compute number of unrolls.
+    int unrolls = 0;
+    for (int i = 1; i <= kMaxUnrolls; ++i) {
+      if (depth % i == 0) unrolls = i;
+    }
+    if (step->variant().empty()) {
+      string variant = "U" + std::to_string(unrolls);
+      step->set_variant(variant);
+    }
+
     // Set grid size. Use one thread for each output element in C.
     ptx->set_grid_dims(width, height);
 
@@ -140,21 +153,25 @@ class CUDAMatMulBase : public CUDAKernel {
 
     // Compute sum += A[row,idx] * B[idx,col].
     PTXReg a = ptx->reg(type, "a");
-    ptx->emit(PTXInstr("ld.global", type), a, PTXAddr(aptr));
     PTXReg b = ptx->reg(type, "b");
-    ptx->emit(PTXInstr("ld.global", type), b, PTXAddr(bptr));
-    ptx->emit(PTXInstr(fp ? "fma.rn" : "mad.lo", type), sum, a, b, sum);
+    for (int i = 0; i < unrolls; ++i) {
+      ptx->emit(PTXInstr("ld.global", type), a, PTXAddr(aptr, i * dsize));
+      ptx->emit(PTXInstr("ld.global", type), b, PTXAddr(bptr, i * dsize));
+      ptx->emit(PTXInstr(fp ? "fma.rn" : "mad.lo", type), sum, a, b, sum);
+    }
 
     // Next element.
-    ptx_emit(add.u32, idx, idx, PTXImm(1));
-    ptx_emit(add.u64, aptr, aptr, PTXImm(dsize));
-    ptx_emit(add.u64, bptr, bptr, PTXImm(dsize));
+    if (unrolls != dsize) {
+      ptx_emit(add.u32, idx, idx, PTXImm(unrolls));
+      ptx_emit(add.u64, aptr, aptr, PTXImm(dsize * unrolls));
+      ptx_emit(add.u64, bptr, bptr, PTXImm(dsize * unrolls));
 
-    ptx_decl(pred, more);
-    ptx_emit(setp.lt.u32, more, idx, PTXImm(depth));
-    ptx_if(more);
-    ptx_emit(bra, PTXLabel("loop"));
-    ptx_endif();
+      ptx_decl(pred, more);
+      ptx_emit(setp.lt.u32, more, idx, PTXImm(depth));
+      ptx_if(more);
+      ptx_emit(bra, PTXLabel("loop"));
+      ptx_endif();
+    }
 
     // Compute output offset.
     ptx_decl(b64, ofs);

@@ -19,7 +19,6 @@ cc_library(
   deps = [
     ":cuda-api",
     "//base",
-    "//string:printf",
   ],
 )
 

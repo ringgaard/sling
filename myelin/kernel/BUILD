@@ -88,6 +88,7 @@ cc_library(
   name = "cuda",
   srcs = [
     "cuda.cc",
+    "cuda-array.cc",
     "cuda-matmul.cc",
     "cuda-arithmetic.cc",
   ],

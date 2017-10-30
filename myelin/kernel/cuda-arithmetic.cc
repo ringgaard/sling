@@ -230,37 +230,47 @@ class CUDACalculate : public CUDAKernel {
       case Express::INPUT: {
         // mov reg, [ptr].
         Tensor *input = comp->step->input(instr->args[0]->id);
-        if (input->IsConstant()) {
-          // Load from constant tensor.
-          if (input->elements() != 1) {
-            ptx->emit(PTXInstr("ld.global", comp->type), dst,
-                      PTXAddr(input->device_data(), comp->offset));
-          } else {
-            ptx->emit(PTXInstr("ld.global", comp->type), dst,
-                      PTXAddr(input->device_data()));
+        if (input->IsConstant() && input->elements() == 1) {
+          // Load scalar constant.
+          switch (comp->dtype) {
+            case DT_FLOAT:
+              ptx->emit(PTXInstr("mov", comp->type), dst,
+                        PTXFloat(input->value<float>()));
+              break;
+            case DT_DOUBLE:
+              ptx->emit(PTXInstr("mov", comp->type), dst,
+                        PTXFloat(input->value<double>()));
+              break;
+            case DT_INT8:
+              ptx->emit(PTXInstr("mov", comp->type), dst,
+                        PTXImm(input->value<int8>()));
+              break;
+            case DT_INT16:
+              ptx->emit(PTXInstr("mov", comp->type), dst,
+                        PTXImm(input->value<int16>()));
+              break;
+            case DT_INT32:
+              ptx->emit(PTXInstr("mov", comp->type), dst,
+                        PTXImm(input->value<int32>()));
+              break;
+            case DT_INT64:
+              ptx->emit(PTXInstr("mov", comp->type), dst,
+                        PTXImm(input->value<int64>()));
+              break;
+            default:
+              LOG(FATAL) << "Unsupported: " << instr->AsInstruction();
           }
-        } else if (input->ref()) {
-          // Load from reference tensor.
-          ptx->emit("ld.global.u64", comp->addr,
-                    PTXAddr(ptx->data(), input->device_offset()));
+        } else {
+          // Load from tensor.
+          ptx->LoadTensorAddress(comp->addr, input);
           if (input->elements() != 1) {
             ptx->emit("add.u64", comp->addr, comp->addr, comp->offset);
           }
           ptx->emit(PTXInstr("ld.global", comp->type), dst,
                     PTXAddr(comp->addr));
-        } else {
-          // Load from instance tensor.
-          if (input->elements() == 1) {
-            ptx->emit(PTXInstr("ld.global", comp->type), dst,
-                      PTXAddr(ptx->data(), input->device_offset()));
-          } else {
-            ptx->emit("add.u64", comp->addr, ptx->data(), comp->offset);
-            ptx->emit(PTXInstr("ld.global", comp->type), dst,
-                      PTXAddr(comp->addr, input->device_offset()));
-          }
         }
+        break;
       }
-      break;
 
       case Express::NUMBER:
         // mov reg, imm.
@@ -286,19 +296,11 @@ class CUDACalculate : public CUDAKernel {
     PTXReg &src = comp->reg[instr->src];
     Tensor *output = comp->step->output(instr->result->id);
     CHECK(!output->IsConstant());
-    if (output->ref()) {
-      // Save to reference tensor.
-      ptx->emit("ld.global.u64", comp->addr,
-                PTXAddr(ptx->data(), output->device_offset()));
+    ptx->LoadTensorAddress(comp->addr, output);
+    if (output->elements() != 1) {
       ptx->emit("add.u64", comp->addr, comp->addr, comp->offset);
-      ptx->emit(PTXInstr("st.global", comp->type),
-                PTXAddr(comp->addr), src);
-    } else {
-      // Save to instance tensor.
-      ptx->emit("add.u64", comp->addr, ptx->data(), comp->offset);
-      ptx->emit(PTXInstr("st.global", comp->type),
-                PTXAddr(comp->addr, output->device_offset()), src);
     }
+    ptx->emit(PTXInstr("st.global", comp->type), PTXAddr(comp->addr), src);
   }
 
   void GenerateBinaryOp(const char *op, Express::Op *instr, Compilation *comp) {

@@ -14,6 +14,7 @@
 #include "myelin/flow.h"
 #include "myelin/graph.h"
 #include "myelin/profile.h"
+#include "myelin/cuda/cuda-kernel.h"
 #include "myelin/cuda/cuda-runtime.h"
 #include "myelin/kernel/cuda.h"
 #include "myelin/kernel/tensorflow.h"
@@ -35,6 +36,8 @@ DEFINE_bool(dump_code, true, "Dump generated code");
 DEFINE_bool(debug, false, "Debug mode");
 DEFINE_double(epsilon, 1e-5, "Epsilon for floating point comparison");
 DEFINE_bool(twisted, false, "Swap hidden and control in LSTMs");
+DEFINE_bool(sync, false, "Sync all steps");
+DEFINE_bool(check, true, "Check test sentence");
 
 DEFINE_bool(sse, true, "SSE support");
 DEFINE_bool(sse2, true, "SSE2 support");
@@ -298,6 +301,7 @@ class FixedDragnnTyper : public Typer {
   }
 };
 
+// RNN tagger.
 class RNN {
  public:
   // Loads and initialize parser model.
@@ -434,9 +438,11 @@ void RNN::Load(const string &filename) {
   }
 
   // Compile parser flow.
-  if (FLAGS_profile) network_.set_profiling(true);
-  if (FLAGS_debug) network_.set_debug(true);
-  if (FLAGS_dynamic) network_.set_dynamic_allocation(true);
+  auto &opts = network_.options();
+  if (FLAGS_profile) opts.profiling = true;
+  if (FLAGS_debug) opts.debug = true;
+  if (FLAGS_dynamic) opts.dynamic_allocation = true;
+  if (FLAGS_sync) opts.sync_steps = true;
   if (FLAGS_gpu) {
     cudart.Connect();
     network_.set_runtime(&cudart);
@@ -748,11 +754,13 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << tokens[i] << " " << rnn.tag(predictions[i]);
   }
 
-  CHECK_EQ(tokens.size(), tokens.size());
-  for (int i = 0; i < predictions.size(); ++i) {
-    CHECK_EQ(golden[i], predictions[i])
-        << i << " gold: " << rnn.tag(golden[i])
-        << " predicted: " << rnn.tag(predictions[i]);
+  if (FLAGS_check) {
+    CHECK_EQ(tokens.size(), tokens.size());
+    for (int i = 0; i < predictions.size(); ++i) {
+      CHECK_EQ(golden[i], predictions[i])
+          << i << " gold: " << rnn.tag(golden[i])
+          << " predicted: " << rnn.tag(predictions[i]);
+    }
   }
 
   return 0;

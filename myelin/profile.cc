@@ -55,11 +55,12 @@ Profile::Profile(Instance *instance, Order order) : cell_(instance->cell()) {
 }
 
 void Profile::Initialize(int64 *data, Order order) {
-  // First element is evocation count followed by one cycle counter for each
-  // step.
-  invocations_ = *data;
-  timing_ = data + 1;
-  total_ = 0;
+  // First element is evocation count followed by the overhead counter and
+  // then one cycle counter for each step.
+  invocations_ = data[0];
+  overhead_ = data[1];
+  timing_ = data + 2;
+  total_ = overhead_;
   total_complexity_ = 0;
   tasks_ = reinterpret_cast<TaskTiming *>(timing_ + steps());
 
@@ -168,6 +169,16 @@ string Profile::ASCIIReport() const {
       StringAppendF(&report, " [%s]", step(i)->GetAttr("expr").c_str());
     }
     report.push_back('\n');
+  }
+
+  // Output overhead.
+  if (overhead_ > 0) {
+    StringAppendF(&report,
+                  "| %6.2f%% | %6.2f%% |%s |%8.3f | %-27s|%-2s | %s\n",
+                  overhead_percent(),
+                  100.0,
+                  TimeStr(overhead_time()).c_str(), 0.0, "", "",
+                  "Entry & Exit");
   }
 
   // Output totals.

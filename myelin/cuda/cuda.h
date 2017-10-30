@@ -443,6 +443,9 @@ class PTXAssembler {
     condition_ = true;
   }
 
+  // Declare constant for absolute address.
+  PTXReg abs(DevicePtr ptr);
+
   // Emit printf call.
   void vprintf(const char *fmt, va_list args);
   void printf(const char *fmt, ...);
@@ -506,6 +509,9 @@ class PTXAssembler {
 
   // Declared registers.
   std::vector<Declaration> registers_;
+
+  // Absolute address constants.
+  std::vector<DevicePtr> addresses_;
 
   // Current predicate.
   PTXReg predicate_;
