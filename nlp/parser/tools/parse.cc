@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
     std::cout << lr.ASCIIReport() << "\n";
 
     myelin::Profile rl(&parser.profile()->rl);
-    std::cout << lr.ASCIIReport() << "\n";
+    std::cout << rl.ASCIIReport() << "\n";
 
     myelin::Profile ff(&parser.profile()->ff);
     std::cout << ff.ASCIIReport() << "\n";
