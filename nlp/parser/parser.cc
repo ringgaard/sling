@@ -32,6 +32,16 @@ void Parser::Load(Store *store, const string &model) {
   // Load and analyze parser flow file.
   myelin::Flow flow;
   CHECK(flow.Load(model));
+
+  // Add argmax for fast fallback.
+  if (fast_fallback_) {
+    auto *ff = flow.Func("ff");
+    auto *output = flow.Var("ff/output");
+    auto *prediction = flow.AddVariable("ff/prediction", myelin::DT_INT32, {1});
+    flow.AddOperation(ff, "ff/ArgMax", "ArgMax", {output}, {prediction});
+  }
+
+  // Analyze parser flow file.
   flow.Analyze(library_);
 
   // Compile parser flow.
@@ -179,6 +189,7 @@ void Parser::InitFF(const string &name, FF *ff) {
   ff->steps = GetParam(name + "/steps");
   ff->hidden = GetParam(name + "/hidden");
   ff->output = GetParam(name + "/output");
+  ff->prediction = GetParam(name + "/prediction", true);
 }
 
 void Parser::Parse(Document *document) const {
@@ -242,15 +253,30 @@ void Parser::Parse(Document *document) const {
       // Predict next action.
       if (profile_) data.ff_.set_profile(&profile_->ff);
       data.ff_.Compute();
-      float *output = data.ff_.Get<float>(ff_.output);
       int prediction = 0;
-      float max_score = -INFINITY;
-      for (int a = 0; a < num_actions_; ++a) {
-        if (output[a] > max_score) {
-          const ParserAction &action = actions_.Action(a);
-          if (state.CanApply(action) && !actions_.Beyond(a)) {
-            prediction = a;
-            max_score = output[a];
+      if (fast_fallback_) {
+        // Get highest scoring action.
+        prediction = *data.ff_.Get<int>(ff_.prediction);
+        const ParserAction &action = actions_.Action(prediction);
+        if (!state.CanApply(action) || actions_.Beyond(prediction)) {
+          // Fall back to SHIFT or STOP action.
+          if (state.current() == state.end()) {
+            prediction = actions_.StopIndex();
+          } else {
+            prediction = actions_.ShiftIndex();
+          }
+        }
+      } else {
+        // Get highest scoring allowed action.
+        float *output = data.ff_.Get<float>(ff_.output);
+        float max_score = -INFINITY;
+        for (int a = 0; a < num_actions_; ++a) {
+          if (output[a] > max_score) {
+            const ParserAction &action = actions_.Action(a);
+            if (state.CanApply(action) && !actions_.Beyond(a)) {
+              prediction = a;
+              max_score = output[a];
+            }
           }
         }
       }

@@ -424,7 +424,6 @@ int main(int argc, char *argv[]) {
     CheckFltBinOp("Mul", "AVXFltMul", "GenFltMul", 8);
 
     CheckMulTwoAdd("MulTwoAdd", "AVXFltMulTwoAdd", "GenFltMulTwoAdd");
-    CheckArgMax("AVXFltArgMax", "GenFltArgMax");
   } else {
     LOG(WARNING) << "CPU does not support AVX, skipping AVX tests";
   }
@@ -436,6 +435,9 @@ int main(int argc, char *argv[]) {
 
     // Test AVX integer matrix multiplication.
     CheckIntMatMul("AVXIntVecMatMulH", "GenIntVecMatMul");
+
+    // Test AVX argmax.
+    CheckArgMax("AVXFltArgMax", "GenFltArgMax");
   } else {
     LOG(WARNING) << "CPU does not support AVX2, skipping AVX2 tests";
   }

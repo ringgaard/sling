@@ -463,8 +463,8 @@ class AVXFltArgMax : public Kernel {
   string Operation() override { return "ArgMax"; }
 
   bool Supports(Step *step) override {
-    // Requires CPU with AVX support.
-    if (!CPU::Enabled(AVX)) return false;
+    // Requires CPU with AVX2 support.
+    if (!CPU::Enabled(AVX2)) return false;
 
     // Check inputs and outputs.
     if (step->inputs().size() != 1) return false;
@@ -524,7 +524,7 @@ class AVXFltArgMax : public Kernel {
       __ vcmpps(mask, maxval0, value, CMP_LE);
       __ vblendvps(maxval0, maxval0, value, mask);
       __ vblendvps(best0, best0, index, mask);
-      __ vpaddq(index, index, eight);
+      __ vpaddd(index, index, eight);  // requires avx2
       __ addq(ofs, Immediate(8 * sizeof(float)));
       __ cmpq(ofs, Immediate(main_elements * sizeof(float)));
       __ j(less, &loop1);

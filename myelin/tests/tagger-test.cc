@@ -38,6 +38,7 @@ DEFINE_double(epsilon, 1e-5, "Epsilon for floating point comparison");
 DEFINE_bool(twisted, false, "Swap hidden and control in LSTMs");
 DEFINE_bool(sync, false, "Sync all steps");
 DEFINE_bool(check, true, "Check test sentence");
+DEFINE_bool(fast_argmax, false, "Let network cell compute argmax");
 
 DEFINE_bool(sse, true, "SSE support");
 DEFINE_bool(sse2, true, "SSE2 support");
@@ -336,7 +337,7 @@ class RNN {
   // Looks up cells, connectors, and parameters.
   Cell *GetCell(const string &name);
   Connector *GetConnector(const string &name);
-  Tensor *GetParam(const string &name);
+  Tensor *GetParam(const string &name, bool optional = false);
 
   // Tagger network.
   Library library_;
@@ -356,6 +357,7 @@ class RNN {
   Tensor *lr_h_in_;           // link to LSTM hidden input
   Tensor *lr_h_out_;          // link to LSTM hidden output
   Tensor *ff_output_;         // link to FF logit layer output
+  Tensor *ff_prediction_;     // link to FF logit layer argmax
 
   // Lexicon.
   std::unordered_map<string, int> vocabulary_;
@@ -411,6 +413,15 @@ void RNN::Load(const string &filename) {
   }
   if (FLAGS_intermediate) {
     for (auto *var : flow.vars()) var->out = true;
+  }
+
+  if (FLAGS_fast_argmax) {
+    auto *tagger = flow.Func("tagger");
+    auto *logits = flow.Var("tagger/xw_plus_b/MatMul");
+    auto *prediction = flow.AddVariable("tagger/prediction",
+                                        myelin::DT_INT32, {1});
+    flow.AddOperation(tagger, "tagger/ArgMax", "ArgMax",
+                      {logits}, {prediction});
   }
 
   // Zero out the last embedding vector (used for oov).
@@ -477,6 +488,7 @@ void RNN::Load(const string &filename) {
   lr_h_out_ = GetParam("tagger/h_out");
 
   ff_output_ = GetParam("tagger/output");
+  ff_prediction_ = GetParam("tagger/prediction", true);
 
   // Load lexicon.
   Flow::Function *lexicon = flow.Func("lexicon");
@@ -573,14 +585,18 @@ void RNN::Execute(const std::vector<string> &tokens,
       // Compute LSTM cell.
       data.lr.Compute();
 
-      float *output = data.lr.Get<float>(ff_output_);
       int prediction = 0;
-      float max_score = -std::numeric_limits<float>::infinity();
+      if (FLAGS_fast_argmax) {
+        prediction = *data.lr.Get<int>(ff_prediction_);
+      } else {
+        float *output = data.lr.Get<float>(ff_output_);
+        float max_score = -std::numeric_limits<float>::infinity();
 
-      for (int a = 0; a < ff_output_->dim(1); ++a) {
-        if (output[a] > max_score) {
-          prediction = a;
-          max_score = output[a];
+        for (int a = 0; a < ff_output_->dim(1); ++a) {
+          if (output[a] > max_score) {
+            prediction = a;
+            max_score = output[a];
+          }
         }
       }
       predictions->push_back(prediction);
@@ -657,9 +673,9 @@ Connector *RNN::GetConnector(const string &name) {
   return cnx;
 }
 
-Tensor *RNN::GetParam(const string &name) {
+Tensor *RNN::GetParam(const string &name, bool optional) {
   Tensor *param = network_.GetParameter(name);
-  if (param == nullptr) {
+  if (!optional && param == nullptr) {
     LOG(FATAL) << "Unknown parser parameter: " << name;
   }
   return param;
