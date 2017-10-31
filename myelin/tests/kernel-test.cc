@@ -1,3 +1,4 @@
+#include <math.h>
 #include <string>
 
 #include "base/flags.h"
@@ -93,6 +94,20 @@ void BaselineMatMatMul2(const TensorData &A, const TensorData &B,
       C->at<float>(i, j) = sum;
     }
   }
+}
+
+// Baseline implementation of argmax.
+void BaselineArgMax(const TensorData &x, TensorData *y) {
+  float maxval = -INFINITY;
+  int best = -1;
+  for (int i = 0; i < x.dim(0); ++i) {
+    float value = x.at<float>(i);
+    if (value > maxval) {
+      maxval = value;
+      best = i;
+    }
+  }
+  y->at<int>(0) = best;
 }
 
 void CheckTest(bool success) {
@@ -286,6 +301,20 @@ void CheckIntBinOp(const string &func,
   }
 }
 
+void CheckArgMax(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
+  if (!FLAGS_base.empty() && FLAGS_base != base) return;
+  LOG(INFO) << "Testing " << test << " against " << base;
+  for (int d = FLAGS_dmin; d <= FLAGS_dmax; d++) {
+    FltIntKernelComparator comp(library, "ArgMax", test, base);
+    VLOG(2) << "Testing " << d;
+    if (cudart.connected()) comp.set_runtime(&cudart);
+    comp.AddInput("x", {d}, -10.0, 10.0);
+    comp.AddOutput("y", {1}, DT_INT32);
+    CheckTest(comp.Check(10));
+  }
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
   if (FLAGS_w != -1) FLAGS_wmin = FLAGS_wmax = FLAGS_w;
@@ -316,6 +345,9 @@ int main(int argc, char *argv[]) {
      .Input(0, DT_FLOAT, 2)
      .Input(1, DT_FLOAT, 2)
      .Output(0, DT_FLOAT, 2);
+  library.Register("ArgMax", "BaselineArgMax", BaselineArgMax)
+     .Input(0, DT_FLOAT, 1)
+     .Output(0, DT_INT32);
 
   // Test GenFltVecMatMul against itself to test the kernel comparator.
   CheckFltMatMul("GenFltVecMatMul", "GenFltVecMatMul");
@@ -329,7 +361,7 @@ int main(int argc, char *argv[]) {
   CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul1");
   CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul2");
 
-  // Check expression kernels.
+  // Test expression kernels.
   CheckFltBinOp("Add", "AddExpr", "GenFltAdd");
   CheckFltBinOp("Sub", "SubExpr", "GenFltSub");
   CheckFltBinOp("Mul", "MulExpr", "GenFltMul");
@@ -337,6 +369,9 @@ int main(int argc, char *argv[]) {
   CheckIntBinOp("Add", "AddExpr", "GenIntAdd");
   CheckIntBinOp("Sub", "SubExpr", "GenIntSub");
   CheckIntBinOp("Mul", "MulExpr", "GenIntMul");
+
+  // Test argmax.
+  CheckArgMax("GenFltArgMax", "BaselineArgMax");
 
   if (CPU::Enabled(SSE4_1)) {
     // Test expression intrinsics.
@@ -389,6 +424,7 @@ int main(int argc, char *argv[]) {
     CheckFltBinOp("Mul", "AVXFltMul", "GenFltMul", 8);
 
     CheckMulTwoAdd("MulTwoAdd", "AVXFltMulTwoAdd", "GenFltMulTwoAdd");
+    CheckArgMax("AVXFltArgMax", "GenFltArgMax");
   } else {
     LOG(WARNING) << "CPU does not support AVX, skipping AVX tests";
   }

@@ -98,6 +98,37 @@ class IntKernelComparator : public KernelComparator {
   Runtime *runtime_ = nullptr;
 };
 
+class FltIntKernelComparator : public KernelComparator {
+ public:
+  FltIntKernelComparator(const Library &library,
+                         const string &operation_name,
+                         const string &test_kernel_name,
+                         const string &base_kernel_name)
+      : KernelComparator(library, operation_name,
+                         test_kernel_name, base_kernel_name) {}
+
+  // Set runtime for comparator.
+  void set_runtime(Runtime *runtime) { runtime_ = runtime; }
+
+  // Add input.
+  void AddInput(const string &name, const Shape &shape,
+                float low, float high);
+
+  // Add output.
+  void AddOutput(const string &name, const Shape &shape, Type type);
+
+  // Check test kernel by comparing it to the output of the base kernel.
+  bool Check(int iterations);
+
+ private:
+  // Myelin runtime for test.
+  Runtime *runtime_ = nullptr;
+
+  // Range for random input values.
+  std::vector<float> low_;
+  std::vector<float> high_;
+};
+
 }  // namespace myelin
 }  // namespace sling
 

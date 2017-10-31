@@ -554,6 +554,149 @@ bool IntKernelComparator::Check(int iterations) {
   return num_errors == 0;
 }
 
+void FltIntKernelComparator::AddInput(const string &name,
+                                      const Shape &shape,
+                                      float low, float high) {
+  Flow::Variable *input = flow_.AddVariable(name, DT_FLOAT, shape);
+  op_->AddInput(input);
+  inputs_.push_back(input);
+  low_.push_back(low);
+  high_.push_back(high);
+  input->in = true;
+}
+
+void FltIntKernelComparator::AddOutput(const string &name,
+                                       const Shape &shape,
+                                       Type type) {
+  Flow::Variable *output = flow_.AddVariable(name, type, shape);
+  op_->AddOutput(output);
+  outputs_.push_back(output);
+  output->out = true;
+}
+
+bool FltIntKernelComparator::Check(int iterations) {
+  VLOG(3) << "Compare " << op_->type << " kernel " << test_kernel_name_
+          << " against " << base_kernel_name_;
+
+  // Compile computation for base kernel.
+  KernelCompiler base;
+  if (!base.Compile(library_, flow_, op_->type, base_kernel_name_,
+      FLAGS_base_code_output, FLAGS_debug_base)) {
+    return false;
+  }
+
+  // Compile computation for base kernel.
+  KernelCompiler test;
+  test.runtime = runtime_;
+  if (!test.Compile(library_, flow_, op_->type, test_kernel_name_,
+      FLAGS_test_code_output, FLAGS_debug_test)) {
+    return false;
+  }
+
+  // Compare kernels on random sampled inputs.
+  FloatPRNG prng;
+  int num_errors = 0;
+  int num_elements = 0;
+  for (int iteration = 0; iteration < iterations; ++iteration) {
+    // Create data instances for base and test.
+    Instance base_data(base.func);
+    Instance test_data(test.func);
+
+    // Fill inputs with random data.
+    for (int i = 0; i < inputs_.size(); ++i) {
+      Flow::Variable *var = inputs_[i];
+      Tensor *b = base.func->GetParameter(var->name);
+      Tensor *t = test.func->GetParameter(var->name);
+      float bias = low_[i];
+      float scale = high_[i] - low_[i];
+      if (var->rank() == 1) {
+        for (int r = 0; r < var->dim(0); ++r) {
+          float val = prng.Random(scale, bias);
+          *base_data.Get<float>(b, r) = val;
+          *test_data.Get<float>(t, r) = val;
+          if (FLAGS_log_input_tensors) {
+            LOG(INFO) << var->name << "[" << r << "]=" << val;
+          }
+        }
+      } else if (var->rank() == 2) {
+        for (int r = 0; r < var->dim(0); ++r) {
+          for (int c = 0; c < var->dim(1); ++c) {
+            float val = prng.Random(scale, bias);
+            *base_data.Get<float>(b, r, c) = val;
+            *test_data.Get<float>(t, r, c) = val;
+            if (FLAGS_log_input_tensors) {
+              LOG(INFO) << var->name << "[" << r << "," << c << "]=" << val;
+            }
+          }
+        }
+      } else {
+        LOG(ERROR) << var->rank() << "D tensor not supported";
+        return false;
+      }
+    }
+
+    // Run base and test computation.
+    base_data.Compute();
+    test_data.Compute();
+
+    // Compare output from base and test.
+    for (int i = 0; i < outputs_.size(); ++i) {
+      Flow::Variable *var = outputs_[i];
+      Tensor *b = base.func->GetParameter(var->name);
+      Tensor *t = test.func->GetParameter(var->name);
+      if (var->rank() == 1) {
+        num_elements += var->dim(0);
+        for (int r = 0; r < var->dim(0); ++r) {
+          int64 base_result = GetInt(&base_data, b, r);
+          int64 test_result = GetInt(&test_data, t, r);
+          int64 delta = abs(test_result - base_result);
+          if (delta != 0.0) {
+              VLOG(9) << "Base and test difference for "
+                      << var->name << "[" << r << "] "
+                      << base_result << " vs. " << test_result
+                      << " (delta " << delta << ")";
+            num_errors++;
+          }
+          if (FLAGS_log_output_tensors) {
+            LOG(INFO) << var->name << "[" << r << "]=" << test_result;
+          }
+        }
+      } else if (var->rank() == 2) {
+        num_elements += var->elements();
+        for (int r = 0; r < var->dim(0); ++r) {
+          for (int c = 0; c < var->dim(1); ++c) {
+            int64 base_result = GetInt(&base_data, b, r, c);
+            int64 test_result = GetInt(&test_data, t, r, c);
+            int64 delta = abs(test_result - base_result);
+            if (delta != 0.0) {
+              VLOG(9) << "Base and test difference for "
+                      << var->name << "[" << r << "," << c << "] "
+                      << base_result << " vs. " << test_result
+                      << " (delta " << delta << ")";
+              num_errors++;
+            }
+            if (FLAGS_log_output_tensors) {
+              LOG(INFO) << var->name << "[" << r << "," << c << "]="
+                        << test_result;
+            }
+          }
+        }
+      } else {
+        LOG(ERROR) << var->rank() << "D tensor not supported";
+        return false;
+      }
+    }
+  }
+
+  if (num_errors != 0) {
+    LOG(ERROR) << num_errors << "/" << num_elements
+              << " errors in comparison between " << test_kernel_name_
+              << " and " << base_kernel_name_;
+  }
+
+  return num_errors == 0;
+}
+
 }  // namespace myelin
 }  // namespace sling
 
