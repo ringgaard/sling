@@ -568,10 +568,13 @@ void Channel::reserve(int n) {
 
   // Allocate or reallocate data buffer.
   data_ = runtime()->AllocateChannel(data_,
-                                     capacity_ * connector_->size(),
+                                     size_ * connector_->size(),
                                      n * connector_->size(),
                                      connector_->alignment(),
                                      connector_->placement());
+
+  // Change capacity.
+  capacity_ = n;
 }
 
 ProfileSummary::ProfileSummary(Cell *cell) : cell_(cell) {
