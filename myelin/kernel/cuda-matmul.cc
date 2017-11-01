@@ -37,11 +37,6 @@ class CUDAMatMulBase : public CUDAKernel {
     if (TypeTraits::of(type).ptx() == nullptr) return false;
     if (B->type() != type || C->type() != type) return false;
 
-    // Check order.
-    if (!A->SupportsOrder(ROW_MAJOR)) return false;
-    if (!B->SupportsOrder(COLUMN_MAJOR)) return false;
-    if (!C->SupportsOrder(ROW_MAJOR)) return false;
-
     // Check bias vector.
     if (bias_) {
       Tensor *v = step->input(2);
@@ -59,15 +54,6 @@ class CUDAMatMulBase : public CUDAKernel {
   }
 
   void Adjust(Step *step) override {
-    // Get input and output tensors.
-    Tensor *A = step->input(0);
-    Tensor *B = step->input(1);
-    Tensor *C = step->output(0);
-
-    // Set order requirements.
-    A->SetRequiredOrder(ROW_MAJOR);
-    B->SetRequiredOrder(COLUMN_MAJOR);
-    C->SetRequiredOrder(ROW_MAJOR);
   }
 
   void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
@@ -155,16 +141,18 @@ class CUDAMatMulBase : public CUDAKernel {
     PTXReg a = ptx->reg(type, "a");
     PTXReg b = ptx->reg(type, "b");
     for (int i = 0; i < unrolls; ++i) {
-      ptx->emit(PTXInstr("ld.global", type), a, PTXAddr(aptr, i * dsize));
-      ptx->emit(PTXInstr("ld.global", type), b, PTXAddr(bptr, i * dsize));
+      int aofs = i * A->stride(1);
+      int bofs = i * B->stride(0);
+      ptx->emit(PTXInstr("ld.global", type), a, PTXAddr(aptr, aofs));
+      ptx->emit(PTXInstr("ld.global", type), b, PTXAddr(bptr, bofs));
       ptx->emit(PTXInstr(fp ? "fma.rn" : "mad.lo", type), sum, a, b, sum);
     }
 
     // Next element.
-    if (unrolls != dsize) {
+    if (unrolls != depth) {
       ptx_emit(add.u32, idx, idx, PTXImm(unrolls));
-      ptx_emit(add.u64, aptr, aptr, PTXImm(dsize * unrolls));
-      ptx_emit(add.u64, bptr, bptr, PTXImm(dsize * unrolls));
+      ptx_emit(add.u64, aptr, aptr, PTXImm(A->stride(1) * unrolls));
+      ptx_emit(add.u64, bptr, bptr, PTXImm(B->stride(0) * unrolls));
 
       ptx_decl(pred, more);
       ptx_emit(setp.lt.u32, more, idx, PTXImm(depth));
@@ -173,15 +161,11 @@ class CUDAMatMulBase : public CUDAKernel {
       ptx_endif();
     }
 
-    // Compute output offset.
-    ptx_decl(b64, ofs);
-    ptx_emit(mul.wide.u32, ofs, col, PTXImm(dsize));
-
     // Optionally add bias.
     if (bias_) {
       ptx_decl(b64, vptr);
       ptx->LoadTensorAddress(vptr, v);
-      ptx_emit(add.u64, vptr, ofs, vptr);
+      ptx_emit(mad.wide.u32, vptr, col, PTXImm(dsize), vptr);
 
       PTXReg bias = ptx->reg(type, "bias");
       ptx->emit(PTXInstr("ld.global", type), bias, PTXAddr(vptr));
@@ -203,7 +187,7 @@ class CUDAMatMulBase : public CUDAKernel {
     if (!vec) {
       ptx_emit(mad.wide.u32, cptr, row, PTXImm(C->stride(0)), cptr);
     }
-    ptx_emit(add.u64, cptr, ofs, cptr);
+    ptx_emit(mad.wide.u32, cptr, col, PTXImm(C->stride(1)), cptr);
     ptx->emit(PTXInstr("st.global", type), PTXAddr(cptr), sum);
 
     // Done.

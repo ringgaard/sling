@@ -42,8 +42,15 @@ static const Order combined_order[4][4] = {
   {CONFLICTING_ORDER, CONFLICTING_ORDER, CONFLICTING_ORDER, CONFLICTING_ORDER},
 };
 
+// Element order names.
+const char *ordername[] = {
+  "unspecified", "row-major", "column-major", "conflicting"
+};
+
 // Placement names.
-const char *placename[] = {"nowhere", "host", "device", "host and device"};
+const char *placename[] = {
+  "nowhere", "host", "device", "host and device"
+};
 
 static int LeastCommonMultiple(int n, int m) {
   int a = n;
@@ -1155,7 +1162,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             << " aligned " << tensor->aligned_.ToString()
             << " size " << tensor->space_
             << " stride " << tensor->stride_.ToString()
-            << " order " << tensor->order_
+            << " order " << ordername[tensor->order_]
             << " on " << placename[tensor->placement_];
   }
 
@@ -1201,7 +1208,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             << " aligned " << t->aligned_.ToString()
             << " size " << t->size_
             << " stride " << t->stride_.ToString()
-            << " order " << t->order_
+            << " order " << ordername[t->order_]
             << " on " << placename[connector->placement_];
   }
 
@@ -1287,10 +1294,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         tensor->AddNewPlace(DEVICE);
       }
     } else {
-      // Allocate aligned tensor and copy data.
-      tensor->data_ = AllocateTensor(tensor);
-      if (tensor->data_ == nullptr) return false;
-      tensor->AddNewPlace(HOST);
+      // Allocate aligned tensor.
+      char *data = AllocateTensor(tensor);
+      if (data == nullptr) return false;
 
       // Copy constant to device if needed.
       if (tensor->placement_ & DEVICE) {
@@ -1298,6 +1304,15 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         tensor->device_data_ = runtime_->CopyTensorToDevice(tensor);
         CHECK(tensor->device_data_ != DEVICE_NULL);
         tensor->AddNewPlace(DEVICE);
+      }
+
+      // Place constant on host if needed.
+      if (tensor->placement_ & HOST) {
+        tensor->data_ = data;
+        tensor->AddNewPlace(HOST);
+        memory_.push_back(data);
+      } else {
+        MemFree(data);
       }
     }
   }
@@ -1626,7 +1641,7 @@ char *Network::AllocateTensor(Tensor *tensor) {
   }
 
   // Allocate memory for tensor.
-  char *data = AllocateMemory(tensor->size_, alignment);
+  char *data = MemAlloc(tensor->size_, alignment);
   memset(data, 0, tensor->size_);
 
   // Copy data.
@@ -1723,6 +1738,7 @@ string Cell::ToString() const {
   std::sort(fields.begin(), fields.end(), CompareOffset);
 
   int prev_offset = -1;
+  bool on_device = false;
   for (Tensor *t : fields) {
     if (t->placement() & HOST) {
       str.append("  ");
@@ -1740,25 +1756,29 @@ string Cell::ToString() const {
                     t->space());
       prev_offset = t->offset();
     }
+    if (t->placement() & DEVICE) on_device = true;
   }
 
-  prev_offset = -1;
-  for (Tensor *t : fields) {
-    if (t->placement() & DEVICE) {
-      str.append("  ");
-      if (t->device_offset() == prev_offset) {
-        str.append("  union ");
-      } else {
-        if (t->in()) str.append("input ");
-        if (t->out()) str.append("output ");
-        str.append("device var ");
+  if (on_device) {
+    str.append("\n");
+    prev_offset = -1;
+    for (Tensor *t : fields) {
+      if (t->placement() & DEVICE) {
+        str.append("  ");
+        if (t->device_offset() == prev_offset) {
+          str.append("  union ");
+        } else {
+          if (t->in()) str.append("input ");
+          if (t->out()) str.append("output ");
+          str.append("device var ");
+        }
+        StringAppendF(&str, "%s: %s  // offset %lu size %lu\n",
+                      t->name().c_str(),
+                      t->TypeString().c_str(),
+                      t->device_offset(),
+                      t->space());
+        prev_offset = t->device_offset();
       }
-      StringAppendF(&str, "%s: %s  // offset %lu size %lu\n",
-                    t->name().c_str(),
-                    t->TypeString().c_str(),
-                    t->device_offset(),
-                    t->space());
-      prev_offset = t->device_offset();
     }
   }
 

@@ -879,6 +879,9 @@ void Flow::InferInputsAndOutputs() {
   }
 
   for (Variable *var : vars_) {
+    // Constants are not considered inputs or outputs.
+    if (var->data != nullptr) continue;
+
     // Check the input and output attributes of the producing op.
     bool input_set = false;
     bool output_set = false;
