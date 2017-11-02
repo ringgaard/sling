@@ -273,6 +273,10 @@ class GenericFltArgMax : public Kernel {
       __ movq(Operand(output), best);
     }
   }
+
+  int64 Complexity(const Step *step) override {
+    return step->input(0)->elements();
+  }
 };
 
 void RegisterGenericMath(Library *library) {

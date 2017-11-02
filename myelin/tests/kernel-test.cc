@@ -122,7 +122,7 @@ void CheckFltMatMul(const string &test, const string &base) {
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; ++d) {
     for (int w = FLAGS_wmin; w <= FLAGS_wmax; ++w) {
-      VLOG(2) << "Testing " << d << "x" << w;
+      VLOG(1) << "Testing " << d << "x" << w;
       FltKernelComparator matmul(library, "MatMul", test, base);
       if (cudart.connected()) matmul.set_runtime(&cudart);
       matmul.AddInput("x", {1, d}, FLAGS_minmat, 100.0);
@@ -199,7 +199,7 @@ void CheckFltFunc(const string &func,
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; d++) {
     if (modulo != 0 && d % modulo != 0) continue;
-    VLOG(2) << "Testing " << d;
+    VLOG(1) << "Testing " << d;
     FltKernelComparator comp(library, func, test, base);
     if (cudart.connected()) comp.set_runtime(&cudart);
     comp.AddInput("x", {d}, negative ? -10.0 : 1e-3, 10.0);
@@ -217,7 +217,7 @@ void CheckFltBinOp(const string &func,
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; d++) {
     if (modulo != 0 && d % modulo != 0) continue;
-    VLOG(2) << "Testing " << d;
+    VLOG(1) << "Testing " << d;
     FltKernelComparator comp(library, func, test, base);
     if (cudart.connected()) comp.set_runtime(&cudart);
     comp.AddInput("a", {d}, -100.0, 100.0);
@@ -269,7 +269,7 @@ void CheckIntBinOp(const string &func,
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; ++d) {
     if (modulo != 0 && d % modulo != 0) continue;
-    VLOG(2) << "Testing " << d;
+    VLOG(1) << "Testing " << d;
     if (!cudart.connected()) {
       IntKernelComparator comp8(library, func, test, base);
       comp8.AddInput("a", {d}, DT_INT8);
@@ -307,7 +307,7 @@ void CheckArgMax(const string &test, const string &base) {
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int d = FLAGS_dmin; d <= FLAGS_dmax; d++) {
     FltIntKernelComparator comp(library, "ArgMax", test, base);
-    VLOG(2) << "Testing " << d;
+    VLOG(1) << "Testing " << d;
     if (cudart.connected()) comp.set_runtime(&cudart);
     comp.AddInput("x", {d}, -10.0, 10.0);
     comp.AddOutput("y", {1}, DT_INT32);
@@ -478,6 +478,9 @@ int main(int argc, char *argv[]) {
     CheckFltMatMulAddRelu("CUDAMatMulAddRelu", "GenFltVecMatMulAddRelu");
     CheckFltMatMatMul("CUDAMatMul", "GenFltMatMatMul");
     CheckIntMatMul("CUDAMatMul", "GenIntVecMatMul");
+
+    // Test CUDA reductions.
+    CheckArgMax("CUDAArgMax", "GenFltArgMax");
 
     cudart.Disconnect();
   } else {

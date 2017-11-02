@@ -300,7 +300,7 @@ bool FltKernelComparator::Check(int iterations) {
               float e = 0.0;
               if (fabs(base_result) > kEpsilon) e = delta / fabs(base_result);
               error += e;
-              VLOG(9) << "Base and test difference for "
+              VLOG(2) << "Base and test difference for "
                       << var->name << "[" << r << "] "
                       << base_result << " vs. " << test_result
                       << " (delta " << delta << ", error " << e << ")";
@@ -352,7 +352,7 @@ bool FltKernelComparator::Check(int iterations) {
 
   if (max_error != 0 || error != 0.0 || num_inexact != 0) {
     double avg_error = error / num_elements;
-    VLOG(1) << num_inexact << "/" << num_elements
+    VLOG(3) << num_inexact << "/" << num_elements
             << " inexact values in comparison between "
             << test_kernel_name_ << " and " << base_kernel_name_
             << " (max. error: " << max_error << ", "
@@ -508,7 +508,7 @@ bool IntKernelComparator::Check(int iterations) {
           int64 test_result = GetInt(&test_data, t, r);
           int64 delta = abs(test_result - base_result);
           if (delta != 0.0) {
-              VLOG(9) << "Base and test difference for "
+              VLOG(2) << "Base and test difference for "
                       << var->name << "[" << r << "] "
                       << base_result << " vs. " << test_result
                       << " (delta " << delta << ")";
@@ -651,7 +651,7 @@ bool FltIntKernelComparator::Check(int iterations) {
           int64 test_result = GetInt(&test_data, t, r);
           int64 delta = abs(test_result - base_result);
           if (delta != 0.0) {
-              VLOG(9) << "Base and test difference for "
+              VLOG(2) << "Base and test difference for "
                       << var->name << "[" << r << "] "
                       << base_result << " vs. " << test_result
                       << " (delta " << delta << ")";

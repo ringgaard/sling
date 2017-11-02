@@ -11,7 +11,7 @@ namespace myelin {
 class CUDAMatMulBase : public CUDAKernel {
  public:
   // Maximum number of loop unrolls.
-  static const int kMaxUnrolls = 8;
+  static const int MAX_UNROLLS = 8;
 
   CUDAMatMulBase(bool bias, bool relu) : bias_(bias), relu_(relu) {}
 
@@ -50,6 +50,10 @@ class CUDAMatMulBase : public CUDAKernel {
       }
     }
 
+    // Transpose not supported.
+    if (step->GetAttr("transpose_a", false)) return false;
+    if (step->GetAttr("transpose_b", false)) return false;
+
     return true;
   }
 
@@ -76,7 +80,7 @@ class CUDAMatMulBase : public CUDAKernel {
 
     // Compute number of unrolls.
     int unrolls = 0;
-    for (int i = 1; i <= kMaxUnrolls; ++i) {
+    for (int i = 1; i <= MAX_UNROLLS; ++i) {
       if (depth % i == 0) unrolls = i;
     }
     if (step->variant().empty()) {
@@ -100,7 +104,7 @@ class CUDAMatMulBase : public CUDAKernel {
       ptx_decl(pred, outside);
       ptx_emit(setp.ge.u32, outside, col, PTXImm(width));
       ptx_if(outside);
-      ptx_emit(bra, PTXLabel("done"));
+      ptx_jump(done);
       ptx_endif();
     } else {
       ptx_decl(pred, outside_col);
@@ -110,7 +114,7 @@ class CUDAMatMulBase : public CUDAKernel {
       ptx_decl(pred, outside);
       ptx_emit(or.pred, outside, outside_col, outside_row);
       ptx_if(outside);
-      ptx_emit(bra, PTXLabel("done"));
+      ptx_jump(done);
       ptx_endif();
     }
 
@@ -157,7 +161,7 @@ class CUDAMatMulBase : public CUDAKernel {
       ptx_decl(pred, more);
       ptx_emit(setp.lt.u32, more, idx, PTXImm(depth));
       ptx_if(more);
-      ptx_emit(bra, PTXLabel("loop"));
+      ptx_jump(loop);
       ptx_endif();
     }
 

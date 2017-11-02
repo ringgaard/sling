@@ -130,7 +130,7 @@ class CUDACalculate : public CUDAKernel {
     ptx_decl(pred, outside);
     ptx_emit(setp.ge.u32, outside, idx, PTXImm(size));
     ptx_if(outside);
-    ptx_emit(bra, PTXLabel("done"));
+    ptx_jump(done);
     ptx_endif();
 
     // Compute element offset.
@@ -376,6 +376,189 @@ class CUDACalculate : public CUDAKernel {
   int arity_;               // number of inputs
 };
 
+// CUDA-based argmax using reduction.
+class CUDAArgMax : public CUDAKernel {
+ public:
+  static const int MAX_BLOCK_SIZE = 512;
+  static const int WARP_SIZE = 32;
+
+  string Name() override { return "CUDAArgMax"; }
+  string Operation() override { return "ArgMax"; }
+
+  bool Supports(Step *step) override {
+    // Requires CUDA support.
+    if (!CUDAKernel::Supports(step)) return false;
+
+    // Check inputs and outputs.
+    if (step->inputs().size() != 1) return false;
+    if (step->outputs().size() != 1) return false;
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+
+    // Check type.
+    if (x->type() != DT_FLOAT) return false;
+    if (y->type() != DT_INT32) return false;
+    if (y->elements() != 1) return false;
+
+    return true;
+  }
+
+  void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
+    // Get input and output tensors.
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    int size = x->elements();
+
+    // Compute the block size.
+    int block_size = 1;
+    while (block_size * 2 <= size && block_size < MAX_BLOCK_SIZE) {
+      block_size *= 2;
+    }
+    ptx->set_grid_dims(block_size);
+    if (step->variant().empty()) {
+      string variant = "B" + std::to_string(block_size);
+      step->set_variant(variant);
+    }
+
+    // Declare shared memory for reduction.
+    char str[128];
+    sprintf(str, ".shared .f32 maxval_array[%d];\n", block_size);
+    ptx->emit(str);
+    sprintf(str, ".shared .u32 best_array[%d];\n", block_size);
+    ptx->emit(str);
+    ptx_decl(b64, maxval);
+    ptx_decl(b64, best);
+    ptx_emit(mov.u64, maxval, PTXLiteral("maxval_array"));
+    ptx_emit(mov.u64, best, PTXLiteral("best_array"));
+
+    // Get thread index.
+    ptx_decl(b32, idx);
+    ptx->GetThreadIndex(idx, 0);
+
+    // Check bounds.
+    ptx_decl(pred, outside);
+    ptx_emit(setp.ge.u32, outside, idx, PTXImm(block_size));
+    ptx_if(outside);
+    ptx_jump(done);
+    ptx_endif();
+
+    // Reduce input array down to block size:
+    //  m = x[idx];
+    //  s = idx;
+    //  while (s < size) {
+    //    s += block_size;
+    //    if (x[s] > m) {
+    //      m = x[s];
+    //      b = s;
+    //    }
+    //  }
+    //  maxval[idx] = m;
+    //  best[idx] = b;
+    ptx_decl(b64, xptr);
+    ptx->LoadTensorAddress(xptr, x);
+
+    // Initially set m = x[idx] and b = idx.
+    ptx_decl(b64, xiptr);
+    ptx_emit(mad.wide.u32, xiptr, idx, PTXImm(sizeof(float)), xptr);
+    ptx_decl(pred, larger);
+    ptx_decl(f32, m);
+    ptx_decl(u32, b);
+    ptx_emit(ld.global.f32, m, PTXAddr(xiptr));
+    ptx_emit(mov.u32, b, idx);
+
+    if (block_size < size) {
+      // Strided loop over inputs.
+      ptx_decl(u32, s);
+      ptx_emit(mov.u32, s, idx);
+      ptx_label(loop1);
+
+      // Next element in stride. Stop when reaching end of input.
+      ptx_emit(add.u32, s, s, PTXImm(block_size));
+      ptx_emit(setp.ge.u32, outside, s, PTXImm(size));
+      ptx_if(outside);
+      ptx_jump(done1);
+      ptx_endif();
+
+      // Get x[s].
+      ptx_decl(b64, sptr);
+      ptx_emit(mad.wide.u32, sptr, s, PTXImm(sizeof(float)), xptr);
+      ptx_decl(f32, value);
+      ptx_emit(ld.global.f32, value, PTXAddr(sptr));
+
+      // Update max element if x[s] is larger than m.
+      ptx_emit(setp.gt.f32, larger, value, m);
+      ptx_if(larger);
+      ptx_emit(mov.f32, m, value);
+      ptx_emit(mov.u32, b, s);
+      ptx_endif();
+
+      ptx_jump(loop1);
+      ptx_label(done1);
+    }
+
+    // Store max element into shared memory.
+    ptx_decl(b64, mptr);
+    ptx_emit(mad.wide.u32, mptr, idx, PTXImm(sizeof(float)), maxval);
+    ptx_emit(st.shared.f32, PTXAddr(mptr), m);
+
+    ptx_decl(b64, bptr);
+    ptx_emit(mad.wide.u32, bptr, idx, PTXImm(sizeof(int)), best);
+    ptx_emit(st.shared.u32, PTXAddr(bptr), b);
+
+    // The input has now been reduced down to the block size and the largest
+    // element in each block, together with its index, is now stored in shared
+    // memory. The block is reduced in a number of steps that reduce the problem
+    // in half. This is done until there is only one element left.
+    ptx_decl(pred, completed);
+    ptx_decl(f32, ms);
+    ptx_decl(u32, bs);
+    while (block_size > 1) {
+      // Terminate threads that are no longer active in the reduction.
+      ptx_emit(setp.ge.u32, completed, idx, PTXImm(block_size / 2));
+      ptx_if(completed);
+      ptx_jump(done);
+      ptx_endif();
+
+      // Synchronize threads. No synchronization is needed when all remaining
+      // active threads are running in the same warp because instructions are
+      // SIMD synchronous within a warp.
+      if (block_size > WARP_SIZE) {
+        ptx_emit(bar.sync, PTXImm(0));
+      }
+      block_size >>= 1;
+
+      // Reduce block by comparing strided elements.
+      //  if (maxval[idx + block_size] > maxval[idx]) {
+      //    maxval[idx] = maxval[idx + block_size];
+      //    best[idx] = best[idx + block_size];
+      //  }
+      ptx_emit(ld.shared.f32, m, PTXAddr(mptr));
+      ptx_emit(ld.shared.f32, ms, PTXAddr(mptr, block_size * sizeof(float)));
+      ptx_emit(setp.gt.f32, larger, ms, m);
+      ptx_if(larger);
+      ptx_emit(ld.shared.u32, bs, PTXAddr(bptr, block_size * sizeof(int)));
+      ptx_emit(st.shared.f32, PTXAddr(mptr), ms);
+      ptx_emit(st.shared.u32, PTXAddr(bptr), bs);
+      ptx_endif();
+    }
+
+    // ArgMax is now in the first element.
+    ptx_decl(u32, result);
+    ptx_emit(ld.shared.u32, result, PTXAddr(best));
+    ptx_decl(b64, yptr);
+    ptx->LoadTensorAddress(yptr, y);
+    ptx_emit(st.global.u32, PTXAddr(yptr), result);
+
+    // Done.
+    ptx_label(done);
+    ptx_ret();
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 // Register CUDA arithmetic library.
 void RegisterCUDAArithmeticLibrary(Library *library) {
   ptx_model.mov_reg_reg = true;
@@ -412,6 +595,8 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
   library->Register(new CUDACalculate("CUDALogSigmoid", "LogSigmoid", 1));
   library->Register(new CUDACalculate("CUDAReciprocal", "Reciprocal", 1));
   library->Register(new CUDACalculate("CUDASquare", "Square", 1));
+
+  library->Register(new CUDAArgMax());
 }
 
 }  // namespace myelin

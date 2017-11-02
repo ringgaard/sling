@@ -40,7 +40,7 @@ void VectorAdd(PTXAssembler *ptx) {
   ptx_decl(pred, outside);
   ptx_emit(setp_ge_s32, outside, idx, n);
   ptx_if(outside);
-  ptx_emit(bra, PTXLabel("done"));
+  ptx_jump(done);
   ptx_endif();
 
   // Compute vector addresses.

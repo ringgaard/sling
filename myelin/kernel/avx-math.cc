@@ -589,6 +589,10 @@ class AVXFltArgMax : public Kernel {
       __ movq(Operand(output), best);
     }
   }
+
+  int64 Complexity(const Step *step) override {
+    return step->input(0)->elements();
+  }
 };
 
 void RegisterAVXMath(Library *library) {

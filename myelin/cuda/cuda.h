@@ -450,6 +450,9 @@ class PTXAssembler {
   void vprintf(const char *fmt, va_list args);
   void printf(const char *fmt, ...);
 
+  // Emit custom PTX code.
+  void emit(const char *snippet) { code_.append(snippet); }
+
   // CUDA SM target architecture.
   int target() const { return target_; }
   void set_target(int target) { target_ = target; }
@@ -551,6 +554,7 @@ class PTXAssembler {
 #define ptx_ifnot(p) ptx->pred(p, false)
 #define ptx_else() ptx->negate()
 #define ptx_endif() ptx->clear()
+#define ptx_jump(l) ptx_emit(bra, PTXLabel(#l))
 
 }  // namespace myelin
 }  // namespace sling

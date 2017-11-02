@@ -322,7 +322,11 @@ class RNN {
   void ExtractFeaturesLR(RNNInstance *instance, int current) const;
 
   // Loop up tag name.
-  const string &tag(int index) const { return tags_[index]; }
+  const string &tag(int index) const {
+    static const string unk = "--UNK--";
+    if (index < 0 || index >= tags_.size()) return unk;
+    return tags_[index];
+  }
 
   // Get tag id for tag name.
   int tagid(const string &tag) const {
@@ -417,11 +421,13 @@ void RNN::Load(const string &filename) {
 
   if (FLAGS_fast_argmax) {
     auto *tagger = flow.Func("tagger");
-    auto *logits = flow.Var("tagger/xw_plus_b/MatMul");
+    auto *logits = flow.Var("tagger/logits");
     auto *prediction = flow.AddVariable("tagger/prediction",
                                         myelin::DT_INT32, {1});
     flow.AddOperation(tagger, "tagger/ArgMax", "ArgMax",
                       {logits}, {prediction});
+    CHECK(!logits->in);
+    CHECK(!logits->out);
   }
 
   // Zero out the last embedding vector (used for oov).
