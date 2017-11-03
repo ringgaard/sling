@@ -1410,6 +1410,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         auto pc = masm.pc_offset();
         VLOG(8) << "Generate " << step->name() << " @ "
                 << reinterpret_cast<uint64 *>(pc)
+                << " with " << step->kernel_->Name()
                 << " on " << placename[step->placement()];
         step->kernel_->Generate(step, &masm);
         if (masm.pc_offset() == pc) step->noop_ = true;

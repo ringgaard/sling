@@ -15,6 +15,8 @@
 #include "nlp/parser/parser.h"
 
 #include "frame/serialization.h"
+#include "myelin/cuda/cuda-runtime.h"
+#include "myelin/kernel/cuda.h"
 #include "myelin/kernel/dragnn.h"
 #include "myelin/kernel/tensorflow.h"
 #include "nlp/document/document.h"
@@ -24,10 +26,26 @@
 namespace sling {
 namespace nlp {
 
+static myelin::CUDARuntime cudart;
+
+void Parser::EnableGPU() {
+  if (myelin::CUDA::Supported()) {
+    // Initialize CUDA runtime for Myelin.
+    if (!cudart.connected()) {
+      cudart.Connect();
+    }
+
+    // Always use fast fallback when running on GPU.
+    use_gpu_ = true;
+    fast_fallback_ = true;
+  }
+}
+
 void Parser::Load(Store *store, const string &model) {
   // Register kernels for implementing parser ops.
   RegisterTensorflowLibrary(&library_);
   RegisterDragnnLibrary(&library_);
+  if (use_gpu_) RegisterCUDALibrary(&library_);
 
   // Load and analyze parser flow file.
   myelin::Flow flow;
@@ -45,12 +63,18 @@ void Parser::Load(Store *store, const string &model) {
   flow.Analyze(library_);
 
   // Compile parser flow.
+  if (use_gpu_) network_.set_runtime(&cudart);
+  //network_.options().sync_steps = true;
   CHECK(network_.Compile(flow, library_));
 
   // Initialize cells.
   InitLSTM("lr_lstm", &lr_, false);
   InitLSTM("rl_lstm", &rl_, true);
   InitFF("ff", &ff_);
+
+  std::cout << lr_.cell->ToString();
+  std::cout << rl_.cell->ToString();
+  std::cout << ff_.cell->ToString();
 
   // Initialize profiling.
   if (ff_.cell->profile()) profile_ = new Profile(this);

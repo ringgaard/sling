@@ -5,6 +5,153 @@
 namespace sling {
 namespace myelin {
 
+// Concatenation of input tensors along first dimension using CUDA
+class CUDABasicConcat : public CUDAKernel {
+ public:
+  string Name() override { return "CUDABasicConcat"; }
+  string Operation() override { return "ConcatV2"; }
+
+  bool Supports(Step *step) override {
+    // Requires CUDA support.
+    if (!CUDAKernel::Supports(step)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() < 2 || step->outdegree() != 1) return false;
+
+    // Only concatenation along a singular prefix supported.
+    int n = step->GetAttr("N", step->indegree() - 1);
+    if (step->indegree() < n + 1) return false;
+    Tensor *axis = step->input(n);
+    if (!axis->IsConstant()) return false;
+    int a = axis->value<int32>();
+    if (step->output(0)->shape().outer(a) != 1) return false;
+
+    return true;
+  }
+
+  void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
+    // Get the number of tensors to concatenate.
+    int n = step->GetAttr("N", step->indegree() - 1);
+
+    // Kernel is single-threaded.
+    ptx->set_grid_dims(1);
+
+    // Load output tensor address.
+    ptx_decl(b64, out);
+    ptx->LoadTensorAddress(out, step->output(0));
+
+    // Copy input tensors to output.
+    static const int UNROLLS = 8;
+    static const int BLOCK_SIZE = UNROLLS * 16;
+    ptx_decl(b64, in);
+    ptx_decl(b64, src);
+    ptx_decl(b64, dst);
+    ptx_decl(u32, cnt);
+    ptx_decl(v4.u32, data128);
+    ptx_decl(v2.u32, data64);
+    ptx_decl(u32, data32);
+    ptx_decl(u16, data16);
+    ptx_decl(u8, data8);
+    int offset = 0;
+    for (int i = 0; i < n; ++i) {
+      // Load input tensor address.
+      int size = step->input(i)->size();
+      ptx->LoadTensorAddress(in, step->input(i));
+      int disp = 0;
+      int left = size;
+
+#if 1
+      // Simple copy.
+      // TODO: make sure n-byte loads/stores are only performed in naturally
+      // aligned addresses.
+      ptx_emit(add.u64, src, in, PTXImm(disp));
+      ptx_emit(add.u64, dst, out, PTXImm(offset + disp));
+      ptx_emit(mov.u32, cnt, PTXImm(0));
+      ptx->label("loop", i);
+      ptx_emit(ld.global.u8, data8, PTXAddr(src));
+      ptx_emit(st.global.u8, PTXAddr(dst), data8);
+      ptx_emit(add.u64, src, src, PTXImm(1));
+      ptx_emit(add.u64, dst, dst, PTXImm(1));
+      ptx_emit(add.u32, cnt, cnt, PTXImm(1));
+      PTXReg more = ptx->reg("pred", "more", i);
+      ptx_emit(setp.lt.u32, more, cnt, PTXImm(left));
+      ptx_if(more);
+      ptx_emit(bra, PTXLabel("loop", i));
+      ptx_endif();
+
+      disp += left;
+      left = 0;
+#endif
+
+      // Copy large blocks in loop.
+      if (left >= 2 * BLOCK_SIZE) {
+        int repeats = left / BLOCK_SIZE;
+        ptx_emit(add.u64, src, in, PTXImm(disp));
+        ptx_emit(add.u64, dst, out, PTXImm(offset + disp));
+        ptx_emit(mov.u32, cnt, PTXImm(0));
+
+        ptx->label("loop", i);
+        for (int unroll = 0; unroll < UNROLLS; ++unroll) {
+          ptx_emit(ld.global.v4.u32, data128, PTXAddr(src, unroll * 16));
+          ptx_emit(st.global.v4.u32, PTXAddr(dst, unroll * 16), data128);
+        }
+        ptx_emit(add.u64, src, src, PTXImm(BLOCK_SIZE));
+        ptx_emit(add.u64, dst, dst, PTXImm(BLOCK_SIZE));
+        ptx_emit(add.u32, cnt, cnt, PTXImm(1));
+        PTXReg more = ptx->reg("pred", "more", i);
+        ptx_emit(setp.lt.u32, more, cnt, PTXImm(repeats));
+        ptx_if(more);
+        ptx_emit(bra, PTXLabel("loop", i));
+        ptx_endif();
+
+        disp += BLOCK_SIZE * repeats;
+        left -= BLOCK_SIZE * repeats;
+      }
+
+      // Copy residual 16, 8, 4, 2, and 1 bytes at a time.
+      while (left >= 16) {
+        ptx_emit(ld.global.v4.u32, data128, PTXAddr(in, disp));
+        ptx_emit(st.global.v4.u32, PTXAddr(out, offset + disp), data128);
+        disp += 16;
+        left -= 16;
+      }
+      while (left >= 8) {
+        ptx_emit(ld.global.v2.u32, data64, PTXAddr(in, disp));
+        ptx_emit(st.global.v2.u32, PTXAddr(out, offset + disp), data64);
+        disp += 8;
+        left -= 8;
+      }
+      while (left >= 4) {
+        ptx_emit(ld.global.u32, data32, PTXAddr(in, disp));
+        ptx_emit(st.global.u32, PTXAddr(out, offset + disp), data32);
+        disp += 4;
+        left -= 4;
+      }
+      while (left >= 2) {
+        ptx_emit(ld.global.u16, data16, PTXAddr(in, disp));
+        ptx_emit(st.global.u16, PTXAddr(out, offset + disp), data16);
+        disp += 2;
+        left -= 2;
+      }
+      while (left >= 1) {
+        ptx_emit(ld.global.u8, data8, PTXAddr(in, disp));
+        ptx_emit(st.global.u8, PTXAddr(out, offset + disp), data8);
+        disp += 1;
+        left -= 1;
+      }
+
+      // Move to next destination in output tensor.
+      offset += size;
+    }
+
+    ptx_ret();
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 // CUDA-based embedding lookup for single feature.
 class CUDALookupSingle : public CUDAKernel {
  public:
@@ -159,7 +306,7 @@ class CUDALookupMultiple : public CUDAKernel {
     ptx_decl(b64, fptr);
     ptx->LoadTensorAddress(fptr, f);
     ptx_decl(u32, fidx);
-    ptx_emit(mov.f32, fidx, PTXImm(0));
+    ptx_emit(mov.u32, fidx, PTXImm(0));
     ptx_label(loop1);
 
     // Get feature from feature vector.
@@ -213,10 +360,121 @@ class CUDALookupMultiple : public CUDAKernel {
   }
 };
 
+// CUDA-based feature collect operation for recurrent features mapped through
+// an embedding matrix.
+class CUDACollect : public CUDAKernel {
+ public:
+  string Name() override { return "CUDACollect"; }
+  string Operation() override { return "Collect"; }
+
+  bool Supports(Step *step) override {
+    // Requires CUDA support.
+    if (!CUDAKernel::Supports(step)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+
+    // Check types.
+    Tensor *f = step->input(0);
+    Tensor *M = step->input(1);
+    Tensor *R = step->output(0);
+    if (f->type() != DT_INT32) return false;
+    if (M->type() != DT_FLOAT || M->rank() != 2) return false;
+    if (R->type() != DT_FLOAT || R->rank() != 2) return false;
+
+    if (f->dim(0) != 1 || f->dim(1) != R->dim(0)) return false;
+    if (R->dim(1) != M->dim(1) + 1) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    step->input(1)->SetRequiredOrder(ROW_MAJOR);
+    step->output(0)->SetRequiredOrder(ROW_MAJOR);
+  }
+
+  void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
+    // Get inputs and outputs.
+    Tensor *f = step->input(0);
+    Tensor *M = step->input(1);
+    Tensor *R = step->output(0);
+
+    // Get size of activation vectors.
+    int dims = M->dim(1);
+
+    // Get number input features.
+    int num_features = f->dim(1);
+
+    // Use a thread for each feature and embedding dim.
+    ptx->set_grid_dims(num_features, dims);
+
+    // Get thread feature and embedding position index.
+    ptx_decl(b32, fidx);
+    ptx->GetThreadIndex(fidx, 0);
+    ptx_decl(b32, midx);
+    ptx->GetThreadIndex(midx, 1);
+
+    // Get feature id.
+    ptx_decl(b64, fptr);
+    ptx->LoadTensorAddress(fptr, f);
+    ptx_decl(u32, fid);
+    ptx_emit(mad.wide.u32, fptr, fidx, PTXImm(f->stride(0)), fptr);
+    ptx_emit(ld.global.u32, fid, PTXAddr(fptr));
+
+    // Get output address.
+    ptx_decl(b64, result);
+    ptx->LoadTensorAddress(result, R);
+    ptx_decl(b64, rrow);
+    ptx_emit(mad.wide.u32, rrow, fidx, PTXImm(R->stride(0)), result);
+    ptx_decl(b64, rptr);
+    ptx_emit(mad.wide.u32, rptr, midx, PTXImm(R->stride(1)), rrow);
+
+    // Lookup embedding.
+    ptx_decl(b64, mptr);
+    ptx->LoadTensorAddress(mptr, M);
+    ptx_decl(f32, value);
+    ptx_decl(pred, oov);
+    ptx_emit(setp.eq.u32, oov, fidx, PTXImm(-1));
+    ptx_if(oov);
+    ptx_emit(mov.f32, value, PTXFloat(0));
+    ptx_else();
+    ptx_emit(ld.global.f32, value, PTXAddr(mptr));
+    ptx_endif();
+
+    // Store value in result.
+    ptx_emit(st.global.f32, PTXAddr(rptr), value);
+
+    // The OOV indicator is set in the first thread for the feature.
+    ptx_decl(pred, first);
+    ptx_emit(setp.eq.u32, first, midx, PTXImm(0));
+    ptx_ifnot(first);
+    ptx_jump(done);
+    ptx_endif();
+
+    // Set OOV indicator to 1.0 if feature is -1.
+    ptx_decl(f32, oovval);
+    ptx_emit(mov.f32, oovval, PTXFloat(0));
+    ptx_if(oov);
+    ptx_emit(mov.f32, oovval, PTXFloat(1.0));
+    ptx_endif();
+    ptx_emit(st.global.f32, PTXAddr(rrow, dims * sizeof(float)), oovval);
+
+    // Done.
+    ptx_label(done);
+    ptx_ret();
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 // Register CUDA array library.
 void RegisterCUDAArrayLibrary(Library *library) {
-  library->Register(new CUDALookupSingle());
+  library->Register(new CUDABasicConcat());
   library->Register(new CUDALookupMultiple());
+  library->Register(new CUDALookupSingle());
+  library->Register(new CUDACollect());
 }
 
 }  // namespace myelin

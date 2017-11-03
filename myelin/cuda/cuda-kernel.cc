@@ -77,7 +77,10 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
   // Set up macro-assembler for generating PTX code for kernel.
   CUDADevice *device = step->cell()->runtime()->Device();
   CHECK(device != nullptr);
-  string name = Name();
+  string name = step->name();
+  for (char &c : name) {
+    if (c == '/' || c == '-') c = '_';
+  }
   PTXMacroAssembler ptx(name.c_str());
   ptx.set_target(device->capability());
 

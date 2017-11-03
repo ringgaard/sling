@@ -259,12 +259,14 @@ class PTXLiteral : public PTXArg {
 // PTX label argument.
 class PTXLabel : public PTXArg {
  public:
-  PTXLabel(const char *name) : name_(name) {}
+  PTXLabel(const char *name) : name_(name), index_(-1) {}
+  PTXLabel(const char *name, int index) : name_(name), index_(index) {}
 
   void Generate(string *code) const override;
 
  private:
   const char *name_;
+  int index_;
 };
 
 // PTX immediate argument.
@@ -420,10 +422,10 @@ class PTXAssembler {
   }
 
   // Declare label.
-  void label(const char *name,
+  void label(const char *name, int index = -1,
              const char *source = nullptr, int line = -1) {
     EmitLoc(source, line);
-    EmitLabel(name);
+    EmitLabel(name, index);
   }
 
   // Set instruction predicate.
@@ -490,7 +492,7 @@ class PTXAssembler {
   void EmitArg(const PTXArg &arg);
 
   // Emit label declaration.
-  void EmitLabel(const char *name);
+  void EmitLabel(const char *name, int index);
 
   // Emit line termination with semicolon.
   void EmitLineEnd();
@@ -546,7 +548,7 @@ class PTXAssembler {
 #define ptx_emit(instr, ...) \
   ptx->emit(#instr, __VA_ARGS__, __FILE__, __LINE__)
 #define ptx_label(name) \
-  ptx->label(#name, __FILE__, __LINE__)
+  ptx->label(#name, -1, __FILE__, __LINE__)
 #define ptx_ret() \
   ptx->emit("ret", __FILE__, __LINE__)
 

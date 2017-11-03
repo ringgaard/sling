@@ -69,6 +69,9 @@ class Parser {
   // Enable fast fallback. Must be called before Load().
   void EnableFastFallback() { fast_fallback_ = true; }
 
+  // Run parser on GPU if available. Must be called before Load().
+  void EnableGPU();
+
   // Return profile summary for parser.
   Profile *profile() const { return profile_; }
 
@@ -186,6 +189,9 @@ class Parser {
 
   // Fast fallback using argmax.
   bool fast_fallback_ = false;
+
+  // Run parser on GPU.
+  bool use_gpu_ = false;
 
   // Symbols.
   Names names_;

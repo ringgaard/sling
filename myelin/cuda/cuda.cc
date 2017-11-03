@@ -190,6 +190,7 @@ void PTXLiteral::Generate(string *code) const {
 
 void PTXLabel::Generate(string *code) const {
   code->append(name_);
+  if (index_ != -1) code->append(std::to_string(index_));
 }
 
 void PTXImm::Generate(string *code) const {
@@ -353,8 +354,9 @@ void PTXAssembler::EmitArg(const PTXArg &arg) {
   arg.Generate(&code_);
 }
 
-void PTXAssembler::EmitLabel(const char *name) {
+void PTXAssembler::EmitLabel(const char *name, int index) {
   code_.append(name);
+  if (index != -1) code_.append(std::to_string(index));
   code_.append(":\n");
 }
 
