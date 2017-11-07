@@ -1321,6 +1321,48 @@ class Assembler : public CodeGenerator {
     emit(mask);
   }
 
+  void vblendvps(XMMRegister dst, XMMRegister src1, XMMRegister src2,
+                 XMMRegister mask) {
+    vinstr(0x4A, dst, src1, src2, k66, k0F3A, kW0);
+    emit(mask.code() << 4);
+  }
+  void vblendvps(XMMRegister dst, XMMRegister src1, const Operand &src2,
+                 XMMRegister mask) {
+    vinstr(0x4A, dst, src1, src2, k66, k0F3A, kW0, 1);
+    emit(mask.code() << 4);
+  }
+  void vblendvps(YMMRegister dst, YMMRegister src1, YMMRegister src2,
+                 YMMRegister mask) {
+    vinstr(0x4A, dst, src1, src2, k66, k0F3A, kW0);
+    emit(mask.code() << 4);
+  }
+  void vblendvps(YMMRegister dst, YMMRegister src1, const Operand &src2,
+                 YMMRegister mask) {
+    vinstr(0x4A, dst, src1, src2, k66, k0F3A, kW0, 1);
+    emit(mask.code() << 4);
+  }
+
+  void vblendvpd(XMMRegister dst, XMMRegister src1, XMMRegister src2,
+                 XMMRegister mask) {
+    vinstr(0x4B, dst, src1, src2, k66, k0F3A, kW0);
+    emit(mask.code() << 4);
+  }
+  void vblendvpd(XMMRegister dst, XMMRegister src1, const Operand &src2,
+                 XMMRegister mask) {
+    vinstr(0x4B, dst, src1, src2, k66, k0F3A, kW0, 1);
+    emit(mask.code() << 4);
+  }
+  void vblendvpd(YMMRegister dst, YMMRegister src1, YMMRegister src2,
+                 YMMRegister mask) {
+    vinstr(0x4B, dst, src1, src2, k66, k0F3A, kW0);
+    emit(mask.code() << 4);
+  }
+  void vblendvpd(YMMRegister dst, YMMRegister src1, const Operand &src2,
+                 YMMRegister mask) {
+    vinstr(0x4B, dst, src1, src2, k66, k0F3A, kW0, 1);
+    emit(mask.code() << 4);
+  }
+
   void vsd(byte op, XMMRegister dst, XMMRegister src1, XMMRegister src2) {
     vinstr(op, dst, src1, src2, kF2, k0F, kWIG);
   }

@@ -14,6 +14,9 @@
 #include "myelin/flow.h"
 #include "myelin/graph.h"
 #include "myelin/profile.h"
+#include "myelin/cuda/cuda-kernel.h"
+#include "myelin/cuda/cuda-runtime.h"
+#include "myelin/kernel/cuda.h"
 #include "myelin/kernel/tensorflow.h"
 #include "myelin/kernel/dragnn.h"
 #include "third_party/jit/cpu.h"
@@ -33,6 +36,9 @@ DEFINE_bool(dump_code, true, "Dump generated code");
 DEFINE_bool(debug, false, "Debug mode");
 DEFINE_double(epsilon, 1e-5, "Epsilon for floating point comparison");
 DEFINE_bool(twisted, false, "Swap hidden and control in LSTMs");
+DEFINE_bool(sync, false, "Sync all steps");
+DEFINE_bool(check, true, "Check test sentence");
+DEFINE_bool(fast_argmax, false, "Let network cell compute argmax");
 
 DEFINE_bool(sse, true, "SSE support");
 DEFINE_bool(sse2, true, "SSE2 support");
@@ -41,6 +47,7 @@ DEFINE_bool(sse41, true, "SSE 4.1 support");
 DEFINE_bool(avx, true, "AVX support");
 DEFINE_bool(avx2, true, "AVX2 support");
 DEFINE_bool(fma3, true, "FMA3 support");
+DEFINE_bool(gpu, false, "Run on GPU");
 
 DEFINE_int32(strict, 0, "Strict math mode (0=relaxed,1=strict matmul,2=strict");
 
@@ -48,6 +55,8 @@ using namespace sling;
 using namespace sling::myelin;
 
 struct RNNInstance;
+
+CUDARuntime cudart;
 
 // Baseline LSTM tagger.
 struct LSTMTagger {
@@ -293,6 +302,7 @@ class FixedDragnnTyper : public Typer {
   }
 };
 
+// RNN tagger.
 class RNN {
  public:
   // Loads and initialize parser model.
@@ -312,7 +322,11 @@ class RNN {
   void ExtractFeaturesLR(RNNInstance *instance, int current) const;
 
   // Loop up tag name.
-  const string &tag(int index) const { return tags_[index]; }
+  const string &tag(int index) const {
+    static const string unk = "--UNK--";
+    if (index < 0 || index >= tags_.size()) return unk;
+    return tags_[index];
+  }
 
   // Get tag id for tag name.
   int tagid(const string &tag) const {
@@ -327,7 +341,7 @@ class RNN {
   // Looks up cells, connectors, and parameters.
   Cell *GetCell(const string &name);
   Connector *GetConnector(const string &name);
-  Tensor *GetParam(const string &name);
+  Tensor *GetParam(const string &name, bool optional = false);
 
   // Tagger network.
   Library library_;
@@ -347,6 +361,7 @@ class RNN {
   Tensor *lr_h_in_;           // link to LSTM hidden input
   Tensor *lr_h_out_;          // link to LSTM hidden output
   Tensor *ff_output_;         // link to FF logit layer output
+  Tensor *ff_prediction_;     // link to FF logit layer argmax
 
   // Lexicon.
   std::unordered_map<string, int> vocabulary_;
@@ -385,6 +400,7 @@ void RNN::Load(const string &filename) {
   // Register kernels for implementing parser ops.
   RegisterTensorflowLibrary(&library_);
   RegisterDragnnLibrary(&library_);
+  if (FLAGS_gpu) RegisterCUDALibrary(&library_);
 
   library_.Register(new FixedDragnnInitializer());
   library_.RegisterTyper(new FixedDragnnTyper());
@@ -401,6 +417,17 @@ void RNN::Load(const string &filename) {
   }
   if (FLAGS_intermediate) {
     for (auto *var : flow.vars()) var->out = true;
+  }
+
+  if (FLAGS_fast_argmax) {
+    auto *tagger = flow.Func("tagger");
+    auto *logits = flow.Var("tagger/logits");
+    auto *prediction = flow.AddVariable("tagger/prediction",
+                                        myelin::DT_INT32, {1});
+    flow.AddOperation(tagger, "tagger/ArgMax", "ArgMax",
+                      {logits}, {prediction});
+    CHECK(!logits->in);
+    CHECK(!logits->out);
   }
 
   // Zero out the last embedding vector (used for oov).
@@ -428,9 +455,16 @@ void RNN::Load(const string &filename) {
   }
 
   // Compile parser flow.
-  if (FLAGS_profile) network_.set_profiling(true);
-  if (FLAGS_debug) network_.set_debug(true);
-  if (FLAGS_dynamic) network_.set_dynamic_allocation(true);
+  auto &opts = network_.options();
+  if (FLAGS_profile) opts.profiling = true;
+  if (FLAGS_debug) opts.debug = true;
+  if (FLAGS_dynamic) opts.dynamic_allocation = true;
+  if (FLAGS_sync) opts.sync_steps = true;
+  if (FLAGS_gpu) {
+    cudart.Connect();
+    network_.set_runtime(&cudart);
+  }
+
   CHECK(network_.Compile(flow, library_));
 
   // Get computation for each function.
@@ -460,6 +494,7 @@ void RNN::Load(const string &filename) {
   lr_h_out_ = GetParam("tagger/h_out");
 
   ff_output_ = GetParam("tagger/output");
+  ff_prediction_ = GetParam("tagger/prediction", true);
 
   // Load lexicon.
   Flow::Function *lexicon = flow.Func("lexicon");
@@ -556,14 +591,18 @@ void RNN::Execute(const std::vector<string> &tokens,
       // Compute LSTM cell.
       data.lr.Compute();
 
-      float *output = data.lr.Get<float>(ff_output_);
       int prediction = 0;
-      float max_score = -std::numeric_limits<float>::infinity();
+      if (FLAGS_fast_argmax) {
+        prediction = *data.lr.Get<int>(ff_prediction_);
+      } else {
+        float *output = data.lr.Get<float>(ff_output_);
+        float max_score = -std::numeric_limits<float>::infinity();
 
-      for (int a = 0; a < ff_output_->dim(1); ++a) {
-        if (output[a] > max_score) {
-          prediction = a;
-          max_score = output[a];
+        for (int a = 0; a < ff_output_->dim(1); ++a) {
+          if (output[a] > max_score) {
+            prediction = a;
+            max_score = output[a];
+          }
         }
       }
       predictions->push_back(prediction);
@@ -640,9 +679,9 @@ Connector *RNN::GetConnector(const string &name) {
   return cnx;
 }
 
-Tensor *RNN::GetParam(const string &name) {
+Tensor *RNN::GetParam(const string &name, bool optional) {
   Tensor *param = network_.GetParameter(name);
-  if (param == nullptr) {
+  if (!optional && param == nullptr) {
     LOG(FATAL) << "Unknown parser parameter: " << name;
   }
   return param;
@@ -737,11 +776,13 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << tokens[i] << " " << rnn.tag(predictions[i]);
   }
 
-  CHECK_EQ(tokens.size(), tokens.size());
-  for (int i = 0; i < predictions.size(); ++i) {
-    CHECK_EQ(golden[i], predictions[i])
-        << i << " gold: " << rnn.tag(golden[i])
-        << " predicted: " << rnn.tag(predictions[i]);
+  if (FLAGS_check) {
+    CHECK_EQ(tokens.size(), tokens.size());
+    for (int i = 0; i < predictions.size(); ++i) {
+      CHECK_EQ(golden[i], predictions[i])
+          << i << " gold: " << rnn.tag(golden[i])
+          << " predicted: " << rnn.tag(predictions[i]);
+    }
   }
 
   return 0;

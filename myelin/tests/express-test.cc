@@ -10,11 +10,27 @@ using namespace sling::myelin;
 
 void Test(const string &str) {
   bool three_arg_ops = true;
+  Express::Target target = Express::NVIDIA;
   bool fma = true;
   bool hoist = 0;
 
   Express::Model model;
-  if (three_arg_ops) {
+  if (target == Express::NVIDIA) {
+    model.mov_reg_reg = true;
+    model.mov_reg_imm = true;
+    model.mov_reg_mem = true;
+    model.mov_mem_reg = true;
+
+    model.op_reg_reg = true;
+    model.op_reg_imm = true;
+
+    model.op_reg_reg_reg = true;
+    model.op_reg_reg_imm = true;
+
+    model.func_reg_reg = true;
+    model.func_reg_imm = true;
+    fma = true;
+  } else  if (three_arg_ops) {
     model.mov_reg_reg = true;
     model.mov_reg_imm = true;
     model.mov_reg_mem = true;
@@ -51,7 +67,7 @@ void Test(const string &str) {
   }
 
   LOG(INFO) << "Expression: " << str;
-  Express expr;
+  Express expr(target);
   expr.Parse(str, true);
 
   bool raw = false;
@@ -66,10 +82,9 @@ void Test(const string &str) {
 
   if (fma) {
     expr.FuseMulAdd();
-    expr.FuseMulSub();
+    if (target != Express::NVIDIA) expr.FuseMulSub();
     model.fm_reg_reg_reg = true;
     model.fm_reg_reg_imm = true;
-    model.fm_reg_reg_mem = true;
   }
 
   expr.CacheResults();
@@ -179,8 +194,9 @@ int main(int argc, char *argv[]) {
 
 #endif
 
-  Test("@0=Tanh(%0)");
-
+  //Test("@0=Tanh(%0)");
+  Test("$2=Sigmoid(Add(%2,%3));@0=Add(Mul($2,Tanh(Add(%0,%1))),Mul(Sub(_1,$2),%5));@1=Tanh(@0)");
+  Test("@0=Mul(Sigmoid(Add(%0,%1)),%2)");
   return 0;
 }
 
