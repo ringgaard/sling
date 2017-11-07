@@ -33,117 +33,92 @@ class CUDABasicConcat : public CUDAKernel {
     // Get the number of tensors to concatenate.
     int n = step->GetAttr("N", step->indegree() - 1);
 
-    // Kernel is single-threaded.
-    ptx->set_grid_dims(1);
+    // Find maximum number of 32-bit words to copy.
+    static const int WORD_SIZE = 4;
+    int max_words = 0;
+    bool has_residuals = false;
+    for (int i = 0; i < n; ++i) {
+      int bytes = step->input(i)->size();
+      int words = bytes / WORD_SIZE;
+      if (words > max_words) max_words = words;
+      if (bytes != words * WORD_SIZE) has_residuals = true;
+    }
+    ptx->set_grid_dims(max_words);
+
+    // Get thread index.
+    ptx_decl(b32, idx);
+    ptx->GetThreadIndex(idx, 0);
+
+    // Compute block offset.
+    ptx_decl(b64, ofs);
+    ptx_emit(mul.wide.u32, ofs, idx, PTXImm(WORD_SIZE));
 
     // Load output tensor address.
     ptx_decl(b64, out);
     ptx->LoadTensorAddress(out, step->output(0));
 
+    // Residuals are copied in the first thread.
+    ptx_decl(pred, first);
+    if (has_residuals) {
+      ptx_emit(setp.eq.u32, first, idx, PTXImm(0));
+    }
+
     // Copy input tensors to output.
-    static const int UNROLLS = 8;
-    static const int BLOCK_SIZE = UNROLLS * 16;
+    int offset = 0;
     ptx_decl(b64, in);
     ptx_decl(b64, src);
     ptx_decl(b64, dst);
-    ptx_decl(u32, cnt);
-    ptx_decl(v4.u32, data128);
-    ptx_decl(v2.u32, data64);
     ptx_decl(u32, data32);
     ptx_decl(u16, data16);
     ptx_decl(u8, data8);
-    int offset = 0;
     for (int i = 0; i < n; ++i) {
       // Load input tensor address.
       int size = step->input(i)->size();
       ptx->LoadTensorAddress(in, step->input(i));
-      int disp = 0;
-      int left = size;
 
-#if 1
-      // Simple copy.
-      // TODO: make sure n-byte loads/stores are only performed in naturally
-      // aligned addresses.
-      ptx_emit(add.u64, src, in, PTXImm(disp));
-      ptx_emit(add.u64, dst, out, PTXImm(offset + disp));
-      ptx_emit(mov.u32, cnt, PTXImm(0));
-      ptx->label("loop", i);
-      ptx_emit(ld.global.u8, data8, PTXAddr(src));
-      ptx_emit(st.global.u8, PTXAddr(dst), data8);
-      ptx_emit(add.u64, src, src, PTXImm(1));
-      ptx_emit(add.u64, dst, dst, PTXImm(1));
-      ptx_emit(add.u32, cnt, cnt, PTXImm(1));
-      PTXReg more = ptx->reg("pred", "more", i);
-      ptx_emit(setp.lt.u32, more, cnt, PTXImm(left));
-      ptx_if(more);
-      ptx_emit(bra, PTXLabel("loop", i));
-      ptx_endif();
-
-      disp += left;
-      left = 0;
-#endif
-
-      // Copy large blocks in loop.
-      if (left >= 2 * BLOCK_SIZE) {
-        int repeats = left / BLOCK_SIZE;
-        ptx_emit(add.u64, src, in, PTXImm(disp));
-        ptx_emit(add.u64, dst, out, PTXImm(offset + disp));
-        ptx_emit(mov.u32, cnt, PTXImm(0));
-
-        ptx->label("loop", i);
-        for (int unroll = 0; unroll < UNROLLS; ++unroll) {
-          ptx_emit(ld.global.v4.u32, data128, PTXAddr(src, unroll * 16));
-          ptx_emit(st.global.v4.u32, PTXAddr(dst, unroll * 16), data128);
-        }
-        ptx_emit(add.u64, src, src, PTXImm(BLOCK_SIZE));
-        ptx_emit(add.u64, dst, dst, PTXImm(BLOCK_SIZE));
-        ptx_emit(add.u32, cnt, cnt, PTXImm(1));
-        PTXReg more = ptx->reg("pred", "more", i);
-        ptx_emit(setp.lt.u32, more, cnt, PTXImm(repeats));
-        ptx_if(more);
-        ptx_emit(bra, PTXLabel("loop", i));
+      // Copy main block in parallel; one word per thread.
+      int words = size / WORD_SIZE;
+      if (words > 0) {
+        PTXReg copy = ptx->reg("pred", "copy", i);
+        ptx_emit(setp.lt.u32, copy, idx, PTXImm(words));
+        ptx_if(copy);
+        ptx_emit(add.u64, src, in, ofs);
+        ptx_emit(add.u64, dst, out, ofs);
+        ptx_emit(ld.global.u32, data32, PTXAddr(src));
+        ptx_emit(st.global.u32, PTXAddr(dst, offset), data32);
         ptx_endif();
-
-        disp += BLOCK_SIZE * repeats;
-        left -= BLOCK_SIZE * repeats;
       }
 
-      // Copy residual 16, 8, 4, 2, and 1 bytes at a time.
-      while (left >= 16) {
-        ptx_emit(ld.global.v4.u32, data128, PTXAddr(in, disp));
-        ptx_emit(st.global.v4.u32, PTXAddr(out, offset + disp), data128);
-        disp += 16;
-        left -= 16;
-      }
-      while (left >= 8) {
-        ptx_emit(ld.global.v2.u32, data64, PTXAddr(in, disp));
-        ptx_emit(st.global.v2.u32, PTXAddr(out, offset + disp), data64);
-        disp += 8;
-        left -= 8;
-      }
-      while (left >= 4) {
-        ptx_emit(ld.global.u32, data32, PTXAddr(in, disp));
-        ptx_emit(st.global.u32, PTXAddr(out, offset + disp), data32);
-        disp += 4;
-        left -= 4;
-      }
-      while (left >= 2) {
-        ptx_emit(ld.global.u16, data16, PTXAddr(in, disp));
-        ptx_emit(st.global.u16, PTXAddr(out, offset + disp), data16);
-        disp += 2;
-        left -= 2;
-      }
-      while (left >= 1) {
-        ptx_emit(ld.global.u8, data8, PTXAddr(in, disp));
-        ptx_emit(st.global.u8, PTXAddr(out, offset + disp), data8);
-        disp += 1;
-        left -= 1;
+      // Copy residual in first thread.
+      int residual = size - words * WORD_SIZE;
+      if (residual > 0) {
+        int res_ofs_in = words * WORD_SIZE;
+        int res_ofs_out = res_ofs_in + offset;
+        ptx_if(first);
+        switch (residual) {
+          case 1:
+            ptx_emit(ld.global.u8, data8, PTXAddr(in, res_ofs_in));
+            ptx_emit(st.global.u8, PTXAddr(out, res_ofs_out), data8);
+            break;
+
+          case 2:
+            ptx_emit(ld.global.u16, data16, PTXAddr(in, res_ofs_in));
+            ptx_emit(st.global.u16, PTXAddr(out, res_ofs_out), data16);
+            break;
+
+          case 3:
+            ptx_emit(ld.global.u16, data16, PTXAddr(in, res_ofs_in));
+            ptx_emit(st.global.u16, PTXAddr(out, res_ofs_out), data16);
+            ptx_emit(ld.global.u8, data8, PTXAddr(in, res_ofs_in + 2));
+            ptx_emit(st.global.u8, PTXAddr(out, res_ofs_out + 2), data8);
+            break;
+        }
+        ptx_endif();
       }
 
       // Move to next destination in output tensor.
       offset += size;
     }
-
     ptx_ret();
   }
 
