@@ -45,13 +45,3 @@ cc_library(
   ],
 )
 
-cc_binary(
-  name = "cuda-test",
-  srcs = ["cuda-test.cc"],
-  deps = [
-    ":cuda",
-    "//base",
-    "//base:clock",
-  ],
-)
-
