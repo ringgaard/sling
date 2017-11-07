@@ -310,26 +310,26 @@ class CUDALookupMultiple : public CUDAKernel {
     ptx_label(loop1);
 
     // Get feature from feature vector.
-    ptx_decl(u32, feature);
-    ptx_emit(ld.global.u32, feature, PTXAddr(fptr));
+    ptx_decl(s32, feature);
+    ptx_emit(ld.global.s32, feature, PTXAddr(fptr));
 
     // Use OOV if feature value is -1.
     ptx_decl(pred, oov);
-    ptx_emit(setp.eq.u32, oov, fidx, PTXImm(-1));
+    ptx_emit(setp.eq.s32, oov, feature, PTXImm(-1));
     ptx_if(oov);
-    ptx_emit(mov.u32, fidx, PTXImm(embedding_size));
+    ptx_emit(mov.s32, feature, PTXImm(embedding_size));
     ptx_endif();
 
     // Skip if feature value is -2.
     ptx_decl(pred, empty);
-    ptx_emit(setp.eq.u32, empty, fidx, PTXImm(-2));
-    ptx_if(oov);
+    ptx_emit(setp.eq.s32, empty, feature, PTXImm(-2));
+    ptx_if(empty);
     ptx_jump(skip);
     ptx_endif();
 
     // Add embedding for feature to sum.
     ptx_decl(b64, mptr);
-    ptx_emit(mad.wide.u32, mptr, fidx, PTXImm(M->stride(0)), embedding);
+    ptx_emit(mad.wide.u32, mptr, feature, PTXImm(M->stride(0)), embedding);
     ptx_decl(f32, value);
     ptx_emit(ld.global.f32, value, PTXAddr(mptr));
     ptx_emit(add.f32, sum, sum, value);
@@ -406,40 +406,60 @@ class CUDACollect : public CUDAKernel {
     int num_features = f->dim(1);
 
     // Use a thread for each feature and embedding dim.
-    ptx->set_grid_dims(num_features, dims);
+    ptx->set_grid_dims(dims, num_features);
 
-    // Get thread feature and embedding position index.
-    ptx_decl(b32, fidx);
-    ptx->GetThreadIndex(fidx, 0);
+    // Get feature and embedding position thread index.
     ptx_decl(b32, midx);
-    ptx->GetThreadIndex(midx, 1);
+    ptx->GetThreadIndex(midx, 0);
+    ptx_decl(b32, fidx);
+    ptx->GetThreadIndex(fidx, 1);
+
+    // Check bounds.
+    ptx_decl(pred, outside_x);
+    ptx_emit(setp.ge.u32, outside_x, midx, PTXImm(dims));
+    ptx_decl(pred, outside_y);
+    ptx_emit(setp.ge.u32, outside_y, fidx, PTXImm(num_features));
+    ptx_decl(pred, outside);
+    ptx_emit(or.pred, outside, outside_x, outside_y);
+    ptx_if(outside);
+    ptx_jump(done);
+    ptx_endif();
 
     // Get feature id.
     ptx_decl(b64, fptr);
     ptx->LoadTensorAddress(fptr, f);
-    ptx_decl(u32, fid);
-    ptx_emit(mad.wide.u32, fptr, fidx, PTXImm(f->stride(0)), fptr);
-    ptx_emit(ld.global.u32, fid, PTXAddr(fptr));
+    ptx_decl(s32, fval);
+    ptx_emit(mad.wide.u32, fptr, fidx, PTXImm(f->stride(1)), fptr);
+    ptx_emit(ld.global.s32, fval, PTXAddr(fptr));
 
-    // Get output address.
-    ptx_decl(b64, result);
-    ptx->LoadTensorAddress(result, R);
-    ptx_decl(b64, rrow);
-    ptx_emit(mad.wide.u32, rrow, fidx, PTXImm(R->stride(0)), result);
-    ptx_decl(b64, rptr);
-    ptx_emit(mad.wide.u32, rptr, midx, PTXImm(R->stride(1)), rrow);
+    // Output zero if feature value is -1.
+    ptx_decl(f32, value);
+    ptx_emit(mov.f32, value, PTXFloat(0));
+    ptx_decl(pred, oov);
+    ptx_emit(setp.eq.s32, oov, fval, PTXImm(-1));
+    ptx_if(oov);
+    ptx_jump(l1);
+    ptx_endif();
 
     // Lookup embedding.
     ptx_decl(b64, mptr);
     ptx->LoadTensorAddress(mptr, M);
-    ptx_decl(f32, value);
-    ptx_decl(pred, oov);
-    ptx_emit(setp.eq.u32, oov, fidx, PTXImm(-1));
-    ptx_if(oov);
-    ptx_emit(mov.f32, value, PTXFloat(0));
-    ptx_else();
+    ptx_emit(mad.wide.u32, mptr, fval, PTXImm(M->stride(0)), mptr);
+    ptx_emit(mad.wide.u32, mptr, midx, PTXImm(M->stride(1)), mptr);
     ptx_emit(ld.global.f32, value, PTXAddr(mptr));
-    ptx_endif();
+
+    // Get output address.
+    ptx_label(l1);
+    ptx_decl(b64, result);
+    ptx->LoadTensorAddress(result, R);
+    ptx_decl(b64, rrow);
+    if (num_features > 1) {
+      ptx_emit(mad.wide.u32, rrow, fidx, PTXImm(R->stride(0)), result);
+    } else {
+      rrow = result;
+    }
+    ptx_decl(b64, rptr);
+    ptx_emit(mad.wide.u32, rptr, midx, PTXImm(R->stride(1)), rrow);
 
     // Store value in result.
     ptx_emit(st.global.f32, PTXAddr(rptr), value);
@@ -453,9 +473,10 @@ class CUDACollect : public CUDAKernel {
 
     // Set OOV indicator to 1.0 if feature is -1.
     ptx_decl(f32, oovval);
-    ptx_emit(mov.f32, oovval, PTXFloat(0));
     ptx_if(oov);
     ptx_emit(mov.f32, oovval, PTXFloat(1.0));
+    ptx_else();
+    ptx_emit(mov.f32, oovval, PTXFloat(0));
     ptx_endif();
     ptx_emit(st.global.f32, PTXAddr(rrow, dims * sizeof(float)), oovval);
 

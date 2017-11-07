@@ -64,17 +64,12 @@ void Parser::Load(Store *store, const string &model) {
 
   // Compile parser flow.
   if (use_gpu_) network_.set_runtime(&cudart);
-  //network_.options().sync_steps = true;
   CHECK(network_.Compile(flow, library_));
 
   // Initialize cells.
   InitLSTM("lr_lstm", &lr_, false);
   InitLSTM("rl_lstm", &rl_, true);
   InitFF("ff", &ff_);
-
-  std::cout << lr_.cell->ToString();
-  std::cout << rl_.cell->ToString();
-  std::cout << ff_.cell->ToString();
 
   // Initialize profiling.
   if (ff_.cell->profile()) profile_ = new Profile(this);
@@ -483,7 +478,7 @@ void ParserInstance::ExtractFeaturesFF(int step) {
   // Extract LSTM focus features.
   const Parser::FF &ff = parser_->ff_;
   int current = state_.current() - state_.begin();
-  if (current == state_.end()) current = -1;
+  if (state_.current() == state_.end()) current = -1;
   int *lr_focus = GetFF(ff.lr_focus_feature);
   int *rl_focus = GetFF(ff.rl_focus_feature);
   if (lr_focus != nullptr) *lr_focus = current;

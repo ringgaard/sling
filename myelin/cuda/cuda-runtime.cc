@@ -77,7 +77,7 @@ void CUDARuntime::AllocateInstance(Instance *instance) {
   CUDAInstance *rt = reinterpret_cast<CUDAInstance *>(data);
 
   // Allocate device instance block.
-  int size = instance->cell()->device_instance_size();
+  size_t size = instance->cell()->device_instance_size();
   if (size > 0) {
     CHECK_CUDA(cuMemAlloc(&rt->data, size));
   } else {
@@ -124,6 +124,15 @@ void CUDARuntime::ClearInstance(Instance *instance) {
   // Do not clear task data at the start of the instance block.
   memset(instance->data() + instance->cell()->data_start(), 0,
          instance->size() - instance->cell()->data_start());
+
+  // Clear instance on device in debug mode.
+#if !defined(NDEBUG)
+  CUDAInstance *rt = reinterpret_cast<CUDAInstance *>(instance->data());
+  if (rt->data != DEVICE_NULL) {
+    size_t size = instance->cell()->device_instance_size();
+    CHECK_CUDA(cuMemsetD8(rt->data, 0, size));
+  }
+#endif
 }
 
 char *CUDARuntime::AllocateChannel(char *data,
@@ -206,6 +215,24 @@ DevicePtr CUDARuntime::CopyTensorToDevice(Tensor *tensor) {
 
 void CUDARuntime::RemoveTensorFromDevice(Tensor *tensor) {
   CHECK_CUDA(cuMemFree(tensor->device_data()));
+}
+
+char *CUDARuntime::FetchTensorFromDevice(const Instance *data, Tensor *tensor) {
+  // Allocate host memory buffer for tensor.
+  char *dest = reinterpret_cast<char *>(malloc(tensor->space()));
+
+  // Copy tensor from device.
+  if (tensor->device_data() != DEVICE_NULL) {
+    CHECK_CUDA(cuMemcpyDtoH(dest, tensor->device_data(), tensor->space()));
+  } else {
+    CUDAInstance *rt = reinterpret_cast<CUDAInstance *>(data->data());
+    CHECK(rt != nullptr);
+    size_t offset = tensor->device_offset();
+    CHECK_NE(offset, -1);
+    CHECK_CUDA(cuMemcpyDtoH(dest, rt->data + offset, tensor->space()));
+  }
+
+  return dest;
 }
 
 void CUDARuntime::EmitTensorTransfers(const Transfers &xfers,

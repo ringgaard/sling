@@ -609,12 +609,20 @@ void Instance::Clear() {
 
 string Instance::ToString(Tensor *param) const {
   // Locate parameter in instance.
-  char *p  = data_ + param->offset();
-  if (param->ref()) {
-    p = *reinterpret_cast<char **>(p);
-    if (p == nullptr) return "null";
-  }
   if (!param->shape().defined()) return "*";
+  char *p;
+  char *buffer = nullptr;
+  if (param->placement() == DEVICE) {
+    if (param->ref()) return "<<device ptr>>";
+    p = buffer = runtime()->FetchTensorFromDevice(this, param);
+  } else {
+    p  = data_ + param->offset();
+    if (param->ref()) {
+      if (param->placement() & DEVICE) return "<<device ref>>";
+      p = *reinterpret_cast<char **>(p);
+    }
+  }
+  if (p == nullptr) return "null";
 
   // Get type traits for elements.
   const TypeTraits &traits = TypeTraits::of(param->type());
@@ -649,15 +657,14 @@ string Instance::ToString(Tensor *param) const {
     str = "<<" + std::to_string(param->rank()) + "D tensor>>";
   }
 
+  free(buffer);
   return str;
 }
 
 string Instance::ToString() const {
   string str;
   for (Tensor *t : cell()->network()->parameters()) {
-    if (t->cell() == cell() &&
-        t->shared() == nullptr &&
-        t->placement() & HOST) {
+    if (t->cell() == cell() && t->shared() == nullptr) {
       str.append(t->name());
       str.append(" = ");
       str.append(ToString(t));
@@ -1499,10 +1506,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         task.state = COMPLETED;
       }
     }
-    if (sync) {
-      VLOG(8) << "Sync main task";
-      masm.CallInstanceFunction(runtime_->SyncMainFunc());
-    }
+
+    // Synchronize main task.
+    masm.CallInstanceFunction(runtime_->SyncMainFunc());
 
     // Stop runtime profiler.
     if (options_.profiling) {
@@ -1716,7 +1722,11 @@ void Cell::WriteCodeToFile(const string &filename) const {
 }
 
 static bool CompareOffset(Tensor *t1, Tensor *t2) {
-  return t1->offset() < t2->offset();
+  if (t1->offset() != t2->offset()) {
+    return t1->offset() < t2->offset();
+  } else {
+    return t1->device_offset() < t2->device_offset();
+  }
 }
 
 static bool Contains(const std::vector<Tensor *> &v, Tensor *t) {

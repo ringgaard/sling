@@ -134,7 +134,8 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
   int grid_dim_y = (y + block_dim_y - 1) / block_dim_y;
   int grid_dim_z = (z + block_dim_z - 1) / block_dim_z;
 
-  VLOG(5) << step->name() << ", block size " << block_size << ", thread ("
+  VLOG(5) << step->name() << ", block size " << block_size
+          << ", min grid size " << min_grid_size << ", thread ("
           << x << "," << y << "," << z
           << "), grid ("
           << grid_dim_x << "," << grid_dim_y << "," << grid_dim_z

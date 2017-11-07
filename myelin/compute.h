@@ -242,6 +242,12 @@ class Runtime {
   // Remove constant tensor from device.
   virtual void RemoveTensorFromDevice(Tensor *tensor) {}
 
+  // Fetch copy of tensor from device. Caller takes ownership of the returned
+  // data buffer.
+  virtual char *FetchTensorFromDevice(const Instance *data, Tensor *tensor) {
+    return nullptr;
+  }
+
   // Generate code for transferring data between host and device.
   virtual void EmitTensorTransfers(const Transfers &xfers,
                                    Cell *cell,
