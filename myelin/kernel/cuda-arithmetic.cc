@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "myelin/kernel/cuda.h"
 
 #include <string>
@@ -142,7 +156,6 @@ class CUDACalculate : public CUDAKernel {
 
     // Allocate registers.
     comp.reg.resize(regs);
-    std::vector<PTXReg> reg(regs);
     for (int i = 0; i < regs; ++i) {
       comp.reg[i] = ptx->reg(comp.type, "r", i);
     }
@@ -379,9 +392,6 @@ class CUDACalculate : public CUDAKernel {
 // CUDA-based argmax using reduction.
 class CUDAArgMax : public CUDAKernel {
  public:
-  static const int MAX_BLOCK_SIZE = 512;
-  static const int WARP_SIZE = 32;
-
   string Name() override { return "CUDAArgMax"; }
   string Operation() override { return "ArgMax"; }
 
@@ -409,9 +419,14 @@ class CUDAArgMax : public CUDAKernel {
     Tensor *y = step->output(0);
     int size = x->elements();
 
+    // Get device capabilities.
+    CUDADevice *device = step->cell()->runtime()->Device();
+    int max_block_size = device->max_threads_per_block();
+    int warp_size = device->warp_size();
+
     // Compute the block size.
     int block_size = 1;
-    while (block_size * 2 <= size && block_size < MAX_BLOCK_SIZE) {
+    while (block_size * 2 <= size && block_size < max_block_size) {
       block_size *= 2;
     }
     ptx->set_grid_dims(block_size);
@@ -522,7 +537,7 @@ class CUDAArgMax : public CUDAKernel {
       // Synchronize threads. No synchronization is needed when all remaining
       // active threads are running in the same warp because instructions are
       // SIMD synchronous within a warp.
-      if (block_size > WARP_SIZE) {
+      if (block_size > warp_size) {
         ptx_emit(bar.sync, PTXImm(0));
       }
       block_size >>= 1;

@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef MYELIN_CUDA_CUDA_H_
 #define MYELIN_CUDA_CUDA_H_
 
@@ -65,7 +79,7 @@ class CUDADevice {
     return value;
   }
 
-  // Return Number of multiprocessors on the device.
+  // Return number of multiprocessors on the device.
   int multiprocessors() const {
     return GetAttribute(CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT);
   }
@@ -93,6 +107,11 @@ class CUDADevice {
   // Maximum number of threads in a block.
   int max_threads_per_block() const {
     return GetAttribute(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK);
+  }
+
+  // Number of threads per warp.
+  int warp_size() const {
+    return GetAttribute(CU_DEVICE_ATTRIBUTE_WARP_SIZE);
   }
 
   // Maximum block dimensions supported by device.
