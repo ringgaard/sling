@@ -1,4 +1,5 @@
 #include <string>
+#include <unordered_map>
 
 #include "base/logging.h"
 #include "base/types.h"
@@ -494,7 +495,7 @@ class WikidataImporter : public task::Processor {
   Store *commons_ = nullptr;
 
   // Wikidata property data types.
-  hash_map<Text, Handle> datatypes_;
+  std::unordered_map<Text, Handle> datatypes_;
 
   // Primary language.
   string primary_language_name_;

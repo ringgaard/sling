@@ -16,7 +16,6 @@
 #define FRAME_ENCODER_H_
 
 #include <string>
-#include <hash_map>
 
 #include "base/macros.h"
 #include "frame/object.h"

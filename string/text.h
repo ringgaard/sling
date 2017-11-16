@@ -264,5 +264,15 @@ template<> struct hash<sling::Text> {
 
 }  // namespace __gnu_cxx
 
+namespace std {
+
+template<> struct hash<sling::Text> {
+  size_t operator()(sling::Text t) const {
+    return sling::HashStringThoroughly(t.data(), t.size());
+  }
+};
+
+}  // namespace std
+
 #endif  // STRING_TEXT_H_
 

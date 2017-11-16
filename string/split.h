@@ -18,12 +18,12 @@
 #define STRING_SPLIT_H_
 
 #include <algorithm>
-#include <hash_map>
 #include <initializer_list>
 #include <iterator>
 #include <map>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
