@@ -44,10 +44,10 @@ static void RunModuleInitializers(bool silent) {
 
 void InitProgram(int *argc, char ***argv) {
   // Install signal handlers for dumping crash information.
-  google::InstallFailureSignalHandler();
+  //google::InstallFailureSignalHandler();
 
   // Initialize logging.
-  google::InitGoogleLogging(*argc == 0 ? "program" : (*argv)[0]);
+  //google::InitGoogleLogging(*argc == 0 ? "program" : (*argv)[0]);
 
   // Initialize command line flags.
   if (*argc > 0) {
@@ -64,10 +64,10 @@ void InitProgram(int *argc, char ***argv) {
 
 void InitSharedLibrary() {
   // Install signal handlers for dumping crash information.
-  google::InstallFailureSignalHandler();
+  //google::InstallFailureSignalHandler();
 
   // Initialize logging.
-  google::InitGoogleLogging("library");
+  //google::InitGoogleLogging("library");
 
   // Run module initializers.
   RunModuleInitializers(true);

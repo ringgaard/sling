@@ -22,7 +22,7 @@ class LibraryInitializer {
  public:
   LibraryInitializer() {
     InitSharedLibrary();
-    google::LogToStderr();
+    //google::LogToStderr();
   };
 };
 

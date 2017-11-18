@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "base/flags.h"
 #include "base/init.h"
 #include "base/logging.h"
 #include "file/file.h"

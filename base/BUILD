@@ -4,6 +4,7 @@ cc_library(
   name = "base",
   srcs = [
     "init.cc",
+    "logging.cc",
     "status.cc",
     "strtoint.cc",
   ],
@@ -21,7 +22,6 @@ cc_library(
   ],
   deps = [
     "//external:gflags",
-    "//external:glog",
   ],
   copts = [
     "-Wno-sign-compare",

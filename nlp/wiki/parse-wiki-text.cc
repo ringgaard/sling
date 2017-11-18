@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 
+#include "base/flags.h"
 #include "base/init.h"
 #include "base/logging.h"
 #include "base/types.h"
