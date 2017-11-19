@@ -23,6 +23,8 @@
 
 namespace sling {
 
+#ifndef LOG
+
 const int INFO = 0;
 const int WARNING = 1;
 const int ERROR = 2;
@@ -34,8 +36,13 @@ class LogMessage : public std::basic_ostringstream<char> {
   LogMessage(const char *fname, int line, int severity);
   ~LogMessage();
 
-  // Returns the minimum log level for VLOG statements.
-  static int LogLevel();
+  // Minimum severity for LOG statements.
+  static int log_level() { return loglevel; }
+  static void set_log_level(int level) { loglevel = level; }
+
+  // Minimum log level for VLOG statements.
+  static int vlog_level() { return vloglevel; }
+  static void set_vlog_level(int level) { vloglevel = level; }
 
  protected:
   void GenerateLogMessage();
@@ -45,7 +52,8 @@ class LogMessage : public std::basic_ostringstream<char> {
   int line_;
   int severity_;
 
-  static int loglevel;
+  static int loglevel;   // log level for LOG
+  static int vloglevel;  // log level for VLOG
 };
 
 // LogMessageFatal ensures the process will exit in failure after
@@ -64,7 +72,7 @@ class LogMessageFatal : public LogMessage {
 #define LOG(severity) _LOG_##severity
 
 // Get log level from VLOG environment variable.
-#define VLOG_IS_ON(level) ((level) <= ::sling::LogMessage::LogLevel())
+#define VLOG_IS_ON(level) ((level) <= ::sling::LogMessage::vlog_level())
 
 #define VLOG(level)                     \
   if (PREDICT_FALSE(VLOG_IS_ON(level))) \
@@ -267,6 +275,8 @@ T &&CheckNotNull(const char *file, int line, const char *exprtext, T &&t) {
   }
   return std::forward<T>(t);
 }
+
+#endif
 
 }  // namespace sling
 

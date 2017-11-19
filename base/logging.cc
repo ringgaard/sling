@@ -14,6 +14,7 @@
 
 #include "base/logging.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
@@ -24,7 +25,8 @@
 
 namespace sling {
 
-int LogMessage::loglevel = -1;
+int LogMessage::loglevel = 0;
+int LogMessage::vloglevel = 0;
 
 LogMessage::LogMessage(const char *fname, int line, int severity)
     : fname_(fname), line_(line), severity_(severity) {}
@@ -41,18 +43,8 @@ void LogMessage::GenerateLogMessage() {
           "IWEF"[severity_], fname_, line_, str().c_str());
 }
 
-int LogMessage::LogLevel() {
-  if (loglevel != -1) return loglevel;
-  const char *vlog = getenv("VLOG");
-  if (vlog == nullptr) {
-    return 0;
-  } else {
-    return std::stoi(vlog);
-  }
-}
-
 LogMessage::~LogMessage() {
-  GenerateLogMessage();
+  if (severity_ >= loglevel) GenerateLogMessage();
 }
 
 LogMessageFatal::LogMessageFatal(const char* file, int line)
