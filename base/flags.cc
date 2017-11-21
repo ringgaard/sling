@@ -133,7 +133,7 @@ int Flag::ParseCommandLineFlags(int *argc, char **argv, bool remove_flags) {
     }
 
     // If we still need a flag value, use the next argument if available.
-    if (flag->type != BOOL && value == nullptr) {
+    if (value == nullptr && flag->type != BOOL) {
       if (i < *argc) {
         value = argv[i++];
       }
@@ -143,6 +143,29 @@ int Flag::ParseCommandLineFlags(int *argc, char **argv, bool remove_flags) {
         rc = j;
         break;
       }
+    }
+
+    // Parse boolean flag value.
+    if (flag->type == BOOL && !neg && value != nullptr) {
+      static const char *trueval[]  = {"1", "t", "true", "y", "yes"};
+      static const char *falseval[] = {"0", "f", "false", "n", "no"};
+      static_assert(sizeof(trueval) == sizeof(falseval), "true/false values");
+      int bval = -1;
+      for (size_t i = 0; i < sizeof(trueval) / sizeof(*trueval); ++i) {
+        if (strcasecmp(value, trueval[i]) == 0) {
+          bval = 1;
+          break;
+        } else if (strcasecmp(value, falseval[i]) == 0) {
+          bval = 0;
+          break;
+        }
+      }
+      if (bval == -1) {
+        std::cerr << "Error: illegal value for boolean flag " << arg << "\n";
+        rc = j;
+        break;
+      }
+      neg = (bval == 0);
     }
 
     // Set the flag.
@@ -172,17 +195,7 @@ int Flag::ParseCommandLineFlags(int *argc, char **argv, bool remove_flags) {
     }
 
     // Handle errors.
-    bool error = false;
-    if (flag->type == BOOL) {
-      error = value != nullptr;
-      if (error) {
-        std::cerr
-            << "Use --flag or --no-flag to set or unset a boolean flag.\n";
-      }
-    } else if (endptr != nullptr && *endptr != '\0') {
-      error = true;
-    }
-    if (error) {
+    if (endptr != nullptr && *endptr != '\0') {
       std::cerr << "Error: illegal value for flag " << arg << " of type "
                 << flagtype[flag->type] << "\nTry --help for options\n";
       rc = j;
