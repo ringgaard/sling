@@ -276,7 +276,7 @@ T &&CheckNotNull(const char *file, int line, const char *exprtext, T &&t) {
   return std::forward<T>(t);
 }
 
-#endif
+#endif  // LOG
 
 }  // namespace sling
 

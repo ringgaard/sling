@@ -60,9 +60,6 @@ void InitProgram(int *argc, char ***argv) {
   LogMessage::set_log_level(FLAGS_loglevel);
   LogMessage::set_vlog_level(FLAGS_v);
 
-  // Install signal handlers for dumping crash information.
-  //google::InstallFailureSignalHandler();
-
   // Run module initializers.
   RunModuleInitializers();
 }

@@ -21,6 +21,9 @@
 
 namespace sling {
 
+// Guard against inclusion of of other flags library.
+#ifndef DEFINE_VARIABLE
+
 // Command line flag information.
 struct Flag {
   // Command line flag types.
@@ -96,6 +99,8 @@ struct Flag {
 #define DECLARE_int64(name) DECLARE_VARIABLE(int64, name)
 #define DECLARE_uint64(name) DECLARE_VARIABLE(uint64, name)
 #define DECLARE_string(name) DECLARE_VARIABLE(string, name)
+
+#endif  // DEFINE_VARIABLE
 
 }  // namespace sling
 
