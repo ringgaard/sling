@@ -1,8 +1,22 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "tools/elf-writer.h"
+
 #include <elf.h>
 #include <string.h>
 #include <stdio.h>
-
-#include "tools/elf-writer.h"
 
 Elf::Elf() {
   // Initialize header.
@@ -77,13 +91,14 @@ Elf::Symbol *Elf::AddSymbol(const char *name) {
 }
 
 Elf::Symbol *Elf::AddSymbol(const char *name, Section *section,
-                            int bind, int type, int size) {
+                            int bind, int type, int size, int value) {
   Symbol *symbol = AddSymbol(name);
   symbol->sym.st_info = ELF64_ST_INFO(bind, type);
   if (section != nullptr) {
     symbol->sym.st_shndx = section->index;
   }
   symbol->sym.st_size = size;
+  symbol->sym.st_value = value;
   return symbol;
 }
 
@@ -150,5 +165,96 @@ void Elf::Write(const char *filename) {
 
   // Close output file.
   fclose(f);
+}
+
+Elf::Buffer::Buffer(Elf *elf,
+                    const char *name,
+                    const char *relaname,
+                    Elf64_Word type,
+                    Elf64_Word flags) : elf(elf) {
+  progbits = elf->AddSection(name, type);
+  progbits->hdr.sh_flags = flags;
+  if (relaname) {
+    rela = elf->AddSection(relaname, SHT_RELA);
+    rela->hdr.sh_link = elf->symtab()->index;
+    rela->hdr.sh_info = progbits->index;
+    rela->hdr.sh_entsize = sizeof(Elf64_Rela);
+    rela->hdr.sh_addralign = 8;
+  } else {
+    rela = nullptr;
+  }
+}
+
+void Elf::Buffer::Add(const void *data, int size) {
+  content.append(reinterpret_cast<const char *>(data), size);
+}
+
+void Elf::Buffer::Add8(uint8_t data) {
+  Add(&data, sizeof(uint8_t));
+}
+
+void Elf::Buffer::Add32(uint32_t data) {
+  Add(&data, sizeof(uint32_t));
+}
+
+void Elf::Buffer::Add64(uint64_t data) {
+  Add(&data, sizeof(uint64_t));
+}
+
+void Elf::Buffer::AddPtr(Buffer *buffer, int offset) {
+  AddReloc(buffer, R_X86_64_64, offset);
+  Add64(0);
+}
+
+void Elf::Buffer::AddPtr32(Buffer *buffer, int offset) {
+  AddReloc(buffer, R_X86_64_32, offset);
+  Add32(0);
+}
+
+void Elf::Buffer::Clear64(int offset) {
+  for (int n = 0; n < 8; ++n) content[offset + n] = 0;
+}
+
+void Elf::Buffer::Align(int alignment) {
+  // Pad section buffer.
+  while (offset() % alignment != 0) Add8(0);
+
+  // Update section alignment.
+  if (progbits->hdr.sh_addralign < alignment) {
+    progbits->hdr.sh_addralign = alignment;
+  }
+}
+
+void Elf::Buffer::AddReloc(Section *section, int type, int addend) {
+  Elf64_Rela rel;
+  rel.r_offset = offset();
+  rel.r_info = ELF64_R_INFO(section->symidx, type);
+  rel.r_addend = addend;
+  relocs.append(reinterpret_cast<const char *>(&rel), sizeof(rel));
+}
+
+void Elf::Buffer::AddReloc(Symbol *symbol, int type, int addend, int offset) {
+  Elf64_Rela rel;
+  rel.r_offset = offset;
+  rel.r_info = ELF64_R_INFO(symbol->index, type);
+  rel.r_addend = addend;
+  relocs.append(reinterpret_cast<const char *>(&rel), sizeof(rel));
+}
+
+void Elf::Buffer::AddReloc(Symbol *symbol, int type, int addend) {
+  AddReloc(symbol, type, addend, offset());
+}
+
+void Elf::Buffer::AddReloc(Buffer *buffer, int type, int addend) {
+  AddReloc(buffer->progbits, type, addend);
+}
+
+void Elf::Buffer::Update() {
+  progbits->data = content.data();
+  progbits->hdr.sh_size = content.size();
+  if (rela) {
+    rela->data = relocs.data();
+    rela->hdr.sh_size = relocs.size();
+  }
 }
 

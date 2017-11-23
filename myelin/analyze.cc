@@ -21,6 +21,7 @@
 #include "base/types.h"
 #include "file/file.h"
 #include "myelin/compute.h"
+#include "myelin/elf-linker.h"
 #include "myelin/flow.h"
 #include "myelin/graph.h"
 #include "myelin/profile.h"
@@ -42,6 +43,8 @@ DEFINE_string(graph, "", "DOT file name for flow");
 DEFINE_bool(consts, true, "Include constants in DOT graph");
 DEFINE_string(datagraph, "", "DOT file name prefix for data profile");
 DEFINE_int32(batch, 1, "Batch size");
+DEFINE_string(o, "", "ELF object output file for generated code");
+DEFINE_bool(gendata, false, "Output tensor data to ELF object file");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -92,7 +95,13 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_raw) {
     // Compile model.
     LOG(INFO) << "Compiling flow";
+    ElfLinker *linker = nullptr;
     Network network;
+    if (!FLAGS_o.empty()) {
+      linker = new ElfLinker();
+      if (FLAGS_gendata) linker->set_generate_data(true);
+      network.set_linker(linker);
+    }
     if (FLAGS_profile) network.options().profiling = true;
     if (FLAGS_dynalloc) network.options().dynamic_allocation = true;
     if (!network.Compile(flow, library)) {
@@ -112,10 +121,10 @@ int main(int argc, char *argv[]) {
       // Dump data profile.
       if (!FLAGS_datagraph.empty()) {
         string svgfn = FLAGS_datagraph + cell->name() + ".svg";
-        DataProfile dprof(cell);
+        DataProfile data_profile(cell);
         LOG(INFO) << "Writing data profile for " << cell->name()
                   << " to " << svgfn;
-        File::WriteContents(svgfn, dprof.AsSVG());
+        File::WriteContents(svgfn, data_profile.AsSVG());
       }
 
       // Dump generated code to file. The file can be viewed with objdump:
@@ -126,6 +135,15 @@ int main(int argc, char *argv[]) {
         cell->WriteCodeToFile(binfn);
       }
     }
+
+    // Write object file. The file can be viewed with objdump:
+    // objdump -t -r -d -M intel --no-show-raw-insn <ofn>
+    if (linker != nullptr) {
+      LOG(INFO) << "Write code and data to " << FLAGS_o;
+      linker->Link();
+      linker->Write(FLAGS_o.c_str());
+    }
+    delete linker;
   }
 
   return 0;
