@@ -190,7 +190,8 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
   __ pushq(Immediate(block_dim_z));
 
   // Call cuLaunchKernel.
-  __ movp(tmpreg, reinterpret_cast<void *>(cuLaunchKernel));
+  __ load_extern(tmpreg, reinterpret_cast<void *>(cuLaunchKernel),
+                 "cuLaunchKernel");
   __ call(tmpreg);
   __ addq(rsp, Immediate(7 * 8));
   CUDARuntime::EmitStatusCheck("cuLaunchKernel", masm);
