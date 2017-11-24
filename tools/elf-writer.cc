@@ -18,6 +18,9 @@
 #include <string.h>
 #include <stdio.h>
 
+// Offset for global symbol indices.
+static const int GLOBAL_SYMBOL_OFFSET = 1 << 20;
+
 Elf::Elf() {
   // Initialize header.
   memset(&ehdr_, 0, sizeof(ehdr_));
@@ -37,7 +40,7 @@ Elf::Elf() {
   ehdr_.e_shentsize = sizeof(Elf64_Shdr);
 
   // Add null symbol as first symbol.
-  AddSymbol("");
+  AddSymbol("", false);
 
   // Add null section as first section.
   AddSection("", SHT_NULL);
@@ -48,7 +51,8 @@ Elf::Elf() {
 
 Elf::~Elf() {
   for (auto *section : sections_) delete section;
-  for (auto *symbol : symbols_) delete symbol;
+  for (auto *symbol : local_symbols_) delete symbol;
+  for (auto *symbol : global_symbols_) delete symbol;
 }
 
 Elf::Section *Elf::AddSection(const char *name, Elf64_Word type) {
@@ -73,10 +77,16 @@ Elf::Section *Elf::AddSection(const char *name, Elf64_Word type) {
   return section;
 }
 
-Elf::Symbol *Elf::AddSymbol(const char *name) {
+Elf::Symbol *Elf::AddSymbol(const char *name, bool global) {
   // Allocate new symbol.
-  Symbol *symbol = new Symbol(symbols_.size());
-  symbols_.push_back(symbol);
+  Symbol *symbol;
+  if (global) {
+    symbol = new Symbol(global_symbols_.size() + GLOBAL_SYMBOL_OFFSET);
+    global_symbols_.push_back(symbol);
+  } else {
+    symbol = new Symbol(local_symbols_.size());
+    local_symbols_.push_back(symbol);
+  }
 
   // Set symbol name.
   int namelen = strlen(name);
@@ -92,7 +102,7 @@ Elf::Symbol *Elf::AddSymbol(const char *name) {
 
 Elf::Symbol *Elf::AddSymbol(const char *name, Section *section,
                             int bind, int type, int size, int value) {
-  Symbol *symbol = AddSymbol(name);
+  Symbol *symbol = AddSymbol(name, bind == STB_GLOBAL);
   symbol->sym.st_info = ELF64_ST_INFO(bind, type);
   if (section != nullptr) {
     symbol->sym.st_shndx = section->index;
@@ -103,21 +113,20 @@ Elf::Symbol *Elf::AddSymbol(const char *name, Section *section,
 }
 
 void Elf::Update() {
-  // Build symbol table section.
-  for (int i = 0; i < symbols_.size(); ++i) {
-    // Copy symbol.
-    symbol_data_.push_back(symbols_[i]->sym);
-
-    // Set first non-local symbol. Local symbols must come before non-local
-    // symbols in the symbol table.
-    if (ELF64_ST_BIND(symbols_[i]->sym.st_info) == STB_LOCAL) {
-      symtab_->hdr.sh_info = i + 1;
-    }
+  // Build symbol table. Local symbols must come before non-local symbols in the
+  // symbol table.
+  for (int i = 0; i < local_symbols_.size(); ++i) {
+    symbol_data_.push_back(local_symbols_[i]->sym);
   }
+  for (int i = 0; i < global_symbols_.size(); ++i) {
+    symbol_data_.push_back(global_symbols_[i]->sym);
+  }
+
   symtab_->data = symbol_data_.data();
   symtab_->hdr.sh_size = symbol_data_.size() * sizeof(Elf64_Sym);
   symtab_->hdr.sh_entsize = sizeof(Elf64_Sym);
   symtab_->hdr.sh_addralign = 8;
+  symtab_->hdr.sh_info = local_symbols_.size();
 
   // Build symbol name string table.
   Section *strtab = AddSection(".strtab", SHT_STRTAB);
@@ -230,7 +239,7 @@ void Elf::Buffer::AddReloc(Section *section, int type, int addend) {
   rel.r_offset = offset();
   rel.r_info = ELF64_R_INFO(section->symidx, type);
   rel.r_addend = addend;
-  relocs.append(reinterpret_cast<const char *>(&rel), sizeof(rel));
+  relocs.push_back(rel);
 }
 
 void Elf::Buffer::AddReloc(Symbol *symbol, int type, int addend, int offset) {
@@ -238,7 +247,7 @@ void Elf::Buffer::AddReloc(Symbol *symbol, int type, int addend, int offset) {
   rel.r_offset = offset;
   rel.r_info = ELF64_R_INFO(symbol->index, type);
   rel.r_addend = addend;
-  relocs.append(reinterpret_cast<const char *>(&rel), sizeof(rel));
+  relocs.push_back(rel);
 }
 
 void Elf::Buffer::AddReloc(Symbol *symbol, int type, int addend) {
@@ -253,8 +262,19 @@ void Elf::Buffer::Update() {
   progbits->data = content.data();
   progbits->hdr.sh_size = content.size();
   if (rela) {
+    // Adjust symbol indices for global symbols in relocations.
+    int global_offset = elf->num_local_symbols() - GLOBAL_SYMBOL_OFFSET;
+    for (Elf64_Rela &rel : relocs) {
+      int symidx = ELF64_R_SYM(rel.r_info);
+      if (symidx >=  GLOBAL_SYMBOL_OFFSET) {
+        rel.r_info = ELF64_R_INFO(symidx + global_offset,
+                                  ELF64_R_TYPE(rel.r_info));
+      }
+    }
+
+    // Set data for relocation section.
     rela->data = relocs.data();
-    rela->hdr.sh_size = relocs.size();
+    rela->hdr.sh_size = relocs.size() * sizeof(Elf64_Rela);
   }
 }
 

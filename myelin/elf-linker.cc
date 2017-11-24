@@ -17,6 +17,8 @@
 namespace sling {
 namespace myelin {
 
+void ElfLinker::StartNetwork(Network *network) {}
+
 void ElfLinker::StartCell(Cell *cell) {
   // Align code buffer before generating new cell computation function.
   code_.Align(16);
@@ -77,7 +79,7 @@ void ElfLinker::AddData(Tensor *data) {
 
     // Add symbol for data block.
     Elf::Symbol *sym = elf_.AddSymbol(data->name().c_str(), data_.progbits,
-                                      STB_GLOBAL, STT_OBJECT,
+                                      STB_LOCAL, STT_OBJECT,
                                       data->space(), data_.offset());
     symbols_[data->name()] = sym;
 

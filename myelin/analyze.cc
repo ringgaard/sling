@@ -49,13 +49,44 @@ DEFINE_bool(gendata, false, "Output tensor data to ELF object file");
 using namespace sling;
 using namespace sling::myelin;
 
+// Stub for Dragnn initializer.
+class FixedDragnnInitializer : public Kernel {
+ public:
+  string Name() override { return "WordInitializerDummy"; }
+  string Operation() override { return "WordEmbeddingInitializer"; }
+
+  bool Supports(Step *step) override { return true; }
+
+  void Generate(Step *step, MacroAssembler *masm) override {}
+};
+
+// Type inference for Dragnn ops.
+class FixedDragnnTyper : public Typer {
+ public:
+  bool InferTypes(Flow::Operation *op) override {
+    if (op->type == "WordEmbeddingInitializer") {
+      if (op->outdegree() == 1) {
+        Flow::Variable *result = op->outputs[0];
+        result->type = DT_INT32;
+        result->shape.clear();
+      }
+    }
+
+    return false;
+  }
+};
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
   // Set up kernel library.
   Library library;
   if (FLAGS_tf) RegisterTensorflowLibrary(&library);
-  if (FLAGS_dragnn) RegisterDragnnLibrary(&library);
+  if (FLAGS_dragnn) {
+    RegisterDragnnLibrary(&library);
+    library.Register(new FixedDragnnInitializer());
+    library.RegisterTyper(new FixedDragnnTyper());
+  }
 
   // Load flow.
   Flow flow;
@@ -136,7 +167,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // Write object file. The file can be viewed with objdump:
+    // Write ELF object file. The file can be viewed with objdump:
     // objdump -t -r -d -M intel --no-show-raw-insn <ofn>
     if (linker != nullptr) {
       LOG(INFO) << "Write code and data to " << FLAGS_o;

@@ -268,6 +268,9 @@ class Linker {
  public:
   virtual ~Linker() = default;
 
+  // Start compilation of network.
+  virtual void StartNetwork(Network *network) = 0;
+
   // Start code generation for cell.
   virtual void StartCell(Cell *cell) = 0;
 

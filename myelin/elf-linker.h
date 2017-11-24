@@ -28,6 +28,9 @@ namespace myelin {
 // Myelin linker for outputting code and data to ELF object file.
 class ElfLinker : public Linker {
  public:
+  // Start generating code for network.
+  void StartNetwork(Network *network) override;
+
   // Start generating code for cell.
   void StartCell(Cell *cell) override;
 
@@ -61,8 +64,8 @@ class ElfLinker : public Linker {
                     SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR};
 
   // Data section.
-  Elf::Buffer data_{&elf_, ".data", ".rela.data",
-                    SHT_PROGBITS, SHF_ALLOC | SHF_WRITE};
+  Elf::Buffer data_{&elf_, ".rodata", ".rela.rodata",
+                    SHT_PROGBITS, SHF_ALLOC};
 
   // External symbols.
   std::unordered_map<string, Elf::Symbol *> symbols_;

@@ -154,6 +154,7 @@ static BasicRuntime default_runtime;
 // Linker for JIT generation of code.
 class JITLinker : public Linker {
  public:
+  void StartNetwork(Network *network) override {}
   void StartCell(Cell *cell) override {}
   void AddStep(Step *step, int offset) override {}
 
@@ -812,6 +813,9 @@ static bool CompareUsage(const std::pair<int, Tensor *> &a,
 }
 
 bool Network::Compile(const Flow &flow, const Library &library) {
+  // Let linker configure network before compilation.
+  linker_->StartNetwork(this);
+
   // Fetch information about the CPU we are running on.
   jit::CPU::Probe();
 

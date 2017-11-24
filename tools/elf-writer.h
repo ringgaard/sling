@@ -31,12 +31,11 @@ class Elf {
     Section(int idx) {
       memset(&hdr, 0, sizeof(Elf64_Shdr));
       index = idx;
-      data = nullptr;
     }
     Elf64_Shdr hdr;
     int index;
     int symidx = 0;
-    const void *data;
+    const void *data = nullptr;
   };
 
   // Symbol in ELF file.
@@ -80,11 +79,11 @@ class Elf {
     // Return current offset in section buffer.
     int offset() const { return content.size(); }
 
-    Elf *elf;             // ELF file for section
-    Section *progbits;    // section for data
-    Section *rela;        // section for relocations
-    std::string content;  // section content
-    std::string relocs;   // section relocations
+    Elf *elf;                        // ELF file for section
+    Section *progbits;               // section for data
+    Section *rela;                   // section for relocations
+    std::string content;             // section content
+    std::vector<Elf64_Rela> relocs;  // section relocations
   };
 
   Elf();
@@ -94,7 +93,7 @@ class Elf {
   Section *AddSection(const char *name, Elf64_Word type);
 
   // Add symbol to ELF file.
-  Symbol *AddSymbol(const char *name);
+  Symbol *AddSymbol(const char *name, bool global);
   Symbol *AddSymbol(const char *name, Section *section,
                     int bind, int type, int size = 0, int value = 0);
 
@@ -107,12 +106,16 @@ class Elf {
   // Return symbol table.
   Section *symtab() { return symtab_; }
 
+  // Return number of local symbols.
+  int num_local_symbols() { return local_symbols_.size(); }
+
  private:
   // ELF file header.
   Elf64_Ehdr ehdr_;
 
-  // Symbol table.
-  std::vector<Symbol *> symbols_;
+  // Local and global symbols.
+  std::vector<Symbol *> local_symbols_;
+  std::vector<Symbol *> global_symbols_;
 
   // Symbol names.
   std::string symbol_names_;
