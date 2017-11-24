@@ -17,8 +17,6 @@
 namespace sling {
 namespace myelin {
 
-void ElfLinker::StartNetwork(Network *network) {}
-
 void ElfLinker::StartCell(Cell *cell) {
   // Align code buffer before generating new cell computation function.
   code_.Align(16);
@@ -30,7 +28,7 @@ void ElfLinker::AddStep(Step *step, int offset) {
                  0, code_.offset() + offset);
 }
 
-void ElfLinker::AddCode(Cell *cell,
+void ElfLinker::EndCell(Cell *cell,
                         jit::CodeGenerator *generator,
                         jit::Code *code,
                         int data_size) {

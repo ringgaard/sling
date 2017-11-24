@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "tools/elf-writer.h"
+#include "util/elf-writer.h"
 
 #include <elf.h>
 #include <string.h>

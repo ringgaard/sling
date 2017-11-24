@@ -91,7 +91,7 @@ cc_library(
   deps = [
     ":compute",
     "//base",
-    "//tools:elf-writer",
+    "//util:elf-writer",
   ],
 )
 

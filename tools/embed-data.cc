@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include "tools/elf-writer.h"
+#include "util/elf-writer.h"
 
 // Package files as embedded data in an ELF object file.
 class EmbeddedData {

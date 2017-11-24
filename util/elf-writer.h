@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TOOLS_ELF_WRITER_
-#define TOOLS_ELF_WRITER_
+#ifndef UTIL_ELF_WRITER_
+#define UTIL_ELF_WRITER_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -133,4 +133,4 @@ class Elf {
   std::string section_names_;
 };
 
-#endif  // TOOLS_ELF_WRITER_
+#endif  // UTIL_ELF_WRITER_

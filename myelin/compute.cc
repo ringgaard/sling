@@ -154,19 +154,13 @@ static BasicRuntime default_runtime;
 // Linker for JIT generation of code.
 class JITLinker : public Linker {
  public:
-  void StartNetwork(Network *network) override {}
-  void StartCell(Cell *cell) override {}
-  void AddStep(Step *step, int offset) override {}
-
-  void AddCode(Cell *cell,
+  void EndCell(Cell *cell,
                jit::CodeGenerator *generator,
                jit::Code *code,
                int data_size) override {
     // Allocate executable code object in memory.
     code->Allocate(generator);
   }
-
-  void AddData(Tensor *data) override {}
 };
 
 static JITLinker jit_linker;
@@ -814,7 +808,7 @@ static bool CompareUsage(const std::pair<int, Tensor *> &a,
 
 bool Network::Compile(const Flow &flow, const Library &library) {
   // Let linker configure network before compilation.
-  linker_->StartNetwork(this);
+  linker_->BeginNetwork(this);
 
   // Fetch information about the CPU we are running on.
   jit::CPU::Probe();
@@ -1617,12 +1611,15 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     masm.GenerateDataBlocks();
 
     // Add generated code to linker.
-    linker_->AddCode(cell, &masm, &cell->code_, masm.pc_offset() - code_size);
+    linker_->EndCell(cell, &masm, &cell->code_, masm.pc_offset() - code_size);
     VLOG(5) << cell->name()
             << " entry address: " << cell->code_.entry()
             << " code size: " << cell->code_.size()
             << " data size: " << cell->instance_size();
   }
+
+  // Notify linker that compilation of network has completed.
+  linker_->EndNetwork(this);
 
   return true;
 }

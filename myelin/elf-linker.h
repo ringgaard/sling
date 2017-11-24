@@ -20,7 +20,7 @@
 
 #include "base/types.h"
 #include "myelin/compute.h"
-#include "tools/elf-writer.h"
+#include "util/elf-writer.h"
 
 namespace sling {
 namespace myelin {
@@ -28,9 +28,6 @@ namespace myelin {
 // Myelin linker for outputting code and data to ELF object file.
 class ElfLinker : public Linker {
  public:
-  // Start generating code for network.
-  void StartNetwork(Network *network) override;
-
   // Start generating code for cell.
   void StartCell(Cell *cell) override;
 
@@ -38,7 +35,7 @@ class ElfLinker : public Linker {
   void AddStep(Step *step, int offset) override;
 
   // Add code for cell.
-  void AddCode(Cell *cell,
+  void EndCell(Cell *cell,
                jit::CodeGenerator *generator,
                jit::Code *code,
                int data_size) override;

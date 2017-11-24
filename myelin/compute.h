@@ -268,23 +268,26 @@ class Linker {
  public:
   virtual ~Linker() = default;
 
-  // Start compilation of network.
-  virtual void StartNetwork(Network *network) = 0;
+  // Begin compilation of network.
+  virtual void BeginNetwork(Network *network) {}
+
+  // Compilation of network complete.
+  virtual void EndNetwork(Network *network) {}
 
   // Start code generation for cell.
-  virtual void StartCell(Cell *cell) = 0;
+  virtual void StartCell(Cell *cell) {}
 
-  // Add entry point for step.
-  virtual void AddStep(Step *step, int offset) = 0;
-
-  // Add generated code to linker.
-  virtual void AddCode(Cell *cell,
+  // Compilation of cell completed.
+  virtual void EndCell(Cell *cell,
                        jit::CodeGenerator *generator,
                        jit::Code *code,
-                       int data_size) = 0;
+                       int data_size) {}
+
+  // Add entry point for step.
+  virtual void AddStep(Step *step, int offset) {}
 
   // Add tensor data block to linker.
-  virtual void AddData(Tensor *data) = 0;
+  virtual void AddData(Tensor *data) {}
 };
 
 // A tensor is a multi-dimensional array that can be used for constants and
