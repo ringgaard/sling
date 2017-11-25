@@ -807,9 +807,6 @@ static bool CompareUsage(const std::pair<int, Tensor *> &a,
 }
 
 bool Network::Compile(const Flow &flow, const Library &library) {
-  // Let linker configure network before compilation.
-  linker_->BeginNetwork(this);
-
   // Fetch information about the CPU we are running on.
   jit::CPU::Probe();
 
@@ -886,6 +883,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       tensors[link]->link_ = t;
     }
   }
+
+  // Let linker configure network before compilation.
+  linker_->BeginNetwork(this);
 
   // Find kernels for implementing each step.
   std::unordered_map<Flow::Function *, Cell *> cells;
@@ -1349,7 +1349,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   // Compile each cell computation.
   for (Cell *cell : cells_) {
     // Start code generation for cell.
-    linker_->StartCell(cell);
+    linker_->BeginCell(cell);
 
     // Create macro assembler for code generation.
     MacroAssembler masm(nullptr, 0, options_);

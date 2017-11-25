@@ -17,7 +17,7 @@
 namespace sling {
 namespace myelin {
 
-void ElfLinker::StartCell(Cell *cell) {
+void ElfLinker::BeginCell(Cell *cell) {
   // Align code buffer before generating new cell computation function.
   code_.Align(16);
 }

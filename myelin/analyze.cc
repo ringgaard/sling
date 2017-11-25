@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Write ELF object file. The file can be viewed with objdump:
-    // objdump -t -r -d -M intel --no-show-raw-insn <ofn>
+    // objdump -xrtdw -M intel --no-show-raw-insn <ofn>
     if (linker != nullptr) {
       LOG(INFO) << "Write code and data to " << FLAGS_o;
       linker->Link();

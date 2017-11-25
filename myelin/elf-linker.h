@@ -29,7 +29,7 @@ namespace myelin {
 class ElfLinker : public Linker {
  public:
   // Start generating code for cell.
-  void StartCell(Cell *cell) override;
+  void BeginCell(Cell *cell) override;
 
   // Add local entry point for step.
   void AddStep(Step *step, int offset) override;
