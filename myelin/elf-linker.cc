@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <iostream>
+
 #include "myelin/elf-linker.h"
 
 namespace sling {
@@ -84,6 +86,10 @@ void ElfLinker::AddData(Tensor *data) {
     // Output tensor to data section.
     data_.Add(data->data(), data->space());
   }
+}
+
+void ElfLinker::AddDeviceCode(Step *step, const string &code) {
+  std::cout << "GPU code for step " << step->name() << ":\n" << code << "\n";
 }
 
 void ElfLinker::Link() {

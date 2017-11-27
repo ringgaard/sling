@@ -43,6 +43,9 @@ class ElfLinker : public Linker {
   // Add data for tensor.
   void AddData(Tensor *data) override;
 
+  // Add device code for step.
+  void AddDeviceCode(Step *step, const string &code) override;
+
   // Link sections.
   void Link();
 

@@ -288,6 +288,9 @@ class Linker {
 
   // Add tensor data block to linker.
   virtual void AddData(Tensor *data) {}
+
+  // Add device code for step.
+  virtual void AddDeviceCode(Step *step, const string &code) {}
 };
 
 // A tensor is a multi-dimensional array that can be used for constants and

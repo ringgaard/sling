@@ -342,7 +342,7 @@ std::vector<CUDARuntime::Block> CUDARuntime::MergedTransfers(
   // Sort transfers in task and instance offset order.
   std::vector<Transfer> t = xfers;
   std::sort(t.begin(), t.end(), [](const Transfer &a, const Transfer &b) {
-    if (a.taskidx == a.taskidx) {
+    if (a.taskidx == b.taskidx) {
       return a.tensor->offset() < b.tensor->offset();
     } else {
       return a.taskidx < b.taskidx;
@@ -389,6 +389,14 @@ void CUDARuntime::EmitStatusCheck(const char *msg, MacroAssembler *masm) {
   masm->call(r10);
   masm->bind(&l);
 #endif
+}
+
+void CUDARuntime::StartProfiler(void *data) {
+  cuProfilerStart();
+}
+
+void CUDARuntime::StopProfiler(void *data) {
+  cuProfilerStop();
 }
 
 }  // namespace myelin

@@ -116,6 +116,8 @@ cc_binary(
     ":profile",
     "//base",
     "//file:posix",
+    "//myelin/cuda:cuda-runtime",
+    "//myelin/kernel:cuda",
     "//myelin/kernel:dragnn",
     "//myelin/kernel:tensorflow",
   ],

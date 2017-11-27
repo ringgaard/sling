@@ -25,6 +25,8 @@
 #include "myelin/flow.h"
 #include "myelin/graph.h"
 #include "myelin/profile.h"
+#include "myelin/cuda/cuda-runtime.h"
+#include "myelin/kernel/cuda.h"
 #include "myelin/kernel/dragnn.h"
 #include "myelin/kernel/tensorflow.h"
 
@@ -45,9 +47,14 @@ DEFINE_string(datagraph, "", "DOT file name prefix for data profile");
 DEFINE_int32(batch, 1, "Batch size");
 DEFINE_string(o, "", "ELF object output file for generated code");
 DEFINE_bool(gendata, false, "Output tensor data to ELF object file");
+DEFINE_bool(gpu, false, "Run kernels on GPU");
+DEFINE_bool(argmax, false, "Use argmax for predictions");
 
 using namespace sling;
 using namespace sling::myelin;
+
+// CUDA runtime.
+static myelin::CUDARuntime cudart;
 
 // Stub for Dragnn initializer.
 class FixedDragnnInitializer : public Kernel {
@@ -87,12 +94,25 @@ int main(int argc, char *argv[]) {
     library.Register(new FixedDragnnInitializer());
     library.RegisterTyper(new FixedDragnnTyper());
   }
+  if (FLAGS_gpu) RegisterCUDALibrary(&library);
 
   // Load flow.
   Flow flow;
   LOG(INFO) << "Loading flow from " << FLAGS_flow;
   flow.set_batch_size(FLAGS_batch);
   CHECK(flow.Load(FLAGS_flow));
+
+  if (FLAGS_argmax) {
+    for (auto *func : flow.funcs()) {
+      auto *output = flow.Var(func->name + "/output");
+      if (output != nullptr) {
+        auto *prediction = flow.AddVariable(func->name + "/prediction",
+                                            DT_INT32, {1});
+        flow.AddOperation(func, func->name + "/ArgMax", "ArgMax",
+                          {output}, {prediction});
+      }
+    }
+  }
 
   if (!FLAGS_raw) {
     // Analyze flow.
@@ -128,6 +148,10 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Compiling flow";
     ElfLinker *linker = nullptr;
     Network network;
+    if (FLAGS_gpu) {
+      cudart.Connect();
+      network.set_runtime(&cudart);
+    }
     if (!FLAGS_o.empty()) {
       linker = new ElfLinker();
       if (FLAGS_gendata) linker->set_generate_data(true);
