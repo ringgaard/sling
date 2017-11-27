@@ -275,7 +275,7 @@ class Linker {
   virtual void EndNetwork(Network *network) {}
 
   // Start code generation for cell.
-  virtual void StartCell(Cell *cell) {}
+  virtual void BeginCell(Cell *cell) {}
 
   // Compilation of cell completed.
   virtual void EndCell(Cell *cell,
