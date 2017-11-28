@@ -9,6 +9,8 @@
 
 #include "util/elf-writer.h"
 
+using sling::Elf;
+
 // Package files as embedded data in an ELF object file.
 class EmbeddedData {
  public:
