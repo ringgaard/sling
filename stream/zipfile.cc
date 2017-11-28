@@ -40,7 +40,7 @@ ZipFileReader::ZipFileReader(const string &filename, int block_size) {
   // Read the 64-bit version of the record, if any. If found, this will
   // supersede the ordinary record read above.
   int locator_size = sizeof(EOCD64Locator);
-  uint64 locator_offset = size - sizeof(EOCDRecord) - locator_size;
+  int64 locator_offset = size - sizeof(EOCDRecord) - locator_size;
   if (locator_offset >= 0) {
     CHECK(file_->Seek(locator_offset));
     EOCD64Locator locator;

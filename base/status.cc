@@ -29,6 +29,7 @@ Status::State *Status::CopyState(const State *s) {
   if (s == nullptr) return nullptr;
   int size = sizeof(State) + s->length + 1;
   State *result = static_cast<State *>(malloc(size));
+  CHECK(result != nullptr);
   memcpy(result, s, size);
   return result;
 }
@@ -38,6 +39,7 @@ Status::Status(int code, const char *msg) {
   int length = strlen(msg);
   int size = sizeof(State) + length + 1;
   state_ = static_cast<State *>(malloc(size));
+  CHECK(state_ != nullptr);
   state_->length = length;
   state_->code = code;
   memcpy(state_->message(), msg, length + 1);
@@ -50,6 +52,7 @@ Status::Status(int code, const char *msg1, const char *msg2)  {
   int length = length1 + length2 + 2;
   int size = sizeof(State) + length + 1;
   state_ = static_cast<State *>(malloc(size));
+  CHECK(state_ != nullptr);
   state_->length = length;
   state_->code = code;
   char *msg = state_->message();
