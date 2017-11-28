@@ -1,4 +1,6 @@
 dist: trusty
+language: cpp
+compiler: gcc
 
 addons:
   apt:
@@ -7,10 +9,10 @@ addons:
     packages:
       - wget
       - pkg-config
+      - g++-4.8.4
 
 before_install:
   - wget https://github.com/bazelbuild/bazel/releases/download/0.8.0/bazel_0.8.0-linux-x86_64.deb
-  - sha256sum -c tools/bazel_0.8.0-linux-x86_64.deb.sha256
   - sudo dpkg -i bazel_0.8.0-linux-x86_64.deb
 
 script:
