@@ -15,13 +15,15 @@
 #ifndef UTIL_ELF_WRITER_
 #define UTIL_ELF_WRITER_
 
+#include <elf.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <elf.h>
 
 #include <string>
 #include <vector>
+
+namespace sling {
 
 // ELF object file writer.
 class Elf {
@@ -73,7 +75,8 @@ class Elf {
     void AddReloc(Symbol *symbol, int type, int addend = 0);
     void AddReloc(Buffer *buffer, int type, int addend = 0);
 
-    // Update section information.
+    // Update section information. This must be called once after all the data
+    // has been added to the section buffer and before the ELF file is updated.
     void Update();
 
     // Return current offset in section buffer.
@@ -97,7 +100,8 @@ class Elf {
   Symbol *AddSymbol(const char *name, Section *section,
                     int bind, int type, int size = 0, int value = 0);
 
-  // Update symbol and section tables.
+  // Update symbol and section tables. The must be called once before the ELF
+  // file is written out.
   void Update();
 
   // Write ELF object file.
@@ -132,5 +136,7 @@ class Elf {
   // Section names.
   std::string section_names_;
 };
+
+}  // namespace sling
 
 #endif  // UTIL_ELF_WRITER_

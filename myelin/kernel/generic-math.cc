@@ -125,7 +125,7 @@ class GenericFltAbs : public GenericFltMathFunction {
   string Name() override { return "GenFltAbs"; }
   string Operation() override { return "Abs"; }
   FltFunc Function() override { return fabsf; }
-  string FunctionSymbol() override { return "_fabsf"; }
+  string FunctionSymbol() override { return "fabsf"; }
 };
 
 class GenericFltSqrt : public GenericFltMathFunction {
@@ -133,7 +133,7 @@ class GenericFltSqrt : public GenericFltMathFunction {
   string Name() override { return "GenFltSqrt"; }
   string Operation() override { return "Sqrt"; }
   FltFunc Function() override { return sqrtf; }
-  string FunctionSymbol() override { return "_sqrtf"; }
+  string FunctionSymbol() override { return "sqrtf"; }
 };
 
 class GenericFltExp : public GenericFltMathFunction {
@@ -141,7 +141,7 @@ class GenericFltExp : public GenericFltMathFunction {
   string Name() override { return "GenFltExp"; }
   string Operation() override { return "Exp"; }
   FltFunc Function() override { return expf; }
-  string FunctionSymbol() override { return "_expf"; }
+  string FunctionSymbol() override { return "expf"; }
 };
 
 class GenericFltLog : public GenericFltMathFunction {
@@ -149,7 +149,7 @@ class GenericFltLog : public GenericFltMathFunction {
   string Name() override { return "GenFltLog"; }
   string Operation() override { return "Log"; }
   FltFunc Function() override { return logf; }
-  string FunctionSymbol() override { return "_logf"; }
+  string FunctionSymbol() override { return "logf"; }
 };
 
 class GenericFltCeil : public GenericFltMathFunction {
@@ -157,7 +157,7 @@ class GenericFltCeil : public GenericFltMathFunction {
   string Name() override { return "GenFltCeil"; }
   string Operation() override { return "Ceil"; }
   FltFunc Function() override { return ceilf; }
-  string FunctionSymbol() override { return "_ceilf"; }
+  string FunctionSymbol() override { return "ceilf"; }
 };
 
 class GenericFltFloor : public GenericFltMathFunction {
@@ -165,7 +165,7 @@ class GenericFltFloor : public GenericFltMathFunction {
   string Name() override { return "GenFltFloor"; }
   string Operation() override { return "Floor"; }
   FltFunc Function() override { return floorf; }
-  string FunctionSymbol() override { return "_floorf"; }
+  string FunctionSymbol() override { return "floorf"; }
 };
 
 class GenericFltCos : public GenericFltMathFunction {
@@ -173,7 +173,7 @@ class GenericFltCos : public GenericFltMathFunction {
   string Name() override { return "GenFltCos"; }
   string Operation() override { return "Cos"; }
   FltFunc Function() override { return cosf; }
-  string FunctionSymbol() override { return "_cosf"; }
+  string FunctionSymbol() override { return "cosf"; }
 };
 
 class GenericFltSin : public GenericFltMathFunction {
@@ -181,7 +181,7 @@ class GenericFltSin : public GenericFltMathFunction {
   string Name() override { return "GenFltSin"; }
   string Operation() override { return "Sin"; }
   FltFunc Function() override { return sinf; }
-  string FunctionSymbol() override { return "_sinf"; }
+  string FunctionSymbol() override { return "sinf"; }
 };
 
 class GenericFltTan : public GenericFltMathFunction {
@@ -189,7 +189,7 @@ class GenericFltTan : public GenericFltMathFunction {
   string Name() override { return "GenFltTan"; }
   string Operation() override { return "Tan"; }
   FltFunc Function() override { return tanf; }
-  string FunctionSymbol() override { return "_tanf"; }
+  string FunctionSymbol() override { return "tanf"; }
 };
 
 class GenericFltTanh : public GenericFltMathFunction {
@@ -197,7 +197,7 @@ class GenericFltTanh : public GenericFltMathFunction {
   string Name() override { return "GenFltTanh"; }
   string Operation() override { return "Tanh"; }
   FltFunc Function() override { return tanhf; }
-  string FunctionSymbol() override { return "_tanhf"; }
+  string FunctionSymbol() override { return "tanhf"; }
 };
 
 class GenericFltSigmoid : public GenericFltMathFunction {
@@ -205,7 +205,7 @@ class GenericFltSigmoid : public GenericFltMathFunction {
   string Name() override { return "GenFltSigmoid"; }
   string Operation() override { return "Sigmoid"; }
   FltFunc Function() override { return sigmoid; }
-  string FunctionSymbol() override { return "_sigmoid"; }
+  string FunctionSymbol() override { return "sigmoid"; }
 };
 
 class GenericFltRelu : public GenericFltMathFunction {
@@ -213,7 +213,7 @@ class GenericFltRelu : public GenericFltMathFunction {
   string Name() override { return "GenFltRelu"; }
   string Operation() override { return "Relu"; }
   FltFunc Function() override { return relu; }
-  string FunctionSymbol() override { return "_relu"; }
+  string FunctionSymbol() override { return "relu"; }
 };
 
 // Compute argmax of input.

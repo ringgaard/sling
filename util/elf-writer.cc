@@ -18,6 +18,8 @@
 #include <string.h>
 #include <stdio.h>
 
+namespace sling {
+
 // Offset for global symbol indices.
 static const int GLOBAL_SYMBOL_OFFSET = 1 << 20;
 
@@ -277,4 +279,6 @@ void Elf::Buffer::Update() {
     rela->hdr.sh_size = relocs.size() * sizeof(Elf64_Rela);
   }
 }
+
+}  // namespace sling
 
