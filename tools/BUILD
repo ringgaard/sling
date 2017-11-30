@@ -4,7 +4,7 @@ cc_binary(
   name = "embed-data",
   srcs = ["embed-data.cc"],
   deps = [
-    "//util:elf-writer",
+    "//sling/util:elf-writer",
   ],
 )
 
@@ -12,13 +12,13 @@ cc_binary(
   name = "shell",
   srcs = ["shell.cc"],
   deps = [
-    "//base",
-    "//file:posix",
-    "//frame",
-    "//frame:json",
-    "//schema:feature-structure",
-    "//schema:schemata",
-    "//string",
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/frame",
+    "//sling/frame:json",
+    "//sling/schema:feature-structure",
+    "//sling/schema:schemata",
+    "//sling/string",
   ],
 )
 

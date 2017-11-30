@@ -2,20 +2,20 @@
 #include <string>
 #include <vector>
 
-#include "base/clock.h"
-#include "base/init.h"
-#include "base/strtoint.h"
-#include "base/types.h"
-#include "file/posix.h"
-#include "frame/json.h"
-#include "frame/serialization.h"
-#include "frame/store.h"
-#include "frame/wire.h"
-#include "schema/feature-structure.h"
-#include "schema/schemata.h"
-#include "string/printf.h"
-#include "string/strcat.h"
-#include "string/strip.h"
+#include "sling/base/clock.h"
+#include "sling/base/init.h"
+#include "sling/base/strtoint.h"
+#include "sling/base/types.h"
+#include "sling/file/posix.h"
+#include "sling/frame/json.h"
+#include "sling/frame/serialization.h"
+#include "sling/frame/store.h"
+#include "sling/frame/wire.h"
+#include "sling/schema/feature-structure.h"
+#include "sling/schema/schemata.h"
+#include "sling/string/printf.h"
+#include "sling/string/strcat.h"
+#include "sling/string/strip.h"
 
 using namespace sling;
 

@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include "util/elf-writer.h"
+#include "sling/util/elf-writer.h"
 
 using sling::Elf;
 
