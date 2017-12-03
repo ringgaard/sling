@@ -18,6 +18,27 @@
 
 namespace sling {
 
+InputParser::InputParser(Store *store, InputStream *stream) : input_(stream) {
+  if (input_.Peek() == 0) {
+    decoder_ = new Decoder(store, &input_);
+  } else {
+    reader_ = new Reader(store, &input_);
+  }
+}
+
+InputParser::~InputParser() {
+  delete decoder_;
+  delete reader_;
+}
+
+Object InputParser::Read() {
+  return binary() ? decoder_->Decode() : reader_->Read();
+}
+
+Object InputParser::ReadAll() {
+  return binary() ? decoder_->DecodeAll() : reader_->ReadAll();
+}
+
 Object FromText(Store *store, Text text) {
   StringReader reader(store, text);
   return reader.Read();

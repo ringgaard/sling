@@ -27,6 +27,12 @@ Object Reader::Read() {
   return Object(store_, ReadObject());
 }
 
+Object Reader::ReadAll() {
+  Handle handle;
+  while (!done() && !error()) handle = ReadObject();
+  return Object(store_, handle);
+}
+
 Handle Reader::ReadObject() {
   // Read next object.
   Handle handle = ParseObject();
