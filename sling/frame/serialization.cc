@@ -15,11 +15,14 @@
 #include "sling/frame/serialization.h"
 
 #include "sling/base/logging.h"
+#include "sling/frame/wire.h"
 
 namespace sling {
 
 InputParser::InputParser(Store *store, InputStream *stream) : input_(stream) {
-  if (input_.Peek() == 0) {
+  // If the input starts with a binary marker, use a binary decoder for reading
+  // the stream. Otherwise, the input is assumed to be in text format.
+  if (input_.Peek() == WIRE_BINARY_MARKER) {
     decoder_ = new Decoder(store, &input_);
   } else {
     reader_ = new Reader(store, &input_);

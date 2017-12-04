@@ -27,7 +27,7 @@ namespace sling {
 Decoder::Decoder(Store *store, Input *input)
     : store_(store), input_(input), references_(store), stack_(store) {
   // Skip binary encoding mark.
-  if (input->Peek() == 0) input->Skip(1);
+  if (input->Peek() == WIRE_BINARY_MARKER) input->Skip(1);
 }
 
 Object Decoder::Decode() {

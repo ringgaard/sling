@@ -134,6 +134,7 @@ cc_library(
     ":printer",
     ":reader",
     ":store",
+    ":wire",
     "//sling/base",
     "//sling/file",
     "//sling/stream",

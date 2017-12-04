@@ -33,7 +33,7 @@ Encoder::Encoder(const Store *store, Output *output)
   references_[Handle::is()] = Reference(-WIRE_IS);
 
   // Output binary encoding mark.
-  output_->WriteChar(0);
+  output_->WriteChar(WIRE_BINARY_MARKER);
 }
 
 void Encoder::EncodeAll() {
