@@ -1344,5 +1344,19 @@ void Store::GetMemoryUsage(MemoryUsage *usage, bool quick) const {
   usage->gc_time = gc_time_;
 }
 
+int Store::NumSymbols() const  {
+  int num_symbols = 0;
+  const MapDatum *map = GetMap(symbols());
+  for (Handle *bucket = map->begin(); bucket < map->end(); ++bucket) {
+    Handle h = *bucket;
+    while (!h.IsNil()) {
+      const SymbolDatum *symbol = GetSymbol(h);
+      num_symbols++;
+      h = symbol->next;
+    }
+  }
+  return num_symbols;
+}
+
 }  // namespace sling
 

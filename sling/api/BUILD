@@ -14,16 +14,23 @@ cc_library(
   hdrs = ["frames.h"],
   deps = [
     "//sling/base",
-    "//sling/frame:store",
+    "//sling/file",
+    "//sling/frame",
+    "//sling/stream:file",
+    "//sling/stream:unix-file",
   ],
+  copts = [
+    "-Wno-pmf-conversions",
+  ]
 )
 
 cc_binary(
-  name = "sling.so",
+  name = "pysling.so",
   srcs = ["api.cc"],
   deps = [
     ":frames",
     ":hello",
+    "//sling/base",
     "//sling/base:libinit",
     "//sling/file:posix",
   ],

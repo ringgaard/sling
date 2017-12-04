@@ -733,6 +733,9 @@ class Root {
  protected:
   friend class Store;
 
+  // Initialize root.
+  void InitRoot(Store *store, Handle handle);
+
   // Link root into root list.
   void Link(const Root *list) {
     prev_ = list;
@@ -1000,6 +1003,9 @@ class Store {
 
   // Returns handle for symbol table.
   Handle symbols() const { return symbols_; }
+
+  // Returns the number of symbols in the symbol table.
+  int NumSymbols() const;
 
   // Checks if this handle is owned by this store.
   bool Owned(Handle handle) const {
@@ -1306,6 +1312,19 @@ class Store {
 
 // Adds root to store.
 inline Root::Root(Store *store, Handle handle) {
+  handle_ = handle;
+  if (store == nullptr ||
+      handle.IsNil() ||
+      !handle.IsRef() ||
+      !store->Owned(handle) ||
+      store->frozen()) {
+    next_ = prev_ = this;
+  } else {
+    Link(store->roots());
+  }
+}
+
+inline void Root::InitRoot(Store *store, Handle handle) {
   handle_ = handle;
   if (store == nullptr ||
       handle.IsNil() ||
