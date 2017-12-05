@@ -43,7 +43,7 @@ StdFileInputStream::StdFileInputStream(FILE *file,
 }
 
 StdFileInputStream::~StdFileInputStream() {
-  if (!owned_ && used_ > 0) fseek(file_, -used_, SEEK_CUR);
+  if (!owned_ && backup_ > 0) fseek(file_, -backup_, SEEK_CUR);
   if (owned_ && file_ != nullptr) CHECK(fclose(file_) == 0);
   delete [] buffer_;
 }
@@ -58,7 +58,7 @@ bool StdFileInputStream::Next(const void **data, int *size) {
   }
 
   // Read data into buffer.
-  uint64 bytes = fread(buffer_, size_, 1, file_);
+  uint64 bytes = fread(buffer_, 1, size_, file_);
   if (bytes == 0) return false;
   used_ = bytes;
   position_ += bytes;
@@ -140,7 +140,7 @@ bool StdFileOutputStream::Close() {
 bool StdFileOutputStream::Next(void **data, int *size) {
   // Flush buffer.
   if (used_ > 0) {
-    if (fwrite(buffer_, used_, 1, file_) != used_) return false;
+    if (fwrite(buffer_, 1, used_, file_) != used_) return false;
     position_ += used_;
   }
 

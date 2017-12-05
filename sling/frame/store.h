@@ -1005,7 +1005,7 @@ class Store {
   Handle symbols() const { return symbols_; }
 
   // Returns the number of symbols in the symbol table.
-  int NumSymbols() const;
+  int num_symbols() const { return num_symbols_; }
 
   // Checks if this handle is owned by this store.
   bool Owned(Handle handle) const {
@@ -1308,6 +1308,20 @@ class Store {
 
   // Default configuration options.
   static const Options kDefaultOptions;
+};
+
+// Utility class for GC locking in store.
+class GCLock {
+ public:
+  // Lock GC in store.
+  GCLock(Store *store) : store_(store) { store->LockGC(); }
+
+  // Unlock GC in sttore.
+  ~GCLock() { store_->UnlockGC(); }
+
+ private:
+  // Locked store.
+  Store *store_;
 };
 
 // Adds root to store.

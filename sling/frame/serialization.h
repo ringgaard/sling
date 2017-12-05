@@ -328,7 +328,7 @@ class FileEncoder {
 class InputParser {
  public:
   // Initializes reading objects from a stream.
-  InputParser(Store *store, InputStream *stream);
+  InputParser(Store *store, InputStream *stream, bool force_binary = false);
   ~InputParser();
 
   // Reads next object from input.

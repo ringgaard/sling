@@ -19,10 +19,11 @@
 
 namespace sling {
 
-InputParser::InputParser(Store *store, InputStream *stream) : input_(stream) {
+InputParser::InputParser(Store *store, InputStream *stream, bool force_binary)
+    : input_(stream) {
   // If the input starts with a binary marker, use a binary decoder for reading
   // the stream. Otherwise, the input is assumed to be in text format.
-  if (input_.Peek() == WIRE_BINARY_MARKER) {
+  if (force_binary || input_.Peek() == WIRE_BINARY_MARKER) {
     decoder_ = new Decoder(store, &input_);
   } else {
     reader_ = new Reader(store, &input_);

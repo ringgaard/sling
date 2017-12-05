@@ -15,7 +15,11 @@ static PyMethodDef py_funcs[] = {
 static void RegisterModule() {
   PyObject *module = Py_InitModule3("pysling", py_funcs, "SLING API");
   PyStore::Define(module);
+  PySymbols::Define(module);
   PyFrame::Define(module);
+  PySlots::Define(module);
+  PyArray::Define(module);
+  PyItems::Define(module);
 }
 
 }  // namespace sling
