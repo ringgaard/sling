@@ -100,6 +100,8 @@ PyMethodDef PyStore::methods[] = {
   {"load", (PyCFunction) &PyStore::Load, METH_VARARGS | METH_KEYWORDS, ""},
   {"save", (PyCFunction) &PyStore::Save, METH_VARARGS | METH_KEYWORDS, ""},
   {"parse", (PyCFunction) &PyStore::Parse, METH_VARARGS| METH_KEYWORDS, ""},
+  {"frame", (PyCFunction) &PyStore::NewFrame, METH_O, ""},
+  {"array", (PyCFunction) &PyStore::NewArray, METH_O, ""},
   {nullptr}
 };
 
@@ -314,6 +316,50 @@ PyObject *PyStore::Symbols() {
   return iter->AsObject();
 }
 
+PyObject *PyStore::NewFrame(PyObject *arg) {
+  // Parse data into slot list.
+  GCLock lock(store);
+  std::vector<Slot> slots;
+  if (!SlotList(arg, &slots)) return nullptr;
+
+  // Allocate new frame.
+  Slot *begin = slots.data();
+  Slot *end = slots.data() + slots.size();
+  Handle handle = store->AllocateFrame(begin, end);
+
+  // Return new frame wrapper for handle.
+  PyFrame *frame = PyObject_New(PyFrame, &PyFrame::type);
+  frame->Init(this, handle);
+  return frame->AsObject();
+}
+
+PyObject *PyStore::NewArray(PyObject *arg) {
+  GCLock lock(store);
+
+  Handle handle;
+  if (PyList_Check(arg)) {
+    // Inialize new array from Python list.
+    int size = PyList_Size(arg);
+    handle = store->AllocateArray(size);
+    ArrayDatum *array = store->Deref(handle)->AsArray();
+    for (int i = 0; i < size; ++i) {
+      PyObject *item = PyList_GetItem(arg, i);
+      Handle value = Value(item);
+      if (value.IsError()) return nullptr;
+      *array->at(i) = value;
+    }
+  } else {
+    int size = PyInt_AsLong(arg);
+    if (size < 0) return nullptr;
+    handle = store->AllocateArray(size);
+  }
+
+  // Return array wrapper for new array.
+  PyArray *array = PyObject_New(PyArray, &PyArray::type);
+  array->Init(this, handle);
+  return array->AsObject();
+}
+
 PyObject *PyStore::PyValue(Handle handle) {
   switch (handle.tag()) {
     case Handle::kGlobal:
@@ -368,9 +414,10 @@ Handle PyStore::Value(PyObject *object) {
   } else if (PyObject_TypeCheck(object, &PyFrame::type)) {
     // Return handle for frame.
     PyFrame *frame = reinterpret_cast<PyFrame *>(object);
-    if (frame->pystore->store != store) {
+    if (frame->pystore->store != store &&
+        frame->pystore->store != store->globals()) {
       PyErr_SetString(PyExc_ValueError, "Frame does not belongs to this store");
-      return Handle::nil();
+      return Handle::error();
     }
     return frame->handle();
   } else if (PyString_Check(object)) {
@@ -385,10 +432,103 @@ Handle PyStore::Value(PyObject *object) {
   } else if (PyFloat_Check(object)) {
     // Return floating point number handle.
     return Handle::Float(PyFloat_AsDouble(object));
+  } else if (PyObject_TypeCheck(object, &PyArray::type)) {
+    // Return handle for frame.
+    PyArray *array = reinterpret_cast<PyArray *>(object);
+    if (array->pystore->store != store &&
+        array->pystore->store != store->globals()) {
+      PyErr_SetString(PyExc_ValueError, "Array does not belongs to this store");
+      return Handle::error();
+    }
+    return array->handle();
   } else {
     PyErr_SetString(PyExc_ValueError, "Unsupported frame value type");
-    return Handle::nil();
+    return Handle::error();
   }
+}
+
+Handle PyStore::RoleValue(PyObject *object, bool existing) {
+  if (PyString_Check(object)) {
+    char *name = PyString_AsString(object);
+    if (name == nullptr) return Handle::error();
+    if (existing) {
+      return store->LookupExisting(name);
+    } else {
+      return store->Lookup(name);
+    }
+  } else {
+    return Value(object);
+  }
+}
+
+Handle PyStore::SymbolValue(PyObject *object) {
+  if (PyString_Check(object)) {
+    char *name = PyString_AsString(object);
+    if (name == nullptr) return Handle::error();
+    return store->Symbol(name);
+  } else {
+    return Value(object);
+  }
+}
+
+bool PyStore::SlotList(PyObject *object, std::vector<Slot> *slots) {
+  if (PyDict_Check(object)) {
+    // Build slots from key/value pairs in dictionary.
+    PyObject *k;
+    PyObject *v;
+    Py_ssize_t pos = 0;
+    slots->reserve(slots->size() + PyDict_Size(object));
+    while (PyDict_Next(object, &pos, &k, &v)) {
+      // Get slot name.
+      Handle name = RoleValue(k);
+      if (name.IsError()) return false;
+
+      // Get slot value.
+      Handle value;
+      if (name.IsId() && PyString_Check(v)) {
+        value = SymbolValue(v);
+      } else {
+        value = Value(v);
+      }
+      if (value.IsError()) return false;
+
+      // Add slot.
+      slots->emplace_back(name, value);
+    }
+  } else if (PyList_Check(object)) {
+    // Build slots from list of 2-tuples.
+    int size = PyList_Size(object);
+    slots->reserve(slots->size() + size);
+    for (int i = 0; i < size; ++i) {
+      // Check that item is a 2-tuple.
+      PyObject *item = PyList_GetItem(object, i);
+      if (!PyTuple_Check(item) ||  PyTuple_Size(item) != 2) {
+        PyErr_SetString(PyExc_ValueError, "Slot list must contain 2-tuples");
+        return false;
+      }
+
+      // Get slot name.
+      PyObject *k = PyTuple_GetItem(item, 0);
+      Handle name = RoleValue(k);
+      if (name.IsError()) return false;
+
+      // Get slot value.
+      PyObject *v = PyTuple_GetItem(item, 1);
+      Handle value;
+      if (name.IsId() && PyString_Check(v)) {
+        value = SymbolValue(v);
+      } else {
+        value = Value(v);
+      }
+      if (value.IsError()) return false;
+
+      // Add slot.
+      slots->emplace_back(name, value);
+    }
+  } else {
+    return false;
+  }
+  return true;
 }
 
 void PySymbols::Define(PyObject *module) {
@@ -439,8 +579,10 @@ PyObject *PySymbols::Self() {
 }
 
 PyMethodDef PyFrame::methods[] = {
-  {"store", (PyCFunction) &PyFrame::GetStore, METH_NOARGS, ""},
   {"data", (PyCFunction) &PyFrame::Data, METH_KEYWORDS, ""},
+  {"append", (PyCFunction) &PyFrame::Append, METH_VARARGS, ""},
+  {"extend", (PyCFunction) &PyFrame::Extend, METH_O, ""},
+  {"store", (PyCFunction) &PyFrame::GetStore, METH_NOARGS, ""},
   {nullptr}
 };
 
@@ -453,6 +595,7 @@ void PyFrame::Define(PyObject *module) {
   type.tp_iter = &PyFrame::Slots;
   type.tp_call = &PyFrame::Find;
   type.tp_hash = &PyFrame::Hash;
+  type.tp_richcompare = &PyFrame::Compare;
   type.tp_methods = methods;
 
   type.tp_as_mapping = &mapping;
@@ -491,55 +634,57 @@ long PyFrame::Hash() {
   return handle().bits;
 }
 
+PyObject *PyFrame::Compare(PyObject *other, int op) {
+  // Only equality check is suported.
+  if (op != Py_EQ && op != Py_NE) {
+    PyErr_SetString(PyExc_TypeError, "Invalid frame comparison");
+    return nullptr;
+  }
+
+  // Check if other object is a frame.
+  bool match = false;
+  if (PyObject_TypeCheck(other, &PyFrame::type)) {
+    // Check if the stores and handles are the same.
+    PyFrame *pyother = reinterpret_cast<PyFrame *>(other);
+    match = pyother->pystore->store == pystore->store &&
+            pyother->handle() == handle();
+  }
+
+  if (op == Py_NE) match = !match;
+  if (match) {
+    Py_RETURN_TRUE;
+  } else {
+    Py_RETURN_FALSE;
+  }
+}
+
 PyObject *PyFrame::GetStore() {
   Py_INCREF(pystore);
   return pystore->AsObject();
 }
 
 PyObject *PyFrame::Lookup(PyObject *key) {
-  if (PyString_Check(key)) {
-    // Look up role value based on name.
-    char *name = PyString_AsString(key);
-    if (name == nullptr) return nullptr;
-    Handle role = pystore->store->LookupExisting(name);
-    if (role.IsNil()) Py_RETURN_NONE;
-    Handle value = frame()->get(role);
-    return pystore->PyValue(value);
-  } else if (PyObject_TypeCheck(key, &PyFrame::type)) {
-    // Look up role value based on frame value.
-    PyFrame *role = reinterpret_cast<PyFrame *>(key);
-    if (role->handle().IsNil()) Py_RETURN_NONE;
-    Handle value = frame()->get(role->handle());
-    return pystore->PyValue(value);
-  } else {
-    // Look up based on handle value.
-    Handle role = pystore->Value(key);
-    if (role.IsNil()) Py_RETURN_NONE;
-    Handle value = frame()->get(role);
-    return pystore->PyValue(value);
-  }
+  // Look up role.
+  Handle role = pystore->RoleValue(key, true);
+  if (role.IsError()) return nullptr;
+
+  // Return None if the role name does not exist.
+  if (role.IsNil()) Py_RETURN_NONE;
+
+  // Look up (first) value for role.
+  Handle value = frame()->get(role);
+  return pystore->PyValue(value);
 }
 
 int PyFrame::Assign(PyObject *key, PyObject *v) {
-  // Get new frame role value.
+  // Look up role.
   GCLock lock(pystore->store);
-  Handle value = pystore->Value(v);
-  if (value.IsNil() && v != Py_None)  return -1;
+  Handle role = pystore->RoleValue(key);
+  if (role.IsError()) return -1;
 
-  Handle role;
-  if (PyString_Check(key)) {
-    // Look up role value based on name.
-    char *name = PyString_AsString(key);
-    if (name == nullptr) return -1;
-    role = pystore->store->Lookup(name);
-  } else if (PyObject_TypeCheck(key, &PyFrame::type)) {
-    // Look up role value based on frame value.
-    PyFrame *pyrole = reinterpret_cast<PyFrame *>(key);
-    role = pyrole->handle();
-  } else {
-    // Look up based on handle value.
-    role = pystore->Value(key);
-  }
+  // Get new frame role value.
+  Handle value = pystore->Value(v);
+  if (value.IsError()) return -1;
 
   // Check role.
   if (role.IsNil()) {
@@ -558,24 +703,13 @@ int PyFrame::Assign(PyObject *key, PyObject *v) {
 }
 
 int PyFrame::Contains(PyObject *key) {
-  if (PyString_Check(key)) {
-    // Look up role value based on name.
-    char *name = PyString_AsString(key);
-    if (name == nullptr) return -1;
-    Handle role = pystore->store->LookupExisting(name);
-    if (role.IsNil()) return 0;
-    return frame()->has(role);
-  } else if (PyObject_TypeCheck(key, &PyFrame::type)) {
-    // Look up role value based on frame value.
-    PyFrame *role = reinterpret_cast<PyFrame *>(key);
-    if (role->handle().IsNil()) return 0;
-    return frame()->has(role->handle());
-  } else {
-    // Look up based on handle value.
-    Handle role = pystore->Value(key);
-    if (role.IsNil()) return 0;
-    return frame()->has(role);
-  }
+  // Look up role.
+  Handle role = pystore->RoleValue(key, true);
+  if (role.IsError()) return -1;
+
+  // Check if frame has slot with role.
+  if (role.IsNil()) return 0;
+  return frame()->has(role);
 }
 
 PyObject *PyFrame::GetAttr(PyObject *key) {
@@ -616,12 +750,47 @@ int PyFrame::SetAttr(PyObject *key, PyObject *v) {
 
   // Get role value.
   Handle value = pystore->Value(v);
-  if (value.IsNil() && v != Py_None)  return -1;
+  if (value.IsError())  return -1;
 
   // Set role value for frame.
   pystore->store->Set(handle(), role, value);
 
   return 0;
+}
+
+PyObject *PyFrame::Append(PyObject *args) {
+  // Get name and value arguments.
+  PyObject *pyname;
+  PyObject *pyvalue;
+  if (!PyArg_ParseTuple(args, "OO", &pyname, &pyvalue)) return nullptr;
+
+  // Get role.
+  GCLock lock(pystore->store);
+  Handle role = pystore->RoleValue(pyname);
+  if (role.IsError()) return nullptr;
+
+  // Get value.
+  Handle value = pystore->Value(pyvalue);
+  if (value.IsError()) return nullptr;
+
+  // Set role value for frame.
+  pystore->store->Set(handle(), role, value);
+  Py_RETURN_NONE;
+}
+
+PyObject *PyFrame::Extend(PyObject *arg) {
+  // Get existing slots for frame.
+  GCLock lock(pystore->store);
+  std::vector<Slot> slots(frame()->begin(), frame()->end());
+
+  // Append slots from data to slot list.
+  if (!pystore->SlotList(arg, &slots)) return nullptr;
+
+  // Reallocate frame.
+  Slot *begin = slots.data();
+  Slot *end = slots.data() + slots.size();
+  handle_ = pystore->store->AllocateFrame(begin, end, handle_);
+  Py_RETURN_NONE;
 }
 
 PyObject *PyFrame::Slots() {
@@ -634,15 +803,8 @@ PyObject *PyFrame::Find(PyObject *args, PyObject *kw) {
   // Get role argument.
   PyObject *pyrole;
   if (!PyArg_ParseTuple(args, "O", &pyrole)) return nullptr;
-  Handle role;
-  if (PyString_Check(pyrole)) {
-    char *name = PyString_AsString(pyrole);
-    if (name == nullptr) return nullptr;
-    role = pystore->store->Lookup(name);
-    if (role.IsNil()) Py_RETURN_NONE;
-  } else {
-    role = pystore->Value(pyrole);
-  }
+  Handle role = pystore->RoleValue(pyrole);
+  if (role.IsError()) return nullptr;
 
   // Create iterator for find all slot with the role.
   PySlots *iter = PyObject_New(PySlots, &PySlots::type);
@@ -751,6 +913,7 @@ void PyArray::Define(PyObject *module) {
   sequence.sq_length = &PyArray::Size;
   sequence.sq_item = &PyArray::GetItem;
   sequence.sq_ass_item = &PyArray::SetItem;
+  sequence.sq_contains = &PyArray::Contains;
 
   RegisterType(&type);
 }
@@ -803,6 +966,7 @@ int PyArray::SetItem(Py_ssize_t index, PyObject *value) {
 
   // Set array element.
   Handle handle = pystore->Value(value);
+  if (handle.IsError()) return -1;
   *array()->at(index) = handle;
   return 0;
 }
@@ -815,6 +979,19 @@ PyObject *PyArray::Items() {
 
 long PyArray::Hash() {
   return handle().bits;
+}
+
+int PyArray::Contains(PyObject *key) {
+  // Get handle for key.
+  Handle handle = pystore->Value(key);
+  if (handle.IsError()) return -1;
+
+  // Check if value is contained in array.
+  ArrayDatum *arr = array();
+  for (int i = 0; i < arr->length(); ++i) {
+    if (arr->get(i) == handle) return true;
+  }
+  return false;
 }
 
 PyObject *PyArray::GetStore() {

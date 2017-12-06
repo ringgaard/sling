@@ -1,6 +1,7 @@
 #ifndef SLING_API_FRAMES_H_
 #define SLING_API_FRAMES_H_
 
+#include <vector>
 #include <python2.7/Python.h>
 
 #include "sling/frame/store.h"
@@ -52,11 +53,30 @@ struct PyStore : public PyBase {
   // Return iterator for all symbols in symbol table.
   PyObject *Symbols();
 
+  // Create new frame.
+  PyObject *NewFrame(PyObject *arg);
+
+  // Create new array.
+  PyObject *NewArray(PyObject *arg);
+
   // Create new Python object for handle value.
   PyObject *PyValue(Handle handle);
 
-  // Get handle value for Python object.
+  // Get handle value for Python object. Returns Handle::error() if the value
+  // could not be converted.
   Handle Value(PyObject *object);
+
+  // Get role handle value for Python object. This is similar to Value() except
+  // that strings are considered to be symbol names. If existing=true then
+  // nil will be returned if the symbol does not already exist.
+  Handle RoleValue(PyObject *object, bool existing = false);
+
+  // Get symbol handle value for Python object.
+  Handle SymbolValue(PyObject *object);
+
+  // Convert Python object to slot list. The Python object can either be a
+  // dict or a list of 2-tuples.
+  bool SlotList(PyObject *object, std::vector<Slot> *slots);
 
   // Underlying frame store.
   Store *store;
@@ -123,6 +143,12 @@ struct PyFrame : public PyBase, public Root {
   // Set role value for frame.
   int SetAttr(PyObject *key, PyObject *v);
 
+  // Append slot to frame.
+  PyObject *Append(PyObject *args);
+
+  // Extend frame with list of slots.
+  PyObject *Extend(PyObject *arg);
+
   // Return iterator for all slots in frame.
   PyObject *Slots();
 
@@ -131,6 +157,9 @@ struct PyFrame : public PyBase, public Root {
 
   // Return handle as hash value for frame.
   long Hash();
+
+  // Check id frame is the same as another object.
+  PyObject *Compare(PyObject *other, int op);
 
   // Return store for frame.
   PyObject *GetStore();
@@ -208,6 +237,9 @@ struct PyArray : public PyBase, public Root {
 
   // Return handle as hash value for array.
   long Hash();
+
+  // Check if array contains value.
+  int Contains(PyObject *key);
 
   // Return store for array.
   PyObject *GetStore();

@@ -339,6 +339,12 @@ struct Handle {
     return Handle{static_cast<Word>(n << kIntShift) | kIndexMask};
   }
 
+  // A signalling NaN is used as an error value for handles.
+  static const Word kError = kFloatTag | 0xFFBFFF00;
+
+  // Checks if a handle is an error handle.
+  bool IsError() const { return bits == kError; }
+
   // Equality testing.
   bool operator ==(Handle other) const { return bits == other.bits; }
   bool operator !=(Handle other) const { return bits != other.bits; }
@@ -362,6 +368,7 @@ struct Handle {
   static constexpr Handle is() { return Handle{kIs}; }
   static constexpr Handle zero() { return Handle{kZero}; }
   static constexpr Handle one() { return Handle{kOne}; }
+  static constexpr Handle error() { return Handle{kError}; }
 
   // Handle is represented as an 32-bit unsigned integer where the lower bit are
   // used as tag bits to encode the handle type.
