@@ -1,5 +1,5 @@
-#ifndef SLING_API_FRAMES_H_
-#define SLING_API_FRAMES_H_
+#ifndef SLING_PYAPI_FRAMES_H_
+#define SLING_PYAPI_FRAMES_H_
 
 #include <vector>
 #include <python2.7/Python.h>
@@ -302,5 +302,5 @@ struct PyItems : public PyBase {
 
 }  // namespace sling
 
-#endif  // SLING_API_FRAMES_H_
+#endif  // SLING_PYAPI_FRAMES_H_
 

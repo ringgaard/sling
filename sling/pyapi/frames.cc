@@ -1,4 +1,4 @@
-#include "sling/api/frames.h"
+#include "sling/pyapi/frames.h"
 
 #include <python2.7/Python.h>
 
