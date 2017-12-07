@@ -1,17 +1,20 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-  name = "hello",
-  srcs = ["hello.cc"],
-  deps = [
-    "//sling/base",
+  name = "pyapi",
+  srcs = [
+    "pyapi.cc",
+    "pyarray.cc",
+    "pybase.cc",
+    "pyframe.cc",
+    "pystore.cc",
   ],
-)
-
-cc_library(
-  name = "frames",
-  srcs = ["frames.cc"],
-  hdrs = ["frames.h"],
+  hdrs = [
+    "pyarray.h",
+    "pybase.h",
+    "pyframe.h",
+    "pystore.h",
+  ],
   deps = [
     "//sling/base",
     "//sling/file",
@@ -26,10 +29,8 @@ cc_library(
 
 cc_binary(
   name = "pysling.so",
-  srcs = ["api.cc"],
   deps = [
-    ":frames",
-    ":hello",
+    ":pyapi",
     "//sling/base",
     "//sling/base:libinit",
     "//sling/file:posix",
