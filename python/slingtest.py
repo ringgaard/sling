@@ -1,7 +1,3 @@
-#import sys
-#sys.path.append(".")
-#import python.pysling as sling
-
 import sling
 
 commons = sling.Store()

@@ -44,7 +44,7 @@ wheel_dir = "/tmp"
 weel_basename = package + "-" + version + "-cp27-none-linux_x86_64.whl"
 wheel_filename = wheel_dir + "/" + weel_basename
 
-# File to distribute in wheel.
+# Files to distribute in wheel.
 files = {
   'bazel-bin/sling/pyapi/pysling.so': '$DATA$/sling/pysling.so',
   'python/__init__.py': '$DATA$/sling/__init__.py',
@@ -81,8 +81,8 @@ Classifier: Programming Language :: Python
 Classifier: Programming Language :: Python :: 2
 Classifier: Programming Language :: Python :: 2.7
 
-Google SLING frame semantic parsing framework"""
-package_metadata = package_metadata.replace("$VERSION$", version)
+Google SLING frame semantic parsing framework
+""".replace("$VERSION$", version)
 
 record += package_metadata_filename + ",sha256=" + \
           sha256_content_checksum(package_metadata) + "," + \
@@ -98,14 +98,9 @@ for source in files:
   print "Install", source, "as", destination
 
   # Write entry to RECORD file.
-  record += destination
-  if destination == record_filename:
-    record += ",,"
-  else:
-    size = os.path.getsize(source)
-    checksum = sha256_checksum(source)
-    record += ",sha256=" + checksum + "," + str(size)
-  record += "\n"
+  size = os.path.getsize(source)
+  checksum = sha256_checksum(source)
+  record += destination + ",sha256=" + checksum + "," + str(size)  + "\n"
 
   # Add file to wheel zip archive.
   wheel.write(source, destination)
