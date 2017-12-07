@@ -62,6 +62,9 @@ struct PyStore : public PyBase {
   // Create new Python object for handle value.
   PyObject *PyValue(Handle handle);
 
+  // Check if store can be modified.
+  bool Writable();
+
   // Get handle value for Python object. Returns Handle::error() if the value
   // could not be converted.
   Handle Value(PyObject *object);
@@ -170,6 +173,9 @@ struct PyFrame : public PyBase, public Root {
   // Return frame in ascii or binary encoding.
   PyObject *Data(PyObject *args, PyObject *kw);
 
+  // Check if frame can be modified.
+  bool Writable();
+
   // Return handle for frame.
   Handle handle() const { return handle_; }
 
@@ -249,6 +255,9 @@ struct PyArray : public PyBase, public Root {
 
   // Return array in ascii or binary encoding.
   PyObject *Data(PyObject *args, PyObject *kw);
+
+  // Check if array can be modified.
+  bool Writable();
 
   // Return handle for array.
   Handle handle() const { return handle_; }

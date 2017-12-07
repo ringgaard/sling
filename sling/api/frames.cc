@@ -172,11 +172,8 @@ PyObject *PyStore::Load(PyObject *args, PyObject *kw) {
                   &file, &force_binary);
   if (!ok) return nullptr;
 
-  // Check that global is not frozen.
-  if (store->frozen()) {
-    PyErr_SetString(PyExc_ValueError, "Store is frozen");
-    return nullptr;
-  }
+  // Check that store is writable.
+  if (!Writable()) return nullptr;
 
   // Read frames from file.
   if (PyFile_Check(file)) {
@@ -264,11 +261,8 @@ PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
                   &object, &force_binary);
   if (!ok) return nullptr;
 
-  // Check that store is not frozen.
-  if (store->frozen()) {
-    PyErr_SetString(PyExc_ValueError, "Store is frozen");
-    return nullptr;
-  }
+  // Check that store is writable.
+  if (!Writable()) return nullptr;
 
   // Get data buffer.
   char *data;
@@ -317,6 +311,9 @@ PyObject *PyStore::Symbols() {
 }
 
 PyObject *PyStore::NewFrame(PyObject *arg) {
+  // Check that store is writable.
+  if (!Writable()) return nullptr;
+
   // Parse data into slot list.
   GCLock lock(store);
   std::vector<Slot> slots;
@@ -334,8 +331,10 @@ PyObject *PyStore::NewFrame(PyObject *arg) {
 }
 
 PyObject *PyStore::NewArray(PyObject *arg) {
-  GCLock lock(store);
+  // Check that store is writable.
+  if (!Writable()) return nullptr;
 
+  GCLock lock(store);
   Handle handle;
   if (PyList_Check(arg)) {
     // Inialize new array from Python list.
@@ -358,6 +357,14 @@ PyObject *PyStore::NewArray(PyObject *arg) {
   PyArray *array = PyObject_New(PyArray, &PyArray::type);
   array->Init(this, handle);
   return array->AsObject();
+}
+
+bool PyStore::Writable() {
+  if (store->frozen()) {
+    PyErr_SetString(PyExc_ValueError, "Frame store is not writable");
+    return false;
+  }
+  return true;
 }
 
 PyObject *PyStore::PyValue(Handle handle) {
@@ -677,6 +684,9 @@ PyObject *PyFrame::Lookup(PyObject *key) {
 }
 
 int PyFrame::Assign(PyObject *key, PyObject *v) {
+  // Check that frame is writable.
+  if (!Writable()) return -1;
+
   // Look up role.
   GCLock lock(pystore->store);
   Handle role = pystore->RoleValue(key);
@@ -732,6 +742,9 @@ PyObject *PyFrame::GetAttr(PyObject *key) {
 }
 
 int PyFrame::SetAttr(PyObject *key, PyObject *v) {
+  // Check that frame is writable.
+  if (!Writable()) return -1;
+
   // Get role name.
   char *name = PyString_AsString(key);
   if (name == nullptr) return -1;
@@ -759,6 +772,9 @@ int PyFrame::SetAttr(PyObject *key, PyObject *v) {
 }
 
 PyObject *PyFrame::Append(PyObject *args) {
+  // Check that frame is writable.
+  if (!Writable()) return nullptr;
+
   // Get name and value arguments.
   PyObject *pyname;
   PyObject *pyvalue;
@@ -779,6 +795,9 @@ PyObject *PyFrame::Append(PyObject *args) {
 }
 
 PyObject *PyFrame::Extend(PyObject *arg) {
+  // Check that frame is writable.
+  if (!Writable()) return nullptr;
+
   // Get existing slots for frame.
   GCLock lock(pystore->store);
   std::vector<Slot> slots(frame()->begin(), frame()->end());
@@ -848,6 +867,14 @@ PyObject *PyFrame::Data(PyObject *args, PyObject *kw) {
     const string &text = printer.text();
     return PyString_FromStringAndSize(text.data(), text.size());
   }
+}
+
+bool PyFrame::Writable() {
+  if (pystore->store->frozen() || !pystore->store->Owned(handle())) {
+    PyErr_SetString(PyExc_ValueError, "Frame is not writable");
+    return false;
+  }
+  return true;
 }
 
 void PySlots::Define(PyObject *module) {
@@ -952,11 +979,8 @@ PyObject *PyArray::GetItem(Py_ssize_t index) {
 }
 
 int PyArray::SetItem(Py_ssize_t index, PyObject *value) {
-  // Check that store is not frozen.
-  if (pystore->store->frozen()) {
-    PyErr_SetString(PyExc_ValueError, "Store is frozen");
-    return -1;
-  }
+  // Check that array is writable.
+  if (!Writable()) return -1;
 
   // Check array bounds.
   if (index < 0 || index >= array()->length()) {
@@ -1025,6 +1049,14 @@ PyObject *PyArray::Data(PyObject *args, PyObject *kw) {
     const string &text = printer.text();
     return PyString_FromStringAndSize(text.data(), text.size());
   }
+}
+
+bool PyArray::Writable() {
+  if (pystore->store->frozen() || !pystore->store->Owned(handle())) {
+    PyErr_SetString(PyExc_ValueError, "Array is not writable");
+    return false;
+  }
+  return true;
 }
 
 void PyItems::Define(PyObject *module) {

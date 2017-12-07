@@ -48,8 +48,6 @@ print "len(f1.data(binary=True))", len(f1.data(binary=True))
 for n, v in f1:
   print "slot", n,"=", v
 
-commons.save("/tmp/xxx", pretty=True)
-
 for i in range(len(f1.e)):
   print "e", i, f1.e[i]
 
@@ -95,4 +93,7 @@ print "f5 extended", f5.data()
 
 for frame in store:
   print "symbol:", frame
+
+store.save("/tmp/xxx", pretty=True)
+
 
