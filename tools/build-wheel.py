@@ -14,6 +14,17 @@
 
 """Create a Python Wheel for installing SLING API."""
 
+# The Python wheel produced by this script can be installed with the following
+# command:
+#
+#   sudo pip install /tmp/sling-1.0.0-cp27-none-linux_x86_64.whl
+#
+# If you are developing the SLING system, it is convenient to just add a
+# link to the SLING repository directly from the Python package directory
+# instead:
+#
+#   sudo ln -s $(realpath python) /usr/local/lib/python2.7/dist-packages/sling
+
 import os
 import hashlib
 import base64
