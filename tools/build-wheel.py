@@ -52,8 +52,8 @@ data_dir = package + "-" + version + ".data/purelib"
 record_filename = dist_dir + "/RECORD"
 
 wheel_dir = "/tmp"
-weel_basename = package + "-" + version + "-cp27-none-linux_x86_64.whl"
-wheel_filename = wheel_dir + "/" + weel_basename
+wheel_basename = package + "-" + version + "-cp27-none-linux_x86_64.whl"
+wheel_filename = wheel_dir + "/" + wheel_basename
 
 # Files to distribute in wheel.
 files = {
