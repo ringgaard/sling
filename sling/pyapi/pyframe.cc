@@ -228,8 +228,8 @@ PyObject *PyFrame::Append(PyObject *args) {
   Handle value = pystore->Value(pyvalue);
   if (value.IsError()) return nullptr;
 
-  // Set role value for frame.
-  pystore->store->Set(handle(), role, value);
+  // Add new slot to frame.
+  pystore->store->Add(handle(), role, value);
   Py_RETURN_NONE;
 }
 
@@ -264,7 +264,7 @@ PyObject *PyFrame::Find(PyObject *args, PyObject *kw) {
   Handle role = pystore->RoleValue(pyrole);
   if (role.IsError()) return nullptr;
 
-  // Create iterator for find all slot with the role.
+  // Create iterator for finding all slot with the role.
   PySlots *iter = PyObject_New(PySlots, &PySlots::type);
   iter->Init(this, role);
   return iter->AsObject();
@@ -351,7 +351,7 @@ PyObject *PySlots::Next() {
     }
   }
 
-  // More more slots.
+  // No more slots.
   PyErr_SetNone(PyExc_StopIteration);
   return nullptr;
 }

@@ -28,7 +28,7 @@ Object Reader::Read() {
 }
 
 Object Reader::ReadAll() {
-  Handle handle;
+  Handle handle = Handle::nil();
   while (!done() && !error()) {
     handle = ReadObject();
   }

@@ -101,7 +101,7 @@ PyObject *PyStore::Load(PyObject *args, PyObject *kw) {
   bool force_binary = false;
   bool ok = PyArg_ParseTupleAndKeywords(
                 args, kw, "O|b", const_cast<char **>(kwlist),
-                  &file, &force_binary);
+                &file, &force_binary);
   if (!ok) return nullptr;
 
   // Check that store is writable.
@@ -355,7 +355,7 @@ Handle PyStore::Value(PyObject *object) {
     PyFrame *frame = reinterpret_cast<PyFrame *>(object);
     if (frame->pystore->store != store &&
         frame->pystore->store != store->globals()) {
-      PyErr_SetString(PyExc_ValueError, "Frame does not belongs to this store");
+      PyErr_SetString(PyExc_ValueError, "Frame does not belong to this store");
       return Handle::error();
     }
     return frame->handle();
@@ -376,7 +376,7 @@ Handle PyStore::Value(PyObject *object) {
     PyArray *array = reinterpret_cast<PyArray *>(object);
     if (array->pystore->store != store &&
         array->pystore->store != store->globals()) {
-      PyErr_SetString(PyExc_ValueError, "Array does not belongs to this store");
+      PyErr_SetString(PyExc_ValueError, "Array does not belong to this store");
       return Handle::error();
     }
     return array->handle();
