@@ -63,7 +63,9 @@ f4 = store.frame({
   name: 'f4',
   'value': 7,
   'bool': True,
-  'doc': doc
+  'doc': doc,
+  'arr' : [1, 2, 3, 'four'],
+  'sub' : {name: 'foo', 'a': 10},
 })
 print "f4", f4
 
