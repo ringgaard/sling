@@ -64,7 +64,7 @@ void PyFrame::Init(PyStore *pystore, Handle handle) {
   } else {
     this->pystore = pystore;
   }
-  Py_INCREF(pystore);
+  Py_INCREF(this->pystore);
 
   // Add frame as root object for store to keep it alive in the store.
   InitRoot(this->pystore->store, handle);
