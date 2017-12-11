@@ -34,6 +34,7 @@ PyMethodDef PyStore::methods[] = {
   {"parse", (PyCFunction) &PyStore::Parse, METH_VARARGS| METH_KEYWORDS, ""},
   {"frame", (PyCFunction) &PyStore::NewFrame, METH_O, ""},
   {"array", (PyCFunction) &PyStore::NewArray, METH_O, ""},
+  {"globals", (PyCFunction) &PyStore::Globals, METH_NOARGS, ""},
   {nullptr}
 };
 
@@ -73,9 +74,14 @@ int PyStore::Init(PyObject *args, PyObject *kwds) {
 
     // Create local store.
     store = new Store(globals->store);
+
+    // Save reference to global store.
+    pyglobals = globals;
+    Py_INCREF(pyglobals);
   } else {
     // Create global store.
     store = new Store();
+    pyglobals = nullptr;
   }
 
   return 0;
@@ -83,6 +89,7 @@ int PyStore::Init(PyObject *args, PyObject *kwds) {
 
 void PyStore::Dealloc() {
   delete store;
+  if (pyglobals != nullptr) Py_DECREF(pyglobals);
 }
 
 PyObject *PyStore::Freeze() {
@@ -299,6 +306,14 @@ bool PyStore::Writable() {
   return true;
 }
 
+PyObject *PyStore::Globals() {
+  // Return None if store is not a local store.
+  if (pyglobals == nullptr) Py_RETURN_NONE;
+
+  Py_INCREF(pyglobals);
+  return pyglobals->AsObject();
+}
+
 PyObject *PyStore::PyValue(Handle handle) {
   switch (handle.tag()) {
     case Handle::kGlobal:
@@ -406,7 +421,7 @@ Handle PyStore::Value(PyObject *object) {
 
       // Add slot.
       slots.emplace_back(name, value);
-    }    
+    }
 
     // Allocate new frame.
     Slot *begin = slots.data();
