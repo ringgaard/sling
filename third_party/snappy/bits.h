@@ -27,8 +27,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef SLING_UTIL_BITS_H_
-#define SLING_UTIL_BITS_H_
+#ifndef SNAPPY_BITS_H_
+#define SNAPPY_BITS_H_
 
 #include "sling/base/macros.h"
 #include "sling/base/types.h"
@@ -113,5 +113,5 @@ inline int Bits::FindLSBSetNonZero64(uint64 n) {
 
 }  // namespace sling
 
-#endif  // SLING_UTIL_BITS_H_
+#endif  // SNAPPY_BITS_H_
 

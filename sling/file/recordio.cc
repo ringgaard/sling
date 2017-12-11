@@ -16,9 +16,9 @@
 
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
-#include "sling/util/snappy.h"
-#include "sling/util/snappy-sinksource.h"
 #include "sling/util/varint.h"
+#include "third_party/snappy/snappy.h"
+#include "third_party/snappy/snappy-sinksource.h"
 
 namespace sling {
 

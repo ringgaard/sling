@@ -26,7 +26,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "sling/util/snappy.h"
+#include "third_party/snappy/snappy.h"
 
 #include <stdio.h>
 
@@ -37,10 +37,10 @@
 #include "sling/base/logging.h"
 #include "sling/base/macros.h"
 #include "sling/base/port.h"
-#include "sling/util/bits.h"
 #include "sling/util/varint.h"
-#include "sling/util/snappy-sinksource.h"
-#include "sling/util/endian.h"
+#include "third_party/snappy/bits.h"
+#include "third_party/snappy/endian.h"
+#include "third_party/snappy/snappy-sinksource.h"
 
 namespace sling {
 namespace snappy {

@@ -5,8 +5,8 @@
 // so on. These functions do exactly the same as their standard variants,
 // but don't require including the dangerous netinet/in.h.
 
-#ifndef SLING_UTIL_ENDIAN_H_
-#define SLING_UTIL_ENDIAN_H_
+#ifndef SNAPPY_ENDIAN_H_
+#define SNAPPY_ENDIAN_H_
 
 #include "sling/base/logging.h"
 #include "sling/base/port.h"
@@ -162,5 +162,5 @@ class LittleEndian {
 
 }  // namespace sling
 
-#endif  // SLING_UTIL_ENDIAN_ENDIAN_H_
+#endif  // SNAPPY_ENDIAN_ENDIAN_H_
 
