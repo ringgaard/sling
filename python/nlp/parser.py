@@ -15,7 +15,6 @@
 """Wrapper classes for tokenizer and parser"""
 
 import sling
-import sling.pysling as api
 
 # Global tokenizer.
 tokenizer = None
