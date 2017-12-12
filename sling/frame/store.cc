@@ -501,7 +501,7 @@ void Store::Delete(Handle frame, Handle name) {
   CHECK(datum->IsFrame());
 
   // Id slots cannot be deleted.
-  DCHECK(name != Handle::id());
+  CHECK(name != Handle::id());
 
   // Delete all slots with name.
   Slot *slot = datum->begin();
