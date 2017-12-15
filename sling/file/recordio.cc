@@ -298,8 +298,8 @@ Status RecordReader::Skip(int64 n) {
 
 Status RecordReader::Seek(uint64 pos) {
   // Check if we can skip to position in input buffer.
+  int64 offset = pos - position_;
   position_ = pos;
-  int64 offset = pos - Tell();
   char *ptr = input_.begin() + offset;
   if (ptr >= input_.floor() && ptr < input_.end()) {
     input_.consumed(offset);

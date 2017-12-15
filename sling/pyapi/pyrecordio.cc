@@ -117,7 +117,7 @@ PyObject *PyRecordReader::Seek(PyObject *arg) {
 }
 
 PyObject *PyRecordReader::Next() {
-  // Check if the are more records.
+  // Check if there are more records.
   if (reader->Done()) {
     PyErr_SetNone(PyExc_StopIteration);
     return nullptr;
