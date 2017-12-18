@@ -15,7 +15,7 @@
 #include "sling/string/split.h"
 #include "sling/string/strip.h"
 #include "sling/task/accumulator.h"
-#include "sling/task/container.h"
+#include "sling/task/job.h"
 #include "sling/task/task.h"
 #include "sling/util/unicode.h"
 #include "sling/web/html-parser.h"
@@ -573,7 +573,7 @@ int main(int argc, char *argv[]) {
 
   // Set up workflow.
   LOG(INFO) << "Set up workflow";
-  Container wf;
+  Job wf;
   ResourceFactory rf(&wf);
 
   // Web corpus reader.

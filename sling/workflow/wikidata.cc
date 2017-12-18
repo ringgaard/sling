@@ -1,6 +1,6 @@
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
-#include "sling/task/container.h"
+#include "sling/task/job.h"
 #include "sling/workflow/common.h"
 
 using namespace sling;
@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
   // Set up workflow.
   LOG(INFO) << "Set up workflow";
   string wfdir = Corpora::workflow("wikidata");
-  Container wf;
+  Job wf;
   ResourceFactory rf(&wf);
 
   // Wikidata reader.

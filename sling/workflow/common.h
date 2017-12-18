@@ -7,7 +7,7 @@
 #include "sling/base/types.h"
 #include "sling/string/text.h"
 #include "sling/string/strcat.h"
-#include "sling/task/container.h"
+#include "sling/task/job.h"
 #include "sling/task/task.h"
 
 namespace sling {
@@ -67,28 +67,28 @@ struct Corpora {
     return StrCat("/archive/", volume, "/commoncrawl/files.txt");
   }
 
-  static Resources CommonCrawlFiles(task::Container *wf, int volume);
+  static Resources CommonCrawlFiles(task::Job *job, int volume);
 
-  static std::vector<Resources> CommonCrawl(task::Container *wf);
+  static std::vector<Resources> CommonCrawl(task::Job *job);
 };
 
-// Resource factory for creating resources in a task container.
+// Resource factory for creating resources for a job.
 struct ResourceFactory {
-  ResourceFactory(task::Container *wf) : container(wf) {}
+  ResourceFactory(task::Job *job) : job(job) {}
 
   task::Resource *File(Text filename, Text format = "text");
   Resources Files(Text filename, Text format = "text");
   Resources Files(Text basename, int shards, Text format = "text");
 
-  task::Container *container;
+  task::Job *job;
 };
 
 // Read files.
 struct Reader {
-  Reader(task::Container *wf, Text name, const Resources &files);
+  Reader(task::Job *job, Text name, const Resources &files);
 
-  void Connect(task::Container *wf, task::Task *task, Text input = "input");
-  void Connect(task::Container *wf, const Tasks &tasks, Text input = "input");
+  void Connect(task::Job *job, task::Task *task, Text input = "input");
+  void Connect(task::Job *job, const Tasks &tasks, Text input = "input");
 
   int shards() const { return readers.size(); }
 
@@ -100,10 +100,10 @@ struct Reader {
 
 // Write files.
 struct Writer {
-  Writer(task::Container *wf, Text name, const Resources &files);
+  Writer(task::Job *job, Text name, const Resources &files);
 
-  void Connect(task::Container *wf, task::Task *task, Text output = "output");
-  void Connect(task::Container *wf, const Tasks &tasks, Text output = "output");
+  void Connect(task::Job *job, task::Task *task, Text output = "output");
+  void Connect(task::Job *job, const Tasks &tasks, Text output = "output");
 
   int shards() const { return writers.size(); }
 
@@ -115,9 +115,9 @@ struct Writer {
 
 // Sharded writer.
 struct ShardedWriter {
-  ShardedWriter(task::Container *wf, Text name, const Resources &files);
+  ShardedWriter(task::Job *job, Text name, const Resources &files);
 
-  void Connect(task::Container *wf, task::Task *task, Text output = "output");
+  void Connect(task::Job *job, task::Task *task, Text output = "output");
   int shards() const { return writer.shards(); }
 
   task::Format format;
@@ -127,7 +127,7 @@ struct ShardedWriter {
 
 // Map task with record input.
 struct Map {
-  Map(task::Container *wf, Text name, Text type, const Resources &files);
+  Map(task::Job *job, Text name, Text type, const Resources &files);
 
   Reader reader;
   task::Task *mapper;
@@ -135,9 +135,9 @@ struct Map {
 
 // Shard and sort input data.
 struct Shuffle {
-  Shuffle(task::Container *wf, Text name, Text format, int shards);
+  Shuffle(task::Job *job, Text name, Text format, int shards);
 
-  void Connect(task::Container *wf, task::Task *task,
+  void Connect(task::Job *job, task::Task *task,
                Text format, Text output = "output");
 
   task::Task *sharder;
@@ -146,9 +146,9 @@ struct Shuffle {
 
 // Reduce and output to file.
 struct Reduce {
-  Reduce(task::Container *wf, Text name, Text type, const Resources &files);
+  Reduce(task::Job *job, Text name, Text type, const Resources &files);
 
-  void Connect(task::Container *wf, const Shuffle &shuffle, Text format);
+  void Connect(task::Job *job, const Shuffle &shuffle, Text format);
 
   task::Task *reducer;
   Writer writer;
@@ -156,7 +156,7 @@ struct Reduce {
 
 // Map input records, shuffle, sort, reduce, and output to files.
 struct MapReduce {
-  MapReduce(task::Container *wf,
+  MapReduce(task::Job *job,
             Text name,
             const Resources &inputs,
             const Resources &outputs,
@@ -171,23 +171,23 @@ struct MapReduce {
 
 // Build frame store from input frames.
 struct FrameStoreBuilder {
-  FrameStoreBuilder(task::Container *wf,
+  FrameStoreBuilder(task::Job *job,
                     Text name,
                     task::Resource *output);
 
-  void Connect(task::Container *wf, task::Task *task, Text output);
+  void Connect(task::Job *job, task::Task *task, Text output);
 
   task::Task *builder;
 };
 
 // Web corpus reader.
 struct WebCorpus {
-  WebCorpus(task::Container *wf, int num_workers = 5);
+  WebCorpus(task::Job *job, int num_workers = 5);
 
   void SetFileLimit(int limit);
   void SetBufferSize(int buffer_size);
 
-  void Connect(task::Container *wf, task::Task *task, Text input = "input");
+  void Connect(task::Job *job, task::Task *task, Text input = "input");
 
   std::vector<Resources> volumes;
   Tasks readers;

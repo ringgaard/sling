@@ -5,8 +5,8 @@
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
 #include "sling/frame/object.h"
-#include "sling/task/container.h"
 #include "sling/task/frames.h"
+#include "sling/task/job.h"
 #include "sling/workflow/common.h"
 
 using namespace sling;
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "Set up workflow";
   string wfdir = Corpora::workflow("wikidata");
 
-  Container wf;
+  Job wf;
   ResourceFactory rf(&wf);
   Resources items = rf.Files(wfdir + "/items@10", "records/frame");
   Resources properties = rf.Files(wfdir + "/properties", "records/frame");

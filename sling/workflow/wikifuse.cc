@@ -1,9 +1,9 @@
 #include "sling/base/flags.h"
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
-#include "sling/task/container.h"
-#include "sling/task/task.h"
 #include "sling/task/frames.h"
+#include "sling/task/job.h"
+#include "sling/task/task.h"
 #include "sling/workflow/common.h"
 
 DEFINE_string(language, "en", "Wikipedia language");
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "Set up workflow";
   string wddir = Corpora::workflow("wikidata");
   string wfdir = Corpora::workflow("wikifuse");
-  Container wf;
+  Job wf;
   ResourceFactory rf(&wf);
 
   // Map reduce over Wikidata for keying by Wikipedia id.

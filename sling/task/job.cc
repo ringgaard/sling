@@ -1,4 +1,4 @@
-#include "sling/task/container.h"
+#include "sling/task/job.h"
 
 #include <algorithm>
 #include <chrono>
@@ -13,22 +13,22 @@
 #include "sling/util/mutex.h"
 
 DEFINE_int32(event_manager_threads, 10,
-             "number of threads for task container event manager");
+             "number of threads for job event manager");
 
 DEFINE_int32(event_manager_queue_size, 1024,
-             "size of event queue for task container");
+             "size of event queue for job");
 
 namespace sling {
 namespace task {
 
-Container::Container() {
+Job::Job() {
   // Start event dispatcher.
   event_dispatcher_ = new ThreadPool(FLAGS_event_manager_threads,
                                      FLAGS_event_manager_queue_size);
   event_dispatcher_->StartWorkers();
 }
 
-Container::~Container() {
+Job::~Job() {
   delete event_dispatcher_;
   for (auto t : tasks_) delete t;
   for (auto c : channels_) delete c;
@@ -36,14 +36,14 @@ Container::~Container() {
   for (auto c : counters_) delete c.second;
 }
 
-Resource *Container::CreateResource(const string &filename,
-                                    const Format &format) {
+Resource *Job::CreateResource(const string &filename,
+                              const Format &format) {
   MutexLock lock(&mu_);
   return new Resource(filename, Shard(), format);
 }
 
-std::vector<Resource *> Container::CreateResources(const string &filename,
-                                                   const Format &format) {
+std::vector<Resource *> Job::CreateResources(const string &filename,
+                                             const Format &format) {
   std::vector<string> filenames;
   bool sharded = false;
   if (filename.find('?') != -1 || filename.find('*') != -1) {
@@ -87,7 +87,7 @@ std::vector<Resource *> Container::CreateResources(const string &filename,
   return resources;
 }
 
-std::vector<Resource *> Container::CreateShardedResources(
+std::vector<Resource *> Job::CreateShardedResources(
     const string &basename,
     int shards,
     const Format &format) {
@@ -105,15 +105,14 @@ std::vector<Resource *> Container::CreateShardedResources(
   return resources;
 }
 
-Channel *Container::CreateChannel(const Format &format) {
+Channel *Job::CreateChannel(const Format &format) {
   MutexLock lock(&mu_);
   Channel *channel = new Channel(channels_.size(), format);
   channels_.push_back(channel);
   return channel;
 }
 
-std::vector<Channel *> Container::CreateChannels(
-    const Format &format, int shards) {
+std::vector<Channel *> Job::CreateChannels(const Format &format, int shards) {
   MutexLock lock(&mu_);
   std::vector<Channel *> channels;
   for (int i = 0; i < shards; ++i) {
@@ -124,18 +123,18 @@ std::vector<Channel *> Container::CreateChannels(
   return channels;
 }
 
-Task *Container::CreateTask(const string &type,
-                            const string &name,
-                            Shard shard) {
+Task *Job::CreateTask(const string &type,
+                      const string &name,
+                      Shard shard) {
   MutexLock lock(&mu_);
   Task *task = new Task(this, tasks_.size(), type, name, shard);
   tasks_.push_back(task);
   return task;
 }
 
-std::vector<Task *> Container::CreateTasks(const string &type,
-                                           const string &name,
-                                           int shards) {
+std::vector<Task *> Job::CreateTasks(const string &type,
+                                     const string &name,
+                                     int shards) {
   MutexLock lock(&mu_);
   std::vector<Task *> tasks;
   for (int i = 0; i < shards; ++i) {
@@ -146,41 +145,41 @@ std::vector<Task *> Container::CreateTasks(const string &type,
   return tasks;
 }
 
-Channel *Container::Connect(const Port &producer,
-                            const Port &consumer,
-                            const Format &format) {
+Channel *Job::Connect(const Port &producer,
+                      const Port &consumer,
+                      const Format &format) {
   Channel *channel = CreateChannel(format);
   channel->ConnectConsumer(consumer);
   channel->ConnectProducer(producer);
   return channel;
 }
 
-Binding *Container::BindInput(Task *task,
-                              Resource *resource,
-                              const string &input) {
+Binding *Job::BindInput(Task *task,
+                        Resource *resource,
+                        const string &input) {
   MutexLock lock(&mu_);
   Binding *binding = new Binding(input, resource);
   task->AttachInput(binding);
   return binding;
 }
 
-Binding *Container::BindOutput(Task *task,
-                               Resource *resource,
-                               const string &output) {
+Binding *Job::BindOutput(Task *task,
+                         Resource *resource,
+                         const string &output) {
   MutexLock lock(&mu_);
   Binding *binding = new Binding(output, resource);
   task->AttachOutput(binding);
   return binding;
 }
 
-Counter *Container::GetCounter(const string &name) {
+Counter *Job::GetCounter(const string &name) {
   MutexLock lock(&mu_);
   Counter *&counter = counters_[name];
   if (counter == nullptr) counter = new Counter();
   return counter;
 }
 
-void Container::ChannelCompleted(Channel *channel) {
+void Job::ChannelCompleted(Channel *channel) {
   MutexLock lock(&mu_);
   LOG(INFO) << "Channel " << channel->id() << " completed";
 
@@ -190,7 +189,7 @@ void Container::ChannelCompleted(Channel *channel) {
   });
 }
 
-void Container::TaskCompleted(Task *task) {
+void Job::TaskCompleted(Task *task) {
   LOG(INFO) << "Task " << task->ToString() << " completed";
 
   event_dispatcher_->Schedule([this, task](){
@@ -203,14 +202,14 @@ void Container::TaskCompleted(Task *task) {
   });
 }
 
-bool Container::Completed() {
+bool Job::Completed() {
   for (Task *task : tasks_) {
     if (!task->completed()) return false;
   }
   return true;
 }
 
-void Container::Run() {
+void Job::Run() {
   // Initialize all tasks.
   for (Task *task : tasks_) {
     LOG(INFO) << "Initialize " << task->ToString();
@@ -228,12 +227,12 @@ void Container::Run() {
   LOG(INFO) << "All systems GO";
 }
 
-void Container::Wait() {
+void Job::Wait() {
   std::unique_lock<std::mutex> lock(mu_);
   while (!Completed()) completed_.wait(lock);
 }
 
-bool Container::Wait(int ms) {
+bool Job::Wait(int ms) {
   auto timeout = std::chrono::milliseconds(ms);
   auto expire = std::chrono::system_clock::now() + timeout;
   std::unique_lock<std::mutex> lock(mu_);
@@ -245,7 +244,7 @@ bool Container::Wait(int ms) {
   return true;
 }
 
-void Container::DumpCounters() {
+void Job::DumpCounters() {
   MutexLock lock(&mu_);
   std::vector<std::pair<string, Counter *>> stats(counters_.begin(),
                                                   counters_.end());

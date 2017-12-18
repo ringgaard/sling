@@ -32,9 +32,9 @@ cc_library(
 )
 
 cc_library(
-  name = "container",
-  srcs = ["container.cc"],
-  hdrs = ["container.h"],
+  name = "job",
+  srcs = ["job.cc"],
+  hdrs = ["job.h"],
   deps = [
     ":environment",
     ":task",

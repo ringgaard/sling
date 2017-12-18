@@ -1,7 +1,7 @@
 #include "sling/base/flags.h"
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
-#include "sling/task/container.h"
+#include "sling/task/job.h"
 #include "sling/workflow/common.h"
 
 DEFINE_string(language, "en", "Name language");
@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   // Set up workflow.
   LOG(INFO) << "Set up workflow";
   string wfdir = Corpora::workflow("wikidata");
-  task::Container wf;
+  task::Job wf;
   ResourceFactory rf(&wf);
 
   // Alias reader.

@@ -1,7 +1,7 @@
 #include "sling/base/flags.h"
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
-#include "sling/task/container.h"
+#include "sling/task/job.h"
 #include "sling/workflow/common.h"
 
 DEFINE_string(language, "en", "Wikipedia language");
@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
   string wfdir = Corpora::workflow("wikidata");
   string infile = wfdir + "/items@10";
   string outfile = wfdir + "/mapping-" + FLAGS_language;
-  Container wf;
+  Job wf;
   ResourceFactory rf(&wf);
 
   // Wikidata item reader.

@@ -3,8 +3,8 @@
 #include "sling/base/logging.h"
 #include "sling/nlp/wiki/wiki.h"
 #include "sling/task/accumulator.h"
-#include "sling/task/container.h"
 #include "sling/task/frames.h"
+#include "sling/task/job.h"
 #include "sling/task/task.h"
 #include "sling/string/numbers.h"
 #include "sling/workflow/common.h"
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
   string wfdir = Corpora::workflow("wikidata");
   string infile = wfdir + "/items@10";
   string outfile = wfdir + "/toxic-aliases-" + FLAGS_language;
-  Container wf;
+  Job wf;
   ResourceFactory rf(&wf);
 
   // Map reduction for finding toxic aliases in Wikidata.

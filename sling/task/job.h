@@ -1,5 +1,5 @@
-#ifndef SLING_TASK_CONTAINER_H_
-#define SLING_TASK_CONTAINER_H_
+#ifndef SLING_TASK_JOB_H_
+#define SLING_TASK_JOB_H_
 
 #include <condition_variable>
 #include <string>
@@ -20,20 +20,20 @@ DECLARE_int32(event_manager_queue_size);
 namespace sling {
 namespace task {
 
-// A task container manages a set of tasks with inputs and outputs. These tasks
-// are connected by channels which allow the tasks to communicate.
-class Container : public Environment {
+// A job manages a set of tasks with inputs and outputs. These tasks are
+// connected by channels which allow the tasks to communicate.
+class Job : public Environment {
  public:
-  // Initialize container.
-  Container();
+  // Initialize job.
+  Job();
 
-  // Destroy container.
-  ~Container();
+  // Destroy job.
+  ~Job();
 
-  // Create a new resource in the container.
+  // Create a new resource for the job.
   Resource *CreateResource(const string &filename, const Format &format);
 
-  // Create new resources in the container. If the filename contains wild cards
+  // Create new resources for the job. If the filename contains wild cards
   // or has a @n specifier, a set of sharded resources are returned.
   std::vector<Resource *> CreateResources(const string &filename,
                                           const Format &format);
@@ -43,11 +43,11 @@ class Container : public Environment {
                                                  int shards,
                                                  const Format &format);
 
-  // Create a new channel in the container.
+  // Create a new channel for the job.
   Channel *CreateChannel(const Format &format);
   std::vector<Channel *> CreateChannels(const Format &format, int shards);
 
-  // Create a new task in the container.
+  // Create a new task for the job.
   Task *CreateTask(const string &type,
                    const string &name,
                    Shard shard = Shard());
@@ -113,7 +113,7 @@ class Container : public Environment {
   // Worker queue for event dispatching.
   ThreadPool *event_dispatcher_;
 
-  // Mutex for protecting container state.
+  // Mutex for protecting job state.
   Mutex mu_;
 
   // Signal that all tasks have completed.
@@ -123,5 +123,5 @@ class Container : public Environment {
 }  // namespace task
 }  // namespace sling
 
-#endif  // SLING_TASK_CONTAINER_H_
+#endif  // SLING_TASK_JOB_H_
 
