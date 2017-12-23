@@ -237,6 +237,24 @@ class DivToMulTransformer : public Transformer {
   }
 };
 
+// Convert addition where last term is negated to subtraction.
+class AddNegToSubTransformer : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    int updates = 0;
+    for (Flow::Operation *op : flow->Find("Negate|1:Add")) {
+      Flow::Operation *add = op;
+      Flow::Operation *negate = add->inputs[1]->producer;
+      if (negate->outputs[0]->consumers.size() == 1) {
+        flow->Eliminate(negate);
+        add->type = "Sub";
+        updates++;
+      }
+    }
+    return updates > 0;
+  }
+};
+
 // Combine arithmetic operators into expressions that can be computed by a
 // Calculate kernel.
 class ExpressionTransformer : public Transformer {
@@ -535,6 +553,7 @@ void RegisterArithmeticLibrary(Library *library) {
 void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new ExpressionTransformer());
   library->RegisterTransformer(new DivToMulTransformer());
+  library->RegisterTransformer(new AddNegToSubTransformer());
 }
 
 }  // namespace myelin

@@ -418,6 +418,20 @@ void Flow::Operation::AddOutput(Variable *var) {
   var->producer = this;
 }
 
+int Flow::Operation::InputIndex(const Variable *var) const {
+  for (int i = 0; i < inputs.size(); ++i) {
+    if (inputs[i] == var) return i;
+  }
+  return -1;
+}
+
+int Flow::Operation::OutputIndex(const Variable *var) const {
+  for (int i = 0; i < outputs.size(); ++i) {
+    if (outputs[i] == var) return i;
+  }
+  return -1;
+}
+
 bool Flow::Operation::IsInput(const Variable *var) const {
   for (const Variable *input : inputs) {
     if (var == input) return true;

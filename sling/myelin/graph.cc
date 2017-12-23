@@ -177,6 +177,9 @@ static void AppendVar(string *str,
       str->append(" [");
       str->append("tooltip=\"");
       str->append(var->name);
+      if (var->producer->outputs.size() > 1) {
+        StringAppendF(str, " (@%d)", var->producer->OutputIndex(var));
+      }
       str->append("\" ");
       AppendPenWidth(str, var, options);
       str->append("];\n");
@@ -188,6 +191,9 @@ static void AppendVar(string *str,
       AppendOpId(str, consumer);
       str->append(" [");
       str->append("tooltip=\"");
+      if (consumer->inputs.size() > 1) {
+        StringAppendF(str, "%%%d = ", consumer->InputIndex(var));
+      }
       str->append(var->name);
       str->append("\" ");
       AppendPenWidth(str, var, options);
@@ -251,14 +257,21 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
 
   // Output DOT graph edges between ops.
   for (Flow::Operation *op : flow.ops()) {
-    for (Flow::Variable *input : op->inputs) {
+    for (int i = 0; i < op->inputs.size(); ++i) {
+      Flow::Variable *input = op->inputs[i];
       if (input->producer != nullptr && !input->in && !input->out) {
         AppendOpId(&str, input->producer);
         str.append(" -> ");
         AppendOpId(&str, op);
         str.append(" [");
         str.append("tooltip=\"");
+        if (op->inputs.size() > 1) {
+          StringAppendF(&str, "%%%d = ", i);
+        }
         str.append(input->name);
+        if (input->producer->outputs.size() > 1) {
+          StringAppendF(&str, " (@%d)", input->producer->OutputIndex(input));
+        }
         str.append("\" ");
         AppendPenWidth(&str, input, options);
         str.append("];\n");
