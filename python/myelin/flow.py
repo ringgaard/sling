@@ -58,6 +58,14 @@ class File:
     elif isinstance(a, str):
       self.write_long(len(a))
       self.f.write(a)
+    elif isinstance(a, float):
+      data = pack('f', a);
+      self.write_long(len(data))
+      self.f.write(data)
+    elif isinstance(a, int):
+      data = pack('i', a);
+      self.write_long(len(data))
+      self.f.write(data)
     else:
       self.write_long(a.nbytes)
       self.write(a.tostring())
@@ -128,6 +136,10 @@ class Operation:
   def add_attr(self, name, value):
     """Add operation attribute."""
     self.attrs[name] = str(value)
+
+  def attr(self, name):
+    """Look up attribute for operation."""
+    return self.attrs.get(name, None)
 
   def __repr__(self):
     return self.name

@@ -127,6 +127,33 @@ static void AppendOp(string *str,
   } else {
     options.ops.Append(str);
   }
+
+  str->append(" tooltip=\"");
+  StringAppendF(str, "name: %s&#10;", op->name.c_str());
+  StringAppendF(str, "type: %s&#10;", op->type.c_str());
+  if (!op->inputs.empty()) {
+    str->append("input:&#10;");
+    for (Flow::Variable *var : op->inputs) {
+      StringAppendF(str, "  %s: %s&#10;",
+        var->name.c_str(), var->TypeString().c_str());
+    }
+  }
+  if (!op->outputs.empty()) {
+    str->append("output:&#10;");
+    for (Flow::Variable *var : op->outputs) {
+      StringAppendF(str, "  %s: %s&#10;",
+        var->name.c_str(), var->TypeString().c_str());
+    }
+  }
+  if (!op->attrs.empty()) {
+    str->append("attr:&#10;");
+    for (const auto &attr : op->attrs) {
+      StringAppendF(str, "  %s = %s&#10;",
+        attr.name.c_str(), attr.value.c_str());
+    }
+  }
+  str->append("\"");
+
   str->append("];\n");
 }
 
@@ -152,6 +179,21 @@ static void AppendVar(string *str,
       if (elements > 0 && elements <= options.max_value_size) {
         str->append("\\n");
         str->append(var->DataString());
+      }
+    }
+    str->append("\" ");
+
+    str->append(" tooltip=\"");
+    if (var->data) str->append("const ");
+    if (var->in) str->append("in ");
+    if (var->out) str->append("out ");
+    str->append("var ");
+    str->append(var->name);
+    if (!var->aliases.empty()) {
+      str->append("&#10;alias:");
+      for (const string &alias : var->aliases) {
+        str->append("&#10;  ");
+        str->append(alias);
       }
     }
     str->append("\" ");
@@ -271,6 +313,13 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
         str.append(input->name);
         if (input->producer->outputs.size() > 1) {
           StringAppendF(&str, " (@%d)", input->producer->OutputIndex(input));
+        }
+        if (!input->aliases.empty()) {
+          str.append("&#10;alias:");
+          for (const string &alias : input->aliases) {
+            str.append("&#10;  ");
+            str.append(alias);
+          }
         }
         str.append("\" ");
         AppendPenWidth(&str, input, options);

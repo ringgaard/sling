@@ -55,7 +55,7 @@ static Express::OpType OpType(const string &op) {
     {"Sigmoid", Express::SIGMOID},
     {"Tanh", Express::TANH},
 
-    {"Negate", Express::NEG},
+    {"Neg", Express::NEG},
     {"Abs", Express::ABS},
     {"Relu", Express::RELU},
     {"Softsign", Express::SOFTSIGN},

@@ -18,89 +18,154 @@
 import math
 from sling.myelin.builder import Builder
 
-def add_gradient(op, g):
+# z = x + y
+# dx = dz
+# dy = dz
+def add_grad(op, g):
   x = op.inputs[0]
   y = op.inputs[1]
   z = op.outputs[0]
-  g.add(x, g(z))
-  g.add(y, g(z))
+  g.add(x, g.d(z))
+  g.add(y, g.d(z))
 
-def sub_gradient(op, g):
+# z = x - y
+# dx = dz
+# dy = -dz
+def sub_grad(op, g):
   x = op.inputs[0]
   y = op.inputs[1]
   z = op.outputs[0]
-  g.add(x, g(z))
-  g.add(y, g.expr.negate(g(z)))
+  g.add(x, g.d(z))
+  g.add(y, g.expr.neg(g.d(z)))
 
-def mul_gradient(op, g):
+# z = x * y
+# dx = dz * y
+# dy = x * dz
+def mul_grad(op, g):
   x = op.inputs[0]
   y = op.inputs[1]
   z = op.outputs[0]
-  g.add(x, g.expr.mul(g(z), g.var(y)))
-  g.add(y, g.expr.mul(g(z), g.var(x)))
+  g.add(x, g.expr.mul(g.d(z), g.v(y)))
+  g.add(y, g.expr.mul(g.v(x), g.d(z)))
 
-# gx = 2 * x * dy
-def square_gradient(op, g):
+# z = x * y
+# dx = dz * y^T
+# dy = x^T * dz
+def matmul_grad(op, g):
+  x = op.inputs[0]
+  y = op.inputs[1]
+  z = op.outputs[0]
+
+  if op.attr("transpose_b"):
+    g.add(x, g.expr.matmul(g.d(z), g.v(y)))
+  else:
+    g.add(x, g.expr.matmul(g.d(z), g.expr.t(g.v(y))))
+
+  if op.attr("transpose_a"):
+    g.add(y, g.expr.matmul(g.v(x), g.d(z)))
+  else:
+    g.add(y, g.expr.matmul(g.expr.t(g.v(x)), g.d(z)))
+
+# z = x / y
+# dx = y * dz
+# dy = (-x / y^2) * dz
+def div_grad(op, g):
+  x = op.inputs[0]
+  y = op.inputs[1]
+  z = op.outputs[0]
+  dx = g.expr.div(g.d(z), g.v(y))
+  g.add(x, dx)
+  dy = g.expr.mul(g.d(z), g.expr.div(g.expr.neg(g.v(x)),g.expr.square(g.v(y))))
+  g.add(y, )
+
+# y = x * x
+# dx = 2 * x * dy
+def square_grad(op, g):
   x = op.inputs[0]
   y = op.outputs[0]
-  g.add(x, g.expr.mul(g(y), g.expr.mul(2.0, g.var(x))))
+  g.add(x, g.expr.mul(g.d(y), g.expr.mul(2.0, g.v(x))))
 
-# gx = -1 / x^2 * dy
-def reciprocal_gradient(op, g):
+# y = 1 / x
+# dx = -1 / x^2 * dy
+def reciprocal_grad(op, g):
   x = op.inputs[0]
   y = op.outputs[0]
-  d = g.expr.negate(g.expr.reciprocal(g.expr.square(g.var(x))))
-  g.add(x, g.expr.mul(g(y), d))
+  g.add(x, g.expr.mul(g.d(y), g.expr.neg(g.expr.rcp(g.expr.square(g.v(x))))))
 
-# gx = cos(x) * dy
-def sin_gradient(op, g):
+# y = -x
+# dx = -dy
+def neg_grad(op, g):
   x = op.inputs[0]
   y = op.outputs[0]
-  g.add(x, g.expr.mul(g(y), g.expr.cos(g.var(x))))
+  g.add(x, g.expr.mul(g.d(y), g.expr.neg(g.v(x))))
 
-# gx = -sin(x) *dy
-def cos_gradient(op, g):
+# y = sin(x)
+# dx = cos(x) * dy
+def sin_grad(op, g):
   x = op.inputs[0]
   y = op.outputs[0]
-  g.add(x, g.expr.negate(g.expr.mul(g(y), g.expr.sin(g.var(x)))))
+  g.add(x, g.expr.mul(g.d(y), g.expr.cos(g.v(x))))
 
-# gx = exp(x) * dy = y * dy
-def exp_gradient(op, g):
+# y = cos(x)
+# dx = -sin(x) * dy
+def cos_grad(op, g):
   x = op.inputs[0]
   y = op.outputs[0]
-  g.add(x, g.expr.mul(g(y), g.var(y)))
+  g.add(x, g.expr.neg(g.expr.mul(g.d(y), g.expr.sin(g.v(x)))))
 
-# gx = dy / x
-def log_gradient(op, g):
+# y = exp(x)
+# dx = exp(x) * dy = y * dy
+def exp_grad(op, g):
   x = op.inputs[0]
   y = op.outputs[0]
-  g.add(x, g.expr.div(g(y), g.var(x)))
+  g.add(x, g.expr.mul(g.d(y), g.v(y)))
 
-# gx = sigmoid(x) * (1 - sigmoid(x)) * dy = y * (1 - y) * dy
-def sigmoid_gradient(op, g):
+# y = log(x)
+# dx = dy / x
+def log_grad(op, g):
   x = op.inputs[0]
   y = op.outputs[0]
-  g.add(x, g.expr.mul(g(y), g.expr.mul(g.var(y), g.expr.sub(1, g.var(y)))))
+  g.add(x, g.expr.div(g.d(y), g.v(x)))
 
-# gx = (1 - tanh(x)^2) * dy = (1 - y^2) * dy
-def tanh_gradient(op, g):
+# y = sigmoid(x)
+# dx = sigmoid(x) * (1 - sigmoid(x)) * dy = y * (1 - y) * dy
+def sigmoid_grad(op, g):
   x = op.inputs[0]
   y = op.outputs[0]
-  g.add(x, g.expr.mul(g(y), g.expr.sub(1.0, g.expr.square(g.var(y)))))
+  g.add(x, g.expr.mul(g.d(y), g.expr.mul(g.v(y), g.expr.sub(1.0, g.v(y)))))
+
+# y = tanh(x)
+# dx = (1 - tanh(x)^2) * dy = (1 - y^2) * dy
+def tanh_grad(op, g):
+  x = op.inputs[0]
+  y = op.outputs[0]
+  g.add(x, g.expr.mul(g.d(y), g.expr.sub(1.0, g.expr.square(g.v(y)))))
+
+# y = relu(x)
+# dx = (x > 0) * dy = relugrad(x, dy)
+def relu_grad(op, g):
+  x = op.inputs[0]
+  y = op.outputs[0]
+  g.add(x, g.expr.op("ReluGrad", [g.v(x), g.d(y)]))
 
 
 math_differentiators = {
-  'Add': add_gradient,
-  'Sub': sub_gradient,
-  'Mul': mul_gradient,
-  'Square': square_gradient,
-  'Reciprocal': reciprocal_gradient,
-  'Sin': sin_gradient,
-  'Cos': cos_gradient,
-  'Exp': exp_gradient,
-  'Log': log_gradient,
-  'Sigmoid': sigmoid_gradient,
-  'Tanh': tanh_gradient,
+  'Add': add_grad,
+  'Sub': sub_grad,
+  'Mul': mul_grad,
+  'MatMul': matmul_grad,
+  'Div': div_grad,
+  'TrueDiv': div_grad,
+  'Square': square_grad,
+  'Reciprocal': reciprocal_grad,
+  'Neg': neg_grad,
+  'Sin': sin_grad,
+  'Cos': cos_grad,
+  'Exp': exp_grad,
+  'Log': log_grad,
+  'Sigmoid': sigmoid_grad,
+  'Tanh': tanh_grad,
+  'Relu': relu_grad,
 }
 
 
@@ -119,12 +184,12 @@ class Gradients:
       self.terms[dv] = []
 
   # Get gradient variable for primal variable.
-  def __call__(self, x):
+  def d(self, x):
     if x.data != None: return self.expr.const(0.0)
     return self.adjoints[x]
 
   # Get variable reference.
-  def var(self, x):
+  def v(self, x):
     if x.data != None: return x
     r = self.refs.get(x)
     if r == None:

@@ -74,11 +74,11 @@ class Builder:
     if type(value) is float:
       dtype = DT_FLOAT
       shape = []
-      value = pack('f', value)
+      value = value
     elif type(value) is int:
       dtype = DT_INT
       shape = []
-      value = pack('i', value)
+      value = value
 
     # Get type and shape if missing.
     if dtype is None: dtype = str(value.dtype)
@@ -127,6 +127,9 @@ class Builder:
   def matmul(self, x, y, name=None):
     return self.op("MatMul", [x, y], name)
 
+  def t(self, x, name=None):
+    return self.op("Transpose", [x], name)
+
   def log(self, x, name=None):
     return self.op("Log", [x], name)
 
@@ -151,13 +154,16 @@ class Builder:
   def square(self, x, name=None):
     return self.op("Square", [x], name)
 
-  def negate(self, x, name=None):
-    return self.op("Negate", [x], name)
+  def neg(self, x, name=None):
+    return self.op("Neg", [x], name)
 
   def abs(self, x, name=None):
     return self.op("Abs", [x], name)
 
-  def reciprocal(self, x, name=None):
+  def sign(self, x, name=None):
+    return self.op("Sign", [x], name)
+
+  def rcp(self, x, name=None):
     return self.op("Reciprocal", [x], name)
 
   def ref(self, instance, var, name=None):

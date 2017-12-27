@@ -1213,8 +1213,13 @@ void Flow::Eliminate(Operation *op) {
       input->consumers.push_back(consumer);
     }
 
-    // Make input variable an alias for the output variable.
-    input->AddAlias(output->name);
+    // Merge input and output variable names.
+    if (output->out && !input->in) {
+      input->AddAlias(input->name);
+      input->name = output->name;
+    } else {
+      input->AddAlias(output->name);
+    }
     for (const string &alias : output->aliases) {
       input->AddAlias(alias);
     }
