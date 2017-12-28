@@ -148,6 +148,13 @@ def relu_grad(op, g):
   y = op.outputs[0]
   g.add(x, g.expr.op("ReluGrad", [g.v(x), g.d(y)]))
 
+# y = x
+# dx = dy
+def identity_grad(op, g):
+  x = op.inputs[0]
+  y = op.outputs[0]
+  g.add(x, g.d(y))
+
 
 math_differentiators = {
   'Add': add_grad,
@@ -166,6 +173,7 @@ math_differentiators = {
   'Sigmoid': sigmoid_grad,
   'Tanh': tanh_grad,
   'Relu': relu_grad,
+  'Identity': identity_grad,
 }
 
 
@@ -179,9 +187,11 @@ class Gradients:
     self.refs = {}
     self.instance = self.expr.var(self.func.name + "/primal", "&resource")
     for v in vars:
-      dv = self.expr.var("g/" + v.name)
-      self.adjoints[v] = dv
-      self.terms[dv] = []
+      if v.data == None:
+        dv = self.expr.var("g/" + v.name, v.type, v.shape)
+        if v.ref: dv.ref = True
+        self.adjoints[v] = dv
+        self.terms[dv] = []
 
   # Get gradient variable for primal variable.
   def d(self, x):
@@ -194,12 +204,16 @@ class Gradients:
     r = self.refs.get(x)
     if r == None:
       r = self.expr.ref(self.instance, x, name="ref/" + x.name)
+      r.type = x.type
+      r.shape = x.shape
+      r.ref = True
       self.refs[x] = r
     return r
 
   # Add term to adjoint for variable.
   def add(self, x, term):
-    self.terms[self.adjoints[x]].append(term)
+    if x in self.adjoints:
+      self.terms[self.adjoints[x]].append(term)
 
 
 def grad(flow, func, differentiators=math_differentiators):
@@ -215,6 +229,7 @@ def grad(flow, func, differentiators=math_differentiators):
   # Sum gradient terms for each variable.
   sum_index = 1
   for v in vars:
+    if v not in g.adjoints: continue
     dv = g.adjoints[v]
     terms = g.terms[dv]
     accum = None
@@ -230,6 +245,10 @@ def grad(flow, func, differentiators=math_differentiators):
       op.add_output(dv)
       g.func.add(op)
       sum_index += 1
+
+    if v.producer != None and dv.producer != None:
+      if v.producer.attr("input"): dv.producer.add_attr("input", 1)
+      if v.producer.attr("output"): dv.producer.add_attr("output", 1)
 
   # Return gradient computation function.
   return g.func

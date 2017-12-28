@@ -1187,10 +1187,10 @@ void Flow::Eliminate(Operation *op) {
     Variable *input = op->inputs[0];
     Variable *output = op->outputs[0];
     if (input->type != DT_INVALID && output->type != DT_INVALID) {
-      CHECK_EQ(input->type, output->type);
+      CHECK_EQ(input->type, output->type) << op->name;
     }
     if (input->shape.defined() && output->shape.defined()) {
-      CHECK(input->shape == output->shape);
+      CHECK(input->shape == output->shape) << op->name;
     }
     if (output->in) input->in = true;
     if (output->out) input->out = true;
@@ -1205,7 +1205,7 @@ void Flow::Eliminate(Operation *op) {
 
     // Remove op as consumer of input variable.
     auto f = std::find(input->consumers.begin(), input->consumers.end(), op);
-    CHECK(f != input->consumers.end());
+    CHECK(f != input->consumers.end()) << op->name;
     input->consumers.erase(f);
 
     // Move consumers of output variable to input variable.

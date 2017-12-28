@@ -61,11 +61,13 @@ class Builder:
     op = self.flow.op(name)
     op.type = optype
     self.func.add(op)
+    shape = []
     for a in args:
       if not isinstance(a, Variable): a = self.const(a)
       op.add_input(a)
+      if len(a.shape) > len(shape): shape = a.shape
     dtype = op.inputs[0].type if len(op.inputs) > 0 else DT_FLOAT
-    result = self.var(name + ":0", dtype)
+    result = self.var(name + ":0", dtype, shape)
     op.add_output(result)
     return result
 
@@ -125,10 +127,21 @@ class Builder:
     return self.op("Maximum", [x, y], name)
 
   def matmul(self, x, y, name=None):
-    return self.op("MatMul", [x, y], name)
+    result = self.op("MatMul", [x, y], name)
+    result.type = x.type
+    if len(x.shape) == 2 and len(y.shape) == 2:
+      result.shape = [x.shape[0], y.shape[1]]
+    else:
+      result.shape = [0]
+    return result
 
   def t(self, x, name=None):
-    return self.op("Transpose", [x], name)
+    result = self.op("Transpose", [x], name)
+    if len(x.shape) == 2:
+      result.shape = [x.shape[1], x.shape[0]]
+    else:
+      result.shape = [0]
+    return result
 
   def log(self, x, name=None):
     return self.op("Log", [x], name)
@@ -165,6 +178,9 @@ class Builder:
 
   def rcp(self, x, name=None):
     return self.op("Reciprocal", [x], name)
+
+  def identity(self, x, name=None):
+    return self.op("Identity", [x], name)
 
   def ref(self, instance, var, name=None):
     r = self.op("Referece", [instance], name)

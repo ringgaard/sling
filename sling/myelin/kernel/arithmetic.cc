@@ -174,7 +174,7 @@ struct Expression {
     CHECK(generator != nullptr);
 
     // Initialize expression and index generators.
-    generator->Initalize(expr, type, spare_regs, &index);
+    generator->Initialize(expr, type, spare_regs, &index);
   }
 
   ~Expression() { delete generator; }

@@ -79,6 +79,7 @@ class Variable:
     self.name = name
     self.type = None
     self.shape = []
+    self.ref = False
     self.data = None
     self.producer = None
     self.consumers = []
@@ -105,10 +106,11 @@ class Variable:
     return s
 
   def typestr(self):
-    if len(self.shape) == 0:
-      return self.type
-    else:
-      return self.type + "[" + 'x'.join(map(str, self.shape)) + "]"
+    t = ""
+    if self.ref: t += "&"
+    t += self.type
+    if len(self.shape) != 0: t += "[" + 'x'.join(map(str, self.shape)) + "]"
+    return t
 
 
 class Operation:
@@ -225,7 +227,7 @@ class Flow:
       self.funcs[name] = f
     return f
 
-  def var(self, name):
+  def var(self, name, type="float32", shape=[]):
     """Add variable to flow."""
     if isinstance(name, Variable): return name
     v = self.vars.get(name, None)
@@ -380,7 +382,7 @@ class Flow:
       var = self.vars[name]
       f.write_string(var.name)
       f.write_int(0)  # no aliases
-      f.write_string(var.type)
+      f.write_string("&" + var.type if var.ref else var.type)
       f.write_int(len(var.shape))
       for d in var.shape: f.write_int(d)
       f.write_array(var.data)

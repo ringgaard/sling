@@ -529,6 +529,8 @@ class TransposeTransformer : public Transformer {
       Flow::Operation *t1 = op;
       Flow::Operation *t2 = t1->inputs[0]->producer;
       if (t1->outputs[0]->consumers.size() == 1) {
+        t2->outputs[0]->shape = t2->inputs[0]->shape;
+        t1->outputs[0]->shape = t1->inputs[0]->shape;
         flow->Eliminate(t1);
         flow->Eliminate(t2);
         updates++;
@@ -540,6 +542,7 @@ class TransposeTransformer : public Transformer {
       Flow::Operation *matmul = op;
       Flow::Operation *transpose = matmul->inputs[0]->producer;
       if (transpose->outputs[0]->consumers.size() == 1) {
+        transpose->outputs[0]->shape = transpose->inputs[0]->shape;
         flow->Eliminate(transpose);
         matmul->SetAttr("transpose_a", !matmul->GetAttr("transpose_a", false));
         updates++;
@@ -551,6 +554,7 @@ class TransposeTransformer : public Transformer {
       Flow::Operation *matmul = op;
       Flow::Operation *transpose = matmul->inputs[1]->producer;
       if (transpose->outputs[0]->consumers.size() == 1) {
+        transpose->outputs[0]->shape = transpose->inputs[0]->shape;
         flow->Eliminate(transpose);
         matmul->SetAttr("transpose_b", !matmul->GetAttr("transpose_b", false));
         updates++;
