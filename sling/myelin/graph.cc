@@ -110,6 +110,9 @@ static void AppendOp(string *str,
   if (options.op_type_as_label) {
     if (op->HasAttr("expr")) {
       str->append(op->GetAttr("expr"));
+    } else if (op->HasAttr("var")) {
+      str->append("&#10132; ");
+      str->append(op->GetAttr("var"));
     } else {
       str->append(op->type);
     }

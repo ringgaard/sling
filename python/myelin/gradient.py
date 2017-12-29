@@ -176,6 +176,9 @@ math_differentiators = {
   'Identity': identity_grad,
 }
 
+def basename(name):
+  slash = name.rfind('/')
+  return name[slash + 1:] if slash != -1 else name
 
 class Gradients:
   def __init__(self, flow, primal, vars):
@@ -185,13 +188,17 @@ class Gradients:
     self.adjoints = {}
     self.terms = {}
     self.refs = {}
-    self.instance = self.expr.var(self.func.name + "/primal", "&resource")
+    self.instance = self.expr.var("primal", "&resource")
     for v in vars:
       if v.data == None:
-        dv = self.expr.var("g/" + v.name, v.type, v.shape)
-        if v.ref: dv.ref = True
+        dv = self.expr.var("d_" + basename(v.name), v.type, v.shape)
+        dv.ref = v.ref
         self.adjoints[v] = dv
         self.terms[dv] = []
+        if v.ref and len(v.consumers) > 0:
+          dvacc = self.expr.var("acc_" + basename(v.name), v.type, v.shape)
+          dvacc.ref = True
+          self.terms[dv].append(dvacc)
 
   # Get gradient variable for primal variable.
   def d(self, x):
@@ -203,7 +210,7 @@ class Gradients:
     if x.data != None: return x
     r = self.refs.get(x)
     if r == None:
-      r = self.expr.ref(self.instance, x, name="ref/" + x.name)
+      r = self.expr.ref(self.instance, x, name=basename(x.name))
       r.type = x.type
       r.shape = x.shape
       r.ref = True
@@ -239,14 +246,14 @@ def grad(flow, func, differentiators=math_differentiators):
       else:
         accum = g.expr.add(accum, t)
     if accum != None:
-      op = flow.op(dv.name + "_sum")
+      op = flow.op(dv.name)
       op.type = "Identity"
       op.add_input(accum)
       op.add_output(dv)
       g.func.add(op)
       sum_index += 1
 
-    if v.producer != None and dv.producer != None:
+    if not v.ref and v.producer != None and dv.producer != None:
       if v.producer.attr("input"): dv.producer.add_attr("input", 1)
       if v.producer.attr("output"): dv.producer.add_attr("output", 1)
 

@@ -51,13 +51,16 @@ class Builder:
     self.func = flow.func(func)
 
   def var(self, name, dtype=DT_FLOAT, shape=[]):
-    v = self.flow.var(name)
+    v = self.flow.var(self.func.name + "/" + name)
     v.type = dtype
     v.shape = shape
     return v
 
   def op(self, optype, args, name=None):
-    if name is None: name = self.opname(optype)
+    if name is None:
+      name = self.opname(optype)
+    else:
+      name = self.func.name + "/" + name
     op = self.flow.op(name)
     op.type = optype
     self.func.add(op)
@@ -67,7 +70,7 @@ class Builder:
       op.add_input(a)
       if len(a.shape) > len(shape): shape = a.shape
     dtype = op.inputs[0].type if len(op.inputs) > 0 else DT_FLOAT
-    result = self.var(name + ":0", dtype, shape)
+    result = self.flow.var(name + ":0", dtype, shape)
     op.add_output(result)
     return result
 
@@ -86,7 +89,7 @@ class Builder:
     if dtype is None: dtype = str(value.dtype)
     if shape is None: shape = list(value.shape)
 
-    var = self.var(self.varname("const"), dtype, shape)
+    var = self.flow.var(self.varname("const"), dtype, shape)
     var.data = value
     return var
 

@@ -108,7 +108,7 @@ class Variable:
   def typestr(self):
     t = ""
     if self.ref: t += "&"
-    t += self.type
+    t += self.type if self.type != None else "???"
     if len(self.shape) != 0: t += "[" + 'x'.join(map(str, self.shape)) + "]"
     return t
 
@@ -234,6 +234,8 @@ class Flow:
     if v == None:
       v = Variable(name)
       self.vars[name] = v
+      v.type = type
+      v.shape = shape
     return v
 
   def op(self, name):
