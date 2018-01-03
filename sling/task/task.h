@@ -16,6 +16,7 @@ namespace task {
 
 class Task;
 class Processor;
+class Stage;
 
 // Format specifier.
 class Format {
@@ -86,17 +87,21 @@ class Shard {
 // sharded files.
 class Resource {
  public:
-  Resource(const string &name, const Shard &shard, const Format &format)
-    : name_(name), shard_(shard), format_(format) {}
+  Resource(int id, const string &name, const Shard &shard, const Format &format)
+    : id_(id), name_(name), shard_(shard), format_(format) {}
 
-  Resource(const string &name, const Format &format)
-    : name_(name), shard_(), format_(format) {}
+  Resource(int id, const string &name, const Format &format)
+    : id_(id), name_(name), shard_(), format_(format) {}
 
+  int id() const { return id_; }
   const string name() const { return name_; }
   const Shard &shard() const { return shard_; }
   const Format &format() const { return format_; }
 
  private:
+  // Resource id.
+  int id_;
+
   // Resource name, e.g. a file name.
   string name_;
 
@@ -243,8 +248,8 @@ class Processor : public Component<Processor> {
 #define REGISTER_TASK_PROCESSOR(type, component) \
     REGISTER_COMPONENT_TYPE(sling::task::Processor, type, component)
 
-// A task is a node in the container computation graph. A processor is used
-// for processing the input data and producing the output data.
+// A task is a node in the job computation graph. A processor is used for
+// processing the input data and producing the output data.
 class Task {
  public:
   // Parameter with name and value.
@@ -293,6 +298,12 @@ class Task {
   std::vector<Binding *> GetOutputs(const string &name);
   std::vector<string> GetOutputFiles(const string &name);
 
+  // Get all inputs.
+  const std::vector<Binding *> &inputs() const { return inputs_; }
+
+  // Get all outputs.
+  const std::vector<Binding *> &outputs() const { return outputs_; }
+
   // Get singleton inbound source channel.
   Channel *GetSource(const string &name);
 
@@ -304,6 +315,12 @@ class Task {
 
   // Get outbound sink channels.
   std::vector<Channel *> GetSinks(const string &name);
+
+  // Get source channels.
+  const std::vector<Channel *> &sources() const { return sources_; }
+
+  // Get sink channels.
+  const std::vector<Channel *> &sinks() const { return sinks_; }
 
   // Get task parameter value.
   const string &Get(const string &name, const string &defval);
@@ -353,17 +370,21 @@ class Task {
   void Start();
   void Done();
 
-  // Check if task has completed.
-  bool completed() const { return done_; }
-
   // Reference counting. When all references have been released the task is
   // marked as done.
   void AddRef();
   void Release();
 
+  // Get and set stage for task.
+  Stage *stage() const { return stage_; }
+  void set_stage(Stage *stage) { stage_ = stage; }
+
  private:
   // Environment owning the task.
   Environment *env_;
+
+  // Stage for task.
+  Stage *stage_ = nullptr;
 
   // Task id.
   int id_;

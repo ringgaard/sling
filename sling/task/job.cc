@@ -21,6 +21,24 @@ DEFINE_int32(event_manager_queue_size, 1024,
 namespace sling {
 namespace task {
 
+void Stage::AddTask(Task *task) {
+  tasks_.push_back(task);
+}
+
+bool Stage::Ready() {
+  for (Stage *dependency : dependencies_) {
+    if (!dependency->done()) return false;
+  }
+  return true;
+}
+
+void Stage::Run() {
+  for (int i = tasks_.size() - 1; i >= 0; --i) {
+    LOG(INFO) << "Start " << tasks_[i]->ToString();
+    tasks_[i]->Start();
+  }
+}
+
 Job::Job() {
   // Start event dispatcher.
   event_dispatcher_ = new ThreadPool(FLAGS_event_manager_threads,
@@ -39,7 +57,9 @@ Job::~Job() {
 Resource *Job::CreateResource(const string &filename,
                               const Format &format) {
   MutexLock lock(&mu_);
-  return new Resource(filename, Shard(), format);
+  Resource *r = new Resource(resources_.size(), filename, Shard(), format);
+  resources_.push_back(r);
+  return r;
 }
 
 std::vector<Resource *> Job::CreateResources(const string &filename,
@@ -79,7 +99,8 @@ std::vector<Resource *> Job::CreateResources(const string &filename,
   std::vector<Resource *> resources;
   for (int i = 0; i < filenames.size(); ++i) {
     Shard shard = sharded ? Shard(i, filenames.size()) : Shard();
-    Resource *r = new Resource(filenames[i],  shard, format);
+    int id = resources_.size();
+    Resource *r = new Resource(id, filenames[i],  shard, format);
     resources_.push_back(r);
     resources.push_back(r);
   }
@@ -98,7 +119,8 @@ std::vector<Resource *> Job::CreateShardedResources(
     Shard shard(i, shards);
     string fn =
         StringPrintf("%s-%05d-of-%05d", basename.c_str(), i, shards);
-    Resource *r = new Resource(fn,  shard, format);
+    int id = resources_.size();
+    Resource *r = new Resource(id, fn,  shard, format);
     resources_.push_back(r);
     resources.push_back(r);
   }
@@ -196,32 +218,119 @@ void Job::TaskCompleted(Task *task) {
     // Notify task that it is done.
     task->Done();
 
-    // Check if all tasks have completed.
+    // Notify stage about task completion.
     std::unique_lock<std::mutex> lock(mu_);
-    if (Completed()) completed_.notify_all();
+    task->stage()->TaskCompleted(task);
+
+    // Start any new stages that are ready to run.
+    for (Stage *stage : stages_) {
+      if (stage->done()) continue;
+      if (stage->Ready()) stage->Run();
+    }
+
+    // Check if all stages have completed.
+    if (Done()) completed_.notify_all();
   });
 }
 
-bool Job::Completed() {
-  for (Task *task : tasks_) {
-    if (!task->completed()) return false;
+bool Job::Done() {
+  for (Stage *stage : stages_) {
+    if (!stage->done()) return false;
   }
   return true;
 }
 
 void Job::Run() {
-  // Initialize all tasks.
+  // Determine producer (if any) of each resource.
+  std::vector<Task *> producer(resources_.size());
   for (Task *task : tasks_) {
+    for (Binding *binding : task->outputs()) {
+      producer[binding->resource()->id()] = task;
+    }
+  }
+
+  // Sort tasks in dependency order.
+  std::vector<bool> ready(tasks_.size());
+  std::vector<Task *> order;
+  while (order.size() < tasks_.size()) {
+    for (Task *task : tasks_) {
+      if (ready[task->id()]) continue;
+
+      // Check if all input resources are ready.
+      bool ok = true;
+      for (Binding *binding : task->inputs()) {
+        Task *dependency = producer[binding->resource()->id()];
+        if (dependency != nullptr && !ready[dependency->id()]) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) continue;
+
+      // Check if all source channels are ready.
+      ok = true;
+      for (Channel *channel : task->sources()) {
+        Task *dependency = channel->producer().task();
+        if (dependency != nullptr && !ready[dependency->id()]) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) continue;
+
+      // Task is ready.
+      ready[task->id()] = true;
+      order.push_back(task);
+    }
+  }
+
+  // Create stages.
+  for (;;) {
+    // Find next task that is not assigned to a stage yet.
+    Task *task = nullptr;
+    for (Task *t : order) {
+      if (t->stage() == nullptr) {
+        task = t;
+        break;
+      }
+    }
+    if (task == nullptr) break;
+
+    // Create a new stage for the task.
+    Stage *stage = new Stage();
+    stages_.push_back(stage);
+
+    // Assign the transitive closure over source and sink channels to stage.
+    std::vector<Task *> queue;
+    queue.push_back(task);
+    while (!queue.empty()) {
+      Task *t = queue.back();
+      queue.pop_back();
+      if (t->stage() != nullptr) continue;
+      t->set_stage(stage);
+      for (Channel *channel : t->sources()) {
+        queue.push_back(channel->producer().task());
+      }
+      for (Channel *channel : t->sinks()) {
+        queue.push_back(channel->consumer().task());
+      }
+    }
+  }
+
+  // Assign tasks to stages.
+  for (Task *task : order) {
+    task->stage()->AddTask(task);
+  }
+
+  // Initialize all tasks.
+  for (Task *task : order) {
     LOG(INFO) << "Initialize " << task->ToString();
     task->Init();
   }
 
-  // Start all tasks.
-  // Start in reverse to "ensure" that dependent tasks are ready to receive.
-  // TODO: sort tasks in dependency order.
-  for (int i = tasks_.size() - 1; i >= 0; --i) {
-    LOG(INFO) << "Start " << tasks_[i]->ToString();
-    tasks_[i]->Start();
+  // Start all stages that are ready.
+  for (Stage *stage : stages_) {
+    if (stage->Ready()) stage->Run();
   }
 
   LOG(INFO) << "All systems GO";
@@ -229,14 +338,14 @@ void Job::Run() {
 
 void Job::Wait() {
   std::unique_lock<std::mutex> lock(mu_);
-  while (!Completed()) completed_.wait(lock);
+  while (!Done()) completed_.wait(lock);
 }
 
 bool Job::Wait(int ms) {
   auto timeout = std::chrono::milliseconds(ms);
   auto expire = std::chrono::system_clock::now() + timeout;
   std::unique_lock<std::mutex> lock(mu_);
-  while (!Completed()) {
+  while (!Done()) {
     if (completed_.wait_until(lock, expire) == std::cv_status::timeout) {
       return false;
     }
