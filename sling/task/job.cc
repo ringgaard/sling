@@ -25,6 +25,13 @@ void Stage::AddTask(Task *task) {
   tasks_.push_back(task);
 }
 
+void Stage::AddDependency(Stage *dependency) {
+  for (Stage *stage : dependencies_) {
+    if (stage == dependency) return;
+  }
+  dependencies_.push_back(dependency);
+}
+
 bool Stage::Ready() {
   for (Stage *dependency : dependencies_) {
     if (!dependency->done()) return false;
@@ -51,6 +58,7 @@ Job::~Job() {
   for (auto t : tasks_) delete t;
   for (auto c : channels_) delete c;
   for (auto r : resources_) delete r;
+  for (auto s : stages_) delete s;
   for (auto c : counters_) delete c.second;
 }
 
@@ -320,6 +328,17 @@ void Job::Run() {
   // Assign tasks to stages.
   for (Task *task : order) {
     task->stage()->AddTask(task);
+  }
+
+  // Add stage dependencies.
+  for (Task *task : order) {
+    Stage *stage = task->stage();
+    for (Binding *binding : task->inputs()) {
+      Task *dependency = producer[binding->resource()->id()];
+      if (dependency->stage() != stage) {
+        stage->AddDependency(dependency->stage());
+      }
+    }
   }
 
   // Initialize all tasks.

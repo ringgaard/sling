@@ -28,6 +28,9 @@ class Stage {
   // Add task to stage.
   void AddTask(Task *task);
 
+  // Add stage dependency.
+  void AddDependency(Stage *dependency);
+
   // Check if stage is ready to run, i.e. all the dependent stages are done.
   bool Ready();
 
