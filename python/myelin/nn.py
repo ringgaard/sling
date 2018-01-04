@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Neyral network cells."""
+"""Neural network cells."""
 
 def feed_forward(tf, input, layers, hidden=None, bias=True, activation="Relu"):
   v = input
