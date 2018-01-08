@@ -17,39 +17,39 @@
 import argparse
 
 # Command line flag arguments.
-args = None
+arg = argparse.Namespace()
 
 # Initialize command-line argument parser.
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-def arg(*args, **kwargs):
+def define(*args, **kwargs):
   """Define command-line flag."""
   parser.add_argument(*args, **kwargs)
 
 def parse():
   """Parse command-line flags."""
-  global args
-  args = parser.parse_args()
-  if args.corpora == None: args.corpora = args.data + "/corpora"
-  if args.repository == None: args.repository = args.data + "/sling"
+  global arg
+  parser.parse_args(namespace=arg)
+  if arg.corpora == None: arg.corpora = arg.data + "/corpora"
+  if arg.repository == None: arg.repository = arg.data + "/sling"
 
 # Standard command-line flags.
-arg("--language",
-    help="primary language for resources",
-    default="en",
-    metavar="LANG")
+define("--language",
+       help="primary language for resources",
+       default="en",
+       metavar="LANG")
 
-arg("--data",
-    help="data directory",
-    default="/var/data",
-    metavar="DIR")
+define("--data",
+       help="data directory",
+       default="/var/data",
+       metavar="DIR")
 
-arg("--corpora",
-    help="corpus directory",
-    metavar="DIR")
+define("--corpora",
+       help="corpus directory",
+       metavar="DIR")
 
-arg("--repository",
-    help="SLING git repository directory",
-    metavar="DIR")
+define("--repository",
+       help="SLING git repository directory",
+       metavar="DIR")
 

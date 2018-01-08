@@ -17,23 +17,23 @@
 import sling.flags as flags
 
 # Command-line flags.
-flags.arg("--wikidata",
-          help="wikidata version",
-          default="20161031",
-          metavar="YYYYMMDD")
-flags.arg("--wikipedia",
-          help="wikipedia version",
-          default="20161101",
-          metavar="YYYYMMDD")
+flags.define("--wikidata",
+             help="wikidata version",
+             default="20161031",
+             metavar="YYYYMMDD")
+flags.define("--wikipedia",
+             help="wikipedia version",
+             default="20161101",
+             metavar="YYYYMMDD")
 
 def wikidata_dump():
   """WikiData dump location."""
-  return flags.args.corpora + "/wikidata/wikidata-" + \
-         flags.args.wikidata + "-all.json.bz2"
+  return flags.arg.corpora + "/wikidata/wikidata-" + \
+         flags.arg.wikidata + "-all.json.bz2"
 
 def wikipedia_dump(language=None):
   """Wikipedia dump location."""
-  if language == None: language = flags.args.language
-  return flags.args.corpora + "/wikipedia/" + language + "wiki-" + \
-         flags.args.wikipedia + "-pages-articles.xml.bz2"
+  if language == None: language = flags.arg.language
+  return flags.arg.corpora + "/wikipedia/" + language + "wiki-" + \
+         flags.arg.wikipedia + "-pages-articles.xml.bz2"
 
