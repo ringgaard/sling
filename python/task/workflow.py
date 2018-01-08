@@ -18,100 +18,12 @@ from task import *
 import corpora
 import sling.flags as flags
 
-# Input readers.
-readers = {
-  "records": "record-file-reader",
-  "zip": "zip-file-reader",
-  "store": "frame-store-reader",
-  "textmap": "text-map-reader",
-  "text": "text-file-reader",
-}
-
-# Output writers.
-writers = {
-  "records": "record-file-writer",
-  "store": "frame-store-writer",
-  "textmap": "text-map-writer",
-  "text": "text-file-writer",
-}
-
-class WikidataImporter:
-  def __init__(self, items, properties):
-    self.items = items
-    self.properties = properties
-
-
 class Workflow(Job):
   def __init__(self):
     super(Workflow, self).__init__()
 
-  def read(self, input, name=None):
-    if isinstance(input, list):
-      outputs = []
-      shards = len(input)
-      for shard in xrange(shards):
-        format = input[shard].format
-        if type(format) == str: format = Format(format)
-        if format == None: format = Format("text")
-        tasktype = readers.get(format.file)
-        if tasktype == None: raise Exception("No reader for " + str(format))
-
-        reader = self.task(tasktype, name=name, shard=Shard(shard, shards))
-        reader.attach_input("input", input[shard])
-        output = self.channel(reader, format=format.as_message())
-        output.producer.shard = Shard(shard, shards)
-        outputs.append(output)
-      return outputs
-    else:
-      format = input.format
-      if type(format) == str: format = Format(format)
-      if format == None: format = Format("text")
-      tasktype = readers.get(format.file)
-      if tasktype == None: raise Exception("No reader for " + str(format))
-
-      reader = self.task(tasktype, name=name)
-      reader.attach_input("input", input)
-      output = self.channel(reader, format=format.as_message())
-      return output
-
-  def write(self, producer, output, sharding=None, name=None):
-    # Determine fan-in (channels) and fan-out (files).
-    if not isinstance(producer, list): producer = [producer]
-    if not isinstance(output, list): output = [output]
-    fanin = len(producer)
-    fanout = len(output)
-
-    # Use sharding if fan-out is different from fan-in.
-    if sharding == None and (fanout != 1 or fanin != fanout):
-      sharding = "sharder"
-    if sharding == None:
-      input = producer
-    else:
-      sharder = self.task(sharding)
-      if fanin == 1:
-        self.connect(producer[0], sharder)
-      else:
-        self.connect(producer, sharder)
-      input = self.channel(sharder, shards=fanout, format=producer[0].format)
-
-    # Create writer task for writing to output.
-    writer_tasks = []
-    for shard in xrange(fanout):
-      format = output[shard].format
-      if type(format) == str: format = Format(format)
-      if format == None: format = Format("text")
-      tasktype = writers.get(format.file)
-      if tasktype == None: raise Exception("No writer for " + str(format))
-
-      if fanout == 1:
-        writer = self.task(tasktype, name=name)
-      else:
-        writer = self.task(tasktype, name=name, shard=Shard(shard, fanout))
-      writer.attach_output("output", output[shard])
-      writer_tasks.append(writer)
-    self.connect(input, writer_tasks)
-
   def distribute(self, input, threads=5, name=None):
+    """Distribute input messages over thread worker pool."""
     workers = self.task("workers", name=name)
     workers.add_param("worker_threads", threads)
     self.connect(input, workers)
@@ -122,9 +34,17 @@ class Workflow(Job):
     """Resource for wikidata dump"""
     return self.resource(corpora.wikidata_dump(), format="text/json")
 
-  def wikipedia_dump(self):
-    """Resource for wikipedia dump"""
-    return self.resource(corpora.wikipedia_dump(), format="xml/wikipage")
+  def wikidata_items(self):
+    """Resource for wikidata items."""
+    return self.resource("items@10.rec",
+                         dir=corpora.wikidir(),
+                         format="records/frame")
+
+  def wikidata_properties(self):
+    """Resource for wikidata properties."""
+    return self.resource("properties.rec",
+                         dir=corpora.wikidir(),
+                         format="records/frame")
 
   def wikidata_import(self, input, name=None):
     """Convert WikiData JSON to SLING items and properties."""
@@ -133,5 +53,54 @@ class Workflow(Job):
     self.connect(input, task)
     items = self.channel(task, name="items", format="message/frame")
     properties = self.channel(task, name="properties", format="message/frame")
-    return WikidataImporter(items, properties)
+    return items, properties
+
+  def wikidata(self):
+    """Import Wikidata dump."""
+    input = self.distribute(self.read(self.wikidata_dump()), threads=5)
+    items, properties = self.wikidata_import(input)
+    items_output = self.wikidata_items()
+    self.write(items, items_output, name="item-writer")
+    properties_output = self.wikidata_properties()
+    self.write(properties, properties_output, name="property-writer")
+    return items_output, properties_output
+
+  def wikipedia_dump(self, language=None):
+    """Resource for wikipedia dump"""
+    if language == None: language = flags.arg.language
+    return self.resource(corpora.wikipedia_dump(language),
+                         format="xml/wikipage")
+
+  def wikipedia_articles(self, language=None):
+    """Resource for wikipedia articles."""
+    if language == None: language = flags.arg.language
+    return self.resource("articles@10.rec",
+                         dir=corpora.wikidir() + "/" + language,
+                         format="records/frame")
+
+  def wikipedia_redirects(self, language=None):
+    """Resource for wikidata redirects."""
+    if language == None: language = flags.arg.language
+    return self.resource("redirects.sling",
+                         dir=corpora.wikidir() + "/" + language,
+                         format="store/frame")
+
+  def wikipedia_import(self, input, name=None):
+    """Convert Wikipedia dump to SLING documents and redirects."""
+    task = self.task("wikipedia-importer", name=name)
+    task.attach_input("input", input)
+    articles = self.channel(task, name="articles", format="message/frame")
+    redirects = self.channel(task, name="redirects", format="message/frame")
+    return articles, redirects
+
+  def wikipedia(self, language=None, name=None):
+    """Import Wikipedia dump."""
+    if language == None: language = flags.arg.language
+    input = self.wikipedia_dump(language)
+    articles, redirects = self.wikipedia_import(input, name=name)
+    articles_output = self.wikipedia_articles(language)
+    self.write(articles, articles_output, name=language + "-article-writer")
+    redirects_output = self.wikipedia_redirects(language)
+    self.write(redirects, redirects_output, name=language + "-redirect-writer")
+    return articles_output, redirects_output
 

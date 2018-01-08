@@ -33,6 +33,7 @@ def parse():
   parser.parse_args(namespace=arg)
   if arg.corpora == None: arg.corpora = arg.data + "/corpora"
   if arg.repository == None: arg.repository = arg.data + "/sling"
+  if arg.workdir == None: arg.workdir = arg.data + "/e"
 
 # Standard command-line flags.
 define("--language",
@@ -47,6 +48,10 @@ define("--data",
 
 define("--corpora",
        help="corpus directory",
+       metavar="DIR")
+
+define("--workdir",
+       help="working directory",
        metavar="DIR")
 
 define("--repository",

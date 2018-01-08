@@ -14,28 +14,42 @@
 
 """Interface to SLING task system"""
 
-"""
-PyJob in pyapi: interface to task system
-task.py: Job, Task, etc classes
-
-corpora.py: definitions for standard corpora and locations
-  uses flags for configuring corpora locations
-
-workflow.py: Workflow class subclass of Job with builder methods
-  the builder methods can return tasks, channels, resources, or structs
-  with information about the component parts
-"""
-
 import glob
 import os
 import re
 import sling
 import sling.pysling as api
 
+# Input readers.
+readers = {
+  "records": "record-file-reader",
+  "zip": "zip-file-reader",
+  "store": "frame-store-reader",
+  "textmap": "text-map-reader",
+  "text": "text-file-reader",
+}
+
+# Output writers.
+writers = {
+  "records": "record-file-writer",
+  "store": "frame-store-writer",
+  "textmap": "text-map-writer",
+  "text": "text-file-writer",
+}
+
 class Shard:
   def __init__(self, part, total):
     self.part = part
     self.total = total
+
+  def __hash__(self):
+    return hash(self.part)
+
+  def __eq__(self, other):
+    return other != None and self.part == other.part
+
+  def __ne__(self, other):
+    return not(self == other)
 
   def __repr__(self):
     return "[%d/%d]" % (self.part, self.total)
@@ -171,11 +185,18 @@ class Job(object):
     self.tasks = []
     self.channels = []
     self.resources = []
+    self.taskmap = {}
 
   def task(self, type, name=None, shard=None):
-    if name == None: name = type  # TODO: generate unique name
+    if name == None: name = type
+    basename = name
+    index = 0
+    while (name, shard) in self.taskmap:
+      index += 1
+      name = basename + "-" + str(index)
     t = Task(type, name, shard)
     self.tasks.append(t)
+    self.taskmap[(name, shard)] = t
     return t
 
   def resource(self, file, dir=None, shards=None, ext=None, format=None):
@@ -274,11 +295,77 @@ class Job(object):
       if len(consumer) != shards: raise Exception("size mismatch")
       for shard in xrange(shards):
         if channel[shard].consumer != None: raise Exception("already connected")
-        port = Port(consumer[shard], name, Shard(shard, shards))
+        port = Port(consumer[shard], name, None)
         channel[shard].consumer = port
         consumer[shard].connect_source(channel[shard])
     else:
       raise Exception("cannot connect single channel to multiple tasks")
+
+  def read(self, input, name=None):
+    if isinstance(input, list):
+      outputs = []
+      shards = len(input)
+      for shard in xrange(shards):
+        format = input[shard].format
+        if type(format) == str: format = Format(format)
+        if format == None: format = Format("text")
+        tasktype = readers.get(format.file)
+        if tasktype == None: raise Exception("No reader for " + str(format))
+
+        reader = self.task(tasktype, name=name, shard=Shard(shard, shards))
+        reader.attach_input("input", input[shard])
+        output = self.channel(reader, format=format.as_message())
+        output.producer.shard = Shard(shard, shards)
+        outputs.append(output)
+      return outputs
+    else:
+      format = input.format
+      if type(format) == str: format = Format(format)
+      if format == None: format = Format("text")
+      tasktype = readers.get(format.file)
+      if tasktype == None: raise Exception("No reader for " + str(format))
+
+      reader = self.task(tasktype, name=name)
+      reader.attach_input("input", input)
+      output = self.channel(reader, format=format.as_message())
+      return output
+
+  def write(self, producer, output, sharding=None, name=None):
+    # Determine fan-in (channels) and fan-out (files).
+    if not isinstance(producer, list): producer = [producer]
+    if not isinstance(output, list): output = [output]
+    fanin = len(producer)
+    fanout = len(output)
+
+    # Use sharding if fan-out is different from fan-in.
+    if sharding == None and (fanout != 1 or fanin != fanout):
+      sharding = "sharder"
+    if sharding == None:
+      input = producer
+    else:
+      sharder = self.task(sharding)
+      if fanin == 1:
+        self.connect(producer[0], sharder)
+      else:
+        self.connect(producer, sharder)
+      input = self.channel(sharder, shards=fanout, format=producer[0].format)
+
+    # Create writer task for writing to output.
+    writer_tasks = []
+    for shard in xrange(fanout):
+      format = output[shard].format
+      if type(format) == str: format = Format(format)
+      if format == None: format = Format("text")
+      tasktype = writers.get(format.file)
+      if tasktype == None: raise Exception("No writer for " + str(format))
+
+      if fanout == 1:
+        writer = self.task(tasktype, name=name)
+      else:
+        writer = self.task(tasktype, name=name, shard=Shard(shard, fanout))
+      writer.attach_output("output", output[shard])
+      writer_tasks.append(writer)
+    self.connect(input, writer_tasks)
 
   def run(self):
     pass
@@ -309,5 +396,8 @@ class Job(object):
         s += "  output " + output.name + " = " + str(output.resource) + "\n"
       for sink in task.sinks:
         s += "  sink " +  str(sink) + "\n"
-
+    for channel in self.channels:
+      s += "channel " + str(channel) + "\n"
+    for resource in self.resources:
+      s += "resource " + str(resource) + "\n"
     return s

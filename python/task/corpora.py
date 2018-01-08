@@ -16,6 +16,11 @@
 
 import sling.flags as flags
 
+# Wikipedia languages.
+languages = [
+  "en", "da", "sv", "no", "de", "fr", "es", "it", "nl", "pt", "pl", "fi"
+]
+
 # Command-line flags.
 flags.define("--wikidata",
              help="wikidata version",
@@ -36,4 +41,8 @@ def wikipedia_dump(language=None):
   if language == None: language = flags.arg.language
   return flags.arg.corpora + "/wikipedia/" + language + "wiki-" + \
          flags.arg.wikipedia + "-pages-articles.xml.bz2"
+
+def wikidir():
+  """Location of wiki datasets."""
+  return flags.arg.workdir + "/wiki"
 
