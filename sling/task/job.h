@@ -65,7 +65,9 @@ class Job : public Environment {
   ~Job();
 
   // Create a new resource for the job.
-  Resource *CreateResource(const string &filename, const Format &format);
+  Resource *CreateResource(const string &filename,
+                           const Format &format,
+                           const Shard &shard = Shard());
 
   // Create new resources for the job. If the filename contains wild cards
   // or has a @n specifier, a set of sharded resources are returned.
@@ -84,7 +86,7 @@ class Job : public Environment {
   // Create a new task for the job.
   Task *CreateTask(const string &type,
                    const string &name,
-                   Shard shard = Shard());
+                   const Shard &shard = Shard());
 
   // Create a set of sharded tasks.
   std::vector<Task *> CreateTasks(const string &type,

@@ -22,14 +22,6 @@ class Workflow(Job):
   def __init__(self):
     super(Workflow, self).__init__()
 
-  def distribute(self, input, threads=5, name=None):
-    """Distribute input messages over thread worker pool."""
-    workers = self.task("workers", name=name)
-    workers.add_param("worker_threads", threads)
-    self.connect(input, workers)
-    format = input[0].format if isinstance(input, list) else input.format
-    return self.channel(workers, format=format)
-
   def wikidata_dump(self):
     """Resource for wikidata dump"""
     return self.resource(corpora.wikidata_dump(), format="text/json")
@@ -57,7 +49,7 @@ class Workflow(Job):
 
   def wikidata(self):
     """Import Wikidata dump."""
-    input = self.distribute(self.read(self.wikidata_dump()), threads=5)
+    input = self.parallel(self.read(self.wikidata_dump()), threads=5)
     items, properties = self.wikidata_import(input)
     items_output = self.wikidata_items()
     self.write(items, items_output, name="item-writer")

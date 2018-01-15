@@ -1,4 +1,5 @@
 import pysling as api
+from log import *
 from nlp.document import *
 from nlp.parser import *
 

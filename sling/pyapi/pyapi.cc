@@ -19,6 +19,7 @@
 #include "sling/pyapi/pyparser.h"
 #include "sling/pyapi/pyrecordio.h"
 #include "sling/pyapi/pystore.h"
+#include "sling/pyapi/pytask.h"
 
 namespace sling {
 
@@ -43,6 +44,7 @@ static void RegisterPythonModule() {
   PyParser::Define(module);
   PyRecordReader::Define(module);
   PyRecordWriter::Define(module);
+  PyJob::Define(module);
 }
 
 }  // namespace sling

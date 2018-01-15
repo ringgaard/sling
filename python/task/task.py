@@ -32,7 +32,7 @@ readers = {
 # Output writers.
 writers = {
   "records": "record-file-writer",
-  "store": "frame-store-writer",
+  "store": "frame-store-builder",
   "textmap": "text-map-writer",
   "text": "text-file-writer",
 }
@@ -96,6 +96,7 @@ class Resource:
     self.name = name
     self.shard = shard
     self.format = format
+
   def __repr__(self):
     return "%d/%d" % (self.part, self.total)
 
@@ -186,6 +187,7 @@ class Job(object):
     self.channels = []
     self.resources = []
     self.taskmap = {}
+    self.driver = None
 
   def task(self, type, name=None, shard=None):
     if name == None: name = type
@@ -301,6 +303,14 @@ class Job(object):
     else:
       raise Exception("cannot connect single channel to multiple tasks")
 
+  def parallel(self, input, threads=5, name=None):
+    """Parallelize input messages over thread worker pool."""
+    workers = self.task("workers", name=name)
+    workers.add_param("worker_threads", threads)
+    self.connect(input, workers)
+    format = input[0].format if isinstance(input, list) else input.format
+    return self.channel(workers, format=format)
+
   def read(self, input, name=None):
     if isinstance(input, list):
       outputs = []
@@ -350,7 +360,7 @@ class Job(object):
         self.connect(producer, sharder)
       input = self.channel(sharder, shards=fanout, format=producer[0].format)
 
-    # Create writer task for writing to output.
+    # Create writer tasks for writing to output.
     writer_tasks = []
     for shard in xrange(fanout):
       format = output[shard].format
@@ -368,7 +378,8 @@ class Job(object):
     self.connect(input, writer_tasks)
 
   def run(self):
-    pass
+    if self.driver != None: raise Exception("job already running")
+    self.driver = api.Job(self)
 
   def wait(self, timeout=None):
     pass

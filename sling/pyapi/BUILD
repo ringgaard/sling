@@ -10,6 +10,7 @@ cc_library(
     "pyparser.cc",
     "pyrecordio.cc",
     "pystore.cc",
+    "pytask.cc",
   ],
   hdrs = [
     "pyarray.h",
@@ -18,8 +19,10 @@ cc_library(
     "pyparser.h",
     "pyrecordio.h",
     "pystore.h",
+    "pytask.h",
   ],
   deps = [
+    ":tasks",
     "//sling/base",
     "//sling/file",
     "//sling/file:recordio",
@@ -27,12 +30,29 @@ cc_library(
     "//sling/nlp/document",
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/parser",
+    "//sling/task:job",
     "//sling/stream:file",
     "//sling/stream:unix-file",
   ],
   copts = [
     "-Wno-pmf-conversions",
   ]
+)
+
+cc_library(
+  name = "tasks",
+  deps = [
+    "//sling/nlp/wiki:wikidata-importer",
+    "//sling/nlp/wiki:wikipedia-importer",
+    "//sling/task:frame-store-reader",
+    "//sling/task:frame-store-builder",
+    "//sling/task:sharder",
+    "//sling/task:record-file-reader",
+    "//sling/task:record-file-writer",
+    "//sling/task:text-file-reader",
+    "//sling/task:text-file-writer",
+    "//sling/task:workers",
+  ],
 )
 
 cc_binary(

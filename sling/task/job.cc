@@ -63,9 +63,10 @@ Job::~Job() {
 }
 
 Resource *Job::CreateResource(const string &filename,
-                              const Format &format) {
+                              const Format &format,
+                              const Shard &shard) {
   MutexLock lock(&mu_);
-  Resource *r = new Resource(resources_.size(), filename, Shard(), format);
+  Resource *r = new Resource(resources_.size(), filename, shard, format);
   resources_.push_back(r);
   return r;
 }
@@ -155,7 +156,7 @@ std::vector<Channel *> Job::CreateChannels(const Format &format, int shards) {
 
 Task *Job::CreateTask(const string &type,
                       const string &name,
-                      Shard shard) {
+                      const Shard &shard) {
   MutexLock lock(&mu_);
   Task *task = new Task(this, tasks_.size(), type, name, shard);
   tasks_.push_back(task);

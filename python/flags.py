@@ -23,27 +23,27 @@ arg = argparse.Namespace()
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+# Post-processing hooks.
+hooks = []
+
 def define(*args, **kwargs):
   """Define command-line flag."""
   parser.add_argument(*args, **kwargs)
+
+def hook(callback):
+  """Add hook for post-processing flags."""
+  hooks.append(callback)
 
 def parse():
   """Parse command-line flags."""
   global arg
   parser.parse_args(namespace=arg)
-  if arg.corpora == None: arg.corpora = arg.data + "/corpora"
-  if arg.repository == None: arg.repository = arg.data + "/sling"
-  if arg.workdir == None: arg.workdir = arg.data + "/e"
+  for callback in hooks: callback(arg)
 
 # Standard command-line flags.
-define("--language",
-       help="primary language for resources",
-       default="en",
-       metavar="LANG")
-
 define("--data",
        help="data directory",
-       default="/var/data",
+       default="local/data",
        metavar="DIR")
 
 define("--corpora",
@@ -56,5 +56,12 @@ define("--workdir",
 
 define("--repository",
        help="SLING git repository directory",
+       default=".",
        metavar="DIR")
+
+def post_process_flags(arg):
+  if arg.corpora == None: arg.corpora = arg.data + "/corpora"
+  if arg.workdir == None: arg.workdir = arg.data + "/e"
+
+hook(post_process_flags)
 
