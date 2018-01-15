@@ -75,6 +75,9 @@ class Shard {
   int part() const { return part_; }
   int total() const { return total_; }
 
+  // Return shard as string.
+  string ToString() const;
+
  private:
   // Part number in multi-part data.
   int part_;
@@ -141,6 +144,9 @@ class Port {
   Task *task() const { return task_; }
   const string &name() const { return name_; }
   Shard shard() const { return shard_; }
+
+  // Return port as string.
+  string ToString() const;
 
  private:
   Task *task_;

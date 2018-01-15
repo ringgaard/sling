@@ -15,6 +15,8 @@
 #ifndef SLING_PYAPI_PYTASK_H_
 #define SLING_PYAPI_PYTASK_H_
 
+#include <unordered_map>
+
 #include "sling/task/job.h"
 #include "sling/pyapi/pybase.h"
 
@@ -22,6 +24,10 @@ namespace sling {
 
 // Python wrapper for job.
 struct PyJob : public PyBase {
+  // Mappings.
+  typedef std::unordered_map<PyObject *, task::Resource *> ResourceMapping;
+  typedef std::unordered_map<PyObject *, task::Task *> TaskMapping;
+
   // Initialize job wrapper.
   int Init(PyObject *args, PyObject *kwds);
 
@@ -30,6 +36,9 @@ struct PyJob : public PyBase {
 
   // Run job.
   PyObject *Run();
+
+  // Convert Port object.
+  static task::Port PyGetPort(PyObject *obj, const TaskMapping &mapping);
 
   // Convert Format object.
   static task::Format PyGetFormat(PyObject *obj);
@@ -43,7 +52,7 @@ struct PyJob : public PyBase {
   // Get string attribute for object.
   static int PyIntAttr(PyObject *obj, const char *name);
 
-  // Get attribute for object.
+  // Get attribute for object. Returns new reference.
   static PyObject *PyAttr(PyObject *obj, const char *name);
 
   // Job object for runnning job.

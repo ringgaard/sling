@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <unordered_map>
-
 #include "sling/pyapi/pytask.h"
+
+using namespace sling::task;
 
 namespace sling {
 
@@ -43,77 +43,114 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
 
   // Create new job.
   LOG(INFO) << "Create job";
-  job_ = new task::Job();
+  job_ = new Job();
 
   // Get resources.
-  std::unordered_map<PyObject *, task::Resource *> resource_mapping;
+  ResourceMapping resource_mapping;
   PyObject *resources = PyAttr(pyjob, "resources");
   for (int i = 0; i < PyList_Size(resources); ++i) {
-    PyObject *resource = PyList_GetItem(resources, i);
-    const char *name = PyStrAttr(resource, "name");
-    task::Format format = PyGetFormat(PyAttr(resource, "format"));
-    task::Shard shard = PyGetShard(PyAttr(resource, "shard"));
-    task::Resource *r = job_->CreateResource(name, format, shard);
-    resource_mapping[resource] = r;
+    PyObject *pyresource = PyList_GetItem(resources, i);
+    PyObject *pyformat = PyAttr(pyresource, "format");
+    PyObject *pyshard = PyAttr(pyresource, "shard");
+
+    const char *name = PyStrAttr(pyresource, "name");
+    Format format = PyGetFormat(pyformat);
+    Shard shard = PyGetShard(pyshard);
+
+
+    Resource *resource = job_->CreateResource(name, format, shard);
+    resource_mapping[pyresource] = resource;
     LOG(INFO) << "Resource " << name << " format: " << format.ToString()
               << " shard: " << shard.part() << "/" << shard.total();
+
+    Py_DECREF(pyformat);
+    Py_DECREF(pyshard);
   }
   Py_DECREF(resources);
 
   // Get tasks.
-  std::unordered_map<PyObject *, task::Task *> task_mapping;
+  TaskMapping task_mapping;
   PyObject *tasks = PyAttr(pyjob, "tasks");
   for (int i = 0; i < PyList_Size(tasks); ++i) {
-    PyObject *task = PyList_GetItem(tasks, i);
-    const char *type = PyStrAttr(task, "type");
-    const char *name = PyStrAttr(task, "name");
-    task::Shard shard = PyGetShard(PyAttr(task, "shard"));
-    task::Task *t = job_->CreateTask(type, name, shard);
-    task_mapping[task] = t;
+    PyObject *pytask = PyList_GetItem(tasks, i);
+    const char *type = PyStrAttr(pytask, "type");
+    const char *name = PyStrAttr(pytask, "name");
+
+    PyObject *pyshard = PyAttr(pytask, "shard");
+    Shard shard = PyGetShard(pyshard);
+    Py_DECREF(pyshard);
+
+    Task *task = job_->CreateTask(type, name, shard);
+    task_mapping[pytask] = task;
 
     LOG(INFO) << "Task " << name << " type: " << type
               << " shard: " << shard.part() << "/" << shard.total();
 
     // Get task parameters.
-    PyObject *params = PyAttr(task, "params");
+    PyObject *params = PyAttr(pytask, "params");
     Py_ssize_t pos = 0;
     PyObject *k;
     PyObject *v;
     while (PyDict_Next(params, &pos, &k, &v)) {
       const char *key = PyString_AsString(k);
       const char *value = PyString_AsString(v);
-      t->AddParameter(key, value);
+      task->AddParameter(key, value);
       LOG(INFO) << "  Param " << key << " = " << value;
     }
     Py_DECREF(params);
 
     // Bind inputs.
-    PyObject *inputs = PyAttr(task, "inputs");
+    PyObject *inputs = PyAttr(pytask, "inputs");
     for (int i = 0; i < PyList_Size(inputs); ++i) {
-      PyObject *binding = PyList_GetItem(inputs, i);
-      const char *name = PyStrAttr(binding, "name");
-      PyObject *resource = PyAttr(binding, "resource");
-      task::Resource *r = resource_mapping[resource];
-      CHECK(r != nullptr);
-      job_->BindInput(t, r, name);
-      Py_DECREF(resource);
+      PyObject *pybinding = PyList_GetItem(inputs, i);
+      const char *name = PyStrAttr(pybinding, "name");
+      PyObject *pyresource = PyAttr(pybinding, "resource");
+      Resource *resource = resource_mapping.at(pyresource);
+      CHECK(resource != nullptr);
+      job_->BindInput(task, resource, name);
+      Py_DECREF(pyresource);
     }
     Py_DECREF(inputs);
 
     // Bind outputs.
-    PyObject *outputs = PyAttr(task, "outputs");
+    PyObject *outputs = PyAttr(pytask, "outputs");
     for (int i = 0; i < PyList_Size(outputs); ++i) {
-      PyObject *binding = PyList_GetItem(outputs, i);
-      const char *name = PyStrAttr(binding, "name");
-      PyObject *resource = PyAttr(binding, "resource");
-      task::Resource *r = resource_mapping[resource];
-      CHECK(r != nullptr);
-      job_->BindOutput(t, r, name);
-      Py_DECREF(resource);
+      PyObject *pybinding = PyList_GetItem(outputs, i);
+      const char *name = PyStrAttr(pybinding, "name");
+      PyObject *pyresource = PyAttr(pybinding, "resource");
+      Resource *resource = resource_mapping.at(pyresource);
+      CHECK(resource != nullptr);
+      job_->BindOutput(task, resource, name);
+      Py_DECREF(pyresource);
     }
     Py_DECREF(outputs);
   }
   Py_DECREF(tasks);
+
+  // Get channels.
+  PyObject *channels = PyAttr(pyjob, "channels");
+  for (int i = 0; i < PyList_Size(channels); ++i) {
+    PyObject *pychannel = PyList_GetItem(channels, i);
+
+    PyObject *pyformat = PyAttr(pychannel, "format");
+    Format format = PyGetFormat(pyformat);
+    Py_DECREF(pyformat);
+
+    PyObject *pyproducer = PyAttr(pychannel, "producer");
+    Port producer = PyGetPort(pyproducer, task_mapping);
+    Py_DECREF(pyproducer);
+
+    PyObject *pyconsumer = PyAttr(pychannel, "consumer");
+    Port consumer = PyGetPort(pyconsumer, task_mapping);
+    Py_DECREF(pyconsumer);
+
+    Channel *channel = job_->Connect(producer, consumer, format);
+
+    LOG(INFO) << "Channel " << channel->producer().ToString()
+              << " -> " << channel->consumer().ToString()
+              << " format: " << channel->format().ToString();
+  }
+  Py_DECREF(channels);
 
   return 0;
 }
@@ -127,18 +164,32 @@ PyObject *PyJob::Run() {
   Py_RETURN_NONE;
 }
 
-task::Format PyJob::PyGetFormat(PyObject *obj) {
+Port PyJob::PyGetPort(PyObject *obj, const TaskMapping &mapping) {
+  const char *name = PyStrAttr(obj, "name");
+
+  PyObject *pyshard = PyAttr(obj, "shard");
+  Shard shard = PyGetShard(pyshard);
+  Py_DECREF(pyshard);
+
+  PyObject *pytask = PyAttr(obj, "task");
+  Task *task = mapping.at(pytask);
+  Py_DECREF(pytask);
+
+  return Port(task, name, shard);
+}
+
+Format PyJob::PyGetFormat(PyObject *obj) {
   const char *file = PyStrAttr(obj, "file");
   const char *key = PyStrAttr(obj, "key");
   const char *value = PyStrAttr(obj, "value");
-  return task::Format(file, key, value);
+  return Format(file, key, value);
 }
 
-task::Shard PyJob::PyGetShard(PyObject *obj) {
-  if (obj == Py_None) return task::Shard();
+Shard PyJob::PyGetShard(PyObject *obj) {
+  if (obj == Py_None) return Shard();
   int part = PyIntAttr(obj, "part");
   int total = PyIntAttr(obj, "total");
-  return task::Shard(part, total);
+  return Shard(part, total);
 }
 
 const char *PyJob::PyStrAttr(PyObject *obj, const char *name) {

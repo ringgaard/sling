@@ -8,6 +8,18 @@ REGISTER_COMPONENT_REGISTRY("task processor", sling::task::Processor);
 namespace sling {
 namespace task {
 
+string Shard::ToString() const {
+  string str;
+  if (!singleton()) {
+    str.append("[");
+    str.append(SimpleItoa(part()));
+    str.append("/");
+    str.append(SimpleItoa(total()));
+    str.append("]");
+  }
+  return str;
+}
+
 Format::Format(const string &format) {
   size_t slash = format.find('/');
   if (slash != -1) {
@@ -46,6 +58,16 @@ string Format::ToString() const {
     fmt.append(value_);
   }
   return fmt;
+}
+
+string Port::ToString() const {
+  string str;
+  str.append(task_->name());
+  str.append(task_->shard().ToString());
+  str.append(".");
+  str.append(name_);
+  str.append(shard_.ToString());
+  return str;
 }
 
 void Channel::ConnectProducer(const Port &port) {
