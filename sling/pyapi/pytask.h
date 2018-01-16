@@ -37,6 +37,18 @@ struct PyJob : public PyBase {
   // Run job.
   PyObject *Run();
 
+  // Check if job has completed.
+  PyObject *Done();
+
+  // Wait for job to complete.
+  PyObject *Wait();
+
+  // Wait for job to complete with timeout.
+  PyObject *WaitFor(PyObject *timeout);
+
+  // Get current counter values.
+  PyObject *Counters();
+
   // Convert Port object.
   static task::Port PyGetPort(PyObject *obj, const TaskMapping &mapping);
 

@@ -100,7 +100,7 @@ void Channel::ConnectConsumer(const Port &port) {
   task->ConnectSource(this);
 
   // Create output counters.
-  string arg = task->name() + "," + port.name();
+  string arg = task->name() + "." + port.name();
   task->GetCounter("input_shards[" + arg + "]")->Increment();
   output_shards_done_ = task->GetCounter("input_shards_done[" + arg + "]");
   output_messages_ = task->GetCounter("input_messages[" + arg + "]");
@@ -182,16 +182,7 @@ Task::~Task() {
 string Task::ToString() const {
   string str;
   str.append(name_);
-  str.append("(");
-  str.append(SimpleItoa(id_));
-  str.append(")");
-  if (!shard_.singleton()) {
-    str.append("[");
-    str.append(SimpleItoa(shard_.part()));
-    str.append("/");
-    str.append(SimpleItoa(shard_.total()));
-    str.append("]");
-  }
+  str.append(shard_.ToString());
   return str;
 }
 

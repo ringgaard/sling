@@ -49,13 +49,14 @@ class Workflow(Job):
 
   def wikidata(self):
     """Import Wikidata dump."""
-    input = self.parallel(self.read(self.wikidata_dump()), threads=5)
-    items, properties = self.wikidata_import(input)
-    items_output = self.wikidata_items()
-    self.write(items, items_output, name="item-writer")
-    properties_output = self.wikidata_properties()
-    self.write(properties, properties_output, name="property-writer")
-    return items_output, properties_output
+    with self.namespace("wikidata"):
+      input = self.parallel(self.read(self.wikidata_dump()), threads=5)
+      items, properties = self.wikidata_import(input)
+      items_output = self.wikidata_items()
+      self.write(items, items_output, name="item-writer")
+      properties_output = self.wikidata_properties()
+      self.write(properties, properties_output, name="property-writer")
+      return items_output, properties_output
 
   def wikipedia_dump(self, language=None):
     """Resource for wikipedia dump"""
@@ -88,11 +89,12 @@ class Workflow(Job):
   def wikipedia(self, language=None, name=None):
     """Import Wikipedia dump."""
     if language == None: language = flags.arg.language
-    input = self.wikipedia_dump(language)
-    articles, redirects = self.wikipedia_import(input, name=name)
-    articles_output = self.wikipedia_articles(language)
-    self.write(articles, articles_output, name=language + "-article-writer")
-    redirects_output = self.wikipedia_redirects(language)
-    self.write(redirects, redirects_output, name=language + "-redirect-writer")
-    return articles_output, redirects_output
+    with self.namespace(language + "-wikipedia"):
+      input = self.wikipedia_dump(language)
+      articles, redirects = self.wikipedia_import(input, name=name)
+      articles_output = self.wikipedia_articles(language)
+      self.write(articles, articles_output, name="article-writer")
+      redirects_output = self.wikipedia_redirects(language)
+      self.write(redirects, redirects_output, name="redirect-writer")
+      return articles_output, redirects_output
 

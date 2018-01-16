@@ -2,6 +2,7 @@
 #define SLING_TASK_JOB_H_
 
 #include <condition_variable>
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -40,8 +41,14 @@ class Stage {
   // Notification that task in stage has completed.
   void TaskCompleted(Task *task) { num_completed_++; }
 
+  // Check if stage has been started.
+  bool started() const { return started_; }
+
   // Check if all tasks have completed.
   bool done() const { return num_completed_ == tasks_.size(); }
+
+  // Return list of tasks in stage.
+  const std::vector<Task *> &tasks() const { return tasks_; }
 
  private:
   // Tasks in stage.
@@ -49,6 +56,9 @@ class Stage {
 
   // Other stages that this stage depend on.
   std::vector<Stage *> dependencies_;
+
+  // Whether stage has been started.
+  bool started_ = false;
 
   // Number of tasks in stage that have completed.
   int num_completed_ = 0;
@@ -125,6 +135,10 @@ class Job : public Environment {
   // Check if all tasks have completed.
   bool Done();
 
+  // Iterate counters.
+  void IterateCounters(
+      std::function<void(const string &name, Counter *counter)> callback);
+
   // Dump counters to log.
   void DumpCounters();
 
@@ -132,6 +146,8 @@ class Job : public Environment {
   Counter *GetCounter(const string &name) override;
   void ChannelCompleted(Channel *channel) override;
   void TaskCompleted(Task *task) override;
+
+  // Return counter map.
 
  private:
   // List of tasks in container indexed by id.

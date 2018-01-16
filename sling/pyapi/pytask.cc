@@ -23,6 +23,10 @@ PyTypeObject PyJob::type;
 
 PyMethodDef PyJob::methods[] = {
   {"run", (PyCFunction) &PyJob::Run, METH_NOARGS, ""},
+  {"wait", (PyCFunction) &PyJob::Wait, METH_NOARGS, ""},
+  {"done", (PyCFunction) &PyJob::Done, METH_NOARGS, ""},
+  {"wait_for", (PyCFunction) &PyJob::WaitFor, METH_O, ""},
+  {"counters", (PyCFunction) &PyJob::Counters, METH_NOARGS, ""},
   {nullptr}
 };
 
@@ -42,7 +46,6 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
   if (!PyArg_ParseTuple(args, "O", &pyjob)) return -1;
 
   // Create new job.
-  LOG(INFO) << "Create job";
   job_ = new Job();
 
   // Get resources.
@@ -60,8 +63,6 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
 
     Resource *resource = job_->CreateResource(name, format, shard);
     resource_mapping[pyresource] = resource;
-    LOG(INFO) << "Resource " << name << " format: " << format.ToString()
-              << " shard: " << shard.part() << "/" << shard.total();
 
     Py_DECREF(pyformat);
     Py_DECREF(pyshard);
@@ -83,9 +84,6 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
     Task *task = job_->CreateTask(type, name, shard);
     task_mapping[pytask] = task;
 
-    LOG(INFO) << "Task " << name << " type: " << type
-              << " shard: " << shard.part() << "/" << shard.total();
-
     // Get task parameters.
     PyObject *params = PyAttr(pytask, "params");
     Py_ssize_t pos = 0;
@@ -95,7 +93,6 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
       const char *key = PyString_AsString(k);
       const char *value = PyString_AsString(v);
       task->AddParameter(key, value);
-      LOG(INFO) << "  Param " << key << " = " << value;
     }
     Py_DECREF(params);
 
@@ -144,11 +141,7 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
     Port consumer = PyGetPort(pyconsumer, task_mapping);
     Py_DECREF(pyconsumer);
 
-    Channel *channel = job_->Connect(producer, consumer, format);
-
-    LOG(INFO) << "Channel " << channel->producer().ToString()
-              << " -> " << channel->consumer().ToString()
-              << " format: " << channel->format().ToString();
+    job_->Connect(producer, consumer, format);
   }
   Py_DECREF(channels);
 
@@ -156,12 +149,52 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
 }
 
 void PyJob::Dealloc() {
-  LOG(INFO) << "Destroy job";
+  if (job_ != nullptr && !job_->Done()) {
+    LOG(FATAL) << "Job has not completed";
+  }
   delete job_;
 }
 
 PyObject *PyJob::Run() {
+  if (job_ != nullptr) job_->Run();
   Py_RETURN_NONE;
+}
+
+PyObject *PyJob::Done() {
+  bool done = false;
+  if (job_ != nullptr) done = job_->Done();
+  return PyBool_FromLong(done);
+}
+
+PyObject *PyJob::Wait() {
+  if (job_ != nullptr) job_->Wait();
+  Py_RETURN_NONE;
+}
+
+PyObject *PyJob::WaitFor(PyObject *timeout) {
+  int ms = PyNumber_AsSsize_t(timeout, nullptr);
+  bool done = true;
+  if (job_ != nullptr) done = job_->Wait(ms);
+  return PyBool_FromLong(done);
+}
+
+PyObject *PyJob::Counters() {
+  // Create Python dictionary for counter values.
+  PyObject *counters = PyDict_New();
+  if (counters == nullptr) return nullptr;
+
+  // Gather current counter values.
+  if (job_ != nullptr) {
+    job_->IterateCounters([counters](const string &name, Counter *counter) {
+      PyObject *key = PyString_FromStringAndSize(name.data(), name.size());
+      PyObject *val = PyLong_FromLong(counter->value());
+      PyDict_SetItem(counters, key, val);
+      Py_DECREF(key);
+      Py_DECREF(val);
+    });
+  }
+
+  return counters;
 }
 
 Port PyJob::PyGetPort(PyObject *obj, const TaskMapping &mapping) {

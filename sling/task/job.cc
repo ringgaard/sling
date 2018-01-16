@@ -40,6 +40,7 @@ bool Stage::Ready() {
 }
 
 void Stage::Run() {
+  started_ = true;
   for (int i = tasks_.size() - 1; i >= 0; --i) {
     LOG(INFO) << "Start " << tasks_[i]->ToString();
     tasks_[i]->Start();
@@ -233,7 +234,7 @@ void Job::TaskCompleted(Task *task) {
 
     // Start any new stages that are ready to run.
     for (Stage *stage : stages_) {
-      if (stage->done()) continue;
+      if (stage->started()) continue;
       if (stage->Ready()) stage->Run();
     }
 
@@ -336,7 +337,7 @@ void Job::Run() {
     Stage *stage = task->stage();
     for (Binding *binding : task->inputs()) {
       Task *dependency = producer[binding->resource()->id()];
-      if (dependency->stage() != stage) {
+      if (dependency != nullptr && dependency->stage() != stage) {
         stage->AddDependency(dependency->stage());
       }
     }
@@ -371,6 +372,14 @@ bool Job::Wait(int ms) {
     }
   }
   return true;
+}
+
+void Job::IterateCounters(
+    std::function<void(const string &name, Counter *counter)> callback) {
+  MutexLock lock(&mu_);
+  for (auto &it : counters_) {
+    callback(it.first, it.second);
+  }
 }
 
 void Job::DumpCounters() {

@@ -49,6 +49,8 @@ class WikidataImporter : public task::Processor {
     AddTypeMapping(s_url_.name(), "/w/url");
     AddTypeMapping(s_globe_coordinate_.name(), "/w/coord");
     AddTypeMapping(s_math_.name(), "/w/math");
+    AddTypeMapping(s_tabular_data_.name(), "/w/table");
+    AddTypeMapping(s_geo_shape_.name(), "/w/shape");
 
     // Get primary language.
     primary_language_name_ = Wiki::language_priority[0];
@@ -533,7 +535,7 @@ class WikidataImporter : public task::Processor {
   Name n_alias_sources_{names_, "/s/alias/sources"};
 
   // Wikidata attribute names.
-  Name s_id_{names_, "id"};
+  Name s_id_{names_, "_id"};
   Name s_type_{names_, "type"};
   Name s_datatype_{names_, "datatype"};
   Name s_labels_{names_, "labels"};
@@ -575,6 +577,8 @@ class WikidataImporter : public task::Processor {
   Name s_url_{names_, "url"};
   Name s_globe_coordinate_{names_, "globe-coordinate"};
   Name s_math_{names_, "math"};
+  Name s_tabular_data_{names_, "tabular-data"};
+  Name s_geo_shape_{names_, "geo-shape"};
   // ... plus string, time, quantity, monolingualtext
 
   // Entity prefix.

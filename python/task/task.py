@@ -19,6 +19,7 @@ import os
 import re
 import sling
 import sling.pysling as api
+import sling.log as log
 
 # Input readers.
 readers = {
@@ -181,16 +182,44 @@ class Task:
     return s
 
 
+class Scope:
+  def __init__(self, job, name):
+    self.job = job
+    self.name = name
+    self.prev = None
+
+  def __enter__(self):
+    self.prev = self.job.scope
+    self.job.scope = self
+    return self
+
+  def __exit__(self, type, value, traceback):
+    self.job.scope = self.prev
+
+  def prefix(self):
+    parts = []
+    s = self
+    while s != None:
+      parts.append(s.name)
+      s = s.prev
+    return '/'.join(reversed(parts))
+
+
 class Job(object):
   def __init__(self):
     self.tasks = []
     self.channels = []
     self.resources = []
     self.taskmap = {}
+    self.scope = None
     self.driver = None
+
+  def namespace(self, name):
+    return Scope(self, name)
 
   def task(self, type, name=None, shard=None):
     if name == None: name = type
+    if self.scope != None: name = self.scope.prefix() + "/" + name
     basename = name
     index = 0
     while (name, shard) in self.taskmap:
@@ -378,17 +407,31 @@ class Job(object):
     self.connect(input, writer_tasks)
 
   def run(self):
+    # Make sure all output directories exist.
+    self.create_output_directories()
+
+    # Create underlying job in task system.
     if self.driver != None: raise Exception("job already running")
     self.driver = api.Job(self)
 
+    # Start job.
+    self.driver.run()
+
   def wait(self, timeout=None):
-    pass
+    if self.driver == None: return True
+    if timeout != None:
+      return self.driver.wait_for(timeout)
+    else:
+      self.driver.wait()
+      return True
 
   def done(self):
-    return False
+    if self.driver == None: return Trye
+    return self.driver.done()
 
   def counters(self):
-    return {}
+    if self.driver == None: return None
+    return self.driver.counters()
 
   def dump(self):
     s = ""
@@ -412,3 +455,13 @@ class Job(object):
     for resource in self.resources:
       s += "resource " + str(resource) + "\n"
     return s
+
+  def create_output_directories(self):
+    checked = set()
+    for task in self.tasks:
+      for output in task.outputs:
+        directory = os.path.dirname(output.resource.name)
+        if directory in checked: continue
+        if not os.path.exists(directory): os.makedirs(directory)
+        checked.add(directory)
+
