@@ -130,7 +130,7 @@ string Writer::TaskName(const task::Format &format) {
   if (format.file() == "records") return "record-file-writer";
   if (format.file() == "sstable") return "sstable-writer";
   if (format.file() == "textmap") return "text-map-writer";
-  if (format.file() == "store") return "frame-store-builder";
+  if (format.file() == "store") return "frame-store-writer";
   return "text-file-writer";
 }
 
@@ -223,7 +223,7 @@ MapReduce::MapReduce(task::Job *job,
 FrameStoreBuilder::FrameStoreBuilder(task::Job *job,
                                      Text name,
                                      task::Resource *output) {
-  builder = job->CreateTask("frame-store-builder", StrCat(name, "-builder"));
+  builder = job->CreateTask("frame-store-writer", StrCat(name, "-builder"));
   job->BindOutput(builder, output, "store");
 }
 
