@@ -81,7 +81,7 @@ void Channel::ConnectProducer(const Port &port) {
   task->ConnectSink(this);
 
   // Create input counters.
-  string arg = task->name() + "," + port.name();
+  string arg = task->name() + "." + port.name();
   task->GetCounter("output_shards[" + arg + "]")->Increment();
   input_shards_done_ = task->GetCounter("output_shards_done[" + arg + "]");
   input_messages_ = task->GetCounter("output_messages[" + arg + "]");

@@ -237,8 +237,8 @@ cc_library(
 )
 
 cc_library(
-  name = "frame-store-builder",
-  srcs = ["frame-store-builder.cc"],
+  name = "frame-store-writer",
+  srcs = ["frame-store-writer.cc"],
   deps = [
     ":frames",
     ":task",

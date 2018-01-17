@@ -204,53 +204,7 @@ Binding *Job::BindOutput(Task *task,
   return binding;
 }
 
-Counter *Job::GetCounter(const string &name) {
-  MutexLock lock(&mu_);
-  Counter *&counter = counters_[name];
-  if (counter == nullptr) counter = new Counter();
-  return counter;
-}
-
-void Job::ChannelCompleted(Channel *channel) {
-  MutexLock lock(&mu_);
-  LOG(INFO) << "Channel " << channel->id() << " completed";
-
-  event_dispatcher_->Schedule([this, channel]() {
-    // Notify consumer that one of its input channels has been closed.
-    channel->consumer().task()->OnClose(channel);
-  });
-}
-
-void Job::TaskCompleted(Task *task) {
-  LOG(INFO) << "Task " << task->ToString() << " completed";
-
-  event_dispatcher_->Schedule([this, task](){
-    // Notify task that it is done.
-    task->Done();
-
-    // Notify stage about task completion.
-    std::unique_lock<std::mutex> lock(mu_);
-    task->stage()->TaskCompleted(task);
-
-    // Start any new stages that are ready to run.
-    for (Stage *stage : stages_) {
-      if (stage->started()) continue;
-      if (stage->Ready()) stage->Run();
-    }
-
-    // Check if all stages have completed.
-    if (Done()) completed_.notify_all();
-  });
-}
-
-bool Job::Done() {
-  for (Stage *stage : stages_) {
-    if (!stage->done()) return false;
-  }
-  return true;
-}
-
-void Job::Run() {
+void Job::BuildStages() {
   // Determine producer (if any) of each resource.
   std::vector<Task *> producer(resources_.size());
   for (Task *task : tasks_) {
@@ -342,9 +296,14 @@ void Job::Run() {
       }
     }
   }
+}
+
+void Job::Run() {
+  // Build stages.
+  BuildStages();
 
   // Initialize all tasks.
-  for (Task *task : order) {
+  for (Task *task : tasks_) {
     LOG(INFO) << "Initialize " << task->ToString();
     task->Init();
   }
@@ -372,6 +331,52 @@ bool Job::Wait(int ms) {
     }
   }
   return true;
+}
+
+bool Job::Done() {
+  for (Stage *stage : stages_) {
+    if (!stage->done()) return false;
+  }
+  return true;
+}
+
+void Job::ChannelCompleted(Channel *channel) {
+  MutexLock lock(&mu_);
+  LOG(INFO) << "Channel " << channel->id() << " completed";
+
+  event_dispatcher_->Schedule([this, channel]() {
+    // Notify consumer that one of its input channels has been closed.
+    channel->consumer().task()->OnClose(channel);
+  });
+}
+
+void Job::TaskCompleted(Task *task) {
+  LOG(INFO) << "Task " << task->ToString() << " completed";
+
+  event_dispatcher_->Schedule([this, task](){
+    // Notify task that it is done.
+    task->Done();
+
+    // Notify stage about task completion.
+    std::unique_lock<std::mutex> lock(mu_);
+    task->stage()->TaskCompleted(task);
+
+    // Start any new stages that are ready to run.
+    for (Stage *stage : stages_) {
+      if (stage->started()) continue;
+      if (stage->Ready()) stage->Run();
+    }
+
+    // Check if all stages have completed.
+    if (Done()) completed_.notify_all();
+  });
+}
+
+Counter *Job::GetCounter(const string &name) {
+  MutexLock lock(&mu_);
+  Counter *&counter = counters_[name];
+  if (counter == nullptr) counter = new Counter();
+  return counter;
 }
 
 void Job::IterateCounters(

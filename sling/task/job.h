@@ -150,6 +150,9 @@ class Job : public Environment {
   // Return counter map.
 
  private:
+  // Build stages for job.
+  void BuildStages();
+
   // List of tasks in container indexed by id.
   std::vector<Task *> tasks_;
 

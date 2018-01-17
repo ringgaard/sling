@@ -41,7 +41,7 @@ class Workflow(Job):
   def wikidata_import(self, input, name=None):
     """Convert WikiData JSON to SLING items and properties."""
     task = self.task("wikidata-importer", name=name)
-    task.add_param("primary_language", flags.arg.language);
+    task.add_param("primary_language", flags.arg.language)
     self.connect(input, task)
     items = self.channel(task, name="items", format="message/frame")
     properties = self.channel(task, name="properties", format="message/frame")
@@ -86,15 +86,34 @@ class Workflow(Job):
     redirects = self.channel(task, name="redirects", format="message/frame")
     return articles, redirects
 
-  def wikipedia(self, language=None, name=None):
+  def wikipedia(self, language=None):
     """Import Wikipedia dump."""
     if language == None: language = flags.arg.language
     with self.namespace(language + "-wikipedia"):
       input = self.wikipedia_dump(language)
-      articles, redirects = self.wikipedia_import(input, name=name)
+      articles, redirects = self.wikipedia_import(input)
       articles_output = self.wikipedia_articles(language)
       self.write(articles, articles_output, name="article-writer")
       redirects_output = self.wikipedia_redirects(language)
       self.write(redirects, redirects_output, name="redirect-writer")
       return articles_output, redirects_output
+
+  def wikipedia_mapping(self, language=None):
+    """Resource for wikipedia to wikidata mapping"""
+    if language == None: language = flags.arg.language
+    return self.resource("mapping",
+                         dir=corpora.wikidir() + "/" + language,
+                         format="store/frame")
+
+  def wikijoin(self, language=None):
+    """Join Wikidata and Wikipedia."""
+    if language == None: language = flags.arg.language
+    with self.namespace(language + "-wikipedia"):
+      # Create mapping from Wikipedia IDs to Wikidata IDs.
+      wikidata_items = self.wikidata_items()
+      wikimap = self.map(wikidata_items, "wikipedia-mapping",
+                         params={"language": language})
+      self.write(wikimap,
+                 self.wikipedia_mapping(language),
+                 name="mapping-writer")
 

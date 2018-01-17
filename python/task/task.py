@@ -33,7 +33,7 @@ readers = {
 # Output writers.
 writers = {
   "records": "record-file-writer",
-  "store": "frame-store-builder",
+  "store": "frame-store-writer",
   "textmap": "text-map-writer",
   "text": "text-file-writer",
 }
@@ -81,6 +81,7 @@ class Format:
         self.file = fmt
 
   def as_message(self):
+    if self.file == "message": return self
     return Format(file="message", key=self.key, value=self.value)
 
   def __repr__(self):
@@ -113,6 +114,13 @@ class Binding:
   def __init__(self, name, resource):
     self.name = name
     self.resource = resource
+
+  def __repr__(self):
+    s = "Binding(" + self.name + " = "  + self.resource.name
+    if self.resource.shard != None: s += str(self.resource.shard)
+    if self.resource.format != None: s += " as " + str(self.resource.format)
+    s += ")"
+    return s
 
 
 class Port:
@@ -204,6 +212,13 @@ class Scope:
       s = s.prev
     return '/'.join(reversed(parts))
 
+
+def format_of(input):
+  """Get format from one or more channels or resources."""
+  if isinstance(input, list):
+    return input[0].format
+  else:
+    return input.format
 
 class Job(object):
   def __init__(self):
@@ -319,7 +334,7 @@ class Job(object):
         if channel[shard].consumer != None: raise Exception("already connected")
         port = Port(consumer, name, Shard(shard, shards))
         channel[shard].consumer = port
-        consumer.connect_source(channel)
+        consumer.connect_source(channel[shard])
     elif multi_channel and multi_task:
       # Connect multiple channels to multiple tasks.
       shards = len(channel)
@@ -331,14 +346,6 @@ class Job(object):
         consumer[shard].connect_source(channel[shard])
     else:
       raise Exception("cannot connect single channel to multiple tasks")
-
-  def parallel(self, input, threads=5, name=None):
-    """Parallelize input messages over thread worker pool."""
-    workers = self.task("workers", name=name)
-    workers.add_param("worker_threads", threads)
-    self.connect(input, workers)
-    format = input[0].format if isinstance(input, list) else input.format
-    return self.channel(workers, format=format)
 
   def read(self, input, name=None):
     if isinstance(input, list):
@@ -354,7 +361,6 @@ class Job(object):
         reader = self.task(tasktype, name=name, shard=Shard(shard, shards))
         reader.attach_input("input", input[shard])
         output = self.channel(reader, format=format.as_message())
-        output.producer.shard = Shard(shard, shards)
         outputs.append(output)
       return outputs
     else:
@@ -406,6 +412,80 @@ class Job(object):
       writer_tasks.append(writer)
     self.connect(input, writer_tasks)
 
+  def parallel(self, input, threads=5, name=None):
+    """Parallelize input messages over thread worker pool."""
+    workers = self.task("workers", name=name)
+    workers.add_param("worker_threads", threads)
+    self.connect(input, workers)
+    return self.channel(workers, format=format_of(input))
+
+  def map(self, input, type=None, format=None, params=None, name=None):
+    """Map input through processor."""
+    # Use input format if no format specified.
+    if format == None: format = format_of(input).as_message()
+
+    # Create mapper.
+    if type != None:
+      mapper = self.task(type, name=name)
+      if params != None:
+        for k, v in params.iteritems():
+          mapper.add_param(k, v)
+      reader = self.read(input)
+      self.connect(reader, mapper)
+      output = self.channel(mapper, format=format)
+    else:
+      output = input
+
+    return output
+
+  def shuffle(self, input, shards):
+    """Shard and sort the input messages."""
+    # Create sharder and connect input.
+    sharder = self.task("sharder")
+    self.connect(input, sharder)
+    pipes = self.channel(sharder, shards=shards, format=format_of(input))
+
+    # Pipe outputs from sharder to sorters.
+    sorters = []
+    for i in xrange(shards):
+      sorter = self.task("sorter", shard=Shard(i, shards))
+      sorters.append(sorter)
+
+    # Return output channel from sorters.
+    outputs = self.channel(sorters, format=format_of(input))
+    return outputs
+
+  def reduce(self, input, output, type=None, params=None, name=None):
+    """Reduce input and write reduced output."""
+    if type == None:
+      # No reducer (i.e. i.e. identity reducer), just write input.
+      reduced = input
+    else:
+      reducer = self.task(type, name=name)
+      if params != None:
+        for k, v in params.iteritems():
+          reducer.add_param(k, v)
+      self.connect(input, reducer)
+      reduced = self.channel(reducer, format=format_of(output).as_message())
+
+    # Write reduce output.
+    self.write(reduced, output)
+
+  def mapreduce(self, input, output, mapper, reducer=None, params=None,
+                format=None):
+    """Map input files, shuffle, sort, reduce, and output to files."""
+    # Determine the number of output shards.
+    shards = len(output) if isinstance(output, list) else 1
+
+    # Mapping of input.
+    mapping = self.map(input, mapper, params=params, format=format)
+
+    # Shuffling of map output.
+    shuffle = self.shuffle(mapping, shards=shards)
+
+    # Reduction of shuffled map output.
+    self.reduce(shuffle, output, reducer, params=params)
+
   def run(self):
     # Make sure all output directories exist.
     self.create_output_directories()
@@ -443,11 +523,11 @@ class Job(object):
       for param in task.params:
         s += "  param " + param + " = " + task.params[param] + "\n"
       for input in task.inputs:
-        s += "  input " + input.name + " = " + str(input.resource) + "\n"
+        s += "  input " + str(input) + "\n"
       for source in task.sources:
         s += "  source " +  str(source) + "\n"
       for output in task.outputs:
-        s += "  output " + output.name + " = " + str(output.resource) + "\n"
+        s += "  output " +  str(output) + "\n"
       for sink in task.sinks:
         s += "  sink " +  str(sink) + "\n"
     for channel in self.channels:

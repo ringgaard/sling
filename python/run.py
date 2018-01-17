@@ -14,7 +14,9 @@
 
 """Run SLING processing"""
 
+import datetime
 import re
+import time
 import sling
 import sling.flags as flags
 import sling.log as log
@@ -42,13 +44,25 @@ flags.define("--import_wikipedia",
              default=False,
              action='store_true')
 
+flags.define("--join_wiki",
+             help="join wikipedia and wikidata",
+             default=False,
+             action='store_true')
+
 flags.define("--dryrun",
              help="build worflows but do not run them",
              default=False,
              action='store_true')
 
+flags.define("--refresh",
+             help="refresh frequency for workflow status",
+             default=5,
+             type=int,
+             metavar="SECS")
+
 class ChannelStats:
   def __init__(self):
+    self.time = time.time()
     self.key_bytes = 0
     self.value_bytes = 0
     self.messages = 0
@@ -70,6 +84,17 @@ class ChannelStats:
       return False
     return True
 
+  def volume(self):
+    return self.key_bytes + self.value_bytes
+
+  def throughput(self, prev):
+    if prev == None: return 0.0
+    return (self.messages - prev.messages) / (self.time - prev.time)
+
+  def bandwidth(self, prev):
+    if prev == None: return 0.0
+    return (self.volume() - prev.volume()) / (self.time - prev.time)
+
 
 def run_workflow(wf):
   # In dryrun mode the workflow is just dumped without running it.
@@ -82,29 +107,40 @@ def run_workflow(wf):
   wf.run()
 
   # Wait until workflow completes.
-  while not wf.wait(5000):
+  start = time.time()
+  done = False
+  prev_channels = {}
+  while not done:
+    done = wf.wait(flags.arg.refresh * 1000)
     counters = wf.counters()
-    print
-    print "{0:64} {1:>16}".format("Counter", "Value")
+    print "{:64} {:>16}".format("Counter", "Value")
     channels = {}
     for ctr in sorted(counters):
-      m = re.match(r"(.+)\[(.+)\]", ctr)
+      m = re.match(r"(.+)\[(.+\..+)\]", ctr)
       if m != None:
         channel = m.group(2)
         metric = m.group(1)
         if channel not in channels: channels[channel] = ChannelStats()
         channels[channel].update(metric, counters[ctr])
       else:
-        print "{0:64} {1:>16,}".format(ctr, counters[ctr])
+        print "{:64} {:>16,}".format(ctr, counters[ctr])
+    print
     if len(channels) > 0:
-      print
-      print "{0:64} {1:>16} {2:>16} {3:>16} {4:>13}".format(
-            "Channel", "Key bytes", "Value bytes", "Messages", "Shards done")
+      print "{:64} {:>16} {:>16} {:>16} {:>16} {:>16}  {}".format(
+            "Channel", "Key bytes", "Value bytes", "Bandwidth",
+            "Messages", "Throughput", "Shards")
       for channel in channels:
         stats = channels[channel]
-        print "{0:64} {1:>16,} {2:>16,} {3:>16,} {4:>5} / {5:>5}".format(
-              channel, stats.key_bytes, stats.value_bytes, stats.messages,
-              stats.shards_done, stats.shards_total)
+        prev = prev_channels.get(channel)
+        print "{:64} {:>16,} {:>16,} {:>11,.3f} MB/s {:>16,} " \
+              "{:>12,.0f} MPS  {:}".format(
+              channel, stats.key_bytes, stats.value_bytes,
+              stats.bandwidth(prev) / 1000000,
+              stats.messages, stats.throughput(prev),
+              str(stats.shards_done) + "/" + str(stats.shards_total))
+      print
+    prev_channels = channels
+  log("workflow time: " + str(datetime.timedelta(seconds=time.time() - start)))
 
 
 def download_corpora():
@@ -132,9 +168,17 @@ def import_wiki():
     for language in flags.arg.languages:
       log("Import " + language + " wikipedia")
       wf = workflow.Workflow()
-      wf.wikipedia()
+      wf.wikipedia(language=language)
       run_workflow(wf)
 
+def join_wiki():
+  # Import wikipedia(s).
+  if flags.arg.join_wiki:
+    for language in flags.arg.languages:
+      log("Join " + language + " wikipedia with wikidata")
+      wf = workflow.Workflow()
+      wf.wikijoin(language=language)
+      run_workflow(wf)
 
 if __name__ == '__main__':
   # Parse command-line arguments.
@@ -145,6 +189,9 @@ if __name__ == '__main__':
 
   # Import wikidata and wikipedia(s).
   import_wiki()
+
+  # Join wikidata and wikipedia(s).
+  join_wiki()
 
   # Done.
   log("Done")

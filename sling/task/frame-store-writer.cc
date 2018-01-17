@@ -10,10 +10,10 @@ namespace sling {
 namespace task {
 
 // Decode all input messages as frames and save them into a frame store.
-class FrameStoreBuilder : public Processor {
+class FrameStoreWriter : public Processor {
  public:
-  FrameStoreBuilder() { options_.symbol_rebinding = true; }
-  ~FrameStoreBuilder() { delete store_; }
+  FrameStoreWriter() { options_.symbol_rebinding = true; }
+  ~FrameStoreWriter() { delete store_; }
 
   void Start(Task *task) override {
     // Create store.
@@ -30,7 +30,7 @@ class FrameStoreBuilder : public Processor {
 
   void Done(Task *task) override {
     // Get output file name.
-    Binding *file = task->GetOutput("store");
+    Binding *file = task->GetOutput("output");
     CHECK(file != nullptr);
 
     // Compact store.
@@ -63,7 +63,7 @@ class FrameStoreBuilder : public Processor {
   Mutex mu_;
 };
 
-REGISTER_TASK_PROCESSOR("frame-store-builder", FrameStoreBuilder);
+REGISTER_TASK_PROCESSOR("frame-store-writer", FrameStoreWriter);
 
 }  // namespace task
 }  // namespace sling
