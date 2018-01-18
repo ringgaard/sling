@@ -74,9 +74,16 @@ def wikipedia_dump(language=None):
   return flags.arg.corpora + "/wikipedia/" + language + "wiki-" + \
          flags.arg.wikipedia + "-pages-articles.xml.bz2"
 
-def wikidir():
+def wikidir(language=None):
   """Location of wiki datasets."""
-  return flags.arg.workdir + "/wiki"
+  if language == None:
+    return flags.arg.workdir + "/wiki"
+  else:
+    return flags.arg.workdir + "/wiki/" + language
+
+def repository(path):
+  """Location of file in Git repository."""
+  return flags.arg.repository + "/" + path
 
 def ensure_dir(path):
   """Ensure directory for file exists."""

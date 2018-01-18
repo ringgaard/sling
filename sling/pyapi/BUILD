@@ -44,9 +44,11 @@ cc_library(
   deps = [
     "//sling/nlp/wiki:wikidata-importer",
     "//sling/nlp/wiki:wikipedia-importer",
+    "//sling/nlp/wiki:wikipedia-profiles",
     "//sling/task:frame-store-reader",
     "//sling/task:frame-store-writer",
     "//sling/task:sharder",
+    "//sling/task:sorter",
     "//sling/task:record-file-reader",
     "//sling/task:record-file-writer",
     "//sling/task:text-file-reader",

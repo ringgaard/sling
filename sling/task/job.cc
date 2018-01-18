@@ -39,8 +39,8 @@ bool Stage::Ready() {
   return true;
 }
 
-void Stage::Run() {
-  started_ = true;
+void Stage::Start() {
+  LOG(INFO) << "Starting stage #" << index_;
   for (int i = tasks_.size() - 1; i >= 0; --i) {
     LOG(INFO) << "Start " << tasks_[i]->ToString();
     tasks_[i]->Start();
@@ -261,7 +261,7 @@ void Job::BuildStages() {
     if (task == nullptr) break;
 
     // Create a new stage for the task.
-    Stage *stage = new Stage();
+    Stage *stage = new Stage(stages_.size());
     stages_.push_back(stage);
 
     // Assign the transitive closure over source and sink channels to stage.
@@ -298,22 +298,25 @@ void Job::BuildStages() {
   }
 }
 
-void Job::Run() {
+void Job::Start() {
   // Build stages.
   BuildStages();
 
   // Initialize all tasks.
   for (Task *task : tasks_) {
-    LOG(INFO) << "Initialize " << task->ToString();
+    VLOG(3) << "Initialize " << task->ToString();
     task->Init();
   }
 
+  LOG(INFO) << "All systems GO";
+
   // Start all stages that are ready.
   for (Stage *stage : stages_) {
-    if (stage->Ready()) stage->Run();
+    if (stage->Ready()) {
+      stage->mark_started();
+      stage->Start();
+    }
   }
-
-  LOG(INFO) << "All systems GO";
 }
 
 void Job::Wait() {
@@ -356,19 +359,35 @@ void Job::TaskCompleted(Task *task) {
   event_dispatcher_->Schedule([this, task](){
     // Notify task that it is done.
     task->Done();
+    LOG(INFO) << "Task " << task->ToString() << " done";
 
     // Notify stage about task completion.
-    std::unique_lock<std::mutex> lock(mu_);
     task->stage()->TaskCompleted(task);
 
-    // Start any new stages that are ready to run.
-    for (Stage *stage : stages_) {
-      if (stage->started()) continue;
-      if (stage->Ready()) stage->Run();
+    // Check if new stages are ready to be started. New stages cannot be started
+    // with while holding the job lock, so each ready stage is collected and
+    // marked as started. After the lock has been released, these stages are
+    // then started.
+    mu_.lock();
+    std::vector<Stage *> ready;
+    if (task->stage()->done()) {
+      LOG(INFO) << "Stage #" << task->stage()->index() << " done";
+      for (Stage *stage : stages_) {
+        if (!stage->started() && stage->Ready()) {
+          stage->mark_started();
+          ready.push_back(stage);
+        }
+      }
     }
 
     // Check if all stages have completed.
     if (Done()) completed_.notify_all();
+
+    // Unlock and start any new stages that are ready to run.
+    mu_.unlock();
+    for (Stage *stage : ready) {
+      stage->Start();
+    }
   });
 }
 

@@ -220,12 +220,17 @@ def format_of(input):
   else:
     return input.format
 
+def length_of(l):
+  """Get number of elements in list or None for singletons."""
+  return len(l) if isinstance(l, list) else None
+
 class Job(object):
   def __init__(self):
     self.tasks = []
     self.channels = []
     self.resources = []
-    self.taskmap = {}
+    self.task_map = {}
+    self.resource_map = {}
     self.scope = None
     self.driver = None
 
@@ -237,12 +242,12 @@ class Job(object):
     if self.scope != None: name = self.scope.prefix() + "/" + name
     basename = name
     index = 0
-    while (name, shard) in self.taskmap:
+    while (name, shard) in self.task_map:
       index += 1
       name = basename + "-" + str(index)
     t = Task(type, name, shard)
     self.tasks.append(t)
-    self.taskmap[(name, shard)] = t
+    self.task_map[(name, shard)] = t
     return t
 
   def resource(self, file, dir=None, shards=None, ext=None, format=None):
@@ -279,29 +284,42 @@ class Job(object):
     if n == 0:
       return None
     elif n == 1:
-      r = Resource(filenames[0], None, format)
-      self.resources.append(r)
+      key = (filenames[0], None, str(format))
+      r = self.resource_map.get(key)
+      if r == None:
+        r = Resource(filenames[0], None, format)
+        self.resource_map[key] = r
+        self.resources.append(r)
       return r
     else:
       filenames.sort()
       resources = []
       for shard in xrange(n):
-        r = Resource(filenames[shard], Shard(shard, n), format)
-        self.resources.append(r)
-        resources.append(r)
+        key = (filenames[shard], str(Shard(shard, n)), str(format))
+        r = self.resource_map.get(key)
+        if r == None:
+          r = Resource(filenames[shard], Shard(shard, n), format)
+          self.resource_map[key] = r
+          self.resources.append(r)
+          resources.append(r)
       return resources
 
   def channel(self, producer, name="output", shards=None, format=None):
     if type(format) == str: format = Format(format)
     if isinstance(producer, list):
       channels = []
-      shards = len(producer)
-      for shard in xrange(shards):
-        sink = Port(producer[i], name, Shard(shard, shards))
-        ch = Channel(format, sink, None)
-        producer[i].connect_sink(sink)
-        channels.append(ch)
-        self.channels.append(ch)
+      for p in producer:
+        if shards != None:
+          for shard in xrange(shards):
+            ch = Channel(format, Port(p, name, Shard(shard, shards)), None)
+            p.connect_sink(ch)
+            channels.append(ch)
+            self.channels.append(ch)
+        else:
+          ch = Channel(format, Port(p, name, None), None)
+          p.connect_sink(ch)
+          channels.append(ch)
+          self.channels.append(ch)
       return channels
     elif shards != None:
       channels = []
@@ -313,8 +331,7 @@ class Job(object):
         self.channels.append(ch)
       return channels
     else:
-      sink = Port(producer, name, None)
-      ch = Channel(format, sink, None)
+      ch = Channel(format, Port(producer, name, None), None)
       producer.connect_sink(ch)
       self.channels.append(ch)
       return ch
@@ -383,8 +400,10 @@ class Job(object):
     fanout = len(output)
 
     # Use sharding if fan-out is different from fan-in.
-    if sharding == None and (fanout != 1 or fanin != fanout):
+    if sharding == None and fanout != 1 and fanin != fanout:
       sharding = "sharder"
+
+    # Create sharder if needed.
     if sharding == None:
       input = producer
     else:
@@ -449,6 +468,7 @@ class Job(object):
     sorters = []
     for i in xrange(shards):
       sorter = self.task("sorter", shard=Shard(i, shards))
+      self.connect(pipes[i], sorter)
       sorters.append(sorter)
 
     # Return output channel from sorters.
@@ -466,7 +486,9 @@ class Job(object):
         for k, v in params.iteritems():
           reducer.add_param(k, v)
       self.connect(input, reducer)
-      reduced = self.channel(reducer, format=format_of(output).as_message())
+      reduced = self.channel(reducer,
+                             shards=length_of(output),
+                             format=format_of(output).as_message())
 
     # Write reduce output.
     self.write(reduced, output)
@@ -475,7 +497,7 @@ class Job(object):
                 format=None):
     """Map input files, shuffle, sort, reduce, and output to files."""
     # Determine the number of output shards.
-    shards = len(output) if isinstance(output, list) else 1
+    shards = length_of(output)
 
     # Mapping of input.
     mapping = self.map(input, mapper, params=params, format=format)
@@ -486,7 +508,7 @@ class Job(object):
     # Reduction of shuffled map output.
     self.reduce(shuffle, output, reducer, params=params)
 
-  def run(self):
+  def start(self):
     # Make sure all output directories exist.
     self.create_output_directories()
 
@@ -495,7 +517,7 @@ class Job(object):
     self.driver = api.Job(self)
 
     # Start job.
-    self.driver.run()
+    self.driver.start()
 
   def wait(self, timeout=None):
     if self.driver == None: return True

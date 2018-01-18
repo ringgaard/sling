@@ -44,8 +44,8 @@ flags.define("--import_wikipedia",
              default=False,
              action='store_true')
 
-flags.define("--join_wiki",
-             help="join wikipedia and wikidata",
+flags.define("--wikifuse",
+             help="fuse wikipedia and wikidata",
              default=False,
              action='store_true')
 
@@ -56,7 +56,7 @@ flags.define("--dryrun",
 
 flags.define("--refresh",
              help="refresh frequency for workflow status",
-             default=5,
+             default=10,
              type=int,
              metavar="SECS")
 
@@ -103,8 +103,8 @@ def run_workflow(wf):
     return
 
   # Start workflow.
-  log("run workflow")
-  wf.run()
+  log("start workflow")
+  wf.start()
 
   # Wait until workflow completes.
   start = time.time()
@@ -168,16 +168,16 @@ def import_wiki():
     for language in flags.arg.languages:
       log("Import " + language + " wikipedia")
       wf = workflow.Workflow()
-      wf.wikipedia(language=language)
+      wf.wikipedia(language)
       run_workflow(wf)
 
-def join_wiki():
-  # Import wikipedia(s).
-  if flags.arg.join_wiki:
+def wikifuse():
+  # Convert Wikipedia articles to SLING documents.
+  if flags.arg.wikifuse:
     for language in flags.arg.languages:
-      log("Join " + language + " wikipedia with wikidata")
+      log("Fuse " + language + " wikipedia with wikidata")
       wf = workflow.Workflow()
-      wf.wikijoin(language=language)
+      wf.wikifuse(language)
       run_workflow(wf)
 
 if __name__ == '__main__':
@@ -190,8 +190,8 @@ if __name__ == '__main__':
   # Import wikidata and wikipedia(s).
   import_wiki()
 
-  # Join wikidata and wikipedia(s).
-  join_wiki()
+  # Fuse wikidata and wikipedia(s).
+  wikifuse()
 
   # Done.
   log("Done")

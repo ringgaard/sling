@@ -427,7 +427,7 @@ class WikipediaAliasReducer : public task::Reducer {
       // Parse message value (<source>:<alias>).
       Text value = message->value();
       int colon = value.find(':');
-      CHECK_NE(colon, string::npos);
+      CHECK_NE(colon, -1);
       int source;
       CHECK(strtoint(value.substr(0, colon), &source));
       string name = value.substr(colon + 1).str();

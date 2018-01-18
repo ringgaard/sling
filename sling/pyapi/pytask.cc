@@ -22,7 +22,7 @@ namespace sling {
 PyTypeObject PyJob::type;
 
 PyMethodDef PyJob::methods[] = {
-  {"run", (PyCFunction) &PyJob::Run, METH_NOARGS, ""},
+  {"start", (PyCFunction) &PyJob::Start, METH_NOARGS, ""},
   {"wait", (PyCFunction) &PyJob::Wait, METH_NOARGS, ""},
   {"done", (PyCFunction) &PyJob::Done, METH_NOARGS, ""},
   {"wait_for", (PyCFunction) &PyJob::WaitFor, METH_O, ""},
@@ -155,8 +155,8 @@ void PyJob::Dealloc() {
   delete job_;
 }
 
-PyObject *PyJob::Run() {
-  if (job_ != nullptr) job_->Run();
+PyObject *PyJob::Start() {
+  if (job_ != nullptr) job_->Start();
   Py_RETURN_NONE;
 }
 

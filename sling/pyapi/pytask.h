@@ -34,8 +34,8 @@ struct PyJob : public PyBase {
   // Deallocate job wrapper.
   void Dealloc();
 
-  // Run job.
-  PyObject *Run();
+  // Start job.
+  PyObject *Start();
 
   // Check if job has completed.
   PyObject *Done();

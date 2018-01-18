@@ -68,14 +68,14 @@ class Workflow(Job):
     """Resource for wikipedia articles."""
     if language == None: language = flags.arg.language
     return self.resource("articles@10.rec",
-                         dir=corpora.wikidir() + "/" + language,
+                         dir=corpora.wikidir(language),
                          format="records/frame")
 
   def wikipedia_redirects(self, language=None):
     """Resource for wikidata redirects."""
     if language == None: language = flags.arg.language
     return self.resource("redirects.sling",
-                         dir=corpora.wikidir() + "/" + language,
+                         dir=corpora.wikidir(language),
                          format="store/frame")
 
   def wikipedia_import(self, input, name=None):
@@ -102,18 +102,73 @@ class Workflow(Job):
     """Resource for wikipedia to wikidata mapping"""
     if language == None: language = flags.arg.language
     return self.resource("mapping",
-                         dir=corpora.wikidir() + "/" + language,
+                         dir=corpora.wikidir(language),
                          format="store/frame")
 
-  def wikijoin(self, language=None):
-    """Join Wikidata and Wikipedia."""
+  def wikipedia_documents(self, language=None):
+    """Resource for wikipedia documents."""
+    if language == None: language = flags.arg.language
+    return self.resource("documents@10.rec",
+                         dir=corpora.wikidir(language),
+                         format="records/document")
+
+  def wikipedia_aliases(self, language=None):
+    """Resource for wikipedia aliases."""
+    if language == None: language = flags.arg.language
+    return self.resource("aliases@10.rec",
+                         dir=corpora.wikidir(language),
+                         format="records/alias")
+
+  def language_defs(self):
+    """Resource for language definitions"""
+    return self.resource("languages.sling",
+                         dir=corpora.repository("data/wiki"),
+                         format="text/frame")
+
+  def wikimap(self, language=None, name=None):
+    """Create mapping from Wikipedia IDs to Wikidata IDs."""
+    if language == None: language = flags.arg.language
+    wikidata_items = self.wikidata_items()
+    wiki_mapping = self.map(wikidata_items, "wikipedia-mapping",
+                            params={"language": language},
+                            name=name)
+    output = self.wikipedia_mapping(language)
+    self.write(wiki_mapping, output, name="mapping-writer")
+    return output
+
+  def parse_wikipedia(self, language=None):
+    """Parse Wikipedia articles to SLING documents and aliases."""
+    if language == None: language = flags.arg.language
+    articles = self.wikipedia_articles(language)
+    redirects = self.wikipedia_redirects(language)
+    parser = self.task("wikipedia-profile-builder", "wikipedia-documents")
+    self.connect(self.read(articles, name="article-reader"), parser)
+    parser.attach_input("commons", self.language_defs())
+    parser.attach_input("wikimap", self.wikipedia_mapping(language))
+    parser.attach_input("redirects", redirects)
+    documents = self.channel(parser, format="message/document")
+    aliases = self.channel(parser, "aliases", format="message/qid:alias")
+    return documents, aliases
+
+  def wikifuse(self, language=None):
+    """Fuse Wikidata and Wikipedia."""
     if language == None: language = flags.arg.language
     with self.namespace(language + "-wikipedia"):
-      # Create mapping from Wikipedia IDs to Wikidata IDs.
-      wikidata_items = self.wikidata_items()
-      wikimap = self.map(wikidata_items, "wikipedia-mapping",
-                         params={"language": language})
-      self.write(wikimap,
-                 self.wikipedia_mapping(language),
-                 name="mapping-writer")
+      # Build mapping from Wikipedia IDs to Wikidata IDs.
+      self.wikimap(language=language)
+
+      # Parse Wikipedia articles to SLING documents.
+      documents, aliases = self.parse_wikipedia(language)
+
+      # Write Wikipedia documents.
+      document_output = self.wikipedia_documents(language)
+      self.write(documents, document_output, name="document-writer")
+
+      # Collect aliases.
+      alias_output = self.wikipedia_aliases(language)
+      self.reduce(self.shuffle(aliases, len(alias_output)),
+                  alias_output,
+                  "wikipedia-alias-reducer",
+                  params={'language': language})
+    return document_output, alias_output
 

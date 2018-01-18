@@ -887,6 +887,7 @@ void WikiParser::ExtractChildren(int index) {
 
       case ETAG:
         if (node.name() == "ref") in_ref = false;
+        Append(" ");
         break;
 
       default: ;

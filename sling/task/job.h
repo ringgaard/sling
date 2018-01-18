@@ -26,6 +26,8 @@ namespace task {
 // can run.
 class Stage {
  public:
+  Stage(int index) : index_(index) {}
+
   // Add task to stage.
   void AddTask(Task *task);
 
@@ -35,8 +37,8 @@ class Stage {
   // Check if stage is ready to run, i.e. all the dependent stages are done.
   bool Ready();
 
-  // Run tasks in stage.
-  void Run();
+  // Start tasks in stage.
+  void Start();
 
   // Notification that task in stage has completed.
   void TaskCompleted(Task *task) { num_completed_++; }
@@ -44,13 +46,22 @@ class Stage {
   // Check if stage has been started.
   bool started() const { return started_; }
 
+  // Mark stage as being started.
+  void mark_started() { started_ = true; }
+
   // Check if all tasks have completed.
   bool done() const { return num_completed_ == tasks_.size(); }
+
+  // Stage index.
+  int index() const { return index_; }
 
   // Return list of tasks in stage.
   const std::vector<Task *> &tasks() const { return tasks_; }
 
  private:
+  // Stage index.
+  int index_;
+
   // Tasks in stage.
   std::vector<Task *> tasks_;
 
@@ -124,7 +135,7 @@ class Job : public Environment {
                       const string &output);
 
   // Initialize and start tasks.
-  void Run();
+  void Start();
 
   // Wait for all tasks to complete.
   void Wait();
