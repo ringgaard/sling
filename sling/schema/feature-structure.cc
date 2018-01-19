@@ -14,6 +14,8 @@
 
 #include "sling/schema/feature-structure.h"
 
+#include <algorithm>
+
 #include "sling/base/logging.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"

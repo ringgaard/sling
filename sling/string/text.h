@@ -18,7 +18,6 @@
 #define SLING_STRING_TEXT_H_
 
 #include <string.h>
-#include <ext/hash_map>
 #include <iosfwd>
 #include <limits>
 #include <string>
@@ -27,7 +26,7 @@
 #include "sling/base/port.h"
 #include "sling/base/slice.h"
 #include "sling/base/types.h"
-#include "sling/util/hash.h"
+#include "sling/util/city.h"
 
 namespace sling {
 
@@ -229,46 +228,16 @@ inline bool operator >=(Text x, Text y) {
   return !(x < y);
 }
 
-class Text;
-template <class X> struct GoodFastHash;
-
-// An implementation of GoodFastHash for text.
-template<> struct GoodFastHash<Text> {
-  size_t operator()(Text t) const {
-    return HashStringThoroughly(t.data(), t.size());
-  }
-  // Less than operator, for MSVC.
-  bool operator()(const Text &t1, const Text &t2) const {
-    return t1 < t2;
-  }
-  static const size_t bucket_size = 4;  // These are required by MSVC
-  static const size_t min_buckets = 8;  // 4 and 8 are defaults.
-};
-
 // Allow text to be streamed.
 extern std::ostream &operator <<(std::ostream &o, Text t);
 
 }  // namespace sling
 
-namespace __gnu_cxx {
-
-template<> struct hash<sling::Text> {
-  size_t operator()(sling::Text t) const;
-  // Less than operator, for MSVC.
-  bool operator()(const sling::Text &t1, const sling::Text &t2) const {
-    return t1 < t2;
-  }
-  static const size_t bucket_size = 4;  // These are required by MSVC
-  static const size_t min_buckets = 8;  // 4 and 8 are defaults.
-};
-
-}  // namespace __gnu_cxx
-
 namespace std {
 
 template<> struct hash<sling::Text> {
   size_t operator()(sling::Text t) const {
-    return sling::HashStringThoroughly(t.data(), t.size());
+    return sling::CityHash64(t.data(), t.size());
   }
 };
 

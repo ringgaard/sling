@@ -14,6 +14,7 @@
 
 #include "sling/schema/schemata.h"
 
+#include <algorithm>
 #include <vector>
 
 #include "sling/frame/object.h"
