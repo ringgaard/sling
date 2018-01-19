@@ -184,6 +184,11 @@ class Task:
   def add_param(self, name, value):
     self.params[name] = str(value)
 
+  def add_params(self, params):
+    if params != None:
+      for name, value in params.iteritems():
+        self.add_param(name, value)
+
   def __repr__(self):
     s = self.name
     if self.shard != None: s += str(self.shard)
@@ -446,9 +451,7 @@ class Job(object):
     # Create mapper.
     if type != None:
       mapper = self.task(type, name=name)
-      if params != None:
-        for k, v in params.iteritems():
-          mapper.add_param(k, v)
+      mapper.add_params(params)
       reader = self.read(input)
       self.connect(reader, mapper)
       output = self.channel(mapper, format=format)
@@ -482,9 +485,7 @@ class Job(object):
       reduced = input
     else:
       reducer = self.task(type, name=name)
-      if params != None:
-        for k, v in params.iteritems():
-          reducer.add_param(k, v)
+      reducer.add_params(params)
       self.connect(input, reducer)
       reduced = self.channel(reducer,
                              shards=length_of(output),

@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
   // Wikipedia profile builder.
   Task *builder =
-      wf.CreateTask("wikipedia-profile-builder", "wikipedia-profiles");
+      wf.CreateTask("wikipedia-document-builder", "wikipedia-profiles");
   pages.Connect(&wf, builder);
   wf.BindInput(builder, languages, "commons");
   wf.BindInput(builder, wikimap, "wikimap");

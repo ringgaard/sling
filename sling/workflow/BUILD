@@ -85,7 +85,7 @@ cc_binary(
     ":common",
     "//sling/base",
     "//sling/file:posix",
-    "//sling/nlp/wiki:wikipedia-profiles",
+    "//sling/nlp/wiki:wikipedia-documents",
     "//sling/task:job",
     "//sling/task:frames",
     "//sling/task:record-file-reader",

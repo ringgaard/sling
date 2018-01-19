@@ -77,8 +77,8 @@ cc_library(
 )
 
 cc_library(
-  name = "wikipedia-profiles",
-  srcs = ["wikipedia-profiles.cc"],
+  name = "wikipedia-documents",
+  srcs = ["wikipedia-documents.cc"],
   deps = [
     ":wiki-parser",
     ":wikipedia-map",

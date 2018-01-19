@@ -21,8 +21,8 @@ static bool strtoint(Text text, int *value) {
   return safe_strto32(text.data(), text.size(), value);
 }
 
-// Convert Wikipedia articles to entity profiles.
-class WikipediaProfileBuilder : public task::FrameProcessor {
+// Convert Wikipedia articles to documents.
+class WikipediaDocumentBuilder : public task::FrameProcessor {
  public:
   // Language information for Wikipedia.
   struct LanguageInfo {
@@ -407,7 +407,7 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
   task::Counter *num_discarded_aliases_[kNumAliasSources];
 };
 
-REGISTER_TASK_PROCESSOR("wikipedia-profile-builder", WikipediaProfileBuilder);
+REGISTER_TASK_PROCESSOR("wikipedia-document-builder", WikipediaDocumentBuilder);
 
 class WikipediaAliasReducer : public task::Reducer {
  public:

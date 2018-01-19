@@ -136,7 +136,7 @@ class Workflow(Job):
     self.write(wiki_mapping, output, name="mapping-writer")
     return output
 
-  def parse_wikipedia(self, language=None):
+  def parse_wikipedia_articles(self, language=None):
     """Parse Wikipedia articles to SLING documents and aliases."""
     if language == None: language = flags.arg.language
     articles = self.wikipedia_articles(language)
@@ -150,15 +150,15 @@ class Workflow(Job):
     aliases = self.channel(parser, "aliases", format="message/qid:alias")
     return documents, aliases
 
-  def wikifuse(self, language=None):
-    """Fuse Wikidata and Wikipedia."""
+  def parse_wikipedia(self, language=None):
+    """Parse Wikipedia articles and build alias table."""
     if language == None: language = flags.arg.language
     with self.namespace(language + "-wikipedia"):
       # Build mapping from Wikipedia IDs to Wikidata IDs.
       self.wikimap(language=language)
 
       # Parse Wikipedia articles to SLING documents.
-      documents, aliases = self.parse_wikipedia(language)
+      documents, aliases = self.parse_wikipedia_articles(language)
 
       # Write Wikipedia documents.
       document_output = self.wikipedia_documents(language)

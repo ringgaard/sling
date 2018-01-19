@@ -44,8 +44,8 @@ flags.define("--import_wikipedia",
              default=False,
              action='store_true')
 
-flags.define("--wikifuse",
-             help="fuse wikipedia and wikidata",
+flags.define("--parse_wikipedia",
+             help="parse wikipedia(s)",
              default=False,
              action='store_true')
 
@@ -146,14 +146,20 @@ def run_workflow(wf):
 def download_corpora():
   # Download wikidata dump.
   if flags.arg.download_wikidata:
-    log("Download wikidata dump")
-    corpora.download_wikidata()
+    if flags.arg.dryrun:
+      log("wikidata dump: " + corpora.wikidata_url())
+    else:
+      log("Download wikidata dump")
+      corpora.download_wikidata()
 
   # Download wikipedia dumps.
   if flags.arg.download_wikipedia:
     for language in flags.arg.languages:
-      log("Download " + language + " wikipedia dump")
-      corpora.download_wikipedia(language)
+      if flags.arg.dryrun:
+        log(language + " wikipedia dump: " + corpora.wikipedia_url(language))
+      else:
+        log("Download " + language + " wikipedia dump")
+        corpora.download_wikipedia(language)
 
 def import_wiki():
   # Import wikidata.
@@ -171,13 +177,13 @@ def import_wiki():
       wf.wikipedia(language)
       run_workflow(wf)
 
-def wikifuse():
-  # Convert Wikipedia articles to SLING documents.
-  if flags.arg.wikifuse:
+def parse_wikipedia():
+  # Convert Wikipedia pages to SLING documents.
+  if flags.arg.parse_wikipedia:
     for language in flags.arg.languages:
-      log("Fuse " + language + " wikipedia with wikidata")
+      log("Parse " + language + " wikipedia")
       wf = workflow.Workflow()
-      wf.wikifuse(language)
+      wf.parse_wikipedia(language)
       run_workflow(wf)
 
 if __name__ == '__main__':
@@ -190,8 +196,8 @@ if __name__ == '__main__':
   # Import wikidata and wikipedia(s).
   import_wiki()
 
-  # Fuse wikidata and wikipedia(s).
-  wikifuse()
+  # Parse wikipedia(s).
+  parse_wikipedia()
 
   # Done.
   log("Done")
