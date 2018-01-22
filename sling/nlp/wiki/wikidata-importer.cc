@@ -701,6 +701,57 @@ class WikipediaMapping : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("wikipedia-mapping", WikipediaMapping);
 
+// Prune Wikidata items for knowledge base repository.
+class WikidataPruner : public task::FrameProcessor {
+ public:
+  void Process(Slice key, const Frame &frame) override {
+    // Remove aliases and wikilinks from item.
+    Builder item(frame);
+    item.Delete(n_profile_alias_);
+    item.Delete(n_wikipedia_);
+    item.Update();
+
+    // Output item.
+    Output(frame);
+  }
+
+ private:
+  // Symbols.
+  Name n_profile_alias_{names_, "/s/profile/alias"};
+  Name n_wikipedia_{names_, "/w/wikipedia"};
+};
+
+REGISTER_TASK_PROCESSOR("wikidata-pruner", WikidataPruner);
+
+// Collect Wikidata properties.
+class WikidataPropertyCollector : public task::FrameProcessor {
+ public:
+  void Process(Slice key, const Frame &frame) override {
+    // Save property id.
+    properties_.push_back(frame.Id().str());
+
+    // Output property.
+    Output(frame);
+  }
+
+  // Output property catalog.
+  void Flush(task::Task *task) override {
+    Store store;
+    Builder catalog(&store);
+    catalog.AddId("/w/properties");
+    for (const string &id : properties_) {
+      catalog.AddLink(id, id);
+    }
+    Output(catalog.Create());
+  }
+
+ private:
+  // Property ids.
+  std::vector<string> properties_;
+};
+
+REGISTER_TASK_PROCESSOR("wikidata-property-collector",
+                        WikidataPropertyCollector);
 }  // namespace nlp
 }  // namespace sling
 

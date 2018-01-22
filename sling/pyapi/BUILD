@@ -42,6 +42,7 @@ cc_library(
 cc_library(
   name = "tasks",
   deps = [
+    "//sling/nlp/wiki:profile-aliases",
     "//sling/nlp/wiki:wikidata-importer",
     "//sling/nlp/wiki:wikipedia-importer",
     "//sling/nlp/wiki:wikipedia-documents",

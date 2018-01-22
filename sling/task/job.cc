@@ -34,17 +34,30 @@ void Stage::AddDependency(Stage *dependency) {
 
 bool Stage::Ready() {
   for (Stage *dependency : dependencies_) {
-    if (!dependency->done()) return false;
+    if (dependency->state() != DONE) return false;
   }
   return true;
 }
 
+void Stage::MarkReady() {
+  CHECK_EQ(state_, WAITING);
+  state_ = READY;
+}
+
 void Stage::Start() {
   LOG(INFO) << "Starting stage #" << index_;
+  CHECK_EQ(state_, READY);
+  state_ = RUNNING;
   for (int i = tasks_.size() - 1; i >= 0; --i) {
     LOG(INFO) << "Start " << tasks_[i]->ToString();
     tasks_[i]->Start();
   }
+}
+
+void Stage::TaskCompleted(Task *task) {
+  CHECK_EQ(state_, RUNNING);
+  num_completed_++;
+  if (num_completed_ == tasks_.size()) state_ = DONE;
 }
 
 Job::Job() {
@@ -310,13 +323,17 @@ void Job::Start() {
 
   LOG(INFO) << "All systems GO";
 
-  // Start all stages that are ready.
+  // Get all stages that are ready to run.
+  std::vector<Stage *> ready;
   for (Stage *stage : stages_) {
     if (stage->Ready()) {
-      stage->mark_started();
-      stage->Start();
+      stage->MarkReady();
+      ready.push_back(stage);
     }
   }
+
+  // Start all stages that are ready.
+  for (Stage *stage : ready) stage->Start();
 }
 
 void Job::Wait() {
@@ -338,7 +355,7 @@ bool Job::Wait(int ms) {
 
 bool Job::Done() {
   for (Stage *stage : stages_) {
-    if (!stage->done()) return false;
+    if (stage->state() != Stage::DONE) return false;
   }
   return true;
 }
@@ -365,16 +382,16 @@ void Job::TaskCompleted(Task *task) {
     task->stage()->TaskCompleted(task);
 
     // Check if new stages are ready to be started. New stages cannot be started
-    // with while holding the job lock, so each ready stage is collected and
-    // marked as started. After the lock has been released, these stages are
-    // then started.
+    // while holding the job lock, so each ready stage is collected and marked
+    // as ready to prevent new task completions from tryng to start the same
+    // task. After the lock has been released, these stages are then started.
     mu_.lock();
     std::vector<Stage *> ready;
-    if (task->stage()->done()) {
+    if (task->stage()->state() == Stage::DONE) {
       LOG(INFO) << "Stage #" << task->stage()->index() << " done";
       for (Stage *stage : stages_) {
-        if (!stage->started() && stage->Ready()) {
-          stage->mark_started();
+        if (stage->state() == Stage::WAITING && stage->Ready()) {
+          stage->MarkReady();
           ready.push_back(stage);
         }
       }

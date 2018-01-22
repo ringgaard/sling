@@ -103,6 +103,7 @@ cc_binary(
     ":common",
     "//sling/base",
     "//sling/file:posix",
+    "//sling/nlp/wiki:wikidata-importer",
     "//sling/task:frame-store-reader",
     "//sling/task:frame-store-writer",
     "//sling/task:frames",

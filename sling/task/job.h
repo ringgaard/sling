@@ -26,6 +26,9 @@ namespace task {
 // can run.
 class Stage {
  public:
+  // Stage states.
+  enum State {WAITING, READY, RUNNING, DONE};
+
   Stage(int index) : index_(index) {}
 
   // Add task to stage.
@@ -37,23 +40,20 @@ class Stage {
   // Check if stage is ready to run, i.e. all the dependent stages are done.
   bool Ready();
 
+  // Mark stage as ready for running.
+  void MarkReady();
+
   // Start tasks in stage.
   void Start();
 
   // Notification that task in stage has completed.
-  void TaskCompleted(Task *task) { num_completed_++; }
-
-  // Check if stage has been started.
-  bool started() const { return started_; }
-
-  // Mark stage as being started.
-  void mark_started() { started_ = true; }
-
-  // Check if all tasks have completed.
-  bool done() const { return num_completed_ == tasks_.size(); }
+  void TaskCompleted(Task *task);
 
   // Stage index.
   int index() const { return index_; }
+
+  // Stage state.
+  State state() const { return state_; }
 
   // Return list of tasks in stage.
   const std::vector<Task *> &tasks() const { return tasks_; }
@@ -62,14 +62,14 @@ class Stage {
   // Stage index.
   int index_;
 
+  // Stage state.
+  State state_ = WAITING;
+
   // Tasks in stage.
   std::vector<Task *> tasks_;
 
   // Other stages that this stage depend on.
   std::vector<Stage *> dependencies_;
-
-  // Whether stage has been started.
-  bool started_ = false;
 
   // Number of tasks in stage that have completed.
   int num_completed_ = 0;
@@ -157,8 +157,6 @@ class Job : public Environment {
   Counter *GetCounter(const string &name) override;
   void ChannelCompleted(Channel *channel) override;
   void TaskCompleted(Task *task) override;
-
-  // Return counter map.
 
  private:
   // Build stages for job.

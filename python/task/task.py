@@ -434,7 +434,36 @@ class Job(object):
         writer = self.task(tasktype, name=name, shard=Shard(shard, fanout))
       writer.attach_output("output", output[shard])
       writer_tasks.append(writer)
+
+    # Connect producer(s) to writer task(s).
+    if isinstance(input, list) and len(input) == 1: input = input[0]
+    if fanout == 1: writer_tasks = writer_tasks[0]
     self.connect(input, writer_tasks)
+
+    return output
+
+  def collect(self, *args):
+    """Return list of channels that collects the input from all the arguments.
+    The arguments can be channels, resources, or lists of channels or
+    resources."""
+    channels = []
+    for arg in args:
+      if isinstance(arg, Channel):
+        channels.append(arg)
+      elif isinstance(arg, Resource):
+        channels.append(self.read(arg))
+      elif isinstance(arg, list):
+        for elem in arg:
+          if isinstance(elem, Channel):
+            channels.append(elem)
+          elif isinstance(elem, Resource):
+            channels.append(self.read(elem))
+          else:
+            raise Exception("illegal element")
+        pass
+      else:
+        raise Exception("illegal argument")
+    return channels if len(channels) > 1 else channels[0]
 
   def parallel(self, input, threads=5, name=None):
     """Parallelize input messages over thread worker pool."""
@@ -456,7 +485,7 @@ class Job(object):
       self.connect(reader, mapper)
       output = self.channel(mapper, format=format)
     else:
-      output = input
+      output = self.read(input)
 
     return output
 
@@ -508,6 +537,7 @@ class Job(object):
 
     # Reduction of shuffled map output.
     self.reduce(shuffle, output, reducer, params=params)
+    return output
 
   def start(self):
     # Make sure all output directories exist.

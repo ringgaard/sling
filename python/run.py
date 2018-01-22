@@ -49,6 +49,16 @@ flags.define("--parse_wikipedia",
              default=False,
              action='store_true')
 
+flags.define("--extract_names",
+             help="extract names for items",
+             default=False,
+             action='store_true')
+
+flags.define("--build_kb",
+             help="build knowledge base",
+             default=False,
+             action='store_true')
+
 flags.define("--dryrun",
              help="build worflows but do not run them",
              default=False,
@@ -174,17 +184,34 @@ def import_wiki():
     for language in flags.arg.languages:
       log("Import " + language + " wikipedia")
       wf = workflow.Workflow()
-      wf.wikipedia(language)
+      wf.wikipedia(language=language)
       run_workflow(wf)
 
 def parse_wikipedia():
-  # Convert Wikipedia pages to SLING documents.
+  # Convert wikipedia pages to SLING documents.
   if flags.arg.parse_wikipedia:
     for language in flags.arg.languages:
       log("Parse " + language + " wikipedia")
       wf = workflow.Workflow()
-      wf.parse_wikipedia(language)
+      wf.parse_wikipedia(language=language)
       run_workflow(wf)
+
+def extract_names():
+  # Extract item names from wikidata and wikipedia.
+  if flags.arg.extract_names:
+    for language in flags.arg.languages:
+      log("Extract " + language + " names")
+      wf = workflow.Workflow()
+      wf.extract_names(language=language)
+      run_workflow(wf)
+
+def build_knowledge_base():
+  # Build knowledge base repository.
+  if flags.arg.build_kb:
+    log("Build knowledge base repository")
+    wf = workflow.Workflow()
+    wf.build_knowledge_base()
+    run_workflow(wf)
 
 if __name__ == '__main__':
   # Parse command-line arguments.
@@ -193,11 +220,11 @@ if __name__ == '__main__':
   # Download corpora.
   download_corpora()
 
-  # Import wikidata and wikipedia(s).
+  # Run workflows.
   import_wiki()
-
-  # Parse wikipedia(s).
   parse_wikipedia()
+  extract_names()
+  build_knowledge_base()
 
   # Done.
   log("Done")

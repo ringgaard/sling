@@ -3,6 +3,7 @@
 #include "sling/frame/object.h"
 #include "sling/frame/reader.h"
 #include "sling/frame/store.h"
+#include "sling/frame/wire.h"
 #include "sling/stream/file.h"
 #include "sling/task/process.h"
 #include "sling/task/frames.h"
@@ -37,7 +38,7 @@ class FrameStoreReader : public Process {
 
     // Read frames from input and output to output channel.
     Store store;
-    if (file->format().file() == "store") {
+    if (input.Peek() == WIRE_BINARY_MARKER) {
       Decoder decoder(&store, &input);
       while (!decoder.done()) {
         Object object = decoder.Decode();

@@ -122,7 +122,9 @@ PyObject *PyStore::Load(PyObject *args, PyObject *kw) {
     // Load store from file object.
     StdFileInputStream stream(PyFile_AsFile(file), false);
     InputParser parser(store, &stream, force_binary);
+    store->LockGC();
     Object result = parser.ReadAll();
+    store->UnlockGC();
     if (parser.error()) {
       PyErr_SetString(PyExc_IOError, parser.error_message().c_str());
       return nullptr;
@@ -140,7 +142,9 @@ PyObject *PyStore::Load(PyObject *args, PyObject *kw) {
     // Load frames from file.
     FileInputStream stream(f);
     InputParser parser(store, &stream, force_binary);
+    store->LockGC();
     Object result = parser.ReadAll();
+    store->UnlockGC();
     if (parser.error()) {
       PyErr_SetString(PyExc_IOError, parser.error_message().c_str());
       return nullptr;
