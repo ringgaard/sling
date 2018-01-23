@@ -80,7 +80,7 @@ class Workflow(Job):
     """Task for converting WikiData JSON to SLING items and properties."""
     task = self.task("wikidata-importer", name=name)
     task.add_param("primary_language", flags.arg.language)
-    self.connect(dump, input)
+    self.connect(input, task)
     items = self.channel(task, name="items", format="message/frame")
     properties = self.channel(task, name="properties", format="message/frame")
     return items, properties
@@ -293,7 +293,7 @@ class Workflow(Job):
       self.wikimap(language=language)
 
       # Parse Wikipedia articles to SLING documents.
-      documents, aliases = self.parse_wikipedia_articles(language)
+      documents, aliases = self.parse_wikipedia_articles(language=language)
 
       # Write Wikipedia documents.
       document_output = self.wikipedia_documents(language)
