@@ -70,6 +70,9 @@ struct PyJob : public PyBase {
   // Job object for runnning job.
   task::Job *job_;
 
+  // Whether job is currently running.
+  bool running_;
+
   // Registration.
   static PyTypeObject type;
   static PyMethodDef methods[];

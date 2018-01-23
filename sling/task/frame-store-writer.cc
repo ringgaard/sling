@@ -18,6 +18,12 @@ class FrameStoreWriter : public Processor {
   void Start(Task *task) override {
     // Create store.
     store_ = new Store(&options_);
+
+    // Suppressing garbage collection can make store updates faster at the
+    // expense of potentially larger memory usage.
+    if (task->Get("suppress_gc", true)) {
+      store_->LockGC();
+    }
   }
 
   void Receive(Channel *channel, Message *message) override {

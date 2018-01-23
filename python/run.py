@@ -121,11 +121,15 @@ def run_workflow(wf):
   start = time.time()
   done = False
   prev_channels = {}
+  prev_counters = {}
+  prev_time = start
   while not done:
     done = wf.wait(flags.arg.refresh * 1000)
     counters = wf.counters()
-    print "{:64} {:>16}".format("Counter", "Value")
+    print "{:64} {:>16} {:>16}".format("Counter", "Value", "Rate")
     channels = {}
+    current_counters = {}
+    current_time = time.time()
     for ctr in sorted(counters):
       m = re.match(r"(.+)\[(.+\..+)\]", ctr)
       if m != None:
@@ -134,13 +138,19 @@ def run_workflow(wf):
         if channel not in channels: channels[channel] = ChannelStats()
         channels[channel].update(metric, counters[ctr])
       else:
-        print "{:64} {:>16,}".format(ctr, counters[ctr])
+        current_value = counters[ctr]
+        prev_value = prev_counters.get(ctr, 0)
+        delta = current_value - prev_value
+        elapsed = current_time - prev_time
+        rate = long(delta / elapsed)
+        print "{:64} {:>16,} {:>16,}".format(ctr, current_value, rate)
+        current_counters[ctr] = current_value
     print
     if len(channels) > 0:
       print "{:64} {:>16} {:>16} {:>16} {:>16} {:>16}  {}".format(
             "Channel", "Key bytes", "Value bytes", "Bandwidth",
             "Messages", "Throughput", "Shards")
-      for channel in channels:
+      for channel in sorted(channels):
         stats = channels[channel]
         prev = prev_channels.get(channel)
         print "{:64} {:>16,} {:>16,} {:>11,.3f} MB/s {:>16,} " \
@@ -150,6 +160,8 @@ def run_workflow(wf):
               stats.messages, stats.throughput(prev),
               str(stats.shards_done) + "/" + str(stats.shards_total))
       print
+    prev_time = current_time
+    prev_counters = current_counters
     prev_channels = channels
   log("workflow time: " + str(datetime.timedelta(seconds=time.time() - start)))
 
@@ -173,20 +185,20 @@ def download_corpora():
         corpora.download_wikipedia(language)
 
 def import_wiki():
-  # Import wikidata.
-  if flags.arg.import_wikidata:
-    log("Import wikidata")
+  if flags.arg.import_wikidata or flags.arg.import_wikipedia:
     wf = workflow.Workflow()
-    wf.wikidata()
-    run_workflow(wf)
+    # Import wikidata.
+    if flags.arg.import_wikidata:
+      log("Import wikidata")
+      wf.wikidata()
 
-  # Import wikipedia(s).
-  if flags.arg.import_wikipedia:
-    for language in flags.arg.languages:
-      log("Import " + language + " wikipedia")
-      wf = workflow.Workflow()
-      wf.wikipedia(language=language)
-      run_workflow(wf)
+    # Import wikipedia(s).
+    if flags.arg.import_wikipedia:
+      for language in flags.arg.languages:
+        log("Import " + language + " wikipedia")
+        wf.wikipedia(language=language)
+
+    run_workflow(wf)
 
 def parse_wikipedia():
   # Convert wikipedia pages to SLING documents.

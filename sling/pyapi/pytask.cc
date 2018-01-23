@@ -41,12 +41,13 @@ void PyJob::Define(PyObject *module) {
 }
 
 int PyJob::Init(PyObject *args, PyObject *kwds) {
+  // Create new job.
+  job_ = new Job();
+  running_ = false;
+
   // Get python job argument.
   PyObject *pyjob = nullptr;
   if (!PyArg_ParseTuple(args, "O", &pyjob)) return -1;
-
-  // Create new job.
-  job_ = new Job();
 
   // Get resources.
   ResourceMapping resource_mapping;
@@ -149,32 +150,48 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
 }
 
 void PyJob::Dealloc() {
-  if (job_ != nullptr && !job_->Done()) {
-    LOG(FATAL) << "Job has not completed";
-  }
+  CHECK(!running_) << "Job is still running";
   delete job_;
 }
 
 PyObject *PyJob::Start() {
-  if (job_ != nullptr) job_->Start();
+  if (!running_) {
+    // Add self-reference count to job to keep it alive while the job is
+    // running. This reference is not released until the job has completed.
+    Py_INCREF(this);
+    running_ = true;
+
+    // Start job.
+    job_->Start();
+  }
   Py_RETURN_NONE;
 }
 
 PyObject *PyJob::Done() {
-  bool done = false;
-  if (job_ != nullptr) done = job_->Done();
+  bool done = job_->Done();
+  if (done && running_) {
+    running_ = false;
+    Py_DECREF(this);
+  }
   return PyBool_FromLong(done);
 }
 
 PyObject *PyJob::Wait() {
-  if (job_ != nullptr) job_->Wait();
+  job_->Wait();
+  if (running_) {
+    running_ = false;
+    Py_DECREF(this);
+  }
   Py_RETURN_NONE;
 }
 
 PyObject *PyJob::WaitFor(PyObject *timeout) {
   int ms = PyNumber_AsSsize_t(timeout, nullptr);
-  bool done = true;
-  if (job_ != nullptr) done = job_->Wait(ms);
+  bool done = job_->Wait(ms);
+  if (done && running_) {
+    running_ = false;
+    Py_DECREF(this);
+  }
   return PyBool_FromLong(done);
 }
 
@@ -184,15 +201,13 @@ PyObject *PyJob::Counters() {
   if (counters == nullptr) return nullptr;
 
   // Gather current counter values.
-  if (job_ != nullptr) {
-    job_->IterateCounters([counters](const string &name, Counter *counter) {
-      PyObject *key = PyString_FromStringAndSize(name.data(), name.size());
-      PyObject *val = PyLong_FromLong(counter->value());
-      PyDict_SetItem(counters, key, val);
-      Py_DECREF(key);
-      Py_DECREF(val);
-    });
-  }
+  job_->IterateCounters([counters](const string &name, Counter *counter) {
+    PyObject *key = PyString_FromStringAndSize(name.data(), name.size());
+    PyObject *val = PyLong_FromLong(counter->value());
+    PyDict_SetItem(counters, key, val);
+    Py_DECREF(key);
+    Py_DECREF(val);
+  });
 
   return counters;
 }

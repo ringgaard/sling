@@ -50,12 +50,19 @@ void WikipediaMap::LoadRedirects(Text filename) {
 
 Handle WikipediaMap::Resolve(Handle h) {
   // Recursively resolve redirects.
+  static const int MAX_REDIRECTS = 32;
   const FrameDatum *frame = store_.GetFrame(h);
-  for (;;) {
+  int num_redirects = 0;
+  while (true) {
     Handle redir = frame->get(n_redirect_link_);
     if (redir.IsNil()) break;
     if (redir == frame->self) break;
     frame = store_.GetFrame(redir);
+    if (++num_redirects > MAX_REDIRECTS) {
+      LOG(WARNING) << "Unresolved redirect from " << store_.DebugString(h)
+                   << " ending at " << store_.DebugString(redir);
+      return h;
+    }
   }
   return frame->self;
 }

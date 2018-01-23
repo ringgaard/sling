@@ -78,6 +78,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
     }
 
     // Output aliases for all redirects.
+    LOG(INFO) << "Output aliases for redirects";
     aliases_ = task->GetSink("aliases");
     for (Handle redirect : wikimap_.redirects()) {
       WikipediaMap::PageInfo page;
@@ -91,6 +92,8 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
       Wiki::SplitTitle(page.title.str(), &name, &disambiguation);
       OutputAlias(page.qid, name, SRC_WIKIPEDIA_REDIRECT);
     }
+
+    LOG(INFO) << "Wikipedia document builder initalized";
   }
 
   void Process(Slice key, const Frame &frame) override {

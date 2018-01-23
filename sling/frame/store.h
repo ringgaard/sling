@@ -407,6 +407,8 @@ struct Range {
 const Word kSizeBits = 28;
 const Word kSizeMask = (1 << kSizeBits) - 1;
 const Word kTypeMask = 0xF0000000;
+const Word kObjectSizeLimit = (1 << kSizeBits);
+const Word kMapSizeLimit = kObjectSizeLimit / sizeof(Handle);
 
 // Types.
 enum Type : Word {

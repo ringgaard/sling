@@ -6,6 +6,7 @@
 #include "sling/frame/object.h"
 #include "sling/frame/reader.h"
 #include "sling/frame/store.h"
+#include "sling/frame/wire.h"
 #include "sling/stream/file.h"
 #include "sling/stream/memory.h"
 #include "sling/task/task.h"
@@ -37,7 +38,7 @@ void FrameProcessor::Start(Task *task) {
   // Update statistics for common store.
   MemoryUsage usage;
   commons_->GetMemoryUsage(&usage, true);
-  task->GetCounter("commons_memory")->Increment(usage.memory_allocated());
+  task->GetCounter("commons_memory")->Increment(usage.memory_used());
   task->GetCounter("commons_handles")->Increment(usage.used_handles());
   task->GetCounter("commons_symbols")->Increment(usage.num_symbols());
   task->GetCounter("commons_gcs")->Increment(usage.num_gcs);
@@ -65,7 +66,7 @@ void FrameProcessor::Receive(Channel *channel, Message *message) {
   // Update statistics.
   MemoryUsage usage;
   store.GetMemoryUsage(&usage, true);
-  frame_memory_->Increment(usage.memory_allocated());
+  frame_memory_->Increment(usage.memory_used());
   frame_handles_->Increment(usage.used_handles());
   frame_symbols_->Increment(usage.num_symbols());
   frame_gcs_->Increment(usage.num_gcs);
@@ -133,7 +134,7 @@ void LoadStore(Store *store, Resource *file) {
   store->LockGC();
   FileInputStream stream(file->name());
   Input input(&stream);
-  if (file->format().file() == "store") {
+  if (input.Peek() == WIRE_BINARY_MARKER) {
     Decoder decoder(store, &input);
     decoder.DecodeAll();
   } else {

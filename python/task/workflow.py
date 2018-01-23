@@ -276,7 +276,7 @@ class Workflow(Job):
     if commons == None: commons = self.language_defs()
     if wikimap == None: wikimap = self.wikipedia_mapping(language)
 
-    parser = self.task("wikipedia-profile-builder", "wikipedia-documents")
+    parser = self.task("wikipedia-document-builder", "wikipedia-documents")
     self.connect(self.read(articles, name="article-reader"), parser)
     parser.attach_input("commons", commons)
     parser.attach_input("wikimap", wikimap)
@@ -289,22 +289,26 @@ class Workflow(Job):
     """Parse Wikipedia articles and build alias table."""
     if language == None: language = flags.arg.language
     with self.namespace(language + "-wikipedia"):
-      # Build mapping from Wikipedia IDs to Wikidata IDs.
-      self.wikimap(language=language)
+      with self.namespace("mapping"):
+        # Build mapping from Wikipedia IDs to Wikidata IDs.
+        self.wikimap(language=language)
 
-      # Parse Wikipedia articles to SLING documents.
-      documents, aliases = self.parse_wikipedia_articles(language=language)
+      with self.namespace("parsing"):
+        # Parse Wikipedia articles to SLING documents.
+        documents, aliases = self.parse_wikipedia_articles(language=language)
 
-      # Write Wikipedia documents.
-      document_output = self.wikipedia_documents(language)
-      self.write(documents, document_output, name="document-writer")
+        # Write Wikipedia documents.
+        document_output = self.wikipedia_documents(language)
+        self.write(documents, document_output, name="document-writer")
 
-      # Collect aliases.
-      alias_output = self.wikipedia_aliases(language)
-      self.reduce(self.shuffle(aliases, len(alias_output)),
-                  alias_output,
-                  "wikipedia-alias-reducer",
-                  params={'language': language})
+      with self.namespace("aliases"):
+        # Collect aliases.
+        alias_output = self.wikipedia_aliases(language)
+        self.reduce(self.shuffle(aliases, len(alias_output)),
+                    alias_output,
+                    "wikipedia-alias-reducer",
+                    params={'language': language})
+
     return document_output, alias_output
 
   #---------------------------------------------------------------------------
@@ -381,10 +385,7 @@ class Workflow(Job):
     if wikidata_properties == None:
       wikidata_properties = self.wikidata_properties()
     if schemas == None:
-      schemas = [
-        self.language_defs(),
-        self.calendar_defs(),
-      ]
+      schemas = [self.language_defs(), self.calendar_defs()]
 
     with self.namespace("wikidata"):
       # Prune information from Wikidata items.

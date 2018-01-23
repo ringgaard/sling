@@ -39,6 +39,7 @@ writers = {
 }
 
 class Shard:
+  """A shard is one part of a multi-part set."""
   def __init__(self, part, total):
     self.part = part
     self.total = total
@@ -57,6 +58,8 @@ class Shard:
 
 
 class Format:
+  """Data format with a file format and a record format. The record format
+  consists of a key and a value format."""
   def __init__(self, fmt=None, file=None, key=None, value=None):
     if fmt == None:
       self.file = file
@@ -81,6 +84,7 @@ class Format:
         self.file = fmt
 
   def as_message(self):
+    """Return format as a message format."""
     if self.file == "message": return self
     return Format(file="message", key=self.key, value=self.value)
 
@@ -94,13 +98,11 @@ class Format:
 
 
 class Resource:
+  """A resource is an external input or output, e.g. a file."""
   def __init__(self, name, shard, format):
     self.name = name
     self.shard = shard
     self.format = format
-
-  def __repr__(self):
-    return "%d/%d" % (self.part, self.total)
 
   def __repr__(self):
     s = "Resource(" + self.name
@@ -111,6 +113,8 @@ class Resource:
 
 
 class Binding:
+  """A binding binds a resouce to a task input or output."""
+
   def __init__(self, name, resource):
     self.name = name
     self.resource = resource
@@ -124,6 +128,7 @@ class Binding:
 
 
 class Port:
+  """A port connects a channel to a task source or sink."""
   def __init__(self, task, name, shard):
     self.task = task
     self.name = name
@@ -137,6 +142,8 @@ class Port:
 
 
 class Channel:
+  """A channel is used for seding messages from a producer task to a consumer
+  task."""
   def __init__(self, format, producer, consumer):
     self.format = format
     self.producer = producer
@@ -159,6 +166,9 @@ class Channel:
 
 
 class Task:
+  """A task is used for processing inputs from resources and messages from
+  sources. It can output data to output resource and send messages to channel
+  sinks."""
   def __init__(self, type, name, shard):
     self.type = type
     self.name = name
@@ -170,21 +180,27 @@ class Task:
     self.params = {}
 
   def attach_input(self, name, resource):
+    """Attach named input resource to task."""
     self.inputs.append(Binding(name, resource))
 
   def attach_output(self, name, resource):
+    """Attach named output resource to task."""
     self.outputs.append(Binding(name, resource))
 
   def connect_source(self, channel):
+    """Connect channel to a named input source for the task."""
     self.sources.append(channel)
 
   def connect_sink(self, channel):
+    """Connect channel to a named output sink for the task."""
     self.sinks.append(channel)
 
   def add_param(self, name, value):
+    """Add configuration parameter to task."""
     self.params[name] = str(value)
 
   def add_params(self, params):
+    """Add configuration parameters to task."""
     if params != None:
       for name, value in params.iteritems():
         self.add_param(name, value)
@@ -196,6 +212,8 @@ class Task:
 
 
 class Scope:
+  """A score is used for defined a name space for task names. It implements
+  context management so you can use with statements to define name spaces."""
   def __init__(self, job, name):
     self.job = job
     self.name = name
@@ -210,6 +228,8 @@ class Scope:
     self.job.scope = self.prev
 
   def prefix(self):
+    """Returns the name prefix defined in the scope by concatenating all nested
+    name spaces."""
     parts = []
     s = self
     while s != None:
@@ -230,6 +250,9 @@ def length_of(l):
   return len(l) if isinstance(l, list) else None
 
 class Job(object):
+  """A job is used for running a set of tasks over some input producing some
+  output. The task can be connected using channels. A job can run asynchronously
+  and supports multi-threaded processing."""
   def __init__(self):
     self.tasks = []
     self.channels = []
@@ -240,9 +263,11 @@ class Job(object):
     self.driver = None
 
   def namespace(self, name):
+    """Defines a name space for task names."""
     return Scope(self, name)
 
   def task(self, type, name=None, shard=None):
+    """A new task to job."""
     if name == None: name = type
     if self.scope != None: name = self.scope.prefix() + "/" + name
     basename = name
@@ -256,6 +281,12 @@ class Job(object):
     return t
 
   def resource(self, file, dir=None, shards=None, ext=None, format=None):
+    """A one or more resources to job. The file parameter can be a file name
+    pattern with wild-cards, in which can it is expanded to a list of matching
+    resources. The optional dir and ext are prepended and appended to the
+    base file name. The file name can also be a sharded file name (@n), which
+    is expanded to a list of resources, one for each shard. The general format
+    of a file name is as follows: [<dir>]<file>[@<shards>][ext]"""
     # Convert format.
     if type(format) == str: format = Format(format)
 
@@ -310,6 +341,9 @@ class Job(object):
       return resources
 
   def channel(self, producer, name="output", shards=None, format=None):
+    """Adds one or more channels to job. The channel(s) are connected as sinks
+    to the producer(s). Is shards are specified, this creates a sharded set of
+    channels."""
     if type(format) == str: format = Format(format)
     if isinstance(producer, list):
       channels = []
@@ -341,7 +375,8 @@ class Job(object):
       self.channels.append(ch)
       return ch
 
-  def connect(self, channel, consumer, name="input"):
+  def connect(self, channel, consumer, sharding=None, name="input"):
+    """Connect channel(s) to consumer task(s)."""
     multi_channel = isinstance(channel, list)
     multi_task = isinstance(consumer, list)
     if not multi_channel and not multi_task:
@@ -367,9 +402,19 @@ class Job(object):
         channel[shard].consumer = port
         consumer[shard].connect_source(channel[shard])
     else:
-      raise Exception("cannot connect single channel to multiple tasks")
+      # Connect single channel to multiple tasks using sharder.
+      if sharding == None: sharding = "sharder"
+      sharder = self.task(sharding)
+      self.connect(channel, sharder)
+      self.connect(self.channel(sharder,
+                                shards=len(consumer),
+                                format=channel.format),
+                   consumer,
+                   name=name)
 
   def read(self, input, name=None):
+    """Add readers for input resource(s). The format of the input resource is
+    used for selecting an appropriate reader task for the format."""
     if isinstance(input, list):
       outputs = []
       shards = len(input)
@@ -398,6 +443,8 @@ class Job(object):
       return output
 
   def write(self, producer, output, sharding=None, name=None):
+    """Add writers for output resource(s). The format of the output resource is
+    used for selecting an appropriate reader task for the format."""
     # Determine fan-in (channels) and fan-out (files).
     if not isinstance(producer, list): producer = [producer]
     if not isinstance(output, list): output = [output]
@@ -465,10 +512,11 @@ class Job(object):
         raise Exception("illegal argument")
     return channels if len(channels) > 1 else channels[0]
 
-  def parallel(self, input, threads=5, name=None):
+  def parallel(self, input, threads=5, queue=None, name=None):
     """Parallelize input messages over thread worker pool."""
     workers = self.task("workers", name=name)
     workers.add_param("worker_threads", threads)
+    if queue != None: workers.add_param("queue_size", queue)
     self.connect(input, workers)
     return self.channel(workers, format=format_of(input))
 
@@ -540,6 +588,8 @@ class Job(object):
     return output
 
   def start(self):
+    """Start job. The job with be run in the background, and the done() and
+    wait() methods can be used to determine if the job as completed."""
     # Make sure all output directories exist.
     self.create_output_directories()
 
@@ -551,6 +601,7 @@ class Job(object):
     self.driver.start()
 
   def wait(self, timeout=None):
+    """Wait until job completes."""
     if self.driver == None: return True
     if timeout != None:
       return self.driver.wait_for(timeout)
@@ -559,14 +610,17 @@ class Job(object):
       return True
 
   def done(self):
+    """Check if job is done."""
     if self.driver == None: return Trye
     return self.driver.done()
 
   def counters(self):
+    """Return map of counters for the job."""
     if self.driver == None: return None
     return self.driver.counters()
 
   def dump(self):
+    """Return job configuration."""
     s = ""
     for task in self.tasks:
       s += "task " + task.name
@@ -590,6 +644,7 @@ class Job(object):
     return s
 
   def create_output_directories(self):
+    """Create output directories for job."""
     checked = set()
     for task in self.tasks:
       for output in task.outputs:

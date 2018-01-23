@@ -28,7 +28,9 @@ class RecordFileReader : public Process {
     }
 
     // Open input file.
-    RecordReader reader(input->resource()->name());
+    RecordFileOptions options;
+    options.buffer_size = task->Get("buffer_size", options.buffer_size);
+    RecordReader reader(input->resource()->name(), options);
 
     // Statistics counters.
     Counter *records_read = task->GetCounter("records_read");
