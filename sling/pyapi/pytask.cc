@@ -31,7 +31,7 @@ PyMethodDef PyJob::methods[] = {
 };
 
 void PyJob::Define(PyObject *module) {
-  InitType(&type, "sling.api.Job", sizeof(PyJob));
+  InitType(&type, "sling.api.Job", sizeof(PyJob), true);
 
   type.tp_init = reinterpret_cast<initproc>(&PyJob::Init);
   type.tp_dealloc = reinterpret_cast<destructor>(&PyJob::Dealloc);
@@ -152,6 +152,7 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
 void PyJob::Dealloc() {
   CHECK(!running_) << "Job is still running";
   delete job_;
+  Free();
 }
 
 PyObject *PyJob::Start() {

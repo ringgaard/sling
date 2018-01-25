@@ -39,7 +39,7 @@ PyMethodDef PyStore::methods[] = {
 };
 
 void PyStore::Define(PyObject *module) {
-  InitType(&type, "sling.Store", sizeof(PyStore));
+  InitType(&type, "sling.Store", sizeof(PyStore), true);
 
   type.tp_init = reinterpret_cast<initproc>(&PyStore::Init);
   type.tp_dealloc = reinterpret_cast<destructor>(&PyStore::Dealloc);
@@ -93,6 +93,7 @@ int PyStore::Init(PyObject *args, PyObject *kwds) {
 void PyStore::Dealloc() {
   store->Release();
   if (pyglobals != nullptr) Py_DECREF(pyglobals);
+  Free();
 }
 
 PyObject *PyStore::Freeze() {
@@ -539,11 +540,11 @@ bool PyStore::SlotList(PyObject *object, std::vector<Slot> *slots) {
 }
 
 void PySymbols::Define(PyObject *module) {
-  InitType(&type, "sling.Symbols", sizeof(PySymbols));
+  InitType(&type, "sling.Symbols", sizeof(PySymbols), false);
   type.tp_dealloc = reinterpret_cast<destructor>(&PySymbols::Dealloc);
   type.tp_iter = &PySymbols::Self;
   type.tp_iternext = &PySymbols::Next;
-  RegisterType(&type);
+  RegisterType(&type, module, "Symbols");
 }
 
 void PySymbols::Init(PyStore *pystore) {
@@ -557,8 +558,8 @@ void PySymbols::Init(PyStore *pystore) {
 }
 
 void PySymbols::Dealloc() {
-  // Release reference to store.
   Py_DECREF(pystore);
+  Free();
 }
 
 PyObject *PySymbols::Next() {
