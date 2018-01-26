@@ -21,9 +21,16 @@ class ProfileAliasExtractor : public task::FrameProcessor {
   void Startup(task::Task *task) override {
     string lang = task->Get("language", "en");
     language_ = commons_->Lookup("/lang/" + lang);
+    skip_aux_ = task->Get("skip_aux", false);
+
+    // Initialize filter.
+    if (skip_aux_) filter_.Init(commons_);
   }
 
   void Process(Slice key, const Frame &frame) override {
+    // Optionally skip aux items.
+    if (skip_aux_ && filter_.IsAux(frame)) return;
+
     // Create frame with all aliases matching language.
     Builder a(frame.store());
     for (const Slot &s : frame) {
@@ -63,6 +70,10 @@ class ProfileAliasExtractor : public task::FrameProcessor {
 
   // Language for aliases.
   Handle language_;
+
+  // Skip auxiliary items.
+  bool skip_aux_ = false;
+  AuxFilter filter_;
 };
 
 REGISTER_TASK_PROCESSOR("profile-alias-extractor", ProfileAliasExtractor);

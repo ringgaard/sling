@@ -14,6 +14,8 @@ cc_library(
   hdrs = ["wiki.h"],
   deps = [
     "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:store",
     "//sling/util:unicode",
   ],
 )

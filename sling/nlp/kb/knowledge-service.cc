@@ -71,7 +71,7 @@ void KnowledgeService::Load(const string &knowledge_base,
     p.datatype = property.GetHandle(n_datatype_);
 
     // Get URL formatter for property.
-    Handle formatter = Resolve(property.GetHandle(n_formatter_url_));
+    Handle formatter = property.Resolve(n_formatter_url_);
     if (kb_.IsString(formatter)) {
       p.url = String(&kb_, formatter).value();
     }
@@ -193,14 +193,6 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   ws.set_output(b.Create());
 }
 
-Handle KnowledgeService::Resolve(Handle handle) const {
-  if (kb_.IsFrame(handle)) {
-    Handle resolved = kb_.GetFrame(handle)->get(Handle::is());
-    if (!resolved.IsNil()) return resolved;
-  }
-  return handle;
-}
-
 void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
   // Collect properties and values.
   HandleMap<Handles *> property_map;
@@ -298,20 +290,21 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
                               lat, ",", lng));
       } else if (property.datatype == n_quantity_type_) {
         // Add quantity value.
-        string text = ToText(&kb_, Resolve(value));
+        string text = ToText(&kb_, kb_.Resolve(value));
         if (kb_.IsFrame(value)) {
           Frame quantity(&kb_, value);
           Frame unit = quantity.GetFrame(n_unit_);
           if (unit.valid()) {
             text.append(" ");
             if (unit.Has(n_unit_symbol_)) {
-              text.append(unit.GetString(n_unit_symbol_));
+              Handle unit_symbol = unit.Resolve(n_unit_symbol_);
+              if (kb_.IsString(unit_symbol)) {
+                text.append(String(&kb_, unit_symbol).value());
+              }
             } else {
               text.append(unit.GetString(n_name_));
             }
           }
-          // TODO: remove when units have been tested.
-          v.Add("frame", ToText(quantity));
         }
         v.Add(n_text_, text);
       } else if (property.datatype == n_time_type_) {

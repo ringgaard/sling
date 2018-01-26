@@ -999,6 +999,9 @@ class Store {
   ProxyDatum *GetProxy(Handle h) { return Deref(h)->AsProxy(); }
   const ProxyDatum *GetProxy(Handle h) const { return Deref(h)->AsProxy(); }
 
+  // Resolve handle by following is: chain.
+  Handle Resolve(Handle handle);
+
   // Freezes the store. This will convert all handles to global handles and make
   // the store read-only.
   void Freeze();

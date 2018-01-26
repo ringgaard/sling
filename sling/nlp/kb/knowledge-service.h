@@ -43,9 +43,6 @@ class KnowledgeService {
   void HandleGetItem(HTTPRequest *request, HTTPResponse *response);
 
  private:
-  // Resolve reference.
-  Handle Resolve(Handle handle) const;
-
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);
 
@@ -75,7 +72,7 @@ class KnowledgeService {
   NameTable aliases_;
 
   // Knowledge base browser app.
-  StaticContent app_{"/kb", "nlp/kb/app"};
+  StaticContent app_{"/kb", "sling/nlp/kb/app"};
 
   // Symbols.
   Names names_;

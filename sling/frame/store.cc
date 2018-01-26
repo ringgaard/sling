@@ -943,6 +943,21 @@ Handle Store::AllocateHandleSlow(Datum *object) {
   return handle;
 }
 
+Handle Store::Resolve(Handle handle) {
+  for (;;) {
+    if (!handle.IsRef() || handle.IsNil()) return handle;
+    Datum *datum = Deref(handle);
+    if (!datum->IsFrame()) return handle;
+
+    FrameDatum *frame = datum->AsFrame();
+    if (frame->IsNamed()) return handle;
+
+    Handle qua = frame->get(Handle::is());
+    if (qua == Handle::nil()) return handle;
+    handle = qua;
+  }
+}
+
 void Store::Mark() {
   // The marking stack keeps track of memory regions with handles that have not
   // yet been marked and traversed.

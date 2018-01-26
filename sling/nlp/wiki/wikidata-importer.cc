@@ -248,7 +248,7 @@ class WikidataImporter : public task::Processor {
     const char *s_end = s + str.length();
     const char *f = format.data();
     while (s != s_end) {
-      if (*f != '?' && *f != *s) return false;
+      if (*f != '*' && *f != *s) return false;
       s++;
       f++;
     }
@@ -370,11 +370,12 @@ class WikidataImporter : public task::Processor {
   }
 
   // Convert Wikidata timestamp.
-  Handle ConvertTime(Store *store, Handle timestamp) {
+  Handle ConvertTime(Store *store, const Frame &value) {
     // Check if string matches simple date format.
+    Handle timestamp = value.GetHandle(s_time_);
     if (!store->IsString(timestamp)) return timestamp;
     Text str = store->GetString(timestamp)->str();
-    if (!MatchesFormat(str, "+\?\?\?\?-\?\?-\?\?T00:00:00Z")) return timestamp;
+    if (!MatchesFormat(str, "+****-**-**T00:00:00Z")) return timestamp;
 
     // Get year, month, and day.
     int year = ParseNumber(str.substr(1, 4));
@@ -383,9 +384,11 @@ class WikidataImporter : public task::Processor {
     if (year < 1000 || month < 0 || day < 0) return timestamp;
 
     // Convert to integer encoded date.
-    if (day == 0 && month == 0) {
+    int precision = value.GetInt(s_precision_, -1);
+    if (precision < 0) return timestamp;
+    if (precision == 9 || (day == 0 && month == 0)) {
       return Handle::Integer(year);
-    } else if (day == 0) {
+    } else if (precision == 10 || day == 0) {
       return Handle::Integer(year * 100 + month);
     } else {
       return Handle::Integer(year * 10000 + month * 100 + day);
@@ -455,7 +458,7 @@ class WikidataImporter : public task::Processor {
       if (type.equals("wikibase-entityid")) {
         return ConvertEntity(value);
       } else if (type.equals("time")) {
-        return ConvertTime(store, value.GetHandle(s_time_));
+        return ConvertTime(store, value);
       } else if (type.equals("quantity")) {
         return ConvertQuantity(value);
       } else if (type.equals("monolingualtext")) {
@@ -704,6 +707,15 @@ REGISTER_TASK_PROCESSOR("wikipedia-mapping", WikipediaMapping);
 // Prune Wikidata items for knowledge base repository.
 class WikidataPruner : public task::FrameProcessor {
  public:
+  void Startup(task::Task *task) override {
+    // Initialize aux filter.
+    filter_.Init(commons_);
+
+    // Initialize counters.
+    num_kb_items_ = task->GetCounter("num_kb_items");
+    num_aux_items_ = task->GetCounter("num_aux_items");
+  }
+
   void Process(Slice key, const Frame &frame) override {
     // Remove aliases and wikilinks from item.
     Builder item(frame);
@@ -711,7 +723,15 @@ class WikidataPruner : public task::FrameProcessor {
     item.Delete(n_wikipedia_);
     item.Update();
 
+    // Filter out aux items.
+    if (filter_.IsAux(frame)) {
+      // TODO(ringgaard): output aux items to separate channel.
+      num_aux_items_->Increment();
+      return;
+    }
+
     // Output item.
+    num_kb_items_->Increment();
     Output(frame);
   }
 
@@ -719,6 +739,13 @@ class WikidataPruner : public task::FrameProcessor {
   // Symbols.
   Name n_profile_alias_{names_, "/s/profile/alias"};
   Name n_wikipedia_{names_, "/w/wikipedia"};
+
+  // Item filter.
+  AuxFilter filter_;
+
+  // Statistics.
+  task::Counter *num_kb_items_;
+  task::Counter *num_aux_items_;
 };
 
 REGISTER_TASK_PROCESSOR("wikidata-pruner", WikidataPruner);

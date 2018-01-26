@@ -15,13 +15,11 @@
 
 """Run SLING processing"""
 
-import datetime
-import re
-import time
 import sling
 import sling.flags as flags
 import sling.log as log
 import sling.task.corpora as corpora
+import sling.task.wiki as wiki
 import sling.task.workflow as workflow
 
 # Command-line flags.
@@ -60,6 +58,11 @@ flags.define("--build_kb",
              default=False,
              action='store_true')
 
+flags.define("--build_nametab",
+             help="build name table",
+             default=False,
+             action='store_true')
+
 flags.define("--dryrun",
              help="build worflows but do not run them",
              default=False,
@@ -71,100 +74,18 @@ flags.define("--refresh",
              type=int,
              metavar="SECS")
 
-class ChannelStats:
-  def __init__(self):
-    self.time = time.time()
-    self.key_bytes = 0
-    self.value_bytes = 0
-    self.messages = 0
-    self.shards_done = 0
-    self.shards_total = 0
-
-  def update(self, metric, value):
-    if metric == "input_key_bytes" or metric == "output_key_bytes":
-      self.key_bytes = value
-    elif metric == "input_value_bytes" or metric == "output_value_bytes":
-      self.value_bytes = value
-    elif metric == "input_messages" or metric == "output_messages":
-      self.messages = value
-    elif metric == "input_shards" or metric == "output_shards":
-      self.shards_total = value
-    elif metric == "input_shards_done" or metric == "output_shards_done":
-      self.shards_done = value
-    else:
-      return False
-    return True
-
-  def volume(self):
-    return self.key_bytes + self.value_bytes
-
-  def throughput(self, prev):
-    if prev == None: return 0.0
-    return (self.messages - prev.messages) / (self.time - prev.time)
-
-  def bandwidth(self, prev):
-    if prev == None: return 0.0
-    return (self.volume() - prev.volume()) / (self.time - prev.time)
-
-
 def run_workflow(wf):
   # In dryrun mode the workflow is just dumped without running it.
   if flags.arg.dryrun:
-    print wf.dump()
+    print wf.wf.dump()
     return
 
   # Start workflow.
   log("start workflow")
-  wf.start()
+  wf.wf.start()
 
-  # Wait until workflow completes.
-  start = time.time()
-  done = False
-  prev_channels = {}
-  prev_counters = {}
-  prev_time = start
-  while not done:
-    done = wf.wait(flags.arg.refresh * 1000)
-    counters = wf.counters()
-    print "{:64} {:>16} {:>16}".format("Counter", "Value", "Rate")
-    channels = {}
-    current_counters = {}
-    current_time = time.time()
-    for ctr in sorted(counters):
-      m = re.match(r"(.+)\[(.+\..+)\]", ctr)
-      if m != None:
-        channel = m.group(2)
-        metric = m.group(1)
-        if channel not in channels: channels[channel] = ChannelStats()
-        channels[channel].update(metric, counters[ctr])
-      else:
-        current_value = counters[ctr]
-        prev_value = prev_counters.get(ctr, 0)
-        delta = current_value - prev_value
-        elapsed = current_time - prev_time
-        rate = long(delta / elapsed)
-        print "{:64} {:>16,} {:>16,}".format(ctr, current_value, rate)
-        current_counters[ctr] = current_value
-    print
-    if len(channels) > 0:
-      print "{:64} {:>16} {:>16} {:>16} {:>16} {:>16}  {}".format(
-            "Channel", "Key bytes", "Value bytes", "Bandwidth",
-            "Messages", "Throughput", "Shards")
-      for channel in sorted(channels):
-        stats = channels[channel]
-        prev = prev_channels.get(channel)
-        print "{:64} {:>16,} {:>16,} {:>11,.3f} MB/s {:>16,} " \
-              "{:>12,.0f} MPS  {:}".format(
-              channel, stats.key_bytes, stats.value_bytes,
-              stats.bandwidth(prev) / 1000000,
-              stats.messages, stats.throughput(prev),
-              str(stats.shards_done) + "/" + str(stats.shards_total))
-      print
-    prev_time = current_time
-    prev_counters = current_counters
-    prev_channels = channels
-  log("workflow time: " + str(datetime.timedelta(seconds=time.time() - start)))
-
+  # Monitor workflow until it completes.
+  wf.wf.monitor(flags.arg.refresh)
 
 def download_corpora():
   # Download wikidata dump.
@@ -186,7 +107,7 @@ def download_corpora():
 
 def import_wiki():
   if flags.arg.import_wikidata or flags.arg.import_wikipedia:
-    wf = workflow.Workflow()
+    wf = wiki.WikiWorkflow()
     # Import wikidata.
     if flags.arg.import_wikidata:
       log("Import wikidata")
@@ -205,7 +126,7 @@ def parse_wikipedia():
   if flags.arg.parse_wikipedia:
     for language in flags.arg.languages:
       log("Parse " + language + " wikipedia")
-      wf = workflow.Workflow()
+      wf = wiki.WikiWorkflow()
       wf.parse_wikipedia(language=language)
       run_workflow(wf)
 
@@ -214,7 +135,7 @@ def extract_names():
   if flags.arg.extract_names:
     for language in flags.arg.languages:
       log("Extract " + language + " names")
-      wf = workflow.Workflow()
+      wf = wiki.WikiWorkflow()
       wf.extract_names(language=language)
       run_workflow(wf)
 
@@ -222,8 +143,15 @@ def build_knowledge_base():
   # Build knowledge base repository.
   if flags.arg.build_kb:
     log("Build knowledge base repository")
-    wf = workflow.Workflow()
+    wf = wiki.WikiWorkflow()
     wf.build_knowledge_base()
+    run_workflow(wf)
+
+  # Build name table.
+  if flags.arg.build_nametab:
+    log("Build name table")
+    wf = wiki.WikiWorkflow()
+    wf.build_name_table()
     run_workflow(wf)
 
 if __name__ == '__main__':

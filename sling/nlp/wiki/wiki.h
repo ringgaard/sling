@@ -4,6 +4,8 @@
 #include <string>
 
 #include "sling/base/types.h"
+#include "sling/frame/object.h"
+#include "sling/frame/store.h"
 
 namespace sling {
 namespace nlp {
@@ -42,6 +44,27 @@ class Wiki {
 
   // Language priority order.
   static const char *language_priority[];
+};
+
+// Filter for auxiliary items. The auxiliary items in the knowledge base are
+// items that are used infrequently and are stored in a separate knowledge
+// base store.
+class AuxFilter {
+ public:
+  // Initialize auxiliary item filter.
+  void Init(Store *store);
+
+  // Check if item is an auxiliary item.
+  bool IsAux(const Frame &frame);
+
+ private:
+  // Auxiliary item types.
+  HandleSet aux_types_;
+
+  // Names.
+  Names names_;
+  Name n_wikipedia_{names_, "/w/wikipedia"};
+  Name n_instanceof_{names_, "P31"};
 };
 
 }  // namespace nlp

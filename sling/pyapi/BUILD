@@ -46,6 +46,8 @@ cc_library(
     "//sling/nlp/wiki:wikidata-importer",
     "//sling/nlp/wiki:wikipedia-importer",
     "//sling/nlp/wiki:wikipedia-documents",
+    "//sling/nlp/wiki:name-table-builder",
+
     "//sling/task:frame-store-reader",
     "//sling/task:frame-store-writer",
     "//sling/task:sharder",

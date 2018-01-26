@@ -12,390 +12,734 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Workflow builder"""
+"""Interface to SLING workflow task system"""
 
-from task import *
-import corpora
-import sling.flags as flags
+import datetime
+import glob
+import os
+import re
+import time
+import sling
+import sling.pysling as api
+import sling.log as log
 
-class Workflow(Job):
+# Input readers.
+readers = {
+  "records": "record-file-reader",
+  "zip": "zip-file-reader",
+  "store": "frame-store-reader",
+  "textmap": "text-map-reader",
+  "text": "text-file-reader",
+}
+
+# Output writers.
+writers = {
+  "records": "record-file-writer",
+  "store": "frame-store-writer",
+  "textmap": "text-map-writer",
+  "text": "text-file-writer",
+}
+
+class Shard:
+  """A shard is one part of a multi-part set."""
+  def __init__(self, part, total):
+    self.part = part
+    self.total = total
+
+  def __hash__(self):
+    return hash(self.part)
+
+  def __eq__(self, other):
+    return other != None and self.part == other.part
+
+  def __ne__(self, other):
+    return not(self == other)
+
+  def __repr__(self):
+    return "[%d/%d]" % (self.part, self.total)
+
+
+class Format:
+  """Data format with a file format and a record format. The record format
+  consists of a key and a value format."""
+  def __init__(self, fmt=None, file=None, key=None, value=None):
+    if fmt == None:
+      self.file = file
+      self.key = key
+      self.value = value
+    else:
+      # Parse format specifier into file, key, and value formats.
+      # <file>[/[<key>:]<value>].
+      self.file = None
+      self.key = None
+      self.value = None
+      slash = fmt.find('/')
+      if slash != -1:
+        self.file = fmt[:slash]
+        colon = fmt.find(':', slash + 1)
+        if colon != -1:
+          self.key = fmt[slash + 1:colon]
+          self.value = fmt[colon + 1:]
+        else:
+          self.value = fmt[slash + 1:]
+      else:
+        self.file = fmt
+
+  def as_message(self):
+    """Return format as a message format."""
+    if self.file == "message": return self
+    return Format(file="message", key=self.key, value=self.value)
+
+  def __repr__(self):
+    s = self.file if self.file != None else "*"
+    if self.key != None or self.value != None:
+      s += "/"
+      if self.key != None: s += self.key + ":"
+      s += self.value if self.value != None else "*"
+    return s
+
+
+class Resource:
+  """A resource is an external input or output, e.g. a file."""
+  def __init__(self, name, shard, format):
+    self.name = name
+    self.shard = shard
+    self.format = format
+
+  def __repr__(self):
+    s = "Resource(" + self.name
+    if self.shard != None: s += str(self.shard)
+    if self.format != None: s += " as " + str(self.format)
+    s += ")"
+    return s
+
+
+class Binding:
+  """A binding binds a resouce to a task input or output."""
+
+  def __init__(self, name, resource):
+    self.name = name
+    self.resource = resource
+
+  def __repr__(self):
+    s = "Binding(" + self.name + " = "  + self.resource.name
+    if self.resource.shard != None: s += str(self.resource.shard)
+    if self.resource.format != None: s += " as " + str(self.resource.format)
+    s += ")"
+    return s
+
+
+class Port:
+  """A port connects a channel to a task source or sink."""
+  def __init__(self, task, name, shard):
+    self.task = task
+    self.name = name
+    self.shard = shard
+
+  def __repr__(self):
+    s = str(self.task)
+    s += "." + self.name
+    if self.shard != None: s += str(self.shard)
+    return s
+
+
+class Channel:
+  """A channel is used for seding messages from a producer task to a consumer
+  task."""
+  def __init__(self, format, producer, consumer):
+    self.format = format
+    self.producer = producer
+    self.consumer = consumer
+
+  def __repr__(self):
+    s = "Channel("
+    if self.producer != None:
+      s += str(self.producer)
+    else:
+      s += "*"
+    s += " -> "
+    if self.consumer != None:
+      s += str(self.consumer)
+    else:
+      s += "*"
+    if self.format != None: s += " as " + str(self.format)
+    s += ")"
+    return s
+
+
+class Task:
+  """A task is used for processing inputs from resources and messages from
+  sources. It can output data to output resource and send messages to channel
+  sinks."""
+  def __init__(self, type, name, shard):
+    self.type = type
+    self.name = name
+    self.shard = shard
+    self.inputs = []
+    self.outputs = []
+    self.sources = []
+    self.sinks = []
+    self.params = {}
+
+  def attach_input(self, name, resource):
+    """Attach named input resource to task."""
+    self.inputs.append(Binding(name, resource))
+
+  def attach_output(self, name, resource):
+    """Attach named output resource to task."""
+    self.outputs.append(Binding(name, resource))
+
+  def connect_source(self, channel):
+    """Connect channel to a named input source for the task."""
+    self.sources.append(channel)
+
+  def connect_sink(self, channel):
+    """Connect channel to a named output sink for the task."""
+    self.sinks.append(channel)
+
+  def add_param(self, name, value):
+    """Add configuration parameter to task."""
+    if value is True: value = 1
+    if value is False: value = 0
+    self.params[name] = str(value)
+
+  def add_params(self, params):
+    """Add configuration parameters to task."""
+    if params != None:
+      for name, value in params.iteritems():
+        self.add_param(name, value)
+
+  def __repr__(self):
+    s = self.name
+    if self.shard != None: s += str(self.shard)
+    return s
+
+
+class Scope:
+  """A score is used for defined a name space for task names. It implements
+  context management so you can use with statements to define name spaces."""
+  def __init__(self, job, name):
+    self.job = job
+    self.name = name
+    self.prev = None
+
+  def __enter__(self):
+    self.prev = self.job.scope
+    self.job.scope = self
+    return self
+
+  def __exit__(self, type, value, traceback):
+    self.job.scope = self.prev
+
+  def prefix(self):
+    """Returns the name prefix defined in the scope by concatenating all nested
+    name spaces."""
+    parts = []
+    s = self
+    while s != None:
+      parts.append(s.name)
+      s = s.prev
+    return '/'.join(reversed(parts))
+
+
+class ChannelStats:
   def __init__(self):
-    super(Workflow, self).__init__()
+    self.time = time.time()
+    self.key_bytes = 0
+    self.value_bytes = 0
+    self.messages = 0
+    self.shards_done = 0
+    self.shards_total = 0
 
-  #---------------------------------------------------------------------------
-  # Wikidata
-  #---------------------------------------------------------------------------
+  def update(self, metric, value):
+    if metric == "input_key_bytes" or metric == "output_key_bytes":
+      self.key_bytes = value
+    elif metric == "input_value_bytes" or metric == "output_value_bytes":
+      self.value_bytes = value
+    elif metric == "input_messages" or metric == "output_messages":
+      self.messages = value
+    elif metric == "input_shards" or metric == "output_shards":
+      self.shards_total = value
+    elif metric == "input_shards_done" or metric == "output_shards_done":
+      self.shards_done = value
+    else:
+      return False
+    return True
 
-  def wikidata_dump(self):
-    """Resource for wikidata dump. This can be downloaded from wikimedia.org
-    and contains a full dump of WikiData in JSON format."""
-    return self.resource(corpora.wikidata_dump(), format="text/json")
+  def volume(self):
+    return self.key_bytes + self.value_bytes
 
-  def wikidata_items(self):
-    """Resource for wikidata items. This is a set of record files where each
-    WikiData item is represented as a frame:
-      <qid>: {
-        =<qid>
-        :/w/item
-        name: "..."
-        description: "..."
-        /s/profile/alias: {
-          name: "..."
-          lang: /lang/<lang>
-          /s/alias/sources: ...
-        }
-        ...
-        /w/wikipedia: {
-          /lang/<lang>: <wid>
-          ...
-       }
-       ... properties
-      }
+  def throughput(self, prev):
+    if prev == None: return 0.0
+    return (self.messages - prev.messages) / (self.time - prev.time)
 
-      <qid>: Wikidata item id (Q<item number>, e.g. Q35)
-      <pid>: Wikidata property id (P<property number>, e.g. P31)
-      <wid>: Wikipedia page id (/wp/<lang>/<pageid>, /wp/en/76972)
-    """
-    return self.resource("items@10.rec",
-                         dir=corpora.wikidir(),
-                         format="records/frame")
+  def bandwidth(self, prev):
+    if prev == None: return 0.0
+    return (self.volume() - prev.volume()) / (self.time - prev.time)
 
-  def wikidata_properties(self):
-    """Resource for wikidata properties. This is a record file where each
-    WikiData property is represented as a frame.
-      <pid>: {
-        =<pid>
-        :/w/property
-        name: "..."
-        description: "..."
-        /w/datatype: ...
-        ... properties ...
-      }
-    """
-    return self.resource("properties.rec",
-                         dir=corpora.wikidir(),
-                         format="records/frame")
 
-  def wikidata_import(self, input, name=None):
-    """Task for converting WikiData JSON to SLING items and properties."""
-    task = self.task("wikidata-importer", name=name)
-    task.add_param("primary_language", flags.arg.language)
-    self.connect(input, task)
-    items = self.channel(task, name="items", format="message/frame")
-    properties = self.channel(task, name="properties", format="message/frame")
-    return items, properties
+def format_of(input):
+  """Get format from one or more channels or resources."""
+  if isinstance(input, list):
+    return input[0].format
+  else:
+    return input.format
 
-  def wikidata(self, dump=None):
-    """Import Wikidata dump to frame format. It takes a WikiData dump in JSON
-    format as inpput and converts each item and property to a SLING frame.
-    Returns the item and property output files."""
-    if dump == None: dump = self.wikidata_dump()
-    with self.namespace("wikidata"):
-      input = self.parallel(self.read(dump), threads=5)
-      items, properties = self.wikidata_import(input)
-      items_output = self.wikidata_items()
-      self.write(items, items_output, name="item-writer")
-      properties_output = self.wikidata_properties()
-      self.write(properties, properties_output, name="property-writer")
-      return items_output, properties_output
+def length_of(l):
+  """Get number of elements in list or None for singletons."""
+  return len(l) if isinstance(l, list) else None
 
-  #---------------------------------------------------------------------------
-  # Wikipedia
-  #---------------------------------------------------------------------------
+class Workflow(object):
+  """A workflow is used for running a set of tasks over some input producing
+  some output. The tasks can be connected using channels. A job can run
+  asynchronously and supports multi-threaded processing."""
+  def __init__(self):
+    self.tasks = []
+    self.channels = []
+    self.resources = []
+    self.task_map = {}
+    self.resource_map = {}
+    self.scope = None
+    self.job = None
 
-  def wikipedia_dump(self, language=None):
-    """Resource for wikipedia dump. This can be downloaded from wikimedia.org
-    and contrains a full dump of Wikipedia in a particular language. This is
-    in XML format with the articles in Wiki markup format."""
-    if language == None: language = flags.arg.language
-    return self.resource(corpora.wikipedia_dump(language),
-                         format="xml/wikipage")
+  def namespace(self, name):
+    """Defines a name space for task names."""
+    return Scope(self, name)
 
-  def wikipedia_articles(self, language=None):
-    """Resource for wikipedia articles. This is a set of record files where each
-    Wikipedia article is encoded as a SLING document.
-      <wid>: {
-        =<wid>
-        :/wp/page
-        /wp/page/pageid: ...
-        /wp/page/title: "..."
-        lang: /lang/<lang>
-        /wp/page/text: "<Wikipedia page in Wiki markup format>"
-      }
-    """
-    if language == None: language = flags.arg.language
-    return self.resource("articles@10.rec",
-                         dir=corpora.wikidir(language),
-                         format="records/frame")
+  def task(self, type, name=None, shard=None):
+    """A new task to job."""
+    if name == None: name = type
+    if self.scope != None: name = self.scope.prefix() + "/" + name
+    basename = name
+    index = 0
+    while (name, shard) in self.task_map:
+      index += 1
+      name = basename + "-" + str(index)
+    t = Task(type, name, shard)
+    self.tasks.append(t)
+    self.task_map[(name, shard)] = t
+    return t
 
-  def wikipedia_redirects(self, language=None):
-    """Resource for wikidata redirects. This is encoded as a SLING frame store
-    where each redirect is a SLING frame.
-      {
-        =<wid for redirect page>
-        :/wp/redirect
-        /wp/redirect/pageid: ...
-        /wp/redirect/title: "..."
-        /wp/redirect/link: <wid for target page>
-      }
-    """
-    if language == None: language = flags.arg.language
-    return self.resource("redirects.sling",
-                         dir=corpora.wikidir(language),
-                         format="store/frame")
+  def resource(self, file, dir=None, shards=None, ext=None, format=None):
+    """A one or more resources to job. The file parameter can be a file name
+    pattern with wild-cards, in which can it is expanded to a list of matching
+    resources. The optional dir and ext are prepended and appended to the
+    base file name. The file name can also be a sharded file name (@n), which
+    is expanded to a list of resources, one for each shard. The general format
+    of a file name is as follows: [<dir>]<file>[@<shards>][ext]"""
+    # Convert format.
+    if type(format) == str: format = Format(format)
 
-  def wikipedia_mapping(self, language=None):
-    """Resource for wikipedia to wikidata mapping. This is a SLING frame store
-    with one frame per Wikipedia article with infomation for mapping it to
-    WikiData.
-      {
-        =<wid>
-        /w/item/qid: <qid>
-        /w/item/kind: /w/item/kind/...
-      }
-    """
-    if language == None: language = flags.arg.language
-    return self.resource("mapping.sling",
-                         dir=corpora.wikidir(language),
-                         format="store/frame")
+    # Combine file name parts.
+    filename = file
+    if dir != None: filename = os.path.join(dir, filename)
+    if shards != None: filename += "@" + str(shards)
+    if ext != None: filename += ext
 
-  def wikipedia_documents(self, language=None):
-    """Resource for parsed Wikipedia documents. This is a set of record files
-    with one record per article, where the text has been extracted from the
-    wiki markup and tokenized. The documents also contains additional
-    structured information (e.g. categories) and mentions for links to other
-    Wikipedia pages:
-      <wid>: {
-        =<wid>
-        :/wp/page
-        /wp/page/pageid: ...
-        /wp/page/title: "..."
-        lang: /lang/<lang>
-        /wp/page/text: "<Wikipedia page in wiki markup format>"
-        /wp/page/qid: <qid>
-        :/s/document
-        /s/document/url: "http://<lang>.wikipedia.org/wiki/<name>"
-        /s/document/title: "..."
-        /s/document/text: "<clear text extracted from wiki markup>"
-        /s/document/tokens: [...]
-        /s/document/mention: {
-          :/wp/link
-          /s/phrase/begin: ...
-          /s/phrase/length: ...
-          name: "..."
-          /s/phrase/evokes: <qid>
-        }
-        ...
-        /wp/page/category: <qid>
-        ...
-      }
-    """
-    if language == None: language = flags.arg.language
-    return self.resource("documents@10.rec",
-                         dir=corpora.wikidir(language),
-                         format="records/document")
+    # Check if filename is a wildcard pattern.
+    filenames = []
+    if re.search(r"[\*\?\[\]]", filename):
+      # Match file name pattern.
+      filenames = glob.glob(filename)
+    else:
+      m = re.match(r"(.*)@(\d+)(.*)", filename)
+      if m != None:
+        # Expand sharded filename.
+        prefix = m.group(1)
+        shards = int(m.group(2))
+        suffix = m.group(3)
+        for shard in xrange(shards):
+          fn = "%s-%05d-of-%05d%s" % (prefix, shard, shards, suffix)
+          filenames.append(fn)
+      else:
+        # Simple filename.
+        filenames.append(filename)
 
-  def wikipedia_aliases(self, language=None):
-    """Resource for wikipedia aliases. The aliases are extracted from the
-    Wiipedia pages from anchors, redirects, disambiguation pages etc. This is
-    a set of record files with a SLING frame record for each item:
-      <qid>: {
-        /s/profile/alias: {
-          name: "<alias>"
-          lang: /lang/<lang>
-          /s/alias/sources: ...
-          /s/alias/count: ...
-        }
-        ...
-      }
-    """
-    if language == None: language = flags.arg.language
-    return self.resource("aliases@10.rec",
-                         dir=corpora.wikidir(language),
-                         format="records/alias")
+    # Create resources.
+    n = len(filenames)
+    if n == 0:
+      return None
+    elif n == 1:
+      key = (filenames[0], None, str(format))
+      r = self.resource_map.get(key)
+      if r == None:
+        r = Resource(filenames[0], None, format)
+        self.resource_map[key] = r
+        self.resources.append(r)
+      return r
+    else:
+      filenames.sort()
+      resources = []
+      for shard in xrange(n):
+        key = (filenames[shard], str(Shard(shard, n)), str(format))
+        r = self.resource_map.get(key)
+        if r == None:
+          r = Resource(filenames[shard], Shard(shard, n), format)
+          self.resource_map[key] = r
+          self.resources.append(r)
+          resources.append(r)
+      return resources
 
-  def language_defs(self):
-    """Resource for language definitions. This defines the /lang/<lang>
-    symbols and has meta information for each language."""
-    return self.resource("languages.sling",
-                         dir=corpora.repository("data/wiki"),
-                         format="store/frame")
+  def channel(self, producer, name="output", shards=None, format=None):
+    """Adds one or more channels to job. The channel(s) are connected as sinks
+    to the producer(s). Is shards are specified, this creates a sharded set of
+    channels."""
+    if type(format) == str: format = Format(format)
+    if isinstance(producer, list):
+      channels = []
+      for p in producer:
+        if shards != None:
+          for shard in xrange(shards):
+            ch = Channel(format, Port(p, name, Shard(shard, shards)), None)
+            p.connect_sink(ch)
+            channels.append(ch)
+            self.channels.append(ch)
+        else:
+          ch = Channel(format, Port(p, name, None), None)
+          p.connect_sink(ch)
+          channels.append(ch)
+          self.channels.append(ch)
+      return channels
+    elif shards != None:
+      channels = []
+      for shard in xrange(shards):
+        sink = Port(producer, name, Shard(shard, shards))
+        ch = Channel(format, sink, None)
+        producer.connect_sink(ch)
+        channels.append(ch)
+        self.channels.append(ch)
+      return channels
+    else:
+      ch = Channel(format, Port(producer, name, None), None)
+      producer.connect_sink(ch)
+      self.channels.append(ch)
+      return ch
 
-  def wikipedia_import(self, input, name=None):
-    """Task for converting Wikipedia dump to SLING articles and redirects.
-    Returns article and redirect channels."""
-    task = self.task("wikipedia-importer", name=name)
-    task.attach_input("input", input)
-    articles = self.channel(task, name="articles", format="message/frame")
-    redirects = self.channel(task, name="redirects", format="message/frame")
-    return articles, redirects
+  def connect(self, channel, consumer, sharding=None, name="input"):
+    """Connect channel(s) to consumer task(s)."""
+    multi_channel = isinstance(channel, list)
+    multi_task = isinstance(consumer, list)
+    if not multi_channel and not multi_task:
+      # Connect single channel to single task.
+      if channel.consumer != None: raise Exception("already connected")
+      channel.consumer = Port(consumer, name, None)
+      consumer.connect_source(channel)
+    elif multi_channel and not multi_task:
+      # Connect multiple channels to single task.
+      shards = len(channel)
+      for shard in xrange(shards):
+        if channel[shard].consumer != None: raise Exception("already connected")
+        port = Port(consumer, name, Shard(shard, shards))
+        channel[shard].consumer = port
+        consumer.connect_source(channel[shard])
+    elif multi_channel and multi_task:
+      # Connect multiple channels to multiple tasks.
+      shards = len(channel)
+      if len(consumer) != shards: raise Exception("size mismatch")
+      for shard in xrange(shards):
+        if channel[shard].consumer != None: raise Exception("already connected")
+        port = Port(consumer[shard], name, None)
+        channel[shard].consumer = port
+        consumer[shard].connect_source(channel[shard])
+    else:
+      # Connect single channel to multiple tasks using sharder.
+      if sharding == None: sharding = "sharder"
+      sharder = self.task(sharding)
+      self.connect(channel, sharder)
+      self.connect(self.channel(sharder,
+                                shards=len(consumer),
+                                format=channel.format),
+                   consumer,
+                   name=name)
 
-  def wikipedia(self, dump=None, language=None):
-    """Convert Wikipedia dump to SLING articles and store them in a set of
-    record files. Returns output resources for articles and redirects."""
-    if language == None: language = flags.arg.language
-    if dump == None: dump = self.wikipedia_dump(language)
-    with self.namespace(language + "-wikipedia"):
-      # Import Wikipedia dump and convert to SLING format.
-      articles, redirects = self.wikipedia_import(dump)
+  def read(self, input, name=None):
+    """Add readers for input resource(s). The format of the input resource is
+    used for selecting an appropriate reader task for the format."""
+    if isinstance(input, list):
+      outputs = []
+      shards = len(input)
+      for shard in xrange(shards):
+        format = input[shard].format
+        if type(format) == str: format = Format(format)
+        if format == None: format = Format("text")
+        tasktype = readers.get(format.file)
+        if tasktype == None: raise Exception("No reader for " + str(format))
 
-      # Write articles.
-      articles_output = self.wikipedia_articles(language)
-      self.write(articles, articles_output, name="article-writer")
+        reader = self.task(tasktype, name=name, shard=Shard(shard, shards))
+        reader.attach_input("input", input[shard])
+        output = self.channel(reader, format=format.as_message())
+        outputs.append(output)
+      return outputs
+    else:
+      format = input.format
+      if type(format) == str: format = Format(format)
+      if format == None: format = Format("text")
+      tasktype = readers.get(format.file)
+      if tasktype == None: raise Exception("No reader for " + str(format))
 
-      # Write redirects.
-      redirects_output = self.wikipedia_redirects(language)
-      self.write(redirects, redirects_output, name="redirect-writer")
+      reader = self.task(tasktype, name=name)
+      reader.attach_input("input", input)
+      output = self.channel(reader, format=format.as_message())
+      return output
 
-      return articles_output, redirects_output
+  def write(self, producer, output, sharding=None, name=None):
+    """Add writers for output resource(s). The format of the output resource is
+    used for selecting an appropriate reader task for the format."""
+    # Determine fan-in (channels) and fan-out (files).
+    if not isinstance(producer, list): producer = [producer]
+    if not isinstance(output, list): output = [output]
+    fanin = len(producer)
+    fanout = len(output)
 
-  def wikimap(self, wikidata_items=None, language=None, name=None):
-    """Task for building mapping from Wikipedia IDs (<wid>) to Wikidata
-    IDs (<qid>). Returns file with frame store for mapping."""
-    if language == None: language = flags.arg.language
-    if wikidata_items == None: wikidata_items = self.wikidata_items()
+    # Use sharding if fan-out is different from fan-in.
+    if sharding == None and fanout != 1 and fanin != fanout:
+      sharding = "sharder"
 
-    wiki_mapping = self.map(wikidata_items, "wikipedia-mapping",
-                            params={"language": language},
-                            name=name)
-    output = self.wikipedia_mapping(language)
-    self.write(wiki_mapping, output, name="mapping-writer")
+    # Create sharder if needed.
+    if sharding == None:
+      input = producer
+    else:
+      sharder = self.task(sharding)
+      if fanin == 1:
+        self.connect(producer[0], sharder)
+      else:
+        self.connect(producer, sharder)
+      input = self.channel(sharder, shards=fanout, format=producer[0].format)
+
+    # Create writer tasks for writing to output.
+    writer_tasks = []
+    for shard in xrange(fanout):
+      format = output[shard].format
+      if type(format) == str: format = Format(format)
+      if format == None: format = Format("text")
+      tasktype = writers.get(format.file)
+      if tasktype == None: raise Exception("No writer for " + str(format))
+
+      if fanout == 1:
+        writer = self.task(tasktype, name=name)
+      else:
+        writer = self.task(tasktype, name=name, shard=Shard(shard, fanout))
+      writer.attach_output("output", output[shard])
+      writer_tasks.append(writer)
+
+    # Connect producer(s) to writer task(s).
+    if isinstance(input, list) and len(input) == 1: input = input[0]
+    if fanout == 1: writer_tasks = writer_tasks[0]
+    self.connect(input, writer_tasks)
+
     return output
 
-  def parse_wikipedia_articles(self,
-                               articles=None,
-                               redirects=None,
-                               commons=None,
-                               wikimap=None,
-                               language=None):
-    """Task for parsing Wikipedia articles to SLING documents and aliases.
-    Returns channels for documents and aliases."""
-    if language == None: language = flags.arg.language
-    if articles == None: articles = self.wikipedia_articles(language)
-    if redirects == None: redirects = self.wikipedia_redirects(language)
-    if commons == None: commons = self.language_defs()
-    if wikimap == None: wikimap = self.wikipedia_mapping(language)
+  def collect(self, *args):
+    """Return list of channels that collects the input from all the arguments.
+    The arguments can be channels, resources, or lists of channels or
+    resources."""
+    channels = []
+    for arg in args:
+      if isinstance(arg, Channel):
+        channels.append(arg)
+      elif isinstance(arg, Resource):
+        channels.append(self.read(arg))
+      elif isinstance(arg, list):
+        for elem in arg:
+          if isinstance(elem, Channel):
+            channels.append(elem)
+          elif isinstance(elem, Resource):
+            channels.append(self.read(elem))
+          else:
+            raise Exception("illegal element")
+        pass
+      else:
+        raise Exception("illegal argument")
+    return channels if len(channels) > 1 else channels[0]
 
-    parser = self.task("wikipedia-document-builder", "wikipedia-documents")
-    self.connect(self.read(articles, name="article-reader"), parser)
-    parser.attach_input("commons", commons)
-    parser.attach_input("wikimap", wikimap)
-    parser.attach_input("redirects", redirects)
-    documents = self.channel(parser, format="message/document")
-    aliases = self.channel(parser, "aliases", format="message/qid:alias")
-    return documents, aliases
+  def parallel(self, input, threads=5, queue=None, name=None):
+    """Parallelize input messages over thread worker pool."""
+    workers = self.task("workers", name=name)
+    workers.add_param("worker_threads", threads)
+    if queue != None: workers.add_param("queue_size", queue)
+    self.connect(input, workers)
+    return self.channel(workers, format=format_of(input))
 
-  def parse_wikipedia(self, language=None):
-    """Parse Wikipedia articles and build alias table."""
-    if language == None: language = flags.arg.language
-    with self.namespace(language + "-wikipedia"):
-      with self.namespace("mapping"):
-        # Build mapping from Wikipedia IDs to Wikidata IDs.
-        self.wikimap(language=language)
+  def map(self, input, type=None, format=None, params=None, name=None):
+    """Map input through processor."""
+    # Use input format if no format specified.
+    if format == None: format = format_of(input).as_message()
 
-      with self.namespace("parsing"):
-        # Parse Wikipedia articles to SLING documents.
-        documents, aliases = self.parse_wikipedia_articles(language=language)
+    # Create mapper.
+    if type != None:
+      mapper = self.task(type, name=name)
+      mapper.add_params(params)
+      reader = self.read(input)
+      self.connect(reader, mapper)
+      output = self.channel(mapper, format=format)
+    else:
+      output = self.read(input)
 
-        # Write Wikipedia documents.
-        document_output = self.wikipedia_documents(language)
-        self.write(documents, document_output, name="document-writer")
+    return output
 
-      with self.namespace("aliases"):
-        # Collect aliases.
-        alias_output = self.wikipedia_aliases(language)
-        self.reduce(self.shuffle(aliases, len(alias_output)),
-                    alias_output,
-                    "wikipedia-alias-reducer",
-                    params={'language': language})
+  def shuffle(self, input, shards):
+    """Shard and sort the input messages."""
+    # Create sharder and connect input.
+    sharder = self.task("sharder")
+    self.connect(input, sharder)
+    pipes = self.channel(sharder, shards=shards, format=format_of(input))
 
-    return document_output, alias_output
+    # Pipe outputs from sharder to sorters.
+    sorters = []
+    for i in xrange(shards):
+      sorter = self.task("sorter", shard=Shard(i, shards))
+      self.connect(pipes[i], sorter)
+      sorters.append(sorter)
 
-  #---------------------------------------------------------------------------
-  # Item names
-  #---------------------------------------------------------------------------
+    # Return output channel from sorters.
+    outputs = self.channel(sorters, format=format_of(input))
+    return outputs
 
-  def item_names(self, language=None):
-    """Resource for item names in language. This is a set of record files with
-    one SLING frame per item.
-      <qid>: {
-        /s/profile/alias: {
-          name: "<alias>"
-          lang: /lang/<lang>
-          /s/alias/sources: ...
-          /s/alias/count: ...
-        }
-        ...
-      }
-    """
-    if language == None: language = flags.arg.language
-    return self.resource("names@10.rec",
-                         dir=corpora.wikidir(language),
-                         format="records/alias")
+  def reduce(self, input, output, type=None, params=None, name=None):
+    """Reduce input and write reduced output."""
+    if type == None:
+      # No reducer (i.e. i.e. identity reducer), just write input.
+      reduced = input
+    else:
+      reducer = self.task(type, name=name)
+      reducer.add_params(params)
+      self.connect(input, reducer)
+      reduced = self.channel(reducer,
+                             shards=length_of(output),
+                             format=format_of(output).as_message())
 
-  def extract_names(self, aliases=None, language=None):
-    "Task for selecting language-dependent names for items."""
-    if language == None: language = flags.arg.language
+    # Write reduce output.
+    self.write(reduced, output)
 
-    if aliases == None:
-      # Get language-dependent aliases from Wikidata and Wikpedia.
-      wikidata_aliases = self.map(self.wikidata_items(),
-                                  "profile-alias-extractor",
-                                   params={"language": language},
-                                   format="message/alias",
-                                   name="wikidata-alias-extractor")
-      wikipedia_aliases = self.read(self.wikipedia_aliases(language))
-      aliases = wikipedia_aliases + [wikidata_aliases]
+  def mapreduce(self, input, output, mapper, reducer=None, params=None,
+                format=None):
+    """Map input files, shuffle, sort, reduce, and output to files."""
+    # Determine the number of output shards.
+    shards = length_of(output)
 
-    # Merge alias sources.
-    names = self.item_names(language)
-    merged_aliases = self.shuffle(aliases, len(names))
+    # Mapping of input.
+    mapping = self.map(input, mapper, params=params, format=format)
 
-    # Filter and select aliases.
-    self.reduce(merged_aliases, names, "profile-alias-reducer",
-                params={"language": language})
-    return names
+    # Shuffling of map output.
+    shuffle = self.shuffle(mapping, shards=shards)
 
-  #---------------------------------------------------------------------------
-  # Knowledge base
-  #---------------------------------------------------------------------------
+    # Reduction of shuffled map output.
+    self.reduce(shuffle, output, reducer, params=params)
+    return output
 
-  def calendar_defs(self):
-    """Resource for calendar definitions."""
-    return self.resource("calendar.sling",
-                         dir=corpora.repository("data/wiki"),
-                         format="store/frame")
+  def start(self):
+    """Start workflow. The workflow with be run in the background, and the
+    done() and wait() methods can be used to determine if the job as
+    completed."""
+    # Make sure all output directories exist.
+    self.create_output_directories()
 
-  def knowledge_base(self):
-    """Resource for knowledge base. This is a SLING frame store with frames for
-    each Wikidata item and property plus additional schema information.
-    """
-    return self.resource("kb.sling",
-                         dir=corpora.wikidir(),
-                         format="store/frame")
+    # Create underlying job in task system.
+    if self.job != None: raise Exception("job already running")
+    self.job = api.Job(self)
 
-  def build_knowledge_base(self,
-                           wikidata_items=None,
-                           wikidata_properties=None,
-                           schemas=None):
-    """Task for building knowledge base store with items, properties, and
-    schemas."""
-    if wikidata_items == None:
-      wikidata_items = self.wikidata_items()
-    if wikidata_properties == None:
-      wikidata_properties = self.wikidata_properties()
-    if schemas == None:
-      schemas = [self.language_defs(), self.calendar_defs()]
+    # Start job.
+    self.job.start()
 
-    with self.namespace("wikidata"):
-      # Prune information from Wikidata items.
-      pruned_items = self.map(wikidata_items, "wikidata-pruner")
+  def wait(self, timeout=None):
+    """Wait until workflow completes."""
+    if self.job == None: return True
+    if timeout != None:
+      return self.job.wait_for(timeout)
+    else:
+      self.job.wait()
+      return True
 
-      # Collect property catalog.
-      property_catalog = self.map(wikidata_properties,
-                                  "wikidata-property-collector")
+  def done(self):
+    """Check if workflow is done."""
+    if self.job == None: return Trye
+    return self.job.done()
 
-      # Collect frames into knowledge base store.
-      parts = self.collect(pruned_items, property_catalog, schemas)
-      return self.write(parts, self.knowledge_base())
+  def counters(self):
+    """Return map of counters for the workflow."""
+    if self.job == None: return None
+    return self.job.counters()
+
+  def dump(self):
+    """Return workflow configuration."""
+    s = ""
+    for task in self.tasks:
+      s += "task " + task.name
+      if task.shard: s += str(task.shard)
+      s += " : " + task.type
+      s += "\n"
+      for param in task.params:
+        s += "  param " + param + " = " + task.params[param] + "\n"
+      for input in task.inputs:
+        s += "  input " + str(input) + "\n"
+      for source in task.sources:
+        s += "  source " +  str(source) + "\n"
+      for output in task.outputs:
+        s += "  output " +  str(output) + "\n"
+      for sink in task.sinks:
+        s += "  sink " +  str(sink) + "\n"
+    for channel in self.channels:
+      s += "channel " + str(channel) + "\n"
+    for resource in self.resources:
+      s += "resource " + str(resource) + "\n"
+    return s
+
+  def create_output_directories(self):
+    """Create output directories for job."""
+    checked = set()
+    for task in self.tasks:
+      for output in task.outputs:
+        directory = os.path.dirname(output.resource.name)
+        if directory in checked: continue
+        if not os.path.exists(directory): os.makedirs(directory)
+        checked.add(directory)
+
+  def monitor(self, refresh=30):
+    """Wait and monitor wokflow until it completes."""
+    start = time.time()
+    done = False
+    prev_channels = {}
+    prev_counters = {}
+    prev_time = start
+    while not done:
+      done = self.wait(refresh * 1000)
+      counters = self.counters()
+      print "{:64} {:>16} {:>16}".format("Counter", "Value", "Rate")
+      channels = {}
+      current_counters = {}
+      current_time = time.time()
+      for ctr in sorted(counters):
+        m = re.match(r"(.+)\[(.+\..+)\]", ctr)
+        if m != None:
+          channel = m.group(2)
+          metric = m.group(1)
+          if channel not in channels: channels[channel] = ChannelStats()
+          channels[channel].update(metric, counters[ctr])
+        else:
+          current_value = counters[ctr]
+          prev_value = prev_counters.get(ctr, 0)
+          delta = current_value - prev_value
+          elapsed = current_time - prev_time
+          rate = long(delta / elapsed)
+          print "{:64} {:>16,} {:>16,}".format(ctr, current_value, rate)
+          current_counters[ctr] = current_value
+      print
+      if len(channels) > 0:
+        print "{:64} {:>16} {:>16} {:>16} {:>16} {:>16}  {}".format(
+              "Channel", "Key bytes", "Value bytes", "Bandwidth",
+              "Messages", "Throughput", "Shards")
+        for channel in sorted(channels):
+          stats = channels[channel]
+          prev = prev_channels.get(channel)
+          print "{:64} {:>16,} {:>16,} {:>11,.3f} MB/s {:>16,} " \
+                "{:>12,.0f} MPS  {:}".format(
+                channel, stats.key_bytes, stats.value_bytes,
+                stats.bandwidth(prev) / 1000000,
+                stats.messages, stats.throughput(prev),
+                str(stats.shards_done) + "/" + str(stats.shards_total))
+        print
+      prev_time = current_time
+      prev_counters = current_counters
+      prev_channels = channels
+    log("workflow time: " + str(datetime.timedelta(seconds=time.time() - start)))
 
