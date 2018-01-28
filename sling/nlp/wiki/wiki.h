@@ -19,9 +19,11 @@ enum AliasSource {
   SRC_WIKIPEDIA_REDIRECT       = 4,
   SRC_WIKIPEDIA_ANCHOR         = 5,
   SRC_WIKIPEDIA_DISAMBIGUATION = 6,
+  SRC_WIKIDATA_FOREIGN         = 7,
+  SRC_WIKIDATA_NATIVE          = 8,
 };
 
-static const int kNumAliasSources = 7;
+static const int kNumAliasSources = 9;
 
 extern const char *kAliasSourceName[kNumAliasSources];
 

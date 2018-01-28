@@ -9,6 +9,15 @@
 namespace sling {
 namespace nlp {
 
+static const char *parse_number(const char *p, const char *end, int *value) {
+  int n = 0;
+  while (p < end && *p >= '0' && *p <= '9') {
+    n = n * 10 + (*p++ - '0');
+  }
+  *value = n;
+  return p;
+}
+
 void Calendar::Init(Store *store) {
   // Get symbols.
   store_ = store;
@@ -117,27 +126,45 @@ Text Calendar::ItemName(Handle item) const {
 }
 
 Date::Date(const Object &object) {
+  year_ = month_ = day_ = 0;
   if (object.IsInt()) {
     int num = object.AsInt();
     CHECK(num > 0);
     if (num < 10000) {
+      // YYYY
       year_ = num;
-      month_ = 0;
-      day_ = 0;
     } else if (num < 1000000) {
+      // YYYYMM
       year_ = num / 100;
       month_ = num % 100;
-      day_ = 0;
     } else {
+      // YYYYMMDD
       year_ = num / 10000;
       month_ = (num % 10000) / 100;
       day_ = num % 100;
     }
-  } else if (object.IsNil()) {
-    year_ = month_ = day_ = 0;
   } else if (object.IsString()) {
-    // TODO: parse string date format: -YYYY-MM-DDT00:00:00Z.
-    year_ = month_ = day_ = 0;
+    // Parse string date format: [+-]YYYY-MM-DDT00:00:00Z.
+    Text datestr = object.AsString().text();
+    const char *p = datestr.data();
+    const char *end = p + datestr.size();
+    bool bc = false;
+    if (p < end && *p == '+') {
+      p++;
+    } else if (p < end && *p == '-') {
+      bc = true;
+      p++;
+    }
+    p = parse_number(p, end, &year_);
+    if (bc) year_ = -year_;
+    if (p < end && *p == '-') {
+      p++;
+      p = parse_number(p, end, &month_);
+      if (p < end && *p == '-') {
+        p++;
+        p = parse_number(p, end, &day_);
+      }
+    }
   }
 }
 

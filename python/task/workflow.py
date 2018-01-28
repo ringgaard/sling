@@ -218,18 +218,18 @@ class Task:
 class Scope:
   """A score is used for defined a name space for task names. It implements
   context management so you can use with statements to define name spaces."""
-  def __init__(self, job, name):
-    self.job = job
+  def __init__(self, wf, name):
+    self.workflow = workflow
     self.name = name
     self.prev = None
 
   def __enter__(self):
-    self.prev = self.job.scope
-    self.job.scope = self
+    self.prev = self.wf.scope
+    self.wf.scope = self
     return self
 
   def __exit__(self, type, value, traceback):
-    self.job.scope = self.prev
+    self.wf.scope = self.prev
 
   def prefix(self):
     """Returns the name prefix defined in the scope by concatenating all nested
@@ -243,6 +243,7 @@ class Scope:
 
 
 class ChannelStats:
+  """Channel statistics based on task counters."""
   def __init__(self):
     self.time = time.time()
     self.key_bytes = 0
@@ -291,7 +292,7 @@ def length_of(l):
 
 class Workflow(object):
   """A workflow is used for running a set of tasks over some input producing
-  some output. The tasks can be connected using channels. A job can run
+  some output. The tasks can be connected using channels. A workflow can run
   asynchronously and supports multi-threaded processing."""
   def __init__(self):
     self.tasks = []
@@ -307,7 +308,7 @@ class Workflow(object):
     return Scope(self, name)
 
   def task(self, type, name=None, shard=None):
-    """A new task to job."""
+    """A new task to workflow."""
     if name == None: name = type
     if self.scope != None: name = self.scope.prefix() + "/" + name
     basename = name
@@ -321,12 +322,12 @@ class Workflow(object):
     return t
 
   def resource(self, file, dir=None, shards=None, ext=None, format=None):
-    """A one or more resources to job. The file parameter can be a file name
-    pattern with wild-cards, in which can it is expanded to a list of matching
-    resources. The optional dir and ext are prepended and appended to the
-    base file name. The file name can also be a sharded file name (@n), which
-    is expanded to a list of resources, one for each shard. The general format
-    of a file name is as follows: [<dir>]<file>[@<shards>][ext]"""
+    """A one or more resources to workflow. The file parameter can be a file
+    name pattern with wild-cards, in which can it is expanded to a list of
+    matching resources. The optional dir and ext are prepended and appended to
+    the base file name. The file name can also be a sharded file name (@n),
+    which is expanded to a list of resources, one for each shard. The general
+    format of a file name is as follows: [<dir>]<file>[@<shards>][ext]"""
     # Convert format.
     if type(format) == str: format = Format(format)
 
@@ -381,9 +382,9 @@ class Workflow(object):
       return resources
 
   def channel(self, producer, name="output", shards=None, format=None):
-    """Adds one or more channels to job. The channel(s) are connected as sinks
-    to the producer(s). Is shards are specified, this creates a sharded set of
-    channels."""
+    """Adds one or more channels to wrofklow. The channel(s) are connected as
+    sinks to the producer(s). If shards are specified, this creates a sharded
+    set of channels."""
     if type(format) == str: format = Format(format)
     if isinstance(producer, list):
       channels = []
@@ -629,7 +630,7 @@ class Workflow(object):
 
   def start(self):
     """Start workflow. The workflow with be run in the background, and the
-    done() and wait() methods can be used to determine if the job as
+    done() and wait() methods can be used to determine if the workflow has
     completed."""
     # Make sure all output directories exist.
     self.create_output_directories()
@@ -685,7 +686,7 @@ class Workflow(object):
     return s
 
   def create_output_directories(self):
-    """Create output directories for job."""
+    """Create output directories for workflow."""
     checked = set()
     for task in self.tasks:
       for output in task.outputs:

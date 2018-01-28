@@ -22,6 +22,8 @@ const char *kAliasSourceName[kNumAliasSources] = {
   "wikipedia_redirect",
   "wikipedia_anchor",
   "wikipedia_disambiguation",
+  "wikidata_foreign",
+  "wikidata_native",
 };
 
 void Wiki::SplitTitle(const string &title,

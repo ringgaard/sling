@@ -34,6 +34,7 @@ class WikiParser {
     BTAG,         // <tag attr=''>
     ETAG,         // </tag>
     MATH,         // <math>...</math>
+    GALLERY,      // <gallery>...</gallery>
 
     // Elements that must be at the start of a line.
     HEADING,     // =h1= ==h2== ===h3===
@@ -60,6 +61,8 @@ class WikiParser {
     Text text() const { return Text(begin, end - begin); }
     Text name() const { return Text(name_begin, name_end - name_begin); }
     bool anchored() const { return text_begin != text_end; }
+
+    void CheckSpecialLink();
 
     Type type;
     int param;
@@ -132,6 +135,9 @@ class WikiParser {
 
   // Parse tag (<...>) or comment (<!-- ... -->).
   void ParseTag();
+
+  // Parse gallery (<gallery> ... </gallery>).
+  void ParseGallery();
 
   // Parse heading start.
   void ParseHeadingBegin();

@@ -1,6 +1,65 @@
 ; Language definitions.
 
+{=language +named :schema
+  name: "Language"
+  family: /schema/language
+
+  # TODO: change to /language/code
+  role: {=/lang/code :slot
+    name: "code"
+    description: "Language code"
+    source: lang
+    target: string
+  }
+
+  # TODO: change to /language/wiki_category
+  role: {=/lang/wiki_category :slot
+    name: "wiki category prefix"
+    description: "Wikipedia category link prefix"
+    source: lang
+    target: string
+  }
+
+  # TODO: change to /language/item
+  role: {=/lang/item :slot
+    name: "item"
+    description: "Wikidata item for language"
+    source: lang
+    target: /w/item
+  }
+
+  # TODO: change to /language/wiki_image
+  role: {=/lang/wiki_image :slot
+    name: "wiki image prefix"
+    description: "Wikipedia image link prefix"
+    source: lang
+    target: string
+  }
+
+  # TODO: change to /language/wiki_template
+  role: {=/lang/wiki_template :slot
+    name: "wiki template prefix"
+    description: "Wikipedia template link prefix"
+    source: lang
+    target: string
+  }
+
+  value: /lang/da
+  value: /lang/de
+  value: /lang/en
+  value: /lang/es
+  value: /lang/fi
+  value: /lang/fr
+  value: /lang/it
+  value: /lang/nl
+  value: /lang/no
+  value: /lang/pl
+  value: /lang/pt
+  value: /lang/sv
+}
+
 {=/lang/da
+  :language
   name: "Danish"
   /lang/code: "da"
 
@@ -10,7 +69,8 @@
 }
 
 {=/lang/de
-  name: "German"     
+  :language
+  name: "German"
   /lang/code: "de"
 
   /lang/wiki_category: "Kategorie"
@@ -19,6 +79,7 @@
 }
 
 {=/lang/en
+  :language
   name: "English"
   /lang/code: "en"
 
@@ -26,8 +87,9 @@
   /lang/wiki_image: "File"
   /lang/wiki_template: "Template"
 }
- 
+
 {=/lang/es
+  :language
   name: "Spanish"
   /lang/code: "es"
 
@@ -37,6 +99,7 @@
 }
 
 {=/lang/fi
+  :language
   name: "Finnish"
   /lang/code: "fi"
 
@@ -46,15 +109,17 @@
 }
 
 {=/lang/fr
+  :language
   name: "French"
   /lang/code: "fr"
 
   /lang/wiki_category: "Catégorie"
-  /lang/wiki_image: "Fichier"
+  /lang/wiki_i/lang/itmage: "Fichier"
   /lang/wiki_template: "Modèle"
 }
 
 {=/lang/it
+  :language
   name: "Italian"
   /lang/code: "it"
 
@@ -64,6 +129,7 @@
 }
 
 {=/lang/nl
+  :language
   name: "Dutch"
   /lang/code: "nl"
 
@@ -73,7 +139,8 @@
 }
 
 {=/lang/no
-  name: "Norwegian"
+  :language
+  name: "Norwegian/lang/pl"
   /lang/code: "no"
 
   /lang/wiki_category: "Kategori"
@@ -82,6 +149,7 @@
 }
 
 {=/lang/pl
+  :language
   name: "Polish"
   /lang/code: "pl"
 
@@ -91,6 +159,7 @@
 }
 
 {=/lang/pt
+  :language
   name: "Portuguese"
   /lang/code: "pt"
 
@@ -100,11 +169,19 @@
 }
 
 {=/lang/sv
+  :language
   name: "Swedish"
   /lang/code: "sv"
 
   /lang/wiki_category: "Kategori"
   /lang/wiki_image: "Fil"
   /lang/wiki_template: "Mall"
+}
+
+; Language schema family
+{=/schema/lang :schema_family
+  name: "Language schemas"
+
+  member_schema: lang
 }
 

@@ -32,13 +32,28 @@ class ProfileAliasExtractor : public task::FrameProcessor {
     if (skip_aux_ && filter_.IsAux(frame)) return;
 
     // Create frame with all aliases matching language.
-    Builder a(frame.store());
+    Store *store = frame.store();
+    Builder a(store);
     for (const Slot &s : frame) {
       if (s.name == n_profile_alias_) {
-        Frame alias(frame.store(), s.value);
+        Frame alias(store, s.value);
         if (alias.GetHandle(n_lang_) == language_) {
           a.Add(n_profile_alias_, alias);
+        } else {
+          // Add aliases in other languages as foreign alias.
+          Builder foreign(store);
+          foreign.Add(n_name_, alias.GetHandle(n_name_));
+          foreign.Add(n_lang_, alias.GetHandle(n_lang_));
+          foreign.Add(n_alias_count_, alias.GetHandle(n_alias_count_));
+          foreign.Add(n_alias_source_, 1 << SRC_WIKIDATA_FOREIGN);
+          a.Add(foreign.Create());
         }
+      } else if (s.name == n_native_name_ || s.name == n_native_label_) {
+        // Output native names/labels as native aliases.
+        Builder native(store);
+        native.Add(n_name_, store->Resolve(s.value));
+        native.Add(n_alias_source_, 1 << SRC_WIKIDATA_NATIVE);
+        a.Add(native.Create());
       } else if (s.name == n_instance_of_) {
         // Discard categories, disambiguations, info boxes and templates.
         if (s.value == n_category_ ||
@@ -60,7 +75,13 @@ class ProfileAliasExtractor : public task::FrameProcessor {
  private:
   // Symbols.
   Name n_lang_{names_, "lang"};
+  Name n_name_(names_, "name"};
   Name n_profile_alias_{names_, "/s/profile/alias"};
+  Name n_alias_count_{names_, "/s/alias/count"};
+  Name n_alias_sources_{names_, "/s/alias/sources"};
+
+  Name n_native_name_{names_, "P1559"};
+  Name n_native_label_{names_, "P1705"};
 
   Name n_instance_of_{names_, "P31"};
   Name n_category_{names_, "Q4167836"};
@@ -188,6 +209,13 @@ class ProfileAliasReducer : public task::Reducer {
 
     // Only keep Wikidata alias if it is not toxic.
     if ((alias->sources & WIKIDATA_ALIAS) && !toxic) return true;
+
+    // Keep foreign and native aliases supported by Wikipedia aliases.
+    if (alias->sources & (WIKIDATA_FOREIGN | WIKIDATA_NATIVE)) {
+      if (alias->sources & (WIKIPEDIA_ANCHOR | WIKIPEDIA_DISAMBIGUATION)) {
+        return true;
+      }
+    }
 
     // Disambiguation links need to be backed by anchors.
     if (alias->sources & WIKIPEDIA_DISAMBIGUATION) {

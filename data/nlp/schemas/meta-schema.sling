@@ -20,6 +20,11 @@
     source: named
     target: knowledge
   }
+  role: {=lang :slot
+    name: "language"
+    source: named
+    target: language
+  }
 }
 
 ; Schema definition for schema.
