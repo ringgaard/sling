@@ -85,7 +85,10 @@ def run_workflow(wf):
   wf.wf.start()
 
   # Monitor workflow until it completes.
-  wf.wf.monitor(flags.arg.refresh)
+  if flags.arg.refresh == 0:
+    wf.wf.wait()
+  else:
+    wf.wf.monitor(flags.arg.refresh)
 
 def download_corpora():
   # Download wikidata dump.
