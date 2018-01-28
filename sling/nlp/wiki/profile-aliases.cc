@@ -45,15 +45,15 @@ class ProfileAliasExtractor : public task::FrameProcessor {
           foreign.Add(n_name_, alias.GetHandle(n_name_));
           foreign.Add(n_lang_, alias.GetHandle(n_lang_));
           foreign.Add(n_alias_count_, alias.GetHandle(n_alias_count_));
-          foreign.Add(n_alias_source_, 1 << SRC_WIKIDATA_FOREIGN);
-          a.Add(foreign.Create());
+          foreign.Add(n_alias_sources_, 1 << SRC_WIKIDATA_FOREIGN);
+          a.Add(n_profile_alias_, foreign.Create());
         }
       } else if (s.name == n_native_name_ || s.name == n_native_label_) {
         // Output native names/labels as native aliases.
         Builder native(store);
         native.Add(n_name_, store->Resolve(s.value));
-        native.Add(n_alias_source_, 1 << SRC_WIKIDATA_NATIVE);
-        a.Add(native.Create());
+        native.Add(n_alias_sources_, 1 << SRC_WIKIDATA_NATIVE);
+        a.Add(n_profile_alias_, native.Create());
       } else if (s.name == n_instance_of_) {
         // Discard categories, disambiguations, info boxes and templates.
         if (s.value == n_category_ ||
@@ -75,7 +75,7 @@ class ProfileAliasExtractor : public task::FrameProcessor {
  private:
   // Symbols.
   Name n_lang_{names_, "lang"};
-  Name n_name_(names_, "name"};
+  Name n_name_{names_, "name"};
   Name n_profile_alias_{names_, "/s/profile/alias"};
   Name n_alias_count_{names_, "/s/alias/count"};
   Name n_alias_sources_{names_, "/s/alias/sources"};
@@ -240,6 +240,8 @@ class ProfileAliasReducer : public task::Reducer {
     WIKIPEDIA_REDIRECT = 1 << SRC_WIKIPEDIA_REDIRECT,
     WIKIPEDIA_ANCHOR = 1 << SRC_WIKIPEDIA_ANCHOR,
     WIKIPEDIA_DISAMBIGUATION = 1 << SRC_WIKIPEDIA_DISAMBIGUATION,
+    WIKIDATA_FOREIGN = 1 << SRC_WIKIDATA_FOREIGN,
+    WIKIDATA_NATIVE = 1 << SRC_WIKIDATA_NATIVE,
   };
 
   // Commons store.
