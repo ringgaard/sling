@@ -58,8 +58,8 @@ void KnowledgeService::Load(const string &knowledge_base,
   kb_.Freeze();
 
   // Get meta data for properties.
-  for (const Slot &s : Frame(&kb_, kb_.Lookup("/w/properties"))) {
-    if (s.name == Handle::id()) continue;
+  for (const Slot &s : Frame(&kb_, kb_.Lookup("/w/entity"))) {
+    if (s.name != n_role_) continue;
     Frame property(&kb_, s.value);
     Property p;
 
@@ -68,7 +68,7 @@ void KnowledgeService::Load(const string &knowledge_base,
     p.name = property.GetHandle(n_name_);
 
     // Property data type.
-    p.datatype = property.GetHandle(n_datatype_);
+    p.datatype = property.GetHandle(n_target_);
 
     // Get URL formatter for property.
     Handle formatter = property.Resolve(n_formatter_url_);
@@ -173,8 +173,6 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   }
   Builder b(ws.store());
   GetStandardProperties(item, &b);
-  Handle dt = item.GetHandle(n_datatype_);
-  if (!dt.IsNil()) b.Add(n_type_, dt);
 
   // Fetch properties.
   Item info(ws.store());
@@ -279,7 +277,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         if (property.alternate_image && info->alternate_image.IsNil()) {
           info->alternate_image = value;
         }
-      } else if (property.datatype == n_coord_type_) {
+      } else if (property.datatype == n_geo_type_) {
         // Add coordinate value.
         Frame coord(&kb_, value);
         double lat = coord.GetFloat(n_lat_);

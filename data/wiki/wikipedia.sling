@@ -25,8 +25,7 @@
     target: string
   }
 
-  ; TODO: rename to /wp/page/item
-  role: {=/wp/page/qid :slot
+  role: {=/wp/page/item :slot
     name: "Wikidata item"
     description: "Wikidata item"
     source: /wp/page
@@ -78,8 +77,8 @@
   family: /schema/wikipedia
 }
 
-{=/schema/wikidata :schema_family
-  name: "Wikidata schemas"
+{=/schema/wikipedia :schema_family
+  name: "Wikipedia schemas"
 
   member_schema: /wp/page
   member_schema: /wp/redirect

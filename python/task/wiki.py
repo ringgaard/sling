@@ -349,7 +349,8 @@ class WikiWorkflow:
                                      },
                                      format="message/alias",
                                      name="wikidata-alias-extractor")
-      wikipedia_aliases = self.wf.read(self.wikipedia_aliases(language))
+      wikipedia_aliases = self.wf.read(self.wikipedia_aliases(language),
+                                       name="wikipedia-alias-reader")
       aliases = wikipedia_aliases + [wikidata_aliases]
 
     # Merge alias sources.
@@ -368,6 +369,12 @@ class WikiWorkflow:
   def calendar_defs(self):
     """Resource for calendar definitions."""
     return self.wf.resource("calendar.sling",
+                            dir=corpora.repository("data/wiki"),
+                            format="store/frame")
+
+  def wikidata_defs(self):
+    """Resource for Wikidata schema definitions."""
+    return self.wf.resource("wikidata.sling",
                             dir=corpora.repository("data/wiki"),
                             format="store/frame")
 
@@ -390,7 +397,9 @@ class WikiWorkflow:
     if wikidata_properties == None:
       wikidata_properties = self.wikidata_properties()
     if schemas == None:
-      schemas = [self.language_defs(), self.calendar_defs()]
+      schemas = [self.language_defs(),
+                 self.calendar_defs(),
+                 self.wikidata_defs()]
 
     with self.wf.namespace("wikidata"):
       # Prune information from Wikidata items.
@@ -424,7 +433,7 @@ class WikiWorkflow:
     with self.wf.namespace("name-table"):
       builder = self.wf.task("name-table-builder")
       builder.add_param("language", language)
-      self.wf.connect(self.wf.read(names), builder)
+      self.wf.connect(self.wf.read(names, name="name-reader"), builder)
       repo = self.name_table(language)
       builder.attach_output("repository", repo)
     return repo

@@ -38,7 +38,7 @@ class WikidataImporter : public task::Processor {
 
     // Initialize global symbols.
     names_.Bind(commons_);
-    AddTypeMapping(s_string_.name(), "string");
+    AddTypeMapping(s_string_.name(), "/w/string");
     AddTypeMapping(s_time_.name(), "/w/time");
     AddTypeMapping(s_quantity_.name(), "/w/quantity");
     AddTypeMapping(s_monolingualtext_.name(), "/w/text");
@@ -47,7 +47,7 @@ class WikidataImporter : public task::Processor {
     AddTypeMapping(s_external_id_.name(), "/w/xref");
     AddTypeMapping(s_wikibase_property_.name(), "/w/property");
     AddTypeMapping(s_url_.name(), "/w/url");
-    AddTypeMapping(s_globe_coordinate_.name(), "/w/coord");
+    AddTypeMapping(s_globe_coordinate_.name(), "/w/geo");
     AddTypeMapping(s_math_.name(), "/w/math");
     AddTypeMapping(s_tabular_data_.name(), "/w/table");
     AddTypeMapping(s_geo_shape_.name(), "/w/shape");
@@ -97,8 +97,6 @@ class WikidataImporter : public task::Processor {
     CHECK(obj.valid());
     CHECK(obj.IsFrame()) << message->value();
 
-    //LOG(INFO) << ToText(obj, 2);
-
     // Get top-level item attributes.
     Frame item = obj.AsFrame();
     string id = item.GetString(s_id_);
@@ -124,7 +122,8 @@ class WikidataImporter : public task::Processor {
       CHECK(!datatype.IsNil());
       auto f = datatypes_.find(datatype.text());
       CHECK(f != datatypes_.end()) << datatype.text();
-      builder.Add(n_datatype_, f->second);
+      builder.Add(n_source_, n_entity_);
+      builder.Add(n_target_, f->second);
     }
 
     // Parse labels and aliases.
@@ -224,7 +223,6 @@ class WikidataImporter : public task::Processor {
 
     // Create SLING frame for item.
     Frame profile = builder.Create();
-    //LOG(INFO) << "Wikidata item: " << ToText(profile, 2);
 
     // Output property or item.
     if (is_property) {
@@ -354,16 +352,16 @@ class WikidataImporter : public task::Processor {
 
     // Create quantity frame if needed.
     if (!unit.IsNil() || !lower.IsNil() || !upper.IsNil()) {
-      Builder number(store);
-      number.AddIs(amount);
-      if (!unit.IsNil()) number.Add(n_unit_, unit);
+      Builder quantity(store);
+      quantity.Add(n_amount_, amount);
+      if (!unit.IsNil()) quantity.Add(n_unit_, unit);
       if (!precision.IsNil()) {
-        number.Add(n_precision_, precision);
+        quantity.Add(n_precision_, precision);
       } else {
-        if (!lower.IsNil()) number.Add(n_low_, lower);
-        if (!upper.IsNil()) number.Add(n_high_, upper);
+        if (!lower.IsNil()) quantity.Add(n_low_, lower);
+        if (!upper.IsNil()) quantity.Add(n_high_, upper);
       }
-      amount = number.Create().handle();
+      amount = quantity.Create().handle();
     }
 
     return amount;
@@ -455,6 +453,7 @@ class WikidataImporter : public task::Processor {
     } else {
       Frame value = datavalue.GetFrame(s_value_);
       if (value.invalid()) return Handle::nil();
+
       if (type.equals("wikibase-entityid")) {
         return ConvertEntity(value);
       } else if (type.equals("time")) {
@@ -520,14 +519,17 @@ class WikidataImporter : public task::Processor {
   Name n_name_{names_, "name"};
   Name n_description_{names_, "description"};
   Name n_lang_{names_, "lang"};
+  Name n_source_{names_, "source"};
+  Name n_target_{names_, "target"};
 
+  Name n_entity_{names_, "/w/entity"};
   Name n_item_{names_, "/w/item"};
   Name n_property_{names_, "/w/property"};
-  Name n_datatype_{names_, "/w/datatype"};
-  Name n_wikipedia_{names_, "/w/wikipedia"};
+  Name n_wikipedia_{names_, "/w/item/wikipedia"};
   Name n_low_{names_, "/w/low"};
   Name n_high_{names_, "/w/high"};
   Name n_precision_{names_, "/w/precision"};
+  Name n_amount_{names_, "/w/amount"};
   Name n_unit_{names_, "/w/unit"};
   Name n_geo_{names_, "/w/geo"};
   Name n_lat_{names_, "/w/lat"};
@@ -674,7 +676,7 @@ class WikipediaMapping : public task::FrameProcessor {
   Handle language_;
 
   // Names.
-  Name n_wikipedia_{names_, "/w/wikipedia"};
+  Name n_wikipedia_{names_, "/w/item/wikipedia"};
   Name n_instance_of_{names_, "P31"};
   Name n_category_{names_, "Q4167836"};
   Name n_disambiguation_{names_, "Q4167410"};
@@ -710,6 +712,7 @@ class WikidataPruner : public task::FrameProcessor {
   void Startup(task::Task *task) override {
     // Initialize aux filter.
     filter_.Init(commons_);
+    aux_output_ = task->GetSink("aux");
 
     // Initialize counters.
     num_kb_items_ = task->GetCounter("num_kb_items");
@@ -725,23 +728,28 @@ class WikidataPruner : public task::FrameProcessor {
 
     // Filter out aux items.
     if (filter_.IsAux(frame)) {
-      // TODO(ringgaard): output aux items to separate channel.
+      // Output aux items to separate channel.
       num_aux_items_->Increment();
-      return;
+      if (aux_output_ != nullptr) {
+        aux_output_->Send(task::CreateMessage(frame));
+      }
+    } else {
+      // Output item.
+      num_kb_items_->Increment();
+      Output(frame);
     }
-
-    // Output item.
-    num_kb_items_->Increment();
-    Output(frame);
   }
 
  private:
   // Symbols.
   Name n_profile_alias_{names_, "/s/profile/alias"};
-  Name n_wikipedia_{names_, "/w/wikipedia"};
+  Name n_wikipedia_{names_, "/w/item/wikipedia"};
 
   // Item filter.
   AuxFilter filter_;
+
+  // Optional output channel for aux items.
+  task::Channel *aux_output_;
 
   // Statistics.
   task::Counter *num_kb_items_;
@@ -765,9 +773,12 @@ class WikidataPropertyCollector : public task::FrameProcessor {
   void Flush(task::Task *task) override {
     Store store;
     Builder catalog(&store);
-    catalog.AddId("/w/properties");
+    catalog.AddId("/w/entity");
+    catalog.AddIs("schema");
+    catalog.Add("name", "Wikidata entity");
+    catalog.AddLink("family", "/schema/wikidata");
     for (const string &id : properties_) {
-      catalog.AddLink(id, id);
+      catalog.Add("role", id);
     }
     Output(catalog.Create());
   }

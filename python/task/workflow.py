@@ -219,7 +219,7 @@ class Scope:
   """A score is used for defined a name space for task names. It implements
   context management so you can use with statements to define name spaces."""
   def __init__(self, wf, name):
-    self.workflow = workflow
+    self.wf = wf
     self.name = name
     self.prev = None
 
@@ -704,8 +704,11 @@ class Workflow(object):
     prev_time = start
     while not done:
       done = self.wait(refresh * 1000)
-      counters = self.counters()
+      elapsed = time.time() - start
+      print "==== workflow status at", datetime.timedelta(seconds=elapsed)
+
       print "{:64} {:>16} {:>16}".format("Counter", "Value", "Rate")
+      counters = self.counters()
       channels = {}
       current_counters = {}
       current_time = time.time()
@@ -742,5 +745,5 @@ class Workflow(object):
       prev_time = current_time
       prev_counters = current_counters
       prev_channels = channels
-    log("workflow time: " + str(datetime.timedelta(seconds=time.time() - start)))
+    log("workflow completed in " + str(datetime.timedelta(seconds=time.time() - start)))
 

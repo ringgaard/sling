@@ -78,6 +78,8 @@ class KnowledgeService {
   Names names_;
   Name n_name_{names_, "name"};
   Name n_description_{names_, "description"};
+  Name n_role_{names_, "role"};
+  Name n_target_{names_, "target"};
   Name n_properties_{names_, "properties"};
   Name n_qualifiers_{names_, "qualifiers"};
   Name n_xrefs_{names_, "xrefs"};
@@ -90,17 +92,16 @@ class KnowledgeService {
   Name n_thumbnail_{names_, "thumbnail"};
   Name n_matches_{names_, "matches"};
 
-  Name n_datatype_{names_, "/w/datatype"};
   Name n_xref_type_{names_, "/w/xref"};
   Name n_item_type_{names_, "/w/item"};
   Name n_property_type_{names_, "/w/property"};
   Name n_url_type_{names_, "/w/url"};
   Name n_text_type_{names_, "/w/text"};
   Name n_quantity_type_{names_, "/w/quantity"};
-  Name n_coord_type_{names_, "/w/coord"};
+  Name n_geo_type_{names_, "/w/geo"};
   Name n_media_type_{names_, "/w/media"};
   Name n_time_type_{names_, "/w/time"};
-  Name n_string_type_{names_, "string"};
+  Name n_string_type_{names_, "/w/string"};
   Name n_lat_{names_, "/w/lat"};
   Name n_lng_{names_, "/w/lng"};
   Name n_unit_{names_, "/w/unit"};

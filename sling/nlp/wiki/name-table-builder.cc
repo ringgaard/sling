@@ -119,7 +119,7 @@ class NameTableBuilder : public task::FrameProcessor {
         entity_array.push_back(entity_table_[entity.index].offset);
         entity_array.push_back(entity.count);
       }
-      int entity_array_size = entity_array.size() * sizeof(EntityName);
+      int entity_array_size = entity_array.size() * sizeof(uint32);
       name_block->WriteOrDie(entity_array.data(), entity_array_size);
 
       // Compute offset of next entry.

@@ -1,6 +1,15 @@
 ; Wikidata schemas.
 
-{=/w/item +/s/profile :schema
+; The schema for /w/entity contains all the Wikidata properties and is defined
+; by the property collector, and has the following form:
+;
+; {=/w/entity  :schema
+;   name: "Wikidata entity"
+;   family: /schema/wikidata
+;   role: Pxxx (one for each property)
+; }
+
+{=/w/item +/s/profile +/w/entity :schema
   name: "Wikidata item"
   family: /schema/wikidata
 
@@ -11,16 +20,9 @@
   }
 }
 
-{=/w/property +role :schema
+{=/w/property +slot +/w/entity :schema
   name: "Wikidata property"
   family: /schema/wikidata
-
-  role: {=/w/datatype :slot
-    name: "property type"
-    description: "Wikidata property type"
-    source: /w/item
-    taget: /w/type
-  }
 }
 
 {=/w/type :schema
@@ -28,7 +30,7 @@
   family: /schema/wikidata
   simple: 1
 
-  value: string
+  value: /w/string
   value: /w/time
   value: /w/quantity
   value: /w/text
@@ -37,10 +39,16 @@
   value: /w/xref
   value: /w/property
   value: /w/url
-  value: /w/coord
+  value: /w/geo
   value: /w/math
   value: /w/table
   value: /w/shape
+}
+
+{=/w/string +string :schema
+  name: "String"
+  family: /schema/wikidata
+  simple: 1
 }
 
 {=/w/time :schema
@@ -52,6 +60,13 @@
 {=/w/quantity :schema
   name: "Quantity"
   family: /schema/wikidata
+
+  role: {=/w/amount :slot
+    name: "amount"
+    description: "Quantity value"
+    source: /w/quantity
+    target: /w/item
+  }
 
   role: {=/w/unit :slot
     name: "unit"
@@ -132,11 +147,6 @@
   }
 }
 
-{=/w/coord +/w/geo :schema
-  name: "Coordinate"
-  family: /schema/wikidata
-}
-
 {=/w/math :schema
   name: "Math"
   family: /schema/wikidata
@@ -158,20 +168,20 @@
 {=/schema/wikidata :schema_family
   name: "Wikidata schemas"
 
+  member_schema: /w/entity
   member_schema: /w/item
   member_schema: /w/property
   member_schema: /w/type
-  member_schema: /w/geo
 
+  member_schema: /w/string
   member_schema: /w/time
   member_schema: /w/quantity
   member_schema: /w/text
   member_schema: /w/media
   member_schema: /w/xref
   member_schema: /w/url
-  member_schema: /w/coord
+  member_schema: /w/geo
   member_schema: /w/math
   member_schema: /w/table
   member_schema: /w/shape
 }
-

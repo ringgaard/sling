@@ -140,7 +140,6 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
     GetLanguageInfo(page.GetHandle(n_lang_), &lang);
 
     // Parse Wikipedia article.
-    //LOG(INFO) << "Extract from " << page.Id();
     Store *store = page.store();
     string wikitext = page.GetString(n_page_text_);
     WikiParser parser(wikitext.c_str());
@@ -149,7 +148,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
 
     // Add basic document information.
     Builder article(page);
-    article.AddLink(n_page_qid_, qid);
+    article.AddLink(n_page_item_, qid);
     article.AddIsA(n_document_);
     string title = page.GetString(n_page_title_);
     article.Add(n_document_url_, Wiki::URL(lang.code.str(), title));
@@ -262,7 +261,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
 
   // Output alias for article title.
   void OutputTitleAlias(const Frame &document) {
-    string qid = document.GetFrame(n_page_qid_).Id().str();
+    string qid = document.GetFrame(n_page_item_).Id().str();
     string title = document.GetString(n_page_title_);
     string name;
     string disambiguation;
@@ -353,16 +352,16 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
   task::Channel *aliases_ = nullptr;
 
   // Symbols.
-  Name n_lang_{names_, "lang"};
   Name n_name_{names_, "name"};
-  Name n_lang_code_{names_, "/lang/code"};
-  Name n_lang_category_{names_, "/lang/wiki_category"};
-  Name n_lang_template_{names_, "/lang/wiki_template"};
+  Name n_lang_{names_, "lang"};
+  Name n_lang_code_{names_, "code"};
+  Name n_lang_category_{names_, "/lang/wikilang/wiki_category"};
+  Name n_lang_template_{names_, "/lang/wikilang//wiki_template"};
 
   Name n_page_text_{names_, "/wp/page/text"};
   Name n_page_title_{names_, "/wp/page/title"};
   Name n_page_category_{names_, "/wp/page/category"};
-  Name n_page_qid_{names_, "/wp/page/qid"};
+  Name n_page_item_{names_, "/wp/page/item"};
   Name n_link_{names_, "/wp/link"};
   Name n_redirect_{names_, "/wp/redirect"};
 

@@ -24,6 +24,7 @@ const char *kAliasSourceName[kNumAliasSources] = {
   "wikipedia_disambiguation",
   "wikidata_foreign",
   "wikidata_native",
+  "wikidata_demonym",
 };
 
 void Wiki::SplitTitle(const string &title,
@@ -85,6 +86,7 @@ void AuxFilter::Init(Store *store) {
     "Q13442814",  // scientific article
     "Q17329259",  // encyclopedic article
     "Q17633526",  // Wikinews article
+    "Q732577",    // publication
     "Q7187",      // gene
     "Q16521",     // taxon
     "Q8054",      // protein

@@ -25,11 +25,15 @@ class ProfileAliasExtractor : public task::FrameProcessor {
 
     // Initialize filter.
     if (skip_aux_) filter_.Init(commons_);
+    num_aux_items_ = task->GetCounter("num_aux_items");
   }
 
   void Process(Slice key, const Frame &frame) override {
     // Optionally skip aux items.
-    if (skip_aux_ && filter_.IsAux(frame)) return;
+    if (skip_aux_ && filter_.IsAux(frame)) {
+      num_aux_items_->Increment();
+      return;
+    }
 
     // Create frame with all aliases matching language.
     Store *store = frame.store();
@@ -54,6 +58,12 @@ class ProfileAliasExtractor : public task::FrameProcessor {
         native.Add(n_name_, store->Resolve(s.value));
         native.Add(n_alias_sources_, 1 << SRC_WIKIDATA_NATIVE);
         a.Add(n_profile_alias_, native.Create());
+      } else if (s.name == n_demonym_) {
+        // Output demonyms as demonym aliases.
+        Builder demonym(store);
+        demonym.Add(n_name_, store->Resolve(s.value));
+        demonym.Add(n_alias_sources_, 1 << SRC_WIKIDATA_DEMONYM);
+        a.Add(n_profile_alias_, demonym.Create());
       } else if (s.name == n_instance_of_) {
         // Discard categories, disambiguations, info boxes and templates.
         if (s.value == n_category_ ||
@@ -82,6 +92,7 @@ class ProfileAliasExtractor : public task::FrameProcessor {
 
   Name n_native_name_{names_, "P1559"};
   Name n_native_label_{names_, "P1705"};
+  Name n_demonym_{names_, "P1549"};
 
   Name n_instance_of_{names_, "P31"};
   Name n_category_{names_, "Q4167836"};
@@ -95,6 +106,7 @@ class ProfileAliasExtractor : public task::FrameProcessor {
   // Skip auxiliary items.
   bool skip_aux_ = false;
   AuxFilter filter_;
+  task::Counter *num_aux_items_;
 };
 
 REGISTER_TASK_PROCESSOR("profile-alias-extractor", ProfileAliasExtractor);
@@ -210,8 +222,10 @@ class ProfileAliasReducer : public task::Reducer {
     // Only keep Wikidata alias if it is not toxic.
     if ((alias->sources & WIKIDATA_ALIAS) && !toxic) return true;
 
-    // Keep foreign and native aliases supported by Wikipedia aliases.
-    if (alias->sources & (WIKIDATA_FOREIGN | WIKIDATA_NATIVE)) {
+    // Keep foreign, native and demonym aliases supported by Wikipedia aliases.
+    if (alias->sources & (WIKIDATA_FOREIGN |
+                          WIKIDATA_NATIVE |
+                          WIKIDATA_DEMONYM)) {
       if (alias->sources & (WIKIPEDIA_ANCHOR | WIKIPEDIA_DISAMBIGUATION)) {
         return true;
       }
@@ -242,6 +256,7 @@ class ProfileAliasReducer : public task::Reducer {
     WIKIPEDIA_DISAMBIGUATION = 1 << SRC_WIKIPEDIA_DISAMBIGUATION,
     WIKIDATA_FOREIGN = 1 << SRC_WIKIDATA_FOREIGN,
     WIKIDATA_NATIVE = 1 << SRC_WIKIDATA_NATIVE,
+    WIKIDATA_DEMONYM = 1 << SRC_WIKIDATA_DEMONYM,
   };
 
   // Commons store.
