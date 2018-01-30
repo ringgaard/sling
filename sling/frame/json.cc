@@ -12,7 +12,9 @@
 namespace sling {
 
 void JSONWriter::Write(const Object &object) {
-  CHECK(object.store() == nullptr || object.store() == store_);
+  CHECK(object.store() == nullptr ||
+        object.store() == store_ ||
+        object.store() == store_->globals());
   Write(object.handle());
 }
 

@@ -64,7 +64,7 @@ void KnowledgeService::Load(const string &knowledge_base,
     Property p;
 
     // Get property id and name.
-    p.id = s.name;
+    p.id = s.value;
     p.name = property.GetHandle(n_name_);
 
     // Property data type.
@@ -104,6 +104,7 @@ void KnowledgeService::Load(const string &knowledge_base,
 void KnowledgeService::Register(HTTPServer *http) {
   http->Register("/kb/query", this, &KnowledgeService::HandleQuery);
   http->Register("/kb/item", this, &KnowledgeService::HandleGetItem);
+  http->Register("/kb/frame", this, &KnowledgeService::HandleGetFrame);
   app_.Register(http);
 }
 
@@ -288,21 +289,17 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
                               lat, ",", lng));
       } else if (property.datatype == n_quantity_type_) {
         // Add quantity value.
-        string text = ToText(&kb_, kb_.Resolve(value));
+        string text;
         if (kb_.IsFrame(value)) {
           Frame quantity(&kb_, value);
+          text = AsText(quantity.GetHandle(n_amount_));
+
+          // Get unit symbol, preferably in latin script.
           Frame unit = quantity.GetFrame(n_unit_);
-          if (unit.valid()) {
-            text.append(" ");
-            if (unit.Has(n_unit_symbol_)) {
-              Handle unit_symbol = unit.Resolve(n_unit_symbol_);
-              if (kb_.IsString(unit_symbol)) {
-                text.append(String(&kb_, unit_symbol).value());
-              }
-            } else {
-              text.append(unit.GetString(n_name_));
-            }
-          }
+          text.append(" ");
+          text.append(UnitName(unit));
+        } else {
+          text = AsText(value);
         }
         v.Add(n_text_, text);
       } else if (property.datatype == n_time_type_) {
@@ -350,9 +347,94 @@ void KnowledgeService::GetStandardProperties(const Frame &item,
                                              Builder *builder) const {
   builder->Add(n_ref_, item.Id());
   Handle name = item.GetHandle(n_name_);
-  if (!name.IsNil()) builder->Add(n_text_, name);
+  if (!name.IsNil()) {
+    builder->Add(n_text_, name);
+  } else {
+    builder->Add(n_text_, item.Id());
+  }
   Handle description = item.GetHandle(n_description_);
   if (!description.IsNil()) builder->Add(n_description_, description);
+}
+
+string KnowledgeService::AsText(Handle value) {
+  value = kb_.Resolve(value);
+  if (value.IsInt()) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%d", value.AsInt());
+    return buf;
+  } else if (value.IsFloat()) {
+    float number = value.AsFloat();
+    char buf[32];
+    if (floorf(number) == number) {
+      snprintf(buf, sizeof(buf), "%.f", number);
+    } else if (number > 0.001) {
+      snprintf(buf, sizeof(buf), "%.3f", number);
+    } else {
+      snprintf(buf, sizeof(buf), "%g", number);
+    }
+    return buf;
+  } else {
+    return ToText(&kb_, value);
+  }
+}
+
+string KnowledgeService::UnitName(const Frame &unit) {
+  // Check for valid unit.
+  if (!unit.valid()) return "";
+
+  // Find best unit symbol, preferably in latin script.
+  Handle best = Handle::nil();
+  Handle fallback = Handle::nil();
+  for (const Slot &s : unit) {
+    if (s.name != n_unit_symbol_) continue;
+    Frame symbol(&kb_, s.value);
+    if (!symbol.valid()) {
+      if (fallback.IsNil()) fallback = s.value;
+      continue;
+    }
+
+    // Prefer latin script.
+    Handle script = symbol.GetHandle(n_writing_system_);
+    if (script == n_latin_script_ && best.IsNil()) {
+      best = s.value;
+    } else {
+      // Skip language specific names.
+      if (symbol.Has(n_language_) || symbol.Has(n_name_language_)) continue;
+
+      // Fall back to symbols with no script.
+      if (script == Handle::nil() && fallback.IsNil()) {
+        fallback = s.value;
+      }
+    }
+  }
+  if (best.IsNil()) best = fallback;
+
+  // Try to get name of best unit symbol.
+  if (!best.IsNil()) {
+    Handle unit_name = kb_.Resolve(best);
+    if (kb_.IsString(unit_name)) {
+      return String(&kb_, unit_name).value();
+    }
+  }
+
+  // Fall back to item name of unit.
+  return unit.GetString(n_name_);
+}
+
+void KnowledgeService::HandleGetFrame(HTTPRequest *request,
+                                      HTTPResponse *response) {
+  WebService ws(&kb_, request, response);
+
+  // Look up frame in knowledge base.
+  Text id = ws.Get("id");
+  Handle handle = kb_.LookupExisting(id);
+  if (handle.IsNil()) {
+    response->SendError(404, nullptr, "Frame not found");
+    return;
+  }
+
+  // Return frame as response.
+  ws.set_output(Object(&kb_, handle));
 }
 
 }  // namespace nlp

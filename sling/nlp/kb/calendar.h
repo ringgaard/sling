@@ -33,6 +33,18 @@ class Calendar {
   Handle Year(int year) const;
   Text YearName(int year) const { return ItemName(Year(year)); }
 
+  // Get item for decade.
+  Handle Decade(int year) const;
+  Text DecadeName(int year) const { return ItemName(Decade(year)); }
+
+  // Get item for century.
+  Handle Century(int year) const;
+  Text CenturyName(int year) const { return ItemName(Century(year)); }
+
+  // Get item for millennium.
+  Handle Millennium(int year) const;
+  Text MillenniumName(int year) const { return ItemName(Millennium(year)); }
+
  private:
   // Get name for item.
   Text ItemName(Handle item) const;
@@ -79,6 +91,8 @@ class Calendar {
 // Date with day, month, and year.
 class Date {
  public:
+  enum Precision {MILLENNIUM, CENTURY, DECADE, YEAR, MONTH, DAY};
+
   // Initialize date from object.
   Date(const Object &object);
 
@@ -91,10 +105,14 @@ class Date {
   // Return day of month (first day of month is 1). Return 0 if no day in date.
   int day() const { return day_; }
 
+  // Return precision of date.
+  Precision precision() const { return precision_; }
+
  private:
   int year_;
   int month_;
   int day_;
+  Precision precision_;
 };
 
 }  // namespace nlp

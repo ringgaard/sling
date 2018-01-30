@@ -170,7 +170,10 @@ void WikiParser::ParseUntil(char stop) {
     switch (*ptr_) {
       case '\n': ParseNewLine(); break;
       case '\'': ParseFont(); break;
-      case '<': ParseTag(); break;
+      case '<':
+        ParseTag();
+        if (Inside(GALLERY)) ParseGallery();
+        break;
 
       case '!':
         if (Inside(TABLE, TEMPLATE) && Matches("!!")) {
@@ -260,6 +263,18 @@ void WikiParser::ParseNewLine() {
         break;
       }
     }
+  }
+
+  // Parse image link at begining of line inside gallery tag.
+  if (Inside(LINK, GALLERY)) {
+    UnwindUntil(LINK);
+    ParseGallery();
+    return;
+  }
+  if (Inside(IMAGE, GALLERY)) {
+    UnwindUntil(IMAGE);
+    ParseGallery();
+    return;
   }
 
   // Check for elements that can start line.
@@ -396,7 +411,7 @@ void WikiParser::ParseArgument() {
   const char *name = ptr_;
   const char *p = name;
   while (*p != 0 && *p != ' ' && *p != '\n' &&
-         *p != '=' && *p != '|' && *p != '}') {
+         *p != '=' && *p != '|' && *p != '}' && *p != '{') {
     p++;
   }
   if (*p == '=' || *p == ' ') {
@@ -490,20 +505,36 @@ void WikiParser::ParseTag() {
     if (*ptr_ != 0) ptr_ += 7;
     nodes_[node].end = ptr_;
     txt_ = ptr_;
+  } else if (Matches("</gallery>")) {
+    ptr_ += 10;
+    if (Inside(GALLERY)) UnwindUntil(GALLERY);
   } else {
+    // Parse '<' (BTAG) or '</' (ETAG).
+    const char *p = ptr_;
     Type type = BTAG;
-    int node = Push(type);
-    ptr_ += 1;
-    SkipWhitespace();
-    if (*ptr_ == '/') {
+    p += 1;
+    if (*p == '/') {
       type = ETAG;
-      ptr_++;
+      p++;
     }
-    SkipWhitespace();
-    const char *tagname = ptr_;
-    while (IsNameChar(*ptr_)) ptr_++;
-    SetName(node, tagname, ptr_);
+
+    // Parse tag name.
+    const char *tagname = p;
+    while (IsNameChar(*p)) p++;
+    if (p == tagname) {
+      ptr_++;
+      return;
+    }
+
+    // Create tag node.
+    int node = Push(type);
+    SetName(node, tagname, p);
+    ptr_ = p;
+
+    // Parse attributes.
     ParseAttributes("/>");
+
+    // Parse end of tag '>' (ETAG) or '/>' (TAG).
     if (*ptr_ == '/') {
       type = TAG;
       ptr_++;
@@ -515,9 +546,15 @@ void WikiParser::ParseTag() {
     nodes_[node].end = ptr_;
     nodes_[node].type = type;
 
-    if (type == BTAG && nodes_[node].name() == "gallery") {
+    if (nodes_[node].name() == "gallery") {
+      // The gallery tag encloses lines of image links.
       nodes_[node].type = GALLERY;
-      ParseGallery();
+      SkipWhitespace();
+      if (*ptr_ == '\n') {
+        ptr_++;
+        SkipWhitespace();
+      }
+      txt_ = ptr_;
     } else {
       UnwindUntil(type);
     }
@@ -525,36 +562,13 @@ void WikiParser::ParseTag() {
 }
 
 void WikiParser::ParseGallery() {
-  for (;;) {
-    // Check for gallery end tag.
-    SkipWhitespace();
-    if (*ptr_ == '\n') ptr_++;
-    SkipWhitespace();
-    txt_ = ptr_;
-    if (Matches("</gallery>") || *ptr_ == 0) break;
-
-    // Parse next line as link.
-    int node = Push(LINK);
-
-    // Parse link name.
-    const char *name = ptr_;
-    while (*ptr_ != 0 && *ptr_ != '|' && *ptr_ != '\n')  ptr_++;
-    SetName(node, name, ptr_);
-    txt_ = ptr_;
-    nodes_[node].CheckSpecialLink();
-
-    // Parse caption.
-    if (*ptr_ == '|') {
-      ptr_++;
-      txt_ = ptr_;
-      ParseUntil('\n');
-    }
-
-    Pop();
-  }
-  if (*ptr_ != 0) ptr_ += 10;
+  // Parse link name at the start of a gallery line.
+  int node = Push(LINK);
+  const char *name = ptr_;
+  while (*ptr_ != 0 && *ptr_ != '|' && *ptr_ != '\n')  ptr_++;
+  SetName(node, name, ptr_);
   txt_ = ptr_;
-  Pop();
+  nodes_[node].CheckSpecialLink();
 }
 
 void WikiParser::ParseHeadingBegin() {
@@ -1016,7 +1030,7 @@ int WikiParser::Push(Type type, int param) {
 }
 
 int WikiParser::Pop() {
-  CHECK(!stack_.empty());
+  CHECK(!stack_.empty()) << ptr_;
   int top = stack_.back();
   nodes_[top].end = ptr_;
   stack_.pop_back();

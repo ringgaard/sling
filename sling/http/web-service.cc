@@ -149,7 +149,7 @@ WebService::~WebService() {
 
     case TEXT: {
       // Output as human-readable SLING frames.
-      response_->SetContentType("text/sling");
+      response_->SetContentType("text/sling; charset=utf-8");
       Printer printer(&store_, &out);
       printer.set_indent(2);
       printer.set_byref(byref_);
@@ -159,7 +159,7 @@ WebService::~WebService() {
 
     case COMPACT: {
       // Output compact SLING text.
-      response_->SetContentType("text/sling");
+      response_->SetContentType("text/sling; charset=utf-8");
       Printer printer(&store_, &out);
       printer.set_byref(byref_);
       printer.Print(output_);
@@ -168,7 +168,7 @@ WebService::~WebService() {
 
     case JSON: {
       // Output in JSON format.
-      response_->SetContentType("text/json");
+      response_->SetContentType("text/json; charset=utf-8");
       JSONWriter writer(&store_, &out);
       writer.set_indent(2);
       writer.set_byref(byref_);
@@ -178,7 +178,7 @@ WebService::~WebService() {
 
     case CJSON: {
       // Output in compact JSON format.
-      response_->SetContentType("application/json");
+      response_->SetContentType("application/json; charset=utf-8");
       JSONWriter writer(&store_, &out);
       writer.set_byref(byref_);
       writer.Write(output_);

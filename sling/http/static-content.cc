@@ -11,7 +11,7 @@
 
 // Use internal embedded file system for web content by default.
 DEFINE_string(webdir, "/intern", "Base directory for serving web contents");
-DEFINE_bool(nowebcache, false, "Disable caching of web content");
+DEFINE_bool(webcache, true, "Enable caching of web content");
 
 namespace sling {
 
@@ -22,17 +22,17 @@ struct MIMEMapping {
 };
 
 static const MIMEMapping mimetypes[] = {
-  {"html", "text/html"},
-  {"htm", "text/html"},
-  {"xml", "text/xml"},
+  {"html", "text/html; charset=utf-8"},
+  {"htm", "text/html; charset=utf-8"},
+  {"xml", "text/xml; charset=utf-8"},
   {"jpeg", "image/jpeg"},
   {"jpg", "image/jpeg"},
   {"gif", "image/gif"},
   {"png", "image/png"},
   {"ico", "image/x-icon"},
-  {"css", "text/css"},
-  {"svg", "image/svg+xml"},
-  {"js", "text/javascript"},
+  {"css", "text/css; charset=utf-8"},
+  {"svg", "image/svg+xml; charset=utf-8"},
+  {"js", "text/javascript; charset=utf-8"},
   {"zip", "application/zip"},
   {nullptr, nullptr},
 };
@@ -191,7 +191,8 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
 
   // Check if file has changed.
   const char *cached = request->Get("If-modified-since");
-  if (cached != nullptr) {
+  const char *control = request->Get("Cache-Control");
+  if (cached != nullptr && control == nullptr) {
     if (ParseRFCTime(cached) == stat.mtime) {
       response->set_status(304);
       response->SetContentLength(0);
@@ -200,7 +201,7 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   }
 
   // Set content type from file extension.
-  const char *mimetype = GetMimeType(GetExtension(request->path()));
+  const char *mimetype = GetMimeType(GetExtension(filename.c_str()));
   if (mimetype != nullptr) {
     response->SetContentType(mimetype);
   }
@@ -210,7 +211,7 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   response->Set("Last-Modified", RFCTime(stat.mtime, datebuf));
 
   // Do not cache content if requested.
-  if (FLAGS_nowebcache) {
+  if (!FLAGS_webcache) {
     response->Set("Cache-Control", "no-cache");
   }
 

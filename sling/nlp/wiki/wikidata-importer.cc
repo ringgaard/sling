@@ -384,7 +384,13 @@ class WikidataImporter : public task::Processor {
     // Convert to integer encoded date.
     int precision = value.GetInt(s_precision_, -1);
     if (precision < 0) return timestamp;
-    if (precision == 9 || (day == 0 && month == 0)) {
+    if (precision == 6) {
+      return Handle::Integer(year / 1000);
+    } else if (precision == 7) {
+      return Handle::Integer(year / 100);
+    } else if (precision == 8) {
+      return Handle::Integer(year / 10);
+    } else if (precision == 9 || (day == 0 && month == 0)) {
       return Handle::Integer(year);
     } else if (precision == 10 || day == 0) {
       return Handle::Integer(year * 100 + month);
@@ -720,6 +726,10 @@ class WikidataPruner : public task::FrameProcessor {
   }
 
   void Process(Slice key, const Frame &frame) override {
+    // Check if item is an auxiliary item. This need to be checked before the
+    // item is pruned.
+    bool aux = filter_.IsAux(frame);
+
     // Remove aliases and wikilinks from item.
     Builder item(frame);
     item.Delete(n_profile_alias_);
@@ -727,7 +737,7 @@ class WikidataPruner : public task::FrameProcessor {
     item.Update();
 
     // Filter out aux items.
-    if (filter_.IsAux(frame)) {
+    if (aux) {
       // Output aux items to separate channel.
       num_aux_items_->Increment();
       if (aux_output_ != nullptr) {
@@ -778,7 +788,7 @@ class WikidataPropertyCollector : public task::FrameProcessor {
     catalog.Add("name", "Wikidata entity");
     catalog.AddLink("family", "/schema/wikidata");
     for (const string &id : properties_) {
-      catalog.Add("role", id);
+      catalog.AddLink("role", id);
     }
     Output(catalog.Create());
   }

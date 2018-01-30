@@ -5,8 +5,8 @@
 #include "sling/nlp/kb/knowledge-service.h"
 
 DEFINE_int32(port, 8080, "HTTP server port");
-DEFINE_string(kb, "/var/data/e/wikidata/repository", "Knowledge base");
-DEFINE_string(names, "/var/data/e/wikidata/names-en", "Name table");
+DEFINE_string(kb, "local/data/e/wiki/kb.sling", "Knowledge base");
+DEFINE_string(names, "local/data/e/wiki/en/name-table.repo", "Name table");
 
 using namespace sling;
 using namespace sling::nlp;

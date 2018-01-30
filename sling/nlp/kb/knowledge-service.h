@@ -42,12 +42,21 @@ class KnowledgeService {
   // Handle KB item requests.
   void HandleGetItem(HTTPRequest *request, HTTPResponse *response);
 
+  // Handle KB frame requests.
+  void HandleGetFrame(HTTPRequest *request, HTTPResponse *response);
+
  private:
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);
 
   // Get standard properties (ref, name, and description).
   void GetStandardProperties(const Frame &item, Builder *builder) const;
+
+  // Get unit name.
+  string UnitName(const Frame &unit);
+
+  // Convert value to readable text.
+  string AsText(Handle value);
 
   // Property information.
   struct Property {
@@ -104,13 +113,19 @@ class KnowledgeService {
   Name n_string_type_{names_, "/w/string"};
   Name n_lat_{names_, "/w/lat"};
   Name n_lng_{names_, "/w/lng"};
+  Name n_amount_{names_, "/w/amount"};
   Name n_unit_{names_, "/w/unit"};
 
   Name n_instance_of_{names_, "P31"};
   Name n_formatter_url_{names_, "P1630"};
   Name n_representative_image_{names_, "Q26940804"};
   Name n_image_{names_, "P18"};
+
   Name n_unit_symbol_{names_, "P558"};
+  Name n_writing_system_{names_, "P282"};
+  Name n_latin_script_{names_, "Q8229"};
+  Name n_language_{names_, "P2439"};
+  Name n_name_language_{names_, "P407"};
 };
 
 }  // namespace nlp

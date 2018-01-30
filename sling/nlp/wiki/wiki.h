@@ -66,7 +66,7 @@ class AuxFilter {
 
   // Names.
   Names names_;
-  Name n_wikipedia_{names_, "/w/wikipedia"};
+  Name n_wikipedia_{names_, "/w/item/wikipedia"};
   Name n_instanceof_{names_, "P31"};
 };
 
