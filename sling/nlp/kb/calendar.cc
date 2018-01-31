@@ -210,11 +210,11 @@ Date::Date(const Object &object) {
       precision_ = DECADE;
     } else if (num >= 10) {
       // YY**
-      year_ = num * 100;
+      year_ = num * 100 + 1;
       precision_ = CENTURY;
     } else {
       // Y***
-      year_ = num * 1000;
+      year_ = num * 1000 + 1;
       precision_ = MILLENNIUM;
     }
   } else if (object.IsString()) {

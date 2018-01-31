@@ -379,23 +379,33 @@ class WikidataImporter : public task::Processor {
     int year = ParseNumber(str.substr(1, 4));
     int month = ParseNumber(str.substr(6, 2));
     int day = ParseNumber(str.substr(9, 2));
-    if (year < 1000 || month < 0 || day < 0) return timestamp;
-
-    // Convert to integer encoded date.
-    int precision = value.GetInt(s_precision_, -1);
+    int precision = value.GetInt(s_precision_, 11);
     if (precision < 0) return timestamp;
-    if (precision == 6) {
-      return Handle::Integer(year / 1000);
-    } else if (precision == 7) {
-      return Handle::Integer(year / 100);
-    } else if (precision == 8) {
-      return Handle::Integer(year / 10);
-    } else if (precision == 9 || (day == 0 && month == 0)) {
-      return Handle::Integer(year);
-    } else if (precision == 10 || day == 0) {
-      return Handle::Integer(year * 100 + month);
+    if (year < 1000 || month < 0 || day < 0) {
+      // Clear parts of the date string to indicate precision.
+      string ts = str.str();
+      if (precision <= 10) ts[9] = ts[10] = '0';  // zero day
+      if (precision <= 9) ts[6] = ts[7] = '0';    // zero month
+      if (precision <= 8) ts[4] = '*';            // decade
+      if (precision <= 7) ts[3] = '*';            // century
+      if (precision <= 6) ts[2] = '*';            // millennium
+
+      return store->AllocateString(ts);
     } else {
-      return Handle::Integer(year * 10000 + month * 100 + day);
+      // Convert to integer encoded date.
+      if (precision == 6) {
+        return Handle::Integer((year - 1) / 1000);
+      } else if (precision == 7) {
+        return Handle::Integer((year - 1) / 100);
+      } else if (precision == 8) {
+        return Handle::Integer(year / 10);
+      } else if (precision == 9 || (day == 0 && month == 0)) {
+        return Handle::Integer(year);
+      } else if (precision == 10 || day == 0) {
+        return Handle::Integer(year * 100 + month);
+      } else {
+        return Handle::Integer(year * 10000 + month * 100 + day);
+      }
     }
   }
 

@@ -21,6 +21,8 @@ DECLARE_int32(event_manager_queue_size);
 namespace sling {
 namespace task {
 
+class Monitor;
+
 // A stage is a set of tasks that can be run concurrently. A stage can have
 // dependencies on other stages, which must have completed before this stage
 // can run.
@@ -84,6 +86,9 @@ class Job : public Environment {
 
   // Destroy job.
   ~Job();
+
+  // Register monitor for job.
+  void RegisterMonitor(Monitor *monitor) { monitor_ = monitor; }
 
   // Create a new resource for the job.
   Resource *CreateResource(const string &filename,
@@ -180,11 +185,28 @@ class Job : public Environment {
   // Worker queue for event dispatching.
   ThreadPool *event_dispatcher_;
 
+  // Optional monitor for job.
+  Monitor *monitor_ = nullptr;
+
   // Mutex for protecting job state.
   Mutex mu_;
 
   // Signal that all tasks have completed.
   std::condition_variable completed_;
+};
+
+// A workflow can be monitored by a Monitor component. Is a monitor is
+// registered using Job::RegisterMonitor(), the monitor is notified when the
+// job is started and when it completes.
+class Monitor {
+ public:
+  virtual ~Monitor() = default;
+
+  // Callback to notify when a job is started.
+  virtual void OnJobStart(Job *job) = 0;
+
+  // Callback to notify when a job is started.
+  virtual void OnJobDone(Job *job) = 0;
 };
 
 }  // namespace task

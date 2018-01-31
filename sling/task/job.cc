@@ -68,6 +68,7 @@ Job::Job() {
 }
 
 Job::~Job() {
+  if (monitor_ != nullptr) monitor_->OnJobDone(this);
   delete event_dispatcher_;
   for (auto t : tasks_) delete t;
   for (auto c : channels_) delete c;
@@ -323,6 +324,9 @@ void Job::Start() {
 
   LOG(INFO) << "All systems GO";
 
+  // Notify monitor.
+  if (monitor_ != nullptr) monitor_->OnJobStart(this);
+
   // Get all stages that are ready to run.
   std::vector<Stage *> ready;
   for (Stage *stage : stages_) {
@@ -398,12 +402,26 @@ void Job::TaskCompleted(Task *task) {
     }
 
     // Check if all stages have completed.
-    if (Done()) completed_.notify_all();
+    Monitor *monitor_on_completion = nullptr;
+    if (Done()) {
+      completed_.notify_all();
+      if (monitor_ != nullptr) {
+        monitor_on_completion = monitor_;
+        monitor_ = nullptr;
+      }
+    }
 
     // Unlock and start any new stages that are ready to run.
     mu_.unlock();
     for (Stage *stage : ready) {
       stage->Start();
+    }
+
+    // Notify monitor on completion. This need to be called when the job is not
+    // locked.
+    if (monitor_on_completion != nullptr) {
+      monitor_on_completion->OnJobDone(this);
+
     }
   });
 }

@@ -1,12 +1,15 @@
+<!doctype html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SLING Knowledge base</title>
+  <base href="/kb/">
   <link rel="shortcut icon" href="appicon.ico" type="image/x-icon" />
 
   <!-- AngularJS libraries -->
   <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js"></script>
   <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular-animate.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular-route.js"></script>
   <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular-aria.min.js"></script>
 
   <!-- Angular Material library -->
@@ -34,16 +37,16 @@
             <i class="material-icons">close</i>
           </md-button>
          </div>
-      </md-toolbar> 
+      </md-toolbar>
 
       <md-content layout-padding="">
         <md-menu-item ng-repeat="appl in applications">
-          <md-button ng-click="switchTo(appl)"">
+          <md-button ng-click="switchTo(appl)">
             <md-icon class="md-default-theme" class="material-icons">{{appl.icon}}</md-icon>
             {{appl.title}}
           </md-button>
         </md-menu-item>
-      </md-content> 
+      </md-content>
     </md-sidenav>
 
     <!-- Toolbar -->
@@ -56,12 +59,12 @@
 
         <!-- Title -->
         <h2><span>{{active.title}}</span></h2>
-        
+
         <!-- Spacer -->
         <span flex></span>
 
         <!-- Search form -->
-        <md-button class="md-icon-button"">
+        <md-button class="md-icon-button">
           <i class="material-icons">search</i>
         </md-button>
         <form class="search" ng-controller="SearchCtrl as ctrl">
@@ -71,8 +74,9 @@
               md-selected-item-change="ctrl.selectedItemChange(item)"
               md-items="item in ctrl.querySearch(ctrl.query)"
               md-item-text="item.text"
-              md-min-length="1"
               md-menu-class="match"
+              md-min-length="2"
+              md-clear-button="true"
               placeholder="Search knowledge base">
             <md-item-template>
               <span class="item-title">{{item.text}}</span>
@@ -85,7 +89,7 @@
         </form>
 
         <!-- Menu -->
-        <md-button class="md-icon-button"">
+        <md-button class="md-icon-button">
           <i class="material-icons">more_vert</i>
         </md-button>
       </div>
@@ -106,9 +110,14 @@
                   (<a ng-href="https://www.wikidata.org/wiki/{{item.ref}}">{{item.ref}}</a>)
               </span>
               <span flex></span>
-              <md-button class="md-icon-button"">
+              <md-button class="md-icon-button">
                 <a ng-href="/kb/item?fmt=json&id={{item.ref}}">
                   <i class="material-icons">code</i>
+                </a>
+              </md-button>
+              <md-button class="md-icon-button">
+                <a ng-href="/kb/frame?fmt=txt&id={{item.ref}}">
+                  <i class="material-icons">input</i>
                 </a>
               </md-button>
             </div>
@@ -121,32 +130,34 @@
             <div class="card-toolbar" layout="row" layout-align="start center">
               <span class="md-headline">Properties</span>
               <span flex></span>
-              <md-button class="md-icon-button"">
+              <md-button class="md-icon-button">
                 <i class="material-icons">expand_less</i>
               </md-button>
             </div>
-            
+
             <table class="prop-tab">
               <tr class="prop-row" ng-repeat="p in item.properties">
                 <!-- Property name -->
                 <td class="prop-name">
-                  <a ng-click="changeItem(p.ref)">{{p.property}}</a>
+                  <a ng-href="{{itemUrl(p.ref)}}">{{p.property}}</a>
                 </td>
 
                 <!-- Property values -->
                 <td class="prop-values">
                   <div class="prop-value" ng-repeat="v in p.values">
-                    <a ng-click="changeItem(v.ref)"">{{v.text}}</a>
+                    <a ng-href="{{itemUrl(v.ref, v.url)}}">{{v.text}}</a>
 
                     <!-- Property qualifiers -->
                     <table class="qual-tab" ngshow="v.qualifiers">
                       <tr class="qual-row" ng-repeat="qp in v.qualifiers">
                         <td class="qprop-name">
-                          <a ng-click="changeItem(p.ref)">{{qp.property}}</a>
+                          <a ng-href="{{itemUrl(qp.ref)}}">{{qp.property}}</a>
                         </td>
                         <td class="qprop-values">
                           <div class="qprop-value" ng-repeat="qv in qp.values">
-                            <a ng-click="changeItem(qv.ref)"">{{qv.text}}</a>
+                            <a ng-href="{{itemUrl(qv.ref, qv.url)}}">
+                              {{qv.text}}
+                            </a>
                           </div>
                         </td>
                       </tr>
@@ -165,7 +176,7 @@
             <div class="card-toolbar" layout="row" layout-align="start center">
               <span class="md-headline">Image</span>
               <span flex></span>
-              <md-button class="md-icon-button"">
+              <md-button class="md-icon-button">
                 <i class="material-icons">expand_less</i>
               </md-button>
             </div>
@@ -180,7 +191,7 @@
             <div class="card-toolbar" layout="row" layout-align="start center">
               <span class="md-headline">References</span>
               <span flex></span>
-              <md-button class="md-icon-button"">
+              <md-button class="md-icon-button">
                 <i class="material-icons">expand_less</i>
               </md-button>
             </div>
@@ -188,7 +199,7 @@
             <table class="xref-tab">
               <tr class="xref-row" ng-repeat="x in item.xrefs">
                 <td class="xref-name">
-                  <a ng-click="changeItem(x.ref)">{{x.property}}</a>
+                  <a ng-href="{{itemUrl(x.ref)}}">{{x.property}}</a>
                 </td>
                 <td class="xref-values">
                   <div class="xref-value" ng-repeat="v in x.values">

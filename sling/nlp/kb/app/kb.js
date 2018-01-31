@@ -1,6 +1,10 @@
-var app = angular.module('KnowledgeBaseApp', ['ngMaterial']);
+var app = angular.module('KnowledgeBaseApp', ['ngRoute', 'ngMaterial']);
 
-app.controller('KnowledgeBaseCtrl', function($scope, $mdSidenav, $http, $location) {
+app.config(function ($locationProvider) {
+  $locationProvider.html5Mode(true);
+})
+
+app.controller('KnowledgeBaseCtrl', function($scope, $mdSidenav, $location) {
   $scope.applications = [
     {"title": "Knowledge base", "url": "", "icon": "search"}
   ];
@@ -17,7 +21,7 @@ app.controller('KnowledgeBaseCtrl', function($scope, $mdSidenav, $http, $locatio
   $scope.closeSideNavPanel = function() {
     $mdSidenav('left').close();
   };
-  
+
   $scope.switchTo = function(appl) {
     $mdSidenav('left').close();
     $scope.active = appl;
@@ -25,7 +29,7 @@ app.controller('KnowledgeBaseCtrl', function($scope, $mdSidenav, $http, $locatio
   }
 })
 
-app.controller('SearchCtrl', function($scope, $http, $rootScope) {
+app.controller('SearchCtrl', function($http,  $location) {
   var self = this;
   self.query = "";
   self.selected = null;
@@ -39,12 +43,12 @@ app.controller('SearchCtrl', function($scope, $http, $rootScope) {
   }
 
   self.selectedItemChange = function(item) {
-    console.log('Item changed to ' + item.ref);
-    $rootScope.$broadcast('item', item.ref);
+    console.log('Navigate to item ' + item.ref);
+    $location.search('id', item.ref);
   }
 })
 
-app.controller('ItemCtrl', function($scope, $http) {
+app.controller('ItemCtrl', function($scope, $http, $routeParams, $location) {
   var commons_service = "https://commons.wikimedia.org/w/api.php?" +
                          "callback=JSON_CALLBACK&" +
                          "action=query&prop=imageinfo&iiprop=url&redirects&" +
@@ -54,9 +58,10 @@ app.controller('ItemCtrl', function($scope, $http) {
   $scope.item = null;
   $scope.image = null;
   $scope.image_url = null;
+  $scope.route = $routeParams;
 
-  $scope.$on('item', function (event, arg) {
-    $scope.changeItem(arg);
+  $scope.$on('$locationChangeStart', function($event, next, current) {
+    $scope.changeItem($location.search().id);
   });
 
   $scope.hasItem = function() {
@@ -73,6 +78,12 @@ app.controller('ItemCtrl', function($scope, $http) {
 
   $scope.hasReferences = function() {
     return $scope.hasItem() && $scope.item.xrefs.length > 0;
+  }
+
+  $scope.itemUrl = function(ref, url) {
+    if (url) return url;
+    if (!ref) return "";
+    return "/kb/?id=" + ref;
   }
 
   $scope.changeItem = function(ref) {
