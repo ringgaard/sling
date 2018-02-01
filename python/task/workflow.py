@@ -294,7 +294,8 @@ class Workflow(object):
   """A workflow is used for running a set of tasks over some input producing
   some output. The tasks can be connected using channels. A workflow can run
   asynchronously and supports multi-threaded processing."""
-  def __init__(self):
+  def __init__(self, name):
+    self.name = name
     self.tasks = []
     self.channels = []
     self.resources = []
@@ -637,7 +638,7 @@ class Workflow(object):
 
     # Create underlying job in task system.
     if self.job != None: raise Exception("job already running")
-    self.job = api.Job(self)
+    self.job = api.Job(self, self.name)
 
     # Start job.
     self.job.start()
@@ -746,4 +747,8 @@ class Workflow(object):
       prev_counters = current_counters
       prev_channels = channels
     log("workflow completed in " + str(datetime.timedelta(seconds=time.time() - start)))
+
+def start_monitor(port):
+  """Start task monitor."""
+  api.start_task_monitor(port)
 

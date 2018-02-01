@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SLING job dashboard</title>
+  <base href="/status/">
+  <link rel="shortcut icon" href="appicon.ico" type="image/x-icon" />
+
+  <!-- AngularJS libraries -->
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular-animate.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular-route.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular-aria.min.js"></script>
+
+  <!-- Angular Material library -->
+  <script src="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.1/angular-material.min.js"></script>
+
+  <!-- Angular Material style sheet -->
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.1/angular-material.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic">
+
+  <!-- Dashboard browser style sheet -->
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+
+<body ng-app="DashboardApp" ng-controller="DashboardCtrl" ng-cloak>
+  <div layout="column" layout-fill>
+    <!-- Toolbar -->
+    <md-toolbar md-whiteframe="3">
+      <div class="md-toolbar-tools" layout="row" layout-align="start center">
+        <!-- Side nav button -->
+        <md-button id="menubtn" class="md-icon-button"">
+          <i class="material-icons">menu</i>
+        </md-button>
+
+        <!-- Title -->
+        <h2><span>Job status</span></h2>
+
+        <!-- Spacer -->
+        <span flex></span>
+
+        <!-- Menu -->
+        <md-button class="md-icon-button">
+          <i class="material-icons">more_vert</i>
+        </md-button>
+      </div>
+    </md-toolbar>
+
+    <!-- Content -->
+    <md-content id="main" class="md-padding" ng-controller="JobsCtrl as ctrl" flex>
+      <div layout="row">
+        <div layout="column" flex="70">
+          <!-- Job list -->
+          <div class="card">
+            <div class="card-toolbar" layout="row" layout-align="start center">
+              <span class="md-headline">Jobs</span>
+              <span flex></span>
+              <md-button class="md-icon-button">
+                <i class="material-icons">expand_less</i>
+              </md-button>
+            </div>
+
+            <table class="job-tab">
+            </table>
+          </div>
+
+        </div>
+    </md-content>
+  </div>
+
+  <!-- Dashboard components -->
+  <script src="dashboard.js"></script>
+
+</body>
+</html>
+

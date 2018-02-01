@@ -60,6 +60,12 @@ class Stage {
   // Return list of tasks in stage.
   const std::vector<Task *> &tasks() const { return tasks_; }
 
+  // Number of tasks in stage.
+  int num_tasks() const { return tasks_.size(); }
+
+  // Number of completed tasks in stage.
+  int num_completed_tasks() const { return num_completed_; }
+
  private:
   // Stage index.
   int index_;
@@ -163,9 +169,19 @@ class Job : public Environment {
   void ChannelCompleted(Channel *channel) override;
   void TaskCompleted(Task *task) override;
 
+  // List of stages in job.
+  const std::vector<Stage *> stages() const { return stages_; }
+
+  // Job name.
+  const string &name() const { return name_; }
+  void set_name(const string &name) { name_ = name; }
+
  private:
   // Build stages for job.
   void BuildStages();
+
+  // Job name.
+  string name_;
 
   // List of tasks in container indexed by id.
   std::vector<Task *> tasks_;

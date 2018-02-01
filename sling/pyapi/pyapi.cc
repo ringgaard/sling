@@ -23,12 +23,8 @@
 
 namespace sling {
 
-static PyObject *version(PyObject *self, PyObject *args) {
-  return Py_BuildValue("s", "1.0.0");
-}
-
 static PyMethodDef py_funcs[] = {
-  {"version", version, METH_NOARGS, ""},
+  {"start_task_monitor", StartTaskMonitor, METH_VARARGS, ""},
   {nullptr, nullptr, 0, nullptr}
 };
 

@@ -19,8 +19,8 @@ import corpora
 import sling.flags as flags
 
 class WikiWorkflow:
-  def __init__(self, wf=None):
-    if wf == None: wf = Workflow()
+  def __init__(self, name=None, wf=None):
+    if wf == None: wf = Workflow(name)
     self.wf = wf
 
   #---------------------------------------------------------------------------

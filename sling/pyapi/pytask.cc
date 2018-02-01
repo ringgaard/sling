@@ -14,9 +14,16 @@
 
 #include "sling/pyapi/pytask.h"
 
+#include "sling/http/http-server.h"
+#include "sling/task/dashboard.h"
+
 using namespace sling::task;
 
 namespace sling {
+
+// Task monitor.
+static HTTPServer *http = nullptr;
+static task::Dashboard *dashboard = nullptr;
 
 // Python type declarations.
 PyTypeObject PyJob::type;
@@ -47,7 +54,9 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
 
   // Get python job argument.
   PyObject *pyjob = nullptr;
-  if (!PyArg_ParseTuple(args, "O", &pyjob)) return -1;
+  const char *name = nullptr;
+  if (!PyArg_ParseTuple(args, "Os", &pyjob, &name)) return -1;
+  job_->set_name(name);
 
   // Get resources.
   ResourceMapping resource_mapping;
@@ -162,6 +171,11 @@ PyObject *PyJob::Start() {
     Py_INCREF(this);
     running_ = true;
 
+    // Register job in dashboard.
+    if (dashboard != nullptr) {
+      job_->RegisterMonitor(dashboard);
+    }
+
     // Start job.
     job_->Start();
   }
@@ -260,6 +274,31 @@ PyObject *PyJob::PyAttr(PyObject *obj, const char *name) {
   PyObject *attr = PyObject_GetAttrString(obj, name);
   CHECK(attr != nullptr) << name;
   return attr;
+}
+
+PyObject *StartTaskMonitor(PyObject *self, PyObject *args) {
+  // Get port number.
+  int port;
+  if (!PyArg_ParseTuple(args, "i", &port)) return nullptr;
+
+  // Start HTTP server.
+  bool start_http_server = false;
+  if (http == nullptr) {
+    LOG(INFO) << "Start HTTP server in port " << port;
+    HTTPServerOptions options;
+    http = new HTTPServer(options, port);
+    start_http_server = true;
+  }
+
+  // Start dashboard.
+  if (dashboard == nullptr) {
+    dashboard = new task::Dashboard();
+    dashboard->Register(http);
+  }
+
+  if (start_http_server) http->Start();
+
+  Py_RETURN_NONE;
 }
 
 }  // namespace sling

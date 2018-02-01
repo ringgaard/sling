@@ -1,0 +1,16 @@
+.background {
+  background-color: #eeeeee;
+}
+
+.card {
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.16), 0 2px 4px rgba(0,0,0,0.23);
+  padding: 10px 10px 10px 10px;
+  margin: 5px 5px 5px 5px;
+}
+
+.card-toolbar {
+  margin-top: 3px;
+  margin-bottom: 8px;
+}
+

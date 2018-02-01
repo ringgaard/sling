@@ -68,6 +68,12 @@ flags.define("--dryrun",
              default=False,
              action='store_true')
 
+flags.define("--monitor",
+             help="port number for task monitor (0 means no monitor)",
+             default=6767,
+             type=int,
+             metavar="PORT")
+
 flags.define("--refresh",
              help="refresh frequency for workflow status",
              default=10,
@@ -110,7 +116,7 @@ def download_corpora():
 
 def import_wiki():
   if flags.arg.import_wikidata or flags.arg.import_wikipedia:
-    wf = wiki.WikiWorkflow()
+    wf = wiki.WikiWorkflow("wiki-import")
     # Import wikidata.
     if flags.arg.import_wikidata:
       log("Import wikidata")
@@ -129,7 +135,7 @@ def parse_wikipedia():
   if flags.arg.parse_wikipedia:
     for language in flags.arg.languages:
       log("Parse " + language + " wikipedia")
-      wf = wiki.WikiWorkflow()
+      wf = wiki.WikiWorkflow("wikipedia-parsing")
       wf.parse_wikipedia(language=language)
       run_workflow(wf)
 
@@ -138,7 +144,7 @@ def extract_names():
   if flags.arg.extract_names:
     for language in flags.arg.languages:
       log("Extract " + language + " names")
-      wf = wiki.WikiWorkflow()
+      wf = wiki.WikiWorkflow("name-extraction")
       wf.extract_names(language=language)
       run_workflow(wf)
 
@@ -146,20 +152,24 @@ def build_knowledge_base():
   # Build knowledge base repository.
   if flags.arg.build_kb:
     log("Build knowledge base repository")
-    wf = wiki.WikiWorkflow()
+    wf = wiki.WikiWorkflow("knowledge-base")
     wf.build_knowledge_base()
     run_workflow(wf)
 
   # Build name table.
   if flags.arg.build_nametab:
     log("Build name table")
-    wf = wiki.WikiWorkflow()
+    wf = wiki.WikiWorkflow("name-table")
     wf.build_name_table()
     run_workflow(wf)
 
 if __name__ == '__main__':
   # Parse command-line arguments.
   flags.parse()
+
+  # Start task monitor.
+  if flags.arg.monitor > 0:
+    workflow.start_monitor(flags.arg.monitor)
 
   # Download corpora.
   download_corpora()
