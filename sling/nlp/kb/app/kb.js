@@ -97,6 +97,7 @@ app.controller('ItemCtrl', function($scope, $http, $routeParams, $location) {
         if (item.thumbnail) {
           $scope.changeImage(item.thumbnail);
         }
+        document.getElementById("main").scrollTop = 0;
       });
     }
   }
