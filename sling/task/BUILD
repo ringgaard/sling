@@ -63,9 +63,10 @@ cc_library(
   srcs = ["dashboard.cc"],
   hdrs = ["dashboard.h"],
   deps = [
-    #":app",
+    ":app",
     ":job",
     "//sling/base",
+    "//sling/file:embed",
     "//sling/http:http-server",
     "//sling/http:static-content",
     "//sling/util:mutex",
