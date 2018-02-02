@@ -8,6 +8,7 @@
 
 #include "sling/base/types.h"
 #include "sling/http/http-server.h"
+#include "sling/http/static-content.h"
 #include "sling/task/job.h"
 #include "sling/util/mutex.h"
 
@@ -48,6 +49,9 @@ class Dashboard : public Monitor {
 
   // Map of active jobs.
   std::unordered_map<Job *, JobStatus *> active_jobs_;
+
+  // Dashboard app.
+  StaticContent app_{"/", "sling/task/app"};
 
   // Mutex for serializing access to dashboard.
   Mutex mu_;

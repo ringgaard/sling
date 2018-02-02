@@ -12,6 +12,7 @@ Dashboard::~Dashboard() {
 
 void Dashboard::Register(HTTPServer *http) {
   http->Register("/status", this, &Dashboard::HandleStatus);
+  app_.Register(http);
 }
 
 void Dashboard::HandleStatus(HTTPRequest *request, HTTPResponse *response) {
