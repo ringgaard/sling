@@ -141,6 +141,34 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "phrase-table-builder",
+  srcs = ["phrase-table-builder.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:repository",
+    "//sling/frame:object",
+    "//sling/nlp/document:phrase-tokenizer",
+    "//sling/task",
+    "//sling/task:frames",
+    "//sling/util:mutex",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "phrase-table",
+  srcs = ["phrase-table.cc"],
+  hdrs = ["phrase-table.h"],
+  deps = [
+    "//sling/base",
+    "//sling/file:repository",
+    "//sling/frame:store",
+    "//sling/frame:object",
+    "//sling/string:text",
+  ],
+)
+
 cc_binary(
   name = "parse-wiki-text",
   srcs = ["parse-wiki-text.cc"],

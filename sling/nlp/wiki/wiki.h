@@ -10,6 +10,18 @@
 namespace sling {
 namespace nlp {
 
+// Wikipedia name spaces.
+enum WikipediaNamespace {
+  WIKIPEDIA_NAMESPACE_MAIN      = 0,
+  WIKIPEDIA_NAMESPACE_USER      = 2,
+  WIKIPEDIA_NAMESPACE_WIKIPEDIA = 4,
+  WIKIPEDIA_NAMESPACE_FILE      = 6,
+  WIKIPEDIA_NAMESPACE_MEDIAWIKI = 8,
+  WIKIPEDIA_NAMESPACE_TEMPLATE  = 10,
+  WIKIPEDIA_NAMESPACE_HELP      = 12,
+  WIKIPEDIA_NAMESPACE_CATEGORY  = 14,
+};
+
 // Alias sources.
 enum AliasSource {
   SRC_GENERIC                  = 0,

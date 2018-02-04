@@ -11,7 +11,7 @@
 namespace sling {
 namespace nlp {
 
-// Name table for looking up entities based on name.
+// Name table for looking up entities based on name prefix.
 class NameTable {
  public:
   // Load name repository from file.

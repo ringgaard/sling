@@ -301,5 +301,11 @@ PyObject *StartTaskMonitor(PyObject *self, PyObject *args) {
   Py_RETURN_NONE;
 }
 
+PyObject *GetJobStatistics() {
+  if (dashboard == nullptr) Py_RETURN_NONE;
+  string stats = dashboard->GetStatus();
+  return PyString_FromStringAndSize(stats.data(), stats.size());
+}
+
 }  // namespace sling
 

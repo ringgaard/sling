@@ -40,6 +40,9 @@ writers = {
   "text": "text-file-writer",
 }
 
+# Track if workflow system has been activated, i.e. any workflow has been run.
+active=False
+
 class Shard:
   """A shard is one part of a multi-part set."""
   def __init__(self, part, total):
@@ -641,6 +644,8 @@ class Workflow(object):
     self.job = api.Job(self, self.name)
 
     # Start job.
+    global active
+    active = True
     self.job.start()
 
   def wait(self, timeout=None):
@@ -751,4 +756,19 @@ class Workflow(object):
 def start_monitor(port):
   """Start task monitor."""
   api.start_task_monitor(port)
+
+def statistics():
+  """Stats for running and completed jobs."""
+  return api.get_job_statistics()
+
+def save_workflow_log(path):
+  global active
+  if not active: return
+  if path is None or len(path) == 0: return
+  if not os.path.exists(path): os.makedirs(path)
+  logfn = path + "/" + time.strftime("%Y%d%m-%H%M%S") + ".json"
+  logfile = open(logfn, "w")
+  logfile.write(statistics())
+  logfile.close()
+  log("workflow stats saved in " + logfn)
 

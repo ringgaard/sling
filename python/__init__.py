@@ -9,4 +9,5 @@ Array=api.Array
 
 RecordReader=api.RecordReader
 RecordWriter=api.RecordWriter
+PhraseTable=api.PhraseTable
 

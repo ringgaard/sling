@@ -130,6 +130,15 @@ class WikiWorkflow:
                             dir=corpora.wikidir(language),
                             format="records/frame")
 
+  def wikipedia_categories(self, language=None):
+    """Resource for wikipedia categories. This is a set of record files where
+    each Wikipedia article is encoded as a SLING document.
+    """
+    if language == None: language = flags.arg.language
+    return self.wf.resource("categories@10.rec",
+                            dir=corpora.wikidir(language),
+                            format="records/frame")
+
   def wikipedia_redirects(self, language=None):
     """Resource for wikidata redirects. This is encoded as a SLING frame store
     where each redirect is a SLING frame.
@@ -229,8 +238,10 @@ class WikiWorkflow:
     task = self.wf.task("wikipedia-importer", name=name)
     task.attach_input("input", input)
     articles = self.wf.channel(task, name="articles", format="message/frame")
+    categories = self.wf.channel(task, name="categories",
+                                 format="message/frame")
     redirects = self.wf.channel(task, name="redirects", format="message/frame")
-    return articles, redirects
+    return articles, categories, redirects
 
   def wikipedia(self, dump=None, language=None):
     """Convert Wikipedia dump to SLING articles and store them in a set of
@@ -239,17 +250,21 @@ class WikiWorkflow:
     if dump == None: dump = self.wikipedia_dump(language)
     with self.wf.namespace(language + "-wikipedia"):
       # Import Wikipedia dump and convert to SLING format.
-      articles, redirects = self.wikipedia_import(dump)
+      articles, categories, redirects = self.wikipedia_import(dump)
 
       # Write articles.
       articles_output = self.wikipedia_articles(language)
       self.wf.write(articles, articles_output, name="article-writer")
 
+      # Write categories.
+      categories_output = self.wikipedia_categories(language)
+      self.wf.write(categories, categories_output, name="category-writer")
+
       # Write redirects.
       redirects_output = self.wikipedia_redirects(language)
       self.wf.write(redirects, redirects_output, name="redirect-writer")
 
-      return articles_output, redirects_output
+      return articles_output, categories_output, redirects_output
 
   def wikimap(self, wikidata_items=None, language=None, name=None):
     """Task for building mapping from Wikipedia IDs (<wid>) to Wikidata
@@ -435,6 +450,31 @@ class WikiWorkflow:
       builder.add_param("language", language)
       self.wf.connect(self.wf.read(names, name="name-reader"), builder)
       repo = self.name_table(language)
+      builder.attach_output("repository", repo)
+    return repo
+
+  #---------------------------------------------------------------------------
+  # Phrase table
+  #---------------------------------------------------------------------------
+
+  def phrase_table(self, language=None):
+    """Resource for item name phrase table. This is a repository with phrase
+    fingerprints of the item names."""
+    if language == None: language = flags.arg.language
+    return self.wf.resource("phrase-table.repo",
+                            dir=corpora.wikidir(language),
+                            format="repository")
+
+  def build_phrase_table(self, names=None, language=None):
+    """Build phrase table for all items."""
+    if language == None: language = flags.arg.language
+    if names == None: names = self.item_names(language)
+
+    with self.wf.namespace("phrase-table"):
+      builder = self.wf.task("phrase-table-builder")
+      builder.add_param("language", language)
+      self.wf.connect(self.wf.read(names, name="name-reader"), builder)
+      repo = self.phrase_table(language)
       builder.attach_output("repository", repo)
     return repo
 

@@ -82,6 +82,9 @@ struct PyJob : public PyBase {
 // Start task monitor dashboard.
 PyObject *StartTaskMonitor(PyObject *self, PyObject *args);
 
+// Get stats for running and completed jobs.
+PyObject *GetJobStatistics();
+
 }  // namespace sling
 
 #endif  // SLING_PYAPI_PYTASK_H_

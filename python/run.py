@@ -63,8 +63,18 @@ flags.define("--build_nametab",
              default=False,
              action='store_true')
 
+flags.define("--build_phrasetab",
+             help="build name table",
+             default=False,
+             action='store_true')
+
 flags.define("--dryrun",
              help="build worflows but do not run them",
+             default=False,
+             action='store_true')
+
+flags.define("--build_all",
+             help="build all workflows",
              default=False,
              action='store_true')
 
@@ -73,6 +83,11 @@ flags.define("--monitor",
              default=6767,
              type=int,
              metavar="PORT")
+
+flags.define("--logdir",
+             help="directory where workflow logs are stored",
+             default="local/logs",
+             metavar="DIR")
 
 flags.define("--refresh",
              help="refresh frequency for workflow status",
@@ -139,7 +154,7 @@ def parse_wikipedia():
       wf.parse_wikipedia(language=language)
       run_workflow(wf)
 
-def extract_names():
+def build_knowledge_base():
   # Extract item names from wikidata and wikipedia.
   if flags.arg.extract_names:
     for language in flags.arg.languages:
@@ -148,7 +163,6 @@ def extract_names():
       wf.extract_names(language=language)
       run_workflow(wf)
 
-def build_knowledge_base():
   # Build knowledge base repository.
   if flags.arg.build_kb:
     log("Build knowledge base repository")
@@ -163,9 +177,26 @@ def build_knowledge_base():
     wf.build_name_table()
     run_workflow(wf)
 
+  # Build phrase table.
+  if flags.arg.build_phrasetab:
+    log("Build phrase table")
+    wf = wiki.WikiWorkflow("phrase-table")
+    wf.build_phrase_table()
+    run_workflow(wf)
+
 if __name__ == '__main__':
   # Parse command-line arguments.
   flags.parse()
+
+  # Check for complete rebuild.
+  if flags.arg.build_all:
+    flags.arg.import_wikidata = True
+    flags.arg.import_wikipedia = True
+    flags.arg.parse_wikipedia = True
+    flags.arg.extract_names = True
+    flags.arg.build_kb = True
+    flags.arg.build_nametab = True
+    flags.arg.build_phrasetab = True
 
   # Start task monitor.
   if flags.arg.monitor > 0:
@@ -177,9 +208,9 @@ if __name__ == '__main__':
   # Run workflows.
   import_wiki()
   parse_wikipedia()
-  extract_names()
   build_knowledge_base()
 
   # Done.
+  workflow.save_workflow_log(flags.arg.logdir)
   log("Done")
 

@@ -15,13 +15,14 @@ void Dashboard::Register(HTTPServer *http) {
   app_.Register(http);
 }
 
-void Dashboard::HandleStatus(HTTPRequest *request, HTTPResponse *response) {
+string Dashboard::GetStatus() {
   MutexLock lock(&mu_);
-
-  // Build job status reply in JSON format.
   std::stringstream out;
+
+  // Output current time.
   out << "{\"time\":" << time(0);
 
+  // Output jobs.
   out << ",\"jobs\":[";
   bool first_job = true;
   for (JobStatus *status : jobs_) {
@@ -70,9 +71,12 @@ void Dashboard::HandleStatus(HTTPRequest *request, HTTPResponse *response) {
   out << "]";
   out << "}";
 
-  // Return reply.
+  return out.str();
+}
+
+void Dashboard::HandleStatus(HTTPRequest *request, HTTPResponse *response) {
   response->SetContentType("text/json; charset=utf-8");
-  response->Append(out.str());
+  response->Append(GetStatus());
 }
 
 void Dashboard::OnJobStart(Job *job) {

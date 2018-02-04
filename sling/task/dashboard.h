@@ -26,6 +26,9 @@ class Dashboard : public Monitor {
   // Register job status service.
   void Register(HTTPServer *http);
 
+  // Get job status in JSON format.
+  string GetStatus();
+
   // Handle job status queries.
   void HandleStatus(HTTPRequest *request, HTTPResponse *response);
 
