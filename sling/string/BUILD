@@ -109,5 +109,9 @@ cc_library(
     "//sling/base",
     "//sling/util:city",
   ],
+  copts = [
+    "-Wno-deprecated",
+    "-Wno-sign-compare",
+  ],
 )
 
