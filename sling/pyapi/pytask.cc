@@ -307,5 +307,10 @@ PyObject *GetJobStatistics() {
   return PyString_FromStringAndSize(stats.data(), stats.size());
 }
 
+PyObject *FinalizeDashboard() {
+  if (dashboard != nullptr) dashboard->Finalize(60);
+  Py_RETURN_NONE;
+}
+
 }  // namespace sling
 

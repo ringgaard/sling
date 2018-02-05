@@ -757,6 +757,13 @@ def start_monitor(port):
   """Start task monitor."""
   api.start_task_monitor(port)
 
+def stop_monitor():
+  """Stop task monitor."""
+  global active
+  if active:
+    log("sending final status to monitor")
+    api.finalize_dashboard();
+
 def statistics():
   """Stats for running and completed jobs."""
   return api.get_job_statistics()

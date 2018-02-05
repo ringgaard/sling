@@ -18,6 +18,8 @@ namespace task {
 // Dashboard for monitoring jobs.
 class Dashboard : public Monitor {
  public:
+  enum Status {IDLE, MONITORED, FINAL, SYNCHED, TERMINAL};
+
   // List of counters.
   typedef std::vector<std::pair<string, int64>> CounterList;
 
@@ -25,6 +27,9 @@ class Dashboard : public Monitor {
 
   // Register job status service.
   void Register(HTTPServer *http);
+
+  // Wait until final status has been reported or timeout (in seconds).
+  void Finalize(int timeout);
 
   // Get job status in JSON format.
   string GetStatus();
@@ -52,6 +57,10 @@ class Dashboard : public Monitor {
 
   // Map of active jobs.
   std::unordered_map<Job *, JobStatus *> active_jobs_;
+
+  // Dashboard monitoring status. This is used for the final handshake to
+  // report the final status of the jobs before termination.
+  Status status_ = IDLE;
 
   // Dashboard app.
   StaticContent app_{"/", "sling/task/app"};

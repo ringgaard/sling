@@ -4,7 +4,27 @@ app.config(function ($locationProvider) {
   $locationProvider.html5Mode(true);
 })
 
-app.controller('DashboardCtrl', function($scope, $location, $rootScope) {
+app.filter('padding', function () {
+  return function(num, width) {
+    return ("0000" + num).slice(-width);
+  };
+});
+
+app.filter('width', function () {
+  return function(num, width) {
+    if (num === undefined) return num;
+    return ("" + num).padStart(width);
+  };
+});
+
+app.controller('DashboardCtrl', function($scope, $location, $rootScope, $interval,
+                                         $mdToast) {
+  $scope.auto = false;
+  $scope.freq = 5;
+  $scope.done = false;
+  $scope.error = false;
+  var ticks = 0;
+
   $scope.host = function() {
     return $location.host() + ":" + $location.port();
   };
@@ -12,6 +32,41 @@ app.controller('DashboardCtrl', function($scope, $location, $rootScope) {
   $rootScope.refresh = function() {
     $rootScope.$emit('refresh');
   };
+
+  $scope.play = function(state, rate) {
+    $scope.auto = state;
+    if (rate != undefined) $scope.freq = rate;
+    ticks = 0;
+  }
+
+  $interval(function() {
+    ticks++;
+    if ($scope.auto && ticks++ % $scope.freq == 0) {
+      $rootScope.$emit('refresh');
+    }
+  }, 1000);
+
+  $rootScope.$on('error', function(event, args) {
+    if (!$scope.error) {
+      $mdToast.show($mdToast.simple()
+          .textContent('Connection to server lost')
+          .hideDelay(3000)
+      );
+    }
+    $scope.error = true;
+    $scope.auto = false;
+  });
+
+  $rootScope.$on('done', function(event, args) {
+    if (!$scope.done) {
+      $mdToast.show($mdToast.simple()
+          .textContent('Workflow completed')
+          .hideDelay(3000)
+      );
+    }
+    $scope.done = true;
+    $scope.auto = false;
+  });
 })
 
 app.controller('StatusCtrl', function($scope, $http, $rootScope) {
@@ -20,37 +75,41 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
   $scope.selected = 0;
 
   $rootScope.$on('refresh', function(event, args) {
-    console.log("refresh");
     $scope.refresh();
   });
 
   $scope.update = function() {
-    console.log("update");
     var status = $scope.status
+    //console.log("update", status);
 
     // Update job list.
-    var jobs = [];
     for (var i = 0; i < status.jobs.length; ++i) {
-      job = status.jobs[i];
-      job.time = status.time;
-      item = {};
-      item.id = i;
-      item.name = job.name;
-      item.job = job;
+      var jobstatus = status.jobs[i];
+
+      // Create new job tab if needed.
+      var job = $scope.jobs[i];
+      if (job == null) {
+        job = {};
+        job.id = i;
+        job.name = jobstatus.name;
+        job.prev_counters = null;
+        job.prev_channels = null;
+        job.prev_time = null;
+        $scope.jobs[i] = job;
+      }
 
       // Compute elapsed time for job.
-      var ended = job.ended ? job.ended : job.time;
-      var elapsed = ended - job.started;
-      var hours = Math.floor(elapsed / 3600);
-      var mins = Math.floor((elapsed % 3600) / 60);
-      var secs = Math.floor(elapsed % 60);
-      item.time = hours + "h  " + mins + "m " + secs + "s";
+      var ended = jobstatus.ended ? jobstatus.ended : status.time;
+      var elapsed = ended - jobstatus.started;
+      job.hours = Math.floor(elapsed / 3600);
+      job.mins = Math.floor((elapsed % 3600) / 60);
+      job.secs = Math.floor(elapsed % 60);
 
       // Compute task progress for job.
       var progress = "";
-      if (job.stages) {
-        for (var j = 0; j < job.stages.length; ++j) {
-          var stage = job.stages[j];
+      if (jobstatus.stages) {
+        for (var j = 0; j < jobstatus.stages.length; ++j) {
+          var stage = jobstatus.stages[j];
           if (j > 0) progress += "│ ";
           progress += "█ ".repeat(stage.done);
           progress += "░ ".repeat(stage.tasks - stage.done);
@@ -58,69 +117,91 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
       } else {
         progress = "✔";
       }
-      item.status = progress;
+      job.progress = progress;
 
-      jobs.push(item);
+      // Process job counters.
+      var counters = [];
+      var channels = [];
+      var channel_map = {};
+      var prev_counters = job.prev_counters;
+      var prev_channels = job.prev_channels;
+      var period = status.time - job.prev_time;
+      var channel_pattern = /(input|output)_(.+)\[(.+\..+)\]/;
+      for (name in jobstatus.counters) {
+        item = {};
+        item.name = name;
+
+        // Check for channel stat counter.
+        m = name.match(channel_pattern);
+        if (m) {
+          // Look up channel.
+          var metric = m[2];
+          var channel_name = m[3];
+          var ch = channel_map[channel_name];
+          if (ch == null) {
+            ch = {};
+            ch.name = channel_name;
+            channel_map[channel_name] = ch;
+            channels.push(ch);
+          }
+
+          // Update channel metrics.
+          var value = jobstatus.counters[name];
+          if (metric == "key_bytes") {
+            ch.key_bytes = value;
+          } else if (metric == "value_bytes") {
+            ch.value_bytes = value;
+          } else if (metric == "messages") {
+            ch.messages = value;
+          } else if (metric == "shards") {
+            ch.shards_total = value;
+          } else if (metric == "shards_done") {
+            ch.shards_done = value;
+          }
+        } else {
+          item.value = jobstatus.counters[name];
+          if (prev_counters && period > 0) {
+            var prev_value = prev_counters[name];
+            var delta = item.value - prev_value;
+            item.rate = delta / elapsed;
+          }
+          counters.push(item);
+        }
+      }
+
+      // Compute bandwidth and throughput.
+      if (prev_channels) {
+        for (var i = 0; i < channels.length; ++i) {
+          var ch = channels[i];
+          var prev = prev_channels[ch.name];
+          if (prev) {
+            var current_bytes = ch.key_bytes + ch.value_bytes;
+            var prev_bytes = prev.key_bytes + prev.value_bytes;
+            ch.bandwidth = (current_bytes - prev_bytes) / period;
+            ch.throughput = (ch.messages - prev.messages) / period;
+          }
+        }
+      }
+
+      // Update job.
+      job.counters = counters;
+      job.channels = channels;
+      job.prev_counters = jobstatus.counters;
+      job.prev_channels = channel_map;
+      job.prev_time = status.time;
+      if (status.finished) $rootScope.$emit('done');
     }
-    $scope.jobs = jobs;
-
-    // Update job status.
-    $rootScope.$emit('job', $scope.status.jobs[$scope.selected]);
   }
 
   $scope.refresh = function() {
-    console.log('Fetch status');
-    $http.get('/status').then(function(results) {
-      $scope.status = results.data;
-      console.log('status', $scope.status);
+    $http.get('/status').then(function(response) {
+      $scope.status = response.data;
       $scope.update($scope.status);
+    }, function(response) {
+      $rootScope.$emit('error');
     });
   }
 
-  $scope.select = function(id) {
-    console.log("select", id);
-    $scope.selected = id;
-    $rootScope.$emit('job', $scope.status.jobs[id]);
-  }
-
   $scope.refresh();
-})
-
-app.controller('JobCtrl', function($scope, $rootScope) {
-  $scope.job = null;
-  $scope.counters = null;
-  $scope.prev_counters = null;
-  $scope.prev_time = null;
-
-  $scope.refresh = function() {
-    var job = $scope.job;
-    console.log("refresh", job);
-    var ctrs = [];
-    var prev = $scope.prev_counters;
-    var elapsed = job.time - $scope.prev_time;
-    for (name in job.counters) {
-      item = {};
-      item.name = name;
-      item.value = job.counters[name];
-      if (prev && elapsed > 0) {
-        var prev_value = prev[name];
-        var delta = item.value - prev_value;
-        item.rate = delta / elapsed;
-      }
-      ctrs.push(item);
-    }
-    $scope.counters = ctrs;
-    $scope.prev_counters = job.counters;
-    $scope.prev_time = job.time;
-  }
-
-  $scope.hasJob = function() {
-    return $scope.job != null;
-  }
-
-  $rootScope.$on('job', function(event, args) {
-    $scope.job = args;
-    $scope.refresh();
-  });
 })
 

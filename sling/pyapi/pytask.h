@@ -85,6 +85,9 @@ PyObject *StartTaskMonitor(PyObject *self, PyObject *args);
 // Get stats for running and completed jobs.
 PyObject *GetJobStatistics();
 
+// Wait until final status has been sent by dashboard.
+PyObject *FinalizeDashboard();
+
 }  // namespace sling
 
 #endif  // SLING_PYAPI_PYTASK_H_

@@ -89,12 +89,6 @@ flags.define("--logdir",
              default="local/logs",
              metavar="DIR")
 
-flags.define("--refresh",
-             help="refresh frequency for workflow status",
-             default=10,
-             type=int,
-             metavar="SECS")
-
 def run_workflow(wf):
   # In dryrun mode the workflow is just dumped without running it.
   if flags.arg.dryrun:
@@ -105,11 +99,10 @@ def run_workflow(wf):
   log("start workflow")
   wf.wf.start()
 
-  # Monitor workflow until it completes.
-  if flags.arg.refresh == 0:
-    wf.wf.wait()
-  else:
-    wf.wf.monitor(flags.arg.refresh)
+  # Wait until workflow completes. Poll every second to make the workflow
+  # interruptible.
+  done = False
+  while not done: done = wf.wf.wait(1000)
 
 def download_corpora():
   # Download wikidata dump.
@@ -199,8 +192,7 @@ if __name__ == '__main__':
     flags.arg.build_phrasetab = True
 
   # Start task monitor.
-  if flags.arg.monitor > 0:
-    workflow.start_monitor(flags.arg.monitor)
+  if flags.arg.monitor > 0: workflow.start_monitor(flags.arg.monitor)
 
   # Download corpora.
   download_corpora()
@@ -210,7 +202,10 @@ if __name__ == '__main__':
   parse_wikipedia()
   build_knowledge_base()
 
-  # Done.
+  # Stop task monitor.
+  if flags.arg.monitor > 0: workflow.stop_monitor()
   workflow.save_workflow_log(flags.arg.logdir)
+
+  # Done.
   log("Done")
 

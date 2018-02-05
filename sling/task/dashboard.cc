@@ -1,6 +1,7 @@
 #include "sling/task/dashboard.h"
 
 #include <time.h>
+#include <unistd.h>
 #include <sstream>
 
 namespace sling {
@@ -19,8 +20,9 @@ string Dashboard::GetStatus() {
   MutexLock lock(&mu_);
   std::stringstream out;
 
-  // Output current time.
+  // Output current time and status.
   out << "{\"time\":" << time(0);
+  out << ",\"finished\":" << ((status_ == FINAL) ? 1 : 0);
 
   // Output jobs.
   out << ",\"jobs\":[";
@@ -77,6 +79,8 @@ string Dashboard::GetStatus() {
 void Dashboard::HandleStatus(HTTPRequest *request, HTTPResponse *response) {
   response->SetContentType("text/json; charset=utf-8");
   response->Append(GetStatus());
+  if (status_ == IDLE) status_ = MONITORED;
+  if (status_ == FINAL) status_ = SYNCHED;
 }
 
 void Dashboard::OnJobStart(Job *job) {
@@ -108,6 +112,17 @@ void Dashboard::OnJobDone(Job *job) {
   // Remove job from active job list.
   active_jobs_.erase(job);
   status->job = nullptr;
+}
+
+void Dashboard::Finalize(int timeout) {
+  if (status_ == MONITORED) {
+    // Signal that all jobs are done.
+    status_ = FINAL;
+
+    // Wait until final status has been sent back.
+    for (int wait = 0; wait < timeout && status_ != SYNCHED; ++wait) sleep(1);
+  }
+  status_ = TERMINAL;
 }
 
 }  // namespace task

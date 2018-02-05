@@ -28,6 +28,7 @@ namespace sling {
 static PyMethodDef py_funcs[] = {
   {"start_task_monitor", (PyCFunction) StartTaskMonitor, METH_VARARGS, ""},
   {"get_job_statistics", (PyCFunction) GetJobStatistics, METH_NOARGS, ""},
+  {"finalize_dashboard", (PyCFunction) FinalizeDashboard, METH_NOARGS, ""},
   {nullptr, nullptr, 0, nullptr}
 };
 

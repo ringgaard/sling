@@ -41,17 +41,46 @@
         <!-- Spacer -->
         <span flex></span>
 
-        <!-- Menu -->
+        <!-- Refresh -->
+        <md-button class="md-icon-button" ng-show="done">
+          <i class="material-icons">done</i>
+        </md-button>
+        <md-button class="md-icon-button" ng-show="error">
+          <i class="material-icons">error</i>
+        </md-button>
+        <md-button class="md-icon-button" ng-disabled="auto" ng-click="play(true)">
+          <i class="material-icons">play_arrow</i>
+        </md-button>
+        <md-button class="md-icon-button" ng-disabled="!auto" ng-click="play(false)">
+          <i class="material-icons">pause</i>
+        </md-button>
         <md-button class="md-icon-button" ng-click="refresh()">
           <i class="material-icons">refresh</i>
         </md-button>
+
+        <!-- Menu -->
+        <md-menu md-position-mode="target-right bottom">
+          <md-button aria-label= "Open menu" class="md-icon-button" ng-click="$mdOpenMenu($event)">
+            <md-icon md-menu-origin class="material-icons">more_vert</md-icon>
+          </md-button>
+          <md-menu-content width="10">
+            <md-menu-item ng-repeat="secs in [5, 15, 30, 60]">
+              <md-button ng-click = "play(true, secs)">
+                <div layout="row">
+                  <p flex>Refresh every {{secs}} seconds</p>
+                </div>
+              </md-button>
+            </md-menu-item>
+          </md-menu-content>
+        </md-menu>
+
       </div>
     </md-toolbar>
 
     <!-- Content -->
     <md-content id="main" class="md-padding" ng-controller="StatusCtrl as ctrl" flex>
       <!-- Job list -->
-      <table class="mdl-data-table mdl-data-table--selectable mdl-shadow--2dp">
+      <table class="mdl-data-table mdl-shadow--2dp">
         <thead>
           <tr>
             <th>Job</th>
@@ -61,37 +90,65 @@
           </tr>
         </thead>
         <tbody>
-          <tr ng-repeat="job in jobs track by job.name", ng-click="select(job.id)">
+          <tr ng-repeat="job in jobs track by job.name">
             <td>#{{job.id}}</td>
             <td class="mdl-data-table__cell--non-numeric">{{job.name}}</td>
-            <td>{{job.time}}</td>
-            <td class="mdl-data-table__cell--non-numeric" width="100%">{{job.status}}</td>
+            <td>{{job.hours}}h {{job.mins | padding: 2}}m {{job.secs | padding: 2}}s</td>
+            <td class="mdl-data-table__cell--non-numeric" width="100%">{{job.progress}}</td>
           </tr>
         </tbody>
       </table>
 
-      <!-- Selected job status -->
-      <div class="card" ng-controller="JobCtrl as jctrl" ng-show="hasJob()">
-        <div class="card-toolbar" layout="row" layout-align="start center">
-          <span class="md-headline">Job status for {{job.name}}</span>
-        </div>
+      <!-- Job status -->
+      <md-tabs md-selected="selected" md-dynamic-height>
+        <md-tab ng-repeat="job in jobs" label="{{job.name}}">
 
-        <table class="mdl-data-table">
-          <thead>
-            <tr>
-              <th class="mdl-data-table__cell--non-numeric">Counter</th>
-              <th>Value</th>
-              <th>Rate (/s)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr ng-repeat="ctr in counters track by ctr.name">
-              <td class="mdl-data-table__cell--non-numeric">{{ctr.name}}</td>
-              <td>{{ctr.value|number:0}}</td>
-              <td>{{ctr.rate|number:0}}</td>
-            </tr>
-          </tbody>
-        </table>
+          <!-- Channels -->
+          <table class="mdl-data-table mdl-shadow--2dp counter-table">
+            <thead>
+              <tr>
+                <th class="mdl-data-table__cell--non-numeric">Channel</th>
+                <th>Key bytes</th>
+                <th>Value bytes</th>
+                <th>Bandwidth</th>
+                <th>Messages</th>
+                <th>Throughput</th>
+                <th>Shards</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="channel in job.channels  | orderBy: 'name' track by channel.name">
+                <td class="mdl-data-table__cell--non-numeric">{{channel.name}}</td>
+                <td>{{channel.key_bytes|number:0|width:20}}</td>
+                <td>{{channel.value_bytes|number:0|width:20}}</td>
+                <td>{{channel.bandwidth / 100000|number:3|width:20}} MB/s</td>
+                <td>{{channel.messages|number:0|width:20}}</td>
+                <td>{{channel.throughput|number:0|width:20}} MPS</td>
+                <td>{{channel.shards_done}} / {{channel.shards_total}}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Counters -->
+          <table class="mdl-data-table mdl-shadow--2dp counter-table">
+            <thead>
+              <tr>
+                <th class="mdl-data-table__cell--non-numeric">Counter</th>
+                <th>Value</th>
+                <th>Rate (/s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="ctr in job.counters  | orderBy: 'name' track by ctr.name">
+                <td class="mdl-data-table__cell--non-numeric">{{ctr.name}}</td>
+                <td>{{ctr.value|number:0}}</td>
+                <td>{{ctr.rate|number:0}}</td>
+              </tr>
+            </tbody>
+          </table>
+
+        </md-tab>
+      </md-tabs>
 
       </div>
 
