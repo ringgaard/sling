@@ -10,13 +10,6 @@ app.filter('padding', function () {
   };
 });
 
-app.filter('width', function () {
-  return function(num, width) {
-    if (num === undefined) return num;
-    return ("" + num).padStart(width);
-  };
-});
-
 app.controller('DashboardCtrl', function($scope, $location, $rootScope, $interval,
                                          $mdToast) {
   $scope.auto = false;
@@ -30,11 +23,13 @@ app.controller('DashboardCtrl', function($scope, $location, $rootScope, $interva
   };
 
   $rootScope.refresh = function() {
+    $scope.error = false;
     $rootScope.$emit('refresh');
   };
 
   $scope.play = function(state, rate) {
     $scope.auto = state;
+    $scope.error = false;
     if (rate != undefined) $scope.freq = rate;
     ticks = 0;
   }
@@ -42,6 +37,7 @@ app.controller('DashboardCtrl', function($scope, $location, $rootScope, $interva
   $interval(function() {
     ticks++;
     if ($scope.auto && ticks++ % $scope.freq == 0) {
+      $scope.error = false;
       $rootScope.$emit('refresh');
     }
   }, 1000);
@@ -64,6 +60,7 @@ app.controller('DashboardCtrl', function($scope, $location, $rootScope, $interva
           .hideDelay(3000)
       );
     }
+    $scope.error = false;
     $scope.done = true;
     $scope.auto = false;
   });
@@ -80,7 +77,6 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
 
   $scope.update = function() {
     var status = $scope.status
-    //console.log("update", status);
 
     // Update job list.
     for (var i = 0; i < status.jobs.length; ++i) {
@@ -88,7 +84,7 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
 
       // Create new job tab if needed.
       var job = $scope.jobs[i];
-      if (job == null) {
+      if (job == undefined) {
         job = {};
         job.id = i;
         job.name = jobstatus.name;
@@ -121,6 +117,7 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
 
       // Process job counters.
       var counters = [];
+      //counters.push({'name': "AAAA" + job.name, "value": 0});
       var channels = [];
       var channel_map = {};
       var prev_counters = job.prev_counters;
@@ -171,8 +168,8 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
 
       // Compute bandwidth and throughput.
       if (prev_channels) {
-        for (var i = 0; i < channels.length; ++i) {
-          var ch = channels[i];
+        for (var j = 0; j < channels.length; ++j) {
+          var ch = channels[j];
           var prev = prev_channels[ch.name];
           if (prev) {
             var current_bytes = ch.key_bytes + ch.value_bytes;
@@ -196,7 +193,7 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
   $scope.refresh = function() {
     $http.get('/status').then(function(response) {
       $scope.status = response.data;
-      $scope.update($scope.status);
+      $scope.update();
     }, function(response) {
       $rootScope.$emit('error');
     });

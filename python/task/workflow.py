@@ -770,12 +770,13 @@ def statistics():
 
 def save_workflow_log(path):
   global active
-  if not active: return
-  if path is None or len(path) == 0: return
-  if not os.path.exists(path): os.makedirs(path)
+  if not active: return False
+  if path is None or len(path) == 0: return False
+  if not os.path.exists(path): return False
   logfn = path + "/" + time.strftime("%Y%d%m-%H%M%S") + ".json"
   logfile = open(logfn, "w")
   logfile.write(statistics())
   logfile.close()
   log("workflow stats saved in " + logfn)
+  return True
 

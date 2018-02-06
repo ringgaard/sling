@@ -192,7 +192,8 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   // Check if file has changed.
   const char *cached = request->Get("If-modified-since");
   const char *control = request->Get("Cache-Control");
-  if (cached != nullptr && control == nullptr) {
+  bool refresh = control != nullptr && strcmp(control, "maxage=0") == 0;
+  if (!refresh && cached) {
     if (ParseRFCTime(cached) == stat.mtime) {
       response->set_status(304);
       response->SetContentLength(0);
@@ -206,13 +207,13 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
     response->SetContentType(mimetype);
   }
 
-  // Set file modified time.
-  char datebuf[32];
-  response->Set("Last-Modified", RFCTime(stat.mtime, datebuf));
-
   // Do not cache content if requested.
   if (!FLAGS_webcache) {
     response->Set("Cache-Control", "no-cache");
+  } else {
+    // Set file modified time.
+    char datebuf[32];
+    response->Set("Last-Modified", RFCTime(stat.mtime, datebuf));
   }
 
   // Do not return file content if only headers were requested.
