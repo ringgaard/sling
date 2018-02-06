@@ -12,36 +12,90 @@
 namespace sling {
 namespace nlp {
 
+// Date with day, month, and year.
+class Date {
+ public:
+  // Granularity for date.
+  enum Precision {NONE, MILLENNIUM, CENTURY, DECADE, YEAR, MONTH, DAY};
+
+  // Initialize date from parts.
+  Date(int year, int month, int day, Precision precision)
+      : year_(year), month_(month), day_(day), precision_(precision) {}
+
+  // Initialize date from object.
+  Date(const Object &object);
+
+  // Return year. Return 0 if date is invalid.
+  int year() const { return year_; }
+
+  // Return month (1=January). Returns 0 if no month in date.
+  int month() const { return month_; }
+
+  // Return day of month (first day of month is 1). Return 0 if no day in date.
+  int day() const { return day_; }
+
+  // Return precision of date.
+  Precision precision() const { return precision_; }
+
+ private:
+  int year_;
+  int month_;
+  int day_;
+  Precision precision_;
+};
+
 // Calendar with items about (Gregorian) calendar concepts.
 class Calendar {
  public:
   // Initialize calendar from store.
   void Init(Store *store);
 
-  // Convert date to string.
-  string DateAsString(const Object &date) const;
+  // Convert date to human-readable string.
+  string DateAsString(const Date &date) const;
+  string DateAsString(const Object &object) const {
+    return DateAsString(Date(object));
+  }
+
+  // Convert date to integer or return -1 if the date cannot be encoded as an
+  // integer. This can only be used for dates after 1000 AD.
+  static int DateNumber(const Date &date);
+
+  // Convert date to string format. The date format dependends on the precision:
+  // DAY:        [+|-]YYYY-MM-DD
+  // MONTH:      [+|-]YYYY-MM
+  // YEAR:       [+|-]YYYY
+  // DECADE:     [+|-]YYY*
+  // CENTURY:    [+|-]YY**
+  // MILLENNIUM: [+|-]Y***
+  static string DateString(const Date &date);
 
   // Get item for day.
+  Handle Day(const Date &date) const;
   Handle Day(int month, int day) const;
   Text DayName(int month, int day) const { return ItemName(Day(month, day)); }
 
   // Get item for month.
+  Handle Month(const Date &date) const;
   Handle Month(int month) const;
   Text MonthName(int month) const { return ItemName(Month(month)); }
 
   // Get item for year.
+  Handle Year(const Date &date) const;
   Handle Year(int year) const;
   Text YearName(int year) const { return ItemName(Year(year)); }
 
   // Get item for decade.
+  Handle Decade(const Date &date) const;
   Handle Decade(int year) const;
   Text DecadeName(int year) const { return ItemName(Decade(year)); }
 
   // Get item for century.
+  Handle Century(const Date &date) const;
   Handle Century(int year) const;
   Text CenturyName(int year) const { return ItemName(Century(year)); }
 
   // Get item for millennium.
+  Handle Millennium(const Date &date) const;
   Handle Millennium(int year) const;
   Text MillenniumName(int year) const { return ItemName(Millennium(year)); }
 
@@ -86,33 +140,6 @@ class Calendar {
   // Millennia. The millennia are numbered as (year-1)/1000+1 for AD and
   // (year+1)/1000-1 for BC.
   CalendarMap millennia_;
-};
-
-// Date with day, month, and year.
-class Date {
- public:
-  enum Precision {MILLENNIUM, CENTURY, DECADE, YEAR, MONTH, DAY};
-
-  // Initialize date from object.
-  Date(const Object &object);
-
-  // Return year. Return 0 if date is invalid.
-  int year() const { return year_; }
-
-  // Return month (1=January). Returns 0 if no month in date.
-  int month() const { return month_; }
-
-  // Return day of month (first day of month is 1). Return 0 if no day in date.
-  int day() const { return day_; }
-
-  // Return precision of date.
-  Precision precision() const { return precision_; }
-
- private:
-  int year_;
-  int month_;
-  int day_;
-  Precision precision_;
 };
 
 }  // namespace nlp

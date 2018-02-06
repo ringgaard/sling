@@ -99,6 +99,14 @@ void KnowledgeService::Load(const string &knowledge_base,
   // Load name table.
   LOG(INFO) << "Loading name table from " << name_table;
   aliases_.Load(name_table);
+
+  for (int y = 2018; y > -111; --y) {
+    LOG(INFO) << "y" << y
+              << " year: " << calendar_.YearName(y)
+              << " decade: " << calendar_.DecadeName(y)
+              << " century: " << calendar_.CenturyName(y)
+              << " millennium: " << calendar_.MillenniumName(y);
+  }
 }
 
 void KnowledgeService::Register(HTTPServer *http) {

@@ -49,6 +49,7 @@ cc_library(
   deps = [
     ":wiki",
     "//sling/frame",
+    "//sling/nlp/kb:calendar",
     "//sling/stream:input",
     "//sling/stream:output",
     "//sling/string:text",

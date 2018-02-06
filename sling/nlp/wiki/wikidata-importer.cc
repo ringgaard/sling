@@ -8,6 +8,7 @@
 #include "sling/frame/reader.h"
 #include "sling/frame/serialization.h"
 #include "sling/frame/store.h"
+#include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/wiki/wiki.h"
 #include "sling/stream/input.h"
 #include "sling/stream/output.h"
@@ -19,6 +20,25 @@
 
 namespace sling {
 namespace nlp {
+
+// Conversion table for Wikidata JSON date precision.
+static Date::Precision date_precision[] = {
+  Date::NONE,       // 0: 1 Gigayear
+  Date::NONE,       // 1: 100 Megayears
+  Date::NONE,       // 2: 10 Megayears
+  Date::NONE,       // 3: Megayear
+  Date::NONE,       // 4: 100 Kiloyears
+  Date::NONE,       // 5: 10 Kiloyears
+  Date::MILLENNIUM, // 6: Kiloyear
+  Date::CENTURY,    // 7: 100 years
+  Date::DECADE,     // 8: 10 years
+  Date::YEAR,       // 9: years
+  Date::MONTH,      // 10: months
+  Date::DAY,        // 11: days
+  Date::NONE,       // 12: hours (unused)
+  Date::NONE,       // 13: minutes (unused)
+  Date::NONE,       // 14: seconds (unused)
+};
 
 // Parse Wikidata items and convert to SLING profiles.
 class WikidataImporter : public task::Processor {
@@ -246,6 +266,8 @@ class WikidataImporter : public task::Processor {
     const char *s_end = s + str.length();
     const char *f = format.data();
     while (s != s_end) {
+      int ch = *s;
+      if (ch == '-') ch = '+';
       if (*f != '*' && *f != *s) return false;
       s++;
       f++;
@@ -368,45 +390,29 @@ class WikidataImporter : public task::Processor {
   }
 
   // Convert Wikidata timestamp.
-  Handle ConvertTime(Store *store, const Frame &value) {
+  Handle ConvertTime(const Frame &value) {
     // Check if string matches simple date format.
+    Store *store = value.store();
     Handle timestamp = value.GetHandle(s_time_);
     if (!store->IsString(timestamp)) return timestamp;
     Text str = store->GetString(timestamp)->str();
     if (!MatchesFormat(str, "+****-**-**T00:00:00Z")) return timestamp;
 
-    // Get year, month, and day.
+    // Get year, month, and day, and precision.
     int year = ParseNumber(str.substr(1, 4));
     int month = ParseNumber(str.substr(6, 2));
     int day = ParseNumber(str.substr(9, 2));
     int precision = value.GetInt(s_precision_, 11);
-    if (precision < 0) return timestamp;
-    if (year < 1000 || month < 0 || day < 0) {
-      // Clear parts of the date string to indicate precision.
-      string ts = str.str();
-      if (precision <= 10) ts[9] = ts[10] = '0';  // zero day
-      if (precision <= 9) ts[6] = ts[7] = '0';    // zero month
-      if (precision <= 8) ts[4] = '*';            // decade
-      if (precision <= 7) ts[3] = '*';            // century
-      if (precision <= 6) ts[2] = '*';            // millennium
+    if (year < 0 || month < 0 || day < 0 || precision < 0) return timestamp;
+    if (str[0] == '-') year = -year;
+    Date date(year, month, day, date_precision[precision]);
 
-      return store->AllocateString(ts);
-    } else {
-      // Convert to integer encoded date.
-      if (precision == 6) {
-        return Handle::Integer((year - 1) / 1000);
-      } else if (precision == 7) {
-        return Handle::Integer((year - 1) / 100);
-      } else if (precision == 8) {
-        return Handle::Integer(year / 10);
-      } else if (precision == 9 || (day == 0 && month == 0)) {
-        return Handle::Integer(year);
-      } else if (precision == 10 || day == 0) {
-        return Handle::Integer(year * 100 + month);
-      } else {
-        return Handle::Integer(year * 10000 + month * 100 + day);
-      }
-    }
+    // Convert timestamp to simplified integer or string format.
+    int number = Calendar::DateNumber(date);
+    if (number != -1) Handle::Integer(number);
+    string ts = Calendar::DateString(date);
+    if (!ts.empty()) return store->AllocateString(ts);
+    return timestamp;
   }
 
   // Convert Wikidata entity id.
@@ -461,7 +467,6 @@ class WikidataImporter : public task::Processor {
 
   // Convert Wikidata value.
   Handle ConvertValue(const Frame &datavalue) {
-    Store *store = datavalue.store();
     String type = datavalue.Get(s_type_).AsString();
     if (type.IsNil()) return Handle::nil();
     if (type.equals("string")) {
@@ -473,7 +478,7 @@ class WikidataImporter : public task::Processor {
       if (type.equals("wikibase-entityid")) {
         return ConvertEntity(value);
       } else if (type.equals("time")) {
-        return ConvertTime(store, value);
+        return ConvertTime(value);
       } else if (type.equals("quantity")) {
         return ConvertQuantity(value);
       } else if (type.equals("monolingualtext")) {
