@@ -1,13 +1,5 @@
 package(default_visibility = ["//visibility:public"])
 
-#load("/tools/proto", "proto_library")
-
-#proto_library(
-#  name = "wiki-proto",
-#  src = "wiki.proto",
-#  generate_cc = 1,
-#)
-
 cc_library(
   name = "wiki",
   srcs = ["wiki.cc"],

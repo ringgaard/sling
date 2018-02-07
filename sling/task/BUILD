@@ -278,6 +278,16 @@ cc_library(
 )
 
 cc_library(
+  name = "documents",
+  srcs = ["documents.cc"],
+  hdrs = ["documents.h"],
+  deps = [
+    ":frames",
+    "//sling/nlp/document",
+  ],
+)
+
+cc_library(
   name = "rekey",
   srcs = ["rekey.cc"],
   deps = [
