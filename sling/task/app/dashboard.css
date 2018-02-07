@@ -1,18 +1,17 @@
-.background {
-  background-color: #eeeeee;
+.job-table {
+  width: calc(100% - 8px);
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
-.card {
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.16), 0 2px 4px rgba(0,0,0,0.23);
-  padding: 10px 10px 10px 10px;
-}
-
-.card-toolbar {
-  margin-top: 3px;
+.channel-table {
+  width: calc(100% - 8px);
+  margin-top: 8px;
   margin-bottom: 8px;
 }
 
 .counter-table {
   margin-top: 8px;
+  margin-bottom: 8px;
 }
+

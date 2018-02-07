@@ -80,7 +80,7 @@
     <!-- Content -->
     <md-content id="main" class="md-padding" ng-controller="StatusCtrl as ctrl" flex>
       <!-- Job list -->
-      <table class="mdl-data-table mdl-shadow--2dp">
+      <table class="mdl-data-table mdl-shadow--2dp job-table">
         <thead>
           <tr>
             <th>Job</th>
@@ -104,10 +104,11 @@
         <md-tab ng-repeat="job in jobs" label="{{job.name}}">
 
           <!-- Channels -->
-          <table class="mdl-data-table mdl-shadow--2dp counter-table" width="100%">
+          <table class=" channel-table mdl-data-table mdl-shadow--2dp">
             <thead>
               <tr>
                 <th class="mdl-data-table__cell--non-numeric">Channel</th>
+                <th class="mdl-data-table__cell--non-numeric">Direction</th>
                 <th>Key bytes</th>
                 <th>Value bytes</th>
                 <th>Bandwidth</th>
@@ -118,7 +119,8 @@
             </thead>
             <tbody>
               <tr ng-repeat="channel in job.channels  | orderBy: 'name' track by channel.name">
-                <td class="mdl-data-table__cell--non-numeric"  width="30ch">{{channel.name}}</td>
+                <td class="mdl-data-table__cell--non-numeric" >{{channel.name}}</td>
+                <td class="mdl-data-table__cell--non-numeric" >{{channel.direction}}</td>
                 <td>{{channel.key_bytes|number:0}}</td>
                 <td>{{channel.value_bytes|number:0}}</td>
                 <td>{{channel.bandwidth / 1000000|number:3}} MB/s</td>
@@ -130,7 +132,7 @@
           </table>
 
           <!-- Counters -->
-          <table class="mdl-data-table mdl-shadow--2dp counter-table">
+          <table class="counter-table mdl-data-table mdl-shadow--2dp">
             <thead>
               <tr>
                 <th class="mdl-data-table__cell--non-numeric">Counter</th>

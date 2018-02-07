@@ -71,6 +71,11 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
   $scope.jobs = [];
   $scope.selected = 0;
 
+  function updateTitle(msg) {
+    var host = window.location.hostname + ":" + window.location.port;
+    window.document.title = msg + " - SLING jobs on " + host;
+  }
+
   $rootScope.$on('refresh', function(event, args) {
     $scope.refresh();
   });
@@ -92,6 +97,8 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
         job.prev_channels = null;
         job.prev_time = null;
         $scope.jobs[i] = job;
+        $scope.selected = i;
+        updateTitle(job.name);
       }
 
       // Compute elapsed time for job.
@@ -128,12 +135,14 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
         m = name.match(channel_pattern);
         if (m) {
           // Look up channel.
+          var direction = m[1];
           var metric = m[2];
           var channel_name = m[3];
           var ch = channel_map[channel_name];
           if (ch == null) {
             ch = {};
             ch.name = channel_name;
+            ch.direction = direction;
             channel_map[channel_name] = ch;
             channels.push(ch);
           }
@@ -185,7 +194,12 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
       job.prev_counters = jobstatus.counters;
       job.prev_channels = channel_map;
       job.prev_time = status.time;
-      if (status.finished) $rootScope.$emit('done');
+
+      // Check for workflow completed.
+      if (status.finished) {
+        $rootScope.$emit('done');
+        updateTitle("Done");
+      }
     }
   }
 
@@ -195,6 +209,7 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
       $scope.update();
     }, function(response) {
       $rootScope.$emit('error');
+      updateTitle("Error");
     });
   }
 
