@@ -117,7 +117,6 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
 
       // Process job counters.
       var counters = [];
-      //counters.push({'name': "AAAA" + job.name, "value": 0});
       var channels = [];
       var channel_map = {};
       var prev_counters = job.prev_counters;
@@ -125,9 +124,6 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
       var period = status.time - job.prev_time;
       var channel_pattern = /(input|output)_(.+)\[(.+\..+)\]/;
       for (name in jobstatus.counters) {
-        item = {};
-        item.name = name;
-
         // Check for channel stat counter.
         m = name.match(channel_pattern);
         if (m) {
@@ -156,11 +152,14 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
             ch.shards_done = value;
           }
         } else {
+          // Add counter.
+          item = {};
+          item.name = name;
           item.value = jobstatus.counters[name];
           if (prev_counters && period > 0) {
             var prev_value = prev_counters[name];
             var delta = item.value - prev_value;
-            item.rate = delta / elapsed;
+            item.rate = delta / period;
           }
           counters.push(item);
         }

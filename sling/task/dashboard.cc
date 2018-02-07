@@ -22,7 +22,7 @@ string Dashboard::GetStatus() {
 
   // Output current time and status.
   out << "{\"time\":" << time(0);
-  out << ",\"finished\":" << ((status_ == FINAL) ? 1 : 0);
+  out << ",\"finished\":" << ((status_ < FINAL) ? 0 : 1);
 
   // Output jobs.
   out << ",\"jobs\":[";

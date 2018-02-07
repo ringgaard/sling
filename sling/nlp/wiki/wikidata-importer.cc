@@ -259,33 +259,6 @@ class WikidataImporter : public task::Processor {
   }
 
  private:
-  // Check if string matches format with wild cards.
-  static bool MatchesFormat(Text str, Text format) {
-    if (str.length() != format.length()) return false;
-    const char *s = str.data();
-    const char *s_end = s + str.length();
-    const char *f = format.data();
-    while (s != s_end) {
-      int ch = *s;
-      if (ch == '-') ch = '+';
-      if (*f != '*' && *f != *s) return false;
-      s++;
-      f++;
-    }
-    return true;
-  }
-
-  // Parse number.
-  static int ParseNumber(Text str) {
-    int number = 0;
-    for (int i = 0; i < str.length(); ++i) {
-      char digit = str[i];
-      if (digit < '0' || digit > '9') return -1;
-      number = number * 10 + (digit - '0');
-    }
-    return number;
-  }
-
   // Return symbol for Wikidata item.
   static Handle Item(Store *store, int id) {
     return store->Lookup(StrCat("Q", id));
@@ -391,28 +364,18 @@ class WikidataImporter : public task::Processor {
 
   // Convert Wikidata timestamp.
   Handle ConvertTime(const Frame &value) {
-    // Check if string matches simple date format.
+    // Convert ISO date string and precision to date.
     Store *store = value.store();
-    Handle timestamp = value.GetHandle(s_time_);
-    if (!store->IsString(timestamp)) return timestamp;
-    Text str = store->GetString(timestamp)->str();
-    if (!MatchesFormat(str, "+****-**-**T00:00:00Z")) return timestamp;
-
-    // Get year, month, and day, and precision.
-    int year = ParseNumber(str.substr(1, 4));
-    int month = ParseNumber(str.substr(6, 2));
-    int day = ParseNumber(str.substr(9, 2));
-    int precision = value.GetInt(s_precision_, 11);
-    if (year < 0 || month < 0 || day < 0 || precision < 0) return timestamp;
-    if (str[0] == '-') year = -year;
-    Date date(year, month, day, date_precision[precision]);
+    Object timestamp = value.Get(s_time_);
+    Date date(timestamp);
+    date.set_precision(date_precision[value.GetInt(s_precision_, 11)]);
 
     // Convert timestamp to simplified integer or string format.
     int number = Calendar::DateNumber(date);
-    if (number != -1) Handle::Integer(number);
+    if (number != -1) return Handle::Integer(number);
     string ts = Calendar::DateString(date);
     if (!ts.empty()) return store->AllocateString(ts);
-    return timestamp;
+    return timestamp.handle();
   }
 
   // Convert Wikidata entity id.

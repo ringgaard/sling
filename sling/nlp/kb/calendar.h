@@ -27,15 +27,19 @@ class Date {
 
   // Return year. Return 0 if date is invalid.
   int year() const { return year_; }
+  void set_year(int year) { year_ = year; }
 
   // Return month (1=January). Returns 0 if no month in date.
   int month() const { return month_; }
+  void set_month(int month) { month_ = month; }
 
   // Return day of month (first day of month is 1). Return 0 if no day in date.
   int day() const { return day_; }
+  void set_day(int day) { day_ = day; }
 
   // Return precision of date.
   Precision precision() const { return precision_; }
+  void set_precision(Precision precision) { precision_ = precision; }
 
  private:
   int year_;
