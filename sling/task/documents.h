@@ -26,6 +26,9 @@ class DocumentProcessor : public FrameProcessor {
  public:
   void Process(Slice key, const Frame &frame) override;
 
+  // Initialize document processor.
+  void Start(Task *task) override;
+
   // Called for each document received on input.
   virtual void Process(Slice key, const nlp::Document &document);
 
@@ -34,6 +37,12 @@ class DocumentProcessor : public FrameProcessor {
 
   // Output document to output using document id as key.
   void Output(const nlp::Document &document);
+
+ private:
+  // Statistics.
+  Counter *num_document_;
+  Counter *num_tokens_;
+  Counter *num_spans_;
 };
 
 }  // namespace task

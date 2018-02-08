@@ -20,6 +20,7 @@ import sling.flags as flags
 import sling.log as log
 import sling.task.corpora as corpora
 import sling.task.wiki as wiki
+import sling.task.embedding as embedding
 import sling.task.workflow as workflow
 
 # Command-line flags.
@@ -65,6 +66,11 @@ flags.define("--build_nametab",
 
 flags.define("--build_phrasetab",
              help="build name table",
+             default=False,
+             action='store_true')
+
+flags.define("--extract_vocabulary",
+             help="extract vocabulary for word embeddings",
              default=False,
              action='store_true')
 
@@ -177,6 +183,15 @@ def build_knowledge_base():
     wf.build_phrase_table()
     run_workflow(wf)
 
+def train_embeddings():
+  # Extract vocabulary for word embeddings.
+  if flags.arg.extract_vocabulary:
+    for language in flags.arg.languages:
+      log("Extract " + language + " vocabulary")
+      wf = embedding.EmbeddingWorkflow("vocabulary")
+      wf.extract_vocabulary(language=language)
+      run_workflow(wf)
+
 if __name__ == '__main__':
   # Parse command-line arguments.
   flags.parse()
@@ -201,6 +216,7 @@ if __name__ == '__main__':
   import_wiki()
   parse_wikipedia()
   build_knowledge_base()
+  train_embeddings()
 
   # Stop task monitor.
   if flags.arg.monitor > 0: workflow.stop_monitor()

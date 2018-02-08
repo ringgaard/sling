@@ -51,6 +51,10 @@ class Accumulator {
   // Output channel for accumulated counts.
   Channel *output_ = nullptr;
 
+  // Statistics.
+  Counter *num_slots_used_ = nullptr;
+  Counter *num_collisions_ = nullptr;
+
   // Mutex for serializing access to accumulator.
   Mutex mu_;
 };

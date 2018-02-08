@@ -590,11 +590,15 @@ class Workflow(object):
     pipes = self.channel(sharder, shards=shards, format=format_of(input))
 
     # Pipe outputs from sharder to sorters.
-    sorters = []
-    for i in xrange(shards):
-      sorter = self.task("sorter", shard=Shard(i, shards))
-      self.connect(pipes[i], sorter)
-      sorters.append(sorter)
+    if shards != None:
+      sorters = []
+      for i in xrange(shards):
+        sorter = self.task("sorter", shard=Shard(i, shards))
+        self.connect(pipes[i], sorter)
+        sorters.append(sorter)
+    else:
+      sorters = self.task("sorter")
+      self.connect(pipes, sorters)
 
     # Return output channel from sorters.
     outputs = self.channel(sorters, format=format_of(input))

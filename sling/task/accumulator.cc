@@ -27,6 +27,10 @@ void Accumulator::Init(Channel *output, int num_buckets) {
   output_ = output;
   buckets_.clear();
   buckets_.resize(num_buckets);
+
+  Task *task = output->producer().task();
+  num_slots_used_ = task->GetCounter("num_accumulator_slots_used");
+  num_collisions_ = task->GetCounter("num_accumulator_collisions");
 }
 
 void Accumulator::Increment(Text key, int64 count) {
@@ -37,6 +41,9 @@ void Accumulator::Increment(Text key, int64 count) {
     if (bucket.count != 0) {
       output_->Send(new Message(bucket.key, SimpleItoa(bucket.count)));
       bucket.count = 0;
+      num_collisions_->Increment();
+    } else {
+      num_slots_used_->Increment();
     }
     bucket.key.assign(key.data(), key.size());
   }

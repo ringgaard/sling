@@ -55,6 +55,8 @@ cc_library(
     "//sling/nlp/wiki:name-table-builder",
     "//sling/nlp/wiki:phrase-table-builder",
 
+    "//sling/nlp/embedding:vocabulary",
+
     "//sling/task:frame-store-reader",
     "//sling/task:frame-store-writer",
     "//sling/task:sharder",
@@ -63,6 +65,8 @@ cc_library(
     "//sling/task:record-file-writer",
     "//sling/task:text-file-reader",
     "//sling/task:text-file-writer",
+    "//sling/task:text-map-reader",
+    "//sling/task:text-map-writer",
     "//sling/task:workers",
   ],
 )

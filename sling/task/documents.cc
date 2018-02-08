@@ -17,9 +17,23 @@
 namespace sling {
 namespace task {
 
+
+void DocumentProcessor::Start(Task *task) {
+  // Initialize frame processor.
+  FrameProcessor::Start(task);
+
+  // Statistics.
+  num_document_ = task->GetCounter("num_documents");
+  num_tokens_ = task->GetCounter("num_tokens");
+  num_spans_ = task->GetCounter("num_spans");
+}
+
 void DocumentProcessor::Process(Slice key, const Frame &frame) {
   // Create documen from frame.
   nlp::Document document(frame);
+  num_document_->Increment();
+  num_tokens_->Increment(document.num_tokens());
+  num_spans_->Increment(document.num_spans());
 
   // Process document.
   Process(key, document);

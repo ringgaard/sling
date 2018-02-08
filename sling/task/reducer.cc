@@ -32,6 +32,8 @@ void Reducer::Start(Task *task) {
 
 void Reducer::Receive(Channel *channel, Message *message) {
   int shard = channel->consumer().shard().part();
+  DCHECK_GE(shard, 0);
+  DCHECK_LT(shard, shards_.size());
   Shard *s = shards_[shard];
 
   MutexLock lock(&s->mu);
@@ -62,6 +64,8 @@ void Reducer::Done(Task *task) {
 }
 
 void Reducer::Output(int shard, Message *message) {
+  DCHECK_GE(shard, 0);
+  DCHECK_LT(shard, outputs_.size());
   outputs_[shard % outputs_.size()]->Send(message);
 }
 
