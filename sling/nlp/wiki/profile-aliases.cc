@@ -144,7 +144,7 @@ class ProfileAliasReducer : public task::Reducer {
     task->Fetch("anchor_threshold", &anchor_threshold_);
 
     // Read toxic aliases.
-    TextMapReader aliases(task->GetInputFiles("toxic-aliases"));
+    TextMapInput aliases(task->GetInputFiles("toxic-aliases"));
     string alias;
     while (aliases.Read(nullptr, &alias, nullptr)) {
       uint64 fp = tokenizer_.Fingerprint(alias);

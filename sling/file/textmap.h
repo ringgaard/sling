@@ -26,12 +26,11 @@ namespace sling {
 
 // A text map file is a text file with one entry per line. The key and
 // value are separated by a tab character.
-class TextMapReader {
+class TextMapInput {
  public:
-  TextMapReader(const std::vector<string> &filenames,
-                int buffer_size = 1 << 16);
-  TextMapReader(const string &filename) : TextMapReader({filename}, 1 << 16) {}
-  ~TextMapReader();
+  TextMapInput(const std::vector<string> &filenames, int buffer_size = 1 << 16);
+  TextMapInput(const string &filename) : TextMapInput({filename}, 1 << 16) {}
+  ~TextMapInput();
 
   // Read next entry from file. Return false if there are more entries.
   bool Next();
@@ -84,14 +83,14 @@ class TextMapReader {
   string value_;
 };
 
-// Text map writer.
-class TextMapWriter {
+// Write text map to output file.
+class TextMapOutput {
  public:
   // Open text map file for writing.
-  TextMapWriter(const string &filename, int buffer_size = 1 << 16);
+  TextMapOutput(const string &filename, int buffer_size = 1 << 16);
 
-  // Flush and close text map writer.
-  ~TextMapWriter();
+  // Flush and close text map.
+  ~TextMapOutput();
 
   // Write entry to text map.
   void Write(const string &key, const string &value);

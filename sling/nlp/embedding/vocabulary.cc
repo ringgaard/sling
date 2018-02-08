@@ -58,11 +58,20 @@ class EmbeddingVocabularyReducer : public task::SumReducer {
   }
 
   void Aggregate(int shard, const Slice &key, uint64 sum) override {
-    // Check threshold and add to OOV or new entry.
+    if (sum < threshold_) {
+      // Add counts for discarded words to OOV entry.
+      vocabulary_[0].count += sum;
+    } else {
+      // Add entry to vocabulary.
+      vocabulary_.emplace_back(string(key.data(), key.size()), sum);
+    }
   }
 
   void Done(task::Task *task) override {
-    // TODO: write vocabulary to output.
+    // Write vocabulary to output.
+    for (auto &entry : vocabulary_) {
+      Output(0, new task::Message(entry.word, std::to_string(entry.count)));
+    }
   }
 
  private:

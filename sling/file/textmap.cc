@@ -24,15 +24,15 @@
 
 namespace sling {
 
-TextMapReader::TextMapReader(const std::vector<string> &filenames,
-                             int buffer_size)
+TextMapInput::TextMapInput(const std::vector<string> &filenames,
+                           int buffer_size)
     : filenames_(filenames), buffer_size_(buffer_size) {
   // Allocate input buffer.
   buffer_ = static_cast<char *>(malloc(buffer_size));
   next_ = end_ = buffer_;
 }
 
-TextMapReader::~TextMapReader() {
+TextMapInput::~TextMapInput() {
   // Deallocate input buffer.
   free(buffer_);
 
@@ -40,7 +40,7 @@ TextMapReader::~TextMapReader() {
   if (file_ != nullptr) CHECK(file_->Close());
 }
 
-bool TextMapReader::Next() {
+bool TextMapInput::Next() {
   while (current_file_ < filenames_.size()) {
     if (file_ != nullptr) {
       // Read next line from the current file.
@@ -82,7 +82,7 @@ bool TextMapReader::Next() {
   return false;
 }
 
-int TextMapReader::Fill() {
+int TextMapInput::Fill() {
   DCHECK(next_ == end_);
   DCHECK(file_ != nullptr);
   int bytes = file_->ReadOrDie(buffer_, buffer_size_);
@@ -92,7 +92,7 @@ int TextMapReader::Fill() {
   return *next_++;
 }
 
-bool TextMapReader::Read(int *index, string *name, int64 *count) {
+bool TextMapInput::Read(int *index, string *name, int64 *count) {
   if (!Next()) return false;
   if (index != nullptr) *index = id();
   if (name != nullptr) *name = key();
@@ -100,7 +100,7 @@ bool TextMapReader::Read(int *index, string *name, int64 *count) {
   return true;
 }
 
-TextMapWriter::TextMapWriter(const string &filename, int buffer_size) {
+TextMapOutput::TextMapOutput(const string &filename, int buffer_size) {
   // Open output file.
   file_ = File::OpenOrDie(filename, "w");
 
@@ -109,7 +109,7 @@ TextMapWriter::TextMapWriter(const string &filename, int buffer_size) {
   next_ = end_ = buffer_;
 }
 
-TextMapWriter::~TextMapWriter() {
+TextMapOutput::~TextMapOutput() {
   // Flush output buffer.
   Flush();
 
@@ -120,14 +120,14 @@ TextMapWriter::~TextMapWriter() {
   CHECK(file_->Close());
 }
 
-void TextMapWriter::Flush() {
+void TextMapOutput::Flush() {
   if (next_ != buffer_) {
     file_->WriteOrDie(buffer_, next_ - buffer_);
   }
   next_ = buffer_;
 }
 
-void TextMapWriter::Output(const char *data, size_t size) {
+void TextMapOutput::Output(const char *data, size_t size) {
   // Flush buffer if there is not enough room for data.
   if (size > end_ - next_) Flush();
 
@@ -140,13 +140,13 @@ void TextMapWriter::Output(const char *data, size_t size) {
   }
 }
 
-void TextMapWriter::Write(const string &key, const string &value) {
+void TextMapOutput::Write(const string &key, const string &value) {
   Output(key.data(), key.size());
   Output("\t", 1);
   Output(value.data(), value.size());
 }
 
-void TextMapWriter::Write(const string &key, int64 value) {
+void TextMapOutput::Write(const string &key, int64 value) {
   Write(key, std::to_string(value));
 }
 
