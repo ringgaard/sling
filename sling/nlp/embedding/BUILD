@@ -5,6 +5,7 @@ cc_library(
   srcs = ["vocabulary.cc"],
   deps = [
     "//sling/base",
+    "//sling/file:textmap",
     "//sling/task:accumulator",
     "//sling/task:documents",
     "//sling/util:unicode",
