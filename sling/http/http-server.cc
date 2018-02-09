@@ -357,6 +357,7 @@ void HTTPServer::Worker() {
           }
         } else {
           // Process connection data.
+          VLOG(5) << "Process in state " << conn->state_;
           Status s = conn->Process(ev->events);
           if (!s.ok()) {
             LOG(ERROR) << "HTTP error: " << s;
@@ -369,6 +370,8 @@ void HTTPServer::Worker() {
           if (conn->HasOutput()) ev->events |= EPOLLOUT;
           rc = epoll_ctl(pollfd_, EPOLL_CTL_MOD, conn->sock_, ev);
           if (rc < 0) LOG(ERROR) << Error("epoll_ctl");
+          VLOG(5) << "Done processing in state " << conn->state_
+                  << ", events " << ev->events;
         }
       }
     }
@@ -400,12 +403,10 @@ void HTTPServer::AcceptConnection() {
     return;
   }
 
-#if 0
   // Set non-blocking mode for socket.
   int flags = fcntl(sock, F_GETFL, 0);
   rc = fcntl(sock, F_SETFL, flags | O_NONBLOCK);
   if (rc < 0) LOG(WARNING) << Error("fcntl");
-#endif
 
   // Create new connection.
   VLOG(3) << "New HTTP connection";
@@ -461,7 +462,7 @@ HTTPConnection::~HTTPConnection() {
 
 Status HTTPConnection::Process(int events) {
   MutexLock lock(&mu_);
-  int rc;
+  bool done;
   switch (state_) {
     case HTTP_STATE_IDLE:
       // Allocate request header buffer.
@@ -480,21 +481,9 @@ Status HTTPConnection::Process(int events) {
         request_header_.ensure(1);
 
         // Receive more data.
-        rc = recv(sock_, request_header_.end, request_header_.remaining(), 0);
-        if (rc <= 0) {
-          if (rc == 0) {
-            // Connection closed.
-            state_ = HTTP_STATE_TERMINATE;
-            return Status::OK;
-          } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // No more data available for now.
-            return Status::OK;
-          } else {
-            // Receive error.
-            return Error("recv");
-          }
-        }
-        request_header_.end += rc;
+        Status st = Recv(&request_header_, &done);
+        if (!st.ok()) return st;
+        if (done) return Status::OK;
 
         // Parse HTTP header.
         if (ParseHeader()) {
@@ -530,21 +519,9 @@ Status HTTPConnection::Process(int events) {
         if ((events & EPOLLIN) == 0) return Status::OK;
 
         // Receive more data.
-        rc = recv(sock_, request_body_.end, request_body_.remaining(), 0);
-        if (rc <= 0) {
-          if (rc == 0) {
-            // Connection closed.
-            state_ = HTTP_STATE_TERMINATE;
-            return Status::OK;
-          } else if (errno == EAGAIN) {
-            // No more data available for now.
-            return Status::OK;
-          } else {
-            // Receive error.
-            return Error("recv");
-          }
-        }
-        request_body_.end += rc;
+        Status st = Recv(&request_body_, &done);
+        if (!st.ok()) return st;
+        if (done) return Status::OK;
       }
       state_ = HTTP_STATE_PROCESSING;
       // Fall through
@@ -562,23 +539,9 @@ Status HTTPConnection::Process(int events) {
     case HTTP_STATE_WRITE_HEADER:
       // Send HTTP response header.
       while (response_header_.size() > 0) {
-        rc  = send(sock_,
-                   response_header_.start, response_header_.size(),
-                   MSG_NOSIGNAL);
-        if (rc <= 0) {
-          if (rc == 0) {
-            // Connection closed.
-            state_ = HTTP_STATE_TERMINATE;
-            return Status::OK;
-          } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // Output queue full.
-            return Status::OK;
-          } else {
-            // Send error.
-            return Error("send");
-          }
-        }
-        response_header_.start += rc;
+        Status st = Send(&response_header_, &done);
+        if (!st.ok()) return st;
+        if (done) return Status::OK;
       }
 
       state_ = HTTP_STATE_WRITE_BODY;
@@ -587,23 +550,9 @@ Status HTTPConnection::Process(int events) {
     case HTTP_STATE_WRITE_BODY:
       // Send HTTP response body.
       while (response_body_.size() > 0) {
-        rc  = send(sock_,
-                   response_body_.start, response_body_.size(),
-                   MSG_NOSIGNAL);
-        if (rc <= 0) {
-          if (rc == 0) {
-            // Connection closed.
-            state_ = HTTP_STATE_TERMINATE;
-            return Status::OK;
-          } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // Output queue full.
-            return Status::OK;
-          } else {
-            // Send error.
-            return Error("send");
-          }
-        }
-        response_body_.start += rc;
+        Status st = Send(&response_body_, &done);
+        if (!st.ok()) return st;
+        if (done) return Status::OK;
       }
 
       state_ = HTTP_STATE_WRITE_FILE;
@@ -634,23 +583,9 @@ Status HTTPConnection::Process(int events) {
         } else {
           // Send next file chunk.
           while (response_body_.size() > 0) {
-            rc  = send(sock_,
-                       response_body_.start, response_body_.size(),
-                       MSG_NOSIGNAL);
-            if (rc <= 0) {
-              if (rc == 0) {
-                // Connection closed.
-                state_ = HTTP_STATE_TERMINATE;
-                return Status::OK;
-              } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // Output queue full.
-                return Status::OK;
-              } else {
-                // Send error.
-                return Error("send");
-              }
-            }
-            response_body_.start += rc;
+            Status st = Send(&response_body_, &done);
+            if (!st.ok()) return st;
+            if (done) return Status::OK;
           }
         }
       }
@@ -677,6 +612,48 @@ Status HTTPConnection::Process(int events) {
     default:
       return Status(1, "Invalid HTTP state");
   }
+}
+
+Status HTTPConnection::Recv(HTTPBuffer *buffer, bool *done) {
+  *done = false;
+  int rc = recv(sock_, buffer->end, buffer->remaining(), 0);
+  if (rc <= 0) {
+    *done = true;
+    if (rc == 0) {
+      // Connection closed.
+      state_ = HTTP_STATE_TERMINATE;
+      return Status::OK;
+    } else if (errno == EAGAIN) {
+      // No more data available for now.
+      return Status::OK;
+    } else {
+      // Receive error.
+      return Error("recv");
+    }
+  }
+  buffer->end += rc;
+  return Status::OK;
+}
+
+Status HTTPConnection::Send(HTTPBuffer *buffer, bool *done) {
+  *done = false;
+  int rc  = send(sock_, buffer->start, buffer->size(), MSG_NOSIGNAL);
+  if (rc <= 0) {
+    *done = true;
+    if (rc == 0) {
+      // Connection closed.
+      state_ = HTTP_STATE_TERMINATE;
+      return Status::OK;
+    } else if (errno == EAGAIN) {
+      // Output queue full.
+      return Status::OK;
+    } else {
+      // Send error.
+      return Error("send");
+    }
+  }
+  buffer->start += rc;
+  return Status::OK;
 }
 
 void HTTPConnection::Dispatch() {

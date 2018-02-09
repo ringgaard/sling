@@ -277,6 +277,14 @@ class HTTPConnection {
   HTTPBuffer *response_buffer() { return &response_body_; }
 
  private:
+  // Receive data into buffer until it is full or all data that can be received
+  // without blocking has been received.
+  Status Recv(HTTPBuffer *buffer, bool *done);
+
+  // Send data from buffer until all data has been sent or all the data that can
+  // be sent without blocking has been sent.
+  Status Send(HTTPBuffer *buffer, bool *done);
+
   // HTTP server for connection.
   HTTPServer *server_;
 
