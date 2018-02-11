@@ -53,31 +53,24 @@ class ProfileAliasExtractor : public task::FrameProcessor {
     Store *store = frame.store();
     Builder a(store);
     for (const Slot &s : frame) {
-      if (s.name == n_profile_alias_) {
+      if (s.name == n_name_) {
+        // Add item name as alias.
+        AddAlias(&a, s.value, SRC_WIKIDATA_LABEL);
+      } else if (s.name == n_profile_alias_) {
         Frame alias(store, s.value);
         if (alias.GetHandle(n_lang_) == language_) {
           a.Add(n_profile_alias_, alias);
         } else {
           // Add aliases in other languages as foreign alias.
-          Builder foreign(store);
-          foreign.Add(n_name_, alias.GetHandle(n_name_));
-          foreign.Add(n_lang_, alias.GetHandle(n_lang_));
-          foreign.Add(n_alias_count_, alias.GetHandle(n_alias_count_));
-          foreign.Add(n_alias_sources_, 1 << SRC_WIKIDATA_FOREIGN);
-          a.Add(n_profile_alias_, foreign.Create());
+          AddAlias(&a, alias.GetHandle(n_name_), SRC_WIKIDATA_FOREIGN,
+                   alias.GetHandle(n_lang_), alias.GetInt(n_alias_count_));
         }
       } else if (s.name == n_native_name_ || s.name == n_native_label_) {
         // Output native names/labels as native aliases.
-        Builder native(store);
-        native.Add(n_name_, store->Resolve(s.value));
-        native.Add(n_alias_sources_, 1 << SRC_WIKIDATA_NATIVE);
-        a.Add(n_profile_alias_, native.Create());
+        AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NATIVE);
       } else if (s.name == n_demonym_) {
         // Output demonyms as demonym aliases.
-        Builder demonym(store);
-        demonym.Add(n_name_, store->Resolve(s.value));
-        demonym.Add(n_alias_sources_, 1 << SRC_WIKIDATA_DEMONYM);
-        a.Add(n_profile_alias_, demonym.Create());
+        AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_DEMONYM);
       } else if (s.name == n_instance_of_) {
         // Discard categories, disambiguations, info boxes and templates.
         if (s.value == n_category_ ||
@@ -94,6 +87,18 @@ class ProfileAliasExtractor : public task::FrameProcessor {
     if (aliases.size() != 0) {
       Output(key, aliases);
     }
+  }
+
+  // Add alias.
+  void AddAlias(Builder *aliases, Handle name, AliasSource source,
+                Handle lang = Handle::nil(), int count = 0) {
+    if (name.IsNil()) return;
+    Builder alias(aliases->store());
+    alias.Add(n_name_, name);
+    if (!lang.IsNil()) alias.Add(n_lang_, lang);
+    if (count > 0) alias.Add(n_alias_count_, count);
+    alias.Add(n_alias_sources_, 1 << source);
+    aliases->Add(n_profile_alias_, alias.Create());
   }
 
  private:

@@ -165,7 +165,9 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
           item = {};
           item.name = name;
           item.value = jobstatus.counters[name];
-          if (prev_counters && period > 0) {
+          if (jobstatus.ended) {
+            item.rate = item.value / elapsed;
+          } else if (prev_counters && period > 0) {
             var prev_value = prev_counters[name];
             var delta = item.value - prev_value;
             item.rate = delta / period;
@@ -179,7 +181,10 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
         for (var j = 0; j < channels.length; ++j) {
           var ch = channels[j];
           var prev = prev_channels[ch.name];
-          if (prev) {
+          if (jobstatus.ended) {
+            ch.bandwidth = (ch.key_bytes + ch.value_bytes) / elapsed;
+            ch.throughput = ch.messages / elapsed;
+          } else if (prev) {
             var current_bytes = ch.key_bytes + ch.value_bytes;
             var prev_bytes = prev.key_bytes + prev.value_bytes;
             ch.bandwidth = (current_bytes - prev_bytes) / period;

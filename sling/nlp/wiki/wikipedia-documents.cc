@@ -138,7 +138,9 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
         break;
 
       case WikipediaMap::LIST:
-        // List: discard
+        // Only keep anchor aliases from list pages.
+        ProcessArticle(frame, page.qid);
+        OutputAnchorAliases(frame);
         num_list_pages_->Increment();
         break;
 

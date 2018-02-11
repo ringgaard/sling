@@ -100,6 +100,7 @@ class WikipediaXMLParser : public XMLParser {
 
       case MEDIAWIKI:
         lang_ = element.Get("xml:lang", "en");
+        if (lang_ == "nb") lang_ = "no";
         break;
 
       default:

@@ -149,19 +149,11 @@ def parse_wikipedia():
   if flags.arg.parse_wikipedia:
     for language in flags.arg.languages:
       log("Parse " + language + " wikipedia")
-      wf = wiki.WikiWorkflow("wikipedia-parsing")
+      wf = wiki.WikiWorkflow(language + "-wikipedia-parsing")
       wf.parse_wikipedia(language=language)
       run_workflow(wf)
 
 def build_knowledge_base():
-  # Extract item names from wikidata and wikipedia.
-  if flags.arg.extract_names:
-    for language in flags.arg.languages:
-      log("Extract " + language + " names")
-      wf = wiki.WikiWorkflow("name-extraction")
-      wf.extract_names(language=language)
-      run_workflow(wf)
-
   # Build knowledge base repository.
   if flags.arg.build_kb:
     log("Build knowledge base repository")
@@ -169,26 +161,36 @@ def build_knowledge_base():
     wf.build_knowledge_base()
     run_workflow(wf)
 
+  # Extract item names from wikidata and wikipedia.
+  if flags.arg.extract_names:
+    for language in flags.arg.languages:
+      log("Extract " + language + " names")
+      wf = wiki.WikiWorkflow(language + "-name-extraction")
+      wf.extract_names(language=language)
+      run_workflow(wf)
+
   # Build name table.
   if flags.arg.build_nametab:
-    log("Build name table")
-    wf = wiki.WikiWorkflow("name-table")
-    wf.build_name_table()
-    run_workflow(wf)
+    for language in flags.arg.languages:
+      log("Build " + language + " name table")
+      wf = wiki.WikiWorkflow(language + "-name-table")
+      wf.build_name_table(language=language)
+      run_workflow(wf)
 
   # Build phrase table.
   if flags.arg.build_phrasetab:
-    log("Build phrase table")
-    wf = wiki.WikiWorkflow("phrase-table")
-    wf.build_phrase_table()
-    run_workflow(wf)
+    for language in flags.arg.languages:
+      log("Build " + language + " phrase table")
+      wf = wiki.WikiWorkflow(language + "-phrase-table")
+      wf.build_phrase_table(language=language)
+      run_workflow(wf)
 
 def train_embeddings():
   # Extract vocabulary for word embeddings.
   if flags.arg.extract_vocabulary:
     for language in flags.arg.languages:
       log("Extract " + language + " vocabulary")
-      wf = embedding.EmbeddingWorkflow("vocabulary")
+      wf = embedding.EmbeddingWorkflow(language + "-vocabulary")
       wf.extract_vocabulary(language=language)
       run_workflow(wf)
 
