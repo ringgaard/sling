@@ -26,6 +26,9 @@ class DocumentProcessor : public FrameProcessor {
  public:
   void Process(Slice key, const Frame &frame) override;
 
+  // Initialize commons store with document symbols.
+  void InitCommons(Task *task) override;
+
   // Initialize document processor.
   void Start(Task *task) override;
 
@@ -39,6 +42,9 @@ class DocumentProcessor : public FrameProcessor {
   void Output(const nlp::Document &document);
 
  private:
+  // Document symbol names.
+  nlp::DocumentNames docnames_;
+
   // Statistics.
   Counter *num_document_;
   Counter *num_tokens_;

@@ -42,6 +42,7 @@ void FrameProcessor::Start(Task *task) {
 
   // Bind names.
   CHECK(names_.Bind(commons_));
+  InitCommons(task);
 
   // Start up processor.
   Startup(task);
@@ -119,6 +120,7 @@ void FrameProcessor::OutputShallow(const Frame &value) {
   output_->Send(CreateMessage(value, true));
 }
 
+void FrameProcessor::InitCommons(Task *task) {}
 void FrameProcessor::Startup(Task *task) {}
 void FrameProcessor::Process(Slice key, const Frame &frame) {}
 void FrameProcessor::Flush(Task *task) {}
