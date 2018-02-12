@@ -44,6 +44,7 @@ static const MIMEMapping mimetypes[] = {
   {"gif", "image/gif"},
   {"png", "image/png"},
   {"ico", "image/x-icon"},
+  {"ttf", "font/ttf"},
   {"css", "text/css; charset=utf-8"},
   {"svg", "image/svg+xml; charset=utf-8"},
   {"js", "text/javascript; charset=utf-8"},

@@ -55,6 +55,7 @@ embed_data(
     "app/index.html",
     "app/dashboard.css",
     "app/dashboard.js",
+    "app/digital-7.mono.ttf",
   ],
 )
 
