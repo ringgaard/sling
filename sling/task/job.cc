@@ -435,7 +435,6 @@ void Job::TaskCompleted(Task *task) {
     // locked.
     if (monitor_on_completion != nullptr) {
       monitor_on_completion->OnJobDone(this);
-
     }
   });
 }

@@ -79,25 +79,54 @@
 
     <!-- Content -->
     <md-content id="main" class="md-padding" ng-controller="StatusCtrl as ctrl" flex>
-      <!-- Job list -->
-      <table class="mdl-data-table mdl-shadow--2dp job-table">
-        <thead>
-          <tr>
-            <th>Job</th>
-            <th class="mdl-data-table__cell--non-numeric">Name</th>
-            <th>Time</th>
-            <th class="mdl-data-table__cell--non-numeric" width="100%">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr ng-repeat="job in jobs track by job.name">
-            <td>#{{job.id}}</td>
-            <td class="mdl-data-table__cell--non-numeric">{{job.name}}</td>
-            <td>{{job.hours}}h {{job.mins|padding:2}}m {{job.secs|padding:2}}s</td>
-            <td class="mdl-data-table__cell--non-numeric" width="100%">{{job.progress}}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div layout="row" layout-align="space-between start">
+        <!-- Job list -->
+        <div flex>
+          <table class="mdl-data-table mdl-shadow--2dp job-table">
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th class="mdl-data-table__cell--non-numeric">Name</th>
+                <th>Time</th>
+                <th class="mdl-data-table__cell--non-numeric">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="job in jobs track by job.name">
+                <td>#{{job.id}}</td>
+                <td class="mdl-data-table__cell--non-numeric">{{job.name}}</td>
+                <td>{{job.hours}}h {{job.mins|padding:2}}m {{job.secs|padding:2}}s</td>
+                <td class="mdl-data-table__cell--non-numeric" width="100%">{{job.progress}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Resource usage -->
+        <div ng-show="census">
+          <table class="res">
+            <tbody>
+              <tr>
+                <td width="30%">TIME</td>
+                <td width="70%"align="right">{{census.hours}}:{{census.mins|padding:2}}:{{census.secs|padding:2}}</td>
+              </tr>
+              <tr>
+                <td width="30%">CPU</td>
+                <td width="70%"align="right">{{(census.cpu * 100)|number:0}} %</td>
+              </tr>
+              <tr>
+                <td width="30%">RAM</td>
+                <td width="70%" align="right">{{census.ram / (1024 * 1024)|number:0}} MB</td>
+              </tr>
+              <tr>
+                <td width="30%">I/O</td>
+                <td width="70%" align="right">{{census.io|number:0}}/sec</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
 
       <!-- Job status -->
       <md-tabs md-selected="selected" md-dynamic-height>

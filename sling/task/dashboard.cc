@@ -16,10 +16,15 @@
 
 #include <time.h>
 #include <unistd.h>
+#include <sys/resource.h>
 #include <sstream>
 
 namespace sling {
 namespace task {
+
+Dashboard::Dashboard() {
+  start_time_ = time(0);
+}
 
 Dashboard::~Dashboard() {
   for (auto *j : jobs_) delete j;
@@ -36,6 +41,7 @@ string Dashboard::GetStatus() {
 
   // Output current time and status.
   out << "{\"time\":" << time(0);
+  out << ",\"started\":" << start_time_;
   out << ",\"finished\":" << ((status_ < FINAL) ? 0 : 1);
 
   // Output jobs.
@@ -85,8 +91,25 @@ string Dashboard::GetStatus() {
     out << "}";
   }
   out << "]";
-  out << "}";
 
+  // Output resource usage.
+  struct rusage ru;
+  if (getrusage(RUSAGE_SELF, &ru) == 0) {
+    int64 utime = ru.ru_utime.tv_sec * 1000000LL + ru.ru_utime.tv_usec;
+    int64 stime = ru.ru_stime.tv_sec * 1000000LL + ru.ru_stime.tv_usec;
+    int64 mem = ru.ru_maxrss * 1024LL;
+    if (mem > peak_memory_) peak_memory_ = mem;
+    if (status_ >= FINAL) mem = peak_memory_;
+    int64 ioread = ru.ru_inblock;
+    int64 iowrite = ru.ru_oublock;
+    out << ",\"utime\":" << utime;
+    out << ",\"stime\":" << stime;
+    out << ",\"mem\":" << mem;
+    out << ",\"ioread\":" << ioread;
+    out << ",\"iowrite\":" << iowrite;
+  }
+
+  out << "}";
   return out.str();
 }
 

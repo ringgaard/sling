@@ -19,7 +19,7 @@ namespace task {
 
 void DocumentProcessor::InitCommons(Task *task) {
   // Bind document names.
-  CHECK(docnames_.Bind(commons_));
+  CHECK(docnames_->Bind(commons_));
 }
 
 void DocumentProcessor::Start(Task *task) {
@@ -34,7 +34,7 @@ void DocumentProcessor::Start(Task *task) {
 
 void DocumentProcessor::Process(Slice key, const Frame &frame) {
   // Create document from frame.
-  nlp::Document document(frame, &docnames_);
+  nlp::Document document(frame, docnames_);
   num_document_->Increment();
   num_tokens_->Increment(document.num_tokens());
   num_spans_->Increment(document.num_spans());

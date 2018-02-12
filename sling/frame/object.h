@@ -159,7 +159,7 @@ class SharedNames : public Names {
 
  private:
   // Reference count.
-  mutable std::atomic<int> refs_{0};
+  mutable std::atomic<int> refs_{1};
 };
 
 // The Object class is the base class for holding references to heap objects.

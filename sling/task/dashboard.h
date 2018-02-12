@@ -37,6 +37,7 @@ class Dashboard : public Monitor {
   // List of counters.
   typedef std::vector<std::pair<string, int64>> CounterList;
 
+  Dashboard();
   ~Dashboard();
 
   // Register job status service.
@@ -78,6 +79,12 @@ class Dashboard : public Monitor {
 
   // Dashboard app.
   StaticContent app_{"/", "sling/task/app"};
+
+  // Start time.
+  int64 start_time_;
+
+  // Peak memory usage.
+  int64 peak_memory_ = 0;
 
   // Mutex for serializing access to dashboard.
   Mutex mu_;

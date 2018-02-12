@@ -13,7 +13,7 @@ app.filter('padding', function () {
 app.controller('DashboardCtrl', function($scope, $location, $rootScope, $interval,
                                          $mdToast) {
   $scope.auto = false;
-  $scope.freq = 5;
+  $scope.freq = 15;
   $scope.done = false;
   $scope.error = false;
   var ticks = 0;
@@ -67,9 +67,13 @@ app.controller('DashboardCtrl', function($scope, $location, $rootScope, $interva
 })
 
 app.controller('StatusCtrl', function($scope, $http, $rootScope) {
+  $scope.running = true;
   $scope.status = null;
   $scope.jobs = [];
   $scope.selected = 0;
+  $scope.census = null;
+
+  var resources = null;
 
   function updateTitle(msg) {
     var host = window.location.hostname + ":" + window.location.port;
@@ -82,6 +86,32 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
 
   $scope.update = function() {
     var status = $scope.status
+
+    // Update resource usage.
+    var runtime = status.time - status.started;
+    var res = {};
+    res.time = status.time;
+    res.cpu = (status.utime + status.stime) / 1000000;
+    res.ram = status.mem;
+    res.io = status.ioread + status.iowrite;
+    if (resources) {
+      var census = {};
+      census.hours = Math.floor(runtime / 3600);
+      census.mins = Math.floor((runtime % 3600) / 60);
+      census.secs = Math.floor(runtime % 60);
+      if (status.finished) {
+        census.cpu = res.cpu / runtime;
+        census.ram = res.ram;
+        census.io = res.io / runtime;
+      } else {
+        var dt = res.time - resources.time;
+        census.cpu = (res.cpu - resources.cpu) / dt;
+        census.ram = res.ram;
+        census.io = (res.io - resources.io) / dt;
+      }
+      $scope.census = census;
+    }
+    resources = res;
 
     // Update job list.
     for (var i = 0; i < status.jobs.length; ++i) {
@@ -202,6 +232,7 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
 
       // Check for workflow completed.
       if (status.finished) {
+        $scope.running = false;
         $rootScope.$emit('done');
         updateTitle("Done");
       }
