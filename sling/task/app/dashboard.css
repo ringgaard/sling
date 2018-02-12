@@ -20,14 +20,14 @@
 
 .res {
   padding: 8px;
-  width: 200px;
+  width: 175px;
   margin-left: 8px;
   margin-bottom: 8px;
   margin-top: 8px;
   color: #00C000;
   background: black;
   font-family: Orbitron, arial;
-  font-size: 12pt;
+  font-size: 11pt;
   border-style: ridge;
   border-color: lightgray;
 }
