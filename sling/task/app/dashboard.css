@@ -27,13 +27,11 @@
   margin-left: 8px;
   margin-bottom: 8px;
   margin-top: 8px;
-  color: #00C000;
-  background: black;
+  color: black;
+  background: lightgray;
   font-family: arial;
   font-weight: normal;
   font-size: 14pt;
-  border-style: ridge;
-  border-color: lightgray;
 }
 
 .lcd {
