@@ -195,7 +195,7 @@ class Channel {
   // Check whether channel is closed.
   bool closed() const { return closed_; }
 
-  // Send message to channel consumer. The caller relinquish ownership of
+  // Send message to channel consumer. The caller relinquishes ownership of
   // message.
   void Send(Message *message);
 
@@ -229,7 +229,7 @@ class Channel {
   Counter *output_value_bytes_ = nullptr;
 };
 
-// A task processor reads input from input resources and message from source
+// A task processor reads input from input resources and messages from source
 // channels and produces output resources and messages on sink channels.
 class Processor : public Component<Processor> {
  public:

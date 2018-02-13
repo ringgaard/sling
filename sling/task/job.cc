@@ -319,7 +319,10 @@ void Job::BuildStages() {
     Stage *stage = task->stage();
     for (Binding *binding : task->inputs()) {
       Task *dependency = producer[binding->resource()->id()];
-      if (dependency != nullptr && dependency->stage() != stage) {
+      if (dependency != nullptr) {
+        CHECK(dependency->stage() != stage)
+            << "The " << binding->name() << " input in " << task->ToString()
+            << " reads data produced in the same stage";
         stage->AddDependency(dependency->stage());
       }
     }

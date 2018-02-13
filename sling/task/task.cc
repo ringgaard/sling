@@ -276,8 +276,7 @@ std::vector<Channel *> Task::GetSinks(const string &name) {
   return channels;
 }
 
-const string &Task::Get(const string &name,
-                             const string &defval) {
+const string &Task::Get(const string &name, const string &defval) {
   for (const auto &p : parameters_) {
     if (p.name == name) return p.value;
   }
