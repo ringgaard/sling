@@ -306,9 +306,11 @@ class Task {
 
   // Get the resource binding for singleton input. Return null if not bound.
   Binding *GetInput(const string &name);
+  const string &GetInputFile(const string &name);
 
   // Get the resource binding for singleton output. Return null if not bound.
   Binding *GetOutput(const string &name);
+  const string &GetOutputFile(const string &name);
 
   // Get resource bindings for input.
   std::vector<Binding *> GetInputs(const string &name);
