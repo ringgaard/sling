@@ -17,6 +17,7 @@
 #include "sling/base/init.h"
 #include "sling/pyapi/pyarray.h"
 #include "sling/pyapi/pyframe.h"
+#include "sling/pyapi/pymisc.h"
 #include "sling/pyapi/pyparser.h"
 #include "sling/pyapi/pyphrase.h"
 #include "sling/pyapi/pyrecordio.h"
@@ -26,6 +27,9 @@
 namespace sling {
 
 static PyMethodDef py_funcs[] = {
+  {"get_flags", (PyCFunction) PyGetFlags, METH_NOARGS, ""},
+  {"set_flag", (PyCFunction) PySetFlag, METH_VARARGS, ""},
+  {"log_message", (PyCFunction) PyLogMessage, METH_VARARGS, ""},
   {"start_task_monitor", (PyCFunction) StartTaskMonitor, METH_VARARGS, ""},
   {"get_job_statistics", (PyCFunction) GetJobStatistics, METH_NOARGS, ""},
   {"finalize_dashboard", (PyCFunction) FinalizeDashboard, METH_NOARGS, ""},

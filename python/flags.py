@@ -15,6 +15,7 @@
 """Command-line flags"""
 
 import argparse
+import pysling as api
 
 # Command line flag arguments.
 arg = argparse.Namespace()
@@ -36,8 +37,26 @@ def hook(callback):
 
 def parse():
   """Parse command-line flags."""
+  # Register all the C++ flags.
+  flags = api.get_flags()
+  for name, help, default in flags:
+    parser.add_argument("--" + name,
+                        help=help,
+                        type=type(default),
+                        default=default,
+                        metavar="VAL")
+
+  # Parse command line flags.
   global arg
   parser.parse_args(namespace=arg)
+
+  # Set C++ flags.
+  current = vars(arg)
+  for name, help, default in flags:
+    value = current[name]
+    if value != default: api.set_flag(name, value)
+
+  # Call all the post-processing hooks.
   for callback in hooks: callback(arg)
 
 # Standard command-line flags.

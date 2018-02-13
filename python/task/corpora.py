@@ -96,7 +96,7 @@ def download(url, filename):
   if os.path.exists(filename):
     raise Exception("file already exists: " + filename)
   chunksize = 64 * 1024
-  log("Download " + filename + " from " + url)
+  log.info("Download " + filename + " from " + url)
   conn = urllib2.urlopen(url)
   with open(filename, 'wb') as f:
     while True:
