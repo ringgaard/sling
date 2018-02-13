@@ -130,6 +130,12 @@
                   <span class="lcd">{{(census.io / 1000)|number:0}}</span> K/s
                 </td>
               </tr>
+              <tr ng-show="census.temp">
+                <td width="30%">TEMP</td>
+                <td width="70%" align="right">
+                  <span class="lcd">{{(census.temp)|number:0}}</span> °C
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>

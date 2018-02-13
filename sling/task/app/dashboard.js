@@ -94,23 +94,22 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
     res.cpu = (status.utime + status.stime) / 1000000;
     res.ram = status.mem;
     res.io = status.ioread + status.iowrite;
-    if (resources) {
-      var census = {};
-      census.hours = Math.floor(runtime / 3600);
-      census.mins = Math.floor((runtime % 3600) / 60);
-      census.secs = Math.floor(runtime % 60);
-      if (status.finished) {
-        census.cpu = res.cpu / runtime;
-        census.ram = res.ram;
-        census.io = res.io / runtime;
-      } else {
-        var dt = res.time - resources.time;
-        census.cpu = (res.cpu - resources.cpu) / dt;
-        census.ram = res.ram;
-        census.io = (res.io - resources.io) / dt;
-      }
-      $scope.census = census;
+    var census = {};
+    census.hours = Math.floor(runtime / 3600);
+    census.mins = Math.floor((runtime % 3600) / 60);
+    census.secs = Math.floor(runtime % 60);
+    census.temp = status.temperature;
+    if (status.finished) {
+      census.cpu = res.cpu / runtime;
+      census.ram = res.ram;
+      census.io = res.io / runtime;
+    } else if (resources) {
+      var dt = res.time - resources.time;
+      census.cpu = (res.cpu - resources.cpu) / dt;
+      census.ram = res.ram;
+      census.io = (res.io - resources.io) / dt;
     }
+    $scope.census = census;
     resources = res;
 
     // Update job list.

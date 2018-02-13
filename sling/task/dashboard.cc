@@ -24,6 +24,7 @@ namespace task {
 
 Dashboard::Dashboard() {
   start_time_ = time(0);
+  File::Match("/sys/class/thermal/thermal_zone*/temp", &thermal_devices_);
 }
 
 Dashboard::~Dashboard() {
@@ -40,9 +41,10 @@ string Dashboard::GetStatus() {
   std::stringstream out;
 
   // Output current time and status.
-  out << "{\"time\":" << time(0);
+  bool running = (status_ < FINAL);
+  out << "{\"time\":" << (running ? time(0) : end_time_);
   out << ",\"started\":" << start_time_;
-  out << ",\"finished\":" << ((status_ < FINAL) ? 0 : 1);
+  out << ",\"finished\":" << (running ? 0 : 1);
 
   // Output jobs.
   out << ",\"jobs\":[";
@@ -99,7 +101,7 @@ string Dashboard::GetStatus() {
     int64 stime = ru.ru_stime.tv_sec * 1000000LL + ru.ru_stime.tv_usec;
     int64 mem = ru.ru_maxrss * 1024LL;
     if (mem > peak_memory_) peak_memory_ = mem;
-    if (status_ >= FINAL) mem = peak_memory_;
+    if (!running) mem = peak_memory_;
     int64 ioread = ru.ru_inblock;
     int64 iowrite = ru.ru_oublock;
     out << ",\"utime\":" << utime;
@@ -107,6 +109,14 @@ string Dashboard::GetStatus() {
     out << ",\"mem\":" << mem;
     out << ",\"ioread\":" << ioread;
     out << ",\"iowrite\":" << iowrite;
+  }
+
+  // Get CPU temperature.
+  float temperature = GetCPUTemperature();
+  if (temperature > 0.0) {
+    if (temperature > peak_temp_) peak_temp_ = temperature;
+    if (!running) temperature = peak_temp_;
+    out << ",\"temperature\":" << temperature;
   }
 
   out << "}";
@@ -154,12 +164,25 @@ void Dashboard::OnJobDone(Job *job) {
 void Dashboard::Finalize(int timeout) {
   if (status_ == MONITORED) {
     // Signal that all jobs are done.
+    end_time_ = time(0);
     status_ = FINAL;
 
     // Wait until final status has been sent back.
     for (int wait = 0; wait < timeout && status_ != SYNCHED; ++wait) sleep(1);
   }
   status_ = TERMINAL;
+}
+
+float Dashboard::GetCPUTemperature() {
+  float temp = 0.0;
+  for (const string &dev : thermal_devices_) {
+    string data;
+    if (File::ReadContents(dev, &data)) {
+      float value = std::stoi(data) / 1000.0;
+      if (value > temp) temp = value;
+    }
+  }
+  return temp;
 }
 
 }  // namespace task
