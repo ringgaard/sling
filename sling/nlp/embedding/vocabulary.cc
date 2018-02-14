@@ -429,8 +429,7 @@ class WordEmbeddingTrainer : public Process {
 
     // Initialize commons store.
     commons_ = new Store();
-    docnames_ = new DocumentNames();
-    CHECK(docnames_->Bind(commons_));
+    docnames_ = new DocumentNames(commons_);
     commons_->Freeze();
 
     // Start training threads. Use one thread per input file.
@@ -628,7 +627,7 @@ class WordEmbeddingTrainer : public Process {
 
   // Commons store.
   Store *commons_ = nullptr;
-  DocumentNames *docnames_ = nullptr;
+  const DocumentNames *docnames_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("word-embedding-trainer", WordEmbeddingTrainer);
