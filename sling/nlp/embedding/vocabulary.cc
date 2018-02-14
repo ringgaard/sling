@@ -587,7 +587,7 @@ class WordEmbeddingTrainer : public Process {
   int window_ = 5;                     // window size for skip-grams
   double learning_rate_ = 0.025;       // learning rate
   double min_learning_rate_ = 0.0001;  // minimum learning rate
-  int embedding_dims_ = 200;           // size of embedding vectors
+  int embedding_dims_ = 256;           // size of embedding vectors
   double subsampling_ = 1e-3;          // sub-sampling rate
 
   // Neural network for training.

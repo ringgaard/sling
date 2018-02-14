@@ -66,12 +66,12 @@ class EmbeddingWorkflow:
     with self.wf.namespace(language + "-word-embeddings"):
       trainer = self.wf.task("word-embedding-trainer")
       trainer.add_params({
-        "iterations" : 1, #5,
+        "iterations" : 5,
         "negative": 5,
         "window": 5,
         "learning_rate": 0.025,
         "min_learning_rate": 0.0001,
-        "embedding_dims": 200,
+        "embedding_dims": 256,
         "subsampling": 1e-3,
       })
       trainer.attach_input("documents", documents)
