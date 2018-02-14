@@ -212,7 +212,7 @@ const string &Task::GetInputFile(const string &name) {
   if (input == nullptr) {
     LOG(FATAL) << "Input " << name << " is missing for task " << ToString();
   }
-  return input->name();
+  return input->resource()->name();
 }
 
 Binding *Task::GetOutput(const string &name) {
@@ -227,7 +227,7 @@ const string &Task::GetOutputFile(const string &name) {
   if (output == nullptr) {
     LOG(FATAL) << "Output " << name << " is missing for task " << ToString();
   }
-  return output->name();
+  return output->resource()->name();
 }
 
 std::vector<Binding *> Task::GetInputs(const string &name) {

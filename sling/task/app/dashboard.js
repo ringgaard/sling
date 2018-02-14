@@ -10,6 +10,13 @@ app.filter('padding', function () {
   };
 });
 
+app.filter('integer', function () {
+  return function(num) {
+    if (isNaN(num)) return "---";
+    return Math.round(num).toString();
+  };
+});
+
 app.controller('DashboardCtrl', function($scope, $location, $rootScope, $interval,
                                          $mdToast) {
   $scope.auto = false;

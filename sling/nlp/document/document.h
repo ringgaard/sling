@@ -33,7 +33,7 @@ class Document;
 
 // Symbol names for documents.
 struct DocumentNames : public SharedNames {
-  DocumentNames(Store *store) : SharedNames(store) {}
+  DocumentNames(Store *store) { CHECK(Bind(store)); }
 
   Name n_document{*this, "/s/document"};
   Name n_document_text{*this, "/s/document/text"};

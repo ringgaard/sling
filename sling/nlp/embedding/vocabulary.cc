@@ -26,6 +26,7 @@
 #include "sling/task/accumulator.h"
 #include "sling/task/documents.h"
 #include "sling/task/process.h"
+#include "sling/util/embeddings.h"
 #include "sling/util/thread.h"
 #include "sling/util/unicode.h"
 
@@ -296,7 +297,7 @@ class VocabularySampler {
     while (input.Read(&index, &word, &count)) {
       if (word == "<UNKNOWN>") oov_ = index;
       dictionary_[word] = index;
-      frequency_.push_back(count);
+      entry_.emplace_back(word, count);
       permutation_.emplace_back(index, count);
       sum += count;
     }
@@ -346,21 +347,30 @@ class VocabularySampler {
   // sentences for skip-grams. This implements the sub-sampling strategy from
   // Mikolov 2013.
   float SubsamplingProbability(int index) const {
-    float count = frequency_[index];
+    float count = entry_[index].count;
     return (sqrt(count / threshold_) + 1.0) * threshold_ / count;
   }
 
   // Clear data.
   void Clear() {
     dictionary_.clear();
-    frequency_.clear();
+    entry_.clear();
     permutation_.clear();
   }
 
   // Return the number of word in the vocabulary.
   size_t size() const { return dictionary_.size(); }
 
+  // Get word for index.
+  const string &word(int index) const { return entry_[index].word; }
+
  private:
+  struct Entry {
+    Entry(const string &word, float count) : word(word), count(count) {}
+    string word;
+    float count;
+  };
+
   struct Element {
     Element(int i, float p) : index(i), probability(p) {}
     int index;
@@ -370,8 +380,8 @@ class VocabularySampler {
   // Mapping from word to vocabulary index.
   std::unordered_map<string, int> dictionary_;
 
-  // Word frequencies.
-  std::vector<float> frequency_;
+  // Word list.
+  std::vector<Entry> entry_;
 
   // Permutaion of words for sampling.
   std::vector<Element> permutation_;
@@ -383,24 +393,15 @@ class VocabularySampler {
   int oov_ = 0;
 };
 
-// Trainer for word embeddings model. The trainer support running training on
+// Trainer for word embeddings model. The trainer supports running training on
 // multiple threads concurrently. While this can significantly speed up
 // the processing time, this will also lead to non-determinism because of
 // concurrent access to shared data structure, i.e. the weight matrices in the
 // network. However, the updates are usually small, so in practice these unsafe
 // updates are usually not harmful and adding mutexes to serialize access to the
-// network slows down training considerably.
+// model slows down training considerably.
 class WordEmbeddingTrainer : public Process {
  public:
-  // One part of the input data.
-  struct Part {
-    int index;            // shard index
-    string filename;      // shard file name
-    int epoch = 0;        // current training epoch
-    int64 total = 0;      // instances per epoch (0 if yet unknown)
-    int64 processed = 0;  // total number instances processed
-  };
-
   // Run training of embedding net.
   void Run(Task *task) override {
     // Get training parameters.
@@ -419,44 +420,38 @@ class WordEmbeddingTrainer : public Process {
     // Allocate embedding model.
     model_.Init(vocabulary_size, embedding_dims_, vocabulary_size);
 
-    // Get file names for training data.
-    std::vector<string> filenames = task->GetInputFiles("documents");
-    parts_.resize(filenames.size());
-    for (int i = 0; i < parts_.size(); ++i) {
-      parts_[i].index = i;
-      parts_[i].filename = filenames[i];
-    }
-
     // Initialize commons store.
     commons_ = new Store();
     docnames_ = new DocumentNames(commons_);
     commons_->Freeze();
 
-    // Start training threads. Use one thread per input file.
+    // Statistics.
+    num_documents_ = task->GetCounter("num_documents");
+    total_documents_ = task->GetCounter("total_documents");
+    num_tokens_ = task->GetCounter("num_tokens");
+    num_instances_ = task->GetCounter("num_instances");
+    epochs_completed_ = task->GetCounter("epochs_completed");
+
+    // Start training threads. Use one worker thread per input file.
+    std::vector<string> filenames = task->GetInputFiles("documents");
     WorkerPool pool;
-    pool.Start(parts_.size(), [this](int index) { Worker(&parts_[index]); });
+    pool.Start(filenames.size(), [this, filenames](int index) {
+      Worker(index, filenames[index]);
+    });
+
+    // Wait until workers completes.
     pool.Join();
 
-#if 0
-    // Get embeddings.
-    SSTableWriter writer;
-    std::vector<float> embedding(embedding_size_);
-    for (int i = 0; i < num_entities_; ++i) {
-      const string &mid = sampler_.GetMid(i);
-      EntityProfile profile;
-      profile.set_mid(mid);
-      net_.GetLayer1(i, &embedding);
-      for (float f : embedding) profile.add_embedding(f);
-      writer.Add(mid, profile.SerializeAsString());
+    // Write embeddings to output file.
+    const string &output_filename = task->GetOutputFile("output");
+    EmbeddingWriter writer(output_filename, vocabulary_size, embedding_dims_);
+    std::vector<float> embedding(embedding_dims_);
+    for (int i = 0; i < vocabulary_size; ++i) {
+      const string &word = vocabulary_.word(i);
+      model_.GetLayer1(i, &embedding);
+      writer.Write(word, embedding);
     }
-
-    // Write profiles with embeddings to sstable.
-    string output_filename = TaskContext::OutputFile(*embeddings_output_);
-    SSTableBuilderOptions options;
-    options.set_attribute_file(false);
-    writer.Write(output_filename, options);
-
-#endif
+    CHECK(writer.Close());
 
     // Clean up.
     model_.Clear();
@@ -468,40 +463,47 @@ class WordEmbeddingTrainer : public Process {
   }
 
   // Worker thread for training embedding model.
-  void Worker(Part *part) {
+  void Worker(int index, const string &filename) {
     Random rnd;
-    rnd.seed(part->index);
+    rnd.seed(index);
     float alpha = learning_rate_;
+    int epoch = 0;
     std::vector<int> words;
     std::vector<int> features;
     std::vector<float> hidden(embedding_dims_);
     std::vector<float> error(embedding_dims_);
-    RecordFileOptions options;
 
-    RecordReader input(part->filename, options);
+    RecordFileOptions options;
+    RecordReader input(filename, options);
     Record record;
     for (;;) {
-      // Read next record from input.
-      if (!input.Read(&record)) {
-        if (++part->epoch < iterations_) {
+      // Check for end of corpus.
+      if (input.Done()) {
+        epochs_completed_->Increment();
+        if (++epoch < iterations_) {
           // Seek back to the begining.
           input.Rewind();
-          if (part->total == 0) part->total = part->processed;
 
           // Update learning rate.
-          alpha = learning_rate_ * (1 - part->epoch / iterations_);
+          float progress = static_cast<float>(epoch) / iterations_;
+          alpha = learning_rate_ * (1.0 - progress);
           if (alpha < min_learning_rate_) alpha = min_learning_rate_;
           continue;
         } else {
           break;
         }
       }
-      part->processed++;
+
+      // Read next record from input.
+      CHECK(input.Read(&record));
+      num_documents_->Increment();
+      if (epoch == 0) total_documents_->Increment();
 
       // Create document.
       Store store(commons_);
       StringDecoder decoder(&store, record.value.data(), record.value.size());
       Document document(decoder.Decode().AsFrame(), docnames_);
+      num_tokens_->Increment(document.num_tokens());
 
       // Go over each sentence in the document.
       for (SentenceIterator s(&document); s.more(); s.next()) {
@@ -529,6 +531,8 @@ class WordEmbeddingTrainer : public Process {
             if (i >= words.size()) continue;
             features.push_back(words[i]);
           }
+          if (features.empty()) continue;
+          num_instances_->Increment();
 
           // Propagate input to hidden layer.
           for (int i = 0; i < hidden.size(); ++i) hidden[i] = 0;
@@ -576,48 +580,15 @@ class WordEmbeddingTrainer : public Process {
     }
   }
 
-#if 0
-  // Returns training progress status.
-  void GetStatusMessage(string *message) override {
-    int64 processed = 0;
-    int64 total = 0;
-    int epoch = iterations_;
-    bool totals_ready = true;
-    for (const Shard &shard : shards_) {
-      processed += shard.processed;
-      total += shard.total;
-      if (shard.epoch < epoch) epoch = shard.epoch;
-      if (shard.total == 0) totals_ready = false;
-    }
-    double progress = 0.0;
-    if (totals_ready) {
-      progress = static_cast<double>(processed) / (total * iterations_);
-    }
-    *message =
-        StringPrintf("Epoch %d/%d, %lld/%lld instances, %.1f%%, %lld/sec",
-                     epoch + 1, iterations_,
-                     processed, total * iterations_,
-                     progress * 100.0,
-                     processed / (time(nullptr) - start_time_));
-  }
-#endif
-
  private:
   // Training parameters.
-  int iterations_ = 1;                 // number of training iterations
+  int iterations_ = 5;                 // number of training iterations
   int negative_ = 5;                   // negative examples per positive example
   int window_ = 5;                     // window size for skip-grams
   double learning_rate_ = 0.025;       // learning rate
   double min_learning_rate_ = 0.0001;  // minimum learning rate
   int embedding_dims_ = 200;           // size of embedding vectors
-  double subsampling_ = 1e-5;          // sub-sampling rate
-
-  // Number of entities and feature.
-  int num_entities_;
-  int num_features_;
-
-  // Training data parts.
-  std::vector<Part> parts_;
+  double subsampling_ = 1e-3;          // sub-sampling rate
 
   // Neural network for training.
   EmbeddingModel model_;
@@ -628,6 +599,13 @@ class WordEmbeddingTrainer : public Process {
   // Commons store.
   Store *commons_ = nullptr;
   const DocumentNames *docnames_ = nullptr;
+
+  // Statistics.
+  Counter *num_documents_ = nullptr;
+  Counter *total_documents_ = nullptr;
+  Counter *num_tokens_ = nullptr;
+  Counter *num_instances_ = nullptr;
+  Counter *epochs_completed_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("word-embedding-trainer", WordEmbeddingTrainer);

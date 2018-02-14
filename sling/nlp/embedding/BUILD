@@ -12,6 +12,7 @@ cc_library(
     "//sling/task:accumulator",
     "//sling/task:documents",
     "//sling/task:process",
+    "//sling/util:embeddings",
     "//sling/util:thread",
     "//sling/util:unicode",
   ],

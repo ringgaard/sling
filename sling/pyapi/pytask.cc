@@ -112,7 +112,7 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
       PyObject *pybinding = PyList_GetItem(inputs, i);
       const char *name = PyStrAttr(pybinding, "name");
       PyObject *pyresource = PyAttr(pybinding, "resource");
-      Resource *resource = resource_mapping.at(pyresource);
+      Resource *resource = resource_mapping[pyresource];
       CHECK(resource != nullptr);
       job_->BindInput(task, resource, name);
       Py_DECREF(pyresource);
@@ -125,7 +125,7 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
       PyObject *pybinding = PyList_GetItem(outputs, i);
       const char *name = PyStrAttr(pybinding, "name");
       PyObject *pyresource = PyAttr(pybinding, "resource");
-      Resource *resource = resource_mapping.at(pyresource);
+      Resource *resource = resource_mapping[pyresource];
       CHECK(resource != nullptr);
       job_->BindOutput(task, resource, name);
       Py_DECREF(pyresource);

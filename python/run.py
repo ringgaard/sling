@@ -74,6 +74,11 @@ flags.define("--extract_vocabulary",
              default=False,
              action='store_true')
 
+flags.define("--train_word_embeddings",
+             help="train word embeddings",
+             default=False,
+             action='store_true')
+
 flags.define("--dryrun",
              help="build worflows but do not run them",
              default=False,
@@ -194,6 +199,15 @@ def train_embeddings():
       wf = embedding.EmbeddingWorkflow(language + "-vocabulary")
       wf.extract_vocabulary(language=language)
       run_workflow(wf)
+
+  # Train word embeddings.
+  if flags.arg.train_word_embeddings:
+    for language in flags.arg.languages:
+      log.info("Train " + language + " word embeddings")
+      wf = embedding.EmbeddingWorkflow(language + "-word-embeddings")
+      wf.train_word_embeddings(language=language)
+      run_workflow(wf)
+
 
 if __name__ == '__main__':
   # Parse command-line arguments.

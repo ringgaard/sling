@@ -185,12 +185,18 @@ class Task:
     self.params = {}
 
   def attach_input(self, name, resource):
-    """Attach named input resource to task."""
-    self.inputs.append(Binding(name, resource))
+    """Attach named input resource(s) to task."""
+    if isinstance(resource, list):
+      for r in resource: self.inputs.append(Binding(name, r))
+    else:
+      self.inputs.append(Binding(name, resource))
 
   def attach_output(self, name, resource):
-    """Attach named output resource to task."""
-    self.outputs.append(Binding(name, resource))
+    """Attach named output resource(s) to task."""
+    if isinstance(resource, list):
+      for r in resource: self.outputs.append(Binding(name, r))
+    else:
+      self.outputs.append(Binding(name, resource))
 
   def connect_source(self, channel):
     """Connect channel to a named input source for the task."""

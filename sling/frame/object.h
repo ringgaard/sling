@@ -151,12 +151,11 @@ class Name {
 
 class SharedNames : public Names {
  public:
-   SharedNames(Store *store) { CHECK(Bind(store)); }
-   ~SharedNames() { CHECK_EQ(refs_, 0); }
+  ~SharedNames() { CHECK_EQ(refs_, 0); }
 
-   // Reference counting for shared names object.
-   void AddRef() const { refs_.fetch_add(1); };
-   void Release() const { if (refs_.fetch_sub(1) == 1) delete this; }
+  // Reference counting for shared names object.
+  void AddRef() const { refs_.fetch_add(1); };
+  void Release() const { if (refs_.fetch_sub(1) == 1) delete this; }
 
  private:
   // Reference count.

@@ -108,33 +108,37 @@
             <tbody>
               <tr>
                 <td width="30%">TIME</td>
-                <td width="70%" align="right">
+                <td width="70%" align="right" colspan=2>
                   <span class="lcd">{{census.hours}}:{{census.mins|padding:2}}:{{census.secs|padding:2}}</span>
                 </td>
               </tr>
               <tr>
                 <td width="30%">CPU</td>
-                <td width="70%" align="right">
-                  <span class="lcd">{{(census.cpu * 100)|number:0}}</span> %
+                <td width="60%" align="right">
+                  <span class="lcd">{{(census.cpu * 100)|integer}}</span>
                 </td>
+                <td width="10%" valign="bottom">%</td>
               </tr>
               <tr>
                 <td width="30%">RAM</td>
-                <td width="70%" align="right">
-                  <span class="lcd">{{census.ram / (1024 * 1024)|number:0}}</span> MB
+                <td width="60%" align="right">
+                  <span class="lcd">{{census.ram / (1024 * 1024)|integer}}</span>
                 </td>
+                <td width="10%" valign="bottom">MB</td>
               </tr>
               <tr>
                 <td width="30%">I/O</td>
-                <td width="70%" align="right">
-                  <span class="lcd">{{(census.io / 1000)|number:0}}</span> K/s
+                <td width="60%" align="right">
+                  <span class="lcd">{{(census.io / 1000)|integer}}</span>
                 </td>
+                <td width="10%" valign="bottom">MB/s</td>
               </tr>
               <tr ng-show="census.temp">
                 <td width="30%">TEMP</td>
-                <td width="70%" align="right">
-                  <span class="lcd">{{(census.temp)|number:0}}</span> °C
+                <td width="60%" align="right">
+                  <span class="lcd">{{(census.temp)|integer}}</span>
                 </td>
+                <td width="10%" valign="bottom">°C</td>
               </tr>
             </tbody>
           </table>
@@ -147,7 +151,7 @@
         <md-tab ng-repeat="job in jobs" label="{{job.name}}">
 
           <!-- Channels -->
-          <table class=" channel-table mdl-data-table mdl-shadow--2dp">
+          <table class="channel-table mdl-data-table mdl-shadow--2dp" ng-show="job.channels.length > 0">
             <thead>
               <tr>
                 <th class="mdl-data-table__cell--non-numeric">Channel</th>
@@ -175,7 +179,7 @@
           </table>
 
           <!-- Counters -->
-          <table class="counter-table mdl-data-table mdl-shadow--2dp">
+          <table class="counter-table mdl-data-table mdl-shadow--2dp" ng-show="job.counters.length > 0">
             <thead>
               <tr>
                 <th class="mdl-data-table__cell--non-numeric">Counter</th>

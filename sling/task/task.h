@@ -111,7 +111,7 @@ class Resource {
     : id_(id), name_(name), shard_(), format_(format) {}
 
   int id() const { return id_; }
-  const string name() const { return name_; }
+  const string &name() const { return name_; }
   const Shard &shard() const { return shard_; }
   const Format &format() const { return format_; }
 
