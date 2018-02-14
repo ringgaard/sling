@@ -104,23 +104,37 @@
 
         <!-- Resource usage -->
         <div ng-show="census">
-          <table class="res">
+          <table class="mdl-shadow--2dp res">
             <tbody>
               <tr>
                 <td width="30%">TIME</td>
-                <td width="70%"align="right">{{census.hours}}:{{census.mins|padding:2}}:{{census.secs|padding:2}}</td>
+                <td width="70%" align="right">
+                  <span class="lcd">{{census.hours}}:{{census.mins|padding:2}}:{{census.secs|padding:2}}</span>
+                </td>
               </tr>
               <tr>
                 <td width="30%">CPU</td>
-                <td width="70%"align="right">{{(census.cpu * 100)|number:0}} %</td>
+                <td width="70%" align="right">
+                  <span class="lcd">{{(census.cpu * 100)|number:0}}</span> %
+                </td>
               </tr>
               <tr>
                 <td width="30%">RAM</td>
-                <td width="70%" align="right">{{census.ram / (1024 * 1024)|number:0}} MB</td>
+                <td width="70%" align="right">
+                  <span class="lcd">{{census.ram / (1024 * 1024)|number:0}}</span> MB
+                </td>
               </tr>
               <tr>
                 <td width="30%">I/O</td>
-                <td width="70%" align="right">{{census.io|number:0}}/sec</td>
+                <td width="70%" align="right">
+                  <span class="lcd">{{(census.io / 1000)|number:0}}</span> K/s
+                </td>
+              </tr>
+              <tr ng-show="census.temp">
+                <td width="30%">TEMP</td>
+                <td width="70%" align="right">
+                  <span class="lcd">{{(census.temp)|number:0}}</span> °C
+                </td>
               </tr>
             </tbody>
           </table>

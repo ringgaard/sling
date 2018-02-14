@@ -14,19 +14,30 @@
 
 """Simple logging."""
 
-import datetime
 import inspect
 import os
+import pysling as api
 
 INFO = 0
 WARNING = 1
 ERROR = 2
 FATAL = 3
 
-def log(msg, severity=INFO):
-  timestamp = str(datetime.datetime.now())
-  caller = inspect.stack()[1]
+def _log_message(msg, severity):
+  caller = inspect.stack()[2]
   fn = os.path.basename(caller[1])
   line = caller[2]
-  print "[%s: %s %s:%d] %s" % (timestamp, "IWEF"[severity], fn, line, msg)
+  api.log_message(severity, fn, line, msg)
+
+def info(msg):
+  _log_message(msg, INFO)
+
+def warning(msg):
+  _log_message(msg, WARNING)
+
+def error(msg):
+  _log_message(msg, ERROR)
+
+def fatal(msg):
+  _log_message(msg, FATAL)
 

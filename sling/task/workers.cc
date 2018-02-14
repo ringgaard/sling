@@ -52,10 +52,8 @@ class Workers : public Processor {
 
   void Done(Task *task) override {
     // Stop all worker threads.
-    if (pool_ != nullptr) {
-      delete pool_;
-      pool_ = nullptr;
-    }
+    delete pool_;
+    pool_ = nullptr;
   }
 
  private:

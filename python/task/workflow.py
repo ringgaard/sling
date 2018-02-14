@@ -245,43 +245,6 @@ class Scope:
     return '/'.join(reversed(parts))
 
 
-class ChannelStats:
-  """Channel statistics based on task counters."""
-  def __init__(self):
-    self.time = time.time()
-    self.key_bytes = 0
-    self.value_bytes = 0
-    self.messages = 0
-    self.shards_done = 0
-    self.shards_total = 0
-
-  def update(self, metric, value):
-    if metric == "input_key_bytes" or metric == "output_key_bytes":
-      self.key_bytes = value
-    elif metric == "input_value_bytes" or metric == "output_value_bytes":
-      self.value_bytes = value
-    elif metric == "input_messages" or metric == "output_messages":
-      self.messages = value
-    elif metric == "input_shards" or metric == "output_shards":
-      self.shards_total = value
-    elif metric == "input_shards_done" or metric == "output_shards_done":
-      self.shards_done = value
-    else:
-      return False
-    return True
-
-  def volume(self):
-    return self.key_bytes + self.value_bytes
-
-  def throughput(self, prev):
-    if prev == None: return 0.0
-    return (self.messages - prev.messages) / (self.time - prev.time)
-
-  def bandwidth(self, prev):
-    if prev == None: return 0.0
-    return (self.volume() - prev.volume()) / (self.time - prev.time)
-
-
 def format_of(input):
   """Get format from one or more channels or resources."""
   if isinstance(input, list):
@@ -705,58 +668,6 @@ class Workflow(object):
         if not os.path.exists(directory): os.makedirs(directory)
         checked.add(directory)
 
-  def monitor(self, refresh=30):
-    """Wait and monitor wokflow until it completes."""
-    start = time.time()
-    done = False
-    prev_channels = {}
-    prev_counters = {}
-    prev_time = start
-    while not done:
-      done = self.wait(refresh * 1000)
-      elapsed = time.time() - start
-      print "==== workflow status at", datetime.timedelta(seconds=elapsed)
-
-      print "{:64} {:>16} {:>16}".format("Counter", "Value", "Rate")
-      counters = self.counters()
-      channels = {}
-      current_counters = {}
-      current_time = time.time()
-      for ctr in sorted(counters):
-        m = re.match(r"(.+)\[(.+\..+)\]", ctr)
-        if m != None:
-          channel = m.group(2)
-          metric = m.group(1)
-          if channel not in channels: channels[channel] = ChannelStats()
-          channels[channel].update(metric, counters[ctr])
-        else:
-          current_value = counters[ctr]
-          prev_value = prev_counters.get(ctr, 0)
-          delta = current_value - prev_value
-          elapsed = current_time - prev_time
-          rate = long(delta / elapsed)
-          print "{:64} {:>16,} {:>16,}".format(ctr, current_value, rate)
-          current_counters[ctr] = current_value
-      print
-      if len(channels) > 0:
-        print "{:64} {:>16} {:>16} {:>16} {:>16} {:>16}  {}".format(
-              "Channel", "Key bytes", "Value bytes", "Bandwidth",
-              "Messages", "Throughput", "Shards")
-        for channel in sorted(channels):
-          stats = channels[channel]
-          prev = prev_channels.get(channel)
-          print "{:64} {:>16,} {:>16,} {:>11,.3f} MB/s {:>16,} " \
-                "{:>12,.0f} MPS  {:}".format(
-                channel, stats.key_bytes, stats.value_bytes,
-                stats.bandwidth(prev) / 1000000,
-                stats.messages, stats.throughput(prev),
-                str(stats.shards_done) + "/" + str(stats.shards_total))
-        print
-      prev_time = current_time
-      prev_counters = current_counters
-      prev_channels = channels
-    log("workflow completed in " + str(datetime.timedelta(seconds=time.time() - start)))
-
 def start_monitor(port):
   """Start task monitor."""
   api.start_task_monitor(port)
@@ -765,7 +676,7 @@ def stop_monitor():
   """Stop task monitor."""
   global active
   if active:
-    log("sending final status to monitor")
+    log.info("sending final status to monitor")
     api.finalize_dashboard();
 
 def statistics():
@@ -781,6 +692,6 @@ def save_workflow_log(path):
   logfile = open(logfn, "w")
   logfile.write(statistics())
   logfile.close()
-  log("workflow stats saved in " + logfn)
+  log.info("workflow stats saved in " + logfn)
   return True
 

@@ -102,7 +102,7 @@ def run_workflow(wf):
     return
 
   # Start workflow.
-  log("start workflow")
+  log.info("start workflow")
   wf.wf.start()
 
   # Wait until workflow completes. Poll every second to make the workflow
@@ -114,18 +114,19 @@ def download_corpora():
   # Download wikidata dump.
   if flags.arg.download_wikidata:
     if flags.arg.dryrun:
-      log("wikidata dump: " + corpora.wikidata_url())
+      log.info("wikidata dump: " + corpora.wikidata_url())
     else:
-      log("Download wikidata dump")
+      log.info("Download wikidata dump")
       corpora.download_wikidata()
 
   # Download wikipedia dumps.
   if flags.arg.download_wikipedia:
     for language in flags.arg.languages:
       if flags.arg.dryrun:
-        log(language + " wikipedia dump: " + corpora.wikipedia_url(language))
+        log.info(language + " wikipedia dump: " +
+                 corpora.wikipedia_url(language))
       else:
-        log("Download " + language + " wikipedia dump")
+        log.info("Download " + language + " wikipedia dump")
         corpora.download_wikipedia(language)
 
 def import_wiki():
@@ -133,13 +134,13 @@ def import_wiki():
     wf = wiki.WikiWorkflow("wiki-import")
     # Import wikidata.
     if flags.arg.import_wikidata:
-      log("Import wikidata")
+      log.info("Import wikidata")
       wf.wikidata()
 
     # Import wikipedia(s).
     if flags.arg.import_wikipedia:
       for language in flags.arg.languages:
-        log("Import " + language + " wikipedia")
+        log.info("Import " + language + " wikipedia")
         wf.wikipedia(language=language)
 
     run_workflow(wf)
@@ -148,7 +149,7 @@ def parse_wikipedia():
   # Convert wikipedia pages to SLING documents.
   if flags.arg.parse_wikipedia:
     for language in flags.arg.languages:
-      log("Parse " + language + " wikipedia")
+      log.info("Parse " + language + " wikipedia")
       wf = wiki.WikiWorkflow(language + "-wikipedia-parsing")
       wf.parse_wikipedia(language=language)
       run_workflow(wf)
@@ -156,7 +157,7 @@ def parse_wikipedia():
 def build_knowledge_base():
   # Build knowledge base repository.
   if flags.arg.build_kb:
-    log("Build knowledge base repository")
+    log.info("Build knowledge base repository")
     wf = wiki.WikiWorkflow("knowledge-base")
     wf.build_knowledge_base()
     run_workflow(wf)
@@ -164,7 +165,7 @@ def build_knowledge_base():
   # Extract item names from wikidata and wikipedia.
   if flags.arg.extract_names:
     for language in flags.arg.languages:
-      log("Extract " + language + " names")
+      log.info("Extract " + language + " names")
       wf = wiki.WikiWorkflow(language + "-name-extraction")
       wf.extract_names(language=language)
       run_workflow(wf)
@@ -172,7 +173,7 @@ def build_knowledge_base():
   # Build name table.
   if flags.arg.build_nametab:
     for language in flags.arg.languages:
-      log("Build " + language + " name table")
+      log.info("Build " + language + " name table")
       wf = wiki.WikiWorkflow(language + "-name-table")
       wf.build_name_table(language=language)
       run_workflow(wf)
@@ -180,7 +181,7 @@ def build_knowledge_base():
   # Build phrase table.
   if flags.arg.build_phrasetab:
     for language in flags.arg.languages:
-      log("Build " + language + " phrase table")
+      log.info("Build " + language + " phrase table")
       wf = wiki.WikiWorkflow(language + "-phrase-table")
       wf.build_phrase_table(language=language)
       run_workflow(wf)
@@ -189,7 +190,7 @@ def train_embeddings():
   # Extract vocabulary for word embeddings.
   if flags.arg.extract_vocabulary:
     for language in flags.arg.languages:
-      log("Extract " + language + " vocabulary")
+      log.info("Extract " + language + " vocabulary")
       wf = embedding.EmbeddingWorkflow(language + "-vocabulary")
       wf.extract_vocabulary(language=language)
       run_workflow(wf)
@@ -225,5 +226,5 @@ if __name__ == '__main__':
   workflow.save_workflow_log(flags.arg.logdir)
 
   # Done.
-  log("Done")
+  log.info("Done")
 

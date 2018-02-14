@@ -55,6 +55,7 @@ embed_data(
     "app/index.html",
     "app/dashboard.css",
     "app/dashboard.js",
+    "app/digital-7.mono.ttf",
   ],
 )
 
@@ -66,6 +67,7 @@ cc_library(
     ":app",
     ":job",
     "//sling/base",
+    "//sling/file",
     "//sling/file:embed",
     "//sling/http:http-server",
     "//sling/http:static-content",

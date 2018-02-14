@@ -12,20 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <math.h>
 #include <algorithm>
 #include <random>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
+#include "sling/file/recordio.h"
 #include "sling/file/textmap.h"
+#include "sling/frame/serialization.h"
+#include "sling/nlp/document/document.h"
 #include "sling/task/accumulator.h"
 #include "sling/task/documents.h"
+#include "sling/task/process.h"
+#include "sling/util/thread.h"
 #include "sling/util/unicode.h"
 
 namespace sling {
 namespace nlp {
 
 using namespace task;
+
+// Sigmoid function.
+static float sigmoid(float x) {
+  return 1.0 / (1.0 + expf(-x));
+}
 
 // Process documents and output counts for normalized words in documents.
 class EmbeddingVocabularyMapper : public DocumentProcessor {
@@ -118,7 +130,7 @@ class EmbeddingVocabularyReducer : public SumReducer {
   }
 
  private:
-  // Word entity with count.
+  // Word entry with count.
   struct Entry {
     Entry(const string &word, int64 count) : word(word), count(count) {}
     string word;
@@ -147,6 +159,12 @@ REGISTER_TASK_PROCESSOR("embedding-vocabulary-reducer",
 class Random {
  public:
   Random() : dist_(0.0, 1.0) {}
+
+  void seed(int seed) { prng_.seed(seed); }
+
+  float UniformProb() {
+    return dist_(prng_);
+  }
 
   float UniformFloat(float scale, float bias) {
     return dist_(prng_) * scale + bias;
@@ -260,15 +278,15 @@ class EmbeddingModel {
   // Weight matrices represented as arrays:
   //   w0[i][h] ==> w0[i * hidden + h]
   //   w1[h][o] ==> w1[o * hidden + h]
-  std::vector<float> w0_;  // weight matrix from feature input to hidden layer
-  std::vector<float> w1_;  // weight matrix from hidden layer to entity output
+  std::vector<float> w0_;  // weight matrix from input to hidden layer
+  std::vector<float> w1_;  // weight matrix from hidden layer to output
 };
 
 // Vocabulary sampling.
 class VocabularySampler {
  public:
   // Load vocabulary table.
-  void Load(const string &filename) {
+  void Load(const string &filename, float subsampling) {
     // Read words and frequencies.
     TextMapInput input(filename);
     double sum = 0.0;
@@ -276,12 +294,15 @@ class VocabularySampler {
     string word;
     int64 count;
     while (input.Read(&index, &word, &count)) {
-      vocabulary_.push_back(word);
+      if (word == "<UNKNOWN>") oov_ = index;
+      dictionary_[word] = index;
+      frequency_.push_back(count);
       permutation_.emplace_back(index, count);
       sum += count;
     }
+    threshold_ = subsampling * sum;
 
-    // Shuffle entities (Fisher–Yates shuffle).
+    // Shuffle words (Fisher-Yates shuffle).
     int n = permutation_.size();
     Random rnd;
     for (int i = 0; i < n - 1; ++i) {
@@ -297,7 +318,15 @@ class VocabularySampler {
     }
   }
 
-  // Sample word according to distribution.
+  // Look up word in dictionary. Return OOV for unknown words.
+  int Lookup(const string &word) const {
+    string normalized;
+    UTF8::Normalize(word, &normalized);
+    auto f = dictionary_.find(normalized);
+    return f != dictionary_.end() ? f->second : oov_;
+  }
+
+  // Sample word according to distribution. Used for sampling negative examples.
   int Sample(float p) const {
     int n = permutation_.size();
     int low = 0;
@@ -313,14 +342,23 @@ class VocabularySampler {
     return permutation_[low].index;
   }
 
+  // Sub-sampling probability for word. Used for sub-sampling words in
+  // sentences for skip-grams. This implements the sub-sampling strategy from
+  // Mikolov 2013.
+  float SubsamplingProbability(int index) const {
+    float count = frequency_[index];
+    return (sqrt(count / threshold_) + 1.0) * threshold_ / count;
+  }
+
   // Clear data.
   void Clear() {
-    vocabulary_.clear();
+    dictionary_.clear();
+    frequency_.clear();
     permutation_.clear();
   }
 
-  // Return word from vocabulary.
-  const string &GetWord(int index) const { return vocabulary_[index]; }
+  // Return the number of word in the vocabulary.
+  size_t size() const { return dictionary_.size(); }
 
  private:
   struct Element {
@@ -329,8 +367,20 @@ class VocabularySampler {
     float probability;
   };
 
-  std::vector<string> vocabulary_;
+  // Mapping from word to vocabulary index.
+  std::unordered_map<string, int> dictionary_;
+
+  // Word frequencies.
+  std::vector<float> frequency_;
+
+  // Permutaion of words for sampling.
   std::vector<Element> permutation_;
+
+  // Threshold for sub-sampling words
+  float threshold_;
+
+  // Entry for unknown words.
+  int oov_ = 0;
 };
 
 // Trainer for word embeddings model. The trainer support running training on
@@ -340,11 +390,10 @@ class VocabularySampler {
 // network. However, the updates are usually small, so in practice these unsafe
 // updates are usually not harmful and adding mutexes to serialize access to the
 // network slows down training considerably.
-#if 0
-class WordEmbeddingTrainer : public Task {
+class WordEmbeddingTrainer : public Process {
  public:
-  // One shard of the input data.
-  struct Shard {
+  // One part of the input data.
+  struct Part {
     int index;            // shard index
     string filename;      // shard file name
     int epoch = 0;        // current training epoch
@@ -352,58 +401,45 @@ class WordEmbeddingTrainer : public Task {
     int64 processed = 0;  // total number instances processed
   };
 
-  // Sets up inputs for training.
-  void Setup(TaskContext *context) override {
-    // Set up inputs.
-    training_data_input_ =
-        context->GetMultiInput("training-data",
-                               "recordio",
-                               "LabeledFeatureVector");
-
-    entities_input_ = context->GetMultiInput("entities", "textmap", "count");
-    dimensions_input_ = context->GetMultiInput("dimensions", "text", "");
-    embeddings_output_ = context->GetOutput("embeddings", "sstable", "profile");
-  }
-
-  // Runs training of embedding net.
-  bool Run(TaskContext *context) override {
+  // Run training of embedding net.
+  void Run(Task *task) override {
     // Get training parameters.
-    context->Fetch("iterations", &iterations_);
-    context->Fetch("negative", &negative_);
-    context->Fetch("learning_rate", &learning_rate_);
-    context->Fetch("min_learning_rate", &min_learning_rate_);
-    context->Fetch("embedding_size", &embedding_size_);
+    task->Fetch("iterations", &iterations_);
+    task->Fetch("negative", &negative_);
+    task->Fetch("window", &window_);
+    task->Fetch("learning_rate", &learning_rate_);
+    task->Fetch("min_learning_rate", &min_learning_rate_);
+    task->Fetch("embedding_dims", &embedding_dims_);
+    task->Fetch("subsampling", &subsampling_);
 
-    // Read entity and feature dimensions.
-    ReadDimensions();
+    // Load vocabulary.
+    vocabulary_.Load(task->GetInputFile("vocabulary"), subsampling_);
+    int vocabulary_size = vocabulary_.size();
 
-    // Load entity sampler.
-    sampler_.Load(*entities_input_);
-
-    // Allocate embedding network.
-    net_.Init(num_features_, embedding_size_, num_entities_);
+    // Allocate embedding model.
+    model_.Init(vocabulary_size, embedding_dims_, vocabulary_size);
 
     // Get file names for training data.
-    std::vector<string> filenames;
-    TaskContext::GetInputFiles(*training_data_input_, &filenames);
-    shards_.resize(filenames.size());
-    for (int i = 0; i < shards_.size(); ++i) {
-      shards_[i].index = i;
-      shards_[i].filename = filenames[i];
+    std::vector<string> filenames = task->GetInputFiles("documents");
+    parts_.resize(filenames.size());
+    for (int i = 0; i < parts_.size(); ++i) {
+      parts_[i].index = i;
+      parts_[i].filename = filenames[i];
     }
 
-    // Start training threads. Use one thread per input shard.
-    ThreadPool *pool = new ThreadPool("EntityVectorTrainer", shards_.size());
-    start_time_ = time(nullptr);
-    pool->StartWorkers();
-    for (int i = 0; i < shards_.size(); ++i) {
-      pool->Add(NewCallback(this, &EntityVectorTrainer::Worker, &shards_[i]));
-    }
+    // Initialize commons store.
+    commons_ = new Store();
+    docnames_ = new DocumentNames();
+    CHECK(docnames_->Bind(commons_));
+    commons_->Freeze();
 
-    // Wait for training threads to complete.
-    delete pool;
+    // Start training threads. Use one thread per input file.
+    WorkerPool pool;
+    pool.Start(parts_.size(), [this](int index) { Worker(&parts_[index]); });
+    pool.Join();
 
-    // Get entity embeddings.
+#if 0
+    // Get embeddings.
     SSTableWriter writer;
     std::vector<float> embedding(embedding_size_);
     for (int i = 0; i < num_entities_; ++i) {
@@ -421,82 +457,127 @@ class WordEmbeddingTrainer : public Task {
     options.set_attribute_file(false);
     writer.Write(output_filename, options);
 
+#endif
+
     // Clean up.
-    net_.Clear();
-    sampler_.Clear();
-    return true;
+    model_.Clear();
+    vocabulary_.Clear();
+    docnames_->Release();
+    delete commons_;
+    docnames_ = nullptr;
+    commons_ = nullptr;
   }
 
-  // Worker thread for training embedding network.
-  void Worker(Shard *shard) {
-    MTRandom rnd(shard->index);
-    LabeledFeatureVector instance;
-    double alpha = learning_rate_;
-    std::vector<float> hidden(embedding_size_);
-    std::vector<float> error(embedding_size_);
-    recordio::RecordReader input(
-        file::OpenOrDie(shard->filename, "r", file::Defaults()));
-    while (true) {
-      // Read next instance from input.
-      if (!input.Read(&instance)) {
-        if (++shard->epoch < iterations_) {
+  // Worker thread for training embedding model.
+  void Worker(Part *part) {
+    Random rnd;
+    rnd.seed(part->index);
+    float alpha = learning_rate_;
+    std::vector<int> words;
+    std::vector<int> features;
+    std::vector<float> hidden(embedding_dims_);
+    std::vector<float> error(embedding_dims_);
+    RecordFileOptions options;
+
+    RecordReader input(part->filename, options);
+    Record record;
+    for (;;) {
+      // Read next record from input.
+      if (!input.Read(&record)) {
+        if (++part->epoch < iterations_) {
           // Seek back to the begining.
-          input.Seek(0);
-          if (shard->total == 0) shard->total = shard->processed;
+          input.Rewind();
+          if (part->total == 0) part->total = part->processed;
 
           // Update learning rate.
-          alpha = learning_rate_ * (1 - shard->epoch / iterations_);
+          alpha = learning_rate_ * (1 - part->epoch / iterations_);
           if (alpha < min_learning_rate_) alpha = min_learning_rate_;
           continue;
         } else {
           break;
         }
       }
-      shard->processed++;
-      if (instance.feature_size() == 0) continue;
+      part->processed++;
 
-      // Propagate input to hidden layer.
-      for (int i = 0; i < hidden.size(); ++i) hidden[i] = 0;
-      for (int i = 0; i < error.size(); ++i) error[i] = 0;
-      for (auto f : instance.feature()) {
-        net_.AddLayer0(f, &hidden);
-      }
-      for (int i = 0; i < hidden.size(); ++i) {
-        hidden[i] /= instance.feature_size();
-      }
+      // Create document.
+      Store store(commons_);
+      StringDecoder decoder(&store, record.value.data(), record.value.size());
+      Document document(decoder.Decode().AsFrame(), docnames_);
 
-      // Propagate hidden to output. This is done for both the positive instance
-      // (d=0) and randomly sampled negative samples (d>0).
-      for (int d = 0; d < negative_ + 1; ++d) {
-        // Select target entity for positive/negative instance.
-        int target;
-        float label;
-        if (d == 0) {
-          target = instance.label();
-          label = 1;
-        } else {
-          target = sampler_.Sample(rnd.RandFloat());
-          label = 0;
+      // Go over each sentence in the document.
+      for (SentenceIterator s(&document); s.more(); s.next()) {
+        // Get all the words in the sentence with sub-sampling.
+        words.clear();
+        for (int t = s.begin(); t < s.end(); ++t) {
+          // Skip punctuation tokens.
+          const string &word = document.token(t).text();
+          if (UTF8::IsPunctuation(word)) continue;
+
+          // Sub-sample words.
+          int index = vocabulary_.Lookup(word);
+          if (rnd.UniformProb() < vocabulary_.SubsamplingProbability(index)) {
+            words.push_back(index);
+          }
         }
 
-        // Compute gradient.
-        float f = net_.DotLayer1(target, hidden);
-        float g = (label - sigmoid(f)) * alpha;
+        // Use each word in the sentence as a training example.
+        for (int pos = 0; pos < words.size(); ++pos) {
+          // Get features from window around word.
+          features.clear();
+          for (int i = pos - window_; i <= pos + window_; ++i) {
+            if (i == pos) continue;
+            if (i < 0) continue;
+            if (i >= words.size()) continue;
+            features.push_back(words[i]);
+          }
 
-        // Propagate errors from output to hidden.
-        net_.AddLayer1(target, g, &error);
+          // Propagate input to hidden layer.
+          for (int i = 0; i < hidden.size(); ++i) hidden[i] = 0;
+          for (int i = 0; i < error.size(); ++i) error[i] = 0;
+          for (auto f : features) {
+            model_.AddLayer0(f, &hidden);
+          }
+          for (int i = 0; i < hidden.size(); ++i) {
+            hidden[i] /= features.size();
+          }
 
-        // Learn weights from hidden to output.
-        net_.UpdateLayer1(target, g, hidden);
-      }
+          // Propagate hidden to output. This is done for both the positive
+          // instance (d=0) and randomly sampled negative samples (d>0).
+          for (int d = 0; d < negative_ + 1; ++d) {
+            // Select target word for positive/negative instance.
+            int target;
+            float label;
+            if (d == 0) {
+              target = words[pos];
+              label = 1;
+            } else {
+              target = vocabulary_.Sample(rnd.UniformProb());
+              label = 0;
+            }
 
-      // Propagate hidden to input.
-      for (auto f : instance.feature()) {
-        net_.UpdateLayer0(f, error);
+            // Compute output.
+            float f = model_.DotLayer1(target, hidden);
+
+            // Compute gradient.
+            float g = (label - sigmoid(f)) * alpha;
+
+            // Propagate errors from output to hidden.
+            model_.AddLayer1(target, g, &error);
+
+            // Learn weights from hidden to output.
+            model_.UpdateLayer1(target, g, hidden);
+          }
+
+          // Propagate hidden to input.
+          for (auto f : features) {
+            model_.UpdateLayer0(f, error);
+          }
+        }
       }
     }
   }
 
+#if 0
   // Returns training progress status.
   void GetStatusMessage(string *message) override {
     int64 processed = 0;
@@ -520,58 +601,37 @@ class WordEmbeddingTrainer : public Task {
                      progress * 100.0,
                      processed / (time(nullptr) - start_time_));
   }
-
-  // Reads entity and feature space dimensions.
-  void ReadDimensions() {
-    string filename = TaskContext::InputFile(*dimensions_input_);
-    string contents;
-    CHECK_OK(file::GetContents(filename, &contents, file::Defaults()));
-    const std::vector<string> fields =
-        absl::StrSplit(contents, ' ', absl::SkipEmpty());
-    CHECK_EQ(fields.size(), 2);
-    CHECK(safe_strto32(fields[0], &num_entities_));
-    CHECK(safe_strto32(fields[1], &num_features_));
-  }
+#endif
 
  private:
-  // Input for training data.
-  TaskInput *training_data_input_ = nullptr;
-
-  // Input for entity distribution.
-  TaskInput *entities_input_ = nullptr;
-
-  // Input for entity and feature space dimensions.
-  TaskInput *dimensions_input_ = nullptr;
-
-  // Output for profiles with embeddings.
-  TaskOutput *embeddings_output_ = nullptr;
-
   // Training parameters.
-  int iterations_ = 15;                // number of training iterations
-  int negative_ = 25;                  // negative examples per positive example
+  int iterations_ = 1;                 // number of training iterations
+  int negative_ = 5;                   // negative examples per positive example
+  int window_ = 5;                     // window size for skip-grams
   double learning_rate_ = 0.025;       // learning rate
   double min_learning_rate_ = 0.0001;  // minimum learning rate
-  int embedding_size_ = 200;           // size of embedding vectors
+  int embedding_dims_ = 200;           // size of embedding vectors
+  double subsampling_ = 1e-5;          // sub-sampling rate
 
   // Number of entities and feature.
   int num_entities_;
   int num_features_;
 
-  // Training data shards.
-  std::vector<Shard> shards_;
+  // Training data parts.
+  std::vector<Part> parts_;
 
   // Neural network for training.
-  EntityNetwork net_;
+  EmbeddingModel model_;
 
-  // Entity sampler for negative examples.
-  EntitySampler sampler_;
+  // Vocabulary for embeddings.
+  VocabularySampler vocabulary_;
 
-  // Starting time (used for speed computation).
-  int64 start_time_ = 0;
+  // Commons store.
+  Store *commons_ = nullptr;
+  DocumentNames *docnames_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("word-embedding-trainer", WordEmbeddingTrainer);
-#endif
 
 }  // namespace nlp
 }  // namespace sling

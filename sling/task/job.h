@@ -225,7 +225,7 @@ class Job : public Environment {
   std::condition_variable completed_;
 };
 
-// A workflow can be monitored by a Monitor component. Is a monitor is
+// A workflow can be monitored by a Monitor component. If a monitor is
 // registered using Job::RegisterMonitor(), the monitor is notified when the
 // job is started and when it completes.
 class Monitor {
@@ -235,7 +235,7 @@ class Monitor {
   // Callback to notify when a job is started.
   virtual void OnJobStart(Job *job) = 0;
 
-  // Callback to notify when a job is started.
+  // Callback to notify when a job completes.
   virtual void OnJobDone(Job *job) = 0;
 };
 

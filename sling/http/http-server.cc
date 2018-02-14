@@ -314,7 +314,7 @@ Status HTTPServer::Start() {
   if (rc < 0) return Error("epoll_ctl");
 
   // Start workers.
-  workers_.Start(options_.num_workers, std::bind(&HTTPServer::Worker, this));
+  workers_.Start(options_.num_workers, [this](int index) { this->Worker(); });
 
   return Status::OK;
 }
