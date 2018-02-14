@@ -142,8 +142,13 @@ Message *CreateMessage(const Frame &frame, bool shallow) {
 Frame DecodeMessage(Store *store, Message *message) {
   ArrayInputStream stream(message->value().data(), message->value().size());
   Input input(&stream);
-  Decoder decoder(store, &input);
-  return decoder.Decode().AsFrame();
+  if (input.Peek() == WIRE_BINARY_MARKER) {
+    Decoder decoder(store, &input);
+    return decoder.Decode().AsFrame();
+  } else {
+    Reader reader(store, &input);
+    return reader.Read().AsFrame();
+  }
 }
 
 void LoadStore(Store *store, Resource *file) {

@@ -19,7 +19,7 @@ namespace task {
 
 void DocumentProcessor::InitCommons(Task *task) {
   // Bind document names.
-  CHECK(docnames_->Bind(commons_));
+  docnames_ = new nlp::DocumentNames(commons_);
 }
 
 void DocumentProcessor::Start(Task *task) {

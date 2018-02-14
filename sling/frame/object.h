@@ -151,6 +151,7 @@ class Name {
 
 class SharedNames : public Names {
  public:
+   SharedNames(Store *store) { CHECK(Bind(store)); }
    ~SharedNames() { CHECK_EQ(refs_, 0); }
 
    // Reference counting for shared names object.

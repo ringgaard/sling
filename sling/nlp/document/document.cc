@@ -107,13 +107,10 @@ uint64 Span::Fingerprint() {
   return fp;
 }
 
-Document::Document(Store *store, DocumentNames *names)
+Document::Document(Store *store, const DocumentNames *names)
     : themes_(store), names_(names) {
   // Bind names.
-  if (names_ == nullptr) {
-    names_ = new DocumentNames();
-    CHECK(names_->Bind(store));
-  }
+  if (names_ == nullptr) names_ = new DocumentNames(store);
   names_->AddRef();
 
   // Build empty document.
@@ -122,13 +119,10 @@ Document::Document(Store *store, DocumentNames *names)
   top_ = builder.Create();
 }
 
-Document::Document(const Frame &top, DocumentNames *names)
+Document::Document(const Frame &top, const DocumentNames *names)
     : top_(top), themes_(top.store()), names_(names) {
   // Bind names.
-  if (names_ == nullptr) {
-    names_ = new DocumentNames();
-    CHECK(names_->Bind(top.store()));
-  }
+  if (names_ == nullptr) names_ = new DocumentNames(top.store());
   names_->AddRef();
 
   // Add document frame if it is missing.

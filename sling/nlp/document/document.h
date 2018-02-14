@@ -33,6 +33,8 @@ class Document;
 
 // Symbol names for documents.
 struct DocumentNames : public SharedNames {
+  DocumentNames(Store *store) : SharedNames(store) {}
+
   Name n_document{*this, "/s/document"};
   Name n_document_text{*this, "/s/document/text"};
   Name n_document_tokens{*this, "/s/document/tokens"};
@@ -206,10 +208,10 @@ class Span {
 class Document {
  public:
   // Create empty document.
-  explicit Document(Store *store, DocumentNames *names = nullptr);
+  explicit Document(Store *store, const DocumentNames *names = nullptr);
 
   // Initialize document from frame.
-  explicit Document(const Frame &top, DocumentNames *names = nullptr);
+  explicit Document(const Frame &top, const DocumentNames *names = nullptr);
 
   ~Document();
 
@@ -384,7 +386,7 @@ class Document {
   MentionMap mentions_;
 
   // Document symbol names.
-  DocumentNames *names_;
+  const DocumentNames *names_;
 
   friend class Span;
 };

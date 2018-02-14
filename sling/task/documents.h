@@ -24,8 +24,7 @@ namespace task {
 // Task processor for receiving and sending documents.
 class DocumentProcessor : public FrameProcessor {
  public:
-  DocumentProcessor() { docnames_ = new nlp::DocumentNames(); }
-  ~DocumentProcessor() { docnames_->Release(); }
+  ~DocumentProcessor() { if (docnames_) docnames_->Release(); }
 
   void Process(Slice key, const Frame &frame) override;
 
@@ -46,7 +45,7 @@ class DocumentProcessor : public FrameProcessor {
 
  private:
   // Document symbol names.
-  nlp::DocumentNames *docnames_;
+  const nlp::DocumentNames *docnames_ = nullptr;
 
   // Statistics.
   Counter *num_document_;
