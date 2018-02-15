@@ -22,9 +22,6 @@ namespace myelin {
 
 using namespace jit;
 
-// Pooling operations.
-enum PoolingOp {SUM, AVG, MAX};
-
 // Reshape tensor while preserving the underlying data.
 class Reshape : public Kernel {
  public:
@@ -635,6 +632,247 @@ class MultiGather : public Kernel {
   }
 };
 
+// Look up multiple features in embedding with pooling.
+class PoolingGather : public Kernel {
+ public:
+  // Pooling operations.
+  enum Pooling {SUM, AVG, MAX};
+
+  PoolingGather(Pooling pooling) : pooling_(pooling) {}
+
+  string Name() override { return Operation(); }
+  string Operation() override {
+    switch (pooling_) {
+      case SUM: return "GatherSum";
+      case AVG: return "GatherAvg";
+      case MAX: return "GatherMax";
+      default: return "???";
+    }
+  }
+
+  bool Supports(Step *step) override {
+    // Requires SSE or AVX support.
+    if (!CPU::Enabled(AVX) && !CPU::Enabled(SSE)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+
+    // Check types.
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *v = step->output(0);
+    if (M->type() != DT_FLOAT || M->rank() != 2) return false;
+    if (f->type() != DT_INT32) return false;
+    if (v->type() != DT_FLOAT || v->elements() != M->dim(1)) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    // Embedding matrix must be row-major.
+    step->input(0)->SetRequiredOrder(ROW_MAJOR);
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get inputs and outputs.
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *v = step->output(0);
+    CHECK(f->IsLocal());
+    CHECK(v->IsLocal());
+
+    // Allocate registers.
+    Register acc = masm->rr().alloc_fixed(rax);
+    Register src = masm->rr().alloc_fixed(rsi);
+    Register dst = masm->rr().alloc_fixed(rdi);
+    Register cnt = masm->rr().alloc_fixed(rcx);
+    Register ofs = cnt;
+    Register fidx = masm->rr().alloc();
+    Register fcnt = masm->rr().alloc();
+    Register embeddings = masm->rr().alloc();
+    Register input = masm->rr().alloc();
+    Register output = masm->rr().alloc();
+    YMMRegister elem = masm->mm().allocy();
+    XMMRegister xelem = elem.xmm();
+
+    // Load tensor locations.
+    __ LoadTensorAddress(embeddings, M);
+    __ LoadTensorAddress(input, f);
+    __ LoadTensorAddress(output, v);
+
+    // Zero feature index and feature count.
+    __ xorq(fidx, fidx);
+    __ xorq(fcnt, fcnt);
+
+    // Find first (non-negative) feature.
+    Label l1, l2, done;
+    __ bind(&l1);
+    __ movsxlq(acc, Operand(input, fidx, times_4));
+    __ testq(acc, acc);
+    __ j(positive, &l2);
+    __ incq(fidx);
+    __ cmpq(fidx, Immediate(f->elements()));
+    __ j(less, &l1);
+
+    // No feature found; zero output vector.
+    __ xorq(acc, acc);
+    __ movq(dst, output);
+    __ movq(cnt, Immediate(v->size()));
+    __ repstosb();
+    __ jmp(&done);
+
+    // First non-negative feature found; copy its embedding vector to output.
+    __ bind(&l2);
+    __ movq(src, embeddings);
+    __ Multiply(acc, M->stride(0));
+    __ addq(src, acc);
+    __ movq(dst, output);
+    __ movq(cnt, Immediate(M->stride(0)));
+    __ repmovsb();
+    __ incq(fcnt);
+
+    // Go over the remaining features.
+    Label l3, l4;
+    __ bind(&l3);
+    __ incq(fidx);
+    __ cmpq(fidx, Immediate(f->elements()));
+    __ j(equal, &l4);
+    __ movsxlq(acc, Operand(input, fidx, times_4));
+    __ testq(acc, acc);
+    __ j(negative, &l3);
+
+    // Combine embedding vector for feature with current result.
+    __ incq(fcnt);
+    __ movq(src, embeddings);
+    __ Multiply(acc, M->stride(0));
+    __ addq(src, acc);
+
+    // Update output vector with embedding vector for feature.
+    if (masm->Enabled(AVX)) {
+      // Combine elements using AVX vectors.
+      if (v->elements() >= 8) {
+        Label next;
+        __ xorq(ofs, ofs);
+        __ bind(&next);
+        __ vmovaps(elem, Operand(src, ofs));
+        if (pooling_ == MAX) {
+          __ vmaxps(elem, elem, Operand(dst, ofs));
+        } else {
+          __ vaddps(elem, elem, Operand(dst, ofs));
+        }
+        __ vmovaps(Operand(output, ofs), elem);
+        __ addq(ofs, Immediate(8 * sizeof(float)));
+        __ cmpq(ofs, Immediate(v->size()));
+        __ j(less, &next);
+      }
+
+      // Combine residual elements.
+      int disp = (v->elements() / 8) * 8 * sizeof(float);
+      for (int i = 0; i < v->size() % 8; ++i) {
+        __ vmovss(elem, Operand(src, disp));
+        if (pooling_ == MAX) {
+          __ vmaxss(elem, elem, Operand(dst, disp));
+        } else {
+          __ vaddss(elem, elem, Operand(dst, disp));
+        }
+        __ vmovss(Operand(output, disp), elem);
+        disp += sizeof(float);
+      }
+    } else {
+      // Combine elements using SSE vectors.
+      if (v->elements() >= 4) {
+        Label next;
+        __ xorq(ofs, ofs);
+        __ bind(&next);
+        __ movaps(xelem, Operand(src, ofs));
+        if (pooling_ == MAX) {
+          __ maxps(xelem, Operand(output, ofs));
+        } else {
+          __ addps(xelem, Operand(output, ofs));
+        }
+        __ movaps(Operand(output, ofs), xelem);
+        __ addq(ofs, Immediate(4 * sizeof(float)));
+        __ cmpq(ofs, Immediate(v->size()));
+        __ j(less, &next);
+      }
+
+      // Combine residual elements.
+      int disp = (v->elements() / 4) * 4 * sizeof(float);
+      for (int i = 0; i < v->size() % 4; ++i) {
+        __ movss(xelem, Operand(src, disp));
+        if (pooling_ == MAX) {
+          __ maxss(xelem, Operand(output, disp));
+        } else {
+          __ addss(xelem, Operand(output, disp));
+        }
+        __ movss(Operand(output, disp), xelem);
+        disp += sizeof(float);
+      }
+    }
+
+    // Next feature.
+    __ jmp(&l3);
+    __ bind(&l4);
+
+    // Compute average.
+    if (pooling_ == AVG) {
+      __ movq(dst, output);
+      if (masm->Enabled(AVX)) {
+        // Compute 1/fcnt.
+        YMMRegister scalar = masm->mm().allocy();
+        __ vcvtqsi2ss(scalar.xmm(), scalar.xmm(), fcnt);
+        __ vrcpss(scalar.xmm(), scalar.xmm(), scalar.xmm());
+        __ vbroadcastss(scalar, scalar);
+
+        // Multiply all output elements with scalar to get the average.
+        if (v->elements() >= 8) {
+          Label next;
+          __ xorq(ofs, ofs);
+          __ bind(&next);
+          __ vmulps(elem, scalar, Operand(output, ofs));
+          __ vmovaps(Operand(output, ofs), elem);
+          __ addq(ofs, Immediate(8 * sizeof(float)));
+          __ cmpq(ofs, Immediate(v->size()));
+          __ j(less, &next);
+        }
+        int disp = (v->elements() / 8) * 8 * sizeof(float);
+        for (int i = 0; i < v->size() % 8; ++i) {
+          __ vmulss(xelem, scalar.xmm(), Operand(output, disp));
+          __ vmovss(Operand(output, disp), elem);
+          disp += sizeof(float);
+        }
+      } else {
+        // Compute 1/fcnt.
+        XMMRegister scalar = masm->mm().allocx();
+        __ cvtqsi2ss(scalar, fcnt);
+        __ rcpss(scalar, scalar);
+
+        // Multiply all output elements with scalar to get the average.
+        Label next;
+        __ xorq(ofs, ofs);
+        __ bind(&next);
+        __ movss(xelem, Operand(output, ofs));
+        __ mulss(xelem, scalar);
+        __ movss(Operand(output, ofs), xelem);
+        __ addq(ofs, Immediate(sizeof(float)));
+        __ cmpq(ofs, Immediate(v->size()));
+        __ j(less, &next);
+      }
+    }
+
+    __ bind(&done);
+  }
+
+  int64 Complexity(const Step *step) override {
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    return M->dim(1) * f->elements();
+  }
+
+ private:
+  Pooling pooling_;  // pooling operation for combining vectors
+};
+
 // Register array kernels.
 void RegisterArrayKernels(Library *library) {
   library->Register(new Reshape());
@@ -648,6 +886,9 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new BasicConcat());
   library->Register(new MultiGather());
   library->Register(new SingleGather());
+  library->Register(new PoolingGather(PoolingGather::SUM));
+  library->Register(new PoolingGather(PoolingGather::AVG));
+  library->Register(new PoolingGather(PoolingGather::MAX));
 }
 
 }  // namespace myelin

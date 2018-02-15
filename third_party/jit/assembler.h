@@ -887,6 +887,8 @@ class Assembler : public CodeGenerator {
 
 #undef SSE_CMP_P
 
+  void rcpss(XMMRegister dst, XMMRegister src);
+  void rcpss(XMMRegister dst, const Operand &src);
   void rcpps(XMMRegister dst, XMMRegister src);
   void rcpps(XMMRegister dst, const Operand &src);
   void rsqrtps(XMMRegister dst, XMMRegister src);
@@ -2076,6 +2078,13 @@ class Assembler : public CodeGenerator {
   }
   void vcvtdq2ps(YMMRegister dst, const Operand &src) {
     vinstr(0x5b, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+
+  void vrcpss(XMMRegister dst, XMMRegister src1, XMMRegister src2) {
+    vinstr(0x53, dst, src1, src2, kF3, k0F, kWIG);
+  }
+  void vrcpss(XMMRegister dst, XMMRegister src1, const Operand &src2) {
+    vinstr(0x53, dst, src1, src2, kF3, k0F, kWIG);
   }
 
   void vrcpps(XMMRegister dst, XMMRegister src) {

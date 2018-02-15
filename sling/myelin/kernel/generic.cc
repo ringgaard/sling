@@ -18,9 +18,14 @@
 #include <vector>
 
 #include "sling/myelin/compute.h"
+#include "sling/myelin/macro-assembler.h"
+
+#define __ masm->
 
 namespace sling {
 namespace myelin {
+
+using namespace jit;
 
 // array.cc
 void RegisterArrayKernels(Library *library);
@@ -33,6 +38,72 @@ void RegisterGenericMatMul(Library *library);
 
 // generic-operators.cc
 void RegisterGenericOperators(Library *library);
+
+// Reference op for accessing parameters in other cells of the network. Looks up
+// tensor 'var' in instance and outputs a reference to the tensor.
+class Reference : public Kernel {
+ public:
+  string Name() override { return "Reference"; }
+  string Operation() override { return "Reference"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 1 || step->outdegree() != 1) return false;
+
+    // Lookup variable.
+    Tensor *var = GetReference(step);
+    if (var == nullptr) {
+      LOG(WARNING) << "Missing/unknown reference variable for " << step->name();
+      return false;
+    }
+
+    // Check types.
+    Tensor *instance = step->input(0);
+    Tensor *ref = step->output(0);
+    if (instance->type() != DT_RESOURCE || !instance->ref()) return false;
+    if (ref->type() != var->type() || !ref->ref()) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    // Propagate alignment constraints from reference to variable.
+    Tensor *var = GetReference(step);
+    CHECK(var != nullptr);
+    step->output(0)->set_link(var);
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get inputs and outputs.
+    Tensor *instance = step->input(0);
+    Tensor *ref = step->output(0);
+    Tensor *var = GetReference(step);
+    CHECK(instance->IsLocal());
+    CHECK(ref->IsLocal());
+    CHECK(var != nullptr);
+
+    // Output reference to variable in other instance.
+    Register addr = masm->rr().alloc();
+    __ movq(addr, Operand(masm->instance(), instance->offset()));
+    if (var->ref()) {
+      __ movq(addr, Operand(masm->instance(), var->offset()));
+    } else {
+      __ addq(addr, Immediate(var->offset()));
+    }
+    __ movq(Operand(masm->instance(), ref->offset()), addr);
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+
+  // Get referenced tensor.
+  static Tensor *GetReference(Step *step) {
+    const string &varname = step->GetAttr("var");
+    if (varname.empty()) return nullptr;
+    return step->cell()->network()->GetParameter(varname);
+  }
+};
 
 // Rename operations with aliases.
 class RenameTransformer : public Transformer {
@@ -397,6 +468,7 @@ class StandardTyper : public Typer {
         Flow::Variable *y = op->outputs[0];
         if (y->type == DT_INVALID) y->type = x->type;
         y->shape = x->shape;
+        y->ref = true;
         return true;
       }
     }
@@ -417,6 +489,7 @@ void RegisterGenericLibrary(Library *library) {
   library->RegisterTyper(new StandardTyper());
 
   // Register kernels.
+  library->Register(new Reference());
   RegisterArrayKernels(library);
   RegisterGenericMath(library);
   RegisterGenericMatMul(library);
