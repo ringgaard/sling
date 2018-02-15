@@ -22,6 +22,9 @@ namespace myelin {
 
 using namespace jit;
 
+// Pooling operations.
+enum PoolingOp {SUM, AVG, MAX};
+
 // Reshape tensor while preserving the underlying data.
 class Reshape : public Kernel {
  public:
