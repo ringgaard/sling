@@ -104,41 +104,31 @@
 
         <!-- Resource usage -->
         <div ng-show="census">
-          <table class="mdl-shadow--2dp res">
+          <table class="mdl-shadow--2dp res-table">
             <tbody>
               <tr>
-                <td width="30%">TIME</td>
-                <td width="70%" align="right" colspan=2>
-                  <span class="lcd">{{census.hours}}:{{census.mins|padding:2}}:{{census.secs|padding:2}}</span>
-                </td>
+                <td>TIME</td>
+                <td class="lcd" colspan=2>{{census.hours}}:{{census.mins|padding:2}}:{{census.secs|padding:2}}</td>
               </tr>
               <tr>
-                <td width="30%">CPU</td>
-                <td width="60%" align="right">
-                  <span class="lcd">{{(census.cpu * 100)|integer}}</span>
-                </td>
-                <td width="10%" valign="bottom">%</td>
+                <td>CPU</td>
+                <td class="lcd">{{(census.cpu * 100)|integer}}</td>
+                <td>%</td>
               </tr>
               <tr>
-                <td width="30%">RAM</td>
-                <td width="60%" align="right">
-                  <span class="lcd">{{census.ram / (1024 * 1024)|integer}}</span>
-                </td>
-                <td width="10%" valign="bottom">MB</td>
+                <td>RAM</td>
+                <td class="lcd">{{census.ram / (1024 * 1024)|integer}}</td>
+                <td>MB</td>
               </tr>
               <tr>
-                <td width="30%">I/O</td>
-                <td width="60%" align="right">
-                  <span class="lcd">{{(census.io / 1000)|integer}}</span>
-                </td>
-                <td width="10%" valign="bottom">MB/s</td>
+                <td>I/O</td>
+                <td class="lcd">{{(census.io / 1000)|integer}}</td>
+                <td>MB/s</td>
               </tr>
               <tr ng-show="census.temp">
-                <td width="30%">TEMP</td>
-                <td width="60%" align="right">
-                  <span class="lcd">{{(census.temp)|integer}}</span>
-                </td>
-                <td width="10%" valign="bottom">°C</td>
+                <td>TEMP</td>
+                <td class="lcd">{{(census.temp)|integer}}</td>
+                <td>°C</td>
               </tr>
             </tbody>
           </table>
