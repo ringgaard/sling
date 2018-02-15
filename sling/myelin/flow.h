@@ -386,6 +386,12 @@ class Flow {
       attrs.Set(name, value);
     }
 
+    // Return input index for variable or -1 if variable is not an input.
+    int InputIndex(const Variable *var) const;
+
+    // Return output index for variable or -1 if variable is not an output.
+    int OutputIndex(const Variable *var) const;
+
     // Check if variable is an input to the operation.
     bool IsInput(const Variable *var) const;
 

@@ -33,10 +33,10 @@ ExpressionGenerator *CreateVectorIntSSEGenerator();
 ExpressionGenerator *CreateVectorIntAVX128Generator();
 ExpressionGenerator *CreateVectorIntAVX256Generator();
 
-void ExpressionGenerator::Initalize(const Express &expression,
-                                    Type type,
-                                    int spare_regs,
-                                    IndexGenerator *index) {
+void ExpressionGenerator::Initialize(const Express &expression,
+                                     Type type,
+                                     int spare_regs,
+                                     IndexGenerator *index) {
   // Copy expression.
   expression_.Copy(expression);
   type_ = type;

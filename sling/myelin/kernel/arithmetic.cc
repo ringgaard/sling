@@ -55,7 +55,7 @@ static Express::OpType OpType(const string &op) {
     {"Sigmoid", Express::SIGMOID},
     {"Tanh", Express::TANH},
 
-    {"Negate", Express::NEG},
+    {"Neg", Express::NEG},
     {"Abs", Express::ABS},
     {"Relu", Express::RELU},
     {"Softsign", Express::SOFTSIGN},
@@ -174,7 +174,7 @@ struct Expression {
     CHECK(generator != nullptr);
 
     // Initialize expression and index generators.
-    generator->Initalize(expr, type, spare_regs, &index);
+    generator->Initialize(expr, type, spare_regs, &index);
   }
 
   ~Expression() { delete generator; }
@@ -232,6 +232,24 @@ class DivToMulTransformer : public Transformer {
       *reinterpret_cast<float *>(buffer) = multiplier;
       second->data = buffer;
       updates++;
+    }
+    return updates > 0;
+  }
+};
+
+// Convert addition where last term is negated to subtraction.
+class AddNegToSubTransformer : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    int updates = 0;
+    for (Flow::Operation *op : flow->Find("Negate|1:Add")) {
+      Flow::Operation *add = op;
+      Flow::Operation *negate = add->inputs[1]->producer;
+      if (negate->outputs[0]->consumers.size() == 1) {
+        flow->Eliminate(negate);
+        add->type = "Sub";
+        updates++;
+      }
     }
     return updates > 0;
   }
@@ -535,6 +553,7 @@ void RegisterArithmeticLibrary(Library *library) {
 void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new ExpressionTransformer());
   library->RegisterTransformer(new DivToMulTransformer());
+  library->RegisterTransformer(new AddNegToSubTransformer());
 }
 
 }  // namespace myelin

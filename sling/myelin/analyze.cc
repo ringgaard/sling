@@ -49,6 +49,7 @@ DEFINE_string(o, "", "ELF object output file for generated code");
 DEFINE_bool(gendata, false, "Output tensor data to ELF object file");
 DEFINE_bool(gpu, false, "Run kernels on GPU");
 DEFINE_bool(argmax, false, "Use argmax for predictions");
+DEFINE_bool(compile, true, "Compile flow");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -143,7 +144,7 @@ int main(int argc, char *argv[]) {
     FlowToDotGraphFile(flow, opts, FLAGS_graph);
   }
 
-  if (!FLAGS_raw) {
+  if (FLAGS_compile && !FLAGS_raw) {
     // Compile model.
     LOG(INFO) << "Compiling flow";
     ElfLinker *linker = nullptr;

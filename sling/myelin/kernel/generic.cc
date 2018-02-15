@@ -251,9 +251,17 @@ class StandardTyper : public Typer {
         if (c->type == DT_INVALID) c->type = a->type;
 
         // Matrix multiplied by matrix.
-        if (a->rank() == 2 && b->rank() == 2 && a->dim(1) == b->dim(0)) {
-          c->shape.assign(a->dim(0), b->dim(1));
-          return true;
+        if (a->rank() == 2 && b->rank() == 2) {
+          bool ta = op->GetAttr("transpose_a", false);
+          bool tb = op->GetAttr("transpose_b", false);
+          int a_rows =  ta ? a->dim(1) : a->dim(0);
+          int a_cols =  ta ? a->dim(0) : a->dim(1);
+          int b_rows =  tb ? b->dim(1) : b->dim(0);
+          int b_cols =  tb ? b->dim(0) : b->dim(1);
+          if (a_cols == b_rows) {
+            c->shape.assign(a_rows, b_cols);
+            return true;
+          }
         }
       }
     }
@@ -378,6 +386,17 @@ class StandardTyper : public Typer {
         Flow::Variable *y = op->outputs[0];
         if (y->type == DT_INVALID) y->type = DT_INT32;
         y->shape.redim(0);
+        return true;
+      }
+    }
+
+    // Infer shape for reference operation.
+    if (op->type == "Reference") {
+      if (op->indegree() == 1 && op->outdegree() == 1) {
+        Flow::Variable *x = op->inputs[0];
+        Flow::Variable *y = op->outputs[0];
+        if (y->type == DT_INVALID) y->type = x->type;
+        y->shape = x->shape;
         return true;
       }
     }

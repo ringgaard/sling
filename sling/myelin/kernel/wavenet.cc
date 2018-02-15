@@ -798,7 +798,7 @@ class ZigZagTanhMulSigmoid : public Kernel {
     CHECK(generator != nullptr);
 
     // Initialize expression and index generators.
-    generator->Initalize(expr, type, 0, &zigzag);
+    generator->Initialize(expr, type, 0, &zigzag);
     zigzag.AllocateRegisters();
 
     // Generate loop.

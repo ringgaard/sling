@@ -56,10 +56,10 @@ class ExpressionGenerator {
   virtual void Generate(Express::Op *instr, MacroAssembler *masm) = 0;
 
   // Initialize expression generator.
-  void Initalize(const Express &expression,
-                 Type type,
-                 int spare_regs,
-                 IndexGenerator *index);
+  void Initialize(const Express &expression,
+                  Type type,
+                  int spare_regs,
+                  IndexGenerator *index);
 
   // Generate code for loop-invariant part of expression.
   void GenerateInit(MacroAssembler *masm);

@@ -110,6 +110,9 @@ static void AppendOp(string *str,
   if (options.op_type_as_label) {
     if (op->HasAttr("expr")) {
       str->append(op->GetAttr("expr"));
+    } else if (op->HasAttr("var")) {
+      str->append("&#10132; ");
+      str->append(op->GetAttr("var"));
     } else {
       str->append(op->type);
     }
@@ -127,6 +130,33 @@ static void AppendOp(string *str,
   } else {
     options.ops.Append(str);
   }
+
+  str->append(" tooltip=\"");
+  StringAppendF(str, "name: %s&#10;", op->name.c_str());
+  StringAppendF(str, "type: %s&#10;", op->type.c_str());
+  if (!op->inputs.empty()) {
+    str->append("input:&#10;");
+    for (Flow::Variable *var : op->inputs) {
+      StringAppendF(str, "  %s: %s&#10;",
+        var->name.c_str(), var->TypeString().c_str());
+    }
+  }
+  if (!op->outputs.empty()) {
+    str->append("output:&#10;");
+    for (Flow::Variable *var : op->outputs) {
+      StringAppendF(str, "  %s: %s&#10;",
+        var->name.c_str(), var->TypeString().c_str());
+    }
+  }
+  if (!op->attrs.empty()) {
+    str->append("attr:&#10;");
+    for (const auto &attr : op->attrs) {
+      StringAppendF(str, "  %s = %s&#10;",
+        attr.name.c_str(), attr.value.c_str());
+    }
+  }
+  str->append("\"");
+
   str->append("];\n");
 }
 
@@ -156,6 +186,21 @@ static void AppendVar(string *str,
     }
     str->append("\" ");
 
+    str->append(" tooltip=\"");
+    if (var->data) str->append("const ");
+    if (var->in) str->append("in ");
+    if (var->out) str->append("out ");
+    str->append("var ");
+    str->append(var->name);
+    if (!var->aliases.empty()) {
+      str->append("&#10;alias:");
+      for (const string &alias : var->aliases) {
+        str->append("&#10;  ");
+        str->append(alias);
+      }
+    }
+    str->append("\" ");
+
     auto f = options.custom_vars.find(var->name);
     if (f != options.custom_vars.end()) {
       f->second.Append(str);
@@ -177,6 +222,9 @@ static void AppendVar(string *str,
       str->append(" [");
       str->append("tooltip=\"");
       str->append(var->name);
+      if (var->producer->outputs.size() > 1) {
+        StringAppendF(str, " (@%d)", var->producer->OutputIndex(var));
+      }
       str->append("\" ");
       AppendPenWidth(str, var, options);
       str->append("];\n");
@@ -188,6 +236,9 @@ static void AppendVar(string *str,
       AppendOpId(str, consumer);
       str->append(" [");
       str->append("tooltip=\"");
+      if (consumer->inputs.size() > 1) {
+        StringAppendF(str, "%%%d = ", consumer->InputIndex(var));
+      }
       str->append(var->name);
       str->append("\" ");
       AppendPenWidth(str, var, options);
@@ -251,14 +302,28 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
 
   // Output DOT graph edges between ops.
   for (Flow::Operation *op : flow.ops()) {
-    for (Flow::Variable *input : op->inputs) {
+    for (int i = 0; i < op->inputs.size(); ++i) {
+      Flow::Variable *input = op->inputs[i];
       if (input->producer != nullptr && !input->in && !input->out) {
         AppendOpId(&str, input->producer);
         str.append(" -> ");
         AppendOpId(&str, op);
         str.append(" [");
         str.append("tooltip=\"");
+        if (op->inputs.size() > 1) {
+          StringAppendF(&str, "%%%d = ", i);
+        }
         str.append(input->name);
+        if (input->producer->outputs.size() > 1) {
+          StringAppendF(&str, " (@%d)", input->producer->OutputIndex(input));
+        }
+        if (!input->aliases.empty()) {
+          str.append("&#10;alias:");
+          for (const string &alias : input->aliases) {
+            str.append("&#10;  ");
+            str.append(alias);
+          }
+        }
         str.append("\" ");
         AppendPenWidth(&str, input, options);
         str.append("];\n");

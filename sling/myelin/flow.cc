@@ -418,6 +418,20 @@ void Flow::Operation::AddOutput(Variable *var) {
   var->producer = this;
 }
 
+int Flow::Operation::InputIndex(const Variable *var) const {
+  for (int i = 0; i < inputs.size(); ++i) {
+    if (inputs[i] == var) return i;
+  }
+  return -1;
+}
+
+int Flow::Operation::OutputIndex(const Variable *var) const {
+  for (int i = 0; i < outputs.size(); ++i) {
+    if (outputs[i] == var) return i;
+  }
+  return -1;
+}
+
 bool Flow::Operation::IsInput(const Variable *var) const {
   for (const Variable *input : inputs) {
     if (var == input) return true;
@@ -1173,10 +1187,10 @@ void Flow::Eliminate(Operation *op) {
     Variable *input = op->inputs[0];
     Variable *output = op->outputs[0];
     if (input->type != DT_INVALID && output->type != DT_INVALID) {
-      CHECK_EQ(input->type, output->type);
+      CHECK_EQ(input->type, output->type) << op->name;
     }
     if (input->shape.defined() && output->shape.defined()) {
-      CHECK(input->shape == output->shape);
+      CHECK(input->shape == output->shape) << op->name;
     }
     if (output->in) input->in = true;
     if (output->out) input->out = true;
@@ -1191,7 +1205,7 @@ void Flow::Eliminate(Operation *op) {
 
     // Remove op as consumer of input variable.
     auto f = std::find(input->consumers.begin(), input->consumers.end(), op);
-    CHECK(f != input->consumers.end());
+    CHECK(f != input->consumers.end()) << op->name;
     input->consumers.erase(f);
 
     // Move consumers of output variable to input variable.
@@ -1199,8 +1213,13 @@ void Flow::Eliminate(Operation *op) {
       input->consumers.push_back(consumer);
     }
 
-    // Make input variable an alias for the output variable.
-    input->AddAlias(output->name);
+    // Merge input and output variable names.
+    if (output->out && !input->in) {
+      input->AddAlias(input->name);
+      input->name = output->name;
+    } else {
+      input->AddAlias(output->name);
+    }
     for (const string &alias : output->aliases) {
       input->AddAlias(alias);
     }
