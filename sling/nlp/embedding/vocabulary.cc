@@ -183,7 +183,7 @@ class Random {
 // Embedding model with input, hidden, and output layer.
 class EmbeddingModel {
  public:
-  // Initializes model.
+  // Initialize model.
   void Init(int inputs, int hidden, int outputs) {
     // Store dimensions.
     inputs_ = inputs;
@@ -201,7 +201,7 @@ class EmbeddingModel {
     while (wptr < wend) *wptr++ = rnd.UniformFloat(1.0, -0.5);
   }
 
-  // Adds layer 0 weight vector to vector, v = v + w0[index].
+  // Add layer 0 weight vector to vector, v = v + w0_i.
   void AddLayer0(int index, std::vector<float> *v) const {
     DCHECK_GE(index, 0);
     DCHECK_LT(index, inputs_);
@@ -211,7 +211,7 @@ class EmbeddingModel {
     while (wptr < wend) *vptr++ += *wptr++;
   }
 
-  // Adds layer 1 weight vector to vector, v = v + s * w1_i.
+  // Add layer 1 weight vector to vector, v = v + s * w1_i.
   void AddLayer1(int index, float scalar, std::vector<float> *v) const {
     DCHECK_GE(index, 0);
     DCHECK_LT(index, outputs_);
@@ -221,7 +221,7 @@ class EmbeddingModel {
     while (wptr < wend) *vptr++ += *wptr++ * scalar;
   }
 
-  // Computes dot product between input vector and layer 1 weight vector.
+  // Compute dot product between input vector and layer 1 weight vector.
   // Returns <v, w1_i>.
   float DotLayer1(int index, const std::vector<float> &v) const {
     DCHECK_GE(index, 0);
@@ -234,7 +234,7 @@ class EmbeddingModel {
     return sum;
   }
 
-  // Updates layer 0 weights. w0_i = w0_i + v.
+  // Update layer 0 weights. w0_i = w0_i + v.
   void UpdateLayer0(int index, const std::vector<float> &v) {
     DCHECK_GE(index, 0);
     DCHECK_LT(index, inputs_);
@@ -244,7 +244,7 @@ class EmbeddingModel {
     while (wptr < wend) *wptr++ += *vptr++;
   }
 
-  // Updates layer 1 weights. w1_i = w1_i + s * v
+  // Update layer 1 weights. w1_i = w1_i + s * v
   void UpdateLayer1(int index, float scalar, const std::vector<float> &v) {
     DCHECK_GE(index, 0);
     DCHECK_LT(index, outputs_);
@@ -254,7 +254,7 @@ class EmbeddingModel {
     while (wptr < wend) *wptr++ += *vptr++ * scalar;
   }
 
-  // Returns layer 1 weight vector (w1_i).
+  // Return layer 1 weight vector (w1_i).
   void GetLayer1(int index, std::vector<float> *v) const {
     DCHECK_GE(index, 0);
     DCHECK_LT(index, outputs_);

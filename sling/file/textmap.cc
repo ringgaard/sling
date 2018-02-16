@@ -106,7 +106,8 @@ TextMapOutput::TextMapOutput(const string &filename, int buffer_size) {
 
   // Allocate output buffer.
   buffer_ = static_cast<char *>(malloc(buffer_size));
-  next_ = end_ = buffer_;
+  next_ = buffer_;
+  end_ =  buffer_ + buffer_size;
 }
 
 TextMapOutput::~TextMapOutput() {

@@ -39,8 +39,8 @@ class TextMapInput {
   int id() const { return id_; }
 
   // Return current key and value.
-  const string key() const { return key_; }
-  const string value() const { return value_; }
+  const string &key() const { return key_; }
+  const string &value() const { return value_; }
 
   // Read the next label from input. Return false if there are no more labels.
   // The value is parsed as a string and returned as count. All parameters can
