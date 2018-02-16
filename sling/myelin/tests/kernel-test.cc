@@ -483,7 +483,7 @@ int main(int argc, char *argv[]) {
     CheckFltFunc("Sigmoid", "CUDASigmoid", "GenFltSigmoid");
     CheckFltFunc("Tanh", "CUDATanh", "GenFltTanh");
 
-    CheckFltFunc("Negate", "CUDANegate", "NegateExpr");
+    CheckFltFunc("Neg", "CUDANeg", "NegExpr");
     CheckFltFunc("Abs", "CUDAAbs", "AbsExpr");
     CheckFltFunc("Relu", "CUDARelu", "ReluExpr");
     CheckFltFunc("Reciprocal", "CUDAReciprocal", "ReciprocalExpr");

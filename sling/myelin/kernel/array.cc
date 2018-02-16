@@ -288,7 +288,7 @@ class BasicConcat : public Kernel {
     int n = step->GetAttr("N", step->indegree() - 1);
     if (step->indegree() < n + 1) return false;
     Tensor *axis = step->input(n);
-    if (!axis->IsConstant()) return false;
+    if (!axis->constant()) return false;
     int a = axis->value<int32>();
     if (step->output(0)->shape().outer(a) != 1) return false;
 
@@ -374,7 +374,7 @@ class GeneralConcat : public Kernel {
     // Check concatenation axis.
     int n = step->GetAttr("N", step->indegree() - 1);
     if (step->indegree() < n + 1) return false;
-    if (!step->input(n)->IsConstant()) return false;
+    if (!step->input(n)->constant()) return false;
     int axis = step->input(n)->value<int32>();
 
     // Check outer prefix has same size for all inputs.

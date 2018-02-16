@@ -297,6 +297,10 @@ class Flow {
     // Check if variable is a constant.
     bool constant() const { return data != nullptr; }
 
+    // Check if variable is a global variable. Global variables are either
+    // constants or learnable variables.
+    bool global() const { return data != nullptr || learnable; }
+
     // Return type as string.
     string TypeString() const;
 
@@ -343,6 +347,7 @@ class Flow {
     uint64_t size = 0;                   // size of data in bytes
     bool in = false;                     // is variable a function input?
     bool out = false;                    // is variable a function output?
+    bool learnable = false;              // is variable writeable for learning?
 
     Operation *producer = nullptr;       // operation producing variable
     std::vector<Operation *> consumers;  // list of consumers of variable

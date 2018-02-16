@@ -65,14 +65,25 @@ class Builder {
     return Constant(value.data(), DT_INT32, {size});
   }
 
+  // Add learnable variable to flow.
+  Variable *Weights(const string &name, Type type, const Shape &shape) {
+    Variable *var = Var(name, type, shape);
+    var->learnable = true;
+    return var;
+  }
+
   // Builder methods for common operations.
   Variable *Add(Variable *x, Variable *y) { return Op("Add", {x, y}); }
   Variable *Sub(Variable *x, Variable *y) { return Op("Sub", {x, y}); }
   Variable *Mul(Variable *x, Variable *y) { return Op("Mul", {x, y}); }
   Variable *Div(Variable *x, Variable *y) { return Op("Div", {x, y}); }
-  Variable *Min(Variable *x, Variable *y) { return Op("Min", {x, y}); }
-  Variable *Max(Variable *x, Variable *y) { return Op("Max", {x, y}); }
+  Variable *Min(Variable *x, Variable *y) { return Op("Minimum", {x, y}); }
+  Variable *Max(Variable *x, Variable *y) { return Op("Maximum", {x, y}); }
   Variable *MatMul(Variable *x, Variable *y) { return Op("MatMul", {x, y}); }
+  Variable *Neg(Variable *x) { return Op("Neg", {x}); }
+  Variable *Square(Variable *x) { return Op("Square", {x}); }
+  Variable *Reciprocal(Variable *x) { return Op("Reciprocal", {x}); }
+  Variable *Abs(Variable *x) { return Op("Abs", {x}); }
   Variable *Log(Variable *x) { return Op("Log", {x}); }
   Variable *Exp(Variable *x) { return Op("Exp", {x}); }
   Variable *Tanh(Variable *x) { return Op("Tanh", {x}); }

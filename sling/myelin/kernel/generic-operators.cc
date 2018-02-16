@@ -285,7 +285,7 @@ class GenericFltConstSub : public Kernel {
     if (y->type() != DT_FLOAT) return false;
 
     // Check shapes.
-    if (c->shape().elements() != 1 || !c->IsConstant()) return false;
+    if (c->shape().elements() != 1 || !c->constant()) return false;
     if (x->shape().elements() != y->shape().elements()) return false;
 
     return true;

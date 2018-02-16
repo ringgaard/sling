@@ -293,7 +293,7 @@ class Linker {
   virtual void AddDeviceCode(Step *step, const string &code) {}
 };
 
-// A tensor is a multi-dimensional array that can be used for constants and
+// A tensor is a multi-dimensional array that can be used for globals and
 // parameters.
 class Tensor {
  public:
@@ -347,7 +347,7 @@ class Tensor {
   // Check if tensor is a matrix.
   bool IsMatrix() const { return rank() == 2; }
 
-  // Tensor name for parameter or constant.
+  // Tensor name for parameter or global.
   const string &name() const { return name_; }
 
   // Data type for tensor elements.
@@ -383,7 +383,8 @@ class Tensor {
   // Number of elements in tensor.
   int elements() const { return shape_.elements(); }
 
-  // Value for constant tensor. Return null for parameters.
+  // Value for constant tensor. Return null for learnable globals and
+  // parameters.
   const char *data() const { return data_; }
 
   // Pointer to constant tensor on device.
@@ -396,8 +397,8 @@ class Tensor {
   // are not stored on the host.
   size_t offset() const { return offset_; }
 
-  // Offset in device data instance block. Return -1 for constants and tensors
-  // that are not stored on the device.
+  // Offset in device data instance block. Return -1 for tensors
+  // that are not not stored in the instance block on the device.
   size_t device_offset() const { return device_offset_; }
 
   // Number bytes allocated for tensor in instance. This takes references into
@@ -433,15 +434,11 @@ class Tensor {
   }
 
   // Check if tensor is a constant.
-  bool IsConstant() const {
-    return data_ != nullptr || device_data_ != DEVICE_NULL;
-  }
+  bool constant() const { return constant_; }
 
   // Local variables are allocated in the instance block.
-  bool IsGlobal() const {
-    return data_ != nullptr || device_data_ != DEVICE_NULL;
-  }
-  bool IsLocal() const { return !IsGlobal(); }
+  bool IsLocal() const { return offset_ != -1 || device_offset_ != -1; }
+  bool IsGlobal() const { return !IsLocal(); }
 
   // Return tensor placement.
   Placement placement() const { return placement_; }
@@ -514,7 +511,7 @@ class Tensor {
   // Offset in device data instance block.
   size_t device_offset_ = -1;
 
-  // Tensor name for parameter or constant.
+  // Tensor name.
   string name_;
 
   // Element data type.
@@ -557,14 +554,17 @@ class Tensor {
   // Optional other tensor that this tensor shares alignment requirements with.
   Tensor *link_ = nullptr;
 
-  // Value for constant tensor (not owned).
+  // Value for global tensor (not owned).
   const char *data_ = nullptr;
 
-  // Pointer to constant tensor data on device. This is only set for constant
-  // tensors that need to be access from the device.
+  // Pointer to global tensor data on device. This is only set for constant
+  // or learnable tensors that need to be accessed from the device.
   DevicePtr device_data_ = DEVICE_NULL;
 
-  // Cell that tensor is part of. Constant tensors can be shared.
+  // Constant tensors are global and cannot be modifed.
+  bool constant_ = false;
+
+  // Cell that tensor is part of.
   Cell *cell_ = nullptr;
 
   // Step that produces tensor.
@@ -935,14 +935,14 @@ class Instance {
   // Get raw pointer to location of parameter in instance memory.
   char *GetAddress(Tensor *param) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsConstant()) << param->name();
+    DCHECK(!param->IsLocal()) << param->name();
     return data_ + param->offset();
   }
 
   // Get pointer to location of parameter in instance memory.
   template<typename T> T *Get(Tensor *param) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsConstant()) << param->name();
+    DCHECK(param->IsLocal()) << param->name();
     DCHECK(!param->ref()) << param->name();
     DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(data_ + param->offset());
@@ -951,14 +951,14 @@ class Instance {
   // Get pointer to location of element of parameter in instance memory.
   template<typename T> T *Get(Tensor *param, int r) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsConstant()) << param->name();
+    DCHECK(param->IsLocal()) << param->name();
     DCHECK(!param->ref()) << param->name();
     DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(data_ + param->offset() + param->offset(r));
   }
   template<typename T> T *Get(Tensor *param, int r, int c) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsConstant()) << param->name();
+    DCHECK(param->IsLocal()) << param->name();
     DCHECK(!param->ref()) << param->name();
     DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(
@@ -975,7 +975,7 @@ class Instance {
   // ensuring proper alignment and any other constraints.
   void SetReference(Tensor *param, void *address) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsConstant()) << param->name();
+    DCHECK(param->IsLocal()) << param->name();
     DCHECK(param->ref()) << param->name();
     *reinterpret_cast<void **>(data_ + param->offset()) = address;
   }
@@ -1193,8 +1193,8 @@ class Network {
   // Network cells.
   const std::vector<Cell *> cells() const { return cells_; }
 
-  // Network constants.
-  const std::vector<Tensor *> constants() const { return constants_; }
+  // GLobal tensors.
+  const std::vector<Tensor *> globals() const { return globals_; }
 
   // Network parameters.
   const std::vector<Tensor *> parameters() const { return parameters_; }
@@ -1212,8 +1212,9 @@ class Network {
   // Network cells.
   std::vector<Cell *> cells_;
 
-  // Constants in network, e.g. weight matrices and vectors.
-  std::vector<Tensor *> constants_;
+  // Global tensors in network, e.g. learnable or constant weight matrices and
+  // scalars.
+  std::vector<Tensor *> globals_;
 
   // Parameters in instance blocks (input, output, and intermediate values).
   std::vector<Tensor *> parameters_;
