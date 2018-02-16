@@ -308,7 +308,7 @@ class FlattenConcatTransformer : public Transformer {
 // Type inference for standard ops.
 class StandardTyper : public Typer {
  public:
-  bool InferTypes(Flow::Operation *op) override {
+  bool InferTypes(Flow *flow, Flow::Operation *op) override {
     // Infer shape for matrix multiplication.
     if (op->type == "MatMul" ||
         op->type == "MatMulAdd" ||
@@ -451,6 +451,22 @@ class StandardTyper : public Typer {
       }
     }
 
+    // Infer shape for pooling gather operation.
+    if (op->type == "GatherAvg" ||
+        op->type == "GatherSum" ||
+        op->type == "GatherMax") {
+      if (op->indegree() == 2 && op->outdegree() == 1) {
+        Flow::Variable *params = op->inputs[0];
+        Flow::Variable *result = op->outputs[0];
+        result->type = params->type;
+        result->shape.clear();
+        for (int i = 1; i < params->shape.rank(); ++i) {
+          result->shape.add(params->shape.dim(i));
+        }
+        return true;
+      }
+    }
+
     // Infer shape for argmax operation.
     if (op->type == "ArgMax") {
       if (op->indegree() == 1 && op->outdegree() == 1) {
@@ -464,11 +480,11 @@ class StandardTyper : public Typer {
     // Infer shape for reference operation.
     if (op->type == "Reference") {
       if (op->indegree() == 1 && op->outdegree() == 1) {
-        Flow::Variable *x = op->inputs[0];
-        Flow::Variable *y = op->outputs[0];
-        if (y->type == DT_INVALID) y->type = x->type;
-        y->shape = x->shape;
-        y->ref = true;
+        Flow::Variable *ref = op->outputs[0];
+        Flow::Variable *external = flow->Var(op->GetAttr("var"));
+        ref->type = external->type;
+        ref->shape = external->shape;
+        ref->ref = true;
         return true;
       }
     }

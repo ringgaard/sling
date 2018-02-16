@@ -289,7 +289,7 @@ class FixedDragnnInitializer : public Kernel {
 // Type inference for Dragnn ops.
 class FixedDragnnTyper : public Typer {
  public:
-  bool InferTypes(Flow::Operation *op) override {
+  bool InferTypes(Flow *flow, Flow::Operation *op) override {
     if (op->type == "WordEmbeddingInitializer") {
       if (op->outdegree() == 1) {
         Flow::Variable *result = op->outputs[0];

@@ -64,13 +64,13 @@ class Builder {
     int size = value.size();
     return Constant(value.data(), DT_INT32, {size});
   }
-
-  // Add learnable variable to flow.
-  Variable *Weights(const string &name, Type type, const Shape &shape) {
-    Variable *var = Var(name, type, shape);
-    var->learnable = true;
-    return var;
+  Variable *Constant(const std::vector<int> &value) {
+    int size = value.size();
+    return Constant(value.data(), DT_INT32, {size});
   }
+
+  // Add instance reference to other function.
+  Variable *Instance(Function *func);
 
   // Builder methods for common operations.
   Variable *Add(Variable *x, Variable *y) { return Op("Add", {x, y}); }
@@ -90,8 +90,37 @@ class Builder {
   Variable *Sigmoid(Variable *x) { return Op("Sigmoid", {x}); }
   Variable *Relu(Variable *x) { return Op("Relu", {x}); }
 
+  Variable *Transpose(Variable *x) { return Op("Transpose", {x}); }
+  Variable *Dot(Variable *x, Variable *y) { return MatMul(x, Transpose(y)); }
+
   Variable *Reshape(Variable *x, Variable *shape) {
     return Op("Reshape", {x, shape});
+  }
+  Variable *Reshape(Variable *x, const Shape &shape) {
+    return Reshape(x, Constant(shape.dims()));
+  }
+
+  Variable *Gather(Variable *M, Variable *f) {
+    return Op("Gather", {M, f});
+  }
+  Variable *GatherSum(Variable *M, Variable *f) {
+    return Op("GatherSum", {M, f});
+  }
+  Variable *GatherAvg(Variable *M, Variable *f) {
+    return Op("GatherAvg", {M, f});
+  }
+  Variable *GatherMax(Variable *M, Variable *f) {
+    return Op("GatherMax", {M, f});
+  }
+
+  Variable *Ref(Variable *instance, Variable *external);
+
+  Variable *AssignAdd(Variable *var, Variable *value) {
+    return Op("AssignAdd", {var, value});
+  }
+
+  Variable *ScatterAdd(Variable *M, Variable *f, Variable *v) {
+    return Op("ScatterAdd", {M, f, v});
   }
 
   // Return unique name for operation.

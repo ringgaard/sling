@@ -94,6 +94,11 @@ GraphOptions::GraphOptions() {
   consts.color = "#A6A6A6";
   consts.fillcolor = "#EEEEEE";
 
+  globals.shape = "box";
+  globals.style = "filled";
+  globals.color = "#A6A6A6";
+  globals.fillcolor = "#EEEEEE";
+
   funcs.shape = "box";
   funcs.style = "rounded,filled";
   funcs.fillcolor = "#FCFCFC";
@@ -163,7 +168,7 @@ static void AppendOp(string *str,
 static void AppendVar(string *str,
                       Flow::Variable *var,
                       const GraphOptions &options) {
-  if (var->in || var->out || var->data) {
+  if (var->in || var->out || var->global()) {
     AppendVarId(str, var);
     str->append(" [");
     str->append("label=\"");
@@ -190,6 +195,7 @@ static void AppendVar(string *str,
     if (var->data) str->append("const ");
     if (var->in) str->append("in ");
     if (var->out) str->append("out ");
+    if (var->learnable) str->append("learn ");
     str->append("var ");
     str->append(var->name);
     if (!var->aliases.empty()) {
@@ -204,8 +210,10 @@ static void AppendVar(string *str,
     auto f = options.custom_vars.find(var->name);
     if (f != options.custom_vars.end()) {
       f->second.Append(str);
-    } else if (var->data != nullptr) {
+    } else if (var->constant()) {
       options.consts.Append(str);
+    } else if (var->global()) {
+      options.globals.Append(str);
     } else if (var->out && !var->in) {
       options.outputs.Append(str);
     } else if (var->in && !var->out) {

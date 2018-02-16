@@ -40,6 +40,21 @@ Flow::Variable *Builder::Constant(const void *data, Type type,
   return var;
 }
 
+Flow::Variable *Builder::Instance(Function *func) {
+  Variable *instance = Var(func_->name + "/" + func->name, DT_RESOURCE, {});
+  instance->ref = true;
+  return instance;
+}
+
+Flow::Variable *Builder::Ref(Variable *instance, Variable *external) {
+  Variable *ref = Op("Reference", {instance});
+  ref->type = external->type;
+  ref->shape = external->shape;
+  ref->ref = true;
+  ref->producer->SetAttr("var", external->name);
+  return ref;
+}
+
 string Builder::OpName(const string &op) {
   string name = func_->name;
   name.push_back('/');

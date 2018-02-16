@@ -239,6 +239,9 @@ class Shape {
   // Return shape as string.
   string ToString() const;
 
+  // Return dimensions.
+  const std::vector<int> dims() const { return dims_; }
+
  private:
   // Size of each dimension.
   std::vector<int> dims_;
@@ -501,9 +504,14 @@ class Flow {
   void Analyze(const Transformations &transformations);
 
   // Add variable.
-  Variable *AddVariable(const string &name,
-                        Type type,
-                        const Shape &shape);
+  Variable *AddVariable(const string &name, Type type, const Shape &shape);
+
+  // Add learnable variable.
+  Variable *AddWeights(const string &name, Type type, const Shape &shape) {
+    Variable *var = AddVariable(name, type, shape);
+    var->learnable = true;
+    return var;
+  }
 
   // Add operation.
   Operation *AddOperation(const string &name, const string &type);
@@ -649,7 +657,7 @@ class Typer {
 
   // Return true if the type of the outputs of the operations has been
   // inferred.
-  virtual bool InferTypes(Flow::Operation *op) = 0;
+  virtual bool InferTypes(Flow *flow, Flow::Operation *op) = 0;
 };
 
 // Component type for applying transformations to a flow.

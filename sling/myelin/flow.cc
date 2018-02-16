@@ -1419,7 +1419,7 @@ bool Flow::InferTypes(const Transformations &transformations) {
     auto &typers = transformations.typers();
     for (int t = typers.size() -1; t >= 0; --t) {
       Typer *typer = typers[t];
-      bool done = typer->InferTypes(op);
+      bool done = typer->InferTypes(this, op);
       if (done) break;
     }
 
@@ -1653,6 +1653,7 @@ string Flow::ToString() const {
                   var->TypeString().c_str());
     if (var->in) StringAppendF(&str, " in");
     if (var->out) StringAppendF(&str, " out");
+    if (var->learnable) StringAppendF(&str, " learn");
     if (var->data != nullptr) {
       StringAppendF(&str, ", %lu bytes", var->size);
     }
