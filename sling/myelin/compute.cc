@@ -519,11 +519,14 @@ bool Tensor::SupportsAlignment(const Shape &align) const {
 }
 
 bool Tensor::SupportsOrder(Order order) {
+  if (shape_.real_rank() <= 1) return true;
   return combined_order[required_order_][order] != CONFLICTING_ORDER;
 }
 
 void Tensor::SetRequiredOrder(Order order) {
-  required_order_ = combined_order[required_order_][order];
+  if (shape_.real_rank() > 1) {
+    required_order_ = combined_order[required_order_][order];
+  }
 }
 
 void Tensor::SetMiniumAlignment(int alignment) {
@@ -815,14 +818,15 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   for (Flow::Variable *var : flow.vars()) {
     Tensor *tensor = new Tensor();
     tensors[var] = tensor;
-    if (var->global()) {
-      globals_.push_back(tensor);
-      tensor->data_ = var->data;
-    } else {
+    tensor->constant_ = var->constant();
+    tensor->local_ = !var->global();
+    if (tensor->local_) {
       parameters_.push_back(tensor);
       tensor->required_order_ = options_.parameter_element_order;
+    } else {
+      globals_.push_back(tensor);
+      tensor->data_ = var->data;
     }
-    tensor->constant_ = var->constant();
     tensor->name_ = var->name;
     names_[var->name] = tensor;
     for (const string &alias : var->aliases) {

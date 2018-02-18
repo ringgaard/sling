@@ -22,6 +22,22 @@ namespace myelin {
 
 using namespace jit;
 
+// Allocate registers for unrolling.
+static int AllocateYMMUnrolls(MacroAssembler *masm,
+                              int vector_size,
+                              int max_unrolls,
+                              std::vector<YMMRegister> *regs) {
+  int unrolls = 0;
+  for (int i = 1; i <= max_unrolls; ++i) {
+    int batch_size = i * 8;
+    if (vector_size >= batch_size && vector_size % batch_size == 0) unrolls = i;
+  }
+  for (int i = 0; i < std::max(unrolls, 1); ++i) {
+    regs->push_back(masm->mm().allocy());
+  }
+  return unrolls;
+}
+
 // Reshape tensor while preserving the underlying data.
 class Reshape : public Kernel {
  public:
@@ -669,8 +685,17 @@ class PoolingGather : public Kernel {
   }
 
   void Adjust(Step *step) override {
+    Tensor *M = step->input(0);
+    Tensor *v = step->output(0);
+
+    // Align to one ymm/xmm register.
+    int byte_alignment = (CPU::Enabled(AVX) ? 256 : 128) / 8;
+    M->SetMiniumAlignment(byte_alignment);
+    v->SetMiniumAlignment(byte_alignment);
+
     // Embedding matrix must be row-major.
-    step->input(0)->SetRequiredOrder(ROW_MAJOR);
+    M->SetRequiredOrder(ROW_MAJOR);
+    M->MinAlign({CPU::Enabled(AVX) ? 8 : 4, 1});
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -678,8 +703,9 @@ class PoolingGather : public Kernel {
     Tensor *M = step->input(0);
     Tensor *f = step->input(1);
     Tensor *v = step->output(0);
-    CHECK(f->IsLocal());
-    CHECK(v->IsLocal());
+    CHECK(f->IsLocal()) << f->name();
+    CHECK(v->IsLocal()) << v->name();
+    int n = v->elements();
 
     // Allocate registers.
     Register acc = masm->rr().alloc_fixed(rax);
@@ -692,8 +718,6 @@ class PoolingGather : public Kernel {
     Register embeddings = masm->rr().alloc();
     Register input = masm->rr().alloc();
     Register output = masm->rr().alloc();
-    YMMRegister elem = masm->mm().allocy();
-    XMMRegister xelem = elem.xmm();
 
     // Load tensor locations.
     __ LoadTensorAddress(embeddings, M);
@@ -702,7 +726,9 @@ class PoolingGather : public Kernel {
 
     // Zero feature index and feature count.
     __ xorq(fidx, fidx);
-    __ xorq(fcnt, fcnt);
+    if (pooling_ == AVG) {
+      __ xorq(fcnt, fcnt);
+    }
 
     // Find first (non-negative) feature.
     Label l1, l2, done;
@@ -729,7 +755,9 @@ class PoolingGather : public Kernel {
     __ movq(dst, output);
     __ movq(cnt, Immediate(M->stride(0)));
     __ repmovsb();
-    __ incq(fcnt);
+    if (pooling_ == AVG) {
+      __ incq(fcnt);
+    }
 
     // Go over the remaining features.
     Label l3, l4;
@@ -742,7 +770,9 @@ class PoolingGather : public Kernel {
     __ j(negative, &l3);
 
     // Combine embedding vector for feature with current result.
-    __ incq(fcnt);
+    if (pooling_ == AVG) {
+      __ incq(fcnt);
+    }
     __ movq(src, embeddings);
     __ Multiply(acc, M->stride(0));
     __ addq(src, acc);
@@ -750,62 +780,77 @@ class PoolingGather : public Kernel {
     // Update output vector with embedding vector for feature.
     if (masm->Enabled(AVX)) {
       // Combine elements using AVX vectors.
-      if (v->elements() >= 8) {
+      std::vector<YMMRegister> elem;
+      int main = (n / 8) * 8;
+      int unrolls = AllocateYMMUnrolls(masm, main, 4, &elem);
+      if (unrolls > 0) {
         Label next;
         __ xorq(ofs, ofs);
         __ bind(&next);
-        __ vmovaps(elem, Operand(src, ofs));
-        if (pooling_ == MAX) {
-          __ vmaxps(elem, elem, Operand(dst, ofs));
-        } else {
-          __ vaddps(elem, elem, Operand(dst, ofs));
+        for (int i = 0; i < unrolls; ++i) {
+          int disp = i * 8 * sizeof(float);
+          __ vmovaps(elem[i], Operand(src, ofs, times_1, disp));
         }
-        __ vmovaps(Operand(output, ofs), elem);
-        __ addq(ofs, Immediate(8 * sizeof(float)));
-        __ cmpq(ofs, Immediate(v->size()));
+        for (int i = 0; i < unrolls; ++i) {
+          int disp = i * 8 * sizeof(float);
+          if (pooling_ == MAX) {
+            __ vmaxps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
+          } else {
+            __ vaddps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
+          }
+        }
+        for (int i = 0; i < unrolls; ++i) {
+          int disp = i * 8 * sizeof(float);
+          __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
+        }
+        __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
+        __ cmpq(ofs, Immediate(main * sizeof(float)));
         __ j(less, &next);
       }
 
       // Combine residual elements.
-      int disp = (v->elements() / 8) * 8 * sizeof(float);
-      for (int i = 0; i < v->size() % 8; ++i) {
-        __ vmovss(elem, Operand(src, disp));
+      int disp = main * sizeof(float);
+      for (int i = 0; i < n % 8; ++i) {
+        int r = i % std::max(unrolls, 1);
+        __ vmovss(elem[r], Operand(src, disp));
         if (pooling_ == MAX) {
-          __ vmaxss(elem, elem, Operand(dst, disp));
+          __ vmaxss(elem[r], elem[r], Operand(output, disp));
         } else {
-          __ vaddss(elem, elem, Operand(dst, disp));
+          __ vaddss(elem[r], elem[r], Operand(output, disp));
         }
-        __ vmovss(Operand(output, disp), elem);
+        __ vmovss(Operand(output, disp), elem[r]);
         disp += sizeof(float);
       }
     } else {
       // Combine elements using SSE vectors.
-      if (v->elements() >= 4) {
+      int main = (n / 4) * 4;
+      XMMRegister elem = masm->mm().allocx();
+      if (n >= 4) {
         Label next;
         __ xorq(ofs, ofs);
         __ bind(&next);
-        __ movaps(xelem, Operand(src, ofs));
+        __ movaps(elem, Operand(src, ofs));
         if (pooling_ == MAX) {
-          __ maxps(xelem, Operand(output, ofs));
+          __ maxps(elem, Operand(output, ofs));
         } else {
-          __ addps(xelem, Operand(output, ofs));
+          __ addps(elem, Operand(output, ofs));
         }
-        __ movaps(Operand(output, ofs), xelem);
+        __ movaps(Operand(output, ofs), elem);
         __ addq(ofs, Immediate(4 * sizeof(float)));
-        __ cmpq(ofs, Immediate(v->size()));
+        __ cmpq(ofs, Immediate(main * sizeof(float)));
         __ j(less, &next);
       }
 
       // Combine residual elements.
-      int disp = (v->elements() / 4) * 4 * sizeof(float);
-      for (int i = 0; i < v->size() % 4; ++i) {
-        __ movss(xelem, Operand(src, disp));
+      int disp = main * sizeof(float);
+      for (int i = 0; i < n % 4; ++i) {
+        __ movss(elem, Operand(src, disp));
         if (pooling_ == MAX) {
-          __ maxss(xelem, Operand(output, disp));
+          __ maxss(elem, Operand(output, disp));
         } else {
-          __ addss(xelem, Operand(output, disp));
+          __ addss(elem, Operand(output, disp));
         }
-        __ movss(Operand(output, disp), xelem);
+        __ movss(Operand(output, disp), elem);
         disp += sizeof(float);
       }
     }
@@ -816,7 +861,6 @@ class PoolingGather : public Kernel {
 
     // Compute average.
     if (pooling_ == AVG) {
-      __ movq(dst, output);
       if (masm->Enabled(AVX)) {
         // Compute 1/fcnt.
         YMMRegister scalar = masm->mm().allocy();
@@ -825,20 +869,30 @@ class PoolingGather : public Kernel {
         __ vbroadcastss(scalar, scalar);
 
         // Multiply all output elements with scalar to get the average.
-        if (v->elements() >= 8) {
+        std::vector<YMMRegister> elem;
+        int main = (n / 8) * 8;
+        int unrolls = AllocateYMMUnrolls(masm, main, 4, &elem);
+        if (unrolls > 0) {
           Label next;
           __ xorq(ofs, ofs);
           __ bind(&next);
-          __ vmulps(elem, scalar, Operand(output, ofs));
-          __ vmovaps(Operand(output, ofs), elem);
-          __ addq(ofs, Immediate(8 * sizeof(float)));
-          __ cmpq(ofs, Immediate(v->size()));
+          for (int i = 0; i < unrolls; ++i) {
+            int disp = i * 8 * sizeof(float);
+            __ vmulps(elem[i], scalar, Operand(output, ofs, times_1, disp));
+          }
+          for (int i = 0; i < unrolls; ++i) {
+            int disp = i * 8 * sizeof(float);
+            __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
+          }
+          __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
+          __ cmpq(ofs, Immediate(main * sizeof(float)));
           __ j(less, &next);
         }
-        int disp = (v->elements() / 8) * 8 * sizeof(float);
-        for (int i = 0; i < v->size() % 8; ++i) {
-          __ vmulss(xelem, scalar.xmm(), Operand(output, disp));
-          __ vmovss(Operand(output, disp), elem);
+        int disp = main * sizeof(float);
+        for (int i = 0; i < n % 8; ++i) {
+          int r = i % std::max(unrolls, 1);
+          __ vmulss(elem[r].xmm(), scalar.xmm(), Operand(output, disp));
+          __ vmovss(Operand(output, disp), elem[r].xmm());
           disp += sizeof(float);
         }
       } else {
@@ -848,12 +902,13 @@ class PoolingGather : public Kernel {
         __ rcpss(scalar, scalar);
 
         // Multiply all output elements with scalar to get the average.
+        XMMRegister elem = masm->mm().allocx();
         Label next;
         __ xorq(ofs, ofs);
         __ bind(&next);
-        __ movss(xelem, Operand(output, ofs));
-        __ mulss(xelem, scalar);
-        __ movss(Operand(output, ofs), xelem);
+        __ movss(elem, Operand(output, ofs));
+        __ mulss(elem, scalar);
+        __ movss(Operand(output, ofs), elem);
         __ addq(ofs, Immediate(sizeof(float)));
         __ cmpq(ofs, Immediate(v->size()));
         __ j(less, &next);
@@ -866,11 +921,395 @@ class PoolingGather : public Kernel {
   int64 Complexity(const Step *step) override {
     Tensor *M = step->input(0);
     Tensor *f = step->input(1);
-    return M->dim(1) * f->elements();
+    return M->dim(1) * f->elements() + (pooling_ == AVG ? M->dim(1) : 0);
   }
 
  private:
   Pooling pooling_;  // pooling operation for combining vectors
+};
+
+// Add (scaled) input to variable.
+class AssignAdd : public Kernel {
+ public:
+  AssignAdd(bool scale) : scale_(scale) {}
+
+  string Name() override { return Operation(); }
+  string Operation() override { return scale_ ? "AssignMulAdd" : "AssignAdd"; }
+
+  bool Supports(Step *step) override {
+    // Requires SSE or AVX support.
+    if (!CPU::Enabled(AVX) && !CPU::Enabled(SSE)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() != (scale_ ? 3 : 2)) return false;
+    if (step->outdegree() != 0) return false;
+
+    // Check types.
+    Tensor *var = step->input(0);
+    Tensor *value = step->input(1);
+    Tensor *scaler = scale_ ? step->input(2) : nullptr;
+    if (var->type() != DT_FLOAT) return false;
+    if (var->constant()) return false;
+    if (value->type() != DT_FLOAT) return false;
+    if (!var->shape().IsCompatible(value->shape())) return false;
+    if (var->elements() != value->elements()) return false;
+    if (scale_) {
+      if (scaler->type() != DT_FLOAT) return false;
+      if (scaler->elements() != 1) return false;
+    }
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    Tensor *var = step->input(0);
+    Tensor *value = step->input(1);
+
+    // Align to one ymm/xmm register.
+    int byte_alignment = (CPU::Enabled(AVX) ? 256 : 128) / 8;
+    var->SetMiniumAlignment(byte_alignment);
+    value->SetMiniumAlignment(byte_alignment);
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get inputs.
+    Tensor *var = step->input(0);
+    Tensor *value = step->input(1);
+    Tensor *scaler = scale_ ? step->input(2) : nullptr;
+    int n = value->elements();
+
+    // Allocate registers.
+    Register ofs = masm->rr().alloc();
+    Register dst = masm->rr().alloc();
+    Register src = masm->rr().alloc();
+    Register saddr = masm->rr().alloc();
+
+    // Load tensor locations.
+    __ LoadTensorAddress(dst, var);
+    __ LoadTensorAddress(src, value);
+
+    // Add (scaled) value to variabel.
+    if (masm->Enabled(AVX)) {
+      // AVX version.
+      std::vector<YMMRegister> elem;
+      int main = (n / 8) * 8;
+      int unrolls = AllocateYMMUnrolls(masm, main, 4, &elem);
+
+      // Load scaling value.
+      YMMRegister factor = masm->mm().allocy();
+      if (scaler) {
+        __ LoadTensorAddress(saddr, scaler);
+        __ vbroadcastss(factor, Operand(saddr));
+      }
+
+      if (unrolls > 0) {
+        Label next;
+        __ xorq(ofs, ofs);
+        __ bind(&next);
+        for (int i = 0; i < unrolls; ++i) {
+          int disp = i * 8 * sizeof(float);
+          if (scale_) {
+            __ vmulps(elem[i], factor, Operand(src, ofs, times_1, disp));
+          } else {
+            __ vmovaps(elem[i], Operand(src, ofs, times_1, disp));
+          }
+        }
+        for (int i = 0; i < unrolls; ++i) {
+          int disp = i * 8 * sizeof(float);
+          __ vaddps(elem[i], elem[i], Operand(dst, ofs, times_1, disp));
+        }
+        for (int i = 0; i < unrolls; ++i) {
+          int disp = i * 8 * sizeof(float);
+          __ vmovaps(Operand(dst, ofs, times_1, disp), elem[i]);
+        }
+        __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
+        __ cmpq(ofs, Immediate(main * sizeof(float)));
+        __ j(less, &next);
+      }
+
+      int disp = main * sizeof(float);
+      for (int i = 0; i < n % 8; ++i) {
+        int r = i % std::max(unrolls, 1);
+        if (scale_) {
+          __ vmulss(elem[r], factor, Operand(src, disp));
+        } else {
+          __ vmovss(elem[r], Operand(src, disp));
+        }
+        __ vaddss(elem[r], elem[r], Operand(dst, disp));
+        __ vmovss(Operand(dst, disp), elem[r]);
+        disp += sizeof(float);
+      }
+    } else {
+      // SSE version.
+      XMMRegister elem = masm->mm().allocx();
+      XMMRegister factor = masm->mm().allocx();
+
+      // Load scaling value.
+      if (scaler) {
+        __ LoadTensorAddress(saddr, scaler);
+        __ movss(factor, Operand(saddr));
+        __ shufps(factor, factor, 0);
+      }
+
+      // Add (scaled) value to variabel.
+      int main = (n / 4) * 4;
+      if (n >= 4) {
+        Label next;
+        __ xorq(ofs, ofs);
+        __ bind(&next);
+          __ movaps(elem, Operand(src, ofs));
+        if (scale_) {
+          __ mulps(elem, factor);
+        }
+        __ addps(elem, Operand(dst, ofs));
+        __ movaps(Operand(dst, ofs), elem);
+        __ addq(ofs, Immediate(8 * sizeof(float)));
+        __ cmpq(ofs, Immediate(main * sizeof(float)));
+        __ j(less, &next);
+      }
+      int disp = main * sizeof(float);
+      for (int i = 0; i < n % 4; ++i) {
+        __ movss(elem, Operand(src, disp));
+        if (scale_) {
+          __ mulss(elem, factor);
+        }
+        __ addss(elem, Operand(dst, disp));
+        __ movss(Operand(dst, disp), elem);
+        disp += sizeof(float);
+      }
+    }
+  }
+
+  int64 Complexity(const Step *step) override {
+    Tensor *var = step->input(0);
+    return var->elements() * (scale_ ? 2 : 1);
+  }
+
+ private:
+  bool scale_;  // scale input
+};
+
+// Add sparse (scaled) input to variable.
+class ScatterAdd : public Kernel {
+ public:
+  ScatterAdd(bool scale) : scale_(scale) {}
+
+  string Name() override { return Operation(); }
+  string Operation() override {
+    return scale_ ? "ScatterMulAdd" : "ScatterAdd";
+  }
+
+  bool Supports(Step *step) override {
+    // Requires SSE or AVX support.
+    if (!CPU::Enabled(AVX) && !CPU::Enabled(SSE)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() != (scale_ ? 4 : 3)) return false;
+    if (step->outdegree() != 0) return false;
+
+    // Check types.
+    Tensor *var = step->input(0);
+    Tensor *indices = step->input(1);
+    Tensor *value = step->input(2);
+    Tensor *scaler = scale_ ? step->input(3) : nullptr;
+    if (var->type() != DT_FLOAT && var->rank() == 2) return false;
+    if (var->constant()) return false;
+    if (indices->type() != DT_INT32 && indices->rank() == 1) return false;
+    if (value->type() != DT_FLOAT) return false;
+    if (value->rank() != 1) return false;
+    if (value->dim(0) != var->dim(1)) return false;
+    if (scale_) {
+      if (scaler->type() != DT_FLOAT) return false;
+      if (scaler->elements() != 1) return false;
+    }
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    Tensor *var = step->input(0);
+    Tensor *value = step->input(2);
+
+    // Align to one ymm/xmm register.
+    int byte_alignment = (CPU::Enabled(AVX) ? 256 : 128) / 8;
+    var->SetMiniumAlignment(byte_alignment);
+    value->SetMiniumAlignment(byte_alignment);
+
+    // Embedding matrix must be row-major.
+    var->SetRequiredOrder(ROW_MAJOR);
+    var->MinAlign({CPU::Enabled(AVX) ? 8 : 4, 1});
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get inputs.
+    Tensor *var = step->input(0);
+    Tensor *indices = step->input(1);
+    Tensor *value = step->input(2);
+    Tensor *scaler = scale_ ? step->input(3) : nullptr;
+    bool single = indices->elements() == 1;
+    int n = value->elements();
+
+    // Allocate registers.
+    Register acc = masm->rr().alloc();
+    Register ofs = masm->rr().alloc();
+    Register varaddr = masm->rr().alloc();
+    Register idxaddr = masm->rr().alloc();
+    Register valaddr = masm->rr().alloc();
+    Register fidx = masm->rr().alloc();
+    Register src = masm->rr().alloc();
+    YMMRegister factor = masm->mm().allocy();
+
+    // Load tensor locations.
+    __ LoadTensorAddress(varaddr, var);
+    __ LoadTensorAddress(idxaddr, indices);
+    __ LoadTensorAddress(valaddr, value);
+
+    // Load scaling value.
+    if (scaler) {
+      __ LoadTensorAddress(src, scaler);
+      if (masm->Enabled(AVX)) {
+        __ vbroadcastss(factor, Operand(src));
+      } else {
+        __ movss(factor.xmm(), Operand(src));
+        __ shufps(factor.xmm(), factor.xmm(), 0);
+      }
+    }
+
+    // Loop over features.
+    if (!single) {
+      __ xorq(fidx, fidx);
+    }
+    Label l1, l2;
+    __ bind(&l1);
+    if (single) {
+      __ movsxlq(acc, Operand(idxaddr));
+    } else {
+      __ movsxlq(acc, Operand(idxaddr, fidx, times_4));
+    }
+    __ testq(acc, acc);
+    __ j(negative, &l2);
+
+    //  look up address of index in embedding
+    __ Multiply(acc, var->stride(0));
+    __ addq(acc, varaddr);
+
+    // Add (scaled) input vector for feature tp embedding vector.
+    if (masm->Enabled(AVX)) {
+      // Update elements using AVX vectors.
+      std::vector<YMMRegister> elem;
+      int main = (n / 8) * 8;
+      int unrolls = AllocateYMMUnrolls(masm, main, 4, &elem);
+      if (unrolls > 0) {
+        Label next;
+        __ xorq(ofs, ofs);
+        __ bind(&next);
+        for (int i = 0; i < unrolls; ++i) {
+          int disp = i * 8 * sizeof(float);
+          if (scale_) {
+            __ vmulps(elem[i], factor, Operand(valaddr, ofs, times_1, disp));
+          } else {
+            __ vmovaps(elem[i], Operand(valaddr, ofs, times_1, disp));
+          }
+        }
+        for (int i = 0; i < unrolls; ++i) {
+          int disp = i * 8 * sizeof(float);
+          __ vaddps(elem[i], elem[i], Operand(acc, ofs, times_1, disp));
+        }
+        for (int i = 0; i < unrolls; ++i) {
+          int disp = i * 8 * sizeof(float);
+          __ vmovaps(Operand(acc, ofs, times_1, disp), elem[i]);
+        }
+        __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
+        __ cmpq(ofs, Immediate(main * sizeof(float)));
+        __ j(less, &next);
+      }
+
+      // Update residual elements.
+      int disp = main * sizeof(float);
+      for (int i = 0; i < n % 8; ++i) {
+        int r = i % std::max(unrolls, 1);
+        if (scale_) {
+          __ vmulss(elem[r], factor, Operand(valaddr, disp));
+        } else {
+          __ vmovss(elem[r], Operand(valaddr, disp));
+        }
+        __ vaddss(elem[r], elem[r], Operand(acc, disp));
+        __ vmovss(Operand(acc, disp), elem[r]);
+        disp += sizeof(float);
+      }
+    } else {
+      // Update elements using SSE vectors.
+      XMMRegister elem = masm->mm().allocx();
+      int main = (n / 4) * 4;
+      if (n >= 4) {
+        Label next;
+        __ xorq(ofs, ofs);
+        __ bind(&next);
+        __ movaps(elem, Operand(valaddr, ofs));
+        if (scale_) {
+          __ mulps(elem, factor.xmm());
+        }
+        __ addps(elem, Operand(acc, ofs));
+        __ movaps(Operand(acc, ofs), elem);
+        __ addq(ofs, Immediate(4 * sizeof(float)));
+        __ cmpq(ofs, Immediate(main * sizeof(float)));
+        __ j(less, &next);
+      }
+
+      // Update residual elements.
+      int disp = main * sizeof(float);
+      for (int i = 0; i < n % 4; ++i) {
+        __ movss(elem, Operand(valaddr, disp));
+        if (scale_) {
+          __ mulss(elem, factor.xmm());
+        }
+        __ addss(elem, Operand(acc, disp));
+        __ movss(Operand(acc, disp), elem);
+        disp += sizeof(float);
+      }
+    }
+
+    __ bind(&l2);
+    if (!single) {
+      __ incq(fidx);
+      __ cmpq(fidx, Immediate(indices->elements()));
+      __ j(less, &l1);
+    }
+  }
+
+  int64 Complexity(const Step *step) override {
+    Tensor *indices = step->input(1);
+    Tensor *value = step->input(2);
+    return value->elements() * indices->elements() * (scale_ ? 2 : 1);
+  }
+
+ private:
+  bool scale_;  // scale input
+};
+
+// Fold scaling into update ops.
+class ScaledUpdateTransformer : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    int updates = 0;
+    for (Flow::Operation *op : flow->Find("Mul|1:AssignAdd")) {
+      Flow::Operation *assign = op;
+      Flow::Operation *mul = assign->inputs[1]->producer;
+      if (mul->outputs[0]->consumers.size() == 1) {
+        flow->Fuse(assign, mul, "AssignMulAdd");
+        updates++;
+      }
+    }
+    for (Flow::Operation *op : flow->Find("Mul|2:ScatterAdd")) {
+      Flow::Operation *scatter = op;
+      Flow::Operation *mul = scatter->inputs[2]->producer;
+      if (mul->outputs[0]->consumers.size() == 1) {
+        flow->Fuse(scatter, mul, "ScatterMulAdd");
+        updates++;
+      }
+    }
+    return updates > 0;
+  }
 };
 
 // Register array kernels.
@@ -889,6 +1328,12 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new PoolingGather(PoolingGather::SUM));
   library->Register(new PoolingGather(PoolingGather::AVG));
   library->Register(new PoolingGather(PoolingGather::MAX));
+  library->Register(new AssignAdd(false));
+  library->Register(new AssignAdd(true));
+  library->Register(new ScatterAdd(false));
+  library->Register(new ScatterAdd(true));
+
+  library->RegisterTransformer(new ScaledUpdateTransformer());
 }
 
 }  // namespace myelin

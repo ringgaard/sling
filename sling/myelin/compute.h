@@ -437,8 +437,8 @@ class Tensor {
   bool constant() const { return constant_; }
 
   // Local variables are allocated in the instance block.
-  bool IsLocal() const { return offset_ != -1 || device_offset_ != -1; }
-  bool IsGlobal() const { return !IsLocal(); }
+  bool IsLocal() const { return local_; }
+  bool IsGlobal() const { return !local_; }
 
   // Return tensor placement.
   Placement placement() const { return placement_; }
@@ -563,6 +563,9 @@ class Tensor {
 
   // Constant tensors are global and cannot be modifed.
   bool constant_ = false;
+
+  // Local tensors are allocated in the instance data block.
+  bool local_ = true;
 
   // Cell that tensor is part of.
   Cell *cell_ = nullptr;
@@ -971,6 +974,11 @@ class Instance {
     *reinterpret_cast<char **>(data_ + param->offset()) = channel->at(index);
   }
 
+  // Set link to other instance.
+  void Set(Tensor *param, Instance *instance) {
+    *reinterpret_cast<char **>(data_ + param->offset()) = instance->data();
+  }
+
   // Sets a reference parameter to an address. Caller is responsible for
   // ensuring proper alignment and any other constraints.
   void SetReference(Tensor *param, void *address) {
@@ -978,6 +986,11 @@ class Instance {
     DCHECK(param->IsLocal()) << param->name();
     DCHECK(param->ref()) << param->name();
     *reinterpret_cast<void **>(data_ + param->offset()) = address;
+  }
+
+  // Clear instance tensor.
+  void Clear(Tensor *param) {
+    memset(GetAddress(param), 0, param->space());
   }
 
   // Set profiling summary for collecting profiling data for instance.

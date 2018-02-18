@@ -1235,14 +1235,6 @@ class AVXIntVecMatMulAddReluH : public AVXIntVecMatMulHBase {
 };
 
 void RegisterAVXMatMul(Library *library) {
-  // Computes  : c = a * c
-  // Input     : a: float32[1,n]
-  //             b: float32[n,1]
-  // Output    : c: float32[1]
-  // Requires  : AVX
-  // Supports  : FMA3
-  library->Register(new AVXFltDotProduct());
-
   // Computes  : C = A * B
   // Input     : A: float32[k,n] row-major
   //             B: float32[n,m] column-major
@@ -1344,6 +1336,14 @@ void RegisterAVXMatMul(Library *library) {
   // Output    : y: int16[1,m]
   // Requires  : AVX2
   library->Register(new AVXIntVecMatMulAddReluH());
+
+  // Computes  : c = a * c
+  // Input     : a: float32[1,n]
+  //             b: float32[n,1]
+  // Output    : c: float32[1]
+  // Requires  : AVX
+  // Supports  : FMA3
+  library->Register(new AVXFltDotProduct());
 }
 
 }  // namespace myelin

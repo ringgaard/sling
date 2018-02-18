@@ -87,7 +87,7 @@ class Reference : public Kernel {
     __ movq(addr, Operand(masm->instance(), instance->offset()));
     if (var->ref()) {
       __ movq(addr, Operand(masm->instance(), var->offset()));
-    } else {
+    } else if (var->offset() != 0) {
       __ addq(addr, Immediate(var->offset()));
     }
     __ movq(Operand(masm->instance(), ref->offset()), addr);

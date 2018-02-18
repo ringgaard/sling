@@ -49,8 +49,17 @@ class Builder {
   // Add variable to flow.
   Variable *Var(const string &name, Type type, const Shape &shape);
 
+  // Change name of variable. Returns the variable itself.
+  Variable *Name(Variable *var, const string &name) {
+    var->name = func_->name + "/" + name;
+    return var;
+  }
+
   // Add operation to function and return output variable.
   Variable *Op(const string &op, const std::vector<Variable *> &args);
+
+  // Add operation with no output to function.
+  void Op0(const string &op, const std::vector<Variable *> &args);
 
   // Add constant to flow.
   Variable *Constant(const void *data, Type type, const Shape &shape);
@@ -90,14 +99,17 @@ class Builder {
   Variable *Sigmoid(Variable *x) { return Op("Sigmoid", {x}); }
   Variable *Relu(Variable *x) { return Op("Relu", {x}); }
 
-  Variable *Transpose(Variable *x) { return Op("Transpose", {x}); }
-  Variable *Dot(Variable *x, Variable *y) { return MatMul(x, Transpose(y)); }
-
   Variable *Reshape(Variable *x, Variable *shape) {
     return Op("Reshape", {x, shape});
   }
   Variable *Reshape(Variable *x, const Shape &shape) {
     return Reshape(x, Constant(shape.dims()));
+  }
+
+  Variable *Transpose(Variable *x) { return Op("Transpose", {x}); }
+
+  Variable *Dot(Variable *x, Variable *y, int size) {
+    return MatMul(Reshape(x, {1, size}), Reshape(y, {size, 1}));
   }
 
   Variable *Gather(Variable *M, Variable *f) {
@@ -115,12 +127,18 @@ class Builder {
 
   Variable *Ref(Variable *instance, Variable *external);
 
-  Variable *AssignAdd(Variable *var, Variable *value) {
-    return Op("AssignAdd", {var, value});
+  void AssignAdd(Variable *var, Variable *value) {
+    Op0("AssignAdd", {var, value});
+  }
+  void AssignMulAdd(Variable *var, Variable *value, Variable *factor) {
+    Op0("AssignMulAdd", {var, value, factor});
   }
 
-  Variable *ScatterAdd(Variable *M, Variable *f, Variable *v) {
-    return Op("ScatterAdd", {M, f, v});
+  void ScatterAdd(Variable *M, Variable *f, Variable *v) {
+    return Op0("ScatterAdd", {M, f, v});
+  }
+  void ScatterMulAdd(Variable *M, Variable *f, Variable *v, Variable *factor) {
+    return Op0("ScatterMulAdd", {M, f, v, factor});
   }
 
   // Return unique name for operation.
