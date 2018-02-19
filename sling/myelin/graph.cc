@@ -192,10 +192,10 @@ static void AppendVar(string *str,
     str->append("\" ");
 
     str->append(" tooltip=\"");
-    if (var->data) str->append("const ");
+    if (var->constant()) str->append("const ");
+    if (var->rw) str->append("rw ");
     if (var->in) str->append("in ");
     if (var->out) str->append("out ");
-    if (var->learnable) str->append("learn ");
     str->append("var ");
     str->append(var->name);
     if (!var->aliases.empty()) {

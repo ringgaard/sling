@@ -12,7 +12,7 @@ app.filter('padding', function () {
 
 app.filter('integer', function () {
   return function(num) {
-    if (isNaN(num)) return "---";
+    if (!isFinite(num) || ) return "---";
     return Math.round(num).toString();
   };
 });

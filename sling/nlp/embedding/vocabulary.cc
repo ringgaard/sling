@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <math.h>
 #include <algorithm>
 #include <random>
 #include <string>
@@ -22,6 +21,10 @@
 #include "sling/file/recordio.h"
 #include "sling/file/textmap.h"
 #include "sling/frame/serialization.h"
+#include "sling/myelin/compute.h"
+#include "sling/myelin/builder.h"
+#include "sling/myelin/flow.h"
+#include "sling/myelin/kernel/tensorflow.h"
 #include "sling/nlp/document/document.h"
 #include "sling/task/accumulator.h"
 #include "sling/task/documents.h"
@@ -34,11 +37,6 @@ namespace sling {
 namespace nlp {
 
 using namespace task;
-
-// Sigmoid function.
-static float sigmoid(float x) {
-  return 1.0 / (1.0 + expf(-x));
-}
 
 // Process documents and output counts for normalized words in documents.
 class EmbeddingVocabularyMapper : public DocumentProcessor {
@@ -180,109 +178,6 @@ class Random {
   std::uniform_real_distribution<float> dist_;
 };
 
-// Embedding model with input, hidden, and output layer.
-class EmbeddingModel {
- public:
-  // Initialize model.
-  void Init(int inputs, int hidden, int outputs) {
-    // Store dimensions.
-    inputs_ = inputs;
-    hidden_ = hidden;
-    outputs_ = outputs;
-
-    // Allocate weight matrices.
-    w0_.resize(inputs * hidden);
-    w1_.resize(hidden * outputs);
-
-    // Initialize layer 0 with random weights.
-    Random rnd;
-    float *wptr = w0_.data();
-    float *wend = wptr + inputs * hidden;
-    while (wptr < wend) *wptr++ = rnd.UniformFloat(1.0, -0.5);
-  }
-
-  // Add layer 0 weight vector to vector, v = v + w0_i.
-  void AddLayer0(int index, std::vector<float> *v) const {
-    DCHECK_GE(index, 0);
-    DCHECK_LT(index, inputs_);
-    const float *wptr = w0_.data() + index * hidden_;
-    const float *wend = wptr + hidden_;
-    float *vptr = v->data();
-    while (wptr < wend) *vptr++ += *wptr++;
-  }
-
-  // Add layer 1 weight vector to vector, v = v + s * w1_i.
-  void AddLayer1(int index, float scalar, std::vector<float> *v) const {
-    DCHECK_GE(index, 0);
-    DCHECK_LT(index, outputs_);
-    const float *wptr = w1_.data() + index * hidden_;
-    const float *wend = wptr + hidden_;
-    float *vptr = v->data();
-    while (wptr < wend) *vptr++ += *wptr++ * scalar;
-  }
-
-  // Compute dot product between input vector and layer 1 weight vector.
-  // Returns <v, w1_i>.
-  float DotLayer1(int index, const std::vector<float> &v) const {
-    DCHECK_GE(index, 0);
-    DCHECK_LT(index, outputs_);
-    float sum = 0.0;
-    const float *wptr = w1_.data() + index * hidden_;
-    const float *wend = wptr + hidden_;
-    const float *vptr = v.data();
-    while (wptr < wend) sum += *vptr++ * *wptr++;
-    return sum;
-  }
-
-  // Update layer 0 weights. w0_i = w0_i + v.
-  void UpdateLayer0(int index, const std::vector<float> &v) {
-    DCHECK_GE(index, 0);
-    DCHECK_LT(index, inputs_);
-    float *wptr = w0_.data() + index * hidden_;
-    float *wend = wptr + hidden_;
-    const float *vptr = v.data();
-    while (wptr < wend) *wptr++ += *vptr++;
-  }
-
-  // Update layer 1 weights. w1_i = w1_i + s * v
-  void UpdateLayer1(int index, float scalar, const std::vector<float> &v) {
-    DCHECK_GE(index, 0);
-    DCHECK_LT(index, outputs_);
-    float *wptr = w1_.data() + index * hidden_;
-    float *wend = wptr + hidden_;
-    const float *vptr = v.data();
-    while (wptr < wend) *wptr++ += *vptr++ * scalar;
-  }
-
-  // Return layer 1 weight vector (w1_i).
-  void GetLayer1(int index, std::vector<float> *v) const {
-    DCHECK_GE(index, 0);
-    DCHECK_LT(index, outputs_);
-    const float *wptr = w1_.data() + index * hidden_;
-    const float *wend = wptr + hidden_;
-    float *vptr = v->data();
-    while (wptr < wend) *vptr++ = *wptr++;
-  }
-
-  // Free up memory used by network.
-  void Clear() {
-    w0_.clear();
-    w1_.clear();
-  }
-
- private:
-  // Model dimensions.
-  int inputs_;        // number of input nodes
-  int hidden_;        // number of hidden nodes
-  int outputs_;       // number of output nodes
-
-  // Weight matrices represented as arrays:
-  //   w0[i][h] ==> w0[i * hidden + h]
-  //   w1[h][o] ==> w1[o * hidden + h]
-  std::vector<float> w0_;  // weight matrix from input to hidden layer
-  std::vector<float> w1_;  // weight matrix from hidden layer to output
-};
-
 // Vocabulary sampling.
 class VocabularySampler {
  public:
@@ -393,6 +288,81 @@ class VocabularySampler {
   int oov_ = 0;
 };
 
+// Word embedding model (Mikolov word2vec skipgram model).
+struct WordEmbeddingFlow : public myelin::Flow {
+  WordEmbeddingFlow(int words, int dims, int window)
+      : words(words), dims(dims), window(window) {
+    BuildModel();
+    BuildLayer0();
+    BuildLayer1();
+    BuildLayer0Back();
+  }
+
+  // Create embedding matrices.
+  void BuildModel() {
+    W0 = AddWeights("W0", myelin::DT_FLOAT, {words, dims});
+    W1 = AddWeights("W1", myelin::DT_FLOAT, {words, dims});
+  }
+
+  // Build layer 0 computing hidden from input.
+  void BuildLayer0() {
+    layer0 = AddFunction("layer0");
+    myelin::Builder tf(this, layer0);
+    features = tf.Var("features", myelin::DT_INT32, {window * 2});
+    hidden = tf.Name(tf.GatherAvg(W0, features), "hidden");
+  }
+
+  // Build layer 1 computing output from hidden, scaled loss, and update
+  // layer1.
+  void BuildLayer1() {
+    layer1 = AddFunction("layer1");
+    myelin::Builder tf(this, layer1);
+
+    // Inputs.
+    auto *alpha = tf.Var("alpha", myelin::DT_FLOAT, {});
+    auto *label = tf.Var("label", myelin::DT_FLOAT, {});
+    auto *target = tf.Var("target", myelin::DT_INT32, {});
+    error = tf.Var("error", myelin::DT_FLOAT, {dims});
+    auto *l0 = tf.Instance(layer0);
+    auto *h = tf.Ref(l0, hidden);
+
+    // Output.
+    auto *embed = tf.Gather(W1, target);
+    auto *output = tf.Dot(embed, h, dims);
+
+    // Loss.
+    auto *loss = tf.Mul(tf.Sub(label, tf.Sigmoid(output)), alpha);
+
+    // Backprop layer 1.
+    tf.AssignAdd(error, tf.Mul(embed, loss));
+    tf.ScatterAdd(W1, target, tf.Mul(h, loss));
+  }
+
+  // Update layer 0 weights from accumulated error in layer 1.
+  void BuildLayer0Back() {
+    layer0b = AddFunction("layer0b");
+    myelin::Builder tf(this, layer0b);
+    auto *l0 = tf.Instance(layer0);
+    auto *l1 = tf.Instance(layer1);
+    tf.ScatterAdd(W0, tf.Ref(l0, features), tf.Ref(l1, error));
+  }
+
+  int words;             // number of words
+  int dims;              // number of dimensions in embedding vectors
+  int window;            // feature window size
+
+  Variable *W0;          // layer 0 embedding matrix
+  Variable *W1;          // layer 1 embedding matrix
+
+  Variable *features;    // feature input
+  Variable *hidden;      // hidden activation
+  Variable *error;       // accumulated error
+
+  Function *layer0;      // layer 0 forward computation
+  Function *layer1;      // layer 1 forward/backward computation
+  Function *layer0b;     // layer 0 backward computation
+};
+
 // Trainer for word embeddings model. The trainer supports running training on
 // multiple threads concurrently. While this can significantly speed up
 // the processing time, this will also lead to non-determinism because of
@@ -417,8 +387,24 @@ class WordEmbeddingTrainer : public Process {
     vocabulary_.Load(task->GetInputFile("vocabulary"), subsampling_);
     int vocabulary_size = vocabulary_.size();
 
-    // Allocate embedding model.
-    model_.Init(vocabulary_size, embedding_dims_, vocabulary_size);
+    // Build embedding model.
+    myelin::Library library;
+    myelin::RegisterTensorflowLibrary(&library);
+    WordEmbeddingFlow flow(vocabulary_size, embedding_dims_, window_);
+    flow.Analyze(library);
+    myelin::Network model;
+    CHECK(model.Compile(flow, library));
+
+    // Initialize weights.
+    Random rnd;
+    myelin::TensorData W0 = model[flow.W0->name];
+    myelin::TensorData W1 = model[flow.W1->name];
+    for (int i = 0; i < vocabulary_size; ++i) {
+      for (int j = 0; j < embedding_dims_; ++j) {
+        W0.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5);
+        W1.at<float>(i, j) = 0.0;
+      }
+    }
 
     // Initialize commons store.
     commons_ = new Store();
@@ -435,8 +421,8 @@ class WordEmbeddingTrainer : public Process {
     // Start training threads. Use one worker thread per input file.
     std::vector<string> filenames = task->GetInputFiles("documents");
     WorkerPool pool;
-    pool.Start(filenames.size(), [this, filenames](int index) {
-      Worker(index, filenames[index]);
+    pool.Start(filenames.size(), [this, &filenames, &model](int index) {
+      Worker(index, filenames[index], &model);
     });
 
     // Wait until workers completes.
@@ -448,13 +434,14 @@ class WordEmbeddingTrainer : public Process {
     std::vector<float> embedding(embedding_dims_);
     for (int i = 0; i < vocabulary_size; ++i) {
       const string &word = vocabulary_.word(i);
-      model_.GetLayer1(i, &embedding);
+      for (int j = 0; j < embedding_dims_; ++j) {
+        embedding[j] = W1.at<float>(i, j);
+      }
       writer.Write(word, embedding);
     }
     CHECK(writer.Close());
 
     // Clean up.
-    model_.Clear();
     vocabulary_.Clear();
     docnames_->Release();
     delete commons_;
@@ -463,15 +450,28 @@ class WordEmbeddingTrainer : public Process {
   }
 
   // Worker thread for training embedding model.
-  void Worker(int index, const string &filename) {
+  void Worker(int index, const string &filename, myelin::Network *model) {
     Random rnd;
     rnd.seed(index);
-    float alpha = learning_rate_;
     int epoch = 0;
     std::vector<int> words;
-    std::vector<int> features;
-    std::vector<float> hidden(embedding_dims_);
-    std::vector<float> error(embedding_dims_);
+
+    // Set up model compute instances.
+    myelin::Instance l0(model->GetCell("layer0"));
+    myelin::Instance l1(model->GetCell("layer1"));
+    myelin::Instance l0b(model->GetCell("layer0b"));
+
+    int *features = l0.Get<int>(model->GetParameter("layer0/features"));
+    int *fend = features + 2 * window_;
+    int *target = l1.Get<int>(model->GetParameter("layer1/target"));
+    float *label = l1.Get<float>(model->GetParameter("layer1/label"));
+    float *alpha = l1.Get<float>(model->GetParameter("layer1/alpha"));
+    *alpha = learning_rate_;
+    myelin::Tensor *error = model->GetParameter("layer1/error");
+
+    l1.Set(model->GetParameter("layer1/layer0"), &l0);
+    l0b.Set(model->GetParameter("layer0b/layer0"), &l0);
+    l0b.Set(model->GetParameter("layer0b/layer1"), &l1);
 
     RecordFileOptions options;
     RecordReader input(filename, options);
@@ -486,8 +486,8 @@ class WordEmbeddingTrainer : public Process {
 
           // Update learning rate.
           float progress = static_cast<float>(epoch) / iterations_;
-          alpha = learning_rate_ * (1.0 - progress);
-          if (alpha < min_learning_rate_) alpha = min_learning_rate_;
+          *alpha = learning_rate_ * (1.0 - progress);
+          if (*alpha < min_learning_rate_) *alpha = min_learning_rate_;
           continue;
         } else {
           break;
@@ -524,57 +524,36 @@ class WordEmbeddingTrainer : public Process {
         // Use each word in the sentence as a training example.
         for (int pos = 0; pos < words.size(); ++pos) {
           // Get features from window around word.
-          features.clear();
+          int *f = features;
           for (int i = pos - window_; i <= pos + window_; ++i) {
             if (i == pos) continue;
             if (i < 0) continue;
             if (i >= words.size()) continue;
-            features.push_back(words[i]);
+            *f++ = words[i];
           }
-          if (features.empty()) continue;
+          if (f == features) continue;
+          while (f < fend) *f++ = -1;
           num_instances_->Increment();
 
           // Propagate input to hidden layer.
-          for (int i = 0; i < hidden.size(); ++i) hidden[i] = 0;
-          for (int i = 0; i < error.size(); ++i) error[i] = 0;
-          for (auto f : features) {
-            model_.AddLayer0(f, &hidden);
-          }
-          for (int i = 0; i < hidden.size(); ++i) {
-            hidden[i] /= features.size();
-          }
+          l0.Compute();
 
-          // Propagate hidden to output. This is done for both the positive
-          // instance (d=0) and randomly sampled negative samples (d>0).
-          for (int d = 0; d < negative_ + 1; ++d) {
-            // Select target word for positive/negative instance.
-            int target;
-            float label;
-            if (d == 0) {
-              target = words[pos];
-              label = 1;
-            } else {
-              target = vocabulary_.Sample(rnd.UniformProb());
-              label = 0;
-            }
+          // Propagate hidden to output and back. This also accumulates the
+          // errors that should be propagated back to the input layer.
+          l1.Clear(error);
+          *target = words[pos];
+          *label = 1.0;
+          l1.Compute();
 
-            // Compute output.
-            float f = model_.DotLayer1(target, hidden);
-
-            // Compute gradient.
-            float g = (label - sigmoid(f)) * alpha;
-
-            // Propagate errors from output to hidden.
-            model_.AddLayer1(target, g, &error);
-
-            // Learn weights from hidden to output.
-            model_.UpdateLayer1(target, g, hidden);
+          // Randomly sample negative samples.
+          for (int d = 0; d < negative_; ++d) {
+            *target = vocabulary_.Sample(rnd.UniformProb());
+            *label = 0.0;
+            l1.Compute();
           }
 
           // Propagate hidden to input.
-          for (auto f : features) {
-            model_.UpdateLayer0(f, error);
-          }
+          l0b.Compute();
         }
       }
     }
@@ -589,9 +568,6 @@ class WordEmbeddingTrainer : public Process {
   double min_learning_rate_ = 0.0001;  // minimum learning rate
   int embedding_dims_ = 256;           // size of embedding vectors
   double subsampling_ = 1e-3;          // sub-sampling rate
-
-  // Neural network for training.
-  EmbeddingModel model_;
 
   // Vocabulary for embeddings.
   VocabularySampler vocabulary_;

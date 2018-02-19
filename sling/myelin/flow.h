@@ -309,8 +309,8 @@ class Flow {
     bool constant() const { return data != nullptr; }
 
     // Check if variable is a global variable. Global variables are either
-    // constants or learnable variables.
-    bool global() const { return data != nullptr || learnable; }
+    // constants or read/write variables.
+    bool global() const { return data != nullptr || rw; }
 
     // Return type as string.
     string TypeString() const;
@@ -320,7 +320,7 @@ class Flow {
 
     // Set data for variable. The storage is not owned by the variable.
     void SetData(const void *buffer, int len) {
-      data = static_cast<const char *>(buffer);
+      data = const_cast<char *>(static_cast<const char *>(buffer));
       size = len;
     }
 
@@ -354,11 +354,11 @@ class Flow {
     Type type = DT_INVALID;              // element type for variable
     bool ref = false;                    // is variable a reference?
     Shape shape;                         // variable shape
-    const char *data = nullptr;          // data for constants (owned by flow)
+    char *data = nullptr;                // data for constants (owned by flow)
     uint64_t size = 0;                   // size of data in bytes
     bool in = false;                     // is variable a function input?
     bool out = false;                    // is variable a function output?
-    bool learnable = false;              // is variable writeable for learning?
+    bool rw = false;                     // is variable writeable global?
 
     Operation *producer = nullptr;       // operation producing variable
     std::vector<Operation *> consumers;  // list of consumers of variable
@@ -514,10 +514,10 @@ class Flow {
   // Add variable.
   Variable *AddVariable(const string &name, Type type, const Shape &shape);
 
-  // Add learnable variable.
+  // Add learnable global read/write variable.
   Variable *AddWeights(const string &name, Type type, const Shape &shape) {
     Variable *var = AddVariable(name, type, shape);
-    var->learnable = true;
+    var->rw = true;
     return var;
   }
 

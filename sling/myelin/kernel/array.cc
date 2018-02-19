@@ -866,7 +866,12 @@ class PoolingGather : public Kernel {
         YMMRegister scalar = masm->mm().allocy();
         __ vcvtqsi2ss(scalar.xmm(), scalar.xmm(), fcnt);
         __ vrcpss(scalar.xmm(), scalar.xmm(), scalar.xmm());
-        __ vbroadcastss(scalar, scalar);
+        if (masm->Enabled(AVX2)) {
+          __ vbroadcastss(scalar, scalar);
+        } else {
+          __ vshufps(scalar, scalar, scalar, 0);
+          __ vperm2f128(scalar, scalar, scalar, 0);
+        }
 
         // Multiply all output elements with scalar to get the average.
         std::vector<YMMRegister> elem;

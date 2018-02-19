@@ -383,9 +383,9 @@ class Tensor {
   // Number of elements in tensor.
   int elements() const { return shape_.elements(); }
 
-  // Value for constant tensor. Return null for learnable globals and
-  // parameters.
+  // Value for global tensor. Return null for parameters.
   const char *data() const { return data_; }
+  char *data() { return data_; }
 
   // Pointer to constant tensor on device.
   DevicePtr device_data() const { return device_data_; }
@@ -555,7 +555,7 @@ class Tensor {
   Tensor *link_ = nullptr;
 
   // Value for global tensor (not owned).
-  const char *data_ = nullptr;
+  char *data_ = nullptr;
 
   // Pointer to global tensor data on device. This is only set for constant
   // or learnable tensors that need to be accessed from the device.
@@ -1171,6 +1171,18 @@ class Network {
 
   // Get parameter.
   Tensor *GetParameter(const string &name) const;
+
+  // Return tensor data object for global tensor.
+  TensorData operator[](Tensor *global) {
+    CHECK(global->IsGlobal());
+    return TensorData(global->data(), global);
+  }
+  inline TensorData operator[](const string &name) {
+    Tensor *global = GetParameter(name);
+    DCHECK(global != nullptr) << "Unknown parameter: " << name;
+    CHECK(global->IsGlobal());
+    return TensorData(global->data(), global);
+  }
 
   // Allocate memory in memory pool.
   char *AllocateMemory(size_t size, int alignment);

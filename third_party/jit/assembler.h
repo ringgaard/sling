@@ -1820,20 +1820,41 @@ class Assembler : public CodeGenerator {
 
   void vshufps(XMMRegister dst, XMMRegister src1, XMMRegister src2,
                int8_t imm8) {
-    vinstr(0xc6, dst, src1, src2, k66, k0F, kWIG);
+    vinstr(0xc6, dst, src1, src2, kNone, k0F, kWIG);
     emit(imm8);
   }
   void vshufps(XMMRegister dst, XMMRegister src1, const Operand &src2,
                int8_t imm8) {
-    vinstr(0xc6, dst, src1, src2, k66, k0F, kWIG, 1);
+    vinstr(0xc6, dst, src1, src2, kNone, k0F, kWIG, 1);
     emit(imm8);
   }
   void vshufps(YMMRegister dst, YMMRegister src1, YMMRegister src2,
                int8_t imm8) {
-    vinstr(0xc6, dst, src1, src2, k66, k0F, kWIG);
+    vinstr(0xc6, dst, src1, src2, kNone, k0F, kWIG);
     emit(imm8);
   }
   void vshufps(YMMRegister dst, YMMRegister src1, const Operand &src2,
+               int8_t imm8) {
+    vinstr(0xc6, dst, src1, src2, kNone, k0F, kWIG, 1);
+    emit(imm8);
+  }
+
+  void vshufpd(XMMRegister dst, XMMRegister src1, XMMRegister src2,
+               int8_t imm8) {
+    vinstr(0xc6, dst, src1, src2, k66, k0F, kWIG);
+    emit(imm8);
+  }
+  void vshufpd(XMMRegister dst, XMMRegister src1, const Operand &src2,
+               int8_t imm8) {
+    vinstr(0xc6, dst, src1, src2, k66, k0F, kWIG, 1);
+    emit(imm8);
+  }
+  void vshufpd(YMMRegister dst, YMMRegister src1, YMMRegister src2,
+               int8_t imm8) {
+    vinstr(0xc6, dst, src1, src2, k66, k0F, kWIG);
+    emit(imm8);
+  }
+  void vshufpd(YMMRegister dst, YMMRegister src1, const Operand &src2,
                int8_t imm8) {
     vinstr(0xc6, dst, src1, src2, k66, k0F, kWIG, 1);
     emit(imm8);
