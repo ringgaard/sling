@@ -41,7 +41,7 @@ class MapInput {
   Slice value_;
 };
 
-// A mapper process all the input message in the Map() method and can output.
+// A mapper processes all the input message in the Map() method and can output
 // new key/value pairs to the output.
 class Mapper : public Processor {
  public:
