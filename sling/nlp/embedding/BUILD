@@ -1,8 +1,8 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-  name = "vocabulary",
-  srcs = ["vocabulary.cc"],
+  name = "word-embeddings",
+  srcs = ["word-embeddings.cc"],
   deps = [
     "//sling/base",
     "//sling/file:recordio",
@@ -17,6 +17,7 @@ cc_library(
     "//sling/task:documents",
     "//sling/task:process",
     "//sling/util:embeddings",
+    "//sling/util:random",
     "//sling/util:thread",
     "//sling/util:unicode",
   ],

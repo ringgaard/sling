@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <algorithm>
-#include <random>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -30,6 +29,7 @@
 #include "sling/task/documents.h"
 #include "sling/task/process.h"
 #include "sling/util/embeddings.h"
+#include "sling/util/random.h"
 #include "sling/util/thread.h"
 #include "sling/util/unicode.h"
 
@@ -39,7 +39,7 @@ namespace nlp {
 using namespace task;
 
 // Process documents and output counts for normalized words in documents.
-class EmbeddingVocabularyMapper : public DocumentProcessor {
+class WordEmbeddingsVocabularyMapper : public DocumentProcessor {
  public:
   void Startup(Task *task) override {
     // Initialize accumulator.
@@ -71,11 +71,11 @@ class EmbeddingVocabularyMapper : public DocumentProcessor {
   Accumulator accumulator_;
 };
 
-REGISTER_TASK_PROCESSOR("embedding-vocabulary-mapper",
-                        EmbeddingVocabularyMapper);
+REGISTER_TASK_PROCESSOR("word-embeddings-vocabulary-mapper",
+                        WordEmbeddingsVocabularyMapper);
 
 // Collect vocabulary and output text map with words and counts.
-class EmbeddingVocabularyReducer : public SumReducer {
+class WordEmbeddingsVocabularyReducer : public SumReducer {
  public:
   void Start(Task *task) override {
     // Initialize sum reducer.
@@ -151,35 +151,11 @@ class EmbeddingVocabularyReducer : public SumReducer {
   Counter *num_words_discarded_ = nullptr;
 };
 
-REGISTER_TASK_PROCESSOR("embedding-vocabulary-reducer",
-                        EmbeddingVocabularyReducer);
+REGISTER_TASK_PROCESSOR("word-embeddings-vocabulary-reducer",
+                        WordEmbeddingsVocabularyReducer);
 
-// Random number generator.
-class Random {
- public:
-  Random() : dist_(0.0, 1.0) {}
-
-  void seed(int seed) { prng_.seed(seed); }
-
-  float UniformProb() {
-    return dist_(prng_);
-  }
-
-  float UniformFloat(float scale, float bias) {
-    return dist_(prng_) * scale + bias;
-  }
-
-  float UniformInt(int n) {
-    return dist_(prng_) * n;
-  }
-
- private:
-  std::mt19937 prng_;
-  std::uniform_real_distribution<float> dist_;
-};
-
-// Vocabulary sampling.
-class VocabularySampler {
+// Vocabulary sampling for word embeddings.
+class WordVocabularySampler {
  public:
   // Load vocabulary table.
   void Load(const string &filename, float subsampling) {
@@ -253,7 +229,7 @@ class VocabularySampler {
     permutation_.clear();
   }
 
-  // Return the number of word in the vocabulary.
+  // Return the number of words in the vocabulary.
   size_t size() const { return dictionary_.size(); }
 
   // Get word for index.
@@ -308,6 +284,7 @@ struct WordEmbeddingFlow : public myelin::Flow {
   void BuildLayer0() {
     layer0 = AddFunction("layer0");
     myelin::Builder tf(this, layer0);
+
     features = tf.Var("features", myelin::DT_INT32, {window * 2});
     hidden = tf.Name(tf.GatherAvg(W0, features), "hidden");
   }
@@ -342,6 +319,7 @@ struct WordEmbeddingFlow : public myelin::Flow {
   void BuildLayer0Back() {
     layer0b = AddFunction("layer0b");
     myelin::Builder tf(this, layer0b);
+
     auto *l0 = tf.Instance(layer0);
     auto *l1 = tf.Instance(layer1);
     tf.ScatterAdd(W0, tf.Ref(l0, features), tf.Ref(l1, error));
@@ -541,14 +519,14 @@ class WordEmbeddingTrainer : public Process {
           // Propagate hidden to output and back. This also accumulates the
           // errors that should be propagated back to the input layer.
           l1.Clear(error);
-          *target = words[pos];
           *label = 1.0;
+          *target = words[pos];
           l1.Compute();
 
-          // Randomly sample negative samples.
+          // Randomly sample negative examples.
+          *label = 0.0;
           for (int d = 0; d < negative_; ++d) {
             *target = vocabulary_.Sample(rnd.UniformProb());
-            *label = 0.0;
             l1.Compute();
           }
 
@@ -570,7 +548,7 @@ class WordEmbeddingTrainer : public Process {
   double subsampling_ = 1e-3;          // sub-sampling rate
 
   // Vocabulary for embeddings.
-  VocabularySampler vocabulary_;
+  WordVocabularySampler vocabulary_;
 
   // Commons store.
   Store *commons_ = nullptr;

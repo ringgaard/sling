@@ -53,8 +53,8 @@ class EmbeddingWorkflow:
     with self.wf.namespace(language + "-vocabulary"):
       return self.wf.mapreduce(documents, output,
                                format="message/word:count",
-                               mapper="embedding-vocabulary-mapper",
-                               reducer="embedding-vocabulary-reducer")
+                               mapper="word-embeddings-vocabulary-mapper",
+                               reducer="word-embeddings-vocabulary-reducer")
 
   def train_word_embeddings(self, documents=None, vocabulary=None, output=None,
                             language=None):

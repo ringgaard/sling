@@ -57,7 +57,7 @@ cc_library(
     "//sling/nlp/wiki:name-table-builder",
     "//sling/nlp/wiki:phrase-table-builder",
 
-    "//sling/nlp/embedding:vocabulary",
+    "//sling/nlp/embedding:word-embeddings",
 
     "//sling/task:frame-store-reader",
     "//sling/task:frame-store-writer",
