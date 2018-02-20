@@ -82,8 +82,8 @@ class WordEmbeddingsVocabularyReducer : public SumReducer {
     SumReducer::Start(task);
 
     // Get max vocabulary size and threshold for discarding words.
-    threshold_ = task->Get("threshold", 100);
-    max_words_ = task->Get("max_words", 100000);
+    threshold_ = task->Get("threshold", 30);
+    max_words_ = task->Get("max_words", 1000000);
 
     // Add OOV item to vocabulary as the first entry.
     vocabulary_.emplace_back("<UNKNOWN>", 0);
@@ -510,7 +510,7 @@ class WordEmbeddingsTrainer : public Process {
             *f++ = words[i];
           }
           if (f == features) continue;
-          while (f < fend) *f++ = -1;
+          if (f < fend) *f = -1;
           num_instances_->Increment();
 
           // Propagate input to hidden layer.

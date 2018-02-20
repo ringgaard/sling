@@ -767,7 +767,7 @@ class PoolingGather : public Kernel {
     __ j(equal, &l4);
     __ movsxlq(acc, Operand(input, fidx, times_4));
     __ testq(acc, acc);
-    __ j(negative, &l3);
+    __ j(negative, &l4);
 
     // Combine embedding vector for feature with current result.
     if (pooling_ == AVG) {
@@ -1274,12 +1274,12 @@ class ScatterAdd : public Kernel {
       }
     }
 
-    __ bind(&l2);
     if (!single) {
       __ incq(fidx);
       __ cmpq(fidx, Immediate(indices->elements()));
       __ j(less, &l1);
     }
+    __ bind(&l2);
   }
 
   int64 Complexity(const Step *step) override {
