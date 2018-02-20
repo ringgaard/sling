@@ -44,10 +44,10 @@ void register_embedded_files(EmbeddedFile *files, int count) {
   }
 }
 
-// Embedded file.
-class EmbedFile : public File {
+// Internal file.
+class InternalFile : public File {
  public:
-  EmbedFile(EmbeddedFile *file) : file_(file) {}
+  InternalFile(EmbeddedFile *file) : file_(file) {}
 
   Status PRead(uint64 pos, void *buffer, size_t size, uint64 *read) override {
     ssize_t bytes = size;
@@ -122,10 +122,10 @@ class EmbedFile : public File {
   ssize_t position_ = 0;
 };
 
-// Embedded directory.
-class EmbedDirectory : public File {
+// Internal directory.
+class InternalDirectory : public File {
  public:
-  EmbedDirectory(const string &name) : name_(name) {}
+  InternalDirectory(const string &name) : name_(name) {}
 
   Status PRead(uint64 pos, void *buffer, size_t size, uint64 *read) override {
     if (read) *read = 0;
@@ -187,14 +187,14 @@ class EmbedDirectory : public File {
   string name_;
 };
 
-// Embedded file system interface.
-class EmbedFileSystem : public FileSystem {
+// Internal file system interface.
+class InternalFileSystem : public FileSystem {
  public:
-  EmbedFileSystem() {
+  InternalFileSystem() {
     if (instance == nullptr) instance = this;
   }
 
-  ~EmbedFileSystem() override {
+  ~InternalFileSystem() override {
     if (instance == this) instance = nullptr;
   }
 
@@ -316,9 +316,9 @@ class EmbedFileSystem : public FileSystem {
     auto f = files_.find(name);
     if (f == files_.end()) return nullptr;
     if (f->second == nullptr) {
-      return new EmbedDirectory(name);
+      return new InternalDirectory(name);
     } else {
-      return new EmbedFile(f->second);
+      return new InternalFile(f->second);
     }
   }
 
@@ -334,20 +334,20 @@ class EmbedFileSystem : public FileSystem {
   // Mapping from file names to embedded files.
   std::unordered_map<string, EmbeddedFile *> files_;
 
-  // Instance of embedded file system.
-  static EmbedFileSystem *instance;
+  // Instance of internal file system.
+  static InternalFileSystem *instance;
 };
 
-REGISTER_FILE_SYSTEM_TYPE("intern", EmbedFileSystem);
+REGISTER_FILE_SYSTEM_TYPE("intern", InternalFileSystem);
 
-EmbedFileSystem *EmbedFileSystem::instance = nullptr;
+InternalFileSystem *InternalFileSystem::instance = nullptr;
 
 const EmbeddedFile *GetEmbeddedFile(const string &name) {
-  return EmbedFileSystem::Lookup(name);
+  return InternalFileSystem::Lookup(name);
 }
 
 const char *GetEmbeddedFileContent(const string &name) {
-  const EmbeddedFile *file = EmbedFileSystem::Lookup(name);
+  const EmbeddedFile *file = InternalFileSystem::Lookup(name);
   if (file == nullptr) return nullptr;
   return file->data;
 }
