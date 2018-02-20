@@ -265,8 +265,8 @@ class WordVocabularySampler {
 };
 
 // Word embedding model (Mikolov word2vec skipgram model).
-struct WordEmbeddingFlow : public myelin::Flow {
-  WordEmbeddingFlow(int words, int dims, int window)
+struct WordEmbeddingsFlow : public myelin::Flow {
+  WordEmbeddingsFlow(int words, int dims, int window)
       : words(words), dims(dims), window(window) {
     BuildModel();
     BuildLayer0();
@@ -348,7 +348,7 @@ struct WordEmbeddingFlow : public myelin::Flow {
 // network. However, the updates are usually small, so in practice these unsafe
 // updates are usually not harmful and adding mutexes to serialize access to the
 // model slows down training considerably.
-class WordEmbeddingTrainer : public Process {
+class WordEmbeddingsTrainer : public Process {
  public:
   // Run training of embedding net.
   void Run(Task *task) override {
@@ -368,7 +368,7 @@ class WordEmbeddingTrainer : public Process {
     // Build embedding model.
     myelin::Library library;
     myelin::RegisterTensorflowLibrary(&library);
-    WordEmbeddingFlow flow(vocabulary_size, embedding_dims_, window_);
+    WordEmbeddingsFlow flow(vocabulary_size, embedding_dims_, window_);
     flow.Analyze(library);
     myelin::Network model;
     CHECK(model.Compile(flow, library));
@@ -562,7 +562,7 @@ class WordEmbeddingTrainer : public Process {
   Counter *epochs_completed_ = nullptr;
 };
 
-REGISTER_TASK_PROCESSOR("word-embedding-trainer", WordEmbeddingTrainer);
+REGISTER_TASK_PROCESSOR("word-embeddings-trainer", WordEmbeddingsTrainer);
 
 }  // namespace nlp
 }  // namespace sling

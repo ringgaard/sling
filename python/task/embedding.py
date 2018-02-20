@@ -64,7 +64,7 @@ class EmbeddingWorkflow:
     if output == None: output = self.word_embeddings(language)
 
     with self.wf.namespace(language + "-word-embeddings"):
-      trainer = self.wf.task("word-embedding-trainer")
+      trainer = self.wf.task("word-embeddings-trainer")
       trainer.add_params({
         "iterations" : 5,
         "negative": 5,
