@@ -107,7 +107,11 @@ cc_library(
   deps = [
     ":memutil",
     "//sling/base",
-    "//sling/util:hash",
+    "//sling/util:city",
+  ],
+  copts = [
+    "-Wno-deprecated",
+    "-Wno-sign-compare",
   ],
 )
 

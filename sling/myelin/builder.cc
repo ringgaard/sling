@@ -19,15 +19,21 @@ namespace myelin {
 
 Flow::Variable *Builder::Var(const string &name, Type type,
                              const Shape &shape) {
-  return flow_->AddVariable(name, type, shape);
+  return flow_->AddVariable(func_->name + "/" + name, type, shape);
 }
 
 Flow::Variable *Builder::Op(const string &op,
                             const std::vector<Flow::Variable *> &args) {
   string name = OpName(op);
-  Variable *result = Var(name + ":0", DT_INVALID, {0});
+  Variable *result = flow_->AddVariable(name + ":0", DT_INVALID, {0});
   flow_->AddOperation(func_, name, op, args, {result});
   return result;
+}
+
+void Builder::Op0(const string &op,
+                  const std::vector<Flow::Variable *> &args) {
+  string name = OpName(op);
+  flow_->AddOperation(func_, name, op, args, {});
 }
 
 Flow::Variable *Builder::Constant(const void *data, Type type,
@@ -38,6 +44,21 @@ Flow::Variable *Builder::Constant(const void *data, Type type,
   var->data = buffer;
   memcpy(buffer, data, var->size);
   return var;
+}
+
+Flow::Variable *Builder::Instance(Function *func) {
+  Variable *instance = Var(func->name, DT_RESOURCE, {});
+  instance->ref = true;
+  return instance;
+}
+
+Flow::Variable *Builder::Ref(Variable *instance, Variable *external) {
+  Variable *ref = Op("Reference", {instance});
+  ref->type = external->type;
+  ref->shape = external->shape;
+  ref->ref = true;
+  ref->producer->SetAttr("var", external->name);
+  return ref;
 }
 
 string Builder::OpName(const string &op) {

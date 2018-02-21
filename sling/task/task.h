@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef SLING_TASK_TASK_H_
 #define SLING_TASK_TASK_H_
 
@@ -16,6 +30,7 @@ namespace task {
 
 class Task;
 class Processor;
+class Stage;
 
 // Format specifier.
 class Format {
@@ -74,6 +89,9 @@ class Shard {
   int part() const { return part_; }
   int total() const { return total_; }
 
+  // Return shard as string.
+  string ToString() const;
+
  private:
   // Part number in multi-part data.
   int part_;
@@ -86,17 +104,21 @@ class Shard {
 // sharded files.
 class Resource {
  public:
-  Resource(const string &name, const Shard &shard, const Format &format)
-    : name_(name), shard_(shard), format_(format) {}
+  Resource(int id, const string &name, const Shard &shard, const Format &format)
+    : id_(id), name_(name), shard_(shard), format_(format) {}
 
-  Resource(const string &name, const Format &format)
-    : name_(name), shard_(), format_(format) {}
+  Resource(int id, const string &name, const Format &format)
+    : id_(id), name_(name), shard_(), format_(format) {}
 
-  const string name() const { return name_; }
+  int id() const { return id_; }
+  const string &name() const { return name_; }
   const Shard &shard() const { return shard_; }
   const Format &format() const { return format_; }
 
  private:
+  // Resource id.
+  int id_;
+
   // Resource name, e.g. a file name.
   string name_;
 
@@ -137,6 +159,9 @@ class Port {
   const string &name() const { return name_; }
   Shard shard() const { return shard_; }
 
+  // Return port as string.
+  string ToString() const;
+
  private:
   Task *task_;
   string name_;
@@ -170,7 +195,7 @@ class Channel {
   // Check whether channel is closed.
   bool closed() const { return closed_; }
 
-  // Send message to channel consumer. The caller relinquish ownership of
+  // Send message to channel consumer. The caller relinquishes ownership of
   // message.
   void Send(Message *message);
 
@@ -204,7 +229,7 @@ class Channel {
   Counter *output_value_bytes_ = nullptr;
 };
 
-// A task processor reads input from input resources and message from source
+// A task processor reads input from input resources and messages from source
 // channels and produces output resources and messages on sink channels.
 class Processor : public Component<Processor> {
  public:
@@ -243,8 +268,8 @@ class Processor : public Component<Processor> {
 #define REGISTER_TASK_PROCESSOR(type, component) \
     REGISTER_COMPONENT_TYPE(sling::task::Processor, type, component)
 
-// A task is a node in the container computation graph. A processor is used
-// for processing the input data and producing the output data.
+// A task is a node in the job computation graph. A processor is used for
+// processing the input data and producing the output data.
 class Task {
  public:
   // Parameter with name and value.
@@ -281,9 +306,11 @@ class Task {
 
   // Get the resource binding for singleton input. Return null if not bound.
   Binding *GetInput(const string &name);
+  const string &GetInputFile(const string &name);
 
   // Get the resource binding for singleton output. Return null if not bound.
   Binding *GetOutput(const string &name);
+  const string &GetOutputFile(const string &name);
 
   // Get resource bindings for input.
   std::vector<Binding *> GetInputs(const string &name);
@@ -292,6 +319,12 @@ class Task {
   // Get resource bindings for output.
   std::vector<Binding *> GetOutputs(const string &name);
   std::vector<string> GetOutputFiles(const string &name);
+
+  // Get all inputs.
+  const std::vector<Binding *> &inputs() const { return inputs_; }
+
+  // Get all outputs.
+  const std::vector<Binding *> &outputs() const { return outputs_; }
 
   // Get singleton inbound source channel.
   Channel *GetSource(const string &name);
@@ -304,6 +337,12 @@ class Task {
 
   // Get outbound sink channels.
   std::vector<Channel *> GetSinks(const string &name);
+
+  // Get source channels.
+  const std::vector<Channel *> &sources() const { return sources_; }
+
+  // Get sink channels.
+  const std::vector<Channel *> &sinks() const { return sinks_; }
 
   // Get task parameter value.
   const string &Get(const string &name, const string &defval);
@@ -353,17 +392,21 @@ class Task {
   void Start();
   void Done();
 
-  // Check if task has completed.
-  bool completed() const { return done_; }
-
   // Reference counting. When all references have been released the task is
   // marked as done.
   void AddRef();
   void Release();
 
+  // Get and set stage for task.
+  Stage *stage() const { return stage_; }
+  void set_stage(Stage *stage) { stage_ = stage; }
+
  private:
   // Environment owning the task.
   Environment *env_;
+
+  // Stage for task.
+  Stage *stage_ = nullptr;
 
   // Task id.
   int id_;

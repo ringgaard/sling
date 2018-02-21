@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "sling/nlp/kb/knowledge-service.h"
 
 #include <math.h>
@@ -58,20 +72,20 @@ void KnowledgeService::Load(const string &knowledge_base,
   kb_.Freeze();
 
   // Get meta data for properties.
-  for (const Slot &s : Frame(&kb_, kb_.Lookup("/w/properties"))) {
-    if (s.name == Handle::id()) continue;
+  for (const Slot &s : Frame(&kb_, kb_.Lookup("/w/entity"))) {
+    if (s.name != n_role_) continue;
     Frame property(&kb_, s.value);
     Property p;
 
     // Get property id and name.
-    p.id = s.name;
+    p.id = s.value;
     p.name = property.GetHandle(n_name_);
 
     // Property data type.
-    p.datatype = property.GetHandle(n_datatype_);
+    p.datatype = property.GetHandle(n_target_);
 
     // Get URL formatter for property.
-    Handle formatter = Resolve(property.GetHandle(n_formatter_url_));
+    Handle formatter = property.Resolve(n_formatter_url_);
     if (kb_.IsString(formatter)) {
       p.url = String(&kb_, formatter).value();
     }
@@ -104,6 +118,7 @@ void KnowledgeService::Load(const string &knowledge_base,
 void KnowledgeService::Register(HTTPServer *http) {
   http->Register("/kb/query", this, &KnowledgeService::HandleQuery);
   http->Register("/kb/item", this, &KnowledgeService::HandleGetItem);
+  http->Register("/kb/frame", this, &KnowledgeService::HandleGetFrame);
   app_.Register(http);
 }
 
@@ -173,8 +188,6 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   }
   Builder b(ws.store());
   GetStandardProperties(item, &b);
-  Handle dt = item.GetHandle(n_datatype_);
-  if (!dt.IsNil()) b.Add(n_type_, dt);
 
   // Fetch properties.
   Item info(ws.store());
@@ -191,14 +204,6 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
 
   // Return response.
   ws.set_output(b.Create());
-}
-
-Handle KnowledgeService::Resolve(Handle handle) const {
-  if (kb_.IsFrame(handle)) {
-    Handle resolved = kb_.GetFrame(handle)->get(Handle::is());
-    if (!resolved.IsNil()) return resolved;
-  }
-  return handle;
 }
 
 void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
@@ -287,7 +292,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         if (property.alternate_image && info->alternate_image.IsNil()) {
           info->alternate_image = value;
         }
-      } else if (property.datatype == n_coord_type_) {
+      } else if (property.datatype == n_geo_type_) {
         // Add coordinate value.
         Frame coord(&kb_, value);
         double lat = coord.GetFloat(n_lat_);
@@ -298,20 +303,17 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
                               lat, ",", lng));
       } else if (property.datatype == n_quantity_type_) {
         // Add quantity value.
-        string text = ToText(&kb_, Resolve(value));
+        string text;
         if (kb_.IsFrame(value)) {
           Frame quantity(&kb_, value);
+          text = AsText(quantity.GetHandle(n_amount_));
+
+          // Get unit symbol, preferably in latin script.
           Frame unit = quantity.GetFrame(n_unit_);
-          if (unit.valid()) {
-            text.append(" ");
-            if (unit.Has(n_unit_symbol_)) {
-              text.append(unit.GetString(n_unit_symbol_));
-            } else {
-              text.append(unit.GetString(n_name_));
-            }
-          }
-          // TODO: remove when units have been tested.
-          v.Add("frame", ToText(quantity));
+          text.append(" ");
+          text.append(UnitName(unit));
+        } else {
+          text = AsText(value);
         }
         v.Add(n_text_, text);
       } else if (property.datatype == n_time_type_) {
@@ -359,9 +361,94 @@ void KnowledgeService::GetStandardProperties(const Frame &item,
                                              Builder *builder) const {
   builder->Add(n_ref_, item.Id());
   Handle name = item.GetHandle(n_name_);
-  if (!name.IsNil()) builder->Add(n_text_, name);
+  if (!name.IsNil()) {
+    builder->Add(n_text_, name);
+  } else {
+    builder->Add(n_text_, item.Id());
+  }
   Handle description = item.GetHandle(n_description_);
   if (!description.IsNil()) builder->Add(n_description_, description);
+}
+
+string KnowledgeService::AsText(Handle value) {
+  value = kb_.Resolve(value);
+  if (value.IsInt()) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%d", value.AsInt());
+    return buf;
+  } else if (value.IsFloat()) {
+    float number = value.AsFloat();
+    char buf[32];
+    if (floorf(number) == number) {
+      snprintf(buf, sizeof(buf), "%.f", number);
+    } else if (number > 0.001) {
+      snprintf(buf, sizeof(buf), "%.3f", number);
+    } else {
+      snprintf(buf, sizeof(buf), "%g", number);
+    }
+    return buf;
+  } else {
+    return ToText(&kb_, value);
+  }
+}
+
+string KnowledgeService::UnitName(const Frame &unit) {
+  // Check for valid unit.
+  if (!unit.valid()) return "";
+
+  // Find best unit symbol, preferably in latin script.
+  Handle best = Handle::nil();
+  Handle fallback = Handle::nil();
+  for (const Slot &s : unit) {
+    if (s.name != n_unit_symbol_) continue;
+    Frame symbol(&kb_, s.value);
+    if (!symbol.valid()) {
+      if (fallback.IsNil()) fallback = s.value;
+      continue;
+    }
+
+    // Prefer latin script.
+    Handle script = symbol.GetHandle(n_writing_system_);
+    if (script == n_latin_script_ && best.IsNil()) {
+      best = s.value;
+    } else {
+      // Skip language specific names.
+      if (symbol.Has(n_language_) || symbol.Has(n_name_language_)) continue;
+
+      // Fall back to symbols with no script.
+      if (script == Handle::nil() && fallback.IsNil()) {
+        fallback = s.value;
+      }
+    }
+  }
+  if (best.IsNil()) best = fallback;
+
+  // Try to get name of best unit symbol.
+  if (!best.IsNil()) {
+    Handle unit_name = kb_.Resolve(best);
+    if (kb_.IsString(unit_name)) {
+      return String(&kb_, unit_name).value();
+    }
+  }
+
+  // Fall back to item name of unit.
+  return unit.GetString(n_name_);
+}
+
+void KnowledgeService::HandleGetFrame(HTTPRequest *request,
+                                      HTTPResponse *response) {
+  WebService ws(&kb_, request, response);
+
+  // Look up frame in knowledge base.
+  Text id = ws.Get("id");
+  Handle handle = kb_.LookupExisting(id);
+  if (handle.IsNil()) {
+    response->SendError(404, nullptr, "Frame not found");
+    return;
+  }
+
+  // Return frame as response.
+  ws.set_output(Object(&kb_, handle));
 }
 
 }  // namespace nlp

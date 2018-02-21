@@ -32,9 +32,8 @@ int main(int argc, char *argv[]) {
 
   // Run.
   LOG(INFO) << "Run workflow";
-  wf.Run();
+  wf.Start();
   while (!wf.Wait(15000)) wf.DumpCounters();
-
   wf.Wait();
 
   LOG(INFO) << "Done workflow";

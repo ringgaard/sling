@@ -100,5 +100,56 @@ bool TextMapInput::Read(int *index, string *name, int64 *count) {
   return true;
 }
 
+TextMapOutput::TextMapOutput(const string &filename, int buffer_size) {
+  // Open output file.
+  file_ = File::OpenOrDie(filename, "w");
+
+  // Allocate output buffer.
+  buffer_ = static_cast<char *>(malloc(buffer_size));
+  next_ = buffer_;
+  end_ =  buffer_ + buffer_size;
+}
+
+TextMapOutput::~TextMapOutput() {
+  // Flush output buffer.
+  Flush();
+
+  // Deallocate output buffer.
+  free(buffer_);
+
+  // Close output file.
+  CHECK(file_->Close());
+}
+
+void TextMapOutput::Flush() {
+  if (next_ != buffer_) {
+    file_->WriteOrDie(buffer_, next_ - buffer_);
+  }
+  next_ = buffer_;
+}
+
+void TextMapOutput::Output(const char *data, size_t size) {
+  // Flush buffer if there is not enough room for data.
+  if (size > end_ - next_) Flush();
+
+  // Add data to buffer or directly to file if output buffer is too small.
+  if (size < end_ - next_) {
+    memcpy(next_, data, size);
+    next_ += size;
+  } else {
+    file_->WriteOrDie(data, size);
+  }
+}
+
+void TextMapOutput::Write(const string &key, const string &value) {
+  Output(key.data(), key.size());
+  Output("\t", 1);
+  Output(value.data(), value.size());
+}
+
+void TextMapOutput::Write(const string &key, int64 value) {
+  Write(key, std::to_string(value));
+}
+
 }  // namespace sling
 

@@ -519,11 +519,14 @@ bool Tensor::SupportsAlignment(const Shape &align) const {
 }
 
 bool Tensor::SupportsOrder(Order order) {
+  if (shape_.real_rank() <= 1) return true;
   return combined_order[required_order_][order] != CONFLICTING_ORDER;
 }
 
 void Tensor::SetRequiredOrder(Order order) {
-  required_order_ = combined_order[required_order_][order];
+  if (shape_.real_rank() > 1) {
+    required_order_ = combined_order[required_order_][order];
+  }
 }
 
 void Tensor::SetMiniumAlignment(int alignment) {
@@ -713,7 +716,7 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   Tensor *t = in;
   while (t != nullptr) {
     if (!preserved) {
-      if (t->IsConstant()) return false;
+      if (t->constant()) return false;
       if (t->consumers().size() != 1) return false;
       if (t->out()) return false;
     }
@@ -764,7 +767,7 @@ Network::Network() {
 Network::~Network() {
   for (auto *m : memory_) MemFree(m);
   for (auto *t : parameters_) delete t;
-  for (auto *t : constants_) {
+  for (auto *t : globals_) {
     if (t->shared() == nullptr) {
       if (t->device_data_ != DEVICE_NULL) {
         runtime_->RemoveTensorFromDevice(t);
@@ -815,12 +818,14 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   for (Flow::Variable *var : flow.vars()) {
     Tensor *tensor = new Tensor();
     tensors[var] = tensor;
-    if (var->data != nullptr) {
-      constants_.push_back(tensor);
-      tensor->data_ = var->data;
-    } else {
+    tensor->constant_ = var->constant();
+    tensor->local_ = !var->global();
+    if (tensor->local_) {
       parameters_.push_back(tensor);
       tensor->required_order_ = options_.parameter_element_order;
+    } else {
+      globals_.push_back(tensor);
+      tensor->data_ = var->data;
     }
     tensor->name_ = var->name;
     names_[var->name] = tensor;
@@ -917,7 +922,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       tensor->consumers_.push_back(step);
 
       // Assign input parameter to cell.
-      if (step->cell_ != nullptr && !tensor->IsConstant()) {
+      if (step->cell_ != nullptr && tensor->IsLocal()) {
         if (tensor->cell_ != nullptr && tensor->cell_ != step->cell_) {
           LOG(FATAL) << tensor->name_ << " belongs to both "
                      << tensor->cell_->name_ << " and "
@@ -936,7 +941,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       tensor->producer_ = step;
 
       // Assign output parameter to cell.
-      if (step->cell_ != nullptr && !tensor->IsConstant()) {
+      if (step->cell_ != nullptr && tensor->IsLocal()) {
         if (tensor->cell_ != nullptr && tensor->cell_ != step->cell_) {
           LOG(FATAL) << tensor->name_ << " belongs to both "
                      << tensor->cell_->name_ << " and "
@@ -1238,15 +1243,15 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             << " on " << placename[connector->placement_];
   }
 
-  // Move all variables that are shared with a constant to the constant pool.
+  // Move all variables that are shared with a global to the global pool.
   for (auto it = parameters_.begin(); it != parameters_.end();) {
     // Check if tensor is shared with a constant.
     Tensor *t = *it;
-    if (t->shared_ != nullptr && t->shared_->IsConstant()) {
-      // Move variable to constant pool.
-      VLOG(5) << "Convert " << t->name() << " to constant";
+    if (t->shared_ != nullptr && t->shared_->data_ != nullptr) {
+      // Move variable to global pool.
+      VLOG(5) << "Convert " << t->name() << " to global";
       it = parameters_.erase(it);
-      constants_.push_back(t);
+      globals_.push_back(t);
     } else {
       ++it;
     }
@@ -1308,11 +1313,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
   }
 
-  // Copy and align constants.
-  for (Tensor *tensor : constants_) {
+  // Allocate globals.
+  for (Tensor *tensor : globals_) {
     if (tensor->shared_ != nullptr) {
-      // Shared constant. Copy reference to data.
-      CHECK(tensor->shared_->IsConstant());
+      // Shared tensor. Copy reference to data.
       tensor->data_ = tensor->shared_->data_;
       tensor->AddNewPlace(HOST);
       if (tensor->placement_ & DEVICE) {
@@ -1685,7 +1689,10 @@ char *Network::AllocateTensor(Tensor *tensor) {
   memset(data, 0, tensor->size_);
 
   // Copy data.
-  if (tensor->rank() == 0 || tensor->rank() == 1) {
+  if (!tensor->constant()) {
+    // Clear learnable global tensor.
+    memset(data, 0, tensor->size_);
+  } else if (tensor->rank() == 0 || tensor->rank() == 1) {
     // Vectors and scalars can just be copied regardless of alignment and
     // order.
     memcpy(data, tensor->data_, tensor->size_);
@@ -1826,24 +1833,25 @@ string Cell::ToString() const {
     }
   }
 
-  // Output constants used by cell.
-  std::vector<Tensor *> constants;
+  // Output globals used by cell.
+  std::vector<Tensor *> globals;
   for (Step *step : steps_) {
     for (Tensor *input : step->inputs()) {
-      if (input->IsConstant() && !Contains(constants, input)) {
-        constants.push_back(input);
+      if (input->IsGlobal() && !Contains(globals, input)) {
+        globals.push_back(input);
       }
     }
   }
-  if (!constants.empty()) {
+  if (!globals.empty()) {
     str.append("\n");
-    for (Tensor *t : constants) {
+    for (Tensor *t : globals) {
       str.append("  ");
       if (t->placement() != HOST) {
         str.append(placename[t->placement()]);
         str.append(" ");
       }
-      StringAppendF(&str, "const %s: %s   // size %lu\n",
+      StringAppendF(&str, "%s %s: %s   // size %lu\n",
+                    t->constant() ? "const" : "global",
                     t->name().c_str(),
                     t->TypeString().c_str(),
                     t->size());

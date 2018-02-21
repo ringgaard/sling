@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "sling/base/clock.h"
+#include "sling/base/flags.h"
 #include "sling/base/init.h"
 #include "sling/base/strtoint.h"
 #include "sling/base/types.h"
@@ -18,6 +19,8 @@
 #include "sling/string/strip.h"
 
 using namespace sling;
+
+DEFINE_bool(rebind, false, "allow symbol rebinding");
 
 // Output stream for printing on standard output.
 class StdoutStream : public FileOutputStream {
@@ -59,7 +62,8 @@ class Shell {
  public:
   Shell() {
     // Create store.
-    store_ = new Store();
+    options_.symbol_rebinding = FLAGS_rebind;
+    store_ = new Store(&options_);
   }
 
   ~Shell() {
@@ -540,7 +544,7 @@ class Shell {
   void ResetCommand(const string &args) {
     Timing timing(this);
     Clear();
-    store_ = new Store();
+    store_ = new Store(&options_);
     global_ = true;
   }
 
@@ -854,6 +858,7 @@ class Shell {
   };
 
   // Object store.
+  Store::Options options_;
   Store *store_;
 
   // Schemata for frame construction.

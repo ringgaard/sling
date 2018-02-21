@@ -65,7 +65,7 @@
   width: 100%;
 }
 
-.prop-row { 
+.prop-row {
   border-top: 1px solid lightgrey;
 }
 
@@ -82,11 +82,11 @@
   cursor: hand;
 }
 
-.prop-values { 
+.prop-values {
   vertical-align: top;
 }
 
-.prop-value { 
+.prop-value {
   padding: 8px;
   cursor: hand;
 }
@@ -100,10 +100,10 @@
   border-collapse: collapse;
 }
 
-.qual-row { 
+.qual-row {
 }
 
-.qprop-name { 
+.qprop-name {
   font-size: 10pt;
   vertical-align: top;
   padding-left: 30px;
@@ -134,7 +134,7 @@
   border-top: 1px solid lightgrey;
 }
 
-.xref-name { 
+.xref-name {
   font-size: 10pt;
   width: 40%;
   padding: 8px;
@@ -148,16 +148,16 @@
 }
 
 .xref-values {
+  max-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .xref-value {
   font-size: 10pt;
   padding: 8px;
   vertical-align: top;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .xref-value a {

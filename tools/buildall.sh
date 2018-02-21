@@ -11,6 +11,7 @@ bazel build -c opt \
   sling/myelin/tests:* \
   sling/myelin/cuda:* \
   sling/nlp/document:* \
+  sling/nlp/embedding:* \
   sling/nlp/kb:* \
   sling/nlp/parser:* \
   sling/nlp/parser/tools:* \

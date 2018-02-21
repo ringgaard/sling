@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -21,17 +35,42 @@ class ProfileAliasExtractor : public task::FrameProcessor {
   void Startup(task::Task *task) override {
     string lang = task->Get("language", "en");
     language_ = commons_->Lookup("/lang/" + lang);
+    skip_aux_ = task->Get("skip_aux", false);
+
+    // Initialize filter.
+    if (skip_aux_) filter_.Init(commons_);
+    num_aux_items_ = task->GetCounter("num_aux_items");
   }
 
   void Process(Slice key, const Frame &frame) override {
+    // Optionally skip aux items.
+    if (skip_aux_ && filter_.IsAux(frame)) {
+      num_aux_items_->Increment();
+      return;
+    }
+
     // Create frame with all aliases matching language.
-    Builder a(frame.store());
+    Store *store = frame.store();
+    Builder a(store);
     for (const Slot &s : frame) {
-      if (s.name == n_profile_alias_) {
-        Frame alias(frame.store(), s.value);
+      if (s.name == n_name_) {
+        // Add item name as alias.
+        AddAlias(&a, s.value, SRC_WIKIDATA_LABEL);
+      } else if (s.name == n_profile_alias_) {
+        Frame alias(store, s.value);
         if (alias.GetHandle(n_lang_) == language_) {
           a.Add(n_profile_alias_, alias);
+        } else {
+          // Add aliases in other languages as foreign alias.
+          AddAlias(&a, alias.GetHandle(n_name_), SRC_WIKIDATA_FOREIGN,
+                   alias.GetHandle(n_lang_), alias.GetInt(n_alias_count_));
         }
+      } else if (s.name == n_native_name_ || s.name == n_native_label_) {
+        // Output native names/labels as native aliases.
+        AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NATIVE);
+      } else if (s.name == n_demonym_) {
+        // Output demonyms as demonym aliases.
+        AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_DEMONYM);
       } else if (s.name == n_instance_of_) {
         // Discard categories, disambiguations, info boxes and templates.
         if (s.value == n_category_ ||
@@ -50,10 +89,29 @@ class ProfileAliasExtractor : public task::FrameProcessor {
     }
   }
 
+  // Add alias.
+  void AddAlias(Builder *aliases, Handle name, AliasSource source,
+                Handle lang = Handle::nil(), int count = 0) {
+    if (name.IsNil()) return;
+    Builder alias(aliases->store());
+    alias.Add(n_name_, name);
+    if (!lang.IsNil()) alias.Add(n_lang_, lang);
+    if (count > 0) alias.Add(n_alias_count_, count);
+    alias.Add(n_alias_sources_, 1 << source);
+    aliases->Add(n_profile_alias_, alias.Create());
+  }
+
  private:
   // Symbols.
   Name n_lang_{names_, "lang"};
+  Name n_name_{names_, "name"};
   Name n_profile_alias_{names_, "/s/profile/alias"};
+  Name n_alias_count_{names_, "/s/alias/count"};
+  Name n_alias_sources_{names_, "/s/alias/sources"};
+
+  Name n_native_name_{names_, "P1559"};
+  Name n_native_label_{names_, "P1705"};
+  Name n_demonym_{names_, "P1549"};
 
   Name n_instance_of_{names_, "P31"};
   Name n_category_{names_, "Q4167836"};
@@ -63,6 +121,11 @@ class ProfileAliasExtractor : public task::FrameProcessor {
 
   // Language for aliases.
   Handle language_;
+
+  // Skip auxiliary items.
+  bool skip_aux_ = false;
+  AuxFilter filter_;
+  task::Counter *num_aux_items_;
 };
 
 REGISTER_TASK_PROCESSOR("profile-alias-extractor", ProfileAliasExtractor);
@@ -178,6 +241,15 @@ class ProfileAliasReducer : public task::Reducer {
     // Only keep Wikidata alias if it is not toxic.
     if ((alias->sources & WIKIDATA_ALIAS) && !toxic) return true;
 
+    // Keep foreign, native and demonym aliases supported by Wikipedia aliases.
+    if (alias->sources & (WIKIDATA_FOREIGN |
+                          WIKIDATA_NATIVE |
+                          WIKIDATA_DEMONYM)) {
+      if (alias->sources & (WIKIPEDIA_ANCHOR | WIKIPEDIA_DISAMBIGUATION)) {
+        return true;
+      }
+    }
+
     // Disambiguation links need to be backed by anchors.
     if (alias->sources & WIKIPEDIA_DISAMBIGUATION) {
       if (alias->sources & WIKIPEDIA_ANCHOR) return true;
@@ -201,6 +273,9 @@ class ProfileAliasReducer : public task::Reducer {
     WIKIPEDIA_REDIRECT = 1 << SRC_WIKIPEDIA_REDIRECT,
     WIKIPEDIA_ANCHOR = 1 << SRC_WIKIPEDIA_ANCHOR,
     WIKIPEDIA_DISAMBIGUATION = 1 << SRC_WIKIPEDIA_DISAMBIGUATION,
+    WIKIDATA_FOREIGN = 1 << SRC_WIKIDATA_FOREIGN,
+    WIKIDATA_NATIVE = 1 << SRC_WIKIDATA_NATIVE,
+    WIKIDATA_DEMONYM = 1 << SRC_WIKIDATA_DEMONYM,
   };
 
   // Commons store.

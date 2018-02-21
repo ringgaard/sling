@@ -48,8 +48,8 @@ PTXMacroAssembler::PTXMacroAssembler(const string &name): PTXAssembler(name) {
 }
 
 void PTXMacroAssembler::LoadTensorAddress(const PTXReg &reg, Tensor *tensor) {
-  if (tensor->IsConstant()) {
-    // Read from constant tensor.
+  if (tensor->IsGlobal()) {
+    // Read from global tensor.
     emit("ld.const.u64", reg, PTXAddr(abs(tensor->device_data())));
   } else if (tensor->ref()) {
     // Read from reference tensor.

@@ -197,7 +197,7 @@ class Shape {
     return true;
   }
 
-  // Check if shape is missing, e.g. some dimensions are zero.
+  // Check if shape is missing, i.e. some dimensions are zero.
   bool missing() const {
     for (int d : dims_) if (d == 0) return true;
     return false;
@@ -236,8 +236,19 @@ class Shape {
   // size is the product of all the shared suffix dimensions.
   int CommonSize(const Shape &other) const;
 
+  // Return the number of non-trivial dimensions, i.e. dimensions with a size
+  // bigger than one.
+  int real_rank() const {
+    int n = 0;
+    for (int d : dims_) if (d > 1) n++;
+    return n;
+  }
+
   // Return shape as string.
   string ToString() const;
+
+  // Return dimensions.
+  const std::vector<int> dims() const { return dims_; }
 
  private:
   // Size of each dimension.
@@ -297,6 +308,10 @@ class Flow {
     // Check if variable is a constant.
     bool constant() const { return data != nullptr; }
 
+    // Check if variable is a global variable. Global variables are either
+    // constants or read/write learnable variables.
+    bool global() const { return constant() || learnable; }
+
     // Return type as string.
     string TypeString() const;
 
@@ -305,7 +320,7 @@ class Flow {
 
     // Set data for variable. The storage is not owned by the variable.
     void SetData(const void *buffer, int len) {
-      data = static_cast<const char *>(buffer);
+      data = const_cast<char *>(static_cast<const char *>(buffer));
       size = len;
     }
 
@@ -339,10 +354,11 @@ class Flow {
     Type type = DT_INVALID;              // element type for variable
     bool ref = false;                    // is variable a reference?
     Shape shape;                         // variable shape
-    const char *data = nullptr;          // data for constants (owned by flow)
+    char *data = nullptr;                // data for constants (owned by flow)
     uint64_t size = 0;                   // size of data in bytes
     bool in = false;                     // is variable a function input?
     bool out = false;                    // is variable a function output?
+    bool learnable = false;              // is variable learnable r/w global?
 
     Operation *producer = nullptr;       // operation producing variable
     std::vector<Operation *> consumers;  // list of consumers of variable
@@ -496,9 +512,14 @@ class Flow {
   void Analyze(const Transformations &transformations);
 
   // Add variable.
-  Variable *AddVariable(const string &name,
-                        Type type,
-                        const Shape &shape);
+  Variable *AddVariable(const string &name, Type type, const Shape &shape);
+
+  // Add learnable global read/write variable.
+  Variable *AddWeights(const string &name, Type type, const Shape &shape) {
+    Variable *var = AddVariable(name, type, shape);
+    var->learnable = true;
+    return var;
+  }
 
   // Add operation.
   Operation *AddOperation(const string &name, const string &type);
@@ -644,7 +665,7 @@ class Typer {
 
   // Return true if the type of the outputs of the operations has been
   // inferred.
-  virtual bool InferTypes(Flow::Operation *op) = 0;
+  virtual bool InferTypes(Flow *flow, Flow::Operation *op) = 0;
 };
 
 // Component type for applying transformations to a flow.

@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "sling/task/frames.h"
 
 #include "sling/base/logging.h"
@@ -6,6 +20,7 @@
 #include "sling/frame/object.h"
 #include "sling/frame/reader.h"
 #include "sling/frame/store.h"
+#include "sling/frame/wire.h"
 #include "sling/stream/file.h"
 #include "sling/stream/memory.h"
 #include "sling/task/task.h"
@@ -27,6 +42,7 @@ void FrameProcessor::Start(Task *task) {
 
   // Bind names.
   CHECK(names_.Bind(commons_));
+  InitCommons(task);
 
   // Start up processor.
   Startup(task);
@@ -37,7 +53,7 @@ void FrameProcessor::Start(Task *task) {
   // Update statistics for common store.
   MemoryUsage usage;
   commons_->GetMemoryUsage(&usage, true);
-  task->GetCounter("commons_memory")->Increment(usage.memory_allocated());
+  task->GetCounter("commons_memory")->Increment(usage.memory_used());
   task->GetCounter("commons_handles")->Increment(usage.used_handles());
   task->GetCounter("commons_symbols")->Increment(usage.num_symbols());
   task->GetCounter("commons_gcs")->Increment(usage.num_gcs);
@@ -65,7 +81,7 @@ void FrameProcessor::Receive(Channel *channel, Message *message) {
   // Update statistics.
   MemoryUsage usage;
   store.GetMemoryUsage(&usage, true);
-  frame_memory_->Increment(usage.memory_allocated());
+  frame_memory_->Increment(usage.memory_used());
   frame_handles_->Increment(usage.used_handles());
   frame_symbols_->Increment(usage.num_symbols());
   frame_gcs_->Increment(usage.num_gcs);
@@ -104,6 +120,7 @@ void FrameProcessor::OutputShallow(const Frame &value) {
   output_->Send(CreateMessage(value, true));
 }
 
+void FrameProcessor::InitCommons(Task *task) {}
 void FrameProcessor::Startup(Task *task) {}
 void FrameProcessor::Process(Slice key, const Frame &frame) {}
 void FrameProcessor::Flush(Task *task) {}
@@ -125,15 +142,20 @@ Message *CreateMessage(const Frame &frame, bool shallow) {
 Frame DecodeMessage(Store *store, Message *message) {
   ArrayInputStream stream(message->value().data(), message->value().size());
   Input input(&stream);
-  Decoder decoder(store, &input);
-  return decoder.Decode().AsFrame();
+  if (input.Peek() == WIRE_BINARY_MARKER) {
+    Decoder decoder(store, &input);
+    return decoder.Decode().AsFrame();
+  } else {
+    Reader reader(store, &input);
+    return reader.Read().AsFrame();
+  }
 }
 
 void LoadStore(Store *store, Resource *file) {
   store->LockGC();
   FileInputStream stream(file->name());
   Input input(&stream);
-  if (file->format().file() == "store") {
+  if (input.Peek() == WIRE_BINARY_MARKER) {
     Decoder decoder(store, &input);
     decoder.DecodeAll();
   } else {

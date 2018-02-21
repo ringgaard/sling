@@ -1,19 +1,13 @@
 package(default_visibility = ["//visibility:public"])
 
-#load("/tools/proto", "proto_library")
-
-#proto_library(
-#  name = "wiki-proto",
-#  src = "wiki.proto",
-#  generate_cc = 1,
-#)
-
 cc_library(
   name = "wiki",
   srcs = ["wiki.cc"],
   hdrs = ["wiki.h"],
   deps = [
     "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:store",
     "//sling/util:unicode",
   ],
 )
@@ -47,6 +41,7 @@ cc_library(
   deps = [
     ":wiki",
     "//sling/frame",
+    "//sling/nlp/kb:calendar",
     "//sling/stream:input",
     "//sling/stream:output",
     "//sling/string:text",
@@ -77,8 +72,8 @@ cc_library(
 )
 
 cc_library(
-  name = "wikipedia-profiles",
-  srcs = ["wikipedia-profiles.cc"],
+  name = "wikipedia-documents",
+  srcs = ["wikipedia-documents.cc"],
   deps = [
     ":wiki-parser",
     ":wikipedia-map",
@@ -136,6 +131,34 @@ cc_library(
     "//sling/file:repository",
     "//sling/string:text",
     "//sling/util:unicode",
+  ],
+)
+
+cc_library(
+  name = "phrase-table-builder",
+  srcs = ["phrase-table-builder.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:repository",
+    "//sling/frame:object",
+    "//sling/nlp/document:phrase-tokenizer",
+    "//sling/task",
+    "//sling/task:frames",
+    "//sling/util:mutex",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "phrase-table",
+  srcs = ["phrase-table.cc"],
+  hdrs = ["phrase-table.h"],
+  deps = [
+    "//sling/base",
+    "//sling/file:repository",
+    "//sling/frame:store",
+    "//sling/frame:object",
+    "//sling/string:text",
   ],
 )
 

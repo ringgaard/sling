@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <string>
 #include <unordered_map>
 
@@ -21,8 +35,8 @@ static bool strtoint(Text text, int *value) {
   return safe_strto32(text.data(), text.size(), value);
 }
 
-// Convert Wikipedia articles to entity profiles.
-class WikipediaProfileBuilder : public task::FrameProcessor {
+// Convert Wikipedia articles to documents.
+class WikipediaDocumentBuilder : public task::FrameProcessor {
  public:
   // Language information for Wikipedia.
   struct LanguageInfo {
@@ -78,6 +92,7 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
     }
 
     // Output aliases for all redirects.
+    LOG(INFO) << "Output aliases for redirects";
     aliases_ = task->GetSink("aliases");
     for (Handle redirect : wikimap_.redirects()) {
       WikipediaMap::PageInfo page;
@@ -91,6 +106,8 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
       Wiki::SplitTitle(page.title.str(), &name, &disambiguation);
       OutputAlias(page.qid, name, SRC_WIKIPEDIA_REDIRECT);
     }
+
+    LOG(INFO) << "Wikipedia document builder initalized";
   }
 
   void Process(Slice key, const Frame &frame) override {
@@ -121,7 +138,9 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
         break;
 
       case WikipediaMap::LIST:
-        // List: discard
+        // Only keep anchor aliases from list pages.
+        ProcessArticle(frame, page.qid);
+        OutputAnchorAliases(frame);
         num_list_pages_->Increment();
         break;
 
@@ -137,7 +156,6 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
     GetLanguageInfo(page.GetHandle(n_lang_), &lang);
 
     // Parse Wikipedia article.
-    //LOG(INFO) << "Extract from " << page.Id();
     Store *store = page.store();
     string wikitext = page.GetString(n_page_text_);
     WikiParser parser(wikitext.c_str());
@@ -146,7 +164,7 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
 
     // Add basic document information.
     Builder article(page);
-    article.AddLink(n_page_qid_, qid);
+    article.AddLink(n_page_item_, qid);
     article.AddIsA(n_document_);
     string title = page.GetString(n_page_title_);
     article.Add(n_document_url_, Wiki::URL(lang.code.str(), title));
@@ -259,7 +277,7 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
 
   // Output alias for article title.
   void OutputTitleAlias(const Frame &document) {
-    string qid = document.GetFrame(n_page_qid_).Id().str();
+    string qid = document.GetFrame(n_page_item_).Id().str();
     string title = document.GetString(n_page_title_);
     string name;
     string disambiguation;
@@ -350,16 +368,16 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
   task::Channel *aliases_ = nullptr;
 
   // Symbols.
-  Name n_lang_{names_, "lang"};
   Name n_name_{names_, "name"};
-  Name n_lang_code_{names_, "/lang/code"};
-  Name n_lang_category_{names_, "/lang/wiki_category"};
-  Name n_lang_template_{names_, "/lang/wiki_template"};
+  Name n_lang_{names_, "lang"};
+  Name n_lang_code_{names_, "code"};
+  Name n_lang_category_{names_, "/lang/wikilang/wiki_category"};
+  Name n_lang_template_{names_, "/lang/wikilang//wiki_template"};
 
   Name n_page_text_{names_, "/wp/page/text"};
   Name n_page_title_{names_, "/wp/page/title"};
   Name n_page_category_{names_, "/wp/page/category"};
-  Name n_page_qid_{names_, "/wp/page/qid"};
+  Name n_page_item_{names_, "/wp/page/item"};
   Name n_link_{names_, "/wp/link"};
   Name n_redirect_{names_, "/wp/redirect"};
 
@@ -407,7 +425,7 @@ class WikipediaProfileBuilder : public task::FrameProcessor {
   task::Counter *num_discarded_aliases_[kNumAliasSources];
 };
 
-REGISTER_TASK_PROCESSOR("wikipedia-profile-builder", WikipediaProfileBuilder);
+REGISTER_TASK_PROCESSOR("wikipedia-document-builder", WikipediaDocumentBuilder);
 
 class WikipediaAliasReducer : public task::Reducer {
  public:
@@ -427,7 +445,7 @@ class WikipediaAliasReducer : public task::Reducer {
       // Parse message value (<source>:<alias>).
       Text value = message->value();
       int colon = value.find(':');
-      CHECK_NE(colon, string::npos);
+      CHECK_NE(colon, -1);
       int source;
       CHECK(strtoint(value.substr(0, colon), &source));
       string name = value.substr(colon + 1).str();

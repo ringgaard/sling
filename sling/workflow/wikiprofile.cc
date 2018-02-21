@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
   // Wikipedia profile builder.
   Task *builder =
-      wf.CreateTask("wikipedia-profile-builder", "wikipedia-profiles");
+      wf.CreateTask("wikipedia-document-builder", "wikipedia-profiles");
   pages.Connect(&wf, builder);
   wf.BindInput(builder, languages, "commons");
   wf.BindInput(builder, wikimap, "wikimap");
@@ -54,9 +54,8 @@ int main(int argc, char *argv[]) {
 
   // Run.
   LOG(INFO) << "Run workflow";
-  wf.Run();
+  wf.Start();
   while (!wf.Wait(15000)) wf.DumpCounters();
-
   wf.Wait();
 
   LOG(INFO) << "Done workflow";

@@ -5,64 +5,11 @@
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
 #include "sling/frame/object.h"
-#include "sling/task/frames.h"
 #include "sling/task/job.h"
 #include "sling/workflow/common.h"
 
 using namespace sling;
 using namespace sling::task;
-
-// Prune Wikidata items for repository.
-class WikidataPruner : public FrameProcessor {
- public:
-  void Process(Slice key, const Frame &frame) override {
-    // Remove aliases and wikilinks from item.
-    Builder item(frame);
-    item.Delete(n_profile_alias_);
-    item.Delete(n_wikipedia_);
-    item.Update();
-
-    // Output item.
-    Output(frame);
-  }
-
- private:
-  // Symbols.
-  Name n_profile_alias_{names_, "/s/profile/alias"};
-  Name n_wikipedia_{names_, "/w/wikipedia"};
-};
-
-REGISTER_TASK_PROCESSOR("wikidata-pruner", WikidataPruner);
-
-// Collect Wikidata properties.
-class WikidataPropertyCollector : public FrameProcessor {
- public:
-  void Process(Slice key, const Frame &frame) override {
-    // Save property id.
-    properties_.push_back(frame.Id().str());
-
-    // Output property.
-    Output(frame);
-  }
-
-  // Output property catalog.
-  void Flush(Task *task) override {
-    Store store;
-    Builder catalog(&store);
-    catalog.AddId("/w/properties");
-    for (const string &id : properties_) {
-      catalog.AddLink(id, id);
-    }
-    Output(catalog.Create());
-  }
-
- private:
-  // Property ids.
-  std::vector<string> properties_;
-};
-
-REGISTER_TASK_PROCESSOR("wikidata-property-collector",
-                        WikidataPropertyCollector);
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
@@ -107,9 +54,8 @@ int main(int argc, char *argv[]) {
 
   // Run.
   LOG(INFO) << "Run workflow";
-  wf.Run();
+  wf.Start();
   while (!wf.Wait(15000)) wf.DumpCounters();
-
   wf.Wait();
 
   LOG(INFO) << "Done workflow";

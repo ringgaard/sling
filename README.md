@@ -2,9 +2,11 @@
 
 [![Build Status](https://travis-ci.org/google/sling.svg?branch=master)](https://travis-ci.org/google/sling)
 
-SLING is a parser for annotating text with frame semantic annotations. It is
+SLING CASPAR is a parser for annotating text with frame semantic annotations. It is
 trained on an annotated corpus using [Tensorflow](https://www.tensorflow.org/)
 and [Dragnn](https://github.com/tensorflow/models/blob/master/research/syntaxnet/g3doc/DRAGNN.md).
+
+This is the second generation of the SLING parser. The first generation, SEMPAR, can be found [here](https://github.com/google/sling).
 
 The parser is a general transition-based frame semantic parser using
 bi-directional LSTMs for input encoding and a Transition Based Recurrent Unit
@@ -170,6 +172,7 @@ can be seen below. It is best to create one SLING document per input sentence.
   }
 }
 ```
+For writing your converter or getting a better hold of the concepts of frames and store in SLING, you can have a look at detailed deep dive on frames and stores [here](sling/frame/README.md).
 
 The SLING [Document class](sling/nlp/document/document.h)
 also has methods to incrementally make such document frames, e.g.

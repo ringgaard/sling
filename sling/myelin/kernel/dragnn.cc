@@ -459,7 +459,7 @@ class DragnnLookupUnrolled : public Kernel {
 // Type inference for Dragnn ops.
 class DragnnTyper : public Typer {
  public:
-  bool InferTypes(Flow::Operation *op) override {
+  bool InferTypes(Flow *flow, Flow::Operation *op) override {
     // Infer shape for lookup operation.
     if (op->type == "Lookup") {
       if (op->indegree() == 2 && op->outdegree() == 1) {

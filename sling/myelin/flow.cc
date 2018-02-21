@@ -640,8 +640,11 @@ void Flow::Read(const char *data, size_t size) {
     }
 
     // Get optional variable constant.
-    var->size = parser.GetLong();
-    if (var->size != 0) var->data = parser.Get(var->size);
+    int64 size = parser.GetLong();
+    if (size != 0) {
+      const char *data = parser.Get(var->size);
+      var->SetData(data, size);
+    }
   }
 
   // Read operations.
@@ -1419,7 +1422,7 @@ bool Flow::InferTypes(const Transformations &transformations) {
     auto &typers = transformations.typers();
     for (int t = typers.size() -1; t >= 0; --t) {
       Typer *typer = typers[t];
-      bool done = typer->InferTypes(op);
+      bool done = typer->InferTypes(this, op);
       if (done) break;
     }
 
@@ -1651,6 +1654,7 @@ string Flow::ToString() const {
     StringAppendF(&str, "var %s : %s",
                   var->name.c_str(),
                   var->TypeString().c_str());
+    if (var->learnable) StringAppendF(&str, " learnable ");
     if (var->in) StringAppendF(&str, " in");
     if (var->out) StringAppendF(&str, " out");
     if (var->data != nullptr) {

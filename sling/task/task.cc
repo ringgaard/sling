@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "sling/task/task.h"
 
 #include "sling/base/logging.h"
@@ -7,6 +21,18 @@ REGISTER_COMPONENT_REGISTRY("task processor", sling::task::Processor);
 
 namespace sling {
 namespace task {
+
+string Shard::ToString() const {
+  string str;
+  if (!singleton()) {
+    str.append("[");
+    str.append(SimpleItoa(part()));
+    str.append("/");
+    str.append(SimpleItoa(total()));
+    str.append("]");
+  }
+  return str;
+}
 
 Format::Format(const string &format) {
   size_t slash = format.find('/');
@@ -48,6 +74,16 @@ string Format::ToString() const {
   return fmt;
 }
 
+string Port::ToString() const {
+  string str;
+  str.append(task_->name());
+  str.append(task_->shard().ToString());
+  str.append(".");
+  str.append(name_);
+  str.append(shard_.ToString());
+  return str;
+}
+
 void Channel::ConnectProducer(const Port &port) {
   // Get producer task.
   Task *task = port.task();
@@ -59,7 +95,7 @@ void Channel::ConnectProducer(const Port &port) {
   task->ConnectSink(this);
 
   // Create input counters.
-  string arg = task->name() + "," + port.name();
+  string arg = task->name() + "." + port.name();
   task->GetCounter("output_shards[" + arg + "]")->Increment();
   input_shards_done_ = task->GetCounter("output_shards_done[" + arg + "]");
   input_messages_ = task->GetCounter("output_messages[" + arg + "]");
@@ -78,7 +114,7 @@ void Channel::ConnectConsumer(const Port &port) {
   task->ConnectSource(this);
 
   // Create output counters.
-  string arg = task->name() + "," + port.name();
+  string arg = task->name() + "." + port.name();
   task->GetCounter("input_shards[" + arg + "]")->Increment();
   output_shards_done_ = task->GetCounter("input_shards_done[" + arg + "]");
   output_messages_ = task->GetCounter("input_messages[" + arg + "]");
@@ -160,16 +196,7 @@ Task::~Task() {
 string Task::ToString() const {
   string str;
   str.append(name_);
-  str.append("(");
-  str.append(SimpleItoa(id_));
-  str.append(")");
-  if (!shard_.singleton()) {
-    str.append("[");
-    str.append(SimpleItoa(shard_.part()));
-    str.append("/");
-    str.append(SimpleItoa(shard_.total()));
-    str.append("]");
-  }
+  str.append(shard_.ToString());
   return str;
 }
 
@@ -180,11 +207,27 @@ Binding *Task::GetInput(const string &name) {
   return nullptr;
 }
 
+const string &Task::GetInputFile(const string &name) {
+  Binding *input = GetInput(name);
+  if (input == nullptr) {
+    LOG(FATAL) << "Input " << name << " is missing for task " << ToString();
+  }
+  return input->resource()->name();
+}
+
 Binding *Task::GetOutput(const string &name) {
   for (auto *output : outputs_) {
     if (output->name() == name) return output;
   }
   return nullptr;
+}
+
+const string &Task::GetOutputFile(const string &name) {
+  Binding *output = GetOutput(name);
+  if (output == nullptr) {
+    LOG(FATAL) << "Output " << name << " is missing for task " << ToString();
+  }
+  return output->resource()->name();
 }
 
 std::vector<Binding *> Task::GetInputs(const string &name) {
@@ -249,8 +292,7 @@ std::vector<Channel *> Task::GetSinks(const string &name) {
   return channels;
 }
 
-const string &Task::Get(const string &name,
-                             const string &defval) {
+const string &Task::Get(const string &name, const string &defval) {
   for (const auto &p : parameters_) {
     if (p.name == name) return p.value;
   }

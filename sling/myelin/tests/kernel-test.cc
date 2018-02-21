@@ -189,6 +189,21 @@ void CheckFltMatMatMul(const string &test, const string &base) {
   }
 }
 
+void CheckFltDotProduct(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
+  if (!FLAGS_base.empty() && FLAGS_base != base) return;
+  LOG(INFO) << "Testing " << test << " against " << base;
+  for (int d = FLAGS_dmin; d <= FLAGS_dmax; ++d) {
+    if (d % 8 != 0) continue;
+    VLOG(1) << "Testing " << d;
+    FltKernelComparator matmul(library, "MatMul", test, base);
+    matmul.AddInput("a", {1, d}, FLAGS_minmat, 100.0);
+    matmul.AddInput("b", {d, 1}, FLAGS_minmat, 100.0);
+    matmul.AddOutput("c", {1,1}, FLAGS_matmul_accuracy);
+    CheckTest(matmul.Check(100));
+  }
+}
+
 void CheckFltFunc(const string &func,
                   const string &test,
                   const string &base,
@@ -413,6 +428,9 @@ int main(int argc, char *argv[]) {
     // Compare AVX matrix-matrix multiplication.
     CheckFltMatMatMul("AVXFltMatMatMul", "GenFltMatMatMul");
 
+    // Compare AVX dot product.
+    CheckFltDotProduct("AVXFltDotProduct", "GenFltMatMatMul");
+
     // Test AVX math functions.
     CheckFltFunc("Exp", "AVXFltExp", "GenFltExp", 8);
     CheckFltFunc("Sigmoid", "AVXFltSigmoid", "GenFltSigmoid", 8);
@@ -465,7 +483,7 @@ int main(int argc, char *argv[]) {
     CheckFltFunc("Sigmoid", "CUDASigmoid", "GenFltSigmoid");
     CheckFltFunc("Tanh", "CUDATanh", "GenFltTanh");
 
-    CheckFltFunc("Negate", "CUDANegate", "NegateExpr");
+    CheckFltFunc("Neg", "CUDANeg", "NegExpr");
     CheckFltFunc("Abs", "CUDAAbs", "AbsExpr");
     CheckFltFunc("Relu", "CUDARelu", "ReluExpr");
     CheckFltFunc("Reciprocal", "CUDAReciprocal", "ReciprocalExpr");
