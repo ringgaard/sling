@@ -364,7 +364,7 @@ class ExpressionTransformer : public Transformer {
         // Map input from second op to input from first op.
         mapping[vars2[v]] = vars1[v];
       } else if (first->IsOutput(v)) {
-        if (v->consumers.size() == 1 && !v->out) {
+        if (v->consumers.size() == 1 && !v->out()) {
           // Second op is the only consumer of the output from the first op,
           // so the input can be turned into a temporary variable.
           int id = vars1[v]->id;

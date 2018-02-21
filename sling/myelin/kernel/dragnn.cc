@@ -529,8 +529,8 @@ class PrecomputedEmbeddings : public Transformer {
       Flow::Operation *lookup = reshape->inputs[0]->producer;
       if (matmul->indegree() != 2 || !matmul->inputs[1]->constant()) continue;
       if (lookup->indegree() != 2 || !lookup->inputs[1]->constant()) continue;
-      if (lookup->outputs[0]->out) continue;
-      if (reshape->outputs[0]->out) continue;
+      if (lookup->outputs[0]->out()) continue;
+      if (reshape->outputs[0]->out()) continue;
       Flow::Variable *feature = lookup->inputs[0];
       Flow::Variable *embedding = lookup->inputs[1];
       Flow::Variable *transform = matmul->inputs[1];

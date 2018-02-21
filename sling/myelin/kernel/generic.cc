@@ -194,7 +194,7 @@ class CombineTransformer : public Transformer {
       if (var->consumers.size() != 1) continue;
       if (var->consumers[0]->type != second) continue;
       if (var->consumers[0]->task != op->task) continue;
-      if (var->out) continue;
+      if (var->out()) continue;
       if (!var->shape.defined()) continue;
       if (op->indegree() >= 1) {
         // Only combine for vector inputs.

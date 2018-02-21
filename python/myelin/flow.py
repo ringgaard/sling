@@ -51,7 +51,7 @@ class File:
       self.write_int(len(s))
       self.f.write(s)
 
-  def write_array(self, a):
+  def write_object(self, a):
     """Write array to flow file."""
     if a is None:
       self.write_long(0)
@@ -387,7 +387,7 @@ class Flow:
       f.write_string("&" + var.type if var.ref else var.type)
       f.write_int(len(var.shape))
       for d in var.shape: f.write_int(d)
-      f.write_array(var.data)
+      f.write_object(var.data)
 
     # Write operations.
     f.write_int(len(self.ops))
@@ -434,7 +434,7 @@ class Flow:
       for a in blob.attrs:
         f.write_string(a)
         f.write_string(blob.attrs[a])
-      f.write_array(blob.data)
+      f.write_object(blob.data)
 
     f.close()
 

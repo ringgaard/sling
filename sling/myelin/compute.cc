@@ -841,15 +841,15 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     tensor->byte_alignment_ = TypeTraits::of(var->type).size();
 
     // Input variables are initially placed in host memory.
-    tensor->in_ = var->in;
-    if (var->in) {
+    tensor->in_ = var->in();
+    if (var->in()) {
       tensor->current_placement_ = HOST;
       tensor->placement_ = HOST;
     }
 
     // Output variables must be available on the host after the computation.
-    tensor->out_ = var->out;
-    if (var->out) tensor->placement_ = HOST;
+    tensor->out_ = var->out();
+    if (var->out()) tensor->placement_ = HOST;
   }
 
   // Create connectors between variables.

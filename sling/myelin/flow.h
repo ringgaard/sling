@@ -288,11 +288,19 @@ class Flow {
   struct Function;
 
   // Flow file version
-  static const int kVersion = 4;
+  static const int kVersion = 5;
   static const int kMagic = 0x776f6c66;
 
   // Flow variable.
   struct Variable {
+    // Variable flags.
+    enum Flags {
+      NONE = 0,         // no flags
+      IN = 1,           // input variable
+      OUT = 2,          // output variable
+      LEARNABLE = 4,    // learnable global variable
+    };
+
     // Add alias for variable.
     void AddAlias(const string &alias);
 
@@ -305,12 +313,21 @@ class Flow {
     // Return the number of elements in the variable tensor.
     int elements() const { return shape.elements(); }
 
+    // Check if variable is an input variable.
+    bool in() const { return (flags & IN) != 0; }
+
+    // Check if variable is an output variable.
+    bool out() const { return (flags & OUT) != 0; }
+
+    // Check if variable is learnable.
+    bool learnable() const { return (flags & LEARNABLE) != 0; }
+
     // Check if variable is a constant.
     bool constant() const { return data != nullptr; }
 
     // Check if variable is a global variable. Global variables are either
     // constants or read/write learnable variables.
-    bool global() const { return constant() || learnable; }
+    bool global() const { return constant() || learnable(); }
 
     // Return type as string.
     string TypeString() const;
@@ -351,14 +368,12 @@ class Flow {
     string name;                         // variable name
     std::vector<string> aliases;         // additional aliases for variable
 
+    uint32 flags = 0;                    // variable flags
     Type type = DT_INVALID;              // element type for variable
     bool ref = false;                    // is variable a reference?
     Shape shape;                         // variable shape
     char *data = nullptr;                // data for constants (owned by flow)
     uint64_t size = 0;                   // size of data in bytes
-    bool in = false;                     // is variable a function input?
-    bool out = false;                    // is variable a function output?
-    bool learnable = false;              // is variable learnable r/w global?
 
     Operation *producer = nullptr;       // operation producing variable
     std::vector<Operation *> consumers;  // list of consumers of variable
@@ -512,13 +527,12 @@ class Flow {
   void Analyze(const Transformations &transformations);
 
   // Add variable.
-  Variable *AddVariable(const string &name, Type type, const Shape &shape);
+  Variable *AddVariable(const string &name, Type type, const Shape &shape,
+                        Variable::Flags flags = Variable::NONE);
 
-  // Add learnable global read/write variable.
+  // Add learnable variable.
   Variable *AddWeights(const string &name, Type type, const Shape &shape) {
-    Variable *var = AddVariable(name, type, shape);
-    var->learnable = true;
-    return var;
+    return AddVariable(name, type, shape, Variable::LEARNABLE);
   }
 
   // Add operation.
