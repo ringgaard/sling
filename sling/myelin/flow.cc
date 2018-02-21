@@ -1654,7 +1654,7 @@ string Flow::ToString() const {
     StringAppendF(&str, "var %s : %s",
                   var->name.c_str(),
                   var->TypeString().c_str());
-    if (var->rw) StringAppendF(&str, " rw");
+    if (var->learnable) StringAppendF(&str, " learnable ");
     if (var->in) StringAppendF(&str, " in");
     if (var->out) StringAppendF(&str, " out");
     if (var->data != nullptr) {

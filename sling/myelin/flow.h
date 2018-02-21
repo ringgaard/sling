@@ -309,8 +309,8 @@ class Flow {
     bool constant() const { return data != nullptr; }
 
     // Check if variable is a global variable. Global variables are either
-    // constants or read/write variables.
-    bool global() const { return data != nullptr || rw; }
+    // constants or read/write learnable variables.
+    bool global() const { return constant() || learnable; }
 
     // Return type as string.
     string TypeString() const;
@@ -358,7 +358,7 @@ class Flow {
     uint64_t size = 0;                   // size of data in bytes
     bool in = false;                     // is variable a function input?
     bool out = false;                    // is variable a function output?
-    bool rw = false;                     // is variable writeable global?
+    bool learnable = false;              // is variable learnable r/w global?
 
     Operation *producer = nullptr;       // operation producing variable
     std::vector<Operation *> consumers;  // list of consumers of variable
@@ -517,7 +517,7 @@ class Flow {
   // Add learnable global read/write variable.
   Variable *AddWeights(const string &name, Type type, const Shape &shape) {
     Variable *var = AddVariable(name, type, shape);
-    var->rw = true;
+    var->learnable = true;
     return var;
   }
 
