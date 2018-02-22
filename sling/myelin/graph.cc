@@ -193,7 +193,7 @@ static void AppendVar(string *str,
 
     str->append(" tooltip=\"");
     if (var->constant()) str->append("const ");
-    if (var->rw) str->append("rw ");
+    if (var->learnable) str->append("learnable ");
     if (var->in) str->append("in ");
     if (var->out) str->append("out ");
     str->append("var ");
