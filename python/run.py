@@ -49,13 +49,23 @@ flags.define("--parse_wikipedia",
              default=False,
              action='store_true')
 
-flags.define("--extract_names",
-             help="extract names for items",
+flags.define("--merge_categories",
+             help="merge categories for Wikipedias into items",
+             default=False,
+             action='store_true')
+
+flags.define("--fuse_items",
+             help="fuse items from wikidata and wikipedia",
              default=False,
              action='store_true')
 
 flags.define("--build_kb",
              help="build knowledge base",
+             default=False,
+             action='store_true')
+
+flags.define("--extract_names",
+             help="extract names for items",
              default=False,
              action='store_true')
 
@@ -74,6 +84,11 @@ flags.define("--extract_vocabulary",
              default=False,
              action='store_true')
 
+flags.define("--build_wiki",
+             help="run all workflow for building knowledge base",
+             default=False,
+             action='store_true')
+
 flags.define("--train_word_embeddings",
              help="train word embeddings",
              default=False,
@@ -81,11 +96,6 @@ flags.define("--train_word_embeddings",
 
 flags.define("--dryrun",
              help="build worflows but do not run them",
-             default=False,
-             action='store_true')
-
-flags.define("--build_all",
-             help="build all workflows",
              default=False,
              action='store_true')
 
@@ -159,6 +169,22 @@ def parse_wikipedia():
       wf.parse_wikipedia(language=language)
       run_workflow(wf)
 
+def fuse_items():
+  # Merge categories from wikipedias.
+  if flags.arg.merge_categories:
+    log.info("Merge wikipedia categories")
+    wf = wiki.WikiWorkflow("category-merging")
+    wf.merge_wikipedia_categories()
+    run_workflow(wf)
+
+  # Fuse items.
+  if flags.arg.fuse_items:
+    log.info("Fuse items")
+    wf = wiki.WikiWorkflow("fuse-items")
+    wf.fuse_items()
+    run_workflow(wf)
+
+
 def build_knowledge_base():
   # Build knowledge base repository.
   if flags.arg.build_kb:
@@ -213,13 +239,14 @@ if __name__ == '__main__':
   # Parse command-line arguments.
   flags.parse()
 
-  # Check for complete rebuild.
-  if flags.arg.build_all:
+  if flags.arg.build_wiki:
     flags.arg.import_wikidata = True
     flags.arg.import_wikipedia = True
     flags.arg.parse_wikipedia = True
-    flags.arg.extract_names = True
+    flags.arg.merge_categories = True
+    flags.arg.fuse_items = True
     flags.arg.build_kb = True
+    flags.arg.extract_names = True
     flags.arg.build_nametab = True
     flags.arg.build_phrasetab = True
 
@@ -232,6 +259,7 @@ if __name__ == '__main__':
   # Run workflows.
   import_wiki()
   parse_wikipedia()
+  fuse_items()
   build_knowledge_base()
   train_embeddings()
 

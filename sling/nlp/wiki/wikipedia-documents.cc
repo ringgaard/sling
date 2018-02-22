@@ -491,6 +491,72 @@ class WikipediaAliasReducer : public task::Reducer {
 
 REGISTER_TASK_PROCESSOR("wikipedia-alias-reducer", WikipediaAliasReducer);
 
+// Extract categories from Wikipedia documents.
+class CategoryItemExtractor : public task::FrameProcessor {
+ public:
+  void Process(Slice key, const Frame &frame) override {
+    // Collect categories for page.
+    Builder categories(frame.store());
+    int num_categories = 0;
+    for (const Slot &slot : frame) {
+      if (slot.name == n_page_category_) {
+        categories.Add(n_category_, slot.value);
+        num_categories++;
+      }
+    }
+    if (num_categories > 0) {
+      Output(key, categories.Create());
+    }
+  }
+
+ private:
+  // Symbols.
+  Name n_page_category_{names_, "/wp/page/category"};
+  Name n_page_item_{names_, "/wp/page/item"};
+  Name n_category_{names_, "/w/item/category"};
+};
+
+REGISTER_TASK_PROCESSOR("category-item-extractor", CategoryItemExtractor);
+
+// Merge categories from different Wikipedias.
+class CategoryItemMerger : public task::Reducer {
+ public:
+  void Start(task::Task *task) override {
+    task::Reducer::Start(task);
+    CHECK(names_.Bind(&commons_));
+    commons_.Freeze();
+  }
+
+  void Reduce(const task::ReduceInput &input) override {
+    // Merge all categories.
+    Store store(&commons_);
+    Builder categories(&store);
+    HandleSet seen;
+    for (task::Message *message : input.messages()) {
+      for (const Slot &slot : DecodeMessage(&store, message)) {
+        if (slot.name == n_category_ && seen.count(slot.value) == 0) {
+          categories.Add(slot.name, slot.value);
+          seen.insert(slot.value);
+        }
+      }
+    }
+
+    // Output merged categories for item.
+    Frame merged = categories.Create();
+    Output(input.shard(), task::CreateMessage(input.key(), merged));
+  }
+
+ private:
+  // Commons store.
+  Store commons_;
+
+  // Symbols.
+  Names names_;
+  Name n_category_{names_, "/w/category"};
+};
+
+REGISTER_TASK_PROCESSOR("category-item-merger", CategoryItemMerger);
+
 }  // namespace nlp
 }  // namespace sling
 
