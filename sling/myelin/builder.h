@@ -24,6 +24,28 @@
 namespace sling {
 namespace myelin {
 
+// A score is used for defined a name space for variables and operations.
+class Scope {
+ public:
+  Scope(Scope *parent, const string &name);
+  ~Scope();
+
+  // Return unique name for operation.
+  string OpName(const string &op);
+
+  // Return scope name prefix.
+  const string prefix() const { return name_; }
+
+ private:
+  Scope *root_;     // root scope
+  Scope *parent_;   // parent scope of this scope
+  Scope *current_;  // current inner-most scope for root scope
+  string name_;     // name prefix for scope
+
+  // Next unused operation number for each operation type.
+  std::map<string, int> opnum_;
+};
+
 // Flow builder utility for building flows from expressions, e.g.:
 //   Flow flow;
 //   Builder tf(&flow, "mnist");
@@ -31,7 +53,7 @@ namespace myelin {
 //   auto *b = tf.Constant(bias, DT_FLOAT, {10});
 //   auto *x = tf.Var("x", DT_FLOAT, {1, 784});
 //   auto *y = tf.Add(tf.MatMul(x, w), b);
-class Builder {
+class Builder : public Scope {
  public:
   // Flow typedefs.
   typedef Flow::Variable Variable;
@@ -39,10 +61,13 @@ class Builder {
   typedef Flow::Function Function;
 
   // Initialize builder for existing function.
-  Builder(Flow *flow, Function *func) : flow_(flow), func_(func) {}
+  Builder(Flow *flow, Function *func)
+      : Scope(nullptr, func->name),
+        flow_(flow),
+        func_(func) {}
 
   // Initialize builder for new function.
-  Builder(Flow *flow, const string &name) : flow_(flow) {
+  Builder(Flow *flow, const string &name) : Scope(nullptr, name), flow_(flow) {
     func_ = flow->AddFunction(name);
   }
 
@@ -51,7 +76,7 @@ class Builder {
 
   // Change name of variable. Returns the variable itself.
   Variable *Name(Variable *var, const string &name) {
-    var->name = func_->name + "/" + name;
+    var->name = prefix() + "/" + name;
     return var;
   }
 
@@ -141,9 +166,6 @@ class Builder {
     return Op0("ScatterMulAdd", {M, f, v, factor});
   }
 
-  // Return unique name for operation.
-  string OpName(const string &op);
-
   // Return function for builder.
   Flow::Function *func() const { return func_; }
 
@@ -153,9 +175,6 @@ class Builder {
 
   // Function for builder.
   Function *func_;
-
-  // Next unused operation number for each operation type.
-  std::map<string, int> opnum_;
 };
 
 }  // namespace myelin
