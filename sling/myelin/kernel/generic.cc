@@ -485,6 +485,15 @@ class StandardTyper : public Typer {
         ref->type = external->type;
         ref->shape = external->shape;
         ref->ref = true;
+      }
+    }
+
+    // Infer shape for tf.fill(dims, value).
+    if (op->type == "Fill") {
+      std::vector<int> dims;
+      if (op->indegree() == 2 && op->outdegree() == 1 &&
+          op->inputs[0]->GetData(&dims)) {
+        op->outputs[0]->shape = Shape(dims);
         return true;
       }
     }
