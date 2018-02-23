@@ -416,7 +416,7 @@ void RNN::Load(const string &filename) {
     for (auto *op : flow.Find({"Sigmoid"})) op->SetAttr("strict", true);
   }
   if (FLAGS_intermediate) {
-    for (auto *var : flow.vars()) var->out = true;
+    for (auto *var : flow.vars()) var->flags |= Flow::Variable::OUT;
   }
 
   if (FLAGS_fast_argmax) {
@@ -426,8 +426,8 @@ void RNN::Load(const string &filename) {
                                         myelin::DT_INT32, {1});
     flow.AddOperation(tagger, "tagger/ArgMax", "ArgMax",
                       {logits}, {prediction});
-    CHECK(!logits->in);
-    CHECK(!logits->out);
+    CHECK(!logits->in());
+    CHECK(!logits->out());
   }
 
   // Zero out the last embedding vector (used for oov).
