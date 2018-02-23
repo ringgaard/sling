@@ -48,6 +48,7 @@ cc_library(
     "//sling/string:numbers",
     "//sling/task",
     "//sling/task:frames",
+    "//sling/task:reducer",
   ],
   alwayslink = 1,
 )
