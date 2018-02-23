@@ -236,14 +236,6 @@ class Shape {
   // size is the product of all the shared suffix dimensions.
   int CommonSize(const Shape &other) const;
 
-  // Return the number of non-trivial dimensions, i.e. dimensions with a size
-  // bigger than one.
-  int real_rank() const {
-    int n = 0;
-    for (int d : dims_) if (d > 1) n++;
-    return n;
-  }
-
   // Return shape as string.
   string ToString() const;
 

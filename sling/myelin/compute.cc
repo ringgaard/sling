@@ -519,14 +519,11 @@ bool Tensor::SupportsAlignment(const Shape &align) const {
 }
 
 bool Tensor::SupportsOrder(Order order) {
-  if (shape_.real_rank() <= 1) return true;
   return combined_order[required_order_][order] != CONFLICTING_ORDER;
 }
 
 void Tensor::SetRequiredOrder(Order order) {
-  if (shape_.real_rank() > 1) {
-    required_order_ = combined_order[required_order_][order];
-  }
+  required_order_ = combined_order[required_order_][order];
 }
 
 void Tensor::SetMiniumAlignment(int alignment) {

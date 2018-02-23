@@ -13,10 +13,17 @@
   name: "Wikidata item"
   family: /schema/wikidata
 
-  role: {=/w/wikipedia :slot
+  role: {=/w/item/wikipedia :slot
     name: "Wikipedia articles"
     description: "Map of Wikipedia articles for each language"
     source: /w/item
+  }
+
+  role: {=/w/item/category :slot
+    name: "Wikipedia category"
+    description: "Category for corresponding Wikipedia articles"
+    source: /w/item
+    target: /w/item
   }
 }
 

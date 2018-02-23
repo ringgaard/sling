@@ -17,6 +17,37 @@
 namespace sling {
 namespace myelin {
 
+Scope::Scope(Scope *parent, const string &name) : parent_(parent) {
+  if (parent == nullptr) {
+    // Top-level scope.
+    root_ = current_ = this;
+    name_ = name;
+  } else {
+    // Inner scope.
+    root_ = parent_->root_;
+    CHECK(root_->current_ == parent_);
+    root_->current_ = current_ = this;
+    name_ = parent_->name_ + "/" + name;
+  }
+}
+
+Scope::~Scope() {
+  CHECK(root_->current_ == this);
+  root_->current_ = parent_;
+}
+
+string Scope::OpName(const string &op) {
+  string name = current_->name_;
+  name.push_back('/');
+  name.append(op);
+  int num = opnum_[op]++;
+  if (num > 0) {
+    name.push_back('_');
+    name.append(std::to_string(num));
+  }
+  return name;
+}
+
 Flow::Variable *Builder::Var(const string &name, Type type,
                              const Shape &shape) {
   return flow_->AddVariable(func_->name + "/" + name, type, shape);
@@ -59,18 +90,6 @@ Flow::Variable *Builder::Ref(Variable *instance, Variable *external) {
   ref->ref = true;
   ref->producer->SetAttr("var", external->name);
   return ref;
-}
-
-string Builder::OpName(const string &op) {
-  string name = func_->name;
-  name.push_back('/');
-  name.append(op);
-  int num = opnum_[op]++;
-  if (num > 0) {
-    name.push_back('_');
-    name.append(std::to_string(num));
-  }
-  return name;
 }
 
 }  // namespace myelin

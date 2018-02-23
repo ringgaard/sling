@@ -57,7 +57,7 @@ class WikiWorkflow:
       <pid>: Wikidata property id (P<property number>, e.g. P31)
       <wid>: Wikipedia page id (/wp/<lang>/<pageid>, /wp/en/76972)
     """
-    return self.wf.resource("items@10.rec",
+    return self.wf.resource("wikidata-items@10.rec",
                             dir=corpora.wikidir(),
                             format="records/frame")
 
@@ -329,6 +329,101 @@ class WikiWorkflow:
     return document_output, alias_output
 
   #---------------------------------------------------------------------------
+  # Wikipedia items
+  #---------------------------------------------------------------------------
+
+  def wikipedia_items(self):
+    """Resource for item data from Wikipedia . This merges the item categories
+    from all Wikipedias.
+    """
+    return self.wf.resource("wikipedia-items.rec",
+                            dir=corpora.wikidir(),
+                            format="records/frame")
+
+  def merge_wikipedia_categories(self, languages=None):
+    """Merge Wikipedia categories for all languages."""
+    if languages == None: languages = flags.arg.languages
+
+    with self.wf.namespace("wikipedia-categories"):
+      documents = []
+      for language in languages:
+        documents.extend(self.wikipedia_documents(language))
+      return self.wf.mapreduce(input=documents,
+                               output=self.wikipedia_items(),
+                               mapper="category-item-extractor",
+                               reducer="category-item-merger",
+                               format="message/frame")
+
+  #---------------------------------------------------------------------------
+  # Fused items
+  #---------------------------------------------------------------------------
+
+  def fused_items(self):
+    """Resource for merged items. This is a set of record files where each
+    item is represented as a frame.
+    """
+    return self.wf.resource("items@10.rec",
+                            dir=corpora.wikidir(),
+                            format="records/frame")
+
+  def fuse_items(self, items=None):
+    if items == None: items = self.wikidata_items() + [self.wikipedia_items()]
+    with self.wf.namespace("fused-items"):
+      return self.wf.mapreduce(input=items,
+                               output=self.fused_items(),
+                               mapper=None,
+                               reducer="item-merger",
+                               format="message/frame")
+
+  #---------------------------------------------------------------------------
+  # Knowledge base
+  #---------------------------------------------------------------------------
+
+  def calendar_defs(self):
+    """Resource for calendar definitions."""
+    return self.wf.resource("calendar.sling",
+                            dir=corpora.repository("data/wiki"),
+                            format="store/frame")
+
+  def wikidata_defs(self):
+    """Resource for Wikidata schema definitions."""
+    return self.wf.resource("wikidata.sling",
+                            dir=corpora.repository("data/wiki"),
+                            format="store/frame")
+
+  def knowledge_base(self):
+    """Resource for knowledge base. This is a SLING frame store with frames for
+    each Wikidata item and property plus additional schema information.
+    """
+    return self.wf.resource("kb.sling",
+                            dir=corpora.wikidir(),
+                            format="store/frame")
+
+  def build_knowledge_base(self,
+                           items=None,
+                           properties=None,
+                           schemas=None):
+    """Task for building knowledge base store with items, properties, and
+    schemas."""
+    if items == None: items = self.fused_items()
+    if properties == None: properties = self.wikidata_properties()
+    if schemas == None:
+      schemas = [self.language_defs(),
+                 self.calendar_defs(),
+                 self.wikidata_defs()]
+
+    with self.wf.namespace("wikidata"):
+      # Prune information from Wikidata items.
+      pruned_items = self.wf.map(items, "wikidata-pruner")
+
+      # Collect property catalog.
+      property_catalog = self.wf.map(properties, "wikidata-property-collector")
+
+      # Collect frames into knowledge base store.
+      parts = self.wf.collect(pruned_items, property_catalog, schemas)
+      return self.wf.write(parts, self.knowledge_base())
+
+  #---------------------------------------------------------------------------
   # Item names
   #---------------------------------------------------------------------------
 
@@ -356,7 +451,7 @@ class WikiWorkflow:
 
     if aliases == None:
       # Get language-dependent aliases from Wikidata and Wikpedia.
-      wikidata_aliases = self.wf.map(self.wikidata_items(),
+      wikidata_aliases = self.wf.map(self.fused_items(),
                                      "profile-alias-extractor",
                                      params={
                                        "language": language,
@@ -376,57 +471,6 @@ class WikiWorkflow:
     self.wf.reduce(merged_aliases, names, "profile-alias-reducer",
                    params={"language": language})
     return names
-
-  #---------------------------------------------------------------------------
-  # Knowledge base
-  #---------------------------------------------------------------------------
-
-  def calendar_defs(self):
-    """Resource for calendar definitions."""
-    return self.wf.resource("calendar.sling",
-                            dir=corpora.repository("data/wiki"),
-                            format="store/frame")
-
-  def wikidata_defs(self):
-    """Resource for Wikidata schema definitions."""
-    return self.wf.resource("wikidata.sling",
-                            dir=corpora.repository("data/wiki"),
-                            format="store/frame")
-
-  def knowledge_base(self):
-    """Resource for knowledge base. This is a SLING frame store with frames for
-    each Wikidata item and property plus additional schema information.
-    """
-    return self.wf.resource("kb.sling",
-                            dir=corpora.wikidir(),
-                            format="store/frame")
-
-  def build_knowledge_base(self,
-                           wikidata_items=None,
-                           wikidata_properties=None,
-                           schemas=None):
-    """Task for building knowledge base store with items, properties, and
-    schemas."""
-    if wikidata_items == None:
-      wikidata_items = self.wikidata_items()
-    if wikidata_properties == None:
-      wikidata_properties = self.wikidata_properties()
-    if schemas == None:
-      schemas = [self.language_defs(),
-                 self.calendar_defs(),
-                 self.wikidata_defs()]
-
-    with self.wf.namespace("wikidata"):
-      # Prune information from Wikidata items.
-      pruned_items = self.wf.map(wikidata_items, "wikidata-pruner")
-
-      # Collect property catalog.
-      property_catalog = self.wf.map(wikidata_properties,
-                                     "wikidata-property-collector")
-
-      # Collect frames into knowledge base store.
-      parts = self.wf.collect(pruned_items, property_catalog, schemas)
-      return self.wf.write(parts, self.knowledge_base())
 
   #---------------------------------------------------------------------------
   # Name table
