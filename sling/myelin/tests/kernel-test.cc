@@ -23,6 +23,7 @@ DEFINE_string(test, "", "Kernel to be tested");
 DEFINE_bool(ignore_errors, false, "Ignore test errors");
 DEFINE_double(matmul_accuracy, 1e-6, "Maximum error on matmul operations");
 DEFINE_double(func_accuracy, 1e-5, "Maximum error on function operations");
+DEFINE_bool(test_baseline, false, "Test baseline kernels");
 
 DEFINE_int32(d, -1, "Vector dimension for tests");
 DEFINE_int32(dmin, 1, "Minimum vector dimension for tests");
@@ -364,17 +365,22 @@ int main(int argc, char *argv[]) {
      .Input(0, DT_FLOAT, 1)
      .Output(0, DT_INT32);
 
-  // Test GenFltVecMatMul against itself to test the kernel comparator.
-  CheckFltMatMul("GenFltVecMatMul", "GenFltVecMatMul");
+  if (FLAGS_test_baseline) {
+    // Test GenFltVecMatMul against itself to test the kernel comparator.
+    CheckFltMatMul("GenFltVecMatMul", "GenFltVecMatMul");
 
-  // Test baselines against each other.
-  CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul1");
-  CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul2");
+    // Test baselines against each other.
+    CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul1");
+    CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul2");
+  }
 
   // Test GenFltVecMatMul against baseline.
   CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul");
-  CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul1");
-  CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul2");
+  CheckFltMatMatMul("GenFltMatMatMul", "BaselineMatMatMul");
+  if (FLAGS_test_baseline) {
+    CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul1");
+    CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul2");
+  }
 
   // Test expression kernels.
   CheckFltBinOp("Add", "AddExpr", "GenFltAdd");
@@ -417,13 +423,19 @@ int main(int argc, char *argv[]) {
     CheckFltMatMulAddRelu("AVXFltVecMatMulAddReluH", "GenFltVecMatMulAddRelu");
 
     // Compare AVX float matrix multiplication to baseline.
-    CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul");
-    CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul1");
-    CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul2");
+    if (FLAGS_test_baseline) {
+      CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul");
+      CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul1");
+      CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul2");
+    }
 
-    CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul");
-    CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul1");
-    CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul2");
+    if (FLAGS_test_baseline) {
+      CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul");
+      CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul1");
+      CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul2");
+    } else {
+      CheckFltMatMul("AVXFltVecMatMulH", "GenFltVecMatMul");
+    }
 
     // Compare AVX matrix-matrix multiplication.
     CheckFltMatMatMul("AVXFltMatMatMul", "GenFltMatMatMul");

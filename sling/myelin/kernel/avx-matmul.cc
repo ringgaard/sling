@@ -855,7 +855,7 @@ class AVXFltMatMatMul : public Kernel {
     __ vmovss(Operand(c), sum[0]);
     __ addq(c, Immediate(C->stride(c_col_dim)));
 
-    // Move to next column in B
+    // Move to next column in B.
     __ addq(b_row, Immediate(B->stride(b_col_dim)));
     __ cmpq(b_row, b_end);
     __ j(less, &l2);
