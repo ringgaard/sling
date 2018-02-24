@@ -85,6 +85,17 @@ cc_library(
 )
 
 cc_library(
+  name = "gradient",
+  srcs = ["gradient.cc"],
+  hdrs = ["gradient.h"],
+  deps = [
+    ":flow",
+    ":builder",
+    "//sling/base",
+  ],
+)
+
+cc_library(
   name = "elf-linker",
   srcs = ["elf-linker.cc"],
   hdrs = ["elf-linker.h"],

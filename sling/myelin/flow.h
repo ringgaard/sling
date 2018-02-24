@@ -25,8 +25,8 @@
 namespace sling {
 namespace myelin {
 
-class Typer;
-class Transformer;
+class Gradients;
+class Transformations;
 
 // Data types.
 enum Type {
@@ -102,39 +102,6 @@ TYPE_TRAIT(int64, DT_INT64);
 TYPE_TRAIT(bool, DT_BOOL);
 
 #undef TYPE_TRAIT
-
-// Flow graph transformations.
-class Transformations {
- public:
-  ~Transformations();
-
-  // Register flow transformation component. Transfers ownership from caller.
-  void RegisterTransformer(Transformer *transformer) {
-    transformers_.emplace_back(transformer);
-  }
-
-  // Register type inference component. Transfers ownership from caller.
-  void RegisterTyper(Typer *typer) {
-    typers_.emplace_back(typer);
-  }
-
-  // Flow transformation components.
-  const std::vector<Transformer *> &transformers() const {
-    return transformers_;
-  }
-
-  // Type inference components.
-  const std::vector<Typer *> &typers() const {
-    return typers_;
-  }
-
- private:
-  // Flow transformation components.
-  std::vector<Transformer *> transformers_;
-
-  // Type inference components.
-  std::vector<Typer *> typers_;
-};
 
 // Tensor shape.
 class Shape {
@@ -601,6 +568,12 @@ class Flow {
   // Check flow graph consistency.
   bool IsConsistent() const;
 
+  // Return ops and variables in dependency order for a function. This does not
+  // change the internal order of the operations and variables.
+  void Order(Function *func,
+             std::vector<Operation *> *ops,
+             std::vector<Variable *> *vars) const;
+
  private:
   // Infer which variables are inputs and outputs to functions.
   void InferInputsAndOutputs();
@@ -655,6 +628,55 @@ class Transformer {
   // Apply transformations to flow and return true is any transformations were
   // applied.
   virtual bool Transform(Flow *flow) = 0;
+};
+
+// Flow graph transformations.
+class Transformations {
+ public:
+  // Gradient function for differentiation of ops.
+  typedef Flow::Variable *(GradientFunc)(Flow::Operation *op, Gradients *g);
+
+  ~Transformations();
+
+  // Register flow transformation component. Transfers ownership from caller.
+  void RegisterTransformer(Transformer *transformer) {
+    transformers_.emplace_back(transformer);
+  }
+
+  // Register type inference component. Transfers ownership from caller.
+  void RegisterTyper(Typer *typer) {
+    typers_.emplace_back(typer);
+  }
+
+  // Register gradient function for op.
+  void RegisterGradient(const string &op, GradientFunc *func) {
+    gradients_[op] = func;
+  }
+
+  // Flow transformation components.
+  const std::vector<Transformer *> &transformers() const {
+    return transformers_;
+  }
+
+  // Type inference components.
+  const std::vector<Typer *> &typers() const {
+    return typers_;
+  }
+
+  // Gradient functions.
+  const std::unordered_map<string, GradientFunc *> &gradients() const {
+    return gradients_;
+  }
+
+ private:
+  // Flow transformation components.
+  std::vector<Transformer *> transformers_;
+
+  // Type inference components.
+  std::vector<Typer *> typers_;
+
+  // Gradient components.
+  std::unordered_map<string, GradientFunc *> gradients_;
 };
 
 }  // namespace myelin

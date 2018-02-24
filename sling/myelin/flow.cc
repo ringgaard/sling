@@ -1447,6 +1447,57 @@ bool Flow::InferTypes(const Transformations &transformations) {
   return true;
 }
 
+void Flow::Order(Function *func,
+                 std::vector<Operation *> *ops,
+                 std::vector<Variable *> *vars) const {
+  // Add all variables with no producer.
+  vars->clear();
+  for (Variable *var : vars_) {
+    if (var->producer != nullptr) continue;
+    bool used = false;
+    for (Operation *consumer : var->consumers) {
+      if (consumer->func == func) {
+        used = true;
+        break;
+      }
+    }
+    if (used) vars->push_back(var);
+  }
+
+  // Compute the number of missing inputs for each operation.
+  ops->clear();
+  std::unordered_map<Operation *, int> remaining;
+  for (Operation *op : ops_) {
+    if (op->func != func) continue;
+    int missing = 0;
+    for (Variable *var : op->inputs) {
+      if (var->producer != nullptr) missing++;
+    }
+    if (missing == 0) {
+      ops->push_back(op);
+    } else {
+      remaining[op] = missing;
+    }
+  }
+
+  // Keep adding ops that are ready to be computed.
+  for (int i = 0; i < ops->size(); ++i) {
+    // Get the next op that is ready.
+    Operation *op = ops->at(i);
+
+    // Propagate readiness to consumers.
+    for (Variable *v : op->outputs) {
+      vars->push_back(v);
+      for (Operation *consumer : v->consumers) {
+        if (consumer->func != func) continue;
+        if (--remaining[consumer] == 0) {
+          ops->push_back(consumer);
+        }
+      }
+    }
+  }
+}
+
 Flow::Variable *Flow::AddVariable(const string &name,
                                   Type type,
                                   const Shape &shape) {
