@@ -684,8 +684,8 @@ class AVXFltMatMatMul : public Kernel {
     Shape a = A->shape();
     Shape b = B->shape();
     Shape c = C->shape();
-    if (transpose_a) a.transpose();
-    if (transpose_b) b.transpose();
+    if (transpose_a) a = a.transpose();
+    if (transpose_b) b = b.transpose();
 
     if (a.dim(0) != c.dim(0)) return false;
     if (a.dim(1) != b.dim(0)) return false;

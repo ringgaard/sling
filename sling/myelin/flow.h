@@ -134,9 +134,12 @@ class Shape {
   // Add dimension to shape.
   void add(int size) { dims_.push_back(size); }
 
-  // Transpose shape.
-  void transpose() {
-    if (rank() >= 2) std::swap(dims_[0], dims_[1]);
+  // Return transposed shape.
+  Shape transpose() {
+    if (rank() < 2) return *this;
+    Shape t = *this;
+    std::swap(t.dims_[0], t.dims_[1]);
+    return t;
   }
 
   // Return the rank of the shape, i.e. the number of dimensions.
@@ -661,7 +664,7 @@ class Transformer {
 class Transformations {
  public:
   // Gradient function for differentiation of ops.
-  typedef Flow::Variable *(GradientFunc)(Flow::Operation *op, Gradients *g);
+  typedef void (GradientFunc)(Flow::Operation *op, Gradients *g);
 
   ~Transformations();
 

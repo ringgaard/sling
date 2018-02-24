@@ -81,26 +81,33 @@ class Builder : public Scope {
   Variable *Name(Variable *var, const string &name);
 
   // Add operation to function and return output variable.
+  Variable *Op(const string &op,
+               const std::vector<Variable *> &args,
+               Type type,
+               const Shape &shape);
+
+  // Add operation to function and return output variable. The output is
+  // shaped using broadcast semantics.
   Variable *Op(const string &op, const std::vector<Variable *> &args);
 
   // Add operation with no output to function.
   void Op0(const string &op, const std::vector<Variable *> &args);
 
   // Add constant to flow.
-  Variable *Constant(const void *data, Type type, const Shape &shape);
-  Variable *Constant(float value) { return Constant(&value, DT_FLOAT, {}); }
-  Variable *Constant(int value) { return Constant(&value, DT_INT32, {}); }
-  Variable *Constant(std::vector<float> &value) {
+  Variable *Const(const void *data, Type type, const Shape &shape);
+  Variable *Const(float value) { return Const(&value, DT_FLOAT, {}); }
+  Variable *Const(int value) { return Const(&value, DT_INT32, {}); }
+  Variable *Const(std::vector<float> &value) {
     int size = value.size();
-    return Constant(value.data(), DT_FLOAT, {size});
+    return Const(value.data(), DT_FLOAT, {size});
   }
-  Variable *Constant(std::vector<int> &value) {
+  Variable *Const(std::vector<int> &value) {
     int size = value.size();
-    return Constant(value.data(), DT_INT32, {size});
+    return Const(value.data(), DT_INT32, {size});
   }
-  Variable *Constant(const std::vector<int> &value) {
+  Variable *Const(const std::vector<int> &value) {
     int size = value.size();
-    return Constant(value.data(), DT_INT32, {size});
+    return Const(value.data(), DT_INT32, {size});
   }
 
   // Add instance reference to other function.
@@ -113,7 +120,6 @@ class Builder : public Scope {
   Variable *Div(Variable *x, Variable *y) { return Op("Div", {x, y}); }
   Variable *Min(Variable *x, Variable *y) { return Op("Minimum", {x, y}); }
   Variable *Max(Variable *x, Variable *y) { return Op("Maximum", {x, y}); }
-  Variable *MatMul(Variable *x, Variable *y) { return Op("MatMul", {x, y}); }
   Variable *Neg(Variable *x) { return Op("Neg", {x}); }
   Variable *Square(Variable *x) { return Op("Square", {x}); }
   Variable *Reciprocal(Variable *x) { return Op("Reciprocal", {x}); }
@@ -124,31 +130,37 @@ class Builder : public Scope {
   Variable *Sigmoid(Variable *x) { return Op("Sigmoid", {x}); }
   Variable *Relu(Variable *x) { return Op("Relu", {x}); }
   Variable *Identity(Variable *x) { return Op("Identity", {x}); }
+  Variable *Cos(Variable *x) { return Op("Cos", {x}); }
+  Variable *Sin(Variable *x) { return Op("Sin", {x}); }
+
+  Variable *MatMul(Variable *x, Variable *y);
 
   Variable *Reshape(Variable *x, Variable *shape) {
     return Op("Reshape", {x, shape});
   }
   Variable *Reshape(Variable *x, const Shape &shape) {
-    return Reshape(x, Constant(shape.dims()));
+    return Op("Reshape", {x, Const(shape.dims())}, x->type, shape);
   }
 
-  Variable *Transpose(Variable *x) { return Op("Transpose", {x}); }
+  Variable *Transpose(Variable *x) {
+    return Op("Transpose", {x}, x->type, x->shape.transpose());
+  }
 
   Variable *Dot(Variable *x, Variable *y, int size) {
     return MatMul(Reshape(x, {1, size}), Reshape(y, {size, 1}));
   }
 
   Variable *Gather(Variable *M, Variable *f) {
-    return Op("Gather", {M, f});
+    return Op("Gather", {M, f}, M->type, {f->dim(1), M->dim(1)});
   }
   Variable *GatherSum(Variable *M, Variable *f) {
-    return Op("GatherSum", {M, f});
+    return Op("GatherSum", {M, f}, M->type, {f->dim(0)});
   }
   Variable *GatherAvg(Variable *M, Variable *f) {
-    return Op("GatherAvg", {M, f});
+    return Op("GatherAvg", {M, f}, M->type, {f->dim(0)});
   }
   Variable *GatherMax(Variable *M, Variable *f) {
-    return Op("GatherMax", {M, f});
+    return Op("GatherMax", {M, f}, M->type, {f->dim(0)});
   }
 
   Variable *Ref(Variable *instance, Variable *external);
@@ -156,15 +168,9 @@ class Builder : public Scope {
   void AssignAdd(Variable *var, Variable *value) {
     Op0("AssignAdd", {var, value});
   }
-  void AssignMulAdd(Variable *var, Variable *value, Variable *factor) {
-    Op0("AssignMulAdd", {var, value, factor});
-  }
 
   void ScatterAdd(Variable *M, Variable *f, Variable *v) {
     return Op0("ScatterAdd", {M, f, v});
-  }
-  void ScatterMulAdd(Variable *M, Variable *f, Variable *v, Variable *factor) {
-    return Op0("ScatterMulAdd", {M, f, v, factor});
   }
 
   // Feed-forward (FF) layer(s).
@@ -182,6 +188,9 @@ class Builder : public Scope {
 
   // Return function for builder.
   Function *func() const { return func_; }
+
+  // Return flow for builder.
+  Flow *flow() const { return flow_; }
 
  private:
   // Flow for builder.

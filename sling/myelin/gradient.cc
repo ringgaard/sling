@@ -14,8 +14,85 @@
 
 #include "sling/myelin/gradient.h"
 
+#include <vector>
+
+#include "sling/base/logging.h"
+
 namespace sling {
 namespace myelin {
+
+// Return last part of name.
+static string basename(const string &name) {
+  int slash = name.rfind('/');
+  if (slash == -1) return name;
+  return name.substr(slash + 1);
+}
+
+Gradients::Gradients(Flow *flow,
+                     Flow::Function *primal,
+                     std::vector<Flow::Variable *> &vars)
+    : Builder(flow, "gradients/" + primal->name) {
+  // Add instance reference.
+  instance_ = Name(Instance(primal), "primal");
+
+  // Create adjoints.
+  for (Flow::Variable *v : vars) {
+    if (v->constant()) continue;
+    auto *dv = Var("d_" + basename(v->name), v->type, v->shape);
+    if (v->in()) dv->flags |= Flow::Variable::OUT;
+    if (v->out()) dv->flags |= Flow::Variable::IN;
+    dv->ref = v->ref;
+    adjoints_[v] = dv;
+  }
+}
+
+Flow::Variable *Gradients::GetReference(Flow::Variable *x) {
+  Flow::Variable *&r = refs_[x];
+  if (r == nullptr) {
+    r = Name(Ref(instance_, x), basename(x->name));
+    refs_[x] = r;
+  }
+  return r;
+}
+
+Flow::Function *Gradients::Finalize() {
+  // Bind terms to adjoints.
+  for (auto &it : adjoints_) {
+    Flow::Variable *dv = it.second;
+    Flow::Variable *terms = terms_[dv];
+    if (terms != nullptr) {;
+      string name = OpName("Identity");
+      flow()->AddOperation(func(), name, "Identity", {terms}, {dv});
+    }
+  }
+
+  // Return final gradient function.
+  return func();
+}
+
+Flow::Function *Gradient(Flow *flow,
+                         Flow::Function *func,
+                         const Transformations &library) {
+  // Get variables for gradients.
+  std::vector<Flow::Variable *> vars;
+  std::vector<Flow::Operation *> ops;
+  flow->Order(func, &ops, &vars);
+
+  // Derive gradients backwards from outputs to inputs (reverse mode).
+  Gradients g(flow, func, vars);
+  for (int i = ops.size() - 1; i >= 0; --i) {
+    Flow::Operation *op = ops[i];
+    auto f = library.gradients().find(op->type);
+    if (f == library.gradients().end()) {
+      LOG(FATAL) << "No gradient function for " << op->type;
+    }
+    auto *gradfunc = f->second;
+    gradfunc(op, &g);
+  }
+
+  // Return gradient function.
+  return g.Finalize();
+}
 
 }  // namespace myelin
 }  // namespace sling

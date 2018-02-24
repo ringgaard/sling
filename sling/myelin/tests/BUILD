@@ -87,6 +87,21 @@ cc_binary(
 )
 
 cc_binary(
+  name = "postagger",
+  srcs = ["postagger.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/myelin:builder",
+    "//sling/myelin:compute",
+    "//sling/myelin:gradient",
+    "//sling/myelin:flow",
+    "//sling/myelin:graph",
+    "//sling/myelin/kernel:tensorflow",
+  ],
+)
+
+cc_binary(
   name = "convert-tagger-flow",
   srcs = ["convert-tagger-flow.cc"],
   deps = [

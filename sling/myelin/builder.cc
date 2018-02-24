@@ -67,11 +67,39 @@ Flow::Variable *Builder::Name(Variable *var, const string &name) {
 }
 
 Flow::Variable *Builder::Op(const string &op,
-                            const std::vector<Flow::Variable *> &args) {
+                            const std::vector<Flow::Variable *> &args,
+                            Type type,
+                            const Shape &shape) {
   string name = OpName(op);
-  Variable *result = flow_->AddVariable(name + ":0", DT_INVALID, {0});
+  Variable *result = flow_->AddVariable(name + ":0", type, shape);
   flow_->AddOperation(func_, name, op, args, {result});
   return result;
+}
+
+Flow::Variable *Builder::Op(const string &op,
+                            const std::vector<Flow::Variable *> &args) {
+  // Use first argument for return type.
+  Type type = args.empty() ? DT_INVALID : args[0]->type;
+
+  // Determine output rank.
+  Shape shape;
+  int rank = 0;
+  for (Flow::Variable *arg : args) {
+    if (arg->rank() > rank) rank = arg->rank();
+  }
+  shape.fill(rank, 1);
+
+  // Determine output shape based on broadcast semantics.
+  for (Flow::Variable *arg : args) {
+    int depth = rank - arg->rank();
+    for (int d = 0; d < arg->rank(); ++d) {
+      if (shape.dim(d + depth) < arg->dim(d)) {
+        shape.set(d + depth, arg->dim(d));
+      }
+    }
+  }
+
+  return Op(op, args, type, shape);
 }
 
 void Builder::Op0(const string &op,
@@ -80,8 +108,8 @@ void Builder::Op0(const string &op,
   flow_->AddOperation(func_, name, op, args, {});
 }
 
-Flow::Variable *Builder::Constant(const void *data, Type type,
-                                  const Shape &shape) {
+Flow::Variable *Builder::Const(const void *data, Type type,
+                               const Shape &shape) {
   Variable *var = Var(OpName("const"), type, shape);
   var->size = TypeTraits::of(type).size() * shape.elements();
   char *buffer = flow_->AllocateMemory(var->size);
@@ -94,6 +122,14 @@ Flow::Variable *Builder::Instance(Function *func) {
   Variable *instance = Var(func->name, DT_RESOURCE, {});
   instance->ref = true;
   return instance;
+}
+
+Flow::Variable *Builder::MatMul(Variable *x, Variable *y) {
+  Variable *result = Op("MatMul", {x, y});
+  if (x->rank() == 2 && y->rank() == 2) {
+    result->shape = Shape({x->dim(0), y->dim(1)});
+  }
+  return result;
 }
 
 Flow::Variable *Builder::Ref(Variable *instance, Variable *external) {
@@ -177,8 +213,10 @@ Flow::Variable *Builder::LSTMLayer(Variable *input, int size) {
   // Channels -- h_in, c_in = h_{t-1}, c_{t-1}
   auto *h_in = Var("h_in", type, {1, size});
   h_in->ref = true;
+  h_in->flags |= Variable::IN;
   auto *c_in = Var("c_in", type, {1, size});
   c_in->ref = true;
+  c_in->flags |= Variable::IN;
 
   // Input -- i_t = sigmoid(affine(x_t, h_{t-1}, c_{t-1}))
   auto *i_ait = Name(Add(MatMul(input, x2i),
@@ -188,9 +226,9 @@ Flow::Variable *Builder::LSTMLayer(Variable *input, int size) {
   auto *i_it = Name(Sigmoid(i_ait), "i_it");
 
   // Forget -- f_t = 1 - i_t
-  auto *i_ft = Name(Sub(Constant(1.0f), i_it), "i_ft");
+  auto *i_ft = Name(Sub(Const(1.0f), i_it), "i_ft");
 
-  // Write memory cell -- tanh(affine(x_t, h_{t-1}))
+  // Memory -- tanh(affine(x_t, h_{t-1}))
   auto *i_awt = Name(Add(MatMul(input, x2c),
                      Add(MatMul(h_in, h2c), bc)),
                      "i_awt");
@@ -199,7 +237,7 @@ Flow::Variable *Builder::LSTMLayer(Variable *input, int size) {
   // Control -- c_t = f_t \odot c_{t-1} + i_t \odot tanh(affine(x_t, h_{t-1}))
   auto *ct = Name(Add(Mul(i_it, i_wt), Mul(i_ft, c_in)), "c_out");
   ct->ref = true;
-  ct->flags |= Variable::IN | Variable::OUT;
+  ct->flags |= Variable::OUT;
 
   // Output -- o_t = sigmoid(affine(x_t, h_{t-1}, c_t))
   auto *i_aot = Name(Add(MatMul(input, x2o),
@@ -212,7 +250,7 @@ Flow::Variable *Builder::LSTMLayer(Variable *input, int size) {
   auto *ph_t = Tanh(ct);
   auto *ht = Name(Mul(i_ot, ph_t), "h_out");
   ht->ref = true;
-  ht->flags |= Variable::IN | Variable::OUT;
+  ht->flags |= Variable::OUT;
 
   return ht;
 }
