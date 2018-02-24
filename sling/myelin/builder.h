@@ -74,11 +74,11 @@ class Builder : public Scope {
   // Add variable to flow.
   Variable *Var(const string &name, Type type, const Shape &shape);
 
+  // Add learnable parameter variable to flow.
+  Variable *Weights(const string &name, Type type, const Shape &shape);
+
   // Change name of variable. Returns the variable itself.
-  Variable *Name(Variable *var, const string &name) {
-    var->name = prefix() + "/" + name;
-    return var;
-  }
+  Variable *Name(Variable *var, const string &name);
 
   // Add operation to function and return output variable.
   Variable *Op(const string &op, const std::vector<Variable *> &args);
@@ -123,6 +123,7 @@ class Builder : public Scope {
   Variable *Tanh(Variable *x) { return Op("Tanh", {x}); }
   Variable *Sigmoid(Variable *x) { return Op("Sigmoid", {x}); }
   Variable *Relu(Variable *x) { return Op("Relu", {x}); }
+  Variable *Identity(Variable *x) { return Op("Identity", {x}); }
 
   Variable *Reshape(Variable *x, Variable *shape) {
     return Op("Reshape", {x, shape});
@@ -166,8 +167,21 @@ class Builder : public Scope {
     return Op0("ScatterMulAdd", {M, f, v, factor});
   }
 
+  // Feed-forward (FF) layer(s).
+  Variable *FFLayers(Variable *input,
+                     std::vector<int> layers,
+                     int hidden = -1,
+                     bool bias = false,
+                     const string &activation = "Relu");
+  Variable *FFLayer(Variable *input, int size, bool bias = false) {
+    return FFLayers(input, {size}, -1, bias);
+  }
+
+  // Long short-term memory (LSTM) layer.
+  Variable *LSTMLayer(Variable *input, int size);
+
   // Return function for builder.
-  Flow::Function *func() const { return func_; }
+  Function *func() const { return func_; }
 
  private:
   // Flow for builder.

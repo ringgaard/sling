@@ -53,6 +53,19 @@ Flow::Variable *Builder::Var(const string &name, Type type,
   return flow_->AddVariable(func_->name + "/" + name, type, shape);
 }
 
+Flow::Variable *Builder::Weights(const string &name,
+                                 Type type,
+                                 const Shape &shape) {
+  Variable *weights = Var(name, type, shape);
+  weights->flags |= Variable::LEARNABLE;
+  return weights;
+}
+
+Flow::Variable *Builder::Name(Variable *var, const string &name) {
+  var->name = prefix() + "/" + name;
+  return var;
+}
+
 Flow::Variable *Builder::Op(const string &op,
                             const std::vector<Flow::Variable *> &args) {
   string name = OpName(op);
@@ -90,6 +103,118 @@ Flow::Variable *Builder::Ref(Variable *instance, Variable *external) {
   ref->ref = true;
   ref->producer->SetAttr("var", external->name);
   return ref;
+}
+
+Flow::Variable *Builder::FFLayers(Variable *input,
+                                  std::vector<int> layers,
+                                  int hidden,
+                                  bool bias,
+                                  const string &activation) {
+  Variable *v = input;
+  for (int l = 0; l < layers.size(); ++l) {
+    // Get dimensions for next layer.
+    Type type = v->type;
+    int height = v->dim(1);
+    int width = layers[l];
+
+    // Add weight matrix.
+    auto *W = Weights("W" + std::to_string(l), type, {height, width});
+    v = MatMul(v, W);
+    v->type = type;
+    v->shape = {1, width};
+
+    // Optionally add bias.
+    if (bias) {
+      auto *b = Weights("b" + std::to_string(l), type, {1, width});
+      v = Add(v, b);
+      v->type = type;
+      v->shape = {1, width};
+    }
+
+    // Add activation function between layers.
+    if (l != layers.size() - 1) {
+      v = Op(activation, {v});
+      v->type = type;
+      v->shape = {1, width};
+    }
+
+    // Make hidden layer a reference.
+    if (l == hidden) {
+      v = Name(Identity(v), "hidden");
+      v->type = type;
+      v->shape = {1, width};
+      v->ref = true;
+      v->flags |= Variable::IN | Variable::OUT;
+    }
+  }
+
+  auto *logits = Name(Identity(v), "logits");
+  logits->type = v->type;
+  logits->shape = v->shape;
+  return logits;
+}
+
+Flow::Variable *Builder::LSTMLayer(Variable *input, int size) {
+  // Get LSTM dimensions.
+  Type type = input->type;
+  int input_dim = input->dim(1);
+
+  // Define parameters.
+  auto *x2i = Weights("x2i", type, {input_dim, size});
+  auto *h2i = Weights("h2i", type, {size, size});
+  auto *c2i = Weights("c2i", type, {size, size});
+  auto *bi = Weights("bi", type, {1, size});
+
+  auto *x2o = Weights("x2o", type, {input_dim, size});
+  auto *h2o = Weights("h2o", type, {size, size});
+  auto *c2o = Weights("c2o", type, {size, size});
+  auto *bo = Weights("bo", type, {1, size});
+
+  auto *x2c = Weights("x2c", type, {input_dim, size});
+  auto *h2c = Weights("h2c", type, {size, size});
+  auto *bc = Weights("bc", type, {1, size});
+
+  // Channels -- h_in, c_in = h_{t-1}, c_{t-1}
+  auto *h_in = Var("h_in", type, {1, size});
+  h_in->ref = true;
+  auto *c_in = Var("c_in", type, {1, size});
+  c_in->ref = true;
+
+  // Input -- i_t = sigmoid(affine(x_t, h_{t-1}, c_{t-1}))
+  auto *i_ait = Name(Add(MatMul(input, x2i),
+                     Add(MatMul(h_in, h2i),
+                     Add(MatMul(c_in, c2i), bi))),
+                     "i_ait");
+  auto *i_it = Name(Sigmoid(i_ait), "i_it");
+
+  // Forget -- f_t = 1 - i_t
+  auto *i_ft = Name(Sub(Constant(1.0f), i_it), "i_ft");
+
+  // Write memory cell -- tanh(affine(x_t, h_{t-1}))
+  auto *i_awt = Name(Add(MatMul(input, x2c),
+                     Add(MatMul(h_in, h2c), bc)),
+                     "i_awt");
+  auto *i_wt = Name(Tanh(i_awt), "i_wt");
+
+  // Control -- c_t = f_t \odot c_{t-1} + i_t \odot tanh(affine(x_t, h_{t-1}))
+  auto *ct = Name(Add(Mul(i_it, i_wt), Mul(i_ft, c_in)), "c_out");
+  ct->ref = true;
+  ct->flags |= Variable::IN | Variable::OUT;
+
+  // Output -- o_t = sigmoid(affine(x_t, h_{t-1}, c_t))
+  auto *i_aot = Name(Add(MatMul(input, x2o),
+                     Add(MatMul(ct, c2o),
+                     Add(MatMul(h_in, h2o), bo))),
+                     "i_aot");
+  auto *i_ot = Name(Sigmoid(i_aot), "i_ot");
+
+  // Hidden -- ht = o_t \odot tanh(ct)
+  auto *ph_t = Tanh(ct);
+  auto *ht = Name(Mul(i_ot, ph_t), "h_out");
+  ht->ref = true;
+  ht->flags |= Variable::IN | Variable::OUT;
+
+  return ht;
 }
 
 }  // namespace myelin
