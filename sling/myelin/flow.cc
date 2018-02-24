@@ -599,8 +599,9 @@ void Flow::Read(const char *data, size_t size) {
   int magic = parser.GetInt();
   CHECK_EQ(magic, kMagic) << "not a flow file";
   int version = parser.GetInt();
-  CHECK(version >= 3 && version <= 4)
+  CHECK(version >= 3 && version <= 5)
       << "unsupported flow file version " << version;
+  if (version >= 5) parser.GetInt();  // unused flags
 
   // Read variables.
   int num_vars = parser.GetInt();
@@ -608,6 +609,9 @@ void Flow::Read(const char *data, size_t size) {
     // Create new variable.
     Variable *var = new Variable;
     vars_.push_back(var);
+
+    // Get flags.
+    if (version >= 5) var->flags = parser.GetInt();
 
     // Get variable name.
     var->name = parser.GetString();
@@ -640,8 +644,11 @@ void Flow::Read(const char *data, size_t size) {
     }
 
     // Get optional variable constant.
-    var->size = parser.GetLong();
-    if (var->size != 0) var->data = parser.Get(var->size);
+    int64 size = parser.GetLong();
+    if (size != 0) {
+      const char *data = parser.Get(size);
+      var->SetData(data, size);
+    }
   }
 
   // Read operations.
@@ -650,6 +657,7 @@ void Flow::Read(const char *data, size_t size) {
     // Create new operation.
     Operation *op = new Operation;
     ops_.push_back(op);
+    if (version >= 5) parser.GetInt();  // unused flags
 
     // Get operation name and type.
     op->name = parser.GetString();
@@ -690,6 +698,7 @@ void Flow::Read(const char *data, size_t size) {
     // Create new function.
     Function *func = new Function;
     funcs_.push_back(func);
+    if (version >= 5) parser.GetInt();  // unused flags
 
     // Get function name.
     func->name = parser.GetString();
@@ -710,6 +719,7 @@ void Flow::Read(const char *data, size_t size) {
     // Create new connector.
     Connector *cnx = new Connector;
     cnxs_.push_back(cnx);
+    if (version >= 5) parser.GetInt();  // unused flags
 
     // Get connector name.
     cnx->name = parser.GetString();
@@ -731,6 +741,7 @@ void Flow::Read(const char *data, size_t size) {
       // Create new blob.
       Blob *blob = new Blob;
       blobs_.push_back(blob);
+      if (version >= 5) parser.GetInt();  // unused flags
 
       // Get blob name and type.
       blob->name = parser.GetString();
@@ -760,10 +771,14 @@ void Flow::Save(const string &filename, int version) const {
   CHECK_LE(version, kVersion);
   file.WriteInt(kMagic);
   file.WriteInt(version);
+  if (version >= 5) file.WriteInt(0);  // unused flags
 
   // Write variables.
   file.WriteInt(vars_.size());
   for (const Variable *var : vars_) {
+    // Write flags.
+    if (version >= 5) file.WriteInt(var->flags);
+
     // Write name.
     file.WriteString(var->name);
 
@@ -798,6 +813,9 @@ void Flow::Save(const string &filename, int version) const {
   // Write operations.
   file.WriteInt(ops_.size());
   for (Operation *op : ops_) {
+    // Write flags.
+    if (version >= 5) file.WriteInt(0);
+
     // Write name.
     file.WriteString(op->name);
 
@@ -827,6 +845,7 @@ void Flow::Save(const string &filename, int version) const {
   // Write functions.
   file.WriteInt(funcs_.size());
   for (const Function *func : funcs_) {
+    if (version >= 5) file.WriteInt(0);  // unused flags
     file.WriteString(func->name);
     file.WriteInt(func->ops.size());
     for (const Operation *op : func->ops) {
@@ -837,6 +856,7 @@ void Flow::Save(const string &filename, int version) const {
   // Write connectors.
   file.WriteInt(cnxs_.size());
   for (const Connector *cnx : cnxs_) {
+    if (version >= 5) file.WriteInt(0);  // unused flags
     file.WriteString(cnx->name);
     file.WriteInt(cnx->links.size());
     for (const Variable *link : cnx->links) {
@@ -848,6 +868,7 @@ void Flow::Save(const string &filename, int version) const {
   if (version >= 4) {
     file.WriteInt(blobs_.size());
     for (const Blob *blob : blobs_) {
+      if (version >= 5) file.WriteInt(0);  // unused flags
       file.WriteString(blob->name);
       file.WriteString(blob->type);
       file.WriteInt(blob->attrs.size());
@@ -887,14 +908,13 @@ void Flow::InferInputsAndOutputs() {
   // Connector links are considered both inputs and outputs.
   for (Connector *cnx : cnxs_) {
     for (Variable *link : cnx->links) {
-      link->in = true;
-      link->out = true;
+      link->flags |= Variable::IN | Variable::OUT;
     }
   }
 
   for (Variable *var : vars_) {
     // Constants are not considered inputs or outputs.
-    if (var->data != nullptr) continue;
+    if (var->constant()) continue;
 
     // Check the input and output attributes of the producing op.
     bool input_set = false;
@@ -902,12 +922,12 @@ void Flow::InferInputsAndOutputs() {
     if (var->producer != nullptr) {
       const string &input = var->producer->GetAttr("input");
       if (!input.empty()) {
-        if (input == "1" || input == "true") var->in = true;
+        if (input == "1" || input == "true") var->flags |= Variable::IN;
         input_set = true;
       }
       const string &output = var->producer->GetAttr("output");
       if (!output.empty()) {
-        if (output == "1" || output == "true") var->out = true;
+        if (output == "1" || output == "true") var->flags |= Variable::OUT;
         output_set = true;
       }
     }
@@ -916,7 +936,7 @@ void Flow::InferInputsAndOutputs() {
     // is considered an input to the function.
     if (!input_set) {
       if (var->producer == nullptr || var->producer->inputs.empty()) {
-        var->in = true;
+        var->flags |= Variable::IN;
       }
     }
 
@@ -924,7 +944,7 @@ void Flow::InferInputsAndOutputs() {
     // function.
     if (!output_set) {
       if (var->consumers.empty()) {
-        var->out = true;
+        var->flags |= Variable::OUT;
       }
     }
   }
@@ -962,7 +982,7 @@ Flow::Operation *Flow::Fuse(Operation *first,
       // Input from first op. Eliminate variable if it is only used as an
       // intermediate result between the first and second op.
       second->RemoveInput(v);
-      if (v->consumers.empty() && !v->out) {
+      if (v->consumers.empty() && !v->out()) {
         first->RemoveOutput(v);
         DeleteVariable(v);
         for (Connector *cnx : cnxs_) cnx->RemoveLink(v);
@@ -979,7 +999,7 @@ Flow::Operation *Flow::Fuse(Operation *first,
     if (first->IsInput(v)) {
       // Input from second op. Eliminate variable if it is only used as an
       // intermediate result between the first and second op.
-      if (v->consumers.size() == 1 && !v->out) {
+      if (v->consumers.size() == 1 && !v->out()) {
         first->RemoveInput(v);
         second->RemoveOutput(v);
         DeleteVariable(v);
@@ -1192,8 +1212,8 @@ void Flow::Eliminate(Operation *op) {
     if (input->shape.defined() && output->shape.defined()) {
       CHECK(input->shape == output->shape) << op->name;
     }
-    if (output->in) input->in = true;
-    if (output->out) input->out = true;
+    if (output->in()) input->flags |= Variable::IN;
+    if (output->out()) input->flags |= Variable::OUT;
     if (output->ref) input->ref = true;
     for (Operation *target : ops_) {
       for (int i = 0; i < target->inputs.size(); ++i) {
@@ -1214,7 +1234,7 @@ void Flow::Eliminate(Operation *op) {
     }
 
     // Merge input and output variable names.
-    if (output->out && !input->in) {
+    if (output->out() && !input->in()) {
       input->AddAlias(input->name);
       input->name = output->name;
     } else {
@@ -1419,7 +1439,7 @@ bool Flow::InferTypes(const Transformations &transformations) {
     auto &typers = transformations.typers();
     for (int t = typers.size() -1; t >= 0; --t) {
       Typer *typer = typers[t];
-      bool done = typer->InferTypes(op);
+      bool done = typer->InferTypes(this, op);
       if (done) break;
     }
 
@@ -1500,12 +1520,14 @@ void Flow::Order(Function *func,
 
 Flow::Variable *Flow::AddVariable(const string &name,
                                   Type type,
-                                  const Shape &shape) {
+                                  const Shape &shape,
+                                  Variable::Flags flags) {
   Variable *var = new Variable;
   vars_.push_back(var);
   var->name = name;
   var->type = type;
   var->shape = shape;
+  var->flags = flags;
   return var;
 }
 
@@ -1702,9 +1724,10 @@ string Flow::ToString() const {
     StringAppendF(&str, "var %s : %s",
                   var->name.c_str(),
                   var->TypeString().c_str());
-    if (var->in) StringAppendF(&str, " in");
-    if (var->out) StringAppendF(&str, " out");
-    if (var->data != nullptr) {
+    if (var->learnable()) StringAppendF(&str, " learnable");
+    if (var->in()) StringAppendF(&str, " in");
+    if (var->out()) StringAppendF(&str, " out");
+    if (var->constant()) {
       StringAppendF(&str, ", %lu bytes", var->size);
     }
     StringAppendF(&str, " {\n");

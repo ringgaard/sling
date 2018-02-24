@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "sling/nlp/wiki/wiki.h"
 
 #include <string>
@@ -22,6 +36,9 @@ const char *kAliasSourceName[kNumAliasSources] = {
   "wikipedia_redirect",
   "wikipedia_anchor",
   "wikipedia_disambiguation",
+  "wikidata_foreign",
+  "wikidata_native",
+  "wikidata_demonym",
 };
 
 void Wiki::SplitTitle(const string &title,
@@ -76,6 +93,39 @@ string Wiki::URL(const string &lang, const string &title) {
     if (c == ' ') c = '_';
   }
   return "http://" + lang + ".wikipedia.org/wiki/" + t;
+}
+
+void AuxFilter::Init(Store *store) {
+  const char *kAuxItemtypes[] = {
+    "Q13442814",  // scientific article
+    "Q17329259",  // encyclopedic article
+    "Q17633526",  // Wikinews article
+    "Q732577",    // publication
+    "Q7187",      // gene
+    "Q16521",     // taxon
+    "Q8054",      // protein
+    "Q11173",     // chemical compound
+    nullptr,
+  };
+  for (const char **type = kAuxItemtypes; *type; ++type) {
+    aux_types_.insert(store->Lookup(*type));
+  }
+  names_.Bind(store);
+}
+
+bool AuxFilter::IsAux(const Frame &frame) {
+  // Never mark items in Wikipedia as aux.
+  Frame wikipedia = frame.GetFrame(n_wikipedia_);
+  if (wikipedia.valid() && wikipedia.size() > 0) return false;
+
+  // Check item types.
+  for (const Slot &slot : frame) {
+    if (slot.name != n_instanceof_) continue;
+    Handle type = frame.store()->Resolve(slot.value);
+    if (aux_types_.count(type) > 0) return true;
+  }
+
+  return false;
 }
 
 }  // namespace nlp

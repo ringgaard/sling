@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "sling/http/web-service.h"
 
 #include "sling/stream/stream.h"
@@ -149,7 +163,7 @@ WebService::~WebService() {
 
     case TEXT: {
       // Output as human-readable SLING frames.
-      response_->SetContentType("text/sling");
+      response_->SetContentType("text/sling; charset=utf-8");
       Printer printer(&store_, &out);
       printer.set_indent(2);
       printer.set_byref(byref_);
@@ -159,7 +173,7 @@ WebService::~WebService() {
 
     case COMPACT: {
       // Output compact SLING text.
-      response_->SetContentType("text/sling");
+      response_->SetContentType("text/sling; charset=utf-8");
       Printer printer(&store_, &out);
       printer.set_byref(byref_);
       printer.Print(output_);
@@ -168,7 +182,7 @@ WebService::~WebService() {
 
     case JSON: {
       // Output in JSON format.
-      response_->SetContentType("text/json");
+      response_->SetContentType("text/json; charset=utf-8");
       JSONWriter writer(&store_, &out);
       writer.set_indent(2);
       writer.set_byref(byref_);
@@ -178,7 +192,7 @@ WebService::~WebService() {
 
     case CJSON: {
       // Output in compact JSON format.
-      response_->SetContentType("application/json");
+      response_->SetContentType("application/json; charset=utf-8");
       JSONWriter writer(&store_, &out);
       writer.set_byref(byref_);
       writer.Write(output_);

@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef NLP_KB_KNOWLEDGE_SERVICE_H_
 #define NLP_KB_KNOWLEDGE_SERVICE_H_
 
@@ -42,15 +56,21 @@ class KnowledgeService {
   // Handle KB item requests.
   void HandleGetItem(HTTPRequest *request, HTTPResponse *response);
 
- private:
-  // Resolve reference.
-  Handle Resolve(Handle handle) const;
+  // Handle KB frame requests.
+  void HandleGetFrame(HTTPRequest *request, HTTPResponse *response);
 
+ private:
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);
 
   // Get standard properties (ref, name, and description).
   void GetStandardProperties(const Frame &item, Builder *builder) const;
+
+  // Get unit name.
+  string UnitName(const Frame &unit);
+
+  // Convert value to readable text.
+  string AsText(Handle value);
 
   // Property information.
   struct Property {
@@ -75,12 +95,14 @@ class KnowledgeService {
   NameTable aliases_;
 
   // Knowledge base browser app.
-  StaticContent app_{"/kb", "nlp/kb/app"};
+  StaticContent app_{"/kb", "sling/nlp/kb/app"};
 
   // Symbols.
   Names names_;
   Name n_name_{names_, "name"};
   Name n_description_{names_, "description"};
+  Name n_role_{names_, "role"};
+  Name n_target_{names_, "target"};
   Name n_properties_{names_, "properties"};
   Name n_qualifiers_{names_, "qualifiers"};
   Name n_xrefs_{names_, "xrefs"};
@@ -93,26 +115,31 @@ class KnowledgeService {
   Name n_thumbnail_{names_, "thumbnail"};
   Name n_matches_{names_, "matches"};
 
-  Name n_datatype_{names_, "/w/datatype"};
   Name n_xref_type_{names_, "/w/xref"};
   Name n_item_type_{names_, "/w/item"};
   Name n_property_type_{names_, "/w/property"};
   Name n_url_type_{names_, "/w/url"};
   Name n_text_type_{names_, "/w/text"};
   Name n_quantity_type_{names_, "/w/quantity"};
-  Name n_coord_type_{names_, "/w/coord"};
+  Name n_geo_type_{names_, "/w/geo"};
   Name n_media_type_{names_, "/w/media"};
   Name n_time_type_{names_, "/w/time"};
-  Name n_string_type_{names_, "string"};
+  Name n_string_type_{names_, "/w/string"};
   Name n_lat_{names_, "/w/lat"};
   Name n_lng_{names_, "/w/lng"};
+  Name n_amount_{names_, "/w/amount"};
   Name n_unit_{names_, "/w/unit"};
 
   Name n_instance_of_{names_, "P31"};
   Name n_formatter_url_{names_, "P1630"};
   Name n_representative_image_{names_, "Q26940804"};
   Name n_image_{names_, "P18"};
+
   Name n_unit_symbol_{names_, "P558"};
+  Name n_writing_system_{names_, "P282"};
+  Name n_latin_script_{names_, "Q8229"};
+  Name n_language_{names_, "P2439"};
+  Name n_name_language_{names_, "P407"};
 };
 
 }  // namespace nlp

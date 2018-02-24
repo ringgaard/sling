@@ -169,6 +169,12 @@ class UTF8 {
 
   // Convert string to title case, i.e. make the first letter uppercase.
   static void ToTitleCase(const string &str, string *titlecased);
+
+  // Check if all characters are punctuation characters.
+  static bool IsPunctuation(const char *s, int len);
+  static bool IsPunctuation(const string &str) {
+    return IsPunctuation(str.data(), str.size());
+  }
 };
 
 }  // namespace sling

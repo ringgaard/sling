@@ -15,6 +15,7 @@
 #ifndef SLING_FRAME_OBJECT_H_
 #define SLING_FRAME_OBJECT_H_
 
+#include <atomic>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -146,6 +147,20 @@ class Name {
 
   // Next name in the name list.
   Name *next_ = nullptr;
+};
+
+class SharedNames : public Names {
+ public:
+  // Reference counting for shared names object.
+  void AddRef() const { refs_.fetch_add(1); };
+  void Release() const { if (refs_.fetch_sub(1) == 1) delete this; }
+
+ protected:
+  ~SharedNames() { CHECK_EQ(refs_, 0); }
+
+ private:
+  // Reference count.
+  mutable std::atomic<int> refs_{1};
 };
 
 // The Object class is the base class for holding references to heap objects.
@@ -466,6 +481,12 @@ class Frame : public Object {
   Handle GetHandle(const Object &name) const;
   Handle GetHandle(const Name &name) const;
   Handle GetHandle(Text name) const;
+
+  // Resolve slot value by following is: chain.
+  Handle Resolve(Handle name) const;
+  Handle Resolve(const Object &name) const;
+  Handle Resolve(const Name &name) const;
+  Handle Resolve(Text name) const;
 
   // Checks frame type, i.e. checks if frame has an isa/is slot with the type.
   bool IsA(Handle type) const;

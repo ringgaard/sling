@@ -29,8 +29,7 @@ namespace sling {
 class TextMapInput {
  public:
   TextMapInput(const std::vector<string> &filenames, int buffer_size = 1 << 16);
-  TextMapInput(const string &filename)
-    : TextMapInput({filename}, 1 << 16) {}
+  TextMapInput(const string &filename) : TextMapInput({filename}, 1 << 16) {}
   ~TextMapInput();
 
   // Read next entry from file. Return false if there are more entries.
@@ -40,8 +39,8 @@ class TextMapInput {
   int id() const { return id_; }
 
   // Return current key and value.
-  const string key() const { return key_; }
-  const string value() const { return value_; }
+  const string &key() const { return key_; }
+  const string &value() const { return value_; }
 
   // Read the next label from input. Return false if there are no more labels.
   // The value is parsed as a string and returned as count. All parameters can
@@ -82,6 +81,35 @@ class TextMapInput {
   // Current key and value.
   string key_;
   string value_;
+};
+
+// Write text map to output file.
+class TextMapOutput {
+ public:
+  // Open text map file for writing.
+  TextMapOutput(const string &filename, int buffer_size = 1 << 16);
+
+  // Flush and close text map.
+  ~TextMapOutput();
+
+  // Write entry to text map.
+  void Write(const string &key, const string &value);
+  void Write(const string &key, int64 value);
+
+ private:
+  // Output buffered data to file.
+  void Output(const char *data, size_t size);
+
+  // Flush output buffer.
+  void Flush();
+
+  // Output file.
+  File *file_;
+
+  // Output buffer.
+  char *buffer_;
+  char *next_;
+  char *end_;
 };
 
 }  // namespace sling

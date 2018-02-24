@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <string.h>
 #include <string>
 #include <unordered_map>
@@ -27,6 +41,7 @@ class WikipediaXMLParser : public XMLParser {
     // Get output channel for articles and redirects.
     articles_channel_ = task->GetSink("articles");
     redirects_channel_ = task->GetSink("redirects");
+    categories_channel_ = task->GetSink("categories");
 
     // Set up XML field mapping.
     fields_.resize(NUM_FIELDS);
@@ -45,6 +60,7 @@ class WikipediaXMLParser : public XMLParser {
 
     // Initialize counters.
     num_articles_ = task->GetCounter("num_wikipedia_articles");
+    num_categories_ = task->GetCounter("num_wikipedia_categories");
     num_redirects_ = task->GetCounter("num_wikipedia_redirects");
     num_fragment_redirects_ = task->GetCounter("num_fragment_redirects");
     input_bytes_ = task->GetCounter("wikipedia_input_bytes");
@@ -84,6 +100,7 @@ class WikipediaXMLParser : public XMLParser {
 
       case MEDIAWIKI:
         lang_ = element.Get("xml:lang", "en");
+        if (lang_ == "nb") lang_ = "no";
         break;
 
       default:
@@ -144,13 +161,16 @@ class WikipediaXMLParser : public XMLParser {
     string id = Wiki::Id(lang_, title);
 
     if (redirect_.empty()) {
-      // Only keep articles in main namespace.
+      // Only keep articles in main and category namespaces.
       task::Counter *&ctr = num_namespace_pages_[ns];
       if (ctr == nullptr) {
         ctr = task_->GetCounter(StringPrintf("namespace_pages[%d]", ns));
       }
       ctr->Increment();
-      if (ns != 0) return;
+      if (ns != WIKIPEDIA_NAMESPACE_MAIN &&
+          ns != WIKIPEDIA_NAMESPACE_CATEGORY) {
+        return;
+      }
 
       // Build article frame.
       Store store(&commons_);
@@ -164,13 +184,19 @@ class WikipediaXMLParser : public XMLParser {
         builder.Add(n_page_text_, text);
       }
 
-      // Output frame on article channel.
+      // Output frame.
       Frame frame = builder.Create();
-      //LOG(INFO) << "Article: " << ToText(frame, 2);
-      if (articles_channel_) {
-        articles_channel_->Send(task::CreateMessage(frame));
+      if (ns == WIKIPEDIA_NAMESPACE_MAIN) {
+        if (articles_channel_) {
+          articles_channel_->Send(task::CreateMessage(frame));
+        }
+        num_articles_->Increment();
+      } else if (ns == WIKIPEDIA_NAMESPACE_CATEGORY) {
+        if (categories_channel_) {
+          categories_channel_->Send(task::CreateMessage(frame));
+        }
+        num_categories_->Increment();
       }
-      num_articles_->Increment();
     } else {
       // Ignore redirects with fragments.
       if (fields_[TEXT].find('#', 1) != string::npos) {
@@ -218,6 +244,7 @@ class WikipediaXMLParser : public XMLParser {
   // Output channels.
   task::Channel *articles_channel_;
   task::Channel *redirects_channel_;
+  task::Channel *categories_channel_;
 
   // Wikipedia language.
   string lang_;
@@ -239,6 +266,7 @@ class WikipediaXMLParser : public XMLParser {
   std::unordered_map<int, task::Counter *> num_namespace_pages_;
   task::Counter *num_articles_;
   task::Counter *num_redirects_;
+  task::Counter *num_categories_;
   task::Counter *num_fragment_redirects_;
   task::Counter *input_bytes_;
   uint64 position_ = 0;

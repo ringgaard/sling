@@ -94,6 +94,11 @@ GraphOptions::GraphOptions() {
   consts.color = "#A6A6A6";
   consts.fillcolor = "#EEEEEE";
 
+  globals.shape = "box";
+  globals.style = "filled";
+  globals.color = "#A6A6A6";
+  globals.fillcolor = "#EEEEEE";
+
   funcs.shape = "box";
   funcs.style = "rounded,filled";
   funcs.fillcolor = "#FCFCFC";
@@ -163,7 +168,7 @@ static void AppendOp(string *str,
 static void AppendVar(string *str,
                       Flow::Variable *var,
                       const GraphOptions &options) {
-  if (var->in || var->out || var->data) {
+  if (var->in() || var->out() || var->global()) {
     AppendVarId(str, var);
     str->append(" [");
     str->append("label=\"");
@@ -187,9 +192,10 @@ static void AppendVar(string *str,
     str->append("\" ");
 
     str->append(" tooltip=\"");
-    if (var->data) str->append("const ");
-    if (var->in) str->append("in ");
-    if (var->out) str->append("out ");
+    if (var->constant()) str->append("const ");
+    if (var->learnable()) str->append("learnable ");
+    if (var->in()) str->append("in ");
+    if (var->out()) str->append("out ");
     str->append("var ");
     str->append(var->name);
     if (!var->aliases.empty()) {
@@ -204,11 +210,13 @@ static void AppendVar(string *str,
     auto f = options.custom_vars.find(var->name);
     if (f != options.custom_vars.end()) {
       f->second.Append(str);
-    } else if (var->data != nullptr) {
+    } else if (var->constant()) {
       options.consts.Append(str);
-    } else if (var->out && !var->in) {
+    } else if (var->global()) {
+      options.globals.Append(str);
+    } else if (var->out() && !var->in()) {
       options.outputs.Append(str);
-    } else if (var->in && !var->out) {
+    } else if (var->in() && !var->out()) {
       options.inputs.Append(str);
     } else {
       options.vars.Append(str);
@@ -304,7 +312,7 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
   for (Flow::Operation *op : flow.ops()) {
     for (int i = 0; i < op->inputs.size(); ++i) {
       Flow::Variable *input = op->inputs[i];
-      if (input->producer != nullptr && !input->in && !input->out) {
+      if (input->producer != nullptr && !input->in() && !input->out()) {
         AppendOpId(&str, input->producer);
         str.append(" -> ");
         AppendOpId(&str, op);
@@ -334,7 +342,7 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
   // Output shared variables.
   for (Flow::Variable *var : flow.vars()) {
     if (exclusive.count(var) == 0) {
-      if (options.include_constants || var->data == nullptr) {
+      if (options.include_constants || !var->constant()) {
         AppendVar(&str, var, options);
       }
     }

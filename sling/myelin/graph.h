@@ -57,6 +57,7 @@ struct GraphOptions {
   GraphNodeOptions outputs;
   GraphNodeOptions vars;
   GraphNodeOptions consts;
+  GraphNodeOptions globals;
   GraphNodeOptions funcs;
 
   // Options for individual op nodes.

@@ -23,6 +23,7 @@ DEFINE_string(test, "", "Kernel to be tested");
 DEFINE_bool(ignore_errors, false, "Ignore test errors");
 DEFINE_double(matmul_accuracy, 1e-6, "Maximum error on matmul operations");
 DEFINE_double(func_accuracy, 1e-5, "Maximum error on function operations");
+DEFINE_bool(test_baseline, false, "Test baseline kernels");
 
 DEFINE_int32(d, -1, "Vector dimension for tests");
 DEFINE_int32(dmin, 1, "Minimum vector dimension for tests");
@@ -189,6 +190,21 @@ void CheckFltMatMatMul(const string &test, const string &base) {
   }
 }
 
+void CheckFltDotProduct(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
+  if (!FLAGS_base.empty() && FLAGS_base != base) return;
+  LOG(INFO) << "Testing " << test << " against " << base;
+  for (int d = FLAGS_dmin; d <= FLAGS_dmax; ++d) {
+    if (d % 8 != 0) continue;
+    VLOG(1) << "Testing " << d;
+    FltKernelComparator matmul(library, "MatMul", test, base);
+    matmul.AddInput("a", {1, d}, FLAGS_minmat, 100.0);
+    matmul.AddInput("b", {d, 1}, FLAGS_minmat, 100.0);
+    matmul.AddOutput("c", {1,1}, FLAGS_matmul_accuracy);
+    CheckTest(matmul.Check(100));
+  }
+}
+
 void CheckFltFunc(const string &func,
                   const string &test,
                   const string &base,
@@ -349,17 +365,22 @@ int main(int argc, char *argv[]) {
      .Input(0, DT_FLOAT, 1)
      .Output(0, DT_INT32);
 
-  // Test GenFltVecMatMul against itself to test the kernel comparator.
-  CheckFltMatMul("GenFltVecMatMul", "GenFltVecMatMul");
+  if (FLAGS_test_baseline) {
+    // Test GenFltVecMatMul against itself to test the kernel comparator.
+    CheckFltMatMul("GenFltVecMatMul", "GenFltVecMatMul");
 
-  // Test baselines against each other.
-  CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul1");
-  CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul2");
+    // Test baselines against each other.
+    CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul1");
+    CheckFltMatMul("BaselineMatMatMul", "BaselineMatMatMul2");
+  }
 
   // Test GenFltVecMatMul against baseline.
   CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul");
-  CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul1");
-  CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul2");
+  CheckFltMatMatMul("GenFltMatMatMul", "BaselineMatMatMul");
+  if (FLAGS_test_baseline) {
+    CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul1");
+    CheckFltMatMul("GenFltVecMatMul", "BaselineMatMatMul2");
+  }
 
   // Test expression kernels.
   CheckFltBinOp("Add", "AddExpr", "GenFltAdd");
@@ -402,16 +423,25 @@ int main(int argc, char *argv[]) {
     CheckFltMatMulAddRelu("AVXFltVecMatMulAddReluH", "GenFltVecMatMulAddRelu");
 
     // Compare AVX float matrix multiplication to baseline.
-    CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul");
-    CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul1");
-    CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul2");
+    if (FLAGS_test_baseline) {
+      CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul");
+      CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul1");
+      CheckFltMatMul("AVXFltVecMatMulV", "BaselineMatMatMul2");
+    }
 
-    CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul");
-    CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul1");
-    CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul2");
+    if (FLAGS_test_baseline) {
+      CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul");
+      CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul1");
+      CheckFltMatMul("AVXFltVecMatMulH", "BaselineMatMatMul2");
+    } else {
+      CheckFltMatMul("AVXFltVecMatMulH", "GenFltVecMatMul");
+    }
 
     // Compare AVX matrix-matrix multiplication.
     CheckFltMatMatMul("AVXFltMatMatMul", "GenFltMatMatMul");
+
+    // Compare AVX dot product.
+    CheckFltDotProduct("AVXFltDotProduct", "GenFltMatMatMul");
 
     // Test AVX math functions.
     CheckFltFunc("Exp", "AVXFltExp", "GenFltExp", 8);
@@ -465,7 +495,7 @@ int main(int argc, char *argv[]) {
     CheckFltFunc("Sigmoid", "CUDASigmoid", "GenFltSigmoid");
     CheckFltFunc("Tanh", "CUDATanh", "GenFltTanh");
 
-    CheckFltFunc("Negate", "CUDANegate", "NegateExpr");
+    CheckFltFunc("Neg", "CUDANeg", "NegExpr");
     CheckFltFunc("Abs", "CUDAAbs", "AbsExpr");
     CheckFltFunc("Relu", "CUDARelu", "ReluExpr");
     CheckFltFunc("Reciprocal", "CUDAReciprocal", "ReciprocalExpr");

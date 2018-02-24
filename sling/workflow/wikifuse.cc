@@ -19,7 +19,7 @@ class WikiIdMapper : public Processor {
     CHECK(output_ != nullptr) << "Output channel missing";
 
     // Initialize commons.
-    n_wikipedia_ = commons_.Lookup("/w/wikipedia");
+    n_wikipedia_ = commons_.Lookup("/w/item/wikipedia");
     n_language_ = commons_.Lookup("/lang/" + FLAGS_language);
     commons_.Freeze();
 
@@ -89,9 +89,8 @@ int main(int argc, char *argv[]) {
 
   // Run.
   LOG(INFO) << "Run workflow";
-  wf.Run();
+  wf.Start();
   while (!wf.Wait(15000)) wf.DumpCounters();
-
   wf.Wait();
 
   LOG(INFO) << "Done workflow";

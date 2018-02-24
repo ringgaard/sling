@@ -142,7 +142,7 @@ void InitExpression(const Step *step, Express *expr, bool expand) {
 
   // Mark constant inputs.
   for (int i = 0; i < step->indegree(); ++i) {
-    if (step->input(i)->IsConstant() && step->input(i)->elements() == 1) {
+    if (step->input(i)->constant() && step->input(i)->elements() == 1) {
       expr->Variable(Express::INPUT, i)->type = Express::CONST;
     }
   }
@@ -161,7 +161,7 @@ struct Expression {
     DCHECK_GE(step->outdegree(), 1);
     int elements = output->elements();
     for (auto *input : step->inputs()) {
-      if (input->IsConstant() && input->elements() == 1) continue;
+      if (input->constant() && input->elements() == 1) continue;
       int common = output->shape().CommonSize(input->shape());
       if (common < elements) elements = common;
     }
@@ -242,11 +242,11 @@ class AddNegToSubTransformer : public Transformer {
  public:
   bool Transform(Flow *flow) override {
     int updates = 0;
-    for (Flow::Operation *op : flow->Find("Negate|1:Add")) {
+    for (Flow::Operation *op : flow->Find("Neg|1:Add")) {
       Flow::Operation *add = op;
-      Flow::Operation *negate = add->inputs[1]->producer;
-      if (negate->outputs[0]->consumers.size() == 1) {
-        flow->Eliminate(negate);
+      Flow::Operation *neg = add->inputs[1]->producer;
+      if (neg->outputs[0]->consumers.size() == 1) {
+        flow->Eliminate(neg);
         add->type = "Sub";
         updates++;
       }
@@ -364,7 +364,7 @@ class ExpressionTransformer : public Transformer {
         // Map input from second op to input from first op.
         mapping[vars2[v]] = vars1[v];
       } else if (first->IsOutput(v)) {
-        if (v->consumers.size() == 1 && !v->out) {
+        if (v->consumers.size() == 1 && !v->out()) {
           // Second op is the only consumer of the output from the first op,
           // so the input can be turned into a temporary variable.
           int id = vars1[v]->id;
@@ -539,7 +539,7 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("TanhExpr", "Tanh", 1));
   library->Register(new Calculate("Calculate", "Calculate"));
 
-  library->Register(new Calculate("NegateExpr", "Negate", 1));
+  library->Register(new Calculate("NegExpr", "Neg", 1));
   library->Register(new Calculate("AbsExpr", "Abs", 1));
   library->Register(new Calculate("ReluExpr", "Relu", 1));
   library->Register(new Calculate("SoftsignExpr", "Softsign", 1));

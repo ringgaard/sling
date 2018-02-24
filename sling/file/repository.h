@@ -221,10 +221,10 @@ template<class OBJ> class RepositoryMap : public RepositoryIndex<uint64, OBJ> {
   using RepositoryIndex<uint64, OBJ>::Init;
 
   // Initialize buckets and items for map.
-  RepositoryMap(const Repository &repository, const string &name) {
+  void Init(const Repository &repository, const string &name) {
     string buckets = name + "Buckets";
     string items = name + "Items";
-    if (Init(repository, buckets, items, true)) {
+    if (RepositoryIndex<uint64, OBJ>::Init(repository, buckets, items, true)) {
       num_buckets_ = repository.GetBlockSize(buckets) / sizeof(uint64) - 1;
     } else {
       num_buckets_ = 0;
@@ -237,7 +237,7 @@ template<class OBJ> class RepositoryMap : public RepositoryIndex<uint64, OBJ> {
  private:
   // Number of buckets. It is assumed that the bucket block contains an extra
   // entry for marking the end of the table.
-  int num_buckets_;
+  int num_buckets_ = 0;
 };
 
 // Base class for all objects in the repository. These objects have customized

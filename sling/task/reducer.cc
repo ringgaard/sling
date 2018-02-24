@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "sling/task/reducer.h"
 
 namespace sling {
@@ -18,6 +32,8 @@ void Reducer::Start(Task *task) {
 
 void Reducer::Receive(Channel *channel, Message *message) {
   int shard = channel->consumer().shard().part();
+  DCHECK_GE(shard, 0);
+  DCHECK_LT(shard, shards_.size());
   Shard *s = shards_[shard];
 
   MutexLock lock(&s->mu);
@@ -48,6 +64,8 @@ void Reducer::Done(Task *task) {
 }
 
 void Reducer::Output(int shard, Message *message) {
+  DCHECK_GE(shard, 0);
+  DCHECK_LT(shard, outputs_.size());
   outputs_[shard % outputs_.size()]->Send(message);
 }
 

@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
     }
     LOG(INFO) << noops << " noops";
 
-    int consts = network.constants().size();
+    int globs = network.globals().size();
     int params = 0;
     int shared = 0;
     for (auto *t : network.parameters()) {
@@ -250,7 +250,7 @@ int main(int argc, char *argv[]) {
         params++;
       }
     }
-    LOG(INFO) << consts << " constants";
+    LOG(INFO) << globs << " globals";
     LOG(INFO) << params << " parameters";
     LOG(INFO) << shared << " shared";
     LOG(INFO) << distil->instance_size() << " bytes instance";

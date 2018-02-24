@@ -17,17 +17,54 @@
 namespace sling {
 namespace myelin {
 
+Scope::Scope(Scope *parent, const string &name) : parent_(parent) {
+  if (parent == nullptr) {
+    // Top-level scope.
+    root_ = current_ = this;
+    name_ = name;
+  } else {
+    // Inner scope.
+    root_ = parent_->root_;
+    CHECK(root_->current_ == parent_);
+    root_->current_ = current_ = this;
+    name_ = parent_->name_ + "/" + name;
+  }
+}
+
+Scope::~Scope() {
+  CHECK(root_->current_ == this);
+  root_->current_ = parent_;
+}
+
+string Scope::OpName(const string &op) {
+  string name = current_->name_;
+  name.push_back('/');
+  name.append(op);
+  int num = opnum_[op]++;
+  if (num > 0) {
+    name.push_back('_');
+    name.append(std::to_string(num));
+  }
+  return name;
+}
+
 Flow::Variable *Builder::Var(const string &name, Type type,
                              const Shape &shape) {
-  return flow_->AddVariable(name, type, shape);
+  return flow_->AddVariable(func_->name + "/" + name, type, shape);
 }
 
 Flow::Variable *Builder::Op(const string &op,
                             const std::vector<Flow::Variable *> &args) {
   string name = OpName(op);
-  Variable *result = Var(name + ":0", DT_INVALID, {0});
+  Variable *result = flow_->AddVariable(name + ":0", DT_INVALID, {0});
   flow_->AddOperation(func_, name, op, args, {result});
   return result;
+}
+
+void Builder::Op0(const string &op,
+                  const std::vector<Flow::Variable *> &args) {
+  string name = OpName(op);
+  flow_->AddOperation(func_, name, op, args, {});
 }
 
 Flow::Variable *Builder::Constant(const void *data, Type type,
@@ -40,16 +77,19 @@ Flow::Variable *Builder::Constant(const void *data, Type type,
   return var;
 }
 
-string Builder::OpName(const string &op) {
-  string name = func_->name;
-  name.push_back('/');
-  name.append(op);
-  int num = opnum_[op]++;
-  if (num > 0) {
-    name.push_back('_');
-    name.append(std::to_string(num));
-  }
-  return name;
+Flow::Variable *Builder::Instance(Function *func) {
+  Variable *instance = Var(func->name, DT_RESOURCE, {});
+  instance->ref = true;
+  return instance;
+}
+
+Flow::Variable *Builder::Ref(Variable *instance, Variable *external) {
+  Variable *ref = Op("Reference", {instance});
+  ref->type = external->type;
+  ref->shape = external->shape;
+  ref->ref = true;
+  ref->producer->SetAttr("var", external->name);
+  return ref;
 }
 
 }  // namespace myelin

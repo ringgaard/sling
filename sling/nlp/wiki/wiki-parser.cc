@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "sling/nlp/wiki/wiki-parser.h"
 
 #include <iostream>
@@ -22,7 +36,7 @@ namespace {
 static const char *node_names[] = {
   "DOCUMENT", "ARG", "ATTR",
   "TEXT", "FONT", "TEMPLATE", "LINK", "IMAGE", "CATEGORY", "URL",
-  "COMMENT", "TAG", "BTAG", "ETAG", "MATH",
+  "COMMENT", "TAG", "BTAG", "ETAG", "MATH", "GALLERY",
   "HEADING", "INDENT", "UL", "OL", "HR", "TERM", "SWITCH",
   "TABLE", "CAPTION", "ROW", "HEADER", "CELL", "BREAK",
 };
@@ -170,7 +184,10 @@ void WikiParser::ParseUntil(char stop) {
     switch (*ptr_) {
       case '\n': ParseNewLine(); break;
       case '\'': ParseFont(); break;
-      case '<': ParseTag(); break;
+      case '<':
+        ParseTag();
+        if (Inside(GALLERY)) ParseGallery();
+        break;
 
       case '!':
         if (Inside(TABLE, TEMPLATE) && Matches("!!")) {
@@ -260,6 +277,18 @@ void WikiParser::ParseNewLine() {
         break;
       }
     }
+  }
+
+  // Parse image link at begining of line inside gallery tag.
+  if (Inside(LINK, GALLERY)) {
+    UnwindUntil(LINK);
+    ParseGallery();
+    return;
+  }
+  if (Inside(IMAGE, GALLERY)) {
+    UnwindUntil(IMAGE);
+    ParseGallery();
+    return;
   }
 
   // Check for elements that can start line.
@@ -396,7 +425,7 @@ void WikiParser::ParseArgument() {
   const char *name = ptr_;
   const char *p = name;
   while (*p != 0 && *p != ' ' && *p != '\n' &&
-         *p != '=' && *p != '|' && *p != '}') {
+         *p != '=' && *p != '|' && *p != '}' && *p != '{') {
     p++;
   }
   if (*p == '=' || *p == ' ') {
@@ -438,17 +467,7 @@ void WikiParser::ParseLinkEnd() {
   if (node != -1) {
     Node &n = nodes_[node];
     n.end = ptr_;
-
-    // Check for special links.
-    int colon = n.name().find(':');
-    if (colon != -1) {
-      string prefix(n.name_begin, colon);
-      auto f = link_prefix.find(prefix);
-      if (f != link_prefix.end()) {
-        n.type = f->second;
-        n.name_begin += colon + 1;
-      }
-    }
+    n.CheckSpecialLink();
   }
   txt_ = ptr_;
 }
@@ -479,7 +498,6 @@ void WikiParser::ParseUrl() {
 }
 
 void WikiParser::ParseTag() {
-  // TODO: handle <gallery> tags.
   EndText();
   if (Matches("<!--")) {
     int node = Add(COMMENT);
@@ -501,20 +519,36 @@ void WikiParser::ParseTag() {
     if (*ptr_ != 0) ptr_ += 7;
     nodes_[node].end = ptr_;
     txt_ = ptr_;
+  } else if (Matches("</gallery>")) {
+    ptr_ += 10;
+    if (Inside(GALLERY)) UnwindUntil(GALLERY);
   } else {
+    // Parse '<' (BTAG) or '</' (ETAG).
+    const char *p = ptr_;
     Type type = BTAG;
-    int node = Push(type);
-    ptr_ += 1;
-    SkipWhitespace();
-    if (*ptr_ == '/') {
+    p += 1;
+    if (*p == '/') {
       type = ETAG;
-      ptr_++;
+      p++;
     }
-    SkipWhitespace();
-    const char *tagname = ptr_;
-    while (IsNameChar(*ptr_)) ptr_++;
-    SetName(node, tagname, ptr_);
+
+    // Parse tag name.
+    const char *tagname = p;
+    while (IsNameChar(*p)) p++;
+    if (p == tagname) {
+      ptr_++;
+      return;
+    }
+
+    // Create tag node.
+    int node = Push(type);
+    SetName(node, tagname, p);
+    ptr_ = p;
+
+    // Parse attributes.
     ParseAttributes("/>");
+
+    // Parse end of tag '>' (ETAG) or '/>' (TAG).
     if (*ptr_ == '/') {
       type = TAG;
       ptr_++;
@@ -525,8 +559,30 @@ void WikiParser::ParseTag() {
 
     nodes_[node].end = ptr_;
     nodes_[node].type = type;
-    UnwindUntil(type);
+
+    if (nodes_[node].name() == "gallery") {
+      // The gallery tag encloses lines of image links.
+      nodes_[node].type = GALLERY;
+      SkipWhitespace();
+      if (*ptr_ == '\n') {
+        ptr_++;
+        SkipWhitespace();
+      }
+      txt_ = ptr_;
+    } else {
+      UnwindUntil(type);
+    }
   }
+}
+
+void WikiParser::ParseGallery() {
+  // Parse link name at the start of a gallery line.
+  int node = Push(LINK);
+  const char *name = ptr_;
+  while (*ptr_ != 0 && *ptr_ != '|' && *ptr_ != '\n')  ptr_++;
+  SetName(node, name, ptr_);
+  txt_ = ptr_;
+  nodes_[node].CheckSpecialLink();
 }
 
 void WikiParser::ParseHeadingBegin() {
@@ -755,6 +811,7 @@ void WikiParser::Extract(int index) {
     case BTAG: break;
     case ETAG: break;
     case MATH: break;
+    case GALLERY: ExtractChildren(index); break;
     case HEADING: ExtractHeading(index); break;
     case INDENT: break;
     case UL: ExtractListItem(index); break;
@@ -887,6 +944,7 @@ void WikiParser::ExtractChildren(int index) {
 
       case ETAG:
         if (node.name() == "ref") in_ref = false;
+        Append(" ");
         break;
 
       default: ;
@@ -986,7 +1044,7 @@ int WikiParser::Push(Type type, int param) {
 }
 
 int WikiParser::Pop() {
-  CHECK(!stack_.empty());
+  CHECK(!stack_.empty()) << ptr_;
   int top = stack_.back();
   nodes_[top].end = ptr_;
   stack_.pop_back();
@@ -1046,6 +1104,18 @@ void WikiParser::Append(const char *begin, const char *end) {
         line_breaks_ = 0;
       }
       text_.push_back(*p);
+    }
+  }
+}
+
+void WikiParser::Node::CheckSpecialLink() {
+  int colon = name().find(':');
+  if (colon != -1) {
+    string prefix(name_begin, colon);
+    auto f = link_prefix.find(prefix);
+    if (f != link_prefix.end()) {
+      type = f->second;
+      name_begin += colon + 1;
     }
   }
 }

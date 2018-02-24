@@ -1,5 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 
+load("//tools:embed.bzl", "embed_data")
+
 cc_library(
   name = "message",
   srcs = ["message.cc"],
@@ -43,6 +45,33 @@ cc_library(
     "//sling/string:numbers",
     "//sling/util:mutex",
     "//sling/util:threadpool",
+  ],
+)
+
+embed_data(
+  name = "app",
+  srcs = [
+    "app/appicon.ico",
+    "app/index.html",
+    "app/dashboard.css",
+    "app/dashboard.js",
+    "app/digital-7.mono.ttf",
+  ],
+)
+
+cc_library(
+  name = "dashboard",
+  srcs = ["dashboard.cc"],
+  hdrs = ["dashboard.h"],
+  deps = [
+    ":app",
+    ":job",
+    "//sling/base",
+    "//sling/file",
+    "//sling/file:embed",
+    "//sling/http:http-server",
+    "//sling/http:static-content",
+    "//sling/util:mutex",
   ],
 )
 
@@ -237,8 +266,8 @@ cc_library(
 )
 
 cc_library(
-  name = "frame-store-builder",
-  srcs = ["frame-store-builder.cc"],
+  name = "frame-store-writer",
+  srcs = ["frame-store-writer.cc"],
   deps = [
     ":frames",
     ":task",
@@ -248,6 +277,16 @@ cc_library(
     "//sling/util:mutex",
   ],
   alwayslink = 1,
+)
+
+cc_library(
+  name = "documents",
+  srcs = ["documents.cc"],
+  hdrs = ["documents.h"],
+  deps = [
+    ":frames",
+    "//sling/nlp/document",
+  ],
 )
 
 cc_library(

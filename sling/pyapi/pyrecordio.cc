@@ -35,12 +35,13 @@ PyMethodDef PyRecordReader::methods[] = {
   {"read", (PyCFunction) &PyRecordReader::Read, METH_VARARGS, ""},
   {"tell", (PyCFunction) &PyRecordReader::Tell, METH_NOARGS, ""},
   {"seek", (PyCFunction) &PyRecordReader::Seek, METH_O, ""},
+  {"rewind", (PyCFunction) &PyRecordReader::Rewind, METH_NOARGS, ""},
 
   {nullptr}
 };
 
 void PyRecordReader::Define(PyObject *module) {
-  InitType(&type, "sling.RecordReader", sizeof(PyRecordReader));
+  InitType(&type, "sling.RecordReader", sizeof(PyRecordReader), true);
 
   type.tp_init = reinterpret_cast<initproc>(&PyRecordReader::Init);
   type.tp_dealloc = reinterpret_cast<destructor>(&PyRecordReader::Dealloc);
@@ -70,6 +71,7 @@ int PyRecordReader::Init(PyObject *args, PyObject *kwds) {
 
 void PyRecordReader::Dealloc() {
   delete reader;
+  Free();
 }
 
 PyObject *PyRecordReader::Close() {
@@ -116,6 +118,12 @@ PyObject *PyRecordReader::Seek(PyObject *arg) {
   Py_RETURN_NONE;
 }
 
+PyObject *PyRecordReader::Rewind() {
+  // Seek to first record.
+  if (!CheckIO(reader->Rewind())) return nullptr;
+  Py_RETURN_NONE;
+}
+
 PyObject *PyRecordReader::Next() {
   // Check if there are more records.
   if (reader->Done()) {
@@ -140,7 +148,7 @@ PyMethodDef PyRecordWriter::methods[] = {
 };
 
 void PyRecordWriter::Define(PyObject *module) {
-  InitType(&type, "sling.RecordWriter", sizeof(PyRecordWriter));
+  InitType(&type, "sling.RecordWriter", sizeof(PyRecordWriter), true);
 
   type.tp_init = reinterpret_cast<initproc>(&PyRecordWriter::Init);
   type.tp_dealloc = reinterpret_cast<destructor>(&PyRecordWriter::Dealloc);
@@ -172,6 +180,7 @@ int PyRecordWriter::Init(PyObject *args, PyObject *kwds) {
 
 void PyRecordWriter::Dealloc() {
   delete writer;
+  Free();
 }
 
 PyObject *PyRecordWriter::Close() {

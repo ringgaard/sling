@@ -254,12 +254,6 @@ size_t Repository::GetBlockSize(const string &name) const {
   return 0;
 }
 
-// Comparator for sorting map items in bucket order.
-static bool CompareBucket(const RepositoryMapItem *a,
-                          const RepositoryMapItem *b) {
-  return a->bucket() < b->bucket();
-}
-
 void Repository::WriteMap(const string &name,
                           std::vector<RepositoryMapItem *> *items,
                           int num_buckets) {
@@ -267,7 +261,10 @@ void Repository::WriteMap(const string &name,
   for (RepositoryMapItem *item : *items) item->ComputeBucket(num_buckets);
 
   // Sort items in bucket order.
-  std::sort(items->begin(), items->end(), CompareBucket);
+  std::sort(items->begin(), items->end(),
+      [](const RepositoryMapItem *a, const RepositoryMapItem *b) {
+        return a->bucket() < b->bucket();
+      });
 
   // Create item block.
   File *data = AddBlock(name + "Items");

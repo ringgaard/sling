@@ -53,7 +53,7 @@ bool ElementwiseIndexGenerator::InitializeLocator(Tensor *var, Locator *loc) {
   // Determine iterator type for variable.
   if (var->elements() == 1) {
     // Variable only has one element; use a scalar/const iterator.
-    loc->iterator = NewIterator(var->IsConstant() ? CONST : SCALAR);
+    loc->iterator = NewIterator(var->constant() ? CONST : SCALAR);
   } else if (var->shape() == shape_) {
     // Variable has same shape as output; use simple iterator.
     loc->iterator = NewIterator(SIMPLE);
@@ -343,7 +343,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
         }
       case CONST: {
         // Scalar constant in code block, vectorized if needed.
-        DCHECK(loc->var->IsConstant());
+        DCHECK(loc->var->constant());
         int size = loc->var->element_size();
         int repeat = vecsize_ / size;
         DCHECK_EQ(repeat * size, vecsize_);
@@ -383,7 +383,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
 const void *ElementwiseIndexGenerator::data(Express::Var *var) {
   DCHECK_EQ(var->type, Express::CONST);
   Locator *loc = GetLocator(var);
-  DCHECK(loc->var->IsConstant());
+  DCHECK(loc->var->IsGlobal());
   return loc->var->data();
 }
 

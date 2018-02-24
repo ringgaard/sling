@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "sling/nlp/wiki/wikipedia-map.h"
 
 #include "sling/base/logging.h"
@@ -50,12 +64,19 @@ void WikipediaMap::LoadRedirects(Text filename) {
 
 Handle WikipediaMap::Resolve(Handle h) {
   // Recursively resolve redirects.
+  static const int MAX_REDIRECTS = 32;
   const FrameDatum *frame = store_.GetFrame(h);
-  for (;;) {
+  int num_redirects = 0;
+  while (true) {
     Handle redir = frame->get(n_redirect_link_);
     if (redir.IsNil()) break;
     if (redir == frame->self) break;
     frame = store_.GetFrame(redir);
+    if (++num_redirects > MAX_REDIRECTS) {
+      LOG(WARNING) << "Unresolved redirect from " << store_.DebugString(h)
+                   << " ending at " << store_.DebugString(redir);
+      return h;
+    }
   }
   return frame->self;
 }

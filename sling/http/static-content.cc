@@ -1,3 +1,17 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "sling/http/static-content.h"
 
 #include <string.h>
@@ -11,7 +25,7 @@
 
 // Use internal embedded file system for web content by default.
 DEFINE_string(webdir, "/intern", "Base directory for serving web contents");
-DEFINE_bool(nowebcache, false, "Disable caching of web content");
+DEFINE_bool(webcache, true, "Enable caching of web content");
 
 namespace sling {
 
@@ -22,17 +36,18 @@ struct MIMEMapping {
 };
 
 static const MIMEMapping mimetypes[] = {
-  {"html", "text/html"},
-  {"htm", "text/html"},
-  {"xml", "text/xml"},
+  {"html", "text/html; charset=utf-8"},
+  {"htm", "text/html; charset=utf-8"},
+  {"xml", "text/xml; charset=utf-8"},
   {"jpeg", "image/jpeg"},
   {"jpg", "image/jpeg"},
   {"gif", "image/gif"},
   {"png", "image/png"},
   {"ico", "image/x-icon"},
-  {"css", "text/css"},
-  {"svg", "image/svg+xml"},
-  {"js", "text/javascript"},
+  {"ttf", "font/ttf"},
+  {"css", "text/css; charset=utf-8"},
+  {"svg", "image/svg+xml; charset=utf-8"},
+  {"js", "text/javascript; charset=utf-8"},
   {"zip", "application/zip"},
   {nullptr, nullptr},
 };
@@ -191,7 +206,9 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
 
   // Check if file has changed.
   const char *cached = request->Get("If-modified-since");
-  if (cached != nullptr) {
+  const char *control = request->Get("Cache-Control");
+  bool refresh = control != nullptr && strcmp(control, "maxage=0") == 0;
+  if (!refresh && cached) {
     if (ParseRFCTime(cached) == stat.mtime) {
       response->set_status(304);
       response->SetContentLength(0);
@@ -200,18 +217,18 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   }
 
   // Set content type from file extension.
-  const char *mimetype = GetMimeType(GetExtension(request->path()));
+  const char *mimetype = GetMimeType(GetExtension(filename.c_str()));
   if (mimetype != nullptr) {
     response->SetContentType(mimetype);
   }
 
-  // Set file modified time.
-  char datebuf[32];
-  response->Set("Last-Modified", RFCTime(stat.mtime, datebuf));
-
   // Do not cache content if requested.
-  if (FLAGS_nowebcache) {
+  if (!FLAGS_webcache) {
     response->Set("Cache-Control", "no-cache");
+  } else {
+    // Set file modified time.
+    char datebuf[32];
+    response->Set("Last-Modified", RFCTime(stat.mtime, datebuf));
   }
 
   // Do not return file content if only headers were requested.

@@ -120,7 +120,9 @@ bool Unicode::IsPunctuation(int c) {
     (1 << CHARCAT_CONNECTOR_PUNCTUATION) |
     (1 << CHARCAT_OTHER_PUNCTUATION) |
     (1 << CHARCAT_INITIAL_QUOTE_PUNCTUATION) |
-    (1 << CHARCAT_FINAL_QUOTE_PUNCTUATION);
+    (1 << CHARCAT_FINAL_QUOTE_PUNCTUATION) |
+    (1 << CHARCAT_MODIFIER_SYMBOL) |
+    (1 << CHARCAT_OTHER_SYMBOL);
 
   if (c & unicode_tab_mask) return false;
   int category = unicode_cat_tab[c] & CHARCAT_MASK;
@@ -423,6 +425,27 @@ void UTF8::ToTitleCase(const string &str, string *titlecased) {
     // Just copy string.
     titlecased->assign(str);
   }
+}
+
+bool UTF8::IsPunctuation(const char *s, int len) {
+  // Try fast check where all characters are below 128.
+  const char *end = s + len;
+  while (s < end) {
+    uint8 c = *reinterpret_cast<const uint8 *>(s);
+    if (c & 0x80) break;
+    if (!Unicode::IsPunctuation(c)) return false;
+    s++;
+  }
+
+  // Handle any remaining part of the string which can contain multi-byte
+  // characters.
+  while (s < end) {
+    int code = Unicode::Normalize(Decode(s));
+    if (!Unicode::IsPunctuation(code)) return false;
+    s = Next(s);
+  }
+
+  return true;
 }
 
 }  // namespace sling

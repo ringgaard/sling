@@ -855,7 +855,7 @@ class AVXFltMatMatMul : public Kernel {
     __ vmovss(Operand(c), sum[0]);
     __ addq(c, Immediate(C->stride(c_col_dim)));
 
-    // Move to next column in B
+    // Move to next column in B.
     __ addq(b_row, Immediate(B->stride(b_col_dim)));
     __ cmpq(b_row, b_end);
     __ j(less, &l2);
@@ -873,6 +873,160 @@ class AVXFltMatMatMul : public Kernel {
 
   int64 Complexity(const Step *step) override {
     return step->input(0)->dim(0) * step->input(1)->elements() * 2;
+  }
+};
+
+// Float dot product for CPUs with AVX.
+class AVXFltDotProduct : public Kernel {
+ public:
+  // Maximum number of loop unrolls.
+  static const int kMaxUnrolls = 4;
+
+  // Maximum number of adder registers.
+  static const int kMaxAdders = 4;
+
+  string Name() override { return "AVXFltDotProduct"; }
+  string Operation() override { return "MatMul"; }
+
+  bool Supports(Step *step) override {
+    // Requires CPU with AVX support.
+    if (!CPU::Enabled(AVX)) return false;
+
+    // Two tensor inputs and one tensor output.
+    if (step->inputs().size() != 2) return false;
+    if (step->outputs().size() != 1) return false;
+    Tensor *a = step->input(0);
+    Tensor *b = step->input(1);
+    Tensor *c = step->output(0);
+    if (a->type() != DT_FLOAT) return false;
+    if (b->type() != DT_FLOAT) return false;
+    if (c->type() != DT_FLOAT) return false;
+    if (a->elements() != b->elements()) return false;
+    if (c->elements() != 1) return false;
+
+    // Size of be multiple of YMM register size.
+    if (a->elements() % 8  != 0) return false;
+
+    // Horizontal summation is not strict math compatible.
+    if (step->GetAttr("strict", false)) return false;
+
+    return true;
+  }
+
+  int64 Complexity(const Step *step) override {
+    return step->output(0)->elements() * 2;
+  }
+
+  void Adjust(Step *step) override {
+    // Get input and output tensors.
+    Tensor *a = step->input(0);
+    Tensor *b = step->input(1);
+
+    // Align to one ymm register (256 bits, 32 bytes).
+    int byte_alignment = 256 / 8;
+    a->SetMiniumAlignment(byte_alignment);
+    b->SetMiniumAlignment(byte_alignment);
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    Registers &rr = masm->rr();
+    SIMDRegisters &mm = masm->mm();
+
+    // Get input and output tensors.
+    Tensor *a = step->input(0);
+    Tensor *b = step->input(1);
+    Tensor *c = step->output(0);
+
+    // Get number of elements.
+    int n = a->elements();
+
+    // Compute the number of unrolls and adders.
+    int unrolls = 0;
+    for (int i = 1; i <= kMaxUnrolls; ++i) {
+      int batch_size = i * 8;
+      if (n >= batch_size && n % batch_size == 0) unrolls = i;
+    }
+    int adders = unrolls;
+    if (adders < 1) adders = 1;
+    if (adders > kMaxAdders) adders = kMaxAdders;
+    string variant = "U" + std::to_string(unrolls);
+    variant += "A" + std::to_string(adders);
+    step->set_variant(variant);
+
+    // Allocate general registers.
+    Register idx = rr.alloc();
+    Register aptr = rr.alloc();
+    Register bptr = rr.alloc();
+    Register cptr = rr.alloc();
+
+    // Allocate SIMD registers.
+    std::vector<YMMRegister> elem;
+    for (int i = 0; i < std::max(unrolls, 1); ++i) {
+      elem.push_back(mm.allocy());
+    }
+    std::vector<YMMRegister> sum;
+    for (int i = 0; i < adders; ++i) {
+      sum.push_back(mm.allocy());
+    }
+    YMMRegister acc = mm.allocy();
+
+    // Load tensor locations.
+    __ LoadTensorAddress(aptr, a);
+    __ LoadTensorAddress(bptr, b);
+    __ xorq(idx, idx);
+    for (int i = 0; i < adders; ++i) {
+      __ vxorps(sum[i], sum[i], sum[i]);
+    }
+
+    // Outer loop over elements.
+    Label l;
+    __ LoopStart(&l);
+
+    // Multiply and sum next batch.
+    for (int i = 0; i < unrolls; ++i) {
+      // Load a[idx:idx+8].
+      int disp = 8 * i * sizeof(float);
+      __ vmovaps(elem[i], Operand(aptr, idx, times_4, disp));
+    }
+    for (int i = 0; i < unrolls; ++i) {
+      // Multiply a[idx:idx+8] with b[idx:idx+8] and add to sum.
+      int disp = 8 * i * sizeof(float);
+      if (masm->Enabled(FMA3)) {
+        __ vfmadd231ps(sum[i % adders], elem[i],
+                       Operand(bptr, idx, times_4, disp));
+      } else {
+        __ vmulps(elem[i], elem[i], Operand(bptr, idx, times_4, disp));
+        __ vaddps(sum[i % adders], sum[i % adders], elem[i]);
+      }
+    }
+
+    // Move to next batch.
+    if (n > 8 * unrolls) {
+      __ addq(idx, Immediate(8 * unrolls));
+      __ cmpq(idx, Immediate(n));
+      __ j(less, &l);
+    }
+
+    // Sum adders in sum[0].
+    if (adders == 4) {
+      __ vaddps(sum[0], sum[0], sum[2]);
+      __ vaddps(sum[1], sum[1], sum[3]);
+      __ vaddps(sum[0], sum[0], sum[1]);
+    } else {
+      for (int i = 1; i < adders; ++i) {
+        __ vaddps(sum[0], sum[0], sum[i]);
+      }
+    }
+
+    // Add elements in sum[0] horizontally.
+    __ vperm2f128(acc, sum[0], sum[0], 1);
+    __ vhaddps(sum[0], sum[0], acc);
+    __ vhaddps(sum[0], sum[0], sum[0]);
+    __ vhaddps(sum[0], sum[0], sum[0]);
+
+    // Save result to c.
+    __ LoadTensorAddress(cptr, c);
+    __ vmovss(Operand(cptr), sum[0]);
   }
 };
 
@@ -1182,6 +1336,14 @@ void RegisterAVXMatMul(Library *library) {
   // Output    : y: int16[1,m]
   // Requires  : AVX2
   library->Register(new AVXIntVecMatMulAddReluH());
+
+  // Computes  : c = a * c
+  // Input     : a: float32[1,n]
+  //             b: float32[n,1]
+  // Output    : c: float32[1]
+  // Requires  : AVX
+  // Supports  : FMA3
+  library->Register(new AVXFltDotProduct());
 }
 
 }  // namespace myelin
