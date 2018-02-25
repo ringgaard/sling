@@ -1234,7 +1234,7 @@ void Flow::Eliminate(Operation *op) {
     }
 
     // Merge input and output variable names.
-    if (!(input->in() || input->out()) && (output->in() || output->out())) {
+    if (output->out()) {
       input->AddAlias(input->name);
       input->name = output->name;
     } else {

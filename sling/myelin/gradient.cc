@@ -42,7 +42,16 @@ Gradients::Gradients(Flow *flow,
     if (v->in()) dv->flags |= Flow::Variable::OUT;
     if (v->out()) dv->flags |= Flow::Variable::IN;
     dv->ref = v->ref;
-    adjoints_[v] = dv;
+    if (v->ref && v->producer != nullptr && !v->consumers.empty()) {
+      // For recurrences that are both produced and consumed by the function
+      // an additional accumulator is added to sum both contributions to the
+      // gradient.
+      auto *acc = Var("acc_" + basename(v->name), v->type, v->shape);
+      adjoints_[v] = acc;
+      terms_[acc] = dv;
+    } else {
+      adjoints_[v] = dv;
+    }
   }
 }
 
@@ -56,13 +65,21 @@ Flow::Variable *Gradients::GetReference(Flow::Variable *x) {
 }
 
 Flow::Function *Gradients::Finalize() {
-  // Bind terms to adjoints.
   for (auto &it : adjoints_) {
+    Flow::Variable *v = it.first;
     Flow::Variable *dv = it.second;
     Flow::Variable *terms = terms_[dv];
-    if (terms != nullptr) {;
-      string name = OpName("Identity");
-      flow()->AddOperation(func(), name, "Identity", {terms}, {dv});
+    if (terms != nullptr) {
+      if (v->learnable()) {
+        // Accumulate gradients for learnable variables.
+        CHECK(dv->consumers.empty());
+        AssignAdd(dv, terms);
+        dv->flags |= Flow::Variable::OUT;
+      } else {
+        // Bind terms to adjoint.
+        string name = OpName("Identity");
+        flow()->AddOperation(func(), name, "Identity", {terms}, {dv});
+      }
     }
   }
 

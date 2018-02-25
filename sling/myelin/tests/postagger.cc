@@ -12,6 +12,9 @@
 #include "sling/myelin/graph.h"
 #include "sling/myelin/kernel/tensorflow.h"
 
+DEFINE_bool(analyze, false, "Analyze flow");
+DEFINE_bool(dump, false, "Dump flow");
+
 using namespace sling;
 using namespace sling::myelin;
 
@@ -34,10 +37,14 @@ int main(int argc, char *argv[]) {
 
   /*Flow::Function *dtagger =*/ Gradient(&flow, tf.func(), library);
 
-  //flow.Analyze(library);
+  if (FLAGS_analyze) {
+    flow.Analyze(library);
+  }
 
   // Dump flow.
-  std::cout << flow.ToString();
+  if (FLAGS_dump) {
+    std::cout << flow.ToString();
+  }
 
   // Output DOT graph. The file can be converted to SVG using GraphWiz dot:
   // dot /tmp/model.dot -Tsvg > model.svg

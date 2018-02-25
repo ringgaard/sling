@@ -1292,7 +1292,7 @@ class ScatterAdd : public Kernel {
   bool scale_;  // scale input
 };
 
-// Fold scaling into update ops.
+// Fold scaling or outer product into update ops.
 class ScaledUpdateTransformer : public Transformer {
  public:
   bool Transform(Flow *flow) override {
@@ -1312,6 +1312,23 @@ class ScaledUpdateTransformer : public Transformer {
         flow->Fuse(scatter, mul, "ScatterMulAdd");
         updates++;
       }
+    }
+    for (Flow::Operation *op : flow->Find("MatMul|1:AssignAdd")) {
+      Flow::Operation *assign = op;
+      Flow::Operation *matmul = assign->inputs[1]->producer;
+      if (matmul->outputs[0]->consumers.size() != 1) continue;
+      if (matmul->inputs.size() != 2) continue;
+
+      // Only fuse if matrix multiplication is an outer product.
+      Shape a = matmul->inputs[0]->shape;
+      Shape b = matmul->inputs[1]->shape;
+      if (a.rank() != 2 || b.rank() != 2) continue;
+      if (matmul->GetAttr("transpose_a", false)) a = a.transpose();
+      if (matmul->GetAttr("transpose_b", false)) b = b.transpose();
+      if (a.dim(1) != 1 || b.dim(0) != 1) continue;
+
+      flow->Fuse(assign, matmul, "AssignAddOuter");
+      updates++;
     }
     return updates > 0;
   }

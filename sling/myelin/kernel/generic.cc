@@ -170,8 +170,8 @@ class IdentityTransformer : public Transformer {
   }
 };
 
-// Combine ops.
-class CombineTransformer : public Transformer {
+// Combine matrix multiplication with add and relu.
+class MatMulTransformer : public Transformer {
  public:
   bool Transform(Flow *flow) override {
     int combines = 0;
@@ -201,6 +201,8 @@ class CombineTransformer : public Transformer {
         Flow::Variable *input = op->inputs[0];
         if (input->rank() == 2 && input->dim(0) > 1) continue;
       }
+      if (op->GetAttr("transpose_a", false)) continue;
+      if (op->GetAttr("transpose_b", false)) continue;
 
       flow->Fuse(op, var->consumers[0], combined);
       return true;
@@ -508,7 +510,7 @@ void RegisterGenericLibrary(Library *library) {
   // Register transformations.
   library->RegisterTransformer(new RenameTransformer());
   library->RegisterTransformer(new IdentityTransformer());
-  library->RegisterTransformer(new CombineTransformer());
+  library->RegisterTransformer(new MatMulTransformer());
   library->RegisterTransformer(new FlattenConcatTransformer());
 
   // Register type inference.
