@@ -172,6 +172,15 @@ void identity_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->d(y));
 }
 
+// v = gather(M, f)
+// dM = Scatter(v, f)
+void gather_grad(Flow::Operation *op, Gradients *g) {
+  auto M = op->inputs[0];
+  auto f = op->inputs[1];
+  auto v = op->outputs[0];
+  g->add(M, g->Scatter(g->d(v), g->v(f), M->dim(0)));
+}
+
 } // namespace
 
 void RegisterStandardGradients(Transformations *library) {
@@ -191,6 +200,7 @@ void RegisterStandardGradients(Transformations *library) {
   library->RegisterGradient("Tanh", tanh_grad);
   library->RegisterGradient("Relu", relu_grad);
   library->RegisterGradient("Identity", identity_grad);
+  library->RegisterGradient("Gather", gather_grad);
 }
 
 }  // namespace myelin

@@ -1305,6 +1305,7 @@ class ScaledUpdateTransformer : public Transformer {
         updates++;
       }
     }
+
     for (Flow::Operation *op : flow->Find("Mul|2:ScatterAdd")) {
       Flow::Operation *scatter = op;
       Flow::Operation *mul = scatter->inputs[2]->producer;
@@ -1313,6 +1314,7 @@ class ScaledUpdateTransformer : public Transformer {
         updates++;
       }
     }
+
     for (Flow::Operation *op : flow->Find("MatMul|1:AssignAdd")) {
       Flow::Operation *assign = op;
       Flow::Operation *matmul = assign->inputs[1]->producer;
@@ -1330,6 +1332,16 @@ class ScaledUpdateTransformer : public Transformer {
       flow->Fuse(assign, matmul, "AssignAddOuter");
       updates++;
     }
+
+    for (Flow::Operation *op : flow->Find("Scatter|1:AssignAdd")) {
+      Flow::Operation *assign = op;
+      Flow::Operation *scatter = assign->inputs[1]->producer;
+      if (scatter->outputs[0]->consumers.size() == 1) {
+        flow->Fuse(scatter, assign, "ScatterAdd");
+        updates++;
+      }
+    }
+
     return updates > 0;
   }
 };

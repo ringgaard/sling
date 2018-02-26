@@ -38,6 +38,7 @@ Gradients::Gradients(Flow *flow,
   // Create adjoints.
   for (Flow::Variable *v : vars) {
     if (v->constant()) continue;
+    if (v->type != DT_FLOAT && v->type != DT_DOUBLE) continue;
     auto *dv = Var("d_" + basename(v->name), v->type, v->shape);
     if (v->in()) dv->flags |= Flow::Variable::OUT;
     if (v->out()) dv->flags |= Flow::Variable::IN;

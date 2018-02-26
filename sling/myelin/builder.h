@@ -77,6 +77,13 @@ class Builder : public Scope {
   // Add learnable parameter variable to flow.
   Variable *Weights(const string &name, Type type, const Shape &shape);
 
+  // Add input variable to flow.
+  Variable *Placeholder(const string &name, Type type, const Shape &shape) {
+    Variable *input = Var(name, type, shape);
+    input->flags |= Variable::IN;
+    return input;
+  }
+
   // Change name of variable. Returns the variable itself.
   Variable *Name(Variable *var, const string &name);
 
@@ -112,6 +119,9 @@ class Builder : public Scope {
 
   // Add instance reference to other function.
   Variable *Instance(Function *func);
+
+  // Add reference to variable in external instance.
+  Variable *Ref(Variable *instance, Variable *external);
 
   // Builder methods for common operations.
   Variable *Add(Variable *x, Variable *y) { return Op("Add", {x, y}); }
@@ -163,7 +173,9 @@ class Builder : public Scope {
     return Op("GatherMax", {M, f}, M->type, {f->dim(0)});
   }
 
-  Variable *Ref(Variable *instance, Variable *external);
+  Variable *Scatter(Variable *v, Variable *f, int size) {
+    return Op("Scatter", {v, f}, v->type, {size, v->dim(1)});
+  }
 
   void AssignAdd(Variable *var, Variable *value) {
     Op0("AssignAdd", {var, value});

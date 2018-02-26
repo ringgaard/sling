@@ -26,16 +26,22 @@ int main(int argc, char *argv[]) {
   RegisterTensorflowLibrary(&library);
 
   // Build flow.
+  int vocab = 50000;
+  int worddim = 64;
   Flow flow;
   Builder tf(&flow, "tagger");
-  auto *input = tf.Var("input", DT_FLOAT, {1, 64});
-  input->flags |= Flow::Variable::IN;
 
-  auto *hidden = tf.LSTMLayer(input, 128);
+  auto *word = tf.Placeholder("word", DT_INT32, {1, 1});
+  auto *embedding = tf.Weights("embedding", DT_FLOAT, {vocab, worddim});
+  auto *features = tf.Gather(embedding, word);
+
+  auto *hidden = tf.LSTMLayer(features, 128);
   auto *logits = tf.FFLayer(hidden, 43, true);
-  logits->flags |= Flow::Variable::OUT;
 
-  /*Flow::Function *dtagger =*/ Gradient(&flow, tf.func(), library);
+  Flow::Function *dtagger = Gradient(&flow, tf.func(), library);
+
+  LOG(INFO) << "logits: " << logits->name;
+  LOG(INFO) << "dtagger: " << dtagger->name;
 
   if (FLAGS_analyze) {
     flow.Analyze(library);
