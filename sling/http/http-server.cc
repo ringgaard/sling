@@ -180,7 +180,7 @@ char *HTTPBuffer::gets() {
   while (s < end) {
     switch (*s) {
       case '\n':
-        if (s[1] == ' ' || s[1] == '\t') {
+        if (s + 1 < end && (s[1] == ' ' || s[1] == '\t')) {
           // Replace HTTP header continuation with space.
           *s++ = ' ';
         } else {
