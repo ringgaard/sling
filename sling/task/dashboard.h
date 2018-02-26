@@ -33,7 +33,13 @@ namespace task {
 // Dashboard for monitoring jobs.
 class Dashboard : public Monitor {
  public:
-  enum Status {IDLE, MONITORED, FINAL, SYNCHED, TERMINAL};
+  enum Status {
+    IDLE,        // dashboard is idle when jobs are not being monitored
+    MONITORED,   // job status has been requested by client
+    FINAL,       // all jobs has completed
+    SYNCHED,     // final status has been sent to client
+    TERMINAL,    // dashboard ready for shutdown
+  };
 
   // List of counters.
   typedef std::vector<std::pair<string, int64>> CounterList;
