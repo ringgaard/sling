@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   Builder tf(&flow, "tagger");
 
   auto *word = tf.Placeholder("word", DT_INT32, {1, 1});
-  auto *embedding = tf.Weights("embedding", DT_FLOAT, {vocab, worddim});
+  auto *embedding = tf.Parameter("embedding", DT_FLOAT, {vocab, worddim});
   auto *features = tf.Gather(embedding, word);
 
   auto *hidden = tf.LSTMLayer(features, 128);

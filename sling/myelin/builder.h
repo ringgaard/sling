@@ -75,14 +75,10 @@ class Builder : public Scope {
   Variable *Var(const string &name, Type type, const Shape &shape);
 
   // Add learnable parameter variable to flow.
-  Variable *Weights(const string &name, Type type, const Shape &shape);
+  Variable *Parameter(const string &name, Type type, const Shape &shape);
 
-  // Add input variable to flow.
-  Variable *Placeholder(const string &name, Type type, const Shape &shape) {
-    Variable *input = Var(name, type, shape);
-    input->flags |= Variable::IN;
-    return input;
-  }
+  // Add input variable to function.
+  Variable *Placeholder(const string &name, Type type, const Shape &shape);
 
   // Change name of variable. Returns the variable itself.
   Variable *Name(Variable *var, const string &name);

@@ -173,7 +173,7 @@ void identity_grad(Flow::Operation *op, Gradients *g) {
 }
 
 // v = gather(M, f)
-// dM = Scatter(v, f)
+// dM = scatter(v, f)
 void gather_grad(Flow::Operation *op, Gradients *g) {
   auto M = op->inputs[0];
   auto f = op->inputs[1];

@@ -53,12 +53,20 @@ Flow::Variable *Builder::Var(const string &name, Type type,
   return flow_->AddVariable(func_->name + "/" + name, type, shape);
 }
 
-Flow::Variable *Builder::Weights(const string &name,
-                                 Type type,
-                                 const Shape &shape) {
-  Variable *weights = Var(name, type, shape);
-  weights->flags |= Variable::LEARNABLE;
-  return weights;
+Flow::Variable *Builder::Parameter(const string &name,
+                                   Type type,
+                                   const Shape &shape) {
+  Variable *var = Var(name, type, shape);
+  var->flags |= Variable::LEARNABLE;
+  return var;
+}
+
+Flow::Variable *Builder::Placeholder(const string &name, 
+                                     Type type, 
+                                     const Shape &shape) {
+  Variable *input = Var(name, type, shape);
+  input->flags |= Variable::IN;
+  return input;
 }
 
 Flow::Variable *Builder::Name(Variable *var, const string &name) {
@@ -154,14 +162,14 @@ Flow::Variable *Builder::FFLayers(Variable *input,
     int width = layers[l];
 
     // Add weight matrix.
-    auto *W = Weights("W" + std::to_string(l), type, {height, width});
+    auto *W = Parameter("W" + std::to_string(l), type, {height, width});
     v = MatMul(v, W);
     v->type = type;
     v->shape = {1, width};
 
     // Optionally add bias.
     if (bias) {
-      auto *b = Weights("b" + std::to_string(l), type, {1, width});
+      auto *b = Parameter("b" + std::to_string(l), type, {1, width});
       v = Add(v, b);
       v->type = type;
       v->shape = {1, width};
@@ -196,19 +204,19 @@ Flow::Variable *Builder::LSTMLayer(Variable *input, int size) {
   int input_dim = input->dim(1);
 
   // Define parameters.
-  auto *x2i = Weights("x2i", type, {input_dim, size});
-  auto *h2i = Weights("h2i", type, {size, size});
-  auto *c2i = Weights("c2i", type, {size, size});
-  auto *bi = Weights("bi", type, {1, size});
+  auto *x2i = Parameter("x2i", type, {input_dim, size});
+  auto *h2i = Parameter("h2i", type, {size, size});
+  auto *c2i = Parameter("c2i", type, {size, size});
+  auto *bi = Parameter("bi", type, {1, size});
 
-  auto *x2o = Weights("x2o", type, {input_dim, size});
-  auto *h2o = Weights("h2o", type, {size, size});
-  auto *c2o = Weights("c2o", type, {size, size});
-  auto *bo = Weights("bo", type, {1, size});
+  auto *x2o = Parameter("x2o", type, {input_dim, size});
+  auto *h2o = Parameter("h2o", type, {size, size});
+  auto *c2o = Parameter("c2o", type, {size, size});
+  auto *bo = Parameter("bo", type, {1, size});
 
-  auto *x2c = Weights("x2c", type, {input_dim, size});
-  auto *h2c = Weights("h2c", type, {size, size});
-  auto *bc = Weights("bc", type, {1, size});
+  auto *x2c = Parameter("x2c", type, {input_dim, size});
+  auto *h2c = Parameter("h2c", type, {size, size});
+  auto *bc = Parameter("bc", type, {1, size});
 
   // Channels -- h_in, c_in = h_{t-1}, c_{t-1}
   auto *h_in = Var("h_in", type, {1, size});
