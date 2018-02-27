@@ -290,6 +290,113 @@ class Unpack : public Kernel {
   }
 };
 
+// Slice input tensors along first dimension.
+class Slice : public Kernel {
+ public:
+  string Name() override { return "Slice"; }
+  string Operation() override { return "Slice"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 3 || step->outdegree() != 1) return false;
+
+    // Begin and size must be integer scalars.
+    Tensor *begin = step->input(1);
+    Tensor *size = step->input(2);
+    if (begin->elements() != 1 || begin->type() != DT_INT32) return false;
+    if (size->elements() != 1 || size->type() != DT_INT32) return false;
+    if (!size->constant()) return false;
+    int n = size->value<int32>();
+    if (step->output(0)->dim(0) != n) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get inputs and output.
+    Tensor *source = step->input(0);
+    Tensor *begin = step->input(1);
+    Tensor *size = step->input(2);
+    Tensor *destination = step->output(1);
+    int n = size->value<int32>();
+    int bytes = n * source->stride(0);
+
+    // Allocate registers.
+    Register src = masm->rr().alloc_fixed(rsi);
+    Register dst = masm->rr().alloc_fixed(rdi);
+    Register cnt = masm->rr().alloc_fixed(rcx);
+    Register acc = masm->rr().alloc_fixed(rax);
+    Register bptr = masm->rr().alloc();
+
+    // Get address of source.
+    if (begin->constant()) {
+      if (source->offset() != -1) {
+        int disp = source->offset() + begin->value<int32>() * source->stride(0);
+        __ leaq(src, Operand(masm->instance(), disp));
+      } else {
+        __ LoadTensorAddress(src, source);
+        __ addq(src, Immediate(begin->value<int32>() * source->stride(0)));
+      }
+    } else {
+      __ LoadTensorAddress(src, source);
+      if (begin->ref()) {
+        __ movq(bptr, Operand(masm->instance(), begin->offset()));
+        __ movsxlq(acc, Operand(bptr));
+      } else if (begin->data() != nullptr) {
+      __ load_extern(bptr, begin->data(), begin->name());
+      __ movsxlq(acc, Operand(bptr));
+      } else {
+        __ movq(acc, Operand(masm->instance(), begin->offset()));
+      }
+      __ Multiply(acc, source->stride(0));
+      __ addq(src, acc);
+    }
+
+    // Get destination address.
+    __ LoadTensorAddress(dst, destination);
+
+    // Copy input to output.
+    if (bytes > 0 && bytes < 16) {
+      int disp = 0;
+      int left = bytes;
+      while (left >= 8) {
+        __ movq(acc, Operand(src, disp));
+        __ movq(Operand(dst, disp), acc);
+        disp += 8;
+        left -= 8;
+      }
+      while (left >= 4) {
+        __ movl(acc, Operand(src, disp));
+        __ movl(Operand(dst, disp), acc);
+        disp += 4;
+        left -= 4;
+      }
+      while (left >= 2) {
+        __ movw(acc, Operand(src, disp));
+        __ movw(Operand(dst, disp), acc);
+        disp += 2;
+        left -= 2;
+      }
+      while (left >= 1) {
+        __ movb(acc, Operand(src, disp));
+        __ movb(Operand(dst, disp), acc);
+        disp += 1;
+        left -= 1;
+      }
+    } else {
+      __ movq(cnt, Immediate(bytes));
+      __ repmovsb();
+    }
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 // Output concatenation of input tensors along first dimension.
 class BasicConcat : public Kernel {
  public:
@@ -1357,6 +1464,7 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new Unpack());
   library->Register(new GeneralConcat());
   library->Register(new BasicConcat());
+  library->Register(new Slice());
   library->Register(new MultiGather());
   library->Register(new SingleGather());
   library->Register(new PoolingGather(PoolingGather::SUM));

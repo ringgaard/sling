@@ -595,7 +595,7 @@ class Softmax : public Kernel {
     if (y->SharedWith(x)) {
       output = input;
     } else {
-    __ LoadTensorAddress(output, y);
+      __ LoadTensorAddress(output, y);
     }
     __ xorq(offset, offset);
 
