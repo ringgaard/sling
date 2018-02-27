@@ -182,6 +182,10 @@ class Builder : public Scope {
     return Op0("ScatterAdd", {M, f, v});
   }
 
+  Variable *Slice(Variable *v, Variable *begin, int size = 1) {
+    return Op("Slice", {v, begin, Const(size)}, v->type, {size});
+  }
+
   // Feed-forward (FF) layer(s).
   Variable *FFLayers(Variable *input,
                      std::vector<int> layers,

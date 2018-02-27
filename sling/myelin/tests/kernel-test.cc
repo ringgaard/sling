@@ -116,7 +116,7 @@ void BaselineSoftmax(const TensorData &x, TensorData *y) {
   float sum = 0.0;
   int n = x.dim(0);
   for (int i = 0; i < n; ++i) {
-    float v = exp(x.at<float>(i));
+    float v = expf(x.at<float>(i));
     sum += v;
     y->at<float>(i) = v;
   }

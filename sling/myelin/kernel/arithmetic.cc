@@ -528,11 +528,13 @@ class Calculate : public Kernel {
   int arity_;         // number of inputs
 };
 
-// Kernel for computing softmax.
+// Kernel for computing softmax or log-softmax.
 class Softmax : public Kernel {
  public:
-  string Name() override { return "Softmax"; }
-  string Operation() override { return "Softmax"; }
+  Softmax(bool log) : log_(log) {}
+
+  string Name() override { return log_ ? "LogSoftmax" : "Softmax"; }
+  string Operation() override { return log_ ? "LogSoftmax" : "Softmax"; }
 
   bool Supports(Step *step) override {
     // Requires SSE or AVX support.
@@ -576,12 +578,17 @@ class Softmax : public Kernel {
     Express expr;
     expr.Parse("!0=Exp(%0);@0=Id(!0)", true);
 
+    // Compile expression for post-processing.
+    Express postexpr;
+    postexpr.Parse(log_ ? "@0=Log(Mul(%0,!0))" : "@0=Mul(%0,!0)", true);
+
     // Allocate registers.
     Register input = masm->rr().alloc();
     Register output = masm->rr().alloc();
     Register offset = masm->rr().alloc();
     YMMRegister sum = masm->mm().allocy();
     YMMRegister elem = masm->mm().allocy();
+    SIMDRegisters basemm = masm->mm();
 
     // Load tensor locations.
     __ LoadTensorAddress(input, x);
@@ -611,27 +618,21 @@ class Softmax : public Kernel {
 
     // Compute exp(x) for main block.
     if (vecsize > 1) {
-      // Initialize expression generator.
-      SimpleIndexGenerator index(masm, input, output, offset);
-      auto *generator = ExpressionGenerator::Select(expr, DT_FLOAT, m);
-      CHECK(generator != nullptr);
-      generator->Initialize(expr, DT_FLOAT, 0, &index);
-      index.AllocateRegisters();
-      CHECK_EQ(index.vecsize(), vecsize * sizeof(float));
+      UnaryExpression expression(expr, masm, input, output, offset, m);
 
       // Loop over all main elements.
-      generator->GenerateInit(masm);
+      expression.generator->GenerateInit(masm);
       Label l;
       __ bind(&l);
 
       // Compute exp(x) for the next block.
-      generator->GenerateBody(masm);
+      expression.generator->GenerateBody(masm);
 
       // Sum up results.
       if (masm->Enabled(AVX)) {
-        __ vaddps(sum, sum, index.ymm(0));
+        __ vaddps(sum, sum, expression.index.ymm(0));
       } else {
-        __ addps(sum.xmm(), index.xmm(0));
+        __ addps(sum.xmm(), expression.index.xmm(0));
       }
 
       if (m > vecsize || r > 0) {
@@ -655,31 +656,26 @@ class Softmax : public Kernel {
         __ haddps(sum.xmm(), sum.xmm());
       }
 
-      delete generator;
+      masm->mm() = basemm;
     }
 
     // Compute exp(x) for residual block.
     if (r > 0) {
-      // Initialize expression generator.
-      SimpleIndexGenerator index(masm, input, output, offset);
-      auto *generator = ExpressionGenerator::Select(expr, DT_FLOAT, 1);
-      CHECK(generator != nullptr);
-      generator->Initialize(expr, DT_FLOAT, 0, &index);
-      index.AllocateRegisters();
+      UnaryExpression expression(expr, masm, input, output, offset, 1);
 
       // Loop over all residual elements.
-      generator->GenerateInit(masm);
+      expression.generator->GenerateInit(masm);
       Label l;
       __ bind(&l);
 
       // Compute exp(x) for the next element in residual block.
-      generator->GenerateBody(masm);
+      expression.generator->GenerateBody(masm);
 
       // Sum up results.
       if (masm->Enabled(AVX)) {
-        __ vaddss(sum, sum, index.ymm(0));
+        __ vaddss(sum, sum, expression.index.ymm(0));
       } else {
-        __ addss(sum.xmm(), index.xmm(0));
+        __ addss(sum.xmm(), expression.index.xmm(0));
       }
 
       if (r > 1) {
@@ -688,7 +684,7 @@ class Softmax : public Kernel {
         __ j(less, &l);
       }
 
-      delete generator;
+      masm->mm() = basemm;
     }
 
     // Compute 1/sum for normalization. Multiplication is faster than division.
@@ -708,18 +704,22 @@ class Softmax : public Kernel {
     // Normalize output for main block.
     __ xorq(offset, offset);
     if (vecsize > 1) {
-      // Loop over all main elements.
-      int m = (n / vecsize) * vecsize;
+      UnaryExpression expression(postexpr, masm, input, output, offset, m);
+
+      // Load scaling factor.
+      if (masm->Enabled(AVX)) {
+        __ vmovaps(expression.index.ymm(0), sum);
+      } else {
+        __ movaps(expression.index.xmm(0), sum.xmm());
+      }
+      expression.generator->GenerateInit(masm);
+
+      // Loop over main elements.
       Label l;
       __ bind(&l);
-      if (vecsize == 8) {
-        __ vmulps(elem, sum, Operand(output, offset));
-        __ vmovaps(Operand(output, offset), elem);
-      } else {
-        __ movaps(elem.xmm(), Operand(output, offset));
-        __ mulps(elem.xmm(), sum.xmm());
-        __ movaps(Operand(output, offset), elem.xmm());
-      }
+
+      // Compute normalization for the next block.
+      expression.generator->GenerateBody(masm);
 
       if (m > vecsize || r > 0) {
         __ addq(offset, Immediate(vecsize * sizeof(float)));
@@ -728,26 +728,36 @@ class Softmax : public Kernel {
         __ cmpq(offset, Immediate(m * sizeof(float)));
         __ j(less, &l);
       }
+
+      masm->mm() = basemm;
     }
 
     // Normalize output for residual block.
     if (r > 0) {
+      UnaryExpression expression(postexpr, masm, input, output, offset, 1);
+
+      // Load scaling factor.
+      if (masm->Enabled(AVX)) {
+        __ vmovaps(expression.index.ymm(0), sum);
+      } else {
+        __ movaps(expression.index.xmm(0), sum.xmm());
+      }
+      expression.generator->GenerateInit(masm);
+
+      // Loop over all residual elements.
+      expression.generator->GenerateInit(masm);
       Label l;
       __ bind(&l);
-      if (masm->Enabled(AVX)) {
-        __ vmulss(elem, sum, Operand(output, offset));
-        __ vmovss(Operand(output, offset), elem);
-      } else {
-        __ movss(elem.xmm(), Operand(output, offset));
-        __ mulss(elem.xmm(), sum.xmm());
-        __ movss(Operand(output, offset), elem.xmm());
-      }
+
+      // Compute normalization for the next residual element.
+      expression.generator->GenerateBody(masm);
 
       if (r > 1) {
         __ addq(offset, Immediate(sizeof(float)));
         __ cmpq(offset, Immediate(n * sizeof(float)));
         __ j(less, &l);
       }
+      masm->mm() = basemm;
     }
   }
 
@@ -756,13 +766,13 @@ class Softmax : public Kernel {
   }
 
  private:
-  // Index generator for simple function.
-  class SimpleIndexGenerator : public IndexGenerator {
+  // Index generator for unary function.
+  class UnaryIndexGenerator : public IndexGenerator {
    public:
-    SimpleIndexGenerator(MacroAssembler *masm,
-                         Register input,
-                         Register output,
-                         Register offset)
+    UnaryIndexGenerator(MacroAssembler *masm,
+                        Register input,
+                        Register output,
+                        Register offset)
         : IndexGenerator(masm),
           input_(input), output_(output), offset_(offset) {}
 
@@ -799,6 +809,29 @@ class Softmax : public Kernel {
     Register offset_;   // displacement register
     int vecsize_;       // vector size
   };
+
+  // Unary Expression.
+  struct UnaryExpression {
+    UnaryExpression(const Express &expr,
+                    MacroAssembler *masm,
+                    Register input,
+                    Register output,
+                    Register offset,
+                    int size)
+        : index(masm, input, output, offset) {
+      generator = ExpressionGenerator::Select(expr, DT_FLOAT, size);
+      CHECK(generator != nullptr);
+      generator->Initialize(expr, DT_FLOAT, 0, &index);
+      CHECK(index.AllocateRegisters()) << "Register overflow";
+    }
+
+    ~UnaryExpression() { delete generator; }
+
+    UnaryIndexGenerator index;
+    ExpressionGenerator *generator;
+  };
+
+  bool log_; // log(softmax(x)) vs. softmax(x)
 };
 
 // Register arithmetic library.
@@ -825,7 +858,8 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("ReciprocalExpr", "Reciprocal", 1));
   library->Register(new Calculate("SquareExpr", "Square", 1));
 
-  library->Register(new Softmax());
+  library->Register(new Softmax(false));
+  library->Register(new Softmax(true));
 }
 
 // Register arithmetic transforms.

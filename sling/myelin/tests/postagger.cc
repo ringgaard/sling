@@ -18,6 +18,16 @@ DEFINE_bool(dump, false, "Dump flow");
 using namespace sling;
 using namespace sling::myelin;
 
+Flow::Function *BuildLoss(Flow *flow, int size) {
+  Builder tf(flow, "loss");
+  auto *logits = tf.Placeholder("logits", DT_FLOAT, {size});
+  auto *target = tf.Placeholder("target", DT_INT32, {});
+  auto *softmax = tf.Softmax(logits);
+  tf.Name(tf.Op("DeltaCrossEntropy", {softmax}), "dlogits");
+  tf.Name(tf.Neg(tf.Log(tf.Slice(softmax, target))), "loss");
+  return tf.func();
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
@@ -28,6 +38,8 @@ int main(int argc, char *argv[]) {
   // Build flow.
   int vocab = 50000;
   int worddim = 64;
+  int lstmdim = 128;
+  int tags = 43;
   Flow flow;
   Builder tf(&flow, "tagger");
 
@@ -35,13 +47,15 @@ int main(int argc, char *argv[]) {
   auto *embedding = tf.Parameter("embedding", DT_FLOAT, {vocab, worddim});
   auto *features = tf.Gather(embedding, word);
 
-  auto *hidden = tf.LSTMLayer(features, 128);
-  auto *logits = tf.FFLayer(hidden, 43, true);
+  auto *hidden = tf.LSTMLayer(features, lstmdim);
+  auto *logits = tf.FFLayer(hidden, tags, true);
 
   Flow::Function *dtagger = Gradient(&flow, tf.func(), library);
+  Flow::Function *loss = BuildLoss(&flow, tags);
 
   LOG(INFO) << "logits: " << logits->name;
   LOG(INFO) << "dtagger: " << dtagger->name;
+  LOG(INFO) << "loss: " << loss->name;
 
   if (FLAGS_analyze) {
     flow.Analyze(library);
