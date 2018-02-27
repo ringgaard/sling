@@ -197,6 +197,27 @@ struct Expression {
     return output->shape().elements() * expr.Complexity();
   }
 
+  // Compute how many spare register we have for hoisting constant out of the
+  // loop body. This is only done for floating-point operations to avoid
+  // register pressure on the regular x64 integer registers which are also
+  // used for the loop indexing.
+  static int SpareRegs(const Step *step, const Options &options) {
+    int spare_regs = 0;
+    Type type = step->output(0)->type();
+    if (type == DT_FLOAT || type == DT_DOUBLE) {
+      // Perform dry-run to estimate the number of SIMD registers needed.
+      MacroAssembler masm(nullptr, 0, options);
+      Expression expr(step, &masm, 0);
+      CHECK(expr.AllocateRegisters()) << "Register overflow";
+
+      // Count the number of spare SIMD registers.
+      if (!expr.index.single()) {
+        while (masm.mm().try_alloc() != -1) spare_regs++;
+      }
+    }
+    return spare_regs;
+  }
+
   // Representative output from expression.
   Tensor *output;
 
@@ -489,25 +510,8 @@ class Calculate : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    // Check how many spare register we have for hoisting constant out of the
-    // loop body. This is only done for floating-point operations to avoid
-    // register pressure on the regular x64 integer registers which are also
-    // used for the loop indexing.
-    int spare_regs = 0;
-    Type type = step->output(0)->type();
-    if (type == DT_FLOAT || type == DT_DOUBLE) {
-      // Perform dry-run to estimate the number of SIMD registers needed.
-      MacroAssembler dryrun_masm(nullptr, 0, masm->options());
-      Expression dryrun_expr(step, &dryrun_masm, 0);
-      CHECK(dryrun_expr.AllocateRegisters()) << "Register overflow";
-
-      // Count the number of spare SIMD registers.
-      if (!dryrun_expr.index.single()) {
-        while (dryrun_masm.mm().try_alloc() != -1) spare_regs++;
-      }
-    }
-
     // Generate code for element-wise expression evaluation.
+    int spare_regs = Expression::SpareRegs(step, masm->options());
     Expression expression(step, masm, spare_regs);
     CHECK(expression.AllocateRegisters()) << "Register overflow";
     expression.Generate(masm);
@@ -522,6 +526,279 @@ class Calculate : public Kernel {
   string name_;       // kernel name
   string operation_;  // kernel operation
   int arity_;         // number of inputs
+};
+
+// Kernel for computing softmax.
+class Softmax : public Kernel {
+ public:
+  string Name() override { return "Softmax"; }
+  string Operation() override { return "Softmax"; }
+
+  bool Supports(Step *step) override {
+    // Requires SSE or AVX support.
+    if (!CPU::Enabled(AVX) && !CPU::Enabled(SSE)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() != 1 || step->outdegree() != 1) return false;
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+
+    // Check type.
+    if (x->type() != DT_FLOAT) return false;
+    if (y->type() != DT_FLOAT) return false;
+
+    // Input and output must have same shape.
+    if (!x->HasSameShape(y)) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    x->SetMiniumAlignment(32);
+    x->RequireDense();
+    x->RequireStandardOrder();
+    y->SetMiniumAlignment(32);
+    y->RequireDense();
+    y->RequireStandardOrder();
+    step->AllowInPlace(0, 0);
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get input and output.
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    int n = y->elements();
+
+    // Compile expression for computing y=exp(x) storing the result in an
+    // intermediate register.
+    Express expr;
+    expr.Parse("!0=Exp(%0);@0=Id(!0)", true);
+
+    // Allocate registers.
+    Register input = masm->rr().alloc();
+    Register output = masm->rr().alloc();
+    Register offset = masm->rr().alloc();
+    YMMRegister sum = masm->mm().allocy();
+    YMMRegister elem = masm->mm().allocy();
+
+    // Load tensor locations.
+    __ LoadTensorAddress(input, x);
+    if (y->SharedWith(x)) {
+      output = input;
+    } else {
+    __ LoadTensorAddress(output, y);
+    }
+    __ xorq(offset, offset);
+
+    // Clear sum register.
+    if (masm->Enabled(AVX)) {
+      __ vxorps(sum, sum, sum);
+    } else {
+      __ xorps(sum.xmm(), sum.xmm());
+    }
+
+    // Determine vector size for main block computation.
+    int vecsize = 1;
+    if (masm->Enabled(AVX) && n >= 8) {
+      vecsize = 8;
+    } else if (masm->Enabled(SSE) && n >= 4) {
+      vecsize = 4;
+    }
+    int m = (n / vecsize) * vecsize;
+    int r = vecsize == 1 ? n : n % vecsize;
+
+    // Compute exp(x) for main block.
+    if (vecsize > 1) {
+      // Initialize expression generator.
+      SimpleIndexGenerator index(masm, input, output, offset);
+      auto *generator = ExpressionGenerator::Select(expr, DT_FLOAT, m);
+      CHECK(generator != nullptr);
+      generator->Initialize(expr, DT_FLOAT, 0, &index);
+      index.AllocateRegisters();
+      CHECK_EQ(index.vecsize(), vecsize * sizeof(float));
+
+      // Loop over all main elements.
+      generator->GenerateInit(masm);
+      Label l;
+      __ bind(&l);
+
+      // Compute exp(x) for the next block.
+      generator->GenerateBody(masm);
+
+      // Sum up results.
+      if (masm->Enabled(AVX)) {
+        __ vaddps(sum, sum, index.ymm(0));
+      } else {
+        __ addps(sum.xmm(), index.xmm(0));
+      }
+
+      if (m > vecsize || r > 0) {
+        __ addq(offset, Immediate(vecsize * sizeof(float)));
+      }
+      if (m > vecsize) {
+        __ cmpq(offset, Immediate(m * sizeof(float)));
+        __ j(less, &l);
+      }
+
+      // Reduce sum.
+      if (masm->Enabled(AVX)) {
+        if (vecsize > 4) {
+          __ vperm2f128(elem, sum, sum, 1);
+          __ vhaddps(sum, sum, elem);
+        }
+        __ vhaddps(sum, sum, sum);
+        __ vhaddps(sum, sum, sum);
+      } else {
+        __ haddps(sum.xmm(), sum.xmm());
+        __ haddps(sum.xmm(), sum.xmm());
+      }
+
+      delete generator;
+    }
+
+    // Compute exp(x) for residual block.
+    if (r > 0) {
+      // Initialize expression generator.
+      SimpleIndexGenerator index(masm, input, output, offset);
+      auto *generator = ExpressionGenerator::Select(expr, DT_FLOAT, 1);
+      CHECK(generator != nullptr);
+      generator->Initialize(expr, DT_FLOAT, 0, &index);
+      index.AllocateRegisters();
+
+      // Loop over all residual elements.
+      generator->GenerateInit(masm);
+      Label l;
+      __ bind(&l);
+
+      // Compute exp(x) for the next element in residual block.
+      generator->GenerateBody(masm);
+
+      // Sum up results.
+      if (masm->Enabled(AVX)) {
+        __ vaddss(sum, sum, index.ymm(0));
+      } else {
+        __ addss(sum.xmm(), index.xmm(0));
+      }
+
+      if (r > 1) {
+        __ addq(offset, Immediate(sizeof(float)));
+        __ cmpq(offset, Immediate(n * sizeof(float)));
+        __ j(less, &l);
+      }
+
+      delete generator;
+    }
+
+    // Compute 1/sum for normalization. Multiplication is faster than division.
+    if (masm->Enabled(AVX)) {
+      __ vrcpss(sum.xmm(), sum.xmm(), sum.xmm());
+      if (masm->Enabled(AVX2)) {
+        __ vbroadcastss(sum, sum);
+      } else {
+        __ vshufps(sum, sum, sum, 0);
+        __ vperm2f128(sum, sum, sum, 0);
+      }
+    } else {
+      __ rcpss(sum.xmm(), sum.xmm());
+      __ shufps(sum.xmm(), sum.xmm(), 0);
+    }
+
+    // Normalize output for main block.
+    __ xorq(offset, offset);
+    if (vecsize > 1) {
+      // Loop over all main elements.
+      int m = (n / vecsize) * vecsize;
+      Label l;
+      __ bind(&l);
+      if (vecsize == 8) {
+        __ vmulps(elem, sum, Operand(output, offset));
+        __ vmovaps(Operand(output, offset), elem);
+      } else {
+        __ movaps(elem.xmm(), Operand(output, offset));
+        __ mulps(elem.xmm(), sum.xmm());
+        __ movaps(Operand(output, offset), elem.xmm());
+      }
+
+      if (m > vecsize || r > 0) {
+        __ addq(offset, Immediate(vecsize * sizeof(float)));
+      }
+      if (m > vecsize) {
+        __ cmpq(offset, Immediate(m * sizeof(float)));
+        __ j(less, &l);
+      }
+    }
+
+    // Normalize output for residual block.
+    if (r > 0) {
+      Label l;
+      __ bind(&l);
+      if (masm->Enabled(AVX)) {
+        __ vmulss(elem, sum, Operand(output, offset));
+        __ vmovss(Operand(output, offset), elem);
+      } else {
+        __ movss(elem.xmm(), Operand(output, offset));
+        __ mulss(elem.xmm(), sum.xmm());
+        __ movss(Operand(output, offset), elem.xmm());
+      }
+
+      if (r > 1) {
+        __ addq(offset, Immediate(sizeof(float)));
+        __ cmpq(offset, Immediate(n * sizeof(float)));
+        __ j(less, &l);
+      }
+    }
+  }
+
+  int64 Complexity(const Step *step) override {
+    return step->input(0)->elements();
+  }
+
+ private:
+  // Index generator for simple function.
+  class SimpleIndexGenerator : public IndexGenerator {
+   public:
+    SimpleIndexGenerator(MacroAssembler *masm,
+                         Register input,
+                         Register output,
+                         Register offset)
+        : IndexGenerator(masm),
+          input_(input), output_(output), offset_(offset) {}
+
+    void Initialize(size_t vecsize) override {
+      vecsize_ = vecsize;
+    }
+
+    jit::Operand addr(Express::Var *var) override {
+      if (var->type == Express::NUMBER) {
+        float number = Express::NumericFlt32(var->id);
+        int repeat = vecsize_ / sizeof(float);
+        return masm_->GetConstant(number, repeat)->address();
+      } else if (var->type == Express::INPUT) {
+        return Operand(input_, offset_);
+      } else if (var->type == Express::OUTPUT) {
+        return Operand(output_, offset_);
+      } else {
+        LOG(INFO) << var->AsString();
+        UNSUPPORTED;
+        return Operand(rbp);
+      }
+    }
+
+    const void *data(Express::Var *var) {
+      UNSUPPORTED;
+      return nullptr;
+    }
+
+    int vecsize() const { return vecsize_; }
+
+   private:
+    Register input_;    // input base register
+    Register output_;   // output base register
+    Register offset_;   // displacement register
+    int vecsize_;       // vector size
+  };
 };
 
 // Register arithmetic library.
@@ -547,6 +824,8 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("LogSigmoidExpr", "LogSigmoid", 1));
   library->Register(new Calculate("ReciprocalExpr", "Reciprocal", 1));
   library->Register(new Calculate("SquareExpr", "Square", 1));
+
+  library->Register(new Softmax());
 }
 
 // Register arithmetic transforms.

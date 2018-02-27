@@ -9,8 +9,8 @@ using namespace sling;
 using namespace sling::myelin;
 
 void Test(const string &str) {
-  bool three_arg_ops = true;
-  Express::Target target = Express::NVIDIA;
+  bool three_arg_ops = false;
+  Express::Target target = Express::INTEL;
   bool fma = true;
   bool hoist = 0;
 
@@ -195,8 +195,10 @@ int main(int argc, char *argv[]) {
 #endif
 
   //Test("@0=Tanh(%0)");
-  Test("$2=Sigmoid(Add(%2,%3));@0=Add(Mul($2,Tanh(Add(%0,%1))),Mul(Sub(_1,$2),%5));@1=Tanh(@0)");
-  Test("@0=Mul(Sigmoid(Add(%0,%1)),%2)");
+  //Test("$2=Sigmoid(Add(%2,%3));@0=Add(Mul($2,Tanh(Add(%0,%1))),Mul(Sub(_1,$2),%5));@1=Tanh(@0)");
+  //Test("@0=Mul(Sigmoid(Add(%0,%1)),%2)");
+  Test("!0=Exp(%0);@0=Id(!0)");
+
   return 0;
 }
 

@@ -959,6 +959,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
         // Move operations.
         switch (result->type) {
           case TEMP:
+          case REGISTER:
             // Move value into register.
             switch (args[0]->type) {
               case INPUT:
@@ -999,7 +1000,6 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             break;
 
           case INPUT:
-          case REGISTER:
           case CONST:
           case NUMBER:
             // Assignment to inputs and constants not allowed.
@@ -1085,12 +1085,13 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
       // Binary operator.
       switch (result->type) {
         case TEMP:
+        case REGISTER:
         case OUTPUT:
           if (model.op_reg_reg_reg) {
             // Three-operand instruction. Try to put the memory operand last if
             // operation is commutative.
             if (model.op_reg_reg_mem && op->commutative() &&
-                args[0]->type != TEMP && args[1]->type == TEMP) {
+                !args[0]->IsRegister() && args[1]->IsRegister()) {
               std::swap(args[0], args[1]);
             }
 
@@ -1113,7 +1114,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
             // Put destination into a register if memory destinations are not
             // supported or if second argument is not in a register.
-            bool arg1_in_reg = args[1]->type == TEMP || source2 != nullptr;
+            bool arg1_in_reg = args[1]->IsRegister() || source2 != nullptr;
             if (result->type == OUTPUT &&
                 (!arg1_in_reg || !model.op_mem_reg_reg)) {
               destination = rewritten->Temp();
@@ -1127,7 +1128,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
             // Try to put the memory operand last if operation is commutative.
             if (model.op_reg_mem && op->commutative() &&
-                args[0]->type != TEMP && args[1]->type == TEMP) {
+                !args[0]->IsRegister() && args[1]->IsRegister()) {
               std::swap(args[0], args[1]);
             }
 
@@ -1193,7 +1194,6 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
           break;
 
         case INPUT:
-        case REGISTER:
         case CONST:
         case NUMBER:
           // Assignment to inputs and constants not allowed.
@@ -1206,7 +1206,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
 
       // Try to put memory operand last.
       if (model.fm_reg_reg_mem) {
-        if (args[1]->type != TEMP && args[2]->type == TEMP) {
+        if (!args[1]->IsRegister() && args[2]->IsRegister()) {
           // Swap second and third argument.
           std::swap(args[1], args[2]);
           switch (type) {
@@ -1218,7 +1218,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             case MULSUB231: break;
             default: success = false;
           }
-        } else if (args[0]->type != TEMP && args[2]->type == TEMP) {
+        } else if (!args[0]->IsRegister() && args[2]->IsRegister()) {
           // Swap first and third argument.
           std::swap(args[0], args[2]);
           switch (type) {
@@ -1262,7 +1262,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
       }
 
       // Make sure second operand is in register.
-      if (args[1]->type != TEMP) {
+      if (!args[1]->IsRegister()) {
         source2 = rewritten->Temp();
       }
 
@@ -1355,6 +1355,8 @@ int Express::AllocateRegisters() {
           op->dst = regs.Get(op->result);
         }
         CHECK(op->dst != -1);
+      } else if (op->result->type == REGISTER) {
+        op->dst = op->result->reg;
       }
 
       // Get source register for move op.
@@ -1368,7 +1370,7 @@ int Express::AllocateRegisters() {
         regs.Free(op->args[0]);
       }
     } else {
-      // Allocate register for result.
+      // Get register for result.
       if (op->result->type == TEMP) {
         if (op->result->first == op) {
           // Allocate register for result.
@@ -1378,6 +1380,8 @@ int Express::AllocateRegisters() {
           op->dst = regs.Get(op->result);
         }
         CHECK(op->dst != -1);
+      } else if (op->result->type == REGISTER) {
+        op->dst = op->result->reg;
       }
 
       // Get registers for source operands.

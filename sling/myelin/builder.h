@@ -138,6 +138,7 @@ class Builder : public Scope {
   Variable *Identity(Variable *x) { return Op("Identity", {x}); }
   Variable *Cos(Variable *x) { return Op("Cos", {x}); }
   Variable *Sin(Variable *x) { return Op("Sin", {x}); }
+  Variable *Softmax(Variable *x) { return Op("Softmax", {x}); }
 
   Variable *MatMul(Variable *x, Variable *y);
 

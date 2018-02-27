@@ -33,7 +33,7 @@ namespace myelin {
 //
 //   %n: memory-based input variable
 //   #n: constant variable
-//   !n: register-based input variable
+//   !n: register-based variable
 //   @n: memory-based output variable
 //   $n: temporary register variable
 //   _n: number

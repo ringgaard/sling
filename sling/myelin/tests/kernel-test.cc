@@ -22,7 +22,7 @@ DEFINE_string(test, "", "Kernel to be tested");
 
 DEFINE_bool(ignore_errors, false, "Ignore test errors");
 DEFINE_double(matmul_accuracy, 1e-6, "Maximum error on matmul operations");
-DEFINE_double(func_accuracy, 1e-5, "Maximum error on function operations");
+DEFINE_double(func_accuracy, 1e-3, "Maximum error on function operations");
 DEFINE_bool(test_baseline, false, "Test baseline kernels");
 
 DEFINE_int32(d, -1, "Vector dimension for tests");
@@ -109,6 +109,20 @@ void BaselineArgMax(const TensorData &x, TensorData *y) {
     }
   }
   y->at<int>(0) = best;
+}
+
+// Baseline implementation of softmax.
+void BaselineSoftmax(const TensorData &x, TensorData *y) {
+  float sum = 0.0;
+  int n = x.dim(0);
+  for (int i = 0; i < n; ++i) {
+    float v = exp(x.at<float>(i));
+    sum += v;
+    y->at<float>(i) = v;
+  }
+  for (int i = 0; i < n; ++i) {
+    y->at<float>(i) /= sum;
+  }
 }
 
 void CheckTest(bool success) {
@@ -364,6 +378,9 @@ int main(int argc, char *argv[]) {
   library.Register("ArgMax", "BaselineArgMax", BaselineArgMax)
      .Input(0, DT_FLOAT, 1)
      .Output(0, DT_INT32);
+  library.Register("Softmax", "BaselineSoftmax", BaselineSoftmax)
+     .Input(0, DT_FLOAT, 1)
+     .Output(0, DT_FLOAT, 1);
 
   if (FLAGS_test_baseline) {
     // Test GenFltVecMatMul against itself to test the kernel comparator.
@@ -400,6 +417,7 @@ int main(int argc, char *argv[]) {
     CheckFltFunc("Exp", "ExpExpr", "GenFltExp");
     CheckFltFunc("Sigmoid", "SigmoidExpr", "GenFltSigmoid");
     CheckFltFunc("Tanh", "TanhExpr", "GenFltTanh");
+    CheckFltFunc("Softmax", "Softmax", "BaselineSoftmax");
 
     // Test SSE float matrix multiplication.
     CheckFltMatMul("SSEFltVecMatMul", "GenFltVecMatMul");
