@@ -272,8 +272,11 @@ class Express {
   // set for the returned op.
   Op *Function(OpType type, std::vector<Var *> &args, bool expand = false);
 
-  // Lookup variable in expression or add a new variable if it does not exist.
+  // Find variable in expression or add a new variable if it does not exist.
   Var *Variable(VarType type, int id);
+
+  // Look up variable in expression. Return null is variable does not exist.
+  Var *Lookup(VarType type, int id);
 
   // Add new temp variable to expression.
   Var *Temp() { return Variable(TEMP, -1); }
@@ -341,6 +344,10 @@ class Express {
   // operations needed to compute the expression. This does not include move
   // operations.
   int Complexity() const;
+
+  // Delete unused input variable from expression by renumbering all following
+  // input variables.
+  void EliminateInput(int id);
 
   // Variables.
   const std::vector<Var *> vars() const { return vars_; }

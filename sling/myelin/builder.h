@@ -170,8 +170,8 @@ class Builder : public Scope {
     return Op("GatherMax", {M, f}, M->type, {f->dim(0)});
   }
 
-  Variable *Scatter(Variable *v, Variable *f, int size) {
-    return Op("Scatter", {v, f}, v->type, {size, v->dim(1)});
+  Variable *Scatter(Variable *f, Variable *v, int size) {
+    return Op("Scatter", {f, v}, v->type, {size, v->dim(1)});
   }
 
   void AssignAdd(Variable *var, Variable *value) {

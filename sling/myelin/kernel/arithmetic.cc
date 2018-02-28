@@ -315,7 +315,7 @@ class ExpressionTransformer : public Transformer {
         }
       }
     }
-    VLOG(3) << num_combines << " of " << candidates.size() << " ops combined";
+    VLOG(7) << num_combines << " of " << candidates.size() << " ops combined";
 
     return num_combines > 0;
   }
@@ -442,6 +442,33 @@ class ExpressionTransformer : public Transformer {
     } else {
       return Express::INPUT;
     }
+  }
+};
+
+// Eliminate unused inputs to calculate ops. These are usually constants that
+// have been replaced with system constants.
+class RemoveUnusedInputs : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    int num_eliminates = 0;
+    for (Flow::Operation *op : flow->ops()) {
+      if (op->type == "Calculate") {
+        Express expr;
+        InitExpression(op, &expr, false);
+        for (int i = 0; i < op->inputs.size(); ++i) {
+          if (expr.Lookup(Express::INPUT, i) == nullptr &&
+              expr.Lookup(Express::CONST, i) == nullptr) {
+            expr.EliminateInput(i);
+            op->RemoveInput(op->inputs[i]);
+            op->SetAttr("expr", expr.AsRecipe());
+            num_eliminates++;
+            break;
+          }
+        }
+      }
+    }
+
+    return num_eliminates > 0;
   }
 };
 
@@ -865,6 +892,7 @@ void RegisterArithmeticLibrary(Library *library) {
 // Register arithmetic transforms.
 void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new ExpressionTransformer());
+  library->RegisterTransformer(new RemoveUnusedInputs());
   library->RegisterTransformer(new DivToMulTransformer());
   library->RegisterTransformer(new AddNegToSubTransformer());
 }

@@ -84,11 +84,15 @@ class Reference : public Kernel {
 
     // Output reference to variable in other instance.
     Register addr = masm->rr().alloc();
-    __ movq(addr, Operand(masm->instance(), instance->offset()));
-    if (var->ref()) {
-      __ movq(addr, Operand(masm->instance(), var->offset()));
-    } else if (var->offset() != 0) {
-      __ addq(addr, Immediate(var->offset()));
+    if (var->IsGlobal()) {
+      __ load_extern(addr, var->data(), var->name());
+    } else {
+      __ movq(addr, Operand(masm->instance(), instance->offset()));
+      if (var->ref()) {
+        __ movq(addr, Operand(addr, var->offset()));
+      } else if (var->offset() != 0) {
+        __ addq(addr, Immediate(var->offset()));
+      }
     }
     __ movq(Operand(masm->instance(), ref->offset()), addr);
   }

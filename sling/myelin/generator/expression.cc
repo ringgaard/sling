@@ -51,13 +51,13 @@ void ExpressionGenerator::Initialize(const Express &expression,
     expression_.FuseMulSub();
   }
 
+  // Cache inputs and results used in multiple ops in temporary variables.
+  expression_.CacheResults();
+
   // Use spare registers to hoist constants outside the loop.
   if (spare_regs > 0 && !ImmediateOperands()) {
     expression_.HoistConstants(spare_regs);
   }
-
-  // Cache inputs and results used in multiple ops in temporary variables.
-  expression_.CacheResults();
 
   // Convert expression to instructions using instruction model.
   CHECK(expression_.Rewrite(model_, &instructions_));

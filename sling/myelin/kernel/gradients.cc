@@ -178,7 +178,7 @@ void gather_grad(Flow::Operation *op, Gradients *g) {
   auto M = op->inputs[0];
   auto f = op->inputs[1];
   auto v = op->outputs[0];
-  g->add(M, g->Scatter(g->d(v), g->v(f), M->dim(0)));
+  g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0)));
 }
 
 } // namespace

@@ -893,8 +893,7 @@ class AVXFltDotProduct : public Kernel {
     if (!CPU::Enabled(AVX)) return false;
 
     // Two tensor inputs and one tensor output.
-    if (step->inputs().size() != 2) return false;
-    if (step->outputs().size() != 1) return false;
+    if (step->indegree() != 2 || step->outdegree() != 1) return false;
     Tensor *a = step->input(0);
     Tensor *b = step->input(1);
     Tensor *c = step->output(0);
@@ -1027,6 +1026,40 @@ class AVXFltDotProduct : public Kernel {
     // Save result to c.
     __ LoadTensorAddress(cptr, c);
     __ vmovss(Operand(cptr), sum[0]);
+  }
+};
+
+// Float outer product for CPUs with AVX.
+class AVXFltAssignAddOuter : public Kernel {
+ public:
+  string Name() override { return "AVXFltAssignAddOuter"; }
+  string Operation() override { return "AssignAddOuter"; }
+
+  bool Supports(Step *step) override {
+    // Requires CPU with AVX support.
+    //if (!CPU::Enabled(AVX)) return false;
+
+    // Three tensor inputs.
+    if (step->indegree() != 3 || step->outdegree() != 0) return false;
+    Tensor *c = step->input(0);
+    Tensor *a = step->input(1);
+    Tensor *b = step->input(2);
+    if (a->type() != DT_FLOAT) return false;
+    if (b->type() != DT_FLOAT) return false;
+    if (c->type() != DT_FLOAT) return false;
+
+    return true;
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+
+  void Adjust(Step *step) override {
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
   }
 };
 
@@ -1344,6 +1377,14 @@ void RegisterAVXMatMul(Library *library) {
   // Requires  : AVX
   // Supports  : FMA3
   library->Register(new AVXFltDotProduct());
+
+  // Computes  : c += a * c
+  // Input     : a: float32[n,1]
+  //             b: float32[1,m]
+  // Output    : c: float32[n,m]
+  // Requires  : AVX
+  // Supports  : FMA3
+  library->Register(new AVXFltAssignAddOuter());
 }
 
 }  // namespace myelin

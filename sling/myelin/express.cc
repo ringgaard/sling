@@ -433,6 +433,13 @@ void Express::GetRecipe(string *recipe) const {
   }
 }
 
+Express::Var *Express::Lookup(VarType type, int id) {
+  for (Var *v : vars_) {
+    if (v->type == type && v->id == id) return v;
+  }
+  return nullptr;
+}
+
 Express::Var *Express::Variable(VarType type, int id) {
   // Look for existing variable.
   if (id != -1) {
@@ -580,6 +587,12 @@ int Express::Complexity() const {
   return n;
 }
 
+void Express::EliminateInput(int id) {
+  for (Var *v : vars_) {
+    if ((v->type == INPUT || v->type == CONST) && v->id > id) v->id--;
+  }
+}
+
 int Express::CompactTempVars() {
   int n = 0;
   for (Var *v : vars_) {
@@ -674,7 +687,7 @@ void Express::HoistConstants(int limit) {
     }
 
     // Stop if no candidate for hoisting was found.
-    if (candidate == nullptr) break;
+    if (candidate == nullptr || candidate->usages() == 0) break;
 
     // Allocate temp for constant and update all usages.
     Var *temp = Temp();

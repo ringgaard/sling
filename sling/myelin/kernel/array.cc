@@ -1227,9 +1227,15 @@ class ScatterAdd : public Kernel {
     if (var->type() != DT_FLOAT && var->rank() == 2) return false;
     if (var->constant()) return false;
     if (indices->type() != DT_INT32 && indices->rank() == 1) return false;
+
     if (value->type() != DT_FLOAT) return false;
-    if (value->rank() != 1) return false;
-    if (value->dim(0) != var->dim(1)) return false;
+    if (value->rank() == 1) {
+      if (value->dim(0) != var->dim(1)) return false;
+    } else if (value->rank() == 2) {
+      if (value->dim(1) != var->dim(1)) return false;
+    } else {
+      return false;
+    }
     if (scale_) {
       if (scaler->type() != DT_FLOAT) return false;
       if (scaler->elements() != 1) return false;
@@ -1444,7 +1450,13 @@ class ScaledUpdateTransformer : public Transformer {
       Flow::Operation *assign = op;
       Flow::Operation *scatter = assign->inputs[1]->producer;
       if (scatter->outputs[0]->consumers.size() == 1) {
-        flow->Fuse(scatter, assign, "ScatterAdd");
+        auto *scatteradd  = flow->Fuse(scatter, assign, "ScatterAdd");
+        auto *f = scatteradd->inputs[0];
+        auto *v = scatteradd->inputs[1];
+        auto *M = scatteradd->inputs[2];
+        scatteradd->inputs[0] = M;
+        scatteradd->inputs[1] = f;
+        scatteradd->inputs[2] = v;
         updates++;
       }
     }

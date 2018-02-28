@@ -37,16 +37,29 @@ Gradients::Gradients(Flow *flow,
 
   // Create adjoints.
   for (Flow::Variable *v : vars) {
+    // Constants have trivial derivatives.
     if (v->constant()) continue;
+
+    // Only floats are differentiable.
     if (v->type != DT_FLOAT && v->type != DT_DOUBLE) continue;
+
+    // Create adjoint corresponding to the primal variable.
     auto *dv = Var("d_" + basename(v->name), v->type, v->shape);
     if (v->in()) dv->flags |= Flow::Variable::OUT;
     if (v->out()) dv->flags |= Flow::Variable::IN;
     dv->ref = v->ref;
+
+    // Connect adjoint to primal variable to ensure common layout.
+    if (v->learnable()) {
+      auto *cnx = flow->AddConnector("gradients/" + v->name);
+      cnx->AddLink(v);
+      cnx->AddLink(dv);
+    }
+
+    // For recurrences that are both produced and consumed by the function an
+    // additional accumulator is added to sum both contributions to the
+    // gradient.
     if (v->ref && v->producer != nullptr && !v->consumers.empty()) {
-      // For recurrences that are both produced and consumed by the function
-      // an additional accumulator is added to sum both contributions to the
-      // gradient.
       auto *acc = Var("acc_" + basename(v->name), v->type, v->shape);
       adjoints_[v] = acc;
       terms_[acc] = dv;
@@ -59,7 +72,14 @@ Gradients::Gradients(Flow *flow,
 Flow::Variable *Gradients::GetReference(Flow::Variable *x) {
   Flow::Variable *&r = refs_[x];
   if (r == nullptr) {
-    r = Name(Ref(instance_, x), basename(x->name));
+    if (x->global()) {
+      // Global variables can be directly referenced.
+      r = x;
+    } else {
+      // Local variables need to be accessed through a reference op.
+      r = Name(Ref(instance_, x), basename(x->name));
+      x->flags |= Flow::Variable::OUT;
+    }
     refs_[x] = r;
   }
   return r;

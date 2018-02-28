@@ -94,6 +94,7 @@ cc_binary(
     "//sling/file:posix",
     "//sling/myelin:builder",
     "//sling/myelin:compute",
+    "//sling/myelin:elf-linker",
     "//sling/myelin:gradient",
     "//sling/myelin:flow",
     "//sling/myelin:graph",
