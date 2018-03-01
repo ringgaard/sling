@@ -158,16 +158,16 @@ class Builder : public Scope {
   }
 
   Variable *Gather(Variable *M, Variable *f) {
-    return Op("Gather", {M, f}, M->type, {f->dim(1), M->dim(1)});
+    return Op("Gather", {M, f}, M->type, {f->dim(0), M->dim(1)});
   }
   Variable *GatherSum(Variable *M, Variable *f) {
-    return Op("GatherSum", {M, f}, M->type, {f->dim(0)});
+    return Op("GatherSum", {M, f}, M->type, {f->dim(0), M->dim(1)});
   }
   Variable *GatherAvg(Variable *M, Variable *f) {
-    return Op("GatherAvg", {M, f}, M->type, {f->dim(0)});
+    return Op("GatherAvg", {M, f}, M->type, {f->dim(0), M->dim(1)});
   }
   Variable *GatherMax(Variable *M, Variable *f) {
-    return Op("GatherMax", {M, f}, M->type, {f->dim(0)});
+    return Op("GatherMax", {M, f}, M->type, {f->dim(0), M->dim(1)});
   }
 
   Variable *Scatter(Variable *f, Variable *v, int size) {

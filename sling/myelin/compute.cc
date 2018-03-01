@@ -880,7 +880,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Link tensors to connector.
     for (Flow::Variable *link : cnx->links) {
-      CHECK(link->ref);
       connector->links_.push_back(tensors[link]);
       tensors[link]->link_ = t;
     }
@@ -1003,6 +1002,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
     VLOG(3) << "Step " << step->name() << " implemented by "
             << step->kernel_->Name();
+
+    // Let kernel adjust the input and output data alignment requirements.
+    step->kernel_->Adjust(step);
   }
 
   // Add tensors for profiling.
@@ -1039,11 +1041,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       tensors[profile] = profile;
       cell->profile_ = profile;
     }
-  }
-
-  // Let kernels adjust the input and output data alignment requirements.
-  for (Step *step : steps_) {
-    step->kernel_->Adjust(step);
   }
 
   // Propagate constraints between linked tensors.
@@ -1139,8 +1136,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Check for dense encoding conflicts.
     if (tensor->require_dense_) {
+      bool singular = true;
       for (int d = 0; d < tensor->rank(); ++d) {
-        if (tensor->dim(d) % tensor->minalign(d) != 0) {
+        if (tensor->dim(d) != 1) singular = false;
+        if (tensor->dim(d) % tensor->minalign(d) != 0 && !singular) {
           LOG(ERROR) << "Conflicting dense encoding requirements for "
                      << tensor->name()
                      << " shape " << tensor->shape().ToString()

@@ -614,14 +614,14 @@ class SingleGather : public Kernel {
     Tensor *M = step->input(0);
     Tensor *f = step->input(1);
     Tensor *v = step->output(0);
-    int r = f->rank();
+    int r = f->rank() - 1;
     if (f->type() != DT_INT32 || f->elements() != 1) return false;
     if (M->type() != DT_FLOAT || M->rank() != 2) return false;
     if (v->type() != DT_FLOAT || v->rank() != r + 1) return false;
     if (v->shape().outer(r) != 1 || v->dim(r) != M->dim(1)) return false;
 
-    // Check that the output is not already a reference or a cell output.
-    if (v->ref() || v->out()) return false;
+    // Check that the output is not already a reference.
+    if (v->ref()) return false;
 
     return true;
   }
@@ -690,7 +690,7 @@ class MultiGather : public Kernel {
     Tensor *M = step->input(0);
     Tensor *f = step->input(1);
     Tensor *v = step->output(0);
-    int r = f->rank();
+    int r = f->rank() - 1;
     int n = f->elements();
     if (f->type() != DT_INT32) return false;
     if (M->type() != DT_FLOAT || M->rank() != 2) return false;
@@ -785,7 +785,7 @@ class PoolingGather : public Kernel {
     Tensor *f = step->input(1);
     Tensor *v = step->output(0);
     if (M->type() != DT_FLOAT || M->rank() != 2) return false;
-    if (f->type() != DT_INT32) return false;
+    if (f->type() != DT_INT32 || f->rank() != 2) return false;
     if (v->type() != DT_FLOAT || v->elements() != M->dim(1)) return false;
 
     return true;
@@ -1224,18 +1224,11 @@ class ScatterAdd : public Kernel {
     Tensor *indices = step->input(1);
     Tensor *value = step->input(2);
     Tensor *scaler = scale_ ? step->input(3) : nullptr;
-    if (var->type() != DT_FLOAT && var->rank() == 2) return false;
+    if (var->type() != DT_FLOAT || var->rank() != 2) return false;
     if (var->constant()) return false;
-    if (indices->type() != DT_INT32 && indices->rank() == 1) return false;
-
+    if (indices->type() != DT_INT32 || indices->rank() != 2) return false;
     if (value->type() != DT_FLOAT) return false;
-    if (value->rank() == 1) {
-      if (value->dim(0) != var->dim(1)) return false;
-    } else if (value->rank() == 2) {
-      if (value->dim(1) != var->dim(1)) return false;
-    } else {
-      return false;
-    }
+    if (value->elements() != var->dim(1)) return false;
     if (scale_) {
       if (scaler->type() != DT_FLOAT) return false;
       if (scaler->elements() != 1) return false;
