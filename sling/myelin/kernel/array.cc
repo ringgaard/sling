@@ -320,7 +320,7 @@ class Slice : public Kernel {
     Tensor *source = step->input(0);
     Tensor *begin = step->input(1);
     Tensor *size = step->input(2);
-    Tensor *destination = step->output(1);
+    Tensor *destination = step->output(0);
     int n = size->value<int32>();
     int bytes = n * source->stride(0);
 
@@ -630,7 +630,6 @@ class SingleGather : public Kernel {
     // Make output a reference into the embedding matrix.
     Tensor *v = step->output(0);
     DCHECK(!v->ref());
-    DCHECK(!v->out());
     v->set_ref(true);
     v->set_link(step->input(0));
 
@@ -1054,7 +1053,7 @@ class AssignAdd : public Kernel {
 
     // Check inputs and outputs.
     if (step->indegree() != (scale_ ? 3 : 2)) return false;
-    if (step->outdegree() != 0) return false;
+    if (step->outdegree() > 1) return false;
 
     // Check types.
     Tensor *var = step->input(0);
@@ -1069,6 +1068,11 @@ class AssignAdd : public Kernel {
       if (scaler->type() != DT_FLOAT) return false;
       if (scaler->elements() != 1) return false;
     }
+    if (step->outdegree() == 1) {
+      Tensor *output = step->output(0);
+      if (var->type() != output->type()) return false;
+      if (var->shape() != output->shape()) return false;
+    }
 
     return true;
   }
@@ -1081,6 +1085,9 @@ class AssignAdd : public Kernel {
     int byte_alignment = (CPU::Enabled(AVX) ? 256 : 128) / 8;
     var->SetMiniumAlignment(byte_alignment);
     value->SetMiniumAlignment(byte_alignment);
+
+    // Make optional output a reference.
+    if (step->outdegree() == 1) step->output(0)->set_ref(true);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -1088,6 +1095,7 @@ class AssignAdd : public Kernel {
     Tensor *var = step->input(0);
     Tensor *value = step->input(1);
     Tensor *scaler = scale_ ? step->input(2) : nullptr;
+    Tensor *output = step->outdegree() == 1 ? step->output(0) : nullptr;
     int n = value->elements();
 
     // Allocate registers.
@@ -1189,6 +1197,12 @@ class AssignAdd : public Kernel {
         __ movss(Operand(dst, disp), elem);
         disp += sizeof(float);
       }
+    }
+
+    // Optionally output reference to sum.
+    if (output != nullptr) {
+      CHECK(output->IsLocal());
+      __ movq(Operand(masm->instance(), output->offset()), dst);
     }
   }
 

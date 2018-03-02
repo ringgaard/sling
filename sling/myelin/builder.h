@@ -178,6 +178,10 @@ class Builder : public Scope {
     Op0("AssignAdd", {var, value});
   }
 
+  Variable *Accumulate(Variable *var, Variable *value) {
+    return Op("AssignAdd", {var, value});
+  }
+
   void ScatterAdd(Variable *M, Variable *f, Variable *v) {
     return Op0("ScatterAdd", {M, f, v});
   }

@@ -98,6 +98,7 @@ cc_binary(
     "//sling/myelin:gradient",
     "//sling/myelin:flow",
     "//sling/myelin:graph",
+    "//sling/myelin:learning",
     "//sling/myelin/kernel:tensorflow",
   ],
 )

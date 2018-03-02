@@ -24,10 +24,13 @@ void ElfLinker::BeginCell(Cell *cell) {
   code_.Align(16);
 }
 
-void ElfLinker::AddStep(Step *step, int offset) {
+void ElfLinker::EndStep(Step *step, int offset) {
   // Add entry point for step.
-  elf_.AddSymbol(step->name().c_str(), code_.progbits, STB_LOCAL, STT_FUNC,
-                 0, code_.offset() + offset);
+  if (!step->noop()) {
+    string name = step->name() + ":" + step->kernel()->Name();
+    elf_.AddSymbol(name.c_str(), code_.progbits, STB_LOCAL, STT_FUNC,
+                   0, code_.offset() + offset);
+  }
 }
 
 void ElfLinker::EndCell(Cell *cell,

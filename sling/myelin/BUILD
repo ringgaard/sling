@@ -96,6 +96,18 @@ cc_library(
 )
 
 cc_library(
+  name = "learning",
+  srcs = ["learning.cc"],
+  hdrs = ["learning.h"],
+  deps = [
+    ":compute",
+    ":flow",
+    ":builder",
+    "//sling/base",
+  ],
+)
+
+cc_library(
   name = "elf-linker",
   srcs = ["elf-linker.cc"],
   hdrs = ["elf-linker.h"],

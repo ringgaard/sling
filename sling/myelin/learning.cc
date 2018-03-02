@@ -1,0 +1,125 @@
+// Copyright 2018 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "sling/myelin/learning.h"
+
+#include "sling/base/logging.h"
+#include "sling/myelin/builder.h"
+
+namespace sling {
+namespace myelin {
+
+CrossEntropyLoss::CrossEntropyLoss(const string &name) {
+  name_ = name;
+  gradient_name_ = "gradients/" + name;
+}
+
+void CrossEntropyLoss::Build(Flow *flow, Flow::Variable *input) {
+  // Assume logits batch dimension is one.
+  CHECK_EQ(input->rank(), 2);
+  CHECK_EQ(input->dim(0), 1);
+  int size = input->dim(1);
+
+  // Build forward loss computation.
+  Builder fwd(flow, name_);
+
+  // Inputs are logits and target label.
+  auto *logits = fwd.Placeholder("logits", DT_FLOAT, input->shape);
+  logits->ref = true;
+  auto *target = fwd.Placeholder("target", DT_INT32, {});
+
+  // Compute softmax for logits.
+  auto *softmax = fwd.Softmax(fwd.Reshape(logits, {size}));
+
+  // Compute loss (negative log-likelihood).
+  auto *loss = fwd.Neg(fwd.Log(fwd.Slice(softmax, target)));
+
+  // Sum losses.
+  auto *loss_sum = fwd.Placeholder("loss_sum", DT_FLOAT, {1});
+  loss_sum->flags |= Flow::Variable::OUT;
+  fwd.AssignAdd(loss_sum, loss);
+
+  // Increment batch counter.
+  auto *batch_size = fwd.Placeholder("batch_size", DT_FLOAT, {});
+  batch_size->flags |= Flow::Variable::OUT;
+  fwd.AssignAdd(batch_size, fwd.Const(1.0f));
+
+  // Sum softmax.
+  auto *softmax_sum = fwd.Placeholder("softmax_sum", DT_FLOAT, softmax->shape);
+  softmax_sum->flags |= Flow::Variable::OUT;
+  fwd.AssignAdd(softmax_sum, softmax);
+
+  // Sum target labels.
+  auto *labels = fwd.Placeholder("labels", DT_FLOAT, {size});
+  labels->flags |= Flow::Variable::OUT;
+  fwd.ScatterAdd(fwd.Reshape(labels, {size, 1}),
+                 fwd.Reshape(target, {1, 1}),
+                 fwd.Const(1.0f));
+
+  // Build backward loss gradient.
+  Builder bkw(flow, gradient_name_);
+  auto *forward = bkw.Name(bkw.Instance(fwd.func()), "primal");
+  auto *n = bkw.Ref(forward, batch_size);
+
+  // Average loss.
+  bkw.Name(bkw.Div(bkw.Ref(forward, loss_sum), n) , "loss");
+
+  // Loss gradient.
+  bkw.Name(
+    bkw.Reshape(
+      bkw.Div(
+        bkw.Sub(bkw.Ref(forward, softmax_sum), bkw.Ref(forward, labels)),
+        n),
+      {1, size}),
+    "d_logits");
+}
+
+void CrossEntropyLoss::Initialize(const Network &network) {
+  // Get forward and backward loss computation cells.
+  forward_ = network.GetCell(name_);
+  CHECK(forward_ != nullptr);
+  backward_ = network.GetCell(gradient_name_);
+  CHECK(backward_ != nullptr);
+
+  // Get tensors.
+  logits_ = network.GetParameter(name_ + "/logits");
+  target_ = network.GetParameter(name_ + "/target");
+  batch_size_ = network.GetParameter(name_ + "/batch_size");
+  primal_ = network.GetParameter(gradient_name_ + "/primal");
+  loss_ = network.GetParameter(gradient_name_ + "/loss");
+  dlogits_ = network.GetParameter(gradient_name_ + "/d_logits");
+}
+
+CrossEntropyLoss::Batch::Batch(const CrossEntropyLoss &loss)
+    : loss_(loss), forward_(loss.forward_), backward_(loss.backward_) {}
+
+void CrossEntropyLoss::Batch::Clear() {
+  forward_.Clear();
+  backward_.Clear();
+}
+
+void CrossEntropyLoss::Batch::Forward(float *logits, int target) {
+  forward_.SetReference(loss_.logits_, logits);
+  *forward_.Get<int>(loss_.target_) = target;
+  forward_.Compute();
+}
+
+void CrossEntropyLoss::Batch::Backward() {
+  backward_.Set(loss_.primal_, &forward_);
+  backward_.Compute();
+}
+
+}  // namespace myelin
+}  // namespace sling
+

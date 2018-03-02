@@ -11,6 +11,7 @@
 #include "sling/myelin/flow.h"
 #include "sling/myelin/gradient.h"
 #include "sling/myelin/graph.h"
+#include "sling/myelin/learning.h"
 #include "sling/myelin/kernel/tensorflow.h"
 
 DEFINE_bool(analyze, true, "Analyze flow");
@@ -20,14 +21,10 @@ DEFINE_bool(dump_cell, false, "Dump flow");
 using namespace sling;
 using namespace sling::myelin;
 
-Flow::Function *BuildLoss(Flow *flow, int size) {
-  Builder tf(flow, "loss");
-  auto *logits = tf.Placeholder("logits", DT_FLOAT, {size});
-  auto *target = tf.Placeholder("target", DT_INT32, {});
-  auto *softmax = tf.Softmax(logits);
-  tf.Name(tf.Op("DeltaCrossEntropy", {softmax}), "dlogits");
-  tf.Name(tf.Neg(tf.Log(tf.Slice(softmax, target))), "loss");
-  return tf.func();
+string DeltaName(const string &name) {
+  int slash = name.rfind('/');
+  if (slash == -1) return "gradients/d_" + name;
+  return "gradients/" + name.substr(0, slash) + "/d_" + name.substr(slash + 1);
 }
 
 int main(int argc, char *argv[]) {
@@ -59,9 +56,11 @@ int main(int argc, char *argv[]) {
   Flow::Function *dtagger = Gradient(&flow, tf.func(), library);
   //Flow::Function *loss = BuildLoss(&flow, tags);
 
+  CrossEntropyLoss loss;
+  loss.Build(&flow, logits);
+
   LOG(INFO) << "logits: " << logits->name;
   LOG(INFO) << "dtagger: " << dtagger->name;
-  //LOG(INFO) << "loss: " << loss->name;
 
   if (FLAGS_analyze) {
     flow.Analyze(library);
@@ -81,12 +80,22 @@ int main(int argc, char *argv[]) {
   Network network;
   ElfLinker linker;
   network.set_linker(&linker);
-  network.Compile(flow, library);
+  CHECK(network.Compile(flow, library));
+  loss.Initialize(network);
 
   // Dump cell.
   for (Cell *cell : network.cells()) {
     if (FLAGS_dump_cell) {
       std::cout << cell->ToString();
+    }
+  }
+
+  // Output learnable variables.
+  for (Tensor *var : network.globals()) {
+    if (var->learnable()) {
+      Tensor *dvar = network.GetParameter(DeltaName(var->name()));
+      CHECK(dvar != nullptr) << DeltaName(var->name());
+      LOG(INFO) << "Learn " << var->name() << " from " << dvar->name() << " in " << dvar->cell()->name();
     }
   }
 

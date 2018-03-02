@@ -283,8 +283,11 @@ class Linker {
                        jit::Code *code,
                        int data_size) {}
 
-  // Add entry point for step.
-  virtual void AddStep(Step *step, int offset) {}
+  // Start code generation for step.
+  virtual void BeginStep(Step *step, int offset) {}
+
+  // Code generation for step completed.
+  virtual void EndStep(Step *step, int offset) {}
 
   // Add tensor data block to linker.
   virtual void AddData(Tensor *data) {}
@@ -435,6 +438,9 @@ class Tensor {
 
   // Check if tensor is a constant.
   bool constant() const { return constant_; }
+
+  // Check if tensor is learnable.
+  bool learnable() const { return !local_ && !constant_; }
 
   // Local variables are allocated in the instance block.
   bool IsLocal() const { return local_; }
@@ -1169,7 +1175,7 @@ class Network {
   // Get connector.
   Connector *GetConnector(const string &name) const;
 
-  // Get parameter.
+  // Get parameter tensor.
   Tensor *GetParameter(const string &name) const;
 
   // Return tensor data object for global tensor.

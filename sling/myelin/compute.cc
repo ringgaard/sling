@@ -1445,9 +1445,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
                 << reinterpret_cast<uint64 *>(pc)
                 << " with " << step->kernel_->Name()
                 << " on " << placename[step->placement()];
-        linker_->AddStep(step, pc);
+        linker_->BeginStep(step, pc);
         step->kernel_->Generate(step, &masm);
         if (masm.pc_offset() == pc) step->noop_ = true;
+        linker_->EndStep(step, pc);
 
         // No registers are preserved between steps, so reset register
         // allocation.

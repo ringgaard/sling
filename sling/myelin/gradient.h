@@ -65,7 +65,7 @@ class Gradients : public Builder {
   // Terms for adjoint.
   std::unordered_map<Flow::Variable *, Flow::Variable *> terms_;
 
-  // Instance variable pointing to primary variables.
+  // Instance variable pointing to primal variables.
   Flow::Variable *instance_;
 
   // References to primal variables (lazily initialized).

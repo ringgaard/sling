@@ -32,7 +32,7 @@ class ElfLinker : public Linker {
   void BeginCell(Cell *cell) override;
 
   // Add local entry point for step.
-  void AddStep(Step *step, int offset) override;
+  void EndStep(Step *step, int offset) override;
 
   // Add code for cell.
   void EndCell(Cell *cell,
