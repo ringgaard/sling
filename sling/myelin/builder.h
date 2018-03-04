@@ -24,7 +24,7 @@
 namespace sling {
 namespace myelin {
 
-// A score is used for defined a name space for variables and operations.
+// A scope is used for defined a name space for variables and operations.
 class Scope {
  public:
   Scope(Scope *parent, const string &name);
