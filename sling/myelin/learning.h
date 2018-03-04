@@ -16,7 +16,9 @@
 #define SLING_MYELIN_LEARNING_H_
 
 #include <string>
+#include <map>
 
+#include "sling/myelin/builder.h"
 #include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
 
@@ -89,13 +91,40 @@ class CrossEntropyLoss {
 // based on the (accumulated) gradients from backpropagation.
 class Optimizer {
  public:
-  virtual ~Optimizer() = default;
+  // Mapping from learnable variables to their gradients.
+  typedef std::map<Flow::Variable *, Flow::Variable *> GradientMap;
+
+  Optimizer(const string &name = "optimizer") : name_(name) {}
+  virtual ~Optimizer() { delete update_; }
+
+  // Build update function for applying gradients.
+  void Build(Flow *flow);
+
+  // Initialize gradient update for model.
+  void Initialize(const Network &network);
+
+  // Apply gradients to update learnable parameters.
+  void Apply(std::vector<Instance *> &gradients);
+
+ protected:
+  virtual void BuildUpdate(const GradientMap &gradmap, Builder *update) = 0;
 
  private:
+  // Name of optimizer.
+  string name_;
+
+  // Mapping from gradient computation cell to instance variable in update.
+  std::map<Flow::Function *, Flow::Variable *> instance_;
+  std::map<const Cell *, Tensor *> refs_;
+
+  // Instance for updating the learnable parameters from the gradients.
+  Instance *update_ = nullptr;
 };
 
 // Stocastic gradient descent optimizer.
 class GradientDescentOptimizer : public Optimizer {
+ protected:
+  void BuildUpdate(const GradientMap &gradmap, Builder *update) override;
 };
 
 }  // namespace myelin

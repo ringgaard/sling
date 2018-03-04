@@ -20,6 +20,13 @@
 namespace sling {
 namespace myelin {
 
+// Return name of gradient variable.
+static string GradientName(const string &name) {
+  int slash = name.rfind('/');
+  if (slash == -1) return "gradients/d_" + name;
+  return "gradients/" + name.substr(0, slash) + "/d_" + name.substr(slash + 1);
+}
+
 CrossEntropyLoss::CrossEntropyLoss(const string &name) {
   name_ = name;
   gradient_name_ = "gradients/" + name;
@@ -118,6 +125,84 @@ void CrossEntropyLoss::Batch::Forward(float *logits, int target) {
 void CrossEntropyLoss::Batch::Backward() {
   backward_.Set(loss_.primal_, &forward_);
   backward_.Compute();
+}
+
+void Optimizer::Build(Flow *flow) {
+  // Build mapping from learnable variable to gradient for variable.
+  Builder tf(flow, name_);
+  GradientMap gradmap;
+  for (Flow::Variable *var : flow->vars()) {
+    if (!var->learnable()) continue;
+
+    // Get gradient variable for learnable variable.
+    Flow::Variable *dvar = flow->Var(GradientName(var->name));
+    CHECK(dvar != nullptr) << "No gradient found for " << var->name;
+
+    // Find function for gradient variable.
+    Flow::Operation *producer = nullptr;
+    if (dvar->producer != nullptr) {
+      producer = dvar->producer;
+    } else if (!dvar->consumers.empty()) {
+      producer = dvar->consumers[0];
+    }
+    CHECK(producer != nullptr) << "No producer for gradient " << dvar->name;
+    Flow::Function *func = producer->func;
+    CHECK(func != nullptr) "No producer function for gradient " << dvar->name;
+
+    // Add instance variables for producer functions.
+    if (instance_[func] == nullptr) instance_[func] = tf.Instance(func);
+
+    // Add reference to gradient in update function.
+    gradmap[var] = tf.Ref(instance_[func], dvar);
+  }
+
+  // Build variable update.
+  BuildUpdate(gradmap, &tf);
+}
+
+void Optimizer::Initialize(const Network &network) {
+  // Get cell for update.
+  Cell *cell = network.GetCell(name_);
+  CHECK(cell != nullptr);
+
+  // Create update instance.
+  update_ = new Instance(cell);
+
+  // Create mapping from gradient computation cell to instance variable in
+  // update cell.
+  for (auto it : instance_) {
+    Cell *gradient_cell = network.GetCell(it.first->name);
+    CHECK(gradient_cell != nullptr);
+    Tensor *gradient_instance = cell->GetParameter(it.second->name);
+    CHECK(gradient_instance != nullptr);
+    refs_[gradient_cell] = gradient_instance;
+  }
+}
+
+void Optimizer::Apply(std::vector<Instance *> &gradients) {
+  // Set instance references to gradients in update.
+  for (Instance *g : gradients) {
+    auto f = refs_.find(g->cell());
+    CHECK(f != refs_.end());
+    update_->Set(f->second, g);
+  }
+
+  // Apply gradient update to learnable parameters.
+  update_->Compute();
+}
+
+void GradientDescentOptimizer::BuildUpdate(const GradientMap &gradmap,
+                                           Builder *update) {
+  // Add learning rate to update function.
+  auto *alpha = update->Var("alpha", DT_FLOAT, {});
+  auto *weight = update->Neg(alpha);
+
+  // Update learnable variables from gradients.
+  for (auto it : gradmap) {
+    auto *v = it.first;
+    auto *dv = it.second;
+    update->AssignAdd(v, update->Mul(dv, weight));
+  }
 }
 
 }  // namespace myelin

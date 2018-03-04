@@ -21,18 +21,16 @@ DEFINE_bool(dump_cell, false, "Dump flow");
 using namespace sling;
 using namespace sling::myelin;
 
-string DeltaName(const string &name) {
-  int slash = name.rfind('/');
-  if (slash == -1) return "gradients/d_" + name;
-  return "gradients/" + name.substr(0, slash) + "/d_" + name.substr(slash + 1);
-}
-
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
   // Set up kernel library.
   Library library;
   RegisterTensorflowLibrary(&library);
+
+  Network network;
+  ElfLinker linker;
+  network.set_linker(&linker);
 
   jit::CPU::Enable(jit::AVX);
   jit::CPU::Enable(jit::AVX2);
@@ -54,14 +52,17 @@ int main(int argc, char *argv[]) {
   auto *logits = tf.FFLayer(hidden, tags, true);
 
   Flow::Function *dtagger = Gradient(&flow, tf.func(), library);
-  //Flow::Function *loss = BuildLoss(&flow, tags);
 
   CrossEntropyLoss loss;
   loss.Build(&flow, logits);
 
+  GradientDescentOptimizer optimizer;
+  optimizer.Build(&flow);
+
   LOG(INFO) << "logits: " << logits->name;
   LOG(INFO) << "dtagger: " << dtagger->name;
 
+  // Analyze flow.
   if (FLAGS_analyze) {
     flow.Analyze(library);
   }
@@ -71,31 +72,20 @@ int main(int argc, char *argv[]) {
     std::cout << flow.ToString();
   }
 
-  // Output DOT graph. The file can be converted to SVG using GraphWiz dot:
-  // dot /tmp/model.dot -Tsvg > model.svg
+  // Output DOT graph.
   GraphOptions opts;
   FlowToDotGraphFile(flow, opts, "/tmp/postagger.dot");
 
   // Compile network.
-  Network network;
-  ElfLinker linker;
-  network.set_linker(&linker);
   CHECK(network.Compile(flow, library));
+
   loss.Initialize(network);
+  optimizer.Initialize(network);
 
   // Dump cell.
   for (Cell *cell : network.cells()) {
     if (FLAGS_dump_cell) {
       std::cout << cell->ToString();
-    }
-  }
-
-  // Output learnable variables.
-  for (Tensor *var : network.globals()) {
-    if (var->learnable()) {
-      Tensor *dvar = network.GetParameter(DeltaName(var->name()));
-      CHECK(dvar != nullptr) << DeltaName(var->name());
-      LOG(INFO) << "Learn " << var->name() << " from " << dvar->name() << " in " << dvar->cell()->name();
     }
   }
 
