@@ -107,9 +107,12 @@ class Optimizer {
   void Apply(std::vector<Instance *> &gradients);
 
  protected:
-  virtual void BuildUpdate(const GradientMap &gradmap, Builder *update) = 0;
+  // Let subclass build the parameter update using the gradient map.
+  virtual void BuildOptimizer(const GradientMap &gradmap, Builder *update) = 0;
 
- private:
+  // Let subclass initialize update function for optimizer.
+  virtual void InitializeOptimizer() = 0;
+
   // Name of optimizer.
   string name_;
 
@@ -123,8 +126,18 @@ class Optimizer {
 
 // Stocastic gradient descent optimizer.
 class GradientDescentOptimizer : public Optimizer {
+ public:
+  // Return current learning rate.
+  float alpha() const { return *update_->Get<float>(alpha_); }
+
+  // Set learning rate.
+  void set_alpha(float alpha) { *update_->Get<float>(alpha_) = alpha; }
+
  protected:
-  void BuildUpdate(const GradientMap &gradmap, Builder *update) override;
+  void BuildOptimizer(const GradientMap &gradmap, Builder *update) override;
+  void InitializeOptimizer() override;
+
+  Tensor *alpha_ = nullptr;  // learning rate
 };
 
 }  // namespace myelin

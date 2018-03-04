@@ -76,20 +76,16 @@ void CrossEntropyLoss::Build(Flow *flow, Flow::Variable *input) {
 
   // Build backward loss gradient.
   Builder bkw(flow, gradient_name_);
-  auto *forward = bkw.Name(bkw.Instance(fwd.func()), "primal");
-  auto *n = bkw.Ref(forward, batch_size);
+  auto *primal = bkw.Name(bkw.Instance(fwd.func()), "primal");
+  auto *n = bkw.Ref(primal, batch_size);
 
   // Average loss.
-  bkw.Name(bkw.Div(bkw.Ref(forward, loss_sum), n) , "loss");
+  bkw.Name(bkw.Div(bkw.Ref(primal, loss_sum), n) , "loss");
 
   // Loss gradient.
-  bkw.Name(
-    bkw.Reshape(
-      bkw.Div(
-        bkw.Sub(bkw.Ref(forward, softmax_sum), bkw.Ref(forward, labels)),
-        n),
-      {1, size}),
-    "d_logits");
+  auto *diff = bkw.Sub(bkw.Ref(primal, softmax_sum), bkw.Ref(primal, labels));
+  auto *mean = bkw.Div(diff ,n);
+  bkw.Name(bkw.Reshape(mean, {1, size}), "d_logits");
 }
 
 void CrossEntropyLoss::Initialize(const Network &network) {
@@ -156,8 +152,8 @@ void Optimizer::Build(Flow *flow) {
     gradmap[var] = tf.Ref(instance_[func], dvar);
   }
 
-  // Build variable update.
-  BuildUpdate(gradmap, &tf);
+  // Build optimizer.
+  BuildOptimizer(gradmap, &tf);
 }
 
 void Optimizer::Initialize(const Network &network) {
@@ -177,6 +173,9 @@ void Optimizer::Initialize(const Network &network) {
     CHECK(gradient_instance != nullptr);
     refs_[gradient_cell] = gradient_instance;
   }
+
+  // Initialize optimizer.
+  InitializeOptimizer();
 }
 
 void Optimizer::Apply(std::vector<Instance *> &gradients) {
@@ -191,8 +190,8 @@ void Optimizer::Apply(std::vector<Instance *> &gradients) {
   update_->Compute();
 }
 
-void GradientDescentOptimizer::BuildUpdate(const GradientMap &gradmap,
-                                           Builder *update) {
+void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
+                                              Builder *update) {
   // Add learning rate to update function.
   auto *alpha = update->Var("alpha", DT_FLOAT, {});
   auto *weight = update->Neg(alpha);
@@ -203,6 +202,12 @@ void GradientDescentOptimizer::BuildUpdate(const GradientMap &gradmap,
     auto *dv = it.second;
     update->AssignAdd(v, update->Mul(dv, weight));
   }
+}
+
+void GradientDescentOptimizer::InitializeOptimizer() {
+  // Set initial learning rate.
+  alpha_ = update_->cell()->GetParameter("alpha");
+  set_alpha(0.01);
 }
 
 }  // namespace myelin
