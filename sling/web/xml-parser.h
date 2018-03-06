@@ -21,12 +21,14 @@
 
 namespace sling {
 
+// XML attribute with name and value.
 struct XMLAttribute {
   XMLAttribute(char *n, char *v) : name(n), value(v) {}
   char *name;
   char *value;
 };
 
+// XML element with name and attribute list.
 struct XMLElement {
   char *name;
   std::vector<XMLAttribute> attrs;
@@ -39,6 +41,9 @@ struct XMLElement {
   }
 };
 
+// XML event-driven parser. The XML input is parsed and the callbacks are called
+// incrementally as each constituent of the XML file is parsed. Subclasses can
+// override the callbacks to process the events.
 class XMLParser {
  public:
   XMLParser();

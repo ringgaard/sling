@@ -140,13 +140,13 @@ class Calendar {
   CalendarMap days_;
 
   // Years where BCE are represented by negative numbers. There is no year 0 in
-  // the AD calendar although the is an item for this concept.
+  // the AD calendar although there is an item for this concept.
   CalendarMap years_;
 
   // Decades. The decades are numbered as year/10, e.g. the decade from
   // 1970-1979 has 197 as the key. The last decade before AD, i.e. years 1-9 BC,
   // has decade number -1. Likewise, the first decade after AD, i.e. years
-  // 1-9 AD, has number 0. These two decades only has nine years.
+  // 1-9 AD, has number 0. These two decades only have nine years.
   CalendarMap decades_;
 
   // Centuries. The centuries are numbered as (year-1)/100+1 for AD and

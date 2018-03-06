@@ -22,13 +22,12 @@
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/nlp/wiki/wiki.h"
-#include "sling/nlp/wiki/wiki.h"
 #include "sling/stream/file-input.h"
 #include "sling/string/numbers.h"
 #include "sling/string/printf.h"
 #include "sling/task/frames.h"
-#include "sling/task/task.h"
 #include "sling/task/process.h"
+#include "sling/task/task.h"
 #include "sling/web/xml-parser.h"
 
 namespace sling {
@@ -217,7 +216,10 @@ class WikipediaXMLParser : public XMLParser {
         // Output frame on redirect channel.
         if (redirects_channel_) {
           Frame frame = builder.Create();
+<<<<<<< HEAD
           //LOG(INFO) << "Redirect: " << ToText(frame, 2);
+=======
+>>>>>>> upstream/caspar
           redirects_channel_->Send(task::CreateMessage(frame));
         }
         num_redirects_->Increment();
