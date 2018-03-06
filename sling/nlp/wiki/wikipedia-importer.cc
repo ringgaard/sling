@@ -216,10 +216,6 @@ class WikipediaXMLParser : public XMLParser {
         // Output frame on redirect channel.
         if (redirects_channel_) {
           Frame frame = builder.Create();
-<<<<<<< HEAD
-          //LOG(INFO) << "Redirect: " << ToText(frame, 2);
-=======
->>>>>>> upstream/caspar
           redirects_channel_->Send(task::CreateMessage(frame));
         }
         num_redirects_->Increment();
