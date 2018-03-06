@@ -63,6 +63,7 @@ cc_library(
 )
 
 cc_library(
+<<<<<<< HEAD
   name = "html-parser",
   srcs = ["html-parser.cc"],
   hdrs = ["html-parser.h"],
@@ -74,6 +75,8 @@ cc_library(
 )
 
 cc_library(
+=======
+>>>>>>> upstream/caspar
   name = "entity-ref",
   srcs = ["entity-ref.cc"],
   hdrs = ["entity-ref.h"],

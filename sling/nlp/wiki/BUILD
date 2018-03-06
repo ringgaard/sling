@@ -72,6 +72,7 @@ cc_library(
   alwayslink = 1,
 )
 
+<<<<<<< HEAD
 cc_library(
   name = "wikipedia-documents",
   srcs = ["wikipedia-documents.cc"],
@@ -175,3 +176,5 @@ cc_binary(
   ],
 )
 
+=======
+>>>>>>> upstream/caspar

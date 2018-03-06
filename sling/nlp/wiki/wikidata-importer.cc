@@ -818,6 +818,7 @@ class WikidataPropertyCollector : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("wikidata-property-collector",
                         WikidataPropertyCollector);
+
 }  // namespace nlp
 }  // namespace sling
 

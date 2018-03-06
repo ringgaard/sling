@@ -202,8 +202,7 @@ bool XMLParser::Parse(Input *input) {
                   txtptr_ = nullptr;
                   ch = ReadChar();
                   break;
-                }
-                else {
+                } else {
                   dashes = 0;
                 }
               } else if (ch < 0) {
