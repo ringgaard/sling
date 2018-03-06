@@ -55,7 +55,7 @@ class CrossEntropyLoss {
     float loss() { return *backward_.Get<float>(loss_.loss_); }
 
     // Return current batch size.
-    int batch_size() { return *forward_.Get<int>(loss_.batch_size_); }
+    int batch_size() { return *forward_.Get<float>(loss_.batch_size_); }
 
     // Return loss gradient.
     float *dlogits() { return backward_.Get<float>(loss_.dlogits_); }

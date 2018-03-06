@@ -260,6 +260,14 @@ Flow::Variable *Builder::LSTMLayer(Variable *input, int size) {
   ht->ref = true;
   ht->flags |= Variable::OUT;
 
+  // Connectors for hidden and control channels.
+  auto *h_cnx = flow_->AddConnector(prefix() + "/hidden");
+  h_cnx->AddLink(h_in);
+  h_cnx->AddLink(ht);
+  auto *c_cnx = flow_->AddConnector(prefix() + "/control");
+  c_cnx->AddLink(c_in);
+  c_cnx->AddLink(ct);
+  
   return ht;
 }
 

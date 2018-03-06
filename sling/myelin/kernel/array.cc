@@ -349,7 +349,7 @@ class Slice : public Kernel {
       __ load_extern(bptr, begin->data(), begin->name());
       __ movsxlq(acc, Operand(bptr));
       } else {
-        __ movq(acc, Operand(masm->instance(), begin->offset()));
+        __ movsxlq(acc, Operand(masm->instance(), begin->offset()));
       }
       __ Multiply(acc, source->stride(0));
       __ addq(src, acc);
