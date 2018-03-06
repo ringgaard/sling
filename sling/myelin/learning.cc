@@ -194,6 +194,7 @@ void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
                                               Builder *update) {
   // Add learning rate to update function.
   auto *alpha = update->Var("alpha", DT_FLOAT, {});
+  alpha->flags |= Flow::Variable::IN | Flow::Variable::OUT;
   auto *weight = update->Neg(alpha);
 
   // Update learnable variables from gradients.
@@ -206,7 +207,8 @@ void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
 
 void GradientDescentOptimizer::InitializeOptimizer() {
   // Set initial learning rate.
-  alpha_ = update_->cell()->GetParameter("alpha");
+  alpha_ = update_->cell()->GetParameter(name_ + "/alpha");
+  CHECK(alpha_ != nullptr);
   set_alpha(0.01);
 }
 
