@@ -483,9 +483,13 @@ class Tensor {
            (shared_ != nullptr && shared_ == other->shared_);
   }
 
-  // Other tensor that this tensor shares alignment requirements with.
-  Tensor *link() const { return link_; }
-  void set_link(Tensor *link) { link_ = link; }
+  // Circular list of tensors that tensor shares alignment requirements with.
+  Tensor *prev_link() const { return prev_link_; }
+  Tensor *next_link() const { return next_link_; }
+  bool linked() const { return prev_link_ != this; }
+
+  // Link other tensor for propagating alignment requirements.
+  void Link(Tensor *link);
 
   // Step that produces tensor.
   Step *producer() const { return producer_; }
@@ -557,8 +561,9 @@ class Tensor {
   // Optional other tensor that this tensor shares storage with.
   Tensor *shared_ = nullptr;
 
-  // Optional other tensor that this tensor shares alignment requirements with.
-  Tensor *link_ = nullptr;
+  // Tensors that share alignment requirements are linked in a circular list.
+  Tensor *prev_link_ = this;
+  Tensor *next_link_ = this;
 
   // Value for global tensor (not owned).
   char *data_ = nullptr;

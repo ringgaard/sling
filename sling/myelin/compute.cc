@@ -466,6 +466,13 @@ bool Library::Singleton(const string &op,
   return false;
 }
 
+void Tensor::Link(Tensor *link) {
+  next_link_->prev_link_ = link->prev_link_;
+  link->prev_link_->next_link_ = next_link_;
+  next_link_ = link;
+  link->prev_link_ = this;
+}
+
 void Tensor::MinAlign(const Shape &align) {
   CHECK_LE(align.rank(), minalign_.rank());
   for (int d = 0; d < align.rank(); ++d) {
@@ -600,10 +607,11 @@ void Channel::reserve(int n) {
 }
 
 ProfileSummary::ProfileSummary(Cell *cell) : cell_(cell) {
-  CHECK(cell->profile() != nullptr);
-  int size = cell->profile()->elements();
-  data_ = new int64[size];
-  for (int i = 0; i < size; ++i) data_[i] = 0;
+  if (cell->profile()) {
+    int size = cell->profile()->elements();
+    data_ = new int64[size];
+    for (int i = 0; i < size; ++i) data_[i] = 0;
+  }
 }
 
 ProfileSummary::~ProfileSummary() {
@@ -727,10 +735,8 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
 
   // Share input and output.
   out->set_shared(in);
-  if (out->shape() == in->shape()) {
-    CHECK(out->link() == nullptr) << out->name();
-    out->set_link(in);
-  }
+  if (out->shape() == in->shape()) out->Link(in);
+
   return true;
 }
 
@@ -879,7 +885,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     // Link tensors to connector.
     for (Flow::Variable *link : cnx->links) {
       connector->links_.push_back(tensors[link]);
-      tensors[link]->link_ = t;
+      tensors[link]->Link(t);
     }
   }
 
@@ -1049,7 +1055,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     again = false;
     for (auto it : tensors) {
       Tensor *t = it.second;
-      Tensor *l = t->link_;
+      Tensor *l = t->next_link_;
       if (l == nullptr) continue;
 
       // Check type compatibility between linked tensors.
@@ -1192,41 +1198,18 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   }
 
   // Propagate size and alignment for shared tensors.
-  again = true;
-  while (again) {
-    again = false;
-		for (auto it : tensors) {
-		  Tensor *tensor = it.second;
-		  Tensor *next = tensor->shared_;
-		  if (next == nullptr) continue;
-
-      // Determine common size and alignment for shared tensor.
-		  size_t size = tensor->size_;
-		  int align = tensor->byte_alignment_;
-		  bool propagate = false;
-		  while (next != nullptr) {
-		    if (size != next->size_) {
-		      if (size < next->size_) size = next->size_;
-		      propagate = true;
-		    }
-		    if (align != next->byte_alignment_) {
-  		    if (align < next->byte_alignment_) align = next->byte_alignment_;
-  		    propagate = true;
-  		  }
-		    next = next->shared_;
-		  }
-
-		  // Propagate size and alignment.
-		  if (propagate) {
-  		  Tensor *t = tensor;
-  		  while (t != nullptr) {
-  		    t->size_ = size;
-  		    t->byte_alignment_ = align;
-  		    t = t->shared_;
-  		  }
-  		  again = true;
-		  }
-		}
+  for (auto it : tensors) {
+    Tensor *tensor = it.second;
+    Tensor *next = tensor->shared_;
+    while (next != nullptr) {
+      if (next->size_ < tensor->size_) {
+        next->size_ = tensor->size_;
+      }
+      if (next->byte_alignment_ < tensor->byte_alignment_) {
+        next->byte_alignment_ = tensor->byte_alignment_;
+      }
+      next = next->shared_;
+    }
   }
 
   // Compute alignment and placement for connectors.
@@ -1850,8 +1833,8 @@ string Cell::ToString() const {
                     t->TypeString().c_str(),
                     t->offset(),
                     t->space(), t->byte_alignment());
-      if (t->link()) {
-        StringAppendF(&str, " linked to %s", t->link()->name().c_str());
+      if (t->linked()) {
+        StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
       }
       str.append("\n");
       prev_offset = t->offset();
@@ -1877,8 +1860,8 @@ string Cell::ToString() const {
                       t->TypeString().c_str(),
                       t->device_offset(),
                       t->space(), t->byte_alignment());
-		    if (t->link()) {
-		      StringAppendF(&str, " linked to %s", t->link()->name().c_str());
+		    if (t->linked()) {
+		      StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
 		    }
 		    str.append("\n");
         prev_offset = t->device_offset();
@@ -1908,8 +1891,8 @@ string Cell::ToString() const {
                     t->name().c_str(),
                     t->TypeString().c_str(),
                     t->size(), t->byte_alignment());
-      if (t->link()) {
-        StringAppendF(&str, " linked to %s", t->link()->name().c_str());
+      if (t->linked()) {
+        StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
       }
       str.append("\n");
     }

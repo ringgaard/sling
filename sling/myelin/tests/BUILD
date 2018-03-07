@@ -99,6 +99,7 @@ cc_binary(
     "//sling/myelin:flow",
     "//sling/myelin:graph",
     "//sling/myelin:learning",
+    "//sling/myelin:profile",
     "//sling/myelin/kernel:tensorflow",
   ],
 )

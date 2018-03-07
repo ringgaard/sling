@@ -102,9 +102,7 @@ void CrossEntropyLoss::Build(Flow *flow,
 void CrossEntropyLoss::Initialize(const Network &network) {
   // Get forward and backward loss computation cells.
   forward_ = network.GetCell(name_);
-  CHECK(forward_ != nullptr);
   backward_ = network.GetCell(gradient_name_);
-  CHECK(backward_ != nullptr);
 
   // Get tensors.
   logits_ = network.GetParameter(name_ + "/logits");
@@ -116,7 +114,21 @@ void CrossEntropyLoss::Initialize(const Network &network) {
 }
 
 CrossEntropyLoss::Batch::Batch(const CrossEntropyLoss &loss)
-    : loss_(loss), forward_(loss.forward_), backward_(loss.backward_) {}
+    : loss_(loss), forward_(loss.forward_), backward_(loss.backward_) {
+  if (loss.forward_->profile()) {
+    forward_profile_ = new ProfileSummary(loss.forward_);
+    forward_.set_profile(forward_profile_);
+  }
+  if (loss.backward_->profile()) {
+    backward_profile_ = new ProfileSummary(loss.backward_);
+    backward_.set_profile(backward_profile_);
+  }
+}
+
+CrossEntropyLoss::Batch::~Batch() {
+  delete forward_profile_;
+  delete backward_profile_;
+}
 
 void CrossEntropyLoss::Batch::Clear() {
   forward_.Clear();
@@ -126,11 +138,13 @@ void CrossEntropyLoss::Batch::Clear() {
 void CrossEntropyLoss::Batch::Forward(float *logits, int target) {
   forward_.SetReference(loss_.logits_, logits);
   *forward_.Get<int>(loss_.target_) = target;
+  if (forward_profile_) forward_.set_profile(forward_profile_);
   forward_.Compute();
 }
 
 void CrossEntropyLoss::Batch::Backward() {
   backward_.Set(loss_.primal_, &forward_);
+  if (backward_profile_) backward_.set_profile(backward_profile_);
   backward_.Compute();
 }
 
@@ -170,10 +184,12 @@ void Optimizer::Build(Flow *flow) {
 void Optimizer::Initialize(const Network &network) {
   // Get cell for update.
   Cell *cell = network.GetCell(name_);
-  CHECK(cell != nullptr);
 
   // Create update instance.
   update_ = new Instance(cell);
+
+  // Set up profiling.
+  if (cell->profile()) profile_ = new ProfileSummary(cell);
 
   // Create mapping from gradient computation cell to instance variable in
   // update cell.
@@ -194,6 +210,7 @@ void Optimizer::Apply(std::vector<Instance *> &gradients) {
     CHECK(f != refs_.end());
     update_->Set(f->second, g);
   }
+  if (profile_) update_->set_profile(profile_);
 
   // Apply gradient update to learnable parameters.
   update_->Compute();

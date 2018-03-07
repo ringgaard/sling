@@ -631,7 +631,7 @@ class SingleGather : public Kernel {
     Tensor *v = step->output(0);
     DCHECK(!v->ref());
     v->set_ref(true);
-    v->set_link(step->input(0));
+    v->Link(step->input(0));
 
     // Embedding matrix must be row-major.
     step->input(0)->SetRequiredOrder(ROW_MAJOR);

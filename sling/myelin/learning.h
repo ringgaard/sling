@@ -41,6 +41,7 @@ class CrossEntropyLoss {
    public:
     // Initialize loss batch computation.
     Batch(const CrossEntropyLoss &loss);
+    ~Batch();
 
     // Clear accumulated losses.
     void Clear();
@@ -60,11 +61,19 @@ class CrossEntropyLoss {
     // Return loss gradient.
     float *dlogits() { return backward_.Get<float>(loss_.dlogits_); }
 
+    // Profile information.
+    ProfileSummary *forward_profile() const { return forward_profile_; }
+    ProfileSummary *backward_profile() const { return backward_profile_; }
+
    private:
     const CrossEntropyLoss &loss_;
 
     Instance forward_;   // forward computation and accumulation of losses
     Instance backward_;  // backward computation of gradient
+
+    // Profile information.
+    ProfileSummary *forward_profile_ = nullptr;
+    ProfileSummary *backward_profile_ = nullptr;
   };
 
  private:
@@ -95,7 +104,7 @@ class Optimizer {
   typedef std::map<Flow::Variable *, Flow::Variable *> GradientMap;
 
   Optimizer(const string &name = "optimizer") : name_(name) {}
-  virtual ~Optimizer() { delete update_; }
+  virtual ~Optimizer() { delete update_; delete profile_; }
 
   // Build update function for applying gradients.
   void Build(Flow *flow);
@@ -105,6 +114,9 @@ class Optimizer {
 
   // Apply gradients to update learnable parameters.
   void Apply(std::vector<Instance *> &gradients);
+
+  // Profile information.
+  ProfileSummary *profile() const { return profile_; }
 
  protected:
   // Let subclass build the parameter update using the gradient map.
@@ -122,6 +134,9 @@ class Optimizer {
 
   // Instance for updating the learnable parameters from the gradients.
   Instance *update_ = nullptr;
+
+  // Profile information.
+  ProfileSummary *profile_ = nullptr;
 };
 
 // Stocastic gradient descent optimizer.

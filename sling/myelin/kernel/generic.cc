@@ -70,7 +70,7 @@ class Reference : public Kernel {
     // Propagate alignment constraints from reference to variable.
     Tensor *var = GetReference(step);
     CHECK(var != nullptr);
-    step->output(0)->set_link(var);
+    step->output(0)->Link(var);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {

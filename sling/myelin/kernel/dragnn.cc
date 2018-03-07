@@ -282,7 +282,7 @@ class DragnnLookupSingle : public Kernel {
     CHECK(!v->ref());
     CHECK(!v->out());
     v->set_ref(true);
-    v->set_link(step->input(1));
+    v->Link(step->input(1));
 
     // Embedding matrix must be row-major.
     step->input(1)->SetRequiredOrder(ROW_MAJOR);
