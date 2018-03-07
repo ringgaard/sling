@@ -908,7 +908,9 @@ void Flow::InferInputsAndOutputs() {
   // Connector links are considered both inputs and outputs.
   for (Connector *cnx : cnxs_) {
     for (Variable *link : cnx->links) {
-      link->flags |= Variable::IN | Variable::OUT;
+      if (link->ref) {
+        link->flags |= Variable::IN | Variable::OUT;
+      }
     }
   }
 

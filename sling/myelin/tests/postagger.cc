@@ -43,7 +43,7 @@ struct Dictionary {
     vocabulary.push_back(word);
     return index;
   }
-  
+
   std::unordered_map<string, int> mapping;
   std::vector<string> vocabulary;
   bool readonly = false;
@@ -103,6 +103,29 @@ void RandomInitialize(Tensor *tensor, float stddev) {
   }
 }
 
+// POS tagger flow using LSTM.
+struct TaggerFlow : Flow {
+  TaggerFlow(int num_words, int num_tags, int word_dim, int lstm_dim) {
+		Builder tf(this, "tagger");
+		tagger = tf.func();
+		word = tf.Placeholder("word", DT_INT32, {1, 1});
+		embedding = tf.Parameter("embedding", DT_FLOAT, {num_words, word_dim});
+		features = tf.Gather(embedding, word);
+		hidden = tf.LSTMLayer(features, lstm_dim);
+		logits = tf.FFLayer(hidden, num_tags, true);
+  }
+
+  Function *tagger;
+  Variable *word;
+  Variable *embedding;
+  Variable *features;
+  Variable *hidden;
+  Variable *logits;
+
+  Function *dtagger;
+  Variable *dlogits;
+};
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
@@ -119,7 +142,7 @@ int main(int argc, char *argv[]) {
   Corpus dev;
   dev.Read("local/data/corpora/stanford/dev.pos", &words, &tags);
 
-  LOG(INFO) << "Train sentences: " << train.sentences.size();  
+  LOG(INFO) << "Train sentences: " << train.sentences.size();
   LOG(INFO) << "Dev sentences: " << dev.sentences.size();
   LOG(INFO) << "Words: " << words.vocabulary.size();
   LOG(INFO) << "Tags: " << tags.vocabulary.size();
@@ -132,35 +155,21 @@ int main(int argc, char *argv[]) {
   ElfLinker linker;
   network.set_linker(&linker);
 
-  //jit::CPU::Enable(jit::AVX);
-  //jit::CPU::Enable(jit::AVX2);
-  //jit::CPU::Enable(jit::FMA3);
-
   // Build flow.
   int num_words = words.vocabulary.size();
   int num_tags = tags.vocabulary.size();
   int word_dim = 64;
   int lstm_dim = 128;
-  Flow flow;
-  Builder tf(&flow, "tagger");
-
-  auto *word = tf.Placeholder("word", DT_INT32, {1, 1});
-  auto *embedding = tf.Parameter("embedding", DT_FLOAT, {num_words, word_dim});
-  auto *features = tf.Gather(embedding, word);
-
-  auto *hidden = tf.LSTMLayer(features, lstm_dim);
-  auto *logits = tf.FFLayer(hidden, num_tags, true);
-
-  Flow::Function *dtagger = Gradient(&flow, tf.func(), library);
+  TaggerFlow flow(num_words, num_tags, word_dim, lstm_dim);
+  flow.dtagger = Gradient(&flow, flow.tagger, library);
+  flow.dlogits = flow.Var("gradients/tagger/d_logits");
+  flow.dlogits->ref = true;
 
   CrossEntropyLoss loss;
-  loss.Build(&flow, logits);
+  loss.Build(&flow, flow.logits, flow.dlogits);
 
   GradientDescentOptimizer optimizer;
   optimizer.Build(&flow);
-
-  LOG(INFO) << "logits: " << logits->name;
-  LOG(INFO) << "dtagger: " << dtagger->name;
 
   // Analyze flow.
   if (FLAGS_analyze) {
@@ -200,15 +209,12 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Create gradient instance for backpropagation.
-  Instance gradients(network.GetCell(dtagger->name));
-  
   // Create batch for loss accumulation.
   CrossEntropyLoss::Batch batch(loss);
-  
+
   // Create channels.
-  Connector *h_cnx = network.GetConnector("tagger/hidden");
-  Connector *c_cnx = network.GetConnector("tagger/control");
+  Connector *h_cnx = network.GetConnector("tagger/cnx_hidden");
+  Connector *c_cnx = network.GetConnector("tagger/cnx_control");
   CHECK(h_cnx != nullptr);
   CHECK(c_cnx != nullptr);
 
@@ -220,6 +226,9 @@ int main(int argc, char *argv[]) {
   Channel h(h_cnx);
   Channel c(c_cnx);
 
+  Channel dh(h_cnx);
+  Channel dc(c_cnx);
+
   // Get cells and parameters.
   Cell *tagger = network.GetCell("tagger");
   Tensor *h_in = network.GetParameter("tagger/h_in");
@@ -228,21 +237,39 @@ int main(int argc, char *argv[]) {
   Tensor *c_out = network.GetParameter("tagger/c_out");
   Tensor *input = network.GetParameter("tagger/word");
   Tensor *output = network.GetParameter("tagger/logits");
-  
+
+  Cell *dtagger = network.GetCell("gradients/tagger");
+  Tensor *primal = network.GetParameter("gradients/tagger/primal");
+  Tensor *dh_in = network.GetParameter("gradients/tagger/d_h_in");
+  Tensor *dh_out = network.GetParameter("gradients/tagger/d_h_out");
+  Tensor *dc_in = network.GetParameter("gradients/tagger/d_c_in");
+  Tensor *dc_out = network.GetParameter("gradients/tagger/d_c_out");
+  Tensor *dlogits = network.GetParameter("gradients/tagger/d_logits");
+
+  // Allocate gradients.
+  Instance gtagger(dtagger);
+  std::vector<Instance *> gradients = {&gtagger};
+
   // Train.
+  int num_tokens = 0;
+  int num_sentences = 0;
+  LOG(INFO) << "Start training";
   for (Sentence *sentence : train.sentences) {
     // Initialize training on sentence instance.
     int length = sentence->size();
-    LOG(INFO) << "Train length " << length;
     h.resize(length + 1);
     c.resize(length + 1);
     batch.Clear();
-    
+    gtagger.Clear();
+
     // Forward pass.
     std::vector<Instance *> forward;
     for (int i = 0; i < length; ++i) {
+      // Create new instance for token.
       Instance *data = new Instance(tagger);
       forward.push_back(data);
+
+      // Set up channels.
       if (i == 0) {
         data->Set(h_in, &h_zero);
         data->Set(c_in, &c_zero);
@@ -252,23 +279,63 @@ int main(int argc, char *argv[]) {
       }
       data->Set(h_out, &h, i + 1);
       data->Set(c_out, &c, i + 1);
+
+      // Set up features.
       *data->Get<int>(input) = (*sentence)[i].word;
+
+      // Compute forward.
       data->Compute();
 
       //LOG(INFO) << "data:\n" << data->ToString();
       //exit(1);
 
-      // Compute loss.
+      // Accumulate loss.
       int target = (*sentence)[i].tag;
       batch.Forward(data->Get<float>(output), target);
     }
 
+    // Compute batch loss and loss gradient.
     batch.Backward();
     LOG(INFO) << "loss: " << batch.loss() << " batch size: " << batch.batch_size();
+
+    // Backpropagate gradients.
+    dh.resize(length + 1);
+    dc.resize(length + 1);
+    for (int i = length - 1; i >= 0; --i) {
+      // Set gradient.
+      gtagger.SetReference(dlogits, batch.dlogits());
+
+      // Set reference to primal cell.
+      gtagger.Set(primal, forward[i]);
+
+      // Set up channels.
+      if (i == 0) {
+        gtagger.Set(dh_out, &h_zero);
+        gtagger.Set(dc_out, &c_zero);
+      } else {
+        gtagger.Set(dh_out, &dh, i + 1);
+        gtagger.Set(dc_out, &dc, i + 1);
+      }
+      gtagger.Set(dh_in, &dh, i);
+      gtagger.Set(dc_in, &dc, i);
+
+      // Compute backward.
+      gtagger.Compute();
+    }
+
+    // Apply gradients.
+    optimizer.Apply(gradients);
+
     // Clear data.
     for (auto *d : forward) delete d;
+
+    num_sentences++;
+    num_tokens += length;
+    if (num_sentences % 1000 == 0) {
+      LOG(INFO) << num_sentences << " sentences, " << num_tokens << " tokens";
+    }
   }
-  
+
   return 0;
 }
 

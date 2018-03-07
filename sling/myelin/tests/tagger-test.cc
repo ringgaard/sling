@@ -664,7 +664,7 @@ void RNN::Execute(const std::vector<string> &tokens,
 }
 
 Cell *RNN::GetCell(const string &name) {
-  Cell *cell = network_.GetCell(name);
+  Cell *cell = network_.LookupCell(name);
   if (cell == nullptr) {
     LOG(FATAL) << "Unknown parser cell: " << name;
   }
@@ -672,7 +672,7 @@ Cell *RNN::GetCell(const string &name) {
 }
 
 Connector *RNN::GetConnector(const string &name) {
-  Connector *cnx = network_.GetConnector(name);
+  Connector *cnx = network_.LookupConnector(name);
   if (cnx == nullptr) {
     LOG(FATAL) << "Unknown parser connector: " << name;
   }
@@ -680,7 +680,7 @@ Connector *RNN::GetConnector(const string &name) {
 }
 
 Tensor *RNN::GetParam(const string &name, bool optional) {
-  Tensor *param = network_.GetParameter(name);
+  Tensor *param = network_.LookupParameter(name);
   if (!optional && param == nullptr) {
     LOG(FATAL) << "Unknown parser parameter: " << name;
   }

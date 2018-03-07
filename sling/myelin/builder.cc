@@ -61,8 +61,8 @@ Flow::Variable *Builder::Parameter(const string &name,
   return var;
 }
 
-Flow::Variable *Builder::Placeholder(const string &name, 
-                                     Type type, 
+Flow::Variable *Builder::Placeholder(const string &name,
+                                     Type type,
                                      const Shape &shape) {
   Variable *input = Var(name, type, shape);
   input->flags |= Variable::IN;
@@ -118,7 +118,7 @@ void Builder::Op0(const string &op,
 
 Flow::Variable *Builder::Const(const void *data, Type type,
                                const Shape &shape) {
-  Variable *var = Var(OpName("const"), type, shape);
+  Variable *var = flow_->AddVariable(OpName("const"), type, shape);
   var->size = TypeTraits::of(type).size() * shape.elements();
   char *buffer = flow_->AllocateMemory(var->size);
   var->data = buffer;
@@ -261,13 +261,13 @@ Flow::Variable *Builder::LSTMLayer(Variable *input, int size) {
   ht->flags |= Variable::OUT;
 
   // Connectors for hidden and control channels.
-  auto *h_cnx = flow_->AddConnector(prefix() + "/hidden");
+  auto *h_cnx = flow_->AddConnector(prefix() + "/cnx_hidden");
   h_cnx->AddLink(h_in);
   h_cnx->AddLink(ht);
-  auto *c_cnx = flow_->AddConnector(prefix() + "/control");
+  auto *c_cnx = flow_->AddConnector(prefix() + "/cnx_control");
   c_cnx->AddLink(c_in);
   c_cnx->AddLink(ct);
-  
+
   return ht;
 }
 

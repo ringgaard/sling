@@ -346,7 +346,7 @@ void Parser::Parse(Document *document) const {
 }
 
 myelin::Cell *Parser::GetCell(const string &name) {
-  myelin::Cell *cell = network_.GetCell(name);
+  myelin::Cell *cell = network_.LookupCell(name);
   if (cell == nullptr) {
     LOG(FATAL) << "Unknown parser cell: " << name;
   }
@@ -354,7 +354,7 @@ myelin::Cell *Parser::GetCell(const string &name) {
 }
 
 myelin::Connector *Parser::GetConnector(const string &name) {
-  myelin::Connector *cnx = network_.GetConnector(name);
+  myelin::Connector *cnx = network_.LookupConnector(name);
   if (cnx == nullptr) {
     LOG(FATAL) << "Unknown parser connector: " << name;
   }
@@ -362,7 +362,7 @@ myelin::Connector *Parser::GetConnector(const string &name) {
 }
 
 myelin::Tensor *Parser::GetParam(const string &name, bool optional) {
-  myelin::Tensor *param = network_.GetParameter(name);
+  myelin::Tensor *param = network_.LookupParameter(name);
   if (param == nullptr && !optional) {
     LOG(FATAL) << "Unknown parser parameter: " << name;
   }

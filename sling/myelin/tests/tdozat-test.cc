@@ -181,7 +181,6 @@ int main(int argc, char *argv[]) {
   std::vector<string> cell_names = {"lookup", "fw_lstm", "bw_lstm", "mlps"};
   for (const string &cell_name : cell_names) {
     Cell *cell = network.GetCell(cell_name);
-    CHECK(cell != nullptr) << cell_name;
     if (FLAGS_dump_cell) {
       std::cout << cell->ToString();
     }

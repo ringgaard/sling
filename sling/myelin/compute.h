@@ -1053,6 +1053,9 @@ class Cell {
   // Cell computation steps.
   const std::vector<Step *> &steps() const { return steps_; }
 
+  // Look up parameter and return null if it is not found.
+  Tensor *LookupParameter(const string &name) const;
+
   // Get parameter.
   Tensor *GetParameter(const string &name) const;
 
@@ -1169,11 +1172,20 @@ class Network {
   // Load flow from file and compile all the cells.
   bool Compile(const string &flowfile, const Library &library);
 
-  // Get compiled cell.
+  // Look up cell returning null if it is not found.
+  Cell *LookupCell(const string &name) const;
+
+  // Get cell.
   Cell *GetCell(const string &name) const;
+
+  // Look up connector returning null if it is not found.
+  Connector *LookupConnector(const string &name) const;
 
   // Get connector.
   Connector *GetConnector(const string &name) const;
+
+  // Look up up parameter tensor returning null if it is not found.
+  Tensor *LookupParameter(const string &name) const;
 
   // Get parameter tensor.
   Tensor *GetParameter(const string &name) const;

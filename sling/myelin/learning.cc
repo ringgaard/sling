@@ -32,22 +32,25 @@ CrossEntropyLoss::CrossEntropyLoss(const string &name) {
   gradient_name_ = "gradients/" + name;
 }
 
-void CrossEntropyLoss::Build(Flow *flow, Flow::Variable *input) {
+void CrossEntropyLoss::Build(Flow *flow,
+                             Flow::Variable *logits,
+                             Flow::Variable *dlogits) {
   // Assume logits batch dimension is one.
-  CHECK_EQ(input->rank(), 2);
-  CHECK_EQ(input->dim(0), 1);
-  int size = input->dim(1);
+  CHECK_EQ(logits->rank(), 2);
+  CHECK_EQ(logits->dim(0), 1);
+  CHECK(logits->shape == dlogits->shape);
+  int size = logits->dim(1);
 
   // Build forward loss computation.
   Builder fwd(flow, name_);
 
   // Inputs are logits and target label.
-  auto *logits = fwd.Placeholder("logits", DT_FLOAT, input->shape);
-  logits->ref = true;
+  auto *prediction = fwd.Placeholder("logits", DT_FLOAT, logits->shape);
+  prediction->ref = true;
   auto *target = fwd.Placeholder("target", DT_INT32, {});
 
   // Compute softmax for logits.
-  auto *softmax = fwd.Softmax(fwd.Reshape(logits, {size}));
+  auto *softmax = fwd.Softmax(fwd.Reshape(prediction, {size}));
 
   // Compute loss (negative log-likelihood).
   auto *loss = fwd.Neg(fwd.Log(fwd.Slice(softmax, target)));
@@ -85,7 +88,15 @@ void CrossEntropyLoss::Build(Flow *flow, Flow::Variable *input) {
   // Loss gradient.
   auto *diff = bkw.Sub(bkw.Ref(primal, softmax_sum), bkw.Ref(primal, labels));
   auto *mean = bkw.Div(diff ,n);
-  bkw.Name(bkw.Reshape(mean, {1, size}), "d_logits");
+  auto *output = bkw.Name(bkw.Reshape(mean, {1, size}), "d_logits");
+
+  // Connect input and output logits.
+  auto *cnx = flow->AddConnector(name_ + "/cnx_logits");
+  cnx->AddLink(logits);
+  cnx->AddLink(prediction);
+  auto *dcnx = flow->AddConnector(name_ + "/cnx_dlogits");
+  dcnx->AddLink(dlogits);
+  dcnx->AddLink(output);
 }
 
 void CrossEntropyLoss::Initialize(const Network &network) {
@@ -168,9 +179,7 @@ void Optimizer::Initialize(const Network &network) {
   // update cell.
   for (auto it : instance_) {
     Cell *gradient_cell = network.GetCell(it.first->name);
-    CHECK(gradient_cell != nullptr);
     Tensor *gradient_instance = cell->GetParameter(it.second->name);
-    CHECK(gradient_instance != nullptr);
     refs_[gradient_cell] = gradient_instance;
   }
 
@@ -208,7 +217,6 @@ void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
 void GradientDescentOptimizer::InitializeOptimizer() {
   // Set initial learning rate.
   alpha_ = update_->cell()->GetParameter(name_ + "/alpha");
-  CHECK(alpha_ != nullptr);
   set_alpha(0.01);
 }
 

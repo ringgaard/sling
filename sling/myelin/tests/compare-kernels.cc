@@ -164,10 +164,6 @@ struct KernelCompiler {
       return false;
     }
     func = network.GetCell("benchmark");
-    if (func == nullptr) {
-      LOG(ERROR) << "Benchmark function missing";
-      return false;
-    }
     if (!binfile.empty()) func->WriteCodeToFile(binfile);
     if (!func->steps().empty() && !func->steps()[0]->variant().empty()) {
       VLOG(2) << kernel << " variant " << func->steps()[0]->variant();

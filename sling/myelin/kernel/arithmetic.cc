@@ -731,7 +731,7 @@ class Softmax : public Kernel {
     // Normalize output for main block.
     __ xorq(offset, offset);
     if (vecsize > 1) {
-      UnaryExpression expression(postexpr, masm, input, output, offset, m);
+      UnaryExpression expression(postexpr, masm, output, output, offset, m);
 
       // Load scaling factor.
       if (masm->Enabled(AVX)) {
@@ -761,7 +761,7 @@ class Softmax : public Kernel {
 
     // Normalize output for residual block.
     if (r > 0) {
-      UnaryExpression expression(postexpr, masm, input, output, offset, 1);
+      UnaryExpression expression(postexpr, masm, output, output, offset, 1);
 
       // Load scaling factor.
       if (masm->Enabled(AVX)) {

@@ -727,7 +727,10 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
 
   // Share input and output.
   out->set_shared(in);
-  if (out->shape() == in->shape()) out->set_link(in);
+  if (out->shape() == in->shape()) {
+    CHECK(out->link() == nullptr) << out->name();
+    out->set_link(in);
+  }
   return true;
 }
 
@@ -775,11 +778,6 @@ Network::~Network() {
   for (auto *c : cells_) delete c;
   for (auto *s : steps_) delete s;
   for (auto *c : connectors_) delete c;
-}
-
-Tensor *Network::GetParameter(const string &name) const {
-  auto f = names_.find(name);
-  return f == names_.end() ? nullptr : f->second;
 }
 
 char *Network::AllocateMemory(size_t size, int alignment) {
@@ -1194,18 +1192,41 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   }
 
   // Propagate size and alignment for shared tensors.
-  for (auto it : tensors) {
-    Tensor *tensor = it.second;
-    Tensor *next = tensor->shared_;
-    while (next != nullptr) {
-      if (next->size_ < tensor->size_) {
-        next->size_ = tensor->size_;
-      }
-      if (next->byte_alignment_ < tensor->byte_alignment_) {
-        next->byte_alignment_ = tensor->byte_alignment_;
-      }
-      next = next->shared_;
-    }
+  again = true;
+  while (again) {
+    again = false;
+		for (auto it : tensors) {
+		  Tensor *tensor = it.second;
+		  Tensor *next = tensor->shared_;
+		  if (next == nullptr) continue;
+
+      // Determine common size and alignment for shared tensor.
+		  size_t size = tensor->size_;
+		  int align = tensor->byte_alignment_;
+		  bool propagate = false;
+		  while (next != nullptr) {
+		    if (size != next->size_) {
+		      if (size < next->size_) size = next->size_;
+		      propagate = true;
+		    }
+		    if (align != next->byte_alignment_) {
+  		    if (align < next->byte_alignment_) align = next->byte_alignment_;
+  		    propagate = true;
+  		  }
+		    next = next->shared_;
+		  }
+
+		  // Propagate size and alignment.
+		  if (propagate) {
+  		  Tensor *t = tensor;
+  		  while (t != nullptr) {
+  		    t->size_ = size;
+  		    t->byte_alignment_ = align;
+  		    t = t->shared_;
+  		  }
+  		  again = true;
+		  }
+		}
   }
 
   // Compute alignment and placement for connectors.
@@ -1736,18 +1757,45 @@ char *Network::AllocateTensor(Tensor *tensor) {
   return data;
 }
 
-Cell *Network::GetCell(const string &name) const {
+Cell *Network::LookupCell(const string &name) const {
   for (Cell *cell : cells_) {
     if (cell->name() == name) return cell;
   }
   return nullptr;
 }
 
-Connector *Network::GetConnector(const string &name) const {
+Cell *Network::GetCell(const string &name) const {
+  Cell *cell = LookupCell(name);
+  CHECK(cell != nullptr) << "Unknown cell: " << name;
+  return cell;
+}
+
+Connector *Network::LookupConnector(const string &name) const {
   for (Connector *connector : connectors_) {
     if (connector->name() == name) return connector;
   }
   return nullptr;
+}
+
+Connector *Network::GetConnector(const string &name) const {
+  Connector *connector = LookupConnector(name);
+  CHECK(connector != nullptr) << "Unknown connector: " << name;
+  return connector;
+}
+
+Tensor *Network::LookupParameter(const string &name) const {
+  auto f = names_.find(name);
+  return f == names_.end() ? nullptr : f->second;
+}
+
+Tensor *Network::GetParameter(const string &name) const {
+  Tensor *tensor = LookupParameter(name);
+  CHECK(tensor != nullptr) << "Unknown parameter: " << name;
+  return tensor;
+}
+
+Tensor *Cell::LookupParameter(const string &name) const {
+  return network_->LookupParameter(name);
 }
 
 Tensor *Cell::GetParameter(const string &name) const {
@@ -1797,11 +1845,15 @@ string Cell::ToString() const {
         if (t->out()) str.append("output ");
         str.append("var ");
       }
-      StringAppendF(&str, "%s: %s  // offset %lu size %lu\n",
+      StringAppendF(&str, "%s: %s  // offset %lu size %lu alignment %d",
                     t->name().c_str(),
                     t->TypeString().c_str(),
                     t->offset(),
-                    t->space());
+                    t->space(), t->byte_alignment());
+      if (t->link()) {
+        StringAppendF(&str, " linked to %s", t->link()->name().c_str());
+      }
+      str.append("\n");
       prev_offset = t->offset();
     }
     if (t->placement() & DEVICE) on_device = true;
@@ -1820,11 +1872,15 @@ string Cell::ToString() const {
           if (t->out()) str.append("output ");
           str.append("device var ");
         }
-        StringAppendF(&str, "%s: %s  // offset %lu size %lu\n",
+        StringAppendF(&str, "%s: %s  // offset %lu size %lu alignment %d",
                       t->name().c_str(),
                       t->TypeString().c_str(),
                       t->device_offset(),
-                      t->space());
+                      t->space(), t->byte_alignment());
+		    if (t->link()) {
+		      StringAppendF(&str, " linked to %s", t->link()->name().c_str());
+		    }
+		    str.append("\n");
         prev_offset = t->device_offset();
       }
     }
@@ -1847,11 +1903,15 @@ string Cell::ToString() const {
         str.append(placename[t->placement()]);
         str.append(" ");
       }
-      StringAppendF(&str, "%s %s: %s   // size %lu\n",
+      StringAppendF(&str, "%s %s: %s   // size %lu alignment %d",
                     t->constant() ? "const" : "global",
                     t->name().c_str(),
                     t->TypeString().c_str(),
-                    t->size());
+                    t->size(), t->byte_alignment());
+      if (t->link()) {
+        StringAppendF(&str, " linked to %s", t->link()->name().c_str());
+      }
+      str.append("\n");
     }
   }
 

@@ -31,7 +31,7 @@ class CrossEntropyLoss {
   CrossEntropyLoss(const string &name = "loss");
 
   // Build loss function together with gradient computation.
-  void Build(Flow *flow, Flow::Variable *logits);
+  void Build(Flow *flow, Flow::Variable *logits, Flow::Variable *dlogits);
 
   // Initialize loss for model.
   void Initialize(const Network &network);
