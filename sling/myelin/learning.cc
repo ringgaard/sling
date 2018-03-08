@@ -89,6 +89,7 @@ void CrossEntropyLoss::Build(Flow *flow,
   auto *diff = bkw.Sub(bkw.Ref(primal, softmax_sum), bkw.Ref(primal, labels));
   auto *mean = bkw.Div(diff ,n);
   auto *output = bkw.Name(bkw.Reshape(mean, {1, size}), "d_logits");
+  output->ref = true;
 
   // Connect input and output logits.
   auto *cnx = flow->AddConnector(name_ + "/cnx_logits");
@@ -142,8 +143,9 @@ void CrossEntropyLoss::Batch::Forward(float *logits, int target) {
   forward_.Compute();
 }
 
-void CrossEntropyLoss::Batch::Backward() {
+void CrossEntropyLoss::Batch::Backward(float *dlogits) {
   backward_.Set(loss_.primal_, &forward_);
+  backward_.SetReference(loss_.dlogits_, dlogits);
   if (backward_profile_) backward_.set_profile(backward_profile_);
   backward_.Compute();
 }

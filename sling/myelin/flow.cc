@@ -905,10 +905,10 @@ void Flow::Analyze(const Transformations &transformations) {
 }
 
 void Flow::InferInputsAndOutputs() {
-  // Connector links are considered both inputs and outputs.
+  // Internal connector links are considered both inputs and outputs.
   for (Connector *cnx : cnxs_) {
     for (Variable *link : cnx->links) {
-      if (link->ref) {
+      if (link->ref && link->producer != nullptr && !link->consumers.empty()) {
         link->flags |= Variable::IN | Variable::OUT;
       }
     }

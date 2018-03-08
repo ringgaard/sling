@@ -50,7 +50,7 @@ class CrossEntropyLoss {
     void Forward(float *logits, int target);
 
     // Compute loss gradient for batch.
-    void Backward();
+    void Backward(float *dlogits);
 
     // Return average loss for batch.
     float loss() { return *backward_.Get<float>(loss_.loss_); }

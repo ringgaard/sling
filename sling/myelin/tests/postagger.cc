@@ -23,8 +23,14 @@ DEFINE_bool(analyze, true, "Analyze flow");
 DEFINE_bool(dump, false, "Dump flow");
 DEFINE_bool(dump_cell, false, "Dump flow");
 DEFINE_bool(profile, false, "Profile tagger");
-DEFINE_int32(epochs, 100, "Number of training epochs");
-DEFINE_int32(maxsent, 1 << 31, "Maximum sentence for training");
+DEFINE_int32(epochs, 500000, "Number of training epochs");
+DEFINE_int32(report, 1000, "Report loss after every n sentence");
+DEFINE_double(alpha, 0.1, "Learning rate");
+DEFINE_double(decay, 0.5, "Learning rate decay rate");
+DEFINE_int32(seed, 0, "random number generator seed");
+DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
+DEFINE_int32(batch, 1, "Number of epochs between gradient updates");
+DEFINE_bool(shuffle, true, "Shuffle training corpus");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -89,7 +95,7 @@ struct Corpus {
 };
 
 void RandomInitialize(Tensor *tensor, float stddev) {
-  static std::mt19937 prng;
+  static std::mt19937 prng(FLAGS_seed);
   std::normal_distribution<float> dist(0.0, stddev);
   TensorData data(tensor->data(), tensor);
   if (tensor->rank() == 1) {
@@ -203,7 +209,6 @@ int main(int argc, char *argv[]) {
   CHECK(network.Compile(flow, library));
   loss.Initialize(network);
   optimizer.Initialize(network);
-  //optimizer.set_alpha(0.1);
 
   // Dump cell.
   for (Cell *cell : network.cells()) {
@@ -229,17 +234,16 @@ int main(int argc, char *argv[]) {
   // Create channels.
   Connector *h_cnx = network.GetConnector("tagger/cnx_hidden");
   Connector *c_cnx = network.GetConnector("tagger/cnx_control");
-  CHECK(h_cnx != nullptr);
-  CHECK(c_cnx != nullptr);
+  Connector *l_cnx = network.GetConnector("loss/cnx_dlogits");
 
   Channel h_zero(h_cnx);
   h_zero.resize(1);
-  Channel c_zero(h_cnx);
+  Channel c_zero(c_cnx);
   c_zero.resize(1);
 
   Channel h(h_cnx);
   Channel c(c_cnx);
-
+  Channel l(l_cnx);
   Channel dh(h_cnx);
   Channel dc(c_cnx);
 
@@ -270,101 +274,109 @@ int main(int argc, char *argv[]) {
 
   // Train.
   int num_tokens = 0;
-  int num_sentences = 0;
   float loss_sum = 0.0;
   int loss_count = 0;
+  float alpha = FLAGS_alpha;
+  std::mt19937 prng(FLAGS_seed);
 
   LOG(INFO) << "Start training";
-  for (int epoch = 0; epoch < FLAGS_epochs; ++epoch) {
-    for (Sentence *sentence : train.sentences) {
-      // Initialize training on sentence instance.
-      int length = sentence->size();
-      h.resize(length + 1);
-      c.resize(length + 1);
-      batch.Clear();
-      gtagger.Clear();
-      if (FLAGS_profile) gtagger.set_profile(&dtagger_profile);
+  for (int epoch = 1; epoch <= FLAGS_epochs; ++epoch) {
+    // Select next sentence to train on.
+    int sample = (FLAGS_shuffle ? prng() : epoch - 1) % train.sentences.size();
+    Sentence *sentence = train.sentences[sample];
 
-      // Forward pass.
-      std::vector<Instance *> forward;
-      for (int i = 0; i < length; ++i) {
-        // Create new instance for token.
-        Instance *data = new Instance(tagger);
-        forward.push_back(data);
-        if (FLAGS_profile) data->set_profile(&tagger_profile);
+    // Initialize training on sentence instance.
+    int length = sentence->size();
+    h.resize(length + 1);
+    c.resize(length + 1);
+    l.resize(length);
 
-        // Set up channels.
-        if (i == 0) {
-          data->Set(h_in, &h_zero);
-          data->Set(c_in, &c_zero);
-        } else {
-          data->Set(h_in, &h, i);
-          data->Set(c_in, &c, i);
-        }
-        data->Set(h_out, &h, i + 1);
-        data->Set(c_out, &c, i + 1);
+    // Forward pass.
+    std::vector<Instance *> forward;
+    for (int i = 0; i < length; ++i) {
+      // Create new instance for token.
+      Instance *data = new Instance(tagger);
+      forward.push_back(data);
+      if (FLAGS_profile) data->set_profile(&tagger_profile);
 
-        // Set up features.
-        *data->Get<int>(input) = (*sentence)[i].word;
-
-        // Compute forward.
-        data->Compute();
-
-        // Accumulate loss.
-        int target = (*sentence)[i].tag;
-        batch.Forward(data->Get<float>(output), target);
+      // Set up channels.
+      if (i == 0) {
+        data->Set(h_in, &h_zero);
+        data->Set(c_in, &c_zero);
+      } else {
+        data->Set(h_in, &h, i);
+        data->Set(c_in, &c, i);
       }
+      data->Set(h_out, &h, i + 1);
+      data->Set(c_out, &c, i + 1);
 
-      // Compute batch loss and loss gradient.
-      batch.Backward();
-      //LOG(INFO) << "loss: " << batch.loss() << " batch size: " << batch.batch_size();
+      // Set up features.
+      *data->Get<int>(input) = (*sentence)[i].word;
+
+      // Compute forward.
+      data->Compute();
+
+      // Compute loss and gradient.
+      int target = (*sentence)[i].tag;
+      batch.Clear();
+      batch.Forward(data->Get<float>(output), target);
+      float *dl = reinterpret_cast<float *>(l.at(i));
+      batch.Backward(dl);
       loss_sum += batch.loss();
       loss_count++;
-
-      // Backpropagate gradients.
-      dh.resize(length + 1);
-      dc.resize(length + 1);
-      for (int i = length - 1; i >= 0; --i) {
-        // Set gradient.
-        gtagger.SetReference(dlogits, batch.dlogits());
-
-        // Set reference to primal cell.
-        gtagger.Set(primal, forward[i]);
-
-        // Set up channels.
-        if (i == 0) {
-          gtagger.Set(dh_out, &h_zero);
-          gtagger.Set(dc_out, &c_zero);
-        } else {
-          gtagger.Set(dh_out, &dh, i + 1);
-          gtagger.Set(dc_out, &dc, i + 1);
-        }
-        gtagger.Set(dh_in, &dh, i);
-        gtagger.Set(dc_in, &dc, i);
-
-        // Compute backward.
-        gtagger.Compute();
-      }
-
-      // Apply gradients.
-      optimizer.Apply(gradients);
-
-      // Clear data.
-      for (auto *d : forward) delete d;
-
-      num_sentences++;
-      num_tokens += length;
-      if (num_sentences % 1000 == 0) {
-        float avg_loss = loss_sum / loss_count;
-        LOG(INFO) << "epoch " << epoch << ", "
-                  << num_sentences << " sentences, "
-                  << num_tokens << " tokens, loss=" << avg_loss;
-        loss_sum = 0.0;
-        loss_count = 0;
-      }
-      if (num_sentences >= FLAGS_maxsent) break;
     }
-    if (num_sentences >= FLAGS_maxsent) break;
+
+    // Backpropagate loss gradient.
+    dh.resize(length);
+    dc.resize(length);
+    if (FLAGS_profile) gtagger.set_profile(&dtagger_profile);
+    for (int i = length - 1; i >= 0; --i) {
+      // Set gradient.
+      gtagger.Set(dlogits, &l, i);
+
+      // Set reference to primal cell.
+      gtagger.Set(primal, forward[i]);
+
+      // Set up channels.
+      if (i == length - 1) {
+        gtagger.Set(dh_out, &h_zero);
+        gtagger.Set(dc_out, &c_zero);
+      } else {
+        gtagger.Set(dh_out, &dh, i + 1);
+        gtagger.Set(dc_out, &dc, i + 1);
+      }
+      gtagger.Set(dh_in, &dh, i);
+      gtagger.Set(dc_in, &dc, i);
+
+      // Compute backward.
+      gtagger.Compute();
+    }
+
+    // Clear data.
+    for (auto *d : forward) delete d;
+    num_tokens += length;
+
+    // Decay learning rate.
+    if (epoch % FLAGS_alpha_update == 0) {
+      alpha *= FLAGS_decay;
+    }
+
+    // Apply gradients to model.
+    if (epoch % FLAGS_batch == 0) {
+      optimizer.set_alpha(alpha);
+      optimizer.Apply(gradients);
+      gtagger.Clear();
+    }
+
+    // Report progress.
+    if (epoch % FLAGS_report == 0) {
+      float avg_loss = loss_sum / loss_count;
+      LOG(INFO) << "epochs " << epoch << ", "
+                << "alpha " << alpha << ", "
+                << num_tokens << " tokens, loss=" << avg_loss;
+      loss_sum = 0.0;
+      loss_count = 0;
+    }
   }
 
   if (FLAGS_profile) {

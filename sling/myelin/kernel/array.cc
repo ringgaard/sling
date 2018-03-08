@@ -55,7 +55,8 @@ class Reshape : public Kernel {
   }
 
   void Adjust(Step *step) override {
-    step->output(0)->set_ref(step->input(0)->ref());
+    if (step->input(0)->ref()) step->output(0)->set_ref(true);
+    if (step->output(0)->ref()) step->input(0)->set_ref(true);
     CHECK(step->AllowInPlace(0, 0, true));
   }
 
