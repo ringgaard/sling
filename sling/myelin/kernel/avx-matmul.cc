@@ -1030,14 +1030,14 @@ class AVXFltDotProduct : public Kernel {
 };
 
 // Float accumulating outer product for CPUs with AVX (C += A * B).
-class AVXFltAssignAddOuter : public Kernel {
+class AVXFltAssignOuterAdd : public Kernel {
  public:
   // Block size.
   static const int kRowRegs = 4;
   static const int kColRegs = 4;
 
-  string Name() override { return "AVXFltAssignAddOuter"; }
-  string Operation() override { return "AssignAddOuter"; }
+  string Name() override { return "AVXFltAssignOuterAdd"; }
+  string Operation() override { return "AssignMatMulAdd"; }
 
   bool Supports(Step *step) override {
     // Requires CPU with AVX support.
@@ -1586,7 +1586,7 @@ void RegisterAVXMatMul(Library *library) {
   // Output    : c: float32[n,m]
   // Requires  : AVX
   // Supports  : FMA3
-  library->Register(new AVXFltAssignAddOuter());
+  library->Register(new AVXFltAssignOuterAdd());
 }
 
 }  // namespace myelin

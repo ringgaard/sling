@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
@@ -19,15 +20,14 @@
 #include "sling/myelin/profile.h"
 #include "sling/myelin/kernel/tensorflow.h"
 
-DEFINE_bool(analyze, true, "Analyze flow");
 DEFINE_bool(dump, false, "Dump flow");
 DEFINE_bool(dump_cell, false, "Dump flow");
 DEFINE_bool(profile, false, "Profile tagger");
 DEFINE_int32(epochs, 500000, "Number of training epochs");
-DEFINE_int32(report, 1000, "Report loss after every n sentence");
+DEFINE_int32(report, 1000, "Report status after every n sentence");
 DEFINE_double(alpha, 0.1, "Learning rate");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
-DEFINE_int32(seed, 0, "random number generator seed");
+DEFINE_int32(seed, 0, "Random number generator seed");
 DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
 DEFINE_int32(batch, 1, "Number of epochs between gradient updates");
 DEFINE_bool(shuffle, true, "Shuffle training corpus");
@@ -122,13 +122,13 @@ void DumpProfile(ProfileSummary *summary) {
 // POS tagger flow using LSTM.
 struct TaggerFlow : Flow {
   TaggerFlow(int num_words, int num_tags, int word_dim, int lstm_dim) {
-		Builder tf(this, "tagger");
-		tagger = tf.func();
-		word = tf.Placeholder("word", DT_INT32, {1, 1});
-		embedding = tf.Parameter("embedding", DT_FLOAT, {num_words, word_dim});
-		features = tf.Gather(embedding, word);
-		hidden = tf.LSTMLayer(features, lstm_dim);
-		logits = tf.FFLayer(hidden, num_tags, true);
+    Builder tf(this, "tagger");
+    tagger = tf.func();
+    word = tf.Placeholder("word", DT_INT32, {1, 1});
+    embedding = tf.Parameter("embedding", DT_FLOAT, {num_words, word_dim});
+    features = tf.Gather(embedding, word);
+    hidden = tf.LSTMLayer(features, lstm_dim);
+    logits = tf.FFLayer(hidden, num_tags, true);
   }
 
   Function *tagger;
@@ -192,9 +192,9 @@ int main(int argc, char *argv[]) {
   optimizer.Build(&flow);
 
   // Analyze flow.
-  if (FLAGS_analyze) {
-    flow.Analyze(library);
-  }
+  CHECK(flow.IsConsistent());
+  flow.Analyze(library);
+  CHECK(flow.IsConsistent());
 
   // Dump flow.
   if (FLAGS_dump) {
@@ -263,6 +263,8 @@ int main(int argc, char *argv[]) {
   Tensor *dc_in = network.GetParameter("gradients/tagger/d_c_in");
   Tensor *dc_out = network.GetParameter("gradients/tagger/d_c_out");
   Tensor *dlogits = network.GetParameter("gradients/tagger/d_logits");
+
+  Tensor *dx2i = network.GetParameter("gradients/tagger/d_x2i");
 
   // Profiling.
   ProfileSummary tagger_profile(tagger);
@@ -350,10 +352,24 @@ int main(int argc, char *argv[]) {
 
       // Compute backward.
       gtagger.Compute();
+
+      if (num_tokens == 8715) {
+        LOG(INFO) << "back " << num_tokens << " " << i;
+        for (Tensor *t : network.parameters()) {
+          if (t->cell() == dtagger && t->shared() == nullptr) {
+            if (t->name() == "gradients/tagger/d_embedding") continue;
+            LOG(INFO) << t->name() << " = " << gtagger.ToString(t).substr(0, 100);
+          }
+        }
+      }
+
+      float *f = gtagger.Get<float>(dx2i);
+      CHECK(!isnan(*f)) << num_tokens << " " << i;
     }
 
     // Clear data.
     for (auto *d : forward) delete d;
+    forward.clear();
     num_tokens += length;
 
     // Decay learning rate.
@@ -366,14 +382,76 @@ int main(int argc, char *argv[]) {
       optimizer.set_alpha(alpha);
       optimizer.Apply(gradients);
       gtagger.Clear();
+
+#if 1
+      LOG(INFO) << "gtagger " << num_tokens;
+      for (Tensor *t : network.parameters()) {
+        if (t->cell() == dtagger && t->ref()) {
+          gtagger.SetReference(t, nullptr);
+        }
+      }
+      for (Tensor *t : network.parameters()) {
+        if (t->cell() == dtagger && t->shared() == nullptr) {
+          if (t->name() == "gradients/tagger/d_embedding") continue;
+          LOG(INFO) << t->name() << " = " << gtagger.ToString(t).substr(0, 100);
+        }
+      }
+#endif
     }
 
     // Report progress.
     if (epoch % FLAGS_report == 0) {
+      // Compute accuracy on dev corpus.
+      int num_correct = 0;
+      int num_wrong = 0;
+      Instance test(tagger);
+      if (FLAGS_profile) test.set_profile(&tagger_profile);
+      for (Sentence *s : dev.sentences) {
+        int length = s->size();
+        h.resize(length + 1);
+        c.resize(length + 1);
+        for (int i = 0; i < length; ++i) {
+          // Set up channels.
+          if (i == 0) {
+            test.Set(h_in, &h_zero);
+            test.Set(c_in, &c_zero);
+          } else {
+            test.Set(h_in, &h, i);
+            test.Set(c_in, &c, i);
+          }
+          test.Set(h_out, &h, i + 1);
+          test.Set(c_out, &c, i + 1);
+
+          // Set up features.
+          int word = (*s)[i].word;
+          *test.Get<int>(input) = word;
+
+          // Compute forward.
+          test.Compute();
+
+          // Compute predicted tag.
+          float *predictions = test.Get<float>(output);
+          int best = 0;
+          for (int t = 1; t < num_tags; ++t) {
+            if (predictions[t] > predictions[best]) best = t;
+          }
+
+          // Compare with golden tag.
+          int target = (*s)[i].tag;
+          if (best == target) {
+            num_correct++;
+          } else {
+            num_wrong++;
+          }
+        }
+      }
+
+      float acc = num_correct * 100.0 / (num_correct + num_wrong);
       float avg_loss = loss_sum / loss_count;
       LOG(INFO) << "epochs " << epoch << ", "
                 << "alpha " << alpha << ", "
-                << num_tokens << " tokens, loss=" << avg_loss;
+                << num_tokens << " tokens, loss=" << avg_loss
+                << ", accuracy=" << acc;
       loss_sum = 0.0;
       loss_count = 0;
     }

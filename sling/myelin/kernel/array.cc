@@ -1450,7 +1450,7 @@ class ScaledUpdateTransformer : public Transformer {
       if (matmul->GetAttr("transpose_b", false)) b = b.transpose();
       if (a.dim(1) != 1 || b.dim(0) != 1) continue;
 
-      flow->Fuse(assign, matmul, "AssignAddOuter");
+      flow->Fuse(assign, matmul, "AssignMatMulAdd");
       updates++;
     }
 
