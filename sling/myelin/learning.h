@@ -65,6 +65,11 @@ class CrossEntropyLoss {
     ProfileSummary *forward_profile() const { return forward_profile_; }
     ProfileSummary *backward_profile() const { return backward_profile_; }
 
+    void dump() {
+      LOG(INFO) << "loss fwd: " << forward_.ToString();
+      LOG(INFO) << "loss bkw: " << backward_.ToString();
+    }
+
    private:
     const CrossEntropyLoss &loss_;
 

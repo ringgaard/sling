@@ -566,6 +566,50 @@ string Tensor::TypeString() const {
   return str;
 }
 
+string Tensor::ToString(const char *data) const {
+  // Resolve references.
+  if (ref()) data  = *reinterpret_cast<const char * const *>(data);
+
+  // Check for shape and null.
+  if (!shape().defined()) return "*";
+  if (data == nullptr) return "null";
+
+  // Get type traits for elements.
+  const TypeTraits &traits = TypeTraits::of(type());
+
+  // Output tensor as string.
+  string str;
+  if (rank() == 0) {
+    // Scalar.
+    str = traits.str(data);
+  } else if (rank() == 1) {
+    // Vector.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) str.append(",");
+      str.append(traits.str(data + offset(r)));
+    }
+    str.append("]");
+  } else if (rank() == 2) {
+    // Matrix.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) str.append(",");
+      str.append("[");
+      for (int c = 0; c < dim(1); ++c) {
+        if (c > 0) str.append(",");
+        str.append(traits.str(data + offset(r, c)));
+      }
+      str.append("]");
+    }
+    str.append("]");
+  } else {
+    str = "<<" + std::to_string(rank()) + "D tensor>>";
+  }
+
+  return str;
+}
+
 Channel::~Channel() {
   runtime()->FreeChannel(data_, connector_->placement());
 }
@@ -632,7 +676,6 @@ void Instance::Clear() {
 
 string Instance::ToString(Tensor *param) const {
   // Locate parameter in instance.
-  if (!param->shape().defined()) return "*";
   char *p;
   char *buffer = nullptr;
   if (param->placement() == DEVICE) {
@@ -640,46 +683,11 @@ string Instance::ToString(Tensor *param) const {
     p = buffer = runtime()->FetchTensorFromDevice(this, param);
   } else {
     p  = data_ + param->offset();
-    if (param->ref()) {
-      if (param->placement() & DEVICE) return "<<device ref>>";
-      p = *reinterpret_cast<char **>(p);
-    }
-  }
-  if (p == nullptr) return "null";
-
-  // Get type traits for elements.
-  const TypeTraits &traits = TypeTraits::of(param->type());
-
-  // Output tensor as string.
-  string str;
-  if (param->rank() == 0) {
-    // Scalar.
-    str = traits.str(p);
-  } else if (param->rank() == 1) {
-    // Vector.
-    str.append("[");
-    for (int r = 0; r < param->dim(0); ++r) {
-      if (r > 0) str.append(",");
-      str.append(traits.str(p + param->offset(r)));
-    }
-    str.append("]");
-  } else if (param->rank() == 2) {
-    // Matrix.
-    str.append("[");
-    for (int r = 0; r < param->dim(0); ++r) {
-      if (r > 0) str.append(",");
-      str.append("[");
-      for (int c = 0; c < param->dim(1); ++c) {
-        if (c > 0) str.append(",");
-        str.append(traits.str(p + param->offset(r, c)));
-      }
-      str.append("]");
-    }
-    str.append("]");
-  } else {
-    str = "<<" + std::to_string(param->rank()) + "D tensor>>";
+    if (param->ref() && (param->placement() & DEVICE)) return "<<device ref>>";
   }
 
+  // Convert tensor to string.
+  string str = param->ToString(p);
   free(buffer);
   return str;
 }

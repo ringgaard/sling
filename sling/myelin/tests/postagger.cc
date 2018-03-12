@@ -354,6 +354,10 @@ int main(int argc, char *argv[]) {
       gtagger.Compute();
 
       if (num_tokens == 8715) {
+        batch.dump();
+
+        LOG(INFO) << "forward " << num_tokens << " " << i << "\n" << forward[i]->ToString();
+
         LOG(INFO) << "back " << num_tokens << " " << i;
         for (Tensor *t : network.parameters()) {
           if (t->cell() == dtagger && t->shared() == nullptr) {
@@ -361,6 +365,8 @@ int main(int argc, char *argv[]) {
             LOG(INFO) << t->name() << " = " << gtagger.ToString(t).substr(0, 100);
           }
         }
+
+        LOG(INFO) << "dlogits=" << gtagger["gradients/tagger/d_logits"].ToString();
       }
 
       float *f = gtagger.Get<float>(dx2i);
@@ -379,11 +385,7 @@ int main(int argc, char *argv[]) {
 
     // Apply gradients to model.
     if (epoch % FLAGS_batch == 0) {
-      optimizer.set_alpha(alpha);
-      optimizer.Apply(gradients);
-      gtagger.Clear();
-
-#if 1
+#if 0
       LOG(INFO) << "gtagger " << num_tokens;
       for (Tensor *t : network.parameters()) {
         if (t->cell() == dtagger && t->ref()) {
@@ -396,7 +398,14 @@ int main(int argc, char *argv[]) {
           LOG(INFO) << t->name() << " = " << gtagger.ToString(t).substr(0, 100);
         }
       }
+
+      //TensorData W0 = network["tagger/W0"];
+      //LOG(INFO) << "W0=" << W0.ToString();
 #endif
+
+      optimizer.set_alpha(alpha);
+      optimizer.Apply(gradients);
+      gtagger.Clear();
     }
 
     // Report progress.

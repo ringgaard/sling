@@ -514,6 +514,10 @@ class Tensor {
   // Return tensor type as string.
   string TypeString() const;
 
+  // Return contents of tensor as string.
+  string ToString(const char *data) const;
+  string ToString() const { return ToString(data_); }
+
  private:
   // Offset in data instance block.
   size_t offset_ = -1;
@@ -904,6 +908,9 @@ class TensorData {
 
   // Return tensor format.
   const Tensor &format() const { return *format_; }
+
+  // Return tensor as string.
+  string ToString() const { return format_->ToString(data_); }
 
  private:
   char *data_;      // data for tensor
