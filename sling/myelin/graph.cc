@@ -136,21 +136,28 @@ static void AppendOp(string *str,
     options.ops.Append(str);
   }
 
+  bool calculate = (op->type == "Calculate");
   str->append(" tooltip=\"");
   StringAppendF(str, "name: %s&#10;", op->name.c_str());
   StringAppendF(str, "type: %s&#10;", op->type.c_str());
   if (!op->inputs.empty()) {
     str->append("input:&#10;");
-    for (Flow::Variable *var : op->inputs) {
-      StringAppendF(str, "  %s: %s&#10;",
+    for (int i = 0; i < op->inputs.size(); ++i) {
+      Flow::Variable *var = op->inputs[i];
+      if (calculate) StringAppendF(str, "  %%%d ", i);
+      StringAppendF(str, "  %s: %s",
         var->name.c_str(), var->TypeString().c_str());
+      str->append("&#10;");
     }
   }
   if (!op->outputs.empty()) {
     str->append("output:&#10;");
-    for (Flow::Variable *var : op->outputs) {
-      StringAppendF(str, "  %s: %s&#10;",
+    for (int i = 0; i < op->outputs.size(); ++i) {
+      Flow::Variable *var = op->outputs[i];
+      if (calculate) StringAppendF(str, "  @%d ", i);
+      StringAppendF(str, "  %s: %s",
         var->name.c_str(), var->TypeString().c_str());
+      str->append("&#10;");
     }
   }
   if (!op->attrs.empty()) {
