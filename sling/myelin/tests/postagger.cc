@@ -145,6 +145,9 @@ struct TaggerFlow : Flow {
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
+  //jit::CPU::Disable(jit::AVX2);
+  //jit::CPU::Disable(jit::FMA3);
+
   // Read training and test data.
   Dictionary words;
   words.add("<UNKNOWN>");
@@ -353,7 +356,8 @@ int main(int argc, char *argv[]) {
       // Compute backward.
       gtagger.Compute();
 
-      if (num_tokens == 8715) {
+#if 0
+      if (num_tokens == 6037) {
         batch.dump();
 
         LOG(INFO) << "forward " << num_tokens << " " << i << "\n" << forward[i]->ToString();
@@ -368,9 +372,10 @@ int main(int argc, char *argv[]) {
 
         LOG(INFO) << "dlogits=" << gtagger["gradients/tagger/d_logits"].ToString();
       }
+#endif
 
       float *f = gtagger.Get<float>(dx2i);
-      CHECK(!isnan(*f)) << num_tokens << " " << i;
+      CHECK(!std::isnan(*f)) << num_tokens << " " << i;
     }
 
     // Clear data.
