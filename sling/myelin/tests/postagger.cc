@@ -32,6 +32,8 @@ DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
 DEFINE_int32(batch, 1, "Number of epochs between gradient updates");
 DEFINE_bool(shuffle, true, "Shuffle training corpus");
 
+#define BATCHSPLIT
+
 using namespace sling;
 using namespace sling::myelin;
 
@@ -111,6 +113,26 @@ void RandomInitialize(Tensor *tensor, float stddev) {
   } else {
     LOG(FATAL) << "Cannot initialize " << tensor->name();
   }
+}
+
+float MaxAbs(const TensorData &data) {
+  float max = 0.0;
+  if (data.rank() == 1) {
+    for (int r = 0; r < data.dim(0); ++r) {
+      float f = fabs(data.at<float>(r));
+      if (f > max) max = f;
+    }
+  } else if (data.rank() == 2) {
+    for (int r = 0; r < data.dim(0); ++r) {
+      for (int c = 0; c < data.dim(1); ++c) {
+        float f = fabs(data.at<float>(r, c));
+        if (f > max) max = f;
+      }
+    }
+  } else {
+    return -1;
+  }
+  return max;
 }
 
 void DumpProfile(ProfileSummary *summary) {
@@ -267,15 +289,22 @@ int main(int argc, char *argv[]) {
   Tensor *dc_out = network.GetParameter("gradients/tagger/d_c_out");
   Tensor *dlogits = network.GetParameter("gradients/tagger/d_logits");
 
-  Tensor *dx2i = network.GetParameter("gradients/tagger/d_x2i");
+  //Tensor *dx2i = network.GetParameter("gradients/tagger/d_x2i");
 
   // Profiling.
   ProfileSummary tagger_profile(tagger);
   ProfileSummary dtagger_profile(dtagger);
 
   // Allocate gradients.
+#ifdef BATCHSPLIT
+  std::vector<Instance *> gtaggers;
+  for (int i = 0; i < FLAGS_batch; ++i) {
+    gtaggers.push_back(new Instance(dtagger));
+  }
+#else
   Instance gtagger(dtagger);
   std::vector<Instance *> gradients = {&gtagger};
+#endif
 
   // Train.
   int num_tokens = 0;
@@ -334,6 +363,9 @@ int main(int argc, char *argv[]) {
     // Backpropagate loss gradient.
     dh.resize(length);
     dc.resize(length);
+#ifdef BATCHSPLIT
+    Instance &gtagger = *gtaggers[epoch % FLAGS_batch];
+#endif
     if (FLAGS_profile) gtagger.set_profile(&dtagger_profile);
     for (int i = length - 1; i >= 0; --i) {
       // Set gradient.
@@ -344,9 +376,13 @@ int main(int argc, char *argv[]) {
 
       // Set up channels.
       if (i == length - 1) {
+        LOG(INFO) << "zero channels";
         gtagger.Set(dh_out, &h_zero);
         gtagger.Set(dc_out, &c_zero);
+        LOG(INFO) << "hzero=" << gtagger.ToString(dh_out);
+        LOG(INFO) << "czero=" << gtagger.ToString(dc_out);
       } else {
+        LOG(INFO) << "channels " <<  (i + 1) << " of " << dh.size();
         gtagger.Set(dh_out, &dh, i + 1);
         gtagger.Set(dc_out, &dc, i + 1);
       }
@@ -355,6 +391,13 @@ int main(int argc, char *argv[]) {
 
       // Compute backward.
       gtagger.Compute();
+
+      LOG(INFO) << "Max gradients at epoch " << epoch;
+      for (Tensor *tensor : network.parameters()) {
+        if (tensor->cell() == dtagger && tensor->name().find("/d_") != -1) {
+          LOG(INFO) << "max gradient " << tensor->name() << " = " << MaxAbs(gtagger[tensor]);
+        }
+      }
 
 #if 0
       if (num_tokens == 6037) {
@@ -372,10 +415,10 @@ int main(int argc, char *argv[]) {
 
         LOG(INFO) << "dlogits=" << gtagger["gradients/tagger/d_logits"].ToString();
       }
-#endif
 
       float *f = gtagger.Get<float>(dx2i);
       CHECK(!std::isnan(*f)) << num_tokens << " " << i;
+#endif
     }
 
     // Clear data.
@@ -409,8 +452,17 @@ int main(int argc, char *argv[]) {
 #endif
 
       optimizer.set_alpha(alpha);
+#ifdef BATCHSPLIT
+      for (int i = 0; i < FLAGS_batch; ++i) {
+        std::vector<Instance *> gradients = {gtaggers[i]};
+
+        optimizer.Apply(gradients);
+        gtaggers[i]->Clear();
+      }
+#else
       optimizer.Apply(gradients);
       gtagger.Clear();
+#endif
     }
 
     // Report progress.
