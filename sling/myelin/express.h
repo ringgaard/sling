@@ -276,7 +276,7 @@ class Express {
   Var *Variable(VarType type, int id);
 
   // Look up variable in expression. Return null is variable does not exist.
-  Var *Lookup(VarType type, int id);
+  Var *Lookup(VarType type, int id) const;
 
   // Add new temp variable to expression.
   Var *Temp() { return Variable(TEMP, -1); }

@@ -663,9 +663,9 @@ class Softmax : public Kernel {
       // Find max element for next block.
       expression.generator->GenerateBody(masm);
       if (masm->Enabled(AVX)) {
-        __ vmaxps(max, max, expression.index.ymm(0));
+        __ vmaxps(max, max, expression.ymm(0));
       } else {
-        __ maxps(max.xmm(), expression.index.xmm(0));
+        __ maxps(max.xmm(), expression.xmm(0));
       }
 
       if (m > vecsize || r > 0) {
@@ -706,9 +706,9 @@ class Softmax : public Kernel {
       __ bind(&l);
       expression.generator->GenerateBody(masm);
       if (masm->Enabled(AVX)) {
-        __ vmaxss(max, max, expression.index.ymm(0));
+        __ vmaxss(max, max, expression.ymm(0));
       } else {
-        __ maxss(max.xmm(), expression.index.xmm(0));
+        __ maxss(max.xmm(), expression.xmm(0));
       }
 
       if (r > 1) {
@@ -733,7 +733,7 @@ class Softmax : public Kernel {
       UnaryExpression expression(expr, masm, input, output, offset, m);
 
       // Broadcast max value over vector.
-      YMMRegister i0 = expression.index.ymm(0);
+      YMMRegister i0 = expression.ymm(0);
       if (masm->Enabled(AVX2)) {
         __ vbroadcastss(i0, max);
       } else if (masm->Enabled(AVX)) {
@@ -753,9 +753,9 @@ class Softmax : public Kernel {
 
       // Sum up results.
       if (masm->Enabled(AVX)) {
-        __ vaddps(sum, sum, expression.index.ymm(1));
+        __ vaddps(sum, sum, expression.ymm(1));
       } else {
-        __ addps(sum.xmm(), expression.index.xmm(1));
+        __ addps(sum.xmm(), expression.xmm(1));
       }
 
       if (m > vecsize || r > 0) {
@@ -788,9 +788,9 @@ class Softmax : public Kernel {
 
       // Loop over all residual elements.
       if (masm->Enabled(AVX)) {
-        __ vmovaps(expression.index.ymm(0), max);
+        __ vmovaps(expression.ymm(0), max);
       } else {
-        __ movaps(expression.index.xmm(0), max.xmm());
+        __ movaps(expression.xmm(0), max.xmm());
       }
       expression.generator->GenerateInit(masm);
       Label l;
@@ -801,9 +801,9 @@ class Softmax : public Kernel {
 
       // Sum up results.
       if (masm->Enabled(AVX)) {
-        __ vaddss(sum, sum, expression.index.ymm(1));
+        __ vaddss(sum, sum, expression.ymm(1));
       } else {
-        __ addss(sum.xmm(), expression.index.xmm(1));
+        __ addss(sum.xmm(), expression.xmm(1));
       }
 
       if (r > 1) {
@@ -836,9 +836,9 @@ class Softmax : public Kernel {
 
       // Load scaling factor.
       if (masm->Enabled(AVX)) {
-        __ vmovaps(expression.index.ymm(0), sum);
+        __ vmovaps(expression.ymm(0), sum);
       } else {
-        __ movaps(expression.index.xmm(0), sum.xmm());
+        __ movaps(expression.xmm(0), sum.xmm());
       }
       expression.generator->GenerateInit(masm);
 
@@ -866,9 +866,9 @@ class Softmax : public Kernel {
 
       // Load scaling factor.
       if (masm->Enabled(AVX)) {
-        __ vmovaps(expression.index.ymm(0), sum);
+        __ vmovaps(expression.ymm(0), sum);
       } else {
-        __ movaps(expression.index.xmm(0), sum.xmm());
+        __ movaps(expression.xmm(0), sum.xmm());
       }
       expression.generator->GenerateInit(masm);
 
@@ -954,6 +954,11 @@ class Softmax : public Kernel {
     }
 
     ~UnaryExpression() { delete generator; }
+
+    // Get register for register-based variable.
+    int reg(int id) { return generator->RegisterNumber(Express::REGISTER, id); }
+    YMMRegister ymm(int id) { return index.ymm(reg(id)); }
+    XMMRegister xmm(int id) { return index.xmm(reg(id)); }
 
     UnaryIndexGenerator index;
     ExpressionGenerator *generator;

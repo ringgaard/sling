@@ -433,7 +433,7 @@ void Express::GetRecipe(string *recipe) const {
   }
 }
 
-Express::Var *Express::Lookup(VarType type, int id) {
+Express::Var *Express::Lookup(VarType type, int id) const {
   for (Var *v : vars_) {
     if (v->type == type && v->id == id) return v;
   }

@@ -91,6 +91,11 @@ void ExpressionGenerator::GenerateBody(MacroAssembler *masm) {
   }
 }
 
+int ExpressionGenerator::RegisterNumber(Express::VarType type, int id) const {
+  Express::Var *v = instructions_.Lookup(type, id);
+  return v == nullptr ? -1 : v->reg;
+}
+
 ExpressionGenerator *ExpressionGenerator::Select(const Express &expr,
                                                  Type type, int size) {
   ExpressionGenerator *generator = nullptr;
