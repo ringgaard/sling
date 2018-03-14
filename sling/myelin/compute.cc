@@ -1095,6 +1095,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         dt--;
         dl--;
       }
+      t->require_dense_ |= l->require_dense_;
+      l->require_dense_ |= t->require_dense_;
 
       // Propagate order constraints.
       if (t->required_order_ != l->required_order_) {

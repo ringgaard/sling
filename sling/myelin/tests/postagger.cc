@@ -23,7 +23,7 @@
 DEFINE_bool(dump, false, "Dump flow");
 DEFINE_bool(dump_cell, false, "Dump flow");
 DEFINE_bool(profile, false, "Profile tagger");
-DEFINE_int32(epochs, 500000, "Number of training epochs");
+DEFINE_int32(epochs, 250000, "Number of training epochs");
 DEFINE_int32(report, 1000, "Report status after every n sentence");
 DEFINE_double(alpha, 0.1, "Learning rate");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
@@ -32,7 +32,7 @@ DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
 DEFINE_int32(batch, 1, "Number of epochs between gradient updates");
 DEFINE_bool(shuffle, true, "Shuffle training corpus");
 
-#define BATCHSPLIT
+//#define BATCHSPLIT
 
 using namespace sling;
 using namespace sling::myelin;
@@ -133,6 +133,45 @@ float MaxAbs(const TensorData &data) {
     return -1;
   }
   return max;
+}
+
+void ClipByNorm(TensorData &data, float threshold) {
+  float sum = 0.0;
+  if (data.rank() == 1) {
+    for (int r = 0; r < data.dim(0); ++r) {
+      float f = data.at<float>(r);
+      sum += f * f;
+    }
+  } else if (data.rank() == 2) {
+    for (int r = 0; r < data.dim(0); ++r) {
+      for (int c = 0; c < data.dim(1); ++c) {
+        float f = data.at<float>(r, c);
+        sum += f * f;
+      }
+    }
+  } else {
+    LOG(FATAL) << "Rank not supported";
+  }
+
+  float l2 = sqrt(sum);
+  if (l2 <= threshold) return;
+  float scale = threshold / l2;
+  VLOG(1) << "Scale " << data.format().name() << " by " << scale << " l2=" << l2 << " max=" << MaxAbs(data);
+
+  if (data.rank() == 1) {
+    for (int r = 0; r < data.dim(0); ++r) {
+      data.at<float>(r) *= scale;
+    }
+  } else if (data.rank() == 2) {
+    for (int r = 0; r < data.dim(0); ++r) {
+      for (int c = 0; c < data.dim(1); ++c) {
+        data.at<float>(r, c) *= scale;
+      }
+    }
+  } else {
+    LOG(FATAL) << "Rank not supported";
+  }
+
 }
 
 void DumpProfile(ProfileSummary *summary) {
@@ -376,13 +415,11 @@ int main(int argc, char *argv[]) {
 
       // Set up channels.
       if (i == length - 1) {
-        LOG(INFO) << "zero channels";
+        //LOG(INFO) << "zero channels";
         gtagger.Set(dh_out, &h_zero);
         gtagger.Set(dc_out, &c_zero);
-        LOG(INFO) << "hzero=" << gtagger.ToString(dh_out);
-        LOG(INFO) << "czero=" << gtagger.ToString(dc_out);
       } else {
-        LOG(INFO) << "channels " <<  (i + 1) << " of " << dh.size();
+        //LOG(INFO) << "channels " <<  (i + 1) << " of " << dh.size();
         gtagger.Set(dh_out, &dh, i + 1);
         gtagger.Set(dc_out, &dc, i + 1);
       }
@@ -392,12 +429,17 @@ int main(int argc, char *argv[]) {
       // Compute backward.
       gtagger.Compute();
 
+      //LOG(INFO) << "dh_out=" << gtagger.ToString(dh_out);
+      //LOG(INFO) << "dc_out=" << gtagger.ToString(dc_out);
+
+#if 0
       LOG(INFO) << "Max gradients at epoch " << epoch;
       for (Tensor *tensor : network.parameters()) {
         if (tensor->cell() == dtagger && tensor->name().find("/d_") != -1) {
           LOG(INFO) << "max gradient " << tensor->name() << " = " << MaxAbs(gtagger[tensor]);
         }
       }
+#endif
 
 #if 0
       if (num_tokens == 6037) {
@@ -460,6 +502,14 @@ int main(int argc, char *argv[]) {
         gtaggers[i]->Clear();
       }
 #else
+
+      for (Tensor *tensor : network.parameters()) {
+        if (tensor->cell() == dtagger && tensor->name().find("/d_") != -1) {
+          TensorData data = gtagger[tensor];
+          ClipByNorm(data, 1.0);
+        }
+      }
+
       optimizer.Apply(gradients);
       gtagger.Clear();
 #endif
