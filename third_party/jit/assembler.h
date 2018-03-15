@@ -1110,6 +1110,7 @@ class Assembler : public CodeGenerator {
   AVX_SP_3(vdiv, 0x5e);
   AVX_SP_3(vmin, 0x5d);
   AVX_SP_3(vmax, 0x5f);
+  AVX_SP_3(vsqrt, 0x51);
   AVX_P_3(vand, 0x54);
   AVX_P_3(vandn, 0x55);
   AVX_P_3(vor, 0x56);

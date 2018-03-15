@@ -586,10 +586,10 @@ class Softmax : public Kernel {
   void Adjust(Step *step) override {
     Tensor *x = step->input(0);
     Tensor *y = step->output(0);
-    x->SetMiniumAlignment(32);
+    x->SetMiniumAlignment(CPU::Enabled(AVX) ? 32 : 16);
     x->RequireDense();
     x->RequireStandardOrder();
-    y->SetMiniumAlignment(32);
+    y->SetMiniumAlignment(CPU::Enabled(AVX) ? 32 : 16);
     y->RequireDense();
     y->RequireStandardOrder();
     step->AllowInPlace(0, 0);

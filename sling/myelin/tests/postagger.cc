@@ -32,8 +32,6 @@ DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
 DEFINE_int32(batch, 1, "Number of epochs between gradient updates");
 DEFINE_bool(shuffle, true, "Shuffle training corpus");
 
-//#define BATCHSPLIT
-
 using namespace sling;
 using namespace sling::myelin;
 
@@ -328,22 +326,13 @@ int main(int argc, char *argv[]) {
   Tensor *dc_out = network.GetParameter("gradients/tagger/d_c_out");
   Tensor *dlogits = network.GetParameter("gradients/tagger/d_logits");
 
-  //Tensor *dx2i = network.GetParameter("gradients/tagger/d_x2i");
-
   // Profiling.
   ProfileSummary tagger_profile(tagger);
   ProfileSummary dtagger_profile(dtagger);
 
   // Allocate gradients.
-#ifdef BATCHSPLIT
-  std::vector<Instance *> gtaggers;
-  for (int i = 0; i < FLAGS_batch; ++i) {
-    gtaggers.push_back(new Instance(dtagger));
-  }
-#else
   Instance gtagger(dtagger);
   std::vector<Instance *> gradients = {&gtagger};
-#endif
 
   // Train.
   int num_tokens = 0;
@@ -402,9 +391,6 @@ int main(int argc, char *argv[]) {
     // Backpropagate loss gradient.
     dh.resize(length);
     dc.resize(length);
-#ifdef BATCHSPLIT
-    Instance &gtagger = *gtaggers[epoch % FLAGS_batch];
-#endif
     if (FLAGS_profile) gtagger.set_profile(&dtagger_profile);
     for (int i = length - 1; i >= 0; --i) {
       // Set gradient.
@@ -494,15 +480,6 @@ int main(int argc, char *argv[]) {
 #endif
 
       optimizer.set_alpha(alpha);
-#ifdef BATCHSPLIT
-      for (int i = 0; i < FLAGS_batch; ++i) {
-        std::vector<Instance *> gradients = {gtaggers[i]};
-
-        optimizer.Apply(gradients);
-        gtaggers[i]->Clear();
-      }
-#else
-
       for (Tensor *tensor : network.parameters()) {
         if (tensor->cell() == dtagger && tensor->name().find("/d_") != -1) {
           TensorData data = gtagger[tensor];
@@ -512,7 +489,6 @@ int main(int argc, char *argv[]) {
 
       optimizer.Apply(gradients);
       gtagger.Clear();
-#endif
     }
 
     // Report progress.

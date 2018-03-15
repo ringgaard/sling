@@ -125,6 +125,16 @@ void BaselineSoftmax(const TensorData &x, TensorData *y) {
   }
 }
 
+// Baseline implementation of norm.
+void BaselineNorm(const TensorData &x, TensorData *norm) {
+  float sum = 0.0;
+  for (int i = 0; i < x.dim(0); ++i) {
+    float value = x.at<float>(i);
+    sum += value * value;
+  }
+  norm->at<float>(0) = sqrtf(sum);
+}
+
 void CheckTest(bool success) {
   if (!FLAGS_ignore_errors && !success) {
     LOG(FATAL) << "Test failed, aborting";
@@ -345,6 +355,20 @@ void CheckArgMax(const string &test, const string &base) {
   }
 }
 
+void CheckNorm(const string &test, const string &base) {
+  if (!FLAGS_test.empty() && FLAGS_test != test) return;
+  if (!FLAGS_base.empty() && FLAGS_base != base) return;
+  LOG(INFO) << "Testing " << test << " against " << base;
+  for (int d = FLAGS_dmin; d <= FLAGS_dmax; d++) {
+    VLOG(1) << "Testing " << d;
+    FltKernelComparator comp(library, "Norm", test, base);
+    if (cudart.connected()) comp.set_runtime(&cudart);
+    comp.AddInput("x", {d}, -100.0, 100.0);
+    comp.AddOutput("l2", {1}, FLAGS_func_accuracy);
+    CheckTest(comp.Check(10));
+  }
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
   if (FLAGS_w != -1) FLAGS_wmin = FLAGS_wmax = FLAGS_w;
@@ -381,6 +405,9 @@ int main(int argc, char *argv[]) {
   library.Register("Softmax", "BaselineSoftmax", BaselineSoftmax)
      .Input(0, DT_FLOAT, 1)
      .Output(0, DT_FLOAT, 1);
+  library.Register("Norm", "BaselineNorm", BaselineNorm)
+     .Input(0, DT_FLOAT, 1)
+     .Output(0, DT_FLOAT, 1);
 
   if (FLAGS_test_baseline) {
     // Test GenFltVecMatMul against itself to test the kernel comparator.
@@ -410,6 +437,9 @@ int main(int argc, char *argv[]) {
 
   // Test argmax.
   CheckArgMax("GenFltArgMax", "BaselineArgMax");
+
+  // Test norm.
+  CheckNorm("Norm", "BaselineNorm");
 
   if (CPU::Enabled(SSE4_1)) {
     // Test expression intrinsics.
