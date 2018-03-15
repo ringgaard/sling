@@ -274,9 +274,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Create batch for loss accumulation.
-  CrossEntropyLoss::Batch batch(loss);
-
   // Create channels.
   Channel h_zero(model.h_cnx);
   Channel c_zero(model.c_cnx);
@@ -343,11 +340,10 @@ int main(int argc, char *argv[]) {
 
       // Compute loss and gradient.
       int target = (*sentence)[i].tag;
-      batch.Clear();
-      batch.Forward(data->Get<float>(model.logits), target);
-      float *dl = reinterpret_cast<float *>(l.at(i));
-      batch.Backward(dl);
-      loss_sum += batch.loss();
+      float *logits = data->Get<float>(model.logits);
+      float *dlogits = reinterpret_cast<float *>(l.at(i));
+      float cost = loss.Compute(logits, target, dlogits);
+      loss_sum += cost;
       loss_count++;
     }
 
@@ -464,8 +460,7 @@ int main(int argc, char *argv[]) {
   if (FLAGS_profile) {
     DumpProfile(&tagger_profile);
     DumpProfile(&dtagger_profile);
-    DumpProfile(batch.forward_profile());
-    DumpProfile(batch.backward_profile());
+    DumpProfile(loss.profile());
     DumpProfile(optimizer.profile());
   }
 

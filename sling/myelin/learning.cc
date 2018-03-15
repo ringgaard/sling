@@ -27,11 +27,6 @@ static string GradientName(const string &name) {
   return "gradients/" + name.substr(0, slash) + "/d_" + name.substr(slash + 1);
 }
 
-CrossEntropyLoss::CrossEntropyLoss(const string &name) {
-  name_ = name;
-  gradient_name_ = "gradients/" + name;
-}
-
 void CrossEntropyLoss::Build(Flow *flow,
                              Flow::Variable *logits,
                              Flow::Variable *dlogits) {
@@ -41,113 +36,57 @@ void CrossEntropyLoss::Build(Flow *flow,
   CHECK(logits->shape == dlogits->shape);
   int size = logits->dim(1);
 
-  // Build forward loss computation.
-  Builder fwd(flow, name_);
+  // Build loss and loss gradient computation.
+  Builder tf(flow, name_);
 
   // Inputs are logits and target label.
-  auto *prediction = fwd.Placeholder("logits", DT_FLOAT, logits->shape);
-  prediction->ref = true;
-  auto *target = fwd.Placeholder("target", DT_INT32, {});
+  auto *input = tf.Placeholder("logits", DT_FLOAT, logits->shape);
+  input->ref = true;
+  auto *target = tf.Placeholder("target", DT_INT32, {});
 
   // Compute softmax for logits.
-  auto *softmax = fwd.Softmax(fwd.Reshape(prediction, {size}));
+  auto *softmax = tf.Softmax(tf.Reshape(input, {size}));
 
   // Compute loss (negative log-likelihood).
-  auto *loss = fwd.Neg(fwd.Log(fwd.Slice(softmax, target)));
+  auto *loss = tf.Name(tf.Neg(tf.Log(tf.Slice(softmax, target))), "loss");
+  loss->flags |= Flow::Variable::OUT;
 
-  // Sum losses.
-  auto *loss_sum = fwd.Placeholder("loss_sum", DT_FLOAT, {1});
-  loss_sum->flags |= Flow::Variable::OUT;
-  fwd.AssignAdd(loss_sum, loss);
-
-  // Increment batch counter.
-  auto *batch_size = fwd.Placeholder("batch_size", DT_FLOAT, {});
-  batch_size->flags |= Flow::Variable::OUT;
-  fwd.AssignAdd(batch_size, fwd.Const(1.0f));
-
-  // Sum softmax.
-  auto *softmax_sum = fwd.Placeholder("softmax_sum", DT_FLOAT, softmax->shape);
-  softmax_sum->flags |= Flow::Variable::OUT;
-  fwd.AssignAdd(softmax_sum, softmax);
-
-  // Sum target labels.
-  auto *labels = fwd.Placeholder("labels", DT_FLOAT, {size});
-  labels->flags |= Flow::Variable::OUT;
-  fwd.ScatterAdd(fwd.Reshape(labels, {size, 1}),
-                 fwd.Reshape(target, {1, 1}),
-                 fwd.Const(1.0f));
-
-  // Build backward loss gradient.
-  Builder bkw(flow, gradient_name_);
-  auto *primal = bkw.Name(bkw.Instance(fwd.func()), "primal");
-  auto *n = bkw.Ref(primal, batch_size);
-
-  // Average loss.
-  bkw.Name(bkw.Div(bkw.Ref(primal, loss_sum), n) , "loss");
-
-  // Loss gradient.
-  auto *diff = bkw.Sub(bkw.Ref(primal, softmax_sum), bkw.Ref(primal, labels));
-  auto *mean = bkw.Div(diff ,n);
-  auto *output = bkw.Name(bkw.Reshape(mean, {1, size}), "d_logits");
+  // Compute gradient.
+  auto *gradient = tf.Sub(softmax, tf.OneHot(target, size));
+  auto *output = tf.Name(tf.Reshape(gradient, dlogits->shape), "d_logits");
   output->ref = true;
 
   // Connect input and output logits.
   auto *cnx = flow->AddConnector(name_ + "/cnx_logits");
   cnx->AddLink(logits);
-  cnx->AddLink(prediction);
+  cnx->AddLink(input);
   auto *dcnx = flow->AddConnector(name_ + "/cnx_dlogits");
   dcnx->AddLink(dlogits);
   dcnx->AddLink(output);
 }
 
 void CrossEntropyLoss::Initialize(const Network &network) {
-  // Get forward and backward loss computation cells.
-  forward_ = network.GetCell(name_);
-  backward_ = network.GetCell(gradient_name_);
+  // Get loss computation cell.
+  cell_ = network.GetCell(name_);
 
   // Get tensors.
   logits_ = network.GetParameter(name_ + "/logits");
   target_ = network.GetParameter(name_ + "/target");
-  batch_size_ = network.GetParameter(name_ + "/batch_size");
-  primal_ = network.GetParameter(gradient_name_ + "/primal");
-  loss_ = network.GetParameter(gradient_name_ + "/loss");
-  dlogits_ = network.GetParameter(gradient_name_ + "/d_logits");
+  loss_ = network.GetParameter(name_ + "/loss");
+  dlogits_ = network.GetParameter(name_ + "/d_logits");
+
+  // Create profile summary for profiling.
+  if (cell_->profile()) profile_ = new ProfileSummary(cell_);
 }
 
-CrossEntropyLoss::Batch::Batch(const CrossEntropyLoss &loss)
-    : loss_(loss), forward_(loss.forward_), backward_(loss.backward_) {
-  if (loss.forward_->profile()) {
-    forward_profile_ = new ProfileSummary(loss.forward_);
-    forward_.set_profile(forward_profile_);
-  }
-  if (loss.backward_->profile()) {
-    backward_profile_ = new ProfileSummary(loss.backward_);
-    backward_.set_profile(backward_profile_);
-  }
-}
-
-CrossEntropyLoss::Batch::~Batch() {
-  delete forward_profile_;
-  delete backward_profile_;
-}
-
-void CrossEntropyLoss::Batch::Clear() {
-  forward_.Clear();
-  backward_.Clear();
-}
-
-void CrossEntropyLoss::Batch::Forward(float *logits, int target) {
-  forward_.SetReference(loss_.logits_, logits);
-  *forward_.Get<int>(loss_.target_) = target;
-  if (forward_profile_) forward_.set_profile(forward_profile_);
-  forward_.Compute();
-}
-
-void CrossEntropyLoss::Batch::Backward(float *dlogits) {
-  backward_.Set(loss_.primal_, &forward_);
-  backward_.SetReference(loss_.dlogits_, dlogits);
-  if (backward_profile_) backward_.set_profile(backward_profile_);
-  backward_.Compute();
+float CrossEntropyLoss::Compute(float *logits, int target, float *dlogits) {
+  Instance data(cell_);
+  data.SetReference(logits_, logits);
+  data.SetReference(dlogits_, dlogits);
+  *data.Get<int>(target_) = target;
+  if (profile_) data.set_profile(profile_);
+  data.Compute();
+  return *data.Get<float>(loss_);
 }
 
 void Optimizer::Build(Flow *flow) {

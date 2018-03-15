@@ -191,6 +191,10 @@ class Builder : public Scope {
     return Op("Slice", {v, begin, Const(size)}, v->type, {size});
   }
 
+  Variable *OneHot(Variable *index, int size) {
+    return Op("OneHot", {index}, DT_FLOAT, {size});
+  }
+
   // Feed-forward (FF) layer(s).
   Variable *FFLayers(Variable *input,
                      std::vector<int> layers,

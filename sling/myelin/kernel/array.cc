@@ -291,6 +291,51 @@ class Unpack : public Kernel {
   }
 };
 
+// Output a one-hot vector.
+class OneHot : public Kernel {
+ public:
+  string Name() override { return "OneHot"; }
+  string Operation() override { return "OneHot"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 1 || step->outdegree() != 1) return false;
+    Tensor *index = step->input(0);
+    Tensor *onehot = step->output(0);
+    if (index->type() != DT_INT32) return false;
+    if (onehot->type() != DT_FLOAT) return false;
+    return true;
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    Tensor *index = step->input(0);
+    Tensor *onehot = step->output(0);
+
+    // Allocate registers.
+    Register dst = masm->rr().alloc_fixed(rdi);
+    Register cnt = masm->rr().alloc_fixed(rcx);
+    Register acc = masm->rr().alloc_fixed(rax);
+    Register input = masm->rr().alloc();
+    Register output = masm->rr().alloc();
+
+    // Zero output tensor.
+    __ LoadTensorAddress(output, onehot);
+    __ movq(dst, output);
+    __ movq(cnt, Immediate(onehot->size()));
+    __ xorq(acc, acc);
+    __ repstosb();
+
+    // Set one-hot index.
+    __ LoadTensorAddress(input, index);
+    __ movsxlq(acc, Operand(input));
+    __ movq(Operand(output, acc, times_4), Immediate(0x3F800000));
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 // Slice input tensors along first dimension.
 class Slice : public Kernel {
  public:
@@ -1482,6 +1527,7 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new BatchToSpace());
   library->Register(new Pack());
   library->Register(new Unpack());
+  library->Register(new OneHot());
   library->Register(new GeneralConcat());
   library->Register(new BasicConcat());
   library->Register(new Slice());

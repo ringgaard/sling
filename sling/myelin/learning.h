@@ -28,7 +28,8 @@ namespace myelin {
 // Cross entropy loss for multi-class classification.
 class CrossEntropyLoss {
  public:
-  CrossEntropyLoss(const string &name = "loss");
+  CrossEntropyLoss(const string &name = "loss") : name_(name) {}
+  ~CrossEntropyLoss() { delete profile_; }
 
   // Build loss function together with gradient computation.
   void Build(Flow *flow, Flow::Variable *logits, Flow::Variable *dlogits);
@@ -36,69 +37,27 @@ class CrossEntropyLoss {
   // Initialize loss for model.
   void Initialize(const Network &network);
 
-  // Batch for accumulating losses from forward computations.
-  class Batch {
-   public:
-    // Initialize loss batch computation.
-    Batch(const CrossEntropyLoss &loss);
-    ~Batch();
+  // Compute loss from logits and output loss gradient.
+  float Compute(float *logits, int target, float *dlogits);
 
-    // Clear accumulated losses.
-    void Clear();
-
-    // Accumulate loss from logits.
-    void Forward(float *logits, int target);
-
-    // Compute loss gradient for batch.
-    void Backward(float *dlogits);
-
-    // Return average loss for batch.
-    float loss() { return *backward_.Get<float>(loss_.loss_); }
-
-    // Return current batch size.
-    int batch_size() { return *forward_.Get<float>(loss_.batch_size_); }
-
-    // Return loss gradient.
-    float *dlogits() { return backward_.Get<float>(loss_.dlogits_); }
-
-    // Profile information.
-    ProfileSummary *forward_profile() const { return forward_profile_; }
-    ProfileSummary *backward_profile() const { return backward_profile_; }
-
-    void dump() {
-      LOG(INFO) << "loss fwd: " << forward_.ToString();
-      LOG(INFO) << "loss bkw: " << backward_.ToString();
-    }
-
-   private:
-    const CrossEntropyLoss &loss_;
-
-    Instance forward_;   // forward computation and accumulation of losses
-    Instance backward_;  // backward computation of gradient
-
-    // Profile information.
-    ProfileSummary *forward_profile_ = nullptr;
-    ProfileSummary *backward_profile_ = nullptr;
-  };
+  // Profile information.
+  ProfileSummary *profile() const { return profile_; }
 
  private:
   // Name of loss function.
   string name_;
 
-  // Name of gradient function for loss.
-  string gradient_name_;
+  // Cell for loss computation.
+  Cell *cell_ = nullptr;
 
-  // Cells for forward and backward loss computation.
-  Cell *forward_ = nullptr;
-  Cell *backward_ = nullptr;
-
-  // Tensors for forward and backward loss computation.
+  // Tensors for loss computation.
   Tensor *logits_ = nullptr;
   Tensor *target_ = nullptr;
-  Tensor *batch_size_ = nullptr;
-  Tensor *primal_ = nullptr;
   Tensor *loss_ = nullptr;
   Tensor *dlogits_ = nullptr;
+
+  // Profile information.
+  ProfileSummary *profile_ = nullptr;
 };
 
 // A parameter optimizer applies updates to the learnable parameters of a model
