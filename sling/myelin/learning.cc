@@ -188,7 +188,11 @@ void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
       weight = tf.Mul(multiplier, clip);
     }
 
-    tf.AssignAdd(v, tf.Mul(dv, weight));
+    auto *assign = tf.AssignAdd(v, tf.Mul(dv, weight));
+    if (lambda_ != 0.0) {
+      float decay = 1.0 - lambda_;
+      assign->SetAttr("decay", decay);
+    }
   }
 }
 

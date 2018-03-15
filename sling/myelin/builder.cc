@@ -110,10 +110,10 @@ Flow::Variable *Builder::Op(const string &op,
   return Op(op, args, type, shape);
 }
 
-void Builder::Op0(const string &op,
-                  const std::vector<Flow::Variable *> &args) {
+Flow::Operation *Builder::Op0(const string &op,
+                              const std::vector<Flow::Variable *> &args) {
   string name = OpName(op);
-  flow_->AddOperation(func_, name, op, args, {});
+  return flow_->AddOperation(func_, name, op, args, {});
 }
 
 Flow::Variable *Builder::Const(const void *data, Type type,

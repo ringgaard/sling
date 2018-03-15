@@ -1143,6 +1143,7 @@ class AssignAdd : public Kernel {
     Tensor *scaler = scale_ ? step->input(2) : nullptr;
     Tensor *output = step->outdegree() == 1 ? step->output(0) : nullptr;
     int n = value->elements();
+    float decay = step->GetAttr("decay", 1.0f);
 
     // Allocate registers.
     Register ofs = masm->rr().alloc();
@@ -1168,6 +1169,13 @@ class AssignAdd : public Kernel {
         __ vbroadcastss(factor, Operand(saddr));
       }
 
+      // Load decay value.
+      YMMRegister lambda = masm->mm().allocy();
+      YMMRegister acc = masm->mm().allocy();
+      if (decay != 1.0) {
+        __ vmovaps(lambda, masm->GetConstant<float>(decay, 8)->address());
+      }
+
       if (unrolls > 0) {
         Label next;
         __ xorq(ofs, ofs);
@@ -1182,7 +1190,16 @@ class AssignAdd : public Kernel {
         }
         for (int i = 0; i < unrolls; ++i) {
           int disp = i * 8 * sizeof(float);
-          __ vaddps(elem[i], elem[i], Operand(dst, ofs, times_1, disp));
+          if (decay != 1.0) {
+            if (masm->Enabled(FMA3)) {
+              __ vfmadd231ps(elem[i], lambda, Operand(dst, ofs, times_1, disp));
+            } else {
+              __ vmulps(acc, lambda, Operand(dst, ofs, times_1, disp));
+              __ vaddps(elem[i], elem[i], acc);
+            }
+          } else {
+            __ vaddps(elem[i], elem[i], Operand(dst, ofs, times_1, disp));
+          }
         }
         for (int i = 0; i < unrolls; ++i) {
           int disp = i * 8 * sizeof(float);
@@ -1201,7 +1218,16 @@ class AssignAdd : public Kernel {
         } else {
           __ vmovss(elem[r], Operand(src, disp));
         }
-        __ vaddss(elem[r], elem[r], Operand(dst, disp));
+        if (decay != 1.0) {
+          if (masm->Enabled(FMA3)) {
+            __ vfmadd231ps(elem[r], lambda, Operand(dst, disp));
+          } else {
+            __ vmulps(acc, lambda, Operand(dst, disp));
+            __ vaddps(elem[r], elem[r], acc);
+          }
+        } else {
+          __ vaddss(elem[r], elem[r], Operand(dst, disp));
+        }
         __ vmovss(Operand(dst, disp), elem[r]);
         disp += sizeof(float);
       }
@@ -1217,6 +1243,13 @@ class AssignAdd : public Kernel {
         __ shufps(factor, factor, 0);
       }
 
+      // Load decay value.
+      XMMRegister lambda = masm->mm().allocx();
+      XMMRegister acc = masm->mm().allocx();
+      if (decay != 1.0) {
+        __ movaps(lambda, masm->GetConstant<float>(decay, 4)->address());
+      }
+
       // Add (scaled) value to variabel.
       int main = (n / 4) * 4;
       if (n >= 4) {
@@ -1227,7 +1260,13 @@ class AssignAdd : public Kernel {
         if (scale_) {
           __ mulps(elem, factor);
         }
-        __ addps(elem, Operand(dst, ofs));
+        if (decay != 1.0) {
+          __ movaps(acc, Operand(dst, ofs));
+          __ mulps(acc, lambda);
+          __ addps(elem, acc);
+        } else {
+          __ addps(elem, Operand(dst, ofs));
+        }
         __ movaps(Operand(dst, ofs), elem);
         __ addq(ofs, Immediate(8 * sizeof(float)));
         __ cmpq(ofs, Immediate(main * sizeof(float)));
@@ -1239,7 +1278,13 @@ class AssignAdd : public Kernel {
         if (scale_) {
           __ mulss(elem, factor);
         }
-        __ addss(elem, Operand(dst, disp));
+        if (decay != 1.0) {
+          __ movss(acc, Operand(dst, ofs));
+          __ mulps(acc, lambda);
+          __ addss(elem, acc);
+        } else {
+          __ addss(elem, Operand(dst, disp));
+        }
         __ movss(Operand(dst, disp), elem);
         disp += sizeof(float);
       }

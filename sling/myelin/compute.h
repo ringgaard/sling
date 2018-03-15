@@ -641,6 +641,9 @@ class Step {
   bool GetAttr(const string &name, bool defval) const {
     return attributes_.Get(name, defval);
   }
+  float GetAttr(const string &name, float defval) const {
+    return attributes_.Get(name, defval);
+  }
 
   // Check if step has attribute.
   bool HasAttr(const string &name) const {
@@ -658,6 +661,9 @@ class Step {
     attributes_.Set(name, value);
   }
   void SetAttr(const string &name, bool value) {
+    attributes_.Set(name, value);
+  }
+  void SetAttr(const string &name, float value) {
     attributes_.Set(name, value);
   }
 

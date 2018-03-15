@@ -27,6 +27,7 @@ DEFINE_bool(profile, false, "Profile tagger");
 DEFINE_int32(epochs, 250000, "Number of training epochs");
 DEFINE_int32(report, 1000, "Report status after every n sentence");
 DEFINE_double(alpha, 1.0, "Learning rate");
+DEFINE_double(lambda, 0.0, "Regularization parameter");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
 DEFINE_int32(seed, 0, "Random number generator seed");
@@ -229,6 +230,7 @@ int main(int argc, char *argv[]) {
 
   GradientDescentOptimizer optimizer;
   optimizer.set_clipping_threshold(FLAGS_clip);
+  optimizer.set_lambda(FLAGS_lambda);
   optimizer.Build(&flow);
 
   // Analyze flow.

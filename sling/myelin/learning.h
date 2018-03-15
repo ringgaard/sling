@@ -106,11 +106,13 @@ class Optimizer {
 // Stocastic gradient descent optimizer.
 class GradientDescentOptimizer : public Optimizer {
  public:
-  // Return current learning rate.
+  // Learning rate.
   float alpha() const { return *update_->Get<float>(alpha_); }
-
-  // Set learning rate.
   void set_alpha(float alpha) { *update_->Get<float>(alpha_) = alpha; }
+
+  // Regularization parameter for L2 regularization.
+  float lambda() const { return lambda_; }
+  void set_lambda(float lambda) { lambda_ = lambda; }
 
   // Norm clipping threshold.
   float clipping_threshold() const { return clipping_threshold_; }
@@ -122,6 +124,7 @@ class GradientDescentOptimizer : public Optimizer {
 
   Tensor *alpha_ = nullptr;         // learning rate
   float clipping_threshold_ = 0.0;  // norm clipping threshold (0=no clipping)
+  float lambda_ = 0.0;              // regularization parameter (0=none)
 };
 
 }  // namespace myelin

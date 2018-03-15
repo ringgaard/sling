@@ -94,7 +94,7 @@ class Builder : public Scope {
   Variable *Op(const string &op, const std::vector<Variable *> &args);
 
   // Add operation with no output to function.
-  void Op0(const string &op, const std::vector<Variable *> &args);
+  Operation *Op0(const string &op, const std::vector<Variable *> &args);
 
   // Add constant to flow.
   Variable *Const(const void *data, Type type, const Shape &shape);
@@ -175,15 +175,17 @@ class Builder : public Scope {
     return Op("Scatter", {f, v}, v->type, {size, v->dim(1)});
   }
 
-  void AssignAdd(Variable *var, Variable *value) {
-    Op0("AssignAdd", {var, value});
+  Operation *AssignAdd(Variable *var, Variable *value, float decay = 1.0) {
+    auto *op = Op0("AssignAdd", {var, value});
+    if (decay != 1.0) op->SetAttr("decay", decay);
+    return op;
   }
 
   Variable *Accumulate(Variable *var, Variable *value) {
     return Op("AssignAdd", {var, value});
   }
 
-  void ScatterAdd(Variable *M, Variable *f, Variable *v) {
+  Operation *ScatterAdd(Variable *M, Variable *f, Variable *v) {
     return Op0("ScatterAdd", {M, f, v});
   }
 
