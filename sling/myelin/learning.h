@@ -153,11 +153,16 @@ class GradientDescentOptimizer : public Optimizer {
   // Set learning rate.
   void set_alpha(float alpha) { *update_->Get<float>(alpha_) = alpha; }
 
+  // Norm clipping threshold.
+  float clipping_threshold() const { return clipping_threshold_; }
+  void set_clipping_threshold(float t) { clipping_threshold_ = t; }
+
  protected:
   void BuildOptimizer(const GradientMap &gradmap, Builder *update) override;
   void InitializeOptimizer() override;
 
-  Tensor *alpha_ = nullptr;  // learning rate
+  Tensor *alpha_ = nullptr;         // learning rate
+  float clipping_threshold_ = 0.0;  // norm clipping threshold (0=no clipping)
 };
 
 }  // namespace myelin

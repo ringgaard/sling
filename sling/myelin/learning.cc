@@ -221,15 +221,35 @@ void Optimizer::Apply(std::vector<Instance *> &gradients) {
 void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
                                               Builder *update) {
   // Add learning rate to update function.
-  auto *alpha = update->Var("alpha", DT_FLOAT, {});
+  Builder &tf = *update;
+  auto *alpha = tf.Var("alpha", DT_FLOAT, {});
   alpha->flags |= Flow::Variable::IN | Flow::Variable::OUT;
-  auto *weight = update->Neg(alpha);
+  auto *multiplier = tf.Neg(alpha);
+
+  // Optionally add hyperparameter for gradient clipping.
+  Flow::Variable *threshold = nullptr;
+  if (clipping_threshold_ != 0.0) {
+    threshold = tf.Name(tf.Const(clipping_threshold_), "threshold");
+  }
 
   // Update learnable variables from gradients.
   for (auto it : gradmap) {
     auto *v = it.first;
     auto *dv = it.second;
-    update->AssignAdd(v, update->Mul(dv, weight));
+
+    // Optionally add clipping.
+    auto *weight = multiplier;
+    if (threshold != nullptr) {
+      // Compute L2 norm of threshold.
+      auto *norm = tf.Norm(dv);
+      //norm->flags |= Flow::Variable::OUT;
+
+      // Compute clipping factor.
+      auto *clip = tf.Div(threshold, tf.Max(norm, threshold));
+      weight = tf.Mul(multiplier, clip);
+    }
+
+    tf.AssignAdd(v, tf.Mul(dv, weight));
   }
 }
 

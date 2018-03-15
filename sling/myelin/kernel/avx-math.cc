@@ -621,7 +621,8 @@ class Norm : public Kernel {
 
   void Adjust(Step *step) override {
     Tensor *x = step->input(0);
-    x->RequireDense();
+    // TODO: support non-dense inputs.
+    //x->RequireDense();
     x->SetMiniumAlignment(CPU::Enabled(AVX) ? 32 : 16);
   }
 

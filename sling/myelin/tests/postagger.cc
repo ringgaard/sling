@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <iostream>
 #include <random>
 #include <string>
@@ -25,12 +26,14 @@ DEFINE_bool(dump_cell, false, "Dump flow");
 DEFINE_bool(profile, false, "Profile tagger");
 DEFINE_int32(epochs, 250000, "Number of training epochs");
 DEFINE_int32(report, 1000, "Report status after every n sentence");
-DEFINE_double(alpha, 0.1, "Learning rate");
+DEFINE_double(alpha, 1.0, "Learning rate");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
+DEFINE_double(clip, 1.0, "Gradient norm clipping");
 DEFINE_int32(seed, 0, "Random number generator seed");
 DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
-DEFINE_int32(batch, 1, "Number of epochs between gradient updates");
+DEFINE_int32(batch, 128, "Number of epochs between gradient updates");
 DEFINE_bool(shuffle, true, "Shuffle training corpus");
+DEFINE_bool(heldout, true, "Test tagger on heldout data");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -94,93 +97,20 @@ struct Corpus {
   std::vector<Sentence *> sentences;
 };
 
-void RandomInitialize(Tensor *tensor, float stddev) {
-  static std::mt19937 prng(FLAGS_seed);
-  std::normal_distribution<float> dist(0.0, stddev);
-  TensorData data(tensor->data(), tensor);
-  if (tensor->rank() == 1) {
-    for (int r = 0; r < data.dim(0); ++r) {
-      data.at<float>(r) = dist(prng);
-    }
-  } else if (tensor->rank() == 2) {
-    for (int r = 0; r < data.dim(0); ++r) {
-      for (int c = 0; c < data.dim(1); ++c) {
-        data.at<float>(r, c) = dist(prng);
-      }
-    }
-  } else {
-    LOG(FATAL) << "Cannot initialize " << tensor->name();
-  }
-}
-
-float MaxAbs(const TensorData &data) {
-  float max = 0.0;
-  if (data.rank() == 1) {
-    for (int r = 0; r < data.dim(0); ++r) {
-      float f = fabs(data.at<float>(r));
-      if (f > max) max = f;
-    }
-  } else if (data.rank() == 2) {
-    for (int r = 0; r < data.dim(0); ++r) {
-      for (int c = 0; c < data.dim(1); ++c) {
-        float f = fabs(data.at<float>(r, c));
-        if (f > max) max = f;
-      }
-    }
-  } else {
-    return -1;
-  }
-  return max;
-}
-
-void ClipByNorm(TensorData &data, float threshold) {
-  float sum = 0.0;
-  if (data.rank() == 1) {
-    for (int r = 0; r < data.dim(0); ++r) {
-      float f = data.at<float>(r);
-      sum += f * f;
-    }
-  } else if (data.rank() == 2) {
-    for (int r = 0; r < data.dim(0); ++r) {
-      for (int c = 0; c < data.dim(1); ++c) {
-        float f = data.at<float>(r, c);
-        sum += f * f;
-      }
-    }
-  } else {
-    LOG(FATAL) << "Rank not supported";
-  }
-
-  float l2 = sqrt(sum);
-  if (l2 <= threshold) return;
-  float scale = threshold / l2;
-  VLOG(1) << "Scale " << data.format().name() << " by " << scale << " l2=" << l2 << " max=" << MaxAbs(data);
-
-  if (data.rank() == 1) {
-    for (int r = 0; r < data.dim(0); ++r) {
-      data.at<float>(r) *= scale;
-    }
-  } else if (data.rank() == 2) {
-    for (int r = 0; r < data.dim(0); ++r) {
-      for (int c = 0; c < data.dim(1); ++c) {
-        data.at<float>(r, c) *= scale;
-      }
-    }
-  } else {
-    LOG(FATAL) << "Rank not supported";
-  }
-
-}
-
 void DumpProfile(ProfileSummary *summary) {
   Profile profile(summary);
   string report = profile.ASCIIReport();
   std::cout << report << "\n";
 }
 
-// POS tagger flow using LSTM.
+// POS tagger flow.
 struct TaggerFlow : Flow {
-  TaggerFlow(int num_words, int num_tags, int word_dim, int lstm_dim) {
+  TaggerFlow(Library &library,
+             int num_words,
+             int num_tags,
+             int word_dim,
+             int lstm_dim) {
+    // Build forward flow.
     Builder tf(this, "tagger");
     tagger = tf.func();
     word = tf.Placeholder("word", DT_INT32, {1, 1});
@@ -188,6 +118,11 @@ struct TaggerFlow : Flow {
     features = tf.Gather(embedding, word);
     hidden = tf.LSTMLayer(features, lstm_dim);
     logits = tf.FFLayer(hidden, num_tags, true);
+
+    // Build gradient for tagger.
+    dtagger = Gradient(this, tagger, library);
+    dlogits = Var("gradients/tagger/d_logits");
+    dlogits->ref = true;
   }
 
   Function *tagger;
@@ -201,11 +136,56 @@ struct TaggerFlow : Flow {
   Variable *dlogits;
 };
 
+// POS tagger model.
+struct TaggerModel {
+  TaggerModel(Network *network) {
+    tagger = network->GetCell("tagger");
+    h_in = network->GetParameter("tagger/h_in");
+    h_out = network->GetParameter("tagger/h_out");
+    c_in = network->GetParameter("tagger/c_in");
+    c_out = network->GetParameter("tagger/c_out");
+    word = network->GetParameter("tagger/word");
+    logits = network->GetParameter("tagger/logits");
+
+    dtagger = network->GetCell("gradients/tagger");
+    primal = network->GetParameter("gradients/tagger/primal");
+    dh_in = network->GetParameter("gradients/tagger/d_h_in");
+    dh_out = network->GetParameter("gradients/tagger/d_h_out");
+    dc_in = network->GetParameter("gradients/tagger/d_c_in");
+    dc_out = network->GetParameter("gradients/tagger/d_c_out");
+    dlogits = network->GetParameter("gradients/tagger/d_logits");
+
+    h_cnx = network->GetConnector("tagger/cnx_hidden");
+    c_cnx = network->GetConnector("tagger/cnx_control");
+    l_cnx = network->GetConnector("loss/cnx_dlogits");
+  }
+
+  // Forward parameters.
+  Cell *tagger;
+  Tensor *h_in;
+  Tensor *h_out;
+  Tensor *c_in;
+  Tensor *c_out;
+  Tensor *word;
+  Tensor *logits;
+
+  // Backward parameters.
+  Cell *dtagger;
+  Tensor *primal;
+  Tensor *dh_in;
+  Tensor *dh_out;
+  Tensor *dc_in;
+  Tensor *dc_out;
+  Tensor *dlogits;
+
+  // Connectors.
+  Connector *h_cnx;
+  Connector *c_cnx;
+  Connector *l_cnx;
+};
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
-
-  //jit::CPU::Disable(jit::AVX2);
-  //jit::CPU::Disable(jit::FMA3);
 
   // Read training and test data.
   Dictionary words;
@@ -237,26 +217,22 @@ int main(int argc, char *argv[]) {
     network.options().external_profiler = true;
   }
 
-  // Build flow.
+  // Build flow for POS tagger.
   int num_words = words.vocabulary.size();
   int num_tags = tags.vocabulary.size();
   int word_dim = 64;
   int lstm_dim = 128;
-  TaggerFlow flow(num_words, num_tags, word_dim, lstm_dim);
-  flow.dtagger = Gradient(&flow, flow.tagger, library);
-  flow.dlogits = flow.Var("gradients/tagger/d_logits");
-  flow.dlogits->ref = true;
+  TaggerFlow flow(library, num_words, num_tags, word_dim, lstm_dim);
 
   CrossEntropyLoss loss;
   loss.Build(&flow, flow.logits, flow.dlogits);
 
   GradientDescentOptimizer optimizer;
+  optimizer.set_clipping_threshold(FLAGS_clip);
   optimizer.Build(&flow);
 
   // Analyze flow.
-  CHECK(flow.IsConsistent());
   flow.Analyze(library);
-  CHECK(flow.IsConsistent());
 
   // Dump flow.
   if (FLAGS_dump) {
@@ -272,21 +248,29 @@ int main(int argc, char *argv[]) {
   loss.Initialize(network);
   optimizer.Initialize(network);
 
-  // Dump cell.
-  for (Cell *cell : network.cells()) {
-    if (FLAGS_dump_cell) {
-      std::cout << cell->ToString();
-    }
+  // Dump cells.
+  if (FLAGS_dump_cell) {
+    for (Cell *cell : network.cells()) std::cout << cell->ToString();
   }
 
   // Write object file with generated code.
   linker.Link();
   linker.Write("/tmp/postagger.o");
 
+  // Set up model.
+  TaggerModel model(&network);
+
   // Initialize weights.
+  std::mt19937 prng(FLAGS_seed);
+  std::normal_distribution<float> normal(0.0, 1e-4);
   for (Tensor *tensor : network.globals()) {
-    if (tensor->learnable()) {
-      RandomInitialize(tensor, 1e-4);
+    if (tensor->learnable() && tensor->rank() == 2) {
+      TensorData data(tensor->data(), tensor);
+      for (int r = 0; r < data.dim(0); ++r) {
+        for (int c = 0; c < data.dim(1); ++c) {
+          data.at<float>(r, c) = normal(prng);
+        }
+      }
     }
   }
 
@@ -294,54 +278,33 @@ int main(int argc, char *argv[]) {
   CrossEntropyLoss::Batch batch(loss);
 
   // Create channels.
-  Connector *h_cnx = network.GetConnector("tagger/cnx_hidden");
-  Connector *c_cnx = network.GetConnector("tagger/cnx_control");
-  Connector *l_cnx = network.GetConnector("loss/cnx_dlogits");
-
-  Channel h_zero(h_cnx);
+  Channel h_zero(model.h_cnx);
+  Channel c_zero(model.c_cnx);
   h_zero.resize(1);
-  Channel c_zero(c_cnx);
   c_zero.resize(1);
 
-  Channel h(h_cnx);
-  Channel c(c_cnx);
-  Channel l(l_cnx);
-  Channel dh(h_cnx);
-  Channel dc(c_cnx);
-
-  // Get cells and parameters.
-  Cell *tagger = network.GetCell("tagger");
-  Tensor *h_in = network.GetParameter("tagger/h_in");
-  Tensor *h_out = network.GetParameter("tagger/h_out");
-  Tensor *c_in = network.GetParameter("tagger/c_in");
-  Tensor *c_out = network.GetParameter("tagger/c_out");
-  Tensor *input = network.GetParameter("tagger/word");
-  Tensor *output = network.GetParameter("tagger/logits");
-
-  Cell *dtagger = network.GetCell("gradients/tagger");
-  Tensor *primal = network.GetParameter("gradients/tagger/primal");
-  Tensor *dh_in = network.GetParameter("gradients/tagger/d_h_in");
-  Tensor *dh_out = network.GetParameter("gradients/tagger/d_h_out");
-  Tensor *dc_in = network.GetParameter("gradients/tagger/d_c_in");
-  Tensor *dc_out = network.GetParameter("gradients/tagger/d_c_out");
-  Tensor *dlogits = network.GetParameter("gradients/tagger/d_logits");
+  Channel h(model.h_cnx);
+  Channel c(model.c_cnx);
+  Channel l(model.l_cnx);
+  Channel dh(model.h_cnx);
+  Channel dc(model.c_cnx);
 
   // Profiling.
-  ProfileSummary tagger_profile(tagger);
-  ProfileSummary dtagger_profile(dtagger);
+  ProfileSummary tagger_profile(model.tagger);
+  ProfileSummary dtagger_profile(model.dtagger);
 
   // Allocate gradients.
-  Instance gtagger(dtagger);
+  Instance gtagger(model.dtagger);
   std::vector<Instance *> gradients = {&gtagger};
 
   // Train.
+  LOG(INFO) << "Start training";
+  int prev_tokens = 0;
   int num_tokens = 0;
   float loss_sum = 0.0;
   int loss_count = 0;
   float alpha = FLAGS_alpha;
-  std::mt19937 prng(FLAGS_seed);
-
-  LOG(INFO) << "Start training";
+  clock_t start = clock();
   for (int epoch = 1; epoch <= FLAGS_epochs; ++epoch) {
     // Select next sentence to train on.
     int sample = (FLAGS_shuffle ? prng() : epoch - 1) % train.sentences.size();
@@ -357,23 +320,23 @@ int main(int argc, char *argv[]) {
     std::vector<Instance *> forward;
     for (int i = 0; i < length; ++i) {
       // Create new instance for token.
-      Instance *data = new Instance(tagger);
+      Instance *data = new Instance(model.tagger);
       forward.push_back(data);
       if (FLAGS_profile) data->set_profile(&tagger_profile);
 
       // Set up channels.
       if (i == 0) {
-        data->Set(h_in, &h_zero);
-        data->Set(c_in, &c_zero);
+        data->Set(model.h_in, &h_zero);
+        data->Set(model.c_in, &c_zero);
       } else {
-        data->Set(h_in, &h, i);
-        data->Set(c_in, &c, i);
+        data->Set(model.h_in, &h, i);
+        data->Set(model.c_in, &c, i);
       }
-      data->Set(h_out, &h, i + 1);
-      data->Set(c_out, &c, i + 1);
+      data->Set(model.h_out, &h, i + 1);
+      data->Set(model.c_out, &c, i + 1);
 
       // Set up features.
-      *data->Get<int>(input) = (*sentence)[i].word;
+      *data->Get<int>(model.word) = (*sentence)[i].word;
 
       // Compute forward.
       data->Compute();
@@ -381,7 +344,7 @@ int main(int argc, char *argv[]) {
       // Compute loss and gradient.
       int target = (*sentence)[i].tag;
       batch.Clear();
-      batch.Forward(data->Get<float>(output), target);
+      batch.Forward(data->Get<float>(model.logits), target);
       float *dl = reinterpret_cast<float *>(l.at(i));
       batch.Backward(dl);
       loss_sum += batch.loss();
@@ -394,59 +357,24 @@ int main(int argc, char *argv[]) {
     if (FLAGS_profile) gtagger.set_profile(&dtagger_profile);
     for (int i = length - 1; i >= 0; --i) {
       // Set gradient.
-      gtagger.Set(dlogits, &l, i);
+      gtagger.Set(model.dlogits, &l, i);
 
       // Set reference to primal cell.
-      gtagger.Set(primal, forward[i]);
+      gtagger.Set(model.primal, forward[i]);
 
       // Set up channels.
       if (i == length - 1) {
-        //LOG(INFO) << "zero channels";
-        gtagger.Set(dh_out, &h_zero);
-        gtagger.Set(dc_out, &c_zero);
+        gtagger.Set(model.dh_out, &h_zero);
+        gtagger.Set(model.dc_out, &c_zero);
       } else {
-        //LOG(INFO) << "channels " <<  (i + 1) << " of " << dh.size();
-        gtagger.Set(dh_out, &dh, i + 1);
-        gtagger.Set(dc_out, &dc, i + 1);
+        gtagger.Set(model.dh_out, &dh, i + 1);
+        gtagger.Set(model.dc_out, &dc, i + 1);
       }
-      gtagger.Set(dh_in, &dh, i);
-      gtagger.Set(dc_in, &dc, i);
+      gtagger.Set(model.dh_in, &dh, i);
+      gtagger.Set(model.dc_in, &dc, i);
 
       // Compute backward.
       gtagger.Compute();
-
-      //LOG(INFO) << "dh_out=" << gtagger.ToString(dh_out);
-      //LOG(INFO) << "dc_out=" << gtagger.ToString(dc_out);
-
-#if 0
-      LOG(INFO) << "Max gradients at epoch " << epoch;
-      for (Tensor *tensor : network.parameters()) {
-        if (tensor->cell() == dtagger && tensor->name().find("/d_") != -1) {
-          LOG(INFO) << "max gradient " << tensor->name() << " = " << MaxAbs(gtagger[tensor]);
-        }
-      }
-#endif
-
-#if 0
-      if (num_tokens == 6037) {
-        batch.dump();
-
-        LOG(INFO) << "forward " << num_tokens << " " << i << "\n" << forward[i]->ToString();
-
-        LOG(INFO) << "back " << num_tokens << " " << i;
-        for (Tensor *t : network.parameters()) {
-          if (t->cell() == dtagger && t->shared() == nullptr) {
-            if (t->name() == "gradients/tagger/d_embedding") continue;
-            LOG(INFO) << t->name() << " = " << gtagger.ToString(t).substr(0, 100);
-          }
-        }
-
-        LOG(INFO) << "dlogits=" << gtagger["gradients/tagger/d_logits"].ToString();
-      }
-
-      float *f = gtagger.Get<float>(dx2i);
-      CHECK(!std::isnan(*f)) << num_tokens << " " << i;
-#endif
     }
 
     // Clear data.
@@ -461,91 +389,75 @@ int main(int argc, char *argv[]) {
 
     // Apply gradients to model.
     if (epoch % FLAGS_batch == 0) {
-#if 0
-      LOG(INFO) << "gtagger " << num_tokens;
-      for (Tensor *t : network.parameters()) {
-        if (t->cell() == dtagger && t->ref()) {
-          gtagger.SetReference(t, nullptr);
-        }
-      }
-      for (Tensor *t : network.parameters()) {
-        if (t->cell() == dtagger && t->shared() == nullptr) {
-          if (t->name() == "gradients/tagger/d_embedding") continue;
-          LOG(INFO) << t->name() << " = " << gtagger.ToString(t).substr(0, 100);
-        }
-      }
-
-      //TensorData W0 = network["tagger/W0"];
-      //LOG(INFO) << "W0=" << W0.ToString();
-#endif
-
       optimizer.set_alpha(alpha);
-      for (Tensor *tensor : network.parameters()) {
-        if (tensor->cell() == dtagger && tensor->name().find("/d_") != -1) {
-          TensorData data = gtagger[tensor];
-          ClipByNorm(data, 1.0);
-        }
-      }
-
       optimizer.Apply(gradients);
       gtagger.Clear();
     }
 
     // Report progress.
     if (epoch % FLAGS_report == 0) {
-      // Compute accuracy on dev corpus.
-      int num_correct = 0;
-      int num_wrong = 0;
-      Instance test(tagger);
-      if (FLAGS_profile) test.set_profile(&tagger_profile);
-      for (Sentence *s : dev.sentences) {
-        int length = s->size();
-        h.resize(length + 1);
-        c.resize(length + 1);
-        for (int i = 0; i < length; ++i) {
-          // Set up channels.
-          if (i == 0) {
-            test.Set(h_in, &h_zero);
-            test.Set(c_in, &c_zero);
-          } else {
-            test.Set(h_in, &h, i);
-            test.Set(c_in, &c, i);
-          }
-          test.Set(h_out, &h, i + 1);
-          test.Set(c_out, &c, i + 1);
+      clock_t end = clock();
+      float avg_loss = loss_sum / loss_count;
+      float acc = exp(-avg_loss) * 100.0;
+      if (FLAGS_heldout) {
+        // Compute accuracy on dev corpus.
+        int num_correct = 0;
+        int num_wrong = 0;
+        Instance test(model.tagger);
+        if (FLAGS_profile) test.set_profile(&tagger_profile);
+        for (Sentence *s : dev.sentences) {
+          int length = s->size();
+          h.resize(length + 1);
+          c.resize(length + 1);
+          for (int i = 0; i < length; ++i) {
+            // Set up channels.
+            if (i == 0) {
+              test.Set(model.h_in, &h_zero);
+              test.Set(model.c_in, &c_zero);
+            } else {
+              test.Set(model.h_in, &h, i);
+              test.Set(model.c_in, &c, i);
+            }
+            test.Set(model.h_out, &h, i + 1);
+            test.Set(model.c_out, &c, i + 1);
 
-          // Set up features.
-          int word = (*s)[i].word;
-          *test.Get<int>(input) = word;
+            // Set up features.
+            int word = (*s)[i].word;
+            *test.Get<int>(model.word) = word;
 
-          // Compute forward.
-          test.Compute();
+            // Compute forward.
+            test.Compute();
 
-          // Compute predicted tag.
-          float *predictions = test.Get<float>(output);
-          int best = 0;
-          for (int t = 1; t < num_tags; ++t) {
-            if (predictions[t] > predictions[best]) best = t;
-          }
+            // Compute predicted tag.
+            float *predictions = test.Get<float>(model.logits);
+            int best = 0;
+            for (int t = 1; t < num_tags; ++t) {
+              if (predictions[t] > predictions[best]) best = t;
+            }
 
-          // Compare with golden tag.
-          int target = (*s)[i].tag;
-          if (best == target) {
-            num_correct++;
-          } else {
-            num_wrong++;
+            // Compare with golden tag.
+            int target = (*s)[i].tag;
+            if (best == target) {
+              num_correct++;
+            } else {
+              num_wrong++;
+            }
           }
         }
+
+        acc = num_correct * 100.0 / (num_correct + num_wrong);
       }
 
-      float acc = num_correct * 100.0 / (num_correct + num_wrong);
-      float avg_loss = loss_sum / loss_count;
+      float secs = (end - start) / 1000000.0;
+      int tps = (num_tokens - prev_tokens) / secs;
       LOG(INFO) << "epochs " << epoch << ", "
                 << "alpha " << alpha << ", "
-                << num_tokens << " tokens, loss=" << avg_loss
+                << tps << " tokens/s, loss=" << avg_loss
                 << ", accuracy=" << acc;
       loss_sum = 0.0;
       loss_count = 0;
+      start = clock();
+      prev_tokens = num_tokens;
     }
   }
 

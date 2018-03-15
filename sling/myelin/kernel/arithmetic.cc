@@ -212,9 +212,7 @@ struct Expression {
       CHECK(expr.AllocateRegisters()) << "Register overflow";
 
       // Count the number of spare SIMD registers.
-      if (!expr.index.single()) {
-        while (masm.mm().try_alloc() != -1) spare_regs++;
-      }
+      while (masm.mm().try_alloc() != -1) spare_regs++;
     }
     return spare_regs;
   }
@@ -531,7 +529,8 @@ class Calculate : public Kernel {
     for (int i = 0; i < step->indegree(); ++i) {
       for (int j = 0; j < step->outdegree(); ++j) {
         if (step->input(i)->shape() == step->output(j)->shape()) {
-          if (step->AllowInPlace(i, j)) break;
+          // TODO: make in-place sharing safe!!
+          //if (step->AllowInPlace(i, j)) break;
         }
       }
     }
