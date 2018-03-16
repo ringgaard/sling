@@ -152,6 +152,8 @@ struct TaggerFlow : Flow {
 // POS tagger model.
 struct TaggerModel {
   ~TaggerModel() {
+    delete h_zero;
+    delete c_zero;
     delete tagger_profile;
     delete dtagger_profile;
   }
@@ -176,6 +178,11 @@ struct TaggerModel {
     h_cnx = network.GetConnector("tagger/cnx_hidden");
     c_cnx = network.GetConnector("tagger/cnx_control");
     l_cnx = network.GetConnector("loss/cnx_dlogits");
+
+    h_zero = new Channel(h_cnx);
+    c_zero = new Channel(c_cnx);
+    h_zero->resize(1);
+    c_zero->resize(1);
 
     if (tagger->profile()) tagger_profile = new ProfileSummary(tagger);
     if (dtagger->profile()) dtagger_profile = new ProfileSummary(dtagger);
@@ -203,6 +210,10 @@ struct TaggerModel {
   Connector *h_cnx;
   Connector *c_cnx;
   Connector *l_cnx;
+
+  // Zero channels.
+  Channel *h_zero = nullptr;
+  Channel *c_zero = nullptr;
 
   // Profiling.
   ProfileSummary *tagger_profile = nullptr;
@@ -321,10 +332,6 @@ class Tagger {
     LOG(INFO) << "Start worker " << index;
 
     // Create channels.
-    Channel h_zero(model_.h_cnx);
-    Channel c_zero(model_.c_cnx);
-    h_zero.resize(1);
-    c_zero.resize(1);
     Channel h(model_.h_cnx);
     Channel c(model_.c_cnx);
     Channel l(model_.l_cnx);
@@ -362,8 +369,8 @@ class Tagger {
 
         // Set up channels.
         if (i == 0) {
-          data->Set(model_.h_in, &h_zero);
-          data->Set(model_.c_in, &c_zero);
+          data->Set(model_.h_in, model_.h_zero);
+          data->Set(model_.c_in, model_.c_zero);
         } else {
           data->Set(model_.h_in, &h, i);
           data->Set(model_.c_in, &c, i);
@@ -399,8 +406,8 @@ class Tagger {
 
         // Set up channels.
         if (i == length - 1) {
-          gtagger.Set(model_.dh_out, &h_zero);
-          gtagger.Set(model_.dc_out, &c_zero);
+          gtagger.Set(model_.dh_out, model_.h_zero);
+          gtagger.Set(model_.dc_out, model_.c_zero);
         } else {
           gtagger.Set(model_.dh_out, &dh, i + 1);
           gtagger.Set(model_.dc_out, &dc, i + 1);
@@ -475,10 +482,6 @@ class Tagger {
   float Evaluate(Corpus *corpus) {
     // Create tagger instance with channels.
     Instance test(model_.tagger);
-    Channel h_zero(model_.h_cnx);
-    Channel c_zero(model_.c_cnx);
-    h_zero.resize(1);
-    c_zero.resize(1);
     Channel h(model_.h_cnx);
     Channel c(model_.c_cnx);
     if (FLAGS_profile) test.set_profile(model_.tagger_profile);
@@ -493,8 +496,8 @@ class Tagger {
       for (int i = 0; i < length; ++i) {
         // Set up channels.
         if (i == 0) {
-          test.Set(model_.h_in, &h_zero);
-          test.Set(model_.c_in, &c_zero);
+          test.Set(model_.h_in, model_.h_zero);
+          test.Set(model_.c_in, model_.c_zero);
         } else {
           test.Set(model_.h_in, &h, i);
           test.Set(model_.c_in, &c, i);
