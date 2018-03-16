@@ -255,6 +255,13 @@ class ExpressionGenerator {
       int8 imm,
       MacroAssembler *masm, int argnum = 1);
 
+  // Generate unary YMM float op.
+  void GenerateYMMUnaryFltOp(
+      Express::Op *instr,
+      OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
+      OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
+      MacroAssembler *masm);
+
   // Generate two-operand YMM float op.
   void GenerateYMMFltOp(
       Express::Op *instr,

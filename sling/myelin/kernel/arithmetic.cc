@@ -64,6 +64,7 @@ static Express::OpType OpType(const string &op) {
     {"LogSigmoid", Express::LOGSIGMOID},
     {"Reciprocal", Express::RECIPROCAL},
     {"Square", Express::SQUARE},
+    {"Sqrt", Express::SQRT},
   };
 
   auto f = ops.find(op);
@@ -989,6 +990,7 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("LogSigmoidExpr", "LogSigmoid", 1));
   library->Register(new Calculate("ReciprocalExpr", "Reciprocal", 1));
   library->Register(new Calculate("SquareExpr", "Square", 1));
+  library->Register(new Calculate("SqrtExpr", "Sqrt", 1));
 
   library->Register(new Softmax(false));
   library->Register(new Softmax(true));

@@ -443,6 +443,7 @@ int main(int argc, char *argv[]) {
 
   if (CPU::Enabled(SSE4_1)) {
     // Test expression intrinsics.
+    CheckFltFunc("Sqrt", "SqrtExpr", "GenFltSqrt", 0, false);
     CheckFltFunc("Log", "LogExpr", "GenFltLog", 0, false);
     CheckFltFunc("Exp", "ExpExpr", "GenFltExp");
     CheckFltFunc("Sigmoid", "SigmoidExpr", "GenFltSigmoid");

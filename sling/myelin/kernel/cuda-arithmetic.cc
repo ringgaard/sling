@@ -207,6 +207,9 @@ class CUDACalculate : public CUDAKernel {
         case Express::ABS:
           GenerateUnaryOp("abs", instr, &comp);
           break;
+        case Express::SQRT:
+          GenerateUnaryOp("sqrt.approx", instr, &comp);
+          break;
         case Express::RECIPROCAL:
           GenerateUnaryOp("rcp.approx", instr, &comp);
           break;

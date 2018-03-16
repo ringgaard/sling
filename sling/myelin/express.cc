@@ -42,6 +42,7 @@ static std::map<string, Express::OpType> optypes = {
   {"LogSigmoid", Express::LOGSIGMOID},
   {"Reciprocal", Express::RECIPROCAL},
   {"Square", Express::SQUARE},
+  {"Sqrt", Express::SQRT},
   {"Log", Express::LOG},
   {"Exp", Express::EXP},
   {"Sigmoid", Express::SIGMOID},

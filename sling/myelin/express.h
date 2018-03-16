@@ -83,6 +83,7 @@ class Express {
     LOGSIGMOID,  // log sigmoid, r=log(1/(1+exp(-x)))=-softplus(-x))
     RECIPROCAL,  // reciprocal value, r=1/x
     SQUARE,      // square, r=x*x
+    SQRT,        // square root, r=x^(1/2)
 
     LOG,         // natural logarithm, r=log(a)
     EXP,         // natural exponential function, r=exp(a)
@@ -408,6 +409,7 @@ class Express {
     return target_ == NVIDIA ? Do(RECIPROCAL, x) : Div(One(), x);
   }
   Var *Square(Var *x) { return Mul(x, x); }
+  Var *Sqrt(Var *x) { return Do(SQRT, x); }
   Var *Sigmoid(Var *x) { return Reciprocal(Add(One(), Exp(Neg(x)))); }
 
   // Look up op type for op name. Return INVALID for unknown op name.

@@ -896,6 +896,8 @@ class Assembler : public CodeGenerator {
   void rsqrtps(XMMRegister dst, const Operand &src);
   void sqrtps(XMMRegister dst, XMMRegister src);
   void sqrtps(XMMRegister dst, const Operand &src);
+  void sqrtpd(XMMRegister dst, XMMRegister src);
+  void sqrtpd(XMMRegister dst, const Operand &src);
   void movups(XMMRegister dst, XMMRegister src);
   void movups(XMMRegister dst, const Operand &src);
   void movups(const Operand &dst, XMMRegister src);

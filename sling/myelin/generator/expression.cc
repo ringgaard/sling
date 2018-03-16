@@ -626,6 +626,40 @@ void ExpressionGenerator::GenerateXMMFltOp(
   }
 }
 
+void ExpressionGenerator::GenerateYMMUnaryFltOp(
+    Express::Op *instr,
+    OpYMMRegRegReg fltopreg, OpYMMRegRegReg dblopreg,
+    OpYMMRegRegMem fltopmem, OpYMMRegRegMem dblopmem,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(ymm(instr->dst), ymm(instr->dst),
+                          addr(instr->args[0]));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(ymm(instr->dst), ymm(instr->dst),
+                          addr(instr->args[0]));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
 void ExpressionGenerator::GenerateYMMFltOp(
     Express::Op *instr,
     OpYMMRegReg fltopreg, OpYMMRegReg dblopreg,
