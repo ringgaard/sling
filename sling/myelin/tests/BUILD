@@ -101,6 +101,8 @@ cc_binary(
     "//sling/myelin:learning",
     "//sling/myelin:profile",
     "//sling/myelin/kernel:tensorflow",
+    "//sling/util:mutex",
+    "//sling/util:thread",
   ],
 )
 
