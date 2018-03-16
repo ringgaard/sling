@@ -196,7 +196,7 @@ Register MacroAssembler::instance() const {
 void MacroAssembler::Prologue() {
   // Zero upper part of YMM register if CPU needs it to avoid AVX-SSE transition
   // penalties.
-  if (CPU::VZeroNeeded()) {
+  if (CPU::VZeroNeeded() && Enabled(AVX)) {
     vzeroupper();
   }
 
@@ -239,7 +239,7 @@ void MacroAssembler::Epilogue() {
 
   // Zero upper part of YMM register if CPU needs it to avoid AVX-SSE transition
   // penalties.
-  if (CPU::VZeroNeeded()) {
+  if (CPU::VZeroNeeded() && Enabled(AVX)) {
     vzeroupper();
   }
 

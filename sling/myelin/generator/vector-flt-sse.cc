@@ -106,7 +106,7 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         GenerateXMMFltOp(instr,
             &Assembler::sqrtps, &Assembler::sqrtpd,
             &Assembler::sqrtps, &Assembler::sqrtpd,
-            masm);
+            masm, 0);
         break;
       case Express::CMPEQOQ:
         GenerateCompare(instr, masm, CMP_EQ_OQ);

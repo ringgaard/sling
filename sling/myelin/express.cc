@@ -75,7 +75,7 @@ static const string opname[] = {
   "Add", "Sub", "Mul", "Div",
   "Min", "Max",
   "Neg", "Abs", "Relu", "Softsign", "Softplus", "LogSigmoid",
-  "Reciprocal", "Square",
+  "Reciprocal", "Square", "Sqrt",
   "Log", "Exp", "Sigmoid", "Tanh", "Log2", "Exp2",
   "MulAdd132", "MulAdd213", "MulAdd231",
   "MulSub132", "MulSub213", "MulSub231",

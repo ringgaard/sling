@@ -494,7 +494,7 @@ void ExpressionGenerator::GenerateXMMFltOp(
     Express::Op *instr,
     OpXMMRegReg fltopreg, OpXMMRegReg dblopreg,
     OpXMMRegMem fltopmem, OpXMMRegMem dblopmem,
-    MacroAssembler *masm) {
+    MacroAssembler *masm, int argnum) {
   if (instr->dst != -1 && instr->src != -1) {
     // OP reg,reg
     switch (type_) {
@@ -510,10 +510,10 @@ void ExpressionGenerator::GenerateXMMFltOp(
     // OP reg,[mem]
     switch (type_) {
       case DT_FLOAT:
-        (masm->*fltopmem)(xmm(instr->dst), addr(instr->args[1]));
+        (masm->*fltopmem)(xmm(instr->dst), addr(instr->args[argnum]));
         break;
       case DT_DOUBLE:
-        (masm->*dblopmem)(xmm(instr->dst), addr(instr->args[1]));
+        (masm->*dblopmem)(xmm(instr->dst), addr(instr->args[argnum]));
         break;
       default: UNSUPPORTED;
     }
@@ -547,6 +547,40 @@ void ExpressionGenerator::GenerateXMMFltOp(
         break;
       case DT_DOUBLE:
         (masm->*dblopmem)(xmm(instr->dst), addr(instr->args[1]), imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
+void ExpressionGenerator::GenerateXMMUnaryFltOp(
+    Express::Op *instr,
+    OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
+    OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
+    MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg,reg
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,reg,[mem]
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(xmm(instr->dst), xmm(instr->dst),
+                          addr(instr->args[0]));
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(xmm(instr->dst), xmm(instr->dst),
+                          addr(instr->args[0]));
         break;
       default: UNSUPPORTED;
     }
