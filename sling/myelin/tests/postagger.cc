@@ -40,6 +40,7 @@ DEFINE_bool(shuffle, true, "Shuffle training corpus");
 DEFINE_bool(heldout, true, "Test tagger on heldout data");
 DEFINE_int32(threads, 1, "Number of threads for training");
 DEFINE_int32(rampup, 0, "Number of seconds between thread starts");
+DEFINE_bool(lock, false, "Locked gradient updates");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -222,10 +223,9 @@ class Tagger {
     }
   }
 
+  // Read training and test corpora.
   void ReadCorpora() {
-    // Read training and test data.
     words_.add("<UNKNOWN>");
-
     train_.Read("local/data/corpora/stanford/train.pos", &words_, &tags_);
     words_.readonly = true;
     tags_.readonly = true;
@@ -240,6 +240,7 @@ class Tagger {
     LOG(INFO) << "Tags: " << tags_.vocabulary.size();
   }
 
+  // Build tagger flow.
   void Build() {
     // Build flow for POS tagger.
     flow_.Build(library_, num_words_, num_tags_, word_dim_, lstm_dim_);
@@ -253,6 +254,7 @@ class Tagger {
     optimizer_.Build(&flow_);
   }
 
+  // Compile model.
   void Compile() {
     // Analyze flow.
     flow_.Analyze(library_);
@@ -284,8 +286,8 @@ class Tagger {
     optimizer_.Initialize(network_);
   }
 
+  // Initialize model weights.
   void Initialize() {
-    // Initialize weights.
     std::mt19937 prng(FLAGS_seed);
     std::normal_distribution<float> normal(0.0, 1e-4);
     for (Tensor *tensor : network_.globals()) {
@@ -300,16 +302,19 @@ class Tagger {
     }
   }
 
+  // Train model.
   void Train() {
     // Start training workers.
     LOG(INFO) << "Start training";
     start_ = WallTime();
-    pool_.Start(FLAGS_threads, [this](int index) { Worker(index);});
+    WorkerPool pool;
+    pool.Start(FLAGS_threads, [this](int index) { Worker(index);});
 
     // Wait until workers completes.
-    pool_.Join();
+    pool.Join();
   }
 
+  // Trainer worker thread.
   void Worker(int index) {
     // Ramp-up peiod.
     sleep(index * FLAGS_rampup);
@@ -413,12 +418,12 @@ class Tagger {
 
       // Apply gradients to model.
       if (iteration % FLAGS_batch == 0) {
-        mu_.Lock();
+        if (FLAGS_lock) mu_.Lock();
         optimizer_.set_alpha(alpha_);
         optimizer_.Apply(gradients);
         loss_sum_ += local_loss_sum;
         loss_count_ += local_loss_count;
-        mu_.Unlock();
+        if (FLAGS_lock) mu_.Unlock();
 
         gtagger.Clear();
         local_loss_sum = 0;
@@ -438,56 +443,7 @@ class Tagger {
       if (epoch_ % FLAGS_report == 0) {
         double end = WallTime();
         float avg_loss = loss_sum_ / loss_count_;
-        float acc = exp(-avg_loss) * 100.0;
-        if (FLAGS_heldout) {
-          // Compute accuracy on dev corpus.
-          int num_correct = 0;
-          int num_wrong = 0;
-          Instance test(model_.tagger);
-          if (FLAGS_profile) test.set_profile(model_.tagger_profile);
-          for (Sentence *s : dev_.sentences) {
-            int length = s->size();
-            h.resize(length + 1);
-            c.resize(length + 1);
-            for (int i = 0; i < length; ++i) {
-              // Set up channels.
-              if (i == 0) {
-                test.Set(model_.h_in, &h_zero);
-                test.Set(model_.c_in, &c_zero);
-              } else {
-                test.Set(model_.h_in, &h, i);
-                test.Set(model_.c_in, &c, i);
-              }
-              test.Set(model_.h_out, &h, i + 1);
-              test.Set(model_.c_out, &c, i + 1);
-
-              // Set up features.
-              int word = (*s)[i].word;
-              *test.Get<int>(model_.word) = word;
-
-              // Compute forward.
-              test.Compute();
-
-              // Compute predicted tag.
-              float *predictions = test.Get<float>(model_.logits);
-              int best = 0;
-              for (int t = 1; t < num_tags_; ++t) {
-                if (predictions[t] > predictions[best]) best = t;
-              }
-
-              // Compare with golden tag.
-              int target = (*s)[i].tag;
-              if (best == target) {
-                num_correct++;
-              } else {
-                num_wrong++;
-              }
-            }
-          }
-
-          acc = num_correct * 100.0 / (num_correct + num_wrong);
-        }
-
+        float acc = FLAGS_heldout ? Evaluate(&dev_) : exp(-avg_loss) * 100.0;
         float secs = end - start_;
         int tps = (num_tokens_ - prev_tokens_) / secs;
         LOG(INFO) << "epochs " << epoch_ << ", "
@@ -505,6 +461,7 @@ class Tagger {
     }
   }
 
+  // Finish tagger model.
   void Done() {
     if (FLAGS_profile) {
       DumpProfile(model_.tagger_profile);
@@ -512,6 +469,65 @@ class Tagger {
       DumpProfile(loss_.profile());
       DumpProfile(optimizer_.profile());
     }
+  }
+
+  // Evaulate model on corpus returning accuracy.
+  float Evaluate(Corpus *corpus) {
+    // Create tagger instance with channels.
+    Instance test(model_.tagger);
+    Channel h_zero(model_.h_cnx);
+    Channel c_zero(model_.c_cnx);
+    h_zero.resize(1);
+    c_zero.resize(1);
+    Channel h(model_.h_cnx);
+    Channel c(model_.c_cnx);
+    if (FLAGS_profile) test.set_profile(model_.tagger_profile);
+
+    // Run tagger on corpus and compare with gold tags.
+    int num_correct = 0;
+    int num_wrong = 0;
+    for (Sentence *s : corpus->sentences) {
+      int length = s->size();
+      h.resize(length + 1);
+      c.resize(length + 1);
+      for (int i = 0; i < length; ++i) {
+        // Set up channels.
+        if (i == 0) {
+          test.Set(model_.h_in, &h_zero);
+          test.Set(model_.c_in, &c_zero);
+        } else {
+          test.Set(model_.h_in, &h, i);
+          test.Set(model_.c_in, &c, i);
+        }
+        test.Set(model_.h_out, &h, i + 1);
+        test.Set(model_.c_out, &c, i + 1);
+
+        // Set up features.
+        int word = (*s)[i].word;
+        *test.Get<int>(model_.word) = word;
+
+        // Compute forward.
+        test.Compute();
+
+        // Compute predicted tag.
+        float *predictions = test.Get<float>(model_.logits);
+        int best = 0;
+        for (int t = 1; t < num_tags_; ++t) {
+          if (predictions[t] > predictions[best]) best = t;
+        }
+
+        // Compare with golden tag.
+        int target = (*s)[i].tag;
+        if (best == target) {
+          num_correct++;
+        } else {
+          num_wrong++;
+        }
+      }
+    }
+
+    // Return accuracy.
+    return num_correct * 100.0 / (num_correct + num_wrong);
   }
 
  private:
@@ -547,9 +563,6 @@ class Tagger {
   int loss_count_ = 0;
   float alpha_ = FLAGS_alpha;
   double start_;
-
-  // Thread workers.
-  WorkerPool pool_;
 
   // Global lock.
   Mutex mu_;
