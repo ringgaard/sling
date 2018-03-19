@@ -78,19 +78,25 @@ class WikiParser {
 
     void CheckSpecialLink();
 
+    // Node type with optional parameter.
     Type type;
     int param;
 
+    // Links to children and sibling nodes.
     int first_child = -1;
     int last_child = -1;
     int prev_sibling = -1;
     int next_sibling = -1;
 
+    // Input text span covered by the AST node.
     const char *begin = nullptr;
     const char *end = nullptr;
+
+    // Name part of text span covered by the AST node.
     const char *name_begin = nullptr;
     const char *name_end = nullptr;
 
+    // Text span of AST node in the output text.
     int text_begin = -1;
     int text_end = -1;
   };
