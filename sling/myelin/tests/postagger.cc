@@ -329,7 +329,7 @@ class Tagger {
   void Worker(int index) {
     // Ramp-up peiod.
     sleep(index * FLAGS_rampup);
-    LOG(INFO) << "Start worker " << index;
+    num_workers_++;
 
     // Create channels.
     Channel h(model_.h_cnx);
@@ -455,6 +455,7 @@ class Tagger {
         int tps = (num_tokens_ - prev_tokens_) / secs;
         LOG(INFO) << "epochs " << epoch_ << ", "
                   << "alpha " << alpha_ << ", "
+                  << num_workers_ << " workers, "
                   << tps << " tokens/s, loss=" << avg_loss
                   << ", accuracy=" << acc;
         loss_sum_ = 0.0;
@@ -566,6 +567,7 @@ class Tagger {
   int loss_count_ = 0;
   float alpha_ = FLAGS_alpha;
   double start_;
+  int num_workers_ = 0;
 
   // Global lock.
   Mutex mu_;

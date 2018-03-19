@@ -138,3 +138,16 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "lexical-features",
+  srcs = ["lexical-features.cc"],
+  hdrs = ["lexical-features.h"],
+  deps = [
+    ":document",
+    ":features",
+    ":lexicon",
+    "//sling/myelin:compute",
+    "//sling/myelin:flow",
+  ],
+)
+
