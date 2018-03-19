@@ -14,6 +14,8 @@
 
 #include "sling/nlp/document/lexical-features.h"
 
+#include "sling/util/embeddings.h"
+
 namespace sling {
 namespace nlp {
 
@@ -44,7 +46,6 @@ void LexicalFeatures::InitializeLexicon(const Dictionary &dictionary,
   // TODO: implement.
 }
 
-
 void LexicalFeatures::Build(const Spec &spec, Flow *flow, bool learning) {
   // TODO: implement
 }
@@ -61,6 +62,7 @@ void LexicalFeatures::InitializeModel(const Network &net) {
   quote_feature_ = net.LookupParameter(name_ + "/quote");
   digit_feature_ = net.LookupParameter(name_ + "/digit");
   feature_vector_ = net.GetParameter(name_ + "/feature_vector");
+  word_embeddings_ = net.GetParameter(name_ + "/word_embeddings");
 
   // Optionally initialize gradient cell.
   gfeatures_ = net.LookupCell("g" + name_);
@@ -76,8 +78,31 @@ void LexicalFeatures::InitializeModel(const Network &net) {
   feature_vector_dims_ = feature_vector_->elements();
 }
 
-void LexicalFeatures::LoadWordEmbeddings(const string &filename) {
-  // TODO: implement
+int LexicalFeatures::LoadWordEmbeddings(const string &filename) {
+  // Read word embeddings.
+  EmbeddingReader reader(filename);
+
+  // Check that embedding matrix matches embeddings and vocabulary.
+  CHECK_EQ(word_embeddings_->rank(), 2);
+  CHECK_EQ(word_embeddings_->type(), DT_FLOAT);
+  CHECK_EQ(word_embeddings_->dim(0), lexicon_.size());
+  CHECK_EQ(word_embeddings_->dim(1), reader.dim());
+  CHECK(word_embeddings_->data() != nullptr);
+
+  // Initialize matrix with pre-trained word embeddings.
+  int rowsize = reader.dim() * sizeof(float);
+  int found = 0;
+  while (reader.Next()) {
+    // Check if word is in vocabulary
+    int row = lexicon_.LookupWord(reader.word());
+    if (row == lexicon_.oov()) continue;
+
+    // Copy embedding to matrix.
+    void *f = word_embeddings_->data() + word_embeddings_->offset(row);
+    memcpy(f, reader.embedding().data(), rowsize);
+    found++;
+  }
+  return found;
 };
 
 void LexicalFeatureExtractor::Compute(const DocumentFeatures &document,

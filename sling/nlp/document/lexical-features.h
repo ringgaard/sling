@@ -66,8 +66,9 @@ class LexicalFeatures {
   // Initialize feature extractor from existing model.
   void InitializeModel(const Network &net);
 
-  // Load pre-trained word embeddings.
-  void LoadWordEmbeddings(const string &filename);
+  // Load pre-trained word embeddings. Returns the number of words which were
+  // initialized from the pre-trained embeddings.
+  int LoadWordEmbeddings(const string &filename);
 
   // Lexicon.
   const Lexicon &lexicon() const { return lexicon_; }
@@ -76,27 +77,28 @@ class LexicalFeatures {
   int feature_vector_dims() const { return feature_vector_dims_; }
 
  private:
-  string name_;                       // cell name
-  Lexicon lexicon_;                   // lexicon for word vocabulary
+  string name_;                        // cell name
+  Lexicon lexicon_;                    // lexicon for word vocabulary
 
-  Cell *features_ = nullptr;          // feature extractor cell
-  Tensor *word_feature_ = nullptr;    // word feature
-  Tensor *prefix_feature_ = nullptr;  // prefix feature
-  Tensor *suffix_feature_ = nullptr;  // suffix feature
-  Tensor *hyphen_feature_ = nullptr;  // hyphenation feature
-  Tensor *caps_feature_ = nullptr;    // capitalization feature
-  Tensor *punct_feature_ = nullptr;   // punctuation feature
-  Tensor *quote_feature_ = nullptr;   // quote feature
-  Tensor *digit_feature_ = nullptr;   // digit feature
-  Tensor *feature_vector_ = nullptr;  // output feature vector
+  Cell *features_ = nullptr;           // feature extractor cell
+  Tensor *word_feature_ = nullptr;     // word feature
+  Tensor *prefix_feature_ = nullptr;   // prefix feature
+  Tensor *suffix_feature_ = nullptr;   // suffix feature
+  Tensor *hyphen_feature_ = nullptr;   // hyphenation feature
+  Tensor *caps_feature_ = nullptr;     // capitalization feature
+  Tensor *punct_feature_ = nullptr;    // punctuation feature
+  Tensor *quote_feature_ = nullptr;    // quote feature
+  Tensor *digit_feature_ = nullptr;    // digit feature
+  Tensor *feature_vector_ = nullptr;   // output feature vector
+  Tensor *word_embeddings_ = nullptr;  // word embedding matrix
 
-  int prefix_size_ = 0;               // max prefix length
-  int suffix_size_ = 0;               // max suffix length
-  int feature_vector_dims_ = 0;       // size of output feature vector
+  int prefix_size_ = 0;                // max prefix length
+  int suffix_size_ = 0;                // max suffix length
+  int feature_vector_dims_ = 0;        // size of output feature vector
 
-  Cell *gfeatures_ = nullptr;         // gradient cell
-  Tensor *d_feature_vector_;          // feature vector input to gradient
-  Tensor *primal_;                    // reference to primal cell
+  Cell *gfeatures_ = nullptr;          // gradient cell
+  Tensor *d_feature_vector_;           // feature vector input to gradient
+  Tensor *primal_;                     // reference to primal cell
 
   friend class LexicalFeatureExtractor;
   friend class LexicalFeatureLearner;

@@ -148,6 +148,7 @@ cc_library(
     ":lexicon",
     "//sling/myelin:compute",
     "//sling/myelin:flow",
+    "//sling/util:embeddings",
   ],
 )
 
