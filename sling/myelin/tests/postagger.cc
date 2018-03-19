@@ -23,23 +23,26 @@
 #include "sling/myelin/kernel/tensorflow.h"
 #include "sling/util/mutex.h"
 #include "sling/util/thread.h"
+#include "third_party/jit/cpu.h"
+
+const int cpu_cores = sling::jit::CPU::Processors();
 
 DEFINE_bool(dump, false, "Dump flow");
 DEFINE_bool(dump_cell, false, "Dump flow");
 DEFINE_bool(profile, false, "Profile tagger");
 DEFINE_int32(epochs, 250000, "Number of training epochs");
-DEFINE_int32(report, 1000, "Report status after every n sentence");
+DEFINE_int32(report, 25000, "Report status after every n sentence");
 DEFINE_double(alpha, 1.0, "Learning rate");
 DEFINE_double(lambda, 0.0, "Regularization parameter");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
 DEFINE_int32(seed, 0, "Random number generator seed");
 DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
-DEFINE_int32(batch, 128, "Number of epochs between gradient updates");
+DEFINE_int32(batch, 64, "Number of epochs between gradient updates");
 DEFINE_bool(shuffle, true, "Shuffle training corpus");
 DEFINE_bool(heldout, true, "Test tagger on heldout data");
-DEFINE_int32(threads, 1, "Number of threads for training");
-DEFINE_int32(rampup, 0, "Number of seconds between thread starts");
+DEFINE_int32(threads, cpu_cores, "Number of threads for training");
+DEFINE_int32(rampup, 10, "Number of seconds between thread starts");
 DEFINE_bool(lock, false, "Locked gradient updates");
 
 using namespace sling;
@@ -158,22 +161,22 @@ struct TaggerModel {
     delete dtagger_profile;
   }
 
-  void Initialize(Network &network) {
-    tagger = network.GetCell("tagger");
-    h_in = network.GetParameter("tagger/h_in");
-    h_out = network.GetParameter("tagger/h_out");
-    c_in = network.GetParameter("tagger/c_in");
-    c_out = network.GetParameter("tagger/c_out");
-    word = network.GetParameter("tagger/word");
-    logits = network.GetParameter("tagger/logits");
+  void Initialize(Network &net) {
+    tagger = net.GetCell("tagger");
+    h_in = net.GetParameter("tagger/h_in");
+    h_out = net.GetParameter("tagger/h_out");
+    c_in = net.GetParameter("tagger/c_in");
+    c_out = net.GetParameter("tagger/c_out");
+    word = net.GetParameter("tagger/word");
+    logits = net.GetParameter("tagger/logits");
 
-    dtagger = network.GetCell("gradients/tagger");
-    primal = network.GetParameter("gradients/tagger/primal");
-    dh_in = network.GetParameter("gradients/tagger/d_h_in");
-    dh_out = network.GetParameter("gradients/tagger/d_h_out");
-    dc_in = network.GetParameter("gradients/tagger/d_c_in");
-    dc_out = network.GetParameter("gradients/tagger/d_c_out");
-    dlogits = network.GetParameter("gradients/tagger/d_logits");
+    dtagger = net.GetCell("gradients/tagger");
+    primal = net.GetParameter("gradients/tagger/primal");
+    dh_in = net.GetParameter("gradients/tagger/d_h_in");
+    dh_out = net.GetParameter("gradients/tagger/d_h_out");
+    dc_in = net.GetParameter("gradients/tagger/d_c_in");
+    dc_out = net.GetParameter("gradients/tagger/d_c_out");
+    dlogits = net.GetParameter("gradients/tagger/d_logits");
 
     h_zero = new Channel(h_in);
     c_zero = new Channel(c_in);
@@ -218,10 +221,10 @@ class Tagger {
     // Set up kernel library.
     RegisterTensorflowLibrary(&library_);
 
-    network_.set_linker(&linker_);
+    net_.set_linker(&linker_);
     if (FLAGS_profile) {
-      network_.options().profiling = true;
-      network_.options().external_profiler = true;
+      net_.options().profiling = true;
+      net_.options().external_profiler = true;
     }
   }
 
@@ -271,11 +274,11 @@ class Tagger {
     FlowToDotGraphFile(flow_, opts, "/tmp/postagger.dot");
 
     // Compile network.
-    CHECK(network_.Compile(flow_, library_));
+    CHECK(net_.Compile(flow_, library_));
 
     // Dump cells.
     if (FLAGS_dump_cell) {
-      for (Cell *cell : network_.cells()) std::cout << cell->ToString();
+      for (Cell *cell : net_.cells()) std::cout << cell->ToString();
     }
 
     // Write object file with generated code.
@@ -283,16 +286,16 @@ class Tagger {
     linker_.Write("/tmp/postagger.o");
 
     // Initialize model.
-    model_.Initialize(network_);
-    loss_.Initialize(network_);
-    optimizer_.Initialize(network_);
+    model_.Initialize(net_);
+    loss_.Initialize(net_);
+    optimizer_.Initialize(net_);
   }
 
   // Initialize model weights.
   void Initialize() {
     std::mt19937 prng(FLAGS_seed);
     std::normal_distribution<float> normal(0.0, 1e-4);
-    for (Tensor *tensor : network_.globals()) {
+    for (Tensor *tensor : net_.globals()) {
       if (tensor->learnable() && tensor->rank() == 2) {
         TensorData data(tensor->data(), tensor);
         for (int r = 0; r < data.dim(0); ++r) {
@@ -310,7 +313,7 @@ class Tagger {
     LOG(INFO) << "Start training";
     start_ = WallTime();
     WorkerPool pool;
-    pool.Start(FLAGS_threads, [this](int index) { Worker(index);});
+    pool.Start(FLAGS_threads, [this](int index) { Worker(index); });
 
     // Wait until workers completes.
     pool.Join();
@@ -432,11 +435,6 @@ class Tagger {
       MutexLock lock(&mu_);
       num_tokens_ += length;
 
-      // Decay learning rate.
-      if (epoch_ % FLAGS_alpha_update == 0) {
-        alpha_ *= FLAGS_decay;
-      }
-
       // Report progress.
       if (epoch_ % FLAGS_report == 0) {
         double end = WallTime();
@@ -453,6 +451,11 @@ class Tagger {
         loss_count_ = 0;
         start_ = WallTime();
         prev_tokens_ = num_tokens_;
+      }
+
+      // Decay learning rate.
+      if (epoch_ % FLAGS_alpha_update == 0) {
+        alpha_ *= FLAGS_decay;
       }
 
       epoch_++;
@@ -540,7 +543,7 @@ class Tagger {
 
   Library library_;    // kernel library
   TaggerFlow flow_;    // flow for tagger model
-  Network network_;    // neural network
+  Network net_;        // neural net
   ElfLinker linker_;   // linker for outputting generated code
 
   // Tagger model.

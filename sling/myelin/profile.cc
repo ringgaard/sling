@@ -113,9 +113,10 @@ string Profile::ASCIIReport() const {
       complexity());
   StringAppendF(&report, "CPU model: %s\n", cpu.brand());
   StringAppendF(&report,
-      "CPU architecture: %s (family %02x model %02x stepping %02x)\n",
+      "CPU architecture: %s (family %02x model %02x stepping %02x), %d cores\n",
       cpu.architecture(),
-      cpu.family(), cpu.model(), cpu.stepping());
+      cpu.family(), cpu.model(), cpu.stepping(),
+      jit::CPU::Processors());
 
   report.append("CPU features:");
   if (jit::CPU::Enabled(jit::MMX)) report.append(" MMX");

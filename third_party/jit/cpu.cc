@@ -29,6 +29,7 @@
 // modified significantly by Google Inc.
 // Copyright 2017 Google Inc. All rights reserved.
 
+#include <sys/sysinfo.h>
 #include <utility>
 
 #include "third_party/jit/cpu.h"
@@ -255,6 +256,11 @@ void CPU::Initialize() {
     vzero_needed = true;
 #endif
   }
+}
+
+int CPU::Processors() {
+  Probe();
+  return get_nprocs();
 }
 
 }  // namespace jit

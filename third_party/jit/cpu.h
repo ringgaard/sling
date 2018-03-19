@@ -150,6 +150,9 @@ class CPU {
     initialized = true;
   }
 
+  // Return the number of CPUs.
+  static int Processors();
+
   // Return bit mask with supported features.
   static unsigned SupportedFeatures() {
     Probe();
