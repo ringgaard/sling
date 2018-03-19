@@ -748,63 +748,11 @@ class Step {
   friend class Network;
 };
 
-// A connector links different (parts of) cells in a network to create recurrent
-// connections.
-class Connector {
- public:
-  Connector(Network *network) : network_(network) {}
-  ~Connector() { delete type_; }
-
-  // Connector name.
-  const string &name() const { return type_->name(); }
-
-  // Connector type.
-  Tensor *type() const { return type_; }
-
-  // Size of one element.
-  size_t size() const { return type_->size(); }
-
-  // Connector array alignment (in bytes).
-  int alignment() const { return alignment_; }
-
-  // Return connector placement.
-  Placement placement() const { return placement_; }
-
-  // Add location for placement.
-  void AddPlace(Placement place) {
-    placement_ = static_cast<Placement>(placement_ | place);
-  }
-
-  // Tensors linked to the connector.
-  const std::vector<Tensor *> &links() const { return links_; }
-
-  // Network that connector belongs to.
-  Network *network() const { return network_; }
-
- private:
-  // Network that connector belongs to.
-  Network *network_;
-
-  // Tensor for connector type.
-  Tensor *type_ = nullptr;
-
-  // Tensors linked to the connector.
-  std::vector<Tensor *> links_;
-
-  // Connector array alignment (in bytes).
-  int alignment_ = kMinDataAlignment;
-
-  // Placement of connector.
-  Placement placement_ = NOWHERE;
-
-  friend class Network;
-};
-
 // A channel is an array of tensors used for connecting cells in a network.
 class Channel {
  public:
   // Initialize empty channel.
-  Channel(const Connector *connector) : connector_(connector) {}
+  Channel(const Tensor *format);
 
   // Delete channel.
   ~Channel();
@@ -820,7 +768,7 @@ class Channel {
 
   // Return pointer to channel element.
   char *at(int index) const {
-    return data_ + (index * connector_->size());
+    return data_ + (index * format_->size());
   }
 
   // Add element to channel and return the last element.
@@ -831,6 +779,9 @@ class Channel {
 
   // Return the number of elements in the channel.
   int size() const { return size_; }
+
+  // Return placement of channel.
+  Placement placement() const { return format_->placement(); }
 
   // Return runtime for channel.
   inline Runtime *runtime() const;
@@ -845,8 +796,11 @@ class Channel {
   // Number of allocated elements.
   int capacity_ = 0;
 
-  // Connector describing the element type of the channel.
-  const Connector *connector_;
+  // A tensor describing the element type of the channel.
+  const Tensor *format_;
+
+  // Byte alignment.
+  int alignment_ = kMinDataAlignment;
 };
 
 // A tensor data object is a reference to a tensor value. It does not own the
@@ -992,7 +946,7 @@ class Instance {
         data_ + param->offset() + param->offset(r, c));
   }
 
-  // Set link to element in connector channel.
+  // Set link to element in channel.
   void Set(Tensor *param, Channel *channel, int index = 0) {
     DCHECK(param->ref()) << param->name();
     *reinterpret_cast<char **>(data_ + param->offset()) = channel->at(index);
@@ -1196,12 +1150,6 @@ class Network {
   // Get cell.
   Cell *GetCell(const string &name) const;
 
-  // Look up connector returning null if it is not found.
-  Connector *LookupConnector(const string &name) const;
-
-  // Get connector.
-  Connector *GetConnector(const string &name) const;
-
   // Look up up parameter tensor returning null if it is not found.
   Tensor *LookupParameter(const string &name) const;
 
@@ -1283,9 +1231,6 @@ class Network {
   // Steps for network computation in order of execution.
   std::vector<Step *> steps_;
 
-  // Connections between tensors.
-  std::vector<Connector *> connectors_;
-
   // Parameter names.
   std::unordered_map<string, Tensor *> names_;
 
@@ -1349,12 +1294,12 @@ inline Runtime *Cell::runtime() const {
   return network_->runtime();
 }
 
-inline Runtime *Instance::runtime() const {
-  return cell_->runtime();
+inline Runtime *Channel::runtime() const {
+  return format_->cell()->runtime();
 }
 
-inline Runtime *Channel::runtime() const {
-  return connector_->network()->runtime();
+inline Runtime *Instance::runtime() const {
+  return cell_->runtime();
 }
 
 inline void Instance::Compute() {

@@ -39,11 +39,11 @@ class LexicalFeatures {
     int max_suffix = 3;          // max suffix length
     int prefix_dim = 16;         // prefix embedding dimensions
     int suffix_dim = 16;         // prefix embedding dimensions
-    bool hyphen_dim = 8;         // hyphenation embedding dimensions
-    bool caps_dim = 8;           // capitalization embedding dimensions
-    bool punct_dim = 8;          // punctuation embedding dimensions
-    bool quote_dim = 8;          // quote feature embedding dimensions
-    bool digit_dim = 8;          // digit feature embedding dimensions
+    int hyphen_dim = 8;          // hyphenation embedding dimensions
+    int caps_dim = 8;            // capitalization embedding dimensions
+    int punct_dim = 8;           // punctuation embedding dimensions
+    int quote_dim = 8;           // quote feature embedding dimensions
+    int digit_dim = 8;           // digit feature embedding dimensions
   };
 
   // Dictionary type mapping words to frequency.
@@ -90,8 +90,6 @@ class LexicalFeatures {
   Tensor *digit_feature_ = nullptr;   // digit feature
   Tensor *feature_vector_ = nullptr;  // output feature vector
 
-  Connector *fv_cnx_;
-
   int prefix_size_ = 0;               // max prefix length
   int suffix_size_ = 0;               // max suffix length
   int feature_vector_dims_ = 0;       // size of output feature vector
@@ -132,7 +130,7 @@ class LexicalFeatureLearner {
  public:
   LexicalFeatureLearner(const LexicalFeatures &features)
       : features_(features),
-        fv_(features.fv_cnx_),
+        fv_(features.feature_vector_),
         gradient_(features.gfeatures_) {}
   ~LexicalFeatureLearner() { for (auto *e : extractors_) delete e; }
 

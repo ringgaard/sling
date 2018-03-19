@@ -509,7 +509,7 @@ bool Tensor::Compatible(const Tensor *other) const {
     int s1 = dim(d1--);
     int s2 = other->dim(d2--);
     if (s1 == -1 || s1 == 1) continue;
-    if (s2 == -1 || d2 == 1) continue;
+    if (s2 == -1 || s2 == 1) continue;
     if (s1 != s2) return false;
   }
   return true;
@@ -610,8 +610,13 @@ string Tensor::ToString(const char *data) const {
   return str;
 }
 
+Channel::Channel(const Tensor *format) : format_(format) {
+  EnsureAlignment(&alignment_, jit::CPU::CacheLineSize());
+  EnsureAlignment(&alignment_, format->byte_alignment());
+}
+
 Channel::~Channel() {
-  runtime()->FreeChannel(data_, connector_->placement());
+  runtime()->FreeChannel(data_, placement());
 }
 
 void Channel::resize(int n) {
@@ -625,9 +630,10 @@ void Channel::resize(int n) {
 
   // Clear new elements.
   if (n > size_) {
-    size_t pos = size_ * connector_->size();
-    size_t bytes = (n - size_) * connector_->size();
-    runtime()->ClearChannel(data_, pos, bytes, connector_->placement());
+    size_t element_size = format_->size();
+    size_t pos = size_ * element_size;
+    size_t bytes = (n - size_) * element_size;
+    runtime()->ClearChannel(data_, pos, bytes, placement());
   }
 
   // Change size.
@@ -640,11 +646,12 @@ void Channel::reserve(int n) {
   if (n == capacity_) return;
 
   // Allocate or reallocate data buffer.
+  size_t element_size = format_->size();
   data_ = runtime()->AllocateChannel(data_,
-                                     size_ * connector_->size(),
-                                     n * connector_->size(),
-                                     connector_->alignment(),
-                                     connector_->placement());
+                                     size_ * element_size,
+                                     n * element_size,
+                                     alignment_,
+                                     placement());
 
   // Change capacity.
   capacity_ = n;
@@ -791,7 +798,6 @@ Network::~Network() {
   }
   for (auto *c : cells_) delete c;
   for (auto *s : steps_) delete s;
-  for (auto *c : connectors_) delete c;
 }
 
 char *Network::AllocateMemory(size_t size, int alignment) {
@@ -861,39 +867,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (var->out()) tensor->placement_ = HOST;
   }
 
-  // Create connectors between variables.
+  // Link tensors in each connector.
   for (Flow::Connector *cnx : flow.cnxs()) {
-    // Connectors must have at least one link.
-    if (cnx->links.empty()) {
-      LOG(WARNING) << "Skipping empty connector: " << cnx->name;
-      continue;
-    }
-
-    // Create new connector.
-    Connector *connector = new Connector(this);
-    connectors_.push_back(connector);
-
-    // Create tensor for connector.
-    Tensor *t = new Tensor();
-    t->name_ = cnx->name;
-    t->required_order_ = ROW_MAJOR;
-    connector->type_ = t;
-    tensors[connector] = t;
-
-    // Initialize connector tensor from first link.
-    Tensor *prototype = tensors[cnx->links[0]];
-    t->type_ = prototype->type_;
-    t->shape_ = prototype->shape_;
-    t->shape_.set(0, -1);
-    t->minalign_ = prototype->minalign_;
-    t->aligned_ = prototype->aligned_;
-    t->stride_ = prototype->stride_;
-    t->byte_alignment_ = prototype->byte_alignment_;
-
-    // Link tensors to connector.
-    for (Flow::Variable *link : cnx->links) {
-      connector->links_.push_back(tensors[link]);
-      tensors[link]->Link(t);
+    if (cnx->links.empty()) continue;
+    Tensor *t = tensors[cnx->links[0]];
+    for (int i = 1; i < cnx->links.size(); ++i) {
+      tensors[cnx->links[i]]->Link(t);
     }
   }
 
@@ -1064,7 +1043,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     for (auto it : tensors) {
       Tensor *t = it.second;
       Tensor *l = t->next_link_;
-      if (l == nullptr) continue;
+      if (l == t) continue;
 
       // Check type compatibility between linked tensors.
       if (t->type_ != l->type_ || !t->Compatible(l)) {
@@ -1220,37 +1199,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
       next = next->shared_;
     }
-  }
-
-  // Compute alignment and placement for connectors.
-  for (Connector *connector : connectors_) {
-    Tensor *t = connector->type_;
-    EnsureAlignment(&connector->alignment_, t->byte_alignment_);
-    EnsureAlignment(&connector->alignment_, jit::CPU::CacheLineSize());
-
-    for (Tensor *link : connector->links_) {
-      if (link->producer_ != nullptr) {
-        connector->AddPlace(link->producer_->placement());
-      }
-      for (Step *consumer : link->consumers_) {
-        connector->AddPlace(consumer->placement());
-      }
-    }
-
-    if (connector->placement_ == EVERYWHERE) {
-      LOG(ERROR) << "Connector " << connector->name()
-                 << " crosses host/device boundary";
-      return false;
-    }
-
-    VLOG(5) << "Connector " << connector->name() << ": " << t->TypeString()
-            << " min " << t->minalign_.ToString()
-            << ":" << connector->alignment_
-            << " aligned " << t->aligned_.ToString()
-            << " size " << t->size_
-            << " stride " << t->stride_.ToString()
-            << " order " << ordername[t->order_]
-            << " on " << placename[connector->placement_];
   }
 
   // Move all variables that are shared with a global to the global pool.
@@ -1761,19 +1709,6 @@ Cell *Network::GetCell(const string &name) const {
   Cell *cell = LookupCell(name);
   CHECK(cell != nullptr) << "Unknown cell: " << name;
   return cell;
-}
-
-Connector *Network::LookupConnector(const string &name) const {
-  for (Connector *connector : connectors_) {
-    if (connector->name() == name) return connector;
-  }
-  return nullptr;
-}
-
-Connector *Network::GetConnector(const string &name) const {
-  Connector *connector = LookupConnector(name);
-  CHECK(connector != nullptr) << "Unknown connector: " << name;
-  return connector;
 }
 
 Tensor *Network::LookupParameter(const string &name) const {

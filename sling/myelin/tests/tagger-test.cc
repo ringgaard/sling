@@ -315,7 +315,7 @@ class RNN {
   // Looks up word in the lexicon.
   int LookupWord(const string &word) const;
 
-  // Attaches connectors for LR LSTM.
+  // Attaches channels for LR LSTM.
   void AttachLR(RNNInstance *instance, int input, int output) const;
 
   // Extracts features for LR LSTM.
@@ -338,21 +338,12 @@ class RNN {
   }
 
  private:
-  // Looks up cells, connectors, and parameters.
-  Cell *GetCell(const string &name);
-  Connector *GetConnector(const string &name);
-  Tensor *GetParam(const string &name, bool optional = false);
-
   // Tagger network.
   Library library_;
   Network network_;
 
   // Parser cells.
   Cell *lr_;  // left-to-right LSTM cell
-
-  // Connectors.
-  Connector *lr_c_;  // left-to-right LSTM control layer
-  Connector *lr_h_;  // left-to-right LSTM hidden layer
 
   // Left-to-right LSTM network parameters and links.
   Tensor *lr_feature_words_;  // word feature
@@ -375,8 +366,7 @@ class RNN {
 // RNN state for running an instance of the parser on a document.
 struct RNNInstance {
  public:
-  RNNInstance(Cell *lr, Connector *lr_c,
-              Connector *lr_h, int begin, int end);
+  RNNInstance(Cell *lr, Tensor *lr_c, Tensor *lr_h, int begin, int end);
 
   // Return tensor data.
   float *Get(const string &name) {
@@ -388,7 +378,7 @@ struct RNNInstance {
   // Instances for network computations.
   Instance lr;
 
-  // Channels for connectors.
+  // Channels.
   Channel lr_c;
   Channel lr_h;
 
@@ -468,7 +458,7 @@ void RNN::Load(const string &filename) {
   CHECK(network_.Compile(flow, library_));
 
   // Get computation for each function.
-  lr_ = GetCell("tagger");
+  lr_ = network_.GetCell("tagger");
 
   if (FLAGS_dump_code) {
     lr_->WriteCodeToFile("/tmp/tagger.bin");
@@ -482,19 +472,15 @@ void RNN::Load(const string &filename) {
     File::WriteContents("/tmp/tagger-data.svg", dprof.AsSVG());
   }
 
-  // Get connectors.
-  lr_c_ = GetConnector("tagger_c");
-  lr_h_ = GetConnector("tagger_h");
-
   // Get LR LSTM parameters.
-  lr_feature_words_ = GetParam("tagger/feature/words");
-  lr_c_in_ = GetParam("tagger/c_in");
-  lr_c_out_ = GetParam("tagger/c_out");
-  lr_h_in_ = GetParam("tagger/h_in");
-  lr_h_out_ = GetParam("tagger/h_out");
+  lr_feature_words_ = network_.GetParameter("tagger/feature/words");
+  lr_c_in_ = network_.GetParameter("tagger/c_in");
+  lr_c_out_ =network_.GetParameter("tagger/c_out");
+  lr_h_in_ = network_.GetParameter("tagger/h_in");
+  lr_h_out_ = network_.GetParameter("tagger/h_out");
 
-  ff_output_ = GetParam("tagger/output");
-  ff_prediction_ = GetParam("tagger/prediction", true);
+  ff_output_ = network_.GetParameter("tagger/output");
+  ff_prediction_ = network_.LookupParameter("tagger/prediction");
 
   // Load lexicon.
   Flow::Function *lexicon = flow.Func("lexicon");
@@ -566,7 +552,7 @@ int RNN::LookupWord(const string &word) const {
 
 void RNN::Execute(const std::vector<string> &tokens,
                   std::vector<int> *predictions) {
-  RNNInstance data(lr_, lr_c_, lr_h_, 0, tokens.size());
+  RNNInstance data(lr_, lr_c_in_, lr_h_in_, 0, tokens.size());
 
   // Look up words in vocabulary.
   for (int i = 0; i < tokens.size(); ++i) {
@@ -663,33 +649,9 @@ void RNN::Execute(const std::vector<string> &tokens,
   }
 }
 
-Cell *RNN::GetCell(const string &name) {
-  Cell *cell = network_.LookupCell(name);
-  if (cell == nullptr) {
-    LOG(FATAL) << "Unknown parser cell: " << name;
-  }
-  return cell;
-}
-
-Connector *RNN::GetConnector(const string &name) {
-  Connector *cnx = network_.LookupConnector(name);
-  if (cnx == nullptr) {
-    LOG(FATAL) << "Unknown parser connector: " << name;
-  }
-  return cnx;
-}
-
-Tensor *RNN::GetParam(const string &name, bool optional) {
-  Tensor *param = network_.LookupParameter(name);
-  if (!optional && param == nullptr) {
-    LOG(FATAL) << "Unknown parser parameter: " << name;
-  }
-  return param;
-}
-
 RNNInstance::RNNInstance(Cell *lr,
-                         Connector *lr_c,
-                         Connector *lr_h, int begin, int end)
+                         Tensor *lr_c, Tensor *lr_h,
+                         int begin, int end)
     : lr(lr), lr_c(lr_c), lr_h(lr_h) {
   // Allocate space for word ids.
   int length = end - begin;

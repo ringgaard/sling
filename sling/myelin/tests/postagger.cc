@@ -175,12 +175,8 @@ struct TaggerModel {
     dc_out = network.GetParameter("gradients/tagger/d_c_out");
     dlogits = network.GetParameter("gradients/tagger/d_logits");
 
-    h_cnx = network.GetConnector("tagger/cnx_hidden");
-    c_cnx = network.GetConnector("tagger/cnx_control");
-    l_cnx = network.GetConnector("loss/cnx_dlogits");
-
-    h_zero = new Channel(h_cnx);
-    c_zero = new Channel(c_cnx);
+    h_zero = new Channel(h_in);
+    c_zero = new Channel(c_in);
     h_zero->resize(1);
     c_zero->resize(1);
 
@@ -205,11 +201,6 @@ struct TaggerModel {
   Tensor *dc_in;
   Tensor *dc_out;
   Tensor *dlogits;
-
-  // Connectors.
-  Connector *h_cnx;
-  Connector *c_cnx;
-  Connector *l_cnx;
 
   // Zero channels.
   Channel *h_zero = nullptr;
@@ -332,11 +323,11 @@ class Tagger {
     num_workers_++;
 
     // Create channels.
-    Channel h(model_.h_cnx);
-    Channel c(model_.c_cnx);
-    Channel l(model_.l_cnx);
-    Channel dh(model_.h_cnx);
-    Channel dc(model_.c_cnx);
+    Channel h(model_.h_in);
+    Channel c(model_.c_in);
+    Channel l(model_.dlogits);
+    Channel dh(model_.dh_in);
+    Channel dc(model_.dh_out);
 
     // Allocate gradients.
     Instance gtagger(model_.dtagger);
@@ -483,8 +474,8 @@ class Tagger {
   float Evaluate(Corpus *corpus) {
     // Create tagger instance with channels.
     Instance test(model_.tagger);
-    Channel h(model_.h_cnx);
-    Channel c(model_.c_cnx);
+    Channel h(model_.h_in);
+    Channel c(model_.c_in);
     if (FLAGS_profile) test.set_profile(model_.tagger_profile);
 
     // Run tagger on corpus and compare with gold tags.

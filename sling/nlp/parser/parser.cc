@@ -121,10 +121,6 @@ void Parser::InitLSTM(const string &name, LSTM *lstm, bool reverse) {
   lstm->reverse = reverse;
   lstm->profile = lstm->cell->profile();
 
-  // Get connectors.
-  lstm->control = GetConnector(name + "/control");
-  lstm->hidden = GetConnector(name + "/hidden");
-
   // Get feature inputs.
   lstm->word_feature = GetParam(name + "/words", true);
   lstm->prefix_feature = GetParam(name + "/prefix", true);
@@ -154,9 +150,6 @@ void Parser::InitFF(const string &name, FF *ff) {
   // Get cell.
   ff->cell = GetCell(name);
   ff->profile = ff->cell->profile();
-
-  // Get connector for recurrence.
-  ff->step = GetConnector(name + "/step");
 
   // Get feature inputs.
   ff->lr_focus_feature = GetParam(name + "/lr", true);
@@ -353,14 +346,6 @@ myelin::Cell *Parser::GetCell(const string &name) {
   return cell;
 }
 
-myelin::Connector *Parser::GetConnector(const string &name) {
-  myelin::Connector *cnx = network_.LookupConnector(name);
-  if (cnx == nullptr) {
-    LOG(FATAL) << "Unknown parser connector: " << name;
-  }
-  return cnx;
-}
-
 myelin::Tensor *Parser::GetParam(const string &name, bool optional) {
   myelin::Tensor *param = network_.LookupParameter(name);
   if (param == nullptr && !optional) {
@@ -376,11 +361,11 @@ ParserInstance::ParserInstance(const Parser *parser, Document *document,
       lr_(parser->lr_.cell),
       rl_(parser->rl_.cell),
       ff_(parser->ff_.cell),
-      lr_c_(parser->lr_.control),
-      lr_h_(parser->lr_.hidden),
-      rl_c_(parser->rl_.control),
-      rl_h_(parser->rl_.hidden),
-      ff_step_(parser->ff_.step) {
+      lr_c_(parser->lr_.c_in),
+      lr_h_(parser->lr_.h_in),
+      rl_c_(parser->rl_.c_in),
+      rl_h_(parser->rl_.h_in),
+      ff_step_(parser->ff_.hidden) {
   // Add one extra element to LSTM activations for boundary element.
   int length = end - begin;
   lr_c_.resize(length + 1);

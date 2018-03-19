@@ -192,20 +192,20 @@ int main(int argc, char *argv[]) {
       LOG(INFO) << "Profile " << cell_name;
       Instance data(cell);
       if (cell_name == "fw_lstm") {
-        Channel control(network.GetConnector("fw_lstm_c"));
+        Channel control(network.GetParameter(fw_c_in->name));
         control.resize(2);
         data.Set(cell->GetParameter(fw_c_in->name), &control, 0);
         data.Set(cell->GetParameter(fw_c_out->name), &control, 1);
-        Channel hidden(network.GetConnector("fw_lstm_h"));
+        Channel hidden(network.GetParameter(fw_h_in->name));
         hidden.resize(2);
         data.Set(cell->GetParameter(fw_h_in->name), &hidden, 0);
         data.Set(cell->GetParameter(fw_h_out->name), &hidden, 1);
       } else if (cell_name == "bw_lstm") {
-        Channel control(network.GetConnector("bw_lstm_c"));
+        Channel control(network.GetParameter(bw_c_in->name));
         control.resize(2);
         data.Set(cell->GetParameter(bw_c_in->name), &control, 0);
         data.Set(cell->GetParameter(bw_c_out->name), &control, 1);
-        Channel hidden(network.GetConnector("bw_lstm_h"));
+        Channel hidden(network.GetParameter(bw_h_in->name));
         hidden.resize(2);
         data.Set(cell->GetParameter(bw_h_in->name), &hidden, 0);
         data.Set(cell->GetParameter(bw_h_out->name), &hidden, 1);
