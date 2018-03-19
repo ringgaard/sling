@@ -44,6 +44,7 @@ static const char *node_names[] = {
 typedef std::unordered_map<string, WikiParser::Type> LinkPrefixMap;
 typedef std::unordered_map<string, WikiParser::Special> TemplatePrefixMap;
 
+// Link prefixes for images and categories.
 static const LinkPrefixMap link_prefix = {
   {"Archivo",   WikiParser::IMAGE},      // es
   {"Bestand",   WikiParser::IMAGE},      // nl
@@ -68,6 +69,7 @@ static const LinkPrefixMap link_prefix = {
   {"Tiedosto",  WikiParser::IMAGE},      // fi
 };
 
+// Link prefixes for templates.
 static const TemplatePrefixMap template_prefix = {
   {"DEFAULTSORT",         WikiParser::TMPL_DEFAULTSORT},
   {"DISPLAYTITLE",        WikiParser::TMPL_DISPLAYTITLE},

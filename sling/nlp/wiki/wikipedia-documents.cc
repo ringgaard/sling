@@ -35,7 +35,11 @@ static bool strtoint(Text text, int *value) {
   return safe_strto32(text.data(), text.size(), value);
 }
 
-// Convert Wikipedia articles to documents.
+// Convert Wikipedia articles to documents. This parses the wikitext in the
+// articles and extracts the plain text. Anchors are converted to mentions
+// of the linked entity, and all links are converted to Wikidata ids, including
+// resolution of redirects. Titles, anchors, and disambiguations are used for
+// building up the aliases table for each entity.
 class WikipediaDocumentBuilder : public task::FrameProcessor {
  public:
   // Language information for Wikipedia.
@@ -92,7 +96,6 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
     }
 
     // Output aliases for all redirects.
-    LOG(INFO) << "Output aliases for redirects";
     aliases_ = task->GetSink("aliases");
     for (Handle redirect : wikimap_.redirects()) {
       WikipediaMap::PageInfo page;
@@ -106,8 +109,6 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
       Wiki::SplitTitle(page.title.str(), &name, &disambiguation);
       OutputAlias(page.qid, name, SRC_WIKIPEDIA_REDIRECT);
     }
-
-    LOG(INFO) << "Wikipedia document builder initalized";
   }
 
   void Process(Slice key, const Frame &frame) override {
@@ -267,7 +268,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
           break;
         }
 
-        default: ;
+        default: break;
       }
     }
 
@@ -427,6 +428,8 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("wikipedia-document-builder", WikipediaDocumentBuilder);
 
+// Collect the aliases extracted from the Wikipedia document builder and build
+// an alias profile for each entity.
 class WikipediaAliasReducer : public task::Reducer {
  public:
   void Start(task::Task *task) override {

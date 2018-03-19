@@ -41,6 +41,8 @@ WikipediaMap::WikipediaMap() {
   typemap_[store_.Lookup("/w/item/kind/infobox")] = INFOBOX;
 
   // Allow duplicate symbols.
+  // TODO(ringgaard): Investigate if this is really needed, and if so, document
+  // why it is needed.
   options_.symbol_rebinding = true;
 }
 
