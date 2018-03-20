@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include "sling/base/clock.h"
 #include "sling/base/init.h"
 #include "sling/base/flags.h"
 #include "sling/base/logging.h"
@@ -262,7 +263,10 @@ class Tagger {
   // Compile model.
   void Compile() {
     // Analyze flow.
+    Clock analyze_clock;
+    analyze_clock.start();
     flow_.Analyze(library_);
+    analyze_clock.stop();
 
     // Dump flow.
     if (FLAGS_dump) {
@@ -274,7 +278,12 @@ class Tagger {
     FlowToDotGraphFile(flow_, opts, "/tmp/postagger.dot");
 
     // Compile network.
+    Clock compile_clock;
+    compile_clock.start();
     CHECK(net_.Compile(flow_, library_));
+    compile_clock.stop();
+    LOG(INFO) << "Analyze: " << analyze_clock.ms() << " ms, compile: "
+              << compile_clock.ms() << " ms";
 
     // Dump cells.
     if (FLAGS_dump_cell) {
@@ -341,6 +350,7 @@ class Tagger {
     int iteration = 0;
     float local_loss_sum = 0.0;
     int local_loss_count = 0;
+    int local_tokens = 0;
     while (true) {
       // Select next sentence to train on.
       int sample = (FLAGS_shuffle ? prng() : iteration) % num_sentences;
@@ -416,6 +426,7 @@ class Tagger {
       // Clear data.
       for (auto *d : forward) delete d;
       forward.clear();
+      local_tokens += length;
 
       // Apply gradients to model.
       if (iteration % FLAGS_batch == 0) {
@@ -424,18 +435,17 @@ class Tagger {
         optimizer_.Apply(gradients);
         loss_sum_ += local_loss_sum;
         loss_count_ += local_loss_count;
+        num_tokens_ += local_tokens;
         if (FLAGS_lock) update_mu_.Unlock();
 
         gtagger.Clear();
         local_loss_sum = 0;
         local_loss_count = 0;
+        local_tokens = 0;
       }
 
       // Evaluate model.
       MutexLock lock(&eval_mu_);
-      num_tokens_ += length;
-
-      // Report progress.
       if (epoch_ % FLAGS_report == 0) {
         double end = WallTime();
         float avg_loss = loss_sum_ / loss_count_;
