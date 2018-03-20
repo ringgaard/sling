@@ -43,7 +43,7 @@ DEFINE_bool(shuffle, true, "Shuffle training corpus");
 DEFINE_bool(heldout, true, "Test tagger on heldout data");
 DEFINE_int32(threads, cpu_cores, "Number of threads for training");
 DEFINE_int32(rampup, 10, "Number of seconds between thread starts");
-DEFINE_bool(lock, false, "Locked gradient updates");
+DEFINE_bool(lock, true, "Locked gradient updates");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -419,12 +419,12 @@ class Tagger {
 
       // Apply gradients to model.
       if (iteration % FLAGS_batch == 0) {
-        if (FLAGS_lock) mu_.Lock();
+        if (FLAGS_lock) update_mu_.Lock();
         optimizer_.set_alpha(alpha_);
         optimizer_.Apply(gradients);
         loss_sum_ += local_loss_sum;
         loss_count_ += local_loss_count;
-        if (FLAGS_lock) mu_.Unlock();
+        if (FLAGS_lock) update_mu_.Unlock();
 
         gtagger.Clear();
         local_loss_sum = 0;
@@ -432,7 +432,7 @@ class Tagger {
       }
 
       // Evaluate model.
-      MutexLock lock(&mu_);
+      MutexLock lock(&eval_mu_);
       num_tokens_ += length;
 
       // Report progress.
@@ -563,8 +563,9 @@ class Tagger {
   double start_;
   int num_workers_ = 0;
 
-  // Global lock.
-  Mutex mu_;
+  // Global locks.
+  Mutex update_mu_;
+  Mutex eval_mu_;
 };
 
 int main(int argc, char *argv[]) {

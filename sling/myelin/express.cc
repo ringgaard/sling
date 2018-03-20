@@ -762,13 +762,24 @@ void Express::CacheResults() {
 void Express::ComputeLiveRanges() {
   // All variables assigned before the start of the body need to have their live
   // range extended to the end.
+  if (ops_.empty()) return;
+  Op *begin = ops_.front();
   Op *end = ops_.back();
   for (int i = 0; i < body_; ++i) {
     ops_[i]->result->last = end;
   }
 
+  // Inputs must be keept alive from the beginning and outputs must be kept
+  // alive until the end.
+  for (Var *var : vars_) {
+    if (var->type == INPUT) var->first = begin;
+    if (var->type == OUTPUT) var->last = end;
+  }
+
   // Compute live ranges for the remaining variables.
+  int index = 0;
   for (Op *op : ops_) {
+    op->index = index++;
     if (op->result->first == nullptr) op->result->first = op;
     if (op->result->last != end) op->result->last = op;
     for (Var *arg : op->args) {

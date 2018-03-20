@@ -527,11 +527,23 @@ class Calculate : public Kernel {
     }
 
     // Enable sharing of inputs and outputs.
+    expression.expr.ComputeLiveRanges();
     for (int i = 0; i < step->indegree(); ++i) {
+      Tensor *input = step->input(i);
+      Express::Var *ivar = expression.expr.Lookup(Express::INPUT, i);
+      if (input == nullptr) continue;
+
       for (int j = 0; j < step->outdegree(); ++j) {
-        if (step->input(i)->shape() == step->output(j)->shape()) {
-          // TODO: make in-place sharing safe!!
-          //if (step->AllowInPlace(i, j)) break;
+        Tensor *output = step->output(j);
+        Express::Var *ovar = expression.expr.Lookup(Express::OUTPUT, j);
+        if (ovar == nullptr) continue;
+
+        // The input and output can be shared if they have the same format and
+        // their live ranges do not overlap.
+        if (input->shape() == output->shape() && !ivar->overlaps(ovar)) {
+          if (step->AllowInPlace(i, j)) {
+            break;
+          }
         }
       }
     }

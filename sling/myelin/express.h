@@ -156,6 +156,12 @@ class Express {
     // Temporary variables and register-based inputs are in registers.
     bool IsRegister() const { return type == TEMP || type == REGISTER; }
 
+    // Check if live range for variable overlaps with another variable.
+    bool overlaps(Var *other) const {
+      return first->index < other->last->index &&
+             other->first->index < last->index;
+    }
+
     VarType type;                 // variable type
     int id;                       // variable id (-1 for unassigned temps)
     Op *producer;                 // operation producing value for variable
@@ -208,6 +214,7 @@ class Express {
     int src = -1;                 // register for second operand
     int src2 = -1;                // register for third operand
     bool first_is_dest = false;   // first argument is also destination
+    int index = -1;               // operation index
   };
 
   // Target platform.

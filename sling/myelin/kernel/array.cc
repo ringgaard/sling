@@ -55,8 +55,6 @@ class Reshape : public Kernel {
   }
 
   void Adjust(Step *step) override {
-    if (step->input(0)->ref()) step->output(0)->set_ref(true);
-    if (step->output(0)->ref()) step->input(0)->set_ref(true);
     CHECK(step->AllowInPlace(0, 0, true));
   }
 
@@ -1563,6 +1561,28 @@ class ScaledUpdateTransformer : public Transformer {
   }
 };
 
+// Propagate tensor references across reshapes.
+class ReshapeRefTransformer : public Transformer {
+ public:
+  bool Transform(Flow *flow) override {
+    bool updated = false;
+    for (Flow::Operation *op : flow->ops()) {
+      if (op->type != "Reshape") continue;
+      if (op->indegree() != 2 || op->outdegree() != 1) return false;
+      if (op->inputs[0]->ref && !op->outputs[0]->ref) {
+        op->outputs[0]->ref = true;
+        updated = true;
+      }
+      if (op->outputs[0]->ref && !op->inputs[0]->ref) {
+        op->inputs[0]->ref = true;
+        updated = true;
+      }
+    }
+
+    return updated;
+  }
+};
+
 // Register array kernels.
 void RegisterArrayKernels(Library *library) {
   library->Register(new Reshape());
@@ -1587,6 +1607,7 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new ScatterAdd(true));
 
   library->RegisterTransformer(new ScaledUpdateTransformer());
+  library->RegisterTransformer(new ReshapeRefTransformer());
 }
 
 }  // namespace myelin

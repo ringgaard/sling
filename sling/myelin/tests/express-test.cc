@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <unordered_map>
 
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
@@ -9,10 +10,11 @@ using namespace sling;
 using namespace sling::myelin;
 
 void Test(const string &str) {
-  bool three_arg_ops = false;
+  bool three_arg_ops = true;
   Express::Target target = Express::INTEL;
   bool fma = true;
   bool hoist = 5;
+  bool live_ranges = true;
 
   Express::Model model;
   if (target == Express::NVIDIA) {
@@ -89,11 +91,22 @@ void Test(const string &str) {
 
   expr.CacheResults();
   if (hoist > 0) expr.HoistConstants(hoist);
+  int addr = 0;
   for (auto *op : expr.ops()) {
     if (expr.body() > 0 && op == expr.ops()[expr.body()]) {
       LOG(INFO) << "body:";
     }
-    LOG(INFO) << "  " << op->result->AsString() << " := " << op->AsString();
+    LOG(INFO) << "  " << addr << ": " << op->result->AsString()
+              << " := " << op->AsString();
+    addr++;
+  }
+
+  if (live_ranges) {
+    expr.ComputeLiveRanges();
+    for (int i = 0; i < expr.vars().size(); ++i) {
+      auto *v = expr.vars()[i];
+      LOG(INFO) << v->AsString() << " live from " << v->first->index << " to " << v->last->index;
+    }
   }
 
   Express instrs;
@@ -198,8 +211,7 @@ int main(int argc, char *argv[]) {
   //Test("$2=Sigmoid(Add(%2,%3));@0=Add(Mul($2,Tanh(Add(%0,%1))),Mul(Sub(_1,$2),%5));@1=Tanh(@0)");
   //Test("@0=Mul(Sigmoid(Add(%0,%1)),%2)");
   //Test("!0=Exp(%0);@0=Id(!0)");
-  Test("$2=Add(%4,%5);@0=Mul(Mul($2,%0),Mul(%3,Sub(_1,%3)));@1=Add(%6,Mul(Mul(%3,$2),Sub(_1,Square(%0))))");
-
-  return 0;
+  //Test("$2=Add(%4,%5);@0=Mul(Mul($2,%0),Mul(%3,Sub(_1,%3)));@1=Add(%6,Mul(Mul(%3,$2),Sub(_1,Square(%0))))");
+  Test("$0=Neg(%0);@0=Mul($0,Div(_1,Max(%1,_1)));@1=Mul($0,Div(_1,Max(%2,_1)));@2=Mul($0,Div(_1,Max(%3,_1)));@3=Mul($0,Div(_1,Max(%4,_1)))"); return 0;
 }
 
