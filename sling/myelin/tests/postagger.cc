@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <condition_variable>
 #include <iostream>
 #include <random>
 #include <string>
@@ -324,6 +325,37 @@ class Tagger {
     WorkerPool pool;
     pool.Start(FLAGS_threads, [this](int index) { Worker(index); });
 
+    // Evaluate model at regular intervals.
+    for (;;) {
+      // Wait for next eval.
+      {
+        std::unique_lock<std::mutex> lock(eval_mu_);
+        eval_model_.wait(lock);
+      }
+
+      // Evaluate model.
+      float avg_loss = loss_sum_ / loss_count_;
+      loss_sum_ = 0.0;
+      loss_count_ = 0;
+      float acc = FLAGS_heldout ? Evaluate(&dev_) : exp(-avg_loss) * 100.0;
+
+      double end = WallTime();
+      float secs = end - start_;
+      int tps = (num_tokens_ - prev_tokens_) / secs;
+
+      LOG(INFO) << "epochs " << epoch_ << ", "
+                << "alpha " << alpha_ << ", "
+                << num_workers_ << " workers, "
+                << tps << " tokens/s, loss=" << avg_loss
+                << ", accuracy=" << acc;
+
+      start_ = WallTime();
+      prev_tokens_ = num_tokens_;
+
+      // Check is we are done.
+      if (epoch_ >= FLAGS_epochs) break;
+    }
+
     // Wait until workers completes.
     pool.Join();
   }
@@ -444,32 +476,18 @@ class Tagger {
         local_tokens = 0;
       }
 
-      // Evaluate model.
-      MutexLock lock(&eval_mu_);
-      if (epoch_ % FLAGS_report == 0) {
-        double end = WallTime();
-        float avg_loss = loss_sum_ / loss_count_;
-        float acc = FLAGS_heldout ? Evaluate(&dev_) : exp(-avg_loss) * 100.0;
-        float secs = end - start_;
-        int tps = (num_tokens_ - prev_tokens_) / secs;
-        LOG(INFO) << "epochs " << epoch_ << ", "
-                  << "alpha " << alpha_ << ", "
-                  << num_workers_ << " workers, "
-                  << tps << " tokens/s, loss=" << avg_loss
-                  << ", accuracy=" << acc;
-        loss_sum_ = 0.0;
-        loss_count_ = 0;
-        start_ = WallTime();
-        prev_tokens_ = num_tokens_;
-      }
+      // Check if new evaluation should be triggered.
+      std::unique_lock<std::mutex> lock(eval_mu_);
+      if (epoch_ % FLAGS_report == 0) eval_model_.notify_one();
 
       // Decay learning rate.
       if (epoch_ % FLAGS_alpha_update == 0) {
         alpha_ *= FLAGS_decay;
       }
 
+      // Next epoch.
+      if (epoch_ >= FLAGS_epochs) break;
       epoch_++;
-      if (epoch_ > FLAGS_epochs) break;
     }
   }
 
@@ -576,6 +594,7 @@ class Tagger {
   // Global locks.
   Mutex update_mu_;
   Mutex eval_mu_;
+  std::condition_variable eval_model_;
 };
 
 int main(int argc, char *argv[]) {
