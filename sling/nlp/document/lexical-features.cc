@@ -23,7 +23,8 @@ void LexicalFeatures::LoadLexicon(Flow *flow) {
   // Load word vocabulary.
   Flow::Blob *vocabulary = flow->DataBlock("lexicon");
   CHECK(vocabulary != nullptr);
-  lexicon_.InitWords(vocabulary->data, vocabulary->size);
+  Vocabulary::BufferIterator it(vocabulary->data, vocabulary->size, '\n');
+  lexicon_.InitWords(&it);
   bool normalize = vocabulary->attrs.Get("normalize_digits", false);
   int oov = vocabulary->attrs.Get("oov", -1);
   lexicon_.set_normalize_digits(normalize);
@@ -40,10 +41,46 @@ void LexicalFeatures::LoadLexicon(Flow *flow) {
   }
 }
 
-void LexicalFeatures::InitializeLexicon(const Dictionary &dictionary,
-                                        bool normalize_digits,
-                                        int threshold) {
-  // TODO: implement.
+void LexicalFeatures::InitializeLexicon(Vocabulary::Iterator *words,
+                                        const LexiconSpec &spec) {
+  // Build dictionary.
+  std::unordered_map<string, int> dictionary;
+  words->Reset();
+  Text word;
+  int count;
+  int unknown = 0;
+  while (words->Next(&word, &count)) {
+    if (count < spec.threshold) {
+      unknown += count;
+    } else if (spec.normalize_digits) {
+      string normalized = word.str();
+      for (char &c : normalized) {
+        if (c >= '0' && c <= '9') c = '9';
+      }
+      dictionary[normalized] += count;
+    } else {
+      dictionary[word.str()] += count;
+    }
+  }
+
+  // Build word list.
+  std::vector<std::pair<string, int>> word_list;
+  word_list.emplace_back("<UNKNOWN>", unknown);
+  for (const auto &it : dictionary) {
+    word_list.emplace_back(it.first, it.second);
+  }
+
+  // Build lexicon.
+  Vocabulary::VectorMapIterator it(word_list);
+  lexicon_.InitWords(&it);
+  lexicon_.set_oov(0);
+  lexicon_.set_normalize_digits(spec.normalize_digits);
+
+  // Build affix tables.
+  prefix_size_ = spec.max_prefix;
+  suffix_size_ = spec.max_suffix;
+  lexicon_.BuildPrefixes(spec.max_prefix);
+  lexicon_.BuildSuffixes(spec.max_suffix);
 }
 
 void LexicalFeatures::Build(const Spec &spec, Flow *flow, bool learning) {

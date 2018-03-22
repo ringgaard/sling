@@ -141,8 +141,18 @@ class Builder : public Scope {
   Variable *Softmax(Variable *x) { return Op("Softmax", {x}); }
   Variable *Norm(Variable *v) { return Op("Norm", {v}, v->type, {}); }
 
+  // Matrix multiplication.
   Variable *MatMul(Variable *x, Variable *y);
 
+  Variable *Dot(Variable *x, Variable *y, int size) {
+    return MatMul(Reshape(x, {1, size}), Reshape(y, {size, 1}));
+  }
+
+  Variable *Transpose(Variable *x) {
+    return Op("Transpose", {x}, x->type, x->shape.transpose());
+  }
+
+  // Reshaping.
   Variable *Reshape(Variable *x, Variable *shape) {
     return Op("Reshape", {x, shape});
   }
@@ -150,14 +160,7 @@ class Builder : public Scope {
     return Op("Reshape", {x, Const(shape.dims())}, x->type, shape);
   }
 
-  Variable *Transpose(Variable *x) {
-    return Op("Transpose", {x}, x->type, x->shape.transpose());
-  }
-
-  Variable *Dot(Variable *x, Variable *y, int size) {
-    return MatMul(Reshape(x, {1, size}), Reshape(y, {size, 1}));
-  }
-
+  // Gather for embedding lookups.
   Variable *Gather(Variable *M, Variable *f) {
     return Op("Gather", {M, f}, M->type, {f->dim(0), M->dim(1)});
   }
@@ -171,10 +174,12 @@ class Builder : public Scope {
     return Op("GatherMax", {M, f}, M->type, {f->dim(0), M->dim(1)});
   }
 
+  // Scatter for sparse embedding update.
   Variable *Scatter(Variable *f, Variable *v, int size) {
     return Op("Scatter", {f, v}, v->type, {size, v->dim(1)});
   }
 
+  // Assignment.
   Operation *AssignAdd(Variable *var, Variable *value, float decay = 1.0) {
     auto *op = Op0("AssignAdd", {var, value});
     if (decay != 1.0) op->SetAttr("decay", decay);
@@ -189,6 +194,7 @@ class Builder : public Scope {
     return Op0("ScatterAdd", {M, f, v});
   }
 
+  // Slicing.
   Variable *Slice(Variable *v, Variable *begin, int size = 1) {
     return Op("Slice", {v, begin, Const(size)}, v->type, {size});
   }

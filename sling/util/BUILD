@@ -101,6 +101,7 @@ cc_library(
   deps = [
     ":fingerprint",
     "//sling/base",
+    "//sling/string:text",
   ],
 )
 

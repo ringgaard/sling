@@ -32,22 +32,26 @@ using namespace sling::myelin;
 // Module for token-level lexical feature extraction.
 class LexicalFeatures {
  public:
-  // Lexical feature specification. Feature is disabled if dimension is zero.
-  struct Spec {
-    int word_dim = 64;           // word emmedding dimensions
-    int max_prefix = 3;          // max prefix length
-    int max_suffix = 3;          // max suffix length
-    int prefix_dim = 16;         // prefix embedding dimensions
-    int suffix_dim = 16;         // prefix embedding dimensions
-    int hyphen_dim = 8;          // hyphenation embedding dimensions
-    int caps_dim = 8;            // capitalization embedding dimensions
-    int punct_dim = 8;           // punctuation embedding dimensions
-    int quote_dim = 8;           // quote feature embedding dimensions
-    int digit_dim = 8;           // digit feature embedding dimensions
+  // Lexicon configuration specification.
+  struct LexiconSpec {
+    bool normalize_digits = false;  // normalize digits in words
+    int threshold = 0;              // threshold frequency for words in lexicon
+    int max_prefix = 3;             // max prefix length
+    int max_suffix = 3;             // max suffix length
   };
 
-  // Dictionary type mapping words to frequency.
-  typedef std::unordered_map<string, int> Dictionary;
+  // Lexical feature specification. Feature is disabled if dimension is zero.
+  struct Spec {
+    LexiconSpec lexicon;            // lexicon specification.
+    int word_dim = 64;              // word emmedding dimensions
+    int prefix_dim = 16;            // prefix embedding dimensions
+    int suffix_dim = 16;            // prefix embedding dimensions
+    int hyphen_dim = 8;             // hyphenation embedding dimensions
+    int caps_dim = 8;               // capitalization embedding dimensions
+    int punct_dim = 8;              // punctuation embedding dimensions
+    int quote_dim = 8;              // quote feature embedding dimensions
+    int digit_dim = 8;              // digit feature embedding dimensions
+  };
 
   LexicalFeatures(const string &name = "features") : name_(name) {}
 
@@ -55,9 +59,7 @@ class LexicalFeatures {
   void LoadLexicon(Flow *flow);
 
   // Initialize lexicon from dictionary.
-  void InitializeLexicon(const Dictionary &dictionary,
-                         bool normalize_digits = false,
-                         int threshold = 0);
+  void InitializeLexicon(Vocabulary::Iterator *words, const LexiconSpec &spec);
 
   // Build flow for lexical feature extraction. The lexicon must be initialized
   // before building the flow.
@@ -114,7 +116,7 @@ class LexicalFeatureExtractor {
   // Compute feature vector from token in document.
   void Compute(const DocumentFeatures &document, int token, float *fv);
 
-  // Extract lexical features from a range of document in a socument and output
+  // Extract lexical features from a range of document in a document and output
   // the feature vectors to a channel.
   void Extract(const DocumentFeatures &document, int begin, int end,
                Channel *fv);

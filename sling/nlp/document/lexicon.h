@@ -28,12 +28,16 @@ namespace nlp {
 // Lexicon for extracting lexical features from documents.
 class Lexicon {
  public:
-  // Initialize lexicon with newline-terminated word list.
-  void InitWords(const char *data, size_t size);
+  // Initialize lexicon from word vocabulary.
+  void InitWords(Vocabulary::Iterator *words);
 
-  // Initialize affix tables.
+  // Initialize affix tables from serialized format.
   void InitPrefixes(const char *data, size_t size);
   void InitSuffixes(const char *data, size_t size);
+
+  // Build affix tables from current dictionary.
+  void BuildPrefixes(int max_prefix);
+  void BuildSuffixes(int max_suffix);
 
   // Look up word in vocabulary. Return OOV if word is not found.
   int LookupWord(const string &word) const;

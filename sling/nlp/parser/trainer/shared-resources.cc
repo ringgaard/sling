@@ -54,7 +54,8 @@ void SharedResources::Load(const syntaxnet::dragnn::ComponentSpec &spec) {
       break;
     } else if (r.name() == "word-vocab") {
       CHECK(File::ReadContents(file, &contents));
-      lexicon.InitWords(contents.c_str(), contents.size());
+      Vocabulary::BufferIterator it(contents.data(), contents.size(), '\n');
+      lexicon.InitWords(&it);
       const auto &p = spec.transition_system().parameters();
       CHECK_NE(p.count("lexicon_normalize_digits"), 0) << spec.DebugString();
       CHECK_NE(p.count("lexicon_oov"), 0) << spec.DebugString();
