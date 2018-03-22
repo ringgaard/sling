@@ -1131,7 +1131,10 @@ class AssignAdd : public Kernel {
     value->SetMiniumAlignment(byte_alignment);
 
     // Make optional output a reference.
-    if (step->outdegree() == 1) step->output(0)->set_ref(true);
+    if (step->outdegree() == 1) {
+      step->output(0)->set_ref(true);
+      step->output(0)->Link(var);
+    }
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -1140,8 +1143,29 @@ class AssignAdd : public Kernel {
     Tensor *value = step->input(1);
     Tensor *scaler = scale_ ? step->input(2) : nullptr;
     Tensor *output = step->outdegree() == 1 ? step->output(0) : nullptr;
-    int n = value->elements();
     float decay = step->GetAttr("decay", 1.0f);
+
+    // Compute the number of elements. The variable and the value must have the
+    // same padding and the assignment is run on the padded elements as well,
+    // so this requires the input padding to be zeroed for correct operation.
+    int n = 1;
+    bool singular = true;
+    for (int d = 0; d < var->rank(); ++d) {
+      if (d == 0) {
+        // For first dimension, use the smallest aligned size.
+        if (value->rank() > d && value->aligned(d) < var->aligned(d)) {
+          n *= value->aligned(d);
+        } else {
+          n *= var->aligned(d);
+        }
+      } else {
+        n *= var->aligned(d);
+        if (!singular && value->rank() > d) {
+          CHECK_EQ(var->padding(d), value->padding(d)) << var->name();
+        }
+      }
+      if (var->dim(d) != 1) singular = false;
+    }
 
     // Allocate registers.
     Register ofs = masm->rr().alloc();
