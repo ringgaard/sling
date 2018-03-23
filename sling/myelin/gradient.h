@@ -25,7 +25,7 @@ namespace sling {
 namespace myelin {
 
 // Gradients for function.
-class Gradients : public Builder {
+class Gradients : public FlowBuilder {
  public:
   // Initialize adjoints for gradient derivation.
   Gradients(Flow *flow, Flow::Function *primal,

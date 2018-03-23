@@ -31,7 +31,7 @@ static string basename(const string &name) {
 Gradients::Gradients(Flow *flow,
                      Flow::Function *primal,
                      std::vector<Flow::Variable *> &vars)
-    : Builder(flow, "gradients/" + primal->name) {
+    : FlowBuilder(flow, "gradients/" + primal->name) {
   // Add instance reference.
   instance_ = Name(Instance(primal), "primal");
 

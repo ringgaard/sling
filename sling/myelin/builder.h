@@ -48,12 +48,12 @@ class Scope {
 
 // Flow builder utility for building flows from expressions, e.g.:
 //   Flow flow;
-//   Builder tf(&flow, "mnist");
+//   FlowBuilder tf(&flow, "mnist");
 //   auto *w = tf.Constant(weights, DT_FLOAT, {784, 10});
 //   auto *b = tf.Constant(bias, DT_FLOAT, {10});
 //   auto *x = tf.Var("x", DT_FLOAT, {1, 784});
 //   auto *y = tf.Add(tf.MatMul(x, w), b);
-class Builder : public Scope {
+class FlowBuilder : public Scope {
  public:
   // Flow typedefs.
   typedef Flow::Variable Variable;
@@ -61,13 +61,14 @@ class Builder : public Scope {
   typedef Flow::Function Function;
 
   // Initialize builder for existing function.
-  Builder(Flow *flow, Function *func)
+  FlowBuilder(Flow *flow, Function *func)
       : Scope(nullptr, func->name),
         flow_(flow),
         func_(func) {}
 
   // Initialize builder for new function.
-  Builder(Flow *flow, const string &name) : Scope(nullptr, name), flow_(flow) {
+  FlowBuilder(Flow *flow, const string &name)
+      : Scope(nullptr, name), flow_(flow) {
     func_ = flow->AddFunction(name);
   }
 

@@ -283,7 +283,7 @@ struct WordEmbeddingsFlow : public myelin::Flow {
   // Build layer 0 computing hidden from input.
   void BuildLayer0() {
     layer0 = AddFunction("layer0");
-    myelin::Builder tf(this, layer0);
+    myelin::FlowBuilder tf(this, layer0);
 
     features = tf.Var("features", myelin::DT_INT32, {window * 2});
     hidden = tf.Name(tf.GatherAvg(W0, features), "hidden");
@@ -293,7 +293,7 @@ struct WordEmbeddingsFlow : public myelin::Flow {
   // layer1.
   void BuildLayer1() {
     layer1 = AddFunction("layer1");
-    myelin::Builder tf(this, layer1);
+    myelin::FlowBuilder tf(this, layer1);
 
     // Inputs.
     auto *alpha = tf.Var("alpha", myelin::DT_FLOAT, {});
@@ -318,7 +318,7 @@ struct WordEmbeddingsFlow : public myelin::Flow {
   // Update layer 0 weights from accumulated error in layer 1.
   void BuildLayer0Back() {
     layer0b = AddFunction("layer0b");
-    myelin::Builder tf(this, layer0b);
+    myelin::FlowBuilder tf(this, layer0b);
 
     auto *l0 = tf.Instance(layer0);
     auto *l1 = tf.Instance(layer1);

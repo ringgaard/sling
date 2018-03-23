@@ -84,7 +84,8 @@ class Optimizer {
 
  protected:
   // Let subclass build the parameter update using the gradient map.
-  virtual void BuildOptimizer(const GradientMap &gradmap, Builder *update) = 0;
+  virtual void BuildOptimizer(const GradientMap &gradmap,
+                              FlowBuilder *update) = 0;
 
   // Let subclass initialize update function for optimizer.
   virtual void InitializeOptimizer() = 0;
@@ -119,7 +120,7 @@ class GradientDescentOptimizer : public Optimizer {
   void set_clipping_threshold(float t) { clipping_threshold_ = t; }
 
  protected:
-  void BuildOptimizer(const GradientMap &gradmap, Builder *update) override;
+  void BuildOptimizer(const GradientMap &gradmap, FlowBuilder *update) override;
   void InitializeOptimizer() override;
 
   Tensor *alpha_ = nullptr;         // learning rate
@@ -130,5 +131,5 @@ class GradientDescentOptimizer : public Optimizer {
 }  // namespace myelin
 }  // namespace sling
 
-#endif  // SLING_MYELIN_BUILDER_H_
+#endif  // SLING_MYELIN_LEARNING_H_
 

@@ -48,44 +48,44 @@ string Scope::OpName(const string &op) {
   return name;
 }
 
-Flow::Variable *Builder::Var(const string &name, Type type,
-                             const Shape &shape) {
+Flow::Variable *FlowBuilder::Var(const string &name, Type type,
+                                 const Shape &shape) {
   return flow_->AddVariable(func_->name + "/" + name, type, shape);
 }
 
-Flow::Variable *Builder::Parameter(const string &name,
-                                   Type type,
-                                   const Shape &shape) {
+Flow::Variable *FlowBuilder::Parameter(const string &name,
+                                       Type type,
+                                       const Shape &shape) {
   Variable *var = Var(name, type, shape);
   var->flags |= Variable::LEARNABLE;
   return var;
 }
 
-Flow::Variable *Builder::Placeholder(const string &name,
-                                     Type type,
-                                     const Shape &shape) {
+Flow::Variable *FlowBuilder::Placeholder(const string &name,
+                                         Type type,
+                                         const Shape &shape) {
   Variable *input = Var(name, type, shape);
   input->flags |= Variable::IN;
   return input;
 }
 
-Flow::Variable *Builder::Name(Variable *var, const string &name) {
+Flow::Variable *FlowBuilder::Name(Variable *var, const string &name) {
   var->name = prefix() + "/" + name;
   return var;
 }
 
-Flow::Variable *Builder::Op(const string &op,
-                            const std::vector<Flow::Variable *> &args,
-                            Type type,
-                            const Shape &shape) {
+Flow::Variable *FlowBuilder::Op(const string &op,
+                                const std::vector<Flow::Variable *> &args,
+                                Type type,
+                                const Shape &shape) {
   string name = OpName(op);
   Variable *result = flow_->AddVariable(name + ":0", type, shape);
   flow_->AddOperation(func_, name, op, args, {result});
   return result;
 }
 
-Flow::Variable *Builder::Op(const string &op,
-                            const std::vector<Flow::Variable *> &args) {
+Flow::Variable *FlowBuilder::Op(const string &op,
+                                const std::vector<Flow::Variable *> &args) {
   // Use first argument for return type.
   Type type = args.empty() ? DT_INVALID : args[0]->type;
 
@@ -110,14 +110,14 @@ Flow::Variable *Builder::Op(const string &op,
   return Op(op, args, type, shape);
 }
 
-Flow::Operation *Builder::Op0(const string &op,
-                              const std::vector<Flow::Variable *> &args) {
+Flow::Operation *FlowBuilder::Op0(const string &op,
+                                  const std::vector<Flow::Variable *> &args) {
   string name = OpName(op);
   return flow_->AddOperation(func_, name, op, args, {});
 }
 
-Flow::Variable *Builder::Const(const void *data, Type type,
-                               const Shape &shape) {
+Flow::Variable *FlowBuilder::Const(const void *data, Type type,
+                                   const Shape &shape) {
   Variable *var = flow_->AddVariable(OpName("const"), type, shape);
   var->size = TypeTraits::of(type).size() * shape.elements();
   char *buffer = flow_->AllocateMemory(var->size);
@@ -126,13 +126,13 @@ Flow::Variable *Builder::Const(const void *data, Type type,
   return var;
 }
 
-Flow::Variable *Builder::Instance(Function *func) {
+Flow::Variable *FlowBuilder::Instance(Function *func) {
   Variable *instance = Var(func->name, DT_RESOURCE, {});
   instance->ref = true;
   return instance;
 }
 
-Flow::Variable *Builder::MatMul(Variable *x, Variable *y) {
+Flow::Variable *FlowBuilder::MatMul(Variable *x, Variable *y) {
   Variable *result = Op("MatMul", {x, y});
   if (x->rank() == 2 && y->rank() == 2) {
     result->shape = Shape({x->dim(0), y->dim(1)});
@@ -140,7 +140,7 @@ Flow::Variable *Builder::MatMul(Variable *x, Variable *y) {
   return result;
 }
 
-Flow::Variable *Builder::Ref(Variable *instance, Variable *external) {
+Flow::Variable *FlowBuilder::Ref(Variable *instance, Variable *external) {
   Variable *ref = Op("Reference", {instance});
   ref->type = external->type;
   ref->shape = external->shape;
@@ -149,11 +149,11 @@ Flow::Variable *Builder::Ref(Variable *instance, Variable *external) {
   return ref;
 }
 
-Flow::Variable *Builder::FFLayers(Variable *input,
-                                  std::vector<int> layers,
-                                  int hidden,
-                                  bool bias,
-                                  const string &activation) {
+Flow::Variable *FlowBuilder::FFLayers(Variable *input,
+                                      std::vector<int> layers,
+                                      int hidden,
+                                      bool bias,
+                                      const string &activation) {
   Variable *v = input;
   for (int l = 0; l < layers.size(); ++l) {
     // Get dimensions for next layer.
@@ -198,7 +198,7 @@ Flow::Variable *Builder::FFLayers(Variable *input,
   return logits;
 }
 
-Flow::Variable *Builder::LSTMLayer(Variable *input, int size) {
+Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
   // Get LSTM dimensions.
   Type type = input->type;
   int input_dim = input->dim(1);

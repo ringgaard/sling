@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 
   // Set up workflow.
   Flow flow;
-  Builder tf(&flow, "test");
+  FlowBuilder tf(&flow, "test");
   int size = FLAGS_size;
   auto *a = tf.Var("a", DT_FLOAT, {size});
   auto *b = tf.Var("b", DT_FLOAT, {size});

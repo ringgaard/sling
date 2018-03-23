@@ -107,6 +107,31 @@ cc_binary(
 )
 
 cc_binary(
+  name = "lextagger",
+  srcs = ["lextagger.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/file:recordio",
+    "//sling/frame:serialization",
+    "//sling/frame:store",
+    "//sling/myelin:builder",
+    "//sling/myelin:compute",
+    "//sling/myelin:elf-linker",
+    "//sling/myelin:gradient",
+    "//sling/myelin:flow",
+    "//sling/myelin:graph",
+    "//sling/myelin:learning",
+    "//sling/myelin:profile",
+    "//sling/myelin/kernel:tensorflow",
+    "//sling/nlp/document",
+    "//sling/nlp/document:lexicon",
+    "//sling/util:mutex",
+    "//sling/util:thread",
+  ],
+)
+
+cc_binary(
   name = "convert-tagger-flow",
   srcs = ["convert-tagger-flow.cc"],
   deps = [

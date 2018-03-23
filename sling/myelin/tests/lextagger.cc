@@ -14,6 +14,9 @@
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
 #include "sling/file/file.h"
+#include "sling/file/recordio.h"
+#include "sling/frame/serialization.h"
+#include "sling/frame/store.h"
 #include "sling/myelin/builder.h"
 #include "sling/myelin/compute.h"
 #include "sling/myelin/elf-linker.h"
@@ -23,12 +26,16 @@
 #include "sling/myelin/learning.h"
 #include "sling/myelin/profile.h"
 #include "sling/myelin/kernel/tensorflow.h"
+#include "sling/nlp/document/document.h"
+#include "sling/nlp/document/lexicon.h"
 #include "sling/util/mutex.h"
 #include "sling/util/thread.h"
 #include "third_party/jit/cpu.h"
 
 const int cpu_cores = sling::jit::CPU::Processors();
 
+DEFINE_string(train, "local/data/corpora/stanford/train.rec", "Train corpus");
+DEFINE_string(dev, "local/data/corpora/stanford/dev.rec", "Test corpus");
 DEFINE_bool(dump, false, "Dump flow");
 DEFINE_bool(dump_cell, false, "Dump flow");
 DEFINE_bool(profile, false, "Profile tagger");
@@ -38,6 +45,7 @@ DEFINE_double(alpha, 1.0, "Learning rate");
 DEFINE_double(lambda, 0.0, "Regularization parameter");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
+DEFINE_double(dropout, 0, "Word dropout rate");
 DEFINE_int32(seed, 0, "Random number generator seed");
 DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
 DEFINE_int32(batch, 64, "Number of epochs between gradient updates");
@@ -46,96 +54,11 @@ DEFINE_bool(heldout, true, "Test tagger on heldout data");
 DEFINE_int32(threads, cpu_cores, "Number of threads for training");
 DEFINE_int32(rampup, 10, "Number of seconds between thread starts");
 DEFINE_bool(lock, true, "Locked gradient updates");
+DEFINE_int32(lexthres, 0, "Lexicon threshold");
 
 using namespace sling;
 using namespace sling::myelin;
-
-struct CorpusReader {
-  CorpusReader(const char *filename) {
-    fp = fopen(filename, "r");
-    CHECK(fp != nullptr) << filename;
-  }
-
-  bool Next() {
-    if (!fgets(line, 1024, fp)) return false;
-    char *nl = strchr(line, '\n');
-    if (nl != nullptr) *nl = 0;
-    brk = (*line == 0);
-    if (brk) {
-      word.clear();
-      tag.clear();
-    } else {
-      char *tab = strchr(line, '\t');
-      CHECK(tab != nullptr);
-      word.assign(line, tab - line);
-      tag.assign(tab + 1);
-    }
-    return true;
-  }
-
-  ~CorpusReader() {
-    fclose(fp);
-  }
-
-  FILE *fp = nullptr;
-  string word;
-  string tag;
-  bool brk;
-  char line[1024];
-};
-
-struct Token {
-  Token(int word, int tag) : word(word), tag(tag) {}
-  int word;
-  int tag;
-};
-
-typedef std::vector<Token> Sentence;
-
-struct Dictionary {
-  int add(const string &word) {
-    auto f = mapping.find(word);
-    if (f != mapping.end()) return f->second;
-    if (readonly) return -1;
-    int index = vocabulary.size();
-    mapping[word] = index;
-    vocabulary.push_back(word);
-    return index;
-  }
-
-  std::unordered_map<string, int> mapping;
-  std::vector<string> vocabulary;
-  bool readonly = false;
-};
-
-struct Corpus {
-  ~Corpus() {
-    for (auto *s : sentences) delete s;
-  }
-
-  Sentence *add() {
-    Sentence *s = new Sentence();
-    sentences.push_back(s);
-    return s;
-  }
-
-  void Read(const  char *filename, Dictionary *words, Dictionary *tags) {
-    CorpusReader reader(filename);
-    Sentence *s = nullptr;
-    while (reader.Next()) {
-      if (reader.brk) {
-        s = nullptr;
-      } else {
-        if (s == nullptr) s = add();
-        int word = words->add(reader.word);
-        int tag = tags->add(reader.tag);
-        s->emplace_back(word, tag);
-      }
-    }
-  }
-
-  std::vector<Sentence *> sentences;
-};
+using namespace sling::nlp;
 
 void DumpProfile(ProfileSummary *summary) {
   Profile profile(summary);
@@ -247,7 +170,14 @@ struct TaggerModel {
 // POS tagger.
 class Tagger {
  public:
+  typedef std::vector<Document *> Corpus;
+
   Tagger() {
+    // Bind symbol names.
+    names_ = new DocumentNames(&store_);
+    names_->Bind(&store_);
+    n_pos_ = store_.Lookup("/s/token/pos");
+
     // Set up kernel library.
     RegisterTensorflowLibrary(&library_);
 
@@ -258,21 +188,57 @@ class Tagger {
     }
   }
 
+  ~Tagger() {
+    for (auto *s : train_) delete s;
+    for (auto *s : dev_) delete s;
+    names_->Release();
+  }
+
+  // Read corpus from file.
+  void ReadCorpus(const string &filename, Corpus *corpus) {
+    RecordFileOptions options;
+    RecordReader input(filename, options);
+    Record record;
+    while (input.Read(&record).ok()) {
+      StringDecoder decoder(&store_, record.value.data(), record.value.size());
+      Document *document = new Document(decoder.Decode().AsFrame(), names_);
+      corpus->push_back(document);
+      for (auto &t : document->tokens()) {
+        FrameDatum *datum = store_.GetFrame(t.handle());
+        Handle tag = datum->get(n_pos_);
+        auto f = tagmap_.find(tag);
+        if (f == tagmap_.end()) tagmap_[tag] = tagmap_.size();
+      }
+    }
+  }
+
   // Read training and test corpora.
   void ReadCorpora() {
-    words_.add("<UNKNOWN>");
-    train_.Read("local/data/corpora/stanford/train.pos", &words_, &tags_);
-    words_.readonly = true;
-    tags_.readonly = true;
-    dev_.Read("local/data/corpora/stanford/dev.pos", &words_, &tags_);
+    // Read documents.
+    ReadCorpus(FLAGS_train, &train_);
+    ReadCorpus(FLAGS_dev, &dev_);
 
-    num_words_ = words_.vocabulary.size();
-    num_tags_ = tags_.vocabulary.size();
+    // Build lexicon.
+    std::unordered_map<string, int> words;
+    for (Document *s : train_) {
+      for (const Token &t : s->tokens()) words[t.text()]++;
+    }
+    std::vector<string> wordlist;
+    wordlist.push_back("<UNKNOWN>");
+    lexicon_.set_oov(0);
+    for (auto &it : words) {
+      if (it.second > 0) wordlist.push_back(it.first);
+    }
+    Vocabulary::VectorIterator wordit(wordlist);
+    lexicon_.InitWords(&wordit);
 
-    LOG(INFO) << "Train sentences: " << train_.sentences.size();
-    LOG(INFO) << "Dev sentences: " << dev_.sentences.size();
-    LOG(INFO) << "Words: " << words_.vocabulary.size();
-    LOG(INFO) << "Tags: " << tags_.vocabulary.size();
+    num_words_ = lexicon_.size();
+    num_tags_ = tagmap_.size();
+
+    LOG(INFO) << "Train sentences: " << train_.size();
+    LOG(INFO) << "Dev sentences: " << dev_.size();
+    LOG(INFO) << "Words: " << num_words_;
+    LOG(INFO) << "Tags: " << num_tags_;
   }
 
   // Build tagger flow.
@@ -406,7 +372,8 @@ class Tagger {
     std::vector<Instance *> gradients = {&gtagger};
 
     std::mt19937 prng(FLAGS_seed + index);
-    int num_sentences = train_.sentences.size();
+    std::uniform_real_distribution<float> rndprob(0.0, 1.0);
+    int num_sentences = train_.size();
     int iteration = 0;
     float local_loss_sum = 0.0;
     int local_loss_count = 0;
@@ -414,11 +381,11 @@ class Tagger {
     while (true) {
       // Select next sentence to train on.
       int sample = (FLAGS_shuffle ? prng() : iteration) % num_sentences;
-      Sentence *sentence = train_.sentences[sample];
+      Document *sentence = train_[sample];
       iteration++;
 
       // Initialize training on sentence instance.
-      int length = sentence->size();
+      int length = sentence->num_tokens();
       h.resize(length + 1);
       c.resize(length + 1);
       l.resize(length);
@@ -443,13 +410,15 @@ class Tagger {
         data->Set(model_.c_out, &c, i + 1);
 
         // Set up features.
-        *data->Get<int>(model_.word) = (*sentence)[i].word;
+        int word_id = lexicon_.LookupWord(sentence->token(i).text());
+        if (rndprob(prng) < FLAGS_dropout) word_id = 0;
+        *data->Get<int>(model_.word) = word_id;
 
         // Compute forward.
         data->Compute();
 
         // Compute loss and gradient.
-        int target = (*sentence)[i].tag;
+        int target = Tag(sentence->token(i));
         float *logits = data->Get<float>(model_.logits);
         float *dlogits = reinterpret_cast<float *>(l.at(i));
         float cost = loss_.Compute(logits, target, dlogits);
@@ -540,8 +509,8 @@ class Tagger {
     // Run tagger on corpus and compare with gold tags.
     int num_correct = 0;
     int num_wrong = 0;
-    for (Sentence *s : corpus->sentences) {
-      int length = s->size();
+    for (Document *s : *corpus) {
+      int length = s->num_tokens();
       h.resize(length + 1);
       c.resize(length + 1);
       for (int i = 0; i < length; ++i) {
@@ -557,7 +526,7 @@ class Tagger {
         test.Set(model_.c_out, &c, i + 1);
 
         // Set up features.
-        int word = (*s)[i].word;
+        int word = lexicon_.LookupWord(s->token(i).text());
         *test.Get<int>(model_.word) = word;
 
         // Compute forward.
@@ -571,7 +540,7 @@ class Tagger {
         }
 
         // Compare with golden tag.
-        int target = (*s)[i].tag;
+        int target = Tag(s->token(i));
         if (best == target) {
           num_correct++;
         } else {
@@ -584,12 +553,21 @@ class Tagger {
     return num_correct * 100.0 / (num_correct + num_wrong);
   }
 
- private:
-  Dictionary words_;   // word dictionary
-  Dictionary tags_;    // tag dictionary
+  // Return tag for token.
+  int Tag(const Token &token) {
+    FrameDatum *datum = store_.GetFrame(token.handle());
+    return tagmap_[datum->get(n_pos_)];
+  }
 
-  Corpus train_;       // training corpus
-  Corpus dev_;         // test corpus
+ private:
+  Lexicon lexicon_;        // word lexicon
+  Store store_;            // document store
+  DocumentNames *names_;   // document symbol names
+  Handle n_pos_;           // part-of-speech role symbol
+  HandleMap<int> tagmap_;  // mapping from tag symbol to tag id
+
+  Corpus train_;           // training corpus
+  Corpus dev_;             // test corpus
 
   // Model dimensions.
   int num_words_ = 0;
@@ -597,10 +575,10 @@ class Tagger {
   int word_dim_ = 64;
   int lstm_dim_ = 128;
 
-  Library library_;    // kernel library
-  TaggerFlow flow_;    // flow for tagger model
-  Network net_;        // neural net
-  ElfLinker linker_;   // linker for outputting generated code
+  Library library_;        // kernel library
+  TaggerFlow flow_;        // flow for tagger model
+  Network net_;            // neural net
+  ElfLinker linker_;       // linker for outputting generated code
 
   // Tagger model.
   TaggerModel model_;

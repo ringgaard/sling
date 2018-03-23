@@ -37,7 +37,7 @@ void CrossEntropyLoss::Build(Flow *flow,
   int size = logits->dim(1);
 
   // Build loss and loss gradient computation.
-  Builder tf(flow, name_);
+  FlowBuilder tf(flow, name_);
 
   // Inputs are logits and target label.
   auto *input = tf.Placeholder("logits", DT_FLOAT, logits->shape);
@@ -91,7 +91,7 @@ float CrossEntropyLoss::Compute(float *logits, int target, float *dlogits) {
 
 void Optimizer::Build(Flow *flow) {
   // Build mapping from learnable variable to gradient for variable.
-  Builder tf(flow, name_);
+  FlowBuilder tf(flow, name_);
   GradientMap gradmap;
   for (Flow::Variable *var : flow->vars()) {
     if (!var->learnable()) continue;
@@ -158,9 +158,9 @@ void Optimizer::Apply(std::vector<Instance *> &gradients) {
 }
 
 void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
-                                              Builder *update) {
+                                              FlowBuilder *update) {
   // Add learning rate to update function.
-  Builder &tf = *update;
+  FlowBuilder &tf = *update;
   auto *alpha = tf.Var("alpha", DT_FLOAT, {});
   alpha->flags |= Flow::Variable::IN | Flow::Variable::OUT;
   auto *multiplier = tf.Neg(alpha);
