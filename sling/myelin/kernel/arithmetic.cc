@@ -902,7 +902,9 @@ class Softmax : public Kernel {
   }
 
   int64 Complexity(const Step *step) override {
-    return step->input(0)->elements();
+    int ops = 30;
+    if (log_) ops += 42;
+    return step->input(0)->elements() * ops + 10;
   }
 
  private:

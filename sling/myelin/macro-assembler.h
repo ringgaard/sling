@@ -270,6 +270,9 @@ class MacroAssembler : public jit::Assembler {
   // Multiply register with constant.
   void Multiply(jit::Register reg, int64 scalar);
 
+  // Add value to global counter.
+  void UpdateCounter(int64 *counter, int64 value);
+
   // Start of loop. Align code and bind label.
   void LoopStart(jit::Label *label);
 

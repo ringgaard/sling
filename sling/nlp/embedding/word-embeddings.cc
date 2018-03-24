@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "sling/base/perf.h"
 #include "sling/file/recordio.h"
 #include "sling/file/textmap.h"
 #include "sling/frame/serialization.h"
@@ -285,7 +286,7 @@ struct WordEmbeddingsFlow : public myelin::Flow {
     layer0 = AddFunction("layer0");
     myelin::FlowBuilder tf(this, layer0);
 
-    features = tf.Var("features", myelin::DT_INT32, {window * 2});
+    features = tf.Var("features", myelin::DT_INT32, {1, window * 2});
     hidden = tf.Name(tf.GatherAvg(W0, features), "hidden");
   }
 
@@ -297,8 +298,8 @@ struct WordEmbeddingsFlow : public myelin::Flow {
 
     // Inputs.
     auto *alpha = tf.Var("alpha", myelin::DT_FLOAT, {});
-    auto *label = tf.Var("label", myelin::DT_FLOAT, {});
-    auto *target = tf.Var("target", myelin::DT_INT32, {});
+    auto *label = tf.Var("label", myelin::DT_FLOAT, {1, 1});
+    auto *target = tf.Var("target", myelin::DT_INT32, {1, 1});
     error = tf.Var("error", myelin::DT_FLOAT, {dims});
     auto *l0 = tf.Instance(layer0);
     auto *h = tf.Ref(l0, hidden);
@@ -371,6 +372,7 @@ class WordEmbeddingsTrainer : public Process {
     WordEmbeddingsFlow flow(vocabulary_size, embedding_dims_, window_);
     flow.Analyze(library);
     myelin::Network model;
+    model.options().flops_address = Perf::flopptr();
     CHECK(model.Compile(flow, library));
 
     // Initialize weights.

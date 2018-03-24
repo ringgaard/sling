@@ -465,10 +465,8 @@ class StandardTyper : public Typer {
         Flow::Variable *params = op->inputs[0];
         Flow::Variable *result = op->outputs[0];
         result->type = params->type;
-        result->shape.clear();
-        for (int i = 1; i < params->shape.rank(); ++i) {
-          result->shape.add(params->shape.dim(i));
-        }
+        result->shape = params->shape;
+        result->shape.set(0, 1);
         return true;
       }
     }

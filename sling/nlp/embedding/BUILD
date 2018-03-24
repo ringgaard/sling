@@ -5,6 +5,7 @@ cc_library(
   srcs = ["word-embeddings.cc"],
   deps = [
     "//sling/base",
+    "//sling/base:perf",
     "//sling/file:recordio",
     "//sling/file:textmap",
     "//sling/myelin:builder",

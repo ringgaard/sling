@@ -426,6 +426,12 @@ void MacroAssembler::Multiply(jit::Register reg, int64 scalar) {
   }
 }
 
+void MacroAssembler::UpdateCounter(int64 *counter, int64 value) {
+  movp(rdi, counter);
+  lock();
+  addq(Operand(rdi), Immediate(value));
+}
+
 void MacroAssembler::StartTask(int offset, int32 id, int32 index,
                                jit::Label *entry) {
   // Check that runtime supports parallel execution.

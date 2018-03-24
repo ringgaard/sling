@@ -1022,7 +1022,8 @@ void Assembler::emit_lea(Register dst, const Operand &src, int size) {
   emit_operand(dst, src);
 }
 
-void Assembler::load_extern(Register dst, const void *value, const string &symbol) {
+void Assembler::load_extern(Register dst, const void *value,
+                            const string &symbol) {
   EnsureSpace ensure_space(this);
   emit_rex(dst, kPointerSize);
   emit(0xB8 | dst.low_bits());

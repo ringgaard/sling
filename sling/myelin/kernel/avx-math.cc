@@ -621,8 +621,6 @@ class Norm : public Kernel {
 
   void Adjust(Step *step) override {
     Tensor *x = step->input(0);
-    // TODO: support non-dense inputs.
-    //x->RequireDense();
     x->SetMiniumAlignment(CPU::Enabled(AVX) ? 32 : 16);
   }
 
@@ -632,7 +630,8 @@ class Norm : public Kernel {
     Tensor *norm = step->output(0);
 
     // Determine vector size for main block computation.
-    int n = x->elements();
+    int n = 1;
+    for (int d = 0; d < x->rank(); ++d) n *= x->aligned(d);
     int vecsize = 1;
     if (masm->Enabled(AVX) && n >= 8) {
       vecsize = 8;
@@ -740,7 +739,7 @@ class Norm : public Kernel {
   }
 
   int64 Complexity(const Step *step) override {
-    return step->input(0)->elements() * 3 + 1;
+    return step->input(0)->elements() * 3 + 5;
   }
 };
 

@@ -1321,7 +1321,10 @@ class AssignAdd : public Kernel {
 
   int64 Complexity(const Step *step) override {
     Tensor *var = step->input(0);
-    return var->elements() * (scale_ ? 2 : 1);
+    int ops = 1;
+    if (scale_) ops++;
+    if (step->GetAttr("decay", 1.0f) != 1.0) ops++;
+    return var->elements() * ops;
   }
 
  private:
@@ -1431,7 +1434,7 @@ class ScatterAdd : public Kernel {
     __ Multiply(acc, var->stride(0));
     __ addq(acc, varaddr);
 
-    // Add (scaled) input vector for feature tp embedding vector.
+    // Add (scaled) input vector for feature to embedding vector.
     if (masm->Enabled(AVX)) {
       // Update elements using AVX vectors.
       std::vector<YMMRegister> elem;

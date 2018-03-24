@@ -1368,6 +1368,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Let kernels generate code for each step.
     int stepnum = 0;
+    int64 flops = 0;
     for (Step *step : cell->steps_) {
       if (step->task_index_ == -1) {
         // Wait for completion of all inputs.
@@ -1487,6 +1488,13 @@ bool Network::Compile(const Flow &flow, const Library &library) {
           }
         }
       }
+
+      // Sum complexity for cell.
+      if (options_.flops_address) {
+        int64 complexity = step->complexity();
+        if (complexity > 0) flops += complexity;
+      }
+
       stepnum++;
     }
 
@@ -1511,6 +1519,11 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (options_.profiling) {
       int timing = cell->profile()->offset();
       masm.TimeStep(timing, 1 * sizeof(int64));
+    }
+
+    // Update global FLOPs counter for performance measurements.
+    if (options_.flops_address) {
+      masm.UpdateCounter(options_.flops_address, flops);
     }
 
     // Generate epilogue for main cell computation.

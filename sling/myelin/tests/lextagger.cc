@@ -60,6 +60,8 @@ using namespace sling;
 using namespace sling::myelin;
 using namespace sling::nlp;
 
+int64 flops_counter = 0;
+
 void DumpProfile(ProfileSummary *summary) {
   Profile profile(summary);
   string report = profile.ASCIIReport();
@@ -186,6 +188,7 @@ class Tagger {
       net_.options().profiling = true;
       net_.options().external_profiler = true;
     }
+    net_.options().flops_address = &flops_counter;
   }
 
   ~Tagger() {
@@ -207,7 +210,10 @@ class Tagger {
         FrameDatum *datum = store_.GetFrame(t.handle());
         Handle tag = datum->get(n_pos_);
         auto f = tagmap_.find(tag);
-        if (f == tagmap_.end()) tagmap_[tag] = tagmap_.size();
+        if (f == tagmap_.end()) {
+          int index = tagmap_.size();
+          tagmap_[tag] = index;
+        }
       }
     }
   }
@@ -336,15 +342,20 @@ class Tagger {
       double end = WallTime();
       float secs = end - start_;
       int tps = (num_tokens_ - prev_tokens_) / secs;
+      int64 flops = flops_counter - prev_flops_;
+      float gflops = flops / secs / 1e9;
 
       LOG(INFO) << "epochs " << epoch_ << ", "
                 << "alpha " << alpha_ << ", "
                 << num_workers_ << " workers, "
-                << tps << " tokens/s, loss=" << avg_loss
+                << tps << " tokens/s, "
+                << gflops << " GFLOPS, "
+                << "loss=" << avg_loss
                 << ", accuracy=" << acc;
 
-      start_ = WallTime();
       prev_tokens_ = num_tokens_;
+      prev_flops_ = flops_counter;
+      start_ = WallTime();
 
       // Check is we are done.
       if (epoch_ >= FLAGS_epochs) break;
@@ -411,7 +422,9 @@ class Tagger {
 
         // Set up features.
         int word_id = lexicon_.LookupWord(sentence->token(i).text());
-        if (rndprob(prng) < FLAGS_dropout) word_id = 0;
+        if (FLAGS_dropout > 0) {
+          if (rndprob(prng) < FLAGS_dropout) word_id = 0;
+        }
         *data->Get<int>(model_.word) = word_id;
 
         // Compute forward.
@@ -596,6 +609,7 @@ class Tagger {
   float alpha_ = FLAGS_alpha;
   double start_;
   int num_workers_ = 0;
+  int64 prev_flops_ = 0;
 
   // Global locks.
   Mutex update_mu_;

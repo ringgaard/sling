@@ -1130,6 +1130,7 @@ struct Options {
   bool external_profiler = false;            // external profiling buffer
   bool dynamic_allocation = false;           // dynamic instance allocation
   bool sync_steps = false;                   // synchronize all steps
+  int64 *flops_address = nullptr;            // address of FLOPs counter
 };
 
 // A network is a collection of cells and variables that are compiled as a unit.
