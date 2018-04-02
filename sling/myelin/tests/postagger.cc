@@ -291,6 +291,10 @@ class Tagger {
 
   // Compile model.
   void Compile() {
+    // Output raw DOT graph.
+    GraphOptions opts;
+    FlowToDotGraphFile(flow_, opts, "/tmp/postagger-raw.dot");
+
     // Analyze flow.
     Clock analyze_clock;
     analyze_clock.start();
@@ -303,7 +307,6 @@ class Tagger {
     }
 
     // Output DOT graph.
-    GraphOptions opts;
     FlowToDotGraphFile(flow_, opts, "/tmp/postagger.dot");
 
     // Compile network.
