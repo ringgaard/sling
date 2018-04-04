@@ -249,7 +249,9 @@ char *Repository::GetMutableBlock(const string &name) {
 
 size_t Repository::GetBlockSize(const string &name) const {
   for (const Block &block : blocks_) {
-    if (block.name == name) return block.size;
+    if (block.name == name) {
+      return block.file != nullptr ? block.file->Size() : block.size;
+    }
   }
   return 0;
 }
