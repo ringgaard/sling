@@ -74,9 +74,6 @@ void CrossEntropyLoss::Initialize(const Network &network) {
   target_ = network.GetParameter(name_ + "/target");
   loss_ = network.GetParameter(name_ + "/loss");
   dlogits_ = network.GetParameter(name_ + "/d_logits");
-
-  // Create profile summary for profiling.
-  if (cell_->profile()) profile_ = new ProfileSummary(cell_);
 }
 
 float CrossEntropyLoss::Compute(float *logits, int target, float *dlogits) {
@@ -84,7 +81,6 @@ float CrossEntropyLoss::Compute(float *logits, int target, float *dlogits) {
   data.SetReference(logits_, logits);
   data.SetReference(dlogits_, dlogits);
   *data.Get<int>(target_) = target;
-  if (profile_) data.set_profile(profile_);
   data.Compute();
   return *data.Get<float>(loss_);
 }
@@ -129,9 +125,6 @@ void Optimizer::Initialize(const Network &network) {
   // Create update instance.
   update_ = new Instance(cell);
 
-  // Set up profiling.
-  if (cell->profile()) profile_ = new ProfileSummary(cell);
-
   // Create mapping from gradient computation cell to instance variable in
   // update cell.
   for (auto it : instance_) {
@@ -151,7 +144,6 @@ void Optimizer::Apply(std::vector<Instance *> &gradients) {
     CHECK(f != refs_.end());
     update_->Set(f->second, g);
   }
-  if (profile_) update_->set_profile(profile_);
 
   // Apply gradient update to learnable parameters.
   update_->Compute();

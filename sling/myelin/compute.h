@@ -1049,6 +1049,8 @@ class Instance {
 // A cell contains generated code for executing computation of a function.
 class Cell {
  public:
+  ~Cell() { delete profile_summary_; }
+
   // Cell name from flow function.
   const string &name() const { return name_; }
 
@@ -1097,6 +1099,9 @@ class Cell {
 
   // Tensor with profiling information.
   Tensor *profile() const { return profile_; }
+
+  // Profile summary for global profiling.
+  ProfileSummary *profile_summary() const { return profile_summary_; }
 
   // Return cell in text format.
   string ToString() const;
@@ -1147,6 +1152,9 @@ class Cell {
   // Tensor with profiling information.
   Tensor *profile_ = nullptr;
 
+  // Profile summary for global profiling.
+  ProfileSummary *profile_summary_ = nullptr;
+
   friend class Network;
   friend class Step;
   friend class InstanceAllocator;
@@ -1158,9 +1166,12 @@ struct Options {
   bool debug = false;                        // insert breakpoint in cell
   bool profiling = false;                    // enable profiling
   bool external_profiler = false;            // external profiling buffer
+  bool global_profiler = false;              // global profiling buffer
   bool dynamic_allocation = false;           // dynamic instance allocation
   bool sync_steps = false;                   // synchronize all steps
   int64 *flops_address = nullptr;            // address of FLOPs counter
+
+  bool ref_profiler() const { return external_profiler || global_profiler; }
 };
 
 // A network is a collection of cells and variables that are compiled as a unit.

@@ -1031,7 +1031,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       profile->type_ = DT_INT64;
       profile->shape_.assign(size);
       profile->size_ = profile->space_ = size * sizeof(int64);
-      profile->ref_ = options_.external_profiler;
+      profile->ref_ = options_.ref_profiler();
       profile->aligned_ = profile->shape_;
       profile->minalign_.assign(sizeof(int64));
       profile->stride_.assign(sizeof(int64));
@@ -1338,9 +1338,18 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     masm.Prologue();
     runtime_->GeneratePrologue(cell, &masm);
 
-    // Increment the invocation counter.
+    // Generate profiling prologue.
     if (options_.profiling) {
-      // Invocation counter is the first element of the timing block.
+      // Load global profile summary.
+      if (options_.global_profiler) {
+        cell->profile_summary_ = new ProfileSummary(cell);
+        masm.load_extern(jit::rdi, cell->profile_summary_->data(),
+                         cell->name_ + "_profile");
+        masm.movq(jit::Operand(masm.instance(), cell->profile_->offset_),
+                  jit::rdi);
+      }
+
+      // Increment the invocation counter.
       masm.IncrementInvocations(cell->profile()->offset());
 
       // Start runtime profiler.

@@ -85,8 +85,8 @@ void LexicalFeatures::InitializeLexicon(Vocabulary::Iterator *words,
   lexicon_.BuildSuffixes(spec.max_suffix);
 }
 
-void LexicalFeatures::Build(const Library &library, const Spec &spec,
-                            Flow *flow, bool learning) {
+Flow::Variable *LexicalFeatures::Build(const Library &library, const Spec &spec,
+                                       Flow *flow, bool learning) {
   // Build function for feature extraction and mapping.
   FlowBuilder tf(flow, name_);
   std::vector<Flow::Variable *> features;
@@ -131,11 +131,14 @@ void LexicalFeatures::Build(const Library &library, const Spec &spec,
   }
   auto *fv = tf.Name(tf.Concat(features), "feature_vector");
   fv->flags |= Flow::Variable::OUT;
+  fv->ref = true;
 
   // Build gradient function for feature extractor.
   if (learning) {
     Gradient(flow, tf.func(), library);
   }
+
+  return fv;
 }
 
 void LexicalFeatures::Initialize(const Network &net) {

@@ -173,7 +173,7 @@ void identity_grad(Flow::Operation *op, Gradients *g) {
 }
 
 // v = gather(M, f)
-// dM = scatter(v, f)
+// dM = scatter(dv, f)
 void gather_grad(Flow::Operation *op, Gradients *g) {
   auto M = op->inputs[0];
   auto f = op->inputs[1];
@@ -182,7 +182,7 @@ void gather_grad(Flow::Operation *op, Gradients *g) {
 }
 
 // v = gather_sum(M, f)
-// dM = scatter(v, f)
+// dM = scatter(dv, f)
 void gathersum_grad(Flow::Operation *op, Gradients *g) {
   auto M = op->inputs[0];
   auto f = op->inputs[1];
@@ -191,7 +191,7 @@ void gathersum_grad(Flow::Operation *op, Gradients *g) {
 }
 
 // v = concat(v_1, ..., v_n, axis)
-// dv_i = slice(v, begin_i, size_i)
+// dv_i = slice(dv, begin_i, size_i)
 void concat_grad(Flow::Operation *op, Gradients *g) {
   auto v = op->outputs[0];
   int N = op->GetAttr("N", 0);
@@ -201,7 +201,7 @@ void concat_grad(Flow::Operation *op, Gradients *g) {
   begin.redim(op->outputs[0]->rank());
   for (int i = 0; i < N; ++i) {
     auto vi = op->inputs[i];
-    g->add(vi, g->Slice(g->v(v), g->Const(begin), vi->shape));
+    g->add(vi, g->Slice(g->d(v), g->Const(begin), vi->shape));
     begin.set(axis, begin.dim(axis) + vi->shape.dim(axis));
   }
 }

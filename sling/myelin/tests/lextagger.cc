@@ -46,7 +46,6 @@ DEFINE_double(alpha, 1.0, "Learning rate");
 DEFINE_double(lambda, 0.0, "Regularization parameter");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
-DEFINE_double(dropout, 0, "Word dropout rate");
 DEFINE_int32(seed, 0, "Random number generator seed");
 DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
 DEFINE_int32(batch, 64, "Number of epochs between gradient updates");
@@ -63,12 +62,6 @@ using namespace sling::nlp;
 
 int64 flops_counter = 0;
 
-void DumpProfile(ProfileSummary *summary) {
-  Profile profile(summary);
-  string report = profile.ASCIIReport();
-  std::cout << report << "\n";
-}
-
 double WallTime() {
   struct timeval tv;
   gettimeofday(&tv, nullptr);
@@ -77,35 +70,31 @@ double WallTime() {
 
 // POS tagger flow.
 struct TaggerFlow : Flow {
-  void Build(Library &library,
-             int num_words,
-             int num_tags,
-             int word_dim,
-             int lstm_dim) {
+  void Build(Library &library, Flow::Variable *features,
+             int lstm_dim, int num_tags) {
     // Build forward flow.
     FlowBuilder tf(this, "tagger");
     tagger = tf.func();
-    word = tf.Placeholder("word", DT_INT32, {1, 1});
-    embedding = tf.Parameter("embedding", DT_FLOAT, {num_words, word_dim});
-    features = tf.Gather(embedding, word);
-    hidden = tf.LSTMLayer(features, lstm_dim);
+    input = tf.Var("input", features->type, features->shape);
+    input->ref = true;
+    hidden = tf.LSTMLayer(input, lstm_dim);
     logits = tf.FFLayer(hidden, num_tags, true);
 
     // Build gradient for tagger.
     dtagger = Gradient(this, tagger, library);
     dlogits = Var("gradients/tagger/d_logits");
     dlogits->ref = true;
+    dinput = Var("gradients/tagger/d_input");
   }
 
   Function *tagger;
-  Variable *word;
-  Variable *embedding;
-  Variable *features;
+  Variable *input;
   Variable *hidden;
   Variable *logits;
 
   Function *dtagger;
   Variable *dlogits;
+  Variable *dinput;
 };
 
 // POS tagger model.
@@ -113,8 +102,6 @@ struct TaggerModel {
   ~TaggerModel() {
     delete h_zero;
     delete c_zero;
-    delete tagger_profile;
-    delete dtagger_profile;
   }
 
   void Initialize(Network &net) {
@@ -123,7 +110,7 @@ struct TaggerModel {
     h_out = net.GetParameter("tagger/h_out");
     c_in = net.GetParameter("tagger/c_in");
     c_out = net.GetParameter("tagger/c_out");
-    word = net.GetParameter("tagger/word");
+    input = net.GetParameter("tagger/input");
     logits = net.GetParameter("tagger/logits");
 
     dtagger = net.GetCell("gradients/tagger");
@@ -133,14 +120,12 @@ struct TaggerModel {
     dc_in = net.GetParameter("gradients/tagger/d_c_in");
     dc_out = net.GetParameter("gradients/tagger/d_c_out");
     dlogits = net.GetParameter("gradients/tagger/d_logits");
+    dinput = net.GetParameter("gradients/tagger/d_input");
 
     h_zero = new Channel(h_in);
     c_zero = new Channel(c_in);
     h_zero->resize(1);
     c_zero->resize(1);
-
-    if (tagger->profile()) tagger_profile = new ProfileSummary(tagger);
-    if (dtagger->profile()) dtagger_profile = new ProfileSummary(dtagger);
   }
 
   // Forward parameters.
@@ -149,7 +134,7 @@ struct TaggerModel {
   Tensor *h_out;
   Tensor *c_in;
   Tensor *c_out;
-  Tensor *word;
+  Tensor *input;
   Tensor *logits;
 
   // Backward parameters.
@@ -160,14 +145,11 @@ struct TaggerModel {
   Tensor *dc_in;
   Tensor *dc_out;
   Tensor *dlogits;
+  Tensor *dinput;
 
   // Zero channels.
   Channel *h_zero = nullptr;
   Channel *c_zero = nullptr;
-
-  // Profiling.
-  ProfileSummary *tagger_profile = nullptr;
-  ProfileSummary *dtagger_profile = nullptr;
 };
 
 // POS tagger.
@@ -187,7 +169,7 @@ class Tagger {
     net_.set_linker(&linker_);
     if (FLAGS_profile) {
       net_.options().profiling = true;
-      net_.options().external_profiler = true;
+      net_.options().global_profiler = true;
     }
     net_.options().flops_address = &flops_counter;
 
@@ -233,19 +215,10 @@ class Tagger {
     for (Document *s : train_) {
       for (const Token &t : s->tokens()) words[t.text()]++;
     }
-    std::vector<string> wordlist;
-    wordlist.push_back("<UNKNOWN>");
-    lexicon_.set_oov(0);
-    for (auto &it : words) {
-      if (it.second > 0) wordlist.push_back(it.first);
-    }
-    Vocabulary::VectorIterator wordit(wordlist);
-    lexicon_.InitWords(&wordit);
-
+    Vocabulary::HashMapIterator wordit(words);
     lex_.InitializeLexicon(&wordit, spec_.lexicon);
-    LOG(INFO) << "words: " << lex_.lexicon().size();
 
-    num_words_ = lexicon_.size();
+    num_words_ = lex_.lexicon().size();
     num_tags_ = tagmap_.size();
 
     LOG(INFO) << "Train sentences: " << train_.size();
@@ -257,10 +230,13 @@ class Tagger {
   // Build tagger flow.
   void Build() {
     // Build feature input mapping.
-    lex_.Build(library_, spec_, &flow_, true);
+    auto *fv = lex_.Build(library_, spec_, &flow_, true);
 
     // Build flow for POS tagger.
-    flow_.Build(library_, num_words_, num_tags_, word_dim_, lstm_dim_);
+    flow_.Build(library_, fv, lstm_dim_, num_tags_);
+    flow_.AddConnector("features")->AddLink(fv).AddLink(flow_.input);
+    auto *dfv = flow_.Var("gradients/features/d_feature_vector");
+    flow_.AddConnector("dfeatures")->AddLink(dfv).AddLink(flow_.dinput);
 
     // Build loss computation.
     loss_.Build(&flow_, flow_.logits, flow_.dlogits);
@@ -385,18 +361,21 @@ class Tagger {
     sleep(index * FLAGS_rampup);
     num_workers_++;
 
+    // Lexical feature learner.
+    DocumentFeatures features(&lex_.lexicon());
+    LexicalFeatureLearner extractor(lex_);
+
     // Create channels.
     Channel h(model_.h_in);
     Channel c(model_.c_in);
     Channel l(model_.dlogits);
     Channel dh(model_.dh_in);
     Channel dc(model_.dh_out);
+    Channel dfv(model_.dinput);
 
     // Allocate gradients.
     Instance gtagger(model_.dtagger);
-    //std::vector<Instance *> gradients = {&gtagger};
-    Instance gfeatures(lex_.gfeatures());
-    std::vector<Instance *> gradients = {&gfeatures, &gtagger};
+    std::vector<Instance *> gradients = {extractor.gradient(), &gtagger};
 
     std::mt19937 prng(FLAGS_seed + index);
     std::uniform_real_distribution<float> rndprob(0.0, 1.0);
@@ -417,13 +396,16 @@ class Tagger {
       c.resize(length + 1);
       l.resize(length);
 
+      // Extract features from sentence and map through embeddings.
+      features.Extract(*sentence);
+      Channel *fv = extractor.Extract(features, 0, length);
+
       // Forward pass.
       std::vector<Instance *> forward;
       for (int i = 0; i < length; ++i) {
         // Create new instance for token.
         Instance *data = new Instance(model_.tagger);
         forward.push_back(data);
-        if (FLAGS_profile) data->set_profile(model_.tagger_profile);
 
         // Set up channels.
         if (i == 0) {
@@ -437,11 +419,7 @@ class Tagger {
         data->Set(model_.c_out, &c, i + 1);
 
         // Set up features.
-        int word_id = lexicon_.LookupWord(sentence->token(i).text());
-        if (FLAGS_dropout > 0) {
-          if (rndprob(prng) < FLAGS_dropout) word_id = 0;
-        }
-        *data->Get<int>(model_.word) = word_id;
+        data->Set(model_.input, fv, i);
 
         // Compute forward.
         data->Compute();
@@ -458,7 +436,7 @@ class Tagger {
       // Backpropagate loss gradient.
       dh.resize(length);
       dc.resize(length);
-      if (FLAGS_profile) gtagger.set_profile(model_.dtagger_profile);
+      dfv.resize(length);
       for (int i = length - 1; i >= 0; --i) {
         // Set gradient.
         gtagger.Set(model_.dlogits, &l, i);
@@ -477,9 +455,13 @@ class Tagger {
         gtagger.Set(model_.dh_in, &dh, i);
         gtagger.Set(model_.dc_in, &dc, i);
 
+        // Set feature vector gradient.
+        gtagger.Set(model_.dinput, &dfv, i);
+
         // Compute backward.
         gtagger.Compute();
       }
+      extractor.Backpropagate(&dfv);
 
       // Clear data.
       for (auto *d : forward) delete d;
@@ -497,6 +479,7 @@ class Tagger {
         if (FLAGS_lock) update_mu_.Unlock();
 
         gtagger.Clear();
+        extractor.Clear();
         local_loss_sum = 0;
         local_loss_count = 0;
         local_tokens = 0;
@@ -520,20 +503,23 @@ class Tagger {
   // Finish tagger model.
   void Done() {
     if (FLAGS_profile) {
-      DumpProfile(model_.tagger_profile);
-      DumpProfile(model_.dtagger_profile);
-      DumpProfile(loss_.profile());
-      DumpProfile(optimizer_.profile());
+      for (Cell *cell : net_.cells()) {
+        Profile profile(cell->profile_summary());
+        string report = profile.ASCIIReport();
+        std::cout << report << "\n";
+      }
     }
   }
 
   // Evaulate model on corpus returning accuracy.
   float Evaluate(Corpus *corpus) {
     // Create tagger instance with channels.
+    DocumentFeatures features(&lex_.lexicon());
+    LexicalFeatureExtractor extractor(lex_);
     Instance test(model_.tagger);
     Channel h(model_.h_in);
     Channel c(model_.c_in);
-    if (FLAGS_profile) test.set_profile(model_.tagger_profile);
+    Channel f(lex_.feature_vector());
 
     // Run tagger on corpus and compare with gold tags.
     int num_correct = 0;
@@ -542,6 +528,10 @@ class Tagger {
       int length = s->num_tokens();
       h.resize(length + 1);
       c.resize(length + 1);
+
+      features.Extract(*s);
+      extractor.Extract(features, 0, length, &f);
+
       for (int i = 0; i < length; ++i) {
         // Set up channels.
         if (i == 0) {
@@ -555,8 +545,7 @@ class Tagger {
         test.Set(model_.c_out, &c, i + 1);
 
         // Set up features.
-        int word = lexicon_.LookupWord(s->token(i).text());
-        *test.Get<int>(model_.word) = word;
+        test.Set(model_.input, &f, i);
 
         // Compute forward.
         test.Compute();
@@ -591,7 +580,6 @@ class Tagger {
  private:
   LexicalFeatures::Spec spec_;  // lexical feature specification
   LexicalFeatures lex_;         // lexical feature inputs
-  Lexicon lexicon_;             // word lexicon
   Store store_;                 // document store
   DocumentNames *names_;        // document symbol names
   Handle n_pos_;                // part-of-speech role symbol

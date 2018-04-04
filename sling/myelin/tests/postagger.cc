@@ -137,12 +137,6 @@ struct Corpus {
   std::vector<Sentence *> sentences;
 };
 
-void DumpProfile(ProfileSummary *summary) {
-  Profile profile(summary);
-  string report = profile.ASCIIReport();
-  std::cout << report << "\n";
-}
-
 double WallTime() {
   struct timeval tv;
   gettimeofday(&tv, nullptr);
@@ -187,8 +181,6 @@ struct TaggerModel {
   ~TaggerModel() {
     delete h_zero;
     delete c_zero;
-    delete tagger_profile;
-    delete dtagger_profile;
   }
 
   void Initialize(Network &net) {
@@ -212,9 +204,6 @@ struct TaggerModel {
     c_zero = new Channel(c_in);
     h_zero->resize(1);
     c_zero->resize(1);
-
-    if (tagger->profile()) tagger_profile = new ProfileSummary(tagger);
-    if (dtagger->profile()) dtagger_profile = new ProfileSummary(dtagger);
   }
 
   // Forward parameters.
@@ -238,10 +227,6 @@ struct TaggerModel {
   // Zero channels.
   Channel *h_zero = nullptr;
   Channel *c_zero = nullptr;
-
-  // Profiling.
-  ProfileSummary *tagger_profile = nullptr;
-  ProfileSummary *dtagger_profile = nullptr;
 };
 
 // POS tagger.
@@ -254,7 +239,7 @@ class Tagger {
     net_.set_linker(&linker_);
     if (FLAGS_profile) {
       net_.options().profiling = true;
-      net_.options().external_profiler = true;
+      net_.options().global_profiler = true;
     }
   }
 
@@ -432,7 +417,6 @@ class Tagger {
         // Create new instance for token.
         Instance *data = new Instance(model_.tagger);
         forward.push_back(data);
-        if (FLAGS_profile) data->set_profile(model_.tagger_profile);
 
         // Set up channels.
         if (i == 0) {
@@ -463,7 +447,6 @@ class Tagger {
       // Backpropagate loss gradient.
       dh.resize(length);
       dc.resize(length);
-      if (FLAGS_profile) gtagger.set_profile(model_.dtagger_profile);
       for (int i = length - 1; i >= 0; --i) {
         // Set gradient.
         gtagger.Set(model_.dlogits, &l, i);
@@ -525,10 +508,11 @@ class Tagger {
   // Finish tagger model.
   void Done() {
     if (FLAGS_profile) {
-      DumpProfile(model_.tagger_profile);
-      DumpProfile(model_.dtagger_profile);
-      DumpProfile(loss_.profile());
-      DumpProfile(optimizer_.profile());
+      for (Cell *cell : net_.cells()) {
+        Profile profile(cell->profile_summary());
+        string report = profile.ASCIIReport();
+        std::cout << report << "\n";
+      }
     }
   }
 
@@ -538,7 +522,6 @@ class Tagger {
     Instance test(model_.tagger);
     Channel h(model_.h_in);
     Channel c(model_.c_in);
-    if (FLAGS_profile) test.set_profile(model_.tagger_profile);
 
     // Run tagger on corpus and compare with gold tags.
     int num_correct = 0;

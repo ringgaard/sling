@@ -29,7 +29,6 @@ namespace myelin {
 class CrossEntropyLoss {
  public:
   CrossEntropyLoss(const string &name = "loss") : name_(name) {}
-  ~CrossEntropyLoss() { delete profile_; }
 
   // Build loss function together with gradient computation.
   void Build(Flow *flow, Flow::Variable *logits, Flow::Variable *dlogits);
@@ -39,9 +38,6 @@ class CrossEntropyLoss {
 
   // Compute loss from logits and output loss gradient.
   float Compute(float *logits, int target, float *dlogits);
-
-  // Profile information.
-  ProfileSummary *profile() const { return profile_; }
 
  private:
   // Name of loss function.
@@ -55,9 +51,6 @@ class CrossEntropyLoss {
   Tensor *target_ = nullptr;
   Tensor *loss_ = nullptr;
   Tensor *dlogits_ = nullptr;
-
-  // Profile information.
-  ProfileSummary *profile_ = nullptr;
 };
 
 // A parameter optimizer applies updates to the learnable parameters of a model
@@ -68,7 +61,7 @@ class Optimizer {
   typedef std::map<Flow::Variable *, Flow::Variable *> GradientMap;
 
   Optimizer(const string &name = "optimizer") : name_(name) {}
-  virtual ~Optimizer() { delete update_; delete profile_; }
+  virtual ~Optimizer() { delete update_; }
 
   // Build update function for applying gradients.
   void Build(Flow *flow);
@@ -78,9 +71,6 @@ class Optimizer {
 
   // Apply gradients to update learnable parameters.
   void Apply(std::vector<Instance *> &gradients);
-
-  // Profile information.
-  ProfileSummary *profile() const { return profile_; }
 
  protected:
   // Let subclass build the parameter update using the gradient map.
@@ -99,9 +89,6 @@ class Optimizer {
 
   // Instance for updating the learnable parameters from the gradients.
   Instance *update_ = nullptr;
-
-  // Profile information.
-  ProfileSummary *profile_ = nullptr;
 };
 
 // Stocastic gradient descent optimizer.

@@ -63,8 +63,8 @@ class LexicalFeatures {
 
   // Build flow for lexical feature extraction. The lexicon must be initialized
   // before building the flow.
-  void Build(const Library &library, const Spec &spec, Flow *flow,
-             bool learning);
+  Flow::Variable *Build(const Library &library, const Spec &spec, Flow *flow,
+                        bool learning);
 
   // Initialize feature extractor from existing model.
   void Initialize(const Network &net);
@@ -78,6 +78,9 @@ class LexicalFeatures {
 
   // Size of output feature vector.
   int feature_vector_dims() const { return feature_vector_dims_; }
+
+  // Feature vector output.
+  Tensor *feature_vector() const { return feature_vector_; }
 
   // Gradient cell.
   Cell *gfeatures() const { return gfeatures_; }
@@ -153,7 +156,7 @@ class LexicalFeatureLearner {
   Instance *gradient() { return &gradient_; }
 
   // Clear gradients.
-  void clear() { gradient_.Clear(); }
+  void Clear() { gradient_.Clear(); }
 
  private:
   const LexicalFeatures &features_;

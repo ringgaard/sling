@@ -550,10 +550,11 @@ void Flow::Function::AddOperation(Operation *op) {
   ops.push_back(op);
 }
 
-void Flow::Connector::AddLink(Variable *var) {
+Flow::Connector &Flow::Connector::AddLink(Variable *var) {
   if (std::find(links.begin(), links.end(), var) == links.end()) {
     links.push_back(var);
   }
+  return *this;
 }
 
 bool Flow::Connector::RemoveLink(Variable *var) {

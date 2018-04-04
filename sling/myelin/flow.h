@@ -446,7 +446,7 @@ class Flow {
   // Flow connector.
   struct Connector {
     // Add linked variable to connector.
-    void AddLink(Variable *var);
+    Connector &AddLink(Variable *var);
 
     // Remove linked variable from connector. Return false if link was not
     // found.

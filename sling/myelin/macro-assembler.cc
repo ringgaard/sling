@@ -476,6 +476,7 @@ void MacroAssembler::Multiply(jit::Register reg, int64 scalar) {
 }
 
 void MacroAssembler::UpdateCounter(int64 *counter, int64 value) {
+  CHECK(!rr_.used(rdi));
   movp(rdi, counter);
   lock();
   addq(Operand(rdi), Immediate(value));
@@ -530,7 +531,7 @@ void MacroAssembler::CallInstanceFunction(void (*func)(void *),
 }
 
 void MacroAssembler::IncrementInvocations(int offset) {
-  if (options_.external_profiler) {
+  if (options_.ref_profiler()) {
     CHECK(!rr_.used(rdi));
     movq(rdi, Operand(datareg, offset));
     incq(Operand(rdi));
@@ -555,7 +556,7 @@ void MacroAssembler::TimeStep(int offset, int disp) {
   subq(rdx, tsreg);
 
   // Add elapsed time to timing block.
-  if (options_.external_profiler) {
+  if (options_.ref_profiler()) {
     CHECK(!rr_.used(rdi));
     movq(rdi, Operand(datareg, offset));
     addq(Operand(rdi, disp), rdx);
