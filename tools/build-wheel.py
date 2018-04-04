@@ -58,10 +58,20 @@ wheel_filename = wheel_dir + "/" + wheel_basename
 # Files to distribute in wheel.
 files = {
   'bazel-bin/sling/pyapi/pysling.so': '$DATA$/sling/pysling.so',
+
   'python/__init__.py': '$DATA$/sling/__init__.py',
+  'python/flags.py': '$DATA$/sling/flags.py',
+  'python/log.py': '$DATA$/sling/log.py',
+
   'python/nlp/__init__.py': '$DATA$/sling/nlp/__init__.py',
   'python/nlp/document.py': '$DATA$/sling/nlp/document.py',
   'python/nlp/parser.py': '$DATA$/sling/nlp/parser.py',
+
+  'python/task/__init__.py': '$DATA$/sling/task/__init__.py',
+  'python/task/corpora.py': '$DATA$/sling/task/corpora.py',
+  'python/task/embedding.py': '$DATA$/sling/task/embedding.py',
+  'python/task/wiki.py': '$DATA$/sling/task/wiki.py',
+  'python/task/workflow.py': '$DATA$/sling/task/workflow.py',
 }
 
 # Create new wheel zip archive.

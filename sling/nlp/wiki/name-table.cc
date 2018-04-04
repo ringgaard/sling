@@ -91,7 +91,6 @@ void NameTable::LookupPrefix(Text prefix,
   // Copy matching entity ids to output.
   matches->clear();
   for (const auto &item : matching_entities) {
-    if (matches->size() >= limit) break;
     matches->push_back(item.second->id());
   }
 }
