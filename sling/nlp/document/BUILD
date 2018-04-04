@@ -146,8 +146,10 @@ cc_library(
     ":document",
     ":features",
     ":lexicon",
+    "//sling/myelin:builder",
     "//sling/myelin:compute",
     "//sling/myelin:flow",
+    "//sling/myelin:gradient",
     "//sling/util:embeddings",
   ],
 )

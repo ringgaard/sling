@@ -113,6 +113,11 @@ class FlowBuilder : public Scope {
     int size = value.size();
     return Const(value.data(), DT_INT32, {size});
   }
+  Variable *Const(const Shape &shape) { return Const(shape.dims()); }
+
+  Variable *OneHot(Variable *index, int size) {
+    return Op("OneHot", {index}, DT_FLOAT, {size});
+  }
 
   // Add instance reference to other function.
   Variable *Instance(Function *func);
@@ -163,7 +168,7 @@ class FlowBuilder : public Scope {
 
   // Gather for embedding lookups.
   Variable *Gather(Variable *M, Variable *f) {
-    int n = f->rank() == 0 ? 1 : f->dim(0);
+    int n = f->rank() == 0 ? 1 : f->dim(1);
     return Op("Gather", {M, f}, M->type, {n, M->dim(1)});
   }
   Variable *GatherSum(Variable *M, Variable *f) {
@@ -196,13 +201,19 @@ class FlowBuilder : public Scope {
     return Op0("ScatterAdd", {M, f, v});
   }
 
+  // Concatenation.
+  Variable *Concat(const std::vector<Variable *> &parts, int axis = 1);
+
   // Slicing.
-  Variable *Slice(Variable *v, Variable *begin, int size = 1) {
-    return Op("Slice", {v, begin, Const(size)}, v->type, {size});
+  Variable *Slice(Variable *v, Variable *begin, const Shape &size) {
+    return Op("Slice", {v, begin, Const(size)}, v->type, size);
   }
 
-  Variable *OneHot(Variable *index, int size) {
-    return Op("OneHot", {index}, DT_FLOAT, {size});
+  // Add input mapped through embedding.
+  Variable *Feature(const string &name, int range, int size, int dim) {
+    auto *M = Parameter(name + "_embeddings", DT_FLOAT, {range, dim});
+    auto *f = Placeholder(name, DT_INT32, {1, size});
+    return size == 1 ? Gather(M, f) : GatherSum(M, f);
   }
 
   // Feed-forward (FF) layer(s).

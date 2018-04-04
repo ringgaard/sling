@@ -48,7 +48,7 @@ void CrossEntropyLoss::Build(Flow *flow,
   auto *softmax = tf.Softmax(tf.Reshape(input, {size}));
 
   // Compute loss (negative log-likelihood).
-  auto *loss = tf.Name(tf.Neg(tf.Log(tf.Slice(softmax, target))), "loss");
+  auto *loss = tf.Name(tf.Neg(tf.Log(tf.Slice(softmax, target, {1}))), "loss");
   loss->flags |= Flow::Variable::OUT;
 
   // Compute gradient.

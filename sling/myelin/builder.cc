@@ -149,6 +149,21 @@ Flow::Variable *FlowBuilder::Ref(Variable *instance, Variable *external) {
   return ref;
 }
 
+Flow::Variable *FlowBuilder::Concat(const std::vector<Variable *> &parts,
+                                    int axis) {
+  CHECK(!parts.empty());
+  Shape shape = parts[0]->shape;
+  int n = parts.size();
+  int width = 0;
+  for (Variable *v : parts) width += v->shape.dim(axis);
+  shape.set(axis, width);
+  std::vector<Variable *> args = parts;
+  args.push_back(Const(axis));
+  auto *concat = Op("ConcatV2", args, parts[0]->type, shape);
+  concat->producer->SetAttr("N", n);
+  return concat;
+}
+
 Flow::Variable *FlowBuilder::FFLayers(Variable *input,
                                       std::vector<int> layers,
                                       int hidden,

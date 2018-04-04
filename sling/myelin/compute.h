@@ -390,6 +390,26 @@ class Tensor {
   const char *data() const { return data_; }
   char *data() { return data_; }
 
+  // Get data as scalar. Return false if types do not match.
+  template <typename T> bool GetData(T *value) const {
+    if (data_ == nullptr) return false;
+    auto &traits = Traits<T>();
+    if (type_ != traits.type() || size_ != traits.size()) return false;
+    *value = *reinterpret_cast<const T *>(data_);
+    return true;
+  }
+
+  // Get data as vector. Return false if types do not match.
+  template <typename T> bool GetData(std::vector<T> *value) const {
+    if (data_ == nullptr) return false;
+    auto &traits = Traits<T>();
+    if (type_ != traits.type()) return false;
+    if (elements() * traits.size() != size_) return false;
+    const T *array = reinterpret_cast<const T *>(data_);
+    value->assign(array, array + elements());
+    return true;
+  }
+
   // Pointer to constant tensor on device.
   DevicePtr device_data() const { return device_data_; }
 
@@ -421,6 +441,13 @@ class Tensor {
   size_t offset(int r, int c, int k, int l) const {
     return r * stride(0) + c * stride(1) + k * stride(2) + l * stride(3);
   }
+  size_t offset(const std::vector<int> &indices) const {
+    size_t n = 0;
+    for (int d = 0; d < rank(); ++d) {
+      n += indices[d] * stride(d);
+    }
+    return n;
+  }
 
   // Index of element in tensor.
   int index(int r) const {
@@ -434,6 +461,9 @@ class Tensor {
   }
   int index(int r, int c, int k, int l) const {
     return offset(r, c, k, l) / element_size();
+  }
+  int index(const std::vector<int> &indices) const {
+    return offset(indices) / element_size();
   }
 
   // Check if tensor is a constant.

@@ -251,6 +251,9 @@ class MacroAssembler : public jit::Assembler {
   // Load address of tensor.
   void LoadTensorAddress(jit::Register dst, Tensor *tensor);
 
+  // Load address of element in tensor.
+  void LoadTensorAddress(jit::Register dst, Tensor *tensor, Tensor *indices);
+
   // Emit breakpoint.
   void Breakpoint() { int3(); }
 

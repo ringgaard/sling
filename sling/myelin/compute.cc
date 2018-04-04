@@ -568,7 +568,7 @@ string Tensor::TypeString() const {
 
 string Tensor::ToString(const char *data) const {
   // Resolve references.
-  if (ref()) data  = *reinterpret_cast<const char * const *>(data);
+  if (ref()) data = *reinterpret_cast<const char * const *>(data);
 
   // Check for shape and null.
   if (!shape().defined()) return "*";
@@ -840,7 +840,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       tensor->required_order_ = options_.parameter_element_order;
     } else {
       globals_.push_back(tensor);
-      tensor->data_ = var->data;
     }
     tensor->name_ = var->name;
     names_[var->name] = tensor;
@@ -865,6 +864,18 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     // Output variables must be available on the host after the computation.
     tensor->out_ = var->out();
     if (var->out()) tensor->placement_ = HOST;
+
+    // Initialize constant tensors with data from the flow variable so they can
+    // be used before tensor data allocation.
+    if (tensor->constant()) {
+      tensor->data_ = var->data;
+      tensor->size_ = var->size;
+      size_t stride = TypeTraits::of(tensor->type()).size();
+      for (int d = tensor->rank() - 1; d >= 0; --d) {
+        tensor->stride_.set(d, stride);
+        stride *= tensor->shape_.dim(d);
+      }
+    }
   }
 
   // Link tensors in each connector.

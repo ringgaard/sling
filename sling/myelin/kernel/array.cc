@@ -344,14 +344,17 @@ class Slice : public Kernel {
     // Check inputs and outputs.
     if (step->indegree() != 3 || step->outdegree() != 1) return false;
 
-    // Begin and size must be integer scalars.
+    // Check arguments.
+    Tensor *input = step->input(0);
     Tensor *begin = step->input(1);
     Tensor *size = step->input(2);
-    if (begin->elements() != 1 || begin->type() != DT_INT32) return false;
-    if (size->elements() != 1 || size->type() != DT_INT32) return false;
-    if (!size->constant()) return false;
-    int n = size->value<int32>();
-    if (step->output(0)->dim(0) != n) return false;
+    Tensor *output = step->output(0);
+    if (begin->rank() > 1 || begin->type() != DT_INT32) return false;
+    if (size->rank() > 1 || size->type() != DT_INT32) return false;
+    std::vector<int> s;
+    CHECK(size->GetData(&s));
+    if (Shape(s) != output->shape()) return false;
+    if (input->type() != output->type()) return false;
 
     return true;
   }
@@ -365,41 +368,23 @@ class Slice : public Kernel {
     Tensor *begin = step->input(1);
     Tensor *size = step->input(2);
     Tensor *destination = step->output(0);
-    int n = size->value<int32>();
-    int bytes = n * source->stride(0);
+
+    // Compute size of slice.
+    std::vector<int> size_tensor;
+    CHECK(size->GetData(&size_tensor));
+    int bytes = source->element_size();
+    for (int i = 0; i < size_tensor.size(); ++i) {
+      bytes *= size_tensor[i];
+    }
 
     // Allocate registers.
     Register src = masm->rr().alloc_fixed(rsi);
     Register dst = masm->rr().alloc_fixed(rdi);
     Register cnt = masm->rr().alloc_fixed(rcx);
     Register acc = masm->rr().alloc_fixed(rax);
-    Register bptr = masm->rr().alloc();
 
-    // Get address of source.
-    if (begin->constant()) {
-      if (source->offset() != -1) {
-        int disp = source->offset() + begin->value<int32>() * source->stride(0);
-        __ leaq(src, Operand(masm->instance(), disp));
-      } else {
-        __ LoadTensorAddress(src, source);
-        __ addq(src, Immediate(begin->value<int32>() * source->stride(0)));
-      }
-    } else {
-      __ LoadTensorAddress(src, source);
-      if (begin->ref()) {
-        __ movq(bptr, Operand(masm->instance(), begin->offset()));
-        __ movsxlq(acc, Operand(bptr));
-      } else if (begin->data() != nullptr) {
-      __ load_extern(bptr, begin->data(), begin->name());
-      __ movsxlq(acc, Operand(bptr));
-      } else {
-        __ movsxlq(acc, Operand(masm->instance(), begin->offset()));
-      }
-      __ Multiply(acc, source->stride(0));
-      __ addq(src, acc);
-    }
-
-    // Get destination address.
+    // Get source and destination addresses.
+    __ LoadTensorAddress(src, source, begin);
     __ LoadTensorAddress(dst, destination);
 
     // Copy input to output.
@@ -520,7 +505,7 @@ class BasicConcat : public Kernel {
       }
       offset += size;
     }
-    CHECK_EQ(offset, step->output(0)->size());
+    CHECK_EQ(offset, step->output(0)->size()) << step->name();
   }
 
   int64 Complexity(const Step *step) override {
@@ -953,9 +938,12 @@ class PoolingGather : public Kernel {
           int disp = i * 8 * sizeof(float);
           __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
         }
-        __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
-        __ cmpq(ofs, Immediate(main * sizeof(float)));
-        __ j(less, &next);
+
+        if (8 * unrolls > main) {
+          __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
+          __ cmpq(ofs, Immediate(main * sizeof(float)));
+          __ j(less, &next);
+        }
       }
 
       // Combine residual elements.
@@ -1378,7 +1366,7 @@ class ScatterAdd : public Kernel {
 
     // Embedding matrix must be row-major.
     var->SetRequiredOrder(ROW_MAJOR);
-    var->MinAlign({CPU::Enabled(AVX) ? 8 : 4, 1});
+    var->MinAlign({1, CPU::Enabled(AVX) ? 8 : 4});
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {

@@ -181,6 +181,31 @@ void gather_grad(Flow::Operation *op, Gradients *g) {
   g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0)));
 }
 
+// v = gather_sum(M, f)
+// dM = scatter(v, f)
+void gathersum_grad(Flow::Operation *op, Gradients *g) {
+  auto M = op->inputs[0];
+  auto f = op->inputs[1];
+  auto v = op->outputs[0];
+  g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0)));
+}
+
+// v = concat(v_1, ..., v_n, axis)
+// dv_i = slice(v, begin_i, size_i)
+void concat_grad(Flow::Operation *op, Gradients *g) {
+  auto v = op->outputs[0];
+  int N = op->GetAttr("N", 0);
+  int axis;
+  CHECK(op->inputs.back()->GetData(&axis));
+  Shape begin;
+  begin.redim(op->outputs[0]->rank());
+  for (int i = 0; i < N; ++i) {
+    auto vi = op->inputs[i];
+    g->add(vi, g->Slice(g->v(v), g->Const(begin), vi->shape));
+    begin.set(axis, begin.dim(axis) + vi->shape.dim(axis));
+  }
+}
+
 } // namespace
 
 void RegisterStandardGradients(Transformations *library) {
@@ -201,6 +226,8 @@ void RegisterStandardGradients(Transformations *library) {
   library->RegisterGradient("Relu", relu_grad);
   library->RegisterGradient("Identity", identity_grad);
   library->RegisterGradient("Gather", gather_grad);
+  library->RegisterGradient("GatherSum", gathersum_grad);
+  library->RegisterGradient("ConcatV2", concat_grad);
 }
 
 }  // namespace myelin

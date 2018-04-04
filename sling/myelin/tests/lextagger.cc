@@ -27,6 +27,7 @@
 #include "sling/myelin/profile.h"
 #include "sling/myelin/kernel/tensorflow.h"
 #include "sling/nlp/document/document.h"
+#include "sling/nlp/document/lexical-features.h"
 #include "sling/nlp/document/lexicon.h"
 #include "sling/util/mutex.h"
 #include "sling/util/thread.h"
@@ -189,6 +190,9 @@ class Tagger {
       net_.options().external_profiler = true;
     }
     net_.options().flops_address = &flops_counter;
+
+    // Set up feature spec.
+    spec_.lexicon.normalize_digits = true;
   }
 
   ~Tagger() {
@@ -238,6 +242,9 @@ class Tagger {
     Vocabulary::VectorIterator wordit(wordlist);
     lexicon_.InitWords(&wordit);
 
+    lex_.InitializeLexicon(&wordit, spec_.lexicon);
+    LOG(INFO) << "words: " << lex_.lexicon().size();
+
     num_words_ = lexicon_.size();
     num_tags_ = tagmap_.size();
 
@@ -249,6 +256,9 @@ class Tagger {
 
   // Build tagger flow.
   void Build() {
+    // Build feature input mapping.
+    lex_.Build(library_, spec_, &flow_, true);
+
     // Build flow for POS tagger.
     flow_.Build(library_, num_words_, num_tags_, word_dim_, lstm_dim_);
 
@@ -263,6 +273,10 @@ class Tagger {
 
   // Compile model.
   void Compile() {
+    // Output raw DOT graph.
+    GraphOptions opts;
+    FlowToDotGraphFile(flow_, opts, "/tmp/postagger-raw.dot");
+
     // Analyze flow.
     Clock analyze_clock;
     analyze_clock.start();
@@ -275,7 +289,6 @@ class Tagger {
     }
 
     // Output DOT graph.
-    GraphOptions opts;
     FlowToDotGraphFile(flow_, opts, "/tmp/postagger.dot");
 
     // Compile network.
@@ -296,6 +309,7 @@ class Tagger {
     linker_.Write("/tmp/postagger.o");
 
     // Initialize model.
+    lex_.Initialize(net_);
     model_.Initialize(net_);
     loss_.Initialize(net_);
     optimizer_.Initialize(net_);
@@ -380,7 +394,9 @@ class Tagger {
 
     // Allocate gradients.
     Instance gtagger(model_.dtagger);
-    std::vector<Instance *> gradients = {&gtagger};
+    //std::vector<Instance *> gradients = {&gtagger};
+    Instance gfeatures(lex_.gfeatures());
+    std::vector<Instance *> gradients = {&gfeatures, &gtagger};
 
     std::mt19937 prng(FLAGS_seed + index);
     std::uniform_real_distribution<float> rndprob(0.0, 1.0);
@@ -573,14 +589,16 @@ class Tagger {
   }
 
  private:
-  Lexicon lexicon_;        // word lexicon
-  Store store_;            // document store
-  DocumentNames *names_;   // document symbol names
-  Handle n_pos_;           // part-of-speech role symbol
-  HandleMap<int> tagmap_;  // mapping from tag symbol to tag id
+  LexicalFeatures::Spec spec_;  // lexical feature specification
+  LexicalFeatures lex_;         // lexical feature inputs
+  Lexicon lexicon_;             // word lexicon
+  Store store_;                 // document store
+  DocumentNames *names_;        // document symbol names
+  Handle n_pos_;                // part-of-speech role symbol
+  HandleMap<int> tagmap_;       // mapping from tag symbol to tag id
 
-  Corpus train_;           // training corpus
-  Corpus dev_;             // test corpus
+  Corpus train_;                // training corpus
+  Corpus dev_;                  // test corpus
 
   // Model dimensions.
   int num_words_ = 0;
@@ -588,10 +606,10 @@ class Tagger {
   int word_dim_ = 64;
   int lstm_dim_ = 128;
 
-  Library library_;        // kernel library
-  TaggerFlow flow_;        // flow for tagger model
-  Network net_;            // neural net
-  ElfLinker linker_;       // linker for outputting generated code
+  Library library_;             // kernel library
+  TaggerFlow flow_;             // flow for tagger model
+  Network net_;                 // neural net
+  ElfLinker linker_;            // linker for outputting generated code
 
   // Tagger model.
   TaggerModel model_;

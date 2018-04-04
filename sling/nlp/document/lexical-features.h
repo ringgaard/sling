@@ -63,10 +63,11 @@ class LexicalFeatures {
 
   // Build flow for lexical feature extraction. The lexicon must be initialized
   // before building the flow.
-  void Build(const Spec &spec, Flow *flow, bool learning);
+  void Build(const Library &library, const Spec &spec, Flow *flow,
+             bool learning);
 
   // Initialize feature extractor from existing model.
-  void InitializeModel(const Network &net);
+  void Initialize(const Network &net);
 
   // Load pre-trained word embeddings. Returns the number of words which were
   // initialized from the pre-trained embeddings.
@@ -77,6 +78,9 @@ class LexicalFeatures {
 
   // Size of output feature vector.
   int feature_vector_dims() const { return feature_vector_dims_; }
+
+  // Gradient cell.
+  Cell *gfeatures() const { return gfeatures_; }
 
  private:
   string name_;                        // cell name

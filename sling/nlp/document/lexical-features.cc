@@ -14,6 +14,8 @@
 
 #include "sling/nlp/document/lexical-features.h"
 
+#include "sling/myelin/builder.h"
+#include "sling/myelin/gradient.h"
 #include "sling/util/embeddings.h"
 
 namespace sling {
@@ -83,11 +85,60 @@ void LexicalFeatures::InitializeLexicon(Vocabulary::Iterator *words,
   lexicon_.BuildSuffixes(spec.max_suffix);
 }
 
-void LexicalFeatures::Build(const Spec &spec, Flow *flow, bool learning) {
-  // TODO: implement
+void LexicalFeatures::Build(const Library &library, const Spec &spec,
+                            Flow *flow, bool learning) {
+  // Build function for feature extraction and mapping.
+  FlowBuilder tf(flow, name_);
+  std::vector<Flow::Variable *> features;
+  if (spec.word_dim > 0) {
+    auto *f = tf.Feature("word", lexicon_.size(), 1, spec.word_dim);
+    features.push_back(f);
+  }
+  if (spec.prefix_dim > 0) {
+    auto *f = tf.Feature("prefix", lexicon_.prefixes().size(), prefix_size_,
+                         spec.prefix_dim);
+    features.push_back(f);
+  }
+  if (spec.suffix_dim > 0) {
+    auto *f = tf.Feature("suffix", lexicon_.suffixes().size(), suffix_size_,
+                         spec.suffix_dim);
+    features.push_back(f);
+  }
+  if (spec.hyphen_dim > 0) {
+    auto *f = tf.Feature("hyphen", DocumentFeatures::HYPHEN_CARDINALITY, 1,
+                         spec.hyphen_dim);
+    features.push_back(f);
+  }
+  if (spec.caps_dim > 0) {
+    auto *f = tf.Feature("caps", DocumentFeatures::CAPITALIZATION_CARDINALITY,
+                         1, spec.caps_dim);
+    features.push_back(f);
+  }
+  if (spec.punct_dim > 0) {
+    auto *f = tf.Feature("punct", DocumentFeatures::PUNCTUATION_CARDINALITY,
+                         1, spec.punct_dim);
+    features.push_back(f);
+  }
+  if (spec.quote_dim > 0) {
+    auto *f = tf.Feature("quote", DocumentFeatures::QUOTE_CARDINALITY,
+                         1, spec.quote_dim);
+    features.push_back(f);
+  }
+  if (spec.digit_dim > 0) {
+    auto *f = tf.Feature("digit", DocumentFeatures::DIGIT_CARDINALITY,
+                         1, spec.digit_dim);
+    features.push_back(f);
+  }
+  auto *fv = tf.Name(tf.Concat(features), "feature_vector");
+  fv->flags |= Flow::Variable::OUT;
+
+  // Build gradient function for feature extractor.
+  if (learning) {
+    Gradient(flow, tf.func(), library);
+  }
 }
 
-void LexicalFeatures::InitializeModel(const Network &net) {
+void LexicalFeatures::Initialize(const Network &net) {
   // Get tensors.
   features_ = net.GetCell(name_);
   word_feature_ = net.LookupParameter(name_ + "/word");
@@ -102,7 +153,7 @@ void LexicalFeatures::InitializeModel(const Network &net) {
   word_embeddings_ = net.GetParameter(name_ + "/word_embeddings");
 
   // Optionally initialize gradient cell.
-  gfeatures_ = net.LookupCell("g" + name_);
+  gfeatures_ = net.LookupCell("gradients/" + name_);
   if (gfeatures_ != nullptr) {
     const string &gname = gfeatures_->name();
     d_feature_vector_ = net.GetParameter(gname + "/d_feature_vector");

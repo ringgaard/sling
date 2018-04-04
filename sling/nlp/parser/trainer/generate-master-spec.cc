@@ -350,7 +350,7 @@ void OutputMasterSpec(Artifacts *artifacts) {
     AddFixedFeature(lr_lstm, "quote", "quote", 8,
                     DocumentFeatures::QUOTE_CARDINALITY);
     AddFixedFeature(lr_lstm, "digit", "digit", 8,
-                    DocumentFeatures::DIGIT__CARDINALITY);
+                    DocumentFeatures::DIGIT_CARDINALITY);
   }
 
   // Right to left LSTM.

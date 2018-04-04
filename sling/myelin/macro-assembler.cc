@@ -300,6 +300,55 @@ void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor) {
   }
 }
 
+void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor,
+                                       Tensor *indices) {
+  if (indices == nullptr) {
+    LoadTensorAddress(dst, tensor);
+  } else {
+    CHECK_LE(indices->elements(), tensor->rank());
+    CHECK_EQ(indices->type(), DT_INT32);
+    if (indices->constant()) {
+      std::vector<int> index;
+      CHECK(indices->GetData(&index));
+      int offset = tensor->offset(index);
+      if (tensor->IsGlobal() || tensor->ref()) {
+        LoadTensorAddress(dst, tensor);
+        if (offset != 0) addq(dst, Immediate(offset));
+      } else {
+        int disp = tensor->offset() + offset;
+        leaq(dst, Operand(instance(), disp));
+      }
+    } else {
+      Register iptr = rr_.alloc();
+      Register acc = rr_.alloc();
+      if (indices->rank() < 2) {
+        LoadTensorAddress(dst, tensor);
+        if (indices->ref()) {
+          movq(iptr, Operand(instance(), indices->offset()));
+          movsxlq(acc, Operand(iptr));
+        } else if (indices->IsGlobal()) {
+          load_extern(iptr, indices->data(), indices->name());
+          movsxlq(acc, Operand(iptr));
+        } else {
+          movsxlq(acc, Operand(instance(), indices->offset()));
+        }
+        Multiply(acc, tensor->stride(0));
+        addq(dst, acc);
+      } else {
+        LoadTensorAddress(dst, tensor);
+        LoadTensorAddress(iptr, indices);
+        for (int i = 0; i < indices->elements(); ++i) {
+          movsxlq(acc, Operand(iptr, i * sizeof(int)));
+          Multiply(acc, tensor->stride(i));
+          addq(dst, acc);
+        }
+      }
+      rr_.release(iptr);
+      rr_.release(acc);
+    }
+  }
+}
+
 void MacroAssembler::Copy(Register dst, int ddisp,
                           Register src, int sdisp,
                           int size) {
