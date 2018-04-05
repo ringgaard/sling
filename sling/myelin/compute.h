@@ -799,6 +799,9 @@ class Channel {
   // Reserve space for channel elements.
   void reserve(int n);
 
+  // Zero-fill element in channel.
+  void zero(int n);
+
   // Return pointer to channel element.
   char *at(int index) const {
     return data_ + (index * format_->size());

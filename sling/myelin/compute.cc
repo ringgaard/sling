@@ -673,6 +673,11 @@ void Channel::reserve(int n) {
   capacity_ = n;
 }
 
+void Channel::zero(int n) {
+  runtime()->ClearChannel(data_, n * format_->size(), format_->size(),
+                          placement());
+}
+
 ProfileSummary::ProfileSummary(Cell *cell) : cell_(cell) {
   if (cell->profile()) {
     int size = cell->profile()->elements();

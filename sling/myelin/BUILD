@@ -108,6 +108,18 @@ cc_library(
 )
 
 cc_library(
+  name = "rnn",
+  srcs = ["rnn.cc"],
+  hdrs = ["rnn.h"],
+  deps = [
+    ":builder",
+    ":compute",
+    ":flow",
+    ":gradient",
+  ],
+)
+
+cc_library(
   name = "elf-linker",
   srcs = ["elf-linker.cc"],
   hdrs = ["elf-linker.h"],
