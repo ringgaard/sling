@@ -793,6 +793,9 @@ class Channel {
   // Change size of channel.
   void resize(int n);
 
+  // Change size of channel and clear all elements.
+  void reset(int n);
+
   // Reserve space for channel elements.
   void reserve(int n);
 

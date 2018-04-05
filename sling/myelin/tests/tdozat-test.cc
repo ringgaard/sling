@@ -27,7 +27,7 @@ float filler(int i) {
 
 void makeref(Flow::Variable *var, Flow::Connector *cnx) {
   var->ref = true;
-  var->flags |= Flow::Variable::IN | Flow::Variable::OUT;
+  var->set_in()->set_out();
   cnx->AddLink(var);
 }
 
@@ -83,8 +83,8 @@ int main(int argc, char *argv[]) {
   flow.Var("lookup_2/strided_slice_1:0")->name = "word2";
   flow.Var("lookup_2/strided_slice_2:0")->name = "pos";
 
-  flow.Var("recur_nob_A_2:0")->flags |= Flow::Variable::IN;
-  flow.Var("recur_nob_B_2:0")->flags |= Flow::Variable::IN;
+  flow.Var("recur_nob_A_2:0")->set_in();
+  flow.Var("recur_nob_B_2:0")->set_in();
 
 #if 0
   // Patch Tanh.

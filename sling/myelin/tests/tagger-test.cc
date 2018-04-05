@@ -406,7 +406,7 @@ void RNN::Load(const string &filename) {
     for (auto *op : flow.Find({"Sigmoid"})) op->SetAttr("strict", true);
   }
   if (FLAGS_intermediate) {
-    for (auto *var : flow.vars()) var->flags |= Flow::Variable::OUT;
+    for (auto *var : flow.vars()) var->set_out();
   }
 
   if (FLAGS_fast_argmax) {

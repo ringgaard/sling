@@ -550,11 +550,11 @@ void Flow::Function::AddOperation(Operation *op) {
   ops.push_back(op);
 }
 
-Flow::Connector &Flow::Connector::AddLink(Variable *var) {
+Flow::Connector *Flow::Connector::AddLink(Variable *var) {
   if (std::find(links.begin(), links.end(), var) == links.end()) {
     links.push_back(var);
   }
-  return *this;
+  return this;
 }
 
 bool Flow::Connector::RemoveLink(Variable *var) {
@@ -921,7 +921,7 @@ void Flow::InferInputsAndOutputs() {
   for (Connector *cnx : cnxs_) {
     for (Variable *link : cnx->links) {
       if (link->ref && link->producer != nullptr && !link->consumers.empty()) {
-        link->flags |= Variable::IN | Variable::OUT;
+        link->set_in()->set_out();
       }
     }
   }
@@ -936,12 +936,12 @@ void Flow::InferInputsAndOutputs() {
     if (var->producer != nullptr) {
       const string &input = var->producer->GetAttr("input");
       if (!input.empty()) {
-        if (input == "1" || input == "true") var->flags |= Variable::IN;
+        if (input == "1" || input == "true") var->set_in();
         input_set = true;
       }
       const string &output = var->producer->GetAttr("output");
       if (!output.empty()) {
-        if (output == "1" || output == "true") var->flags |= Variable::OUT;
+        if (output == "1" || output == "true") var->set_out();
         output_set = true;
       }
     }
@@ -950,7 +950,7 @@ void Flow::InferInputsAndOutputs() {
     // is considered an input to the function.
     if (!input_set) {
       if (var->producer == nullptr || var->producer->inputs.empty()) {
-        var->flags |= Variable::IN;
+        var->set_in();
       }
     }
 
@@ -958,7 +958,7 @@ void Flow::InferInputsAndOutputs() {
     // function.
     if (!output_set) {
       if (var->consumers.empty()) {
-        var->flags |= Variable::OUT;
+        var->set_out();
       }
     }
   }
@@ -1226,8 +1226,8 @@ void Flow::Eliminate(Operation *op) {
     if (input->shape.defined() && output->shape.defined()) {
       CHECK(input->shape == output->shape) << op->name;
     }
-    if (output->in()) input->flags |= Variable::IN;
-    if (output->out()) input->flags |= Variable::OUT;
+    if (output->in()) input->set_in();
+    if (output->out()) input->set_out();
     if (output->ref) input->ref = true;
     for (Operation *target : ops_) {
       for (int i = 0; i < target->inputs.size(); ++i) {
@@ -1535,7 +1535,7 @@ void Flow::Order(Function *func,
 Flow::Variable *Flow::AddVariable(const string &name,
                                   Type type,
                                   const Shape &shape,
-                                  Variable::Flags flags) {
+                                  Variable::Flag flags) {
   Variable *var = new Variable;
   vars_.push_back(var);
   var->name = name;
@@ -1585,6 +1585,13 @@ Flow::Connector *Flow::AddConnector(const string &name) {
   Connector *cnx = new Connector;
   cnxs_.push_back(cnx);
   cnx->name = name;
+  return cnx;
+}
+
+Flow::Connector *Flow::AddConnector(const string &name,
+                                    const std::vector<Variable *> &links) {
+  Connector *cnx = AddConnector(name);
+  for (Variable *link : links) cnx->AddLink(link);
   return cnx;
 }
 

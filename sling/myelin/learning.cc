@@ -49,7 +49,7 @@ void CrossEntropyLoss::Build(Flow *flow,
 
   // Compute loss (negative log-likelihood).
   auto *loss = tf.Name(tf.Neg(tf.Log(tf.Slice(softmax, target, {1}))), "loss");
-  loss->flags |= Flow::Variable::OUT;
+  loss->set_out();
 
   // Compute gradient.
   auto *gradient = tf.Sub(softmax, tf.OneHot(target, size));
@@ -57,12 +57,8 @@ void CrossEntropyLoss::Build(Flow *flow,
   output->ref = true;
 
   // Connect input and output logits.
-  auto *cnx = flow->AddConnector(name_ + "/cnx_logits");
-  cnx->AddLink(logits);
-  cnx->AddLink(input);
-  auto *dcnx = flow->AddConnector(name_ + "/cnx_dlogits");
-  dcnx->AddLink(dlogits);
-  dcnx->AddLink(output);
+  flow->AddConnector(name_ + "/cnx_logits", {logits, input});
+  flow->AddConnector(name_ + "/cnx_dlogits", {dlogits, output});
 }
 
 void CrossEntropyLoss::Initialize(const Network &network) {
@@ -153,8 +149,7 @@ void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
                                               FlowBuilder *update) {
   // Add learning rate to update function.
   FlowBuilder &tf = *update;
-  auto *alpha = tf.Var("alpha", DT_FLOAT, {});
-  alpha->flags |= Flow::Variable::IN | Flow::Variable::OUT;
+  auto *alpha = tf.Var("alpha", DT_FLOAT, {})->set_in()->set_out();
   auto *multiplier = tf.Neg(alpha);
 
   // Optionally add hyperparameter for gradient clipping.
@@ -173,7 +168,6 @@ void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
     if (threshold != nullptr) {
       // Compute L2 norm of threshold.
       auto *norm = tf.Norm(dv);
-      //norm->flags |= Flow::Variable::OUT;
 
       // Compute clipping factor.
       auto *clip = tf.Div(threshold, tf.Max(norm, threshold));

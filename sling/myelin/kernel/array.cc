@@ -830,7 +830,8 @@ class PoolingGather : public Kernel {
 
     // Embedding matrix must be row-major.
     M->SetRequiredOrder(ROW_MAJOR);
-    M->MinAlign({CPU::Enabled(AVX) ? 8 : 4, 1});
+    int minalign = CPU::Enabled(AVX) ? 8 : 4;
+    if (M->dim(1) >= minalign) M->MinAlign({1, minalign});
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -1366,7 +1367,10 @@ class ScatterAdd : public Kernel {
 
     // Embedding matrix must be row-major.
     var->SetRequiredOrder(ROW_MAJOR);
-    var->MinAlign({1, CPU::Enabled(AVX) ? 8 : 4});
+    int minalign = 1;
+    if (var->dim(1) >= 4) minalign = 4;
+    if (CPU::Enabled(AVX) && var->dim(1) >= 8) minalign = 8;
+    var->MinAlign({1, minalign});
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -1448,14 +1452,26 @@ class ScatterAdd : public Kernel {
           int disp = i * 8 * sizeof(float);
           __ vmovaps(Operand(acc, ofs, times_1, disp), elem[i]);
         }
-        __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
-        __ cmpq(ofs, Immediate(main * sizeof(float)));
-        __ j(less, &next);
+        if (8 * unrolls > main) {
+          __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
+          __ cmpq(ofs, Immediate(main * sizeof(float)));
+          __ j(less, &next);
+        }
       }
 
       // Update residual elements.
       int disp = main * sizeof(float);
-      for (int i = 0; i < n % 8; ++i) {
+      if (n % 8 >= 4) {
+        if (scale_) {
+          __ vmulps(elem[0].xmm(), factor.xmm(), Operand(valaddr, disp));
+        } else {
+          __ vmovaps(elem[0].xmm(), Operand(valaddr, disp));
+        }
+        __ vaddps(elem[0].xmm(), elem[0].xmm(), Operand(acc, disp));
+        __ vmovaps(Operand(acc, disp), elem[0].xmm());
+        disp += 4 * sizeof(float);
+      }
+      for (int i = 0; i < n % 4; ++i) {
         int r = i % std::max(unrolls, 1);
         if (scale_) {
           __ vmulss(elem[r], factor, Operand(valaddr, disp));

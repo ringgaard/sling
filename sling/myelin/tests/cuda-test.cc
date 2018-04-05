@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
   auto *a = tf.Var("a", DT_FLOAT, {size});
   auto *b = tf.Var("b", DT_FLOAT, {size});
   auto *c = tf.Tanh(tf.Mul(tf.Add(a, b), tf.Sub(a, b)));
-  c->flags |= Flow::Variable::OUT;
+  c->set_out();
 
   // Analyze flow.
   flow.Analyze(library);

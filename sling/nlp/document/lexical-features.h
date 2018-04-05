@@ -42,15 +42,14 @@ class LexicalFeatures {
 
   // Lexical feature specification. Feature is disabled if dimension is zero.
   struct Spec {
-    LexiconSpec lexicon;            // lexicon specification.
-    int word_dim = 64;              // word emmedding dimensions
-    int prefix_dim = 16;            // prefix embedding dimensions
+    int word_dim = 32;              // word emmedding dimensions
+    int prefix_dim = 16;             // prefix embedding dimensions
     int suffix_dim = 16;            // prefix embedding dimensions
-    int hyphen_dim = 8;             // hyphenation embedding dimensions
-    int caps_dim = 8;               // capitalization embedding dimensions
-    int punct_dim = 8;              // punctuation embedding dimensions
-    int quote_dim = 8;              // quote feature embedding dimensions
-    int digit_dim = 8;              // digit feature embedding dimensions
+    int hyphen_dim = 2;             // hyphenation embedding dimensions
+    int caps_dim = 4;               // capitalization embedding dimensions
+    int punct_dim = 4;              // punctuation embedding dimensions
+    int quote_dim = 2;              // quote feature embedding dimensions
+    int digit_dim = 4;              // digit feature embedding dimensions
   };
 
   LexicalFeatures(const string &name = "features") : name_(name) {}
@@ -64,7 +63,7 @@ class LexicalFeatures {
   // Build flow for lexical feature extraction. The lexicon must be initialized
   // before building the flow.
   Flow::Variable *Build(const Library &library, const Spec &spec, Flow *flow,
-                        bool learning);
+                        bool learn);
 
   // Initialize feature extractor from existing model.
   void Initialize(const Network &net);
@@ -76,14 +75,8 @@ class LexicalFeatures {
   // Lexicon.
   const Lexicon &lexicon() const { return lexicon_; }
 
-  // Size of output feature vector.
-  int feature_vector_dims() const { return feature_vector_dims_; }
-
   // Feature vector output.
   Tensor *feature_vector() const { return feature_vector_; }
-
-  // Gradient cell.
-  Cell *gfeatures() const { return gfeatures_; }
 
  private:
   string name_;                        // cell name
@@ -103,7 +96,6 @@ class LexicalFeatures {
 
   int prefix_size_ = 0;                // max prefix length
   int suffix_size_ = 0;                // max suffix length
-  int feature_vector_dims_ = 0;        // size of output feature vector
 
   Cell *gfeatures_ = nullptr;          // gradient cell
   Tensor *d_feature_vector_;           // feature vector input to gradient
@@ -117,37 +109,34 @@ class LexicalFeatures {
 // mapping these though feature embeddings.
 class LexicalFeatureExtractor {
  public:
-  LexicalFeatureExtractor(const LexicalFeatures &features)
-      : features_(features), data_(features.features_) {}
+  LexicalFeatureExtractor(const LexicalFeatures &lex)
+      : lex_(lex), data_(lex.features_) {}
 
-  // Compute feature vector from token in document.
-  void Compute(const DocumentFeatures &document, int token, float *fv);
+  // Compute feature vector for token.
+  void Compute(const DocumentFeatures &features, int index, float *fv);
 
-  // Extract lexical features from a range of document in a document and output
+  // Extract lexical features from a range of tokens in a document and output
   // the feature vectors to a channel.
-  void Extract(const DocumentFeatures &document, int begin, int end,
-               Channel *fv);
+  void Extract(const Document &document, int begin, int end, Channel *fv);
 
   // Data instance for feature extraction.
   Instance *data() { return &data_; }
 
  private:
-  const LexicalFeatures &features_;
+  const LexicalFeatures &lex_;
   Instance data_;
 };
 
 // Lexical feature learner for training feature embeddings.
 class LexicalFeatureLearner {
  public:
-  LexicalFeatureLearner(const LexicalFeatures &features)
-      : features_(features),
-        fv_(features.feature_vector_),
-        gradient_(features.gfeatures_) {}
+  LexicalFeatureLearner(const LexicalFeatures &lex)
+      : lex_(lex), fv_(lex.feature_vector_), gradient_(lex.gfeatures_) {}
   ~LexicalFeatureLearner() { for (auto *e : extractors_) delete e; }
 
   // Extract features and compute feature vectors for all tokens in range.
   // Return channel with feature vectors for each token.
-  Channel *Extract(const DocumentFeatures &document, int begin, int end);
+  Channel *Extract(const Document &document, int begin, int end);
 
   // Backpropagate feature vector gradients to feature embeddings.
   void Backpropagate(Channel *dfv);
@@ -159,7 +148,7 @@ class LexicalFeatureLearner {
   void Clear() { gradient_.Clear(); }
 
  private:
-  const LexicalFeatures &features_;
+  const LexicalFeatures &lex_;
   std::vector<LexicalFeatureExtractor *> extractors_;
   Channel fv_;
   Instance gradient_;

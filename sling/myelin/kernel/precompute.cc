@@ -145,7 +145,7 @@ class ConstantFolding : public Transformer {
           }
           char *data = flow->AllocateMemory(output->size);
           output->data = data;
-          output->flags |= Flow::Variable::IN;
+          output->set_in();
           int32 *result = reinterpret_cast<int32 *>(data);
 
           // Create constant variable with the pre-computed value.
@@ -182,7 +182,7 @@ class ConstantFolding : public Transformer {
             // Make the output of the shape shifting op a constant.
             output->data = input->data;
             output->size = input->size;
-            output->flags |= Flow::Variable::IN;
+            output->set_in();
 
             // Rename variable and add op name as alias.
             output->AddAlias(output->name);
@@ -235,7 +235,7 @@ class ConstantFolding : public Transformer {
               output->size = size;
               output->type = result->type();
               output->shape = result->shape();
-              output->flags |= Flow::Variable::IN;
+              output->set_in();
             }
 
             // Mark constant op for removal.

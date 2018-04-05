@@ -86,7 +86,7 @@ void LexicalFeatures::InitializeLexicon(Vocabulary::Iterator *words,
 }
 
 Flow::Variable *LexicalFeatures::Build(const Library &library, const Spec &spec,
-                                       Flow *flow, bool learning) {
+                                       Flow *flow, bool learn) {
   // Build function for feature extraction and mapping.
   FlowBuilder tf(flow, name_);
   std::vector<Flow::Variable *> features;
@@ -129,12 +129,11 @@ Flow::Variable *LexicalFeatures::Build(const Library &library, const Spec &spec,
                          1, spec.digit_dim);
     features.push_back(f);
   }
-  auto *fv = tf.Name(tf.Concat(features), "feature_vector");
-  fv->flags |= Flow::Variable::OUT;
+  auto *fv = tf.Name(tf.Concat(features), "feature_vector")->set_out();
   fv->ref = true;
 
   // Build gradient function for feature extractor.
-  if (learning) {
+  if (learn) {
     Gradient(flow, tf.func(), library);
   }
 
@@ -166,7 +165,6 @@ void LexicalFeatures::Initialize(const Network &net) {
   // Get feature sizes.
   if (prefix_feature_ != nullptr) prefix_size_ = prefix_feature_->elements();
   if (suffix_feature_ != nullptr) suffix_size_ = suffix_feature_->elements();
-  feature_vector_dims_ = feature_vector_->elements();
 }
 
 int LexicalFeatures::LoadWordEmbeddings(const string &filename) {
@@ -174,6 +172,7 @@ int LexicalFeatures::LoadWordEmbeddings(const string &filename) {
   EmbeddingReader reader(filename);
 
   // Check that embedding matrix matches embeddings and vocabulary.
+  CHECK(word_embeddings_ != nullptr);
   CHECK_EQ(word_embeddings_->rank(), 2);
   CHECK_EQ(word_embeddings_->type(), DT_FLOAT);
   CHECK_EQ(word_embeddings_->dim(0), lexicon_.size());
@@ -196,18 +195,18 @@ int LexicalFeatures::LoadWordEmbeddings(const string &filename) {
   return found;
 };
 
-void LexicalFeatureExtractor::Compute(const DocumentFeatures &document,
-                                      int token, float *fv) {
+void LexicalFeatureExtractor::Compute(const DocumentFeatures &features,
+                                      int index, float *fv) {
   // Extract word feature.
-  if (features_.word_feature_) {
-    *data_.Get<int>(features_.word_feature_) = document.word(token);
+  if (lex_.word_feature_) {
+    *data_.Get<int>(lex_.word_feature_) = features.word(index);
   }
 
   // Extract prefix feature.
-  if (features_.prefix_feature_) {
-    Affix *affix = document.prefix(token);
-    int *a = data_.Get<int>(features_.prefix_feature_);
-    for (int n = 0; n < features_.prefix_size_; ++n) {
+  if (lex_.prefix_feature_) {
+    Affix *affix = features.prefix(index);
+    int *a = data_.Get<int>(lex_.prefix_feature_);
+    for (int n = 0; n < lex_.prefix_size_; ++n) {
       if (affix != nullptr) {
         *a++ = affix->id();
         affix = affix->shorter();
@@ -218,10 +217,10 @@ void LexicalFeatureExtractor::Compute(const DocumentFeatures &document,
   }
 
   // Extract suffix feature.
-  if (features_.suffix_feature_) {
-    Affix *affix = document.suffix(token);
-    int *a = data_.Get<int>(features_.suffix_feature_);
-    for (int n = 0; n < features_.suffix_size_; ++n) {
+  if (lex_.suffix_feature_) {
+    Affix *affix = features.suffix(index);
+    int *a = data_.Get<int>(lex_.suffix_feature_);
+    for (int n = 0; n < lex_.suffix_size_; ++n) {
       if (affix != nullptr) {
         *a++ = affix->id();
         affix = affix->shorter();
@@ -232,59 +231,70 @@ void LexicalFeatureExtractor::Compute(const DocumentFeatures &document,
   }
 
   // Extract hyphen feature.
-  if (features_.hyphen_feature_) {
-    *data_.Get<int>(features_.hyphen_feature_) = document.hyphen(token);
+  if (lex_.hyphen_feature_) {
+    *data_.Get<int>(lex_.hyphen_feature_) = features.hyphen(index);
   }
 
   // Extract capitalization feature.
-  if (features_.caps_feature_) {
-    *data_.Get<int>(features_.caps_feature_) = document.capitalization(token);
+  if (lex_.caps_feature_) {
+    *data_.Get<int>(lex_.caps_feature_) = features.capitalization(index);
   }
 
   // Extract punctuation feature.
-  if (features_.punct_feature_) {
-    *data_.Get<int>(features_.punct_feature_) = document.punctuation(token);
+  if (lex_.punct_feature_) {
+    *data_.Get<int>(lex_.punct_feature_) = features.punctuation(index);
   }
 
   // Extract quote feature.
-  if (features_.quote_feature_) {
-    *data_.Get<int>(features_.quote_feature_) = document.quote(token);
+  if (lex_.quote_feature_) {
+    *data_.Get<int>(lex_.quote_feature_) = features.quote(index);
   }
 
   // Extract digit feature.
-  if (features_.digit_feature_) {
-    *data_.Get<int>(features_.digit_feature_) = document.digit(token);
+  if (lex_.digit_feature_) {
+    *data_.Get<int>(lex_.digit_feature_) = features.digit(index);
   }
 
   // Set reference to output feature vector.
-  data_.SetReference(features_.feature_vector_, fv);
+  data_.SetReference(lex_.feature_vector_, fv);
 
   // Map features through embeddings.
   data_.Compute();
 }
 
-void LexicalFeatureExtractor::Extract(const DocumentFeatures &document,
+void LexicalFeatureExtractor::Extract(const Document &document,
                                       int begin, int end, Channel *fv) {
+  // Extract lexical features from document.
+  DocumentFeatures features(&lex_.lexicon_);
+  features.Extract(document, begin, end);
+
+  // Compute feature vectors.
   int length = end - begin;
   fv->resize(length);
-  for (int token = begin; token < end; ++token) {
-    float *f = reinterpret_cast<float *>(fv->at(token - begin));
-    Compute(document, token, f);
+  for (int i = 0; i < length; ++i) {
+    float *f = reinterpret_cast<float *>(fv->at(i));
+    Compute(features, i, f);
   }
 }
 
-Channel *LexicalFeatureLearner::Extract(const DocumentFeatures &document,
+Channel *LexicalFeatureLearner::Extract(const Document &document,
                                         int begin, int end) {
-  // Extract features and compute feature vector for all tokens in range.
+  // Clear previous feature vectors.
   for (auto *e : extractors_) delete e;
   extractors_.clear();
+
+  // Extract lexical features from document.
+  DocumentFeatures features(&lex_.lexicon_);
+  features.Extract(document, begin, end);
+
+  // Compute feature vector for all tokens in range.
   int length = end - begin;
   fv_.resize(length);
-  for (int token = begin; token < end; ++token) {
-    auto *e = new LexicalFeatureExtractor(features_);
+  for (int i = 0; i < length; ++i) {
+    auto *e = new LexicalFeatureExtractor(lex_);
     extractors_.push_back(e);
-    float *f = reinterpret_cast<float *>(fv_.at(token - begin));
-    e->Compute(document, token, f);
+    float *f = reinterpret_cast<float *>(fv_.at(i));
+    e->Compute(features, i, f);
   }
   return &fv_;
 }
@@ -292,8 +302,8 @@ Channel *LexicalFeatureLearner::Extract(const DocumentFeatures &document,
 void LexicalFeatureLearner::Backpropagate(Channel *dfv) {
   CHECK_EQ(dfv->size(), fv_.size());
   for (int i = 0; i < fv_.size(); ++i) {
-    gradient_.Set(features_.d_feature_vector_, dfv, i);
-    gradient_.Set(features_.primal_, extractors_[i]->data());
+    gradient_.Set(lex_.d_feature_vector_, dfv, i);
+    gradient_.Set(lex_.primal_, extractors_[i]->data());
     gradient_.Compute();
   }
 }

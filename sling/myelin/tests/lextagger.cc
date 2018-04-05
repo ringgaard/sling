@@ -37,12 +37,14 @@ const int cpu_cores = sling::jit::CPU::Processors();
 
 DEFINE_string(train, "local/data/corpora/stanford/train.rec", "Train corpus");
 DEFINE_string(dev, "local/data/corpora/stanford/dev.rec", "Test corpus");
+DEFINE_string(embeddings, "", "Pre-trained word embeddings");
 DEFINE_bool(dump, false, "Dump flow");
 DEFINE_bool(dump_cell, false, "Dump flow");
 DEFINE_bool(profile, false, "Profile tagger");
 DEFINE_int32(epochs, 250000, "Number of training epochs");
 DEFINE_int32(report, 25000, "Report status after every n sentence");
 DEFINE_double(alpha, 1.0, "Learning rate");
+DEFINE_double(minalpha, 0.001, "Minimum learning rate");
 DEFINE_double(lambda, 0.0, "Regularization parameter");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
@@ -75,7 +77,8 @@ struct TaggerFlow : Flow {
     // Build forward flow.
     FlowBuilder tf(this, "tagger");
     tagger = tf.func();
-    input = tf.Var("input", features->type, features->shape);
+    input = tf.Var("input", features->type, features->shape)->set_in();
+    input->set_unique();
     input->ref = true;
     hidden = tf.LSTMLayer(input, lstm_dim);
     logits = tf.FFLayer(hidden, num_tags, true);
@@ -172,9 +175,6 @@ class Tagger {
       net_.options().global_profiler = true;
     }
     net_.options().flops_address = &flops_counter;
-
-    // Set up feature spec.
-    spec_.lexicon.normalize_digits = true;
   }
 
   ~Tagger() {
@@ -216,7 +216,9 @@ class Tagger {
       for (const Token &t : s->tokens()) words[t.text()]++;
     }
     Vocabulary::HashMapIterator wordit(words);
-    lex_.InitializeLexicon(&wordit, spec_.lexicon);
+    LexicalFeatures::LexiconSpec spec;
+    spec.normalize_digits = true;
+    lex_.InitializeLexicon(&wordit, spec);
 
     num_words_ = lex_.lexicon().size();
     num_tags_ = tagmap_.size();
@@ -230,13 +232,14 @@ class Tagger {
   // Build tagger flow.
   void Build() {
     // Build feature input mapping.
-    auto *fv = lex_.Build(library_, spec_, &flow_, true);
+    LexicalFeatures::Spec spec;
+    auto *fv = lex_.Build(library_, spec, &flow_, true);
 
     // Build flow for POS tagger.
     flow_.Build(library_, fv, lstm_dim_, num_tags_);
-    flow_.AddConnector("features")->AddLink(fv).AddLink(flow_.input);
     auto *dfv = flow_.Var("gradients/features/d_feature_vector");
-    flow_.AddConnector("dfeatures")->AddLink(dfv).AddLink(flow_.dinput);
+    flow_.AddConnector("features", {fv, flow_.input});
+    flow_.AddConnector("dfeatures", {dfv, flow_.dinput});
 
     // Build loss computation.
     loss_.Build(&flow_, flow_.logits, flow_.dlogits);
@@ -251,6 +254,7 @@ class Tagger {
   void Compile() {
     // Output raw DOT graph.
     GraphOptions opts;
+    //opts.direction = "LR";
     FlowToDotGraphFile(flow_, opts, "/tmp/postagger-raw.dot");
 
     // Analyze flow.
@@ -293,6 +297,7 @@ class Tagger {
 
   // Initialize model weights.
   void Initialize() {
+    // Initialize parameters with small random weights.
     std::mt19937 prng(FLAGS_seed);
     std::normal_distribution<float> normal(0.0, 1e-4);
     for (Tensor *tensor : net_.globals()) {
@@ -304,6 +309,12 @@ class Tagger {
           }
         }
       }
+    }
+
+    // Load pre-trained word embeddings.
+    if (!FLAGS_embeddings.empty()) {
+      int n = lex_.LoadWordEmbeddings(FLAGS_embeddings);
+      LOG(INFO) << "Loaded " << n << " pretrained word embeddings";
     }
   }
 
@@ -362,20 +373,19 @@ class Tagger {
     num_workers_++;
 
     // Lexical feature learner.
-    DocumentFeatures features(&lex_.lexicon());
-    LexicalFeatureLearner extractor(lex_);
+    LexicalFeatureLearner features(lex_);
 
     // Create channels.
     Channel h(model_.h_in);
     Channel c(model_.c_in);
-    Channel l(model_.dlogits);
+    Channel dl(model_.dlogits);
     Channel dh(model_.dh_in);
     Channel dc(model_.dh_out);
     Channel dfv(model_.dinput);
 
     // Allocate gradients.
     Instance gtagger(model_.dtagger);
-    std::vector<Instance *> gradients = {extractor.gradient(), &gtagger};
+    std::vector<Instance *> gradients = {features.gradient(), &gtagger};
 
     std::mt19937 prng(FLAGS_seed + index);
     std::uniform_real_distribution<float> rndprob(0.0, 1.0);
@@ -394,11 +404,10 @@ class Tagger {
       int length = sentence->num_tokens();
       h.resize(length + 1);
       c.resize(length + 1);
-      l.resize(length);
+      dl.resize(length);
 
       // Extract features from sentence and map through embeddings.
-      features.Extract(*sentence);
-      Channel *fv = extractor.Extract(features, 0, length);
+      Channel *fv = features.Extract(*sentence, 0, length);
 
       // Forward pass.
       std::vector<Instance *> forward;
@@ -427,19 +436,19 @@ class Tagger {
         // Compute loss and gradient.
         int target = Tag(sentence->token(i));
         float *logits = data->Get<float>(model_.logits);
-        float *dlogits = reinterpret_cast<float *>(l.at(i));
+        float *dlogits = reinterpret_cast<float *>(dl.at(i));
         float cost = loss_.Compute(logits, target, dlogits);
         local_loss_sum += cost;
         local_loss_count++;
       }
 
       // Backpropagate loss gradient.
-      dh.resize(length);
+      dh.reset(length);
       dc.resize(length);
       dfv.resize(length);
       for (int i = length - 1; i >= 0; --i) {
         // Set gradient.
-        gtagger.Set(model_.dlogits, &l, i);
+        gtagger.Set(model_.dlogits, &dl, i);
 
         // Set reference to primal cell.
         gtagger.Set(model_.primal, forward[i]);
@@ -461,7 +470,7 @@ class Tagger {
         // Compute backward.
         gtagger.Compute();
       }
-      extractor.Backpropagate(&dfv);
+      features.Backpropagate(&dfv);
 
       // Clear data.
       for (auto *d : forward) delete d;
@@ -479,7 +488,7 @@ class Tagger {
         if (FLAGS_lock) update_mu_.Unlock();
 
         gtagger.Clear();
-        extractor.Clear();
+        features.Clear();
         local_loss_sum = 0;
         local_loss_count = 0;
         local_tokens = 0;
@@ -492,6 +501,7 @@ class Tagger {
       // Decay learning rate.
       if (epoch_ % FLAGS_alpha_update == 0) {
         alpha_ *= FLAGS_decay;
+        if (alpha_ < FLAGS_minalpha) alpha_ = FLAGS_minalpha;
       }
 
       // Next epoch.
@@ -514,8 +524,7 @@ class Tagger {
   // Evaulate model on corpus returning accuracy.
   float Evaluate(Corpus *corpus) {
     // Create tagger instance with channels.
-    DocumentFeatures features(&lex_.lexicon());
-    LexicalFeatureExtractor extractor(lex_);
+    LexicalFeatureExtractor features(lex_);
     Instance test(model_.tagger);
     Channel h(model_.h_in);
     Channel c(model_.c_in);
@@ -529,8 +538,7 @@ class Tagger {
       h.resize(length + 1);
       c.resize(length + 1);
 
-      features.Extract(*s);
-      extractor.Extract(features, 0, length, &f);
+      features.Extract(*s, 0, length, &f);
 
       for (int i = 0; i < length; ++i) {
         // Set up channels.
@@ -578,7 +586,6 @@ class Tagger {
   }
 
  private:
-  LexicalFeatures::Spec spec_;  // lexical feature specification
   LexicalFeatures lex_;         // lexical feature inputs
   Store store_;                 // document store
   DocumentNames *names_;        // document symbol names

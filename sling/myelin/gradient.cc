@@ -45,15 +45,13 @@ Gradients::Gradients(Flow *flow,
 
     // Create adjoint corresponding to the primal variable.
     auto *dv = Var("d_" + basename(v->name), v->type, v->shape);
-    if (v->in()) dv->flags |= Flow::Variable::OUT;
-    if (v->out()) dv->flags |= Flow::Variable::IN;
+    if (v->in()) dv->set_out();
+    if (v->out()) dv->set_in();
     dv->ref = v->ref;
 
     // Connect adjoint to primal variable to ensure common layout.
     if (v->learnable()) {
-      auto *cnx = flow->AddConnector("gradients/" + v->name);
-      cnx->AddLink(v);
-      cnx->AddLink(dv);
+      flow->AddConnector("gradients/" + v->name, {v, dv});
     }
 
     // For recurrences that are both produced and consumed by the function an
@@ -78,7 +76,7 @@ Flow::Variable *Gradients::GetReference(Flow::Variable *x) {
     } else {
       // Local variables need to be accessed through a reference op.
       r = Name(Ref(instance_, x), basename(x->name));
-      x->flags |= Flow::Variable::OUT;
+      x->set_out();
     }
     refs_[x] = r;
   }
@@ -95,7 +93,10 @@ Flow::Function *Gradients::Finalize() {
         // Accumulate gradients for learnable variables.
         CHECK(dv->consumers.empty());
         AssignAdd(dv, terms);
-        dv->flags |= Flow::Variable::OUT;
+        dv->set_out();
+      } else if (v->in() && !v->unique() && dv->consumers.empty()) {
+        // Accumulate output gradient.
+        AssignAdd(dv, terms);
       } else {
         // Bind terms to adjoint.
         string name = OpName("Identity");

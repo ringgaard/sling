@@ -56,16 +56,14 @@ Flow::Variable *FlowBuilder::Var(const string &name, Type type,
 Flow::Variable *FlowBuilder::Parameter(const string &name,
                                        Type type,
                                        const Shape &shape) {
-  Variable *var = Var(name, type, shape);
-  var->flags |= Variable::LEARNABLE;
+  Variable *var = Var(name, type, shape)->set_learnable();
   return var;
 }
 
 Flow::Variable *FlowBuilder::Placeholder(const string &name,
                                          Type type,
                                          const Shape &shape) {
-  Variable *input = Var(name, type, shape);
-  input->flags |= Variable::IN;
+  Variable *input = Var(name, type, shape)->set_in();
   return input;
 }
 
@@ -203,7 +201,7 @@ Flow::Variable *FlowBuilder::FFLayers(Variable *input,
       v->type = type;
       v->shape = {1, width};
       v->ref = true;
-      v->flags |= Variable::IN | Variable::OUT;
+      v->set_in()->set_out();
     }
   }
 
@@ -234,12 +232,10 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
   auto *bc = Parameter("bc", type, {1, size});
 
   // Channels -- h_in, c_in = h_{t-1}, c_{t-1}
-  auto *h_in = Var("h_in", type, {1, size});
+  auto *h_in = Var("h_in", type, {1, size})->set_in();
   h_in->ref = true;
-  h_in->flags |= Variable::IN;
-  auto *c_in = Var("c_in", type, {1, size});
+  auto *c_in = Var("c_in", type, {1, size})->set_in();
   c_in->ref = true;
-  c_in->flags |= Variable::IN;
 
   // Input -- i_t = sigmoid(affine(x_t, h_{t-1}, c_{t-1}))
   auto *i_ait = Name(Add(MatMul(input, x2i),
@@ -258,9 +254,8 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
   auto *i_wt = Name(Tanh(i_awt), "i_wt");
 
   // Control -- c_t = f_t \odot c_{t-1} + i_t \odot tanh(affine(x_t, h_{t-1}))
-  auto *ct = Name(Add(Mul(i_it, i_wt), Mul(i_ft, c_in)), "c_out");
+  auto *ct = Name(Add(Mul(i_it, i_wt), Mul(i_ft, c_in)), "c_out")->set_out();
   ct->ref = true;
-  ct->flags |= Variable::OUT;
 
   // Output -- o_t = sigmoid(affine(x_t, h_{t-1}, c_t))
   auto *i_aot = Name(Add(MatMul(input, x2o),
@@ -271,17 +266,15 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
 
   // Hidden -- ht = o_t \odot tanh(ct)
   auto *ph_t = Tanh(ct);
-  auto *ht = Name(Mul(i_ot, ph_t), "h_out");
+  auto *ht = Name(Mul(i_ot, ph_t), "h_out")->set_out();
   ht->ref = true;
-  ht->flags |= Variable::OUT;
 
   // Connectors for hidden and control channels.
-  auto *h_cnx = flow_->AddConnector(prefix() + "/cnx_hidden");
-  h_cnx->AddLink(h_in);
-  h_cnx->AddLink(ht);
-  auto *c_cnx = flow_->AddConnector(prefix() + "/cnx_control");
-  c_cnx->AddLink(c_in);
-  c_cnx->AddLink(ct);
+  flow_->AddConnector(prefix() + "/cnx_hidden", {h_in, ht});
+  flow_->AddConnector(prefix() + "/cnx_control", {c_in, ct});
+
+  // The control channel has a single-source gradient.
+  c_in->set_unique();
 
   return ht;
 }

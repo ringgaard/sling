@@ -385,7 +385,7 @@ class Tagger {
     // Create channels.
     Channel h(model_.h_in);
     Channel c(model_.c_in);
-    Channel l(model_.dlogits);
+    Channel dl(model_.dlogits);
     Channel dh(model_.dh_in);
     Channel dc(model_.dh_out);
 
@@ -409,7 +409,7 @@ class Tagger {
       int length = sentence->size();
       h.resize(length + 1);
       c.resize(length + 1);
-      l.resize(length);
+      dl.resize(length);
 
       // Forward pass.
       std::vector<Instance *> forward;
@@ -438,18 +438,18 @@ class Tagger {
         // Compute loss and gradient.
         int target = (*sentence)[i].tag;
         float *logits = data->Get<float>(model_.logits);
-        float *dlogits = reinterpret_cast<float *>(l.at(i));
+        float *dlogits = reinterpret_cast<float *>(dl.at(i));
         float cost = loss_.Compute(logits, target, dlogits);
         local_loss_sum += cost;
         local_loss_count++;
       }
 
       // Backpropagate loss gradient.
-      dh.resize(length);
+      dh.reset(length);
       dc.resize(length);
       for (int i = length - 1; i >= 0; --i) {
         // Set gradient.
-        gtagger.Set(model_.dlogits, &l, i);
+        gtagger.Set(model_.dlogits, &dl, i);
 
         // Set reference to primal cell.
         gtagger.Set(model_.primal, forward[i]);

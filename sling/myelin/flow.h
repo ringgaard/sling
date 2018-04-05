@@ -258,11 +258,12 @@ class Flow {
   // Flow variable.
   struct Variable {
     // Variable flags.
-    enum Flags {
-      NONE = 0,         // no flags
-      IN = 1,           // input variable
-      OUT = 2,          // output variable
-      LEARNABLE = 4,    // learnable global variable
+    enum Flag {
+      NONE = 0,       // no flags
+      IN = 1,         // input variable
+      OUT = 2,        // output variable
+      LEARNABLE = 4,  // learnable global variable
+      UNIQUE = 8,     // input with single gradient
     };
 
     // Add alias for variable.
@@ -278,13 +279,48 @@ class Flow {
     int elements() const { return shape.elements(); }
 
     // Check if variable is an input variable.
-    bool in() const { return (flags & IN) != 0; }
+    bool in() const { return is(IN); }
+    Variable *set_in(bool enable = true) { return set(IN, enable); }
+    Variable *clear_in(bool disable = true) { return clear(IN, disable); }
 
     // Check if variable is an output variable.
-    bool out() const { return (flags & OUT) != 0; }
+    bool out() const { return is(OUT); }
+    Variable *set_out(bool enable = true) { return set(OUT, enable); }
+    Variable *clear_out(bool disable = true) { return clear(OUT, disable); }
 
     // Check if variable is learnable.
-    bool learnable() const { return (flags & LEARNABLE) != 0; }
+    bool learnable() const { return is(LEARNABLE); }
+    Variable *set_learnable(bool enable = true) {
+      return set(LEARNABLE, enable);
+    }
+    Variable *clear_learnable(bool disable = true) {
+      return clear(LEARNABLE, disable);
+    }
+
+    // Check if variable is unique.
+    bool unique() const { return is(UNIQUE); }
+    Variable *set_unique(bool enable = true) {
+      return set(UNIQUE, enable);
+    }
+    Variable *clear_unique(bool disable = true) {
+      return clear(UNIQUE, disable);
+    }
+
+    // Check if flag is set.
+    bool is(Flag flag) const { return (flag & flags) != 0; }
+
+    // Set or clear flag.
+    Variable *set(Flag flag, bool enable = true) {
+      if (enable) {
+        flags |= flag;
+      } else {
+        flags &= ~flag;
+      }
+      return this;
+    }
+    Variable *clear(Flag flag, bool disable = true) {
+      return set(flag, !disable);
+    }
 
     // Check if variable is a constant.
     bool constant() const { return data != nullptr; }
@@ -446,7 +482,7 @@ class Flow {
   // Flow connector.
   struct Connector {
     // Add linked variable to connector.
-    Connector &AddLink(Variable *var);
+    Connector *AddLink(Variable *var);
 
     // Remove linked variable from connector. Return false if link was not
     // found.
@@ -498,7 +534,7 @@ class Flow {
 
   // Add variable.
   Variable *AddVariable(const string &name, Type type, const Shape &shape,
-                        Variable::Flags flags = Variable::NONE);
+                        Variable::Flag flags = Variable::NONE);
 
   // Add learnable variable.
   Variable *AddWeights(const string &name, Type type, const Shape &shape) {
@@ -523,6 +559,8 @@ class Flow {
 
   // Add connector.
   Connector *AddConnector(const string &name);
+  Connector *AddConnector(const string &name,
+                          const std::vector<Variable *> &links);
 
   // Add data block.
   Blob *AddBlob(const string &name, const string &type);

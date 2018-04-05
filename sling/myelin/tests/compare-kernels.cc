@@ -200,7 +200,7 @@ void FltKernelComparator::AddInput(const string &name,
   inputs_.push_back(input);
   low_.push_back(low);
   high_.push_back(high);
-  input->flags |= Flow::Variable::IN;
+  input->set_in();
 }
 
 void FltKernelComparator::AddOutput(const string &name,
@@ -210,7 +210,7 @@ void FltKernelComparator::AddOutput(const string &name,
   op_->AddOutput(output);
   outputs_.push_back(output);
   tolerance_.push_back(tolerance);
-  output->flags |= Flow::Variable::OUT;
+  output->set_out();
 }
 
 bool FltKernelComparator::Check(int iterations) {
@@ -370,7 +370,7 @@ void IntKernelComparator::AddInput(const string &name,
   Flow::Variable *input = flow_.AddVariable(name, type, shape);
   op_->AddInput(input);
   inputs_.push_back(input);
-  input->flags |= Flow::Variable::IN;
+  input->set_in();
 }
 
 void IntKernelComparator::AddOutput(const string &name,
@@ -379,7 +379,7 @@ void IntKernelComparator::AddOutput(const string &name,
   Flow::Variable *output = flow_.AddVariable(name, type, shape);
   op_->AddOutput(output);
   outputs_.push_back(output);
-  output->flags |= Flow::Variable::OUT;
+  output->set_out();
 }
 
 static int64 GetInt(Instance *data, Tensor *t, int r) {
@@ -558,7 +558,7 @@ void FltIntKernelComparator::AddInput(const string &name,
   inputs_.push_back(input);
   low_.push_back(low);
   high_.push_back(high);
-  input->flags |= Flow::Variable::IN;
+  input->set_in();
 }
 
 void FltIntKernelComparator::AddOutput(const string &name,
@@ -567,7 +567,7 @@ void FltIntKernelComparator::AddOutput(const string &name,
   Flow::Variable *output = flow_.AddVariable(name, type, shape);
   op_->AddOutput(output);
   outputs_.push_back(output);
-  output->flags |= Flow::Variable::OUT;
+  output->set_out();
 }
 
 bool FltIntKernelComparator::Check(int iterations) {

@@ -640,6 +640,22 @@ void Channel::resize(int n) {
   size_ = n;
 }
 
+void Channel::reset(int n) {
+  // Allocate more space if needed.
+  if (n > capacity_) {
+    int cap = capacity_ * 2;
+    if (cap < n) cap = n;
+    if (cap < 8) cap = 8;
+    reserve(cap);
+  }
+
+  // Clear all elements.
+  runtime()->ClearChannel(data_, 0, n * format_->size(), placement());
+
+  // Change size.
+  size_ = n;
+}
+
 void Channel::reserve(int n) {
   // Never remove any existing elements.
   if (n < size_) return;
