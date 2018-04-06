@@ -70,89 +70,33 @@ double WallTime() {
   return tv.tv_sec + tv.tv_usec / 1000000.0;
 }
 
-// POS tagger flow.
-struct TaggerFlow : Flow {
-  void Build(Library &library, Flow::Variable *features,
-             int lstm_dim, int num_tags) {
-    // Build forward flow.
-    FlowBuilder tf(this, "tagger");
-    tagger = tf.func();
-    input = tf.Var("input", features->type, features->shape)->set_in();
-    input->set_unique();
-    input->ref = true;
-    hidden = tf.LSTMLayer(input, lstm_dim);
-    logits = tf.FFLayer(hidden, num_tags, true);
-
-    // Build gradient for tagger.
-    dtagger = Gradient(this, tagger, library);
-    dlogits = Var("gradients/tagger/d_logits");
-    dlogits->ref = true;
-    dinput = Var("gradients/tagger/d_input");
-  }
-
-  Function *tagger;
-  Variable *input;
-  Variable *hidden;
-  Variable *logits;
-
-  Function *dtagger;
-  Variable *dlogits;
-  Variable *dinput;
-};
-
 // POS tagger model.
 struct TaggerModel {
-  ~TaggerModel() {
-    delete h_zero;
-    delete c_zero;
-  }
-
   void Initialize(Network &net) {
     tagger = net.GetCell("tagger");
-    h_in = net.GetParameter("tagger/h_in");
-    h_out = net.GetParameter("tagger/h_out");
-    c_in = net.GetParameter("tagger/c_in");
-    c_out = net.GetParameter("tagger/c_out");
-    input = net.GetParameter("tagger/input");
+    lr = net.GetParameter("tagger/lr");
+    rl = net.GetParameter("tagger/rl");
     logits = net.GetParameter("tagger/logits");
 
     dtagger = net.GetCell("gradients/tagger");
     primal = net.GetParameter("gradients/tagger/primal");
-    dh_in = net.GetParameter("gradients/tagger/d_h_in");
-    dh_out = net.GetParameter("gradients/tagger/d_h_out");
-    dc_in = net.GetParameter("gradients/tagger/d_c_in");
-    dc_out = net.GetParameter("gradients/tagger/d_c_out");
+    dlr = net.GetParameter("gradients/tagger/d_lr");
+    drl = net.GetParameter("gradients/tagger/d_rl");
     dlogits = net.GetParameter("gradients/tagger/d_logits");
-    dinput = net.GetParameter("gradients/tagger/d_input");
-
-    h_zero = new Channel(h_in);
-    c_zero = new Channel(c_in);
-    h_zero->resize(1);
-    c_zero->resize(1);
   }
 
   // Forward parameters.
   Cell *tagger;
-  Tensor *h_in;
-  Tensor *h_out;
-  Tensor *c_in;
-  Tensor *c_out;
-  Tensor *input;
+  Tensor *rl;
+  Tensor *lr;
   Tensor *logits;
 
   // Backward parameters.
   Cell *dtagger;
   Tensor *primal;
-  Tensor *dh_in;
-  Tensor *dh_out;
-  Tensor *dc_in;
-  Tensor *dc_out;
+  Tensor *dlr;
+  Tensor *drl;
   Tensor *dlogits;
-  Tensor *dinput;
-
-  // Zero channels.
-  Channel *h_zero = nullptr;
-  Channel *c_zero = nullptr;
 };
 
 // POS tagger.
@@ -209,44 +153,57 @@ class Tagger {
     // Read documents.
     ReadCorpus(FLAGS_train, &train_);
     ReadCorpus(FLAGS_dev, &dev_);
-
-    // Build lexicon.
-    std::unordered_map<string, int> words;
-    for (Document *s : train_) {
-      for (const Token &t : s->tokens()) words[t.text()]++;
-    }
-    Vocabulary::HashMapIterator wordit(words);
-    LexicalFeatures::LexiconSpec spec;
-    spec.normalize_digits = true;
-    lex_.InitializeLexicon(&wordit, spec);
-
-    num_words_ = lex_.lexicon().size();
     num_tags_ = tagmap_.size();
 
     LOG(INFO) << "Train sentences: " << train_.size();
     LOG(INFO) << "Dev sentences: " << dev_.size();
-    LOG(INFO) << "Words: " << num_words_;
     LOG(INFO) << "Tags: " << num_tags_;
   }
 
   // Build tagger flow.
   void Build() {
-    // Build feature input mapping.
+    // Build lexicon.
+    std::unordered_map<string, int> words;
+    for (Document *s : train_) {
+      for (const Token &t : s->tokens()) words[t.text()]++;
+    }
+    Vocabulary::HashMapIterator vocab(words);
+
+    // Build document input encoder.
     LexicalFeatures::Spec spec;
-    auto lexvars = lex_.Build(&flow_, library_, spec, true);
+    spec.lexicon.normalize_digits = true;
+    auto lstm = encoder_.Build(&flow_, library_, spec, &vocab, lstm_dim_,
+                               true);
 
     // Build flow for POS tagger.
-    flow_.Build(library_, lexvars.fv, lstm_dim_, num_tags_);
-    flow_.AddConnector("features", {lexvars.fv, flow_.input});
-    flow_.AddConnector("dfeatures", {lexvars.dfv, flow_.dinput});
+    FlowBuilder tf(&flow_, "tagger");
+    auto *tagger = tf.func();
+    auto *lr = tf.Var("lr", lstm.lr->type, lstm.lr->shape);
+    lr->set_in();
+    lr->ref = true;
+    auto *rl = tf.Var("rl", lstm.rl->type, lstm.rl->shape);
+    rl->set_in();
+    rl->ref = true;
+    auto *logits = tf.FFLayer(tf.Concat({lr, rl}), num_tags_, true);
+
+    // Build gradient for tagger.
+    Gradient(&flow_, tagger, library_);
+    auto *dlogits = flow_.Var("gradients/tagger/d_logits");
+    dlogits->ref = true;
+
+    flow_.AddConnector("tagger/lr", {lr, lstm.lr});
+    flow_.AddConnector("tagger/rl", {rl, lstm.rl});
 
     // Build loss computation.
-    loss_.Build(&flow_, flow_.logits, flow_.dlogits);
+    loss_.Build(&flow_, logits, dlogits);
 
     // Build optimizer.
     optimizer_.set_clipping_threshold(FLAGS_clip);
     optimizer_.set_lambda(FLAGS_lambda);
     optimizer_.Build(&flow_);
+
+    num_words_ = encoder_.lex().lexicon().size();
+    LOG(INFO) << "Words: " << num_words_;
   }
 
   // Compile model.
@@ -288,7 +245,7 @@ class Tagger {
     linker_.Write("/tmp/postagger.o");
 
     // Initialize model.
-    lex_.Initialize(net_);
+    encoder_.Initialize(net_);
     model_.Initialize(net_);
     loss_.Initialize(net_);
     optimizer_.Initialize(net_);
@@ -312,7 +269,7 @@ class Tagger {
 
     // Load pre-trained word embeddings.
     if (!FLAGS_embeddings.empty()) {
-      int n = lex_.LoadWordEmbeddings(FLAGS_embeddings);
+      int n = encoder_.LoadWordEmbeddings(FLAGS_embeddings);
       LOG(INFO) << "Loaded " << n << " pretrained word embeddings";
     }
   }
@@ -371,22 +328,15 @@ class Tagger {
     sleep(index * FLAGS_rampup);
     num_workers_++;
 
-    // Lexical feature learner.
-    LexicalFeatureLearner features(lex_);
-
-    // Create channels.
-    Channel h(model_.h_in);
-    Channel c(model_.c_in);
-    Channel dl(model_.dlogits);
-    Channel dh(model_.dh_in);
-    Channel dc(model_.dh_out);
-    Channel dfv(model_.dinput);
+    // Lexical encoder learner.
+    LexicalEncoderLearner encoder(encoder_);
 
     // Allocate gradients.
     std::vector<Instance *> gradients;
     Instance gtagger(model_.dtagger);
-    features.CollectGradients(&gradients);
+    encoder.CollectGradients(&gradients);
     gradients.push_back(&gtagger);
+    Channel dl(model_.dlogits);
 
     std::mt19937 prng(FLAGS_seed + index);
     std::uniform_real_distribution<float> rndprob(0.0, 1.0);
@@ -399,37 +349,21 @@ class Tagger {
       // Select next sentence to train on.
       int sample = (FLAGS_shuffle ? prng() : iteration) % num_sentences;
       Document *sentence = train_[sample];
+      int length = sentence->num_tokens();
       iteration++;
 
-      // Initialize training on sentence instance.
-      int length = sentence->num_tokens();
-      h.resize(length + 1);
-      c.resize(length + 1);
+      // Foward pass.
+      auto lstm = encoder.Compute(*sentence, 0, length);
       dl.resize(length);
-
-      // Extract features from sentence and map through embeddings.
-      Channel *fv = features.Extract(*sentence, 0, length);
-
-      // Forward pass.
       std::vector<Instance *> forward;
       for (int i = 0; i < length; ++i) {
         // Create new instance for token.
         Instance *data = new Instance(model_.tagger);
         forward.push_back(data);
 
-        // Set up channels.
-        if (i == 0) {
-          data->Set(model_.h_in, model_.h_zero);
-          data->Set(model_.c_in, model_.c_zero);
-        } else {
-          data->Set(model_.h_in, &h, i);
-          data->Set(model_.c_in, &c, i);
-        }
-        data->Set(model_.h_out, &h, i + 1);
-        data->Set(model_.c_out, &c, i + 1);
-
-        // Set up features.
-        data->Set(model_.input, fv, i);
+        // Set hidden state from LSTMs as input to tagger.
+        data->Set(model_.lr, lstm.lr, i);
+        data->Set(model_.rl, lstm.rl, i);
 
         // Compute forward.
         data->Compute();
@@ -444,34 +378,22 @@ class Tagger {
       }
 
       // Backpropagate loss gradient.
-      dh.reset(length);
-      dc.resize(length);
-      dfv.resize(length);
-      for (int i = length - 1; i >= 0; --i) {
+      auto grad = encoder.PrepareGradientChannels(length);
+      for (int i = 0; i < length; ++i) {
         // Set gradient.
         gtagger.Set(model_.dlogits, &dl, i);
 
         // Set reference to primal cell.
         gtagger.Set(model_.primal, forward[i]);
 
-        // Set up channels.
-        if (i == length - 1) {
-          gtagger.Set(model_.dh_out, model_.h_zero);
-          gtagger.Set(model_.dc_out, model_.c_zero);
-        } else {
-          gtagger.Set(model_.dh_out, &dh, i + 1);
-          gtagger.Set(model_.dc_out, &dc, i + 1);
-        }
-        gtagger.Set(model_.dh_in, &dh, i);
-        gtagger.Set(model_.dc_in, &dc, i);
-
-        // Set feature vector gradient.
-        gtagger.Set(model_.dinput, &dfv, i);
+        // Set hidden state gradients.
+        gtagger.Set(model_.dlr, grad.lr, i);
+        gtagger.Set(model_.drl, grad.rl, i);
 
         // Compute backward.
         gtagger.Compute();
       }
-      features.Backpropagate(&dfv);
+      encoder.Backpropagate();
 
       // Clear data.
       for (auto *d : forward) delete d;
@@ -489,7 +411,7 @@ class Tagger {
         if (FLAGS_lock) update_mu_.Unlock();
 
         gtagger.Clear();
-        features.Clear();
+        encoder.Clear();
         local_loss_sum = 0;
         local_loss_count = 0;
         local_tokens = 0;
@@ -525,36 +447,19 @@ class Tagger {
   // Evaulate model on corpus returning accuracy.
   float Evaluate(Corpus *corpus) {
     // Create tagger instance with channels.
-    LexicalFeatureExtractor features(lex_);
+    LexicalEncoderInstance encoder(encoder_);
     Instance test(model_.tagger);
-    Channel h(model_.h_in);
-    Channel c(model_.c_in);
-    Channel f(lex_.feature_vector());
 
     // Run tagger on corpus and compare with gold tags.
     int num_correct = 0;
     int num_wrong = 0;
     for (Document *s : *corpus) {
       int length = s->num_tokens();
-      h.resize(length + 1);
-      c.resize(length + 1);
-
-      features.Extract(*s, 0, length, &f);
-
+      auto lstm = encoder.Compute(*s, 0, length);
       for (int i = 0; i < length; ++i) {
-        // Set up channels.
-        if (i == 0) {
-          test.Set(model_.h_in, model_.h_zero);
-          test.Set(model_.c_in, model_.c_zero);
-        } else {
-          test.Set(model_.h_in, &h, i);
-          test.Set(model_.c_in, &c, i);
-        }
-        test.Set(model_.h_out, &h, i + 1);
-        test.Set(model_.c_out, &c, i + 1);
-
-        // Set up features.
-        test.Set(model_.input, &f, i);
+        // Set up inputs from LSTMs.
+        test.Set(model_.lr, lstm.lr, i);
+        test.Set(model_.rl, lstm.rl, i);
 
         // Compute forward.
         test.Compute();
@@ -587,7 +492,6 @@ class Tagger {
   }
 
  private:
-  LexicalFeatures lex_;         // lexical feature inputs
   Store store_;                 // document store
   DocumentNames *names_;        // document symbol names
   Handle n_pos_;                // part-of-speech role symbol
@@ -599,13 +503,15 @@ class Tagger {
   // Model dimensions.
   int num_words_ = 0;
   int num_tags_ = 0;
-  int word_dim_ = 64;
   int lstm_dim_ = 128;
 
   Library library_;             // kernel library
-  TaggerFlow flow_;             // flow for tagger model
+  Flow flow_;                   // flow for tagger model
   Network net_;                 // neural net
   ElfLinker linker_;            // linker for outputting generated code
+
+  // Document input encoder.
+  LexicalEncoder encoder_;
 
   // Tagger model.
   TaggerModel model_;

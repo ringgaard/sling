@@ -67,8 +67,8 @@ BiLSTM::Outputs BiLSTM::Build(Flow *flow, const Library &library, int dim,
   if (dinput != nullptr) {
     auto *glr = Gradient(flow, lr.func(), library);
     auto *grl = Gradient(flow, rl.func(), library);
-    out.dlr = flow->Var(glr->name + "d_input");
-    out.drl = flow->Var(grl->name + "d_input");
+    out.dlr = flow->Var(glr->name + "/d_input");
+    out.drl = flow->Var(grl->name + "/d_input");
     flow->AddConnector(name_ + "/inputs", {dinput, out.dlr, out.drl});
   } else {
     out.dlr = nullptr;

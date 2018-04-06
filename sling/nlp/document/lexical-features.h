@@ -169,7 +169,8 @@ class LexicalFeatureLearner {
 // on top.
 class LexicalEncoder {
  public:
-  LexicalEncoder(const string &lexname, const string &lstmname)
+  LexicalEncoder(const string &lexname = "features",
+                 const string &lstmname = "lstm")
       : lex_(lexname), bilstm_(lstmname) {}
 
   // Build flow for lexical encoder. Returns the output variables from the
@@ -185,6 +186,12 @@ class LexicalEncoder {
 
   // Lexical features module.
   const LexicalFeatures &lex() const { return lex_; }
+
+  // Load pre-trained word embeddings. Returns the number of words which were
+  // initialized from the pre-trained embeddings.
+  int LoadWordEmbeddings(const string &filename) {
+    return lex_.LoadWordEmbeddings(filename);
+  }
 
  private:
   // Lexical feature extractor with embeddings.
