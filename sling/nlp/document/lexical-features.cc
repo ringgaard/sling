@@ -18,6 +18,8 @@
 #include "sling/myelin/gradient.h"
 #include "sling/util/embeddings.h"
 
+using namespace sling::myelin;
+
 namespace sling {
 namespace nlp {
 
@@ -85,8 +87,10 @@ void LexicalFeatures::InitializeLexicon(Vocabulary::Iterator *words,
   lexicon_.BuildSuffixes(spec.max_suffix);
 }
 
-Flow::Variable *LexicalFeatures::Build(const Library &library, const Spec &spec,
-                                       Flow *flow, bool learn) {
+LexicalFeatures::Variables LexicalFeatures::Build(Flow *flow,
+                                                  const Library &library,
+                                                  const Spec &spec,
+                                                  bool learn) {
   // Build function for feature extraction and mapping.
   FlowBuilder tf(flow, name_);
   std::vector<Flow::Variable *> features;
@@ -129,15 +133,21 @@ Flow::Variable *LexicalFeatures::Build(const Library &library, const Spec &spec,
                          1, spec.digit_dim);
     features.push_back(f);
   }
-  auto *fv = tf.Name(tf.Concat(features), "feature_vector")->set_out();
-  fv->ref = true;
+
+  // Concatenate feature embeddings.
+  Variables vars;
+  vars.fv = tf.Name(tf.Concat(features), "feature_vector")->set_out();
+  vars.fv->ref = true;
 
   // Build gradient function for feature extractor.
   if (learn) {
     Gradient(flow, tf.func(), library);
+    vars.dfv = flow->Var("gradients/" + name_ + "/d_feature_vector");
+  } else {
+    vars.dfv = nullptr;
   }
 
-  return fv;
+  return vars;
 }
 
 void LexicalFeatures::Initialize(const Network &net) {
@@ -306,6 +316,47 @@ void LexicalFeatureLearner::Backpropagate(Channel *dfv) {
     gradient_.Set(lex_.primal_, extractors_[i]->data());
     gradient_.Compute();
   }
+}
+
+BiLSTM::Outputs LexicalEncoder::Build(Flow *flow,
+                                      const Library &library,
+                                      const LexicalFeatures::Spec &spec,
+                                      Vocabulary::Iterator *words,
+                                      int dim, bool learn) {
+  lex_.InitializeLexicon(words, spec.lexicon);
+  auto lexvars = lex_.Build(flow, library, spec, learn);
+  return bilstm_.Build(flow, library, dim, lexvars.fv, lexvars.dfv);
+}
+
+void LexicalEncoder::Initialize(const myelin::Network &net) {
+  lex_.Initialize(net);
+  bilstm_.Initialize(net);
+}
+
+myelin::BiChannel LexicalEncoderInstance::Compute(const Document &document,
+                                                  int begin, int end) {
+  // Extract feature and map through feature embeddings.
+  features_.Extract(document, begin, end, &fv_);
+
+  // Compute hidden states of LSTMs.
+  return bilstm_.Compute(&fv_);
+}
+
+myelin::BiChannel LexicalEncoderLearner::Compute(const Document &document,
+                                                 int begin, int end) {
+  // Extract feature and map through feature embeddings.
+  myelin::Channel *fv = features_.Extract(document, begin, end);
+
+  // Compute hidden states of LSTMs.
+  return bilstm_.Compute(fv);
+}
+
+void LexicalEncoderLearner::Backpropagate() {
+  // Backpropagate hidden state gradients through LSTMs.
+  myelin::Channel *dfv = bilstm_.Backpropagate();
+
+  // Backpropagate feature vector gradients to feature embeddings.
+  features_.Backpropagate(dfv);
 }
 
 }  // namespace nlp

@@ -233,13 +233,12 @@ class Tagger {
   void Build() {
     // Build feature input mapping.
     LexicalFeatures::Spec spec;
-    auto *fv = lex_.Build(library_, spec, &flow_, true);
+    auto lexvars = lex_.Build(&flow_, library_, spec, true);
 
     // Build flow for POS tagger.
-    flow_.Build(library_, fv, lstm_dim_, num_tags_);
-    auto *dfv = flow_.Var("gradients/features/d_feature_vector");
-    flow_.AddConnector("features", {fv, flow_.input});
-    flow_.AddConnector("dfeatures", {dfv, flow_.dinput});
+    flow_.Build(library_, lexvars.fv, lstm_dim_, num_tags_);
+    flow_.AddConnector("features", {lexvars.fv, flow_.input});
+    flow_.AddConnector("dfeatures", {lexvars.dfv, flow_.dinput});
 
     // Build loss computation.
     loss_.Build(&flow_, flow_.logits, flow_.dlogits);

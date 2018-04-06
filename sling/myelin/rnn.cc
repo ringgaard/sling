@@ -42,7 +42,7 @@ void BiLSTM::LSTM::Initialize(const Network &net, const string &name) {
 }
 
 // Build flows for LSTMs.
-BiLSTM::Outputs BiLSTM::Build(const Library &library, Flow *flow, int dim,
+BiLSTM::Outputs BiLSTM::Build(Flow *flow, const Library &library, int dim,
                               Flow::Variable *input, Flow::Variable *dinput) {
   Outputs out;
 
@@ -217,7 +217,7 @@ BiChannel BiLSTMLearner::Compute(Channel *input) {
   return BiChannel(&lr_hidden_, &rl_hidden_);
 }
 
-BiChannel BiLSTMLearner::PrepareGradients(int length) {
+BiChannel BiLSTMLearner::PrepareGradientChannels(int length) {
   dlr_hidden_.reset(length + 1);
   drl_hidden_.reset(length + 1);
   dlr_control_.resize(length + 1);

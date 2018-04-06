@@ -45,7 +45,7 @@ class BiLSTM {
   BiLSTM(const string &name = "lstm") : name_(name) {}
 
   // Build flows for LSTMs.
-  Outputs Build(const Library &library, Flow *flow, int dim,
+  Outputs Build(Flow *flow, const Library &library, int dim,
                 Flow::Variable *input, Flow::Variable *dinput = nullptr);
 
   // Initialize LSTMs.
@@ -113,7 +113,7 @@ class BiLSTMLearner {
   BiChannel Compute(Channel *input);
 
   // Prepare gradient channels.
-  BiChannel PrepareGradients(int length);
+  BiChannel PrepareGradientChannels(int length);
 
   // Backpropagate hidden gradients to input gradient.
   Channel *Backpropagate();

@@ -28,8 +28,6 @@
 namespace sling {
 namespace nlp {
 
-using namespace sling::myelin;
-
 // Module for token-level lexical feature extraction.
 class LexicalFeatures {
  public:
@@ -43,8 +41,9 @@ class LexicalFeatures {
 
   // Lexical feature specification. Feature is disabled if dimension is zero.
   struct Spec {
+    LexiconSpec lexicon;            // lexicon specification
     int word_dim = 32;              // word emmedding dimensions
-    int prefix_dim = 16;             // prefix embedding dimensions
+    int prefix_dim = 16;            // prefix embedding dimensions
     int suffix_dim = 16;            // prefix embedding dimensions
     int hyphen_dim = 2;             // hyphenation embedding dimensions
     int caps_dim = 4;               // capitalization embedding dimensions
@@ -53,21 +52,29 @@ class LexicalFeatures {
     int digit_dim = 4;              // digit feature embedding dimensions
   };
 
+  // Feature output and gradient input for module.
+  struct Variables {
+    myelin::Flow::Variable *fv;     // feature vector output
+    myelin::Flow::Variable *dfv;    // feature vector gradient input
+  };
+
   LexicalFeatures(const string &name = "features") : name_(name) {}
 
   // Load lexicon from existing model.
-  void LoadLexicon(Flow *flow);
+  void LoadLexicon(myelin::Flow *flow);
 
   // Initialize lexicon from dictionary.
   void InitializeLexicon(Vocabulary::Iterator *words, const LexiconSpec &spec);
 
   // Build flow for lexical feature extraction. The lexicon must be initialized
   // before building the flow.
-  Flow::Variable *Build(const Library &library, const Spec &spec, Flow *flow,
-                        bool learn);
+  Variables Build(myelin::Flow *flow,
+                  const myelin::Library &library,
+                  const Spec &spec,
+                  bool learn);
 
   // Initialize feature extractor from existing model.
-  void Initialize(const Network &net);
+  void Initialize(const myelin::Network &net);
 
   // Load pre-trained word embeddings. Returns the number of words which were
   // initialized from the pre-trained embeddings.
@@ -77,30 +84,30 @@ class LexicalFeatures {
   const Lexicon &lexicon() const { return lexicon_; }
 
   // Feature vector output.
-  Tensor *feature_vector() const { return feature_vector_; }
+  myelin::Tensor *feature_vector() const { return feature_vector_; }
 
  private:
-  string name_;                        // cell name
-  Lexicon lexicon_;                    // lexicon for word vocabulary
+  string name_;                                // cell name
+  Lexicon lexicon_;                            // lexicon for word vocabulary
 
-  Cell *features_ = nullptr;           // feature extractor cell
-  Tensor *word_feature_ = nullptr;     // word feature
-  Tensor *prefix_feature_ = nullptr;   // prefix feature
-  Tensor *suffix_feature_ = nullptr;   // suffix feature
-  Tensor *hyphen_feature_ = nullptr;   // hyphenation feature
-  Tensor *caps_feature_ = nullptr;     // capitalization feature
-  Tensor *punct_feature_ = nullptr;    // punctuation feature
-  Tensor *quote_feature_ = nullptr;    // quote feature
-  Tensor *digit_feature_ = nullptr;    // digit feature
-  Tensor *feature_vector_ = nullptr;   // output feature vector
-  Tensor *word_embeddings_ = nullptr;  // word embedding matrix
+  myelin::Cell *features_ = nullptr;           // feature extractor cell
+  myelin::Tensor *word_feature_ = nullptr;     // word feature
+  myelin::Tensor *prefix_feature_ = nullptr;   // prefix feature
+  myelin::Tensor *suffix_feature_ = nullptr;   // suffix feature
+  myelin::Tensor *hyphen_feature_ = nullptr;   // hyphenation feature
+  myelin::Tensor *caps_feature_ = nullptr;     // capitalization feature
+  myelin::Tensor *punct_feature_ = nullptr;    // punctuation feature
+  myelin::Tensor *quote_feature_ = nullptr;    // quote feature
+  myelin::Tensor *digit_feature_ = nullptr;    // digit feature
+  myelin::Tensor *feature_vector_ = nullptr;   // output feature vector
+  myelin::Tensor *word_embeddings_ = nullptr;  // word embedding matrix
 
-  int prefix_size_ = 0;                // max prefix length
-  int suffix_size_ = 0;                // max suffix length
+  int prefix_size_ = 0;                        // max prefix length
+  int suffix_size_ = 0;                        // max suffix length
 
-  Cell *gfeatures_ = nullptr;          // gradient cell
-  Tensor *d_feature_vector_;           // feature vector input to gradient
-  Tensor *primal_;                     // reference to primal cell
+  myelin::Cell *gfeatures_ = nullptr;          // gradient cell
+  myelin::Tensor *d_feature_vector_;           // feature vector gradient
+  myelin::Tensor *primal_;                     // reference to primal cell
 
   friend class LexicalFeatureExtractor;
   friend class LexicalFeatureLearner;
@@ -118,14 +125,15 @@ class LexicalFeatureExtractor {
 
   // Extract lexical features from a range of tokens in a document and output
   // the feature vectors to a channel.
-  void Extract(const Document &document, int begin, int end, Channel *fv);
+  void Extract(const Document &document, int begin, int end,
+               myelin::Channel *fv);
 
   // Data instance for feature extraction.
-  Instance *data() { return &data_; }
+  myelin::Instance *data() { return &data_; }
 
  private:
   const LexicalFeatures &lex_;
-  Instance data_;
+  myelin::Instance data_;
 };
 
 // Lexical feature learner for training feature embeddings.
@@ -137,13 +145,13 @@ class LexicalFeatureLearner {
 
   // Extract features and compute feature vectors for all tokens in range.
   // Return channel with feature vectors for each token.
-  Channel *Extract(const Document &document, int begin, int end);
+  myelin::Channel *Extract(const Document &document, int begin, int end);
 
   // Backpropagate feature vector gradients to feature embeddings.
-  void Backpropagate(Channel *dfv);
+  void Backpropagate(myelin::Channel *dfv);
 
   // Collect gradients.
-  void CollectGradients(std::vector<Instance *> *gradients) {
+  void CollectGradients(std::vector<myelin::Instance *> *gradients) {
     gradients->push_back(&gradient_);
   }
 
@@ -153,20 +161,37 @@ class LexicalFeatureLearner {
  private:
   const LexicalFeatures &lex_;
   std::vector<LexicalFeatureExtractor *> extractors_;
-  Channel fv_;
-  Instance gradient_;
+  myelin::Channel fv_;
+  myelin::Instance gradient_;
 };
 
-// A lexical encoder is a lexical feature extractor with embeddings with a
-// bi-directional LSTM on top.
+// A lexical encoder is a lexical feature extractor with a bi-directional LSTM
+// on top.
 class LexicalEncoder {
  public:
+  LexicalEncoder(const string &lexname, const string &lstmname)
+      : lex_(lexname), bilstm_(lstmname) {}
+
+  // Build flow for lexical encoder. Returns the output variables from the
+  // LSTMs.
+  myelin::BiLSTM::Outputs Build(myelin::Flow *flow,
+                                const myelin::Library &library,
+                                const LexicalFeatures::Spec &spec,
+                                Vocabulary::Iterator *words,
+                                int dim, bool learn);
+
+  // Initialize feature extractor from existing model.
+  void Initialize(const myelin::Network &net);
+
+  // Lexical features module.
+  const LexicalFeatures &lex() const { return lex_; }
+
  private:
   // Lexical feature extractor with embeddings.
   LexicalFeatures lex_;
 
   // Bi-directional LSTM.
-  BiLSTM bilstm_;
+  myelin::BiLSTM bilstm_;
 
   friend class LexicalEncoderInstance;
   friend class LexicalEncoderLearner;
@@ -178,12 +203,20 @@ class LexicalEncoderInstance {
   LexicalEncoderInstance(const LexicalEncoder &encoder)
     : encoder_(encoder),
       features_(encoder_.lex_),
-      bilstm_(encoder_.bilstm_) {}
+      bilstm_(encoder_.bilstm_),
+      fv_(encoder.lex().feature_vector()) {}
+
+  // Extract lexical features from a range of tokens in a document, map the
+  // features through the feature embeddings, and run the bi-directional LSTM
+  // encoder. Returns the left-to-right and right-to-left channels for the
+  // hidden state of the LSTMs.
+  myelin::BiChannel Compute(const Document &document, int begin, int end);
 
  private:
   const LexicalEncoder &encoder_;
   LexicalFeatureExtractor features_;
-  BiLSTMInstance bilstm_;
+  myelin::BiLSTMInstance bilstm_;
+  myelin::Channel fv_;
 };
 
 // Lexical encoder learner.
@@ -194,8 +227,19 @@ class LexicalEncoderLearner {
         features_(encoder.lex_),
         bilstm_(encoder_.bilstm_) {}
 
+  // Compute hidden states for the LSTMs from input document.
+  myelin::BiChannel Compute(const Document &document, int begin, int end);
+
+  // Prepare gradient channels.
+  myelin::BiChannel PrepareGradientChannels(int length) {
+    return bilstm_.PrepareGradientChannels(length);
+  }
+
+  // Backpropagate hidden state gradients.
+  void Backpropagate();
+
   // Collect gradients.
-  void CollectGradients(std::vector<Instance *> *gradients) {
+  void CollectGradients(std::vector<myelin::Instance *> *gradients) {
     features_.CollectGradients(gradients);
     bilstm_.CollectGradients(gradients);
   }
@@ -209,7 +253,7 @@ class LexicalEncoderLearner {
  private:
   const LexicalEncoder &encoder_;
   LexicalFeatureLearner features_;
-  BiLSTMLearner bilstm_;
+  myelin::BiLSTMLearner bilstm_;
 };
 
 }  // namespace nlp
