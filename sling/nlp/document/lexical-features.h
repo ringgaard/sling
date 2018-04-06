@@ -21,6 +21,7 @@
 #include "sling/base/types.h"
 #include "sling/myelin/flow.h"
 #include "sling/myelin/compute.h"
+#include "sling/myelin/rnn.h"
 #include "sling/nlp/document/features.h"
 #include "sling/nlp/document/lexicon.h"
 
@@ -141,8 +142,10 @@ class LexicalFeatureLearner {
   // Backpropagate feature vector gradients to feature embeddings.
   void Backpropagate(Channel *dfv);
 
-  // Accumulated gradients.
-  Instance *gradient() { return &gradient_; }
+  // Collect gradients.
+  void CollectGradients(std::vector<Instance *> *gradients) {
+    gradients->push_back(&gradient_);
+  }
 
   // Clear gradients.
   void Clear() { gradient_.Clear(); }
@@ -152,6 +155,61 @@ class LexicalFeatureLearner {
   std::vector<LexicalFeatureExtractor *> extractors_;
   Channel fv_;
   Instance gradient_;
+};
+
+// A lexical encoder is a lexical feature extractor with embeddings with a
+// bi-directional LSTM on top.
+class LexicalEncoder {
+ public:
+ private:
+  // Lexical feature extractor with embeddings.
+  LexicalFeatures lex_;
+
+  // Bi-directional LSTM.
+  BiLSTM bilstm_;
+
+  friend class LexicalEncoderInstance;
+  friend class LexicalEncoderLearner;
+};
+
+// Lexical encoder instance.
+class LexicalEncoderInstance {
+ public:
+  LexicalEncoderInstance(const LexicalEncoder &encoder)
+    : encoder_(encoder),
+      features_(encoder_.lex_),
+      bilstm_(encoder_.bilstm_) {}
+
+ private:
+  const LexicalEncoder &encoder_;
+  LexicalFeatureExtractor features_;
+  BiLSTMInstance bilstm_;
+};
+
+// Lexical encoder learner.
+class LexicalEncoderLearner {
+ public:
+  LexicalEncoderLearner(const LexicalEncoder &encoder)
+      : encoder_(encoder),
+        features_(encoder.lex_),
+        bilstm_(encoder_.bilstm_) {}
+
+  // Collect gradients.
+  void CollectGradients(std::vector<Instance *> *gradients) {
+    features_.CollectGradients(gradients);
+    bilstm_.CollectGradients(gradients);
+  }
+
+  // Clear gradients.
+  void Clear() {
+    features_.Clear();
+    bilstm_.Clear();
+  }
+
+ private:
+  const LexicalEncoder &encoder_;
+  LexicalFeatureLearner features_;
+  BiLSTMLearner bilstm_;
 };
 
 }  // namespace nlp

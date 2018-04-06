@@ -23,6 +23,13 @@
 namespace sling {
 namespace myelin {
 
+// Channel pair with left-to-right and right-to-left channels.
+struct BiChannel {
+  BiChannel(Channel *lr, Channel *rl) : lr(rl), rl(rl) {}
+  Channel *lr;  // left-to-right channel
+  Channel *rl;  // right-to-left channel
+};
+
 // Bi-directional long short-term memory (LSTM) module.
 class BiLSTM {
  public:
@@ -81,13 +88,7 @@ class BiLSTMInstance {
   BiLSTMInstance(const BiLSTM &bilstm);
 
   // Compute left-to-right and right-to-left LSTM sequences for input.
-  void Compute(Channel *input);
-
-  // Return left-to-right hidden channel.
-  Channel *lr_hidden() { return &lr_hidden_; }
-
-  // Return right-to-left hidden channel.
-  Channel *rl_hidden() { return &rl_hidden_; }
+  BiChannel Compute(Channel *input);
 
  private:
   const BiLSTM &bilstm_;     // bi-directional LSTM
@@ -108,11 +109,26 @@ class BiLSTMLearner {
   BiLSTMLearner(const BiLSTM &bilstm);
   ~BiLSTMLearner();
 
-  // Return left-to-right LSTM gradients.
-  Instance *lr_gradient() { return &lr_gradient_; }
+  // Compute left-to-right and right-to-left LSTM sequences for input.
+  BiChannel Compute(Channel *input);
 
-  // Return right-to-left LSTM gradients.
-  Instance *rl_gradient() { return &rl_gradient_; }
+  // Prepare gradient channels.
+  BiChannel PrepareGradients(int length);
+
+  // Backpropagate hidden gradients to input gradient.
+  Channel *Backpropagate();
+
+  // Collect gradients.
+  void CollectGradients(std::vector<Instance *> *gradients) {
+    gradients->push_back(&lr_gradient_);
+    gradients->push_back(&rl_gradient_);
+  }
+
+  // Clear gradients.
+  void Clear() {
+    lr_gradient_.Clear();
+    rl_gradient_.Clear();
+  }
 
  private:
   const BiLSTM &bilstm_;        // bi-directional LSTM
@@ -131,6 +147,8 @@ class BiLSTMLearner {
   Channel dlr_control_;         // left-to-right LSTM control gradient channel
   Channel drl_hidden_;          // right-to-left LSTM hidden gradient channel
   Channel drl_control_;         // right-to-left LSTM control gradient channel
+
+  Channel dinput_;              // input gradient channel
 };
 
 }  // namespace myelin

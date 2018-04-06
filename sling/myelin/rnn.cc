@@ -92,7 +92,7 @@ BiLSTMInstance::BiLSTMInstance(const BiLSTM &bilstm)
       rl_hidden_(bilstm.rl_.h_in),
       rl_control_(bilstm.rl_.c_in) {}
 
-void BiLSTMInstance::Compute(Channel *input) {
+BiChannel BiLSTMInstance::Compute(Channel *input) {
   // Reset hidden and control channels.
   int length = input->size();
   lr_hidden_.reset(length + 1);
@@ -135,6 +135,8 @@ void BiLSTMInstance::Compute(Channel *input) {
     // Compute LSTM cell.
     rl_.Compute();
   }
+
+  return BiChannel(&lr_hidden_, &rl_hidden_);
 }
 
 BiLSTMLearner::BiLSTMLearner(const BiLSTM &bilstm)
@@ -148,11 +150,128 @@ BiLSTMLearner::BiLSTMLearner(const BiLSTM &bilstm)
       dlr_hidden_(bilstm.lr_.dh_in),
       dlr_control_(bilstm.lr_.dc_in),
       drl_hidden_(bilstm.rl_.dh_in),
-      drl_control_(bilstm.rl_.dc_in) {}
+      drl_control_(bilstm.rl_.dc_in),
+      dinput_(bilstm.rl_.dinput) {}
 
 BiLSTMLearner::~BiLSTMLearner() {
   for (Instance *data : lr_) delete data;
   for (Instance *data : rl_) delete data;
+}
+
+BiChannel BiLSTMLearner::Compute(Channel *input) {
+  // Allocate instances.
+  int length = input->size();
+  for (auto *data : lr_) delete data;
+  for (auto *data : rl_) delete data;
+  lr_.resize(length);
+  rl_.resize(length);
+  for (int i = 0; i < length; ++i) {
+    lr_[i] = new Instance(bilstm_.lr_.cell);
+    rl_[i] = new Instance(bilstm_.rl_.cell);
+  }
+
+  // Reset hidden and control channels.
+  lr_hidden_.reset(length + 1);
+  rl_hidden_.reset(length + 1);
+  lr_control_.resize(length + 1);
+  rl_control_.reset(length + 1);
+  lr_control_.zero(length);
+  rl_hidden_.zero(length);
+
+  // Compute left-to-right LSTM.
+  for (int i = 0; i < length; ++i) {
+    // Attach hidden and control layers.
+    Instance *lr = lr_[i];
+    int in = i > 0 ? i - 1 : length;
+    int out = i;
+    lr->Set(bilstm_.lr_.h_in, &lr_hidden_, in);
+    lr->Set(bilstm_.lr_.h_out, &lr_hidden_, out);
+    lr->Set(bilstm_.lr_.c_in, &lr_control_, in);
+    lr->Set(bilstm_.lr_.c_out, &lr_control_, out);
+
+    // Attach input features.
+    lr->Set(bilstm_.lr_.input, input, i);
+
+    // Compute LSTM cell.
+    lr->Compute();
+  }
+
+  // Compute right-to-left LSTM.
+  for (int i = 0; i < length; ++i) {
+    // Attach hidden and control layers.
+    Instance *rl = rl_[i];
+    int in = length - i;
+    int out = in - 1;
+    rl->Set(bilstm_.rl_.h_in, &rl_hidden_, in);
+    rl->Set(bilstm_.rl_.h_out, &rl_hidden_, out);
+    rl->Set(bilstm_.rl_.c_in, &rl_control_, in);
+    rl->Set(bilstm_.rl_.c_out, &rl_control_, out);
+
+    // Attach input features.
+    rl->Set(bilstm_.rl_.input, input, out);
+
+    // Compute LSTM cell.
+    rl->Compute();
+  }
+
+  return BiChannel(&lr_hidden_, &rl_hidden_);
+}
+
+BiChannel BiLSTMLearner::PrepareGradients(int length) {
+  dlr_hidden_.reset(length + 1);
+  drl_hidden_.reset(length + 1);
+  dlr_control_.resize(length + 1);
+  drl_control_.reset(length + 1);
+  dlr_control_.zero(length);
+  drl_hidden_.zero(length);
+  dinput_.reset(length);
+
+  return BiChannel(&dlr_hidden_, &drl_hidden_);
+}
+
+Channel *BiLSTMLearner::Backpropagate() {
+  int length = lr_.size();
+
+  // Propagate gradients for left-to-right LSTM.
+  for (int i = length - 1; i >= 0; --i) {
+    // Set reference to primal cell.
+    lr_gradient_.Set(bilstm_.lr_.primal, lr_[i]);
+
+    // Set gradient for hidden and control.
+    lr_gradient_.Set(bilstm_.lr_.dh_out, &dlr_hidden_, i + 1);
+    lr_gradient_.Set(bilstm_.lr_.dc_out, &dlr_control_, i + 1);
+    lr_gradient_.Set(bilstm_.lr_.dh_in, &dlr_hidden_, i);
+    lr_gradient_.Set(bilstm_.lr_.dc_in, &dlr_control_, i);
+
+    // Set input gradient.
+    lr_gradient_.Set(bilstm_.lr_.dinput, &dinput_, i);
+
+    // Compute backward.
+    lr_gradient_.Compute();
+  }
+
+  // Propagate gradients for right-to-left LSTM.
+  for (int i = 0; i < length; ++i) {
+    // Set reference to primal cell.
+    rl_gradient_.Set(bilstm_.rl_.primal, rl_[i]);
+
+    // Set gradient for hidden and control.
+    int in = i > 0 ? i - 1 : length;
+    int out = i;
+    rl_gradient_.Set(bilstm_.rl_.dh_out, &drl_hidden_, in);
+    rl_gradient_.Set(bilstm_.rl_.dc_out, &drl_control_, in);
+    rl_gradient_.Set(bilstm_.rl_.dh_in, &drl_hidden_, out);
+    rl_gradient_.Set(bilstm_.rl_.dc_in, &drl_control_, out);
+
+    // Set input gradient.
+    rl_gradient_.Set(bilstm_.rl_.dinput, &dinput_, i);
+
+    // Compute backward.
+    rl_gradient_.Compute();
+  }
+
+  // Return input gradient.
+  return &dinput_;
 }
 
 }  // namespace myelin

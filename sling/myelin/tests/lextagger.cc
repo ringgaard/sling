@@ -384,8 +384,10 @@ class Tagger {
     Channel dfv(model_.dinput);
 
     // Allocate gradients.
+    std::vector<Instance *> gradients;
     Instance gtagger(model_.dtagger);
-    std::vector<Instance *> gradients = {features.gradient(), &gtagger};
+    features.CollectGradients(&gradients);
+    gradients.push_back(&gtagger);
 
     std::mt19937 prng(FLAGS_seed + index);
     std::uniform_real_distribution<float> rndprob(0.0, 1.0);
