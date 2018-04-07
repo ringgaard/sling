@@ -25,7 +25,7 @@ namespace myelin {
 
 // Channel pair with left-to-right and right-to-left channels.
 struct BiChannel {
-  BiChannel(Channel *lr, Channel *rl) : lr(rl), rl(rl) {}
+  BiChannel(Channel *lr, Channel *rl) : lr(lr), rl(rl) {}
   Channel *lr;  // left-to-right channel
   Channel *rl;  // right-to-left channel
 };
@@ -75,7 +75,7 @@ class BiLSTM {
 
   string name_;   // LSTM cell name prefix
   LSTM lr_;       // left-to-right LSTM
-  LSTM rl_;       // right-to-left LSTM
+  //LSTM rl_;       // right-to-left LSTM
 
   friend class BiLSTMInstance;
   friend class BiLSTMLearner;
@@ -94,12 +94,12 @@ class BiLSTMInstance {
   const BiLSTM &bilstm_;     // bi-directional LSTM
 
   Instance lr_;              // left-to-right LSTM instance
-  Instance rl_;              // right-to-left LSTM instance
+  //Instance rl_;              // right-to-left LSTM instance
 
   Channel lr_hidden_;        // left-to-right LSTM hidden channel
   Channel lr_control_;       // left-to-right LSTM control channel
-  Channel rl_hidden_;        // right-to-left LSTM hidden channel
-  Channel rl_control_;       // right-to-left LSTM control channel
+  //Channel rl_hidden_;        // right-to-left LSTM hidden channel
+  //Channel rl_control_;       // right-to-left LSTM control channel
 };
 
 // Bi-directional LSTM learner.
@@ -121,32 +121,32 @@ class BiLSTMLearner {
   // Collect gradients.
   void CollectGradients(std::vector<Instance *> *gradients) {
     gradients->push_back(&lr_gradient_);
-    gradients->push_back(&rl_gradient_);
+    //gradients->push_back(&rl_gradient_);
   }
 
   // Clear gradients.
   void Clear() {
     lr_gradient_.Clear();
-    rl_gradient_.Clear();
+    //rl_gradient_.Clear();
   }
 
  private:
   const BiLSTM &bilstm_;        // bi-directional LSTM
 
   std::vector<Instance *> lr_;  // left-to-right LSTM instances
-  std::vector<Instance *> rl_;  // right-to-left LSTM instances
+  //std::vector<Instance *> rl_;  // right-to-left LSTM instances
   Instance lr_gradient_;        // left-to-right LSTM gradients
-  Instance rl_gradient_;        // right-to-left LSTM gradients
+  //Instance rl_gradient_;        // right-to-left LSTM gradients
 
   Channel lr_hidden_;           // left-to-right LSTM hidden channel
   Channel lr_control_;          // left-to-right LSTM control channel
-  Channel rl_hidden_;           // right-to-left LSTM hidden channel
-  Channel rl_control_;          // right-to-left LSTM control channel
+  //Channel rl_hidden_;           // right-to-left LSTM hidden channel
+  //Channel rl_control_;          // right-to-left LSTM control channel
 
   Channel dlr_hidden_;          // left-to-right LSTM hidden gradient channel
   Channel dlr_control_;         // left-to-right LSTM control gradient channel
-  Channel drl_hidden_;          // right-to-left LSTM hidden gradient channel
-  Channel drl_control_;         // right-to-left LSTM control gradient channel
+  //Channel drl_hidden_;          // right-to-left LSTM hidden gradient channel
+  //Channel drl_control_;         // right-to-left LSTM control gradient channel
 
   Channel dinput_;              // input gradient channel
 };

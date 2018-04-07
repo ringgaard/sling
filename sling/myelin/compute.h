@@ -545,7 +545,7 @@ class Tensor {
   string TypeString() const;
 
   // Return contents of tensor as string.
-  string ToString(const char *data) const;
+  string ToString(const char *data, bool deref = true) const;
   string ToString() const { return ToString(data_); }
 
  private:
@@ -822,6 +822,9 @@ class Channel {
   // Return runtime for channel.
   inline Runtime *runtime() const;
 
+  // Return contents of channel as string.
+  string ToString() const;
+
  private:
   // Data for the channel.
   char *data_ = nullptr;
@@ -953,6 +956,7 @@ class Instance {
   char *GetAddress(Tensor *param) {
     DCHECK(param != nullptr);
     DCHECK(!param->IsLocal()) << param->name();
+    DCHECK(param->cell() == cell_) << param->name();
     return data_ + param->offset();
   }
 
@@ -961,6 +965,7 @@ class Instance {
     DCHECK(param != nullptr);
     DCHECK(param->IsLocal()) << param->name();
     DCHECK(!param->ref()) << param->name();
+    DCHECK(param->cell() == cell_) << param->name();
     DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(data_ + param->offset());
   }
@@ -970,6 +975,7 @@ class Instance {
     DCHECK(param != nullptr);
     DCHECK(param->IsLocal()) << param->name();
     DCHECK(!param->ref()) << param->name();
+    DCHECK(param->cell() == cell_) << param->name();
     DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(data_ + param->offset() + param->offset(r));
   }
@@ -977,6 +983,7 @@ class Instance {
     DCHECK(param != nullptr);
     DCHECK(param->IsLocal()) << param->name();
     DCHECK(!param->ref()) << param->name();
+    DCHECK(param->cell() == cell_) << param->name();
     DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(
         data_ + param->offset() + param->offset(r, c));
@@ -985,11 +992,13 @@ class Instance {
   // Set link to element in channel.
   void Set(Tensor *param, Channel *channel, int index = 0) {
     DCHECK(param->ref()) << param->name();
+    DCHECK(param->cell() == cell_) << param->name();
     *reinterpret_cast<char **>(data_ + param->offset()) = channel->at(index);
   }
 
   // Set link to other instance.
   void Set(Tensor *param, Instance *instance) {
+    DCHECK(param->cell() == cell_) << param->name();
     *reinterpret_cast<char **>(data_ + param->offset()) = instance->data();
   }
 
@@ -999,6 +1008,7 @@ class Instance {
     DCHECK(param != nullptr);
     DCHECK(param->IsLocal()) << param->name();
     DCHECK(param->ref()) << param->name();
+    DCHECK(param->cell() == cell_) << param->name();
     *reinterpret_cast<void **>(data_ + param->offset()) = address;
   }
 

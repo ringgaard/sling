@@ -75,13 +75,13 @@ struct TaggerModel {
   void Initialize(Network &net) {
     tagger = net.GetCell("tagger");
     lr = net.GetParameter("tagger/lr");
-    rl = net.GetParameter("tagger/rl");
+    //rl = net.GetParameter("tagger/rl");
     logits = net.GetParameter("tagger/logits");
 
     dtagger = net.GetCell("gradients/tagger");
     primal = net.GetParameter("gradients/tagger/primal");
     dlr = net.GetParameter("gradients/tagger/d_lr");
-    drl = net.GetParameter("gradients/tagger/d_rl");
+    //drl = net.GetParameter("gradients/tagger/d_rl");
     dlogits = net.GetParameter("gradients/tagger/d_logits");
   }
 
@@ -181,18 +181,18 @@ class Tagger {
     auto *lr = tf.Var("lr", lstm.lr->type, lstm.lr->shape);
     lr->set_in();
     lr->ref = true;
-    auto *rl = tf.Var("rl", lstm.rl->type, lstm.rl->shape);
-    rl->set_in();
-    rl->ref = true;
-    auto *logits = tf.FFLayer(tf.Concat({lr, rl}), num_tags_, true);
+    //auto *rl = tf.Var("rl", lstm.rl->type, lstm.rl->shape);
+    //rl->set_in();
+    //rl->ref = true;
+    //auto *logits = tf.FFLayer(tf.Concat({lr, rl}), num_tags_, true);
+    auto *logits = tf.FFLayer(lr, num_tags_, true);
 
     // Build gradient for tagger.
     Gradient(&flow_, tagger, library_);
     auto *dlogits = flow_.Var("gradients/tagger/d_logits");
-    dlogits->ref = true;
 
     flow_.AddConnector("tagger/lr", {lr, lstm.lr});
-    flow_.AddConnector("tagger/rl", {rl, lstm.rl});
+    //flow_.AddConnector("tagger/rl", {rl, lstm.rl});
 
     // Build loss computation.
     loss_.Build(&flow_, logits, dlogits);
@@ -210,7 +210,6 @@ class Tagger {
   void Compile() {
     // Output raw DOT graph.
     GraphOptions opts;
-    //opts.direction = "LR";
     FlowToDotGraphFile(flow_, opts, "/tmp/postagger-raw.dot");
 
     // Analyze flow.
@@ -331,12 +330,14 @@ class Tagger {
     // Lexical encoder learner.
     LexicalEncoderLearner encoder(encoder_);
 
+    // POS tagger instance.
+    Instance tagger(model_.tagger);
+
     // Allocate gradients.
     std::vector<Instance *> gradients;
     Instance gtagger(model_.dtagger);
     encoder.CollectGradients(&gradients);
     gradients.push_back(&gtagger);
-    Channel dl(model_.dlogits);
 
     std::mt19937 prng(FLAGS_seed + index);
     std::uniform_real_distribution<float> rndprob(0.0, 1.0);
@@ -352,52 +353,36 @@ class Tagger {
       int length = sentence->num_tokens();
       iteration++;
 
-      // Foward pass.
+      // Run sentence through lexical encoder.
       auto lstm = encoder.Compute(*sentence, 0, length);
-      dl.resize(length);
-      std::vector<Instance *> forward;
-      for (int i = 0; i < length; ++i) {
-        // Create new instance for token.
-        Instance *data = new Instance(model_.tagger);
-        forward.push_back(data);
 
+      // Run tagger and compute loss.
+      auto grad = encoder.PrepareGradientChannels(length);
+      for (int i = 0; i < length; ++i) {
         // Set hidden state from LSTMs as input to tagger.
-        data->Set(model_.lr, lstm.lr, i);
-        data->Set(model_.rl, lstm.rl, i);
+        tagger.Set(model_.lr, lstm.lr, i);
+        //tagger.Set(model_.rl, lstm.rl, i);
 
         // Compute forward.
-        data->Compute();
+        tagger.Compute();
 
         // Compute loss and gradient.
         int target = Tag(sentence->token(i));
-        float *logits = data->Get<float>(model_.logits);
-        float *dlogits = reinterpret_cast<float *>(dl.at(i));
+        float *logits = tagger.Get<float>(model_.logits);
+        float *dlogits = gtagger.Get<float>(model_.dlogits);
         float cost = loss_.Compute(logits, target, dlogits);
         local_loss_sum += cost;
         local_loss_count++;
-      }
 
-      // Backpropagate loss gradient.
-      auto grad = encoder.PrepareGradientChannels(length);
-      for (int i = 0; i < length; ++i) {
-        // Set gradient.
-        gtagger.Set(model_.dlogits, &dl, i);
-
-        // Set reference to primal cell.
-        gtagger.Set(model_.primal, forward[i]);
-
-        // Set hidden state gradients.
+        // Backpropagate loss gradient through tagger.
+        gtagger.Set(model_.primal, &tagger);
         gtagger.Set(model_.dlr, grad.lr, i);
-        gtagger.Set(model_.drl, grad.rl, i);
-
-        // Compute backward.
+        //gtagger.Set(model_.drl, grad.rl, i);
         gtagger.Compute();
       }
-      encoder.Backpropagate();
 
-      // Clear data.
-      for (auto *d : forward) delete d;
-      forward.clear();
+      // Propagate tagger gradient through encoder.
+      encoder.Backpropagate();
       local_tokens += length;
 
       // Apply gradients to model.
@@ -459,7 +444,7 @@ class Tagger {
       for (int i = 0; i < length; ++i) {
         // Set up inputs from LSTMs.
         test.Set(model_.lr, lstm.lr, i);
-        test.Set(model_.rl, lstm.rl, i);
+        //test.Set(model_.rl, lstm.rl, i);
 
         // Compute forward.
         test.Compute();

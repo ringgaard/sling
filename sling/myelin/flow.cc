@@ -551,6 +551,7 @@ void Flow::Function::AddOperation(Operation *op) {
 }
 
 Flow::Connector *Flow::Connector::AddLink(Variable *var) {
+  CHECK(var != nullptr) << name;
   if (std::find(links.begin(), links.end(), var) == links.end()) {
     links.push_back(var);
   }

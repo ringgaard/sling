@@ -566,9 +566,9 @@ string Tensor::TypeString() const {
   return str;
 }
 
-string Tensor::ToString(const char *data) const {
+string Tensor::ToString(const char *data, bool deref) const {
   // Resolve references.
-  if (ref()) data = *reinterpret_cast<const char * const *>(data);
+  if (deref && ref()) data = *reinterpret_cast<const char * const *>(data);
 
   // Check for shape and null.
   if (!shape().defined()) return "*";
@@ -676,6 +676,17 @@ void Channel::reserve(int n) {
 void Channel::zero(int n) {
   runtime()->ClearChannel(data_, n * format_->size(), format_->size(),
                           placement());
+}
+
+string Channel::ToString() const {
+  string str;
+  for (int i = 0; i < size_; ++i) {
+    str.append(std::to_string(i));
+    str.append(": ");
+    str.append(format_->ToString(at(i), false));
+    str.append("\n");
+  }
+  return str;
 }
 
 ProfileSummary::ProfileSummary(Cell *cell) : cell_(cell) {
@@ -904,7 +915,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (cnx->links.empty()) continue;
     Tensor *t = tensors[cnx->links[0]];
     for (int i = 1; i < cnx->links.size(); ++i) {
-      tensors[cnx->links[i]]->Link(t);
+      Tensor *l = tensors[cnx->links[i]];
+      l->Link(t);
     }
   }
 
