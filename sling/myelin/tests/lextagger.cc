@@ -75,13 +75,13 @@ struct TaggerModel {
   void Initialize(Network &net) {
     tagger = net.GetCell("tagger");
     lr = net.GetParameter("tagger/lr");
-    //rl = net.GetParameter("tagger/rl");
+    rl = net.GetParameter("tagger/rl");
     logits = net.GetParameter("tagger/logits");
 
     dtagger = net.GetCell("gradients/tagger");
     primal = net.GetParameter("gradients/tagger/primal");
     dlr = net.GetParameter("gradients/tagger/d_lr");
-    //drl = net.GetParameter("gradients/tagger/d_rl");
+    drl = net.GetParameter("gradients/tagger/d_rl");
     dlogits = net.GetParameter("gradients/tagger/d_logits");
   }
 
@@ -172,8 +172,7 @@ class Tagger {
     // Build document input encoder.
     LexicalFeatures::Spec spec;
     spec.lexicon.normalize_digits = true;
-    auto lstm = encoder_.Build(&flow_, library_, spec, &vocab, lstm_dim_,
-                               true);
+    auto lstm = encoder_.Build(&flow_, library_, spec, &vocab, 128, true);
 
     // Build flow for POS tagger.
     FlowBuilder tf(&flow_, "tagger");
@@ -181,18 +180,17 @@ class Tagger {
     auto *lr = tf.Var("lr", lstm.lr->type, lstm.lr->shape);
     lr->set_in();
     lr->ref = true;
-    //auto *rl = tf.Var("rl", lstm.rl->type, lstm.rl->shape);
-    //rl->set_in();
-    //rl->ref = true;
-    //auto *logits = tf.FFLayer(tf.Concat({lr, rl}), num_tags_, true);
-    auto *logits = tf.FFLayer(lr, num_tags_, true);
+    auto *rl = tf.Var("rl", lstm.rl->type, lstm.rl->shape);
+    rl->set_in();
+    rl->ref = true;
+    auto *logits = tf.FFLayer(tf.Concat({lr, rl}), num_tags_, true);
+
+    flow_.AddConnector("tagger/lr", {lr, lstm.lr});
+    flow_.AddConnector("tagger/rl", {rl, lstm.rl});
 
     // Build gradient for tagger.
     Gradient(&flow_, tagger, library_);
     auto *dlogits = flow_.Var("gradients/tagger/d_logits");
-
-    flow_.AddConnector("tagger/lr", {lr, lstm.lr});
-    //flow_.AddConnector("tagger/rl", {rl, lstm.rl});
 
     // Build loss computation.
     loss_.Build(&flow_, logits, dlogits);
@@ -361,7 +359,7 @@ class Tagger {
       for (int i = 0; i < length; ++i) {
         // Set hidden state from LSTMs as input to tagger.
         tagger.Set(model_.lr, lstm.lr, i);
-        //tagger.Set(model_.rl, lstm.rl, i);
+        tagger.Set(model_.rl, lstm.rl, i);
 
         // Compute forward.
         tagger.Compute();
@@ -377,7 +375,7 @@ class Tagger {
         // Backpropagate loss gradient through tagger.
         gtagger.Set(model_.primal, &tagger);
         gtagger.Set(model_.dlr, grad.lr, i);
-        //gtagger.Set(model_.drl, grad.rl, i);
+        gtagger.Set(model_.drl, grad.rl, i);
         gtagger.Compute();
       }
 
@@ -433,7 +431,7 @@ class Tagger {
   float Evaluate(Corpus *corpus) {
     // Create tagger instance with channels.
     LexicalEncoderInstance encoder(encoder_);
-    Instance test(model_.tagger);
+    Instance tagger(model_.tagger);
 
     // Run tagger on corpus and compare with gold tags.
     int num_correct = 0;
@@ -443,14 +441,14 @@ class Tagger {
       auto lstm = encoder.Compute(*s, 0, length);
       for (int i = 0; i < length; ++i) {
         // Set up inputs from LSTMs.
-        test.Set(model_.lr, lstm.lr, i);
-        //test.Set(model_.rl, lstm.rl, i);
+        tagger.Set(model_.lr, lstm.lr, i);
+        tagger.Set(model_.rl, lstm.rl, i);
 
         // Compute forward.
-        test.Compute();
+        tagger.Compute();
 
         // Compute predicted tag.
-        float *predictions = test.Get<float>(model_.logits);
+        float *predictions = tagger.Get<float>(model_.logits);
         int best = 0;
         for (int t = 1; t < num_tags_; ++t) {
           if (predictions[t] > predictions[best]) best = t;
@@ -488,7 +486,6 @@ class Tagger {
   // Model dimensions.
   int num_words_ = 0;
   int num_tags_ = 0;
-  int lstm_dim_ = 128;
 
   Library library_;             // kernel library
   Flow flow_;                   // flow for tagger model
