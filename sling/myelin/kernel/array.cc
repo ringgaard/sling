@@ -1600,12 +1600,12 @@ class ReshapeRefTransformer : public Transformer {
     for (Flow::Operation *op : flow->ops()) {
       if (op->type != "Reshape") continue;
       if (op->indegree() != 2 || op->outdegree() != 1) return false;
-      if (op->inputs[0]->ref && !op->outputs[0]->ref) {
-        op->outputs[0]->ref = true;
+      if (op->inputs[0]->ref() && !op->outputs[0]->ref()) {
+        op->outputs[0]->set_ref();
         updated = true;
       }
-      if (op->outputs[0]->ref && !op->inputs[0]->ref) {
-        op->inputs[0]->ref = true;
+      if (op->outputs[0]->ref() && !op->inputs[0]->ref()) {
+        op->inputs[0]->set_ref();
         updated = true;
       }
     }

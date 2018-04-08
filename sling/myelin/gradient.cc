@@ -47,17 +47,15 @@ Gradients::Gradients(Flow *flow,
     auto *dv = Var("d_" + basename(v->name), v->type, v->shape);
     if (v->in()) dv->set_out();
     if (v->out()) dv->set_in();
-    dv->ref = v->ref;
+    dv->set_ref(v->ref());
 
     // Connect adjoint to primal variable to ensure common layout.
-    if (v->learnable()) {
-      flow->AddConnector("gradients/" + v->name, {v, dv});
-    }
+    if (v->learnable()) flow->Connect({dv, v});
 
     // For recurrences that are both produced and consumed by the function an
     // additional accumulator is added to sum both contributions to the
     // gradient.
-    if (v->ref && v->producer != nullptr && !v->consumers.empty()) {
+    if (v->ref() && v->producer != nullptr && !v->consumers.empty()) {
       auto *acc = Var("acc_" + basename(v->name), v->type, v->shape);
       adjoints_[v] = acc;
       terms_[acc] = dv;
@@ -65,6 +63,9 @@ Gradients::Gradients(Flow *flow,
       adjoints_[v] = dv;
     }
   }
+
+  // Gradients are only needed at training-time.
+  func()->set_training();
 }
 
 Flow::Variable *Gradients::GetReference(Flow::Variable *x) {

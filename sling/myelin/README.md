@@ -191,27 +191,27 @@ flow = "flow" <version>
        <#blobs> blob* (from version 4)
 
 var = <name$>
-      <#flags> (IN=1, OUT=2, LEARNABLE=4, from version 5)
+      <#flags> (IN=1, OUT=2, REF=4, LEARNABLE=8 UNIQUE=16, from version 5)
       <#aliases> <alias$>
       <dtype$>
       <shape>
       <#bytes> value
 
-op = <name$> 
+op = <name$>
      <#flags> (unused, from version 5)
      <type$>
      <#inputs> <input$>*
      <#outputs> <output$>*
      <#attrs> attr*
 
-blob = <name$> 
+blob = <name$>
        <#flags> (unused, from version 5)
        <type$>
        <#attrs> attr*
        <#bytes> data
 
 func = <name$>
-       <#flags> (unused, from version 5)
+       <#flags> (TRAINING=1, from version 5)
        <#ops> <op$>
 
 cnx = <name$>

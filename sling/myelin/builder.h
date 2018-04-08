@@ -79,7 +79,8 @@ class FlowBuilder : public Scope {
   Variable *Parameter(const string &name, Type type, const Shape &shape);
 
   // Add input variable to function.
-  Variable *Placeholder(const string &name, Type type, const Shape &shape);
+  Variable *Placeholder(const string &name, Type type, const Shape &shape,
+                        bool ref = false);
 
   // Change name of variable. Returns the variable itself.
   Variable *Name(Variable *var, const string &name);

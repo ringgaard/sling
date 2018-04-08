@@ -879,7 +879,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       names_[alias] = tensor;
     }
     tensor->type_ = var->type;
-    tensor->ref_ = var->ref;
+    tensor->ref_ = var->ref();
     tensor->shape_ = var->shape;
     tensor->aligned_ = var->shape;
     tensor->minalign_.fill(var->rank(), 1);

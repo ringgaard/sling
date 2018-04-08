@@ -41,7 +41,7 @@ void CrossEntropyLoss::Build(Flow *flow,
 
   // Inputs are logits and target label.
   auto *input = tf.Placeholder("logits", DT_FLOAT, logits->shape);
-  input->ref = true;
+  input->set_ref();
   auto *target = tf.Placeholder("target", DT_INT32, {});
 
   // Compute softmax for logits.
@@ -54,11 +54,14 @@ void CrossEntropyLoss::Build(Flow *flow,
   // Compute gradient.
   auto *gradient = tf.Sub(softmax, tf.OneHot(target, size));
   auto *output = tf.Name(tf.Reshape(gradient, dlogits->shape), "d_logits");
-  output->ref = true;
+  output->set_ref();
 
   // Connect input and output logits.
-  flow->AddConnector(name_ + "/cnx_logits", {logits, input});
-  flow->AddConnector(name_ + "/cnx_dlogits", {dlogits, output});
+  flow->Connect({logits, input});
+  flow->Connect({dlogits, output});
+
+  // Loss is only needed at training-time.
+  tf.func()->set_training();
 }
 
 void CrossEntropyLoss::Initialize(const Network &network) {
@@ -112,6 +115,9 @@ void Optimizer::Build(Flow *flow) {
 
   // Build optimizer.
   BuildOptimizer(gradmap, &tf);
+
+  // Optimizer is only needed at training-time.
+  tf.func()->set_training();
 }
 
 void Optimizer::Initialize(const Network &network) {

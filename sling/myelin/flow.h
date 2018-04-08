@@ -255,15 +255,38 @@ class Flow {
   static const int kVersion = 5;
   static const int kMagic = 0x776f6c66;
 
+  // Flow artifact.
+  template<typename T> struct Artifact {
+    // Check if flag is set.
+    bool is(uint32 flag) const { return (flag & flags) != 0; }
+
+    // Set or clear flag.
+    T *set(uint32 flag, bool enable = true) {
+      if (enable) {
+        flags |= flag;
+      } else {
+        flags &= ~flag;
+      }
+      return static_cast<T *>(this);
+    }
+    T *clear(uint32 flag, bool disable = true) {
+      return set(flag, !disable);
+    }
+
+    string name;         // artifact name
+    uint32 flags = 0;    // artifact flags (meaning depends on artifact type)
+  };
+
   // Flow variable.
-  struct Variable {
+  struct Variable : public Artifact<Variable> {
     // Variable flags.
     enum Flag {
       NONE = 0,       // no flags
       IN = 1,         // input variable
       OUT = 2,        // output variable
-      LEARNABLE = 4,  // learnable global variable
-      UNIQUE = 8,     // input with single gradient
+      REF = 4,        // reference variable
+      LEARNABLE = 8,  // learnable global variable
+      UNIQUE = 16,    // input with single gradient
     };
 
     // Add alias for variable.
@@ -278,17 +301,22 @@ class Flow {
     // Return the number of elements in the variable tensor.
     int elements() const { return shape.elements(); }
 
-    // Check if variable is an input variable.
+    // Input variable flag.
     bool in() const { return is(IN); }
     Variable *set_in(bool enable = true) { return set(IN, enable); }
     Variable *clear_in(bool disable = true) { return clear(IN, disable); }
 
-    // Check if variable is an output variable.
+    // Output variable flag.
     bool out() const { return is(OUT); }
     Variable *set_out(bool enable = true) { return set(OUT, enable); }
     Variable *clear_out(bool disable = true) { return clear(OUT, disable); }
 
-    // Check if variable is learnable.
+    // Reference variable flag.
+    bool ref() const { return is(REF); }
+    Variable *set_ref(bool enable = true) { return set(REF, enable); }
+    Variable *clear_ref(bool disable = true) { return clear(REF, disable); }
+
+    // Learnable variable flag.
     bool learnable() const { return is(LEARNABLE); }
     Variable *set_learnable(bool enable = true) {
       return set(LEARNABLE, enable);
@@ -297,29 +325,13 @@ class Flow {
       return clear(LEARNABLE, disable);
     }
 
-    // Check if variable is unique.
+    // Unique gradient flag.
     bool unique() const { return is(UNIQUE); }
     Variable *set_unique(bool enable = true) {
       return set(UNIQUE, enable);
     }
     Variable *clear_unique(bool disable = true) {
       return clear(UNIQUE, disable);
-    }
-
-    // Check if flag is set.
-    bool is(Flag flag) const { return (flag & flags) != 0; }
-
-    // Set or clear flag.
-    Variable *set(Flag flag, bool enable = true) {
-      if (enable) {
-        flags |= flag;
-      } else {
-        flags &= ~flag;
-      }
-      return this;
-    }
-    Variable *clear(Flag flag, bool disable = true) {
-      return set(flag, !disable);
     }
 
     // Check if variable is a constant.
@@ -365,12 +377,8 @@ class Flow {
     // Check if variable has a dependency on some operation.
     bool DependsOn(const Operation *op) const;
 
-    string name;                         // variable name
     std::vector<string> aliases;         // additional aliases for variable
-
-    uint32 flags = 0;                    // variable flags
     Type type = DT_INVALID;              // element type for variable
-    bool ref = false;                    // is variable a reference?
     Shape shape;                         // variable shape
     char *data = nullptr;                // data for constants (owned by flow)
     uint64_t size = 0;                   // size of data in bytes
@@ -380,7 +388,7 @@ class Flow {
   };
 
   // Flow operation.
-  struct Operation {
+  struct Operation : public Artifact<Operation> {
     // Add input to operation.
     void AddInput(Variable *var);
 
@@ -457,7 +465,6 @@ class Flow {
     int indegree() const { return inputs.size(); }
     int outdegree() const { return outputs.size(); }
 
-    string name;                      // operation name
     string type;                      // operation type
     std::vector<Variable *> inputs;   // input variables
     std::vector<Variable *> outputs;  // output variables
@@ -471,16 +478,30 @@ class Flow {
   };
 
   // Flow function.
-  struct Function {
+  struct Function : public Artifact<Function> {
+    // Variable flags.
+    enum Flag {
+      NONE = 0,       // no flags
+      TRAINING = 1,   // function only needed for training
+    };
+
     // Add operation to function.
     void AddOperation(Operation *op);
 
-    string name;                      // function name
+    // Training function flag.
+    bool training() const { return is(TRAINING); }
+    Function *set_training(bool enable = true) {
+      return set(TRAINING, enable);
+    }
+    Function *clear_training(bool disable = true) {
+      return clear(TRAINING, disable);
+    }
+
     std::vector<Operation *> ops;     // ops for function in compute order
   };
 
   // Flow connector.
-  struct Connector {
+  struct Connector : public Artifact<Connector> {
     // Add linked variable to connector.
     Connector *AddLink(Variable *var);
 
@@ -492,13 +513,11 @@ class Flow {
     // not found.
     bool ReplaceLink(Variable *old, Variable *var);
 
-    string name;                      // connector name
     std::vector<Variable *> links;    // variables linked to connector
   };
 
   // Blob for storing auxiliary data blocks in flow files.
-  struct Blob {
-    string name;                      // name of data block
+  struct Blob : public Artifact<Blob> {
     string type;                      // data block type
     Attributes attrs;                 // attributes for data block
     const char *data = nullptr;       // data for blob
@@ -559,8 +578,9 @@ class Flow {
 
   // Add connector.
   Connector *AddConnector(const string &name);
-  Connector *AddConnector(const string &name,
-                          const std::vector<Variable *> &links);
+
+  // Link variables using new connector.
+  Connector *Connect(const std::vector<Variable *> &links);
 
   // Add data block.
   Blob *AddBlob(const string &name, const string &type);

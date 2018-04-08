@@ -136,8 +136,8 @@ LexicalFeatures::Variables LexicalFeatures::Build(Flow *flow,
 
   // Concatenate feature embeddings.
   Variables vars;
-  vars.fv = tf.Name(tf.Concat(features), "feature_vector")->set_out();
-  vars.fv->ref = true;
+  vars.fv = tf.Name(tf.Concat(features), "feature_vector");
+  vars.fv->set_out()->set_ref();
 
   // Build gradient function for feature extractor.
   if (learn) {

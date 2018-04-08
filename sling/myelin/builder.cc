@@ -62,8 +62,10 @@ Flow::Variable *FlowBuilder::Parameter(const string &name,
 
 Flow::Variable *FlowBuilder::Placeholder(const string &name,
                                          Type type,
-                                         const Shape &shape) {
+                                         const Shape &shape,
+                                         bool ref) {
   Variable *input = Var(name, type, shape)->set_in();
+  if (ref) input->set_ref();
   return input;
 }
 
@@ -126,7 +128,7 @@ Flow::Variable *FlowBuilder::Const(const void *data, Type type,
 
 Flow::Variable *FlowBuilder::Instance(Function *func) {
   Variable *instance = Var(func->name, DT_RESOURCE, {});
-  instance->ref = true;
+  instance->set_ref();
   return instance;
 }
 
@@ -142,7 +144,7 @@ Flow::Variable *FlowBuilder::Ref(Variable *instance, Variable *external) {
   Variable *ref = Op("Reference", {instance});
   ref->type = external->type;
   ref->shape = external->shape;
-  ref->ref = true;
+  ref->set_ref();
   ref->producer->SetAttr("var", external->name);
   return ref;
 }
@@ -200,8 +202,7 @@ Flow::Variable *FlowBuilder::FFLayers(Variable *input,
       v = Name(Identity(v), "hidden");
       v->type = type;
       v->shape = {1, width};
-      v->ref = true;
-      v->set_in()->set_out();
+      v->set_in()->set_out()->set_ref();
     }
   }
 
@@ -232,10 +233,8 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
   auto *bc = Parameter("bc", type, {1, size});
 
   // Channels -- h_in, c_in = h_{t-1}, c_{t-1}
-  auto *h_in = Var("h_in", type, {1, size})->set_in();
-  h_in->ref = true;
-  auto *c_in = Var("c_in", type, {1, size})->set_in();
-  c_in->ref = true;
+  auto *h_in = Placeholder("h_in", type, {1, size}, true);
+  auto *c_in = Placeholder("c_in", type, {1, size}, true);
 
   // Input -- i_t = sigmoid(affine(x_t, h_{t-1}, c_{t-1}))
   auto *i_ait = Name(Add(MatMul(input, x2i),
@@ -254,8 +253,8 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
   auto *i_wt = Name(Tanh(i_awt), "i_wt");
 
   // Control -- c_t = f_t \odot c_{t-1} + i_t \odot tanh(affine(x_t, h_{t-1}))
-  auto *ct = Name(Add(Mul(i_it, i_wt), Mul(i_ft, c_in)), "c_out")->set_out();
-  ct->ref = true;
+  auto *ct = Name(Add(Mul(i_it, i_wt), Mul(i_ft, c_in)), "c_out");
+  ct->set_out()->set_ref();
 
   // Output -- o_t = sigmoid(affine(x_t, h_{t-1}, c_t))
   auto *i_aot = Name(Add(MatMul(input, x2o),
@@ -266,12 +265,11 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
 
   // Hidden -- ht = o_t \odot tanh(ct)
   auto *ph_t = Tanh(ct);
-  auto *ht = Name(Mul(i_ot, ph_t), "h_out")->set_out();
-  ht->ref = true;
+  auto *ht = Name(Mul(i_ot, ph_t), "h_out")->set_out()->set_ref();
 
   // Connectors for hidden and control channels.
-  flow_->AddConnector(prefix() + "/cnx_hidden", {h_in, ht});
-  flow_->AddConnector(prefix() + "/cnx_control", {c_in, ct});
+  flow_->Connect({h_in, ht});
+  flow_->Connect({c_in, ct});
 
   // The control channel has a single-source gradient.
   c_in->set_unique();

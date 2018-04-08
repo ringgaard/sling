@@ -162,7 +162,7 @@ struct TaggerFlow : Flow {
     // Build gradient for tagger.
     dtagger = Gradient(this, tagger, library);
     dlogits = Var("gradients/tagger/d_logits");
-    dlogits->ref = true;
+    dlogits->set_ref();
   }
 
   Function *tagger;

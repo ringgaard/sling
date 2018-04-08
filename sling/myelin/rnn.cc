@@ -48,20 +48,16 @@ BiLSTM::Outputs BiLSTM::Build(Flow *flow, const Library &library, int dim,
 
   // Build left-to-right LSTM flow.
   FlowBuilder lr(flow, name_ + "/lr");
-  auto *lr_input = lr.Var("input", input->type, input->shape);
-  lr_input->set_in();
-  lr_input->ref = true;
+  auto *lr_input = lr.Placeholder("input", input->type, input->shape, true);
   out.lr = lr.LSTMLayer(lr_input, dim);
 
   // Build right-to-left LSTM flow.
   FlowBuilder rl(flow, name_ + "/rl");
-  auto *rl_input = rl.Var("input", input->type, input->shape);
-  rl_input->set_in();
-  rl_input->ref = true;
+  auto *rl_input = rl.Placeholder("input", input->type, input->shape, true);
   out.rl = rl.LSTMLayer(rl_input, dim);
 
   // Connect input to LSTMs.
-  flow->AddConnector(name_ + "/inputs", {input, lr_input, rl_input});
+  flow->Connect({input, lr_input, rl_input});
 
   // Build gradients for learning.
   if (dinput != nullptr) {
@@ -69,7 +65,7 @@ BiLSTM::Outputs BiLSTM::Build(Flow *flow, const Library &library, int dim,
     auto *grl = Gradient(flow, rl.func(), library);
     out.dlr = flow->Var(glr->name + "/d_input");
     out.drl = flow->Var(grl->name + "/d_input");
-    flow->AddConnector(name_ + "/inputs", {dinput, out.dlr, out.drl});
+    flow->Connect({dinput, out.dlr, out.drl});
   } else {
     out.dlr = nullptr;
     out.drl = nullptr;

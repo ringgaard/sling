@@ -203,6 +203,7 @@ static void AppendVar(string *str,
     if (var->learnable()) str->append("learnable ");
     if (var->in()) str->append("in ");
     if (var->out()) str->append("out ");
+    if (var->unique()) str->append("unique ");
     str->append("var ");
     str->append(var->name);
     if (!var->aliases.empty()) {
@@ -295,7 +296,9 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
       StringAppendF(&str, "subgraph cluster_%d {\n", cluster_id++);
       options.funcs.Append(&str, ";\n");
       StringAppendF(&str, "label=\"%s\";\n", func->name.c_str());
-      StringAppendF(&str, "tooltip=\"%s\";\n", func->name.c_str());
+      StringAppendF(&str, "tooltip=\"%s%s\";\n",
+                    func->name.c_str(),
+                    func->training() ? " (train)" : "");
     }
 
     // Output all ops in function.

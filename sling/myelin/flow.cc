@@ -323,7 +323,7 @@ void Flow::Variable::AddAlias(const string &alias) {
 
 string Flow::Variable::TypeString() const {
   string str;
-  if (ref) str.append("&");
+  if (ref()) str.append("&");
   str.append(TypeTraits::of(type).name());
   if (!shape.scalar()) {
     str.append("[");
@@ -337,7 +337,7 @@ string Flow::Variable::DataString() const {
   // Locate data.
   const char *p = data;
   if (p == nullptr) return "∅";
-  if (ref) {
+  if (ref()) {
     p = *reinterpret_cast<const char * const *>(p);
     if (p == nullptr) return "null";
   }
@@ -641,7 +641,7 @@ void Flow::Read(const char *data, size_t size) {
       var->type = DT_INVALID;
     } else {
       if (type[0] == '&') {
-        var->ref = true;
+        var->set_ref();
         type.erase(0, 1);
       }
       const TypeTraits &t = TypeTraits::of(type);
@@ -670,7 +670,7 @@ void Flow::Read(const char *data, size_t size) {
     // Create new operation.
     Operation *op = new Operation;
     ops_.push_back(op);
-    if (version >= 5) parser.GetInt();  // unused flags
+    if (version >= 5) op->flags = parser.GetInt();
 
     // Get operation name and type.
     op->name = parser.GetString();
@@ -711,7 +711,7 @@ void Flow::Read(const char *data, size_t size) {
     // Create new function.
     Function *func = new Function;
     funcs_.push_back(func);
-    if (version >= 5) parser.GetInt();  // unused flags
+    if (version >= 5) func->flags = parser.GetInt();
 
     // Get function name.
     func->name = parser.GetString();
@@ -732,7 +732,7 @@ void Flow::Read(const char *data, size_t size) {
     // Create new connector.
     Connector *cnx = new Connector;
     cnxs_.push_back(cnx);
-    if (version >= 5) parser.GetInt();  // unused flags
+    if (version >= 5) cnx->flags = parser.GetInt();
 
     // Get connector name.
     cnx->name = parser.GetString();
@@ -754,7 +754,7 @@ void Flow::Read(const char *data, size_t size) {
       // Create new blob.
       Blob *blob = new Blob;
       blobs_.push_back(blob);
-      if (version >= 5) parser.GetInt();  // unused flags
+      if (version >= 5) blob->flags = parser.GetInt();
 
       // Get blob name and type.
       blob->name = parser.GetString();
@@ -802,7 +802,7 @@ void Flow::Save(const string &filename, int version) const {
     }
 
     // Write type.
-    if (var->ref) {
+    if (var->ref() && version < 5) {
       file.WriteString("&" + TypeTraits::of(var->type).name());
     } else {
       file.WriteString(TypeTraits::of(var->type).name());
@@ -827,7 +827,7 @@ void Flow::Save(const string &filename, int version) const {
   file.WriteInt(ops_.size());
   for (Operation *op : ops_) {
     // Write flags.
-    if (version >= 5) file.WriteInt(0);
+    if (version >= 5) file.WriteInt(op->flags);
 
     // Write name.
     file.WriteString(op->name);
@@ -858,7 +858,7 @@ void Flow::Save(const string &filename, int version) const {
   // Write functions.
   file.WriteInt(funcs_.size());
   for (const Function *func : funcs_) {
-    if (version >= 5) file.WriteInt(0);  // unused flags
+    if (version >= 5) file.WriteInt(func->flags);
     file.WriteString(func->name);
     file.WriteInt(func->ops.size());
     for (const Operation *op : func->ops) {
@@ -869,7 +869,7 @@ void Flow::Save(const string &filename, int version) const {
   // Write connectors.
   file.WriteInt(cnxs_.size());
   for (const Connector *cnx : cnxs_) {
-    if (version >= 5) file.WriteInt(0);  // unused flags
+    if (version >= 5) file.WriteInt(cnx->flags);
     file.WriteString(cnx->name);
     file.WriteInt(cnx->links.size());
     for (const Variable *link : cnx->links) {
@@ -881,7 +881,7 @@ void Flow::Save(const string &filename, int version) const {
   if (version >= 4) {
     file.WriteInt(blobs_.size());
     for (const Blob *blob : blobs_) {
-      if (version >= 5) file.WriteInt(0);  // unused flags
+      if (version >= 5) file.WriteInt(blob->flags);
       file.WriteString(blob->name);
       file.WriteString(blob->type);
       file.WriteInt(blob->attrs.size());
@@ -921,7 +921,9 @@ void Flow::InferInputsAndOutputs() {
   // Internal connector links are considered both inputs and outputs.
   for (Connector *cnx : cnxs_) {
     for (Variable *link : cnx->links) {
-      if (link->ref && link->producer != nullptr && !link->consumers.empty()) {
+      if (link->ref() &&
+          link->producer != nullptr &&
+          !link->consumers.empty()) {
         link->set_in()->set_out();
       }
     }
@@ -1229,7 +1231,7 @@ void Flow::Eliminate(Operation *op) {
     }
     if (output->in()) input->set_in();
     if (output->out()) input->set_out();
-    if (output->ref) input->ref = true;
+    if (output->ref()) input->set_ref();
     for (Operation *target : ops_) {
       for (int i = 0; i < target->inputs.size(); ++i) {
         if (target->inputs[i] == output) {
@@ -1589,9 +1591,10 @@ Flow::Connector *Flow::AddConnector(const string &name) {
   return cnx;
 }
 
-Flow::Connector *Flow::AddConnector(const string &name,
-                                    const std::vector<Variable *> &links) {
-  Connector *cnx = AddConnector(name);
+Flow::Connector *Flow::Connect(const std::vector<Variable *> &links) {
+  if (links.empty()) return nullptr;
+  CHECK(links[0] != nullptr);
+  Connector *cnx = AddConnector(links[0]->name);
   for (Variable *link : links) cnx->AddLink(link);
   return cnx;
 }
@@ -1749,6 +1752,7 @@ string Flow::ToString() const {
     if (var->learnable()) StringAppendF(&str, " learnable");
     if (var->in()) StringAppendF(&str, " in");
     if (var->out()) StringAppendF(&str, " out");
+    if (var->unique()) StringAppendF(&str, " unique");
     if (var->constant()) {
       StringAppendF(&str, ", %lu bytes", var->size);
     }
@@ -1795,6 +1799,7 @@ string Flow::ToString() const {
     str.append("}\n\n");
   }
   for (const Function *func : funcs_) {
+    if (func->training()) StringAppendF(&str, "training ");
     StringAppendF(&str, "func %s {\n", func->name.c_str());
     for (const Operation *op : func->ops) {
       StringAppendF(&str, "  %s : %s\n", op->name.c_str(), op->type.c_str());

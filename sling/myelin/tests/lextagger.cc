@@ -41,10 +41,10 @@ DEFINE_string(embeddings, "", "Pre-trained word embeddings");
 DEFINE_bool(dump, false, "Dump flow");
 DEFINE_bool(dump_cell, false, "Dump flow");
 DEFINE_bool(profile, false, "Profile tagger");
-DEFINE_int32(epochs, 250000, "Number of training epochs");
+DEFINE_int32(epochs, 1000000, "Number of training epochs");
 DEFINE_int32(report, 25000, "Report status after every n sentence");
 DEFINE_double(alpha, 1.0, "Learning rate");
-DEFINE_double(minalpha, 0.001, "Minimum learning rate");
+DEFINE_double(minalpha, 0.01, "Minimum learning rate");
 DEFINE_double(lambda, 0.0, "Regularization parameter");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
@@ -177,16 +177,12 @@ class Tagger {
     // Build flow for POS tagger.
     FlowBuilder tf(&flow_, "tagger");
     auto *tagger = tf.func();
-    auto *lr = tf.Var("lr", lstm.lr->type, lstm.lr->shape);
-    lr->set_in();
-    lr->ref = true;
-    auto *rl = tf.Var("rl", lstm.rl->type, lstm.rl->shape);
-    rl->set_in();
-    rl->ref = true;
+    auto *lr = tf.Placeholder("lr", lstm.lr->type, lstm.lr->shape, true);
+    auto *rl = tf.Placeholder("rl", lstm.rl->type, lstm.rl->shape, true);
     auto *logits = tf.FFLayer(tf.Concat({lr, rl}), num_tags_, true);
 
-    flow_.AddConnector("tagger/lr", {lr, lstm.lr});
-    flow_.AddConnector("tagger/rl", {rl, lstm.rl});
+    flow_.Connect({lr, lstm.lr});
+    flow_.Connect({rl, lstm.rl});
 
     // Build gradient for tagger.
     Gradient(&flow_, tagger, library_);

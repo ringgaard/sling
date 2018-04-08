@@ -26,8 +26,7 @@ float filler(int i) {
 }
 
 void makeref(Flow::Variable *var, Flow::Connector *cnx) {
-  var->ref = true;
-  var->set_in()->set_out();
+  var->set_in()->set_out()->set_ref();
   cnx->AddLink(var);
 }
 

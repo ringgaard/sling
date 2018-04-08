@@ -529,7 +529,7 @@ class StandardTyper : public Typer {
         Flow::Variable *external = flow->Var(op->GetAttr("var"));
         ref->type = external->type;
         ref->shape = external->shape;
-        ref->ref = true;
+        ref->set_ref();
         return true;
       }
     }
