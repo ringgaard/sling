@@ -167,6 +167,11 @@ class Tagger {
     for (Document *s : train_) {
       for (const Token &t : s->tokens()) words[t.text()]++;
     }
+    if (!FLAGS_embeddings.empty()) {
+      for (Document *s : dev_) {
+        for (const Token &t : s->tokens()) words[t.text()]++;
+      }
+    }
     Vocabulary::HashMapIterator vocab(words);
 
     // Build document input encoder.
