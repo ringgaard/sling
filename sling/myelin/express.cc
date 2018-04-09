@@ -37,6 +37,7 @@ static std::map<string, Express::OpType> optypes = {
   {"Neg", Express::NEG},
   {"Abs", Express::ABS},
   {"Relu", Express::RELU},
+  {"ReluGrad", Express::RELUGRAD},
   {"Softsign", Express::SOFTSIGN},
   {"Softplus", Express::SOFTPLUS},
   {"LogSigmoid", Express::LOGSIGMOID},
@@ -74,7 +75,7 @@ static const string opname[] = {
   "Id",
   "Add", "Sub", "Mul", "Div",
   "Min", "Max",
-  "Neg", "Abs", "Relu", "Softsign", "Softplus", "LogSigmoid",
+  "Neg", "Abs", "Relu", "ReluGrad", "Softsign", "Softplus", "LogSigmoid",
   "Reciprocal", "Square", "Sqrt",
   "Log", "Exp", "Sigmoid", "Tanh", "Log2", "Exp2",
   "MulAdd132", "MulAdd213", "MulAdd231",
@@ -481,23 +482,29 @@ Express::Op *Express::Function(OpType type,
                                std::vector<Var *> &args,
                                bool expand) {
   // Expand intrinsics.
-  if (expand && args.size() == 1) {
-    Express::Var *result;
-    switch (type) {
-      case Express::NEG: result = Neg(args[0]); break;
-      case Express::ABS: result = Abs(args[0]); break;
-      case Express::RELU: result = Relu(args[0]); break;
-      case Express::SOFTSIGN: result = Softsign(args[0]); break;
-      case Express::SOFTPLUS: result = Softplus(args[0]); break;
-      case Express::LOGSIGMOID: result = LogSigmoid(args[0]); break;
-      case Express::RECIPROCAL: result = Reciprocal(args[0]); break;
-      case Express::SQUARE: result = Square(args[0]); break;
-      case Express::LOG: result = Log(args[0]); break;
-      case Express::EXP: result = Exp(args[0]); break;
-      case Express::SIGMOID: result = Sigmoid(args[0]); break;
-      case Express::TANH: result = Tanh(args[0]); break;
-
-      default: result = nullptr;
+  if (expand) {
+    Express::Var *result = nullptr;
+    if (args.size() == 1) {
+      switch (type) {
+        case Express::NEG: result = Neg(args[0]); break;
+        case Express::ABS: result = Abs(args[0]); break;
+        case Express::RELU: result = Relu(args[0]); break;
+        case Express::SOFTSIGN: result = Softsign(args[0]); break;
+        case Express::SOFTPLUS: result = Softplus(args[0]); break;
+        case Express::LOGSIGMOID: result = LogSigmoid(args[0]); break;
+        case Express::RECIPROCAL: result = Reciprocal(args[0]); break;
+        case Express::SQUARE: result = Square(args[0]); break;
+        case Express::LOG: result = Log(args[0]); break;
+        case Express::EXP: result = Exp(args[0]); break;
+        case Express::SIGMOID: result = Sigmoid(args[0]); break;
+        case Express::TANH: result = Tanh(args[0]); break;
+        default: ;
+      }
+    } else if (args.size() == 2) {
+      switch (type) {
+        case Express::RELUGRAD: result = ReluGrad(args[0], args[1]); break;
+        default: ;
+      }
     }
 
     // Create result node.

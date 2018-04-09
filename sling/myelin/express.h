@@ -78,6 +78,7 @@ class Express {
     NEG,         // negative, r=-x
     ABS,         // absolute value, r=|x|=max(x,neg(x))
     RELU,        // rectified linear unit, r=max(0,a)
+    RELUGRAD,    // rectified linear unit gradient, r=and(cmpgt(x,0),1)*y
     SOFTSIGN,    // softsign, r=x/(|x|+1)
     SOFTPLUS,    // softplus, r=log(exp(x)+1)
     LOGSIGMOID,  // log sigmoid, r=log(1/(1+exp(-x)))=-softplus(-x))
@@ -396,6 +397,8 @@ class Express {
   Var *Div(Var *x, Var *y) { return Do(DIV, x, y); }
   Var *Min(Var *x, Var *y) { return Do(MIN, x, y); }
   Var *Max(Var *x, Var *y) { return Do(MAX, x, y); }
+  Var *CmpGt(Var *x, Var *y) { return Do(CMPGTOQ, x, y); }
+  Var *And(Var *x, Var *y) { return Do(AND, x, y); }
   Var *Zero() { return Number(ZERO); }
   Var *One() { return Number(ONE); }
 
@@ -409,6 +412,7 @@ class Express {
   Var *Neg(Var *x) { return target_ == NVIDIA ? Do(NEG, x) : Sub(Zero(), x); }
   Var *Abs(Var *x) { return target_ == NVIDIA ? Do(ABS, x) : Max(x, Neg(x)); }
   Var *Relu(Var *x) { return Max(x, Zero()); }
+  Var *ReluGrad(Var *x, Var *y) { return Mul(And(CmpGt(x, Zero()), One()), y); }
   Var *Softsign(Var *x) { return Div(x, Add(Abs(x), One())); }
   Var *Softplus(Var *x) { return Log(Add(Exp(x), One())); }
   Var *LogSigmoid(Var *x) { return Neg(Softplus(Neg(x))); }
