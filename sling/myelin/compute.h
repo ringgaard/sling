@@ -338,6 +338,14 @@ class Tensor {
   // Check if tensor has the same shape as another tensor.
   bool HasSameShape(const Tensor *other) const;
 
+  // Check if tensor has dense layout.
+  bool HasDenseLayout() const;
+
+  // Check if tensor has standard layout, i.e. dense row-major.
+  bool HasStandardLayout() const {
+    return order_ == ROW_MAJOR && HasDenseLayout();
+  }
+
   // Check if tensor shape is broadcast compatible with another tensor.
   bool Compatible(const Tensor *other) const;
 
@@ -1228,6 +1236,11 @@ class Network {
 
   // Allocate memory in memory pool.
   char *AllocateMemory(size_t size, int alignment);
+
+  // Save weights after training. This copies the value of each learnable tensor
+  // in the network to the corresponding variable in the flow. This clears the
+  // learning flag for the variable and turns it into a constant.
+  void SaveLearnedWeights(Flow *flow);
 
   // Runtime support functions.
   Runtime *runtime() const { return runtime_; }

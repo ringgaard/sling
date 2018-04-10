@@ -57,6 +57,7 @@ DEFINE_int32(threads, cpu_cores, "Number of threads for training");
 DEFINE_int32(rampup, 10, "Number of seconds between thread starts");
 DEFINE_bool(lock, true, "Locked gradient updates");
 DEFINE_int32(lexthres, 0, "Lexicon threshold");
+DEFINE_string(flow, "", "Flow file for saving trained POS tagger");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -419,12 +420,20 @@ class Tagger {
 
   // Finish tagger model.
   void Done() {
+    // Output profiling information.
     if (FLAGS_profile) {
       for (Cell *cell : net_.cells()) {
         Profile profile(cell->profile_summary());
         string report = profile.ASCIIReport();
         std::cout << report << "\n";
       }
+    }
+
+    // Save trained model.
+    if (!FLAGS_flow.empty()) {
+      LOG(INFO) << "Saving model to " << FLAGS_flow;
+      net_.SaveLearnedWeights(&flow_);
+      flow_.Save(FLAGS_flow);
     }
   }
 

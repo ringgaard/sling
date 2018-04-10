@@ -541,6 +541,15 @@ bool Tensor::HasSameShape(const Tensor *other) const {
   return shape() == other->shape();
 }
 
+bool Tensor::HasDenseLayout() const {
+  bool singular = true;
+  for (int d = 0; d < rank(); ++d) {
+    if (dim(d) != 1) singular = false;
+    if (dim(d) % minalign(d) != 0 && !singular) return false;
+  }
+  return true;
+}
+
 int Tensor::ConsumerTask() const {
   int consumer_task = -2;
   for (Step *step : consumers_) {
@@ -830,6 +839,67 @@ Network::~Network() {
   }
   for (auto *c : cells_) delete c;
   for (auto *s : steps_) delete s;
+}
+
+void Network::SaveLearnedWeights(Flow *flow) {
+  // Find all learnable variables in flow.
+  for (Flow::Variable *var : flow->vars()) {
+    if (!var->learnable()) continue;
+    Tensor *tensor = LookupParameter(var->name);
+    if (tensor == nullptr) continue;
+
+    // If tensor data has standard layout we can copy the data directly.
+    // Otherwise, tensor data is copied element-by-element.
+    if (tensor->HasStandardLayout()) {
+      // Copy directly.
+      var->size = tensor->size();
+      var->data = flow->AllocateMemory(var->size);
+      memcpy(var->data, tensor->data(), var->size);
+    } else {
+      // Allocate data.
+      int element_size = tensor->element_size();
+      var->size = tensor->shape().elements() * element_size;
+      char *dst = flow->AllocateMemory(var->size);
+      char *src = tensor->data();
+      var->data = dst;
+
+      // Copy elements one at a time.
+      if (tensor->rank() == 2) {
+        for (int r = 0; r < tensor->dim(0); ++r) {
+          for (int c = 0; c < tensor->dim(1); ++c) {
+            memcpy(dst, src + tensor->offset(r, c), element_size);
+            dst += element_size;
+          }
+        }
+       } else if (tensor->rank() == 3) {
+        for (int r = 0; r < tensor->dim(0); ++r) {
+          for (int c = 0; c < tensor->dim(1); ++c) {
+            for (int k = 0; k < tensor->dim(2); ++k) {
+              memcpy(dst, src + tensor->offset(r, c, k), element_size);
+              dst += element_size;
+            }
+          }
+        }
+      } else if (tensor->rank() == 4) {
+        const char *src = tensor->data_;
+        int element_size = tensor->element_size();
+        for (int r = 0; r < tensor->dim(0); ++r) {
+          for (int c = 0; c < tensor->dim(1); ++c) {
+            for (int k = 0; k < tensor->dim(2); ++k) {
+              for (int l = 0; l < tensor->dim(3); ++l) {
+                memcpy(dst, src + tensor->offset(r, c, k, l), element_size);
+                dst += element_size;
+              }
+            }
+          }
+        }
+      } else {
+        LOG(FATAL) << tensor->rank() << "D tensor not supported: "
+                   << tensor->name();
+      }
+    }
+    var->clear_learnable();
+  }
 }
 
 char *Network::AllocateMemory(size_t size, int alignment) {
@@ -1172,18 +1242,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Check for dense encoding conflicts.
-    if (tensor->require_dense_) {
-      bool singular = true;
-      for (int d = 0; d < tensor->rank(); ++d) {
-        if (tensor->dim(d) != 1) singular = false;
-        if (tensor->dim(d) % tensor->minalign(d) != 0 && !singular) {
-          LOG(ERROR) << "Conflicting dense encoding requirements for "
-                     << tensor->name()
-                     << " shape " << tensor->shape().ToString()
-                     << " align " << tensor->minalign().ToString();
-          return false;
-        }
-      }
+    if (tensor->require_dense_ && !tensor->HasDenseLayout()) {
+      LOG(ERROR) << "Conflicting dense encoding requirements for "
+                 << tensor->name()
+                 << " shape " << tensor->shape().ToString()
+                 << " align " << tensor->minalign().ToString();
+      return false;
     }
 
     // Compute stride size for each dimension.
