@@ -1935,10 +1935,10 @@ string Cell::ToString() const {
                       t->TypeString().c_str(),
                       t->device_offset(),
                       t->space(), t->byte_alignment());
-		    if (t->linked()) {
-		      StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
-		    }
-		    str.append("\n");
+        if (t->linked()) {
+          StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
+        }
+        str.append("\n");
         prev_offset = t->device_offset();
       }
     }

@@ -35,6 +35,13 @@ class Lexicon {
   void InitPrefixes(const char *data, size_t size);
   void InitSuffixes(const char *data, size_t size);
 
+  // Write vocabulary to buffer.
+  void WriteVocabulary(string *buffer, char terminator = 0) const;
+
+  // Write affix tables into serialized format.
+  void WritePrefixes(string *buffer) const;
+  void WriteSuffixes(string *buffer) const;
+
   // Build affix tables from current dictionary.
   void BuildPrefixes(int max_prefix);
   void BuildSuffixes(int max_suffix);

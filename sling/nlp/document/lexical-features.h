@@ -63,6 +63,9 @@ class LexicalFeatures {
   // Load lexicon from existing model.
   void LoadLexicon(myelin::Flow *flow);
 
+  // Save lexicon.
+  void SaveLexicon(myelin::Flow *flow) const;
+
   // Initialize lexicon from dictionary.
   void InitializeLexicon(Vocabulary::Iterator *words, const LexiconSpec &spec);
 
@@ -192,6 +195,9 @@ class LexicalEncoder {
   int LoadWordEmbeddings(const string &filename) {
     return lex_.LoadWordEmbeddings(filename);
   }
+
+  // Save lexicon.
+  void SaveLexicon(myelin::Flow *flow) const { lex_.SaveLexicon(flow); }
 
  private:
   // Lexical feature extractor with embeddings.

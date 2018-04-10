@@ -277,6 +277,47 @@ class Flow {
     uint32 flags = 0;    // artifact flags (meaning depends on artifact type)
   };
 
+  // Artifact with attributes.
+  struct ArtifactAttributes {
+    // Get attribute value.
+    const string &GetAttr(const string &name) const {
+      return attrs.Get(name);
+    };
+    int GetAttr(const string &name, int defval) const {
+      return attrs.Get(name, defval);
+    }
+    bool GetAttr(const string &name, bool defval) const {
+      return attrs.Get(name, defval);
+    }
+    float GetAttr(const string &name, float defval) const {
+      return attrs.Get(name, defval);
+    }
+
+    // Check if artifact has attribute.
+    bool HasAttr(const string &name) const {
+      return attrs.Has(name);
+    }
+
+    // Set attribute.
+    void SetAttr(const string &name, const string &value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, const char *value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, int value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, bool value) {
+      attrs.Set(name, value);
+    }
+    void SetAttr(const string &name, float value) {
+      attrs.Set(name, value);
+    }
+
+    Attributes attrs;                 // artifact attributes
+  };
+
   // Flow variable.
   struct Variable : public Artifact<Variable> {
     // Variable flags.
@@ -391,48 +432,12 @@ class Flow {
   };
 
   // Flow operation.
-  struct Operation : public Artifact<Operation> {
+  struct Operation : public Artifact<Operation>, public ArtifactAttributes {
     // Add input to operation.
     void AddInput(Variable *var);
 
     // Add output to operation.
     void AddOutput(Variable *var);
-
-    // Get attribute value.
-    const string &GetAttr(const string &name) const {
-      return attrs.Get(name);
-    };
-    int GetAttr(const string &name, int defval) const {
-      return attrs.Get(name, defval);
-    }
-    bool GetAttr(const string &name, bool defval) const {
-      return attrs.Get(name, defval);
-    }
-    float GetAttr(const string &name, float defval) const {
-      return attrs.Get(name, defval);
-    }
-
-    // Check if operation has attribute.
-    bool HasAttr(const string &name) const {
-      return attrs.Has(name);
-    }
-
-    // Set attribute.
-    void SetAttr(const string &name, const string &value) {
-      attrs.Set(name, value);
-    }
-    void SetAttr(const string &name, const char *value) {
-      attrs.Set(name, value);
-    }
-    void SetAttr(const string &name, int value) {
-      attrs.Set(name, value);
-    }
-    void SetAttr(const string &name, bool value) {
-      attrs.Set(name, value);
-    }
-    void SetAttr(const string &name, float value) {
-      attrs.Set(name, value);
-    }
 
     // Return input index for variable or -1 if variable is not an input.
     int InputIndex(const Variable *var) const;
@@ -471,7 +476,6 @@ class Flow {
     string type;                      // operation type
     std::vector<Variable *> inputs;   // input variables
     std::vector<Variable *> outputs;  // output variables
-    Attributes attrs;                 // operation attributes
     Function *func = nullptr;         // function that operation belongs to
 
     int task = 0;                     // task id for operation for parallel op
@@ -520,9 +524,8 @@ class Flow {
   };
 
   // Blob for storing auxiliary data blocks in flow files.
-  struct Blob : public Artifact<Blob> {
+  struct Blob : public Artifact<Blob>, public ArtifactAttributes {
     string type;                      // data block type
-    Attributes attrs;                 // attributes for data block
     const char *data = nullptr;       // data for blob
     uint64_t size = 0;                // size of data for blob
   };
@@ -540,6 +543,12 @@ class Flow {
 
   // Allocate memory that is owned by the flow.
   char *AllocateMemory(size_t size);
+
+  // Allocate and initialize memory that is owned by the flow.
+  char *AllocateMemory(const void *data, size_t size);
+  char *AllocateMemory(const string &str) {
+    return AllocateMemory(str.data(), str.size());
+  }
 
   // Load flow from file.
   Status Load(const string &filename);

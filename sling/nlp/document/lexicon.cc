@@ -37,6 +37,13 @@ void Lexicon::InitWords(Vocabulary::Iterator *words) {
   }
 }
 
+void Lexicon::WriteVocabulary(string *buffer, char terminator) const {
+  for (const Entry &e : words_) {
+    buffer->append(e.word);
+    buffer->push_back(terminator);
+  }
+}
+
 void Lexicon::InitPrefixes(const char *data, size_t size) {
   // Read prefixes.
   ArrayInputStream stream(data, size);
@@ -57,6 +64,16 @@ void Lexicon::InitSuffixes(const char *data, size_t size) {
   for (Entry &entry : words_) {
     entry.suffix = suffixes_.GetLongestAffix(entry.word);
   }
+}
+
+void Lexicon::WritePrefixes(string *buffer) const {
+  StringOutputStream stream(buffer);
+  prefixes_.Write(&stream);
+}
+
+void Lexicon::WriteSuffixes(string *buffer) const {
+  StringOutputStream stream(buffer);
+  suffixes_.Write(&stream);
 }
 
 void Lexicon::BuildPrefixes(int max_prefix) {

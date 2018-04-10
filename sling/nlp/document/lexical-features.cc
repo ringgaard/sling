@@ -27,10 +27,11 @@ void LexicalFeatures::LoadLexicon(Flow *flow) {
   // Load word vocabulary.
   Flow::Blob *vocabulary = flow->DataBlock("lexicon");
   CHECK(vocabulary != nullptr);
-  Vocabulary::BufferIterator it(vocabulary->data, vocabulary->size, '\n');
+  int delimiter = vocabulary->GetAttr("delimiter", '\n');
+  Vocabulary::BufferIterator it(vocabulary->data, vocabulary->size, delimiter);
   lexicon_.InitWords(&it);
-  bool normalize = vocabulary->attrs.Get("normalize_digits", false);
-  int oov = vocabulary->attrs.Get("oov", -1);
+  bool normalize = vocabulary->GetAttr("normalize_digits", false);
+  int oov = vocabulary->GetAttr("oov", -1);
   lexicon_.set_normalize_digits(normalize);
   lexicon_.set_oov(oov);
 
@@ -42,6 +43,36 @@ void LexicalFeatures::LoadLexicon(Flow *flow) {
   Flow::Blob *suffix_table = flow->DataBlock("suffixes");
   if (suffix_table != nullptr) {
     lexicon_.InitSuffixes(suffix_table->data, suffix_table->size);
+  }
+}
+
+void LexicalFeatures::SaveLexicon(myelin::Flow *flow) const {
+  // Save word vocabulary.
+  Flow::Blob *vocabulary = flow->AddBlob("lexicon", "dict");
+  vocabulary->SetAttr("delimiter", 10);
+  vocabulary->SetAttr("oov", lexicon_.oov());
+  vocabulary->SetAttr("normalize_digits", lexicon_.normalize_digits());
+  string buffer;
+  lexicon_.WriteVocabulary(&buffer);
+  vocabulary->data = flow->AllocateMemory(buffer);
+  vocabulary->size = buffer.size();
+
+  // Save prefixes.
+  if (lexicon_.prefixes().size() > 0) {
+    buffer.clear();
+    lexicon_.WritePrefixes(&buffer);
+    Flow::Blob *blob = flow->AddBlob("prefixes", "affix");
+    blob->data = flow->AllocateMemory(buffer);
+    blob->size = buffer.size();
+  }
+
+  // Save suffixes.
+  if (lexicon_.suffixes().size() > 0) {
+    buffer.clear();
+    lexicon_.WriteSuffixes(&buffer);
+    Flow::Blob *blob = flow->AddBlob("suffixes", "affix");
+    blob->data = flow->AllocateMemory(buffer);
+    blob->size = buffer.size();
   }
 }
 

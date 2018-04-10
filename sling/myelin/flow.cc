@@ -590,6 +590,12 @@ char *Flow::AllocateMemory(size_t size) {
   return data;
 }
 
+char *Flow::AllocateMemory(const void *data, size_t size) {
+  char *buffer = AllocateMemory(size);
+  memcpy(buffer, data, size);
+  return buffer;
+}
+
 Status Flow::Load(const string &filename) {
   // Load flow file into memory.
   File *file;
@@ -1638,7 +1644,7 @@ void Flow::RemoveOperation(Operation *op) {
   for (Flow::Variable *input : op->inputs) {
     auto fc = std::find(input->consumers.begin(), input->consumers.end(), op);
     CHECK(fc != input->consumers.end());
-    input	->consumers.erase(fc);
+    input->consumers.erase(fc);
   }
 
   // Remove outputs.

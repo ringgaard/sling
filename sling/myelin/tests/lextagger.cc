@@ -445,10 +445,10 @@ class Tagger {
     // Save trained model.
     if (!FLAGS_flow.empty()) {
       LOG(INFO) << "Saving model to " << FLAGS_flow;
-
       Flow flow;
       BuildFlow(&flow, false);
       net_.SaveLearnedWeights(&flow);
+      encoder_.SaveLexicon(&flow);
       flow.Save(FLAGS_flow);
     }
   }
