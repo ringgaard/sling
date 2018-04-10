@@ -341,6 +341,9 @@ class Flow {
     // constants or read/write learnable variables.
     bool global() const { return constant() || learnable(); }
 
+    // Check if variable is a local variable.
+    bool local() const { return !global(); }
+
     // Return type as string.
     string TypeString() const;
 

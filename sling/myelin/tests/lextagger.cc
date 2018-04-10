@@ -120,6 +120,8 @@ class Tagger {
       net_.options().global_profiler = true;
     }
     net_.options().flops_address = &flops_counter;
+
+    spec_.lexicon.normalize_digits = true;
   }
 
   ~Tagger() {
@@ -162,26 +164,29 @@ class Tagger {
   }
 
   // Build tagger flow.
-  void Build() {
-    // Build lexicon.
-    std::unordered_map<string, int> words;
-    for (Document *s : train_) {
-      for (const Token &t : s->tokens()) words[t.text()]++;
-    }
-    if (!FLAGS_embeddings.empty()) {
-      for (Document *s : dev_) {
+  void BuildFlow(Flow *flow, bool learn) {
+    BiLSTM::Outputs lstm;
+    if (learn) {
+      // Build lexicon.
+      std::unordered_map<string, int> words;
+      for (Document *s : train_) {
         for (const Token &t : s->tokens()) words[t.text()]++;
       }
-    }
-    Vocabulary::HashMapIterator vocab(words);
+      if (!FLAGS_embeddings.empty()) {
+        for (Document *s : dev_) {
+          for (const Token &t : s->tokens()) words[t.text()]++;
+        }
+      }
+      Vocabulary::HashMapIterator vocab(words);
 
-    // Build document input encoder.
-    LexicalFeatures::Spec spec;
-    spec.lexicon.normalize_digits = true;
-    auto lstm = encoder_.Build(&flow_, library_, spec, &vocab, 128, true);
+      // Build document input encoder.
+      lstm = encoder_.Build(flow, library_, spec_, &vocab, 128, true);
+    } else {
+      lstm = encoder_.Build(flow, library_, spec_, nullptr, 128, false);
+    }
 
     // Build flow for POS tagger.
-    FlowBuilder tf(&flow_, "tagger");
+    FlowBuilder tf(flow, "tagger");
     auto *tagger = tf.func();
     auto *lr = tf.Placeholder("lr", lstm.lr->type, lstm.lr->shape, true);
     auto *rl = tf.Placeholder("rl", lstm.rl->type, lstm.rl->shape, true);
@@ -190,20 +195,27 @@ class Tagger {
     flow_.Connect({lr, lstm.lr});
     flow_.Connect({rl, lstm.rl});
 
-    // Build gradient for tagger.
-    Gradient(&flow_, tagger, library_);
-    auto *dlogits = flow_.Var("gradients/tagger/d_logits");
+    if (learn) {
+      // Build gradient for tagger.
+      Gradient(flow, tagger, library_);
+      auto *dlogits = flow->Var("gradients/tagger/d_logits");
 
-    // Build loss computation.
-    loss_.Build(&flow_, logits, dlogits);
+      // Build loss computation.
+      loss_.Build(flow, logits, dlogits);
 
-    // Build optimizer.
-    optimizer_.set_clipping_threshold(FLAGS_clip);
-    optimizer_.set_lambda(FLAGS_lambda);
-    optimizer_.Build(&flow_);
+      // Build optimizer.
+      optimizer_.set_clipping_threshold(FLAGS_clip);
+      optimizer_.set_lambda(FLAGS_lambda);
+      optimizer_.Build(flow);
 
-    num_words_ = encoder_.lex().lexicon().size();
-    LOG(INFO) << "Words: " << num_words_;
+      num_words_ = encoder_.lex().lexicon().size();
+      LOG(INFO) << "Words: " << num_words_;
+    }
+  }
+
+  // Build flow for learning.
+  void Build() {
+    BuildFlow(&flow_, true);
   }
 
   // Compile model.
@@ -277,6 +289,7 @@ class Tagger {
   void Train() {
     // Start training workers.
     LOG(INFO) << "Start training";
+    if (FLAGS_report > FLAGS_epochs) FLAGS_report = FLAGS_epochs;
     start_ = WallTime();
     WorkerPool pool;
     pool.Start(FLAGS_threads, [this](int index) { Worker(index); });
@@ -432,8 +445,11 @@ class Tagger {
     // Save trained model.
     if (!FLAGS_flow.empty()) {
       LOG(INFO) << "Saving model to " << FLAGS_flow;
-      net_.SaveLearnedWeights(&flow_);
-      flow_.Save(FLAGS_flow);
+
+      Flow flow;
+      BuildFlow(&flow, false);
+      net_.SaveLearnedWeights(&flow);
+      flow.Save(FLAGS_flow);
     }
   }
 
@@ -485,6 +501,7 @@ class Tagger {
   }
 
  private:
+  LexicalFeatures::Spec spec_;  // feature specification
   Store store_;                 // document store
   DocumentNames *names_;        // document symbol names
   Handle n_pos_;                // part-of-speech role symbol

@@ -323,7 +323,9 @@ BiLSTM::Outputs LexicalEncoder::Build(Flow *flow,
                                       const LexicalFeatures::Spec &spec,
                                       Vocabulary::Iterator *words,
                                       int dim, bool learn) {
-  lex_.InitializeLexicon(words, spec.lexicon);
+  if (words != nullptr) {
+    lex_.InitializeLexicon(words, spec.lexicon);
+  }
   auto lexvars = lex_.Build(flow, library, spec, learn);
   return bilstm_.Build(flow, library, dim, lexvars.fv, lexvars.dfv);
 }
