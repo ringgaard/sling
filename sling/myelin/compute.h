@@ -457,6 +457,18 @@ class Tensor {
     return n;
   }
 
+  // Byte offset of element in tensor by linear index between 0 and the number
+  // of elements in tensor.
+  size_t LinearOffset(int index) const {
+    int n = index;
+    size_t ofs = 0;
+    for (int d = rank() - 1; d >= 0; --d) {
+      ofs += (n % dim(d)) * stride(d);
+      n = n / dim(d);
+    }
+    return ofs;
+  }
+
   // Index of element in tensor.
   int index(int r) const {
     return offset(r) / element_size();

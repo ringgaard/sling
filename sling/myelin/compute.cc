@@ -845,6 +845,8 @@ void Network::SaveLearnedWeights(Flow *flow) {
   // Find all learnable variables in flow.
   for (Flow::Variable *var : flow->vars()) {
     if (!var->learnable()) continue;
+
+    // Find tensor for variable.
     Tensor *tensor = LookupParameter(var->name);
     if (tensor == nullptr) continue;
 
@@ -857,45 +859,18 @@ void Network::SaveLearnedWeights(Flow *flow) {
       memcpy(var->data, tensor->data(), var->size);
     } else {
       // Allocate data.
+      int elements = tensor->shape().elements();
       int element_size = tensor->element_size();
-      var->size = tensor->shape().elements() * element_size;
+      var->size = elements * element_size;
       char *dst = flow->AllocateMemory(var->size);
       char *src = tensor->data();
       var->data = dst;
 
       // Copy elements one at a time.
-      if (tensor->rank() == 2) {
-        for (int r = 0; r < tensor->dim(0); ++r) {
-          for (int c = 0; c < tensor->dim(1); ++c) {
-            memcpy(dst, src + tensor->offset(r, c), element_size);
-            dst += element_size;
-          }
-        }
-       } else if (tensor->rank() == 3) {
-        for (int r = 0; r < tensor->dim(0); ++r) {
-          for (int c = 0; c < tensor->dim(1); ++c) {
-            for (int k = 0; k < tensor->dim(2); ++k) {
-              memcpy(dst, src + tensor->offset(r, c, k), element_size);
-              dst += element_size;
-            }
-          }
-        }
-      } else if (tensor->rank() == 4) {
-        const char *src = tensor->data_;
-        int element_size = tensor->element_size();
-        for (int r = 0; r < tensor->dim(0); ++r) {
-          for (int c = 0; c < tensor->dim(1); ++c) {
-            for (int k = 0; k < tensor->dim(2); ++k) {
-              for (int l = 0; l < tensor->dim(3); ++l) {
-                memcpy(dst, src + tensor->offset(r, c, k, l), element_size);
-                dst += element_size;
-              }
-            }
-          }
-        }
-      } else {
-        LOG(FATAL) << tensor->rank() << "D tensor not supported: "
-                   << tensor->name();
+      for (int i = 0; i < elements; ++i) {
+        size_t offset = tensor->LinearOffset(i);
+        memcpy(dst, src + offset, element_size);
+        dst += element_size;
       }
     }
     var->clear_learnable();
@@ -1778,51 +1753,37 @@ char *Network::AllocateTensor(Tensor *tensor) {
   memset(data, 0, tensor->size_);
 
   // Copy data.
-  if (!tensor->constant()) {
-    // Clear learnable global tensor.
-    memset(data, 0, tensor->size_);
-  } else if (tensor->rank() == 0 || tensor->rank() == 1) {
-    // Vectors and scalars can just be copied regardless of alignment and
-    // order.
-    memcpy(data, tensor->data_, tensor->size_);
-  } else if (tensor->rank() == 2) {
-    // Copy matrix one element at a time.
-    const char *src = tensor->data_;
-    int element_size = tensor->element_size();
-    for (int r = 0; r < tensor->dim(0); ++r) {
-      for (int c = 0; c < tensor->dim(1); ++c) {
-        memcpy(data + tensor->offset(r, c), src, element_size);
-        src += element_size;
-      }
-    }
-  } else if (tensor->rank() == 3) {
-    const char *src = tensor->data_;
-    int element_size = tensor->element_size();
-    for (int r = 0; r < tensor->dim(0); ++r) {
-      for (int c = 0; c < tensor->dim(1); ++c) {
-        for (int k = 0; k < tensor->dim(2); ++k) {
-          memcpy(data + tensor->offset(r, c, k), src, element_size);
+  if (tensor->constant()) {
+    if (tensor->HasStandardLayout()) {
+      // Tensors with standard layout can be copied directly.
+      memcpy(data, tensor->data_, tensor->size_);
+    } else {
+      // Copy tensor one element at a time.
+      const char *src = tensor->data_;
+      int element_size = tensor->element_size();
+      if (tensor->rank() == 2) {
+        for (int r = 0; r < tensor->dim(0); ++r) {
+          for (int c = 0; c < tensor->dim(1); ++c) {
+            memcpy(data + tensor->offset(r, c), src, element_size);
+            src += element_size;
+          }
+        }
+      } else if (tensor->rank() == 3) {
+        for (int r = 0; r < tensor->dim(0); ++r) {
+          for (int c = 0; c < tensor->dim(1); ++c) {
+            for (int k = 0; k < tensor->dim(2); ++k) {
+              memcpy(data + tensor->offset(r, c, k), src, element_size);
+              src += element_size;
+            }
+          }
+        }
+      } else {
+        for (int i = 0; i < tensor->elements(); ++i) {
+          memcpy(data + tensor->LinearOffset(i), src, element_size);
           src += element_size;
         }
       }
     }
-  } else if (tensor->rank() == 4) {
-    const char *src = tensor->data_;
-    int element_size = tensor->element_size();
-    for (int r = 0; r < tensor->dim(0); ++r) {
-      for (int c = 0; c < tensor->dim(1); ++c) {
-        for (int k = 0; k < tensor->dim(2); ++k) {
-          for (int l = 0; l < tensor->dim(3); ++l) {
-            memcpy(data + tensor->offset(r, c, k, l), src, element_size);
-            src += element_size;
-          }
-        }
-      }
-    }
-  } else {
-    LOG(ERROR) << tensor->rank() << "D tensor not supported: "
-               << tensor->name();
-    return nullptr;
   }
 
   return data;
