@@ -128,6 +128,7 @@ string Profile::ASCIIReport() const {
   if (jit::CPU::Enabled(jit::F16C)) report.append(" F16C");
   if (jit::CPU::Enabled(jit::AVX)) report.append(" AVX");
   if (jit::CPU::Enabled(jit::AVX2)) report.append(" AVX2");
+  if (jit::CPU::Enabled(jit::AVX512F)) report.append(" AVX512F");
   if (jit::CPU::Enabled(jit::FMA3)) report.append(" FMA3");
   report.append("\n");
   string runtime_info = cell()->runtime()->Description();

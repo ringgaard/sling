@@ -69,6 +69,7 @@ ProcessorInformation::ProcessorInformation() {
   memcpy(vendor_, "Unknown", 8);
   memcpy(brand_, "Unknown", 8);
   int cpu_info[4];
+  for (int i = 0; i < NUMBER_OF_AVX512_FEATURES; ++i) avx512[i] = false;
 
   // Query basic CPU information.
   __cpuid(cpu_info, 0);
@@ -108,6 +109,26 @@ ProcessorInformation::ProcessorInformation() {
     has_bmi1_ = (cpu_info[1] & 0x00000008) != 0;
     has_bmi2_ = (cpu_info[1] & 0x00000100) != 0;
     has_avx2_ = (cpu_info[1] & 0x00000020) != 0;
+
+    auto has = [&cpu_info](int r, int b)  {
+      return (cpu_info[r] & (1 << b)) != 0;
+    };
+
+    avx512[AVX512F] = has(1, 16);
+    avx512[AVX512DQ] = has(1, 17);
+    avx512[AVX512IFMA] = has(1, 21);
+    avx512[AVX512PF] = has(1, 26);
+    avx512[AVX512ER] = has(1, 27);
+    avx512[AVX512CD] = has(1, 28);
+    avx512[AVX512BW] = has(1, 30);
+    avx512[AVX512VL] = has(1, 31);
+    avx512[AVX512VBMI] = has(2, 1);
+    avx512[AVX512VBMI2] = has(2, 6);
+    avx512[AVX512VNNI] = has(2, 11);
+    avx512[AVX512BITALG] = has(2, 12);
+    avx512[AVX512VPOPCNTDQ] = has(2, 14);
+    avx512[AVX512_4VNNIW] = has(3, 2);
+    avx512[AVX512_4FMAPS] = has(3, 3);
   }
 
   // Query extended IDs.
@@ -235,9 +256,12 @@ void CPU::Initialize() {
   if (cpu.has_sahf()) features |= 1u << SAHF;
 
   if (cpu.has_osxsave() && os_has_avx_support()) {
-    features |= 1u << AVX;
+    if (cpu.has_avx()) features |= 1u << AVX;
     if (cpu.has_fma3()) features |= 1u << FMA3;
     if (cpu.has_avx2()) features |= 1u << AVX2;
+    if (cpu.has_avx512(ProcessorInformation::AVX512F)) {
+      features |= 1u << AVX512F;
+    }
   }
 
   if (cpu.has_bmi1()) features |= 1u << BMI1;
