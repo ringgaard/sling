@@ -81,8 +81,8 @@ void Parser::Load(Store *store, const string &model) {
   CHECK(vocabulary != nullptr);
   Vocabulary::BufferIterator it(vocabulary->data, vocabulary->size, '\n');
   lexicon_.InitWords(&it);
-  bool normalize = vocabulary->attrs.Get("normalize_digits", false);
-  int oov = vocabulary->attrs.Get("oov", -1);
+  bool normalize = vocabulary->GetAttr("normalize_digits", false);
+  int oov = vocabulary->GetAttr("oov", -1);
   lexicon_.set_normalize_digits(normalize);
   lexicon_.set_oov(oov);
 

@@ -160,9 +160,9 @@ static void AppendOp(string *str,
       str->append("&#10;");
     }
   }
-  if (!op->attrs.empty()) {
+  if (!op->attrs().empty()) {
     str->append("attr:&#10;");
-    for (const auto &attr : op->attrs) {
+    for (const auto &attr : op->attrs()) {
       StringAppendF(str, "  %s = %s&#10;",
         attr.name.c_str(), attr.value.c_str());
     }

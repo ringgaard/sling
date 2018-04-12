@@ -383,8 +383,8 @@ class Tagger {
         int target = Tag(sentence->token(i));
         float *logits = tagger.Get<float>(model_.logits);
         float *dlogits = gtagger.Get<float>(model_.dlogits);
-        float cost = loss_.Compute(logits, target, dlogits);
-        local_loss_sum += cost;
+        float loss = loss_.Compute(logits, target, dlogits);
+        local_loss_sum += loss;
         local_loss_count++;
 
         // Backpropagate loss gradient through tagger.

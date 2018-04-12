@@ -78,7 +78,7 @@ class Express {
     NEG,         // negative, r=-x
     ABS,         // absolute value, r=|x|=max(x,neg(x))
     RELU,        // rectified linear unit, r=max(0,a)
-    RELUGRAD,    // rectified linear unit gradient, r=and(cmpgt(x,0),1)*y
+    RELUGRAD,    // rectified linear unit gradient, r=(x>0)*y
     SOFTSIGN,    // softsign, r=x/(|x|+1)
     SOFTPLUS,    // softplus, r=log(exp(x)+1)
     LOGSIGMOID,  // log sigmoid, r=log(1/(1+exp(-x)))=-softplus(-x))

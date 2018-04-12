@@ -229,20 +229,26 @@ struct Attribute {
 class Attributes : public std::vector<Attribute> {
  public:
   // Get attribute value.
-  const string &Get(const string &name) const;
-  int Get(const string &name, int defval) const;
-  bool Get(const string &name, bool defval) const;
-  float Get(const string &name, float defval) const;
+  const string &GetAttr(const string &name) const;
+  int GetAttr(const string &name, int defval) const;
+  bool GetAttr(const string &name, bool defval) const;
+  float GetAttr(const string &name, float defval) const;
 
   // Check if attribute exists.
-  bool Has(const string &name) const;
+  bool HasAttr(const string &name) const;
 
   // Set attribute.
-  void Set(const string &name, const string &value);
-  void Set(const string &name, const char *value);
-  void Set(const string &name, int value);
-  void Set(const string &name, bool value);
-  void Set(const string &name, float value);
+  void SetAttr(const string &name, const string &value);
+  void SetAttr(const string &name, const char *value);
+  void SetAttr(const string &name, int value);
+  void SetAttr(const string &name, bool value);
+  void SetAttr(const string &name, float value);
+
+  // Copy attributes from another attribute list.
+  void CopyAttrsFrom(const Attributes &other);
+
+  // Return attribute list.
+  const std::vector<Attribute> attrs() const { return *this; }
 };
 
 // Flow graph for computation.
@@ -275,47 +281,6 @@ class Flow {
 
     string name;         // artifact name
     uint32 flags = 0;    // artifact flags (meaning depends on artifact type)
-  };
-
-  // Artifact with attributes.
-  struct ArtifactAttributes {
-    // Get attribute value.
-    const string &GetAttr(const string &name) const {
-      return attrs.Get(name);
-    };
-    int GetAttr(const string &name, int defval) const {
-      return attrs.Get(name, defval);
-    }
-    bool GetAttr(const string &name, bool defval) const {
-      return attrs.Get(name, defval);
-    }
-    float GetAttr(const string &name, float defval) const {
-      return attrs.Get(name, defval);
-    }
-
-    // Check if artifact has attribute.
-    bool HasAttr(const string &name) const {
-      return attrs.Has(name);
-    }
-
-    // Set attribute.
-    void SetAttr(const string &name, const string &value) {
-      attrs.Set(name, value);
-    }
-    void SetAttr(const string &name, const char *value) {
-      attrs.Set(name, value);
-    }
-    void SetAttr(const string &name, int value) {
-      attrs.Set(name, value);
-    }
-    void SetAttr(const string &name, bool value) {
-      attrs.Set(name, value);
-    }
-    void SetAttr(const string &name, float value) {
-      attrs.Set(name, value);
-    }
-
-    Attributes attrs;                 // artifact attributes
   };
 
   // Flow variable.
@@ -432,7 +397,7 @@ class Flow {
   };
 
   // Flow operation.
-  struct Operation : public Artifact<Operation>, public ArtifactAttributes {
+  struct Operation : public Artifact<Operation>, public Attributes {
     // Add input to operation.
     void AddInput(Variable *var);
 
@@ -524,7 +489,7 @@ class Flow {
   };
 
   // Blob for storing auxiliary data blocks in flow files.
-  struct Blob : public Artifact<Blob>, public ArtifactAttributes {
+  struct Blob : public Artifact<Blob>, public Attributes {
     string type;                      // data block type
     const char *data = nullptr;       // data for blob
     uint64_t size = 0;                // size of data for blob

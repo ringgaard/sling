@@ -251,7 +251,7 @@ class FlowFileWriter {
   File *file_;
 };
 
-const string &Attributes::Get(const string &name) const {
+const string &Attributes::GetAttr(const string &name) const {
   static string empty;
   for (auto &attr : *this) {
     if (attr.name == name) return attr.value;
@@ -259,14 +259,14 @@ const string &Attributes::Get(const string &name) const {
   return empty;
 }
 
-int Attributes::Get(const string &name, int defval) const {
+int Attributes::GetAttr(const string &name, int defval) const {
   for (auto &attr : *this) {
     if (attr.name == name) return atoi(attr.value.c_str());
   }
   return defval;
 }
 
-bool Attributes::Get(const string &name, bool defval) const {
+bool Attributes::GetAttr(const string &name, bool defval) const {
   for (auto &attr : *this) {
     if (attr.name == name) {
       return attr.value == "1" || attr.value == "T" || attr.value == "true";
@@ -275,21 +275,21 @@ bool Attributes::Get(const string &name, bool defval) const {
   return defval;
 }
 
-float Attributes::Get(const string &name, float defval) const {
+float Attributes::GetAttr(const string &name, float defval) const {
   for (auto &attr : *this) {
     if (attr.name == name) return atof(attr.value.c_str());
   }
   return defval;
 }
 
-bool Attributes::Has(const string &name) const {
+bool Attributes::HasAttr(const string &name) const {
   for (auto &attr : *this) {
     if (attr.name == name) return true;
   }
   return false;
 }
 
-void Attributes::Set(const string &name, const string &value) {
+void Attributes::SetAttr(const string &name, const string &value) {
   for (auto &attr : *this) {
     if (attr.name == name) {
       attr.value = value;
@@ -299,20 +299,24 @@ void Attributes::Set(const string &name, const string &value) {
   emplace_back(name, value);
 }
 
-void Attributes::Set(const string &name, const char *value) {
-  Set(name, string(value));
+void Attributes::SetAttr(const string &name, const char *value) {
+  SetAttr(name, string(value));
 }
 
-void Attributes::Set(const string &name, int value) {
-  Set(name, std::to_string(value));
+void Attributes::SetAttr(const string &name, int value) {
+  SetAttr(name, std::to_string(value));
 }
 
-void Attributes::Set(const string &name, bool value) {
-  Set(name, value ? "1" : "0");
+void Attributes::SetAttr(const string &name, bool value) {
+  SetAttr(name, value ? "1" : "0");
 }
 
-void Attributes::Set(const string &name, float value) {
-  Set(name, std::to_string(value));
+void Attributes::SetAttr(const string &name, float value) {
+  SetAttr(name, std::to_string(value));
+}
+
+void Attributes::CopyAttrsFrom(const Attributes &other) {
+  for (auto &attr : other) emplace_back(attr);
 }
 
 void Flow::Variable::AddAlias(const string &alias) {
@@ -771,7 +775,7 @@ void Flow::Read(const char *data, size_t size) {
       for (int j = 0; j < num_attrs; ++j) {
         string name = parser.GetString();
         string value = parser.GetString();
-        blob->attrs.Set(name, value);
+        blob->SetAttr(name, value);
       }
 
       // Get data.
@@ -854,8 +858,8 @@ void Flow::Save(const string &filename, int version) const {
     }
 
     // Write attributes.
-    file.WriteInt(op->attrs.size());
-    for (const auto &attr : op->attrs) {
+    file.WriteInt(op->attrs().size());
+    for (const auto &attr : op->attrs()) {
       file.WriteString(attr.name);
       file.WriteString(attr.value);
     }
@@ -890,8 +894,8 @@ void Flow::Save(const string &filename, int version) const {
       if (version >= 5) file.WriteInt(blob->flags);
       file.WriteString(blob->name);
       file.WriteString(blob->type);
-      file.WriteInt(blob->attrs.size());
-      for (const auto &attr : blob->attrs) {
+      file.WriteInt(blob->attrs().size());
+      for (const auto &attr : blob->attrs()) {
         file.WriteString(attr.name);
         file.WriteString(attr.value);
       }
@@ -1044,7 +1048,7 @@ Flow::Operation *Flow::Fuse(Operation *first,
   first->type = combined;
 
   // Add attributes from second op to first op.
-  for (auto &attr : second->attrs) {
+  for (auto &attr : second->attrs()) {
     if (!first->HasAttr(attr.name)) {
       first->SetAttr(attr.name, attr.value);
     }
@@ -1791,7 +1795,7 @@ string Flow::ToString() const {
                     output->name.c_str(),
                     output->TypeString().c_str());
     }
-    for (const Attribute &attr : op->attrs) {
+    for (const Attribute &attr : op->attrs()) {
       if (attr.value.size() > 512) {
         StringAppendF(&str, "  %s = <<%lu bytes>>\n",
                       attr.name.c_str(),
@@ -1828,7 +1832,7 @@ string Flow::ToString() const {
                   blob->name.c_str(),
                   blob->type.c_str(),
                   blob->size);
-    for (const Attribute &attr : blob->attrs) {
+    for (const Attribute &attr : blob->attrs()) {
       StringAppendF(&str, "  %s = %s\n",
                     attr.name.c_str(),
                     attr.value.c_str());

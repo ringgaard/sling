@@ -663,7 +663,7 @@ class Tensor {
 };
 
 // A step represents an operation that is part of a cell.
-class Step {
+class Step : public Attributes {
  public:
   // Step name from flow operation.
   const string &name() const { return name_; }
@@ -680,42 +680,6 @@ class Step {
   const std::vector<Tensor *> &outputs() const { return outputs_; }
   Tensor *output(int index) const { return outputs_[index]; }
   int outdegree() const { return outputs_.size(); }
-
-  // Get attribute value.
-  const string &GetAttr(const string &name) const {
-    return attributes_.Get(name);
-  };
-  int GetAttr(const string &name, int defval) const {
-    return attributes_.Get(name, defval);
-  }
-  bool GetAttr(const string &name, bool defval) const {
-    return attributes_.Get(name, defval);
-  }
-  float GetAttr(const string &name, float defval) const {
-    return attributes_.Get(name, defval);
-  }
-
-  // Check if step has attribute.
-  bool HasAttr(const string &name) const {
-    return attributes_.Has(name);
-  }
-
-  // Set attribute.
-  void SetAttr(const string &name, const string &value) {
-    attributes_.Set(name, value);
-  }
-  void SetAttr(const string &name, const char *value) {
-    attributes_.Set(name, value);
-  }
-  void SetAttr(const string &name, int value) {
-    attributes_.Set(name, value);
-  }
-  void SetAttr(const string &name, bool value) {
-    attributes_.Set(name, value);
-  }
-  void SetAttr(const string &name, float value) {
-    attributes_.Set(name, value);
-  }
 
   // Kernel used for generating code for step.
   Kernel *kernel() const { return kernel_; }

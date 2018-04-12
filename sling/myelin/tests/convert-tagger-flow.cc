@@ -34,8 +34,8 @@ int main(int argc, char *argv[]) {
   CHECK(lexicon != nullptr && lexicon->ops.size() == 1);
   const string &vocab = lexicon->ops[0]->GetAttr("dict");
   Flow::Blob *dictionary = flow.AddBlob("dictionary", "lexicon");
-  dictionary->attrs.Set("oov", embedding->dim(0) - 1);
-  dictionary->attrs.Set("delimiter", '\n');
+  dictionary->SetAttr("oov", embedding->dim(0) - 1);
+  dictionary->SetAttr("delimiter", '\n');
   char *data = flow.AllocateMemory(vocab.size());
   dictionary->data = data;
   dictionary->size = vocab.size();
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
   string tagdata;
   CHECK(File::ReadContents("local/tag-map", &tagdata));
   Flow::Blob *tags = flow.AddBlob("tags", "lexicon");
-  tags->attrs.Set("delimiter", '\n');
+  tags->SetAttr("delimiter", '\n');
   data = flow.AllocateMemory(tagdata.size());
   tags->data = data;
   tags->size = tagdata.size();
