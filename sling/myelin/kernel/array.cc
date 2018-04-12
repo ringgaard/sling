@@ -1072,7 +1072,7 @@ class PoolingGather : public Kernel {
   Pooling pooling_;  // pooling operation for combining vectors
 };
 
-// Add (scaled) input to variable.
+// Add (scaled) input to variable (var = [decay] * var + [scale] * value[^2]).
 class AssignAdd : public Kernel {
  public:
   AssignAdd(bool scale) : scale_(scale) {}
@@ -1085,21 +1085,30 @@ class AssignAdd : public Kernel {
     if (!CPU::Enabled(AVX) && !CPU::Enabled(SSE)) return false;
 
     // Check inputs and outputs.
-    if (step->indegree() != (scale_ ? 3 : 2)) return false;
+    bool decaying = step->GetAttr("decaying", false);
+    int expected_inputs = 2;
+    if (scale_) expected_inputs++;
+    if (decaying) expected_inputs++;
+    if (step->indegree() != expected_inputs) return false;
     if (step->outdegree() > 1) return false;
 
     // Check types.
     Tensor *var = step->input(0);
     Tensor *value = step->input(1);
     Tensor *scaler = scale_ ? step->input(2) : nullptr;
+    Tensor *decay = decaying ? step->input(scale_ ? 3 : 2) : nullptr;
     if (var->type() != DT_FLOAT) return false;
     if (var->constant()) return false;
     if (value->type() != DT_FLOAT) return false;
     if (!var->shape().IsCompatible(value->shape())) return false;
     if (var->elements() != value->elements()) return false;
-    if (scale_) {
+    if (scaler != nullptr) {
       if (scaler->type() != DT_FLOAT) return false;
       if (scaler->elements() != 1) return false;
+    }
+    if (decay != nullptr) {
+      if (decay->type() != DT_FLOAT) return false;
+      if (decay->elements() != 1) return false;
     }
     if (step->outdegree() == 1) {
       Tensor *output = step->output(0);
@@ -1128,11 +1137,13 @@ class AssignAdd : public Kernel {
 
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get inputs.
+    bool decaying = step->GetAttr("decaying", false);
+    bool squared = step->GetAttr("squared", false);
     Tensor *var = step->input(0);
     Tensor *value = step->input(1);
     Tensor *scaler = scale_ ? step->input(2) : nullptr;
+    Tensor *decay = decaying ? step->input(scale_ ? 3 : 2) : nullptr;
     Tensor *output = step->outdegree() == 1 ? step->output(0) : nullptr;
-    float decay = step->GetAttr("decay", 1.0f);
 
     // Compute the number of elements. The variable and the value must have the
     // same padding and the assignment is run on the padded elements as well,
@@ -1160,7 +1171,7 @@ class AssignAdd : public Kernel {
     Register ofs = masm->rr().alloc();
     Register dst = masm->rr().alloc();
     Register src = masm->rr().alloc();
-    Register saddr = masm->rr().alloc();
+    Register addr = masm->rr().alloc();
 
     // Load tensor locations.
     __ LoadTensorAddress(dst, var);
@@ -1176,15 +1187,16 @@ class AssignAdd : public Kernel {
       // Load scaling value.
       YMMRegister factor = masm->mm().allocy();
       if (scaler) {
-        __ LoadTensorAddress(saddr, scaler);
-        __ vbroadcastss(factor, Operand(saddr));
+        __ LoadTensorAddress(addr, scaler);
+        __ vbroadcastss(factor, Operand(addr));
       }
 
       // Load decay value.
       YMMRegister lambda = masm->mm().allocy();
       YMMRegister acc = masm->mm().allocy();
-      if (decay != 1.0) {
-        __ vmovaps(lambda, masm->GetConstant<float>(decay, 8)->address());
+      if (decay != nullptr) {
+        __ LoadTensorAddress(addr, decay);
+        __ vbroadcastss(lambda, Operand(addr));
       }
 
       if (unrolls > 0) {
@@ -1194,14 +1206,23 @@ class AssignAdd : public Kernel {
         for (int i = 0; i < unrolls; ++i) {
           int disp = i * 8 * sizeof(float);
           if (scale_) {
-            __ vmulps(elem[i], factor, Operand(src, ofs, times_1, disp));
+            if (squared) {
+              __ vmovaps(elem[i], Operand(src, ofs, times_1, disp));
+              __ vmulps(elem[i], elem[i], elem[i]);
+              __ vmulps(elem[i], factor, elem[i]);
+            } else {
+              __ vmulps(elem[i], factor, Operand(src, ofs, times_1, disp));
+            }
           } else {
             __ vmovaps(elem[i], Operand(src, ofs, times_1, disp));
+            if (squared) {
+              __ vmulps(elem[i], elem[i], elem[i]);
+            }
           }
         }
         for (int i = 0; i < unrolls; ++i) {
           int disp = i * 8 * sizeof(float);
-          if (decay != 1.0) {
+          if (decay != nullptr) {
             if (masm->Enabled(FMA3)) {
               __ vfmadd231ps(elem[i], lambda, Operand(dst, ofs, times_1, disp));
             } else {
@@ -1225,16 +1246,25 @@ class AssignAdd : public Kernel {
       for (int i = 0; i < n % 8; ++i) {
         int r = i % std::max(unrolls, 1);
         if (scale_) {
-          __ vmulss(elem[r], factor, Operand(src, disp));
+          if (squared) {
+            __ vmovss(elem[r], Operand(src, disp));
+            __ vmulss(elem[r], elem[r], elem[r]);
+            __ vmulss(elem[r], factor, elem[r]);
+          } else {
+            __ vmulss(elem[r], factor, Operand(src, disp));
+          }
         } else {
           __ vmovss(elem[r], Operand(src, disp));
+          if (squared) {
+            __ vmulss(elem[r], elem[r], elem[r]);
+          }
         }
-        if (decay != 1.0) {
+        if (decay != nullptr) {
           if (masm->Enabled(FMA3)) {
             __ vfmadd231ps(elem[r], lambda, Operand(dst, disp));
           } else {
-            __ vmulps(acc, lambda, Operand(dst, disp));
-            __ vaddps(elem[r], elem[r], acc);
+            __ vmulss(acc, lambda, Operand(dst, disp));
+            __ vaddss(elem[r], elem[r], acc);
           }
         } else {
           __ vaddss(elem[r], elem[r], Operand(dst, disp));
@@ -1249,16 +1279,18 @@ class AssignAdd : public Kernel {
 
       // Load scaling value.
       if (scaler) {
-        __ LoadTensorAddress(saddr, scaler);
-        __ movss(factor, Operand(saddr));
+        __ LoadTensorAddress(addr, scaler);
+        __ movss(factor, Operand(addr));
         __ shufps(factor, factor, 0);
       }
 
       // Load decay value.
       XMMRegister lambda = masm->mm().allocx();
       XMMRegister acc = masm->mm().allocx();
-      if (decay != 1.0) {
-        __ movaps(lambda, masm->GetConstant<float>(decay, 4)->address());
+      if (decay != nullptr) {
+        __ LoadTensorAddress(addr, decay);
+        __ movss(lambda, Operand(addr));
+        __ shufps(lambda, lambda, 0);
       }
 
       // Add (scaled) value to variabel.
@@ -1268,10 +1300,13 @@ class AssignAdd : public Kernel {
         __ xorq(ofs, ofs);
         __ bind(&next);
           __ movaps(elem, Operand(src, ofs));
+        if (squared) {
+          __ mulps(elem, elem);
+        }
         if (scale_) {
           __ mulps(elem, factor);
         }
-        if (decay != 1.0) {
+        if (decay != nullptr) {
           __ movaps(acc, Operand(dst, ofs));
           __ mulps(acc, lambda);
           __ addps(elem, acc);
@@ -1286,12 +1321,15 @@ class AssignAdd : public Kernel {
       int disp = main * sizeof(float);
       for (int i = 0; i < n % 4; ++i) {
         __ movss(elem, Operand(src, disp));
+        if (squared) {
+          __ mulss(elem, elem);
+        }
         if (scale_) {
           __ mulss(elem, factor);
         }
-        if (decay != 1.0) {
+        if (decay != nullptr) {
           __ movss(acc, Operand(dst, ofs));
-          __ mulps(acc, lambda);
+          __ mulss(acc, lambda);
           __ addss(elem, acc);
         } else {
           __ addss(elem, Operand(dst, disp));
@@ -1312,7 +1350,7 @@ class AssignAdd : public Kernel {
     Tensor *var = step->input(0);
     int ops = 1;
     if (scale_) ops++;
-    if (step->GetAttr("decay", 1.0f) != 1.0) ops++;
+    if (step->GetAttr("decaying", false)) ops++;
     return var->elements() * ops;
   }
 

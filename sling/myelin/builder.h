@@ -188,10 +188,16 @@ class FlowBuilder : public Scope {
   }
 
   // Assignment.
-  Operation *AssignAdd(Variable *var, Variable *value, float decay = 1.0) {
-    auto *op = Op0("AssignAdd", {var, value});
-    if (decay != 1.0) op->SetAttr("decay", decay);
+  Operation *AssignAdd(Variable *var, Variable *value) {
+    return Op0("AssignAdd", {var, value});
+  }
+  Operation *AssignAdd(Variable *var, Variable *value, Variable *decay) {
+    auto *op = Op0("AssignAdd", {var, value, decay});
+    op->SetAttr("decaying", true);
     return op;
+  }
+  Operation *AssignAdd(Variable *var, Variable *value, float decay) {
+    return AssignAdd(var, value, Const(decay));
   }
 
   Variable *Accumulate(Variable *var, Variable *value) {
