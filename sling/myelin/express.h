@@ -284,7 +284,7 @@ class Express {
   // Find variable in expression or add a new variable if it does not exist.
   Var *Variable(VarType type, int id);
 
-  // Look up variable in expression. Return null is variable does not exist.
+  // Look up variable in expression. Return null if variable does not exist.
   Var *Lookup(VarType type, int id) const;
 
   // Add new temp variable to expression.
@@ -339,8 +339,8 @@ class Express {
   // Rewrite expression to match instruction formats supported by target
   // architecture. The expression is assumed to be in static single assignment
   // form. The expression is rewritten by adding additional temporary variables
-  // to the rewritten expression so only the supported instruction form are
-  // needed for evaluating the expression.
+  // to the rewritten expression so only the supported instruction forms are
+  // needed for computing the expression.
   bool Rewrite(const Model &model, Express *rewritten) const;
 
   // Allocate registers for operands. Return the number of registers used.

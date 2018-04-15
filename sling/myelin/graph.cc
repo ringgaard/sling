@@ -114,6 +114,7 @@ static void AppendOp(string *str,
   str->append("label=\"");
   if (options.op_type_as_label) {
     if (op->HasAttr("expr")) {
+      if (op->type == "Assign") str->append("&#8612; ");
       str->append(op->GetAttr("expr"));
     } else if (op->HasAttr("var")) {
       str->append("&#10132; ");
@@ -136,7 +137,7 @@ static void AppendOp(string *str,
     options.ops.Append(str);
   }
 
-  bool calculate = (op->type == "Calculate");
+  bool calculate = (op->type == "Calculate" || op->type == "Assign");
   str->append(" tooltip=\"");
   StringAppendF(str, "name: %s&#10;", op->name.c_str());
   StringAppendF(str, "type: %s&#10;", op->type.c_str());

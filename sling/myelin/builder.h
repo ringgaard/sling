@@ -188,20 +188,12 @@ class FlowBuilder : public Scope {
   }
 
   // Assignment.
-  Operation *AssignAdd(Variable *var, Variable *value) {
-    return Op0("AssignAdd", {var, value});
-  }
-  Operation *AssignAdd(Variable *var, Variable *value, Variable *decay) {
-    auto *op = Op0("AssignAdd", {var, value, decay});
-    op->SetAttr("decaying", true);
-    return op;
-  }
-  Operation *AssignAdd(Variable *var, Variable *value, float decay) {
-    return AssignAdd(var, value, Const(decay));
+  Operation *Assign(Variable *var, Variable *value) {
+    return Op0("Assign", {var, value});
   }
 
-  Variable *Accumulate(Variable *var, Variable *value) {
-    return Op("AssignAdd", {var, value});
+  Operation *AssignAdd(Variable *var, Variable *value) {
+    return Op0("Assign", {var, Add(var, value)});
   }
 
   Operation *ScatterAdd(Variable *M, Variable *f, Variable *v) {

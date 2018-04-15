@@ -24,9 +24,10 @@ using namespace jit;
 ElementwiseIndexGenerator::ElementwiseIndexGenerator(
     const Step *step, MacroAssembler *masm) : IndexGenerator(masm) {
   // Get size from first output.
-  CHECK_GE(step->outdegree(), 1);
-  type_ = step->output(0)->type();
-  shape_ = step->output(0)->shape();
+  assign_ = step->type() == "Assign";
+  Tensor *prototype = assign_ ? step->input(0) : step->output(0);
+  type_ = prototype->type();
+  shape_ = prototype->shape();
 
   // Allocate locators for all inputs and outputs.
   input_.resize(step->indegree());
@@ -34,16 +35,47 @@ ElementwiseIndexGenerator::ElementwiseIndexGenerator(
     CHECK(step->input(i)->type() == type_);
     CHECK(InitializeLocator(step->input(i), &input_[i]));
   }
-  output_.resize(step->outdegree());
-  for (int i = 0; i < step->outdegree(); ++i) {
-    CHECK(step->output(i)->type() == type_);
-    CHECK(step->output(i)->shape() == step->output(0)->shape());
-    CHECK(InitializeLocator(step->output(i), &output_[i]));
+  if (assign_) {
+    // Add assigment locator. This shares base register with the first input.
+    output_.resize(1);
+    Locator &loc = output_[0];
+    loc.var = step->input(0);
+    loc.shared = true;
+    loc.iterator = GetIterator(ASSIGN, shape_.elements());
+
+    // Optionally output reference to assignment target.
+    if (step->outdegree() == 1) {
+      output_ref_ = step->output(0);
+    }
+  } else {
+    output_.resize(step->outdegree());
+    for (int i = 0; i < step->outdegree(); ++i) {
+      CHECK(step->output(i)->type() == type_);
+      CHECK(step->output(i)->shape() == shape_);
+      CHECK(InitializeLocator(step->output(i), &output_[i]));
+    }
   }
 }
 
 ElementwiseIndexGenerator::~ElementwiseIndexGenerator() {
   for (auto *i : iterators_) delete i;
+}
+
+ElementwiseIndexGenerator::Iterator *ElementwiseIndexGenerator::GetIterator(
+    IteratorType type,
+    size_t size,
+    size_t broadcast) {
+  // Try to find existing iterator.
+  for (Iterator *it : iterators_) {
+    if (type == it->type && size == it->size && broadcast == it->broadcast) {
+      return it;
+    }
+  }
+
+  // Create new iterator.
+  Iterator *it = new Iterator(type, size, broadcast);
+  iterators_.push_back(it);
+  return it;
 }
 
 bool ElementwiseIndexGenerator::InitializeLocator(Tensor *var, Locator *loc) {
@@ -53,10 +85,10 @@ bool ElementwiseIndexGenerator::InitializeLocator(Tensor *var, Locator *loc) {
   // Determine iterator type for variable.
   if (var->elements() == 1) {
     // Variable only has one element; use a scalar/const iterator.
-    loc->iterator = NewIterator(var->constant() ? CONST : SCALAR);
+    loc->iterator = GetIterator(var->constant() ? CONST : SCALAR, 1);
   } else if (var->shape() == shape_) {
     // Variable has same shape as output; use simple iterator.
-    loc->iterator = NewIterator(SIMPLE);
+    loc->iterator = GetIterator(SIMPLE, shape_.elements());
   } else if (var->rank() <= shape_.rank()) {
     // Find common suffix between variable and output.
     int n = 1;
@@ -74,20 +106,17 @@ bool ElementwiseIndexGenerator::InitializeLocator(Tensor *var, Locator *loc) {
     if (n == var->elements()) {
       if (var->elements() == shape_.elements()) {
         // The variable shape prefix is a one vector so use a simple iterator.
-        loc->iterator = NewIterator(SIMPLE);
+        loc->iterator = GetIterator(SIMPLE, shape_.elements());
       } else {
         // Variable shape is a suffix of the output shape; use a repeated
         // iterator.
         DCHECK(shape_.elements() % n == 0);
-        loc->iterator = NewIterator(REPEAT);
-        loc->iterator->size = n;
+        loc->iterator = GetIterator(REPEAT, n);
       }
     } else if (d1 >= 0 && d2 >= 0 && var->dim(d1) == 1 &&
                var->elements() * shape_.dim(d2) == shape_.elements()) {
       // Create broadcast iterator over one dimension.
-      loc->iterator = NewIterator(BROADCAST);
-      loc->iterator->size = n;
-      loc->iterator->broadcast = shape_.dim(d2);
+      loc->iterator = GetIterator(BROADCAST, n, shape_.dim(d2));
     } else {
       LOG(WARNING) << "Unsupported broadcast: " << var->name()
                    << " input: " << var->shape().ToString()
@@ -135,8 +164,12 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
     }
     for (auto &loc : output_) {
       if (loc.base.is_valid()) continue;
-      if (loc.iterator->type == SIMPLE) {
-        loc.base = rr.try_alloc();
+      if (loc.iterator->type == SIMPLE || loc.iterator->type == ASSIGN) {
+        if (loc.shared) {
+          loc.base = input_[0].base;
+        } else {
+          loc.base = rr.try_alloc();
+        }
       }
     }
   }
@@ -149,9 +182,14 @@ bool ElementwiseIndexGenerator::AllocateLocatorRegisters(Locator *loc) {
   switch (loc->iterator->type) {
     case SIMPLE:
     case SCALAR:
+    case ASSIGN:
       // Allocate base register for non-instance variables.
       if (loc->var->offset() == -1 || loc->var->ref()) {
-        loc->base = rr.try_alloc();
+        if (loc->shared) {
+          loc->base = input_[0].base;
+        } else {
+          loc->base = rr.try_alloc();
+        }
         if (!loc->base.is_valid()) return false;
       }
       break;
@@ -203,7 +241,7 @@ void ElementwiseIndexGenerator::BeginLoop() {
     }
   }
   for (auto &loc : output_) {
-    if (loc.base.is_valid()) {
+    if (loc.base.is_valid() && !loc.shared) {
       __ LoadTensorAddress(loc.base, loc.var);
     }
   }
@@ -265,6 +303,13 @@ void ElementwiseIndexGenerator::EndLoop() {
     __ cmpq(offset_, Immediate(size));
     __ j(less, &begin_);
   }
+
+  // Optionally output reference to assignment target.
+  if (output_ref_ != nullptr) {
+    CHECK(output_ref_->IsLocal());
+    CHECK(output_ref_->ref());
+    __ movq(Operand(masm->instance(), output_ref_->offset()), output_[0].base);
+  }
 }
 
 Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
@@ -313,6 +358,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
     // Return operand for accessing variable.
     switch (loc->iterator->type) {
       case SIMPLE:
+      case ASSIGN:
         if (single_) {
           // Single iteration.
           if (loc->base.is_valid()) {

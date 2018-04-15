@@ -1476,7 +1476,7 @@ Express::Var *Express::Log(Var *x) {
     x = Do(AND, x, Number(INV_MANT_MASK));
     x = Do(OR, x, Number(HALF));
 
-    // Part 2: Shift the inputs from the range [0.5,1) to [sqrt(1/2),sqrt(2))
+    // Part 2: Shift the inputs from the range [0.5,1) to [sqrt(1/2),sqrt(2)]
     // and shift by -1. The values are then centered around 0, which improves
     // the stability of the polynomial evaluation.
     //   if (x < SQRTHF) {
@@ -1513,14 +1513,14 @@ Express::Var *Express::Log(Var *x) {
     x = Add(x, y);
     x = Add(x, tmp);
 
-    x = Do(OR, x, invalid_mask);  // negative arg will be NAN
+    x = Do(OR, x, invalid_mask);  // negative arg will be NaN
 
     return x;
   }
 }
 
 // Exponential function.
-// Works by writing x = m*log(2) + r, where m = floor(x/log(2)+1/2)  and r is
+// Works by writing x = m*log(2) + r, where m = floor(x/log(2)+1/2) and r is
 // the remainder. The result is then exp(x) = 2^m*exp(r), where exp(r) is in the
 // range [-1,1).
 // See also: https://git.io/vHyVR

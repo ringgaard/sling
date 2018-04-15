@@ -213,6 +213,7 @@ int main(int argc, char *argv[]) {
   //Test("!0=Exp(%0);@0=Id(!0)");
   //Test("$2=Add(%4,%5);@0=Mul(Mul($2,%0),Mul(%3,Sub(_1,%3)));@1=Add(%6,Mul(Mul(%3,$2),Sub(_1,Square(%0))))");
   //Test("$0=Neg(%0);@0=Mul($0,Div(_1,Max(%1,_1)));@1=Mul($0,Div(_1,Max(%2,_1)));@2=Mul($0,Div(_1,Max(%3,_1)));@3=Mul($0,Div(_1,Max(%4,_1)))"); return 0;
-  Test("@0=Log(%0)");
+  //Test("@0=Log(%0)");
+  Test("@0=Id(Add(%0,Mul(%2,%1)))");
 }
 

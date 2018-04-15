@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "sling/base/logging.h"
@@ -77,12 +78,20 @@ static bool IsCalculateOp(Flow::Operation *op) {
   return op->type == "Calculate" || OpType(op->type) != Express::INVALID;
 }
 
+// Check if operation is an assignment op.
+static bool IsAssignmentOp(Flow::Operation *op) {
+  return op->type == "Assign";
+}
+
 // Initialize expression for flow operation.
 static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
   if (op->type == "Calculate") {
     // Build expression from expression recipe attribute on op.
     const string &recipe = op->GetAttr("expr");
     if (!recipe.empty()) expr->Parse(recipe, expand);
+  } else if (op->type == "Assign") {
+    const string &recipe = op->GetAttr("expr");
+    expr->Parse(recipe.empty() ? "@0=Id(%1)" : recipe, expand);
   } else {
     // Add op with inputs and output.
     CHECK_EQ(op->outdegree(), 1);
@@ -131,6 +140,9 @@ void InitExpression(const Step *step, Express *expr, bool expand) {
     // Build expression from expression recipe attribute on op.
     const string &recipe = step->GetAttr("expr");
     if (!recipe.empty()) expr->Parse(recipe, expand);
+  } else if (step->type() == "Assign") {
+    const string &recipe = step->GetAttr("expr");
+    expr->Parse(recipe.empty() ? "@0=Id(%1)" : recipe, expand);
   } else {
     // Add op with inputs and output.
     CHECK_EQ(step->outdegree(), 1);
@@ -156,16 +168,17 @@ struct Expression {
   // Initialize expression.
   Expression(const Step *step, MacroAssembler *masm, int spare_regs = 0)
       : index(step, masm) {
-    // Determine output type and shape from the first output.
-    output = step->output(0);
-    Type type = output->type();
+    // Determine output type and shape from the first output (or first input
+    // for assignment op).
+    assign = step->type() == "Assign";
+    prototype = assign ? step->input(0) : step->output(0);
+    Type type = prototype->type();
 
     // Compute the maximum common size between inputs and outputs.
-    DCHECK_GE(step->outdegree(), 1);
-    int elements = output->elements();
+    int elements = prototype->elements();
     for (auto *input : step->inputs()) {
       if (input->constant() && input->elements() == 1) continue;
-      int common = output->shape().CommonSize(input->shape());
+      int common = prototype->shape().CommonSize(input->shape());
       if (common < elements) elements = common;
     }
 
@@ -197,7 +210,7 @@ struct Expression {
 
   // Compute complexity.
   int64 Complexity() {
-    return output->shape().elements() * expr.Complexity();
+    return prototype->shape().elements() * expr.Complexity();
   }
 
   // Compute how many spare register we have for hoisting constant out of the
@@ -206,7 +219,8 @@ struct Expression {
   // used for the loop indexing.
   static int SpareRegs(const Step *step, const Options &options) {
     int spare_regs = 0;
-    Type type = step->output(0)->type();
+    bool assign = step->type() == "Assign";
+    Type type = assign ? step->input(0)->type() : step->output(0)->type();
     if (type == DT_FLOAT || type == DT_DOUBLE) {
       // Perform dry-run to estimate the number of SIMD registers needed.
       MacroAssembler masm(nullptr, 0, options);
@@ -220,7 +234,7 @@ struct Expression {
   }
 
   // Representative output from expression.
-  Tensor *output;
+  Tensor *prototype;
 
   // Expression to be compiled.
   Express expr;
@@ -230,6 +244,9 @@ struct Expression {
 
   // Code generator for expression.
   ExpressionGenerator *generator;
+
+  // Assignment expression.
+  bool assign;
 };
 
 // Convert division with constant c to multiplication with constant 1/c to
@@ -282,15 +299,17 @@ class AddNegToSubTransformer : public Transformer {
 class ExpressionTransformer : public Transformer {
  public:
   bool Transform(Flow *flow) override {
-    // Make list of ops that can potentially be included in Calculate ops.
+    // Make list of ops that can potentially be included in Calculate or
+    // Assign ops.
     std::vector<Flow::Operation *> candidates;
     for (Flow::Operation *op : flow->ops()) {
-      if (IsCalculateOp(op) && !op->GetAttr("strict", false)) {
+      if (IsCalculateOp(op) || IsAssignmentOp(op)) {
+        if (op->GetAttr("strict", false)) continue;
         candidates.push_back(op);
       }
     }
 
-    // Find candidate pairs to merge into combined Calculate ops.
+    // Find candidate pairs to merge into combined Calculate/Assign ops.
     bool again = true;
     int num_combines = 0;
     while (again) {
@@ -298,15 +317,32 @@ class ExpressionTransformer : public Transformer {
       for (int i = 0; i < candidates.size(); ++i) {
         Flow::Operation *op = candidates[i];
         if (op == nullptr) continue;
+        bool assign = IsAssignmentOp(op);
 
         // Check if producer of one of the inputs is also a candidate.
         for (auto *input : op->inputs) {
-          if (input->producer == nullptr) continue;
-          if (!IsCalculateOp(input->producer)) continue;
-          if (input->producer->GetAttr("strict", false)) continue;
+          Flow::Operation *producer = input->producer;
+          if (producer == nullptr) continue;
+          if (!IsCalculateOp(producer)) continue;
+          if (producer->GetAttr("strict", false)) continue;
+
+          // Assignment must be the sole consumer of all the outputs from the
+          // producer.
+          if (assign) {
+            bool contained = true;
+            for (auto *v : producer->outputs) {
+              if (v->consumers.size() != 1 ||
+                  v->consumers[0] != op ||
+                  v->out()) {
+                contained = false;
+                break;
+              }
+            }
+            if (!contained) continue;
+          }
 
           // Try to combine op with producer.
-          if (Combine(flow, input->producer, op)) {
+          if (Combine(flow, producer, op)) {
             // Remove op from candidate list and try again.
             candidates[i] = nullptr;
             num_combines++;
@@ -316,17 +352,20 @@ class ExpressionTransformer : public Transformer {
         }
       }
     }
-    VLOG(7) << num_combines << " of " << candidates.size() << " ops combined";
 
     return num_combines > 0;
   }
 
   bool Combine(Flow *flow, Flow::Operation *first, Flow::Operation *second) {
     // Check that ops have the same types and output shapes.
-    if (first->indegree() < 1 || first->outdegree() < 1) return false;
-    if (second->indegree() < 1 || second->outdegree() < 1) return false;
-    Type type = first->outputs[0]->type;
-    const Shape &shape = first->outputs[0]->shape;
+    bool assign = IsAssignmentOp(second);
+    if (first->indegree() < 1) return false;
+    if (first->outdegree() < 1) return false;
+    if (second->indegree() < 1) return false;
+    if (!assign && second->outdegree() < 1) return false;
+    Flow::Variable *prototype = assign ? first->inputs[0] : first->outputs[0];
+    Type type = prototype->type;
+    const Shape &shape = prototype->shape;
     for (auto *input : first->inputs) {
       if (input->type != type) return false;
       if (!input->shape.defined()) return false;
@@ -357,7 +396,29 @@ class ExpressionTransformer : public Transformer {
     string fused_recipe = FuseExpressions(first, second);
 
     // Fuse the two ops and set expression recipe for the fused Calculate op.
-    Flow::Operation *fused = flow->Fuse(first, second, "Calculate", true);
+    Flow::Variable *target = assign ? second->inputs[0] : nullptr;
+    Flow::Operation *fused = flow->Fuse(first, second,
+                                        assign ? "Assign" : "Calculate",
+                                        true);
+
+    // Make sure that the assignment target is the first input to the combined
+    // op.
+    if (assign && fused->inputs[0] != target) {
+      // Get the input index of the target variable.
+      int target_index = fused->InputIndex(target);
+      CHECK(target_index != -1);
+
+      // Swap target variable with first input.
+      Express expr;
+      expr.Parse(fused_recipe, false);
+      auto *vt = expr.Variable(Express::INPUT, target_index);
+      auto *v0 = expr.Variable(Express::INPUT, 0);
+      vt->id = 0;
+      v0->id = target_index;
+      fused_recipe = expr.AsRecipe();
+      std::swap(fused->inputs[0], fused->inputs[target_index]);
+    }
+
     fused->SetAttr("expr", fused_recipe);
 
     return true;
@@ -371,6 +432,7 @@ class ExpressionTransformer : public Transformer {
     MapVars(first, &expr1, &vars1);
 
     // Build second expression.
+    bool assign = IsAssignmentOp(second);
     Express expr2;
     InitExpression(second, &expr2, false);
     VarMap vars2;
@@ -381,6 +443,12 @@ class ExpressionTransformer : public Transformer {
     Express::Map mapping;
     int next_input = first->inputs.size();
     int next_output = first->outputs.size();
+    if (assign && second->outdegree() == 0) {
+      // Add implicit output for assignment target.
+      Express::Var *v2 = expr2.Variable(Express::OUTPUT, 0);
+      Express::Var *v1 = expr1.Variable(Express::OUTPUT, next_output++);
+      mapping[v2] = v1;
+    }
     for (Flow::Variable *v : second->inputs) {
       if (first->IsInput(v)) {
         // Map input from second op to input from first op.
@@ -487,13 +555,16 @@ class Calculate : public Kernel {
     if (step->type() != operation_) return false;
     if (arity_ != -1 && step->indegree() != arity_) return false;
 
-    // Check that inputs and outputs have the compatible types and shapes.
-    if (step->indegree() < 1 || step->outdegree() < 1) return false;
-    Type type = step->output(0)->type();
-    const Shape &shape = step->output(0)->shape();
+    // Check that inputs and outputs have compatible types and shapes.
+    bool assign = step->type() == "Assign";
+    if (step->indegree() < 1) return false;
+    if (!assign && step->outdegree() < 1) return false;
+    Tensor *prototype = assign ? step->input(0) : step->output(0);
+    Type type = prototype->type();
+    const Shape &shape = prototype->shape();
     for (auto *input : step->inputs()) {
       if (input->type() != type) return false;
-      if (!input->Compatible(step->output(0))) return false;
+      if (!input->Compatible(prototype)) return false;
     }
     for (auto *output : step->outputs()) {
       if (output->type() != type) return false;
@@ -527,23 +598,30 @@ class Calculate : public Kernel {
       output->RequireStandardOrder();
     }
 
-    // Enable sharing of inputs and outputs.
-    expression.expr.ComputeLiveRanges();
-    for (int i = 0; i < step->indegree(); ++i) {
-      Tensor *input = step->input(i);
-      Express::Var *ivar = expression.expr.Lookup(Express::INPUT, i);
-      if (input == nullptr) continue;
+    if (step->type() == "Assign") {
+      // Link output reference to assignment target.
+      if (step->outdegree() == 1) {
+        step->input(0)->Link(step->output(0));
+      }
+    } else {
+      // Enable sharing of inputs and outputs.
+      expression.expr.ComputeLiveRanges();
+      for (int i = 0; i < step->indegree(); ++i) {
+        Tensor *input = step->input(i);
+        Express::Var *ivar = expression.expr.Lookup(Express::INPUT, i);
+        if (input == nullptr) continue;
 
-      for (int j = 0; j < step->outdegree(); ++j) {
-        Tensor *output = step->output(j);
-        Express::Var *ovar = expression.expr.Lookup(Express::OUTPUT, j);
-        if (ovar == nullptr) continue;
+        for (int j = 0; j < step->outdegree(); ++j) {
+          Tensor *output = step->output(j);
+          Express::Var *ovar = expression.expr.Lookup(Express::OUTPUT, j);
+          if (ovar == nullptr) continue;
 
-        // The input and output can be shared if they have the same format and
-        // their live ranges do not overlap.
-        if (input->shape() == output->shape() && !ivar->overlaps(ovar)) {
-          if (step->AllowInPlace(i, j)) {
-            break;
+          // The input and output can be shared if they have the same format and
+          // their live ranges do not overlap.
+          if (input->shape() == output->shape() && !ivar->overlaps(ovar)) {
+            if (step->AllowInPlace(i, j)) {
+              break;
+            }
           }
         }
       }
@@ -996,6 +1074,7 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("SigmoidExpr", "Sigmoid", 1));
   library->Register(new Calculate("TanhExpr", "Tanh", 1));
   library->Register(new Calculate("Calculate", "Calculate"));
+  library->Register(new Calculate("Assign", "Assign"));
 
   library->Register(new Calculate("NegExpr", "Neg", 1));
   library->Register(new Calculate("AbsExpr", "Abs", 1));

@@ -1571,35 +1571,22 @@ class ScatterAdd : public Kernel {
 };
 
 // Fold scaling or outer product into update ops.
-class ScaledUpdateTransformer : public Transformer {
+class UpdateTransformer : public Transformer {
  public:
   bool Transform(Flow *flow) override {
     int updates = 0;
-    for (Flow::Operation *op : flow->Find("Mul|1:AssignAdd")) {
-      Flow::Operation *assign = op;
-      Flow::Operation *mul = assign->inputs[1]->producer;
-      if (mul->outputs[0]->consumers.size() == 1) {
-        flow->Fuse(assign, mul, "AssignMulAdd");
-        updates++;
-      }
-    }
 
-    for (Flow::Operation *op : flow->Find("Mul|2:ScatterAdd")) {
-      Flow::Operation *scatter = op;
-      Flow::Operation *mul = scatter->inputs[2]->producer;
-      if (mul->outputs[0]->consumers.size() == 1) {
-        flow->Fuse(scatter, mul, "ScatterMulAdd");
-        updates++;
-      }
-    }
-
-    for (Flow::Operation *op : flow->Find("MatMul|1:AssignAdd")) {
+    // Transform outer product update.
+    for (Flow::Operation *op : flow->Find("MatMul|1:Add|1:Assign")) {
       Flow::Operation *assign = op;
-      Flow::Operation *matmul = assign->inputs[1]->producer;
+      Flow::Operation *add = assign->inputs[1]->producer;
+      Flow::Operation *matmul = add->inputs[1]->producer;
+      if (assign->inputs[0] != add->inputs[0]) continue;
+      if (add->outputs[0]->consumers.size() != 1) continue;
       if (matmul->outputs[0]->consumers.size() != 1) continue;
-      if (matmul->inputs.size() != 2) continue;
 
       // Only fuse if matrix multiplication is an outer product.
+      if (matmul->inputs.size() != 2) continue;
       Shape a = matmul->inputs[0]->shape;
       Shape b = matmul->inputs[1]->shape;
       if (a.rank() != 2 || b.rank() != 2) continue;
@@ -1607,23 +1594,31 @@ class ScaledUpdateTransformer : public Transformer {
       if (matmul->GetAttr("transpose_b", false)) b = b.transpose();
       if (a.dim(1) != 1 || b.dim(0) != 1) continue;
 
-      flow->Fuse(assign, matmul, "AssignMatMulAdd");
+      flow->Fuse(assign, flow->Fuse(add, matmul, ""), "AssignAddMatMul", true);
       updates++;
     }
 
-    for (Flow::Operation *op : flow->Find("Scatter|1:AssignAdd")) {
+    // Transform sparse update.
+    for (Flow::Operation *op : flow->Find("Scatter|1:Add|1:Assign")) {
       Flow::Operation *assign = op;
-      Flow::Operation *scatter = assign->inputs[1]->producer;
-      if (scatter->outputs[0]->consumers.size() == 1) {
-        auto *scatteradd  = flow->Fuse(scatter, assign, "ScatterAdd");
-        auto *f = scatteradd->inputs[0];
-        auto *v = scatteradd->inputs[1];
-        auto *M = scatteradd->inputs[2];
-        scatteradd->inputs[0] = M;
-        scatteradd->inputs[1] = f;
-        scatteradd->inputs[2] = v;
-        updates++;
-      }
+      Flow::Operation *add = assign->inputs[1]->producer;
+      Flow::Operation *scatter = add->inputs[1]->producer;
+      if (assign->inputs[0] != add->inputs[0]) continue;
+      if (add->outputs[0]->consumers.size() != 1) continue;
+      if (scatter->outputs[0]->consumers.size() != 1) continue;
+
+      flow->Fuse(assign, flow->Fuse(add, scatter, ""), "ScatterAdd", true);
+      updates++;
+    }
+
+    // Transform sparse update scaling.
+    for (Flow::Operation *op : flow->Find("Mul|2:ScatterAdd")) {
+      Flow::Operation *scatter = op;
+      Flow::Operation *mul = scatter->inputs[2]->producer;
+      if (scatter->indegree() != 3) continue;
+      if (mul->outputs[0]->consumers.size() != 1) continue;
+      flow->Fuse(scatter, mul, "ScatterMulAdd");
+      updates++;
     }
 
     return updates > 0;
@@ -1670,12 +1665,12 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new PoolingGather(PoolingGather::SUM));
   library->Register(new PoolingGather(PoolingGather::AVG));
   library->Register(new PoolingGather(PoolingGather::MAX));
-  library->Register(new AssignAdd(false));
-  library->Register(new AssignAdd(true));
+  //library->Register(new AssignAdd(false));
+  //library->Register(new AssignAdd(true));
   library->Register(new ScatterAdd(false));
   library->Register(new ScatterAdd(true));
 
-  library->RegisterTransformer(new ScaledUpdateTransformer());
+  library->RegisterTransformer(new UpdateTransformer());
   library->RegisterTransformer(new ReshapeRefTransformer());
 }
 

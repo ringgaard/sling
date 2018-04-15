@@ -156,6 +156,12 @@ class Tagger {
     // Read documents.
     ReadCorpus(FLAGS_train, &train_);
     ReadCorpus(FLAGS_dev, &dev_);
+
+    // Align tag set size. REMOVE!!!
+    tagmap_[store_.Lookup("EXTRA1")] = -1;
+    tagmap_[store_.Lookup("EXTRA2")] = -1;
+    tagmap_[store_.Lookup("EXTRA3")] = -1;
+
     num_tags_ = tagmap_.size();
 
     LOG(INFO) << "Train sentences: " << train_.size();
