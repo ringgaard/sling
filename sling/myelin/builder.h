@@ -49,8 +49,8 @@ class Scope {
 // Flow builder utility for building flows from expressions, e.g.:
 //   Flow flow;
 //   FlowBuilder tf(&flow, "mnist");
-//   auto *w = tf.Constant(weights, DT_FLOAT, {784, 10});
-//   auto *b = tf.Constant(bias, DT_FLOAT, {10});
+//   auto *w = tf.Const(weights, DT_FLOAT, {784, 10});
+//   auto *b = tf.Const(bias, DT_FLOAT, {10});
 //   auto *x = tf.Var("x", DT_FLOAT, {1, 784});
 //   auto *y = tf.Add(tf.MatMul(x, w), b);
 class FlowBuilder : public Scope {

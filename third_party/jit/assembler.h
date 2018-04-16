@@ -721,6 +721,9 @@ class Assembler : public CodeGenerator {
   void shufps(XMMRegister dst, XMMRegister src, byte imm8);
   void shufps(XMMRegister dst, const Operand &src, byte imm8);
 
+  void shufpd(XMMRegister dst, XMMRegister src, byte imm8);
+  void shufpd(XMMRegister dst, const Operand &src, byte imm8);
+
   void cvttss2si(Register dst, const Operand &src);
   void cvttss2si(Register dst, XMMRegister src);
   void cvtlsi2ss(XMMRegister dst, const Operand &src);

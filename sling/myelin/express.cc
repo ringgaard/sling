@@ -673,7 +673,7 @@ bool Express::TryToEliminateOps() {
   return false;
 }
 
-void Express::HoistConstants(int limit) {
+void Express::Hoist(int limit) {
   // Collect all existing cached variables.
   std::set<Var *> cached;
   for (int i = 0; i < body_; ++i) {
@@ -715,6 +715,33 @@ void Express::HoistConstants(int limit) {
     body_++;
     cached.insert(candidate);
   }
+
+  // Hoist loop-invariant operations.
+  bool again = true;
+  while (again) {
+    again = false;
+    for (int i = body_; i < ops_.size(); ++i) {
+      Op *op = ops_[i];
+
+      // Check if all arguments are cached or single memory inputs.
+      bool invariant = true;
+      for (Var *arg : op->args) {
+        if (cached.count(arg) == 0 && !arg->single) {
+          invariant = false;
+          break;
+        }
+      }
+
+      // Move instruction out of the body if it is loop-invariant.
+      if (invariant) {
+        for (int j = body_; j < i; ++j) ops_[j + 1] = ops_[j];
+        ops_[body_++] = op;
+        again = true;
+        break;
+      }
+    }
+  }
+
   if (!cached.empty()) CompactTempVars();
 }
 
@@ -722,7 +749,7 @@ void Express::CacheResults() {
   int cached_vars = 0;
   for (int n = 0; n < vars_.size(); ++n) {
     Var *var = vars_[n];
-    if (var->type == OUTPUT && var->consumers.size() > 0) {
+    if (var->type == OUTPUT && var->usages() > 0) {
       // Make temp variable and update all usages to use this instead.
       Op *op = var->producer;
       CHECK(op != nullptr);
@@ -741,7 +768,7 @@ void Express::CacheResults() {
       assign->Assign(var);
       assign->AddArgument(temp);
       cached_vars++;
-    } else if (var->type == INPUT && var->consumers.size() > 1) {
+    } else if (var->type == INPUT && (var->usages() > 1 || var->single)) {
       // Make temp variable and update all usages to use this instead.
       Var *temp = Temp();
       var->consumers.swap(temp->consumers);
@@ -961,6 +988,24 @@ bool Express::TryFuseSecond(Op *op, OpType type, OpType combined) {
   return true;
 }
 
+void Express::Optimize(bool fma, int spare_regs) {
+  // Eliminate common subexpressions.
+  EliminateCommonSubexpressions();
+
+  // Optionally fuse multiply and add/sub.
+  if (fma) {
+    FuseMulAdd();
+    FuseMulSub();
+  }
+
+  // Cache inputs and results used in multiple ops in temporary variables.
+  CacheResults();
+
+  // Hoist loop-invariant ops out of the body. The spare registers are used for
+  // used for pre-loading constants.
+  Hoist(spare_regs);
+}
+
 bool Express::Rewrite(const Model &model, Express *rewritten) const {
   // Target expression must be empty.
   CHECK_EQ(rewritten->vars().size(), 0);
@@ -1044,7 +1089,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             switch (args[0]->type) {
               case INPUT:
               case OUTPUT:
-                if (!model.func_reg_mem) {
+                if (!model.func_reg_mem || args[0]->single) {
                   // Add temp variable for input.
                   source = rewritten->Temp();
                   if (!model.func_reg_reg) success = false;
@@ -1139,7 +1184,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 source2 = rewritten->Temp();
               }
             } else if (!args[1]->IsRegister()) {
-              if (!model.op_reg_reg_mem) {
+              if (!model.op_reg_reg_mem || args[1]->single) {
                 source2 = rewritten->Temp();
               }
             }
@@ -1198,7 +1243,8 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
               case OUTPUT:
                 // Put second operand into register if memory operands are not
                 // supported.
-                if (dest->type != TEMP || !model.op_reg_mem) {
+                if (dest->type != TEMP || !model.op_reg_mem ||
+                    args[1]->single) {
                   source2 = rewritten->Temp();
                 }
                 break;
@@ -1304,7 +1350,7 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
           source3 = rewritten->Temp();
         }
       } else if (!args[2]->IsRegister()) {
-        if (!model.fm_reg_reg_mem) {
+        if (!model.fm_reg_reg_mem || args[2]->single) {
           source3 = rewritten->Temp();
         }
       }
@@ -1439,6 +1485,19 @@ int Express::AllocateRegisters() {
   }
 
   return regs.max();
+}
+
+bool Express::Generate(const Model &model, Express *rewritten) const {
+  // Rewrite expression using instruction model.
+  if (!Rewrite(model, rewritten)) return false;
+
+  // Compute live ranges for all variables.
+  rewritten->ComputeLiveRanges();
+
+  // Allocate registers for temporary variables.
+  rewritten->AllocateRegisters();
+
+  return true;
 }
 
 int Express::NumRegs() const {

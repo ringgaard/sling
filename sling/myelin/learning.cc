@@ -180,10 +180,12 @@ void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
       weight = tf.Mul(multiplier, clip);
     }
 
-    auto *assign = tf.AssignAdd(v, tf.Mul(dv, weight));
+    // Add scaled gradient to parameters.
     if (lambda_ != 0.0) {
-      float decay = 1.0 - lambda_;
-      assign->SetAttr("decay", decay);
+      tf.Assign(v, tf.Add(tf.Mul(tf.Sub(tf.Const(1.0f), tf.Const(lambda_)), v),
+                          tf.Mul(dv, weight)));
+    } else {
+      tf.AssignAdd(v, tf.Mul(dv, weight));
     }
   }
 }

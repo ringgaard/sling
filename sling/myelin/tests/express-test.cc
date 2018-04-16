@@ -90,7 +90,7 @@ void Test(const string &str) {
   }
 
   expr.CacheResults();
-  if (hoist > 0) expr.HoistConstants(hoist);
+  if (hoist > 0) expr.Hoist(hoist);
   int addr = 0;
   for (auto *op : expr.ops()) {
     if (expr.body() > 0 && op == expr.ops()[expr.body()]) {

@@ -167,6 +167,7 @@ class Express {
     int id;                       // variable id (-1 for unassigned temps)
     Op *producer;                 // operation producing value for variable
     std::vector<Op *> consumers;  // consumers of variable
+    bool single = false;          // single-element memory variable
 
     // Live range for variable.
     Op *first = nullptr;          // first usage of variable
@@ -310,8 +311,10 @@ class Express {
 
   // Cache constants and move the loads outside the body of the code. Each
   // cached constant takes up an additional register, so the number of cached
-  // constants is limited to the number of spare registers.
-  void HoistConstants(int limit);
+  // constants is limited to the number of spare registers. Loop-invariant ops
+  // are also moved out of the body, notably loads of single element memory
+  // input variables.
+  void Hoist(int limit);
 
   // Cache inputs and results used in multiple ops in temporary variables.
   void CacheResults();
@@ -336,6 +339,13 @@ class Express {
   void FuseMulAdd() { Fuse(ADD, MUL, MULADD213, MULADD231); }
   void FuseMulSub() { Fuse(SUB, MUL, MULSUB213, INVALID); }
 
+  // Optimize expression by performing the following transformations:
+  //   - eliminate common subexpressions
+  //   - fuse multiply and add/subtract
+  //   - cache inputs and results used in multiple ops in temporary variables
+  //   - hoist loop-invariant instructions outside the loop
+  void Optimize(bool fma, int spare_regs);
+
   // Rewrite expression to match instruction formats supported by target
   // architecture. The expression is assumed to be in static single assignment
   // form. The expression is rewritten by adding additional temporary variables
@@ -345,6 +355,10 @@ class Express {
 
   // Allocate registers for operands. Return the number of registers used.
   int AllocateRegisters();
+
+  // Generate instructions according to the instruction model and allocate
+  // registers for operands.
+  bool Generate(const Model &model, Express *rewritten) const;
 
   // Returns the number of register used by expression.
   int NumRegs() const;

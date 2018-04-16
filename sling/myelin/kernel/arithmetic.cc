@@ -104,31 +104,35 @@ static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
     expr->CompactTempVars();
   }
 
-  // Mark constant inputs.
+  // Mark constant and scalar inputs.
   for (int i = 0; i < op->indegree(); ++i) {
     auto *input = op->inputs[i];
-    if (input->constant() && input->elements() == 1) {
+    if (input->elements() == 1) {
       int const_id = -1;
-      if (input->type == DT_FLOAT) {
-        float value = *reinterpret_cast<const float *>(input->data);
-        if (value == 0.0) {
-          const_id = Express::ZERO;
-        } else if (value == 1.0) {
-          const_id = Express::ONE;
-        } else if (value == 0.5) {
-          const_id = Express::HALF;
-        } else if (value == 2.0) {
-          const_id = Express::TWO;
-        } else if (value == -1.0) {
-          const_id = Express::N1;
+      if (input->constant()) {
+        if (input->type == DT_FLOAT) {
+          float value = *reinterpret_cast<const float *>(input->data);
+          if (value == 0.0) {
+            const_id = Express::ZERO;
+          } else if (value == 1.0) {
+            const_id = Express::ONE;
+          } else if (value == 0.5) {
+            const_id = Express::HALF;
+          } else if (value == 2.0) {
+            const_id = Express::TWO;
+          } else if (value == -1.0) {
+            const_id = Express::N1;
+          }
         }
       }
       auto *var = expr->Variable(Express::INPUT, i);
       if (const_id != -1) {
         var->type = Express::NUMBER;
         var->id = const_id;
-      } else {
+      } else if (input->constant()) {
         var->type = Express::CONST;
+      } else {
+        var->single = true;
       }
     }
   }
@@ -155,10 +159,15 @@ void InitExpression(const Step *step, Express *expr, bool expand) {
     expr->CompactTempVars();
   }
 
-  // Mark constant inputs.
+  // Mark scalar and constant inputs.
   for (int i = 0; i < step->indegree(); ++i) {
-    if (step->input(i)->constant() && step->input(i)->elements() == 1) {
-      expr->Variable(Express::INPUT, i)->type = Express::CONST;
+    if (step->input(i)->elements() == 1) {
+      Express::Var *var = expr->Variable(Express::INPUT, i);
+      if (step->input(i)->constant()) {
+        var->type = Express::CONST;
+      } else {
+        var->single = true;
+      }
     }
   }
 }
@@ -174,16 +183,24 @@ struct Expression {
     prototype = assign ? step->input(0) : step->output(0);
     Type type = prototype->type();
 
-    // Compute the maximum common size between inputs and outputs.
+    // Compute the maximum common size between inputs and outputs. Scalars are
+    // not used for computing the maximum size since these can be broadcast to
+    // the vector size.
     int elements = prototype->elements();
     for (auto *input : step->inputs()) {
-      if (input->constant() && input->elements() == 1) continue;
+      if (input->elements() == 1) continue;
       int common = prototype->shape().CommonSize(input->shape());
       if (common < elements) elements = common;
     }
 
     // Compile expression to be computed.
     InitExpression(step, &expr, true);
+
+    // Clear single flag for scalar ops since broadcasting and hoisting is not
+    // needed in this case.
+    if (elements == 1) {
+      for (auto *v : expr.vars()) v->single = false;
+    }
 
     // Select expression generator.
     generator = ExpressionGenerator::Select(expr, type, elements);
@@ -202,10 +219,11 @@ struct Expression {
 
   // Generate code for expression loop.
   void Generate(MacroAssembler *masm) {
+    index.GenerateInit();
     generator->GenerateInit(masm);
-    index.BeginLoop();
+    index.GenerateLoopBegin();
     generator->GenerateBody(masm);
-    index.EndLoop();
+    index.GenerateLoopEnd();
   }
 
   // Compute complexity.
@@ -304,22 +322,25 @@ class ExpressionTransformer : public Transformer {
     std::vector<Flow::Operation *> candidates;
     for (Flow::Operation *op : flow->ops()) {
       if (IsCalculateOp(op) || IsAssignmentOp(op)) {
-        if (op->GetAttr("strict", false)) continue;
-        candidates.push_back(op);
+        if (!op->GetAttr("strict", false)) {
+          candidates.push_back(op);
+        }
       }
     }
 
     // Find candidate pairs to merge into combined Calculate/Assign ops.
-    bool again = true;
     int num_combines = 0;
+    bool again = true;
     while (again) {
       again = false;
+
+      // Merge calculate ops into assignment.
       for (int i = 0; i < candidates.size(); ++i) {
         Flow::Operation *op = candidates[i];
         if (op == nullptr) continue;
-        bool assign = IsAssignmentOp(op);
+        if (!IsAssignmentOp(op)) continue;
 
-        // Check if producer of one of the inputs is also a candidate.
+        // Check if producer of one of the inputs is a calculate op.
         for (auto *input : op->inputs) {
           Flow::Operation *producer = input->producer;
           if (producer == nullptr) continue;
@@ -328,18 +349,40 @@ class ExpressionTransformer : public Transformer {
 
           // Assignment must be the sole consumer of all the outputs from the
           // producer.
-          if (assign) {
-            bool contained = true;
-            for (auto *v : producer->outputs) {
-              if (v->consumers.size() != 1 ||
-                  v->consumers[0] != op ||
-                  v->out()) {
-                contained = false;
-                break;
-              }
+          bool contained = true;
+          for (auto *v : producer->outputs) {
+            if (v->consumers.size() != 1 ||
+                v->consumers[0] != op ||
+                v->out()) {
+              contained = false;
+              break;
             }
-            if (!contained) continue;
           }
+          if (!contained) continue;
+
+          // Try to combine op with producer.
+          if (Combine(flow, producer, op)) {
+            // Remove op from candidate list and try again.
+            candidates[i] = nullptr;
+            num_combines++;
+            again = true;
+            break;
+          }
+        }
+      }
+
+      // Merge calculate ops.
+      for (int i = 0; i < candidates.size(); ++i) {
+        Flow::Operation *op = candidates[i];
+        if (op == nullptr) continue;
+        if (!IsCalculateOp(op)) continue;
+
+        // Check if producer of one of the inputs is also a candidate.
+        for (auto *input : op->inputs) {
+          Flow::Operation *producer = input->producer;
+          if (producer == nullptr) continue;
+          if (!IsCalculateOp(producer)) continue;
+          if (producer->GetAttr("strict", false)) continue;
 
           // Try to combine op with producer.
           if (Combine(flow, producer, op)) {
@@ -401,8 +444,8 @@ class ExpressionTransformer : public Transformer {
                                         assign ? "Assign" : "Calculate",
                                         true);
 
-    // Make sure that the assignment target is the first input to the combined
-    // op.
+    // Make sure that the assignment target is still the first input to the
+    // combined op.
     if (assign && fused->inputs[0] != target) {
       // Get the input index of the target variable.
       int target_index = fused->InputIndex(target);
@@ -419,6 +462,7 @@ class ExpressionTransformer : public Transformer {
       std::swap(fused->inputs[0], fused->inputs[target_index]);
     }
 
+    // Set fused expression for combined op.
     fused->SetAttr("expr", fused_recipe);
 
     return true;

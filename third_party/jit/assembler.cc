@@ -2881,6 +2881,26 @@ void Assembler::shufps(XMMRegister dst, const Operand &src, byte imm8) {
   emit(imm8);
 }
 
+void Assembler::shufpd(XMMRegister dst, XMMRegister src, byte imm8) {
+  DCHECK(is_uint8(imm8));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit(0x0F);
+  emit(0xC6);
+  emit_sse_operand(dst, src);
+  emit(imm8);
+}
+
+void Assembler::shufpd(XMMRegister dst, const Operand &src, byte imm8) {
+  DCHECK(is_uint8(imm8));
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit(0x0F);
+  emit(0xC6);
+  emit_sse_operand(dst, src);
+  emit(imm8);
+}
+
 void Assembler::movapd(XMMRegister dst, XMMRegister src) {
   DCHECK(Enabled(SSE2));
   EnsureSpace ensure_space(this);

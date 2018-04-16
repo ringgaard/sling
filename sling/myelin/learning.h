@@ -70,7 +70,7 @@ class Optimizer {
   void Initialize(const Network &network);
 
   // Apply gradients to update learnable parameters.
-  void Apply(std::vector<Instance *> &gradients);
+  virtual void Apply(std::vector<Instance *> &gradients);
 
  protected:
   // Let subclass build the parameter update using the gradient map.

@@ -46,12 +46,16 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   // Return operand for accessing memory variable.
   jit::Operand addr(Express::Var *var) override;
 
+  // Check if variable needs to be broadcast to whole vector after loading.
+  bool NeedsBroadcast(Express::Var *var) override;
+
   // Return pointer to constant data.
   const void *data(Express::Var *var) override;
 
-  // Generate start and end of loop.
-  void BeginLoop();
-  void EndLoop();
+  // Generate intializer, start and end of loop.
+  void GenerateInit();
+  void GenerateLoopBegin();
+  void GenerateLoopEnd();
 
   // Whether only one iteration is needed.
   bool single() const { return single_; }

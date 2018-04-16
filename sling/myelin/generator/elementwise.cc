@@ -223,7 +223,7 @@ bool ElementwiseIndexGenerator::AllocateLocatorRegisters(Locator *loc) {
   return true;
 }
 
-void ElementwiseIndexGenerator::BeginLoop() {
+void ElementwiseIndexGenerator::GenerateInit() {
   // Load tensor addresses and initialize index registers.
   MacroAssembler *masm = masm_;
   for (auto &loc : input_) {
@@ -245,15 +245,18 @@ void ElementwiseIndexGenerator::BeginLoop() {
       __ LoadTensorAddress(loc.base, loc.var);
     }
   }
+}
 
+void ElementwiseIndexGenerator::GenerateLoopBegin() {
   // Generate loop start, unless there is only one iteration.
+  MacroAssembler *masm = masm_;
   if (!single_) {
     __ xorq(offset_, offset_);
     __ bind(&begin_);
   }
 }
 
-void ElementwiseIndexGenerator::EndLoop() {
+void ElementwiseIndexGenerator::GenerateLoopEnd() {
   MacroAssembler *masm = masm_;
   if (!single_) {
     // Move to next output element.
@@ -310,6 +313,21 @@ void ElementwiseIndexGenerator::EndLoop() {
     CHECK(output_ref_->ref());
     __ movq(Operand(masm->instance(), output_ref_->offset()), output_[0].base);
   }
+}
+
+bool ElementwiseIndexGenerator::NeedsBroadcast(Express::Var *var) {
+  // Constants do not need broadcasting.
+  if (var->type == Express::NUMBER || var->type == Express::CONST) {
+    return false;
+  }
+
+  // Get locator.
+  CHECK(Valid(var));
+  Locator *loc = GetLocator(var);
+
+  // Memory variable needs broadcast if it is a scalar value and the vector size
+  // of the generator is more than one element.
+  return vecsize_ > element_size() && loc->var->elements() == 1;
 }
 
 Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
