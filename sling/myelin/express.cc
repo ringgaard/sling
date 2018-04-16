@@ -680,6 +680,12 @@ void Express::Hoist(int limit) {
     cached.insert(ops_[i]->result);
   }
 
+  // Single element inputs are also considered as cached since these are by
+  // definition loop invariant.
+  for (Var *var : vars_) {
+    if (var->single) cached.insert(var);
+  }
+
   // Hoist const loads outside the body until limit reached.
   for (int r = 0; r < limit; ++r) {
     // Find constant or number variable with the most usages.
@@ -723,10 +729,10 @@ void Express::Hoist(int limit) {
     for (int i = body_; i < ops_.size(); ++i) {
       Op *op = ops_[i];
 
-      // Check if all arguments are cached or single memory inputs.
+      // Check if all arguments are cached.
       bool invariant = true;
       for (Var *arg : op->args) {
-        if (cached.count(arg) == 0 && !arg->single) {
+        if (cached.count(arg) == 0) {
           invariant = false;
           break;
         }
@@ -736,6 +742,7 @@ void Express::Hoist(int limit) {
       if (invariant) {
         for (int j = body_; j < i; ++j) ops_[j + 1] = ops_[j];
         ops_[body_++] = op;
+        cached.insert(op->result);
         again = true;
         break;
       }

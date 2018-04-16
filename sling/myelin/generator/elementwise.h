@@ -61,19 +61,13 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   bool single() const { return single_; }
 
  private:
-  enum IteratorType {SIMPLE, SCALAR, CONST, REPEAT, BROADCAST, ASSIGN};
+  enum IteratorType {SIMPLE, SCALAR, CONST, REPEAT, BROADCAST};
   struct Locator;
   struct Iterator;
 
-  // Initialize locator for variable.
-  bool InitializeLocator(Tensor *var, Locator *loc);
-
-  // Allocate registers for locator.
-  bool AllocateLocatorRegisters(Locator *loc);
-
   // Get locator for variable.
-  Locator *GetLocator(Express::Var *var) {
-    return var->type == Express::OUTPUT ? &output_[var->id] : &input_[var->id];
+  Locator *LookupLocator(Express::Var *var) {
+    return var->type == Express::OUTPUT ? output_[var->id] : input_[var->id];
   }
 
   // Check if variable is a valid index.
@@ -85,27 +79,30 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   }
 
   // Get iterator for iterating over vector elements.
-  Iterator *GetIterator(IteratorType type, size_t size, size_t broadcast = 0);
+  Iterator *GetIterator(IteratorType type, size_t size);
+
+  // Get locator for accessing variable.
+  Locator *GetLocator(Tensor *var);
 
   // Iterator for looping over (vector) elements in tensor.
   struct Iterator {
-    Iterator(IteratorType type, size_t size, size_t broadcast)
-        : type(type), size(size), broadcast(broadcast) {}
+    Iterator(IteratorType type, size_t size) : type(type), size(size) {}
 
     IteratorType type;                   // iterator type
     size_t size;                         // number of elements to iterate over
-    size_t broadcast;                   // broadcast iterations
-    jit::Register block = jit::no_reg;   // block base
     jit::Register offset = jit::no_reg;  // offset from base
-    jit::Register repeat = jit::no_reg;  // broadcast counter
   };
 
   // Locator for generating address operands for variables.
   struct Locator {
-    Tensor *var;                        // variable to iterate over
-    jit::Register base = jit::no_reg;   // base address register
-    bool shared = false;                // base register shared with first input
-    Iterator *iterator = nullptr;       // iterator for iterating over elements
+    Locator(Tensor *var) : var(var) {}
+
+    Tensor *var;                         // variable to iterate over
+    jit::Register base = jit::no_reg;    // base address register
+    Iterator *iterator = nullptr;        // iterator for iterating over elements
+
+    size_t broadcast = 0;                // broadcast iterations
+    jit::Register repeat = jit::no_reg;  // broadcast counter
   };
 
   // Assignment expression.
@@ -133,8 +130,9 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   Tensor *output_ref_ = nullptr;
 
   // Input and output locators.
-  std::vector<Locator> input_;
-  std::vector<Locator> output_;
+  std::vector<Locator *> locators_;
+  std::vector<Locator *> input_;
+  std::vector<Locator *> output_;
 
   // Iterators.
   std::vector<Iterator *> iterators_;
