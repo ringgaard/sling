@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <map>
+
 #include "sling/myelin/generator/elementwise.h"
 
 #define __ masm->
@@ -191,12 +193,33 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
     };
   }
 
-  // Try to allocate extra base registers as an optimization.
+  // Try to allocate extra base registers as an optimization. The base registers
+  // can be shared between local tensors with the same location.
   if (!single_) {
+    std::map<int, Register> base_regs;
     for (auto *loc : locators_) {
+      // Do not allocate register if locator already has a base register.
       if (loc->base.is_valid()) continue;
+
+      // Only simple and repeat iterators can use extra base registers.
       if (loc->iterator->type == SIMPLE || loc->iterator->type == REPEAT) {
-        loc->base = rr.try_alloc();
+        if (loc->var->offset() != -1) {
+          // Try to find existing base register for offset in instance.
+          auto f = base_regs.find(loc->var->offset());
+          if (f != base_regs.end()) {
+            // Use shared base register.
+            loc->base = f->second;
+            loc->shared = true;
+          } else {
+            // Try to allocate new base register.
+            loc->base = rr.try_alloc();
+            if (loc->base.is_valid()) {
+              base_regs[loc->var->offset()] = loc->base;
+            }
+          }
+        } else {
+          loc->base = rr.try_alloc();
+        }
       }
     }
   }
@@ -208,7 +231,7 @@ void ElementwiseIndexGenerator::GenerateInit() {
   // Load tensor addresses and initialize index registers.
   MacroAssembler *masm = masm_;
   for (auto *loc : locators_) {
-    if (loc->base.is_valid()) {
+    if (loc->base.is_valid() && !loc->shared) {
       __ LoadTensorAddress(loc->base, loc->var);
     }
     if (loc->repeat.is_valid()) {
