@@ -193,6 +193,12 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
     };
   }
 
+  // Assignment target needs a base register.
+  if (output_ref_ != nullptr && !input_[0]->base.is_valid()) {
+    input_[0]->base = rr.try_alloc();
+    if (!input_[0]->base.is_valid()) return false;
+  }
+
   // Try to allocate extra base registers as an optimization. The base registers
   // can be shared between local tensors with the same location.
   if (!single_) {
@@ -311,7 +317,8 @@ void ElementwiseIndexGenerator::GenerateLoopEnd() {
   if (output_ref_ != nullptr) {
     CHECK(output_ref_->IsLocal());
     CHECK(output_ref_->ref());
-    __ movq(Operand(masm->instance(), output_ref_->offset()), output_[0]->base);
+    CHECK(input_[0]->base.is_valid());
+    __ movq(Operand(masm->instance(), output_ref_->offset()), input_[0]->base);
   }
 }
 

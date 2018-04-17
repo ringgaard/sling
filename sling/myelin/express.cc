@@ -680,13 +680,14 @@ void Express::Hoist(int limit) {
     cached.insert(ops_[i]->result);
   }
 
-  // Single element inputs are also considered as cached since these are by
-  // definition loop invariant.
+  // Single element inputs and constants are also considered as cached since
+  // these are by definition loop invariant.
   for (Var *var : vars_) {
-    if (var->single) cached.insert(var);
+    if (var->type == NUMBER || var->single) cached.insert(var);
   }
 
   // Hoist const loads outside the body until limit reached.
+  int new_temps = 0;
   for (int r = 0; r < limit; ++r) {
     // Find constant or number variable with the most usages.
     Var *candidate = nullptr;
@@ -720,7 +721,9 @@ void Express::Hoist(int limit) {
     assign->AddArgument(candidate);
     body_++;
     cached.insert(candidate);
+    new_temps++;
   }
+  if (new_temps > 0) CompactTempVars();
 
   // Hoist loop-invariant operations.
   bool again = true;
@@ -740,7 +743,7 @@ void Express::Hoist(int limit) {
 
       // Move instruction out of the body if it is loop-invariant.
       if (invariant) {
-        for (int j = body_; j < i; ++j) ops_[j + 1] = ops_[j];
+        for (int j = i; j > body_; --j) ops_[j] = ops_[j - 1];
         ops_[body_++] = op;
         cached.insert(op->result);
         again = true;
@@ -748,8 +751,6 @@ void Express::Hoist(int limit) {
       }
     }
   }
-
-  if (!cached.empty()) CompactTempVars();
 }
 
 void Express::CacheResults() {

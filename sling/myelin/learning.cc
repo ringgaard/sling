@@ -196,6 +196,87 @@ void GradientDescentOptimizer::InitializeOptimizer() {
   set_alpha(0.01);
 }
 
+void AdamOptimizer::BuildOptimizer(const GradientMap &gradmap,
+                                   FlowBuilder *update) {
+  // See also: http://ruder.io/optimizing-gradient-descent/index.html#adam
+  FlowBuilder &tf = *update;
+
+  // Add hyperparameter inputs.
+  auto *alpha = tf.Name(tf.Const(alpha_), "alpha");
+  auto *beta1 = tf.Name(tf.Const(beta1_), "beta1");
+  auto *beta2 = tf.Name(tf.Const(beta2_), "beta2");
+  auto *epsilon = tf.Name(tf.Const(epsilon_), "epsilon");
+  auto *one_minus_beta1 = tf.Sub(tf.Const(1.0f), beta1);
+  auto *one_minus_beta2 = tf.Sub(tf.Const(1.0f), beta2);
+
+  // Decay beta1 and beta2.
+  auto *beta1t_acc = tf.Var("beta1t", DT_FLOAT, {});
+  auto *beta2t_acc = tf.Var("beta2t", DT_FLOAT, {});
+  auto *beta1t = tf.Accumulate(beta1t_acc, tf.Mul(beta1t_acc, beta1));
+  auto *beta2t = tf.Accumulate(beta2t_acc, tf.Mul(beta2t_acc, beta2));
+  auto *rcp_one_minus_beta1t = tf.Reciprocal(tf.Sub(tf.Const(1.0f), beta1t));
+  auto *rcp_one_minus_beta2t = tf.Reciprocal(tf.Sub(tf.Const(1.0f), beta2t));
+  auto *alpha_over_one_minus_beta1t = tf.Mul(alpha, rcp_one_minus_beta1t);
+
+  // Optionally add hyperparameter for gradient clipping.
+  Flow::Variable *threshold = nullptr;
+  if (clipping_threshold_ != 0.0) {
+    threshold = tf.Name(tf.Const(clipping_threshold_), "threshold");
+  }
+
+  // Update learnable variables from gradients.
+  int i = 0;
+  for (auto it : gradmap) {
+    auto *var = it.first;
+    auto *dv = it.second;
+
+    // Optionally add clipping.
+    Flow::Variable *clip = nullptr;
+    if (threshold != nullptr) {
+      // Compute L2 norm of threshold.
+      auto *norm = tf.Norm(dv);
+
+      // Compute clipping factor.
+      clip = tf.Div(threshold, tf.Max(norm, threshold));
+    }
+
+    // Aggregate mean and variance.
+    auto *m_acc = tf.Var("m" + std::to_string(i), dv->type, dv->shape);
+    auto *mw = one_minus_beta1;
+    if (clip != nullptr) mw = tf.Mul(mw, clip);
+    auto *m = tf.Accumulate(m_acc, tf.Add(tf.Mul(m_acc, beta1),
+                                          tf.Mul(dv, mw)));
+
+    auto *v_acc = tf.Var("v" + std::to_string(i), dv->type, dv->shape);
+    auto *vw = one_minus_beta2;
+    if (clip != nullptr) vw = tf.Mul(vw, clip);
+    auto *v = tf.Accumulate(v_acc, tf.Add(tf.Mul(v_acc, beta2),
+                                          tf.Square(tf.Mul(dv, vw))));
+
+    // Bias-corrected first and second moment estimates.
+    auto *m_cap = tf.Mul(m, alpha_over_one_minus_beta1t);
+    auto *v_cap = tf.Mul(v, rcp_one_minus_beta2t);
+
+    // Update parameters.
+    tf.Assign(var, tf.Sub(var, tf.Div(m_cap, tf.Add(tf.Sqrt(v_cap), epsilon))));
+
+    i++;
+  }
+}
+
+void AdamOptimizer::InitializeOptimizer() {
+  // Initialize bias correction parameters.
+  const Cell *cell = update_->cell();
+  auto *beta1t = cell->GetParameter(name_ + "/beta1t");
+  auto *beta2t = cell->GetParameter(name_ + "/beta2t");
+  *update_->Get<float>(beta1t) = 1.0;
+  *update_->Get<float>(beta2t) = 1.0;
+}
+
+void AdamOptimizer::Apply(std::vector<Instance *> &gradients) {
+  Optimizer::Apply(gradients);
+}
+
 }  // namespace myelin
 }  // namespace sling
 

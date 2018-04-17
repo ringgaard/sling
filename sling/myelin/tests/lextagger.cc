@@ -214,6 +214,9 @@ class Tagger {
       optimizer_.set_lambda(FLAGS_lambda);
       optimizer_.Build(flow);
 
+      adam_.set_clipping_threshold(FLAGS_clip);
+      adam_.Build(flow);
+
       num_words_ = encoder_.lex().lexicon().size();
       LOG(INFO) << "Words: " << num_words_;
     }
@@ -266,6 +269,7 @@ class Tagger {
     model_.Initialize(net_);
     loss_.Initialize(net_);
     optimizer_.Initialize(net_);
+    adam_.Initialize(net_);
   }
 
   // Initialize model weights.
@@ -534,6 +538,7 @@ class Tagger {
   // Loss and optimizer.
   CrossEntropyLoss loss_;
   GradientDescentOptimizer optimizer_;
+  AdamOptimizer adam_{"adam"};
 
   // Statistics.
   int epoch_ = 1;

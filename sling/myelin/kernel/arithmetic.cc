@@ -318,7 +318,7 @@ class ExpressionTransformer : public Transformer {
  public:
   bool Transform(Flow *flow) override {
     // Make list of ops that can potentially be included in Calculate or
-    // Assign ops.
+    // Assign op merging.
     std::vector<Flow::Operation *> candidates;
     for (Flow::Operation *op : flow->ops()) {
       if (IsCalculateOp(op) || IsAssignmentOp(op)) {
@@ -328,13 +328,11 @@ class ExpressionTransformer : public Transformer {
       }
     }
 
-    // Find candidate pairs to merge into combined Calculate/Assign ops.
+    // Merge calculate ops into assignment.
     int num_combines = 0;
     bool again = true;
     while (again) {
       again = false;
-
-      // Merge calculate ops into assignment.
       for (int i = 0; i < candidates.size(); ++i) {
         Flow::Operation *op = candidates[i];
         if (op == nullptr) continue;
@@ -370,7 +368,12 @@ class ExpressionTransformer : public Transformer {
           }
         }
       }
+    }
 
+    // Merge calculate ops.
+    again = true;
+    while (again) {
+      again = false;
       // Merge calculate ops.
       for (int i = 0; i < candidates.size(); ++i) {
         Flow::Operation *op = candidates[i];
@@ -565,12 +568,15 @@ class RemoveUnusedInputs : public Transformer {
   bool Transform(Flow *flow) override {
     int num_eliminates = 0;
     for (Flow::Operation *op : flow->ops()) {
-      if (op->type == "Calculate") {
+      bool calculate = op->type == "Calculate";
+      bool assign = op->type == "Assign";
+      if (calculate || assign) {
         Express expr;
         InitExpression(op, &expr, false);
         for (int i = 0; i < op->inputs.size(); ++i) {
           if (expr.Lookup(Express::INPUT, i) == nullptr &&
               expr.Lookup(Express::CONST, i) == nullptr) {
+            if (assign &&  i == 0) continue;
             expr.EliminateInput(i);
             op->RemoveInput(op->inputs[i]);
             op->SetAttr("expr", expr.AsRecipe());
@@ -653,7 +659,7 @@ class Calculate : public Kernel {
       for (int i = 0; i < step->indegree(); ++i) {
         Tensor *input = step->input(i);
         Express::Var *ivar = expression.expr.Lookup(Express::INPUT, i);
-        if (input == nullptr) continue;
+        if (ivar == nullptr) continue;
 
         for (int j = 0; j < step->outdegree(); ++j) {
           Tensor *output = step->output(j);

@@ -115,6 +115,29 @@ class GradientDescentOptimizer : public Optimizer {
   float lambda_ = 0.0;              // regularization parameter (0=none)
 };
 
+// Adam optimizer.
+class AdamOptimizer : public Optimizer {
+ public:
+  AdamOptimizer(const string &name = "optimizer") : Optimizer(name) {}
+
+  // Apply gradients to update learnable parameters.
+  void Apply(std::vector<Instance *> &gradients) override;
+
+  // Norm clipping threshold.
+  float clipping_threshold() const { return clipping_threshold_; }
+  void set_clipping_threshold(float t) { clipping_threshold_ = t; }
+
+ protected:
+  void BuildOptimizer(const GradientMap &gradmap, FlowBuilder *update) override;
+  void InitializeOptimizer() override;
+
+  float alpha_ = 0.001;             // learning rate
+  float beta1_ = 0.9;               // mean decay rate
+  float beta2_ = 0.999;             // variance decay rate
+  float epsilon_ = 1e-8;            // underflow correction
+  float clipping_threshold_ = 0.0;  // norm clipping threshold (0=no clipping)
+};
+
 }  // namespace myelin
 }  // namespace sling
 

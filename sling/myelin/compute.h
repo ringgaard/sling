@@ -939,7 +939,7 @@ class Instance {
   // Get raw pointer to location of parameter in instance memory.
   char *GetAddress(Tensor *param) {
     DCHECK(param != nullptr);
-    DCHECK(!param->IsLocal()) << param->name();
+    DCHECK(param->IsLocal()) << param->name();
     DCHECK(param->cell() == cell_) << param->name();
     return data_ + param->offset();
   }

@@ -135,6 +135,7 @@ class FlowBuilder : public Scope {
   Variable *Max(Variable *x, Variable *y) { return Op("Maximum", {x, y}); }
   Variable *Neg(Variable *x) { return Op("Neg", {x}); }
   Variable *Square(Variable *x) { return Op("Square", {x}); }
+  Variable *Sqrt(Variable *x) { return Op("Sqrt", {x}); }
   Variable *Reciprocal(Variable *x) { return Op("Reciprocal", {x}); }
   Variable *Abs(Variable *x) { return Op("Abs", {x}); }
   Variable *Log(Variable *x) { return Op("Log", {x}); }
@@ -194,6 +195,10 @@ class FlowBuilder : public Scope {
 
   Operation *AssignAdd(Variable *var, Variable *value) {
     return Op0("Assign", {var, Add(var, value)});
+  }
+
+  Variable *Accumulate(Variable *var, Variable *value) {
+    return Op("Assign", {var, value})->set_ref();
   }
 
   Operation *ScatterAdd(Variable *M, Variable *f, Variable *v) {
