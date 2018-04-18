@@ -167,8 +167,10 @@ string Profile::ASCIIReport() const {
                   name.c_str(),
                   tid.c_str(),
                   step(i)->name().c_str());
-    if (step(i)->type() == "Calculate") {
-      StringAppendF(&report, " [%s]", step(i)->GetAttr("expr").c_str());
+
+    const string &expr = step(i)->GetAttr("expr");
+    if (!expr.empty()) {
+      StringAppendF(&report, " [%s]", expr.c_str());
     }
     report.push_back('\n');
   }

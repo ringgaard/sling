@@ -127,6 +127,18 @@ class AdamOptimizer : public Optimizer {
   float clipping_threshold() const { return clipping_threshold_; }
   void set_clipping_threshold(float t) { clipping_threshold_ = t; }
 
+  // Learning rate.
+  float alpha() const { return alpha_; }
+  void set_alpha(float alpha) { alpha_ = alpha; }
+
+  // The exponential decay rate for the first moment estimates.
+  float beta1() const { return beta1_; }
+  void set_beta1(float beta1) { beta1_ = beta1; }
+
+  // The exponential decay rate for the second moment estimates.
+  float beta2() const { return beta2_; }
+  void set_beta2(float beta2) { beta2_ = beta2; }
+
  protected:
   void BuildOptimizer(const GradientMap &gradmap, FlowBuilder *update) override;
   void InitializeOptimizer() override;

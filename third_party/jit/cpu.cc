@@ -45,15 +45,15 @@ unsigned CPU::cache_line_size = 0;
 bool CPU::vzero_needed = false;
 
 static void __cpuid(int cpu_info[4], int info_type) {
-  __asm__ volatile("cpuid \n\t"
-                   : "=a"(cpu_info[0]), "=b"(cpu_info[1]), "=c"(cpu_info[2]),
-                     "=d"(cpu_info[3])
-                   : "a"(info_type), "c"(0));
+  __asm__ volatile ("cpuid \n\t"
+                    : "=a"(cpu_info[0]), "=b"(cpu_info[1]), "=c"(cpu_info[2]),
+                      "=d"(cpu_info[3])
+                    : "a"(info_type), "c"(0));
 }
 
 static uint64_t _xgetbv(unsigned int xcr) {
   unsigned eax, edx;
-  __asm__ volatile(".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(xcr));
+  __asm__ volatile (".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(xcr));
   return static_cast<uint64_t>(eax) | (static_cast<uint64_t>(edx) << 32);
 }
 
@@ -63,6 +63,15 @@ static bool os_has_avx_support() {
 
   // Check for AVX support.
   return (feature_mask & 0x6) == 0x6;
+}
+
+static void enable_fast_math() {
+  // Prevent slowdown on denormals by treating them as zero.
+  int mxcsr;
+  __asm__ volatile ("stmxcsr %0" : "=m"(mxcsr) : :);
+  mxcsr |= (1 << 11) | (1 << 15); // set bit 11 and 15: flush-to-zero mode
+  mxcsr |= (1 << 6) | (1 << 8);   // set bit 11 and 15: denormals-are-zero mode
+  __asm__ volatile ("ldmxcsr %0" : : "m"(mxcsr) :);
 }
 
 ProcessorInformation::ProcessorInformation() {
@@ -187,6 +196,12 @@ ProcessorInformation::ProcessorInformation() {
 
 const char *ProcessorInformation::architecture() {
   switch (family_model()) {
+    case 0x068E:
+    case 0x069E:
+      return "Kaby Lake";
+
+    case 0x064E:
+    case 0x0655:
     case 0x065E:
       return "Skylake";
 
@@ -279,6 +294,10 @@ void CPU::Initialize() {
 #ifndef __AVX__
     vzero_needed = true;
 #endif
+  }
+
+  if (cpu.has_sse3()) {
+    enable_fast_math();
   }
 }
 

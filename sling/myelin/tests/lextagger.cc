@@ -45,6 +45,9 @@ DEFINE_int32(epochs, 1000000, "Number of training epochs");
 DEFINE_int32(report, 25000, "Report status after every n sentence");
 DEFINE_double(alpha, 1.0, "Learning rate");
 DEFINE_double(minalpha, 0.01, "Minimum learning rate");
+DEFINE_double(eta, 0.001, "Learning rate for Adam");
+DEFINE_double(beta1, 0.9, "Decay rate for the first moment estimates");
+DEFINE_double(beta2, 0.999, "Decay rate for the second moment estimates");
 DEFINE_double(lambda, 0.0, "Regularization parameter");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
@@ -215,6 +218,9 @@ class Tagger {
       if (FLAGS_adam) {
         LOG(INFO) << "Using Adam optimizer";
         AdamOptimizer *adam = new AdamOptimizer();
+        adam->set_alpha(FLAGS_eta);
+        adam->set_beta1(FLAGS_beta1);
+        adam->set_beta2(FLAGS_beta2);
         adam->set_clipping_threshold(FLAGS_clip);
         optimizer_ = adam;
       } else {
