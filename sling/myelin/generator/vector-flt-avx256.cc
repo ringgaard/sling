@@ -121,7 +121,7 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
             masm);
         break;
       case Express::SQRT:
-        GenerateYMMUnaryFltOp(instr,
+        GenerateYMMFltOp(instr,
             &Assembler::vsqrtps, &Assembler::vsqrtpd,
             &Assembler::vsqrtps, &Assembler::vsqrtpd,
             masm);

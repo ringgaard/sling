@@ -1115,7 +1115,6 @@ class Assembler : public CodeGenerator {
   AVX_SP_3(vdiv, 0x5e);
   AVX_SP_3(vmin, 0x5d);
   AVX_SP_3(vmax, 0x5f);
-  AVX_SP_3(vsqrt, 0x51);
   AVX_P_3(vand, 0x54);
   AVX_P_3(vandn, 0x55);
   AVX_P_3(vor, 0x56);
@@ -2126,6 +2125,46 @@ class Assembler : public CodeGenerator {
   }
   void vrcpps(YMMRegister dst, const Operand &src) {
     vinstr(0x53, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+
+
+  void vsqrtss(XMMRegister dst, XMMRegister src1, XMMRegister src2) {
+    vinstr(0x51, dst, src1, src2, kF3, k0F, kWIG);
+  }
+  void vsqrtss(XMMRegister dst, XMMRegister src1, const Operand &src2) {
+    vinstr(0x51, dst, src1, src2, kF3, k0F, kWIG);
+  }
+  void vsqrtsd(XMMRegister dst, XMMRegister src1, XMMRegister src2) {
+    vinstr(0x51, dst, src1, src2, kF2, k0F, kWIG);
+  }
+  void vsqrtsd(XMMRegister dst, XMMRegister src1, const Operand &src2) {
+    vinstr(0x51, dst, src1, src2, kF2, k0F, kWIG);
+  }
+
+
+  void vsqrtps(XMMRegister dst, XMMRegister src) {
+    vinstr(0x51, dst, xmm0, src, kNone, k0F, kWIG);
+  }
+  void vsqrtps(XMMRegister dst, const Operand &src) {
+    vinstr(0x51, dst, xmm0, src, kNone, k0F, kWIG);
+  }
+  void vsqrtps(YMMRegister dst, YMMRegister src) {
+    vinstr(0x51, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+  void vsqrtps(YMMRegister dst, const Operand &src) {
+    vinstr(0x51, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+  void vsqrtpd(XMMRegister dst, XMMRegister src) {
+    vinstr(0x51, dst, xmm0, src, k66, k0F, kWIG);
+  }
+  void vsqrtpd(XMMRegister dst, const Operand &src) {
+    vinstr(0x51, dst, xmm0, src, k66, k0F, kWIG);
+  }
+  void vsqrtpd(YMMRegister dst, YMMRegister src) {
+    vinstr(0x51, dst, ymm0, src, k66, k0F, kWIG);
+  }
+  void vsqrtpd(YMMRegister dst, const Operand &src) {
+    vinstr(0x51, dst, ymm0, src, k66, k0F, kWIG);
   }
 
   void vzeroall();

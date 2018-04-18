@@ -282,7 +282,7 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           __ vsqrtss(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
           break;
         case DT_DOUBLE:
-          __ vsqrtpd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+          __ vsqrtsd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
           break;
         default: UNSUPPORTED;
       }

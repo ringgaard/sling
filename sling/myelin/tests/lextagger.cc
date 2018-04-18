@@ -58,6 +58,7 @@ DEFINE_int32(rampup, 10, "Number of seconds between thread starts");
 DEFINE_bool(lock, true, "Locked gradient updates");
 DEFINE_int32(lexthres, 0, "Lexicon threshold");
 DEFINE_string(flow, "", "Flow file for saving trained POS tagger");
+DEFINE_bool(adam, false, "Use Adam optimizer");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -128,6 +129,7 @@ class Tagger {
     for (auto *s : train_) delete s;
     for (auto *s : dev_) delete s;
     names_->Release();
+    delete optimizer_;
   }
 
   // Read corpus from file.
@@ -210,12 +212,19 @@ class Tagger {
       loss_.Build(flow, logits, dlogits);
 
       // Build optimizer.
-      optimizer_.set_clipping_threshold(FLAGS_clip);
-      optimizer_.set_lambda(FLAGS_lambda);
-      optimizer_.Build(flow);
-
-      adam_.set_clipping_threshold(FLAGS_clip);
-      adam_.Build(flow);
+      if (FLAGS_adam) {
+        LOG(INFO) << "Using Adam optimizer";
+        AdamOptimizer *adam = new AdamOptimizer();
+        adam->set_clipping_threshold(FLAGS_clip);
+        optimizer_ = adam;
+      } else {
+        LOG(INFO) << "Using SGD optimizer";
+        GradientDescentOptimizer *sgd = new GradientDescentOptimizer();
+        sgd->set_lambda(FLAGS_lambda);
+        sgd->set_clipping_threshold(FLAGS_clip);
+        optimizer_ = sgd;
+      }
+      optimizer_->Build(flow);
 
       num_words_ = encoder_.lex().lexicon().size();
       LOG(INFO) << "Words: " << num_words_;
@@ -268,8 +277,7 @@ class Tagger {
     encoder_.Initialize(net_);
     model_.Initialize(net_);
     loss_.Initialize(net_);
-    optimizer_.Initialize(net_);
-    adam_.Initialize(net_);
+    optimizer_->Initialize(net_);
   }
 
   // Initialize model weights.
@@ -411,8 +419,11 @@ class Tagger {
       // Apply gradients to model.
       if (iteration % FLAGS_batch == 0) {
         if (FLAGS_lock) update_mu_.Lock();
-        optimizer_.set_alpha(alpha_);
-        optimizer_.Apply(gradients);
+        if (!FLAGS_adam) {
+          auto *sgd = static_cast<GradientDescentOptimizer *>(optimizer_);
+          sgd->set_alpha(alpha_);
+        }
+        optimizer_->Apply(gradients);
         loss_sum_ += local_loss_sum;
         loss_count_ += local_loss_count;
         num_tokens_ += local_tokens;
@@ -537,8 +548,7 @@ class Tagger {
 
   // Loss and optimizer.
   CrossEntropyLoss loss_;
-  GradientDescentOptimizer optimizer_;
-  AdamOptimizer adam_{"adam"};
+  Optimizer *optimizer_= nullptr;
 
   // Statistics.
   int epoch_ = 1;

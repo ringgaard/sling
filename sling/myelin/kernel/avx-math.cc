@@ -730,7 +730,7 @@ class Norm : public Kernel {
 
     // Take square root of sum.
     if (masm->Enabled(AVX)) {
-      __ vsqrtss(l2, sum, sum);
+      __ vsqrtss(l2.xmm(), sum.xmm(), sum.xmm());
       __ vmovss(Operand(output), l2);
     } else {
       __ sqrtss(l2.xmm(), sum.xmm());
