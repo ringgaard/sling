@@ -70,7 +70,6 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
     Format format = PyGetFormat(pyformat);
     Shard shard = PyGetShard(pyshard);
 
-
     Resource *resource = job_->CreateResource(name, format, shard);
     resource_mapping[pyresource] = resource;
 
