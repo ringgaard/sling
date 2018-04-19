@@ -1010,7 +1010,7 @@ void Express::Optimize(bool fma, int spare_regs) {
   CacheResults();
 
   // Hoist loop-invariant ops out of the body. The spare registers are used for
-  // used for pre-loading constants.
+  // pre-loading constants.
   Hoist(spare_regs);
 }
 

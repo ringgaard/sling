@@ -294,7 +294,7 @@ class Express {
   // Add new number variable.
   Var *Number(ConstantNumber number);
 
-  // Count the number of variable of a certain type.
+  // Count the number of variables of a certain type.
   int NumVars(VarType type) const;
 
   // Count the number of ops of a certain type.
