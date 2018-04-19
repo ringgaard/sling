@@ -968,7 +968,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   // Let linker configure network before compilation.
   linker_->BeginNetwork(this);
 
-  // Find kernels for implementing each step.
+  // Create steps for all the operations.
   std::unordered_map<Flow::Function *, Cell *> cells;
   for (Flow::Operation *op : flow.ops()) {
     // Create step for operation.
@@ -1044,8 +1044,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
       step->task_index_ = taskidx;
     }
+  }
 
-    // Find kernel for implementing the operation.
+  // Find kernels for implementing each step.
+  for (Step *step : steps_) {
     auto &kernels = library.Lookup(step->type());
     for (int k = kernels.size() - 1; k >= 0; --k) {
       Kernel *kernel = kernels[k];
@@ -1053,7 +1055,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         // Check that kernel location is compatible with task placement.
         bool compatible = true;
         if (step->task_index_ != -1) {
-          auto &task = cell->tasks_[step->task_index_];
+          auto &task = step->cell()->tasks_[step->task_index_];
           Placement location = kernel->Location();
           if (task.placement == NOWHERE) {
             // Task has not been placed yet. Use the kernel location for

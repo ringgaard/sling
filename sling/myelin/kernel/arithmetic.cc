@@ -881,7 +881,8 @@ class Softmax : public Kernel {
         __ vshufps(i0, max, max, 0);
         __ vperm2f128(i0, i0, i0, 0);
       } else {
-        __ shufps(i0.xmm(), max.xmm(), 0);
+        __ movaps(i0.xmm(), max.xmm());
+        __ shufps(i0.xmm(), i0.xmm(), 0);
       }
 
       // Loop over all main elements.
