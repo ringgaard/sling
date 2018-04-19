@@ -61,7 +61,7 @@ class Optimizer {
   typedef std::map<Flow::Variable *, Flow::Variable *> GradientMap;
 
   Optimizer(const string &name = "optimizer") : name_(name) {}
-  virtual ~Optimizer() { delete update_; }
+  virtual ~Optimizer() { delete data_; }
 
   // Build update function for applying gradients.
   void Build(Flow *flow);
@@ -72,6 +72,9 @@ class Optimizer {
   // Apply gradients to update learnable parameters.
   virtual void Apply(std::vector<Instance *> &gradients);
 
+  // Data instance for optimizer.
+  Instance *data() const { return data_; }
+
  protected:
   // Let subclass build the parameter update using the gradient map.
   virtual void BuildOptimizer(const GradientMap &gradmap,
@@ -80,6 +83,11 @@ class Optimizer {
   // Let subclass initialize update function for optimizer.
   virtual void InitializeOptimizer() = 0;
 
+  // Get parameter from network.
+  Tensor *GetParameter(const string &name) {
+    return data_->cell()->GetParameter(name);
+  }
+
   // Name of optimizer.
   string name_;
 
@@ -87,16 +95,16 @@ class Optimizer {
   std::map<Flow::Function *, Flow::Variable *> instance_;
   std::map<const Cell *, Tensor *> refs_;
 
-  // Instance for updating the learnable parameters from the gradients.
-  Instance *update_ = nullptr;
+  // Data instance for updating the learnable parameters from the gradients.
+  Instance *data_ = nullptr;
 };
 
 // Stocastic gradient descent optimizer.
 class GradientDescentOptimizer : public Optimizer {
  public:
   // Learning rate.
-  float alpha() const { return *update_->Get<float>(alpha_); }
-  void set_alpha(float alpha) { *update_->Get<float>(alpha_) = alpha; }
+  float alpha() const { return *data_->Get<float>(alpha_); }
+  void set_alpha(float alpha) { *data_->Get<float>(alpha_) = alpha; }
 
   // Regularization parameter for L2 regularization.
   float lambda() const { return lambda_; }
@@ -138,6 +146,10 @@ class AdamOptimizer : public Optimizer {
   // The exponential decay rate for the second moment estimates.
   float beta2() const { return beta2_; }
   void set_beta2(float beta2) { beta2_ = beta2; }
+
+  // Underflow correction.
+  float epsilon() const { return epsilon_; }
+  void set_epsilon(float epsilon) { epsilon_ = epsilon; }
 
  protected:
   void BuildOptimizer(const GradientMap &gradmap, FlowBuilder *update) override;

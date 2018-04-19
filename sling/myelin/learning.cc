@@ -124,8 +124,8 @@ void Optimizer::Initialize(const Network &network) {
   // Get cell for update.
   Cell *cell = network.GetCell(name_);
 
-  // Create update instance.
-  update_ = new Instance(cell);
+  // Create data instance for update.
+  data_ = new Instance(cell);
 
   // Create mapping from gradient computation cell to instance variable in
   // update cell.
@@ -144,11 +144,11 @@ void Optimizer::Apply(std::vector<Instance *> &gradients) {
   for (Instance *g : gradients) {
     auto f = refs_.find(g->cell());
     CHECK(f != refs_.end());
-    update_->Set(f->second, g);
+    data_->Set(f->second, g);
   }
 
   // Apply gradient update to learnable parameters.
-  update_->Compute();
+  data_->Compute();
 }
 
 void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
@@ -182,7 +182,7 @@ void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
 
     // Add scaled gradient to parameters.
     if (lambda_ != 0.0) {
-      tf.Assign(v, tf.Add(tf.Mul(tf.Sub(tf.Const(1.0f), tf.Const(lambda_)), v),
+      tf.Assign(v, tf.Add(tf.Mul(tf.Sub(tf.One(), tf.Const(lambda_)), v),
                           tf.Mul(dv, weight)));
     } else {
       tf.AssignAdd(v, tf.Mul(dv, weight));
@@ -192,12 +192,19 @@ void GradientDescentOptimizer::BuildOptimizer(const GradientMap &gradmap,
 
 void GradientDescentOptimizer::InitializeOptimizer() {
   // Set initial learning rate.
-  alpha_ = update_->cell()->GetParameter(name_ + "/alpha");
+  alpha_ = GetParameter(name_ + "/alpha");
   set_alpha(0.01);
 }
 
 void AdamOptimizer::BuildOptimizer(const GradientMap &gradmap,
                                    FlowBuilder *update) {
+  // Adam update rule:
+  //   t <- t + 1
+  //   lr_t <- learning_rate * sqrt(1 - beta2^t) / (1 - beta1^t)
+  //   m_t <- beta1 * m_{t-1} + (1 - beta1) * dv
+  //   v_t <- beta2 * v_{t-1} + (1 - beta2) * dv^2
+  //   var <- var - lr_t * m_t / (sqrt(v_t) + epsilon)
+  //
   // See also: http://ruder.io/optimizing-gradient-descent/index.html#adam
   FlowBuilder &tf = *update;
 
@@ -206,17 +213,19 @@ void AdamOptimizer::BuildOptimizer(const GradientMap &gradmap,
   auto *beta1 = tf.Name(tf.Const(beta1_), "beta1");
   auto *beta2 = tf.Name(tf.Const(beta2_), "beta2");
   auto *epsilon = tf.Name(tf.Const(epsilon_), "epsilon");
-  auto *one_minus_beta1 = tf.Sub(tf.Const(1.0f), beta1);
-  auto *one_minus_beta2 = tf.Sub(tf.Const(1.0f), beta2);
+
+  auto *one_minus_beta1 = tf.Sub(tf.One(), beta1);
+  auto *one_minus_beta2 = tf.Sub(tf.One(), beta2);
 
   // Decay beta1 and beta2.
-  auto *beta1t_acc = tf.Var("beta1t", DT_FLOAT, {});
-  auto *beta2t_acc = tf.Var("beta2t", DT_FLOAT, {});
-  auto *beta1t = tf.Accumulate(beta1t_acc, tf.Mul(beta1t_acc, beta1));
-  auto *beta2t = tf.Accumulate(beta2t_acc, tf.Mul(beta2t_acc, beta2));
-  auto *rcp_one_minus_beta1t = tf.Reciprocal(tf.Sub(tf.Const(1.0f), beta1t));
-  auto *rcp_one_minus_beta2t = tf.Reciprocal(tf.Sub(tf.Const(1.0f), beta2t));
-  auto *alpha_over_one_minus_beta1t = tf.Mul(alpha, rcp_one_minus_beta1t);
+  auto *beta1_t_var = tf.Var("beta1_t", DT_FLOAT, {});
+  auto *beta2_t_var = tf.Var("beta2_t", DT_FLOAT, {});
+  auto *beta1_t = tf.Accumulate(beta1_t_var, tf.Mul(beta1_t_var, beta1));
+  auto *beta2_t = tf.Accumulate(beta2_t_var, tf.Mul(beta2_t_var, beta2));
+
+  // Compute learning rate.
+  auto *lr = tf.Div(tf.Mul(tf.Sqrt(tf.Sub(tf.One(), beta2_t)), alpha),
+                    tf.Sub(tf.One(), beta1_t));
 
   // Optionally add hyperparameter for gradient clipping.
   Flow::Variable *threshold = nullptr;
@@ -241,36 +250,31 @@ void AdamOptimizer::BuildOptimizer(const GradientMap &gradmap,
     }
 
     // Aggregate mean and variance.
-    auto *m_acc = tf.Var("m" + std::to_string(i), dv->type, dv->shape);
+    auto *m_var = tf.Var("m" + std::to_string(i), dv->type, dv->shape);
     auto *mw = one_minus_beta1;
     if (clip != nullptr) mw = tf.Mul(mw, clip);
-    auto *m = tf.Accumulate(m_acc, tf.Add(tf.Mul(m_acc, beta1),
+    auto *m = tf.Accumulate(m_var, tf.Add(tf.Mul(m_var, beta1),
                                           tf.Mul(dv, mw)));
 
-    auto *v_acc = tf.Var("v" + std::to_string(i), dv->type, dv->shape);
+    auto *v_var = tf.Var("v" + std::to_string(i), dv->type, dv->shape);
     auto *vw = one_minus_beta2;
     if (clip != nullptr) vw = tf.Mul(vw, clip);
-    auto *v = tf.Accumulate(v_acc, tf.Add(tf.Mul(v_acc, beta2),
+    auto *v = tf.Accumulate(v_var, tf.Add(tf.Mul(v_var, beta2),
                                           tf.Square(tf.Mul(dv, vw))));
 
-    // Bias-corrected first and second moment estimates.
-    auto *m_cap = tf.Mul(m, alpha_over_one_minus_beta1t);
-    auto *v_cap = tf.Mul(v, rcp_one_minus_beta2t);
-
     // Update parameters.
-    tf.Assign(var, tf.Sub(var, tf.Div(m_cap, tf.Add(tf.Sqrt(v_cap), epsilon))));
-
+    auto *delta = tf.Div(tf.Mul(m, lr), tf.Add(tf.Sqrt(v), epsilon));
+    tf.Assign(var, tf.Sub(var, delta));
     i++;
   }
 }
 
 void AdamOptimizer::InitializeOptimizer() {
   // Initialize bias correction parameters.
-  const Cell *cell = update_->cell();
-  auto *beta1t = cell->GetParameter(name_ + "/beta1t");
-  auto *beta2t = cell->GetParameter(name_ + "/beta2t");
-  *update_->Get<float>(beta1t) = 1.0;
-  *update_->Get<float>(beta2t) = 1.0;
+  auto *beta1_t = GetParameter(name_ + "/beta1_t");
+  auto *beta2_t = GetParameter(name_ + "/beta2_t");
+  *data_->Get<float>(beta1_t) = 1.0;
+  *data_->Get<float>(beta2_t) = 1.0;
 }
 
 void AdamOptimizer::Apply(std::vector<Instance *> &gradients) {

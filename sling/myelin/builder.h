@@ -120,6 +120,10 @@ class FlowBuilder : public Scope {
     return Op("OneHot", {index}, DT_FLOAT, {size});
   }
 
+  Variable *Zero() { return Const(0.0f); }
+  Variable *One() { return Const(1.0f); }
+  Variable *Two() { return Const(2.0f); }
+
   // Add instance reference to other function.
   Variable *Instance(Function *func);
 

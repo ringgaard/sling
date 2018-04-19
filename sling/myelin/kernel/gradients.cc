@@ -89,7 +89,7 @@ void div_grad(Flow::Operation *op, Gradients *g) {
 void square_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->Mul(g->d(y), g->Mul(g->Const(2.0f), g->v(x))));
+  g->add(x, g->Mul(g->d(y), g->Mul(g->Two(), g->v(x))));
 }
 
 // y = 1 / x
@@ -145,7 +145,7 @@ void log_grad(Flow::Operation *op, Gradients *g) {
 void sigmoid_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->Mul(g->d(y), g->Mul(g->v(y), g->Sub(g->Const(1.0f), g->v(y)))));
+  g->add(x, g->Mul(g->d(y), g->Mul(g->v(y), g->Sub(g->One(), g->v(y)))));
 }
 
 // y = tanh(x)
@@ -153,7 +153,7 @@ void sigmoid_grad(Flow::Operation *op, Gradients *g) {
 void tanh_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->Mul(g->d(y), g->Sub(g->Const(1.0f), g->Square(g->v(y)))));
+  g->add(x, g->Mul(g->d(y), g->Sub(g->One(), g->Square(g->v(y)))));
 }
 
 // y = relu(x)
