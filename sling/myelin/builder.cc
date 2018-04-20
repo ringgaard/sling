@@ -236,7 +236,7 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
   auto *h_in = Placeholder("h_in", type, {1, size}, true);
   auto *c_in = Placeholder("c_in", type, {1, size}, true);
 
-  // Input -- i_t = sigmoid(affine(x_t, h_{t-1}, c_{t-1}))
+  // Input -- i_t = sigmoid(x_t * x2i + h_in * h2i + c_in * c2i)
   auto *i_ait = Name(Add(MatMul(input, x2i),
                      Add(MatMul(h_in, h2i),
                      Add(MatMul(c_in, c2i), bi))),
@@ -244,37 +244,37 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
   auto *i_it = Name(Sigmoid(i_ait), "i_it");
 
   // Forget -- f_t = 1 - i_t
-  auto *i_ft = Name(Sub(Const(1.0f), i_it), "i_ft");
+  auto *i_ft = Name(Sub(One(), i_it), "i_ft");
 
-  // Memory -- tanh(affine(x_t, h_{t-1}))
+  // Memory -- tanh(x_t * x2c + h_in * h2c + h_in * h2c + bc)
   auto *i_awt = Name(Add(MatMul(input, x2c),
                      Add(MatMul(h_in, h2c), bc)),
                      "i_awt");
   auto *i_wt = Name(Tanh(i_awt), "i_wt");
 
-  // Control -- c_t = f_t \odot c_{t-1} + i_t \odot tanh(affine(x_t, h_{t-1}))
-  auto *ct = Name(Add(Mul(i_it, i_wt), Mul(i_ft, c_in)), "c_out");
-  ct->set_out()->set_ref();
+  // Control -- c_out = c_t = i_t * w_t + f_t * c_in
+  auto *c_out = Name(Add(Mul(i_it, i_wt), Mul(i_ft, c_in)), "c_out");
+  c_out->set_out()->set_ref();
 
-  // Output -- o_t = sigmoid(affine(x_t, h_{t-1}, c_t))
+  // Output -- o_t = sigmoid(x_t * x2o + c_t * c2o + h_in * h2o + bo)
   auto *i_aot = Name(Add(MatMul(input, x2o),
-                     Add(MatMul(ct, c2o),
+                     Add(MatMul(c_out, c2o),
                      Add(MatMul(h_in, h2o), bo))),
                      "i_aot");
   auto *i_ot = Name(Sigmoid(i_aot), "i_ot");
 
-  // Hidden -- ht = o_t \odot tanh(ct)
-  auto *ph_t = Tanh(ct);
-  auto *ht = Name(Mul(i_ot, ph_t), "h_out")->set_out()->set_ref();
+  // Hidden -- h_out = h_t = o_t * tanh(c_out)
+  auto *h_out = Name(Mul(i_ot, Tanh(c_out)), "h_out");
+  h_out->set_out()->set_ref();
 
   // Connectors for hidden and control channels.
-  flow_->Connect({h_in, ht});
-  flow_->Connect({c_in, ct});
+  flow_->Connect({h_in, h_out});
+  flow_->Connect({c_in, c_out});
 
   // The control channel has a single-source gradient.
   c_in->set_unique();
 
-  return ht;
+  return h_out;
 }
 
 }  // namespace myelin
