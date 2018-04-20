@@ -118,7 +118,7 @@ class Resource:
 
 
 class Binding:
-  """A binding binds a resouce to a task input or output."""
+  """A binding binds a resource to a task input or output."""
 
   def __init__(self, name, resource):
     self.name = name
@@ -147,7 +147,7 @@ class Port:
 
 
 class Channel:
-  """A channel is used for seding messages from a producer task to a consumer
+  """A channel is used for sending messages from a producer task to a consumer
   task."""
   def __init__(self, format, producer, consumer):
     self.format = format
@@ -225,7 +225,7 @@ class Task:
 
 
 class Scope:
-  """A score is used for defined a name space for task names. It implements
+  """A scope is used for defined a name space for task names. It implements
   context management so you can use with statements to define name spaces."""
   def __init__(self, wf, name):
     self.wf = wf
@@ -355,7 +355,7 @@ class Workflow(object):
       return resources
 
   def channel(self, producer, name="output", shards=None, format=None):
-    """Adds one or more channels to wrofklow. The channel(s) are connected as
+    """Adds one or more channels to workflow. The channel(s) are connected as
     sinks to the producer(s). If shards are specified, this creates a sharded
     set of channels."""
     if type(format) == str: format = Format(format)
@@ -521,7 +521,6 @@ class Workflow(object):
             channels.append(self.read(elem))
           else:
             raise Exception("illegal element")
-        pass
       else:
         raise Exception("illegal argument")
     return channels if len(channels) > 1 else channels[0]
@@ -576,7 +575,7 @@ class Workflow(object):
   def reduce(self, input, output, type=None, params=None, name=None):
     """Reduce input and write reduced output."""
     if type == None:
-      # No reducer (i.e. i.e. identity reducer), just write input.
+      # No reducer (i.e. identity reducer), just write input.
       reduced = input
     else:
       reducer = self.task(type, name=name)
@@ -606,7 +605,7 @@ class Workflow(object):
     return output
 
   def start(self):
-    """Start workflow. The workflow with be run in the background, and the
+    """Start workflow. The workflow will be run in the background, and the
     done() and wait() methods can be used to determine if the workflow has
     completed."""
     # Make sure all output directories exist.
@@ -632,7 +631,7 @@ class Workflow(object):
 
   def done(self):
     """Check if workflow is done."""
-    if self.job == None: return Trye
+    if self.job == None: return True
     return self.job.done()
 
   def counters(self):
@@ -683,7 +682,7 @@ def stop_monitor():
   global active
   if active:
     log.info("sending final status to monitor")
-    api.finalize_dashboard();
+    api.finalize_dashboard()
 
 def statistics():
   """Stats for running and completed jobs."""

@@ -32,6 +32,8 @@ void DocumentFeatures::Extract(const Document &document, int begin, int end) {
   for (int i = 0; i < length; ++i) {
     string word = document.token(begin + i).text();
     TokenFeatures &f = features_[i];
+    f.hyphen = NO_HYPHEN;
+    f.quote = NO_QUOTE;
 
     // Look up word in lexicon.
     f.word = lexicon_->LookupWord(word);
