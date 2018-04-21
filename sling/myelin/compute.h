@@ -1249,7 +1249,7 @@ class Network {
   // Network cells.
   const std::vector<Cell *> cells() const { return cells_; }
 
-  // GLobal tensors.
+  // Global tensors.
   const std::vector<Tensor *> globals() const { return globals_; }
 
   // Network parameters.

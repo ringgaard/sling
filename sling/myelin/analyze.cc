@@ -47,6 +47,7 @@ DEFINE_string(datagraph, "", "DOT file name prefix for data profile");
 DEFINE_int32(batch, 1, "Batch size");
 DEFINE_string(o, "", "ELF object output file for generated code");
 DEFINE_bool(gendata, false, "Output tensor data to ELF object file");
+DEFINE_bool(genrwdata, false, "Allocate space for tensor data in object file");
 DEFINE_bool(gpu, false, "Run kernels on GPU");
 DEFINE_bool(argmax, false, "Use argmax for predictions");
 DEFINE_bool(compile, true, "Compile flow");
@@ -154,8 +155,13 @@ int main(int argc, char *argv[]) {
       network.set_runtime(&cudart);
     }
     if (!FLAGS_o.empty()) {
-      linker = new ElfLinker();
-      if (FLAGS_gendata) linker->set_generate_data(true);
+      ElfLinker::Options linker_opts;
+      if (FLAGS_gendata) linker_opts.generate_data = true;
+      if (FLAGS_genrwdata) {
+        linker_opts.generate_data = true;
+        linker_opts.writeable_data = true;
+      }
+      linker = new ElfLinker(linker_opts);
       network.set_linker(linker);
     }
     if (FLAGS_profile) network.options().profiling = true;
