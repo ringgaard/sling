@@ -56,13 +56,15 @@ enum Type {
 // Type properties.
 class TypeTraits {
  public:
-  TypeTraits(Type type, const char *name, int size, const char *ptx)
-      : type_(type), name_(name), size_(size), ptx_(ptx) {}
+  TypeTraits(Type type, const char *name, int size,
+             const char *ctype, const char *ptx)
+      : type_(type), name_(name), size_(size), ctype_(ctype), ptx_(ptx) {}
 
   Type type() const { return type_; }
   const string &name() const { return name_; }
   size_t size() const { return size_; }
   bool valid() const { return type_ != DT_INVALID; }
+  const char *ctype() const { return ctype_; }
   const char *ptx() const { return ptx_; }
   string str(const void *data) const;
 
@@ -73,10 +75,11 @@ class TypeTraits {
   static const TypeTraits &of(string &name);
 
  private:
-  Type type_;        // basic type
-  string name_;      // type name
-  size_t size_;      // size in bytes
-  const char *ptx_;  // ptx type
+  Type type_;          // basic type
+  string name_;        // type name
+  size_t size_;        // size in bytes
+  const char *ctype_;  // C type
+  const char *ptx_;    // ptx type
 };
 
 // Look up traits from type.
