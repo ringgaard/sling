@@ -289,12 +289,26 @@ void CPU::Initialize() {
 
   cache_line_size = cpu.cache_line_size();
 
-  vzero_needed = false;
-  if (cpu.has_avx()) {
+  // Check if vzeroupper is needed to avoid expensive state transitions. Based
+  // on recommandations in:
+  // https://software.intel.com/en-us/forums/intel-isa-extensions/topic/704023
 #ifndef __AVX__
-    vzero_needed = true;
-#endif
+  switch (cpu.family_model()) {
+    case 0x062A: // Sandy Bridge
+    case 0x062D: // Sandy Bridge
+    case 0x063A: // Ivy Bridge
+    case 0x063E: // Ivy Bridge
+    case 0x063C: // Haswell
+    case 0x063F: // Haswell
+    case 0x0645: // Haswell
+    case 0x0646: // Haswell
+    case 0x063D: // Broadwell
+      vzero_needed = true;
+      break;
+    default:
+      vzero_needed = false;
   }
+#endif
 
   if (cpu.has_sse3()) {
     enable_fast_math();

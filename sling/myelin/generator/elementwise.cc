@@ -373,7 +373,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
       }
       default:
         LOG(FATAL) << "Unsupported constant type";
-        return Operand(rbp);
+        return Operand(no_reg);
     }
   } else {
     // Get locator.
@@ -445,7 +445,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
         return Operand(loc->base, loc->iterator->offset);
       default:
         LOG(FATAL) << "Unsupported iterator type";
-        return Operand(rbp);
+        return Operand(no_reg);
     }
   }
 }

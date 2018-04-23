@@ -25,11 +25,17 @@ namespace myelin {
 
 using namespace jit;
 
+#ifdef NDEBUG
+// Base register for data instance.
+static Register datareg = rbp;
+
 // Register used for profile timestamp.
 static Register tsreg = r15;
-
-// Use base register for data instance.
-static Register datareg = rbp;
+#else
+// Do not use rbp in debug mode to avoid confusing the debugger.
+static Register datareg = r15;
+static Register tsreg = r14;
+#endif
 
 Register Registers::try_alloc() {
   for (int r = 0; r < kNumRegisters; ++r) {
@@ -200,22 +206,28 @@ void MacroAssembler::Prologue() {
     vzeroupper();
   }
 
+  // Reserve data instance register.
+  rr_.reserve(datareg);
+  rr_.use(datareg);
+
   // Reserve timestamp register.
   if (options_.profiling) {
     rr_.reserve(tsreg);
     rr_.use(tsreg);
   }
 
-  // Get argument.
-  pushq(datareg);
-  movq(datareg, arg_reg_1);
-
   // Save preserved registers on stack.
+  if (rr_.saved(rbp)) pushq(rbp);
   if (rr_.saved(rbx)) pushq(rbx);
   if (rr_.saved(r12)) pushq(r12);
   if (rr_.saved(r13)) pushq(r13);
   if (rr_.saved(r14)) pushq(r14);
   if (rr_.saved(r15)) pushq(r15);
+
+  // Get argument.
+  if (!datareg.is(arg_reg_1)) {
+    movq(datareg, arg_reg_1);
+  }
 
   // Get initial timestamp counter if timing instrumentation is active.
   if (options_.profiling) {
@@ -233,9 +245,7 @@ void MacroAssembler::Epilogue() {
   if (rr_.saved(r13)) popq(r13);
   if (rr_.saved(r12)) popq(r12);
   if (rr_.saved(rbx)) popq(rbx);
-
-  // Restore instance data register.
-  popq(datareg);
+  if (rr_.saved(rbp)) popq(rbp);
 
   // Zero upper part of YMM register if CPU needs it to avoid AVX-SSE transition
   // penalties.
@@ -251,6 +261,10 @@ void MacroAssembler::Epilogue() {
     rr_.release(tsreg);
     rr_.free(tsreg);
   }
+
+  // Release data instance register.
+  rr_.release(datareg);
+  rr_.free(datareg);
 }
 
 StaticData *MacroAssembler::CreateDataBlock(int alignment) {
@@ -571,6 +585,7 @@ void MacroAssembler::TimeStep(int offset, int disp) {
 void MacroAssembler::ResetRegisterUsage() {
   rr_.reset();
   mm_.reset();
+  rr_.use(datareg);
   if (options_.profiling) rr_.use(tsreg);
 }
 

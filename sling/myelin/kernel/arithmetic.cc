@@ -1064,7 +1064,7 @@ class Softmax : public Kernel {
       } else {
         LOG(INFO) << var->AsString();
         UNSUPPORTED;
-        return Operand(rbp);
+        return Operand(no_reg);
       }
     }
 

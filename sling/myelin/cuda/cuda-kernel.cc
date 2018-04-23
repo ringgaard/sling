@@ -28,9 +28,6 @@ namespace myelin {
 
 using namespace jit;
 
-// Base register used for data instance.
-static Register datareg = rbp;
-
 // Temporary register.
 static Register tmpreg = r10;
 
@@ -171,7 +168,7 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
 
   // Build parameter array with device instance address as the only parameter.
   Register params = tmpreg;
-  __ pushq(Operand(datareg, offsetof(CUDAInstance, data)));
+  __ pushq(Operand(masm->instance(), offsetof(CUDAInstance, data)));
   __ pushq(rsp);
   __ movq(params, rsp);
 
@@ -186,7 +183,7 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
   // Set up stack-based parameters for launching kernel.
   __ pushq(Immediate(0));  // extra options
   __ pushq(params);
-  __ pushq(Operand(datareg, streamofs));
+  __ pushq(Operand(masm->instance(), streamofs));
   __ pushq(Immediate(0));  // shared memory
   __ pushq(Immediate(block_dim_z));
 

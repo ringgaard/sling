@@ -672,7 +672,7 @@ class ZigZag : public IndexGenerator {
       return Operand(output_);
     } else {
       UNSUPPORTED;
-      return Operand(rbp);
+      return Operand(no_reg);
     }
   }
 
