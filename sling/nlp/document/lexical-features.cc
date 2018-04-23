@@ -211,6 +211,7 @@ void LexicalFeatures::Initialize(const Network &net) {
 int LexicalFeatures::LoadWordEmbeddings(const string &filename) {
   // Read word embeddings.
   EmbeddingReader reader(filename);
+  reader.set_normalize(true);
 
   // Check that embedding matrix matches embeddings and vocabulary.
   CHECK(word_embeddings_ != nullptr);
