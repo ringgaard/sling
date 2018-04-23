@@ -1296,8 +1296,8 @@ class UpdateTransformer : public Transformer {
       Flow::Operation *add = assign->inputs[1]->producer;
       Flow::Operation *matmul = add->inputs[1]->producer;
       if (assign->inputs[0] != add->inputs[0]) continue;
-      if (add->outputs[0]->consumers.size() != 1) continue;
-      if (matmul->outputs[0]->consumers.size() != 1) continue;
+      if (add->outputs[0]->usages() != 1) continue;
+      if (matmul->outputs[0]->usages() != 1) continue;
 
       // Only fuse if matrix multiplication is an outer product.
       if (matmul->inputs.size() != 2) continue;
@@ -1318,8 +1318,8 @@ class UpdateTransformer : public Transformer {
       Flow::Operation *add = assign->inputs[1]->producer;
       Flow::Operation *scatter = add->inputs[1]->producer;
       if (assign->inputs[0] != add->inputs[0]) continue;
-      if (add->outputs[0]->consumers.size() != 1) continue;
-      if (scatter->outputs[0]->consumers.size() != 1) continue;
+      if (add->outputs[0]->usages() != 1) continue;
+      if (scatter->outputs[0]->usages() != 1) continue;
 
       flow->Fuse(assign, flow->Fuse(add, scatter, ""), "ScatterAdd", true);
       updates++;
@@ -1330,7 +1330,7 @@ class UpdateTransformer : public Transformer {
       Flow::Operation *scatter = op;
       Flow::Operation *mul = scatter->inputs[2]->producer;
       if (scatter->indegree() != 3) continue;
-      if (mul->outputs[0]->consumers.size() != 1) continue;
+      if (mul->outputs[0]->usages() != 1) continue;
       flow->Fuse(scatter, mul, "ScatterMulAdd");
       updates++;
     }

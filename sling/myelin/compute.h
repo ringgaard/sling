@@ -545,7 +545,10 @@ class Tensor {
   Step *producer() const { return producer_; }
 
   // List of steps that uses tensor.
-  const std::vector<Step *> consumers() const { return consumers_; }
+  const std::vector<Step *> &consumers() const { return consumers_; }
+
+  // Return the number of usages of tensor.
+  int usages() const { return consumers_.size(); }
 
   // Cell that tensor belongs to.
   Cell *cell() const { return cell_; }

@@ -279,7 +279,7 @@ class DivToMulTransformer : public Transformer {
       if (op->indegree() != 2) continue;
       Flow::Variable *second = op->inputs[1];
       if (second->type != DT_FLOAT || second->elements() != 1) continue;
-      if (!second->constant() || second->consumers.size() != 1) continue;
+      if (!second->constant() || second->usages() != 1) continue;
 
       // Change Div(x,c) to Mul(x,1/c).
       CHECK_EQ(second->size, sizeof(float));
@@ -302,7 +302,7 @@ class AddNegToSubTransformer : public Transformer {
     for (Flow::Operation *op : flow->Find("Neg|1:Add")) {
       Flow::Operation *add = op;
       Flow::Operation *neg = add->inputs[1]->producer;
-      if (neg->outputs[0]->consumers.size() == 1) {
+      if (neg->outputs[0]->usages() == 1) {
         flow->Eliminate(neg);
         add->type = "Sub";
         updates++;
@@ -349,9 +349,7 @@ class ExpressionTransformer : public Transformer {
           // producer.
           bool contained = true;
           for (auto *v : producer->outputs) {
-            if (v->consumers.size() != 1 ||
-                v->consumers[0] != op ||
-                v->out()) {
+            if (v->usages() != 1 ||v->consumers[0] != op || v->out()) {
               contained = false;
               break;
             }
@@ -501,7 +499,7 @@ class ExpressionTransformer : public Transformer {
         // Map input from second op to input from first op.
         mapping[vars2[v]] = vars1[v];
       } else if (first->IsOutput(v)) {
-        if (v->consumers.size() == 1 && !v->out()) {
+        if (v->usages() == 1 && !v->out()) {
           // Second op is the only consumer of the output from the first op,
           // so the input can be turned into a temporary variable.
           int id = vars1[v]->id;

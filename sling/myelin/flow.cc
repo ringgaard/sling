@@ -1026,7 +1026,7 @@ Flow::Operation *Flow::Fuse(Operation *first,
     if (first->IsInput(v)) {
       // Input from second op. Eliminate variable if it is only used as an
       // intermediate result between the first and second op.
-      if (v->consumers.size() == 1 && !v->out()) {
+      if (v->usages() == 1 && !v->out()) {
         first->RemoveInput(v);
         second->RemoveOutput(v);
         DeleteVariable(v);

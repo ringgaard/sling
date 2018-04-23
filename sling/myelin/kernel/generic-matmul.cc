@@ -528,7 +528,7 @@ class TransposeTransformer : public Transformer {
     for (Flow::Operation *op : flow->Find("Transpose|Transpose")) {
       Flow::Operation *t1 = op;
       Flow::Operation *t2 = t1->inputs[0]->producer;
-      if (t1->outputs[0]->consumers.size() == 1) {
+      if (t1->outputs[0]->usages() == 1) {
         t2->outputs[0]->shape = t2->inputs[0]->shape;
         t1->outputs[0]->shape = t1->inputs[0]->shape;
         flow->Eliminate(t1);
@@ -541,7 +541,7 @@ class TransposeTransformer : public Transformer {
     for (Flow::Operation *op : flow->Find("Transpose|MatMul")) {
       Flow::Operation *matmul = op;
       Flow::Operation *transpose = matmul->inputs[0]->producer;
-      if (transpose->outputs[0]->consumers.size() == 1) {
+      if (transpose->outputs[0]->usages() == 1) {
         transpose->outputs[0]->shape = transpose->inputs[0]->shape;
         flow->Eliminate(transpose);
         matmul->SetAttr("transpose_a", !matmul->GetAttr("transpose_a", false));
@@ -553,7 +553,7 @@ class TransposeTransformer : public Transformer {
     for (Flow::Operation *op : flow->Find("Transpose|1:MatMul")) {
       Flow::Operation *matmul = op;
       Flow::Operation *transpose = matmul->inputs[1]->producer;
-      if (transpose->outputs[0]->consumers.size() == 1) {
+      if (transpose->outputs[0]->usages() == 1) {
         transpose->outputs[0]->shape = transpose->inputs[0]->shape;
         flow->Eliminate(transpose);
         matmul->SetAttr("transpose_b", !matmul->GetAttr("transpose_b", false));

@@ -310,6 +310,9 @@ class Flow {
     // Return the number of elements in the variable tensor.
     int elements() const { return shape.elements(); }
 
+    // Return the number of usages of variable.
+    int usages() const { return consumers.size(); }
+
     // Input variable flag.
     bool in() const { return is(IN); }
     Variable *set_in(bool enable = true) { return set(IN, enable); }

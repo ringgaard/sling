@@ -195,7 +195,7 @@ class MatMulTransformer : public Transformer {
       if (op->type != first) continue;
       if (op->outputs.size() != 1) continue;
       Flow::Variable *var = op->outputs[0];
-      if (var->consumers.size() != 1) continue;
+      if (var->usages() != 1) continue;
       if (var->consumers[0]->type != second) continue;
       if (var->consumers[0]->task != op->task) continue;
       if (var->out()) continue;
@@ -246,7 +246,7 @@ class FlattenConcatTransformer : public Transformer {
 
       // The child should have only one consumer, the parent.
       Flow::Variable *child_result = child->outputs[0];
-      if (child_result->consumers.size() != 1) continue;
+      if (child_result->usages() != 1) continue;
       Flow::Operation *parent = child_result->consumers[0];
       if (!IsConcat(*parent)) continue;
 
@@ -257,7 +257,7 @@ class FlattenConcatTransformer : public Transformer {
       if (parent_axis != child_axis) continue;
 
       // The child axis will be pruned, so it should have no other dependencies.
-      if (child->inputs.back()->consumers.size() != 1) continue;
+      if (child->inputs.back()->usages() != 1) continue;
       if (child->inputs.back()->producer != nullptr) continue;
 
       Flatten(flow, parent, child);
@@ -340,7 +340,7 @@ class GatherTransformer : public Transformer {
       if (axis32 != 0) continue;
 
       // The axis will be pruned, so it should have no other dependencies.
-      if (axis->consumers.size() != 1) continue;
+      if (axis->usages() != 1) continue;
       if (axis->producer != nullptr) continue;
 
       op->RemoveInput(axis);
