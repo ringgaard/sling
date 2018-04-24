@@ -99,7 +99,7 @@ class Optimizer {
   Instance *data_ = nullptr;
 };
 
-// Stocastic gradient descent optimizer.
+// Stochastic gradient descent optimizer.
 class GradientDescentOptimizer : public Optimizer {
  public:
   // Learning rate.
