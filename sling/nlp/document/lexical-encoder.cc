@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/nlp/document/lexical-features.h"
+#include "sling/nlp/document/lexical-encoder.h"
 
 #include "sling/myelin/builder.h"
 #include "sling/myelin/gradient.h"

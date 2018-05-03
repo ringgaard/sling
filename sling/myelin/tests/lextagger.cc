@@ -27,7 +27,7 @@
 #include "sling/myelin/profile.h"
 #include "sling/myelin/kernel/tensorflow.h"
 #include "sling/nlp/document/document.h"
-#include "sling/nlp/document/lexical-features.h"
+#include "sling/nlp/document/lexical-encoder.h"
 #include "sling/nlp/document/lexicon.h"
 #include "sling/util/mutex.h"
 #include "sling/util/thread.h"

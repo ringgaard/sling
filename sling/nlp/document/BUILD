@@ -139,9 +139,9 @@ cc_library(
 )
 
 cc_library(
-  name = "lexical-features",
-  srcs = ["lexical-features.cc"],
-  hdrs = ["lexical-features.h"],
+  name = "lexical-encoder",
+  srcs = ["lexical-encoder.cc"],
+  hdrs = ["lexical-encoder.h"],
   deps = [
     ":document",
     ":features",

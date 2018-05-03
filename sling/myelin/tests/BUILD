@@ -125,7 +125,7 @@ cc_binary(
     "//sling/myelin:profile",
     "//sling/myelin/kernel:tensorflow",
     "//sling/nlp/document",
-    "//sling/nlp/document:lexical-features",
+    "//sling/nlp/document:lexical-encoder",
     "//sling/util:mutex",
     "//sling/util:thread",
   ],
