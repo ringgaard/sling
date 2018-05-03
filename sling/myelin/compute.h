@@ -428,8 +428,8 @@ class Tensor {
   // are not stored on the host.
   size_t offset() const { return offset_; }
 
-  // Offset in device data instance block. Return -1 for tensors
-  // that are not not stored in the instance block on the device.
+  // Offset in device data instance block. Return -1 for tensors that are not
+  // stored in the instance block on the device.
   size_t device_offset() const { return device_offset_; }
 
   // Number bytes allocated for tensor in instance. This takes references into

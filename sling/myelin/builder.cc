@@ -50,7 +50,7 @@ string Scope::OpName(const string &op) {
 
 Flow::Variable *FlowBuilder::Var(const string &name, Type type,
                                  const Shape &shape) {
-  return flow_->AddVariable(func_->name + "/" + name, type, shape);
+  return flow_->AddVariable(prefix() + "/" + name, type, shape);
 }
 
 Flow::Variable *FlowBuilder::Parameter(const string &name,
@@ -179,36 +179,26 @@ Flow::Variable *FlowBuilder::FFLayers(Variable *input,
     // Add weight matrix.
     auto *W = Parameter("W" + std::to_string(l), type, {height, width});
     v = MatMul(v, W);
-    v->type = type;
-    v->shape = {1, width};
 
     // Optionally add bias.
     if (bias) {
       auto *b = Parameter("b" + std::to_string(l), type, {1, width});
       v = Add(v, b);
-      v->type = type;
-      v->shape = {1, width};
     }
 
     // Add activation function between layers.
     if (l != layers.size() - 1) {
       v = Op(activation, {v});
-      v->type = type;
-      v->shape = {1, width};
     }
 
     // Make hidden layer a reference.
     if (l == hidden) {
       v = Name(Identity(v), "hidden");
-      v->type = type;
-      v->shape = {1, width};
       v->set_in()->set_out()->set_ref();
     }
   }
 
   auto *logits = Name(Identity(v), "logits");
-  logits->type = v->type;
-  logits->shape = v->shape;
   return logits;
 }
 
@@ -236,7 +226,7 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
   auto *h_in = Placeholder("h_in", type, {1, size}, true);
   auto *c_in = Placeholder("c_in", type, {1, size}, true);
 
-  // Input -- i_t = sigmoid(x_t * x2i + h_in * h2i + c_in * c2i)
+  // Input -- i_t = sigmoid(x_t * x2i + h_in * h2i + c_in * c2i + bi)
   auto *i_ait = Name(Add(MatMul(input, x2i),
                      Add(MatMul(h_in, h2i),
                      Add(MatMul(c_in, c2i), bi))),

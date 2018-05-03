@@ -30,6 +30,7 @@ class Scope {
   Scope(Scope *parent, const string &name);
   ~Scope();
 
+ protected:
   // Return unique name for operation.
   string OpName(const string &op);
 

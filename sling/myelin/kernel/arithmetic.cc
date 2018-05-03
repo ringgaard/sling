@@ -574,7 +574,7 @@ class RemoveUnusedInputs : public Transformer {
         for (int i = 0; i < op->inputs.size(); ++i) {
           if (expr.Lookup(Express::INPUT, i) == nullptr &&
               expr.Lookup(Express::CONST, i) == nullptr) {
-            if (assign &&  i == 0) continue;
+            if (assign && i == 0) continue;
             expr.EliminateInput(i);
             op->RemoveInput(op->inputs[i]);
             op->SetAttr("expr", expr.AsRecipe());
