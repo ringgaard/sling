@@ -289,7 +289,7 @@ bool WebPageAnalyzer::Text(const char *str) {
   if (e > s + 2) {
     // Check if text ends in ... (or ellipsis).
     if (e[-3] == '.' && e[-2] == '.') keep = false;
-    if (e[-3] == 0xe2 && e[-2] == 0x80 && e[-1] == 0xa6) keep = false;
+    if (e[-3] == '\xe2' && e[-2] == '\x80' && e[-1] == '\xa6') keep = false;
   }
 
   // Discard text with characters that are rarely used in normal text.
@@ -509,7 +509,7 @@ void WebPageTextExtractor::DebugText(const char *str) {
   while (s < end) {
     if (ascii_isspace(*s)) {
       if (brk_ < SPACE) brk_ = SPACE;
-    } else if (s[0] == 0xc2 && s[1] == 0xa0) {
+    } else if (s[0] == '\xc2' && s[1] == '\xa0') {
       if (brk_ < NBSP) brk_ = NBSP;
     } else {
       break;

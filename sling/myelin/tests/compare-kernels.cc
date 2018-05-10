@@ -502,7 +502,7 @@ bool IntKernelComparator::Check(int iterations) {
         for (int r = 0; r < var->dim(0); ++r) {
           int64 base_result = GetInt(&base_data, b, r);
           int64 test_result = GetInt(&test_data, t, r);
-          int64 delta = abs(test_result - base_result);
+          int64 delta = std::abs(test_result - base_result);
           if (delta != 0.0) {
               VLOG(2) << "Base and test difference for "
                       << var->name << "[" << r << "] "
@@ -520,7 +520,7 @@ bool IntKernelComparator::Check(int iterations) {
           for (int c = 0; c < var->dim(1); ++c) {
             int64 base_result = GetInt(&base_data, b, r, c);
             int64 test_result = GetInt(&test_data, t, r, c);
-            int64 delta = abs(test_result - base_result);
+            int64 delta = std::abs(test_result - base_result);
             if (delta != 0.0) {
               VLOG(9) << "Base and test difference for "
                       << var->name << "[" << r << "," << c << "] "
@@ -645,7 +645,7 @@ bool FltIntKernelComparator::Check(int iterations) {
         for (int r = 0; r < var->dim(0); ++r) {
           int64 base_result = GetInt(&base_data, b, r);
           int64 test_result = GetInt(&test_data, t, r);
-          int64 delta = abs(test_result - base_result);
+          int64 delta = std::abs(test_result - base_result);
           if (delta != 0.0) {
               VLOG(2) << "Base and test difference for "
                       << var->name << "[" << r << "] "
@@ -663,7 +663,7 @@ bool FltIntKernelComparator::Check(int iterations) {
           for (int c = 0; c < var->dim(1); ++c) {
             int64 base_result = GetInt(&base_data, b, r, c);
             int64 test_result = GetInt(&test_data, t, r, c);
-            int64 delta = abs(test_result - base_result);
+            int64 delta = std::abs(test_result - base_result);
             if (delta != 0.0) {
               VLOG(9) << "Base and test difference for "
                       << var->name << "[" << r << "," << c << "] "
