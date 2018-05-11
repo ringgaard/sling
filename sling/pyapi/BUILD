@@ -1,15 +1,5 @@
 package(default_visibility = ["//visibility:public"])
 
-config_setting (
-  name = "osx",
-  constraint_values = [ "@bazel_tools//platforms:osx" ]
-)
-
-config_setting (
-  name = "linux",
-  constraint_values = [ "@bazel_tools//platforms:linux" ]
-)
-
 cc_library(
   name = "pyapi",
   srcs = [
@@ -50,17 +40,17 @@ cc_library(
     "//sling/stream:file",
     "//sling/stream:unix-file",
   ] + select({
-    ":linux": [
+    "//build:linux": [
       "//sling/http:http-server",
       "//sling/task:dashboard",
     ],
-    ":osx": [],
+    "//build:osx": [],
   }),
   copts = [
     "-Wno-pmf-conversions",
   ] + select({
-    ":linux": [],
-    ":osx": [
+    "//build:linux": [],
+    "//build:osx": [
       "-DNO_DASHBOARD",
     ],
   }),

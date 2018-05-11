@@ -1,15 +1,3 @@
-package(default_visibility = ["//visibility:public"])
-
-config_setting (
-  name = "osx",
-  constraint_values = [ "@bazel_tools//platforms:osx" ]
-)
-
-config_setting (
-  name = "linux",
-  constraint_values = [ "@bazel_tools//platforms:linux" ]
-)
-
 cc_library(
   name = "compare-kernels",
   srcs = [
@@ -138,10 +126,10 @@ cc_binary(
     "//sling/util:mutex",
     "//sling/util:thread",
   ] + select({
-    ":linux": [
+    "//build:linux": [
       "//sling/myelin:elf-linker",
     ],
-    ":osx": [],
+    "//build:osx": [],
   }),
 )
 

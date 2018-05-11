@@ -135,7 +135,6 @@ cc_binary(
   srcs = ["analyze.cc"],
   deps = [
     ":compute",
-    ":elf-linker",
     ":flow",
     ":graph",
     ":profile",
@@ -145,6 +144,11 @@ cc_binary(
     "//sling/myelin/kernel:cuda",
     "//sling/myelin/kernel:dragnn",
     "//sling/myelin/kernel:tensorflow",
-  ],
+  ] + select({
+    "//build:linux": [
+      ":elf-linker",
+    ],
+    "//build:osx": [],
+  }),
 )
 

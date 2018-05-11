@@ -21,7 +21,6 @@
 #include "sling/base/types.h"
 #include "sling/file/file.h"
 #include "sling/myelin/compute.h"
-#include "sling/myelin/elf-linker.h"
 #include "sling/myelin/flow.h"
 #include "sling/myelin/graph.h"
 #include "sling/myelin/profile.h"
@@ -45,12 +44,17 @@ DEFINE_string(graph, "", "DOT file name for flow");
 DEFINE_bool(consts, true, "Include constants in DOT graph");
 DEFINE_string(datagraph, "", "DOT file name prefix for data profile");
 DEFINE_int32(batch, 1, "Batch size");
-DEFINE_string(o, "", "ELF object output file for generated code");
-DEFINE_bool(gendata, false, "Output tensor data to ELF object file");
-DEFINE_bool(genrwdata, false, "Allocate space for tensor data in object file");
 DEFINE_bool(gpu, false, "Run kernels on GPU");
 DEFINE_bool(argmax, false, "Use argmax for predictions");
 DEFINE_bool(compile, true, "Compile flow");
+
+#ifdef __linux__
+#include "sling/myelin/elf-linker.h"
+
+DEFINE_string(o, "", "ELF object output file for generated code");
+DEFINE_bool(gendata, false, "Output tensor data to ELF object file");
+DEFINE_bool(genrwdata, false, "Allocate space for tensor data in object file");
+#endif
 
 using namespace sling;
 using namespace sling::myelin;
@@ -148,12 +152,13 @@ int main(int argc, char *argv[]) {
   if (FLAGS_compile && !FLAGS_raw) {
     // Compile model.
     LOG(INFO) << "Compiling flow";
-    ElfLinker *linker = nullptr;
     Network network;
     if (FLAGS_gpu) {
       cudart.Connect();
       network.set_runtime(&cudart);
     }
+#ifdef __linux__
+    ElfLinker *linker = nullptr;
     if (!FLAGS_o.empty()) {
       ElfLinker::Options linker_opts;
       if (FLAGS_gendata) linker_opts.generate_data = true;
@@ -164,6 +169,7 @@ int main(int argc, char *argv[]) {
       linker = new ElfLinker(linker_opts);
       network.set_linker(linker);
     }
+#endif
     if (FLAGS_profile) network.options().profiling = true;
     if (FLAGS_dynalloc) network.options().dynamic_allocation = true;
     if (!network.Compile(flow, library)) {
@@ -198,6 +204,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
+#ifdef __linux__
     // Write ELF object file. The file can be viewed with objdump:
     // objdump -xrtdw -M intel --no-show-raw-insn <ofn>
     if (linker != nullptr) {
@@ -206,6 +213,7 @@ int main(int argc, char *argv[]) {
       linker->Write(FLAGS_o.c_str());
     }
     delete linker;
+#endif
   }
 
   return 0;
