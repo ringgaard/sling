@@ -63,7 +63,6 @@ cc_library(
   name = "dashboard",
   srcs = ["dashboard.cc"],
   hdrs = ["dashboard.h"],
-  tags = ["linux"],
   deps = [
     ":app",
     ":job",

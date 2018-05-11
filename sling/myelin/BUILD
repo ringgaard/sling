@@ -123,7 +123,6 @@ cc_library(
   name = "elf-linker",
   srcs = ["elf-linker.cc"],
   hdrs = ["elf-linker.h"],
-  tags = ["linux"],
   deps = [
     ":compute",
     "//sling/base",
@@ -134,7 +133,6 @@ cc_library(
 cc_binary(
   name = "analyze",
   srcs = ["analyze.cc"],
-  tags = ["linux"],
   deps = [
     ":compute",
     ":elf-linker",

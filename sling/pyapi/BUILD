@@ -1,5 +1,15 @@
 package(default_visibility = ["//visibility:public"])
 
+config_setting (
+  name = "osx",
+  constraint_values = [ "@bazel_tools//platforms:osx" ]
+)
+
+config_setting (
+  name = "linux",
+  constraint_values = [ "@bazel_tools//platforms:linux" ]
+)
+
 cc_library(
   name = "pyapi",
   srcs = [
@@ -31,20 +41,29 @@ cc_library(
     "//sling/file",
     "//sling/file:recordio",
     "//sling/frame",
-    "//sling/http:http-server",
     "//sling/nlp/document",
     "//sling/nlp/wiki:phrase-table",
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:phrase-tokenizer",
     "//sling/nlp/parser",
-    "//sling/task:dashboard",
     "//sling/task:job",
     "//sling/stream:file",
     "//sling/stream:unix-file",
-  ],
+  ] + select({
+    ":linux": [
+      "//sling/http:http-server",
+      "//sling/task:dashboard",
+    ],
+    ":osx": [],
+  }),
   copts = [
     "-Wno-pmf-conversions",
-  ]
+  ] + select({
+    ":linux": [],
+    ":osx": [
+      "-DNO_DASHBOARD",
+    ],
+  }),
 )
 
 cc_library(

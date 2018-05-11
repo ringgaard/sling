@@ -1,6 +1,6 @@
 #!/bin/sh
 
-bazel build -c opt --build_tag_filters -linux \
+bazel build -c opt \
   sling/base:* \
   sling/file:* \
   sling/frame:* \

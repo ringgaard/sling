@@ -1,5 +1,15 @@
 package(default_visibility = ["//visibility:public"])
 
+config_setting (
+  name = "osx",
+  constraint_values = [ "@bazel_tools//platforms:osx" ]
+)
+
+config_setting (
+  name = "linux",
+  constraint_values = [ "@bazel_tools//platforms:linux" ]
+)
+
 cc_library(
   name = "compare-kernels",
   srcs = [
@@ -89,7 +99,6 @@ cc_binary(
 cc_binary(
   name = "postagger",
   srcs = ["postagger.cc"],
-  tags = ["linux"],
   deps = [
     "//sling/base",
     "//sling/file:posix",
@@ -110,7 +119,6 @@ cc_binary(
 cc_binary(
   name = "lextagger",
   srcs = ["lextagger.cc"],
-  tags = ["linux"],
   deps = [
     "//sling/base",
     "//sling/file:posix",
@@ -119,7 +127,6 @@ cc_binary(
     "//sling/frame:store",
     "//sling/myelin:builder",
     "//sling/myelin:compute",
-    "//sling/myelin:elf-linker",
     "//sling/myelin:gradient",
     "//sling/myelin:flow",
     "//sling/myelin:graph",
@@ -130,7 +137,12 @@ cc_binary(
     "//sling/nlp/document:lexical-encoder",
     "//sling/util:mutex",
     "//sling/util:thread",
-  ],
+  ] + select({
+    ":linux": [
+      "//sling/myelin:elf-linker",
+    ],
+    ":osx": [],
+  }),
 )
 
 cc_binary(
