@@ -35,11 +35,12 @@ void LogMessage::GenerateLogMessage() {
   const size_t BUFSIZE = 30;
   struct timeval tv;
   gettimeofday(&tv, nullptr);
+  int usec = tv.tv_usec;
   char timestr[BUFSIZE];
   strftime(timestr, BUFSIZE, "%Y-%m-%d %H:%M:%S", localtime(&tv.tv_sec));
 
   // TODO: Replace this with something that logs through a log sink.
-  fprintf(stderr, "[%s.%06ld: %c %s:%d] %s\n", timestr, tv.tv_usec,
+  fprintf(stderr, "[%s.%06d: %c %s:%d] %s\n", timestr, usec,
           "IWEF"[severity_], fname_, line_, str().c_str());
 }
 

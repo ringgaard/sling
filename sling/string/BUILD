@@ -50,7 +50,6 @@ cc_library(
   srcs = ["numbers.cc"],
   deps = [
     ":ctype",
-    ":printf",
     "//sling/base",
   ],
 )

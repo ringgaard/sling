@@ -28,6 +28,7 @@ cc_library(
   name = "knowledge-service",
   srcs = ["knowledge-service.cc"],
   hdrs = ["knowledge-service.h"],
+  tags = ["linux"],
   deps = [
     ":calendar",
     ":app",
@@ -44,6 +45,7 @@ cc_library(
 cc_binary(
   name = "knowledge-server",
   srcs = ["knowledge-server.cc"],
+  tags = ["linux"],
   deps = [
     ":knowledge-service",
     "//sling/base",
@@ -56,4 +58,3 @@ cc_binary(
     "//sling/string:strcat",
   ],
 )
-

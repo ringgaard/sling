@@ -121,8 +121,8 @@ cc_library(
   name = "elf-writer",
   srcs = ["elf-writer.cc"],
   hdrs = ["elf-writer.h"],
+  tags = ["linux"],
   copts = [
     "-Wno-sign-compare",
   ],
 )
-

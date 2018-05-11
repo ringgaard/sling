@@ -89,6 +89,7 @@ cc_binary(
 cc_binary(
   name = "postagger",
   srcs = ["postagger.cc"],
+  tags = ["linux"],
   deps = [
     "//sling/base",
     "//sling/file:posix",
@@ -109,6 +110,7 @@ cc_binary(
 cc_binary(
   name = "lextagger",
   srcs = ["lextagger.cc"],
+  tags = ["linux"],
   deps = [
     "//sling/base",
     "//sling/file:posix",

@@ -65,7 +65,7 @@ string ParserState::DebugString() const {
     StrAppend(&s, "AttentionIndex: ", i, " FrameIndex: ", Attention(i),
               " FrameType:", store_->DebugString(type(i)), "\n");
   }
-  if (attention_.size() > kMaxAttention) {
+  if (attention_.size() > kMaxAttention) { 
     StrAppend(&s, "..and ", (attention_.size() - kMaxAttention), " more.\n");
   }
 

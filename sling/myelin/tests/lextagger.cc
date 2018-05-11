@@ -19,7 +19,9 @@
 #include "sling/frame/store.h"
 #include "sling/myelin/builder.h"
 #include "sling/myelin/compute.h"
+#ifdef __linux__
 #include "sling/myelin/elf-linker.h"
+#endif
 #include "sling/myelin/flow.h"
 #include "sling/myelin/gradient.h"
 #include "sling/myelin/graph.h"
@@ -119,7 +121,9 @@ class Tagger {
     // Set up kernel library.
     RegisterTensorflowLibrary(&library_);
 
+#ifdef __linux__
     net_.set_linker(&linker_);
+#endif
     if (FLAGS_profile) {
       net_.options().profiling = true;
       net_.options().global_profiler = true;
@@ -277,9 +281,11 @@ class Tagger {
       for (Cell *cell : net_.cells()) std::cout << cell->ToString();
     }
 
+#ifdef __linux__
     // Write object file with generated code.
     linker_.Link();
     linker_.Write("/tmp/postagger.o");
+#endif
 
     // Initialize model.
     encoder_.Initialize(net_);
@@ -546,7 +552,9 @@ class Tagger {
   Library library_;             // kernel library
   Flow flow_;                   // flow for tagger model
   Network net_;                 // neural net
+#ifdef __linux__
   ElfLinker linker_;            // linker for outputting generated code
+#endif
 
   // Document input encoder.
   LexicalEncoder encoder_;
