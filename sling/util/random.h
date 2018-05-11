@@ -39,7 +39,7 @@ class Random {
   }
 
   // Return uniformly distributed random number between 0 and n (exclusive).
-  float UniformInt(int n) {
+  int UniformInt(int n) {
     return dist_(prng_) * n;
   }
 
