@@ -85,26 +85,6 @@ cc_binary(
 )
 
 cc_binary(
-  name = "postagger",
-  srcs = ["postagger.cc"],
-  deps = [
-    "//sling/base",
-    "//sling/file:posix",
-    "//sling/myelin:builder",
-    "//sling/myelin:compute",
-    "//sling/myelin:elf-linker",
-    "//sling/myelin:gradient",
-    "//sling/myelin:flow",
-    "//sling/myelin:graph",
-    "//sling/myelin:learning",
-    "//sling/myelin:profile",
-    "//sling/myelin/kernel:tensorflow",
-    "//sling/util:mutex",
-    "//sling/util:thread",
-  ],
-)
-
-cc_binary(
   name = "lextagger",
   srcs = ["lextagger.cc"],
   deps = [

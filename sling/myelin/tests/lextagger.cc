@@ -55,7 +55,6 @@ DEFINE_double(lambda, 0.0, "Regularization parameter");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
 DEFINE_int32(seed, 0, "Random number generator seed");
-DEFINE_int32(alpha_update, 50000, "Number of epochs between alpha updates");
 DEFINE_int32(batch, 64, "Number of epochs between gradient updates");
 DEFINE_bool(shuffle, true, "Shuffle training corpus");
 DEFINE_bool(heldout, true, "Test tagger on heldout data");
@@ -65,6 +64,7 @@ DEFINE_bool(lock, true, "Locked gradient updates");
 DEFINE_int32(lexthres, 0, "Lexicon threshold");
 DEFINE_string(flow, "", "Flow file for saving trained POS tagger");
 DEFINE_bool(adam, false, "Use Adam optimizer");
+DEFINE_bool(optacc, false, "Decay learning rate based on accuracy");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -223,18 +223,23 @@ class Tagger {
       if (FLAGS_adam) {
         LOG(INFO) << "Using Adam optimizer";
         AdamOptimizer *adam = new AdamOptimizer();
-        adam->set_alpha(FLAGS_eta);
+        adam->set_learning_rate(FLAGS_eta);
+        adam->set_decay(FLAGS_decay);
         adam->set_beta1(FLAGS_beta1);
         adam->set_beta2(FLAGS_beta2);
         adam->set_clipping_threshold(FLAGS_clip);
         adam->set_epsilon(FLAGS_epsilon);
         optimizer_ = adam;
+        alpha_ = FLAGS_eta;
       } else {
         LOG(INFO) << "Using SGD optimizer";
         GradientDescentOptimizer *sgd = new GradientDescentOptimizer();
+        sgd->set_learning_rate(FLAGS_alpha);
+        sgd->set_decay(FLAGS_decay);
         sgd->set_lambda(FLAGS_lambda);
         sgd->set_clipping_threshold(FLAGS_clip);
         optimizer_ = sgd;
+        alpha_ = FLAGS_alpha;
       }
       optimizer_->Build(flow);
 
@@ -335,28 +340,41 @@ class Tagger {
       }
 
       // Evaluate model.
-      float avg_loss = loss_sum_ / loss_count_;
+      float loss = loss_sum_ / loss_count_;
       loss_sum_ = 0.0;
       loss_count_ = 0;
-      float acc = FLAGS_heldout ? Evaluate(&dev_) : exp(-avg_loss) * 100.0;
+      float acc = FLAGS_heldout ? Evaluate(&dev_) : exp(-loss) * 100.0;
 
       double end = WallTime();
       float secs = end - start_;
       int tps = (num_tokens_ - prev_tokens_) / secs;
       int64 flops = flops_counter - prev_flops_;
-      float gflops = flops / secs / 1e9;
+      int gflops = flops / secs / 1e9;
 
       LOG(INFO) << "epochs " << epoch_ << ", "
                 << "alpha " << alpha_ << ", "
                 << num_workers_ << " workers, "
                 << tps << " tokens/s, "
                 << gflops << " GFLOPS, "
-                << "loss=" << avg_loss
+                << "loss=" << loss
                 << ", accuracy=" << acc;
 
       prev_tokens_ = num_tokens_;
       prev_flops_ = flops_counter;
       start_ = WallTime();
+
+      // Decay learning rate if loss increases or accuracy drops.
+      bool decay = false;
+      if (FLAGS_optacc) {
+        if (acc < prev_acc_ && prev_acc_ != 0.0) decay = true;
+      } else {
+        if (loss > prev_loss_ && prev_loss_ != 0.0) decay = true;
+      }
+      if (decay) {
+        alpha_ = optimizer_->DecayLearningRate();
+      }
+      prev_loss_ = loss;
+      prev_acc_ = acc;
 
       // Check is we are done.
       if (epoch_ >= FLAGS_epochs) break;
@@ -433,10 +451,6 @@ class Tagger {
       // Apply gradients to model.
       if (iteration % FLAGS_batch == 0) {
         if (FLAGS_lock) update_mu_.Lock();
-        if (!FLAGS_adam) {
-          auto *sgd = static_cast<GradientDescentOptimizer *>(optimizer_);
-          sgd->set_alpha(alpha_);
-        }
         optimizer_->Apply(gradients);
         loss_sum_ += local_loss_sum;
         loss_count_ += local_loss_count;
@@ -453,12 +467,6 @@ class Tagger {
       // Check if new evaluation should be triggered.
       std::unique_lock<std::mutex> lock(eval_mu_);
       if (epoch_ % FLAGS_report == 0) eval_model_.notify_one();
-
-      // Decay learning rate.
-      if (epoch_ % FLAGS_alpha_update == 0) {
-        alpha_ *= FLAGS_decay;
-        if (alpha_ < FLAGS_minalpha) alpha_ = FLAGS_minalpha;
-      }
 
       // Next epoch.
       if (epoch_ >= FLAGS_epochs) break;
@@ -572,6 +580,8 @@ class Tagger {
   int num_tokens_ = 0;
   float loss_sum_ = 0.0;
   int loss_count_ = 0;
+  float prev_loss_ = 0.0;
+  float prev_acc_ = 0.0;
   float alpha_ = FLAGS_alpha;
   double start_;
   int num_workers_ = 0;
