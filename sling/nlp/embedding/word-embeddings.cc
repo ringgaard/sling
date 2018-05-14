@@ -400,9 +400,11 @@ class WordEmbeddingsTrainer : public Process {
 
     // Start training threads. Use one worker thread per input file.
     std::vector<string> filenames = task->GetInputFiles("documents");
+    int threads = filenames.size();
+    task->Fetch("threads", &threads);
     WorkerPool pool;
-    pool.Start(filenames.size(), [this, &filenames, &model](int index) {
-      Worker(index, filenames[index], &model);
+    pool.Start(threads, [this, &filenames, &model](int index) {
+      Worker(index, filenames[index % filenames.size()], &model);
     });
 
     // Wait until workers completes.
