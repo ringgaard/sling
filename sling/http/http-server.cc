@@ -351,12 +351,14 @@ void HTTPServer::Worker() {
         if (ev->events & EPOLLHUP) {
           // Detach socket from poll descriptor.
           rc = epoll_ctl(pollfd_, EPOLL_CTL_DEL, conn->sock_, ev);
-          if (rc < 0) LOG(ERROR) << Error("epoll_ctl");
-
-          // Delete client connection.
-          VLOG(3) << "Close HTTP connection";
-          RemoveConnection(conn);
-          delete conn;
+          if (rc < 0) {
+            LOG(ERROR) << Error("epoll_ctl");
+          } else {
+            // Delete client connection.
+            VLOG(3) << "Close HTTP connection";
+            RemoveConnection(conn);
+            delete conn;
+          }
         } else {
           // Process connection data.
           VLOG(5) << "Process in state " << conn->state_;
