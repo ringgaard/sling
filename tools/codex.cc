@@ -18,6 +18,7 @@ DEFINE_bool(frames, false, "Record values as encoded frames");
 DEFINE_string(key, "", "Only display records with matching key");
 DEFINE_int32(indent, 2, "Indentation for structured data");
 DEFINE_int32(limit, 0, "Maximum number of records to output");
+DEFINE_bool(utf8, false, "Allow UTF8-encoded output");
 
 using namespace sling;
 
@@ -31,6 +32,7 @@ void DisplayFrame(const Slice &value) {
   StringPrinter printer(&store);
   printer.printer()->set_indent(FLAGS_indent);
   printer.printer()->set_shallow(false);
+  printer.printer()->set_utf8(FLAGS_utf8);
   printer.Print(decoder.Decode());
 
   std::cout << printer.text();
