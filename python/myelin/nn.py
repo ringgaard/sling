@@ -15,106 +15,131 @@
 
 """Neural network cells."""
 
-def feed_forward(tf, input, layers, hidden=None, bias=True, activation="Relu"):
-  v = input
-  for l in range(len(layers)):
-    type = v.type
-    height = v.shape[1]
-    width = layers[l]
+class FF:
+  def __init__(
+      self, tf, input, layers, hidden=None, bias=True, activation="Relu"):
+    self.weights = []
+    self.biases = []
+    self.hidden_out = None
+    self.output = None
 
-    W = tf.var("W" + str(l), type, [height, width])
-    v = tf.matmul(v, W)
-    v.type = type
-    v.shape = [1, width]
+    v = input
+    for l in range(len(layers)):
+      type = v.type
+      height = v.shape[1]
+      width = layers[l]
 
-    if bias:
-      b = tf.var("b" + str(l), type, [1, width])
-      v = tf.add(v, b)
+      W = tf.var("W" + str(l), type, [height, width])
+      self.weights.append(W)
+      v = tf.matmul(v, W)
       v.type = type
       v.shape = [1, width]
 
-    if l != len(layers) - 1:
-      v = tf.op(activation, [v])
-      v.type = type
-      v.shape = [1, width]
+      if bias:
+        b = tf.var("b" + str(l), type, [1, width])
+        self.biases.append(b)
+        v = tf.add(v, b)
+        v.type = type
+        v.shape = [1, width]
 
-    if l == hidden:
-      v = tf.identity(v, name="hidden")
-      v.type = type
-      v.shape = [1, width]
-      v.ref = True
-      v.producer.add_attr("input", 1)
-      v.producer.add_attr("output", 1)
+      if l != len(layers) - 1:
+        v = tf.op(activation, [v])
+        v.type = type
+        v.shape = [1, width]
 
-  logits = tf.identity(v, name='logits')
-  logits.type = v.type
-  logits.shape = v.shape
-  return logits
+      if l == hidden:
+        self.hidden_out = v
+        v = tf.identity(v, name="hidden")
+        v.type = type
+        v.shape = [1, width]
+        v.ref = True
+        v.producer.add_attr("input", 1)
+        v.producer.add_attr("output", 1)
 
-def lstm(tf, input, size, output_dim=None):
-  # Get LSTM dimensions.
-  type = input.type
-  input_dim = input.shape[1]
+    self.output = tf.identity(v, name='output')
+    self.output.type = v.type
+    self.output.shape = v.shape
 
-  # Define parameters.
-  x2i = tf.var("x2i", type, [input_dim, size])
-  h2i = tf.var("h2i", type, [size, size])
-  c2i = tf.var("c2i", type, [size, size])
-  bi = tf.var("bi", type, [1, size])
 
-  x2o = tf.var("x2o", type, [input_dim, size])
-  h2o = tf.var("h2o", type, [size, size])
-  c2o = tf.var("c2o", type, [size, size])
-  bo = tf.var("bo", type, [1, size])
+  def set_layer_data(self, index, weight, bias=None):
+    assert len(self.weights) > index, index
+    self.weights[index].data = weight
+    if bias is not None:
+      self.biases[index].data = bias
 
-  x2c = tf.var("x2c", type, [input_dim, size])
-  h2c = tf.var("h2c", type, [size, size])
-  bc = tf.var("bc", type, [1, size])
 
-  # h_in, c_in = h_{t-1}, c_{t-1}
-  h_in = tf.var("h_in", type, [1, size])
-  h_in.ref = True
-  c_in = tf.var("c_in", type, [1, size])
-  c_in.ref = True
+class LSTM:
+  def __init__(self, tf, input, size, output_dim=None):
+    # Get LSTM dimensions.
+    type = input.type
+    input_dim = input.shape[1]
 
-  # input --  i_t = sigmoid(affine(x_t, h_{t-1}, c_{t-1}))
-  i_ait = tf.add(tf.matmul(input, x2i),
-          tf.add(tf.matmul(h_in, h2i),
-          tf.add(tf.matmul(c_in, c2i), bi)), name='i_ait')
-  i_it = tf.sigmoid(i_ait, name='i_it')
+    # Define parameters.
+    self.x2i = tf.var("x2i", type, [input_dim, size])
+    self.h2i = tf.var("h2i", type, [size, size])
+    self.c2i = tf.var("c2i", type, [size, size])
+    self.bi = tf.var("bi", type, [1, size])
 
-  # forget -- f_t = 1 - i_t
-  i_ft = tf.sub(1.0, i_it, name='i_ft')
+    self.x2o = tf.var("x2o", type, [input_dim, size])
+    self.h2o = tf.var("h2o", type, [size, size])
+    self.c2o = tf.var("c2o", type, [size, size])
+    self.bo = tf.var("bo", type, [1, size])
 
-  # write memory cell -- tanh(affine(x_t, h_{t-1}))
-  i_awt = tf.add(tf.matmul(input, x2c),
-          tf.add(tf.matmul(h_in, h2c), bc), name='i_awt')
-  i_wt = tf.tanh(i_awt, name='i_wt')
+    self.x2c = tf.var("x2c", type, [input_dim, size])
+    self.h2c = tf.var("h2c", type, [size, size])
+    self.bc = tf.var("bc", type, [1, size])
 
-  # c_t = f_t \odot c_{t-1} + i_t \odot tanh(affine(x_t, h_{t-1}))
-  ct = tf.add(tf.mul(i_it, i_wt), tf.mul(i_ft, c_in), name='c_out')
-  ct.ref = True
-  ct.producer.add_attr("input", 1)
-  ct.producer.add_attr("output", 1)
+    # h_in, c_in = h_{t-1}, c_{t-1}
+    h_in = tf.var("h_in", type, [1, size])
+    h_in.ref = True
+    c_in = tf.var("c_in", type, [1, size])
+    c_in.ref = True
 
-  # output -- o_t = sigmoid(affine(x_t, h_{t-1}, c_t))
-  i_aot = tf.add(tf.matmul(input, x2o),
-          tf.add(tf.matmul(ct, c2o),
-          tf.add(tf.matmul(h_in, h2o), bo)), name='i_aot')
-  i_ot = tf.sigmoid(i_aot, name='i_ot')
+    # input --  i_t = sigmoid(affine(x_t, h_{t-1}, c_{t-1}))
+    i_ait = tf.add(
+        tf.matmul(input, self.x2i),
+        tf.add(tf.matmul(h_in, self.h2i),
+               tf.add(tf.matmul(c_in, self.c2i), self.bi)), name='i_ait')
+    i_it = tf.sigmoid(i_ait, name='i_it')
 
-  # ht = o_t \odot tanh(ct)
-  ph_t = tf.tanh(ct)
-  ht = tf.mul(i_ot, ph_t, name='h_out')
-  ht.ref = True
-  ht.producer.add_attr("input", 1)
-  ht.producer.add_attr("output", 1)
+    # forget -- f_t = 1 - i_t
+    i_ft = tf.sub(1.0, i_it, name='i_ft')
 
-  if output_dim != None:
-    W = tf.var("W", type, [size, output_dim])
-    b = tf.var("b", type, [1, output_dim])
-    return tf.add(tf.matmul(ht, W), b, name='logits')
-  else:
-    return ht
+    # write memory cell -- tanh(affine(x_t, h_{t-1}))
+    i_awt = tf.add(
+        tf.matmul(input, self.x2c),
+        tf.add(tf.matmul(h_in, self.h2c), self.bc), name='i_awt')
+    i_wt = tf.tanh(i_awt, name='i_wt')
+
+    # c_t = f_t \odot c_{t-1} + i_t \odot tanh(affine(x_t, h_{t-1}))
+    ct = tf.add(tf.mul(i_it, i_wt), tf.mul(i_ft, c_in), name='c_out')
+    ct.ref = True
+    ct.producer.add_attr("input", 1)
+    ct.producer.add_attr("output", 1)
+    self.ct = ct
+
+    # Connector for control channel.
+    self.cnx_control = tf.cnx('control', [c_in, ct])
+
+    # output -- o_t = sigmoid(affine(x_t, h_{t-1}, c_t))
+    i_aot = tf.add(tf.matmul(input, self.x2o),
+            tf.add(tf.matmul(ct, self.c2o),
+            tf.add(tf.matmul(h_in, self.h2o), self.bo)), name='i_aot')
+    i_ot = tf.sigmoid(i_aot, name='i_ot')
+
+    # ht = o_t \odot tanh(ct)
+    ph_t = tf.tanh(ct)
+    ht = tf.mul(i_ot, ph_t, name='h_out')
+    ht.ref = True
+    ht.producer.add_attr("input", 1)
+    ht.producer.add_attr("output", 1)
+    self.ht = ht
+
+    # Connector for hidden channel.
+    self.cnx_hidden = tf.cnx('hidden', [h_in, ht])
+
+    if output_dim != None:
+      self.W = tf.var("W", type, [size, output_dim])
+      self.b = tf.var("b", type, [1, output_dim])
 
 

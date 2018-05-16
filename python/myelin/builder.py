@@ -25,26 +25,6 @@ from flow import Flow
 DT_INT = "int32"
 DT_FLOAT = "float32"
 
-math_kernels = {
-  'Add': lambda x, y: x + y,
-  'Sub': lambda x, y: x - y,
-  'Mul': lambda x, y: x * y,
-  'Div': lambda x, y: x / y,
-  'Minimum': lambda x, y: math.min(x, y),
-  'Maximum': lambda x, y: math.max(x, y),
-  'Log': math.log,
-  'Exp': math.exp,
-  'Tanh': math.tanh,
-  'Sigmoid': lambda x: 1 / (1 + math.exp(-x)),
-  'Relu': lambda x: x if x > 0 else 0,
-  'Sin': math.sin,
-  'Cos': math.cos,
-  'Square': lambda x: x * x,
-  'Reciprocal': lambda x: 1 / x,
-  'Negate': lambda x: -x,
-  'Abs': lambda x: math.abs(x),
-}
-
 class Builder:
   def __init__(self, flow, func):
     self.flow = flow
@@ -55,6 +35,12 @@ class Builder:
     v.type = dtype
     v.shape = shape
     return v
+
+  def cnx(self, name, args):
+    c = self.flow.cnx(self.func.name + "/" + name)
+    for a in args:
+      c.add(a)
+    return c
 
   def op(self, optype, args, name=None):
     if name is None:
@@ -73,6 +59,16 @@ class Builder:
     result = self.flow.var(name + ":0", dtype, shape)
     op.add_output(result)
     return result
+
+  def rawop(self, optype, name=None):
+    if name is None:
+      name = self.opname(optype)
+    else:
+      name = self.func.name + "/" + name
+    op = self.flow.op(name)
+    op.type = optype
+    self.func.add(op)
+    return op
 
   def const(self, value, dtype=None, shape=None):
     # Convert scalars.
@@ -186,47 +182,9 @@ class Builder:
     return self.op("Identity", [x], name)
 
   def ref(self, instance, var, name=None):
-    r = self.op("Referece", [instance], name)
+    r = self.op("Reference", [instance], name)
     r.producer.add_attr("var", var.name)
     r.type = var.type
     r.shape = var.shape
     return r
-
-
-class Expression:
-  def __init__(self, flow, func, kernels=math_kernels):
-    self.flow = flow
-    self.kernels = kernels
-    _, self.ops = flow.order(flow.func(func))
-
-  def evaluate(self, inputs):
-    # Initialize input values
-    values = {}
-    for var, value in inputs.iteritems():
-      if type(var) is str: var = self.flow.var(var)
-      values[var] = value
-
-    # Compute ops using kernels.
-    for op in self.ops:
-      # Build argument list.
-      args = []
-      for v in op.inputs:
-        if v.data is None:
-          # Variable.
-          args.append(values[v])
-        else:
-          # Constant.
-          args.append(v.data)
-
-      # Call kernel to compute op.
-      result = self.kernels[op.type](*args)
-      fanout = len(op.outputs)
-      if fanout == 1:
-        values[op.outputs[0]] = result
-      else:
-        if len(result) != fanout: raise ValueError("Fanout mismatch")
-        for i in xrange(fanout): values[op.outputs[i]] = result[i]
-
-    # Return results.
-    return values
 

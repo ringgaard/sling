@@ -137,6 +137,9 @@ class Operation:
 
   def add_attr(self, name, value):
     """Add operation attribute."""
+    if type(value) is bool:
+      if value == True: value = 1
+      elif value == False: value = 0
     self.attrs[name] = str(value)
 
   def attr(self, name):
