@@ -31,29 +31,20 @@ cc_library(
     "//sling/file",
     "//sling/file:recordio",
     "//sling/frame",
+    "//sling/http:http-server",
     "//sling/nlp/document",
     "//sling/nlp/wiki:phrase-table",
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:phrase-tokenizer",
     "//sling/nlp/parser",
+    "//sling/task:dashboard",
     "//sling/task:job",
     "//sling/stream:file",
     "//sling/stream:unix-file",
-  ] + select({
-    "//build:linux": [
-      "//sling/http:http-server",
-      "//sling/task:dashboard",
-    ],
-    "//build:osx": [],
-  }),
+  ],
   copts = [
     "-Wno-pmf-conversions",
-  ] + select({
-    "//build:linux": [],
-    "//build:osx": [
-      "-DNO_DASHBOARD",
-    ],
-  }),
+  ],
 )
 
 cc_library(

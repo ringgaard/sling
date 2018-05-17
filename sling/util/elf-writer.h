@@ -15,10 +15,6 @@
 #ifndef SLING_UTIL_ELF_WRITER_
 #define SLING_UTIL_ELF_WRITER_
 
-#ifndef __linux__
-#error ELF only supported on Linux
-#endif
-
 #include <elf.h>
 #include <stdint.h>
 #include <stdio.h>

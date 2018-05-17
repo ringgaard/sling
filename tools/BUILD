@@ -3,7 +3,6 @@ package(default_visibility = ["//visibility:public"])
 cc_binary(
   name = "embed-data",
   srcs = ["embed-data.cc"],
-  tags = ["linux"],
   deps = [
     "//sling/util:elf-writer",
   ],

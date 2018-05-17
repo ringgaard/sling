@@ -36,12 +36,11 @@ def embed_data(name, srcs):
   embed_pkg = genembed(
     name = name + "_genembed",
     srcs = srcs,
-    tags = ["linux"],
   )
   native.cc_library(
     name = name,
     srcs = [name + "_genembed"],
     alwayslink = True,
     linkstatic = True,
-    tags = ["linux"],
   )
+

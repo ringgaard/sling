@@ -95,6 +95,7 @@ cc_binary(
     "//sling/frame:store",
     "//sling/myelin:builder",
     "//sling/myelin:compute",
+    "//sling/myelin:elf-linker",
     "//sling/myelin:gradient",
     "//sling/myelin:flow",
     "//sling/myelin:graph",
@@ -105,12 +106,7 @@ cc_binary(
     "//sling/nlp/document:lexical-encoder",
     "//sling/util:mutex",
     "//sling/util:thread",
-  ] + select({
-    "//build:linux": [
-      "//sling/myelin:elf-linker",
-    ],
-    "//build:osx": [],
-  }),
+  ],
 )
 
 cc_binary(

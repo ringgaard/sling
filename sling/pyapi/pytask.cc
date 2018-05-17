@@ -14,20 +14,16 @@
 
 #include "sling/pyapi/pytask.h"
 
-#ifndef NO_DASHBOARD
 #include "sling/http/http-server.h"
 #include "sling/task/dashboard.h"
-#endif
 
 using namespace sling::task;
 
 namespace sling {
 
-#ifndef NO_DASHBOARD
 // Task monitor.
 static HTTPServer *http = nullptr;
 static task::Dashboard *dashboard = nullptr;
-#endif
 
 // Python type declarations.
 PyTypeObject PyJob::type;
@@ -174,12 +170,10 @@ PyObject *PyJob::Start() {
     Py_INCREF(this);
     running_ = true;
 
-#ifndef NO_DASHBOARD
     // Register job in dashboard.
     if (dashboard != nullptr) {
       job_->RegisterMonitor(dashboard);
     }
-#endif
 
     // Start job.
     job_->Start();
@@ -282,7 +276,6 @@ PyObject *PyJob::PyAttr(PyObject *obj, const char *name) {
 }
 
 PyObject *StartTaskMonitor(PyObject *self, PyObject *args) {
-#ifndef NO_DASHBOARD
   // Get port number.
   int port;
   if (!PyArg_ParseTuple(args, "i", &port)) return nullptr;
@@ -303,26 +296,20 @@ PyObject *StartTaskMonitor(PyObject *self, PyObject *args) {
   }
 
   if (start_http_server) http->Start();
-#endif
 
   Py_RETURN_NONE;
 }
 
 PyObject *GetJobStatistics() {
-#ifndef NO_DASHBOARD
   if (dashboard == nullptr) Py_RETURN_NONE;
   string stats = dashboard->GetStatus();
   return PyString_FromStringAndSize(stats.data(), stats.size());
-#else
-  Py_RETURN_NONE;
-#endif
 }
 
 PyObject *FinalizeDashboard() {
-#ifndef NO_DASHBOARD
   if (dashboard != nullptr) dashboard->Finalize(60);
-#endif
   Py_RETURN_NONE;
 }
 
 }  // namespace sling
+
