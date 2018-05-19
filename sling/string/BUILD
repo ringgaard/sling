@@ -5,7 +5,6 @@ cc_library(
   deps = [
     ":charset",
     ":ctype",
-    ":memutil",
     ":numbers",
     ":printf",
     ":split",
@@ -32,16 +31,6 @@ cc_library(
   copts = [
     "-Wno-narrowing",
   ]
-)
-
-cc_library(
-  name = "memutil",
-  hdrs = ["memutil.h"],
-  srcs = ["memutil.cc"],
-  deps = [
-    ":ctype",
-    "//sling/base",
-  ],
 )
 
 cc_library(
@@ -104,7 +93,6 @@ cc_library(
   hdrs = ["text.h"],
   srcs = ["text.cc"],
   deps = [
-    ":memutil",
     "//sling/base",
     "//sling/util:city",
   ],
