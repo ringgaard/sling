@@ -35,7 +35,7 @@ struct PyPhraseTable : public PyBase {
   PyObject *Lookup(PyObject *obj);
 
   // Look up entities in phrase table returning entities and counts.
-  PyObject *Prior(PyObject *obj);
+  PyObject *Query(PyObject *obj);
 
   // Phrase tokenizer.
   nlp::PhraseTokenizer *tokenizer;

@@ -23,7 +23,7 @@ PyTypeObject PyPhraseTable::type;
 
 PyMethodDef PyPhraseTable::methods[] = {
   {"lookup", PYFUNC(PyPhraseTable::Lookup), METH_O, ""},
-  {"prior", PYFUNC(PyPhraseTable::Prior), METH_O, ""},
+  {"query", PYFUNC(PyPhraseTable::Query), METH_O, ""},
   {nullptr}
 };
 
@@ -82,7 +82,7 @@ PyObject *PyPhraseTable::Lookup(PyObject *obj) {
   return result;
 }
 
-PyObject *PyPhraseTable::Prior(PyObject *obj) {
+PyObject *PyPhraseTable::Query(PyObject *obj) {
   // Get phrase.
   char *phrase = PyString_AsString(obj);
   if (phrase == nullptr) return nullptr;
