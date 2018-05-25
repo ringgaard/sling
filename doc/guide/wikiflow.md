@@ -31,9 +31,6 @@ used for running the pipeline:
 ./run.sh --help
 ```
 
-You only need to install the SLING Python wheel to use the Wiki processing
-pipeline.
-
 ## Download dumps
 
 First, the Wikipedia and Wikidata dumps need to be downloaded:
@@ -79,9 +76,9 @@ This is equivalent to running each of the step separately:
 ## Wikidata import
 
 The Wikidata dump contains _entities_ for all the items in the knowledge base
-in [JSON format](https://www.mediawiki.org/wiki/Wikibase/DataModel/JSON). The
-`wikidata-import` task reads these and convert them into SLING frame format and
-stores these in a record file set. This also outputs the [schema](https://www.mediawiki.org/wiki/Wikibase/DataModel)
+in [WikiData JSON format](https://www.mediawiki.org/wiki/Wikibase/DataModel/JSON). 
+The `wikidata-import` task reads these and convert them into SLING frame format 
+and stores these in a record file set. This also outputs the [schema](https://www.mediawiki.org/wiki/Wikibase/DataModel)
 for the Wikidata properties in SLING frame schema format. After this, the
 `wiki-mapping` task produces a frame store that maps from Wikipedia article ids
 to Wikidata ids.
@@ -203,12 +200,12 @@ P27: {
 }
 ```
 
-## Wikipedia import
+## Wikipedia import and parsing
 
 In contrast to Wikidata, the Wikipedia dumps are language-dependent, and there
 is one dump per language. By default, the English Wikipedia is used, but
 multiple Wikipedias in different languages can be processed by the SLING wiki
-processing pipeline.
+processing pipeline by using the `--languages` flag.
 
 The `wikipedia-import` task reads the Wikipedia dump and converts it into
 Wikipedia articles, redirects, and categories. The Wikipedia dumps are stored
@@ -219,6 +216,132 @@ the documents into SLING document format. All the links in the Wikipedia
 articles are converted to Wikidata ids, and redirects are resolved to the target
 entity. The Wikipedia parser also outputs aliases from anchor text in the
 articles.
+
+Parsed [Wikipedia document](https://en.wikipedia.org/wiki/Annette_Stroyberg) for Wikidata item Q2534120:
+```
+Q2534120: {
+  =/wp/en/Annette_Stroyberg
+  :/wp/page
+  /wp/page/pageid: 488963
+  /wp/page/title: "Annette Stroyberg"
+  lang: /lang/en
+  /wp/page/text: "{{Use dmy dates|date=January 2014}}\n{{Infobox person\n|..."
+  /wp/page/item: Q2534120
+  :/s/document
+  /s/document/url: "http://en.wikipedia.org/wiki/Annette_Stroyberg"
+  /s/document/title: "Annette Stroyberg"
+  /s/document/text: "<b>Annette Strøyberg</b> (7 December 1936  – 12 December 2005) was a Danish actress..."
+  /s/document/tokens: [{=#1 
+    :/s/token
+    /s/token/index: 0
+    /s/token/text: "Annette"
+    /s/token/start: 3
+    /s/token/length: 7
+  }, {=#2 
+    :/s/token
+    /s/token/index: 1
+    /s/token/text: "Strøyberg"
+    /s/token/start: 11
+    /s/token/length: 10
+  }, {=#3 
+    :/s/token
+    /s/token/index: 2
+    /s/token/text: "("
+    /s/token/start: 26
+    /s/token/length: 1
+  }
+  ...
+  ]
+  /s/document/mention: {=#401 
+    :/wp/link
+    /s/phrase/begin: 13
+    name: "Danish"
+    /s/phrase/evokes: Q35
+  }
+  /s/document/mention: {=#402 
+    :/wp/link
+    /s/phrase/begin: 14
+    name: "actress"
+    /s/phrase/evokes: Q33999
+  }
+  /s/document/mention: {=#403 
+    :/wp/link
+    /s/phrase/begin: 19
+    /s/phrase/length: 3
+    name: "Les Liaisons Dangereuses"
+    /s/phrase/evokes: Q1498136
+  }
+  /s/document/mention: {=#404 
+    :/wp/link
+    /s/phrase/begin: 34
+    /s/phrase/length: 2
+    name: "Roger Vadim"
+    /s/phrase/evokes: Q383420
+  }
+  ...
+  /wp/page/category: Q6135380
+  /wp/page/category: Q6547526
+  /wp/page/category: Q7482274
+  /wp/page/category: Q8362270
+}
+```
+
+# Name and phrase tables
+
+The aliases extracted from the parsed Wikipedia documents and Wikidata are
+consolidated to a set of aliases for each entity in the knowledge base in the
+`name-extraction` task. This alias table is used for producing a name table 
+repository (`name-table` task) which contains all the (normalized) alias phrases 
+in alphabetical order. This is useful for incremental entity name search used by
+the knowledge base browser. The phrase table repository allows for fast 
+retrieval of all entities having a (normalized) alias matching a phrase. From
+the Python SLING API you can use this for finding entities by name:
+```
+import sling
+
+# Load knowledge base and phrase table.
+kb = sling.Store()
+kb.load("local/data/e/wiki/kb.sling")
+names = sling.PhraseTable(kb, "local/data/e/wiki/en/phrase-table.repo")
+kb.freeze()
+
+# Lookup entities with name 'Annette Stroyberg'.
+for entity in names.lookup("Annette Stroyberg"): 
+  print entity.id, entity.name
+# output:
+# Q2534120 Annette Vadim
+
+# Query all entities named 'Funen' with freqency counts.
+for entity, count in names.query("Funen"): 
+  print count, entity.id, entity.name, "(", entity.description, ")"
+# output:
+# 667 Q26503 Funen ( island of Denmark )
+# 7 Q847014 Funen County ( county of Denmark )
+# 3 Q19160275 Funen ( street in Blauwestad, the Netherlands )
+```
+
+# Item fusing and knowledge base
+
+Once the Wikipedia documents have been parsed for all the languages you need,
+the information from these documents are collected into a Wikipedia item for
+each entity. Currently, only Wikipedia categories are collected from Wikipedia
+documents in the `category-merging`task. The Wikipedia items are consolidated
+with the Wikidata items in the `item-fusing` task into the final items. These
+are then used in the `knowledge-base`task for building a knowledge base 
+repository, which can be loaded into memory.
+
+# Browsing the knowledge base
+
+After the wiki processing pipeline has been run, uou can use the knowledge base 
+browser for viewing the information in the knowledge base:
+```
+bazel build -c opt sling/nlp/kb:knowledge-server
+bazel-bin/sling/nlp/kb/knowledge-server
+```
+If you point your browser at [http://localhost:8080/kb](http://localhost:8080/kb), 
+you can search for entities by name or id:
+
+![SLING knowledge base browser.](kb-browser.png)
 
 # Data sets
 

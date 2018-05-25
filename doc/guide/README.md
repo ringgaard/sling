@@ -5,5 +5,5 @@
   * [Parsing with SLING](parsing.md)
   * [SLING frames](frames.md)
   * [Myelin neural network JIT compiler](myelin.md)
-  * [Wikipedia and Wikidata processing](doc/guide/wikiflow.md)
+  * [Wikipedia and Wikidata processing](wikiflow.md)
 
