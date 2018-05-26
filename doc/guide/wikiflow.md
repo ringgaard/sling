@@ -76,8 +76,8 @@ This is equivalent to running each of the step separately:
 ## Wikidata import
 
 The Wikidata dump contains _entities_ for all the items in the knowledge base
-in [WikiData JSON format](https://www.mediawiki.org/wiki/Wikibase/DataModel/JSON). 
-The `wikidata-import` task reads these and convert them into SLING frame format 
+in [WikiData JSON format](https://www.mediawiki.org/wiki/Wikibase/DataModel/JSON).
+The `wikidata-import` task reads these and convert them into SLING frame format
 and stores these in a record file set. This also outputs the [schema](https://www.mediawiki.org/wiki/Wikibase/DataModel)
 for the Wikidata properties in SLING frame schema format. After this, the
 `wiki-mapping` task produces a frame store that maps from Wikipedia article ids
@@ -231,19 +231,19 @@ Q2534120: {
   /s/document/url: "http://en.wikipedia.org/wiki/Annette_Stroyberg"
   /s/document/title: "Annette Stroyberg"
   /s/document/text: "<b>Annette Strøyberg</b> (7 December 1936  – 12 December 2005) was a Danish actress..."
-  /s/document/tokens: [{=#1 
+  /s/document/tokens: [{=#1
     :/s/token
     /s/token/index: 0
     /s/token/text: "Annette"
     /s/token/start: 3
     /s/token/length: 7
-  }, {=#2 
+  }, {=#2
     :/s/token
     /s/token/index: 1
     /s/token/text: "Strøyberg"
     /s/token/start: 11
     /s/token/length: 10
-  }, {=#3 
+  }, {=#3
     :/s/token
     /s/token/index: 2
     /s/token/text: "("
@@ -252,26 +252,26 @@ Q2534120: {
   }
   ...
   ]
-  /s/document/mention: {=#401 
+  /s/document/mention: {=#401
     :/wp/link
     /s/phrase/begin: 13
     name: "Danish"
     /s/phrase/evokes: Q35
   }
-  /s/document/mention: {=#402 
+  /s/document/mention: {=#402
     :/wp/link
     /s/phrase/begin: 14
     name: "actress"
     /s/phrase/evokes: Q33999
   }
-  /s/document/mention: {=#403 
+  /s/document/mention: {=#403
     :/wp/link
     /s/phrase/begin: 19
     /s/phrase/length: 3
     name: "Les Liaisons Dangereuses"
     /s/phrase/evokes: Q1498136
   }
-  /s/document/mention: {=#404 
+  /s/document/mention: {=#404
     :/wp/link
     /s/phrase/begin: 34
     /s/phrase/length: 2
@@ -290,12 +290,14 @@ Q2534120: {
 
 The aliases extracted from the parsed Wikipedia documents and Wikidata are
 consolidated to a set of aliases for each entity in the knowledge base in the
-`name-extraction` task. This alias table is used for producing a name table 
-repository (`name-table` task) which contains all the (normalized) alias phrases 
+`name-extraction` task. This alias table is used for producing a name table
+repository (`name-table` task) which contains all the (normalized) alias phrases
 in alphabetical order. This is useful for incremental entity name search used by
-the knowledge base browser. The phrase table repository allows for fast 
-retrieval of all entities having a (normalized) alias matching a phrase. From
-the Python SLING API you can use this for finding entities by name:
+the knowledge base browser.
+
+The `phrase-table` task creates a phrase table repository which can be used for
+fast retrieval of all entities having a (normalized) alias matching a phrase.
+From the Python SLING API you can use this for finding entities by name:
 ```
 import sling
 
@@ -306,13 +308,13 @@ names = sling.PhraseTable(kb, "local/data/e/wiki/en/phrase-table.repo")
 kb.freeze()
 
 # Lookup entities with name 'Annette Stroyberg'.
-for entity in names.lookup("Annette Stroyberg"): 
+for entity in names.lookup("Annette Stroyberg"):
   print entity.id, entity.name
 # output:
 # Q2534120 Annette Vadim
 
 # Query all entities named 'Funen' with freqency counts.
-for entity, count in names.query("Funen"): 
+for entity, count in names.query("Funen"):
   print count, entity.id, entity.name, "(", entity.description, ")"
 # output:
 # 667 Q26503 Funen ( island of Denmark )
@@ -327,18 +329,18 @@ the information from these documents are collected into a Wikipedia item for
 each entity. Currently, only Wikipedia categories are collected from Wikipedia
 documents in the `category-merging`task. The Wikipedia items are consolidated
 with the Wikidata items in the `item-fusing` task into the final items. These
-are then used in the `knowledge-base`task for building a knowledge base 
+are then used in the `knowledge-base`task for building a knowledge base
 repository, which can be loaded into memory.
 
 # Browsing the knowledge base
 
-After the wiki processing pipeline has been run, uou can use the knowledge base 
+After the wiki processing pipeline has been run, uou can use the knowledge base
 browser for viewing the information in the knowledge base:
 ```
 bazel build -c opt sling/nlp/kb:knowledge-server
 bazel-bin/sling/nlp/kb/knowledge-server
 ```
-If you point your browser at [http://localhost:8080/kb](http://localhost:8080/kb), 
+If you point your browser at [http://localhost:8080/kb](http://localhost:8080/kb),
 you can search for entities by name or id:
 
 ![SLING knowledge base browser.](kb-browser.png)
