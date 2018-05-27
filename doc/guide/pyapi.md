@@ -11,6 +11,14 @@ in "developer mode":
 ```
 sudo ln -s $(realpath python) /usr/lib/python2.7/dist-packages/sling
 ```
+# Table of contents
+
+* [Frame stores](#frame-stores)
+* [Phrase tables](#phrase-tables)
+* [Record files](#record-files)
+* [Documents](#documents)
+* [Parsing](#parsing)
+* [Miscellaneous](#miscellaneous)
 
 # Frame stores
 
@@ -170,9 +178,56 @@ for entity, count in names.query("Funen"):
   print count, entity.id, entity.name, "(", entity.description, ")"
 ```
 
+## Record files
+
+[Record files](../../sling/file/recordio.h) are files with variable-size records
+each having a key and a value. Individual records are (optionally) compressed
+and records are stores in chunks which can be read independently.
+The default chunk size is 64 MB.
+
+A `RecordReader` is used for reading records from a record file and supports
+iteration over all the records in the record file:
+```
+import sling
+
+recin = sling.RecordReader("test.rec")
+for key,value in recin:
+  print key, value
+recin.close()
+```
+The `RecordReader` class has the following methods:
+* `close()`<br>
+  Closes the record reader.
+* `read()`<br>
+  Reads next record and returns the key and value for the record.
+* `tell()`<br>
+  Returns the current file position in the record file.
+* `seek(pos)`<br>
+  Seek to new file position `pos` in record file.
+* `rewind()`<br>
+  Seeks back to beginning of record file.
+* `done()`<br>
+  Checks for end-of-file.
+
+To write a record file, you can use a `RecordWriter`:
+```
+recout = sling.RecordWriter("/tmp/test.rec")
+recout.write("key1", "value1")
+recout.write("key2", "value2")
+recout.close()
+```
+
+The `RecordWriter` class has the following methods:
+* `close()`<br>
+  Closes the record writer.
+* `write(key, value)`<br>
+  Writes record to record file.
+* `tell()`<br>
+  Returns the current file position in the record file.
+
 ## Documents
 
-Read all document from a corpus:
+Example: read all document from a corpus:
 ```
 import sling
 
@@ -192,7 +247,7 @@ for _,rec in corpus:
 print "docs:", num_docs, "tokens:", num_tokens
 ```
 
-Read text from a file and create a corpus of tokenized documents:
+Example: read text from a file and create a corpus of tokenized documents:
 ```
 import sling
 
@@ -228,7 +283,7 @@ fin.close()
 fout.close()
 ```
 
-Write document with annotations for "John loves Mary":
+Example: write document with annotations for "John loves Mary":
 ```
 import sling
 
@@ -264,29 +319,33 @@ fin.close()
 fout.close()
 ```
 
+The `Document` class has the following methods and properties:
+* `__init__(frame=None, store=None, schema=None)`<br>
+* `text` (r/w property)<br>
+* `tokens` (r/o property)<br>
+* `mentions` (r/o property)<br>
+* `themes` (r/o property)<br>
+* `add_token(text=None, start=None, length=None, brk=SPACE_BREAK)`<br>
+* `add_mention(begin, end)`<br>
+* `add_theme(theme)`<br>
+* `update()`<br>
+* `phrase(begin, end)`<br>
+* `refresh_annotations()`<br>
 
-## Record files
+The `Token` class has the following properties:
+* `index` (r/w int property)<br>
+* `text` (r/w string property)<br>
+* `start` (r/w int property)<br>
+* `length` (r/w int property)<br>
+* `end` (r/o int property)<br>
+* `brk` (r/w int property)<br>
 
-[Record files](../../sling/file/recordio.h) are files with variable-size records
-each having a key and a value.
-
-A `RecordReader` is used for reading records from a record file:
-```
-import sling
-
-recin = sling.RecordReader("test.rec")
-for key,value in recin:
-  print key, value
-recin.close()
-```
-
-To write a record file, you can use a `RecordWriter`:
-```
-recout = sling.RecordWriter("/tmp/test.rec")
-recout.write("key1", "value1")
-recout.write("key2", "value2")
-recout.close()
-```
+The `Mention` class has the following methods and properties:
+* `begin` (r/w int property)<br>
+* `length` (r/w int property)<br>
+* `end` (r/o int property)<br>
+* `evokes()`<br>
+* `evoke(frame)`<br>
 
 ## Parsing
 
