@@ -355,6 +355,7 @@ class WordEmbeddingsTrainer : public Process {
   void Run(Task *task) override {
     // Get training parameters.
     task->Fetch("iterations", &iterations_);
+    task->Fetch("max_epochs", &max_epochs_);
     task->Fetch("negative", &negative_);
     task->Fetch("window", &window_);
     task->Fetch("learning_rate", &learning_rate_);
@@ -538,12 +539,18 @@ class WordEmbeddingsTrainer : public Process {
           l0b.Compute();
         }
       }
+
+      // Check for early stopping.
+      if (max_epochs_ != -1) {
+        if (num_instances_->value() >= max_epochs_) break;
+      }
     }
   }
 
  private:
   // Training parameters.
   int iterations_ = 5;                 // number of training iterations
+  int64 max_epochs_ = -1;              // maximum number of training epochs
   int negative_ = 5;                   // negative examples per positive example
   int window_ = 5;                     // window size for skip-grams
   double learning_rate_ = 0.025;       // learning rate

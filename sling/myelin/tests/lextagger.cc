@@ -40,6 +40,7 @@ const int cpu_cores = sling::jit::CPU::Processors();
 DEFINE_string(train, "local/data/corpora/stanford/train.rec", "Train corpus");
 DEFINE_string(dev, "local/data/corpora/stanford/dev.rec", "Test corpus");
 DEFINE_string(embeddings, "", "Pre-trained word embeddings");
+DEFINE_bool(train_embeddings, true, "Train word embeddings jointly");
 DEFINE_bool(dump, false, "Dump flow");
 DEFINE_bool(dump_cell, false, "Dump flow");
 DEFINE_bool(profile, false, "Profile tagger");
@@ -130,7 +131,10 @@ class Tagger {
     }
     net_.options().flops_address = &flops_counter;
 
+    // Set up lexical encoder spec.
     spec_.lexicon.normalize_digits = true;
+    spec_.word_embeddings = FLAGS_embeddings;
+    spec_.train_word_embeddings = FLAGS_train_embeddings;
   }
 
   ~Tagger() {
@@ -305,20 +309,19 @@ class Tagger {
     std::mt19937 prng(FLAGS_seed);
     std::normal_distribution<float> normal(0.0, 1e-4);
     for (Tensor *tensor : net_.globals()) {
-      if (tensor->learnable() && tensor->rank() == 2) {
-        TensorData data(tensor->data(), tensor);
-        for (int r = 0; r < data.dim(0); ++r) {
-          for (int c = 0; c < data.dim(1); ++c) {
-            data.at<float>(r, c) = normal(prng);
-          }
+      if (!tensor->learnable()) continue;
+      if (tensor->rank() != 2) continue;
+      if (tensor->name() == "features/word_embeddings" &&
+          !FLAGS_embeddings.empty()) {
+        continue;
+      }
+
+      TensorData data(tensor->data(), tensor);
+      for (int r = 0; r < data.dim(0); ++r) {
+        for (int c = 0; c < data.dim(1); ++c) {
+          data.at<float>(r, c) = normal(prng);
         }
       }
-    }
-
-    // Load pre-trained word embeddings.
-    if (!FLAGS_embeddings.empty()) {
-      int n = encoder_.LoadWordEmbeddings(FLAGS_embeddings);
-      LOG(INFO) << "Loaded " << n << " pretrained word embeddings";
     }
   }
 

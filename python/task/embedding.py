@@ -71,7 +71,7 @@ class EmbeddingWorkflow:
         "window": 5,
         "learning_rate": 0.025,
         "min_learning_rate": 0.0001,
-        "embedding_dims": 256,
+        "embedding_dims": 32,
         "subsampling": 1e-3,
       })
       trainer.attach_input("documents", documents)
