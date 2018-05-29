@@ -6,11 +6,12 @@ You can install the SLING Python wheel using pip:
 sudo pip install http://www.jbox.dk/sling/sling-2.0.0-cp27-none-linux_x86_64.whl
 ```
 or you can [clone the repo and build SLING from sources](install.md). You can
-then link the `sling` Python module directly to the source directory to use it
-in "developer mode":
+then link the `sling` Python module directly to the Python source directory to
+use it in "developer mode":
 ```
 sudo ln -s $(realpath python) /usr/lib/python2.7/dist-packages/sling
 ```
+
 # Table of contents
 
 * [Frame stores](#frame-stores)
@@ -227,6 +228,49 @@ The `RecordWriter` class has the following methods:
 
 ## Documents
 
+A _SLING document_ is a SLING frame formatted according to the
+[/s/document](../../data/nlp/schemas/document-schema.sling) schema. A document
+has the raw text of the document as well as the tokens, mentions, and thematic
+frames:
+```
+{
+  :/s/document
+  /s/document/text: "John loves Mary"
+  /s/document/tokens: [
+    {:/s/token /s/token/index: 0 /s/token/text: "John" /s/token/start: 0 /s/token/length: 4 /s/token/break: 0},
+    {:/s/token /s/token/index: 1 /s/token/text: "loves" /s/token/start: 5 /s/token/length: 5},
+    {:/s/token /s/token/index: 2 /s/token/text: "Mary" /s/token/start: 11 /s/token/length: 4}
+  ]
+  /s/document/mention: {
+    :/s/phrase
+    /s/phrase/begin: 0
+    /s/phrase/evokes: {=#1 :/saft/person}
+  }
+  /s/document/mention: {
+    :/s/phrase
+    /s/phrase/begin: 1
+    /s/phrase/evokes: {
+      :/pb/love-01
+      /pb/arg0: #1
+      /pb/arg1: #2
+    }
+  }
+  /s/document/mention: {
+    :/s/phrase
+    /s/phrase/begin: 2
+    /s/phrase/evokes: {=#2 :/saft/person}
+  }
+}
+```
+
+The SLING Python API has wrapper classes for working with SLING documents, which
+are more convenient to use than manipulating them directly using the frame API.
+
+The `DocumentSchema` class keeps track of all the frame ids for document
+role names. It is faster to create a document schema in the global store and
+pass that as an argument when creating new documents because the document role
+names only need to be resolved once and not each time a new document is created.
+
 Example: read all document from a corpus:
 ```
 import sling
@@ -321,33 +365,93 @@ fout.close()
 
 The `Document` class has the following methods and properties:
 * `__init__(frame=None, store=None, schema=None)`<br>
+  Creates a new document. If `frame` is None, a new "blank" document is created.
+  Otherwise, the frame is used to initialize the document. If `store` is None,
+  a new store is created for the document. If `schema` is None, a new
+  `DocumentSchema` is created for the store, but it is faster to pass in a
+  pre-initialized document schema when creating new documents.
 * `text` (r/w property)<br>
+  Sets/gets the raw text for the document.
 * `tokens` (r/o property)<br>
+  Returns a list of tokens in the document.
 * `mentions` (r/o property)<br>
+  Returns a list of mentions in the document.
 * `themes` (r/o property)<br>
+  Returns a list of themes in the document.
 * `add_token(text=None, start=None, length=None, brk=SPACE_BREAK)`<br>
+  Adds token to the document.
 * `add_mention(begin, end)`<br>
+  Adds mention to the document.
 * `add_theme(theme)`<br>
+  Adds thematic frame to the document.
 * `update()`<br>
+  Updates the underlying document frame. The `update()` method needs to be
+  called after tokens, mentions, or themes have been added to the document.
 * `phrase(begin, end)`<br>
+  Returns phrase text for a span of tokens.
 * `refresh_annotations()`<br>
+  Re-initializes the document object from the underlying frame.
 
 The `Token` class has the following properties:
 * `index` (r/w int property)<br>
+  Gets/sets the index of the token.
 * `text` (r/w string property)<br>
+  Gets/sets text for token.
 * `start` (r/w int property)<br>
+  Gets/sets the start position in the raw text for the token.
 * `length` (r/w int property)<br>
+  Gets/sets the length (in bytes) of the token in the raw text.
 * `end` (r/o int property)<br>
+  Returns the end position (exclusive) of the token in the raw text.
 * `brk` (r/w int property)<br>
+  Gets/sets the break level for the token, i.e. the spacing between this token
+  and the previous token. The following token break levels are supported:
+    0. `NO_BREAK` no white space between tokens
+    1. `SPACE_BREAK` white space between tokens (default)
+    2. `LINE_BREAK` new line between tokens
+    3. `SENTENCE_BREAK` token starts a new sentence
+    4. `PARAGRAPH_BREAK` token starts a new paragraph
+    5. `SECTION_BREAK` token starts a new section
+    6. `CHAPTER_BREAK` token starts a new chapter
 
 The `Mention` class has the following methods and properties:
 * `begin` (r/w int property)<br>
+  Gets/sets the index of the first token in the mention.
 * `length` (r/w int property)<br>
+  Gets/sets the number of tokens in the mention.
 * `end` (r/o int property)<br>
+  Returns the index of the first token after the mention.
 * `evokes()`<br>
+  Returns a list of of frames evoked by this mention.
 * `evoke(frame)`<br>
+  Adds frame evoked by this mention.
 
 ## Parsing
+
+A document needs to be tokenized before parsing:
+* `doc = sling.tokenize(text)`<br>
+  Creates a new store and returns a document with the tokenized text.
+* `doc = sling.tokenize(text, store=store)`<br>
+  Returns a new document in the store with the tokenized text.
+* `doc = sling.tokenize(text, store=store, schema=docschema)`<br>
+  Returns a new document with the tokenized text using a pre-initialized
+  document schema.
+
+The SLING frame semantic parser can be loaded from a flow file:
+```
+import sling
+parser = sling.Parser("sempar.flow")
+```
+
+After the parser has been loaded, it can be used for parsing text and adding
+semantic annotations to the text:
+* `doc = parser.parse(text)`<br>
+  Tokenize and parse the text and return new document with text, tokens, and
+  frame annotations.
+* `doc = parser.parse(frame)`<br>
+  Create document from frame and parse the document.
+* `parser.parse(doc)`<br>
+  Parse the tokens in the document and add semantic annotations.
 
 ## Miscellaneous
 
