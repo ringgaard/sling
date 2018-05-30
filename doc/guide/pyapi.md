@@ -15,10 +15,10 @@ sudo ln -s $(realpath python) /usr/lib/python2.7/dist-packages/sling
 # Table of contents
 
 * [Frame stores](#frame-stores)
-* [Phrase tables](#phrase-tables)
 * [Record files](#record-files)
 * [Documents](#documents)
 * [Parsing](#parsing)
+* [Phrase tables](#phrase-tables)
 * [Miscellaneous](#miscellaneous)
 
 # Frame stores
@@ -154,29 +154,6 @@ store.save("/tmp/txt.sling")
 or in binary encoding:
 ```
 store.save("/tmp/bin.sling", binary=True)
-```
-
-## Phrase tables
-
-A phrase table contains a mapping from _names_ to frames. A phrase table for
-Wikidata entities is constructed by the `phrase-table` task, and can be used for
-fast retrieval of all entities having a (normalized) name matching a phrase:
-```
-import sling
-
-# Load knowledge base and phrase table.
-kb = sling.Store()
-kb.load("local/data/e/wiki/kb.sling")
-names = sling.PhraseTable(kb, "local/data/e/wiki/en/phrase-table.repo")
-kb.freeze()
-
-# Lookup entities with name 'Annette Stroyberg'.
-for entity in names.lookup("Annette Stroyberg"):
-  print entity.id, entity.name
-
-# Query all entities named 'Funen' with freqency counts.
-for entity, count in names.query("Funen"):
-  print count, entity.id, entity.name, "(", entity.description, ")"
 ```
 
 ## Record files
@@ -359,7 +336,6 @@ doc.add_mention(2, 3).evoke(mary)
 doc.update()
 fout.write("0001", doc.frame.data(binary=True))
 
-fin.close()
 fout.close()
 ```
 
@@ -406,13 +382,14 @@ The `Token` class has the following properties:
 * `brk` (r/w int property)<br>
   Gets/sets the break level for the token, i.e. the spacing between this token
   and the previous token. The following token break levels are supported:
-    0. `NO_BREAK` no white space between tokens
-    1. `SPACE_BREAK` white space between tokens (default)
-    2. `LINE_BREAK` new line between tokens
-    3. `SENTENCE_BREAK` token starts a new sentence
-    4. `PARAGRAPH_BREAK` token starts a new paragraph
-    5. `SECTION_BREAK` token starts a new section
-    6. `CHAPTER_BREAK` token starts a new chapter
+
+    - `NO_BREAK` no white space between tokens
+    - `SPACE_BREAK` white space between tokens (default)
+    - `LINE_BREAK` new line between tokens
+    - `SENTENCE_BREAK` token starts a new sentence
+    - `PARAGRAPH_BREAK` token starts a new paragraph
+    - `SECTION_BREAK` token starts a new section
+    - `CHAPTER_BREAK` token starts a new chapter
 
 The `Mention` class has the following methods and properties:
 * `begin` (r/w int property)<br>
@@ -452,6 +429,32 @@ semantic annotations to the text:
   Create document from frame and parse the document.
 * `parser.parse(doc)`<br>
   Parse the tokens in the document and add semantic annotations.
+
+## Phrase tables
+
+A phrase table contains a mapping from _names_ to frames. A phrase table for
+Wikidata entities is constructed by the `phrase-table` task, and can be used for
+fast retrieval of all entities having a (normalized) name matching a phrase:
+```
+import sling
+
+# Load knowledge base and phrase table.
+kb = sling.Store()
+kb.load("local/data/e/wiki/kb.sling")
+names = sling.PhraseTable(kb, "local/data/e/wiki/en/phrase-table.repo")
+kb.freeze()
+
+# Lookup entities with name 'Annette Stroyberg'.
+for entity in names.lookup("Annette Stroyberg"):
+  print entity.id, entity.name
+
+# Query all entities named 'Funen' with frequency counts.
+for entity, count in names.query("Funen"):
+  print count, entity.id, entity.name, "(", entity.description, ")"
+```
+
+The `lookup()` and `query()` methods return the entities in decreasing
+frequency order.
 
 ## Miscellaneous
 

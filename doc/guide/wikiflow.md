@@ -16,7 +16,7 @@ The Wiki processing pipeline performs the following tasks:
   * Download Wikidata and Wikpedia dumps
   * Import Wikipedia dump (`wikipedia-import`)
   * Import Wikidata dump (`wikidata-import`)
-  * Construct mapping from Wikipedia to Wikidata (`wikidata-mapping`)
+  * Construct mapping from Wikipedia to Wikidata (`wikipedia-mapping`)
   * Wikipedia parsing (`wikipedia-parsing`)
   * Extract and select aliases for entities from Wikidata and Wikipedia (`name-extraction`)
   * Build name table for searching for entities (`name-table`)
@@ -52,7 +52,7 @@ the download with the following flags:
     Specifies the language for Wikipedia. The default is `en` (English).
   * `--languages LANG,...`
     Specifies a list of language for Wikipedia. If `ALL` is specified, the
-    12 "sactioned" languages are downloaded (en,da,sv,no,de,fr,es,it,nl,pt,pl,fi).
+    12 "sanctioned" languages are downloaded (en,da,sv,no,de,fr,es,it,nl,pt,pl,fi).
 
 This will put the Wikipedia dump into `local/data/corpora/wikipedia` and
 the Wikidata dump into `local/data/corpora/wikipedia`. After the dumps have been
@@ -80,8 +80,8 @@ in [WikiData JSON format](https://www.mediawiki.org/wiki/Wikibase/DataModel/JSON
 The `wikidata-import` task reads these and convert them into SLING frame format
 and stores these in a record file set. This also outputs the [schema](https://www.mediawiki.org/wiki/Wikibase/DataModel)
 for the Wikidata properties in SLING frame schema format. After this, the
-`wiki-mapping` task produces a frame store that maps from Wikipedia article ids
-to Wikidata ids.
+`wikipedia-mapping` task produces a frame store that maps from Wikipedia article
+idsto Wikidata ids.
 
 This is an example of the SLING frame for Wikidata item [Q2534120](https://www.wikidata.org/wiki/Q2534120):
 ```
@@ -185,7 +185,7 @@ means [spouse](https://www.wikidata.org/wiki/Property:P26) is
 [start time](https://www.wikidata.org/wiki/Property:P580) 1958 and
 [end time](https://www.wikidata.org/wiki/Property:P582) 1960.
 
-Schema frames for Wikidata properties encoded in a similar format:
+Schema frames for Wikidata properties are encoded in a similar format:
 ```
 P27: {
   =P27
@@ -296,31 +296,8 @@ in alphabetical order. This is useful for incremental entity name search used by
 the knowledge base browser.
 
 The `phrase-table` task creates a phrase table repository which can be used for
-fast retrieval of all entities having a (normalized) alias matching a phrase.
-From the Python SLING API you can use this for finding entities by name:
-```
-import sling
-
-# Load knowledge base and phrase table.
-kb = sling.Store()
-kb.load("local/data/e/wiki/kb.sling")
-names = sling.PhraseTable(kb, "local/data/e/wiki/en/phrase-table.repo")
-kb.freeze()
-
-# Lookup entities with name 'Annette Stroyberg'.
-for entity in names.lookup("Annette Stroyberg"):
-  print entity.id, entity.name
-# output:
-# Q2534120 Annette Vadim
-
-# Query all entities named 'Funen' with freqency counts.
-for entity, count in names.query("Funen"):
-  print count, entity.id, entity.name, "(", entity.description, ")"
-# output:
-# 667 Q26503 Funen ( island of Denmark )
-# 7 Q847014 Funen County ( county of Denmark )
-# 3 Q19160275 Funen ( street in Blauwestad, the Netherlands )
-```
+[fast retrieval of all entities](pyapi.md#phrase-tables) having a (normalized)
+alias matching a phrase.
 
 # Item fusing and knowledge base
 
@@ -334,7 +311,7 @@ repository, which can be loaded into memory.
 
 # Browsing the knowledge base
 
-After the wiki processing pipeline has been run, uou can use the knowledge base
+After the wiki processing pipeline has been run, you can use the knowledge base
 browser for viewing the information in the knowledge base:
 ```
 bazel build -c opt sling/nlp/kb:knowledge-server
@@ -361,7 +338,7 @@ For each language, the following data sets are produced:
   * `<lang>/articles-?????-of-?????.rec` (produced by `wikipedia-import` task)
   * `<lang>/redirects.sling` (produced by `wikipedia-import` task)
   * `<lang>/categories-?????-of-?????.rec` (produced by `wikipedia-import` task)
-  * `<lang>/mapping.sling` (produced by `wiki-mapping` task)
+  * `<lang>/mapping.sling` (produced by `wikipedia-mapping` task)
   * `<lang>/documents-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
   * `<lang>/aliases-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
   * `<lang>/names-?????-of-?????.rec` (produced by `name-extraction` task)
