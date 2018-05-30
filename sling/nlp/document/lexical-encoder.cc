@@ -256,7 +256,7 @@ int LexicalFeatures::LoadWordEmbeddings(Flow::Variable *matrix,
   int found = 0;
   while (reader.Next()) {
     // Check if word is in vocabulary
-    int row = lexicon_.LookupWord(reader.word());
+    int row = lexicon_.LookupWord(reader.word(), nullptr);
     if (row == lexicon_.oov()) continue;
 
     // Copy embedding to matrix.
