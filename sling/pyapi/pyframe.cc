@@ -31,6 +31,7 @@ PyMethodDef PyFrame::methods[] = {
   {"store", PYFUNC(PyFrame::GetStore), METH_NOARGS, ""},
   {"islocal", PYFUNC(PyFrame::IsLocal), METH_NOARGS, ""},
   {"isglobal", PYFUNC(PyFrame::IsGlobal), METH_NOARGS, ""},
+  {"resolve", PYFUNC(PyFrame::Resolve), METH_NOARGS, ""},
   {nullptr}
 };
 
@@ -328,6 +329,16 @@ PyObject *PyFrame::IsLocal() {
 
 PyObject *PyFrame::IsGlobal() {
   return PyBool_FromLong(handle().IsGlobalRef());
+}
+
+PyObject *PyFrame::Resolve() {
+  Handle qua = pystore->store->Resolve(handle());
+  if (qua == handle()) {
+    Py_INCREF(this);
+    return AsObject();
+  } else {
+    return pystore->PyValue(qua);
+  }
 }
 
 bool PyFrame::Writable() {
