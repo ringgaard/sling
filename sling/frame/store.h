@@ -971,6 +971,10 @@ class Store {
   // Deletes all slots in a frame with a particular name.
   void Delete(Handle frame, Handle name);
 
+  // Computes a fingerprint for an object. This fingerprint is independent of
+  // the specific handle values in this store. The object cannot contain cycles.
+  uint64 Fingerprint(Handle handle, uint64 seed = 0) const;
+
   // Returns a display name for the handle. This should only be used for display
   // purposes and should not be used as an alternative identifier for the
   // handle. If you want to get the text representation of an object you should
