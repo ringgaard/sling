@@ -42,7 +42,8 @@ Loading binary encoded frames in legacy encoding:
 ```
 actions = commons.load("local/sempar/out/table", binary=True)
 ```
-Freezing a store to makes it read-only and allows local stores to be created based on the store:
+Freezing a store makes it read-only and allows local stores to be created based
+on the store:
 ```
 commons.freeze()
 ```
@@ -105,7 +106,7 @@ New slots can be added using the `append()` method:
 ```
 f.d.append(name, "A thing")
 ```
-Multiple slot can be added using the `extend()` method:
+Multiple slots can be added using the `extend()` method:
 ```
 f.extend({'foo': 10, 'bar': 20})
 ```
@@ -166,7 +167,7 @@ store.save("/tmp/bin.sling", binary=True)
 
 [Record files](../../sling/file/recordio.h) are files with variable-size records
 each having a key and a value. Individual records are (optionally) compressed
-and records are stores in chunks which can be read independently.
+and records are stored in chunks which can be read independently.
 The default chunk size is 64 MB.
 
 A `RecordReader` is used for reading records from a record file and supports
