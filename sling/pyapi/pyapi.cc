@@ -16,6 +16,7 @@
 
 #include "sling/base/init.h"
 #include "sling/pyapi/pyarray.h"
+#include "sling/pyapi/pydate.h"
 #include "sling/pyapi/pyframe.h"
 #include "sling/pyapi/pymisc.h"
 #include "sling/pyapi/pyparser.h"
@@ -50,6 +51,8 @@ static void RegisterPythonModule() {
   PyRecordReader::Define(module);
   PyRecordWriter::Define(module);
   PyJob::Define(module);
+  PyCalendar::Define(module);
+  PyDate::Define(module);
 }
 
 }  // namespace sling
