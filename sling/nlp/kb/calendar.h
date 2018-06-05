@@ -43,22 +43,22 @@ class Date {
   // Parse date from number.
   void ParseFromNumber(int num);
 
-  // Parse date from string.
+  // Parse string date format: [+-]YYYY-MM-DDT00:00:00Z.
   void ParseFromString(Text str);
 
   // Parse date from frame.
   void ParseFromFrame(const Frame &frame);
 
-  // Year; 0 if date is invalid.
+  // Year or 0 if date is invalid.
   int year = 0;
 
-  /// Month (1=January); 0 if no month in date.
+  /// Month (1=January) or 0 if no month in date.
   int month = 0;
 
-  // Day of month (first day of month is 1); 0 if no day in date.
+  // Day of month (first day of month is 1) or 0 if no day in date.
   int day = 0;
 
-  // Date precision/
+  // Date precision.
   Precision precision = NONE;
 };
 

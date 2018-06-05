@@ -47,8 +47,11 @@ struct PyCalendar : public PyBase {
   // Deallocate record reader wrapper.
   void Dealloc();
 
-  // Convert date to string.
+  // Convert date to human-readable string.
   PyObject *Str(PyObject *obj);
+
+  // Convert date to string or integer value.
+  PyObject *Value(PyObject *obj);
 
   // Return frames for date parts.
   PyObject *Day(PyObject *obj);

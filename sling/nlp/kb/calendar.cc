@@ -82,7 +82,6 @@ void Date::ParseFromNumber(int num) {
 }
 
 void Date::ParseFromString(Text str) {
-  // Parse string date format: [+-]YYYY-MM-DDT00:00:00Z.
   const char *p = str.data();
   const char *end = p + str.size();
 

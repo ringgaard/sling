@@ -58,9 +58,10 @@ int PyDate::Init(PyObject *args, PyObject *kwds) {
     date.year = date.month = date.day = 0;
     date.precision = nlp::Date::NONE;
   } else if (PyObject_TypeCheck(time, &PyFrame::type)) {
-    // Parse date from frame.
+    // Parse date from object.
     PyFrame *frame = reinterpret_cast<PyFrame *>(time);
-    date.ParseFromFrame(Frame(frame->pystore->store, frame->handle()));
+    Store *store = frame->pystore->store;
+    date.Init(Object(store, store->Resolve(frame->handle())));
   } else if (PyString_Check(time)) {
     // Parse date from string.
     char *data;
@@ -84,12 +85,13 @@ void PyDate::Dealloc() {
 
 PyMethodDef PyCalendar::methods[] = {
   {"str", PYFUNC(PyCalendar::Str), METH_O, ""},
+  {"value", PYFUNC(PyCalendar::Value), METH_O, ""},
   {"day", PYFUNC(PyCalendar::Day), METH_O, ""},
-  {"month", PYFUNC(PyCalendar::Day), METH_O, ""},
+  {"month", PYFUNC(PyCalendar::Month), METH_O, ""},
   {"year", PYFUNC(PyCalendar::Year), METH_O, ""},
   {"decade", PYFUNC(PyCalendar::Decade), METH_O, ""},
   {"century", PYFUNC(PyCalendar::Century), METH_O, ""},
-  {"Millennium", PYFUNC(PyCalendar::Millennium), METH_O, ""},
+  {"millennium", PYFUNC(PyCalendar::Millennium), METH_O, ""},
   {nullptr}
 };
 
@@ -128,6 +130,16 @@ PyObject *PyCalendar::Str(PyObject *obj) {
 
   string str = calendar->DateAsString(pydate->date);
   return PyString_FromStringAndSize(str.data(), str.size());
+}
+
+PyObject *PyCalendar::Value(PyObject *obj) {
+  PyDate *pydate = GetDate(obj);
+  if (pydate == nullptr) return nullptr;
+
+  int number = nlp::Calendar::DateNumber(pydate->date);
+  if (number != -1) return PyInt_FromLong(number);
+  string ts = nlp::Calendar::DateString(pydate->date);
+  return PyString_FromStringAndSize(ts.data(), ts.size());
 }
 
 PyObject *PyCalendar::Day(PyObject *obj) {
