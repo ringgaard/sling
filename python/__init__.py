@@ -3,6 +3,9 @@ from log import *
 from nlp.document import *
 from nlp.parser import *
 
+from nlp.measure import Globe
+from nlp.measure import MeasureSchema
+
 Store=api.Store
 Frame=api.Frame
 Array=api.Array
