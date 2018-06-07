@@ -92,8 +92,10 @@ cc_library(
     ":document-tokenizer",
     "//sling/base",
     "//sling/frame:object",
+    "//sling/frame:serialization",
     "//sling/frame:store",
     "//sling/string:text",
+    "//sling/string:ctype",
   ],
 )
 

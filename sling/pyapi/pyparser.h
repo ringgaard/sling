@@ -34,6 +34,9 @@ struct PyTokenizer : public PyBase {
   // Tokenize text and return document frame with tokens.
   PyObject *Tokenize(PyObject *args);
 
+  // Parse LEX-encoded text and return document with tokens, spans, and frames.
+  PyObject *Lex(PyObject *args);
+
   // Document tokenizer.
   nlp::DocumentTokenizer *tokenizer;
 
@@ -65,6 +68,9 @@ struct PyParser : public PyBase {
   static PyMethodDef methods[];
   static void Define(PyObject *module);
 };
+
+// Return document frame in LEX-encoded format.
+PyObject *PyToLex(PyObject *self, PyObject *args);
 
 }  // namespace sling
 

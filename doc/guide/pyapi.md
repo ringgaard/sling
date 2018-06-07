@@ -410,12 +410,14 @@ The `Mention` class has the following methods and properties:
 * `evoke(frame)`<br>
   Adds frame evoked by this mention.
 
+### LEX format
+
 While annotated documents can be created using the methods on the `Document`
 class, it is sometime more convenient to use _LEX_ formatted text, which is a
 light-weight frame annotation format for text. This is like normal plain text,
-but you can add mentions with annotations to the text.
+but you can add mentions with annotations to the text using special markup.
 Mentions in the text are enclosed in square brackets, e.g.
-`[John] [loves] [Mary']`. One or more frames evoked from a mention can be added
+`[John] [loves] [Mary]`. One or more frames evoked from a mention can be added
 to the mention using a vertical bar in the mention,
 e.g. `[John|{:/saft/person}]`. The frames can be assigned ids to reference the
 frames from other frames, e.g. `[John|{=#1 :/saft/person}]`. The full

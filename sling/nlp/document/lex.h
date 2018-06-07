@@ -33,20 +33,23 @@ class DocumentLexer {
   bool Lex(Document *document, Text lex) const;
 
  private:
-  // Span in LEX-encoded text.
-  struct Span {
-    Span(int pos) : begin(pos) {}
+  // Markable span in LEX-encoded text.
+  struct Markable {
+    Markable(int pos) : begin(pos) {}
     // Range of bytes in plain text covering the span.
     int begin;
     int end = -1;
 
-    // Frames evoked by span.
-    std::vector<int> evoked;
+    // Annotation object number.
+    int object = -1;
   };
 
   // Document tokenizer.
   const DocumentTokenizer *tokenizer_;
 };
+
+// Convert document to LEX format.
+string ToLex(const Document &document);
 
 }  // namespace nlp
 }  // namespace sling
