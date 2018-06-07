@@ -410,6 +410,45 @@ The `Mention` class has the following methods and properties:
 * `evoke(frame)`<br>
   Adds frame evoked by this mention.
 
+While annotated documents can be created using the methods on the `Document`
+class, it is sometime more convenient to use _LEX_ formatted text, which is a
+light-weight frame annotation format for text. This is like normal plain text,
+but you can add mentions with annotations to the text.
+Mentions in the text are enclosed in square brackets, e.g.
+`[John] [loves] [Mary']`. One or more frames evoked from a mention can be added
+to the mention using a vertical bar in the mention,
+e.g. `[John|{:/saft/person}]`. The frames can be assigned ids to reference the
+frames from other frames, e.g. `[John|{=#1 :/saft/person}]`. The full
+"John loves Mary" can be encoded in LEX format like this:
+```
+[John|{=#1 :/saft/person}] [loves|{:/pb/love-01 /pb/arg0: #1 /pb/arg1: #2}] [Mary|{=#2 :/saft/person}]
+```
+Stand-alone frames can also be added outside the mentions and then referenced in
+the mentions:
+```
+[John|#1] [loves|#3] [Mary|#2]
+{=#1 :/saft/person}
+{=#2 :/saft/person}
+{=#3 :/pb/love-01 /pb/arg0: #1 /pb/arg1: #2}
+
+```
+If a stand-alone frame is not evoked by any mention, it is added to the document
+as a theme.
+
+Mentions can also be nested:
+```
+[[New York|#1] [University|#2]|#3] {=#3 +Q49210 P276:{=#1 +Q60} P31:{=#2 +Q3918}}
+```
+
+A document can be created from LEX-encoded text using the `lex()` method:
+* `doc = sling.lex(text)`<br>
+  Creates a new store and returns a document with the annotated text.
+* `doc = sling.lex(text, store=store)`<br>
+  Returns a new document in the store with the annotated text.
+* `doc = sling.lex(text, store=store, schema=docschema)`<br>
+  Returns a new document with the annotated text using a pre-initialized
+  document schema.
+
 ## Parsing
 
 A document needs to be tokenized before parsing:
