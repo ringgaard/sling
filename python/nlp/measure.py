@@ -16,7 +16,7 @@
 
 # See: https://www.movable-type.co.uk/scripts/latlong.html
 
-from math import sin, cos, atan2, sqrt, pow
+from math import sin, cos, atan2, sqrt, pow, pi
 import sling
 
 cardinals = [
@@ -27,10 +27,10 @@ cardinals = [
 ]
 
 def radians(deg):
-  return deg * math.pi / 180
+  return deg * pi / 180
 
 def degrees(rad):
-  return rad * 180 / math.pi
+  return rad * 180 / pi
 
 def square(x):
   return x * x
@@ -66,7 +66,8 @@ class Quantity:
 
   def si(self):
     siunit = self.unit[self.schema.si_unit]
-    return Quantity((self.amount * siunit[self.schema.amount], siunit), schema)
+    amount = self.amount * siunit[self.schema.amount]
+    return Quantity((amount, siunit), self.schema)
 
 
 class Globe:
@@ -135,6 +136,7 @@ class Globe:
   def compass(self, source, destination, precision = 3):
     b = self.bearing(source, destination)
     n = 4 * pow(2, precision - 1)
-    direction = int(round(bearing * n / 360) % n * (16 / n))
+    print "prec", precision, "dirs", n
+    direction = int(round(b * n / 360) % n * (16 / n))
     return cardinals[direction]
 
