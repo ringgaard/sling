@@ -17,6 +17,7 @@
 # See: https://www.movable-type.co.uk/scripts/latlong.html
 
 from math import sin, cos, atan2, sqrt, pow, pi
+from collections import deque
 import sling
 
 cardinals = [
@@ -35,6 +36,32 @@ def degrees(rad):
 def square(x):
   return x * x
 
+# Topological sorting using DFS and gray/black colors.
+GRAY = 0
+BLACK = 1
+
+def topological(graph):
+  order = deque()
+  enter = set(graph)
+  state = {}
+
+  def dfs(node):
+    state[node] = GRAY
+    for k in graph.get(node, ()):
+      sk = state.get(k, None)
+      if sk == GRAY:
+        print "cycle", node, k
+        continue
+        #raise ValueError("cycle")
+      if sk == BLACK: continue
+      enter.discard(k)
+      dfs(k)
+    order.appendleft(node)
+    state[node] = BLACK
+
+  while enter: dfs(enter.pop())
+  return order
+
 class MeasureSchema:
   def __init__(self, store):
     self.isa = store['isa']
@@ -50,8 +77,33 @@ class MeasureSchema:
     self.globe = store['/w/globe']
     self.radius = store['P2120']
     self.diameter = store['P2386']
-    self.coord = store['P625']
+    self.coordinate_location = store['P625']
+    self.shares_border_with = store['P47']
+    self.end_time = store['P582']
+    self.applies_to_part = store['P518']
+    self.located_in = store['P131']
+    self.location = store['P276']
+    self.part_of = store['P361']
+    self.country = store['P17']
+    self.continent = store['P30']
+    self.astronomical_body = store['P376']
+    self.containment = [
+      self.located_in,
+      self.location,
+      self.country,
+      self.continent,
+      self.part_of,
+      self.astronomical_body,
+    ]
     self.earth = store['Q2']
+    self.scandinavia = store['Q21195']
+
+  def coord(self, location):
+    if location == None: raise ValueError("No location")
+    l = location.resolve()
+    if self.coordinate_location in l: l = l[self.coordinate_location].resolve()
+    if l[self.isa] == self.geo: return l
+    raise ValueError("Cannot determine location for " + str(l))
 
 class Quantity:
   def __init__(self, item, schema=None):
@@ -64,10 +116,13 @@ class Quantity:
       self.amount = item[0]
       self.unit = item[1]
 
+  def convert_to(self, unit):
+    amount = self.amount * unit[self.schema.amount]
+    return Quantity((amount, unit), self.schema)
+
   def si(self):
     siunit = self.unit[self.schema.si_unit]
-    amount = self.amount * siunit[self.schema.amount]
-    return Quantity((amount, siunit), self.schema)
+    return self.convert_to(siunit)
 
 
 class Globe:
@@ -80,7 +135,7 @@ class Globe:
     self.schema = schema
 
     # Determine radius of globe and convert to metres.
-    radius = body[schema.radius]
+    radius = self.body[self.schema.radius]
     if radius != None:
       self.radius = Quantity(radius.resolve(), schema).si().amount
     else:
@@ -91,10 +146,7 @@ class Globe:
         self.radius = 6371000  # radius of Earth in metres
 
   def coord(self, location):
-    if location[self.schema.isa] == self.schema.geo:
-      return location
-    else:
-      return location[self.schema.coord].resolve()
+    return self.schema.coord(location)
 
   def distance(self, source, destination):
     # Get lat/lng for source and destination.
@@ -114,7 +166,7 @@ class Globe:
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return self.radius * c
 
-  def bearing(self, source, destination):
+  def initial_bearing(self, source, destination):
     # Get lat/lng for source and destination.
     coord1 = self.coord(source)
     coord2 = self.coord(destination)
@@ -133,10 +185,100 @@ class Globe:
     x = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(dlambda)
     return (degrees(atan2(y, x)) + 360) % 360
 
+  def final_bearing(self, source, destination):
+    return (self.initial_bearing(destination, source) + 180) % 360
+
+  def bearing(self, source, destination):
+    coord1 = self.coord(source)
+    coord2 = self.coord(destination)
+    initial = self.initial_bearing(coord1, coord2)
+    final = self.final_bearing(coord1, coord2)
+    return (initial + final) / 2
+
   def compass(self, source, destination, precision = 3):
     b = self.bearing(source, destination)
     n = 4 * pow(2, precision - 1)
-    print "prec", precision, "dirs", n
     direction = int(round(b * n / 360) % n * (16 / n))
     return cardinals[direction]
+
+
+class Universe:
+  def __init__(self, store=None, schema=None):
+    if store == None: store = sling.Store()
+    if schema == None: schema = MeasureSchema(store)
+    self.schema = schema
+    self.earth = Globe(self.schema.earth)
+    self.globes = {}
+    self.globes[self.schema.earth] = self.earth
+
+  def globe(self, coord):
+    g = coord[self.schema.globe]
+    if g == None: return self.earth
+    if g not in self.globes: self.globes[g] = Globe(g, schema=self.schema)
+    return self.globes[g]
+
+  def locate(self, source, destination):
+    coord1 = self.schema.coord(source)
+    coord2 = self.schema.coord(destination)
+    globe1 = self.globe(coord1)
+    globe2 = self.globe(coord2)
+    if globe1 != globe2:
+      raise ValueError(str(source) + " and " + str(destination) +
+                       " are not the same globe")
+    return globe1, coord1, coord2
+
+  def distance(self, source, destination):
+    globe, coord1, coord2 = self.locate(source, destination)
+    return globe.distance(coord1, coord2)
+
+  def bearing(self, source, destination):
+    globe, coord1, coord2 = self.locate(source, destination)
+    return globe.bearing(coord1, coord2)
+
+  def compass(self, source, destination):
+    globe, coord1, coord2 = self.locate(source, destination)
+    return globe.compass(coord1, coord2)
+
+  def containment_graph(self, location):
+    queue = [location]
+    graph = {}
+    current = 0
+    while current < len(queue):
+      loc = queue[current]
+      current += 1
+      if loc == self.schema.earth: continue
+      if loc == self.schema.scandinavia: continue  # hack due to country: cycle
+      edges = graph.get(loc)
+      if edges == None:
+        edges = []
+        graph[loc] = edges
+
+      for name, value in loc:
+        if name not in self.schema.containment: continue
+        if value[self.schema.end_time]: continue
+        if value[self.schema.applies_to_part]: continue
+        l = value.resolve()
+        if l != loc: edges.append(l)
+        if l not in queue: queue.append(l)
+    return graph
+
+  def containment(self, location):
+    return topological(self.containment_graph(location))
+
+  def inside(self, part, whole):
+    return whole in self.containment(part)
+
+  def common(self, source, destination):
+    sc = self.containment(source)
+    dc = self.containment(destination)
+    for s in sc:
+      if s in dc: return s
+    return None
+
+  def borders(self, source, destination):
+    for neighbor in source(self.schema.shares_border_with):
+      if neighbor.resolve() == destination: return True
+    for neighbor in destination(self.schema.shares_border_with):
+      if neighbor.resolve() == source: return True
+    return False
 

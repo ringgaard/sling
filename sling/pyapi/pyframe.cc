@@ -41,6 +41,7 @@ void PyFrame::Define(PyObject *module) {
   type.tp_getattro = method_cast<getattrofunc>(&PyFrame::GetAttr);
   type.tp_setattro = method_cast<setattrofunc>(&PyFrame::SetAttr);
   type.tp_str = method_cast<reprfunc>(&PyFrame::Str);
+  type.tp_repr = method_cast<reprfunc>(&PyFrame::Str);
   type.tp_iter = method_cast<getiterfunc>(&PyFrame::Slots);
   type.tp_call = method_cast<ternaryfunc>(&PyFrame::Find);
   type.tp_hash = method_cast<hashfunc>(&PyFrame::Hash);

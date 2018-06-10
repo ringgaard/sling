@@ -3,8 +3,7 @@ from log import *
 from nlp.document import *
 from nlp.parser import *
 
-from nlp.measure import Globe
-from nlp.measure import MeasureSchema
+from nlp.measure import Universe, Globe, MeasureSchema
 
 Store=api.Store
 Frame=api.Frame
