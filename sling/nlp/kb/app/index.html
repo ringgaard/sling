@@ -186,30 +186,9 @@
             <table class="prop-tab">
               <tr class="prop-row" ng-repeat="c in item.categories">
                 <td class="prop-value">
-                  <a ng-href="{{itemUrl(c.ref)}}">{{c.text}}</a>
-                </td>
-
-                <!-- Property values -->
-                <td class="prop-values">
-                  <div class="prop-value" ng-repeat="v in p.values">
-                    <a ng-href="{{itemUrl(v.ref, v.url)}}">{{v.text}}</a>
-
-                    <!-- Property qualifiers -->
-                    <table class="qual-tab" ngshow="v.qualifiers">
-                      <tr class="qual-row" ng-repeat="qp in v.qualifiers">
-                        <td class="qprop-name">
-                          <a ng-href="{{itemUrl(qp.ref)}}">{{qp.property}}</a>
-                        </td>
-                        <td class="qprop-values">
-                          <div class="qprop-value" ng-repeat="qv in qp.values">
-                            <a ng-href="{{itemUrl(qv.ref, qv.url)}}">
-                              {{qv.text}}
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
-                  </div>
+                  <a ng-href="{{itemUrl(c.ref)}}">
+                    {{c.text.substr(c.text.indexOf(':') + 1)}}
+                  </a>
                 </td>
               </tr>
             </table>

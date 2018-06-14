@@ -75,6 +75,7 @@ class MeasureSchema:
     self.lat = store['/w/lat']
     self.lng = store['/w/lng']
     self.globe = store['/w/globe']
+
     self.radius = store['P2120']
     self.diameter = store['P2386']
     self.coordinate_location = store['P625']
@@ -84,6 +85,8 @@ class MeasureSchema:
     self.located_in = store['P131']
     self.location = store['P276']
     self.part_of = store['P361']
+    self.instance_of = store['P31']
+    self.subclass_of = store['P279']
     self.country = store['P17']
     self.continent = store['P30']
     self.astronomical_body = store['P376']
@@ -95,8 +98,26 @@ class MeasureSchema:
       self.part_of,
       self.astronomical_body,
     ]
-    self.earth = store['Q2']
-    self.scandinavia = store['Q21195']
+
+    self.n_earth = store['Q2']
+    self.n_scandinavia = store['Q21195']
+    self.n_astronomical_body = store['Q6999']
+
+  def has_type(self, item, cls):
+    queue = []
+    for t in item(self.instance_of):
+      t = t.resolve()
+      if t == cls: return True
+      queue.append(t)
+    i = 0
+    while i < len(queue):
+      current = queue[i]
+      i += 1
+      for t in current(self.subclass_of):
+        t = t.resolve()
+        if t == cls: return True
+        if t not in queue: queue.append(t)
+    return False
 
   def coord(self, location):
     if location == None: raise ValueError("No location")
@@ -130,7 +151,7 @@ class Globe:
     if body != None: store = body.store()
     if store == None: store = sling.Store()
     if schema == None: schema = MeasureSchema(store)
-    if body == None: body = schema.earth
+    if body == None: body = schema.n_earth
     self.body = body
     self.schema = schema
 
@@ -207,15 +228,25 @@ class Universe:
     if store == None: store = sling.Store()
     if schema == None: schema = MeasureSchema(store)
     self.schema = schema
-    self.earth = Globe(self.schema.earth)
+    self.earth = Globe(self.schema.n_earth)
     self.globes = {}
-    self.globes[self.schema.earth] = self.earth
+    self.globes[self.schema.n_earth] = self.earth
 
   def globe(self, coord):
     g = coord[self.schema.globe]
     if g == None: return self.earth
+    if not self.schema.has_type(g, self.schema.n_astronomical_body):
+      print g, "is not a globe"
+      return self.earth
     if g not in self.globes: self.globes[g] = Globe(g, schema=self.schema)
     return self.globes[g]
+
+  def located(self, location):
+    if location == None: return False
+    l = location.resolve()
+    if self.schema.coordinate_location in l:
+      l = l[self.schema.coordinate_location].resolve()
+    return l[self.schema.isa] == self.schema.geo
 
   def locate(self, source, destination):
     coord1 = self.schema.coord(source)
@@ -224,7 +255,8 @@ class Universe:
     globe2 = self.globe(coord2)
     if globe1 != globe2:
       raise ValueError(str(source) + " and " + str(destination) +
-                       " are not the same globe")
+                       " are not the same globe, " +
+                       str(globe1.body) + " vs " + str(globe2.body))
     return globe1, coord1, coord2
 
   def distance(self, source, destination):
@@ -246,8 +278,8 @@ class Universe:
     while current < len(queue):
       loc = queue[current]
       current += 1
-      if loc == self.schema.earth: continue
-      if loc == self.schema.scandinavia: continue  # hack due to country: cycle
+      if loc == self.schema.n_earth: continue
+      if loc == self.schema.n_scandinavia: continue  # hack due to country: cycle
       edges = graph.get(loc)
       if edges == None:
         edges = []
