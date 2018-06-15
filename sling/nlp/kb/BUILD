@@ -14,6 +14,18 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "facts",
+  srcs = ["facts.cc"],
+  hdrs = ["facts.h"],
+  deps = [
+    ":calendar",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/frame:serialization",  # TODO: remove
+  ],
+)
+
 embed_data(
   name = "app",
   srcs = [
@@ -56,3 +68,17 @@ cc_binary(
     "//sling/string:strcat",
   ],
 )
+
+cc_binary(
+  name = "facttest",
+  srcs = ["facttest.cc"],
+  deps = [
+    ":facts",
+    "//sling/base",
+    "//sling/file",
+    "//sling/file:posix",
+    "//sling/frame:serialization",
+    "//sling/frame:store",
+  ],
+)
+
