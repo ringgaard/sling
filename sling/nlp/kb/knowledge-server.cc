@@ -28,7 +28,7 @@ using namespace sling::nlp;
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
-  LOG(INFO) << "Start HTTP server om port " << FLAGS_port;
+  LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   HTTPServerOptions options;
   HTTPServer http(options, FLAGS_port);
 
