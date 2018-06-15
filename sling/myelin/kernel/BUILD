@@ -122,15 +122,3 @@ cc_library(
   ],
 )
 
-cc_library(
-  name = "wavenet",
-  srcs = ["wavenet.cc"],
-  hdrs = ["wavenet.h"],
-  deps = [
-    "//sling/base",
-    "//sling/myelin:compute",
-    "//sling/myelin/generator:index",
-    "//sling/myelin/generator:expression",
-  ],
-)
-

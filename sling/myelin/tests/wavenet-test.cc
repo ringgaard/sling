@@ -12,8 +12,8 @@
 #include "sling/myelin/graph.h"
 #include "sling/myelin/profile.h"
 #include "sling/myelin/kernel/tensorflow.h"
-#include "sling/myelin/kernel/wavenet.h"
 #include "sling/myelin/macro-assembler.h"
+#include "sling/myelin/tests/wavenet.h"
 
 #define __ masm->
 

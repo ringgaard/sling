@@ -1,4 +1,4 @@
-#include "sling/myelin/kernel/wavenet.h"
+#include "sling/myelin/tests/wavenet.h"
 
 #include <algorithm>
 #include <random>

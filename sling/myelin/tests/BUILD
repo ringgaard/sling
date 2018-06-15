@@ -49,10 +49,23 @@ cc_binary(
   ],
 )
 
+cc_library(
+  name = "wavenet",
+  srcs = ["wavenet.cc"],
+  hdrs = ["wavenet.h"],
+  deps = [
+    "//sling/base",
+    "//sling/myelin:compute",
+    "//sling/myelin/generator:index",
+    "//sling/myelin/generator:expression",
+  ],
+)
+
 cc_binary(
   name = "wavenet-test",
   srcs = ["wavenet-test.cc"],
   deps = [
+    ":wavenet",
     "//sling/base",
     "//sling/base:clock",
     "//sling/file:posix",
@@ -61,7 +74,6 @@ cc_binary(
     "//sling/myelin:graph",
     "//sling/myelin:profile",
     "//sling/myelin/kernel:tensorflow",
-    "//sling/myelin/kernel:wavenet",
   ],
 )
 
