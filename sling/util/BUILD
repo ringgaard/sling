@@ -36,6 +36,11 @@ cc_library(
 )
 
 cc_library(
+  name = "sortmap",
+  hdrs = ["sortmap.h"],
+)
+
+cc_library(
   name = "unicode",
   hdrs = [
     "unicode.h",
