@@ -15,6 +15,7 @@
 #include "sling/nlp/kb/facts.h"
 
 #include "sling/base/logging.h"
+#include "sling/util/bloom.h"
 
 namespace sling {
 namespace nlp {
@@ -35,14 +36,18 @@ void FactCatalog::Init(Store *store) {
     if (target == n_item_) {
       Handle baseprop = property.GetHandle(p_subproperty_of_);
       if (baseprop == p_location_) {
-        SetExtractor(property.handle(), &Facts::ExtractLocation);
+        SetExtractor(property, &Facts::ExtractLocation);
       } else {
-        SetExtractor(property.handle(), &Facts::ExtractSimple);
+        SetExtractor(property, &Facts::ExtractSimple);
       }
     } else if (target == n_time_) {
-      SetExtractor(property.handle(), &Facts::ExtractDate);
+      SetExtractor(property, &Facts::ExtractDate);
     }
   }
+
+  // Set extraction method for specific properties.
+  SetExtractor(p_instance_of_, &Facts::ExtractType);
+  SetExtractor(p_occupation_, &Facts::ExtractType);
 }
 
 void Facts::Extract(Handle item) {
@@ -61,6 +66,10 @@ void Facts::Extract(Handle item) {
   }
 }
 
+void Facts::ExtractType(Handle type) {
+  ExtractClosure(type, catalog_->p_subclass_of_.handle());
+}
+
 void Facts::ExtractSimple(Handle value) {
   AddFact(store_->Resolve(value));
 }
@@ -76,33 +85,29 @@ void Facts::ExtractDate(Handle value) {
 }
 
 void Facts::ExtractLocation(Handle location) {
-  ExtractTransitive(location, catalog_->p_located_in_.handle());
+  ExtractClosure(location, catalog_->p_located_in_.handle());
 }
 
-void Facts::ExtractTransitive(Handle item, Handle relation) {
+void Facts::ExtractClosure(Handle item, Handle relation) {
   Handles closure(store_);
   closure.push_back(store_->Resolve(item));
   int current = 0;
   while (current < closure.size()) {
     Frame f(store_, closure[current++]);
+    AddFact(f.handle());
     for (const Slot &s : f) {
-      if (s.name == relation) {
-        // Check if new item is already known.
-        Handle newitem = store_->Resolve(s.value);
-        bool known = false;
-        for (Handle h : closure) {
-          if (newitem == h) {
-            known = true;
-            break;
-          }
-        }
+      if (s.name != relation) continue;
 
-        // Add backoff fact.
-        if (!known) {
-          AddFact(newitem);
-          closure.push_back(newitem);
+      // Check if new item is already known.
+      Handle newitem = store_->Resolve(s.value);
+      bool known = false;
+      for (Handle h : closure) {
+        if (newitem == h) {
+          known = true;
+          break;
         }
       }
+      if (!known) closure.push_back(newitem);
     }
   }
 }

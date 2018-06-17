@@ -39,6 +39,12 @@ class FactCatalog {
   void SetExtractor(Handle property, Extractor extractor) {
     property_extractors_[property] = extractor;
   }
+  void SetExtractor(const Frame &property, Extractor extractor) {
+    SetExtractor(property.handle(), extractor);
+  }
+  void SetExtractor(const Name &property, Extractor extractor) {
+    SetExtractor(property.handle(), extractor);
+  }
 
   // Knowledge base store.
   Store *store_ = nullptr;
@@ -55,7 +61,10 @@ class FactCatalog {
   Name p_target_{names_, "target"};
   Name p_located_in_{names_, "P131"};
   Name p_location_{names_, "P276"};
+  Name p_instance_of_{names_, "P31"};
+  Name p_subclass_of_{names_, "P279"};
   Name p_subproperty_of_{names_, "P1647"};
+  Name p_occupation_{names_, "P106"};
 
   Name n_time_{names_, "/w/time"};
   Name n_item_{names_, "/w/item"};
@@ -80,6 +89,9 @@ class Facts {
   // Extract simple fact with no backoff.
   void ExtractSimple(Handle value);
 
+  // Extract type with super-class backoff.
+  void ExtractType(Handle type);
+
   // Extract date-valued fact with backoff to year, decade and century.
   void ExtractDate(Handle value);
 
@@ -87,7 +99,7 @@ class Facts {
   void ExtractLocation(Handle location);
 
   // Extract fact with backoff through transitive property relation.
-  void ExtractTransitive(Handle item, Handle relation);
+  void ExtractClosure(Handle item, Handle relation);
 
   // Add fact based on current path.
   void AddFact(Handle value);

@@ -27,10 +27,12 @@ int main(int argc, char *argv[]) {
 
   LOG(INFO) << "Extract facts";
   Store store(&commons);
+
   Handle helle = store.Lookup("Q57652");
   Facts facts(&catalog, &store);
   facts.Extract(helle);
 
+  std::cout << facts.list().size() << " facts\n";
   for (Handle fact : facts.list()) {
     std::cout << "fact " << ToText(&store, fact) << "\n";
   }

@@ -23,6 +23,7 @@ cc_library(
     "//sling/frame:object",
     "//sling/frame:store",
     "//sling/frame:serialization",  # TODO: remove
+    "//sling/util:bloom",
   ],
 )
 
