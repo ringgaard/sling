@@ -57,7 +57,7 @@ class BloomFilter {
   bool add(uint64 fp) {
     Mixer mixer(fp, bits_.size());
     bool member = true;
-    for (int n = 0; n < bits_.size(); ++n) {
+    for (int n = 0; n < hashes_; ++n) {
       uint64 h = mixer();
       member &= bits_[h];
       bits_[h] = true;
@@ -68,7 +68,7 @@ class BloomFilter {
   // Check if element is possibly in the set.
   bool contains(uint64 fp) {
     Mixer mixer(fp, bits_.size());
-    for (int n = 0; n < bits_.size(); ++n) {
+    for (int n = 0; n < hashes_; ++n) {
       if (!bits_[mixer()]) return false;
     }
     return true;
