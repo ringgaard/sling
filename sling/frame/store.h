@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <atomic>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -1029,6 +1030,20 @@ class Store {
 
   // Returns the number of symbols in the symbol table.
   int num_symbols() const { return num_symbols_; }
+
+  // Iterate all objects in the symbol table. This requires the store to be
+  // stable during iteration to avoid invalidating the iterator.
+  void ForAll(std::function<void(Handle handle)> callback) {
+    const MapDatum *map = GetMap(symbols());
+    for (Handle *bucket = map->begin(); bucket < map->end(); ++bucket) {
+      Handle h = *bucket;
+      while (!h.IsNil()) {
+        const SymbolDatum *symbol = GetSymbol(h);
+        if (symbol->bound()) callback(symbol->value);
+        h = symbol->next;
+      }
+    }
+  }
 
   // Checks if this handle is owned by this store.
   bool Owned(Handle handle) const {
