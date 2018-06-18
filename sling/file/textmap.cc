@@ -111,14 +111,22 @@ TextMapOutput::TextMapOutput(const string &filename, int buffer_size) {
 }
 
 TextMapOutput::~TextMapOutput() {
-  // Flush output buffer.
-  Flush();
+  // Close output file.
+  Close();
 
   // Deallocate output buffer.
   free(buffer_);
+}
 
-  // Close output file.
-  CHECK(file_->Close());
+void TextMapOutput::Close() {
+  if (file_ != nullptr) {
+    // Flush output buffer.
+    Flush();
+
+    // Close output file.
+    CHECK(file_->Close());
+    file_ = nullptr;
+  }
 }
 
 void TextMapOutput::Flush() {
@@ -133,23 +141,24 @@ void TextMapOutput::Output(const char *data, size_t size) {
   if (size > end_ - next_) Flush();
 
   // Add data to buffer or directly to file if output buffer is too small.
-  if (size < end_ - next_) {
+  if (size <= end_ - next_) {
     memcpy(next_, data, size);
     next_ += size;
   } else {
+    DCHECK(next_ == buffer_);
     file_->WriteOrDie(data, size);
   }
 }
 
-void TextMapOutput::Write(const string &key, const string &value) {
+void TextMapOutput::Write(Text key, Text value) {
   Output(key.data(), key.size());
   Output("\t", 1);
   Output(value.data(), value.size());
+  Output("\n", 1);
 }
 
-void TextMapOutput::Write(const string &key, int64 value) {
+void TextMapOutput::Write(Text key, int64 value) {
   Write(key, std::to_string(value));
 }
 
 }  // namespace sling
-

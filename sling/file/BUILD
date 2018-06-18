@@ -58,6 +58,7 @@ cc_library(
   deps = [
     ":file",
     "//sling/base",
+    "//sling/string:text",
   ],
 )
 
