@@ -15,7 +15,6 @@
 #include "sling/nlp/kb/facts.h"
 
 #include "sling/base/logging.h"
-#include "sling/util/bloom.h"
 
 namespace sling {
 namespace nlp {

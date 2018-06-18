@@ -24,9 +24,9 @@ namespace sling {
 // A hash map which can be sorted by value. This implementation is space
 // efficient since the sorted array just keeps pointers to the internal
 // nodes in the hash map.
-template<typename K, typename V> struct SortableMap {
+template<typename K, typename V, class H = std::hash<K>> struct SortableMap {
  public:
-  typedef std::unordered_map<K, V> Map;
+  typedef std::unordered_map<K, V, H> Map;
   typedef typename Map::value_type Node;
   typedef std::vector<Node *> Array;
 
@@ -50,4 +50,3 @@ template<typename K, typename V> struct SortableMap {
 }  // namespace sling
 
 #endif  // SLING_UTIL_SORTMAP_H_
-

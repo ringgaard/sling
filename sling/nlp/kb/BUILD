@@ -22,8 +22,6 @@ cc_library(
     ":calendar",
     "//sling/frame:object",
     "//sling/frame:store",
-    "//sling/frame:serialization",  # TODO: remove
-    "//sling/util:bloom",
   ],
 )
 
@@ -76,10 +74,14 @@ cc_binary(
   deps = [
     ":facts",
     "//sling/base",
+    "//sling/base:clock",
     "//sling/file",
     "//sling/file:posix",
+    "//sling/file:textmap",
     "//sling/frame:serialization",
     "//sling/frame:store",
+    "//sling/util:bloom",
+    "//sling/util:sortmap",
   ],
 )
 
