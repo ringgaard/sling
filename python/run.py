@@ -94,6 +94,11 @@ flags.define("--train_word_embeddings",
              default=False,
              action='store_true')
 
+flags.define("--extract_fact_lexicon",
+             help="extract fact and category lexicons",
+             default=False,
+             action='store_true')
+
 flags.define("--dryrun",
              help="build worflows but do not run them",
              default=False,
@@ -234,6 +239,12 @@ def train_embeddings():
       wf.train_word_embeddings(language=language)
       run_workflow(wf)
 
+  # Extract vocabulary for fact and category embeddings.
+  if flags.arg.extract_fact_lexicon:
+      log.info("Extract fact and category lexicons")
+      wf = embedding.EmbeddingWorkflow("fact-lexicon")
+      wf.extract_fact_lexicon()
+      run_workflow(wf)
 
 if __name__ == '__main__':
   # Parse command-line arguments.
@@ -269,4 +280,3 @@ if __name__ == '__main__':
 
   # Done.
   log.info("Done")
-

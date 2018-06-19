@@ -79,3 +79,31 @@ class EmbeddingWorkflow:
       trainer.attach_output("output", output)
       return output
 
+  #---------------------------------------------------------------------------
+  # Fact and category embeddings
+  #---------------------------------------------------------------------------
+
+  def fact_dir(self):
+    return flags.arg.workdir + "/fact"
+
+  def fact_lexicon(self):
+    """Resource for fact vocabulary (text map with fact paths and counts."""
+    return self.wf.resource("facts.map",
+                            dir=self.fact_dir(),
+                            format="textmap/fact")
+  def category_lexicon(self):
+    """Resource for category vocabulary (text map with categories and counts."""
+    return self.wf.resource("categories.map",
+                            dir=self.fact_dir(),
+                            format="textmap/category")
+
+  def extract_fact_lexicon(self):
+    kb = self.wiki.knowledge_base()
+    factmap = self.fact_lexicon()
+    catmap = self.category_lexicon()
+    with self.wf.namespace("fact-embeddings"):
+      trainer = self.wf.task("fact-lexicon-extractor")
+      trainer.attach_input("kb", kb)
+      trainer.attach_output("factmap", factmap)
+      trainer.attach_output("catmap", catmap)
+      return factmap, catmap

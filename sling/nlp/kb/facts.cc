@@ -46,7 +46,10 @@ void FactCatalog::Init(Store *store) {
 
   // Set extraction method for specific properties.
   SetExtractor(p_instance_of_, &Facts::ExtractType);
-  SetExtractor(p_occupation_, &Facts::ExtractType);
+  SetExtractor(p_educated_at_, &Facts::ExtractAlmaMater);
+  SetExtractor(p_employer_, &Facts::ExtractEmployer);
+  SetExtractor(p_occupation_, &Facts::ExtractOccupation);
+  SetExtractor(p_position_, &Facts::ExtractPosition);
 }
 
 void Facts::Extract(Handle item) {
@@ -65,26 +68,8 @@ void Facts::Extract(Handle item) {
   }
 }
 
-void Facts::ExtractType(Handle type) {
-  ExtractClosure(type, catalog_->p_subclass_of_.handle());
-}
-
 void Facts::ExtractSimple(Handle value) {
   AddFact(store_->Resolve(value));
-}
-
-void Facts::ExtractDate(Handle value) {
-  // Convert value to date.
-  Date date(Object(store_, store_->Resolve(value)));
-
-  // Add facts for year, decade, and century.
-  AddFact(catalog_->calendar_.Year(date));
-  AddFact(catalog_->calendar_.Decade(date));
-  AddFact(catalog_->calendar_.Century(date));
-}
-
-void Facts::ExtractLocation(Handle location) {
-  ExtractClosure(location, catalog_->p_located_in_.handle());
 }
 
 void Facts::ExtractClosure(Handle item, Handle relation) {
@@ -109,6 +94,86 @@ void Facts::ExtractClosure(Handle item, Handle relation) {
       if (!known) closure.push_back(newitem);
     }
   }
+}
+
+void Facts::ExtractType(Handle type) {
+  ExtractClosure(type, catalog_->p_subclass_of_.handle());
+}
+
+void Facts::ExtractClass(Handle item) {
+  for (const Slot &s : Frame(store_, store_->Resolve(item))) {
+    if (s.name == catalog_->p_instance_of_) {
+      push(catalog_->p_instance_of_);
+      ExtractType(s.value);
+      pop();
+    }
+  }
+}
+
+void Facts::ExtractProperty(Handle item, const Name &property) {
+  Frame f(store_, store_->Resolve(item));
+  Handle value = f.GetHandle(property);
+  if (!value.IsNil()) {
+    push(property);
+    ExtractSimple(value);
+    pop();
+  }
+}
+
+void Facts::ExtractQualifier(Handle item, const Name &qualifier) {
+  Frame f(store_, item);
+  if (!f.Has(Handle::is())) return;
+  Handle value = f.GetHandle(qualifier);
+  if (!value.IsNil()) {
+    push(qualifier);
+    ExtractSimple(value);
+    pop();
+  }
+}
+
+void Facts::ExtractDate(Handle value) {
+  // Convert value to date.
+  Date date(Object(store_, store_->Resolve(value)));
+
+  // Add facts for year, decade, and century.
+  AddFact(catalog_->calendar_.Year(date));
+  AddFact(catalog_->calendar_.Decade(date));
+  AddFact(catalog_->calendar_.Century(date));
+}
+
+void Facts::ExtractLocation(Handle location) {
+  ExtractClosure(location, catalog_->p_located_in_.handle());
+}
+
+void Facts::ExtractPlacement(Handle item) {
+  Frame f(store_, store_->Resolve(item));
+  Handle value = f.GetHandle(catalog_->p_located_in_);
+  if (!value.IsNil()) {
+    push(catalog_->p_located_in_);
+    ExtractLocation(value);
+    pop();
+  }
+}
+
+void Facts::ExtractAlmaMater(Handle institution) {
+  ExtractSimple(institution);
+  ExtractClass(institution);
+  ExtractPlacement(institution);
+  ExtractQualifier(institution, catalog_->p_academic_degree_);
+}
+
+void Facts::ExtractEmployer(Handle employer) {
+  ExtractSimple(employer);
+  ExtractClass(employer);
+}
+
+void Facts::ExtractOccupation(Handle occupation) {
+  ExtractType(occupation);
+}
+
+void Facts::ExtractPosition(Handle position) {
+  ExtractType(position);
+  ExtractProperty(position, catalog_->p_jurisdiction_);
 }
 
 void Facts::AddFact(Handle value) {

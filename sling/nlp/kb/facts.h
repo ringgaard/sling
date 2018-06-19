@@ -64,7 +64,12 @@ class FactCatalog {
   Name p_instance_of_{names_, "P31"};
   Name p_subclass_of_{names_, "P279"};
   Name p_subproperty_of_{names_, "P1647"};
+  Name p_educated_at_{names_, "P69"};
   Name p_occupation_{names_, "P106"};
+  Name p_employer_{names_, "P108"};
+  Name p_jurisdiction_{names_, "P1001"};
+  Name p_position_{names_, "P39"};
+  Name p_academic_degree_{names_, "P512"};
 
   Name n_time_{names_, "/w/time"};
   Name n_item_{names_, "/w/item"};
@@ -75,9 +80,7 @@ class FactCatalog {
 // Set of facts. A fact is represented as a list properties followed by a
 // value, e.g. [P69 P31 Q3918] means "educated at: instance of: university".
 // A fact can be seen as a path through the frame graph with from an unspecified
-// starting frame. Qualified values are preceeded by a nil value, e.g.
-// [P69 nil P512 Q3616388] means
-// "educated at: {+... academic degree: Cand.scient.pol.}".
+// starting frame.
 class Facts {
  public:
   Facts(FactCatalog *catalog, Store *store)
@@ -89,23 +92,48 @@ class Facts {
   // Extract simple fact with no backoff.
   void ExtractSimple(Handle value);
 
+  // Extract simple property from item.
+  void ExtractProperty(Handle item, const Name &property);
+
+  // Extract qualified property from item.
+  void ExtractQualifier(Handle item, const Name &qualifier);
+
+  // Extract fact with backoff through transitive property relation.
+  void ExtractClosure(Handle item, Handle relation);
+
   // Extract type with super-class backoff.
   void ExtractType(Handle type);
+
+  // Extract class using instance-of with super-class backoff.
+  void ExtractClass(Handle item);
 
   // Extract date-valued fact with backoff to year, decade and century.
   void ExtractDate(Handle value);
 
+  // Extract location of item with containment backoff.
+  void ExtractPlacement(Handle item);
+
   // Extract location with containment backoff.
   void ExtractLocation(Handle location);
 
-  // Extract fact with backoff through transitive property relation.
-  void ExtractClosure(Handle item, Handle relation);
+  // Extract alma mater.
+  void ExtractAlmaMater(Handle institution);
+
+  // Extract occupation.
+  void ExtractOccupation(Handle occupation);
+
+  // Extract employer.
+  void ExtractEmployer(Handle employer);
+
+  // Extract position.
+  void ExtractPosition(Handle position);
 
   // Add fact based on current path.
   void AddFact(Handle value);
 
   // Add value to current fact path.
   void push(Handle value) { path_.push_back(value); }
+  void push(const Name &value) { path_.push_back(value.handle()); }
 
   // Remove last value from current fact path.
   void pop() { path_.pop_back(); }

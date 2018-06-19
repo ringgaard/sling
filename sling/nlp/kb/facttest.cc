@@ -41,14 +41,17 @@ class FactVocabularyExtractor {
     // a fast and compact check for detecting if a fact is a new fact. The
     // probabilistic nature of the Bloom filter means that the fact instance
     // counts can be off by one.
+    //BloomFilter filter(4 * (1LL << 30), 8);
+    BloomFilter filter(4000000000LL, 4);
 
     LOG(INFO) << "Extract facts";
     Clock clock;
     clock.start();
-    int num_items = 0;
-    int num_facts = 0;
+    int64 num_items = 0;
+    int64 num_facts = 0;
+    int64 num_filtered = 0;
     SortableMap<Handle, int64, HandleHash> category_lexicon;
-    SortableMap<string, int64> fact_lexicon;
+    SortableMap<int64, std::pair<int64, char *>> fact_lexicon;
     commons.ForAll([&](Handle handle) {
       Frame item(&commons, handle);
       if (!item.IsA(n_item)) return;
@@ -64,11 +67,18 @@ class FactVocabularyExtractor {
 
       // Add facts to fact lexicon.
       for (Handle fact : facts.list()) {
-        string str = ToText(&store, fact);
-        //fact_lexicon[str]++;
-        //LOG(INFO) << "fact " << str;
-        num_facts++;
+        int64 fp = store.Fingerprint(fact);
+        if (filter.add(fp)) {
+          auto &entry = fact_lexicon[fp];
+          if (entry.second == nullptr) {
+            entry.second = strdup(ToText(&store, fact).c_str());
+          }
+          entry.first++;
+        } else {
+          num_filtered++;
+        }
       }
+      num_facts += facts.list().size();
 
       // Extract categories from item.
       for (const Slot &s : item) {
@@ -80,18 +90,48 @@ class FactVocabularyExtractor {
       num_items++;
       if (num_items % 1000000 == 0) {
         LOG(INFO) << num_items << " processed, "
-                  << fact_lexicon.map.size() << " facts";
+                  << num_facts << " facts, "
+                  << num_filtered << " filtered, "
+                  << fact_lexicon.map.size() << " fact types";
       }
     });
     clock.stop();
+    int num_singletons = 0;
+    int64 string_bytes = 0;
+    for (auto &it : fact_lexicon.map) {
+      if (it.second.first == 1) num_singletons++;
+      string_bytes += strlen(it.second.second);
+    }
+
     LOG(INFO) << num_items << " items";
     LOG(INFO) << num_facts << " facts";
+    LOG(INFO) << fact_lexicon.map.size() << " fact types";
+    LOG(INFO) << num_singletons << " singletons";
+    LOG(INFO) << string_bytes << " string bytes";
     LOG(INFO) << clock.secs() << " secs";
+
+    LOG(INFO) << "Write top facts";
+    fact_lexicon.sort();
+    LOG(INFO) << fact_lexicon.array.size() << " facts in lexicon";
+    TextMapOutput factout("/tmp/facts.map");
+    int fact_threshold = 10;
+    int num_facts_selected = 0;
+    for (int i = fact_lexicon.array.size() - 1; i >= 0; --i) {
+      Text fact(fact_lexicon.array[i]->second.second);
+      int64 count = fact_lexicon.array[i]->second.first;
+      if (count < fact_threshold) break;
+      factout.Write(fact, count);
+      num_facts_selected++;
+    }
+    factout.Close();
+    LOG(INFO) << num_facts_selected << " facts selected";
+
+    for (auto &it : fact_lexicon.map) free(it.second.second);
 
     LOG(INFO) << "Write top categories";
     category_lexicon.sort();
     LOG(INFO) << category_lexicon.array.size() << " categories";
-    TextMapOutput catout("/tmp/catmap.txt");
+    TextMapOutput catout("/tmp/categories.map");
     int category_threshold = 10;
     int num_categories = 0;
     for (int i = category_lexicon.array.size() - 1; i >= 0; --i) {
@@ -113,7 +153,14 @@ int main(int argc, char *argv[]) {
   extractor.Run();
 
 #if 0
-  Handle helle = store.Lookup("Q57652");
+  Store commons;
+  LoadStore(FLAGS_kb, &commons);
+  FactCatalog catalog;
+  catalog.Init(&commons);
+  commons.Freeze();
+
+  Handle helle = commons.Lookup("Q57652");
+  Store store(&commons);
   Facts facts(&catalog, &store);
   facts.Extract(helle);
 

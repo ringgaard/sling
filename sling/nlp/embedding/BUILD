@@ -25,3 +25,27 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "fact-embeddings",
+  srcs = ["fact-embeddings.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/base:perf",
+    "//sling/file:textmap",
+    "//sling/myelin:builder",
+    "//sling/myelin:compute",
+    "//sling/myelin:flow",
+    "//sling/myelin/kernel:tensorflow",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/frame:serialization",
+    "//sling/nlp/kb:facts",
+    "//sling/task:process",
+    "//sling/util:embeddings",
+    "//sling/util:bloom",
+    "//sling/util:random",
+    "//sling/util:sortmap",
+    "//sling/util:thread",
+  ],
+  alwayslink = 1,
+)
