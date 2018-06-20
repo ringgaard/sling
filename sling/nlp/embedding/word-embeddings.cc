@@ -378,8 +378,8 @@ class WordEmbeddingsTrainer : public Process {
 
     // Initialize weights.
     Random rnd;
-    myelin::TensorData W0 = model[flow.W0->name];
-    myelin::TensorData W1 = model[flow.W1->name];
+    myelin::TensorData W0 = model[flow.W0];
+    myelin::TensorData W1 = model[flow.W1];
     for (int i = 0; i < vocabulary_size; ++i) {
       for (int j = 0; j < embedding_dims_; ++j) {
         W0.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5);
