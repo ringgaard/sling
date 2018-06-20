@@ -559,7 +559,7 @@ void HTTPServer::ConnectionHandler(HTTPRequest *req, HTTPResponse *rsp) {
     rsp->Append("</td>");
 
     // Keep alive.
-    rsp->Append(conn->keep_ ? "<td>Y</td>" : "<td>Y</td>");
+    rsp->Append(conn->keep_ ? "<td>Y</td>" : "<td>N</td>");
 
     // Idle time.
     rsp->Append("<td>" + SimpleItoa(now - conn->last_) + "</td>");
@@ -567,7 +567,7 @@ void HTTPServer::ConnectionHandler(HTTPRequest *req, HTTPResponse *rsp) {
     rsp->Append("</tr>\n");
     conn = conn->next_;
   }
-  rsp->Append("</ul>\n");
+  rsp->Append("</table>\n");
   rsp->Append("</body></html>\n");
 }
 

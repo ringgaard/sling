@@ -42,7 +42,7 @@ def lex(text, store=None, schema=None):
   # Create store for document if needed.
   if store == None: store = sling.Store()
 
-  # Pase LEX-encoded text.
+  # Parse LEX-encoded text.
   frame = tokenizer.lex(store, text)
 
   # Return document with annotations.
