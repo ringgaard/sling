@@ -40,6 +40,7 @@ cc_library(
     "//sling/frame:store",
     "//sling/frame:serialization",
     "//sling/nlp/kb:facts",
+    "//sling/task:frames",
     "//sling/task:process",
     "//sling/util:embeddings",
     "//sling/util:bloom",

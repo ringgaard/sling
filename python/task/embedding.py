@@ -58,6 +58,7 @@ class EmbeddingWorkflow:
 
   def train_word_embeddings(self, documents=None, vocabulary=None, output=None,
                             language=None):
+    """Train word embeddings."""
     if language == None: language = flags.arg.language
     if documents == None: documents = self.wiki.wikipedia_documents(language)
     if vocabulary == None: vocabulary = self.vocabulary(language)
@@ -96,8 +97,14 @@ class EmbeddingWorkflow:
     return self.wf.resource("categories.map",
                             dir=self.fact_dir(),
                             format="textmap/category")
+  def facts(self):
+    """Resource for resolved facts."""
+    return self.wf.resource("facts.rec",
+                            dir=self.fact_dir(),
+                            format="records/fact")
 
   def extract_fact_lexicon(self):
+    """Build fact and category lexicons."""
     kb = self.wiki.knowledge_base()
     factmap = self.fact_lexicon()
     catmap = self.category_lexicon()
@@ -107,3 +114,17 @@ class EmbeddingWorkflow:
       trainer.attach_output("factmap", factmap)
       trainer.attach_output("catmap", catmap)
       return factmap, catmap
+
+  def extract_facts(self):
+    """Extract facts for items in the knowledge base."""
+    kb = self.wiki.knowledge_base()
+    factmap = self.fact_lexicon()
+    catmap = self.category_lexicon()
+    output = self.facts()
+    with self.wf.namespace("fact-embeddings"):
+      extractor = self.wf.task("fact-extractor")
+      extractor.attach_input("kb", kb)
+      extractor.attach_input("factmap", factmap)
+      extractor.attach_input("catmap", catmap)
+      facts = self.wf.channel(extractor, format="message/frame")
+      return self.wf.write(facts, output, name="fact-writer")

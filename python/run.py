@@ -99,6 +99,11 @@ flags.define("--extract_fact_lexicon",
              default=False,
              action='store_true')
 
+flags.define("--extract_facts",
+             help="extract fact from knowledge base",
+             default=False,
+             action='store_true')
+
 flags.define("--dryrun",
              help="build worflows but do not run them",
              default=False,
@@ -245,6 +250,14 @@ def train_embeddings():
       wf = embedding.EmbeddingWorkflow("fact-lexicon")
       wf.extract_fact_lexicon()
       run_workflow(wf)
+
+  # Extract facts from knowledge base.
+  if flags.arg.extract_facts:
+      log.info("Extract facts from knowledge base")
+      wf = embedding.EmbeddingWorkflow("fact-extraction")
+      wf.extract_facts()
+      run_workflow(wf)
+
 
 if __name__ == '__main__':
   # Parse command-line arguments.

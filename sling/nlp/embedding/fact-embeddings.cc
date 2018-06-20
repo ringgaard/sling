@@ -19,6 +19,7 @@
 #include "sling/frame/store.h"
 #include "sling/frame/serialization.h"
 #include "sling/nlp/kb/facts.h"
+#include "sling/task/frames.h"
 #include "sling/task/process.h"
 #include "sling/util/bloom.h"
 #include "sling/util/sortmap.h"
@@ -56,6 +57,8 @@ class FactLexiconExtractor : public Process {
     Name n_item(names, "/w/item");
     Name p_instance_of(names, "P31");
     Name n_wikimedia_category(names, "Q4167836");
+    Name n_wikimedia_disambiguation(names, "Q4167410");
+
     names.Bind(&commons);
 
     // Initialize fact catalog.
@@ -83,8 +86,10 @@ class FactLexiconExtractor : public Process {
       Frame item(&commons, handle);
       if (!item.IsA(n_item)) return;
 
-      // Skip categories.
-      if (item.GetHandle(p_instance_of) == n_wikimedia_category) return;
+      // Skip categories and disambiguation page items.
+      Handle cls = item.GetHandle(p_instance_of);
+      if (cls == n_wikimedia_category) return;
+      if (cls == n_wikimedia_disambiguation) return;
 
       // Extract facts from item.
       Store store(&commons);
@@ -148,6 +153,147 @@ class FactLexiconExtractor : public Process {
 };
 
 REGISTER_TASK_PROCESSOR("fact-lexicon-extractor", FactLexiconExtractor);
+
+// Extract facts items.
+class FactExtractor : public Process {
+ public:
+  void Run(Task *task) override {
+    // Set up counters.
+    Counter *num_items = task->GetCounter("items");
+    Counter *num_facts = task->GetCounter("facts");
+    Counter *num_facts_extracted = task->GetCounter("facts_extracted");
+    Counter *num_facts_skipped = task->GetCounter("facts_skipped");
+    Counter *num_no_facts = task->GetCounter("items_without_facts");
+    Counter *num_cats = task->GetCounter("categories");
+    Counter *num_cats_extracted = task->GetCounter("categories_extracted");
+    Counter *num_cats_skipped = task->GetCounter("categories_skipped");
+    Counter *num_no_cats = task->GetCounter("items_without_categories");
+
+    // Load knowledge base.
+    LoadStore(task->GetInputFile("kb"), &commons_);
+
+    // Resolve symbols.
+    names_.Bind(&commons_);
+
+    // Initialize fact catalog.
+    FactCatalog catalog;
+    catalog.Init(&commons_);
+    commons_.Freeze();
+
+    // Read fact and category lexicons.
+    ReadFactLexicon(task->GetInputFile("factmap"));
+    ReadCategoryLexicon(task->GetInputFile("catmap"));
+
+    // Get output channel for resolved fact frames.
+    Channel *output = task->GetSink("output");
+
+    // Extract facts from all items in the knowledge base.
+    commons_.ForAll([&](Handle handle) {
+      Frame item(&commons_, handle);
+      if (!item.IsA(n_item_)) return;
+
+      // Skip categories and disambiguation page items.
+      Handle cls = item.GetHandle(p_instance_of_);
+      if (cls == n_wikimedia_category_) return;
+      if (cls == n_wikimedia_disambiguation_) return;
+
+      // Extract facts from item.
+      Store store(&commons_);
+      Facts facts(&catalog, &store);
+      facts.Extract(handle);
+
+      // Add facts to fact lexicon.
+      Handles fact_indicies(&store);
+      for (Handle fact : facts.list()) {
+        int64 fp = store.Fingerprint(fact);
+        auto f = fact_lexicon_.find(fp);
+        if (f != fact_lexicon_.end()) {
+          fact_indicies.push_back(Handle::Integer(f->second));
+        }
+      }
+      int total = facts.list().size();
+      int extracted = fact_indicies.size();
+      int skipped = total - extracted;
+      num_facts->Increment(total);
+      num_facts_extracted->Increment(extracted);
+      num_facts_skipped->Increment(skipped);
+      if (extracted == 0) num_no_facts->Increment();
+
+      // Extract categories from item.
+      Handles category_indicies(&store);
+      for (const Slot &s : item) {
+        if (s.name == p_item_category_) {
+          auto f = category_lexicon_.find(s.value);
+          if (f != category_lexicon_.end()) {
+            category_indicies.push_back(Handle::Integer(f->second));
+            num_cats_extracted->Increment();
+          } else {
+            num_cats_skipped->Increment();
+          }
+          num_cats->Increment();
+        }
+      }
+      if (category_indicies.empty()) num_no_cats->Increment();
+
+      // Build frame with resolved facts.
+      Builder builder(&store);
+      builder.Add(p_item_, item.id());
+      builder.Add(p_facts_, Array(&store, fact_indicies));
+      builder.Add(p_categories_, Array(&store, category_indicies));
+
+      // Output frame with resolved facts on output channel.
+      output->Send(CreateMessage(item.Id(), builder.Create()));
+      num_items->Increment();
+    });
+  }
+
+ private:
+  // Read fact lexicon.
+  void ReadFactLexicon(const string &filename) {
+    Store store(&commons_);
+    TextMapInput factmap(filename);
+    string key;
+    int index;
+    while (factmap.Read(&index, &key, nullptr)) {
+      uint64 fp = FromText(&store, key).Fingerprint();
+      fact_lexicon_[fp] = index;
+    }
+  }
+
+  // Read category lexicon.
+  void ReadCategoryLexicon(const string &filename) {
+    TextMapInput catmap(filename);
+    string key;
+    int index;
+    while (catmap.Read(&index, &key, nullptr)) {
+      Handle cat = commons_.Lookup(key);
+      category_lexicon_[cat] = index;
+    }
+  }
+
+  // Commons store with knowledge base.
+  Store commons_;
+
+  // Fact lexicon mapping from fact fingerprint to fact index.
+  std::unordered_map<uint64, int> fact_lexicon_;
+
+  // Category lexicon mapping from category handle to category index.
+  HandleMap<int> category_lexicon_;
+
+  // Symbols.
+  Names names_;
+  Name p_item_category_{names_, "/w/item/category"};
+  Name n_item_{names_, "/w/item"};
+  Name p_instance_of_{names_, "P31"};
+  Name n_wikimedia_category_{names_, "Q4167836"};
+  Name n_wikimedia_disambiguation_{names_, "Q4167410"};
+
+  Name p_item_{names_, "item"};
+  Name p_facts_{names_, "facts"};
+  Name p_categories_{names_, "categories"};
+};
+
+REGISTER_TASK_PROCESSOR("fact-extractor", FactExtractor);
 
 }  // namespace nlp
 }  // namespace sling
