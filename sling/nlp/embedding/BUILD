@@ -43,6 +43,7 @@ cc_library(
     ":embedding-model",
     "//sling/base",
     "//sling/base:perf",
+    "//sling/file",
     "//sling/file:textmap",
     "//sling/myelin:builder",
     "//sling/myelin:compute",

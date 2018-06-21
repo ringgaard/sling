@@ -14,6 +14,7 @@
 
 #include <utility>
 
+#include "sling/file/file.h"
 #include "sling/file/textmap.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
@@ -146,6 +147,16 @@ class FactLexiconExtractor : public Process {
       num_categories_selected->Increment();
     }
     catout.Close();
+
+    // Write lexicon sizes to output.
+    if (task->GetOutput("numfacts")) {
+      File::WriteContents(task->GetOutputFile("numfacts"),
+                          std::to_string(num_facts_selected->value()));
+    }
+    if (task->GetOutput("numfacts")) {
+      File::WriteContents(task->GetOutputFile("numcats"),
+                          std::to_string(num_categories_selected->value()));
+    }
 
     // Clean up.
     for (auto &it : fact_lexicon.map) free(it.second.second);
