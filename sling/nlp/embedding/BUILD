@@ -1,9 +1,20 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+  name = "embedding-model",
+  srcs = ["embedding-model.cc"],
+  hdrs = ["embedding-model.h"],
+  deps = [
+    "//sling/myelin:builder",
+    "//sling/myelin:flow",
+  ],
+)
+
+cc_library(
   name = "word-embeddings",
   srcs = ["word-embeddings.cc"],
   deps = [
+    ":embedding-model",
     "//sling/base",
     "//sling/base:perf",
     "//sling/file:recordio",
@@ -29,6 +40,7 @@ cc_library(
   name = "fact-embeddings",
   srcs = ["fact-embeddings.cc"],
   deps = [
+    ":embedding-model",
     "//sling/base",
     "//sling/base:perf",
     "//sling/file:textmap",

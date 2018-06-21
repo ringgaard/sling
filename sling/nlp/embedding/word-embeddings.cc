@@ -26,6 +26,7 @@
 #include "sling/myelin/flow.h"
 #include "sling/myelin/kernel/tensorflow.h"
 #include "sling/nlp/document/document.h"
+#include "sling/nlp/embedding/embedding-model.h"
 #include "sling/task/accumulator.h"
 #include "sling/task/documents.h"
 #include "sling/task/process.h"
@@ -265,90 +266,13 @@ class WordVocabularySampler {
   int oov_ = 0;
 };
 
-// Word embedding model (Mikolov word2vec skipgram model).
-struct WordEmbeddingsFlow : public myelin::Flow {
-  WordEmbeddingsFlow(int words, int dims, int window)
-      : words(words), dims(dims), window(window) {
-    BuildModel();
-    BuildLayer0();
-    BuildLayer1();
-    BuildLayer0Back();
-  }
-
-  // Create embedding matrices.
-  void BuildModel() {
-    W0 = AddWeights("W0", myelin::DT_FLOAT, {words, dims});
-    W1 = AddWeights("W1", myelin::DT_FLOAT, {words, dims});
-  }
-
-  // Build layer 0 computing hidden from input.
-  void BuildLayer0() {
-    layer0 = AddFunction("layer0");
-    myelin::FlowBuilder tf(this, layer0);
-
-    features = tf.Var("features", myelin::DT_INT32, {1, window * 2});
-    hidden = tf.Name(tf.GatherAvg(W0, features), "hidden");
-  }
-
-  // Build layer 1 computing output from hidden, scaled loss, and update
-  // layer1.
-  void BuildLayer1() {
-    layer1 = AddFunction("layer1");
-    myelin::FlowBuilder tf(this, layer1);
-
-    // Inputs.
-    auto *alpha = tf.Var("alpha", myelin::DT_FLOAT, {});
-    auto *label = tf.Var("label", myelin::DT_FLOAT, {1, 1});
-    auto *target = tf.Var("target", myelin::DT_INT32, {1, 1});
-    error = tf.Var("error", myelin::DT_FLOAT, {dims});
-    auto *l0 = tf.Instance(layer0);
-    auto *h = tf.Ref(l0, hidden);
-
-    // Output.
-    auto *embed = tf.Gather(W1, target);
-    auto *output = tf.Dot(embed, h, dims);
-
-    // Loss.
-    auto *loss = tf.Mul(tf.Sub(label, tf.Sigmoid(output)), alpha);
-
-    // Backprop layer 1.
-    tf.AssignAdd(error, tf.Mul(embed, loss));
-    tf.ScatterAdd(W1, target, tf.Mul(h, loss));
-  }
-
-  // Update layer 0 weights from accumulated error in layer 1.
-  void BuildLayer0Back() {
-    layer0b = AddFunction("layer0b");
-    myelin::FlowBuilder tf(this, layer0b);
-
-    auto *l0 = tf.Instance(layer0);
-    auto *l1 = tf.Instance(layer1);
-    tf.ScatterAdd(W0, tf.Ref(l0, features), tf.Ref(l1, error));
-  }
-
-  int words;             // number of words
-  int dims;              // number of dimensions in embedding vectors
-  int window;            // feature window size
-
-  Variable *W0;          // layer 0 embedding matrix
-  Variable *W1;          // layer 1 embedding matrix
-
-  Variable *features;    // feature input
-  Variable *hidden;      // hidden activation
-  Variable *error;       // accumulated error
-
-  Function *layer0;      // layer 0 forward computation
-  Function *layer1;      // layer 1 forward/backward computation
-  Function *layer0b;     // layer 0 backward computation
-};
-
-// Trainer for word embeddings model. The trainer supports running training on
-// multiple threads concurrently. While this can significantly speed up
-// the processing time, this will also lead to non-determinism because of
-// concurrent access to shared data structure, i.e. the weight matrices in the
-// network. However, the updates are usually small, so in practice these unsafe
-// updates are usually not harmful and adding mutexes to serialize access to the
-// model slows down training considerably.
+// Trainer for word embeddings model using Mikolov word2vec skipgram model. The
+// trainer supports running training on multiple threads concurrently. While
+// this can significantly speed up the processing time, this will also lead to
+// non-determinism because of concurrent access to shared data structure, i.e.
+// the weight matrices in the network. However, the updates are usually small,
+// so in practice these unsafe updates are usually not harmful and adding
+// mutexes to serialize access to the model slows down training considerably.
 class WordEmbeddingsTrainer : public Process {
  public:
   // Run training of embedding net.
@@ -370,16 +294,16 @@ class WordEmbeddingsTrainer : public Process {
     // Build embedding model.
     myelin::Library library;
     myelin::RegisterTensorflowLibrary(&library);
-    WordEmbeddingsFlow flow(vocabulary_size, embedding_dims_, window_);
-    flow.Analyze(library);
+    flow_.Init(vocabulary_size, vocabulary_size, embedding_dims_, window_ * 2);
+    flow_.Analyze(library);
     myelin::Network model;
     model.options().flops_address = Perf::flopptr();
-    CHECK(model.Compile(flow, library));
+    CHECK(model.Compile(flow_, library));
 
     // Initialize weights.
     Random rnd;
-    myelin::TensorData W0 = model[flow.W0];
-    myelin::TensorData W1 = model[flow.W1];
+    myelin::TensorData W0 = model[flow_.W0];
+    myelin::TensorData W1 = model[flow_.W1];
     for (int i = 0; i < vocabulary_size; ++i) {
       for (int j = 0; j < embedding_dims_; ++j) {
         W0.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5);
@@ -440,21 +364,21 @@ class WordEmbeddingsTrainer : public Process {
     std::vector<int> words;
 
     // Set up model compute instances.
-    myelin::Instance l0(model->GetCell("layer0"));
-    myelin::Instance l1(model->GetCell("layer1"));
-    myelin::Instance l0b(model->GetCell("layer0b"));
+    myelin::Instance l0(model->GetCell(flow_.layer0));
+    myelin::Instance l1(model->GetCell(flow_.layer1));
+    myelin::Instance l0b(model->GetCell(flow_.layer0b));
 
-    int *features = l0.Get<int>(model->GetParameter("layer0/features"));
+    int *features = l0.Get<int>(model->GetParameter(flow_.fv));
     int *fend = features + 2 * window_;
-    int *target = l1.Get<int>(model->GetParameter("layer1/target"));
-    float *label = l1.Get<float>(model->GetParameter("layer1/label"));
-    float *alpha = l1.Get<float>(model->GetParameter("layer1/alpha"));
+    int *target = l1.Get<int>(model->GetParameter(flow_.target));
+    float *label = l1.Get<float>(model->GetParameter(flow_.label));
+    float *alpha = l1.Get<float>(model->GetParameter(flow_.alpha));
     *alpha = learning_rate_;
-    myelin::Tensor *error = model->GetParameter("layer1/error");
+    myelin::Tensor *error = model->GetParameter(flow_.error);
 
-    l1.Set(model->GetParameter("layer1/layer0"), &l0);
-    l0b.Set(model->GetParameter("layer0b/layer0"), &l0);
-    l0b.Set(model->GetParameter("layer0b/layer1"), &l1);
+    l1.Set(model->GetParameter(flow_.l1_l0), &l0);
+    l0b.Set(model->GetParameter(flow_.l0b_l0), &l0);
+    l0b.Set(model->GetParameter(flow_.l0b_l1), &l1);
 
     RecordFileOptions options;
     RecordReader input(filename, options);
@@ -557,6 +481,9 @@ class WordEmbeddingsTrainer : public Process {
   double min_learning_rate_ = 0.0001;  // minimum learning rate
   int embedding_dims_ = 256;           // size of embedding vectors
   double subsampling_ = 1e-3;          // sub-sampling rate
+
+  // Flow model for word embedding trainer.
+  EmbeddingsFlow flow_;
 
   // Vocabulary for embeddings.
   WordVocabularySampler vocabulary_;
