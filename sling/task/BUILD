@@ -81,6 +81,7 @@ cc_library(
   hdrs = ["process.h"],
   deps = [
     ":task",
+    "//sling/util:mutex",
     "//sling/util:thread",
   ],
 )

@@ -14,15 +14,21 @@
 
 #include <utility>
 
-#include "sling/file/file.h"
+#include "sling/base/perf.h"
 #include "sling/file/textmap.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/frame/serialization.h"
+#include "sling/myelin/compute.h"
+#include "sling/myelin/builder.h"
+#include "sling/myelin/flow.h"
+#include "sling/myelin/kernel/tensorflow.h"
+#include "sling/nlp/embedding/embedding-model.h"
 #include "sling/nlp/kb/facts.h"
 #include "sling/task/frames.h"
 #include "sling/task/process.h"
 #include "sling/util/bloom.h"
+#include "sling/util/mutex.h"
 #include "sling/util/sortmap.h"
 
 namespace sling {
@@ -147,16 +153,6 @@ class FactLexiconExtractor : public Process {
       num_categories_selected->Increment();
     }
     catout.Close();
-
-    // Write lexicon sizes to output.
-    if (task->GetOutput("numfacts")) {
-      File::WriteContents(task->GetOutputFile("numfacts"),
-                          std::to_string(num_facts_selected->value()));
-    }
-    if (task->GetOutput("numfacts")) {
-      File::WriteContents(task->GetOutputFile("numcats"),
-                          std::to_string(num_categories_selected->value()));
-    }
 
     // Clean up.
     for (auto &it : fact_lexicon.map) free(it.second.second);
@@ -305,6 +301,81 @@ class FactExtractor : public Process {
 };
 
 REGISTER_TASK_PROCESSOR("fact-extractor", FactExtractor);
+
+// Trainer for fact embeddings model.
+class FactEmbeddingsTrainer : public Process {
+ public:
+  // Run training of embedding net.
+  void Run(Task *task) override {
+    // Get training parameters.
+    task->Fetch("embedding_dims", &embedding_dims_);
+    task->Fetch("max_features", &max_features_);
+
+    // Bind names.
+    names_.Bind(&store_);
+
+    // Read training instances from input.
+    int fact_dims = 0;
+    int category_dims = 0;
+    Queue input(this, task->GetSources("input"));
+    Message *message;
+    while (input.Read(&message)) {
+      // Parse message into frame.
+      Frame instance = DecodeMessage(&store_, message);
+      Array facts = instance.Get(p_facts_).AsArray();
+      Array categories = instance.Get(p_categories_).AsArray();
+      if (facts.length() > 0 && categories.length() > 0) {
+        instances_.push_back(instance.handle());
+
+        // Check for max fact id.
+        for (int i = 0; i < facts.length(); ++i) {
+          int fact_id = facts.get(i).AsInt();
+          if (fact_id >= fact_dims) fact_dims = fact_id + 1;
+        }
+
+        // Check for max category id.
+        for (int i = 0; i < categories.length(); ++i) {
+          int category_id = categories.get(i).AsInt();
+          if (category_id >= category_dims) category_dims = category_dims + 1;
+        }
+      }
+
+      delete message;
+    }
+    store_.Freeze();
+
+    // Build embedding model.
+    myelin::Library library;
+    myelin::RegisterTensorflowLibrary(&library);
+    flow_.Init(fact_dims, category_dims, embedding_dims_, max_features_);
+    flow_.Analyze(library);
+    myelin::Network model;
+    model.options().flops_address = Perf::flopptr();
+    CHECK(model.Compile(flow_, library));
+  }
+
+ private:
+  // Flow model for fact embedding trainer.
+  EmbeddingsFlow flow_;
+
+  // Store for training instances.
+  Store store_;
+
+  // Training instances.
+  Handles instances_{&store_};
+
+  // Training parameters.
+  int embedding_dims_ = 256;   // size of embedding vectors
+  int max_features_ = 256;     // maximum number of fact features per item
+
+  // Symbols.
+  Names names_;
+  Name p_item_{names_, "item"};
+  Name p_facts_{names_, "facts"};
+  Name p_categories_{names_, "categories"};
+};
+
+REGISTER_TASK_PROCESSOR("fact-embeddings-trainer", FactEmbeddingsTrainer);
 
 }  // namespace nlp
 }  // namespace sling

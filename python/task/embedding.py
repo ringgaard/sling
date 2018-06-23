@@ -97,13 +97,6 @@ class EmbeddingWorkflow:
     return self.wf.resource("categories.map",
                             dir=self.fact_dir(),
                             format="textmap/category")
-  def num_facts(self):
-    """Resource for size of fact lexicon."""
-    return self.wf.resource("numfacts.txt", dir=self.fact_dir(), format="text")
-
-  def num_categories(self):
-    """Resource for size of category lexicon."""
-    return self.wf.resource("numcats.txt", dir=self.fact_dir(), format="text")
 
   def facts(self):
     """Resource for resolved facts."""
@@ -121,8 +114,6 @@ class EmbeddingWorkflow:
       trainer.attach_input("kb", kb)
       trainer.attach_output("factmap", factmap)
       trainer.attach_output("catmap", catmap)
-      trainer.attach_output("numfacts", self.num_facts())
-      trainer.attach_output("numcats", self.num_categories())
       return factmap, catmap
 
   def extract_facts(self):
