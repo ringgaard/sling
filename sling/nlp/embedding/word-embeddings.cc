@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "sling/base/flags.h"
 #include "sling/base/perf.h"
 #include "sling/file/recordio.h"
 #include "sling/file/textmap.h"
@@ -34,6 +35,8 @@
 #include "sling/util/random.h"
 #include "sling/util/thread.h"
 #include "sling/util/unicode.h"
+
+DEFINE_string(word2vec_flow, "", "fact2vec flow output file");
 
 namespace sling {
 namespace nlp {
@@ -295,6 +298,7 @@ class WordEmbeddingsTrainer : public Process {
     myelin::Library library;
     myelin::RegisterTensorflowLibrary(&library);
     flow_.Init(vocabulary_size, vocabulary_size, embedding_dims_, window_ * 2);
+    if (!FLAGS_word2vec_flow.empty()) flow_.Save(FLAGS_word2vec_flow);
     flow_.Analyze(library);
     myelin::Network model;
     model.options().flops_address = Perf::flopptr();

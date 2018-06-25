@@ -104,6 +104,18 @@ class EmbeddingWorkflow:
                             dir=self.fact_dir(),
                             format="records/fact")
 
+  def fact_embeddings(self):
+    """Resource for fact embeddings in word2vec embedding format."""
+    return self.wf.resource("fact-embeddings.vec",
+                            dir=self.fact_dir(),
+                            format="embeddings")
+
+  def category_embeddings(self):
+    """Resource for category embeddings in word2vec embedding format."""
+    return self.wf.resource("category-embeddings.vec",
+                            dir=self.fact_dir(),
+                            format="embeddings")
+
   def extract_fact_lexicon(self):
     """Build fact and category lexicons."""
     kb = self.wiki.knowledge_base()
@@ -129,3 +141,27 @@ class EmbeddingWorkflow:
       extractor.attach_input("catmap", catmap)
       facts = self.wf.channel(extractor, format="message/frame")
       return self.wf.write(facts, output, name="fact-writer")
+
+  def train_fact_embeddings(self):
+    """Train fact and category embeddings."""
+    facts = self.facts()
+    factmap = self.fact_lexicon()
+    catmap = self.category_lexicon()
+    fact_embeddings = self.fact_embeddings()
+    category_embeddings = self.category_embeddings()
+    with self.wf.namespace("fact-embeddings"):
+      trainer = self.wf.task("fact-embeddings-trainer")
+      trainer.add_params({
+        "threads" : 8,
+        "iterations" : 10, #100,
+        "negative": 20,
+        "learning_rate": 0.025,
+        "min_learning_rate": 0.0001,
+        "embedding_dims": 256,
+      })
+      self.wf.connect(self.wf.read(facts, name="fact-reader"), trainer)
+      trainer.attach_input("factmap", factmap)
+      trainer.attach_input("catmap", catmap)
+      trainer.attach_output("factvecs", fact_embeddings)
+      trainer.attach_output("catvecs", category_embeddings)
+    return fact_embeddings, category_embeddings

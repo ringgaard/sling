@@ -104,6 +104,11 @@ flags.define("--extract_facts",
              default=False,
              action='store_true')
 
+flags.define("--train_fact_embeddings",
+             help="train fact and category embeddings",
+             default=False,
+             action='store_true')
+
 flags.define("--dryrun",
              help="build worflows but do not run them",
              default=False,
@@ -256,6 +261,13 @@ def train_embeddings():
       log.info("Extract facts from knowledge base")
       wf = embedding.EmbeddingWorkflow("fact-extraction")
       wf.extract_facts()
+      run_workflow(wf)
+
+  # Train fact and category embeddings.
+  if flags.arg.train_fact_embeddings:
+      log.info("Train fact and category embeddings")
+      wf = embedding.EmbeddingWorkflow("fact-embeddings")
+      wf.train_fact_embeddings()
       run_workflow(wf)
 
 

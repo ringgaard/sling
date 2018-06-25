@@ -20,7 +20,17 @@
 namespace sling {
 namespace nlp {
 
-// Embedding model with input layer, hidden layer, and output layer.
+// Embedding model for training vector embeddings using the word2vec algorithm.
+// This uses a network with an input layer, a hidden layer (the embedding), and
+// an output layer, and optimizes the following objective function:
+//
+// L = \sum_i y_i log(sigmoid(a)) + (1-y_i) log(sigmoid(-a)), where
+//   y_i \in {0, 1} is the item label
+//   a = <w0_i, w1_o>
+//   w0_i is the average of input embeddings w0_i
+//   w1_o is the average of output embeddings w1_o
+//
+// See Mikolov et al. 2013 for more details.
 struct EmbeddingsFlow : public myelin::Flow {
   void Init(int inputs, int outputs, int dims, int features);
 

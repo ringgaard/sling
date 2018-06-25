@@ -68,6 +68,7 @@ void EmbeddingReader::NextWord(string *output) {
     char ch;
     CHECK(input_.Next(&ch));
     if (ch == ' ' || ch == '\n') break;
+    if (ch == '_') ch = ' ';
     output->push_back(ch);
   }
 }
@@ -90,7 +91,11 @@ bool EmbeddingWriter::Close() {
 void EmbeddingWriter::Write(const string &word,
                             const std::vector<float> &embedding) {
   // Write word.
-  output_.Write(word);
+  if (word.find(' ') == string::npos) {
+    output_.Write(word);
+  } else {
+    for (char c : word) output_.WriteChar(c == ' ' ? '_' : c);
+  }
   output_.WriteChar(' ');
 
   // Write embedding vector.
@@ -101,4 +106,3 @@ void EmbeddingWriter::Write(const string &word,
 }
 
 }  // namespace sling
-

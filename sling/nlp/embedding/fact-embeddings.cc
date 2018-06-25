@@ -14,6 +14,7 @@
 
 #include <utility>
 
+#include "sling/base/flags.h"
 #include "sling/base/perf.h"
 #include "sling/file/textmap.h"
 #include "sling/frame/object.h"
@@ -28,8 +29,12 @@
 #include "sling/task/frames.h"
 #include "sling/task/process.h"
 #include "sling/util/bloom.h"
+#include "sling/util/embeddings.h"
 #include "sling/util/mutex.h"
+#include "sling/util/random.h"
 #include "sling/util/sortmap.h"
+
+DEFINE_string(fact2vec_flow, "", "fact2vec flow output file");
 
 namespace sling {
 namespace nlp {
@@ -308,15 +313,39 @@ class FactEmbeddingsTrainer : public Process {
   // Run training of embedding net.
   void Run(Task *task) override {
     // Get training parameters.
+    task->Fetch("iterations", &iterations_);
     task->Fetch("embedding_dims", &embedding_dims_);
     task->Fetch("max_features", &max_features_);
+    task->Fetch("threads", &threads_);
+    task->Fetch("learning_rate", &learning_rate_);
+    task->Fetch("min_learning_rate", &min_learning_rate_);
+    task->Fetch("negative", &negative_);
+
+    // Set up counters.
+    Counter *num_instances = task->GetCounter("instances");
+    Counter *num_instances_skipped = task->GetCounter("instances_skipped");
+    num_epochs_completed_ = task->GetCounter("epochs_completed");
+    num_feature_overflows_ = task->GetCounter("feature_overflows");
 
     // Bind names.
     names_.Bind(&store_);
 
+    // Read fact lexicon.
+    std::vector<string> fact_lexicon;
+    TextMapInput factmap(task->GetInputFile("factmap"));
+    while (factmap.Next()) fact_lexicon.push_back(factmap.key());
+    int fact_dims = fact_lexicon.size();
+    task->GetCounter("facts")->Increment(fact_dims);
+
+    // Read category lexicon.
+    std::vector<string> category_lexicon;
+    TextMapInput catmap(task->GetInputFile("catmap"));
+    while (catmap.Next()) category_lexicon.push_back(catmap.key());
+    int category_dims = category_lexicon.size();
+    task->GetCounter("categories")->Increment(category_dims);
+
     // Read training instances from input.
-    int fact_dims = 0;
-    int category_dims = 0;
+    LOG(INFO) << "Reading facts";
     Queue input(this, task->GetSources("input"));
     Message *message;
     while (input.Read(&message)) {
@@ -326,32 +355,144 @@ class FactEmbeddingsTrainer : public Process {
       Array categories = instance.Get(p_categories_).AsArray();
       if (facts.length() > 0 && categories.length() > 0) {
         instances_.push_back(instance.handle());
-
-        // Check for max fact id.
-        for (int i = 0; i < facts.length(); ++i) {
-          int fact_id = facts.get(i).AsInt();
-          if (fact_id >= fact_dims) fact_dims = fact_id + 1;
-        }
-
-        // Check for max category id.
-        for (int i = 0; i < categories.length(); ++i) {
-          int category_id = categories.get(i).AsInt();
-          if (category_id >= category_dims) category_dims = category_dims + 1;
-        }
+        num_instances->Increment();
+      } else {
+        num_instances_skipped->Increment();
       }
 
       delete message;
     }
     store_.Freeze();
+    epochs_ = instances_.size() * iterations_;
+    task->GetCounter("epochs_total")->Increment(epochs_);
 
     // Build embedding model.
+    LOG(INFO) << "Building model";
     myelin::Library library;
     myelin::RegisterTensorflowLibrary(&library);
     flow_.Init(fact_dims, category_dims, embedding_dims_, max_features_);
+    if (!FLAGS_fact2vec_flow.empty()) flow_.Save(FLAGS_fact2vec_flow);
     flow_.Analyze(library);
     myelin::Network model;
     model.options().flops_address = Perf::flopptr();
     CHECK(model.Compile(flow_, library));
+
+    // Initialize weights.
+    Random rnd;
+    myelin::TensorData W0 = model[flow_.W0];
+    myelin::TensorData W1 = model[flow_.W1];
+    for (int i = 0; i < fact_dims; ++i) {
+      for (int j = 0; j < embedding_dims_; ++j) {
+        W0.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5);
+      }
+    }
+
+    // Start training threads.
+    LOG(INFO) << "Training model";
+    //threads_ = 1; // TODO: remove
+    WorkerPool pool;
+    pool.Start(threads_, [this, &model](int index) { Worker(index, &model); });
+
+    // Wait until workers completes.
+    pool.Join();
+
+    // Write fact embeddings to output file.
+    LOG(INFO) << "Writing embeddings";
+    std::vector<float> embedding(embedding_dims_);
+    EmbeddingWriter fact_writer(task->GetOutputFile("factvecs"),
+                                fact_lexicon.size(), embedding_dims_);
+    for (int i = 0; i < fact_lexicon.size(); ++i) {
+      for (int j = 0; j < embedding_dims_; ++j) {
+        embedding[j] = W0.at<float>(i, j);
+      }
+      fact_writer.Write(fact_lexicon[i], embedding);
+    }
+    CHECK(fact_writer.Close());
+
+    // Write category embeddings to output file.
+    EmbeddingWriter category_writer(task->GetOutputFile("catvecs"),
+                                    category_lexicon.size(), embedding_dims_);
+    for (int i = 0; i < category_lexicon.size(); ++i) {
+      for (int j = 0; j < embedding_dims_; ++j) {
+        embedding[j] = W1.at<float>(i, j);
+      }
+      category_writer.Write(category_lexicon[i], embedding);
+    }
+    CHECK(category_writer.Close());
+  }
+
+  // Worker thread for training embedding model.
+  void Worker(int index, myelin::Network *model) {
+    Random rnd;
+    rnd.seed(index);
+
+    // Set up model compute instances.
+    myelin::Instance l0(model->GetCell(flow_.layer0));
+    myelin::Instance l1(model->GetCell(flow_.layer1));
+    myelin::Instance l0b(model->GetCell(flow_.layer0b));
+
+    int *features = l0.Get<int>(model->GetParameter(flow_.fv));
+    int *fend = features + max_features_;
+    int *target = l1.Get<int>(model->GetParameter(flow_.target));
+    float *label = l1.Get<float>(model->GetParameter(flow_.label));
+    float *alpha = l1.Get<float>(model->GetParameter(flow_.alpha));
+    *alpha = learning_rate_;
+    myelin::Tensor *error = model->GetParameter(flow_.error);
+    int category_dims = flow_.W1->dim(0);
+
+    l1.Set(model->GetParameter(flow_.l1_l0), &l0);
+    l0b.Set(model->GetParameter(flow_.l0b_l0), &l0);
+    l0b.Set(model->GetParameter(flow_.l0b_l1), &l1);
+
+    // Random sample instances from training data.
+    for (;;) {
+      // Get next instance.
+      int sample = rnd.UniformInt(instances_.size());
+      Frame instance(&store_, instances_[sample]);
+      Array facts = instance.Get(p_facts_).AsArray();
+      Array categories = instance.Get(p_categories_).AsArray();
+
+      // Initialize features with facts.
+      int *f = features;
+      for (int i = 0; i < facts.length(); ++i) {
+        if (f == fend) {
+          num_feature_overflows_->Increment();
+          break;
+        }
+        *f++ = facts.get(i).AsInt();
+      }
+      if (f < fend) *f = -1;
+
+      // Propagate input to hidden layer.
+      l0.Compute();
+      VLOG(3) << "l0 for " << sample << ":\n" << l0.ToString();
+
+      // Propagate hidden to output and back. This also accumulates the
+      // errors that should be propagated back to the input layer.
+      l1.Clear(error);
+      *label = 1.0;
+      for (int i = 0; i < categories.length(); ++i) {
+        *target = categories.get(i).AsInt();
+        l1.Compute();
+        VLOG(3) << "l1 +ve:\n" << l1.ToString();
+      }
+
+      // Randomly sample negative categories.
+      *label = 0.0;
+      for (int d = 0; d < negative_; ++d) {
+        *target = rnd.UniformInt(category_dims);
+        l1.Compute();
+        VLOG(3) << "l1 -ve:\n" << l1.ToString();
+      }
+
+      // Propagate hidden to input.
+      l0b.Compute();
+      VLOG(3) << "l0b:\n" << l0b.ToString();
+
+      // Check if we are done.
+      num_epochs_completed_->Increment();
+      if (num_epochs_completed_->value() >= epochs_) break;
+    }
   }
 
  private:
@@ -365,14 +506,26 @@ class FactEmbeddingsTrainer : public Process {
   Handles instances_{&store_};
 
   // Training parameters.
-  int embedding_dims_ = 256;   // size of embedding vectors
-  int max_features_ = 256;     // maximum number of fact features per item
+  int iterations_ = 5;                 // number of training iterations
+  int embedding_dims_ = 256;           // size of embedding vectors
+  int max_features_ = 256;             // maximum fact features per item
+  int threads_ = 5;                    // number of training worker threads
+  double learning_rate_ = 0.025;       // learning rate
+  double min_learning_rate_ = 0.0001;  // minimum learning rate
+  int negative_ = 5;                   // negative examples per positive example
+
+  // Total number of training epochs.
+  int epochs_;
 
   // Symbols.
   Names names_;
   Name p_item_{names_, "item"};
   Name p_facts_{names_, "facts"};
   Name p_categories_{names_, "categories"};
+
+  // Staticstics.
+  Counter *num_epochs_completed_ = nullptr;
+  Counter *num_feature_overflows_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("fact-embeddings-trainer", FactEmbeddingsTrainer);
