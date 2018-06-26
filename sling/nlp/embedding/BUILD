@@ -63,3 +63,21 @@ cc_library(
   ],
   alwayslink = 1,
 )
+
+cc_binary(
+  name = "category-facts",
+  srcs = ["category-facts.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/frame:serialization",
+    "//sling/myelin:builder",
+    "//sling/myelin:compute",
+    "//sling/myelin/kernel:tensorflow",
+    "//sling/util:embeddings",
+    "//sling/util:top",
+  ],
+)
+

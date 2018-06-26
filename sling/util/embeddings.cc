@@ -46,10 +46,10 @@ bool EmbeddingReader::Next() {
   // Optionally normalize embedding vector to unit length.
   if (normalize_) {
     float sum = 0.0;
-    for (int i = 0; i < dim_; ++i) sum += data[i] * data[i];
+    for (int i = 0; i < dim_; ++i) sum += embedding_[i] * embedding_[i];
     if (sum > 0.0) {
       float l2 = sqrt(sum);
-      for (int i = 0; i < dim_; ++i) data[i] /= l2;
+      for (int i = 0; i < dim_; ++i) embedding_[i] /= l2;
     }
   }
 
