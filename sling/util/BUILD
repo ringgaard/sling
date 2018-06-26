@@ -41,6 +41,11 @@ cc_library(
 )
 
 cc_library(
+  name = "top",
+  hdrs = ["top.h"],
+)
+
+cc_library(
   name = "unicode",
   hdrs = [
     "unicode.h",
