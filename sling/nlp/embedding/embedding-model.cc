@@ -21,12 +21,7 @@ namespace nlp {
 
 using namespace myelin;
 
-void EmbeddingsFlow::Init(int inputs, int outputs, int dims, int features) {
-  this->inputs = inputs;
-  this->outputs = outputs;
-  this->dims = dims;
-  this->features = features;
-
+void EmbeddingsFlow::Init() {
   BuildModel();
   BuildLayer0();
   BuildLayer1();
@@ -42,7 +37,7 @@ void EmbeddingsFlow::BuildLayer0() {
   layer0 = AddFunction("layer0");
   FlowBuilder tf(this, layer0);
 
-  fv = tf.Var("features", DT_INT32, {1, features});
+  fv = tf.Var("features", DT_INT32, {1, in_features});
   hidden = tf.Name(tf.GatherAvg(W0, fv), "hidden");
 }
 
@@ -53,21 +48,24 @@ void EmbeddingsFlow::BuildLayer1() {
   // Inputs.
   alpha = tf.Var("alpha", DT_FLOAT, {});
   label = tf.Var("label", DT_FLOAT, {1, 1});
-  target = tf.Var("target", DT_INT32, {1, 1});
+  target = tf.Var("target", DT_INT32, {1, out_features});
   error = tf.Var("error", DT_FLOAT, {dims});
   l1_l0 = tf.Instance(layer0);
   auto *h = tf.Ref(l1_l0, hidden);
 
   // Output.
-  auto *embed = tf.Gather(W1, target);
+  bool single = out_features == 1;
+  auto *embed = single ? tf.Gather(W1, target) : tf.GatherAvg(W1, target);
   auto *output = tf.Dot(embed, h, dims);
 
   // Loss.
-  auto *loss = tf.Mul(tf.Sub(label, tf.Sigmoid(output)), alpha);
+  loss = tf.Name(tf.Sub(label, tf.Sigmoid(output)), "loss");
+  loss->set_out();
+  auto *eta = tf.Mul(loss, alpha);
 
   // Backprop layer 1.
-  tf.AssignAdd(error, tf.Mul(embed, loss));
-  tf.ScatterAdd(W1, target, tf.Mul(h, loss));
+  tf.AssignAdd(error, tf.Mul(embed, eta));
+  tf.ScatterAdd(W1, target, tf.Mul(h, eta));
 }
 
 void EmbeddingsFlow::BuildLayer0Back() {
@@ -81,4 +79,3 @@ void EmbeddingsFlow::BuildLayer0Back() {
 
 }  // namespace nlp
 }  // namespace sling
-

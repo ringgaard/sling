@@ -379,7 +379,7 @@ class Tagger {
       prev_loss_ = loss;
       prev_acc_ = acc;
 
-      // Check is we are done.
+      // Check if we are done.
       if (epoch_ >= FLAGS_epochs) break;
     }
 

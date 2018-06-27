@@ -32,32 +32,34 @@ namespace nlp {
 //
 // See Mikolov et al. 2013 for more details.
 struct EmbeddingsFlow : public myelin::Flow {
-  void Init(int inputs, int outputs, int dims, int features);
+  void Init();
 
-  int inputs;            // number of input dimensions
-  int outputs;           // number of output dimensions
-  int dims;              // number of dimensions in embedding vectors
-  int features;          // (maximum) number of input features
+  int inputs = 0;         // number of input dimensions
+  int outputs = 0;        // number of output dimensions
+  int dims = 64;          // number of dimensions in embedding vectors
+  int in_features = 32;   // (maximum) number of input features
+  int out_features = 1;   // (maximum) number of output features
 
-  Variable *W0;          // input embedding matrix
-  Variable *W1;          // output embedding matrix
+  Variable *W0;           // input embedding matrix
+  Variable *W1;           // output embedding matrix
 
-  Variable *fv;          // input feature vector
-  Variable *hidden;      // hidden activation
+  Variable *fv;           // input feature vector
+  Variable *hidden;       // hidden activation
 
-  Variable *alpha;       // learning rate
-  Variable *label;       // output label (1=positive, 0=negative example)
-  Variable *target;      // output target
+  Variable *alpha;        // learning rate
+  Variable *label;        // output label (1=positive, 0=negative example)
+  Variable *target;       // output target
 
-  Variable *error;       // accumulated error
+  Variable *loss;         // loss for example
+  Variable *error;        // accumulated error
 
-  Function *layer0;      // layer 0 forward computation
-  Function *layer1;      // layer 1 forward/backward computation
-  Function *layer0b;     // layer 0 backward computation
+  Function *layer0;       // layer 0 forward computation
+  Function *layer1;       // layer 1 forward/backward computation
+  Function *layer0b;      // layer 0 backward computation
 
-  Variable *l1_l0;       // reference to layer 0 in layer 1
-  Variable *l0b_l0;      // reference to layer 0 in layer 0b
-  Variable *l0b_l1;      // reference to layer 1 in layer 0b
+  Variable *l1_l0;        // reference to layer 0 in layer 1
+  Variable *l0b_l0;       // reference to layer 0 in layer 0b
+  Variable *l0b_l1;       // reference to layer 1 in layer 0b
 
  private:
   // Create embedding matrices.

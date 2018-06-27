@@ -297,7 +297,10 @@ class WordEmbeddingsTrainer : public Process {
     // Build embedding model.
     myelin::Library library;
     myelin::RegisterTensorflowLibrary(&library);
-    flow_.Init(vocabulary_size, vocabulary_size, embedding_dims_, window_ * 2);
+    flow_.inputs = flow_.outputs = vocabulary_size;
+    flow_.dims = embedding_dims_;
+    flow_.in_features = window_ * 2;
+    flow_.Init();
     if (!FLAGS_word2vec_flow.empty()) flow_.Save(FLAGS_word2vec_flow);
     flow_.Analyze(library);
     myelin::Network model;
