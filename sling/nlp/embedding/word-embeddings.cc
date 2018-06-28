@@ -259,7 +259,7 @@ class WordVocabularySampler {
   // Word list.
   std::vector<Entry> entry_;
 
-  // Permutaion of words for sampling.
+  // Permutation of words for sampling.
   std::vector<Element> permutation_;
 
   // Threshold for sub-sampling words

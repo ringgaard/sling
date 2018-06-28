@@ -7,6 +7,7 @@ cc_library(
   deps = [
     "//sling/myelin:builder",
     "//sling/myelin:flow",
+    "//sling/util:random",
   ],
 )
 
@@ -47,6 +48,7 @@ cc_library(
     "//sling/myelin:builder",
     "//sling/myelin:compute",
     "//sling/myelin:flow",
+    "//sling/myelin:profile",
     "//sling/myelin/kernel:tensorflow",
     "//sling/frame:object",
     "//sling/frame:store",

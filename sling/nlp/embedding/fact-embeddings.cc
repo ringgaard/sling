@@ -21,9 +21,10 @@
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/frame/serialization.h"
-#include "sling/myelin/compute.h"
 #include "sling/myelin/builder.h"
+#include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
+#include "sling/myelin/profile.h"
 #include "sling/myelin/kernel/tensorflow.h"
 #include "sling/nlp/embedding/embedding-model.h"
 #include "sling/nlp/kb/facts.h"
@@ -36,6 +37,7 @@
 #include "sling/util/sortmap.h"
 
 DEFINE_string(fact2vec_flow, "", "fact2vec flow output file");
+DEFINE_bool(fact2vec_profile, false, "profile fact2vec flow");
 
 namespace sling {
 namespace nlp {
@@ -342,9 +344,13 @@ class FactEmbeddingsTrainer : public Process {
     // Read category lexicon.
     std::vector<string> category_lexicon;
     TextMapInput catmap(task->GetInputFile("catmap"));
-    while (catmap.Next()) category_lexicon.push_back(catmap.key());
+    while (catmap.Next()) {
+      category_lexicon.push_back(catmap.key());
+      categories_.Add(catmap.id(), std::stof(catmap.value()));
+    }
     int category_dims = category_lexicon.size();
     task->GetCounter("categories")->Increment(category_dims);
+    categories_.Shuffle();
 
     // Read training instances from input.
     LOG(INFO) << "Reading facts";
@@ -380,16 +386,25 @@ class FactEmbeddingsTrainer : public Process {
     if (!FLAGS_fact2vec_flow.empty()) flow_.Save(FLAGS_fact2vec_flow);
     flow_.Analyze(library);
     myelin::Network model;
+    if (FLAGS_fact2vec_profile) {
+      model.options().profiling = true;
+      model.options().global_profiler = true;
+    }
     model.options().flops_address = Perf::flopptr();
     CHECK(model.Compile(flow_, library));
 
     // Initialize weights.
     Random rnd;
     myelin::TensorData W0 = model[flow_.W0];
-    myelin::TensorData W1 = model[flow_.W1];
     for (int i = 0; i < fact_dims; ++i) {
       for (int j = 0; j < embedding_dims_; ++j) {
         W0.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5);
+      }
+    }
+    myelin::TensorData W1 = model[flow_.W1];
+    for (int i = 0; i < category_dims; ++i) {
+      for (int j = 0; j < embedding_dims_; ++j) {
+        W1.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5);
       }
     }
 
@@ -437,6 +452,15 @@ class FactEmbeddingsTrainer : public Process {
     // Wait until workers completes.
     pool.Join();
 
+    // Output profile.
+    if (FLAGS_fact2vec_profile) {
+      for (myelin::Cell *cell : model.cells()) {
+        myelin::Profile profile(cell->profile_summary());
+        string report = profile.ASCIIReport();
+        LOG(INFO) << "Profile:\n" << report;
+      }
+    }
+
     // Write fact embeddings to output file.
     LOG(INFO) << "Writing embeddings";
     std::vector<float> embedding(embedding_dims_);
@@ -462,6 +486,14 @@ class FactEmbeddingsTrainer : public Process {
     CHECK(category_writer.Close());
   }
 
+  // TODO: try single treaded model
+  // TODO: try with 5x negative examples (hmm!)
+  // TODO: try with more/fewer embedding dimensions, e.g. 64 and 1024
+  // TODO: try swapping fact and categories, i.e. cats in and facts out
+  // TODO: try with no negative examples (hmm!)
+  // TODO: try using categories from other random examples as negatives
+  // TODO: try normalizing encodings
+
   // Worker thread for training embedding model.
   void Worker(int index, myelin::Network *model) {
     Random rnd;
@@ -480,7 +512,7 @@ class FactEmbeddingsTrainer : public Process {
     float *alpha = l1.Get<float>(model->GetParameter(flow_.alpha));
     float *loss = l1.Get<float>(model->GetParameter(flow_.loss));
     myelin::Tensor *error = model->GetParameter(flow_.error);
-    int category_dims = flow_.W1->dim(0);
+    //int category_dims = flow_.W1->dim(0);
 
     l1.Set(model->GetParameter(flow_.l1_l0), &l0);
     l0b.Set(model->GetParameter(flow_.l0b_l0), &l0);
@@ -524,19 +556,22 @@ class FactEmbeddingsTrainer : public Process {
       l1.Compute();
       pos_loss_sum_ += *loss;
 
+#if 0
       // Randomly sample negative categories.
       *label = 0.0;
       int *neg = target;
-      for (int d = 0; d < negative_; ++d) {
+      for (int d = 0; d < categories.length() * negative_; ++d) {
         if (neg == tend) {
           num_feature_overflows_->Increment();
           break;
         }
-        *neg++ = rnd.UniformInt(category_dims);
+        //*neg++ = rnd.UniformInt(category_dims);
+        *neg++ = categories_.Sample(rnd.UniformProb());
       }
       if (neg < tend) *neg = -1;
       l1.Compute();
       neg_loss_sum_ -= *loss;
+#endif
 
       // Propagate hidden to input.
       l0b.Compute();
@@ -571,6 +606,9 @@ class FactEmbeddingsTrainer : public Process {
 
   // Training instances.
   Handles instances_{&store_};
+
+  // Category distribution for sampling negative examples.
+  Distribution categories_;
 
   // Training parameters.
   int iterations_ = 5;                 // number of training iterations

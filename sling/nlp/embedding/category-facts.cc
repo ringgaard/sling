@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
     std::getline(std::cin, srcid);
     if (srcid == "q") break;
 
-    // Look source index.
+    // Look up source index.
     auto f = source_map.find(srcid);
     if (f == source_map.end()) {
       std::cout << "Unknown source id\n";

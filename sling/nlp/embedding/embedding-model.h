@@ -15,6 +15,8 @@
 #ifndef SLING_NLP_EMBEDDING_EMBEDDING_FLOW_H_
 #define SLING_NLP_EMBEDDING_EMBEDDING_FLOW_H_
 
+#include <vector>
+
 #include "sling/myelin/flow.h"
 
 namespace sling {
@@ -73,6 +75,35 @@ struct EmbeddingsFlow : public myelin::Flow {
 
   // Update layer 0 weights from accumulated error in layer 1.
   void BuildLayer0Back();
+};
+
+// Distribution over weighted elements which can be sampled according to the
+// weights.
+class Distribution {
+ public:
+  // Add element to distribution.
+  void Add(int index, float weight) {
+    permutation_.emplace_back(index, weight);
+  }
+
+  // Shuffle elements and prepare for sampling.
+  void Shuffle();
+
+  // Sample from distribution.
+  int Sample(float p) const;
+
+ private:
+  // Element in distribution. Before shuffling the probability field holds the
+  // (unnormalized) weight for the element, but after shuffling it is the
+  // cumulative probability.
+  struct Element {
+    Element(int i, float p) : index(i), probability(p) {}
+    int index;
+    float probability;
+  };
+
+  // Permutation of elements for sampling.
+  std::vector<Element> permutation_;
 };
 
 }  // namespace nlp

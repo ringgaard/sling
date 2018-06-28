@@ -154,7 +154,7 @@ class EmbeddingWorkflow:
       trainer.add_params({
         "threads" : 5,
         "iterations" : 100,
-        "negative": 20,
+        "negative": 1,
         "learning_rate": 0.1,
         "learning_rate_decay": 0.5,
         "min_learning_rate": 0.0001,

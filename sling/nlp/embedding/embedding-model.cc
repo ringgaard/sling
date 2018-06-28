@@ -15,6 +15,7 @@
 #include "sling/nlp/embedding/embedding-model.h"
 
 #include "sling/myelin/builder.h"
+#include "sling/util/random.h"
 
 namespace sling {
 namespace nlp {
@@ -77,5 +78,40 @@ void EmbeddingsFlow::BuildLayer0Back() {
   tf.ScatterAdd(W0, tf.Ref(l0b_l0, fv), tf.Ref(l0b_l1, error));
 }
 
+void Distribution::Shuffle() {
+  // Shuffle elements (Fisher-Yates shuffle).
+  int n = permutation_.size();
+  Random rnd;
+  for (int i = 0; i < n - 1; ++i) {
+    int j = rnd.UniformInt(n - i);
+    std::swap(permutation_[i], permutation_[i + j]);
+  }
+
+  // Convert weights to cumulative distribution.
+  double sum = 0.0;
+  for (const Element &e : permutation_) sum += e.probability;
+  double acc = 0.0;
+  for (Element &e : permutation_) {
+    acc += e.probability / sum;
+    e.probability = acc;
+  }
+}
+
+int Distribution::Sample(float p) const {
+  int n = permutation_.size();
+  int low = 0;
+  int high = n - 1;
+  while (low < high) {
+    int center = (low + high) / 2;
+    if (permutation_[center].probability < p) {
+      low = center + 1;
+    } else {
+      high = center;
+    }
+  }
+  return permutation_[low].index;
+}
+
 }  // namespace nlp
 }  // namespace sling
+
