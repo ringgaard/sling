@@ -556,22 +556,24 @@ class FactEmbeddingsTrainer : public Process {
       l1.Compute();
       pos_loss_sum_ += *loss;
 
-#if 0
-      // Randomly sample negative categories.
+      // Sample negative example from random instances.
       *label = 0.0;
       int *neg = target;
-      for (int d = 0; d < categories.length() * negative_; ++d) {
-        if (neg == tend) {
-          num_feature_overflows_->Increment();
-          break;
+      for (int d = 0; d < negative_; ++d) {
+        int negid = rnd.UniformInt(instances_.size());
+        Frame negative(&store_, instances_[negid]);
+        Array negcat = negative.Get(p_categories_).AsArray();
+        for (int i = 0; i < negcat.length(); ++i) {
+          if (neg == tend) {
+            num_feature_overflows_->Increment();
+            break;
+          }
+        *neg++ = negcat.get(i).AsInt();
         }
-        //*neg++ = rnd.UniformInt(category_dims);
-        *neg++ = categories_.Sample(rnd.UniformProb());
       }
       if (neg < tend) *neg = -1;
       l1.Compute();
       neg_loss_sum_ -= *loss;
-#endif
 
       // Propagate hidden to input.
       l0b.Compute();
