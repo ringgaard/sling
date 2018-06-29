@@ -732,6 +732,11 @@ class Step : public Attributes {
   // to be synchronized before execution.
   bool NeedsSynchronization();
 
+  // Get prototype variable for step. This is the biggest output from the step,
+  // unless this is a scalar or the step does not have any outputs. In that
+  // case, the biggest input is returned.
+  Tensor *GetPrototype() const;
+
  private:
   // Step name from flow operation.
   string name_;
