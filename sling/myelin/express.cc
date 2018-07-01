@@ -850,7 +850,7 @@ void Express::ComputeLiveRanges() {
     ops_[i]->result->last = end;
   }
 
-  // Inputs must be keept alive from the beginning and outputs must be kept
+  // Inputs must be kept alive from the beginning and outputs must be kept
   // alive until the end.
   for (Var *var : vars_) {
     if (var->type == INPUT) var->first = begin;
