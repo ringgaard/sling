@@ -33,8 +33,8 @@ namespace nlp {
 //   w1_o is the average of output embeddings w1_o
 //
 // See Mikolov et al. 2013 for more details.
-struct EmbeddingsFlow : public myelin::Flow {
-  void Init();
+struct MikolovFlow : public myelin::Flow {
+  void Build();
 
   int inputs = 0;         // number of input dimensions
   int outputs = 0;        // number of output dimensions
@@ -75,6 +75,32 @@ struct EmbeddingsFlow : public myelin::Flow {
 
   // Update layer 0 weights from accumulated error in layer 1.
   void BuildLayer0Back();
+};
+
+// Siamese network for learning embeddings over two different domains. The
+// left side only has positive examples, whereas the right side has one
+// positive and one negative example. It uses a triplet contrastive loss for
+// scoring the instances.
+struct SiameseFlow : public myelin::Flow {
+  void Build(const myelin::Transformations &library);
+
+  string name = "siamese";       // model name space
+  int left_dims = 1;             // number of left dimensions (feature types)
+  int right_dims = 1;            // number of right dimensions (feature types)
+  int embedding_dims = 64;       // number of dimensions in embedding vectors
+  int max_left_features = 1;     // maximum number of left features per example
+  int max_right_features = 1;    // maximum number of right features per example
+
+  Variable *left_embeddings;     // left embedding matrix
+  Variable *right_embeddings;    // right embedding matrix
+
+  Variable *anchor;              // features for left anchor example
+  Variable *pos;                 // features for right positive example
+  Variable *neg;                 // features for right negative example
+  Variable *score;               // output score
+
+  Function *forward = nullptr;   // forward computation
+  Function *backward = nullptr;  // backward computation
 };
 
 // Distribution over weighted elements which can be sampled according to the

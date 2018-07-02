@@ -15,6 +15,7 @@
 #include "sling/nlp/embedding/embedding-model.h"
 
 #include "sling/myelin/builder.h"
+#include "sling/myelin/gradient.h"
 #include "sling/util/random.h"
 
 namespace sling {
@@ -22,19 +23,19 @@ namespace nlp {
 
 using namespace myelin;
 
-void EmbeddingsFlow::Init() {
+void MikolovFlow::Build() {
   BuildModel();
   BuildLayer0();
   BuildLayer1();
   BuildLayer0Back();
 }
 
-void EmbeddingsFlow::BuildModel() {
+void MikolovFlow::BuildModel() {
   W0 = AddWeights("W0", DT_FLOAT, {inputs, dims});
   W1 = AddWeights("W1", DT_FLOAT, {outputs, dims});
 }
 
-void EmbeddingsFlow::BuildLayer0() {
+void MikolovFlow::BuildLayer0() {
   layer0 = AddFunction("layer0");
   FlowBuilder tf(this, layer0);
 
@@ -42,7 +43,7 @@ void EmbeddingsFlow::BuildLayer0() {
   hidden = tf.Name(tf.GatherAvg(W0, fv), "hidden");
 }
 
-void EmbeddingsFlow::BuildLayer1() {
+void MikolovFlow::BuildLayer1() {
   layer1 = AddFunction("layer1");
   FlowBuilder tf(this, layer1);
 
@@ -69,13 +70,46 @@ void EmbeddingsFlow::BuildLayer1() {
   tf.ScatterAdd(W1, target, tf.Mul(h, eta));
 }
 
-void EmbeddingsFlow::BuildLayer0Back() {
+void MikolovFlow::BuildLayer0Back() {
   layer0b = AddFunction("layer0b");
   FlowBuilder tf(this, layer0b);
 
   l0b_l0 = tf.Instance(layer0);
   l0b_l1 = tf.Instance(layer1);
   tf.ScatterAdd(W0, tf.Ref(l0b_l0, fv), tf.Ref(l0b_l1, error));
+}
+
+void SiameseFlow::Build(const Transformations &library) {
+  // Create embeddings for left and right side.
+  left_embeddings = AddWeights(name + "/left_embeddings", DT_FLOAT,
+                               {left_dims, embedding_dims});
+  right_embeddings = AddWeights(name + "/right_embeddings", DT_FLOAT,
+                                {right_dims, embedding_dims});
+
+  // Build siamese network for scoring anchor with positive and negative
+  // examples.
+  forward = AddFunction(name + "/forward");
+  FlowBuilder tf(this, forward);
+
+  // Inputs.
+  anchor = tf.Placeholder("anchor", DT_INT32, {1, max_left_features});
+  pos = tf.Placeholder("pos", DT_INT32, {1, max_right_features});
+  neg = tf.Placeholder("neg", DT_INT32, {1, max_right_features});
+
+  // Compute encodings.
+  auto *anchor_encoding = tf.GatherSum(left_embeddings, anchor);
+  auto *pos_encoding = tf.GatherSum(right_embeddings, pos);
+  auto *neg_encoding = tf.GatherSum(right_embeddings, neg);
+
+  // Compute cosine similarity between anchor and positive/negative.
+  auto *pos_sim = tf.CosSim(anchor_encoding, pos_encoding);
+  auto *neg_sim = tf.CosSim(anchor_encoding, neg_encoding);
+
+  // Compute scores.
+  score = tf.Name(tf.Sub(neg_sim, pos_sim), "score");
+
+  // Compute gradient.
+  backward = Gradient(this, forward, library);
 }
 
 void Distribution::Shuffle() {

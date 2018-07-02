@@ -133,13 +133,24 @@ class IdentityTransformer : public Transformer {
     // Eliminate no-ops.
     std::vector<Flow::Operation *> noops;
     for (Flow::Operation *op : flow->ops()) {
-      if (op->type == "Identity" ||
-          op->type == "Const" ||
+      if (op->type == "Const" ||
           op->type == "Variable" ||
           op->type == "VariableV2" ||
           op->type == "Placeholder" ||
           op->type == "Enter") {
         noops.push_back(op);
+      } else if (op->type == "Identity") {
+        // Eliminate identity if there is no implicit broadcasting involved.
+        if (op->indegree() == 1 && op->outdegree() == 1) {
+          Flow::Variable *in = op->inputs[0];
+          Flow::Variable *out = op->outputs[0];
+          if (in->shape.defined() &&
+              out->shape.defined() &&
+              in->shape == out->shape &&
+              in->type == out->type) {
+            noops.push_back(op);
+          }
+        }
       } else if (op->type == "Reshape") {
         // Eliminate reshaping if input and output shapes are equal.
         if (op->indegree() == 2 && op->outdegree() == 1) {

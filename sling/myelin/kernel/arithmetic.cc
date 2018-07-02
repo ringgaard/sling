@@ -72,6 +72,8 @@ static Express::OpType OpType(const string &op) {
     {"Product", Express::PRODUCT},
     {"Min", Express::MIN},
     {"Max", Express::MAX},
+
+    {"Identity", Express::MOV},
   };
 
   auto f = ops.find(op);
@@ -1211,6 +1213,8 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("ProductExpr", "Product", 1));
   library->Register(new Calculate("MaxExpr", "Max", 1));
   library->Register(new Calculate("MinExpr", "Min", 1));
+
+  library->Register(new Calculate("IdExpr", "Identity", 1));
 
   library->Register(new Softmax(false));
   library->Register(new Softmax(true));

@@ -382,7 +382,7 @@ class FactEmbeddingsTrainer : public Process {
     flow_.outputs = category_dims;
     flow_.dims = embedding_dims_;
     flow_.in_features = flow_.out_features = max_features_;
-    flow_.Init();
+    flow_.Build();
     if (!FLAGS_fact2vec_flow.empty()) flow_.Save(FLAGS_fact2vec_flow);
     flow_.Analyze(library);
     myelin::Network model;
@@ -601,7 +601,7 @@ class FactEmbeddingsTrainer : public Process {
 
  private:
   // Flow model for fact embedding trainer.
-  EmbeddingsFlow flow_;
+  MikolovFlow flow_;
 
   // Store for training instances.
   Store store_;

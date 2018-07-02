@@ -306,7 +306,7 @@ class WordEmbeddingsTrainer : public Process {
     flow_.inputs = flow_.outputs = vocabulary_size;
     flow_.dims = embedding_dims_;
     flow_.in_features = window_ * 2;
-    flow_.Init();
+    flow_.Build();
     if (!FLAGS_word2vec_flow.empty()) flow_.Save(FLAGS_word2vec_flow);
     flow_.Analyze(library);
     myelin::Network model;
@@ -493,7 +493,7 @@ class WordEmbeddingsTrainer : public Process {
   double subsampling_ = 1e-3;          // sub-sampling rate
 
   // Flow model for word embedding trainer.
-  EmbeddingsFlow flow_;
+  MikolovFlow flow_;
 
   // Token normalization flags.
   Normalization normalization_;

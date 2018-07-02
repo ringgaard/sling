@@ -7,6 +7,7 @@ cc_library(
   deps = [
     "//sling/myelin:builder",
     "//sling/myelin:flow",
+    "//sling/myelin:gradient",
     "//sling/util:random",
   ],
 )
