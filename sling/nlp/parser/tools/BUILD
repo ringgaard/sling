@@ -41,3 +41,16 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "parser-server",
+  srcs = ["parser-server.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/http:http-server",
+    "//sling/http:web-service",
+    "//sling/nlp/document:document-tokenizer",
+    "//sling/nlp/parser",
+  ],
+)
+
