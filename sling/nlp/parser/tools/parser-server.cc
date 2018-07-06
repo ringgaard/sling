@@ -47,7 +47,7 @@ class ParserService {
     } else {
       document = new Document(ws.store(), &docnames_);
       if (ws.input().IsString()) {
-        document->SetText(ws.input().AsString().text());
+        document->SetText(ws.input().AsString());
       } else {
         document->SetText(ws.Get("text"));
       }
