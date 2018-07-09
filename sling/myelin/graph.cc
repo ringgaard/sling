@@ -176,7 +176,8 @@ static void AppendOp(string *str,
 static void AppendVar(string *str,
                       Flow::Variable *var,
                       const GraphOptions &options) {
-  if (var->in() || var->out() || var->global()) {
+  bool any_input = options.include_all_inputs && var->producer == nullptr;
+  if (var->in() || var->out() || var->global() || any_input) {
     AppendVarId(str, var);
     str->append(" [");
     str->append("label=\"");
@@ -265,14 +266,19 @@ static void AppendVar(string *str,
 }
 
 static bool Exclusive(Flow::Variable *var, Flow::Function *func) {
-  if ((var->producer != nullptr && var->producer->func == func) ||
-      !var->consumers.empty()) {
-    for (Flow::Operation *consumer : var->consumers) {
-      if (consumer->func != func) return false;
-    }
-    return true;
+  bool has_producer = var->producer != nullptr;
+  bool is_producer =  has_producer && var->producer->func == func;
+  bool is_consumer = false;
+  bool only_consumer = true;
+  for (Flow::Operation *consumer : var->consumers) {
+    if (consumer->func == func) is_consumer = true;
+    if (consumer->func != func) only_consumer = false;
+  }
+
+  if (has_producer) {
+    return is_producer && only_consumer;
   } else {
-    return false;
+    return is_consumer;
   }
 }
 
@@ -312,7 +318,7 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
     // Output variables that are only used by ops in the function.
     for (Flow::Variable *var : flow.vars()) {
       if (Exclusive(var, func)) {
-        if (options.include_constants || var->data == nullptr) {
+        if (options.include_constants || !var->constant()) {
           AppendVar(&str, var, options);
         }
         exclusive.insert(var);

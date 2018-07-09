@@ -222,6 +222,14 @@ void sum_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Broadcast(g->d(y), x->shape));
 }
 
+// y = x^T
+// dx = dy^T
+void transpose_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  g->add(x, g->Transpose(g->d(y)));
+}
+
 } // namespace
 
 void RegisterStandardGradients(Transformations *library) {
@@ -246,6 +254,7 @@ void RegisterStandardGradients(Transformations *library) {
   library->RegisterGradient("GatherSum", gathersum_grad);
   library->RegisterGradient("ConcatV2", concat_grad);
   library->RegisterGradient("Sum", sum_grad);
+  library->RegisterGradient("Transpose", transpose_grad);
 }
 
 }  // namespace myelin

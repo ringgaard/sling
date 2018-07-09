@@ -505,9 +505,7 @@ class DragnnTransformer : public Transformer {
   bool Transform(Flow *flow) override {
     std::vector<Flow::Operation *> noops;
     for (Flow::Operation *op : flow->ops()) {
-      if (op->type == "FeatureVector" ||
-          op->type == "Identity" ||
-          op->type == "Enter") {
+      if (op->type == "FeatureVector" || op->type == "Enter") {
         noops.push_back(op);
       }
     }

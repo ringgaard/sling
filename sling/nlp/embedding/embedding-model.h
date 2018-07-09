@@ -77,30 +77,35 @@ struct MikolovFlow : public myelin::Flow {
   void BuildLayer0Back();
 };
 
-// Siamese network for learning embeddings over two different domains. The
-// left side only has positive examples, whereas the right side has one
-// positive and one negative example. It uses a triplet contrastive loss for
-// scoring the instances.
-struct SiameseFlow : public myelin::Flow {
+// Dual encoder network for learning embeddings over two different domains.
+struct DualEncoderFlow : public myelin::Flow {
+  struct Encoder {
+    string name;                   // encoder name space
+    int dims = 1;                  // number of dimensions (feature types)
+    int max_features = 1;          // maximum number of features per example
+    Variable *embeddings;          // embedding matrix
+    Function *forward = nullptr;   // forward encoder computation
+    Function *backward = nullptr;  // backward encoder computation
+    Variable *features = nullptr;  // encoder feature input
+    Variable *encoding = nullptr;  // encoder output
+  };
+
   void Build(const myelin::Transformations &library);
 
-  string name = "siamese";       // model name space
-  int left_dims = 1;             // number of left dimensions (feature types)
-  int right_dims = 1;            // number of right dimensions (feature types)
-  int embedding_dims = 64;       // number of dimensions in embedding vectors
-  int max_left_features = 1;     // maximum number of left features per example
-  int max_right_features = 1;    // maximum number of right features per example
+  string name = "dualenc";         // model name space
+  Encoder left;                    // left encoder
+  Encoder right;                   // right encoder
+  int dims = 64;                   // dimension of embedding vectors
+  int batch_size = 1024;           // number of examples per batch
 
-  Variable *left_embeddings;     // left embedding matrix
-  Variable *right_embeddings;    // right embedding matrix
+  Function *similarity = nullptr;      // similarity function
+  Function *gsimilarity = nullptr;     // similarity gradient function
+  Variable *left_encodings = nullptr;  // left encodings input
+  Variable *right_encodings = nullptr; // right encodings input
+  Variable *similarities = nullptr;    // similarity matrix
 
-  Variable *anchor;              // features for left anchor example
-  Variable *pos;                 // features for right positive example
-  Variable *neg;                 // features for right negative example
-  Variable *score;               // output score
-
-  Function *forward = nullptr;   // forward computation
-  Function *backward = nullptr;  // backward computation
+ private:
+  void BuildEncoder(Encoder *encoder);
 };
 
 // Distribution over weighted elements which can be sampled according to the

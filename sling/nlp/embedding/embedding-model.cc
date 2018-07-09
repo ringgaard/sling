@@ -79,37 +79,36 @@ void MikolovFlow::BuildLayer0Back() {
   tf.ScatterAdd(W0, tf.Ref(l0b_l0, fv), tf.Ref(l0b_l1, error));
 }
 
-void SiameseFlow::Build(const Transformations &library) {
-  // Create embeddings for left and right side.
-  left_embeddings = AddWeights(name + "/left_embeddings", DT_FLOAT,
-                               {left_dims, embedding_dims});
-  right_embeddings = AddWeights(name + "/right_embeddings", DT_FLOAT,
-                                {right_dims, embedding_dims});
+void DualEncoderFlow::Build(const Transformations &library) {
+  // Create left and right encoders.
+  left.name = name + "/left";
+  BuildEncoder(&left);
+  right.name = name + "/right";
+  BuildEncoder(&right);
 
-  // Build siamese network for scoring anchor with positive and negative
-  // examples.
-  forward = AddFunction(name + "/forward");
-  FlowBuilder tf(this, forward);
+  // Create gradient computations.
+  left.backward = Gradient(this, left.forward, library);
+  right.backward = Gradient(this, right.forward, library);
 
-  // Inputs.
-  anchor = tf.Placeholder("anchor", DT_INT32, {1, max_left_features});
-  pos = tf.Placeholder("pos", DT_INT32, {1, max_right_features});
-  neg = tf.Placeholder("neg", DT_INT32, {1, max_right_features});
+  // Create similarity computation.
+  similarity = AddFunction(name + "/similarity");
+  FlowBuilder tf(this, similarity);
+  left_encodings = tf.Placeholder("left", DT_FLOAT, {batch_size, dims});
+  right_encodings = tf.Placeholder("right", DT_FLOAT, {batch_size, dims});
+  similarities = tf.MatMul(left_encodings, tf.Transpose(right_encodings));
+  tf.Name(similarities, "similarities");
+  gsimilarity = Gradient(this, similarity, library);
+}
 
-  // Compute encodings.
-  auto *anchor_encoding = tf.GatherSum(left_embeddings, anchor);
-  auto *pos_encoding = tf.GatherSum(right_embeddings, pos);
-  auto *neg_encoding = tf.GatherSum(right_embeddings, neg);
-
-  // Compute cosine similarity between anchor and positive/negative.
-  auto *pos_sim = tf.CosSim(anchor_encoding, pos_encoding);
-  auto *neg_sim = tf.CosSim(anchor_encoding, neg_encoding);
-
-  // Compute scores.
-  score = tf.Name(tf.Sub(neg_sim, pos_sim), "score");
-
-  // Compute gradient.
-  backward = Gradient(this, forward, library);
+void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
+  encoder->forward = AddFunction(encoder->name);
+  FlowBuilder tf(this, encoder->forward);
+  encoder->embeddings =
+      tf.Parameter("embeddings", DT_FLOAT, {encoder->dims, dims});
+  encoder->features =
+      tf.Placeholder("features", DT_INT32, {1, encoder->max_features});
+  auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
+  encoder->encoding = tf.Name(tf.Div(sum, tf.Norm(sum)), "encoding");
 }
 
 void Distribution::Shuffle() {
