@@ -17,6 +17,8 @@ using namespace jit;
 
 class WaveNetTransformer : public Transformer {
  public:
+  string Name() override { return "WaveNetTransformer"; }
+
   bool Transform(Flow *flow) override {
     // Convert 2D convolution to 1D convolution.
     int combines = 0;

@@ -704,6 +704,9 @@ class Typer {
  public:
   virtual ~Typer() = default;
 
+  // Return descriptive name for typer.
+  virtual string Name() = 0;
+
   // Return true if the type of the outputs of the operations has been
   // inferred.
   virtual bool InferTypes(Flow *flow, Flow::Operation *op) = 0;
@@ -713,6 +716,9 @@ class Typer {
 class Transformer {
  public:
   virtual ~Transformer() = default;
+
+  // Return descriptive name for transformer.
+  virtual string Name() = 0;
 
   // Apply transformations to flow and return true is any transformations were
   // applied.

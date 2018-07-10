@@ -397,7 +397,7 @@ Library::~Library() {
 }
 
 void Library::Register(Kernel *kernel) {
-  VLOG(7) << "Register " << kernel->Name() << " for " << kernel->Operation();
+  VLOG(12) << "Register " << kernel->Name() << " for " << kernel->Operation();
   kernels_[kernel->Operation()].push_back(kernel);
 }
 

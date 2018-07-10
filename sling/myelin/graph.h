@@ -48,7 +48,7 @@ struct GraphOptions {
   bool op_type_as_label = true;
   bool types_in_labels = true;
   bool include_constants = true;
-  bool include_all_inputs = false;
+  bool include_intermediates = false;
   bool cluster_functions = true;
   int max_value_size = 8;
   float edge_thickness_scalar = 0.0;

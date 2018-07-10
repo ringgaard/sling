@@ -1446,6 +1446,8 @@ class ScatterAdd : public Kernel {
 // Fold multiplication into update ops.
 class UpdateTransformer : public Transformer {
  public:
+  string Name() override { return "UpdateTransformer"; }
+
   bool Transform(Flow *flow) override {
     int updates = 0;
 
@@ -1458,17 +1460,6 @@ class UpdateTransformer : public Transformer {
       if (assign->inputs[0] != add->inputs[0]) continue;
       if (add->outputs[0]->usages() != 1) continue;
       if (matmul->outputs[0]->usages() != 1) continue;
-
-#if 1
-      // Only fuse if matrix multiplication is an outer product.
-      if (matmul->inputs.size() != 2) continue;
-      Shape a = matmul->inputs[0]->shape;
-      Shape b = matmul->inputs[1]->shape;
-      if (a.rank() != 2 || b.rank() != 2) continue;
-      if (matmul->GetAttr("transpose_a", false)) a = a.transpose();
-      if (matmul->GetAttr("transpose_b", false)) b = b.transpose();
-      if (a.dim(1) != 1 || b.dim(0) != 1) continue;
-#endif
 
       flow->Fuse(assign, flow->Fuse(add, matmul, ""), "AssignAddMatMul", true);
       updates++;
@@ -1504,6 +1495,8 @@ class UpdateTransformer : public Transformer {
 // Propagate tensor references across reshapes.
 class ReshapeRefTransformer : public Transformer {
  public:
+  string Name() override { return "ReshapeRefTransformer"; }
+
   bool Transform(Flow *flow) override {
     bool updated = false;
     for (Flow::Operation *op : flow->ops()) {

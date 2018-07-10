@@ -518,9 +518,54 @@ class GenericIntVecMatMulAddRelu : public GenericIntVecMatMulBase {
   string Operation() override { return "MatMulAddRelu"; }
 };
 
+// Combine matrix multiplication with add and relu.
+class MatMulTransformer : public Transformer {
+ public:
+  string Name() override { return "MatMulTransformer"; }
+
+  bool Transform(Flow *flow) override {
+    int combines = 0;
+    while (Combine(flow, "MatMul", "Add", "MatMulAdd") ||
+           Combine(flow, "MatMul", "Relu", "MatMulRelu") ||
+           Combine(flow, "MatMulAdd", "Relu", "MatMulAddRelu")) {
+      combines++;
+    }
+    return combines > 0;
+  }
+
+  // Try to find combinations and replace them with a combined op.
+  bool Combine(Flow *flow, const string &first, const string &second,
+               const string &combined) {
+    // Find operations that can be combined.
+    for (Flow::Operation *op : flow->ops()) {
+      if (op->type != first) continue;
+      if (op->outputs.size() != 1) continue;
+      Flow::Variable *var = op->outputs[0];
+      if (var->usages() != 1) continue;
+      if (var->consumers[0]->type != second) continue;
+      if (var->consumers[0]->task != op->task) continue;
+      if (var->out()) continue;
+      if (!var->shape.defined()) continue;
+      if (op->indegree() >= 1) {
+        // Only combine for vector inputs.
+        Flow::Variable *input = op->inputs[0];
+        if (input->rank() == 2 && input->dim(0) > 1) continue;
+      }
+      if (op->GetAttr("transpose_a", false)) continue;
+      if (op->GetAttr("transpose_b", false)) continue;
+
+      flow->Fuse(op, var->consumers[0], combined);
+      return true;
+    }
+    return false;
+  }
+};
+
 // Merge transpose into matmul attributes.
 class TransposeTransformer : public Transformer {
  public:
+  string Name() override { return "TransposeTransformer"; }
+
   bool Transform(Flow *flow) override {
     int updates = 0;
 
@@ -616,9 +661,9 @@ class TransposeTransformer : public Transformer {
   }
 };
 
-
 void RegisterGenericMatMul(Library *library) {
   // Transformations.
+  library->RegisterTransformer(new MatMulTransformer());
   library->RegisterTransformer(new TransposeTransformer());
 
   // Computes  : C = A * B
