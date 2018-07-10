@@ -161,6 +161,9 @@ static void AppendOp(string *str,
       str->append("&#10;");
     }
   }
+  if (op->func != nullptr) {
+    StringAppendF(str, "func: %s&#10;", op->func->name.c_str());
+  }
   if (!op->attrs().empty()) {
     str->append("attr:&#10;");
     for (const auto &attr : op->attrs()) {

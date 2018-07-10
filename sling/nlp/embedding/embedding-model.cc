@@ -86,10 +86,6 @@ void DualEncoderFlow::Build(const Transformations &library) {
   right.name = name + "/right";
   BuildEncoder(&right);
 
-  // Create gradient computations.
-  left.backward = Gradient(this, left.forward, library);
-  right.backward = Gradient(this, right.forward, library);
-
   // Create similarity computation.
   similarity = AddFunction(name + "/similarity");
   FlowBuilder tf(this, similarity);
@@ -97,6 +93,10 @@ void DualEncoderFlow::Build(const Transformations &library) {
   right_encodings = tf.Placeholder("right", DT_FLOAT, {batch_size, dims});
   similarities = tf.MatMul(left_encodings, tf.Transpose(right_encodings));
   tf.Name(similarities, "similarities");
+
+  // Create gradient computations.
+  left.backward = Gradient(this, left.forward, library);
+  right.backward = Gradient(this, right.forward, library);
   gsimilarity = Gradient(this, similarity, library);
 }
 
@@ -108,7 +108,8 @@ void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
   encoder->features =
       tf.Placeholder("features", DT_INT32, {1, encoder->max_features});
   auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
-  encoder->encoding = tf.Name(tf.Div(sum, tf.Norm(sum)), "encoding");
+  auto *length = tf.Name(tf.Norm(sum), "length");
+  encoder->encoding = tf.Name(tf.Div(sum, length), "encoding");
 }
 
 void Distribution::Shuffle() {

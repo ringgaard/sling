@@ -559,9 +559,8 @@ class StandardTyper : public Typer {
   }
 };
 
-// Register generic library.
-void RegisterGenericLibrary(Library *library) {
-  // Register transformations.
+// Register generic transforms.
+void RegisterGenericTransforms(Library *library) {
   library->RegisterTransformer(new RenameTransformer());
   library->RegisterTransformer(new IdentityTransformer());
   library->RegisterTransformer(new MatMulTransformer());
@@ -570,8 +569,10 @@ void RegisterGenericLibrary(Library *library) {
 
   // Register type inference.
   library->RegisterTyper(new StandardTyper());
+}
 
-  // Register kernels.
+// Register generic library.
+void RegisterGenericLibrary(Library *library) {
   library->Register(new Reference());
   RegisterArrayKernels(library);
   RegisterGenericMath(library);

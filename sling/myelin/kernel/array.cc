@@ -1454,13 +1454,12 @@ class UpdateTransformer : public Transformer {
       Flow::Operation *assign = op;
       Flow::Operation *add = assign->inputs[1]->producer;
       Flow::Operation *matmul = add->inputs[1]->producer;
-      LOG(INFO) << "AssignAddMatMul1: " << assign->name << " " << add->name << " " << matmul->name;
 
       if (assign->inputs[0] != add->inputs[0]) continue;
       if (add->outputs[0]->usages() != 1) continue;
       if (matmul->outputs[0]->usages() != 1) continue;
 
-#if 0
+#if 1
       // Only fuse if matrix multiplication is an outer product.
       if (matmul->inputs.size() != 2) continue;
       Shape a = matmul->inputs[0]->shape;

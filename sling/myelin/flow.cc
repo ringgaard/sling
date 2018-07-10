@@ -720,7 +720,7 @@ void Flow::Read(const char *data, size_t size) {
       Variable *var = Var(output);
       CHECK(var != nullptr) << "Unknown " << op->name << " output: " << output;
       op->AddOutput(var);
-      var->AddAlias(op->name);
+      if (j == 0) var->AddAlias(op->name);
     }
 
     // Get attributes.
@@ -1681,7 +1681,15 @@ void Flow::RemoveOperation(Operation *op) {
 
 bool Flow::IsConsistent() const {
   // Check operations.
+  std::unordered_set<string> opnames;
   for (const Operation *op : ops_) {
+    // Check that op name is unique.
+    if (opnames.count(op->name) != 0) {
+      LOG(WARNING) << "Operation name is not unique: " << op->name;
+      return false;
+    }
+    opnames.insert(op->name);
+
     for (const Variable *input : op->inputs) {
       // Check that input variable is in flow.
       if (std::find(vars_.begin(), vars_.end(), input) == vars_.end()) {
@@ -1715,7 +1723,23 @@ bool Flow::IsConsistent() const {
   }
 
   // Check variables.
+  std::unordered_set<string> varnames;
   for (const Variable *var : vars_) {
+    // Check that op name is unique.
+    if (varnames.count(var->name) != 0) {
+      LOG(WARNING) << "Variable name is not unique: " << var->name;
+      return false;
+    }
+    varnames.insert(var->name);
+    for (const string &alias : var->aliases) {
+      if (varnames.count(alias) != 0) {
+        LOG(WARNING) << "Variable alias is not unique: " << alias << " for "
+                     << "variable " << var->name;
+        return false;
+      }
+      varnames.insert(alias);
+    }
+
     // Check that producer is in flow.
     const Operation *producer = var->producer;
     if (producer != nullptr) {
