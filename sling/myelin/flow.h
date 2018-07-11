@@ -246,6 +246,9 @@ class Attributes : public std::vector<Attribute> {
   void SetAttr(const string &name, bool value);
   void SetAttr(const string &name, float value);
 
+  // Remove attribute.
+  void RemoveAttr(const string &name);
+
   // Copy attributes from another attribute list.
   void CopyAttrsFrom(const Attributes &other);
 

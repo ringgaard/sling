@@ -657,6 +657,18 @@ class TransposeTransformer : public Transformer {
       updates++;
     }
 
+    // Factor transpose out of MatMul result by applying C^T=A*B => C=B^T*A^T.
+    for (Flow::Operation *op : flow->Find("MatMul")) {
+      if (!op->GetAttr("transpose_c", false)) continue;
+      if (op->indegree() != 2 || op->outdegree() != 1) continue;
+      std::swap(op->inputs[0], op->inputs[1]);
+      bool ta = op->GetAttr("transpose_a", false);
+      bool tb = op->GetAttr("transpose_b", false);
+      op->SetAttr("transpose_a", !tb);
+      op->SetAttr("transpose_b", !ta);
+      op->RemoveAttr("transpose_c");
+    }
+
     return updates > 0;
   }
 };

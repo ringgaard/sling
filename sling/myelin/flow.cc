@@ -316,6 +316,17 @@ void Attributes::SetAttr(const string &name, float value) {
   SetAttr(name, std::to_string(value));
 }
 
+void Attributes::RemoveAttr(const string &name) {
+  auto it = begin();
+  while (it != end()) {
+    if (it->name == name) {
+      it = erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
 void Attributes::CopyAttrsFrom(const Attributes &other) {
   for (auto &attr : other) emplace_back(attr);
 }
