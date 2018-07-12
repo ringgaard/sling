@@ -1038,7 +1038,7 @@ class AVXFltMatMatMul : public Kernel {
   }
 
   int64 Complexity(const Step *step) override {
-    return step->input(0)->dim(0) * step->input(1)->elements() * 2;
+    return step->input(0)->elements() * step->input(1)->elements() * 2;
   }
 };
 

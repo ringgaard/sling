@@ -109,7 +109,7 @@ void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
       tf.Placeholder("features", DT_INT32, {1, encoder->max_features});
   auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
   auto *length = tf.Name(tf.Norm(sum), "length");
-  encoder->encoding = tf.Name(tf.Div(sum, length), "encoding");
+  encoder->encoding = tf.Name(tf.Mul(sum, tf.Reciprocal(length)), "encoding");
 }
 
 void Distribution::Shuffle() {

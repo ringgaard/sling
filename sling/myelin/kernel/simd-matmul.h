@@ -12,31 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/myelin/kernel/avx.h"
+#ifndef SLING_MYELIN_KERNEL_SIMD_MATMUL_H_
+#define SLING_MYELIN_KERNEL_SIMD_MATMUL_H_
 
 #include "sling/myelin/compute.h"
-#include "sling/myelin/kernel/simd-matmul.h"
 
 namespace sling {
 namespace myelin {
 
-// avx-math.cc
-void RegisterAVXMath(Library *library);
-
-// avx-matmul.cc
-void RegisterAVXMatMul(Library *library);
-
-// avx-operators.cc
-void RegisterAVXOperators(Library *library);
-
-// Register AVX library.
-void RegisterAVXLibrary(Library *library) {
-  RegisterAVXMath(library);
-  RegisterSIMDMatMulLibrary(library);
-  RegisterAVXMatMul(library);
-  RegisterAVXOperators(library);
-}
+// Register SIMD matmul library.
+void RegisterSIMDMatMulLibrary(Library *library);
 
 }  // namespace myelin
 }  // namespace sling
+
+#endif  // SLING_MYELIN_KERNEL_SIMD_MATMUL_H_
 
