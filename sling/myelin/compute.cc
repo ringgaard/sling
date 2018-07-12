@@ -1909,6 +1909,7 @@ string Cell::ToString() const {
                     t->TypeString().c_str(),
                     t->offset(),
                     t->space(), t->byte_alignment());
+      StringAppendF(&str, " %s", ordername[t->order()]);
       if (t->linked()) {
         StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
       }

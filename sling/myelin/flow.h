@@ -137,7 +137,7 @@ class Shape {
   void add(int size) { dims_.push_back(size); }
 
   // Return transposed shape.
-  Shape transpose() {
+  Shape transpose() const {
     if (rank() < 2) return *this;
     Shape t = *this;
     std::swap(t.dims_[0], t.dims_[1]);
