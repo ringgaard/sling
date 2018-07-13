@@ -72,7 +72,7 @@ class SIMDGenerator {
 // are used for successively smaller vector registers for handling the remaining
 // elements ending with a handler for scalars.
 class SIMDAssembler {
- private:
+ public:
   SIMDAssembler(MacroAssembler *masm, Type type, bool aligned);
   ~SIMDAssembler();
 
@@ -81,8 +81,26 @@ class SIMDAssembler {
 
   // Residual generators.
   const std::vector<SIMDGenerator *> residuals() const { return residuals_; }
+
+  // The residual generator for scalars is always the last one.
+  SIMDGenerator *scalar() const { return residuals_.back(); }
+
+  // Check if type is supported.
+  static bool Supports(Type type);
+
+  // Return biggest vector size in bytes.
+  static int VectorBytes(Type type);
+
+  const string &name() const { return name_; }
+
  private:
+  // Generator name.
+  string name_;
+
+  // Main SIMD code generator.
   SIMDGenerator *main_ = nullptr;
+
+  // Code generator for residuals.
   std::vector<SIMDGenerator *> residuals_;
 };
 
@@ -90,4 +108,3 @@ class SIMDAssembler {
 }  // namespace sling
 
 #endif  // SLING_MYELIN_SIMD_ASSEMBLER_H_
-

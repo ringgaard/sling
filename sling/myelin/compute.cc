@@ -1993,6 +1993,11 @@ string Cell::ToString() const {
       }
 
       str.append(step->kernel()->Name());
+      if (!step->variant().empty()) {
+        str.append("[");
+        str.append(step->variant());
+        str.append("]");
+      }
 
       str.append("(");
       bool first = true;

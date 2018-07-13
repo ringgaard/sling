@@ -341,6 +341,63 @@ class SSE128FloatGenerator : public SIMDGenerator {
   }
 };
 
+// AVX512 scalar float SIMD generator.
+class AVX512ScalarFloatGenerator : public SIMDGenerator {
+ public:
+  AVX512ScalarFloatGenerator(MacroAssembler *masm, bool aligned)
+      : SIMDGenerator(masm, aligned) {}
+
+  // Only uses the lower 32-bit float of ZMM register.
+  int VectorBytes() override { return 4; }
+  int VectorSize() override { return 4; }
+
+  void Load(int dst, const Operand &src) override {
+    masm_->vmovss(ZMMRegister::from_code(dst), src);
+  }
+
+  void Store(const Operand &dst, int src) override {
+    masm_->vmovss(dst, ZMMRegister::from_code(src));
+  }
+
+  void Broadcast(int dst, const Operand &src) override {
+    // Broadcast is just a load for scalars.
+    Load(dst, src);
+  }
+
+  void Zero(int reg) override {
+    ZMMRegister r = ZMMRegister::from_code(reg);
+    masm_->vxorps(r, r, r);
+  }
+
+  void Add(int dst, int src1, int src2) override {
+    ZMMRegister d = ZMMRegister::from_code(dst);
+    ZMMRegister s1 = ZMMRegister::from_code(src1);
+    ZMMRegister s2 = ZMMRegister::from_code(src2);
+    masm_->vaddss(d, s1, s2);
+  }
+
+  void Add(int dst, int src1, const jit::Operand &src2) override {
+    ZMMRegister d = ZMMRegister::from_code(dst);
+    ZMMRegister s1 = ZMMRegister::from_code(src1);
+    masm_->vaddss(d, s1, src2);
+  }
+
+  void MultiplyAdd(int dst, int src1, const Operand &src2) override {
+    ZMMRegister d = ZMMRegister::from_code(dst);
+    ZMMRegister s1 = ZMMRegister::from_code(src1);
+    if (masm_->Enabled(FMA3)) {
+      masm_->vfmadd231ss(d, s1, src2);
+    } else {
+      masm_->vmulss(s1, s1, src2);
+      masm_->vaddss(d, d, s1);
+    }
+  }
+
+  void Sum(int reg) override {
+    // Sum is a no-op for scalars.
+  }
+};
+
 // AVX scalar float SIMD generator.
 class AVXScalarFloatGenerator : public SIMDGenerator {
  public:
@@ -453,18 +510,32 @@ class SSEScalarFloatGenerator : public SIMDGenerator {
   }
 };
 
-SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type, bool aligned) {
+bool SIMDAssembler::Supports(Type type) {
   // Only floats are currently supported.
-  if (type != DT_FLOAT) return;
+  return type == DT_FLOAT;
+}
+
+int SIMDAssembler::VectorBytes(Type type) {
+  if (CPU::Enabled(AVX512F)) return 64;
+  if (CPU::Enabled(AVX)) return 32;
+  if (CPU::Enabled(SSE)) return 16;
+  return TypeTraits::of(type).size();
+}
+
+SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type, bool aligned) {
+  if (!Supports(type)) return;
 
   if (masm->Enabled(AVX512F)) {
+    name_ = "AVX512Flt";
     main_ = new AVX512FloatGenerator(masm, aligned);
-    residuals_.push_back(new AVXScalarFloatGenerator(masm, aligned));
+    residuals_.push_back(new AVX512ScalarFloatGenerator(masm, aligned));
   } else if (masm->Enabled(AVX)) {
+    name_ = "AVXFlt";
     main_ = new AVX256FloatGenerator(masm, aligned);
     residuals_.push_back(new AVX128FloatGenerator(masm, aligned));
     residuals_.push_back(new AVXScalarFloatGenerator(masm, aligned));
   } else if (masm->Enabled(SSE)) {
+    name_ = "SSEFlt";
     main_ = new SSE128FloatGenerator(masm, aligned);
     residuals_.push_back(new SSEScalarFloatGenerator(masm, aligned));
   }

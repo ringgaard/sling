@@ -18,6 +18,7 @@
 #include "sling/base/logging.h"
 #include "sling/myelin/compute.h"
 #include "sling/myelin/macro-assembler.h"
+#include "sling/myelin/simd-assembler.h"
 
 #define __ masm->
 
@@ -53,26 +54,48 @@ class MatMulArgs {
       switch (tensor->order()) {
         case ROW_MAJOR: return transposed ? COLUMN_MAJOR : ROW_MAJOR;
         case COLUMN_MAJOR: return transposed ? ROW_MAJOR : COLUMN_MAJOR;
-        default: tensor->order();
+        default: break;
       }
+      return tensor->order();
     }
 
     // Width (inner dimension) with respect to order and transpose.
-    int width() const {
-      switch (tensor->order()) {
-        case ROW_MAJOR: return shape.dim(1);
-        case COLUMN_MAJOR: return shape.dim(0);
-        default: LOG(FATAL) << "Undertermined layout: " << tensor->name();
-      }
-    }
+    int width() const { return shape.dim(0); }
 
     // Height (outer dimension) with respect to order and transpose.
-    int height() const {
-      switch (tensor->order()) {
-        case ROW_MAJOR: return shape.dim(0);
-        case COLUMN_MAJOR: return shape.dim(1);
-        default: LOG(FATAL) << "Undertermined layout: " << tensor->name();
-      }
+    int height() const { return shape.dim(1); }
+
+    // Number of bytes per row.
+    int stride() const {
+      return tensor->stride(0);
+    }
+
+    // Padding bytes per row.
+    int padding() const {
+      return tensor->padding(0);
+    }
+
+    // Data type for underlying tensor.
+    Type type() const { return tensor->type(); }
+
+    string ToString() const {
+      extern const char *ordername[];
+      string str = "name=" + tensor->name();
+      str.append(" shape=");
+      str.append(shape.ToString());
+      str.append(" t=");
+      str.append(transposed ? "y" : "n");
+      str.append(" order=");
+      str.append(ordername[order()]);
+      str.append(" width=");
+      str.append(std::to_string(width()));
+      str.append(" height=");
+      str.append(std::to_string(height()));
+      str.append(" stride=");
+      str.append(std::to_string(stride()));
+      str.append(" padding=");
+      str.append(std::to_string(padding()));
+      return str;
     }
 
     Tensor *tensor;   // underlying tensor for argument
@@ -108,9 +131,10 @@ class MatMulArgs {
     b_.Init(b, step->GetAttr("transpose_b", false));
   }
 
-  // Ensure output order.
-  void EnsureOutputOrder(Order order) {
-    // Determine if matmul need to be transformed to meet output element order
+  // Ensure output order. Returns false if the output tensor does not support
+  // this order.
+  bool EnsureOutputOrder(Order order) {
+    // Determine if matmul needs to be transformed to meet output element order
     // requirement.
     bool transform = false;
     if (order == ROW_MAJOR) {
@@ -126,6 +150,26 @@ class MatMulArgs {
       a_.Transpose();
       b_.Transpose();
     }
+
+    // Check that output supports order.
+    return c_.tensor->SupportsOrder(c_.tensor->order());
+  }
+
+  // Set the required order for output.
+  void SetRequiredOrder(Order order) {
+    EnsureOutputOrder(order);
+    Order required;
+    switch (order) {
+      case ROW_MAJOR:
+        required = c_.transposed ? COLUMN_MAJOR : ROW_MAJOR;
+        break;
+      case COLUMN_MAJOR:
+        required = c_.transposed ? ROW_MAJOR : COLUMN_MAJOR;
+        break;
+      default:
+        required = ANY_ORDER;
+    }
+    c_.tensor->SetRequiredOrder(required);
   }
 
   // Check that argument shapes match a matrix multiplication.
@@ -140,6 +184,13 @@ class MatMulArgs {
     if (b_.shape.dim(1) != c_.shape.dim(1)) return false;
 
     return true;
+  }
+
+  // Check if all elements are aligned.
+  bool Aligned(int align) const {
+    return a_.stride() % align == 0 &&
+           b_.stride() % align == 0 &&
+           c_.stride() % align == 0;
   }
 
   // Whether this is an accumulating matmul.
@@ -163,6 +214,12 @@ class MatMulArgs {
 // General matrix multiplication using SIMD code generators.
 class SIMDMatMul : public Kernel {
  public:
+  // Maximum number of loop unrolls.
+  static const int kMaxUnrolls = 4;
+
+  // Maximum number of adder registers.
+  static const int kMaxAdders = 4;
+
   SIMDMatMul(bool accumulate) : accumulate_(accumulate) {}
 
   string Name() override {
@@ -182,14 +239,93 @@ class SIMDMatMul : public Kernel {
     if (!args.CheckShapes()) return false;
     if (args.accumulate() != accumulate_) return false;
 
-    // TODO: check types are the same and supported by SIMD generator.
+    // Output must be row-major.
+    if (!args.EnsureOutputOrder(ROW_MAJOR)) return false;
+
+    // Check that element type is supported.
+    Type type = args.c().type();
+    if (!SIMDAssembler::Supports(type)) return false;
+    if (args.a().type() != type) return false;
+    if (args.b().type() != type) return false;
+
     return true;
   }
 
   void Adjust(Step *step) override {
+    // Set required order for output.
+    MatMulArgs args(step);
+    args.SetRequiredOrder(ROW_MAJOR);
+
+    // Set alignment.
+    int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
+    args.a().tensor->SetMiniumAlignment(vecbytes);
+    args.b().tensor->SetMiniumAlignment(vecbytes);
+    args.c().tensor->SetMiniumAlignment(vecbytes);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    MatMulArgs args(step);
+    CHECK(args.EnsureOutputOrder(ROW_MAJOR));
+
+    LOG(INFO) << "Generate " << step->name();
+    LOG(INFO) << "  a: " << args.a().ToString();
+    LOG(INFO) << "  b: " << args.b().ToString();
+    LOG(INFO) << "  c: " << args.c().ToString();
+
+    // Use the input element order to choose matmul algorithm.
+    Order a = args.a().order();
+    Order b = args.b().order();
+    if (a == ROW_MAJOR && b == ROW_MAJOR) {
+      GenerateRowRow(step, masm, args);
+    } else if (a == ROW_MAJOR && b == COLUMN_MAJOR) {
+      GenerateRowCol(step, masm, args);
+    } else if (a == COLUMN_MAJOR && b == ROW_MAJOR) {
+      GenerateRowCol(step, masm, args);
+    } else if (a == COLUMN_MAJOR && b == COLUMN_MAJOR) {
+      GenerateColCol(step, masm, args);
+    } else {
+      LOG(FATAL) << "Unsupported element order";
+    }
+  }
+
+  void GenerateRowRow(Step *step, MacroAssembler *masm,
+                      const MatMulArgs &args) {
+    // Create SIMD code generators.
+    Type type = args.c().tensor->type();
+    int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
+    SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
+    LOG(INFO) << step->name() << " generated by " << sasm.name()
+              << (args.Aligned(vecbytes) ? " aligned" : " unaligned");
+
+    // Set kernel variant.
+    step->set_variant(sasm.name() + "RR");
+
+    __ nop();
+  }
+
+  void GenerateRowCol(Step *step, MacroAssembler *masm,
+                      const MatMulArgs &args) {
+    // Create SIMD code generators.
+    Type type = args.c().tensor->type();
+    int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
+    SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
+    LOG(INFO) << step->name() << " generated by " << sasm.name()
+              << (args.Aligned(vecbytes) ? " aligned" : " unaligned");
+
+    // Set kernel variant.
+    step->set_variant(sasm.name() + "RC");
+
+    __ nop();
+  }
+
+  void GenerateColRow(Step *step, MacroAssembler *masm,
+                      const MatMulArgs &args) {
+    __ nop();
+  }
+
+  void GenerateColCol(Step *step, MacroAssembler *masm,
+                      const MatMulArgs &args) {
+    LOG(INFO) << "ColCol";
     __ nop();
   }
 
