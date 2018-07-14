@@ -33,6 +33,9 @@ class SIMDGenerator {
   // Number of elements per vector register.
   virtual int VectorSize() = 0;
 
+  // Allocate SIMD register.
+  virtual int Alloc() = 0;
+
   // Load memory into register.
   virtual void Load(int dst, const jit::Operand &src) = 0;
 
@@ -49,8 +52,10 @@ class SIMDGenerator {
   virtual void Add(int dst, int src1, int src2) = 0;
   virtual void Add(int dst, int src1, const jit::Operand &src2) = 0;
 
-  // Multiply src1 and src2 and add it to dst, destroying contents of src1.
-  virtual void MultiplyAdd(int dst, int src1, const jit::Operand &src2) = 0;
+  // Multiply src1 and src2 and add it to dst. If the keep flag is false the
+  // contents of src1 can possibly be destroyed.
+  virtual void MultiplyAdd(int dst, int src1, const jit::Operand &src2,
+                           bool keep) = 0;
 
   // Horizontal sum of all elements in register.
   virtual void Sum(int reg) = 0;
@@ -61,6 +66,8 @@ class SIMDGenerator {
   virtual void SetMask(int bits);
   virtual void MaskedLoad(int dst, const jit::Operand &src);
   virtual void MaskedStore(const jit::Operand &dst, int src);
+  virtual void MaskedAdd(int dst, int src1, const jit::Operand &src2);
+  virtual void MaskedMultiplyAdd(int dst, int src1, const jit::Operand &src2);
 
  protected:
   MacroAssembler *masm_;  // assembler for code generation
@@ -68,22 +75,34 @@ class SIMDGenerator {
 };
 
 // Assembler for SIMD vector code generation. The main generator is used for
-// for the (unrolled) bulk of the vector operation and the residual generators
-// are used for successively smaller vector registers for handling the remaining
+// the (unrolled) bulk of the vector operation. The generator cascade is
+// used for successively smaller vector registers for handling the remaining
 // elements ending with a handler for scalars.
 class SIMDAssembler {
  public:
   SIMDAssembler(MacroAssembler *masm, Type type, bool aligned);
   ~SIMDAssembler();
 
-  // Main generator.
-  SIMDGenerator *main() const { return main_; }
+  // The first generator is the main generator.
+  SIMDGenerator *main() const { return cascade_.front(); }
 
-  // Residual generators.
-  const std::vector<SIMDGenerator *> residuals() const { return residuals_; }
+  // The last generator is for scalars.
+  SIMDGenerator *scalar() const { return cascade_.back(); }
 
-  // The residual generator for scalars is always the last one.
-  SIMDGenerator *scalar() const { return residuals_.back(); }
+  // Generator cascade from bigger to smaller vector registers.
+  const std::vector<SIMDGenerator *> cascade() const { return cascade_; }
+
+
+  // Allocate SIMD register(s).
+  int alloc() { return main()->Alloc(); }
+  std::vector<int> alloc(int n) {
+    std::vector<int> regs(n);
+    for (auto &r : regs) r = alloc();
+    return regs;
+  }
+
+  // Vertical sum of list of registers. Result is in the first register.
+  void Sum(const std::vector<int> &regs);
 
   // Check if type is supported.
   static bool Supports(Type type);
@@ -94,14 +113,47 @@ class SIMDAssembler {
   const string &name() const { return name_; }
 
  private:
+  // Add generator to cascade.
+  void add(SIMDGenerator *generator) { cascade_.push_back(generator); }
+
   // Generator name.
   string name_;
 
-  // Main SIMD code generator.
-  SIMDGenerator *main_ = nullptr;
+  // Code generator cascade.
+  std::vector<SIMDGenerator *> cascade_;
+};
 
-  // Code generator for residuals.
-  std::vector<SIMDGenerator *> residuals_;
+// A SIMD strategy breaks down operations on general vectors into a number
+// of phases. Each phase is a repeated, unrolled/masked operation on parts
+// of the vector.
+class SIMDStrategy {
+ public:
+  // A phase is a (repeated) (unrolled) (masked) operation on parts of a vector.
+  struct Phase {
+    Phase(SIMDGenerator *generator) : generator(generator) {}
+
+    int offset = 0;             // start offset in vector
+    int unrolls = 1;            // number of unrolls of operation
+    int repeat = 1;             // number of repeats of unrolled operation
+    int masked = 0;             // number of elements for masked operation
+    int regs = 1;               // number of registers used for operation
+    SIMDGenerator *generator;   // code generator for phase
+  };
+
+  // Compute a strategy for processing a vector of a certain size.
+  SIMDStrategy(SIMDAssembler *sasm, int size, int max_unrolls);
+
+  // Maximum number of unrolls.
+  int MaxUnrolls();
+
+  // Pre-load masks for all masked phases.
+  void PreloadMasks();
+
+  const std::vector<Phase> &phases() const { return phases_; }
+
+ private:
+  // Vector processing phases.
+  std::vector<Phase> phases_;
 };
 
 }  // namespace myelin

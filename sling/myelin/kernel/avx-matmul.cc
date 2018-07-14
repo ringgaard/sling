@@ -171,7 +171,7 @@ class AVXFltVecMatMulVBase : public AVXVecMatMulBase {
     // Allocate SIMD registers.
     std::vector<ZMMRegister> sum;
     for (int i = 0; i < std::max(unrolls, 4); ++i) {
-      sum.push_back(mm.allocz());
+      sum.push_back(mm.allocz(avx512));
     }
     std::vector<ZMMRegister> acc;
     for (int i = 0; i < 4; ++i) {

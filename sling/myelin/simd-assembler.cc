@@ -35,6 +35,15 @@ void SIMDGenerator::MaskedStore(const Operand &dst, int src) {
   LOG(FATAL) << "Masking not supported";
 }
 
+void SIMDGenerator::MaskedAdd(int dst, int src1, const jit::Operand &src2) {
+  LOG(FATAL) << "Masking not supported";
+}
+
+void SIMDGenerator::MaskedMultiplyAdd(int dst, int src1,
+                                      const jit::Operand &src2) {
+  LOG(FATAL) << "Masking not supported";
+}
+
 // AVX512 float SIMD generator using 512-bit ZMM registers.
 class AVX512FloatGenerator : public SIMDGenerator {
  public:
@@ -49,6 +58,7 @@ class AVX512FloatGenerator : public SIMDGenerator {
   // Sixteen 32-bit floats per YMM register.
   int VectorBytes() override { return 64; }
   int VectorSize() override { return 16; }
+  int Alloc() override { return masm_->mm().alloc(true); }
 
   void Load(int dst, const Operand &src) override {
     if (aligned_) {
@@ -83,12 +93,12 @@ class AVX512FloatGenerator : public SIMDGenerator {
   }
 
   void Add(int dst, int src1, const jit::Operand &src2) override {
-    YMMRegister d = YMMRegister::from_code(dst);
-    YMMRegister s1 = YMMRegister::from_code(src1);
+    ZMMRegister d = ZMMRegister::from_code(dst);
+    ZMMRegister s1 = ZMMRegister::from_code(src1);
     masm_->vaddps(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2) override {
+  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
     ZMMRegister d = ZMMRegister::from_code(dst);
     ZMMRegister s1 = ZMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -135,6 +145,18 @@ class AVX512FloatGenerator : public SIMDGenerator {
     }
   }
 
+  void MaskedAdd(int dst, int src1, const jit::Operand &src2) {
+    ZMMRegister d = ZMMRegister::from_code(dst);
+    ZMMRegister s1 = ZMMRegister::from_code(src1);
+    masm_->vaddps(d, s1, src2, Mask(mask_, zeroing));
+  }
+
+  void MaskedMultiplyAdd(int dst, int src1, const jit::Operand &src2) {
+    ZMMRegister d = ZMMRegister::from_code(dst);
+    ZMMRegister s1 = ZMMRegister::from_code(src1);
+    masm_->vfmadd231ps(d, s1, src2, Mask(mask_, zeroing));
+  }
+
  private:
    OpmaskRegister mask_;
 };
@@ -148,6 +170,7 @@ class AVX256FloatGenerator : public SIMDGenerator {
   // Eight 32-bit floats per YMM register.
   int VectorBytes() override { return 32; }
   int VectorSize() override { return 8; }
+  int Alloc() override { return masm_->mm().alloc(false); }
 
   void Load(int dst, const Operand &src) override {
     if (aligned_) {
@@ -187,7 +210,7 @@ class AVX256FloatGenerator : public SIMDGenerator {
     masm_->vaddps(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2) override {
+  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
     YMMRegister d = YMMRegister::from_code(dst);
     YMMRegister s1 = YMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -218,6 +241,7 @@ class AVX128FloatGenerator : public SIMDGenerator {
   // Four 32-bit floats per XMM register.
   int VectorBytes() override { return 16; }
   int VectorSize() override { return 4; }
+  int Alloc() override { return masm_->mm().alloc(false); }
 
   void Load(int dst, const Operand &src) override {
     if (aligned_) {
@@ -257,7 +281,7 @@ class AVX128FloatGenerator : public SIMDGenerator {
     masm_->vaddps(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2) override {
+  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
     XMMRegister d = XMMRegister::from_code(dst);
     XMMRegister s1 = XMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -284,6 +308,7 @@ class SSE128FloatGenerator : public SIMDGenerator {
   // Four 32-bit floats per YMM register.
   int VectorBytes() override { return 16; }
   int VectorSize() override { return 4; }
+  int Alloc() override { return masm_->mm().alloc(false); }
 
   void Load(int dst, const Operand &src) override {
     if (aligned_) {
@@ -327,11 +352,19 @@ class SSE128FloatGenerator : public SIMDGenerator {
     masm_->addps(d, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2) override {
+  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
     XMMRegister d = XMMRegister::from_code(dst);
     XMMRegister s1 = XMMRegister::from_code(src1);
-    masm_->mulps(s1, src2);
-    masm_->addps(d, s1);
+    if (keep) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->movaps(acc, s1);
+      masm_->mulps(acc, src2);
+      masm_->addps(d, acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->mulps(s1, src2);
+      masm_->addps(d, s1);
+    }
   }
 
   void Sum(int reg) override {
@@ -348,8 +381,9 @@ class AVX512ScalarFloatGenerator : public SIMDGenerator {
       : SIMDGenerator(masm, aligned) {}
 
   // Only uses the lower 32-bit float of ZMM register.
-  int VectorBytes() override { return 4; }
-  int VectorSize() override { return 4; }
+  int VectorBytes() override { return sizeof(float); }
+  int VectorSize() override { return 1; }
+  int Alloc() override { return masm_->mm().alloc(true); }
 
   void Load(int dst, const Operand &src) override {
     masm_->vmovss(ZMMRegister::from_code(dst), src);
@@ -382,7 +416,7 @@ class AVX512ScalarFloatGenerator : public SIMDGenerator {
     masm_->vaddss(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2) override {
+  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
     ZMMRegister d = ZMMRegister::from_code(dst);
     ZMMRegister s1 = ZMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -405,8 +439,9 @@ class AVXScalarFloatGenerator : public SIMDGenerator {
       : SIMDGenerator(masm, aligned) {}
 
   // Only uses the lower 32-bit float of XMM register.
-  int VectorBytes() override { return 4; }
-  int VectorSize() override { return 4; }
+  int VectorBytes() override { return sizeof(float); }
+  int VectorSize() override { return 1; }
+  int Alloc() override { return masm_->mm().alloc(false); }
 
   void Load(int dst, const Operand &src) override {
     masm_->vmovss(XMMRegister::from_code(dst), src);
@@ -439,7 +474,7 @@ class AVXScalarFloatGenerator : public SIMDGenerator {
     masm_->vaddss(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2) override {
+  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
     XMMRegister d = XMMRegister::from_code(dst);
     XMMRegister s1 = XMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -462,8 +497,9 @@ class SSEScalarFloatGenerator : public SIMDGenerator {
       : SIMDGenerator(masm, aligned) {}
 
   // Only uses the lower 32-bit float of XMM register.
-  int VectorBytes() override { return 4; }
-  int VectorSize() override { return 4; }
+  int VectorBytes() override { return sizeof(float); }
+  int VectorSize() override { return 1; }
+  int Alloc() override { return masm_->mm().alloc(false); }
 
   void Load(int dst, const Operand &src) override {
     masm_->movss(XMMRegister::from_code(dst), src);
@@ -498,11 +534,19 @@ class SSEScalarFloatGenerator : public SIMDGenerator {
     masm_->addss(d, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2) override {
+  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
     XMMRegister d = XMMRegister::from_code(dst);
     XMMRegister s1 = XMMRegister::from_code(src1);
-    masm_->mulss(s1, src2);
-    masm_->addss(d, s1);
+    if (keep) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->movss(acc, s1);
+      masm_->mulss(acc, src2);
+      masm_->addss(d, acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->mulss(s1, src2);
+      masm_->addss(d, s1);
+    }
   }
 
   void Sum(int reg) override {
@@ -527,23 +571,93 @@ SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type, bool aligned) {
 
   if (masm->Enabled(AVX512F)) {
     name_ = "AVX512Flt";
-    main_ = new AVX512FloatGenerator(masm, aligned);
-    residuals_.push_back(new AVX512ScalarFloatGenerator(masm, aligned));
+    add(new AVX512FloatGenerator(masm, aligned));
+    add(new AVX512ScalarFloatGenerator(masm, aligned));
   } else if (masm->Enabled(AVX)) {
     name_ = "AVXFlt";
-    main_ = new AVX256FloatGenerator(masm, aligned);
-    residuals_.push_back(new AVX128FloatGenerator(masm, aligned));
-    residuals_.push_back(new AVXScalarFloatGenerator(masm, aligned));
+    add(new AVX256FloatGenerator(masm, aligned));
+    add(new AVX128FloatGenerator(masm, aligned));
+    add(new AVXScalarFloatGenerator(masm, aligned));
   } else if (masm->Enabled(SSE)) {
     name_ = "SSEFlt";
-    main_ = new SSE128FloatGenerator(masm, aligned);
-    residuals_.push_back(new SSEScalarFloatGenerator(masm, aligned));
+    add(new SSE128FloatGenerator(masm, aligned));
+    add(new SSEScalarFloatGenerator(masm, aligned));
   }
 }
 
 SIMDAssembler::~SIMDAssembler() {
-  delete main_;
-  for (auto *r : residuals_) delete r;
+  for (auto *r : cascade_) delete r;
+}
+
+void SIMDAssembler::Sum(const std::vector<int> &regs) {
+  if (regs.size() == 4) {
+    main()->Add(regs[0], regs[0], regs[2]);
+    main()->Add(regs[1], regs[1], regs[3]);
+    main()->Add(regs[0], regs[0], regs[1]);
+  } else {
+    for (int n = 1; n < regs.size(); ++n) {
+      main()->Add(regs[0], regs[0], regs[n]);
+    }
+  }
+}
+
+SIMDStrategy::SIMDStrategy(SIMDAssembler *sasm, int size, int max_unrolls) {
+  // Add bulk phase.
+  int vecsize = sasm->main()->VectorSize();
+  int main = (size / vecsize) * vecsize;
+  int unrolls = std::min(main / vecsize, max_unrolls);
+  int remaining = size;
+  int offset = 0;
+  if (unrolls > 0) {
+    phases_.emplace_back(sasm->main());
+    Phase &bulk = phases_.back();
+    bulk.unrolls = unrolls;
+    bulk.repeat = size / (vecsize * unrolls);
+    remaining -= bulk.repeat * vecsize * unrolls;
+    offset += bulk.repeat * vecsize * unrolls;
+  }
+
+  // Add residual phases.
+  for (auto *gen : sasm->cascade()) {
+    // Stop when all elements have been processed.
+    if (remaining == 0) break;
+
+    // Compute the number of elements that can be handled with this vector size.
+    int vecsize = gen->VectorSize();
+    int n = remaining / vecsize;
+    if (n > 0) {
+      // Add phase for generator.
+      phases_.emplace_back(gen);
+      Phase &phase = phases_.back();
+      phase.unrolls = n;
+      phase.offset = offset;
+      offset += n * vecsize;
+      remaining -= n * vecsize;
+    }
+
+    // Add masked phase for remainder if generators supports it.
+    if (gen->SupportsMasking() && remaining > 0 && remaining < vecsize) {
+      // Add phase for generator.
+      phases_.emplace_back(gen);
+      Phase &phase = phases_.back();
+      phase.masked = remaining;
+      phase.offset = offset;
+      offset += remaining;
+      remaining = 0;
+    }
+  }
+}
+
+int SIMDStrategy::MaxUnrolls() {
+  int unrolls = 1;
+  for (auto &p : phases_) unrolls = std::max(unrolls, p.unrolls);
+  return unrolls;
+}
+
+void SIMDStrategy::PreloadMasks() {
+  for (auto &p : phases_) {
+    if (p.masked) p.generator->SetMask(p.masked);
+  }
 }
 
 }  // namespace myelin
