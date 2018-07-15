@@ -48,6 +48,7 @@ class GenericFltVecMatMulBase : public Kernel {
     // Transpose not supported.
     if (step->GetAttr("transpose_a", false)) return false;
     if (step->GetAttr("transpose_b", false)) return false;
+    if (step->GetAttr("transpose_c", false)) return false;
 
     // Check shape. First input must be a row vector.
     if (x->dim(0) != 1 || x->dim(1) != W->dim(0)) return false;
@@ -210,6 +211,7 @@ class GenericFltMatMatMul : public Kernel {
     if (C->rank() != 2 || C->type() != DT_FLOAT) return false;
 
     // Check shape.
+    if (step->GetAttr("transpose_c", false)) return false;
     bool transpose_a = step->GetAttr("transpose_a", false);
     bool transpose_b = step->GetAttr("transpose_b", false);
     Shape a = A->shape();
@@ -319,7 +321,7 @@ class GenericFltMatMatMul : public Kernel {
   }
 
   int64 Complexity(const Step *step) override {
-    return step->input(0)->elements() * step->input(1)->elements() * 2;
+    return step->input(0)->dim(0) * step->input(1)->elements() * 2;
   }
 };
 
@@ -553,6 +555,7 @@ class MatMulTransformer : public Transformer {
       }
       if (op->GetAttr("transpose_a", false)) continue;
       if (op->GetAttr("transpose_b", false)) continue;
+      if (op->GetAttr("transpose_c", false)) continue;
 
       flow->Fuse(op, var->consumers[0], combined);
       return true;

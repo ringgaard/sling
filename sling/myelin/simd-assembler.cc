@@ -39,8 +39,7 @@ void SIMDGenerator::MaskedAdd(int dst, int src1, const jit::Operand &src2) {
   LOG(FATAL) << "Masking not supported";
 }
 
-void SIMDGenerator::MaskedMultiplyAdd(int dst, int src1,
-                                      const jit::Operand &src2) {
+void SIMDGenerator::MaskedMulAdd(int dst, int src1, const jit::Operand &src2) {
   LOG(FATAL) << "Masking not supported";
 }
 
@@ -98,7 +97,13 @@ class AVX512FloatGenerator : public SIMDGenerator {
     masm_->vaddps(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
+  void Mul(int dst, int src1, const jit::Operand &src2) override {
+    ZMMRegister d = ZMMRegister::from_code(dst);
+    ZMMRegister s1 = ZMMRegister::from_code(src1);
+    masm_->vmulps(d, s1, src2);
+  }
+
+  void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
     ZMMRegister d = ZMMRegister::from_code(dst);
     ZMMRegister s1 = ZMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -139,9 +144,9 @@ class AVX512FloatGenerator : public SIMDGenerator {
 
   void MaskedStore(const jit::Operand &dst, int src) override  {
     if (aligned_) {
-      masm_->vmovaps(dst, ZMMRegister::from_code(src), Mask(mask_, zeroing));
+      masm_->vmovaps(dst, ZMMRegister::from_code(src), Mask(mask_, merging));
     } else {
-      masm_->vmovups(dst, ZMMRegister::from_code(src), Mask(mask_, zeroing));
+      masm_->vmovups(dst, ZMMRegister::from_code(src), Mask(mask_, merging));
     }
   }
 
@@ -151,7 +156,7 @@ class AVX512FloatGenerator : public SIMDGenerator {
     masm_->vaddps(d, s1, src2, Mask(mask_, zeroing));
   }
 
-  void MaskedMultiplyAdd(int dst, int src1, const jit::Operand &src2) {
+  void MaskedMulAdd(int dst, int src1, const jit::Operand &src2) {
     ZMMRegister d = ZMMRegister::from_code(dst);
     ZMMRegister s1 = ZMMRegister::from_code(src1);
     masm_->vfmadd231ps(d, s1, src2, Mask(mask_, zeroing));
@@ -210,7 +215,13 @@ class AVX256FloatGenerator : public SIMDGenerator {
     masm_->vaddps(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
+  void Mul(int dst, int src1, const jit::Operand &src2) override {
+    YMMRegister d = YMMRegister::from_code(dst);
+    YMMRegister s1 = YMMRegister::from_code(src1);
+    masm_->vmulps(d, s1, src2);
+  }
+
+  void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
     YMMRegister d = YMMRegister::from_code(dst);
     YMMRegister s1 = YMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -281,7 +292,13 @@ class AVX128FloatGenerator : public SIMDGenerator {
     masm_->vaddps(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
+  void Mul(int dst, int src1, const jit::Operand &src2) override {
+    XMMRegister d = XMMRegister::from_code(dst);
+    XMMRegister s1 = XMMRegister::from_code(src1);
+    masm_->vmulps(d, s1, src2);
+  }
+
+  void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
     XMMRegister d = XMMRegister::from_code(dst);
     XMMRegister s1 = XMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -352,10 +369,17 @@ class SSE128FloatGenerator : public SIMDGenerator {
     masm_->addps(d, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
+  void Mul(int dst, int src1, const jit::Operand &src2) override {
     XMMRegister d = XMMRegister::from_code(dst);
     XMMRegister s1 = XMMRegister::from_code(src1);
-    if (keep) {
+    if (dst != src1) masm_->movaps(d, s1);
+    masm_->mulps(d, src2);
+  }
+
+  void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
+    XMMRegister d = XMMRegister::from_code(dst);
+    XMMRegister s1 = XMMRegister::from_code(src1);
+    if (retain) {
       XMMRegister acc = masm_->mm().allocx();
       masm_->movaps(acc, s1);
       masm_->mulps(acc, src2);
@@ -416,7 +440,13 @@ class AVX512ScalarFloatGenerator : public SIMDGenerator {
     masm_->vaddss(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
+  void Mul(int dst, int src1, const jit::Operand &src2) override {
+    ZMMRegister d = ZMMRegister::from_code(dst);
+    ZMMRegister s1 = ZMMRegister::from_code(src1);
+    masm_->vmulss(d, s1, src2);
+  }
+
+  void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
     ZMMRegister d = ZMMRegister::from_code(dst);
     ZMMRegister s1 = ZMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -474,7 +504,13 @@ class AVXScalarFloatGenerator : public SIMDGenerator {
     masm_->vaddss(d, s1, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
+  void Mul(int dst, int src1, const jit::Operand &src2) override {
+    XMMRegister d = XMMRegister::from_code(dst);
+    XMMRegister s1 = XMMRegister::from_code(src1);
+    masm_->vmulss(d, s1, src2);
+  }
+
+  void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
     XMMRegister d = XMMRegister::from_code(dst);
     XMMRegister s1 = XMMRegister::from_code(src1);
     if (masm_->Enabled(FMA3)) {
@@ -534,10 +570,17 @@ class SSEScalarFloatGenerator : public SIMDGenerator {
     masm_->addss(d, src2);
   }
 
-  void MultiplyAdd(int dst, int src1, const Operand &src2, bool keep) override {
+  void Mul(int dst, int src1, const jit::Operand &src2) override {
     XMMRegister d = XMMRegister::from_code(dst);
     XMMRegister s1 = XMMRegister::from_code(src1);
-    if (keep) {
+    if (dst != src1) masm_->movss(d, s1);
+    masm_->mulss(d, src2);
+  }
+
+  void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
+    XMMRegister d = XMMRegister::from_code(dst);
+    XMMRegister s1 = XMMRegister::from_code(src1);
+    if (retain) {
       XMMRegister acc = masm_->mm().allocx();
       masm_->movss(acc, s1);
       masm_->mulss(acc, src2);
@@ -635,9 +678,9 @@ SIMDStrategy::SIMDStrategy(SIMDAssembler *sasm, int size, int max_unrolls) {
       remaining -= n * vecsize;
     }
 
-    // Add masked phase for remainder if generators supports it.
+    // Add masked phase for remainder if generator supports it.
     if (gen->SupportsMasking() && remaining > 0 && remaining < vecsize) {
-      // Add phase for generator.
+      // Add masked phase for generator.
       phases_.emplace_back(gen);
       Phase &phase = phases_.back();
       phase.masked = remaining;

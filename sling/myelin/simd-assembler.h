@@ -52,10 +52,13 @@ class SIMDGenerator {
   virtual void Add(int dst, int src1, int src2) = 0;
   virtual void Add(int dst, int src1, const jit::Operand &src2) = 0;
 
+  // Multiply src1 and src2 and store it in dst.
+  virtual void Mul(int dst, int src1, const jit::Operand &src2) = 0;
+
   // Multiply src1 and src2 and add it to dst. If the keep flag is false the
   // contents of src1 can possibly be destroyed.
-  virtual void MultiplyAdd(int dst, int src1, const jit::Operand &src2,
-                           bool keep) = 0;
+  virtual void MulAdd(int dst, int src1, const jit::Operand &src2,
+                      bool retain) = 0;
 
   // Horizontal sum of all elements in register.
   virtual void Sum(int reg) = 0;
@@ -67,7 +70,7 @@ class SIMDGenerator {
   virtual void MaskedLoad(int dst, const jit::Operand &src);
   virtual void MaskedStore(const jit::Operand &dst, int src);
   virtual void MaskedAdd(int dst, int src1, const jit::Operand &src2);
-  virtual void MaskedMultiplyAdd(int dst, int src1, const jit::Operand &src2);
+  virtual void MaskedMulAdd(int dst, int src1, const jit::Operand &src2);
 
  protected:
   MacroAssembler *masm_;  // assembler for code generation

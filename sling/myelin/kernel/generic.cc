@@ -352,12 +352,17 @@ class StandardTyper : public Typer {
         if (a->rank() == 2 && b->rank() == 2) {
           bool ta = op->GetAttr("transpose_a", false);
           bool tb = op->GetAttr("transpose_b", false);
+          bool tc = op->GetAttr("transpose_c", false);
           int a_rows =  ta ? a->dim(1) : a->dim(0);
           int a_cols =  ta ? a->dim(0) : a->dim(1);
           int b_rows =  tb ? b->dim(1) : b->dim(0);
           int b_cols =  tb ? b->dim(0) : b->dim(1);
           if (a_cols == b_rows) {
-            c->shape.assign(a_rows, b_cols);
+            if (tc) {
+              c->shape.assign(b_cols, a_rows);
+            } else {
+              c->shape.assign(a_rows, b_cols);
+            }
             return true;
           }
         }

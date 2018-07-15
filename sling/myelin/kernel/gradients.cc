@@ -59,14 +59,25 @@ void matmul_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->inputs[1];
   auto z = op->outputs[0];
+  bool ta = op->GetAttr("transpose_a", false);
+  bool tb = op->GetAttr("transpose_b", false);
+  bool tc = op->GetAttr("transpose_c", false);
 
-  if (op->GetAttr("transpose_b", false)) {
+  if (tc) {
+    // c^T = b^T a^T
+    std::swap(x, y);
+    std::swap(ta, tb);
+    ta = !ta;
+    tb = !tb;
+  }
+
+  if (tb) {
     g->add(x, g->MatMul(g->d(z), g->v(y)));
   } else {
     g->add(x, g->MatMul(g->d(z), g->Transpose(g->v(y))));
   }
 
-  if (op->GetAttr("transpose_a", false)) {
+  if (ta) {
     g->add(y, g->MatMul(g->v(x), g->d(z)));
   } else {
     g->add(y, g->MatMul(g->Transpose(g->v(x)), g->d(z)));
