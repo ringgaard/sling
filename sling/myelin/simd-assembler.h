@@ -43,10 +43,10 @@ class SIMDGenerator {
   virtual void Store(const jit::Operand &dst, int src) = 0;
 
   // Broadcast memory into register.
-  virtual void Broadcast(int dst, const jit::Operand &src) = 0;
+  virtual void Broadcast(int dst, const jit::Operand &src);
 
   // Clear register.
-  virtual void Zero(int reg) = 0;
+  virtual void Zero(int r) = 0;
 
   // Add src1 and src2 and store it in dst.
   virtual void Add(int dst, int src1, int src2) = 0;
@@ -61,7 +61,7 @@ class SIMDGenerator {
                       bool retain) = 0;
 
   // Horizontal sum of all elements in register.
-  virtual void Sum(int reg) = 0;
+  virtual void Sum(int r);
 
   // Some vector instructions support masking (e.g. AVX512) that allow loading
   // and storing partial results.
@@ -73,6 +73,12 @@ class SIMDGenerator {
   virtual void MaskedMulAdd(int dst, int src1, const jit::Operand &src2);
 
  protected:
+  // Get register from register code.
+  jit::Register reg(int r) { return jit::Register::from_code(r); }
+  jit::XMMRegister xmm(int r) { return jit::XMMRegister::from_code(r); }
+  jit::YMMRegister ymm(int r) { return jit::YMMRegister::from_code(r); }
+  jit::ZMMRegister zmm(int r) { return jit::ZMMRegister::from_code(r); }
+
   MacroAssembler *masm_;  // assembler for code generation
   bool aligned_;          // aligned load/store allowed
 };
