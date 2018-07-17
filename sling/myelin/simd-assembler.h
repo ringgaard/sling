@@ -70,6 +70,7 @@ class SIMDGenerator {
   virtual void MaskedLoad(int dst, const jit::Operand &src);
   virtual void MaskedStore(const jit::Operand &dst, int src);
   virtual void MaskedAdd(int dst, int src1, const jit::Operand &src2);
+  virtual void MaskedMul(int dst, int src1, const jit::Operand &src2);
   virtual void MaskedMulAdd(int dst, int src1, const jit::Operand &src2);
 
  protected:

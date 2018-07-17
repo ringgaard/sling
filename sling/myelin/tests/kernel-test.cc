@@ -489,6 +489,9 @@ int main(int argc, char *argv[]) {
     // Compare AVX matrix-matrix multiplication.
     CheckFltMatMatMul("AVXFltMatMatMul", "GenFltMatMatMul");
 
+    // Compare SIMD matrix-matrix multiplication.
+    CheckFltMatMatMul("SIMDMatMul", "AVXFltMatMatMul");
+
     // Compare AVX dot product.
     CheckFltDotProduct("AVXFltDotProduct", "GenFltMatMatMul");
 

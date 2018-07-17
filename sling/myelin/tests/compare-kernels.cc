@@ -7,16 +7,17 @@
 #include "sling/base/logging.h"
 #include "sling/file/file.h"
 #include "sling/myelin/compute.h"
+#include "sling/myelin/elf-linker.h"
 #include "sling/myelin/macro-assembler.h"
 
 DEFINE_bool(debug_base, false, "Debug base kernel");
 DEFINE_bool(debug_test, false, "Debug test kernel");
 DEFINE_bool(memory_check, false, "Check for memory overwrites");
 DEFINE_bool(scramble_registers, false, "Scramble registers on entry");
-DEFINE_bool(log_input_tensors, false, "Dump input tensors");
-DEFINE_bool(log_output_tensors, false, "Dump output tensors");
-DEFINE_string(test_code_output, "", "File for generated test code");
-DEFINE_string(base_code_output, "", "File for generated base code");
+DEFINE_bool(log_input, false, "Dump input tensors");
+DEFINE_bool(log_output, false, "Dump output tensors");
+DEFINE_string(test_code, "", "File for generated test code");
+DEFINE_string(base_code, "", "File for generated base code");
 DEFINE_bool(intrand, false, "Use integers for random number generation");
 DEFINE_int32(minint, -64, "Minimum integer for random number generation");
 DEFINE_int32(maxint, 64, "Maximum integer for random number generation");
@@ -146,7 +147,7 @@ struct KernelCompiler {
                const Flow &flow,
                const string &op,
                const string &kernel,
-               const string binfile,
+               const string codefile,
                bool debug) {
     if (!library.Singleton(op, kernel, &singleton)) {
       LOG(ERROR) << "Unknown kernel: " << kernel;
@@ -158,13 +159,18 @@ struct KernelCompiler {
       network.set_runtime(&debug_runtime);
     }
     network.set_parameter_element_order(ANY_ORDER);
+    ElfLinker linker;
+    network.set_linker(&linker);
     if (debug) network.set_debug(true);
     if (!network.Compile(flow, singleton)) {
       LOG(ERROR) << "Error compiling kernel: " << kernel;
       return false;
     }
     func = network.GetCell("benchmark");
-    if (!binfile.empty()) func->WriteCodeToFile(binfile);
+    if (!codefile.empty()) {
+      linker.Link();
+      linker.Write(codefile.c_str());
+    }
     if (!func->steps().empty() && !func->steps()[0]->variant().empty()) {
       VLOG(2) << kernel << " variant " << func->steps()[0]->variant();
     }
@@ -220,7 +226,7 @@ bool FltKernelComparator::Check(int iterations) {
   // Compile computation for base kernel.
   KernelCompiler base;
   if (!base.Compile(library_, flow_, op_->type, base_kernel_name_,
-      FLAGS_base_code_output, FLAGS_debug_base)) {
+      FLAGS_base_code, FLAGS_debug_base)) {
     return false;
   }
 
@@ -228,7 +234,7 @@ bool FltKernelComparator::Check(int iterations) {
   KernelCompiler test;
   test.runtime = runtime_;
   if (!test.Compile(library_, flow_, op_->type, test_kernel_name_,
-      FLAGS_test_code_output, FLAGS_debug_test)) {
+      FLAGS_test_code, FLAGS_debug_test)) {
     return false;
   }
 
@@ -247,33 +253,17 @@ bool FltKernelComparator::Check(int iterations) {
     // Fill inputs with random data.
     for (int i = 0; i < inputs_.size(); ++i) {
       Flow::Variable *var = inputs_[i];
-      Tensor *b = base.func->GetParameter(var->name);
-      Tensor *t = test.func->GetParameter(var->name);
+      TensorData b = base_data[base.func->GetParameter(var)];
+      TensorData t = test_data[test.func->GetParameter(var)];
       float bias = low_[i];
       float scale = high_[i] - low_[i];
-      if (var->rank() == 1) {
-        for (int r = 0; r < var->dim(0); ++r) {
-          float val = prng.Random(scale, bias);
-          *base_data.Get<float>(b, r) = val;
-          *test_data.Get<float>(t, r) = val;
-          if (FLAGS_log_input_tensors) {
-            LOG(INFO) << var->name << "[" << r << "]=" << val;
-          }
-        }
-      } else if (var->rank() == 2) {
-        for (int r = 0; r < var->dim(0); ++r) {
-          for (int c = 0; c < var->dim(1); ++c) {
-            float val = prng.Random(scale, bias);
-            *base_data.Get<float>(b, r, c) = val;
-            *test_data.Get<float>(t, r, c) = val;
-            if (FLAGS_log_input_tensors) {
-              LOG(INFO) << var->name << "[" << r << "," << c << "]=" << val;
-            }
-          }
-        }
-      } else {
-        LOG(ERROR) << var->rank() << "D tensor not supported";
-        return false;
+      for (int j = 0; j < var->elements(); ++j) {
+        float val = prng.Random(scale, bias);
+        b.nth<float>(j) = val;
+        t.nth<float>(j) = val;
+      }
+      if (FLAGS_log_input) {
+        LOG(INFO) << var->name << "=" << b.ToString();
       }
     }
 
@@ -284,64 +274,32 @@ bool FltKernelComparator::Check(int iterations) {
     // Compare output from base and test.
     for (int i = 0; i < outputs_.size(); ++i) {
       Flow::Variable *var = outputs_[i];
-      Tensor *b = base.func->GetParameter(var->name);
-      Tensor *t = test.func->GetParameter(var->name);
-      if (var->rank() == 1) {
-        num_elements += var->dim(0);
-        for (int r = 0; r < var->dim(0); ++r) {
-          float base_result = *base_data.Get<float>(b, r);
-          float test_result = *test_data.Get<float>(t, r);
-          float delta = fabs(test_result - base_result);
-          if (delta != 0.0) {
-              float e = 0.0;
-              if (fabs(base_result) > kEpsilon) e = delta / fabs(base_result);
-              error += e;
-              VLOG(2) << "Base and test difference for "
-                      << var->name << "[" << r << "] "
-                      << base_result << " vs. " << test_result
-                      << " (delta " << delta << ", error " << e << ")";
-            if (e > tolerance_[i]) {
-              num_errors++;
-            } else {
-              num_inexact++;
-            }
-            if (e > max_error) max_error = e;
+      TensorData b = base_data[base.func->GetParameter(var)];
+      TensorData t = test_data[test.func->GetParameter(var)];
+      num_elements += var->elements();
+      if (FLAGS_log_output) {
+        LOG(INFO) << "base " << var->name << "=" << b.ToString();
+        LOG(INFO) << "test " << var->name << "=" << t.ToString();
+      }
+      for (int j = 0; j < var->elements(); ++j) {
+        float base_result = b.nth<float>(j);
+        float test_result = t.nth<float>(j);
+        float delta = fabs(test_result - base_result);
+        if (delta != 0.0) {
+            float e = 0.0;
+            if (fabs(base_result) > kEpsilon) e = delta / fabs(base_result);
+            error += e;
+            VLOG(2) << "Base and test difference for "
+                    << var->name << "@" << j << " "
+                    << base_result << " vs. " << test_result
+                    << " (delta " << delta << ", error " << e << ")";
+          if (e > tolerance_[i]) {
+            num_errors++;
+          } else {
+            num_inexact++;
           }
-          if (FLAGS_log_output_tensors) {
-            LOG(INFO) << var->name << "[" << r << "]=" << test_result;
-          }
+          if (e > max_error) max_error = e;
         }
-      } else if (var->rank() == 2) {
-        num_elements += var->elements();
-        for (int r = 0; r < var->dim(0); ++r) {
-          for (int c = 0; c < var->dim(1); ++c) {
-            float base_result = *base_data.Get<float>(b, r, c);
-            float test_result = *test_data.Get<float>(t, r, c);
-            float delta = fabs(test_result - base_result);
-            if (delta != 0.0) {
-              float e = 0.0;
-              if (fabs(base_result) > kEpsilon) e = delta / fabs(base_result);
-              error += e;
-              VLOG(9) << "Base and test difference for "
-                      << var->name << "[" << r << "," << c << "] "
-                      << base_result << " vs. " << test_result
-                      << " (delta " << delta << ", error " << e << ")";
-              if (e > tolerance_[i]) {
-                num_errors++;
-              } else {
-                num_inexact++;
-              }
-              if (e > max_error) max_error = e;
-            }
-            if (FLAGS_log_output_tensors) {
-              LOG(INFO) << var->name << "[" << r << "," << c << "]="
-                        << test_result;
-            }
-          }
-        }
-      } else {
-        LOG(ERROR) << var->rank() << "D tensor not supported";
-        return false;
       }
     }
   }
@@ -435,7 +393,7 @@ bool IntKernelComparator::Check(int iterations) {
   // Compile computation for base kernel.
   KernelCompiler base;
   if (!base.Compile(library_, flow_, op_->type, base_kernel_name_,
-      FLAGS_base_code_output, FLAGS_debug_base)) {
+      FLAGS_base_code, FLAGS_debug_base)) {
     return false;
   }
 
@@ -443,7 +401,7 @@ bool IntKernelComparator::Check(int iterations) {
   KernelCompiler test;
   test.runtime = runtime_;
   if (!test.Compile(library_, flow_, op_->type, test_kernel_name_,
-      FLAGS_test_code_output, FLAGS_debug_test)) {
+      FLAGS_test_code, FLAGS_debug_test)) {
     return false;
   }
 
@@ -467,7 +425,7 @@ bool IntKernelComparator::Check(int iterations) {
           int64 val = unit(prng);
           SetInt(&base_data, b, r, val);
           SetInt(&test_data, t, r, val);
-          if (FLAGS_log_input_tensors) {
+          if (FLAGS_log_input) {
             LOG(INFO) << var->name << "[" << r << "]=" << val;
           }
         }
@@ -477,7 +435,7 @@ bool IntKernelComparator::Check(int iterations) {
             int64 val = unit(prng);
             SetInt(&base_data, b, r, c, val);
             SetInt(&test_data, t, r, c, val);
-            if (FLAGS_log_input_tensors) {
+            if (FLAGS_log_input) {
               LOG(INFO) << var->name << "[" << r << "," << c << "]=" << val;
             }
           }
@@ -510,7 +468,7 @@ bool IntKernelComparator::Check(int iterations) {
                       << " (delta " << delta << ")";
             num_errors++;
           }
-          if (FLAGS_log_output_tensors) {
+          if (FLAGS_log_output) {
             LOG(INFO) << var->name << "[" << r << "]=" << test_result;
           }
         }
@@ -528,7 +486,7 @@ bool IntKernelComparator::Check(int iterations) {
                       << " (delta " << delta << ")";
               num_errors++;
             }
-            if (FLAGS_log_output_tensors) {
+            if (FLAGS_log_output) {
               LOG(INFO) << var->name << "[" << r << "," << c << "]="
                         << test_result;
             }
@@ -577,7 +535,7 @@ bool FltIntKernelComparator::Check(int iterations) {
   // Compile computation for base kernel.
   KernelCompiler base;
   if (!base.Compile(library_, flow_, op_->type, base_kernel_name_,
-      FLAGS_base_code_output, FLAGS_debug_base)) {
+      FLAGS_base_code, FLAGS_debug_base)) {
     return false;
   }
 
@@ -585,7 +543,7 @@ bool FltIntKernelComparator::Check(int iterations) {
   KernelCompiler test;
   test.runtime = runtime_;
   if (!test.Compile(library_, flow_, op_->type, test_kernel_name_,
-      FLAGS_test_code_output, FLAGS_debug_test)) {
+      FLAGS_test_code, FLAGS_debug_test)) {
     return false;
   }
 
@@ -610,7 +568,7 @@ bool FltIntKernelComparator::Check(int iterations) {
           float val = prng.Random(scale, bias);
           *base_data.Get<float>(b, r) = val;
           *test_data.Get<float>(t, r) = val;
-          if (FLAGS_log_input_tensors) {
+          if (FLAGS_log_input) {
             LOG(INFO) << var->name << "[" << r << "]=" << val;
           }
         }
@@ -620,7 +578,7 @@ bool FltIntKernelComparator::Check(int iterations) {
             float val = prng.Random(scale, bias);
             *base_data.Get<float>(b, r, c) = val;
             *test_data.Get<float>(t, r, c) = val;
-            if (FLAGS_log_input_tensors) {
+            if (FLAGS_log_input) {
               LOG(INFO) << var->name << "[" << r << "," << c << "]=" << val;
             }
           }
@@ -653,7 +611,7 @@ bool FltIntKernelComparator::Check(int iterations) {
                       << " (delta " << delta << ")";
             num_errors++;
           }
-          if (FLAGS_log_output_tensors) {
+          if (FLAGS_log_output) {
             LOG(INFO) << var->name << "[" << r << "]=" << test_result;
           }
         }
@@ -671,7 +629,7 @@ bool FltIntKernelComparator::Check(int iterations) {
                       << " (delta " << delta << ")";
               num_errors++;
             }
-            if (FLAGS_log_output_tensors) {
+            if (FLAGS_log_output) {
               LOG(INFO) << var->name << "[" << r << "," << c << "]="
                         << test_result;
             }

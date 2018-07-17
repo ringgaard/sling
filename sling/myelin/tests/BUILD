@@ -10,6 +10,7 @@ cc_library(
     "//sling/base",
     "//sling/file",
     "//sling/myelin:compute",
+    "//sling/myelin:elf-linker",
     "//sling/myelin:flow",
   ],
 )

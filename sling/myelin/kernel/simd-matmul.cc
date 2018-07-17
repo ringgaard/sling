@@ -62,24 +62,26 @@ class MatMulArgs {
       return tensor->order();
     }
 
-    // Width (inner dimension) with respect to order and transpose.
-    int width() const { return shape.dim(0); }
+    // Outer dimension in tensor array.
+    int outer() const { return tensor->order() == ROW_MAJOR ? 0 : 1; }
 
-    // Height (outer dimension) with respect to order and transpose.
-    int height() const { return shape.dim(1); }
+    // Inner dimension in tensor array.
+    int inner() const { return tensor->order() == ROW_MAJOR ? 1 : 0; }
+
+    // Height (outer dimension) of tensor array
+    int height() const { return tensor->dim(outer()); }
+
+    // Width (inner dimension) of tensor array.
+    int width() const { return tensor->dim(inner()); }
 
     // Size of tensor in bytes.
     int size() const { return tensor->size(); }
 
-    // Number of bytes per row.
-    int stride() const {
-      return tensor->stride(0);
-    }
+    // Number of bytes per row including padding.
+    int stride() const { return tensor->stride(outer()); }
 
     // Padding bytes per row.
-    int padding() const {
-      return tensor->padding(0);
-    }
+    int padding() const { return tensor->padding(outer()); }
 
     // Data type for underlying tensor.
     Type type() const { return tensor->type(); }
@@ -217,7 +219,8 @@ class MatMulArgs {
   bool accumulate_;
 };
 
-// General matrix multiplication using SIMD code generators.
+// General matrix multiplication using SIMD code generators. It supports
+// transposed inputs and output as well as output accumulation.
 class SIMDMatMul : public Kernel {
  public:
   SIMDMatMul(bool accumulate) : accumulate_(accumulate) {}
@@ -267,20 +270,15 @@ class SIMDMatMul : public Kernel {
     MatMulArgs args(step);
     CHECK(args.EnsureOutputOrder(ROW_MAJOR));
 
-    LOG(INFO) << "Generate " << step->name();
-    LOG(INFO) << "  a: " << args.a().ToString();
-    LOG(INFO) << "  b: " << args.b().ToString();
-    LOG(INFO) << "  c: " << args.c().ToString();
-
-    // Use the input element order to choose matmul algorithm.
+    // Use the input element order to choose matrix multiplication algorithm.
     Order a = args.a().order();
     Order b = args.b().order();
     if (a == ROW_MAJOR && b == ROW_MAJOR) {
-      GenerateRowRow(step, masm, args);
+      GenerateVertical(step, masm, args, false);
     } else if (a == ROW_MAJOR && b == COLUMN_MAJOR) {
-      GenerateRowCol(step, masm, args);
+      GenerateHorizontal(step, masm, args);
     } else if (a == COLUMN_MAJOR && b == ROW_MAJOR) {
-      GenerateRowCol(step, masm, args);
+      GenerateVertical(step, masm, args, true);
     } else if (a == COLUMN_MAJOR && b == COLUMN_MAJOR) {
       GenerateColCol(step, masm, args);
     } else {
@@ -288,14 +286,22 @@ class SIMDMatMul : public Kernel {
     }
   }
 
-  void GenerateRowRow(Step *step, MacroAssembler *masm,
-                      const MatMulArgs &args) {
+  // Compute dot products between rows/columns in A and column blocks in B using
+  // vertical summing. The vectors in A can either be traverse from top to
+  // bottom (strided) or from left ro right (consecutive).
+  void GenerateVertical(Step *step, MacroAssembler *masm,
+                        const MatMulArgs &args, bool strided) {
     // Create SIMD code generators.
     Type type = args.c().tensor->type();
     int dsize = TypeTraits::of(type).size();
     int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
     SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
-    step->set_variant(sasm.name() + "RR");
+    step->set_variant(sasm.name() + (strided ? "CR" : "RR"));
+    if (strided) {
+      CHECK_EQ(args.a().height(), args.b().height());
+    } else {
+      CHECK_EQ(args.a().width(), args.b().height());
+    }
 
     // Compute vector processing strategy.
     SIMDStrategy strategy(&sasm, args.b().width(), kMaxUnrolls);
@@ -316,15 +322,31 @@ class SIMDMatMul : public Kernel {
     __ LoadTensorAddress(b, args.b().tensor);
     __ LoadTensorAddress(c, args.c().tensor);
 
-    // Loop over rows in A.
+    // Compute inner and outer dimensions.
+    int outer_step, outer_limit, inner_step, inner_limit;
+    if (strided) {
+      outer_step = dsize;
+      outer_limit = dsize * args.a().width();
+      inner_step = args.a().stride();
+      inner_limit = args.a().stride() * args.a().height();
+    } else {
+      outer_step = args.a().stride();
+      outer_limit = args.a().stride() * args.a().height();
+      inner_step = dsize;
+      inner_limit = dsize * args.a().width();
+    }
+    bool outer_single = outer_step == outer_limit;
+    bool inner_single = inner_step == inner_limit;
+
+    // Loop over rows/columns in A.
     Register a_end = masm->rr().alloc();
     Label l1;
-    if (args.a().height() > 1) {
-      __ leaq(a_end, Operand(a, args.a().size()));
+    if (!outer_single) {
+      __ leaq(a_end, Operand(a, outer_limit));
       __ bind(&l1);
     }
 
-    // Compute dot product between row in A and column blocks in B.
+    // Compute dot product between row/column in A and column blocks in B.
     for (auto &phase : strategy.phases()) {
       auto *gen = phase.generator;
       int vecsize = gen->VectorSize();
@@ -341,34 +363,51 @@ class SIMDMatMul : public Kernel {
         }
         __ bind(&l2);
 
-        for (int r = 0; r < phase.unrolls; ++r) {
-          gen->Zero(sum[r]);
-        }
-        __ xorq(a_ofs, a_ofs);
-        __ leaq(b_ptr, Operand(b, col_ofs));
-
-        // Loop over columns in A and rows in B.
-        Label l3;
-        __ bind(&l3);
-        gen->Broadcast(elem, Operand(a, a_ofs));
-        for (int i = 0; i < phase.unrolls; ++i) {
-          int disp = i * args.b().stride();
-          bool retain = i != phase.unrolls - 1;
-          gen->MulAdd(sum[i], elem, Operand(b_ptr, disp), retain);
-        }
-        __ addq(b_ptr, Immediate(phase.unrolls * args.b().stride()));
-        __ addq(a_ofs, Immediate(phase.unrolls * dsize));
-        __ cmpq(a_ofs, Immediate(args.a().width() * dsize));
-        __ j(less, &l3);
-
-        // Save result in C.
-        for (int i = 0; i < phase.unrolls; ++i) {
-          if (accumulate_) {
-            gen->Add(sum[i], sum[i], Operand(c, i * vecsize * dsize));
+        if (inner_single) {
+          // Outer product of A element and B rowblock.
+          gen->Broadcast(elem, Operand(a));
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = i * vecsize * dsize;
+            if (accumulate_) {
+              gen->Load(sum[i], Operand(c, i * vecsize * dsize));
+              bool retain = i != phase.unrolls - 1;
+              gen->MulAdd(sum[i], elem, Operand(b, col_ofs, times_1, disp),
+                          retain);
+            } else {
+              gen->Mul(sum[i], elem, Operand(b, col_ofs, times_1, disp));
+            }
+            gen->Store(Operand(c, i * vecsize * dsize), sum[i]);
           }
-          gen->Store(Operand(c, i * vecsize * dsize), sum[i]);
+        } else {
+          for (int r = 0; r < phase.unrolls; ++r) {
+            gen->Zero(sum[r]);
+          }
+          __ xorq(a_ofs, a_ofs);
+          __ leaq(b_ptr, Operand(b, col_ofs));
+
+          // Loop over columns/rows in A and rows in B.
+          Label l3;
+          __ bind(&l3);
+          gen->Broadcast(elem, Operand(a, a_ofs));
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = i * vecsize * dsize;
+            bool retain = i != phase.unrolls - 1;
+            gen->MulAdd(sum[i], elem, Operand(b_ptr, disp), retain);
+          }
+          __ addq(b_ptr, Immediate(args.b().stride()));
+          __ addq(a_ofs, Immediate(inner_step));
+          __ cmpq(a_ofs, Immediate(inner_limit));
+          __ j(less, &l3);
+
+          // Save result in C.
+          for (int i = 0; i < phase.unrolls; ++i) {
+            if (accumulate_) {
+              gen->Add(sum[i], sum[i], Operand(c, i * vecsize * dsize));
+            }
+            gen->Store(Operand(c, i * vecsize * dsize), sum[i]);
+          }
         }
-        __ addq(c, Immediate(phase.unrolls * vecsize * dsize));
+        __ addq(c, Immediate(blksize));
 
         // Next block.
         __ addq(col_ofs, Immediate(blksize));
@@ -376,78 +415,109 @@ class SIMDMatMul : public Kernel {
         __ j(less, &l2);
       } else if (phase.masked == 0) {
         // Residual phase.
-        for (int r = 0; r < phase.unrolls; ++r) {
-          gen->Zero(sum[r]);
-        }
-        __ xorq(a_ofs, a_ofs);
-        __ leaq(b_ptr, Operand(b, phase.offset * dsize));
-
-        // Loop over columns in A and rows in B.
-        Label l3;
-        __ bind(&l3);
-        gen->Broadcast(elem, Operand(a, a_ofs));
-        for (int i = 0; i < phase.unrolls; ++i) {
-          int disp = i * args.b().stride();
-          bool retain = i != phase.unrolls - 1;
-          gen->MulAdd(sum[i], elem, Operand(b_ptr, disp), retain);
-        }
-        __ addq(b_ptr, Immediate(phase.unrolls * args.b().stride()));
-        __ addq(a_ofs, Immediate(phase.unrolls * dsize));
-        __ cmpq(a_ofs, Immediate(args.a().width() * dsize));
-        __ j(less, &l3);
-
-        // Save result in C.
-        for (int i = 0; i < phase.unrolls; ++i) {
-          if (accumulate_) {
-            gen->Add(sum[i], sum[i], Operand(c, i * vecsize * dsize));
+        if (inner_single) {
+          // Outer product of A element and B rowblock.
+          gen->Broadcast(elem, Operand(a));
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = blkstart + i * vecsize * dsize;
+            if (accumulate_) {
+              gen->Load(sum[i], Operand(c, i * vecsize * dsize));
+              bool retain = i != phase.unrolls - 1;
+              gen->MulAdd(sum[i], elem, Operand(b, disp), retain);
+            } else {
+              gen->Mul(sum[i], elem, Operand(b, disp));
+            }
+            gen->Store(Operand(c, i * vecsize * dsize), sum[i]);
           }
-          gen->Store(Operand(c, i * vecsize * dsize), sum[i]);
+        } else {
+          for (int r = 0; r < phase.unrolls; ++r) {
+            gen->Zero(sum[r]);
+          }
+          __ xorq(a_ofs, a_ofs);
+          __ leaq(b_ptr, Operand(b, blkstart));
+
+          // Loop over columns/rows in A and rows in B.
+          Label l3;
+          __ bind(&l3);
+          gen->Broadcast(elem, Operand(a, a_ofs));
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = i * vecsize * dsize;
+            bool retain = i != phase.unrolls - 1;
+            gen->MulAdd(sum[i], elem, Operand(b_ptr, disp), retain);
+          }
+          __ addq(b_ptr, Immediate(args.b().stride()));
+          __ addq(a_ofs, Immediate(inner_step));
+          __ cmpq(a_ofs, Immediate(inner_limit));
+          __ j(less, &l3);
+
+          // Save result in C.
+          for (int i = 0; i < phase.unrolls; ++i) {
+            if (accumulate_) {
+              gen->Add(sum[i], sum[i], Operand(c, i * vecsize * dsize));
+            }
+            gen->Store(Operand(c, i * vecsize * dsize), sum[i]);
+          }
         }
-        __ addq(c, Immediate(phase.unrolls * vecsize * dsize));
+        __ addq(c, Immediate(blksize));
       } else {
         // Masked phase.
-        gen->Zero(sum[0]);
-        __ xorq(a_ofs, a_ofs);
-        __ leaq(b_ptr, Operand(b, phase.offset * dsize));
+        CHECK_EQ(phase.unrolls, 0);
+        if (inner_single) {
+          gen->Broadcast(elem, Operand(a));
+          if (accumulate_) {
+            gen->MaskedLoad(elem, Operand(c));
+            gen->MaskedMulAdd(sum[0], elem, Operand(b, blkstart));
+          } else {
+            gen->MaskedMul(sum[0], elem, Operand(b, blkstart));
+          }
+          gen->MaskedStore(Operand(c), sum[0]);
+        } else {
+          gen->Zero(sum[0]);
+          __ xorq(a_ofs, a_ofs);
+          __ leaq(b_ptr, Operand(b, blkstart));
 
-        // Loop over columns in A and rows in B.
-        Label l3;
-        __ bind(&l3);
-        gen->Broadcast(elem, Operand(a, a_ofs));
-        gen->MaskedMulAdd(sum[0], elem, Operand(b_ptr));
-        __ addq(b_ptr, Immediate(args.b().stride()));
-        __ addq(a_ofs, Immediate(dsize));
-        __ cmpq(a_ofs, Immediate(args.a().width() * dsize));
-        __ j(less, &l3);
+          // Loop over columns/rows in A and rows in B.
+          Label l3;
+          __ bind(&l3);
+          gen->Broadcast(elem, Operand(a, a_ofs));
+          gen->MaskedMulAdd(sum[0], elem, Operand(b_ptr));
+          __ addq(b_ptr, Immediate(args.b().stride()));
+          __ addq(a_ofs, Immediate(inner_step));
+          __ cmpq(a_ofs, Immediate(inner_limit));
+          __ j(less, &l3);
 
-        // Save result in C.
-        if (accumulate_) {
-          gen->MaskedAdd(sum[0], sum[0], Operand(c));
+          // Save result in C.
+          if (accumulate_) {
+            gen->MaskedAdd(sum[0], sum[0], Operand(c));
+          }
+          gen->MaskedStore(Operand(c), sum[0]);
         }
-        gen->MaskedStore(Operand(c), sum[0]);
-        __ addq(c, Immediate(phase.masked * dsize));
+        __ addq(c, Immediate(blksize));
       }
     }
 
-    // Next row in A.
-    if (args.a().height() > 1) {
+    // Next row/column in A.
+    if (!outer_single) {
       if (args.c().padding() > 0) {
         __ addq(c, Immediate(args.c().padding()));
       }
-      __ addq(a, Immediate(args.a().stride()));
+      __ addq(a, Immediate(outer_step));
       __ cmpq(a, a_end);
       __ j(less, &l1);
     }
   }
 
-  void GenerateRowCol(Step *step, MacroAssembler *masm,
-                      const MatMulArgs &args) {
+  // Compute dot products between row blocks in A and row blocks in B  using
+  // horizontal summation.
+  void GenerateHorizontal(Step *step, MacroAssembler *masm,
+                          const MatMulArgs &args) {
     // Create SIMD code generators.
     Type type = args.c().tensor->type();
     int dsize = TypeTraits::of(type).size();
     int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
     SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
-    step->set_variant(sasm.name() + "RR");
+    step->set_variant(sasm.name() + "RC");
+    CHECK_EQ(args.a().width(), args.b().width());
 
     // Compute vector processing strategy.
     SIMDStrategy strategy(&sasm, args.b().width(), kMaxUnrolls);
@@ -482,7 +552,11 @@ class SIMDMatMul : public Kernel {
     // Loop over rows in B.
     Label l2;
     if (args.b().height() > 1) {
-      __ movq(b_ptr, b);
+      if (args.a().height() > 1) {
+        __ movq(b_ptr, b);
+      } else {
+        b_ptr = b;
+      }
       __ bind(&l2);
     } else {
       b_ptr = b;
@@ -506,7 +580,7 @@ class SIMDMatMul : public Kernel {
         }
         __ bind(&l3);
         for (int i = 0; i < phase.unrolls; ++i) {
-          int disp = i * vecsize;
+          int disp = i * vecsize * dsize;
           gen->Load(elem[i], Operand(a, ofs, times_1, disp));
           gen->MulAdd(sum[i], elem[i], Operand(b_ptr, ofs, times_1, disp),
                       false);
@@ -519,28 +593,29 @@ class SIMDMatMul : public Kernel {
         if (phase.offset == 0 || vecsize == sasm.main()->VectorSize()) {
           // Same vector size as bulk; unroll directly into sum registers.
           for (int i = 0; i < phase.unrolls; ++i) {
-            int disp = i * vecsize;
+            int disp = blkstart + i * vecsize * dsize;
             gen->Load(elem[i], Operand(a, disp));
-            gen->MulAdd(sum[i], elem[i], Operand(b, disp), false);
+            gen->MulAdd(sum[i], elem[i], Operand(b_ptr, disp), false);
           }
         } else if (phase.unrolls == 1) {
           // Single residual; merge into first sum register.
           gen->Load(elem[0], Operand(a, blkstart));
-          gen->Mul(elem[0], elem[0], Operand(b, blkstart));
+          gen->Mul(elem[0], elem[0], Operand(b_ptr, blkstart));
           sasm.main()->Add(sum[0], sum[0], elem[0]);
         } else {
           // Accumulate unrolled residual and merge into first sum register.
           auto acc = sasm.alloc();
           gen->Zero(acc);
           for (int i = 0; i < phase.unrolls; ++i) {
-            int disp = i * vecsize + blkstart;
+            int disp = blkstart + i * vecsize * dsize;
             gen->Load(elem[i], Operand(a, disp));
-            gen->MulAdd(acc, elem[i], Operand(b, disp), false);
+            gen->MulAdd(acc, elem[i], Operand(b_ptr, disp), false);
           }
           sasm.main()->Add(sum[0], sum[0], acc);
         }
       } else {
         // Masked phase.
+        CHECK_EQ(phase.unrolls, 0);
         gen->MaskedLoad(elem[0], Operand(a, blkstart));
         gen->MaskedMulAdd(sum[0], sum[0], Operand(b_ptr, blkstart));
       }
@@ -560,7 +635,7 @@ class SIMDMatMul : public Kernel {
     // Next row in B.
     if (args.b().height() > 1) {
       __ addq(b_ptr, Immediate(args.b().stride()));
-      __ cmpq(b, b_end);
+      __ cmpq(b_ptr, b_end);
       __ j(less, &l2);
     }
 
@@ -575,164 +650,14 @@ class SIMDMatMul : public Kernel {
     }
   }
 
-  void GenerateColRow(Step *step, MacroAssembler *masm,
-                      const MatMulArgs &args) {
-    // Create SIMD code generators.
-    Type type = args.c().tensor->type();
-    int dsize = TypeTraits::of(type).size();
-    int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
-    SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
-    step->set_variant(sasm.name() + "CR");
-
-    // Compute vector processing strategy.
-    SIMDStrategy strategy(&sasm, args.b().width(), kMaxUnrolls);
-    strategy.PreloadMasks();
-
-    // Allocate registers.
-    Register a = masm->rr().alloc();
-    Register b = masm->rr().alloc();
-    Register c = masm->rr().alloc();
-    Register a_ofs = masm->rr().alloc();
-    Register b_ptr = masm->rr().alloc();
-    Register col_ofs = masm->rr().alloc();
-    auto sum = sasm.alloc(strategy.MaxUnrolls());
-    int elem = sasm.alloc();
-
-    // Load tensor addresses and masks.
-    __ LoadTensorAddress(a, args.a().tensor);
-    __ LoadTensorAddress(b, args.b().tensor);
-    __ LoadTensorAddress(c, args.c().tensor);
-
-    // Loop over columns in A.
-    Register a_end = masm->rr().alloc();
-    Label l1;
-    if (args.a().width() > 1) {
-      __ leaq(a_end, Operand(a, args.a().width() * dsize));
-      __ bind(&l1);
-    }
-
-    // Compute dot product between column in A and column blocks in B.
-    for (auto &phase : strategy.phases()) {
-      auto *gen = phase.generator;
-      int vecsize = gen->VectorSize();
-      int blkstart = phase.offset * dsize;
-      int blksize = phase.unrolls * vecsize * dsize;
-
-      if (phase.repeat > 1) {
-        // Repeated phase.
-        Label l2;
-        if (phase.offset == 0) {
-          __ xorq(col_ofs, col_ofs);
-        } else {
-          __ movq(col_ofs, Immediate(blkstart));
-        }
-        __ bind(&l2);
-
-        for (int r = 0; r < phase.unrolls; ++r) {
-          gen->Zero(sum[r]);
-        }
-        __ xorq(a_ofs, a_ofs);
-        __ leaq(b_ptr, Operand(b, col_ofs));
-
-        // Loop over columns in A and rows in B.
-        Label l3;
-        __ bind(&l3);
-        gen->Broadcast(elem, Operand(a, a_ofs));
-        for (int i = 0; i < phase.unrolls; ++i) {
-          int disp = i * args.b().stride();
-          bool retain = i != phase.unrolls - 1;
-          gen->MulAdd(sum[i], elem, Operand(b_ptr, disp), retain);
-        }
-        __ addq(b_ptr, Immediate(phase.unrolls * args.b().stride()));
-        __ addq(a_ofs, Immediate(args.a().stride()));
-        __ cmpq(a_ofs, Immediate(args.a().stride() * args.a().height()));
-        __ j(less, &l3);
-
-        // Save result in C.
-        for (int i = 0; i < phase.unrolls; ++i) {
-          if (accumulate_) {
-            gen->Add(sum[i], sum[i], Operand(c, i * vecsize * dsize));
-          }
-          gen->Store(Operand(c, i * vecsize * dsize), sum[i]);
-        }
-        __ addq(c, Immediate(phase.unrolls * vecsize * dsize));
-
-        // Next block.
-        __ addq(col_ofs, Immediate(blksize));
-        __ cmpq(col_ofs, Immediate(blkstart + phase.repeat * blksize));
-        __ j(less, &l2);
-      } else if (phase.masked == 0) {
-        // Residual phase.
-        for (int r = 0; r < phase.unrolls; ++r) {
-          gen->Zero(sum[r]);
-        }
-        __ xorq(a_ofs, a_ofs);
-        __ leaq(b_ptr, Operand(b, phase.offset * dsize));
-
-        // Loop over columns in A and rows in B.
-        Label l3;
-        __ bind(&l3);
-        gen->Broadcast(elem, Operand(a, a_ofs));
-        for (int i = 0; i < phase.unrolls; ++i) {
-          int disp = i * args.b().stride();
-          bool retain = i != phase.unrolls - 1;
-          gen->MulAdd(sum[i], elem, Operand(b_ptr, disp), retain);
-        }
-        __ addq(b_ptr, Immediate(phase.unrolls * args.b().stride()));
-        __ addq(a_ofs, Immediate(args.a().stride()));
-        __ cmpq(a_ofs, Immediate(args.a().stride() * args.a().height()));
-        __ j(less, &l3);
-
-        // Save result in C.
-        for (int i = 0; i < phase.unrolls; ++i) {
-          if (accumulate_) {
-            gen->Add(sum[i], sum[i], Operand(c, i * vecsize * dsize));
-          }
-          gen->Store(Operand(c, i * vecsize * dsize), sum[i]);
-        }
-        __ addq(c, Immediate(phase.unrolls * vecsize * dsize));
-      } else {
-        // Masked phase.
-        gen->Zero(sum[0]);
-        __ xorq(a_ofs, a_ofs);
-        __ leaq(b_ptr, Operand(b, phase.offset * dsize));
-
-        // Loop over columns in A and rows in B.
-        Label l3;
-        __ bind(&l3);
-        gen->Broadcast(elem, Operand(a, a_ofs));
-        gen->MaskedMulAdd(sum[0], elem, Operand(b_ptr));
-        __ addq(b_ptr, Immediate(args.b().stride()));
-        __ addq(a_ofs, Immediate(args.a().stride()));
-        __ cmpq(a_ofs, Immediate(args.a().stride() * args.a().height()));
-        __ j(less, &l3);
-
-        // Save result in C.
-        if (accumulate_) {
-          gen->MaskedAdd(sum[0], sum[0], Operand(c));
-        }
-        gen->MaskedStore(Operand(c), sum[0]);
-        __ addq(c, Immediate(phase.masked * dsize));
-      }
-    }
-
-    // Next column in A.
-    if (args.a().width() > 1) {
-      if (args.c().padding() > 0) {
-        __ addq(c, Immediate(args.c().padding()));
-      }
-      __ addq(a, Immediate(dsize));
-      __ cmpq(a, a_end);
-      __ j(less, &l1);
-    }
-  }
-
+  // Compute dot products between columns in A and rows in B.
   void GenerateColCol(Step *step, MacroAssembler *masm,
                       const MatMulArgs &args) {
     // Create SIMD code generators.
     Type type = args.c().tensor->type();
     int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
     SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
+    CHECK_EQ(args.a().height(), args.b().width());
 
     // Set kernel variant.
     step->set_variant(sasm.name() + "CC");
@@ -740,6 +665,7 @@ class SIMDMatMul : public Kernel {
               << (args.Aligned(vecbytes) ? " aligned" : " unaligned");
 
     __ nop();
+    LOG(FATAL) << "CC not implemented";
   }
 
   int64 Complexity(const Step *step) override {

@@ -51,6 +51,10 @@ void SIMDGenerator::MaskedAdd(int dst, int src1, const jit::Operand &src2) {
   LOG(FATAL) << "Masking not supported";
 }
 
+void SIMDGenerator::MaskedMul(int dst, int src1, const jit::Operand &src2) {
+  LOG(FATAL) << "Masking not supported";
+}
+
 void SIMDGenerator::MaskedMulAdd(int dst, int src1, const jit::Operand &src2) {
   LOG(FATAL) << "Masking not supported";
 }
@@ -154,6 +158,10 @@ class AVX512FloatGenerator : public SIMDGenerator {
 
   void MaskedAdd(int dst, int src1, const jit::Operand &src2) {
     masm_->vaddps(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
+  }
+
+  void MaskedMul(int dst, int src1, const jit::Operand &src2) {
+    masm_->vmulps(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
   }
 
   void MaskedMulAdd(int dst, int src1, const jit::Operand &src2) {

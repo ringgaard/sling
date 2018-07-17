@@ -99,10 +99,22 @@ static void AppendPenWidth(string *str,
                            const Flow::Variable *var,
                            const GraphOptions &options) {
   if (options.edge_thickness_scalar == 0) return;
-  size_t size = TypeTraits::of(var->type).size() * var->shape.elements();
-  int width = log(size) * options.edge_thickness_scalar;
-  if (width < 1) width = 1;
-  StringAppendF(str, "penwidth=%d", width);
+  const Shape shape = var->shape;
+  int width;
+  if (shape.elements() == 1 || !shape.defined()) {
+    width = 1;
+  } else if (shape.rank() == 1) {
+    width = 2;
+  } else if (shape.rank() == 2) {
+    if (shape.dim(0) == 1 || shape.dim(0) == 1) {
+      width = 2;
+    } else {
+      width = 3;
+    }
+  } else {
+    width = 4;
+  }
+  StringAppendF(str, "penwidth=%d", width * options.edge_thickness_scalar);
 }
 
 void GraphNodeOptions::Append(string *str, const char *delim) const {
