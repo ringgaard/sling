@@ -15,7 +15,6 @@
 #include "sling/myelin/kernel/avx.h"
 
 #include "sling/myelin/compute.h"
-#include "sling/myelin/kernel/simd-matmul.h"
 
 namespace sling {
 namespace myelin {
@@ -28,6 +27,9 @@ void RegisterAVXMatMul(Library *library);
 
 // avx-operators.cc
 void RegisterAVXOperators(Library *library);
+
+// simd-matmul.cc
+void RegisterSIMDMatMulLibrary(Library *library);
 
 // Register AVX library.
 void RegisterAVXLibrary(Library *library) {

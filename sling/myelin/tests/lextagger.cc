@@ -69,6 +69,7 @@ DEFINE_string(flow, "", "Flow file for saving trained POS tagger");
 DEFINE_bool(adam, false, "Use Adam optimizer");
 DEFINE_bool(optacc, false, "Decay learning rate based on accuracy");
 DEFINE_string(normalization, "d", "Token normalization");
+DEFINE_int32(tagset_align, 1, "Tag set size alignment");
 
 using namespace sling;
 using namespace sling::myelin;
@@ -175,10 +176,11 @@ class Tagger {
     ReadCorpus(FLAGS_train, &train_);
     ReadCorpus(FLAGS_dev, &dev_);
 
-    // Align tag set size. REMOVE!!!
-    tagmap_[store_.Lookup("EXTRA1")] = -1;
-    tagmap_[store_.Lookup("EXTRA2")] = -1;
-    tagmap_[store_.Lookup("EXTRA3")] = -1;
+    // Align tag set size.
+    while (tagmap_.size() % FLAGS_tagset_align != 0) {
+      string tagname = "TAG" + std::to_string(tagmap_.size());
+      tagmap_[store_.Lookup(tagname)] = -1;
+    }
 
     num_tags_ = tagmap_.size();
 

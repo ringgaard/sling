@@ -55,7 +55,6 @@ cc_library(
   ],
   hdrs = [
     "avx.h",
-    "simd-matmul.h",
   ],
   deps = [
     "//sling/base",
