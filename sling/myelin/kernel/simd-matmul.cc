@@ -100,8 +100,7 @@ class MatMulArgs {
     }
   }
 
-  // Initialize arguments for matmul op. The arguments are arranged to meet the
-  // required output order.
+  // Initialize arguments for matmul op.
   MatMulArgs(const Step *step) {
     CHECK(Valid(step));
 
@@ -195,7 +194,7 @@ class MatMulArgs {
   Arg a_;
   Arg b_;
 
-  // An accumulating matmul adds matrix multiplication to the result.
+  // An accumulating matmul adds the matrix multiplication to the result.
   bool accumulate_;
 };
 
@@ -213,10 +212,7 @@ class SIMDMatMul : public Kernel {
   }
 
   bool Supports(Step *step) override {
-    // Requires CPU with SSE support.
-    if (!CPU::Enabled(SSE)) return false;
-
-    // Two float 2D tensor inputs and one 2D tensor output.
+    // Check inputs and outputs.
     if (!MatMulArgs::Valid(step)) return false;
     MatMulArgs args(step);
     if (!args.CheckShapes()) return false;
@@ -344,7 +340,7 @@ class SIMDMatMul : public Kernel {
         __ bind(&l2);
 
         if (inner_single) {
-          // Outer product of A element and B rowblock.
+          // Outer product of A element and B row block.
           gen->Broadcast(elem, Operand(a));
           for (int i = 0; i < phase.unrolls; ++i) {
             int disp = i * vecsize * dsize;
@@ -396,7 +392,7 @@ class SIMDMatMul : public Kernel {
       } else if (phase.masked == 0) {
         // Residual phase.
         if (inner_single) {
-          // Outer product of A element and B rowblock.
+          // Outer product of A element and B row block.
           gen->Broadcast(elem, Operand(a));
           for (int i = 0; i < phase.unrolls; ++i) {
             int disp = blkstart + i * vecsize * dsize;
