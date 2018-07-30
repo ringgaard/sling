@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import cascade
 import sling
 import struct
 import unicodedata
@@ -155,6 +156,7 @@ class Spec:
     self.lstm_features = []
     self.ff_fixed_features = []
     self.ff_link_features = []
+    self.cascade = None
 
 
   # Builds an action table from 'corpora'.
@@ -208,8 +210,11 @@ class Spec:
     writeint(self.suffix.size(), buf)
     for i in xrange(self.suffix.size()):
       v = self.suffix.value(i)
-      assert type(v) is unicode
-      v_str = v.encode("utf-8")
+      if type(v) is unicode:
+        v_str = v.encode("utf-8")
+      else:
+        assert type(v) is str, type(v)
+        v_str = v
 
       writeint(len(v_str), buf)       # number of bytes
       for x in v_str: buf.append(x)   # the bytes themselves
@@ -317,6 +322,10 @@ class Spec:
 
     # Add feature specs.
     self._specify_features()
+
+    # Build cascade.
+    self.cascade = cascade.ShiftPropbankEvokeCascade(self.actions)
+    print self.cascade
 
 
   # Loads embeddings for words in the lexicon.
