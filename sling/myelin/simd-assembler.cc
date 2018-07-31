@@ -345,24 +345,57 @@ class SSE128FloatGenerator : public SIMDGenerator {
 
   void Add(int dst, int src1, const jit::Operand &src2) override {
     if (dst != src1) masm_->movaps(xmm(dst), xmm(src1));
-    masm_->addps(xmm(dst), src2);
+    if (aligned_) {
+      masm_->addps(xmm(dst), src2);
+    } else {
+      XMMRegister mem = masm_->mm().allocx();
+      masm_->movups(mem, src2);
+      masm_->addps(xmm(dst), mem);
+      masm_->mm().release(mem);
+    }
   }
 
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     if (dst != src1) masm_->movaps(xmm(dst), xmm(src1));
-    masm_->mulps(xmm(dst), src2);
+    if (aligned_) {
+      masm_->mulps(xmm(dst), src2);
+    } else {
+      XMMRegister mem = masm_->mm().allocx();
+      masm_->movups(mem, src2);
+      masm_->mulps(xmm(dst), mem);
+      masm_->mm().release(mem);
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
     if (retain) {
-      XMMRegister acc = masm_->mm().allocx();
-      masm_->movaps(acc, xmm(src1));
-      masm_->mulps(acc, src2);
-      masm_->addps(xmm(dst), acc);
-      masm_->mm().release(acc);
+      if (aligned_) {
+        XMMRegister acc = masm_->mm().allocx();
+        masm_->movaps(acc, xmm(src1));
+        masm_->mulps(acc, src2);
+        masm_->addps(xmm(dst), acc);
+        masm_->mm().release(acc);
+      } else {
+        XMMRegister acc = masm_->mm().allocx();
+        XMMRegister mem = masm_->mm().allocx();
+        masm_->movaps(acc, xmm(src1));
+        masm_->movups(mem, src2);
+        masm_->mulps(acc, mem);
+        masm_->addps(xmm(dst), acc);
+        masm_->mm().release(acc);
+        masm_->mm().release(mem);
+      }
     } else {
-      masm_->mulps(xmm(src1), src2);
-      masm_->addps(xmm(dst), xmm(src1));
+      if (aligned_) {
+        masm_->mulps(xmm(src1), src2);
+        masm_->addps(xmm(dst), xmm(src1));
+      } else {
+        XMMRegister mem = masm_->mm().allocx();
+        masm_->movups(mem, src2);
+        masm_->mulps(xmm(src1), mem);
+        masm_->addps(xmm(dst), xmm(src1));
+        masm_->mm().release(mem);
+      }
     }
   }
 

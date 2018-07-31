@@ -267,21 +267,6 @@ void CheckFltBinOp(const string &func,
   }
 }
 
-void CheckMulTwoAdd(const string &func,
-                    const string &test,
-                    const string &base) {
-  if (!FLAGS_test.empty() && FLAGS_test != test) return;
-  if (!FLAGS_base.empty() && FLAGS_base != base) return;
-  LOG(INFO) << "Testing " << test << " against " << base;
-  FltKernelComparator comp(library, func, test, base);
-  comp.AddInput("x0", {10}, -10.0, 10.0);
-  comp.AddInput("x1", {10}, -10.0, 10.0);
-  comp.AddInput("x2", {10}, -10.0, 10.0);
-  comp.AddInput("x3", {10}, -10.0, 10.0);
-  comp.AddOutput("y", {10}, FLAGS_func_accuracy);
-  CheckTest(comp.Check(100));
-}
-
 void CheckIntMatMul(const string &test, const string &base) {
   if (!FLAGS_test.empty() && FLAGS_test != test) return;
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
@@ -438,9 +423,6 @@ int main(int argc, char *argv[]) {
   // Test argmax.
   CheckArgMax("GenFltArgMax", "BaselineArgMax");
 
-  // Test norm.
-  CheckNorm("Norm", "BaselineNorm");
-
   if (CPU::Enabled(SSE4_1)) {
     // Test expression intrinsics.
     CheckFltFunc("Sqrt", "SqrtExpr", "GenFltSqrt", 0, false);
@@ -458,6 +440,9 @@ int main(int argc, char *argv[]) {
   } else {
     LOG(WARNING) << "CPU does not support SSE 4.1, skipping SSE tests";
   }
+
+  // Compare SIMD matrix-matrix multiplication.
+  CheckFltMatMatMul("SIMDMatMul", "GenFltMatMatMul");
 
   if (CPU::Enabled(AVX)) {
     // Test AVX float matrix multiplication.
@@ -486,12 +471,6 @@ int main(int argc, char *argv[]) {
       CheckFltMatMul("AVXFltVecMatMulH", "GenFltVecMatMul");
     }
 
-    // Compare AVX matrix-matrix multiplication.
-    CheckFltMatMatMul("AVXFltMatMatMul", "GenFltMatMatMul");
-
-    // Compare SIMD matrix-matrix multiplication.
-    CheckFltMatMatMul("SIMDMatMul", "AVXFltMatMatMul");
-
     // Compare AVX dot product.
     CheckFltDotProduct("AVXFltDotProduct", "GenFltMatMatMul");
 
@@ -505,7 +484,8 @@ int main(int argc, char *argv[]) {
     CheckFltBinOp("Sub", "AVXFltSub", "GenFltSub", 8);
     CheckFltBinOp("Mul", "AVXFltMul", "GenFltMul", 8);
 
-    CheckMulTwoAdd("MulTwoAdd", "AVXFltMulTwoAdd", "GenFltMulTwoAdd");
+    // Test norm.
+    CheckNorm("Norm", "BaselineNorm");
   } else {
     LOG(WARNING) << "CPU does not support AVX, skipping AVX tests";
   }

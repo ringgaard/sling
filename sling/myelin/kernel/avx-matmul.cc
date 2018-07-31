@@ -673,7 +673,7 @@ class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
           if (left >= 4) {
             __ vmovaps(s, Operand(input, disp));
             __ vmulps(s, s, Operand(matrix, disp));
-            __ vaddps(sum[0], sum[0], acc);
+            __ vaddps(sum[0].ymm(), sum[0].ymm(), acc.ymm());
             left -= 4;
             disp += 4 * sizeof(float);
           }
