@@ -46,6 +46,7 @@ cc_binary(
     "//sling/file:posix",
     "//sling/myelin:compute",
     "//sling/myelin:flow",
+    "//sling/myelin:elf-linker",
     "//sling/myelin/kernel:tensorflow",
   ],
 )

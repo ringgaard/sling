@@ -10,9 +10,9 @@ using namespace sling;
 using namespace sling::myelin;
 
 void Test(const string &str) {
-  bool three_arg_ops = true;
+  bool three_arg_ops = false;
   Express::Target target = Express::INTEL;
-  bool fma = true;
+  bool fma = false;
   int hoist = 0;
   bool live_ranges = false;
 
@@ -93,6 +93,7 @@ void Test(const string &str) {
       LOG(INFO) << "body:";
     }
     LOG(INFO) << "  " << addr << ": " << op->result->AsString()
+              << (op->result->predicate ? "?" : "")
               << " := " << op->AsString();
     addr++;
   }
@@ -108,7 +109,7 @@ void Test(const string &str) {
   Express instrs;
   bool success = expr.Generate(model, &instrs);
   if (!success) {
-    LOG(ERROR) << "Rewrite failed";
+    LOG(ERROR) << "Code generation failed";
     return;
   }
 
@@ -208,6 +209,9 @@ int main(int argc, char *argv[]) {
   Test("@0=Log(%0)");
   Test("@0=Id(Add(%0,Mul(%2,%1)))");
 #endif
-  Test("@0=Mul(%0,%1)");
+  //Test("@0=Exp(%0)");
+  //Test("@0=Tanh(%0)");
+  Test("@0=Log(%0)");
+  //Test("@0=Sigmoid(%0)");
 }
 

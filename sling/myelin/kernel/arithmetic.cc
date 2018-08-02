@@ -60,13 +60,28 @@ static Express::OpType OpType(const string &op) {
     {"Neg", Express::NEG},
     {"Abs", Express::ABS},
     {"Relu", Express::RELU},
-    {"ReluGrad", Express::RELUGRAD},
     {"Softsign", Express::SOFTSIGN},
     {"Softplus", Express::SOFTPLUS},
     {"LogSigmoid", Express::LOGSIGMOID},
     {"Reciprocal", Express::RECIPROCAL},
     {"Square", Express::SQUARE},
     {"Sqrt", Express::SQRT},
+
+    {"Equal", Express::CMPEQOQ},
+    {"NotEqual", Express::CMPNEUQ},
+    {"Less", Express::CMPLTOQ},
+    {"LessEqual", Express::CMPLEOQ},
+    {"Greater", Express::CMPGTOQ},
+    {"GreaterEqual", Express::CMPGEOQ},
+
+    {"Cond", Express::COND},
+    {"Select", Express::SELECT},
+
+    {"And", Express::AND},
+    {"Or", Express::OR},
+    {"Xor", Express::XOR},
+    {"AndNot", Express::ANDNOT},
+    {"Not", Express::NOT},
 
     {"Sum", Express::SUM},
     {"Product", Express::PRODUCT},
@@ -1209,13 +1224,28 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("NegExpr", "Neg", 1));
   library->Register(new Calculate("AbsExpr", "Abs", 1));
   library->Register(new Calculate("ReluExpr", "Relu", 1));
-  library->Register(new Calculate("ReluGradExpr", "ReluGrad", 2));
   library->Register(new Calculate("SoftsignExpr", "Softsign", 1));
   library->Register(new Calculate("SoftplusExpr", "Softplus", 1));
   library->Register(new Calculate("LogSigmoidExpr", "LogSigmoid", 1));
   library->Register(new Calculate("ReciprocalExpr", "Reciprocal", 1));
   library->Register(new Calculate("SquareExpr", "Square", 1));
   library->Register(new Calculate("SqrtExpr", "Sqrt", 1));
+
+  library->Register(new Calculate("EqualExpr", "Equal", 2));
+  library->Register(new Calculate("NotEqualExpr", "NotEqual", 2));
+  library->Register(new Calculate("LessExpr", "Less", 2));
+  library->Register(new Calculate("LessEqualExpr", "LessEqual", 2));
+  library->Register(new Calculate("GreaterExpr", "Greater", 2));
+  library->Register(new Calculate("GreaterEqualExpr", "GreaterEqual", 2));
+
+  library->Register(new Calculate("CondExpr", "Cond", 3));
+  library->Register(new Calculate("SelectExpr", "Select", 2));
+
+  library->Register(new Calculate("AndExpr", "And", 2));
+  library->Register(new Calculate("OrExpr", "Or", 2));
+  library->Register(new Calculate("XorExpr", "Xor", 2));
+  library->Register(new Calculate("AndNotExpr", "AndNot", 2));
+  library->Register(new Calculate("NotExpr", "Not", 1));
 
   library->Register(new Calculate("SumExpr", "Sum", 1));
   library->Register(new Calculate("ProductExpr", "Product", 1));

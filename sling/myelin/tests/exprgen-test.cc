@@ -6,6 +6,7 @@
 #include "sling/base/logging.h"
 #include "sling/myelin/express.h"
 #include "sling/myelin/compute.h"
+#include "sling/myelin/elf-linker.h"
 #include "sling/myelin/flow.h"
 #include "sling/myelin/kernel/tensorflow.h"
 
@@ -33,21 +34,31 @@ void Test(const string &expression) {
   auto *func = flow.AddFunction("test");
 
   Type dt = DT_FLOAT;
+  Shape shape({128});
 
-  auto *x = flow.AddVariable("x", dt, {128});
-  auto *y = flow.AddVariable("y", dt, {128});
-  auto *z = flow.AddVariable("z", dt, {128});
+  std::vector<Flow::Variable *> inputs;
+  std::vector<Flow::Variable *> outputs;
+  char varno = 'a';
+  for (auto *v : expr.vars()) {
+    if (v->type == Express::INPUT) {
+      auto *v = flow.AddVariable(string(1, varno++), dt, shape);
+      inputs.push_back(v);
+    } else if (v->type == Express::OUTPUT) {
+      auto *v = flow.AddVariable(string(1, varno++), dt, shape);
+      outputs.push_back(v);
+    }
+  }
 
-  //int32 yval = FLAGS_n;
-  //y->SetData(&yval, sizeof(yval));
-
-  auto *op = flow.AddOperation(func, "expr", "Calculate", {x, y}, {z});
+  auto *op = flow.AddOperation(func, "expr", "Calculate", inputs, outputs);
   op->SetAttr("expr", expression);
 
+  ElfLinker linker;
   Network network;
+  network.set_linker(&linker);
   CHECK(network.Compile(flow, library));
-  Cell *cell = network.GetCell("test");
-  cell->WriteCodeToFile("/tmp/expr.bin");
+
+  linker.Link();
+  linker.Write("/tmp/expr.o");
 }
 
 int main(int argc, char *argv[]) {
@@ -61,12 +72,20 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_avx2) jit::CPU::Disable(jit::AVX2);
   if (!FLAGS_fma3) jit::CPU::Disable(jit::FMA3);
 
+  //jit::CPU::Enable(jit::AVX512F);
+
   //Test("@0=Sub(Add(%0,#1),#1)");
   //Test("@0=Div(Mul(Sub(Add(%0,#1),#1),#1),#1)");
   //Test("@0=Sub(Add(Mul(Div(%0,%1),%1),%1),%1)");
   //Test("@0=Max(Add(Mul(%0,#1),#1),#1)");
   //Test("@0=Relu(Add(!0,!1))");
   //Test("@0=Mul(Tanh(!0),Sigmoid(!1))");
+
+  //Test("@0=Sigmoid(%0)");
+  //Test("@0=Log(%0)");
+  //Test("@0=Cond(Not(And(CmpLt(%0,%1),%2)),%0,%1)");
+  //Test("@0=Not(And(CmpLt(%0,%1),%2));@1=Cond(Not(@0),%0,_0)");
+  Test("@0=Select(CmpGt(%0,_0),_1)");
 
   return 0;
 }
