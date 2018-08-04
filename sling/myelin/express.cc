@@ -1393,6 +1393,17 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
         source = rewritten->Temp();
       }
 
+      // Put source into a register if memory operands are not available.
+      if (args[1]->type == CONST || args[1]->type == NUMBER) {
+        if (!model.func_reg_imm) {
+          source = rewritten->Temp();
+        }
+      } else if (!args[1]->IsRegister()) {
+        if (!model.func_reg_mem || args[1]->single) {
+          source = rewritten->Temp();
+        }
+      }
+
       // Put destination into a register.
       if (!result->IsRegister()) {
         destination = rewritten->Temp();
@@ -1486,6 +1497,18 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
         // Put second argument into a register.
         if (!args[1]->IsRegister()) {
           source2 = rewritten->Temp();
+        }
+
+        // Put third operand into a register if memory operands are not
+        // available.
+        if (args[2]->type == CONST || args[2]->type == NUMBER) {
+          if (!model.func_reg_imm) {
+            source2 = rewritten->Temp();
+          }
+        } else if (!args[2]->IsRegister()) {
+          if (!model.func_reg_mem || args[2]->single) {
+            source2 = rewritten->Temp();
+          }
         }
 
         // Put destination into a register.

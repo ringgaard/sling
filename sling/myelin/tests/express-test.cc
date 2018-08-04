@@ -31,6 +31,7 @@ void Test(const string &str) {
 
     model.func_reg_reg = true;
     model.func_reg_imm = true;
+
     fma = true;
   } else  if (three_arg_ops) {
     model.mov_reg_reg = true;
