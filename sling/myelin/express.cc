@@ -476,6 +476,16 @@ int Express::IdentityValue(OpType type) {
   }
 }
 
+Express::OpType Express::Commute(OpType type) {
+  switch (type) {
+    case CMPLTOQ: return CMPGEOQ;
+    case CMPLEOQ: return CMPGTOQ;
+    case CMPGTOQ: return CMPLEOQ;
+    case CMPGEOQ: return CMPLTOQ;
+    default: return type;
+  }
+}
+
 Express::OpType Express::Lookup(const string &opname) {
   auto f = optypes.find(opname);
   return f == optypes.end() ? INVALID : f->second;
@@ -1256,8 +1266,10 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
           if (model.op_reg_reg_reg) {
             // Three-operand instruction. Try to put the memory operand last if
             // operation is commutative.
-            if (model.op_reg_reg_mem && op->commutative() &&
+            if (model.op_reg_reg_mem &&
+                (op->commutative() || op->compare()) &&
                 !args[0]->IsRegister() && args[1]->IsRegister()) {
+              type = Commute(type);
               std::swap(args[0], args[1]);
             }
 
@@ -1297,8 +1309,10 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
             first_is_dest = true;
 
             // Try to put the memory operand last if operation is commutative.
-            if (model.op_reg_mem && op->commutative() &&
+            if (model.op_reg_mem &&
+                (op->commutative() || op->compare()) &&
                 !args[0]->IsRegister() && args[1]->IsRegister()) {
+              type = Commute(type);
               std::swap(args[0], args[1]);
             }
 

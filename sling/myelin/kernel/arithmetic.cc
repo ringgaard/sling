@@ -324,7 +324,7 @@ class AddNegToSubTransformer : public Transformer {
     for (Flow::Operation *op : flow->Find("Neg|1:Add")) {
       Flow::Operation *add = op;
       Flow::Operation *neg = add->inputs[1]->producer;
-      if (neg->outputs[0]->usages() == 1) {
+      if (neg->outputs[0]->usages() == 1 && !neg->outputs[0]->out()) {
         flow->Eliminate(neg);
         add->type = "Sub";
         updates++;
@@ -655,6 +655,108 @@ class RemoveUnusedInputs : public Transformer {
     }
 
     return num_eliminates > 0;
+  }
+};
+
+// Apply transformations to logic operations.
+class LogicTransformer : public Transformer {
+ public:
+  string Name() override { return "LogicTransformer"; }
+
+  bool Transform(Flow *flow) override {
+    int num_updates = 0;
+
+    // Fold logical negations into comparison ops.
+    bool again = true;
+    while (again) {
+      again = false;
+      for (Flow::Operation *op : flow->ops()) {
+        if (op->type != "Not" || op->indegree() != 1) continue;
+        Flow::Operation *producer = op->inputs[0]->producer;
+        if (producer == nullptr) continue;
+
+        if (producer->type == "Not") {
+          // Transform Not(Not(x)) to x.
+          again = EliminateDoubleNegation(flow, producer, op);
+        } else if (producer->type == "Equal") {
+          // Transform Not(Equal(x,y)) to NotEqual(x,y).
+          again = FoldNotCompare(flow, producer, op, "NotEqual");
+        } else if (producer->type == "NotEqual") {
+          // Transform Not(NotEqual(x,y)) to Equal(x,y).
+          again = FoldNotCompare(flow, producer, op, "Equal");
+        } else if (producer->type == "Less") {
+          // Transform Not(Less(x,y)) to GreaterEqual(x,y).
+          again = FoldNotCompare(flow, producer, op, "GreaterEqual");
+        } else if (producer->type == "LessEqual") {
+          // Transform Not(LessEqual(x,y)) to Greater(x,y).
+          again = FoldNotCompare(flow, producer, op, "Greater");
+        } else if (producer->type == "Greater") {
+          // Transform Not(Greater(x,y)) to LessEqual(x,y).
+          again = FoldNotCompare(flow, producer, op, "LessEqual");
+        } else if (producer->type == "GreaterEqual") {
+          // Transform Not(GreaterEqual(x,y)) to Less(x,y).
+          again = FoldNotCompare(flow, producer, op, "Less");
+        }
+
+        if (again) {
+          num_updates++;
+          break;
+        }
+      }
+    }
+
+    // Merge negation into logical and.
+    for (Flow::Operation *op : flow->Find("Not|1:And")) {
+      Flow::Operation *logand = op;
+      Flow::Operation *logneg = logand->inputs[1]->producer;
+      if (logneg->outputs[0]->usages() == 1 && !logneg->outputs[0]->out()) {
+        flow->Eliminate(logneg);
+        logand->type = "AndNot";
+        num_updates++;
+      }
+    }
+    for (Flow::Operation *op : flow->Find("Not|0:And")) {
+      Flow::Operation *logand = op;
+      Flow::Operation *logneg = logand->inputs[0]->producer;
+      if (logneg->outputs[0]->usages() == 1 && !logneg->outputs[0]->out()) {
+        flow->Eliminate(logneg);
+        logand->type = "AndNot";
+        std::swap(logand->inputs[0], logand->inputs[1]);
+        num_updates++;
+      }
+    }
+
+    return num_updates > 0;
+  }
+
+  bool FoldNotCompare(Flow *flow, Flow::Operation *cmp, Flow::Operation *neg,
+                      const string &replacement) {
+    // Check that negation is the only consumer of the comparison.
+    if (cmp->outputs[0]->usages() != 1) return false;
+    if (cmp->outputs[0]->out()) return false;
+
+    // Remove negation and invert comparison condition.
+    flow->Eliminate(neg);
+    cmp->type = replacement;
+    return true;
+  }
+
+  bool EliminateDoubleNegation(Flow *flow, Flow::Operation *neg1,
+                               Flow::Operation *neg2) {
+    // Bypass double negation.
+    Flow::Variable *result = neg2->outputs[0];
+    for (Flow::Operation *op : result->consumers) {
+      op->ReplaceInput(result, neg1->inputs[0]);
+    }
+
+    // Remove unused negations.
+    if (neg2->outputs[0]->usages() == 0 && !neg2->outputs[0]->out()) {
+      flow->RemoveOperation(neg2);
+    }
+    if (neg1->outputs[0]->usages() == 0 && !neg1->outputs[0]->out()) {
+      flow->RemoveOperation(neg1);
+    }
+    return true;
   }
 };
 
@@ -1264,6 +1366,7 @@ void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new RemoveUnusedInputs());
   library->RegisterTransformer(new DivToMulTransformer());
   library->RegisterTransformer(new AddNegToSubTransformer());
+  library->RegisterTransformer(new LogicTransformer());
 }
 
 }  // namespace myelin

@@ -175,13 +175,12 @@ void tanh_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Mul(g->d(y), g->Sub(g->One(), g->Square(g->v(y)))));
 }
 
-// y = relu(x)
+// y = relu(x) = max(0, x)
 // dx = (x > 0) * dy
 void relu_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  auto *positive = g->Greater(g->v(x), g->Zero());
-  g->add(x, g->Mul(g->Select(positive, g->One()), g->d(y)));
+  g->add(x, g->Select(g->Greater(g->v(x), g->Zero()), g->d(y)));
 }
 
 // y = x

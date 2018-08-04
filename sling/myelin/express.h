@@ -225,6 +225,7 @@ class Express {
       return type == ADD || type == MUL ||
              type == MINIMUM || type == MAXIMUM ||
              type == BITAND || type == BITOR ||
+             type == CMPEQOQ || type == CMPNEUQ ||
              type == AND || type == OR || type == XOR;
     }
 
@@ -512,6 +513,9 @@ class Express {
   Var *Square(Var *x) { return Mul(x, x); }
   Var *Sqrt(Var *x) { return Do(SQRT, x); }
   Var *Sigmoid(Var *x) { return Reciprocal(Add(One(), Exp(Neg(x)))); }
+
+  // Commute operation so op(a,b) = commute(op)(b,a).
+  static OpType Commute(OpType type);
 
   // Look up op type for op name. Return INVALID for unknown op name.
   static OpType Lookup(const string &opname);

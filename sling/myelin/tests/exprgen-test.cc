@@ -85,7 +85,10 @@ int main(int argc, char *argv[]) {
   //Test("@0=Log(%0)");
   //Test("@0=Cond(Not(And(CmpLt(%0,%1),%2)),%0,%1)");
   //Test("@0=Not(And(CmpLt(%0,%1),%2));@1=Cond(Not(@0),%0,_0)");
-  Test("@0=Select(CmpGt(%0,_0),_1)");
+  //Test("@0=Mul(Select(CmpGt(%0,_0),_1),%1)");
+  //Test("@0=Select(CmpLt(_0,%0),%1)");
+  //Test("@0=Select(CmpGt(%0,_0),%1)");
+  Test("@0=Mul(Mul(%0,Sub(_1,%0)),%1)");
 
   return 0;
 }
