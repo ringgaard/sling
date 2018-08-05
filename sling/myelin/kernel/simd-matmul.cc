@@ -591,7 +591,7 @@ class SIMDMatMul : public Kernel {
         }
       } else {
         // Masked phase.
-        CHECK_EQ(phase.unrolls, 0);
+        CHECK_EQ(phase.unrolls, 1);
         gen->MaskedLoad(elem[0], Operand(a, blkstart));
         gen->MaskedMulAdd(sum[0], sum[0], Operand(b_ptr, blkstart));
       }
