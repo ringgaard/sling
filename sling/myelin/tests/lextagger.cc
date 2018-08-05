@@ -18,16 +18,9 @@
 #include "sling/frame/serialization.h"
 #include "sling/frame/store.h"
 #include "sling/myelin/builder.h"
-#include "sling/myelin/compute.h"
-#ifdef __linux__
-#include "sling/myelin/elf-linker.h"
-#endif
-#include "sling/myelin/flow.h"
+#include "sling/myelin/compiler.h"
 #include "sling/myelin/gradient.h"
-#include "sling/myelin/graph.h"
 #include "sling/myelin/learning.h"
-#include "sling/myelin/profile.h"
-#include "sling/myelin/kernel/tensorflow.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/lexical-encoder.h"
 #include "sling/nlp/document/lexicon.h"
@@ -41,9 +34,6 @@ DEFINE_string(train, "local/data/corpora/stanford/train.rec", "Train corpus");
 DEFINE_string(dev, "local/data/corpora/stanford/dev.rec", "Test corpus");
 DEFINE_string(embeddings, "", "Pre-trained word embeddings");
 DEFINE_bool(train_embeddings, true, "Train word embeddings jointly");
-DEFINE_bool(dump, false, "Dump flow");
-DEFINE_bool(dump_cell, false, "Dump flow");
-DEFINE_bool(profile, false, "Profile tagger");
 DEFINE_int32(epochs, 1000000, "Number of training epochs");
 DEFINE_int32(report, 25000, "Report status after every n sentence");
 DEFINE_double(alpha, 1.0, "Learning rate");
@@ -123,16 +113,7 @@ class Tagger {
     names_->Bind(&store_);
     n_pos_ = store_.Lookup("/s/token/pos");
 
-    // Set up kernel library.
-    RegisterTensorflowLibrary(&library_);
-
-#ifdef __linux__
-    net_.set_linker(&linker_);
-#endif
-    if (FLAGS_profile) {
-      net_.options().profiling = true;
-      net_.options().global_profiler = true;
-    }
+    // Set FLOP counter.
     net_.options().flops_address = &flops_counter;
 
     // Set up lexical encoder spec.
@@ -191,6 +172,7 @@ class Tagger {
 
   // Build tagger flow.
   void BuildFlow(Flow *flow, bool learn) {
+    Library *library = compiler_.library();
     BiLSTM::Outputs lstm;
     if (learn) {
       // Build lexicon.
@@ -206,9 +188,9 @@ class Tagger {
       Vocabulary::HashMapIterator vocab(words);
 
       // Build document input encoder.
-      lstm = encoder_.Build(flow, library_, spec_, &vocab, FLAGS_lstm, true);
+      lstm = encoder_.Build(flow, *library, spec_, &vocab, FLAGS_lstm, true);
     } else {
-      lstm = encoder_.Build(flow, library_, spec_, nullptr, FLAGS_lstm, false);
+      lstm = encoder_.Build(flow, *library, spec_, nullptr, FLAGS_lstm, false);
     }
 
     // Build flow for POS tagger.
@@ -223,7 +205,7 @@ class Tagger {
 
     if (learn) {
       // Build gradient for tagger.
-      Gradient(flow, tagger, library_);
+      Gradient(flow, tagger, *library);
       auto *dlogits = flow->Var("gradients/tagger/d_logits");
 
       // Build loss computation.
@@ -265,42 +247,8 @@ class Tagger {
 
   // Compile model.
   void Compile() {
-    // Output raw DOT graph.
-    GraphOptions opts;
-    FlowToDotGraphFile(flow_, opts, "/tmp/postagger-raw.dot");
-
-    // Analyze flow.
-    Clock analyze_clock;
-    analyze_clock.start();
-    flow_.Analyze(library_);
-    analyze_clock.stop();
-
-    // Dump flow.
-    if (FLAGS_dump) {
-      std::cout << flow_.ToString();
-    }
-
-    // Output DOT graph.
-    FlowToDotGraphFile(flow_, opts, "/tmp/postagger.dot");
-
-    // Compile network.
-    Clock compile_clock;
-    compile_clock.start();
-    CHECK(net_.Compile(flow_, library_));
-    compile_clock.stop();
-    LOG(INFO) << "Analyze: " << analyze_clock.ms() << " ms, compile: "
-              << compile_clock.ms() << " ms";
-
-    // Dump cells.
-    if (FLAGS_dump_cell) {
-      for (Cell *cell : net_.cells()) std::cout << cell->ToString();
-    }
-
-#ifdef __linux__
-    // Write object file with generated code.
-    linker_.Link();
-    linker_.Write("/tmp/postagger.o");
-#endif
+    // Compile flow.
+    compiler_.Compile(&flow_, &net_);
 
     // Initialize model.
     encoder_.Initialize(net_);
@@ -486,13 +434,7 @@ class Tagger {
   // Finish tagger model.
   void Done() {
     // Output profiling information.
-    if (FLAGS_profile) {
-      for (Cell *cell : net_.cells()) {
-        Profile profile(cell->profile_summary());
-        string report = profile.ASCIIReport();
-        std::cout << report << "\n";
-      }
-    }
+    LogProfile(&net_);
 
     // Save trained model.
     if (!FLAGS_flow.empty()) {
@@ -566,12 +508,10 @@ class Tagger {
   int num_words_ = 0;
   int num_tags_ = 0;
 
-  Library library_;             // kernel library
+  // Neural network.
   Flow flow_;                   // flow for tagger model
   Network net_;                 // neural net
-#ifdef __linux__
-  ElfLinker linker_;            // linker for outputting generated code
-#endif
+  Compiler compiler_;           // neural network compiler
 
   // Document input encoder.
   LexicalEncoder encoder_;

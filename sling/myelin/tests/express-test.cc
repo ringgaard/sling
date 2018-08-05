@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
 
 
   Test("@0=Tanh(%0)");
-  Test("$2=Sigmoid(Add(%2,%3));@0=Add(Mul($2,Tanh(Add(%0,%1))),Mul(Sub(_1,$2),%5));@1=Tanh(@0)");
+  Test("$2=Sigmoid(Add(%2,%3));@0=Add(Mul($2,Tanh(Add(%0,%1))),Mul(Sub(_1,$2),%4));@1=Tanh(@0)");
   Test("@0=Mul(Sigmoid(Add(%0,%1)),%2)");
   Test("!0=Exp(%0);@0=Id(!0)");
   Test("$2=Add(%4,%5);@0=Mul(Mul($2,%0),Mul(%3,Sub(_1,%3)));@1=Add(%6,Mul(Mul(%3,$2),Sub(_1,Square(%0))))");
