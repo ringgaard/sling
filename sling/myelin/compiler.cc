@@ -36,6 +36,7 @@ DEFINE_string(final_graph, "", "File for saving analyzed flow as DOT file");
 DEFINE_string(jit_code, "", "File for saving JIT generated code");
 DEFINE_bool(dump_input_flow, false, "Dump raw input flow to log");
 DEFINE_bool(dump_final_flow, false, "Dump final analyzed flow to log");
+DEFINE_bool(dump_cells, false, "Dump cells after compilation");
 DEFINE_bool(check_flow_consistency, false, "Check that flow is consistent");
 DEFINE_bool(dynamic_instance_allocation, false, "Dynamic instance allocation");
 
@@ -169,6 +170,13 @@ void Compiler::Compile(Flow *flow, Network *net) {
     net->options().dynamic_allocation = true;
   }
   CHECK(net->Compile(*flow, library_));
+
+  // Optionally dump cells to log.
+  if (FLAGS_dump_cells) {
+    for (Cell *cell : net->cells()) {
+      LOG(INFO) << "Cell " << cell->name() << "\n" << cell->ToString();
+    }
+  }
 
   // Optionally output generated code to ELF file.
   if (!FLAGS_jit_code.empty()) {
