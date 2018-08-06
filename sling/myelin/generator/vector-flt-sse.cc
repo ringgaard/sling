@@ -326,8 +326,8 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
       }
     } else {
       // NOT dst,[mem]
+      __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
       switch (type_) {
-        __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
         case DT_FLOAT:
           __ xorps(xmm(instr->dst), addr(instr->args[0]));
           break;

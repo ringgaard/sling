@@ -437,7 +437,7 @@ class SIMDMatMul : public Kernel {
         __ addq(c, Immediate(blksize));
       } else {
         // Masked phase.
-        CHECK_EQ(phase.unrolls, 0);
+        CHECK_EQ(phase.unrolls, 1);
         if (inner_single) {
           gen->Broadcast(elem, Operand(a));
           if (accumulate_) {
