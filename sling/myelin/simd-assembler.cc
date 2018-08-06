@@ -156,15 +156,15 @@ class AVX512FloatGenerator : public SIMDGenerator {
     }
   }
 
-  void MaskedAdd(int dst, int src1, const jit::Operand &src2) {
+  void MaskedAdd(int dst, int src1, const jit::Operand &src2) override {
     masm_->vaddps(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
   }
 
-  void MaskedMul(int dst, int src1, const jit::Operand &src2) {
+  void MaskedMul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulps(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
   }
 
-  void MaskedMulAdd(int dst, int src1, const jit::Operand &src2) {
+  void MaskedMulAdd(int dst, int src1, const jit::Operand &src2) override {
     masm_->vfmadd231ps(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
   }
 
