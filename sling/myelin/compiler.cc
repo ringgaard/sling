@@ -190,6 +190,7 @@ void LogProfile(Network *net) {
     string report;
     for (Cell *cell : net->cells()) {
       Profile profile(cell->profile_summary());
+      report.append("\n");
       report.append(profile.ASCIIReport());
     }
     LOG(INFO) << "Profiling report:\n" << report;
