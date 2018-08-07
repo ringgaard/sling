@@ -663,6 +663,7 @@ int Express::Complexity() const {
       case MULSUB132:
       case MULSUB213:
       case MULSUB231:
+      case ANDNOT:
         n += 2;
         break;
       default:
