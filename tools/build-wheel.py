@@ -29,6 +29,7 @@ import os
 import hashlib
 import base64
 import zipfile
+import distutils.util;
 
 def sha256_checksum(filename, block_size=65536):
   """ Compute SHA256 digest for file."""
@@ -45,6 +46,8 @@ def sha256_content_checksum(data):
   return base64.urlsafe_b64encode(sha256.digest()).rstrip(b'=')
 
 # Wheel package information.
+platform = distutils.util.get_platform().replace("-", "_")
+tag = "cp27-none-" + platform
 package = "sling"
 version = "2.0.0"
 dist_dir = package + "-" + version + ".dist-info"
@@ -52,7 +55,7 @@ data_dir = package + "-" + version + ".data/purelib"
 record_filename = dist_dir + "/RECORD"
 
 wheel_dir = "/tmp"
-wheel_basename = package + "-" + version + "-cp27-none-linux_x86_64.whl"
+wheel_basename = package + "-" + version + "-" + tag + ".whl"
 wheel_filename = wheel_dir + "/" + wheel_basename
 
 # Files to distribute in wheel.
@@ -83,7 +86,7 @@ record = ""
 wheel_metadata_filename = dist_dir + "/WHEEL"
 wheel_metadata = """Wheel-Version: 1.0
 Root-Is-Purelib: false
-Tag: cp27-none-linux_x86_64"""
+Tag: $TAG$""".replace("$TAG$", tag)
 
 record += wheel_metadata_filename + ",sha256=" + \
           sha256_content_checksum(wheel_metadata) + "," + \

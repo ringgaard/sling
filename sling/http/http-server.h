@@ -146,15 +146,6 @@ class HTTPServer {
   // HTTP handler.
   typedef std::function<void(HTTPRequest *, HTTPResponse *)> Handler;
 
-  // HTTP context for serving requests under an URI.
-  struct Context {
-    Context(const string &u, const Handler &h) : uri(u), handler(h) {
-      if (uri == "/") uri = "";
-    }
-    string uri;
-    Handler handler;
-  };
-
   // Initialize HTTP server to listen on port.
   HTTPServer(const HTTPServerOptions &options, int port);
   ~HTTPServer();
@@ -185,6 +176,15 @@ class HTTPServer {
   const HTTPServerOptions &options() const { return options_; }
 
  private:
+  // HTTP context for serving requests under an URI.
+  struct Context {
+    Context(const string &u, const Handler &h) : uri(u), handler(h) {
+      if (uri == "/") uri = "";
+    }
+    string uri;
+    Handler handler;
+  };
+
   // Worker handler.
   void Worker();
 
