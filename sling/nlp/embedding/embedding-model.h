@@ -103,38 +103,10 @@ struct DualEncoderFlow : public myelin::Flow {
   Variable *left_encodings = nullptr;  // left encodings input
   Variable *right_encodings = nullptr; // right encodings input
   Variable *similarities = nullptr;    // similarity matrix
+  Variable *gsimilarities = nullptr;   // similarity gradient matrix
 
  private:
   void BuildEncoder(Encoder *encoder);
-};
-
-// Distribution over weighted elements which can be sampled according to the
-// weights.
-class Distribution {
- public:
-  // Add element to distribution.
-  void Add(int index, float weight) {
-    permutation_.emplace_back(index, weight);
-  }
-
-  // Shuffle elements and prepare for sampling.
-  void Shuffle();
-
-  // Sample from distribution.
-  int Sample(float p) const;
-
- private:
-  // Element in distribution. Before shuffling the probability field holds the
-  // (unnormalized) weight for the element, but after shuffling it is the
-  // cumulative probability.
-  struct Element {
-    Element(int i, float p) : index(i), probability(p) {}
-    int index;
-    float probability;
-  };
-
-  // Permutation of elements for sampling.
-  std::vector<Element> permutation_;
 };
 
 }  // namespace nlp

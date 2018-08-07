@@ -15,17 +15,13 @@
 #include <atomic>
 #include <utility>
 
-#include "sling/base/flags.h"
-#include "sling/base/perf.h"
 #include "sling/file/textmap.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/frame/serialization.h"
 #include "sling/myelin/builder.h"
-#include "sling/myelin/compute.h"
-#include "sling/myelin/flow.h"
-#include "sling/myelin/profile.h"
-#include "sling/myelin/kernel/tensorflow.h"
+#include "sling/myelin/compiler.h"
+#include "sling/myelin/learning.h"
 #include "sling/nlp/embedding/embedding-model.h"
 #include "sling/nlp/kb/facts.h"
 #include "sling/task/frames.h"
@@ -35,9 +31,6 @@
 #include "sling/util/mutex.h"
 #include "sling/util/random.h"
 #include "sling/util/sortmap.h"
-
-DEFINE_string(fact2vec_flow, "", "fact2vec flow output file");
-DEFINE_bool(fact2vec_profile, false, "profile fact2vec flow");
 
 namespace sling {
 namespace nlp {
@@ -316,8 +309,9 @@ class FactEmbeddingsTrainer : public Process {
   // Run training of embedding net.
   void Run(Task *task) override {
     // Get training parameters.
-    task->Fetch("iterations", &iterations_);
+    task->Fetch("epochs", &epochs_);
     task->Fetch("embedding_dims", &embedding_dims_);
+    task->Fetch("batch_size", &batch_size_);
     task->Fetch("max_features", &max_features_);
     task->Fetch("threads", &threads_);
     task->Fetch("learning_rate", &learning_rate_);
@@ -346,11 +340,32 @@ class FactEmbeddingsTrainer : public Process {
     TextMapInput catmap(task->GetInputFile("catmap"));
     while (catmap.Next()) {
       category_lexicon.push_back(catmap.key());
-      categories_.Add(catmap.id(), std::stof(catmap.value()));
     }
     int category_dims = category_lexicon.size();
     task->GetCounter("categories")->Increment(category_dims);
-    categories_.Shuffle();
+
+    // Build dual encoder model with facts on the left side and categories on
+    // the right side.
+    LOG(INFO) << "Building model";
+    myelin::Compiler compiler;
+    flow_.dims = embedding_dims_;
+    flow_.batch_size = batch_size_;
+    flow_.left.dims = fact_dims;
+    flow_.left.max_features = max_features_;
+    flow_.right.dims = category_dims;
+    flow_.left.max_features = max_features_;
+    flow_.Build(*compiler.library());
+    loss_.Build(&flow_, flow_.similarities, flow_.gsimilarities);
+
+    // Compile embedding model.
+    LOG(INFO) << "Compiling model";
+    myelin::Network model;
+    compiler.Compile(&flow_, &model);
+    loss_.Initialize(model);
+
+    // Initialize weights.
+    LOG(INFO) << "Initializing model";
+    model.InitLearnableWeights(0, 0.0, 1e-4);
 
     // Read training instances from input.
     LOG(INFO) << "Reading facts";
@@ -371,42 +386,7 @@ class FactEmbeddingsTrainer : public Process {
       delete message;
     }
     store_.Freeze();
-    epochs_ = instances_.size() * iterations_;
     task->GetCounter("epochs_total")->Increment(epochs_);
-
-    // Build embedding model.
-    LOG(INFO) << "Building model";
-    myelin::Library library;
-    myelin::RegisterTensorflowLibrary(&library);
-    flow_.inputs = fact_dims;
-    flow_.outputs = category_dims;
-    flow_.dims = embedding_dims_;
-    flow_.in_features = flow_.out_features = max_features_;
-    flow_.Build();
-    if (!FLAGS_fact2vec_flow.empty()) flow_.Save(FLAGS_fact2vec_flow);
-    flow_.Analyze(library);
-    myelin::Network model;
-    if (FLAGS_fact2vec_profile) {
-      model.options().profiling = true;
-      model.options().global_profiler = true;
-    }
-    model.options().flops_address = Perf::flopptr();
-    CHECK(model.Compile(flow_, library));
-
-    // Initialize weights.
-    Random rnd;
-    myelin::TensorData W0 = model[flow_.W0];
-    for (int i = 0; i < fact_dims; ++i) {
-      for (int j = 0; j < embedding_dims_; ++j) {
-        W0.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5);
-      }
-    }
-    myelin::TensorData W1 = model[flow_.W1];
-    for (int i = 0; i < category_dims; ++i) {
-      for (int j = 0; j < embedding_dims_; ++j) {
-        W1.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5);
-      }
-    }
 
     // Start training threads.
     LOG(INFO) << "Training model";
@@ -453,16 +433,11 @@ class FactEmbeddingsTrainer : public Process {
     pool.Join();
 
     // Output profile.
-    if (FLAGS_fact2vec_profile) {
-      for (myelin::Cell *cell : model.cells()) {
-        myelin::Profile profile(cell->profile_summary());
-        string report = profile.ASCIIReport();
-        LOG(INFO) << "Profile:\n" << report;
-      }
-    }
+    myelin::LogProfile(&model);
 
     // Write fact embeddings to output file.
     LOG(INFO) << "Writing embeddings";
+    myelin::TensorData W0 = model[flow_.left.embeddings];
     std::vector<float> embedding(embedding_dims_);
     EmbeddingWriter fact_writer(task->GetOutputFile("factvecs"),
                                 fact_lexicon.size(), embedding_dims_);
@@ -475,6 +450,7 @@ class FactEmbeddingsTrainer : public Process {
     CHECK(fact_writer.Close());
 
     // Write category embeddings to output file.
+    myelin::TensorData W1 =  model[flow_.right.embeddings];
     EmbeddingWriter category_writer(task->GetOutputFile("catvecs"),
                                     category_lexicon.size(), embedding_dims_);
     for (int i = 0; i < category_lexicon.size(); ++i) {
@@ -486,16 +462,9 @@ class FactEmbeddingsTrainer : public Process {
     CHECK(category_writer.Close());
   }
 
-  // TODO: try single treaded model
-  // TODO: try with 5x negative examples (hmm!)
-  // TODO: try with more/fewer embedding dimensions, e.g. 64 and 1024
-  // TODO: try swapping fact and categories, i.e. cats in and facts out
-  // TODO: try with no negative examples (hmm!)
-  // TODO: try using categories from other random examples as negatives
-  // TODO: try normalizing encodings
-
   // Worker thread for training embedding model.
   void Worker(int index, myelin::Network *model) {
+#if 0
     Random rnd;
     rnd.seed(index);
 
@@ -591,6 +560,9 @@ class FactEmbeddingsTrainer : public Process {
       // Update learning rate.
       *alpha = learning_rate_;
     }
+#else
+    SignalEval();
+#endif
   }
 
   // Signal next evaluation round.
@@ -601,7 +573,8 @@ class FactEmbeddingsTrainer : public Process {
 
  private:
   // Flow model for fact embedding trainer.
-  MikolovFlow flow_;
+  DualEncoderFlow flow_;
+  myelin::CrossEntropyLoss loss_;
 
   // Store for training instances.
   Store store_;
@@ -609,22 +582,16 @@ class FactEmbeddingsTrainer : public Process {
   // Training instances.
   Handles instances_{&store_};
 
-  // Category distribution for sampling negative examples.
-  Distribution categories_;
-
   // Training parameters.
-  int iterations_ = 5;                 // number of training iterations
+  int epochs_ = 1000;                  // number of training epochs
   int embedding_dims_ = 256;           // size of embedding vectors
   int max_features_ = 512;             // maximum features per item
   int threads_ = 5;                    // number of training worker threads
   double learning_rate_ = 0.025;       // learning rate
   double learning_rate_decay_ = 0.5;   // learning rate decay rate
   double min_learning_rate_ = 0.0001;  // minimum learning rate
-  int negative_ = 5;                   // negative examples per positive example
+  int batch_size_ = 1024;              // number of examples per epoch
   int eval_interval_ = 10000000;       // epochs between evaluations
-
-  // Total number of training epochs.
-  int64 epochs_;
 
   // Current number of completed epochs.
   std::atomic<int64> epochs_completed_{0};

@@ -10,8 +10,7 @@
 #include "sling/frame/serialization.h"
 #include "sling/frame/store.h"
 #include "sling/myelin/builder.h"
-#include "sling/myelin/flow.h"
-#include "sling/myelin/kernel/tensorflow.h"
+#include "sling/myelin/compiler.h"
 #include "sling/util/embeddings.h"
 #include "sling/util/top.h"
 
@@ -30,7 +29,6 @@ DEFINE_string(target, "f", "target embeddings (c=category, f=facts)");
 using namespace sling;
 using namespace sling::myelin;
 
-Library library;
 Network net;
 std::vector<string> source_lexicon;
 std::vector<string> target_lexicon;
@@ -81,8 +79,8 @@ void BuildModel(const string &source_embeddings,
   if (!FLAGS_similarity_flow.empty()) flow.Save(FLAGS_similarity_flow);
 
   LOG(INFO) << "Compile model";
-  flow.Analyze(library);
-  net.Compile(flow, library);
+  Compiler compiler;
+  compiler.Compile(&flow, &net);
 }
 
 int main(int argc, char *argv[]) {
@@ -97,7 +95,6 @@ int main(int argc, char *argv[]) {
   }
 
   // Build model.
-  RegisterTensorflowLibrary(&library);
   if (FLAGS_source == "c" && FLAGS_target == "f") {
     BuildModel(FLAGS_category_embeddings, FLAGS_fact_embeddings);
   } else if (FLAGS_source == "f" && FLAGS_target == "c") {

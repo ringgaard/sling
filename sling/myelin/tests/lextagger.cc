@@ -45,7 +45,7 @@ DEFINE_double(epsilon, 1e-8, "Underflow correction");
 DEFINE_double(lambda, 0.0, "Regularization parameter");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
-DEFINE_int32(seed, 0, "Random number generator seed");
+DEFINE_int64(seed, 0, "Random number generator seed");
 DEFINE_int32(batch, 64, "Number of epochs between gradient updates");
 DEFINE_bool(shuffle, true, "Shuffle training corpus");
 DEFINE_bool(heldout, true, "Test tagger on heldout data");
@@ -259,24 +259,8 @@ class Tagger {
 
   // Initialize model weights.
   void Initialize() {
-    // Initialize parameters with small random weights.
-    std::mt19937 prng(FLAGS_seed);
-    std::normal_distribution<float> normal(0.0, 1e-4);
-    for (Tensor *tensor : net_.globals()) {
-      if (!tensor->learnable()) continue;
-      if (tensor->rank() != 2) continue;
-      if (tensor->name() == "features/word_embeddings" &&
-          !FLAGS_embeddings.empty()) {
-        continue;
-      }
-
-      TensorData data(tensor->data(), tensor);
-      for (int r = 0; r < data.dim(0); ++r) {
-        for (int c = 0; c < data.dim(1); ++c) {
-          data.at<float>(r, c) = normal(prng);
-        }
-      }
-    }
+    // Initialize parameters with Gaussian noise.
+    net_.InitLearnableWeights(FLAGS_seed, 0.0, 1e-4);
   }
 
   // Train model.

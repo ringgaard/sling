@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <list>
+#include <random>
 #include <string>
 #include <unordered_map>
 
@@ -863,6 +864,32 @@ Network::~Network() {
   for (auto *s : steps_) delete s;
 }
 
+void Network::InitLearnableWeights(int64 seed, float mean, float stddev) {
+  // Intialize random generator.
+  std::mt19937_64 prng;
+  prng.seed(seed);
+  std::uniform_real_distribution<float> dist(mean, stddev);
+
+  // Initialize learnable variable with Gaussian noise.
+  for (auto *tensor : globals_) {
+    if (!tensor->random_init_) continue;
+    if (tensor->type() != DT_FLOAT) continue;
+    if (tensor->data() == nullptr) continue;
+
+    if (tensor->HasStandardLayout()) {
+      float *data = reinterpret_cast<float *>(tensor->data());
+      for (int i = 0; i < tensor->elements(); ++i) {
+        data[i] = dist(prng);
+      }
+    } else {
+      for (int i = 0; i < tensor->elements(); ++i) {
+        size_t offset = tensor->LinearOffset(i);
+        *reinterpret_cast<float *>(tensor->data() + offset) = dist(prng);
+      }
+    }
+  }
+}
+
 void Network::SaveLearnedWeights(Flow *flow) {
   // Find all learnable variables in flow.
   for (Flow::Variable *var : flow->vars()) {
@@ -940,6 +967,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       tensor->required_order_ = options_.parameter_element_order;
     } else {
       globals_.push_back(tensor);
+      tensor->random_init_ = var->random() && var->learnable();
     }
     tensor->name_ = var->name;
     names_[var->name] = tensor;

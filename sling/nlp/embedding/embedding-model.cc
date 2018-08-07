@@ -33,6 +33,7 @@ void MikolovFlow::Build() {
 void MikolovFlow::BuildModel() {
   W0 = AddWeights("W0", DT_FLOAT, {inputs, dims});
   W1 = AddWeights("W1", DT_FLOAT, {outputs, dims});
+  W0->set_random();
 }
 
 void MikolovFlow::BuildLayer0() {
@@ -98,52 +99,19 @@ void DualEncoderFlow::Build(const Transformations &library) {
   left.backward = Gradient(this, left.forward, library);
   right.backward = Gradient(this, right.forward, library);
   gsimilarity = Gradient(this, similarity, library);
+  gsimilarities = Var("gradients/" + name + "/similarity/d_similarities");
 }
 
 void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
   encoder->forward = AddFunction(encoder->name);
   FlowBuilder tf(this, encoder->forward);
   encoder->embeddings =
-      tf.Parameter("embeddings", DT_FLOAT, {encoder->dims, dims});
+      tf.Random(tf.Parameter("embeddings", DT_FLOAT, {encoder->dims, dims}));
   encoder->features =
       tf.Placeholder("features", DT_INT32, {1, encoder->max_features});
   auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
   auto *length = tf.Name(tf.Norm(sum), "length");
   encoder->encoding = tf.Name(tf.Mul(sum, tf.Reciprocal(length)), "encoding");
-}
-
-void Distribution::Shuffle() {
-  // Shuffle elements (Fisher-Yates shuffle).
-  int n = permutation_.size();
-  Random rnd;
-  for (int i = 0; i < n - 1; ++i) {
-    int j = rnd.UniformInt(n - i);
-    std::swap(permutation_[i], permutation_[i + j]);
-  }
-
-  // Convert weights to cumulative distribution.
-  double sum = 0.0;
-  for (const Element &e : permutation_) sum += e.probability;
-  double acc = 0.0;
-  for (Element &e : permutation_) {
-    acc += e.probability / sum;
-    e.probability = acc;
-  }
-}
-
-int Distribution::Sample(float p) const {
-  int n = permutation_.size();
-  int low = 0;
-  int high = n - 1;
-  while (low < high) {
-    int center = (low + high) / 2;
-    if (permutation_[center].probability < p) {
-      low = center + 1;
-    } else {
-      high = center;
-    }
-  }
-  return permutation_[low].index;
 }
 
 }  // namespace nlp

@@ -22,10 +22,8 @@
 #include "sling/file/recordio.h"
 #include "sling/file/textmap.h"
 #include "sling/frame/serialization.h"
-#include "sling/myelin/compute.h"
 #include "sling/myelin/builder.h"
-#include "sling/myelin/flow.h"
-#include "sling/myelin/kernel/tensorflow.h"
+#include "sling/myelin/compiler.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/embedding/embedding-model.h"
 #include "sling/task/accumulator.h"
@@ -35,8 +33,6 @@
 #include "sling/util/random.h"
 #include "sling/util/thread.h"
 #include "sling/util/unicode.h"
-
-DEFINE_string(word2vec_flow, "", "fact2vec flow output file");
 
 namespace sling {
 namespace nlp {
@@ -301,17 +297,15 @@ class WordEmbeddingsTrainer : public Process {
     int vocabulary_size = vocabulary_.size();
 
     // Build embedding model.
-    myelin::Library library;
-    myelin::RegisterTensorflowLibrary(&library);
     flow_.inputs = flow_.outputs = vocabulary_size;
     flow_.dims = embedding_dims_;
     flow_.in_features = window_ * 2;
     flow_.Build();
-    if (!FLAGS_word2vec_flow.empty()) flow_.Save(FLAGS_word2vec_flow);
-    flow_.Analyze(library);
+
+    // Compile embedding model.
+    myelin::Compiler compiler;
     myelin::Network model;
-    model.options().flops_address = Perf::flopptr();
-    CHECK(model.Compile(flow_, library));
+    compiler.Compile(&flow_, &model);
 
     // Initialize weights.
     Random rnd;
@@ -347,6 +341,9 @@ class WordEmbeddingsTrainer : public Process {
 
     // Wait until workers completes.
     pool.Join();
+
+    // Output profile.
+    myelin::LogProfile(&model);
 
     // Write embeddings to output file.
     const string &output_filename = task->GetOutputFile("output");

@@ -79,6 +79,9 @@ class FlowBuilder : public Scope {
   // Add learnable parameter variable to flow.
   Variable *Parameter(const string &name, Type type, const Shape &shape);
 
+  // Initialize variable with random values. Returns the variable itself.
+  Variable *Random(Variable *var);
+
   // Add input variable to function.
   Variable *Placeholder(const string &name, Type type, const Shape &shape,
                         bool ref = false);
