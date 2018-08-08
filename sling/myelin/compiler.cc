@@ -185,10 +185,10 @@ void Compiler::Compile(Flow *flow, Network *net) {
   }
 }
 
-void LogProfile(Network *net) {
-  if (net->options().global_profiler) {
+void LogProfile(const Network &net) {
+  if (net.options().global_profiler) {
     string report;
-    for (Cell *cell : net->cells()) {
+    for (const Cell *cell : net.cells()) {
       Profile profile(cell->profile_summary());
       report.append("\n");
       report.append(profile.ASCIIReport());

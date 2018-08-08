@@ -433,7 +433,7 @@ class FactEmbeddingsTrainer : public Process {
     pool.Join();
 
     // Output profile.
-    myelin::LogProfile(&model);
+    myelin::LogProfile(model);
 
     // Write fact embeddings to output file.
     LOG(INFO) << "Writing embeddings";

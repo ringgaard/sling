@@ -343,7 +343,7 @@ class WordEmbeddingsTrainer : public Process {
     pool.Join();
 
     // Output profile.
-    myelin::LogProfile(&model);
+    myelin::LogProfile(model);
 
     // Write embeddings to output file.
     const string &output_filename = task->GetOutputFile("output");

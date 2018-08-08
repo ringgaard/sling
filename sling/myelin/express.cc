@@ -208,7 +208,7 @@ class RegisterAllocator {
 
  private:
   // In typed allocation mode, predicates and non-predicate variables are not
-  // alllowed to share registers.
+  // allowed to share registers.
   bool typed_;
 
   // Variable currently assigned to register or null if the register is not

@@ -46,7 +46,7 @@ class Compiler {
 };
 
 // Log profile report if profiling enabled.
-void LogProfile(Network *net);
+void LogProfile(const Network &net);
 
 }  // namespace myelin
 }  // namespace sling

@@ -418,7 +418,7 @@ class Tagger {
   // Finish tagger model.
   void Done() {
     // Output profiling information.
-    LogProfile(&net_);
+    LogProfile(net_);
 
     // Save trained model.
     if (!FLAGS_flow.empty()) {
