@@ -57,6 +57,9 @@ class FltKernelComparator : public KernelComparator {
   // Add output.
   void AddOutput(const string &name, const Shape &shape, float tolerance);
 
+  // Set input transposition.
+  void SetTranspose(bool ta, bool tb);
+
   // Check test kernel by comparing it to the output of the base kernel.
   bool Check(int iterations);
 

@@ -163,7 +163,8 @@ struct KernelCompiler {
     network.set_linker(&linker);
     if (debug) network.set_debug(true);
     if (!network.Compile(flow, singleton)) {
-      LOG(ERROR) << "Error compiling kernel: " << kernel;
+      LOG(ERROR) << "Error compiling kernel: " << kernel << "\n"
+                 << flow.ToString();
       return false;
     }
     func = network.GetCell("benchmark");
@@ -217,6 +218,11 @@ void FltKernelComparator::AddOutput(const string &name,
   outputs_.push_back(output);
   tolerance_.push_back(tolerance);
   output->set_out();
+}
+
+void FltKernelComparator::SetTranspose(bool ta, bool tb) {
+  if (ta) op_->SetAttr("transpose_a", true);
+  if (tb) op_->SetAttr("transpose_b", true);
 }
 
 bool FltKernelComparator::Check(int iterations) {

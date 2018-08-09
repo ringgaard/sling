@@ -65,6 +65,48 @@ void BaselineMatMatMul(const TensorData &A, const TensorData &B,
   }
 }
 
+// Baseline implementation of float matrix multiplication with A^T.
+void BaselineMatMatMulAt(const TensorData &A, const TensorData &B,
+                         TensorData *C) {
+  for (int i = 0; i < A.dim(1); ++i) {
+    for (int j = 0; j < B.dim(1); ++j) {
+      float sum = 0.0;
+      for (int k = 0; k < A.dim(0); ++k) {
+        sum += A.at<float>(k, i) * B.at<float>(k, j);
+      }
+      C->at<float>(i, j) = sum;
+    }
+  }
+}
+
+// Baseline implementation of float matrix multiplication. with B^T.
+void BaselineMatMatMulBt(const TensorData &A, const TensorData &B,
+                         TensorData *C) {
+  for (int i = 0; i < A.dim(0); ++i) {
+    for (int j = 0; j < B.dim(0); ++j) {
+      float sum = 0.0;
+      for (int k = 0; k < A.dim(1); ++k) {
+        sum += A.at<float>(i, k) * B.at<float>(j, k);
+      }
+      C->at<float>(i, j) = sum;
+    }
+  }
+}
+
+// Baseline implementation of float matrix multiplication with A^T and B^T.
+void BaselineMatMatMulAtBt(const TensorData &A, const TensorData &B,
+                           TensorData *C) {
+  for (int i = 0; i < A.dim(1); ++i) {
+    for (int j = 0; j < B.dim(0); ++j) {
+      float sum = 0.0;
+      for (int k = 0; k < A.dim(0); ++k) {
+        sum += A.at<float>(k, i) * B.at<float>(j, k);
+      }
+      C->at<float>(i, j) = sum;
+    }
+  }
+}
+
 // Baseline implementation of float matrix multiplication with double precision
 // adder.
 void BaselineMatMatMul1(const TensorData &A, const TensorData &B,
@@ -196,17 +238,28 @@ void CheckFltMatMulAddRelu(const string &test, const string &base) {
   CheckTest(matmul.Check(100));
 }
 
-void CheckFltMatMatMul(const string &test, const string &base) {
+void CheckFltMatMatMul(const string &test, const string &base,
+                       bool ta = false, bool tb = false) {
   if (!FLAGS_test.empty() && FLAGS_test != test) return;
   if (!FLAGS_base.empty() && FLAGS_base != base) return;
   LOG(INFO) << "Testing " << test << " against " << base;
   for (int i = FLAGS_mmin; i <= FLAGS_mmax; ++i) {
     for (int j = FLAGS_mmin; j <= FLAGS_mmax; ++j) {
       for (int k = FLAGS_mmin; k <= FLAGS_mmax; ++k) {
+        VLOG(1) << "Testing " << i << "x" << j << "x" << k;
         FltKernelComparator matmul(library, "MatMul", test, base);
+        matmul.SetTranspose(ta, tb);
         if (cudart.connected()) matmul.set_runtime(&cudart);
-        matmul.AddInput("A", {i, j}, FLAGS_minmat, FLAGS_maxmat);
-        matmul.AddInput("B", {j, k}, FLAGS_minmat, FLAGS_maxmat);
+        if (ta) {
+          matmul.AddInput("A", {j, i}, FLAGS_minmat, FLAGS_maxmat);
+        } else {
+          matmul.AddInput("A", {i, j}, FLAGS_minmat, FLAGS_maxmat);
+        }
+        if (tb) {
+          matmul.AddInput("B", {k, j}, FLAGS_minmat, FLAGS_maxmat);
+        } else {
+          matmul.AddInput("B", {j, k}, FLAGS_minmat, FLAGS_maxmat);
+        }
         matmul.AddOutput("C", {i, k}, FLAGS_matmul_accuracy);
         CheckTest(matmul.Check(2));
       }
@@ -354,6 +407,13 @@ void CheckNorm(const string &test, const string &base) {
   }
 }
 
+bool CheckTranspose(Step *step, bool ta, bool tb) {
+  if (step->GetAttr("transpose_a", false) != ta) return false;
+  if (step->GetAttr("transpose_b", false) != tb) return false;
+  if (step->GetAttr("transpose_c", false)) return false;
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
   if (FLAGS_w != -1) FLAGS_wmin = FLAGS_wmax = FLAGS_w;
@@ -375,15 +435,33 @@ int main(int argc, char *argv[]) {
   library.Register("MatMul", "BaselineMatMatMul", BaselineMatMatMul)
      .Input(0, DT_FLOAT, 2)
      .Input(1, DT_FLOAT, 2)
-     .Output(0, DT_FLOAT, 2);
+     .Output(0, DT_FLOAT, 2)
+     .Select([](Step *step) { return CheckTranspose(step, false, false); });
+  library.Register("MatMul", "BaselineMatMatMulAt", BaselineMatMatMulAt)
+     .Input(0, DT_FLOAT, 2)
+     .Input(1, DT_FLOAT, 2)
+     .Output(0, DT_FLOAT, 2)
+     .Select([](Step *step) { return CheckTranspose(step, true, false); });
+  library.Register("MatMul", "BaselineMatMatMulBt", BaselineMatMatMulBt)
+     .Input(0, DT_FLOAT, 2)
+     .Input(1, DT_FLOAT, 2)
+     .Output(0, DT_FLOAT, 2)
+     .Select([](Step *step) { return CheckTranspose(step, false, true); });
+  library.Register("MatMul", "BaselineMatMatMulAtBt", BaselineMatMatMulAtBt)
+     .Input(0, DT_FLOAT, 2)
+     .Input(1, DT_FLOAT, 2)
+     .Output(0, DT_FLOAT, 2)
+     .Select([](Step *step) { return CheckTranspose(step, true, true); });
   library.Register("MatMul", "BaselineMatMatMul1", BaselineMatMatMul1)
      .Input(0, DT_FLOAT, 2)
      .Input(1, DT_FLOAT, 2)
-     .Output(0, DT_FLOAT, 2);
+     .Output(0, DT_FLOAT, 2)
+     .Select([](Step *step) { return CheckTranspose(step, false, false); });
   library.Register("MatMul", "BaselineMatMatMul2", BaselineMatMatMul2)
      .Input(0, DT_FLOAT, 2)
      .Input(1, DT_FLOAT, 2)
-     .Output(0, DT_FLOAT, 2);
+     .Output(0, DT_FLOAT, 2)
+     .Select([](Step *step) { return CheckTranspose(step, false, false); });
   library.Register("ArgMax", "BaselineArgMax", BaselineArgMax)
      .Input(0, DT_FLOAT, 1)
      .Output(0, DT_INT32);
@@ -442,7 +520,10 @@ int main(int argc, char *argv[]) {
   }
 
   // Compare SIMD matrix-matrix multiplication.
-  CheckFltMatMatMul("SIMDMatMul", "GenFltMatMatMul");
+  CheckFltMatMatMul("SIMDMatMul", "GenFltMatMatMul", false, false);
+  CheckFltMatMatMul("SIMDMatMul", "BaselineMatMatMulAt", true, false);
+  CheckFltMatMatMul("SIMDMatMul", "BaselineMatMatMulBt", false, true);
+  CheckFltMatMatMul("SIMDMatMul", "BaselineMatMatMulAtBt", true, true);
 
   if (CPU::Enabled(AVX)) {
     // Test AVX float matrix multiplication.
