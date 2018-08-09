@@ -621,12 +621,12 @@ string Tensor::ToString(const char *data, bool deref) const {
 }
 
 Channel::Channel(const Tensor *format) : format_(format) {
-  // Use the stride of the first dimension as the element size to ensure
+  // Align the element size to the byte alignment of the format tensor to ensure
   // proper alignment of the elements in the channel array.
   DCHECK(format->order() == ROW_MAJOR) << format->name();
   DCHECK_GE(format->rank(), 1) << format->name();
   DCHECK_EQ(format->dim(0), 1) << format->name();
-  element_size_ = format->stride(0);
+  element_size_ = Align(format->size(), format->byte_alignment());
 
   // Channel are aligned to the element alignment and cache lines.
   EnsureAlignment(&alignment_, format->byte_alignment());
@@ -1280,7 +1280,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Compute stride size for each dimension.
     size_t size = TypeTraits::of(tensor->type()).size();
-    int outer;
     if (tensor->order_ == ROW_MAJOR) {
       for (int d = tensor->rank() - 1; d >= 0; --d) {
         tensor->stride_.set(d, size);
@@ -1290,7 +1289,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         tensor->aligned_.set(d, align);
         size *= align;
       }
-      outer = 0;
     } else {
       for (int d = 0; d < tensor->rank(); ++d) {
         tensor->stride_.set(d, size);
@@ -1300,17 +1298,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         tensor->aligned_.set(d, align);
         size *= align;
       }
-      outer = tensor->rank() - 1;
-    }
-
-    // For tensors where the size of the outer dimension is one, the stride of
-    // the first dimension is adjusted to the byte alignment requirement for the
-    // tensor. This ensures that channels allocated using this tensor as the
-    // format will have the correct alignment for all the elements.
-    if (tensor->rank() > 1 &&
-        tensor->shape_.dim(outer) == 1 &&
-        size % tensor->byte_alignment_ != 0) {
-      tensor->stride_.set(outer, Align(size, tensor->byte_alignment_));
     }
 
     // Set tensor size.
