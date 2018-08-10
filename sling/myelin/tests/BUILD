@@ -132,12 +132,7 @@ cc_binary(
   deps = [
     "//sling/base",
     "//sling/file:posix",
-    "//sling/myelin:compute",
-    "//sling/myelin:flow",
-    "//sling/myelin:graph",
-    "//sling/myelin:multi-process",
-    "//sling/myelin:profile",
-    "//sling/myelin/kernel:tensorflow",
+    "//sling/myelin:compiler",
   ],
 )
 

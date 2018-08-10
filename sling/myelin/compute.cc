@@ -1952,6 +1952,7 @@ string Cell::ToString() const {
                       t->TypeString().c_str(),
                       t->device_offset(),
                       t->space(), t->byte_alignment());
+        StringAppendF(&str, " %s", ordername[t->order()]);
         if (t->linked()) {
           StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
         }
@@ -1983,6 +1984,7 @@ string Cell::ToString() const {
                     t->name().c_str(),
                     t->TypeString().c_str(),
                     t->size(), t->byte_alignment());
+      StringAppendF(&str, " %s", ordername[t->order()]);
       if (t->linked()) {
         StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
       }
