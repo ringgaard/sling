@@ -131,7 +131,7 @@ class AVX512FloatGenerator : public SIMDGenerator {
     masm_->vshuff32x4(acc, sum, sum, 0x0E);
     masm_->vaddps(sum, sum, acc);
     masm_->vperm2f128(acc.ymm(), sum.ymm(), sum.ymm(), 1);
-    masm_->vhaddps(sum.ymm(), sum.ymm(), sum.ymm());
+    masm_->vhaddps(sum.ymm(), sum.ymm(), acc.ymm());
     masm_->vhaddps(sum.ymm(), sum.ymm(), sum.ymm());
     masm_->vhaddps(sum.ymm(), sum.ymm(), sum.ymm());
     masm_->mm().release(acc);
@@ -162,15 +162,15 @@ class AVX512FloatGenerator : public SIMDGenerator {
   }
 
   void MaskedAdd(int dst, int src1, const jit::Operand &src2) override {
-    masm_->vaddps(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
+    masm_->vaddps(zmm(dst), zmm(src1), src2, Mask(mask_, merging));
   }
 
   void MaskedMul(int dst, int src1, const jit::Operand &src2) override {
-    masm_->vmulps(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
+    masm_->vmulps(zmm(dst), zmm(src1), src2, Mask(mask_, merging));
   }
 
   void MaskedMulAdd(int dst, int src1, const jit::Operand &src2) override {
-    masm_->vfmadd231ps(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
+    masm_->vfmadd231ps(zmm(dst), zmm(src1), src2, Mask(mask_, merging));
   }
 
  private:

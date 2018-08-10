@@ -594,8 +594,8 @@ int main(int argc, char *argv[]) {
     CheckFltBinOp("Sub", "CUDASub", "SubExpr");
     CheckFltBinOp("Mul", "CUDAMul", "MulExpr");
     CheckFltBinOp("Div", "CUDADiv", "DivExpr");
-    CheckFltBinOp("Maximum", "CUDAMax", "MaxExpr");
-    CheckFltBinOp("Minimum", "CUDAMin", "MinExpr");
+    CheckFltBinOp("Maximum", "CUDAMaximum", "MaximumExpr");
+    CheckFltBinOp("Minimum", "CUDAMinimum", "MinimumExpr");
 
     // Test CUDA integer operators.
     CheckIntBinOp("Add", "CUDAAdd", "GenIntAdd");

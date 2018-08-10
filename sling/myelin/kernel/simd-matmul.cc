@@ -468,7 +468,7 @@ class SIMDMatMul : public Kernel {
           }
           gen->MaskedStore(Operand(c), sum[0]);
         }
-        __ addq(c, Immediate(blksize));
+        __ addq(c, Immediate(phase.masked * dsize));
       }
     }
 
@@ -593,7 +593,7 @@ class SIMDMatMul : public Kernel {
         // Masked phase.
         CHECK_EQ(phase.unrolls, 1);
         gen->MaskedLoad(elem[0], Operand(a, blkstart));
-        gen->MaskedMulAdd(sum[0], sum[0], Operand(b_ptr, blkstart));
+        gen->MaskedMulAdd(sum[0], elem[0], Operand(b_ptr, blkstart));
       }
     }
 

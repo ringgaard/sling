@@ -160,7 +160,7 @@ struct KernelCompiler {
     }
     network.set_parameter_element_order(ANY_ORDER);
     ElfLinker linker;
-    network.set_linker(&linker);
+    if (!codefile.empty()) network.set_linker(&linker);
     if (debug) network.set_debug(true);
     if (!network.Compile(flow, singleton)) {
       LOG(ERROR) << "Error compiling kernel: " << kernel << "\n"
