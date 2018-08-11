@@ -135,6 +135,45 @@ class GradientDescentOptimizer : public Optimizer {
   float lambda_ = 0.0;              // regularization parameter (0=none)
 };
 
+// Momentum optimizer.
+class MomentumOptimizer : public Optimizer {
+ public:
+  MomentumOptimizer(const string &name = "optimizer") : Optimizer(name) {}
+
+  // Apply gradients to update learnable parameters.
+  void Apply(std::vector<Instance *> &gradients) override;
+
+  // Decay learning rate.
+  float DecayLearningRate() override;
+
+  // Learning rate.
+  float learning_rate() const { return lr_; }
+  void set_learning_rate(float lr) { lr_ = lr; }
+
+  // Learning rate decay.
+  float decay() const { return decay_; }
+  void set_decay(float decay) { decay_ = decay; }
+
+  // Norm clipping threshold.
+  float clipping_threshold() const { return clipping_threshold_; }
+  void set_clipping_threshold(float t) { clipping_threshold_ = t; }
+
+  // Momentum for blending in previous updates.
+  float momentum() const { return momentum_; }
+  void set_momentum(float momentum) { momentum_ = momentum; }
+
+ protected:
+  void BuildOptimizer(const GradientMap &gradmap, FlowBuilder *update) override;
+  void InitializeOptimizer() override;
+
+  Tensor *alpha_ = nullptr;         // current learning rate
+  float lr_ = 0.01;                 // initial learning rate
+  float decay_  = 1.0;              // learning rate decay
+  float momentum_ = 0.9;            // blending ratio for previous update
+  float clipping_threshold_ = 0.0;  // norm clipping threshold (0=no clipping)
+  int num_linked_ = 0;              // number of linked updates
+};
+
 // Adam optimizer.
 class AdamOptimizer : public Optimizer {
  public:

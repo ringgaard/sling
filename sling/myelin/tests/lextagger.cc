@@ -43,6 +43,7 @@ DEFINE_double(beta1, 0.9, "Decay rate for the first moment estimates");
 DEFINE_double(beta2, 0.999, "Decay rate for the second moment estimates");
 DEFINE_double(epsilon, 1e-8, "Underflow correction");
 DEFINE_double(lambda, 0.0, "Regularization parameter");
+DEFINE_double(gamma, 0.6, "Momentum rate");
 DEFINE_double(decay, 0.5, "Learning rate decay rate");
 DEFINE_double(clip, 1.0, "Gradient norm clipping");
 DEFINE_int64(seed, 0, "Random number generator seed");
@@ -57,6 +58,7 @@ DEFINE_int32(worddim, 32, "Word embedding dimensions");
 DEFINE_int32(lstm, 128, "LSTM size");
 DEFINE_string(flow, "", "Flow file for saving trained POS tagger");
 DEFINE_bool(adam, false, "Use Adam optimizer");
+DEFINE_bool(momentum, false, "Use Momentum optimizer");
 DEFINE_bool(optacc, false, "Decay learning rate based on accuracy");
 DEFINE_string(normalization, "d", "Token normalization");
 DEFINE_int32(tagset_align, 1, "Tag set size alignment");
@@ -223,6 +225,15 @@ class Tagger {
         adam->set_epsilon(FLAGS_epsilon);
         optimizer_ = adam;
         alpha_ = FLAGS_eta;
+      } else if (FLAGS_momentum) {
+        LOG(INFO) << "Using Momentum optimizer";
+        MomentumOptimizer *momentum = new MomentumOptimizer();
+        momentum->set_learning_rate(FLAGS_alpha);
+        momentum->set_decay(FLAGS_decay);
+        momentum->set_momentum(FLAGS_gamma);
+        momentum->set_clipping_threshold(FLAGS_clip);
+        optimizer_ = momentum;
+        alpha_ = FLAGS_alpha;
       } else {
         LOG(INFO) << "Using SGD optimizer";
         GradientDescentOptimizer *sgd = new GradientDescentOptimizer();
