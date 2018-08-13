@@ -37,7 +37,7 @@ class CrossEntropyLoss {
   void Initialize(const Network &network);
 
   // Compute loss from logits and output loss gradient.
-  float Compute(float *logits, int target, float *dlogits);
+  float Compute(float *logits, int target, float *dlogits) const;
 
  private:
   // Name of loss function.

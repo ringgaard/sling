@@ -318,3 +318,15 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "learner",
+  srcs = ["learner.cc"],
+  hdrs = ["learner.h"],
+  deps = [
+    ":process",
+    ":task",
+    "//sling/base",
+    "//sling/myelin:learning",
+    "//sling/util:mutex",
+  ],
+)

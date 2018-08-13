@@ -17,7 +17,9 @@
 
 #include <vector>
 
+#include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
+#include "sling/myelin/learning.h"
 
 namespace sling {
 namespace nlp {
@@ -109,8 +111,56 @@ struct DualEncoderFlow : public myelin::Flow {
   void BuildEncoder(Encoder *encoder);
 };
 
+// Dual encoder for one batch of examples.
+class DualEncoderBatch {
+ public:
+  // Initialize batch.
+  DualEncoderBatch(const DualEncoderFlow &flow,
+                   const myelin::Network &model,
+                   const myelin::CrossEntropyLoss &loss);
+
+  // Get feature array for left encoder.
+  int *left_features(int index) {
+    return elements_[index].left.Get<int>(left_features_);
+  }
+
+  // Get feature array for right encoder.
+  int *right_features(int index) {
+    return elements_[index].right.Get<int>(right_features_);
+  }
+
+  // Forward and backward computation. Return average loss.
+  float Compute();
+
+ private:
+  // Data instances for one batch element.
+  struct Element {
+    Element(const myelin::Cell *l, const myelin::Cell *r,
+            const myelin::Cell *gl, const myelin::Cell *gr)
+        : left(r), right(r), gleft(gl), gright(gr) {}
+
+    myelin::Instance left;
+    myelin::Instance right;
+    myelin::Instance gleft;
+    myelin::Instance gright;
+  };
+
+  // Similarity computation.
+  myelin::Instance sim_;
+  myelin::Instance gsim_;
+
+  // Softmax cross-entropy loss computation.
+  const myelin::CrossEntropyLoss &loss_;
+
+  // Batch elements.
+  std::vector<Element> elements_;
+
+  // Tensors for accessing instance data.
+  const myelin::Tensor *left_features_ = nullptr;
+  const myelin::Tensor *right_features_ = nullptr;
+};
+
 }  // namespace nlp
 }  // namespace sling
 
 #endif  // SLING_NLP_EMBEDDING_EMBEDDING_FLOW_H_
-

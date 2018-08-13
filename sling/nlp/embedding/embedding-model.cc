@@ -112,6 +112,67 @@ void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
   auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
   auto *length = tf.Name(tf.Norm(sum), "length");
   encoder->encoding = tf.Name(tf.Mul(sum, tf.Reciprocal(length)), "encoding");
+  encoder->encoding->set_ref();
+}
+
+DualEncoderBatch::DualEncoderBatch(const DualEncoderFlow &flow,
+                                   const Network  &model,
+                                   const CrossEntropyLoss &loss)
+    : sim_(model.GetCell(flow.similarity)),
+      gsim_(model.GetCell(flow.gsimilarity)),
+      loss_(loss) {
+  // Get cells for left end right encoders.
+  const Cell *l = model.GetCell(flow.left.forward);
+  const Cell *r = model.GetCell(flow.right.forward);
+  const Cell *gl = model.GetCell(flow.left.backward);
+  const Cell *gr = model.GetCell(flow.right.backward);
+
+  // Allocate instances for all batch elements.
+  elements_.reserve(flow.batch_size);
+  for (int i = 0; i < flow.batch_size; ++i) {
+    elements_.emplace_back(l, r, gl, gr);
+  }
+
+  // Get tensors.
+  left_features_ = l->GetParameter(flow.left.features);
+  right_features_ = r->GetParameter(flow.right.features);
+
+  // Set up encoding references.
+  auto *left_encoding = l->GetParameter(flow.left.encoding);
+  auto *right_encoding = l->GetParameter(flow.right.encoding);
+  auto *sim_left = sim_.cell()->GetParameter(flow.left_encodings);
+  auto *sim_right = sim_.cell()->GetParameter(flow.right_encodings);
+  for (int i = 0; i < flow.batch_size; ++i) {
+    elements_[i].left.SetReference(left_encoding,
+                                   sim_.Get<float>(sim_left, i));
+    elements_[i].right.SetReference(right_encoding,
+                                    sim_.Get<float>(sim_right, i));
+  }
+
+  // TODO: add gradient cells to optimizer.
+}
+
+float DualEncoderBatch::Compute() {
+  // Compute left encodings.
+  for (int i = 0; i < elements_.size(); ++i) {
+    elements_[i].left.Compute();
+  }
+
+  // Compute right encodings.
+  for (int i = 0; i < elements_.size(); ++i) {
+    elements_[i].right.Compute();
+  }
+
+  // Compute similarity for all pairs in batch.
+  sim_.Compute();
+
+  // TODO: compute loss and propagate gradient to gsim.
+
+  // TODO: propagate gradient through gsim.
+
+  // TODO: propagate gradient through gleft and gright.
+
+  return 0.0;
 }
 
 }  // namespace nlp

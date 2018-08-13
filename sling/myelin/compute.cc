@@ -728,7 +728,7 @@ void Instance::Clear() {
   cell_->runtime()->ClearInstance(this);
 }
 
-string Instance::ToString(Tensor *param) const {
+string Instance::ToString(const Tensor *param) const {
   // Locate parameter in instance.
   char *p;
   char *buffer = nullptr;

@@ -25,10 +25,9 @@
 #include "sling/nlp/embedding/embedding-model.h"
 #include "sling/nlp/kb/facts.h"
 #include "sling/task/frames.h"
-#include "sling/task/process.h"
+#include "sling/task/learner.h"
 #include "sling/util/bloom.h"
 #include "sling/util/embeddings.h"
-#include "sling/util/mutex.h"
 #include "sling/util/random.h"
 #include "sling/util/sortmap.h"
 
@@ -304,25 +303,18 @@ class FactExtractor : public Process {
 REGISTER_TASK_PROCESSOR("fact-extractor", FactExtractor);
 
 // Trainer for fact embeddings model.
-class FactEmbeddingsTrainer : public Process {
+class FactEmbeddingsTrainer : public LearnerTask {
  public:
   // Run training of embedding net.
   void Run(Task *task) override {
     // Get training parameters.
-    task->Fetch("epochs", &epochs_);
     task->Fetch("embedding_dims", &embedding_dims_);
     task->Fetch("batch_size", &batch_size_);
     task->Fetch("max_features", &max_features_);
-    task->Fetch("threads", &threads_);
-    task->Fetch("learning_rate", &learning_rate_);
-    task->Fetch("learning_rate_decay", &learning_rate_decay_);
-    task->Fetch("min_learning_rate", &min_learning_rate_);
-    task->Fetch("eval_interval", &eval_interval_);
 
     // Set up counters.
     Counter *num_instances = task->GetCounter("instances");
     Counter *num_instances_skipped = task->GetCounter("instances_skipped");
-    num_epochs_completed_ = task->GetCounter("epochs_completed");
     num_feature_overflows_ = task->GetCounter("feature_overflows");
 
     // Bind names.
@@ -356,6 +348,8 @@ class FactEmbeddingsTrainer : public Process {
     flow_.left.max_features = max_features_;
     flow_.Build(*compiler.library());
     loss_.Build(&flow_, flow_.similarities, flow_.gsimilarities);
+    optimizer_ = GetOptimizer(task);
+    optimizer_->Build(&flow_);
 
     // Compile embedding model.
     LOG(INFO) << "Compiling model";
@@ -386,51 +380,10 @@ class FactEmbeddingsTrainer : public Process {
       delete message;
     }
     store_.Freeze();
-    task->GetCounter("epochs_total")->Increment(epochs_);
 
-    // Start training threads.
+    // Run training
     LOG(INFO) << "Training model";
-    WorkerPool pool;
-    pool.Start(threads_, [this, &model](int index) { Worker(index, &model); });
-
-    // Evaluate model on regular intervals. The workers signal when it is time
-    // for the next eval round.
-    for (;;) {
-      // Wait for next eval.
-      {
-        std::unique_lock<std::mutex> lock(eval_mu_);
-        eval_model_.wait(lock);
-      }
-
-      // Evaluate model.
-      int64 epoch = epochs_completed_;
-      float epochs = epoch - eval_epoch_;
-      float pos_loss = pos_loss_sum_ / epochs;
-      float neg_loss = neg_loss_sum_ / epochs;
-      float loss = pos_loss + neg_loss;
-      eval_epoch_ = epoch;
-      pos_loss_sum_ = 0.0;
-      neg_loss_sum_ = 0.0;
-
-      // Decay learning rate if loss increases.
-      if (prev_loss_ != 0.0 && prev_loss_ < loss) {
-        double lr = learning_rate_ * learning_rate_decay_;
-        if (lr < min_learning_rate_) lr = min_learning_rate_;
-        learning_rate_ = lr;
-      }
-      prev_loss_ = loss;
-
-      LOG(INFO) << "epoch=" << epoch << ", "
-                << "lr=" << learning_rate_ << ", "
-                << "+loss=" << pos_loss  << ", "
-                << "-loss=" << neg_loss;
-
-      // Check if we are done.
-      if (epoch >= epochs_) break;
-    }
-
-    // Wait until workers completes.
-    pool.Join();
+    Train(task, &model);
 
     // Output profile.
     myelin::LogProfile(model);
@@ -460,121 +413,88 @@ class FactEmbeddingsTrainer : public Process {
       category_writer.Write(category_lexicon[i], embedding);
     }
     CHECK(category_writer.Close());
+
+    delete optimizer_;
   }
 
   // Worker thread for training embedding model.
-  void Worker(int index, myelin::Network *model) {
-#if 0
+  void Worker(int index, myelin::Network *model) override {
+    // Initialize batch.
     Random rnd;
     rnd.seed(index);
+    DualEncoderBatch batch(flow_, *model, loss_);
 
-    // Set up model compute instances.
-    myelin::Instance l0(model->GetCell(flow_.layer0));
-    myelin::Instance l1(model->GetCell(flow_.layer1));
-    myelin::Instance l0b(model->GetCell(flow_.layer0b));
-
-    int *features = l0.Get<int>(model->GetParameter(flow_.fv));
-    int *fend = features + max_features_;
-    int *target = l1.Get<int>(model->GetParameter(flow_.target));
-    int *tend = target + max_features_;
-    float *label = l1.Get<float>(model->GetParameter(flow_.label));
-    float *alpha = l1.Get<float>(model->GetParameter(flow_.alpha));
-    float *loss = l1.Get<float>(model->GetParameter(flow_.loss));
-    myelin::Tensor *error = model->GetParameter(flow_.error);
-    //int category_dims = flow_.W1->dim(0);
-
-    l1.Set(model->GetParameter(flow_.l1_l0), &l0);
-    l0b.Set(model->GetParameter(flow_.l0b_l0), &l0);
-    l0b.Set(model->GetParameter(flow_.l0b_l1), &l1);
-
-    // Random sample instances from training data.
     for (;;) {
-      // Get next instance.
-      int sample = rnd.UniformInt(instances_.size());
-      Frame instance(&store_, instances_[sample]);
-      Array facts = instance.Get(p_facts_).AsArray();
-      Array categories = instance.Get(p_categories_).AsArray();
+      // Random sample instances for batch.
+      for (int i = 0; i < flow_.batch_size; ++i) {
+        int sample = rnd.UniformInt(instances_.size());
+        Frame instance(&store_, instances_[sample]);
+        Array facts = instance.Get(p_facts_).AsArray();
+        Array categories = instance.Get(p_categories_).AsArray();
 
-      // Initialize features with facts.
-      int *f = features;
-      for (int i = 0; i < facts.length(); ++i) {
-        if (f == fend) {
-          num_feature_overflows_->Increment();
-          break;
-        }
-        *f++ = facts.get(i).AsInt();
-      }
-      if (f < fend) *f = -1;
-
-      // Propagate input to hidden layer.
-      l0.Compute();
-
-      // Propagate hidden to output and back. This also accumulates the
-      // errors that should be propagated back to the input layer.
-      l1.Clear(error);
-      *label = 1.0;
-      int *pos = target;
-      for (int i = 0; i < categories.length(); ++i) {
-        if (pos == tend) {
-          num_feature_overflows_->Increment();
-          break;
-        }
-        *pos++ = categories.get(i).AsInt();
-      }
-      if (pos < tend) *pos = -1;
-      l1.Compute();
-      pos_loss_sum_ += *loss;
-
-      // Sample negative example from random instances.
-      *label = 0.0;
-      int *neg = target;
-      for (int d = 0; d < negative_; ++d) {
-        int negid = rnd.UniformInt(instances_.size());
-        Frame negative(&store_, instances_[negid]);
-        Array negcat = negative.Get(p_categories_).AsArray();
-        for (int i = 0; i < negcat.length(); ++i) {
-          if (neg == tend) {
+        // Initialize fact features for instance.
+        int *f = batch.left_features(i);
+        int *fend = f + flow_.left.max_features;
+        for (int i = 0; i < facts.length(); ++i) {
+          if (f == fend) {
             num_feature_overflows_->Increment();
             break;
           }
-        *neg++ = negcat.get(i).AsInt();
+          *f++ = facts.get(i).AsInt();
         }
-      }
-      if (neg < tend) *neg = -1;
-      l1.Compute();
-      neg_loss_sum_ -= *loss;
+        if (f < fend) *f = -1;
 
-      // Propagate hidden to input.
-      l0b.Compute();
+        // Initialize category features for instance.
+        f = batch.right_features(i);
+        fend = f + flow_.right.max_features;
+        for (int i = 0; i < categories.length(); ++i) {
+          if (f == fend) {
+            num_feature_overflows_->Increment();
+            break;
+          }
+          *f++ = categories.get(i).AsInt();
+        }
+        if (f < fend) *f = -1;
+      }
 
       // Check if we are done.
-      num_epochs_completed_->Increment();
-      int64 epoch = ++epochs_completed_;
-      if (epoch >= epochs_) {
-        SignalEval();
-        break;
-      } else if (epoch % eval_interval_ == 0) {
-        SignalEval();
-      }
-
-      // Update learning rate.
-      *alpha = learning_rate_;
+      if (EpochCompleted()) break;
     }
-#else
-    SignalEval();
-#endif
   }
 
-  // Signal next evaluation round.
-  void SignalEval() {
-    std::unique_lock<std::mutex> lock(eval_mu_);
-    eval_model_.notify_one();
+  // Evaluate model.
+  bool Evaluate(myelin::Network *model) override {
+#if 0
+      // Evaluate model.
+      int64 epoch = epochs_completed_;
+      float epochs = epoch - eval_epoch_;
+      float pos_loss = pos_loss_sum_ / epochs;
+      float neg_loss = neg_loss_sum_ / epochs;
+      float loss = pos_loss + neg_loss;
+      eval_epoch_ = epoch;
+      pos_loss_sum_ = 0.0;
+      neg_loss_sum_ = 0.0;
+
+      // Decay learning rate if loss increases.
+      //if (prev_loss_ != 0.0 && prev_loss_ < loss) {
+      //  double lr = learning_rate_ * learning_rate_decay_;
+      //  //if (lr < min_learning_rate_) lr = min_learning_rate_;
+      //  learning_rate_ = lr;
+      //}
+      prev_loss_ = loss;
+
+      LOG(INFO) << "epoch=" << epoch << ", "
+                << "+loss=" << pos_loss  << ", "
+                << "-loss=" << neg_loss;
+#endif
+    return true;
   }
 
  private:
   // Flow model for fact embedding trainer.
   DualEncoderFlow flow_;
   myelin::CrossEntropyLoss loss_;
+  myelin::Optimizer *optimizer_ = nullptr;
 
   // Store for training instances.
   Store store_;
@@ -583,25 +503,11 @@ class FactEmbeddingsTrainer : public Process {
   Handles instances_{&store_};
 
   // Training parameters.
-  int epochs_ = 1000;                  // number of training epochs
   int embedding_dims_ = 256;           // size of embedding vectors
   int max_features_ = 512;             // maximum features per item
-  int threads_ = 5;                    // number of training worker threads
-  double learning_rate_ = 0.025;       // learning rate
-  double learning_rate_decay_ = 0.5;   // learning rate decay rate
-  double min_learning_rate_ = 0.0001;  // minimum learning rate
   int batch_size_ = 1024;              // number of examples per epoch
-  int eval_interval_ = 10000000;       // epochs between evaluations
-
-  // Current number of completed epochs.
-  std::atomic<int64> epochs_completed_{0};
-
-  // Signal model evaluation.
-  Mutex eval_mu_;
-  std::condition_variable eval_model_;
 
   // Evaluation statistics.
-  int64 eval_epoch_ = 0;
   float prev_loss_ = 0.0;
   float pos_loss_sum_ = 0.0;
   float neg_loss_sum_ = 0.0;
@@ -613,7 +519,6 @@ class FactEmbeddingsTrainer : public Process {
   Name p_categories_{names_, "categories"};
 
   // Staticstics.
-  Counter *num_epochs_completed_ = nullptr;
   Counter *num_feature_overflows_ = nullptr;
 };
 

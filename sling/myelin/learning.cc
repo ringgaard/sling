@@ -74,7 +74,8 @@ void CrossEntropyLoss::Initialize(const Network &network) {
   dlogits_ = network.GetParameter(name_ + "/d_logits");
 }
 
-float CrossEntropyLoss::Compute(float *logits, int target, float *dlogits) {
+float CrossEntropyLoss::Compute(float *logits, int target,
+                                float *dlogits) const {
   Instance data(cell_);
   data.SetReference(logits_, logits);
   data.SetReference(dlogits_, dlogits);

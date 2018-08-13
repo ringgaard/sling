@@ -6,8 +6,10 @@ cc_library(
   hdrs = ["embedding-model.h"],
   deps = [
     "//sling/myelin:builder",
+    "//sling/myelin:compute",
     "//sling/myelin:flow",
     "//sling/myelin:gradient",
+    "//sling/myelin:learning",
     "//sling/util:random",
   ],
 )
@@ -52,6 +54,7 @@ cc_library(
     "//sling/nlp/kb:facts",
     "//sling/task:frames",
     "//sling/task:process",
+    "//sling/task:learner",
     "//sling/util:bloom",
     "//sling/util:embeddings",
     "//sling/util:mutex",
