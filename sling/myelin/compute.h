@@ -570,6 +570,9 @@ class Tensor {
   // Byte alignment.
   int byte_alignment() const { return byte_alignment_; }
 
+  // Return corresponding gradient tensor.
+  Tensor *Gradient() const;
+
   // Return tensor type as string.
   string TypeString() const;
 
@@ -1139,6 +1142,12 @@ class Cell {
 
   // Profile summary for global profiling.
   ProfileSummary *profile_summary() const { return profile_summary_; }
+
+  // Return corresponding gradient cell.
+  Cell *Gradient() const;
+
+  // Return tensor for primal reference in gradient cell.
+  Tensor *Primal() const;
 
   // Return cell in text format.
   string ToString() const;

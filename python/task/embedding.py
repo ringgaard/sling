@@ -154,13 +154,21 @@ class EmbeddingWorkflow:
     with self.wf.namespace("fact-embeddings"):
       trainer = self.wf.task("fact-embeddings-trainer")
       trainer.add_params({
-        "threads" : 10,
-        "epochs" : 1000,
+        #"batch_size": 4,
+        #"embedding_dims": 16,
+        #"epochs" : 10,
+        #"report_interval": 1,
+
         "batch_size": 1024,
-        "learning_rate": 0.1,
-        "learning_rate_decay": 0.5,
-        "min_learning_rate": 0.0001,
         "embedding_dims": 256,
+        "epochs" : 10000,
+        "report_interval": 100,
+
+        "learning_rate": 1,
+        #"learning_rate_decay": 0.5,
+        "workers": 1,
+        "clipping": 1,
+        #"optimizer": "momentum",
       })
       self.wf.connect(self.wf.read(facts, name="fact-reader"), trainer)
       trainer.attach_input("factmap", factmap)

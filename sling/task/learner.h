@@ -39,23 +39,27 @@ class LearnerTask : public Process {
   virtual void Worker(int index, myelin::Network *model) = 0;
 
   // Model evaluation. Return false to end training.
-  virtual bool Evaluate(myelin::Network *model) = 0;
+  virtual bool Evaluate(int64 epoch, myelin::Network *model) = 0;
 
  private:
   // Total number of training epochs.
-  int64 epochs_ = 0;
+  int64 epochs_ = 10000;
+
+  // Number of epochs between model evaluation.
+  int64 report_interval_ = 100;
+
+  // Number of seconds between starting up workers.
+  int64 rampup_ = 0;
 
   // Current number of completed epochs.
   std::atomic<int64> epoch_{0};
-
-  // Number of epochs between model evaluation.
-  int64 eval_interval_ = 0;
 
   // Signal model evaluation or completions.
   Mutex eval_mu_;
   std::condition_variable eval_model_;
 
   // Staticstics.
+  Counter *num_workers_ = nullptr;
   Counter *num_epochs_total_ = nullptr;
   Counter *num_epochs_completed_ = nullptr;
 };

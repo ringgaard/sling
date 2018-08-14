@@ -311,6 +311,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
     task->Fetch("embedding_dims", &embedding_dims_);
     task->Fetch("batch_size", &batch_size_);
     task->Fetch("max_features", &max_features_);
+    task->Fetch("learning_rate", &learning_rate_);
 
     // Set up counters.
     Counter *num_instances = task->GetCounter("instances");
@@ -338,31 +339,30 @@ class FactEmbeddingsTrainer : public LearnerTask {
 
     // Build dual encoder model with facts on the left side and categories on
     // the right side.
-    LOG(INFO) << "Building model";
     myelin::Compiler compiler;
     flow_.dims = embedding_dims_;
     flow_.batch_size = batch_size_;
     flow_.left.dims = fact_dims;
     flow_.left.max_features = max_features_;
     flow_.right.dims = category_dims;
-    flow_.left.max_features = max_features_;
+    flow_.right.max_features = max_features_;
     flow_.Build(*compiler.library());
     loss_.Build(&flow_, flow_.similarities, flow_.gsimilarities);
     optimizer_ = GetOptimizer(task);
     optimizer_->Build(&flow_);
 
     // Compile embedding model.
-    LOG(INFO) << "Compiling model";
     myelin::Network model;
     compiler.Compile(&flow_, &model);
+    optimizer_->Initialize(model);
     loss_.Initialize(model);
 
     // Initialize weights.
-    LOG(INFO) << "Initializing model";
-    model.InitLearnableWeights(0, 0.0, 1e-4);
+    model.InitLearnableWeights(task->Get("seed", 0), 0.0, 0.01);
+    //model.InitLearnableWeights(task->Get("seed", 0), 1.0, 0.0);
 
     // Read training instances from input.
-    LOG(INFO) << "Reading facts";
+    LOG(INFO) << "Reading training data";
     Queue input(this, task->GetSources("input"));
     Message *message;
     while (input.Read(&message)) {
@@ -378,11 +378,12 @@ class FactEmbeddingsTrainer : public LearnerTask {
       }
 
       delete message;
+      //if (instances_.size() == 1000) break; // TODO: remove
     }
     store_.Freeze();
 
-    // Run training
-    LOG(INFO) << "Training model";
+    // Run training.
+    LOG(INFO) << "Starting training";
     Train(task, &model);
 
     // Output profile.
@@ -425,6 +426,9 @@ class FactEmbeddingsTrainer : public LearnerTask {
     DualEncoderBatch batch(flow_, *model, loss_);
 
     for (;;) {
+      // Reset gradients.
+      batch.Reset();
+
       // Random sample instances for batch.
       for (int i = 0; i < flow_.batch_size; ++i) {
         int sample = rnd.UniformInt(instances_.size());
@@ -432,7 +436,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
         Array facts = instance.Get(p_facts_).AsArray();
         Array categories = instance.Get(p_categories_).AsArray();
 
-        // Initialize fact features for instance.
+        // Set fact features for instance.
         int *f = batch.left_features(i);
         int *fend = f + flow_.left.max_features;
         for (int i = 0; i < facts.length(); ++i) {
@@ -444,18 +448,28 @@ class FactEmbeddingsTrainer : public LearnerTask {
         }
         if (f < fend) *f = -1;
 
-        // Initialize category features for instance.
-        f = batch.right_features(i);
-        fend = f + flow_.right.max_features;
+        // Set category features for instance.
+        int *c = batch.right_features(i);
+        int *cend = c + flow_.right.max_features;
         for (int i = 0; i < categories.length(); ++i) {
-          if (f == fend) {
+          if (c == cend) {
             num_feature_overflows_->Increment();
             break;
           }
-          *f++ = categories.get(i).AsInt();
+          *c++ = categories.get(i).AsInt();
         }
-        if (f < fend) *f = -1;
+        if (c < cend) *c = -1;
       }
+
+      // Process batch.
+      float loss = batch.Compute();
+
+      // Update parameters.
+      optimizer_mu_.Lock();
+      optimizer_->Apply(batch.gradients());
+      loss_sum_ += loss;
+      loss_count_++;
+      optimizer_mu_.Unlock();
 
       // Check if we are done.
       if (EpochCompleted()) break;
@@ -463,30 +477,22 @@ class FactEmbeddingsTrainer : public LearnerTask {
   }
 
   // Evaluate model.
-  bool Evaluate(myelin::Network *model) override {
-#if 0
-      // Evaluate model.
-      int64 epoch = epochs_completed_;
-      float epochs = epoch - eval_epoch_;
-      float pos_loss = pos_loss_sum_ / epochs;
-      float neg_loss = neg_loss_sum_ / epochs;
-      float loss = pos_loss + neg_loss;
-      eval_epoch_ = epoch;
-      pos_loss_sum_ = 0.0;
-      neg_loss_sum_ = 0.0;
+  bool Evaluate(int64 epoch, myelin::Network *model) override {
+    // Evaluate model.
+    float loss = loss_sum_ / loss_count_;
+    loss_sum_ = 0.0;
+    loss_count_ = 0;
 
-      // Decay learning rate if loss increases.
-      //if (prev_loss_ != 0.0 && prev_loss_ < loss) {
-      //  double lr = learning_rate_ * learning_rate_decay_;
-      //  //if (lr < min_learning_rate_) lr = min_learning_rate_;
-      //  learning_rate_ = lr;
-      //}
-      prev_loss_ = loss;
+    // Decay learning rate if loss increases.
+    if (prev_loss_ != 0.0 && prev_loss_ < loss) {
+      learning_rate_ = optimizer_->DecayLearningRate();
+    }
+    prev_loss_ = loss;
 
-      LOG(INFO) << "epoch=" << epoch << ", "
-                << "+loss=" << pos_loss  << ", "
-                << "-loss=" << neg_loss;
-#endif
+    LOG(INFO) << "epoch=" << epoch
+              << ", lr=" << learning_rate_
+              << ", loss=" << loss;
+
     return true;
   }
 
@@ -507,10 +513,14 @@ class FactEmbeddingsTrainer : public LearnerTask {
   int max_features_ = 512;             // maximum features per item
   int batch_size_ = 1024;              // number of examples per epoch
 
+  // Mutex for serializing access to optimizer.
+  Mutex optimizer_mu_;
+
   // Evaluation statistics.
+  float learning_rate_ = 0.01;
   float prev_loss_ = 0.0;
-  float pos_loss_sum_ = 0.0;
-  float neg_loss_sum_ = 0.0;
+  float loss_sum_ = 0.0;
+  int loss_count_ = 0.0;
 
   // Symbols.
   Names names_;

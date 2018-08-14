@@ -70,7 +70,7 @@ class Optimizer {
   void Initialize(const Network &network);
 
   // Apply gradients to update learnable parameters.
-  virtual void Apply(std::vector<Instance *> &gradients);
+  virtual void Apply(const std::vector<Instance *> &gradients);
 
   // Decay learning rate. Returns new learning rate.
   virtual float DecayLearningRate() { return 0.0; }
@@ -141,7 +141,7 @@ class MomentumOptimizer : public Optimizer {
   MomentumOptimizer(const string &name = "optimizer") : Optimizer(name) {}
 
   // Apply gradients to update learnable parameters.
-  void Apply(std::vector<Instance *> &gradients) override;
+  void Apply(const std::vector<Instance *> &gradients) override;
 
   // Decay learning rate.
   float DecayLearningRate() override;
@@ -180,7 +180,7 @@ class AdamOptimizer : public Optimizer {
   AdamOptimizer(const string &name = "optimizer") : Optimizer(name) {}
 
   // Apply gradients to update learnable parameters.
-  void Apply(std::vector<Instance *> &gradients) override;
+  void Apply(const std::vector<Instance *> &gradients) override;
 
   // Decay learning rate.
   float DecayLearningRate() override;

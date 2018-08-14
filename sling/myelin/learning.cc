@@ -20,13 +20,6 @@
 namespace sling {
 namespace myelin {
 
-// Return name of gradient variable.
-static string GradientName(const string &name) {
-  int slash = name.rfind('/');
-  if (slash == -1) return "gradients/d_" + name;
-  return "gradients/" + name.substr(0, slash) + "/d_" + name.substr(slash + 1);
-}
-
 void CrossEntropyLoss::Build(Flow *flow,
                              Flow::Variable *logits,
                              Flow::Variable *dlogits) {
@@ -92,7 +85,7 @@ void Optimizer::Build(Flow *flow) {
     if (!var->learnable()) continue;
 
     // Get gradient variable for learnable variable.
-    Flow::Variable *dvar = flow->Var(GradientName(var->name));
+    Flow::Variable *dvar = flow->GradientVar(var);
     CHECK(dvar != nullptr) << "No gradient found for " << var->name;
 
     // Find function for gradient variable.
@@ -140,11 +133,11 @@ void Optimizer::Initialize(const Network &network) {
   InitializeOptimizer();
 }
 
-void Optimizer::Apply(std::vector<Instance *> &gradients) {
+void Optimizer::Apply(const std::vector<Instance *> &gradients) {
   // Set instance references to gradients in update.
   for (Instance *g : gradients) {
     auto f = refs_.find(g->cell());
-    CHECK(f != refs_.end());
+    CHECK(f != refs_.end()) << g->cell()->name();
     data_->Set(f->second, g);
   }
 
@@ -272,7 +265,7 @@ void MomentumOptimizer::InitializeOptimizer() {
   }
 }
 
-void MomentumOptimizer::Apply(std::vector<Instance *> &gradients) {
+void MomentumOptimizer::Apply(const std::vector<Instance *> &gradients) {
   Optimizer::Apply(gradients);
 }
 
@@ -367,7 +360,7 @@ void AdamOptimizer::InitializeOptimizer() {
   *data_->Get<float>(beta2_t) = 1.0;
 }
 
-void AdamOptimizer::Apply(std::vector<Instance *> &gradients) {
+void AdamOptimizer::Apply(const std::vector<Instance *> &gradients) {
   Optimizer::Apply(gradients);
 }
 

@@ -14,6 +14,8 @@
 
 #include "sling/task/learner.h"
 
+#include <unistd.h>
+
 #include "sling/task/task.h"
 
 namespace sling {
@@ -23,19 +25,26 @@ using namespace myelin;
 
 void LearnerTask::Train(Task *task, myelin::Network *model) {
   // Get training parameters.
-  epoch_ = 0;
-  epochs_ = task->Get("epochs", 10000);
-  eval_interval_ = task->Get("eval_interval", 100);
+  task->Fetch("epochs", &epochs_);
+  task->Fetch("report_interval", &report_interval_);
+  task->Fetch("rampup", &rampup_);
 
   // Initialize statistics counters.
+  num_workers_ = task->GetCounter("workers");
   num_epochs_total_ = task->GetCounter("epochs_total");
   num_epochs_completed_ = task->GetCounter("epochs_completed");
+
+  epoch_ = 0;
   num_epochs_total_->Increment(epochs_);
 
   // Start training threads.
   int threads = task->Get("workers", jit::CPU::Processors());
   WorkerPool pool;
-  pool.Start(threads, [this, model](int index) { Worker(index, model); });
+  pool.Start(threads, [this, model](int index) {
+    sleep(index * rampup_);
+    num_workers_->Increment();
+    Worker(index, model);
+  });
 
   // Evaluate model on regular intervals. The workers signal when it is time
   // for the next eval round or training has completed.
@@ -47,7 +56,7 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
     }
 
     // Run evaluation.
-    Evaluate(model);
+    Evaluate(epoch_, model);
 
     // Check if we are done.
     if (epoch_ >= epochs_) break;
@@ -61,7 +70,7 @@ bool LearnerTask::EpochCompleted() {
   num_epochs_completed_->Increment();
   int64 current_epoch = ++epoch_;
   bool done = current_epoch >= epochs_;
-  bool eval = current_epoch % eval_interval_ == 0;
+  bool eval = current_epoch % report_interval_ == 0;
   if (eval || done) {
     std::unique_lock<std::mutex> lock(eval_mu_);
     eval_model_.notify_one();
@@ -99,6 +108,7 @@ Optimizer *GetOptimizer(Task *task) {
     return adam;
   } else {
     LOG(FATAL) << "Unknown optimizer type: " << type;
+    return nullptr;
   }
 }
 

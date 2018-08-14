@@ -91,7 +91,9 @@ void DualEncoderFlow::Build(const Transformations &library) {
   similarity = AddFunction(name + "/similarity");
   FlowBuilder tf(this, similarity);
   left_encodings = tf.Placeholder("left", DT_FLOAT, {batch_size, dims});
+  left_encodings->set_unique();
   right_encodings = tf.Placeholder("right", DT_FLOAT, {batch_size, dims});
+  right_encodings->set_unique();
   similarities = tf.MatMul(left_encodings, tf.Transpose(right_encodings));
   tf.Name(similarities, "similarities");
 
@@ -99,7 +101,16 @@ void DualEncoderFlow::Build(const Transformations &library) {
   left.backward = Gradient(this, left.forward, library);
   right.backward = Gradient(this, right.forward, library);
   gsimilarity = Gradient(this, similarity, library);
-  gsimilarities = Var("gradients/" + name + "/similarity/d_similarities");
+
+  gsimilarities = GradientVar(similarities);
+  gleft_encodings = GradientVar(left_encodings);
+  gright_encodings = GradientVar(right_encodings);
+  left.gencoding = GradientVar(left.encoding);
+  right.gencoding = GradientVar(right.encoding);
+
+  sim_primal = PrimalVar(similarity);
+  left.primal = PrimalVar(left.forward);
+  right.primal = PrimalVar(right.forward);
 }
 
 void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
@@ -111,7 +122,7 @@ void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
       tf.Placeholder("features", DT_INT32, {1, encoder->max_features});
   auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
   auto *length = tf.Name(tf.Norm(sum), "length");
-  encoder->encoding = tf.Name(tf.Mul(sum, tf.Reciprocal(length)), "encoding");
+  encoder->encoding = tf.Name(tf.Div(sum, length), "encoding");
   encoder->encoding->set_ref();
 }
 
@@ -120,26 +131,40 @@ DualEncoderBatch::DualEncoderBatch(const DualEncoderFlow &flow,
                                    const CrossEntropyLoss &loss)
     : sim_(model.GetCell(flow.similarity)),
       gsim_(model.GetCell(flow.gsimilarity)),
+      gleft_(model.GetCell(flow.left.backward)),
+      gright_(model.GetCell(flow.right.backward)),
       loss_(loss) {
   // Get cells for left end right encoders.
   const Cell *l = model.GetCell(flow.left.forward);
-  const Cell *r = model.GetCell(flow.right.forward);
   const Cell *gl = model.GetCell(flow.left.backward);
+  const Cell *r = model.GetCell(flow.right.forward);
   const Cell *gr = model.GetCell(flow.right.backward);
 
   // Allocate instances for all batch elements.
   elements_.reserve(flow.batch_size);
   for (int i = 0; i < flow.batch_size; ++i) {
-    elements_.emplace_back(l, r, gl, gr);
+    elements_.emplace_back(l, r);
   }
 
   // Get tensors.
   left_features_ = l->GetParameter(flow.left.features);
   right_features_ = r->GetParameter(flow.right.features);
 
-  // Set up encoding references.
+  sim_matrix_ = sim_.cell()->GetParameter(flow.similarities);
+  gsim_matrix_ = gsim_.cell()->GetParameter(flow.gsimilarities);
+
+  gleft_primal_ = gl->GetParameter(flow.left.primal);
+  gleft_encoding_ = gl->GetParameter(flow.left.gencoding);
+
+  gright_primal_ = gr->GetParameter(flow.right.primal);
+  gright_encoding_ = gr->GetParameter(flow.right.gencoding);
+
+  gsim_left_ = gsim_.cell()->GetParameter(flow.left_encodings);
+  gsim_right_ = gsim_.cell()->GetParameter(flow.right_encodings);
+
+  // Set up references between cells.
   auto *left_encoding = l->GetParameter(flow.left.encoding);
-  auto *right_encoding = l->GetParameter(flow.right.encoding);
+  auto *right_encoding = r->GetParameter(flow.right.encoding);
   auto *sim_left = sim_.cell()->GetParameter(flow.left_encodings);
   auto *sim_right = sim_.cell()->GetParameter(flow.right_encodings);
   for (int i = 0; i < flow.batch_size; ++i) {
@@ -149,30 +174,68 @@ DualEncoderBatch::DualEncoderBatch(const DualEncoderFlow &flow,
                                     sim_.Get<float>(sim_right, i));
   }
 
-  // TODO: add gradient cells to optimizer.
+  auto *gsim_primal = gsim_.cell()->GetParameter(flow.sim_primal);
+  gsim_.Set(gsim_primal, &sim_);
 }
 
 float DualEncoderBatch::Compute() {
+  // Get batch size.
+  int batch_size = elements_.size();
+
   // Compute left encodings.
-  for (int i = 0; i < elements_.size(); ++i) {
+  for (int i = 0; i < batch_size; ++i) {
     elements_[i].left.Compute();
+    //LOG(INFO) << "left " << i << ": " << elements_[i].left.ToString();
   }
 
   // Compute right encodings.
-  for (int i = 0; i < elements_.size(); ++i) {
+  for (int i = 0; i < batch_size; ++i) {
     elements_[i].right.Compute();
+    //LOG(INFO) << "right " << i << ": " << elements_[i].right.ToString();
   }
 
   // Compute similarity for all pairs in batch.
   sim_.Compute();
+  //LOG(INFO) << "sim:\n" << sim_.ToString();
 
-  // TODO: compute loss and propagate gradient to gsim.
+  // Compute loss for all instances in batch and compute the loss gradient.
+  // For each row in the similarity matrix we compute a batch softmax
+  // cross-entropy loss where the positive instances are in the diagonal and
+  // the negative examples are off the diagonal.
+  float loss = 0.0;
+  for (int i = 0; i < batch_size; ++i) {
+    float *logits = sim_.Get<float>(sim_matrix_, i);
+    float *glogits = gsim_.Get<float>(gsim_matrix_, i);
+    loss += loss_.Compute(logits, i, glogits);
+  }
 
-  // TODO: propagate gradient through gsim.
+  // Propagate gradient through gsim.
+  gsim_.Compute();
+  //LOG(INFO) << "gsim:\n" << gsim_.ToString();
 
-  // TODO: propagate gradient through gleft and gright.
+  // Propagate gradient through left encoder.
+  for (int i = 0; i < batch_size; ++i) {
+    gleft_.Set(gleft_primal_, &elements_[i].left);
+    gleft_.SetReference(gleft_encoding_, gsim_.Get<float>(gsim_left_, i));
+    gleft_.Compute();
+    //LOG(INFO) << "gleft " << i << gleft_.ToString();
+  }
 
-  return 0.0;
+  // Propagate gradient through right encoder.
+  for (int i = 0; i < batch_size; ++i) {
+    gright_.Set(gright_primal_, &elements_[i].right);
+    gright_.SetReference(gright_encoding_, gsim_.Get<float>(gsim_right_, i));
+    gright_.Compute();
+    //LOG(INFO) << "gright " << i << gright_.ToString();
+  }
+
+  // Return average loss.
+  return loss / batch_size;
+}
+
+void DualEncoderBatch::Reset() {
+  gleft_.Clear();
+  gright_.Clear();
 }
 
 }  // namespace nlp

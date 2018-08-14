@@ -82,14 +82,16 @@ struct MikolovFlow : public myelin::Flow {
 // Dual encoder network for learning embeddings over two different domains.
 struct DualEncoderFlow : public myelin::Flow {
   struct Encoder {
-    string name;                   // encoder name space
-    int dims = 1;                  // number of dimensions (feature types)
-    int max_features = 1;          // maximum number of features per example
-    Variable *embeddings;          // embedding matrix
-    Function *forward = nullptr;   // forward encoder computation
-    Function *backward = nullptr;  // backward encoder computation
-    Variable *features = nullptr;  // encoder feature input
-    Variable *encoding = nullptr;  // encoder output
+    string name;                    // encoder name space
+    int dims = 1;                   // number of dimensions (feature types)
+    int max_features = 1;           // maximum number of features per example
+    Variable *embeddings;           // embedding matrix
+    Function *forward = nullptr;    // forward encoder computation
+    Function *backward = nullptr;   // backward encoder computation
+    Variable *features = nullptr;   // encoder feature input
+    Variable *encoding = nullptr;   // encoder output
+    Variable *gencoding = nullptr;  // encoder gradient
+    Variable *primal = nullptr;     // primal reference for gradient
   };
 
   void Build(const myelin::Transformations &library);
@@ -100,12 +102,16 @@ struct DualEncoderFlow : public myelin::Flow {
   int dims = 64;                   // dimension of embedding vectors
   int batch_size = 1024;           // number of examples per batch
 
-  Function *similarity = nullptr;      // similarity function
-  Function *gsimilarity = nullptr;     // similarity gradient function
-  Variable *left_encodings = nullptr;  // left encodings input
-  Variable *right_encodings = nullptr; // right encodings input
-  Variable *similarities = nullptr;    // similarity matrix
-  Variable *gsimilarities = nullptr;   // similarity gradient matrix
+  Function *similarity = nullptr;       // similarity function
+  Variable *left_encodings = nullptr;   // left encodings input
+  Variable *right_encodings = nullptr;  // right encodings input
+  Variable *similarities = nullptr;     // similarity matrix
+
+  Function *gsimilarity = nullptr;      // similarity gradient function
+  Variable *sim_primal = nullptr;       // primal reference for similarity
+  Variable *gsimilarities = nullptr;    // similarity gradient matrix
+  Variable *gleft_encodings = nullptr;  // left encodings gradient
+  Variable *gright_encodings = nullptr; // right encodings gradient
 
  private:
   void BuildEncoder(Encoder *encoder);
@@ -129,35 +135,55 @@ class DualEncoderBatch {
     return elements_[index].right.Get<int>(right_features_);
   }
 
-  // Forward and backward computation. Return average loss.
+  // Compute similarities between instances in batch and propagate loss back
+  // to the model parameters. The input features for the right and left
+  // instances need to be set up before the computation. Return average loss.
   float Compute();
+
+  // Reset accumulated gradients.
+  void Reset();
+
+  // Get gradient instances.
+  const std::vector<myelin::Instance *> gradients() { return gradients_; }
 
  private:
   // Data instances for one batch element.
   struct Element {
-    Element(const myelin::Cell *l, const myelin::Cell *r,
-            const myelin::Cell *gl, const myelin::Cell *gr)
-        : left(r), right(r), gleft(gl), gright(gr) {}
-
+    Element(const myelin::Cell *l, const myelin::Cell *r) : left(l), right(r) {}
     myelin::Instance left;
     myelin::Instance right;
-    myelin::Instance gleft;
-    myelin::Instance gright;
   };
+
+  // Batch elements.
+  std::vector<Element> elements_;
 
   // Similarity computation.
   myelin::Instance sim_;
   myelin::Instance gsim_;
 
+  // Gradient computation for encoders.
+  myelin::Instance gleft_;
+  myelin::Instance gright_;
+  std::vector<myelin::Instance *> gradients_{&gleft_, &gright_};
+
   // Softmax cross-entropy loss computation.
   const myelin::CrossEntropyLoss &loss_;
-
-  // Batch elements.
-  std::vector<Element> elements_;
 
   // Tensors for accessing instance data.
   const myelin::Tensor *left_features_ = nullptr;
   const myelin::Tensor *right_features_ = nullptr;
+
+  const myelin::Tensor *sim_matrix_ = nullptr;
+  const myelin::Tensor *gsim_matrix_ = nullptr;
+
+  const myelin::Tensor *gleft_primal_ = nullptr;
+  const myelin::Tensor *gleft_encoding_ = nullptr;
+
+  const myelin::Tensor *gright_primal_ = nullptr;
+  const myelin::Tensor *gright_encoding_ = nullptr;
+
+  const myelin::Tensor *gsim_left_ = nullptr;
+  const myelin::Tensor *gsim_right_ = nullptr;
 };
 
 }  // namespace nlp

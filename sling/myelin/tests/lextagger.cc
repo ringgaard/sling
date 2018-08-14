@@ -208,7 +208,7 @@ class Tagger {
     if (learn) {
       // Build gradient for tagger.
       Gradient(flow, tagger, *library);
-      auto *dlogits = flow->Var("gradients/tagger/d_logits");
+      auto *dlogits = flow->GradientVar(logits);
 
       // Build loss computation.
       loss_.Build(flow, logits, dlogits);
@@ -338,7 +338,7 @@ class Tagger {
 
   // Trainer worker thread.
   void Worker(int index) {
-    // Ramp-up peiod.
+    // Ramp-up period.
     sleep(index * FLAGS_rampup);
     num_workers_++;
 
