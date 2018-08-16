@@ -489,7 +489,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
     // Decay learning rate if loss increases.
     if (prev_loss_ != 0.0 &&
         prev_loss_ < loss &&
-        learning_rate > min_learning_rate_) {
+        learning_rate_ > min_learning_rate_) {
       learning_rate_ = optimizer_->DecayLearningRate();
     }
     prev_loss_ = loss;
