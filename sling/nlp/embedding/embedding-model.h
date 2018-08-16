@@ -82,36 +82,39 @@ struct MikolovFlow : public myelin::Flow {
 // Dual encoder network for learning embeddings over two different domains.
 struct DualEncoderFlow : public myelin::Flow {
   struct Encoder {
-    string name;                    // encoder name space
-    int dims = 1;                   // number of dimensions (feature types)
-    int max_features = 1;           // maximum number of features per example
-    Variable *embeddings;           // embedding matrix
-    Function *forward = nullptr;    // forward encoder computation
-    Function *backward = nullptr;   // backward encoder computation
-    Variable *features = nullptr;   // encoder feature input
-    Variable *encoding = nullptr;   // encoder output
-    Variable *gencoding = nullptr;  // encoder gradient
-    Variable *primal = nullptr;     // primal reference for gradient
+    string name;                      // encoder name space
+    int dims = 1;                     // number of dimensions (feature types)
+    int max_features = 1;             // maximum number of features per example
+
+    Function *forward = nullptr;      // forward encoder computation
+    Function *backward = nullptr;     // backward encoder computation
+    Variable *embeddings;             // embedding matrix
+    Variable *features = nullptr;     // encoder feature input
+    Variable *encoding = nullptr;     // encoder output
+    Variable *d_encoding = nullptr;   // encoder gradient
+    Variable *primal = nullptr;       // primal reference for gradient
   };
 
   void Build(const myelin::Transformations &library);
 
-  string name = "dualenc";         // model name space
-  Encoder left;                    // left encoder
-  Encoder right;                   // right encoder
-  int dims = 64;                   // dimension of embedding vectors
-  int batch_size = 1024;           // number of examples per batch
+  string name = "dualenc";            // model name space
+  Encoder left;                       // left encoder
+  Encoder right;                      // right encoder
+  int dims = 64;                      // dimension of embedding vectors
+  int batch_size = 1024;              // number of examples per batch
 
-  Function *similarity = nullptr;       // similarity function
-  Variable *left_encodings = nullptr;   // left encodings input
-  Variable *right_encodings = nullptr;  // right encodings input
-  Variable *similarities = nullptr;     // similarity matrix
+  // Cosine similarity function.
+  Function *sim = nullptr;            // similarity function
+  Variable *sim_left = nullptr;       // left encodings input
+  Variable *sim_right = nullptr;      // right encodings input
+  Variable *sim_cosine = nullptr;     // similarity matrix
 
-  Function *gsimilarity = nullptr;      // similarity gradient function
-  Variable *sim_primal = nullptr;       // primal reference for similarity
-  Variable *gsimilarities = nullptr;    // similarity gradient matrix
-  Variable *gleft_encodings = nullptr;  // left encodings gradient
-  Variable *gright_encodings = nullptr; // right encodings gradient
+  // Cosine similarity gradient function.
+  Function *gsim = nullptr;           // similarity gradient function
+  Variable *gsim_primal = nullptr;    // primal reference for similarity
+  Variable *gsim_d_cosine = nullptr;  // similarity gradient matrix
+  Variable *gsim_d_left = nullptr;    // left encodings gradient
+  Variable *gsim_d_right = nullptr;   // right encodings gradient
 
  private:
   void BuildEncoder(Encoder *encoder);
@@ -173,17 +176,17 @@ class DualEncoderBatch {
   const myelin::Tensor *left_features_ = nullptr;
   const myelin::Tensor *right_features_ = nullptr;
 
-  const myelin::Tensor *sim_matrix_ = nullptr;
-  const myelin::Tensor *gsim_matrix_ = nullptr;
+  const myelin::Tensor *sim_cosine_ = nullptr;
+  const myelin::Tensor *gsim_d_cosine_ = nullptr;
 
   const myelin::Tensor *gleft_primal_ = nullptr;
-  const myelin::Tensor *gleft_encoding_ = nullptr;
+  const myelin::Tensor *gleft_d_encoding_ = nullptr;
 
   const myelin::Tensor *gright_primal_ = nullptr;
-  const myelin::Tensor *gright_encoding_ = nullptr;
+  const myelin::Tensor *gright_d_encoding_ = nullptr;
 
-  const myelin::Tensor *gsim_left_ = nullptr;
-  const myelin::Tensor *gsim_right_ = nullptr;
+  const myelin::Tensor *gsim_d_left_ = nullptr;
+  const myelin::Tensor *gsim_d_right_ = nullptr;
 };
 
 }  // namespace nlp

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <math.h>
 #include <atomic>
 #include <utility>
 
@@ -312,6 +313,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
     task->Fetch("batch_size", &batch_size_);
     task->Fetch("max_features", &max_features_);
     task->Fetch("learning_rate", &learning_rate_);
+    task->Fetch("min_learning_rate", &min_learning_rate_);
 
     // Set up counters.
     Counter *num_instances = task->GetCounter("instances");
@@ -347,7 +349,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
     flow_.right.dims = category_dims;
     flow_.right.max_features = max_features_;
     flow_.Build(*compiler.library());
-    loss_.Build(&flow_, flow_.similarities, flow_.gsimilarities);
+    loss_.Build(&flow_, flow_.sim_cosine, flow_.gsim_d_cosine);
     optimizer_ = GetOptimizer(task);
     optimizer_->Build(&flow_);
 
@@ -480,18 +482,22 @@ class FactEmbeddingsTrainer : public LearnerTask {
   bool Evaluate(int64 epoch, myelin::Network *model) override {
     // Evaluate model.
     float loss = loss_sum_ / loss_count_;
+    float p = exp(-loss) * 100.0;
     loss_sum_ = 0.0;
     loss_count_ = 0;
 
     // Decay learning rate if loss increases.
-    if (prev_loss_ != 0.0 && prev_loss_ < loss) {
+    if (prev_loss_ != 0.0 &&
+        prev_loss_ < loss &&
+        learning_rate > min_learning_rate_) {
       learning_rate_ = optimizer_->DecayLearningRate();
     }
     prev_loss_ = loss;
 
     LOG(INFO) << "epoch=" << epoch
               << ", lr=" << learning_rate_
-              << ", loss=" << loss;
+              << ", loss=" << loss
+              << ", p=" << p;
 
     return true;
   }
@@ -518,6 +524,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
 
   // Evaluation statistics.
   float learning_rate_ = 0.01;
+  float min_learning_rate_ = 0.01;
   float prev_loss_ = 0.0;
   float loss_sum_ = 0.0;
   int loss_count_ = 0.0;

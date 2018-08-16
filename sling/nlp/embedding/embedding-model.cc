@@ -88,27 +88,26 @@ void DualEncoderFlow::Build(const Transformations &library) {
   BuildEncoder(&right);
 
   // Create similarity computation.
-  similarity = AddFunction(name + "/similarity");
-  FlowBuilder tf(this, similarity);
-  left_encodings = tf.Placeholder("left", DT_FLOAT, {batch_size, dims});
-  left_encodings->set_unique();
-  right_encodings = tf.Placeholder("right", DT_FLOAT, {batch_size, dims});
-  right_encodings->set_unique();
-  similarities = tf.MatMul(left_encodings, tf.Transpose(right_encodings));
-  tf.Name(similarities, "similarities");
+  sim = AddFunction(name + "/similarity");
+  FlowBuilder tf(this, sim);
+  sim_left = tf.Placeholder("left", DT_FLOAT, {batch_size, dims});
+  sim_left->set_unique();
+  sim_right = tf.Placeholder("right", DT_FLOAT, {batch_size, dims});
+  sim_right->set_unique();
+  sim_cosine = tf.Name(tf.MatMul(sim_left, tf.Transpose(sim_right)), "cosine");
 
   // Create gradient computations.
   left.backward = Gradient(this, left.forward, library);
   right.backward = Gradient(this, right.forward, library);
-  gsimilarity = Gradient(this, similarity, library);
+  gsim = Gradient(this, sim, library);
 
-  gsimilarities = GradientVar(similarities);
-  gleft_encodings = GradientVar(left_encodings);
-  gright_encodings = GradientVar(right_encodings);
-  left.gencoding = GradientVar(left.encoding);
-  right.gencoding = GradientVar(right.encoding);
+  gsim_d_cosine = GradientVar(sim_cosine);
+  gsim_d_left = GradientVar(sim_left);
+  gsim_d_right = GradientVar(sim_right);
+  left.d_encoding = GradientVar(left.encoding);
+  right.d_encoding = GradientVar(right.encoding);
 
-  sim_primal = PrimalVar(similarity);
+  gsim_primal = PrimalVar(sim);
   left.primal = PrimalVar(left.forward);
   right.primal = PrimalVar(right.forward);
 }
@@ -121,16 +120,20 @@ void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
   encoder->features =
       tf.Placeholder("features", DT_INT32, {1, encoder->max_features});
   auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
-  auto *length = tf.Name(tf.Norm(sum), "length");
-  encoder->encoding = tf.Name(tf.Div(sum, length), "encoding");
+
+  //auto *length = tf.Name(tf.Norm(sum), "length");
+  //encoder->encoding = tf.Name(tf.Div(sum, length), "encoding");
+
+  encoder->encoding = tf.Name(sum, "encoding");
+
   encoder->encoding->set_ref();
 }
 
 DualEncoderBatch::DualEncoderBatch(const DualEncoderFlow &flow,
                                    const Network  &model,
                                    const CrossEntropyLoss &loss)
-    : sim_(model.GetCell(flow.similarity)),
-      gsim_(model.GetCell(flow.gsimilarity)),
+    : sim_(model.GetCell(flow.sim)),
+      gsim_(model.GetCell(flow.gsim)),
       gleft_(model.GetCell(flow.left.backward)),
       gright_(model.GetCell(flow.right.backward)),
       loss_(loss) {
@@ -148,25 +151,25 @@ DualEncoderBatch::DualEncoderBatch(const DualEncoderFlow &flow,
 
   // Get tensors.
   left_features_ = l->GetParameter(flow.left.features);
+  auto *left_encoding = l->GetParameter(flow.left.encoding);
   right_features_ = r->GetParameter(flow.right.features);
+  auto *right_encoding = r->GetParameter(flow.right.encoding);
 
-  sim_matrix_ = sim_.cell()->GetParameter(flow.similarities);
-  gsim_matrix_ = gsim_.cell()->GetParameter(flow.gsimilarities);
+  sim_cosine_ = sim_.cell()->GetParameter(flow.sim_cosine);
+  auto *sim_left = sim_.cell()->GetParameter(flow.sim_left);
+  auto *sim_right = sim_.cell()->GetParameter(flow.sim_right);
 
   gleft_primal_ = gl->GetParameter(flow.left.primal);
-  gleft_encoding_ = gl->GetParameter(flow.left.gencoding);
+  gleft_d_encoding_ = gl->GetParameter(flow.left.d_encoding);
 
   gright_primal_ = gr->GetParameter(flow.right.primal);
-  gright_encoding_ = gr->GetParameter(flow.right.gencoding);
+  gright_d_encoding_ = gr->GetParameter(flow.right.d_encoding);
 
-  gsim_left_ = gsim_.cell()->GetParameter(flow.left_encodings);
-  gsim_right_ = gsim_.cell()->GetParameter(flow.right_encodings);
+  gsim_d_cosine_ = sim_cosine_->Gradient();
+  gsim_d_left_ = sim_left->Gradient();
+  gsim_d_right_ = sim_right->Gradient();
 
-  // Set up references between cells.
-  auto *left_encoding = l->GetParameter(flow.left.encoding);
-  auto *right_encoding = r->GetParameter(flow.right.encoding);
-  auto *sim_left = sim_.cell()->GetParameter(flow.left_encodings);
-  auto *sim_right = sim_.cell()->GetParameter(flow.right_encodings);
+  // Set up static references between cells.
   for (int i = 0; i < flow.batch_size; ++i) {
     elements_[i].left.SetReference(left_encoding,
                                    sim_.Get<float>(sim_left, i));
@@ -174,7 +177,7 @@ DualEncoderBatch::DualEncoderBatch(const DualEncoderFlow &flow,
                                     sim_.Get<float>(sim_right, i));
   }
 
-  auto *gsim_primal = gsim_.cell()->GetParameter(flow.sim_primal);
+  auto *gsim_primal = gsim_.cell()->GetParameter(flow.gsim_primal);
   gsim_.Set(gsim_primal, &sim_);
 }
 
@@ -204,8 +207,8 @@ float DualEncoderBatch::Compute() {
   // the negative examples are off the diagonal.
   float loss = 0.0;
   for (int i = 0; i < batch_size; ++i) {
-    float *logits = sim_.Get<float>(sim_matrix_, i);
-    float *glogits = gsim_.Get<float>(gsim_matrix_, i);
+    float *logits = sim_.Get<float>(sim_cosine_, i);
+    float *glogits = gsim_.Get<float>(gsim_d_cosine_, i);
     loss += loss_.Compute(logits, i, glogits);
   }
 
@@ -215,16 +218,26 @@ float DualEncoderBatch::Compute() {
 
   // Propagate gradient through left encoder.
   for (int i = 0; i < batch_size; ++i) {
+    // Set reference to primal cell.
     gleft_.Set(gleft_primal_, &elements_[i].left);
-    gleft_.SetReference(gleft_encoding_, gsim_.Get<float>(gsim_left_, i));
+
+    // Set reference to gradient from similarity gradient.
+    auto *d_encoding = gsim_.Get<float>(gsim_d_left_, i);
+    gleft_.SetReference(gleft_d_encoding_, d_encoding);
+
     gleft_.Compute();
-    //LOG(INFO) << "gleft " << i << gleft_.ToString();
+    //LOG(INFO) << "gleft " << i << "\n" << gleft_.ToString();
   }
 
   // Propagate gradient through right encoder.
   for (int i = 0; i < batch_size; ++i) {
+    // Set reference to primal cell.
     gright_.Set(gright_primal_, &elements_[i].right);
-    gright_.SetReference(gright_encoding_, gsim_.Get<float>(gsim_right_, i));
+
+    // Set reference to gradient from similarity gradient.
+    auto *d_encoding = gsim_.Get<float>(gsim_d_right_, i);
+    gright_.SetReference(gright_d_encoding_, d_encoding);
+
     gright_.Compute();
     //LOG(INFO) << "gright " << i << gright_.ToString();
   }
