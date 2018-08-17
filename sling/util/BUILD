@@ -143,3 +143,11 @@ cc_library(
     "-Wno-sign-compare",
   ],
 )
+
+cc_library(
+  name = "snappy",
+  hdrs = ["snappy.h"],
+  deps = [
+    "//third_party/snappy",
+  ],
+)
