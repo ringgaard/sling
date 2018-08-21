@@ -283,3 +283,20 @@ class Document(object):
       self.themes.append(theme)
     self.themes_dirty = False
 
+
+class Corpus:
+  def __init__(self, filename, commons=None):
+    self.input = sling.RecordReader(filename)
+    self.iter = iter(self.input)
+    self.commons = sling.Store() if commons == None else commons
+    self.docschema = sling.DocumentSchema(self.commons)
+    if commons == None: self.commons.freeze()
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+    _, data = self.input.next()
+    f = sling.Store(self.commons).parse(data)
+    return sling.Document(f, schema=self.docschema)
+
