@@ -79,7 +79,7 @@ class FactCatalog {
 
 // Set of facts. A fact is represented as a list properties followed by a
 // value, e.g. [P69 P31 Q3918] means "educated at: instance of: university".
-// A fact can be seen as a path through the frame graph with from an unspecified
+// A fact can be seen as a path through the frame graph from an unspecified
 // starting frame.
 class Facts {
  public:
