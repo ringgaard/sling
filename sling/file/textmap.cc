@@ -85,7 +85,8 @@ bool TextMapInput::Next() {
 int TextMapInput::Fill() {
   DCHECK(next_ == end_);
   DCHECK(file_ != nullptr);
-  int bytes = file_->ReadOrDie(buffer_, buffer_size_);
+  uint64 bytes;
+  if (!file_->Read(buffer_, buffer_size_, &bytes)) return -1;
   if (bytes == 0) return -1;
   next_ = buffer_;
   end_ = buffer_ + bytes;

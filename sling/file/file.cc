@@ -249,11 +249,10 @@ Status File::WriteContents(const string &filename,
   return f->Close();
 }
 
-size_t File::ReadOrDie(void *buffer, size_t size) {
+void File::ReadOrDie(void *buffer, size_t size) {
   uint64 read;
   CHECK(Read(buffer, size, &read));
   CHECK_EQ(read, size) << "Read " << read << " bytes, expected " << size;
-  return read;
 }
 
 void File::WriteOrDie(const void *buffer, size_t size) {
