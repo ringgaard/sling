@@ -365,6 +365,9 @@ class Express {
   // Compact temporary variable ids and return the number of temporary variable.
   int CompactTempVars();
 
+  // Eliminate redundant move instructions.
+  void EliminateRedundantMoves();
+
   // Eliminate common subexpressions.
   void EliminateCommonSubexpressions();
 

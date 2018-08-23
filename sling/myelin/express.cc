@@ -690,6 +690,25 @@ int Express::CompactTempVars() {
   return n;
 }
 
+void Express::EliminateRedundantMoves() {
+  int eliminated = 0;
+  for (int i = 0; i < ops_.size(); ++i) {
+    Op *op = ops_[i];
+    if (op->type != MOV) continue;
+    Var *src = op->args[0];
+    Var *dst = op->result;
+    if (src->usages() != 1) continue;
+    if (dst->type != TEMP) continue;
+
+    dst->Redirect(src);
+    RemoveOp(op);
+    RemoveVar(dst);
+    eliminated++;
+    i--;
+  }
+  if (eliminated > 0) CompactTempVars();
+}
+
 void Express::EliminateCommonSubexpressions() {
   // Coalesce system constant variables.
   std::map<int, Var *> sysvars;

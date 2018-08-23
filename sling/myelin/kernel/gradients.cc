@@ -183,6 +183,14 @@ void relu_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Select(g->Greater(g->v(x), g->Zero()), g->d(y)));
 }
 
+// y = norm(x) = sqrt(sum(square(x))) = |x|
+// dx = x/|x| * dy = x/y * dy
+void norm_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  g->add(x, g->Mul(g->d(y), g->Div(g->v(x), g->v(y))));
+}
+
 // y = x
 // dx = dy
 void identity_grad(Flow::Operation *op, Gradients *g) {
@@ -281,6 +289,7 @@ void RegisterStandardGradients(Transformations *library) {
   library->RegisterGradient("Sigmoid", sigmoid_grad);
   library->RegisterGradient("Tanh", tanh_grad);
   library->RegisterGradient("Relu", relu_grad);
+  library->RegisterGradient("Norm", norm_grad);
   library->RegisterGradient("Identity", identity_grad);
   library->RegisterGradient("Gather", gather_grad);
   library->RegisterGradient("GatherSum", gathersum_grad);

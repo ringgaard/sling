@@ -118,7 +118,7 @@ void Compiler::Compile(Flow *flow, Network *net) {
 
   // Compile flow to network.
   ElfLinker linker;
-  if (net->linker() == nullptr && !FLAGS_jit_code.empty()) {
+  if (!FLAGS_jit_code.empty()) {
     net->set_linker(&linker);
   }
   if (FLAGS_dynamic_instance_allocation) {

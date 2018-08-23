@@ -161,6 +161,7 @@ class EmbeddingWorkflow:
 
         "batch_size": 1024,
         "embedding_dims": 128,
+        "normalize": False,
         "epochs" : 100000,
         "report_interval": 100,
 
