@@ -120,12 +120,12 @@ void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
   encoder->features =
       tf.Placeholder("features", DT_INT32, {1, encoder->max_features});
   auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
-
-  //auto *length = tf.Name(tf.Norm(sum), "length");
-  //encoder->encoding = tf.Name(tf.Div(sum, length), "encoding");
-
-  encoder->encoding = tf.Name(sum, "encoding");
-
+  if (normalize) {
+    auto *length = tf.Name(tf.Norm(sum), "length");
+    encoder->encoding = tf.Name(tf.Div(sum, length), "encoding");
+  } else {
+    encoder->encoding = tf.Name(sum, "encoding");
+  }
   encoder->encoding->set_ref();
 }
 
@@ -188,18 +188,15 @@ float DualEncoderBatch::Compute() {
   // Compute left encodings.
   for (int i = 0; i < batch_size; ++i) {
     elements_[i].left.Compute();
-    //LOG(INFO) << "left " << i << ": " << elements_[i].left.ToString();
   }
 
   // Compute right encodings.
   for (int i = 0; i < batch_size; ++i) {
     elements_[i].right.Compute();
-    //LOG(INFO) << "right " << i << ": " << elements_[i].right.ToString();
   }
 
   // Compute similarity for all pairs in batch.
   sim_.Compute();
-  //LOG(INFO) << "sim:\n" << sim_.ToString();
 
   // Compute loss for all instances in batch and compute the loss gradient.
   // For each row in the similarity matrix we compute a batch softmax
@@ -214,7 +211,6 @@ float DualEncoderBatch::Compute() {
 
   // Propagate gradient through gsim.
   gsim_.Compute();
-  //LOG(INFO) << "gsim:\n" << gsim_.ToString();
 
   // Propagate gradient through left encoder.
   for (int i = 0; i < batch_size; ++i) {
@@ -226,7 +222,6 @@ float DualEncoderBatch::Compute() {
     gleft_.SetReference(gleft_d_encoding_, d_encoding);
 
     gleft_.Compute();
-    //LOG(INFO) << "gleft " << i << "\n" << gleft_.ToString();
   }
 
   // Propagate gradient through right encoder.
@@ -239,7 +234,6 @@ float DualEncoderBatch::Compute() {
     gright_.SetReference(gright_d_encoding_, d_encoding);
 
     gright_.Compute();
-    //LOG(INFO) << "gright " << i << gright_.ToString();
   }
 
   // Return average loss.

@@ -102,6 +102,7 @@ struct DualEncoderFlow : public myelin::Flow {
   Encoder right;                      // right encoder
   int dims = 64;                      // dimension of embedding vectors
   int batch_size = 1024;              // number of examples per batch
+  bool normalize = true;              // normalize for similarity
 
   // Cosine similarity function.
   Function *sim = nullptr;            // similarity function

@@ -344,6 +344,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
     myelin::Compiler compiler;
     flow_.dims = embedding_dims_;
     flow_.batch_size = batch_size_;
+    flow_.normalize = task->Get("normalize", false);
     flow_.left.dims = fact_dims;
     flow_.left.max_features = max_features_;
     flow_.right.dims = category_dims;
@@ -361,7 +362,6 @@ class FactEmbeddingsTrainer : public LearnerTask {
 
     // Initialize weights.
     model.InitLearnableWeights(task->Get("seed", 0), 0.0, 0.01);
-    //model.InitLearnableWeights(task->Get("seed", 0), 1.0, 0.0);
 
     // Read training instances from input.
     LOG(INFO) << "Reading training data";
@@ -380,7 +380,6 @@ class FactEmbeddingsTrainer : public LearnerTask {
       }
 
       delete message;
-      //if (instances_.size() == 1000) break; // TODO: remove
     }
     store_.Freeze();
 
