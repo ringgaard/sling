@@ -54,6 +54,9 @@ class LearnerTask : public Process {
   // Current number of completed epochs.
   std::atomic<int64> epoch_{0};
 
+  // Flag set when training is done.
+  bool done_ = false;
+
   // Signal model evaluation or completions.
   Mutex eval_mu_;
   std::condition_variable eval_model_;

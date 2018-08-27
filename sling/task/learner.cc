@@ -41,14 +41,14 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
   int threads = task->Get("workers", jit::CPU::Processors());
   WorkerPool pool;
   pool.Start(threads, [this, model](int index) {
-    sleep(index * rampup_);
+    for (int i = 0; i < index * rampup_ && !done_; ++i) sleep(1);
     num_workers_->Increment();
-    Worker(index, model);
+    if (!done_) Worker(index, model);
   });
 
   // Evaluate model on regular intervals. The workers signal when it is time
   // for the next eval round or training has completed.
-  for (;;) {
+  while (!done_) {
     // Wait for next eval or completion.
     {
       std::unique_lock<std::mutex> lock(eval_mu_);
@@ -57,25 +57,25 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
 
     // Run evaluation.
     Evaluate(epoch_, model);
-
-    // Check if we are done.
-    if (epoch_ >= epochs_) break;
   }
 
-  // Wait until workers completes.
+  // Run final evaluation.
+  Evaluate(epoch_, model);
+
+  // Wait until workers complete.
   pool.Join();
 }
 
 bool LearnerTask::EpochCompleted() {
   num_epochs_completed_->Increment();
   int64 current_epoch = ++epoch_;
-  bool done = current_epoch >= epochs_;
+  if (current_epoch >= epochs_) done_ = true;
   bool eval = current_epoch % report_interval_ == 0;
-  if (eval || done) {
+  if (eval || done_) {
     std::unique_lock<std::mutex> lock(eval_mu_);
     eval_model_.notify_one();
   }
-  return done;
+  return done_;
 }
 
 Optimizer *GetOptimizer(Task *task) {

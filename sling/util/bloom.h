@@ -21,7 +21,7 @@
 
 namespace sling {
 
-// Bloom filter for implementing a probablistic set.
+// Bloom filter for implementing a probabilistic set.
 // To achieve a false-positive rate of p for a set of n elements, use the
 // following parameters:
 //   size = -n ln p / (ln 2)^2

@@ -28,7 +28,7 @@ namespace nlp {
 enum WikidataType {
   WIKIDATA_ITEM = 0,
   WIKIDATA_PROPERTY = 1,
-  WIKIDATA_LEXEME = 1,
+  WIKIDATA_LEXEME = 2,
 };
 
 // Wikipedia name spaces.
