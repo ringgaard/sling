@@ -440,25 +440,6 @@ Handle WikidataConverter::ConvertValue(const Frame &datavalue) {
   }
 }
 
-Handle WikidataConverter::PickName(const Frame &names) {
-  Store *store = names.store();
-  if (names.invalid()) return Handle::nil();
-  int priority = 999;
-  Handle name = Handle::nil();
-  for (const Slot &l : names) {
-    auto f = languages_.find(l.name);
-    if (f != languages_.end()) {
-      if (f->second.priority < priority) {
-        name = Frame(store, l.value).GetHandle(s_value_);
-        priority = f->second.priority;
-      }
-    } else if (name.IsNil()) {
-      name = Frame(store, l.value).GetHandle(s_value_);
-    }
-  }
-  return name;
-}
-
 }  // namespace nlp
 }  // namespace sling
 

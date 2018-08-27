@@ -81,9 +81,6 @@ class WikidataConverter {
   // Convert Wikidata value.
   Handle ConvertValue(const Frame &datavalue);
 
-  // Pick name based on language priority.
-  Handle PickName(const Frame &names);
-
   // Symbols.
   Names names_;
 
