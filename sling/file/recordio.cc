@@ -426,7 +426,7 @@ RecordFile::IndexPage *RecordIndex::GetIndexPage(uint64 position) {
   if (cache_.size() < cache_size_) {
     cache_.push_back(page);
   } else {
-    // Find replace oldest entry in cache.
+    // Replace oldest entry in cache.
     int oldest = 0;
     for (int i = 1; i < cache_.size(); ++i) {
       if (cache_[i]->lru < cache_[oldest]->lru) oldest = i;
