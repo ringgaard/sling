@@ -197,7 +197,7 @@ struct RecordFileOptions {
 class RecordReader : public RecordFile {
  public:
   // Open record file for reading.
-  RecordReader(File *file, const RecordFileOptions &options);
+  RecordReader(File *file, const RecordFileOptions &options, bool owned = true);
   RecordReader(const string &filename, const RecordFileOptions &options);
   explicit RecordReader(File *file);
   explicit RecordReader(const string &filename);
@@ -230,12 +230,21 @@ class RecordReader : public RecordFile {
   // Record file header information.
   const FileHeader &info() const { return info_; }
 
+  // Underlying file object for reader.
+  File *file() const { return file_; }
+
+  // File size.
+  uint64 size() const { return size_; }
+
  private:
   // Fill input buffer.
   Status Fill();
 
   // Input file.
   File *file_;
+
+  // Flag to indicate that file object is owned by reader.
+  bool owned_;
 
   // File size.
   uint64 size_;
@@ -338,7 +347,14 @@ class RecordWriter : public RecordFile {
   // Return current position in record file.
   uint64 Tell() const { return position_; }
 
+  // Add index to existing record file.
+  static Status AddIndex(const string &filename,
+                         const RecordFileOptions &options);
+
  private:
+  // Special constructor for reindexing record files.
+  explicit RecordWriter(RecordReader *reader, const RecordFileOptions &options);
+
   // Flush output buffer to disk.
   Status Flush();
 

@@ -194,8 +194,10 @@ int RecordFile::WriteHeader(const Header &header, char *data) {
   return p - data;
 }
 
-RecordReader::RecordReader(File *file, const RecordFileOptions &options)
-    : file_(file) {
+RecordReader::RecordReader(File *file,
+                           const RecordFileOptions &options,
+                           bool owned)
+    : file_(file), owned_(owned) {
   // Allocate input buffer.
   CHECK_GE(options.buffer_size, sizeof(FileHeader));
   input_.resize(options.buffer_size);
@@ -236,7 +238,7 @@ RecordReader::~RecordReader() {
 }
 
 Status RecordReader::Close() {
-  if (file_) {
+  if (owned_ && file_) {
     Status s = file_->Close();
     file_ = nullptr;
     if (!s.ok()) return s;
@@ -503,6 +505,14 @@ RecordWriter::RecordWriter(File *file)
 RecordWriter::RecordWriter(const string &filename)
     : RecordWriter(filename, default_options) {}
 
+RecordWriter::RecordWriter(RecordReader *reader,
+                           const RecordFileOptions &options) {
+  output_.resize(options.buffer_size);
+  file_ = reader->file();
+  info_ = reader->info();
+  info_.index_page_size = options.index_page_size;
+}
+
 RecordWriter::~RecordWriter() {
   CHECK(Close());
 }
@@ -678,6 +688,45 @@ Status RecordWriter::WriteIndexLevel(const Index &level, Index *parent,
     if (!s.ok()) return s;
   }
 
+  return Status::OK;
+}
+
+Status RecordWriter::AddIndex(const string &filename,
+                              const RecordFileOptions &options) {
+  // Open file in read/write mode.
+  File *file;
+  Status s = File::Open(filename, "r+", &file);
+  if (!s.ok()) return s;
+
+  // Open reader and writer using shared file.
+  RecordReader *reader = new RecordReader(file, options, false);
+  if (reader->info().index_start != 0) {
+    // Record file already has an index.
+    delete reader;
+    file->Close();
+    return Status::OK;
+  }
+  RecordWriter *writer = new RecordWriter(reader, options);
+
+  // Build record index.
+  Record record;
+  while (!reader->Done()) {
+    uint64 pos = reader->Tell();
+    s = reader->Read(&record);
+    if (!s.ok()) return s;
+    uint64 fp = Fingerprint(record.key.data(), record.key.size());
+    writer->index_.emplace_back(fp, pos);
+  }
+
+  // Write index.
+  s = file->Seek(reader->size());
+  if (!s.ok()) return s;
+  writer->position_ = reader->size();
+  s = writer->Close();
+  if (!s.ok()) return s;
+
+  delete reader;
+  delete writer;
   return Status::OK;
 }
 
