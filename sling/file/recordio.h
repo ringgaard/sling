@@ -175,7 +175,7 @@ class RecordFile {
 // Configuration options for record file.
 struct RecordFileOptions {
   // Input/output buffer size.
-  int buffer_size = 1 << 16;
+  int buffer_size = 4096;
 
   // Chunk size. Records never overlap chunk boundaries.
   int chunk_size = 64 * (1 << 20);
@@ -187,10 +187,10 @@ struct RecordFileOptions {
   bool indexed = false;
 
   // Number of entries in each index record.
-  int index_page_size = 4096;
+  int index_page_size = 1024;
 
   // Number of pages in index page cache.
-  int index_cache_size = 16;
+  int index_cache_size = 256;
 };
 
 // Reader for reading records from a record file.

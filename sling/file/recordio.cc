@@ -706,6 +706,13 @@ Status RecordWriter::AddIndex(const string &filename,
     file->Close();
     return Status::OK;
   }
+
+  // Check version.
+  if (reader->info().magic == MAGIC1) {
+    return Status(1, "Record files v1 do not support indexing",  filename);
+  }
+
+  // Open writer that takes ownership of the underlying file.
   RecordWriter *writer = new RecordWriter(reader, options);
 
   // Build record index.
