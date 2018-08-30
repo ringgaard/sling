@@ -337,7 +337,6 @@ void HTTPServer::Worker() {
     int rc = epoll_wait(pollfd_, events, max_events, 2000);
     idle_--;
     if (stop_) break;
-    if (errno == EAGAIN) continue;
     if (rc < 0) {
       LOG(ERROR) << Error("epoll_wait");
       break;
