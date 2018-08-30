@@ -211,9 +211,10 @@ RecordReader::RecordReader(File *file,
   CHECK(info_.magic == MAGIC1 || info_.magic == MAGIC2)
       << "Not a record file: " << file->filename();
   CHECK_GE(input_.size(), info_.hdrlen);
-  memcpy(&info_, input_.begin(), info_.hdrlen);
-  input_.consumed(info_.hdrlen);
-  position_ = info_.hdrlen;
+  size_t hdrlen = info_.hdrlen;
+  memcpy(&info_, input_.begin(), std::min(hdrlen, sizeof(FileHeader)));
+  input_.consumed(hdrlen);
+  position_ = hdrlen;
 
   // Get size of file. The index records are always at the end of the file.
   if (info_.index_start != 0) {
