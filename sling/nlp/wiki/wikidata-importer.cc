@@ -302,7 +302,7 @@ class WikidataPruner : public task::FrameProcessor {
     Builder item(frame);
     if (prune_aliases_) item.Delete(n_profile_alias_);
     if (prune_wiki_links_) item.Delete(n_wikipedia_);
-    if (prune_category_members_) item.Delete(n_members_);
+    if (prune_category_members_) item.Delete(n_member_);
     item.Update();
 
     // Filter out aux items.
