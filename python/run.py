@@ -55,6 +55,11 @@ flags.define("--merge_categories",
              default=False,
              action='store_true')
 
+flags.define("--invert_categories",
+             help="invert categories from item categories to category members",
+             default=False,
+             action='store_true')
+
 flags.define("--fuse_items",
              help="fuse items from wikidata and wikipedia",
              default=False,
@@ -189,6 +194,13 @@ def fuse_items():
     wf.merge_wikipedia_categories()
     run_workflow(wf)
 
+  # Invert categories.
+  if flags.arg.invert_categories:
+    log.info("Invert categories")
+    wf = wiki.WikiWorkflow("category-inversion")
+    wf.invert_wikipedia_categories()
+    run_workflow(wf)
+
   # Fuse items.
   if flags.arg.fuse_items:
     log.info("Fuse items")
@@ -277,6 +289,7 @@ if __name__ == '__main__':
     flags.arg.import_wikipedia = True
     flags.arg.parse_wikipedia = True
     flags.arg.merge_categories = True
+    flags.arg.invert_categories = True
     flags.arg.fuse_items = True
     flags.arg.build_kb = True
     flags.arg.extract_names = True
