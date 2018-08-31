@@ -50,6 +50,26 @@ void FactCatalog::Init(Store *store) {
   SetExtractor(p_employer_, &Facts::ExtractEmployer);
   SetExtractor(p_occupation_, &Facts::ExtractOccupation);
   SetExtractor(p_position_, &Facts::ExtractPosition);
+
+  // Set up items that stops closure expansion.
+  static const char *baseids[] = {
+    "Q215627",    // person
+    "Q17334923",  // location
+    "Q41176",     // building
+    "Q43229",     // organization
+    "Q2385804",   // educational institution
+    "Q294163",    // public institution
+    "Q1935049",   // military school
+    "Q15401930",  // product
+    "Q12737077",  // occupation
+    "Q192581",    // job
+    "Q4164871",   // position
+    "Q216353",    // title
+    nullptr,
+  };
+  for (const char **id = baseids; *id != nullptr; ++id) {
+    base_items_.insert(store_->Lookup(*id));
+  }
 }
 
 void Facts::Extract(Handle item) {
@@ -79,6 +99,7 @@ void Facts::ExtractClosure(Handle item, Handle relation) {
   while (current < closure.size()) {
     Frame f(store_, closure[current++]);
     AddFact(f.handle());
+    if (catalog_->IsBaseItem(f.handle())) continue;
     for (const Slot &s : f) {
       if (s.name != relation) continue;
 

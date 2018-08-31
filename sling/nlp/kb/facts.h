@@ -46,6 +46,9 @@ class FactCatalog {
     SetExtractor(property.handle(), extractor);
   }
 
+  // Check if item is a base item.
+  bool IsBaseItem(Handle item) const { return base_items_.count(item) != 0; }
+
   // Knowledge base store.
   Store *store_ = nullptr;
 
@@ -54,6 +57,9 @@ class FactCatalog {
 
   // Calendar.
   Calendar calendar_;
+
+  // Items that stops closure expansion.
+  HandleSet base_items_;
 
   // Symbols.
   Names names_;
@@ -83,7 +89,7 @@ class FactCatalog {
 // starting frame.
 class Facts {
  public:
-  Facts(FactCatalog *catalog, Store *store)
+  Facts(const FactCatalog *catalog, Store *store)
       : catalog_(catalog), store_(store), list_(store), path_(store) {}
 
   // Extract facts for item.
@@ -143,7 +149,7 @@ class Facts {
 
  private:
   // Catalog for facts.
-  FactCatalog *catalog_;
+  const FactCatalog *catalog_;
 
   // Store for facts.
   Store *store_;
