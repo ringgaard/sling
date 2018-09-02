@@ -44,6 +44,9 @@ struct PyArray : public PyBase, public Root {
   // Return handle as hash value for array.
   long Hash();
 
+  // Check if array is equal to another object.
+  PyObject *Compare(PyObject *other, int op);
+
   // Check if array contains value.
   int Contains(PyObject *key);
 
@@ -55,6 +58,9 @@ struct PyArray : public PyBase, public Root {
 
   // Return array in ascii or binary encoding.
   PyObject *Data(PyObject *args, PyObject *kw);
+
+  // Check if another array belongs to a compatible store.
+  bool CompatibleStore(PyArray *other);
 
   // Check if array can be modified.
   bool Writable();

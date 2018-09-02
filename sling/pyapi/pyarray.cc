@@ -30,6 +30,7 @@ void PyArray::Define(PyObject *module) {
   type.tp_str = method_cast<reprfunc>(&PyArray::Str);
   type.tp_iter = method_cast<getiterfunc>(&PyArray::Items);
   type.tp_hash = method_cast<hashfunc>(&PyArray::Hash);
+  type.tp_richcompare = method_cast<richcmpfunc>(&PyArray::Compare);
 
   methods.Add("store", &PyArray::GetStore);
   methods.Add("data", &PyArray::Data);
@@ -106,7 +107,31 @@ PyObject *PyArray::Items() {
 }
 
 long PyArray::Hash() {
-  return handle().bits;
+  uint64 fp = pystore->store->Fingerprint(handle());
+  return fp ^ (fp >> 32);
+}
+
+PyObject *PyArray::Compare(PyObject *other, int op) {
+  // Only equality check is suported.
+  if (op != Py_EQ && op != Py_NE) {
+    PyErr_SetString(PyExc_TypeError, "Invalid array comparison");
+    return nullptr;
+  }
+
+  // Check if other object is an array.
+  bool match = false;
+  if (PyObject_TypeCheck(other, &PyArray::type)) {
+    PyArray *pyother = reinterpret_cast<PyArray *>(other);
+    if (CompatibleStore(pyother)) {
+      // Check if arrays are equal.
+      match = pystore->store->Equal(handle(), pyother->handle());
+    } else {
+      match = false;
+    }
+  }
+
+  if (op == Py_NE) match = !match;
+  return PyBool_FromLong(match);
 }
 
 int PyArray::Contains(PyObject *key) {
@@ -161,6 +186,22 @@ bool PyArray::Writable() {
     return false;
   }
   return true;
+}
+
+bool PyArray::CompatibleStore(PyArray *other) {
+  // Arrays are compatible if they are in the same store.
+  if (pystore->store == other->pystore->store) return true;
+
+  if (handle().IsLocalRef()) {
+    // A local store is also compatible with its global store.
+    return pystore->pyglobals->store == other->pystore->store;
+  } else if (other->handle().IsLocalRef()) {
+    // A global store is also compatible with a local store based on it.
+    return pystore->store == other->pystore->pyglobals->store;
+  } else {
+    // Arrays belong to different global stores.
+    return false;
+  }
 }
 
 void PyItems::Define(PyObject *module) {

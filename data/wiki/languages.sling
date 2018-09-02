@@ -1,6 +1,6 @@
 ; Language definitions.
 
-{=/lang/wikilang :schema
+{=/lang/wikilang +language :schema
   name: "Wiki language metadata"
   family: /schema/lang
 

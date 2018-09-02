@@ -637,6 +637,22 @@ struct FrameDatum : public Datum {
     return false;
   }
 
+  // Checks if frame has isa: type.
+  bool isa(Handle type) const {
+    for (const Slot *slot = begin(); slot < end(); ++slot) {
+      if (slot->name == Handle::isa() && slot->value == type) return true;
+    }
+    return false;
+  }
+
+  // Checks if frame has is: type.
+  bool is(Handle type) const {
+    for (const Slot *slot = begin(); slot < end(); ++slot) {
+      if (slot->name == Handle::is() && slot->value == type) return true;
+    }
+    return false;
+  }
+
   // Updates the named flag for frame.
   void AddFlags(Word flags) { info |= (flags & NAMED); }
 
@@ -971,6 +987,9 @@ class Store {
 
   // Deletes all slots in a frame with a particular name.
   void Delete(Handle frame, Handle name);
+
+  // Compares two objects.
+  bool Equal(Handle x, Handle y) const;
 
   // Computes a fingerprint for an object. This fingerprint is independent of
   // the specific handle values in this store. Fingerprints of frames with ids

@@ -848,6 +848,68 @@ SymbolDatum *Store::LocalSymbol(SymbolDatum *symbol) {
   return local;
 }
 
+bool Store::Equal(Handle x, Handle y) const {
+  // Trivial case.
+  if (x == y) return true;
+
+  if (x.IsNumber() || y.IsNumber()) {
+    // Use the bit pattern for comparison.
+    return x.bits == y.bits;
+  } else {
+    if (x.IsNil() || y.IsNil()) return false;
+    const Datum *xdatum = GetObject(x);
+    const Datum *ydatum = GetObject(y);
+    if (xdatum->type() != ydatum->type()) return false;
+    if (xdatum->size() != ydatum->size()) return false;
+    switch (xdatum->type()) {
+      case FRAME: {
+        const FrameDatum *xframe = xdatum->AsFrame();
+        const FrameDatum *yframe = ydatum->AsFrame();
+
+        // Compare named frames by reference.
+        if (xframe->IsNamed() || yframe->IsNamed()) {
+          // Already tested if handles are equal.
+          return false;
+        }
+
+        // Compare unnamed frames by value.
+        const Slot *sx = xframe->begin();
+        const Slot *sy = yframe->begin();
+        while (sx < xframe->end()) {
+          if (!Equal(sx->name, sy->name)) return false;
+          if (!Equal(sx->value, sy->value)) return false;
+          sx++;
+          sy++;
+        }
+        return true;
+      }
+      case STRING: {
+        // Compare string content.
+        const StringDatum *xstr = xdatum->AsString();
+        const StringDatum *ystr = ydatum->AsString();
+        return xstr->equals(*ystr);
+      }
+      case SYMBOL: {
+        // Already tested if handles are equal.
+        return false;
+      }
+      case ARRAY: {
+        // Compare all elements of the array.
+        const ArrayDatum *xarray = xdatum->AsArray();
+        const ArrayDatum *yarray = ydatum->AsArray();
+        const Handle *hx = xarray->begin();
+        const Handle *hy = yarray->begin();
+        while (hx < xarray->end()) {
+          if (!Equal(*hx++, *hy++)) return false;
+        }
+        return true;
+      }
+      default:
+        return false;
+    }
+  }
+}
+
 uint64 Store::Fingerprint(Handle handle, uint64 seed) const {
   // Fingerprint mixing constants.
   enum FingerprintSeed : uint64 {
