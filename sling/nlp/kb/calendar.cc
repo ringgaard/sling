@@ -124,7 +124,8 @@ void Date::ParseFromString(Text str) {
 
 void Date::ParseFromFrame(const Frame &frame) {
   // Try to get the 'point in time' property from frame and parse it.
-  Object time = frame.Get("P585");
+  Store *store = frame.store();
+  Object time(store, store->Resolve(frame.GetHandle("P585")));
   if (time.invalid()) return;
   if (time.IsInt()) {
     int num = time.AsInt();
