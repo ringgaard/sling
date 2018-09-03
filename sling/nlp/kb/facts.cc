@@ -50,6 +50,7 @@ void FactCatalog::Init(Store *store) {
   SetExtractor(p_employer_, &Facts::ExtractEmployer);
   SetExtractor(p_occupation_, &Facts::ExtractOccupation);
   SetExtractor(p_position_, &Facts::ExtractPosition);
+  SetExtractor(p_member_of_sports_team_, &Facts::ExtractTeam);
 
   // Set up items that stops closure expansion.
   static const char *baseids[] = {
@@ -195,6 +196,11 @@ void Facts::ExtractOccupation(Handle occupation) {
 void Facts::ExtractPosition(Handle position) {
   ExtractType(position);
   ExtractProperty(position, catalog_->p_jurisdiction_);
+}
+
+void Facts::ExtractTeam(Handle team) {
+  ExtractSimple(team);
+  ExtractProperty(team, catalog_->p_league_);
 }
 
 void Facts::AddFact(Handle value) {

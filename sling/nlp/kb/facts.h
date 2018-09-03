@@ -76,6 +76,8 @@ class FactCatalog {
   Name p_jurisdiction_{names_, "P1001"};
   Name p_position_{names_, "P39"};
   Name p_academic_degree_{names_, "P512"};
+  Name p_member_of_sports_team_{names_, "P54"};
+  Name p_league_{names_, "P118"};
 
   Name n_time_{names_, "/w/time"};
   Name n_item_{names_, "/w/item"};
@@ -133,6 +135,9 @@ class Facts {
 
   // Extract position.
   void ExtractPosition(Handle position);
+
+  // Extract team.
+  void ExtractTeam(Handle team);
 
   // Add fact based on current path.
   void AddFact(Handle value);
