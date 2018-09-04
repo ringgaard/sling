@@ -1336,7 +1336,7 @@ void Store::Freeze() {
   CHECK(globals_ == nullptr);
 
   // Run garbage collection to free up unused space.
-  GC();
+  if (gc_locks_ == 0) GC();
 
   // Shrink all the heaps to fit the allocated data. This will force slow case
   // in object memory allocation where we check for frozen store.

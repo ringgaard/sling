@@ -263,6 +263,14 @@ Status File::WriteContents(const string &filename,
   return f->Close();
 }
 
+Status File::Read(void *buffer, size_t size) {
+  uint64 bytes;
+  Status st = Read(buffer, size, &bytes);
+  if (!st.ok()) return st;
+  if (bytes != size) return Status(1, "Truncated", filename());
+  return Status::OK;
+}
+
 void File::ReadOrDie(void *buffer, size_t size) {
   uint64 read;
   CHECK(Read(buffer, size, &read));

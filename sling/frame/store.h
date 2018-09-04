@@ -386,6 +386,7 @@ struct HandleHash {
 
 // Forward declarations.
 class Store;
+class Snapshot;
 struct StringDatum;
 struct FrameDatum;
 struct SymbolDatum;
@@ -1386,6 +1387,9 @@ class Store {
 
   // Default configuration options.
   static const Options kDefaultOptions;
+
+  // Allow internal access for snapshots.
+  friend class Snapshot;
 };
 
 // Utility class for GC locking in store.
