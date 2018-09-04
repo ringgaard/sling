@@ -1,6 +1,7 @@
 import sling
+import sling.flags as flags
 import string
-import traceback
+import time
 
 wikidir = "local/data/e/wiki"
 
@@ -211,6 +212,7 @@ class Category:
 class Categories:
   def __init__(self):
     # Initialize commons store with knowledge base.
+    start = time.time()
     self.commons = sling.Store()
     self.commons.lockgc()
     self.commons.load(wikidir + "/kb.sling", snapshot=True)
@@ -230,11 +232,16 @@ class Categories:
     for p in subject_properties: self.subject_properties.append(self.commons[p])
 
     self.commons.freeze()
+    end = time.time()
+    print end - start, "secs loading commons"
 
     # Load phrase table.
     # TODO(ringgaard): Load language-dependent phrase table.
+    start = time.time()
     self.phrasetab = sling.PhraseTable(self.commons,
                                        wikidir + "/en/phrase-table.repo")
+    end = time.time()
+    print end - start, "secs loading phrase table"
 
     # Open category member database.
     self.member_db = sling.RecordDatabase(wikidir + "/wikipedia-members.rec")
@@ -250,6 +257,8 @@ class Categories:
   def is_category(self, item):
     return self.n_wikimedia_category in item(self.n_instance_of)
 
+
+flags.parse()
 
 print "Load categories"
 categories = Categories()

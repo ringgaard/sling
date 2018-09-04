@@ -14,6 +14,7 @@
 
 #include "sling/file/file.h"
 
+#include <unistd.h>
 #include <pthread.h>
 #include <algorithm>
 #include <string>
@@ -319,6 +320,23 @@ uint64 File::Size() {
   uint64 size;
   if (!GetSize(&size).ok()) return -1;
   return size;
+}
+
+size_t File::PageSize() {
+  return sysconf(_SC_PAGESIZE);
+}
+
+void *File::MapMemory(uint64 pos, size_t size) {
+  return nullptr;
+}
+
+Status File::FreeMappedMemory(void *data, size_t size) {
+  if (default_file_system == nullptr) return NoFileSystem("mmunmap");
+  return default_file_system->FreeMappedMemory(data, size);
+}
+
+Status FileSystem::FreeMappedMemory(void *data, size_t size) {
+  return Status(ENOSYS, "Memory-mapped files not supported");
 }
 
 REGISTER_INITIALIZER(filesystem, {
