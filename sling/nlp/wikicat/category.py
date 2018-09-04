@@ -4,20 +4,35 @@ import traceback
 
 wikidir = "local/data/e/wiki"
 
+prior_weight = 0.5
+
 stop_words = [
   'of', 'in', 'from', 'at', 'by', 'for', 'to', 'on',
   'the', 'and',
-  'le', 'la', 'de',
+  'le', 'la', 'de', 'des', 'et',
+  'der', 'die', 'das', 'und',
   '--',
 ] + list(string.punctuation)
 
 english_subject_types = {
+  # Humans.
   "people" : "Q5",
+  "births": "Q5",
+  "deaths": "Q5",
   "players" : "Q5",
   "alumni" : "Q5",
   "expatriates": "Q5",
-  "establishments": "Q43229",
+
+  "women": "Q6581072",         # female
+  "establishments": "Q43229",  # organization
 }
+
+subject_properties = [
+  'P31',   # instance of
+  'P106',  # occupation
+  'P39',   # position held
+  'P21',   # sex or gender
+]
 
 def fact_to_text(fact):
   l = []
@@ -32,14 +47,25 @@ def stem(phrase):
   if phrase.endswith("ies"): return phrase[:-3] + "y"
   if phrase.endswith("es"): return phrase[:-2]
   if phrase.endswith("s"): return phrase[:-1]
+
+  for suffix, replacement in (("ies ", "y "), ("es ", " "), ("s ", " ")):
+    pos = phrase.find(suffix)
+    if pos != -1: return phrase.replace(suffix, replacement)
+
   return phrase
 
+def item_description(item):
+  text = item.id + " " + item.name
+  description = item.description
+  if description != None: text = text + " (" + description + ")"
+  return text
+
 class Phrase:
-  def __init__(self, begin, end, item, count):
+  def __init__(self, begin, end, item, score):
     self.begin = begin
     self.end = end
     self.item = item
-    self.count = count
+    self.score = score
 
 class Category:
   def __init__(self, cats, catid):
@@ -64,13 +90,17 @@ class Category:
     # Build fact distribution for members.
     self.facts = {}
     self.targets = {}
+    self.num_members = 0
     for member in self.members(cats.n_item_member):
       if cats.is_category(member): continue
       member_facts = self.cats.extractor.extract_facts(self.store, member)
+      member_targets = set()
       for fact in member_facts:
         target = fact[-1]
         increment_key(self.facts, fact)
-        increment_key(self.targets, target)
+        member_targets.add(target)
+      for target in member_targets: increment_key(self.targets, target)
+      self.num_members += 1
 
   def build_phrase_spans(self):
     # Find stop word tokens.
@@ -86,12 +116,13 @@ class Category:
         if skip[b] or skip[b + l -1]: continue
 
         # Find matches for sub-phrase.
+        matches = []
         subphrase = self.doc.phrase(b, b + l)
         items = self.cats.phrasetab.query(subphrase)
         matched = False
         for item, count in items:
           if item in self.targets:
-            self.phrases.append(Phrase(b, b + l, item, count))
+            matches.append(Phrase(b, b + l, item, count))
             matched = True
 
         lemma = stem(subphrase)
@@ -100,16 +131,25 @@ class Category:
           items = self.cats.phrasetab.query(lemma)
           for item, count in items:
             if item in self.targets:
-              self.phrases.append(Phrase(b, b + l, item, count))
+              matches.append(Phrase(b, b + l, item, count))
               matched = True
 
         if not matched:
           # Try to match special category subjects.
           item = self.cats.subjects.get(subphrase.lower())
           if item != None and item in self.targets:
-            self.phrases.append(Phrase(b, b + l, item, 1))
+            matches.append(Phrase(b, b + l, item, 1))
+
+        # Normalize phrase scores.
+        if len(matches) > 0:
+          total = 0.0
+          for p in matches: total += p.score
+          for p in matches: p.score /= total
+          matches.sort(key=lambda x: x.score, reverse=True)
+          self.phrases.extend(matches)
 
   def build_span_cover(self):
+    self.frames = {}
     covered = [False] * len(self.doc.tokens)
     for phrase in self.phrases:
       skip = False
@@ -118,34 +158,94 @@ class Category:
       if skip: continue
       frame = self.store.frame({"is": phrase.item})
       self.doc.evoke(phrase.begin, phrase.end, frame)
+      self.frames[phrase.item] = frame
       for i in xrange(phrase.begin, phrase.end): covered[i] = True
+
+  def target_facts(self, item):
+    dist = {}
+    for fact, count in self.facts.iteritems():
+      if len(fact) != 2: continue  # TODO: handle complex facts
+      if fact[-1] == item: increment_key(dist, fact[0], count)
+    return dist
+
+  def find_subject(self):
+    best = None
+    highscore = 0
+    for item, frame in self.frames.iteritems():
+      score = 0
+      for property, count in self.target_facts(item).iteritems():
+        if property in self.cats.subject_properties:
+          score += count
+      if best == None or score > highscore:
+        best = frame
+        highscore = score
+
+    self.subject = best
+    if best != None:
+      best.append("isa", self.cats.n_subject)
+
+  def annotate_relations(self):
+    if self.subject == None: return
+    for item, frame in self.frames.iteritems():
+      # Determine most common relation between members and item
+      property_scores = {}
+      for prop, count in self.target_facts(item).iteritems():
+        increment_key(property_scores, prop, count)
+
+      best = None
+      highscore = 0
+      for prop, score in property_scores.iteritems():
+        if best == None or score > highscore:
+          best = prop
+          highscore = score
+      if best == None: continue
+
+      if frame == self.subject:
+        self.subject.append(best, item)
+      else:
+        self.subject.append(best, frame)
+
+  def target_score(self, item):
+    return self.targets.get(item, 0.0) / float(self.num_members)
 
 class Categories:
   def __init__(self):
     # Initialize commons store with knowledge base.
     self.commons = sling.Store()
-    self.commons.load(wikidir + "/kb.sling")
+    self.commons.lockgc()
+    self.commons.load(wikidir + "/kb.sling", snapshot=True)
     self.n_item_member = self.commons['/w/item/member']
     self.n_instance_of = self.commons['P31']
     self.n_wikimedia_category = self.commons['Q4167836']
+    self.n_subject = self.commons['subject']
     self.extractor = sling.FactExtractor(self.commons)
-    self.commons.freeze()
 
     # Add category subject types.
     self.subjects = {}
     for subject, item in english_subject_types.iteritems():
       self.subjects[subject] = self.commons[item]
 
+    # Add properties for subjects.
+    self.subject_properties = []
+    for p in subject_properties: self.subject_properties.append(self.commons[p])
+
+    self.commons.freeze()
+
     # Load phrase table.
     # TODO(ringgaard): Load language-dependent phrase table.
-    self.phrasetab = sling.PhraseTable(self.commons, wikidir + "/en/phrase-table.repo")
+    self.phrasetab = sling.PhraseTable(self.commons,
+                                       wikidir + "/en/phrase-table.repo")
 
     # Open category member database.
     self.member_db = sling.RecordDatabase(wikidir + "/wikipedia-members.rec")
 
   def analyze(self, catid):
-    cat = Category(self, catid)
-    return cat
+    category = Category(self, catid)
+    category.build_phrase_spans()
+    category.build_span_cover()
+    category.find_subject()
+    category.annotate_relations()
+    return category
 
   def is_category(self, item):
     return self.n_wikimedia_category in item(self.n_instance_of)
@@ -153,35 +253,40 @@ class Categories:
 
 print "Load categories"
 categories = Categories()
+n_is = categories.commons["is"]
+n_isa = categories.commons["isa"]
 
 while True:
-  try:
-    catid = raw_input("category: ")
-    category = categories.analyze(catid)
-    category.build_phrase_spans()
-    category.build_span_cover()
+  catid = raw_input("category: ")
+  category = categories.analyze(catid)
+  print len(category.members), "members", len(category.targets), "targets"
+  print
 
-    print "Analysis:", category.doc.tolex()
+  print "Title:", category.doc.text
+  print "Analysis:", category.doc.tolex()
+  print
+  if category.subject != None:
+    for role, value in category.subject:
+      if role == n_is:
+        print "subject:", item_description(value)
+      elif role != n_isa:
+        print role.id, role.name, ":", item_description(value.resolve())
+    print
 
-    #print "Fact distribution:"
-    #for fact, count in sorted(category.facts.iteritems(), reverse=True, key=lambda (k,v): v):
-    #  if count > 1:
-    #    print "%d: %s %s" % (count, fact_to_text(fact), str(fact))
-    #print
+  print "Span matches:"
+  for phrase in category.phrases:
+    text = category.doc.phrase(phrase.begin, phrase.end)
+    ps = phrase.score
+    ts = category.target_score(phrase.item)
+    f1 = 2 * ps * ts / (ps + ts)
+    print "  '%s' prior: %.1f%% target: %.1f%% f1: %.1f%% item: %s" % (text, ps * 100.0, ts * 100.0, f1 * 100.0, item_description(phrase.item))
+  print
 
-    #print "Targets:"
-    #for target, count in sorted(category.targets.iteritems(), reverse=True, key=lambda (k,v): v):
-    #  if count > 1:
-    #    print "%d: %s %s" % (count, target.name, str(target))
-    #print
+  print "Frames:"
+  for item, frame in category.frames.iteritems():
+    print "  ", item.id, item.name
+    dist = category.target_facts(item)
+    for property, count in sorted(dist.iteritems(), reverse=True, key=lambda (k,v): v):
+      print "    ", count, property.id, property.name
+  print
 
-    print "Span matches:"
-    for phrase in category.phrases:
-      text = category.doc.phrase(phrase.begin, phrase.end)
-      print "  '%s' %5d %-10s %s (%s)" % (text, phrase.count, phrase.item.id, phrase.item.name, str(phrase.item.description))
-
-  except KeyboardInterrupt:
-    print "Stop"
-    break
-  except:
-    print traceback.format_exc()

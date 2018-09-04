@@ -33,8 +33,13 @@ void FactCatalog::Init(Store *store) {
     Frame property(store, s.value);
     Handle target = property.GetHandle(p_target_);
     if (target == n_item_) {
-      Handle baseprop = property.GetHandle(p_subproperty_of_);
-      if (baseprop == p_location_) {
+      bool is_location = false;
+      for (const Slot &s : property) {
+        if (s.name == p_subproperty_of_) {
+          if (store->Resolve(s.value) == p_location_) is_location = true;
+        }
+      }
+      if (is_location) {
         SetExtractor(property, &Facts::ExtractLocation);
       } else {
         SetExtractor(property, &Facts::ExtractSimple);
@@ -95,7 +100,8 @@ void Facts::ExtractSimple(Handle value) {
 
 void Facts::ExtractClosure(Handle item, Handle relation) {
   Handles closure(store_);
-  closure.push_back(store_->Resolve(item));
+  item = store_->Resolve(item);
+  closure.push_back(item);
   int current = 0;
   while (current < closure.size()) {
     Frame f(store_, closure[current++]);
