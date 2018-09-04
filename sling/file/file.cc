@@ -265,10 +265,15 @@ Status File::WriteContents(const string &filename,
 }
 
 Status File::Read(void *buffer, size_t size) {
-  uint64 bytes;
-  Status st = Read(buffer, size, &bytes);
-  if (!st.ok()) return st;
-  if (bytes != size) return Status(1, "Truncated", filename());
+  // Keep reading partial data until all data has been read. Return error if
+  // then end of the file is reached or a read error occurred.
+  while (size > 0) {
+    uint64 bytes;
+    Status st = Read(buffer, size, &bytes);
+    if (!st.ok()) return st;
+    if (bytes == 0) return Status(1, "Truncated", filename());
+    size -= bytes;
+  }
   return Status::OK;
 }
 

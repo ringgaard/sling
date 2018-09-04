@@ -49,6 +49,10 @@ static const Word kInitialHeap[] = {
   STRING         |  2, 0x48, 'i' | ('s' << 8), 0,
 };
 
+// Size of pristine store.
+static const int kPristineSymbols = 3;
+static const int kPristineHandles = 11;
+
 // Default store options.
 const Store::Options Store::kDefaultOptions;
 
@@ -155,6 +159,7 @@ Store::Store(const Options *options) : options_(options) {
   for (Datum *datum = begin; datum < end; datum = datum->next()) {
     if (datum->IsSymbol()) InsertSymbol(datum->AsSymbol());
   }
+
   UnlockGC();
 }
 
@@ -1096,6 +1101,12 @@ Handle Store::Resolve(Handle handle) {
     if (qua == Handle::nil()) return handle;
     handle = qua;
   }
+}
+
+bool Store::Pristine() const {
+  return globals_ == nullptr &&
+         num_symbols_ == kPristineSymbols &&
+         handles_.length() == kPristineHandles;
 }
 
 void Store::Mark() {

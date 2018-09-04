@@ -1186,6 +1186,11 @@ class Store {
   // Performs garbage collection.
   void GC();
 
+  // Check is store is pristine, i.e. the store only contains the standard
+  // frames. This can be used for checking if a snapshot can be used for
+  // restoring the store without overwriting any existing content.
+  bool Pristine() const;
+
   // Iterator for enumerating all objects in the heaps. This will also iterate
   // over invalidated object in the heaps. The iterator will be invalidated by
   // any GCs. Please use this with care. This is primarily intended for

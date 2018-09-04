@@ -135,7 +135,7 @@ PyObject *PyStore::Load(PyObject *args, PyObject *kw) {
     return PyValue(result.handle());
   } else if (PyString_Check(file)) {
     char *filename = PyString_AsString(file);
-    if (snapshot && Snapshot::Valid(filename)) {
+    if (snapshot && store->Pristine() && Snapshot::Valid(filename)) {
       // Load store from snapshot.
       Status st = Snapshot::Read(store, filename);
       if (!st.ok()) {
