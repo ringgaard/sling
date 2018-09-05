@@ -341,7 +341,7 @@ struct Handle {
     return Handle{static_cast<Word>(n << kIntShift) | kIndexMask};
   }
 
-  // A signalling NaN is used as an error value for handles.
+  // A signaling NaN is used as an error value for handles.
   static const Word kError = kFloatTag | 0xFFBFFF00;
 
   // Checks if a handle is an error handle.

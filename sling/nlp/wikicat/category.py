@@ -32,7 +32,7 @@ subject_properties = [
   'P31',   # instance of
   'P106',  # occupation
   'P39',   # position held
-  'P21',   # sex or gender
+  #'P21',   # sex or gender
 ]
 
 def fact_to_text(fact):

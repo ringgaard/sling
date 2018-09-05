@@ -92,7 +92,7 @@ long PyFrame::Hash() {
 }
 
 PyObject *PyFrame::Compare(PyObject *other, int op) {
-  // Only equality check is suported.
+  // Only equality check is supported.
   if (op != Py_EQ && op != Py_NE) {
     PyErr_SetString(PyExc_TypeError, "Invalid frame comparison");
     return nullptr;

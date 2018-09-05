@@ -20,6 +20,7 @@ namespace sling {
 
 // Python type declarations.
 PyTypeObject PyArray::type;
+PyMappingMethods PyArray::mapping;
 PySequenceMethods PyArray::sequence;
 PyMethodTable PyArray::methods;
 PyTypeObject PyItems::type;
@@ -32,9 +33,9 @@ void PyArray::Define(PyObject *module) {
   type.tp_hash = method_cast<hashfunc>(&PyArray::Hash);
   type.tp_richcompare = method_cast<richcmpfunc>(&PyArray::Compare);
 
-  methods.Add("store", &PyArray::GetStore);
-  methods.Add("data", &PyArray::Data);
-  type.tp_methods = methods.table();
+  type.tp_as_mapping = &mapping;
+  mapping.mp_length = method_cast<lenfunc>(&PyArray::Size);
+  mapping.mp_subscript = method_cast<binaryfunc>(&PyArray::GetItems);
 
   type.tp_as_sequence = &sequence;
   sequence.sq_length = method_cast<lenfunc>(&PyArray::Size);
@@ -42,12 +43,17 @@ void PyArray::Define(PyObject *module) {
   sequence.sq_ass_item = method_cast<ssizeobjargproc>(&PyArray::SetItem);
   sequence.sq_contains = method_cast<objobjproc>(&PyArray::Contains);
 
+  methods.Add("store", &PyArray::GetStore);
+  methods.Add("data", &PyArray::Data);
+  type.tp_methods = methods.table();
+
   RegisterType(&type, module, "Array");
 }
 
-void PyArray::Init(PyStore *pystore, Handle handle) {
+void PyArray::Init(PyStore *pystore, Handle handle, ArraySlice *slice) {
   // Add array as root object for store to keep it alive in the store.
   InitRoot(pystore->store, handle);
+  this->slice = slice;
 
   // Add reference to store to keep it alive.
   this->pystore = pystore;
@@ -62,24 +68,48 @@ void PyArray::Dealloc() {
   Py_DECREF(pystore);
 
   // Free object.
+  delete slice;
   Free();
 }
 
 Py_ssize_t PyArray::Size() {
-  return array()->length();
+  return length();
 }
 
 PyObject *PyArray::GetItem(Py_ssize_t index) {
   // Check array bounds.
   ArrayDatum *arr = array();
-  if (index < 0) index = arr->length() + index;
-  if (index < 0 || index >= arr->length()) {
+  if (index < 0) index = length() + index;
+  if (index < 0 || index >= length()) {
     PyErr_SetString(PyExc_IndexError, "Array index out of bounds");
     return nullptr;
   }
 
   // Return array element.
-  return pystore->PyValue(arr->get(index));
+  return pystore->PyValue(arr->get(pos(index)));
+}
+
+PyObject *PyArray::GetItems(PyObject *key) {
+  if (PyInt_Check(key)) {
+    // Simple integer index.
+    return GetItem(PyInt_AS_LONG(key));
+  } else if (PySlice_Check(key)) {
+    // Get index slice.
+    PySliceObject *pyslice = reinterpret_cast<PySliceObject *>(key);
+    ArraySlice *slice = new ArraySlice();
+    if (slice->Init(pyslice, array()->length()) == -1) {
+      delete slice;
+      return nullptr;
+    }
+
+    // Create sliced array wrapper.
+    PyArray *sliced = PyObject_New(PyArray, &PyArray::type);
+    sliced->Init(pystore, handle(), slice);
+    return sliced->AsObject();
+  } else {
+    PyErr_SetString(PyExc_IndexError, "Unsupported index type");
+    return nullptr;
+  }
 }
 
 int PyArray::SetItem(Py_ssize_t index, PyObject *value) {
@@ -87,8 +117,8 @@ int PyArray::SetItem(Py_ssize_t index, PyObject *value) {
   if (!Writable()) return -1;
 
   // Check array bounds.
-  if (index < 0) index = array()->length() + index;
-  if (index < 0 || index >= array()->length()) {
+  if (index < 0) index = length() + index;
+  if (index < 0 || index >= length()) {
     PyErr_SetString(PyExc_IndexError, "Array index out of bounds");
     return -1;
   }
@@ -96,7 +126,7 @@ int PyArray::SetItem(Py_ssize_t index, PyObject *value) {
   // Set array element.
   Handle handle = pystore->Value(value);
   if (handle.IsError()) return -1;
-  *array()->at(index) = handle;
+  *array()->at(pos(index)) = handle;
   return 0;
 }
 
@@ -112,7 +142,7 @@ long PyArray::Hash() {
 }
 
 PyObject *PyArray::Compare(PyObject *other, int op) {
-  // Only equality check is suported.
+  // Only equality check is supported.
   if (op != Py_EQ && op != Py_NE) {
     PyErr_SetString(PyExc_TypeError, "Invalid array comparison");
     return nullptr;
@@ -153,8 +183,10 @@ PyObject *PyArray::GetStore() {
 }
 
 PyObject *PyArray::Str() {
+  Handle h = AsValue();
+  if (h.IsError()) return nullptr;
   StringPrinter printer(pystore->store);
-  printer.Print(handle());
+  printer.Print(h);
   const string &text = printer.text();
   return PyString_FromStringAndSize(text.data(), text.size());
 }
@@ -165,16 +197,18 @@ PyObject *PyArray::Data(PyObject *args, PyObject *kw) {
   if (!flags.ParseFlags(args, kw)) return nullptr;
 
   // Serialize frame.
+  Handle h = AsValue();
+  if (h.IsError()) return nullptr;
   if (flags.binary) {
     StringEncoder encoder(pystore->store);
     flags.InitEncoder(encoder.encoder());
-    encoder.Encode(handle());
+    encoder.Encode(h);
     const string &buffer = encoder.buffer();
     return PyString_FromStringAndSize(buffer.data(), buffer.size());
   } else {
     StringPrinter printer(pystore->store);
     flags.InitPrinter(printer.printer());
-    printer.Print(handle());
+    printer.Print(h);
     const string &text = printer.text();
     return PyString_FromStringAndSize(text.data(), text.size());
   }
@@ -186,6 +220,21 @@ bool PyArray::Writable() {
     return false;
   }
   return true;
+}
+
+Handle PyArray::AsValue() {
+  if (slice == nullptr) return handle();
+  if (pystore->store->frozen()) {
+    PyErr_SetString(PyExc_ValueError, "Cannot clone array slice");
+    return Handle::error();
+  }
+  Handle sliced = pystore->store->AllocateArray(slice->length);
+  Handle *data = pystore->store->GetArray(sliced)->begin();
+  ArrayDatum *arr = array();
+  for (int idx = slice->start; idx != slice->stop; idx += slice->step) {
+    *data++ = arr->get(idx);
+  }
+  return sliced;
 }
 
 bool PyArray::CompatibleStore(PyArray *other) {
@@ -244,4 +293,3 @@ PyObject *PyItems::Self() {
 }
 
 }  // namespace sling
-

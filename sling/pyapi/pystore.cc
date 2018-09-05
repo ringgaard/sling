@@ -303,7 +303,7 @@ PyObject *PyStore::NewArray(PyObject *arg) {
   GCLock lock(store);
   Handle handle;
   if (PyList_Check(arg)) {
-    // Inialize new array from Python list.
+    // Initialize new array from Python list.
     int size = PyList_Size(arg);
     handle = store->AllocateArray(size);
     ArrayDatum *array = store->Deref(handle)->AsArray();
@@ -432,7 +432,7 @@ Handle PyStore::Value(PyObject *object) {
       PyErr_SetString(PyExc_ValueError, "Array does not belong to this store");
       return Handle::error();
     }
-    return array->handle();
+    return array->AsValue();
   } else if (PyDict_Check(object)) {
     // Build frame from dictionary.
     if (!Writable()) return Handle::error();

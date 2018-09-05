@@ -21,10 +21,25 @@
 
 namespace sling {
 
+// A slice represents a subset of the elements in an array.
+struct ArraySlice {
+  int Init(PySliceObject *slice, Py_ssize_t size) {
+    int rc = PySlice_GetIndicesEx(slice, size, &start, &stop, &step, &length);
+    LOG(INFO) << "size:" << size << " start:" << start << " stop:" << stop << " step:" << step << " length: " << length;
+    stop = start + step * length;
+    return rc;
+  }
+
+  Py_ssize_t start;
+  Py_ssize_t stop;
+  Py_ssize_t step;
+  Py_ssize_t length;
+};
+
 // Python wrapper for array.
 struct PyArray : public PyBase, public Root {
-  // Initialize array wrapper.
-  void Init(PyStore *pystore, Handle handle);
+  // Initialize array wrapper. Takes ownership of the slice.
+  void Init(PyStore *pystore, Handle handle, ArraySlice *slice = nullptr);
 
   // Deallocate array wrapper.
   void Dealloc();
@@ -34,6 +49,9 @@ struct PyArray : public PyBase, public Root {
 
   // Get element from array.
   PyObject *GetItem(Py_ssize_t index);
+
+  // Get elements from array.
+  PyObject *GetItems(PyObject *key);
 
   // Set element in array.
   int SetItem(Py_ssize_t index, PyObject *value);
@@ -56,7 +74,7 @@ struct PyArray : public PyBase, public Root {
   // Return array as string.
   PyObject *Str();
 
-  // Return array in ascii or binary encoding.
+  // Return array in text or binary encoding.
   PyObject *Data(PyObject *args, PyObject *kw);
 
   // Check if another array belongs to a compatible store.
@@ -65,17 +83,39 @@ struct PyArray : public PyBase, public Root {
   // Check if array can be modified.
   bool Writable();
 
+  // Return handle for array. If it is an array slice, this will create a new
+  // array with the sliced elements.
+  Handle AsValue();
+
+  // Return length of array (or slice).
+  int length() {
+    return slice == nullptr ? array()->length() : slice->length;
+  }
+
+  // Return element position in the underlying array.
+  int pos(int index) {
+    if (slice == nullptr) {
+      return index;
+    } else {
+      return slice->start + slice->step * index;
+    }
+  }
+
   // Return handle for array.
   Handle handle() const { return handle_; }
 
   // Dereference array reference.
   ArrayDatum *array() { return pystore->store->Deref(handle())->AsArray(); }
 
-  // Store for frame.
+  // Store for array.
   PyStore *pystore;
+
+  // Array slice or the whole array if the slice is null.
+  ArraySlice *slice;
 
   // Registration.
   static PyTypeObject type;
+  static PyMappingMethods mapping;
   static PySequenceMethods sequence;
   static PyMethodTable methods;
   static void Define(PyObject *module);
