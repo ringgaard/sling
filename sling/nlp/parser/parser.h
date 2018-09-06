@@ -122,12 +122,6 @@ class Parser {
   // Set of roles considered.
   RoleSet roles_;
 
-  // Symbols.
-  Names names_;
-  Name n_document_tokens_{names_, "/s/document/tokens"};
-  Name n_token_text_{names_, "/s/token/text"};
-  Name n_token_break_{names_, "/s/token/break"};
-
   friend class ParserInstance;
 };
 
