@@ -21,25 +21,41 @@
 
 namespace sling {
 
-// A slice represents a subset of the elements in an array.
-struct ArraySlice {
-  int Init(PySliceObject *slice, Py_ssize_t size) {
-    int rc = PySlice_GetIndicesEx(slice, size, &start, &stop, &step, &length);
-    LOG(INFO) << "size:" << size << " start:" << start << " stop:" << stop << " step:" << step << " length: " << length;
-    stop = start + step * length;
-    return rc;
-  }
-
-  Py_ssize_t start;
-  Py_ssize_t stop;
-  Py_ssize_t step;
-  Py_ssize_t length;
-};
-
 // Python wrapper for array.
 struct PyArray : public PyBase, public Root {
+  // A slice represents a subset of the elements in an array.
+  struct Slice {
+    // Initialize slice from Python slice object.
+    int Init(PySliceObject *slice, Py_ssize_t size) {
+      int rc = PySlice_GetIndicesEx(slice, size, &start, &stop, &step, &length);
+      stop = start + step * length;
+      return rc;
+    }
+
+    // Combine slice with a base slice.
+    void Combine(Slice *base) {
+      start = base->pos(start);
+      stop = base->pos(stop);
+      step *= base->step;
+      DCHECK_EQ(stop, start + step * length);
+    }
+
+    // Position of index in underlying array, where index is between 0 and
+    // length.
+    int pos(int index) const {
+      DCHECK_GE(index, 0);
+      DCHECK_LT(index, length);
+      return start + step * index;
+    }
+
+    Py_ssize_t start;
+    Py_ssize_t stop;
+    Py_ssize_t step;
+    Py_ssize_t length;
+  };
+
   // Initialize array wrapper. Takes ownership of the slice.
-  void Init(PyStore *pystore, Handle handle, ArraySlice *slice = nullptr);
+  void Init(PyStore *pystore, Handle handle, Slice *slice = nullptr);
 
   // Deallocate array wrapper.
   void Dealloc();
@@ -94,11 +110,7 @@ struct PyArray : public PyBase, public Root {
 
   // Return element position in the underlying array.
   int pos(int index) {
-    if (slice == nullptr) {
-      return index;
-    } else {
-      return slice->start + slice->step * index;
-    }
+    return slice == nullptr ? index : slice->pos(index);
   }
 
   // Return handle for array.
@@ -111,7 +123,7 @@ struct PyArray : public PyBase, public Root {
   PyStore *pystore;
 
   // Array slice or the whole array if the slice is null.
-  ArraySlice *slice;
+  Slice *slice;
 
   // Registration.
   static PyTypeObject type;

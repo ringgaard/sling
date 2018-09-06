@@ -50,7 +50,7 @@ void PyArray::Define(PyObject *module) {
   RegisterType(&type, module, "Array");
 }
 
-void PyArray::Init(PyStore *pystore, Handle handle, ArraySlice *slice) {
+void PyArray::Init(PyStore *pystore, Handle handle, Slice *slice) {
   // Add array as root object for store to keep it alive in the store.
   InitRoot(pystore->store, handle);
   this->slice = slice;
@@ -96,18 +96,21 @@ PyObject *PyArray::GetItems(PyObject *key) {
   } else if (PySlice_Check(key)) {
     // Get index slice.
     PySliceObject *pyslice = reinterpret_cast<PySliceObject *>(key);
-    ArraySlice *slice = new ArraySlice();
-    if (slice->Init(pyslice, array()->length()) == -1) {
-      delete slice;
+    Slice *subset = new Slice();
+    if (subset->Init(pyslice, length()) == -1) {
+      delete subset;
       return nullptr;
     }
 
+    // Combine with existing slice when making a slice of a slice.
+    if (slice) subset->Combine(slice);
+
     // Create sliced array wrapper.
     PyArray *sliced = PyObject_New(PyArray, &PyArray::type);
-    sliced->Init(pystore, handle(), slice);
+    sliced->Init(pystore, handle(), subset);
     return sliced->AsObject();
   } else {
-    PyErr_SetString(PyExc_IndexError, "Unsupported index type");
+    PyErr_SetString(PyExc_IndexError, "Integer or slice expected");
     return nullptr;
   }
 }
@@ -137,14 +140,20 @@ PyObject *PyArray::Items() {
 }
 
 long PyArray::Hash() {
-  uint64 fp = pystore->store->Fingerprint(handle());
-  return fp ^ (fp >> 32);
+  if (slice == nullptr) {
+    return pystore->store->Fingerprint(handle());
+  } else {
+    return pystore->store->Fingerprint(array(),
+                                       slice->start,
+                                       slice->stop,
+                                       slice->step);
+  }
 }
 
 PyObject *PyArray::Compare(PyObject *other, int op) {
   // Only equality check is supported.
   if (op != Py_EQ && op != Py_NE) {
-    PyErr_SetString(PyExc_TypeError, "Invalid array comparison");
+    PyErr_SetString(PyExc_TypeError, "Unsupported array comparison");
     return nullptr;
   }
 
@@ -154,9 +163,20 @@ PyObject *PyArray::Compare(PyObject *other, int op) {
     PyArray *pyother = reinterpret_cast<PyArray *>(other);
     if (CompatibleStore(pyother)) {
       // Check if arrays are equal.
-      match = pystore->store->Equal(handle(), pyother->handle());
-    } else {
-      match = false;
+      if (slice == nullptr && pyother->slice == nullptr) {
+        match = pystore->store->Equal(handle(), pyother->handle());
+      } else {
+        int len = length();
+        if (len == pyother->length()) {
+          ArrayDatum *arr = array();
+          ArrayDatum *other = pyother->array();
+          match = true;
+          for (int i = 0; i < len && match; ++i) {
+            match = pystore->store->Equal(arr->get(pos(i)),
+                                          other->get(pyother->pos(i)));
+          }
+        }
+      }
     }
   }
 
@@ -171,8 +191,14 @@ int PyArray::Contains(PyObject *key) {
 
   // Check if value is contained in array.
   ArrayDatum *arr = array();
-  for (int i = 0; i < arr->length(); ++i) {
-    if (arr->get(i) == handle) return true;
+  if (slice == nullptr) {
+    for (int i = 0; i < arr->length(); ++i) {
+      if (pystore->store->Equal(arr->get(i), handle)) return true;
+    }
+  } else {
+    for (int idx = slice->start; idx != slice->stop; idx += slice->step) {
+      if (pystore->store->Equal(arr->get(pos(idx)), handle)) return true;
+    }
   }
   return false;
 }
@@ -262,7 +288,7 @@ void PyItems::Define(PyObject *module) {
 }
 
 void PyItems::Init(PyArray *pyarray) {
-  current = -1;
+  current = 0;
   this->pyarray = pyarray;
   Py_INCREF(pyarray);
 }
@@ -277,14 +303,14 @@ void PyItems::Dealloc() {
 
 PyObject *PyItems::Next() {
   // Check bounds.
-  ArrayDatum *arr = pyarray->array();
-  if (++current >= arr->length()) {
+  if (current == pyarray->length()) {
     PyErr_SetNone(PyExc_StopIteration);
     return nullptr;
   }
 
   // Get next item in array.
-  return pyarray->pystore->PyValue(arr->get(current));
+  int index = pyarray->pos(current++);
+  return pyarray->pystore->PyValue(pyarray->array()->get(index));
 }
 
 PyObject *PyItems::Self() {

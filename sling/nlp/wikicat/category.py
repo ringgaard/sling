@@ -135,11 +135,10 @@ class Category:
               matches.append(Phrase(b, b + l, item, count))
               matched = True
 
-        if not matched:
-          # Try to match special category subjects.
-          item = self.cats.subjects.get(subphrase.lower())
-          if item != None and item in self.targets:
-            matches.append(Phrase(b, b + l, item, 1))
+        # Try to match special category subjects.
+        item = self.cats.subjects.get(subphrase.lower())
+        if item != None and item in self.targets:
+          matches.append(Phrase(b, b + l, item, 1000))
 
         # Normalize phrase scores.
         if len(matches) > 0:
@@ -150,6 +149,7 @@ class Category:
           self.phrases.extend(matches)
 
   def build_span_cover(self):
+    self.subject  = None
     self.frames = {}
     covered = [False] * len(self.doc.tokens)
     for phrase in self.phrases:
@@ -206,6 +206,27 @@ class Category:
       else:
         self.subject.append(best, frame)
 
+  def find_relations(self):
+    self.relations = {}
+    for item, frame in self.frames.iteritems():
+      # Determine most common relation between members and item
+      property_scores = {}
+      for prop, count in self.target_facts(item).iteritems():
+        increment_key(property_scores, prop, count)
+
+      best = None
+      highscore = 0
+      for prop, score in property_scores.iteritems():
+        if best == None or score > highscore:
+          best = prop
+          highscore = score
+      if best == None: continue
+
+      #self.relations[best] = item
+      self.relations[best] = frame
+
+    self.doc.add_theme(self.store.frame(self.relations))
+
   def target_score(self, item):
     return self.targets.get(item, 0.0) / float(self.num_members)
 
@@ -250,8 +271,9 @@ class Categories:
     category = Category(self, catid)
     category.build_phrase_spans()
     category.build_span_cover()
-    category.find_subject()
-    category.annotate_relations()
+    #category.find_subject()
+    #category.annotate_relations()
+    category.find_relations()
     return category
 
   def is_category(self, item):
@@ -281,6 +303,13 @@ while True:
       elif role != n_isa:
         print role.id, role.name, ":", item_description(value.resolve())
     print
+
+  if category.relations != None:
+    for role, value in category.relations.iteritems():
+      print role.name + " (" + role.id + "): " + item_description(value.resolve())
+    print
+
+  print category.doc.frame.data(pretty=True)
 
   print "Span matches:"
   for phrase in category.phrases:

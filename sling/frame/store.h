@@ -989,7 +989,7 @@ class Store {
   // Deletes all slots in a frame with a particular name.
   void Delete(Handle frame, Handle name);
 
-  // Compares two objects.
+  // Compares two objects by value.
   bool Equal(Handle x, Handle y) const;
 
   // Computes a fingerprint for an object. This fingerprint is independent of
@@ -997,6 +997,7 @@ class Store {
   // only depend on the name, no the content of the frame. The object cannot
   // contain cycles.
   uint64 Fingerprint(Handle handle, uint64 seed = 0) const;
+  uint64 Fingerprint(ArrayDatum *array, int begin, int end, int step) const;
 
   // Returns a display name for the handle. This should only be used for display
   // purposes and should not be used as an alternative identifier for the

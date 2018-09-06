@@ -144,6 +144,7 @@ cc_library(
     ":object",
     ":printer",
     ":reader",
+    ":snapshot",
     ":store",
     ":wire",
     "//sling/base",

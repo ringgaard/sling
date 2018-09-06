@@ -915,18 +915,18 @@ bool Store::Equal(Handle x, Handle y) const {
   }
 }
 
-uint64 Store::Fingerprint(Handle handle, uint64 seed) const {
-  // Fingerprint mixing constants.
-  enum FingerprintSeed : uint64 {
-    FP_NUMBER =  0xd1ac3c3a168f9a23,
-    FP_STRING =  0xedbf08a562d55ca0,
-    FP_FRAME =   0x07a535307e971126,
-    FP_SYMBOL =  0x06c498392bf66124,
-    FP_ARRAY =   0x7e71d2f093c19cd1,
-    FP_NIL =     0xe958f32bf433420c,
-    FP_INVALID = 0x159ba7c32c364f9b,
-  };
+// Fingerprint mixing constants.
+enum FingerprintSeed : uint64 {
+  FP_NUMBER =  0xd1ac3c3a168f9a23,
+  FP_STRING =  0xedbf08a562d55ca0,
+  FP_FRAME =   0x07a535307e971126,
+  FP_SYMBOL =  0x06c498392bf66124,
+  FP_ARRAY =   0x7e71d2f093c19cd1,
+  FP_NIL =     0xe958f32bf433420c,
+  FP_INVALID = 0x159ba7c32c364f9b,
+};
 
+uint64 Store::Fingerprint(Handle handle, uint64 seed) const {
   if (handle.IsNumber()) {
     // Use the bit pattern of the integer or float for hashing.
     return HashMix(HashMix(seed, FP_NUMBER), handle.bits);
@@ -976,6 +976,17 @@ uint64 Store::Fingerprint(Handle handle, uint64 seed) const {
       }
     }
   }
+}
+
+uint64 Store::Fingerprint(ArrayDatum *array,
+                          int begin, int end, int step) const {
+  // Hash array slice.
+  uint64 fp = HashMix(0, FP_ARRAY);
+  for (int i = begin; i != end; i += step) {
+    Handle h = *(array->begin() + i);
+    fp = Fingerprint(h, fp);
+  }
+  return fp;
 }
 
 void Store::ReplaceProxy(ProxyDatum *proxy, FrameDatum *frame) {
