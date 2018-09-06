@@ -23,6 +23,16 @@ flags.define("--index",
              default=False,
              action='store_true')
 
+flags.define("--only_primary_language",
+             help="only use wikidata labels from primary language",
+             default=False,
+             action='store_true')
+
+flags.define("--only_known_languages",
+             help="only use wikidata labels from known languages",
+             default=False,
+             action='store_true')
+
 class WikiWorkflow:
   def __init__(self, name=None, wf=None):
     if wf == None: wf = Workflow(name)
@@ -86,6 +96,8 @@ class WikiWorkflow:
     """Task for converting Wikidata JSON to SLING items and properties."""
     task = self.wf.task("wikidata-importer", name=name)
     task.add_param("primary_language", flags.arg.language)
+    task.add_param("only_primary_language", flags.arg.only_primary_language)
+    task.add_param("only_known_languages", flags.arg.only_known_languages)
     self.wf.connect(input, task)
     items = self.wf.channel(task, name="items", format="message/frame")
     properties = self.wf.channel(task, name="properties",

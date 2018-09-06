@@ -61,6 +61,11 @@ class WikidataImporter : public task::Processor {
     string lang = task->Get("primary_language", "");
     commons_ = new Store();
     converter_ = new WikidataConverter(commons_, lang);
+    bool only_primary = task->Get("only_primary_language", false);
+    bool only_known = task->Get("only_known_languages", false);
+    converter_->set_only_primary_language(only_primary);
+    converter_->set_only_known_languages(only_known);
+
     names_.Bind(commons_);
     commons_->Freeze();
   }
