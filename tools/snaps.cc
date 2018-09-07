@@ -26,7 +26,7 @@
 #include "sling/frame/store.h"
 
 DEFINE_bool(check, false, "Check for valid snapshot");
-DEFINE_bool(verify, false, "Check snapshot by read it into memory");
+DEFINE_bool(verify, false, "Check snapshot by reading it into memory");
 
 using namespace sling;
 
