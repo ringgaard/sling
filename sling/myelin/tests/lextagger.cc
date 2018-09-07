@@ -137,7 +137,8 @@ class Tagger {
     RecordFileOptions options;
     RecordReader input(filename, options);
     Record record;
-    while (input.Read(&record).ok()) {
+    while (!input.Done()) {
+      CHECK(input.Read(&record));
       StringDecoder decoder(&store_, record.value.data(), record.value.size());
       Document *document = new Document(decoder.Decode().AsFrame(), names_);
       corpus->push_back(document);
