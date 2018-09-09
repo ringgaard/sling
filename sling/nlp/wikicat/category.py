@@ -3,6 +3,9 @@ import sling.flags as flags
 import string
 import time
 
+import BaseHTTPServer
+import urlparse
+
 wikidir = "local/data/e/wiki"
 
 prior_weight = 0.5
@@ -34,6 +37,8 @@ subject_properties = [
   'P39',   # position held
   #'P21',   # sex or gender
 ]
+
+categories = None
 
 def fact_to_text(fact):
   l = []
@@ -120,20 +125,25 @@ class Category:
         matches = []
         subphrase = self.doc.phrase(b, b + l)
         items = self.cats.phrasetab.query(subphrase)
+        seen = set()
         matched = False
         for item, count in items:
           if item in self.targets:
             matches.append(Phrase(b, b + l, item, count))
             matched = True
+            seen.add(item)
 
         lemma = stem(subphrase)
-        if not matched and lemma != subphrase:
+        #if not matched and lemma != subphrase:
+        if lemma != subphrase:
           # Try to match stemmed phrase.
           items = self.cats.phrasetab.query(lemma)
           for item, count in items:
             if item in self.targets:
-              matches.append(Phrase(b, b + l, item, count))
-              matched = True
+              if item not in seen:
+                matches.append(Phrase(b, b + l, item, count))
+                matched = True
+                seen.add(item)
 
         # Try to match special category subjects.
         item = self.cats.subjects.get(subphrase.lower())
@@ -279,6 +289,86 @@ class Categories:
   def is_category(self, item):
     return self.n_wikimedia_category in item(self.n_instance_of)
 
+def query_value(params, name, default):
+  value = params.get(name)
+  if value == None or len(value) != 1: return default
+  return value[0]
+
+def query_flag(params, name, default):
+  value = query_value(params, name, '')
+  if value == '': return default
+  return value != '0'
+
+class CategoryHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+  def do_GET(self):
+    out = self.wfile
+    url = urlparse.urlsplit(self.path)
+
+    if url.path == '/favicon.ico':
+      self.send_response(404)
+      return
+
+    params = urlparse.parse_qs(url.query)
+    catid = str(query_value(params, "qid", ""))
+
+    self.send_response(200)
+    self.send_header("Content-type", "text/html")
+    self.end_headers()
+
+    out.write("<html><head><title>Category title parser</title><meta charset='UTF-8'></head>")
+    out.write("<body>")
+
+    category = categories.analyze(catid)
+    out.write("<h1>%s</h1>\n" % (category.doc.text))
+    out.write("<p>%d members, %d targets</p>\n" % (len(category.members), len(category.targets)))
+
+    out.write("<h4>Analysis</h4>\n")
+    out.write("<pre>%s</pre>\n" % (category.doc.tolex()))
+
+    out.write("<h4>Properties</h4>\n")
+    if category.relations != None:
+      out.write("<table border=1>")
+      for role, value in category.relations.iteritems():
+        out.write("<tr>")
+        out.write("<td>%s</td><td>%s</td><td>%s</td>" % (role.id, role.name, item_description(value.resolve())))
+        out.write("</tr>")
+      out.write("</table>")
+
+    out.write("<h4>Spans</h4>\n")
+    out.write("<table border=1>")
+    out.write("<tr>")
+    out.write("<th>Span</td>")
+    out.write("<th>Prior</td>")
+    out.write("<th>Target</td>")
+    out.write("<th>F1</td>")
+    out.write("<th>Item</td>")
+    out.write("</tr>")
+    for phrase in category.phrases:
+      text = category.doc.phrase(phrase.begin, phrase.end)
+      ps = phrase.score
+      ts = category.target_score(phrase.item)
+      f1 = 2 * ps * ts / (ps + ts)
+      out.write("<tr>")
+      out.write("<td>%s</td>" % (text))
+      out.write("<td align=right>%.1f%%</td>" % (ps * 100.0))
+      out.write("<td align=right>%.1f%%</td>" % (ts * 100.0))
+      out.write("<td align=right>%.1f%%</td>" % (f1 * 100.0))
+      out.write("<td>%s</td>" % (item_description(phrase.item)))
+      out.write("</tr>")
+    out.write("</table>")
+
+    out.write("<h4>Targets</h4>")
+    out.write("<pre>")
+    for item, frame in category.frames.iteritems():
+      out.write("%s %s\n" % (item.id, item.name))
+      dist = category.target_facts(item)
+      for property, count in sorted(dist.iteritems(), reverse=True, key=lambda (k,v): v):
+        out.write("%10d %s %s\n" % (count, property.id, property.name))
+    print
+    out.write("</pre>")
+
+    out.write("</body>")
+    out.write("</html>")
 
 flags.parse()
 
@@ -286,6 +376,9 @@ print "Load categories"
 categories = Categories()
 n_is = categories.commons["is"]
 n_isa = categories.commons["isa"]
+
+httpd = BaseHTTPServer.HTTPServer(("", 8080), CategoryHandler)
+httpd.serve_forever()
 
 while True:
   catid = raw_input("category: ")
@@ -309,7 +402,7 @@ while True:
       print role.name + " (" + role.id + "): " + item_description(value.resolve())
     print
 
-  print category.doc.frame.data(pretty=True)
+  #print category.doc.frame.data(pretty=True)
 
   print "Span matches:"
   for phrase in category.phrases:
