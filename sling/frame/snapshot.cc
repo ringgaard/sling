@@ -46,7 +46,7 @@ bool Snapshot::Valid(const string &filename) {
 Status Snapshot::Read(Store *store, const string &filename) {
   // Only global stores can be restored from snapshot.
   if (store->globals() != nullptr) {
-    return Status(1, "local store cannot be loaded from snaphot");
+    return Status(1, "local store cannot be loaded from snapshot");
   }
 
   // Read snapshot header.
