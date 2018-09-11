@@ -192,12 +192,12 @@ int PyArray::Contains(PyObject *key) {
   // Check if value is contained in array.
   ArrayDatum *arr = array();
   if (slice == nullptr) {
-    for (int i = 0; i < arr->length(); ++i) {
-      if (pystore->store->Equal(arr->get(i), handle)) return true;
+    for (int idx = 0; idx < arr->length(); ++idx) {
+      if (pystore->store->Equal(arr->get(idx), handle)) return true;
     }
   } else {
     for (int idx = slice->start; idx != slice->stop; idx += slice->step) {
-      if (pystore->store->Equal(arr->get(pos(idx)), handle)) return true;
+      if (pystore->store->Equal(arr->get(idx), handle)) return true;
     }
   }
   return false;
