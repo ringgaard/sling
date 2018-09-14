@@ -25,6 +25,7 @@
 #include "sling/base/types.h"
 #include "sling/file/file.h"
 #include "sling/frame/store.h"
+#include "sling/myelin/compiler.h"
 #include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
 #include "sling/nlp/document/document.h"
@@ -100,6 +101,9 @@ class Parser {
 
   // Parser network.
   myelin::Network network_;
+
+  // JIT compiler.
+  myelin::Compiler compiler_;
 
   // Lexical encoder.
   LexicalEncoder encoder_;
