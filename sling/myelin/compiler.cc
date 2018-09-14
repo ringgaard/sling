@@ -23,8 +23,9 @@
 #include "sling/myelin/graph.h"
 #include "sling/myelin/profile.h"
 #include "sling/myelin/cuda/cuda-runtime.h"
-#include "sling/myelin/kernel/tensorflow.h"
 #include "sling/myelin/kernel/cuda.h"
+#include "sling/myelin/kernel/dragnn.h"
+#include "sling/myelin/kernel/tensorflow.h"
 
 DEFINE_string(cpu, "", "Enable/disable CPU features");
 DEFINE_bool(gpu, false, "Run kernels on GPU");
@@ -39,6 +40,7 @@ DEFINE_bool(dump_final_flow, false, "Dump final analyzed flow to log");
 DEFINE_bool(dump_cells, false, "Dump cells after compilation");
 DEFINE_bool(check_flow_consistency, false, "Check that flow is consistent");
 DEFINE_bool(dynamic_instance_allocation, false, "Dynamic instance allocation");
+DEFINE_bool(dragnn, false, "Use DRAGNN kernels");
 
 namespace sling {
 namespace myelin {
@@ -59,6 +61,9 @@ Compiler::Compiler() {
     cudart.Connect();
     runtime_ = &cudart;
   }
+
+  // Add extra kernels.
+  if (FLAGS_dragnn) RegisterDragnnLibrary(&library_);
 }
 
 void Compiler::Compile(Flow *flow, Network *net) {
