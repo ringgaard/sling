@@ -86,7 +86,7 @@ class FactLexiconExtractor : public Process {
 
     // The facts are collected in a sortable hash map where the key is the
     // fact fingerprint. The name of the fact is stored in a nul-terminated
-    // dynaminally allocated string.
+    // dynamically allocated string.
     SortableMap<int64, std::pair<int64, char *>> fact_lexicon;
 
     // Extract facts from all items in the knowledge base.
@@ -211,16 +211,16 @@ class FactExtractor : public Process {
       facts.Extract(handle);
 
       // Add facts to fact lexicon.
-      Handles fact_indicies(&store);
+      Handles fact_indices(&store);
       for (Handle fact : facts.list()) {
-        int64 fp = store.Fingerprint(fact);
+        uint64 fp = store.Fingerprint(fact);
         auto f = fact_lexicon_.find(fp);
         if (f != fact_lexicon_.end()) {
-          fact_indicies.push_back(Handle::Integer(f->second));
+          fact_indices.push_back(Handle::Integer(f->second));
         }
       }
       int total = facts.list().size();
-      int extracted = fact_indicies.size();
+      int extracted = fact_indices.size();
       int skipped = total - extracted;
       num_facts->Increment(total);
       num_facts_extracted->Increment(extracted);
@@ -228,12 +228,12 @@ class FactExtractor : public Process {
       if (extracted == 0) num_no_facts->Increment();
 
       // Extract categories from item.
-      Handles category_indicies(&store);
+      Handles category_indices(&store);
       for (const Slot &s : item) {
         if (s.name == p_item_category_) {
           auto f = category_lexicon_.find(s.value);
           if (f != category_lexicon_.end()) {
-            category_indicies.push_back(Handle::Integer(f->second));
+            category_indices.push_back(Handle::Integer(f->second));
             num_cats_extracted->Increment();
           } else {
             num_cats_skipped->Increment();
@@ -241,13 +241,13 @@ class FactExtractor : public Process {
           num_cats->Increment();
         }
       }
-      if (category_indicies.empty()) num_no_cats->Increment();
+      if (category_indices.empty()) num_no_cats->Increment();
 
       // Build frame with resolved facts.
       Builder builder(&store);
       builder.Add(p_item_, item.id());
-      builder.Add(p_facts_, Array(&store, fact_indicies));
-      builder.Add(p_categories_, Array(&store, category_indicies));
+      builder.Add(p_facts_, Array(&store, fact_indices));
+      builder.Add(p_categories_, Array(&store, category_indices));
 
       // Output frame with resolved facts on output channel.
       output->Send(CreateMessage(item.Id(), builder.Create()));
@@ -479,7 +479,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
 
   // Evaluate model.
   bool Evaluate(int64 epoch, myelin::Network *model) override {
-    // Evaluate model.
+    // Compute average loss of epochs since last eval.
     float loss = loss_sum_ / loss_count_;
     float p = exp(-loss) * 100.0;
     loss_sum_ = 0.0;
@@ -534,7 +534,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
   Name p_facts_{names_, "facts"};
   Name p_categories_{names_, "categories"};
 
-  // Staticstics.
+  // Statistics.
   Counter *num_feature_overflows_ = nullptr;
 };
 

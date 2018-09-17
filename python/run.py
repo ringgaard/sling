@@ -106,7 +106,7 @@ flags.define("--extract_fact_lexicon",
              action='store_true')
 
 flags.define("--extract_facts",
-             help="extract fact from knowledge base",
+             help="extract facts from knowledge base",
              default=False,
              action='store_true')
 
@@ -260,24 +260,24 @@ def train_embeddings():
 
   # Extract vocabulary for fact and category embeddings.
   if flags.arg.extract_fact_lexicon:
-      log.info("Extract fact and category lexicons")
-      wf = embedding.EmbeddingWorkflow("fact-lexicon")
-      wf.extract_fact_lexicon()
-      run_workflow(wf)
+    log.info("Extract fact and category lexicons")
+    wf = embedding.EmbeddingWorkflow("fact-lexicon")
+    wf.extract_fact_lexicon()
+    run_workflow(wf)
 
   # Extract facts from knowledge base.
   if flags.arg.extract_facts:
-      log.info("Extract facts from knowledge base")
-      wf = embedding.EmbeddingWorkflow("fact-extraction")
-      wf.extract_facts()
-      run_workflow(wf)
+    log.info("Extract facts from knowledge base")
+    wf = embedding.EmbeddingWorkflow("fact-extraction")
+    wf.extract_facts()
+    run_workflow(wf)
 
   # Train fact and category embeddings.
   if flags.arg.train_fact_embeddings:
-      log.info("Train fact and category embeddings")
-      wf = embedding.EmbeddingWorkflow("fact-embeddings")
-      wf.train_fact_embeddings()
-      run_workflow(wf)
+    log.info("Train fact and category embeddings")
+    wf = embedding.EmbeddingWorkflow("fact-embeddings")
+    wf.train_fact_embeddings()
+    run_workflow(wf)
 
 
 if __name__ == '__main__':

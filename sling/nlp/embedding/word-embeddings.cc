@@ -379,7 +379,7 @@ class WordEmbeddingsTrainer : public Process {
     myelin::Instance l0b(model->GetCell(flow_.layer0b));
 
     int *features = l0.Get<int>(model->GetParameter(flow_.fv));
-    int *fend = features + 2 * window_;
+    int *fend = features + flow_.in_features;
     int *target = l1.Get<int>(model->GetParameter(flow_.target));
     float *label = l1.Get<float>(model->GetParameter(flow_.label));
     float *alpha = l1.Get<float>(model->GetParameter(flow_.alpha));
@@ -398,7 +398,7 @@ class WordEmbeddingsTrainer : public Process {
       if (input.Done()) {
         epochs_completed_->Increment();
         if (++epoch < iterations_) {
-          // Seek back to the begining.
+          // Seek back to the beginning.
           input.Rewind();
 
           // Update learning rate.

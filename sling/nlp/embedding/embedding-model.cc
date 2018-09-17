@@ -61,10 +61,10 @@ void MikolovFlow::BuildLayer1() {
   auto *embed = single ? tf.Gather(W1, target) : tf.GatherAvg(W1, target);
   auto *output = tf.Dot(embed, h, dims);
 
-  // Loss.
-  loss = tf.Name(tf.Sub(label, tf.Sigmoid(output)), "loss");
-  loss->set_out();
-  auto *eta = tf.Mul(loss, alpha);
+  // Likelihood.
+  likelihood = tf.Name(tf.Sub(label, tf.Sigmoid(output)), "likelihood");
+  likelihood->set_out();
+  auto *eta = tf.Mul(likelihood, alpha);
 
   // Backprop layer 1.
   tf.AssignAdd(error, tf.Mul(embed, eta));
@@ -121,8 +121,8 @@ void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
       tf.Placeholder("features", DT_INT32, {1, encoder->max_features});
   auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
   if (normalize) {
-    auto *length = tf.Name(tf.Norm(sum), "length");
-    encoder->encoding = tf.Name(tf.Div(sum, length), "encoding");
+    auto *norm = tf.Name(tf.Norm(sum), "norm");
+    encoder->encoding = tf.Name(tf.Div(sum, norm), "encoding");
   } else {
     encoder->encoding = tf.Name(sum, "encoding");
   }

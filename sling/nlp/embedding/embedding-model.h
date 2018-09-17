@@ -34,6 +34,9 @@ namespace nlp {
 //   w0_i is the average of input embeddings w0_i
 //   w1_o is the average of output embeddings w1_o
 //
+// This model uses HOGWILD!-style parameter updates, where the global parameters
+// are updated directly in the backward pass without a separate optimizer step.
+//
 // See Mikolov et al. 2013 for more details.
 struct MikolovFlow : public myelin::Flow {
   void Build();
@@ -54,7 +57,7 @@ struct MikolovFlow : public myelin::Flow {
   Variable *label;        // output label (1=positive, 0=negative example)
   Variable *target;       // output target
 
-  Variable *loss;         // loss for example
+  Variable *likelihood;   // likelihood for example
   Variable *error;        // accumulated error
 
   Function *layer0;       // layer 0 forward computation
@@ -141,14 +144,14 @@ class DualEncoderBatch {
 
   // Compute similarities between instances in batch and propagate loss back
   // to the model parameters. The input features for the right and left
-  // instances need to be set up before the computation. Return average loss.
+  // instances need to be set up before the computation. Returns average loss.
   float Compute();
 
   // Reset accumulated gradients.
   void Reset();
 
   // Get gradient instances.
-  const std::vector<myelin::Instance *> gradients() { return gradients_; }
+  const std::vector<myelin::Instance *> &gradients() const { return gradients_; }
 
  private:
   // Data instances for one batch element.
