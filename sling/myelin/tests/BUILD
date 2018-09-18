@@ -29,6 +29,18 @@ cc_binary(
 )
 
 cc_binary(
+  name = "gradcheck",
+  srcs = ["gradcheck.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/myelin:builder",
+    "//sling/myelin:compiler",
+    "//sling/myelin:gradient",
+  ],
+)
+
+cc_binary(
   name = "express-test",
   srcs = ["express-test.cc"],
   deps = [
