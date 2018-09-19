@@ -97,6 +97,9 @@ class Facts {
   // Extract facts for item.
   void Extract(Handle item);
 
+  // Extract item types (P31) with closure over subclass of (P279).
+  void ExtractItemTypes(Handle item, Handles *types);
+
   // Extract simple fact with no backoff.
   void ExtractSimple(Handle value);
 
@@ -170,4 +173,3 @@ class Facts {
 }  // namespace sling
 
 #endif  // SLING_NLP_KB_FACTS_H_
-

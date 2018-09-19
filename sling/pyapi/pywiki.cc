@@ -95,6 +95,7 @@ void PyFactExtractor::Define(PyObject *module) {
   type.tp_dealloc = method_cast<destructor>(&PyFactExtractor::Dealloc);
 
   methods.Add("extract_facts", &PyFactExtractor::ExtractFacts);
+  methods.Add("item_types", &PyFactExtractor::ItemTypes);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "FactExtractor");
@@ -136,6 +137,25 @@ PyObject *PyFactExtractor::ExtractFacts(PyObject *args, PyObject *kw) {
   // Return array of facts.
   const Handle *begin = facts.list().data();
   const Handle *end = begin + facts.list().size();
+  return pystore->PyValue(pystore->store->AllocateArray(begin, end));
+}
+
+PyObject *PyFactExtractor::ItemTypes(PyObject *args, PyObject *kw) {
+  // Get store and Wikidata item.
+  PyStore *pystore = nullptr;
+  PyFrame *pyitem = nullptr;
+  if (!PyArg_ParseTuple(args, "OO", &pystore, &pyitem)) return nullptr;
+  if (!PyObject_TypeCheck(pystore, &PyStore::type)) return nullptr;
+  if (!PyObject_TypeCheck(pyitem, &PyFrame::type)) return nullptr;
+
+  // Extract types.
+  nlp::Facts facts(catalog, pystore->store);
+  Handles types(pystore->store);
+  facts.ExtractItemTypes(pyitem->handle(), &types);
+
+  // Return array of types.
+  const Handle *begin = types.data();
+  const Handle *end = begin + types.size();
   return pystore->PyValue(pystore->store->AllocateArray(begin, end));
 }
 

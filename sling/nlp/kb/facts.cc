@@ -94,6 +94,38 @@ void Facts::Extract(Handle item) {
   }
 }
 
+void Facts::ExtractItemTypes(Handle item, Handles *types) {
+  // Get types for item.
+  item = store_->Resolve(item);
+  for (const Slot &s : Frame(store_, item)) {
+    if (s.name == catalog_->p_instance_of_) {
+      Handle type = store_->Resolve(s.value);
+      types->push_back(type);
+    }
+  }
+
+  // Build type closure.
+  int current = 0;
+  while (current < types->size()) {
+    Frame f(store_, (*types)[current++]);
+    if (catalog_->IsBaseItem(f.handle())) continue;
+    for (const Slot &s : f) {
+      if (s.name != catalog_->p_subclass_of_) continue;
+
+      // Check if new item is already known.
+      Handle newitem = store_->Resolve(s.value);
+      bool known = false;
+      for (Handle h : *types) {
+        if (newitem == h) {
+          known = true;
+          break;
+        }
+      }
+      if (!known) types->push_back(newitem);
+    }
+  }
+}
+
 void Facts::ExtractSimple(Handle value) {
   AddFact(store_->Resolve(value));
 }

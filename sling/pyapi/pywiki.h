@@ -50,6 +50,9 @@ struct PyFactExtractor : public PyBase {
   // Extract list of facts from item.
   PyObject *ExtractFacts(PyObject *args, PyObject *kw);
 
+  // Get types for item.
+  PyObject *ItemTypes(PyObject *args, PyObject *kw);
+
   // Commons store for converter.
   PyStore *pycommons;
 
