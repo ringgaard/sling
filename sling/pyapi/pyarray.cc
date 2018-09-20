@@ -198,7 +198,7 @@ int PyArray::Contains(PyObject *key) {
     }
   } else {
     for (int idx = slice->start; idx != slice->stop; idx += slice->step) {
-      if (pystore->store->Equal(arr->get(idx), handle), true) return true;
+      if (pystore->store->Equal(arr->get(idx), handle, true)) return true;
     }
   }
   return false;

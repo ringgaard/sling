@@ -181,11 +181,11 @@ class Tagger {
       // Build lexicon.
       std::unordered_map<string, int> words;
       for (Document *s : train_) {
-        for (const Token &t : s->tokens()) words[t.text()]++;
+        for (const Token &t : s->tokens()) words[t.word()]++;
       }
       if (!FLAGS_embeddings.empty()) {
         for (Document *s : dev_) {
-          for (const Token &t : s->tokens()) words[t.text()]++;
+          for (const Token &t : s->tokens()) words[t.word()]++;
         }
       }
       Vocabulary::HashMapIterator vocab(words);

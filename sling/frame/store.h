@@ -997,8 +997,8 @@ class Store {
   // the specific handle values in this store. Fingerprints of frames with ids
   // only depend on the name, no the content of the frame. The object cannot
   // contain cycles. Anonymous frames can either be compared by value (default)
-  // or by reference. If they are by reference, the fingerprint will become
-  // dependent on the store.
+  // or by reference. If they are compared by reference, the fingerprint will
+  // become dependent on the store.
   uint64 Fingerprint(Handle handle, bool byref = false, uint64 seed = 0) const;
   uint64 Fingerprint(ArrayDatum *array, int begin, int end, int step) const;
 

@@ -121,9 +121,8 @@ class ParserState:
     if self.done: return False
 
     actions = self.spec.actions
-    if self.current == self.end: return action_index == actions.stop()
-    if action_index == actions.stop(): return False
-    if action_index == actions.shift(): return True
+    if action_index == actions.stop(): return self.current == self.end
+    if action_index == actions.shift(): return self.current < self.end
     action = actions.table[action_index]
 
     if action.type == Action.EVOKE or action.type == Action.REFER:
@@ -310,7 +309,7 @@ class ParserState:
       mention = document.add_mention(s.start, s.end)
       for f in s.evoked:
         assert f in frames
-        mention.frame.append("/s/phrase/evokes", frames[f])
+        mention.frame.append("evokes", frames[f])
 
     document.update()
 
