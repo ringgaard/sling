@@ -1,5 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 
+load("//tools:embed.bzl", "embed_data")
+
 cc_library(
   name = "token-breaks",
   hdrs = ["token-breaks.h"],
@@ -161,3 +163,25 @@ cc_library(
   ],
 )
 
+embed_data(
+  name = "app",
+  srcs = [
+    "app/index.html",
+    "app/doc.js",
+  ],
+)
+
+cc_binary(
+  name = "document-server",
+  srcs = ["document-server.cc"],
+  deps = [
+    ":app",
+    "//sling/base",
+    "//sling/file",
+    "//sling/file:embed",
+    "//sling/file:posix",
+    "//sling/http:http-server",
+    "//sling/http:static-content",
+    "//sling/http:web-service",
+  ],
+)
