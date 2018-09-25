@@ -6,9 +6,12 @@ embed_data(
   name = "app",
   srcs = [
     "image/appicon.ico",
-    "external/preact.js",
     "external/material.js",
     "external/material.css",
+    "external/material-icons.css",
+    "external/material-icons.woff2",
+    "external/preact.js",
+    "external/preact-mdl.js",
     "lib/sling.js",
   ],
 )

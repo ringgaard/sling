@@ -176,6 +176,7 @@ cc_binary(
   srcs = ["document-server.cc"],
   deps = [
     ":app",
+    "//app",
     "//sling/base",
     "//sling/file",
     "//sling/file:embed",

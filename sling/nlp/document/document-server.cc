@@ -48,8 +48,12 @@ int main(int argc, char *argv[]) {
   DocumentService service;
   service.Register(&http);
 
-  http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
-    rsp->RedirectTo("/doc");
+  //http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
+  //  rsp->RedirectTo("/doc/");
+  //});
+
+  http.Register("/favicon.ico", [](HTTPRequest *req, HTTPResponse *rsp) {
+    rsp->RedirectTo("/common/image/appicon.ico");
   });
 
   CHECK(http.Start());
