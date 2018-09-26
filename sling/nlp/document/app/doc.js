@@ -1,48 +1,62 @@
-import { Component, h, render } from '/common/external/preact.js';
-import { Button } from '/common/external/preact-mdl.js';
+import {Component, h, render} from '/common/external/preact.js';
+import {Layout, Button, Icon, Card, Menu} from '/common/external/preact-mdl.js';
 
 class App extends Component {
-	componentDidMount() {
-		this.setState({message: 'Hello!'});
-	}
-	render(props, state) {
-		return (
-			h('div', {id: 'app'},
-				h(Header, {message: state.message}),
-				h(Main),
-				h(MyButton)
-			)
-		);
-	}
+  render(props, state) {
+    return (
+      h('div', {id: 'app'},
+        h(Layout, {"fixed-header": true},
+          h(Header),
+          h(Sidebar),
+          h(Main)
+        )
+      )
+    );
+  }
 }
 
-const Header = (props) => {
-	return h('header', null,
-		h('h1', null, 'App'),
-		props.message && h('h2', null, props.message)
-	);
-};
+/*
+h(Menu, {"top-right": true},
+  h(Menu.Item, null, "Item 1"),
+  h(Menu.Item, null, "Item 2"),
+  h(Menu.Item, null, "Item 3")
+)
+*/
+
+class Sidebar extends Component {
+  render(props, state) {
+    return (
+      h(Layout.Drawer)
+    );
+  }
+}
+
+class Header extends Component {
+  render(props, state) {
+    return (
+      h(Layout.Header, null,
+        h(Layout.HeaderRow, null,
+          h(Layout.Title, null, "Document analyzer")
+        ),
+      )
+    );
+  }
+}
 
 class Main extends Component {
-	render() {
-		const items = [1,2,3,4,5].map((item) => (
-			h('li', {id:item}, 'Item ' + item)
-		));
-		return (
-			h('main', null,
-				h('ul', null, items)
-			)
-		);
-	}
-}
-
-class MyButton extends Component {
   render() {
-    return(
-      h("div", null, h(Button, null, "I am button!"))
-    )
+    return (
+      h(Layout.Content, {id: "main"},
+        h(Card, {class: "skinny", shadow: 4},
+          h(Card.Title, null,
+            h(Icon, {icon: "info", style: "float:left; margin-top:20px"}),
+            h(Card.TitleText, null, "Documentation")
+          ),
+          h(Card.Text)
+        )
+      )
+    );
   }
 }
 
 render(h(App), document.body);
-
