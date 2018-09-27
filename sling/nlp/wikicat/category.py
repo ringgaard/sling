@@ -111,7 +111,7 @@ class Category:
   def build_phrase_spans(self):
     # Find stop word tokens.
     skip = []
-    for t in self.doc.tokens: skip.append(t.text in stop_words)
+    for t in self.doc.tokens: skip.append(t.word in stop_words)
 
     # Find matching phrases.
     self.phrases = []
