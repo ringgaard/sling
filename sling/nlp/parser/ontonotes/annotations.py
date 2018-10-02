@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2018 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License")
@@ -18,6 +19,21 @@
 
 import re
 import sling
+
+# Special tokens that need conversion.
+special_tokens = {
+  '-LRB-': '(',
+  '-RRB-': ')',
+  '-LSB-': '[',
+  '-RSB-': ']',
+  '-LCB-': '{',
+  '-RCB-': '}',
+  '--': '—',
+  '``': '“',
+  "''": '”',
+  '...': '…',
+}
+
 
 # Represents a span/token/constituent.
 class Span:
@@ -250,7 +266,7 @@ class Annotations:
     token.brk = token_break
 
     # fields[3] = token text, fields[4] = POS.
-    token.text = fields[3]
+    token.text = special_tokens.get(fields[3], fields[3])
     token.label = fields[4]
 
     # fields[5] = constituency bit.
@@ -363,7 +379,7 @@ class Annotations:
     else:
       self.sentence += 1
 
-  
+
   # Called at the end of the document. Writes the annotations to a SLING
   # document and invokes 'callback' with it.
   def _end_document(self, callback=None):
@@ -397,7 +413,7 @@ class Annotations:
       self.write(document)
       callback(document)
 
-  
+
   # Saves the current sentence's SRL annotations.
   def _save_srl_annotations(self):
     # SRL spans should be complete.
@@ -405,7 +421,7 @@ class Annotations:
       assert stack.all_ended()
     self.srl.extend(self.current_srl)
     self.current_srl = []
- 
+
 
   # Complete the children constituents array by inserting tokens:
   # - When there are holes in the token range of the parent.
@@ -433,7 +449,7 @@ class Annotations:
   # (S(VP*  : S and VP spans begin here.
   # (NP*))) : NP span begins and ends here, 2 other spans end here.
   # *))))   : 4 spans end here.
-  # 
+  #
   # Beginning and ending spans are assumed to be separated by '*'.
   def _parse_constituents(self, parse_bit):
     if parse_bit == '' or parse_bit == '*' or parse_bit == '-':
@@ -496,7 +512,7 @@ class Annotations:
         if example: e = self._context(begin, end, window=0)
         histogram.increment(key, example=e)
         begin += 1
- 
+
     # Set new span boundaries.
     span.begin = begin
     span.end = end
@@ -527,7 +543,7 @@ class Annotations:
             norm_summary.predicates.increment()
           else:
             norm_summary.arguments.increment()
-    
+
     # Normalize Coref spans.
     for span in self.coref.spans:
       if self._normalize_span(span, constituents, key="Coref", example=False):
@@ -581,7 +597,7 @@ class Annotations:
             span.begin = match.begin
             span.end = match.end
             norm_summary.head.increment("COREF -> " + heads[lowest.head][1])
-           
+
     # Coref spans in the same cluster can be nested, e.g. [this [itself]].
     # After normalization, they can create duplicates, e.g. [[itself]].
     # Remove those now.
@@ -613,7 +629,7 @@ class Annotations:
             key = key.lower()
             self.summary.normalization.particles.increment(key)
 
- 
+
   # Summarizes CONLL annotation statistics for the current document.
   def _summarize_input(self):
     input_stats = self.summary.input
@@ -775,12 +791,12 @@ class Annotations:
   def _phrase(self, begin, end=None):
     return self._context(begin, end, window=0)
 
-  
+
   # Stores a particular frame type to be evoked for a span.
   class FrameType:
     def __init__(self, span, type, refer=None):
       self.span = (span.begin, span.end)   # span itself
-      self.type = type                     # frame type          
+      self.type = type                     # frame type
       self.refer = refer                   # referring frame, only for coref
       self.frame = None                    # if already evoked, the frame
 
@@ -855,7 +871,7 @@ class Annotations:
     # Span -> list of FrameType objects.
     frame_types = {}
 
-    # Adds 'type' as to the list of frame types for 'span'. 
+    # Adds 'type' as to the list of frame types for 'span'.
     def _add_type(span, type, refer=None):
       key = (span.begin, span.end)
       if key not in frame_types:
@@ -904,7 +920,7 @@ class Annotations:
           head = span
           head_type = frame_types[key][0]
           break
-      
+
       # Fallback to the first span, and use a generic type.
       if head is None:
         head = cluster[0]
