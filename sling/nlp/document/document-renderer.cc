@@ -35,7 +35,7 @@ using namespace sling::nlp;
 // Stylesheet for frame renderer.
 const char *kStyleSheet = R"(
 .panel {
-  margin: 0px 0px 10px 10px;
+  margin: 0px 5px 10px 5px;
   padding: 5px;
   box-shadow: 1px 1px 1px 0px #808080;
   background: white;
@@ -105,7 +105,7 @@ const char *kStyleSheet = R"(
   position: absolute;
   left: -5px;
   top: 0;
-  border: 1px solid black;
+  border: 1px solid #e0e0e0;
   border-right: 0px;
   width: 5px;
   height: 100%;
@@ -116,7 +116,7 @@ const char *kStyleSheet = R"(
   position: absolute;
   right: -5px;
   top: 0;
-  border: 1px solid black;
+  border: 1px solid #e0e0e0;
   border-left: 0px;
   width: 5px;
   height: 100%;
@@ -127,13 +127,6 @@ const char *kStyleSheet = R"(
   font-size: 10pt;
   text-align: left;
   white-space:nowrap;
-}
-
-.tfs td:last-child {
-  font-family: arial;
-  font-size: 10pt;
-  text-align: left;
-  width:100%;
 }
 
 .tfs th {
@@ -149,7 +142,6 @@ const char *kStyleSheet = R"(
   font-weight:bold;
   font-style:italic;
   color: #909090;
-  width:100%;
 }
 
 .tfs-collapsed:after {
@@ -784,7 +776,7 @@ class DocumentRenderer {
   void Render() {
     // Render header.
     h("<!doctype html>\n");
-    h("<html>\n");
+    h("<html style=\"height: 100%; width: 100%;\">\n");
     h("<head>\n");
     h("<meta charset=\"utf-8\">\n");
     h("<title>Document</title>\n");
@@ -795,13 +787,13 @@ class DocumentRenderer {
     h(kFunctions);
     h("</script>\n");
     h("</head>\n");
-    h("<body>\n");
+    h("<body style=\"height: 100%; width: 100%; margin: 0px;\">\n");
 
     // Create layout with document text to the left and frames to the right.
-    h("<table cellspacing=15px style=\"margin: 10 10px 10px 10px; background: #eeeeee;\">\n");
-    h("<tr id=themes colspan=2>\n");
-    h("</tr>\n");
-    h("<tr>\n");
+    h("<div id=themes style=\"display: flex; background: #eeeeee;\">");
+    h("</div>\n");
+
+    h("<div style=\"display: flex; height: 100%; background: #eeeeee;\">\n");
 
     // Build list of spans in nesting order.
     std::vector<Span *> spans;
@@ -823,7 +815,7 @@ class DocumentRenderer {
     BuildFrameList();
 
     // Render document text.
-    h("<td id=text valign=top width=500 style=\"background: white; border: 2px solid #cccccc; font: 13pt lora, georgia, serif; padding: 10px;\">\n");
+    h("<div id=text style=\"flex:1; overflow-x:auto; margin: 10px 5px 10px 10px; background: white; border: 2px solid #cccccc; font: 13pt lora, georgia, serif; padding: 10px;\">\n");
     std::vector<Span *> nesting;
     int next = 0;
     for (int index = 0; index < document_.num_tokens(); ++index) {
@@ -862,11 +854,12 @@ class DocumentRenderer {
         nesting.pop_back();
       }
     }
-    h("</td>\n");
+    h("</div>\n");
 
-    h("<td id=panels valign=top>\n");
-    h("</td>\n");
-    h("</table>\n");
+    h("<div id=panels valign=top style=\"flex:1; overflow-x:auto; margin: 10px 10px 10px 5px;\">\n");
+    h("</div>\n");
+
+    h("</div>\n");
 
     // Output frame list.
     h("<script>\n");
@@ -888,7 +881,7 @@ class DocumentRenderer {
     } else if (brk >= PARAGRAPH_BREAK) {
       h("\n<p>");
     } else if (brk >= SENTENCE_BREAK) {
-      h("&ensp;");
+      h("&ensp;\n");
     } else if (brk >= SPACE_BREAK) {
       h(" ");
     }
