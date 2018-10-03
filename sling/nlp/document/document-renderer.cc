@@ -32,7 +32,7 @@ DEFINE_string(html, "/tmp/test.html", "HTML output");
 using namespace sling;
 using namespace sling::nlp;
 
-// Stylesheet for frame renderer.
+// Style sheet for frame renderer.
 const char *kStyleSheet = R"(
 .panel {
   margin: 0px 5px 10px 5px;
