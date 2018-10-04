@@ -80,7 +80,8 @@ class DocumentService {
       // Add the mention frame.
       if (mapping.Add(mention.handle())) {
         queue.push_back(mention.handle());
-        mentions.push_back(mention.handle());
+        int idx = mapping.Lookup(mention.handle());
+        mentions.push_back(Handle::Integer(idx));
       }
 
       // Add all evoked frames.
@@ -102,7 +103,8 @@ class DocumentService {
       if (mapping.Add(h)) {
         queue.push_back(h);
       }
-      themes.push_back(h);
+      int idx = mapping.Lookup(h);
+      themes.push_back(Handle::Integer(idx));
     }
 
     // Process queue.
@@ -113,13 +115,11 @@ class DocumentService {
       for (const Slot &slot : frame) {
         if (store->IsFrame(slot.name)) {
           if (mapping.Add(slot.name)) {
-            // Only add local frames to queue.
             if (slot.name.IsLocalRef()) queue.push_back(slot.name);
           }
         }
         if (store->IsFrame(slot.value)) {
           if (mapping.Add(slot.value)) {
-            // Only add local frames to queue.
             if (slot.value.IsLocalRef()) queue.push_back(slot.value);
           }
         }
@@ -134,7 +134,7 @@ class DocumentService {
     // Output frame list.
     Handles frames(store);
     Handles types(store);
-    Handles roles(store);
+    Handles slots(store);
     String idstr(store, "id");
     for (Handle handle : mapping.frames) {
       // Collect id, name, description, types, and other roles for frame.
@@ -143,13 +143,14 @@ class DocumentService {
       Handle name = Handle::nil();
       Handle description = Handle::nil();
       types.clear();
-      roles.clear();
+      slots.clear();
       if (store->IsFrame(handle)) {
         Frame frame(store, handle);
+        bool global = frame.IsGlobal();
         for (const Slot &slot : frame) {
-          if (slot.name == Handle::id() && store->IsSymbol(slot.value)) {
+          if (slot.name == Handle::id()) {
             if (id.IsNil()) id = slot.value;
-          } else if (slot.name == n_name_ && store->IsString(slot.value)) {
+          } else if (slot.name == n_name_) {
             if (name.IsNil()) name = slot.value;
           } else if (slot.name == n_description_ &&
                      store->IsString(slot.value)) {
@@ -166,9 +167,9 @@ class DocumentService {
                 if (type.GetBool(n_simple_)) simple = true;
               }
             }
-          } else {
-            roles.push_back(mapping.Convert(slot.name));
-            roles.push_back(mapping.Convert(slot.value));
+          } else if (!global) {
+            slots.push_back(mapping.Convert(slot.name));
+            slots.push_back(mapping.Convert(slot.value));
           }
         }
       } else if (store->IsSymbol(handle)) {
@@ -180,10 +181,15 @@ class DocumentService {
       fb.Add(idstr, id);
       fb.Add(n_name_, name);
       fb.Add(n_description_, description);
+      fb.Add(n_types_, types);
+      fb.Add(n_slots_, slots);
+      fb.Add(n_mentions_, Handle::nil());
       if (simple) fb.Add(n_simple_, true);
       frames.push_back(fb.Create().handle());
     }
     b.Add(n_frames_, frames);
+    b.Add(n_mentions_, mentions);
+    b.Add(n_themes_, themes);
 
     // Return response.
     ws.set_output(b.Create());
@@ -237,8 +243,8 @@ class DocumentService {
         if (!literal.IsNil()) return literal;
       }
 
-      // Output strings literally.
-      if (store->IsString(value)) return value;
+      // Output strings and symbols literally.
+      if (store->IsString(value) || store->IsSymbol(value)) return value;
 
       // Otherwise output SLING text encoding.
       return store->AllocateString(ToText(store, value));
@@ -267,6 +273,8 @@ class DocumentService {
   Name n_text_{names_, "text"};
   Name n_tokens_{names_, "tokens"};
   Name n_frames_{names_, "frames"};
+  Name n_types_{names_, "types"};
+  Name n_slots_{names_, "slots"};
   Name n_mentions_{names_, "mentions"};
   Name n_themes_{names_, "themes"};
   Name n_evokes_{names_, "evokes"};
