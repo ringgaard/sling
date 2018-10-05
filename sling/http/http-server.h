@@ -253,16 +253,6 @@ class HTTPConnection {
   HTTPConnection(HTTPServer *server, int sock);
   ~HTTPConnection();
 
-  // Check if the connection awaits input.
-  bool AwaitsInput() const {
-    return state_ >= HTTP_STATE_IDLE && state_ <= HTTP_STATE_READ_BODY;
-  }
-
-  // Check if the connection has output.
-  bool HasOutput() const {
-    return state_ >= HTTP_STATE_WRITE_HEADER && state_ <= HTTP_STATE_WRITE_FILE;
-  }
-
   // Process I/O for connection.
   Status Process();
 
