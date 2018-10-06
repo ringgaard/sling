@@ -11,7 +11,8 @@ embed_data(
     "external/material-icons.css",
     "external/material-icons.woff2",
     "external/preact.js",
-    "external/preact-mdl.js",
+    "lib/mdl.js",
     "lib/sling.js",
   ],
 )
+

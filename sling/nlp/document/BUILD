@@ -168,6 +168,7 @@ embed_data(
   srcs = [
     "app/index.html",
     "app/doc.js",
+    "app/doc.css",
   ],
 )
 

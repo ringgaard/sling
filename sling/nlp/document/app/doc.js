@@ -1,5 +1,16 @@
-import {Component, h, render} from '/common/external/preact.js';
-import {Layout, Button, Icon, Card, Menu, TextField, Grid} from '/common/external/preact-mdl.js';
+import {Component, h, render} from "/common/external/preact.js";
+import {Layout, TextField, Grid, Card} from "/common/lib/mdl.js";
+
+class Document {
+  constructor(data) {
+    this.data = data;
+    this.text = data.text
+    this.tokens = data.tokens
+    this.frames = data.frames
+    this.mentions = data.mentions
+    this.themes = data.themes
+  }
+}
 
 class App extends Component {
   constructor(props) {
@@ -9,27 +20,28 @@ class App extends Component {
 
   search(e) {
     var docid = e.target.value
-    var url = "/fetch?docid=" + docid + "&fmt=cjson";
-    var self = this;
-    fetch(url)
-      .then(response => {
-        if (response.ok) {
-          return response.json();
-        } else {
-          console.log("fetch error", response.status, response.message);
-          return null;
-        }
-      })
-      .then(response => {
-        self.setState({document: response});
-      });
+    if (docid) {
+      var url = "/fetch?docid=" + docid + "&fmt=cjson";
+      var self = this;
+      fetch(url)
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          } else {
+            console.log("fetch error", response.status, response.message);
+            return null;
+          }
+        })
+        .then(response => {
+          self.setState({document: new Document(response)});
+        });
+    }
   }
 
   render(props, state) {
-    console.log("render app", state);
     return (
-      h('div', {id: 'app'},
-        h(Layout, {"fixed-header": true},
+      h("div", {id: "app"},
+        h(Layout, null,
           h(Layout.Header, null,
             h(Layout.HeaderRow, null,
               h(Layout.Title, null, "Corpus browser"),
@@ -40,40 +52,12 @@ class App extends Component {
                 type: "search",
                 onsearch: e => this.search(e),
                 style: "background-color:#FFF; color:#000; padding:10px;"}),
-              h(Button, {id: "header-menu", icon: true},
-                h(Icon, {icon: "more_vert"})
-              )
             ),
-            h(Menu, {"for": "header-menu", "bottom-right": true})
           ),
-          h(Layout.Drawer),
-          h(Main, {document: state.document})
-        )
-      )
-    );
-  }
-}
-
-class Main extends Component {
-  render(props, state) {
-    var doc = props.document;
-    var docstr = JSON.stringify(doc);
-    console.log("main document", docstr);
-    return (
-      h(Layout.Content, {id: "main", doc: doc},
-        h(Grid, {doc: doc},
-          h(Card, {"class": "card"},
-            h("form", null,
-              h(TextField, {multiline: true}, "Enter text to analyze...")
-            )
-          ),
-          h(Card, {"class": "card", doc: doc},
-            h(Card.Title, null,
-              h(Card.TitleText, null, "Analysis")
-            ),
-            h(Card.Text, {doc: doc},
-              h("pre", null, "DOC:", docstr),
-            ),
+          h(Layout.Drawer, null, h(Layout.Title, null, "Menu")),
+          h(Layout.DrawerButton),
+          h(Layout.Content, {id: "main"},
+            h(Main, {document: state.document})
           )
         )
       )
@@ -81,4 +65,22 @@ class Main extends Component {
   }
 }
 
+class Main extends Component {
+  render(props) {
+    return (
+      h(Grid, null,
+        h(Card, {"class": "card"},
+          h(Card.Title, null,
+            h(Card.TitleText, null, "Analysis")
+          ),
+          h(Card.Text, null,
+            h("pre", null, "DOC:", JSON.stringify(props.document, null, "  ")),
+          ),
+        )
+      )
+    );
+  }
+}
+
 render(h(App), document.body);
+
