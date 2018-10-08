@@ -64,7 +64,7 @@ class DocumentService {
 
     // Builds client-side frame list.
     FrameMapping mapping(store);
-    Handles mentions(store);
+    Handles spans(store);
     Handles themes(store);
     mapping.Add(Handle::isa());
     mapping.Add(Handle::is());
@@ -81,7 +81,11 @@ class DocumentService {
       if (mapping.Add(mention.handle())) {
         queue.push_back(mention.handle());
         int idx = mapping.Lookup(mention.handle());
-        mentions.push_back(Handle::Integer(idx));
+        Builder mb(store);
+        mb.Add(n_begin_, Handle::Integer(span->begin()));
+        mb.Add(n_end_, Handle::Integer(span->end()));
+        mb.Add(n_frame_, Handle::Integer(idx));
+        spans.push_back(mb.Create().handle());
       }
 
       // Add all evoked frames.
@@ -188,7 +192,7 @@ class DocumentService {
       frames.push_back(fb.Create().handle());
     }
     b.Add(n_frames_, frames);
-    b.Add(n_mentions_, mentions);
+    b.Add(n_spans_, spans);
     b.Add(n_themes_, themes);
 
     // Return response.
@@ -279,6 +283,10 @@ class DocumentService {
   Name n_themes_{names_, "themes"};
   Name n_evokes_{names_, "evokes"};
   Name n_simple_{names_, "simple"};
+  Name n_spans_{names_, "spans"};
+  Name n_begin_{names_, "begin"};
+  Name n_end_{names_, "end"};
+  Name n_frame_{names_, "frame"};
 
   // Mutex for accessing database.
   Mutex mu_;

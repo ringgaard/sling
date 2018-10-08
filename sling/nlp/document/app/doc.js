@@ -1,16 +1,6 @@
 import {Component, h, render} from "/common/external/preact.js";
-import {Layout, TextField, Grid, Card} from "/common/lib/mdl.js";
-
-class Document {
-  constructor(data) {
-    this.data = data;
-    this.text = data.text
-    this.tokens = data.tokens
-    this.frames = data.frames
-    this.mentions = data.mentions
-    this.themes = data.themes
-  }
-}
+import {Layout, TextField} from "/common/lib/mdl.js";
+import {Document, DocumentViewer} from "/common/lib/docview.js";
 
 class App extends Component {
   constructor(props) {
@@ -44,7 +34,7 @@ class App extends Component {
         h(Layout, null,
           h(Layout.Header, null,
             h(Layout.HeaderRow, null,
-              h(Layout.Title, null, "Corpus browser"),
+              h(Layout.Title, null, "Corpus Browser"),
               h(Layout.Spacer),
               h(TextField, {
                 id: "docid",
@@ -57,7 +47,7 @@ class App extends Component {
           h(Layout.Drawer, null, h(Layout.Title, null, "Menu")),
           h(Layout.DrawerButton),
           h(Layout.Content, {id: "main"},
-            h(Main, {document: state.document})
+            h(DocumentViewer, {document: state.document})
           )
         )
       )
@@ -65,22 +55,4 @@ class App extends Component {
   }
 }
 
-class Main extends Component {
-  render(props) {
-    return (
-      h(Grid, null,
-        h(Card, {"class": "card"},
-          h(Card.Title, null,
-            h(Card.TitleText, null, "Analysis")
-          ),
-          h(Card.Text, null,
-            h("pre", null, "DOC:", JSON.stringify(props.document, null, "  ")),
-          ),
-        )
-      )
-    );
-  }
-}
-
 render(h(App), document.body);
-
