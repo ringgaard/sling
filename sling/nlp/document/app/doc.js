@@ -1,6 +1,9 @@
 import {Component, h, render} from "/common/external/preact.js";
 import {Layout, TextField} from "/common/lib/mdl.js";
 import {Document, DocumentViewer} from "/common/lib/docview.js";
+import {stylesheet} from "/common/lib/util.js";
+
+stylesheet("/doc/doc.css");
 
 class App extends Component {
   constructor(props) {
@@ -41,11 +44,12 @@ class App extends Component {
                 placeholder: "Document ID",
                 type: "search",
                 onsearch: e => this.search(e),
-                style: "background-color:#FFF; color:#000; padding:10px;"}),
+              }),
             ),
           ),
           h(Layout.Drawer, null, h(Layout.Title, null, "Menu")),
           h(Layout.DrawerButton),
+
           h(Layout.Content, {id: "main"},
             h(DocumentViewer, {document: state.document})
           )

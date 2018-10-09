@@ -1,5 +1,8 @@
 import {Component, h} from "/common/external/preact.js";
 import {Grid, Card} from "/common/lib/mdl.js";
+import {stylesheet} from "/common/lib/util.js";
+
+stylesheet("/common/style/docview.css");
 
 let kb_url = '/kb?id=';
 
@@ -16,6 +19,9 @@ let notchgif = 'data:image/gif;base64,R0lGODlhDAAWAJEAAP/68NK8jv///' +
                'wAAACH5BAUUAAIALAAAAAAMABYAAAIrlI8SmQF83INyNoBtzPhy' +
                'XXHb1ylkZp5dSBqs6KrIq6Xw/FG3V+M9DpkVAAA7';
 
+let next_panel = 1;
+let next_docno = 1;
+
 // Token break types.
 const NO_BREAK = 0;
 const SPACE_BREAK = 1;
@@ -29,6 +35,7 @@ const CHAPTER_BREAK = 6;
 export class Document {
   constructor(data) {
     this.data = data;
+    this.docno = next_docno++;
     this.text = data.text
     this.tokens = data.tokens
     this.frames = data.frames
@@ -39,7 +46,6 @@ export class Document {
 
   SortSpans() {
     // Sort spans in nesting order.
-    console.log("before sort", this.spans);
     this.spans.sort((a, b) => {
       if (a.begin != b.begin) {
         return a.begin - b.begin;
@@ -47,7 +53,6 @@ export class Document {
         return a.end - b.end;
       }
     });
-    console.log("after sort", this.spans);
   }
 
   Word(index) {
@@ -81,9 +86,15 @@ export class DocumentViewer extends Component {
     this.active_callout = null;
     this.highlighted = null;
     this.labeled = null;
-    this.next_panel = 1;
   }
 
+  docno() {
+    if (this.document) {
+      return this.document.docno;
+    } else {
+      return 0;
+    }
+  }
   render(props) {
     // Get document for rendering.
     this.document = props.document;
@@ -148,7 +159,7 @@ export class DocumentViewer extends Component {
         let text = doc.Phrase(span.begin, span.end);
         if (depth > 3) depth = 3;
         let attrs = {
-          id: "s" + fidx,
+          id: "s" + this.docno() + "-" + fidx,
           frame: fidx,
           "class": "b" + depth,
           phrase: text
@@ -159,12 +170,15 @@ export class DocumentViewer extends Component {
 
     // Render document viewer with text to the left, panels to the right,
     // and themes above.
+    let key = "doc-" + this.docno();
     return (
-      h(Grid, {"class": "docviewer", document: document},
-        h("div", {id: "themes", "class": "themes"}),
+      h(Grid, {"class": "docviewer", key},
+        h("div", {id: "themes" + this.docno(), "class": "themes"}),
         h("div", {"class": "text-and-panels"}),
-          h("div", {id: "text",  "class": "doctext"}, elements),
-          h("div", {id: "panels", "class": "docpanels"})
+          h("div", {id: "text" + this.docno(),  "class": "doctext", key},
+            elements
+          ),
+          h("div", {id: "panels" + this.docno(), "class": "docpanels"})
       )
     );
   }
@@ -178,18 +192,13 @@ export class DocumentViewer extends Component {
   }
 
   Initialize() {
-    // Clear panels.
-    let panels = document.getElementById('panels');
-    if (panels) {
-      while (panels.lastChild) panels.removeChild(panels.lastChild);
-    }
-
     // Bail out if there is no document.
     if (!this.document) return;
 
+    let docno = this.document.docno;
     for (let i = 0; i < this.document.spans.length; ++i) {
       let fidx = this.document.spans[i].frame;
-      let span = document.getElementById('s' + fidx);
+      let span = document.getElementById('s' + docno + "-" + fidx);
 
       // Bind event handlers for spans.
       span.addEventListener('click', this.OpenPanel.bind(this), false);
@@ -236,7 +245,7 @@ export class DocumentViewer extends Component {
     let name;
     if (typeof f == "number") {
       let frame = this.document.frames[f];
-      let name = frame.name;
+      name = frame.name;
       if (!name) name = frame.id;
       if (!name) name = '#' + f;
     } else {
@@ -257,8 +266,42 @@ export class DocumentViewer extends Component {
     return box;
   }
 
+  AddTypes(elem, types) {
+    if (!types) return;
+    for (let t = 0; t < types.length; ++t) {
+      let type = types[t];
+      let label = document.createElement("span");
+      label.className = "type-label";
+
+      let color = null;
+      let typename = null;
+      if (typeof type == "number") {
+        let schema = this.document.frames[type];
+        typename = schema.name;
+        if (typename) {
+          let hover = this.HoverText(schema);
+          if (hover.length > 0) {
+            label.setAttribute("tooltip", hover);
+          }
+        } else {
+          typename = schema.id;
+        }
+        color = this.TypeColor(schema.id);
+        if (!typename) typename = '(' + t + ')';
+      } else {
+        typename = type;
+        color = this.TypeColor(type);
+      }
+
+      if (color) label.style.backgroundColor = color;
+      label.appendChild(document.createTextNode(typename));
+      elem.appendChild(document.createTextNode(" "));
+      elem.appendChild(label);
+    }
+  }
+
   BuildAVM(fidx, rendered) {
-    let frame = this.document.frames[fidx]
+    let frame = this.document.frames[fidx];
     rendered[fidx] = true;
 
     let tbl = document.createElement("table");
@@ -278,7 +321,7 @@ export class DocumentViewer extends Component {
         if (frame.id) {
           if (frame.id.startsWith('Q') || frame.id.startsWith('P')) {
             let a = document.createElement("a");
-            a.href = profile_url + frame.id;
+            a.href = kb_url + frame.id;
             a.appendChild(name);
             name = a
           } else {
@@ -286,41 +329,12 @@ export class DocumentViewer extends Component {
             s.appendChild(name);
             name = s;
           }
-          name.setAttribute("title", frame.id);
+          name.setAttribute("tooltip", frame.id);
         }
         title.appendChild(name);
       }
 
-      for (let t = 0; t < frame.types.length; ++t) {
-        let type = frame.types[t];
-        let label = document.createElement("span");
-        label.className = "type-label";
-
-        let color = null;
-        let typename = null;
-        if (typeof type == "number") {
-          let schema = this.document.frames[type];
-          let typename = schema.name;
-          if (typename) {
-            let hover = this.HoverText(schema);
-            if (hover.length > 0) {
-              label.setAttribute("title", hover);
-            }
-          } else {
-            typename = schema.id;
-          }
-          color = this.TypeColor(schema.id);
-          if (!typename) typename = '(' + t + ')';
-        } else {
-          typename = type;
-          color = this.TypeColor(type);
-        }
-
-        if (color) label.style.backgroundColor = color;
-        label.appendChild(document.createTextNode(typename));
-        title.appendChild(document.createTextNode(" "));
-        title.appendChild(label);
-      }
+      this.AddTypes(title, frame.types);
     }
 
     let slots = frame.slots;
@@ -330,29 +344,32 @@ export class DocumentViewer extends Component {
         let v = slots[i + 1];
 
         let row = document.createElement("tr");
-
         let label = document.createElement("td");
+        let box = document.createElement("td");
+        let val = document.createElement("td");
+
         let link = false;
         if (typeof n == "number") {
+          let span = document.createElement("span");
           let f = this.document.frames[n];
           let role = f.name;
           if (role) {
             let hover = this.HoverText(f);
             if (hover.length > 0) {
-              label.setAttribute("title", hover);
+              span.setAttribute("tooltip", hover);
             }
           } else {
             role = this.document.frames[n].id;
           }
           if (!role) role = '(' + n + ')';
           if (role == 'MID' || role == '/s/profile/mid') link = true;
-          label.appendChild(document.createTextNode(role + ':'));
+
+          span.appendChild(document.createTextNode(role + ':'));
+          label.appendChild(span);
         } else {
           label.appendChild(document.createTextNode(n + ':'));
         }
 
-        let box = document.createElement("td");
-        let val = document.createElement("td");
         if (typeof v == "number") {
           let simple = this.document.frames[v].simple == 1;
           box.appendChild(this.BuildBox(v, simple));
@@ -396,9 +413,10 @@ export class DocumentViewer extends Component {
   }
 
   BuildPanel(phrase, fidx) {
+    let mention = this.document.frames[fidx];
     let panel = document.createElement("div");
     panel.className = "panel";
-    panel.id = "p" + this.next_panel++;
+    panel.id = "p" + next_panel++;
 
     let titlebar = document.createElement("div");
     titlebar.className = "panel-titlebar";
@@ -408,6 +426,7 @@ export class DocumentViewer extends Component {
     title.className = "panel-title";
     title.appendChild(document.createTextNode(phrase));
     titlebar.appendChild(title);
+    this.AddTypes(titlebar, mention.types);
 
     let icon = document.createElement("span");
     icon.className = "panel-icon";
@@ -419,16 +438,25 @@ export class DocumentViewer extends Component {
     let contents = document.createElement("div");
     contents.className = "panel-content"
 
-    let avm = this.BuildAVM(fidx, {});
-    contents.appendChild(avm);
-    panel.appendChild(contents);
+    let slots = mention.slots;
+    if (slots) {
+      for (let i = 0; i < slots.length; i += 2) {
+        let n = slots[i];
+        let v = slots[i + 1];
+        if (this.document.frames[n].id == "evokes") {
+          let avm = this.BuildAVM(v, {});
+          contents.appendChild(avm);
+        }
+      }
+    }
 
+    panel.appendChild(contents);
     return panel;
   }
 
   AddPanel(phrase, fidx) {
     let panel = this.BuildPanel(phrase, fidx);
-    document.getElementById("panels").appendChild(panel);
+    document.getElementById("panels" + this.docno()).appendChild(panel);
   }
 
   OpenPanel(e) {
@@ -442,7 +470,7 @@ export class DocumentViewer extends Component {
   ClosePanel(e) {
     let pid = e.currentTarget.getAttribute("panel");
     let panel =  document.getElementById(pid);
-    document.getElementById("panels").removeChild(panel);
+    document.getElementById("panels" + this.docno()).removeChild(panel);
   }
 
   BuildChip(fidx) {
@@ -459,7 +487,7 @@ export class DocumentViewer extends Component {
 
   AddChip(fidx) {
     let chip = this.BuildChip(fidx);
-    document.getElementById("themes").appendChild(chip);
+    document.getElementById("themes" + this.docno()).appendChild(chip);
     chip.addEventListener('click', this.OpenPanel.bind(this), false);
     chip.addEventListener('mouseenter', this.EnterChip.bind(this), false);
     chip.addEventListener('mouseleave', this.LeaveChip.bind(this), false);
@@ -479,8 +507,18 @@ export class DocumentViewer extends Component {
     callout.style.top = ((bbox.top + bbox.bottom) / 2 - 30)  + "px";
 
     let fidx = parseInt(span.getAttribute("frame"))
-    let avm = this.BuildAVM(fidx, {});
-    callout.appendChild(avm)
+    let mention = this.document.frames[fidx];
+    let slots = mention.slots;
+    if (slots) {
+      for (let i = 0; i < slots.length; i += 2) {
+        let n = slots[i];
+        let v = slots[i + 1];
+        if (this.document.frames[n].id == "evokes") {
+          let avm = this.BuildAVM(v, {});
+          callout.appendChild(avm);
+        }
+      }
+    }
 
     span.appendChild(callout);
     return span;
@@ -549,7 +587,7 @@ export class DocumentViewer extends Component {
 
   HighlightMentions(mentions) {
     for (let idx of mentions) {
-      let span = document.getElementById('s' + idx);
+      let span = document.getElementById('s' + this.docno() + '-' + idx);
       span.style.backgroundColor = '#FFFFFF';
       span.style.borderColor = '#FFFFFF';
       span.style.boxShadow = '2px 2px 9px 1px rgba(0,0,0,0.5)';
@@ -588,7 +626,7 @@ export class DocumentViewer extends Component {
         let role = this.FrameName(n);
         let mentions = this.Mentions(new Set([v]));
         for (let idx of mentions) {
-          let span = document.getElementById('s' + idx);
+          let span = document.getElementById('s' + this.docno() + '-' + idx);
           let label = document.createElement("span");
           label.className = "label";
           label.appendChild(document.createTextNode(role + ':'));

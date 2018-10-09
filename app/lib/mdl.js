@@ -1,8 +1,12 @@
 // Material Design components for Preact.
 // Based on preact-mdl (see https://github.com/developit/preact-mdl/)
 
-import { h, Component } from "/common/external/preact.js";
+import {h, Component} from "/common/external/preact.js";
+import {stylesheet} from "/common/lib/util.js";
 import "/common/external/material.js";
+
+stylesheet("/common/external/material-icons.css");
+stylesheet("/common/external/material.css");
 
 // Extend base with properties.
 function extend(base, props) {
@@ -44,9 +48,7 @@ export class MaterialComponent extends Component {
     if (js) c.push(this.component.replace("mdl-", "mdl-js-"));
     if (r.attributes.class) c.push(r.attributes.class);
     r.attributes.class = c.join(" ");
-
     if (this.nodeName) r.nodeName = this.nodeName;
-    if (this.mdlClasses) r.class = this.mdlClasses;
     if (this.container) r = h("div", {"class": this.container}, r);
     return r;
   }
@@ -64,10 +66,18 @@ export class MaterialComponent extends Component {
   }
 }
 
-// Icon components.
+// Icon component.
 export class Icon extends Component {
   render(props) {
     return h("i", {"class": "material-icons"}, props.icon);
+  }
+}
+
+// Tool tip component.
+export class Tooltip extends MaterialComponent {
+  constructor() {
+    super();
+    this.component = 'mdl-tooltip';
   }
 }
 
@@ -101,6 +111,7 @@ export class Layout extends MaterialComponent {
     this.component = "mdl-layout";
     this.js = true;
     this.container = "mdl-layout__container";
+    this.mdlClasses = ["mdl-layout--fixed-header"];
   }
 }
 

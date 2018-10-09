@@ -16,8 +16,8 @@
 }
 
 .doctext {
-  flex:1;
-  overflow-x:auto;
+  flex: 1;
+  overflow-x: auto;
   margin: 10px 5px 10px 10px;
   background: white;
   border: 2px solid #cccccc;
@@ -26,8 +26,8 @@
 }
 
 .docpanels {
-  flex:1;
-  overflow-x:auto;
+  flex: 1;
+  overflow-x: auto;
   margin: 10px 10px 10px 5px;
 }
 
@@ -42,7 +42,6 @@
   text-align: left;
   font:  bold 11pt arial;
   padding: 3px;
-  cursor: move;
 }
 
 .panel-title {
@@ -81,12 +80,14 @@
   color: white;
   vertical-align: baseline;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .boxed {
   border: 1px solid black;
   text-align: center;
   font-size: 7pt;
+  line-height: 1;
   padding: 1px 1px 1px 1px;
   margin-right: 5px;
   cursor: pointer;
@@ -216,3 +217,17 @@
   top: 20px;
   left: -12px;
 }
+
+span[tooltip]:hover:before {
+  content: attr(tooltip);
+  font:  11pt arial;
+  position: absolute;
+  color: #fff;
+  padding: 8px;
+  border-radius: 5px;
+  z-index: 1;
+  margin-top: 25px;
+  background: #666;
+  white-space: pre-wrap;
+}
+
