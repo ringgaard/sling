@@ -1,5 +1,5 @@
 import {Component, h} from "/common/external/preact.js";
-import {Grid, Card} from "/common/lib/mdl.js";
+import {Grid} from "/common/lib/mdl.js";
 import {stylesheet} from "/common/lib/util.js";
 
 stylesheet("/common/style/docview.css");
@@ -149,7 +149,7 @@ export class DocumentViewer extends Component {
 
       // Pop spans that end on this token.
       while (nesting.length > 0 &&
-            nesting[nesting.length - 1].end == index + 1) {
+             nesting[nesting.length - 1].end == index + 1) {
         let depth = nesting.length;
         let span = nesting.pop();
         let subelements = elements.slice(span.mark);
