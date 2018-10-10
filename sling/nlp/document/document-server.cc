@@ -27,6 +27,7 @@ DEFINE_int32(port, 8080, "HTTP server port");
 DEFINE_string(commons, "", "Commons store");
 
 using namespace sling;
+using namespace sling::nlp;
 
 class DocumentService {
  public:
@@ -38,31 +39,15 @@ class DocumentService {
   // Register service.
   void Register(HTTPServer *http) {
     http->Register("/fetch", this, &DocumentService::HandleFetch);
+    http->Register("/next", this, &DocumentService::HandleNext);
     app_content_.Register(http);
     common_content_.Register(http);
   }
 
-  void HandleFetch(HTTPRequest *request, HTTPResponse *response) {
-    WebService ws(commons_, request, response);
-    Text docid = ws.Get("docid");
-    if (docid.empty()) {
-      response->SendError(400, nullptr, "docid missing");
-      return;
-    }
-    LOG(INFO) << "docid: " << docid;
-
-    // Fetch document from database.
-    Record record;
-    if (!FetchRecord(docid, &record)) {
-      response->SendError(400, nullptr, "unknown document");
-      return;
-    }
-
-    Store *store = ws.store();
-    Frame top = Decode(store, record.value).AsFrame();
-    nlp::Document document(top);
-
+  // Convert document to JSON format.
+  Frame Convert(const Document &document) {
     // Builds client-side frame list.
+    Store *store = document.store();
     FrameMapping mapping(store);
     Handles spans(store);
     Handles themes(store);
@@ -73,7 +58,7 @@ class DocumentService {
     // Add all evoked frames.
     Handles queue(store);
     for (int i = 0; i < document.num_spans(); ++i) {
-      nlp::Span *span = document.span(i);
+      Span *span = document.span(i);
       if (span->deleted()) continue;
       const Frame &mention = span->mention();
 
@@ -131,9 +116,9 @@ class DocumentService {
     }
 
     // Set document text and tokens.
-    Builder b(ws.store());
+    Builder b(store);
     b.Add(n_text_, document.text());
-    b.Add(n_tokens_, top.GetHandle(n_tokens_));
+    b.Add(n_tokens_, document.top().GetHandle(n_tokens_));
 
     // Output frame list.
     Handles frames(store);
@@ -195,13 +180,64 @@ class DocumentService {
     b.Add(n_spans_, spans);
     b.Add(n_themes_, themes);
 
-    // Return response.
-    ws.set_output(b.Create());
+    // Return JSON-encoded document.
+    return b.Create();
+  }
+
+  void HandleFetch(HTTPRequest *request, HTTPResponse *response) {
+    WebService ws(commons_, request, response);
+    Text docid = ws.Get("docid");
+    if (docid.empty()) {
+      response->SendError(400, nullptr, "docid missing");
+      return;
+    }
+    LOG(INFO) << "docid: " << docid;
+
+    // Fetch document from database.
+    Record record;
+    if (!FetchRecord(docid, &record)) {
+      response->SendError(400, nullptr, "unknown document");
+      return;
+    }
+
+    // Convert document to JSON.
+    Store *store = ws.store();
+    Frame top = Decode(store, record.value).AsFrame();
+    Document document(top);
+
+    // Return document in JSON format.
+    Frame json = Convert(document);
+    ws.set_output(json);
+  }
+
+  void HandleNext(HTTPRequest *request, HTTPResponse *response) {
+    WebService ws(commons_, request, response);
+
+    // Fetch next document from database.
+    Record record;
+    if (!FetchNext(&record)) {
+      response->SendError(400, nullptr, "no more documents");
+      return;
+    }
+
+    // Convert document to JSON.
+    Store *store = ws.store();
+    Frame top = Decode(store, record.value).AsFrame();
+    Document document(top);
+
+    // Return document in JSON format.
+    Frame json = Convert(document);
+    ws.set_output(json);
   }
 
   bool FetchRecord(Text key, Record *record) {
     MutexLock lock(&mu_);
     return db_->Lookup(key.slice(), record);
+  }
+
+  bool FetchNext(Record *record) {
+    MutexLock lock(&mu_);
+    return db_->Next(record);
   }
 
  private:

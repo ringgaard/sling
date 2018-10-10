@@ -1,5 +1,5 @@
 import {Component, h, render} from "/common/external/preact.js";
-import {Layout, TextField} from "/common/lib/mdl.js";
+import {Layout, TextField, Button, Icon} from "/common/lib/mdl.js";
 import {Document, DocumentViewer} from "/common/lib/docview.js";
 import {stylesheet} from "/common/lib/util.js";
 
@@ -11,24 +11,31 @@ class App extends Component {
     this.state = { document: null };
   }
 
+  update(url) {
+    var self = this;
+    fetch(url)
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          console.log("fetch error", response.status, response.message);
+          return null;
+        }
+      })
+      .then(response => {
+        self.setState({document: new Document(response)});
+      });
+  }
+
   search(e) {
     var docid = e.target.value
     if (docid) {
-      var url = "/fetch?docid=" + docid + "&fmt=cjson";
-      var self = this;
-      fetch(url)
-        .then(response => {
-          if (response.ok) {
-            return response.json();
-          } else {
-            console.log("fetch error", response.status, response.message);
-            return null;
-          }
-        })
-        .then(response => {
-          self.setState({document: new Document(response)});
-        });
+      this.update("/fetch?docid=" + docid + "&fmt=cjson");
     }
+  }
+
+  next(e) {
+    this.update("/next?fmt=cjson");
   }
 
   render(props, state) {
@@ -45,6 +52,9 @@ class App extends Component {
                 type: "search",
                 onsearch: e => this.search(e),
               }),
+              h(Button, {icon: true, onclick: e => this.next(e)},
+                h(Icon, {icon: "skip_next"})
+              ),
             ),
           ),
           h(Layout.Drawer, null, h(Layout.Title, null, "Menu")),

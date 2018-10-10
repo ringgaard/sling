@@ -95,6 +95,7 @@ export class DocumentViewer extends Component {
       return 0;
     }
   }
+
   render(props) {
     // Get document for rendering.
     this.document = props.document;
@@ -198,12 +199,14 @@ export class DocumentViewer extends Component {
     let docno = this.document.docno;
     for (let i = 0; i < this.document.spans.length; ++i) {
       let fidx = this.document.spans[i].frame;
-      let span = document.getElementById('s' + docno + "-" + fidx);
 
       // Bind event handlers for spans.
-      span.addEventListener('click', this.OpenPanel.bind(this), false);
-      span.addEventListener('mouseenter', this.EnterSpan.bind(this), false);
-      span.addEventListener('mouseleave', this.LeaveSpan.bind(this), false);
+      let span = document.getElementById('s' + docno + "-" + fidx);
+      if (span) {
+        span.addEventListener('click', this.OpenPanel.bind(this), false);
+        span.addEventListener('mouseenter', this.EnterSpan.bind(this), false);
+        span.addEventListener('mouseleave', this.LeaveSpan.bind(this), false);
+      }
 
       // Update frame mentions.
       let frame = this.document.frames[fidx];

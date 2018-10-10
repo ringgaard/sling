@@ -73,6 +73,33 @@ export class Icon extends Component {
   }
 }
 
+// Button component.
+export class Button extends MaterialComponent {
+  constructor() {
+    super();
+    this.component = 'mdl-button';
+    this.nodeName = 'button';
+    this.js = true;
+    this.ripple = true;
+  }
+
+  mdlRender(props) {
+    let c = [];
+    if (props.class) c.push(props.class);
+    if (props.primary) c.push("mdl-button--primary");
+    if (props.accent) c.push("mdl-button--accent");
+    if (props.colored) c.push("mdl-button--colored");
+    if (props.raised) c.push("mdl-button--raised");
+    if (props.icon) c.push("mdl-button--icon");
+    if (props.fab) c.push("mdl-button--fab");
+    if (props.minifab) c.push("mdl-button--mini-fab");
+    if (props.disabled) c.push("mdl-button--disabled");
+    return h("button",
+             Object.assign({class: c.join(" ")}, props),
+             props.children);
+  }
+}
+
 // Tool tip component.
 export class Tooltip extends MaterialComponent {
   constructor() {
