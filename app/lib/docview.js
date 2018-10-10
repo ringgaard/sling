@@ -121,7 +121,7 @@ export class DocumentViewer extends Component {
         } else if (brk >= PARAGRAPH_BREAK) {
           elements.push("<p>");
         } else if (brk >= SENTENCE_BREAK) {
-          elements.push("&ensp;");
+          elements.push("	 ");
         } else if (brk >= SPACE_BREAK) {
           elements.push(" ");
         }
