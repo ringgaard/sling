@@ -3,7 +3,7 @@ import {Layout, TextField, Button, Icon} from "/common/lib/mdl.js";
 import {Document, DocumentViewer} from "/common/lib/docview.js";
 import {stylesheet} from "/common/lib/util.js";
 
-stylesheet("/doc/doc.css");
+stylesheet("/doc/corpus.css");
 
 class App extends Component {
   constructor(props) {

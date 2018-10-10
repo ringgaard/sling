@@ -163,20 +163,32 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "document-service",
+  srcs = ["document-service.cc"],
+  hdrs = ["document-service.h"],
+  deps = [
+    "//sling/base",
+    "//sling/frame",
+    "//sling/nlp/document",
+  ],
+)
+
 embed_data(
-  name = "app",
+  name = "corpus-app",
   srcs = [
-    "app/index.html",
-    "app/doc.js",
-    "app/doc.css",
+    "app/corpus.html",
+    "app/corpus.js",
+    "app/corpus.css",
   ],
 )
 
 cc_binary(
-  name = "document-server",
-  srcs = ["document-server.cc"],
+  name = "corpus-browser",
+  srcs = ["corpus-browser.cc"],
   deps = [
-    ":app",
+    ":corpus-app",
+    ":document-service",
     "//app",
     "//sling/base",
     "//sling/file",
