@@ -2,27 +2,22 @@
 
 ## `preact.js`<br/>
 Fast alternative to React.
+* Website: https://preactjs.com
 * Retrieved from: https://unpkg.com/preact
 * Date: 2018-09-24
 * License: [MIT](https://github.com/developit/preact/blob/master/LICENSE)
 
-## `preact-mdl.js`
-Collection of Preact Components that encapsulate Google's Material Design Lite.
-* Retrieved from: https://github.com/developit/preact-mdl/blob/master/src/index.js
-* Date: 2018-09-24
-* License: [MIT](https://github.com/developit/preact-mdl/blob/master/LICENSE)
-
 ## `material.js` and `material.css`
-Material Design Components. These have been patched because the original
-`Layout` component is not fully compatible with the Preact component model
-(see this [ticket](https://github.com/google/material-design-lite/issues/1356)).
+Material Design Light (MDL) components.
+* Website: https://getmdl.io
 * Retrieved from: https://code.getmdl.io/1.3.0/mdl.zip
 * Date: 2018-09-24
 * Version: 1.3.0
 * License: [Apache 2.0](https://github.com/google/material-design-lite/blob/mdl-1.x/LICENSE)
 
-# `material-icons` and `material-icons.woff2`
+## `material-icons.css` and `material-icons.woff2`
 Material Design Icon Font.
+* Website: https://material.io/tools/icons
 * Retrieved from: https://fonts.googleapis.com/icon?family=Material+Icons
 * Date: 2018-09-25
-
+* License: [Apache 2.0](https://github.com/google/material-design-icons/blob/master/LICENSE)
