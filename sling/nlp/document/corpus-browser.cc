@@ -22,10 +22,13 @@
 #include "sling/http/web-service.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-service.h"
+#include "sling/nlp/kb/knowledge-service.h"
 #include "sling/util/mutex.h"
 
 DEFINE_int32(port, 8080, "HTTP server port");
 DEFINE_string(commons, "", "Commons store");
+DEFINE_bool(kb, false, "Start knowledge base browser");
+DEFINE_string(names, "local/data/e/wiki/en/name-table.repo", "Name table");
 
 using namespace sling;
 using namespace sling::nlp;
@@ -168,9 +171,17 @@ int main(int argc, char *argv[]) {
 
   // Load commons store.
   Store commons;
+  if (FLAGS_kb && FLAGS_commons.empty()) {
+    FLAGS_commons = "local/data/e/wiki/kb.sling";
+  }
   if (!FLAGS_commons.empty()) {
+    LOG(INFO) << "Loading " << FLAGS_commons;
     LoadStore(FLAGS_commons, &commons);
   }
+
+  // Initialize knowledge base service.
+  KnowledgeService kb;
+  if (FLAGS_kb) kb.Load(&commons, FLAGS_names);
 
   // Initialize corpus browser.
   CorpusBrowser browser(&commons, &db);
@@ -181,6 +192,7 @@ int main(int argc, char *argv[]) {
   HTTPServer http(httpopts, FLAGS_port);
 
   browser.Register(&http);
+  if (FLAGS_kb) kb.Register(&http);
 
   http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
     if (strcmp(req->path(), "/") == 0) {

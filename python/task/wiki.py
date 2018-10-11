@@ -454,6 +454,12 @@ class WikiWorkflow:
                             dir=corpora.repository("data/wiki"),
                             format="store/frame")
 
+  def wikipedia_defs(self):
+    """Resource for Wikipedia schema definitions."""
+    return self.wf.resource("wikipedia.sling",
+                            dir=corpora.repository("data/wiki"),
+                            format="store/frame")
+
   def knowledge_base(self):
     """Resource for knowledge base. This is a SLING frame store with frames for
     each Wikidata item and property plus additional schema information.
@@ -473,7 +479,8 @@ class WikiWorkflow:
     if schemas == None:
       schemas = [self.language_defs(),
                  self.calendar_defs(),
-                 self.wikidata_defs()]
+                 self.wikidata_defs(),
+                 self.wikipedia_defs()]
 
     with self.wf.namespace("wikidata"):
       # Prune information from Wikidata items.
