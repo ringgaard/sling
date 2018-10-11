@@ -38,7 +38,8 @@ class CorpusBrowser : public DocumentService {
   // Register service.
   void Register(HTTPServer *http) {
     http->Register("/fetch", this, &CorpusBrowser::HandleFetch);
-    http->Register("/next", this, &CorpusBrowser::HandleNext);
+    http->Register("/forward", this, &CorpusBrowser::HandleForward);
+    http->Register("/back", this, &CorpusBrowser::HandleBack);
     app_content_.Register(http);
     common_content_.Register(http);
   }
@@ -68,7 +69,7 @@ class CorpusBrowser : public DocumentService {
     ws.set_output(json);
   }
 
-  void HandleNext(HTTPRequest *request, HTTPResponse *response) {
+  void HandleForward(HTTPRequest *request, HTTPResponse *response) {
     WebService ws(commons_, request, response);
 
     // Fetch next document from database.
@@ -88,19 +89,62 @@ class CorpusBrowser : public DocumentService {
     ws.set_output(json);
   }
 
+  void HandleBack(HTTPRequest *request, HTTPResponse *response) {
+    WebService ws(commons_, request, response);
+
+    // Fetch previous document from database.
+    Record record;
+    if (!FetchBackward(&record)) {
+      response->SendError(400, nullptr, "no more documents");
+      return;
+    }
+
+    // Convert document to JSON.
+    Store *store = ws.store();
+    Frame top = Decode(store, record.value).AsFrame();
+    Document document(top);
+
+    // Return document in JSON format.
+    Frame json = Convert(document);
+    ws.set_output(json);
+  }
+
   bool FetchRecord(Text key, Record *record) {
     MutexLock lock(&mu_);
-    return db_->Lookup(key.slice(), record);
+    if (db_->Lookup(key.slice(), record)) {
+      history_.emplace_back(db_->current_shard(), record->position);
+      return true;
+    } else {
+      return false;
+    }
   }
 
   bool FetchNext(Record *record) {
     MutexLock lock(&mu_);
-    return db_->Next(record);
+    if (db_->Next(record)) {
+      history_.emplace_back(db_->current_shard(), record->position);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  bool FetchBackward(Record *record) {
+    MutexLock lock(&mu_);
+    if (history_.empty()) return false;
+    history_.pop_back();
+    if (history_.empty()) return false;
+    int shard = history_.back().first;
+    int64 position = history_.back().second;
+    return db_->Read(shard, position, record);
   }
 
  private:
   // Record database with documents.
   RecordDatabase *db_;
+
+  // History of records read from database.
+  std::vector<std::pair<int, int64>> history_;
 
   // Static web content.
   StaticContent app_content_{"/doc", "sling/nlp/document/app"};
