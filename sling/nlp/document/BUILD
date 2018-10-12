@@ -204,16 +204,3 @@ cc_binary(
     "//sling/util:mutex",
   ],
 )
-
-cc_binary(
-  name = "document-renderer",
-  srcs = ["document-renderer.cc"],
-  deps = [
-    "//sling/base",
-    "//sling/file",
-    "//sling/file:posix",
-    "//sling/file:recordio",
-    "//sling/frame",
-    "//sling/nlp/document",
-  ],
-)
