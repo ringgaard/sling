@@ -33,7 +33,7 @@ const PARAGRAPH_BREAK = 4;
 const SECTION_BREAK = 5;
 const CHAPTER_BREAK = 6;
 
-// Document representation from JSON reponse.
+// Document representation from JSON response.
 export class Document {
   constructor(data) {
     this.data = data;
@@ -280,6 +280,18 @@ export class DocumentViewer extends Component {
     return name;
   }
 
+  IsExternal(f) {
+    if (typeof f == "number") f = this.document.frames[f];
+    for (let t = 0; t < f.types.length; ++t) {
+      let type = f.types[t];
+      if (typeof type == "number") {
+        let schema = this.document.frames[type];
+        if (schema.id == "/w/item") return true;
+      }
+    }
+    return false;
+  }
+
   BuildBox(index, collapsed) {
     let box = document.createElement("div");
     box.className = "boxed";
@@ -345,7 +357,7 @@ export class DocumentViewer extends Component {
       if (frame.name) {
         let name = document.createTextNode(frame.name);
         if (frame.id) {
-          if (frame.id.startsWith('Q') || frame.id.startsWith('P')) {
+          if (this.IsExternal(frame)) {
             let a = document.createElement("a");
             a.href = kb_url + frame.id;
             a.appendChild(name);
@@ -374,7 +386,6 @@ export class DocumentViewer extends Component {
         let box = document.createElement("td");
         let val = document.createElement("td");
 
-        let link = false;
         if (typeof n == "number") {
           let span = document.createElement("span");
           let f = this.document.frames[n];
@@ -388,8 +399,6 @@ export class DocumentViewer extends Component {
             role = this.document.frames[n].id;
           }
           if (!role) role = '(' + n + ')';
-          if (role == 'MID' || role == '/s/profile/mid') link = true;
-
           span.appendChild(document.createTextNode(role + ':'));
           label.appendChild(span);
         } else {
@@ -409,7 +418,7 @@ export class DocumentViewer extends Component {
             }
           }
         } else {
-          if (link || v.startsWith('Q') || v.startsWith('P')) {
+          if (this.IsExternal(v)) {
             let a = document.createElement("a");
             a.href = kb_url + v;
             a.appendChild(document.createTextNode(v));
