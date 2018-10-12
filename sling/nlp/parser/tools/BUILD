@@ -31,17 +31,6 @@ cc_binary(
 )
 
 cc_binary(
-  name = "build-store",
-  srcs = ["build-store.cc"],
-  deps = [
-    "//sling/base",
-    "//sling/file:posix",
-    "//sling/frame:object",
-    "//sling/frame:serialization",
-  ],
-)
-
-cc_binary(
   name = "parser-server",
   srcs = ["parser-server.cc"],
   deps = [
