@@ -600,7 +600,7 @@ The `Date` class has the following properties and methods:
 * `iso()`<br>
   Returns date in ISO 8601 format.
 * `value()`<br>
-  Convert date to numeric format ifthe date cannot be encoded as an integer.
+  Convert date to numeric format if the date can be encoded as an integer.
   This can only be done for dates after 1000 AD. Otherwise the date is returned
   in ISO 8601 format. This can be used for updating date properties in the
   knowledge base.
