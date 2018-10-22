@@ -61,11 +61,10 @@ void FactCatalog::Init(Store *store) {
   static const char *baseids[] = {
     "Q215627",    // person
     "Q17334923",  // location
-    "Q41176",     // building
+    "Q811430",    // construction
     "Q43229",     // organization
     "Q2385804",   // educational institution
     "Q294163",    // public institution
-    "Q1935049",   // military school
     "Q15401930",  // product
     "Q12737077",  // occupation
     "Q192581",    // job
