@@ -152,6 +152,7 @@ struct SerializationFlags {
   bool shallow = true;  // output frames with ids by reference
   bool byref = true;    // output anonymous frames by reference using index ids
   bool pretty = false;  // pretty print with indentation
+  bool utf8 = false;    // output strings in utf-8 encoding
 };
 
 }  // namespace sling
