@@ -1,0 +1,689 @@
+A.ADM1 Q10864048 first-level administrative country subdivision
+A.ADM1H Q19953632 former administrative territorial entity
+A.ADM2 Q13220204 second-level administrative country subdivision
+A.ADM2H Q19953632 former administrative territorial entity
+A.ADM3 Q13221722 third-level administrative country subdivision
+A.ADM3H Q19953632 former administrative territorial entity
+A.ADM4 Q14757767 fourth-level administrative country subdivision
+A.ADM4H Q19953632 former administrative territorial entity
+A.ADM5 Q15640612 fifth-level administrative country subdivision
+A.ADM5H Q19953632 former administrative territorial entity
+A.ADMD Q56061 administrative territorial entity
+A.ADMDH Q19832712 historical administrative division
+A.LTER Q1496967 territorial entity
+A.PCL Q7225121 political structure
+A.PCLD Q161243 dependent territory
+A.PCLF Q3624078 sovereign state (freely associated state)
+A.PCLH Q3024240 historical country (historical political entity)
+A.PCLI Q6256 country (independent political entity)
+A.PCLIX Q5164076 constituent state (section of independent political entity)
+A.PCLS Q161243 dependent territory (semi-independent political entity)
+A.PRSH Q102496 parish
+A.TERR Q462778 insular area (territory)
+A.ZN Q219858 zone
+A.ZNB Q1054581 buffer zone
+
+H.AIRS Q3143713 seaplane base (seaplane landing area)
+H.ANCH Q6908406 anchorage
+H.BAY Q39594 bay
+H.BAYS Q39594 bay
+H.BGHT Q17018380 bight
+H.BNK Q468756 shore (bank)
+H.BNKR Q3706062 stream bank
+H.BNKX Q2897058 bank (section of bank)
+H.BOG Q1681353 bog
+H.CAPG Q878077 ice cap
+H.CHN Q1210950 channel
+H.CHNL Q55465414 lake channel
+H.CHNM Q55465477 marine channel
+H.CHNN Q41982239 navigation channel
+H.CNFL Q723748 confluence
+H.CNL Q12284 canal
+H.CNLA Q474 aqueduct
+H.CNLB Q12284 canal (canal bend)
+H.CNLD Q28109789 drainage canal
+H.CNLI Q2935978 irrigation canal
+H.CNLN Q41982239 navigation channel (navigation canal)
+H.CNLQ Q12284 canal (abandoned canal)
+H.CNLSB Q55468440 underground irrigation canal
+H.CNLX Q12284 canal (section of canal)
+H.COVE Q31615 cove
+H.CRKT Q27250 tidal creek
+H.CRNT Q129558 ocean current
+H.CUTF Q2478493 meander cutoff (cutoff)
+H.DCK Q124282 dock
+H.DCKB Q124282 dock (docking basin)
+H.DOMG Q8502 mountain (icecap dome)
+H.DPRG Q8502 mountain (icecap depression)
+H.DTCH Q2048319 ditch
+H.DTCHD Q2048319 ditch (drainage ditch)
+H.DTCHI Q2048319 ditch (irrigation ditch)
+H.DTCHM Q2048319 ditch (ditch mouth)
+H.ESTY Q47053 estuary
+H.FISH Q55468590 fishing area
+H.FJD Q45776 fjord
+H.FJDS Q45776 fjord (fjords)
+H.FLLS Q34038 waterfall
+H.FLLSX Q34038 waterfall (section of waterfall(s))
+H.FLTM Q31796 mudflat
+H.FLTT Q31796 mudflat (tidal flat(s))
+H.GLCR Q35666 glacier
+H.GULF Q1322134 gulf
+H.GYSR Q83471 geyser
+H.HBR Q283202 harbor
+H.HBRX Q283202 harbor (section of harbor)
+H.INLT Q1172599 inlet
+H.INLTQ Q1172599 inlet (former inlet)
+H.LBED Q23397 lake (lake bed)
+H.LGN Q187223 lagoon
+H.LGNS Q187223 lagoon (lagoons)
+H.LGNX Q187223 lagoon (section of lagoon)
+H.LK Q23397 lake
+H.LKC Q204324 crater lake
+H.LKI Q10313934 intermittent lake
+H.LKN Q188025 salt lake
+H.LKNI Q55470156 intermittent salt lake
+H.LKO Q209333 oxbow lake
+H.LKOI Q55470128 intermittent oxbow lake
+H.LKS Q5926864 group of lakes
+H.LKSB Q1048337 underground lake
+H.LKSC Q204324 crater lake (crater lakes)
+H.LKSI Q10313934 intermittent lake (intermittent lakes)
+H.LKSN Q188025 salt lake (salt lakes)
+H.LKSNI Q55470156 intermittent salt lake (intermittent salt lakes)
+H.LKX Q23397 lake (section of lake)
+H.MFGN Q244326 salt evaporation pond
+H.MGV Q28129994 mangrove swamp
+H.MOOR Q34795826 moor
+H.MRSH Q30198 marsh
+H.MRSHN Q29925 salt marsh
+H.NRWS Q6966332 narrows
+H.OCN Q9430 ocean
+H.OVF Q34038 waterfall (overfalls)
+H.PND Q3253281 pond
+H.PNDI Q55711375 intermittent pond
+H.PNDN Q7846183 Tropical salt pond ecosystem (salt pond)
+H.PNDNI Q55711375 intermittent pond (intermittent salt pond(s))
+H.PNDS Q42055295 group of ponds
+H.PNDSF Q1265665 fish pond
+H.PNDSI Q55711375 intermittent pond (intermittent ponds)
+H.PNDSN Q7846183 Tropical salt pond ecosystem (salt ponds)
+H.POOL Q204324 crater lake (pool(s))
+H.POOLI Q204324 crater lake (intermittent pool)
+H.RCH Q7300165 reach
+H.RDGG Q740445 ridge (icecap ridge)
+H.RDST Q913035 roadstead
+H.RF Q184358 reef
+H.RFC Q11292 coral reef
+H.RFX Q184358 reef (section of reef)
+H.RPDS Q695793 rapids
+H.RSV Q131681 reservoir
+H.RSVI Q55470036 intermittent reservoir
+H.RSVT Q6501028 water tank
+H.RVN Q2042028 ravine
+H.SBKH Q637600 sabkha
+H.SD Q491713 sound
+H.SEA Q165 sea
+H.SHOL Q28337 shoal
+H.SILL Q830230 sill
+H.SPNG Q124714 spring
+H.SPNS Q55670172 sulphur spring
+H.SPNT Q177380 hot spring
+H.STM Q47521 stream
+H.STMA Q661702 anabranch
+H.STMB Q47521 stream (stream bend)
+H.STMC Q47521 stream (canalized stream)
+H.STMD Q591942 distributary
+H.STMH Q7376362 river source (headwaters)
+H.STMI Q55659107 intermittent natural watercourse (intermittent stream)
+H.STMIX Q55659107 intermittent natural watercourse (section of intermittent stream)
+H.STMM Q1233637 river mouth (stream mouth)
+H.STMQ Q355304 watercourse (abandoned watercourse)
+H.STMS Q355304 watercourse (streams)
+H.STMSB Q4022 river (lost river)
+H.STMX Q4022 river (section of stream)
+H.STRT Q37901 strait
+H.SWMP Q166735 swamp
+H.SYSI Q6129871 irrigation system
+H.TNLC Q5031071 canal tunnel
+H.WAD Q187971 wadi
+H.WADB Q187971 wadi (wadi bend)
+H.WADJ Q187971 wadi (wadi junction)
+H.WADM Q187971 wadi (wadi mouth)
+H.WADS Q187971 wadi (wadies)
+H.WADX Q187971 wadi (section of wadi)
+H.WHRL Q607538 whirlpool
+H.WLL Q502102 borehole (well)
+H.WLLQ Q502102 borehole (abandoned well)
+H.WLLS Q502102 borehole (wells)
+H.WTLD Q170321 wetland
+H.WTLDI Q55463449 intermittent wetland
+H.WTRC Q355304 watercourse
+H.WTRH Q7974142 waterhole
+
+L.AGRC Q486972 human settlement (agricultural colony)
+L.AMUS Q194195 amusement park
+L.AREA Q82794 geographic region (area)
+L.BSND Q166620 drainage basin
+L.BSNP Q813672 basin (petroleum basin)
+L.BTL Q37896512 battlefield
+L.CLG Q4358873 glade (clearing)
+L.CMN Q2259176 common land
+L.CNS Q1192403 concession (concession area)
+L.COLF Q4469107 coal mining region (coalfield)
+L.CONT Q5107 continent
+L.CST Q93352 coast
+L.CTRB Q203180 serviced office (business center)
+L.DEVH Q5916199 housing development
+L.FLD Q188869 field
+L.FLDI Q188869 field (irrigated field(s))
+L.GASF Q1349255 natural gas field (gasfield)
+L.GRAZ Q486972 human settlement (grazing area)
+L.GVL Q504874 gravel pit (gravel area)
+L.INDS Q329683 industrial park (industrial area)
+L.LAND Q82794 geographic region (arctic land)
+L.LCTY Q618123 geographical object (locality)
+L.MILB Q245016 military base
+L.MNA Q820477 mine
+L.MVA Q57208460 manoeuver area
+L.NVB Q1324633 naval base
+L.OAS Q43742 oasis
+L.OILF Q211748 oil field
+L.PEAT Q820477 mine (peat cutting area)
+L.PRK Q22698 park
+L.PRT Q44782 port
+L.QCKS Q224090 quicksand
+L.RES Q473972 protected area (reserve)
+L.RESA Q759882 protected landscape area (agricultural reserve)
+L.RESF Q7315273 reserve forest (forest reserve)
+L.RESH Q1714375 game reserve
+L.RESN Q179049 nature reserve
+L.RESP Q179049 nature reserve (palm tree reserve)
+L.RESV Q20203616 Indian reservation (reservation)
+L.RESW Q20268591 wildlife reserve
+L.RGN Q82794 geographic region
+L.RGNE Q1973901 economic region
+L.RGNH Q1620908 historical region
+L.RGNL Q1742059 lake area (lake region)
+L.RNGA Q13226383 facility (artillery range)
+L.SALT Q55392224 salt area
+L.SNOW Q1365419 snow field
+L.TRB Q55463514 tribal area
+
+P.PPL Q486972 human settlement
+P.PPLA Q515 city (seat of a first-order administrative division)
+P.PPLA2 Q532 village (seat of a second-order administrative division)
+P.PPLA3 Q3957 town (seat of a third-order administrative division)
+P.PPLA4 Q1115575 civil parish (seat of a fourth-order administrative division)
+P.PPLA5 Q486972 human settlement (seat of a fifth-order administrative division)
+P.PPLC Q5119 capital
+P.PPLCH Q27554677 former capital (historical capital of a political entity)
+P.PPLF Q486972 human settlement (farm village)
+P.PPLG Q5119 capital (seat of government of a political entity)
+P.PPLH Q22674925 former populated place
+P.PPLL Q3257686 locality (populated locality)
+P.PPLQ Q74047 ghost town (abandoned populated place)
+P.PPLR Q486972 human settlement (religious populated place)
+P.PPLS Q25964111 group of settlements (populated places)
+P.PPLW Q22674925 former populated place (destroyed populated place)
+P.PPLX Q188509 suburb (section of populated place)
+P.STLMT Q582706 Israeli settlement
+
+R.CSWY Q892168 causeway
+R.OILP Q1262090 oil pipeline
+R.PRMN Q88372 esplanade (promenade)
+R.PTGE Q618123 geographical object (portage)
+R.RD Q34442 road
+R.RDA Q445741 historic road
+R.RDB Q3560558 bend (road bend)
+R.RDCUT Q1308978 cut (road cut)
+R.RDJCT Q1788454 road junction
+R.RJCT Q836550 junction (railroad junction)
+R.RR Q22667 railway (railroad)
+R.RRQ Q357685 abandoned railway (abandoned railroad)
+R.RTE Q405155 trade route by road (caravan route)
+R.RYD Q19563580 rail yard (railroad yard)
+R.ST Q79007 street
+R.STKR Q7617917 Stock route (stock route)
+R.TNL Q44377 tunnel
+R.TNLN Q44377 tunnel (natural tunnel)
+R.TNLRD Q2354973 road tunnel (road tunnel)
+R.TNLRR Q1311958 railway tunnel (railroad tunnel)
+R.TNLS Q44377 tunnel (tunnels)
+R.TRL Q628179 trail
+
+S.ADMF Q13226383 facility (administrative facility)
+S.AGRF Q13226383 facility (agricultural facility)
+S.AIRB Q695850 military airbase (airbase)
+S.AIRF Q62447 aerodrome (airfield)
+S.AIRH Q502074 heliport
+S.AIRP Q1248784 airport
+S.AIRQ Q1248784 airport (abandoned airfield)
+S.AIRT Q849706 airport terminal (terminal)
+S.AMTH Q54831 amphitheatre (amphitheater)
+S.ANS Q839954 archaeological site (archaeological/prehistoric site)
+S.AQC Q188989 aquaculture (aquaculture facility)
+S.ARCH Q12277 arch
+S.ARCHV Q166118 archive
+S.ART Q838948 work of art (piece of art)
+S.ASTR Q486972 human settlement (astronomical station)
+S.ASYL Q210999 psychiatric hospital (asylum)
+S.ATHF Q1076486 sports venue (athletic field)
+S.ATM Q81235 automated teller machine (automatic teller machine)
+S.BANK Q22687 bank (bank)
+S.BCN Q17484395 beacon (beacon)
+S.BDG Q12280 bridge (bridge)
+S.BDGQ Q12280 bridge (ruined bridge)
+S.BLDA Q13402009 apartment building (apartment building)
+S.BLDG Q41176 building (building)
+S.BLDO Q1021645 office building (office building)
+S.BP Q921099 boundary marker (boundary marker)
+S.BRKS Q131263 barracks (barracks)
+S.BRKW Q153084 groyne (breakwater)
+S.BSTN Q4992010 Transfer station (baling station)
+S.BTYD Q190928 shipyard (boatyard)
+S.BUR Q39614 cemetery (burial cave)
+S.BUSTN Q494829 bus station (bus station)
+S.BUSTP Q953806 bus stop (bus stop)
+S.CARN Q7321974 cairn
+S.CAVE Q35509 cave
+S.CH Q16970 church building
+S.CMP Q27108230 campground (camp)
+S.CMPL Q27108230 campground (logging camp)
+S.CMPLA Q628505 labor camp (labor camp)
+S.CMPMN Q820254 mining community (mining camp)
+S.CMPO Q211748 oil field (oil camp)
+S.CMPQ Q27108230 campground (abandoned camp)
+S.CMPRF Q622499 refugee camp (refugee camp)
+S.CMTY Q39614 cemetery
+S.COMC Q5154193 communications center
+S.CRRL Q858177 pen (corral)
+S.CSNO Q133215 casino
+S.CSTL Q23413 castle (castle)
+S.CSTM Q218653 custom house
+S.CTHSE Q1137809 courthouse
+S.CTRA Q1739545 nuclear facility (atomic center)
+S.CTRCM Q77115 community center
+S.CTRF Q1378975 convention center (facility center)
+S.CTRM Q4260475 medical facility (medical center)
+S.CTRR Q1370598 place of worship (religious center)
+S.CTRS Q1192221 space center
+S.CVNT Q1128397 convent
+S.DAM Q12323 dam
+S.DAMQ Q12323 dam (ruined dam)
+S.DAMSB Q12323 dam (sub-surface dam)
+S.DARY Q637776 dairy
+S.DCKD Q811177 dry dock
+S.DCKY Q190928 shipyard (dockyard)
+S.DIKE Q662806 dike
+S.DIP Q3917681 embassy (diplomatic facility)
+S.DPOF Q57208328 fuel depot
+S.EST Q12292478 estate
+S.ESTO Q188913 plantation (oil palm plantation)
+S.ESTR Q188913 plantation (rubber plantation)
+S.ESTSG Q14419427 sugar cane plantation (sugar plantation)
+S.ESTT Q16670382 tea estate (tea plantation)
+S.ESTX Q12292478 estate
+S.FCL Q13226383 facility
+S.FNDY Q13883136 foundry
+S.FRM Q131596 farm
+S.FRMQ Q16423630 abandoned farm
+S.FRMS Q131596 farm
+S.FRMT Q1623285 yard (farmstead)
+S.FT Q57821 fortification (fort)
+S.FY Q19912315 ferry route (ferry)
+S.FYT Q4303352 ferry terminal (ferry terminal)
+S.GATE Q53060 gate
+S.GDN Q1107656 garden
+S.GHAT Q1010155 ghat
+S.GHSE Q2460422 guest house
+S.GOSP Q3011536 separator (gas-oil separator plant)
+S.GOVL Q543654 city hall (local government office)
+S.GRVE Q173387 grave
+S.HERM Q513550 hermitage
+S.HLT Q618123 geographical object (halting place)
+S.HMSD Q5890494 homestead (homestead)
+S.HSE Q3947 house (house)
+S.HSEC Q16884952 country house
+S.HSP Q16917 hospital
+S.HSPC Q1774898 clinic (clinic)
+S.HSPD Q688829 dispensary
+S.HSPL Q1406569 leper colony (leprosarium)
+S.HSTS Q839954 archaeological site (historical site)
+S.HTL Q27686 hotel
+S.HUT Q5784097 hut
+S.HUTS Q5784097 hut (huts)
+S.INSM Q245016 military base (military installation)
+S.ITTR Q31855 research institute
+S.JTY Q3082251 jetty
+S.LDNG Q16938673 landing
+S.LEPC Q1406569 leper colony
+S.LIBR Q7075 library
+S.LNDF Q152810 landfill
+S.LOCK Q105731 lock
+S.LTHSE Q39715 lighthouse
+S.MALL Q11315 shopping mall
+S.MAR Q721207 marina
+S.MFG Q83405 factory
+S.MFGB Q131734 brewery
+S.MFGC Q1922209 cannery
+S.MFGCU Q83405 factory (copper works)
+S.MFGLM Q59772 lime kiln
+S.MFGM Q83405 factory (munitions plant)
+S.MFGPH Q83405 factory (phosphate works)
+S.MFGQ Q83405 factory (abandoned factory)
+S.MFGSG Q227857 sugar refinery
+S.MKT Q330284 marketplace
+S.ML Q44494 mill
+S.MLM Q7189622 physical plant (ore treatment plant)
+S.MLO Q44494 mill (olive oil mill)
+S.MLSG Q1820305 sugarcane mill
+S.MLSGQ Q1820305 sugarcane mill (former sugar mill)
+S.MLSW Q505213 sawmill
+S.MLWND Q38720 windmill
+S.MLWTR Q185187 watermill
+S.MN Q820477 mine
+S.MNAU Q16659538 gold mine
+S.MNC Q959309 coal mine
+S.MNCR Q55711069 chromium mine
+S.MNCU Q10564300 copper mine
+S.MNFE Q16659620 iron mine
+S.MNMT Q4989906 monument
+S.MNN Q40551 salt mine
+S.MNQ Q42412840 abandoned mine
+S.MNQR Q188040 quarry
+S.MOLE Q13370235 mole
+S.MSQE Q32815 mosque
+S.MSSN Q1564373 mission complex
+S.MSSNQ Q1564373 mission complex (abandoned mission)
+S.MSTY Q44613 monastery
+S.MTRO Q928830 metro station
+S.MUS Q33506 museum
+S.NOV Q837999 novitiate
+S.NSY Q364005 day care (nursery)
+S.OBPT Q6017969 scenic viewpoint (observation point)
+S.OBS Q62832 observatory
+S.OBSR Q184356 radio telescope (radio observatory)
+S.OILJ Q2221906 geographic location (oil pipeline junction)
+S.OILQ Q587682 oil well (abandoned oil well)
+S.OILR Q12353044 oil refinery
+S.OILT Q592856 oil depot (tank farm)
+S.OILW Q587682 oil well (oil well)
+S.OPRA Q153562 opera house
+S.PAL Q16560 palace
+S.PGDA Q199451 pagoda
+S.PIER Q863454 pier
+S.PKLT Q6501349 parking lot
+S.PMPO Q2221906 geographic location (oil pumping station)
+S.PMPW Q2221906 geographic location (water pumping station)
+S.PO Q35054 post office
+S.PP Q861951 police station (police post)
+S.PPQ Q861951 police station (abandoned police post)
+S.PRKGT Q2221906 geographic location (park gate)
+S.PRKHQ Q2221906 geographic location (park headquarters)
+S.PRN Q40357 prison
+S.PRNJ Q7307453 reformatory
+S.PRNQ Q40357 prison (abandoned prison)
+S.PS Q159719 power station
+S.PSH Q15911738 hydroelectric power station
+S.PSN Q134447 nuclear power plant
+S.PSTB Q757292 border checkpoint (border post)
+S.PSTC Q757292 border checkpoint (customs post)
+S.PSTP Q757292 border checkpoint (patrol post)
+S.PYR Q12516 pyramid
+S.PYRS Q12516 pyramid (pyramids)
+S.QUAY Q828909 wharf (quay)
+S.RDCR Q1529 traffic circle
+S.RDIN Q285783 intersection
+S.RECG Q1048525 golf course
+S.RECR Q1777138 race track
+S.REST Q11707 restaurant
+S.RET Q213441 shop (store)
+S.RHSE Q55713852 resthouse
+S.RKRY Q2640507 rookery
+S.RLG Q697295 shrine (religious site)
+S.RLGR Q2221906 geographic location (retreat)
+S.RNCH Q509028 ranch
+S.RSD Q21683257 siding (railroad siding)
+S.RSGNL Q862562 railway signal (railroad signal)
+S.RSRT Q875157 resort
+S.RSTN Q55488 railway station (railroad station)
+S.RSTNQ Q55488 railway station (abandoned railroad station)
+S.RSTP Q55678 railway halt (railroad stop)
+S.RSTPQ Q55678 railway halt (abandoned railroad stop)
+S.RUIN Q109607 ruins
+S.SCH Q3914 school
+S.SCHA Q3345348 agricultural education (agricultural school)
+S.SCHC Q189004 college
+S.SCHL Q897403 language school (language school)
+S.SCHM Q1935049 military school
+S.SCHN Q25505858 maritime school
+S.SCHT Q845392 polytechnic (technical school)
+S.SECP Q3914 school (State Exam Prep Centre)
+S.SHPF Q1871110 sheepfold
+S.SHRN Q697295 shrine
+S.SHSE Q181623 depot (storehouse)
+S.SLCE Q610559 sluice
+S.SNTR Q46124 sanatorium
+S.SPA Q1341387 spa
+S.SPLY Q911379 spillway
+S.SQR Q174782 square
+S.STBL Q214252 stable
+S.STDM Q483110 stadium
+S.STNB Q195339 research station (scientific research base)
+S.STNC Q31407679 coast guard station
+S.STNE Q195339 research station (experiment station)
+S.STNF Q195339 research station (forest station)
+S.STNI Q195339 research station (inspection station)
+S.STNM Q190107 weather station (meteorological station)
+S.STNR Q14350 radio station
+S.STNS Q357742 broadcast relay station (satellite station)
+S.STNW Q3497366 whaling station
+S.STPS Q12511 stairs (steps)
+S.SWT Q15242449 wastewater treatment plant (sewage treatment plant)
+S.SYG Q34627 synagogue
+S.THTR Q24354 theater
+S.TMB Q381885 tomb
+S.TMPL Q44539 temple
+S.TNKD Q2221906 geographic location (cattle dipping tank)
+S.TOLL Q1364150 toll booth (toll gate/barrier)
+S.TOWR Q12518 tower
+S.TRAM Q2175765 tram stop (tram)
+S.TRANT Q2221906 geographic location (transit terminal)
+S.TRIG Q131862 triangulation station
+S.TRMO Q592856 oil depot (oil pipeline terminal)
+S.TWO Q2221906 geographic location (temp work office)
+S.UNIP Q428602 university-preparatory school
+S.UNIV Q3918 university
+S.USGE Q13226383 facility (united states government establishment)
+S.VETF Q13226383 facility (veterinary facility)
+S.WALL Q42948 wall
+S.WALLA Q42948 wall (ancient wall)
+S.WEIR Q1066997 weir
+S.WHRF Q828909 wharf
+S.WRCK Q852190 shipwreck (wreck)
+S.WTRW Q11849395 waterworks
+S.ZNF Q496341 free economic zone (free trade zone)
+S.ZOO Q43501 zoo
+
+T.ASPH Q2091807 tar pit (asphalt lake)
+T.ATOL Q42523 atoll
+T.BAR Q478251 bar
+T.BCH Q40080 beach
+T.BCHS Q40080 beach (beaches)
+T.BDLD Q272921 badlands
+T.BLDR Q1709247 blockfield (boulder field)
+T.BLHL Q885499 blowhole
+T.BLOW Q1182724 blowout
+T.BNCH Q4478339 bench
+T.BUTE Q6554910 butte
+T.CAPE Q185113 cape
+T.CFT Q55674403 cleft
+T.CLDA Q159954 caldera
+T.CLF Q107679 cliff
+T.CNYN Q150784 canyon
+T.CONE Q1368970 volcanic cone
+T.CRDR Q7834916 transport corridor (corridor)
+T.CRQ Q388227 cirque
+T.CRQS Q388227 cirque (cirques)
+T.CRTR Q3240715 crater
+T.CUET Q873398 cuesta
+T.DLTA Q43197 river delta (delta)
+T.DPR Q190429 depression
+T.DSRT Q8514 desert
+T.DUNE Q25391 dune
+T.DVD Q152005 drainage divide (divide)
+T.ERG Q319120 erg (sandy desert)
+T.FAN Q465088 alluvial fan (fan)
+T.FORD Q12743 ford
+T.FSR Q28843416 fissure
+T.GAP Q23069713 pass (gap)
+T.GRGE Q55462851 gorge
+T.HDLD Q191992 headland
+T.HLL Q54050 hill
+T.HLLS Q54050 hill (hills)
+T.HMCK Q3126543 hammock
+T.HMDA Q757301 hamada (rock desert)
+T.INTF Q23228 interfluve
+T.ISL Q23442 island
+T.ISLET Q207524 islet
+T.ISLF Q13691 artificial island
+T.ISLM Q23442 island (mangrove island)
+T.ISLS Q33837 archipelago (islands)
+T.ISLT Q1226252 tied island (land-tied island)
+T.ISLX Q23442 island (section of island)
+T.ISTH Q93267 isthmus
+T.KRST Q55471069 karst area (karst area)
+T.LAVA Q2512740 lava flow (lava area)
+T.LEV Q105190 levee
+T.MESA Q623319 mesa
+T.MND Q1584134 mound
+T.MRN Q2610088 moraine
+T.MT Q8502 mountain
+T.MTS Q46831 mountain range (mountains)
+T.NKM Q2221906 geographic location (meander neck)
+T.NTK Q194408 nunatak
+T.NTKS Q194408 nunatak (nunataks)
+T.PAN Q55710865 pan
+T.PANS Q55710865 pan (pans)
+T.PASS Q23069713 pass
+T.PEN Q34763 peninsula
+T.PENX Q34763 peninsula (section of peninsula)
+T.PK Q207326 summit (peak)
+T.PKS Q207326 summit (peaks)
+T.PLAT Q75520 plateau
+T.PLATX Q75520 plateau (section of plateau)
+T.PLDR Q106259 polder
+T.PLN Q160091 plain
+T.PLNX Q160091 plain (section of plain)
+T.PROM Q1245089 promontory
+T.PT Q24529780 point
+T.PTS Q24529780 point (points)
+T.RDGB Q2532557 beach ridge
+T.RDGE Q740445 ridge
+T.REG Q8514 desert (stony desert)
+T.RK Q631305 rock formation (rock)
+T.RKFL Q5654036 rockfall
+T.RKS Q24576816 group of rocks (rocks)
+T.SAND Q34379419 sand area
+T.SBED Q57237852 dry stream bed
+T.SCRP Q1174791 escarpment
+T.SDL Q10862618 saddle
+T.SHOR Q93352 coast (shore)
+T.SINK Q847016 ponor (sinkhole)
+T.SLID Q7540307 slide
+T.SLP Q107679 cliff (slope)
+T.SPIT Q217101 spit
+T.SPUR Q1400565 spur
+T.TAL Q1133195 scree (talus slope)
+T.TRGD Q55711124 interdune trough
+T.TRR Q828581 terrace
+T.UPLD Q55075651 upland
+T.VAL Q39816 valley
+T.VALG Q25424443 hanging valley
+T.VALS Q39816 valley (valleys)
+T.VALX Q39816 valley (section of valley)
+T.VLC Q8072 volcano
+
+U.APNU Q6554416 Linkspan (apron)
+U.ARCU Q12277 arch
+U.ARRU Q618123 geographical object (arrugado)
+U.BDLU Q618123 geographical object (borderland)
+U.BKSU Q2897058 bank (banks)
+U.BNKU Q2897058 bank
+U.BSNU Q813672 basin
+U.CDAU Q2751984 cordillera
+U.CNSU Q963729 submarine canyon (canyons)
+U.CNYU Q963729 submarine canyon
+U.CRSU Q332602 continental rise
+U.DEPU Q51330213 deep
+U.EDGU Q618123 geographical object (shelf edge)
+U.ESCU Q1174791 escarpment
+U.FANU Q3592807 Subaqueous fan (fan)
+U.FLTU Q18389975 flat
+U.FRZU Q5477586 fracture zone
+U.FURU Q1474839 furrow
+U.GAPU Q16887036 gap
+U.GLYU Q1361400 gully
+U.HLLU Q47781632 undersea hill (hill)
+U.HLSU Q47781632 undersea hill (hills)
+U.HOLU Q55471289 undersea hole (hole)
+U.KNLU Q55182635 undersea knoll (knoll)
+U.KNSU Q55182635 undersea knoll (knolls)
+U.LDGU Q55670187 undersea ledge (ledge)
+U.LEVU Q55670193 undersea levee (levee)
+U.MESU Q623319 mesa (mesa)
+U.MNDU Q1584134 mound
+U.MOTU Q88480 moat (moat)
+U.MTU Q503269 seamount (mountain)
+U.PKSU Q271669 landform (peaks)
+U.PKU Q271669 landform (peak)
+U.PLNU Q570554 abyssal plain (plain)
+U.PLTU Q1377943 ocean bank (plateau)
+U.PNLU Q683031 Pinnacle (pinnacle)
+U.PRVU Q2140450 geologic province (province)
+U.RDGU Q11702690 undersea ridge
+U.RDSU Q11702690 undersea ridge (ridges)
+U.RFSU Q184358 reef (reefs)
+U.RFU Q184358 reef (reef)
+U.RISU Q1271224 oceanic plateau (rise)
+U.SCNU Q4054763 abyssal channel (seachannel)
+U.SCSU Q4054763 abyssal channel (seachannels)
+U.SDLU Q10862618 saddle
+U.SHFU Q134851 continental shelf (shelf)
+U.SHLU Q55471305 undersea shoal (shoal)
+U.SHSU Q55471305 undersea shoal (shoals)
+U.SHVU Q271669 landform (shelf valley)
+U.SILU Q830230 sill
+U.SLPU Q55471272 undersea slope (slope)
+U.SMSU Q503269 seamount (seamounts)
+U.SMU Q503269 seamount
+U.SPRU Q55471245 undersea spur (spur)
+U.TERU Q828581 terrace
+U.TMSU Q151957 guyot (tablemounts (or guyots))
+U.TMTU Q151957 guyot (tablemount (or guyot))
+U.TNGU Q271669 landform (tongue)
+U.TRGU Q55193679 undersea trough (trough)
+U.TRNU Q119253 oceanic trench
+U.VALU Q55436365 undersea valley (valley)
+U.VLSU Q55436365 undersea valley (valleys)
+
+V.BUSH Q2344518 The bush (bush(es))
+V.CULT Q271669 landform (cultivated area)
+V.FRST Q4421 forest (forest(s))
+V.FRSTF Q4421 forest (fossilized forest)
+V.GROVE Q1510380 grove
+V.GRSLD Q1006733 grassland
+V.GRVC Q1510380 grove (coconut grove)
+V.GRVO Q1510380 grove (olive grove)
+V.GRVP Q1510380 grove (palm grove)
+V.GRVPN Q1510380 grove (pine grove)
+V.HTH Q27590 heath
+V.MDW Q7777019 meadow
+V.OCH Q236371 orchard
+V.SCRB Q879641 shrubland
+V.TREE Q10884 tree
+V.TUND Q43262 tundra
+V.VIN Q22715 vineyard
+V.VINS Q22715 vineyard (vineyards)
+
