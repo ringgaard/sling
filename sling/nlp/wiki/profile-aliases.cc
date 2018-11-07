@@ -134,6 +134,7 @@ class ProfileAliasReducer : public task::Reducer {
  public:
   struct Alias {
     std::unordered_map<string, int> variants;
+    std::unordered_map<CaseForm, int> forms;
     int sources = 0;
     int count = 0;
   };
@@ -147,6 +148,8 @@ class ProfileAliasReducer : public task::Reducer {
     names_.Bind(&commons_);
     commons_.Freeze();
     task->Fetch("anchor_threshold", &anchor_threshold_);
+    task->Fetch("majority_form_fraction", &majority_form_fraction_);
+    CHECK_GE(majority_form_fraction_, 0.5);
 
     // Read toxic aliases.
     TextMapInput aliases(task->GetInputFiles("toxic-aliases"));
@@ -180,8 +183,10 @@ class ProfileAliasReducer : public task::Reducer {
           continue;
         }
 
-        // Compute fingerprint.
-        uint64 fp = tokenizer_.Fingerprint(name);
+        // Compute fingerprint and case form.
+        uint64 fp;
+        CaseForm form;
+        tokenizer_.FingerprintAndForm(name, &fp, &form);
 
         // Update alias table.
         Alias *a = aliases[fp];
@@ -192,6 +197,7 @@ class ProfileAliasReducer : public task::Reducer {
         a->sources |= sources;
         a->count += count;
         a->variants[name] += count;
+        a->forms[form] += count;
       }
     }
 
@@ -205,7 +211,7 @@ class ProfileAliasReducer : public task::Reducer {
       // Find most common variant.
       int max_count = -1;
       string name;
-      for (auto variant : alias->variants) {
+      for (auto &variant : alias->variants) {
         if (variant.second > max_count) {
           max_count = variant.second;
           name = variant.first;
@@ -213,12 +219,23 @@ class ProfileAliasReducer : public task::Reducer {
       }
       if (name.empty()) continue;
 
+      // Find majority form.
+      CaseForm form = CASE_NONE;
+      for (auto &f : alias->forms) {
+        if (f.second >= alias->count * majority_form_fraction_) {
+          form = f.first;
+          break;
+        }
+      }
+      if (form == CASE_INVALID) continue;
+
       // Add alias to output.
       Builder a(&store);
       a.Add(n_name_, name);
       a.Add(n_lang_, language_);
       a.Add(n_count_, alias->count);
       a.Add(n_sources_, alias->sources);
+      if (form != CASE_NONE) a.Add(n_form_, form);
       merged.Add(n_alias_, a.Create());
     }
 
@@ -288,6 +305,7 @@ class ProfileAliasReducer : public task::Reducer {
   Name n_alias_{names_, "alias"};
   Name n_count_{names_, "count"};
   Name n_sources_{names_, "sources"};
+  Name n_form_{names_, "form"};
 
   // Language.
   Handle language_;
@@ -297,6 +315,10 @@ class ProfileAliasReducer : public task::Reducer {
 
   // Threshold for pure anchors.
   int anchor_threshold_ = 100;
+
+  // Fraction of aliases that must have a certain case form for this form to
+  // be considered the majority form.
+  float majority_form_fraction_ = 0.75;
 
   // Fingerprint for toxic aliases.
   std::set<uint64> toxic_aliases_;
