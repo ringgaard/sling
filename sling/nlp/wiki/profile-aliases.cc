@@ -76,7 +76,8 @@ class ProfileAliasExtractor : public task::FrameProcessor {
         if (s.value == n_category_ ||
             s.value == n_disambiguation_ ||
             s.value == n_infobox_ ||
-            s.value == n_template_) {
+            s.value == n_template_ ||
+            s.value == n_templates_category_) {
           return;
         }
       }
@@ -118,6 +119,7 @@ class ProfileAliasExtractor : public task::FrameProcessor {
   Name n_disambiguation_{names_, "Q4167410"};
   Name n_template_{names_, "Q11266439"};
   Name n_infobox_{names_, "Q19887878"};
+  Name n_templates_category_{names_, "Q23894233"};
 
   // Language for aliases.
   Handle language_;

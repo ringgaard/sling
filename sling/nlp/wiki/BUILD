@@ -153,6 +153,7 @@ cc_library(
   name = "phrase-table-builder",
   srcs = ["phrase-table-builder.cc"],
   deps = [
+    ":wiki",
     "//sling/base",
     "//sling/file:repository",
     "//sling/frame:object",

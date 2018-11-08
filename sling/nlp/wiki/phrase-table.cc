@@ -76,7 +76,7 @@ void PhraseTable::Lookup(uint64 fp, MatchList *matches) {
       const EntityPhrase *entities = phrase->entities();
       for (int i = 0; i < phrase->num_entities(); ++i) {
         int index = entities[i].index;
-        int count = entities[i].count;
+        int count = entities[i].count();
         Handle handle = (*entity_table_)[index];
         if (handle.IsNil()) {
           const EntityItem *entity = entity_index_.GetEntity(index);

@@ -49,10 +49,15 @@ class PhraseTable {
   const string &normalization() const { return normalization_; }
 
  private:
-  // Entity phrase with entity index and frequency.
+  // Entity phrase with entity index and frequency. The count_and_flags field
+  // contains the count in the lower 29 bit. Bit 29 and 30 contain the case
+  // form, and bit 31 contains the reliable source flag.
   struct EntityPhrase {
     uint32 index;
-    uint32 count;
+    uint32 count_and_flags;
+    int count() const { return count_and_flags & ((1 << 29) - 1); }
+    int form() const { return (count_and_flags >> 29) & 3; }
+    bool reliable() const { return count_and_flags & (1 << 31); }
   };
 
   // Entity item in repository.
