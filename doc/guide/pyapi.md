@@ -547,11 +547,11 @@ for entity in names.lookup("Annette Stroyberg"):
   print entity.id, entity.name
 
 # Query all entities named 'Funen' with frequency counts.
-for entity, count in names.query("Funen"):
-  print count, entity.id, entity.name, "(", entity.description, ")"
+for m in names.query("Funen"):
+  print m.count(), m.id(), m.item().name, "(", m.item().description, ")"
 ```
 
-The `lookup()` and `query()` methods return the entities in decreasing
+The `lookup()` and `query()` methods return the matches in decreasing
 frequency order.
 
 ## Dates

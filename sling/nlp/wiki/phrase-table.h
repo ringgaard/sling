@@ -31,7 +31,17 @@ namespace nlp {
 // Phrase table for looking up entities based on name fingerprints.
 class PhraseTable {
  public:
-  typedef std::vector<std::pair<Handle, int>> MatchList;
+  struct Match {
+    Match(Text id, Handle item, int count, int form, bool reliable)
+      : id(id), item(item), count(count), form(form), reliable(reliable) {}
+    Text id;        // entity id of matching item
+    Handle item;    // matching item
+    int count;      // frequency of matching item
+    int form;       // majority case form for item
+    bool reliable;  // matching alias from reliable source
+  };
+
+  typedef std::vector<Match> MatchList;
 
   ~PhraseTable() { delete entity_table_; }
 
@@ -41,14 +51,16 @@ class PhraseTable {
   // Find all entities matching a phrase fingerprint.
   void Lookup(uint64 fp, Handles *matches);
 
-  // Find all entities matching a phrase fingerprint and return list of
-  // frames and counts.
+  // Find all entities matching a phrase fingerprint and return list of matches.
   void Lookup(uint64 fp, MatchList *matches);
 
   // Text normalization flags.
   const string &normalization() const { return normalization_; }
 
  private:
+  // Get handle for entity.
+  Handle GetEntityHandle(int index);
+
   // Entity phrase with entity index and frequency. The count_and_flags field
   // contains the count in the lower 29 bit. Bit 29 and 30 contain the case
   // form, and bit 31 contains the reliable source flag.
@@ -130,6 +142,11 @@ class PhraseTable {
     // Return entity from entity index.
     const EntityItem *GetEntity(int index) const {
       return GetObject(index);
+    }
+
+    // Return id for entity.
+    Text GetEntityId(int index) const {
+      return GetEntity(index)->id();
     }
   };
 

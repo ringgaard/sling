@@ -60,6 +60,7 @@ static void RegisterPythonModule() {
   PyArray::Define(module);
   PyItems::Define(module);
   PyTokenizer::Define(module);
+  PyPhraseMatch::Define(module);
   PyPhraseTable::Define(module);
   PyParser::Define(module);
   PyRecordReader::Define(module);
