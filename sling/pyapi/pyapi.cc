@@ -69,6 +69,7 @@ static void RegisterPythonModule() {
   PyDate::Define(module);
   PyWikiConverter::Define(module);
   PyFactExtractor::Define(module);
+  PyTaxonomy::Define(module);
 #ifndef SLING_GOOGLE3
   PyJob::Define(module);
   PyResource::Define(module);

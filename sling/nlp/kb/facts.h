@@ -23,6 +23,7 @@ namespace sling {
 namespace nlp {
 
 class Facts;
+class Taxonomy;
 
 // A fact catalog holds the configuration information for extracting facts
 // from items.
@@ -33,6 +34,9 @@ class FactCatalog {
 
   // Intialize fact catalog.
   void Init(Store *store);
+
+  // Initialize and return a default taxonomy. Caller takes ownership.
+  Taxonomy *CreateDefaultTaxonomy();
 
  private:
   // Set extractor for property type.
@@ -58,7 +62,7 @@ class FactCatalog {
   // Calendar.
   Calendar calendar_;
 
-  // Items that stops closure expansion.
+  // Items that stop closure expansion.
   HandleSet base_items_;
 
   // Symbols.
@@ -83,6 +87,7 @@ class FactCatalog {
   Name n_item_{names_, "/w/item"};
 
   friend class Facts;
+  friend class Taxonomy;
 };
 
 // Set of facts. A fact is represented as a list properties followed by a
@@ -167,6 +172,25 @@ class Facts {
 
   // Current fact path [P1,...,Pn].
   Handles path_;
+};
+
+// A taxonomy is a type system for classifying items into a list of types.
+// The types are specified in order from the most specific type to the most
+// general type.
+class Taxonomy {
+ public:
+  // Initialize taxonomy from a ranked type list.
+  Taxonomy(const FactCatalog *catalog, const std::vector<Text> &types);
+
+  // Classify item according to taxonomy.
+  Handle Classify(const Frame &item);
+
+ private:
+  // Fact catalog.
+  const FactCatalog *catalog_;
+
+  // Mapping from type to priority.
+  HandleMap<int> typemap_;
 };
 
 }  // namespace nlp

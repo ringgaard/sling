@@ -65,7 +65,7 @@ int PyStore::Init(PyObject *args, PyObject *kwds) {
   // Create new store.
   if (globals != nullptr) {
     // Check that argument is a store.
-    if (!PyObject_TypeCheck(globals, &type)) return -1;
+    if (!PyStore::TypeCheck(globals)) return -1;
 
     // Check that global has been frozen.
     if (!globals->store->frozen()) {

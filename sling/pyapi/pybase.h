@@ -114,6 +114,19 @@ struct PyBase : public PyVarObject {
   static PyObject *AllocateString(Text text) {
     return PyString_FromStringAndSize(text.data(), text.size());
   }
+
+  // Type checking.
+  static bool TypeCheck(PyObject *object, PyTypeObject *type) {
+    if (!PyObject_TypeCheck(object, type)) {
+      PyErr_BadArgument();
+      return false;
+    } else {
+      return true;
+    }
+  }
+  static bool TypeCheck(PyBase *object, PyTypeObject *type) {
+    return TypeCheck(object->AsObject(), type);
+  }
 };
 
 }  // namespace sling
