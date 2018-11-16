@@ -142,29 +142,38 @@ class CUDABasicConcat : public CUDAKernel {
 };
 
 // CUDA-based embedding lookup for single feature.
-class CUDALookupSingle : public CUDAKernel {
+class CUDAGatherSingle : public CUDAKernel {
  public:
-  string Name() override { return "CUDALookupSingle"; }
-  string Operation() override { return "Lookup"; }
+  string Name() override { return "CUDAGatherSingle"; }
+  string Operation() override { return "Gather"; }
 
   bool Supports(Step *step) override {
     // Requires CUDA support.
     if (!CUDAKernel::Supports(step)) return false;
 
     // Check inputs and outputs.
-    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+    if (step->indegree() != 2 && step->indegree() != 3) return false;
+    if (step->outdegree() != 1) return false;
 
     // Check types.
-    Tensor *f = step->input(0);
-    Tensor *M = step->input(1);
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
     Tensor *v = step->output(0);
-    if (f->type() != DT_INT32 || f->elements() != 1) return false;
+    if (f->type() != DT_INT32) return false;
     if (M->type() != DT_FLOAT || M->rank() != 2) return false;
-    if (v->type() != DT_FLOAT || v->rank() != 2) return false;
-    if (v->dim(0) != 1 || v->dim(1) != M->dim(1)) return false;
+    if (v->type() != DT_FLOAT) return false;
+    if (oov != nullptr && oov->type() != DT_FLOAT) return false;
+    int n = f->elements();
+    int d = M->dim(1);
+    int r = v->rank() - 1;
+    if (v->shape().outer(r) != n) return false;
+    if (v->shape().inner(r) != d) return false;
+    if (oov != nullptr && v->shape().inner(r) != oov->elements()) return false;
+    if (n != 1) return false;
 
-    // Check that the output is not already a reference or a cell output.
-    if (v->ref() || v->out()) return false;
+    // Check that the output is not already a reference.
+    if (v->ref()) return false;
 
     return true;
   }
@@ -172,22 +181,21 @@ class CUDALookupSingle : public CUDAKernel {
   void Adjust(Step *step) override {
     // Make output a reference into the embedding matrix.
     Tensor *v = step->output(0);
-    CHECK(!v->ref());
-    CHECK(!v->out());
+    DCHECK(!v->ref());
     v->set_ref(true);
+    v->Link(step->input(0));
+    if (step->indegree() == 3) v->Link(step->input(2));
 
     // Embedding matrix must be row-major.
-    step->input(1)->SetRequiredOrder(ROW_MAJOR);
+    step->input(0)->SetRequiredOrder(ROW_MAJOR);
   }
 
   void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
     // Get inputs and outputs.
-    Tensor *f = step->input(0);
-    Tensor *M = step->input(1);
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
     Tensor *v = step->output(0);
-
-    // Get embedding size. The last element is the OOV element.
-    int embedding_size = M->dim(0) - 1;
 
     // Set grid size.
     ptx->set_grid_dims(1);
@@ -199,20 +207,29 @@ class CUDALookupSingle : public CUDAKernel {
     ptx_emit(ld.global.u32, fidx, PTXAddr(fptr));
 
     // Use OOV for negative index.
-    ptx_decl(pred, oov);
-    ptx_emit(setp.eq.s32, oov, fidx, PTXImm(-1));
-    ptx_if(oov);
-    ptx_emit(mov.s32, fidx, PTXImm(embedding_size));
-    ptx_endif();
-
-    // Compute offset in embedding.
-    ptx_decl(b64, ofs);
-    ptx_emit(mul.wide.s32, ofs, fidx, PTXImm(M->stride(0)));
-
-    // Lookup element in embedding.
     ptx_decl(b64, mptr);
-    ptx->LoadTensorAddress(mptr, M);
-    ptx_emit(add.u64, mptr, mptr, ofs);
+    if (oov) {
+      ptx_decl(pred, is_oov);
+      ptx_emit(setp.eq.s32, is_oov, fidx, PTXImm(-1));
+      ptx_if(is_oov);
+      ptx_decl(b64, oovptr);
+      ptx->LoadTensorAddress(oovptr, oov);
+      ptx_emit(ld.global.u64, mptr, PTXAddr(oovptr));
+      ptx_else();
+      ptx_decl(b64, ofs);
+      ptx_emit(mul.wide.s32, ofs, fidx, PTXImm(M->stride(0)));
+      ptx->LoadTensorAddress(mptr, M);
+      ptx_emit(add.u64, mptr, mptr, ofs);
+      ptx_endif();
+    } else {
+      // Compute offset in embedding.
+      ptx_decl(b64, ofs);
+      ptx_emit(mul.wide.s32, ofs, fidx, PTXImm(M->stride(0)));
+
+      // Lookup element in embedding.
+      ptx->LoadTensorAddress(mptr, M);
+      ptx_emit(add.u64, mptr, mptr, ofs);
+    }
 
     // Save reference to embedding vector.
     ptx_emit(st.global.b64, PTXAddr(ptx->data(), v->device_offset()), mptr);
@@ -228,10 +245,10 @@ class CUDALookupSingle : public CUDAKernel {
 };
 
 // CUDA-based embedding lookup for multiple features.
-class CUDALookupMultiple : public CUDAKernel {
+class CUDAGatherMultiple : public CUDAKernel {
  public:
-  string Name() override { return "CUDALookupMultiple"; }
-  string Operation() override { return "Lookup"; }
+  string Name() override { return "CUDAGatherMultiple"; }
+  string Operation() override { return "Gather"; }
 
   bool Supports(Step *step) override {
     // Requires CUDA support.
@@ -482,8 +499,8 @@ class CUDACollect : public CUDAKernel {
 // Register CUDA array library.
 void RegisterCUDAArrayLibrary(Library *library) {
   library->Register(new CUDABasicConcat());
-  library->Register(new CUDALookupMultiple());
-  library->Register(new CUDALookupSingle());
+  library->Register(new CUDAGatherMultiple());
+  library->Register(new CUDAGatherSingle());
   library->Register(new CUDACollect());
 }
 
