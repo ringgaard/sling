@@ -18,6 +18,7 @@
 #include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/document/lex.h"
 #include "sling/nlp/parser/parser.h"
+#include "sling/nlp/parser/trainer/frame-evaluation.h"
 #include "sling/pyapi/pyframe.h"
 #include "sling/pyapi/pystore.h"
 
@@ -184,6 +185,33 @@ PyObject *PyToLex(PyObject *self, PyObject *args) {
 
   // Return LEX representation.
   return PyString_FromStringAndSize(lex.data(), lex.size());
+}
+
+PyObject *PyEvaluateFrames(PyObject *self, PyObject *args) {
+  // Get arguments.
+  PyStore *pystore;
+  const char *golden;
+  const char *test;
+  if (!PyArg_ParseTuple(args, "Oss", &pystore, &golden, &test)) return nullptr;
+  if (!PyStore::TypeCheck(pystore)) return nullptr;
+
+  // Run frame evaluation.
+  nlp::FrameEvaluation::Output eval;
+  nlp::FrameEvaluation::Evaluate(pystore->store, golden, test, &eval);
+  nlp::FrameEvaluation::Scores scores;
+  eval.GetScores(&scores);
+
+
+  // Return list of benchmark scores.
+  PyObject *result = PyList_New(scores.size());
+  for (int i = 0; i < scores.size(); ++i) {
+    PyObject *score = PyTuple_New(2);
+    PyTuple_SetItem(score, 0, PyBase::AllocateString(scores[i].first));
+    PyTuple_SetItem(score, 1, PyFloat_FromDouble(scores[i].second));
+    PyList_SetItem(result, i, score);
+  }
+
+  return result;
 }
 
 }  // namespace sling

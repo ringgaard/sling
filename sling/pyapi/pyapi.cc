@@ -48,6 +48,7 @@ static PyMethodDef py_funcs[] = {
   {"finalize_dashboard", (PyCFunction) PyFinalizeDashboard, METH_NOARGS, ""},
 #endif
   {"tolex", (PyCFunction) PyToLex, METH_VARARGS, ""},
+  {"evaluate_frames", (PyCFunction) PyEvaluateFrames, METH_VARARGS, ""},
   {nullptr, nullptr, 0, nullptr}
 };
 

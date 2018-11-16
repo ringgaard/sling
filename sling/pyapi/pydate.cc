@@ -102,20 +102,17 @@ void PyDate::Dealloc() {
 }
 
 PyObject *PyDate::Str() {
-  string str = nlp::Calendar::DateString(date);
-  return PyString_FromStringAndSize(str.data(), str.size());
+  return AllocateString(nlp::Calendar::DateString(date));
 }
 
 PyObject *PyDate::Value() {
   int number = nlp::Calendar::DateNumber(date);
   if (number != -1) return PyInt_FromLong(number);
-  string ts = date.ISO8601();
-  return PyString_FromStringAndSize(ts.data(), ts.size());
+  return AllocateString(date.ISO8601());
 }
 
 PyObject *PyDate::ISO() {
-  string str = date.ISO8601();
-  return PyString_FromStringAndSize(str.data(), str.size());
+  return AllocateString(date.ISO8601());
 }
 
 void PyCalendar::Define(PyObject *module) {
@@ -158,8 +155,7 @@ PyObject *PyCalendar::Str(PyObject *obj) {
   PyDate *pydate = GetDate(obj);
   if (pydate == nullptr) return nullptr;
 
-  string str = calendar->DateAsString(pydate->date);
-  return PyString_FromStringAndSize(str.data(), str.size());
+  return AllocateString(calendar->DateAsString(pydate->date));
 }
 
 PyObject *PyCalendar::Day(PyObject *obj) {

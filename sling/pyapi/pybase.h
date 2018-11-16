@@ -37,7 +37,7 @@ inline Dest method_cast(const Source &source) {
   return d.ptr;
 }
 
-// Method table for Python member funtions.
+// Method table for Python member functions.
 class PyMethodTable {
  public:
   // Initialize method table.
