@@ -138,7 +138,7 @@ int PyCalendar::Init(PyObject *args, PyObject *kwds) {
   // Get store argument.
   pystore = nullptr;
   if (!PyArg_ParseTuple(args, "O", &pystore)) return -1;
-  if (!PyObject_TypeCheck(pystore, &PyStore::type)) return -1;
+  if (!PyStore::TypeCheck(pystore)) return -1;
 
   // Initialize calendar.
   Py_INCREF(pystore);

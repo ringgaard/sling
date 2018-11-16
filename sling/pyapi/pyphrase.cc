@@ -94,7 +94,7 @@ int PyPhraseTable::Init(PyObject *args, PyObject *kwds) {
   // Get store and phrase table file name.
   const char *filename = nullptr;
   if (!PyArg_ParseTuple(args, "Os", &pystore, &filename)) return -1;
-  if (!PyObject_TypeCheck(pystore, &PyStore::type)) return -1;
+  if (!PyStore::TypeCheck(pystore)) return -1;
   Py_INCREF(pystore);
 
   // Load phrase table.

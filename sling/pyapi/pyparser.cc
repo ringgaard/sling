@@ -58,7 +58,7 @@ PyObject *PyTokenizer::Tokenize(PyObject *args) {
   PyStore *pystore;
   PyObject *text;
   if (!PyArg_ParseTuple(args, "OS", &pystore, &text)) return nullptr;
-  if (!PyObject_TypeCheck(pystore, &PyStore::type)) return nullptr;
+  if (!PyStore::TypeCheck(pystore)) return nullptr;
   if (!pystore->Writable()) return nullptr;
 
   // Get text.
@@ -84,7 +84,7 @@ PyObject *PyTokenizer::Lex(PyObject *args) {
   PyStore *pystore;
   PyObject *lex;
   if (!PyArg_ParseTuple(args, "OS", &pystore, &lex)) return nullptr;
-  if (!PyObject_TypeCheck(pystore, &PyStore::type)) return nullptr;
+  if (!PyStore::TypeCheck(pystore)) return nullptr;
   if (!pystore->Writable()) return nullptr;
 
   // Get text.
@@ -126,7 +126,7 @@ int PyParser::Init(PyObject *args, PyObject *kwds) {
   PyStore *pystore;
   char *filename;
   if (!PyArg_ParseTuple(args, "Os", &pystore, &filename)) return -1;
-  if (!PyObject_TypeCheck(pystore, &PyStore::type)) return -1;
+  if (!PyStore::TypeCheck(pystore)) return -1;
   if (!pystore->Writable()) return -1;
 
   // Save reference to store to keep it alive.
@@ -155,7 +155,7 @@ PyObject *PyParser::Parse(PyObject *args) {
   // Get arguments.
   PyFrame *pyframe;
   if (!PyArg_ParseTuple(args, "O", &pyframe)) return nullptr;
-  if (!PyObject_TypeCheck(pyframe, &PyFrame::type)) return nullptr;
+  if (!PyFrame::TypeCheck(pyframe)) return nullptr;
   if (!pyframe->pystore->Writable()) return nullptr;
 
   // Initialize document.
@@ -173,7 +173,7 @@ PyObject *PyToLex(PyObject *self, PyObject *args) {
   // Get arguments.
   PyFrame *pyframe;
   if (!PyArg_ParseTuple(args, "O", &pyframe)) return nullptr;
-  if (!PyObject_TypeCheck(pyframe, &PyFrame::type)) return nullptr;
+  if (!PyFrame::TypeCheck(pyframe)) return nullptr;
 
   // Initialize document from frame.
   Frame top(pyframe->pystore->store, pyframe->handle());
