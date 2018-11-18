@@ -73,11 +73,19 @@ class ProfileAliasExtractor : public task::FrameProcessor {
         AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_DEMONYM);
       } else if (s.name == n_instance_of_) {
         // Discard categories, disambiguations, info boxes and templates.
-        if (s.value == n_category_ ||
-            s.value == n_disambiguation_ ||
+        if (s.value == n_disambiguation_ ||
             s.value == n_infobox_ ||
             s.value == n_template_ ||
-            s.value == n_templates_category_) {
+            s.value == n_category_ ||
+            s.value == n_disambiguation_category_ ||
+            s.value == n_list_category_ ||
+            s.value == n_template_category_ ||
+            s.value == n_admin_category_ ||
+            s.value == n_user_category_ ||
+            s.value == n_user_language_category_ ||
+            s.value == n_stub_category_ ||
+            s.value == n_meta_category_ ||
+            s.value == n_navbox_category_) {
           return;
         }
       }
@@ -115,11 +123,20 @@ class ProfileAliasExtractor : public task::FrameProcessor {
   Name n_demonym_{names_, "P1549"};
 
   Name n_instance_of_{names_, "P31"};
-  Name n_category_{names_, "Q4167836"};
   Name n_disambiguation_{names_, "Q4167410"};
   Name n_template_{names_, "Q11266439"};
   Name n_infobox_{names_, "Q19887878"};
-  Name n_templates_category_{names_, "Q23894233"};
+
+  Name n_category_{names_, "Q4167836"};
+  Name n_disambiguation_category_{names_, "Q15407973"};
+  Name n_list_category_{names_, "Q56428020"};
+  Name n_template_category_{names_, "Q23894233"};
+  Name n_stub_category_{names_, "Q24046192"};
+  Name n_admin_category_{names_, "Q15647814"};
+  Name n_user_category_{names_, "Q20769287"};
+  Name n_user_language_category_{names_, "Q20010800"};
+  Name n_meta_category_{names_, "Q30432511"};
+  Name n_navbox_category_{names_, "Q13331174"};
 
   // Language for aliases.
   Handle language_;
@@ -136,7 +153,7 @@ class ProfileAliasReducer : public task::Reducer {
  public:
   struct Alias {
     std::unordered_map<string, int> variants;
-    std::unordered_map<int, int> forms;
+    int forms[NUM_FORMS] = {};
     int sources = 0;
     int count = 0;
   };
@@ -223,9 +240,9 @@ class ProfileAliasReducer : public task::Reducer {
 
       // Find majority form.
       int form = CASE_NONE;
-      for (auto &f : alias->forms) {
-        if (f.second >= alias->count * majority_form_fraction_) {
-          form = f.first;
+      for (int f = 0; f < NUM_FORMS; ++f) {
+        if (alias->forms[f] >= alias->count * majority_form_fraction_) {
+          form = f;
           break;
         }
       }
@@ -264,18 +281,20 @@ class ProfileAliasReducer : public task::Reducer {
     if (alias->sources & (WIKIDATA_FOREIGN |
                           WIKIDATA_NATIVE |
                           WIKIDATA_DEMONYM)) {
-      if (alias->sources & (WIKIPEDIA_ANCHOR | WIKIPEDIA_DISAMBIGUATION)) {
+      if (alias->sources & (WIKIPEDIA_ANCHOR |
+                            WIKIPEDIA_LINK |
+                            WIKIPEDIA_DISAMBIGUATION)) {
         return true;
       }
     }
 
     // Disambiguation links need to be backed by anchors.
     if (alias->sources & WIKIPEDIA_DISAMBIGUATION) {
-      if (alias->sources & WIKIPEDIA_ANCHOR) return true;
+      if (alias->sources & (WIKIPEDIA_ANCHOR | WIKIPEDIA_LINK)) return true;
     }
 
     // Pure anchors need high counts to be selected.
-    if (alias->sources & WIKIPEDIA_ANCHOR) {
+    if (alias->sources & (WIKIPEDIA_ANCHOR  | WIKIPEDIA_LINK)) {
       if (alias->count >= anchor_threshold_) return true;
     }
 
@@ -295,6 +314,7 @@ class ProfileAliasReducer : public task::Reducer {
     WIKIDATA_FOREIGN = 1 << SRC_WIKIDATA_FOREIGN,
     WIKIDATA_NATIVE = 1 << SRC_WIKIDATA_NATIVE,
     WIKIDATA_DEMONYM = 1 << SRC_WIKIDATA_DEMONYM,
+    WIKIPEDIA_LINK = 1 << SRC_WIKIPEDIA_LINK,
   };
 
   // Commons store.

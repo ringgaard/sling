@@ -78,10 +78,12 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
     num_wiki_ast_nodes_ = task->GetCounter("wiki_ast_nodes");
     num_article_text_bytes_ = task->GetCounter("article_text_bytes");
     num_article_tokens_ = task->GetCounter("article_tokens");
+    num_intro_aliases_ = task->GetCounter("intro_aliases");
     num_images_ = task->GetCounter("wiki_images");
     num_links_ = task->GetCounter("wiki_links");
     num_dead_links_ = task->GetCounter("dead_links");
     num_fragment_links_ = task->GetCounter("fragment_links");
+    num_unanchored_links_ = task->GetCounter("unanchored_links");
     num_anchors_ = task->GetCounter("wiki_anchors");
     num_templates_ = task->GetCounter("wiki_templates");
     num_special_templates_ = task->GetCounter("special_templates");
@@ -143,6 +145,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
         // Article: parse, extract aliases, output anchors as aliases for links.
         OutputTitleAlias(document);
         OutputAnchorAliases(document);
+        OutputLinkAliases(document);
         Output(page.qid, frame);
         num_article_pages_->Increment();
         break;
@@ -150,6 +153,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
       case WikipediaMap::CATEGORY:
         // Category: parse article, output anchors as aliases.
         OutputAnchorAliases(document);
+        OutputLinkAliases(document);
         if (categories_ != nullptr) {
           categories_->Send(task::CreateMessage(page.qid, frame));
         }
@@ -165,6 +169,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
       case WikipediaMap::LIST:
         // Only keep anchor aliases from list pages.
         OutputAnchorAliases(document);
+        OutputLinkAliases(document);
         num_list_pages_->Increment();
         break;
 
@@ -199,6 +204,14 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
     // Tokenize article.
     Document document(page, docnames_);
     tokenizer_.Tokenize(&document);
+
+    // Add intro text as alternative title alias.
+    int intro_begin, intro_end;
+    if (parser.GetIntro(&intro_begin, &intro_end)) {
+      string intro = parser.text().substr(intro_begin, intro_end - intro_begin);
+      OutputAlias(qid, intro, SRC_WIKIPEDIA_TITLE);
+      num_intro_aliases_->Increment();
+    }
 
     // Add links as mentions.
     num_wiki_ast_nodes_->Increment(parser.num_ast_nodes());
@@ -251,19 +264,33 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
             if (link.empty()) {
               VLOG(9) << "Dead link: " << node.name();
               num_dead_links_->Increment();
-            } else if (node.anchored()) {
-              // Get tokens span.
-              int begin = document.Locate(node.text_begin);
-              int end = document.Locate(node.text_end);
+            } else {
+              if (node.anchored()) {
+                // Get tokens span.
+                int begin = document.Locate(node.text_begin);
+                int end = document.Locate(node.text_end);
 
-              if (begin == -1 || begin == end) {
-                num_empty_phrases_->Increment();
+                if (begin == -1 || begin == end) {
+                  num_empty_phrases_->Increment();
+                } else {
+                  // Add mention with link.
+                  Span *span = document.AddSpan(begin, end, n_link_);
+                  span->Evoke(document.store()->Lookup(link));
+                }
+                num_anchors_->Increment();
               } else {
-                // Add mention with link.
-                Span *span = document.AddSpan(begin, end, n_link_);
-                span->Evoke(document.store()->Lookup(link));
+                // Add thematic frame for link outside the extracted text.
+                string anchor;
+                parser.ExtractSimpleText(node, &anchor);
+                if (!anchor.empty()) {
+                  Builder theme(document.store());
+                  theme.AddIsA(n_link_);
+                  theme.Add(n_name_, anchor);
+                  theme.AddIs(document.store()->Lookup(link));
+                  document.AddTheme(theme.Create());
+                  num_unanchored_links_->Increment();
+                }
               }
-              num_anchors_->Increment();
             }
           }
           break;
@@ -293,6 +320,18 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
       string anchor = span->GetText();
       Text qid = span->Evoked().Id();
       OutputAlias(qid, anchor, SRC_WIKIPEDIA_ANCHOR);
+    }
+  }
+
+  // Output aliases for links outside text.
+  void OutputLinkAliases(const Document &document) {
+    for (Handle h : document.themes()) {
+      Frame theme(document.store(), h);
+      if (theme.IsA(n_link_)) {
+        Text qid = theme.GetFrame(Handle::is()).Id();
+        Text anchor = theme.GetText(n_name_);
+        OutputAlias(qid, anchor, SRC_WIKIPEDIA_LINK);
+      }
     }
   }
 
@@ -334,7 +373,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
 
   // Lookup Wikidata id for link.
   Text LookupLink(const LanguageInfo &lang, Text name) {
-    return wikimap_.LookupLink(lang.code, name);
+    return wikimap_.LookupLink(lang.code, name, WikipediaMap::ARTICLE);
   }
 
   // Get page info for template.
@@ -345,7 +384,8 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
 
   // Lookup Wikidata id for category.
   Text LookupCategory(const LanguageInfo &lang, Text name) {
-    return wikimap_.LookupLink(lang.code, lang.category_prefix, name);
+    return wikimap_.LookupLink(lang.code, lang.category_prefix, name,
+                               WikipediaMap::CATEGORY);
   }
 
  private:
@@ -386,10 +426,12 @@ class WikipediaDocumentBuilder : public task::FrameProcessor {
   task::Counter *num_wiki_ast_nodes_;
   task::Counter *num_article_text_bytes_;
   task::Counter *num_article_tokens_;
+  task::Counter *num_intro_aliases_;
   task::Counter *num_images_;
   task::Counter *num_links_;
   task::Counter *num_dead_links_;
   task::Counter *num_fragment_links_;
+  task::Counter *num_unanchored_links_;
   task::Counter *num_anchors_;
   task::Counter *num_templates_;
   task::Counter *num_special_templates_;

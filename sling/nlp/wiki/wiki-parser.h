@@ -110,11 +110,22 @@ class WikiParser {
   // Extract plain text and information from AST.
   void Extract() { Extract(0); }
 
+  // Extract text from node into string buffer.
+  void ExtractToString(int index, string *text);
+
+  // Extract simple text from node and its children.
+  void ExtractSimpleText(const Node &node, string *text);
+
+  // Get intro text of article, i.e. the opening phrase in bold/italic.
+  // Returns true if intro text is found, and begin and end is set to the
+  // text span in the extracted text.
+  bool GetIntro(int *begin, int *end);
+
   // Print AST node and its children.
   void PrintAST(int index, int indent);
 
   // Return extracted text.
-  const string text() const { return text_; }
+  const string &text() const { return text_; }
 
   // Return the number of AST nodes.
   int num_ast_nodes() const { return nodes_.size(); }
@@ -288,6 +299,9 @@ class WikiParser {
 
   // Extracted text.
   string text_;
+
+  // String for text output.
+  string *output_ = &text_;
 
   // Number of pending line breaks.
   int line_breaks_ = 0;

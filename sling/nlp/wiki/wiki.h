@@ -45,19 +45,20 @@ enum WikipediaNamespace {
 
 // Alias sources.
 enum AliasSource {
-  SRC_GENERIC                  = 0,
-  SRC_WIKIDATA_LABEL           = 1,
-  SRC_WIKIDATA_ALIAS           = 2,
-  SRC_WIKIPEDIA_TITLE          = 3,
-  SRC_WIKIPEDIA_REDIRECT       = 4,
-  SRC_WIKIPEDIA_ANCHOR         = 5,
-  SRC_WIKIPEDIA_DISAMBIGUATION = 6,
-  SRC_WIKIDATA_FOREIGN         = 7,
-  SRC_WIKIDATA_NATIVE          = 8,
-  SRC_WIKIDATA_DEMONYM         = 9,
+  SRC_GENERIC                  =  0,  //    1  0x0001
+  SRC_WIKIDATA_LABEL           =  1,  //    2  0x0002
+  SRC_WIKIDATA_ALIAS           =  2,  //    4  0x0004
+  SRC_WIKIPEDIA_TITLE          =  3,  //    8  0x0008
+  SRC_WIKIPEDIA_REDIRECT       =  4,  //   16  0x0010
+  SRC_WIKIPEDIA_ANCHOR         =  5,  //   32  0x0020
+  SRC_WIKIPEDIA_DISAMBIGUATION =  6,  //   64  0x0040
+  SRC_WIKIDATA_FOREIGN         =  7,  //  128  0x0080
+  SRC_WIKIDATA_NATIVE          =  8,  //  256  0x0100
+  SRC_WIKIDATA_DEMONYM         =  9,  //  512  0x0200
+  SRC_WIKIPEDIA_LINK           = 10,  // 1024  0x0400
 };
 
-static const int kNumAliasSources = 10;
+static const int kNumAliasSources = 11;
 
 extern const char *kAliasSourceName[kNumAliasSources];
 

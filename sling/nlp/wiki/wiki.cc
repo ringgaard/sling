@@ -41,6 +41,7 @@ const char *kAliasSourceName[kNumAliasSources] = {
   "wikidata_foreign",
   "wikidata_native",
   "wikidata_demonym",
+  "wikipedia_link",
 };
 
 void Wiki::SplitTitle(const string &title,

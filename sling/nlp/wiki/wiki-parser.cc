@@ -287,14 +287,12 @@ void WikiParser::ParseNewLine() {
   while (*ptr_ == '\n' || *ptr_ == ' ') ptr_++;
 
   // End all elements that cannot span newline.
-  if (!Inside(TEMPLATE)) {
-    for (int i = 0; i < stack_.size(); ++i) {
-      int t = nodes_[stack_[i]].type;
-      if (t >= HEADING && t <= TERM) {
-        EndText();
-        while (stack_.size() > i) Pop();
-        break;
-      }
+  for (int i = 0; i < stack_.size(); ++i) {
+    int t = nodes_[stack_[i]].type;
+    if (t >= HEADING && t <= TERM) {
+      EndText();
+      while (stack_.size() > i) Pop();
+      break;
     }
   }
 
@@ -838,9 +836,94 @@ bool WikiParser::ParseAttributes(const char *delimiters) {
   return true;
 }
 
+bool WikiParser::GetIntro(int *begin, int *end) {
+  // Look for FONT-TEXT-FONT sequence at the top level of the AST.
+  if (nodes_.empty()) return false;
+
+  // Seach for FONT node.
+  int index = nodes_[0].first_child;
+  while (index != -1) {
+    Node &node = nodes_[index];
+    if (node.type == FONT) {
+      // FONT node found.
+      index = node.next_sibling;
+      break;
+    } else if (node.type == TEXT) {
+      // No text allowed before intro.
+      for (const char *p = node.begin; p < node.end; ++p) {
+        if (*p != ' ' && *p != '\n') return false;
+      }
+    } else if (node.type == HEADING) {
+      // Intro text must be in the first section.
+      return false;
+    }
+    index = node.next_sibling;
+  }
+  if (index == -1) return false;
+
+  // Find end of bold/italics text.
+  *begin = nodes_[index].text_begin;
+  while (index != -1) {
+    Node &node = nodes_[index];
+    if (node.type == FONT) {
+      *end = node.text_begin;
+      return *begin != -1 && *end != -1;
+    }
+    if (node.type != TEXT) return false;
+    index = node.next_sibling;
+  }
+  return false;
+}
+
+void WikiParser::ExtractSimpleText(const Node &node, string *text) {
+  // Extract text from text node.
+  if (node.type == TEXT) {
+    bool brk = false;
+    for (const char *p = node.begin; p < node.end; ++p) {
+      if (*p == ' ' || *p == '\n') {
+        brk = true;
+      } else {
+        if (brk) {
+          if (!text->empty()) text->push_back(' ');
+          brk = false;
+        }
+        text->push_back(*p);
+      }
+    }
+  }
+
+  // Extract text from child nodes.
+  int child = node.first_child;
+  bool in_ref = false;
+  while (child != -1) {
+    Node &sub = nodes_[child];
+    if ((sub.type == BTAG || sub.type == ETAG) && sub.name() == "ref") {
+      in_ref = sub.type == BTAG;
+    } else if (!in_ref) {
+      ExtractSimpleText(sub, text);
+    }
+    child = sub.next_sibling;
+  }
+}
+
+void WikiParser::ExtractToString(int index, string *text) {
+  // Save current text extraction state.
+  string *saved_output = output_;
+  int saved_line_breaks = line_breaks_;
+
+  // Extract text to string buffer
+  output_ = text;
+  line_breaks_ = 0;
+  Extract(index);
+
+  // Restore text extraction state.
+  output_ = saved_output;
+  line_breaks_ = saved_line_breaks;
+}
+
 void WikiParser::Extract(int index) {
   Node &node = nodes_[index];
-  node.text_begin = text_.size();
+  if (output_ == &text_) node.text_begin = text_.size();
   switch (node.type) {
     case DOCUMENT: ExtractChildren(index); break;
     case ARG: ExtractChildren(index); break;
@@ -872,7 +955,7 @@ void WikiParser::Extract(int index) {
     case CELL: ExtractChildren(index); break;
     case BREAK: break;
   }
-  node.text_end = text_.size();
+  if (output_ == &text_) node.text_end = text_.size();
 }
 
 void WikiParser::ExtractLink(int index) {
@@ -935,6 +1018,7 @@ void WikiParser::ExtractHeading(int index) {
       case 2: Append("</em>"); break;
       case 3: Append("</b>"); break;
       case 4: Append("</em></b>"); break;
+      case 5: Append("</em></b>"); break;
     }
     font_ = 0;
   }
@@ -952,6 +1036,7 @@ void WikiParser::ExtractFont(int index) {
       case 2: Append("</em>"); break;
       case 3: Append("</b>"); break;
       case 4: Append("</em></b>"); break;
+      case 5: Append("</em></b>"); break;
     }
     font_ = 0;
   } else {
@@ -959,6 +1044,7 @@ void WikiParser::ExtractFont(int index) {
       case 2: Append("<em>"); break;
       case 3: Append("<b>"); break;
       case 4: Append("<b><em>"); break;
+      case 5: Append("<b><em>"); break;
     }
     font_ = node.param;
   }
@@ -1144,16 +1230,16 @@ void WikiParser::SkipWhitespace() {
 void WikiParser::Append(const char *begin, const char *end) {
   for (const char *p = begin; p < end; ++p) {
     if (*p == '\n') {
-      if (!text_.empty()) line_breaks_++;
+      if (!output_->empty()) line_breaks_++;
     } else if (*p != ' ' || line_breaks_ == 0) {
       if (line_breaks_ > 1) {
-        text_.append("\n<p>");
+        output_->append("\n<p>");
         line_breaks_ = 0;
       } else if (line_breaks_ > 0) {
-        text_.push_back('\n');
+        output_->push_back('\n');
         line_breaks_ = 0;
       }
-      text_.push_back(*p);
+      output_->push_back(*p);
     }
   }
 }

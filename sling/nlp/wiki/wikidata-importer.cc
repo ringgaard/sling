@@ -148,14 +148,14 @@ class WikipediaMapping : public task::FrameProcessor {
     language_ = commons_->Lookup(StrCat("/lang/" + lang));
 
     // Statistics.
-    num_skipped_ = task->GetCounter("skipped_pages");
-    num_pages_ = task->GetCounter("total_pages");
-    num_articles_ = task->GetCounter("article_pages");
-    num_disambiguations_ = task->GetCounter("disambiguation_pages");
-    num_categories_ = task->GetCounter("category_pages");
-    num_lists_ = task->GetCounter("list_pages");
-    num_templates_ = task->GetCounter("template_pages");
-    num_infoboxes_ = task->GetCounter("infobox_pages");
+    num_skipped_ = task->GetCounter("items_skipped");
+    num_items_ = task->GetCounter("total_items_mapped");
+    num_articles_ = task->GetCounter("article_pages_mapped");
+    num_disambiguations_ = task->GetCounter("disambiguation_pages_mapped");
+    num_categories_ = task->GetCounter("category_pages_mapped");
+    num_lists_ = task->GetCounter("list_pages_mapped");
+    num_templates_ = task->GetCounter("template_pages_mapped");
+    num_infoboxes_ = task->GetCounter("infobox_pages_mapped");
   }
 
   void Process(Slice key, const Frame &frame) override {
@@ -165,7 +165,7 @@ class WikipediaMapping : public task::FrameProcessor {
       num_skipped_->Increment();
       return;
     }
-    num_pages_->Increment();
+    num_items_->Increment();
     Frame article = wikipedia.GetFrame(language_);
     if (article.invalid()) return;
 
@@ -177,7 +177,16 @@ class WikipediaMapping : public task::FrameProcessor {
     bool is_template = false;
     for (const Slot &s : frame) {
       if (s.name == n_instance_of_) {
-        if (s.value == n_category_) {
+        if (s.value == n_category_ ||
+            s.value == n_disambiguation_category_ ||
+            s.value == n_list_category_ ||
+            s.value == n_template_category_ ||
+            s.value == n_admin_category_ ||
+            s.value == n_user_category_ ||
+            s.value == n_user_language_category_ ||
+            s.value == n_stub_category_ ||
+            s.value == n_meta_category_ ||
+            s.value == n_navbox_category_) {
           is_category = true;
         } else if (s.value == n_disambiguation_) {
           is_disambiguation = true;
@@ -225,11 +234,20 @@ class WikipediaMapping : public task::FrameProcessor {
   // Names.
   Name n_wikipedia_{names_, "/w/item/wikipedia"};
   Name n_instance_of_{names_, "P31"};
-  Name n_category_{names_, "Q4167836"};
   Name n_disambiguation_{names_, "Q4167410"};
   Name n_list_{names_, "Q13406463"};
   Name n_template_{names_, "Q11266439"};
   Name n_infobox_{names_, "Q19887878"};
+  Name n_category_{names_, "Q4167836"};
+  Name n_disambiguation_category_{names_, "Q15407973"};
+  Name n_list_category_{names_, "Q56428020"};
+  Name n_template_category_{names_, "Q23894233"};
+  Name n_stub_category_{names_, "Q24046192"};
+  Name n_admin_category_{names_, "Q15647814"};
+  Name n_user_category_{names_, "Q20769287"};
+  Name n_user_language_category_{names_, "Q20010800"};
+  Name n_meta_category_{names_, "Q30432511"};
+  Name n_navbox_category_{names_, "Q13331174"};
 
   Name n_qid_{names_, "/w/item/qid"};
   Name n_kind_{names_, "/w/item/kind"};
@@ -242,7 +260,7 @@ class WikipediaMapping : public task::FrameProcessor {
 
   // Statistics.
   task::Counter *num_skipped_ = nullptr;
-  task::Counter *num_pages_ = nullptr;
+  task::Counter *num_items_ = nullptr;
   task::Counter *num_articles_ = nullptr;
   task::Counter *num_disambiguations_ = nullptr;
   task::Counter *num_categories_ = nullptr;

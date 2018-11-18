@@ -5,8 +5,8 @@
 }
 
 .themes {
-  display: flex;
-  background: #eeeeee;
+  margin-top: 10px;
+
 }
 
 .text-and-panels {
@@ -85,6 +85,7 @@ a:visited {
   box-shadow: 1px 1px 1px 0px #808080;
   white-space: nowrap;
   cursor: pointer;
+  display:inline-block;
 }
 
 .type-label {

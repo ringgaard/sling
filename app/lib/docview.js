@@ -190,13 +190,12 @@ export class DocumentViewer extends Component {
         elements.push(h("span", attrs, subelements));
       }
     }
+    elements.push(h("div", {id: "themes" + this.docno(), class: "themes"}));
 
-    // Render document viewer with text to the left, panels to the right,
-    // and themes above.
+    // Render document viewer with text to the left, panels to the right.
     let key = "doc-" + this.docno();
     return (
       h(Grid, {class: "docviewer", key},
-        h("div", {id: "themes" + this.docno(), class: "themes"}),
         h("div", {class: "text-and-panels"}),
           h("div", {id: "text" + this.docno(),  class: "doctext", key},
             elements
@@ -481,7 +480,8 @@ export class DocumentViewer extends Component {
       for (let i = 0; i < slots.length; i += 2) {
         let n = slots[i];
         let v = slots[i + 1];
-        if (this.document.frames[n].id == "evokes") {
+        if (this.document.frames[n].id == "evokes" ||
+            this.document.frames[n].id == "is") {
           let avm = this.BuildAVM(v, {});
           contents.appendChild(avm);
         }
@@ -729,7 +729,7 @@ export class DocumentViewer extends Component {
 
     this.highlighted = [];
     this.labeled = [];
-    HighlightFrames([fidx]);
+    this.HighlightFrames([fidx]);
     this.LabelMentionedRoles(fidx);
   }
 
