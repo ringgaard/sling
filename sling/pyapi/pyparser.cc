@@ -146,7 +146,7 @@ void PyParser::Dealloc() {
   delete parser;
 
   // Release reference to store.
-  Py_DECREF(pystore);
+  if (pystore) Py_DECREF(pystore);
 
   // Free object.
   Free();

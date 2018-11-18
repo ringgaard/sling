@@ -112,7 +112,7 @@ int PyPhraseTable::Init(PyObject *args, PyObject *kwds) {
 void PyPhraseTable::Dealloc() {
   delete tokenizer;
   delete phrase_table;
-  Py_DECREF(pystore);
+  if (pystore) Py_DECREF(pystore);
   Free();
 }
 

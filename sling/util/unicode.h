@@ -195,6 +195,8 @@ enum CaseForm {
   CASE_CAPITAL = 3,   // capitalized, e.g. proper noun
 };
 
+static const int NUM_FORMS = 4;
+
 // UTF-8 string categorization and conversion.
 class UTF8 {
  public:
