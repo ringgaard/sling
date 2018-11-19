@@ -200,31 +200,30 @@ class CUDAGatherSingle : public CUDAKernel {
     // Set grid size.
     ptx->set_grid_dims(1);
 
-    // Get feature index.
+    // Get feature value.
     ptx_decl(b64, fptr);
     ptx->LoadTensorAddress(fptr, f);
-    ptx_decl(u32, fidx);
-    ptx_emit(ld.global.u32, fidx, PTXAddr(fptr));
+    ptx_decl(u32, feature);
+    ptx_emit(ld.global.u32, feature, PTXAddr(fptr));
 
-    // Use OOV for negative index.
+    // Look up embedding vector. Use OOV for negative index.
     ptx_decl(b64, mptr);
     if (oov) {
       ptx_decl(pred, is_oov);
-      ptx_emit(setp.eq.s32, is_oov, fidx, PTXImm(-1));
+      ptx_emit(setp.le.s32, is_oov, feature, PTXImm(0));
       ptx_if(is_oov);
       ptx_decl(b64, oovptr);
       ptx->LoadTensorAddress(oovptr, oov);
-      ptx_emit(ld.global.u64, mptr, PTXAddr(oovptr));
       ptx_else();
       ptx_decl(b64, ofs);
-      ptx_emit(mul.wide.s32, ofs, fidx, PTXImm(M->stride(0)));
+      ptx_emit(mul.wide.s32, ofs, feature, PTXImm(M->stride(0)));
       ptx->LoadTensorAddress(mptr, M);
       ptx_emit(add.u64, mptr, mptr, ofs);
       ptx_endif();
     } else {
       // Compute offset in embedding.
       ptx_decl(b64, ofs);
-      ptx_emit(mul.wide.s32, ofs, fidx, PTXImm(M->stride(0)));
+      ptx_emit(mul.wide.s32, ofs, feature, PTXImm(M->stride(0)));
 
       // Lookup element in embedding.
       ptx->LoadTensorAddress(mptr, M);
@@ -255,33 +254,41 @@ class CUDAGatherMultiple : public CUDAKernel {
     if (!CUDAKernel::Supports(step)) return false;
 
     // Check inputs and outputs.
-    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+    if (step->indegree() != 2 && step->indegree() != 3) return false;
+    if (step->outdegree() != 1) return false;
 
     // Check types.
-    Tensor *f = step->input(0);
-    Tensor *M = step->input(1);
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
     Tensor *v = step->output(0);
     if (f->type() != DT_INT32) return false;
     if (M->type() != DT_FLOAT || M->rank() != 2) return false;
-    if (v->type() != DT_FLOAT || v->rank() != 2) return false;
-    if (v->dim(0) != 1 || v->dim(1) != M->dim(1)) return false;
+    if (v->type() != DT_FLOAT) return false;
+    if (oov != nullptr && oov->type() != DT_FLOAT) return false;
+    int n = f->elements();
+    int d = M->dim(1);
+    int r = v->rank() - 1;
+    if (v->shape().outer(r) != n) return false;
+    if (v->shape().inner(r) != d) return false;
+    if (oov != nullptr && v->shape().inner(r) != oov->elements()) return false;
 
     return true;
   }
 
   void Adjust(Step *step) override {
     // Embedding matrix must be row-major.
-    step->input(1)->SetRequiredOrder(ROW_MAJOR);
+    step->input(0)->SetRequiredOrder(ROW_MAJOR);
   }
 
   void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
     // Get inputs and outputs.
-    Tensor *f = step->input(0);
-    Tensor *M = step->input(1);
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
     Tensor *v = step->output(0);
 
-    // Get embedding size and dimension. The last element is the OOV element.
-    int embedding_size = M->dim(0) - 1;
+    // Get embedding size and dimension-
     int embedding_dims = v->dim(1);
 
     // Get number of input features.
@@ -304,11 +311,23 @@ class CUDAGatherMultiple : public CUDAKernel {
     // Get embedding.
     ptx_decl(u64, embedding);
     ptx->LoadTensorAddress(embedding, M);
-    ptx_emit(mad.wide.u32, embedding, idx, PTXImm(M->stride(1)), embedding);
+
+    // Get OOV vector.
+    ptx_decl(u64, oovptr);
+    if (oov != nullptr) {
+      ptx->LoadTensorAddress(oovptr, oov);
+    }
+
+    // Compute offset of element in embedding vector.
+    ptx_decl(b64, element_offset);
+    ptx_emit(mul.wide.u32, element_offset, idx, PTXImm(M->element_size()));
+
+    // Initialize output pointer.
+    ptx_decl(b64, vptr);
+    ptx->LoadTensorAddress(vptr, v);
+    ptx_emit(add.u64, vptr, vptr, element_offset);
 
     // Loop over input features.
-    ptx_decl(f32, sum);
-    ptx_emit(mov.f32, sum, PTXFloat(0));
     ptx_decl(b64, fptr);
     ptx->LoadTensorAddress(fptr, f);
     ptx_decl(u32, fidx);
@@ -319,42 +338,37 @@ class CUDAGatherMultiple : public CUDAKernel {
     ptx_decl(s32, feature);
     ptx_emit(ld.global.s32, feature, PTXAddr(fptr));
 
-    // Use OOV if feature value is -1.
-    ptx_decl(pred, oov);
-    ptx_emit(setp.eq.s32, oov, feature, PTXImm(-1));
-    ptx_if(oov);
-    ptx_emit(mov.s32, feature, PTXImm(embedding_size));
-    ptx_endif();
-
-    // Skip if feature value is -2.
-    ptx_decl(pred, empty);
-    ptx_emit(setp.eq.s32, empty, feature, PTXImm(-2));
-    ptx_if(empty);
-    ptx_jump(skip);
-    ptx_endif();
-
-    // Add embedding for feature to sum.
+    // Look up embedding vector. Use OOV for negative index.
     ptx_decl(b64, mptr);
-    ptx_emit(mad.wide.u32, mptr, feature, PTXImm(M->stride(0)), embedding);
+    if (oov) {
+      ptx_decl(pred, is_oov);
+      ptx_emit(setp.le.s32, is_oov, feature, PTXImm(0));
+      ptx_if(is_oov);
+      ptx_emit(mov.b64, mptr, oovptr);
+      ptx_else();
+      ptx_emit(mad.wide.u32, mptr, feature, PTXImm(M->stride(0)), embedding);
+      ptx_endif();
+    } else {
+      ptx_emit(mad.wide.u32, mptr, feature, PTXImm(M->stride(0)), embedding);
+    }
+    ptx_emit(add.u64, mptr, mptr, element_offset);
+
+    // Get element in embedding.
     ptx_decl(f32, value);
     ptx_emit(ld.global.f32, value, PTXAddr(mptr));
-    ptx_emit(add.f32, sum, sum, value);
+
+    // Write element to output.
+    ptx_emit(st.global.f32, PTXAddr(vptr), value);
 
     // Next feature.
-    ptx_label(skip);
     ptx_emit(add.u32, fidx, fidx, PTXImm(1));
     ptx_emit(add.u64, fptr, fptr, PTXImm(sizeof(int)));
+    ptx_emit(add.u64, vptr, fptr, PTXImm(M->stride(0)));
     ptx_decl(pred, more);
     ptx_emit(setp.lt.u32, more, fidx, PTXImm(num_features));
     ptx_if(more);
     ptx_jump(loop1);
     ptx_endif();
-
-    // Save sum to output.
-    ptx_decl(b64, vptr);
-    ptx->LoadTensorAddress(vptr, v);
-    ptx_emit(mad.wide.u32, vptr, idx, PTXImm(v->stride(1)), vptr);
-    ptx_emit(st.global.f32, PTXAddr(vptr), sum);
 
     // Done.
     ptx_label(done);
@@ -364,6 +378,69 @@ class CUDAGatherMultiple : public CUDAKernel {
   int64 Complexity(const Step *step) override {
     return step->input(0)->elements() * step->output(0)->elements();
   }
+};
+
+// Look up multiple features in embedding with pooling.
+class CUDAPoolingGather : public CUDAKernel {
+ public:
+  // Pooling operations.
+  enum Pooling {SUM, AVG, MAX};
+
+  CUDAPoolingGather(Pooling pooling) : pooling_(pooling) {}
+
+  string Name() override { return "CUDA" + Operation(); }
+  string Operation() override {
+    switch (pooling_) {
+      case SUM: return "GatherSum";
+      case AVG: return "GatherAvg";
+      case MAX: return "GatherMax";
+      default: return "???";
+    }
+  }
+
+  bool Supports(Step *step) override {
+    // Requires CUDA support.
+    if (!CUDAKernel::Supports(step)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+
+    // Check types.
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *v = step->output(0);
+    if (M->type() != DT_FLOAT || M->rank() != 2) return false;
+    if (f->type() != DT_INT32 || f->rank() != 2) return false;
+    if (v->type() != DT_FLOAT || v->elements() != M->dim(1)) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    // Embedding matrix must be row-major.
+    step->input(0)->SetRequiredOrder(ROW_MAJOR);
+  }
+
+  void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
+#if 0
+    // Get inputs and outputs.
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    Tensor *v = step->output(0);
+    CHECK(f->IsLocal()) << f->name();
+    CHECK(v->IsLocal()) << v->name();
+    int n = v->elements();
+#endif
+  }
+
+  int64 Complexity(const Step *step) override {
+    Tensor *M = step->input(0);
+    Tensor *f = step->input(1);
+    return M->dim(1) * f->elements() + (pooling_ == AVG ? M->dim(1) : 0);
+  }
+
+ private:
+  Pooling pooling_;  // pooling operation for combining vectors
 };
 
 // CUDA-based feature collect operation for recurrent features mapped through
@@ -501,9 +578,13 @@ void RegisterCUDAArrayLibrary(Library *library) {
   library->Register(new CUDABasicConcat());
   library->Register(new CUDAGatherMultiple());
   library->Register(new CUDAGatherSingle());
+
+  library->Register(new CUDAPoolingGather(CUDAPoolingGather::SUM));
+  library->Register(new CUDAPoolingGather(CUDAPoolingGather::AVG));
+  library->Register(new CUDAPoolingGather(CUDAPoolingGather::MAX));
+
   library->Register(new CUDACollect());
 }
 
 }  // namespace myelin
 }  // namespace sling
-

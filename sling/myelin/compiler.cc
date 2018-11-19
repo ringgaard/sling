@@ -49,6 +49,7 @@ DEFINE_bool(dump_code, false, "Dump generated assembly code");
 DEFINE_bool(check_flow_consistency, false, "Check that flow is consistent");
 DEFINE_bool(dynamic_instance_allocation, false, "Dynamic instance allocation");
 DEFINE_bool(dragnn, false, "Use DRAGNN kernels");
+DEFINE_bool(sync_steps, false, "Synchronize all compute steps");
 
 namespace sling {
 namespace myelin {
@@ -138,6 +139,8 @@ void Compiler::Compile(Flow *flow, Network *net) {
   if (FLAGS_dynamic_instance_allocation) {
     net->options().dynamic_allocation = true;
   }
+  if (FLAGS_sync_steps) net->options().sync_steps = true;
+
   CHECK(net->Compile(*flow, *library_));
 
   // Optionally dump cells to log.

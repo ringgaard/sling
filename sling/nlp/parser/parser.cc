@@ -34,6 +34,9 @@ void Parser::Load(Store *store, const string &model) {
   myelin::Flow flow;
   CHECK(flow.Load(model));
 
+  // FIXME(ringgaard): Patch feature cell output.
+  flow.Var("features/feature_vector")->set_in();
+
   // Compile parser flow.
   compiler_.Compile(&flow, &network_);
 
@@ -152,7 +155,7 @@ void Parser::InitFF(const string &name, myelin::Flow::Blob *spec, FF *ff) {
     }
     ff->mark_distance_bins.push_back(bins.size());
   }
-  
+
   // Get links.
   ff->lr_lstm = GetParam(name + "/link/lr_lstm");
   ff->rl_lstm = GetParam(name + "/link/rl_lstm");
