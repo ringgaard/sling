@@ -346,7 +346,7 @@ export class DocumentViewer extends Component {
     tbl.className = "tfs";
     tbl.setAttribute("frame", fidx);
 
-    if (frame.name || frame.types.length > 0) {
+    if (frame.name || frame.id || frame.types.length > 0) {
       let hdr = document.createElement("tr");
       tbl.appendChild(hdr);
 
@@ -354,8 +354,8 @@ export class DocumentViewer extends Component {
       title.colSpan = 3;
       hdr.appendChild(title);
 
-      if (frame.name) {
-        let name = document.createTextNode(frame.name);
+      if (frame.name || frame.id) {
+        let name = document.createTextNode(frame.name ? frame.name : frame.id);
         if (frame.id) {
           if (this.IsExternal(frame)) {
             let a = document.createElement("a");
