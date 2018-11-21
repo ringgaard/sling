@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import sling
 import re
 import string
@@ -16,6 +18,11 @@ punctuation_pattern = re.compile("[" + re.escape(string.punctuation) + "]+$")
 
 def ispunct(word):
   return punctuation_pattern.match(word)
+
+def has_lower(matches):
+  for m in matches:
+    if m.form() == sling.api.CASE_LOWER: return True
+  return False
 
 class Span:
   def __init__(self, begin, end, matches = None):
@@ -59,11 +66,9 @@ docschema = sling.DocumentSchema(commons)
 commons.freeze()
 
 documentids = [
+  'Q5945076', 'Q23883660', 'Q43287478', 'Q2147524',
   'Q57652',     # Helle Thorning-Schmidt
-  # Ishøj matching many weird aliases
-  # Villy Søvndal not matched
   'Q1636974',   # Danske Bank
-  # Danske Bank not matched
   'Q186285',    # University of Copenhagen
   'Q1687170',   # Jens Christian Skou
 ]
@@ -74,11 +79,15 @@ output = sling.RecordWriter("/tmp/chunked.rec")
 for docid in documentids:
   # Read document from article database.
   store = sling.Store(commons)
-  record = articles.lookup(docid)
-  article = store.parse(record)
-  document = sling.Document(article, schema=docschema)
-  document.remove_annotations()
-  document.update()
+  if docid.startswith("Q"):
+    record = articles.lookup(docid)
+    article = store.parse(record)
+    document = sling.Document(article, schema=docschema)
+    document.remove_annotations()
+    document.update()
+  else:
+    document = sling.tokenize(docid, store=store, schema=docschema)
+
   print document.frame["title"]
 
   begin = 0
@@ -97,7 +106,11 @@ for docid in documentids:
     for i in xrange(length):
       word = document.tokens[begin + i].word
       is_punct[i] = ispunct(word)
-      is_lower[i] = word.islower()
+      is_lower[i] = word.islower();
+
+    # Consider the first token in the sentence to be lower case if the
+    # following token is lower case.
+    if length > 1: is_lower[0] = is_lower[1]
 
     # Find all matching spans.
     chart = Chart(length)
@@ -110,9 +123,12 @@ for docid in documentids:
         phrase = document.phrase(b , e)
         matches = phrasetab.query(phrase)
         if len(matches) > 0:
-          #print phrase, "(", matches[0].item().id, matches[0].item().name, ")"
-          span = Span(b, e, matches)
-          chart.assign(b - begin, e - b, span)
+          if e - b == 1 and is_lower[b - begin] and not has_lower(matches):
+            print "Discard:", phrase
+          else:
+            print phrase, "(", matches[0].item().id, matches[0].item().name, ")"
+            span = Span(b, e, matches)
+            chart.assign(b - begin, e - b, span)
 
     # Find non-overlapping span covering with minimum cost.
     for l in xrange(2, length + 1):
@@ -132,10 +148,18 @@ for docid in documentids:
           #print "compute", s, n, l
           left = chart.get(s, n)
           right = chart.get(s + n, l - n)
+
           cost = 0
-          if left != None and left.cost != None: cost += left.cost
-          if right != None and right.cost != None: cost += right.cost
-          if span.cost == None or cost < span.cost:
+          if left != None and left.cost != None:
+            cost += left.cost
+          else:
+            cost += n
+          if right != None and right.cost != None:
+            cost += right.cost
+          else:
+            cost += l - n
+
+          if span.cost == None or cost <= span.cost:
             span.cost = cost
             span.left = left
             span.right = right
