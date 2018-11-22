@@ -153,7 +153,7 @@ class ProfileAliasReducer : public task::Reducer {
  public:
   struct Alias {
     std::unordered_map<string, int> variants;
-    int forms[NUM_FORMS] = {};
+    int forms[NUM_CASE_FORMS] = {};
     int sources = 0;
     int count = 0;
   };
@@ -240,7 +240,7 @@ class ProfileAliasReducer : public task::Reducer {
 
       // Find majority form.
       int form = CASE_NONE;
-      for (int f = 0; f < NUM_FORMS; ++f) {
+      for (int f = 0; f < NUM_CASE_FORMS; ++f) {
         if (alias->forms[f] >= alias->count * majority_form_fraction_) {
           form = f;
           break;

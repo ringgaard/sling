@@ -114,7 +114,8 @@ export class DocumentViewer extends Component {
       if (doc.url) {
         elements.push(
           h("h3", {class: "title"},
-            h("a", {href: doc.url}, doc.title)
+            h("a", {href: doc.url, class: "titlelink", target: "_blank"},
+              doc.title)
            )
          );
       } else {

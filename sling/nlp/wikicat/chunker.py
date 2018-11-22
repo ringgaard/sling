@@ -4,14 +4,22 @@ import sling
 import re
 import string
 
+from sling import CASE_NONE, CASE_LOWER, CASE_UPPER, CASE_TITLE
+
 MAXSPAN = 10
 
 stop_words = set([
   'of', 'in', 'from', 'at', 'by', 'for', 'to', 'on', 'as',
-  'is', 'a', 'an', 'the', 'and', 'or',
+  'is', 'be', 'was', 'were', 'a', 'an', 'the', 'and', 'or',
+  'it', 'he', 'she', 'his', 'her',
   'le', 'la', 'de', 'des', 'et',
   'der', 'die', 'das', 'und',
   "``", "''", "'s",
+])
+
+initial_stop_words = set([
+  'The', 'A', 'An', 'He', 'She', 'It', 'His', 'Her', 'In', 'On', 'At',
+  'This', 'That', 'However', 'There', 'Following',
 ])
 
 punctuation_pattern = re.compile("[" + re.escape(string.punctuation) + "]+$")
@@ -19,10 +27,19 @@ punctuation_pattern = re.compile("[" + re.escape(string.punctuation) + "]+$")
 def ispunct(word):
   return punctuation_pattern.match(word)
 
+def can_be_lower(form):
+  return form == CASE_LOWER or form == CASE_NONE
+
 def has_lower(matches):
   for m in matches:
-    if m.form() == sling.api.CASE_LOWER: return True
+    if can_be_lower(m.form()): return True
   return False
+
+def caseform(word):
+  if word.islower(): return CASE_LOWER
+  if word.isupper(): return CASE_UPPER
+  if word.istitle(): return CASE_TITLE
+  return CASE_NONE
 
 class Span:
   def __init__(self, begin, end, matches = None):
@@ -63,10 +80,19 @@ commons.lockgc()
 commons.load("local/data/e/wiki/kb.sling")
 phrasetab = sling.PhraseTable(commons, "local/data/e/wiki/en/phrase-table.repo")
 docschema = sling.DocumentSchema(commons)
+factex = sling.FactExtractor(commons)
+taxonomy = factex.taxonomy()
+titles = [
+  commons['Q4164871'],   # position
+  commons['Q12737077'],  # occupation
+  commons['Q216353'],    # title
+]
 commons.freeze()
 
 documentids = [
-  'Q5945076', 'Q23883660', 'Q43287478', 'Q2147524',
+  #'Q5945076', 'Q23883660', 'Q43287478', 'Q2147524',
+  #'Q25048736', 'Q6525874', 'Q3851366', 'Q308735', 'Q2184354',
+  'Q5337174', 'Q6218080', 'Q1606412', 'Q7264446', 'Q2263863', 'Q834815', 'Q2583807', 'Q42887751',
   'Q57652',     # Helle Thorning-Schmidt
   'Q1636974',   # Danske Bank
   'Q186285',    # University of Copenhagen
@@ -100,30 +126,34 @@ for docid in documentids:
     print "s:", document.phrase(begin, end)
     length = end - begin
 
-    # Find punctuations and lowercase tokens.
-    is_punct = [False] * length
-    is_lower = [False] * length
+    # Find punctuations and case forms.
+    punct = [False] * length
+    case = [sling.CASE_NONE] * length
     for i in xrange(length):
       word = document.tokens[begin + i].word
-      is_punct[i] = ispunct(word)
-      is_lower[i] = word.islower();
+      punct[i] = ispunct(word)
+      case[i] = caseform(word)
 
     # Consider the first token in the sentence to be lower case if the
     # following token is lower case.
-    if length > 1: is_lower[0] = is_lower[1]
+    if length > 1 and case[0] == CASE_UPPER and case[1] == CASE_LOWER:
+      case[0] = CASE_LOWER
 
     # Find all matching spans.
     chart = Chart(length)
     for b in xrange(begin, end):
-      if is_punct[b - begin]: continue
-      if document.tokens[b].word in stop_words: continue
+      word = document.tokens[b].word
+      if punct[b - begin]: continue
+      if word in stop_words: continue
+      if b == begin and word in initial_stop_words: continue
+
       for e in xrange(b + 1, min(b + 1 + MAXSPAN, end + 1)):
-        if is_punct[e - 1 - begin]: continue
+        if punct[e - 1 - begin]: continue
         if document.tokens[e - 1].word in stop_words: continue
         phrase = document.phrase(b , e)
         matches = phrasetab.query(phrase)
         if len(matches) > 0:
-          if e - b == 1 and is_lower[b - begin] and not has_lower(matches):
+          if phrase.islower() and not has_lower(matches):
             print "Discard:", phrase
           else:
             print phrase, "(", matches[0].item().id, matches[0].item().name, ")"
@@ -170,17 +200,35 @@ for docid in documentids:
       spans = []
       solution.extract(spans)
       for s in spans:
-        if s.matches != None:
-          print "**", document.phrase(s.begin, s.end), "(", s.matches[0].item().id, s.matches[0].item().name, ")"
+        if s.matches == None: continue
 
-          mention = document.add_mention(s.begin, s.end)
-          total = 0
-          for m in s.matches: total += m.count()
-          count = 0
-          for m in s.matches:
-            mention.evoke(m.item())
-            count += m.count()
-            if count * 2 >= total: break
+        lower = True
+        for i in xrange(s.begin - begin, s.end - begin):
+          if case[i] != CASE_LOWER:
+            lower = False
+            break
+        if lower:
+          title = False
+          #for m in s.matches:
+          #  if taxonomy.classify(m.item()) in titles:
+          #    title = True
+          if not title: continue
+
+        print "**", document.phrase(s.begin, s.end), "(", s.matches[0].item().id, s.matches[0].item().name, ")"
+
+        mention = document.add_mention(s.begin, s.end)
+
+        total = 0
+        for m in s.matches:
+          if not lower or can_be_lower(m.form()):
+            total += m.count()
+
+        count = 0
+        for m in s.matches:
+          if lower and not can_be_lower(m.form()): continue
+          mention.evoke(m.item())
+          count += m.count()
+          if count * 2 >= total: break
 
     begin = end
 
