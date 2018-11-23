@@ -189,11 +189,11 @@ class InstanceAllocator {
     // Shared variables share offset.
     if (var->shared_ != nullptr) {
       if (placement_ == HOST) {
-        CHECK(var->shared_->offset_ != -1)
+        CHECK(var->shared_->offset_ != NOOFFSET)
             << var->name() << " " << var->shared_->name();
         var->offset_ = var->shared_->offset_;
       } else {
-        CHECK(var->shared_->device_offset_ != -1)
+        CHECK(var->shared_->device_offset_ != NOOFFSET)
             << var->name() << " " << var->shared_->name();
         var->device_offset_ = var->shared_->device_offset_;
       }
@@ -205,7 +205,7 @@ class InstanceAllocator {
     int align = var->ref_ ? kMinDataAlignment : var->byte_alignment_;
 
     // Try to find free space in the instance block.
-    size_t offset = -1;
+    size_t offset = NOOFFSET;
     for (auto it = freelist_.begin(); it != freelist_.end(); ++it) {
       if (it->first + size > it->second) continue;
       int aligned = Align(it->first, align);
@@ -233,7 +233,7 @@ class InstanceAllocator {
       break;
     }
 
-    if (offset == -1) {
+    if (offset == NOOFFSET) {
       // No free space in instance block. Extend the instance block and add new
       // variable at the end.
       size_t end = current_instance_size_;
@@ -1247,13 +1247,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         l->byte_alignment_ = align;
         again = true;
       }
-
-      // Propagate placement.
-      if (t->placement_ != l->placement_) {
-        t->AddPlace(l->placement_);
-        l->AddPlace(t->placement_);
-        again = true;
-      }
     }
   }
 
@@ -1342,6 +1335,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
       if (next->byte_alignment_ < tensor->byte_alignment_) {
         next->byte_alignment_ = tensor->byte_alignment_;
+      }
+      if (next->placement_ != tensor->placement_) {
+        next->AddPlace(tensor->placement_);
+        tensor->AddPlace(next->placement_);
       }
       next = next->shared_;
     }
@@ -1923,7 +1920,7 @@ string Cell::ToString() const {
   }
   std::sort(fields.begin(), fields.end(), CompareOffset);
 
-  int prev_offset = -1;
+  size_t prev_offset = NOOFFSET;
   bool on_device = false;
   for (Tensor *t : fields) {
     if (t->placement() & HOST) {
@@ -1952,7 +1949,7 @@ string Cell::ToString() const {
 
   if (on_device) {
     str.append("\n");
-    prev_offset = -1;
+    prev_offset = NOOFFSET;
     for (Tensor *t : fields) {
       if (t->placement() & DEVICE) {
         str.append("  ");

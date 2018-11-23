@@ -240,7 +240,7 @@ char *CUDARuntime::FetchTensorFromDevice(const Instance *data,
     CUDAInstance *rt = reinterpret_cast<CUDAInstance *>(data->data());
     CHECK(rt != nullptr);
     size_t offset = tensor->device_offset();
-    CHECK_NE(offset, -1);
+    CHECK_NE(offset, NOOFFSET);
     CHECK_CUDA(cuMemcpyDtoH(dest, rt->data + offset, tensor->space()));
   }
 

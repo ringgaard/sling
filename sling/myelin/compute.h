@@ -52,6 +52,7 @@ enum Placement {NOWHERE = 0x0, HOST = 0x1, DEVICE = 0x2, EVERYWHERE = 0x3};
 // Pointer to data in device memory.
 typedef uint64 DevicePtr;
 #define DEVICE_NULL 0
+const size_t NOOFFSET = -1;
 
 // Minimum data alignment.
 static const int kMinDataAlignment = sizeof(void *);
@@ -430,12 +431,12 @@ class Tensor {
   // Size (in bytes) of elements in tensor.
   int element_size() const { return TypeTraits::of(type_).size(); }
 
-  // Offset in data instance block. Return -1 for constants and tensors that
-  // are not stored on the host.
+  // Offset in data instance block. Return NOOFFSET for constants and tensors
+  // that are not stored on the host.
   size_t offset() const { return offset_; }
 
-  // Offset in device data instance block. Return -1 for tensors that are not
-  // stored in the instance block on the device.
+  // Offset in device data instance block. Return NOOFFSET for tensors that are
+  // not stored in the instance block on the device.
   size_t device_offset() const { return device_offset_; }
 
   // Number bytes allocated for tensor in instance. This takes references into
@@ -585,10 +586,10 @@ class Tensor {
 
  private:
   // Offset in data instance block.
-  size_t offset_ = -1;
+  size_t offset_ = NOOFFSET;
 
   // Offset in device data instance block.
-  size_t device_offset_ = -1;
+  size_t device_offset_ = NOOFFSET;
 
   // Tensor name.
   string name_;

@@ -14,6 +14,8 @@
 
 #include "sling/myelin/kernel/cuda.h"
 
+#include <math.h>
+
 #include "sling/myelin/cuda/cuda-kernel.h"
 
 namespace sling {
@@ -212,8 +214,7 @@ class CUDAGatherSingle : public CUDAKernel {
       ptx_decl(pred, is_oov);
       ptx_emit(setp.le.s32, is_oov, feature, PTXImm(0));
       ptx_if(is_oov);
-      ptx_decl(b64, oovptr);
-      ptx->LoadTensorAddress(oovptr, oov);
+      ptx->LoadTensorAddress(mptr, oov);
       ptx_else();
       ptx_decl(b64, ofs);
       ptx_emit(mul.wide.s32, ofs, feature, PTXImm(M->stride(0)));
@@ -422,15 +423,106 @@ class CUDAPoolingGather : public CUDAKernel {
   }
 
   void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
-#if 0
     // Get inputs and outputs.
     Tensor *M = step->input(0);
     Tensor *f = step->input(1);
     Tensor *v = step->output(0);
-    CHECK(f->IsLocal()) << f->name();
-    CHECK(v->IsLocal()) << v->name();
-    int n = v->elements();
-#endif
+
+    // Get embedding size and dimension-
+    int embedding_dims = v->dim(1);
+
+    // Get number of input features.
+    int num_features = f->dim(1);
+
+    // Use one thread for each element in the embedding.
+    ptx->set_grid_dims(embedding_dims);
+
+    // Get thread index.
+    ptx_decl(b32, idx);
+    ptx->GetThreadIndex(idx, 0);
+
+    // Check bounds.
+    ptx_decl(pred, outside);
+    ptx_emit(setp.ge.u32, outside, idx, PTXImm(embedding_dims));
+    ptx_if(outside);
+    ptx_jump(done);
+    ptx_endif();
+
+    // Get embedding.
+    ptx_decl(u64, embedding);
+    ptx->LoadTensorAddress(embedding, M);
+
+    // Compute offset of element in embedding vector.
+    ptx_decl(b64, element_offset);
+    ptx_emit(mul.wide.u32, element_offset, idx, PTXImm(M->element_size()));
+
+    // Initialize neutral value for pooling operation.
+    ptx_decl(f32, accum);
+    if (pooling_ == MAX) {
+      ptx_emit(mov.f32, accum, PTXFloat(-INFINITY));
+    } else {
+      ptx_emit(mov.f32, accum, PTXFloat(0.0));
+    }
+
+    // Loop over input features.
+    ptx_decl(b64, fptr);
+    ptx->LoadTensorAddress(fptr, f);
+    ptx_decl(u32, fidx);
+    ptx_emit(mov.u32, fidx, PTXImm(0));
+    ptx_label(loop1);
+
+    // Get feature from feature vector.
+    ptx_decl(s32, feature);
+    ptx_emit(ld.global.s32, feature, PTXAddr(fptr));
+
+    // Stop if feature is negative.
+    ptx_decl(pred, negative);
+    ptx_emit(setp.le.s32, negative, feature, PTXImm(0));
+    ptx_if(negative);
+    ptx_jump(end);
+    ptx_endif();
+
+    // Look up embedding vector. Use OOV for negative index.
+    ptx_decl(b64, mptr);
+    ptx_emit(mad.wide.u32, mptr, feature, PTXImm(M->stride(0)), embedding);
+    ptx_emit(add.u64, mptr, mptr, element_offset);
+
+    // Get element in embedding.
+    ptx_decl(f32, value);
+    ptx_emit(ld.global.f32, value, PTXAddr(mptr));
+
+    // Accumulate values.
+    if (pooling_ == MAX) {
+      ptx_emit(max.f32, accum, accum, value);
+    } else {
+      ptx_emit(add.f32, accum, accum, value);
+    }
+
+    // Next feature.
+    ptx_emit(add.u32, fidx, fidx, PTXImm(1));
+    ptx_emit(add.u64, fptr, fptr, PTXImm(sizeof(int)));
+    ptx_decl(pred, more);
+    ptx_emit(setp.lt.u32, more, fidx, PTXImm(num_features));
+    ptx_if(more);
+    ptx_jump(loop1);
+    ptx_endif();
+
+    // Store result.
+    ptx_label(end);
+    if (pooling_ == AVG) {
+      // Compute average.
+      ptx_decl(f32, count);
+      ptx_emit(cvt.u32.f32, count, fidx);
+      ptx_emit(div.rnd.f32, accum, count);
+    }
+    ptx_decl(b64, vptr);
+    ptx->LoadTensorAddress(vptr, v);
+    ptx_emit(add.u64, vptr, vptr, element_offset);
+    ptx_emit(st.global.f32, PTXAddr(vptr), accum);
+
+    // Done.
+    ptx_label(done);
+    ptx_ret();
   }
 
   int64 Complexity(const Step *step) override {
@@ -443,147 +535,14 @@ class CUDAPoolingGather : public CUDAKernel {
   Pooling pooling_;  // pooling operation for combining vectors
 };
 
-// CUDA-based feature collect operation for recurrent features mapped through
-// an embedding matrix.
-class CUDACollect : public CUDAKernel {
- public:
-  string Name() override { return "CUDACollect"; }
-  string Operation() override { return "Collect"; }
-
-  bool Supports(Step *step) override {
-    // Requires CUDA support.
-    if (!CUDAKernel::Supports(step)) return false;
-
-    // Check inputs and outputs.
-    if (step->indegree() != 2 || step->outdegree() != 1) return false;
-
-    // Check types.
-    Tensor *f = step->input(0);
-    Tensor *M = step->input(1);
-    Tensor *R = step->output(0);
-    if (f->type() != DT_INT32) return false;
-    if (M->type() != DT_FLOAT || M->rank() != 2) return false;
-    if (R->type() != DT_FLOAT || R->rank() != 2) return false;
-
-    if (f->dim(0) != 1 || f->dim(1) != R->dim(0)) return false;
-    if (R->dim(1) != M->dim(1) + 1) return false;
-
-    return true;
-  }
-
-  void Adjust(Step *step) override {
-    step->input(1)->SetRequiredOrder(ROW_MAJOR);
-    step->output(0)->SetRequiredOrder(ROW_MAJOR);
-  }
-
-  void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
-    // Get inputs and outputs.
-    Tensor *f = step->input(0);
-    Tensor *M = step->input(1);
-    Tensor *R = step->output(0);
-
-    // Get size of activation vectors.
-    int dims = M->dim(1);
-
-    // Get number input features.
-    int num_features = f->dim(1);
-
-    // Use a thread for each feature and embedding dim.
-    ptx->set_grid_dims(dims, num_features);
-
-    // Get feature and embedding position thread index.
-    ptx_decl(b32, midx);
-    ptx->GetThreadIndex(midx, 0);
-    ptx_decl(b32, fidx);
-    ptx->GetThreadIndex(fidx, 1);
-
-    // Check bounds.
-    ptx_decl(pred, outside_x);
-    ptx_emit(setp.ge.u32, outside_x, midx, PTXImm(dims));
-    ptx_decl(pred, outside_y);
-    ptx_emit(setp.ge.u32, outside_y, fidx, PTXImm(num_features));
-    ptx_decl(pred, outside);
-    ptx_emit(or.pred, outside, outside_x, outside_y);
-    ptx_if(outside);
-    ptx_jump(done);
-    ptx_endif();
-
-    // Get feature id.
-    ptx_decl(b64, fptr);
-    ptx->LoadTensorAddress(fptr, f);
-    ptx_decl(s32, fval);
-    ptx_emit(mad.wide.u32, fptr, fidx, PTXImm(f->stride(1)), fptr);
-    ptx_emit(ld.global.s32, fval, PTXAddr(fptr));
-
-    // Output zero if feature value is -1.
-    ptx_decl(f32, value);
-    ptx_emit(mov.f32, value, PTXFloat(0));
-    ptx_decl(pred, oov);
-    ptx_emit(setp.eq.s32, oov, fval, PTXImm(-1));
-    ptx_if(oov);
-    ptx_jump(l1);
-    ptx_endif();
-
-    // Lookup embedding.
-    ptx_decl(b64, mptr);
-    ptx->LoadTensorAddress(mptr, M);
-    ptx_emit(mad.wide.u32, mptr, fval, PTXImm(M->stride(0)), mptr);
-    ptx_emit(mad.wide.u32, mptr, midx, PTXImm(M->stride(1)), mptr);
-    ptx_emit(ld.global.f32, value, PTXAddr(mptr));
-
-    // Get output address.
-    ptx_label(l1);
-    ptx_decl(b64, result);
-    ptx->LoadTensorAddress(result, R);
-    ptx_decl(b64, rrow);
-    if (num_features > 1) {
-      ptx_emit(mad.wide.u32, rrow, fidx, PTXImm(R->stride(0)), result);
-    } else {
-      rrow = result;
-    }
-    ptx_decl(b64, rptr);
-    ptx_emit(mad.wide.u32, rptr, midx, PTXImm(R->stride(1)), rrow);
-
-    // Store value in result.
-    ptx_emit(st.global.f32, PTXAddr(rptr), value);
-
-    // The OOV indicator is set in the first thread for the feature.
-    ptx_decl(pred, first);
-    ptx_emit(setp.eq.u32, first, midx, PTXImm(0));
-    ptx_ifnot(first);
-    ptx_jump(done);
-    ptx_endif();
-
-    // Set OOV indicator to 1.0 if feature is -1.
-    ptx_decl(f32, oovval);
-    ptx_if(oov);
-    ptx_emit(mov.f32, oovval, PTXFloat(1.0));
-    ptx_else();
-    ptx_emit(mov.f32, oovval, PTXFloat(0));
-    ptx_endif();
-    ptx_emit(st.global.f32, PTXAddr(rrow, dims * R->stride(1)), oovval);
-
-    // Done.
-    ptx_label(done);
-    ptx_ret();
-  }
-
-  int64 Complexity(const Step *step) override {
-    return 0;
-  }
-};
-
 // Register CUDA array library.
 void RegisterCUDAArrayLibrary(Library *library) {
   library->Register(new CUDABasicConcat());
   library->Register(new CUDAGatherMultiple());
   library->Register(new CUDAGatherSingle());
-
   library->Register(new CUDAPoolingGather(CUDAPoolingGather::SUM));
   library->Register(new CUDAPoolingGather(CUDAPoolingGather::AVG));
   library->Register(new CUDAPoolingGather(CUDAPoolingGather::MAX));
-
-  library->Register(new CUDACollect());
 }
 
 }  // namespace myelin
