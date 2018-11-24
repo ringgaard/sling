@@ -190,32 +190,32 @@ flow = "flow" <version>
        <#cnxs> cnx*
        <#blobs> blob* (from version 4)
 
-var = <name$>
-      <#flags> (IN=1, OUT=2, REF=4, LEARNABLE=8 UNIQUE=16, from version 5)
+var = <#flags> (IN=1, OUT=2, REF=4, LEARNABLE=8 UNIQUE=16, from version 5)
+      <name$>
       <#aliases> <alias$>
       <dtype$>
       <shape>
       <#bytes> value
 
-op = <name$>
-     <#flags> (unused, from version 5)
+op = <#flags> (unused, from version 5)
+     <name$>
      <type$>
      <#inputs> <input$>*
      <#outputs> <output$>*
      <#attrs> attr*
 
-blob = <name$>
-       <#flags> (unused, from version 5)
+blob = <#flags> (unused, from version 5)
+       <name$>
        <type$>
        <#attrs> attr*
        <#bytes> data
 
-func = <name$>
-       <#flags> (TRAINING=1, from version 5)
+func = <#flags> (TRAINING=1, from version 5)
+       <name$>
        <#ops> <op$>
 
-cnx = <name$>
-      <#flags> (unused, from version 5)
+cnx = <#flags> (unused, from version 5)
+      <name$>
       <#vars> <var$>
 
 shape = <#dims> <size>*
