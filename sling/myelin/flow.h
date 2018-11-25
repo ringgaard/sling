@@ -67,6 +67,9 @@ class TypeTraits {
   bool valid() const { return type_ != DT_INVALID; }
   const char *ctype() const { return ctype_; }
   const char *ptx() const { return ptx_; }
+  const char *pytype() const { return pytype_; }
+
+  // Return data formatted according to type.
   string str(const void *data) const;
 
   // Look up traits from type code.
