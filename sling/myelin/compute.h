@@ -830,6 +830,9 @@ class Channel {
   // Return runtime for channel.
   inline Runtime *runtime() const;
 
+  // Return tensor format for channel elements.
+  const Tensor *format() const { return format_; }
+
   // Return contents of channel as string.
   string ToString() const;
 

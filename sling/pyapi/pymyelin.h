@@ -80,8 +80,117 @@ struct PyNetwork : public PyBase {
   // Look up global tensor in network.
   PyObject *LookupTensor(PyObject *key);
 
+  // Look up cell in network.
+  PyObject *LookupCell(PyObject *key);
+
+  // Return profile report if profiling is enabled.
+  PyObject *Profile();
+
+  // Get named tensor in cell or a global tensor is cell is null.
+  myelin::Tensor *GetTensor(PyObject *key, const myelin::Cell *cell);
+
   // Myelin network.
   myelin::Network *net;
+
+  // Registration.
+  static PyTypeObject type;
+  static PyMappingMethods mapping;
+  static PyMethodTable methods;
+  static void Define(PyObject *module);
+};
+
+// Python wrapper for Myelin cell.
+struct PyCell : public PyBase {
+  // Initialize wrapper.
+  int Init(PyNetwork *pynet, myelin::Cell *cell);
+
+  // Deallocate wrapper.
+  void Dealloc();
+
+  // Return new data instance for cell.
+  PyObject *NewInstance();
+
+  // Return new channel.
+  PyObject *NewChannel(PyObject *args);
+
+  // Myelin cell.
+  myelin::Cell *cell;
+
+  // Network that owns the cell.
+  PyNetwork *pynet;
+
+  // Registration.
+  static PyTypeObject type;
+  static PyMethodTable methods;
+  static void Define(PyObject *module);
+};
+
+// Python wrapper for Myelin instance.
+struct PyInstance : public PyBase {
+  // Initialize wrapper.
+  int Init(PyCell *pycell);
+
+  // Deallocate wrapper.
+  void Dealloc();
+
+  // Look up local tensor in instance.
+  PyObject *LookupTensor(PyObject *key);
+
+  // Connect channel element to reference tensor in instance.
+  PyObject *Connect(PyObject *args);
+
+  // Run cell computation on instance.
+  PyObject *Compute();
+
+  // Clear instance.
+  PyObject *Clear();
+
+  // Return data instance as string.
+  PyObject *Str();
+
+  // Myelin data instance.
+  myelin::Instance *data;
+
+  // Cell for the instance.
+  PyCell *pycell;
+
+  // Registration.
+  static PyTypeObject type;
+  static PyMappingMethods mapping;
+  static PyMethodTable methods;
+  static void Define(PyObject *module);
+};
+
+// Python wrapper for Myelin channel.
+struct PyChannel : public PyBase {
+  // Initialize wrapper.
+  int Init(PyNetwork *pynet, myelin::Tensor *format, int size);
+
+  // Deallocate wrapper.
+  void Dealloc();
+
+  // Return channel size.
+  PyObject *Size();
+
+  // Return channel element.
+  PyObject *Lookup(PyObject *key);
+
+  // Resize channel.
+  PyObject *Resize(PyObject *args);
+
+  // Myelin channel data.
+  myelin::Channel *channel;
+
+  // Network for channel.
+  PyNetwork *pynet;
+
+  // Type checking.
+  static bool TypeCheck(PyBase *object) {
+    return PyBase::TypeCheck(object, &type);
+  }
+  static bool TypeCheck(PyObject *object) {
+    return PyBase::TypeCheck(object, &type);
+  }
 
   // Registration.
   static PyTypeObject type;
@@ -133,7 +242,7 @@ struct PyTensor : public PyBase {
   }
 
   // Get address of element in tensor.
-  char *GetReference(PyObject *index);
+  char *GetAddress(PyObject *index);
 
   // Reference for keeping data alive.
   PyObject *owner;

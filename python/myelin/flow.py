@@ -123,7 +123,7 @@ class FileReader:
     return ''
 
 
-class Variable:
+class Variable(object):
   """Flow variable."""
 
   def __init__(self, name):
@@ -198,7 +198,7 @@ class Variable:
     return t
 
 
-class Operation:
+class Operation(object):
   """Flow operation with inputs and outputs."""
 
   def __init__(self, name):
@@ -247,7 +247,7 @@ class Operation:
     return s
 
 
-class Function:
+class Function(object):
   """Flow function with operations."""
 
   def __init__(self, name):
@@ -269,7 +269,7 @@ class Function:
     return s
 
 
-class Connector:
+class Connector(object):
   """Flow connector with linked variables."""
 
   def __init__(self, name):
@@ -290,7 +290,7 @@ class Connector:
     return s
 
 
-class Blob:
+class Blob(object):
   """Blob for storing extra data like lexicons and feature maps."""
 
   def __init__(self, name):

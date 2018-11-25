@@ -224,6 +224,18 @@ void LogProfile(const Network &net) {
   }
 }
 
+string ProfileReport(const Network &net) {
+  string report;
+  if (net.options().global_profiler) {
+    for (const Cell *cell : net.cells()) {
+      Profile profile(cell->profile_summary());
+      report.append(profile.ASCIIReport());
+      report.append("\n");
+    }
+  }
+  return report;
+}
+
 void SetCPUFeatures(const string &features) {
   const char *p = features.c_str();
 
@@ -238,7 +250,6 @@ void SetCPUFeatures(const string &features) {
     jit::CPU::Disable(jit::AVX2);
     jit::CPU::Disable(jit::AVX512F);
     jit::CPU::Disable(jit::FMA3);
-    p++;
   }
 
   while (*p != 0) {

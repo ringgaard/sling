@@ -82,6 +82,9 @@ static void RegisterPythonModule() {
 
   PyCompiler::Define(module);
   PyNetwork::Define(module);
+  PyCell::Define(module);
+  PyInstance::Define(module);
+  PyChannel::Define(module);
   PyTensor::Define(module);
 
 #ifndef SLING_GOOGLE3

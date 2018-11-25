@@ -23,9 +23,22 @@ using namespace myelin;
 // Python type declarations.
 PyTypeObject PyCompiler::type;
 PyMethodTable PyCompiler::methods;
+
 PyTypeObject PyNetwork::type;
 PyMappingMethods PyNetwork::mapping;
 PyMethodTable PyNetwork::methods;
+
+PyTypeObject PyCell::type;
+PyMethodTable PyCell::methods;
+
+PyTypeObject PyInstance::type;
+PyMappingMethods PyInstance::mapping;
+PyMethodTable PyInstance::methods;
+
+PyTypeObject PyChannel::type;
+PyMappingMethods PyChannel::mapping;
+PyMethodTable PyChannel::methods;
+
 PyTypeObject PyTensor::type;
 PyMappingMethods PyTensor::mapping;
 PyBufferProcs PyTensor::buffer;
@@ -45,6 +58,7 @@ void PyCompiler::Define(PyObject *module) {
 int PyCompiler::Init(PyObject *args, PyObject *kwds) {
   // Initialize compiler.
   compiler = new Compiler();
+  compiler->set_perf_flopctr(false);
 
   return 0;
 }
@@ -258,8 +272,9 @@ void PyNetwork::Define(PyObject *module) {
   type.tp_as_mapping = &mapping;
   mapping.mp_subscript = method_cast<binaryfunc>(&PyNetwork::LookupTensor);
 
-  //methods.AddO("compile", &PyCompiler::Compile);
-  //type.tp_methods = methods.table();
+  methods.AddO("cell", &PyNetwork::LookupCell);
+  methods.Add("profile", &PyNetwork::Profile);
+  type.tp_methods = methods.table();
 
   RegisterType(&type, module, "Network");
 }
@@ -275,27 +290,273 @@ void PyNetwork::Dealloc() {
 }
 
 PyObject *PyNetwork::LookupTensor(PyObject *key) {
-  // Get name of global tensor.
-  const char *name = PyString_AsString(key);
-  if (name == nullptr) return nullptr;
-
   // Look up tensor in network.
-  Tensor *tensor = net->LookupParameter(name);
-  if (tensor == nullptr) {
-    PyErr_SetString(PyExc_TypeError, "Unknown global tensor");
-    return nullptr;
-  }
+  Tensor *tensor = GetTensor(key, nullptr);
+  if (tensor == nullptr) return nullptr;
 
   // Get tensor data buffer.
-  char *data = tensor->data();
-  if (data == nullptr) Py_RETURN_NONE;
-  if (tensor->ref()) data = *reinterpret_cast<char **>(data);
-  if (data == nullptr) Py_RETURN_NONE;
+  char *ptr = tensor->data();
+  if (ptr == nullptr) Py_RETURN_NONE;
+  if (tensor->ref()) ptr = *reinterpret_cast<char **>(ptr);
+  if (ptr == nullptr) Py_RETURN_NONE;
 
   // Return tensor data.
   PyTensor *pytensor = PyObject_New(PyTensor, &PyTensor::type);
-  pytensor->Init(this->AsObject(), data, tensor);
+  pytensor->Init(this->AsObject(), ptr, tensor);
   return pytensor->AsObject();
+}
+
+PyObject *PyNetwork::LookupCell(PyObject *key) {
+  // Get cell name.
+  const char *name = PyString_AsString(key);
+  if (name == nullptr) return nullptr;
+
+  // Look up cell in network.
+  Cell *cell = net->LookupCell(name);
+  if (cell == nullptr) {
+    PyErr_SetString(PyExc_TypeError, "Unknown cell");
+    return nullptr;
+  }
+
+  // Return cell wrapper.
+  PyCell *pycell = PyObject_New(PyCell, &PyCell::type);
+  pycell->Init(this, cell);
+  return pycell->AsObject();
+}
+
+PyObject *PyNetwork::Profile() {
+  return AllocateString(ProfileReport(*net));
+}
+
+Tensor *PyNetwork::GetTensor(PyObject *key, const Cell *cell) {
+  // Get tensor name. If key is not a string, the name is computed using
+  // the repr() method on the key object.
+  Tensor *tensor;
+  if (PyString_Check(key)) {
+    const char *name = PyString_AsString(key);
+    if (name == nullptr) return nullptr;
+    tensor = net->LookupParameter(name);
+  } else {
+    PyObject *repr = PyObject_Repr(key);
+    if (repr == nullptr) return nullptr;
+    const char *name = PyString_AsString(repr);
+    if (name == nullptr) {
+      Py_DECREF(repr);
+      return nullptr;
+    }
+    tensor = net->LookupParameter(name);
+    Py_DECREF(repr);
+  }
+
+  if (tensor == nullptr) {
+    PyErr_SetString(PyExc_ValueError, "Unknown tensor");
+    return nullptr;
+  }
+
+  if (tensor->cell() != cell) {
+    if (cell == nullptr) {
+      PyErr_SetString(PyExc_TypeError, "Tensor is not a global tensor");
+    } else {
+      PyErr_SetString(PyExc_TypeError, "Tensor does not belong to cell");
+    }
+    return nullptr;
+  }
+
+  return tensor;
+}
+
+void PyCell::Define(PyObject *module) {
+  InitType(&type, "sling.Cell", sizeof(PyCell), false);
+  type.tp_init = method_cast<initproc>(&PyCell::Init);
+  type.tp_dealloc = method_cast<destructor>(&PyCell::Dealloc);
+
+  methods.Add("instance", &PyCell::NewInstance);
+  methods.Add("channel", &PyCell::NewChannel);
+  type.tp_methods = methods.table();
+
+  RegisterType(&type, module, "Cell");
+}
+
+int PyCell::Init(PyNetwork *pynet, myelin::Cell *cell) {
+  this->cell = cell;
+  this->pynet = pynet;
+  Py_INCREF(pynet);
+  return 0;
+}
+
+void PyCell::Dealloc() {
+  Py_DECREF(pynet);
+  Free();
+}
+
+PyObject *PyCell::NewInstance() {
+  PyInstance *pyinstance = PyObject_New(PyInstance, &PyInstance::type);
+  pyinstance->Init(this);
+  return pyinstance->AsObject();
+}
+
+PyObject *PyCell::NewChannel(PyObject *args) {
+  // Get tensor name for channel and optionally size.
+  PyObject *key = nullptr;
+  int size = 0;
+  if (!PyArg_ParseTuple(args, "O|i", &key, &size)) return nullptr;
+
+  // Look up tensor in network.
+  Tensor *tensor = pynet->GetTensor(key, cell);
+  if (tensor == nullptr) return nullptr;
+
+  // Create new channel.
+  PyChannel *pychannel = PyObject_New(PyChannel, &PyChannel::type);
+  pychannel->Init(pynet, tensor, size);
+  return pychannel->AsObject();
+}
+
+void PyInstance::Define(PyObject *module) {
+  InitType(&type, "sling.Instance", sizeof(PyInstance), false);
+  type.tp_init = method_cast<initproc>(&PyInstance::Init);
+  type.tp_dealloc = method_cast<destructor>(&PyInstance::Dealloc);
+  type.tp_str = method_cast<reprfunc>(&PyInstance::Str);
+  type.tp_repr = method_cast<reprfunc>(&PyInstance::Str);
+
+  type.tp_as_mapping = &mapping;
+  mapping.mp_subscript = method_cast<binaryfunc>(&PyInstance::LookupTensor);
+
+  methods.Add("compute", &PyInstance::Compute);
+  methods.Add("clear", &PyInstance::Clear);
+  methods.Add("connect", &PyInstance::Connect);
+  type.tp_methods = methods.table();
+
+  RegisterType(&type, module, "Instance");
+}
+
+int PyInstance::Init(PyCell *pycell) {
+  this->pycell = pycell;
+  Py_INCREF(pycell);
+  data = new Instance(pycell->cell);
+  data->Clear();
+  return 0;
+}
+
+void PyInstance::Dealloc() {
+  delete data;
+  Py_DECREF(pycell);
+  Free();
+}
+
+PyObject *PyInstance::LookupTensor(PyObject *key) {
+  // Look up tensor in network.
+  Tensor *tensor = pycell->pynet->GetTensor(key, data->cell());
+  if (tensor == nullptr) return nullptr;
+
+  // Get tensor data buffer.
+  char *ptr = data->GetAddress(tensor);
+  if (ptr == nullptr) Py_RETURN_NONE;
+  if (tensor->ref()) ptr = *reinterpret_cast<char **>(ptr);
+  if (ptr == nullptr) Py_RETURN_NONE;
+
+  // Return tensor data.
+  PyTensor *pytensor = PyObject_New(PyTensor, &PyTensor::type);
+  pytensor->Init(this->AsObject(), ptr, tensor);
+  return pytensor->AsObject();
+}
+
+PyObject *PyInstance::Connect(PyObject *args) {
+  // Get arguments: tensor name, channel, index.
+  PyObject *key;
+  PyChannel *pychannel;
+  int index;
+  if (!PyArg_ParseTuple(args, "OOi", &key, &pychannel, &index)) return nullptr;
+  if (!PyChannel::TypeCheck(pychannel)) return nullptr;
+
+  // Look up tensor in network.
+  Tensor *tensor = pycell->pynet->GetTensor(key, data->cell());
+  if (tensor == nullptr) return nullptr;
+
+  // Check index.
+  if (index < 0 || index >= pychannel->channel->size()) {
+    PyErr_SetString(PyExc_IndexError, "Invalid channel element index");
+    return nullptr;
+  }
+
+  // Set reference tensor to element in channel.
+  data->Set(tensor, pychannel->channel, index);
+
+  Py_RETURN_NONE;
+}
+
+PyObject *PyInstance::Compute() {
+  data->Compute();
+  Py_RETURN_NONE;
+}
+
+PyObject *PyInstance::Clear() {
+  data->Clear();
+  Py_RETURN_NONE;
+}
+
+PyObject *PyInstance::Str() {
+  return AllocateString(data->ToString());
+}
+
+void PyChannel::Define(PyObject *module) {
+  InitType(&type, "sling.Channel", sizeof(PyChannel), false);
+  type.tp_init = method_cast<initproc>(&PyChannel::Init);
+  type.tp_dealloc = method_cast<destructor>(&PyChannel::Dealloc);
+
+  type.tp_as_mapping = &mapping;
+  mapping.mp_length = method_cast<lenfunc>(&PyChannel::Size);
+  mapping.mp_subscript = method_cast<binaryfunc>(&PyChannel::Lookup);
+
+  methods.Add("resize", &PyChannel::Resize);
+  type.tp_methods = methods.table();
+
+  RegisterType(&type, module, "Channel");
+}
+
+int PyChannel::Init(PyNetwork *pynet, Tensor *format, int size) {
+  this->pynet = pynet;
+  Py_INCREF(pynet);
+  channel = new Channel(format);
+  if (size > 0) channel->resize(size);
+  return 0;
+}
+
+void PyChannel::Dealloc() {
+  delete channel;
+  Py_DECREF(pynet);
+  Free();
+}
+
+PyObject *PyChannel::Size() {
+  return PyInt_FromLong(channel->size());
+}
+
+PyObject *PyChannel::Lookup(PyObject *key) {
+  // Get index.
+  int index = PyInt_AsLong(key);
+  if (index == -1 && PyErr_Occurred()) return nullptr;
+  if (index < 0 || index >= channel->size()) {
+    PyErr_SetString(PyExc_IndexError, "Invalid channel element index");
+    return nullptr;
+  }
+
+  // Return element as tensor.
+  char *ptr = channel->at(index);
+  PyTensor *pytensor = PyObject_New(PyTensor, &PyTensor::type);
+  pytensor->Init(this->AsObject(), ptr, channel->format());
+  return pytensor->AsObject();
+}
+
+PyObject *PyChannel::Resize(PyObject *args) {
+  // Get new channel size.
+  int size = 0;
+  if (!PyArg_ParseTuple(args, "i", &size)) return nullptr;
+  if (size < 0) size = 0;
+
+  // Resize channel.
+  channel->resize(size);
+
+  Py_RETURN_NONE;
 }
 
 void PyTensor::Define(PyObject *module) {
@@ -336,9 +597,9 @@ int PyTensor::Init(PyObject *owner, char *data, const Tensor *format) {
 }
 
 void PyTensor::Dealloc() {
-  if (owner) Py_DECREF(owner);
   if (shape) free(shape);
   if (strides) free(strides);
+  if (owner) Py_DECREF(owner);
   Free();
 }
 
@@ -368,7 +629,7 @@ PyObject *PyTensor::Str() {
 
 PyObject *PyTensor::GetElement(PyObject *index) {
   // Get reference to tensor element.
-  char *ptr = GetReference(index);
+  char *ptr = GetAddress(index);
   if (ptr == nullptr) return nullptr;
 
   // Return element.
@@ -403,7 +664,7 @@ int PyTensor::SetElement(PyObject *index, PyObject *value) {
   }
 
   // Get reference to tensor element.
-  char *ptr = GetReference(index);
+  char *ptr = GetAddress(index);
   if (ptr == nullptr) return -1;
 
   // Return element.
@@ -464,14 +725,22 @@ int PyTensor::SetElement(PyObject *index, PyObject *value) {
   return 0;
 }
 
-char *PyTensor::GetReference(PyObject *index) {
+char *PyTensor::GetAddress(PyObject *index) {
   int rank = format->rank();
-  if (rank == 1) {
-    // Get single dimensional index.
+  if (rank == 0) {
+    // Ignore index for scalars.
+    return data;
+  } else if (rank == 1) {
+    // Get single-dimensional index.
     int idx = PyInt_AsLong(index);
     if (idx == -1 &&  PyErr_Occurred()) return nullptr;
+    if (idx < 0 || idx >= format->dim(0)) {
+      PyErr_SetString(PyExc_IndexError, "Invalid tensor index");
+      return nullptr;
+    }
     return data + format->offset(idx);
   } else if (PyTuple_Check(index)) {
+    // Get multi-dimensional index.
     int size =  PyTuple_Size(index);
     if (size != rank) {
       PyErr_SetString(PyExc_IndexError, "Wrong number of indices");
@@ -481,6 +750,10 @@ char *PyTensor::GetReference(PyObject *index) {
     for (int d = 0; d < rank; ++d) {
       int idx = PyInt_AsLong(PyTuple_GetItem(index, d));
       if (idx == -1 &&  PyErr_Occurred()) return nullptr;
+      if (idx < 0 || idx >= format->dim(d)) {
+        PyErr_SetString(PyExc_IndexError, "Invalid tensor index");
+        return nullptr;
+      }
       ofs += idx * format->stride(d);
     }
     return data + ofs;
@@ -507,11 +780,11 @@ int PyTensor::GetBuffer(Py_buffer *view, int flags) {
 
     if (flags & PyBUF_ND) {
       view->ndim = dims;
-      view->shape = GetShape();
+      if (dims > 0) view->shape = GetShape();
     }
 
     if (flags & PyBUF_STRIDES) {
-      view->strides = GetStrides();
+      if (dims > 0) view->strides = GetStrides();
     }
   }
 
@@ -520,7 +793,6 @@ int PyTensor::GetBuffer(Py_buffer *view, int flags) {
 }
 
 void PyTensor::ReleaseBuffer(Py_buffer *view) {
-  Py_DECREF(AsObject());
 }
 
 Py_ssize_t *PyTensor::GetShape() {
@@ -550,7 +822,7 @@ PyBuffers::~PyBuffers() {
 
 Py_buffer *PyBuffers::GetBuffer(PyObject *obj) {
   Py_buffer *view = new Py_buffer;
-  if (PyObject_GetBuffer(obj, view, PyBUF_SIMPLE) == -1) {
+  if (PyObject_GetBuffer(obj, view, PyBUF_C_CONTIGUOUS) == -1) {
     delete view;
     return nullptr;
   }
