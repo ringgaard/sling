@@ -467,7 +467,7 @@ class AVXFltVecMatMulAddReluV : public AVXFltVecMatMulVBase {
 class AVXFltVecMatMulHBase : public AVXVecMatMulBase {
  public:
   // Maximum number of loop unrolls.
-  static const int kMaxUnrolls = 4;
+  static const int kMaxUnrolls = 8;
 
   // Maximum number of adder registers.
   static const int kMaxAdders = 4;

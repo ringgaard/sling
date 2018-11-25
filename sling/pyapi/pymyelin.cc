@@ -329,10 +329,19 @@ PyObject *PyNetwork::Profile() {
 }
 
 Tensor *PyNetwork::GetTensor(PyObject *key, const Cell *cell) {
-  // Get tensor name. If key is not a string, the name is computed using
-  // the repr() method on the key object.
+  // Get tensor name. If key is an integer, this is used as an index into the
+  // parameter array of the network. Otherwise, if key is not a string, the name
+  // is computed using the repr() method on the key object.
   Tensor *tensor;
-  if (PyString_Check(key)) {
+  if (PyInt_Check(key)) {
+    int index = PyInt_AsLong(key);
+    auto &params = net->parameters();
+    if (index < 0 || index >= params.size()) {
+      PyErr_SetString(PyExc_IndexError, "Invalid parameter tensor index");
+      return nullptr;
+    }
+    tensor = params[index];
+  } else if (PyString_Check(key)) {
     const char *name = PyString_AsString(key);
     if (name == nullptr) return nullptr;
     tensor = net->LookupParameter(name);
@@ -372,6 +381,7 @@ void PyCell::Define(PyObject *module) {
 
   methods.Add("instance", &PyCell::NewInstance);
   methods.Add("channel", &PyCell::NewChannel);
+  methods.AddO("index", &PyCell::Index);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "Cell");
@@ -409,6 +419,23 @@ PyObject *PyCell::NewChannel(PyObject *args) {
   PyChannel *pychannel = PyObject_New(PyChannel, &PyChannel::type);
   pychannel->Init(pynet, tensor, size);
   return pychannel->AsObject();
+}
+
+PyObject *PyCell::Index(PyObject *key) {
+  // Look up tensor in network.
+  Tensor *tensor = pynet->GetTensor(key, cell);
+  if (tensor == nullptr) return nullptr;
+
+  // Find parameter tensor index.
+  int index = -1;
+  auto &params = pynet->net->parameters();
+  for (int i = 0; i < params.size(); ++i) {
+    if (params[i] == tensor) {
+      index = i;
+      break;
+    }
+  }
+  return PyInt_FromLong(index);
 }
 
 void PyInstance::Define(PyObject *module) {

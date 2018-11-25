@@ -113,6 +113,10 @@ struct PyCell : public PyBase {
   // Return new channel.
   PyObject *NewChannel(PyObject *args);
 
+  // Return parameter tensor index. This can be used as a key for looking up
+  // tensors in instances.
+  PyObject *Index(PyObject *key);
+
   // Myelin cell.
   myelin::Cell *cell;
 

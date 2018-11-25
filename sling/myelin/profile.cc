@@ -114,10 +114,24 @@ string Profile::ASCIIReport() const {
       complexity());
   StringAppendF(&report, "CPU model: %s\n", cpu.brand());
   StringAppendF(&report,
-      "CPU architecture: %s (family %02x model %02x stepping %02x), %d cores\n",
+      "CPU architecture: %s (family %02x model %02x stepping %02x), %d cores",
       cpu.architecture(),
       cpu.family(), cpu.model(), cpu.stepping(),
       jit::CPU::Processors());
+  if (jit::CPU::MemorySize() > 0) {
+    StringAppendF(&report,", %" PRId64 "G RAM",
+                  jit::CPU::MemorySize() / 1073741824);
+  }
+  if (jit::CPU::L1CacheSize() > 0) {
+    StringAppendF(&report,", %dK L1", jit::CPU::L1CacheSize() / 1024);
+  }
+  if (jit::CPU::L2CacheSize() > 0) {
+    StringAppendF(&report,", %dK L2", jit::CPU::L2CacheSize() / 1024);
+  }
+  if (jit::CPU::L3CacheSize() > 0) {
+    StringAppendF(&report,", %dK L3", jit::CPU::L3CacheSize() / 1024);
+  }
+  report.append("\n");
 
   report.append("CPU features:");
   if (jit::CPU::Enabled(jit::MMX)) report.append(" MMX");
