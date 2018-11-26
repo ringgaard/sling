@@ -27,12 +27,12 @@ namespace sling {
 namespace myelin {
 
 static const char *divider = "+---------+---------+--------------+---------"
-                             "+----------------------------"
+                             "+-------------------------------"
                              "+---+------------------------\n";
 
 static const char *header = "| percent |  accum% |      time    |  gflops |"
                             " kernel"
-                            "                     | t | step\n";
+                            "                        | t | step\n";
 
 static float max_giga_flops = 10000;
 
@@ -177,7 +177,7 @@ string Profile::ASCIIReport() const {
     if (gflops >= max_giga_flops) gflops = 0;
     accum += percent(i);
     StringAppendF(&report,
-                  "| %6.2f%% | %6.2f%% |%s |%8.3f | %-27s|%-2s | %s",
+                  "| %6.2f%% | %6.2f%% |%s |%8.3f | %-30s|%-2s | %s",
                   percent(i), accum, TimeStr(time(i)).c_str(), gflops,
                   name.c_str(),
                   tid.c_str(),
@@ -193,7 +193,7 @@ string Profile::ASCIIReport() const {
   // Output overhead.
   if (overhead_ > 0) {
     StringAppendF(&report,
-                  "| %6.2f%% | %6.2f%% |%s |%8.3f | %-27s|%-2s | %s\n",
+                  "| %6.2f%% | %6.2f%% |%s |%8.3f | %-30s|%-2s | %s\n",
                   overhead_percent(),
                   100.0,
                   TimeStr(overhead_time()).c_str(), 0.0, "", "",
@@ -206,7 +206,7 @@ string Profile::ASCIIReport() const {
 
   report.append(divider);
   StringAppendF(&report,
-                "| 100.00%% | 100.00%% |%s |%8.3f | %-27s|   |\n",
+                "| 100.00%% | 100.00%% |%s |%8.3f | %-30s|   |\n",
                 TimeStr(time()).c_str(), gflops, "TOTAL");
   report.append(divider);
 

@@ -113,7 +113,8 @@ class Tagger {
     // Bind symbol names.
     names_ = new DocumentNames(&store_);
     names_->Bind(&store_);
-    n_pos_ = store_.Lookup("/s/token/pos");
+    //n_pos_ = store_.Lookup("/s/token/pos");
+    n_pos_ = store_.Lookup("postag");
 
     // Set FLOP counter.
     net_.options().flops_address = &flops_counter;

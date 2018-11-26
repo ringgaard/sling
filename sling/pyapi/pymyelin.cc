@@ -822,6 +822,19 @@ int PyTensor::GetBuffer(Py_buffer *view, int flags) {
     }
 
     if (flags & PyBUF_STRIDES) {
+      if ((flags & PyBUF_C_CONTIGUOUS) == PyBUF_C_CONTIGUOUS) {
+        if (format->order() != ROW_MAJOR) {
+          PyErr_SetString(PyExc_TypeError, "Buffer is not row-major");
+          return -1;
+        }
+      }
+      if ((flags & PyBUF_F_CONTIGUOUS) == PyBUF_F_CONTIGUOUS) {
+        if (format->order() != COLUMN_MAJOR) {
+          PyErr_SetString(PyExc_TypeError, "Buffer is not column-major");
+          return -1;
+        }
+      }
+
       if (dims > 0) view->strides = GetStrides();
     }
   }
