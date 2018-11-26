@@ -238,7 +238,9 @@ class Runtime {
   virtual int ExtraInstanceData(Cell *cell) { return 0; }
 
   // Copy constant tensor to device.
-  virtual DevicePtr CopyTensorToDevice(const Tensor *tensor) { return DEVICE_NULL; }
+  virtual DevicePtr CopyTensorToDevice(const Tensor *tensor) {
+    return DEVICE_NULL;
+  }
 
   // Remove constant tensor from device.
   virtual void RemoveTensorFromDevice(const Tensor *tensor) {}
@@ -247,6 +249,12 @@ class Runtime {
   // data buffer.
   virtual char *FetchTensorFromDevice(const Instance *data,
                                       const Tensor *tensor) {
+    return nullptr;
+  }
+
+  // Fetch data block from device. Caller takes ownership of the returned
+  // data buffer.
+  virtual char *FetchDataFromDevice(DevicePtr data, size_t size) {
     return nullptr;
   }
 
@@ -506,6 +514,9 @@ class Tensor {
   // Return tensor placement.
   Placement placement() const { return placement_; }
 
+  // Return tensor reference placement.
+  Placement ref_placement() const { return ref_placement_; }
+
   // Add location for placement.
   void AddPlace(Placement place) {
     placement_ = static_cast<Placement>(placement_ | place);
@@ -514,6 +525,11 @@ class Tensor {
   // Add new location for current placement.
   void AddNewPlace(Placement place) {
     current_placement_ = static_cast<Placement>(current_placement_ | place);
+  }
+
+  // Add new location for referenced data.
+  void AddRefPlace(Placement place) {
+    ref_placement_ = static_cast<Placement>(ref_placement_ | place);
   }
 
   // Return the task index for consumers of this tensor or -1 if tensor is
@@ -642,10 +658,10 @@ class Tensor {
   // or learnable tensors that need to be accessed from the device.
   DevicePtr device_data_ = DEVICE_NULL;
 
-  // Constant tensors are global and cannot be modifed.
+  // Constant tensors are global and cannot be modified.
   bool constant_ = false;
 
-  // Initialize tensor with random values from normal distrubution.
+  // Initialize tensor with random values from normal distribution.
   bool random_init_ = false;
 
   // Local tensors are allocated in the instance data block.
@@ -676,6 +692,9 @@ class Tensor {
 
   // Deferred placement for outputs from asynchronous steps.
   Placement deferred_placement_ = NOWHERE;
+
+  // Placement for data referenced by a reference tensor.
+  Placement ref_placement_ = NOWHERE;
 
   friend class Network;
   friend class InstanceAllocator;

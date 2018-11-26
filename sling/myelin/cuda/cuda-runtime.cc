@@ -247,6 +247,13 @@ char *CUDARuntime::FetchTensorFromDevice(const Instance *data,
   return dest;
 }
 
+char *CUDARuntime::FetchDataFromDevice(DevicePtr data, size_t size) {
+  if (data == DEVICE_NULL) return nullptr;
+  char *dest = reinterpret_cast<char *>(malloc(size));
+  CHECK_CUDA(cuMemcpyDtoH(dest, data, size));
+  return dest;
+}
+
 void CUDARuntime::EmitTensorTransfers(const Transfers &xfers,
                                       Cell *cell,
                                       MacroAssembler *masm) {

@@ -195,8 +195,7 @@ void Parser::Parse(Document *document) const {
 
       // Apply the cascade.
       ParserAction action;
-      data.cascade_.Compute(
-        &data.ff_step_, step, &state, &action, data.trace_);
+      data.cascade_.Compute(&data.ff_step_, step, &state, &action, data.trace_);
       state.Apply(action);
 
       // Update state.

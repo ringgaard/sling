@@ -113,6 +113,7 @@ class BasicRuntime : public Runtime {
 
   char *AllocateChannel(char *data, size_t old_size, size_t new_size,
                         size_t alignment, Placement placement) override {
+    DCHECK_EQ(placement, HOST);
     char *buffer = MemAlloc(new_size, alignment);
     if (data != nullptr) {
       memcpy(buffer, data, old_size);
@@ -123,10 +124,12 @@ class BasicRuntime : public Runtime {
 
   void ClearChannel(char *data, size_t pos, size_t size,
                     Placement placement) override {
+    DCHECK_EQ(placement, HOST);
     memset(data + pos, 0, size);
   }
 
   void FreeChannel(char *data, Placement placement) override {
+    DCHECK_EQ(placement, HOST);
     MemFree(data);
   }
 
@@ -706,8 +709,15 @@ string Channel::ToString() const {
   for (int i = 0; i < size_; ++i) {
     str.append(std::to_string(i));
     str.append(": ");
-    str.append(format_->ToString(at(i), false));
+    char *p = at(i);
+    char *buffer = nullptr;
+    if (placement() & DEVICE) {
+      p = buffer = runtime()->FetchDataFromDevice(
+        reinterpret_cast<DevicePtr>(p), element_size_);
+    }
+    str.append(format_->ToString(p, false));
     str.append("\n");
+    free(buffer);
   }
   return str;
 }
@@ -741,16 +751,28 @@ string Instance::ToString(const Tensor *param) const {
   char *p;
   char *buffer = nullptr;
   if (param->placement() == DEVICE) {
-    if (param->ref()) return "<<device ptr>>";
     p = buffer = runtime()->FetchTensorFromDevice(this, param);
   } else {
-    p  = data_ + param->offset();
-    if (param->ref() && (param->placement() & DEVICE)) return "<<device ref>>";
+    p = data_ + param->offset();
+  }
+
+  // Dereference reference tensors.
+  if (param->ref() && p != nullptr) {
+    p = *reinterpret_cast<char **>(p);
+    if (buffer) {
+      free(buffer);
+      buffer = nullptr;
+    }
+    if (param->ref_placement() == DEVICE && p != nullptr) {
+      // Fetch referenced data from device.
+      DevicePtr devptr = reinterpret_cast<DevicePtr>(p);
+      p = buffer = runtime()->FetchDataFromDevice(devptr, param->size());
+    }
   }
 
   // Convert tensor to string.
-  string str = param->ToString(p);
-  free(buffer);
+  string str = param->ToString(p, false);
+  if (buffer) free(buffer);
   return str;
 }
 
@@ -873,7 +895,7 @@ Network::~Network() {
 }
 
 void Network::InitLearnableWeights(int64 seed, float mean, float stddev) {
-  // Intialize random generator.
+  // Initialize random generator.
   std::mt19937_64 prng;
   prng.seed(seed);
   std::uniform_real_distribution<float> dist(mean, stddev);
@@ -1309,10 +1331,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (tensor->producer_ != nullptr) {
       // Tensor is available in the place it is produced.
       tensor->AddPlace(tensor->producer_->placement());
+      if (tensor->ref()) tensor->AddRefPlace(tensor->producer_->placement());
     }
     for (Step *consumer : tensor->consumers_) {
       // Tensor must be made available in the places it is consumed.
       tensor->AddPlace(consumer->placement());
+      if (tensor->ref()) tensor->AddRefPlace(consumer->placement());
     }
 
     VLOG(5) << "Tensor " << tensor->name_ << ": " << tensor->TypeString()
@@ -1938,6 +1962,9 @@ string Cell::ToString() const {
                     t->offset(),
                     t->space(), t->byte_alignment());
       StringAppendF(&str, " %s", ordername[t->order()]);
+      if (t->ref_placement() != NOWHERE) {
+        StringAppendF(&str, " %s ref", placename[t->ref_placement()]);
+      }
       if (t->linked()) {
         StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
       }
@@ -1966,6 +1993,9 @@ string Cell::ToString() const {
                       t->device_offset(),
                       t->space(), t->byte_alignment());
         StringAppendF(&str, " %s", ordername[t->order()]);
+        if (t->ref_placement() != NOWHERE) {
+          StringAppendF(&str, " %s ref", placename[t->ref_placement()]);
+        }
         if (t->linked()) {
           StringAppendF(&str, " linked to %s", t->next_link()->name().c_str());
         }

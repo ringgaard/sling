@@ -212,7 +212,7 @@ class CUDAGatherSingle : public CUDAKernel {
     ptx_decl(b64, mptr);
     if (oov) {
       ptx_decl(pred, is_oov);
-      ptx_emit(setp.le.s32, is_oov, feature, PTXImm(0));
+      ptx_emit(setp.lt.s32, is_oov, feature, PTXImm(0));
       ptx_if(is_oov);
       ptx->LoadTensorAddress(mptr, oov);
       ptx_else();
@@ -343,7 +343,7 @@ class CUDAGatherMultiple : public CUDAKernel {
     ptx_decl(b64, mptr);
     if (oov) {
       ptx_decl(pred, is_oov);
-      ptx_emit(setp.le.s32, is_oov, feature, PTXImm(0));
+      ptx_emit(setp.lt.s32, is_oov, feature, PTXImm(0));
       ptx_if(is_oov);
       ptx_emit(mov.b64, mptr, oovptr);
       ptx_else();
@@ -364,7 +364,7 @@ class CUDAGatherMultiple : public CUDAKernel {
     // Next feature.
     ptx_emit(add.u32, fidx, fidx, PTXImm(1));
     ptx_emit(add.u64, fptr, fptr, PTXImm(sizeof(int)));
-    ptx_emit(add.u64, vptr, fptr, PTXImm(M->stride(0)));
+    ptx_emit(add.u64, vptr, vptr, PTXImm(M->stride(0)));
     ptx_decl(pred, more);
     ptx_emit(setp.lt.u32, more, fidx, PTXImm(num_features));
     ptx_if(more);
@@ -477,7 +477,7 @@ class CUDAPoolingGather : public CUDAKernel {
 
     // Stop if feature is negative.
     ptx_decl(pred, negative);
-    ptx_emit(setp.le.s32, negative, feature, PTXImm(0));
+    ptx_emit(setp.lt.s32, negative, feature, PTXImm(0));
     ptx_if(negative);
     ptx_jump(end);
     ptx_endif();
@@ -515,6 +515,7 @@ class CUDAPoolingGather : public CUDAKernel {
       ptx_emit(cvt.u32.f32, count, fidx);
       ptx_emit(div.rnd.f32, accum, count);
     }
+
     ptx_decl(b64, vptr);
     ptx->LoadTensorAddress(vptr, v);
     ptx_emit(add.u64, vptr, vptr, element_offset);
