@@ -844,7 +844,9 @@ class Channel {
   int size() const { return size_; }
 
   // Return placement of channel.
-  Placement placement() const { return format_->placement(); }
+  Placement placement() const {
+    return format_->ref() ? format_->ref_placement() : format_->placement();
+  }
 
   // Return runtime for channel.
   inline Runtime *runtime() const;

@@ -295,9 +295,13 @@ PyObject *PyNetwork::LookupTensor(PyObject *key) {
   if (tensor == nullptr) return nullptr;
 
   // Get tensor data buffer.
+  if (tensor->placement() == DEVICE) Py_RETURN_NONE;
   char *ptr = tensor->data();
   if (ptr == nullptr) Py_RETURN_NONE;
-  if (tensor->ref()) ptr = *reinterpret_cast<char **>(ptr);
+  if (tensor->ref()) {
+    if (tensor->ref_placement() == DEVICE) Py_RETURN_NONE;
+    ptr = *reinterpret_cast<char **>(ptr);
+  }
   if (ptr == nullptr) Py_RETURN_NONE;
 
   // Return tensor data.
@@ -476,9 +480,13 @@ PyObject *PyInstance::LookupTensor(PyObject *key) {
   if (tensor == nullptr) return nullptr;
 
   // Get tensor data buffer.
+  if (tensor->placement() == DEVICE) Py_RETURN_NONE;
   char *ptr = data->GetAddress(tensor);
   if (ptr == nullptr) Py_RETURN_NONE;
-  if (tensor->ref()) ptr = *reinterpret_cast<char **>(ptr);
+  if (tensor->ref()) {
+    if (tensor->ref_placement() == DEVICE) Py_RETURN_NONE;
+    ptr = *reinterpret_cast<char **>(ptr);
+  }
   if (ptr == nullptr) Py_RETURN_NONE;
 
   // Return tensor data.
@@ -566,6 +574,9 @@ PyObject *PyChannel::Lookup(PyObject *key) {
     PyErr_SetString(PyExc_IndexError, "Invalid channel element index");
     return nullptr;
   }
+
+  // Cannot access channel elements in device.
+  if (channel->placement() == DEVICE) Py_RETURN_NONE;
 
   // Return element as tensor.
   char *ptr = channel->at(index);
