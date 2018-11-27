@@ -1026,13 +1026,20 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     // Initialize constant tensors with data from the flow variable so they can
     // be used before tensor data allocation.
     if (tensor->constant()) {
-      tensor->data_ = var->data;
-      tensor->size_ = var->size;
       size_t stride = TypeTraits::of(tensor->type()).size();
       for (int d = tensor->rank() - 1; d >= 0; --d) {
         tensor->stride_.set(d, stride);
         stride *= tensor->shape_.dim(d);
       }
+
+      if (var->size != stride) {
+        LOG(ERROR) << "Invalid data size for variable " << var->name << ", "
+                   << var->size << "bytes, " << stride << "expected";
+        return false;
+      }
+
+      tensor->data_ = var->data;
+      tensor->size_ = var->size;
     }
   }
 

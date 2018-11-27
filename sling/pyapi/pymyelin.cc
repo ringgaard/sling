@@ -71,7 +71,7 @@ void PyCompiler::Dealloc() {
 PyObject *PyCompiler::Compile(PyObject *arg) {
   // Import Python-based flow into a Myelin flow.
   Flow flow;
-  PyBuffers buffers;
+  PyBuffers buffers(&flow);
   if (!ImportFlow(arg, &flow, &buffers)) return nullptr;
 
   // Compile flow to network.
@@ -110,14 +110,8 @@ bool PyCompiler::ImportFlow(PyObject *pyflow, Flow *flow, PyBuffers *buffers) {
 
     PyObject *pydata = PyAttr(pyvar, "data");
     if (pydata != Py_None) {
-      if (PyObject_CheckBuffer(pydata)) {
-        Py_buffer *view = buffers->GetBuffer(pydata);
-        if (view == nullptr) return false;
-        var->data = static_cast<char *>(view->buf);
-        var->size = view->len;
-      } else {
-        LOG(WARNING) << name << " does not support buffer";
-      }
+      var->data = buffers->GetData(pydata, &var->size);
+      if (var->data == nullptr) return false;
     }
     Py_DECREF(pydata);
   }
@@ -209,14 +203,8 @@ bool PyCompiler::ImportFlow(PyObject *pyflow, Flow *flow, PyBuffers *buffers) {
 
     PyObject *pydata = PyAttr(pyblob, "data");
     if (pydata != Py_None) {
-      if (PyObject_CheckBuffer(pydata)) {
-        Py_buffer *view = buffers->GetBuffer(pydata);
-        if (view == nullptr) return false;
-        blob->data = static_cast<char *>(view->buf);
-        blob->size = view->len;
-      } else {
-        LOG(WARNING) << name << " does not support buffer";
-      }
+      blob->data = buffers->GetData(pydata, &blob->size);
+      if (blob->data == nullptr) return false;
     }
     Py_DECREF(pydata);
 
@@ -333,9 +321,10 @@ PyObject *PyNetwork::Profile() {
 }
 
 Tensor *PyNetwork::GetTensor(PyObject *key, const Cell *cell) {
-  // Get tensor name. If key is an integer, this is used as an index into the
-  // parameter array of the network. Otherwise, if key is not a string, the name
-  // is computed using the repr() method on the key object.
+  // Get tensor name. If the key is a string, this used for looking up the
+  // tensor by name. If key is an integer, it is used as an index into the
+  // parameter array of the network. Otherwise, Otherwise, the repr() method
+  // is used for computing the name of the tensor.
   Tensor *tensor;
   if (PyInt_Check(key)) {
     int index = PyInt_AsLong(key);
@@ -869,16 +858,43 @@ PyBuffers::~PyBuffers() {
     PyBuffer_Release(view);
     delete view;
   }
+  for (auto *ref : refs_) {
+    Py_DECREF(ref);
+  }
 }
 
-Py_buffer *PyBuffers::GetBuffer(PyObject *obj) {
-  Py_buffer *view = new Py_buffer;
-  if (PyObject_GetBuffer(obj, view, PyBUF_C_CONTIGUOUS) == -1) {
-    delete view;
+char *PyBuffers::GetData(PyObject *obj, size_t *size) {
+  if (PyObject_CheckBuffer(obj)) {
+    // Get data using Python buffer protocol.
+    Py_buffer *view = new Py_buffer;
+    if (PyObject_GetBuffer(obj, view, PyBUF_C_CONTIGUOUS) == -1) {
+      delete view;
+      return nullptr;
+    }
+    views_.push_back(view);
+    *size = view->len;
+    return static_cast<char *>(view->buf);
+  } else if (PyString_Check(obj)) {
+    // Get string buffer.
+    char *data;
+    Py_ssize_t length;
+    if (PyString_AsStringAndSize(obj, &data, &length) == -1) return nullptr;
+    Py_INCREF(obj);
+    refs_.push_back(obj);
+    *size = length;
+    return data;
+  } else if (PyFloat_Check(obj)) {
+    float v = PyFloat_AsDouble(obj);
+    *size = sizeof(float);
+    return flow_->AllocateMemory(&v, sizeof(float));
+  } else if (PyInt_Check(obj)) {
+    int v = PyInt_AsLong(obj);
+    *size = sizeof(int);
+    return flow_->AllocateMemory(&v, sizeof(int));
+  } else {
+    PyErr_SetString(PyExc_TypeError, "Cannot get data from object");
     return nullptr;
   }
-  views_.push_back(view);
-  return view;
 }
 
 }  // namespace sling

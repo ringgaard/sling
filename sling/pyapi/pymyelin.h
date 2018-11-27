@@ -27,10 +27,13 @@ namespace sling {
 // Myelin flows.
 class PyBuffers {
  public:
+  PyBuffers(myelin::Flow *flow) : flow_(flow) {}
   ~PyBuffers();
-  Py_buffer *GetBuffer(PyObject *obj);
+  char *GetData(PyObject *obj, size_t *size);
  private:
+  myelin::Flow *flow_;
   std::vector<Py_buffer *> views_;
+  std::vector<PyObject *> refs_;
 };
 
 // Python wrapper for Myelin compiler.
