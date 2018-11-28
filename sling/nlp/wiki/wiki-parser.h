@@ -53,10 +53,10 @@ class WikiParser {
     // Elements that must be at the start of a line.
     HEADING,     // =h1= ==h2== ===h3===
     INDENT,      // : :: :::
+    TERM,        // ; term
     UL,          // * ** *** ****
     OL,          // # ## ### ###
     HR,          // ----
-    TERM,        // ; term : definition
     SWITCH,      // __SWITCH__
 
     // Tables.
@@ -176,14 +176,8 @@ class WikiParser {
   // Parse heading end.
   void ParseHeadingEnd();
 
-  // Parse indent or term definition (:).
-  void ParseIndent();
-
   // Parse list item (* or =).
   void ParseListItem();
-
-  // Parse term (;).
-  void ParseTerm();
 
   // Parse horizontal rule (----).
   void ParseHorizontalRule();

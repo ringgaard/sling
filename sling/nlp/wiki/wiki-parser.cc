@@ -287,16 +287,16 @@ void WikiParser::ParseNewLine() {
   while (*ptr_ == '\n' || *ptr_ == ' ') ptr_++;
 
   // End all elements that cannot span newline.
-  for (int i = 0; i < stack_.size(); ++i) {
+  for (int i = stack_.size() - 1; i >= 0; --i) {
     int t = nodes_[stack_[i]].type;
+    if (t == TEMPLATE) break;
     if (t >= HEADING && t <= TERM) {
       EndText();
       while (stack_.size() > i) Pop();
-      break;
     }
   }
 
-  // Parse image link at begining of line inside gallery tag.
+  // Parse image link at beginning of line inside gallery tag.
   if (Inside(LINK, GALLERY)) {
     UnwindUntil(LINK);
     ParseGallery();
@@ -311,11 +311,11 @@ void WikiParser::ParseNewLine() {
   // Check for elements that can start line.
   switch (*ptr_) {
     case '=': ParseHeadingBegin(); return;
-    case ':': ParseIndent(); return;
-    case ';': ParseTerm(); return;
 
     case '*':
     case '#':
+    case ';':
+    case ':':
       ParseListItem();
       return;
 
@@ -650,24 +650,27 @@ void WikiParser::ParseHeadingEnd() {
   txt_ = ptr_;
 }
 
-void WikiParser::ParseIndent() {
-  VLOG(14) << "Indent";
-}
-
 void WikiParser::ParseListItem() {
   // Get item level.
   const char *p = ptr_;
-  while (*p == '*' || *p == '#') p++;
+  while (*p == '*' || *p == '#' || *p == ':' || *p == ';') p++;
 
   // Start new item.
-  Push(p[-1] == '*' ? UL : OL, p - ptr_);
+  Type type;
+  switch (p[-1]) {
+    case '*': type = UL; break;
+    case '#': type = OL; break;
+    case ':': type = INDENT; break;
+    case ';': type = TERM; break;
+    default:
+      ptr_ = p;
+      return;
+  }
+
+  Push(type, p - ptr_);
   ptr_ = p;
   SkipWhitespace();
   txt_ = ptr_;
-}
-
-void WikiParser::ParseTerm() {
-  VLOG(14) << "Term";
 }
 
 void WikiParser::ParseHorizontalRule() {
@@ -840,7 +843,7 @@ bool WikiParser::GetIntro(int *begin, int *end) {
   // Look for FONT-TEXT-FONT sequence at the top level of the AST.
   if (nodes_.empty()) return false;
 
-  // Seach for FONT node.
+  // Search for FONT node.
   int index = nodes_[0].first_child;
   while (index != -1) {
     Node &node = nodes_[index];
@@ -942,11 +945,11 @@ void WikiParser::Extract(int index) {
     case MATH: break;
     case GALLERY: ExtractChildren(index); break;
     case HEADING: ExtractHeading(index); break;
-    case INDENT: break;
+    case INDENT: ExtractChildren(index); break;
+    case TERM: ExtractChildren(index); break;
     case UL: ExtractListItem(index); break;
     case OL: ExtractListItem(index); break;
     case HR: break;
-    case TERM: break;
     case SWITCH: break;
     case TABLE: ExtractTable(index); break;
     case CAPTION: break;
@@ -1080,7 +1083,6 @@ void WikiParser::ExtractChildren(int index) {
 
       case ETAG:
         if (node.name() == "ref") in_ref = false;
-        Append(" ");
         break;
 
       default: ;
