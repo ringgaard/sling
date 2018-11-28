@@ -126,7 +126,7 @@ Taxonomy *FactCatalog::CreateDefaultTaxonomy() {
     "Q28877",      // goods
     "Q15401930",   // product
     "Q483394",     // genre
-    "Q121769",     //  reference
+    "Q121769",     // reference
     "Q1047113",    // specialty
     "Q1190554",    // occurrence
     "Q151885",     // concept

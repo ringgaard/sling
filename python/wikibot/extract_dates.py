@@ -15,9 +15,15 @@
 """Class for extracting birth date facts and storing them in a record file"""
 
 import sling
+import sling.flags as flags
 import re
 import sys
 import json
+
+flags.define("--prop",
+             help="The property to extract dates for",
+             default="birth",
+             type=str)
 
 class ExtractDates:
   def __init__(self):
@@ -27,6 +33,7 @@ class ExtractDates:
     self.instanceof = self.kb['P31']
     self.has_part = self.kb['P527']
     self.part_of = self.kb['P361']
+    self.subclass = self.kb['P279']
     self.item_category = self.kb['/w/item/category']
     self.date_of_birth = self.kb['P569']
     self.date_of_death = self.kb['P570']
@@ -41,18 +48,57 @@ class ExtractDates:
       self.kb['Q36507'],    # millennium
     ]
     self.human = self.kb['Q5']
+    self.business = self.kb['Q4830453']
+    self.organization = self.kb['Q43229']
     self.item = self.kb["item"]
     self.facts = self.kb["facts"]
     self.provenance = self.kb["provenance"]
     self.category = self.kb["category"]
     self.method = self.kb["method"]
 
-    self.calendar = sling.Calendar(self.kb)
     self.names = sling.PhraseTable(self.kb,
                                    "local/data/e/wiki/en/phrase-table.repo")
     self.kb.freeze()
     self.date_type = {}
     self.conflicts = 0
+
+    self.months = {
+      "January": 1,
+      "February": 2,
+      "March": 3,
+      "April": 4,
+      "May": 5,
+      "June": 6,
+      "July": 7,
+      "August": 8,
+      "September": 9,
+      "October": 10,
+      "November": 11,
+      "December": 12
+    }
+
+  def subclasses(self, cls):
+    subcls = {}
+    subcls[int(cls.id[1:len(cls.id)])] = True
+    changed = True
+    while changed:
+      changed = False
+      for item in self.kb:
+        try:
+          num = int(item.id[1:len(item.id)])
+        except:
+          continue
+        if num in subcls: continue
+        for supercls in item(self.subclass):
+          try:
+            supernum = int(supercls.id[1:len(supercls.id)])
+          except:
+            continue
+          if supernum in subcls:
+            changed = True
+            subcls[num] = True
+            break
+    return subcls
 
   def find_date(self, phrase):
     for item in self.names.lookup(phrase):
@@ -65,9 +111,10 @@ class ExtractDates:
 
   def dated_categories(self, pattern, group=1):
     cats = {}
+    rec = re.compile(pattern)
     for item in self.kb:
       if self.wikimedia_category not in item(self.instanceof): continue
-      m = re.compile(pattern).match(str(item.name))  # , re.IGNORECASE
+      m = rec.match(str(item.name))  # , re.IGNORECASE
       if m is not None:
         date = self.find_date(m.group(group))
         if date is not None:
@@ -95,15 +142,26 @@ class ExtractDates:
         return dt[self.date_types[i]]
     return None
 
+  def is_org(self, item):
+    for cls in item(self.instanceof):
+      try:
+        num = int(cls.id[1:len(cls.id)])
+      except:
+        continue
+      if num in self.org_cls: return True
+    return False
+
   def find_inceptions(self, inc_cats):
     self.out_file = "local/data/e/wikibot/inc-dates.rec"
     record_file = sling.RecordWriter(self.out_file)
     records = 0
     store = sling.Store(self.kb)
+    types = {}
 
     for item in self.kb:
       if self.wikimedia_category in item(self.instanceof): continue
       if self.human in item(self.instanceof): continue
+      if not self.is_org(item): continue
       name = item.name
       if name is not None and name.startswith("Category:"): continue
       if item[self.inception] is not None: continue
@@ -120,7 +178,7 @@ class ExtractDates:
       records += 1
 
       facts = store.frame({
-        self.inception: self.calendar.value(sling.Date(inc_date))
+        self.inception: sling.Date(inc_date).value()
       })
       provenance = store.frame({
         self.category: inc_cat,
@@ -158,7 +216,7 @@ class ExtractDates:
       records += 1
       store = sling.Store(self.kb)
       facts = store.frame({
-        self.date_of_death: self.calendar.value(sling.Date(death_date))
+        self.date_of_death: sling.Date(death_date).value()
       })
       provenance = store.frame({
         self.category: death_cat,
@@ -196,7 +254,7 @@ class ExtractDates:
       records += 1
       store = sling.Store(self.kb)
       facts = store.frame({
-        self.date_of_birth: self.calendar.value(sling.Date(birth_date))
+        self.date_of_birth: sling.Date(birth_date).value()
       })
       provenance = store.frame({
         self.category: birth_cat,
@@ -213,15 +271,23 @@ class ExtractDates:
     print records, "birth date records written to file:", self.out_file
     print self.conflicts, "conflicts encountered"
 
+
   def run(self):
-    birth_cats = self.dated_categories("Category:(.+) births")
-    self.find_births(birth_cats)
-    death_cats = self.dated_categories("Category:(.+) deaths")
-    self.find_deaths(death_cats)
-    inc_cats = self.dated_categories("Category:(.+) established in (.+)", 2)
-    self.find_inceptions(inc_cats)
+    if flags.arg.prop == "birth":
+      birth_cats = self.dated_categories("Category:(.+) births")
+      self.find_births(birth_cats)
+    elif flags.arg.prop == "death":
+      death_cats = self.dated_categories("Category:(.+) deaths")
+      self.find_deaths(death_cats)
+    elif flags.arg.prop == "inception":
+      self.org_cls = self.subclasses(self.organization)
+      inc_cats = self.dated_categories("Category:(.+) established in (.+)", 2)
+      self.find_inceptions(inc_cats)
+    else:
+      print "'--prop' flags must be either 'birth', 'death', or 'inception'"
 
 if __name__ == '__main__':
+  flags.parse()
   extract_dates = ExtractDates()
   extract_dates.run()
 

@@ -201,7 +201,6 @@ PyObject *PyEvaluateFrames(PyObject *self, PyObject *args) {
   nlp::FrameEvaluation::Scores scores;
   eval.GetScores(&scores);
 
-
   // Return list of benchmark scores.
   PyObject *result = PyList_New(scores.size());
   for (int i = 0; i < scores.size(); ++i) {
