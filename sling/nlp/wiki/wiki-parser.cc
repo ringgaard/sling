@@ -36,8 +36,8 @@ namespace {
 static const char *node_names[] = {
   "DOCUMENT", "ARG", "ATTR",
   "TEXT", "FONT", "TEMPLATE", "LINK", "IMAGE", "CATEGORY", "URL",
-  "COMMENT", "TAG", "BTAG", "ETAG", "MATH", "GALLERY",
-  "HEADING", "INDENT", "UL", "OL", "HR", "TERM", "SWITCH",
+  "COMMENT", "TAG", "BTAG", "ETAG", "MATH", "GALLERY", "REF",
+  "HEADING", "INDENT", "TERM", "UL", "OL", "HR", "SWITCH",
   "TABLE", "CAPTION", "ROW", "HEADER", "CELL", "BREAK",
 };
 
@@ -290,7 +290,7 @@ void WikiParser::ParseNewLine() {
   for (int i = stack_.size() - 1; i >= 0; --i) {
     int t = nodes_[stack_[i]].type;
     if (t == TEMPLATE) break;
-    if (t >= HEADING && t <= TERM) {
+    if (t >= HEADING && t <= SWITCH) {
       EndText();
       while (stack_.size() > i) Pop();
     }
@@ -447,8 +447,8 @@ void WikiParser::ParseArgument() {
   // Try to parse argument name.
   const char *name = ptr_;
   const char *p = name;
-  while (*p != 0 && *p != ' ' && *p != '\n' &&
-         *p != '=' && *p != '|' && *p != '}' && *p != '{') {
+  while (*p != 0 && *p != ' ' && *p != '\n' && *p != '=' &&
+         *p != ']' && *p != '|' && *p != '}' && *p != '{') {
     p++;
   }
   if (*p == '=' || *p == ' ') {
@@ -558,6 +558,10 @@ void WikiParser::ParseTag() {
     EndText();
     if (*ptr_ != 0) ptr_ += 9;
     txt_ = ptr_;
+  } else if (Matches("</ref>")) {
+    ptr_ += 6;
+    txt_ = ptr_;
+    if (Inside(REF)) UnwindUntil(REF);
   } else if (Matches("</gallery>")) {
     ptr_ += 10;
     if (Inside(GALLERY)) UnwindUntil(GALLERY);
@@ -602,7 +606,9 @@ void WikiParser::ParseTag() {
     nodes_[node].end = ptr_;
     nodes_[node].type = type;
 
-    if (nodes_[node].name() == "gallery") {
+    if (type == BTAG && nodes_[node].name() == "ref") {
+      nodes_[node].type = REF;
+    } else if (type == BTAG && nodes_[node].name() == "gallery") {
       // The gallery tag encloses lines of image links.
       nodes_[node].type = GALLERY;
       SkipWhitespace();
@@ -703,6 +709,9 @@ void WikiParser::ParseTableBegin() {
 
 void WikiParser::ParseTableCaption() {
   EndText();
+  if (Inside(CAPTION, TABLE)) UnwindUntil(CAPTION);
+  if (Inside(ROW, TABLE)) UnwindUntil(ROW);
+
   Push(CAPTION);
   ptr_ += 2;
   SkipWhitespace();
@@ -711,6 +720,7 @@ void WikiParser::ParseTableCaption() {
 
 void WikiParser::ParseTableRow() {
   EndText();
+  if (Inside(CAPTION, TABLE)) UnwindUntil(CAPTION);
   if (Inside(ROW, TABLE)) UnwindUntil(ROW);
 
   Push(ROW);
@@ -722,6 +732,7 @@ void WikiParser::ParseTableRow() {
 
 void WikiParser::ParseHeaderCell(bool first) {
   EndText();
+  if (Inside(CAPTION, TABLE)) UnwindUntil(CAPTION);
   if (!Inside(ROW, TABLE)) Push(ROW);
   if (Inside(HEADER, ROW)) UnwindUntil(HEADER);
 
@@ -737,17 +748,15 @@ void WikiParser::ParseHeaderCell(bool first) {
 
 void WikiParser::ParseTableCell(bool first) {
   EndText();
+  if (Inside(CAPTION, TABLE)) UnwindUntil(CAPTION);
   if (!Inside(ROW, TABLE)) Push(ROW);
 
   if (Inside(CELL, ROW)) {
     UnwindUntil(CELL);
-    Push(CELL);
   } else if (Inside(HEADER, ROW)) {
     UnwindUntil(HEADER);
-    Push(HEADER);
-  } else {
-    Push(CELL);
   }
+  Push(CELL);
 
   ptr_ += first ? 1 : 2;
   if (ParseAttributes("|\n")) {
@@ -815,7 +824,7 @@ bool WikiParser::ParseAttributes(const char *delimiters) {
       attrlen = p++ - attr;
     } else {
       attr = p;
-      while (IsNameChar(*p)  || *p == '#'  || *p == '%') p++;
+      while (IsNameChar(*p)  || *p == '#'  || *p == '%' || *p == ';') p++;
       if (p == attr) return false;
       attrlen = p - attr;
     }
@@ -944,6 +953,7 @@ void WikiParser::Extract(int index) {
     case ETAG: break;
     case MATH: break;
     case GALLERY: ExtractChildren(index); break;
+    case REF: break;
     case HEADING: ExtractHeading(index); break;
     case INDENT: ExtractChildren(index); break;
     case TERM: ExtractChildren(index); break;
@@ -1083,6 +1093,7 @@ void WikiParser::ExtractChildren(int index) {
 
       case ETAG:
         if (node.name() == "ref") in_ref = false;
+        Append("\xe2\x80\x8b");  // zero-width space
         break;
 
       default: ;
@@ -1250,6 +1261,9 @@ void WikiParser::Node::CheckSpecialLink() {
   int colon = name().find(':');
   if (colon != -1) {
     string prefix(name_begin, colon);
+    if (prefix.size() >= 1 && prefix[0] >= 'a' && prefix[0] <= 'z') {
+      prefix[0] = prefix[0] - 'a' + 'A';
+    }
     auto f = link_prefix.find(prefix);
     if (f != link_prefix.end()) {
       type = f->second;

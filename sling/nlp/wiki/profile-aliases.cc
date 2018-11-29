@@ -36,6 +36,7 @@ class ProfileAliasExtractor : public task::FrameProcessor {
     string lang = task->Get("language", "en");
     language_ = commons_->Lookup("/lang/" + lang);
     skip_aux_ = task->Get("skip_aux", false);
+    wikitypes_.Init(commons_);
 
     // Initialize filter.
     if (skip_aux_) filter_.Init(commons_);
@@ -73,19 +74,10 @@ class ProfileAliasExtractor : public task::FrameProcessor {
         AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_DEMONYM);
       } else if (s.name == n_instance_of_) {
         // Discard categories, disambiguations, info boxes and templates.
-        if (s.value == n_disambiguation_ ||
-            s.value == n_infobox_ ||
-            s.value == n_template_ ||
-            s.value == n_category_ ||
-            s.value == n_disambiguation_category_ ||
-            s.value == n_list_category_ ||
-            s.value == n_template_category_ ||
-            s.value == n_admin_category_ ||
-            s.value == n_user_category_ ||
-            s.value == n_user_language_category_ ||
-            s.value == n_stub_category_ ||
-            s.value == n_meta_category_ ||
-            s.value == n_navbox_category_) {
+        if (wikitypes_.IsCategory(s.value) ||
+            wikitypes_.IsDisambiguation(s.value) ||
+            wikitypes_.IsInfobox(s.value) ||
+            wikitypes_.IsTemplate(s.value)) {
           return;
         }
       }
@@ -111,6 +103,17 @@ class ProfileAliasExtractor : public task::FrameProcessor {
   }
 
  private:
+  // Wiki page types.
+  WikimediaTypes wikitypes_;
+
+  // Language for aliases.
+  Handle language_;
+
+  // Skip auxiliary items.
+  bool skip_aux_ = false;
+  AuxFilter filter_;
+  task::Counter *num_aux_items_;
+
   // Symbols.
   Name n_lang_{names_, "lang"};
   Name n_name_{names_, "name"};
@@ -121,30 +124,7 @@ class ProfileAliasExtractor : public task::FrameProcessor {
   Name n_native_name_{names_, "P1559"};
   Name n_native_label_{names_, "P1705"};
   Name n_demonym_{names_, "P1549"};
-
   Name n_instance_of_{names_, "P31"};
-  Name n_disambiguation_{names_, "Q4167410"};
-  Name n_template_{names_, "Q11266439"};
-  Name n_infobox_{names_, "Q19887878"};
-
-  Name n_category_{names_, "Q4167836"};
-  Name n_disambiguation_category_{names_, "Q15407973"};
-  Name n_list_category_{names_, "Q56428020"};
-  Name n_template_category_{names_, "Q23894233"};
-  Name n_stub_category_{names_, "Q24046192"};
-  Name n_admin_category_{names_, "Q15647814"};
-  Name n_user_category_{names_, "Q20769287"};
-  Name n_user_language_category_{names_, "Q20010800"};
-  Name n_meta_category_{names_, "Q30432511"};
-  Name n_navbox_category_{names_, "Q13331174"};
-
-  // Language for aliases.
-  Handle language_;
-
-  // Skip auxiliary items.
-  bool skip_aux_ = false;
-  AuxFilter filter_;
-  task::Counter *num_aux_items_;
 };
 
 REGISTER_TASK_PROCESSOR("profile-alias-extractor", ProfileAliasExtractor);

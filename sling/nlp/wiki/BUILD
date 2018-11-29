@@ -50,6 +50,16 @@ cc_library(
 )
 
 cc_library(
+  name = "wiki-extractor",
+  srcs = ["wiki-extractor.cc"],
+  hdrs = ["wiki-extractor.h"],
+  deps = [
+    ":wiki-parser",
+    "//sling/string:strcat",
+  ],
+)
+
+cc_library(
   name = "wikidata-importer",
   srcs = ["wikidata-importer.cc"],
   deps = [
@@ -184,6 +194,7 @@ cc_binary(
   srcs = ["parse-wiki-text.cc"],
   deps = [
     ":wiki-parser",
+    ":wiki-extractor",
     "//sling/base",
     "//sling/file",
     "//sling/file:posix",

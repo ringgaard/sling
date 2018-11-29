@@ -146,6 +146,7 @@ class WikipediaMapping : public task::FrameProcessor {
     // Get language for mapping.
     string lang = task->Get("language", "en");
     language_ = commons_->Lookup(StrCat("/lang/" + lang));
+    wikitypes_.Init(commons_);
 
     // Statistics.
     num_skipped_ = task->GetCounter("items_skipped");
@@ -177,24 +178,15 @@ class WikipediaMapping : public task::FrameProcessor {
     bool is_template = false;
     for (const Slot &s : frame) {
       if (s.name == n_instance_of_) {
-        if (s.value == n_category_ ||
-            s.value == n_disambiguation_category_ ||
-            s.value == n_list_category_ ||
-            s.value == n_template_category_ ||
-            s.value == n_admin_category_ ||
-            s.value == n_user_category_ ||
-            s.value == n_user_language_category_ ||
-            s.value == n_stub_category_ ||
-            s.value == n_meta_category_ ||
-            s.value == n_navbox_category_) {
+        if (wikitypes_.IsCategory(s.value)) {
           is_category = true;
-        } else if (s.value == n_disambiguation_) {
+        } else if (wikitypes_.IsDisambiguation(s.value)) {
           is_disambiguation = true;
-        } else if (s.value == n_list_) {
+        } else if (wikitypes_.IsList(s.value)) {
           is_list = true;
-        } else if (s.value == n_infobox_) {
+        } else if (wikitypes_.IsInfobox(s.value)) {
           is_infobox = true;
-        } else if (s.value == n_template_) {
+        } else if (wikitypes_.IsTemplate(s.value)) {
           is_template = true;
         }
       }
@@ -231,24 +223,12 @@ class WikipediaMapping : public task::FrameProcessor {
   // Language.
   Handle language_;
 
-  // Names.
-  Name n_wikipedia_{names_, "/w/item/wikipedia"};
-  Name n_instance_of_{names_, "P31"};
-  Name n_disambiguation_{names_, "Q4167410"};
-  Name n_list_{names_, "Q13406463"};
-  Name n_template_{names_, "Q11266439"};
-  Name n_infobox_{names_, "Q19887878"};
-  Name n_category_{names_, "Q4167836"};
-  Name n_disambiguation_category_{names_, "Q15407973"};
-  Name n_list_category_{names_, "Q56428020"};
-  Name n_template_category_{names_, "Q23894233"};
-  Name n_stub_category_{names_, "Q24046192"};
-  Name n_admin_category_{names_, "Q15647814"};
-  Name n_user_category_{names_, "Q20769287"};
-  Name n_user_language_category_{names_, "Q20010800"};
-  Name n_meta_category_{names_, "Q30432511"};
-  Name n_navbox_category_{names_, "Q13331174"};
+  // Wiki page types.
+  WikimediaTypes wikitypes_;
 
+  // Names.
+  Name n_instance_of_{names_, "P31"};
+  Name n_wikipedia_{names_, "/w/item/wikipedia"};
   Name n_qid_{names_, "/w/item/qid"};
   Name n_kind_{names_, "/w/item/kind"};
   Name n_kind_article_{names_, "/w/item/kind/article"};

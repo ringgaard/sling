@@ -83,6 +83,46 @@ class Wiki {
   static const char *language_priority[];
 };
 
+// Wikimedia item types for special Wikimedia pages.
+class WikimediaTypes {
+ public:
+  // Initialize Wikimedia types.
+  void Init(Store *store);
+
+  // Check if item is a Wikipedia category.
+  bool IsCategory(Handle type);
+
+  // Check if item is a Wikipedia disambiguation page.
+  bool IsDisambiguation(Handle type);
+
+  // Check if item is a Wikipedia list article.
+  bool IsList(Handle type);
+
+  // Check if item is a Wikipedia template.
+  bool IsTemplate(Handle type);
+
+  // Check if item is a Wikipedia infobox.
+  bool IsInfobox(Handle type);
+
+ private:
+  // Names.
+  Names names_;
+  Name n_disambiguation_{names_, "Q4167410"};
+  Name n_list_{names_, "Q13406463"};
+  Name n_template_{names_, "Q11266439"};
+  Name n_infobox_{names_, "Q19887878"};
+  Name n_category_{names_, "Q4167836"};
+  Name n_disambiguation_category_{names_, "Q15407973"};
+  Name n_list_category_{names_, "Q56428020"};
+  Name n_template_category_{names_, "Q23894233"};
+  Name n_stub_category_{names_, "Q24046192"};
+  Name n_admin_category_{names_, "Q15647814"};
+  Name n_user_category_{names_, "Q20769287"};
+  Name n_user_language_category_{names_, "Q20010800"};
+  Name n_meta_category_{names_, "Q30432511"};
+  Name n_navbox_category_{names_, "Q13331174"};
+};
+
 // Filter for auxiliary items. The auxiliary items in the knowledge base are
 // items that are used infrequently and are stored in a separate knowledge
 // base store.

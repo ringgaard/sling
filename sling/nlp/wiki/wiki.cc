@@ -98,6 +98,40 @@ string Wiki::URL(const string &lang, const string &title) {
   return "http://" + lang + ".wikipedia.org/wiki/" + t;
 }
 
+
+void WikimediaTypes::Init(Store *store) {
+  CHECK(names_.Bind(store));
+}
+
+bool WikimediaTypes::IsCategory(Handle type) {
+  return type == n_category_ ||
+         type == n_disambiguation_category_ ||
+         type == n_list_category_ ||
+         type == n_template_category_ ||
+         type == n_admin_category_ ||
+         type == n_user_category_ ||
+         type == n_user_language_category_ ||
+         type == n_stub_category_ ||
+         type == n_meta_category_ ||
+         type == n_navbox_category_;
+}
+
+bool WikimediaTypes::IsDisambiguation(Handle type) {
+  return type == n_disambiguation_;
+}
+
+bool WikimediaTypes::IsList(Handle type) {
+  return type == n_list_;
+}
+
+bool WikimediaTypes::IsTemplate(Handle type) {
+  return type == n_template_;
+}
+
+bool WikimediaTypes::IsInfobox(Handle type) {
+  return type == n_infobox_;
+}
+
 void AuxFilter::Init(Store *store) {
   const char *kAuxItemtypes[] = {
     "Q13442814",  // scientific article
