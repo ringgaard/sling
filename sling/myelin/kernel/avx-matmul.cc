@@ -111,7 +111,7 @@ class AVXFltVecMatMulBase : public AVXVecMatMulBase {
     // Determine order.
     if (W->required_order() == ANY_ORDER) {
       // Use vertical summations for small matrices and horizontal summation for
-      // larse matrices. Use the on-chip cache size for selection.
+      // large matrices. Use the on-chip cache size for selection.
       static const int kCacheHitRatio = 2;
       int cache_size = CPU::L3CacheSize();
       if (cache_size == 0) cache_size = 1024 * 1024;
