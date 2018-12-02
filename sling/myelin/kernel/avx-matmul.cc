@@ -686,7 +686,7 @@ class AVXFltVecMatMulBase : public AVXVecMatMulBase {
         __ vaddps(sum[0], sum[0], acc);
       }
       __ vperm2f128(acc.ymm(), sum[0].ymm(), sum[0].ymm(), 1);
-      __ vhaddps(sum[0].ymm(), sum[0].ymm(), acc.ymm());
+      __ vaddps(sum[0].ymm(), sum[0].ymm(), acc.ymm());
       __ vhaddps(sum[0].ymm(), sum[0].ymm(), sum[0].ymm());
       __ vhaddps(sum[0].ymm(), sum[0].ymm(), sum[0].ymm());
     }
@@ -915,7 +915,7 @@ class AVXFltDotProduct : public Kernel {
       __ vaddps(sum[0], sum[0], acc);
     }
     __ vperm2f128(acc.ymm(), sum[0].ymm(), sum[0].ymm(), 1);
-    __ vhaddps(sum[0].ymm(), sum[0].ymm(), acc.ymm());
+    __ vaddps(sum[0].ymm(), sum[0].ymm(), acc.ymm());
     __ vhaddps(sum[0].ymm(), sum[0].ymm(), sum[0].ymm());
     __ vhaddps(sum[0].ymm(), sum[0].ymm(), sum[0].ymm());
 

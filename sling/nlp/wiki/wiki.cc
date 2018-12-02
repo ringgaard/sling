@@ -62,7 +62,7 @@ void Wiki::SplitTitle(const string &title,
   // Split title into name and disambiguation parts.
   if (open > 1 && close == title.size() - 1) {
     int end = open - 1;
-    while (end > 0 and title[end - 1] == ' ') end--;
+    while (end > 0 && title[end - 1] == ' ') end--;
     name->assign(title, 0, end);
     disambiguation->assign(title, open + 1, close - open - 1);
   } else {

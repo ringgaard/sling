@@ -1034,7 +1034,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
       if (var->size != stride) {
         LOG(ERROR) << "Invalid data size for variable " << var->name << ", "
-                   << var->size << "bytes, " << stride << "expected";
+                   << var->size << " bytes, " << stride << " expected";
         return false;
       }
 

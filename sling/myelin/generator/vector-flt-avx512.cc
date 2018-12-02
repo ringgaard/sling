@@ -40,6 +40,8 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
       model_.fm_reg_reg_imm = true;
       model_.fm_reg_reg_mem = true;
     }
+    model_.cond_reg_reg_reg = true;
+    model_.cond_reg_mem_reg = true;
     model_.predicate_regs = true;
     model_.logic_in_regs = true;
   }
@@ -236,6 +238,9 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
             nullptr, nullptr,
             &Assembler::vcvttps2dq, &Assembler::vcvttpd2dq,
             masm);
+        if (type_ == DT_DOUBLE) {
+          __ vpmovsxdq(zmm(instr->dst), zmm(instr->dst));
+        }
         break;
       case Express::CVTINTFLT:
         GenerateZMMFltOp(instr,
@@ -427,32 +432,32 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
   // Generate conditional.
   void GenerateConditional(Express::Op *instr, MacroAssembler *masm) {
     CHECK(instr->dst != -1);
-    if (instr->src != -1 && instr->src2 != -1) {
+    CHECK(instr->src2 != -1);
+    CHECK(instr->mask != -1);
+    if (instr->src != -1) {
       switch (type_) {
         case DT_FLOAT:
-          __ vblendmps(zmm(instr->dst), zmm(instr->src), zmm(instr->src2),
+          __ vblendmps(zmm(instr->dst), zmm(instr->src2), zmm(instr->src),
                        Mask(kk(instr->mask), merging));
           break;
         case DT_DOUBLE:
-          __ vblendmpd(zmm(instr->dst), zmm(instr->src), zmm(instr->src2),
-                       Mask(kk(instr->mask), merging));
-          break;
-        default: UNSUPPORTED;
-      }
-    } else if (instr->src != -1 && instr->src2 == -1) {
-      switch (type_) {
-        case DT_FLOAT:
-          __ vblendmps(zmm(instr->dst), zmm(instr->src), addr(instr->args[2]),
-                       Mask(kk(instr->mask), merging));
-          break;
-        case DT_DOUBLE:
-          __ vblendmpd(zmm(instr->dst), zmm(instr->src), addr(instr->args[2]),
+          __ vblendmpd(zmm(instr->dst), zmm(instr->src2), zmm(instr->src),
                        Mask(kk(instr->mask), merging));
           break;
         default: UNSUPPORTED;
       }
     } else {
-      UNSUPPORTED;
+      switch (type_) {
+        case DT_FLOAT:
+          __ vblendmps(zmm(instr->dst), zmm(instr->src2), addr(instr->args[1]),
+                       Mask(kk(instr->mask), merging));
+          break;
+        case DT_DOUBLE:
+          __ vblendmpd(zmm(instr->dst), zmm(instr->src2), addr(instr->args[1]),
+                       Mask(kk(instr->mask), merging));
+          break;
+        default: UNSUPPORTED;
+      }
     }
   }
 
@@ -494,7 +499,7 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
             __ vshuff32x4(aux, acc, acc, 0x0E);
             __ vaddps(acc, acc, aux);
             __ vperm2f128(aux.ymm(), acc.ymm(), acc.ymm(), 1);
-            __ vhaddps(acc.ymm(), acc.ymm(), aux.ymm());
+            __ vaddps(acc.ymm(), acc.ymm(), aux.ymm());
             __ vhaddps(acc.ymm(), acc.ymm(), acc.ymm());
             __ vhaddps(acc.ymm(), acc.ymm(), acc.ymm());
             break;

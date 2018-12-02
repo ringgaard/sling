@@ -76,6 +76,7 @@ PyObject *PyCompiler::Compile(PyObject *arg) {
 
   // Compile flow to network.
   Network *net = new Network();
+  net->options().parameter_element_order = ANY_ORDER;
   compiler->Compile(&flow, net);
 
   // Return compiled network.

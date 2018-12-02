@@ -336,7 +336,7 @@ void ExpressionGenerator::GenerateXMMVectorMove(
           if (CPU::Enabled(AVX)) {
             __ vbroadcastsd(ymm(instr->dst), addr(instr->args[0]));
           } else if (CPU::Enabled(SSE2)) {
-            __ movss(xmm(instr->dst), addr(instr->args[0]));
+            __ movsd(xmm(instr->dst), addr(instr->args[0]));
             __ shufpd(xmm(instr->dst), xmm(instr->dst), 0);
           } else {
             UNSUPPORTED;
@@ -583,8 +583,70 @@ void ExpressionGenerator::GenerateXMMVectorIntMove(
   } else if (instr->dst != -1 && instr->src == -1) {
     // MOV reg,[mem]
     if (index_->NeedsBroadcast(instr->args[0])) {
-      // TODO: implement vector int broadcast load.
-      UNSUPPORTED;
+      XMMRegister dst = xmm(instr->dst);
+      switch (type_) {
+        case DT_INT8:
+        case DT_UINT8:
+          if (CPU::Enabled(AVX2)) {
+            __ vpbroadcastb(dst, addr(instr->args[0]));
+          } else if (CPU::Enabled(AVX)) {
+            __ vpinsrb(dst, dst, addr(instr->args[0]), 0);
+            __ vpinsrb(dst, dst, addr(instr->args[0]), 1);
+            __ vpshuflw(dst, dst, 0);
+            __ vshufps(dst, dst, dst, 0);
+          } else if (CPU::Enabled(SSE2) && CPU::Enabled(SSE4_1)) {
+            __ pinsrb(dst, addr(instr->args[0]), 0);
+            __ pinsrb(dst, addr(instr->args[0]), 1);
+            __ pshuflw(dst, dst, 0);
+            __ shufps(dst, dst, 0);
+          } else {
+            UNSUPPORTED;
+          }
+          break;
+        case DT_INT16:
+        case DT_UINT16:
+          if (CPU::Enabled(AVX2)) {
+            __ vpbroadcastw(dst, addr(instr->args[0]));
+          } else if (CPU::Enabled(AVX)) {
+            __ vpinsrw(dst, dst, addr(instr->args[0]), 0);
+            __ vpshuflw(dst, dst, 0);
+            __ vshufps(dst, dst, dst, 0);
+          } else if (CPU::Enabled(SSE2) && CPU::Enabled(SSE4_1)) {
+            __ pinsrw(dst, addr(instr->args[0]), 0);
+            __ pshuflw(dst, dst, 0);
+            __ shufps(dst, dst, 0);
+          } else {
+            UNSUPPORTED;
+          }
+          break;
+        case DT_INT32:
+          if (CPU::Enabled(AVX2)) {
+            __ vpbroadcastd(dst, addr(instr->args[0]));
+          } else if (CPU::Enabled(AVX)) {
+            __ vpinsrd(dst, dst, addr(instr->args[0]), 0);
+            __ vshufps(dst, dst, dst, 0);
+          } else if (CPU::Enabled(SSE2) && CPU::Enabled(SSE4_1)) {
+            __ pinsrd(dst, addr(instr->args[0]), 0);
+            __ shufps(dst, dst, 0);
+          } else {
+            UNSUPPORTED;
+          }
+          break;
+        case DT_INT64:
+          if (CPU::Enabled(AVX2)) {
+            __ vpbroadcastq(dst, addr(instr->args[0]));
+          } else if (CPU::Enabled(AVX)) {
+            __ vpinsrq(dst, dst, addr(instr->args[0]), 0);
+            __ vshufpd(dst, dst, dst, 0);
+          } else if (CPU::Enabled(SSE2) && CPU::Enabled(SSE4_1)) {
+            __ pinsrq(dst, addr(instr->args[0]), 0);
+            __ shufpd(dst, dst, 0);
+          } else {
+            UNSUPPORTED;
+          }
+          break;
+        default: UNSUPPORTED;
+      }
     } else {
       if (CPU::Enabled(AVX)) {
         __ vmovdqa(xmm(instr->dst), addr(instr->args[0]));
@@ -617,8 +679,52 @@ void ExpressionGenerator::GenerateYMMVectorIntMove(
   } else if (instr->dst != -1 && instr->src == -1) {
     // MOV reg,[mem]
     if (index_->NeedsBroadcast(instr->args[0])) {
-      // TODO: implement vector int broadcast load.
-      UNSUPPORTED;
+      YMMRegister ydst = ymm(instr->dst);
+      XMMRegister xdst = xmm(instr->dst);
+      switch (type_) {
+        case DT_INT8:
+        case DT_UINT8:
+          if (CPU::Enabled(AVX2)) {
+            __ vpbroadcastb(ydst, addr(instr->args[0]));
+          } else {
+            __ vpinsrb(xdst, xdst, addr(instr->args[0]), 0);
+            __ vpinsrb(xdst, xdst, addr(instr->args[0]), 1);
+            __ vpshuflw(xdst, xdst, 0);
+            __ vshufps(xdst, xdst, xdst, 0);
+            __ vperm2f128(ydst, ydst, ydst, 0);
+          }
+          break;
+        case DT_INT16:
+        case DT_UINT16:
+          if (CPU::Enabled(AVX2)) {
+            __ vpbroadcastw(ydst, addr(instr->args[0]));
+          } else {
+            __ vpinsrw(xdst, xdst, addr(instr->args[0]), 0);
+            __ vpshuflw(xdst, xdst, 0);
+            __ vshufps(xdst, xdst, xdst, 0);
+            __ vperm2f128(ydst, ydst, ydst, 0);
+          }
+          break;
+        case DT_INT32:
+          if (CPU::Enabled(AVX2)) {
+            __ vpbroadcastd(ydst, addr(instr->args[0]));
+          } else {
+            __ vpinsrd(xdst, xdst, addr(instr->args[0]), 0);
+            __ vshufps(xdst, xdst, xdst, 0);
+            __ vperm2f128(ydst, ydst, ydst, 0);
+          }
+          break;
+        case DT_INT64:
+          if (CPU::Enabled(AVX2)) {
+            __ vpbroadcastq(ydst, addr(instr->args[0]));
+          } else {
+            __ vpinsrq(xdst, xdst, addr(instr->args[0]), 0);
+            __ vshufpd(xdst, xdst, xdst, 0);
+            __ vperm2f128(ydst, ydst, ydst, 0);
+          }
+          break;
+        default: UNSUPPORTED;
+      }
     } else {
       __ vmovdqa(ymm(instr->dst), addr(instr->args[0]));
     }

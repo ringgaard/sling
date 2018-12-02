@@ -175,7 +175,11 @@ class ScalarIntGenerator : public ExpressionGenerator {
       GenerateInc(dst, masm);
     } else if (imm == -1) {
       GenerateDec(dst, masm);
-    } else  if (imm != 0) {
+    } else if (imm == 0) {
+      if (instr->dst != instr->src) {
+        GenerateScalarIntMove(instr, masm);
+      }
+    } else {
       switch (type_) {
         case DT_INT8:  __ addb(dst, Immediate(imm)); break;
         case DT_INT16: __ addw(dst, Immediate(imm)); break;
@@ -194,7 +198,11 @@ class ScalarIntGenerator : public ExpressionGenerator {
       GenerateDec(dst, masm);
     } else if (imm == -1) {
       GenerateInc(dst, masm);
-    } else if (imm != 0) {
+    } else if (imm == 0) {
+      if (instr->dst != instr->src) {
+        GenerateScalarIntMove(instr, masm);
+      }
+    } else {
       switch (type_) {
         case DT_INT8:  __ subb(dst, Immediate(imm)); break;
         case DT_INT16: __ subw(dst, Immediate(imm)); break;
@@ -209,7 +217,11 @@ class ScalarIntGenerator : public ExpressionGenerator {
   void GenerateMulImm(Express::Op *instr, MacroAssembler *masm) {
     int64 imm = GetConstant(instr->args[1]);
     Register dst = reg(instr->dst);
-    if (imm != 1) {
+    if (imm == 1) {
+      if (instr->dst != instr->src) {
+        GenerateScalarIntMove(instr, masm);
+      }
+    } else {
       // Shift instead of multiply if immediate is a power of two.
       int shift = 0;
       int64 value = 1;
@@ -264,7 +276,12 @@ class ScalarIntGenerator : public ExpressionGenerator {
     if (instr->args[1]->type == Express::CONST) {
       // Division by one is a no-op.
       int64 imm = GetConstant(instr->args[1]);
-      if (imm == 1) return;
+      if (imm == 1) {
+        if (instr->dst != instr->src) {
+          GenerateScalarIntMove(instr, masm);
+        }
+        return;
+      }
       if (imm == 0) LOG(WARNING) << "Division by zero";
 
       // Shift instead of divide if immediate is a power of two.
@@ -287,17 +304,26 @@ class ScalarIntGenerator : public ExpressionGenerator {
       }
     }
 
-    __ movq(rax, reg(instr->dst));
-    if (type_ != DT_INT8) {
-      __ xorq(rdx, rdx);
+    if (reg(instr->dst).code() != rax.code()) {
+      __ movq(rax, reg(instr->dst));
     }
+
+    // Sign-extend rax into rdx:rax.
+    if (type_ == DT_INT16 || type_ == DT_INT32) {
+      __ cdq();
+    } else if (type_ == DT_INT64) {
+      __ cqo();
+    }
+
     GenerateIntUnaryOp(instr,
         &Assembler::idivb, &Assembler::idivb,
         &Assembler::idivw, &Assembler::idivw,
         &Assembler::idivl, &Assembler::idivl,
         &Assembler::idivq, &Assembler::idivq,
         masm, 1);
-    __ movq(reg(instr->dst), rax);
+    if (reg(instr->dst).code() != rax.code()) {
+      __ movq(reg(instr->dst), rax);
+    }
   }
 
   // Generate min/max.

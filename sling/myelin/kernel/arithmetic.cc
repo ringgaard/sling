@@ -1030,9 +1030,10 @@ class Softmax : public Kernel {
         __ vpermilps(elem.ymm(), max.ymm(), 0x01);
         __ vmaxps(max.ymm(), max.ymm(), elem.ymm());
       } else {
-        __ shufps(elem.xmm(), max.xmm(), 0x0E);
+        __ movaps(elem.xmm(), max.xmm());
+        __ shufps(elem.xmm(), max.xmm(), 0xB1);
         __ maxps(max.xmm(), elem.xmm());
-        __ shufps(elem.xmm(), max.xmm(), 0x01);
+        __ movhlps(elem.xmm(), max.xmm());
         __ maxps(max.xmm(), elem.xmm());
       }
 
