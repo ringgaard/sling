@@ -27,21 +27,22 @@ DT_INT8 = "int8"
 DT_INT16 = "int16"
 DT_INT32 = "int32"
 DT_INT64 = "int64"
+DT_BOOL = "bool"
 
 DT_INT = DT_INT32
 DT_FLOAT = DT_FLOAT32
 DT_DOUBLE = DT_FLOAT64
 
 typemap = {
-  "f": "float32",
-  "d": "float64",
-  "i": "int32",
-  "l": "int32",
-  "B": "uint8",
-  "h": "int16",
-  "b": "int8",
-  "q": "int64",
-  "?": "bool",
+  "f": DT_FLOAT32,
+  "d": DT_FLOAT64,
+  "i": DT_INT32,
+  "l": DT_INT32,
+  "B": DT_INT8,
+  "h": DT_INT16,
+  "b": DT_INT8,
+  "q": DT_INT64,
+  "?": DT_BOOL,
 }
 
 class Builder:
@@ -316,6 +317,9 @@ class Builder:
 
   def max(self, x, name=None):
     return self.reduce("Max", x, name)
+
+  def norm(self, x, name=None):
+    return self.sqrt(self.sum(self.square(x)))
 
   def normalize(self, x, name=None):
     return self.mul(x, self.rcp(self.sum(x)), name)

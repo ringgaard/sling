@@ -1339,6 +1339,54 @@ void ExpressionGenerator::GenerateZMMFltAccOp(
   }
 }
 
+void ExpressionGenerator::GenerateZMMReduction(
+    OpZMMRegRegReg op, 
+    ZMMRegister acc,
+    ZMMRegister aux,
+    int elements,
+    MacroAssembler *masm) {
+  if (elements >= 2) {
+    __ vshuff32x4(aux, acc, acc, 0x0E);
+    (masm->*op)(acc, acc, aux, nomask);
+  }
+  if (elements >= 4) {
+    __ vshuff32x4(aux, acc, acc, 0xB1);
+    (masm->*op)(acc, acc, aux, nomask);
+  }
+  if (elements >= 8) {
+    __ vpermilps(aux, acc, 0x0E);
+    (masm->*op)(acc, acc, aux, nomask);
+  }
+  if (elements >= 16) {
+    __ vpermilps(aux, acc, 0x01);
+    (masm->*op)(acc, acc, aux, nomask);
+  }
+}
+
+void ExpressionGenerator::GenerateZMMReduction(
+    OpZMMRegRegRegR op, 
+    ZMMRegister acc,
+    ZMMRegister aux,
+    int elements,
+    MacroAssembler *masm) {
+  if (elements >= 2) {
+    __ vshuff32x4(aux, acc, acc, 0x0E);
+    (masm->*op)(acc, acc, aux, nomask, noround);
+  }
+  if (elements >= 4) {
+    __ vshuff32x4(aux, acc, acc, 0xB1);
+    (masm->*op)(acc, acc, aux, nomask, noround);
+  }
+  if (elements >= 8) {
+    __ vpermilps(aux, acc, 0x0E);
+    (masm->*op)(acc, acc, aux, nomask, noround);
+  }
+  if (elements >= 16) {
+    __ vpermilps(aux, acc, 0x01);
+    (masm->*op)(acc, acc, aux, nomask, noround);
+  }
+}
+
 void ExpressionGenerator::GenerateIntUnaryOp(
     Express::Op *instr,
     OpReg opregb, OpMem opmemb,

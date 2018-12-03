@@ -130,10 +130,12 @@ class AVX512FloatGenerator : public SIMDGenerator {
     ZMMRegister acc = masm_->mm().allocz();
     masm_->vshuff32x4(acc, sum, sum, 0x0E);
     masm_->vaddps(sum, sum, acc);
-    masm_->vperm2f128(acc.ymm(), sum.ymm(), sum.ymm(), 1);
-    masm_->vaddps(sum.ymm(), sum.ymm(), acc.ymm());
-    masm_->vhaddps(sum.ymm(), sum.ymm(), sum.ymm());
-    masm_->vhaddps(sum.ymm(), sum.ymm(), sum.ymm());
+    masm_->vshuff32x4(acc, sum, sum, 0xB1);
+    masm_->vaddps(sum, sum, acc);
+    masm_->vpermilps(acc, sum, 0x0E);
+    masm_->vaddps(sum, sum, acc);
+    masm_->vpermilps(acc, sum, 0x01);
+    masm_->vaddps(sum, sum, acc);
     masm_->mm().release(acc);
   }
 

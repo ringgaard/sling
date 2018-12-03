@@ -314,6 +314,13 @@ def product_test(n):
   y = f.product(x)
   check(flow, 0.0, 1.0)
 
+def norm_test(n):
+  flow = myelin.Flow()
+  f = flow.define("norm")
+  x = f.var("x", dt, [n])
+  y = f.norm(x)
+  check(flow, 0.0, 1.0)
+
 def argmax_test(n):
   flow = myelin.Flow()
   f = flow.define("argmax")
@@ -341,7 +348,7 @@ def bcast_test(n):
   flow = myelin.Flow()
   f = flow.define("bcast")
   x = f.var("x", dt, [n])
-  y = f.mul(x, f.var("c", dt))
+  y = f.mul(x, f.const(7, dt))
   check(flow)
 
 def concat_test(n, m):
@@ -358,7 +365,7 @@ sizes = range(1, 48) + [64, 128, 256]
 #  print "test exp", i
 # exp_test(i)
 
-#maximum_test(8)
+#div_test(1)
 #quit()
 
 print "test concat"
@@ -431,6 +438,9 @@ for i in sizes:
     print "test max", i
     max_test(i)
 
+    print "test norm", i
+    max_test(i)
+
     if dt != myelin.DT_DOUBLE:
       print "test argmax", i
       argmax_test(i)
@@ -454,5 +464,9 @@ print
 
 for name in sorted(tests):
   t = tests[name]
-  print "%-20s %7d runs %7d errors" % (t.name, t.runs, t.errors)
+  if t.errors == 0:
+    print "%-20s %7d runs" % (t.name, t.runs)
+  else:
+    print "%-20s %7d runs %7d errors" % (t.name, t.runs, t.errors)
+  
 
