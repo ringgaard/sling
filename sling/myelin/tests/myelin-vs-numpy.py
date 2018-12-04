@@ -1,3 +1,20 @@
+# Copyright 2018 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+"""Compare Myelin flow computations with NumPy."""
+
 import sling
 import sling.flags as flags
 import sling.myelin as myelin
@@ -6,11 +23,13 @@ import sys
 import struct
 
 flags.define("--dt", default=myelin.DT_FLOAT)
-
 flags.parse()
-
 dt = flags.arg.dt
 
+print "Myelin test suite for", dt, flags.arg.cpu
+print
+
+# Statistics for test runs.
 class Test:
   def __init__(self, f):
     self.name = f.name
@@ -19,6 +38,7 @@ class Test:
 
 tests = {}
 
+# Initialize myelin compiler.
 compiler = myelin.Compiler()
 
 # Myelin to NumPy type conversion.
@@ -31,13 +51,14 @@ nptypes = {
   myelin.DT_INT64: np.int64,
 }
 
-# Compute flow function using numpy.
+# NumPy functions.
 def sigmoid(x):
   return 1 / (1 + np.exp(-x))
 
 def relu(x):
   return np.maximum(x, 0)
 
+# Compute flow function using numpy.
 def simulate(flow, f, data):
   # Copy input tensors.
   v = {}
@@ -134,13 +155,16 @@ def simulate(flow, f, data):
   return v
 
 # Compare flow functions against numpy.
-def check(flow, lo=-10.0, hi=10.0):
+def check(flow, variant, lo=-10.0, hi=10.0):
   # Ensure that inputs are not overwritten.
   for i in flow.inputs(): i.output = True
 
   # Compile flow.
   net = compiler.compile(flow)
   for f in flow.funcs.itervalues():
+    # Output progress.
+    print "\r" + "Running " + f.name + " " + str(variant) + ": \033[K",
+
     # Create data instance for cell.
     cell = net.cell(f.name)
     data = cell.instance()
@@ -185,13 +209,15 @@ def check(flow, lo=-10.0, hi=10.0):
           print "diff:"
           print b - np.asarray(t)
 
+# Tests
+
 def matmul_test(m, k, n):
   flow = myelin.Flow()
   f = flow.define("matmul")
   x = f.var("x", dt, [m, k])
   W = f.var("W", dt, [k, n])
   y = f.matmul(x, W)
-  check(flow, -10, 10)
+  check(flow, (m, k, n), -10, 10)
 
 def matmul_add_test(m, k, n):
   flow = myelin.Flow()
@@ -200,7 +226,7 @@ def matmul_add_test(m, k, n):
   W = f.var("W", dt, [k, n])
   b = f.var("b", dt, [1, n])
   y = f.add(f.matmul(x, W), b)
-  check(flow, -10, 10)
+  check(flow, (m, k, n), -10, 10)
 
 def matmul_add_relu_test(m, k, n):
   flow = myelin.Flow()
@@ -209,7 +235,7 @@ def matmul_add_relu_test(m, k, n):
   W = f.var("W", dt, [k, n])
   b = f.var("b", dt, [1, n])
   y = f.relu(f.add(f.matmul(x, W), b))
-  check(flow, -10, 10)
+  check(flow, (m, k, n), -10, 10)
 
 def matmul_transpose_test(m, n):
   flow = myelin.Flow()
@@ -218,7 +244,7 @@ def matmul_transpose_test(m, n):
   W = f.var("W", dt, [n, m])
   f.matmul(x, f.t(W))
   f.matmul(W, f.t(x))
-  check(flow, -10, 10)
+  check(flow, (m, n), -10, 10)
 
 def add_test(n):
   flow = myelin.Flow()
@@ -226,7 +252,7 @@ def add_test(n):
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
   f.add(x, y)
-  check(flow)
+  check(flow, n)
 
 def sub_test(n):
   flow = myelin.Flow()
@@ -234,7 +260,7 @@ def sub_test(n):
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
   f.sub(x, y)
-  check(flow)
+  check(flow, n)
 
 def mul_test(n):
   flow = myelin.Flow()
@@ -242,7 +268,7 @@ def mul_test(n):
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
   f.mul(x, y)
-  check(flow)
+  check(flow, n)
 
 def div_test(n):
   flow = myelin.Flow()
@@ -250,126 +276,126 @@ def div_test(n):
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
   f.div(x, y)
-  check(flow, 1.0, 100.0)
+  check(flow, n, 1.0, 100.0)
 
 def neg_test(n):
   flow = myelin.Flow()
   f = flow.define("neg")
   x = f.var("x", dt, [n])
   y = f.neg(x)
-  check(flow)
+  check(flow, n)
 
 def rcp_test(n):
   flow = myelin.Flow()
   f = flow.define("rcp")
   x = f.var("x", dt, [n])
   y = f.rcp(x)
-  check(flow)
+  check(flow, n)
 
 def abs_test(n):
   flow = myelin.Flow()
   f = flow.define("abs")
   x = f.var("x", dt, [n])
   y = f.abs(x)
-  check(flow, -10.0, 10.0)
+  check(flow, n, -10.0, 10.0)
 
 def exp_test(n):
   flow = myelin.Flow()
   f = flow.define("exp")
   x = f.var("x", dt, [n])
   y = f.exp(x)
-  check(flow)
+  check(flow, n)
 
 def log_test(n):
   flow = myelin.Flow()
   f = flow.define("log")
   x = f.var("x", dt, [n])
   y = f.log(x)
-  check(flow, 0.1, 10.0)
+  check(flow, n, 0.1, 10.0)
 
 def tanh_test(n):
   flow = myelin.Flow()
   f = flow.define("tanh")
   x = f.var("x", dt, [n])
   y = f.tanh(x)
-  check(flow, -1.0, 1.0)
+  check(flow, n, -1.0, 1.0)
 
 def sqrt_test(n):
   flow = myelin.Flow()
   f = flow.define("sqrt")
   x = f.var("x", dt, [n])
   y = f.sqrt(x)
-  check(flow, 0.1, 10.0)
+  check(flow, n, 0.1, 10.0)
 
 def square_test(n):
   flow = myelin.Flow()
   f = flow.define("square")
   x = f.var("x", dt, [n])
   y = f.square(x)
-  check(flow)
+  check(flow, n)
 
 def sigmoid_test(n):
   flow = myelin.Flow()
   f = flow.define("sigmoid")
   x = f.var("x", dt, [n])
   y = f.sigmoid(x)
-  check(flow)
+  check(flow, n)
 
 def softmax_test(n):
   flow = myelin.Flow()
   f = flow.define("softmax")
   x = f.var("x", dt, [n])
   y = f.softmax(x)
-  check(flow)
+  check(flow, n)
 
 def relu_test(n):
   flow = myelin.Flow()
   f = flow.define("relu")
   x = f.var("x", dt, [n])
   y = f.relu(x)
-  check(flow)
+  check(flow, n)
 
 def min_test(n):
   flow = myelin.Flow()
   f = flow.define("min")
   x = f.var("x", dt, [n])
   y = f.min(x)
-  check(flow)
+  check(flow, n)
 
 def max_test(n):
   flow = myelin.Flow()
   f = flow.define("max")
   x = f.var("x", dt, [n])
   y = f.max(x)
-  check(flow)
+  check(flow, n)
 
 def sum_test(n):
   flow = myelin.Flow()
   f = flow.define("sum")
   x = f.var("x", dt, [n])
   y = f.sum(x)
-  check(flow, 0.0, 10.0)
+  check(flow, n, 0.0, 10.0)
 
 def product_test(n):
   flow = myelin.Flow()
   f = flow.define("product")
   x = f.var("x", dt, [n])
   y = f.product(x)
-  check(flow, 0.0, 1.0)
+  check(flow, n, 0.0, 1.0)
 
 def norm_test(n):
   flow = myelin.Flow()
   f = flow.define("norm")
   x = f.var("x", dt, [n])
   y = f.norm(x)
-  check(flow, 0.0, 1.0)
+  check(flow, n, 0.0, 1.0)
 
 def argmax_test(n):
   flow = myelin.Flow()
   f = flow.define("argmax")
   x = f.var("x", dt, [n])
   y = f.argmax(x)
-  check(flow)
+  check(flow, n)
 
 def minimum_test(n):
   flow = myelin.Flow()
@@ -377,7 +403,7 @@ def minimum_test(n):
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
   z = f.minimum(x, y)
-  check(flow)
+  check(flow, n)
 
 def maximum_test(n):
   flow = myelin.Flow()
@@ -385,14 +411,14 @@ def maximum_test(n):
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
   z = f.maximum(x, y)
-  check(flow)
+  check(flow, n)
 
 def bcast_test(n):
   flow = myelin.Flow()
   f = flow.define("bcast")
   x = f.var("x", dt, [n])
   y = f.mul(x, f.const(7, dt))
-  check(flow)
+  check(flow, n)
 
 def concat_test(n, m):
   flow = myelin.Flow()
@@ -400,43 +426,43 @@ def concat_test(n, m):
   a = f.var("a", dt, [1, n])
   b = f.var("b", dt, [1, m])
   c = f.concat([a, b])
-  check(flow)
+  check(flow, (n, m))
 
 def equal_test(n):
   flow = myelin.Flow()
   f = flow.define("equal")
   f.equal(f.var("x", dt, [n]), f.var("y", dt, [n]))
-  check(flow, 0, 10)
+  check(flow, n, 0, 10)
 
 def not_equal_test(n):
   flow = myelin.Flow()
   f = flow.define("not_equal")
   f.not_equal(f.var("x", dt, [n]), f.var("y", dt, [n]))
-  check(flow, 0, 10)
+  check(flow, n, 0, 10)
 
 def less_test(n):
   flow = myelin.Flow()
   f = flow.define("less")
   f.less(f.var("x", dt, [n]), f.var("y", dt, [n]))
-  check(flow, 0, 10)
+  check(flow, n, 0, 10)
 
 def less_equal_test(n):
   flow = myelin.Flow()
   f = flow.define("less_equal")
   f.less_equal(f.var("x", dt, [n]), f.var("y", dt, [n]))
-  check(flow, 0, 10)
+  check(flow, n, 0, 10)
 
 def greater_test(n):
   flow = myelin.Flow()
   f = flow.define("greater")
   f.greater(f.var("x", dt, [n]), f.var("y", dt, [n]))
-  check(flow, 0, 10)
+  check(flow, n, 0, 10)
 
 def greater_equal_test(n):
   flow = myelin.Flow()
   f = flow.define("greater_equal")
   f.greater_equal(f.var("x", dt, [n]), f.var("y", dt, [n]))
-  check(flow, 0, 10)
+  check(flow, n, 0, 10)
 
 def logic_test(n):
   flow = myelin.Flow()
@@ -450,7 +476,7 @@ def logic_test(n):
   f.logical_not(gt, name="not")
   f.logical_xor(eq, gt, name="xor")
   f.logical_and(f.logical_not(eq), gt, name="andn")
-  check(flow, 0, 10)
+  check(flow, n, 0, 10)
 
 def add_const_test(n, c):
   flow = myelin.Flow()
@@ -458,7 +484,7 @@ def add_const_test(n, c):
   x = f.var("x", dt, [n])
   y = f.const(c, dt)
   x = f.add(x, y)
-  check(flow)
+  check(flow, (n, c))
 
 def sub_const_test(n, c):
   flow = myelin.Flow()
@@ -466,7 +492,7 @@ def sub_const_test(n, c):
   x = f.var("x", dt, [n])
   y = f.const(c, dt)
   x = f.sub(x, y)
-  check(flow)
+  check(flow, (n, c))
 
 def mul_const_test(n, c):
   flow = myelin.Flow()
@@ -474,133 +500,70 @@ def mul_const_test(n, c):
   x = f.var("x", dt, [n])
   y = f.const(c, dt)
   x = f.mul(x, y)
-  check(flow)
+  check(flow, (n, c))
 
+# Run tests for different size ranges.
 sizes = range(1, 48) + [64, 128, 256]
 
-print "test concat"
 for i in sizes:
   for j in sizes:
     concat_test(i, j)
 
 for i in sizes:
-  print "test add", i
   add_test(i)
-
-  print "test sub", i
   sub_test(i)
-
-  print "test mul", i
   mul_test(i)
-
-  print "test div", i
   div_test(i)
-
-  print "test minimum", i
   minimum_test(i)
-
-  print "test maximum", i
   maximum_test(i)
-
-  print "test neg", i
   neg_test(i)
-
-  print "test abs", i
   abs_test(i)
-
-  print "test square", i
   square_test(i)
-
-  print "test relu", i
   relu_test(i)
-
-  print "test bcast", i
   bcast_test(i)
 
   for c in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]:
-    print "test binop const", i, c
     add_const_test(i, c)
     sub_const_test(i, c)
     mul_const_test(i, c)
 
   if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
-    print "test rcp", i
     rcp_test(i)
-
-    print "test sqrt", i
     sqrt_test(i)
-
-    print "test exp", i
     exp_test(i)
-
-    print "test tanh", i
     tanh_test(i)
-
-    print "test log", i
     log_test(i)
-
-    print "test sigmoid", i
     sigmoid_test(i)
-
-    print "test softmax", i
     softmax_test(i)
-
-    print "test sum", i
     sum_test(i)
-
-    print "test product", i
     product_test(i)
-
-    print "test min", i
     min_test(i)
-
-    print "test max", i
     max_test(i)
-
-    print "test norm", i
-    max_test(i)
-
-    print "test equal", i
+    norm_test(i)
     equal_test(i)
-
-    print "test not equal", i
     not_equal_test(i)
-
-    print "test less", i
     less_test(i)
-
-    print "test less equal", i
     less_equal_test(i)
-
-    print "test greater", i
     greater_test(i)
-
-    print "test greater equal", i
     greater_equal_test(i)
-
-    print "test logic", i
     logic_test(i)
 
     if dt != myelin.DT_DOUBLE:
       # No support yet for argmax over doubles.
-      print "test argmax", i
       argmax_test(i)
 
 if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
   for i in sizes:
-    print "test matmul", i
     for j in sizes:
       matmul_transpose_test(i, j)
       for k in sizes:
         matmul_test(i, j, k)
         matmul_add_test(i, j, k)
         matmul_add_relu_test(i, j, k)
-  print "test large matmul"
   matmul_test(2048, 2048, 2048)
 else:
   # Only vector-matrix matmul supported for integers.
   for i in sizes:
-    print "test int matmul", i
     for j in sizes:
       matmul_test(1, i, j)
       matmul_add_test(1, i, j)
@@ -609,7 +572,8 @@ else:
         matmul_add_relu_test(1, i, j)
 
 
-print
+# Output test results.
+print "\r\033[K"
 print "Test results"
 print "============"
 print
@@ -622,6 +586,7 @@ for name in sorted(tests):
     print "%-20s %7d runs" % (t.name, t.runs)
   else:
     print "%-20s %7d runs %7d errors" % (t.name, t.runs, t.errors)
+print
 
 if errors > 0:
   print "******", errors, "tests failed for ", " ".join(sys.argv[1:]), " ******"
