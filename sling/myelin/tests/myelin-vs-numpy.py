@@ -86,6 +86,10 @@ def simulate(flow, f, data):
       v[o[0]] = np.log(v[i[0]])
     elif op.type == "Tanh":
       v[o[0]] = np.tanh(v[i[0]])
+    elif op.type == "Sin":
+      v[o[0]] = np.sin(v[i[0]])
+    elif op.type == "Cos":
+      v[o[0]] = np.cos(v[i[0]])
     elif op.type == "Relu":
       v[o[0]] = relu(v[i[0]])
     elif op.type == "Sqrt":
@@ -320,6 +324,20 @@ def tanh_test(n):
   y = f.tanh(x)
   check(flow, n, -1.0, 1.0)
 
+def sin_test(n):
+  flow = myelin.Flow()
+  f = flow.define("sin")
+  x = f.var("x", dt, [n])
+  y = f.sin(x)
+  check(flow, n)
+
+def cos_test(n):
+  flow = myelin.Flow()
+  f = flow.define("cos")
+  x = f.var("x", dt, [n])
+  y = f.sin(x)
+  check(flow, n)
+
 def sqrt_test(n):
   flow = myelin.Flow()
   f = flow.define("sqrt")
@@ -549,7 +567,9 @@ for i in sizes:
     logic_test(i)
 
     if dt != myelin.DT_DOUBLE:
-      # No support yet for argmax over doubles.
+      # No support yet for argmax, sin, and cos for doubles.
+      sin_test(i)
+      cos_test(i)
       argmax_test(i)
 
 if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
