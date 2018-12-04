@@ -256,9 +256,6 @@ class Builder:
   def abs(self, x, name=None):
     return self.op("Abs", [x], name)
 
-  def sign(self, x, name=None):
-    return self.op("Sign", [x], name)
-
   def rcp(self, x, name=None):
     return self.op("Reciprocal", [x], name)
 

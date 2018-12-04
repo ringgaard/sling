@@ -175,11 +175,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
       GenerateInc(dst, masm);
     } else if (imm == -1) {
       GenerateDec(dst, masm);
-    } else if (imm == 0) {
-      if (instr->dst != instr->src) {
-        GenerateScalarIntMove(instr, masm);
-      }
-    } else {
+    } else if (imm != 0) {
       switch (type_) {
         case DT_INT8:  __ addb(dst, Immediate(imm)); break;
         case DT_INT16: __ addw(dst, Immediate(imm)); break;
@@ -198,11 +194,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
       GenerateDec(dst, masm);
     } else if (imm == -1) {
       GenerateInc(dst, masm);
-    } else if (imm == 0) {
-      if (instr->dst != instr->src) {
-        GenerateScalarIntMove(instr, masm);
-      }
-    } else {
+    } else if (imm != 0) {
       switch (type_) {
         case DT_INT8:  __ subb(dst, Immediate(imm)); break;
         case DT_INT16: __ subw(dst, Immediate(imm)); break;
@@ -217,11 +209,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
   void GenerateMulImm(Express::Op *instr, MacroAssembler *masm) {
     int64 imm = GetConstant(instr->args[1]);
     Register dst = reg(instr->dst);
-    if (imm == 1) {
-      if (instr->dst != instr->src) {
-        GenerateScalarIntMove(instr, masm);
-      }
-    } else {
+    if (imm != 1) {
       // Shift instead of multiply if immediate is a power of two.
       int shift = 0;
       int64 value = 1;
@@ -231,10 +219,10 @@ class ScalarIntGenerator : public ExpressionGenerator {
       }
       if (value == imm) {
         switch (type_) {
-          case DT_INT8:  __ shlb(dst, Immediate(shift)); break;
-          case DT_INT16: __ shlw(dst, Immediate(shift)); break;
-          case DT_INT32: __ shll(dst, Immediate(shift)); break;
-          case DT_INT64: __ shlq(dst, Immediate(shift)); break;
+          case DT_INT8:  __ salb(dst, Immediate(shift)); break;
+          case DT_INT16: __ salw(dst, Immediate(shift)); break;
+          case DT_INT32: __ sall(dst, Immediate(shift)); break;
+          case DT_INT64: __ salq(dst, Immediate(shift)); break;
           default: UNSUPPORTED;
         }
       } else {
@@ -276,12 +264,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
     if (instr->args[1]->type == Express::CONST) {
       // Division by one is a no-op.
       int64 imm = GetConstant(instr->args[1]);
-      if (imm == 1) {
-        if (instr->dst != instr->src) {
-          GenerateScalarIntMove(instr, masm);
-        }
-        return;
-      }
+      if (imm == 1) return;
       if (imm == 0) LOG(WARNING) << "Division by zero";
 
       // Shift instead of divide if immediate is a power of two.
@@ -294,10 +277,10 @@ class ScalarIntGenerator : public ExpressionGenerator {
       if (value == imm) {
         Register dst = reg(instr->dst);
         switch (type_) {
-          case DT_INT8:  __ shrb(dst, Immediate(shift)); break;
-          case DT_INT16: __ shrw(dst, Immediate(shift)); break;
-          case DT_INT32: __ shrl(dst, Immediate(shift)); break;
-          case DT_INT64: __ shrq(dst, Immediate(shift)); break;
+          case DT_INT8:  __ sarb(dst, Immediate(shift)); break;
+          case DT_INT16: __ sarw(dst, Immediate(shift)); break;
+          case DT_INT32: __ sarl(dst, Immediate(shift)); break;
+          case DT_INT64: __ sarq(dst, Immediate(shift)); break;
           default: UNSUPPORTED;
         }
         return;
@@ -309,10 +292,12 @@ class ScalarIntGenerator : public ExpressionGenerator {
     }
 
     // Sign-extend rax into rdx:rax.
-    if (type_ == DT_INT16 || type_ == DT_INT32) {
-      __ cdq();
-    } else if (type_ == DT_INT64) {
-      __ cqo();
+    switch (type_) {
+      case DT_INT8:  __ movsxbl(rax, rax); break;
+      case DT_INT16: __ cbw(); break;
+      case DT_INT32: __ cdq(); break;
+      case DT_INT64: __ cqo(); break;
+      default: UNSUPPORTED;
     }
 
     GenerateIntUnaryOp(instr,

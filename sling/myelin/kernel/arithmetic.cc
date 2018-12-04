@@ -728,18 +728,18 @@ class LogicTransformer : public Transformer {
     }
 
     // Merge negation into logical and.
-    for (Flow::Operation *op : flow->Find("Not|1:And")) {
+    for (Flow::Operation *op : flow->Find("Not|0:And")) {
       Flow::Operation *logand = op;
-      Flow::Operation *logneg = logand->inputs[1]->producer;
+      Flow::Operation *logneg = logand->inputs[0]->producer;
       if (logneg->outputs[0]->usages() == 1 && !logneg->outputs[0]->out()) {
         flow->Eliminate(logneg);
         logand->type = "AndNot";
         num_updates++;
       }
     }
-    for (Flow::Operation *op : flow->Find("Not|0:And")) {
+    for (Flow::Operation *op : flow->Find("Not|1:And")) {
       Flow::Operation *logand = op;
-      Flow::Operation *logneg = logand->inputs[0]->producer;
+      Flow::Operation *logneg = logand->inputs[1]->producer;
       if (logneg->outputs[0]->usages() == 1 && !logneg->outputs[0]->out()) {
         flow->Eliminate(logneg);
         logand->type = "AndNot";

@@ -72,6 +72,7 @@ namespace jit {
   V(rcr, 0x3)                           \
   V(shl, 0x4)                           \
   V(shr, 0x5)                           \
+  V(sal, 0x4)                           \
   V(sar, 0x7)                           \
 
 // SSE instructions.

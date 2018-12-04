@@ -2,6 +2,8 @@ import sling
 import sling.flags as flags
 import sling.myelin as myelin
 import numpy as np
+import sys
+import struct
 
 flags.define("--dt", default=myelin.DT_FLOAT)
 
@@ -80,13 +82,13 @@ def simulate(flow, f, data):
     elif op.type == "Mul":
       v[o[0]] = v[i[0]] * v[i[1]]
     elif op.type == "Div":
-      v[o[0]] = v[i[0]] / v[i[1]]
+      v[o[0]] = np.divide(v[i[0]], v[i[1]])
     elif op.type == "Minimum":
       v[o[0]] = np.minimum(v[i[0]], v[i[1]])
     elif op.type == "Maximum":
       v[o[0]] = np.maximum(v[i[0]], v[i[1]])
     elif op.type == "Reciprocal":
-      v[o[0]] = 1 / v[i[0]]
+      v[o[0]] = np.divide(1, v[i[0]])
     elif op.type == "Sum":
       v[o[0]] = np.sum(v[i[0]])
     elif op.type == "Max":
@@ -97,6 +99,28 @@ def simulate(flow, f, data):
       v[o[0]] = np.prod(v[i[0]])
     elif op.type == "ArgMax":
       v[o[0]] = np.argmax(v[i[0]])
+    elif op.type == "Equal":
+      v[o[0]] = np.equal(v[i[0]], v[i[1]])
+    elif op.type == "NotEqual":
+      v[o[0]] = np.not_equal(v[i[0]], v[i[1]])
+    elif op.type == "Less":
+      v[o[0]] = np.less(v[i[0]], v[i[1]])
+    elif op.type == "LessEqual":
+      v[o[0]] = np.less_equal(v[i[0]], v[i[1]])
+    elif op.type == "Greater":
+      v[o[0]] = np.greater(v[i[0]], v[i[1]])
+    elif op.type == "GreaterEqual":
+      v[o[0]] = np.greater_equal(v[i[0]], v[i[1]])
+    elif op.type == "And":
+      v[o[0]] = np.logical_and(v[i[0]], v[i[1]])
+    elif op.type == "Or":
+      v[o[0]] = np.logical_or(v[i[0]], v[i[1]])
+    elif op.type == "Xor":
+      v[o[0]] = np.logical_xor(v[i[0]], v[i[1]])
+    elif op.type == "Not":
+      v[o[0]] = np.logical_not(v[i[0]])
+    elif op.type == "Transpose":
+      v[o[0]] = np.transpose(v[i[0]])
     elif op.type == "ConcatV2":
       n = int(op.attr("N"))
       axis = v[i[n]]
@@ -144,18 +168,22 @@ def check(flow, lo=-10.0, hi=10.0):
       tests[f.name] = test
     test.runs += 1
     for o in flow.outputs(f):
-      if not np.allclose(data[o], baseline[o]):
+      t = data[o]
+      b = baseline[o]
+      if b.dtype == bool: t = np.array(t, dtype=bool)
+      if not np.allclose(t, b):
         test.errors += 1
         print "mismatch in", f.name, "for", o.name
         print "inputs:"
         for i in flow.inputs(f):
           if i.data == None: print i.name, np.asarray(data[i])
         print "myelin:"
-        print np.asarray(data[o])
+        print np.asarray(t)
         print "numpy:"
-        print baseline[o]
-        print "diff:"
-        print baseline[o] - np.asarray(data[o])
+        print b
+        if b.dtype != bool:
+          print "diff:"
+          print b - np.asarray(t)
 
 def matmul_test(m, k, n):
   flow = myelin.Flow()
@@ -183,12 +211,21 @@ def matmul_add_relu_test(m, k, n):
   y = f.relu(f.add(f.matmul(x, W), b))
   check(flow, -10, 10)
 
+def matmul_transpose_test(m, n):
+  flow = myelin.Flow()
+  f = flow.define("matmul_transpose")
+  x = f.var("x", dt, [1, m])
+  W = f.var("W", dt, [n, m])
+  f.matmul(x, f.t(W))
+  f.matmul(W, f.t(x))
+  check(flow, -10, 10)
+
 def add_test(n):
   flow = myelin.Flow()
   f = flow.define("add")
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
-  x = f.add(x, y)
+  f.add(x, y)
   check(flow)
 
 def sub_test(n):
@@ -196,7 +233,7 @@ def sub_test(n):
   f = flow.define("sub")
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
-  x = f.sub(x, y)
+  f.sub(x, y)
   check(flow)
 
 def mul_test(n):
@@ -204,7 +241,7 @@ def mul_test(n):
   f = flow.define("mul")
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
-  x = f.mul(x, y)
+  f.mul(x, y)
   check(flow)
 
 def div_test(n):
@@ -212,15 +249,21 @@ def div_test(n):
   f = flow.define("div")
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
-  x = f.div(x, y)
+  f.div(x, y)
   check(flow, 1.0, 100.0)
-  check(flow, -100.0, -1.0)
 
 def neg_test(n):
   flow = myelin.Flow()
   f = flow.define("neg")
   x = f.var("x", dt, [n])
   y = f.neg(x)
+  check(flow)
+
+def rcp_test(n):
+  flow = myelin.Flow()
+  f = flow.define("rcp")
+  x = f.var("x", dt, [n])
+  y = f.rcp(x)
   check(flow)
 
 def abs_test(n):
@@ -359,6 +402,80 @@ def concat_test(n, m):
   c = f.concat([a, b])
   check(flow)
 
+def equal_test(n):
+  flow = myelin.Flow()
+  f = flow.define("equal")
+  f.equal(f.var("x", dt, [n]), f.var("y", dt, [n]))
+  check(flow, 0, 10)
+
+def not_equal_test(n):
+  flow = myelin.Flow()
+  f = flow.define("not_equal")
+  f.not_equal(f.var("x", dt, [n]), f.var("y", dt, [n]))
+  check(flow, 0, 10)
+
+def less_test(n):
+  flow = myelin.Flow()
+  f = flow.define("less")
+  f.less(f.var("x", dt, [n]), f.var("y", dt, [n]))
+  check(flow, 0, 10)
+
+def less_equal_test(n):
+  flow = myelin.Flow()
+  f = flow.define("less_equal")
+  f.less_equal(f.var("x", dt, [n]), f.var("y", dt, [n]))
+  check(flow, 0, 10)
+
+def greater_test(n):
+  flow = myelin.Flow()
+  f = flow.define("greater")
+  f.greater(f.var("x", dt, [n]), f.var("y", dt, [n]))
+  check(flow, 0, 10)
+
+def greater_equal_test(n):
+  flow = myelin.Flow()
+  f = flow.define("greater_equal")
+  f.greater_equal(f.var("x", dt, [n]), f.var("y", dt, [n]))
+  check(flow, 0, 10)
+
+def logic_test(n):
+  flow = myelin.Flow()
+  f = flow.define("logic")
+  x = f.var("x", dt, [n])
+  y = f.var("y", dt, [n])
+  eq = f.equal(x, y)
+  gt = f.greater(x, y)
+  f.logical_and(eq, gt, name="and")
+  f.logical_or(eq, gt, name="or")
+  f.logical_not(gt, name="not")
+  f.logical_xor(eq, gt, name="xor")
+  f.logical_and(f.logical_not(eq), gt, name="andn")
+  check(flow, 0, 10)
+
+def add_const_test(n, c):
+  flow = myelin.Flow()
+  f = flow.define("add_const")
+  x = f.var("x", dt, [n])
+  y = f.const(c, dt)
+  x = f.add(x, y)
+  check(flow)
+
+def sub_const_test(n, c):
+  flow = myelin.Flow()
+  f = flow.define("sub_const")
+  x = f.var("x", dt, [n])
+  y = f.const(c, dt)
+  x = f.sub(x, y)
+  check(flow)
+
+def mul_const_test(n, c):
+  flow = myelin.Flow()
+  f = flow.define("mul_const")
+  x = f.var("x", dt, [n])
+  y = f.const(c, dt)
+  x = f.mul(x, y)
+  check(flow)
+
 sizes = range(1, 48) + [64, 128, 256]
 
 #for i in sizes:
@@ -366,6 +483,7 @@ sizes = range(1, 48) + [64, 128, 256]
 # exp_test(i)
 
 #div_test(1)
+#div_const_test(2, 7)
 #quit()
 
 print "test concat"
@@ -407,7 +525,16 @@ for i in sizes:
   print "test bcast", i
   bcast_test(i)
 
+  for c in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]:
+    print "test binop const", i, c
+    add_const_test(i, c)
+    sub_const_test(i, c)
+    mul_const_test(i, c)
+
   if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
+    print "test rcp", i
+    rcp_test(i)
+
     print "test sqrt", i
     sqrt_test(i)
 
@@ -441,6 +568,27 @@ for i in sizes:
     print "test norm", i
     max_test(i)
 
+    print "test equal", i
+    equal_test(i)
+
+    print "test not equal", i
+    not_equal_test(i)
+
+    print "test less", i
+    less_test(i)
+
+    print "test less equal", i
+    less_equal_test(i)
+
+    print "test greater", i
+    greater_test(i)
+
+    print "test greater equal", i
+    greater_equal_test(i)
+
+    print "test logic", i
+    logic_test(i)
+
     if dt != myelin.DT_DOUBLE:
       print "test argmax", i
       argmax_test(i)
@@ -449,6 +597,7 @@ if dt == myelin.DT_FLOAT:
   for i in sizes:
     print "test matmul", i
     for j in sizes:
+      matmul_transpose_test(i, j)
       for k in sizes:
         matmul_test(i, j, k)
         matmul_add_test(i, j, k)
@@ -462,11 +611,17 @@ print "Test results"
 print "============"
 print
 
+errors = 0
 for name in sorted(tests):
   t = tests[name]
+  errors += t.errors
   if t.errors == 0:
     print "%-20s %7d runs" % (t.name, t.runs)
   else:
     print "%-20s %7d runs %7d errors" % (t.name, t.runs, t.errors)
-  
+
+if errors > 0:
+  print "*******", errors, "tests failed *******"
+  exit(1)
+
 

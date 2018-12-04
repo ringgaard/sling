@@ -473,6 +473,9 @@ class Assembler : public CodeGenerator {
   // Sign-extends eax into edx:eax.
   void cdq();
 
+  // Sign-extends ax into dx:ax.
+  void cbw();
+
   // Multiply eax by src, put the result in edx:eax.
   void mull(Register src);
   void mull(const Operand &src);
@@ -601,6 +604,16 @@ class Assembler : public CodeGenerator {
   void shrb(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x5, 1); }
   void shrw(Register dst, Immediate imm8) { shift(dst, imm8, 0x5, 2); }
   void shrw(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x5, 2); }
+
+  void salb(Register dst, Immediate imm8) { shift(dst, imm8, 0x4, 1); }
+  void salb(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x4, 1); }
+  void salw(Register dst, Immediate imm8) { shift(dst, imm8, 0x4, 2); }
+  void salw(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x4, 2); }
+
+  void sarb(Register dst, Immediate imm8) { shift(dst, imm8, 0x7, 1); }
+  void sarb(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x7, 1); }
+  void sarw(Register dst, Immediate imm8) { shift(dst, imm8, 0x7, 2); }
+  void sarw(const Operand &dst, Immediate imm8) { shift(dst, imm8, 0x7, 2); }
 
   void testb(Register dst, Register src);
   void testb(Register reg, Immediate mask);
@@ -3385,6 +3398,7 @@ class Assembler : public CodeGenerator {
   // Emit machine code for a shift operation.
   void shift(Operand dst, Immediate shift_amount, int subcode, int size);
   void shift(Register dst, Immediate shift_amount, int subcode, int size);
+
   // Shift dst by cl % 64 bits.
   void shift(Register dst, int subcode, int size);
   void shift(Operand dst, int subcode, int size);

@@ -340,6 +340,12 @@ void Assembler::cdq() {
   emit(0x99);
 }
 
+void Assembler::cbw() {
+  EnsureSpace ensure_space(this);
+  emit(0x66);
+  emit(0x99);
+}
+
 void Assembler::cmovq(Condition cc, Register dst, Register src) {
   if (cc == always) {
     movq(dst, src);
