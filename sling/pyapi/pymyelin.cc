@@ -762,6 +762,7 @@ char *PyTensor::GetAddress(PyObject *index) {
     // Get single-dimensional index.
     int idx = PyInt_AsLong(index);
     if (idx == -1 &&  PyErr_Occurred()) return nullptr;
+    if (idx < 0) idx += format->dim(0);
     if (idx < 0 || idx >= format->dim(0)) {
       PyErr_SetString(PyExc_IndexError, "Invalid tensor index");
       return nullptr;
@@ -778,6 +779,7 @@ char *PyTensor::GetAddress(PyObject *index) {
     for (int d = 0; d < rank; ++d) {
       int idx = PyInt_AsLong(PyTuple_GetItem(index, d));
       if (idx == -1 &&  PyErr_Occurred()) return nullptr;
+      if (idx < 0) idx += format->dim(d);
       if (idx < 0 || idx >= format->dim(d)) {
         PyErr_SetString(PyExc_IndexError, "Invalid tensor index");
         return nullptr;

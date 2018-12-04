@@ -39,7 +39,7 @@ This can be computed with the following flow graph:
 
 ![input flow](flowin.svg)
 
-The graph only shows the input and output variables (gren and blue), and the
+The graph only shows the input and output variables (green and blue), and the
 global variables (rectangles), but does not show the intermediate variables
 between the tensor operations. The softmax is also expanded into more basic
 operations, i.e.:
@@ -64,7 +64,7 @@ f = myelin.Builder(flow, "f")
 
 The weights in W and b can be initialized from NumPy arrays or any other
 objects that support the
-[Python bufffer protocol](https://docs.python.org/2/c-api/buffer.html):
+[Python buffer protocol](https://docs.python.org/2/c-api/buffer.html):
 
 ```python
 # Initialize weights.
