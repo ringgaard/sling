@@ -891,7 +891,6 @@ class Assembler : public CodeGenerator {
   void movshdup(XMMRegister dst, XMMRegister src);
   void movshdup(XMMRegister dst, const Operand &src);
 
-
   // SSE4 instructions.
 #define DECLARE_SSE4_INSTRUCTION(instruction, prefix, escape1, escape2,     \
                                  opcode)                                    \

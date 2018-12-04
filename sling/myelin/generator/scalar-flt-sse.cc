@@ -298,12 +298,13 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         switch (instr->type) {
           case Express::CVTFLTINT:
             __ cvttps2dq(dst, src);
-            __ pmovsxdq(dst, dst);
             break;
           case Express::CVTINTFLT:
             __ cvtdq2ps(dst, src);
             break;
-          case Express::SUBINT: __ psubd(dst, src); break;
+          case Express::SUBINT:
+            __ psubd(dst, src);
+            break;
           case Express::BITAND:
           case Express::AND:
             __ andps(dst, src);
@@ -336,9 +337,16 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
           __ movsd(src, addr(instr->args[1]));
         }
         switch (instr->type) {
-          case Express::CVTFLTINT: __ cvttpd2dq(dst, src); break;
-          case Express::CVTINTFLT: __ cvtdq2pd(dst, src); break;
-          case Express::SUBINT: __ psubq(dst, src); break;
+          case Express::CVTFLTINT:
+            __ cvttpd2dq(dst, src);
+            __ pmovsxdq(dst, dst);
+            break;
+          case Express::CVTINTFLT:
+            __ cvtdq2pd(dst, src);
+            break;
+          case Express::SUBINT:
+            __ psubq(dst, src);
+            break;
           case Express::BITAND:
           case Express::AND:
             __ andpd(dst, src);
