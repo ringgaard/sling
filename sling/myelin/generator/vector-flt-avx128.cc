@@ -60,9 +60,6 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
         instructions_.Has(Express::MAX)) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
-    if (instructions_.Has(Express::NOT)) {
-      num_mm_aux = std::max(num_mm_aux, 1);
-    }
     index_->ReserveAuxXMMRegisters(num_mm_aux);
   }
 
@@ -351,18 +348,16 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
 
   // Generate logical not.
   void GenerateNot(Express::Op *instr, MacroAssembler *masm) {
-    // Set aux register to all 1s.
-    __ vpcmpeqd(xmmaux(0), xmmaux(0), xmmaux(0));
-
     // Compute not(x) = xor(1,x).
+    __ vpcmpeqd(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
     if (instr->src != -1) {
       // NOT dst,reg
       switch (type_) {
         case DT_FLOAT:
-          __ vxorps(xmm(instr->dst), xmmaux(0), xmm(instr->src));
+          __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
           break;
         case DT_DOUBLE:
-          __ vxorpd(xmm(instr->dst), xmmaux(0), xmm(instr->src));
+          __ vxorpd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
           break;
         default: UNSUPPORTED;
       }
@@ -370,10 +365,10 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
       // NOT dst,[mem]
       switch (type_) {
         case DT_FLOAT:
-          __ vxorps(xmm(instr->dst), xmmaux(0), addr(instr->args[0]));
+          __ vxorps(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
           break;
         case DT_DOUBLE:
-          __ vxorpd(xmm(instr->dst), xmmaux(0), addr(instr->args[0]));
+          __ vxorpd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
           break;
         default: UNSUPPORTED;
       }

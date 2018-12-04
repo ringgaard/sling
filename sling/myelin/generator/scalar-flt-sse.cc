@@ -359,7 +359,7 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
               __ movq(xmmaux(1), aux(0));
               __ xorpd(dst, xmmaux(1));
             } else {
-              __ movd(dst, aux(0));
+              __ movq(dst, aux(0));
               __ xorpd(dst, src);
             }
             break;

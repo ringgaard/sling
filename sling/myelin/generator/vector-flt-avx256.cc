@@ -63,9 +63,6 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         num_mm_aux = std::max(num_mm_aux, 3);
       }
     }
-    if (instructions_.Has(Express::NOT)) {
-      num_mm_aux = std::max(num_mm_aux, 1);
-    }
     if (instructions_.Has(Express::SUM) ||
         instructions_.Has(Express::PRODUCT) ||
         instructions_.Has(Express::MIN) ||
@@ -419,18 +416,16 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
 
   // Generate logical not.
   void GenerateNot(Express::Op *instr, MacroAssembler *masm) {
-    // Set aux register to all 1s.
-    __ vpcmpeqd(ymmaux(0), ymmaux(0), ymmaux(0));
-
     // Compute not(x) = xor(1,x).
+    __ vpcmpeqd(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
     if (instr->src != -1) {
       // NOT dst,reg
       switch (type_) {
         case DT_FLOAT:
-          __ vxorps(ymm(instr->dst), ymmaux(0), ymm(instr->src));
+          __ vxorps(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
           break;
         case DT_DOUBLE:
-          __ vxorpd(ymm(instr->dst), ymmaux(0), ymm(instr->src));
+          __ vxorpd(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
           break;
         default: UNSUPPORTED;
       }
@@ -438,10 +433,10 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
       // NOT dst,[mem]
       switch (type_) {
         case DT_FLOAT:
-          __ vxorps(ymm(instr->dst), ymmaux(0), addr(instr->args[0]));
+          __ vxorps(ymm(instr->dst), ymm(instr->dst), addr(instr->args[0]));
           break;
         case DT_DOUBLE:
-          __ vxorpd(ymm(instr->dst), ymmaux(0), addr(instr->args[0]));
+          __ vxorpd(ymm(instr->dst), ymm(instr->dst), addr(instr->args[0]));
           break;
         default: UNSUPPORTED;
       }
@@ -568,7 +563,7 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         switch (instr->type) {
           case Express::SUM:
             __ vperm2f128(aux, acc, acc, 1);
-            __ vhaddpd(acc, acc, aux);
+            __ vaddpd(acc, acc, aux);
             __ vhaddpd(acc, acc, acc);
             break;
           case Express::PRODUCT:

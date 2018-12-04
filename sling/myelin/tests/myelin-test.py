@@ -478,14 +478,6 @@ def mul_const_test(n, c):
 
 sizes = range(1, 48) + [64, 128, 256]
 
-#for i in sizes:
-#  print "test exp", i
-# exp_test(i)
-
-#div_test(1)
-#div_const_test(2, 7)
-#quit()
-
 print "test concat"
 for i in sizes:
   for j in sizes:
@@ -590,10 +582,11 @@ for i in sizes:
     logic_test(i)
 
     if dt != myelin.DT_DOUBLE:
+      # No support yet for argmax over doubles.
       print "test argmax", i
       argmax_test(i)
 
-if dt == myelin.DT_FLOAT:
+if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
   for i in sizes:
     print "test matmul", i
     for j in sizes:
@@ -602,9 +595,19 @@ if dt == myelin.DT_FLOAT:
         matmul_test(i, j, k)
         matmul_add_test(i, j, k)
         matmul_add_relu_test(i, j, k)
-
   print "test large matmul"
   matmul_test(2048, 2048, 2048)
+else:
+  # Only vector-matrix matmul supported for integers.
+  for i in sizes:
+    print "test int matmul", i
+    for j in sizes:
+      matmul_test(1, i, j)
+      matmul_add_test(1, i, j)
+      if dt != myelin.DT_INT8:
+        # Rounding with MatMulAddRelu not compatible with NymPy for INT8.
+        matmul_add_relu_test(1, i, j)
+
 
 print
 print "Test results"
@@ -621,7 +624,6 @@ for name in sorted(tests):
     print "%-20s %7d runs %7d errors" % (t.name, t.runs, t.errors)
 
 if errors > 0:
-  print "*******", errors, "tests failed *******"
+  print "******", errors, "tests failed for ", " ".join(sys.argv[1:]), " ******"
   exit(1)
-
 

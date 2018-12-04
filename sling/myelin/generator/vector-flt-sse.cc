@@ -333,32 +333,11 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
   // Generate logical not.
   void GenerateNot(Express::Op *instr, MacroAssembler *masm) {
     // Compute not(x) = xor(1,x).
-    CHECK(instr->first_is_dest);
-    if (instr->src != -1) {
-      // NOT dst,reg
-      __ pcmpeqd(xmmaux(0), xmmaux(0));
-      switch (type_) {
-        case DT_FLOAT:
-          __ xorps(xmm(instr->dst), xmmaux(0));
-          break;
-        case DT_DOUBLE:
-          __ xorpd(xmm(instr->dst), xmmaux(0));
-          break;
-        default: UNSUPPORTED;
-      }
-    } else {
-      // NOT dst,[mem]
-      __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
-      switch (type_) {
-        case DT_FLOAT:
-          __ xorps(xmm(instr->dst), addr(instr->args[0]));
-          break;
-        case DT_DOUBLE:
-          __ xorpd(xmm(instr->dst), addr(instr->args[0]));
-          break;
-        default: UNSUPPORTED;
-      }
-    }
+    __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
+    GenerateXMMFltOp(instr,
+        &Assembler::xorps, &Assembler::xorpd,
+        &Assembler::xorps, &Assembler::xorpd,
+        masm);
   }
 
   // Generate compare.
