@@ -874,6 +874,29 @@ Tensor *Step::GetPrototype() const {
   return prototype;
 }
 
+string Step::Signature() const {
+  string str;
+  if (!outputs_.empty()) {
+    bool first = true;
+    for (Tensor *output : outputs_) {
+      if (!first) str.append(",");
+      str.append(output->TypeString());
+      first = false;
+    }
+    str.append("=");
+  }
+  str.append(type_);
+  str.append("(");
+  bool first = true;
+  for (Tensor *input : inputs_) {
+    if (!first) str.append(",");
+    str.append(input->TypeString());
+    first = false;
+  }
+  str.append(")");
+  return str;
+}
+
 Network::Network() {
   runtime_ = &default_runtime;
   linker_ = &jit_linker;
@@ -1166,8 +1189,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
     }
     if (step->kernel_ == nullptr) {
-      LOG(ERROR) << "No kernel supports " << step->name()
-                 << " of type " << step->type();
+      LOG(ERROR) << "No kernel supports step " << step->name() << ": "
+                 << step->Signature();
       return false;
     }
     VLOG(3) << "Step " << step->name() << " implemented by "

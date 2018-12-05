@@ -23,6 +23,7 @@ import sys
 import struct
 
 flags.define("--dt", default=myelin.DT_FLOAT)
+flags.define("--test")
 flags.parse()
 dt = flags.arg.dt
 
@@ -167,7 +168,10 @@ def check(flow, variant, lo=-10.0, hi=10.0):
   net = compiler.compile(flow)
   for f in flow.funcs.itervalues():
     # Output progress.
-    print "\r" + "Running " + f.name + " " + str(variant) + ": \033[K",
+    if sys.stdout.isatty():
+      print "\rRunning %-20s %s\033[K" % (f.name, str(variant)),
+    else:
+      print "Running %s %s" % (f.name, str(variant))
 
     # Create data instance for cell.
     cell = net.cell(f.name)
@@ -201,7 +205,8 @@ def check(flow, variant, lo=-10.0, hi=10.0):
       if b.dtype == bool: t = np.array(t, dtype=bool)
       if not np.allclose(t, b):
         test.errors += 1
-        print "mismatch in", f.name, "for", o.name
+        print
+        print "mismatch in", f.name, variant, "for", o.name
         print "inputs:"
         for i in flow.inputs(f):
           if i.data == None: print i.name, np.asarray(data[i])
@@ -519,6 +524,13 @@ def mul_const_test(n, c):
   y = f.const(c, dt)
   x = f.mul(x, y)
   check(flow, (n, c))
+
+# Check for specific test to run.
+if flags.arg.test:
+  print "Running test", flags.arg.test
+  exec(flags.arg.test)
+  print
+  quit()
 
 # Run tests for different size ranges.
 sizes = range(1, 48) + [64, 128, 256]
