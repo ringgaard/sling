@@ -170,7 +170,7 @@ def check(flow, variant, lo=-10.0, hi=10.0):
   net = compiler.compile(flow)
   for f in flow.funcs.itervalues():
     # Output progress.
-    if sys.stdout.isatty():
+    if False and sys.stdout.isatty():
       print "\rRunning %-20s %s\033[K" % (f.name, str(variant)),
     else:
       print "Running %s %s" % (f.name, str(variant))

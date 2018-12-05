@@ -28,7 +28,7 @@ namespace myelin {
 using namespace jit;
 
 // Maximum number of loop unrolls.
-static const int kMaxUnrolls = 4;
+static const int kMaxUnrolls = 1; //4;
 
 // Arguments for matmul op. This takes transposition and element order of the
 // arguments into account.
@@ -243,6 +243,13 @@ class SIMDMatMul : public Kernel {
     args.a().tensor->SetMiniumAlignment(vecbytes);
     args.b().tensor->SetMiniumAlignment(vecbytes);
     args.c().tensor->SetMiniumAlignment(vecbytes);
+
+    // Reserve registers.
+    Type type = args.c().type();
+    if (type == DT_INT8 || type == DT_INT16 ||
+        type == DT_INT32 || type == DT_INT64) {
+      step->SetRegisterUsage(9);
+    }
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {

@@ -1056,15 +1056,109 @@ class SSEScalarDoubleGenerator : public SIMDGenerator {
   }
 };
 
+// Scalar integer SIMD generator using regular registers.
+class ScalarIntSIMDGenerator : public SIMDGenerator {
+ public:
+  ScalarIntSIMDGenerator(MacroAssembler *masm, Type type)
+      : SIMDGenerator(masm, false), type_(type) {}
+
+  // Uses regular registers.
+  int VectorBytes() override { return TypeTraits::of(type_).size(); }
+  int VectorSize() override { return 1; }
+  int Alloc() override { return masm_->rr().alloc().code(); }
+
+  void Load(int dst, const Operand &src) override {
+    switch (type_) {
+      case DT_INT8: masm_->movsxbq(reg(dst), src); break;
+      case DT_INT16: masm_->movsxwq(reg(dst), src); break;
+      case DT_INT32: masm_->movsxlq(reg(dst), src); break;
+      case DT_INT64: masm_->movq(reg(dst), src); break;
+      default: LOG(FATAL) << "Unsupported integer type: " << type_;
+    }
+  }
+
+  void Store(const Operand &dst, int src) override {
+    switch (type_) {
+      case DT_INT8: masm_->movb(dst, reg(src)); break;
+      case DT_INT16: masm_->movw(dst, reg(src)); break;
+      case DT_INT32: masm_->movl(dst, reg(src)); break;
+      case DT_INT64: masm_->movq(dst, reg(src)); break;
+      default: LOG(FATAL) << "Unsupported integer type: " << type_;
+    }
+  }
+
+  void Zero(int r) override {
+    masm_->xorq(reg(r), reg(r));
+  }
+
+  void Add(int dst, int src1, int src2) override {
+    if (dst == src1) {
+      masm_->addq(reg(dst), reg(src2));
+    } else if (dst == src2) {
+      masm_->addq(reg(dst), reg(src1));
+    } else {
+      masm_->movq(reg(dst), reg(src1));
+      masm_->addq(reg(dst), reg(src2));
+    }
+  }
+
+  void Add(int dst, int src1, const jit::Operand &src2) override {
+    if (dst == src1) {
+      if (type_ == DT_INT64) {
+        masm_->addq(reg(dst), src2);
+      } else {
+        Load(dst, src2);
+        masm_->addq(reg(dst), reg(src1));
+      }
+    } else {
+      Load(dst, src2);
+      masm_->addq(reg(dst), reg(src1));
+    }
+  }
+
+  void Mul(int dst, int src1, const jit::Operand &src2) override {
+    if (dst == src1) {
+      if (type_ == DT_INT64) {
+        masm_->imulq(reg(dst), src2);
+      } else {
+        Load(dst, src2);
+        masm_->imulq(reg(dst), reg(src1));
+      }
+    } else {
+      Load(dst, src2);
+      masm_->imulq(reg(dst), reg(src1));
+    }
+  }
+
+  void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
+    if (!retain && type_ == DT_INT64) {
+      masm_->imulq(reg(src1), src2);
+      masm_->addq(reg(dst), reg(src1));
+    } else {
+      Register acc = masm_->rr().alloc();
+      Load(acc.code(), src2);
+      masm_->imulq(acc, reg(src1));
+      masm_->addq(reg(dst), acc);
+      masm_->rr().release(acc);
+    }
+  }
+
+ public:
+  Type type_;
+};
+
 bool SIMDAssembler::Supports(Type type) {
-  // Only floats and doubles are currently supported.
-  return type == DT_FLOAT || type == DT_DOUBLE;
+  return type == DT_FLOAT || type == DT_DOUBLE ||
+         type == DT_INT8 || type == DT_INT16 ||
+         type == DT_INT32 || type == DT_INT64;
 }
 
 int SIMDAssembler::VectorBytes(Type type) {
-  if (CPU::Enabled(AVX512F)) return 64;
-  if (CPU::Enabled(AVX)) return 32;
-  if (CPU::Enabled(SSE)) return 16;
+  if (type == DT_FLOAT || type == DT_DOUBLE) {
+    if (CPU::Enabled(AVX512F)) return 64;
+    if (CPU::Enabled(AVX)) return 32;
+    if (CPU::Enabled(SSE)) return 16;
+  }
   return TypeTraits::of(type).size();
 }
 
@@ -1102,6 +1196,26 @@ SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type, bool aligned) {
         add(new SSE128DoubleGenerator(masm, aligned));
         add(new SSEScalarDoubleGenerator(masm, aligned));
       }
+      break;
+
+    case DT_INT8:
+      name_ = "Int8";
+      add(new ScalarIntSIMDGenerator(masm, DT_INT8));
+      break;
+
+    case DT_INT16:
+      name_ = "Int16";
+      add(new ScalarIntSIMDGenerator(masm, DT_INT16));
+      break;
+
+    case DT_INT32:
+      name_ = "Int32";
+      add(new ScalarIntSIMDGenerator(masm, DT_INT32));
+      break;
+
+    case DT_INT64:
+      name_ = "Int64";
+      add(new ScalarIntSIMDGenerator(masm, DT_INT64));
       break;
 
     default:
