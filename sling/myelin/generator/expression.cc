@@ -1579,13 +1579,13 @@ void ExpressionGenerator::GenerateYMMIntOp(
 
 Reduction ReduceOp(Express::Op *instr) {
   switch (instr->type) {
-    case Express::SUM: return REDUCE_SUM;
+    case Express::SUM: return REDUCE_ADD;
     case Express::PRODUCT: return REDUCE_MUL;
     case Express::MIN: return REDUCE_MIN;
     case Express::MAX: return REDUCE_MAX;
     default: UNSUPPORTED;
   }
-  return REDUCE_SUM;
+  return REDUCE_ADD;
 }
 
 void UnsupportedOperation(const char *file, int line) {

@@ -521,7 +521,7 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
   switch (type) {
     case DT_FLOAT:
       switch (op) {
-        case REDUCE_SUM:
+        case REDUCE_ADD:
           if (avx) {
             vaddps(acc, acc, r);
           } else {
@@ -553,7 +553,7 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
       break;
     case DT_DOUBLE:
       switch (op) {
-        case REDUCE_SUM:
+        case REDUCE_ADD:
           if (avx) {
             vaddpd(acc, acc, r);
           } else {
@@ -593,7 +593,7 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
   switch (type) {
     case DT_FLOAT:
       switch (op) {
-        case REDUCE_SUM:
+        case REDUCE_ADD:
           vaddps(acc, acc, r);
           break;
         case REDUCE_MUL:
@@ -609,7 +609,7 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
       break;
     case DT_DOUBLE:
       switch (op) {
-        case REDUCE_SUM:
+        case REDUCE_ADD:
           vaddpd(acc, acc, r);
           break;
         case REDUCE_MUL:
@@ -633,7 +633,7 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
   switch (type) {
     case DT_FLOAT:
       switch (op) {
-        case REDUCE_SUM:
+        case REDUCE_ADD:
           vaddps(acc, acc, r);
           break;
         case REDUCE_MUL:
@@ -649,7 +649,7 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
       break;
     case DT_DOUBLE:
       switch (op) {
-        case REDUCE_SUM:
+        case REDUCE_ADD:
           vaddpd(acc, acc, r);
           break;
         case REDUCE_MUL:
@@ -665,33 +665,6 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
       break;
     default:
       LOG(FATAL) << "Reduction for type not supported";
-  }
-}
-
-void MacroAssembler::vpermil(Type type, XMMRegister dst,
-                             XMMRegister src, int8_t imm8) {
-  if (TypeTraits::of(type).size() == 8) {
-    vpermilpd(dst, src, imm8);
-  } else {
-    vpermilps(dst, src, imm8);
-  }
-}
-
-void MacroAssembler::vpermil(Type type, YMMRegister dst,
-                             YMMRegister src, int8_t imm8) {
-  if (TypeTraits::of(type).size() == 8) {
-    vpermilpd(dst, src, imm8);
-  } else {
-    vpermilps(dst, src, imm8);
-  }
-}
-
-void MacroAssembler::vpermil(Type type, ZMMRegister dst,
-                             ZMMRegister src, int8_t imm8) {
-  if (TypeTraits::of(type).size() == 8) {
-    vpermilpd(dst, src, imm8);
-  } else {
-    vpermilps(dst, src, imm8);
   }
 }
 
@@ -877,6 +850,33 @@ void MacroAssembler::ResetRegisterUsage() {
   kk_.reset();
   rr_.use(datareg);
   if (options_.profiling) rr_.use(tsreg);
+}
+
+void MacroAssembler::vpermil(Type type, XMMRegister dst,
+                             XMMRegister src, int8_t imm8) {
+  if (TypeTraits::of(type).size() == 8) {
+    vpermilpd(dst, src, imm8);
+  } else {
+    vpermilps(dst, src, imm8);
+  }
+}
+
+void MacroAssembler::vpermil(Type type, YMMRegister dst,
+                             YMMRegister src, int8_t imm8) {
+  if (TypeTraits::of(type).size() == 8) {
+    vpermilpd(dst, src, imm8);
+  } else {
+    vpermilps(dst, src, imm8);
+  }
+}
+
+void MacroAssembler::vpermil(Type type, ZMMRegister dst,
+                             ZMMRegister src, int8_t imm8) {
+  if (TypeTraits::of(type).size() == 8) {
+    vpermilpd(dst, src, imm8);
+  } else {
+    vpermilps(dst, src, imm8);
+  }
 }
 
 }  // namespace myelin

@@ -22,7 +22,7 @@ namespace sling {
 namespace myelin {
 
 // Reduction operations.
-enum Reduction { REDUCE_SUM, REDUCE_MUL, REDUCE_MIN, REDUCE_MAX };
+enum Reduction {REDUCE_ADD, REDUCE_MUL, REDUCE_MIN, REDUCE_MAX};
 
 // Register allocation.
 class Registers {
@@ -344,11 +344,6 @@ class MacroAssembler : public jit::Assembler {
   // opmask register if no mask register is provided as input.
   OpmaskRegister LoadMask(int n, OpmaskRegister k = jit::no_opmask_reg);
 
-  // Type-dependent instructions.
-  void vpermil(Type type, XMMRegister dst, XMMRegister src, int8_t imm8);
-  void vpermil(Type type, YMMRegister dst, YMMRegister src, int8_t imm8);
-  void vpermil(Type type, ZMMRegister dst, ZMMRegister src, int8_t imm8);
-
   // Combine pairwise elements with reduction operator, i.e. acc = acc <op> r.
   void Accumulate(Reduction op, Type type, XMMRegister acc, XMMRegister r);
   void Accumulate(Reduction op, Type type, YMMRegister acc, YMMRegister r);
@@ -383,6 +378,11 @@ class MacroAssembler : public jit::Assembler {
 
   // Reset register usage.
   void ResetRegisterUsage();
+
+  // Type-dependent instructions.
+  void vpermil(Type type, XMMRegister dst, XMMRegister src, int8_t imm8);
+  void vpermil(Type type, YMMRegister dst, YMMRegister src, int8_t imm8);
+  void vpermil(Type type, ZMMRegister dst, ZMMRegister src, int8_t imm8);
 
   // General purpose register allocation.
   Registers &rr() { return rr_; }

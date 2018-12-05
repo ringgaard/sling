@@ -24,6 +24,8 @@ import struct
 
 flags.define("--dt", default=myelin.DT_FLOAT)
 flags.define("--test")
+flags.define("--superficial", default=False, action='store_true')
+
 flags.parse()
 dt = flags.arg.dt
 
@@ -533,7 +535,10 @@ if flags.arg.test:
   quit()
 
 # Run tests for different size ranges.
-sizes = range(1, 48) + [64, 128, 256]
+if flags.arg.superficial:
+  sizes = range(1, 8) + [9, 14, 15, 16, 31, 32, 33, 64]
+else:
+  sizes = range(1, 48) + [64, 128, 256]
 
 for i in sizes:
   for j in sizes:
@@ -592,7 +597,8 @@ if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
         matmul_test(i, j, k)
         matmul_add_test(i, j, k)
         matmul_add_relu_test(i, j, k)
-  matmul_test(2048, 2048, 2048)
+  if not flags.arg.superficial:
+    matmul_test(2048, 2048, 2048)
 else:
   # Only vector-matrix matmul supported for integers.
   for i in sizes:
