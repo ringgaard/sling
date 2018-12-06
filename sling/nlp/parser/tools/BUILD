@@ -18,18 +18,6 @@ cc_binary(
     "//sling/string:printf",
   ],
 )
-
-cc_binary(
-  name = "evaluate-frames",
-  srcs = ["evaluate-frames.cc"],
-  deps = [
-    "//sling/base",
-    "//sling/file:posix",
-    "//sling/nlp/parser/trainer:frame-evaluation",
-    "//third_party/zlib",
-  ],
-)
-
 cc_binary(
   name = "parser-server",
   srcs = ["parser-server.cc"],
