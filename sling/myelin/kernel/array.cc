@@ -396,45 +396,13 @@ class Slice : public Kernel {
     // Allocate registers.
     Register src = masm->rr().alloc_fixed(rsi);
     Register dst = masm->rr().alloc_fixed(rdi);
-    Register cnt = masm->rr().alloc_fixed(rcx);
-    Register acc = masm->rr().alloc_fixed(rax);
 
     // Get source and destination addresses.
     __ LoadTensorAddress(src, source, begin);
     __ LoadTensorAddress(dst, destination);
 
     // Copy input to output.
-    if (bytes > 0 && bytes < 16) {
-      int disp = 0;
-      int left = bytes;
-      while (left >= 8) {
-        __ movq(acc, Operand(src, disp));
-        __ movq(Operand(dst, disp), acc);
-        disp += 8;
-        left -= 8;
-      }
-      while (left >= 4) {
-        __ movl(acc, Operand(src, disp));
-        __ movl(Operand(dst, disp), acc);
-        disp += 4;
-        left -= 4;
-      }
-      while (left >= 2) {
-        __ movw(acc, Operand(src, disp));
-        __ movw(Operand(dst, disp), acc);
-        disp += 2;
-        left -= 2;
-      }
-      while (left >= 1) {
-        __ movb(acc, Operand(src, disp));
-        __ movb(Operand(dst, disp), acc);
-        disp += 1;
-        left -= 1;
-      }
-    } else {
-      __ movq(cnt, Immediate(bytes));
-      __ repmovsb();
-    }
+    __ Copy(dst, 0, src, 0, bytes);
   }
 
   int64 Complexity(const Step *step) override {
@@ -471,12 +439,9 @@ class BasicConcat : public Kernel {
     int n = step->GetAttr("N", step->indegree() - 1);
 
     // Allocate registers.
-    Register src = masm->rr().alloc_fixed(rsi);
-    Register dst = masm->rr().alloc_fixed(rdi);
-    Register cnt = masm->rr().alloc_fixed(rcx);
-    Register acc = masm->rr().alloc_fixed(rax);
-    Register in = masm->rr().alloc();
-    Register out = masm->rr().alloc();
+    Register src = masm->rr().alloc_preferred(rsi);
+    Register dst = masm->rr().alloc_preferred(rdi);
+    Register out = masm->rr().alloc_preferred(rdx);
 
     // Load output tensor.
     __ LoadTensorAddress(out, step->output(0));
@@ -485,40 +450,9 @@ class BasicConcat : public Kernel {
     int offset = 0;
     for (int i = 0; i < n; ++i) {
       int size = step->input(i)->size();
-      if (size > 0 && size < 16) {
-        __ LoadTensorAddress(in, step->input(i));
-        int disp = 0;
-        int left = size;
-        while (left >= 8) {
-          __ movq(acc, Operand(in, disp));
-          __ movq(Operand(out, offset + disp), acc);
-          disp += 8;
-          left -= 8;
-        }
-        while (left >= 4) {
-          __ movl(acc, Operand(in, disp));
-          __ movl(Operand(out, offset + disp), acc);
-          disp += 4;
-          left -= 4;
-        }
-        while (left >= 2) {
-          __ movw(acc, Operand(in, disp));
-          __ movw(Operand(out, offset + disp), acc);
-          disp += 2;
-          left -= 2;
-        }
-        while (left >= 1) {
-          __ movb(acc, Operand(in, disp));
-          __ movb(Operand(out, offset + disp), acc);
-          disp += 1;
-          left -= 1;
-        }
-      } else {
         __ LoadTensorAddress(src, step->input(i));
         __ leaq(dst, Operand(out, offset));
-        __ movq(cnt, Immediate(size));
-        __ repmovsb();
-      }
+      __ Copy(dst, 0, src, 0, size);
       offset += size;
     }
     CHECK_EQ(offset, step->output(0)->size()) << step->name();
@@ -567,10 +501,8 @@ class GeneralConcat : public Kernel {
     int n = step->GetAttr("N", step->indegree() - 1);
 
     // Allocate registers.
-    Register src = masm->rr().alloc_fixed(rsi);
-    Register dst = masm->rr().alloc_fixed(rdi);
-    Register cnt = masm->rr().alloc_fixed(rcx);
-    Register acc = masm->rr().alloc_fixed(rax);
+    Register src = masm->rr().alloc_preferred(rsi);
+    Register dst = masm->rr().alloc_preferred(rdi);
     Register out = masm->rr().alloc();
     Register idx = masm->rr().alloc();
     std::vector<Register> in(n);
@@ -596,39 +528,9 @@ class GeneralConcat : public Kernel {
     for (int i = 0; i < n; ++i) {
       Tensor *input = step->input(i);
       int size = axis > 0 ? input->stride(axis - 1) : input->size();
-      if (size > 0 && size < 16) {
-        int disp = 0;
-        int left = size;
-        while (left >= 8) {
-          __ movq(acc, Operand(in[i], disp));
-          __ movq(Operand(out, disp), acc);
-          disp += 8;
-          left -= 8;
-        }
-        while (left >= 4) {
-          __ movl(acc, Operand(in[i], disp));
-          __ movl(Operand(out, disp), acc);
-          disp += 4;
-          left -= 4;
-        }
-        while (left >= 2) {
-          __ movw(acc, Operand(in[i], disp));
-          __ movw(Operand(out, disp), acc);
-          disp += 2;
-          left -= 2;
-        }
-        while (left >= 1) {
-          __ movb(acc, Operand(in[i], disp));
-          __ movb(Operand(out, disp), acc);
-          disp += 1;
-          left -= 1;
-        }
-      } else {
-        __ movq(src, in[i]);
-        __ movq(dst, out);
-        __ movq(cnt, Immediate(size));
-        __ repmovsb();
-      }
+      __ movq(src, in[i]);
+      __ movq(dst, out);
+      __ Copy(dst, 0, src, 0, size);
       __ addq(in[i], Immediate(size));
     }
 
