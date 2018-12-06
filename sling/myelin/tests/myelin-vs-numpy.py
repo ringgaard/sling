@@ -24,7 +24,8 @@ import struct
 
 flags.define("--dt", default=myelin.DT_FLOAT)
 flags.define("--test")
-flags.define("--superficial", default=False, action='store_true')
+flags.define("--thorough", default=False, action='store_true')
+flags.define("--repeat", default=1, type=int)
 
 flags.parse()
 dt = flags.arg.dt
@@ -170,8 +171,8 @@ def check(flow, variant, lo=-10.0, hi=10.0):
   net = compiler.compile(flow)
   for f in flow.funcs.itervalues():
     # Output progress.
-    if False and sys.stdout.isatty():
-      print "\rRunning %-20s %s\033[K" % (f.name, str(variant)),
+    if sys.stdout.isatty():
+      print "\r\033[KRunning %-20s %s" % (f.name, str(variant)),
     else:
       print "Running %s %s" % (f.name, str(variant))
 
@@ -190,7 +191,8 @@ def check(flow, variant, lo=-10.0, hi=10.0):
       np.copyto(a, r, casting="unsafe")
 
     # Compute cell.
-    data.compute()
+    for n in range(flags.arg.repeat):
+      data.compute()
 
     # Compute function using numpy.
     baseline = simulate(flow, f, data)
@@ -219,6 +221,10 @@ def check(flow, variant, lo=-10.0, hi=10.0):
         if b.dtype != bool:
           print "diff:"
           print b - np.asarray(t)
+
+  if flags.arg.profile:
+    print
+    print net.profile()
 
 # Tests
 
@@ -535,10 +541,10 @@ if flags.arg.test:
   quit()
 
 # Run tests for different size ranges.
-if flags.arg.superficial:
-  sizes = range(1, 8) + [9, 14, 15, 16, 31, 32, 33, 64]
-else:
+if flags.arg.thorough:
   sizes = range(1, 48) + [64, 128, 256]
+else:
+  sizes = range(1, 8) + [9, 14, 15, 16, 31, 32, 33, 64]
 
 for i in sizes:
   for j in sizes:
@@ -575,6 +581,7 @@ for i in sizes:
     min_test(i)
     max_test(i)
     norm_test(i)
+
     equal_test(i)
     not_equal_test(i)
     less_test(i)
@@ -589,26 +596,17 @@ for i in sizes:
       cos_test(i)
       argmax_test(i)
 
-if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
-  for i in sizes:
-    for j in sizes:
-      matmul_transpose_test(i, j)
-      for k in sizes:
-        matmul_test(i, j, k)
-        matmul_add_test(i, j, k)
-        matmul_add_relu_test(i, j, k)
-  if not flags.arg.superficial:
-    matmul_test(2048, 2048, 2048)
-else:
-  # Only vector-matrix matmul supported for integers.
-  for i in sizes:
-    for j in sizes:
-      matmul_test(1, i, j)
-      matmul_add_test(1, i, j)
+for i in sizes:
+  for j in sizes:
+    matmul_transpose_test(i, j)
+    for k in sizes:
+      matmul_test(i, j, k)
+      matmul_add_test(i, j, k)
       if dt != myelin.DT_INT8:
         # Rounding with MatMulAddRelu not compatible with NymPy for INT8.
-        matmul_add_relu_test(1, i, j)
-
+        matmul_add_relu_test(i, j, k)
+if flags.arg.thorough:
+  matmul_test(1024, 1024, 1024)
 
 # Output test results.
 print "\r\033[K"

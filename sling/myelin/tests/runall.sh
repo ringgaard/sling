@@ -32,23 +32,23 @@ testtype() {
 
   if [[ $AVX512 ]]; then
     echo "Test data type $DT without AVX512"
-    $TESTPGM --dt $DT --cpu=-avx512
+    $TESTPGM --dt $DT --cpu=-avx512 --thorough
   fi
   if [[ $FMA ]]; then
     echo "Test data type $DT without FMA3"
-    $TESTPGM --dt $DT --cpu=-avx512-fma3
+    $TESTPGM --dt $DT --cpu=-avx512-fma3 --thorough
   fi
   if [[ $AVX2 ]]; then
     echo "Test data type $DT without AVX2"
-    $TESTPGM --dt $DT --cpu=-avx512-avx2
+    $TESTPGM --dt $DT --cpu=-avx512-avx2 --thorough
     if [[ $FMA ]]; then
       echo "Test data type $DT without AVX2 and FMA3"
-      $TESTPGM --dt $DT --cpu=-avx512-fma3-avx2
+      $TESTPGM --dt $DT --cpu=-avx512-fma3-avx2 --thorough
     fi
   fi
   if [[ $AVX ]]; then
     echo "Test data type $DT without AVX"
-    $TESTPGM --dt $DT --cpu=-avx512-fma3-avx2-avx
+    $TESTPGM --dt $DT --cpu=-avx512-fma3-avx2-avx --thorough
   fi
 }
 

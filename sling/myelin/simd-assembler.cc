@@ -19,12 +19,15 @@ namespace myelin {
 
 using namespace jit;
 
+bool SIMDGenerator::SupportsUnroll() {
+  return true;
+}
+
 void SIMDGenerator::Broadcast(int dst, const Operand &src) {
   // Broadcast is just a load for scalars.
   CHECK_EQ(VectorSize(), 1);
   Load(dst, src);
 }
-
 
 void SIMDGenerator::Sum(int r) {
   // Sum is a no-op for scalars.
@@ -1066,6 +1069,7 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
   int VectorBytes() override { return TypeTraits::of(type_).size(); }
   int VectorSize() override { return 1; }
   int Alloc() override { return masm_->rr().alloc().code(); }
+  bool SupportsUnroll() override { return false; }
 
   void Load(int dst, const Operand &src) override {
     switch (type_) {
@@ -1151,6 +1155,15 @@ bool SIMDAssembler::Supports(Type type) {
   return type == DT_FLOAT || type == DT_DOUBLE ||
          type == DT_INT8 || type == DT_INT16 ||
          type == DT_INT32 || type == DT_INT64;
+}
+
+int SIMDAssembler::RegisterUsage(Type type) {
+  if (type == DT_INT8 || type == DT_INT16 ||
+      type == DT_INT32 || type == DT_INT64) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 int SIMDAssembler::VectorBytes(Type type) {
@@ -1239,7 +1252,7 @@ void SIMDAssembler::Sum(const std::vector<int> &regs) {
   }
 }
 
-SIMDStrategy::SIMDStrategy(SIMDAssembler *sasm, int size, int max_unrolls) {
+SIMDStrategy::SIMDStrategy(SIMDAssembler *sasm, int size) {
   // Use scalar generator for singletons.
   if (size == 1) {
     phases_.emplace_back(sasm->scalar());
@@ -1249,6 +1262,7 @@ SIMDStrategy::SIMDStrategy(SIMDAssembler *sasm, int size, int max_unrolls) {
   // Add bulk phase.
   int vecsize = sasm->main()->VectorSize();
   int main = (size / vecsize) * vecsize;
+  int max_unrolls = sasm->main()->SupportsUnroll() ? kMaxUnrolls : 1;
   int unrolls = std::min(main / vecsize, max_unrolls);
   int remaining = size;
   int offset = 0;
