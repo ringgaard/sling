@@ -115,7 +115,8 @@ class AVXFltVecMatMulBase : public AVXVecMatMulBase {
       static const int kCacheHitRatio = 2;
       int cache_size = CPU::L3CacheSize();
       if (cache_size == 0) cache_size = 1024 * 1024;
-      int footprint = (x->size() + W->size() + y->size());
+      int elements = x->elements() + W->elements() + y->elements();
+      int footprint = elements * sizeof(float);
       if (footprint * kCacheHitRatio > cache_size) {
         W->SetRequiredOrder(COLUMN_MAJOR);
       }
