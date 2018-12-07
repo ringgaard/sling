@@ -222,6 +222,8 @@ void Parser::Parse(Document *document) const {
 
         case ParserAction::EVOKE:
           if (action.length == 0) data.marks_.pop_back();
+          FALLTHROUGH_INTENDED;
+
         case ParserAction::REFER:
         case ParserAction::CONNECT:
         case ParserAction::ASSIGN:
