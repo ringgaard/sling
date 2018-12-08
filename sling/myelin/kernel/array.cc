@@ -658,7 +658,7 @@ class SingleGather : public Kernel {
     if (step->indegree() == 3) v->Link(step->input(2));
 
     // Embedding matrix must be row-major.
-    step->input(0)->SetRequiredOrder(ROW_MAJOR);
+    step->input(0)->RequireOrder(ROW_MAJOR);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -748,7 +748,7 @@ class MultiGather : public Kernel {
 
   void Adjust(Step *step) override {
     // Embedding matrix must be row-major.
-    step->input(0)->SetRequiredOrder(ROW_MAJOR);
+    step->input(0)->RequireOrder(ROW_MAJOR);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -866,7 +866,7 @@ class PoolingGather : public Kernel {
     v->SetMiniumAlignment(align * sizeof(float));
 
     // Embedding matrix must be row-major.
-    M->SetRequiredOrder(ROW_MAJOR);
+    M->RequireOrder(ROW_MAJOR);
     if (M->dim(1) >= align) M->MinAlign({1, align});
   }
 
@@ -1241,7 +1241,7 @@ class ScatterAdd : public Kernel {
     value->SetMiniumAlignment(align * sizeof(float));
 
     // Embedding matrix must be row-major.
-    var->SetRequiredOrder(ROW_MAJOR);
+    var->RequireOrder(ROW_MAJOR);
     int minalign = 1;
     if (var->dim(1) >= 4) minalign = 4;
     if (CPU::Enabled(AVX) && var->dim(1) >= 8) minalign = 8;
