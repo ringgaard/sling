@@ -547,6 +547,74 @@ class GeneralConcat : public Kernel {
   }
 };
 
+// Split input tensors input tensor into chunks along a dimension.
+class Split : public Kernel {
+ public:
+  string Name() override { return "Split"; }
+  string Operation() override { return "Split"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 2) return false;
+    int n = step->GetAttr("N", step->outdegree());
+    if (step->outdegree() != n) return false;
+
+    // Only splits along a singular prefix supported.
+    Tensor *input = step->input(0);
+    Tensor *axis = step->input(1);
+    if (!axis->constant()) return false;
+    int a = axis->value<int32>();
+    if (a > input->rank() - 1) return false;
+    if (input->shape().outer(a) != 1) return false;
+
+    // Check that outputs match the input.
+    Type dt = input->type();
+    int size = input->shape().inner(a);
+    if (size % n != 0) return false;
+    for (int i = 0; i < n; ++i) {
+      Tensor *output = step->output(i);
+      if (output->type() != dt) return false;
+      if (output->rank() != input->rank()) return false;
+      if (output->shape().outer(a) != 1) return false;
+      if (output->shape().inner(a) != size / n) return false;
+    }
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get input.
+    Tensor *input = step->input(0);
+    int axis = step->input(1)->value<int32>();
+    int n = step->GetAttr("N", step->indegree());
+    int chunk_size = input->shape().inner(axis) / n;
+    int stride = input->stride(axis) * chunk_size;
+
+    // Allocate registers.
+    Register src = masm->rr().alloc_preferred(rsi);
+    Register dst = masm->rr().alloc_preferred(rdi);
+    Register in = masm->rr().alloc();
+
+    // Load input tensor.
+    __ LoadTensorAddress(in, input);
+
+    // Copy input tensors to output.
+    int offset = 0;
+    for (int i = 0; i < n; ++i) {
+      __ leaq(src, Operand(in, offset));
+      __ LoadTensorAddress(dst, step->output(i));
+      __ Copy(dst, 0, src, 0, stride);
+      offset += stride;
+    }
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 // Look up single embedding.
 class SingleGather : public Kernel {
  public:
@@ -1479,6 +1547,7 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new OneHot());
   library->Register(new GeneralConcat());
   library->Register(new BasicConcat());
+  library->Register(new Split());
   library->Register(new Slice());
   library->Register(new MultiGather());
   library->Register(new SingleGather());
