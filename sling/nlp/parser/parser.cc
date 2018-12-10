@@ -39,7 +39,7 @@ void Parser::Load(Store *store, const string &model) {
   flow.Var("features/feature_vector")->set_in();
 
   // Register DRAGNN kernel to support legacy parser models.
-  //RegisterDragnnLibrary(compiler_.library());
+  RegisterDragnnLibrary(compiler_.library());
 
   // Compile parser flow.
   compiler_.Compile(&flow, &network_);
