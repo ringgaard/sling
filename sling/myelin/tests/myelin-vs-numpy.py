@@ -40,6 +40,12 @@ class Test:
     self.runs = 0
     self.errors = 0
 
+  def passed(self):
+    return self.runs - self.errors
+
+  def failed(self):
+    return self.errors
+
 tests = {}
 
 # Initialize myelin compiler.
@@ -156,6 +162,9 @@ def simulate(flow, f, data):
       seq = []
       for k in range(n): seq.append(v[i[k]])
       v[o[0]] = np.concatenate(tuple(seq), axis)
+    elif op.type == "Split":
+      splits = np.split(v[i[0]], v[i[1]],v[i[2]])
+      for k in range(len(splits)): v[o[k]] = splits[k]
     else:
       raise Exception("No NumPy support for " + op.type)
 
@@ -221,7 +230,6 @@ def check(flow, variant, lo=-10.0, hi=10.0):
           print b - np.asarray(t)
 
   if flags.arg.profile:
-    print
     print net.profile()
 
 # Tests
@@ -457,6 +465,13 @@ def concat_test(n, m):
   c = f.concat([a, b])
   check(flow, (n, m))
 
+def split_test(n, m):
+  flow = myelin.Flow()
+  f = flow.define("split")
+  x = f.var("x", dt, [1, n])
+  y = f.split(x, m, 1)
+  check(flow, (n, m))
+
 def equal_test(n):
   flow = myelin.Flow()
   f = flow.define("equal")
@@ -547,6 +562,9 @@ else:
 for i in sizes:
   for j in sizes:
     concat_test(i, j)
+  for j in xrange(1, i + 1):
+    if i % j == 0:
+      split_test(i, j)
 
 for i in sizes:
   add_test(i)
@@ -607,7 +625,6 @@ if flags.arg.thorough:
   matmul_test(1024, 1024, 1024)
 
 # Output test results.
-print "\r\033[K"
 print "Test results"
 print "============"
 print
@@ -615,11 +632,11 @@ print
 errors = 0
 for name in sorted(tests):
   t = tests[name]
-  errors += t.errors
-  if t.errors == 0:
-    print "%-20s %7d runs" % (t.name, t.runs)
+  errors += t.failed()
+  if t.failed() == 0:
+    print "%-20s %7d passed" % (t.name, t.passed())
   else:
-    print "%-20s %7d runs %7d errors" % (t.name, t.runs, t.errors)
+    print "%-20s %7d passed %7d failed" % (t.name, t.passed(), t.failed())
 print
 
 if errors > 0:
