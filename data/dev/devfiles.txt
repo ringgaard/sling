@@ -9,6 +9,7 @@ bin/nnc
 bin/parse
 bin/parse-wiki-text
 bin/snaps
+data/dev/devfiles.txt
 data/geonames/feature-code-map.txt
 data/nlp/wordnet/original-wordnet-mapping
 data/nlp/wordnet/sense-mids.txt
@@ -93,4 +94,5 @@ start.sh
 tools/BUILD
 tools/buildall.sh
 tools/shell.cc
-
+tools/master-diff.sh
+tools/master-difftool.sh
