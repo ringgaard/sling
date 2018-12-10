@@ -130,9 +130,9 @@ class Conv1D : public Kernel {
     filter->SetMiniumAlignment(byte_alignment);
     out->SetMiniumAlignment(byte_alignment);
 
-    in->SetRequiredOrder(ROW_MAJOR);
-    filter->SetRequiredOrder(ROW_MAJOR);
-    out->SetRequiredOrder(ROW_MAJOR);
+    in->RequireOrder(ROW_MAJOR);
+    filter->RequireOrder(ROW_MAJOR);
+    out->RequireOrder(ROW_MAJOR);
   }
 
   int64 Complexity(const Step *step) override {
@@ -508,9 +508,9 @@ class Deconv1DStride2 : public Kernel {
     filter->SetMiniumAlignment(byte_alignment);
     out->SetMiniumAlignment(byte_alignment);
 
-    in->SetRequiredOrder(ROW_MAJOR);
-    filter->SetRequiredOrder(ROW_MAJOR);
-    out->SetRequiredOrder(ROW_MAJOR);
+    in->RequireOrder(ROW_MAJOR);
+    filter->RequireOrder(ROW_MAJOR);
+    out->RequireOrder(ROW_MAJOR);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
