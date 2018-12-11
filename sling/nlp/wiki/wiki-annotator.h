@@ -40,7 +40,7 @@ class WikiLinkResolver {
 
 // Wiki extractor sink for collecting text and annotators for Wikipedia page.
 // It collects text span information about evoked frames than can later be added
-// to a SLING document when the text has been tokenized. It also collect
+// to a SLING document when the text has been tokenized. It also collects
 // thematic frames for unanchored annotations.
 class WikiDocumentAnnotator : public WikiTextSink {
  public:

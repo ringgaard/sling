@@ -5656,5 +5656,217 @@
     9: Q1375624
     10: Q963455
   }
+
+  /w/dates: {
+    /lang/en: {=/w/dates/en
+      /w/month_names: [
+        "January"
+        "February"
+        "March"
+        "April"
+        "May"
+        "June"
+        "Juli"
+        "August"
+        "September"
+        "October"
+        "November"
+        "December"
+      ]
+      /w/month_abbrev: 3
+      /w/date_format: "D M Y"
+    }
+    /lang/da: {=/w/dates/da
+      /w/month_names: [
+        "januar"
+        "februar"
+        "marts"
+        "april"
+        "maj"
+        "juni"
+        "juli"
+        "august"
+        "september"
+        "oktober"
+        "november"
+        "december"
+      ]
+      /w/month_abbrev: 3
+      /w/date_format: "D. M Y"
+    }
+    /lang/sv: {=/w/dates/sv
+      /w/month_names: [
+        "januari"
+        "februari"
+        "mars"
+        "april"
+        "maj"
+        "juni"
+        "juli"
+        "augusti"
+        "september"
+        "oktober"
+        "november"
+        "december"
+      ]
+      /w/month_abbrev: 3
+      /w/date_format: "D M Y"
+    }
+    /lang/no: {=/w/dates/no
+      /w/month_names: [
+        "januar"
+        "februar"
+        "mars"
+        "april"
+        "mai"
+        "juni"
+        "juli"
+        "august"
+        "september"
+        "oktober"
+        "november"
+        "desember"
+      ]
+      /w/month_abbrev: 3
+      /w/date_format: "D. M Y"
+    }
+    /lang/de: {=/w/dates/de
+      /w/month_names: [
+        "Januar"
+        "Februar"
+        "März"
+        "April"
+        "Mai"
+        "Juni"
+        "Juli"
+        "August"
+        "September"
+        "Oktober"
+        "November"
+        "Dezember"
+      ]
+      /w/month_abbrev: 3
+      /w/date_format: "D. M Y"
+    }
+    /lang/fr: {=/w/dates/fr
+      /w/month_names: [
+        "janvier"
+        "février"
+        "mars"
+        "avril"
+        "mai"
+        "juin"
+        "juillet"
+        "août"
+        "septembre"
+        "octobre"
+        "novembre"
+        "décembre"
+      ]
+      /w/date_format: "D M Y"
+    }
+    /lang/es: {=/w/dates/es
+      /w/month_names: [
+        "enero"
+        "febrero"
+        "marzo"
+        "abril"
+        "mayo"
+        "junio"
+        "julio"
+        "agosto"
+        "septiembre"
+        "octubre"
+        "noviembre"
+        "diciembre"
+      ]
+      /w/date_format: "D de M de Y"
+    }
+    /lang/it: {=/w/dates/it
+      /w/month_names: [
+        "gennaio"
+        "febbraio"
+        "marzo"
+        "aprile"
+        "maggio"
+        "giugno"
+        "luglio"
+        "agosto"
+        "settembre"
+        "ottobre"
+        "novembre"
+        "dicembre"
+      ]
+      /w/date_format: "D M Y"
+    }
+    /lang/nl: {=/w/dates/nl
+      /w/month_names: [
+        "januari"
+        "februari"
+        "maart"
+        "april"
+        "mei"
+        "juni"
+        "juli"
+        "augustus"
+        "september"
+        "oktober"
+        "november"
+        "december"
+      ]
+      /w/date_format: "D M Y"
+    }
+    /lang/pt: {=/w/dates/pt
+      /w/month_names: [
+        "janeiro"
+        "fevereiro"
+        "março"
+        "abril"
+        "maio"
+        "junho"
+        "julho"
+        "agosto"
+        "setembro"
+        "outubro"
+        "novembro"
+        "dezembro"
+      ]
+      /w/date_format: "D de M de Y"
+    }
+    /lang/pl: {=/w/dates/pl
+      /w/month_names: [
+        "stycznia"
+        "lutego"
+        "marca"
+        "kwietnia"
+        "maja"
+        "czerwca"
+        "lipca"
+        "sierpnia"
+        "września"
+        "października"
+        "listopada"
+        "grudnia"
+      ]
+      /w/date_format: "D M Y"
+    }
+    /lang/fi: {=/w/dates/fi
+      /w/month_names: [
+        "tammikuuta"
+        "helmikuuta"
+        "maaliskuuta"
+        "huhtikuuta"
+        "toukokuuta"
+        "kesäkuuta"
+        "heinäkuuta"
+        "elokuuta"
+        "syyskuuta"
+        "lokakuuta"
+        "marraskuuta"
+        "joulukuuta"
+      ]
+      /w/date_format: "D. M Y"
+    }
+  }
 }
 
