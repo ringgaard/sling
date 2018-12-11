@@ -41,14 +41,15 @@ int main(int argc, char *argv[]) {
   bool has_intro = parser.GetIntro(&intro_begin, &intro_end);
 
   WikiExtractor extractor(parser);
-  extractor.Extract();
+  WikiTextSink sink;
+  extractor.Extract(&sink);
 
   std::cout << "<html>\n";
   std::cout << "<head>\n";
   std::cout << "<meta charset='utf-8'/>\n";
   std::cout << "</head>\n";
   std::cout << "<body>\n";
-  std::cout <<  extractor.text() << "\n";
+  std::cout <<  sink.text() << "\n";
   std::cout << "<h1>AST</h1>\n<pre>\n";
   if (has_intro) {
     string intro = parser.text().substr(intro_begin, intro_end - intro_begin);

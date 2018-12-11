@@ -60,6 +60,18 @@ cc_library(
 )
 
 cc_library(
+  name = "wiki-annotator",
+  srcs = ["wiki-annotator.cc"],
+  hdrs = ["wiki-annotator.h"],
+  deps = [
+    ":wiki-extractor",
+    "//sling/frame:object",
+    "//sling/nlp/document",
+    "//sling/string:text",
+  ],
+)
+
+cc_library(
   name = "wikidata-importer",
   srcs = ["wikidata-importer.cc"],
   deps = [

@@ -19,8 +19,33 @@
 namespace sling {
 namespace nlp {
 
-void WikiExtractor::Extract() {
+void WikiSink::Link(const Node &node,
+                    WikiExtractor *extractor,
+                    bool unanchored) {
+  if (unanchored) return;
+  WikiPlainTextSink plain;
+  extractor->Enter(&plain);
+  extractor->ExtractChildren(node);
+  extractor->Leave(&plain);
+  extractor->Emit(plain.text());
+}
+
+void WikiSink::Template(const Node &node,
+                        WikiExtractor *extractor,
+                        bool unanchored) {
+  extractor->ExtractSkip(node);
+}
+
+void WikiSink::Category(const Node &node,
+                        WikiExtractor *extractor,
+                        bool unanchored) {
+  extractor->ExtractSkip(node);
+}
+
+void WikiExtractor::Extract(WikiSink *sink) {
+  Enter(sink);
   ExtractNode(parser_.node(0));
+  Leave(sink);
 }
 
 void WikiExtractor::ExtractNode(const Node &node) {
@@ -94,24 +119,15 @@ void WikiExtractor::ExtractText(const Node &node) {
 }
 
 void WikiExtractor::ExtractFont(const Node &node) {
-  if (font_ != 0) {
-    ResetFont();
-  } else {
-    switch (node.param) {
-      case 2: Emit("<em>"); break;
-      case 3: Emit("<b>"); break;
-      case 5: Emit("<b><em>"); break;
-    }
-    font_ = node.param;
-  }
+  sink()->Font(node.param);
 }
 
 void WikiExtractor::ExtractTemplate(const Node &node) {
-  ExtractSkip(node);
+  sink()->Template(node, this, false);
 }
 
 void WikiExtractor::ExtractLink(const Node &node) {
-  ExtractChildren(node);
+  sink()->Link(node, this, false);
 }
 
 void WikiExtractor::ExtractImage(const Node &node) {
@@ -119,7 +135,7 @@ void WikiExtractor::ExtractImage(const Node &node) {
 }
 
 void WikiExtractor::ExtractCategory(const Node &node) {
-  ExtractSkip(node);
+  sink()->Category(node, this, false);
 }
 
 void WikiExtractor::ExtractUrl(const Node &node) {
@@ -157,9 +173,11 @@ void WikiExtractor::ExtractReference(const Node &node) {
 
 void WikiExtractor::ExtractHeading(const Node &node) {
   ResetFont();
-  Emit(StrCat("\n<h", node.param, ">"));
+  Emit("\n");
+  Emit(StrCat("<h", node.param, ">"));
   ExtractChildren(node);
-  Emit(StrCat("</h", node.param, ">\n"));
+  Emit(StrCat("</h", node.param, ">"));
+  Emit("\n");
 }
 
 void WikiExtractor::ExtractIndent(const Node &node) {
@@ -271,7 +289,11 @@ void WikiExtractor::ExtractSkip(const Node &node) {
   while (child != -1) {
     const Node &n = parser_.node(child);
     if (n.type == WikiParser::LINK) {
-      ExtractUnanchoredLink(n);
+      sink()->Link(n, this, true);
+    } else if (n.type == WikiParser::TEMPLATE) {
+      sink()->Template(n, this, true);
+    } else if (n.type == WikiParser::CATEGORY) {
+      sink()->Category(n, this, true);
     } else {
       ExtractSkip(n);
     }
@@ -279,8 +301,48 @@ void WikiExtractor::ExtractSkip(const Node &node) {
   }
 }
 
-void WikiExtractor::ExtractUnanchoredLink(const Node &node) {
-  ExtractSkip(node);
+bool WikiExtractor::ExtractIntro(WikiSink *sink) {
+  // Look for FONT-TEXT-FONT sequence at the top level of the AST.
+  if (parser_.nodes().empty()) return false;
+
+  // Search for FONT node.
+  int index = parser_.node(0).first_child;
+  while (index != -1) {
+    const Node &node = parser_.node(index);
+    if (node.type == WikiParser::FONT) {
+      // FONT node found.
+      index = node.next_sibling;
+      break;
+    } else if (node.type == WikiParser::TEXT) {
+      // No text allowed before intro.
+      for (const char *p = node.begin; p < node.end; ++p) {
+        if (*p != ' ' && *p != '\n') return false;
+      }
+    } else if (node.type == WikiParser::HEADING) {
+      // Intro text must be in the first section.
+      return false;
+    }
+    index = node.next_sibling;
+  }
+  if (index == -1) return false;
+
+  // Find end of bold/italics text.
+  Enter(sink);
+  bool found = false;
+  while (index != -1) {
+    const Node &node = parser_.node(index);
+    if (node.type == WikiParser::FONT) {
+      found = true;
+      break;
+    } else if (node.type == WikiParser::TEXT) {
+      ExtractNode(node);
+    } else {
+      break;
+    }
+    index = node.next_sibling;
+  }
+  Leave(sink);
+  return found;
 }
 
 Text WikiExtractor::GetAttr(const Node &node, Text attrname) {
@@ -296,30 +358,58 @@ Text WikiExtractor::GetAttr(const Node &node, Text attrname) {
 }
 
 void WikiExtractor::ResetFont() {
-  if (font_ != 0) {
-    switch (font_) {
-      case 2: Emit("</em>"); break;
-      case 3: Emit("</b>"); break;
-      case 5: Emit("</em></b>"); break;
+  sink()->Font(0);
+}
+
+void WikiPlainTextSink::Content(const char *begin, const char *end) {
+  if (begin != end && *begin == '<') return;
+  for (const char *p = begin; p < end; ++p) {
+    if (*p == ' ' || *p == '\n') {
+      space_break_ = true;
+    } else {
+      if (space_break_) {
+        text_.push_back(' ');
+        space_break_ = false;
+      }
+      text_.push_back(*p);
     }
-    font_ = 0;
   }
 }
 
-void WikiExtractor::Emit(const char *begin, const char *end) {
+void WikiTextSink::Content(const char *begin, const char *end) {
   for (const char *p = begin; p < end; ++p) {
     if (*p == '\n') {
-      if (!output_->empty()) line_breaks_++;
+      if (!text_.empty()) line_breaks_++;
     } else if (*p != ' ' || line_breaks_ == 0) {
       if (line_breaks_ > 1) {
-        output_->append("\n<p>");
+        text_.append("\n<p>");
         line_breaks_ = 0;
       } else if (line_breaks_ > 0) {
-        output_->push_back('\n');
+        text_.push_back('\n');
         line_breaks_ = 0;
       }
-      output_->push_back(*p);
+      text_.push_back(*p);
     }
+  }
+}
+
+void WikiTextSink::Font(int font) {
+  if (font_ != 0) {
+    // Reset font.
+    switch (font_) {
+      case 2: Content("</em>"); break;
+      case 3: Content("</b>"); break;
+      case 5: Content("</em></b>"); break;
+    }
+    font_ = 0;
+  } else {
+    // Set font.
+    switch (font) {
+      case 2: Content("<em>"); break;
+      case 3: Content("<b>"); break;
+      case 5: Content("<b><em>"); break;
+    }
+    font_ = font;
   }
 }
 
