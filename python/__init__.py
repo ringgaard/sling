@@ -1,9 +1,7 @@
-import pysling as api
-from log import *
-from nlp.document import *
-from nlp.parser import *
-
-from nlp.measure import Universe, Globe, MeasureSchema
+import sling.pysling as api
+from sling.log import *
+from sling.nlp.document import *
+from sling.nlp.parser import *
 
 Store=api.Store
 Frame=api.Frame

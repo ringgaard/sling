@@ -380,6 +380,13 @@ void WikiTextSink::Content(const char *begin, const char *end) {
   for (const char *p = begin; p < end; ++p) {
     if (*p == '\n') {
       if (!text_.empty()) line_breaks_++;
+
+      switch (font_) {
+        case 2: text_.append("</em>"); break;
+        case 3: text_.append("</b>"); break;
+        case 5: text_.append("</em></b>"); break;
+      }
+      font_ = 0;
     } else if (*p != ' ' || line_breaks_ == 0) {
       if (line_breaks_ > 1) {
         text_.append("\n<p>");
@@ -394,7 +401,15 @@ void WikiTextSink::Content(const char *begin, const char *end) {
 }
 
 void WikiTextSink::Font(int font) {
-  if (font_ != 0) {
+  if (font_ == 5 && font == 2) {
+    // Change from bold italic to bold.
+    Content("</em>");
+    font_ = 3;
+  } else if (font_ == 5 && font == 3) {
+    // Change from bold italic to italic.
+    Content("</em></b><em>");
+    font_ = 2;
+  } else if (font_ != 0) {
     // Reset font.
     switch (font_) {
       case 2: Content("</em>"); break;

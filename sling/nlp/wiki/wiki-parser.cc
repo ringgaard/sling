@@ -297,15 +297,17 @@ void WikiParser::ParseNewLine() {
   }
 
   // Parse image link at beginning of line inside gallery tag.
-  if (Inside(LINK, GALLERY)) {
-    UnwindUntil(LINK);
-    ParseGallery();
-    return;
-  }
-  if (Inside(IMAGE, GALLERY)) {
-    UnwindUntil(IMAGE);
-    ParseGallery();
-    return;
+  if (Inside(GALLERY)) {
+    if (Inside(LINK, GALLERY)) {
+      UnwindUntil(LINK);
+      ParseGallery();
+      return;
+    }
+    if (Inside(IMAGE, GALLERY)) {
+      UnwindUntil(IMAGE);
+      ParseGallery();
+      return;
+    }
   }
 
   // Check for elements that can start line.
@@ -430,6 +432,12 @@ void WikiParser::ParseTemplateEnd() {
 }
 
 void WikiParser::ParseArgument() {
+  // Allow | as verbatim text in URL nodes.
+  if (Inside(URL, TEMPLATE, LINK)) {
+    ptr_++;
+    return;
+  }
+
   // Terminate argument.
   EndText();
   if (Inside(ARG, TEMPLATE, LINK)) {
@@ -502,13 +510,22 @@ void WikiParser::ParseLinkEnd() {
 }
 
 void WikiParser::ParseUrl() {
+  // Check for valid url, i.e. it must start with protocol://.
+  const char *p = ptr_ + 1;
+  while (ascii_isalpha(*p)) p++;
+  if (p[0] != ':' || p[1] != '/' || p[2] != '/') {
+    ptr_++;
+    return;
+  }
+
+  // Start URL node.
   EndText();
   int node = Push(URL);
   ptr_ += 1;
 
   // Parse url.
   const char *name = ptr_;
-  while (*ptr_ != 0 && *ptr_ != ' ' && *ptr_ != ']') ptr_++;
+  while (*ptr_ != 0 && *ptr_ != ' ' && *ptr_ != '\n' && *ptr_ != ']') ptr_++;
   SetName(node, name, ptr_);
 
   if (*ptr_ == ' ') {
@@ -520,6 +537,7 @@ void WikiParser::ParseUrl() {
     txt_ = name;
   }
 
+  // End URL node.
   UnwindUntil(URL);
   if (*ptr_ == ']') ptr_++;
   nodes_[node].end = ptr_;
