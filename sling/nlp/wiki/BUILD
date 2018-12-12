@@ -112,6 +112,8 @@ cc_library(
   name = "wikipedia-documents",
   srcs = ["wikipedia-documents.cc"],
   deps = [
+    ":wiki-annotator",
+    ":wiki-extractor",
     ":wiki-parser",
     ":wikipedia-map",
     "//sling/base",

@@ -37,12 +37,12 @@ int main(int argc, char *argv[]) {
   WikiParser parser(wikitext.c_str());
   parser.Parse();
 
-  int intro_begin, intro_end;
-  bool has_intro = parser.GetIntro(&intro_begin, &intro_end);
-
   WikiExtractor extractor(parser);
   WikiTextSink sink;
   extractor.Extract(&sink);
+
+  WikiPlainTextSink intro;
+  extractor.ExtractIntro(&intro);
 
   std::cout << "<html>\n";
   std::cout << "<head>\n";
@@ -51,9 +51,8 @@ int main(int argc, char *argv[]) {
   std::cout << "<body>\n";
   std::cout <<  sink.text() << "\n";
   std::cout << "<h1>AST</h1>\n<pre>\n";
-  if (has_intro) {
-    string intro = parser.text().substr(intro_begin, intro_end - intro_begin);
-    std::cout << "Intro: " << intro << "<br><br>";
+  if (!intro.text().empty()) {
+    std::cout << "Intro: " << intro.text() << "<br><br>";
   }
   parser.PrintAST(0, 0);
   std::cout << "</pre>\n";
