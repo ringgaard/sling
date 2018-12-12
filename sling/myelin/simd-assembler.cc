@@ -1107,13 +1107,8 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
   }
 
   void Add(int dst, int src1, const jit::Operand &src2) override {
-    if (dst == src1) {
-      if (type_ == DT_INT64) {
-        masm_->addq(reg(dst), src2);
-      } else {
-        Load(dst, src2);
-        masm_->addq(reg(dst), reg(src1));
-      }
+    if (dst == src1 && type_ == DT_INT64) {
+      masm_->addq(reg(dst), src2);
     } else {
       Load(dst, src2);
       masm_->addq(reg(dst), reg(src1));
@@ -1121,13 +1116,8 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
   }
 
   void Mul(int dst, int src1, const jit::Operand &src2) override {
-    if (dst == src1) {
-      if (type_ == DT_INT64) {
-        masm_->imulq(reg(dst), src2);
-      } else {
-        Load(dst, src2);
-        masm_->imulq(reg(dst), reg(src1));
-      }
+    if (dst == src1 && type_ == DT_INT64) {
+      masm_->imulq(reg(dst), src2);
     } else {
       Load(dst, src2);
       masm_->imulq(reg(dst), reg(src1));

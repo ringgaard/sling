@@ -163,7 +163,7 @@ def simulate(flow, f, data):
       for k in range(n): seq.append(v[i[k]])
       v[o[0]] = np.concatenate(tuple(seq), axis)
     elif op.type == "Split":
-      splits = np.split(v[i[0]], v[i[1]],v[i[2]])
+      splits = np.split(v[i[0]], v[i[1]], v[i[2]])
       for k in range(len(splits)): v[o[k]] = splits[k]
     else:
       raise Exception("No NumPy support for " + op.type)
