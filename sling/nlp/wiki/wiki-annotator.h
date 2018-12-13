@@ -42,11 +42,11 @@ class WikiLinkResolver {
 // It collects text span information about evoked frames than can later be added
 // to a SLING document when the text has been tokenized. It also collects
 // thematic frames for unanchored annotations.
-class WikiDocumentAnnotator : public WikiTextSink {
+class WikiAnnotator : public WikiTextSink {
  public:
   // Initialize document annotator. The frame annotations will be created in
   // the store and links will be resolved using the resolver.
-  WikiDocumentAnnotator(Store *store, WikiLinkResolver *resolver);
+  WikiAnnotator(Store *store, WikiLinkResolver *resolver);
 
   // Wiki sink interface receiving the annotations from the extractor.
   void Link(const Node &node,
@@ -61,6 +61,21 @@ class WikiDocumentAnnotator : public WikiTextSink {
 
   // Add annotations to tokenized document.
   void AddToDocument(Document *document);
+
+  // Add frame evoked from span.
+  void AddMention(int begin, int end, Handle frame);
+
+  // Add thematic frame.
+  void AddTheme(Handle theme);
+
+  // Add category.
+  void AddCategory(Handle category);
+
+  // Return store for annotations.
+  Store *store() { return store_; }
+
+  // Return link resolver.
+  WikiLinkResolver *resolver() { return resolver_; }
 
  private:
   // Annotated span with byte-offset interval for the phrase in the text as well

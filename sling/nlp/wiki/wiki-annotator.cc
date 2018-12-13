@@ -17,8 +17,7 @@
 namespace sling {
 namespace nlp {
 
-WikiDocumentAnnotator::WikiDocumentAnnotator(Store *store,
-                                             WikiLinkResolver *resolver)
+WikiAnnotator::WikiAnnotator(Store *store, WikiLinkResolver *resolver)
     : store_(store),
       resolver_(resolver),
       annotations_(store),
@@ -27,9 +26,9 @@ WikiDocumentAnnotator::WikiDocumentAnnotator(Store *store,
   names_.Bind(store);
 }
 
-void WikiDocumentAnnotator::Link(const Node &node,
-                                 WikiExtractor *extractor,
-                                 bool unanchored) {
+void WikiAnnotator::Link(const Node &node,
+                         WikiExtractor *extractor,
+                         bool unanchored) {
   // Resolve link.
   Text link = resolver_->ResolveLink(node.name());
   if (link.empty()) return;
@@ -47,7 +46,7 @@ void WikiDocumentAnnotator::Link(const Node &node,
       theme.AddIsA(n_link_);
       theme.Add(n_name_, plain.text());
       theme.AddIs(store_->Lookup(link));
-      themes_.push_back(theme.Create().handle());
+      AddTheme(theme.Create().handle());
     }
   } else {
     // Output anchor text.
@@ -57,29 +56,29 @@ void WikiDocumentAnnotator::Link(const Node &node,
 
     // Evoke frame for link.
     if (begin != end) {
-      annotations_.emplace_back(begin, end, store_->Lookup(link));
+      AddMention(begin, end, store_->Lookup(link));
     }
   }
 }
 
-void WikiDocumentAnnotator::Template(const Node &node,
-                                     WikiExtractor *extractor,
-                                     bool unanchored) {
+void WikiAnnotator::Template(const Node &node,
+                             WikiExtractor *extractor,
+                             bool unanchored) {
   extractor->ExtractSkip(node);
 }
 
-void WikiDocumentAnnotator::Category(const Node &node,
-                                     WikiExtractor *extractor,
-                                     bool unanchored) {
+void WikiAnnotator::Category(const Node &node,
+                             WikiExtractor *extractor,
+                             bool unanchored) {
   // Resolve link.
   Text link = resolver_->ResolveCategory(node.name());
   if (link.empty()) return;
 
   // Add category link.
-  categories_.push_back(store_->Lookup(link));
+  AddCategory(store_->Lookup(link));
 }
 
-void WikiDocumentAnnotator::AddToDocument(Document *document) {
+void WikiAnnotator::AddToDocument(Document *document) {
   // Add annotated spans to document.
   for (Annotation &a : annotations_) {
     int begin = document->Locate(a.begin.AsInt());
@@ -97,6 +96,18 @@ void WikiDocumentAnnotator::AddToDocument(Document *document) {
   for (Handle category : categories_) {
     document->AddExtra(n_page_category_, category);
   }
+}
+
+void WikiAnnotator::AddMention(int begin, int end, Handle frame) {
+  annotations_.emplace_back(begin, end, frame);
+}
+
+void WikiAnnotator::AddTheme(Handle theme) {
+  themes_.push_back(theme);
+}
+
+void WikiAnnotator::AddCategory(Handle category) {
+  categories_.push_back(category);
 }
 
 }  // namespace nlp

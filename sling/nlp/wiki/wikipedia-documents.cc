@@ -183,7 +183,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     num_wiki_ast_nodes_->Increment(parser.nodes().size());
 
     // Extract annotations from article.
-    WikiDocumentAnnotator annotator(page.store(), this);
+    WikiAnnotator annotator(page.store(), this);
     WikiExtractor extractor(parser);
     extractor.Extract(&annotator);
 
