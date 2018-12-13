@@ -167,7 +167,10 @@ static const TemplatePrefixMap template_prefix = {
   {"subst",               WikiParser::TMPL_SUBST},
 
   {"#expr",               WikiParser::TMPL_EXPR},
+  {"#EXPR",               WikiParser::TMPL_EXPR},
+  {"#if",                 WikiParser::TMPL_IF},
   {"#ifexpr",             WikiParser::TMPL_IFEXPR},
+  {"#ifexist",            WikiParser::TMPL_IFEXIST},
   {"#ifeq",               WikiParser::TMPL_IFEQ},
   {"#tag",                WikiParser::TMPL_TAG},
   {"#Tag",                WikiParser::TMPL_TAG},
@@ -175,7 +178,14 @@ static const TemplatePrefixMap template_prefix = {
   {"#time",               WikiParser::TMPL_TIME},
   {"#invoke",             WikiParser::TMPL_INVOKE},
   {"#section",            WikiParser::TMPL_SECTION},
+  {"#section-h",          WikiParser::TMPL_SECTIONH},
   {"#property",           WikiParser::TMPL_PROPERTY},
+  {"#Property",           WikiParser::TMPL_PROPERTY},
+  {"#dateformat",         WikiParser::TMPL_DATEFORMAT},
+  {"#formatdate",         WikiParser::TMPL_FORMATDATE},
+  {"#list",               WikiParser::TMPL_LIST},
+  {"#statements",         WikiParser::TMPL_STATEMENTS},
+  {"#switch",             WikiParser::TMPL_SWITCH},
 };
 
 }  // namespace
