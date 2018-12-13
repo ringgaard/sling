@@ -136,6 +136,9 @@ class WikiExtractor {
   void Emit(Text str) { Emit(str.data(), str.data() + str.size()); }
   void Emit(const Node &node) { Emit(node.begin, node.end); }
 
+  // Return parser for extractor.
+  const WikiParser &parser() const { return parser_; }
+
  private:
   // Wiki text parser with AST.
   const WikiParser &parser_;

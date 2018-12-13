@@ -15,6 +15,12 @@
 #ifndef SLING_NLP_WIKI_WIKI_ANNOTATOR_H_
 #define SLING_NLP_WIKI_WIKI_ANNOTATOR_H_
 
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "sling/base/registry.h"
+#include "sling/base/types.h"
 #include "sling/frame/object.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/wiki/wiki-extractor.h"
@@ -22,6 +28,8 @@
 
 namespace sling {
 namespace nlp {
+
+class WikiAnnotator;
 
 // Abstract class for resolving Wikipedia links.
 class WikiLinkResolver {
@@ -36,6 +44,79 @@ class WikiLinkResolver {
 
   // Resolve link to Wikipedia category returning Wikidata QID for item.
   virtual Text ResolveCategory(Text link) = 0;
+};
+
+// Wrapper around wiki template node.
+class WikiTemplate {
+ public:
+  typedef WikiParser::Node Node;
+
+  WikiTemplate(const Node &node, WikiExtractor *extractor)
+      : node_(node), extractor_(extractor) {}
+
+  // Return template name.
+  Text name() const { return node_.name(); }
+
+  // Return the number of positional (i.e. unnamed) arguments.
+  int NumArgs() const;
+
+  // Return node for named template argument, or null if it is not found.
+  const Node *GetArgument(Text name);
+
+  // Return node for positional template argument.
+  const Node *GetArgument(int index);
+
+  // Return plain text value for named template argument.
+  string GetValue(Text name);
+
+  // Return plain text value for positional template argument.
+  string GetValue(int index);
+
+  // Return template extractor.
+  WikiExtractor *extractor() const { return extractor_; }
+
+ private:
+  // Template node.
+  const Node &node_;
+
+  // Extractor for extracting template argument values.
+  WikiExtractor *extractor_;
+};
+
+// A wiki macro processor is used for expanding wiki templates into text and
+// annotations.
+class WikiMacro : public Component<WikiMacro> {
+ public:
+  virtual ~WikiMacro() = default;
+
+  // Initialize wiki macro processor from configuration.
+  virtual void Init(const Frame &config) {}
+
+  // Expand template by adding content and annotations to annotator.
+  virtual void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) {}
+};
+
+#define REGISTER_WIKI_MACRO(type, component) \
+    REGISTER_COMPONENT_TYPE(sling::nlp::WikiMacro, type, component)
+
+// Repository of wiki macro configurations for a language for expanding wiki
+// templates when processing a Wikipedia page.
+class WikiTemplateRepository {
+ public:
+  ~WikiTemplateRepository();
+
+  // Intialize repository from configuration.
+  void Init(const Frame &frame);
+
+  // Look up macro processor for temaplate name .
+  WikiMacro *Lookup(Text name);
+
+ private:
+  // Get fingerprint for template name. Template names are case-insensitive.
+  static uint64 Fingerprint(Text name);
+
+  // Mapping from (fingerprint of) template name to wiki macro procesor.
+  std::unordered_map<uint64, WikiMacro *> repository_;
 };
 
 // Wiki extractor sink for collecting text and annotators for Wikipedia page.
@@ -77,6 +158,12 @@ class WikiAnnotator : public WikiTextSink {
   // Return link resolver.
   WikiLinkResolver *resolver() { return resolver_; }
 
+  // Get/set template repository.
+  WikiTemplateRepository *templates() const { return templates_; }
+  void set_templates(WikiTemplateRepository *templates) {
+    templates_ = templates;
+  }
+
  private:
   // Annotated span with byte-offset interval for the phrase in the text as well
   // as the evoked frame. The begin and end offsets are encoded as integer
@@ -108,6 +195,9 @@ class WikiAnnotator : public WikiTextSink {
 
   // Link resolver.
   WikiLinkResolver *resolver_;
+
+  // Template generator.
+  WikiTemplateRepository *templates_;
 
   // Annotated spans.
   Annotations annotations_;

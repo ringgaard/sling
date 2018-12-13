@@ -65,8 +65,10 @@ cc_library(
   hdrs = ["wiki-annotator.h"],
   deps = [
     ":wiki-extractor",
+    "//sling/base:registry",
     "//sling/frame:object",
     "//sling/nlp/document",
+    "//sling/nlp/document:fingerprinter",
     "//sling/string:text",
   ],
 )
