@@ -168,7 +168,7 @@ void WikiExtractor::ExtractGallery(const Node &node) {
 }
 
 void WikiExtractor::ExtractReference(const Node &node) {
-  Emit("\xe2\x80\x8b");  // zero-width space
+  sink()->WordBreak();
 }
 
 void WikiExtractor::ExtractHeading(const Node &node) {
@@ -380,6 +380,7 @@ void WikiTextSink::Content(const char *begin, const char *end) {
   for (const char *p = begin; p < end; ++p) {
     if (*p == '\n') {
       if (!text_.empty()) line_breaks_++;
+      word_break_ = false;
 
       switch (font_) {
         case 2: text_.append("</em>"); break;
@@ -391,13 +392,25 @@ void WikiTextSink::Content(const char *begin, const char *end) {
       if (line_breaks_ > 1) {
         text_.append("\n<p>");
         line_breaks_ = 0;
+        word_break_ = false;
       } else if (line_breaks_ > 0) {
         text_.push_back('\n');
         line_breaks_ = 0;
+        word_break_ = false;
+      } else if (*p == ' ') {
+        word_break_ = false;
+      }
+      if (word_break_) {
+        text_.append("\xe2\x80\x8b");  // zero-width space
+        word_break_ = false;
       }
       text_.push_back(*p);
     }
   }
+}
+
+void WikiTextSink::WordBreak() {
+  word_break_ = true;
 }
 
 void WikiTextSink::Font(int font) {

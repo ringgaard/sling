@@ -28,6 +28,7 @@
 
 DEFINE_bool(keys, false, "Only output keys");
 DEFINE_bool(files, false, "Output file names");
+DEFINE_bool(store, false, "Input is a SLING store");
 DEFINE_bool(frames, false, "Record values as encoded frames");
 DEFINE_string(key, "", "Only display records with matching key");
 DEFINE_int32(indent, 2, "Indentation for structured data");
@@ -38,18 +39,21 @@ using namespace sling;
 
 int records_output = 0;
 
-void DisplayFrame(const Slice &value) {
-  Store store;
-  Text encoded(value.data(), value.size());
-  StringDecoder decoder(&store, encoded);
-
-  StringPrinter printer(&store);
+void DisplayObject(const Object &object) {
+  StringPrinter printer(object.store());
   printer.printer()->set_indent(FLAGS_indent);
   printer.printer()->set_shallow(false);
   printer.printer()->set_utf8(FLAGS_utf8);
-  printer.Print(decoder.Decode());
+  printer.Print(object);
 
   std::cout << printer.text();
+}
+
+void DisplayObject(const Slice &value) {
+  Store store;
+  Text encoded(value.data(), value.size());
+  StringDecoder decoder(&store, encoded);
+  DisplayObject(decoder.Decode());
 }
 
 void DisplayRaw(const Slice &value) {
@@ -64,7 +68,7 @@ void DisplayRecord(const Slice &key, const Slice &value) {
   if (!FLAGS_keys) {
     if (!key.empty()) std::cout << ": ";
     if (FLAGS_frames) {
-      DisplayFrame(value);
+      DisplayObject(value);
     } else {
       DisplayRaw(value);
     }
@@ -76,22 +80,31 @@ void DisplayRecord(const Slice &key, const Slice &value) {
 
 void DisplayFile(const string &filename) {
   if (FLAGS_files) std::cout << "File " << filename << ":\n";
-  RecordReader reader(filename);
-  while (!reader.Done()) {
-    // Read next record.
-    Record record;
-    CHECK(reader.Read(&record));
+  if (FLAGS_store) {
+    Store store;
+    FileInputStream stream(filename);
+    InputParser parser(&store, &stream);
+    while (!parser.done()) {
+      DisplayObject(parser.Read());
+    }
+  } else  {
+    RecordReader reader(filename);
+    while (!reader.Done()) {
+      // Read next record.
+      Record record;
+      CHECK(reader.Read(&record));
 
-    // Check for key match.
-    if (!FLAGS_key.empty() && record.key != FLAGS_key) continue;
+      // Check for key match.
+      if (!FLAGS_key.empty() && record.key != FLAGS_key) continue;
 
-    // Display record.
-    DisplayRecord(record.key, record.value);
+      // Display record.
+      DisplayRecord(record.key, record.value);
 
-    // Check record limit.
-    if (FLAGS_limit > 0 && records_output >= FLAGS_limit) break;
+      // Check record limit.
+      if (FLAGS_limit > 0 && records_output >= FLAGS_limit) break;
+    }
+    CHECK(reader.Close());
   }
-  CHECK(reader.Close());
 }
 
 int main(int argc, char *argv[]) {

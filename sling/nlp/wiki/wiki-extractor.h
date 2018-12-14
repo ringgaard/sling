@@ -36,6 +36,9 @@ class WikiSink {
   // Font change.
   virtual void Font(int font) {}
 
+  // Word break.
+  virtual void WordBreak() {}
+
   // Output link.
   virtual void Link(const Node &node,
                     WikiExtractor *extractor,
@@ -170,6 +173,7 @@ class WikiTextSink : public WikiSink {
   void Content(const char *str) { Content(str, str + strlen(str)); }
   void Content(Text str) { Content(str.data(), str.data() + str.size()); }
   void Font(int font) override;
+  void WordBreak() override;
 
   // Return extracted text.
   const string &text() const { return text_; }
@@ -183,6 +187,9 @@ class WikiTextSink : public WikiSink {
 
   // Number of pending line breaks.
   int line_breaks_ = 0;
+
+  // Pending word break.
+  bool word_break_ = false;
 
   // Current font.
   int font_ = 0;

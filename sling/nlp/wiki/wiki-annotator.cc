@@ -14,8 +14,6 @@
 
 #include "sling/nlp/wiki/wiki-annotator.h"
 
-#include "sling/nlp/document/fingerprinter.h"
-
 REGISTER_COMPONENT_REGISTRY("wiki template macro", sling::nlp::WikiMacro);
 
 namespace sling {
@@ -32,7 +30,7 @@ int WikiTemplate::NumArgs() const {
   return args;
 }
 
-const WikiParser::Node *WikiTemplate::GetArgument(Text name) {
+const WikiParser::Node *WikiTemplate::GetArgument(Text name) const {
   int child = node_.first_child;
   while (child != -1) {
     const Node &n = extractor_->parser().node(child);
@@ -42,7 +40,7 @@ const WikiParser::Node *WikiTemplate::GetArgument(Text name) {
   return nullptr;
 }
 
-const WikiParser::Node *WikiTemplate::GetArgument(int index) {
+const WikiParser::Node *WikiTemplate::GetArgument(int index) const {
   int argnum = 0;
   int child = node_.first_child;
   while (child != -1) {
@@ -56,7 +54,7 @@ const WikiParser::Node *WikiTemplate::GetArgument(int index) {
   return nullptr;
 }
 
-string WikiTemplate::GetValue(Text name) {
+string WikiTemplate::GetValue(Text name) const {
   const Node *node = GetArgument(name);
   if (node == nullptr) return "";
   WikiPlainTextSink value;
@@ -66,7 +64,7 @@ string WikiTemplate::GetValue(Text name) {
   return value.text();
 }
 
-string WikiTemplate::GetValue(int index) {
+string WikiTemplate::GetValue(int index) const {
   const Node *node = GetArgument(index);
   if (node == nullptr) return "";
   WikiPlainTextSink value;
@@ -80,32 +78,37 @@ WikiTemplateRepository::~WikiTemplateRepository() {
   for (auto &it : repository_) delete it.second;
 }
 
-void WikiTemplateRepository::Init(const Frame &frame) {
-  Store *store = frame.store();
-  Handle n_type = store->Lookup("type");
+void WikiTemplateRepository::Init(WikiLinkResolver *resolver,
+                                  const Frame &frame) {
+  resolver_ = resolver;
+  store_ = frame.store();
+  Handle n_type = store_->Lookup("type");
   for (const Slot &s : frame) {
-    if (!store->IsString(s.name) || !store->IsFrame(s.value)) continue;
+    if (!store_->IsString(s.name) || !store_->IsFrame(s.value)) continue;
 
     // Get name, configuration, and type for template.
-    Text name = store->GetString(s.name)->str();
-    Frame config(store, s.value);
+    Text name = store_->GetString(s.name)->str();
+    Frame config(store_, s.value);
     string type = config.GetString(n_type);
+    Text qid = resolver->ResolveTemplate(name);
+    if (qid.empty()) {
+      LOG(WARNING) << "Unknown template: " << name;
+      continue;
+    }
 
     // Create and initialize macro processor for template type.
     WikiMacro *macro = WikiMacro::Create(type);
     macro->Init(config);
-    repository_[Fingerprint(name)] = macro;
+    repository_[store_->Lookup(qid)] = macro;
   }
 }
 
 WikiMacro *WikiTemplateRepository::Lookup(Text name) {
-  auto f = repository_.find(Fingerprint(name));
+  Text qid = resolver_->ResolveTemplate(name);
+  if (qid.empty()) return nullptr;
+  auto f = repository_.find(store_->Lookup(qid));
   if (f == repository_.end()) return nullptr;
   return f->second;
-}
-
-uint64 WikiTemplateRepository::Fingerprint(Text name) {
-  return Fingerprinter::Fingerprint(name, NORMALIZE_CASE);
 }
 
 WikiAnnotator::WikiAnnotator(Store *store, WikiLinkResolver *resolver)
@@ -122,7 +125,10 @@ void WikiAnnotator::Link(const Node &node,
                          bool unanchored) {
   // Resolve link.
   Text link = resolver_->ResolveLink(node.name());
-  if (link.empty()) return;
+  if (link.empty()) {
+    if (!unanchored) extractor->ExtractChildren(node);
+    return;
+  }
 
   if (unanchored) {
     // Extract anchor as plain text.
@@ -159,8 +165,17 @@ void WikiAnnotator::Template(const Node &node,
     WikiTemplate tmpl(node, extractor);
     WikiMacro *macro = templates_->Lookup(tmpl.name());
     if (macro != nullptr) {
-      macro->Generate(tmpl, this);
+      if (unanchored) {
+        macro->Extract(tmpl, this);
+      } else {
+        LOG(INFO) << "Generating macro for " << node.name();
+        macro->Generate(tmpl, this);
+      }
       return;
+    } else {
+      if (!unanchored) {
+        LOG(WARNING) << "No macro for template: " << node.name();
+      }
     }
   }
   extractor->ExtractSkip(node);

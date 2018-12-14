@@ -16,7 +16,6 @@
 #define SLING_NLP_WIKI_WIKI_ANNOTATOR_H_
 
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "sling/base/registry.h"
@@ -61,16 +60,16 @@ class WikiTemplate {
   int NumArgs() const;
 
   // Return node for named template argument, or null if it is not found.
-  const Node *GetArgument(Text name);
+  const Node *GetArgument(Text name) const;
 
   // Return node for positional template argument.
-  const Node *GetArgument(int index);
+  const Node *GetArgument(int index) const;
 
   // Return plain text value for named template argument.
-  string GetValue(Text name);
+  string GetValue(Text name) const;
 
   // Return plain text value for positional template argument.
-  string GetValue(int index);
+  string GetValue(int index) const;
 
   // Return template extractor.
   WikiExtractor *extractor() const { return extractor_; }
@@ -94,6 +93,9 @@ class WikiMacro : public Component<WikiMacro> {
 
   // Expand template by adding content and annotations to annotator.
   virtual void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) {}
+
+  // Extract annotations from unanchored template.
+  virtual void Extract(const WikiTemplate &templ, WikiAnnotator *annotator) {}
 };
 
 #define REGISTER_WIKI_MACRO(type, component) \
@@ -106,17 +108,20 @@ class WikiTemplateRepository {
   ~WikiTemplateRepository();
 
   // Intialize repository from configuration.
-  void Init(const Frame &frame);
+  void Init(WikiLinkResolver *resolver, const Frame &frame);
 
   // Look up macro processor for temaplate name .
   WikiMacro *Lookup(Text name);
 
  private:
-  // Get fingerprint for template name. Template names are case-insensitive.
-  static uint64 Fingerprint(Text name);
+  // Store for templates.
+  Store *store_ = nullptr;
 
-  // Mapping from (fingerprint of) template name to wiki macro procesor.
-  std::unordered_map<uint64, WikiMacro *> repository_;
+  // Link resolver for looking up templates.
+  WikiLinkResolver *resolver_ = nullptr;
+
+  // Mapping from template frame to wiki macro procesor.
+  HandleMap<WikiMacro *> repository_;
 };
 
 // Wiki extractor sink for collecting text and annotators for Wikipedia page.
@@ -197,7 +202,7 @@ class WikiAnnotator : public WikiTextSink {
   WikiLinkResolver *resolver_;
 
   // Template generator.
-  WikiTemplateRepository *templates_;
+  WikiTemplateRepository *templates_ = nullptr;
 
   // Annotated spans.
   Annotations annotations_;
