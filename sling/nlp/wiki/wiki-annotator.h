@@ -62,7 +62,7 @@ class WikiTemplate {
   // Return node for named template argument, or null if it is not found.
   const Node *GetArgument(Text name) const;
 
-  // Return node for positional template argument.
+  // Return node for positional template argument. First argument is 1.
   const Node *GetArgument(int index) const;
 
   // Return plain text value for named template argument.
@@ -86,6 +86,8 @@ class WikiTemplate {
 // annotations.
 class WikiMacro : public Component<WikiMacro> {
  public:
+  typedef WikiParser::Node Node;
+
   virtual ~WikiMacro() = default;
 
   // Initialize wiki macro processor from configuration.

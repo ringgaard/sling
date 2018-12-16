@@ -41,7 +41,7 @@ const WikiParser::Node *WikiTemplate::GetArgument(Text name) const {
 }
 
 const WikiParser::Node *WikiTemplate::GetArgument(int index) const {
-  int argnum = 0;
+  int argnum = 1;
   int child = node_.first_child;
   while (child != -1) {
     const Node &n = extractor_->parser().node(child);
@@ -168,13 +168,13 @@ void WikiAnnotator::Template(const Node &node,
       if (unanchored) {
         macro->Extract(tmpl, this);
       } else {
-        LOG(INFO) << "Generating macro for " << node.name();
+        //LOG(INFO) << "Generating macro for " << node.name();
         macro->Generate(tmpl, this);
       }
       return;
     } else {
-      if (!unanchored) {
-        LOG(WARNING) << "No macro for template: " << node.name();
+      if (!unanchored && line_breaks_ == 0) {
+        //LOG(WARNING) << "No macro for template: " << node.name();
       }
     }
   }

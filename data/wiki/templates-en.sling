@@ -1,63 +1,73 @@
 {=/wp/templates/en
 
-; TODO: handle template redirects in resolver
+"!":      {type: "text" text: "|"}
+"!!":     {type: "text" text: "||"}
+"'":      {type: "text" text: "'"}
+"'s":     {type: "text" text: "'s"}
+"′":      {type: "text" text: "′"}
+"' \"":   {type: "text" text: "' \""}
+"\" '":   {type: "text" text: "\" '"}
+;"' '":    {type: "text" text: "' '"}
+;"\"'\"":  {type: "text" text: "\"'\""}
+;"' \" '": {type: "text" text: "' \" '"}
+"-\"":    {type: "text" text: " \""}
+"\"-":    {type: "text" text: "\" "}
+"-'":     {type: "text" text: " '"}
+"'-":     {type: "text" text: "' "}
+;"--)":    {type: "text" text: " )"}
+"(-":     {type: "text" text: "( "}
+;"(--":    {type: "text" text: "( "}
 
-"!":     {type: "text" text: "|"}
-"!!":    {type: "text" text: "||"}
-"'":     {type: "text" text: "'"}
-"'s":    {type: "text" text: "'s"}
-"′":     {type: "text" text: "′"}
-"' \"":  {type: "text" text: "' \""}
-"\" '":  {type: "text" text: "\" '"}
-;"' '":   {type: "text" text: "' '"}
-"\"'\"": {type: "text" text: "\"'\""}
-;"'\"'":  {type: "text" text: "'\"'"}
-"-\"":   {type: "text" text: " \""}
-"\"-":   {type: "text" text: "\" "}
-"-'":    {type: "text" text: " '"}
-"'-":    {type: "text" text: "' "}
-;"--)":   {type: "text" text: " )"}
-"(-":    {type: "text" text: "( "}
-;"(--":   {type: "text" text: "( "}
+")!":     {type: "text" text: "]"}
+"!((":    {type: "text" text: "[["}
+"))!":    {type: "text" text: "]]"}
+"(":      {type: "text" text: "{"}
+")":      {type: "text" text: "}"}
+"((":     {type: "text" text: "{{"}
+"))":     {type: "text" text: "}}"}
+"(((":    {type: "text" text: "{{{"}
+")))":    {type: "text" text: "}}}"}
 
+"·":      {type: "text" text: "&nbsp;<b>&middot;</b>"}
+"•":      {type: "text" text: "&nbsp;&bull;"}
+"\\":     {type: "text" text: "&nbsp;/"}
+"=":      {type: "text" text: "="}
 
-")!":    {type: "text" text: "]"}
-"!((":   {type: "text" text: "[["}
-"))!":   {type: "text" text: "]]"}
-"(":     {type: "text" text: "{"}
-")":     {type: "text" text: "}"}
-"((":    {type: "text" text: "{{"}
-"))":    {type: "text" text: "}}"}
-"(((":   {type: "text" text: "{{{"}
-")))":   {type: "text" text: "}}}"}
-
-"·":     {type: "text" text: "&nbsp;<b>&middot;</b>"}
-"•":     {type: "text" text: "&nbsp;&bull;"}
-"\\":    {type: "text" text: "&nbsp;/"}
-"=":     {type: "text" text: "="}
-
-"Pi": {type: "text" text: "&pi;"}
+"pi": {type: "text" text: "&pi;"}
 "1/2": {type: "text" text: "½"}
 "1/3": {type: "text" text: "⅓"}
 "2/3": {type: "text" text: "⅔"}
 "1/4": {type: "text" text: "¼"}
 "3/4": {type: "text" text: "¾"}
 
-"Sp": {type: "text" text: " "}
-"En dash": {type: "text" text: "&ndash;"}
-"Em dash": {type: "text" text: "&mdash;"}
-"Spaced en dash": {type: "text" text: " &ndash; "}
-;"Spd": {type: "text" text: "&nbsp;– "}
-"Spaces": {type: "text" text: "&nbsp;"}
-"Wbr": {type: "text" text: "<wbr/>"}
-"Pad": {type: "text" text: "<span/>"}
+"nbsp": {type: "text" text: "&nbsp;"}
+"sp": {type: "text" text: " "}
+"en dash": {type: "text" text: "&ndash;"}
+"em dash": {type: "text" text: "&mdash;"}
+"spaced en dash": {type: "text" text: " &ndash; "}
+"spaced en dash space": {type: "text" text: "&nbsp;&ndash;&nbsp;"}
+;"spd": {type: "text" text: "&nbsp;– "}
+"spaces": {type: "text" text: "&nbsp;"}
+"wbr": {type: "text" text: "<wbr/>"}
+"pad": {type: "text" text: "<span/>"}
+"dagger": {type: "text" text: "&dagger;"}
+"double-dagger": {type: "text" text: "&Dagger;"}
+"extinct": {type: "text" text: "&dagger;"}
 
-"Frac": {type: "frac"}
-"Quote": {type: "quote"}
+"small": {type: "tag" argnum: 1 open: "<small>" close: "</small>"}
+"smaller": {type: "tag" argnum: 1 open: "<div style=\"font-size:90%;\">" close: "</div>"}
+"midsize": {type: "tag" argnum: 1open: "<div style=\"font-size:92%;\">" close: "</div>"}
+"large": {type: "tag" argnum: 1 open: "<div style=\"font-size:large;\">" close: "</div>"}
+"larger": {type: "tag" argnum: 1 open: "<div style=\"font-size:110%;\">" close: "</div>"}
+"big": {type: "tag" argnum: 1 open: "<div style=\"font-size:120%;\">" close: "</div>"}
+"huge": {type: "tag" argnum: 1 open: "<div style=\"font-size:180%;\">" close: "</div>"}
 
-;"Block indent" <div>...</div>
-;"Nowrap"
-;
+"frac": {type: "frac"}
+"quote": {type: "tag" arg: "text" argnum: 1 open: "<blockquote>" close: "</blockquote>"}
+"nowrap": {type: "tag" argnum: 1 open: "<span class=\"nowrap\">" close: "</span"}
+"define": {type: "define"}
+"plainlist": {type: "tag" argnum: 1}
+"flatlist": {type: "tag" argnum: 1}
 
 }
 
