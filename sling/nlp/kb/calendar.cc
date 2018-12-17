@@ -187,6 +187,14 @@ int Date::AsNumber() const {
   return -1;
 }
 
+Handle Date::AsHandle(Store *store) const {
+  int number = AsNumber();
+  if (number != -1) return Handle::Integer(number);
+  string ts = AsString();
+  if (!ts.empty()) return store->AllocateString(ts);
+  return Handle::nil();
+}
+
 string Date::AsString() const {
   char str[16];
   *str = 0;

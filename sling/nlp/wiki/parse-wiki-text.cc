@@ -70,6 +70,7 @@ int main(int argc, char *argv[]) {
   Store *store = resolver.store();
   if (!FLAGS_lang.empty()) {
     resolver.Init();
+    LoadStore("data/wiki/calendar.sling", store);
     LoadStore("data/wiki/templates-" + FLAGS_lang + ".sling", store);
   }
 

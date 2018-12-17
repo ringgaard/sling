@@ -14,6 +14,8 @@
 
 #include "sling/nlp/wiki/wiki-annotator.h"
 
+#include "sling/string/numbers.h"
+
 REGISTER_COMPONENT_REGISTRY("wiki template macro", sling::nlp::WikiMacro);
 
 namespace sling {
@@ -72,6 +74,20 @@ string WikiTemplate::GetValue(int index) const {
   extractor_->ExtractChildren(*node);
   extractor_->Leave(&value);
   return value.text();
+}
+
+int WikiTemplate::GetNumber(Text name) const {
+  string value = GetValue(name);
+  int n;
+  if (safe_strto32(value, &n)) return n;
+  return -1;
+}
+
+int WikiTemplate::GetNumber(int index) const {
+  string value = GetValue(index);
+  int n;
+  if (safe_strto32(value, &n)) return n;
+  return -1;
 }
 
 WikiTemplateRepository::~WikiTemplateRepository() {

@@ -65,11 +65,13 @@ class WikiTemplate {
   // Return node for positional template argument. First argument is 1.
   const Node *GetArgument(int index) const;
 
-  // Return plain text value for named template argument.
+  // Return plain text value for named or positional template argument.
   string GetValue(Text name) const;
-
-  // Return plain text value for positional template argument.
   string GetValue(int index) const;
+
+  // Return numeric value for named or positional template argument.
+  int GetNumber(Text name) const;
+  int GetNumber(int index) const;
 
   // Return template extractor.
   WikiExtractor *extractor() const { return extractor_; }

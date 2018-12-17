@@ -68,6 +68,7 @@ cc_library(
     "//sling/base:registry",
     "//sling/frame:object",
     "//sling/nlp/document",
+    "//sling/string:numbers",
     "//sling/string:text",
   ],
 )
@@ -77,6 +78,8 @@ cc_library(
   srcs = ["wiki-macros.cc"],
   deps = [
     ":wiki-annotator",
+    "//sling/nlp/document:fingerprinter",
+    "//sling/nlp/kb:calendar",
   ],
   alwayslink = 1,
 )

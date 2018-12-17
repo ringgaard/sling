@@ -32,6 +32,9 @@ class Date {
   // Granularity for date.
   enum Precision {NONE, MILLENNIUM, CENTURY, DECADE, YEAR, MONTH, DAY};
 
+  // Initialize invalid date.
+  Date() {}
+
   // Initialize date from parts.
   Date(int year, int month, int day, Precision precision)
       : year(year), month(month), day(day), precision(precision) {}
@@ -55,6 +58,9 @@ class Date {
   // Convert date to integer or return -1 if the date cannot be encoded as an
   // integer. This can only be used for dates after 1000 AD.
   int AsNumber() const;
+
+  // Return a integer or string handle representing date.
+  Handle AsHandle(Store *store) const;
 
   // Convert date to string format. The date format depends on the precision:
   // DAY:        [+|-]YYYY-MM-DD
