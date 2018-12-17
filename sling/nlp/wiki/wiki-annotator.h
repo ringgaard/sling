@@ -126,7 +126,7 @@ class WikiTemplateRepository {
   HandleMap<WikiMacro *> repository_;
 };
 
-// Wiki extractor sink for collecting text and annotators for Wikipedia page.
+// Wiki extractor sink for collecting text and annotations for Wikipedia page.
 // It collects text span information about evoked frames than can later be added
 // to a SLING document when the text has been tokenized. It also collects
 // thematic frames for unanchored annotations.
