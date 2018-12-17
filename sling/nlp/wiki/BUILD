@@ -124,7 +124,10 @@ cc_library(
   deps = [
     ":wiki-annotator",
     ":wiki-extractor",
+<<<<<<< HEAD
     ":wiki-macros",
+=======
+>>>>>>> upstream/master
     ":wiki-parser",
     ":wikipedia-map",
     "//sling/base",
@@ -223,7 +226,11 @@ cc_binary(
     ":wiki-extractor",
     ":wiki-macros",
     ":wiki-parser",
+<<<<<<< HEAD
     ":wikipedia-map",
+=======
+    ":wiki-extractor",
+>>>>>>> upstream/master
     "//sling/base",
     "//sling/file",
     "//sling/file:posix",
