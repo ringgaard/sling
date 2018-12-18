@@ -73,6 +73,10 @@ class WikiTemplate {
   int GetNumber(Text name) const;
   int GetNumber(int index) const;
 
+  // Extract text for template argument
+  void Extract(Text name) const;
+  void Extract(int index) const;
+
   // Return template extractor.
   WikiExtractor *extractor() const { return extractor_; }
 

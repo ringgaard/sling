@@ -80,6 +80,7 @@ cc_library(
     ":wiki-annotator",
     "//sling/nlp/document:fingerprinter",
     "//sling/nlp/kb:calendar",
+    "//sling/string:numbers",
   ],
   alwayslink = 1,
 )
@@ -231,6 +232,8 @@ cc_binary(
     "//sling/file",
     "//sling/file:posix",
     "//sling/frame",
+    "//sling/nlp/document",
+    "//sling/nlp/document:document-tokenizer",
     "//sling/string",
   ],
 )

@@ -53,6 +53,7 @@
 "dagger": {type: "text" text: "&dagger;"}
 "double-dagger": {type: "text" text: "&Dagger;"}
 "extinct": {type: "text" text: "&dagger;"}
+"sbc": {type: "text" text: "&nbsp; BC"}
 
 "small": {type: "tag" argnum: 1 open: "<small>" close: "</small>"}
 "smaller": {type: "tag" argnum: 1 open: "<div style=\"font-size:90%;\">" close: "</div>"}
@@ -75,7 +76,31 @@
 "ordered list": {type: "tag" argnum: -1 open: "<div><ol><li>" close: "</li></ol></div>" delimiter: "</li></li>"}
 
 "date": {type: "date" full: 1 format: /w/dates/en}
+;"fdate": {type: "date" full: 1 format: /w/dates/en}
+
+"start-date": {type: "date" full: 1 format: /w/dates/en}
+"end-date": {type: "date" full: 1 format: /w/dates/en}
+"birth-date": {type: "date" full: 1 format: /w/dates/en}
+
+"start date": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
+"end date": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
+"start date and age": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
+"end date and age": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
+
+"birth date": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
+"birth date and age": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
+"birth year and age": {type: "date" year: 1 format: /w/dates/en}
+
+"death date": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
+"death date and age": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
+"death year and age": {type: "date" year: 1 format: /w/dates/en}
+
 "as of": {type: "date" year: 1 month: 2 day: 3 pre: "As of " format: /w/dates/en}
+"ce": {type: "year" post: " CE"}
+"bce": {type: "year" bce: 1 post: " BCE"}
+"circa": {type: "year" pre: "c. " range: 1}
+
+"convert": {type: "measure" value: 1 unit: 2}
 
 }
 

@@ -16,6 +16,7 @@
 
 #include "sling/nlp/document/fingerprinter.h"
 #include "sling/nlp/kb/calendar.h"
+#include "sling/string/numbers.h"
 
 namespace sling {
 namespace nlp {
@@ -142,7 +143,7 @@ class DateTemplate : public WikiMacro {
     Frame format = config.GetFrame("format");
     if (format.valid()) {
       // Get month names.
-      int prefix = config.GetInt("/w/month_abbrev");
+      int prefix = format.GetInt("/w/month_abbrev");
       Array months = format.Get("/w/month_names").AsArray();
       if (months.valid()) {
         for (int i = 0; i < months.length(); ++i) {
@@ -194,42 +195,9 @@ class DateTemplate : public WikiMacro {
   void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
     // Parse input date.
     Date date;
-    int num_args = templ.NumArgs();
-    string fulldate;
-    if (date_argnum_ != -1 && date_argnum_ <= num_args) {
-      fulldate = templ.GetValue(date_argnum_);
-      ParseDate(fulldate, &date);
-    }
-    if (year_argnum_ != -1 && year_argnum_ <= num_args) {
-      int y = templ.GetNumber(year_argnum_);
-      if (y != -1) date.year = y;
-    }
-    if (month_argnum_ != -1 && month_argnum_ <= num_args) {
-      int m = templ.GetNumber(month_argnum_);
-      if (m != -1) {
-        date.month = m;
-      } else {
-        uint64 fp = Fingerprint(templ.GetValue(month_argnum_));
-        auto f = month_dictionary_.find(fp);
-        if (f != month_dictionary_.end()) {
-          date.month = f->second;
-        }
-      }
-    }
-    if (day_argnum_ != -1 && day_argnum_ <= num_args) {
-      int d = templ.GetNumber(day_argnum_);
-      if (d != -1) date.day = d;
-    }
-
-    // Determine precision.
-    if (date.year != 0) {
-      date.precision = Date::YEAR;
-      if (date.month != 0) {
-        date.precision = Date::MONTH;
-        if (date.day != 0) {
-          date.precision = Date::DAY;
-        }
-      }
+    if (!GetDate(templ, &date)) {
+      templ.Extract(1);
+      return;
     }
 
     // Output date.
@@ -247,12 +215,75 @@ class DateTemplate : public WikiMacro {
       annotator->AddMention(begin, end, b.Create().handle());
     } else {
       // Unable to parse date, output verbatim.
-      annotator->Content(fulldate);
+      templ.Extract(1);
     }
     annotator->Content(postfix_);
   }
 
  protected:
+  // Get date from template argument(s).
+  bool GetDate(const WikiTemplate &templ, Date *date) {
+    // Parse full date argument.
+    int num_args = templ.NumArgs();
+    if (date_argnum_ != -1 && date_argnum_ <= num_args) {
+      string fulldate = templ.GetValue(date_argnum_);
+      if (!ParseDate(fulldate, date)) return false;
+    }
+
+    // Parse year argument.
+    if (year_argnum_ != -1 && year_argnum_ <= num_args) {
+      int y = templ.GetNumber(year_argnum_);
+      if (y != -1) {
+        date->year = y;
+      } else {
+        return false;
+      }
+    }
+
+    // Parse month argument.
+    if (month_argnum_ != -1 && month_argnum_ <= num_args) {
+      int m = templ.GetNumber(month_argnum_);
+      if (m != -1) {
+        date->month = m;
+      } else {
+        uint64 fp = Fingerprint(templ.GetValue(month_argnum_));
+        auto f = month_dictionary_.find(fp);
+        if (f != month_dictionary_.end()) {
+          date->month = f->second;
+        } else {
+          return false;
+        }
+      }
+    }
+
+    // Parse day argument.
+    if (day_argnum_ != -1 && day_argnum_ <= num_args) {
+      int d = templ.GetNumber(day_argnum_);
+      if (d != -1) {
+        date->day = d;
+      } else {
+        return false;
+      }
+    }
+
+    // Check BCE.
+    if (templ.GetArgument("BCE") || templ.GetArgument("BC")) {
+      date->year = -date->year;
+    }
+
+    // Determine precision.
+    if (date->year != 0) {
+      date->precision = Date::YEAR;
+      if (date->month != 0) {
+        date->precision = Date::MONTH;
+        if (date->day != 0) {
+          date->precision = Date::DAY;
+        }
+      }
+    }
+    return true;
+  }
+
   // Try to parse input date.
   bool ParseDate(Text str, Date *date) {
     // Determine if date is numeric or text.
@@ -274,7 +305,6 @@ class DateTemplate : public WikiMacro {
         if (len != fmt.size()) continue;
         y = m = d = ys = 0;
         valid = true;
-        int ys = 0;
         for (int i = 0; i < fmt.size(); ++i) {
           char c = str[i];
           char f = fmt[i];
@@ -318,7 +348,7 @@ class DateTemplate : public WikiMacro {
             case 'M': {
               // Parse next token as month name.
               int k = j;
-              while (k < len && !IsDigit(str[k]) && !IsDelimiter(str[k])) k++;
+              while (k < len && !IsMonthBreak(str[k])) k++;
               auto f = month_dictionary_.find(Fingerprint(Text(str, j, k - j)));
               if (f != month_dictionary_.end()) {
                 m = f->second;
@@ -333,7 +363,7 @@ class DateTemplate : public WikiMacro {
               // Parse sequence of digits as day.
               if (IsDigit(str[j])) {
                 while (j < len && IsDigit(str[j])) {
-                  m = m * 10 + Digit(str[j++]);
+                  d = d * 10 + Digit(str[j++]);
                 }
               } else {
                 valid = false;
@@ -363,9 +393,9 @@ class DateTemplate : public WikiMacro {
       // Dates with two-digit years will have the years from 1970 to 2069.
       if (ys == 2) {
         if (y < 70) {
-          y += 1900;
-        } else {
           y += 2000;
+        } else {
+          y += 1900;
         }
       }
       date->year = y;
@@ -397,7 +427,12 @@ class DateTemplate : public WikiMacro {
 
         case 'M':
           if (date.month != 0) {
-            str.append(month_names_[date.month - 1]);
+            if (date.month > 0 && date.month <= month_names_.size()) {
+              str.append(month_names_[date.month - 1]);
+            } else {
+              sprintf(buf, "?%02d?", date.month);
+              str.append(buf);
+            }
           }
           break;
 
@@ -428,6 +463,11 @@ class DateTemplate : public WikiMacro {
   // Check if character is a date delimiter.
   static bool IsDelimiter(char c) {
     return c == '-' || c == '/' || c == '.';
+  }
+
+  // Check if character is a month name break.
+  static bool IsMonthBreak(char c) {
+    return c == ' ' || IsDigit(c) || IsDelimiter(c);
   }
 
   // Return digit value.
@@ -466,6 +506,120 @@ class DateTemplate : public WikiMacro {
 };
 
 REGISTER_WIKI_MACRO("date", DateTemplate);
+
+// Template macro for years.
+class YearTemplate : public WikiMacro {
+ public:
+  void Init(const Frame &config) override {
+    bce_ = config.GetBool("bce");
+    range_ = config.GetBool("range");
+    prefix_ = config.GetString("pre");
+    postfix_ = config.GetString("post");
+  }
+
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    GenerateYear(templ, annotator, 1);
+    if (range_ && templ.GetArgument(2)) {
+      annotator->Content(" – ");
+      GenerateYear(templ, annotator, 2);
+    }
+  }
+
+  void GenerateYear(const WikiTemplate &templ, WikiAnnotator *annotator,
+                    int argnum) {
+    annotator->Content(prefix_);
+    int year = templ.GetNumber(argnum);
+    if (year != -1) {
+      int begin = annotator->position();
+      templ.Extract(argnum);
+      annotator->Content(postfix_);
+      int end = annotator->position();
+
+      Date date(bce_ ? -year : year, 0, 0, Date::YEAR);
+      Builder b(annotator->store());
+      b.AddIsA("/w/time");
+      b.AddIs(date.AsHandle(annotator->store()));
+      annotator->AddMention(begin, end, b.Create().handle());
+    } else {
+      templ.Extract(argnum);
+    }
+  }
+
+ private:
+  bool bce_;
+  bool range_;
+  string prefix_;
+  string postfix_;
+};
+
+REGISTER_WIKI_MACRO("year", YearTemplate);
+
+// Template macro for measures.
+class MeasureTemplate : public WikiMacro {
+ public:
+  void Init(const Frame &config) override {
+    Store *store = config.store();
+    Frame units = config.GetFrame("units");
+    if (units.valid()) {
+      for (const Slot &s : units) {
+        String name(store, s.name);
+        Frame info(store, s.value);
+        if (!name.valid() || !info.valid()) break;
+        Unit &unit = units_[name.value()];
+        unit.item = info.GetHandle("/w/unit");
+        unit.factor = info.GetFloat("/w/amount");
+      }
+    }
+    value_argnum_ = config.GetInt("value", 1);
+    unit_argnum_ = config.GetInt("unit", 2);
+  }
+
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    // Get value and unit.
+    string value_text = templ.GetValue(value_argnum_);
+    string unit_text = templ.GetValue(unit_argnum_);
+
+    // Output measure.
+    int begin = annotator->position();
+    annotator->Content(value_text);
+    annotator->Content(" ");
+    annotator->Content(unit_text);
+    int end = annotator->position();
+
+    // Parse value.
+    float amount;
+    if (!safe_strtof(value_text, &amount)) return;
+
+    // Look up unit.
+    auto f = units_.find(unit_text);
+    if (f == units_.end()) return;
+
+    // Scale value.
+    const Unit &unit = f->second;
+    if (unit.factor != 0) amount *= unit.factor;
+
+    // Add measure annotation.
+    Builder b(annotator->store());
+    b.Add("/w/amount", amount);
+    b.Add("/w/unit", unit.item);
+    annotator->AddMention(begin, end, b.Create().handle());
+  }
+
+ private:
+  struct Unit {
+    Handle item;
+    float factor;
+  };
+
+  // Units with scaling factors.
+  std::unordered_map<string, Unit> units_;
+
+  // Value and unit arguments.
+  int value_argnum_;
+  int unit_argnum_;
+};
+
+REGISTER_WIKI_MACRO("measure", MeasureTemplate);
 
 }  // namespace nlp
 }  // namespace sling

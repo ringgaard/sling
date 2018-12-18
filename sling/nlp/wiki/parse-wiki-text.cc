@@ -22,6 +22,8 @@
 #include "sling/file/file.h"
 #include "sling/frame/serialization.h"
 #include "sling/frame/store.h"
+#include "sling/nlp/document/document.h"
+#include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/wiki/wiki.h"
 #include "sling/nlp/wiki/wiki-annotator.h"
 #include "sling/nlp/wiki/wiki-extractor.h"
@@ -30,6 +32,7 @@
 
 DEFINE_string(input, "test.txt", "input file with wiki text");
 DEFINE_string(lang, "", "language for wiki text");
+DEFINE_bool(ann, false, "output document annotations");
 
 using namespace sling;
 using namespace sling::nlp;
@@ -94,12 +97,37 @@ int main(int argc, char *argv[]) {
   WikiPlainTextSink intro;
   extractor.ExtractIntro(&intro);
 
+  Document document(store);
+  if (FLAGS_ann) {
+    DocumentTokenizer tokenizer;
+    document.SetText(annotator.text());
+    tokenizer.Tokenize(&document);
+    annotator.AddToDocument(&document);
+    document.Update();
+  }
+
   std::cout << "<html>\n";
   std::cout << "<head>\n";
   std::cout << "<meta charset='utf-8'/>\n";
   std::cout << "</head>\n";
   std::cout << "<body>\n";
   std::cout <<  annotator.text() << "\n";
+  if (FLAGS_ann) {
+    std::cout << "<h1>Mentions</h1>\n";
+    std::cout << "<table border=1>\n";
+    std::cout << "<tr><th>Phrase</th><th>Annotations</th></tr>\n";
+    for (int i = 0; i < document.num_spans(); ++i) {
+      Span *span = document.span(i);
+      std::cout << "<tr><td>" << span->GetText() << "</td><td><pre>\n";
+      Handles evoked(store);
+      span->AllEvoked(&evoked);
+      for (Handle h : evoked) {
+        std::cout << ToText(store, h) << "\n";
+      }
+      std::cout << "</pre></td></tr>\n";
+    }
+    std::cout << "</table>\n";
+  }
   std::cout << "<h1>AST</h1>\n<pre>\n";
   if (!intro.text().empty()) {
     std::cout << "Intro: " << intro.text() << "<br><br>";

@@ -90,6 +90,20 @@ int WikiTemplate::GetNumber(int index) const {
   return -1;
 }
 
+void WikiTemplate::Extract(Text name) const {
+  const Node *node = GetArgument(name);
+  if (node != nullptr) {
+    extractor_->ExtractNode(*node);
+  }
+}
+
+void WikiTemplate::Extract(int index) const {
+  const Node *node = GetArgument(index);
+  if (node != nullptr) {
+    extractor_->ExtractNode(*node);
+  }
+}
+
 WikiTemplateRepository::~WikiTemplateRepository() {
   for (auto &it : repository_) delete it.second;
 }

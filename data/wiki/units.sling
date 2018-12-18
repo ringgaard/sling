@@ -1,0 +1,16 @@
+# Units codes.
+{=/w/units
+  /lang/en: /w/units/en
+  /lang/da: /w/units/da
+  /lang/sv: /w/units/sv
+  /lang/no: /w/units/no
+  /lang/de: /w/units/de
+  /lang/fr: /w/units/fr
+  /lang/es: /w/units/es
+  /lang/it: /w/units/it
+  /lang/nl: /w/units/nl
+  /lang/pt: /w/units/pt
+  /lang/pl: /w/units/pl
+  /lang/fi: /w/units/fi
+}
+
