@@ -76,7 +76,7 @@ blacklist = [
   kb["Q39360471"],  # nautical leagues (nl) vs nanolitre
   kb["Q23925410"],  # UK gallon (gal) vs US gallon
   kb["Q1472674"],   # svedberg (S) vs spat
-  kb["Q577"],       # curtis (a) vs year
+  kb["Q577"],       # curtis (a) vs are
   kb["Q39462709"],  # square inches (in2) vs square inch
   kb["Q1086691"],   # frigorie (fg) vs femtogram
   kb["Q37732658"],  # rankine (°R) vs réaumur
@@ -90,6 +90,17 @@ def trim_unit(unit):
   unit = unit.replace("³", "3")
   unit = unit.replace("°", "")
   return unit
+
+# Determine unit scaling factor for sqaure and cubic units.
+def unit_factor(unit, factor):
+  end = unit.find("/")
+  if end == -1: end = len(unit)
+  if end > 0:
+    if unit[end - 1] == "2":
+      factor = factor * factor
+    elif unit[end - 1] == "3":
+      factor = factor * factor * factor
+  return factor
 
 # Escape string.
 def escape(s):
@@ -157,7 +168,7 @@ for item in si_units:
       if punit not in units:
         f.write('  "' + escape(punit) + '": {/w/unit: ' + item.id +
                 ' name: "' + name + item.name + '"' +
-                ' /w/amount: ' + str(factor) + '}\n')
+                ' /w/amount: ' + str(unit_factor(punit, factor)) + '}\n')
         units[punit] = item
 
 f.write("}\n")

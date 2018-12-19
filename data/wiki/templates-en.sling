@@ -67,6 +67,7 @@
 "quote": {type: "tag" arg: "text" argnum: 1 open: "<blockquote>" close: "</blockquote>"}
 "nowrap": {type: "tag" argnum: 1 open: "<span class=\"nowrap\">" close: "</span"}
 "define": {type: "define"}
+"cn span": {type: "tag" argnum: 1 argname: "text"}
 
 "plainlist": {type: "tag" argnum: 1 open: "<div>" close: "</div>"}
 "flatlist": {type: "tag" argnum: 1 open: "<div>" close: "</div>"}

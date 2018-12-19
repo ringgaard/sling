@@ -73,7 +73,9 @@ class WikiTemplate {
   string GetValue(Text name) const { return GetValue(GetArgument(name)); }
   string GetValue(int index) const { return GetValue(GetArgument(index)); }
 
-  // Return numeric value for named or positional template argument.
+  // Return numeric value for named or positional template argument. Return
+  // -1 if the argument does not exist or is not a number and return zero if
+  // the argument is empty.
   int GetNumber(const Node *node) const;
   int GetNumber(Text name) const { return GetNumber(GetArgument(name)); }
   int GetNumber(int index) const { return GetNumber(GetArgument(index)); }

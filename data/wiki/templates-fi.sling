@@ -33,5 +33,7 @@
 "\\":     {type: "text" text: "&nbsp;/"}
 "=":      {type: "text" text: "="}
 
+"päiväys": {type: "date" full: 1 year: 1 month: 2 day:3 format: /w/dates/fi}
+
 }
 

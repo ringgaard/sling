@@ -254,7 +254,7 @@ void WikiParser::ParseUntil(char stop) {
         if (Matches("[[")) {
           ParseLinkBegin();
         } else {
-          ParseUrl();
+          ParseUrlBegin();
         }
         break;
 
@@ -262,7 +262,7 @@ void WikiParser::ParseUntil(char stop) {
         if (Matches("]]")) {
           ParseLinkEnd();
         } else {
-          ptr_++;
+          ParseUrlEnd();
         }
         break;
 
@@ -519,7 +519,7 @@ void WikiParser::ParseLinkEnd() {
   txt_ = ptr_;
 }
 
-void WikiParser::ParseUrl() {
+void WikiParser::ParseUrlBegin() {
   // Check for valid url, i.e. it must start with protocol://.
   const char *p = ptr_ + 1;
   while (ascii_isalpha(*p)) p++;
@@ -538,19 +538,27 @@ void WikiParser::ParseUrl() {
   while (*ptr_ != 0 && *ptr_ != ' ' && *ptr_ != '\n' && *ptr_ != ']') ptr_++;
   SetName(node, name, ptr_);
 
-  if (*ptr_ == ' ') {
-    // Parse the rest of the URL element as wikitext.
-    while (*ptr_ == ' ') ptr_++;
-    txt_ = ptr_;
-    ParseUntil(']');
-  } else {
+  while (*ptr_ == ' ') ptr_++;
+  if (*ptr_ == ']') {
     txt_ = name;
+  } else {
+    txt_ = ptr_;
+  }
+}
+
+void WikiParser::ParseUrlEnd() {
+  if (!Inside(URL)) {
+    // Ignore unmatched ].
+    ptr_ += 1;
+    return;
   }
 
-  // End URL node.
-  UnwindUntil(URL);
-  if (*ptr_ == ']') ptr_++;
-  nodes_[node].end = ptr_;
+  int node = UnwindUntil(URL);
+  ptr_ += 1;
+  if (node != -1) {
+    Node &n = nodes_[node];
+    n.end = ptr_;
+  }
   txt_ = ptr_;
 }
 
@@ -592,6 +600,7 @@ void WikiParser::ParseTag() {
     if (Inside(REF)) UnwindUntil(REF);
   } else if (Matches("</gallery>")) {
     ptr_ += 10;
+    txt_ = ptr_;
     if (Inside(GALLERY)) UnwindUntil(GALLERY);
   } else {
     // Parse '<' (BTAG) or '</' (ETAG).
@@ -656,7 +665,7 @@ void WikiParser::ParseGallery() {
   if (*ptr_ == '<') return;
   int node = Push(LINK);
   const char *name = ptr_;
-  while (*ptr_ != 0 && *ptr_ != '|' && *ptr_ != '\n')  ptr_++;
+  while (*ptr_ != 0 && *ptr_ != '|' && *ptr_ != '<' && *ptr_ != '\n')  ptr_++;
   SetName(node, name, ptr_);
   txt_ = ptr_;
   nodes_[node].CheckSpecialLink();

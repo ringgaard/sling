@@ -33,5 +33,14 @@
 "\\":     {type: "text" text: "&nbsp;/"}
 "=":      {type: "text" text: "="}
 
+"startdato": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/no}
+"startdato og alder": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/no}
+"fødselsdato": {type: "date" year: 1 month: 2 day: 3 yearn: "år" monthn: "måned" dayn: "dag" format: /w/dates/no}
+"fødselsdato og alder": {type: "date" year: 1 month: 2 day: 3 yearn: "år" monthn: "måned" dayn: "dag" format: /w/dates/no}
+"fødselsdato og alder2": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/no}
+
+"dødsdato": {type: "date" year: 1 month: 2 day: 3 yearn: "år" monthn: "måned" dayn: "dag" format: /w/dates/no}
+"dødsdato og alder": {type: "date" year: 1 month: 2 day: 3 yearn: "år" monthn: "måned" dayn: "dag" format: /w/dates/no}
+
 }
 

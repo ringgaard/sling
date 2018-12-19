@@ -64,7 +64,7 @@ const WikiParser::Node *WikiTemplate::GetArgument(Text name, int index) const {
   }
 
   // Try to get positional argument.
-  if (index != -1) {
+  if (index > 0) {
     const Node *arg = GetArgument(index);
     if (arg != nullptr) return arg;
   }
@@ -84,6 +84,7 @@ string WikiTemplate::GetValue(const Node *node) const {
 int WikiTemplate::GetNumber(const Node *node) const {
   if (node == nullptr) return -1;
   string value = GetValue(node);
+  if (value.empty()) return 0;
   int n;
   if (safe_strto32(value, &n)) return n;
   return -1;

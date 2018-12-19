@@ -138,8 +138,11 @@ class WikiParser {
   // Parse link end.
   void ParseLinkEnd();
 
-  // Parse url.
-  void ParseUrl();
+  // Parse url start.
+  void ParseUrlBegin();
+
+  // Parse url end.
+  void ParseUrlEnd();
 
   // Parse tag (<...>) or comment (<!-- ... -->).
   void ParseTag();

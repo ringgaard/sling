@@ -75,6 +75,7 @@ class TagTemplate : public WikiMacro {
   void Init(const Frame &config) override {
     arg_ = config.GetString("arg");
     argnum_ = config.GetInt("argnum", 0);
+    argname_ = config.GetString("argname");
     open_ = config.GetString("open");
     close_ = config.GetString("close");
     delimiter_ = config.GetString("delimiter");
@@ -82,7 +83,7 @@ class TagTemplate : public WikiMacro {
 
   void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
     annotator->Content(open_);
-    if (argnum_ == -1) {
+    if (argnum_ == -1 && argname_.empty()) {
       for (int i = 1; i < templ.NumArgs() + 1; ++i) {
         if (i != 1) annotator->Content(delimiter_);
         const Node *arg = templ.GetArgument(i);
@@ -91,13 +92,7 @@ class TagTemplate : public WikiMacro {
         }
       }
     } else {
-      const Node *content = nullptr;
-      if (!arg_.empty()) {
-        content = templ.GetArgument(arg_);
-      }
-      if (content == nullptr && argnum_ != 0) {
-        content = templ.GetArgument(argnum_);
-      }
+      const Node *content = templ.GetArgument(argname_, argnum_);
       if (content != nullptr) {
         templ.extractor()->ExtractNode(*content);
       }
@@ -108,6 +103,7 @@ class TagTemplate : public WikiMacro {
  private:
   string arg_;
   int argnum_;
+  string argname_;
   string open_;
   string close_;
   string delimiter_;
@@ -186,6 +182,8 @@ class DateTemplate : public WikiMacro {
     year_argnum_ = config.GetInt("year", -1);
     month_argnum_ = config.GetInt("month", -1);
     day_argnum_ = config.GetInt("day", -1);
+    qualification_argnum_ = config.GetInt("qual", -1);
+    reverse_args_ = config.GetBool("reverse");
 
     date_argname_ = config.GetString("fulln");
     year_argname_ = config.GetString("yearn");
@@ -222,10 +220,26 @@ class DateTemplate : public WikiMacro {
       // Unable to parse date, output verbatim.
       templ.Extract(1);
     }
+    if (qualification_argnum_ != -1) {
+      templ.Extract(qualification_argnum_);
+    }
     annotator->Content(postfix_);
   }
 
  protected:
+  // Get date component.
+  const Node *DateComponent(const WikiTemplate &templ, Text name, int index) {
+    if (reverse_args_) {
+      // In reverse argument mode you have {{date|y}}, {{date|m|y}}, or
+      // {{date|d|m|y}}, compared to normal mode, where the order is
+      // {{date|y}}, {{date|y|m}}, or {{date|y|m|d}}.
+      int numargs = templ.NumArgs();
+      if (numargs > 3) numargs = 3;
+      index = numargs - index + 1;
+    }
+    return templ.GetArgument(name, index);
+  }
+
   // Get date from template argument(s).
   bool GetDate(const WikiTemplate &templ, Date *date) {
     // Parse full date argument.
@@ -236,7 +250,7 @@ class DateTemplate : public WikiMacro {
     }
 
     // Parse year argument.
-    const Node *year_arg = templ.GetArgument(year_argname_, year_argnum_);
+    const Node *year_arg = DateComponent(templ, year_argname_, year_argnum_);
     if (year_arg != nullptr) {
       int y = templ.GetNumber(year_arg);
       if (y != -1) {
@@ -247,7 +261,7 @@ class DateTemplate : public WikiMacro {
     }
 
     // Parse month argument.
-    const Node *month_arg = templ.GetArgument(month_argname_, month_argnum_);
+    const Node *month_arg = DateComponent(templ, month_argname_, month_argnum_);
     if (month_arg != nullptr) {
       int m = templ.GetNumber(month_arg);
       if (m != -1) {
@@ -264,7 +278,7 @@ class DateTemplate : public WikiMacro {
     }
 
     // Parse day argument.
-    const Node *day_arg = templ.GetArgument(day_argname_, day_argnum_);
+    const Node *day_arg = DateComponent(templ, day_argname_, day_argnum_);
     if (day_arg != nullptr) {
       int d = templ.GetNumber(day_arg);
       if (d != -1) {
@@ -507,6 +521,8 @@ class DateTemplate : public WikiMacro {
   int year_argnum_ = -1;
   int month_argnum_ = -1;
   int day_argnum_ = -1;
+  int qualification_argnum_ = -1;
+  bool reverse_args_ = false;
 
   string date_argname_;
   string year_argname_;
@@ -526,6 +542,7 @@ class YearTemplate : public WikiMacro {
   void Init(const Frame &config) override {
     bce_ = config.GetBool("bce");
     range_ = config.GetBool("range");
+    bcarg_ = config.GetInt("bc");
     prefix_ = config.GetString("pre");
     postfix_ = config.GetString("post");
   }
@@ -543,12 +560,19 @@ class YearTemplate : public WikiMacro {
     annotator->Content(prefix_);
     int year = templ.GetNumber(argnum);
     if (year != -1) {
+      Date date(bce_ ? -year : year, 0, 0, Date::YEAR);
+      string bc;
+      if (bcarg_ != -1) {
+        bc = templ.GetValue(bcarg_);
+        if (!bc.empty()) date.year = -date.year;
+      }
+
       int begin = annotator->position();
       templ.Extract(argnum);
+      annotator->Content(bc);
       annotator->Content(postfix_);
       int end = annotator->position();
 
-      Date date(bce_ ? -year : year, 0, 0, Date::YEAR);
       Builder b(annotator->store());
       b.AddIsA("/w/time");
       b.AddIs(date.AsHandle(annotator->store()));
@@ -563,6 +587,7 @@ class YearTemplate : public WikiMacro {
   bool range_;
   string prefix_;
   string postfix_;
+  int bcarg_ = -1;
 };
 
 REGISTER_WIKI_MACRO("year", YearTemplate);

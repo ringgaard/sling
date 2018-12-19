@@ -5824,6 +5824,11 @@
   /w/day_output_format: "D. M Y"
   /w/month_output_format: "M Y"
   /w/year_output_format: "Y"
+
+  /w/numeric_date_format: "YYYY-MM-DD"
+  /w/numeric_date_format: "YYYY-MM-D"
+  /w/numeric_date_format: "YYYY-M-DD"
+  /w/numeric_date_format: "YYYY-M-D"
 }
 
 {=/w/dates/fr
@@ -5844,6 +5849,14 @@
   /w/day_output_format: "D M Y"
   /w/month_output_format: "M Y"
   /w/year_output_format: "Y"
+
+  /w/numeric_date_format: "DD-MM-YYYY"
+  /w/numeric_date_format: "DD/MM/YYYY"
+  /w/numeric_date_format: "YYYY-MM-DD"
+
+  /w/text_date_format: "D M Y"
+  /w/text_date_format: "Der M Y"  ; 1er janvier 1980
+  /w/text_date_format: "M Y"
 }
 
 {=/w/dates/es
@@ -5964,5 +5977,13 @@
   /w/day_output_format: "D. M Y"
   /w/month_output_format: "M Y"
   /w/year_output_format: "Y"
+
+  /w/numeric_date_format: "YYYY-MM-DD"
+  /w/numeric_date_format: "YYYY-MM-D"
+  /w/numeric_date_format: "YYYY-M-D"
+  /w/numeric_date_format: "YY-MM-DD"
+  /w/numeric_date_format: "YY-MM-D"
+  /w/numeric_date_format: "YY-M-DD"
+  /w/numeric_date_format: "YY-M-D"
 }
 
