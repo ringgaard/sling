@@ -187,6 +187,11 @@ class DateTemplate : public WikiMacro {
     month_argnum_ = config.GetInt("month", -1);
     day_argnum_ = config.GetInt("day", -1);
 
+    date_argname_ = config.GetString("fulln");
+    year_argname_ = config.GetString("yearn");
+    month_argname_ = config.GetString("monthn");
+    day_argname_ = config.GetString("dayn");
+
     // Get prefix and postfix.
     prefix_ = config.GetString("pre");
     postfix_ = config.GetString("post");
@@ -224,15 +229,16 @@ class DateTemplate : public WikiMacro {
   // Get date from template argument(s).
   bool GetDate(const WikiTemplate &templ, Date *date) {
     // Parse full date argument.
-    int num_args = templ.NumArgs();
-    if (date_argnum_ != -1 && date_argnum_ <= num_args) {
-      string fulldate = templ.GetValue(date_argnum_);
+    const Node *full_arg = templ.GetArgument(date_argname_, date_argnum_);
+    if (full_arg != nullptr) {
+      string fulldate = templ.GetValue(full_arg);
       if (!ParseDate(fulldate, date)) return false;
     }
 
     // Parse year argument.
-    if (year_argnum_ != -1 && year_argnum_ <= num_args) {
-      int y = templ.GetNumber(year_argnum_);
+    const Node *year_arg = templ.GetArgument(year_argname_, year_argnum_);
+    if (year_arg != nullptr) {
+      int y = templ.GetNumber(year_arg);
       if (y != -1) {
         date->year = y;
       } else {
@@ -241,12 +247,13 @@ class DateTemplate : public WikiMacro {
     }
 
     // Parse month argument.
-    if (month_argnum_ != -1 && month_argnum_ <= num_args) {
-      int m = templ.GetNumber(month_argnum_);
+    const Node *month_arg = templ.GetArgument(month_argname_, month_argnum_);
+    if (month_arg != nullptr) {
+      int m = templ.GetNumber(month_arg);
       if (m != -1) {
         date->month = m;
       } else {
-        uint64 fp = Fingerprint(templ.GetValue(month_argnum_));
+        uint64 fp = Fingerprint(templ.GetValue(month_arg));
         auto f = month_dictionary_.find(fp);
         if (f != month_dictionary_.end()) {
           date->month = f->second;
@@ -257,8 +264,9 @@ class DateTemplate : public WikiMacro {
     }
 
     // Parse day argument.
-    if (day_argnum_ != -1 && day_argnum_ <= num_args) {
-      int d = templ.GetNumber(day_argnum_);
+    const Node *day_arg = templ.GetArgument(day_argname_, day_argnum_);
+    if (day_arg != nullptr) {
+      int d = templ.GetNumber(day_arg);
       if (d != -1) {
         date->day = d;
       } else {
@@ -499,6 +507,11 @@ class DateTemplate : public WikiMacro {
   int year_argnum_ = -1;
   int month_argnum_ = -1;
   int day_argnum_ = -1;
+
+  string date_argname_;
+  string year_argname_;
+  string month_argname_;
+  string day_argname_;
 
   // Prefix and postfix text.
   string prefix_;

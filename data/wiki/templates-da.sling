@@ -1,0 +1,46 @@
+{=/wp/templates/da
+
+"!":      {type: "text" text: "|"}
+"!!":     {type: "text" text: "||"}
+"'":      {type: "text" text: "'"}
+"'s":     {type: "text" text: "'s"}
+"′":      {type: "text" text: "′"}
+"' \"":   {type: "text" text: "' \""}
+"\" '":   {type: "text" text: "\" '"}
+;"' '":    {type: "text" text: "' '"}
+;"\"'\"":  {type: "text" text: "\"'\""}
+;"' \" '": {type: "text" text: "' \" '"}
+"-\"":    {type: "text" text: " \""}
+"\"-":    {type: "text" text: "\" "}
+"-'":     {type: "text" text: " '"}
+"'-":     {type: "text" text: "' "}
+;"--)":    {type: "text" text: " )"}
+"(-":     {type: "text" text: "( "}
+;"(--":    {type: "text" text: "( "}
+
+")!":     {type: "text" text: "]"}
+"!((":    {type: "text" text: "[["}
+"))!":    {type: "text" text: "]]"}
+"(":      {type: "text" text: "{"}
+")":      {type: "text" text: "}"}
+"((":     {type: "text" text: "{{"}
+"))":     {type: "text" text: "}}"}
+"(((":    {type: "text" text: "{{{"}
+")))":    {type: "text" text: "}}}"}
+
+"·":      {type: "text" text: "&nbsp;<b>&middot;</b>"}
+"•":      {type: "text" text: "&nbsp;&bull;"}
+"\\":     {type: "text" text: "&nbsp;/"}
+"=":      {type: "text" text: "="}
+
+"dato og alder": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
+"dato og alder2": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
+"fødselsdato":  {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
+"dødsdato og alder":  {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
+"start dato": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
+"start dato og alder": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
+
+"årstalfkr": {type: "year" bce: 1 post: " f.kr."}
+
+}
+

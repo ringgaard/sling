@@ -1,0 +1,39 @@
+{=/wp/templates/de
+
+"!":      {type: "text" text: "|"}
+"!!":     {type: "text" text: "||"}
+"'":      {type: "text" text: "'"}
+"'s":     {type: "text" text: "'s"}
+"′":      {type: "text" text: "′"}
+"' \"":   {type: "text" text: "' \""}
+"\" '":   {type: "text" text: "\" '"}
+;"' '":    {type: "text" text: "' '"}
+;"\"'\"":  {type: "text" text: "\"'\""}
+;"' \" '": {type: "text" text: "' \" '"}
+"-\"":    {type: "text" text: " \""}
+"\"-":    {type: "text" text: "\" "}
+"-'":     {type: "text" text: " '"}
+"'-":     {type: "text" text: "' "}
+;"--)":    {type: "text" text: " )"}
+"(-":     {type: "text" text: "( "}
+;"(--":    {type: "text" text: "( "}
+
+")!":     {type: "text" text: "]"}
+"!((":    {type: "text" text: "[["}
+"))!":    {type: "text" text: "]]"}
+"(":      {type: "text" text: "{"}
+")":      {type: "text" text: "}"}
+"((":     {type: "text" text: "{{"}
+"))":     {type: "text" text: "}}"}
+"(((":    {type: "text" text: "{{{"}
+")))":    {type: "text" text: "}}}"}
+
+"·":      {type: "text" text: "&nbsp;<b>&middot;</b>"}
+"•":      {type: "text" text: "&nbsp;&bull;"}
+"\\":     {type: "text" text: "&nbsp;/"}
+"=":      {type: "text" text: "="}
+
+"datum":  {type: "date" year: 3 month: 2 day: 1 yearn: "jahr" monthn: "monat" dayn: "tag" format: /w/dates/de}
+
+}
+

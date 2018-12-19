@@ -56,49 +56,40 @@ const WikiParser::Node *WikiTemplate::GetArgument(int index) const {
   return nullptr;
 }
 
-string WikiTemplate::GetValue(Text name) const {
-  const Node *node = GetArgument(name);
-  if (node == nullptr) return "";
-  WikiPlainTextSink value;
-  extractor_->Enter(&value);
-  extractor_->ExtractChildren(*node);
-  extractor_->Leave(&value);
-  return value.text();
-}
-
-string WikiTemplate::GetValue(int index) const {
-  const Node *node = GetArgument(index);
-  if (node == nullptr) return "";
-  WikiPlainTextSink value;
-  extractor_->Enter(&value);
-  extractor_->ExtractChildren(*node);
-  extractor_->Leave(&value);
-  return value.text();
-}
-
-int WikiTemplate::GetNumber(Text name) const {
-  string value = GetValue(name);
-  int n;
-  if (safe_strto32(value, &n)) return n;
-  return -1;
-}
-
-int WikiTemplate::GetNumber(int index) const {
-  string value = GetValue(index);
-  int n;
-  if (safe_strto32(value, &n)) return n;
-  return -1;
-}
-
-void WikiTemplate::Extract(Text name) const {
-  const Node *node = GetArgument(name);
-  if (node != nullptr) {
-    extractor_->ExtractNode(*node);
+const WikiParser::Node *WikiTemplate::GetArgument(Text name, int index) const {
+  // Try to get named argument.
+  if (!name.empty()) {
+    const Node *arg = GetArgument(name);
+    if (arg != nullptr) return arg;
   }
+
+  // Try to get positional argument.
+  if (index != -1) {
+    const Node *arg = GetArgument(index);
+    if (arg != nullptr) return arg;
+  }
+
+  return nullptr;
 }
 
-void WikiTemplate::Extract(int index) const {
-  const Node *node = GetArgument(index);
+string WikiTemplate::GetValue(const Node *node) const {
+  if (node == nullptr) return "";
+  WikiPlainTextSink value;
+  extractor_->Enter(&value);
+  extractor_->ExtractChildren(*node);
+  extractor_->Leave(&value);
+  return value.text();
+}
+
+int WikiTemplate::GetNumber(const Node *node) const {
+  if (node == nullptr) return -1;
+  string value = GetValue(node);
+  int n;
+  if (safe_strto32(value, &n)) return n;
+  return -1;
+}
+
+void WikiTemplate::Extract(const Node *node) const {
   if (node != nullptr) {
     extractor_->ExtractNode(*node);
   }
