@@ -284,11 +284,18 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
   }
 
   Text ResolveTemplate(Text link) override {
-    Text qid = wikimap_.LookupLink(language_, template_prefix_, link,
-                                   WikipediaMap::TEMPLATE);
+    WikipediaMap::PageInfo info;
+    if (!wikimap_.GetPageInfo(language_, template_prefix_, link, &info)) {
+      num_unknown_templates_->Increment();
+      return Text();
+    }
+    if (info.type != WikipediaMap::TEMPLATE &&
+        info.type != WikipediaMap::INFOBOX) {
+      num_unknown_templates_->Increment();
+      return Text();
+    }
     num_templates_->Increment();
-    if (qid.empty()) num_unknown_templates_->Increment();
-    return qid;
+    return info.qid;
   }
 
   Text ResolveCategory(Text link) override {

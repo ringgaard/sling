@@ -376,27 +376,27 @@
   "aV·A": {/w/unit: Q550341 name: "attovolt-ampere" /w/amount: 1e-18}
   "zV·A": {/w/unit: Q550341 name: "zeptovolt-ampere" /w/amount: 1e-21}
   "yV·A": {/w/unit: Q550341 name: "yoctovolt-ampere" /w/amount: 1e-24}
-  "Ymm2": {/w/unit: Q2737347 name: "yottasquare millimetre" /w/amount: 1e+24}
-  "Zmm2": {/w/unit: Q2737347 name: "zettasquare millimetre" /w/amount: 1e+21}
-  "Emm2": {/w/unit: Q2737347 name: "exasquare millimetre" /w/amount: 1e+18}
-  "Pmm2": {/w/unit: Q2737347 name: "petasquare millimetre" /w/amount: 1e+15}
-  "Tmm2": {/w/unit: Q2737347 name: "terasquare millimetre" /w/amount: 1e+12}
-  "Gmm2": {/w/unit: Q2737347 name: "gigasquare millimetre" /w/amount: 1000000000.0}
-  "Mmm2": {/w/unit: Q2737347 name: "megasquare millimetre" /w/amount: 1000000.0}
-  "kmm2": {/w/unit: Q2737347 name: "kilosquare millimetre" /w/amount: 1000.0}
-  "hmm2": {/w/unit: Q2737347 name: "hectosquare millimetre" /w/amount: 100.0}
-  "damm2": {/w/unit: Q2737347 name: "decasquare millimetre" /w/amount: 10.0}
-  "dmm2": {/w/unit: Q2737347 name: "decisquare millimetre" /w/amount: 0.1}
-  "cmm2": {/w/unit: Q2737347 name: "centisquare millimetre" /w/amount: 0.01}
-  "mmm2": {/w/unit: Q2737347 name: "millisquare millimetre" /w/amount: 0.001}
-  "μmm2": {/w/unit: Q2737347 name: "millisquare millimetre" /w/amount: 1e-06}
-  "umm2": {/w/unit: Q2737347 name: "microsquare millimetre" /w/amount: 1e-06}
-  "nmm2": {/w/unit: Q2737347 name: "nanosquare millimetre" /w/amount: 1e-09}
-  "pmm2": {/w/unit: Q2737347 name: "picosquare millimetre" /w/amount: 1e-12}
-  "fmm2": {/w/unit: Q2737347 name: "femtosquare millimetre" /w/amount: 1e-15}
-  "amm2": {/w/unit: Q2737347 name: "attosquare millimetre" /w/amount: 1e-18}
-  "zmm2": {/w/unit: Q2737347 name: "zeptosquare millimetre" /w/amount: 1e-21}
-  "ymm2": {/w/unit: Q2737347 name: "yoctosquare millimetre" /w/amount: 1e-24}
+  "Ymm2": {/w/unit: Q2737347 name: "yottasquare millimetre" /w/amount: 1e+48}
+  "Zmm2": {/w/unit: Q2737347 name: "zettasquare millimetre" /w/amount: 1e+42}
+  "Emm2": {/w/unit: Q2737347 name: "exasquare millimetre" /w/amount: 1e+36}
+  "Pmm2": {/w/unit: Q2737347 name: "petasquare millimetre" /w/amount: 1e+30}
+  "Tmm2": {/w/unit: Q2737347 name: "terasquare millimetre" /w/amount: 1e+24}
+  "Gmm2": {/w/unit: Q2737347 name: "gigasquare millimetre" /w/amount: 1e+18}
+  "Mmm2": {/w/unit: Q2737347 name: "megasquare millimetre" /w/amount: 1e+12}
+  "kmm2": {/w/unit: Q2737347 name: "kilosquare millimetre" /w/amount: 1000000.0}
+  "hmm2": {/w/unit: Q2737347 name: "hectosquare millimetre" /w/amount: 10000.0}
+  "damm2": {/w/unit: Q2737347 name: "decasquare millimetre" /w/amount: 100.0}
+  "dmm2": {/w/unit: Q2737347 name: "decisquare millimetre" /w/amount: 0.01}
+  "cmm2": {/w/unit: Q2737347 name: "centisquare millimetre" /w/amount: 0.0001}
+  "mmm2": {/w/unit: Q2737347 name: "millisquare millimetre" /w/amount: 1e-06}
+  "μmm2": {/w/unit: Q2737347 name: "millisquare millimetre" /w/amount: 1e-12}
+  "umm2": {/w/unit: Q2737347 name: "microsquare millimetre" /w/amount: 1e-12}
+  "nmm2": {/w/unit: Q2737347 name: "nanosquare millimetre" /w/amount: 1e-18}
+  "pmm2": {/w/unit: Q2737347 name: "picosquare millimetre" /w/amount: 1e-24}
+  "fmm2": {/w/unit: Q2737347 name: "femtosquare millimetre" /w/amount: 1e-30}
+  "amm2": {/w/unit: Q2737347 name: "attosquare millimetre" /w/amount: 1e-36}
+  "zmm2": {/w/unit: Q2737347 name: "zeptosquare millimetre" /w/amount: 1e-42}
+  "ymm2": {/w/unit: Q2737347 name: "yoctosquare millimetre" /w/amount: 1e-48}
   "Yrad": {/w/unit: Q33680 name: "yottaradian" /w/amount: 1e+24}
   "Zrad": {/w/unit: Q33680 name: "zettaradian" /w/amount: 1e+21}
   "Erad": {/w/unit: Q33680 name: "exaradian" /w/amount: 1e+18}
@@ -419,24 +419,24 @@
   "yrad": {/w/unit: Q33680 name: "yoctoradian" /w/amount: 1e-24}
   "μm": {/w/unit: Q11573 name: "millimetre" /w/amount: 1e-06}
   "um": {/w/unit: Q11573 name: "micrometre" /w/amount: 1e-06}
-  "Ym2": {/w/unit: Q25343 name: "yottasquare metre" /w/amount: 1e+24}
-  "Zm2": {/w/unit: Q25343 name: "zettasquare metre" /w/amount: 1e+21}
-  "Em2": {/w/unit: Q25343 name: "exasquare metre" /w/amount: 1e+18}
-  "Pm2": {/w/unit: Q25343 name: "petasquare metre" /w/amount: 1e+15}
-  "Tm2": {/w/unit: Q25343 name: "terasquare metre" /w/amount: 1e+12}
-  "Gm2": {/w/unit: Q25343 name: "gigasquare metre" /w/amount: 1000000000.0}
-  "Mm2": {/w/unit: Q25343 name: "megasquare metre" /w/amount: 1000000.0}
-  "hm2": {/w/unit: Q25343 name: "hectosquare metre" /w/amount: 100.0}
-  "dam2": {/w/unit: Q25343 name: "decasquare metre" /w/amount: 10.0}
-  "dm2": {/w/unit: Q25343 name: "decisquare metre" /w/amount: 0.1}
-  "μm2": {/w/unit: Q25343 name: "millisquare metre" /w/amount: 1e-06}
-  "um2": {/w/unit: Q25343 name: "microsquare metre" /w/amount: 1e-06}
-  "nm2": {/w/unit: Q25343 name: "nanosquare metre" /w/amount: 1e-09}
-  "pm2": {/w/unit: Q25343 name: "picosquare metre" /w/amount: 1e-12}
-  "fm2": {/w/unit: Q25343 name: "femtosquare metre" /w/amount: 1e-15}
-  "am2": {/w/unit: Q25343 name: "attosquare metre" /w/amount: 1e-18}
-  "zm2": {/w/unit: Q25343 name: "zeptosquare metre" /w/amount: 1e-21}
-  "ym2": {/w/unit: Q25343 name: "yoctosquare metre" /w/amount: 1e-24}
+  "Ym2": {/w/unit: Q25343 name: "yottasquare metre" /w/amount: 1e+48}
+  "Zm2": {/w/unit: Q25343 name: "zettasquare metre" /w/amount: 1e+42}
+  "Em2": {/w/unit: Q25343 name: "exasquare metre" /w/amount: 1e+36}
+  "Pm2": {/w/unit: Q25343 name: "petasquare metre" /w/amount: 1e+30}
+  "Tm2": {/w/unit: Q25343 name: "terasquare metre" /w/amount: 1e+24}
+  "Gm2": {/w/unit: Q25343 name: "gigasquare metre" /w/amount: 1e+18}
+  "Mm2": {/w/unit: Q25343 name: "megasquare metre" /w/amount: 1e+12}
+  "hm2": {/w/unit: Q25343 name: "hectosquare metre" /w/amount: 10000.0}
+  "dam2": {/w/unit: Q25343 name: "decasquare metre" /w/amount: 100.0}
+  "dm2": {/w/unit: Q25343 name: "decisquare metre" /w/amount: 0.01}
+  "μm2": {/w/unit: Q25343 name: "millisquare metre" /w/amount: 1e-12}
+  "um2": {/w/unit: Q25343 name: "microsquare metre" /w/amount: 1e-12}
+  "nm2": {/w/unit: Q25343 name: "nanosquare metre" /w/amount: 1e-18}
+  "pm2": {/w/unit: Q25343 name: "picosquare metre" /w/amount: 1e-24}
+  "fm2": {/w/unit: Q25343 name: "femtosquare metre" /w/amount: 1e-30}
+  "am2": {/w/unit: Q25343 name: "attosquare metre" /w/amount: 1e-36}
+  "zm2": {/w/unit: Q25343 name: "zeptosquare metre" /w/amount: 1e-42}
+  "ym2": {/w/unit: Q25343 name: "yoctosquare metre" /w/amount: 1e-48}
   "YW": {/w/unit: Q25236 name: "yottawatt" /w/amount: 1e+24}
   "ZW": {/w/unit: Q25236 name: "zettawatt" /w/amount: 1e+21}
   "EW": {/w/unit: Q25236 name: "exawatt" /w/amount: 1e+18}
@@ -550,8 +550,8 @@
   "a℃": {/w/unit: Q25267 name: "attodegrees Celsius" /w/amount: 1e-18}
   "z℃": {/w/unit: Q25267 name: "zeptodegrees Celsius" /w/amount: 1e-21}
   "y℃": {/w/unit: Q25267 name: "yoctodegrees Celsius" /w/amount: 1e-24}
-  "μm3": {/w/unit: Q25517 name: "millicubic metre" /w/amount: 1e-06}
-  "um3": {/w/unit: Q25517 name: "microcubic metre" /w/amount: 1e-06}
+  "μm3": {/w/unit: Q25517 name: "millicubic metre" /w/amount: 1e-18}
+  "um3": {/w/unit: Q25517 name: "microcubic metre" /w/amount: 1e-18}
   "Ym/s": {/w/unit: Q182429 name: "yottametre per second" /w/amount: 1e+24}
   "Zm/s": {/w/unit: Q182429 name: "zettametre per second" /w/amount: 1e+21}
   "Em/s": {/w/unit: Q182429 name: "exametre per second" /w/amount: 1e+18}

@@ -56,6 +56,15 @@ const WikiParser::Node *WikiTemplate::GetArgument(int index) const {
   return nullptr;
 }
 
+void WikiTemplate::GetArguments(std::vector<const Node *> *args) const {
+  int child = node_.first_child;
+  while (child != -1) {
+    const Node &n = extractor_->parser().node(child);
+    if (n.type == WikiParser::ARG) args->push_back(&n);
+    child = n.next_sibling;
+  }
+}
+
 const WikiParser::Node *WikiTemplate::GetArgument(Text name, int index) const {
   // Try to get named argument.
   if (!name.empty()) {
@@ -93,6 +102,32 @@ int WikiTemplate::GetNumber(const Node *node) const {
 void WikiTemplate::Extract(const Node *node) const {
   if (node != nullptr) {
     extractor_->ExtractNode(*node);
+  }
+}
+
+bool WikiTemplate::IsEmpty(const Node *node) const {
+  int child;
+  switch (node->type) {
+    case WikiParser::COMMENT:
+      return true;
+
+    case WikiParser::ARG:
+      child = node->first_child;
+      while (child != -1) {
+        const Node &n = extractor_->parser().node(child);
+        if (!IsEmpty(&n)) return false;
+        child = n.next_sibling;
+      }
+      return true;
+
+    case WikiParser::TEXT:
+      for (char c : node->text()) {
+        if (c != ' ' && c != '\n') return false;
+      }
+      return true;
+
+    default:
+      return false;
   }
 }
 
@@ -140,6 +175,18 @@ WikiAnnotator::WikiAnnotator(Store *store, WikiLinkResolver *resolver)
       themes_(store),
       categories_(store) {
   names_.Bind(store);
+}
+
+WikiAnnotator::WikiAnnotator(WikiAnnotator *other)
+    : store_(other->store_),
+      resolver_(other->resolver_),
+      templates_(other->templates_),
+      annotations_(store_),
+      themes_(store_),
+      categories_(store_) {
+  n_name_.Assign(other->n_name_);
+  n_link_.Assign(other->n_link_);
+  n_page_category_.Assign(other->n_page_category_);
 }
 
 void WikiAnnotator::Link(const Node &node,

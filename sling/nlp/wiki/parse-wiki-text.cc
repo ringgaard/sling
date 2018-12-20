@@ -51,8 +51,15 @@ class Resolver : public WikiLinkResolver {
   }
 
   Text ResolveTemplate(Text link) override {
-    return wikimap_.LookupLink(FLAGS_lang, "Template", link,
-                               WikipediaMap::TEMPLATE);
+    WikipediaMap::PageInfo info;
+    if (!wikimap_.GetPageInfo(FLAGS_lang, "Template", link, &info)) {
+      return false;
+    }
+    if (info.type != WikipediaMap::TEMPLATE &&
+        info.type != WikipediaMap::INFOBOX) {
+      return false;
+    }
+    return info.qid;
   }
 
   Text ResolveCategory(Text link) override {
@@ -75,6 +82,7 @@ int main(int argc, char *argv[]) {
     resolver.Init();
     LoadStore("data/wiki/calendar.sling", store);
     LoadStore("data/wiki/templates-" + FLAGS_lang + ".sling", store);
+    LoadStore("data/wiki/units-" + FLAGS_lang + ".sling", store);
   }
 
   string wikitext;
@@ -127,6 +135,14 @@ int main(int argc, char *argv[]) {
       std::cout << "</pre></td></tr>\n";
     }
     std::cout << "</table>\n";
+    if (!document.themes().empty()) {
+      std::cout << "<h1>Themes</h1>\n";
+      for (Handle theme : document.themes()) {
+        std::cout << "<pre>\n";
+        std::cout << ToText(document.store(), theme, 2);
+        std::cout << "</pre>\n";
+      }
+    }
   }
   std::cout << "<h1>AST</h1>\n<pre>\n";
   if (!intro.text().empty()) {

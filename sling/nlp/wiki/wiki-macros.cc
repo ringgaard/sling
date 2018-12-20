@@ -14,9 +14,13 @@
 
 #include "sling/nlp/wiki/wiki-annotator.h"
 
+#include "sling/nlp/document/document.h"
 #include "sling/nlp/document/fingerprinter.h"
+#include "sling/nlp/document/lex.h"
+#include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/kb/calendar.h"
 #include "sling/string/numbers.h"
+#include "sling/util/mutex.h"
 
 namespace sling {
 namespace nlp {
@@ -658,6 +662,145 @@ class MeasureTemplate : public WikiMacro {
 };
 
 REGISTER_WIKI_MACRO("measure", MeasureTemplate);
+
+// Template macro for info boxes.
+class InfoboxTemplate : public WikiMacro {
+ public:
+  void Init(const Frame &config) override {
+    Store *store = config.store();
+    Handle n_class = store->Lookup("class");
+    Handle n_fields = store->Lookup("fields");
+    Handle n_group = store->Lookup("group");
+    for (const Slot &s : config) {
+      if (s.name == n_class) {
+        classes_.push_back(s.value);
+      } else if (s.name == n_fields) {
+        Frame fields(store, s.value);
+        for (const Slot &f : fields) {
+          if (!store->IsString(f.name)) continue;
+          string name = String(store, f.name).value();
+          Field &field = fields_[name];
+          Frame key(store, f.value);
+          if (key.IsAnonymous()) {
+            field.key = key.GetHandle(Handle::is());
+            field.group = key.GetHandle(n_group);
+          } else {
+            field.key = f.value;
+            field.group = Handle::nil();
+          }
+        }
+      }
+    }
+  }
+
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    // Create builders for main fields and repeated fields.
+    Store *store = annotator->store();
+    Builder main(store);
+    for (Handle cls : classes_) main.AddIsA(cls);
+    HandleMap<std::vector<Builder *>> groups;
+
+    // Extract all the fields.
+    std::vector<const Node *> arguments;
+    templ.GetArguments(&arguments);
+    for (const Node *arg : arguments) {
+      // Skip empty fields.
+      if (templ.IsEmpty(arg)) continue;
+
+      // Look up field.
+      string name = arg->name().str();
+      auto f = fields_.find(name);
+      Field *field = nullptr;
+      int index = 0;
+      if (f != fields_.end()) {
+        field = &f->second;
+        if (!field->group.IsNil()) index = 1;
+      } else {
+        // Try to remove number suffix for repreated field.
+        int i = name.size() - 1;
+        int power = 1;
+        while (i > 1 && name[i] >= '0' && name[i] <= '9') {
+          index += (name[i--] - '0') * power;
+          power *= 10;
+        }
+        if (index != 0) {
+          name = name.substr(0, i + 1);
+          auto f = fields_.find(name);
+          if (f != fields_.end()) {
+            field = &f->second;
+          }
+        }
+      }
+
+      if (field == nullptr) {
+        VLOG(5) << "unknown field " << name;
+        continue;
+      }
+
+      // Extract field using a sub-annotator.
+      WikiAnnotator value(annotator);
+      templ.extractor()->Enter(&value);
+      templ.extractor()->ExtractNode(*arg);
+      templ.extractor()->Leave(&value);
+
+      // Convert field value to LEX format.
+      Document document(store);
+      document.SetText(value.text());
+      GetTokenizer()->Tokenize(&document);
+      value.AddToDocument(&document);
+      document.Update();
+      string lex = ToLex(document);
+
+      // Add field to infobox frame.
+      if (field->group.IsNil()) {
+        main.Add(field->key, lex);
+      } else {
+        auto &group = groups[field->group];
+        if (group.size() < index) group.resize(index);
+        auto &element = group[index - 1];
+        if (element == nullptr) element = new Builder(store);
+        element->Add(field->key, lex);
+      }
+    }
+
+    // Create frames for repeated fields and add them to the main frame.
+    for (auto &it : groups) {
+      for (Builder *element : it.second) {
+        if (element != nullptr) {
+          main.Add(it.first, element->Create().handle());
+          delete element;
+        }
+      }
+    }
+
+    // Add infobox as thematic frame.
+    annotator->AddTheme(main.Create().handle());
+  }
+
+ private:
+  // Singleton document tokenizer.
+  static DocumentTokenizer *GetTokenizer() {
+    static Mutex mu;
+    static DocumentTokenizer *tokenizer = nullptr;
+    MutexLock lock(&mu);
+    if (tokenizer == nullptr) tokenizer = new DocumentTokenizer();
+    return tokenizer;
+  }
+
+  // Infobox field definition.
+  struct Field {
+    Handle key;     // slot name for field
+    Handle group;   // group for repeated field
+  };
+
+  // Types added to thematic frame for infobox.
+  std::vector<Handle> classes_;
+
+  // Infobox fields keyed by field name.
+  std::unordered_map<string, Field> fields_;
+};
+
+REGISTER_WIKI_MACRO("infobox", InfoboxTemplate);
 
 }  // namespace nlp
 }  // namespace sling

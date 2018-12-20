@@ -68,6 +68,9 @@ class WikiTemplate {
   // Return node for named or positional template argument.
   const Node *GetArgument(Text name, int index) const;
 
+  // Get all template arguments.
+  void GetArguments(std::vector<const Node *> *args) const;
+
   // Return plain text value for named or positional template argument.
   string GetValue(const Node *node) const;
   string GetValue(Text name) const { return GetValue(GetArgument(name)); }
@@ -84,6 +87,9 @@ class WikiTemplate {
   void Extract(const Node *node) const;
   void Extract(Text name) const { Extract(GetArgument(name)); }
   void Extract(int index) const { Extract(GetArgument(index)); }
+
+  // Check if a node is empty, i.e. only whitespace and comments.
+  bool IsEmpty(const Node *node) const;
 
   // Return template extractor.
   WikiExtractor *extractor() const { return extractor_; }
@@ -149,6 +155,10 @@ class WikiAnnotator : public WikiTextSink {
   // Initialize document annotator. The frame annotations will be created in
   // the store and links will be resolved using the resolver.
   WikiAnnotator(Store *store, WikiLinkResolver *resolver);
+
+  // Initialize sub-annotator based on another annotator. Plase notice that this
+  // is not a copy constructor.
+  explicit WikiAnnotator(WikiAnnotator *other);
 
   // Wiki sink interface receiving the annotations from the extractor.
   void Link(const Node &node,

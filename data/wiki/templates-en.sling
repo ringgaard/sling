@@ -101,7 +101,119 @@
 "bce": {type: "year" bce: 1 post: " BCE"}
 "circa": {type: "year" pre: "c. " range: 1}
 
-"convert": {type: "measure" value: 1 unit: 2}
+"convert": {type: "measure" value: 1 unit: 2 units: /w/units/en}
+
+"Infobox person": {
+  type: "infobox"
+  class: /wp/infobox/person
+  fields: {=/wp/infobox/person/fields
+    "pre-nominals": /wp/info/pre_nominals
+    "name": /wp/info/name
+    "post-nominals": /wp/info/post_nominals
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "native_name": /wp/info/native_name
+    "native_name_lang": /wp/info/native_name_lang
+    "pronunciation": /wp/info/pronunciation
+    "birth_name": /wp/info/birth_name
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "baptised": /wp/info/baptised
+    "disappeared_date": /wp/info/disappeared_date
+    "disappeared_place": /wp/info/disappeared_place
+    "disappeared_status": /wp/info/disappeared_status
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "death_cause": /wp/info/death_cause
+    "body_discovered": /wp/info/body_discovered
+    "resting_place": /wp/info/resting_place
+    "resting_place_coordinates": /wp/info/resting_place_coordinates
+    "burial_place": /wp/info/burial_place
+    "burial_coordinates": /wp/info/burial_coordinates
+    "monuments": /wp/info/monuments
+    "residence": /wp/info/residence
+    "nationality": /wp/info/nationality
+    "other_names": /wp/info/other_names
+    "citizenship": /wp/info/citizenship
+    "education": /wp/info/education
+    "alma_mater": /wp/info/alma_mater
+    "occupation": /wp/info/occupation
+    "years_active": /wp/info/years_active
+    "era": /wp/info/era
+    "employer": /wp/info/employer
+    "organization": /wp/info/organization
+    "agent": /wp/info/agent
+    "known_for": /wp/info/known_for
+    "notable_works": /wp/info/notable_works
+    "style": /wp/info/style
+    "home_town": /wp/info/home_town
+    "salary": /wp/info/salary
+    "net_worth": /wp/info/net_worth
+    "height": /wp/info/height
+    "weight": /wp/info/weight
+    "television": /wp/info/television
+    "title": /wp/info/title
+    "term": /wp/info/term
+    "predecessor": /wp/info/predecessor
+    "successor": /wp/info/successor
+    "party": /wp/info/party
+    "movement": /wp/info/movement
+    "opponents": /wp/info/opponents
+    "boards": /wp/info/boards
+    "criminal_charge": /wp/info/criminal_charge
+    "criminal_penalty": /wp/info/criminal_penalty
+    "criminal_status": /wp/info/criminal_status
+    "spouse": /wp/info/spouse
+    "partner": /wp/info/partner
+    "children": /wp/info/children
+    "parents": /wp/info/parents
+    "mother": /wp/info/mother
+    "father": /wp/info/father
+    "relatives": /wp/info/relatives
+    "family": /wp/info/family
+    "callsign": /wp/info/callsign
+    "awards": /wp/info/awards
+    "website": /wp/info/website
+    "footnotes": /wp/info/footnotes
+  }
+}
+
+"infobox officeholder": {
+  type: "infobox"
+  class: /wp/infobox/officeholder
+  fields: /wp/infobox/person/fields
+  fields: {
+    "honorific_prefix": /wp/info/honorific_prefix
+    "honorific_suffix": /wp/info/honorific_suffix
+
+    "order": {+/wp/info/order group: /wp/info/position}
+    "office": {+/wp/info/office group: /wp/info/position}
+    "status": {+/wp/info/status group: /wp/info/position}
+    "term_start": {+/wp/info/term_start group: /wp/info/position}
+    "term_end": {+/wp/info/term_end group: /wp/info/position}
+    "alongside": {+/wp/info/alongside group: /wp/info/position}
+    "monarch": {+/wp/info/monarch group: /wp/info/position}
+    "president": {+/wp/info/president group: /wp/info/position}
+    "governor_general": {+/wp/info/governor_general group: /wp/info/position}
+    "primeminister": {+/wp/info/primeminister group: /wp/info/position}
+    "taoiseach": {+/wp/info/taoiseach group: /wp/info/position}
+    "chancellor": {+/wp/info/chancellor group: /wp/info/position}
+    "governor": {+/wp/info/governor group: /wp/info/position}
+    "chair": {+/wp/info/chair group: /wp/info/position}
+    "vicepresident": {+/wp/info/vicepresident group: /wp/info/position}
+    "viceprimeminister": {+/wp/info/viceprimeminister group: /wp/info/position}
+    "deputy": {+/wp/info/deputy group: /wp/info/position}
+    "lieutenant": {+/wp/info/lieutenant group: /wp/info/position}
+    "vicechair": {+/wp/info/vicechair group: /wp/info/position}
+    "succeeding": {+/wp/info/succeeding group: /wp/info/position}
+    "parliamentarygroup": {+/wp/info/parliamentarygroup group: /wp/info/position}
+    "constituency": {+/wp/info/constituency group: /wp/info/position}
+    "majority": {+/wp/info/majority group: /wp/info/position}
+    "predecessor": {+/wp/info/predecessor group: /wp/info/position}
+    "successor": {+/wp/info/successor group: /wp/info/position}
+    "prior_term": {+/wp/info/prior_term group: /wp/info/position}
+  }
+}
 
 }
 

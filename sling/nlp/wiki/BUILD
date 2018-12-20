@@ -78,9 +78,13 @@ cc_library(
   srcs = ["wiki-macros.cc"],
   deps = [
     ":wiki-annotator",
+    "//sling/nlp/document",
     "//sling/nlp/document:fingerprinter",
+    "//sling/nlp/document:lex",
+    "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/kb:calendar",
     "//sling/string:numbers",
+    "//sling/util:mutex",
   ],
   alwayslink = 1,
 )
