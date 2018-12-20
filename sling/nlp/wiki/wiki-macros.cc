@@ -139,47 +139,8 @@ class DateTemplate : public WikiMacro {
  public:
   void Init(const Frame &config) override {
     // Get the date format from the configuration.
-    Store *store = config.store();
     Frame format = config.GetFrame("format");
-    if (format.valid()) {
-      // Get month names.
-      int prefix = format.GetInt("/w/month_abbrev");
-      Array months = format.Get("/w/month_names").AsArray();
-      if (months.valid()) {
-        for (int i = 0; i < months.length(); ++i) {
-          String month(store, months.get(i));
-          CHECK(month.valid());
-          string name = month.value();
-          month_names_.push_back(name);
-
-          month_dictionary_[Fingerprint(name)] = i + 1;
-          if (prefix > 0) {
-            string abbrev = name.substr(0, prefix);
-            month_dictionary_[Fingerprint(abbrev)] = i + 1;
-          }
-        }
-      }
-
-      // Get numeric and textual input date formats.
-      Handle n_numeric = store->Lookup("/w/numeric_date_format");
-      Handle n_textual = store->Lookup("/w/text_date_format");
-      for (const Slot &s : format) {
-        if (s.name == n_numeric) {
-          String fmt(store, s.value);
-          CHECK(fmt.valid());
-          numeric_formats_.push_back(fmt.value());
-        } else if (s.name == n_textual) {
-          String fmt(store, s.value);
-          CHECK(fmt.valid());
-          text_formats_.push_back(fmt.value());
-        }
-      }
-
-      // Get output format for dates.
-      day_format_ = format.GetString("/w/day_output_format");
-      month_format_ = format.GetString("/w/month_output_format");
-      year_format_ = format.GetString("/w/year_output_format");
-    }
+    if (format.valid()) format_.Init(format);
 
     // Get date argument configuration.
     date_argnum_ = config.GetInt("full", -1);
@@ -212,7 +173,7 @@ class DateTemplate : public WikiMacro {
     if (date.precision != Date::NONE) {
       // Output formatted date.
       int begin = annotator->position();
-      annotator->Content(DateAsText(date));
+      annotator->Content(format_.AsString(date));
       int end = annotator->position();
 
       // Create date annotation.
@@ -250,7 +211,7 @@ class DateTemplate : public WikiMacro {
     const Node *full_arg = templ.GetArgument(date_argname_, date_argnum_);
     if (full_arg != nullptr) {
       string fulldate = templ.GetValue(full_arg);
-      if (!ParseDate(fulldate, date)) return false;
+      if (!format_.Parse(fulldate, date)) return false;
     }
 
     // Parse year argument.
@@ -268,16 +229,13 @@ class DateTemplate : public WikiMacro {
     const Node *month_arg = DateComponent(templ, month_argname_, month_argnum_);
     if (month_arg != nullptr) {
       int m = templ.GetNumber(month_arg);
+      if (m == -1) {
+        m = format_.Month(templ.GetValue(month_arg));
+      }
       if (m != -1) {
         date->month = m;
       } else {
-        uint64 fp = Fingerprint(templ.GetValue(month_arg));
-        auto f = month_dictionary_.find(fp);
-        if (f != month_dictionary_.end()) {
-          date->month = f->second;
-        } else {
-          return false;
-        }
+        return false;
       }
     }
 
@@ -310,215 +268,9 @@ class DateTemplate : public WikiMacro {
     return true;
   }
 
-  // Try to parse input date.
-  bool ParseDate(Text str, Date *date) {
-    // Determine if date is numeric or text.
-    bool numeric = true;
-    for (char c : str) {
-      if (!IsDigit(c) && !IsDelimiter(c)) {
-        numeric = false;
-        break;
-      }
-    }
-
-    // Parse date into year, month, and date component.
-    bool valid = false;
-    int len = str.size();
-    int y, m, d, ys;
-    if (numeric) {
-      // Try to parse numeric date using each of the numeric date formats.
-      for (const string &fmt : numeric_formats_) {
-        if (len != fmt.size()) continue;
-        y = m = d = ys = 0;
-        valid = true;
-        for (int i = 0; i < fmt.size(); ++i) {
-          char c = str[i];
-          char f = fmt[i];
-          if (IsDigit(c)) {
-            switch (f) {
-              case 'Y': y = y * 10 + Digit(c); ys++; break;
-              case 'M': m = m * 10 + Digit(c); break;
-              case 'D': d = d * 10 + Digit(c); break;
-              default: valid = false;
-            }
-          } else if (c != f) {
-            valid = false;
-          }
-          if (!valid) break;
-        }
-        if (valid) break;
-      }
-    } else {
-      // Try to parse text date format.
-      for (const string &fmt : text_formats_) {
-        y = m = d = ys = 0;
-        valid = true;
-        int j = 0;
-        for (int i = 0; i < fmt.size(); ++i) {
-          if (j >= len) valid = false;
-          if (!valid) break;
-
-          switch (fmt[i]) {
-            case 'Y':
-              // Parse sequence of digits as year.
-              if (IsDigit(str[j])) {
-                while (j < len && IsDigit(str[j])) {
-                  y = y * 10 + Digit(str[j++]);
-                  ys++;
-                }
-              } else {
-                valid = false;
-              }
-              break;
-
-            case 'M': {
-              // Parse next token as month name.
-              int k = j;
-              while (k < len && !IsMonthBreak(str[k])) k++;
-              auto f = month_dictionary_.find(Fingerprint(Text(str, j, k - j)));
-              if (f != month_dictionary_.end()) {
-                m = f->second;
-                j = k;
-              } else {
-                valid = false;
-              }
-              break;
-            }
-
-            case 'D':
-              // Parse sequence of digits as day.
-              if (IsDigit(str[j])) {
-                while (j < len && IsDigit(str[j])) {
-                  d = d * 10 + Digit(str[j++]);
-                }
-              } else {
-                valid = false;
-              }
-              break;
-
-            case ' ':
-              // Skip sequence of white space.
-              if (str[j] != ' ') {
-                valid = false;
-              } else {
-                while (j < len && str[j] == ' ') j++;
-              }
-              break;
-
-            default:
-              // Literal match.
-              valid = (fmt[i] == str[j++]);
-          }
-        }
-        if (valid) break;
-      }
-    }
-
-    // Return parsed date if it is valid.
-    if (valid) {
-      // Dates with two-digit years will have the years from 1970 to 2069.
-      if (ys == 2) {
-        if (y < 70) {
-          y += 2000;
-        } else {
-          y += 1900;
-        }
-      }
-      date->year = y;
-      date->month = m;
-      date->day = d;
-    }
-    return valid;
-  }
-
-  // Convert date to text.
-  string DateAsText(const Date &date) {
-    Text format;
-    switch (date.precision) {
-      case Date::YEAR: format = year_format_; break;
-      case Date::MONTH: format = month_format_; break;
-      case Date::DAY: format = day_format_; break;
-      default: return date.AsString();
-    }
-    string str;
-    char buf[8];
-    for (char c : format) {
-      switch (c) {
-        case 'Y':
-          if (date.year != 0) {
-            sprintf(buf, "%04d", date.year);
-            str.append(buf);
-          }
-          break;
-
-        case 'M':
-          if (date.month != 0) {
-            if (date.month > 0 && date.month <= month_names_.size()) {
-              str.append(month_names_[date.month - 1]);
-            } else {
-              sprintf(buf, "?%02d?", date.month);
-              str.append(buf);
-            }
-          }
-          break;
-
-        case 'D':
-          if (date.day != 0) {
-            sprintf(buf, "%d", date.day);
-            str.append(buf);
-          }
-          break;
-
-        default:
-          str.push_back(c);
-      }
-    }
-    return str;
-  }
-
-  // Return fingerprint for token.
-  static uint64 Fingerprint(Text token) {
-    return Fingerprinter::Fingerprint(token, NORMALIZE_CASE);
-  }
-
-  // Check if character is a digit.
-  static bool IsDigit(char c) {
-    return c >= '0' && c <= '9';
-  }
-
-  // Check if character is a date delimiter.
-  static bool IsDelimiter(char c) {
-    return c == '-' || c == '/' || c == '.';
-  }
-
-  // Check if character is a month name break.
-  static bool IsMonthBreak(char c) {
-    return c == ' ' || IsDigit(c) || IsDelimiter(c);
-  }
-
-  // Return digit value.
-  static int Digit(char c) {
-    DCHECK(IsDigit(c));
-    return c - '0';
-  }
-
  private:
-  // Month names for generating dates.
-  std::vector<string> month_names_;
-
-  // Month name (and abbreviation) fingerprints for parsing.
-  std::unordered_map<uint64, int> month_dictionary_;
-
-  // Numeric date input formats, e.g. 'YYYY-MM-DD'.
-  std::vector<string> numeric_formats_;
-
-  // Text date input formats, e.g. 'M D, Y'.
-  std::vector<string> text_formats_;
-
-  // Output formats for dates.
-  string day_format_;
-  string month_format_;
-  string year_format_;
+  // Date format for language.
+  DateFormat format_;
 
   // Date input argument.
   int date_argnum_ = -1;
@@ -539,6 +291,84 @@ class DateTemplate : public WikiMacro {
 };
 
 REGISTER_WIKI_MACRO("date", DateTemplate);
+
+// Template macro for marriage.
+class MarriageTemplate : public WikiMacro {
+ public:
+  void Init(const Frame &config) override {
+    // Get the date format from the configuration.
+    Frame format = config.GetFrame("format");
+    if (format.valid()) format_.Init(format);
+  }
+
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    // Parse start date.
+    Date married;
+    Date ended;
+    int numargs = templ.NumArgs();
+    const Node *endarg = templ.GetArgument("end");
+    if (numargs >= 2) format_.Parse(templ.GetValue(2), &married);
+    if (numargs >= 3) format_.Parse(templ.GetValue(3), &ended);
+
+    // Output spouse.
+    templ.Extract(1);
+
+    // Output marriage date.
+    Handle marriage_start = Handle::nil();
+    Handle marriage_end = Handle::nil();
+    annotator->Content(" (");
+    if (numargs >= 2) {
+      annotator->Content("m. ");
+      int begin = annotator->position();
+      annotator->Content(format_.AsString(married));
+      int end = annotator->position();
+
+      // Create date annotation.
+      if (married.precision != Date::NONE) {
+        Builder b(annotator->store());
+        b.AddIsA("/w/time");
+        b.AddIs(married.AsHandle(annotator->store()));
+        marriage_start = b.Create().handle();
+        annotator->AddMention(begin, end, marriage_start);
+      }
+    }
+    if (numargs >= 3) {
+      if (endarg != nullptr) {
+        annotator->Content("; ");
+        templ.Extract(endarg);
+        annotator->Content(" ");
+      } else {
+        annotator->Content(" &ndash; ");
+      }
+      int begin = annotator->position();
+      annotator->Content(format_.AsString(ended));
+      int end = annotator->position();
+
+      // Create date annotation.
+      if (ended.precision != Date::NONE) {
+        Builder b(annotator->store());
+        b.AddIsA("/w/time");
+        b.AddIs(ended.AsHandle(annotator->store()));
+        marriage_end = b.Create().handle();
+        annotator->AddMention(begin, end, marriage_end);
+      }
+    }
+    annotator->Content(")");
+
+    // Add marriage thematic frame.
+    Builder b(annotator->store());
+    b.AddIsA("/wp/marriage");
+    if (!marriage_start.IsNil()) b.Add("/wp/marriage/start", marriage_start);
+    if (!marriage_end.IsNil()) b.Add("/wp/marriage/end", marriage_end);
+    annotator->AddTheme(b.Create().handle());
+  }
+
+ private:
+  // Date format for language.
+  DateFormat format_;
+};
+
+REGISTER_WIKI_MACRO("marriage", MarriageTemplate);
 
 // Template macro for years.
 class YearTemplate : public WikiMacro {
