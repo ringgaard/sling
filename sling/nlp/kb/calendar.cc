@@ -439,11 +439,9 @@ void DateFormat::Init(const Frame &format) {
 
       // Normalize string.
       string lcname;
-      UTF8::Lowercase(name, &lcname);
-      month_dictionary_[lcname] = i + 1;
+      month_dictionary_[UTF8::Lower(name)] = i + 1;
       if (prefix > 0) {
-        string abbrev;
-        UTF8::Lowercase(name.substr(0, prefix), &abbrev);
+        string abbrev = UTF8::Lower(name.substr(0, prefix));
         month_dictionary_[abbrev] = i + 1;
       }
     }

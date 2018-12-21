@@ -83,6 +83,11 @@ class WikiTemplate {
   int GetNumber(Text name) const { return GetNumber(GetArgument(name)); }
   int GetNumber(int index) const { return GetNumber(GetArgument(index)); }
 
+  // Return floating point value for named or positional template argument.
+  float GetFloat(const Node *node) const;
+  float GetFloat(Text name) const { return GetFloat(GetArgument(name)); }
+  float GetFloat(int index) const { return GetFloat(GetArgument(index)); }
+
   // Extract text for template argument
   void Extract(const Node *node) const;
   void Extract(Text name) const { Extract(GetArgument(name)); }

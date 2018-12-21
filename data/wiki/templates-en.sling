@@ -103,6 +103,11 @@
 "circa": {type: "year" pre: "c. " range: 1}
 
 "convert": {type: "measure" value: 1 unit: 2 units: /w/units/en}
+"coord": {type: "coord"}
+"flag": {type: "flag"}
+"flagcountry": {type: "flag"}
+"flagu": {type: "flag"}
+"flagteam": {type: "flag"}
 
 "Infobox person": {
   type: "infobox"
@@ -155,8 +160,8 @@
     "television": /wp/info/television
     "title": /wp/info/title
     "term": /wp/info/term
-    "predecessor": /wp/info/predecessor
-    "successor": /wp/info/successor
+    ;"predecessor": /wp/info/predecessor
+    ;"successor": /wp/info/successor
     "party": /wp/info/party
     "movement": /wp/info/movement
     "opponents": /wp/info/opponents
@@ -213,47 +218,11 @@
     "predecessor": {+/wp/info/predecessor group: /wp/info/position}
     "successor": {+/wp/info/successor group: /wp/info/position}
     "prior_term": {+/wp/info/prior_term group: /wp/info/position}
-  }
-}
-
-"Infobox AM": {
-  type: "infobox"
-  class: /wp/infobox/am
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
-  fields: {
     "constituency_AM": {+/wp/info/constituency_am group: /wp/info/position}
     "assembly": {+/wp/info/assembly group: /wp/info/position}
-  }
-}
-
-"Infobox governor": {
-  type: "infobox"
-  class: /wp/infobox/governor
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
-  fields: {
-    "appointed": {+/wp/info/appointed group: /wp/info/position}
-  }
-}
-
-"Infobox judge": {
-  type: "infobox"
-  class: /wp/infobox/judge
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
-  fields: {
-    "nominator": {+/wp/info/nominator group: /wp/info/position}
     "appointer": {+/wp/info/appointer group: /wp/info/position}
-  }
-}
-
-"Infobox candidate": {
-  type: "infobox"
-  class: /wp/infobox/candidate
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
-  fields: {
+    "appointed": {+/wp/info/appointed group: /wp/info/position}
+    "nominator": {+/wp/info/nominator group: /wp/info/position}
     "nominee": {+/wp/info/nominee group: /wp/info/position}
     "party_election": {+/wp/info/party_election group: /wp/info/position}
     "election_date": {+/wp/info/election_date group: /wp/info/position}
@@ -261,82 +230,267 @@
     "opponent": {+/wp/info/opponent group: /wp/info/position}
     "incumbent": {+/wp/info/incumbent group: /wp/info/position}
     "candidate": {+/wp/info/candidate group: /wp/info/position}
-  }
-}
-
-"Infobox MP": {
-  type: "infobox"
-  class: /wp/infobox/mp
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
-  fields: {
     "constituency_MP": {+/wp/info/constituency_mp group: /wp/info/position}
     "parliament": {+/wp/info/parliament group: /wp/info/position}
-  }
-}
-
-
-"Infobox Congressman": {
-  type: "infobox"
-  class: /wp/infobox/congressman
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
-  fields: {
     "state": {+/wp/info/state group: /wp/info/position}
     "district": {+/wp/info/district group: /wp/info/position}
     "speaker": {+/wp/info/speaker group: /wp/info/position}
-  }
-}
-
-"Infobox state representative": {
-  type: "infobox"
-  class: /wp/infobox/state_representative
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
-  fields: {
     "state_house": {+/wp/info/state_house group: /wp/info/position}
-    "district": {+/wp/info/district group: /wp/info/position}
+    "state_senate": {+/wp/info/state_senate group: /wp/info/position}
     "state_assembly": {+/wp/info/state_assembly group: /wp/info/position}
     "state_delegate": {+/wp/info/state_delegate group: /wp/info/position}
     "state_legislature": {+/wp/info/state_legislature group: /wp/info/position}
-    "speaker": {+/wp/info/speaker group: /wp/info/position}
-  }
-}
-
-"Infobox senator": {
-  type: "infobox"
-  class: /wp/infobox/senator
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
-  fields: {
-    "state": {+/wp/info/state group: /wp/info/position}
     "majorityleader": {+/wp/info/majorityleader group: /wp/info/position}
-    "district": {+/wp/info/district group: /wp/info/position}
-  }
-}
-
-"Infobox state senator": {
-  type: "infobox"
-  class: /wp/infobox/state_senator
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
-  fields: {
-    "state_senate": {+/wp/info/state_senate group: /wp/info/position}
-    "district": {+/wp/info/district group: /wp/info/position}
     "majority_leader": {+/wp/info/majority_leader group: /wp/info/position}
     "minority_leader": {+/wp/info/minority_leader group: /wp/info/position}
     "majority_floor_leader": {+/wp/info/majority_floor_leader group: /wp/info/position}
     "minority_floor_leader": {+/wp/info/minority_floor_leader group: /wp/info/position}
+    "convocation": {+/wp/info/convocation group: /wp/info/position}
   }
 }
 
-"Infobox Ukrainian legislative office": {
+"Infobox football biography": {
   type: "infobox"
-  class: /wp/infobox/ukrainian_legislative_office
-  fields: /wp/infobox/person/fields
-  fields: /wp/infobox/officeholder/fields
+  class: /wp/infobox/football_biography
   fields: {
-    "convocation": {+/wp/info/convocation group: /wp/info/position}
+    "name": /wp/info/name
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "fullname": /wp/info/fullname
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "height": /wp/info/height
+    "position": /wp/info/position
+    "currentclub": /wp/info/currentclub
+    "clubnumber": /wp/info/clubnumber
+
+    "youthyears": {+/wp/info/years group: /wp/info/youth_career}
+    "youthclubs": {+/wp/info/clubs group: /wp/info/youth_career}
+
+    "collegeyears": {+/wp/info/years group: /wp/info/college_career}
+    "college": {+/wp/info/college group: /wp/info/college_career}
+    "collegecaps": {+/wp/info/caps group: /wp/info/college_career}
+    "collegegoals": {+/wp/info/goals group: /wp/info/college_career}
+
+    "years": {+/wp/info/years group: /wp/info/senior_career}
+    "clubs": {+/wp/info/clubs group: /wp/info/senior_career}
+    "caps": {+/wp/info/caps group: /wp/info/senior_career}
+    "goals": {+/wp/info/goals group: /wp/info/senior_career}
+
+    "nationalyears": {+/wp/info/years group: /wp/info/national_career}
+    "nationalteam": {+/wp/info/team group: /wp/info/national_career}
+    "nationalcaps": {+/wp/info/caps group: /wp/info/national_career}
+    "nationalgoals": {+/wp/info/goals group: /wp/info/national_career}
+
+    "medaltemplates": /wp/info/medals
+    "club-update": /wp/info/club-update
+    "nationalteam-update": /wp/info/nationalteam-update
+
+    "manageryears": {+/wp/info/years group: /wp/info/manager_career}
+    "managerclubs": {+/wp/info/clubs group: /wp/info/manager_career}
+  }
+}
+
+"Infobox settlement": {
+  type: "infobox"
+  class: /wp/infobox/settlement
+  fields: {
+    "name": /wp/info/name
+    "official_name": /wp/info/official_name
+    "native_name": /wp/info/native_name
+    "native_name_lang": /wp/info/native_name_lang
+    "other_name": /wp/info/other_name
+    "settlement_type": /wp/info/settlement_type
+
+    "translit_lang1": /wp/info/translit_lang1
+    "translit_lang1_type": /wp/info/translit_lang1_type
+    "translit_lang1_info": /wp/info/translit_lang1_info
+    "translit_lang1_type1": /wp/info/translit_lang1_type1
+    "translit_lang1_info1": /wp/info/translit_lang1_info1
+    "translit_lang1_type2": /wp/info/translit_lang1_type2
+    "translit_lang1_info2": /wp/info/translit_lang1_info2
+    "translit_lang2": /wp/info/translit_lang2
+    "translit_lang2_type": /wp/info/translit_lang2_type
+    "translit_lang2_info": /wp/info/translit_lang2_info
+    "translit_lang2_type1": /wp/info/translit_lang2_type1
+    "translit_lang2_info1": /wp/info/translit_lang2_info1
+    "translit_lang2_type2": /wp/info/translit_lang2_type2
+    "translit_lang2_info2": /wp/info/translit_lang2_info2
+
+    "etymology": /wp/info/etymology
+    "nickname": /wp/info/nickname
+    "nicknames": /wp/info/nicknames
+    "motto": /wp/info/motto
+    "mottoes": /wp/info/mottoes
+    "anthem": /wp/info/anthem
+    "coordinates": /wp/info/coordinates
+    "coor_pinpoint": /wp/info/coor_pinpoint
+    "coordinates_footnotes": /wp/info/coordinates_footnotes
+    "grid_name": /wp/info/grid_name
+    "grid_position": /wp/info/grid_position
+
+    "subdivision_type": {+/wp/info/type group: /wp/info/subdivision}
+    "subdivision_name": {+/wp/info/name group: /wp/info/subdivision}
+
+    "established_title": {+/wp/info/title group: /wp/info/established}
+    "established_date": {+/wp/info/date group: /wp/info/established}
+
+    "extinct_title": /wp/info/extinct_title
+    "extinct_date": /wp/info/extinct_date
+    "founder": /wp/info/founder
+    "named_for": /wp/info/named_for
+    "seat_type": /wp/info/seat_type
+    "seat": /wp/info/seat
+    "seat1_type": /wp/info/seat1_type
+    "seat1": /wp/info/seat1
+    "parts_type": /wp/info/parts_type
+    "parts_style": /wp/info/parts_style
+    "parts": /wp/info/parts
+    "p1": /wp/info/p1
+    "p2": /wp/info/p2
+    "government_footnotes": /wp/info/government_footnotes
+    "government_type": /wp/info/government_type
+    "governing_body": /wp/info/governing_body
+    "leader_party": /wp/info/leader_party
+    "leader_title": /wp/info/leader_title
+    "leader_name": /wp/info/leader_name
+    "leader_title1": /wp/info/leader_title1
+    "leader_name1": /wp/info/leader_name1
+    "total_type": /wp/info/total_type
+    "unit_pref": /wp/info/unit_pref
+    "area_footnotes": /wp/info/area_footnotes
+    "area_magnitude": /wp/info/area_magnitude
+    "dunam_link": /wp/info/dunam_link
+    "area_total_km2": /wp/info/area_total_km2
+    "area_total_sq_mi": /wp/info/area_total_sq_mi
+    "area_total_ha": /wp/info/area_total_ha
+    "area_total_acre": /wp/info/area_total_acre
+    "area_total_dunam": /wp/info/area_total_dunam
+    "area_land_km2": /wp/info/area_land_km2
+    "area_land_sq_mi": /wp/info/area_land_sq_mi
+    "area_land_ha": /wp/info/area_land_ha
+    "area_land_acre": /wp/info/area_land_acre
+    "area_land_dunam": /wp/info/area_land_dunam
+    "area_water_km2": /wp/info/area_water_km2
+    "area_water_sq_mi": /wp/info/area_water_sq_mi
+    "area_water_ha": /wp/info/area_water_ha
+    "area_water_acre": /wp/info/area_water_acre
+    "area_water_dunam": /wp/info/area_water_dunam
+    "area_water_percent": /wp/info/area_water_percent
+    "area_urban_footnotes": /wp/info/area_urban_footnotes
+    "area_urban_km2": /wp/info/area_urban_km2
+    "area_urban_sq_mi": /wp/info/area_urban_sq_mi
+    "area_urban_ha": /wp/info/area_urban_ha
+    "area_urban_acre": /wp/info/area_urban_acre
+    "area_urban_dunam": /wp/info/area_urban_dunam
+    "area_rural_footnotes": /wp/info/area_rural_footnotes
+    "area_rural_km2": /wp/info/area_rural_km2
+    "area_rural_sq_mi": /wp/info/area_rural_sq_mi
+    "area_rural_ha": /wp/info/area_rural_ha
+    "area_rural_acre": /wp/info/area_rural_acre
+    "area_rural_dunam": /wp/info/area_rural_dunam
+    "area_metro_footnotes": /wp/info/area_metro_footnotes
+    "area_metro_km2": /wp/info/area_metro_km2
+    "area_metro_sq_mi": /wp/info/area_metro_sq_mi
+    "area_metro_ha": /wp/info/area_metro_ha
+    "area_metro_acre": /wp/info/area_metro_acre
+    "area_metro_dunam": /wp/info/area_metro_dunam
+    "area_rank": /wp/info/area_rank
+    "area_blank1_title": /wp/info/area_blank1_title
+    "area_blank1_km2": /wp/info/area_blank1_km2
+    "area_blank1_sq_mi": /wp/info/area_blank1_sq_mi
+    "area_blank1_ha": /wp/info/area_blank1_ha
+    "area_blank1_acre": /wp/info/area_blank1_acre
+    "area_blank1_dunam": /wp/info/area_blank1_dunam
+    "area_blank2_title": /wp/info/area_blank2_title
+    "area_blank2_km2": /wp/info/area_blank2_km2
+    "area_blank2_sq_mi": /wp/info/area_blank2_sq_mi
+    "area_blank2_ha": /wp/info/area_blank2_ha
+    "area_blank2_acre": /wp/info/area_blank2_acre
+    "area_blank2_dunam": /wp/info/area_blank2_dunam
+    "area_note": /wp/info/area_note
+    "dimensions_footnotes": /wp/info/dimensions_footnotes
+    "length_km": /wp/info/length_km
+    "length_mi": /wp/info/length_mi
+    "width_km": /wp/info/width_km
+    "width_mi": /wp/info/width_mi
+    "elevation_footnotes": /wp/info/elevation_footnotes
+    "elevation_m": /wp/info/elevation_m
+    "elevation_ft": /wp/info/elevation_ft
+    "elevation_point": /wp/info/elevation_point
+    "elevation_max_footnotes": /wp/info/elevation_max_footnotes
+    "elevation_max_m": /wp/info/elevation_max_m
+    "elevation_max_ft": /wp/info/elevation_max_ft
+    "elevation_max_point": /wp/info/elevation_max_point
+    "elevation_max_rank": /wp/info/elevation_max_rank
+    "elevation_min_footnotes": /wp/info/elevation_min_footnotes
+    "elevation_min_m": /wp/info/elevation_min_m
+    "elevation_min_ft": /wp/info/elevation_min_ft
+    "elevation_min_point": /wp/info/elevation_min_point
+    "elevation_min_rank": /wp/info/elevation_min_rank
+    "population_as_of": /wp/info/population_as_of
+    "population_footnotes": /wp/info/population_footnotes
+    "population_total": /wp/info/population_total
+    "pop_est_as_of": /wp/info/pop_est_as_of
+    "pop_est_footnotes": /wp/info/pop_est_footnotes
+    "population_est": /wp/info/population_est
+    "population_rank": /wp/info/population_rank
+    "population_density_km2": /wp/info/population_density_km2
+    "population_density_sq_mi": /wp/info/population_density_sq_mi
+    "population_urban_footnotes": /wp/info/population_urban_footnotes
+    "population_urban": /wp/info/population_urban
+    "population_density_urban_km2": /wp/info/population_density_urban_km2
+    "population_density_urban_sq_mi": /wp/info/population_density_urban_sq_mi
+    "population_rural_footnotes": /wp/info/population_rural_footnotes
+    "population_rural": /wp/info/population_rural
+    "population_density_rural_km2": /wp/info/population_density_rural_km2
+    "population_density_rural_sq_mi": /wp/info/population_density_rural_sq_mi
+    "population_metro_footnotes": /wp/info/population_metro_footnotes
+    "population_metro": /wp/info/population_metro
+    "population_density_metro_km2": /wp/info/population_density_metro_km2
+    "population_density_metro_sq_mi": /wp/info/population_density_metro_sq_mi
+    "population_density": /wp/info/population_density
+    "population_density_rank": /wp/info/population_density_rank
+    "population_blank1_title": /wp/info/population_blank1_title
+    "population_blank1": /wp/info/population_blank1
+    "population_density_blank1_km2": /wp/info/population_density_blank1_km2
+    "population_density_blank1_sq_mi": /wp/info/population_density_blank1_sq_mi
+    "population_blank2_title": /wp/info/population_blank2_title
+    "population_blank2": /wp/info/population_blank2
+    "population_density_blank2_km2": /wp/info/population_density_blank2_km2
+    "population_density_blank2_sq_mi": /wp/info/population_density_blank2_sq_mi
+    "population_demonym": /wp/info/population_demonym
+    "population_demonyms": /wp/info/population_demonyms
+    "population_note": /wp/info/population_note
+    "demographics_type1": /wp/info/demographics_type1
+    "demographics1_footnotes": /wp/info/demographics1_footnotes
+    "demographics1_title1": /wp/info/demographics1_title1
+    "demographics1_info1": /wp/info/demographics1_info1
+    "demographics_type2": /wp/info/demographics_type2
+    "demographics2_footnotes": /wp/info/demographics2_footnotes
+    "demographics2_title1": /wp/info/demographics2_title1
+    "demographics2_info1": /wp/info/demographics2_info1
+    "timezone1": /wp/info/timezone1
+    "utc_offset1": /wp/info/utc_offset1
+    "timezone1_DST": /wp/info/timezone1_dst
+    "utc_offset1_DST": /wp/info/utc_offset1_dst
+    "timezone2": /wp/info/timezone2
+    "utc_offset2": /wp/info/utc_offset2
+    "timezone2_DST": /wp/info/timezone2_dst
+    "utc_offset2_DST": /wp/info/utc_offset2_dst
+    "postal_code_type": /wp/info/postal_code_type
+    "postal_code": /wp/info/postal_code
+    "postal2_code_type": /wp/info/postal2_code_type
+    "postal2_code": /wp/info/postal2_code
+    "area_code_type": /wp/info/area_code_type
+    "area_code": /wp/info/area_code
+    "area_codes": /wp/info/area_codes
+    "geocode": /wp/info/geocode
+    "iso_code": /wp/info/iso_code
+    "registration_plate_type": /wp/info/registration_plate_type
+    "registration_plate": /wp/info/registration_plate
+    "website": /wp/info/website
+    "footnotes": /wp/info/footnotes
   }
 }
 

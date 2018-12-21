@@ -26,7 +26,7 @@ int WikiTemplate::NumArgs() const {
   int child = node_.first_child;
   while (child != -1) {
     const Node &n = extractor_->parser().node(child);
-    if (n.type == WikiParser::ARG) args++;
+    if (n.type == WikiParser::ARG && !n.named()) args++;
     child = n.next_sibling;
   }
   return args;
@@ -94,9 +94,18 @@ int WikiTemplate::GetNumber(const Node *node) const {
   if (node == nullptr) return -1;
   string value = GetValue(node);
   if (value.empty()) return 0;
-  int n;
-  if (safe_strto32(value, &n)) return n;
+  int number;
+  if (safe_strto32(value, &number)) return number;
   return -1;
+}
+
+float WikiTemplate::GetFloat(const Node *node) const {
+  if (node == nullptr) return 0.0;
+  string value = GetValue(node);
+  if (value.empty()) return 0.0;
+  float number;
+  if (safe_strtof(value, &number)) return number;
+  return 0.0;
 }
 
 void WikiTemplate::Extract(const Node *node) const {
@@ -109,6 +118,7 @@ bool WikiTemplate::IsEmpty(const Node *node) const {
   int child;
   switch (node->type) {
     case WikiParser::COMMENT:
+    case WikiParser::REF:
       return true;
 
     case WikiParser::ARG:

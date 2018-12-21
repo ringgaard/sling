@@ -14,12 +14,19 @@
 
 #include "sling/nlp/wiki/wiki-annotator.h"
 
+#include <math.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/fingerprinter.h"
 #include "sling/nlp/document/lex.h"
 #include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/kb/calendar.h"
 #include "sling/string/numbers.h"
+#include "sling/string/strcat.h"
+#include "sling/string/text.h"
 #include "sling/util/mutex.h"
 
 namespace sling {
@@ -510,6 +517,9 @@ class InfoboxTemplate : public WikiMacro {
           if (!store->IsString(f.name)) continue;
           string name = String(store, f.name).value();
           Field &field = fields_[name];
+          if (!field.key.IsNil()) {
+            LOG(WARNING) << "Duplicate infobox field: " << name;
+          }
           Frame key(store, f.value);
           if (key.IsAnonymous()) {
             field.key = key.GetHandle(Handle::is());
@@ -541,14 +551,15 @@ class InfoboxTemplate : public WikiMacro {
       string name = arg->name().str();
       auto f = fields_.find(name);
       Field *field = nullptr;
-      int index = 0;
+      int index = -1;
       if (f != fields_.end()) {
         field = &f->second;
-        if (!field->group.IsNil()) index = 1;
+        if (!field->group.IsNil()) index = 0;
       } else {
         // Try to remove number suffix for repreated field.
         int i = name.size() - 1;
         int power = 1;
+        index = 0;
         while (i > 1 && name[i] >= '0' && name[i] <= '9') {
           index += (name[i--] - '0') * power;
           power *= 10;
@@ -586,8 +597,8 @@ class InfoboxTemplate : public WikiMacro {
         main.Add(field->key, lex);
       } else {
         auto &group = groups[field->group];
-        if (group.size() < index) group.resize(index);
-        auto &element = group[index - 1];
+        if (group.size() < index + 1) group.resize(index + 1);
+        auto &element = group[index];
         if (element == nullptr) element = new Builder(store);
         element->Add(field->key, lex);
       }
@@ -631,6 +642,160 @@ class InfoboxTemplate : public WikiMacro {
 };
 
 REGISTER_WIKI_MACRO("infobox", InfoboxTemplate);
+
+// Template macro for geographic coordinates (latitude and longitude).
+class CoordinateTemplate : public WikiMacro {
+ public:
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    // Get latitude and longitude.
+    float lat = 0.0;
+    float lng = 0.0;
+    int numargs = templ.NumArgs();
+    switch (numargs) {
+      case 2:
+      case 3:
+        lat = templ.GetFloat(1);
+        lng = templ.GetFloat(2);
+        break;
+
+      case 4:
+      case 5:
+        lat = templ.GetFloat(1);
+        if (templ.GetValue(2) == "S") lat = -lat;
+        lng = templ.GetFloat(3);
+        if (templ.GetValue(4) == "W") lng = -lng;
+        break;
+
+      case 8:
+      case 9:
+        lat = templ.GetFloat(1) +
+              templ.GetFloat(2) / 60.0 +
+              templ.GetFloat(3) / 3600.0;
+        if (templ.GetValue(4) == "S") lat = -lat;
+        lng = templ.GetFloat(5) +
+              templ.GetFloat(6) / 60.0 +
+              templ.GetFloat(7) / 3600.0;
+        if (templ.GetValue(8) == "W") lng = -lng;
+        break;
+    }
+
+    // Output coordinate.
+    int begin = annotator->position();
+    if (numargs == 8) {
+      // Latitude.
+      templ.Extract(1);
+      annotator->Content("°");
+      templ.Extract(2);
+      annotator->Content("′");
+      templ.Extract(3);
+      annotator->Content("″");
+      templ.Extract(4);
+
+      // Longitude.
+      templ.Extract(5);
+      annotator->Content("°");
+      templ.Extract(6);
+      annotator->Content("′");
+      templ.Extract(7);
+      annotator->Content("″");
+      templ.Extract(8);
+    } else {
+      annotator->Content(GeoCoord(lat, true));
+      annotator->Content(" ");
+      annotator->Content(GeoCoord(lng, false));
+    }
+    int end = annotator->position();
+
+    // Create geo annotation.
+    Builder b(annotator->store());
+    b.AddIsA("/w/geo");
+    b.Add("/w/lat", lat);
+    b.Add("/w/lng", lng);
+    annotator->AddMention(begin, end, b.Create().handle());
+  }
+
+ private:
+  // Convert geo coordinate from decimal to minutes and seconds.
+  static string GeoCoord(double coord, bool latitude) {
+    // Compute direction.
+    const char *sign;
+    if (coord < 0) {
+      coord = -coord;
+      sign = latitude ? "S" : "W";
+    } else {
+      sign = latitude ? "N" : "E";
+    }
+
+    // Compute degrees.
+    double integer;
+    double remainder = modf(coord, &integer);
+    int degrees = static_cast<int>(integer);
+
+    // Compute minutes.
+    remainder = modf(remainder * 60, &integer);
+    int minutes = static_cast<int>(integer);
+
+    // Compute seconds.
+    remainder = modf(remainder * 60, &integer);
+    int seconds = static_cast<int>(integer + 0.5);
+
+    // Build coordinate string.
+    return StrCat(degrees, "°", minutes, "′", seconds, "″", sign);
+  }
+};
+
+REGISTER_WIKI_MACRO("coord", CoordinateTemplate);
+
+// Template macro for countries.
+class FlagTemplate : public WikiMacro {
+ public:
+  void Init(const Frame &config) override {
+    Store *store = config.store();
+    Frame country_codes(store, "/w/countries");
+    if (country_codes.valid()) {
+      for (const Slot &s : country_codes) {
+        if (!store->IsString(s.name)) continue;
+        string code = String(store, s.name).value();
+        countries_[code] = s	.value;
+      }
+    }
+  }
+
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    // Look up country.
+    string country = templ.GetValue(1);
+    Handle item = Handle::nil();
+    auto f = countries_.find(country);
+    if (f != countries_.end()) {
+      item = f->second;
+    } else {
+      Text qid = annotator->resolver()->ResolveLink(country);
+      if (!qid.empty()) {
+        item = annotator->store()->Lookup(qid);
+      }
+    }
+
+    // Output country name.
+    int begin = annotator->position();
+    auto *namearg = templ.GetArgument("name");
+    if (namearg != nullptr) {
+      templ.Extract(namearg);
+    } else {
+      annotator->Content(country);
+    }
+    int end = annotator->position();
+
+    // Output annotation.
+    if (!item.IsNil()) {
+      annotator->AddMention(begin, end, item);
+    }
+  }
+
+ private:
+  std::unordered_map<string, Handle> countries_;
+};
+
+REGISTER_WIKI_MACRO("flag", FlagTemplate);
 
 }  // namespace nlp
 }  // namespace sling

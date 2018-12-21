@@ -23,6 +23,7 @@
 #include "sling/base/types.h"
 #include "sling/file/file.h"
 #include "sling/nlp/wiki/wiki-parser.h"
+#include "sling/util/unicode.h"
 
 DEFINE_string(input, "", "input file with wiki template");
 
@@ -49,7 +50,9 @@ int main(int argc, char *argv[]) {
       const WikiParser::Node &n = parser.node(child);
       if (n.type == WikiParser::ARG) {
         std::cout << "    \"" << n.name();
-        std::cout << "\": /wp/info/" << n.name() << "\n";
+        string id = UTF8::Lower(n.name().str());
+        for (char &c : id) if (c == ' ') c = '_';
+        std::cout << "\": /wp/info/" << id << "\n";
       }
       child = n.next_sibling;
     }

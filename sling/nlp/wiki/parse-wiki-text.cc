@@ -53,11 +53,11 @@ class Resolver : public WikiLinkResolver {
   Text ResolveTemplate(Text link) override {
     WikipediaMap::PageInfo info;
     if (!wikimap_.GetPageInfo(FLAGS_lang, "Template", link, &info)) {
-      return false;
+      return Text();
     }
     if (info.type != WikipediaMap::TEMPLATE &&
         info.type != WikipediaMap::INFOBOX) {
-      return false;
+      return Text();
     }
     return info.qid;
   }
@@ -81,6 +81,7 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_lang.empty()) {
     resolver.Init();
     LoadStore("data/wiki/calendar.sling", store);
+    LoadStore("data/wiki/countries.sling", store);
     LoadStore("data/wiki/templates-" + FLAGS_lang + ".sling", store);
     LoadStore("data/wiki/units-" + FLAGS_lang + ".sling", store);
   }

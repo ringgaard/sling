@@ -427,6 +427,7 @@ void WikiTextSink::Font(int font) {
     switch (font_) {
       case 2: Content("</em>"); break;
       case 3: Content("</b>"); break;
+      case 4: Content("'"); Content("</b>"); break;
       case 5: Content("</em></b>"); break;
     }
     font_ = 0;
@@ -435,6 +436,7 @@ void WikiTextSink::Font(int font) {
     switch (font) {
       case 2: Content("<em>"); break;
       case 3: Content("<b>"); break;
+      case 4: Content("<b>"); Content("'"); font = 3; break;
       case 5: Content("<b><em>"); break;
     }
     font_ = font;

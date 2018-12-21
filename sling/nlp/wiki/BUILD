@@ -69,6 +69,7 @@ cc_library(
     "//sling/frame:object",
     "//sling/nlp/document",
     "//sling/string:numbers",
+    "//sling/string:strcat",
     "//sling/string:text",
   ],
 )

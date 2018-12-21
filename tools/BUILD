@@ -69,6 +69,7 @@ cc_binary(
     "//sling/file",
     "//sling/file:posix",
     "//sling/nlp/wiki:wiki-parser",
+    "//sling/util:unicode",
   ],
 )
 
