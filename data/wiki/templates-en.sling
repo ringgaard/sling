@@ -179,11 +179,11 @@
   }
 }
 
-"infobox officeholder": {
+"Infobox officeholder": {
   type: "infobox"
   class: /wp/infobox/officeholder
   fields: /wp/infobox/person/fields
-  fields: {
+  fields: {=/wp/infobox/officeholder/fields
     "honorific_prefix": /wp/info/honorific_prefix
     "honorific_suffix": /wp/info/honorific_suffix
 
@@ -213,6 +213,130 @@
     "predecessor": {+/wp/info/predecessor group: /wp/info/position}
     "successor": {+/wp/info/successor group: /wp/info/position}
     "prior_term": {+/wp/info/prior_term group: /wp/info/position}
+  }
+}
+
+"Infobox AM": {
+  type: "infobox"
+  class: /wp/infobox/am
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "constituency_AM": {+/wp/info/constituency_am group: /wp/info/position}
+    "assembly": {+/wp/info/assembly group: /wp/info/position}
+  }
+}
+
+"Infobox governor": {
+  type: "infobox"
+  class: /wp/infobox/governor
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "appointed": {+/wp/info/appointed group: /wp/info/position}
+  }
+}
+
+"Infobox judge": {
+  type: "infobox"
+  class: /wp/infobox/judge
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "nominator": {+/wp/info/nominator group: /wp/info/position}
+    "appointer": {+/wp/info/appointer group: /wp/info/position}
+  }
+}
+
+"Infobox candidate": {
+  type: "infobox"
+  class: /wp/infobox/candidate
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "nominee": {+/wp/info/nominee group: /wp/info/position}
+    "party_election": {+/wp/info/party_election group: /wp/info/position}
+    "election_date": {+/wp/info/election_date group: /wp/info/position}
+    "runningmate": {+/wp/info/runningmate group: /wp/info/position}
+    "opponent": {+/wp/info/opponent group: /wp/info/position}
+    "incumbent": {+/wp/info/incumbent group: /wp/info/position}
+    "candidate": {+/wp/info/candidate group: /wp/info/position}
+  }
+}
+
+"Infobox MP": {
+  type: "infobox"
+  class: /wp/infobox/mp
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "constituency_MP": {+/wp/info/constituency_mp group: /wp/info/position}
+    "parliament": {+/wp/info/parliament group: /wp/info/position}
+  }
+}
+
+
+"Infobox Congressman": {
+  type: "infobox"
+  class: /wp/infobox/congressman
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "state": {+/wp/info/state group: /wp/info/position}
+    "district": {+/wp/info/district group: /wp/info/position}
+    "speaker": {+/wp/info/speaker group: /wp/info/position}
+  }
+}
+
+"Infobox state representative": {
+  type: "infobox"
+  class: /wp/infobox/state_representative
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "state_house": {+/wp/info/state_house group: /wp/info/position}
+    "district": {+/wp/info/district group: /wp/info/position}
+    "state_assembly": {+/wp/info/state_assembly group: /wp/info/position}
+    "state_delegate": {+/wp/info/state_delegate group: /wp/info/position}
+    "state_legislature": {+/wp/info/state_legislature group: /wp/info/position}
+    "speaker": {+/wp/info/speaker group: /wp/info/position}
+  }
+}
+
+"Infobox senator": {
+  type: "infobox"
+  class: /wp/infobox/senator
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "state": {+/wp/info/state group: /wp/info/position}
+    "majorityleader": {+/wp/info/majorityleader group: /wp/info/position}
+    "district": {+/wp/info/district group: /wp/info/position}
+  }
+}
+
+"Infobox state senator": {
+  type: "infobox"
+  class: /wp/infobox/state_senator
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "state_senate": {+/wp/info/state_senate group: /wp/info/position}
+    "district": {+/wp/info/district group: /wp/info/position}
+    "majority_leader": {+/wp/info/majority_leader group: /wp/info/position}
+    "minority_leader": {+/wp/info/minority_leader group: /wp/info/position}
+    "majority_floor_leader": {+/wp/info/majority_floor_leader group: /wp/info/position}
+    "minority_floor_leader": {+/wp/info/minority_floor_leader group: /wp/info/position}
+  }
+}
+
+"Infobox Ukrainian legislative office": {
+  type: "infobox"
+  class: /wp/infobox/ukrainian_legislative_office
+  fields: /wp/infobox/person/fields
+  fields: /wp/infobox/officeholder/fields
+  fields: {
+    "convocation": {+/wp/info/convocation group: /wp/info/position}
   }
 }
 
