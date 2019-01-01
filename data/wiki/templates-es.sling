@@ -3,34 +3,15 @@
 "!":      {type: "text" text: "|"}
 "!!":     {type: "text" text: "||"}
 "'":      {type: "text" text: "'"}
-"'s":     {type: "text" text: "'s"}
-"′":      {type: "text" text: "′"}
-"' \"":   {type: "text" text: "' \""}
-"\" '":   {type: "text" text: "\" '"}
-;"' '":    {type: "text" text: "' '"}
-;"\"'\"":  {type: "text" text: "\"'\""}
-;"' \" '": {type: "text" text: "' \" '"}
-"-\"":    {type: "text" text: " \""}
-"\"-":    {type: "text" text: "\" "}
-"-'":     {type: "text" text: " '"}
-"'-":     {type: "text" text: "' "}
-;"--)":    {type: "text" text: " )"}
-"(-":     {type: "text" text: "( "}
-;"(--":    {type: "text" text: "( "}
 
-")!":     {type: "text" text: "]"}
 "!((":    {type: "text" text: "[["}
 "))!":    {type: "text" text: "]]"}
 "(":      {type: "text" text: "{"}
 ")":      {type: "text" text: "}"}
 "((":     {type: "text" text: "{{"}
 "))":     {type: "text" text: "}}"}
-"(((":    {type: "text" text: "{{{"}
-")))":    {type: "text" text: "}}}"}
 
 "·":      {type: "text" text: "&nbsp;<b>&middot;</b>"}
-"•":      {type: "text" text: "&nbsp;&bull;"}
-"\\":     {type: "text" text: "&nbsp;/"}
 "=":      {type: "text" text: "="}
 
 "fecha": {type: "date" year: 1 month: 2 day: 3 reverse: 1 format: /w/dates/es}

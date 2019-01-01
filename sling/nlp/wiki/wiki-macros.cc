@@ -37,14 +37,24 @@ class TextTemplate : public WikiMacro {
  public:
   void Init(const Frame &config) override {
     text_ = config.GetString("text");
+    link_ = config.GetHandle("link");
   }
 
   void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    // Output text.
+    int begin = annotator->position();
     annotator->Content(text_);
+    int end = annotator->position();
+
+    // Add link annotation.
+    if (!link_.IsNil()) {
+      annotator->AddMention(begin, end, link_);
+    }
   }
 
  private:
   string text_;
+  Handle link_;
 };
 
 REGISTER_WIKI_MACRO("text", TextTemplate);
@@ -574,6 +584,7 @@ class InfoboxTemplate : public WikiMacro {
       }
 
       if (field == nullptr) {
+        templ.ExtractSkip(arg);
         VLOG(5) << "unknown field " << name;
         continue;
       }
@@ -664,6 +675,14 @@ class CoordinateTemplate : public WikiMacro {
         if (templ.GetValue(2) == "S") lat = -lat;
         lng = templ.GetFloat(3);
         if (templ.GetValue(4) == "W") lng = -lng;
+        break;
+
+      case 6:
+      case 7:
+        lat = templ.GetFloat(1) + templ.GetFloat(2) / 60.0;
+        if (templ.GetValue(3) == "S") lat = -lat;
+        lng = templ.GetFloat(4) + templ.GetFloat(5) / 60.0;
+        if (templ.GetValue(6) == "W") lng = -lng;
         break;
 
       case 8:

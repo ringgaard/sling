@@ -1,36 +1,14 @@
 {=/wp/templates/it
 
-"!":      {type: "text" text: "|"}
 "!!":     {type: "text" text: "||"}
 "'":      {type: "text" text: "'"}
-"'s":     {type: "text" text: "'s"}
-"′":      {type: "text" text: "′"}
-"' \"":   {type: "text" text: "' \""}
-"\" '":   {type: "text" text: "\" '"}
-;"' '":    {type: "text" text: "' '"}
-;"\"'\"":  {type: "text" text: "\"'\""}
-;"' \" '": {type: "text" text: "' \" '"}
-"-\"":    {type: "text" text: " \""}
-"\"-":    {type: "text" text: "\" "}
-"-'":     {type: "text" text: " '"}
-"'-":     {type: "text" text: "' "}
-;"--)":    {type: "text" text: " )"}
-"(-":     {type: "text" text: "( "}
-;"(--":    {type: "text" text: "( "}
 
 ")!":     {type: "text" text: "]"}
-"!((":    {type: "text" text: "[["}
-"))!":    {type: "text" text: "]]"}
 "(":      {type: "text" text: "{"}
 ")":      {type: "text" text: "}"}
-"((":     {type: "text" text: "{{"}
-"))":     {type: "text" text: "}}"}
-"(((":    {type: "text" text: "{{{"}
-")))":    {type: "text" text: "}}}"}
 
 "·":      {type: "text" text: "&nbsp;<b>&middot;</b>"}
 "•":      {type: "text" text: "&nbsp;&bull;"}
-"\\":     {type: "text" text: "&nbsp;/"}
 "=":      {type: "text" text: "="}
 
 "data": {type: "date" year: 3 month: 2 day: 1 yearn: "A" monthn: "M" dayn: "G" format: /w/dates/it}

@@ -40,6 +40,341 @@
 "1/4": {type: "text" text: "¼"}
 "3/4": {type: "text" text: "¾"}
 
+"ABW": {type: "text" text: "Aruba" link: Q21203}
+"AFG": {type: "text" text: "Afghanistan" link: Q889}
+"AGO": {type: "text" text: "Angola" link: Q916}
+"AIA": {type: "text" text: "Anguilla" link: Q25228}
+"AL":  {type: "text" text: "Arab League" link: Q7172}
+"ALA": {type: "text" text: "Åland Islands" link: Q5689}
+"ALB": {type: "text" text: "Albania" link: Q222}
+"ANA": {type: "text" text: "Authorised Neutral Athletes" link: Q35122846}
+"AND": {type: "text" text: "Andorra" link: Q228}
+"ANT": {type: "text" text: "Netherlands Antilles" link: Q25227}
+"ANZ": {type: "text" text: "Australasia" link: Q45256}
+"ARE": {type: "text" text: "United Arab Emirates" link: Q878}
+"ARG": {type: "text" text: "Argentina" link: Q414}
+"ARM": {type: "text" text: "Armenia" link: Q399}
+"ASM": {type: "text" text: "American Samoa" link: Q16641}
+"ATA": {type: "text" text: "Antarctic Treaty area" link: Q21590062}
+"ATF": {type: "text" text: "French Southern and Antarctic Lands" link: Q129003}
+"ATG": {type: "text" text: "Antigua and Barbuda" link: Q781}
+"AUS": {type: "text" text: "Australia" link: Q408}
+"AUT": {type: "text" text: "Austria" link: Q40}
+"AZE": {type: "text" text: "Azerbaijan" link: Q227}
+
+"BDI": {type: "text" text: "Burundi" link: Q967}
+"BEL": {type: "text" text: "Belgium" link: Q31}
+"BEN": {type: "text" text: "Benin" link: Q962}
+"BES": {type: "text" text: "Caribbean Netherlands" link: Q27561}
+"BFA": {type: "text" text: "Burkina Faso" link: Q965}
+"BGD": {type: "text" text: "Bangladesh" link: Q902}
+"BGR": {type: "text" text: "Bulgaria" link: Q219}
+"BHR": {type: "text" text: "Bahrain" link: Q398}
+"BHS": {type: "text" text: "Bahamas" link: Q778}
+"BIH": {type: "text" text: "Bosnia and Herzegovina" link: Q225}
+"BIR": {type: "text" text: "Bosnia and Herzegovina" link: Q225}
+"BLM": {type: "text" text: "Saint-Barthélemy" link: Q25362}
+"BLR": {type: "text" text: "Belarus" link: Q184}
+"BLZ": {type: "text" text: "Belize" link: Q242}
+"BMU": {type: "text" text: "Bermuda" link: Q23635}
+"BOL": {type: "text" text: "Bolivia" link: Q750}
+"BOH": {type: "text" text: "Bohemia" link: Q39193}
+"BRA": {type: "text" text: "Brazil" link: Q155}
+"BRB": {type: "text" text: "Barbados" link: Q244}
+"BRN": {type: "text" text: "Brunei" link: Q921}
+"BTN": {type: "text" text: "Bhutan" link: Q917}
+"BVT": {type: "text" text: "Bouvet Island" link: Q23408}
+"BWA": {type: "text" text: "Botswana" link: Q963}
+
+"CAF": {type: "text" text: "Central African Republic" link: Q929}
+"CAN": {type: "text" text: "Canada" link: Q16}
+"CCK": {type: "text" text: "Cocos (Keeling) Islands" link: Q36004}
+"CEN": {type: "text" text: "Central America" link: Q27611}
+"CHE": {type: "text" text: "Switzerland" link: Q39}
+"CHL": {type: "text" text: "Chile" link: Q298}
+"CHN": {type: "text" text: "China" link: Q148}
+"CHN-MLD": {type: "text" text: "China (Mainland)" link: Q19188}
+"CHN-ROC": {type: "text" text: "China" link: Q13426199}
+"CHNML": {type: "text" text: "Mainland China" link: Q19188}
+"CIP": {type: "text" text: "International Paralympic Committee" link: Q175386}
+"CIS": {type: "text" text: " CIS" link: Q7779}
+"CIV": {type: "text" text: "Ivory Coast" link: Q1008}
+"CMR": {type: "text" text: "Cameroon" link: Q1009}
+"COD": {type: "text" text: "Democratic Republic of the Congo" link: Q974}
+"COD2": {type: "text" text: "DR of the Congo" link: Q974}
+"COE": {type: "text" text: "Council of Europe" link: Q8908}
+"COG": {type: "text" text: "Republic of the Congo" link: Q971}
+"COK": {type: "text" text: "Cook Islands" link: Q26988}
+"COL": {type: "text" text: "Colombia" link: Q739}
+"COM": {type: "text" text: "Comoros" link: Q970}
+"CPV": {type: "text" text: "Cape Verde" link: Q1011}
+"CRI": {type: "text" text: "Costa Rica" link: Q800}
+"CSK": {type: "text" text: "Czechoslovakia" link: Q33946}
+"CSR": {type: "text" text: "Czechoslovak Socialist Republic" link: Q853348}
+"CUB": {type: "text" text: "Cuba" link: Q241}
+"CUW": {type: "text" text: "Curaçao" link: Q25279}
+"CXR": {type: "text" text: "Christmas Island" link: Q31063}
+"CYM": {type: "text" text: "Cayman Islands" link: Q5785}
+"CYP": {type: "text" text: "Cyprus" link: Q229}
+"CZE": {type: "text" text: "Czech Republic" link: Q213}
+
+"DAG": {type: "text" text: "Dagestan" link: Q5118}
+"DDR": {type: "text" text: "German Democratic Republic" link: Q16957}
+"DEU": {type: "text" text: "Germany" link: Q183}
+"DJI": {type: "text" text: "Djibouti" link: Q977}
+"DMA": {type: "text" text: "Dominica" link: Q784}
+"DNK": {type: "text" text: "Denmark" link: Q35}
+"DNR": {type: "text" text: "Donetsk People's Republic" link: Q16150196}
+"DOM": {type: "text" text: "Dominican Republic" link: Q786}
+"DPRK": {type: "text" text: "North Korea" link: North Korea}
+"DZA": {type: "text" text: "Algeria" link: Q262}
+
+"ECU": {type: "text" text: "Ecuador" link: Q736}
+"EGY": {type: "text" text: "Egypt" link: Q79}
+"ENG": {type: "text" text: "England" link: Q21}
+"ERI": {type: "text" text: "Eritrea" link: Q986}
+"ESH": {type: "text" text: "Western Sahara" link: Q6250}
+"ESP": {type: "text" text: "Spain" link: Q29}
+"EST": {type: "text" text: "Estonia" link: Q191}
+"ETH": {type: "text" text: "Ethiopia" link: Q115}
+"ETM": {type: "text" text: "East Timor" link: Q574}
+"EU": {type: "text" text: "European Union" link: Q458}
+"EUA": {type: "text" text: "Germany" link: Q6807126}
+"EUR": {type: "text" text: "Europe" link: Q46}
+
+"FHR": {type: "text" text: "Republic of Haiti (1859–1957)" link: Q5864743}
+"FIN": {type: "text" text: "Finland" link: Q33}
+"FJI": {type: "text" text: "Fiji" link: Q712}
+"FLK": {type: "text" text: "Falkland Islands" link: Q9648}
+"FR-YUG": {type: "text" text: "Yugoslavia" link: Q37024}
+"FRA": {type: "text" text: "France" link: Q142}
+"FRO": {type: "text" text: "Faroe Islands" link: Q4628}
+"FSM": {type: "text" text: "Federated States of Micronesia" link: Q702}
+
+"GAB": {type: "text" text: "Gabon" link: Q1000}
+"GBR": {type: "text" text: "United Kingdom" link: Q145}
+"GBR2": {type: "text" text: "Great Britain" link: Q145}
+"GEO": {type: "text" text: "Georgia" link: Q230}
+"GGY": {type: "text" text: "Guernsey" link: Q25230}
+"GHA": {type: "text" text: "Ghana" link: Q117}
+"GIB": {type: "text" text: "Gibraltar" link: Q1410}
+"GIN": {type: "text" text: "Guinea" link: Q1006}
+"GLP": {type: "text" text: "Guadeloupe" link: Q17012}
+"GMB": {type: "text" text: "The Gambia" link: Q1005}
+"GNB": {type: "text" text: "Guinea-Bissau" link: Q1007}
+"GNQ": {type: "text" text: "Equatorial Guinea" link: Q983}
+"GRC": {type: "text" text: "Greece" link: Q41}
+"GRD": {type: "text" text: "Grenada" link: Q769}
+"GRL": {type: "text" text: "Greenland" link: Q223}
+"GTM": {type: "text" text: "Guatemala" link: Q774}
+"GUF": {type: "text" text: "French Guiana" link: Q3769}
+"GUM": {type: "text" text: "Guam" link: Q16635}
+"GUY": {type: "text" text: "Guyana" link: Q734}
+"GYF": {type: "text" text: "French Guiana" link: Q3769}
+
+"HKG": {type: "text" text: "Hong Kong" link: Q8646}
+"HKG-CHN": {type: "text" text: "Hong Kong, China" link: Q8646}
+"HMD": {type: "text" text: "Heard Island and McDonald Islands" link: Q131198}
+"HND": {type: "text" text: "Honduras" link: Q783}
+"HPR": {type: "text" text: "Hungarian People's Republic" link: Q16410}
+"HRV": {type: "text" text: "Croatia" link: Q224}
+"HTI": {type: "text" text: "Haiti" link: Q790}
+"HUN": {type: "text" text: "Hungary" link: Q28}
+
+"IDN": {type: "text" text: "Indonesia" link: Q252}
+"IMN": {type: "text" text: "Isle of Man" link: Q9676}
+"IND": {type: "text" text: "India" link: Q668}
+"IOC": {type: "text" text: "International Olympic Committee" link: Q40970}
+"IOT": {type: "text" text: "British Indian Ocean Territory" link: Q43448}
+"IRL": {type: "text" text: "Ireland" link: Q27}
+"IRL4": {type: "text" text: "Ireland" link: Q22890}
+"IRN": {type: "text" text: "Iran" link: Q794}
+"IRQ": {type: "text" text: "Iraq" link: Q796}
+"ISL": {type: "text" text: "Iceland" link: Q189}
+"ISR": {type: "text" text: "Israel" link: Q801}
+"ITA": {type: "text" text: "Italy" link: Q38}
+
+"JAM": {type: "text" text: "Jamaica" link: Q766}
+"JEY": {type: "text" text: "Jersey" link: Q785}
+"JOR": {type: "text" text: "Jordan" link: Q810}
+"JPN": {type: "text" text: "Japan" link: Q17}
+
+"KAZ": {type: "text" text: "Kazakhstan" link: Q232}
+"KEN": {type: "text" text: "Kenya" link: Q114}
+"KGZ": {type: "text" text: "Kyrgyzstan" link: Q813}
+"KHM": {type: "text" text: "Cambodia" link: Q424}
+"KIR": {type: "text" text: "Kiribati" link: Q710}
+"KNA": {type: "text" text: "Saint Kitts and Nevis" link: Q763}
+"KOR": {type: "text" text: "South Korea" link: Q884}
+"KOS": {type: "text" text: "Kosovo" link: Q1246}
+"KWT": {type: "text" text: "Kuwait" link: Q817}
+
+"LAO": {type: "text" text: "Laos" link: Q819}
+"LBN": {type: "text" text: "Lebanon" link: Q822}
+"LBR": {type: "text" text: "Liberia" link: Q1014}
+"LBY": {type: "text" text: "Libya" link: Q1016}
+"LCA": {type: "text" text: "Saint Lucia" link: Q760}
+"LIE": {type: "text" text: "Liechtenstein" link: Q347}
+"LKA": {type: "text" text: "Sri Lanka" link: Q854}
+"LPDR": {type: "text" text: "Lao People's Democratic Republic" link: Q819}
+"LSO": {type: "text" text: "Lesotho" link: Q1013}
+"LTU": {type: "text" text: "Lithuania" link: Q37}
+"LUX": {type: "text" text: "Luxembourg" link: Q32}
+"LVA": {type: "text" text: "Latvia" link: Q211}
+
+"MAC": {type: "text" text: "Macau" link: Q14773}
+"MAC-CHN": {type: "text" text: "Macau, China" link: Q14773}
+"MAF": {type: "text" text: "Saint Martin" link: Q126125}
+"MAR": {type: "text" text: "Morocco" link: Q1028}
+"MCO": {type: "text" text: "Monaco" link: Q235}
+"MD": {type: "text" text: "Republic of Moldova" link: Q217}
+"MDA": {type: "text" text: "Moldova" link: Q217}
+"MDA-PMR": {type: "text" text: "Transnistria" link: Q907112}
+"MDG": {type: "text" text: "Madagascar" link: Q1019}
+"MDV": {type: "text" text: "Maldives" link: Q826}
+"MENA": {type: "text" text: "Middle East and North Africa" link: Q984212}
+"MEX": {type: "text" text: "Mexico" link: Q96}
+"MHL": {type: "text" text: "Marshall Islands" link: Q709}
+"MIC": {type: "text" text: "Federated States of Micronesia" link: Q702}
+"MKD": {type: "text" text: "Macedonia" link: Q221}
+"MLI": {type: "text" text: "Mali" link: Q912}
+"MLT": {type: "text" text: "Malta" link: Q233}
+"MMR": {type: "text" text: "Myanmar" link: Q836}
+"MNE": {type: "text" text: "Montenegro" link: Q236}
+"MNG": {type: "text" text: "Mongolia" link: Q711}
+"MNP": {type: "text" text: "Northern Mariana Islands" link: Q16644}
+"MOZ": {type: "text" text: "Mozambique" link: Q1029}
+"MPR": {type: "text" text: "Mongolian People's Republic" link: Q212056}
+"MRT": {type: "text" text: "Mauritania" link: Q1025}
+"MSR": {type: "text" text: "Montserrat" link: Q13353}
+"MT": {type: "text" text: "Malta" link: Q233}
+"MTQ": {type: "text" text: "Martinique" link: Q17054}
+"MUS": {type: "text" text: "Mauritius" link: Q1027}
+"MWI": {type: "text" text: "Malawi" link: Q1020}
+"MYS": {type: "text" text: "Malaysia" link: Q833}
+"MYT": {type: "text" text: "Mayotte" link: Q17063}
+
+"NAM": {type: "text" text: "Namibia" link: Q1030}
+"NCL": {type: "text" text: "New Caledonia" link: Q33788}
+"NER": {type: "text" text: "Niger" link: Q1032}
+"NFK": {type: "text" text: "Norfolk Island" link: Q31057}
+"NGA": {type: "text" text: "Nigeria" link: Q1033}
+"NIC": {type: "text" text: "Nicaragua" link: Q811}
+"NIR": {type: "text" text: "Northern Ireland" link: Q26}
+"NIU": {type: "text" text: "Niue" link: Q34020}
+"NLD": {type: "text" text: "Netherlands" link: Q55}
+"NOR": {type: "text" text: "Norway" link: Q20}
+"NPL": {type: "text" text: "Nepal" link: Q837}
+"NRU": {type: "text" text: "Nauru" link: Q697}
+"NZL": {type: "text" text: "New Zealand" link: Q664}
+
+"OMN": {type: "text" text: "Oman" link: Q842}
+
+"PAK": {type: "text" text: "Pakistan" link: Q843}
+"PAN": {type: "text" text: "Panama" link: Q804}
+"PCN": {type: "text" text: "Pitcairn Islands" link: Q35672}
+"PER": {type: "text" text: "Peru" link: Q419}
+"PHL": {type: "text" text: "Philippines" link: Q928}
+"PLW": {type: "text" text: "Palau" link: Q695}
+"PNG": {type: "text" text: "Papua New Guinea" link: Q691}
+"POL": {type: "text" text: "Poland" link: Q36}
+"PRB": {type: "text" text: "People's Republic of Bulgaria" link: Q121932}
+"PRI": {type: "text" text: "Puerto Rico" link: Q1183}
+"PRK": {type: "text" text: "North Korea" link: Q423}
+"PRT": {type: "text" text: "Portugal" link: Q45}
+"PRY": {type: "text" text: "Paraguay" link: Q733}
+"PSE": {type: "text" text: "Palestine" link: Q219060}
+"PYF": {type: "text" text: "French Polynesia" link: Q30971}
+
+"QAT": {type: "text" text: "Qatar" link: Q846}
+
+"REU": {type: "text" text: "Réunion" link: Q17070}
+"ROC": {type: "text" text: "Republic of China" link: Q865}
+"ROC-TW": {type: "text" text: "Republic of China (Taiwan)" link: Q865}
+"ROK": {type: "text" text: "South Korea" link: Q884}
+"ROU": {type: "text" text: "Romania" link: Q218}
+"RSR": {type: "text" text: "Socialist Republic of Romania" link: Q842794}
+"RUS": {type: "text" text: "Russia" link: Q159}
+"RWA": {type: "text" text: "Rwanda" link: Q1037}
+
+"SADR": {type: "text" text: "Sahrawi Arab Democratic Republic" link: Q40362}
+"SAU": {type: "text" text: "Saudi Arabia" link: Q851}
+"SCG": {type: "text" text: "Serbia and Montenegro" link: Q37024}
+"SCO": {type: "text" text: "Scotland" link: Q22}
+"SDN": {type: "text" text: "Sudan" link: Q1049}
+"SEN": {type: "text" text: "Senegal" link: Q1041}
+"SGP": {type: "text" text: "Singapore" link: Q334}
+"SGS": {type: "text" text: "South Georgia and the South Sandwich Islands" link: Q35086}
+"SHN": {type: "text" text: "Saint Helena, Ascension and Tristan da Cunha" link: Q192184}
+"SJM": {type: "text" text: "Svalbard and Jan Mayen" link: Q842829}
+"SLB": {type: "text" text: "Solomon Islands" link: Q685}
+"SLE": {type: "text" text: "Sierra Leone" link: Q1044}
+"SLV": {type: "text" text: "El Salvador" link: Q792}
+"SMR": {type: "text" text: "San Marino" link: Q238}
+"SOM": {type: "text" text: "Somalia" link: Q1045}
+"SPM": {type: "text" text: "Saint Pierre and Miquelon" link: Q34617}
+"SRB": {type: "text" text: "Serbia" link: Q403}
+"SSD": {type: "text" text: "South Sudan" link: Q958}
+"STP": {type: "text" text: "São Tomé and Príncipe" link: Q1039}
+"SUR": {type: "text" text: "Suriname" link: Q730}
+"SVK": {type: "text" text: "Slovakia" link: Q214}
+"SVN": {type: "text" text: "Slovenia" link: Q215}
+"SWE": {type: "text" text: "Sweden" link: Q34}
+"SWZ": {type: "text" text: "Swaziland" link: Q1050}
+"SXM": {type: "text" text: "Sint Maarten" link: Q26273}
+"SYC": {type: "text" text: "Seychelles" link: Q1042}
+"SYR": {type: "text" text: "Syria" link: Q858}
+
+"TAH": {type: "text" text: "Tahiti" link: Q30971}
+"TCA": {type: "text" text: "Turks and Caicos Islands" link: Q18221}
+"TCD": {type: "text" text: "Chad" link: Q657}
+"TGO": {type: "text" text: "Togo" link: Q945}
+"THA": {type: "text" text: "Thailand" link: Q869}
+"TJK": {type: "text" text: "Tajikistan" link: Q863}
+"TKL": {type: "text" text: "Tokelau" link: Q36823}
+"TKM": {type: "text" text: "Turkmenistan" link: Q874}
+"TLS": {type: "text" text: "East Timor" link: Q574}
+"TON": {type: "text" text: "Tonga" link: Q678}
+"TPE": {type: "text" text: "Chinese Taipei" link: Q216923}
+"TRNC": {type: "text" text: "Northern Cyprus" link: Q23681}
+"TTO": {type: "text" text: "Trinidad and Tobago" link: Q754}
+"TUN": {type: "text" text: "Tunisia" link: Q948}
+"TUR": {type: "text" text: "Turkey" link: Q43}
+"TUV": {type: "text" text: "Tuvalu" link: Q672}
+"TWN": {type: "text" text: "Taiwan" link: Q865}
+"TWN-ROC": {type: "text" text: "Taiwan (Republic of China)" link: Q865}
+"TZA": {type: "text" text: "Tanzania" link: Q924}
+
+"UAR": {type: "text" text: "United Arab Republic" link: Q170468}
+"UGA": {type: "text" text: "Uganda" link: Q1036}
+"UKR": {type: "text" text: "Ukraine" link: Q212}
+"UMI": {type: "text" text: "United States Minor Outlying Islands" link: Q16645}
+"UNO": {type: "text" text: "United Nations" link: Q1065}
+"URS": {type: "text" text: "Soviet Union" link: Q15180}
+"URY": {type: "text" text: "Uruguay" link: Q77}
+"USA": {type: "text" text: "United States" link: Q30}
+"UZB": {type: "text" text: "Uzbekistan" link: Q265}
+
+"VAT": {type: "text" text: "Vatican City" link: Q237}
+"VCT": {type: "text" text: "Saint Vincent and the Grenadines" link: Q757}
+"VEN": {type: "text" text: "Venezuela" link: Q717}
+"VGB": {type: "text" text: "British Virgin Islands" link: Q25305}
+"VIR": {type: "text" text: "United States Virgin Islands" link: Q11703}
+"VNM": {type: "text" text: "Vietnam" link: Q881}
+"VUT": {type: "text" text: "Vanuatu" link: Q686}
+
+"WAL": {type: "text" text: "Wales" link: Q25}
+"WLF": {type: "text" text: "Wallis and Futuna" link: Q35555}
+"WSM": {type: "text" text: "Samoa" link: Q683}
+
+"YEM": {type: "text" text: "Yemen" link: Q805}
+"YUG": {type: "text" text: "Yugoslavia" link: Q83286}
+
+"ZAF": {type: "text" text: "South Africa" link: Q258}
+"ZAI": {type: "text" text: "Zaire" link: Q6500954}
+"ZMB": {type: "text" text: "Zambia" link: Q953}
+"ZWE": {type: "text" text: "Zimbabwe" link: Q954}
+
 "nbsp": {type: "text" text: "&nbsp;"}
 "sp": {type: "text" text: " "}
 "en dash": {type: "text" text: "&ndash;"}
@@ -65,7 +400,7 @@
 
 "frac": {type: "frac"}
 "quote": {type: "tag" arg: "text" argnum: 1 open: "<blockquote>" close: "</blockquote>"}
-"nowrap": {type: "tag" argnum: 1 open: "<span class=\"nowrap\">" close: "</span"}
+"nowrap": {type: "tag" argnum: 1 open: "<span class=\"nowrap\">" close: "</span>"}
 "define": {type: "define"}
 "cn span": {type: "tag" argnum: 1 argname: "text"}
 
@@ -94,6 +429,7 @@
 
 "death date": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
 "death date and age": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
+"death-date and age": {type: "date" full: 1 format: /w/dates/en}
 "death year and age": {type: "date" year: 1 format: /w/dates/en}
 
 "as of": {type: "date" year: 1 month: 2 day: 3 pre: "As of " format: /w/dates/en}
@@ -116,11 +452,8 @@
     "pre-nominals": /wp/info/pre_nominals
     "name": /wp/info/name
     "post-nominals": /wp/info/post_nominals
-    "alt": /wp/info/alt
-    "caption": /wp/info/caption
     "native_name": /wp/info/native_name
     "native_name_lang": /wp/info/native_name_lang
-    "pronunciation": /wp/info/pronunciation
     "birth_name": /wp/info/birth_name
     "birth_date": /wp/info/birth_date
     "birth_place": /wp/info/birth_place

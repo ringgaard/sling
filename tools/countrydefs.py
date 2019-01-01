@@ -5,6 +5,8 @@ import sling.task.corpora
 import sling.flags as flags
 import sys
 
+flags.define("--templ", default=False, action='store_true')
+
 flags.parse()
 
 # Initialize knowledge base.
@@ -18,5 +20,8 @@ for item in kb:
   if n_country_code in item:
     code = item[n_country_code]
     if type(code) is sling.Frame: code = code.resolve()
-    print '  "' + code + '": ' + item.id
+    if flags.arg.templ:
+      print '"%s": {type: "text" text: "%s" link: %s}' % (code, item.name, item.id)
+    else:
+      print '  "' + code + '": ' + item.id
 

@@ -3,20 +3,6 @@
 "!":      {type: "text" text: "|"}
 "!!":     {type: "text" text: "||"}
 "'":      {type: "text" text: "'"}
-"'s":     {type: "text" text: "'s"}
-"′":      {type: "text" text: "′"}
-"' \"":   {type: "text" text: "' \""}
-"\" '":   {type: "text" text: "\" '"}
-;"' '":    {type: "text" text: "' '"}
-;"\"'\"":  {type: "text" text: "\"'\""}
-;"' \" '": {type: "text" text: "' \" '"}
-"-\"":    {type: "text" text: " \""}
-"\"-":    {type: "text" text: "\" "}
-"-'":     {type: "text" text: " '"}
-"'-":     {type: "text" text: "' "}
-;"--)":    {type: "text" text: " )"}
-"(-":     {type: "text" text: "( "}
-;"(--":    {type: "text" text: "( "}
 
 ")!":     {type: "text" text: "]"}
 "!((":    {type: "text" text: "[["}
@@ -30,13 +16,12 @@
 
 "·":      {type: "text" text: "&nbsp;<b>&middot;</b>"}
 "•":      {type: "text" text: "&nbsp;&bull;"}
-"\\":     {type: "text" text: "&nbsp;/"}
 "=":      {type: "text" text: "="}
 
 "date": {type: "date" full: 1 year: 1 month: 2 day: 3 qual: 4 format: /w/dates/fr}
 "date-": {type: "date" full: 1 year: 1 month: 2 day: 3 qual: 4 format: /w/dates/fr}
 "date sport": {type: "date" year: 3 month: 2 day: 1 qual: 4 format: /w/dates/fr}
-"date france": {type: "date" year: 3 month: 2 day: 1 post: " en France" format: /w/dates/fr}
+"Date France": {type: "date" year: 3 month: 2 day: 1 post: " en France" format: /w/dates/fr}
 "date de naissance": {type: "date" year: 3 month: 2 day: 1 qual: 4 format: /w/dates/fr}
 "date de décès": {type: "date" year: 3 month: 2 day: 1 qual: 4 format: /w/dates/fr}
 "date de décès-": {type: "date" year: 3 month: 2 day: 1 qual: 4 format: /w/dates/fr}

@@ -4,19 +4,6 @@
 "!!":     {type: "text" text: "||"}
 "'":      {type: "text" text: "'"}
 "'s":     {type: "text" text: "'s"}
-"′":      {type: "text" text: "′"}
-"' \"":   {type: "text" text: "' \""}
-"\" '":   {type: "text" text: "\" '"}
-;"' '":    {type: "text" text: "' '"}
-;"\"'\"":  {type: "text" text: "\"'\""}
-;"' \" '": {type: "text" text: "' \" '"}
-"-\"":    {type: "text" text: " \""}
-"\"-":    {type: "text" text: "\" "}
-"-'":     {type: "text" text: " '"}
-"'-":     {type: "text" text: "' "}
-;"--)":    {type: "text" text: " )"}
-"(-":     {type: "text" text: "( "}
-;"(--":    {type: "text" text: "( "}
 
 ")!":     {type: "text" text: "]"}
 "!((":    {type: "text" text: "[["}
@@ -38,7 +25,7 @@
 "fødselsdato":  {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
 "dødsdato og alder":  {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
 "start dato": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
-"start dato og alder": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
+"startdato og alder": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
 
 "årstalfkr": {type: "year" bce: 1 post: " f.kr."}
 

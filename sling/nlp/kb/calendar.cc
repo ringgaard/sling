@@ -608,7 +608,7 @@ string DateFormat::AsString(const Date &date) const {
     default: return date.AsString();
   }
   string str;
-  char buf[8];
+  char buf[32];
   for (char c : format) {
     switch (c) {
       case 'Y':

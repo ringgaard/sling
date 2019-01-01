@@ -93,6 +93,11 @@ class WikiTemplate {
   void Extract(Text name) const { Extract(GetArgument(name)); }
   void Extract(int index) const { Extract(GetArgument(index)); }
 
+  // Skip extraction for template argument
+  void ExtractSkip(const Node *node) const;
+  void ExtractSkip(Text name) const { ExtractSkip(GetArgument(name)); }
+  void ExtractSkip(int index) const { ExtractSkip(GetArgument(index)); }
+
   // Check if a node is empty, i.e. only whitespace and comments.
   bool IsEmpty(const Node *node) const;
 

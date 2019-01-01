@@ -43,13 +43,12 @@ const WikiParser::Node *WikiTemplate::GetArgument(Text name) const {
 }
 
 const WikiParser::Node *WikiTemplate::GetArgument(int index) const {
-  int argnum = 1;
+  int argnum = 0;
   int child = node_.first_child;
   while (child != -1) {
     const Node &n = extractor_->parser().node(child);
-    if (n.type == WikiParser::ARG) {
-      if (argnum == index) return &n;
-      argnum++;
+    if (n.type == WikiParser::ARG &&  !n.named()) {
+      if (++argnum == index) return &n;
     }
     child = n.next_sibling;
   }
@@ -111,6 +110,12 @@ float WikiTemplate::GetFloat(const Node *node) const {
 void WikiTemplate::Extract(const Node *node) const {
   if (node != nullptr) {
     extractor_->ExtractNode(*node);
+  }
+}
+
+void WikiTemplate::ExtractSkip(const Node *node) const {
+  if (node != nullptr) {
+    extractor_->ExtractSkip(*node);
   }
 }
 
@@ -247,14 +252,9 @@ void WikiAnnotator::Template(const Node &node,
       if (unanchored) {
         macro->Extract(tmpl, this);
       } else {
-        //LOG(INFO) << "Generating macro for " << node.name();
         macro->Generate(tmpl, this);
       }
       return;
-    } else {
-      if (!unanchored && line_breaks_ == 0) {
-        //LOG(WARNING) << "No macro for template: " << node.name();
-      }
     }
   }
   extractor->ExtractSkip(node);

@@ -1,26 +1,9 @@
 {=/wp/templates/no
 
-"!":      {type: "text" text: "|"}
 "!!":     {type: "text" text: "||"}
 "'":      {type: "text" text: "'"}
-"'s":     {type: "text" text: "'s"}
-"′":      {type: "text" text: "′"}
-"' \"":   {type: "text" text: "' \""}
-"\" '":   {type: "text" text: "\" '"}
-;"' '":    {type: "text" text: "' '"}
-;"\"'\"":  {type: "text" text: "\"'\""}
-;"' \" '": {type: "text" text: "' \" '"}
-"-\"":    {type: "text" text: " \""}
-"\"-":    {type: "text" text: "\" "}
-"-'":     {type: "text" text: " '"}
-"'-":     {type: "text" text: "' "}
-;"--)":    {type: "text" text: " )"}
-"(-":     {type: "text" text: "( "}
-;"(--":    {type: "text" text: "( "}
 
 ")!":     {type: "text" text: "]"}
-"!((":    {type: "text" text: "[["}
-"))!":    {type: "text" text: "]]"}
 "(":      {type: "text" text: "{"}
 ")":      {type: "text" text: "}"}
 "((":     {type: "text" text: "{{"}

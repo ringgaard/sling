@@ -95,6 +95,13 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
           task->GetCounter(StrCat(kAliasSourceName[i], "_discarded_aliases"));
     }
 
+    // Load template repository configuration.
+    Frame template_config(commons_, "/wp/templates/" + language_);
+    if (template_config.valid()) {
+      LOG(INFO) << "Loading template configuration";
+      templates_.Init(this, template_config);
+    }
+
     // Output aliases for all redirects.
     aliases_ = task->GetSink("aliases");
     for (Handle redirect : wikimap_.redirects()) {
@@ -184,6 +191,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
 
     // Extract annotations from article.
     WikiAnnotator annotator(page.store(), this);
+    annotator.set_templates(&templates_);
     WikiExtractor extractor(parser);
     extractor.Extract(&annotator);
 
@@ -318,6 +326,9 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
 
   // Plain text tokenizer.
   nlp::DocumentTokenizer tokenizer_;
+
+  // Template macro repository.
+  WikiTemplateRepository templates_;
 
   // Channel for aliases.
   task::Channel *aliases_ = nullptr;

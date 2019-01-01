@@ -2,22 +2,6 @@
 
 "!":      {type: "text" text: "|"}
 "!!":     {type: "text" text: "||"}
-"'":      {type: "text" text: "'"}
-"'s":     {type: "text" text: "'s"}
-"′":      {type: "text" text: "′"}
-"' \"":   {type: "text" text: "' \""}
-"\" '":   {type: "text" text: "\" '"}
-;"' '":    {type: "text" text: "' '"}
-;"\"'\"":  {type: "text" text: "\"'\""}
-;"' \" '": {type: "text" text: "' \" '"}
-"-\"":    {type: "text" text: " \""}
-"\"-":    {type: "text" text: "\" "}
-"-'":     {type: "text" text: " '"}
-"'-":     {type: "text" text: "' "}
-;"--)":    {type: "text" text: " )"}
-"(-":     {type: "text" text: "( "}
-;"(--":    {type: "text" text: "( "}
-
 ")!":     {type: "text" text: "]"}
 "!((":    {type: "text" text: "[["}
 "))!":    {type: "text" text: "]]"}
@@ -27,10 +11,8 @@
 "))":     {type: "text" text: "}}"}
 "(((":    {type: "text" text: "{{{"}
 ")))":    {type: "text" text: "}}}"}
-
 "·":      {type: "text" text: "&nbsp;<b>&middot;</b>"}
 "•":      {type: "text" text: "&nbsp;&bull;"}
-"\\":     {type: "text" text: "&nbsp;/"}
 "=":      {type: "text" text: "="}
 
 }

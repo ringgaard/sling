@@ -4,6 +4,7 @@ import sling
 import sling.task.corpora
 import sling.flags as flags
 import sys
+import math
 
 flags.parse()
 
@@ -16,6 +17,8 @@ n_instance_of = kb["P31"]
 n_unit_symbol = kb["P5061"]
 n_si_base_unit = kb["Q223662"]
 n_si_derived_unit = kb["Q208469"]
+n_si_prefix = kb["Q131299"]
+n_numeric_value = kb["P1181"]
 
 # Unit types.
 unit_types = {
@@ -36,31 +39,6 @@ unit_types = {
   kb["Q1790144"],    # unit of time
   kb["Q2360980"],    # unit of amount
 }
-
-# SI unit prefixes.
-si_prefixes = [
-  ("Y", 1e24, "yotta"),
-  ("Z", 1e21, "zetta"),
-  ("E", 1e18, "exa"),
-  ("P", 1e15, "peta"),
-  ("T", 1e12, "tera"),
-  ("G", 1e9, "giga"),
-  ("M", 1e6, "mega"),
-  ("k", 1e3, "kilo"),
-  ("h", 1e2, "hecto"),
-  ("da", 1e1, "deca"),
-  ("d", 1e-1, "deci"),
-  ("c", 1e-2, "centi"),
-  ("m", 1e-3, "milli"),
-  ("μ", 1e-6, "milli"),
-  ("u", 1e-6, "micro"),
-  ("n", 1e-9, "nano"),
-  ("p", 1e-12, "pico"),
-  ("f", 1e-15, "femto"),
-  ("a", 1e-18, "atto"),
-  ("z", 1e-21, "zepto"),
-  ("y", 1e-24, "yocto"),
-]
 
 # Black-listed unknown that conflict with other more important units.
 blacklist = [
@@ -92,7 +70,8 @@ def trim_unit(unit):
   return unit
 
 # Determine unit scaling factor for sqaure and cubic units.
-def unit_factor(unit, factor):
+def unit_factor(unit, power):
+  factor = math.pow(10, power)
   end = unit.find("/")
   if end == -1: end = len(unit)
   if end > 0:
@@ -115,13 +94,30 @@ f.write("{=/w/units/" + language.code + "\n")
 
 units = {}
 si_units = []
+si_prefixes = []
 
 # Find all units in the knowledge base.
 for item in kb:
   # Check if item is a unit.
   is_unit = False
+  is_si_prefix = False
   for t in item(n_instance_of):
     if t in unit_types: is_unit = True
+    if t == n_si_prefix: is_si_prefix = True
+
+  # Collect SI prefixes.
+  if is_si_prefix:
+    value = item[n_numeric_value]
+    prefix = None
+    for symbol in item(n_unit_symbol):
+      prefix = symbol
+      lang = None
+      while type(prefix) is not str:
+        lang = prefix[n_lang]
+        prefix = prefix[n_qua]
+      if lang == language:
+        si_prefixes.append((prefix, int(math.log10(value)), item.name))
+
   if not is_unit: continue
   if item in blacklist: continue
 
@@ -163,12 +159,12 @@ for item in si_units:
     unit = trim_unit(unit)
     if lang != language and lang != None: continue
 
-    for prefix, factor, name in si_prefixes:
+    for prefix, power, name in si_prefixes:
       punit = prefix + unit
       if punit not in units:
         f.write('  "' + escape(punit) + '": {/w/unit: ' + item.id +
                 ' name: "' + name + item.name + '"' +
-                ' /w/amount: ' + str(unit_factor(punit, factor)) + '}\n')
+                ' /w/amount: ' + str(unit_factor(punit, power)) + '}\n')
         units[punit] = item
 
 f.write("}\n")
