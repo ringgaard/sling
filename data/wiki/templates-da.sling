@@ -40,7 +40,7 @@
     "dødsdato": /wp/info/death_date
     "dødssted": /wp/info/death_place
     "bopæl": /wp/info/residence
-    "hvilested": /wp/info/hvileresting_place
+    "hvilested": /wp/info/resting_place
     "nationalitet": /wp/info/nationality
     "beskæftigelse": /wp/info/occupation
     "politik": /wp/info/politics
@@ -75,8 +75,8 @@
     "præsteembeder": /wp/info/priesthoods
     "professorater": /wp/info/professorships
     "berømtfor": /wp/info/known_for
-    "påvirket af": /wp/info/influences
-    "har påvirket": /wp/info/influenced
+    "påvirket af": /wp/info/influenced
+    "har påvirket": /wp/info/influences
     "honorific-prefix": /wp/info/honorific_prefix
     "honorific-suffix": /wp/info/honorific_suffix
     "status": /wp/info/status
@@ -137,10 +137,10 @@
     "inspireret af": /wp/info/inspired_by
     "inspirerede": /wp/info/inspired
     "udstilling": /wp/info/exhibition
-    "offentlig": /wp/info/offentlig
+    "offentlig": /wp/info/public
     "indkøbt": /wp/info/bought
     "højeste_auktionspris": /wp/info/highest_bid
-    "Antal_ofre": /wp/info/causalties
+    "Antal_ofre": /wp/info/casualties
     "Ofre": /wp/info/victims
     "Offer": /wp/info/victim
     "Forbrydelse": /wp/info/crime
@@ -178,7 +178,7 @@
     "filmografi": /wp/info/filmography
     "bibliografi": /wp/info/bibliography
     "nomineringer": /wp/info/nominations
-    "hædret for": /wp/info/awarded_for
+    "hædret for": /wp/info/for_work
     "beskrevet": /wp/info/described_in
   }
 }
