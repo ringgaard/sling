@@ -102,7 +102,6 @@ void LoadStore(const string &filename, Store *store) {
     }
   }
 
-
   store->LockGC();
   FileInputStream stream(filename);
   Input input(&stream);

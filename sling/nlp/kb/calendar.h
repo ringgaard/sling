@@ -59,7 +59,7 @@ class Date {
   // integer. This can only be used for dates after 1000 AD.
   int AsNumber() const;
 
-  // Return a integer or string handle representing date.
+  // Return an integer or string handle representing date.
   Handle AsHandle(Store *store) const;
 
   // Convert date to string format. The date format depends on the precision:
