@@ -43,6 +43,15 @@ int main(int argc, char *argv[]) {
     if (templ.type != WikiParser::TEMPLATE) continue;
     std::cout << "\"" << templ.name() << "\": {\n";
     std::cout << "  type: \"infobox\"\n";
+    string cls = UTF8::Lower(templ.name().str());
+    bool first = true;
+    for (char &c : cls) {
+      if (c == ' ') {
+        c = first ? '/' : '_';
+        first = false;
+      }
+    }
+    std::cout << "  class: /wp/" << cls << "\n";
     std::cout << "  fields: {\n";
 
     int child = templ.first_child;
