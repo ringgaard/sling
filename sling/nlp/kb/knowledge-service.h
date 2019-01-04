@@ -23,7 +23,7 @@
 #include "sling/http/http-server.h"
 #include "sling/http/static-content.h"
 #include "sling/nlp/kb/calendar.h"
-#include "sling/nlp/wiki/name-table.h"
+#include "sling/nlp/kb/name-table.h"
 
 namespace sling {
 namespace nlp {

@@ -135,7 +135,7 @@ cc_binary(
     ":common",
     "//sling/base",
     "//sling/file:posix",
-    "//sling/nlp/wiki:name-table-builder",
+    "//sling/nlp/kb:name-table-builder",
     "//sling/task:job",
     "//sling/task:record-file-reader",
   ],

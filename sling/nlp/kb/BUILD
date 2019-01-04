@@ -26,6 +26,62 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "name-table-builder",
+  srcs = ["name-table-builder.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:repository",
+    "//sling/frame:object",
+    "//sling/task",
+    "//sling/task:frames",
+    "//sling/util:mutex",
+    "//sling/util:unicode",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "name-table",
+  srcs = ["name-table.cc"],
+  hdrs = ["name-table.h"],
+  deps = [
+    "//sling/base",
+    "//sling/file:repository",
+    "//sling/string:text",
+    "//sling/util:unicode",
+  ],
+)
+
+cc_library(
+  name = "phrase-table-builder",
+  srcs = ["phrase-table-builder.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:repository",
+    "//sling/frame:object",
+    "//sling/nlp/document:phrase-tokenizer",
+    "//sling/nlp/wiki",
+    "//sling/task",
+    "//sling/task:frames",
+    "//sling/util:mutex",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "phrase-table",
+  srcs = ["phrase-table.cc"],
+  hdrs = ["phrase-table.h"],
+  deps = [
+    "//sling/base",
+    "//sling/file:repository",
+    "//sling/frame:store",
+    "//sling/frame:object",
+    "//sling/string:text",
+  ],
+)
+
 embed_data(
   name = "app",
   srcs = [
@@ -41,15 +97,15 @@ cc_library(
   srcs = ["knowledge-service.cc"],
   hdrs = ["knowledge-service.h"],
   deps = [
-    ":calendar",
     ":app",
+    ":calendar",
+    ":name-table",
     "//sling/frame:object",
     "//sling/frame:serialization",
     "//sling/frame:store",
     "//sling/http:http-server",
     "//sling/http:static-content",
     "//sling/http:web-service",
-    "//sling/nlp/wiki:name-table",
   ],
 )
 
@@ -66,23 +122,6 @@ cc_binary(
     "//sling/http:web-service",
     "//sling/string:text",
     "//sling/string:strcat",
-  ],
-)
-
-cc_binary(
-  name = "facttest",
-  srcs = ["facttest.cc"],
-  deps = [
-    ":facts",
-    "//sling/base",
-    "//sling/base:clock",
-    "//sling/file",
-    "//sling/file:posix",
-    "//sling/file:textmap",
-    "//sling/frame:serialization",
-    "//sling/frame:store",
-    "//sling/util:bloom",
-    "//sling/util:sortmap",
   ],
 )
 
