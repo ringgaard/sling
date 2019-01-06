@@ -566,7 +566,7 @@ class InfoboxTemplate : public WikiMacro {
         field = &f->second;
         if (!field->group.IsNil()) index = 0;
       } else {
-        // Try to remove number suffix for repreated field.
+        // Try to remove number suffix for repeated field.
         int i = name.size() - 1;
         int power = 1;
         index = 0;

@@ -141,7 +141,12 @@ Frame WikidataConverter::Convert(const Frame &item) {
       }
     }
     if (!label.IsNil()) builder.Add(n_name_, label);
-    if (!label_language.IsNil()) builder.Add(n_lang_, label_language);
+    if (!label_language.IsNil()) {
+      auto f = languages_.find(label_language);
+      if (f != languages_.end()) {
+        builder.Add(n_lang_, f->second.language);
+      }
+    }
   }
 
   // Pick description matching label language.
