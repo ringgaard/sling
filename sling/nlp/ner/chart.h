@@ -56,9 +56,12 @@ class SpanChart {
   // Compute non-overlapping span covering with minimum cost.
   void Solve();
 
-  // Return item for token start and span length.
-  Item &item(int start, int length) {
-    return items_[start * size_ + length];
+  // Extract best span covering.
+  void Extract();
+
+  // Return item for token span (0 <= begin < size, 0 < end <= size).
+  Item &item(int begin, int end) {
+    return items_[begin * size_ + end - 1];
   }
 
  private:
@@ -70,7 +73,7 @@ class SpanChart {
   // Maximum phrase length considered for matching.
   int maxlen_;
 
-  // Chart items.
+  // Chart items indexed by span start and length.
   std::vector<Item> items_;
   int size_;
 

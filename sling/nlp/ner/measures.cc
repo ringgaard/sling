@@ -1,10 +1,10 @@
 // Measures:
-//  number (float/integer)
+//  number (float/integer) and compound numbers (e.g. 15 mio)
 //  date plus stand-alone years (1000-2100), month and year, stand-alone month, and weekdays
 //  quantity with unit
 //  amount with currency
 //  entities (person, location, organization, facility)
-// 
+//
 // Add all anchors from input document that matches in the phrase tables and add the
 // correct resolution as the aux item.
 //
@@ -99,7 +99,7 @@ enum NumberFormat {
 Handle ParseNumber(Text str, NumberFormat format = STANDARD_NUMBER_FORMAT) {
   Handle number;
   switch (format) {
-    case STANDARD_NUMBER_FORMAT: 
+    case STANDARD_NUMBER_FORMAT:
       number = ParseNumber(str, '.', ',', 0);
       if (number.IsNil()) number = ParseNumber(str, ',', '.', 0);
       break;

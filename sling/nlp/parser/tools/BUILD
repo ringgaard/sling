@@ -18,6 +18,7 @@ cc_binary(
     "//sling/string:printf",
   ],
 )
+
 cc_binary(
   name = "parser-server",
   srcs = ["parser-server.cc"],
