@@ -181,6 +181,7 @@ class Taxonomy {
  public:
   // Initialize taxonomy from a ranked type list.
   Taxonomy(const FactCatalog *catalog, const std::vector<Text> &types);
+  Taxonomy(const FactCatalog *catalog, const char **types);
 
   // Classify item according to taxonomy.
   Handle Classify(const Frame &item);

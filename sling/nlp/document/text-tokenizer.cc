@@ -1119,6 +1119,10 @@ void LDCTokenization::Init(CharacterFlags *char_flags) {
 
   // Special LDC tokens.
   AddTokenType("(...)", 0);
+
+  //AddTokenType("l'", 0);
+  //AddTokenType("d'", 0);
+  //AddTokenType("all'", 0);
 }
 
 }  // namespace nlp

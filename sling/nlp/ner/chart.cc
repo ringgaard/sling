@@ -17,8 +17,23 @@
 #include <vector>
 #include <utility>
 
+#include "sling/nlp/document/fingerprinter.h"
+
+// TODO: add existing span from document in Populate()
+//  - add aux item if there is an evoked span that can match the phrase
+//  - otherwise add a phrase match
+
 namespace sling {
 namespace nlp {
+
+void StopWords::Add(Text word) {
+  uint64 fp = Fingerprinter::Fingerprint(word);
+  fingerprints_.insert(fp);
+}
+
+bool StopWords::Discard(const Token &token) const {
+  return fingerprints_.count(token.Fingerprint()) > 0;
+}
 
 SpanChart::SpanChart(Document *document, int begin, int end, int maxlen)
     : document_(document), begin_(begin), end_(end), maxlen_(maxlen),
@@ -38,16 +53,20 @@ SpanChart::SpanChart(Document *document, int begin, int end, int maxlen)
   }
 }
 
-void SpanChart::Add(int begin, int end, Handle match) {
-  item(begin - begin_, end - begin_).aux = match;
-  tracking_.push_back(match);
+void SpanChart::Add(int begin, int end, Handle match, int flags) {
+  Item &span = item(begin - begin_, end - begin_);
+  span.aux = match;
+  span.flags |= flags;
+  if (match.IsRef()) tracking_.push_back(match);
+  if (end - begin > maxlen_) maxlen_ = end - begin;
 }
 
-void SpanChart::Populate(const PhraseTable &phrase_table) {
+void SpanChart::Populate(const PhraseTable &phrase_table,
+                         const StopWords &stopwords) {
   // Spans cannot start or end on ignored tokens (i.e. punctuation).
   std::vector<bool> skip(size_);
   for (int i = 0; i < size_; ++i) {
-    skip[i] = document_->token(i + begin_).Fingerprint() == 1;
+    skip[i] = stopwords.Discard(document_->token(i + begin_));
   }
 
   // Find all matching spans up to the maximum length.
@@ -57,13 +76,14 @@ void SpanChart::Populate(const PhraseTable &phrase_table) {
 
     for (int e = b + 1; e <= std::min(b + maxlen_, end_); ++e) {
       // Span cannot end on a skipped token.
-      if (skip[e - 1]) continue;
+      if (skip[e - begin_ - 1]) continue;
 
       // Find matches in phrase table.
       uint64 fp = document_->PhraseFingerprint(b, e);
       Item &span = item(b - begin_, e - begin_);
       span.matches = phrase_table.Find(fp);
       if (span.matches != nullptr) {
+        VLOG(1) << "Phrase: " << document_->PhraseText(b, e);
         span.cost = 1.0;
       }
     }
@@ -77,7 +97,7 @@ void SpanChart::Solve() {
     // Find next segment.
     int segment_end = segment_begin + 1;
     for (int b = segment_begin; b < segment_end; ++b) {
-      for (int l = 0; l < maxlen_; l++) {
+      for (int l = 1; l <= maxlen_; l++) {
         int e = b + l;
         if (e > size_) break;
         Item &span = item(b, e);
@@ -99,7 +119,7 @@ void SpanChart::Solve() {
           Item &left = item(s, s + n);
           Item &right = item(s + n, s + l);
           float cost = left.cost + right.cost;
-          if (cost <= span.cost) {
+          if (cost < span.cost) {
             span.cost = cost;
             span.split = n;
           }

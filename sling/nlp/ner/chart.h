@@ -15,6 +15,7 @@
 #ifndef SLING_NLP_NER_CHART_H_
 #define SLING_NLP_NER_CHART_H_
 
+#include <unordered_set>
 #include <vector>
 
 #include "sling/base/types.h"
@@ -24,6 +25,27 @@
 
 namespace sling {
 namespace nlp {
+
+// Span categorization flags.
+enum SpanFlags {
+  SPAN_NUMBER         = (1 << 0),
+  SPAN_NATURAL_NUMBER = (1 << 1),
+  SPAN_YEAR           = (1 << 2),
+};
+
+// Stop word list. A span cannot start or end with a stop word.
+class StopWords {
+ public:
+  // Add stop word.
+  void Add(Text word);
+
+  // Check if token is a stop word.
+  bool Discard(const Token &token) const;
+
+ private:
+  // Fingerprints for stop words.
+  std::unordered_set<uint64> fingerprints_;
+};
 
 // Span chart for sentence in document. This represents all the phrase matches
 // up to a maximum length.
@@ -42,16 +64,19 @@ class SpanChart {
 
     // Optimal split point for item.
     int split = -1;
+
+    // Span flags.
+    int flags = 0;
   };
 
   // Initialize empty span chart for (part of) document.
   SpanChart(Document *document, int begin, int end, int maxlen);
 
   // Add auxiliary match to chart.
-  void Add(int begin, int end, Handle match);
+  void Add(int begin, int end, Handle match, int flags = 0);
 
   // Populate chart with matches from phrase table.
-  void Populate(const PhraseTable &phrase_table);
+  void Populate(const PhraseTable &phrase_table, const StopWords &stopwords);
 
   // Compute non-overlapping span covering with minimum cost.
   void Solve();
@@ -63,6 +88,13 @@ class SpanChart {
   Item &item(int begin, int end) {
     return items_[begin * size_ + end - 1];
   }
+  int size() const { return size_; }
+  int maxlen() const { return maxlen_; }
+
+  // Get document part for chart.
+  Document *document() const { return document_; }
+  int begin() const { return begin_; }
+  int end() const { return end_; }
 
  private:
   // Document and token span for chart.
