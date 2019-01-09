@@ -20,6 +20,7 @@ cc_library(
     ":chart",
     "//sling/frame:store",
     "//sling/nlp/document",
+    "//sling/nlp/kb:calendar",
     "//sling/nlp/kb:facts",
   ],
 )

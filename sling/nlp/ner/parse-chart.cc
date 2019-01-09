@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   } else if (!FLAGS_input.empty()) {
     CHECK(File::ReadContents(FLAGS_input, &text));
   }
-  
+
   StopWords stopwords;
   stopwords.Add(".");
   stopwords.Add("``");
@@ -55,16 +55,19 @@ int main(int argc, char *argv[]) {
   //stopwords.Add("do");
 
   Store store;
+  store.LockGC();
   LoadStore("local/data/e/wiki/kb.sling", &store);
 
   PhraseTable aliases;
-  aliases.Load(&store, "local/data/e/wiki/nl/phrase-table.repo");
+  aliases.Load(&store, "local/data/e/wiki/en/phrase-table.repo");
 
   SpanTaxonomy taxonomy;
-  NumberAnnotator number;
+  NumberAnnotator numbers;
+  DateAnnotator dates;
   taxonomy.Init(&store);
-  number.Init(&store);
-  
+  numbers.Init(&store);
+  dates.Init(&store);
+
   Document document(&store);
   DocumentTokenizer tokenizer;
   DocumentLexer lexer(&tokenizer);
@@ -73,8 +76,11 @@ int main(int argc, char *argv[]) {
   for (SentenceIterator s(&document); s.more(); s.next()) {
     SpanChart chart(&document, s.begin(), s.end(), 10);
     chart.Populate(aliases, stopwords);
-    number.Annotate(&chart);
+
     taxonomy.Annotate(aliases, &chart);
+    numbers.Annotate(&chart);
+    dates.Annotate(aliases, &chart);
+
     chart.Solve();
     chart.Extract();
   }

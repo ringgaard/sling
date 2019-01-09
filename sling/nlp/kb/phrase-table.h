@@ -32,8 +32,6 @@ namespace nlp {
 class PhraseTable {
  public:
   struct Match {
-    Match(Text id, Handle item, int count, int form, bool reliable)
-      : id(id), item(item), count(count), form(form), reliable(reliable) {}
     Text id;        // entity id of matching item
     Handle item;    // matching item
     int count;      // frequency of matching item

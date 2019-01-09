@@ -33,6 +33,7 @@ class SpanTaxonomy {
  private:
   FactCatalog catalog_;
   Taxonomy *taxonomy_ = nullptr;
+  HandleMap<int> type_flags_;
 };
 
 class NumberAnnotator {
@@ -50,6 +51,26 @@ class NumberAnnotator {
   Name n_lang_{names_, "lang"};
   Name n_english_{names_, "/lang/en"};
   Name n_time_{names_, "/w/time"};
+};
+
+class DateAnnotator {
+ public:
+  void Init(Store *store);
+  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+
+ private:
+  Handle FindMatchByType(const PhraseTable &aliases,
+                         const PhraseTable::Phrase *phrase,
+                         Handle type,
+                         Store *store);
+
+  void AddDate(SpanChart *chart, int begin, int end, const Date &date);
+
+  Names names_;
+  Name n_instance_of_{names_, "P31"};
+  Name n_point_in_time_{names_, "P585"};
+  Name n_time_{names_, "/w/time"};
+  Name n_calendar_day_{names_, "Q47150325"};
 };
 
 }  // namespace nlp

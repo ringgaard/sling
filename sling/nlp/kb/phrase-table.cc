@@ -64,28 +64,34 @@ const PhraseTable::Phrase *PhraseTable::Find(uint64 fp) const {
 }
 
 void PhraseTable::GetMatches(const Phrase *phrase, Handles *matches) const {
-  matches->clear();
-  if (phrase == nullptr)  return;
+  if (phrase == nullptr) {
+    matches->clear();
+    return;
+  }
   const EntityPhrase *entities = phrase->entities();
+  matches->resize(phrase->num_entities());
   for (int i = 0; i < phrase->num_entities(); ++i) {
     int index = entities[i].index;
-    Handle handle = GetEntityHandle(index);
-    matches->push_back(handle);
+    (*matches)[i] = GetEntityHandle(index);
   }
 }
 
 void PhraseTable::GetMatches(const Phrase *phrase, MatchList *matches) const {
-  matches->clear();
-  if (phrase == nullptr) return;
+  if (phrase == nullptr) {
+    matches->clear();
+    return;
+  }
   const EntityPhrase *entities = phrase->entities();
+  matches->resize(phrase->num_entities());
   for (int i = 0; i < phrase->num_entities(); ++i) {
     int index = entities[i].index;
-    Text id = entity_index_.GetEntityId(index);
-    Handle handle = GetEntityHandle(index);
-    int count = entities[i].count();
-    int form = entities[i].form();
-    bool reliable = entities[i].reliable();
-    matches->emplace_back(id, handle, count, form, reliable);
+    Match &match = (*matches)[i];
+    match.id = entity_index_.GetEntityId(index);
+    match.item = GetEntityHandle(index);
+    auto &entity = entities[i];
+    match.count = entity.count();
+    match.form = entity.form();
+    match.reliable = entity.reliable();
   }
 }
 

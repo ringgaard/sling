@@ -28,9 +28,16 @@ namespace nlp {
 
 // Span categorization flags.
 enum SpanFlags {
-  SPAN_NUMBER         = (1 << 0),
-  SPAN_NATURAL_NUMBER = (1 << 1),
-  SPAN_YEAR           = (1 << 2),
+  SPAN_NUMBER            = (1 << 0),
+  SPAN_FRACTION          = (1 << 1),
+  SPAN_UNIT              = (1 << 2),
+  SPAN_YEAR              = (1 << 3),
+  SPAN_MONTH             = (1 << 4),
+  SPAN_WEEKDAY           = (1 << 5),
+  SPAN_CALENDAR_MONTH    = (1 << 6),
+  SPAN_CALENDAR_DAY      = (1 << 7),
+  SPAN_CALENDAR_PERIOD   = (1 << 8),
+  SPAN_DATE              = (1 << 9),
 };
 
 // Stop word list. A span cannot start or end with a stop word.

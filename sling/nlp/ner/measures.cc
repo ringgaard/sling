@@ -15,6 +15,7 @@
 #include "sling/nlp/ner/measures.h"
 
 #include "sling/frame/object.h"
+#include "sling/nlp/kb/calendar.h"
 
 namespace sling {
 namespace nlp {
@@ -53,6 +54,7 @@ SpanTaxonomy::~SpanTaxonomy() {
 }
 
 void SpanTaxonomy::Init(Store *store) {
+#if 0
   static const char *span_taxonomy[] = {
     "Q215627",     // person
     "Q4164871",    // position
@@ -84,35 +86,70 @@ void SpanTaxonomy::Init(Store *store) {
     "Q47574",      // unit of measurement
     nullptr,
   };
+#endif
+
+  static std::pair<const char *, int> span_taxonomy[] = {
+    {"Q47150325", SPAN_CALENDAR_DAY},     // calendar day of a given year
+    {"Q47018478", SPAN_CALENDAR_MONTH},   // calendar month of a given year
+    {"Q14795564", SPAN_CALENDAR_PERIOD},  // date of periodic occurrence
+    {"Q41825",    SPAN_WEEKDAY},          // day of the week
+    {"Q47018901", SPAN_MONTH},            // calendar month
+    {"Q577",      SPAN_YEAR},             // year
+    {"Q29964144", SPAN_YEAR},             // year BC
+    {"Q21199",    SPAN_NUMBER},           // natural number
+    {"Q66055",    SPAN_FRACTION},         // fraction
+    {"Q47574",    SPAN_UNIT},             // unit of measurement
+    {nullptr, 0},
+  };
+
+  std::vector<Text> types;
+  for (auto *type = span_taxonomy; type->first != nullptr; ++type) {
+    const char *name = type->first;
+    int flags = type->second;
+    Handle t = store->LookupExisting(name);
+    if (t.IsNil()) {
+      LOG(WARNING) << "Ignoring unknown type in taxonomy: " << name;
+      continue;
+    }
+    type_flags_[t] = flags;
+    types.push_back(name);
+  }
 
   catalog_.Init(store);
-  taxonomy_ = new Taxonomy(&catalog_, span_taxonomy);
+  taxonomy_ = new Taxonomy(&catalog_, types);
 }
 
 void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
-  Store *store = chart->document()->store();
-  Handles matches(store);
+  Document *document = chart->document();
+  Store *store = document->store();
+  PhraseTable::MatchList matches;
   Handle name = store->Lookup("name");
   for (int b = 0; b < chart->size(); ++b) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = b + 1; e <= end; ++e) {
-      LOG(INFO) << b << "-" << e;
+      CaseForm form = document->Form(b, e);
+      //LOG(INFO) << b << "-" << e << " form: " << form;
       SpanChart::Item &span = chart->item(b, e);
-      matches.clear();
-      if (!span.aux.IsNil()) {
-        matches.push_back(span.aux);
-      } else if (span.matches != nullptr) {
-        aliases.GetMatches(span.matches, &matches);
-      }
-      if (matches.empty()) continue;
-      for (Handle h : matches) {
-        // TODO: only use matches with the correct form.
-        if (!store->IsFrame(h)) continue;
-        Frame item(store, h);
+      aliases.GetMatches(span.matches, &matches);
+      for (const auto &match : matches) {
+        // Skip if case forms conflict.
+        Frame item(store, match.item);
+        if (match.form != CASE_NONE &&
+            form != CASE_NONE &&
+            match.form != form) {
+          //LOG(INFO) << "Skip '" << document->PhraseText(b + chart->begin(), e + chart->begin()) << "': " << item.Id() << " " << item.GetString(name);
+          continue;
+        }
+
         Handle type = taxonomy_->Classify(item);
         if (type.IsNil()) continue;
         Frame t(store, type);
-        LOG(INFO) << "'" << chart->document()->PhraseText(b + chart->begin(), e + chart->begin()) << "': " << item.Id() << " " << item.GetString(name) << " is " << t.GetString(name);
+
+        auto f = type_flags_.find(type);
+        if (f != type_flags_.end()) {
+          span.flags |= f->second;
+          LOG(INFO) << "'" << document->PhraseText(b + chart->begin(), e + chart->begin()) << "': " << item.Id() << " " << item.GetString(name) << " is " << t.GetString(name);
+        }
       }
     }
   }
@@ -148,6 +185,7 @@ void NumberAnnotator::Annotate(SpanChart *chart) {
       Handle number = ParseNumber(word, format);
       if (!number.IsNil()) {
         // Numbers between 1582 and 2038 are considered years.
+        int flags = SPAN_NUMBER;
         if (word.size() == 4 && all_digits && number.IsInt()) {
           int value = number.AsInt();
           if (value >= 1582 && value <= 2038) {
@@ -155,9 +193,10 @@ void NumberAnnotator::Annotate(SpanChart *chart) {
             b.AddIsA(n_time_);
             b.AddIs(number);
             number = b.Create().handle();
+            flags = SPAN_DATE;
           }
         }
-        chart->Add(t, t + 1, number);
+        chart->Add(t, t + 1, number, flags);
       }
     }
   }
@@ -243,6 +282,83 @@ Handle NumberAnnotator::ParseNumber(Text str, Format format) {
       break;
   }
   return number;
+}
+
+void DateAnnotator::Init(Store *store) {
+  CHECK(names_.Bind(store));
+}
+
+Handle DateAnnotator::FindMatchByType(const PhraseTable &aliases,
+                                      const PhraseTable::Phrase *phrase,
+                                      Handle type,
+                                      Store *store) {
+  Handles matches(store);
+  aliases.GetMatches(phrase, &matches);
+  for (Handle h : matches) {
+    Frame item(store, h);
+    for (const Slot &s : item) {
+      if (s.name == n_instance_of_ && store->Resolve(s.value) == type) {
+        return h;
+      }
+    }
+  }
+  return Handle::nil();
+}
+
+void DateAnnotator::AddDate(SpanChart *chart, int begin, int end,
+                            const Date &date) {
+  Store *store = chart->document()->store();
+  Builder builder(store);
+  builder.AddIsA(n_time_);
+  builder.AddIs(date.AsHandle(store));
+  Handle h = builder.Create().handle();
+  chart->Add(begin + chart->begin(), end + chart->begin(), h, SPAN_DATE);
+}
+
+void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
+  Document *document = chart->document();
+  Store *store = document->store();
+  PhraseTable::MatchList matches;
+  for (int b = 0; b < chart->size(); ++b) {
+    int end = std::min(b + chart->maxlen(), chart->size());
+    for (int e = end; e > b; --e) {
+      SpanChart::Item &span = chart->item(b, e);
+      Date date;
+      if (span.flags & SPAN_CALENDAR_DAY) {
+        // Date with year, month and day.
+        LOG(INFO) << "Calendar date: " << document->PhraseText(b + chart->begin(), e + chart->begin());
+        Handle h = FindMatchByType(aliases, span.matches,
+                                   n_calendar_day_.handle(), store);
+        if (!h.IsNil()) {
+          Frame item(store, h);
+          date.ParseFromFrame(item);
+          if (date.precision == Date::DAY) {
+            AddDate(chart, b, e, date);
+            b = e;
+            break;
+          }
+        }
+      } else if (span.flags & SPAN_CALENDAR_MONTH) {
+        LOG(INFO) << "Calendar month: " << document->PhraseText(b + chart->begin(), e + chart->begin());
+        b = e;
+        break;
+      } else if (span.flags & SPAN_CALENDAR_PERIOD) {
+        LOG(INFO) << "Period: " << document->PhraseText(b + chart->begin(), e + chart->begin());
+        b = e;
+        // TODO: get year
+        break;
+      } else if (span.flags & SPAN_CALENDAR_MONTH) {
+        LOG(INFO) << "Month: " << document->PhraseText(b + chart->begin(), e + chart->begin());
+        b = e;
+        // TODO: get year
+        break;
+      } else if (span.flags & SPAN_YEAR) {
+        LOG(INFO) << "Year: " << document->PhraseText(b + chart->begin(), e + chart->begin());
+        b = e;
+        break;
+      }
+    }
+  }
 }
 
 }  // namespace nlp
