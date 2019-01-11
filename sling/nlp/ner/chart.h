@@ -31,13 +31,18 @@ enum SpanFlags {
   SPAN_NUMBER            = (1 << 0),
   SPAN_FRACTION          = (1 << 1),
   SPAN_UNIT              = (1 << 2),
-  SPAN_YEAR              = (1 << 3),
-  SPAN_MONTH             = (1 << 4),
-  SPAN_WEEKDAY           = (1 << 5),
-  SPAN_CALENDAR_MONTH    = (1 << 6),
-  SPAN_CALENDAR_DAY      = (1 << 7),
-  SPAN_CALENDAR_PERIOD   = (1 << 8),
-  SPAN_DATE              = (1 << 9),
+  SPAN_CURRENCY          = (1 << 3),
+  SPAN_YEAR              = (1 << 4),
+  SPAN_YEAR_BC           = (1 << 5),
+  SPAN_MONTH             = (1 << 6),
+  SPAN_WEEKDAY           = (1 << 7),
+  SPAN_CALENDAR_MONTH    = (1 << 8),
+  SPAN_CALENDAR_DAY      = (1 << 9),
+  SPAN_DAY_OF_YEAR       = (1 << 10),
+  SPAN_DECADE            = (1 << 11),
+  SPAN_CENTURY           = (1 << 12),
+  SPAN_DATE              = (1 << 13),
+  SPAN_MEASURE           = (1 << 14),
 };
 
 // Stop word list. A span cannot start or end with a stop word.
@@ -60,6 +65,9 @@ class SpanChart {
  public:
   // Chart item.
   struct Item {
+    // Check span flag.
+    bool is(int flag) const { return flags & flag; }
+
     // Phrase matches in phrase table.
     const PhraseTable::Phrase *matches = nullptr;
 
@@ -102,6 +110,11 @@ class SpanChart {
   Document *document() const { return document_; }
   int begin() const { return begin_; }
   int end() const { return end_; }
+
+  // Return phrase for chart item. The begin and end are relative to the chart.
+  string phrase(int b, int e) const {
+    return document_->PhraseText(b + begin_, e + begin_);
+  }
 
  private:
   // Document and token span for chart.

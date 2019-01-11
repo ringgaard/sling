@@ -49,55 +49,45 @@ namespace nlp {
 //
 // integer number between 1592 and 2038 is year if it is only digits
 
+void SpanAnnotator::Init(Store *store) {
+  CHECK(names_.Bind(store));
+}
+
+Handle SpanAnnotator::FindMatch(const PhraseTable &aliases,
+                                const PhraseTable::Phrase *phrase,
+                                const Name &type,
+                                Store *store) {
+  Handles matches(store);
+  aliases.GetMatches(phrase, &matches);
+  for (Handle h : matches) {
+    Frame item(store, h);
+    for (const Slot &s : item) {
+      if (s.name == n_instance_of_ && store->Resolve(s.value) == type) {
+        return h;
+      }
+    }
+  }
+  return Handle::nil();
+}
+
 SpanTaxonomy::~SpanTaxonomy() {
   delete taxonomy_;
 }
 
 void SpanTaxonomy::Init(Store *store) {
-#if 0
-  static const char *span_taxonomy[] = {
-    "Q215627",     // person
-    "Q4164871",    // position
-    "Q12737077",   // occupation
-    "Q216353",     // title
-    "Q4438121",    // sports organization
-    "Q215380",     // band
-    "Q2385804",    // educational institution
-    "Q783794",     // company
-    "Q17334923",   // location
-    "Q43229",      // organization
-    "Q2188189",    // musical work
-    "Q571",        // book
-    "Q732577",     // publication
-    "Q11424",      // film
-    "Q101352",     // family name
-    "Q202444",     // given name
-    "Q838948",     // work of art
-    "Q47461344",   // written work
-
-    "Q47150325",   // calendar day of a given year
-    "Q47018478",   // calendar month of a given year
-    "Q14795564",   // determinator for date of periodic occurrence
-    "Q41825",      // day of the week
-    "Q47018901",   // calendar month
-    "Q577",        // year
-    "Q21199",      // natural number
-    "Q66055",      // fraction
-    "Q47574",      // unit of measurement
-    nullptr,
-  };
-#endif
-
   static std::pair<const char *, int> span_taxonomy[] = {
     {"Q47150325", SPAN_CALENDAR_DAY},     // calendar day of a given year
     {"Q47018478", SPAN_CALENDAR_MONTH},   // calendar month of a given year
-    {"Q14795564", SPAN_CALENDAR_PERIOD},  // date of periodic occurrence
+    {"Q14795564", SPAN_DAY_OF_YEAR},      // date of periodic occurrence
     {"Q41825",    SPAN_WEEKDAY},          // day of the week
     {"Q47018901", SPAN_MONTH},            // calendar month
     {"Q577",      SPAN_YEAR},             // year
-    {"Q29964144", SPAN_YEAR},             // year BC
+    {"Q29964144", SPAN_YEAR_BC},          // year BC
+    {"Q39911",    SPAN_DECADE},           // decade
+    {"Q578",      SPAN_CENTURY},          // century
     {"Q21199",    SPAN_NUMBER},           // natural number
     {"Q66055",    SPAN_FRACTION},         // fraction
+    {"Q8142",     SPAN_CURRENCY},         // currency
     {"Q47574",    SPAN_UNIT},             // unit of measurement
     {nullptr, 0},
   };
@@ -128,7 +118,6 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = b + 1; e <= end; ++e) {
       CaseForm form = document->Form(b, e);
-      //LOG(INFO) << b << "-" << e << " form: " << form;
       SpanChart::Item &span = chart->item(b, e);
       aliases.GetMatches(span.matches, &matches);
       for (const auto &match : matches) {
@@ -137,7 +126,6 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         if (match.form != CASE_NONE &&
             form != CASE_NONE &&
             match.form != form) {
-          //LOG(INFO) << "Skip '" << document->PhraseText(b + chart->begin(), e + chart->begin()) << "': " << item.Id() << " " << item.GetString(name);
           continue;
         }
 
@@ -148,15 +136,13 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         auto f = type_flags_.find(type);
         if (f != type_flags_.end()) {
           span.flags |= f->second;
-          LOG(INFO) << "'" << document->PhraseText(b + chart->begin(), e + chart->begin()) << "': " << item.Id() << " " << item.GetString(name) << " is " << t.GetString(name);
+          LOG(INFO) << "'" << chart->phrase(b, e) << "': " << item.Id()
+                    << " " << item.GetString(name) << " is "
+                    << t.GetString(name) << " reliable: " << match.reliable;
         }
       }
     }
   }
-}
-
-void NumberAnnotator::Init(Store *store) {
-  CHECK(names_.Bind(store));
 }
 
 void NumberAnnotator::Annotate(SpanChart *chart) {
@@ -284,25 +270,101 @@ Handle NumberAnnotator::ParseNumber(Text str, Format format) {
   return number;
 }
 
-void DateAnnotator::Init(Store *store) {
-  CHECK(names_.Bind(store));
+void MeasureAnnotator::Init(Store *store) {
+  static const char *unit_types[] = {
+    "Q10387685",   // unit of density
+    "Q10387689",   // unit of power
+    "Q1302471",    // unit of volume
+    "Q1371562",    // unit of area
+    "Q15222637",   // unit of speed
+    "Q15976022",   // unit of force
+    "Q16604158",   // unit of charge
+    "Q1790144",    // unit of time
+    "Q1978718",    // unit of length
+    "Q2916980",    // unit of energy
+    "Q3647172",    // unit of mass
+    "Q8142",       // currency
+    nullptr,
+  };
+
+  SpanAnnotator::Init(store);
+  for (const char **type = unit_types; *type != nullptr; ++type) {
+    units_.insert(store->Lookup(*type));
+  }
 }
 
-Handle DateAnnotator::FindMatchByType(const PhraseTable &aliases,
-                                      const PhraseTable::Phrase *phrase,
-                                      Handle type,
-                                      Store *store) {
-  Handles matches(store);
-  aliases.GetMatches(phrase, &matches);
-  for (Handle h : matches) {
-    Frame item(store, h);
-    for (const Slot &s : item) {
-      if (s.name == n_instance_of_ && store->Resolve(s.value) == type) {
-        return h;
+void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
+  Document *document = chart->document();
+  Store *store = document->store();
+  PhraseTable::MatchList matches;
+  for (int b = 0; b < chart->size(); ++b) {
+    int end = std::min(b + chart->maxlen(), chart->size());
+    for (int e = end; e > b; --e) {
+      SpanChart::Item &span = chart->item(b, e);
+      if (!span.is(SPAN_UNIT) && !span.is(SPAN_CURRENCY)) continue;
+
+      // Get unit.
+      Handle unit = Handle::nil();
+      PhraseTable::MatchList matches;
+      aliases.GetMatches(span.matches, &matches);
+      for (auto &match : matches) {
+        if (!match.reliable) continue;
+        Frame item(store, match.item);
+        for (const Slot &s : item) {
+          if (s.name == n_instance_of_) {
+            Handle type = store->Resolve(s.value);
+            if (units_.count(type) > 0) {
+              unit = match.item;
+              break;
+            }
+          }
+        }
+        if (!unit.IsNil()) break;
       }
+      if (unit.IsNil()) continue;
+
+      // Find number to the left.
+      int left_min = std::max(0, b - chart->maxlen());
+      Handle number = Handle::nil();
+      int start;
+      for (int left = left_min; left < b; ++left) {
+        SpanChart::Item &number_span = chart->item(left, b);
+        if (!number_span.is(SPAN_NUMBER)) {
+          continue;
+        }
+        if (number_span.aux.IsNumber()) {
+          start = left;
+          number = number_span.aux;
+          break;
+        }
+      }
+
+      // Add quantity annotation.
+      if (!number.IsNil()) {
+        AddQuantity(chart, start, e, number, unit);
+        break;
+      }
+
+      // TODO: try to find number to the right for currency, e.g. USD 500.
+      // TODO: handle special symbols: % $ pound yen etc.
     }
   }
-  return Handle::nil();
+}
+
+void MeasureAnnotator::AddQuantity(SpanChart *chart, int begin, int end,
+                                   Handle amount, Handle unit) {
+  Store *store = chart->document()->store();
+  Builder builder(store);
+  builder.AddIsA(n_quantity_);
+  builder.Add(n_amount_, amount);
+  builder.Add(n_unit_, unit);
+  Handle h = builder.Create().handle();
+  chart->Add(begin + chart->begin(), end + chart->begin(), h, SPAN_MEASURE);
+}
+
+void DateAnnotator::Init(Store *store) {
+  SpanAnnotator::Init(store);
+  calendar_.Init(store);
 }
 
 void DateAnnotator::AddDate(SpanChart *chart, int begin, int end,
@@ -315,6 +377,34 @@ void DateAnnotator::AddDate(SpanChart *chart, int begin, int end,
   chart->Add(begin + chart->begin(), end + chart->begin(), h, SPAN_DATE);
 }
 
+int DateAnnotator::GetYear(const PhraseTable &aliases,
+                           Store *store, SpanChart *chart,
+                           int pos, int *end) {
+  // Skip date delimiters.
+  if (pos == chart->size()) return 0;
+  const string &word = chart->document()->token(pos + chart->begin()).word();
+  if (word == "," || word == "de" || word == "del") pos++;
+
+  // Try to find year annotation at position.
+  for (int e = std::min(pos + chart->maxlen(), chart->size()); e > pos; --e) {
+    SpanChart::Item &span = chart->item(pos, e);
+    Handle year = Handle::nil();
+    if (span.is(SPAN_YEAR)) {
+      year = FindMatch(aliases, span.matches, n_year_, store);
+    } else if (span.is(SPAN_YEAR_BC)) {
+      year = FindMatch(aliases, span.matches, n_year_bc_, store);
+    }
+    if (!year.IsNil()) {
+      Date date(Object(store, year));
+      if (date.precision == Date::YEAR) {
+        *end = e;
+        return date.year;
+      }
+    }
+  }
+  return 0;
+}
+
 void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   Document *document = chart->document();
   Store *store = document->store();
@@ -324,11 +414,9 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
     for (int e = end; e > b; --e) {
       SpanChart::Item &span = chart->item(b, e);
       Date date;
-      if (span.flags & SPAN_CALENDAR_DAY) {
+      if (span.is(SPAN_CALENDAR_DAY)) {
         // Date with year, month and day.
-        LOG(INFO) << "Calendar date: " << document->PhraseText(b + chart->begin(), e + chart->begin());
-        Handle h = FindMatchByType(aliases, span.matches,
-                                   n_calendar_day_.handle(), store);
+        Handle h = FindMatch(aliases, span.matches, n_calendar_day_, store);
         if (!h.IsNil()) {
           Frame item(store, h);
           date.ParseFromFrame(item);
@@ -338,24 +426,69 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
             break;
           }
         }
-      } else if (span.flags & SPAN_CALENDAR_MONTH) {
-        LOG(INFO) << "Calendar month: " << document->PhraseText(b + chart->begin(), e + chart->begin());
-        b = e;
+      } else if (span.is(SPAN_CALENDAR_MONTH)) {
+        // Date with month and year.
+        Handle h = FindMatch(aliases, span.matches, n_calendar_month_, store);
+        if (!h.IsNil()) {
+          Frame item(store, h);
+          date.ParseFromFrame(item);
+          if (date.precision == Date::MONTH) {
+            AddDate(chart, b, e, date);
+            b = e;
+            break;
+          }
+        }
+      } else if (span.is(SPAN_DAY_OF_YEAR)) {
+        // Day of year with day and month.
+        Handle h = FindMatch(aliases, span.matches, n_day_of_year_, store);
+        if (calendar_.GetDayAndMonth(h, &date)) {
+          int year = GetYear(aliases, store, chart, e, &e);
+          if (year != 0) {
+            date.year = year;
+            date.precision = Date::DAY;
+            AddDate(chart, b, e, date);
+            b = e;
+            break;
+          }
+        }
+      } else if (span.is(SPAN_CALENDAR_MONTH)) {
+        // Month.
+        Handle h = FindMatch(aliases, span.matches, n_month_, store);
+        if (calendar_.GetMonth(h, &date)) {
+          int year = GetYear(aliases, store, chart, e, &e);
+          if (year != 0) {
+            date.year = year;
+            date.precision = Date::MONTH;
+            AddDate(chart, b, e, date);
+            b = e;
+            break;
+          }
+        }
         break;
-      } else if (span.flags & SPAN_CALENDAR_PERIOD) {
-        LOG(INFO) << "Period: " << document->PhraseText(b + chart->begin(), e + chart->begin());
-        b = e;
-        // TODO: get year
-        break;
-      } else if (span.flags & SPAN_CALENDAR_MONTH) {
-        LOG(INFO) << "Month: " << document->PhraseText(b + chart->begin(), e + chart->begin());
-        b = e;
-        // TODO: get year
-        break;
-      } else if (span.flags & SPAN_YEAR) {
-        LOG(INFO) << "Year: " << document->PhraseText(b + chart->begin(), e + chart->begin());
-        b = e;
-        break;
+      } else if (span.is(SPAN_YEAR) && !span.is(SPAN_NUMBER)) {
+        Handle h = FindMatch(aliases, span.matches, n_year_, store);
+        date.ParseFromFrame(Frame(store, h));
+        if (date.precision == Date::YEAR) {
+          AddDate(chart, b, e, date);
+          b = e;
+          break;
+        }
+      } else if (span.is(SPAN_DECADE)) {
+        Handle h = FindMatch(aliases, span.matches, n_decade_, store);
+        date.ParseFromFrame(Frame(store, h));
+        if (date.precision == Date::DECADE) {
+          AddDate(chart, b, e, date);
+          b = e;
+          break;
+        }
+      } else if (span.is(SPAN_CENTURY)) {
+        Handle h = FindMatch(aliases, span.matches, n_century_, store);
+        date.ParseFromFrame(Frame(store, h));
+        if (date.precision == Date::CENTURY) {
+          AddDate(chart, b, e, date);
+          b = e;
+          break;
+        }
       }
     }
   }

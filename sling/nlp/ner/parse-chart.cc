@@ -18,6 +18,7 @@
 
 DEFINE_string(text, "", "Text to parse");
 DEFINE_string(input, "", "File with text to parse");
+DEFINE_string(lang, "en", "Language");
 
 using namespace sling;
 using namespace sling::nlp;
@@ -59,13 +60,16 @@ int main(int argc, char *argv[]) {
   LoadStore("local/data/e/wiki/kb.sling", &store);
 
   PhraseTable aliases;
-  aliases.Load(&store, "local/data/e/wiki/en/phrase-table.repo");
+  aliases.Load(&store,
+               "local/data/e/wiki/" + FLAGS_lang + "/phrase-table.repo");
 
   SpanTaxonomy taxonomy;
   NumberAnnotator numbers;
+  MeasureAnnotator measures;
   DateAnnotator dates;
   taxonomy.Init(&store);
   numbers.Init(&store);
+  measures.Init(&store);
   dates.Init(&store);
 
   Document document(&store);
@@ -77,8 +81,13 @@ int main(int argc, char *argv[]) {
     SpanChart chart(&document, s.begin(), s.end(), 10);
     chart.Populate(aliases, stopwords);
 
+    LOG(INFO) << "Taxonomy annotation";
     taxonomy.Annotate(aliases, &chart);
+    LOG(INFO) << "Number annotation";
     numbers.Annotate(&chart);
+    LOG(INFO) << "Measure annotation";
+    measures.Annotate(aliases, &chart);
+    LOG(INFO) << "Date annotation";
     dates.Annotate(aliases, &chart);
 
     chart.Solve();
