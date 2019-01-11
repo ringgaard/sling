@@ -39,7 +39,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
 
     // Set phrase normalization.
     tokenizer_.set_normalization(
-        ParseNormalization(task->Get("normalization", "lcp")));
+        ParseNormalization(task->Get("normalization", "lc")));
 
     // Statistics.
     num_aliases_ = task->GetCounter("aliases");

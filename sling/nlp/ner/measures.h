@@ -55,6 +55,7 @@ class NumberAnnotator : public SpanAnnotator {
   enum Format {STANDARD, IMPERIAL, NORWEGIAN};
 
   void Annotate(SpanChart *chart);
+
  private:
   static Handle ParseNumber(Text str, char tsep, char dsep, char msep);
   static Handle ParseNumber(Text str, Format format);
@@ -63,6 +64,14 @@ class NumberAnnotator : public SpanAnnotator {
   Name n_lang_{names_, "lang"};
   Name n_english_{names_, "/lang/en"};
   Name n_time_{names_, "/w/time"};
+};
+
+class NumberScaleAnnotator : public SpanAnnotator {
+ public:
+  void Init(Store *store);
+  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+ private:
+  HandleMap<float> scalars_;
 };
 
 class MeasureAnnotator : public SpanAnnotator {

@@ -120,7 +120,7 @@ enum Normalization {
   NORMALIZE_WHITESPACE  = 0x10,  // remove whitespace
 
   // Default normalization.
-  NORMALIZE_DEFAULT = NORMALIZE_CASE | NORMALIZE_LETTERS | NORMALIZE_PUNCTUATION
+  NORMALIZE_DEFAULT = NORMALIZE_CASE | NORMALIZE_LETTERS
 };
 
 // Parse a list of normalization specifiers to a normalization bit mask.

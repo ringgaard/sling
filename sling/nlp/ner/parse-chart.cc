@@ -35,7 +35,15 @@ int main(int argc, char *argv[]) {
 
   StopWords stopwords;
   stopwords.Add(".");
+  stopwords.Add(",");
+  stopwords.Add("-");
+  stopwords.Add(":");
+  stopwords.Add(";");
+  stopwords.Add("(");
+  stopwords.Add(")");
   stopwords.Add("``");
+  stopwords.Add("''");
+  stopwords.Add("--");
   stopwords.Add("the");
   stopwords.Add("a");
   stopwords.Add("an");
@@ -65,10 +73,13 @@ int main(int argc, char *argv[]) {
 
   SpanTaxonomy taxonomy;
   NumberAnnotator numbers;
+  NumberScaleAnnotator scales;
   MeasureAnnotator measures;
   DateAnnotator dates;
+
   taxonomy.Init(&store);
   numbers.Init(&store);
+  scales.Init(&store);
   measures.Init(&store);
   dates.Init(&store);
 
@@ -85,6 +96,7 @@ int main(int argc, char *argv[]) {
     taxonomy.Annotate(aliases, &chart);
     LOG(INFO) << "Number annotation";
     numbers.Annotate(&chart);
+    scales.Annotate(aliases, &chart);
     LOG(INFO) << "Measure annotation";
     measures.Annotate(aliases, &chart);
     LOG(INFO) << "Date annotation";

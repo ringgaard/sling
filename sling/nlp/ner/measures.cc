@@ -22,13 +22,14 @@ namespace nlp {
 
 // Measures:
 //  number (float/integer) and compound numbers (e.g. 15 mio)
-//  date plus stand-alone years (1000-2100), month and year, stand-alone month, and weekdays
+//  date plus stand-alone years (1000-2100), month and year, stand-alone month,
+//  and weekdays
 //  quantity with unit
 //  amount with currency
 //  entities (person, location, organization, facility)
 //
-// Add all anchors from input document that matches in the phrase tables and add the
-// correct resolution as the aux item.
+// Add all anchors from input document that matches in the phrase tables and
+// add the correct resolution as the aux item.
 //
 // For persons, add last name mentions as resolved mentions
 // Aux items take precendence over the matches
@@ -45,7 +46,7 @@ namespace nlp {
 //   calendar month (Q47018901) (January, February, ...)
 //   determinator for date of periodic occurrence (Q14795564) (e.g. February 3)
 //   day of the week (Q41825) (Monday, Tueday, ...)
-//   day of the week within a given month (Q51118183) (e.g. second Tuesday in May)
+//   day of the week within a given month (Q51118183)
 //
 // integer number between 1592 and 2038 is year if it is only digits
 
@@ -85,13 +86,13 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q29964144", SPAN_YEAR_BC},          // year BC
     {"Q39911",    SPAN_DECADE},           // decade
     {"Q578",      SPAN_CENTURY},          // century
-    {"Q21199",    SPAN_NUMBER},           // natural number
-    {"Q66055",    SPAN_FRACTION},         // fraction
+    {"Q21199",    SPAN_NATURAL_NUMBER},   // natural number
     {"Q8142",     SPAN_CURRENCY},         // currency
     {"Q47574",    SPAN_UNIT},             // unit of measurement
     {nullptr, 0},
   };
 
+  SpanAnnotator::Init(store);
   std::vector<Text> types;
   for (auto *type = span_taxonomy; type->first != nullptr; ++type) {
     const char *name = type->first;
@@ -113,33 +114,43 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   Document *document = chart->document();
   Store *store = document->store();
   PhraseTable::MatchList matches;
-  Handle name = store->Lookup("name");
   for (int b = 0; b < chart->size(); ++b) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = b + 1; e <= end; ++e) {
-      CaseForm form = document->Form(b, e);
       SpanChart::Item &span = chart->item(b, e);
+      if (span.matches == nullptr) continue;
       aliases.GetMatches(span.matches, &matches);
+      CaseForm form = document->Form(b + chart->begin(), e + chart->begin());
+      bool nomatch = true;
       for (const auto &match : matches) {
         // Skip if case forms conflict.
-        Frame item(store, match.item);
         if (match.form != CASE_NONE &&
             form != CASE_NONE &&
             match.form != form) {
           continue;
         }
+        nomatch = false;
 
+        // Classify item.
+        Frame item(store, match.item);
         Handle type = taxonomy_->Classify(item);
         if (type.IsNil()) continue;
-        Frame t(store, type);
 
         auto f = type_flags_.find(type);
         if (f != type_flags_.end()) {
           span.flags |= f->second;
+
+          Frame t(store, type);
           LOG(INFO) << "'" << chart->phrase(b, e) << "': " << item.Id()
-                    << " " << item.GetString(name) << " is "
-                    << t.GetString(name) << " reliable: " << match.reliable;
+                    << " " << item.GetString("name") << " is "
+                    << t.GetString("name") << " reliable: " << match.reliable;
         }
+      }
+
+      // Remove matches if all matches have conflicting case forms.
+      if (nomatch) {
+        LOG(INFO) << "Discard '" << chart->phrase(b, e) << "'";
+        span.matches = nullptr;
       }
     }
   }
@@ -270,6 +281,77 @@ Handle NumberAnnotator::ParseNumber(Text str, Format format) {
   return number;
 }
 
+void NumberScaleAnnotator::Init(Store *store) {
+  static std::pair<const char *, float> scalars[] = {
+    {"Q43016", 1e3},      // thousand
+    {"Q38526", 1e6},      // million
+    {"Q16021", 1e9},      // billion
+    {"Q862978", 1e12},    // trillion
+    {nullptr, 0},
+  };
+
+  for (auto *scale = scalars; scale->first != nullptr; ++scale) {
+    const char *qid = scale->first;
+    float scalar = scale->second;
+    scalars_[store->LookupExisting(qid)] = scalar;
+  }
+}
+
+void NumberScaleAnnotator::Annotate(const PhraseTable &aliases,
+                                    SpanChart *chart) {
+  Document *document = chart->document();
+  Store *store = document->store();
+  for (int b = 0; b < chart->size(); ++b) {
+    int end = std::min(b + chart->maxlen(), chart->size());
+    for (int e = end; e > b; --e) {
+      SpanChart::Item &span = chart->item(b, e);
+      if (!span.is(SPAN_NATURAL_NUMBER)) continue;
+      if (span.is(SPAN_NUMBER)) continue;
+
+      // Get scalar.
+      float scale = 0;
+      Handles matches(store);
+      aliases.GetMatches(span.matches, &matches);
+      for (Handle item : matches) {
+        auto f = scalars_.find(item);
+        if (f != scalars_.end()) {
+          scale = f->second;
+          break;
+        }
+      }
+      if (scale == 0) continue;
+      LOG(INFO) << "Scale: " << chart->phrase(b, e);
+
+      // Find number to the left.
+      int left_end = b;
+      int left_begin = std::max(0, left_end - chart->maxlen());
+      Handle number = Handle::nil();
+      int start;
+      for (int left = left_begin; left < left_end; ++left) {
+        SpanChart::Item &number_span = chart->item(left, left_end);
+        if (!number_span.is(SPAN_NUMBER)) continue;
+        if (number_span.aux.IsNumber()) {
+          start = left;
+          number = number_span.aux;
+          LOG(INFO) << "scaled number: " << chart->phrase(start, e);
+          break;
+        }
+      }
+
+      // Add scaled number annotation.
+      if (number.IsInt()) {
+        float value = number.AsInt() * scale;
+        chart->Add(start + chart->begin(), e + chart->begin(),
+                   Handle::Float(value), SPAN_NUMBER);
+      } else if (number.IsFloat()) {
+        float value = number.AsFloat() * scale;
+        chart->Add(start + chart->begin(), e + chart->begin(),
+                   Handle::Float(value), SPAN_NUMBER);
+      }
+    }
+  }
+}
+
 void MeasureAnnotator::Init(Store *store) {
   static const char *unit_types[] = {
     "Q10387685",   // unit of density
@@ -284,6 +366,7 @@ void MeasureAnnotator::Init(Store *store) {
     "Q2916980",    // unit of energy
     "Q3647172",    // unit of mass
     "Q8142",       // currency
+    "Q756202",     // reserve currency
     nullptr,
   };
 
@@ -322,16 +405,20 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         if (!unit.IsNil()) break;
       }
       if (unit.IsNil()) continue;
+      LOG(INFO) << "Unit: " << chart->phrase(b, e);
 
       // Find number to the left.
-      int left_min = std::max(0, b - chart->maxlen());
+      int left_end = b;
+      if (left_end > 0 && chart->token(left_end - 1).word() == "-") {
+        // Allow dash between number and unit.
+        left_end--;
+      }
+      int left_begin = std::max(0, left_end - chart->maxlen());
       Handle number = Handle::nil();
       int start;
-      for (int left = left_min; left < b; ++left) {
-        SpanChart::Item &number_span = chart->item(left, b);
-        if (!number_span.is(SPAN_NUMBER)) {
-          continue;
-        }
+      for (int left = left_begin; left < left_end; ++left) {
+        SpanChart::Item &number_span = chart->item(left, left_end);
+        if (!number_span.is(SPAN_NUMBER)) continue;
         if (number_span.aux.IsNumber()) {
           start = left;
           number = number_span.aux;
@@ -345,8 +432,27 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         break;
       }
 
-      // TODO: try to find number to the right for currency, e.g. USD 500.
-      // TODO: handle special symbols: % $ pound yen etc.
+      // Find number to the right for currency (e.g. USD 100).
+      if (span.is(SPAN_CURRENCY)) {
+        int right_begin = e;
+        int right_end = std::min(right_begin + chart->maxlen(), chart->size());
+        Handle number = Handle::nil();
+        int end;
+        for (int right = right_end - 1; right >= right_begin; --right) {
+          SpanChart::Item &number_span = chart->item(right_begin, right);
+          if (!number_span.is(SPAN_NUMBER)) continue;
+          if (number_span.aux.IsNumber()) {
+            end = right;
+            number = number_span.aux;
+            break;
+          }
+        }
+
+        // Add quantity annotation for amount.
+        if (!number.IsNil()) {
+          AddQuantity(chart, b, end, number, unit);
+        }
+      }
     }
   }
 }
@@ -382,7 +488,7 @@ int DateAnnotator::GetYear(const PhraseTable &aliases,
                            int pos, int *end) {
   // Skip date delimiters.
   if (pos == chart->size()) return 0;
-  const string &word = chart->document()->token(pos + chart->begin()).word();
+  const string &word = chart->token(pos).word();
   if (word == "," || word == "de" || word == "del") pos++;
 
   // Try to find year annotation at position.

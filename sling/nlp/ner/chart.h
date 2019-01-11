@@ -29,7 +29,7 @@ namespace nlp {
 // Span categorization flags.
 enum SpanFlags {
   SPAN_NUMBER            = (1 << 0),
-  SPAN_FRACTION          = (1 << 1),
+  SPAN_NATURAL_NUMBER    = (1 << 1),
   SPAN_UNIT              = (1 << 2),
   SPAN_CURRENCY          = (1 << 3),
   SPAN_YEAR              = (1 << 4),
@@ -114,6 +114,11 @@ class SpanChart {
   // Return phrase for chart item. The begin and end are relative to the chart.
   string phrase(int b, int e) const {
     return document_->PhraseText(b + begin_, e + begin_);
+  }
+
+  // Return token for chart item. The index is relative to the chart.
+  const Token &token(int index) const {
+    return document_->token(index + begin_);
   }
 
  private:
