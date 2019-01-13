@@ -178,7 +178,7 @@ class PhraseTable {
   Handles *entity_table_ = nullptr;
 
   // Text normalization flags.
-  string normalization_ = "lc";
+  string normalization_ = "lcn";
 };
 
 }  // namespace nlp

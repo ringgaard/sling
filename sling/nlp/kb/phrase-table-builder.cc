@@ -39,7 +39,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
 
     // Set phrase normalization.
     tokenizer_.set_normalization(
-        ParseNormalization(task->Get("normalization", "lc")));
+        ParseNormalization(task->Get("normalization", "lcn")));
 
     // Statistics.
     num_aliases_ = task->GetCounter("aliases");
@@ -218,6 +218,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
   int noisy_alias_sources_ =
     (1 << SRC_WIKIPEDIA_ANCHOR) |
     (1 << SRC_WIKIPEDIA_LINK) |
+    (1 << SRC_WIKIPEDIA_REDIRECT) |
     (1 << SRC_WIKIPEDIA_DISAMBIGUATION);
 
   // Phrase tokenizer.

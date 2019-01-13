@@ -127,6 +127,10 @@ bool Unicode::IsPunctuation(int c) {
   return Is(c, CATMASK_PUNCTUATION);
 }
 
+bool Unicode::IsNamePunctuation(int c) {
+  return Is(c, CATMASK_NAME_PUNCTUATION) || c == '.';
+}
+
 int Unicode::ToLower(int c) {
   if (c & unicode_tab_mask) return c;
   return unicode_lower_tab[c];
@@ -150,6 +154,9 @@ int Unicode::Normalize(int c, int flags) {
   }
   if (flags & NORMALIZE_PUNCTUATION) {
     if (IsPunctuation(c)) c = 0;
+  }
+  if (flags & NORMALIZE_NAMEPUNCT) {
+    if (IsNamePunctuation(c)) c = 0;
   }
   if (flags & NORMALIZE_WHITESPACE) {
     if (IsWhitespace(c)) c = 0;
