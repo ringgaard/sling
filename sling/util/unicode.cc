@@ -49,6 +49,7 @@ Normalization ParseNormalization(const string &spec) {
       case 'd': flags |= NORMALIZE_DIGITS; break;
       case 'p': flags |= NORMALIZE_PUNCTUATION; break;
       case 'w': flags |= NORMALIZE_WHITESPACE; break;
+      case 'n': flags |= NORMALIZE_NAME; break;
       default:
         LOG(FATAL) << "Unknown normalization specifier: " << spec;
     }
@@ -155,7 +156,7 @@ int Unicode::Normalize(int c, int flags) {
   if (flags & NORMALIZE_PUNCTUATION) {
     if (IsPunctuation(c)) c = 0;
   }
-  if (flags & NORMALIZE_NAMEPUNCT) {
+  if (flags & NORMALIZE_NAME) {
     if (IsNamePunctuation(c)) c = 0;
   }
   if (flags & NORMALIZE_WHITESPACE) {
