@@ -64,6 +64,7 @@ string NormalizationString(Normalization normalization) {
   if (normalization & NORMALIZE_DIGITS) str.push_back('d');
   if (normalization & NORMALIZE_PUNCTUATION) str.push_back('p');
   if (normalization & NORMALIZE_WHITESPACE) str.push_back('w');
+  if (normalization & NORMALIZE_NAME) str.push_back('n');
   return str;
 }
 

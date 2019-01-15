@@ -216,10 +216,12 @@ class PhraseTableBuilder : public task::FrameProcessor {
   // Noisy alias sources. Aliases that are only backed by noisy alias sources
   // are not marked as reliable.
   int noisy_alias_sources_ =
+    (1 << SRC_WIKIPEDIA_TITLE) |
     (1 << SRC_WIKIPEDIA_ANCHOR) |
     (1 << SRC_WIKIPEDIA_LINK) |
     (1 << SRC_WIKIPEDIA_REDIRECT) |
-    (1 << SRC_WIKIPEDIA_DISAMBIGUATION);
+    (1 << SRC_WIKIPEDIA_DISAMBIGUATION) |
+    (1 << SRC_WIKIDATA_FOREIGN);
 
   // Phrase tokenizer.
   PhraseTokenizer tokenizer_;
