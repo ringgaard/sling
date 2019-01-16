@@ -119,7 +119,7 @@ cc_binary(
     ":common",
     "//sling/base",
     "//sling/file:posix",
-    "//sling/nlp/wiki:profile-aliases",
+    "//sling/nlp/wiki:aliases",
     "//sling/task:job",
     "//sling/task:record-file-reader",
     "//sling/task:record-file-writer",

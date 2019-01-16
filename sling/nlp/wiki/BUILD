@@ -66,7 +66,7 @@ cc_library(
   deps = [
     ":wiki-extractor",
     "//sling/base:registry",
-    "//sling/frame:object",
+    "//sling/frame",
     "//sling/nlp/document",
     "//sling/string:numbers",
     "//sling/string:strcat",
@@ -151,13 +151,13 @@ cc_library(
 )
 
 cc_library(
-  name = "profile-aliases",
-  srcs = ["profile-aliases.cc"],
+  name = "aliases",
+  srcs = ["aliases.cc"],
   deps = [
     ":wiki",
     "//sling/base",
     "//sling/file:textmap",
-    "//sling/frame:object",
+    "//sling/frame",
     "//sling/nlp/document:phrase-tokenizer",
     "//sling/task",
     "//sling/task:frames",

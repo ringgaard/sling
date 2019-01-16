@@ -57,9 +57,11 @@ cc_library(
   name = "phrase-table-builder",
   srcs = ["phrase-table-builder.cc"],
   deps = [
+    ":facts",
     "//sling/base",
     "//sling/file:repository",
     "//sling/frame:object",
+    "//sling/frame:serialization",
     "//sling/nlp/document:phrase-tokenizer",
     "//sling/nlp/wiki",
     "//sling/task",

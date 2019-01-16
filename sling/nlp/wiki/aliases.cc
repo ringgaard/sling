@@ -29,8 +29,8 @@
 namespace sling {
 namespace nlp {
 
-// Extract aliases from profiles.
-class ProfileAliasExtractor : public task::FrameProcessor {
+// Extract aliases for items.
+class AliasExtractor : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     string lang = task->Get("language", "en");
@@ -74,10 +74,11 @@ class ProfileAliasExtractor : public task::FrameProcessor {
         AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_DEMONYM);
       } else if (s.name == n_instance_of_) {
         // Discard categories, disambiguations, info boxes and templates.
-        if (wikitypes_.IsCategory(s.value) ||
-            wikitypes_.IsDisambiguation(s.value) ||
-            wikitypes_.IsInfobox(s.value) ||
-            wikitypes_.IsTemplate(s.value)) {
+        Handle type = store->Resolve(s.value);
+        if (wikitypes_.IsCategory(type) ||
+            wikitypes_.IsDisambiguation(type) ||
+            wikitypes_.IsInfobox(type) ||
+            wikitypes_.IsTemplate(type)) {
           return;
         }
       }
@@ -127,9 +128,9 @@ class ProfileAliasExtractor : public task::FrameProcessor {
   Name n_instance_of_{names_, "P31"};
 };
 
-REGISTER_TASK_PROCESSOR("profile-alias-extractor", ProfileAliasExtractor);
+REGISTER_TASK_PROCESSOR("alias-extractor", AliasExtractor);
 
-class ProfileAliasReducer : public task::Reducer {
+class AliasReducer : public task::Reducer {
  public:
   struct Alias {
     std::unordered_map<string, int> variants;
@@ -165,11 +166,11 @@ class ProfileAliasReducer : public task::Reducer {
     Store store(&commons_);
     std::unordered_map<uint64, Alias *> aliases;
     for (task::Message *message : input.messages()) {
-      // Get next alias profile.
-      Frame profile = DecodeMessage(&store, message);
+      // Get next set of aliases for item.
+      Frame batch = DecodeMessage(&store, message);
 
-      // Get all aliases from profile.
-      for (const Slot &slot : profile) {
+      // Get all aliases for item.
+      for (const Slot &slot : batch) {
         if (slot.name != n_alias_) continue;
         Frame alias(&store, slot.value);
         string name = alias.GetString(n_name_);
@@ -238,7 +239,7 @@ class ProfileAliasReducer : public task::Reducer {
       merged.Add(n_alias_, a.Create());
     }
 
-    // Output alias profile.
+    // Output selected aliased.
     Output(input.shard(), task::CreateMessage(qid, merged.Create()));
 
     // Delete alias table.
@@ -326,7 +327,7 @@ class ProfileAliasReducer : public task::Reducer {
   std::set<uint64> toxic_aliases_;
 };
 
-REGISTER_TASK_PROCESSOR("profile-alias-reducer", ProfileAliasReducer);
+REGISTER_TASK_PROCESSOR("alias-reducer", AliasReducer);
 
 }  // namespace nlp
 }  // namespace sling

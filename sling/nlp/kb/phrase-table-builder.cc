@@ -19,7 +19,9 @@
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
 #include "sling/file/repository.h"
+#include "sling/frame/object.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
+#include "sling/nlp/kb/facts.h"
 #include "sling/nlp/wiki/wiki.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
@@ -35,17 +37,38 @@ class PhraseTableBuilder : public task::FrameProcessor {
     // Get language for names.
     string lang = task->Get("language", "en");
     language_ = commons_->Lookup("/lang/" + lang);
-    task->Fetch("noisy_alias_sources", &noisy_alias_sources_);
+    task->Fetch("reliable_alias_sources", &reliable_alias_sources_);
 
     // Set phrase normalization.
     tokenizer_.set_normalization(
         ParseNormalization(task->Get("normalization", "lcn")));
+
+    // Initialize fact catalog.
+    static const char *exceptions[] = {
+      "P1889",  // different from
+      "P460",   // said to be the same as
+      "P1533",  // identical to this given name
+      "P138",   // named after
+      "P2959",  // permanent duplicated item
+      "P734",   // family name
+      "P735",   // given name
+      "P112",   // founded by
+      "P115",   // home venue
+      "P144",   // based on
+      nullptr
+    };
+    for (const char **p = exceptions; *p != nullptr; ++p) {
+      transfer_exceptions_.insert(commons_->LookupExisting(*p));
+    }
+    catalog_.Init(commons_);
 
     // Statistics.
     num_aliases_ = task->GetCounter("aliases");
     num_phrases_ = task->GetCounter("phrases");
     num_entities_ = task->GetCounter("entities");
     num_instances_ = task->GetCounter("instances");
+    num_transfers_ = task->GetCounter("alias_transfers");
+    num_instance_transfers_ = task->GetCounter("alias_instance_transfers");
   }
 
   void Process(Slice key, const Frame &frame) override {
@@ -88,10 +111,8 @@ class PhraseTableBuilder : public task::FrameProcessor {
         }
 
         // Add entity to phrase.
-        bool reliable = (sources & ~noisy_alias_sources_);
-        uint32 count_and_flags = count | (form << 29);
-        if (reliable) count_and_flags |= (1 << 31);
-        phrase->entities.emplace_back(index, count_and_flags);
+        bool reliable = (sources & reliable_alias_sources_);
+        phrase->entities.emplace_back(index, count, form, reliable);
 
         // Add alias count to entity frequency.
         entity_table_[index].count += count;
@@ -100,7 +121,69 @@ class PhraseTableBuilder : public task::FrameProcessor {
     }
   }
 
+  void TransferAliases() {
+    // Run over all phrases in phrase table.
+    for (auto &it : phrase_table_) {
+      Phrase *phrase = it.second;
+
+      // There must be more than one entity for any transfers to take place.
+      if (phrase->entities.size() < 2) continue;
+
+      // Build mappings between entity items and entity indices.
+      Store store(commons_);
+      int num_items = phrase->entities.size();
+      Handles entity_item(commons_);
+      HandleMap<int> entity_index;
+      entity_item.resize(num_items);
+      for (int i = 0; i < num_items; ++i) {
+        const EntityPhrase &e = phrase->entities[i];
+        const Entity &entity = entity_table_[e.index];
+        Handle item = store.Lookup(entity.id);
+        entity_item[i] = item;
+        entity_index[item] = i;
+      }
+
+      // Find potential targets for alias transfer.
+      std::vector<bool> target(num_items);
+      for (int source = 0; source < num_items; ++source) {
+        // Get set of facts for item.
+        Facts facts(&catalog_, &store);
+        facts.Extract(entity_item[source]);
+        for (Handle h :  facts.list()) {
+          Array fact(&store, h);
+          DCHECK_GE(fact.length(), 2);
+
+          // Check for property exceptions.
+          if (transfer_exceptions_.count(fact.get(0)) > 0) continue;
+
+          // Check if target has the phrase as an alias.
+          Handle t = fact.get(fact.length() - 1);
+          auto f = entity_index.find(t);
+          if (f == entity_index.end()) continue;
+          int target = f->second;
+          if (target == source) continue;
+
+          // Transfer alias from unreliable to reliable alias.
+          auto &src = phrase->entities[source];
+          auto &tgt = phrase->entities[target];
+          if (tgt.reliable() && !src.reliable()) {
+            // Transfer alias from source to target.
+            Transfer(&src, &tgt);
+          } else if (src.reliable() && !tgt.reliable()) {
+            // Transfer alias from target to source.
+            Transfer(&tgt, &src);
+          }
+        }
+      }
+    }
+  }
+
   void Flush(task::Task *task) override {
+    // Prune phrase table by transfering unreliable aliases to reliable
+    // aliases for related items.
+    LOG(INFO) << "Transfer aliases";
+    TransferAliases();
+
     // Build phrase repository.
     Repository repository;
 
@@ -172,11 +255,23 @@ class PhraseTableBuilder : public task::FrameProcessor {
   // the count in the lower 29 bit. Bit 29 and 30 contain the case form, and
   // bit 31 contains the reliable source flag.
   struct EntityPhrase {
-    EntityPhrase(int index, uint32 count_and_flags)
-        : index(index), count_and_flags(count_and_flags) {}
+    EntityPhrase(int index, uint32 count, uint32 form, bool reliable)
+        : index(index),
+          count_and_flags(count | (form << 29) | (reliable ? (1 << 31) : 0)) {}
     uint32 index;
     uint32 count_and_flags;
+
+    // Phrase frequency.
     int count() const { return count_and_flags & ((1 << 29) - 1); }
+    void set_count(uint32 count) {
+      count_and_flags = (count_and_flags & ~((1 << 29) - 1)) | count;
+    }
+
+    // Alias reliability.
+    bool reliable() const { return count_and_flags & (1 << 31); }
+
+    // Phrase form.
+    int form() const { return (count_and_flags << 29) & 3; }
   };
 
   // Phrase with fingerprint and entity distribution.
@@ -202,6 +297,15 @@ class PhraseTableBuilder : public task::FrameProcessor {
     std::vector<EntityPhrase> entities;  // list of entities for name phrase
   };
 
+  // Transfer alias counts from source to target.
+  void Transfer(EntityPhrase *source, EntityPhrase *target) {
+    int sum = source->count() + target->count();
+    target->set_count(sum);
+    source->set_count(0);
+    num_transfers_->Increment();
+    num_instance_transfers_->Increment(sum);
+  }
+
   // Symbols.
   Name n_lang_{names_, "lang"};
   Name n_name_{names_, "name"};
@@ -213,15 +317,11 @@ class PhraseTableBuilder : public task::FrameProcessor {
   // Language for aliases.
   Handle language_;
 
-  // Noisy alias sources. Aliases that are only backed by noisy alias sources
-  // are not marked as reliable.
-  int noisy_alias_sources_ =
-    (1 << SRC_WIKIPEDIA_TITLE) |
-    (1 << SRC_WIKIPEDIA_ANCHOR) |
-    (1 << SRC_WIKIPEDIA_LINK) |
-    (1 << SRC_WIKIPEDIA_REDIRECT) |
-    (1 << SRC_WIKIPEDIA_DISAMBIGUATION) |
-    (1 << SRC_WIKIDATA_FOREIGN);
+  // Reliable alias sources.
+  int reliable_alias_sources_ =
+    (1 << SRC_WIKIDATA_LABEL) |
+    (1 << SRC_WIKIDATA_ALIAS) |
+    (1 << SRC_WIKIDATA_DEMONYM);
 
   // Phrase tokenizer.
   PhraseTokenizer tokenizer_;
@@ -235,11 +335,19 @@ class PhraseTableBuilder : public task::FrameProcessor {
   // Mapping of entity id to entity index in entity table.
   std::unordered_map<string, int> entity_mapping_;
 
+  // Fact catalog for alias transfer.
+  FactCatalog catalog_;
+
+  // Property exceptions for alias transfer.
+  HandleSet transfer_exceptions_;
+
   // Statistics.
   task::Counter *num_phrases_ = nullptr;
   task::Counter *num_entities_ = nullptr;
   task::Counter *num_aliases_ = nullptr;
   task::Counter *num_instances_ = nullptr;
+  task::Counter *num_transfers_ = nullptr;
+  task::Counter *num_instance_transfers_ = nullptr;
 
   // Mutex for serializing access to repository.
   Mutex mu_;
