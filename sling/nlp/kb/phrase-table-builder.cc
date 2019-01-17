@@ -55,6 +55,16 @@ class PhraseTableBuilder : public task::FrameProcessor {
       "P112",   // founded by
       "P115",   // home venue
       "P144",   // based on
+      "P1950",  // second family name in Spanish name
+      "P2359",  // Roman nomen gentilicium
+      "P2358",  // Roman praenomen
+      "P2365",  // Roman cognomen
+      "P2366",  // Roman agnomen
+      "P941",   // inspired by
+      "P629",   // edition or translation of
+      "P37",    // official language
+      "P103",   // native language
+      "P566",   // basionym
       nullptr
     };
     for (const char **p = exceptions; *p != nullptr; ++p) {
@@ -68,6 +78,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
     num_entities_ = task->GetCounter("entities");
     num_instances_ = task->GetCounter("instances");
     num_transfers_ = task->GetCounter("alias_transfers");
+    num_zero_transfers_ = task->GetCounter("alias_zero_transfers");
     num_instance_transfers_ = task->GetCounter("alias_instance_transfers");
   }
 
@@ -145,6 +156,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
 
       // Find potential targets for alias transfer.
       std::vector<bool> target(num_items);
+      bool pruned = false;
       for (int source = 0; source < num_items; ++source) {
         // Get set of facts for item.
         Facts facts(&catalog_, &store);
@@ -169,11 +181,24 @@ class PhraseTableBuilder : public task::FrameProcessor {
           if (tgt.reliable() && !src.reliable()) {
             // Transfer alias from source to target.
             Transfer(&src, &tgt);
+            pruned = true;
           } else if (src.reliable() && !tgt.reliable()) {
             // Transfer alias from target to source.
             Transfer(&tgt, &src);
+            pruned = true;
           }
         }
+      }
+
+      // Prune aliases with zero count.
+      if (pruned) {
+        int j = 0;
+        for (int i = 0; i < num_items; ++i) {
+          if (phrase->entities[i].count() == 0) continue;
+          if (i != j) phrase->entities[j] = phrase->entities[i];
+          j++;
+        }
+        phrase->entities.resize(j);
       }
     }
   }
@@ -255,6 +280,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
   // the count in the lower 29 bit. Bit 29 and 30 contain the case form, and
   // bit 31 contains the reliable source flag.
   struct EntityPhrase {
+    EntityPhrase() = default;
     EntityPhrase(int index, uint32 count, uint32 form, bool reliable)
         : index(index),
           count_and_flags(count | (form << 29) | (reliable ? (1 << 31) : 0)) {}
@@ -299,11 +325,28 @@ class PhraseTableBuilder : public task::FrameProcessor {
 
   // Transfer alias counts from source to target.
   void Transfer(EntityPhrase *source, EntityPhrase *target) {
-    int sum = source->count() + target->count();
-    target->set_count(sum);
+    // Check for conflicting case forms.
+    int source_form = source->form();
+    int target_form = target->form();
+    if (source_form != CASE_NONE &&
+        target_form != CASE_NONE &&
+        source_form != target_form) {
+      return;
+    }
+
+    // Check for zero transfers.
+    int source_count = source->count();
+    int target_count = target->count();
+    if (source_count == 0) {
+      num_zero_transfers_->Increment();
+      return;
+    }
+
+    // Transfer alias counts from source to target.
+    target->set_count(target_count + source_count);
     source->set_count(0);
     num_transfers_->Increment();
-    num_instance_transfers_->Increment(sum);
+    num_instance_transfers_->Increment(source_count);
   }
 
   // Symbols.
@@ -321,6 +364,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
   int reliable_alias_sources_ =
     (1 << SRC_WIKIDATA_LABEL) |
     (1 << SRC_WIKIDATA_ALIAS) |
+    (1 << SRC_WIKIDATA_NAME) |
     (1 << SRC_WIKIDATA_DEMONYM);
 
   // Phrase tokenizer.
@@ -347,6 +391,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
   task::Counter *num_aliases_ = nullptr;
   task::Counter *num_instances_ = nullptr;
   task::Counter *num_transfers_ = nullptr;
+  task::Counter *num_zero_transfers_ = nullptr;
   task::Counter *num_instance_transfers_ = nullptr;
 
   // Mutex for serializing access to repository.

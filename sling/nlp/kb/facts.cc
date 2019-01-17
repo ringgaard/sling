@@ -56,6 +56,7 @@ void FactCatalog::Init(Store *store) {
   SetExtractor(p_occupation_, &Facts::ExtractOccupation);
   SetExtractor(p_position_, &Facts::ExtractPosition);
   SetExtractor(p_member_of_sports_team_, &Facts::ExtractTeam);
+  SetExtractor(p_time_period_, &Facts::ExtractTimePeriod);
 
   // Set up items that stops closure expansion.
   static const char *baseids[] = {
@@ -257,6 +258,22 @@ void Facts::ExtractDate(Handle value) {
   AddFact(catalog_->calendar_.Year(date));
   AddFact(catalog_->calendar_.Decade(date));
   AddFact(catalog_->calendar_.Century(date));
+}
+
+void Facts::ExtractTimePeriod(Handle period) {
+  Frame f(store_, store_->Resolve(period));
+  Handle start = f.GetHandle(catalog_->p_start_time_);
+  if (!start.IsNil()) {
+    push(catalog_->p_start_time_);
+    ExtractDate(start);
+    pop();
+  }
+  Handle end = f.GetHandle(catalog_->p_end_time_);
+  if (!end.IsNil()) {
+    push(catalog_->p_end_time_);
+    ExtractDate(end);
+    pop();
+  }
 }
 
 void Facts::ExtractLocation(Handle location) {
