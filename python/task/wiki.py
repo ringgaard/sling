@@ -648,6 +648,7 @@ class WikiWorkflow:
     with self.wf.namespace("phrase-table"):
       builder = self.wf.task("phrase-table-builder")
       builder.add_param("language", language)
+      builder.add_param("transfer_aliases", True)
       self.wf.connect(self.wf.read(names, name="name-reader"), builder)
       kb = self.knowledge_base()
       repo = self.phrase_table(language)

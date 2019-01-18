@@ -38,6 +38,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
     string lang = task->Get("language", "en");
     language_ = commons_->Lookup("/lang/" + lang);
     task->Fetch("reliable_alias_sources", &reliable_alias_sources_);
+    task->Fetch("transfer_aliases", &transfer_aliases_);
 
     // Set phrase normalization.
     tokenizer_.set_normalization(
@@ -143,7 +144,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
       // Build mappings between entity items and entity indices.
       Store store(commons_);
       int num_items = phrase->entities.size();
-      Handles entity_item(commons_);
+      Handles entity_item(&store);
       HandleMap<int> entity_index;
       entity_item.resize(num_items);
       for (int i = 0; i < num_items; ++i) {
@@ -155,8 +156,9 @@ class PhraseTableBuilder : public task::FrameProcessor {
       }
 
       // Find potential targets for alias transfer.
-      std::vector<bool> target(num_items);
       bool pruned = false;
+      std::vector<int> numbers;
+      std::vector<int> years;
       for (int source = 0; source < num_items; ++source) {
         // Get set of facts for item.
         Facts facts(&catalog_, &store);
@@ -165,11 +167,24 @@ class PhraseTableBuilder : public task::FrameProcessor {
           Array fact(&store, h);
           DCHECK_GE(fact.length(), 2);
 
+          // Get head property and target value.
+          Handle p = fact.get(0);
+          Handle t = fact.get(fact.length() - 1);
+
+          // Collect numbers and years.
+          if (p == n_instance_of_) {
+            if (t == n_natural_number_) {
+              numbers.push_back(source);
+            }
+            if (t == n_year_ || t == n_year_bc_ || t == n_decade_) {
+              years.push_back(source);
+            }
+          }
+
           // Check for property exceptions.
-          if (transfer_exceptions_.count(fact.get(0)) > 0) continue;
+          if (transfer_exceptions_.count(p) > 0) continue;
 
           // Check if target has the phrase as an alias.
-          Handle t = fact.get(fact.length() - 1);
           auto f = entity_index.find(t);
           if (f == entity_index.end()) continue;
           int target = f->second;
@@ -178,14 +193,30 @@ class PhraseTableBuilder : public task::FrameProcessor {
           // Transfer alias from unreliable to reliable alias.
           auto &src = phrase->entities[source];
           auto &tgt = phrase->entities[target];
-          if (tgt.reliable() && !src.reliable()) {
-            // Transfer alias from source to target.
-            Transfer(&src, &tgt);
-            pruned = true;
-          } else if (src.reliable() && !tgt.reliable()) {
-            // Transfer alias from target to source.
-            Transfer(&tgt, &src);
-            pruned = true;
+          if (Exchange(&src, &tgt)) pruned = true;
+        }
+      }
+
+      // Transfer aliases for years.
+      if (!years.empty()) {
+        for (int source = 0; source < years.size(); ++source) {
+          for (int target = 0; target < years.size(); ++target) {
+            if (source == target) continue;
+            auto &src = phrase->entities[years[source]];
+            auto &tgt = phrase->entities[years[target]];
+            if (Exchange(&src, &tgt)) pruned = true;
+          }
+        }
+      }
+
+      // Transfer aliases for numbers.
+      if (!numbers.empty()) {
+        for (int source = 0; source < numbers.size(); ++source) {
+          for (int target = 0; target < numbers.size(); ++target) {
+            if (source == target) continue;
+            auto &src = phrase->entities[numbers[source]];
+            auto &tgt = phrase->entities[numbers[target]];
+            if (Exchange(&src, &tgt)) pruned = true;
           }
         }
       }
@@ -206,8 +237,10 @@ class PhraseTableBuilder : public task::FrameProcessor {
   void Flush(task::Task *task) override {
     // Prune phrase table by transfering unreliable aliases to reliable
     // aliases for related items.
-    LOG(INFO) << "Transfer aliases";
-    TransferAliases();
+    if (transfer_aliases_) {
+      LOG(INFO) << "Transfer aliases";
+      TransferAliases();
+    }
 
     // Build phrase repository.
     Repository repository;
@@ -323,15 +356,26 @@ class PhraseTableBuilder : public task::FrameProcessor {
     std::vector<EntityPhrase> entities;  // list of entities for name phrase
   };
 
+  // Exchange aliases between items.
+  bool Exchange(EntityPhrase *a, EntityPhrase *b) {
+    if (a->reliable() && !b->reliable()) {
+      return Transfer(b, a);
+    } else if (b->reliable() && !a->reliable()) {
+      return Transfer(a, b);
+    } else {
+      return false;
+    }
+  }
+
   // Transfer alias counts from source to target.
-  void Transfer(EntityPhrase *source, EntityPhrase *target) {
+  bool Transfer(EntityPhrase *source, EntityPhrase *target) {
     // Check for conflicting case forms.
     int source_form = source->form();
     int target_form = target->form();
     if (source_form != CASE_NONE &&
         target_form != CASE_NONE &&
         source_form != target_form) {
-      return;
+      return false;
     }
 
     // Check for zero transfers.
@@ -339,7 +383,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
     int target_count = target->count();
     if (source_count == 0) {
       num_zero_transfers_->Increment();
-      return;
+      return false;
     }
 
     // Transfer alias counts from source to target.
@@ -347,6 +391,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
     source->set_count(0);
     num_transfers_->Increment();
     num_instance_transfers_->Increment(source_count);
+    return true;
   }
 
   // Symbols.
@@ -356,6 +401,12 @@ class PhraseTableBuilder : public task::FrameProcessor {
   Name n_count_{names_, "count"};
   Name n_form_{names_, "form"};
   Name n_sources_{names_, "sources"};
+
+  Name n_instance_of_{names_, "P31"};
+  Name n_natural_number_{names_, "Q21199"};
+  Name n_year_{names_, "Q577"};
+  Name n_year_bc_{names_, "Q29964144"};
+  Name n_decade_{names_, "Q39911"};
 
   // Language for aliases.
   Handle language_;
@@ -378,6 +429,9 @@ class PhraseTableBuilder : public task::FrameProcessor {
 
   // Mapping of entity id to entity index in entity table.
   std::unordered_map<string, int> entity_mapping_;
+
+  // Alias transfer.
+  bool transfer_aliases_ = false;
 
   // Fact catalog for alias transfer.
   FactCatalog catalog_;
