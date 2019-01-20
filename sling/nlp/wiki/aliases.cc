@@ -75,8 +75,18 @@ class AliasExtractor : public task::FrameProcessor {
         AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_DEMONYM);
       } else if (s.name == n_iso3166_country_code_2_ ||
                  s.name == n_iso3166_country_code_3_) {
-        // Output as alternative name.
+        // Output country codes as alternative names.
         AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NAME);
+      } else if (s.name == n_short_name_) {
+        // Output short names as alternative or foreign names.
+        Handle lang = Handle::nil();
+        Frame f(store, s.value);
+        if (f.valid()) lang = f.GetHandle(n_lang_);
+        if (lang.IsNil() || lang == language_) {
+          AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NAME);
+        } else {
+          AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_FOREIGN);
+        }
       } else if (s.name == n_instance_of_) {
         // Discard categories, disambiguations, info boxes and templates.
         Handle type = store->Resolve(s.value);
@@ -130,6 +140,7 @@ class AliasExtractor : public task::FrameProcessor {
   Name n_native_name_{names_, "P1559"};
   Name n_native_label_{names_, "P1705"};
   Name n_demonym_{names_, "P1549"};
+  Name n_short_name_{names_, "P1813"};
   Name n_iso3166_country_code_2_{names_, "P297"};
   Name n_iso3166_country_code_3_{names_, "P298"};
 

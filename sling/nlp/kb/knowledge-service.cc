@@ -294,11 +294,15 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         v.Add(n_text_, value);
       } else if (property.datatype == n_text_type_) {
         // Add text value with language.
-        Frame monotext(kb_, value);
-        v.Add(n_text_, monotext.GetHandle(Handle::is()));
-        Frame lang = monotext.GetFrame(n_lang_);
-        if (lang.valid()) {
-          v.Add(n_lang_, lang.GetHandle(n_name_));
+        if (kb_->IsFrame(value)) {
+          Frame monotext(kb_, value);
+          v.Add(n_text_, monotext.GetHandle(Handle::is()));
+          Frame lang = monotext.GetFrame(n_lang_);
+          if (lang.valid()) {
+            v.Add(n_lang_, lang.GetHandle(n_name_));
+          }
+        } else {
+          v.Add(n_text_, value);
         }
       } else if (property.datatype == n_url_type_) {
         // Add URL value.

@@ -42,7 +42,7 @@ class Name:
     self.evokes = {}
     self.matched = set()
     self.skip = []
-    for t in self.doc.tokens: self.skip.append(t.text in stop_words)
+    for t in self.doc.tokens: self.skip.append(t.word in stop_words)
 
   def overlaps(self, begin, end):
     for i in xrange(begin, end):
@@ -60,7 +60,7 @@ class Name:
     targets = {}
     facts = None
     if frame != None:
-      facts = extractor.extract_facts(self.store, frame.resolve())
+      facts = extractor.facts(self.store, frame.resolve())
       for fact in facts:
         target = fact[-1]
         increment_key(targets, target)
@@ -78,7 +78,9 @@ class Name:
 
         # Try to find match.
         matches = phrasetab.query(self.doc.phrase(b, b + l))
-        for match, count in matches:
+        for m in matches:
+          match = m.item()
+          count = m.count()
           if match in self.matched: break
           if frame == None or match in targets:
             # Determine property relation.

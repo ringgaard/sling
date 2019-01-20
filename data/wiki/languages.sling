@@ -50,6 +50,9 @@
   value: /lang/sr
   value: /lang/sv
   value: /lang/uk
+
+  value: /lang/mul
+  value: /lang/zxx
 }
 
 {=/lang/bg
@@ -300,6 +303,18 @@
   /lang/wikilang/wiki_category: "Категорія"
   /lang/wikilang/wiki_image: "Файл"
   /lang/wikilang/wiki_template: "Шаблон"
+}
+
+{=/lang/mul
+  :language :/lang/wikilang
+  name: "multiple"
+  code: "mul"
+}
+
+{=/lang/zxx
+  :language :/lang/wikilang
+  name: "none"
+  code: "zxx"
 }
 
 {=/schema/lang :schema_family

@@ -261,6 +261,10 @@ void Facts::ExtractDate(Handle value) {
 }
 
 void Facts::ExtractTimePeriod(Handle period) {
+  // Add fact for period.
+  ExtractSimple(period);
+
+  // Add facts for start and end time of period.
   Frame f(store_, store_->Resolve(period));
   Handle start = f.GetHandle(catalog_->p_start_time_);
   if (!start.IsNil()) {

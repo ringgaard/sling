@@ -86,6 +86,7 @@ WikidataConverter::WikidataConverter(Store *commons, const string &language) {
     lang++;
   }
   language_map_["mul"] = n_lang_mul_.handle();
+  language_map_["zxx"] = n_lang_none_.handle();
 }
 
 Frame WikidataConverter::Convert(const Frame &item) {
@@ -368,7 +369,9 @@ Handle WikidataConverter::ConvertText(const Frame &value) {
   string langid = value.GetString(s_language_);
   auto f = language_map_.find(langid);
   if (f == language_map_.end()) return Handle::nil();
-  if (f->second == n_lang_mul_) return text.handle();
+  if (f->second == n_lang_mul_ || f->second == n_lang_none_) {
+    return text.handle();
+  }
 
   // Convert text to string qualified by language.
   Builder monoling(store);
