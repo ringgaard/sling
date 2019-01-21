@@ -6,9 +6,9 @@ The aim of the SLING project is to learn to read and understand Wikipedia
 articles in many languages for the purpose of knowledge base completion, e.g.
 adding facts mentioned in Wikipedia (and other sources) to the
 [Wikidata](https://www.wikidata.org) knowledge base.
-We use [frame semantics](doc/guide/frames.md) as a common representation for
-both knowledge representation and document annotation. The SLING parser can
-be trained to produce frame semantic representations of text directly without
+We use [frame semantics](doc/guide/frames.md) as a common representation for 
+both knowledge representation and document annotation. The SLING parser can 
+be trained to produce frame semantic representations of text directly without 
 any explicit intervening linguistic representation.
 
 The SLING project is still work in progress. We do not yet have a full system
