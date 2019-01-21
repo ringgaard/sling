@@ -143,8 +143,11 @@ CaseForm Span::Form() const {
 Document::Document(Store *store, const DocumentNames *names)
     : themes_(store), names_(names) {
   // Bind names.
-  if (names_ == nullptr) names_ = new DocumentNames(store);
-  names_->AddRef();
+  if (names_ == nullptr) {
+    names_ = new DocumentNames(store);
+  } else {
+    names_->AddRef();
+  }
 
   // Build empty document.
   Builder builder(store);
@@ -155,8 +158,11 @@ Document::Document(Store *store, const DocumentNames *names)
 Document::Document(const Frame &top, const DocumentNames *names)
     : top_(top), themes_(top.store()), names_(names) {
   // Bind names.
-  if (names_ == nullptr) names_ = new DocumentNames(top.store());
-  names_->AddRef();
+  if (names_ == nullptr) {
+    names_ = new DocumentNames(top.store());
+  } else {
+    names_->AddRef();
+  }
 
   // Add document frame if it is missing.
   if (!top_.valid()) {

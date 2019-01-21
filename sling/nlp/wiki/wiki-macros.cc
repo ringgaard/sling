@@ -513,8 +513,11 @@ REGISTER_WIKI_MACRO("measure", MeasureTemplate);
 // Template macro for info boxes.
 class InfoboxTemplate : public WikiMacro {
  public:
+  ~InfoboxTemplate() { if (docnames_) docnames_->Release(); }
+
   void Init(const Frame &config) override {
     Store *store = config.store();
+    docnames_ = new DocumentNames(store);
     Handle n_class = store->Lookup("class");
     Handle n_fields = store->Lookup("fields");
     Handle n_group = store->Lookup("group");
@@ -596,7 +599,7 @@ class InfoboxTemplate : public WikiMacro {
       templ.extractor()->Leave(&value);
 
       // Convert field value to LEX format.
-      Document document(store);
+      Document document(store, docnames_);
       document.SetText(value.text());
       GetTokenizer()->Tokenize(&document);
       value.AddToDocument(&document);
@@ -609,7 +612,7 @@ class InfoboxTemplate : public WikiMacro {
       } else {
         auto &group = groups[field->group];
         if (group.size() < index + 1) group.resize(index + 1);
-        auto &element = group[index];
+        Builder *&element = group[index];
         if (element == nullptr) element = new Builder(store);
         element->Add(field->key, lex);
       }
@@ -650,6 +653,9 @@ class InfoboxTemplate : public WikiMacro {
 
   // Infobox fields keyed by field name.
   std::unordered_map<string, Field> fields_;
+
+  // Document names.
+  DocumentNames *docnames_ = nullptr;
 };
 
 REGISTER_WIKI_MACRO("infobox", InfoboxTemplate);
