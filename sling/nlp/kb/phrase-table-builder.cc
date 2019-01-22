@@ -203,7 +203,7 @@ class PhraseTableBuilder : public task::FrameProcessor {
     bool reliable() const { return count_and_flags & (1 << 31); }
 
     // Phrase form.
-    int form() const { return (count_and_flags << 29) & 3; }
+    int form() const { return (count_and_flags >> 29) & 3; }
   };
 
   // Phrase with fingerprint and entity distribution.

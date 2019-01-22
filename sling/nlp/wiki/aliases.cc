@@ -66,8 +66,7 @@ class AliasExtractor : public task::FrameProcessor {
           AddAlias(&a, alias.GetHandle(n_name_), SRC_WIKIDATA_FOREIGN,
                    alias.GetHandle(n_lang_), alias.GetInt(n_count_));
         }
-      } else if (s.name == n_native_name_ ||
-                 s.name == n_native_label_) {
+      } else if (s.name == n_native_name_ || s.name == n_native_label_) {
         // Output native names/labels as native aliases.
         AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NATIVE);
       } else if (s.name == n_demonym_) {
@@ -258,7 +257,7 @@ class AliasReducer : public task::Reducer {
       merged.Add(n_alias_, a.Create());
     }
 
-    // Output selected aliased.
+    // Output selected aliases.
     Output(input.shard(), task::CreateMessage(qid, merged.Create()));
 
     // Delete alias table.
