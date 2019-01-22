@@ -133,6 +133,10 @@ bool WikimediaTypes::IsInfobox(Handle type) {
   return type == n_infobox_;
 }
 
+bool WikimediaTypes::IsDuplicate(Handle type) {
+  return type == n_permanent_duplicate_item_;
+}
+
 void AuxFilter::Init(Store *store) {
   const char *kAuxItemtypes[] = {
     "Q13442814",  // scientific article

@@ -987,6 +987,10 @@ class Store {
   // Builder object.
   void Add(Handle frame, Handle name, Handle value);
 
+  // Clones an existing frame. This can only be used on anonymous frames.
+  // Returns handle to the new frame.
+  Handle Clone(Handle frame);
+
   // Clones an existing frame and adds an additional slot to the clone. This can
   // only be used on anonymous frames. Returns handle to the new frame.
   Handle Extend(Handle frame, Handle name, Handle value);

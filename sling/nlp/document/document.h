@@ -232,6 +232,13 @@ class Document {
   // Initialize document from frame.
   explicit Document(const Frame &top, const DocumentNames *names = nullptr);
 
+  // Copy constructor for making a shallow copy of the whole document.
+  Document(const Document &other);
+
+  // Make a shallow copy of parts of the document. Only annotations within the
+  // token range are copied.
+  Document(const Document &other, int begin, int end, bool annotations);
+
   ~Document();
 
   // Return document frame.

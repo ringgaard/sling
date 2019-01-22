@@ -105,6 +105,9 @@ class WikimediaTypes {
   // Check if item is a Wikipedia infobox.
   bool IsInfobox(Handle type);
 
+  // Check if item is a duplicate.
+  bool IsDuplicate(Handle type);
+
  private:
   // Names.
   Names names_;
@@ -122,6 +125,7 @@ class WikimediaTypes {
   Name n_user_language_category_{names_, "Q20010800"};
   Name n_meta_category_{names_, "Q30432511"};
   Name n_navbox_category_{names_, "Q13331174"};
+  Name n_permanent_duplicate_item_{names_, "Q21286738"};
 };
 
 // Filter for auxiliary items. The auxiliary items in the knowledge base are

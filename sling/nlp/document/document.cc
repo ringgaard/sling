@@ -243,6 +243,105 @@ Document::Document(const Frame &top, const DocumentNames *names)
   }
 }
 
+Document::Document(const Document &other)
+    : text_(other.text_),
+      tokens_(other.tokens_),
+      themes_(other.store()),
+      names_(other.names_) {
+  // Make a copy of the document frame (except document id).
+  names_->AddRef();
+  Store *store = other.store();
+  Builder builder(store);
+  for (const Slot &s : other.top_) {
+    if (s.name != Handle::id()) {
+      builder.Add(s.name, s.value);
+    }
+  }
+  top_ = builder.Create();
+
+  // Update tokens.
+  for (Token &token : tokens_) {
+    token.document_ = this;
+    token.span_ = nullptr;
+  }
+
+  // Copy mention spans.
+  for (const Span *s : other.spans_) {
+    Span *span = Insert(s->begin_, s->end_);
+    span->mention_ = Frame(store, store->Clone(s->mention_.handle()));
+    for (const Slot &s : span->mention_) {
+      if (s.name == names_->n_evokes) AddMention(s.value, span);
+    }
+  }
+
+  // Copy themes.
+  for (Handle h : other.themes_) {
+    themes_.push_back(h);
+  }
+
+  // Copy extra slots.
+  if (other.extras_ != nullptr) {
+    extras_ = new Slots(store);
+    extras_->reserve(other.extras_->size());
+    for (const Slot &s : *other.extras_) {
+      extras_->emplace_back(s.name, s.value);
+    }
+  }
+}
+
+Document::Document(const Document &other,
+                   int begin, int end,
+                   bool annotations)
+    : themes_(other.store()) {
+  // Copy tokens.
+  names_->AddRef();
+  Store *store = other.store();
+  int length = end - begin;
+  int text_begin = other.text().size();
+  int text_end = 0;
+  tokens_.resize(length);
+  for (int i = 0; i < length; ++i) {
+    const Token &o = other.tokens_[i];
+    Token &t = tokens_[i];
+    t = o;
+    t.document_ = this;
+    t.index_ = i;
+    t.span_ = nullptr;
+    if (o.begin_ < text_begin) text_begin = o.begin_;
+    if (o.end_ > text_end) text_end = o.end_;
+  }
+  if (length > 0) tokens_changed_ = true;
+
+  // Copy text and adjust token positions.
+  if (text_end > text_begin) {
+    text_ = other.text_.substr(text_begin, text_end - text_begin);
+    for (Token &t : tokens_) {
+      t.begin_ -= text_begin;
+      t.end_ -= text_begin;
+    }
+  }
+
+  // Copy annotations.
+  if (annotations) {
+    for (const Span *s : other.spans_) {
+      int b = s->begin_ - begin;
+      int e = s->end_ - begin;
+      if (b < 0 || e > length) continue;
+      Span *span = Insert(b, e);
+      span->mention_ = Frame(store, store->Clone(s->mention_.handle()));
+      for (const Slot &s : span->mention_) {
+        if (s.name == names_->n_evokes) AddMention(s.value, span);
+      }
+    }
+  }
+
+  // Create document frame.
+  Builder builder(store);
+  builder.AddIsA(names_->n_document);
+  if (!text_.empty()) builder.Add(names_->n_text, text_);
+  top_ = builder.Create();
+}
+
 Document::~Document() {
   // Delete all spans. This also clears all references to the mention frames.
   for (auto *s : spans_) delete s;
@@ -469,7 +568,7 @@ Span *Document::EnclosingSpan(int begin, int end, bool *crossing) {
   for (int t = begin; t < end; ++t) {
     Span *s = tokens_[t].span_;
 
-    // Skip if is the same as the leaf span for the previous token.
+    // Skip if it is has the same leaf span as the previous token.
     if (s == prev) continue;
     prev = s;
 

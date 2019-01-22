@@ -87,12 +87,13 @@ class AliasExtractor : public task::FrameProcessor {
           AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_FOREIGN);
         }
       } else if (s.name == n_instance_of_) {
-        // Discard categories, disambiguations, info boxes and templates.
+        // Discard alias for non-entity items.
         Handle type = store->Resolve(s.value);
         if (wikitypes_.IsCategory(type) ||
             wikitypes_.IsDisambiguation(type) ||
             wikitypes_.IsInfobox(type) ||
-            wikitypes_.IsTemplate(type)) {
+            wikitypes_.IsTemplate(type) ||
+            wikitypes_.IsDuplicate(type)) {
           return;
         }
       }
