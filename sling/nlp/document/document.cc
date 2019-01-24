@@ -292,7 +292,7 @@ Document::Document(const Document &other)
 Document::Document(const Document &other,
                    int begin, int end,
                    bool annotations)
-    : themes_(other.store()) {
+    : themes_(other.store()), names_(other.names_) {
   // Copy tokens.
   names_->AddRef();
   Store *store = other.store();
@@ -301,7 +301,7 @@ Document::Document(const Document &other,
   int text_end = 0;
   tokens_.resize(length);
   for (int i = 0; i < length; ++i) {
-    const Token &o = other.tokens_[i];
+    const Token &o = other.tokens_[i + begin];
     Token &t = tokens_[i];
     t = o;
     t.document_ = this;

@@ -107,7 +107,12 @@ int main(int argc, char *argv[]) {
   }
   document.Update();
 
-  std::cout << ToLex(document) << "\n\n";
+  for (SentenceIterator s(&document); s.more(); s.next()) {
+    Document sentence(document, s.begin(), s.end(), true);
+    std::cout << "S: " << ToLex(sentence) << "\n";
+  }
+
+  //std::cout << ToLex(document) << "\n\n";
   //std::cout << ToText(document.top()) << "\n";
 
   return 0;

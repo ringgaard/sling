@@ -89,6 +89,25 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q21199",    SPAN_NATURAL_NUMBER},   // natural number
     {"Q8142",     SPAN_CURRENCY},         // currency
     {"Q47574",    SPAN_UNIT},             // unit of measurement
+
+    {"Q101352",   SPAN_FAMILY_NAME},      // family name
+    {"Q202444",   SPAN_GIVEN_NAME},       // given name
+
+    {"Q215627",    SPAN_PERSON},          // person
+    {"Q17334923",  SPAN_LOCATION},        // location
+    {"Q43229",     SPAN_ORGANIZATION},    // organization
+
+    //{"Q2188189",  SPAN_ART},              // musical work
+    //{"Q571",      SPAN_ART},              // book
+    //{"Q732577",   SPAN_ART},              // publication
+    //{"Q11424",    SPAN_ART},              // film
+    //{"Q15416",    SPAN_ART},              // television program
+    //{"Q47461344", SPAN_ART},              // written work
+
+    {"Q838948",   SPAN_ART},              // work of art
+
+    //{"Q35120",    0},                     // entity
+
     {nullptr, 0},
   };
 
@@ -118,10 +137,11 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = b + 1; e <= end; ++e) {
       SpanChart::Item &span = chart->item(b, e);
-      if (span.matches == nullptr) continue;
       aliases.GetMatches(span.matches, &matches);
+      if (span.matches == nullptr) continue;
       CaseForm form = document->Form(b + chart->begin(), e + chart->begin());
       bool nomatch = true;
+      bool only_artwork = true;
       for (const auto &match : matches) {
         // Skip if case forms conflict.
         if (match.form != CASE_NONE &&
@@ -134,22 +154,31 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         // Classify item.
         Frame item(store, match.item);
         Handle type = taxonomy_->Classify(item);
-        if (type.IsNil()) continue;
+        if (type.IsNil()) {
+          only_artwork = false;
+          continue;
+        }
 
         auto f = type_flags_.find(type);
         if (f != type_flags_.end()) {
           span.flags |= f->second;
+          if ((f->second & SPAN_ART) == 0) only_artwork = false;
 
           Frame t(store, type);
           LOG(INFO) << "'" << chart->phrase(b, e) << "': " << item.Id()
                     << " " << item.GetString("name") << " is "
                     << t.GetString("name") << " reliable: " << match.reliable;
+        } else {
+          only_artwork = false;
         }
       }
 
       // Remove matches if all matches have conflicting case forms.
       if (nomatch) {
         LOG(INFO) << "Discard '" << chart->phrase(b, e) << "'";
+        span.matches = nullptr;
+      } else if (only_artwork) {
+        LOG(INFO) << "Work '" << chart->phrase(b, e) << "'";
         span.matches = nullptr;
       }
     }
