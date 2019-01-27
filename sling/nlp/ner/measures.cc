@@ -71,40 +71,58 @@ Handle SpanAnnotator::FindMatch(const PhraseTable &aliases,
   return Handle::nil();
 }
 
+void SpanImporter::Annotate(SpanChart *chart) {
+  int begin = chart->begin();
+  int end = chart->end();
+  for (int i = 0; i < chart->document()->num_spans(); ++i) {
+    Span *span = chart->document()->span(i);
+    if (span->begin() < begin || span->end() > end) continue;
+    Frame evoked = span->Evoked();
+    if (evoked.invalid()) continue;
+    int flags = 0;
+    if (evoked.IsA(n_time_)) flags |= SPAN_DATE;
+    if (evoked.IsA(n_quantity_)) flags |= SPAN_MEASURE;
+    chart->Add(span->begin(), span->end(), evoked.handle(), flags);
+  }
+}
+
 SpanTaxonomy::~SpanTaxonomy() {
   delete taxonomy_;
 }
 
 void SpanTaxonomy::Init(Store *store) {
   static std::pair<const char *, int> span_taxonomy[] = {
-    {"Q47150325", SPAN_CALENDAR_DAY},     // calendar day of a given year
-    {"Q47018478", SPAN_CALENDAR_MONTH},   // calendar month of a given year
-    {"Q14795564", SPAN_DAY_OF_YEAR},      // date of periodic occurrence
-    {"Q41825",    SPAN_WEEKDAY},          // day of the week
-    {"Q47018901", SPAN_MONTH},            // calendar month
-    {"Q577",      SPAN_YEAR},             // year
-    {"Q29964144", SPAN_YEAR_BC},          // year BC
-    {"Q39911",    SPAN_DECADE},           // decade
-    {"Q578",      SPAN_CENTURY},          // century
-    {"Q21199",    SPAN_NATURAL_NUMBER},   // natural number
-    {"Q8142",     SPAN_CURRENCY},         // currency
-    {"Q47574",    SPAN_UNIT},             // unit of measurement
+    {"Q47150325",  SPAN_CALENDAR_DAY},     // calendar day of a given year
+    {"Q47018478",  SPAN_CALENDAR_MONTH},   // calendar month of a given year
+    {"Q14795564",  SPAN_DAY_OF_YEAR},      // date of periodic occurrence
+    {"Q41825",     SPAN_WEEKDAY},          // day of the week
+    {"Q47018901",  SPAN_MONTH},            // calendar month
+    {"Q577",       SPAN_YEAR},             // year
+    {"Q29964144",  SPAN_YEAR_BC},          // year BC
+    {"Q39911",     SPAN_DECADE},           // decade
+    {"Q578",       SPAN_CENTURY},          // century
+    {"Q21199",     SPAN_NATURAL_NUMBER},   // natural number
+    {"Q8142",      SPAN_CURRENCY},         // currency
+    {"Q47574",     SPAN_UNIT},             // unit of measurement
 
-    {"Q101352",   SPAN_FAMILY_NAME},      // family name
-    {"Q202444",   SPAN_GIVEN_NAME},       // given name
+    {"Q101352",    SPAN_FAMILY_NAME},      // family name
+    {"Q202444",    SPAN_GIVEN_NAME},       // given name
 
-    {"Q215627",    SPAN_PERSON},          // person
-    {"Q17334923",  SPAN_LOCATION},        // location
-    {"Q43229",     SPAN_ORGANIZATION},    // organization
+    {"Q215627",    SPAN_PERSON},           // person
+    {"Q17334923",  SPAN_LOCATION},         // location
+    {"Q43229",     SPAN_ORGANIZATION},     // organization
 
-    //{"Q2188189",  SPAN_ART},              // musical work
-    //{"Q571",      SPAN_ART},              // book
-    //{"Q732577",   SPAN_ART},              // publication
-    //{"Q11424",    SPAN_ART},              // film
-    //{"Q15416",    SPAN_ART},              // television program
-    //{"Q47461344", SPAN_ART},              // written work
+    {"Q4164871",   -1},                    // position
+    {"Q180684",    -1},                    // conflict
+    {"Q1656682",   -1},                   // event
+    {"Q838948",    -1},                    // work of art
 
-    {"Q838948",   SPAN_ART},              // work of art
+    //{"Q2188189",  -1},          // musical work
+    //{"Q571",      -1},              // book
+    //{"Q732577",   -1},              // publication
+    //{"Q11424",    -1},              // film
+    //{"Q15416",    -1},              // television program
+    //{"Q47461344", -1},              // written work
 
     //{"Q35120",    0},                     // entity
 
@@ -132,54 +150,96 @@ void SpanTaxonomy::Init(Store *store) {
 void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   Document *document = chart->document();
   Store *store = document->store();
-  PhraseTable::MatchList matches;
+  PhraseTable::MatchList matchlist;
+  Handles matches(store);
   for (int b = 0; b < chart->size(); ++b) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = b + 1; e <= end; ++e) {
       SpanChart::Item &span = chart->item(b, e);
-      aliases.GetMatches(span.matches, &matches);
-      if (span.matches == nullptr) continue;
-      CaseForm form = document->Form(b + chart->begin(), e + chart->begin());
-      bool nomatch = true;
-      bool only_artwork = true;
-      for (const auto &match : matches) {
-        // Skip if case forms conflict.
-        if (match.form != CASE_NONE &&
-            form != CASE_NONE &&
-            match.form != form) {
-          continue;
-        }
-        nomatch = false;
 
-        // Classify item.
-        Frame item(store, match.item);
-        Handle type = taxonomy_->Classify(item);
-        if (type.IsNil()) {
-          only_artwork = false;
-          continue;
-        }
-
-        auto f = type_flags_.find(type);
-        if (f != type_flags_.end()) {
-          span.flags |= f->second;
-          if ((f->second & SPAN_ART) == 0) only_artwork = false;
-
-          Frame t(store, type);
-          LOG(INFO) << "'" << chart->phrase(b, e) << "': " << item.Id()
-                    << " " << item.GetString("name") << " is "
-                    << t.GetString("name") << " reliable: " << match.reliable;
+      // Only keep existing annotation for span if the phrase is an alias for
+      // the entity, or if it is a date or measure annotation.
+      if (!span.aux.IsNil()) {
+        if (span.flags & (SPAN_DATE | SPAN_MEASURE)) {
+          span.matches = nullptr;
         } else {
-          only_artwork = false;
+          // Check that phase is an alias for the annotation.
+          aliases.GetMatches(span.matches, &matches);
+          bool found = false;
+          for (Handle h : matches) {
+            if (h == span.aux) found = true;
+          }
+          if (found) {
+            // Clear other matches.
+            span.matches = nullptr;
+
+            // Classify item.
+            Frame item(store, span.aux);
+            Handle type = taxonomy_->Classify(item);
+            if (!type.IsNil()) {
+              auto f = type_flags_.find(type);
+              if (f != type_flags_.end()) {
+                if (f->second == -1) {
+                  span.aux = Handle::nil();
+                } else {
+                  span.flags |= f->second;
+                }
+              }
+            }
+          } else {
+            // Span is not an alias for the annotated entity.
+            span.aux = Handle::nil();
+          }
         }
       }
 
-      // Remove matches if all matches have conflicting case forms.
-      if (nomatch) {
-        LOG(INFO) << "Discard '" << chart->phrase(b, e) << "'";
-        span.matches = nullptr;
-      } else if (only_artwork) {
-        LOG(INFO) << "Work '" << chart->phrase(b, e) << "'";
-        span.matches = nullptr;
+      if (span.aux.IsNil() && span.matches != nullptr) {
+        aliases.GetMatches(span.matches, &matchlist);
+        CaseForm form = document->Form(b + chart->begin(), e + chart->begin());
+        bool nomatch = true;
+        bool only_discard = true;
+        for (const auto &match : matchlist) {
+          // Skip if case forms conflict.
+          if (match.form != CASE_NONE &&
+              form != CASE_NONE &&
+              match.form != form) {
+            continue;
+          }
+          nomatch = false;
+
+          // Classify item.
+          Frame item(store, match.item);
+          Handle type = taxonomy_->Classify(item);
+          if (type.IsNil()) {
+            only_discard = false;
+            continue;
+          }
+
+          auto f = type_flags_.find(type);
+          if (f == type_flags_.end()) {
+            only_discard = false;
+            continue;
+          }
+
+          if (f->second == -1) continue;
+
+          span.flags |= f->second;
+          only_discard = false;
+
+          //Frame t(store, type);
+          //LOG(INFO) << "'" << chart->phrase(b, e) << "': " << item.Id()
+          //          << " " << item.GetString("name") << " is "
+          //          << t.GetString("name") << " reliable: " << match.reliable;
+        }
+
+        // Remove matches if all matches have conflicting case forms.
+        if (nomatch) {
+          //LOG(INFO) << "No match '" << chart->phrase(b, e) << "'";
+          span.matches = nullptr;
+        } else if (only_discard) {
+          //LOG(INFO) << "Discard '" << chart->phrase(b, e) << "'";
+          span.matches = nullptr;
+        }
       }
     }
   }
@@ -190,7 +250,7 @@ void NumberAnnotator::Annotate(SpanChart *chart) {
   Document *document = chart->document();
   Handle lang = document->top().GetHandle(n_lang_);
   if (lang.IsNil()) lang = n_english_.handle();
-  Format format = lang == n_english_ ? IMPERIAL : STANDARD;
+  Format format = (lang == n_english_ ? IMPERIAL : STANDARD);
 
   for (int t = chart->begin(); t < chart->end(); ++t) {
     const string &word = document->token(t).word();
@@ -250,7 +310,7 @@ Handle NumberAnnotator::ParseNumber(Text str, char tsep, char dsep, char msep) {
       value = value * 10.0 + (*p++ - '0');
     } else if (*p == tsep) {
       if (group != nullptr && p - group != 3) return Handle::nil();
-      group = p;
+      group = p + 1;
       p++;
     } else if (*p == dsep) {
       break;
@@ -272,7 +332,7 @@ Handle NumberAnnotator::ParseNumber(Text str, char tsep, char dsep, char msep) {
         scale /= 10.0;
       } else if (*p == msep) {
         if (group != nullptr && p - group != 3) return Handle::nil();
-        group = p;
+        group = p + 1;
         p++;
       } else {
         return Handle::nil();
@@ -349,7 +409,6 @@ void NumberScaleAnnotator::Annotate(const PhraseTable &aliases,
         }
       }
       if (scale == 0) continue;
-      LOG(INFO) << "Scale: " << chart->phrase(b, e);
 
       // Find number to the left.
       int left_end = b;
@@ -362,7 +421,6 @@ void NumberScaleAnnotator::Annotate(const PhraseTable &aliases,
         if (number_span.aux.IsNumber()) {
           start = left;
           number = number_span.aux;
-          LOG(INFO) << "scaled number: " << chart->phrase(start, e);
           break;
         }
       }
@@ -434,7 +492,6 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         if (!unit.IsNil()) break;
       }
       if (unit.IsNil()) continue;
-      LOG(INFO) << "Unit: " << chart->phrase(b, e);
 
       // Find number to the left.
       int left_end = b;

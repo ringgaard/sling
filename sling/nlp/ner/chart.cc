@@ -63,7 +63,7 @@ void SpanChart::Add(int begin, int end, Handle match, int flags) {
 
 void SpanChart::Populate(const PhraseTable &phrase_table,
                          const StopWords &stopwords) {
-  // Spans cannot start or end on ignored tokens (i.e. punctuation).
+  // Spans cannot start or end on stop words.
   std::vector<bool> skip(size_);
   for (int i = 0; i < size_; ++i) {
     skip[i] = stopwords.Discard(document_->token(i + begin_));

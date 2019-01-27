@@ -489,6 +489,7 @@ class MeasureTemplate : public WikiMacro {
 
     // Add measure annotation.
     Builder b(annotator->store());
+    b.AddIsA("/w/quantity");
     b.Add("/w/amount", amount);
     b.Add("/w/unit", unit.item);
     annotator->AddMention(begin, end, b.Create().handle());

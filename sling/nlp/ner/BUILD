@@ -33,6 +33,7 @@ cc_binary(
     ":measures",
     "//sling/base",
     "//sling/file:posix",
+    "//sling/file:recordio",
     "//sling/frame:object",
     "//sling/frame:serialization",
     "//sling/nlp/document",

@@ -39,6 +39,14 @@ class SpanAnnotator {
   Name n_instance_of_{names_, "P31"};
 };
 
+class SpanImporter : public SpanAnnotator {
+ public:
+  void Annotate(SpanChart *chart);
+ private:
+  Name n_time_{names_, "/w/time"};
+  Name n_quantity_{names_, "/w/quantity"};
+};
+
 class SpanTaxonomy : public SpanAnnotator {
  public:
   ~SpanTaxonomy();

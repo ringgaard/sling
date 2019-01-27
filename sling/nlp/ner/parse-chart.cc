@@ -7,6 +7,7 @@
 #include "sling/base/types.h"
 #include "sling/base/flags.h"
 #include "sling/file/file.h"
+#include "sling/file/recordio.h"
 #include "sling/frame/object.h"
 #include "sling/frame/serialization.h"
 #include "sling/nlp/document/document.h"
@@ -18,6 +19,7 @@
 
 DEFINE_string(text, "", "Text to parse");
 DEFINE_string(input, "", "File with text to parse");
+DEFINE_string(item, "", "QID of item to parse");
 DEFINE_string(lang, "en", "Language");
 
 using namespace sling;
@@ -25,13 +27,6 @@ using namespace sling::nlp;
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
-
-  string text;
-  if (!FLAGS_text.empty()) {
-    text = FLAGS_text;
-  } else if (!FLAGS_input.empty()) {
-    CHECK(File::ReadContents(FLAGS_input, &text));
-  }
 
   StopWords stopwords;
   stopwords.Add(".");
@@ -56,6 +51,7 @@ int main(int argc, char *argv[]) {
   stopwords.Add("to");
   stopwords.Add("at");
   stopwords.Add("'s");
+  stopwords.Add("as");
 
   stopwords.Add("le");
   stopwords.Add("la");
@@ -63,43 +59,66 @@ int main(int argc, char *argv[]) {
   stopwords.Add("l'");
   //stopwords.Add("do");
 
-  Store store;
-  store.LockGC();
-  LoadStore("local/data/e/wiki/kb.sling", &store);
+  Store commons;
+  commons.LockGC();
+  LoadStore("local/data/e/wiki/kb.sling", &commons);
 
   PhraseTable aliases;
-  aliases.Load(&store,
+  aliases.Load(&commons,
                "local/data/e/wiki/" + FLAGS_lang + "/phrase-table.repo");
 
+  RecordFileOptions options;
+  RecordDatabase db("local/data/e/wiki/" + FLAGS_lang + "/documents@10.rec",
+                    options);
+
+  SpanImporter importer;
   SpanTaxonomy taxonomy;
   NumberAnnotator numbers;
   NumberScaleAnnotator scales;
   MeasureAnnotator measures;
   DateAnnotator dates;
 
-  taxonomy.Init(&store);
-  numbers.Init(&store);
-  scales.Init(&store);
-  measures.Init(&store);
-  dates.Init(&store);
+  importer.Init(&commons);
+  taxonomy.Init(&commons);
+  numbers.Init(&commons);
+  scales.Init(&commons);
+  measures.Init(&commons);
+  dates.Init(&commons);
 
-  Document document(&store);
-  DocumentTokenizer tokenizer;
-  DocumentLexer lexer(&tokenizer);
-  CHECK(lexer.Lex(&document, text));
+  commons.Freeze();
+
+  Store store(&commons);
+  Frame frame(&store, Handle::nil());
+  if (!FLAGS_item.empty()) {
+    Record record;
+    CHECK(db.Lookup(FLAGS_item, &record));
+    frame = Decode(&store, record.value).AsFrame();
+  }
+  Document document(frame);
+  if (frame.IsNil()) {
+    string text;
+    if (!FLAGS_text.empty()) {
+      text = FLAGS_text;
+    } else if (!FLAGS_input.empty()) {
+      CHECK(File::ReadContents(FLAGS_input, &text));
+    }
+
+    DocumentTokenizer tokenizer;
+    DocumentLexer lexer(&tokenizer);
+    CHECK(lexer.Lex(&document, text));
+  }
+
+  document.ClearAnnotations();  // TODO: import annotations into chart
 
   for (SentenceIterator s(&document); s.more(); s.next()) {
     SpanChart chart(&document, s.begin(), s.end(), 10);
     chart.Populate(aliases, stopwords);
 
-    LOG(INFO) << "Taxonomy annotation";
+    importer.Annotate(&chart);
     taxonomy.Annotate(aliases, &chart);
-    LOG(INFO) << "Number annotation";
     numbers.Annotate(&chart);
     scales.Annotate(aliases, &chart);
-    LOG(INFO) << "Measure annotation";
     measures.Annotate(aliases, &chart);
-    LOG(INFO) << "Date annotation";
     dates.Annotate(aliases, &chart);
 
     chart.Solve();

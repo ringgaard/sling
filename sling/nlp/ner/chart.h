@@ -43,14 +43,13 @@ enum SpanFlags {
   SPAN_CENTURY           = (1 << 12),
   SPAN_DATE              = (1 << 13),
   SPAN_MEASURE           = (1 << 14),
-  SPAN_ART               = (1 << 15),
 
-  SPAN_FAMILY_NAME       = (1 << 16),
-  SPAN_GIVEN_NAME        = (1 << 17),
+  SPAN_FAMILY_NAME       = (1 << 15),
+  SPAN_GIVEN_NAME        = (1 << 16),
 
-  SPAN_PERSON            = (1 << 18),
-  SPAN_LOCATION          = (1 << 19),
-  SPAN_ORGANIZATION      = (1 << 20),
+  SPAN_PERSON            = (1 << 17),
+  SPAN_LOCATION          = (1 << 18),
+  SPAN_ORGANIZATION      = (1 << 19),
 };
 
 // Stop word list. A span cannot start or end with a stop word.

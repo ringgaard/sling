@@ -201,7 +201,7 @@ string ToLex(const Document &document) {
         for (Handle frame : evoked) {
           if (first) output.WriteChar('|');
           first = false;
-          printer.Print(frame);
+          printer.PrintReference(frame);
         }
         output.WriteChar(']');
       }
@@ -210,7 +210,7 @@ string ToLex(const Document &document) {
 
   // Output themes.
   for (Handle frame : document.themes()) {
-    printer.Print(frame);
+    printer.PrintReference(frame);
   }
 
   output.Flush();
