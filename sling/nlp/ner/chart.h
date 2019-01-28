@@ -43,13 +43,14 @@ enum SpanFlags {
   SPAN_CENTURY           = (1 << 12),
   SPAN_DATE              = (1 << 13),
   SPAN_MEASURE           = (1 << 14),
+  SPAN_GEO               = (1 << 15),
 
-  SPAN_FAMILY_NAME       = (1 << 15),
-  SPAN_GIVEN_NAME        = (1 << 16),
+  SPAN_FAMILY_NAME       = (1 << 16),
+  SPAN_GIVEN_NAME        = (1 << 17),
 
-  SPAN_PERSON            = (1 << 17),
-  SPAN_LOCATION          = (1 << 18),
-  SPAN_ORGANIZATION      = (1 << 19),
+  SPAN_PERSON            = (1 << 18),
+  SPAN_LOCATION          = (1 << 19),
+  SPAN_ORGANIZATION      = (1 << 20),
 };
 
 // Stop word list. A span cannot start or end with a stop word.
@@ -104,7 +105,7 @@ class SpanChart {
   void Solve();
 
   // Extract best span covering.
-  void Extract();
+  void Extract(Document *document = nullptr);
 
   // Return item for token span (0 <= begin < size, 0 < end <= size).
   Item &item(int begin, int end) {

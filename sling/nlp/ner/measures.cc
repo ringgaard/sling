@@ -82,6 +82,7 @@ void SpanImporter::Annotate(SpanChart *chart) {
     int flags = 0;
     if (evoked.IsA(n_time_)) flags |= SPAN_DATE;
     if (evoked.IsA(n_quantity_)) flags |= SPAN_MEASURE;
+    if (evoked.IsA(n_geo_)) flags |= SPAN_GEO;
     chart->Add(span->begin(), span->end(), evoked.handle(), flags);
   }
 }
@@ -112,9 +113,9 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q17334923",  SPAN_LOCATION},         // location
     {"Q43229",     SPAN_ORGANIZATION},     // organization
 
-    {"Q4164871",   -1},                    // position
-    {"Q180684",    -1},                    // conflict
-    {"Q1656682",   -1},                   // event
+    //{"Q4164871",   -1},                    // position
+    //{"Q180684",    -1},                    // conflict
+    //{"Q1656682",   -1},                    // event
     {"Q838948",    -1},                    // work of art
 
     //{"Q2188189",  -1},          // musical work
@@ -160,7 +161,7 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
       // Only keep existing annotation for span if the phrase is an alias for
       // the entity, or if it is a date or measure annotation.
       if (!span.aux.IsNil()) {
-        if (span.flags & (SPAN_DATE | SPAN_MEASURE)) {
+        if (span.flags & (SPAN_DATE | SPAN_MEASURE | SPAN_GEO)) {
           span.matches = nullptr;
         } else {
           // Check that phase is an alias for the annotation.

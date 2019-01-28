@@ -137,7 +137,8 @@ void SpanChart::Solve() {
   }
 }
 
-void SpanChart::Extract() {
+void SpanChart::Extract(Document *document) {
+  if (document == nullptr) document = document_;
   std::vector<std::pair<int, int>> queue;
   queue.emplace_back(0, size_);
   while (!queue.empty()) {
@@ -149,11 +150,11 @@ void SpanChart::Extract() {
     Item &s = item(b, e);
     if (!s.aux.IsNil()) {
       // Add span annotation for auxiliary item.
-      Span *span = document_->AddSpan(begin_ + b, begin_ + e);
+      Span *span = document->AddSpan(begin_ + b, begin_ + e);
       span->Evoke(s.aux);
     } else if (s.matches != nullptr) {
       // Add span annotation for match.
-      document_->AddSpan(begin_ + b, begin_ + e);
+      document->AddSpan(begin_ + b, begin_ + e);
     } else if (s.split != -1) {
       // Queue best split.
       queue.emplace_back(b + s.split, e);

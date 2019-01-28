@@ -45,6 +45,7 @@ class SpanImporter : public SpanAnnotator {
  private:
   Name n_time_{names_, "/w/time"};
   Name n_quantity_{names_, "/w/quantity"};
+  Name n_geo_{names_, "/w/geo"};
 };
 
 class SpanTaxonomy : public SpanAnnotator {

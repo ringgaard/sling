@@ -108,7 +108,10 @@ int main(int argc, char *argv[]) {
     CHECK(lexer.Lex(&document, text));
   }
 
-  document.ClearAnnotations();  // TODO: import annotations into chart
+  //std::cout << "original:\n" << ToLex(document) << "\n\n";
+
+  Document outdoc(document);
+  outdoc.ClearAnnotations();
 
   for (SentenceIterator s(&document); s.more(); s.next()) {
     SpanChart chart(&document, s.begin(), s.end(), 10);
@@ -122,17 +125,11 @@ int main(int argc, char *argv[]) {
     dates.Annotate(aliases, &chart);
 
     chart.Solve();
-    chart.Extract();
+    chart.Extract(&outdoc);
   }
-  document.Update();
+  outdoc.Update();
 
-  for (SentenceIterator s(&document); s.more(); s.next()) {
-    Document sentence(document, s.begin(), s.end(), true);
-    std::cout << "S: " << ToLex(sentence) << "\n";
-  }
-
-  //std::cout << ToLex(document) << "\n\n";
-  //std::cout << ToText(document.top()) << "\n";
+  std::cout << ToLex(outdoc) << "\n";
 
   return 0;
 }
