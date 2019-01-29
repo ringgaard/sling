@@ -312,12 +312,23 @@ class Workflow(object):
     return t
 
   def resource(self, file, dir=None, shards=None, ext=None, format=None):
-    """A one or more resources to workflow. The file parameter can be a file
+    """Adds one or more resources to workflow. The file parameter can be a file
     name pattern with wild-cards, in which can it is expanded to a list of
     matching resources. The optional dir and ext are prepended and appended to
     the base file name. The file name can also be a sharded file name (@n),
     which is expanded to a list of resources, one for each shard. The general
     format of a file name is as follows: [<dir>]<file>[@<shards>][ext]"""
+    # Recursively expand comma-separated list of files.
+    if "," in file:
+      resources = []
+      for f in files.split(","):
+        r = self.resource(f, dir=dir, format=format)
+        if isinstance(r, list):
+          resources.extend(r)
+        else:
+          resources.append(r)
+      return resources
+
     # Convert format.
     if type(format) == str: format = Format(format)
 

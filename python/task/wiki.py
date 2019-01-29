@@ -33,15 +33,15 @@ flags.define("--only_known_languages",
              default=False,
              action='store_true')
 
-flags.define("--snapshot_kb",
-             help="create snapshot for knowledge base",
-             default=False,
-             action='store_true')
-
 flags.define("--skip_wikipedia_mapping",
              help="skip wikipedia mapping step",
              default=False,
              action='store_true')
+
+flags.define("--extra_items",
+             help="additional items with info",
+             default=None,
+             metavar="RECFILES")
 
 class WikiWorkflow:
   def __init__(self, name=None, wf=None):
@@ -472,6 +472,13 @@ class WikiWorkflow:
       items = self.wikidata_items() + [self.wikipedia_items(),
                                        self.wikipedia_members(),
                                        self.item_popularity()]
+    if flags.arg.extra_items:
+      extra = self.wf.resource(flags.arg.extra_items, format="records/frame")
+      if isinstance(extra, list):
+        items.extend(extra)
+      else:
+        items.append(extra)
+
     with self.wf.namespace("fused-items"):
       return self.wf.mapreduce(input=items,
                                output=self.fused_items(),
@@ -551,7 +558,7 @@ class WikiWorkflow:
       # Collect frames into knowledge base store.
       parts = self.wf.collect(pruned_items, property_catalog, schemas)
       return self.wf.write(parts, self.knowledge_base(),
-                          params={"snapshot": flags.arg.snapshot_kb})
+                          params={"snapshot": True})
 
   #---------------------------------------------------------------------------
   # Item names

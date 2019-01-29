@@ -451,9 +451,10 @@ class MeasureTemplate : public WikiMacro {
     Frame units = config.GetFrame("units");
     if (units.valid()) {
       for (const Slot &s : units) {
+        if (!store->IsString(s.name)) continue;
         String name(store, s.name);
         Frame info(store, s.value);
-        if (!name.valid() || !info.valid()) break;
+        CHECK(name.valid() && info.valid());
         Unit &unit = units_[name.value()];
         unit.item = info.GetHandle("/w/unit");
         unit.factor = info.GetFloat("/w/amount");

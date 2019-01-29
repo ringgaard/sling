@@ -126,7 +126,7 @@
 "DNK": {type: "text" text: "Denmark" link: Q35}
 "DNR": {type: "text" text: "Donetsk People's Republic" link: Q16150196}
 "DOM": {type: "text" text: "Dominican Republic" link: Q786}
-"DPRK": {type: "text" text: "North Korea" link: North Korea}
+"DPRK": {type: "text" text: "North Korea" link: Q423}
 "DZA": {type: "text" text: "Algeria" link: Q262}
 
 "ECU": {type: "text" text: "Ecuador" link: Q736}
