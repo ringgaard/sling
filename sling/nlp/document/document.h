@@ -295,6 +295,9 @@ class Document {
   // Return span in document.
   Span *span(int index) const { return spans_[index]; }
 
+  // Return all spans in document.
+  const std::vector<Span *> spans() const { return spans_; }
+
   // Return the number of tokens in the document.
   int num_tokens() const { return tokens_.size(); }
 

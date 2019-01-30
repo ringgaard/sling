@@ -151,6 +151,17 @@ cc_library(
 )
 
 cc_library(
+  name = "wikipedia-links",
+  srcs = ["wikipedia-links.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/task",
+    "//sling/task:documents",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "aliases",
   srcs = ["aliases.cc"],
   deps = [

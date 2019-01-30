@@ -99,7 +99,7 @@ class Category:
     self.num_members = 0
     for member in self.members(cats.n_item_member):
       if cats.is_category(member): continue
-      member_facts = self.cats.extractor.extract_facts(self.store, member)
+      member_facts = self.cats.extractor.facts(self.store, member)
       member_targets = set()
       for fact in member_facts:
         target = fact[-1]
@@ -124,10 +124,11 @@ class Category:
         # Find matches for sub-phrase.
         matches = []
         subphrase = self.doc.phrase(b, b + l)
-        items = self.cats.phrasetab.query(subphrase)
         seen = set()
         matched = False
-        for item, count in items:
+        for m in self.cats.phrasetab.query(subphrase):
+          item = m.item()
+          count = m.count()
           if item in self.targets:
             matches.append(Phrase(b, b + l, item, count))
             matched = True
@@ -137,8 +138,9 @@ class Category:
         #if not matched and lemma != subphrase:
         if lemma != subphrase:
           # Try to match stemmed phrase.
-          items = self.cats.phrasetab.query(lemma)
-          for item, count in items:
+          for m in self.cats.phrasetab.query(lemma):
+            item = m.item()
+            count = m.count()
             if item in self.targets:
               if item not in seen:
                 matches.append(Phrase(b, b + l, item, count))

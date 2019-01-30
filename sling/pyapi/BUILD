@@ -73,6 +73,7 @@ cc_library(
     "//sling/nlp/wiki:wikidata-importer",
     "//sling/nlp/wiki:wikipedia-importer",
     "//sling/nlp/wiki:wikipedia-documents",
+    "//sling/nlp/wiki:wikipedia-links",
 
     "//sling/nlp/kb:name-table-builder",
     "//sling/nlp/kb:phrase-table-builder",
