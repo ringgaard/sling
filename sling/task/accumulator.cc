@@ -29,8 +29,8 @@ void Accumulator::Init(Channel *output, int num_buckets) {
   buckets_.resize(num_buckets);
 
   Task *task = output->producer().task();
-  num_slots_used_ = task->GetCounter("num_accumulator_slots_used");
-  num_collisions_ = task->GetCounter("num_accumulator_collisions");
+  num_slots_used_ = task->GetCounter("accumulator_slots_used");
+  num_collisions_ = task->GetCounter("accumulator_collisions");
 }
 
 void Accumulator::Increment(Text key, int64 count) {

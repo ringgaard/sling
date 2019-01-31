@@ -112,6 +112,7 @@ class WikiExtractor {
   void ExtractMath(const Node &node);
   void ExtractGallery(const Node &node);
   void ExtractReference(const Node &node);
+  void ExtractNoWiki(const Node &node);
   void ExtractHeading(const Node &node);
   void ExtractIndent(const Node &node);
   void ExtractTerm(const Node &node);

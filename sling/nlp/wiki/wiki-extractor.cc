@@ -68,6 +68,7 @@ void WikiExtractor::ExtractNode(const Node &node) {
     case WikiParser::MATH: ExtractMath(node); break;
     case WikiParser::GALLERY: ExtractGallery(node); break;
     case WikiParser::REF: ExtractReference(node); break;
+    case WikiParser::NOWIKI: ExtractNoWiki(node); break;
     case WikiParser::HEADING: ExtractHeading(node); break;
     case WikiParser::INDENT: ExtractIndent(node); break;
     case WikiParser::TERM: ExtractTerm(node); break;
@@ -169,6 +170,9 @@ void WikiExtractor::ExtractGallery(const Node &node) {
 
 void WikiExtractor::ExtractReference(const Node &node) {
   sink()->WordBreak();
+}
+
+void WikiExtractor::ExtractNoWiki(const Node &node) {
 }
 
 void WikiExtractor::ExtractHeading(const Node &node) {

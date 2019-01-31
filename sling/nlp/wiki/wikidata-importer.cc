@@ -290,8 +290,8 @@ class WikidataPruner : public task::FrameProcessor {
     aux_output_ = task->GetSink("aux");
 
     // Initialize counters.
-    num_kb_items_ = task->GetCounter("num_kb_items");
-    num_aux_items_ = task->GetCounter("num_aux_items");
+    num_kb_items_ = task->GetCounter("kb_items");
+    num_aux_items_ = task->GetCounter("aux_items");
   }
 
   void Process(Slice key, const Frame &frame) override {
@@ -299,7 +299,7 @@ class WikidataPruner : public task::FrameProcessor {
     // item is pruned.
     bool aux = filter_.IsAux(frame);
 
-    // Remove aliases and wikilinks from item.
+    // Optionally, remove aliases, wikilinks, and categories from item.
     Builder item(frame);
     if (prune_aliases_) item.Delete(n_alias_);
     if (prune_wiki_links_) item.Delete(n_wikipedia_);

@@ -190,8 +190,15 @@ string ToLex(const Document &document) {
       if (s->begin() == token.index()) output.WriteChar('[');
     }
 
-    // Add token word.
-    output.Write(token.word());
+    // Add token word. Escape reserved characters.
+    for (char c : token.word()) {
+      switch (c) {
+        case '{': case '[': c = '('; break;
+        case '}': case ']': c = ')'; break;
+        case '|': c = '!'; break;
+      }
+      output.WriteChar(c);
+    }
 
     // Add span close brackets.
     for (Span *s = span; s != nullptr; s = s->parent()) {
@@ -199,7 +206,7 @@ string ToLex(const Document &document) {
         bool first = true;
         s->AllEvoked(&evoked);
         for (Handle frame : evoked) {
-          if (first) output.WriteChar('|');
+          output.WriteChar(first ? '|' : ' ');
           first = false;
           printer.PrintReference(frame);
         }

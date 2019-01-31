@@ -45,6 +45,7 @@ phrasetab = sling.PhraseTable(kb, "local/data/e/wiki/en/phrase-table.repo")
 n_id = kb["id"]
 n_fanin = kb["/w/item/fanin"]
 n_popularity = kb["/w/item/popularity"]
+n_links = kb["/w/item/links"]
 kb.freeze()
 
 store = sling.Store(kb)
@@ -79,11 +80,21 @@ for mention in doc.mentions:
         item_type.name if item_type != None else "?",
         "" if m.reliable else "(noisy)", popularity, fanin, support)
 
+      for fact in extractor.facts(store, item):
+        target = fact[-1]
+        if target in context: print "        fact context:", item_text(target)
+
+      links = item[n_links]
+      if links:
+        for l,c in links:
+          if l in context: print "        link context:", item_text(l)
+
     if best != None:
       context[best] = context.get(best, 0) + 100
       for fact in extractor.facts(store, best):
         target = fact[-1]
-        context[target] = context.get(target, 0) + 1
+        if target != item:
+          context[target] = context.get(target, 0) + 1
 
   else:
     for f in evokes:
@@ -92,7 +103,13 @@ for mention in doc.mentions:
         context[f] = context.get(f, 0) + 500
         for fact in extractor.facts(store, f):
           target = fact[-1]
-          context[target] = context.get(target, 0) + 5
+          if target != f:
+            context[target] = context.get(target, 0) + 5
+        links = f[n_links]
+        if links:
+          for l, c in links:
+            print "link", item_text(l)
+            context[l] = context.get(l, 0) + 3
       else:
         print phrase, ":", f
 

@@ -321,8 +321,8 @@ class Workflow(object):
     # Recursively expand comma-separated list of files.
     if "," in file:
       resources = []
-      for f in files.split(","):
-        r = self.resource(f, dir=dir, format=format)
+      for f in file.split(","):
+        r = self.resource(f, dir=dir, shards=shards, ext=ext, format=format)
         if isinstance(r, list):
           resources.extend(r)
         else:

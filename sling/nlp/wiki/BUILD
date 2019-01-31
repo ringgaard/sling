@@ -155,8 +155,12 @@ cc_library(
   srcs = ["wikipedia-links.cc"],
   deps = [
     "//sling/base",
+    "//sling/nlp/document",
+    "//sling/nlp/document:document-tokenizer",
+    "//sling/nlp/document:lex",
     "//sling/task",
     "//sling/task:documents",
+    "//sling/task:reducer",
   ],
   alwayslink = 1,
 )

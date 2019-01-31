@@ -523,6 +523,7 @@ class InfoboxTemplate : public WikiMacro {
     Handle n_class = store->Lookup("class");
     Handle n_fields = store->Lookup("fields");
     Handle n_group = store->Lookup("group");
+    n_infobox_ = store->Lookup("/wp/infobox");
     for (const Slot &s : config) {
       if (s.name == n_class) {
         classes_.push_back(s.value);
@@ -552,6 +553,7 @@ class InfoboxTemplate : public WikiMacro {
     // Create builders for main fields and repeated fields.
     Store *store = annotator->store();
     Builder main(store);
+    main.AddIsA(n_infobox_);
     for (Handle cls : classes_) main.AddIsA(cls);
     HandleMap<std::vector<Builder *>> groups;
 
@@ -658,6 +660,9 @@ class InfoboxTemplate : public WikiMacro {
 
   // Document names.
   DocumentNames *docnames_ = nullptr;
+
+  // Infobox type.
+  Handle n_infobox_;
 };
 
 REGISTER_WIKI_MACRO("infobox", InfoboxTemplate);
