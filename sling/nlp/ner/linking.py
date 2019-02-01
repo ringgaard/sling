@@ -72,44 +72,57 @@ for mention in doc.mentions:
       item_type = taxonomy.classify(item)
       support = context.get(item, 0)
       if best == None and support > 0: best = item
-      print "  %5d %s %s %s [%s] %s pop: %d fanin: %d support: %d" % (
+
+      context_score = 0.0
+      for fact in extractor.facts(store, item):
+        target = fact[-1]
+        target_fanin = target[n_fanin]
+        if target_fanin == None: target_fanin = 1
+        target_prominence = context.get(target, 0)
+        if target_prominence > 0:
+          score = target_prominence / target_fanin
+          context_score += score
+          #if score > 1e-4:
+          #  print "        fact context:", score, item_text(target)
+
+      print "  %5d %s %s %s [%s] %s pop: %d fanin: %d sup: %d ctx: %f" % (
         m.count(),
         "*" if support > 0 else " ",
         formname[m.form()],
         item_text(item),
         item_type.name if item_type != None else "?",
-        "" if m.reliable else "(noisy)", popularity, fanin, support)
+        "" if m.reliable else "(noisy)",
+        popularity,
+        fanin,
+        support,
+        context_score)
 
-      for fact in extractor.facts(store, item):
-        target = fact[-1]
-        if target in context: print "        fact context:", item_text(target)
-
-      links = item[n_links]
-      if links:
-        for l,c in links:
-          if l in context: print "        link context:", item_text(l)
+      #links = item[n_links]
+      #if links:
+      #  for l,c in links:
+      #    if l in context: print "        link context:", item_text(l)
 
     if best != None:
-      context[best] = context.get(best, 0) + 100
+      context[best] = context.get(best, 0.0) + 100.0
       for fact in extractor.facts(store, best):
         target = fact[-1]
         if target != item:
-          context[target] = context.get(target, 0) + 1
+          context[target] = context.get(target, 0.0) + 1.0
 
   else:
     for f in evokes:
       if type(f) is sling.Frame and n_id in f:
         print phrase, ":", item_text(f)
-        context[f] = context.get(f, 0) + 500
+        context[f] = context.get(f, 0.0) + 500.0
         for fact in extractor.facts(store, f):
           target = fact[-1]
           if target != f:
-            context[target] = context.get(target, 0) + 5
+            context[target] = context.get(target, 0.0) + 5.0
         links = f[n_links]
         if links:
           for l, c in links:
-            print "link", item_text(l)
-            context[l] = context.get(l, 0) + 3
+            #print "link", item_text(l)
+            context[l] = context.get(l, 0.0) + 3.0
       else:
         print phrase, ":", f
 
