@@ -71,18 +71,45 @@ Handle SpanAnnotator::FindMatch(const PhraseTable &aliases,
   return Handle::nil();
 }
 
-void SpanImporter::Annotate(SpanChart *chart) {
+void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
+  Document *document = chart->document();
+  Handles matches(document->store());
   int begin = chart->begin();
   int end = chart->end();
-  for (int i = 0; i < chart->document()->num_spans(); ++i) {
-    Span *span = chart->document()->span(i);
+  for (Span *span : document->spans()) {
+    // Skip spans outside the chart.
     if (span->begin() < begin || span->end() > end) continue;
+
+    // Get evoked frame for span.
     Frame evoked = span->Evoked();
     if (evoked.invalid()) continue;
+
+    // Check for special annotations.
     int flags = 0;
     if (evoked.IsA(n_time_)) flags |= SPAN_DATE;
     if (evoked.IsA(n_quantity_)) flags |= SPAN_MEASURE;
     if (evoked.IsA(n_geo_)) flags |= SPAN_GEO;
+
+    auto &item = chart->item(span->begin() - begin, span->end() - begin);
+    if (flags != 0) {
+      // Clear any other matches for span.
+      item.matches = nullptr;
+    } else {
+      // Check that phase is an alias for the annotation.
+      aliases.Lookup(span->Fingerprint(), &matches);
+      bool found = false;
+      for (Handle h : matches) {
+        if (h == evoked.handle()) found = true;
+      }
+      if (found) {
+        // Match found for annotation, clear any other matches.
+        item.matches = nullptr;
+      } else {
+        // No match found for annotation, skip it,
+        continue;
+      }
+    }
+
     chart->Add(span->begin(), span->end(), evoked.handle(), flags);
   }
 }
@@ -152,53 +179,20 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   Document *document = chart->document();
   Store *store = document->store();
   PhraseTable::MatchList matchlist;
-  Handles matches(store);
   for (int b = 0; b < chart->size(); ++b) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = b + 1; e <= end; ++e) {
       SpanChart::Item &span = chart->item(b, e);
 
-      // Only keep existing annotation for span if the phrase is an alias for
-      // the entity, or if it is a date or measure annotation.
       if (!span.aux.IsNil()) {
-        if (span.flags & (SPAN_DATE | SPAN_MEASURE | SPAN_GEO)) {
-          span.matches = nullptr;
-        } else {
-          // Check that phase is an alias for the annotation.
-          aliases.GetMatches(span.matches, &matches);
-          bool found = false;
-          for (Handle h : matches) {
-            if (h == span.aux) found = true;
-          }
-          if (found) {
-            // Clear other matches.
-            span.matches = nullptr;
-
-            // Classify item.
-            Frame item(store, span.aux);
-            Handle type = taxonomy_->Classify(item);
-            if (!type.IsNil()) {
-              auto f = type_flags_.find(type);
-              if (f != type_flags_.end()) {
-                if (f->second == -1) {
-                  span.aux = Handle::nil();
-                } else {
-                  span.flags |= f->second;
-                }
-              }
-            }
-          } else {
-            // Span is not an alias for the annotated entity.
-            span.aux = Handle::nil();
-          }
-        }
-      }
-
-      if (span.aux.IsNil() && span.matches != nullptr) {
+        // Classify matching item.
+        Frame item(store, span.aux);
+        int flags = Classify(item);
+        if (flags != -1) span.flags |= flags;
+      } else if (span.matches != nullptr) {
         aliases.GetMatches(span.matches, &matchlist);
         CaseForm form = document->Form(b + chart->begin(), e + chart->begin());
         bool nomatch = true;
-        bool only_discard = true;
         for (const auto &match : matchlist) {
           // Skip if case forms conflict.
           if (match.form != CASE_NONE &&
@@ -206,44 +200,35 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
               match.form != form) {
             continue;
           }
-          nomatch = false;
 
           // Classify item.
           Frame item(store, match.item);
-          Handle type = taxonomy_->Classify(item);
-          if (type.IsNil()) {
-            only_discard = false;
-            continue;
+          int flags = Classify(item);
+          if (flags != -1) {
+            span.flags |= flags;
+            nomatch = false;
+
+            //LOG(INFO) << "'" << chart->phrase(b, e) << "': " << item.Id()
+            //          << " " << item.GetString("name")
+            //          << " reliable: " << match.reliable;
           }
-
-          auto f = type_flags_.find(type);
-          if (f == type_flags_.end()) {
-            only_discard = false;
-            continue;
-          }
-
-          if (f->second == -1) continue;
-
-          span.flags |= f->second;
-          only_discard = false;
-
-          //Frame t(store, type);
-          //LOG(INFO) << "'" << chart->phrase(b, e) << "': " << item.Id()
-          //          << " " << item.GetString("name") << " is "
-          //          << t.GetString("name") << " reliable: " << match.reliable;
         }
 
-        // Remove matches if all matches have conflicting case forms.
         if (nomatch) {
           //LOG(INFO) << "No match '" << chart->phrase(b, e) << "'";
-          span.matches = nullptr;
-        } else if (only_discard) {
-          //LOG(INFO) << "Discard '" << chart->phrase(b, e) << "'";
           span.matches = nullptr;
         }
       }
     }
   }
+}
+
+int SpanTaxonomy::Classify(const Frame &item) {
+  Handle type = taxonomy_->Classify(item);
+  if (type.IsNil()) return 0;
+  auto f = type_flags_.find(type);
+  if (f == type_flags_.end()) return 0;
+  return f->second;
 }
 
 void NumberAnnotator::Annotate(SpanChart *chart) {

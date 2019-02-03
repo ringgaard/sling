@@ -41,7 +41,7 @@ class SpanAnnotator {
 
 class SpanImporter : public SpanAnnotator {
  public:
-  void Annotate(SpanChart *chart);
+  void Annotate(const PhraseTable &aliases, SpanChart *chart);
  private:
   Name n_time_{names_, "/w/time"};
   Name n_quantity_{names_, "/w/quantity"};
@@ -54,6 +54,8 @@ class SpanTaxonomy : public SpanAnnotator {
   void Init(Store *store);
   void Annotate(const PhraseTable &aliases, SpanChart *chart);
  private:
+  int Classify(const Frame &item);
+
   FactCatalog catalog_;
   Taxonomy *taxonomy_ = nullptr;
   HandleMap<int> type_flags_;

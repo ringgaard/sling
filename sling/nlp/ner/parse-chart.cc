@@ -53,10 +53,10 @@ int main(int argc, char *argv[]) {
   stopwords.Add("'s");
   stopwords.Add("as");
 
-  stopwords.Add("le");
-  stopwords.Add("la");
-  stopwords.Add("les");
-  stopwords.Add("l'");
+  //stopwords.Add("le");
+  //stopwords.Add("la");
+  //stopwords.Add("les");
+  //stopwords.Add("l'");
   //stopwords.Add("do");
 
   Store commons;
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
     SpanChart chart(&document, s.begin(), s.end(), 10);
     chart.Populate(aliases, stopwords);
 
-    importer.Annotate(&chart);
+    importer.Annotate(aliases, &chart);
     taxonomy.Annotate(aliases, &chart);
     numbers.Annotate(&chart);
     scales.Annotate(aliases, &chart);
