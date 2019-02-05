@@ -114,7 +114,8 @@ bool WikimediaTypes::IsCategory(Handle type) {
          type == n_user_language_category_ ||
          type == n_stub_category_ ||
          type == n_meta_category_ ||
-         type == n_navbox_category_;
+         type == n_navbox_category_ ||
+         type == n_infobox_templates_category_;
 }
 
 bool WikimediaTypes::IsDisambiguation(Handle type) {

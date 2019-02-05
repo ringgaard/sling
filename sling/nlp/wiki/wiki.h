@@ -125,6 +125,7 @@ class WikimediaTypes {
   Name n_user_language_category_{names_, "Q20010800"};
   Name n_meta_category_{names_, "Q30432511"};
   Name n_navbox_category_{names_, "Q13331174"};
+  Name n_infobox_templates_category_{names_, "Q23894246"};
   Name n_permanent_duplicate_item_{names_, "Q21286738"};
 };
 
