@@ -21,6 +21,12 @@ def item_text(item):
       s += " (" + descr + ")"
   return s
 
+def item_name(item):
+  name = item.name
+  if name == None: name = item.id
+  if name == None: name = "?"
+  return name
+
 kb = sling.Store()
 kb.lockgc()
 kb.load("local/data/e/wiki/kb.sling")
@@ -29,6 +35,7 @@ factex = sling.FactExtractor(kb)
 n_page_item = kb["/wp/page/item"]
 n_popularity = kb["/w/item/popularity"]
 n_fanin = kb["/w/item/fanin"]
+n_links = kb["/w/item/links"]
 kb.freeze()
 
 form_penalty = 0.1
@@ -44,16 +51,21 @@ for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
   num_docs += 1
   print "Document", num_docs, ":", doc.frame["title"]
   store = doc.store
+  context = {}
 
   # Add document entity to context model.
-  context = {}
   item = doc.frame[n_page_item]
   context[item] = context.get(item, 0.0) + 1.0
+
   for fact in factex.facts(store, item):
     target = fact[-1]
     fanin = target[n_fanin]
-    if fanin == None: fanin = 1
-    context[target] = context.get(target, 0.0) + 1.0 / fanin
+    if fanin != None: continue
+      context[target] = context.get(target, 0.0) + 1.0 / fanin
+
+  links = doc.frame[n_links]
+  if links != None:
+    print len(links), "links"
 
   # Add unanchored links to context model.
   if thematic_weight > 0:
@@ -82,17 +94,24 @@ for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
       found = False
       for m in matches:
         # Compute score for match.
-        score = context.get(m.item(), base_context_score)
+        cscore = context.get(m.item(), base_context_score)
+        clue = None
+        best = base_context_score
         for fact in factex.facts(store, m.item()):
           target = fact[-1]
-          score += context.get(target, 0.0)
-        if not compatible(form, m.form()): score *= form_penalty
-        #scores.append((m, score * m.count(), score))
-        scores.append((m, 1.0 * m.count(), score))
+          weight = context.get(target, 0.0)
+          cscore += weight
+          if weight > best:
+            best = weight
+            clue = target
+        if not compatible(form, m.form()): cscore *= form_penalty
+        score = cscore * m.count()
+        scores.append((m, score, cscore, clue, best))
         if m.item() == item: found = True
 
       # Ignore mention if it is not in the prase table.
       if not found:
+        #print "N/A", phrase, item_text(item)
         num_unknown += 1
         continue
       num_mentions += 1
@@ -103,14 +122,22 @@ for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
       # Output ranked entities.
       rank = 0
       if scores[0][0].item() != item:
-        #print phrase, item.id
+        print phrase, item.id
         for s in scores:
           m = s[0]
           candidate = m.item()
           score = s[1]
           cscore = s[2]
-          #print "  %g %s %d %g %s" % (score, formname[m.form()], m.count(),
-          #                            cscore, item_text(candidate))
+          clue = s[3]
+          clue_score = s[4]
+
+          hint = ""
+          if clue != None:
+            hint = " {" + item_name(clue) + ":" + str(clue_score) + "}"
+
+          print "  %9.4f %s %5d %9.4f %s%s" % (score, formname[m.form()],
+                                             m.count(), cscore,
+                                             item_text(candidate), hint)
           if candidate == item: break
           rank += 1
 
@@ -124,11 +151,11 @@ for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
       for fact in factex.facts(store, item):
         target = fact[-1]
         fanin = target[n_fanin]
-        if fanin == None: fanin = 1
-        context[target] = context.get(target, 0.0) + 1.0 / fanin
+        if fanin != None:
+          context[target] = context.get(target, 0.0) + 1.0 / fanin
 
   if num_docs == 1000: break
-  #print
+  print
 
 print num_mentions, "mentions"
 print num_unknown, "unknown"
