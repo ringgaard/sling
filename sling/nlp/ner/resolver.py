@@ -1,6 +1,8 @@
 import sling
 import sling.flags as flags
 
+flags.define("--start")
+flags.define("--lang", default="en")
 flags.parse()
 
 formname = ["  ", "UP", "lo", "Ca"]
@@ -30,7 +32,8 @@ def item_name(item):
 kb = sling.Store()
 kb.lockgc()
 kb.load("local/data/e/wiki/kb.sling")
-phrasetab = sling.PhraseTable(kb, "local/data/e/wiki/en/phrase-table.repo")
+langdir = "local/data/e/wiki/" + flags.arg.lang
+phrasetab = sling.PhraseTable(kb, langdir + "/phrase-table.repo")
 factex = sling.FactExtractor(kb)
 n_page_item = kb["/wp/page/item"]
 n_popularity = kb["/w/item/popularity"]
@@ -47,7 +50,12 @@ num_mentions = 0
 num_unknown = 0
 num_first = 0
 num_at_rank = [0] * 20
-for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
+
+corpus = sling.Corpus(langdir + "/documents@10.rec", commons=kb)
+first = True
+for doc in corpus:
+  if first and flags.arg.start: doc = corpus[flags.arg.start]
+  first = False
   num_docs += 1
   print "Document", num_docs, ":", doc.frame["title"]
   store = doc.store
@@ -57,15 +65,11 @@ for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
   item = doc.frame[n_page_item]
   context[item] = context.get(item, 0.0) + 1.0
 
-  for fact in factex.facts(store, item):
-    target = fact[-1]
-    fanin = target[n_fanin]
-    if fanin != None: continue
-      context[target] = context.get(target, 0.0) + 1.0 / fanin
-
-  links = doc.frame[n_links]
-  if links != None:
-    print len(links), "links"
+  #for fact in factex.facts(store, item):
+  #  target = fact[-1]
+  #  fanin = target[n_fanin]
+  #  if fanin != None:
+  #    context[target] = context.get(target, 0.0) + 1.0 / fanin
 
   # Add unanchored links to context model.
   if thematic_weight > 0:
@@ -80,7 +84,8 @@ for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
   for mention in doc.mentions:
     # Get phrase and case form.
     phrase = doc.phrase(mention.begin, mention.end)
-    initial = doc.tokens[mention.begin].brk >= sling.SENTENCE_BREAK
+    initial = mention.begin < len(doc.tokens) and \
+              doc.tokens[mention.begin].brk >= sling.SENTENCE_BREAK
     form = phrasetab.form(phrase)
     if initial and form == sling.CASE_TITLE: form = sling.CASE_NONE
 
@@ -97,13 +102,18 @@ for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
         cscore = context.get(m.item(), base_context_score)
         clue = None
         best = base_context_score
-        for fact in factex.facts(store, m.item()):
-          target = fact[-1]
-          weight = context.get(target, 0.0)
-          cscore += weight
-          if weight > best:
-            best = weight
-            clue = target
+        #for fact in factex.facts(store, m.item()):
+        #  target = fact[-1]
+        #  weight = context.get(target, 0.0)
+        #  cscore += weight
+        #  if weight > best:
+        #    best = weight
+        #    clue = target
+        links = m.item()[n_links]
+        if links != None:
+          for link,count in links:
+            weight = context.get(link, 0.0)
+            cscore += weight * count
         if not compatible(form, m.form()): cscore *= form_penalty
         score = cscore * m.count()
         scores.append((m, score, cscore, clue, best))
@@ -135,11 +145,13 @@ for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
           if clue != None:
             hint = " {" + item_name(clue) + ":" + str(clue_score) + "}"
 
-          print "  %9.4f %s %5d %9.4f %s%s" % (score, formname[m.form()],
-                                             m.count(), cscore,
-                                             item_text(candidate), hint)
+          print "%11.4f %s %5d %8.4f %s%s" % (score, formname[m.form()],
+                                              m.count(), cscore,
+                                              item_text(candidate), hint)
           if candidate == item: break
           rank += 1
+
+        if rank + 1 < len(scores): print "... and", len(scores) - rank, "more"
 
       if rank >= len(num_at_rank): rank = len(num_at_rank) - 1
       num_at_rank[rank] += 1
@@ -148,14 +160,22 @@ for doc in sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb):
       popularity = item[n_popularity]
       if popularity == None: popularity = 1
       context[item] = context.get(item, 0.0) + 1.0 / popularity
-      for fact in factex.facts(store, item):
-        target = fact[-1]
-        fanin = target[n_fanin]
-        if fanin != None:
-          context[target] = context.get(target, 0.0) + 1.0 / fanin
+      #for fact in factex.facts(store, item):
+      #  target = fact[-1]
+      #  fanin = target[n_fanin]
+      #  if fanin != None:
+      #    context[target] = context.get(target, 0.0) + 1.0 / fanin
 
-  if num_docs == 1000: break
+      links = item[n_links]
+      if links != None:
+        for link, count in links:
+          popularity = link[n_popularity]
+          if popularity == None: popularity = 1
+          context[link] = context.get(link, 0.0) + float(count) / popularity
+
+  print len(context), "items in context", len(doc.mentions), "mentions"
   print
+  if num_docs == 1000: break
 
 print num_mentions, "mentions"
 print num_unknown, "unknown"
@@ -166,5 +186,5 @@ cummulative = 0.0
 for r in range(0, len(num_at_rank)):
   if num_at_rank[r] == 0: continue
   cummulative += num_at_rank[r]
-  print "p@%d: %.2f%%" % (r + 1, 100.0 * cummulative / num_mentions)
+  print "P@%d: %.2f%%" % (r + 1, 100.0 * cummulative / num_mentions)
 

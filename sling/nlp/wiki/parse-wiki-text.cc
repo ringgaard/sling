@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     LoadStore("data/wiki/calendar.sling", store);
     LoadStore("data/wiki/countries.sling", store);
     LoadStore("data/wiki/templates-" + FLAGS_lang + ".sling", store);
-    LoadStore("data/wiki/units-" + FLAGS_lang + ".sling", store);
+    LoadStore("data/wiki/units.sling", store);
   }
 
   string wikitext;
