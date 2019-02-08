@@ -13,6 +13,20 @@ cc_library(
 )
 
 cc_library(
+  name = "resolver",
+  srcs = ["resolver.cc"],
+  hdrs = ["resolver.h"],
+  deps = [
+    "//sling/base",
+    "//sling/frame:store",
+    "//sling/frame:object",
+    "//sling/nlp/kb:phrase-table",
+    "//sling/util:top",
+    "//sling/util:unicode",
+  ],
+)
+
+cc_library(
   name = "measures",
   srcs = ["measures.cc"],
   hdrs = ["measures.h"],

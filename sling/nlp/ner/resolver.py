@@ -49,6 +49,7 @@ num_docs = 0
 num_mentions = 0
 num_unknown = 0
 num_first = 0
+num_prior_losses = 0
 num_at_rank = [0] * 20
 
 corpus = sling.Corpus(langdir + "/documents@10.rec", commons=kb)
@@ -155,6 +156,7 @@ for doc in corpus:
 
       if rank >= len(num_at_rank): rank = len(num_at_rank) - 1
       num_at_rank[rank] += 1
+      if rank > 0 and item == matches[0].item(): num_prior_losses += 1
 
       # Update context model.
       popularity = item[n_popularity]
@@ -179,6 +181,7 @@ for doc in corpus:
 
 print num_mentions, "mentions"
 print num_unknown, "unknown"
+print num_prior_losses, "prior losses"
 total_mentions = num_mentions + num_unknown
 print 100.0 * num_mentions / total_mentions, "% coverage"
 

@@ -153,7 +153,7 @@ class WikipediaLinkMerger : public task::Reducer {
       }
     }
 
-    // Output output frame with link map.
+    // Output frame with link map.
     Builder linkmap(&store);
     for (auto it : links) {
       linkmap.Add(it.first, it.second);
