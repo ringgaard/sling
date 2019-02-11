@@ -43,6 +43,8 @@ kb.freeze()
 
 form_penalty = 0.1
 base_context_score = 1e-3
+topic_weight = 1.0
+mention_weight = 100.0
 thematic_weight = 0.0
 
 num_docs = 0
@@ -64,7 +66,7 @@ for doc in corpus:
 
   # Add document entity to context model.
   item = doc.frame[n_page_item]
-  context[item] = context.get(item, 0.0) + 1.0
+  context[item] = context.get(item, 0.0) + topic_weight
 
   #for fact in factex.facts(store, item):
   #  target = fact[-1]
@@ -161,7 +163,7 @@ for doc in corpus:
       # Update context model.
       popularity = item[n_popularity]
       if popularity == None: popularity = 1
-      context[item] = context.get(item, 0.0) + 1.0 / popularity
+      context[item] = context.get(item, 0.0) + mention_weight / popularity
       #for fact in factex.facts(store, item):
       #  target = fact[-1]
       #  fanin = target[n_fanin]

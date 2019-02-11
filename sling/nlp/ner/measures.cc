@@ -15,6 +15,7 @@
 #include "sling/nlp/ner/measures.h"
 
 #include "sling/frame/object.h"
+#include "sling/nlp/document/fingerprinter.h"
 #include "sling/nlp/kb/calendar.h"
 
 namespace sling {
@@ -70,6 +71,47 @@ Handle SpanAnnotator::FindMatch(const PhraseTable &aliases,
   }
   return Handle::nil();
 }
+
+void SpanPopulator::Annotate(const PhraseTable &aliases,
+                             SpanChart *chart) {
+  // Spans cannot start or end on stop words.
+  int begin = chart->begin();
+  int end = chart->end();
+  std::vector<bool> skip(chart->size());
+  for (int i = 0; i < chart->size(); ++i) {
+    skip[i] = Discard(chart->token(i));
+  }
+
+  // Find all matching spans up to the maximum length.
+  for (int b = begin; b < end; ++b) {
+    // Span cannot start on a skipped token.
+    if (skip[b - begin]) continue;
+
+    for (int e = b + 1; e <= std::min(b + chart->maxlen(), end); ++e) {
+      // Span cannot end on a skipped token.
+      if (skip[e - begin - 1]) continue;
+
+      // Find matches in phrase table.
+      uint64 fp = chart->document()->PhraseFingerprint(b, e);
+      SpanChart::Item &span = chart->item(b - begin, e - begin);
+      span.matches = aliases.Find(fp);
+      if (span.matches != nullptr) {
+        VLOG(1) << "Phrase: " << chart->document()->PhraseText(b, e);
+        span.cost = 1.0;
+      }
+    }
+  }
+}
+
+void SpanPopulator::AddStopWord(Text word) {
+  uint64 fp = Fingerprinter::Fingerprint(word);
+  fingerprints_.insert(fp);
+}
+
+bool SpanPopulator::Discard(const Token &token) const {
+  return fingerprints_.count(token.Fingerprint()) > 0;
+}
+
 
 void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   Document *document = chart->document();

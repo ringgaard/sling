@@ -25,6 +25,33 @@
 namespace sling {
 namespace nlp {
 
+// Span categorization flags.
+enum SpanFlags {
+  SPAN_NUMBER            = (1 << 0),
+  SPAN_NATURAL_NUMBER    = (1 << 1),
+  SPAN_UNIT              = (1 << 2),
+  SPAN_CURRENCY          = (1 << 3),
+  SPAN_YEAR              = (1 << 4),
+  SPAN_YEAR_BC           = (1 << 5),
+  SPAN_MONTH             = (1 << 6),
+  SPAN_WEEKDAY           = (1 << 7),
+  SPAN_CALENDAR_MONTH    = (1 << 8),
+  SPAN_CALENDAR_DAY      = (1 << 9),
+  SPAN_DAY_OF_YEAR       = (1 << 10),
+  SPAN_DECADE            = (1 << 11),
+  SPAN_CENTURY           = (1 << 12),
+  SPAN_DATE              = (1 << 13),
+  SPAN_MEASURE           = (1 << 14),
+  SPAN_GEO               = (1 << 15),
+
+  SPAN_FAMILY_NAME       = (1 << 16),
+  SPAN_GIVEN_NAME        = (1 << 17),
+
+  SPAN_PERSON            = (1 << 18),
+  SPAN_LOCATION          = (1 << 19),
+  SPAN_ORGANIZATION      = (1 << 20),
+};
+
 class SpanAnnotator {
  public:
   void Init(Store *store);
@@ -37,6 +64,22 @@ class SpanAnnotator {
  protected:
   Names names_;
   Name n_instance_of_{names_, "P31"};
+};
+
+// Populate chart with phrase matches.
+class SpanPopulator : public SpanAnnotator {
+ public:
+  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+
+  // Add stop word.
+  void AddStopWord(Text word);
+
+ private:
+  // Check if token is a stop word.
+  bool Discard(const Token &token) const;
+
+  // Fingerprints for stop words.
+  std::unordered_set<uint64> fingerprints_;
 };
 
 class SpanImporter : public SpanAnnotator {

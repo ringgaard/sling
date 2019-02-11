@@ -28,37 +28,6 @@ using namespace sling::nlp;
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
-  StopWords stopwords;
-  stopwords.Add(".");
-  stopwords.Add(",");
-  stopwords.Add("-");
-  stopwords.Add(":");
-  stopwords.Add(";");
-  stopwords.Add("(");
-  stopwords.Add(")");
-  stopwords.Add("``");
-  stopwords.Add("''");
-  stopwords.Add("--");
-  stopwords.Add("the");
-  stopwords.Add("a");
-  stopwords.Add("an");
-  stopwords.Add("in");
-  stopwords.Add("of");
-  stopwords.Add("is");
-  stopwords.Add("was");
-  stopwords.Add("by");
-  stopwords.Add("and");
-  stopwords.Add("to");
-  stopwords.Add("at");
-  stopwords.Add("'s");
-  stopwords.Add("as");
-
-  //stopwords.Add("le");
-  //stopwords.Add("la");
-  //stopwords.Add("les");
-  //stopwords.Add("l'");
-  //stopwords.Add("do");
-
   Store commons;
   commons.LockGC();
   LoadStore("local/data/e/wiki/kb.sling", &commons);
@@ -71,6 +40,7 @@ int main(int argc, char *argv[]) {
   RecordDatabase db("local/data/e/wiki/" + FLAGS_lang + "/documents@10.rec",
                     options);
 
+  SpanPopulator populator;
   SpanImporter importer;
   SpanTaxonomy taxonomy;
   NumberAnnotator numbers;
@@ -84,6 +54,36 @@ int main(int argc, char *argv[]) {
   scales.Init(&commons);
   measures.Init(&commons);
   dates.Init(&commons);
+
+  populator.AddStopWord(".");
+  populator.AddStopWord(",");
+  populator.AddStopWord("-");
+  populator.AddStopWord(":");
+  populator.AddStopWord(";");
+  populator.AddStopWord("(");
+  populator.AddStopWord(")");
+  populator.AddStopWord("``");
+  populator.AddStopWord("''");
+  populator.AddStopWord("--");
+  populator.AddStopWord("the");
+  populator.AddStopWord("a");
+  populator.AddStopWord("an");
+  populator.AddStopWord("in");
+  populator.AddStopWord("of");
+  populator.AddStopWord("is");
+  populator.AddStopWord("was");
+  populator.AddStopWord("by");
+  populator.AddStopWord("and");
+  populator.AddStopWord("to");
+  populator.AddStopWord("at");
+  populator.AddStopWord("'s");
+  populator.AddStopWord("as");
+
+  //populator.AddStopWord("le");
+  //populator.AddStopWord("la");
+  //populator.AddStopWord("les");
+  //populator.AddStopWord("l'");
+  //populator.AddStopWord("do");
 
   commons.Freeze();
 
@@ -115,8 +115,8 @@ int main(int argc, char *argv[]) {
 
   for (SentenceIterator s(&document); s.more(); s.next()) {
     SpanChart chart(&document, s.begin(), s.end(), 10);
-    chart.Populate(aliases, stopwords);
 
+    populator.Annotate(aliases, &chart);
     importer.Annotate(aliases, &chart);
     taxonomy.Annotate(aliases, &chart);
     numbers.Annotate(&chart);

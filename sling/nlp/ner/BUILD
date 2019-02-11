@@ -7,7 +7,6 @@ cc_library(
   deps = [
     "//sling/frame:store",
     "//sling/nlp/document",
-    "//sling/nlp/document:fingerprinter",
     "//sling/nlp/kb:phrase-table",
   ],
 )

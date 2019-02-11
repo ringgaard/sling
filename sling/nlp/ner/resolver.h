@@ -94,6 +94,7 @@ class Resolver {
   HandleMap<float> context_;
 
   // Hyperparameters.
+  float mention_weight_ = 100.0;
   float base_context_score = 1e-3;
   float case_form_penalty = 0.1;
 };

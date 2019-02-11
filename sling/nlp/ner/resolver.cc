@@ -37,7 +37,7 @@ void Resolver::AddEntity(Handle entity) {
   // Add entity to context model.
   Frame item(store_, entity);
   float popularity = item.GetInt(names_->n_popularity, 1);
-  context_[entity] += 1.0 / popularity;
+  context_[entity] += mention_weight_ / popularity;
 
   // Add outbound links to context model.
   Frame links = item.GetFrame(names_->n_links);

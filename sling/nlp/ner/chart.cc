@@ -17,23 +17,8 @@
 #include <vector>
 #include <utility>
 
-#include "sling/nlp/document/fingerprinter.h"
-
-// TODO: add existing span from document in Populate()
-//  - add aux item if there is an evoked span that can match the phrase
-//  - otherwise add a phrase match
-
 namespace sling {
 namespace nlp {
-
-void StopWords::Add(Text word) {
-  uint64 fp = Fingerprinter::Fingerprint(word);
-  fingerprints_.insert(fp);
-}
-
-bool StopWords::Discard(const Token &token) const {
-  return fingerprints_.count(token.Fingerprint()) > 0;
-}
 
 SpanChart::SpanChart(Document *document, int begin, int end, int maxlen)
     : document_(document), begin_(begin), end_(end), maxlen_(maxlen),
@@ -59,35 +44,6 @@ void SpanChart::Add(int begin, int end, Handle match, int flags) {
   span.flags |= flags;
   if (match.IsRef()) tracking_.push_back(match);
   if (end - begin > maxlen_) maxlen_ = end - begin;
-}
-
-void SpanChart::Populate(const PhraseTable &phrase_table,
-                         const StopWords &stopwords) {
-  // Spans cannot start or end on stop words.
-  std::vector<bool> skip(size_);
-  for (int i = 0; i < size_; ++i) {
-    skip[i] = stopwords.Discard(document_->token(i + begin_));
-  }
-
-  // Find all matching spans up to the maximum length.
-  for (int b = begin_; b < end_; ++b) {
-    // Span cannot start on a skipped token.
-    if (skip[b - begin_]) continue;
-
-    for (int e = b + 1; e <= std::min(b + maxlen_, end_); ++e) {
-      // Span cannot end on a skipped token.
-      if (skip[e - begin_ - 1]) continue;
-
-      // Find matches in phrase table.
-      uint64 fp = document_->PhraseFingerprint(b, e);
-      Item &span = item(b - begin_, e - begin_);
-      span.matches = phrase_table.Find(fp);
-      if (span.matches != nullptr) {
-        VLOG(1) << "Phrase: " << document_->PhraseText(b, e);
-        span.cost = 1.0;
-      }
-    }
-  }
 }
 
 void SpanChart::Solve() {
