@@ -81,6 +81,8 @@ cc_library(
     "//sling/nlp/embedding:fact-embeddings",
     "//sling/nlp/embedding:word-embeddings",
 
+    "//sling/nlp/ner:idf",
+
     "//sling/task:frame-store-reader",
     "//sling/task:frame-store-writer",
     "//sling/task:sharder",

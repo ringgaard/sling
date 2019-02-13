@@ -15,6 +15,7 @@
 #include "sling/nlp/document/lex.h"
 #include "sling/nlp/kb/phrase-table.h"
 #include "sling/nlp/ner/chart.h"
+#include "sling/nlp/ner/idf.h"
 #include "sling/nlp/ner/measures.h"
 
 DEFINE_string(text, "", "Text to parse");
@@ -39,6 +40,9 @@ int main(int argc, char *argv[]) {
   RecordFileOptions options;
   RecordDatabase db("local/data/e/wiki/" + FLAGS_lang + "/documents@10.rec",
                     options);
+
+  IDFTable idf_table;
+  idf_table.Load("local/data/e/wiki/" + FLAGS_lang + "/idf.repo");
 
   SpanPopulator populator;
   SpanImporter importer;
@@ -130,6 +134,13 @@ int main(int argc, char *argv[]) {
   outdoc.Update();
 
   std::cout << ToLex(outdoc) << "\n";
+
+  for (Span *span : outdoc.spans()) {
+    if (span->length() > 1) continue;
+    uint64 fp = outdoc.token(span->begin()).Fingerprint();
+    float idf = idf_table.Lookup(fp);
+    LOG(INFO) << "Span: " << span->GetText() << " IDF: " << idf;
+  }
 
   return 0;
 }

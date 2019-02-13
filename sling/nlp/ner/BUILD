@@ -1,6 +1,22 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+  name = "idf",
+  srcs = ["idf.cc"],
+  hdrs = ["idf.h"],
+  deps = [
+    "//sling/base",
+    "//sling/file:repository",
+    "//sling/nlp/document",
+    "//sling/nlp/document:fingerprinter",
+    "//sling/task:accumulator",
+    "//sling/task:documents",
+    "//sling/util:unicode",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "chart",
   srcs = ["chart.cc"],
   hdrs = ["chart.h"],
@@ -43,6 +59,7 @@ cc_binary(
   srcs = ["parse-chart.cc"],
   deps = [
     ":chart",
+    ":idf",
     ":measures",
     "//sling/base",
     "//sling/file:posix",

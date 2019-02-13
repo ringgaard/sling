@@ -34,10 +34,11 @@ void Accumulator::Init(Channel *output, int num_buckets) {
 }
 
 void Accumulator::Increment(Text key, int64 count) {
-  uint64 b = Fingerprint(key.data(), key.size()) % buckets_.size();
+  uint64 fp = Fingerprint(key.data(), key.size());
+  uint64 b = fp % buckets_.size();
   MutexLock lock(&mu_);
   Bucket &bucket = buckets_[b];
-  if (key != bucket.key) {
+  if (fp != bucket.hash || key != bucket.key) {
     if (bucket.count != 0) {
       output_->Send(new Message(bucket.key, SimpleItoa(bucket.count)));
       bucket.count = 0;
@@ -45,7 +46,27 @@ void Accumulator::Increment(Text key, int64 count) {
     } else {
       num_slots_used_->Increment();
     }
+    bucket.hash = fp;
     bucket.key.assign(key.data(), key.size());
+
+  }
+  bucket.count += count;
+}
+
+void Accumulator::Increment(uint64 key, int64 count) {
+  uint64 b = key % buckets_.size();
+  MutexLock lock(&mu_);
+  Bucket &bucket = buckets_[b];
+  if (key != bucket.hash) {
+    if (bucket.count != 0) {
+      output_->Send(new Message(bucket.key, SimpleItoa(bucket.count)));
+      bucket.count = 0;
+      num_collisions_->Increment();
+    } else {
+      num_slots_used_->Increment();
+    }
+    bucket.hash = key;
+    bucket.key = SimpleItoa(key);
   }
   bucket.count += count;
 }
