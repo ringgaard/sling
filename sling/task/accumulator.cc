@@ -85,6 +85,10 @@ void Accumulator::Flush() {
 void SumReducer::Start(Task *task) {
   Reducer::Start(task);
   task->Fetch("threshold", &threshold_);
+  if (threshold_ > 0) {
+    num_keys_discarded_ = task->GetCounter("keys_discarded");
+    num_counts_discarded_ = task->GetCounter("counts_discarded");
+  }
 }
 
 void SumReducer::Reduce(const ReduceInput &input) {
@@ -97,6 +101,9 @@ void SumReducer::Reduce(const ReduceInput &input) {
   }
   if (sum >= threshold_) {
     Aggregate(input.shard(), input.key(), sum);
+  } else {
+    if (num_keys_discarded_) num_keys_discarded_->Increment();
+    if (num_counts_discarded_) num_counts_discarded_->Increment(sum);
   }
 }
 

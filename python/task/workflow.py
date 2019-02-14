@@ -297,7 +297,7 @@ class Workflow(object):
     """Defines a name space for task names."""
     return Scope(self, name)
 
-  def task(self, type, name=None, shard=None):
+  def task(self, type, name=None, shard=None, params=None):
     """A new task to workflow."""
     if name == None: name = type
     if self.scope != None: name = self.scope.prefix() + "/" + name
@@ -307,6 +307,7 @@ class Workflow(object):
       index += 1
       name = basename + "-" + str(index)
     t = Task(type, name, shard)
+    if params != None: t.add_params(params)
     self.tasks.append(t)
     self.task_map[(name, shard)] = t
     return t

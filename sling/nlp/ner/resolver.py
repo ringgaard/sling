@@ -44,7 +44,7 @@ kb.freeze()
 form_penalty = 0.1
 base_context_score = 1e-3
 topic_weight = 1.0
-mention_weight = 100.0
+mention_weight = 500.0
 thematic_weight = 0.0
 
 num_docs = 0

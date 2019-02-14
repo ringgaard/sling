@@ -317,6 +317,13 @@ class UTF8 {
     return IsSpace(str.data(), str.size());
   }
 
+  // Check if word is name initials, i.e. a sequence of upper case letters
+  // with name punctuation in-between.
+  static bool IsInitials(const char *s, int len);
+  static bool IsInitials(const string &str) {
+    return IsInitials(str.data(), str.size());
+  }
+
   // Determine case for word. This ignores all non-letter characters.
   static CaseForm Case(const char *s, int len);
   static CaseForm Case(const string &str) {

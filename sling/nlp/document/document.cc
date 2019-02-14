@@ -36,12 +36,10 @@ uint64 Token::Fingerprint() const {
 
 CaseForm Token::Form() const {
   if (form_ == CASE_INVALID) {
+    form_ = UTF8::Case(word_);
+
     // Case for first token in a sentence is indeterminate.
-    if (index_ == 0 || brk_ >= SENTENCE_BREAK) {
-      form_ = CASE_NONE;
-    } else {
-      form_ = UTF8::Case(word_);
-    }
+    if (initial() && form_ == CASE_TITLE) form_ = CASE_NONE;
   }
   return form_;
 }

@@ -13,10 +13,11 @@ documents = wf.resource("documents@10.rec",
                         format="records/document")
 
 wordcounts = wf.shuffle(
-  wf.map(documents, "vocabulary-mapper", format="message/count")
+  wf.map(documents, "vocabulary-mapper", format="message/count", 
+          params={"min_document_length": 200})
 )
 
-builder = wf.task("idf-table-builder")
+builder = wf.task("idf-table-builder", params={"threshold": 30})
 wf.connect(wordcounts, builder)
 
 builder.attach_output("repository",

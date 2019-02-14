@@ -79,6 +79,10 @@ class SumReducer : public Reducer {
  private:
   // Discard keys with counts lower than the threshold.
   int64 threshold_ = 0;
+
+  // Statistics.
+  Counter *num_keys_discarded_ = nullptr;
+  Counter *num_counts_discarded_ = nullptr;
 };
 
 }  // namespace task

@@ -47,6 +47,7 @@ cc_library(
   hdrs = ["measures.h"],
   deps = [
     ":chart",
+    ":idf",
     "//sling/frame:store",
     "//sling/nlp/document",
     "//sling/nlp/kb:calendar",

@@ -96,6 +96,9 @@ class Token {
   // Punctuation tokens etc. are skipped in phrase comparison.
   bool skipped() const { return Fingerprint() == 1; }
 
+  // Check for initial token in a sentence.
+  bool initial() const { return index_ == 0 || brk_ >= SENTENCE_BREAK; }
+
  private:
   Document *document_;          // document the token belongs to
   Handle handle_;               // handle for token in the store

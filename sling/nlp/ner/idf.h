@@ -15,6 +15,7 @@
 #ifndef SLING_NLP_NER_IDF_H_
 #define SLING_NLP_NER_IDF_H_
 
+#include "sling/base/port.h"
 #include "sling/file/repository.h"
 #include "sling/util/unicode.h"
 
@@ -28,7 +29,7 @@ class IDFTable {
   void Load(const string &filename);
 
   // Look up word fingerprint and return IDF for word.
-  float Lookup(uint64 fingerprint) const;
+  float GetIDF(uint64 fingerprint) const;
 
   // Get text normalization flags for IDF table.
   Normalization normalization() const { return normalization_; }
@@ -46,7 +47,7 @@ class IDFTable {
   struct Word {
     uint64 fingerprint;
     float idf;
-  };
+  } ABSL_ATTRIBUTE_PACKED;
 
   // Word index in repository.
   class WordIndex : public RepositoryMap<Word> {

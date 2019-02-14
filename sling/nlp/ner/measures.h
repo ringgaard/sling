@@ -21,6 +21,7 @@
 #include "sling/nlp/kb/facts.h"
 #include "sling/nlp/kb/phrase-table.h"
 #include "sling/nlp/ner/chart.h"
+#include "sling/nlp/ner/idf.h"
 
 namespace sling {
 namespace nlp {
@@ -46,10 +47,11 @@ enum SpanFlags {
 
   SPAN_FAMILY_NAME       = (1 << 16),
   SPAN_GIVEN_NAME        = (1 << 17),
+  SPAN_INITIALS          = (1 << 18),
 
-  SPAN_PERSON            = (1 << 18),
-  SPAN_LOCATION          = (1 << 19),
-  SPAN_ORGANIZATION      = (1 << 20),
+  SPAN_PERSON            = (1 << 19),
+  SPAN_LOCATION          = (1 << 20),
+  SPAN_ORGANIZATION      = (1 << 21),
 };
 
 class SpanAnnotator {
@@ -91,6 +93,15 @@ class SpanImporter : public SpanAnnotator {
   Name n_geo_{names_, "/w/geo"};
 };
 
+class CommonWordPruner : public SpanAnnotator {
+ public:
+  void Annotate(const IDFTable &dictionary, SpanChart *chart);
+
+ private:
+  // IDF threshold for pruning single token spans.
+  static constexpr float idf_threshold = 3.0;
+};
+
 class SpanTaxonomy : public SpanAnnotator {
  public:
   ~SpanTaxonomy();
@@ -102,6 +113,14 @@ class SpanTaxonomy : public SpanAnnotator {
   FactCatalog catalog_;
   Taxonomy *taxonomy_ = nullptr;
   HandleMap<int> type_flags_;
+};
+
+class PersonNameAnnotator : public SpanAnnotator {
+ public:
+  void Annotate(SpanChart *chart);
+  
+ private:
+  Name n_person_{names_, "person"};
 };
 
 class NumberAnnotator : public SpanAnnotator {

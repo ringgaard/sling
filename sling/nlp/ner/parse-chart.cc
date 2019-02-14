@@ -41,19 +41,22 @@ int main(int argc, char *argv[]) {
   RecordDatabase db("local/data/e/wiki/" + FLAGS_lang + "/documents@10.rec",
                     options);
 
-  IDFTable idf_table;
-  idf_table.Load("local/data/e/wiki/" + FLAGS_lang + "/idf.repo");
+  IDFTable dictionary;
+  dictionary.Load("local/data/e/wiki/" + FLAGS_lang + "/idf.repo");
 
   SpanPopulator populator;
   SpanImporter importer;
   SpanTaxonomy taxonomy;
+  PersonNameAnnotator persons;
   NumberAnnotator numbers;
   NumberScaleAnnotator scales;
   MeasureAnnotator measures;
   DateAnnotator dates;
+  CommonWordPruner pruner;
 
   importer.Init(&commons);
   taxonomy.Init(&commons);
+  persons.Init(&commons);
   numbers.Init(&commons);
   scales.Init(&commons);
   measures.Init(&commons);
@@ -123,10 +126,12 @@ int main(int argc, char *argv[]) {
     populator.Annotate(aliases, &chart);
     importer.Annotate(aliases, &chart);
     taxonomy.Annotate(aliases, &chart);
+    persons.Annotate(&chart);
     numbers.Annotate(&chart);
     scales.Annotate(aliases, &chart);
     measures.Annotate(aliases, &chart);
     dates.Annotate(aliases, &chart);
+    pruner.Annotate(dictionary, &chart);
 
     chart.Solve();
     chart.Extract(&outdoc);
@@ -134,13 +139,6 @@ int main(int argc, char *argv[]) {
   outdoc.Update();
 
   std::cout << ToLex(outdoc) << "\n";
-
-  for (Span *span : outdoc.spans()) {
-    if (span->length() > 1) continue;
-    uint64 fp = outdoc.token(span->begin()).Fingerprint();
-    float idf = idf_table.Lookup(fp);
-    LOG(INFO) << "Span: " << span->GetText() << " IDF: " << idf;
-  }
 
   return 0;
 }

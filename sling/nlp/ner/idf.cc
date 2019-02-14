@@ -46,17 +46,31 @@ class VocabularyMapper : public DocumentProcessor {
     // Get normalization flags.
     normalization_ = ParseNormalization(task->Get("normalization", "cln"));
 
+    // Pruning threshold for skipping short documents.
+    task->Fetch("min_document_length", &min_document_legth_);
+    if (min_document_legth_ > 0) {
+      num_short_documents_ = task->GetCounter("short_documents");
+      num_short_tokens_ = task->GetCounter("short_tokens");
+    }
+
     // Get document counter.
     num_idf_documents_ = task->GetCounter("idf_documents");
   }
 
   void Process(Slice key, const Document &document) override {
+    // Skip short document.
+    if (document.num_tokens() < min_document_legth_) {
+      num_short_documents_->Increment();
+      num_short_tokens_->Increment(document.num_tokens());
+      return;
+    }
+
     // Collect fingerprints for all the words in the document.
     std::unordered_set<uint64> fingerprints;
     for (const Token &token : document.tokens()) {
       // Get fingerprint for token.
       uint64 fp = Fingerprinter:: Fingerprint(token.word(), normalization_);
-
+      
       // Discard empty tokens.
       if (fp == 0) continue;
 
@@ -82,6 +96,11 @@ class VocabularyMapper : public DocumentProcessor {
   // Token normalization flags.
   Normalization normalization_;
 
+  // Minimum number of tokens in document that are used for extacting words.
+  int min_document_legth_ = 0;
+  Counter *num_short_documents_ = nullptr;
+  Counter *num_short_tokens_ = nullptr;
+
   // Counter for aggregating the total number of documents. This is used in the
   // reducer for computing IDF.
   Counter *num_idf_documents_ = nullptr;
@@ -97,30 +116,20 @@ class IDFTableBuilder : public SumReducer {
     // Initialize sum reducer.
     SumReducer::Start(task);
 
-    // Get threshold for discarding words.
-    threshold_ = task->Get("threshold", 30);
-
     // Statistics.
     num_words_ = task->GetCounter("words");
     num_word_instances_ = task->GetCounter("word_instances");
-    num_words_discarded_ = task->GetCounter("words_discarded");
-    num_instances_discarded_ = task->GetCounter("instances_discarded");
   }
 
   void Aggregate(int shard, const Slice &key, uint64 sum) override {
-    if (sum < threshold_) {
-      num_words_discarded_->Increment();
-      num_instances_discarded_->Increment(sum);
-    } else {
-      // Get word fingerprint.
-      uint64 fp;
-      CHECK(safe_strtou64_base(key.data(), key.size(), &fp, 10));
+    // Get word fingerprint.
+    uint64 fp;
+    CHECK(safe_strtou64_base(key.data(), key.size(), &fp, 10));
 
-      // Add entry to vocabulary.
-      vocabulary_.push_back(new WordEntry(fp, sum));
-      num_words_->Increment();
-      num_word_instances_->Increment(sum);
-    }
+    // Add entry to vocabulary.
+    vocabulary_.push_back(new WordEntry(fp, sum));
+    num_words_->Increment();
+    num_word_instances_->Increment(sum);
   }
 
   void Done(Task *task) override {
@@ -152,7 +161,6 @@ class IDFTableBuilder : public SumReducer {
     // Write repository to file.
     const string &filename = task->GetOutput("repository")->resource()->name();
     CHECK(!filename.empty());
-    LOG(INFO) << "Write IDF repository to " << filename;
     repository.Write(filename);
 
     // Clear collected data.
@@ -177,7 +185,7 @@ class IDFTableBuilder : public SumReducer {
     uint64 Hash() const override { return fingerprint; }
 
     uint64 fingerprint;      // word fingerprint
-    uint64 count;            // word frequency
+    uint64 count;            // number of document containing word
     float idf = 0.0;         // inverse document frequency
   };
 
@@ -190,8 +198,6 @@ class IDFTableBuilder : public SumReducer {
   // Statistics.
   Counter *num_words_ = nullptr;
   Counter *num_word_instances_ = nullptr;
-  Counter *num_words_discarded_ = nullptr;
-  Counter *num_instances_discarded_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("idf-table-builder", IDFTableBuilder);
@@ -211,11 +217,6 @@ void IDFTable::Load(const string &filename) {
 
   // Assume singleton for out-of-vocabulary words.
   oov_idf_ = log(header_->num_docs);
-
-  LOG(INFO) << "Num buckets: " << index_.num_buckets();
-  LOG(INFO) << "Num docs: " << header_->num_docs;
-  LOG(INFO) << "OOV IDF: " << oov_idf_;
-  LOG(INFO) << "Norm: " << header_->normalization;
 }
 
 const IDFTable::Word *IDFTable::Find(uint64 fp) const {
@@ -226,10 +227,11 @@ const IDFTable::Word *IDFTable::Find(uint64 fp) const {
     if (word->fingerprint == fp) return word;
     word++;
   }
+  
   return nullptr;
 }
 
-float IDFTable::Lookup(uint64 fingerprint) const {
+float IDFTable::GetIDF(uint64 fingerprint) const {
   const Word *word = Find(fingerprint);
   return word != nullptr ? word->idf : oov_idf_;
 }

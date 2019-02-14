@@ -112,7 +112,6 @@ bool SpanPopulator::Discard(const Token &token) const {
   return fingerprints_.count(token.Fingerprint()) > 0;
 }
 
-
 void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   Document *document = chart->document();
   Handles matches(document->store());
@@ -153,6 +152,30 @@ void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
     }
 
     chart->Add(span->begin(), span->end(), evoked.handle(), flags);
+  }
+}
+
+void CommonWordPruner::Annotate(const IDFTable &dictionary, SpanChart *chart) {
+  for (int t = 0; t < chart->size(); ++t) {
+    // Get chart item for single token.
+    auto &item = chart->item(t, t + 1);
+    if (item.matches == nullptr) continue;
+    const Token &token = chart->token(t);
+
+    // Check case form.
+    CaseForm form =  UTF8::Case(token.word());
+    bool common = (form == CASE_LOWER);
+    if (token.initial() && form == CASE_TITLE) common = true;
+    
+    // Prune lower-case tokens with low IDF scores.
+    if (common) {
+      float idf = dictionary.GetIDF(token.Fingerprint());
+      if (idf < idf_threshold) {
+        item.matches = nullptr;
+      } else {
+        item.aux = Handle::Float(idf);
+      }
+    }
   }
 }
 
@@ -226,7 +249,7 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
     for (int e = b + 1; e <= end; ++e) {
       SpanChart::Item &span = chart->item(b, e);
 
-      if (!span.aux.IsNil()) {
+      if (span.aux.IsRef() && !span.aux.IsNil()) {
         // Classify matching item.
         Frame item(store, span.aux);
         int flags = Classify(item);
@@ -234,7 +257,7 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
       } else if (span.matches != nullptr) {
         aliases.GetMatches(span.matches, &matchlist);
         CaseForm form = document->Form(b + chart->begin(), e + chart->begin());
-        bool nomatch = true;
+        bool matches = false;
         for (const auto &match : matchlist) {
           // Skip if case forms conflict.
           if (match.form != CASE_NONE &&
@@ -248,16 +271,16 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
           int flags = Classify(item);
           if (flags != -1) {
             span.flags |= flags;
-            nomatch = false;
+            matches = true;
 
-            //LOG(INFO) << "'" << chart->phrase(b, e) << "': " << item.Id()
-            //          << " " << item.GetString("name")
-            //          << " reliable: " << match.reliable;
+            VLOG(2) << "'" << chart->phrase(b, e) << "': " << item.Id()
+                    << " " << item.GetString("name")
+                    << " reliable: " << match.reliable;
           }
         }
 
-        if (nomatch) {
-          //LOG(INFO) << "No match '" << chart->phrase(b, e) << "'";
+        if (!matches) {
+          VLOG(2) << "No match '" << chart->phrase(b, e) << "'";
           span.matches = nullptr;
         }
       }
@@ -271,6 +294,37 @@ int SpanTaxonomy::Classify(const Frame &item) {
   auto f = type_flags_.find(type);
   if (f == type_flags_.end()) return 0;
   return f->second;
+}
+
+void PersonNameAnnotator::Annotate(SpanChart *chart) {
+  // Mark name initials.
+  int size = chart->size();
+  for (int i = 0; i < size; ++i) {
+    if (UTF8::IsInitials(chart->token(i).word())) {
+      chart->item(i, i + 1).flags |= SPAN_INITIALS;
+    }
+  }
+
+  // Find sequences of given names, initials, and family names.
+  Store *store = chart->document()->store();
+  int b = 0;
+  while (b < size) {
+    int e = b;
+    while (e < size && chart->item(e, e + 1).is(SPAN_GIVEN_NAME)) e++;
+    while (e < size && chart->item(e, e + 1).is(SPAN_INITIALS)) e++;
+    while (e < size && chart->item(e, e + 1).is(SPAN_FAMILY_NAME)) e++;
+    
+    if (e > b) {
+      auto &item = chart->item(b, e);
+      if (item.matches == nullptr && item.aux.IsNil()) {
+        Handle person = Builder(store).AddIsA(n_person_).Create().handle();
+        chart->Add(b + chart->begin(), e + chart->begin(), person);
+      }
+      b = e;
+    } else {
+      b++;
+    }
+  }
 }
 
 void NumberAnnotator::Annotate(SpanChart *chart) {
