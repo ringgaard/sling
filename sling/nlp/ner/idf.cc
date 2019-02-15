@@ -53,8 +53,15 @@ class VocabularyMapper : public DocumentProcessor {
       num_short_tokens_ = task->GetCounter("short_tokens");
     }
 
+    // Only extract lowercase words.
+    task->Fetch("only_lowercase", &only_lowercase_);
+    if (only_lowercase_) {
+      num_discarded_tokens_ = task->GetCounter("discarded_tokens");
+    }
+
     // Get document counter.
     num_idf_documents_ = task->GetCounter("idf_documents");
+
   }
 
   void Process(Slice key, const Document &document) override {
@@ -70,9 +77,15 @@ class VocabularyMapper : public DocumentProcessor {
     for (const Token &token : document.tokens()) {
       // Get fingerprint for token.
       uint64 fp = Fingerprinter:: Fingerprint(token.word(), normalization_);
-      
+
       // Discard empty tokens.
-      if (fp == 0) continue;
+      if (fp == 1) continue;
+
+      // Check for lowercase words.
+      if (only_lowercase_ && token.Form() != CASE_LOWER) {
+        num_discarded_tokens_->Increment();
+        continue;
+      }
 
       // Add word to the document word set.
       fingerprints.insert(fp);
@@ -100,6 +113,10 @@ class VocabularyMapper : public DocumentProcessor {
   int min_document_legth_ = 0;
   Counter *num_short_documents_ = nullptr;
   Counter *num_short_tokens_ = nullptr;
+
+  // Only extract lowercase words.
+  bool only_lowercase_ = false;
+  Counter *num_discarded_tokens_ = nullptr;
 
   // Counter for aggregating the total number of documents. This is used in the
   // reducer for computing IDF.
@@ -227,7 +244,7 @@ const IDFTable::Word *IDFTable::Find(uint64 fp) const {
     if (word->fingerprint == fp) return word;
     word++;
   }
-  
+
   return nullptr;
 }
 

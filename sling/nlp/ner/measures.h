@@ -99,7 +99,7 @@ class CommonWordPruner : public SpanAnnotator {
 
  private:
   // IDF threshold for pruning single token spans.
-  static constexpr float idf_threshold = 3.0;
+  static constexpr float idf_threshold = 3.5;
 };
 
 class SpanTaxonomy : public SpanAnnotator {
@@ -118,7 +118,7 @@ class SpanTaxonomy : public SpanAnnotator {
 class PersonNameAnnotator : public SpanAnnotator {
  public:
   void Annotate(SpanChart *chart);
-  
+
  private:
   Name n_person_{names_, "person"};
 };
