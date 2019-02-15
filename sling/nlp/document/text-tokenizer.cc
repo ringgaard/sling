@@ -213,17 +213,17 @@ BreakType TokenizerText::BreakLevel(int index) const {
   }
   if (flags & TOKEN_EOS) return SENTENCE_BREAK;
   if (flags & TOKEN_LINE) return LINE_BREAK;
-  if (flags & TOKEN_DISCARD) {
-    // Do not insert space break for zero-width space.
-    return elements_[index].ch == 0x200B ? NO_BREAK : SPACE_BREAK;
-  }
+  if (flags & TOKEN_NONBREAK) return NO_BREAK;
+  if (flags & TOKEN_DISCARD) return SPACE_BREAK;
 
   return NO_BREAK;
 }
 
 int TokenizerText::Style(int index) const {
-  int flags = elements_[index].flags;
-  if (flags & TOKEN_TAG) return 1 << (flags & TOKEN_PARAM_MASK);
+  TokenFlags flags = elements_[index].flags;
+  if (flags & TOKEN_TAG) {
+    return 1 << ((flags & TOKEN_STYLE_MASK) >> TOKEN_STYLE_SHIFT);
+  }
   return 0;
 }
 
@@ -523,32 +523,36 @@ static const char *kBreakingTags[] = {
   "blockquote", "/blockquote", nullptr
 };
 
-static const struct { const char *tag; int param; } kStyleTags[] = {
-  {"<b>", STYLE_BOLD_BEGIN},
-  {"</b>", STYLE_BOLD_END},
-  {"<em>", STYLE_ITALIC_BEGIN},
-  {"</em>", STYLE_ITALIC_END},
+#define TS(s) (1ULL << s)
 
-  {"<h1>", STYLE_HEADING_BEGIN},
-  {"</h1>", STYLE_HEADING_END},
-  {"<h2>", STYLE_HEADING_BEGIN},
-  {"</h2>", STYLE_HEADING_END},
-  {"<h3>", STYLE_HEADING_BEGIN},
-  {"</h3>", STYLE_HEADING_END},
-  {"<h4>", STYLE_HEADING_BEGIN},
-  {"</h4>", STYLE_HEADING_END},
-  {"<h5>", STYLE_HEADING_BEGIN},
-  {"</h5>", STYLE_HEADING_END},
+static const struct { const char *tag; uint64 flags; } kStyleTags[] = {
+  {"<b>",   TS(STYLE_BOLD_BEGIN) | TOKEN_NONBREAK},
+  {"</b>",  TS(STYLE_BOLD_END) | TOKEN_NONBREAK},
+  {"<em>",  TS(STYLE_ITALIC_BEGIN) | TOKEN_NONBREAK},
+  {"</em>", TS(STYLE_ITALIC_END) | TOKEN_NONBREAK},
 
-  {"<ul>", STYLE_ITEMIZE_BEGIN},
-  {"</ul>", STYLE_ITEMIZE_END},
-  {"<ol>", STYLE_ITEMIZE_BEGIN},
-  {"</ol>", STYLE_ITEMIZE_END},
-  {"<li>", STYLE_LISTITEM_BEGIN},
-  {"</li>", STYLE_LISTITEM_END},
+  {"<h1>",  TS(STYLE_HEADING_BEGIN)},
+  {"</h1>", TS(STYLE_HEADING_END)},
+  {"<h2>",  TS(STYLE_HEADING_BEGIN)},
+  {"</h2>", TS(STYLE_HEADING_END)},
+  {"<h3>",  TS(STYLE_HEADING_BEGIN)},
+  {"</h3>", TS(STYLE_HEADING_END)},
+  {"<h4>",  TS(STYLE_HEADING_BEGIN)},
+  {"</h4>", TS(STYLE_HEADING_END)},
+  {"<h5>",  TS(STYLE_HEADING_BEGIN)},
+  {"</h5>", TS(STYLE_HEADING_END)},
+
+  {"<ul>",  TS(STYLE_ITEMIZE_BEGIN)},
+  {"</ul>", TS(STYLE_ITEMIZE_END)},
+  {"<ol>",  TS(STYLE_ITEMIZE_BEGIN)},
+  {"</ol>", TS(STYLE_ITEMIZE_END)},
+  {"<li>",  TS(STYLE_LISTITEM_BEGIN)},
+  {"</li>", TS(STYLE_LISTITEM_END)},
 
   {nullptr, 0}
 };
+
+#undef TS
 
 static const char *kTokenSuffixes[] = {
   "'s", nullptr,
@@ -850,7 +854,8 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
   AddTokenType("‹", TOKEN_CLOSE, "''");
 
   // URL tokens.
-  int url_flags = discard_urls_ ? (TOKEN_URL | TOKEN_DISCARD) : TOKEN_URL;
+  TokenFlags url_flags = TOKEN_URL;
+  if (discard_urls_) url_flags |= TOKEN_DISCARD;
   AddTokenType("http:", url_flags);
   AddTokenType("https:", url_flags);
   AddTokenType("ftp:", url_flags);
@@ -902,7 +907,7 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
   // Styling tags.
   const auto *style = kStyleTags;
   while (style->tag != nullptr) {
-    AddTokenType(style->tag, TOKEN_DISCARD | TOKEN_TAG | style->param);
+    AddTokenType(style->tag, TOKEN_TAG | TOKEN_DISCARD | style->flags);
     style++;
   }
 
@@ -969,7 +974,7 @@ void StandardTokenization::Process(TokenizerText *t) {
 
     // Check for special tokens. The text is matched against the token trie and
     // the longest match is found.
-    int tag_flags = 0;
+    TokenFlags tag_flags = 0;
     int length;
     const TrieNode *node = token_types_->FindMatch(*t, i, &length);
     if (length > 0) {
@@ -1157,6 +1162,9 @@ void LDCTokenization::Init(CharacterFlags *char_flags) {
 
   // Allow dash to start a negative number (i.e. dash as a sign).
   char_flags->add('-', NUMBER_START);
+
+  // Non-breaking space.
+  char_flags->add(0x200B, TOKEN_DISCARD | TOKEN_NONBREAK);
 
   // Exceptions for prefixes with hyphens.
   const char **exception = kHyphenatedPrefixExceptions;
