@@ -68,7 +68,7 @@ class TrieNode {
 
   // Returns/sets the flags for the node.
   TokenFlags flags() const { return flags_; }
-  void set_flags(TokenFlags flags) { flags_ = flags; }
+  void set_flags(TokenFlags flags) { flags_ |= flags; }
   bool is(TokenFlags flags) const { return (flags_ & flags) != 0; }
 
   // Returns/sets the terminal status of this node.
@@ -219,6 +219,12 @@ BreakType TokenizerText::BreakLevel(int index) const {
   }
 
   return NO_BREAK;
+}
+
+int TokenizerText::Style(int index) const {
+  int flags = elements_[index].flags;
+  if (flags & TOKEN_TAG) return 1 << (flags & TOKEN_PARAM_MASK);
+  return 0;
 }
 
 TrieNode::TrieNode() {
@@ -375,6 +381,7 @@ void Tokenizer::Tokenize(Text text, const Callback &callback) const {
   bool in_quote = false;
   int bracket_level = 0;
   token.brk = NO_BREAK;
+  token.style = 0;
   while (i < t.length()) {
     // Find start of next token.
     int j = t.NextStart(i + 1);
@@ -383,6 +390,23 @@ void Tokenizer::Tokenize(Text text, const Callback &callback) const {
       // Update break level.
       BreakType brk = t.BreakLevel(i);
       if (brk > token.brk) token.brk = brk;
+
+      // Update style.
+      int style = t.Style(i);
+      if (style != 0) {
+        // In order to detect empty style changes, i.e. a BEGIN style followed
+        // by an END style without emitting a token, the empty style change is
+        // cancelled out.
+        if (style & END_STYLE) {
+          // Check for corresponding BEGIN style.
+          if ((style >> 1) & token.style) {
+            // Cancel style change.
+            token.style &= ~(style >> 1);
+            style = 0;
+          }
+        }
+        token.style |= style;
+      }
     } else {
       // Get token value.
       t.GetText(i, j, &token.text);
@@ -402,10 +426,13 @@ void Tokenizer::Tokenize(Text text, const Callback &callback) const {
         // Replacement token.
         token.text = t.node(i)->value();
       }
+
+      // Emit token.
       token.begin = t.position(i);
       token.end = t.position(j);
       callback(token);
       token.brk = NO_BREAK;
+      token.style = 0;
     }
 
     // Make a period followed by a lowercase letter conditional.
@@ -475,6 +502,7 @@ void Tokenizer::Tokenize(Text text, const Callback &callback) const {
           extra.begin = t.position(j);
           extra.end = t.position(k);
           extra.brk = NO_BREAK;
+          extra.style = 0;
           callback(extra);
           j = k;
         }
@@ -493,6 +521,33 @@ static const char *kBreakingTags[] = {
   "/ol", "option", "/option", "p", "/p", "select", "/select",
   "table", "/table", "/title", "tr", "/tr", "ul", "/ul",
   "blockquote", "/blockquote", nullptr
+};
+
+static const struct { const char *tag; int param; } kStyleTags[] = {
+  {"<b>", STYLE_BOLD_BEGIN},
+  {"</b>", STYLE_BOLD_END},
+  {"<em>", STYLE_ITALIC_BEGIN},
+  {"</em>", STYLE_ITALIC_END},
+
+  {"<h1>", STYLE_HEADING_BEGIN},
+  {"</h1>", STYLE_HEADING_END},
+  {"<h2>", STYLE_HEADING_BEGIN},
+  {"</h2>", STYLE_HEADING_END},
+  {"<h3>", STYLE_HEADING_BEGIN},
+  {"</h3>", STYLE_HEADING_END},
+  {"<h4>", STYLE_HEADING_BEGIN},
+  {"</h4>", STYLE_HEADING_END},
+  {"<h5>", STYLE_HEADING_BEGIN},
+  {"</h5>", STYLE_HEADING_END},
+
+  {"<ul>", STYLE_ITEMIZE_BEGIN},
+  {"</ul>", STYLE_ITEMIZE_END},
+  {"<ol>", STYLE_ITEMIZE_BEGIN},
+  {"</ol>", STYLE_ITEMIZE_END},
+  {"<li>", STYLE_LISTITEM_BEGIN},
+  {"</li>", STYLE_LISTITEM_END},
+
+  {nullptr, 0}
 };
 
 static const char *kTokenSuffixes[] = {
@@ -844,6 +899,13 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
     tag++;
   }
 
+  // Styling tags.
+  const auto *style = kStyleTags;
+  while (style->tag != nullptr) {
+    AddTokenType(style->tag, TOKEN_DISCARD | TOKEN_TAG | style->param);
+    style++;
+  }
+
   // Abbreviations.
   const char **abbrev = kAbbreviations;
   while (*abbrev) {
@@ -1119,10 +1181,6 @@ void LDCTokenization::Init(CharacterFlags *char_flags) {
 
   // Special LDC tokens.
   AddTokenType("(...)", 0);
-
-  //AddTokenType("l'", 0);
-  //AddTokenType("d'", 0);
-  //AddTokenType("all'", 0);
 }
 
 }  // namespace nlp

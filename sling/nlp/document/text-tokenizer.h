@@ -37,35 +37,35 @@ enum TokenFlagValues {
   TOKEN_PARAM_MASK = (1 << 4) - 1,
 
   // Token level flags.
-  TOKEN_LINE     = (1 << 4),   // End-of-line token.
-  TOKEN_EOS      = (1 << 5),   // End-of-sentence token.
-  TOKEN_PARA     = (1 << 6),   // End-of-paragraph token.
-  TOKEN_DISCARD  = (1 << 7),   // Discardable token (like whitespace).
-  TOKEN_CONDEOS  = (1 << 8),   // Conditional end-of-sentence token.
-  TOKEN_QUOTE    = (1 << 9),   // Quote token.
-  TOKEN_OPEN     = (1 << 10),  // Opening bracket token.
-  TOKEN_CLOSE    = (1 << 11),  // Closing bracket token.
-  TOKEN_URL      = (1 << 12),  // URL-like token.
-  TOKEN_TAG      = (1 << 13),  // Tag-like token.
-  TOKEN_WORD     = (1 << 14),  // Word-like token.
-  TOKEN_SPLIT    = (1 << 15),  // Split token.
-  TOKEN_PREFIX   = (1 << 16),  // Prefix exception.
-  TOKEN_SUFFIX   = (1 << 17),  // Suffix exception.
+  TOKEN_LINE     = (1 << 4),   // end-of-line token
+  TOKEN_EOS      = (1 << 5),   // end-of-sentence token
+  TOKEN_PARA     = (1 << 6),   // end-of-paragraph token
+  TOKEN_DISCARD  = (1 << 7),   // discardable token (like whitespace)
+  TOKEN_CONDEOS  = (1 << 8),   // conditional end-of-sentence token
+  TOKEN_QUOTE    = (1 << 9),   // quote token
+  TOKEN_OPEN     = (1 << 10),  // opening bracket token
+  TOKEN_CLOSE    = (1 << 11),  // closing bracket token
+  TOKEN_URL      = (1 << 12),  // url-like token
+  TOKEN_TAG      = (1 << 13),  // tag-like token
+  TOKEN_WORD     = (1 << 14),  // word-like token
+  TOKEN_SPLIT    = (1 << 15),  // split token
+  TOKEN_PREFIX   = (1 << 16),  // prefix exception
+  TOKEN_SUFFIX   = (1 << 17),  // suffix exception
 
   // Character level flags.
-  TOKEN_START    = (1 << 18),  // Start of token marker.
-  CHAR_LETTER    = (1 << 19),  // Letter character.
-  CHAR_DIGIT     = (1 << 20),  // Digit character.
-  CHAR_UPPER     = (1 << 21),  // Uppercase letter.
-  CHAR_SPACE     = (1 << 22),  // Whitespace character.
-  CHAR_PUNCT     = (1 << 23),  // Punctuation character.
-  CHAR_HYPHEN    = (1 << 24),  // Hyphen dash character.
-  NUMBER_START   = (1 << 25),  // Character valid as first character in number.
-  NUMBER_PUNCT   = (1 << 26),  // Character allowed inside number.
-  WORD_PUNCT     = (1 << 27),  // Character allowed inside word.
-  TAG_START      = (1 << 28),  // Tag start character.
-  TAG_END        = (1 << 29),  // Tag end character.
-  HASHTAG_START  = (1 << 30),  // Character indicating start of hash-tag.
+  TOKEN_START    = (1 << 18),  // start of token marker
+  CHAR_LETTER    = (1 << 19),  // letter character
+  CHAR_DIGIT     = (1 << 20),  // digit character
+  CHAR_UPPER     = (1 << 21),  // uppercase letter
+  CHAR_SPACE     = (1 << 22),  // whitespace character
+  CHAR_PUNCT     = (1 << 23),  // Punctuation character
+  CHAR_HYPHEN    = (1 << 24),  // hyphen dash character
+  NUMBER_START   = (1 << 25),  // character valid as first character in number
+  NUMBER_PUNCT   = (1 << 26),  // character allowed inside number
+  WORD_PUNCT     = (1 << 27),  // character allowed inside word
+  TAG_START      = (1 << 28),  // tag start character.
+  TAG_END        = (1 << 29),  // tag end character.
+  HASHTAG_START  = (1 << 30),  // character indicating start of hash-tag
 };
 
 typedef int32 TokenFlags;
@@ -114,6 +114,9 @@ class TokenizerText {
 
   // Returns the break level for a token.
   BreakType BreakLevel(int index) const;
+
+  // Returns style change for a token.
+  int Style(int index) const;
 
   // Returns the number of characters in the text.
   int length() const { return length_; }
@@ -191,6 +194,7 @@ class Tokenizer {
   struct Token {
     string text;
     BreakType brk;
+    int style;
     int begin;
     int end;
   };

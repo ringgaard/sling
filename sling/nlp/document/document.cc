@@ -186,6 +186,7 @@ Document::Document(const Frame &top, const DocumentNames *names)
       Handle start = token->get(names_->n_start.handle());
       Handle size = token->get(names_->n_size.handle());
       Handle brk = token->get(names_->n_break.handle());
+      Handle style = token->get(names_->n_style.handle());
 
       // Fill token from frame.
       Token &t = tokens_[i];
@@ -209,6 +210,11 @@ Document::Document(const Frame &top, const DocumentNames *names)
         t.brk_ = static_cast<BreakType>(brk.AsInt());
       } else {
         t.brk_ = i == 0 ? NO_BREAK : SPACE_BREAK;
+      }
+      if (!style.IsNil()) {
+        t.style_ = brk.AsInt();
+      } else {
+        t.style_ = 0;
       }
       t.fingerprint_ = 0;
       t.form_ = CASE_INVALID;
@@ -375,6 +381,9 @@ void Document::Update() {
       if (t.brk_ != (i == 0 ? NO_BREAK : SPACE_BREAK)) {
         token.Add(names_->n_break, t.brk_);
       }
+      if (t.style_ != 0) {
+        token.Add(names_->n_style, t.style_);
+      }
       tokens.push_back(token.Create().handle());
     }
     Array token_array(store(), tokens);
@@ -417,7 +426,8 @@ void Document::SetText(Text text) {
   tokens_changed_ = true;
 }
 
-void Document::AddToken(Text word, int begin, int end, BreakType brk) {
+void Document::AddToken(Text word, int begin, int end,
+                        BreakType brk, int style) {
   // Expand token array.
   int index = tokens_.size();
   tokens_.resize(index + 1);
@@ -431,6 +441,7 @@ void Document::AddToken(Text word, int begin, int end, BreakType brk) {
   t.end_ = end;
   t.word_.assign(word.data(), word.size());
   t.brk_ = brk;
+  t.style_ = style;
   t.fingerprint_ = 0;
   t.form_ = CASE_INVALID;
   t.span_ = nullptr;

@@ -29,6 +29,60 @@ enum BreakType {
   CHAPTER_BREAK    = 6,
 };
 
+// Token style attributes.
+enum TokenStyles {
+  // No formatting (default).
+  STYLE_NORMAL           = 0,
+
+  // Bold typeface.
+  STYLE_BOLD_BEGIN       = 1,
+  STYLE_BOLD_END         = 2,
+
+  // Italic typeface.
+  STYLE_ITALIC_BEGIN     = 3,
+  STYLE_ITALIC_END       = 4,
+
+  // Section headings.
+  STYLE_HEADING_BEGIN    = 5,
+  STYLE_HEADING_END      = 6,
+
+  // Itemized lists.
+  STYLE_ITEMIZE_BEGIN    = 7,
+  STYLE_ITEMIZE_END      = 8,
+
+  // List items.
+  STYLE_LISTITEM_BEGIN   = 9,
+  STYLE_LISTITEM_END     = 10,
+};
+
+// Token style flags.
+enum TokenStyleFlags {
+  // Flag masks for styles.
+  BOLD_BEGIN       = (1 << STYLE_BOLD_BEGIN),
+  BOLD_END         = (1 << STYLE_BOLD_END),
+  ITALIC_BEGIN     = (1 << STYLE_ITALIC_BEGIN),
+  ITALIC_END       = (1 << STYLE_ITALIC_END),
+  HEADING_BEGIN    = (1 << STYLE_HEADING_BEGIN),
+  HEADING_END      = (1 << STYLE_HEADING_END),
+  ITEMIZE_BEGIN    = (1 << STYLE_ITEMIZE_BEGIN),
+  ITEMIZE_END      = (1 << STYLE_ITEMIZE_END),
+  LISTITEM_BEGIN   = (1 << STYLE_LISTITEM_BEGIN),
+  LISTITEM_END     = (1 << STYLE_LISTITEM_END),
+
+  // Mask for begin and end styles.
+  BEGIN_STYLE = BOLD_BEGIN |
+                ITALIC_BEGIN |
+                HEADING_BEGIN |
+                ITEMIZE_BEGIN |
+                LISTITEM_BEGIN,
+  END_STYLE   = BOLD_END |
+                ITALIC_END |
+                HEADING_END |
+                ITEMIZE_END |
+                LISTITEM_END,
+
+};
+
 }  // namespace nlp
 }  // namespace sling
 

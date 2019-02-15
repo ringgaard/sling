@@ -50,6 +50,7 @@ struct DocumentNames : public SharedNames {
   Name n_size{*this, "size"};
   Name n_word{*this, "word"};
   Name n_break{*this, "break"};
+  Name n_style{*this, "style"};
 
   Name n_phrase{*this, "phrase"};
   Name n_begin{*this, "begin"};
@@ -84,6 +85,9 @@ class Token {
   // Break level before token.
   BreakType brk() const { return brk_; }
 
+  // Token style change before token.
+  int style() const { return style_; }
+
   // Lowest span covering the token.
   Span *span() const { return span_; }
 
@@ -109,6 +113,7 @@ class Token {
 
   string word_;                 // token word
   BreakType brk_;               // break level before token
+  int style_;                   // token style change before token
 
   mutable uint64 fingerprint_;  // fingerprint for token text
   mutable CaseForm form_;       // case form for token
@@ -270,7 +275,8 @@ class Document {
   // Add token to document.
   void AddToken(Text word,
                 int begin = -1, int end = -1,
-                BreakType brk = SPACE_BREAK);
+                BreakType brk = SPACE_BREAK,
+                int style = 0);
 
   // Returns the small enclosing span for [begin, end). If no such span exists,
   // then returns nullptr. If a crossing span exists, then returns nullptr and
