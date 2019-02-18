@@ -523,7 +523,7 @@ static const char *kBreakingTags[] = {
   "blockquote", "/blockquote", nullptr
 };
 
-#define TS(s) (1ULL << s)
+#define TS(s) ((1ULL * s) << TOKEN_STYLE_SHIFT)
 
 static const struct { const char *tag; uint64 flags; } kStyleTags[] = {
   {"<b>",   TS(STYLE_BOLD_BEGIN) | TOKEN_NONBREAK},
