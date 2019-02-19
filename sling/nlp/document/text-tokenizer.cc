@@ -222,7 +222,10 @@ BreakType TokenizerText::BreakLevel(int index) const {
 int TokenizerText::Style(int index) const {
   TokenFlags flags = elements_[index].flags;
   if (flags & TOKEN_TAG) {
-    return 1 << ((flags & TOKEN_STYLE_MASK) >> TOKEN_STYLE_SHIFT);
+    int style = flags & TOKEN_STYLE_MASK;
+    if (style != 0) {
+      return 1 << ((flags & TOKEN_STYLE_MASK) >> TOKEN_STYLE_SHIFT);
+    }
   }
   return 0;
 }

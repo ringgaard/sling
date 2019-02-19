@@ -196,12 +196,10 @@ export class DocumentViewer extends Component {
     // Render document viewer with text to the left, panels to the right.
     let key = "doc-" + this.docno();
     return (
-      h(Grid, {class: "docviewer", key},
-        h("div", {class: "text-and-panels"}),
-          h("div", {id: "text" + this.docno(),  class: "doctext", key},
-            elements
-          ),
-          h("div", {id: "panels" + this.docno(), class: "docpanels"})
+      h("div", {id: "docview" + this.docno(), class: "docviewer", key},
+        h("div", {id: "text" + this.docno(), class: "doctext", key}, elements),
+        h("div", {class: "docspacer"}),
+        h("div", {id: "panels" + this.docno(), class: "docpanels"})
       )
     );
   }
@@ -211,6 +209,8 @@ export class DocumentViewer extends Component {
   }
 
   componentDidUpdate() {
+    let panels = document.getElementById("panels" + this.docno());
+    while (panels.firstChild) panels.removeChild(panels.firstChild);
     this.Initialize();
   }
 
