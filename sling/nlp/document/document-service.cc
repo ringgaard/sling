@@ -96,6 +96,9 @@ Frame DocumentService::Convert(const Document &document) {
   b.Add(n_title_, document.top().GetHandle(n_title_));
   b.Add(n_url_, document.top().GetHandle(n_url_));
   b.Add(n_text_, document.text());
+  if (document.top().Has(n_page_item_)) {
+    b.Add(n_key_, document.top().GetHandle(n_page_item_));
+  }
   b.Add(n_tokens_, document.top().GetHandle(n_tokens_));
 
   // Output frame list.

@@ -64,6 +64,7 @@ class DocumentService {
   Name n_description_{names_, "description"};
   Name n_title_{names_, "title"};
   Name n_url_{names_, "url"};
+  Name n_key_{names_, "key"};
   Name n_text_{names_, "text"};
   Name n_tokens_{names_, "tokens"};
   Name n_frames_{names_, "frames"};
@@ -80,6 +81,7 @@ class DocumentService {
 
   Name n_item_{names_, "/w/item"};
   Name n_property_{names_, "/w/property"};
+  Name n_page_item_{names_, "/wp/page/item"};
 };
 
 }  // namespace nlp

@@ -222,7 +222,7 @@ BreakType TokenizerText::BreakLevel(int index) const {
 int TokenizerText::Style(int index) const {
   TokenFlags flags = elements_[index].flags;
   if (flags & TOKEN_TAG) {
-    int style = flags & TOKEN_STYLE_MASK;
+    TokenFlags style = flags & TOKEN_STYLE_MASK;
     if (style != 0) {
       return 1 << ((flags & TOKEN_STYLE_MASK) >> TOKEN_STYLE_SHIFT);
     }
@@ -551,6 +551,9 @@ static const struct { const char *tag; uint64 flags; } kStyleTags[] = {
   {"</ol>", TS(STYLE_ITEMIZE_END)},
   {"<li>",  TS(STYLE_LISTITEM_BEGIN)},
   {"</li>", TS(STYLE_LISTITEM_END)},
+
+  {"<blockquote>",  TS(STYLE_QUOTE_BEGIN)},
+  {"</blockquote>", TS(STYLE_QUOTE_END)},
 
   {nullptr, 0}
 };

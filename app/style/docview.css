@@ -9,7 +9,7 @@
   flex: 1;
   height: 100%;
   overflow-y: auto;
-  padding: 5px;
+  padding: 5px 5px 5px 10px;
   background: white;
   border: 2px solid #cccccc;
   box-sizing: border-box;
@@ -28,6 +28,8 @@
 
 .title {
   font: 20pt bold arial, helvetica;
+  margin-top: 10px;
+  margin-bottom: 20px;
 }
 
 .titlelink {
@@ -45,6 +47,21 @@
   text-decoration: none;
 }
 
+.topiclink {
+  color: #888888;
+  text-decoration: none;
+}
+
+.topiclink:link {
+  color: #888888;
+  text-decoration: none;
+}
+
+.topiclink:visited {
+  color: #888888;
+  text-decoration: none;
+}
+
 a {
   color: black;
 }
@@ -55,6 +72,21 @@ a:link {
 
 a:visited {
   text-decoration: underline;
+}
+
+h2 {
+  font: 16pt bold arial, helvetica;
+  margin-top: 20px;
+  margin-bottom: 0px;
+}
+
+ul {
+  font-size: 13pt;
+  line-height: normal;
+}
+
+.themes {
+  margin-top: 10px;
 }
 
 .panel {
