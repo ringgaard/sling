@@ -85,6 +85,12 @@ ul {
   line-height: normal;
 }
 
+blockquote {
+  font: 12pt lora, georgia, serif;
+  line-height: normal;
+  letter-spacing: normal;
+}
+
 .themes {
   margin-top: 10px;
 }
