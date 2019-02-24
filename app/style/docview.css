@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css?family=Lato|Lora:400,400i,700,700i');
+
 .docviewer {
   display: flex;
   flex-direction: row;
@@ -26,8 +28,14 @@
   overflow-y: auto;
 }
 
+.docref {
+  font-size: 14pt;
+  color: #888888;
+  margin-left: 10px;
+}
+
 .title {
-  font: 20pt bold arial, helvetica;
+  font: 24pt lato, helvetica, sans-serif;
   margin-top: 10px;
   margin-bottom: 20px;
 }
@@ -75,14 +83,13 @@ a:visited {
 }
 
 h2 {
-  font: 16pt bold arial, helvetica;
+  font: 16pt lato, helvetica, sans-serif;
   margin-top: 20px;
-  margin-bottom: 0px;
+  margin-bottom: 10px;
 }
 
 ul {
   font-size: 13pt;
-  line-height: normal;
 }
 
 blockquote {

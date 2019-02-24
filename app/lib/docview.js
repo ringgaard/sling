@@ -24,12 +24,12 @@ let begin_styles = [
 ];
 
 let end_styles = [
-  {mask: (1 << 4), tag: "em"},
-  {mask: (1 << 2), tag: "b"},
-  {mask: (1 << 10), tag: "li"},
-  {mask: (1 << 8), tag: "ul"},
-  {mask: (1 << 12), tag: "blockquote"},
-  {mask: (1 << 6), tag: "h2"},
+  {mask: (1 << 4), tag: "em", para: false},
+  {mask: (1 << 2), tag: "b", para: false},
+  {mask: (1 << 10), tag: "li", para: true},
+  {mask: (1 << 8), tag: "ul", para: true},
+  {mask: (1 << 12), tag: "blockquote", para: true},
+  {mask: (1 << 6), tag: "h2", para: true},
 ];
 
 let notchgif = 'data:image/gif;base64,R0lGODlhDAAWAJEAAP/68NK8jv///' +
@@ -141,9 +141,8 @@ export class DocumentViewer extends Component {
       if (doc.key) {
         let url = kb_url + doc.key;
         let props = {href: url, class: "topiclink", target: "_blank"}
-        headline.push(" (");
-        headline.push(h("a", props, doc.key));
-        headline.push(")");
+        headline.push(h("span", {class: "docref"},
+                        "(", h("a", props, doc.key), ")"));
       }
       elements.push(h("h1", {class: "title"}, headline));
     } else if (doc.url) {
@@ -157,23 +156,24 @@ export class DocumentViewer extends Component {
     }
     for (let index = 0; index < doc.tokens.length; ++index) {
       let token = doc.tokens[index];
+      let brk = token.break;
 
       // Pop elements for end of style.
       if (token.style) {
         for (let ts of end_styles) {
           if (ts.mask & token.style) {
-            if (styles.lenght == 0) break;
+            if (styles.length == 0) break;
             let style = styles.pop();
             let subelements = elements.slice(style.mark);
             elements.length = style.mark;
             elements.push(h(style.tag, null, subelements));
+            if (ts.para && brk == PARAGRAPH_BREAK) brk = undefined;
           }
         }
       }
 
       // Render token break.
       if (index > 0) {
-        let brk = token.break;
         if (brk === undefined) {
           elements.push(" ");
         } else if (brk >= CHAPTER_BREAK) {
@@ -183,7 +183,7 @@ export class DocumentViewer extends Component {
         } else if (brk >= PARAGRAPH_BREAK) {
           elements.push(h("p"));
         } else if (brk >= SENTENCE_BREAK) {
-          elements.push("	 ");
+          elements.push(" 	");
         } else if (brk >= SPACE_BREAK) {
           elements.push(" ");
         }
