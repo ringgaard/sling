@@ -206,3 +206,34 @@ cc_binary(
     "//sling/util:mutex",
   ],
 )
+
+embed_data(
+  name = "lex-app",
+  srcs = [
+    "app/lex.html",
+    "app/lex.js",
+    "app/lex.css",
+  ],
+)
+
+cc_binary(
+  name = "lex-viewer",
+  srcs = ["lex-viewer.cc"],
+  deps = [
+    ":lex",
+    ":lex-app",
+    ":document-service",
+    "//app",
+    "//sling/base",
+    "//sling/file",
+    "//sling/file:embed",
+    "//sling/file:posix",
+    "//sling/frame",
+    "//sling/http:http-server",
+    "//sling/http:static-content",
+    "//sling/http:web-service",
+    "//sling/nlp/document",
+    "//sling/nlp/kb:knowledge-service",
+  ],
+)
+

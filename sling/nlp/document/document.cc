@@ -212,7 +212,7 @@ Document::Document(const Frame &top, const DocumentNames *names)
         t.brk_ = i == 0 ? NO_BREAK : SPACE_BREAK;
       }
       if (!style.IsNil()) {
-        t.style_ = brk.AsInt();
+        t.style_ = style.AsInt();
       } else {
         t.style_ = 0;
       }
