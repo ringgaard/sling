@@ -399,6 +399,7 @@ export class DocumentViewer extends Component {
 
   BuildAVM(fidx, rendered) {
     let frame = this.document.frames[fidx];
+    if (frame == undefined) return document.createTextNode(fidx);
     rendered[fidx] = true;
 
     let tbl = document.createElement("table");

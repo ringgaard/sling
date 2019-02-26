@@ -22,7 +22,6 @@
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-service.h"
 #include "sling/nlp/kb/knowledge-service.h"
-#include "sling/util/mutex.h"
 
 DEFINE_int32(port, 8080, "HTTP server port");
 DEFINE_string(commons, "", "Commons store");
@@ -44,18 +43,19 @@ class LEXViewer : public DocumentService {
   }
 
   void HandleConvert(HTTPRequest *request, HTTPResponse *response) {
-#if 0
     WebService ws(commons_, request, response);
 
-    // Convert document to JSON.
-    Store *store = ws.store();
-    Frame top = Decode(store, record.value).AsFrame();
-    Document document(top);
+    // Get input document.
+    Document *document = GetInputDocument(&ws);
+    if (document == nullptr) {
+      response->SendError(400, "Bad Request", "document missing");
+      return;
+    }
 
     // Return document in JSON format.
-    Frame json = Convert(document);
+    Frame json = Convert(*document);
     ws.set_output(json);
-#endif
+    delete document;
   }
 
  private:

@@ -161,8 +161,8 @@ bool DocumentLexer::Lex(Document *document, Text lex) const {
 
 static void OutputStyle(int style, Output *output) {
   if (style & BEGIN_STYLE) {
-    if (style & HEADING_BEGIN) output->Write("</h2>");
-    if (style & QUOTE_BEGIN) output->Write("</blockquote>");
+    if (style & HEADING_BEGIN) output->Write("<h2>");
+    if (style & QUOTE_BEGIN) output->Write("<blockquote>");
     if (style & ITEMIZE_BEGIN) output->Write("<ul>\n");
     if (style & LISTITEM_BEGIN) output->Write("<li>");
     if (style & BOLD_BEGIN) output->Write("<b>");

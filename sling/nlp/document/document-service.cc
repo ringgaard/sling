@@ -19,7 +19,43 @@
 namespace sling {
 namespace nlp {
 
-Frame DocumentService::Convert(const Document &document) {
+DocumentService::DocumentService(Store *commons) : commons_(commons) {
+  CHECK(names_.Bind(commons));
+  docnames_ = new DocumentNames(commons_);
+}
+
+DocumentService::~DocumentService() {
+  docnames_->Release();
+}
+
+Document *DocumentService::GetInputDocument(WebService *ws) const {
+  if (ws->input().IsFrame()) {
+    // Create document from frame.
+    return new Document(ws->input().AsFrame(), docnames_);
+  } else if (ws->input().IsString()) {
+    auto format = ws->input_format();
+    String input = ws->input().AsString();
+    if (format == WebService::LEX) {
+      // Parse LEX-encoded input document.
+      Document *document = new Document(ws->store(), docnames_);
+      if (!lexer_.Lex(document, input.text())) {
+        delete document;
+        return nullptr;
+      }
+      return document;
+    } else if (format == WebService::PLAIN) {
+      // Tokenize plain text input.
+      Document *document = new Document(ws->store(), docnames_);
+      tokenizer_.Tokenize(document, input.text());
+      return document;
+    }
+  }
+
+  // Unknown input format.
+  return nullptr;
+}
+
+Frame DocumentService::Convert(const Document &document) const {
   // Builds client-side frame list.
   Store *store = document.store();
   FrameMapping mapping(store);

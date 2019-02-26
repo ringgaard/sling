@@ -170,9 +170,12 @@ cc_library(
   srcs = ["document-service.cc"],
   hdrs = ["document-service.h"],
   deps = [
+    ":document",
+    ":document-tokenizer",
+    ":lex",
     "//sling/base",
     "//sling/frame",
-    "//sling/nlp/document",
+    "//sling/http:web-service",
   ],
 )
 
@@ -190,6 +193,7 @@ cc_binary(
   srcs = ["corpus-browser.cc"],
   deps = [
     ":corpus-app",
+    ":document",
     ":document-service",
     "//app",
     "//sling/base",
@@ -201,7 +205,6 @@ cc_binary(
     "//sling/http:http-server",
     "//sling/http:static-content",
     "//sling/http:web-service",
-    "//sling/nlp/document",
     "//sling/nlp/kb:knowledge-service",
     "//sling/util:mutex",
   ],
@@ -220,9 +223,9 @@ cc_binary(
   name = "lex-viewer",
   srcs = ["lex-viewer.cc"],
   deps = [
-    ":lex",
-    ":lex-app",
+    ":document",
     ":document-service",
+    ":lex-app",
     "//app",
     "//sling/base",
     "//sling/file",
@@ -232,7 +235,6 @@ cc_binary(
     "//sling/http:http-server",
     "//sling/http:static-content",
     "//sling/http:web-service",
-    "//sling/nlp/document",
     "//sling/nlp/kb:knowledge-service",
   ],
 )

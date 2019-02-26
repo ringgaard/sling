@@ -1,5 +1,5 @@
 import {Component, h, render} from "/common/external/preact.js";
-import {Layout, Button, Icon, Card} from "/common/lib/mdl.js";
+import {Layout, Button, Icon} from "/common/lib/mdl.js";
 import {Document, DocumentViewer} from "/common/lib/docview.js";
 import {stylesheet} from "/common/lib/util.js";
 
@@ -12,10 +12,17 @@ class DocumentEditor extends Component {
 
   render(props, state) {
     return (
-      h(Card, {class: "doceditor", shadow: 2},
-        h("textarea", {class: "editor", oninput: props.oninput}, props.text)
-      )
+      h("textarea", {
+          id: "text",
+          class: "editor",
+          oninput: props.oninput,
+        },
+        props.text)
     );
+  }
+
+  componentDidMount() {
+    document.getElementById("text").focus();
   }
 }
 
@@ -28,10 +35,26 @@ class App extends Component {
 
   view(e) {
     console.log("view", e);
+    var self = this;
+    let headers = new Headers({
+      "Content-Type": "text/lex",
+    });
+    fetch("/convert?fmt=cjson", {method: "POST", body: this.text, headers})
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          console.log("convert error", response.status, response.message);
+          return null;
+        }
+      })
+      .then(response => {
+        self.setState({document: new Document(response), editmode: false});
+      });
   }
 
   edit(e) {
-    console.log("edit", e);
+    this.setState({document: null, editmode: true});
   }
 
   oninput(e) {
