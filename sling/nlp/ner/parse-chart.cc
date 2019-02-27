@@ -53,6 +53,7 @@ int main(int argc, char *argv[]) {
   MeasureAnnotator measures;
   DateAnnotator dates;
   CommonWordPruner pruner;
+  EmphasisAnnotator emphasis;
 
   importer.Init(&commons);
   taxonomy.Init(&commons);
@@ -71,7 +72,10 @@ int main(int argc, char *argv[]) {
   populator.AddStopWord(")");
   populator.AddStopWord("``");
   populator.AddStopWord("''");
+  populator.AddStopWord("'");
   populator.AddStopWord("--");
+  populator.AddStopWord("/");
+  populator.AddStopWord("&");
   populator.AddStopWord("the");
   populator.AddStopWord("a");
   populator.AddStopWord("an");
@@ -121,6 +125,10 @@ int main(int argc, char *argv[]) {
   outdoc.ClearAnnotations();
 
   for (SentenceIterator s(&document); s.more(); s.next()) {
+    // Skip headings.
+    const Token &first = document.token(s.begin());
+    if (first.style() & HEADING_BEGIN) continue;
+
     SpanChart chart(&document, s.begin(), s.end(), 10);
 
     populator.Annotate(aliases, &chart);
@@ -132,6 +140,7 @@ int main(int argc, char *argv[]) {
     measures.Annotate(aliases, &chart);
     dates.Annotate(aliases, &chart);
     pruner.Annotate(dictionary, &chart);
+    emphasis.Annotate(&chart);
 
     chart.Solve();
     chart.Extract(&outdoc);

@@ -44,14 +44,17 @@ enum SpanFlags {
   SPAN_DATE              = (1 << 13),
   SPAN_MEASURE           = (1 << 14),
   SPAN_GEO               = (1 << 15),
+  SPAN_EMPHASIS          = (1 << 16),
 
-  SPAN_FAMILY_NAME       = (1 << 16),
-  SPAN_GIVEN_NAME        = (1 << 17),
-  SPAN_INITIALS          = (1 << 18),
+  SPAN_FAMILY_NAME       = (1 << 17),
+  SPAN_GIVEN_NAME        = (1 << 18),
+  SPAN_INITIALS          = (1 << 19),
+  SPAN_DASH              = (1 << 20),
+  SPAN_SUFFIX            = (1 << 21),
 
-  SPAN_PERSON            = (1 << 19),
-  SPAN_LOCATION          = (1 << 20),
-  SPAN_ORGANIZATION      = (1 << 21),
+  SPAN_PERSON            = (1 << 22),
+  SPAN_LOCATION          = (1 << 23),
+  SPAN_ORGANIZATION      = (1 << 24),
 };
 
 class SpanAnnotator {
@@ -100,6 +103,11 @@ class CommonWordPruner : public SpanAnnotator {
  private:
   // IDF threshold for pruning single token spans.
   static constexpr float idf_threshold = 3.5;
+};
+
+class EmphasisAnnotator : public SpanAnnotator {
+ public:
+  void Annotate(SpanChart *chart);
 };
 
 class SpanTaxonomy : public SpanAnnotator {

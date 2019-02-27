@@ -166,7 +166,7 @@ void CommonWordPruner::Annotate(const IDFTable &dictionary, SpanChart *chart) {
     CaseForm form =  UTF8::Case(token.word());
     bool common = (form == CASE_LOWER);
     if (token.initial() && form == CASE_TITLE) common = true;
-    
+
     // Prune lower-case tokens with low IDF scores.
     if (common) {
       float idf = dictionary.GetIDF(token.Fingerprint());
@@ -178,6 +178,37 @@ void CommonWordPruner::Annotate(const IDFTable &dictionary, SpanChart *chart) {
     }
   }
 }
+
+void EmphasisAnnotator::Annotate(SpanChart *chart) {
+  int offset = chart->begin();
+  Handle italic = Handle::Index(1);
+  Handle bold = Handle::Index(1);
+  for (int b = 0; b < chart->size(); ++b) {
+    // Mark italic span.
+    if (chart->token(b).style() & ITALIC_BEGIN) {
+      int e = b + 1;
+      while (e < chart->size()) {
+        if (chart->token(e).style() & ITALIC_END) break;
+        e++;
+      }
+      if (chart->item(b, e).aux.IsNil()) {
+        chart->Add(b + offset, e + offset, italic, SPAN_EMPHASIS);
+      }
+    }
+
+    // Mark bold span.
+    if (chart->token(b).style() & BOLD_BEGIN) {
+      int e = b + 1;
+      while (e < chart->size()) {
+        if (chart->token(e).style() & BOLD_END) break;
+        e++;
+      }
+      if (chart->item(b, e).aux.IsNil()) {
+        chart->Add(b + offset, e + offset, bold, SPAN_EMPHASIS);
+      }
+    }
+  }
+};
 
 SpanTaxonomy::~SpanTaxonomy() {
   delete taxonomy_;
@@ -200,6 +231,7 @@ void SpanTaxonomy::Init(Store *store) {
 
     {"Q101352",    SPAN_FAMILY_NAME},      // family name
     {"Q202444",    SPAN_GIVEN_NAME},       // given name
+    {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
 
     {"Q215627",    SPAN_PERSON},           // person
     {"Q17334923",  SPAN_LOCATION},         // location
@@ -276,6 +308,9 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
             VLOG(2) << "'" << chart->phrase(b, e) << "': " << item.Id()
                     << " " << item.GetString("name")
                     << " reliable: " << match.reliable;
+          } else if (e - b > 4) {
+            // Allow matches with longer titles.
+            matches = true;
           }
         }
 
@@ -300,8 +335,12 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
   // Mark name initials.
   int size = chart->size();
   for (int i = 0; i < size; ++i) {
-    if (UTF8::IsInitials(chart->token(i).word())) {
+    const string &word = chart->token(i).word();
+    if (UTF8::IsInitials(word)) {
       chart->item(i, i + 1).flags |= SPAN_INITIALS;
+    }
+    if (UTF8::IsDash(word)) {
+      chart->item(i, i + 1).flags |= SPAN_DASH;
     }
   }
 
@@ -310,11 +349,60 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
   int b = 0;
   while (b < size) {
     int e = b;
-    while (e < size && chart->item(e, e + 1).is(SPAN_GIVEN_NAME)) e++;
-    while (e < size && chart->item(e, e + 1).is(SPAN_INITIALS)) e++;
-    while (e < size && chart->item(e, e + 1).is(SPAN_FAMILY_NAME)) e++;
-    
-    if (e > b) {
+
+    // Parse given name(s).
+    int given_names = 0;
+    while (e < size && chart->item(e, e + 1).is(SPAN_GIVEN_NAME)) {
+      given_names++;
+      e++;
+    }
+
+    // Parse dash followed by given name(s).
+    if (e < size && given_names > 0 && chart->item(e, e + 1).is(SPAN_DASH)) {
+      int de = e + 1;
+      while (de < size && chart->item(de, de + 1).is(SPAN_GIVEN_NAME)) {
+        given_names++;
+        de++;
+      }
+      if (de > e + 1) e = de;
+    }
+
+    // Parse nickname, e.g. Eugene ``Buzz'' Aldrin.
+    if (e < size && given_names > 0 && chart->token(e).word() == "``") {
+      int q = e + 1;
+      while (q < size && chart->token(q).word() != "''") q++;
+
+      // No more than two nicknames.
+      if (q < size && q - e < 4) {
+        e = q + 1;
+      }
+    }
+
+    // Parse initials.
+    while (e < size && chart->item(e, e + 1).is(SPAN_INITIALS)) {
+      given_names++;
+      e++;
+    }
+
+    // Parse family name(s).
+    int family_names = 0;
+    while (e < size && chart->item(e, e + 1).is(SPAN_FAMILY_NAME)) {
+      family_names++;
+      e++;
+    }
+
+    // Parse dash followed by family names.
+    if (e < size && family_names > 0 && chart->item(e, e + 1).is(SPAN_DASH)) {
+      int de = e + 1;
+      while (de < size && chart->item(de, de + 1).is(SPAN_FAMILY_NAME)) de++;
+      if (de > e + 1) e = de;
+    }
+
+    // Parse suffix, e.g. Jr.
+    if (e < size && chart->item(e, e + 1).is(SPAN_SUFFIX)) e++;
+
+    // Mark span if person name found.
+    if (given_names > 0) {
       auto &item = chart->item(b, e);
       if (item.matches == nullptr && item.aux.IsNil()) {
         Handle person = Builder(store).AddIsA(n_person_).Create().handle();
