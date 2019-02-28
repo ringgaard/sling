@@ -22,6 +22,11 @@
 namespace sling {
 namespace nlp {
 
+Handle kItalicMarker = Handle::Index(1);
+Handle kBoldMarker = Handle::Index(2);
+Handle kPersonMarker = Handle::Index(3);
+Handle kRedlinkMarker = Handle::Index(4);
+
 void SpanPopulator::Annotate(const PhraseTable &aliases,
                              SpanChart *chart) {
   // Spans cannot start or end on stop words.
@@ -79,7 +84,11 @@ void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
 
     // Get evoked frame for span.
     Frame evoked = span->Evoked();
-    if (evoked.invalid()) continue;
+    if (evoked.invalid()) {
+      // Red link. Add as span candidate.
+      chart->Add(span->begin(), span->end(), kRedlinkMarker, 0);
+      continue;
+    }
 
     // Check for special annotations.
     int flags = 0;
@@ -147,7 +156,7 @@ void EmphasisAnnotator::Annotate(SpanChart *chart) {
 
       // Only annotate italic phrase if length is below the threshold.
       if (e - b <= max_length && chart->item(b, e).aux.IsNil()) {
-        chart->Add(b + offset, e + offset, italic, SPAN_EMPHASIS);
+        chart->Add(b + offset, e + offset, kItalicMarker, SPAN_EMPHASIS);
       }
     }
 
@@ -162,7 +171,7 @@ void EmphasisAnnotator::Annotate(SpanChart *chart) {
 
       // Only annotate bold phrase if length is below the threshold.
       if (e - b <= max_length && chart->item(b, e).aux.IsNil()) {
-        chart->Add(b + offset, e + offset, bold, SPAN_EMPHASIS);
+        chart->Add(b + offset, e + offset, kBoldMarker, SPAN_EMPHASIS);
       }
     }
   }
@@ -251,7 +260,7 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
           // of a song, book, painting, etc. These are only included if the
           // length of the matching phrase is above a threshold.
           if (flags & SPAN_ART) {
-            matches = (e - b > min_art_length);
+            if (e - b > min_art_length) matches = true;
           } else {
             matches = true;
           }
@@ -278,11 +287,12 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
   // Mark initials and dashes.
   int size = chart->size();
   for (int i = 0; i < size; ++i) {
-    const string &word = chart->token(i).word();
+    const Token &token = chart->token(i);
+    const string &word = token.word();
     if (UTF8::IsInitials(word)) {
       chart->item(i).flags |= SPAN_INITIALS;
     }
-    if (UTF8::IsDash(word)) {
+    if (UTF8::IsDash(word) && token.brk() == NO_BREAK) {
       chart->item(i).flags |= SPAN_DASH;
     }
   }
@@ -348,7 +358,7 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
     if (given_names > 0) {
       auto &item = chart->item(b, e);
       if (item.matches == nullptr && item.aux.IsNil()) {
-        chart->Add(b + chart->begin(), e + chart->begin(), person);
+        chart->Add(b + chart->begin(), e + chart->begin(), kPersonMarker);
       }
       b = e;
     } else {

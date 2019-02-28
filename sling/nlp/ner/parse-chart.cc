@@ -13,10 +13,9 @@
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/document/lex.h"
-#include "sling/nlp/kb/phrase-table.h"
+#include "sling/nlp/ner/annotators.h"
 #include "sling/nlp/ner/chart.h"
 #include "sling/nlp/ner/idf.h"
-#include "sling/nlp/ner/measures.h"
 
 DEFINE_string(text, "", "Text to parse");
 DEFINE_string(input, "", "File with text to parse");
@@ -25,80 +24,37 @@ DEFINE_string(lang, "en", "Language");
 
 using namespace sling;
 using namespace sling::nlp;
-using namespace sling::nlp::measures;
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
+  // Initialize annotator.
   Store commons;
   commons.LockGC();
-  LoadStore("local/data/e/wiki/kb.sling", &commons);
 
-  PhraseTable aliases;
-  aliases.Load(&commons,
-               "local/data/e/wiki/" + FLAGS_lang + "/phrase-table.repo");
+  SpanAnnotator::Resources resources;
+  resources.kb = "local/data/e/wiki/kb.sling";
+  resources.aliases = "local/data/e/wiki/" + FLAGS_lang + "/phrase-table.repo";
+  resources.dictionary = "local/data/e/wiki/" + FLAGS_lang + "/idf.repo";
 
+  SpanAnnotator annotator;
+  annotator.Init(&commons, resources);
+
+  std::vector<string> stop_words = {
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+    "the", "a", "an", "'s", "is", "was", "and",
+    "in", "of", "by", "to", "at", "as",
+  };
+  annotator.AddStopWords(stop_words);
+
+  commons.Freeze();
+
+  // Open document corpus.
   RecordFileOptions options;
   RecordDatabase db("local/data/e/wiki/" + FLAGS_lang + "/documents@10.rec",
                     options);
 
-  IDFTable dictionary;
-  dictionary.Load("local/data/e/wiki/" + FLAGS_lang + "/idf.repo");
-
-  SpanPopulator populator;
-  SpanImporter importer;
-  SpanTaxonomy taxonomy;
-  PersonNameAnnotator persons;
-  NumberAnnotator numbers;
-  NumberScaleAnnotator scales;
-  MeasureAnnotator measures;
-  DateAnnotator dates;
-  CommonWordPruner pruner;
-  EmphasisAnnotator emphasis;
-
-  importer.Init(&commons);
-  taxonomy.Init(&commons);
-  persons.Init(&commons);
-  numbers.Init(&commons);
-  scales.Init(&commons);
-  measures.Init(&commons);
-  dates.Init(&commons);
-
-  populator.AddStopWord(".");
-  populator.AddStopWord(",");
-  populator.AddStopWord("-");
-  populator.AddStopWord(":");
-  populator.AddStopWord(";");
-  populator.AddStopWord("(");
-  populator.AddStopWord(")");
-  populator.AddStopWord("``");
-  populator.AddStopWord("''");
-  populator.AddStopWord("'");
-  populator.AddStopWord("--");
-  populator.AddStopWord("/");
-  populator.AddStopWord("&");
-  populator.AddStopWord("the");
-  populator.AddStopWord("a");
-  populator.AddStopWord("an");
-  populator.AddStopWord("in");
-  populator.AddStopWord("of");
-  populator.AddStopWord("is");
-  populator.AddStopWord("was");
-  populator.AddStopWord("by");
-  populator.AddStopWord("and");
-  populator.AddStopWord("to");
-  populator.AddStopWord("at");
-  populator.AddStopWord("'s");
-  populator.AddStopWord("as");
-
-  //populator.AddStopWord("le");
-  //populator.AddStopWord("la");
-  //populator.AddStopWord("les");
-  //populator.AddStopWord("l'");
-  //populator.AddStopWord("do");
-
-  commons.Freeze();
-
+  // Initialize document.
   Store store(&commons);
   Frame frame(&store, Handle::nil());
   if (!FLAGS_item.empty()) {
@@ -120,33 +76,15 @@ int main(int argc, char *argv[]) {
     CHECK(lexer.Lex(&document, text));
   }
 
-  Document outdoc(document);
-  outdoc.ClearAnnotations();
+  // Create unannotated output document.
+  Document output(document);
+  output.ClearAnnotations();
 
-  for (SentenceIterator s(&document); s.more(); s.next()) {
-    // Skip headings.
-    const Token &first = document.token(s.begin());
-    if (first.style() & HEADING_BEGIN) continue;
+  // Annotate document.
+  annotator.Annotate(document, &output);
 
-    SpanChart chart(&document, s.begin(), s.end(), 10);
-
-    populator.Annotate(aliases, &chart);
-    importer.Annotate(aliases, &chart);
-    taxonomy.Annotate(aliases, &chart);
-    persons.Annotate(&chart);
-    numbers.Annotate(&chart);
-    scales.Annotate(aliases, &chart);
-    measures.Annotate(aliases, &chart);
-    dates.Annotate(aliases, &chart);
-    pruner.Annotate(dictionary, &chart);
-    emphasis.Annotate(&chart);
-
-    chart.Solve();
-    chart.Extract(&outdoc);
-  }
-  outdoc.Update();
-
-  std::cout << ToLex(outdoc) << "\n";
+  // Output annotated document.
+  std::cout << ToLex(output) << "\n";
 
   return 0;
 }

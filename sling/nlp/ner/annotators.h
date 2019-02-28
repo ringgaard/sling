@@ -57,6 +57,12 @@ enum SpanFlags {
   SPAN_ART               = (1 << 22),
 };
 
+// Span markers.
+extern Handle kItalicMarker;
+extern Handle kBoldMarker;
+extern Handle kPersonMarker;
+extern Handle kRedlinkMarker;
+
 // Populate chart with phrase matches. It looks up all spans (up to the maximum
 // span length) in the alias table and adds the matches to the chart. Spans
 // cannot start or end on a stop word.
@@ -115,10 +121,6 @@ class EmphasisAnnotator {
   void Annotate(SpanChart *chart);
 
  private:
-  // Markers for italic and bold spans.
-  static constexpr Handle italic = Handle::Index(1);
-  static constexpr Handle bold = Handle::Index(2);
-
   // Maximum length of an emphasized phrase.
   static constexpr int max_length = 20;
 };
@@ -165,10 +167,6 @@ class PersonNameAnnotator {
  public:
   // Annotate person name spans.
   void Annotate(SpanChart *chart);
-
- private:
-  // Marker for person name span.
-  static constexpr Handle person = Handle::Index(3);
 };
 
 // Annotate numbers. Both standard notation (comma as decimal separator and

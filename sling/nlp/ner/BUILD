@@ -54,6 +54,7 @@ cc_library(
     "//sling/nlp/document",
     "//sling/nlp/kb:calendar",
     "//sling/nlp/kb:facts",
+    "//sling/nlp/kb:phrase-table",
   ],
 )
 
@@ -75,9 +76,9 @@ cc_binary(
   name = "parse-chart",
   srcs = ["parse-chart.cc"],
   deps = [
+    ":annotators",
     ":chart",
     ":idf",
-    ":measures",
     "//sling/base",
     "//sling/file:posix",
     "//sling/file:recordio",
@@ -86,7 +87,6 @@ cc_binary(
     "//sling/nlp/document",
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:lex",
-    "//sling/nlp/kb:phrase-table",
   ],
 )
 
