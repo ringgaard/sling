@@ -25,6 +25,7 @@ DEFINE_string(lang, "en", "Language");
 
 using namespace sling;
 using namespace sling::nlp;
+using namespace sling::nlp::measures;
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
@@ -118,8 +119,6 @@ int main(int argc, char *argv[]) {
     DocumentLexer lexer(&tokenizer);
     CHECK(lexer.Lex(&document, text));
   }
-
-  //std::cout << "original:\n" << ToLex(document) << "\n\n";
 
   Document outdoc(document);
   outdoc.ClearAnnotations();

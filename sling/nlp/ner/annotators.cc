@@ -12,67 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/nlp/ner/measures.h"
+#include "sling/nlp/ner/annotators.h"
 
 #include "sling/frame/object.h"
+#include "sling/frame/serialization.h"
 #include "sling/nlp/document/fingerprinter.h"
 #include "sling/nlp/kb/calendar.h"
 
 namespace sling {
 namespace nlp {
-
-namespace measures {
-
-// Measures:
-//  number (float/integer) and compound numbers (e.g. 15 mio)
-//  date plus stand-alone years (1000-2100), month and year, stand-alone month,
-//  and weekdays
-//  quantity with unit
-//  amount with currency
-//  entities (person, location, organization, facility)
-//
-// Add all anchors from input document that matches in the phrase tables and
-// add the correct resolution as the aux item.
-//
-// For persons, add last name mentions as resolved mentions
-// Aux items take precendence over the matches
-//
-// Absolute calendar types:
-//   millennium (Q36507)
-//   century (Q578)
-//   decade (Q39911)
-//   year (Q577)
-//   calendar day of a given year (Q47150325) (e.g. 3 February 2015)
-//   calendar month of a given year (Q47018478) (e.g February 2015)
-//
-// Relative calendar types:
-//   calendar month (Q47018901) (January, February, ...)
-//   determinator for date of periodic occurrence (Q14795564) (e.g. February 3)
-//   day of the week (Q41825) (Monday, Tueday, ...)
-//   day of the week within a given month (Q51118183)
-//
-// integer number between 1592 and 2038 is year if it is only digits
-
-void SpanAnnotator::Init(Store *store) {
-  CHECK(names_.Bind(store));
-}
-
-Handle SpanAnnotator::FindMatch(const PhraseTable &aliases,
-                                const PhraseTable::Phrase *phrase,
-                                const Name &type,
-                                Store *store) {
-  Handles matches(store);
-  aliases.GetMatches(phrase, &matches);
-  for (Handle h : matches) {
-    Frame item(store, h);
-    for (const Slot &s : item) {
-      if (s.name == n_instance_of_ && store->Resolve(s.value) == type) {
-        return h;
-      }
-    }
-  }
-  return Handle::nil();
-}
 
 void SpanPopulator::Annotate(const PhraseTable &aliases,
                              SpanChart *chart) {
@@ -97,8 +45,9 @@ void SpanPopulator::Annotate(const PhraseTable &aliases,
       uint64 fp = chart->document()->PhraseFingerprint(b, e);
       SpanChart::Item &span = chart->item(b - begin, e - begin);
       span.matches = aliases.Find(fp);
+
+      // Set the span cost to one if there are any matches.
       if (span.matches != nullptr) {
-        VLOG(1) << "Phrase: " << chart->document()->PhraseText(b, e);
         span.cost = 1.0;
       }
     }
@@ -107,14 +56,19 @@ void SpanPopulator::Annotate(const PhraseTable &aliases,
 
 void SpanPopulator::AddStopWord(Text word) {
   uint64 fp = Fingerprinter::Fingerprint(word);
-  fingerprints_.insert(fp);
+  stop_words_.insert(fp);
 }
 
 bool SpanPopulator::Discard(const Token &token) const {
-  return fingerprints_.count(token.Fingerprint()) > 0;
+  return stop_words_.count(token.Fingerprint()) > 0;
+}
+
+void SpanImporter::Init(Store *store) {
+  CHECK(names_.Bind(store));
 }
 
 void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
+  // Find all mention spans covered by the chart.
   const Document *document = chart->document();
   Handles matches(document->store());
   int begin = chart->begin();
@@ -135,10 +89,10 @@ void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
 
     auto &item = chart->item(span->begin() - begin, span->end() - begin);
     if (flags != 0) {
-      // Clear any other matches for span.
+      // Clear any other matches for span for special annotations.
       item.matches = nullptr;
     } else {
-      // Check that phase is an alias for the annotation.
+      // Check that phrase is an alias for the annotated entity.
       aliases.Lookup(span->Fingerprint(), &matches);
       bool found = false;
       for (Handle h : matches) {
@@ -160,7 +114,7 @@ void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
 void CommonWordPruner::Annotate(const IDFTable &dictionary, SpanChart *chart) {
   for (int t = 0; t < chart->size(); ++t) {
     // Get chart item for single token.
-    auto &item = chart->item(t, t + 1);
+    auto &item = chart->item(t);
     if (item.matches == nullptr) continue;
     const Token &token = chart->token(t);
 
@@ -174,8 +128,6 @@ void CommonWordPruner::Annotate(const IDFTable &dictionary, SpanChart *chart) {
       float idf = dictionary.GetIDF(token.Fingerprint());
       if (idf < idf_threshold) {
         item.matches = nullptr;
-      } else {
-        item.aux = Handle::Float(idf);
       }
     }
   }
@@ -183,29 +135,33 @@ void CommonWordPruner::Annotate(const IDFTable &dictionary, SpanChart *chart) {
 
 void EmphasisAnnotator::Annotate(SpanChart *chart) {
   int offset = chart->begin();
-  Handle italic = Handle::Index(1);
-  Handle bold = Handle::Index(1);
   for (int b = 0; b < chart->size(); ++b) {
     // Mark italic span.
     if (chart->token(b).style() & ITALIC_BEGIN) {
+      // Find end of italic phrase.
       int e = b + 1;
       while (e < chart->size()) {
         if (chart->token(e).style() & ITALIC_END) break;
         e++;
       }
-      if (chart->item(b, e).aux.IsNil()) {
+
+      // Only annotate italic phrase if length is below the threshold.
+      if (e - b <= max_length && chart->item(b, e).aux.IsNil()) {
         chart->Add(b + offset, e + offset, italic, SPAN_EMPHASIS);
       }
     }
 
     // Mark bold span.
     if (chart->token(b).style() & BOLD_BEGIN) {
+      // Find end of bold phrase.
       int e = b + 1;
       while (e < chart->size()) {
         if (chart->token(e).style() & BOLD_END) break;
         e++;
       }
-      if (chart->item(b, e).aux.IsNil()) {
+
+      // Only annotate bold phrase if length is below the threshold.
+      if (e - b <= max_length && chart->item(b, e).aux.IsNil()) {
         chart->Add(b + offset, e + offset, bold, SPAN_EMPHASIS);
       }
     }
@@ -217,6 +173,7 @@ SpanTaxonomy::~SpanTaxonomy() {
 }
 
 void SpanTaxonomy::Init(Store *store) {
+  // Taxonomy used for classifying spans in the chart.
   static std::pair<const char *, int> span_taxonomy[] = {
     {"Q47150325",  SPAN_CALENDAR_DAY},     // calendar day of a given year
     {"Q47018478",  SPAN_CALENDAR_MONTH},   // calendar month of a given year
@@ -230,33 +187,14 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q21199",     SPAN_NATURAL_NUMBER},   // natural number
     {"Q8142",      SPAN_CURRENCY},         // currency
     {"Q47574",     SPAN_UNIT},             // unit of measurement
-
     {"Q101352",    SPAN_FAMILY_NAME},      // family name
     {"Q202444",    SPAN_GIVEN_NAME},       // given name
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
-
-    {"Q215627",    SPAN_PERSON},           // person
-    {"Q17334923",  SPAN_LOCATION},         // location
-    {"Q43229",     SPAN_ORGANIZATION},     // organization
-
-    //{"Q4164871",   -1},                    // position
-    //{"Q180684",    -1},                    // conflict
-    //{"Q1656682",   -1},                    // event
-    {"Q838948",    -1},                    // work of art
-
-    //{"Q2188189",  -1},          // musical work
-    //{"Q571",      -1},              // book
-    //{"Q732577",   -1},              // publication
-    //{"Q11424",    -1},              // film
-    //{"Q15416",    -1},              // television program
-    //{"Q47461344", -1},              // written work
-
-    //{"Q35120",    0},                     // entity
-
+    {"Q838948",    SPAN_ART},              // work of art
     {nullptr, 0},
   };
 
-  SpanAnnotator::Init(store);
+  // Build taxonomy as well as mapping from types to span flags.
   std::vector<Text> types;
   for (auto *type = span_taxonomy; type->first != nullptr; ++type) {
     const char *name = type->first;
@@ -278,22 +216,25 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   const Document *document = chart->document();
   Store *store = document->store();
   PhraseTable::MatchList matchlist;
+
+  // Run over all spans in the chart.
   for (int b = 0; b < chart->size(); ++b) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = b + 1; e <= end; ++e) {
       SpanChart::Item &span = chart->item(b, e);
 
       if (span.aux.IsRef() && !span.aux.IsNil()) {
-        // Classify matching item.
+        // Classify span based on single resolved item.
         Frame item(store, span.aux);
         int flags = Classify(item);
-        if (flags != -1) span.flags |= flags;
+        span.flags |= flags;
       } else if (span.matches != nullptr) {
+        // Get the matches for the span from the alias table.
         aliases.GetMatches(span.matches, &matchlist);
         CaseForm form = document->Form(b + chart->begin(), e + chart->begin());
         bool matches = false;
         for (const auto &match : matchlist) {
-          // Skip if case forms conflict.
+          // Skip candidate if case forms conflict.
           if (match.form != CASE_NONE &&
               form != CASE_NONE &&
               match.form != form) {
@@ -303,21 +244,21 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
           // Classify item.
           Frame item(store, match.item);
           int flags = Classify(item);
-          if (flags != -1) {
-            span.flags |= flags;
-            matches = true;
+          span.flags |= flags;
 
-            VLOG(2) << "'" << chart->phrase(b, e) << "': " << item.Id()
-                    << " " << item.GetString("name")
-                    << " reliable: " << match.reliable;
-          } else if (e - b > 4) {
-            // Allow matches with longer titles.
+          // Titles of works of art can add a lot of spurious matches to the
+          // chart because almost any word or short phrase can be the title
+          // of a song, book, painting, etc. These are only included if the
+          // length of the matching phrase is above a threshold.
+          if (flags & SPAN_ART) {
+            matches = (e - b > min_art_length);
+          } else {
             matches = true;
           }
         }
 
+        // Discard matches if all candidates have conflicts.
         if (!matches) {
-          VLOG(2) << "No match '" << chart->phrase(b, e) << "'";
           span.matches = nullptr;
         }
       }
@@ -334,35 +275,35 @@ int SpanTaxonomy::Classify(const Frame &item) {
 }
 
 void PersonNameAnnotator::Annotate(SpanChart *chart) {
-  // Mark name initials.
+  // Mark initials and dashes.
   int size = chart->size();
   for (int i = 0; i < size; ++i) {
     const string &word = chart->token(i).word();
     if (UTF8::IsInitials(word)) {
-      chart->item(i, i + 1).flags |= SPAN_INITIALS;
+      chart->item(i).flags |= SPAN_INITIALS;
     }
     if (UTF8::IsDash(word)) {
-      chart->item(i, i + 1).flags |= SPAN_DASH;
+      chart->item(i).flags |= SPAN_DASH;
     }
   }
 
-  // Find sequences of given names, initials, and family names.
-  Store *store = chart->document()->store();
+  // Find sequences of given names, nick name, initials, family names, and
+  // suffix.
   int b = 0;
   while (b < size) {
     int e = b;
 
     // Parse given name(s).
     int given_names = 0;
-    while (e < size && chart->item(e, e + 1).is(SPAN_GIVEN_NAME)) {
+    while (e < size && chart->item(e).is(SPAN_GIVEN_NAME)) {
       given_names++;
       e++;
     }
 
     // Parse dash followed by given name(s).
-    if (e < size && given_names > 0 && chart->item(e, e + 1).is(SPAN_DASH)) {
+    if (e < size && given_names > 0 && chart->item(e).is(SPAN_DASH)) {
       int de = e + 1;
-      while (de < size && chart->item(de, de + 1).is(SPAN_GIVEN_NAME)) {
+      while (de < size && chart->item(de).is(SPAN_GIVEN_NAME)) {
         given_names++;
         de++;
       }
@@ -380,34 +321,33 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
       }
     }
 
-    // Parse initials.
-    while (e < size && chart->item(e, e + 1).is(SPAN_INITIALS)) {
+    // Parse initials. Initials count as given names, e.g. J. K. Rowling.
+    while (e < size && chart->item(e).is(SPAN_INITIALS)) {
       given_names++;
       e++;
     }
 
     // Parse family name(s).
     int family_names = 0;
-    while (e < size && chart->item(e, e + 1).is(SPAN_FAMILY_NAME)) {
+    while (e < size && chart->item(e).is(SPAN_FAMILY_NAME)) {
       family_names++;
       e++;
     }
 
     // Parse dash followed by family names.
-    if (e < size && family_names > 0 && chart->item(e, e + 1).is(SPAN_DASH)) {
+    if (e < size && family_names > 0 && chart->item(e).is(SPAN_DASH)) {
       int de = e + 1;
-      while (de < size && chart->item(de, de + 1).is(SPAN_FAMILY_NAME)) de++;
+      while (de < size && chart->item(de).is(SPAN_FAMILY_NAME)) de++;
       if (de > e + 1) e = de;
     }
 
     // Parse suffix, e.g. Jr.
-    if (e < size && chart->item(e, e + 1).is(SPAN_SUFFIX)) e++;
+    if (e < size && chart->item(e).is(SPAN_SUFFIX)) e++;
 
     // Mark span if person name found.
     if (given_names > 0) {
       auto &item = chart->item(b, e);
       if (item.matches == nullptr && item.aux.IsNil()) {
-        Handle person = Builder(store).AddIsA(n_person_).Create().handle();
         chart->Add(b + chart->begin(), e + chart->begin(), person);
       }
       b = e;
@@ -415,6 +355,10 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
       b++;
     }
   }
+}
+
+void NumberAnnotator::Init(Store *store) {
+  CHECK(names_.Bind(store));
 }
 
 void NumberAnnotator::Annotate(SpanChart *chart) {
@@ -437,25 +381,24 @@ void NumberAnnotator::Annotate(SpanChart *chart) {
         all_digits = true;
       }
     }
+    if (!has_digits) continue;
 
     // Try to parse token as a number.
-    if (has_digits) {
-      Handle number = ParseNumber(word, format);
-      if (!number.IsNil()) {
-        // Numbers between 1582 and 2038 are considered years.
-        int flags = SPAN_NUMBER;
-        if (word.size() == 4 && all_digits && number.IsInt()) {
-          int value = number.AsInt();
-          if (value >= 1582 && value <= 2038) {
-            Builder b(document->store());
-            b.AddIsA(n_time_);
-            b.AddIs(number);
-            number = b.Create().handle();
-            flags = SPAN_DATE;
-          }
+    Handle number = ParseNumber(word, format);
+    if (!number.IsNil()) {
+      // Numbers between 1582 and 2038 are considered years.
+      int flags = SPAN_NUMBER;
+      if (word.size() == 4 && all_digits && number.IsInt()) {
+        int value = number.AsInt();
+        if (value >= 1582 && value <= 2038) {
+          Builder b(document->store());
+          b.AddIsA(n_time_);
+          b.AddIs(number);
+          number = b.Create().handle();
+          flags = SPAN_DATE;
         }
-        chart->Add(t, t + 1, number, flags);
       }
+      chart->Add(t, t + 1, number, flags);
     }
   }
 }
@@ -565,6 +508,7 @@ void NumberScaleAnnotator::Annotate(const PhraseTable &aliases,
   for (int b = 0; b < chart->size(); ++b) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = end; e > b; --e) {
+      // Only consider number spans.
       SpanChart::Item &span = chart->item(b, e);
       if (!span.is(SPAN_NATURAL_NUMBER)) continue;
       if (span.is(SPAN_NUMBER)) continue;
@@ -629,7 +573,7 @@ void MeasureAnnotator::Init(Store *store) {
     nullptr,
   };
 
-  SpanAnnotator::Init(store);
+  CHECK(names_.Bind(store));
   for (const char **type = unit_types; *type != nullptr; ++type) {
     units_.insert(store->Lookup(*type));
   }
@@ -642,6 +586,7 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   for (int b = 0; b < chart->size(); ++b) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = end; e > b; --e) {
+      // Only consider unit and currency spans.
       SpanChart::Item &span = chart->item(b, e);
       if (!span.is(SPAN_UNIT) && !span.is(SPAN_CURRENCY)) continue;
 
@@ -667,7 +612,7 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
 
       // Find number to the left.
       int left_end = b;
-      if (left_end > 0 && chart->token(left_end - 1).word() == "-") {
+      if (left_end > 0 && UTF8::IsDash(chart->token(left_end - 1).word())) {
         // Allow dash between number and unit.
         left_end--;
       }
@@ -717,28 +662,56 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
 
 void MeasureAnnotator::AddQuantity(SpanChart *chart, int begin, int end,
                                    Handle amount, Handle unit) {
+  // Make quantity frame.
   Store *store = chart->document()->store();
   Builder builder(store);
   builder.AddIsA(n_quantity_);
   builder.Add(n_amount_, amount);
   builder.Add(n_unit_, unit);
   Handle h = builder.Create().handle();
+
+  // Add quantity annotation to chart.
   chart->Add(begin + chart->begin(), end + chart->begin(), h, SPAN_MEASURE);
 }
 
 void DateAnnotator::Init(Store *store) {
-  SpanAnnotator::Init(store);
+  CHECK(names_.Bind(store));
   calendar_.Init(store);
 }
 
 void DateAnnotator::AddDate(SpanChart *chart, int begin, int end,
                             const Date &date) {
+  // Make date annotation frame.
   Store *store = chart->document()->store();
   Builder builder(store);
   builder.AddIsA(n_time_);
   builder.AddIs(date.AsHandle(store));
   Handle h = builder.Create().handle();
+
+  // Add date annotation to chart.
   chart->Add(begin + chart->begin(), end + chart->begin(), h, SPAN_DATE);
+}
+
+Handle DateAnnotator::FindMatch(const PhraseTable &aliases,
+                                const PhraseTable::Phrase *phrase,
+                                const Name &type,
+                                Store *store) {
+  // Get matches from alias table.
+  Handles matches(store);
+  aliases.GetMatches(phrase, &matches);
+
+  // Find first match with the specified type.
+  for (Handle h : matches) {
+    Frame item(store, h);
+    for (const Slot &s : item) {
+      if (s.name == n_instance_of_ && store->Resolve(s.value) == type) {
+        return h;
+      }
+    }
+  }
+
+  // No match found.
+  return Handle::nil();
 }
 
 int DateAnnotator::GetYear(const PhraseTable &aliases,
@@ -752,12 +725,16 @@ int DateAnnotator::GetYear(const PhraseTable &aliases,
   // Try to find year annotation at position.
   for (int e = std::min(pos + chart->maxlen(), chart->size()); e > pos; --e) {
     SpanChart::Item &span = chart->item(pos, e);
+
+    // Find matching year.
     Handle year = Handle::nil();
     if (span.is(SPAN_YEAR)) {
       year = FindMatch(aliases, span.matches, n_year_, store);
     } else if (span.is(SPAN_YEAR_BC)) {
       year = FindMatch(aliases, span.matches, n_year_bc_, store);
     }
+
+    // Get year from match.
     if (!year.IsNil()) {
       Date date(Object(store, year));
       if (date.precision == Date::YEAR) {
@@ -766,6 +743,8 @@ int DateAnnotator::GetYear(const PhraseTable &aliases,
       }
     }
   }
+
+  // No year found.
   return 0;
 }
 
@@ -830,6 +809,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         }
         break;
       } else if (span.is(SPAN_YEAR) && !span.is(SPAN_NUMBER)) {
+        // Year.
         Handle h = FindMatch(aliases, span.matches, n_year_, store);
         date.ParseFromFrame(Frame(store, h));
         if (date.precision == Date::YEAR) {
@@ -838,6 +818,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
           break;
         }
       } else if (span.is(SPAN_DECADE)) {
+        // Decade.
         Handle h = FindMatch(aliases, span.matches, n_decade_, store);
         date.ParseFromFrame(Frame(store, h));
         if (date.precision == Date::DECADE) {
@@ -846,6 +827,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
           break;
         }
       } else if (span.is(SPAN_CENTURY)) {
+        // Century.
         Handle h = FindMatch(aliases, span.matches, n_century_, store);
         date.ParseFromFrame(Frame(store, h));
         if (date.precision == Date::CENTURY) {
@@ -858,7 +840,63 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   }
 }
 
-}  // namespace measures
+void SpanAnnotator::Init(Store *commons, const Resources &resources) {
+  // Load resources.
+  if (!resources.kb.empty()) {
+    LoadStore(resources.kb, commons);
+  }
+  if (!resources.aliases.empty()) {
+    aliases_.Load(commons, resources.aliases);
+  }
+  if (!resources.dictionary.empty()) {
+    dictionary_.Load(resources.dictionary);
+  }
+
+  // Initialize annotators.
+  importer_.Init(commons);
+  taxonomy_.Init(commons);
+  numbers_.Init(commons);
+  scales_.Init(commons);
+  measures_.Init(commons);
+  dates_.Init(commons);
+}
+
+void SpanAnnotator::AddStopWords(const std::vector<string> &words) {
+  for (const string &word : words) {
+    populator_.AddStopWord(word);
+  }
+}
+
+void SpanAnnotator::Annotate(const Document &document, Document *output) {
+  // Run annotators on each sentence in the input document.
+  for (SentenceIterator s(&document); s.more(); s.next()) {
+    // Skip headings.
+    const Token &first = document.token(s.begin());
+    if (first.style() & HEADING_BEGIN) continue;
+
+    // Make chart for sentence.
+    SpanChart chart(&document, s.begin(), s.end(), max_phrase_length);
+
+    // Run annotators.
+    populator_.Annotate(aliases_, &chart);
+    importer_.Annotate(aliases_, &chart);
+    taxonomy_.Annotate(aliases_, &chart);
+    persons_.Annotate(&chart);
+    numbers_.Annotate(&chart);
+    scales_.Annotate(aliases_, &chart);
+    measures_.Annotate(aliases_, &chart);
+    dates_.Annotate(aliases_, &chart);
+    pruner_.Annotate(dictionary_, &chart);
+    emphasis_.Annotate(&chart);
+
+    // Compute best span covering and extract it to the output document.
+    chart.Solve();
+    chart.Extract(output);
+  }
+
+  // Update output document.
+  output->Update();
+}
 
 }  // namespace nlp
 }  // namespace sling

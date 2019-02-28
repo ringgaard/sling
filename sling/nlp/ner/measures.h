@@ -26,6 +26,8 @@
 namespace sling {
 namespace nlp {
 
+namespace measures {
+
 // Span categorization flags.
 enum SpanFlags {
   SPAN_NUMBER            = (1 << 0),
@@ -193,6 +195,8 @@ class DateAnnotator : public SpanAnnotator {
   Name n_decade_{names_, "Q39911"};
   Name n_century_{names_, "Q578"};
 };
+
+}  // namespace measures
 
 }  // namespace nlp
 }  // namespace sling

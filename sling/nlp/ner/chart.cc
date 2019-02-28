@@ -20,7 +20,7 @@
 namespace sling {
 namespace nlp {
 
-SpanChart::SpanChart(Document *document, int begin, int end, int maxlen)
+SpanChart::SpanChart(const Document *document, int begin, int end, int maxlen)
     : document_(document), begin_(begin), end_(end), maxlen_(maxlen),
       tracking_(document->store()) {
   // The chart height is equal to the number of tokens.
@@ -93,8 +93,7 @@ void SpanChart::Solve() {
   }
 }
 
-void SpanChart::Extract(Document *document) {
-  if (document == nullptr) document = document_;
+void SpanChart::Extract(Document *output) {
   std::vector<std::pair<int, int>> queue;
   queue.emplace_back(0, size_);
   while (!queue.empty()) {
@@ -106,11 +105,11 @@ void SpanChart::Extract(Document *document) {
     Item &s = item(b, e);
     if (!s.aux.IsNil()) {
       // Add span annotation for auxiliary item.
-      Span *span = document->AddSpan(begin_ + b, begin_ + e);
+      Span *span = output->AddSpan(begin_ + b, begin_ + e);
       span->Evoke(s.aux);
     } else if (s.matches != nullptr) {
       // Add span annotation for match.
-      document->AddSpan(begin_ + b, begin_ + e);
+      output->AddSpan(begin_ + b, begin_ + e);
     } else if (s.split != -1) {
       // Queue best split.
       queue.emplace_back(b + s.split, e);

@@ -307,7 +307,7 @@ struct Handle {
   }
 
   // Constructs boolean handle.
-  static Handle Bool(bool b) {
+  static constexpr Handle Bool(bool b) {
     return Handle{b ? kTrue : kFalse};
   }
 
@@ -342,7 +342,7 @@ struct Handle {
   }
 
   // Constructs index handle.
-  static Handle Index(int n) {
+  static constexpr Handle Index(int n) {
     return Handle{static_cast<Word>(n << kIntShift) | kIndexMask};
   }
 

@@ -25,6 +25,12 @@
     target: string
   }
 
+  role: {=/lang/wikilang/stop_words :slot
+    name: "stop words"
+    description: "List of stop words"
+    source: /lang/wikilang
+  }
+
   value: /lang/bg
   value: /lang/ca
   value: /lang/cs
@@ -123,6 +129,12 @@
   /lang/wikilang/wiki_category: "Category"
   /lang/wikilang/wiki_image: "File"
   /lang/wikilang/wiki_template: "Template"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+    "the", "a", "an", "'s", "is", "was", "and",
+    "in", "of", "by", "to", "at", "as"
+  ]
 }
 
 {=/lang/es

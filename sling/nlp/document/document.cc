@@ -534,7 +534,7 @@ int Document::Locate(int position) const {
   return index;
 }
 
-uint64 Document::PhraseFingerprint(int begin, int end) {
+uint64 Document::PhraseFingerprint(int begin, int end) const {
   uint64 fp = 1;
   for (int t = begin; t < end; ++t) {
     uint64 word_fp = TokenFingerprint(t);
@@ -545,7 +545,7 @@ uint64 Document::PhraseFingerprint(int begin, int end) {
   return fp;
 }
 
-CaseForm Document::Form(int begin, int end) {
+CaseForm Document::Form(int begin, int end) const {
   CaseForm form = CASE_INVALID;
   for (int t = begin; t < end; ++t) {
     if (token(t).skipped()) continue;

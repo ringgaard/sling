@@ -42,6 +42,22 @@ cc_library(
 )
 
 cc_library(
+  name = "annotators",
+  srcs = ["annotators.cc"],
+  hdrs = ["annotators.h"],
+  deps = [
+    ":chart",
+    ":idf",
+    "//sling/frame:serialization",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/nlp/document",
+    "//sling/nlp/kb:calendar",
+    "//sling/nlp/kb:facts",
+  ],
+)
+
+cc_library(
   name = "measures",
   srcs = ["measures.cc"],
   hdrs = ["measures.h"],

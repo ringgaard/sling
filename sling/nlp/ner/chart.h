@@ -52,7 +52,7 @@ class SpanChart {
   };
 
   // Initialize empty span chart for (part of) document.
-  SpanChart(Document *document, int begin, int end, int maxlen);
+  SpanChart(const Document *document, int begin, int end, int maxlen);
 
   // Add auxiliary match to chart.
   void Add(int begin, int end, Handle match, int flags = 0);
@@ -61,17 +61,24 @@ class SpanChart {
   void Solve();
 
   // Extract best span covering.
-  void Extract(Document *document = nullptr);
+  void Extract(Document *output);
 
   // Return item for token span (0 <= begin < size, 0 < end <= size).
   Item &item(int begin, int end) {
     return items_[begin * size_ + end - 1];
   }
+
+  // Return item for single-token span.
+  Item &item(int index) { return item(index, index + 1); }
+
+  // Return chart size.
   int size() const { return size_; }
+
+  // Return maximum phrase span length.
   int maxlen() const { return maxlen_; }
 
   // Get document part for chart.
-  Document *document() const { return document_; }
+  const Document *document() const { return document_; }
   int begin() const { return begin_; }
   int end() const { return end_; }
 
@@ -87,7 +94,7 @@ class SpanChart {
 
  private:
   // Document and token span for chart.
-  Document *document_;
+  const Document *document_;
   int begin_;
   int end_;
 
