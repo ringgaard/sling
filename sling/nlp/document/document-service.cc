@@ -29,7 +29,10 @@ DocumentService::~DocumentService() {
 }
 
 Document *DocumentService::GetInputDocument(WebService *ws) const {
-  if (ws->input().IsFrame()) {
+  if (ws->input().IsNil()) {
+    // No input.
+    return nullptr;
+  } else if (ws->input().IsFrame()) {
     // Create document from frame.
     return new Document(ws->input().AsFrame(), docnames_);
   } else if (ws->input().IsString()) {

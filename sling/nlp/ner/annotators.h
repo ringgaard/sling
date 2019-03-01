@@ -161,12 +161,33 @@ class SpanTaxonomy {
 //  1) Given names separated by spaces or dashes (mandatory).
 //  2) Nick names in quotes.
 //  3) Single-letter initials.
-//  4) Family names separated by spaces or dashes.
-//  5) Suffix like Jr. or Sr.
+//  4) Notability particle.
+//  5) Family names separated by spaces or dashes.
+//  6) Suffix like Jr. or Sr.
 class PersonNameAnnotator {
  public:
   // Annotate person name spans.
   void Annotate(SpanChart *chart);
+
+ private:
+  // Check if span covers golden annotation.
+  bool Covered(SpanChart *chart, int begin, int end);
+
+  // Notability particles.
+  static std::unordered_set<string> particles;
+};
+
+// Score annotated spans based on case patterns. Adds a penalty if a span starts
+// with a lower case token and ends with an upper case token.
+class CaseScorer {
+ public:
+  // Score spans based on case.
+  void Annotate(SpanChart *chart);
+
+ private:
+  // Case pattern penalties.
+  static constexpr float lower_upper_penalty = 1.1;
+  static constexpr float upper_lower_penalty = 0.1;
 };
 
 // Annotate numbers. Both standard notation (comma as decimal separator and
@@ -327,6 +348,7 @@ class SpanAnnotator {
   MeasureAnnotator measures_;
   DateAnnotator dates_;
   CommonWordPruner pruner_;
+  CaseScorer case_;
   EmphasisAnnotator emphasis_;
 
   // Maximum phrase length.

@@ -43,8 +43,12 @@ void SpanPopulator::Annotate(const PhraseTable &aliases,
     if (skip[b - begin]) continue;
 
     for (int e = b + 1; e <= std::min(b + chart->maxlen(), end); ++e) {
-      // Span cannot end on a skipped token.
-      if (skip[e - begin - 1]) continue;
+      // Span cannot end on a skipped token. This does not apply to upper case
+      // tokens.
+      if (skip[e - begin - 1]) {
+        CaseForm form = chart->token(e - begin - 1).Form();
+        if (form != CASE_TITLE && form != CASE_UPPER) continue;
+      }
 
       // Find matches in phrase table.
       uint64 fp = chart->document()->PhraseFingerprint(b, e);
@@ -196,6 +200,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q21199",     SPAN_NATURAL_NUMBER},   // natural number
     {"Q8142",      SPAN_CURRENCY},         // currency
     {"Q47574",     SPAN_UNIT},             // unit of measurement
+    {"Q27084",     SPAN_UNIT},             // parts-per notation
     {"Q101352",    SPAN_FAMILY_NAME},      // family name
     {"Q202444",    SPAN_GIVEN_NAME},       // given name
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
@@ -258,9 +263,10 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
           // Titles of works of art can add a lot of spurious matches to the
           // chart because almost any word or short phrase can be the title
           // of a song, book, painting, etc. These are only included if the
-          // length of the matching phrase is above a threshold.
+          // length of the matching phrase is above a threshold and not all
+          // lower case.
           if (flags & SPAN_ART) {
-            if (e - b > min_art_length) matches = true;
+            if (form != CASE_LOWER && e - b > min_art_length) matches = true;
           } else {
             matches = true;
           }
@@ -282,6 +288,10 @@ int SpanTaxonomy::Classify(const Frame &item) {
   if (f == type_flags_.end()) return 0;
   return f->second;
 }
+
+std::unordered_set<string> PersonNameAnnotator::particles = {
+  "de", "du", "di", "von", "van"
+};
 
 void PersonNameAnnotator::Annotate(SpanChart *chart) {
   // Mark initials and dashes.
@@ -337,6 +347,9 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
       e++;
     }
 
+    // Parse notability particle.
+    if (e < size && particles.count(chart->token(e).word()) > 0) e++;
+
     // Parse family name(s).
     int family_names = 0;
     while (e < size && chart->item(e).is(SPAN_FAMILY_NAME)) {
@@ -354,8 +367,8 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
     // Parse suffix, e.g. Jr.
     if (e < size && chart->item(e).is(SPAN_SUFFIX)) e++;
 
-    // Mark span if person name found.
-    if (given_names > 0) {
+    // Mark span if person name found except if it covers a golden span.
+    if (given_names > 0 && !Covered(chart, b, e)) {
       auto &item = chart->item(b, e);
       if (item.matches == nullptr && item.aux.IsNil()) {
         chart->Add(b + chart->begin(), e + chart->begin(), kPersonMarker);
@@ -363,6 +376,41 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
       b = e;
     } else {
       b++;
+    }
+  }
+}
+
+bool PersonNameAnnotator::Covered(SpanChart *chart, int begin, int end) {
+  for (int b = begin; b < end; ++b) {
+    for (int e = b + 1; e <= end; ++e) {
+      SpanChart::Item &span = chart->item(b, e);
+      if (!span.aux.IsNil() && !span.aux.IsIndex()) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+void CaseScorer::Annotate(SpanChart *chart) {
+  // Run over all spans with more than one token in the chart.
+  for (int b = 0; b < chart->size(); ++b) {
+    CaseForm first = chart->token(b).Form();
+    int end = std::min(b + chart->maxlen(), chart->size());
+    for (int e = b + 2; e <= end; ++e) {
+      SpanChart::Item &span = chart->item(b, e);
+
+      // Do not score resolved spans.
+      if (!span.aux.IsNil() || span.matches == nullptr) continue;
+
+      // Apply penalty for camel case.
+      CaseForm last = chart->token(e - 1).Form();
+      if (first == CASE_LOWER && last == CASE_TITLE) {
+        span.cost += lower_upper_penalty;
+      } else if (first == CASE_TITLE && last == CASE_LOWER) {
+        span.cost += upper_lower_penalty;
+      }
     }
   }
 }
@@ -580,6 +628,7 @@ void MeasureAnnotator::Init(Store *store) {
     "Q3647172",    // unit of mass
     "Q8142",       // currency
     "Q756202",     // reserve currency
+    "Q27084",      // parts-per notation, e.g. percentage
     nullptr,
   };
 
@@ -897,6 +946,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     measures_.Annotate(aliases_, &chart);
     dates_.Annotate(aliases_, &chart);
     pruner_.Annotate(dictionary_, &chart);
+    case_.Annotate(&chart);
     emphasis_.Annotate(&chart);
 
     // Compute best span covering and extract it to the output document.
