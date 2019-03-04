@@ -64,6 +64,7 @@ cc_library(
   srcs = ["wiki-annotator.cc"],
   hdrs = ["wiki-annotator.h"],
   deps = [
+    ":wiki",
     ":wiki-extractor",
     "//sling/base:registry",
     "//sling/frame",
@@ -78,6 +79,7 @@ cc_library(
   name = "wiki-macros",
   srcs = ["wiki-macros.cc"],
   deps = [
+    ":wiki",
     ":wiki-annotator",
     "//sling/nlp/document",
     "//sling/nlp/document:fingerprinter",

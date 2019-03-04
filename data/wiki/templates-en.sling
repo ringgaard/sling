@@ -455,15 +455,15 @@
     "honorific_prefix": /wp/info/pre_nominals
     "honorific-prefix": /wp/info/pre_nominals
     "honorific prefix": /wp/info/pre_nominals
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "post-nominals": /wp/info/post_nominals
     "honorific_suffix": /wp/info/post_nominals
     "honorific-suffix": /wp/info/post_nominals
     "honorific suffix": /wp/info/post_nominals
-    "native_name": /wp/info/native_name
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "birth_name": /wp/info/birth_name
-    "birthname": /wp/info/birth_name
+    "birth_name": {+/wp/info/birth_name alias: 12}
+    "birthname": {+/wp/info/birth_name alias: 12}
     "birth_date": /wp/info/birth_date
     "birth_place": /wp/info/birth_place
     "baptised": /wp/info/baptised
@@ -471,7 +471,6 @@
     "disappeared_date": /wp/info/disappeared_date
     "disappeared_place": /wp/info/disappeared_place
     "disappeared_status": /wp/info/disappeared_status
-    "status": /wp/info/disappeared_status
     "death_date": /wp/info/death_date
     "death_place": /wp/info/death_place
     "death_cause": /wp/info/death_cause
@@ -489,10 +488,10 @@
     "monuments": /wp/info/monuments
     "residence": /wp/info/residence
     "nationality": /wp/info/nationality
-    "other_names": /wp/info/other_names
-    "other names": /wp/info/other_names
-    "othername": /wp/info/other_names
-    "alias": /wp/info/other_names
+    "other_names": {+/wp/info/other_names alias: 13}
+    "other names": {+/wp/info/other_names alias: 13}
+    "othername": {+/wp/info/other_names  alias: 13}
+    "alias": {+/wp/info/alias  alias: 13}
     "citizenship": /wp/info/citizenship
     "education": /wp/info/education
     "alma_mater": /wp/info/alma_mater
@@ -663,14 +662,14 @@
   class: /wp/infobox/musical_artist
   fields: {
     "honorific_prefix": /wp/info/honorific_prefix
-    "name": /wp/info/name
+    "name": {+/wp/info/name  alias: 12}
     "honorific_suffix": /wp/info/honorific_suffix
     "caption": /wp/info/caption
     "background": /wp/info/background
-    "native_name": /wp/info/native_name
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "birth_name": /wp/info/birth_name
-    "alias": /wp/info/alias
+    "birth_name": {+/wp/info/birth_name alias: 12}
+    "alias": {+/wp/info/alias alias: 13}
     "birth_date": /wp/info/birth_date
     "birth_place": /wp/info/birth_place
     "origin": /wp/info/origin
@@ -683,9 +682,6 @@
     "label": /wp/info/label
     "associated_acts": /wp/info/associated_acts
     "website": /wp/info/website
-    "alias": /wp/info/alias
-    "origin": /wp/info/origin
-    "genre": /wp/info/genre
     "current_members": /wp/info/current_members
     "past_members": /wp/info/past_members
   }
@@ -697,7 +693,7 @@
   fields: {
     "post": /wp/info/post
     "body": /wp/info/body
-    "native_name": /wp/info/native_name
+    "native_name": {+/wp/info/native_name alias: 12}
     "incumbent": /wp/info/incumbent
     "acting": /wp/info/acting
     "incumbentsince": /wp/info/incumbentsince
@@ -722,7 +718,7 @@
     "abolished": /wp/info/abolished
     "succession": /wp/info/succession
     "abbreviation": /wp/info/abbreviation
-    "unofficial_names": /wp/info/unofficial_names
+    "unofficial_names": {+/wp/info/unofficial_names alias: 12}
     "deputy": /wp/info/deputy
     "salary": /wp/info/salary
     "website": /wp/info/website
@@ -733,7 +729,7 @@
   type: "infobox"
   class: /wp/infobox/military_rank
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "country": /wp/info/country
     "service branch": /wp/info/service_branch
     "abbreviation": /wp/info/abbreviation
@@ -753,7 +749,7 @@
   type: "infobox"
   class: /wp/template:infobox/military_gear
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "origin": /wp/info/origin
     "type": /wp/info/type
     "service": /wp/info/service
@@ -779,10 +775,10 @@
   type: "infobox"
   class: /wp/infobox/family
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "other_names": /wp/info/other_names
+    "other_names": {+/wp/info/other_names alias: 13}
     "type": /wp/info/type
     "parent_family": /wp/info/parent_family
     "country": /wp/info/country
@@ -819,10 +815,10 @@
   type: "infobox"
   class: /wp/infobox/football_biography
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "alt": /wp/info/alt
     "caption": /wp/info/caption
-    "fullname": /wp/info/fullname
+    "fullname": {+/wp/info/fullname alias: 12}
     "birth_date": /wp/info/birth_date
     "birth_place": /wp/info/birth_place
     "height": /wp/info/height
@@ -861,10 +857,10 @@
   type: "infobox"
   class: /wp/infobox/organization
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "nickname": /wp/info/nickname
+    "nickname": {+/wp/info/nickname alias: 13}
     "named_after": /wp/info/named_after
     "abbreviation": /wp/info/abbreviation
     "motto": /wp/info/motto
@@ -915,10 +911,10 @@
   type: "infobox"
   class: /wp/infobox/government_agency
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
-    "native_name_a": /wp/info/native_name_a
-    "native_name_r": /wp/info/native_name_r
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
+    "native_name_a": {+/wp/info/native_name_a alias: 12}
+    "native_name_r": {+/wp/info/native_name_r alias: 12}
     "type": /wp/info/type
     "formed": /wp/info/formed
     "preceding1": /wp/info/preceding1
@@ -961,12 +957,12 @@
   type: "infobox"
   class: /wp/infobox/political_party
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "lang": {+/wp/info/lang group: /wp/info/other_name}
+    "lang": {+/wp/info/lang group: /wp/info/other_name alias: 13}
     "name_lang1":  {+/wp/info/name group: /wp/info/other_name}
-    "abbreviation": /wp/info/abbreviation
+    "abbreviation": {+/wp/info/abbreviation alias: 12}
     "leader": /wp/info/leader
     "president": /wp/info/president
     "chairperson": /wp/info/chairperson
@@ -1004,21 +1000,6 @@
     "leader4_name": /wp/info/leader4_name
     "leader5_title": /wp/info/leader5_title
     "leader5_name": /wp/info/leader5_name
-    "founded": /wp/info/founded
-    "legalised": /wp/info/legalised
-    "dissolved": /wp/info/dissolved
-    "banned": /wp/info/banned
-    "merger": /wp/info/merger
-    "split": /wp/info/split
-    "predecessor": /wp/info/predecessor
-    "merged": /wp/info/merged
-    "successor": /wp/info/successor
-    "headquarters": /wp/info/headquarters
-    "newspaper": /wp/info/newspaper
-    "think_tank": /wp/info/think_tank
-    "student_wing": /wp/info/student_wing
-    "youth_wing": /wp/info/youth_wing
-    "womens_wing": /wp/info/womens_wing
     "wing1_title": /wp/info/wing1_title
     "wing1": /wp/info/wing1
     "wing2_title": /wp/info/wing2_title
@@ -1063,12 +1044,12 @@
   type: "infobox"
   class: /wp/infobox/law_enforcement_agency
   fields: {
-    "agencyname": /wp/info/agencyname
-    "nativename": /wp/info/nativename
-    "nativenamea": /wp/info/nativenamea
-    "nativenamer": /wp/info/nativenamer
-    "commonname": /wp/info/commonname
-    "abbreviation": /wp/info/abbreviation
+    "agencyname": {+/wp/info/agencyname alias: 12}
+    "nativename": {+/wp/info/nativename alias: 12}
+    "nativenamea": {+/wp/info/nativenamea alias: 12}
+    "nativenamer": {+/wp/info/nativenamer alias: 12}
+    "commonname": {+/wp/info/commonname alias: 12}
+    "abbreviation": {+/wp/info/abbreviation alias: 12}
     "fictional": /wp/info/fictional
     "patch": /wp/info/patch
     "patchcaption": /wp/info/patchcaption
@@ -1164,7 +1145,7 @@
   type: "infobox"
   class: /wp/infobox/fire_department
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "logo": /wp/info/logo
     "patch": /wp/info/patch
     "flag": /wp/info/flag
@@ -1219,9 +1200,9 @@
   type: "infobox"
   class: /wp/infobox/space_agency
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
-    "acronym": /wp/info/acronym
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
+    "acronym": {+/wp/info/acronym alias: 12}
     "owner": /wp/info/owner
     "established": /wp/info/established
     "headquarters": /wp/info/headquarters
@@ -1239,8 +1220,8 @@
   type: "infobox"
   class: /wp/infobox/military_unit
   fields: {
-    "unit_name": /wp/info/unit_name
-    "native_name": /wp/info/native_name
+    "unit_name": {+/wp/info/unit_name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "dates": /wp/info/dates
     "disbanded": /wp/info/disbanded
     "country": /wp/info/country
@@ -1253,7 +1234,7 @@
     "command_structure": /wp/info/command_structure
     "garrison": /wp/info/garrison
     "garrison_label": /wp/info/garrison_label
-    "nickname": /wp/info/nickname
+    "nickname": {+/wp/info/nickname alias: 13}
     "patron": /wp/info/patron
     "motto": /wp/info/motto
     "march": /wp/info/march
@@ -1323,10 +1304,10 @@
   type: "infobox"
   class: /wp/infobox/christian_denomination
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "abbreviation": /wp/info/abbreviation
+    "abbreviation": {+/wp/info/abbreviation alias: 12}
     "type": /wp/info/type
     "main_classification": /wp/info/main_classification
     "orientation": /wp/info/orientation
@@ -1373,7 +1354,7 @@
     "secondary_schools": /wp/info/secondary_schools
     "tax_status": /wp/info/tax_status
     "tertiary": /wp/info/tertiary
-    "other_names": /wp/info/other_names
+    "other_names": {+/wp/info/other_names alias: 13}
     "publications": /wp/info/publications
     "website": /wp/info/website
     "slogan": /wp/info/slogan
@@ -1386,10 +1367,10 @@
   type: "infobox"
   class: /wp/infobox/church
   fields: {
-    "name": /wp/info/name
-    "fullname": /wp/info/fullname
-    "other name": /wp/info/other_name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "fullname": {+/wp/info/fullname alias: 12}
+    "other name": {+/wp/info/other_name alias: 13}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
     "relief": /wp/info/relief
     "coordinates": /wp/info/coordinates
@@ -1533,7 +1514,7 @@
   class: /wp/infobox/diocese
   fields: {
     "jurisdiction": /wp/info/jurisdiction
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "latin": /wp/info/latin
     "local": /wp/info/local
     "country": /wp/info/country
@@ -1596,11 +1577,11 @@
   type: "infobox"
   class: /wp/infobox/monastery
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "full": /wp/info/full
-    "other_names": /wp/info/other_names
+    "full": {+/wp/info/full alias: 12}
+    "other_names": {+/wp/info/other_names alias: 13}
     "order": /wp/info/order
     "established": /wp/info/established
     "disestablished": /wp/info/disestablished
@@ -1639,9 +1620,9 @@
   type: "infobox"
   class: /wp/infobox/accounting_body
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
-    "abbreviation": /wp/info/abbreviation
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
+    "abbreviation": {+/wp/info/abbreviation alias: 12}
     "motto": /wp/info/motto
     "predecessor": /wp/info/predecessor
     "formation": /wp/info/formation
@@ -1681,7 +1662,7 @@
   type: "infobox"
   class: /wp/infobox/hospital
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "org/group": /wp/info/org_group
     "coordinates": /wp/info/coordinates
     "location": /wp/info/location
@@ -1717,8 +1698,8 @@
   type: "infobox"
   class: /wp/infobox/institute
   fields: {
-    "name": /wp/info/name
-    "latin_name": /wp/info/latin_name
+    "name": {+/wp/info/name alias: 12}
+    "latin_name": {+/wp/info/latin_name alias: 12}
     "motto": /wp/info/motto
     "founder": /wp/info/founder
     "established": /wp/info/established
@@ -1757,9 +1738,9 @@
   type: "infobox"
   class: /wp/infobox/laboratory
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
-    "latin_name": /wp/info/latin_name
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
+    "latin_name": {+/wp/info/latin_name alias: 12}
     "motto": /wp/info/motto
     "established": /wp/info/established
     "type": /wp/info/type
@@ -1800,11 +1781,11 @@
   type: "infobox"
   class: /wp/infobox/museum
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
     "coordinates": /wp/info/coordinates
-    "former_name": /wp/info/former_name
+    "former_name": {+/wp/info/former_name alias: 12}
     "established": /wp/info/established
     "dissolved": /wp/info/dissolved
     "location": /wp/info/location
@@ -1839,10 +1820,10 @@
   type: "infobox"
   class: /wp/infobox/observatory
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "organization": /wp/info/organization
     "code": /wp/info/code
-    "abbreviation": /wp/info/abbreviation
+    "abbreviation": {+/wp/info/abbreviation alias: 12}
     "location": /wp/info/location
     "coordinates": /wp/info/coordinates
     "altitude": /wp/info/altitude
@@ -1865,9 +1846,9 @@
   type: "infobox"
   class: /wp/infobox/school
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
-    "latin_name": /wp/info/latin_name
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
+    "latin_name": {+/wp/info/latin_name alias: 12}
     "motto": /wp/info/motto
     "motto_translation": /wp/info/motto_translation
     "address": /wp/info/address
@@ -1883,8 +1864,8 @@
     "country1": /wp/info/country1
     "coordinates": /wp/info/coordinates
     "coordinates_footnotes": /wp/info/coordinates_footnotes
-    "other_name": /wp/info/other_name
-    "former_name": /wp/info/former_name
+    "other_name": {+/wp/info/other_name alias: 13}
+    "former_name": {+/wp/info/former_name alias: 12}
     "schooltype": /wp/info/schooltype
     "fundingtype": /wp/info/fundingtype
     "type": /wp/info/type
@@ -2004,7 +1985,7 @@
     "sports": /wp/info/sports
     "mascot": /wp/info/mascot
     "mascot_image": /wp/info/mascot_image
-    "nickname": /wp/info/nickname
+    "nickname": {+/wp/info/nickname alias: 13}
     "teams": /wp/info/teams
     "team_name": /wp/info/team_name
     "rival": /wp/info/rival
@@ -2045,12 +2026,12 @@
   type: "infobox"
   class: /wp/infobox/university
   fields: {
-    "name": /wp/info/name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "latin_name": /wp/info/latin_name
-    "other_name": /wp/info/other_name
-    "former_name": /wp/info/former_name
+    "latin_name": {+/wp/info/latin_name alias: 12}
+    "other_name": {+/wp/info/other_name alias: 13}
+    "former_name": {+/wp/info/former_name alias: 12}
     "motto": /wp/info/motto
     "motto_lang": /wp/info/motto_lang
     "mottoeng": /wp/info/mottoeng
@@ -2120,9 +2101,9 @@
   type: "infobox"
   class: /wp/infobox/journal
   fields: {
-    "title": /wp/info/title
-    "former_name": /wp/info/former_name
-    "abbreviation": /wp/info/abbreviation
+    "title": {+/wp/info/title alias: 12}
+    "former_name": {+/wp/info/former_name alias: 12}
+    "abbreviation": {+/wp/info/abbreviation alias: 12}
     "bluebook": /wp/info/bluebook
     "mathscinet": /wp/info/mathscinet
     "nlm": /wp/info/nlm
@@ -2156,7 +2137,7 @@
   type: "infobox"
   class: /wp/infobox/magazine
   fields: {
-    "title": /wp/info/title
+    "title": {+/wp/info/title alias: 12}
     "editor": {+/wp/info/name group: /wp/info/editor}
     "editor_title": {+/wp/info/title group: /wp/info/editor}
     "previous_editor": /wp/info/previous_editor
@@ -2183,12 +2164,6 @@
     "website": /wp/info/website
     "issn": /wp/info/issn
     "oclc": /wp/info/oclc
-    "finaldate": /wp/info/finaldate
-    "finalnumber": /wp/info/finalnumber
-    "paid_circulation": /wp/info/paid_circulation
-    "unpaid_circulation": /wp/info/unpaid_circulation
-    "circulation_year": /wp/info/circulation_year
-    "total_circulation": /wp/info/total_circulation
   }
 }
 
@@ -2196,7 +2171,7 @@
   type: "infobox"
   class: /wp/infobox/newspaper
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "school": /wp/info/school
     "motto": /wp/info/motto
     "type": /wp/info/type
@@ -2248,7 +2223,7 @@
   type: "infobox"
   class: /wp/infobox/publisher
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "parent": /wp/info/parent
     "status": /wp/info/status
     "traded_as": /wp/info/traded_as
@@ -2275,7 +2250,7 @@
   type: "infobox"
   class: /wp/infobox/website
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "url": /wp/info/url
     "areas": /wp/info/areas
     "offices": /wp/info/offices
@@ -2305,7 +2280,7 @@
   type: "infobox"
   class: /wp/infobox/brewery
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "type": /wp/info/type
     "location": /wp/info/location
     "location_place": /wp/info/location_place
@@ -2342,12 +2317,12 @@
   type: "infobox"
   class: /wp/infobox/company
   fields: {
-    "name": /wp/info/name
-    "trading_name": /wp/info/trading_name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "trading_name": {+/wp/info/trading_name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "romanized_name": /wp/info/romanized_name
-    "former_name": /wp/info/former_name
+    "romanized_name": {+/wp/info/romanized_name alias: 12}
+    "former_name": {+/wp/info/former_name alias: 12}
     "type": /wp/info/type
     "traded_as": /wp/info/traded_as
     "ISIN": /wp/info/isin
@@ -2403,7 +2378,7 @@
   type: "infobox"
   class: /wp/infobox/law_firm
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "headquarters": /wp/info/headquarters
     "num_offices": /wp/info/num_offices
     "offices": /wp/info/offices
@@ -2427,9 +2402,9 @@
   type: "infobox"
   class: /wp/infobox/union
   fields: {
-    "name": /wp/info/name
-    "full_name": /wp/info/full_name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "full_name": {+/wp/info/full_name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
     "motto": /wp/info/motto
     "mottoeng": /wp/info/mottoeng
@@ -2456,7 +2431,7 @@
   type: "infobox"
   class: /wp/infobox/order
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "title": /wp/info/title
     "awarded_by": /wp/info/awarded_by
     "type": /wp/info/type
@@ -2489,8 +2464,8 @@
   type: "infobox"
   class: /wp/infobox/fraternity
   fields: {
-    "letters": /wp/info/letters
-    "name": /wp/info/name
+    "letters": {+/wp/info/letters alias: 12}
+    "name": {+/wp/info/name alias: 12}
     "founded": /wp/info/founded
     "birthplace": /wp/info/birthplace
     "type": /wp/info/type
@@ -2528,7 +2503,7 @@
     "members": /wp/info/members
     "lifetime": /wp/info/lifetime
     "object": /wp/info/object
-    "nickname": /wp/info/nickname
+    "nickname": {+/wp/info/nickname alias: 13}
     "free": /wp/info/free
     "address": /wp/info/address
     "city": /wp/info/city
@@ -2544,7 +2519,7 @@
   type: "infobox"
   class: /wp/infobox/grand_lodge
   fields: {
-    "name": /wp/info/name
+    "name": {+/wp/info/name alias: 12}
     "motto-latin": /wp/info/motto-latin
     "motto-english": /wp/info/motto-english
     "established": /wp/info/established
@@ -2561,11 +2536,11 @@
   type: "infobox"
   class: /wp/infobox/settlement
   fields: {
-    "name": /wp/info/name
-    "official_name": /wp/info/official_name
-    "native_name": /wp/info/native_name
+    "name": {+/wp/info/name alias: 12}
+    "official_name": {+/wp/info/official_name alias: 12}
+    "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
-    "other_name": /wp/info/other_name
+    "other_name": {+/wp/info/other_name alias: 13}
     "settlement_type": /wp/info/settlement_type
 
     "translit_lang1": /wp/info/translit_lang1
@@ -2584,8 +2559,8 @@
     "translit_lang2_info2": /wp/info/translit_lang2_info2
 
     "etymology": /wp/info/etymology
-    "nickname": /wp/info/nickname
-    "nicknames": /wp/info/nicknames
+    "nickname": {+/wp/info/nickname alias: 13}
+    "nicknames": {+/wp/info/nicknames alias: 13}
     "motto": /wp/info/motto
     "mottoes": /wp/info/mottoes
     "anthem": /wp/info/anthem
@@ -2600,9 +2575,9 @@
 
     "established_title": {+/wp/info/title group: /wp/info/established}
     "established_date": {+/wp/info/date group: /wp/info/established}
-
     "extinct_title": /wp/info/extinct_title
     "extinct_date": /wp/info/extinct_date
+
     "founder": /wp/info/founder
     "named_for": /wp/info/named_for
     "seat_type": /wp/info/seat_type

@@ -15,6 +15,8 @@
 #include "sling/nlp/wiki/wiki-annotator.h"
 
 #include <math.h>
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -24,6 +26,7 @@
 #include "sling/nlp/document/lex.h"
 #include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/kb/calendar.h"
+#include "sling/nlp/wiki/wiki.h"
 #include "sling/string/numbers.h"
 #include "sling/string/strcat.h"
 #include "sling/string/text.h"
@@ -523,6 +526,7 @@ class InfoboxTemplate : public WikiMacro {
     Handle n_class = store->Lookup("class");
     Handle n_fields = store->Lookup("fields");
     Handle n_group = store->Lookup("group");
+    Handle n_alias = store->Lookup("alias");
     n_infobox_ = store->Lookup("/wp/infobox");
     for (const Slot &s : config) {
       if (s.name == n_class) {
@@ -540,9 +544,11 @@ class InfoboxTemplate : public WikiMacro {
           if (key.IsAnonymous()) {
             field.key = key.GetHandle(Handle::is());
             field.group = key.GetHandle(n_group);
+            field.alias = key.GetInt(n_alias, -1);
           } else {
             field.key = f.value;
             field.group = Handle::nil();
+            field.alias = -1;
           }
         }
       }
@@ -620,6 +626,24 @@ class InfoboxTemplate : public WikiMacro {
         if (element == nullptr) element = new Builder(store);
         element->Add(field->key, lex);
       }
+
+      // Extract alias.
+      if (field->alias != -1) {
+        // Extract alias text from field.
+        AliasSink alias(field->alias);
+        templ.extractor()->Enter(&alias);
+        templ.extractor()->ExtractChildren(*arg);
+        templ.extractor()->Leave(&alias);
+
+        // Output aliases.
+        std::istringstream aliases(alias.text());
+        string name;
+        while (getline(aliases, name)) {
+          if (name.empty()) continue;
+          AliasSource source = static_cast<AliasSource>(field->alias);
+          annotator->AddAlias(name, source);
+        }
+      }
     }
 
     // Create frames for repeated fields and add them to the main frame.
@@ -637,6 +661,65 @@ class InfoboxTemplate : public WikiMacro {
   }
 
  private:
+  // Sink for collecting text from aliases.
+  class AliasSink : public WikiSink {
+   public:
+    AliasSink(int type) : type_(type) {}
+
+    void Content(const char *begin, const char *end) override {
+      if (begin != end && *begin == '<') {
+        line_break_ = true;
+      } else {
+        for (const char *p = begin; p < end; ++p) {
+          if (*p == ' ') {
+            space_break_ = true;
+          } else if (*p == '\n') {
+            line_break_ = true;
+          } else if ((*p == ',' || *p == ';') &&
+                     (line_break_ || type_ == SRC_WIKIPEDIA_NICKNAME)) {
+            line_break_ = true;
+          } else if (*p == '(' || *p == '[') {
+            in_parentheses_ = true;
+          } else if (*p == ')' || *p == ']') {
+            in_parentheses_ = false;
+          } else if (!in_parentheses_) {
+            if (line_break_) {
+              text_.push_back('\n');
+              line_break_ = false;
+              space_break_ = false;
+            } else if (space_break_) {
+              text_.push_back(' ');
+              space_break_ = false;
+            }
+            text_.push_back(*p);
+          }
+        }
+      }
+    }
+
+    // Font change starts a new alias.
+    void Font(int font) override {
+      line_break_ = true;
+    }
+
+    // Return extracted text.
+    const string &text() const { return text_; }
+
+   protected:
+    // Extracted text.
+    string text_;
+
+    // Alias type.
+    int type_;
+
+    // Pending space and line breaks.
+    bool space_break_ = false;
+    bool line_break_ = false;
+
+    // Parentheses tracking for skipping text inside parentheses.
+    bool in_parentheses_ = false;
+  };
+
   // Singleton document tokenizer.
   static DocumentTokenizer *GetTokenizer() {
     static Mutex mu;
@@ -650,6 +733,7 @@ class InfoboxTemplate : public WikiMacro {
   struct Field {
     Handle key;     // slot name for field
     Handle group;   // group for repeated field
+    int alias;      // alias type or -1 if it is not an alias field
   };
 
   // Types added to thematic frame for infobox.
