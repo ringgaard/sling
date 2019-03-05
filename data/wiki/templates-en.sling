@@ -687,6 +687,124 @@
   }
 }
 
+"Infobox sportsperson": {
+  type: "infobox"
+  class: /wp/infobox/sportsperson
+  fields: {
+    "honorific_prefix": /wp/info/honorific_prefix
+    "name": {+/wp/info/name alias: 12}
+    "honorific_suffix": /wp/info/honorific_suffix
+    "native_name": {+/wp/info/native_name alias: 12}
+    "native_name_lang": /wp/info/native_name_lang
+    "birth_name": {+/wp/info/birth_name alias: 12}
+    "full_name": {+/wp/info/full_name  alias: 12}
+    "nickname": {+/wp/info/nickname  alias: 13}
+    "nationality": /wp/info/nationality
+    "national_team": /wp/info/national_team
+    "ethnicity": /wp/info/ethnicity
+    "citizenship": /wp/info/citizenship
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "resting_place": /wp/info/resting_place
+    "resting_place_coordinates": /wp/info/resting_place_coordinates
+    "monuments": /wp/info/monuments
+    "residence": /wp/info/residence
+    "hometown": /wp/info/hometown
+    "education": /wp/info/education
+    "alma_mater": /wp/info/alma_mater
+    "occupation": /wp/info/occupation
+    "years_active": /wp/info/years_active
+    "employer": /wp/info/employer
+    "agent": /wp/info/agent
+    "height": /wp/info/height
+    "weight": /wp/info/weight
+    "spouse": /wp/info/spouse
+    "life_partner": /wp/info/life_partner
+    "other_interests": /wp/info/other_interests
+    "website": /wp/info/website
+    "module": /wp/info/module
+    "country": /wp/info/country
+    "sport": /wp/info/sport
+    "position": /wp/info/position
+    "disability": /wp/info/disability
+    "disability_class": /wp/info/disability_class
+    "weight_class": /wp/info/weight_class
+    "weight_class_type": /wp/info/weight_class_type
+    "rank": /wp/info/rank
+    "event": /wp/info/event
+    "event_type": /wp/info/event_type
+    "universityteam": /wp/info/universityteam
+    "collegeteam": /wp/info/collegeteam
+    "league": /wp/info/league
+    "league_type": /wp/info/league_type
+    "club": /wp/info/club
+    "team": /wp/info/team
+    "turnedpro": /wp/info/turnedpro
+    "turnedpro_type": /wp/info/turnedpro_type
+    "partner": /wp/info/partner
+    "former_partner": /wp/info/former_partner
+    "coach": /wp/info/coach
+    "retired": /wp/info/retired
+    "coaching": /wp/info/coaching
+    "module2": /wp/info/module2
+    "worlds": /wp/info/worlds
+    "regionals": /wp/info/regionals
+    "nationals": /wp/info/nationals
+    "olympics": /wp/info/olympics
+    "paralympics": /wp/info/paralympics
+    "commonwealth": /wp/info/commonwealth
+    "highestranking": /wp/info/highestranking
+    "pb": /wp/info/pb
+    "medaltemplates": /wp/info/medaltemplates
+    "medaltemplates-title": /wp/info/medaltemplates-title
+    "module3": /wp/info/module3
+  }
+}
+
+"Infobox military person": {
+  type: "infobox"
+  class: /wp/infobox/military_person
+  fields: {
+    "honorific_prefix": /wp/info/honorific_prefix
+    "name": {+/wp/info/name alias: 12}
+    "honorific_suffix": /wp/info/honorific_suffix
+    "native_name": {+/wp/info/native_name alias: 12}
+    "native_name_lang": /wp/info/native_name_lang
+    "birth_name": {+/wp/info/birth_name alias: 12}
+    "other_name": {+/wp/info/other_name alias: 12}
+    "nickname": {+/wp/info/nickname alias: 13}
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "placeofburial": /wp/info/placeofburial
+    "placeofburial_label": /wp/info/placeofburial_label
+    "placeofburial_coordinates": /wp/info/placeofburial_coordinates
+    "allegiance": /wp/info/allegiance
+    "branch": /wp/info/branch
+    "branch_label": /wp/info/branch_label
+    "serviceyears": /wp/info/serviceyears
+    "serviceyears_label": /wp/info/serviceyears_label
+    "rank": /wp/info/rank
+    "rank_label": /wp/info/rank_label
+    "servicenumber": /wp/info/servicenumber
+    "unit": /wp/info/unit
+    "commands": /wp/info/commands
+    "battles": /wp/info/battles
+    "battles_label": /wp/info/battles_label
+    "awards": /wp/info/awards
+    "memorials": /wp/info/memorials
+    "spouse": /wp/info/spouse
+    "children": /wp/info/children
+    "relations": /wp/info/relations
+    "laterwork": /wp/info/laterwork
+    "website": /wp/info/website
+    "module": /wp/info/module
+  }
+}
+
 "Infobox official post": {
   type: "infobox"
   class: /wp/infobox/official_post
