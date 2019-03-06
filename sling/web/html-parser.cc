@@ -526,5 +526,9 @@ bool HTMLParser::DocType(const char *str) {
   return true;
 }
 
+bool HTMLParser::CData(const char *str) {
+  return true;
+}
+
 }  // namespace sling
 

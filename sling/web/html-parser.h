@@ -29,6 +29,7 @@ class HTMLParser : public XMLParser {
 
   // Callbacks.
   virtual bool DocType(const char *str);
+  virtual bool CData(const char *str);
 
  private:
   // HTML tag type.
