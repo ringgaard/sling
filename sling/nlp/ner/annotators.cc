@@ -543,6 +543,43 @@ Handle NumberAnnotator::ParseNumber(Text str, Format format) {
   return number;
 }
 
+void SpelledNumberAnnotator::Init(Store *store) {
+  CHECK(names_.Bind(store));
+}
+
+void SpelledNumberAnnotator::Annotate(const PhraseTable &aliases,
+                                      SpanChart *chart) {
+  const Document *document = chart->document();
+  Store *store = document->store();
+  Handles matches(document->store());
+  for (int b = 0; b < chart->size(); ++b) {
+    int end = std::min(b + chart->maxlen(), chart->size());
+    for (int e = end; e > b; --e) {
+      // Only consider number spans that have not already been annotated.
+      SpanChart::Item &span = chart->item(b, e);
+      if (span.is(SPAN_NUMBER) || span.is(SPAN_YEAR)) continue;
+      if (!span.is(SPAN_NATURAL_NUMBER)) continue;
+
+      // Find matching numeric value.
+      aliases.GetMatches(span.matches, &matches);
+      Handle value = Handle::nil();
+      for (Handle item : matches) {
+        Frame f(store, item);
+        value = f.GetHandle(n_numeric_value_);
+        if (!value.IsNil()) {
+          value = store->Resolve(value);
+          break;
+        }
+      }
+
+      // Add spelled number annotation.
+      if (value.IsNumber()) {
+        chart->Add(b + chart->begin(), e + chart->begin(), value, SPAN_NUMBER);
+      }
+    }
+  }
+}
+
 void NumberScaleAnnotator::Init(Store *store) {
   static std::pair<const char *, float> scalars[] = {
     {"Q43016", 1e3},      // thousand
@@ -569,7 +606,6 @@ void NumberScaleAnnotator::Annotate(const PhraseTable &aliases,
       // Only consider number spans.
       SpanChart::Item &span = chart->item(b, e);
       if (!span.is(SPAN_NATURAL_NUMBER)) continue;
-      if (span.is(SPAN_NUMBER)) continue;
 
       // Get scalar.
       float scale = 0;
@@ -901,6 +937,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
 
 void SpanAnnotator::Init(Store *commons, const Resources &resources) {
   // Load resources.
+  CHECK(names_.Bind(commons));
   if (!resources.kb.empty()) {
     LoadStore(resources.kb, commons);
   }
@@ -915,6 +952,7 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
   importer_.Init(commons);
   taxonomy_.Init(commons);
   numbers_.Init(commons);
+  spelled_.Init(commons);
   scales_.Init(commons);
   measures_.Init(commons);
   dates_.Init(commons);
@@ -942,6 +980,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     taxonomy_.Annotate(aliases_, &chart);
     persons_.Annotate(&chart);
     numbers_.Annotate(&chart);
+    spelled_.Annotate(aliases_, &chart);
     scales_.Annotate(aliases_, &chart);
     measures_.Annotate(aliases_, &chart);
     dates_.Annotate(aliases_, &chart);
@@ -951,7 +990,34 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
 
     // Compute best span covering and extract it to the output document.
     chart.Solve();
-    chart.Extract(output);
+    chart.Extract([&](int begin, int end, const SpanChart::Item &item) {
+      if (!item.aux.IsNil()) {
+        // Add span annotation for auxiliary item.
+        Span *span = output->AddSpan(begin, end);
+        if (item.aux.IsIndex()) {
+          if (item.aux == kPersonMarker) {
+            // Mark span as a person name.
+            Builder b(output->store());
+            b.Add(n_instance_of_, n_person_);
+            span->Evoke(b.Create());
+          } else {
+            // Output redlink, bold, or italic span.
+            output->AddSpan(begin, end);
+          }
+        } else if (item.aux.IsNumber()) {
+          // Output stand-alone number span.
+          Builder b(output->store());
+          b.AddIsA(n_quantity_);
+          b.Add(n_amount_, item.aux);
+          span->Evoke(b.Create());
+        } else {
+          span->Evoke(item.aux);
+        }
+      } else if (item.matches != nullptr) {
+        // Add span annotation for match.
+        output->AddSpan(begin, end);
+      }
+    });
   }
 
   // Update output document.

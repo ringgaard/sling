@@ -225,6 +225,22 @@ class NumberAnnotator {
   Name n_time_{names_, "/w/time"};
 };
 
+// Annotate spelled numbers.
+class SpelledNumberAnnotator {
+ public:
+  // Initialize spelled number annotator.
+  void Init(Store *store);
+
+  // Annotate chart with spelled number spans.
+  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+
+ private:
+  // Symbols.
+  Names names_;
+  Name n_natural_number_{names_, "Q21199"};
+  Name n_numeric_value_{names_, "P1181"};
+};
+
 // Annotate scaled number, i.e. a number followed by thousand, million,
 // billion, or trillion, according to the alias table.
 class NumberScaleAnnotator {
@@ -344,12 +360,20 @@ class SpanAnnotator {
   SpanTaxonomy taxonomy_;
   PersonNameAnnotator persons_;
   NumberAnnotator numbers_;
+  SpelledNumberAnnotator spelled_;
   NumberScaleAnnotator scales_;
   MeasureAnnotator measures_;
   DateAnnotator dates_;
   CommonWordPruner pruner_;
   CaseScorer case_;
   EmphasisAnnotator emphasis_;
+
+  // Symbols.
+  Names names_;
+  Name n_quantity_{names_, "/w/quantity"};
+  Name n_amount_{names_, "/w/amount"};
+  Name n_instance_of_{names_, "P31"};
+  Name n_person_{names_, "Q215627"};
 
   // Maximum phrase length.
   static constexpr int max_phrase_length = 10;

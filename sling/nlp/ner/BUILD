@@ -58,20 +58,6 @@ cc_library(
   ],
 )
 
-cc_library(
-  name = "measures",
-  srcs = ["measures.cc"],
-  hdrs = ["measures.h"],
-  deps = [
-    ":chart",
-    ":idf",
-    "//sling/frame:store",
-    "//sling/nlp/document",
-    "//sling/nlp/kb:calendar",
-    "//sling/nlp/kb:facts",
-  ],
-)
-
 cc_binary(
   name = "parse-chart",
   srcs = ["parse-chart.cc"],

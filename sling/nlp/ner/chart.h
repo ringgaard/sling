@@ -15,6 +15,7 @@
 #ifndef SLING_NLP_NER_CHART_H_
 #define SLING_NLP_NER_CHART_H_
 
+#include <functional>
 #include <unordered_set>
 #include <vector>
 
@@ -61,6 +62,8 @@ class SpanChart {
   void Solve();
 
   // Extract best span covering.
+  typedef std::function<void(int begin, int end, const Item &item)> Extractor;
+  void Extract(const Extractor &extractor);
   void Extract(Document *output);
 
   // Return item for token span (0 <= begin < size, 0 < end <= size).

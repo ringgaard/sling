@@ -93,7 +93,8 @@ void SpanChart::Solve() {
   }
 }
 
-void SpanChart::Extract(Document *output) {
+
+void SpanChart::Extract(const Extractor &extractor) {
   std::vector<std::pair<int, int>> queue;
   queue.emplace_back(0, size_);
   while (!queue.empty()) {
@@ -103,19 +104,28 @@ void SpanChart::Extract(Document *output) {
     queue.pop_back();
 
     Item &s = item(b, e);
-    if (!s.aux.IsNil()) {
-      // Add span annotation for auxiliary item.
-      Span *span = output->AddSpan(begin_ + b, begin_ + e);
-      span->Evoke(s.aux);
-    } else if (s.matches != nullptr) {
-      // Add span annotation for match.
-      output->AddSpan(begin_ + b, begin_ + e);
+    if (!s.aux.IsNil() || s.matches != nullptr) {
+      // Output annotation.
+      extractor(begin_ + b, begin_ + e, s);
     } else if (s.split != -1) {
       // Queue best split.
       queue.emplace_back(b + s.split, e);
       queue.emplace_back(b, b + s.split);
     }
   }
+}
+
+void SpanChart::Extract(Document *output) {
+  Extract([output](int begin, int end, const Item &item) {
+    if (!item.aux.IsNil()) {
+      // Add span annotation for auxiliary item.
+      Span *span = output->AddSpan(begin, end);
+      span->Evoke(item.aux);
+    } else if (item.matches != nullptr) {
+      // Add span annotation for match.
+      output->AddSpan(begin, end);
+    }
+  });
 }
 
 }  // namespace nlp
