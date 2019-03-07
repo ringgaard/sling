@@ -26,6 +26,7 @@
 #include "sling/nlp/kb/phrase-table.h"
 #include "sling/nlp/ner/chart.h"
 #include "sling/nlp/ner/idf.h"
+#include "sling/nlp/ner/resolver.h"
 
 namespace sling {
 namespace nlp {
@@ -333,10 +334,13 @@ class SpanAnnotator {
  public:
   // Resources for initializing span annotator.
   struct Resources {
-    string kb;            // knowledge base with entities and metadata
-    string aliases;       // phrase table with phrase to entity mapping
-    string dictionary;    // dictionary table with IDF scores for words
+    string kb;             // knowledge base with entities and metadata
+    string aliases;        // phrase table with phrase to entity mapping
+    string dictionary;     // dictionary table with IDF scores for words
+    bool resolve = false;  // resolve spans to entities in knowledge base
   };
+
+  ~SpanAnnotator() { if (resolver_names_) resolver_names_->Release(); }
 
   // Initialize annotator.
   void Init(Store *commons, const Resources &resources);
@@ -353,6 +357,12 @@ class SpanAnnotator {
 
   // Dictionary with IDF scores.
   IDFTable dictionary_;
+
+  // Resolve spans to entities in the knowledge base.
+  bool resolve_ = false;
+
+  // Schema for entity resolver.
+  ResolverNames *resolver_names_ = nullptr;
 
   // Annotators.
   SpanPopulator populator_;
@@ -374,6 +384,7 @@ class SpanAnnotator {
   Name n_amount_{names_, "/w/amount"};
   Name n_instance_of_{names_, "P31"};
   Name n_person_{names_, "Q215627"};
+  Name n_page_item_{names_, "/wp/page/item"};
 
   // Maximum phrase length.
   static constexpr int max_phrase_length = 10;

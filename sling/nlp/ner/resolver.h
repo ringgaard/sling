@@ -64,7 +64,7 @@ class Resolver {
   // Add entity topic to context.
   void AddTopic(Handle entity);
 
-  // Add entity and output-boubd links to context.
+  // Add entity and output-bound links to context.
   void AddEntity(Handle entity);
 
   // Score candidates for alias. The alias is specified using the fingerprint

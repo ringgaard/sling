@@ -68,10 +68,6 @@ class WikiExtractor {
   // Extract text to sink by traversing the nodes in the AST.
   void Extract(WikiSink *sink);
 
-  // Extract intro text, i.e. the bold text in the first sentence of a Wikipedia
-  // article.
-  bool ExtractIntro(WikiSink *sink);
-
   // Nesting of output sinks.
   void Enter(WikiSink *sink) {
     sinks_.push_back(sink);

@@ -48,6 +48,7 @@ cc_library(
   deps = [
     ":chart",
     ":idf",
+    ":resolver",
     "//sling/frame:serialization",
     "//sling/frame:object",
     "//sling/frame:store",

@@ -205,6 +205,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q202444",    SPAN_GIVEN_NAME},       // given name
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
     {"Q838948",    SPAN_ART},              // work of art
+    {"Q464980",    SPAN_ART},              // exhibition
     {nullptr, 0},
   };
 
@@ -557,7 +558,7 @@ void SpelledNumberAnnotator::Annotate(const PhraseTable &aliases,
     for (int e = end; e > b; --e) {
       // Only consider number spans that have not already been annotated.
       SpanChart::Item &span = chart->item(b, e);
-      if (span.is(SPAN_NUMBER) || span.is(SPAN_YEAR)) continue;
+      if (span.is(SPAN_NUMBER) || span.is(SPAN_DATE)) continue;
       if (!span.is(SPAN_NATURAL_NUMBER)) continue;
 
       // Find matching numeric value.
@@ -956,6 +957,10 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
   scales_.Init(commons);
   measures_.Init(commons);
   dates_.Init(commons);
+
+  // Initialize entity resolver.
+  resolve_ = resources.resolve;
+  resolver_names_ = new ResolverNames(commons);
 }
 
 void SpanAnnotator::AddStopWords(const std::vector<string> &words) {
@@ -965,6 +970,14 @@ void SpanAnnotator::AddStopWords(const std::vector<string> &words) {
 }
 
 void SpanAnnotator::Annotate(const Document &document, Document *output) {
+  // Initialize entity resolver.
+  Resolver resolver(document.store(), &aliases_, resolver_names_);
+  if (resolve_) {
+    // Add focus topic for document to entity resolver context.
+    Handle topic = document.top().GetHandle(n_page_item_);
+    if (!topic.IsNil()) resolver.AddEntity(topic);
+  }
+
   // Run annotators on each sentence in the input document.
   for (SentenceIterator s(&document); s.more(); s.next()) {
     // Skip headings.
@@ -991,31 +1004,52 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     // Compute best span covering and extract it to the output document.
     chart.Solve();
     chart.Extract([&](int begin, int end, const SpanChart::Item &item) {
+      bool resolve_span = resolve_;
+      Span *span = nullptr;
       if (!item.aux.IsNil()) {
         // Add span annotation for auxiliary item.
-        Span *span = output->AddSpan(begin, end);
-        if (item.aux.IsIndex()) {
-          if (item.aux == kPersonMarker) {
-            // Mark span as a person name.
-            Builder b(output->store());
-            b.Add(n_instance_of_, n_person_);
-            span->Evoke(b.Create());
-          } else {
-            // Output redlink, bold, or italic span.
-            output->AddSpan(begin, end);
+        span = output->AddSpan(begin, end);
+        if (!item.aux.IsNumber()) {
+          // Span has already been resolved.
+          span->Evoke(item.aux);
+
+          // Add annotated entity to resolver context model.
+          resolve_span = false;
+          if (resolve_) {
+            resolver.AddEntity(item.aux);
           }
-        } else if (item.aux.IsNumber()) {
+        } else if (!item.aux.IsIndex()) {
           // Output stand-alone number span.
           Builder b(output->store());
           b.AddIsA(n_quantity_);
           b.Add(n_amount_, item.aux);
           span->Evoke(b.Create());
-        } else {
-          span->Evoke(item.aux);
+          resolve_span = false;
         }
       } else if (item.matches != nullptr) {
         // Add span annotation for match.
-        output->AddSpan(begin, end);
+        span = output->AddSpan(begin, end);
+      }
+
+      // Resolve span to entity in knowledge base.
+      bool resolved = false;
+      if (resolve_span && item.matches != nullptr) {
+        Handle entity = resolver.Resolve(span->Fingerprint(), span->Form());
+        if (!entity.IsNil()) {
+          // Evoke resolved entity for span.
+          span->Evoke(Builder(output->store()).AddIs(entity).Create());
+
+          // Add resolved entity to context model.
+          resolver.AddEntity(entity);
+          resolved = true;
+        }
+      }
+
+      // Mark unresolved person name spans.
+      if (!resolved && item.aux == kPersonMarker) {
+        Builder b(output->store());
+        b.Add(n_instance_of_, n_person_);
+        span->Evoke(b.Create());
       }
     });
   }
