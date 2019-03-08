@@ -8,6 +8,7 @@ bin/knowledge-server
 bin/nnc
 bin/parse
 bin/parse-wiki-text
+bin/shell
 bin/snaps
 data/dev/devfiles.txt
 data/geonames/feature-code-map.txt
@@ -15,12 +16,16 @@ data/nlp/wordnet/original-wordnet-mapping
 data/nlp/wordnet/sense-mids.txt
 data/nlp/wordnet/wordnet-mapping
 data/wiki/languages.sling
+data/wiki/units-en.sling
 doc/report/sling.md
 doc/report/sling.tex
 python/dataset/geonames.py
 python/dataset/musicbrainz.py
 python/myelin/gradient.py
 python/nlp/measure.py
+sling/db/BUILD
+sling/db/db.h
+sling/db/db.cc
 sling/frame/ast.cc
 sling/frame/ast.h
 sling/frame/parser.cc
