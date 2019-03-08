@@ -161,6 +161,7 @@ cc_library(
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:lex",
     "//sling/task",
+    "//sling/task:accumulator",
     "//sling/task:documents",
     "//sling/task:reducer",
   ],

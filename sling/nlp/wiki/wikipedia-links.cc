@@ -18,6 +18,7 @@
 #include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/document/lex.h"
 #include "sling/task/documents.h"
+#include "sling/task/accumulator.h"
 #include "sling/task/reducer.h"
 
 namespace sling {
@@ -31,6 +32,12 @@ class WikipediaLinkExtractor : public task::DocumentProcessor {
     task->Fetch("extract_theme_links", &extract_theme_links_);
     task->Fetch("extract_infobox_links", &extract_infobox_links_);
 
+    // Initialize fan-in output.
+    fanin_ = task->GetSink("fanin");
+    if (fanin_ != nullptr) {
+      fanin_counts_.Init(fanin_);
+    }
+
     // Statistics.
     num_links_ = task->GetCounter("links");
     num_mention_links_ = task->GetCounter("mention_links");
@@ -40,15 +47,30 @@ class WikipediaLinkExtractor : public task::DocumentProcessor {
   void Process(Slice key, const Document &document) override {
     // Collect outbound links from document.
     HandleMap<int> links;
+    Store *store = document.store();
     ExtractDocumentLinks(document, &links);
 
-    // Output frame with link statistics.
     if (!links.empty()) {
-      Builder b(document.store());
+      // Output frame with link statistics.
+      Builder b(store);
       for (auto it : links) {
         b.Add(it.first, it.second);
       }
       FrameProcessor::Output(key, b.Create());
+
+      // Accumulate fan-in statistics.
+      if (fanin_ != nullptr) {
+        for (auto it : links) {
+          Frame target(store, it.first);
+          fanin_counts_.Increment(target.Id(), it.second);
+        }
+      }
+    }
+  }
+
+  void Flush(task::Task *task) override {
+    if (fanin_ != nullptr) {
+      fanin_counts_.Flush();
     }
   }
 
@@ -117,6 +139,10 @@ class WikipediaLinkExtractor : public task::DocumentProcessor {
   bool extract_mention_links_ = true;
   bool extract_theme_links_ = true;
   bool extract_infobox_links_ = true;
+
+  // Output channel and accumulator for fan-in statistics.
+  task::Channel *fanin_ = nullptr;
+  task::Accumulator fanin_counts_;
 
   // Counters.
   task::Counter *num_links_;
