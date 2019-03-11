@@ -131,6 +131,17 @@ flags.define("--build_idf",
              default=False,
              action='store_true')
 
+flags.define("--fuse_ner_items",
+             help="fuse items from wikidata, wikipedia, and links",
+             default=False,
+             action='store_true')
+
+flags.define("--build_ner_kb",
+             help="build NER knowledge base",
+             default=False,
+             action='store_true')
+
+
 def download_corpora():
   if flags.arg.download_wikidata or flags.arg.download_wikipedia:
     wf = download.DownloadWorkflow("wiki-download")
@@ -286,6 +297,20 @@ def extract_named_entities():
     for language in flags.arg.languages:
       log.info("Build " + language + " IDF table")
       wf.build_idf(language=language)
+    workflow.run(wf.wf)
+
+  # Fuse NER items.
+  if flags.arg.fuse_ner_items:
+    log.info("Fuse NER items")
+    wf = entity.EntityWorkflow("fuse-ner-items")
+    wf.fuse_items()
+    workflow.run(wf.wf)
+
+  # Build NER knowledge base.
+  if flags.arg.build_ner_kb:
+    log.info("Build NER knowledge base")
+    wf = entity.EntityWorkflow("ner-knowledge-base")
+    wf.build_knowledge_base()
     workflow.run(wf.wf)
 
 

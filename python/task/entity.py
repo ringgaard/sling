@@ -101,3 +101,48 @@ class EntityWorkflow:
       self.wf.connect(wordcounts, builder)
       builder.attach_output("repository", self.idftable(language))
 
+  #---------------------------------------------------------------------------
+  # Fused items
+  #---------------------------------------------------------------------------
+
+  def fused_items(self):
+    """Resource for merged items for NER."""
+    return self.wf.resource("items@10.rec",
+                            dir=self.workdir(),
+                            format="records/frame")
+
+  def fuse_items(self):
+    """Fuse items including the link graph."""
+    return self.wiki.fuse_items(extras=self.wikilinks() +[self.fanin()],
+                                output=self.fused_items())
+  #---------------------------------------------------------------------------
+  # Knowledge base
+  #---------------------------------------------------------------------------
+
+  def knowledge_base(self):
+    """Resource for NER knowledge base."""
+    return self.wf.resource("kb.sling",
+                            dir=self.workdir(),
+                            format="store/frame")
+
+  def build_knowledge_base(self):
+    """Build knowledge base for NER."""
+    items = self.fused_items()
+    properties = self.wiki.wikidata_properties()
+    schemas = self.wiki.schema_defs()
+
+    with self.wf.namespace("ner-kb"):
+      # Prune information from Wikidata items.
+      pruned_items = self.wf.map(items, "wikidata-pruner",
+        params={"prune_aliases": True,
+                "prune_wiki_links": False,
+                "prune_category_members": True})
+
+      # Collect property catalog.
+      property_catalog = self.wf.map(properties, "wikidata-property-collector")
+
+      # Collect frames into knowledge base store.
+      parts = self.wf.collect(pruned_items, property_catalog, schemas)
+      return self.wf.write(parts, self.knowledge_base(),
+                           params={"snapshot": True})
+

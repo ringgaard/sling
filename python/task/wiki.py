@@ -467,7 +467,7 @@ class WikiWorkflow:
                             dir=corpora.wikidir(),
                             format="records/frame")
 
-  def fuse_items(self, items=None):
+  def fuse_items(self, items=None, extras=None, output=None):
     if items == None:
       items = self.wikidata_items() + [self.wikipedia_items(),
                                        self.wikipedia_members(),
@@ -479,9 +479,17 @@ class WikiWorkflow:
       else:
         items.append(extra)
 
+    if extras != None:
+      if isinstance(extras, list):
+        items.extend(extras)
+      else:
+        items.append(extras)
+
+    if output == None: output = self.fused_items();
+
     with self.wf.namespace("fused-items"):
       return self.wf.mapreduce(input=items,
-                               output=self.fused_items(),
+                               output=output,
                                mapper=None,
                                reducer="item-merger",
                                format="message/frame",
@@ -529,6 +537,17 @@ class WikiWorkflow:
                             dir=corpora.wikidir(),
                             format="store/frame")
 
+  def schema_defs(self):
+    """Resources for schemas included in knowledge base."""
+    return [
+      self.language_defs(),
+      self.calendar_defs(),
+      self.country_defs(),
+      self.unit_defs(),
+      self.wikidata_defs(),
+      self.wikipedia_defs()
+    ]
+
   def build_knowledge_base(self,
                            items=None,
                            properties=None,
@@ -537,13 +556,7 @@ class WikiWorkflow:
     schemas."""
     if items == None: items = self.fused_items()
     if properties == None: properties = self.wikidata_properties()
-    if schemas == None:
-      schemas = [self.language_defs(),
-                 self.calendar_defs(),
-                 self.country_defs(),
-                 self.unit_defs(),
-                 self.wikidata_defs(),
-                 self.wikipedia_defs()]
+    if schemas == None: schemas = self.schema_defs()
 
     with self.wf.namespace("wikidata"):
       # Prune information from Wikidata items.
@@ -558,7 +571,7 @@ class WikiWorkflow:
       # Collect frames into knowledge base store.
       parts = self.wf.collect(pruned_items, property_catalog, schemas)
       return self.wf.write(parts, self.knowledge_base(),
-                          params={"snapshot": True})
+                           params={"snapshot": True})
 
   #---------------------------------------------------------------------------
   # Item names

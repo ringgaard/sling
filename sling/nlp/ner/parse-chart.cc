@@ -34,9 +34,9 @@ int main(int argc, char *argv[]) {
   commons.LockGC();
 
   SpanAnnotator::Resources resources;
-  resources.kb = "local/data/e/wiki/kb.sling";
+  resources.kb = "local/data/e/ner/kb.sling";
   resources.aliases = "local/data/e/wiki/" + FLAGS_lang + "/phrase-table.repo";
-  resources.dictionary = "local/data/e/wiki/" + FLAGS_lang + "/idf.repo";
+  resources.dictionary = "local/data/e/ner/" + FLAGS_lang + "/idf.repo";
   resources.resolve = FLAGS_resolve;
 
   SpanAnnotator annotator;
