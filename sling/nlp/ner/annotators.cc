@@ -205,7 +205,6 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q202444",    SPAN_GIVEN_NAME},       // given name
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
     {"Q838948",    SPAN_ART},              // work of art
-    {"Q464980",    SPAN_ART},              // exhibition
     {nullptr, 0},
   };
 

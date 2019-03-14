@@ -596,6 +596,12 @@ class WikiWorkflow:
                             dir=corpora.wikidir(language),
                             format="records/alias")
 
+  def alias_corrections(self):
+    """Resource for alias corrections."""
+    return self.wf.resource("aliases.sling",
+                            dir=corpora.repository("data/wiki"),
+                            format="store/frame")
+
   def extract_names(self, aliases=None, language=None):
     "Task for selecting language-dependent names for items."""
     if language == None: language = flags.arg.language
@@ -619,8 +625,9 @@ class WikiWorkflow:
     merged_aliases = self.wf.shuffle(aliases, len(names))
 
     # Filter and select aliases.
-    self.wf.reduce(merged_aliases, names, "alias-reducer",
-                   params={"language": language})
+    selector = self.wf.reduce(merged_aliases, names, "alias-reducer",
+                              params={"language": language})
+    selector.attach_input("commons", self.alias_corrections())
     return names
 
   #---------------------------------------------------------------------------

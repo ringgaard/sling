@@ -617,6 +617,7 @@ class Workflow(object):
 
     # Write reduce output.
     self.write(reduced, output, params=params)
+    return reducer
 
   def mapreduce(self, input, output, mapper, reducer=None, params=None,
                 format=None):
