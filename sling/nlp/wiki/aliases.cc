@@ -183,10 +183,10 @@ class AliasReducer : public task::Reducer {
     Frame aliases(&commons_, "/w/aliases");
     if (aliases.valid()) {
       // Get corrections for language.
-      corrections_ = aliases.GetFrame(language_);
-      if (corrections_.valid()) {
+      Frame corrections = aliases.GetFrame(language_);
+      if (corrections.valid()) {
         // Make map of alias corrections for each item.
-        for (const Slot &s : corrections_) {
+        for (const Slot &s : corrections) {
           item_corrections_[s.name] = s.value;
         }
       }
@@ -398,9 +398,6 @@ class AliasReducer : public task::Reducer {
   // Fraction of aliases that must have a certain case form for this form to
   // be considered the majority form.
   float majority_form_fraction_ = 0.75;
-
-  // Alias corrections.
-  Frame corrections_;
 
   // Mapping from item id to corrections for item.
   HandleMap<Handle> item_corrections_;
