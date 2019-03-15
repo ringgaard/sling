@@ -314,7 +314,7 @@ class Workflow(object):
 
   def resource(self, file, dir=None, shards=None, ext=None, format=None):
     """Adds one or more resources to workflow. The file parameter can be a file
-    name pattern with wild-cards, in which can it is expanded to a list of
+    name pattern with wild-cards, in which case it is expanded to a list of
     matching resources. The optional dir and ext are prepended and appended to
     the base file name. The file name can also be a sharded file name (@n),
     which is expanded to a list of resources, one for each shard. The general
