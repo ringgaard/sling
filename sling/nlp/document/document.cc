@@ -23,7 +23,7 @@
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/nlp/document/fingerprinter.h"
-#include "sling/nlp/document/token-breaks.h"
+#include "sling/nlp/document/token-properties.h"
 
 namespace sling {
 namespace nlp {
@@ -577,7 +577,7 @@ Span *Document::EnclosingSpan(int begin, int end, bool *crossing) {
   for (int t = begin; t < end; ++t) {
     Span *s = tokens_[t].span_;
 
-    // Skip if it is has the same leaf span as the previous token.
+    // Skip if it has the same leaf span as the previous token.
     if (s == prev) continue;
     prev = s;
 

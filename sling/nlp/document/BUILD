@@ -3,8 +3,8 @@ package(default_visibility = ["//visibility:public"])
 load("//tools:embed.bzl", "embed_data")
 
 cc_library(
-  name = "token-breaks",
-  hdrs = ["token-breaks.h"],
+  name = "token-properties",
+  hdrs = ["token-properties.h"],
 )
 
 cc_library(
@@ -13,7 +13,7 @@ cc_library(
   hdrs = ["document.h"],
   deps = [
     ":fingerprinter",
-    ":token-breaks",
+    ":token-properties",
     "//sling/base",
     "//sling/frame:object",
     "//sling/frame:store",
@@ -27,7 +27,7 @@ cc_library(
   srcs = ["text-tokenizer.cc"],
   hdrs = ["text-tokenizer.h"],
   deps = [
-    ":token-breaks",
+    ":token-properties",
     "//sling/base",
     "//sling/string:ctype",
     "//sling/string:text",

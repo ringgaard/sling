@@ -224,7 +224,7 @@ int TokenizerText::Style(int index) const {
   if (flags & TOKEN_TAG) {
     TokenFlags style = flags & TOKEN_STYLE_MASK;
     if (style != 0) {
-      return 1 << ((flags & TOKEN_STYLE_MASK) >> TOKEN_STYLE_SHIFT);
+      return 1 << (style >> TOKEN_STYLE_SHIFT);
     }
   }
   return 0;

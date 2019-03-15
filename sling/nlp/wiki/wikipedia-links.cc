@@ -103,10 +103,10 @@ class WikipediaLinkExtractor : public task::DocumentProcessor {
             num_theme_links_->Increment();
             num_links_->Increment();
           }
-        } else {
-          if (extract_infobox_links_) {
-            // Extract links from info box theme.
-            Frame f(store, link);
+        } else if (extract_infobox_links_) {
+          // Extract links from info box theme.
+          Frame f(store, link);
+          if (f.IsA(n_infobox_)) {
             ExtractInfoboxLinks(f, links);
           }
         }
@@ -143,6 +143,9 @@ class WikipediaLinkExtractor : public task::DocumentProcessor {
   // Output channel and accumulator for fan-in statistics.
   task::Channel *fanin_ = nullptr;
   task::Accumulator fanin_counts_;
+
+  // Symbols.
+  Name n_infobox_{names_, "/wp/infobox"};
 
   // Counters.
   task::Counter *num_links_;

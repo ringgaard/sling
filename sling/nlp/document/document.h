@@ -22,7 +22,7 @@
 #include "sling/base/types.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
-#include "sling/nlp/document/token-breaks.h"
+#include "sling/nlp/document/token-properties.h"
 #include "sling/string/text.h"
 #include "sling/util/unicode.h"
 
