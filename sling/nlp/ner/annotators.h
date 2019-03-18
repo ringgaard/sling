@@ -268,6 +268,9 @@ class MeasureAnnotator {
   void Annotate(const PhraseTable &aliases, SpanChart *chart);
 
  private:
+  // Check if item is a unit.
+  bool IsUnit(const Frame &item);
+
   // Add quantity with amount and unit to chart.
   void AddQuantity(SpanChart *chart, int begin, int end,
                    Handle amount, Handle unit);

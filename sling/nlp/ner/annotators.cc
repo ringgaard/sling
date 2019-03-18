@@ -205,6 +205,8 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q202444",    SPAN_GIVEN_NAME},       // given name
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
     {"Q838948",    SPAN_ART},              // work of art
+    {"Q47461344",  SPAN_ART},              // written work
+    {"Q17537576",  SPAN_ART},              // creative work
     {nullptr, 0},
   };
 
@@ -687,21 +689,23 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
 
       // Get unit.
       Handle unit = Handle::nil();
-      PhraseTable::MatchList matches;
-      aliases.GetMatches(span.matches, &matches);
-      for (auto &match : matches) {
-        if (!match.reliable) continue;
-        Frame item(store, match.item);
-        for (const Slot &s : item) {
-          if (s.name == n_instance_of_) {
-            Handle type = store->Resolve(s.value);
-            if (units_.count(type) > 0) {
-              unit = match.item;
-              break;
-            }
+      if (span.aux.IsNil()) {
+        PhraseTable::MatchList matches;
+        aliases.GetMatches(span.matches, &matches);
+        for (auto &match : matches) {
+          if (!match.reliable) continue;
+          Frame item(store, match.item);
+          if (IsUnit(item)) {
+            unit = match.item;
+            break;
           }
+          if (!unit.IsNil()) break;
         }
-        if (!unit.IsNil()) break;
+      } else {
+        Frame item(store, span.aux);
+        if (IsUnit(item)) {
+          unit = span.aux;
+        }
       }
       if (unit.IsNil()) continue;
 
@@ -753,6 +757,16 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
       }
     }
   }
+}
+
+bool MeasureAnnotator::IsUnit(const Frame &item) {
+  for (const Slot &s : item) {
+    if (s.name == n_instance_of_) {
+      Handle type = item.store()->Resolve(s.value);
+      if (units_.count(type) > 0) return true;
+    }
+  }
+  return false;
 }
 
 void MeasureAnnotator::AddQuantity(SpanChart *chart, int begin, int end,
@@ -1033,6 +1047,20 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
       // Resolve span to entity in knowledge base.
       bool resolved = false;
       if (resolve_span && item.matches != nullptr) {
+#if 0
+        // TEST
+        LOG(INFO) << "Mention: " << output->PhraseText(begin, end);
+        Resolver::Candidates candidates(3);
+        resolver.Score(span->Fingerprint(), span->Form(), &candidates);
+        candidates.sort();
+        for (const auto &candidate : candidates) {
+          Frame item(document.store(), candidate.entity);
+          LOG(INFO) << "  " << candidate.score << " " << item.Id()
+                    << " " << item.GetString("name")
+                    << " (" << item.GetString("description") << ")";
+        }
+#endif
+
         Handle entity = resolver.Resolve(span->Fingerprint(), span->Form());
         if (!entity.IsNil()) {
           // Evoke resolved entity for span.
