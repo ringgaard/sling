@@ -68,6 +68,10 @@ class SpanChart {
 
   // Return item for token span (0 <= begin < size, 0 < end <= size).
   Item &item(int begin, int end) {
+    DCHECK_GE(begin, 0);
+    DCHECK_LT(begin, size_);
+    DCHECK_GT(end, begin);
+    DCHECK_LE(end, size_);
     return items_[begin * size_ + end - 1];
   }
 

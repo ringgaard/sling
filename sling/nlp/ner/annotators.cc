@@ -85,6 +85,7 @@ void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   for (Span *span : document->spans()) {
     // Skip spans outside the chart.
     if (span->begin() < begin || span->end() > end) continue;
+    if (span->length() == 0) continue;
 
     // Get evoked frame for span.
     Frame evoked = span->Evoked();
@@ -701,7 +702,7 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
           }
           if (!unit.IsNil()) break;
         }
-      } else {
+      } else if (store->IsFrame(span.aux)) {
         Frame item(store, span.aux);
         if (IsUnit(item)) {
           unit = span.aux;
@@ -734,13 +735,13 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         break;
       }
 
-      // Find number to the right for currency (e.g. USD 100).
+      // Find number to the right of currency (e.g. USD 100).
       if (span.is(SPAN_CURRENCY)) {
         int right_begin = e;
         int right_end = std::min(right_begin + chart->maxlen(), chart->size());
         Handle number = Handle::nil();
         int end;
-        for (int right = right_end - 1; right >= right_begin; --right) {
+        for (int right = right_end; right > right_begin; --right) {
           SpanChart::Item &number_span = chart->item(right_begin, right);
           if (!number_span.is(SPAN_NUMBER)) continue;
           if (number_span.aux.IsNumber()) {
