@@ -160,7 +160,8 @@ void EmphasisAnnotator::Annotate(SpanChart *chart) {
       }
 
       // Only annotate italic phrase if length is below the threshold.
-      if (e - b <= max_length && chart->item(b, e).aux.IsNil()) {
+      auto &item = chart->item(b, e);
+      if (e - b <= max_length && item.aux.IsNil() && item.matches == nullptr) {
         chart->Add(b + offset, e + offset, kItalicMarker, SPAN_EMPHASIS);
       }
     }
@@ -175,7 +176,8 @@ void EmphasisAnnotator::Annotate(SpanChart *chart) {
       }
 
       // Only annotate bold phrase if length is below the threshold.
-      if (e - b <= max_length && chart->item(b, e).aux.IsNil()) {
+      auto &item = chart->item(b, e);
+      if (e - b <= max_length && item.aux.IsNil() && item.matches == nullptr) {
         chart->Add(b + offset, e + offset, kBoldMarker, SPAN_EMPHASIS);
       }
     }
@@ -844,10 +846,10 @@ int DateAnnotator::GetYear(const PhraseTable &aliases,
       year = FindMatch(aliases, span.matches, n_year_bc_, store);
     }
 
-    // Get year from match.
+    // Get year from match. Year 0 exists (Q23104) but is not a valid year.
     if (!year.IsNil()) {
       Date date(Object(store, year));
-      if (date.precision == Date::YEAR) {
+      if (date.precision == Date::YEAR && date.year != 0) {
         *end = e;
         return date.year;
       }
@@ -861,7 +863,6 @@ int DateAnnotator::GetYear(const PhraseTable &aliases,
 void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   const Document *document = chart->document();
   Store *store = document->store();
-  PhraseTable::MatchList matches;
   for (int b = 0; b < chart->size(); ++b) {
     int end = std::min(b + chart->maxlen(), chart->size());
     for (int e = end; e > b; --e) {
