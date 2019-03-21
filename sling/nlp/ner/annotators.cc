@@ -207,6 +207,8 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q101352",    SPAN_FAMILY_NAME},      // family name
     {"Q202444",    SPAN_GIVEN_NAME},       // given name
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
+    {"Q215627",    SPAN_PERSON},           // person
+    {"Q11032",     0},                     // newspaper
     {"Q838948",    SPAN_ART},              // work of art
     {"Q47461344",  SPAN_ART},              // written work
     {"Q17537576",  SPAN_ART},              // creative work
@@ -250,7 +252,8 @@ void SpanTaxonomy::Annotate(const PhraseTable &aliases, SpanChart *chart) {
       } else if (span.matches != nullptr) {
         // Get the matches for the span from the alias table.
         aliases.GetMatches(span.matches, &matchlist);
-        CaseForm form = document->Form(b + chart->begin(), e + chart->begin());
+        CaseForm form = document->PhraseForm(b + chart->begin(),
+                                             e + chart->begin());
         bool matches = false;
         for (const auto &match : matchlist) {
           // Skip candidate if case forms conflict.
@@ -975,7 +978,7 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
 
   // Initialize entity resolver.
   resolve_ = resources.resolve;
-  resolver_names_ = new ResolverNames(commons);
+  resolver_.Init(commons, &aliases_);
 }
 
 void SpanAnnotator::AddStopWords(const std::vector<string> &words) {
@@ -985,12 +988,13 @@ void SpanAnnotator::AddStopWords(const std::vector<string> &words) {
 }
 
 void SpanAnnotator::Annotate(const Document &document, Document *output) {
-  // Initialize entity resolver.
-  Resolver resolver(document.store(), &aliases_, resolver_names_);
+  // Initialize entity resolver context.
+  Store *store = output->store();
+  ResolverContext context(store, &resolver_);
   if (resolve_) {
     // Add focus topic for document to entity resolver context.
     Handle topic = document.top().GetHandle(n_page_item_);
-    if (!topic.IsNil()) resolver.AddEntity(topic);
+    if (!topic.IsNil()) context.AddEntity(topic);
   }
 
   // Run annotators on each sentence in the input document.
@@ -1031,11 +1035,17 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
           // Add annotated entity to resolver context model.
           resolve_span = false;
           if (resolve_) {
-            resolver.AddEntity(item.aux);
+            context.AddEntity(item.aux);
+
+            // Add first and last names to mention model for persons.
+            if (item.is(SPAN_PERSON) && IsHuman(Frame(store, item.aux))) {
+              int count = context.GetPopularity(item.aux);
+              AddNameParts(document, begin, end, &context, item.aux, count);
+            }
           }
         } else if (!item.aux.IsIndex()) {
           // Output stand-alone number span.
-          Builder b(output->store());
+          Builder b(store);
           b.AddIsA(n_quantity_);
           b.Add(n_amount_, item.aux);
           span->Evoke(b.Create());
@@ -1048,29 +1058,36 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
 
       // Resolve span to entity in knowledge base.
       bool resolved = false;
+
       if (resolve_span && item.matches != nullptr) {
-#if 0
+        ResolverContext::Candidates candidates(1);
+        context.Score(span->Fingerprint(), span->Form(), &candidates);
+#if 1
         // TEST
-        LOG(INFO) << "Mention: " << output->PhraseText(begin, end);
-        Resolver::Candidates candidates(3);
-        resolver.Score(span->Fingerprint(), span->Form(), &candidates);
         candidates.sort();
+        LOG(INFO) << "Mention: " << output->PhraseText(begin, end);
         for (const auto &candidate : candidates) {
-          Frame item(document.store(), candidate.entity);
+          Frame item(store, candidate.entity);
           LOG(INFO) << "  " << candidate.score << " " << item.Id()
                     << " " << item.GetString("name")
-                    << " (" << item.GetString("description") << ")";
+                    << " (" << item.GetString("description") << ")"
+                    << (candidate.local ? " (local)" : "");
         }
 #endif
-
-        Handle entity = resolver.Resolve(span->Fingerprint(), span->Form());
-        if (!entity.IsNil()) {
+        if (!candidates.empty()) {
           // Evoke resolved entity for span.
-          span->Evoke(Builder(output->store()).AddIs(entity).Create());
+          auto &winner = candidates.front();
+          Handle entity = winner.entity;
+          span->Evoke(Builder(store).AddIs(entity).Create());
 
           // Add resolved entity to context model.
-          resolver.AddEntity(entity);
+          context.AddEntity(entity);
           resolved = true;
+
+          // Add first and last names to mention model for persons.
+          if (item.is(SPAN_PERSON) && IsHuman(Frame(store, entity))) {
+            AddNameParts(document, begin, end, &context, entity, winner.count);
+          }
         }
       }
 
@@ -1078,13 +1095,46 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
       if (!resolved && item.aux == kPersonMarker) {
         Builder b(output->store());
         b.Add(n_instance_of_, n_person_);
-        span->Evoke(b.Create());
+        Handle person = b.Create().handle();
+        span->Evoke(person);
+
+        if (resolve_) {
+          // Add first and last name mentions.
+          AddNameParts(document, begin, end, &context, person, 1);
+        }
       }
     });
   }
 
   // Update output document.
   output->Update();
+}
+
+bool SpanAnnotator::IsHuman(const Frame &item) const {
+  for (const Slot &s : item) {
+    if (s.name == n_instance_of_ && s.value == n_human_) return true;
+  }
+  return false;
+}
+
+void SpanAnnotator::AddNameParts(const Document &document, int begin, int end,
+                                 ResolverContext *context,
+                                 Handle entity, int count) {
+  // Add suffixes, i.e. last names.
+  for (int b = begin + 1; b < end; b++) {
+    if (document.token(b).skipped()) continue;
+    uint64 fp = document.PhraseFingerprint(b, end);
+    CaseForm form = document.PhraseForm(b, end);
+    context->AddMention(fp, form, entity, count);
+  }
+
+  // Add prefixes, i.e. first names.
+  for (int e = end - 1; e > begin; e--) {
+    if (document.token(e - 1).skipped()) continue;
+    uint64 fp = document.PhraseFingerprint(begin, e);
+    CaseForm form = document.PhraseForm(begin, e);
+    context->AddMention(fp, form, entity, count);
+  }
 }
 
 }  // namespace nlp

@@ -55,7 +55,8 @@ enum SpanFlags {
   SPAN_INITIALS          = (1 << 19),
   SPAN_DASH              = (1 << 20),
   SPAN_SUFFIX            = (1 << 21),
-  SPAN_ART               = (1 << 22),
+  SPAN_PERSON            = (1 << 22),
+  SPAN_ART               = (1 << 23),
 };
 
 // Span markers.
@@ -343,8 +344,6 @@ class SpanAnnotator {
     bool resolve = false;  // resolve spans to entities in knowledge base
   };
 
-  ~SpanAnnotator() { if (resolver_names_) resolver_names_->Release(); }
-
   // Initialize annotator.
   void Init(Store *commons, const Resources &resources);
 
@@ -355,6 +354,14 @@ class SpanAnnotator {
   void Annotate(const Document &document, Document *output);
 
  private:
+  // Check if item is a human.
+  bool IsHuman(const Frame &item) const;
+
+  // Add person name parts as local mentions to context.
+  void AddNameParts(const Document &document, int begin, int end,
+                    ResolverContext *context,
+                    Handle entity, int count);
+
   // Phrase table with aliases.
   PhraseTable aliases_;
 
@@ -364,8 +371,8 @@ class SpanAnnotator {
   // Resolve spans to entities in the knowledge base.
   bool resolve_ = false;
 
-  // Schema for entity resolver.
-  ResolverNames *resolver_names_ = nullptr;
+  // Entity resolver.
+  EntityResolver resolver_;
 
   // Annotators.
   SpanPopulator populator_;
@@ -387,6 +394,7 @@ class SpanAnnotator {
   Name n_amount_{names_, "/w/amount"};
   Name n_instance_of_{names_, "P31"};
   Name n_person_{names_, "Q215627"};
+  Name n_human_{names_, "Q5"};
   Name n_page_item_{names_, "/wp/page/item"};
 
   // Maximum phrase length.
