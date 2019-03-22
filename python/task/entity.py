@@ -113,9 +113,8 @@ class EntityWorkflow:
 
   def fuse_items(self):
     """Fuse items including the link graph."""
-    return self.wiki.fuse_items(extras=self.wikilinks() +[self.fanin()],
+    return self.wiki.fuse_items(extras=self.wikilinks() + [self.fanin()],
                                 output=self.fused_items())
-
   #---------------------------------------------------------------------------
   # Knowledge base
   #---------------------------------------------------------------------------

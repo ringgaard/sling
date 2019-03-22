@@ -47,8 +47,8 @@ class VocabularyMapper : public DocumentProcessor {
     normalization_ = ParseNormalization(task->Get("normalization", "cln"));
 
     // Pruning threshold for skipping short documents.
-    task->Fetch("min_document_length", &min_document_legth_);
-    if (min_document_legth_ > 0) {
+    task->Fetch("min_document_length", &min_document_length_);
+    if (min_document_length_ > 0) {
       num_short_documents_ = task->GetCounter("short_documents");
       num_short_tokens_ = task->GetCounter("short_tokens");
     }
@@ -61,12 +61,11 @@ class VocabularyMapper : public DocumentProcessor {
 
     // Get document counter.
     num_idf_documents_ = task->GetCounter("idf_documents");
-
   }
 
   void Process(Slice key, const Document &document) override {
     // Skip short document.
-    if (document.num_tokens() < min_document_legth_) {
+    if (document.num_tokens() < min_document_length_) {
       num_short_documents_->Increment();
       num_short_tokens_->Increment(document.num_tokens());
       return;
@@ -110,7 +109,7 @@ class VocabularyMapper : public DocumentProcessor {
   Normalization normalization_;
 
   // Minimum number of tokens in document that are used for extacting words.
-  int min_document_legth_ = 0;
+  int min_document_length_ = 0;
   Counter *num_short_documents_ = nullptr;
   Counter *num_short_tokens_ = nullptr;
 

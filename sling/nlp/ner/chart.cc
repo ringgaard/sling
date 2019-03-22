@@ -122,7 +122,9 @@ void SpanChart::Extract(Document *output) {
     if (!item.aux.IsNil()) {
       // Add span annotation for auxiliary item.
       Span *span = output->AddSpan(begin, end);
-      span->Evoke(item.aux);
+      if (span != nullptr) {
+        span->Evoke(item.aux);
+      }
     } else if (item.matches != nullptr) {
       // Add span annotation for match.
       output->AddSpan(begin, end);

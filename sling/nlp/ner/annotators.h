@@ -104,7 +104,7 @@ class SpanImporter {
 };
 
 // Prune common words from chart. Common words are classified as words with
-// IDF (Inverse Document Frequency) below the theshold. Only lowercase words
+// IDF (Inverse Document Frequency) below the threshold. Only lowercase words
 // are pruned from the span chart.
 class CommonWordPruner {
  public:
@@ -221,7 +221,6 @@ class NumberAnnotator {
 
   // Symbols.
   Names names_;
-  Name n_natural_number_{names_, "Q21199"};
   Name n_lang_{names_, "lang"};
   Name n_english_{names_, "/lang/en"};
   Name n_time_{names_, "/w/time"};
@@ -239,7 +238,6 @@ class SpelledNumberAnnotator {
  private:
   // Symbols.
   Names names_;
-  Name n_natural_number_{names_, "Q21199"};
   Name n_numeric_value_{names_, "P1181"};
 };
 
