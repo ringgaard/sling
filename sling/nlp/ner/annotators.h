@@ -37,26 +37,27 @@ enum SpanFlags {
   SPAN_NUMBER            = (1 << 1),
   SPAN_NATURAL_NUMBER    = (1 << 2),
   SPAN_UNIT              = (1 << 3),
-  SPAN_CURRENCY          = (1 << 4),
-  SPAN_MEASURE           = (1 << 5),
-  SPAN_GEO               = (1 << 6),
-  SPAN_YEAR              = (1 << 7),
-  SPAN_YEAR_BC           = (1 << 8),
-  SPAN_MONTH             = (1 << 9),
-  SPAN_WEEKDAY           = (1 << 10),
-  SPAN_CALENDAR_MONTH    = (1 << 11),
-  SPAN_CALENDAR_DAY      = (1 << 12),
-  SPAN_DAY_OF_YEAR       = (1 << 13),
-  SPAN_DECADE            = (1 << 14),
-  SPAN_CENTURY           = (1 << 15),
-  SPAN_DATE              = (1 << 16),
-  SPAN_FAMILY_NAME       = (1 << 17),
-  SPAN_GIVEN_NAME        = (1 << 18),
-  SPAN_INITIALS          = (1 << 19),
-  SPAN_DASH              = (1 << 20),
-  SPAN_SUFFIX            = (1 << 21),
-  SPAN_PERSON            = (1 << 22),
-  SPAN_ART               = (1 << 23),
+  SPAN_UNIT_OF_AMOUNT    = (1 << 4),
+  SPAN_CURRENCY          = (1 << 5),
+  SPAN_MEASURE           = (1 << 6),
+  SPAN_GEO               = (1 << 7),
+  SPAN_YEAR              = (1 << 8),
+  SPAN_YEAR_BC           = (1 << 9),
+  SPAN_MONTH             = (1 << 10),
+  SPAN_WEEKDAY           = (1 << 11),
+  SPAN_CALENDAR_MONTH    = (1 << 12),
+  SPAN_CALENDAR_DAY      = (1 << 13),
+  SPAN_DAY_OF_YEAR       = (1 << 14),
+  SPAN_DECADE            = (1 << 15),
+  SPAN_CENTURY           = (1 << 16),
+  SPAN_DATE              = (1 << 17),
+  SPAN_FAMILY_NAME       = (1 << 18),
+  SPAN_GIVEN_NAME        = (1 << 19),
+  SPAN_INITIALS          = (1 << 20),
+  SPAN_DASH              = (1 << 21),
+  SPAN_SUFFIX            = (1 << 22),
+  SPAN_PERSON            = (1 << 23),
+  SPAN_ART               = (1 << 24),
 };
 
 // Span markers.
@@ -254,6 +255,10 @@ class NumberScaleAnnotator {
  private:
   // Mapping from item for scale to scalar.
   HandleMap<float> scalars_;
+
+  // Symbols.
+  Names names_;
+  Name n_numeric_value_{names_, "P1181"};
 };
 
 // Annotate measures in the document. A measure is a number followed by a

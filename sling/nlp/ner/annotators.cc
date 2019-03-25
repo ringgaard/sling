@@ -27,6 +27,11 @@ Handle kBoldMarker = Handle::Index(2);
 Handle kPersonMarker = Handle::Index(3);
 Handle kRedlinkMarker = Handle::Index(4);
 
+// Markers are implemented as index handles.
+static bool IsMarker(Handle h) {
+  return h.IsIndex();
+}
+
 void SpanPopulator::Annotate(const PhraseTable &aliases,
                              SpanChart *chart) {
   // Spans cannot start or end on stop words.
@@ -201,6 +206,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q39911",     SPAN_DECADE},           // decade
     {"Q578",       SPAN_CENTURY},          // century
     {"Q21199",     SPAN_NATURAL_NUMBER},   // natural number
+    {"Q2360980",   SPAN_UNIT_OF_AMOUNT},   // unit of amount
     {"Q8142",      SPAN_CURRENCY},         // currency
     {"Q47574",     SPAN_UNIT},             // unit of measurement
     {"Q27084",     SPAN_UNIT},             // parts-per notation
@@ -392,9 +398,7 @@ bool PersonNameAnnotator::Covered(SpanChart *chart, int begin, int end) {
   for (int b = begin; b < end; ++b) {
     for (int e = b + 1; e <= end; ++e) {
       SpanChart::Item &span = chart->item(b, e);
-      if (!span.aux.IsNil() && !span.aux.IsIndex()) {
-        return true;
-      }
+      if (!span.aux.IsNil()) return true;
     }
   }
 
@@ -444,7 +448,7 @@ void NumberAnnotator::Annotate(SpanChart *chart) {
       if (c >= '0' && c <= '9') {
         has_digits = true;
       } else {
-        all_digits = true;
+        all_digits = false;
       }
     }
     if (!has_digits) continue;
@@ -483,14 +487,18 @@ Handle NumberAnnotator::ParseNumber(Text str, char tsep, char dsep, char msep) {
     p++;
   }
 
-  // Parse integer part.
+  // Parse integer part. The thousand groups must be two or three digits except
+  // for the last, which should always be three digits. Indian numbers use two
+  // two digit groups for lakhs and crores.
   double value = 0.0;
   const char *group = nullptr;
   while (p < end) {
     if (*p >= '0' && *p <= '9') {
       value = value * 10.0 + (*p++ - '0');
     } else if (*p == tsep) {
-      if (group != nullptr && p - group != 3) return Handle::nil();
+      if (group != nullptr && p - group != 3 && p - group != 2) {
+        return Handle::nil();
+      }
       group = p + 1;
       p++;
     } else if (*p == dsep) {
@@ -597,6 +605,7 @@ void NumberScaleAnnotator::Init(Store *store) {
     {nullptr, 0},
   };
 
+  CHECK(names_.Bind(store));
   for (auto *scale = scalars; scale->first != nullptr; ++scale) {
     const char *qid = scale->first;
     float scalar = scale->second;
@@ -613,17 +622,29 @@ void NumberScaleAnnotator::Annotate(const PhraseTable &aliases,
     for (int e = end; e > b; --e) {
       // Only consider number spans.
       SpanChart::Item &span = chart->item(b, e);
-      if (!span.is(SPAN_NATURAL_NUMBER)) continue;
 
       // Get scalar.
       float scale = 0;
-      Handles matches(store);
-      aliases.GetMatches(span.matches, &matches);
-      for (Handle item : matches) {
-        auto f = scalars_.find(item);
-        if (f != scalars_.end()) {
-          scale = f->second;
-          break;
+      if (span.is(SPAN_NATURAL_NUMBER)) {
+        Handles matches(store);
+        aliases.GetMatches(span.matches, &matches);
+        for (Handle item : matches) {
+          auto f = scalars_.find(item);
+          if (f != scalars_.end()) {
+            scale = f->second;
+            break;
+          }
+        }
+      } else if (span.is(SPAN_UNIT_OF_AMOUNT)) {
+        Handles matches(store);
+        aliases.GetMatches(span.matches, &matches);
+        for (Handle item : matches) {
+          Frame unit(store, item);
+          Handle value = unit.GetHandle(n_numeric_value_);
+          if (value.IsInt()) {
+            scale = value.AsInt();
+            break;
+          }
         }
       }
       if (scale == 0) continue;
@@ -921,7 +942,6 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
             break;
           }
         }
-        break;
       } else if (span.is(SPAN_YEAR) && !span.is(SPAN_NUMBER)) {
         // Year.
         Handle h = FindMatch(aliases, span.matches, n_year_, store);
@@ -1043,7 +1063,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
               AddNameParts(document, begin, end, &context, item.aux, count);
             }
           }
-        } else if (!item.aux.IsIndex()) {
+        } else if (!IsMarker(item.aux)) {
           // Output stand-alone number span.
           Builder b(store);
           b.AddIsA(n_quantity_);
