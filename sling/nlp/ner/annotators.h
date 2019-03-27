@@ -17,6 +17,7 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "sling/base/types.h"
@@ -56,8 +57,10 @@ enum SpanFlags {
   SPAN_INITIALS          = (1 << 20),
   SPAN_DASH              = (1 << 21),
   SPAN_SUFFIX            = (1 << 22),
-  SPAN_PERSON            = (1 << 23),
-  SPAN_ART               = (1 << 24),
+  SPAN_ABBREVIATED       = (1 << 23),
+  SPAN_ABBREVIATION      = (1 << 24),
+  SPAN_PERSON            = (1 << 25),
+  SPAN_ART               = (1 << 26),
 };
 
 // Span markers.
@@ -65,6 +68,8 @@ extern Handle kItalicMarker;
 extern Handle kBoldMarker;
 extern Handle kPersonMarker;
 extern Handle kRedlinkMarker;
+extern Handle kAbbreviatedMarker;
+extern Handle kAbbreviationMarker;
 
 // Populate chart with phrase matches. It looks up all spans (up to the maximum
 // span length) in the alias table and adds the matches to the chart. Spans
@@ -334,6 +339,25 @@ class DateAnnotator {
   Name n_century_{names_, "Q578"};
 };
 
+// Annotate abbreviated phrases and their abbreviations.
+class AbbreviationAnnotator {
+ public:
+  typedef std::unordered_map<uint64, uint64> Abbreviations;
+
+  // Initialize annotator.
+  void Init();
+
+  // Annotate abbreviations.
+  void Annotate(SpanChart *chart, Abbreviations *abbreviations);
+
+ private:
+  // Convert word to sequence of Unicode code points.
+  static std::vector<int> Letters(Text word);
+
+  // Fingerprints for words that can be skipped in abbreviated phrases.
+  std::unordered_set<uint64> skipwords_;
+};
+
 // Span annotator for annotating a (pre-annotated) document with annotations
 // based on a knowledge base and an alias table. This runs the annotators above
 // on each sentence to create a fully annotated output document.
@@ -390,6 +414,7 @@ class SpanAnnotator {
   CommonWordPruner pruner_;
   CaseScorer case_;
   EmphasisAnnotator emphasis_;
+  AbbreviationAnnotator abbreviated_;
 
   // Symbols.
   Names names_;

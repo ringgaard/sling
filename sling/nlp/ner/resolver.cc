@@ -52,9 +52,9 @@ void ResolverContext::AddMention(uint64 fp, CaseForm form,
   if (mention.entity.IsNil()) {
     mention.entity = entity;
     mention.form = form;
-    mention.count = count;
+    mention.count = count * resolver_->mention_boost_;
   } else if (entity == mention.entity) {
-    mention.count += count;
+    mention.count += count * resolver_->mention_boost_;
   }
 }
 
@@ -91,7 +91,7 @@ void ResolverContext::Score(uint64 fp, CaseForm form,
   candidates->clear();
   for (auto &m : matches) {
     // Compute score for candidate.
-    float score = ContextScore(m.item, resolver_->base_context_score);
+    float context = ContextScore(m.item, resolver_->base_context_score);
 
     // Add scores from outbound links for candidate.
     Frame item(store_, m.item);
@@ -99,21 +99,22 @@ void ResolverContext::Score(uint64 fp, CaseForm form,
       Frame links = item.GetFrame(resolver_->n_links);
       if (links.valid()) {
         for (const Slot &s : links) {
-          score += ContextScore(s.name) * s.value.AsInt();
+          context += ContextScore(s.name) * s.value.AsInt();
         }
       }
     }
 
-    // Add case form penalty.
+    // Combine context score with name prior.
+    float score = context;
+    score *= m.count;
+
+    // Apply case form penalty.
     if (form != CASE_NONE && m.form != CASE_NONE && form != m.form) {
       score *= resolver_->case_form_penalty;
     }
 
-    // Add name prior to score.
-    score *= m.count;
-
     // Add final score to top-k candidate list. Local match has empty id.
-    candidates->push(Candidate(m.item, score, m.count, m.id.empty()));
+    candidates->push(Candidate(m.item, score, m.count, context, m.id.empty()));
   }
 }
 

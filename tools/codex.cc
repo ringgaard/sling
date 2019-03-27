@@ -23,6 +23,8 @@
 #include "sling/file/recordio.h"
 #include "sling/frame/serialization.h"
 #include "sling/frame/store.h"
+#include "sling/nlp/document/document.h"
+#include "sling/nlp/document/lex.h"
 #include "sling/string/printf.h"
 #include "sling/util/fingerprint.h"
 
@@ -30,23 +32,29 @@ DEFINE_bool(keys, false, "Only output keys");
 DEFINE_bool(files, false, "Output file names");
 DEFINE_bool(store, false, "Input is a SLING store");
 DEFINE_bool(frames, false, "Record values as encoded frames");
+DEFINE_bool(lex, false, "Record values as lex encoded documents");
 DEFINE_string(key, "", "Only display records with matching key");
 DEFINE_int32(indent, 2, "Indentation for structured data");
 DEFINE_int32(limit, 0, "Maximum number of records to output");
 DEFINE_bool(utf8, false, "Allow UTF8-encoded output");
 
 using namespace sling;
+using namespace sling::nlp;
 
 int records_output = 0;
 
 void DisplayObject(const Object &object) {
-  StringPrinter printer(object.store());
-  printer.printer()->set_indent(FLAGS_indent);
-  printer.printer()->set_shallow(false);
-  printer.printer()->set_utf8(FLAGS_utf8);
-  printer.Print(object);
-
-  std::cout << printer.text();
+  if (FLAGS_lex && object.IsFrame()) {
+    Document document(object.AsFrame());
+    std::cout << ToLex(document);
+  } else {
+    StringPrinter printer(object.store());
+    printer.printer()->set_indent(FLAGS_indent);
+    printer.printer()->set_shallow(false);
+    printer.printer()->set_utf8(FLAGS_utf8);
+    printer.Print(object);
+    std::cout << printer.text();
+  }
 }
 
 void DisplayObject(const Slice &value) {
@@ -67,7 +75,7 @@ void DisplayRecord(const Slice &key, const Slice &value) {
   // Display value.
   if (!FLAGS_keys) {
     if (!key.empty()) std::cout << ": ";
-    if (FLAGS_frames) {
+    if (FLAGS_frames || FLAGS_lex) {
       DisplayObject(value);
     } else {
       DisplayRaw(value);

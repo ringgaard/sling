@@ -14,10 +14,14 @@
 
 #include "sling/nlp/ner/annotators.h"
 
+#include "sling/base/flags.h"
 #include "sling/frame/object.h"
 #include "sling/frame/serialization.h"
 #include "sling/nlp/document/fingerprinter.h"
 #include "sling/nlp/kb/calendar.h"
+#include "sling/util/unicode.h"
+
+DEFINE_int32(resolver_trace, 0, "Trace resolver scores");
 
 namespace sling {
 namespace nlp {
@@ -26,6 +30,8 @@ Handle kItalicMarker = Handle::Index(1);
 Handle kBoldMarker = Handle::Index(2);
 Handle kPersonMarker = Handle::Index(3);
 Handle kRedlinkMarker = Handle::Index(4);
+Handle kAbbreviatedMarker = Handle::Index(5);
+Handle kAbbreviationMarker = Handle::Index(6);
 
 // Markers are implemented as index handles.
 static bool IsMarker(Handle h) {
@@ -166,7 +172,7 @@ void EmphasisAnnotator::Annotate(SpanChart *chart) {
 
       // Only annotate italic phrase if length is below the threshold.
       auto &item = chart->item(b, e);
-      if (e - b <= max_length && item.aux.IsNil() && item.matches == nullptr) {
+      if (e - b <= max_length && !item.matched()) {
         chart->Add(b + offset, e + offset, kItalicMarker, SPAN_EMPHASIS);
       }
     }
@@ -182,7 +188,7 @@ void EmphasisAnnotator::Annotate(SpanChart *chart) {
 
       // Only annotate bold phrase if length is below the threshold.
       auto &item = chart->item(b, e);
-      if (e - b <= max_length && item.aux.IsNil() && item.matches == nullptr) {
+      if (e - b <= max_length && !item.matched()) {
         chart->Add(b + offset, e + offset, kBoldMarker, SPAN_EMPHASIS);
       }
     }
@@ -383,8 +389,7 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
 
     // Mark span if person name found except if it covers a golden span.
     if (given_names > 0 && !Covered(chart, b, e)) {
-      auto &item = chart->item(b, e);
-      if (item.matches == nullptr && item.aux.IsNil()) {
+      if (!chart->item(b, e).matched()) {
         chart->Add(b + chart->begin(), e + chart->begin(), kPersonMarker);
       }
       b = e;
@@ -414,7 +419,7 @@ void CaseScorer::Annotate(SpanChart *chart) {
       SpanChart::Item &span = chart->item(b, e);
 
       // Do not score resolved spans.
-      if (!span.aux.IsNil() || span.matches == nullptr) continue;
+      if (span.matched()) continue;
 
       // Apply penalty for camel case.
       CaseForm last = chart->token(e - 1).Form();
@@ -974,6 +979,125 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
   }
 }
 
+void AbbreviationAnnotator::Init() {
+  static const char *skipwords[] = {
+    "-", "&",
+    "of", "for", "and", "the", "in",
+    "ltd", "inc", "corp",
+    nullptr,
+  };
+
+  for (const char **word = skipwords; *word != nullptr; ++word) {
+    skipwords_.insert(Fingerprinter::Fingerprint(*word));
+  }
+}
+
+void AbbreviationAnnotator::Annotate(SpanChart *chart,
+                                     Abbreviations *abbreviations) {
+  // Find abbreviations in parentheses.
+  for (int b = 0; b < chart->size() - 3; ++b) {
+    // Check for '(' ABBREV ')' sequence.
+    if (chart->token(b + 1).word() != "(") continue;
+    if (chart->token(b + 2).Form() != CASE_UPPER) continue;
+    if (chart->token(b + 3).word() != ")") continue;
+
+    // Get letters in abbreviation.
+    const string &abbreviation = chart->token(b + 2).word();
+    std::vector<int> letters = Letters(abbreviation);
+    if (letters.size() < 2) continue;
+
+    // Try to match phrase to the left of the abbreviation.
+    int l = letters.size() - 1;
+    int i = b;
+    while (l >= 0 && i >= 0) {
+      const Token &t = chart->token(i);
+      const string &word = t.word();
+      int letter = letters[l];
+
+      // Try to match first letter.
+      int initial = Unicode::ToUpper(UTF8::Decode(word.data(), word.size()));
+      if (initial == letter) {
+        l--;
+        i--;
+        continue;
+      }
+
+      // Check for skipped word.
+      if (skipwords_.count(t.Fingerprint()) > 0) {
+        // Skip word.
+        i--;
+        continue;
+      }
+
+      // The phrase may contain abbreviations itself, e.g. US Air Force (USAF).
+      if (t.Form() == CASE_UPPER) {
+        std::vector<int> sub_letters = Letters(word);
+        int letter_start = l + 1 - sub_letters.size();
+        if (letter_start >= 0) {
+          bool match = true;
+          for (int j = 0; j < sub_letters.size(); ++j) {
+            if (sub_letters[j] != letters[letter_start + j]) {
+              match = false;
+              break;
+            }
+          }
+          if (match) {
+            // Sub-abbreviation match.
+            l -= sub_letters.size();
+            i--;
+            continue;
+          }
+        }
+      }
+
+      // No abbreviation match.
+      break;
+    }
+
+    // Mark abbreviated phrase and abbreviation if a match was found.
+    if (l < 0) {
+      int offset = chart->begin();
+      int phrase_begin = i + 1;
+      int phrase_end = b + 1;
+      int abbrev_begin = b + 2;
+      int abbrev_end = b + 3;
+
+      // Mark abbreviated phrase.
+      auto &phrase_item = chart->item(phrase_begin, phrase_end);
+      phrase_item.flags |= SPAN_ABBREVIATED;
+      if (!phrase_item.matched()) {
+        chart->Add(phrase_begin + offset, phrase_end + offset,
+                   kAbbreviatedMarker);
+      }
+
+      // Mark abbreviation.
+      auto &abbrev_item = chart->item(abbrev_begin, abbrev_end);
+      abbrev_item.flags |= SPAN_ABBREVIATION;
+      if (!abbrev_item.matched()) {
+        chart->Add(abbrev_begin + offset, abbrev_end + offset,
+                   kAbbreviationMarker);
+      }
+
+      // Add abbreviation to abbreviation mapping.
+      uint64 phrase_fp = chart->fingerprint(phrase_begin, phrase_end);
+      uint64 abbrev_fp = chart->fingerprint(abbrev_begin, abbrev_end);
+      (*abbreviations)[phrase_fp] = abbrev_fp;
+    }
+  }
+}
+
+std::vector<int> AbbreviationAnnotator::Letters(Text word) {
+  std::vector<int> letters;
+  const char *s = word.data();
+  const char *end = s + word.size();
+  while (s < end) {
+    int code = UTF8::Decode(s);
+    if (Unicode::IsLetter(code)) letters.push_back(code);
+    s = UTF8::Next(s);
+  }
+  return letters;
+}
+
 void SpanAnnotator::Init(Store *commons, const Resources &resources) {
   // Load resources.
   CHECK(names_.Bind(commons));
@@ -995,6 +1119,7 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
   scales_.Init(commons);
   measures_.Init(commons);
   dates_.Init(commons);
+  abbreviated_.Init();
 
   // Initialize entity resolver.
   resolve_ = resources.resolve;
@@ -1024,6 +1149,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     if (first.style() & HEADING_BEGIN) continue;
 
     // Make chart for sentence.
+    AbbreviationAnnotator::Abbreviations abbreviations;
     SpanChart chart(&document, s.begin(), s.end(), max_phrase_length);
 
     // Run annotators.
@@ -1036,6 +1162,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     scales_.Annotate(aliases_, &chart);
     measures_.Annotate(aliases_, &chart);
     dates_.Annotate(aliases_, &chart);
+    abbreviated_.Annotate(&chart, &abbreviations);
     pruner_.Annotate(dictionary_, &chart);
     case_.Annotate(&chart);
     emphasis_.Annotate(&chart);
@@ -1064,7 +1191,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
             }
           }
         } else if (!IsMarker(item.aux)) {
-          // Output stand-alone number span.
+          // Output stand-alone quantity annotation.
           Builder b(store);
           b.AddIsA(n_quantity_);
           b.Add(n_amount_, item.aux);
@@ -1079,21 +1206,25 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
       // Resolve span to entity in knowledge base.
       bool resolved = false;
 
-      if (resolve_span && item.matches != nullptr) {
-        ResolverContext::Candidates candidates(1);
+      if (resolve_span && item.matched()) {
+        // Resolve mentioned entity.
+        int k = FLAGS_resolver_trace == 0 ? 1 : FLAGS_resolver_trace;
+        ResolverContext::Candidates candidates(k);
         context.Score(span->Fingerprint(), span->Form(), &candidates);
-#if 1
-        // TEST
-        candidates.sort();
-        LOG(INFO) << "Mention: " << output->PhraseText(begin, end);
-        for (const auto &candidate : candidates) {
-          Frame item(store, candidate.entity);
-          LOG(INFO) << "  " << candidate.score << " " << item.Id()
-                    << " " << item.GetString("name")
-                    << " (" << item.GetString("description") << ")"
-                    << (candidate.local ? " (local)" : "");
+
+        // Optionally, output resolver scores.
+        if (FLAGS_resolver_trace > 0) {
+          candidates.sort();
+          LOG(INFO) << "Mention: " << span->GetText();
+          for (const auto &candidate : candidates) {
+            Frame item(store, candidate.entity);
+            LOG(INFO) << "  " << candidate.score << " " << item.Id()
+                      << " " << item.GetString("name")
+                      << " (" << item.GetString("description") << ")"
+                      << (candidate.local ? " (local)" : "");
+          }
         }
-#endif
+
         if (!candidates.empty()) {
           // Evoke resolved entity for span.
           auto &winner = candidates.front();
@@ -1107,6 +1238,14 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
           // Add first and last names to mention model for persons.
           if (item.is(SPAN_PERSON) && IsHuman(Frame(store, entity))) {
             AddNameParts(document, begin, end, &context, entity, winner.count);
+          }
+
+          // Add abbreviation as local mention for resolved abbreviated phrase.
+          if (item.is(SPAN_ABBREVIATED)) {
+            auto f = abbreviations.find(span->Fingerprint());
+            if (f != abbreviations.end()) {
+              context.AddMention(f->second, CASE_UPPER, entity, winner.count);
+            }
           }
         }
       }

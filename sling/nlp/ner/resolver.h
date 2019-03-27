@@ -48,6 +48,7 @@ class EntityResolver {
   float mention_weight_ = 100.0;
   float base_context_score = 1e-3;
   float case_form_penalty = 0.1;
+  int mention_boost_ = 10;
 
   friend class ResolverContext;
 };
@@ -59,8 +60,9 @@ class ResolverContext {
  public:
   // Entity resolution candidate.
   struct Candidate {
-    Candidate(Handle entity, float score, int count, bool local)
-        : entity(entity), score(score), count(count), local(local) {}
+    Candidate(Handle entity, float score, int count, float context, bool local)
+        : entity(entity), score(score), count(count), context(context),
+          local(local) {}
 
     // Candidate comparison operator.
     bool operator >(const Candidate &other) const {
@@ -70,6 +72,7 @@ class ResolverContext {
     Handle entity;       // item for candidate entity
     float score;         // score for candidate
     int count;           // entity prior frequency
+    float context;       // context score
     bool local;          // local mention
   };
 

@@ -44,6 +44,7 @@ void SpanChart::Add(int begin, int end, Handle match, int flags) {
   Item &span = item(begin - begin_, end - begin_);
   span.aux = match;
   span.flags |= flags;
+  span.cost = 1;
   if (match.IsRef()) tracking_.push_back(match);
   if (end - begin > maxlen_) maxlen_ = end - begin;
 }
