@@ -22,6 +22,7 @@
 #include "sling/util/unicode.h"
 
 DEFINE_int32(resolver_trace, 0, "Trace resolver scores");
+DEFINE_bool(dump_chart, false, "Dump span chart");
 
 namespace sling {
 namespace nlp {
@@ -419,7 +420,7 @@ void CaseScorer::Annotate(SpanChart *chart) {
       SpanChart::Item &span = chart->item(b, e);
 
       // Do not score resolved spans.
-      if (span.matched()) continue;
+      if (!span.aux.IsNil()) continue;
 
       // Apply penalty for camel case.
       CaseForm last = chart->token(e - 1).Form();
@@ -1167,7 +1168,26 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     case_.Annotate(&chart);
     emphasis_.Annotate(&chart);
 
-    // Compute best span covering and extract it to the output document.
+    // Compute best span covering.
+    chart.Solve();
+
+    // Optionally dump chart.
+    if (FLAGS_dump_chart) {
+      for (int b = 0; b < chart.size(); ++b) {
+        for (int e = b + 1; e <= chart.size(); ++e) {
+          auto &item= chart.item(b, e);
+          if (item.split != -1) {
+            LOG(INFO) << chart.phrase(b, b + item.split) << "|"
+                      << chart.phrase(b + item.split, e)
+                      << ": " << item.cost;
+          } else {
+            LOG(INFO) << chart.phrase(b, e) << ": " << item.cost;
+          }
+        }
+      }
+    }
+
+    // Extract best span covering to the output document.
     chart.Solve();
     chart.Extract([&](int begin, int end, const SpanChart::Item &item) {
       bool resolve_span = resolve_;
