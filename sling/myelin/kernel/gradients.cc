@@ -100,7 +100,8 @@ void div_grad(Flow::Operation *op, Gradients *g) {
 void square_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->Mul(g->d(y), g->Mul(g->Two(), g->v(x))));
+  auto two = g->Two(g->v(x)->type);
+  g->add(x, g->Mul(g->d(y), g->Mul(two, g->v(x))));
 }
 
 // y = sqrt(x)
@@ -108,7 +109,8 @@ void square_grad(Flow::Operation *op, Gradients *g) {
 void sqrt_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->Div(g->d(y), g->Mul(g->Two(), g->v(y))));
+  auto two = g->Two(g->v(y)->type);
+  g->add(x, g->Div(g->d(y), g->Mul(two, g->v(y))));
 }
 
 // y = 1 / x
@@ -164,7 +166,8 @@ void log_grad(Flow::Operation *op, Gradients *g) {
 void sigmoid_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->Mul(g->d(y), g->Mul(g->v(y), g->Sub(g->One(), g->v(y)))));
+  auto one = g->One(g->v(y)->type);
+  g->add(x, g->Mul(g->d(y), g->Mul(g->v(y), g->Sub(one, g->v(y)))));
 }
 
 // y = tanh(x)
@@ -172,7 +175,8 @@ void sigmoid_grad(Flow::Operation *op, Gradients *g) {
 void tanh_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->Mul(g->d(y), g->Sub(g->One(), g->Square(g->v(y)))));
+  auto one = g->One(g->v(y)->type);
+  g->add(x, g->Mul(g->d(y), g->Sub(one, g->Square(g->v(y)))));
 }
 
 // y = relu(x) = max(0, x)
@@ -180,7 +184,8 @@ void tanh_grad(Flow::Operation *op, Gradients *g) {
 void relu_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->Select(g->Greater(g->v(x), g->Zero()), g->d(y)));
+  auto zero = g->Zero(g->v(x)->type);
+  g->add(x, g->Select(g->Greater(g->v(x), zero), g->d(y)));
 }
 
 // y = norm(x) = sqrt(sum(square(x))) = |x|

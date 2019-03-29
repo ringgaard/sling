@@ -489,6 +489,7 @@ class Flow {
     enum Flag {
       NONE = 0,       // no flags
       TRAINING = 1,   // function only needed for training
+      BACKPROP = 2,   // build gradient for function
     };
 
     // Add operation to function.
@@ -501,6 +502,15 @@ class Flow {
     }
     Function *clear_training(bool disable = true) {
       return clear(TRAINING, disable);
+    }
+
+    // Back-propagation flag.
+    bool backprop() const { return is(BACKPROP); }
+    Function *set_backkprop(bool enable = true) {
+      return set(BACKPROP, enable);
+    }
+    Function *clear_backprop(bool disable = true) {
+      return clear(BACKPROP, disable);
     }
 
     std::vector<Operation *> ops;     // ops for function in compute order

@@ -175,6 +175,17 @@ class Variable(object):
     else:
       self.flags &= ~4
 
+  @property
+  def unique(self):
+    return (self.flags & 16) != 0
+
+  @unique.setter
+  def unique(self, value):
+    if value:
+      self.flags |= 16
+    else:
+      self.flags &= ~16
+
   def shape_defined(self):
     for d in self.shape:
       if d == -1: return False
@@ -265,6 +276,17 @@ class Function(object):
     """Add operation to function."""
     self.ops.append(op)
     op.func = self
+
+  @property
+  def backprop(self):
+    return (self.flags & 2) != 0
+
+  @backprop.setter
+  def backprop(self, value):
+    if value:
+      self.flags |= 2
+    else:
+      self.flags &= ~2
 
   def __str__(self):
     s = "func " + self.name + " {\n"

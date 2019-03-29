@@ -113,6 +113,7 @@ class FlowBuilder : public Scope {
   // Add constant to flow.
   Variable *Const(const void *data, Type type, const Shape &shape);
   Variable *Const(float value) { return Const(&value, DT_FLOAT, {}); }
+  Variable *Const(double value) { return Const(&value, DT_DOUBLE, {}); }
   Variable *Const(int value) { return Const(&value, DT_INT32, {}); }
   Variable *Const(std::vector<float> &value) {
     int size = value.size();
@@ -132,9 +133,9 @@ class FlowBuilder : public Scope {
     return Op("OneHot", {index}, DT_FLOAT, {size});
   }
 
-  Variable *Zero() { return Const(0.0f); }
-  Variable *One() { return Const(1.0f); }
-  Variable *Two() { return Const(2.0f); }
+  Variable *Zero(Type type = DT_FLOAT);
+  Variable *One(Type type = DT_FLOAT);
+  Variable *Two(Type type = DT_FLOAT);
 
   // Add instance reference to other function.
   Variable *Instance(Function *func);
@@ -183,9 +184,9 @@ class FlowBuilder : public Scope {
     return NoGradient(Op("GreaterEqual", {x, y}));
   }
 
-  Variable *IsZero(Variable *x) { return Equal(x, Zero()); }
-  Variable *IsPositive(Variable *x) { return Greater(x, Zero()); }
-  Variable *IsNegative(Variable *x) { return Less(x, Zero()); }
+  Variable *IsZero(Variable *x) { return Equal(x, Zero(x->type)); }
+  Variable *IsPositive(Variable *x) { return Greater(x, Zero(x->type)); }
+  Variable *IsNegative(Variable *x) { return Less(x, Zero(x->type)); }
 
   // Logic operators.
   Variable *And(Variable *x, Variable *y) {

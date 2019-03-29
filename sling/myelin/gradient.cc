@@ -95,7 +95,7 @@ Flow::Function *Gradients::Finalize() {
         CHECK(dv->consumers.empty());
         AssignAdd(dv, terms);
         dv->set_out();
-      } else if (v->in() && !v->unique() && dv->consumers.empty()) {
+      } else if (v->in() && v->ref() && !v->unique() && dv->consumers.empty()) {
         // Accumulate output gradient.
         AssignAdd(dv, terms);
       } else {
