@@ -155,9 +155,11 @@ class FlowBuilder : public Scope {
   Variable *Sqrt(Variable *x) { return Op("Sqrt", {x}); }
   Variable *Reciprocal(Variable *x) { return Op("Reciprocal", {x}); }
   Variable *Abs(Variable *x) { return Op("Abs", {x}); }
+  Variable *Sign(Variable *x) { return Op("Sign", {x}); }
   Variable *Log(Variable *x) { return Op("Log", {x}); }
   Variable *Exp(Variable *x) { return Op("Exp", {x}); }
   Variable *Tanh(Variable *x) { return Op("Tanh", {x}); }
+  Variable *Erf(Variable *x) { return Op("Erf", {x}); }
   Variable *Sigmoid(Variable *x) { return Op("Sigmoid", {x}); }
   Variable *Relu(Variable *x) { return Op("Relu", {x}); }
   Variable *Identity(Variable *x) { return Op("Identity", {x}); }

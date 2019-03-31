@@ -126,6 +126,9 @@ struct PyCell : public PyBase {
   // tensors in instances.
   PyObject *Index(PyObject *key);
 
+  // Check if parameter is in cell.
+  int Contains(PyObject *key);
+
   // Myelin cell.
   myelin::Cell *cell;
 
@@ -134,6 +137,7 @@ struct PyCell : public PyBase {
 
   // Registration.
   static PyTypeObject type;
+  static PySequenceMethods sequence;
   static PyMethodTable methods;
   static void Define(PyObject *module);
 };

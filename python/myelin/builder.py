@@ -246,6 +246,9 @@ class Builder:
   def tanh(self, x, name=None):
     return self.op("Tanh", [x], name)
 
+  def erf(self, x, name=None):
+    return self.op("Erf", [x], name)
+
   def sigmoid(self, x, name=None):
     return self.op("Sigmoid", [x], name)
 
@@ -269,6 +272,9 @@ class Builder:
 
   def abs(self, x, name=None):
     return self.op("Abs", [x], name)
+
+  def sign(self, x, name=None):
+    return self.op("Sign", [x], name)
 
   def rcp(self, x, name=None):
     return self.op("Reciprocal", [x], name)
@@ -330,7 +336,7 @@ class Builder:
     return self.reduce("Max", x, name)
 
   def norm(self, x, name=None):
-    return self.sqrt(self.sum(self.square(x)))
+    return self.sqrt(self.sum(self.square(x)), name)
 
   def normalize(self, x, name=None):
     return self.mul(x, self.rcp(self.sum(x)), name)

@@ -30,6 +30,7 @@ PyMappingMethods PyNetwork::mapping;
 PyMethodTable PyNetwork::methods;
 
 PyTypeObject PyCell::type;
+PySequenceMethods PyCell::sequence;
 PyMethodTable PyCell::methods;
 
 PyTypeObject PyInstance::type;
@@ -581,6 +582,9 @@ void PyCell::Define(PyObject *module) {
   type.tp_init = method_cast<initproc>(&PyCell::Init);
   type.tp_dealloc = method_cast<destructor>(&PyCell::Dealloc);
 
+  type.tp_as_sequence = &sequence;
+  sequence.sq_contains = method_cast<objobjproc>(&PyCell::Contains);
+
   methods.Add("instance", &PyCell::NewInstance);
   methods.Add("channel", &PyCell::NewChannel);
   methods.AddO("index", &PyCell::Index);
@@ -638,6 +642,13 @@ PyObject *PyCell::Index(PyObject *key) {
     }
   }
   return PyInt_FromLong(index);
+}
+
+int PyCell::Contains(PyObject *key) {
+  // Look up tensor in network.
+  Tensor *tensor = pynet->FindTensor(key, cell);
+  PyErr_Clear();
+  return tensor != nullptr;
 }
 
 void PyInstance::Define(PyObject *module) {

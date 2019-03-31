@@ -14,6 +14,8 @@
 
 #include "sling/myelin/kernel/gradients.h"
 
+#include <math.h>
+
 namespace sling {
 namespace myelin {
 
@@ -129,6 +131,23 @@ void neg_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Neg(g->d(y)));
 }
 
+// y = |x|
+// dx = sign(x) * dy
+void abs_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  auto zero = g->Zero(x->type);
+  g->add(x, g->Cond(g->Less(g->v(x), zero), g->Neg(g->d(y)), g->d(y)));
+}
+
+// y = sign(x)
+// dx = dy
+void sign_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  g->add(x, g->d(y));
+}
+
 // y = sin(x)
 // dx = cos(x) * dy
 void sin_grad(Flow::Operation *op, Gradients *g) {
@@ -177,6 +196,22 @@ void tanh_grad(Flow::Operation *op, Gradients *g) {
   auto y = op->outputs[0];
   auto one = g->One(g->v(y)->type);
   g->add(x, g->Mul(g->d(y), g->Sub(one, g->Square(g->v(y)))));
+}
+
+// y = erf(x)
+// dx = 2/sqrt(pi) exp(-x^2) * dy
+void erf_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  Flow::Variable *c;
+  if (x->type == DT_FLOAT) {
+    float v = 2.0f / sqrtf(M_PI);
+    c = g->Const(v);
+  } else {
+    double v = 2.0 / sqrt(M_PI);
+    c = g->Const(v);
+  }
+  g->add(x, g->Mul(g->d(y), g->Mul(c, g->Exp(g->Neg(g->Square(g->v(x)))))));
 }
 
 // y = relu(x) = max(0, x)
@@ -287,12 +322,15 @@ void RegisterStandardGradients(Transformations *library) {
   library->RegisterGradient("Sqrt", sqrt_grad);
   library->RegisterGradient("Reciprocal", reciprocal_grad);
   library->RegisterGradient("Neg", neg_grad);
+  library->RegisterGradient("Abs", abs_grad);
+  library->RegisterGradient("Sign", sign_grad);
   library->RegisterGradient("Sin", sin_grad);
   library->RegisterGradient("Cos", cos_grad);
   library->RegisterGradient("Exp", exp_grad);
   library->RegisterGradient("Log", log_grad);
   library->RegisterGradient("Sigmoid", sigmoid_grad);
   library->RegisterGradient("Tanh", tanh_grad);
+  library->RegisterGradient("Erf", erf_grad);
   library->RegisterGradient("Relu", relu_grad);
   library->RegisterGradient("Norm", norm_grad);
   library->RegisterGradient("Identity", identity_grad);
