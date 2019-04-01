@@ -191,6 +191,11 @@ class Variable(object):
       if d == -1: return False
     return True
 
+  def elements(self):
+    n = 1
+    for d in self.shape: n *= d
+    return n
+
   def __repr__(self):
     return self.name
 
