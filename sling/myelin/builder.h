@@ -132,6 +132,9 @@ class FlowBuilder : public Scope {
   Variable *OneHot(Variable *index, int size) {
     return Op("OneHot", {index}, DT_FLOAT, {size});
   }
+  Variable *OneHot(Variable *index, Variable *value, int size) {
+    return Op("OneHot", {index, value}, DT_FLOAT, {size});
+  }
 
   Variable *Zero(Type type = DT_FLOAT);
   Variable *One(Type type = DT_FLOAT);
@@ -235,6 +238,7 @@ class FlowBuilder : public Scope {
     float size = x->elements();
     return Div(Sum(x), Const(size));
   }
+  Variable *ArgMax(Variable *x) { return Op("ArgMax", {x}, DT_INT32, {}); }
 
   // Dot product between two vectors.
   Variable *DotProduct(Variable *x, Variable *y) {

@@ -1318,6 +1318,13 @@ void Flow::Eliminate(Operation *op) {
 
     // Delete output variable.
     DeleteVariable(output);
+
+    // Check for unused input. The local input variable still needs to be
+    // generated even if there are no consumers.
+    if (input->local() && input->in() &&
+        input->producer == nullptr && input->usages() == 0) {
+      op->func->unused.push_back(input);
+    }
   } else {
     // Clear producer for outputs.
     for (Variable *var : op->outputs) var->producer = nullptr;

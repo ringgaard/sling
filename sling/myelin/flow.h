@@ -514,6 +514,7 @@ class Flow {
     }
 
     std::vector<Operation *> ops;     // ops for function in compute order
+    std::vector<Variable *> unused;   // unused input variables
   };
 
   // Flow connector.

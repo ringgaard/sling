@@ -176,6 +176,17 @@ class Variable(object):
       self.flags &= ~4
 
   @property
+  def learnable(self):
+    return (self.flags & 8) != 0
+
+  @learnable.setter
+  def learnable(self, value):
+    if value:
+      self.flags |= 8
+    else:
+      self.flags &= ~8
+
+  @property
   def unique(self):
     return (self.flags & 16) != 0
 

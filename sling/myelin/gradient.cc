@@ -35,6 +35,7 @@ Gradients::Gradients(Flow *flow,
     : FlowBuilder(flow, "gradients/" + primal->name) {
   // Add instance reference.
   instance_ = Name(Instance(primal), "primal");
+  instance_->set_in();
 
   // Create adjoints.
   for (Flow::Variable *v : vars) {

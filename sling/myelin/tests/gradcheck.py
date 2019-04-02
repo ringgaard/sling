@@ -19,6 +19,7 @@ import sling
 import sling.myelin as myelin
 import sling.flags as flags
 import numpy as np
+import math
 
 flags.parse()
 compiler = myelin.Compiler()
@@ -26,10 +27,8 @@ compiler = myelin.Compiler()
 shape = [16]
 dtype = myelin.DT_FLOAT
 nptype = np.float32
-dtype = "float64"
-nptype = np.float64
-eps = 1e-3
-tolerance = 1e-5
+#dtype = "float64"
+#nptype = np.float64
 
 # Compute number of elements in shape.
 def elements(shape):
@@ -50,15 +49,21 @@ def adjoint(v):
   if slash == -1: return "gradients/d_" + name
   return "gradients/" + name[:slash] + "/d_" + name[slash + 1:];
 
+# Get variable name for primal.
+def primalvar(f):
+  return "gradients/" + f.name + "/primal"
+
 # Check gradient by comparing analytical and numerical derivatives.
-def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0):
+def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
   # Get function from flow builder.
   flow = f.flow
   func = f.func
 
   # Mark inputs and outputs.
-  for v in inputs: v.input = True
-  for v in outputs: v.output = True
+  for v in inputs:
+    v.input = True
+  for v in outputs:
+    v.output = True
 
   # Enable backprop for function to compute gradient.
   func.backprop = True
@@ -67,13 +72,10 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0):
   net = compiler.compile(flow)
   cell = net.cell(func.name)
   gcell = net.cell("gradients/" + func.name)
-  primal = gcell.index("gradients/" + func.name + "/primal")
-
-  # Get input and output tensors.
-  vin = []
-  for v in inputs: vin.append(cell.index(v))
-  vout = []
-  for v in outputs: vout.append(cell.index(v))
+  if primalvar(func) in gcell:
+    primal = gcell.index(primalvar(func))
+  else:
+    primal = -1
 
   # Choose random input point for evaluating gradient.
   x = {}
@@ -86,12 +88,13 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0):
   data.compute()
 
   # Check gradient for each output variable element.
+  maxulp = None
   for output in outputs:
     for j in xrange(output.elements()):
       # Compute analytical gradient.
       gdata = gcell.instance()
-      gdata[primal] = data
-      gdata[adjoint(output)] =  onehot(output.shape, j, 1.0)
+      if primal != -1: gdata[primal] = data
+      gdata.tensor(adjoint(output))[j] = 1.0
       gdata.compute()
 
       # Check gradient for each input variable element.
@@ -114,8 +117,13 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0):
           plus.compute()
           minus.compute()
 
-          # Compute numerical estimate of df_j/d_i as
-          # (f_j(x+eps)-f_j(x-eps)) / (2 * eps)
+          # Compute numerical estimate of gradient using small finite
+          # difference:
+          #
+          # df_j       f_j(x+eps) - f_j(x-eps)
+          # ---- (x) ~ -----------------------
+          #  d_i                2*eps
+          #
           fplus = plus.tensor(output)[j]
           fminus = minus.tensor(output)[j]
           numerical = (fplus - fminus) / (2 * eps)
@@ -123,25 +131,209 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0):
           # Compare numerical gradient with analytical gradient.
           analytical = gradient[i]
           error = abs(analytical - numerical)
-          if error > tolerance:
-            print analytical, "vs", numerical, "(", error, ")"
+          deviation = error / (1 + abs(analytical))
+          if deviation != 0.0:
+            ulp = int(math.log10(deviation))
+            if maxulp == None or ulp > maxulp: maxulp = ulp
+          if not np.isclose(numerical, analytical, rtol=tol, atol=tol):
+            print "%s: d%s_%d / d%s_%d: %g vs %g dev=%g ulp=%d" % (
+              func.name, output.name, j, input.name, i,
+              analytical, numerical, deviation, ulp)
 
-#flow = myelin.Flow()
-#f = flow.define("f")
-#x = f.var("x", dtype, shape)
-#y = f.square(x, "y")
-#gradcheck(f, [x], [y])
+  # Return the maximum unit of least precision.
+  print func.name, "gradient precision:", maxulp
+  return maxulp
 
-flow = myelin.Flow()
-f = flow.define("f")
-x = f.var("x", dtype, shape)
-y = f.exp(x, "y")
-gradcheck(f, [x], [y])
+def check_add():
+  flow = myelin.Flow()
+  f = flow.define("add")
+  x1 = f.var("x1", dtype, shape)
+  x2 = f.var("x2", dtype, shape)
+  y = f.add(x1, x2, "y")
+  gradcheck(f, [x1, x2], [y], tol=1e-3)
 
-#flow = myelin.Flow()
-#f = flow.define("f")
-#x1 = f.var("x1", dtype, shape)
-#x2 = f.var("x2", dtype, shape)
-#y = f.div(x1, x2, "y")
-#gradcheck(f, [x1, x2], [y])
+def check_sub():
+  flow = myelin.Flow()
+  f = flow.define("sub")
+  x1 = f.var("x1", dtype, shape)
+  x2 = f.var("x2", dtype, shape)
+  y = f.sub(x1, x2, "y")
+  gradcheck(f, [x1, x2], [y], tol=1e-3)
+
+def check_mul():
+  flow = myelin.Flow()
+  f = flow.define("mul")
+  x1 = f.var("x1", dtype, shape)
+  x2 = f.var("x2", dtype, shape)
+  y = f.mul(x1, x2, "y")
+  gradcheck(f, [x1, x2], [y], tol=1e-3)
+
+def check_div():
+  flow = myelin.Flow()
+  f = flow.define("div")
+  x1 = f.var("x1", dtype, shape)
+  x2 = f.var("x2", dtype, shape)
+  y = f.div(x1, x2, "y")
+  gradcheck(f, [x1, x2], [y], tol=1e-3)
+
+def check_minimum():
+  flow = myelin.Flow()
+  f = flow.define("minimum")
+  x1 = f.var("x1", dtype, shape)
+  x2 = f.var("x2", dtype, shape)
+  y = f.minimum(x1, x2, "y")
+  gradcheck(f, [x1, x2], [y], tol=1e-3)
+
+def check_maximum():
+  flow = myelin.Flow()
+  f = flow.define("maximum")
+  x1 = f.var("x1", dtype, shape)
+  x2 = f.var("x2", dtype, shape)
+  y = f.maximum(x1, x2, "y")
+  gradcheck(f, [x1, x2], [y], tol=1e-3)
+
+def check_square():
+  flow = myelin.Flow()
+  f = flow.define("square")
+  x = f.var("x", dtype, shape)
+  y = f.square(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_sqrt():
+  flow = myelin.Flow()
+  f = flow.define("sqrt")
+  x = f.var("x", dtype, shape)
+  y = f.sqrt(x, "y")
+  gradcheck(f, [x], [y], lo=0.0)
+
+def check_rcp():
+  flow = myelin.Flow()
+  f = flow.define("rcp")
+  x = f.var("x", dtype, shape)
+  y = f.rcp(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_neg():
+  flow = myelin.Flow()
+  f = flow.define("neg")
+  x = f.var("x", dtype, shape)
+  y = f.rcp(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_abs():
+  flow = myelin.Flow()
+  f = flow.define("abs")
+  x = f.var("x", dtype, shape)
+  y = f.abs(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_sign():
+  flow = myelin.Flow()
+  f = flow.define("sign")
+  x = f.var("x", dtype, shape)
+  y = f.sign(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_exp():
+  flow = myelin.Flow()
+  f = flow.define("exp")
+  x = f.var("x", dtype, shape)
+  y = f.exp(x, "y")
+  gradcheck(f, [x], [y], -3.0, 3.0)
+
+def check_log():
+  flow = myelin.Flow()
+  f = flow.define("log")
+  x = f.var("x", dtype, shape)
+  y = f.log(x, "y")
+  gradcheck(f, [x], [y], 0.0, 10.0)
+
+def check_tanh():
+  flow = myelin.Flow()
+  f = flow.define("tanh")
+  x = f.var("x", dtype, shape)
+  y = f.tanh(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_sigmoid():
+  flow = myelin.Flow()
+  f = flow.define("sigmoid")
+  x = f.var("x", dtype, shape)
+  y = f.sigmoid(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_erf():
+  flow = myelin.Flow()
+  f = flow.define("erf")
+  x = f.var("x", dtype, shape)
+  y = f.erf(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_relu():
+  flow = myelin.Flow()
+  f = flow.define("relu")
+  x = f.var("x", dtype, shape)
+  y = f.relu(x, "y")
+  gradcheck(f, [x], [y], lo=-1.0, hi=1.0)
+
+def check_norm():
+  flow = myelin.Flow()
+  f = flow.define("norm")
+  x = f.var("x", dtype, shape)
+  y = f.norm(x, "y")
+  gradcheck(f, [x], [y], eps=1e-2)
+
+def check_normalize():
+  flow = myelin.Flow()
+  f = flow.define("normalize")
+  x = f.var("x", dtype, shape)
+  y = f.normalize(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_softmax():
+  flow = myelin.Flow()
+  f = flow.define("softmax")
+  x = f.var("x", dtype, shape)
+  y = f.softmax(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_sum():
+  flow = myelin.Flow()
+  f = flow.define("sum")
+  x = f.var("x", dtype, shape)
+  y = f.sum(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_matmul():
+  flow = myelin.Flow()
+  f = flow.define("matmul")
+  x1 = f.var("x1", dtype, [8, 16])
+  x2 = f.var("x2", dtype, [16, 8])
+  y = f.matmul(x1, x2, "y")
+  gradcheck(f, [x1, x2], [y], eps=1e-2, tol=1e-2)
+
+# Test gradients for all functions.
+check_add()
+check_sub()
+check_mul()
+check_minimum()
+check_maximum()
+#check_div()
+check_square()
+check_sqrt()
+check_rcp()
+check_neg()
+check_abs()
+#check_sign()
+check_exp()
+check_log()
+check_tanh()
+check_sigmoid()
+check_erf()
+check_relu()
+check_norm()
+#check_normalize()
+#check_softmax()
+check_sum()
+check_matmul()
 

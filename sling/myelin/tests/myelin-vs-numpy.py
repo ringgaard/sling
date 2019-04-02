@@ -184,7 +184,7 @@ def simulate(flow, f, data):
   return v
 
 # Compare flow functions against numpy.
-def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-05, atol=1e-08):
+def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
   # Ensure that inputs are not overwritten.
   for i in flow.inputs(): i.output = True
 
