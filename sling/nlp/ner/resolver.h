@@ -32,7 +32,7 @@ class ResolverContext;
 // Entity resolver.
 class EntityResolver {
  public:
-  // Initialize entiry resolver.
+  // Initialize entity resolver.
   void Init(Store *commons, const PhraseTable *aliases);
 
  private:

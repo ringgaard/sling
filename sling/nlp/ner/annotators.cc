@@ -984,7 +984,7 @@ void AbbreviationAnnotator::Init() {
   static const char *skipwords[] = {
     "-", "&",
     "of", "for", "and", "the", "in",
-    "ltd", "inc", "corp",
+    "ltd", "inc", "corp", "llc", "gmbh",
     nullptr,
   };
 
@@ -1188,7 +1188,6 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     }
 
     // Extract best span covering to the output document.
-    chart.Solve();
     chart.Extract([&](int begin, int end, const SpanChart::Item &item) {
       bool resolve_span = resolve_;
       Span *span = nullptr;
