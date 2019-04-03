@@ -373,6 +373,9 @@ class Flow {
     // Check if variable is a local variable.
     bool local() const { return !global(); }
 
+    // Check if variable is detached, i.e. no producer or consumers.
+    bool detached() const { return producer == nullptr && usages() == 0; }
+
     // Return type as string.
     string TypeString() const;
 

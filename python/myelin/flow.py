@@ -207,6 +207,9 @@ class Variable(object):
     for d in self.shape: n *= d
     return n
 
+  def rank(self):
+    return len(self.shape)
+
   def __repr__(self):
     return self.name
 

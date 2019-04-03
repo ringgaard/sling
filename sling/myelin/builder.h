@@ -265,7 +265,17 @@ class FlowBuilder : public Scope {
   Variable *Softmax(Variable *x) { return Normalize(Exp(Sub(x, Max(x)))); }
   Variable *LogSoftmax(Variable *x) { return Log(Softmax(x)); }
 
-  // Reshaping.
+  // Shape.
+  Variable *TensorShape(Variable *x) {
+    return Op("Shape", {x}, DT_INT32, {x->rank()});
+  }
+  Variable *TensorSize(Variable *x) {
+    return Op("Size", {x}, DT_INT32, {});
+  }
+  Variable *TensorRank(Variable *x) {
+    return Op("Rank", {x}, DT_INT32, {});
+  }
+
   Variable *Reshape(Variable *x, Variable *shape) {
     return Op("Reshape", {x, shape});
   }

@@ -339,7 +339,7 @@ class Builder:
     return self.sqrt(self.sum(self.square(x)), name)
 
   def normalize(self, x, name=None):
-    return self.mul(x, self.rcp(self.sum(x)), name)
+    return self.mul(x, self.rcp(self.norm(x)), name)
 
   def softmax(self, x, name=None):
     return self.normalize(self.exp(self.sub(x, self.max(x))), name)
@@ -350,6 +350,24 @@ class Builder:
     r.type = var.type
     r.shape = var.shape
     return r
+
+  def shape(self, x, name=None):
+    result = self.op("Shape", [x], name)
+    result.shape = [x.rank()]
+    result.type = DT_INT
+    return result
+
+  def size(self, x, name=None):
+    result = self.op("Size", [x], name)
+    result.shape = []
+    result.type = DT_INT
+    return result
+
+  def rank(self, x, name=None):
+    result = self.op("Rank", [x], name)
+    result.shape = []
+    result.type = DT_INT
+    return result
 
 # Set builder factory for flows.
 def builder_factory(flow, name):

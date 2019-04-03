@@ -212,7 +212,9 @@ int main(int argc, char *argv[]) {
 #endif
   //Test("@0=Exp(%0)");
   //Test("@0=Tanh(%0)");
-  Test("@0=Log(%0)");
+  //Test("@0=Log(%0)");
   //Test("@0=Sigmoid(%0)");
+  Test("@0=Id(#0)");
+
 }
 

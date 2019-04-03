@@ -87,13 +87,13 @@ void matmul_grad(Flow::Operation *op, Gradients *g) {
 }
 
 // z = x / y
-// dx = y * dz
+// dx = z / x * dz = dz / y
 // dy = (-x / y^2) * dz = -z / y * dz
 void div_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->inputs[1];
   auto z = op->outputs[0];
-  g->add(x, g->Mul(g->d(z), g->v(y)));
+  g->add(x, g->Div(g->d(z), g->v(y)));
   g->add(y, g->Mul(g->d(z), g->Div(g->Neg(g->v(z)), g->v(y))));
 }
 

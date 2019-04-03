@@ -1199,7 +1199,10 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
                 break;
               case CONST:
               case NUMBER:
-                if (!model.mov_mem_imm) success = false;
+                if (!model.mov_mem_imm) {
+                  // Add temp variable for constant.
+                  destination = rewritten->Temp();
+                }
                 break;
             }
             break;

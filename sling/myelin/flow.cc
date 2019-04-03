@@ -1321,8 +1321,7 @@ void Flow::Eliminate(Operation *op) {
 
     // Check for unused input. The local input variable still needs to be
     // generated even if there are no consumers.
-    if (input->local() && input->in() &&
-        input->producer == nullptr && input->usages() == 0) {
+    if (input->local() && input->in() && input->detached()) {
       op->func->unused.push_back(input);
     }
   } else {

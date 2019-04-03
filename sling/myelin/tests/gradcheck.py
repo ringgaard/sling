@@ -43,7 +43,7 @@ def onehot(shape, index, value):
   return v.reshape(shape)
 
 # Get variable name for adjoint.
-def adjoint(v):
+def adjointvar(v):
   name = v.name
   slash = name.find('/')
   if slash == -1: return "gradients/d_" + name
@@ -90,16 +90,22 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
   # Check gradient for each output variable element.
   maxulp = None
   for output in outputs:
+    # Get adjoint for output variable.
+    if adjointvar(output) in gcell:
+      adjoint = gcell.index(adjointvar(output))
+    else:
+      adjoint = -1
+
     for j in xrange(output.elements()):
       # Compute analytical gradient.
       gdata = gcell.instance()
       if primal != -1: gdata[primal] = data
-      gdata.tensor(adjoint(output))[j] = 1.0
+      if adjoint != -1: gdata.tensor(adjoint)[j] = 1.0
       gdata.compute()
 
       # Check gradient for each input variable element.
       for input in inputs:
-        gradient = gdata[adjoint(input)]
+        gradient = gdata[adjointvar(input)]
         for i in xrange(input.elements()):
           # Construct one-hot tensor with x_i set to epsilon.
           delta = onehot(input.shape, i, eps)
@@ -318,13 +324,13 @@ check_sub()
 check_mul()
 check_minimum()
 check_maximum()
-#check_div()
+check_div()
 check_square()
 check_sqrt()
 check_rcp()
 check_neg()
 check_abs()
-#check_sign()
+check_sign()
 check_exp()
 check_log()
 check_tanh()

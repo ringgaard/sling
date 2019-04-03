@@ -316,7 +316,7 @@ class OneHot : public Kernel {
     if (step->indegree() != 1 && step->indegree() != 2) return false;
     if (step->outdegree() != 1) return false;
     Tensor *index = step->input(0);
-    Tensor *value = step->indegree() >= 1 ? step->input(1) : nullptr;
+    Tensor *value = step->indegree() > 1 ? step->input(1) : nullptr;
     Tensor *onehot = step->output(0);
     if (index->type() != DT_INT32) return false;
     if (index->elements() != 1) return false;
@@ -330,7 +330,7 @@ class OneHot : public Kernel {
 
   void Generate(Step *step, MacroAssembler *masm) override {
     Tensor *index = step->input(0);
-    Tensor *value = step->indegree() >= 1 ? step->input(1) : nullptr;
+    Tensor *value = step->indegree() > 1 ? step->input(1) : nullptr;
     Tensor *onehot = step->output(0);
 
     // Allocate registers.

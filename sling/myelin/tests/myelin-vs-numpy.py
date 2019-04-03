@@ -168,6 +168,12 @@ def simulate(flow, f, data):
       v[o[0]] = np.where((v[i[0]] != 0), v[i[1]], 0)
     elif op.type == "Transpose":
       v[o[0]] = np.transpose(v[i[0]])
+    elif op.type == "Shape":
+      v[o[0]] = np.array(v[i[0]].shape)
+    elif op.type == "Size":
+      v[o[0]] = np.array(v[i[0]].size)
+    elif op.type == "Rank":
+      v[o[0]] = np.array(len(v[i[0]].shape))
     elif op.type == "ConcatV2":
       n = int(op.attr("N"))
       axis = v[i[n]]
@@ -485,6 +491,27 @@ def bcast_test(n):
   y = f.mul(x, f.const(7, dt))
   check(flow, n)
 
+def shape_test(n):
+  flow = myelin.Flow()
+  f = flow.define("shape")
+  x = f.var("x", dt, [n])
+  y = f.shape(x)
+  check(flow, n)
+
+def size_test(n):
+  flow = myelin.Flow()
+  f = flow.define("size")
+  x = f.var("x", dt, [n])
+  y = f.size(x)
+  check(flow, n)
+
+def rank_test(n):
+  flow = myelin.Flow()
+  f = flow.define("size")
+  x = f.var("x", dt, [1] * n)
+  y = f.rank(x)
+  check(flow, n)
+
 def concat_test(n, m):
   flow = myelin.Flow()
   f = flow.define("concat")
@@ -623,6 +650,9 @@ for i in sizes:
   square_test(i)
   relu_test(i)
   bcast_test(i)
+  shape_test(i)
+  size_test(i)
+  if i < 32: rank_test(i)
 
   for c in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]:
     add_const_test(i, c)

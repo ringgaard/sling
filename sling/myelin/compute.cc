@@ -1876,9 +1876,6 @@ bool Network::Compile(const string &flowfile, const Library &library) {
 }
 
 void Network::ComputeLiveRanges() {
-  // Check that the network is not empty.
-  if (steps_.empty()) return;
-
   // All inputs and outputs from the network must be alive before and after the
   // computation.
   for (Tensor *t : parameters_) {
