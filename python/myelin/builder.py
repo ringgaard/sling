@@ -184,6 +184,12 @@ class Builder:
   def maximum(self, x, y, name=None):
     return self.op("Maximum", [x, y], name)
 
+  def argmin(self, x, name=None):
+    result = self.op("ArgMin", [x], name)
+    result.shape = []
+    result.type = DT_INT
+    return result
+
   def argmax(self, x, name=None):
     result = self.op("ArgMax", [x], name)
     result.shape = []

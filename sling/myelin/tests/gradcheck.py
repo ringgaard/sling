@@ -21,14 +21,17 @@ import sling.flags as flags
 import numpy as np
 import math
 
+flags.define("--fp64", default=False, action='store_true')
+
 flags.parse()
 compiler = myelin.Compiler()
 
 shape = [16]
 dtype = myelin.DT_FLOAT
 nptype = np.float32
-#dtype = "float64"
-#nptype = np.float64
+if flags.arg.fp64:
+  dtype = "float64"
+  nptype = np.float64
 
 # Compute number of elements in shape.
 def elements(shape):
@@ -88,7 +91,7 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
   data.compute()
 
   # Check gradient for each output variable element.
-  maxulp = None
+  minulp = None
   for output in outputs:
     # Get adjoint for output variable.
     if adjointvar(output) in gcell:
@@ -105,7 +108,7 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
 
       # Check gradient for each input variable element.
       for input in inputs:
-        gradient = gdata[adjointvar(input)]
+        gradient = gdata.tensor(adjointvar(input))
         for i in xrange(input.elements()):
           # Construct one-hot tensor with x_i set to epsilon.
           delta = onehot(input.shape, i, eps)
@@ -139,16 +142,16 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
           error = abs(analytical - numerical)
           deviation = error / (1 + abs(analytical))
           if deviation != 0.0:
-            ulp = int(math.log10(deviation))
-            if maxulp == None or ulp > maxulp: maxulp = ulp
+            ulp = -int(math.log10(deviation))
+            if minulp == None or ulp < minulp: minulp = ulp
           if not np.isclose(numerical, analytical, rtol=tol, atol=tol):
             print "%s: d%s_%d / d%s_%d: %g vs %g dev=%g ulp=%d" % (
               func.name, output.name, j, input.name, i,
               analytical, numerical, deviation, ulp)
 
-  # Return the maximum unit of least precision.
-  print func.name, "gradient precision:", maxulp
-  return maxulp
+  # Return the minimum unit of least precision.
+  print func.name, ":", minulp, "ulp"
+  return minulp
 
 def check_add():
   flow = myelin.Flow()
@@ -294,7 +297,7 @@ def check_normalize():
   f = flow.define("normalize")
   x = f.var("x", dtype, shape)
   y = f.normalize(x, "y")
-  gradcheck(f, [x], [y])
+  gradcheck(f, [x], [y], tol=1e-2)
 
 def check_softmax():
   flow = myelin.Flow()
@@ -310,6 +313,20 @@ def check_sum():
   y = f.sum(x, "y")
   gradcheck(f, [x], [y], tol=1e-3)
 
+def check_max():
+  flow = myelin.Flow()
+  f = flow.define("max")
+  x = f.var("x", dtype, shape)
+  y = f.max(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_min():
+  flow = myelin.Flow()
+  f = flow.define("min")
+  x = f.var("x", dtype, shape)
+  y = f.min(x, "y")
+  gradcheck(f, [x], [y])
+
 def check_matmul():
   flow = myelin.Flow()
   f = flow.define("matmul")
@@ -317,6 +334,22 @@ def check_matmul():
   x2 = f.var("x2", dtype, [16, 8])
   y = f.matmul(x1, x2, "y")
   gradcheck(f, [x1, x2], [y], eps=1e-2, tol=1e-2)
+
+def check_bcast_add():
+  flow = myelin.Flow()
+  f = flow.define("bcast_add")
+  x1 = f.var("x1", dtype, shape)
+  x2 = f.var("x2", dtype)
+  y = f.add(x1, x2, "y")
+  gradcheck(f, [x1, x2], [y], tol=1e-3)
+
+def check_bcast_mul():
+  flow = myelin.Flow()
+  f = flow.define("bcast_mul")
+  x1 = f.var("x1", dtype, shape)
+  x2 = f.var("x2", dtype)
+  y = f.mul(x1, x2, "y")
+  gradcheck(f, [x1, x2], [y], tol=1e-3)
 
 # Test gradients for all functions.
 check_add()
@@ -338,8 +371,13 @@ check_sigmoid()
 check_erf()
 check_relu()
 check_norm()
-#check_normalize()
-#check_softmax()
+check_normalize()
 check_sum()
+if not flags.arg.fp64:
+  check_max()
+  check_min()
+  check_softmax()
 check_matmul()
+check_bcast_add()
+check_bcast_mul()
 

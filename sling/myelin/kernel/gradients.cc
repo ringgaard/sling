@@ -307,6 +307,14 @@ void sum_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Broadcast(g->d(y), x->shape));
 }
 
+// y = min(x)
+// dx = onehot(argmin(x), dy)
+void min_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  g->add(x, g->OneHot(g->ArgMin(g->v(x)), g->d(y), x->elements()));
+}
+
 // y = max(x)
 // dx = onehot(argmax(x), dy)
 void max_grad(Flow::Operation *op, Gradients *g) {
@@ -374,6 +382,7 @@ void RegisterStandardGradients(Transformations *library) {
   library->RegisterGradient("GatherSum", gathersum_grad);
   library->RegisterGradient("ConcatV2", concat_grad);
   library->RegisterGradient("Sum", sum_grad);
+  library->RegisterGradient("Min", min_grad);
   library->RegisterGradient("Max", max_grad);
   library->RegisterGradient("Transpose", transpose_grad);
   library->RegisterGradient("Select", select_grad);

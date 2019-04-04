@@ -140,6 +140,8 @@ def simulate(flow, f, data):
       v[o[0]] = np.min(v[i[0]])
     elif op.type == "Product":
       v[o[0]] = np.prod(v[i[0]])
+    elif op.type == "ArgMin":
+      v[o[0]] = np.argmin(v[i[0]])
     elif op.type == "ArgMax":
       v[o[0]] = np.argmax(v[i[0]])
     elif op.type == "Equal":
@@ -461,6 +463,13 @@ def norm_test(n):
   y = f.norm(x)
   check(flow, n, 0.0, 1.0)
 
+def argmin_test(n):
+  flow = myelin.Flow()
+  f = flow.define("argmin")
+  x = f.var("x", dt, [n])
+  y = f.argmin(x)
+  check(flow, n)
+
 def argmax_test(n):
   flow = myelin.Flow()
   f = flow.define("argmax")
@@ -686,10 +695,11 @@ for i in sizes:
     select_test(i)
 
     if dt != myelin.DT_DOUBLE:
-      # No support yet for argmax, sin, and cos for doubles.
+      # No support yet for argmax, argmin, sin, and cos for doubles.
       sin_test(i)
       cos_test(i)
       argmax_test(i)
+      argmin_test(i)
 
 for i in sizes:
   for j in sizes:

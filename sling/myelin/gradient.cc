@@ -91,6 +91,10 @@ Flow::Function *Gradients::Finalize() {
     Flow::Variable *dv = it.second;
     Flow::Variable *terms = terms_[dv];
     if (terms != nullptr) {
+      // The gradients need to be summed when backpropagating through a
+      // broadcast input. Only simple broadcasting is supported.
+      bool unexpand = dv->elements() == 1 && terms->elements() > 1;
+      if (unexpand) terms = Sum(terms);
       if (v->learnable()) {
         // Accumulate gradients for learnable variables.
         CHECK(dv->consumers.empty());

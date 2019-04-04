@@ -238,6 +238,7 @@ class FlowBuilder : public Scope {
     float size = x->elements();
     return Div(Sum(x), Const(size));
   }
+  Variable *ArgMin(Variable *x) { return Op("ArgMin", {x}, DT_INT32, {}); }
   Variable *ArgMax(Variable *x) { return Op("ArgMax", {x}, DT_INT32, {}); }
 
   // Dot product between two vectors.
