@@ -49,6 +49,11 @@ sling/myelin/tests/wavenet.cc
 sling/myelin/tests/wavenet.h
 sling/nlp/embedding/category-facts.cc
 sling/nlp/kb/facttest.cc
+sling/nlp/ner/fanin.py
+sling/nlp/ner/idftable.py
+sling/nlp/ner/linking.py
+sling/nlp/ner/resolver.py
+sling/nlp/ner/wikilinks.py
 sling/nlp/parser/tools/convert-glove.py
 sling/nlp/parser/tools/parser-server.cc
 sling/nlp/parser/tools/verbnet-to-sling.py
@@ -98,6 +103,10 @@ sling/workflow/wikiprofile.cc
 start.sh
 tools/BUILD
 tools/buildall.sh
+tools/countrydefs.py
 tools/shell.cc
 tools/master-diff.sh
 tools/master-difftool.sh
+tools/templgen.cc
+tools/unitdefs.py
+
