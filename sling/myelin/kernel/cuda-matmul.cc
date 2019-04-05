@@ -146,14 +146,11 @@ class CUDAMatMulBase : public CUDAKernel {
     ptx_emit(mad.wide.u32, bptr, col, PTXImm(B->stride(1)), bptr);
 
     // Compute dot product.
+    PTXConst zero(PTXConst::ZERO, type);
     ptx_decl(u32, idx);
     ptx_emit(mov.u32, idx, PTXImm(0));
     PTXReg sum = ptx->reg(type, "sum");
-    if (fp) {
-      ptx->emit(PTXInstr("mov", type), sum, PTXFloat(0));
-    } else {
-      ptx->emit(PTXInstr("mov", type), sum, PTXImm(0));
-    }
+    ptx->emit(PTXInstr("mov", type), sum, zero);
     ptx_label(loop);
 
     // Compute sum += A[row,idx] * B[idx,col].
@@ -193,11 +190,7 @@ class CUDAMatMulBase : public CUDAKernel {
 
     // Optionally compute relu.
     if (relu_) {
-      if (fp) {
-        ptx->emit(PTXInstr("max", type), sum, sum, PTXFloat(0));
-      } else {
-        ptx->emit(PTXInstr("max", type), sum, sum, PTXImm(0));
-      }
+      ptx->emit(PTXInstr("max", type), sum, sum, zero);
     }
 
     // Save result in C[row,col].
@@ -215,7 +208,8 @@ class CUDAMatMulBase : public CUDAKernel {
   }
 
   int64 Complexity(const Step *step) override {
-    int ops = step->input(0)->dim(0) * step->input(1)->elements() * 2;
+    int64 ops = step->input(0)->dim(0);
+    ops *= step->input(1)->elements() * 2;
     if (bias_) ops += step->input(2)->elements();
     if (relu_) ops += step->output(0)->elements();
     return ops;

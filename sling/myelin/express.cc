@@ -1436,11 +1436,11 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
       // Put source into a register if memory operands are not available.
       if (args[1]->type == CONST || args[1]->type == NUMBER) {
         if (!model.func_reg_imm) {
-          source = rewritten->Temp();
+          source2 = rewritten->Temp();
         }
       } else if (!args[1]->IsRegister()) {
         if (!model.func_reg_mem || args[1]->single) {
-          source = rewritten->Temp();
+          source2 = rewritten->Temp();
         }
       }
 

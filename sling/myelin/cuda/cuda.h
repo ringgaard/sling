@@ -310,6 +310,19 @@ class PTXFloat : public PTXArg {
   float number_;
 };
 
+// PTX constant argument.
+class PTXConst : public PTXArg {
+ public:
+  enum Constant {ZERO, ONE, FALSE, TRUE};
+
+  PTXConst(Constant constant, const char *type);
+
+  void Generate(string *code) const override;
+
+ private:
+  const char *value_;
+};
+
 // PTX register argument.
 class PTXReg : public PTXArg {
  public:

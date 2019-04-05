@@ -222,6 +222,46 @@ void PTXFloat::Generate(string *code) const {
   code->append(str);
 }
 
+PTXConst::PTXConst(Constant constant, const char *type) {
+  char basetype = type[0];
+  int width = atoi(type + 1);
+  value_ = nullptr;
+  switch (constant) {
+    case ZERO:
+    case FALSE:
+      value_ = (basetype == 'f') ? "0.0" : "0";
+      break;
+    case ONE:
+      value_ = (basetype == 'f') ? "1.0" : "1";
+      break;
+    case TRUE:
+      switch (basetype) {
+        case 'f':
+          switch (width) {
+            case 16: value_ = "0fFFFF"; break;
+            case 32: value_ = "0fFFFFFFFF"; break;
+            case 64: value_ = "0dFFFFFFFFFFFFFFFF"; break;
+          }
+          break;
+        case 's':
+        case 'u':
+        case 'b':
+          switch (width) {
+            case 8: value_ = "0xFF"; break;
+            case 16: value_ = "0xFFFF"; break;
+            case 32: value_ = "0xFFFFFFFF"; break;
+            case 64: value_ = "0xFFFFFFFFFFFFFFFF"; break;
+          }
+      }
+      break;
+  }
+  CHECK(value_ != nullptr) << "Unknown CUDA type: " << type;
+}
+
+void PTXConst::Generate(string *code) const {
+  code->append(value_);
+}
+
 void PTXReg::Generate(string *code) const {
   code->append(name_);
   if (index_ != -1) code->append(std::to_string(index_));
