@@ -134,8 +134,13 @@ static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
     if (input->elements() == 1) {
       int const_id = -1;
       if (input->constant()) {
-        if (input->type == DT_FLOAT) {
-          float value = *reinterpret_cast<const float *>(input->data);
+        if (input->type == DT_FLOAT || input->type == DT_DOUBLE) {
+          double value;
+          if (input->type == DT_FLOAT) {
+             value = *reinterpret_cast<const float *>(input->data);
+          } else {
+             value = *reinterpret_cast<const double *>(input->data);
+          }
           if (value == 0.0) {
             const_id = Express::ZERO;
           } else if (value == 1.0) {

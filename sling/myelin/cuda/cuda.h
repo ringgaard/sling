@@ -299,7 +299,7 @@ class PTXImm : public PTXArg {
   int64 number_;
 };
 
-// PTX floating point number argument.
+// PTX 32-bit floating point number argument.
 class PTXFloat : public PTXArg {
  public:
   PTXFloat(float number) : number_(number) {}
@@ -308,6 +308,17 @@ class PTXFloat : public PTXArg {
 
  private:
   float number_;
+};
+
+// PTX 64-bit floating point number argument.
+class PTXDouble : public PTXArg {
+ public:
+  PTXDouble(double number) : number_(number) {}
+
+  void Generate(string *code) const override;
+
+ private:
+  double number_;
 };
 
 // PTX constant argument.

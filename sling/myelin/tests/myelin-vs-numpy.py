@@ -370,7 +370,10 @@ def tanh_test(n):
   f = flow.define("tanh")
   x = f.var("x", dt, [n])
   y = f.tanh(x)
-  check(flow, n, -1.0, 1.0)
+  if flags.arg.gpu:
+    check(flow, n, -1.0, 1.0, atol=1e-7)
+  else:
+    check(flow, n, -1.0, 1.0)
 
 def erf_test(n):
   flow = myelin.Flow()

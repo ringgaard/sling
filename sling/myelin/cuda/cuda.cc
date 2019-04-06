@@ -222,6 +222,14 @@ void PTXFloat::Generate(string *code) const {
   code->append(str);
 }
 
+void PTXDouble::Generate(string *code) const {
+  uint64 bits;
+  memcpy(&bits, &number_, sizeof(double));
+  char str[32];
+  snprintf(str, sizeof(str), "0d%016lx", bits);
+  code->append(str);
+}
+
 PTXConst::PTXConst(Constant constant, const char *type) {
   char basetype = type[0];
   int width = atoi(type + 1);

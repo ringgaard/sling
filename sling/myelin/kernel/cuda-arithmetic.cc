@@ -300,34 +300,9 @@ class CUDACalculate : public CUDAKernel {
         Tensor *input = comp->step->input(instr->args[0]->id);
         if (input->constant() && input->elements() == 1) {
           // Load scalar constant.
-          switch (comp->dtype) {
-            case DT_FLOAT:
-              ptx->emit(PTXInstr("mov", comp->type), dst,
-                        PTXFloat(input->value<float>()));
-              break;
-            case DT_DOUBLE:
-              ptx->emit(PTXInstr("mov", comp->type), dst,
-                        PTXFloat(input->value<double>()));
-              break;
-            case DT_INT8:
-              ptx->emit(PTXInstr("mov", comp->type), dst,
-                        PTXImm(input->value<int8>()));
-              break;
-            case DT_INT16:
-              ptx->emit(PTXInstr("mov", comp->type), dst,
-                        PTXImm(input->value<int16>()));
-              break;
-            case DT_INT32:
-              ptx->emit(PTXInstr("mov", comp->type), dst,
-                        PTXImm(input->value<int32>()));
-              break;
-            case DT_INT64:
-              ptx->emit(PTXInstr("mov", comp->type), dst,
-                        PTXImm(input->value<int64>()));
-              break;
-            default:
-              LOG(FATAL) << "Unsupported: " << instr->AsInstruction();
-          }
+          PTXArg *constant = GetConstantArg(input);
+          ptx->emit(PTXInstr("mov", comp->type), dst, *constant);
+          delete constant;
         } else {
           // Load from tensor.
           ptx->LoadTensorAddress(comp->addr, input);
@@ -340,16 +315,12 @@ class CUDACalculate : public CUDAKernel {
         break;
       }
 
-      case Express::NUMBER:
-        // mov reg, imm.
-        if (IsFloat(comp->dtype)) {
-          ptx->emit(PTXInstr("mov", comp->type), dst,
-                    PTXFloat(Express::NumericFlt32(instr->args[0]->id)));
-        } else {
-          ptx->emit(PTXInstr("mov", comp->type), dst,
-                    PTXImm(Express::NumericFlt32(instr->args[0]->id)));
-        }
+      case Express::NUMBER: {
+        PTXArg *constant = GetNumberArg(instr->args[0], comp->dtype);
+        ptx->emit(PTXInstr("mov", comp->type), dst, *constant);
+        delete constant;
         break;
+      }
 
       default:
         LOG(FATAL) << "Unsupported: " << instr->AsInstruction();
@@ -396,20 +367,26 @@ class CUDACalculate : public CUDAKernel {
                         comp->reg[instr->src2]);
         break;
 
-      case Express::NUMBER:
-        // op reg,reg,imm.
-        if (IsFloat(comp->dtype)) {
-          comp->ptx->emit(PTXInstr(op, type),
-                          comp->reg[instr->dst],
-                          comp->reg[instr->src],
-                          PTXFloat(Express::NumericFlt32(instr->args[1]->id)));
-        } else {
-          comp->ptx->emit(PTXInstr(op, type),
-                          comp->reg[instr->dst],
-                          comp->reg[instr->src],
-                          PTXImm(Express::NumericFlt32(instr->args[1]->id)));
-        }
+      case Express::NUMBER: {
+        PTXArg *constant = GetNumberArg(instr->args[1], comp->dtype);
+        comp->ptx->emit(PTXInstr(op, type),
+                        comp->reg[instr->dst],
+                        comp->reg[instr->src],
+                        *constant);
+        delete constant;
         break;
+      }
+
+      case Express::CONST: {
+        Tensor *input = comp->step->input(instr->args[1]->id);
+        PTXArg *constant = GetConstantArg(input);
+        comp->ptx->emit(PTXInstr(op, type),
+                        comp->reg[instr->dst],
+                        comp->reg[instr->src],
+                        *constant);
+        delete constant;
+        break;
+      }
 
       default:
         LOG(FATAL) << "Unsupported: " << instr->AsInstruction();
@@ -422,7 +399,7 @@ class CUDACalculate : public CUDAKernel {
     CHECK_EQ(instr->result->type, Express::TEMP);
     CHECK_NE(instr->dst, -1);
     PTXMacroAssembler *ptx = comp->ptx;
-    const char *type = comp->pred[instr->dst] ? "pred" : comp->type;
+    const char *type = comp->pred[instr->src] ? "pred" : comp->type;
     switch (instr->args[0]->type) {
       case Express::TEMP:
         // op reg, reg.
@@ -439,18 +416,24 @@ class CUDACalculate : public CUDAKernel {
         }
         break;
 
-      case Express::NUMBER:
-        // op reg, imm.
-        if (IsFloat(comp->dtype)) {
-          comp->ptx->emit(PTXInstr(op, type),
-                          comp->reg[instr->dst],
-                          PTXFloat(Express::NumericFlt32(instr->args[0]->id)));
-        } else {
-          comp->ptx->emit(PTXInstr(op, type),
-                          comp->reg[instr->dst],
-                          PTXImm(Express::NumericFlt32(instr->args[0]->id)));
-        }
+      case Express::NUMBER: {
+        PTXArg *constant = GetNumberArg(instr->args[1], comp->dtype);
+        comp->ptx->emit(PTXInstr(op, type),
+                        comp->reg[instr->dst],
+                        *constant);
+        delete constant;
         break;
+      }
+
+      case Express::CONST: {
+        Tensor *input = comp->step->input(instr->args[1]->id);
+        PTXArg *constant = GetConstantArg(input);
+        comp->ptx->emit(PTXInstr(op, type),
+                        comp->reg[instr->dst],
+                        *constant);
+        delete constant;
+        break;
+      }
 
       default:
         LOG(FATAL) << "Unsupported: " << instr->AsInstruction();
@@ -461,31 +444,37 @@ class CUDACalculate : public CUDAKernel {
     CHECK_EQ(instr->arity(), 3);
     CHECK_EQ(instr->result->type, Express::TEMP);
     CHECK_EQ(instr->args[1]->type, Express::TEMP);
-    const char *type = comp->pred[instr->dst] ? "pred" : comp->type;
     switch (instr->args[2]->type) {
       case Express::TEMP:
-        comp->ptx->emit(PTXInstr("selp", type),
+        comp->ptx->emit(PTXInstr("selp", comp->type),
                         comp->reg[instr->dst],
                         comp->reg[instr->src],
                         comp->reg[instr->src2],
                         comp->reg[instr->mask]);
         break;
 
-      case Express::NUMBER:
-        if (IsFloat(comp->dtype)) {
-          comp->ptx->emit(PTXInstr("selp", type),
-                          comp->reg[instr->dst],
-                          comp->reg[instr->src],
-                          PTXFloat(Express::NumericFlt32(instr->args[2]->id)),
-                          comp->reg[instr->mask]);
-        } else {
-          comp->ptx->emit(PTXInstr("selp", type),
-                          comp->reg[instr->dst],
-                          comp->reg[instr->src],
-                          PTXImm(Express::NumericFlt32(instr->args[2]->id)),
-                          comp->reg[instr->mask]);
-        }
+      case Express::NUMBER: {
+        PTXArg *constant = GetNumberArg(instr->args[2], comp->dtype);
+        comp->ptx->emit(PTXInstr("selp", comp->type),
+                        comp->reg[instr->dst],
+                        comp->reg[instr->src],
+                        *constant,
+                        comp->reg[instr->mask]);
+        delete constant;
         break;
+      }
+
+      case Express::CONST: {
+        Tensor *input = comp->step->input(instr->args[2]->id);
+        PTXArg *constant = GetConstantArg(input);
+        comp->ptx->emit(PTXInstr("selp", comp->type),
+                        comp->reg[instr->dst],
+                        comp->reg[instr->src],
+                        *constant,
+                        comp->reg[instr->mask]);
+        delete constant;
+        break;
+      }
 
       default:
         LOG(FATAL) << "Unsupported: " << instr->AsInstruction();
@@ -495,27 +484,72 @@ class CUDACalculate : public CUDAKernel {
   void GenerateSelect(Express::Op *instr, Compilation *comp) {
     CHECK_EQ(instr->arity(), 2);
     CHECK_EQ(instr->result->type, Express::TEMP);
-    const char *type = comp->pred[instr->dst] ? "pred" : comp->type;
     switch (instr->args[1]->type) {
       case Express::TEMP:
-        comp->ptx->emit(PTXInstr("selp", type),
+        comp->ptx->emit(PTXInstr("selp", comp->type),
                         comp->reg[instr->dst],
                         comp->reg[instr->src],
                         PTXConst(PTXConst::ZERO, comp->type),
                         comp->reg[instr->mask]);
         break;
 
-      case Express::NUMBER:
-        comp->ptx->emit(PTXInstr("selp", type),
+      case Express::NUMBER: {
+        PTXArg *constant = GetNumberArg(instr->args[1], comp->dtype);
+        comp->ptx->emit(PTXInstr("selp", comp->type),
                         comp->reg[instr->dst],
-                        PTXFloat(Express::NumericFlt32(instr->args[1]->id)),
+                        *constant,
                         PTXConst(PTXConst::ZERO, comp->type),
                         comp->reg[instr->mask]);
+        delete constant;
         break;
+      }
+
+      case Express::CONST: {
+        Tensor *input = comp->step->input(instr->args[1]->id);
+        PTXArg *constant = GetConstantArg(input);
+        comp->ptx->emit(PTXInstr("selp", comp->type),
+                        comp->reg[instr->dst],
+                        *constant,
+                        PTXConst(PTXConst::ZERO, comp->type),
+                        comp->reg[instr->mask]);
+        delete constant;
+        break;
+      }
 
       default:
-        LOG(INFO) << instr->args[1]->type;
         LOG(FATAL) << "Unsupported: " << instr->AsInstruction();
+    }
+  }
+
+  PTXArg *GetNumberArg(Express::Var *var, Type dtype) {
+    switch (dtype) {
+      case DT_FLOAT:
+        return new PTXFloat(Express::NumericFlt32(var->id));
+
+      case DT_DOUBLE:
+        return new PTXDouble(Express::NumericFlt64(var->id));
+
+      default:
+        return new PTXImm(Express::NumericFlt32(var->id));
+    }
+  }
+
+  PTXArg *GetConstantArg(Tensor *tensor) {
+    switch (tensor->type()) {
+      case DT_FLOAT:
+        return new PTXFloat(tensor->value<float>());
+      case DT_DOUBLE:
+        return new PTXDouble(tensor->value<double>());
+      case DT_INT8:
+        return new PTXImm(tensor->value<int8>());
+      case DT_INT16:
+        return new PTXImm(tensor->value<int16>());
+      case DT_INT32:
+        return new PTXImm(tensor->value<int32>());
+      case DT_INT64:
+        return new PTXImm(tensor->value<int64>());
+      default:
+        LOG(FATAL) << "Unsupported constant type: " << tensor->type();
     }
   }
 
