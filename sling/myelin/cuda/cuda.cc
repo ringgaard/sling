@@ -64,7 +64,7 @@ CUDADevice::CUDADevice(int number) : number_(number) {
   CHECK_CUDA(cuDeviceGet(&handle_, number));
 
   // Create context for device.
-  CHECK_CUDA(cuCtxCreate(&context_, CU_CTX_SCHED_SPIN, handle_));
+  CHECK_CUDA(cuCtxCreate(&context_, 0, handle_));
 
   // Get compute capabilities.
   int minor, major;

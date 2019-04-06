@@ -73,7 +73,7 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
       case Express::MOV:
         if (IsLoadZero(instr) && masm->Enabled(ZEROIDIOM)) {
           // Use XOR to zero register instead of loading constant from memory.
-          __ vpxor(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
+          __ vpxor(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
         } else {
           GenerateXMMVectorIntMove(instr, masm);
         }

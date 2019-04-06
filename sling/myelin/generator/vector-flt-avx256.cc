@@ -62,6 +62,9 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
       if (instructions_.Has(Express::SUBINT)) {
         num_mm_aux = std::max(num_mm_aux, 3);
       }
+      if (instructions_.Has(Express::CVTFLTINT) && type_ == DT_DOUBLE) {
+        num_mm_aux = std::max(num_mm_aux, 1);
+      }
     }
     if (instructions_.Has(Express::SUM) ||
         instructions_.Has(Express::PRODUCT) ||
@@ -286,7 +289,15 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
 
     // Convert int32 to int64 for doubles.
     if (type_ == DT_DOUBLE) {
-      __ vpmovsxdq(ymm(instr->dst), xmm(instr->dst));
+      if (CPU::Enabled(AVX2)) {
+        __ vpmovsxdq(ymm(instr->dst), xmm(instr->dst));
+      } else {
+        // Sign-extend each lane separately if AVX2 is not supported.
+        __ vpermilps(xmmaux(0), xmm(instr->dst), 0x0E);
+        __ vpmovsxdq(xmm(instr->dst), xmm(instr->dst));
+        __ vpmovsxdq(xmmaux(0), xmmaux(0));
+        __ vinsertf128(ymm(instr->dst), ymm(instr->dst), xmmaux(0), 1);
+      }
     }
   }
 
@@ -417,28 +428,56 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
   // Generate logical not.
   void GenerateNot(Express::Op *instr, MacroAssembler *masm) {
     // Compute not(x) = xor(1,x).
-    __ vpcmpeqd(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
-    if (instr->src != -1) {
-      // NOT dst,reg
-      switch (type_) {
-        case DT_FLOAT:
-          __ vxorps(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
-          break;
-        case DT_DOUBLE:
-          __ vxorpd(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
-          break;
-        default: UNSUPPORTED;
+    if (CPU::Enabled(AVX2)) {
+      __ vpcmpeqd(ymm(instr->dst), ymm(instr->dst), ymm(instr->dst));
+      if (instr->src != -1) {
+        // NOT dst,reg
+        switch (type_) {
+          case DT_FLOAT:
+            __ vxorps(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
+            break;
+          case DT_DOUBLE:
+            __ vxorpd(ymm(instr->dst), ymm(instr->dst), ymm(instr->src));
+            break;
+          default: UNSUPPORTED;
+        }
+      } else {
+        // NOT dst,[mem]
+        switch (type_) {
+          case DT_FLOAT:
+            __ vxorps(ymm(instr->dst), ymm(instr->dst), addr(instr->args[0]));
+            break;
+          case DT_DOUBLE:
+            __ vxorpd(ymm(instr->dst), ymm(instr->dst), addr(instr->args[0]));
+            break;
+          default: UNSUPPORTED;
+        }
       }
     } else {
-      // NOT dst,[mem]
-      switch (type_) {
-        case DT_FLOAT:
-          __ vxorps(ymm(instr->dst), ymm(instr->dst), addr(instr->args[0]));
-          break;
-        case DT_DOUBLE:
-          __ vxorpd(ymm(instr->dst), ymm(instr->dst), addr(instr->args[0]));
-          break;
-        default: UNSUPPORTED;
+      auto *ones = masm->GetConstant<int>(-1, 8);
+      if (instr->src != -1) {
+        // NOT dst,reg
+        switch (type_) {
+          case DT_FLOAT:
+            __ vxorps(ymm(instr->dst), ymm(instr->src), ones->address());
+            break;
+          case DT_DOUBLE:
+            __ vxorpd(ymm(instr->dst), ymm(instr->src), ones->address());
+            break;
+          default: UNSUPPORTED;
+        }
+      } else {
+        // NOT dst,[mem]
+        __ vmovaps(ymm(instr->dst), ones->address());
+        switch (type_) {
+          case DT_FLOAT:
+            __ vxorps(ymm(instr->dst), ymm(instr->dst), addr(instr->args[0]));
+            break;
+          case DT_DOUBLE:
+            __ vxorpd(ymm(instr->dst), ymm(instr->dst), addr(instr->args[0]));
+            break;
+          default: UNSUPPORTED;
+        }
       }
     }
   }
