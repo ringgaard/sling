@@ -53,7 +53,7 @@ int CUDA::Devices() {
   return num_cuda_devices;
 }
 
-CUDADevice::CUDADevice(int number) : number_(number) {
+CUDADevice::CUDADevice(int number, int flags) : number_(number) {
   // Check that CUDA is supported.
   CHECK(CUDA::Supported());
 
@@ -64,7 +64,7 @@ CUDADevice::CUDADevice(int number) : number_(number) {
   CHECK_CUDA(cuDeviceGet(&handle_, number));
 
   // Create context for device.
-  CHECK_CUDA(cuCtxCreate(&context_, 0, handle_));
+  CHECK_CUDA(cuCtxCreate(&context_, flags, handle_));
 
   // Get compute capabilities.
   int minor, major;
@@ -97,6 +97,9 @@ int CUDADevice::CoresPerSM() const {
     case 60: return 64;   // Pascal Generation (SM 6.0) GP100 class
     case 61: return 128;  // Pascal Generation (SM 6.1) GP10x class
     case 62: return 128;  // Pascal Generation (SM 6.2) GP10x class
+    case 70: return 64;   // Volta Generation (SM 7.0) GV100 class
+    case 72: return 64;   // Volta Generation (SM 7.2) GV10B class
+    case 75: return 64;   // Turing Generation (SM 7.5) TU1xx class
     default: return 128;
   }
 }

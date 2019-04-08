@@ -53,7 +53,7 @@ class CUDA {
 class CUDADevice {
  public:
   // Initialize CUDA device.
-  CUDADevice(int number);
+  CUDADevice(int number, int flags = 0);
   ~CUDADevice();
 
   // Return device number.

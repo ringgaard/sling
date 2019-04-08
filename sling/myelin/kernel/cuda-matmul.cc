@@ -73,6 +73,13 @@ class CUDAMatMulBase : public CUDAKernel {
   }
 
   void Adjust(Step *step) override {
+    // Prefer row-major.
+    Tensor *A = step->input(0);
+    Tensor *B = step->input(1);
+    Tensor *C = step->output(0);
+    A->RequireOrder(ROW_MAJOR_PREFERRED);
+    B->RequireOrder(ROW_MAJOR_PREFERRED);
+    C->RequireOrder(ROW_MAJOR_PREFERRED);
   }
 
   void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {

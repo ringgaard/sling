@@ -53,6 +53,8 @@ DEFINE_bool(sync_steps, false, "Synchronize all compute steps");
 DEFINE_bool(graph_all_vars, false, "Include all variables in DOT graph");
 DEFINE_string(graph_layout, "", "DOT graph layout");
 DEFINE_bool(jit_debug, false, "Debug break in jit code");
+DEFINE_int32(cuda_device, -1, "CUDA device number");
+DEFINE_int32(cuda_context_flags, 0, "CUDA context flags");
 
 namespace sling {
 namespace myelin {
@@ -71,7 +73,7 @@ Compiler::Compiler() {
   // Initialize CUDA runtime and register CUDA kernels in GPU mode.
   if (FLAGS_gpu) {
     RegisterCUDALibrary(library_);
-    cudart.Connect();
+    cudart.Connect(FLAGS_cuda_device, FLAGS_cuda_context_flags);
     runtime_ = &cudart;
   }
 
