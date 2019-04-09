@@ -376,6 +376,9 @@ class MacroAssembler : public jit::Assembler {
   // Wait for task to complete.
   void WaitForTask(int offset);
 
+  // Wait for main task to complete.
+  void WaitForMainTask();
+
   // Reset register usage.
   void ResetRegisterUsage();
 

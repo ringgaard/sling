@@ -73,7 +73,7 @@ class CUDABasicConcat : public CUDAKernel {
 
     // Get thread index.
     ptx_decl(b32, idx);
-    ptx->GetThreadIndex(idx, 0);
+    ptx->LoadThreadIndex(idx, 0);
 
     // Compute block offset.
     ptx_decl(b64, ofs);
@@ -316,7 +316,7 @@ class CUDAGatherMultiple : public CUDAKernel {
 
     // Get thread index.
     ptx_decl(b32, idx);
-    ptx->GetThreadIndex(idx, 0);
+    ptx->LoadThreadIndex(idx, 0);
 
     // Check bounds.
     ptx_decl(pred, outside);
@@ -455,7 +455,7 @@ class CUDAPoolingGather : public CUDAKernel {
 
     // Get thread index.
     ptx_decl(b32, idx);
-    ptx->GetThreadIndex(idx, 0);
+    ptx->LoadThreadIndex(idx, 0);
 
     // Check bounds.
     ptx_decl(pred, outside);

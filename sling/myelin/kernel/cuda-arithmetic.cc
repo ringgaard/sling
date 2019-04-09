@@ -139,7 +139,7 @@ class CUDACalculate : public CUDAKernel {
 
     // Get grid location.
     ptx_decl(b32, idx);
-    ptx->GetThreadIndex(idx, 0);
+    ptx->LoadThreadIndex(idx, 0);
 
     // Check bounds.
     ptx_decl(pred, outside);
@@ -624,7 +624,7 @@ class CUDAArgMax : public CUDAKernel {
 
     // Get thread index.
     ptx_decl(b32, idx);
-    ptx->GetThreadIndex(idx, 0);
+    ptx->LoadThreadIndex(idx, 0);
 
     // Check bounds.
     ptx_decl(pred, outside);

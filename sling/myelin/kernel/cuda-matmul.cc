@@ -33,7 +33,7 @@ class CUDAMatMulBase : public CUDAKernel {
     // Requires CUDA support.
     if (!CUDAKernel::Supports(step)) return false;
 
-    // Two or three float 2D tensor inputs and one 2D tensor output.
+    // Two or three 2D tensor inputs and one 2D tensor output.
     if (step->inputs().size() != (bias_ ? 3 : 2)) return false;
     if (step->outputs().size() != 1) return false;
     Tensor *A = step->input(0);
@@ -115,10 +115,10 @@ class CUDAMatMulBase : public CUDAKernel {
 
     // Get output row and column in C.
     ptx_decl(u32, col);
-    ptx->GetThreadIndex(col, 0);
+    ptx->LoadThreadIndex(col, 0);
     ptx_decl(u32, row);
     if (!vec) {
-      ptx->GetThreadIndex(row, 1);
+      ptx->LoadThreadIndex(row, 1);
     }
 
     // Check bounds.
@@ -259,11 +259,215 @@ class CUDAMatMulAddRelu : public CUDAMatMulBase {
   string Operation() override { return "MatMulAddRelu"; }
 };
 
+// Tiled matrix multiplication using CUDA.
+class CUDAMatMulTiled : public CUDAKernel {
+ public:
+  // Tile block size.
+  static const int TILE_SIZE = 16;
+
+  string Name() override { return "CUDAMatMulTiled"; }
+  string Operation() override { return "MatMul"; }
+
+  bool Supports(Step *step) override {
+    // Requires CUDA support.
+    if (!CUDAKernel::Supports(step)) return false;
+
+    // Two 2D tensor inputs and one 2D tensor output.
+    if (step->inputs().size() != 2) return false;
+    if (step->outputs().size() != 1) return false;
+    Tensor *A = step->input(0);
+    Tensor *B = step->input(1);
+    Tensor *C = step->output(0);
+    if (A->rank() != 2 || B->rank() != 2 || C->rank() != 2) return false;
+
+    // Check shape.
+    if (A->dim(0) != C->dim(0)) return false;
+    if (A->dim(1) != B->dim(0)) return false;
+    if (B->dim(1) != C->dim(1)) return false;
+
+    // Types must match and be supported by CUDA.
+    Type type = A->type();
+    if (TypeTraits::of(type).ptx() == nullptr) return false;
+    if (B->type() != type || C->type() != type) return false;
+
+    // Check that matrices can be tiled.
+    if (A->dim(0) % TILE_SIZE != 0) return false;
+    if (A->dim(1) % TILE_SIZE != 0) return false;
+    if (B->dim(1) % TILE_SIZE != 0) return false;
+
+    // Transpose not supported.
+    if (step->GetAttr("transpose_a", false)) return false;
+    if (step->GetAttr("transpose_b", false)) return false;
+    if (step->GetAttr("transpose_c", false)) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+    // Prefer row-major.
+    Tensor *A = step->input(0);
+    Tensor *B = step->input(1);
+    Tensor *C = step->output(0);
+    A->RequireOrder(ROW_MAJOR_PREFERRED);
+    B->RequireOrder(ROW_MAJOR_PREFERRED);
+    C->RequireOrder(ROW_MAJOR_PREFERRED);
+  }
+
+  void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
+    // Get input and output tensors.
+    Tensor *A = step->input(0);
+    Tensor *B = step->input(1);
+    Tensor *C = step->output(0);
+
+    int width = C->dim(1);
+    int height = C->dim(0);
+    int depth = A->dim(1);
+
+    Type dtype = A->type();
+    const TypeTraits &traits = TypeTraits::of(dtype);
+    const char *type = traits.ptx();
+    bool fp = dtype == DT_FLOAT || dtype == DT_DOUBLE || dtype == DT_HALF;
+    int dsize = traits.size();
+
+    // Set the block size to the title size and use one tread per output
+    // element.
+    ptx->set_block_dims(TILE_SIZE, TILE_SIZE);
+    ptx->set_grid_dims(width, height);
+
+    // Declare shared memory for tiles of A and B.
+    char str[128];
+    sprintf(str, ".shared .f32 ablock[%d];\n", TILE_SIZE * TILE_SIZE);
+    ptx->emit(str);
+    sprintf(str, ".shared .f32 bblock[%d];\n", TILE_SIZE * TILE_SIZE);
+    ptx->emit(str);
+    ptx_decl(b64, atile);
+    ptx_decl(b64, btile);
+    ptx_emit(mov.u64, atile, PTXLiteral("ablock"));
+    ptx_emit(mov.u64, btile, PTXLiteral("bblock"));
+
+    // Get block row and column.
+    ptx_decl(u32, block_row);
+    ptx_decl(u32, block_col);
+    ptx->LoadBlockIndex(block_row, 1);
+    ptx->LoadBlockIndex(block_col, 0);
+
+    // Get row and column within tile.
+    ptx_decl(u32, tile_row);
+    ptx_decl(u32, tile_col);
+    ptx->LoadBlockThreadIndex(tile_row, 1);
+    ptx->LoadBlockThreadIndex(tile_col, 0);
+
+    // Compute output row and colum.
+    ptx_decl(u32, row);
+    ptx_decl(u32, col);
+    ptx_emit(mad.lo.u32, row, block_row, PTXImm(TILE_SIZE), tile_row);
+    ptx_emit(mad.lo.u32, col, block_col, PTXImm(TILE_SIZE), tile_col);
+
+    // Compute offset of (col,row) element in tile.
+    ptx_decl(u64, rowofs);
+    ptx_decl(u64, colofs);
+    ptx_decl(u64, tileofs);
+    ptx_emit(mul.wide.u32, rowofs, tile_row, PTXImm(dsize * TILE_SIZE));
+    ptx_emit(mul.wide.u32, colofs, tile_col, PTXImm(dsize));
+    ptx_emit(add.u64, tileofs, rowofs, colofs);
+
+    ptx_decl(b64, atileptr);
+    ptx_emit(add.u64, atileptr, atile, tileofs);
+    ptx_decl(b64, btileptr);
+    ptx_emit(add.u64, btileptr, btile, tileofs);
+
+    // Compute address of first A tile in tile row.
+    ptx_decl(b64, aptr);
+    ptx->LoadTensorAddress(aptr, A);
+    ptx_emit(mad.wide.u32, aptr, row, PTXImm(A->stride(0)), aptr);
+    ptx_emit(mad.wide.u32, aptr, tile_col, PTXImm(A->stride(1)), aptr);
+
+    ptx_decl(b64, as);
+    ptx_emit(add.u64, as, atile, rowofs);
+
+    // Compute address of first B tile column.
+    ptx_decl(b64, bptr);
+    ptx->LoadTensorAddress(bptr, B);
+    ptx_emit(mad.wide.u32, bptr, tile_row, PTXImm(B->stride(0)), bptr);
+    ptx_emit(mad.wide.u32, bptr, col, PTXImm(B->stride(1)), bptr);
+
+    ptx_decl(b64, bs);
+    ptx_emit(add.u64, bs, btile, colofs);
+
+    // Accumulate result for C[row,col].
+    PTXConst zero(PTXConst::ZERO, type);
+    PTXReg c = ptx->reg(type, "c");
+    ptx->emit(PTXInstr("mov", type), c, zero);
+
+    // Loop over all the tiles of A and B that are required to compute the
+    // tile in C.
+    ptx_decl(u32, idx);
+    ptx_emit(mov.u32, idx, PTXImm(0));
+    ptx_label(loop);
+
+    // Load A and B tiles from device memory to shared memory. Each thread loads
+    // one element from each of the A and B tiles.
+    PTXReg a = ptx->reg(type, "a");
+    PTXReg b = ptx->reg(type, "b");
+    ptx->emit(PTXInstr("ld.global", type), a, PTXAddr(aptr));
+    ptx->emit(PTXInstr("ld.global", type), b, PTXAddr(bptr));
+    ptx->emit(PTXInstr("st.shared", type), PTXAddr(atileptr), a);
+    ptx->emit(PTXInstr("st.shared", type), PTXAddr(btileptr), b);
+
+    // Synchronize to make sure the tiles are loaded before starting the
+    // computation.
+    ptx_emit(bar.sync, PTXImm(0));
+
+    // Multiply A and B tiles together.
+    for (int i = 0; i < TILE_SIZE; ++i) {
+      // c += a[row,i] * b[i,col].
+      int aofs = i * dsize;
+      int bofs = i * dsize * TILE_SIZE;
+      ptx->emit(PTXInstr("ld.shared", type), a, PTXAddr(as, aofs));
+      ptx->emit(PTXInstr("ld.shared", type), b, PTXAddr(bs, bofs));
+      ptx->emit(PTXInstr(fp ? "fma.rn" : "mad.lo", type), c, a, b, c);
+    }
+
+    // Synchronize to make sure that the preceding computation is done before
+    // loading new tiles of A and B in the next iteration.
+    ptx_emit(bar.sync, PTXImm(0));
+
+    // Next tile.
+    ptx_emit(add.u64, aptr, aptr, PTXImm(A->stride(1) * TILE_SIZE));
+    ptx_emit(add.u64, bptr, bptr, PTXImm(B->stride(0) * TILE_SIZE));
+    ptx_emit(add.u32, idx, idx, PTXImm(TILE_SIZE));
+
+    ptx_decl(pred, more);
+    ptx_emit(setp.lt.u32, more, idx, PTXImm(depth));
+    ptx_if(more);
+    ptx_jump(loop);
+    ptx_endif();
+
+    // Store result in C[row,col].
+    ptx_decl(b64, cptr);
+    ptx->LoadTensorAddress(cptr, C);
+    ptx_emit(mad.wide.u32, cptr, row, PTXImm(C->stride(0)), cptr);
+    ptx_emit(mad.wide.u32, cptr, col, PTXImm(C->stride(1)), cptr);
+    ptx->emit(PTXInstr("st.global", type), PTXAddr(cptr), c);
+
+    // Done.
+    ptx_label(done);
+    ptx_ret();
+  }
+
+  int64 Complexity(const Step *step) override {
+    int64 ops = step->input(0)->dim(0);
+    ops *= step->input(1)->elements() * 2;
+    return ops;
+  }
+};
+
 void RegisterCUDAMatMulLibrary(Library *library) {
   library->Register(new CUDAMatMul());
   library->Register(new CUDAMatMulAdd());
   library->Register(new CUDAMatMulRelu());
   library->Register(new CUDAMatMulAddRelu());
+  library->Register(new CUDAMatMulTiled());
 }
 
 }  // namespace myelin

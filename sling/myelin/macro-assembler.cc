@@ -839,6 +839,11 @@ void MacroAssembler::WaitForTask(int offset) {
   rr_.release(acc);
 }
 
+void MacroAssembler::WaitForMainTask() {
+  // Call runtime to wait for main task to complete.
+  CallInstanceFunction(runtime_->SyncMainFunc(), "MyelinSyncMain");
+}
+
 void MacroAssembler::CallInstanceFunction(void (*func)(void *),
                                           const string &symbol) {
   if (func != nullptr) {

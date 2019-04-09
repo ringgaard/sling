@@ -240,7 +240,9 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
         print "mismatch in", f.name, variant, "for", o.name
         print "inputs:"
         for i in flow.inputs(f):
-          if i.data == None: print i.name, np.asarray(data.tensor(i))
+          if i.data == None:
+            print i.name
+            print np.asarray(data.tensor(i))
         print "myelin:"
         print np.asarray(t)
         print "numpy:"

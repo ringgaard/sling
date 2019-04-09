@@ -880,7 +880,7 @@ bool Step::NeedsSynchronization() {
   // Only steps running in the main task need synchronization.
   if (task_index_ != -1) return false;
 
-  // Check if any of the inputs has been produced on the device.
+  // Check if any of the inputs have been produced on the device.
   for (Tensor *input : inputs_) {
     Step *producer = input->producer();
     if (producer == nullptr) continue;
@@ -1600,6 +1600,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     // Copy input variables that do not have the placement required by the
     // consumers.
     bool sync = false;
+    bool main_pending = false;
     Transfers xfers;
     for (Tensor *tensor : parameters_) {
       if (tensor->cell_ != cell) continue;
@@ -1615,7 +1616,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         // Copy parameter tensor from device to host.
         xfers.add_device_to_host(tensor, task);
         tensor->AddNewPlace(HOST);
-        if (task == -1) sync = true;
+      }
+      if (task == -1) {
+        sync = true;
+        main_pending = true;
       }
     }
     runtime_->EmitTensorTransfers(xfers, cell, &masm);
@@ -1658,8 +1662,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         // Synchronize main task if needed before executing step.
         if (options_.sync_steps || (sync && step->NeedsSynchronization())) {
           VLOG(8) << "Sync main task";
-          masm.CallInstanceFunction(runtime_->SyncMainFunc(), "MyelinSyncMain");
+          masm.WaitForMainTask();
           sync = false;
+          main_pending = false;
         }
 
         // Generate code for step.
@@ -1672,6 +1677,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         step->kernel_->Generate(step, &masm);
         if (masm.pc_offset() == pc) step->noop_ = true;
         linker_->EndStep(step, pc);
+        if (step->placement() == DEVICE) main_pending = true;
 
         // No registers are preserved between steps, so reset register
         // allocation.
@@ -1711,9 +1717,9 @@ bool Network::Compile(const Flow &flow, const Library &library) {
         if (t.state == PENDING) {
           // Flush asynchronous operations.
           if (sync) {
-            masm.CallInstanceFunction(runtime_->SyncMainFunc(),
-                                      "MyelinSyncMain");
+            masm.WaitForMainTask();
             sync = false;
+            main_pending = false;
           }
 
           // Start parallel task.
@@ -1767,7 +1773,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
 
     // Synchronize main task.
-    masm.CallInstanceFunction(runtime_->SyncMainFunc(), "MyelinSyncMain");
+    if (main_pending) masm.WaitForMainTask();
 
     // Stop runtime profiler.
     if (options_.profiling) {
