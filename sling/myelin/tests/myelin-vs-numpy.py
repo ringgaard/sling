@@ -365,7 +365,10 @@ def log_test(n):
   f = flow.define("log")
   x = f.var("x", dt, [n])
   y = f.log(x)
-  check(flow, n, 0.1, 10.0)
+  if flags.arg.gpu:
+    check(flow, n, 0.1, 10.0, atol=1e-6)
+  else:
+    check(flow, n, 0.1, 10.0)
 
 def tanh_test(n):
   flow = myelin.Flow()
@@ -716,9 +719,7 @@ for i in sizes:
 
 for i in sizes:
   for j in sizes:
-    if not flags.arg.gpu:
-      # Transpose not yet supported on GPU.
-      matmul_transpose_test(i, j)
+    matmul_transpose_test(i, j)
     for k in sizes:
       matmul_test(i, j, k)
       matmul_add_test(i, j, k)
