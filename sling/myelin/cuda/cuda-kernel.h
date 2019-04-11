@@ -44,7 +44,7 @@ class PTXMacroAssembler : public PTXAssembler {
   // Return grid size for kernel.
   int grid_size() const { return grid_dim_[0] * grid_dim_[1] * grid_dim_[2]; }
 
-  // Block size for kernel.
+  // Block dimensions for kernel.
   int block_dim(int d) const { return block_dim_[d]; }
   void set_block_dim(int d, int size) { block_dim_[d] = size; }
   void set_block_dims(int x = 1, int y = 1, int z = 1) {
@@ -61,7 +61,7 @@ class PTXMacroAssembler : public PTXAssembler {
   // Load address of tensor into register.
   void LoadTensorAddress(const PTXReg &reg, Tensor *tensor);
 
-  // Compute the kernel thread index for dimension.
+  // Load the kernel thread index for dimension.
   void LoadThreadIndex(const PTXReg &idx, int d);
 
   // Load the kernel thread index within block for dimension.
@@ -70,7 +70,7 @@ class PTXMacroAssembler : public PTXAssembler {
   // Load the kernel block index for dimension.
   void LoadBlockIndex(const PTXReg &idx, int d);
 
-  // Load the kernel block dimension for dimension.
+  // Load the kernel block size for dimension.
   void LoadBlockDim(const PTXReg &idx, int d);
 
  private:

@@ -345,54 +345,52 @@ class CUDAMatMulTiled : public CUDAKernel {
     ptx_emit(mov.u64, atile, PTXLiteral("ablock"));
     ptx_emit(mov.u64, btile, PTXLiteral("bblock"));
 
-    // Get block row and column.
-    ptx_decl(u32, block_row);
-    ptx_decl(u32, block_col);
-    ptx->LoadBlockIndex(block_row, 1);
-    ptx->LoadBlockIndex(block_col, 0);
+    // Get block x and y indicies.
+    ptx_decl(u32, bx);
+    ptx_decl(u32, by);
+    ptx->LoadBlockIndex(bx, 0);
+    ptx->LoadBlockIndex(by, 1);
 
-    // Get row and column within tile.
-    ptx_decl(u32, tile_row);
-    ptx_decl(u32, tile_col);
-    ptx->LoadBlockThreadIndex(tile_row, 1);
-    ptx->LoadBlockThreadIndex(tile_col, 0);
+    // Get tile x and y indices.
+    ptx_decl(u32, tx);
+    ptx_decl(u32, ty);
+    ptx->LoadBlockThreadIndex(tx, 0);
+    ptx->LoadBlockThreadIndex(ty, 1);
 
-    // Compute output row and colum.
-    ptx_decl(u32, row);
-    ptx_decl(u32, col);
-    ptx_emit(mad.lo.u32, row, block_row, PTXImm(TILE_SIZE), tile_row);
-    ptx_emit(mad.lo.u32, col, block_col, PTXImm(TILE_SIZE), tile_col);
+    // Compute output row and column.
+    ptx_decl(u32, x);
+    ptx_decl(u32, y);
+    ptx_emit(mad.lo.u32, x, bx, PTXImm(TILE_SIZE), tx);
+    ptx_emit(mad.lo.u32, y, by, PTXImm(TILE_SIZE), ty);
 
-    // Compute offset of (col,row) element in tile.
-    ptx_decl(u64, rowofs);
-    ptx_decl(u64, colofs);
-    ptx_decl(u64, tileofs);
-    ptx_emit(mul.wide.u32, rowofs, tile_row, PTXImm(dsize * TILE_SIZE));
-    ptx_emit(mul.wide.u32, colofs, tile_col, PTXImm(dsize));
-    ptx_emit(add.u64, tileofs, rowofs, colofs);
-
-    ptx_decl(b64, atileptr);
-    ptx_emit(add.u64, atileptr, atile, tileofs);
-    ptx_decl(b64, btileptr);
-    ptx_emit(add.u64, btileptr, btile, tileofs);
-
-    // Compute address of first A tile in tile row.
+    // Compute address of first A tile row.
     ptx_decl(b64, aptr);
     ptx->LoadTensorAddress(aptr, A);
-    ptx_emit(mad.wide.u32, aptr, row, PTXImm(A->stride(0)), aptr);
-    ptx_emit(mad.wide.u32, aptr, tile_col, PTXImm(A->stride(1)), aptr);
-
-    ptx_decl(b64, as);
-    ptx_emit(add.u64, as, atile, rowofs);
+    ptx_emit(mad.wide.u32, aptr, y, PTXImm(A->stride(0)), aptr);
+    ptx_emit(mad.wide.u32, aptr, tx, PTXImm(A->stride(1)), aptr);
 
     // Compute address of first B tile column.
     ptx_decl(b64, bptr);
     ptx->LoadTensorAddress(bptr, B);
-    ptx_emit(mad.wide.u32, bptr, tile_row, PTXImm(B->stride(0)), bptr);
-    ptx_emit(mad.wide.u32, bptr, col, PTXImm(B->stride(1)), bptr);
+    ptx_emit(mad.wide.u32, bptr, ty, PTXImm(B->stride(0)), bptr);
+    ptx_emit(mad.wide.u32, bptr, x, PTXImm(B->stride(1)), bptr);
 
+    // Compute offset of (col,row) element in tiles. These are pointers to
+    // the elements in the shared memory blocks that the thread is responsible
+    // for loading.
+    ptx_decl(b64, ain);
+    ptx_emit(mad.wide.u32, ain, ty, PTXImm(dsize * TILE_SIZE), atile);
+    ptx_emit(mad.wide.u32, ain, tx, PTXImm(dsize), ain);
+
+    ptx_decl(b64, bin);
+    ptx_emit(mad.wide.u32, bin, ty, PTXImm(dsize * TILE_SIZE), btile);
+    ptx_emit(mad.wide.u32, bin, tx, PTXImm(dsize), bin);
+
+    // Sub-matrices of A and B that thread is summing over.
+    ptx_decl(b64, as);
     ptx_decl(b64, bs);
-    ptx_emit(add.u64, bs, btile, colofs);
+    ptx_emit(mad.wide.u32, as, ty, PTXImm(dsize * TILE_SIZE), atile);
+    ptx_emit(mad.wide.u32, bs, tx, PTXImm(dsize), btile);
 
     // Accumulate result for C[row,col].
     PTXConst zero(PTXConst::ZERO, type);
@@ -410,9 +408,9 @@ class CUDAMatMulTiled : public CUDAKernel {
     PTXReg a = ptx->reg(type, "a");
     PTXReg b = ptx->reg(type, "b");
     ptx->emit(PTXInstr("ld.global", type), a, PTXAddr(aptr));
+    ptx->emit(PTXInstr("st.shared", type), PTXAddr(ain), a);
     ptx->emit(PTXInstr("ld.global", type), b, PTXAddr(bptr));
-    ptx->emit(PTXInstr("st.shared", type), PTXAddr(atileptr), a);
-    ptx->emit(PTXInstr("st.shared", type), PTXAddr(btileptr), b);
+    ptx->emit(PTXInstr("st.shared", type), PTXAddr(bin), b);
 
     // Synchronize to make sure the tiles are loaded before starting the
     // computation.
@@ -446,8 +444,8 @@ class CUDAMatMulTiled : public CUDAKernel {
     // Store result in C[row,col].
     ptx_decl(b64, cptr);
     ptx->LoadTensorAddress(cptr, C);
-    ptx_emit(mad.wide.u32, cptr, row, PTXImm(C->stride(0)), cptr);
-    ptx_emit(mad.wide.u32, cptr, col, PTXImm(C->stride(1)), cptr);
+    ptx_emit(mad.wide.u32, cptr, y, PTXImm(C->stride(0)), cptr);
+    ptx_emit(mad.wide.u32, cptr, x, PTXImm(C->stride(1)), cptr);
     ptx->emit(PTXInstr("st.global", type), PTXAddr(cptr), c);
 
     // Done.
