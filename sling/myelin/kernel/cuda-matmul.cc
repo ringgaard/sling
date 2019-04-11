@@ -251,9 +251,9 @@ class CUDAMatMulBase : public CUDAKernel {
 
     // Declare shared memory for tiles of A and B.
     char str[128];
-    sprintf(str, ".shared .f32 ablock[%d];\n", tile_size * tile_size);
+    sprintf(str, ".shared .%s ablock[%d];\n", type, tile_size * tile_size);
     ptx->emit(str);
-    sprintf(str, ".shared .f32 bblock[%d];\n", tile_size * tile_size);
+    sprintf(str, ".shared .%s bblock[%d];\n", type, tile_size * tile_size);
     ptx->emit(str);
     ptx_decl(b64, atile);
     ptx_decl(b64, btile);

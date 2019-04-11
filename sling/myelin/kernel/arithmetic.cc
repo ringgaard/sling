@@ -822,10 +822,6 @@ class Calculate : public Kernel {
     // Strict math not supported.
     if (step->GetAttr("strict", false)) return false;
 
-    // Dense encoding required.
-    for (auto *input : step->inputs()) input->RequireDense();
-    for (auto *output : step->outputs()) output->RequireDense();
-
     return true;
   }
 

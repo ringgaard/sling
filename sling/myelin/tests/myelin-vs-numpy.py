@@ -591,9 +591,7 @@ def logic_test(n):
   f.logical_or(eq, gt, name="or")
   f.logical_not(gt, name="not")
   f.logical_xor(eq, gt, name="xor")
-  if not flags.arg.gpu:
-    # AndNot not yet supported on GPU.
-    f.logical_and(f.logical_not(eq), gt, name="andn")
+  f.logical_and(f.logical_not(eq), gt, name="andn")
   check(flow, n, 0, 10)
 
 def cond_test(n):
@@ -668,19 +666,15 @@ for i in sizes:
   abs_test(i)
   square_test(i)
   relu_test(i)
-  if not flags.arg.gpu:
-    # Broadcast not yet supported on GPU.
-    bcast_test(i)
+  bcast_test(i)
   shape_test(i)
   size_test(i)
   if i < 32: rank_test(i)
 
-  if not flags.arg.gpu:
-    # Broadcast not yet supported on GPU.
-    for c in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]:
-      add_const_test(i, c)
-      sub_const_test(i, c)
-      mul_const_test(i, c)
+  for c in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]:
+    add_const_test(i, c)
+    sub_const_test(i, c)
+    mul_const_test(i, c)
 
   if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
     rcp_test(i)
@@ -695,9 +689,7 @@ for i in sizes:
     product_test(i)
     min_test(i)
     max_test(i)
-    if not flags.arg.gpu:
-      # Reductions not yet supported on GPU.
-      norm_test(i)
+    norm_test(i)
     sign_test(i)
 
     equal_test(i)

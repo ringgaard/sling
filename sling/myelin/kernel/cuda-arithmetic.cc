@@ -58,13 +58,16 @@ class CUDACalculate : public CUDAKernel {
     if (step->type() != operation_) return false;
     if (arity_ != -1 && step->indegree() != arity_) return false;
 
-    // Check that inputs and outputs have the compatible types and shapes.
-    if (step->indegree() < 1 || step->outdegree() < 1) return false;
-    Type type = step->output(0)->type();
-    const Shape &shape = step->output(0)->shape();
+    // Check that inputs and outputs have compatible types and shapes.
+    bool assign = step->type() == "Assign";
+    if (step->indegree() < 1) return false;
+    if (!assign && step->outdegree() < 1) return false;
+    Tensor *prototype = step->GetPrototype();
+    Type type = prototype->type();
+    const Shape &shape = prototype->shape();
     for (auto *input : step->inputs()) {
       if (input->type() != type) return false;
-      if (!input->Compatible(step->output(0))) return false;
+      if (!input->Compatible(prototype)) return false;
 
       // NB: general broadcasting not yet supported.
       if (input->elements() != shape.elements() && input->elements() != 1) {
@@ -74,35 +77,55 @@ class CUDACalculate : public CUDAKernel {
     for (auto *output : step->outputs()) {
       if (output->type() != type) return false;
       if (output->shape() != shape) return false;
-      if (output->elements() != shape.elements()) return false;
     }
 
     // Check that element type is supported by CUDA.
     if (TypeTraits::of(type).ptx() == nullptr) return false;
 
-    // Dense encoding required.
-    for (auto *input : step->inputs()) input->RequireDense();
-    for (auto *output : step->outputs()) output->RequireDense();
-
     return true;
   }
 
   void Adjust(Step *step) override {
-    // Inputs and ouputs must be in standard format.
-   for (auto *input : step->inputs()) {
-      input->RequireDense();
-      input->RequireStandardOrder();
-    }
-    for (auto *output : step->outputs()) {
-      output->RequireDense();
-      output->RequireStandardOrder();
-    }
+    // Inputs and ouputs must be dense.
+    for (auto *input : step->inputs()) input->RequireDense();
+    for (auto *output : step->outputs()) output->RequireDense();
 
     // Enable sharing of inputs and outputs.
     for (int i = 0; i < step->indegree(); ++i) {
       for (int j = 0; j < step->outdegree(); ++j) {
         if (step->input(i)->shape() == step->output(j)->shape()) {
           if (step->AllowInPlace(i, j)) break;
+        }
+      }
+    }
+
+    if (step->type() == "Assign") {
+      // Link output reference to assignment target.
+      if (step->outdegree() == 1) {
+        step->input(0)->Link(step->output(0));
+      }
+    } else {
+      // Enable sharing of inputs and outputs.
+      Express expr(Express::NVIDIA);
+      InitExpression(step, &expr, true);
+      expr.ComputeLiveRanges();
+      for (int i = 0; i < step->indegree(); ++i) {
+        Tensor *input = step->input(i);
+        Express::Var *ivar = expr.Lookup(Express::INPUT, i);
+        if (ivar == nullptr) continue;
+
+        for (int j = 0; j < step->outdegree(); ++j) {
+          Tensor *output = step->output(j);
+          Express::Var *ovar = expr.Lookup(Express::OUTPUT, j);
+          if (ovar == nullptr) continue;
+
+          // The input and output can be shared if they have the same format and
+          // their live ranges do not overlap.
+          if (input->shape() == output->shape() && !ivar->overlaps(ovar)) {
+            if (step->AllowInPlace(i, j)) {
+              break;
+            }
+          }
         }
       }
     }
@@ -262,6 +285,9 @@ class CUDACalculate : public CUDAKernel {
         case Express::XOR:
           GenerateBinaryOp("xor", instr, &comp);
           break;
+        case Express::ANDNOT:
+          GenerateAndNot(instr, &comp);
+          break;
         case Express::NOT:
           GenerateUnaryOp("not", instr, &comp);
           break;
@@ -270,6 +296,13 @@ class CUDACalculate : public CUDAKernel {
           break;
         case Express::SELECT:
           GenerateSelect(instr, &comp);
+          break;
+        case Express::SUM:
+        case Express::PRODUCT:
+        case Express::MIN:
+        case Express::MAX:
+          // Only trivial reductions supported.
+          GenerateStore(instr, &comp);
           break;
         default:
           LOG(FATAL) << "Instruction not supported in CUDA: "
@@ -295,7 +328,8 @@ class CUDACalculate : public CUDAKernel {
     CHECK_EQ(instr->result->type, Express::TEMP);
     PTXReg &dst = comp->reg[instr->dst];
     switch (instr->args[0]->type) {
-      case Express::INPUT: {
+      case Express::INPUT:
+      case Express::CONST: {
         // mov reg, [ptr].
         Tensor *input = comp->step->input(instr->args[0]->id);
         if (input->constant() && input->elements() == 1) {
@@ -519,6 +553,17 @@ class CUDACalculate : public CUDAKernel {
       default:
         LOG(FATAL) << "Unsupported: " << instr->AsInstruction();
     }
+  }
+
+  void GenerateAndNot(Express::Op *instr, Compilation *comp) {
+    // Negate first argument.
+    comp->ptx->emit("not.pred", comp->reg[instr->dst], comp->reg[instr->src]);
+
+    // Compute logical and with second argument.
+    int tmp = instr->src;
+    instr->src = instr->dst;
+    GenerateBinaryOp("and", instr, comp);
+    instr->src = tmp;
   }
 
   PTXArg *GetNumberArg(Express::Var *var, Type dtype) {
@@ -795,10 +840,13 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
   library->Register(new CUDACalculate("CUDAExp", "Exp", 1));
   library->Register(new CUDACalculate("CUDASigmoid", "Sigmoid", 1));
   library->Register(new CUDACalculate("CUDATanh", "Tanh", 1));
+  library->Register(new CUDACalculate("CUDAErf", "Erf", 1));
   library->Register(new CUDACalculate("CUDACalculate", "Calculate"));
+  library->Register(new CUDACalculate("CUDAAssign", "Assign"));
 
   library->Register(new CUDACalculate("CUDANeg", "Neg", 1));
   library->Register(new CUDACalculate("CUDAAbs", "Abs", 1));
+  library->Register(new CUDACalculate("CUDASign", "Sign", 1));
   library->Register(new CUDACalculate("CUDARelu", "Relu", 1));
   library->Register(new CUDACalculate("CUDASoftsign", "Softsign", 1));
   library->Register(new CUDACalculate("CUDASoftplus", "Softplus", 1));
@@ -806,8 +854,17 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
   library->Register(new CUDACalculate("CUDAReciprocal", "Reciprocal", 1));
   library->Register(new CUDACalculate("CUDASquare", "Square", 1));
   library->Register(new CUDACalculate("CUDASqrt", "Sqrt", 1));
+
   library->Register(new CUDACalculate("CUDACond", "Cond", 3));
   library->Register(new CUDACalculate("CUDASelect", "Select", 2));
+
+  library->Register(new CUDACalculate("CUDAAnd", "And", 2));
+  library->Register(new CUDACalculate("CUDAOr", "Or", 2));
+  library->Register(new CUDACalculate("CUDAXor", "Xor", 2));
+  library->Register(new CUDACalculate("CUDAAndNot", "AndNot", 2));
+  library->Register(new CUDACalculate("CUDANot", "Not", 1));
+
+  library->Register(new CUDACalculate("CUDAId", "Identity", 1));
 
   library->Register(new CUDAArgMax(false));
   library->Register(new CUDAArgMax(true));
