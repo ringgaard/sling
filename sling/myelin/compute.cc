@@ -2100,6 +2100,11 @@ string Cell::ToString() const {
         globals.push_back(input);
       }
     }
+    for (Tensor *output : step->outputs()) {
+      if (output->IsGlobal() && !Contains(globals, output)) {
+        globals.push_back(output);
+      }
+    }
   }
   if (!globals.empty()) {
     str.append("\n");

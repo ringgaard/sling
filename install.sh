@@ -35,7 +35,7 @@ tools/buildall.sh
 echo
 echo "=== Install SLING Python API"
 SLINGPKG=/usr/lib/python2.7/dist-packages/sling
-if [ ! -x ${SLINGPKG} ]; then
+if ! [ -x ${SLINGPKG} ]; then
   echo "Adding link for SLING Python package"
   sudo ln -s $(realpath python) ${SLINGPKG}
 else
