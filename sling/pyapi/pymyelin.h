@@ -129,6 +129,9 @@ struct PyCell : public PyBase {
   // Check if parameter is in cell.
   int Contains(PyObject *key);
 
+  // Check if cell contains kernels on both host and device.
+  PyObject *Mixed();
+
   // Myelin cell.
   myelin::Cell *cell;
 

@@ -2155,6 +2155,12 @@ string Cell::ToString() const {
       }
       str.append(")");
 
+      string expr = step->GetAttr("expr");
+      if (!expr.empty()) {
+        str.append(" ");
+        str.append(expr);
+      }
+
       if (step->placement() & DEVICE) str.append(" on device");
 
       str.append("\n");

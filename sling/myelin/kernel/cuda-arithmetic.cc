@@ -608,6 +608,203 @@ class CUDACalculate : public CUDAKernel {
   int arity_;               // number of inputs
 };
 
+// CUDA-based reduction.
+class CUDAReduce : public CUDAKernel {
+ public:
+  CUDAReduce(Reduction op) : op_(op) {}
+
+  string Name() override { return "CUDA" + Operation(); }
+
+  string Operation() override {
+    switch (op_) {
+      case REDUCE_ADD: return "Sum";
+      case REDUCE_MUL: return "Product";
+      case REDUCE_MIN: return "Min";
+      case REDUCE_MAX: return "Max";
+    }
+    return "???";
+  }
+
+  bool Supports(Step *step) override {
+    // Requires CUDA support.
+    if (!CUDAKernel::Supports(step)) return false;
+
+    // Check inputs and outputs.
+    if (step->indegree() != 1) return false;
+    if (step->outdegree() != 1) return false;
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+
+    // Check that element type is supported by CUDA.
+    if (TypeTraits::of(x->type()).ptx() == nullptr) return false;
+    if (y->type() != x->type()) return false;
+    if (y->elements() != 1) return false;
+
+    return true;
+  }
+
+  void GeneratePTX(Step *step, PTXMacroAssembler *ptx) override {
+    // Get input and output tensors.
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    int size = x->elements();
+    int dsize = x->element_size();
+    const char *type = TypeTraits::of(x->type()).ptx();
+
+    // Get device capabilities.
+    CUDADevice *device = step->cell()->runtime()->Device();
+    int max_block_size = device->max_threads_per_block();
+    int warp_size = device->warp_size();
+
+    // Compute the block size.
+    int block_size = 1;
+    while (block_size * 2 <= size && block_size < max_block_size) {
+      block_size *= 2;
+    }
+    ptx->set_grid_dims(block_size);
+    if (step->variant().empty()) {
+      string variant = "B" + std::to_string(block_size);
+      step->set_variant(variant);
+    }
+
+    // Declare shared memory for reduction.
+    char str[128];
+    sprintf(str, ".shared .%s reduction_array[%d];\n", type, block_size);
+    ptx->emit(str);
+    ptx_decl(b64, reduction);
+    ptx_emit(mov.u64, reduction, PTXLiteral("reduction_array"));
+
+    // Get thread index.
+    ptx_decl(b32, idx);
+    ptx->LoadThreadIndex(idx, 0);
+
+    // Check bounds.
+    ptx_decl(pred, outside);
+    ptx_emit(setp.ge.u32, outside, idx, PTXImm(block_size));
+    ptx_if(outside);
+    ptx_jump(done);
+    ptx_endif();
+
+    // Reduce input array down to block size:
+    //  r = x[idx];
+    //  s = idx;
+    //  while (s < size) {
+    //    s += block_size;
+    //    r = op(r, x[s])
+    //  }
+    //  reduction[idx] = r;
+    ptx_decl(b64, xptr);
+    ptx->LoadTensorAddress(xptr, x);
+
+    // Initially set r = x[idx].
+    ptx_decl(b64, xiptr);
+    ptx_emit(mad.wide.u32, xiptr, idx, PTXImm(dsize), xptr);
+    PTXReg r = ptx->reg(type, "r");
+    ptx->emit(PTXInstr("ld.global", type), r, PTXAddr(xiptr));
+
+    if (block_size < size) {
+      // Strided loop over inputs.
+      ptx_decl(u32, s);
+      ptx_emit(mov.u32, s, idx);
+      ptx_label(loop1);
+
+      // Next element in stride. Stop when reaching end of input.
+      ptx_emit(add.u32, s, s, PTXImm(block_size));
+      ptx_emit(setp.ge.u32, outside, s, PTXImm(size));
+      ptx_if(outside);
+      ptx_jump(done1);
+      ptx_endif();
+
+      // Get x[s].
+      ptx_decl(b64, sptr);
+      ptx_emit(mad.wide.u32, sptr, s, PTXImm(dsize), xptr);
+      PTXReg value = ptx->reg(type, "value");
+      ptx->emit(PTXInstr("ld.global", type), value, PTXAddr(sptr));
+
+      // Reduce r and x[s].
+      Reduce(ptx, r, value, type);
+
+      ptx_jump(loop1);
+      ptx_label(done1);
+    }
+
+    // Store reduced element into shared memory.
+    ptx_decl(b64, rptr);
+    ptx_emit(mad.wide.u32, rptr, idx, PTXImm(dsize), reduction);
+    ptx->emit(PTXInstr("st.shared", type), PTXAddr(rptr), r);
+
+    // The input has now been reduced down to the block size and the reduced
+    // element in each block is now stored in shared memory. The block is
+    // reduced in a number of steps that reduce the problem in half. This is
+    // done until there is only one element left.
+    ptx_decl(pred, completed);
+    PTXReg rs = ptx->reg(type, "rs");
+    while (block_size > 1) {
+      // Terminate threads that are no longer active in the reduction.
+      ptx_emit(setp.ge.u32, completed, idx, PTXImm(block_size / 2));
+      ptx_if(completed);
+      ptx_jump(done);
+      ptx_endif();
+
+      // Synchronize threads. No synchronization is needed when all remaining
+      // active threads are running in the same warp because instructions are
+      // SIMD synchronous within a warp.
+      if (block_size > warp_size) {
+        ptx_emit(bar.sync, PTXImm(0));
+      }
+      block_size >>= 1;
+
+      // Reduce block by reducing strided elements.
+      //  reduction[idx] = op(reduction[idx], reduction[idx + block_size])
+      int disp = block_size * dsize;
+      ptx->emit(PTXInstr("ld.shared", type), r, PTXAddr(rptr));
+      ptx->emit(PTXInstr("ld.shared", type), rs, PTXAddr(rptr, disp));
+      Reduce(ptx, r, rs, type);
+      ptx->emit(PTXInstr("st.shared", type), PTXAddr(rptr), r);
+    }
+
+    // Reduction is now in the first element.
+    ptx->emit(PTXInstr("ld.shared", type), r, PTXAddr(rptr));
+    ptx_decl(b64, yptr);
+    ptx->LoadTensorAddress(yptr, y);
+    ptx->emit(PTXInstr("st.global", type), PTXAddr(yptr), r);
+
+    // Done.
+    ptx_label(done);
+    ptx_ret();
+  }
+
+  int64 Complexity(const Step *step) override {
+    return step->input(0)->elements();
+  }
+
+  // Emit reduction operation.
+  void Reduce(PTXMacroAssembler *ptx, const PTXReg &acc, const PTXReg &value,
+              const char *type) {
+    switch (op_) {
+      case REDUCE_ADD:
+        ptx->emit(PTXInstr("add", type), acc, acc, value);
+        break;
+      case REDUCE_MUL:
+        if (type[0] == 'f') {
+          ptx->emit(PTXInstr("mul", type), acc, acc, value);
+        } else {
+          ptx->emit(PTXInstr("mul.lo", type), acc, acc, value);
+        }
+        break;
+      case REDUCE_MIN:
+        ptx->emit(PTXInstr("min", type), acc, acc, value);
+        break;
+      case REDUCE_MAX:
+        ptx->emit(PTXInstr("max", type), acc, acc, value);
+        break;
+    }
+  }
+
+ private:
+  Reduction op_;  // reduction operation
+};
+
 // CUDA-based argmax/argmin using reduction.
 class CUDAArgMax : public CUDAKernel {
  public:
@@ -812,6 +1009,30 @@ class CUDAArgMax : public CUDAKernel {
   bool minimum_;  // compute argmin instead of argmax
 };
 
+// Transformer that prevents reductions from being merged with other
+// expression kernels.
+class CUDAReductionTransformer : public Transformer {
+ public:
+  string Name() override { return "CUDAReduction"; }
+
+  bool Transform(Flow *flow) override {
+    int updates = 0;
+    for (Flow::Operation *op : flow->ops()) {
+      if (op->type == "Sum" ||
+          op->type == "Product" ||
+          op->type == "Min" ||
+          op->type == "Max") {
+        if (!op->GetAttr("nomerge", false)) {
+          op->SetAttr("nomerge", true);
+          updates++;
+        }
+      }
+    }
+
+    return updates > 0;
+  }
+};
+
 // Register CUDA arithmetic library.
 void RegisterCUDAArithmeticLibrary(Library *library) {
   ptx_model.mov_reg_reg = true;
@@ -866,8 +1087,14 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
 
   library->Register(new CUDACalculate("CUDAId", "Identity", 1));
 
+  library->Register(new CUDAReduce(REDUCE_ADD));
+  library->Register(new CUDAReduce(REDUCE_MUL));
+  library->Register(new CUDAReduce(REDUCE_MIN));
+  library->Register(new CUDAReduce(REDUCE_MAX));
   library->Register(new CUDAArgMax(false));
   library->Register(new CUDAArgMax(true));
+
+  library->RegisterTransformer(new CUDAReductionTransformer());
 }
 
 }  // namespace myelin

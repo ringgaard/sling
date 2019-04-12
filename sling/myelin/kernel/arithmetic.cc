@@ -465,6 +465,10 @@ class ExpressionTransformer : public Transformer {
   }
 
   bool Combine(Flow *flow, Flow::Operation *first, Flow::Operation *second) {
+    // Check if merging has been disabled.
+    if (first->GetAttr("nomerge", false)) return false;
+    if (second->GetAttr("nomerge", false)) return false;
+
     // Check that ops have the same types and output shapes.
     bool assign = IsAssignmentOp(second);
     if (first->indegree() < 1) return false;
