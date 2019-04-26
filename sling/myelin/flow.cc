@@ -55,28 +55,90 @@ std::unordered_map<string, Type> typemap = {
   {"resource", DT_RESOURCE},
 };
 
+static double f64_zero = 0.0;
+static float f32_zero = 0.0;
+static int64_t i64_zero = 0;
+static int32_t i32_zero = 0;
+static int16_t i16_zero = 0;
+static uint16_t u16_zero = 0;
+static int8_t i8_zero = 0;
+static uint8_t u8_zero = 0;
+static bool b_zero = false;
+
+static double f64_one = 1.0;
+static float f32_one = 1.0;
+static int64_t i64_one = 1;
+static int32_t i32_one = 1;
+static int16_t i16_one = 1;
+static uint16_t u16_one = 1;
+static int8_t i8_one = 1;
+static uint8_t u8_one = 1;
+static bool b_one = true;
+
 std::vector<TypeTraits> typetraits = {
-  {DT_INVALID, "void", 0, nullptr, nullptr, nullptr},
-  {DT_FLOAT, "float32", sizeof(float), "float", "f32", "f"},
-  {DT_DOUBLE, "float64", sizeof(double), "double", "f64", "d"},
-  {DT_INT32, "int32", sizeof(int32_t), "int32_t", "s32", "i"},
-  {DT_UINT8, "uint8", sizeof(uint8_t), "uint8_t", "u8", "B"},
-  {DT_INT16, "int16", sizeof(int16_t), "int16_t", "s16", "h"},
-  {DT_INT8, "int8", sizeof(int8_t), "int8_t", "s8", "b"},
-  {DT_STRING, "string", sizeof(char *), "char *", "b64", nullptr},
-  {DT_COMPLEX64, "complex64", 2 * sizeof(double), nullptr, nullptr, nullptr},
-  {DT_INT64, "int64", sizeof(int64_t), "int64_t", "s64", "q"},
-  {DT_BOOL, "bool", sizeof(bool), "bool", "b8", "?"},
-  {DT_QINT8, "qint8", sizeof(int8_t), nullptr, nullptr, nullptr},
-  {DT_QUINT8, "quint8", sizeof(uint8_t), nullptr, nullptr, nullptr},
-  {DT_QINT32, "qint32", sizeof(int32_t), nullptr, nullptr, nullptr},
-  {DT_BFLOAT16, "bfloat16", 2, nullptr, nullptr, nullptr},
-  {DT_QINT16, "qint16", sizeof(int16_t), nullptr, nullptr, nullptr},
-  {DT_UINT16, "uint16", sizeof(uint16_t), nullptr, nullptr, nullptr},
-  {DT_QUINT16, "quint16", sizeof(uint16_t), nullptr, nullptr, nullptr},
-  {DT_COMPLEX128, "complex128", 2 * sizeof(double), nullptr, nullptr, nullptr},
-  {DT_HALF, "float16", 2, nullptr, "f16", nullptr},
-  {DT_RESOURCE, "resource", 1, "char *", nullptr, nullptr},
+  {DT_INVALID, "void", 0,
+   nullptr, nullptr, -1, nullptr,
+   nullptr, nullptr},
+  {DT_FLOAT, "float32", sizeof(float),
+   "float", "f32", 0, "f",
+   &f32_zero, &f32_one},
+  {DT_DOUBLE, "float64", sizeof(double),
+   "double", "f64", 1, "d",
+   &f64_zero, &f64_one},
+  {DT_INT32, "int32", sizeof(int32_t),
+   "int32_t", "s32", 10, "i",
+   &i32_zero, &i32_one},
+  {DT_UINT8, "uint8", sizeof(uint8_t),
+   "uint8_t", "u8", 8, "B",
+   &u8_zero, &u8_one},
+  {DT_INT16, "int16", sizeof(int16_t),
+   "int16_t", "s16", -1, "h",
+   &i16_zero, &i16_one},
+  {DT_INT8, "int8", sizeof(int8_t),
+   "int8_t", "s8", 3, "b",
+   &i8_zero, &i8_one},
+  {DT_STRING, "string", sizeof(char *),
+   "char *", "b64", -1, nullptr,
+   nullptr, nullptr},
+  {DT_COMPLEX64, "complex64", 2 * sizeof(float),
+   nullptr, nullptr, 5, nullptr,
+   nullptr, nullptr},
+  {DT_INT64, "int64", sizeof(int64_t),
+   "int64_t", "s64", -1, "q",
+   &i64_zero, &i64_one},
+  {DT_BOOL, "bool", sizeof(bool),
+   "bool", "b8", -1, "?",
+   &b_zero, &b_one},
+  {DT_QINT8, "qint8", sizeof(int8_t),
+   nullptr, nullptr, -1, nullptr,
+   nullptr, nullptr},
+  {DT_QUINT8, "quint8", sizeof(uint8_t),
+   nullptr, nullptr, -1, nullptr,
+   nullptr, nullptr},
+  {DT_QINT32, "qint32", sizeof(int32_t),
+   nullptr, nullptr, -1, nullptr,
+   nullptr, nullptr},
+  {DT_BFLOAT16, "bfloat16", 2,
+   nullptr, nullptr, -1, nullptr,
+   nullptr, nullptr},
+  {DT_QINT16, "qint16", sizeof(int16_t),
+   nullptr, nullptr, -1, nullptr,
+   nullptr, nullptr},
+  {DT_UINT16, "uint16", sizeof(uint16_t),
+   nullptr, nullptr, -1, nullptr,
+   &u16_zero, &u16_one},
+  {DT_QUINT16, "quint16", sizeof(uint16_t),
+   nullptr, nullptr, -1, nullptr,
+   nullptr, nullptr},
+  {DT_COMPLEX128, "complex128", 2 * sizeof(double),
+   nullptr, nullptr, 5, nullptr,
+   nullptr, nullptr},
+  {DT_HALF, "float16", 2,
+   nullptr, "f16", 2, nullptr,
+   nullptr, nullptr},
+  {DT_RESOURCE, "resource", 1,
+   "char *", nullptr, -1, nullptr,
+   nullptr, nullptr},
 };
 
 bool Shape::IsSameSize(const Shape &other) const {

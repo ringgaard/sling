@@ -102,6 +102,7 @@ cc_library(
 cc_library(
   name = "cuda",
   srcs = [
+    "cublas-matmul.cc",
     "cuda.cc",
     "cuda-array.cc",
     "cuda-matmul.cc",

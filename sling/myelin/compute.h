@@ -1259,6 +1259,12 @@ struct Options {
 // A network is a collection of cells and variables that are compiled as a unit.
 class Network {
  public:
+  // Resource that is managed by the network.
+  class Resource {
+   public:
+    virtual ~Resource() = default;
+  };
+
   Network();
   ~Network();
 
@@ -1309,6 +1315,9 @@ class Network {
 
   // Allocate memory in memory pool.
   char *AllocateMemory(size_t size, int alignment);
+
+  // Add resource to network. This is deleted together with the network.
+  void AddResource(Resource *resource) { resources_.push_back(resource); }
 
   // Initialize learnable weights with random values from a normal distribution.
   void InitLearnableWeights(int64 seed = 0,
@@ -1386,6 +1395,9 @@ class Network {
 
   // Memory blocks owned by network.
   std::vector<char *> memory_;
+
+  // Resources owned by network.
+  std::vector<Resource *> resources_;
 
   // Runtime support.
   Runtime *runtime_;

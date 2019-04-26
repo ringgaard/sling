@@ -60,7 +60,8 @@ namespace sling {
 namespace myelin {
 
 // CUDA runtime.
-static myelin::CUDARuntime cudart;
+static myelin::CUDARuntime *cudart = nullptr;
+static int cudart_refs = 0;
 
 Compiler::Compiler() {
   // Register standard kernels.
@@ -72,9 +73,13 @@ Compiler::Compiler() {
 
   // Initialize CUDA runtime and register CUDA kernels in GPU mode.
   if (FLAGS_gpu) {
+    if (cudart == nullptr) {
+      cudart = new myelin::CUDARuntime();
+      cudart->Connect(FLAGS_cuda_device, FLAGS_cuda_context_flags);
+    }
+    runtime_ = cudart;
+    cudart_refs++;
     RegisterCUDALibrary(library_);
-    cudart.Connect(FLAGS_cuda_device, FLAGS_cuda_context_flags);
-    runtime_ = &cudart;
   }
 
   // Add extra kernels.
@@ -85,6 +90,11 @@ Compiler::~Compiler() {
   // Kernel library cannot be deallocated when profiling is enabled since the
   // profiler needs to be able to access the registered kernels.
   if (!FLAGS_profile) delete library_;
+
+  if (--cudart_refs == 0) {
+    delete cudart;
+    cudart = nullptr;
+  }
 }
 
 void Compiler::Compile(Flow *flow, Network *net) {

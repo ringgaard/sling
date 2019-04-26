@@ -35,6 +35,9 @@ typedef uint64 DevicePtr;
 // Check that CUDA call is successful.
 #define CHECK_CUDA(op) CHECK_EQ((op), CUDA_SUCCESS)
 
+// Check that CUBLAS call is successful.
+#define CHECK_CUBLAS(op) CHECK_EQ((op), CUBLAS_STATUS_SUCCESS)
+
 // CUDA driver interface.
 class CUDA {
  public:
@@ -64,6 +67,9 @@ class CUDADevice {
 
   // Return context for device.
   CUcontext context() const { return context_; }
+
+  // Return handle for CUBLAS Lt.
+  cublasLtHandle_t lthandle() const { return lthandle_; }
 
   // Compile PTX code and return module. The module is owned by the device
   // object and is destroyed together with the device object.
@@ -152,6 +158,9 @@ class CUDADevice {
 
   // Context for device.
   CUcontext context_;
+
+  // CUBLAS Lt handle.
+  cublasLtHandle_t lthandle_;
 
   // Compute capabilities.
   int capability_;

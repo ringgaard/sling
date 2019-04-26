@@ -167,17 +167,6 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
           << "), block ("
           << block_dim_x << "," << block_dim_y << "," << block_dim_z << ")";
 
-  // Get offset of stream in data instance block.
-  int streamofs;
-  if (step->task_index() == -1) {
-    // Main task stream is stored in runtime block.
-    streamofs = offsetof(CUDAInstance, mainstream);
-  } else {
-    // Parallel task stream is stored in task block.
-    streamofs = step->cell()->task_offset(step->task_index()) +
-                 offsetof(Task, state);
-  }
-
   // Build parameter array with device instance address as the only parameter.
   Register params = tmpreg;
   __ pushq(Operand(masm->instance(), offsetof(CUDAInstance, data)));
@@ -195,7 +184,7 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
   // Set up stack-based parameters for launching kernel.
   __ pushq(Immediate(0));  // extra options
   __ pushq(params);
-  __ pushq(Operand(masm->instance(), streamofs));
+  __ pushq(Operand(masm->instance(), StreamOffset(step)));
   __ pushq(Immediate(0));  // shared memory
   __ pushq(Immediate(block_dim_z));
 

@@ -31,6 +31,9 @@ static std::once_flag cuda_initialized;
 // Number of CUDA-enabled devices.
 static int num_cuda_devices = 0;
 
+// Use default CUDA context.
+static const bool use_default_context = false;
+
 // Initialize CUDA support. This function should only be called once.
 void CUDA::Init() {
   // Load the CUDA driver API.
@@ -63,8 +66,19 @@ CUDADevice::CUDADevice(int number, int flags) : number_(number) {
   // Get device handle.
   CHECK_CUDA(cuDeviceGet(&handle_, number));
 
-  // Create context for device.
-  CHECK_CUDA(cuCtxCreate(&context_, flags, handle_));
+  // Create/get context for device.
+  if (use_default_context) {
+    CHECK_CUDA(cuDevicePrimaryCtxRetain(&context_, handle_));
+  } else {
+    CHECK_CUDA(cuCtxCreate(&context_, flags, handle_));
+  }
+
+  // Get CUBLAS Lt handle.
+  if (HasCuBLASLt()) {
+    CHECK_CUBLAS(cublasLtCreate(&lthandle_));
+  } else {
+    lthandle_ = nullptr;
+  }
 
   // Get compute capabilities.
   int minor, major;
@@ -74,7 +88,12 @@ CUDADevice::CUDADevice(int number, int flags) : number_(number) {
 
 CUDADevice::~CUDADevice() {
   for (auto *m : modules_) delete m;
-  cuCtxDetach(context_);
+  if (lthandle_) cublasLtDestroy(lthandle_);
+  if (use_default_context) {
+    cuDevicePrimaryCtxRelease(handle_);
+  } else {
+    cuCtxDestroy(context_);
+  }
 }
 
 CUDAModule *CUDADevice::Compile(const char *ptx) {

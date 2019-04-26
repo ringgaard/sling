@@ -57,9 +57,11 @@ enum Type {
 class TypeTraits {
  public:
   TypeTraits(Type type, const char *name, int size,
-             const char *ctype, const char *ptx, const char *pytype)
+             const char *ctype, const char *ptx, int cuda, const char *pytype,
+             void *zero, void *one)
       : type_(type), name_(name), size_(size),
-        ctype_(ctype), ptx_(ptx), pytype_(pytype) {}
+        ctype_(ctype), ptx_(ptx), cuda_(cuda), pytype_(pytype),
+        zero_(zero), one_(one) {}
 
   Type type() const { return type_; }
   const string &name() const { return name_; }
@@ -67,10 +69,17 @@ class TypeTraits {
   bool valid() const { return type_ != DT_INVALID; }
   const char *ctype() const { return ctype_; }
   const char *ptx() const { return ptx_; }
+  int cuda() const { return cuda_; }
   const char *pytype() const { return pytype_; }
 
   // Return data formatted according to type.
   string str(const void *data) const;
+
+  // Binary representation of zero.
+  const void *zero() const { return zero_; }
+
+  // Binary representation of one.
+  const void *one() const { return one_; }
 
   // Look up traits from type code.
   static const TypeTraits &of(Type type);
@@ -83,8 +92,12 @@ class TypeTraits {
   string name_;         // type name
   size_t size_;         // size in bytes
   const char *ctype_;   // C type
-  const char *ptx_;     // ptx type
+  const char *ptx_;     // CUDA PTX type
+  int cuda_;            // CUDA CUBLAS type
   const char *pytype_;  // Python type
+
+  const void *zero_;    // binary representation of zero for type
+  const void *one_;     // binary representation of one for type
 };
 
 // Look up traits from type.

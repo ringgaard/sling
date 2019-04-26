@@ -944,6 +944,7 @@ Network::Network() {
 }
 
 Network::~Network() {
+  for (auto *r : resources_) delete r;
   for (auto *m : memory_) MemFree(m);
   for (auto *t : parameters_) delete t;
   for (auto *t : globals_) {

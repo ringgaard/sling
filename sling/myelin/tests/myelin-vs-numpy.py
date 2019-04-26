@@ -196,8 +196,14 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
   # Ensure that inputs are not overwritten.
   for i in flow.inputs(): i.output = True
 
+  if flags.arg.v >= 2:
+    for f in flow.funcs.itervalues():
+      print "Compiling %s %s" % (f.name, str(variant))
+
   # Compile flow.
   net = compiler.compile(flow)
+
+  # Run all functions and compare results.
   for f in flow.funcs.itervalues():
     # Output progress.
     if flags.arg.v >= 1:

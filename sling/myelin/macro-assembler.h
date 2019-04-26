@@ -323,6 +323,9 @@ class MacroAssembler : public jit::Assembler {
   // Load address of element in tensor.
   void LoadTensorAddress(Register dst, Tensor *tensor, Tensor *indices);
 
+  // Load address of tensor on device.
+  void LoadTensorDeviceAddress(Register dst, Tensor *tensor);
+
   // Emit breakpoint.
   void Breakpoint() { int3(); }
 

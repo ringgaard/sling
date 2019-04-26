@@ -225,7 +225,7 @@ DevicePtr CUDARuntime::CopyTensorToDevice(const Tensor *tensor) {
 }
 
 void CUDARuntime::RemoveTensorFromDevice(const Tensor *tensor) {
-  CHECK_CUDA(cuMemFree(tensor->device_data()));
+  CHECK_CUDA(cuMemFree(tensor->device_data())) << tensor->name();
 }
 
 char *CUDARuntime::FetchTensorFromDevice(const Instance *data,
@@ -403,6 +403,18 @@ void CUDARuntime::StartProfiler(void *data) {
 
 void CUDARuntime::StopProfiler(void *data) {
   cuProfilerStop();
+}
+
+// Get offset of stream in data instance block.
+int StreamOffset(Step *step) {
+  if (step->task_index() == -1) {
+    // Main task stream is stored in runtime block.
+    return offsetof(CUDAInstance, mainstream);
+  } else {
+    // Parallel task stream is stored in task block.
+    int task_offset = step->cell()->task_offset(step->task_index());
+    return task_offset + offsetof(Task, state);
+  }
 }
 
 }  // namespace myelin

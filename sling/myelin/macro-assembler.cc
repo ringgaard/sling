@@ -380,6 +380,31 @@ void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor,
   }
 }
 
+void MacroAssembler::LoadTensorDeviceAddress(Register dst, Tensor *tensor) {
+  DCHECK(tensor->placement() & DEVICE);
+  if (tensor->IsGlobal()) {
+    if (tensor->ref()) {
+      DCHECK(tensor->ref_placement() & HOST) << tensor->name();
+      DCHECK(tensor->data() != nullptr);
+      movp(dst, tensor->data());
+      movq(dst, Operand(dst));
+    } else {
+      DCHECK(tensor->device_data() != DEVICE_NULL);
+      movq(dst, tensor->device_data());
+    }
+  } else {
+    if (tensor->ref()) {
+      DCHECK(tensor->ref_placement() & HOST) << tensor->name();
+      movq(dst, Operand(datareg, tensor->offset()));
+    } else {
+      movq(dst, Operand(datareg));
+      if (tensor->device_offset() != 0) {
+        addq(dst, Immediate(tensor->device_offset()));
+      }
+    }
+  }
+}
+
 void MacroAssembler::Copy(Register dst, int ddisp,
                           Register src, int sdisp,
                           int size) {

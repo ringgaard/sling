@@ -122,6 +122,9 @@ class CUDARuntime : public Runtime {
   CUDADevice *device_ = nullptr;
 };
 
+// Get offset of stream in data instance block.
+int StreamOffset(Step *step);
+
 }  // namespace myelin
 }  // namespace sling
 
