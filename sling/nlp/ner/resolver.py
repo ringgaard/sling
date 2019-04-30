@@ -31,13 +31,12 @@ def item_name(item):
 
 kb = sling.Store()
 kb.lockgc()
-kb.load("local/data/e/wiki/kb.sling")
+kb.load("local/data/e/ner/kb.sling")
 langdir = "local/data/e/wiki/" + flags.arg.lang
 phrasetab = sling.PhraseTable(kb, langdir + "/phrase-table.repo")
 factex = sling.FactExtractor(kb)
 n_page_item = kb["/wp/page/item"]
 n_popularity = kb["/w/item/popularity"]
-n_fanin = kb["/w/item/fanin"]
 n_links = kb["/w/item/links"]
 kb.freeze()
 
@@ -45,7 +44,6 @@ form_penalty = 0.1
 base_context_score = 1e-3
 topic_weight = 1.0
 mention_weight = 500.0
-thematic_weight = 0.0
 
 num_docs = 0
 num_mentions = 0
@@ -68,22 +66,7 @@ for doc in corpus:
   item = doc.frame[n_page_item]
   context[item] = context.get(item, 0.0) + topic_weight
 
-  #for fact in factex.facts(store, item):
-  #  target = fact[-1]
-  #  fanin = target[n_fanin]
-  #  if fanin != None:
-  #    context[target] = context.get(target, 0.0) + 1.0 / fanin
-
-  # Add unanchored links to context model.
-  if thematic_weight > 0:
-    for theme in doc.themes:
-      if type(theme) is not sling.Frame: continue
-      theme = theme.resolve()
-      popularity = item[n_popularity]
-      if popularity == None: popularity = 1
-      context[theme] = context.get(theme, 0.0) + thematic_weight / popularity
-
-  # Try to score and rank all linked mentions.
+  # Score and rank all linked mentions.
   for mention in doc.mentions:
     # Get phrase and case form.
     phrase = doc.phrase(mention.begin, mention.end)
@@ -94,7 +77,7 @@ for doc in corpus:
 
     matches = phrasetab.query(phrase)
     for item in mention.evokes():
-      if item.isanonymous(): continue;
+      if item.isanonymous(): continue
 
       # Score all matches.
       scores = []
@@ -103,15 +86,6 @@ for doc in corpus:
       for m in matches:
         # Compute score for match.
         cscore = context.get(m.item(), base_context_score)
-        clue = None
-        best = base_context_score
-        #for fact in factex.facts(store, m.item()):
-        #  target = fact[-1]
-        #  weight = context.get(target, 0.0)
-        #  cscore += weight
-        #  if weight > best:
-        #    best = weight
-        #    clue = target
         links = m.item()[n_links]
         if links != None:
           for link,count in links:
@@ -119,12 +93,11 @@ for doc in corpus:
             cscore += weight * count
         if not compatible(form, m.form()): cscore *= form_penalty
         score = cscore * m.count()
-        scores.append((m, score, cscore, clue, best))
+        scores.append((m, score, cscore))
         if m.item() == item: found = True
 
       # Ignore mention if it is not in the prase table.
       if not found:
-        #print "N/A", phrase, item_text(item)
         num_unknown += 1
         continue
       num_mentions += 1
@@ -141,16 +114,10 @@ for doc in corpus:
           candidate = m.item()
           score = s[1]
           cscore = s[2]
-          clue = s[3]
-          clue_score = s[4]
 
-          hint = ""
-          if clue != None:
-            hint = " {" + item_name(clue) + ":" + str(clue_score) + "}"
-
-          print "%11.4f %s %5d %8.4f %s%s" % (score, formname[m.form()],
-                                              m.count(), cscore,
-                                              item_text(candidate), hint)
+          print "%11.4f %s %5d %8.4f %s" % (score, formname[m.form()],
+                                            m.count(), cscore,
+                                            item_text(candidate))
           if candidate == item: break
           rank += 1
 
@@ -164,11 +131,6 @@ for doc in corpus:
       popularity = item[n_popularity]
       if popularity == None: popularity = 1
       context[item] = context.get(item, 0.0) + mention_weight / popularity
-      #for fact in factex.facts(store, item):
-      #  target = fact[-1]
-      #  fanin = target[n_fanin]
-      #  if fanin != None:
-      #    context[target] = context.get(target, 0.0) + 1.0 / fanin
 
       links = item[n_links]
       if links != None:
@@ -177,7 +139,7 @@ for doc in corpus:
           if popularity == None: popularity = 1
           context[link] = context.get(link, 0.0) + float(count) / popularity
 
-  print len(context), "items in context", len(doc.mentions), "mentions"
+  print len(context), "items in context,", len(doc.mentions), "mentions"
   print
   if num_docs == 1000: break
 
