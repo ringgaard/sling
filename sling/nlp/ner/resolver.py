@@ -34,7 +34,6 @@ kb.lockgc()
 kb.load("local/data/e/ner/kb.sling")
 langdir = "local/data/e/wiki/" + flags.arg.lang
 phrasetab = sling.PhraseTable(kb, langdir + "/phrase-table.repo")
-factex = sling.FactExtractor(kb)
 n_page_item = kb["/wp/page/item"]
 n_popularity = kb["/w/item/popularity"]
 n_links = kb["/w/item/links"]

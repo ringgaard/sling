@@ -81,7 +81,7 @@ class ResolverContext {
 
   // Initialize resolver context.
   ResolverContext(Store *store, const EntityResolver *resolver)
-      : store_(store), resolver_(resolver) {}
+      : store_(store), resolver_(resolver), tracking_(store) {}
 
   // Add entity topic to context.
   void AddTopic(Handle entity);
@@ -104,6 +104,17 @@ class ResolverContext {
   int GetPopularity(Handle entity) const;
 
  private:
+  // Add tracking of anonymous frame to prevent it from being reclaimed.
+  void Track(Handle h) {
+    if (!h.IsRef()) return;
+    if (h.IsNil()) return;
+    Datum *datum = store_->Deref(h);
+    if (!datum->IsFrame()) return;
+    if (datum->AsFrame()->IsAnonymous()) {
+      tracking_.push_back(h);
+    }
+  }
+
   // Resolved mention phrase.
   struct Mention {
     Handle entity = Handle::nil();  // resolved entity
@@ -128,6 +139,9 @@ class ResolverContext {
 
   // Local mention phrases mapping from phrase fingerprint to entity.
   std::unordered_map<uint64, Mention> mentions_;
+
+  // Tracked frame handles.
+  Handles tracking_;
 };
 
 }  // namespace nlp

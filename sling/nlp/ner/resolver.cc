@@ -25,6 +25,7 @@ void EntityResolver::Init(Store *commons, const PhraseTable *aliases) {
 void ResolverContext::AddTopic(Handle entity) {
   // Add entity to context model.
   context_[entity] += 1.0;
+  Track(entity);
 }
 
 void ResolverContext::AddEntity(Handle entity) {
@@ -32,6 +33,7 @@ void ResolverContext::AddEntity(Handle entity) {
   Frame item(store_, entity);
   float popularity = item.GetInt(resolver_->n_popularity, 1);
   context_[entity] += resolver_->mention_weight_ / popularity;
+  Track(entity);
 
   // Add outbound links to context model.
   Frame links = item.GetFrame(resolver_->n_links);
@@ -53,6 +55,7 @@ void ResolverContext::AddMention(uint64 fp, CaseForm form,
     mention.entity = entity;
     mention.form = form;
     mention.count = count * resolver_->mention_boost_;
+    Track(entity);
   } else if (entity == mention.entity) {
     mention.count += count * resolver_->mention_boost_;
   }
@@ -90,6 +93,8 @@ void ResolverContext::Score(uint64 fp, CaseForm form,
   // Score candidates.
   candidates->clear();
   for (auto &m : matches) {
+    if (m.item.IsNil()) continue;
+
     // Compute score for candidate.
     float context = ContextScore(m.item, resolver_->base_context_score);
 
