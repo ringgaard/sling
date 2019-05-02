@@ -41,8 +41,8 @@ class EntityResolver {
 
   // Symbols
   Names names_;
-  Name n_popularity{names_, "/w/item/popularity"};
-  Name n_links{names_, "/w/item/links"};
+  Name n_popularity_{names_, "/w/item/popularity"};
+  Name n_links_{names_, "/w/item/links"};
 
   // Hyperparameters.
   float mention_weight_ = 100.0;
@@ -80,8 +80,7 @@ class ResolverContext {
   typedef Top<Candidate> Candidates;
 
   // Initialize resolver context.
-  ResolverContext(Store *store, const EntityResolver *resolver)
-      : store_(store), resolver_(resolver), tracking_(store) {}
+  ResolverContext(Store *store, const EntityResolver *resolver);
 
   // Add entity topic to context.
   void AddTopic(Handle entity);
@@ -101,7 +100,10 @@ class ResolverContext {
   Handle Resolve(uint64 fp, CaseForm form) const;
 
   // Get entity popularity.
-  int GetPopularity(Handle entity) const;
+  int GetPopularity(Handle entity) const {
+    Handle popularity = store_->GetFrame(entity)->get(n_popularity_);
+    return popularity.IsNil() ? 1 : popularity.AsInt();
+  }
 
  private:
   // Add tracking of anonymous frame to prevent it from being reclaimed.
@@ -142,6 +144,10 @@ class ResolverContext {
 
   // Tracked frame handles.
   Handles tracking_;
+
+  // Symbols.
+  Handle n_popularity_;
+  Handle n_links_;
 };
 
 }  // namespace nlp

@@ -84,7 +84,7 @@ class CUDAMatMulBase : public CUDAKernel {
     // Get input and output tensors.
     Args args(step);
 
-    // Used tiled matrix multiplication if matrices consist of whole tiles.
+    // Use tiled matrix multiplication if matrices consist of whole tiles.
     if (args.A.tileable(16) && args.B.tileable(16)) {
       GenerateTiled(step, ptx, 16);
     } else if (args.A.tileable(8) && args.B.tileable(8)) {
