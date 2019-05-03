@@ -588,7 +588,6 @@ void PyCell::Define(PyObject *module) {
   methods.Add("instance", &PyCell::NewInstance);
   methods.Add("channel", &PyCell::NewChannel);
   methods.AddO("index", &PyCell::Index);
-  methods.Add("mixed", &PyCell::Mixed);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "Cell");
@@ -650,16 +649,6 @@ int PyCell::Contains(PyObject *key) {
   Tensor *tensor = pynet->FindTensor(key, cell);
   PyErr_Clear();
   return tensor != nullptr;
-}
-
-PyObject *PyCell::Mixed() {
-  bool on_host = false;
-  bool on_device = false;
-  for (Step *step : cell->steps()) {
-    if (step->placement() & HOST) on_host = true;
-    if (step->placement() & DEVICE) on_device = true;
-  }
-  return PyBool_FromLong(on_host & on_device);
 }
 
 void PyInstance::Define(PyObject *module) {
