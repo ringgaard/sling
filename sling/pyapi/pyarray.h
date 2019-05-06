@@ -26,7 +26,7 @@ struct PyArray : public PyBase, public Root {
   // A slice represents a subset of the elements in an array.
   struct Slice {
     // Initialize slice from Python slice object.
-    int Init(PySliceObject *slice, Py_ssize_t size) {
+    int Init(PyObject *slice, Py_ssize_t size) {
       int rc = PySlice_GetIndicesEx(slice, size, &start, &stop, &step, &length);
       stop = start + step * length;
       return rc;

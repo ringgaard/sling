@@ -40,8 +40,8 @@ cell = net.cell("matmul")
 
 data = cell.instance()
 
-for run in xrange(flags.arg.repeat):
+for run in range(flags.arg.repeat):
   data.compute()
 
-print net.profile()
+print(net.profile())
 

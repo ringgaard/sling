@@ -7,5 +7,5 @@ else
 fi
 
 echo Running run.py $* in the background logging to $LOGFILE
-python python/run.py $* &> $LOGFILE &
+python3 python/run.py $* &> $LOGFILE &
 

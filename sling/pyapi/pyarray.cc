@@ -90,14 +90,13 @@ PyObject *PyArray::GetItem(Py_ssize_t index) {
 }
 
 PyObject *PyArray::GetItems(PyObject *key) {
-  if (PyInt_Check(key)) {
+  if (PyLong_Check(key)) {
     // Simple integer index.
-    return GetItem(PyInt_AS_LONG(key));
+    return GetItem(PyLong_AS_LONG(key));
   } else if (PySlice_Check(key)) {
     // Get index slice.
-    PySliceObject *pyslice = reinterpret_cast<PySliceObject *>(key);
     Slice *subset = new Slice();
-    if (subset->Init(pyslice, length()) == -1) {
+    if (subset->Init(key, length()) == -1) {
       delete subset;
       return nullptr;
     }
@@ -215,7 +214,7 @@ PyObject *PyArray::Str() {
   StringPrinter printer(pystore->store);
   printer.Print(h);
   const string &text = printer.text();
-  return PyString_FromStringAndSize(text.data(), text.size());
+  return PyUnicode_FromStringAndSize(text.data(), text.size());
 }
 
 PyObject *PyArray::Data(PyObject *args, PyObject *kw) {
@@ -231,13 +230,13 @@ PyObject *PyArray::Data(PyObject *args, PyObject *kw) {
     flags.InitEncoder(encoder.encoder());
     encoder.Encode(h);
     const string &buffer = encoder.buffer();
-    return PyString_FromStringAndSize(buffer.data(), buffer.size());
+    return PyUnicode_FromStringAndSize(buffer.data(), buffer.size());
   } else {
     StringPrinter printer(pystore->store);
     flags.InitPrinter(printer.printer());
     printer.Print(h);
     const string &text = printer.text();
-    return PyString_FromStringAndSize(text.data(), text.size());
+    return PyUnicode_FromStringAndSize(text.data(), text.size());
   }
 }
 

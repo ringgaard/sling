@@ -31,8 +31,8 @@ flags.define("--repeat", default=1, type=int)
 flags.parse()
 dt = flags.arg.dt
 
-print "Myelin test suite for", dt, flags.arg.cpu
-print
+print("Myelin test suite for", dt, flags.arg.cpu)
+print()
 
 # Statistics for test runs.
 class Test:
@@ -197,17 +197,17 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
   for i in flow.inputs(): i.output = True
 
   if flags.arg.v >= 2:
-    for f in flow.funcs.itervalues():
-      print "Compiling %s %s" % (f.name, str(variant))
+    for f in flow.funcs.values():
+      print("Compiling %s %s" % (f.name, str(variant)))
 
   # Compile flow.
   net = compiler.compile(flow)
 
   # Run all functions and compare results.
-  for f in flow.funcs.itervalues():
+  for f in flow.funcs.values():
     # Output progress.
     if flags.arg.v >= 1:
-      print "Running %s %s" % (f.name, str(variant))
+      print("Running %s %s" % (f.name, str(variant)))
 
     # Create data instance for cell.
     cell = net.cell(f.name)
@@ -242,25 +242,25 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
       if b.dtype == bool: t = np.array(t, dtype=bool)
       if not np.allclose(t, b, rtol=rtol, atol=atol):
         test.errors += 1
-        print
-        print "mismatch in", f.name, variant, "for", o.name
-        print "inputs:"
+        print()
+        print("mismatch in", f.name, variant, "for", o.name)
+        print("inputs:")
         for i in flow.inputs(f):
           if i.data == None:
-            print i.name
-            print np.asarray(data.tensor(i))
-        print "myelin:"
-        print np.asarray(t)
-        print "numpy:"
-        print b
+            print(i.name)
+            print(np.asarray(data.tensor(i)))
+        print("myelin:")
+        print(np.asarray(t))
+        print("numpy:")
+        print(b)
         if b.dtype != bool:
-          print "abs error:"
-          print b - np.asarray(t)
-          print "rel error:"
-          print (b - np.asarray(t)) / np.asarray(t)
+          print("abs error:")
+          print(b - np.asarray(t))
+          print("rel error:")
+          print((b - np.asarray(t)) / np.asarray(t))
 
   if flags.arg.profile:
-    print net.profile()
+    print(net.profile())
 
 # Tests
 
@@ -643,21 +643,21 @@ def mul_const_test(n, c):
 
 # Check for specific test to run.
 if flags.arg.test:
-  print "Running test", flags.arg.test
+  print("Running test", flags.arg.test)
   exec(flags.arg.test)
-  print
+  print()
   quit()
 
 # Run tests for different size ranges.
 if flags.arg.thorough:
-  sizes = range(1, 48) + [64, 128, 256]
+  sizes = list(range(1, 48)) + [64, 128, 256]
 else:
-  sizes = range(1, 8) + [9, 14, 15, 16, 31, 32, 33, 64]
+  sizes = list(range(1, 8)) + [9, 14, 15, 16, 31, 32, 33, 64]
 
 for i in sizes:
   for j in sizes:
     concat_test(i, j)
-  for j in xrange(1, i + 1):
+  for j in range(1, i + 1):
     if i % j == 0:
       split_test(i, j)
 
@@ -728,21 +728,21 @@ if flags.arg.thorough:
   matmul_test(1024, 1024, 1024)
 
 # Output test results.
-print "Test results"
-print "============"
-print
+print("Test results")
+print("============")
+print()
 
 errors = 0
 for name in sorted(tests):
   t = tests[name]
   errors += t.failed()
   if t.failed() == 0:
-    print "%-20s %7d passed" % (t.name, t.passed())
+    print("%-20s %7d passed" % (t.name, t.passed()))
   else:
-    print "%-20s %7d passed %7d failed" % (t.name, t.passed(), t.failed())
+    print("%-20s %7d passed %7d failed" % (t.name, t.passed(), t.failed()))
 print
 
 if errors > 0:
-  print "******", errors, "tests failed for ", " ".join(sys.argv[1:]), " ******"
+  print("*****", errors, "tests failed for ", " ".join(sys.argv[1:]), " *****")
   exit(1)
 

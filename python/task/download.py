@@ -15,14 +15,15 @@
 """Workflow builder for downloading wiki dumps"""
 
 import os
-import urllib2
+import urllib
 import _strptime
 import time
 
-from workflow import *
-import corpora
+import sling
+import sling.task.corpora as corpora
 import sling.flags as flags
 import sling.log as log
+from sling.task.workflow import *
 
 # Number of concurrent downloads.
 download_concurrency = 0

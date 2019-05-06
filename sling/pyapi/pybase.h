@@ -19,8 +19,8 @@
 #include <Python.h>
 #include <structmember.h>
 #else
-#include <python2.7/Python.h>
-#include <python2.7/structmember.h>
+#include <python3.6/Python.h>
+#include <python3.6/structmember.h>
 #endif
 #include <vector>
 
@@ -112,7 +112,7 @@ struct PyBase : public PyVarObject {
 
   // Allocate string.
   static PyObject *AllocateString(Text text) {
-    return PyString_FromStringAndSize(text.data(), text.size());
+    return PyUnicode_FromStringAndSize(text.data(), text.size());
   }
 
   // Type checking.

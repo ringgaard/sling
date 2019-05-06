@@ -15,10 +15,11 @@
 #ifdef SLING_GOOGLE3
 #include <Python.h>
 #else
-#include <python2.7/Python.h>
+#include <python3.6/Python.h>
 #endif
 
 #include "sling/base/init.h"
+
 #include "sling/pyapi/pyarray.h"
 #include "sling/pyapi/pydate.h"
 #include "sling/pyapi/pyframe.h"
@@ -50,8 +51,20 @@ static PyMethodDef py_funcs[] = {
   {nullptr, nullptr, 0, nullptr}
 };
 
-static void RegisterPythonModule() {
-  PyObject *module = Py_InitModule3("pysling", py_funcs, "SLING");
+static struct PyModuleDef py_module = {
+  PyModuleDef_HEAD_INIT,
+  "pysling",
+  nullptr,
+  0,
+  py_funcs,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr
+};
+
+static PyObject *RegisterPythonModule() {
+  PyObject *module = PyModule_Create(&py_module);
 
   PyStore::Define(module);
   PySymbols::Define(module);
@@ -89,14 +102,16 @@ static void RegisterPythonModule() {
   PyResource::Define(module);
   PyTask::Define(module);
 #endif
+
+  return module;
 }
 
 }  // namespace sling
 
-extern "C" void initpysling() {
+extern "C" PyMODINIT_FUNC PyInit_pysling() {
 #ifndef SLING_GOOGLE3
   sling::InitSharedLibrary();
 #endif
-  sling::RegisterPythonModule();
+  return sling::RegisterPythonModule();
 }
 

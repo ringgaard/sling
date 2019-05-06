@@ -34,7 +34,7 @@ tools/buildall.sh
 # Install SLING Python API.
 echo
 echo "=== Install SLING Python API"
-SLINGPKG=/usr/lib/python2.7/dist-packages/sling
+SLINGPKG=/usr/lib/python3/dist-packages/sling
 if ! [ -x ${SLINGPKG} ]; then
   echo "Adding link for SLING Python package"
   sudo ln -s $(realpath python) ${SLINGPKG}
@@ -45,8 +45,4 @@ fi
 # Done.
 echo
 echo "=== SLING is now installed."
-
-# Extra dependencies:
-# NumPy: sudo pip install numpy
-# PyTorch: sudo pip install http://download.pytorch.org/whl/cpu/torch-0.3.1-cp27-cp27mu-linux_x86_64.whl
 

@@ -94,10 +94,10 @@ PyObject *PyRecordReader::Read() {
   PyObject *k = Py_None;
   PyObject *v = Py_None;
   if (!record.key.empty()) {
-    k = PyString_FromStringAndSize(record.key.data(), record.key.size());
+    k = PyBytes_FromStringAndSize(record.key.data(), record.key.size());
   }
   if (!record.value.empty()) {
-    v = PyString_FromStringAndSize(record.value.data(), record.value.size());
+    v = PyBytes_FromStringAndSize(record.value.data(), record.value.size());
   }
   PyObject *pair = PyTuple_Pack(2, k, v);
   if (k != Py_None) Py_DECREF(k);
@@ -196,14 +196,14 @@ PyObject *PyRecordDatabase::Close() {
 
 PyObject *PyRecordDatabase::Lookup(PyObject *obj) {
   // Get key.
-  char *key = PyString_AsString(obj);
+  char *key = PyBytes_AsString(obj);
   if (key == nullptr) return nullptr;
 
   // Look up record.
   CHECK(db != nullptr);
   Record record;
   if (!db->Lookup(key, &record)) Py_RETURN_NONE;
-  return PyString_FromStringAndSize(record.value.data(), record.value.size());
+  return PyBytes_FromStringAndSize(record.value.data(), record.value.size());
 }
 
 PyObject *PyRecordDatabase::Next() {
@@ -218,10 +218,10 @@ PyObject *PyRecordDatabase::Next() {
   PyObject *k = Py_None;
   PyObject *v = Py_None;
   if (!record.key.empty()) {
-    k = PyString_FromStringAndSize(record.key.data(), record.key.size());
+    k = PyBytes_FromStringAndSize(record.key.data(), record.key.size());
   }
   if (!record.value.empty()) {
-    v = PyString_FromStringAndSize(record.value.data(), record.value.size());
+    v = PyBytes_FromStringAndSize(record.value.data(), record.value.size());
   }
   PyObject *pair = PyTuple_Pack(2, k, v);
   if (k != Py_None) Py_DECREF(k);
@@ -292,13 +292,13 @@ PyObject *PyRecordWriter::Write(PyObject *args) {
   if (pykey != Py_None) {
     char *data;
     Py_ssize_t length;
-    if (PyString_AsStringAndSize(pykey, &data, &length)) return nullptr;
+    if (PyBytes_AsStringAndSize(pykey, &data, &length)) return nullptr;
     key = Slice(data, length);
   }
   if (pyvalue != Py_None) {
     char *data;
     Py_ssize_t length;
-    if (PyString_AsStringAndSize(pyvalue, &data, &length)) return nullptr;
+    if (PyBytes_AsStringAndSize(pyvalue, &data, &length)) return nullptr;
     value = Slice(data, length);
   }
 
