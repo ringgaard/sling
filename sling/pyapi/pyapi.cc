@@ -12,15 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef SLING_GOOGLE3
-#include <Python.h>
-#else
-#include <python3.6/Python.h>
-#endif
-
 #include "sling/base/init.h"
 
 #include "sling/pyapi/pyarray.h"
+#include "sling/pyapi/pybase.h"
 #include "sling/pyapi/pydate.h"
 #include "sling/pyapi/pyframe.h"
 #include "sling/pyapi/pymyelin.h"
