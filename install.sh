@@ -39,6 +39,8 @@ echo
 echo "=== Install SLING Python API"
 SLINGPKG=/usr/lib/python3/dist-packages/sling
 
+PIP="sudo -H pip3 --disable-pip-version-check"
+
 if [[ -L "/usr/lib/python2.7/dist-packages/sling" ]]; then
   echo "Removing deprecated SLING Python 2.7 package"
   sudo rm /usr/lib/python2.7/dist-packages/sling
@@ -48,9 +50,9 @@ if [[ -L "/usr/local/lib/python2.7/dist-packages/sling" ]]; then
   sudo rm /usr/local/lib/python2.7/dist-packages/sling
 fi
 
-if [[ $(sudo pip3 --disable-pip-version-check freeze | grep "sling==") ]]; then
+if [[ $(${PIP} freeze | grep "sling==") ]]; then
   echo "Removing existing SLING pip package"
-  sudo -H pip3 --disable-pip-version-check uninstall sling
+  ${PIP} uninstall sling
 fi
 
 if [[ -x "${SLINGPKG}" ]]; then

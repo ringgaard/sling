@@ -83,7 +83,7 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
   # Choose random input point for evaluating gradient.
   x = {}
   for v in inputs:
-    x[v] = np.random.ranf(v.shape).astype(nptype) * (hi - lo) + lo
+    x[v] = (np.random.ranf(v.shape) * (hi - lo) + lo).astype(nptype)
 
   # Compute f(x).
   data = cell.instance()
@@ -99,7 +99,7 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
     else:
       adjoint = -1
 
-    for j in xrange(output.elements()):
+    for j in range(output.elements()):
       # Compute analytical gradient.
       gdata = gcell.instance()
       if primal != -1: gdata[primal] = data
@@ -109,7 +109,7 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
       # Check gradient for each input variable element.
       for input in inputs:
         gradient = gdata.tensor(adjointvar(input))
-        for i in xrange(input.elements()):
+        for i in range(input.elements()):
           # Construct one-hot tensor with x_i set to epsilon.
           delta = onehot(input.shape, i, eps)
 
@@ -145,12 +145,12 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
             ulp = -int(math.log10(deviation))
             if minulp == None or ulp < minulp: minulp = ulp
           if not np.isclose(numerical, analytical, rtol=tol, atol=tol):
-            print "%s: d%s_%d / d%s_%d: %g vs %g dev=%g ulp=%d" % (
+            print("%s: d%s_%d / d%s_%d: %g vs %g dev=%g ulp=%d" % (
               func.name, output.name, j, input.name, i,
-              analytical, numerical, deviation, ulp)
+              analytical, numerical, deviation, ulp))
 
   # Return the minimum unit of least precision.
-  print func.name, ":", minulp, "ulp"
+  print(func.name, ":", minulp, "ulp")
   return minulp
 
 def check_add():

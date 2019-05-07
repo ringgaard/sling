@@ -125,7 +125,7 @@ def simulate(flow, f, data):
     elif op.type == "Mul":
       v[o[0]] = v[i[0]] * v[i[1]]
     elif op.type == "Div":
-      v[o[0]] = np.divide(v[i[0]], v[i[1]])
+      v[o[0]] = np.divide(v[i[0]], v[i[1]]).astype(nptypes[dt])
     elif op.type == "Minimum":
       v[o[0]] = np.minimum(v[i[0]], v[i[1]])
     elif op.type == "Maximum":
