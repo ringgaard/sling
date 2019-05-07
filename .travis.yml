@@ -13,6 +13,7 @@ addons:
       - wget
       - pkg-config
       - g++-4.8
+      - python3.6-dev
 
 before_install:
   - wget https://github.com/bazelbuild/bazel/releases/download/0.13.0/bazel_0.13.0-linux-x86_64.deb
