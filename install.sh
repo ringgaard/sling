@@ -10,13 +10,18 @@ echo "========================================================================="
 # Install packages.
 echo
 echo "=== Install SLING dependencies"
-PKGS="pkg-config zip g++ zlib1g-dev unzip python2.7 python2.7-dev python-pip"
+PKGS="pkg-config zip g++ zlib1g-dev unzip python3.6 python3.6-dev python3-pip"
 sudo apt-get install ${PKGS}
+
+# If your system does not have python 3.6 in the repo you can add it manually:
+# sudo add-apt-repository ppa:jonathonf/python-3.6
+# sudo apt update
 
 # Install bazel.
 BAZELVER=0.13.0
 BAZELSH=bazel-${BAZELVER}-installer-linux-x86_64.sh
-BAZELURL=https://github.com/bazelbuild/bazel/releases/download/${BAZELVER}/${BAZELSH}
+BAZELREPO=https://github.com/bazelbuild/bazel
+BAZELURL=${BAZELREPO}/releases/download/${BAZELVER}/${BAZELSH}
 if ! which bazel > /dev/null; then
   echo
   echo "=== Install Bazel build system"
@@ -40,6 +45,11 @@ if ! [ -x ${SLINGPKG} ]; then
   sudo ln -s $(realpath python) ${SLINGPKG}
 else
   echo "SLING Python package already installed"
+fi
+
+if [ -L /usr/lib/python2.7/dist-packages/sling ]; then
+  echo "Removing deprecated SLING Python 2.7 package"
+  sudo rm /usr/lib/python2.7/dist-packages/sling
 fi
 
 # Done.
