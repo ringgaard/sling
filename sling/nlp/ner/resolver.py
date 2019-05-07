@@ -2,6 +2,8 @@ import sling
 import sling.flags as flags
 
 flags.define("--start")
+flags.define("--errors", default=False, action='store_true')
+flags.define("--unknowns", default=False, action='store_true')
 flags.define("--lang", default="en")
 flags.parse()
 
@@ -13,7 +15,7 @@ def compatible(form1, form2):
 
 def item_text(item):
   s = item.id
-  name = item.name
+  name = str(item.name)
   if name != None: s = s + " " + name
   descr = item.description
   if descr != None:
@@ -57,7 +59,7 @@ for doc in corpus:
   if first and flags.arg.start: doc = corpus[flags.arg.start]
   first = False
   num_docs += 1
-  print "Document", num_docs, ":", doc.frame["title"]
+  print("Document", num_docs, ":", doc.frame["title"])
   store = doc.store
   context = {}
 
@@ -97,6 +99,8 @@ for doc in corpus:
 
       # Ignore mention if it is not in the prase table.
       if not found:
+        if flags.arg.unknowns:
+          print("Unknown: '%s' for %s" % (phrase, item_text(item)))
         num_unknown += 1
         continue
       num_mentions += 1
@@ -107,20 +111,22 @@ for doc in corpus:
       # Output ranked entities.
       rank = 0
       if scores[0][0].item() != item:
-        print phrase, item.id
+        if flags.arg.errors: print(phrase, item.id)
         for s in scores:
           m = s[0]
           candidate = m.item()
           score = s[1]
           cscore = s[2]
 
-          print "%11.4f %s %5d %8.4f %s" % (score, formname[m.form()],
-                                            m.count(), cscore,
-                                            item_text(candidate))
+          if flags.arg.errors:
+            print("%11.4f %s %5d %8.4f %s" % (score, formname[m.form()],
+                                              m.count(), cscore,
+                                              item_text(candidate)))
           if candidate == item: break
           rank += 1
 
-        if rank + 1 < len(scores): print "... and", len(scores) - rank, "more"
+        if flags.arg.errors and rank + 1 < len(scores):
+          print("... and", len(scores) - rank, "more")
 
       if rank >= len(num_at_rank): rank = len(num_at_rank) - 1
       num_at_rank[rank] += 1
@@ -138,19 +144,19 @@ for doc in corpus:
           if popularity == None: popularity = 1
           context[link] = context.get(link, 0.0) + float(count) / popularity
 
-  print len(context), "items in context,", len(doc.mentions), "mentions"
-  print
+  print(len(context), "items in context,", len(doc.mentions), "mentions")
+  print()
   if num_docs == 1000: break
 
-print num_mentions, "mentions"
-print num_unknown, "unknown"
-print num_prior_losses, "prior losses"
+print(num_mentions, "mentions")
+print(num_unknown, "unknown")
+print(num_prior_losses, "prior losses")
 total_mentions = num_mentions + num_unknown
-print 100.0 * num_mentions / total_mentions, "% coverage"
+print(100.0 * num_mentions / total_mentions, "% coverage")
 
 cummulative = 0.0
 for r in range(0, len(num_at_rank)):
   if num_at_rank[r] == 0: continue
   cummulative += num_at_rank[r]
-  print "P@%d: %.2f%%" % (r + 1, 100.0 * cummulative / num_mentions)
+  print("P@%d: %.2f%%" % (r + 1, 100.0 * cummulative / num_mentions))
 

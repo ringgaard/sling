@@ -10,12 +10,10 @@ echo "========================================================================="
 # Install packages.
 echo
 echo "=== Install SLING dependencies"
-PKGS="pkg-config zip g++ zlib1g-dev unzip python3.6 python3.6-dev python3-pip"
+PYVER=3.5
+PYPKGS="python${PYVER} python${PYVER}-dev python3-pip"
+PKGS="pkg-config zip g++ zlib1g-dev unzip ${PYPKGS}"
 sudo apt-get install ${PKGS}
-
-# If your system does not have python 3.6 in the repo you can add it manually:
-# sudo add-apt-repository ppa:jonathonf/python-3.6
-# sudo apt update
 
 # Install bazel.
 BAZELVER=0.13.0
@@ -40,16 +38,26 @@ tools/buildall.sh
 echo
 echo "=== Install SLING Python API"
 SLINGPKG=/usr/lib/python3/dist-packages/sling
-if ! [ -x ${SLINGPKG} ]; then
-  echo "Adding link for SLING Python package"
-  sudo ln -s $(realpath python) ${SLINGPKG}
-else
-  echo "SLING Python package already installed"
-fi
 
-if [ -L /usr/lib/python2.7/dist-packages/sling ]; then
+if [[ -L "/usr/lib/python2.7/dist-packages/sling" ]]; then
   echo "Removing deprecated SLING Python 2.7 package"
   sudo rm /usr/lib/python2.7/dist-packages/sling
+fi
+if [[ -L "/usr/local/lib/python2.7/dist-packages/sling" ]]; then
+  echo "Removing deprecated SLING Python 2.7 local package"
+  sudo rm /usr/local/lib/python2.7/dist-packages/sling
+fi
+
+if [[ $(sudo pip3 --disable-pip-version-check freeze | grep "sling==") ]]; then
+  echo "Removing existing SLING pip package"
+  sudo -H pip3 --disable-pip-version-check uninstall sling
+fi
+
+if [[ -x "${SLINGPKG}" ]]; then
+  echo "SLING Python package already installed"
+else
+  echo "Adding link for SLING Python package"
+  sudo ln -s $(realpath python) ${SLINGPKG}
 fi
 
 # Done.

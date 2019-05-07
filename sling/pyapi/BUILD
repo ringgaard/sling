@@ -62,9 +62,9 @@ cc_library(
     "//sling/string:text",
   ],
   copts = [
-    "-Wno-pmf-conversions",
     "-Wno-write-strings",
     "-Wno-invalid-offsetof",
+    "-DPYVER=35"
   ],
 )
 

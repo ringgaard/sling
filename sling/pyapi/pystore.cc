@@ -192,7 +192,7 @@ PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
   bool json = false;
   bool xml = false;
   bool ok = PyArg_ParseTupleAndKeywords(
-                args, kw, "s|bbb", const_cast<char **>(kwlist),
+                args, kw, "O|bbb", const_cast<char **>(kwlist),
                 &object, &force_binary, &json, &xml);
   if (!ok) return nullptr;
 
@@ -200,13 +200,15 @@ PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
   if (!Writable()) return nullptr;
 
   // Get data buffer.
-  char *data;
+  const char *data;
   Py_ssize_t length;
   if (PyUnicode_Check(object)) {
     data = PyUnicode_AsUTF8AndSize(object, &length);
     if (data == nullptr) return nullptr;
   } else {
-    if (PyBytes_AsStringAndSize(object, &data, &length) == -1) return nullptr;
+    char *ptr;
+    if (PyBytes_AsStringAndSize(object, &ptr, &length) == -1) return nullptr;
+    data = ptr;
   }
   ArrayInputStream stream(data, length);
 
@@ -238,7 +240,7 @@ Py_ssize_t PyStore::Size() {
 
 PyObject *PyStore::Lookup(PyObject *key) {
   // Get symbol name.
-  char *name = PyUnicode_AsUTF8(key);
+  const char *name = PyUnicode_AsUTF8(key);
   if (name == nullptr) return nullptr;
 
   // Lookup name in symbol table.
@@ -259,7 +261,7 @@ PyObject *PyStore::Resolve(PyObject *object) {
 
 int PyStore::Contains(PyObject *key) {
   // Get symbol name.
-  char *name = PyUnicode_AsUTF8(key);
+  const char *name = PyUnicode_AsUTF8(key);
   if (name == nullptr) return -1;
 
   // Lookup name in symbol table.
@@ -354,7 +356,7 @@ PyObject *PyStore::UnlockGC() {
   Py_RETURN_NONE;
 }
 
-PyObject *PyStore::PyValue(Handle handle) {
+PyObject *PyStore::PyValue(Handle handle, bool binary) {
   switch (handle.tag()) {
     case Handle::kGlobal:
     case Handle::kLocal: {
@@ -364,15 +366,28 @@ PyObject *PyStore::PyValue(Handle handle) {
       // Get datum for object.
       Datum *datum = store->Deref(handle);
 
+      // Convert SLING object to Python object.
       if (datum->IsFrame()) {
         // Return new frame wrapper for handle.
         PyFrame *frame = PyObject_New(PyFrame, &PyFrame::type);
         frame->Init(this, handle);
         return frame->AsObject();
       } else if (datum->IsString()) {
-        // Return string object.
         StringDatum *str = datum->AsString();
-        return PyUnicode_FromStringAndSize(str->data(), str->size());
+        PyObject *pystr;
+        if (binary) {
+          // Return string as bytes.
+          pystr = PyBytes_FromStringAndSize(str->data(), str->size());
+        } else {
+          // Return unicode string object.
+          pystr = PyUnicode_FromStringAndSize(str->data(), str->size());
+          if (pystr == nullptr) {
+            // Fall back to bytes if string is not valid UTF8.
+            PyErr_Clear();
+            pystr = PyBytes_FromStringAndSize(str->data(), str->size());
+          }
+        }
+        return pystr;
       } else if (datum->IsArray()) {
         // Return new frame array for handle.
         PyArray *array = PyObject_New(PyArray, &PyArray::type);
@@ -418,7 +433,7 @@ Handle PyStore::Value(PyObject *object) {
     // Create string and return handle.
     if (!Writable()) return Handle::error();
     Py_ssize_t length;
-    char *data = PyUnicode_AsUTF8AndSize(object, &length);
+    const char *data = PyUnicode_AsUTF8AndSize(object, &length);
     return  store->AllocateString(Text(data, length));
   } else if (PyBytes_Check(object)) {
     // Create string from bytes and return handle.
@@ -495,7 +510,7 @@ Handle PyStore::Value(PyObject *object) {
 
 Handle PyStore::RoleValue(PyObject *object, bool existing) {
   if (PyUnicode_Check(object)) {
-    char *name = PyUnicode_AsUTF8(object);
+    const char *name = PyUnicode_AsUTF8(object);
     if (name == nullptr) return Handle::error();
     if (existing) {
       return store->LookupExisting(name);
@@ -509,7 +524,7 @@ Handle PyStore::RoleValue(PyObject *object, bool existing) {
 
 Handle PyStore::SymbolValue(PyObject *object) {
   if (PyUnicode_Check(object)) {
-    char *name = PyUnicode_AsUTF8(object);
+    const char *name = PyUnicode_AsUTF8(object);
     if (name == nullptr) return Handle::error();
     return store->Symbol(name);
   } else {

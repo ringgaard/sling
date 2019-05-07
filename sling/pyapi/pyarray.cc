@@ -43,6 +43,7 @@ void PyArray::Define(PyObject *module) {
   sequence.sq_ass_item = method_cast<ssizeobjargproc>(&PyArray::SetItem);
   sequence.sq_contains = method_cast<objobjproc>(&PyArray::Contains);
 
+  methods.Add("get", &PyArray::Get);
   methods.Add("store", &PyArray::GetStore);
   methods.Add("data", &PyArray::Data);
   type.tp_methods = methods.table();
@@ -87,6 +88,25 @@ PyObject *PyArray::GetItem(Py_ssize_t index) {
 
   // Return array element.
   return pystore->PyValue(arr->get(pos(index)));
+}
+
+PyObject *PyArray::Get(PyObject *args, PyObject *kw) {
+  static const char *kwlist[] = {"index", "binary", nullptr};
+  int index = 0;
+  bool binary = false;
+  if (!PyArg_ParseTupleAndKeywords(args, kw, "i|b",
+          const_cast<char **>(kwlist), &index, &binary)) return nullptr;
+
+  // Check array bounds.
+  ArrayDatum *arr = array();
+  if (index < 0) index = length() + index;
+  if (index < 0 || index >= length()) {
+    PyErr_SetString(PyExc_IndexError, "Array index out of bounds");
+    return nullptr;
+  }
+
+  // Return array element.
+  return pystore->PyValue(arr->get(pos(index)), binary);
 }
 
 PyObject *PyArray::GetItems(PyObject *key) {

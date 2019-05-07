@@ -70,7 +70,7 @@ struct PyStore : public PyBase {
   PyObject *UnlockGC();
 
   // Create new Python object for handle value.
-  PyObject *PyValue(Handle handle);
+  PyObject *PyValue(Handle handle, bool binary=false);
 
   // Check if store can be modified.
   bool Writable();

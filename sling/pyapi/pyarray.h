@@ -66,6 +66,9 @@ struct PyArray : public PyBase, public Root {
   // Get element from array.
   PyObject *GetItem(Py_ssize_t index);
 
+  // Get element from array with options.
+  PyObject *Get(PyObject *args, PyObject *kw);
+
   // Get elements from array.
   PyObject *GetItems(PyObject *key);
 

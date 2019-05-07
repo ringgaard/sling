@@ -16,10 +16,7 @@
 """Myelin computation flows."""
 
 import os
-from struct import calcsize
-from struct import pack
-from struct import unpack
-from struct import unpack_from
+from struct import calcsize, pack, unpack, unpack_from
 
 def dummy_factory_builder(flow, name):
   raise Exception("No flow builder defined")

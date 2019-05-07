@@ -196,7 +196,12 @@ PyObject *PyRecordDatabase::Close() {
 
 PyObject *PyRecordDatabase::Lookup(PyObject *obj) {
   // Get key.
-  char *key = PyBytes_AsString(obj);
+  const char *key;
+  if (PyUnicode_Check(obj)) {
+    key = PyUnicode_AsUTF8(obj);
+  } else {
+    key = PyBytes_AsString(obj);
+  }
   if (key == nullptr) return nullptr;
 
   // Look up record.

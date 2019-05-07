@@ -82,7 +82,7 @@ int PyDate::Init(PyObject *args, PyObject *kwds) {
     } else if (PyUnicode_Check(time)) {
       // Parse date from string.
       Py_ssize_t length;
-      char *data = PyUnicode_AsUTF8AndSize(time, &length);
+      const char *data = PyUnicode_AsUTF8AndSize(time, &length);
       date.ParseFromString(Text(data, length));
     } else if (PyLong_Check(time)) {
       // Parse date from number.
@@ -119,6 +119,7 @@ void PyCalendar::Define(PyObject *module) {
   type.tp_init = method_cast<initproc>(&PyCalendar::Init);
   type.tp_dealloc = method_cast<destructor>(&PyCalendar::Dealloc);
 
+  methods.AddO("str", &PyCalendar::Str);
   methods.AddO("day", &PyCalendar::Day);
   methods.AddO("month", &PyCalendar::Month);
   methods.AddO("year", &PyCalendar::Year);
@@ -153,7 +154,6 @@ void PyCalendar::Dealloc() {
 PyObject *PyCalendar::Str(PyObject *obj) {
   PyDate *pydate = GetDate(obj);
   if (pydate == nullptr) return nullptr;
-
   return AllocateString(calendar->DateAsString(pydate->date));
 }
 

@@ -46,6 +46,7 @@ void PyFrame::Define(PyObject *module) {
   type.tp_as_sequence = &sequence;
   sequence.sq_contains = method_cast<objobjproc>(&PyFrame::Contains);
 
+  methods.Add("get", &PyFrame::Get);
   methods.Add("data", &PyFrame::Data);
   methods.Add("append", &PyFrame::Append);
   methods.AddO("extend", &PyFrame::Extend);
@@ -132,6 +133,25 @@ PyObject *PyFrame::Lookup(PyObject *key) {
   return pystore->PyValue(value);
 }
 
+PyObject *PyFrame::Get(PyObject *args, PyObject *kw) {
+  static const char *kwlist[] = {"role", "binary", nullptr};
+  PyObject *key = nullptr;
+  bool binary = false;
+  if (!PyArg_ParseTupleAndKeywords(args, kw, "O|b",
+          const_cast<char **>(kwlist), &key, &binary)) return nullptr;
+
+  // Look up role.
+  Handle role = pystore->RoleValue(key, true);
+  if (role.IsError()) return nullptr;
+
+  // Return None if the role name does not exist.
+  if (role.IsNil()) Py_RETURN_NONE;
+
+  // Look up (first) value for role.
+  Handle value = frame()->get(role);
+  return pystore->PyValue(value, binary);
+}
+
 int PyFrame::Assign(PyObject *key, PyObject *v) {
   // Check that frame is writable.
   if (!Writable()) return -1;
@@ -183,7 +203,7 @@ PyObject *PyFrame::GetAttr(PyObject *key) {
   PyErr_Clear();
 
   // Get attribute name.
-  char *name = PyUnicode_AsUTF8(key);
+  const char *name = PyUnicode_AsUTF8(key);
   if (name == nullptr) return nullptr;
 
   // Lookup role.
@@ -200,7 +220,7 @@ int PyFrame::SetAttr(PyObject *key, PyObject *v) {
   if (!Writable()) return -1;
 
   // Get role name.
-  char *name = PyUnicode_AsUTF8(key);
+  const char *name = PyUnicode_AsUTF8(key);
   if (name == nullptr) return -1;
 
   // Lookup role.
