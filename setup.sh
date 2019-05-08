@@ -4,7 +4,7 @@
 set -e
 
 echo "========================================================================="
-echo "Installing SLING development environment"
+echo "Set up SLING development environment"
 echo "========================================================================="
 
 # Install packages.
@@ -36,7 +36,7 @@ tools/buildall.sh
 
 # Install SLING Python API.
 echo
-echo "=== Install SLING Python API"
+echo "=== Set up SLING Python API"
 SLINGPKG=/usr/lib/python3/dist-packages/sling
 
 PIP="sudo -H pip3 --disable-pip-version-check"
@@ -64,5 +64,5 @@ fi
 
 # Done.
 echo
-echo "=== SLING is now installed."
+echo "=== SLING is now set up."
 

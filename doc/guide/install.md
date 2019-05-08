@@ -38,10 +38,10 @@ git clone https://github.com/google/sling.git
 cd sling
 ```
 
-Next, run the `install.sh` script to set up the SLING development environment
+Next, run the `seup.sh` script to set up the SLING development environment
 and build the code:
 ```shell
-./install.sh
+./setup.sh
 ```
 
 This will perform the following steps:
@@ -49,8 +49,8 @@ This will perform the following steps:
 * Install [Bazel](https://bazel.build/) which is used as the build system for
   SLING.
 * Build SLING from source.
-* Remove the SLING pip package if it is installed.
-* Set up link to the SLING development enviroment for SLING Python API.
+* Remove the Python 2.7 SLING pip package if it is installed.
+* Set up link to the SLING development enviroment for SLING Python 3 API.
 
 The parser trainer uses PyTorch for training, so they it to be installed.
 
@@ -61,7 +61,7 @@ sudo pip3 install http://download.pytorch.org/whl/cpu/torch-0.3.1-cp35-cp35mu-li
 ## Building
 
 Operating system: Linux<br>
-Languages: C++ (gcc or clang), Python 3.5, assembler<br>
+Languages: C++ (gcc or clang), Python 3.5+, assembler<br>
 CPU: Intel x64 or compatible<br>
 Build system: Bazel<br>
 
@@ -71,7 +71,7 @@ You can use the `buildall.sh` script to build all the source code:
 tools/buildall.sh
 ```
 
-If you have run the `install.sh` script already, you then need to link the
+If you haven't run the `setup.sh` script already, you then need to link the
 sling Python module directly to the Python source directory to use it in
 "developer mode":
 
