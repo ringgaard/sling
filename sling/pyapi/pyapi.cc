@@ -103,7 +103,7 @@ static PyObject *RegisterPythonModule() {
 
 }  // namespace sling
 
-extern "C" PyMODINIT_FUNC PyInit_pysling() {
+PyMODINIT_FUNC PyInit_pysling() {
 #ifndef SLING_GOOGLE3
   sling::InitSharedLibrary();
 #endif

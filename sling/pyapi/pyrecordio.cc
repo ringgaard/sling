@@ -295,16 +295,30 @@ PyObject *PyRecordWriter::Write(PyObject *args) {
   Slice key;
   Slice value;
   if (pykey != Py_None) {
-    char *data;
-    Py_ssize_t length;
-    if (PyBytes_AsStringAndSize(pykey, &data, &length)) return nullptr;
-    key = Slice(data, length);
+    if (PyUnicode_Check(pykey)) {
+      Py_ssize_t length;
+      const char *data = PyUnicode_AsUTF8AndSize(pykey, &length);
+      if (data == nullptr) return nullptr;
+      key = Slice(data, length);
+    } else {
+      char *data;
+      Py_ssize_t length;
+      if (PyBytes_AsStringAndSize(pykey, &data, &length)) return nullptr;
+      key = Slice(data, length);
+    }
   }
   if (pyvalue != Py_None) {
-    char *data;
-    Py_ssize_t length;
-    if (PyBytes_AsStringAndSize(pyvalue, &data, &length)) return nullptr;
-    value = Slice(data, length);
+    if (PyUnicode_Check(pyvalue)) {
+      Py_ssize_t length;
+      const char *data = PyUnicode_AsUTF8AndSize(pyvalue, &length);
+      if (data == nullptr) return nullptr;
+      value = Slice(data, length);
+    } else {
+      char *data;
+      Py_ssize_t length;
+      if (PyBytes_AsStringAndSize(pyvalue, &data, &length)) return nullptr;
+      value = Slice(data, length);
+    }
   }
 
   // Write record.
