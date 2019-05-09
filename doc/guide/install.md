@@ -52,7 +52,7 @@ This will perform the following steps:
 * Remove the Python 2.7 SLING pip package if it is installed.
 * Set up link to the SLING development enviroment for SLING Python 3 API.
 
-The parser trainer uses PyTorch for training, so they it to be installed.
+The parser trainer uses PyTorch for training, so it also needs to be installed:
 
 ```shell
 sudo pip3 install http://download.pytorch.org/whl/cpu/torch-0.3.1-cp35-cp35mu-linux_x86_64.whl

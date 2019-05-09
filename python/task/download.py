@@ -15,7 +15,7 @@
 """Workflow builder for downloading wiki dumps"""
 
 import os
-import urllib
+from urllib.request import urlopen
 import _strptime
 import time
 
@@ -60,7 +60,7 @@ class UrlDownload:
 
     # Download from url to file.
     if ratelimit > 0: log.info("Start download of " + url)
-    conn = urllib2.urlopen(url)
+    conn = urlopen(url)
     last_modified = time.mktime(time.strptime(conn.headers['last-modified'],
                                               "%a, %d %b %Y %H:%M:%S GMT"))
     total_bytes = "bytes_downloaded"
