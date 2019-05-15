@@ -154,11 +154,12 @@ class EmbeddingWorkflow:
     with self.wf.namespace("fact-embeddings"):
       trainer = self.wf.task("fact-embeddings-trainer")
       trainer.add_params({
-        "batch_size": 1024,
-        "embedding_dims": 128,
+        "batch_size": 256,
+        "batches_per_update": 32,
+        "embedding_dims": 256,
         "normalize": False,
         "epochs" : 100000,
-        "report_interval": 100,
+        "report_interval": 250,
         "learning_rate": 1.0,
         "learning_rate_decay": 0.95,
         "rampup": 120,

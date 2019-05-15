@@ -278,6 +278,28 @@ int64 Profile::Complexity(const Step *step) {
   return ops;
 }
 
+string ProfileOverview::ASCIIReport() const {
+  static const char *divider =
+      "+---------+--------------+----------------------------------------\n";
+  static const char *header =
+      "| percent |         time | cell\n";
+  string report;
+  if (!cells_.empty()) {
+    report.append(divider);
+    report.append(header);
+    report.append(divider);
+    for (const CellInfo &ci : cells_) {
+      double time = ci.time * ci.invocations;
+      double percent = total_time_ > 0 ? time / total_time_ * 100.0 : 0.0;
+      StringAppendF(&report,
+                   "| %6.2f%% |%11.3f s | %s\n",
+                   percent, time / 1e6, ci.cell->name().c_str());
+    }
+    report.append(divider);
+  }
+  return report;
+}
+
 static bool CompareTensorOrder(Tensor *a, Tensor *b) {
   if (a->first() == b->first()) {
     // Inputs are sorted before outputs.

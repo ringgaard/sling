@@ -232,24 +232,23 @@ void Compiler::WriteGraph(const Flow &flow,
 
 void LogProfile(const Network &net) {
   if (net.options().global_profiler) {
-    string report;
-    for (const Cell *cell : net.cells()) {
-      Profile profile(cell->profile_summary());
-      report.append("\n");
-      report.append(profile.ASCIIReport());
-    }
-    LOG(INFO) << "Profiling report:\n" << report;
+    LOG(INFO) << "Profiling report:\n" << ProfileReport(net);
   }
 }
 
 string ProfileReport(const Network &net) {
   string report;
   if (net.options().global_profiler) {
+    ProfileOverview overview;
     for (const Cell *cell : net.cells()) {
       Profile profile(cell->profile_summary());
       report.append(profile.ASCIIReport());
       report.append("\n");
+      overview.Add(profile);
     }
+    report.append("Summary:\n");
+    report.append(overview.ASCIIReport());
+    report.append("\n");
   }
   return report;
 }
