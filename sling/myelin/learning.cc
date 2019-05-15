@@ -108,13 +108,36 @@ void Optimizer::Build(Flow *flow) {
   }
 
   // Optionally add gradient clipping.
-  if (clipping_threshold_ != 0.0) {
+  if (clipping_threshold_ != 0.0 && !gradmap.empty()) {
     auto *threshold = tf.Name(tf.Const(clipping_threshold_), "threshold");
-    for (auto &it : gradmap) {
-      auto &dv = it.second;
-      auto *norm = tf.Norm(dv);
+    if (local_clipping_) {
+      // Clip each weight tensor separately.
+      for (auto &it : gradmap) {
+        auto &dv = it.second;
+        auto *norm = tf.Norm(dv);
+        auto *clip = tf.Div(threshold, tf.Maximum(norm, threshold));
+        dv = tf.Mul(dv, clip);
+      }
+    } else {
+      // Compute global norm over all gradient tensors.
+      Flow::Variable *sum = nullptr;
+      for (auto &it : gradmap) {
+        auto &dv = it.second;
+        auto *squared_sum = tf.Sum(tf.Square(dv));
+        if (sum == nullptr) {
+          sum = squared_sum;
+        } else {
+          sum = tf.Add(sum, squared_sum);
+        }
+      }
+      auto *norm = tf.Sqrt(sum);
+
+      // Clip gradients by global norm.
       auto *clip = tf.Div(threshold, tf.Maximum(norm, threshold));
-      dv = tf.Mul(dv, clip);
+      for (auto &it : gradmap) {
+        auto &dv = it.second;
+        dv = tf.Mul(dv, clip);
+      }
     }
   }
 

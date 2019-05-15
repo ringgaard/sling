@@ -82,6 +82,10 @@ class Optimizer {
   float clipping_threshold() const { return clipping_threshold_; }
   void set_clipping_threshold(float t) { clipping_threshold_ = t; }
 
+  // Local or global norm clipping.
+  bool local_clipping() const { return local_clipping_; }
+  void set_local_clipping(bool b) { local_clipping_ = b; }
+
  protected:
   // Let subclass build the parameter update using the gradient map.
   virtual void BuildOptimizer(const GradientMap &gradmap,
@@ -106,6 +110,7 @@ class Optimizer {
   Instance *data_ = nullptr;
 
   float clipping_threshold_ = 0.0;  // norm clipping threshold (0=no clipping)
+  bool local_clipping_ = false;     // compute norm per tensor
 };
 
 // Stochastic gradient descent optimizer.
