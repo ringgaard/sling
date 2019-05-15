@@ -88,11 +88,11 @@ int main(int argc, char *argv[]) {
 
   // Load knowledge base.
   Store kb;
-  Handle name = kb.Lookup("name");
   if (!FLAGS_kb.empty()) {
     LOG(INFO) << "Loading knowledge base from " << FLAGS_kb;
     LoadStore(FLAGS_kb, &kb);
   }
+  Handle name = kb.Lookup("name");
 
   // Build model.
   if (FLAGS_source == "c" && FLAGS_target == "f") {
