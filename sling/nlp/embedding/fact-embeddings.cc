@@ -169,6 +169,7 @@ class FactExtractor : public Process {
     // Set up counters.
     Counter *num_items = task->GetCounter("items");
     Counter *num_facts = task->GetCounter("facts");
+    Counter *num_groups = task->GetCounter("groups");
     Counter *num_facts_extracted = task->GetCounter("facts_extracted");
     Counter *num_facts_skipped = task->GetCounter("facts_skipped");
     Counter *num_no_facts = task->GetCounter("items_without_facts");
@@ -210,21 +211,35 @@ class FactExtractor : public Process {
       Facts facts(&catalog, &store);
       facts.Extract(handle);
 
-      // Add facts to fact lexicon.
+      // Add all facts for item found in fact lexicon.
       Handles fact_indices(&store);
-      for (Handle fact : facts.list()) {
-        uint64 fp = store.Fingerprint(fact);
-        auto f = fact_lexicon_.find(fp);
-        if (f != fact_lexicon_.end()) {
-          fact_indices.push_back(Handle::Integer(f->second));
+      Handles group_indices(&store);
+      int start = 0;
+      for (int g = 0; g < facts.groups().size(); ++g) {
+        int end = facts.groups()[g];
+        int prev = fact_indices.size();
+        for (int i = start; i < end; ++i) {
+          Handle fact = facts.list()[i];
+          uint64 fp = store.Fingerprint(fact);
+          auto f = fact_lexicon_.find(fp);
+          if (f != fact_lexicon_.end()) {
+            fact_indices.push_back(Handle::Integer(f->second));
+          }
         }
+        int curr = fact_indices.size();
+        if (curr > prev) {
+          group_indices.push_back(Handle::Integer(curr));
+        }
+        start = end;
       }
+
       int total = facts.list().size();
       int extracted = fact_indices.size();
       int skipped = total - extracted;
       num_facts->Increment(total);
       num_facts_extracted->Increment(extracted);
       num_facts_skipped->Increment(skipped);
+      num_groups->Increment(group_indices.size());
       if (extracted == 0) num_no_facts->Increment();
 
       // Extract categories from item.
@@ -245,8 +260,9 @@ class FactExtractor : public Process {
 
       // Build frame with resolved facts.
       Builder builder(&store);
-      builder.Add(p_item_, item.id());
+      builder.Add(p_item_, item);
       builder.Add(p_facts_, Array(&store, fact_indices));
+      builder.Add(p_groups_, Array(&store, group_indices));
       builder.Add(p_categories_, Array(&store, category_indices));
 
       // Output frame with resolved facts on output channel.
@@ -298,6 +314,7 @@ class FactExtractor : public Process {
 
   Name p_item_{names_, "item"};
   Name p_facts_{names_, "facts"};
+  Name p_groups_{names_, "groups"};
   Name p_categories_{names_, "categories"};
 };
 

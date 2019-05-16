@@ -139,6 +139,25 @@ Taxonomy *FactCatalog::CreateDefaultTaxonomy() {
   return new Taxonomy(this, default_taxonomy);
 }
 
+void Facts::Extract(Handle item) {
+  // Extract facts from the properties of the item.
+  auto &extractors = catalog_->property_extractors_;
+  for (const Slot &s : Frame(store_, item)) {
+    // Look up extractor for property.
+    auto f = extractors.find(s.name);
+    if (f == extractors.end()) continue;
+
+    // Extract facts for property.
+    FactCatalog::Extractor extractor = f->second;
+    push(s.name);
+    int start = list_.size();
+    (this->*extractor)(s.value);
+    int end = list_.size();
+    if (end > start) groups_.push_back(end);
+    pop();
+  }
+}
+
 void Facts::ExtractFor(Handle item, const HandleSet &properties) {
   // Extract facts from the properties of the item.
   auto &extractors = catalog_->property_extractors_;
@@ -152,53 +171,10 @@ void Facts::ExtractFor(Handle item, const HandleSet &properties) {
     // Extract facts for property.
     FactCatalog::Extractor extractor = f->second;
     push(s.name);
+    int start = list_.size();
     (this->*extractor)(s.value);
-    pop();
-  }
-}
-
-bool Facts::ItemInClosure(Handle property, Handle coarse, Handle fine) {
-  if (coarse == fine) return true;
-
-  Handles closure(store_);
-  closure.push_back(fine);
-  int current = 0;
-  while (current < closure.size()) {
-    Frame f(store_, closure[current++]);
-    for (const Slot &s : f) {
-      if (s.name == property) {
-        Handle value = store_->Resolve(s.value);
-        if (value == coarse) {
-          return true;
-        } else if (!catalog_->IsBaseItem(value)) {
-          bool known = false;
-          for (Handle h : closure) {
-            if (value == h) {
-              known = true;
-              break;
-            }
-          }
-          if (!known) closure.push_back(value);
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
-void Facts::Extract(Handle item) {
-  // Extract facts from the properties of the item.
-  auto &extractors = catalog_->property_extractors_;
-  for (const Slot &s : Frame(store_, item)) {
-    // Look up extractor for property.
-    auto f = extractors.find(s.name);
-    if (f == extractors.end()) continue;
-
-    // Extract facts for property.
-    FactCatalog::Extractor extractor = f->second;
-    push(s.name);
-    (this->*extractor)(s.value);
+    int end = list_.size();
+    if (end > start) groups_.push_back(end);
     pop();
   }
 }
@@ -392,6 +368,36 @@ void Facts::AddFact(Handle value) {
   Handle fact = store_->AllocateArray(begin, end);
   list_.push_back(fact);
   pop();
+}
+
+bool Facts::ItemInClosure(Handle property, Handle coarse, Handle fine) {
+  if (coarse == fine) return true;
+
+  Handles closure(store_);
+  closure.push_back(fine);
+  int current = 0;
+  while (current < closure.size()) {
+    Frame f(store_, closure[current++]);
+    for (const Slot &s : f) {
+      if (s.name == property) {
+        Handle value = store_->Resolve(s.value);
+        if (value == coarse) {
+          return true;
+        } else if (!catalog_->IsBaseItem(value)) {
+          bool known = false;
+          for (Handle h : closure) {
+            if (value == h) {
+              known = true;
+              break;
+            }
+          }
+          if (!known) closure.push_back(value);
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 Taxonomy::Taxonomy(const FactCatalog *catalog, const std::vector<Text> &types) {

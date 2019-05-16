@@ -169,8 +169,8 @@ class Facts {
   // Add fact based on current path.
   void AddFact(Handle value);
 
-  // Returns true if 'coarse' is in the closure of 'fine'.
-  // Closure is performed by following 'property' roles.
+  // Returns true if 'coarse' is in the closure of 'fine'. Closure is performed
+  // by following 'property' roles.
   bool ItemInClosure(Handle property, Handle coarse, Handle fine);
 
   // Add value to current fact path.
@@ -183,6 +183,9 @@ class Facts {
   // Fact list.
   const Handles &list() const { return list_; }
 
+  // Fact groups.
+  const std::vector<int> &groups() const { return groups_; }
+
  private:
   // Catalog for facts.
   const FactCatalog *catalog_;
@@ -192,6 +195,13 @@ class Facts {
 
   // List of facts in the form of [P1,..,Pn,Q] values.
   Handles list_;
+
+  // List of fact group delimiters. A fact group is a set of facts extracted
+  // from the same basic fact about the item. A group consists of the basic fact
+  // as well as facts derived from this fact and qualified facts. The first
+  // group contains facts between 0 and groups_[0]-1. The second group goes from
+  // groups_[0] to groups_[1]-1 and so on.
+  std::vector<int> groups_;
 
   // Current fact path [P1,...,Pn].
   Handles path_;

@@ -151,7 +151,9 @@ class DualEncoderBatch {
   void Reset();
 
   // Get gradient instances.
-  const std::vector<myelin::Instance *> &gradients() const { return gradients_; }
+  const std::vector<myelin::Instance *> &gradients() const {
+    return gradients_;
+  }
 
  private:
   // Data instances for one batch element.
