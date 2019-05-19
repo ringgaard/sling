@@ -21,7 +21,7 @@ parser = sling.Parser("caspar.flow")
 
 text = input("text: ")
 doc = parser.parse(text)
-print doc.frame.data(pretty=True)
+print(doc.frame.data(pretty=True))
 for m in doc.mentions:
   print("mention", doc.phrase(m.begin, m.end))
 ```
@@ -55,7 +55,7 @@ This will perform the following steps:
 The parser trainer uses PyTorch for training, so it also needs to be installed:
 
 ```shell
-sudo pip3 install http://download.pytorch.org/whl/cpu/torch-0.3.1-cp35-cp35mu-linux_x86_64.whl
+sudo pip3 install https://download.pytorch.org/whl/cpu/torch-1.1.0-cp36-cp36m-linux_x86_64.whl
 ```
 
 ## Building
@@ -88,3 +88,4 @@ sudo ln -s $(realpath python) /usr/lib/python3/dist-packages/sling
 * Similarly, we do not support Windows, but you can check out
   [issue #296](https://github.com/google/sling/issues/296) for help on
   building SLING on Windows Subsystem for Linux (WSL).
+

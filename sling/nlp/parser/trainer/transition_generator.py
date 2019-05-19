@@ -153,7 +153,7 @@ class TransitionGenerator:
     return TransitionGenerator.SimpleAction(type)
 
 
-  # Stores mentions starting or ending or both at a given token. 
+  # Stores mentions starting or ending or both at a given token.
   class TokenToMentions:
     def __init__(self):
       self.starting = []
@@ -206,7 +206,7 @@ class TransitionGenerator:
 
     # Record start/end boundaries of all mentions.
     token_to_mentions = []
-    for _ in xrange(len(document.tokens)):
+    for _ in range(len(document.tokens)):
       token_to_mentions.append(TransitionGenerator.TokenToMentions())
 
     for m in document.mentions:
@@ -223,7 +223,7 @@ class TransitionGenerator:
     simple_actions = []
     marked = {}   # frames for which we have output a MARK
     evoked = {}   # frames for which we have output an EVOKE
-    for index in xrange(len(document.tokens)):
+    for index in range(len(document.tokens)):
       t2m = token_to_mentions[index]
 
       # First evoke/refer the singleton mentions.
