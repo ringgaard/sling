@@ -190,6 +190,14 @@ void cos_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Neg(g->Mul(g->d(y), g->Sin(g->v(x)))));
 }
 
+// y = tan(x)
+// dx = dy / cos(x)^2
+void tan_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  g->add(x, g->Div(g->d(y), g->Square(g->Cos(x))));
+}
+
 // y = exp(x)
 // dx = exp(x) * dy = y * dy
 void exp_grad(Flow::Operation *op, Gradients *g) {
@@ -370,6 +378,7 @@ void RegisterStandardGradients(Transformations *library) {
   library->RegisterGradient("Maximum", maximum_grad);
   library->RegisterGradient("Sin", sin_grad);
   library->RegisterGradient("Cos", cos_grad);
+  library->RegisterGradient("Tan", tan_grad);
   library->RegisterGradient("Exp", exp_grad);
   library->RegisterGradient("Log", log_grad);
   library->RegisterGradient("Sigmoid", sigmoid_grad);

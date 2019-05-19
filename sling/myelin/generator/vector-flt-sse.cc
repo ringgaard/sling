@@ -51,7 +51,8 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
 
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
-    if (instructions_.Has(Express::SUM) ||
+    if (instructions_.Has(Express::NOT) ||
+        instructions_.Has(Express::SUM) ||
         instructions_.Has(Express::PRODUCT) ||
         instructions_.Has(Express::MIN) ||
         instructions_.Has(Express::MAX)) {
@@ -164,12 +165,14 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
             masm);
         break;
       case Express::XOR:
+      case Express::BITXOR:
         GenerateXMMFltOp(instr,
             &Assembler::xorps, &Assembler::xorpd,
             &Assembler::xorps, &Assembler::xorpd,
             masm);
         break;
       case Express::ANDNOT:
+      case Express::BITANDNOT:
         GenerateXMMFltOp(instr,
             &Assembler::andnps, &Assembler::andnpd,
             &Assembler::andnps, &Assembler::andnpd,
@@ -177,6 +180,16 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         break;
       case Express::NOT:
         GenerateNot(instr, masm);
+        break;
+      case Express::BITEQ:
+        if (CPU::Enabled(SSE4_1)) {
+          GenerateXMMFltOp(instr,
+              &Assembler::pcmpeqd, &Assembler::pcmpeqq,
+              &Assembler::pcmpeqd, &Assembler::pcmpeqq,
+              masm);
+        } else {
+          UNSUPPORTED;
+        }
         break;
       case Express::FLOOR:
         GenerateFloor(instr, masm);
@@ -192,6 +205,15 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         break;
       case Express::CVTINTEXP:
         GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 23 : 52);
+        break;
+      case Express::QUADSIGN:
+        GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 29 : 61);
+        break;
+      case Express::ADDINT:
+        GenerateXMMFltOp(instr,
+            &Assembler::paddd, &Assembler::paddq,
+            &Assembler::paddd, &Assembler::paddq,
+            masm);
         break;
       case Express::SUBINT:
         GenerateXMMFltOp(instr,
@@ -313,18 +335,19 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         __ cvtdq2ps(xmm(instr->dst), addr(instr->args[0]));
       }
     } else if (type_ == DT_DOUBLE && CPU::Enabled(SSE2)) {
-      // Make sure source is in a register.
-      int src = instr->src;
-      if (instr->src == -1) {
+      // Get argument.
+      if (instr->src != -1) {
+        __ movdqa(xmm(instr->dst), xmm(instr->src));
+      } else {
         __ movdqa(xmm(instr->dst), addr(instr->args[0]));
-        src = instr->dst;
       }
 
       // Convert two int64s to two int32s.
-      __ shufps(xmm(instr->src), xmm(instr->src), 0xD8);
+      __ shufps(xmm(instr->dst), xmm(instr->dst), 0xD8);
 
       // Convert two int32s to doubles.
-      __ cvtdq2pd(xmm(instr->dst), xmm(src));
+      __ cvtdq2pd(xmm(instr->dst), xmm(instr->dst));
+
     } else {
       UNSUPPORTED;
     }
@@ -333,11 +356,42 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
   // Generate logical not.
   void GenerateNot(Express::Op *instr, MacroAssembler *masm) {
     // Compute not(x) = xor(1,x).
-    __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
-    GenerateXMMFltOp(instr,
-        &Assembler::xorps, &Assembler::xorpd,
-        &Assembler::xorps, &Assembler::xorpd,
-        masm);
+    if (instr->src != -1) {
+      // NOT dst,reg
+      switch (type_) {
+        case DT_FLOAT:
+          if (instr->dst == instr->src) {
+            __ pcmpeqd(xmmaux(0), xmmaux(0));
+            __ xorps(xmm(instr->dst), xmmaux(0));
+          } else {
+            __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
+            __ xorps(xmm(instr->dst), xmm(instr->src));
+          }
+          break;
+        case DT_DOUBLE:
+          if (instr->dst == instr->src) {
+            __ pcmpeqd(xmmaux(0), xmmaux(0));
+            __ xorpd(xmm(instr->dst), xmmaux(0));
+          } else {
+            __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
+            __ xorpd(xmm(instr->dst), xmm(instr->src));
+          }
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      // NOT dst,[mem]
+      __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
+      switch (type_) {
+        case DT_FLOAT:
+          __ xorps(xmm(instr->dst), addr(instr->args[0]));
+          break;
+        case DT_DOUBLE:
+          __ xorpd(xmm(instr->dst), addr(instr->args[0]));
+          break;
+        default: UNSUPPORTED;
+      }
+    }
   }
 
   // Generate compare.

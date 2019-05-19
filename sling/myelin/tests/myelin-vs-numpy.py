@@ -106,6 +106,8 @@ def simulate(flow, f, data):
       v[o[0]] = np.sin(v[i[0]])
     elif op.type == "Cos":
       v[o[0]] = np.cos(v[i[0]])
+    elif op.type == "Tan":
+      v[o[0]] = np.tan(v[i[0]])
     elif op.type == "Relu":
       v[o[0]] = relu(v[i[0]])
     elif op.type == "Sqrt":
@@ -404,7 +406,23 @@ def cos_test(n):
   flow = myelin.Flow()
   f = flow.define("cos")
   x = f.var("x", dt, [n])
-  y = f.sin(x)
+  y = f.cos(x)
+  check(flow, n)
+
+def tan_test(n):
+  flow = myelin.Flow()
+  f = flow.define("tan")
+  x = f.var("x", dt, [n])
+  y = f.tan(x)
+  check(flow, n)
+
+def trig_test(n):
+  flow = myelin.Flow()
+  f = flow.define("trig")
+  x = f.var("x", dt, [n])
+  ys = f.sin(x)
+  yc = f.cos(x)
+  yt = f.tan(x)
   check(flow, n)
 
 def sqrt_test(n):
@@ -687,6 +705,10 @@ for i in sizes:
     sqrt_test(i)
     exp_test(i)
     log_test(i)
+    sin_test(i)
+    cos_test(i)
+    tan_test(i)
+    trig_test(i)
     tanh_test(i)
     erf_test(i)
     sigmoid_test(i)
@@ -709,9 +731,7 @@ for i in sizes:
     select_test(i)
 
     if dt != myelin.DT_DOUBLE:
-      # No support yet for argmax, argmin, sin, and cos for doubles.
-      sin_test(i)
-      cos_test(i)
+      # No support yet for argmax and argmin for doubles.
       argmax_test(i)
       argmin_test(i)
 

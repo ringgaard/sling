@@ -168,6 +168,7 @@ class FlowBuilder : public Scope {
   Variable *Identity(Variable *x) { return Op("Identity", {x}); }
   Variable *Cos(Variable *x) { return Op("Cos", {x}); }
   Variable *Sin(Variable *x) { return Op("Sin", {x}); }
+  Variable *Tan(Variable *x) { return Op("Tan", {x}); }
 
   // Comparison.
   Variable *Equal(Variable *x, Variable *y) {

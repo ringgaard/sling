@@ -264,6 +264,9 @@ class Builder:
   def cos(self, x, name=None):
     return self.op("Cos", [x], name)
 
+  def tan(self, x, name=None):
+    return self.op("Tan", [x], name)
+
   def square(self, x, name=None):
     return self.op("Square", [x], name)
 

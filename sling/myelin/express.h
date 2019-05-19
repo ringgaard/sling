@@ -95,6 +95,9 @@ class Express {
     ERF,         // error function, r=erf(x)
     LOG2,        // base-2 logarithm, r=log2(x)
     EXP2,        // base-2 exponential function, r=2^x
+    SIN,         // sine function, r=sin(x)
+    COS,         // cosine function, r=cos(x)
+    TAN,         // tangent function, r=tan(x)
 
     // Fused multiply.
     MULADD132,   // fused multiply/add, r=a*c+b
@@ -126,11 +129,16 @@ class Express {
     // Miscellaneous.
     BITAND,      // bitwise and
     BITOR,       // bitwise or
+    BITXOR,      // bitwise xor
+    BITANDNOT,   // bitwise and not
+    BITEQ,       // bitwise equality test
     FLOOR,       // floor function
     CVTFLTINT,   // float to integer conversion
     CVTINTFLT,   // integer to float conversion
     CVTEXPINT,   // convert float exponent to integer
     CVTINTEXP,   // convert integer to float exponent
+    QUADSIGN,    // shift bit 2 to sign bit
+    ADDINT,      // integer addition
     SUBINT,      // integer subtraction
 
     // Reductions.
@@ -144,8 +152,9 @@ class Express {
 
   // System-defined numeric constants.
   enum ConstantNumber {
-    ZERO, ONE, TWO, HALF, N1, P9, N9, LN2, NLN2, LOG2E,
+    ZERO, ONE, TWO, HALF, N1, P9, N9, LN2, NLN2, LOG2E, FOPI,
     PINF, NINF, QNAN, MIN_NORM_POS, INV_MANT_MASK, MAX_MANT,
+    SIGN_MASK, INV_SIGN_MASK, I1, I2, I4, INV_I1,
     CEPHES_SQRTHF,
     CEPHES_LOG_P0, CEPHES_LOG_P1, CEPHES_LOG_P2, CEPHES_LOG_P3, CEPHES_LOG_P4,
     CEPHES_LOG_P5, CEPHES_LOG_P6, CEPHES_LOG_P7, CEPHES_LOG_P8,
@@ -156,6 +165,9 @@ class Express {
     ALPHA_1, ALPHA_3, ALPHA_5, ALPHA_7, ALPHA_9, ALPHA_11, ALPHA_13,
     BETA_0, BETA_2, BETA_4, BETA_6,
     ERF_A1, ERF_A2, ERF_A3, ERF_A4, ERF_A5, ERF_P,
+    CEPHES_MINUS_DP1, CEPHES_MINUS_DP2, CEPHES_MINUS_DP3,
+    SINCOF_P0, SINCOF_P1, SINCOF_P2,
+    COSCOF_P0, COSCOF_P1, COSCOF_P2,
     NUM_CONSTANTS,
   };
 
@@ -227,8 +239,8 @@ class Express {
     bool commutative() const {
       return type == ADD || type == MUL ||
              type == MINIMUM || type == MAXIMUM ||
-             type == BITAND || type == BITOR ||
-             type == CMPEQOQ || type == CMPNEUQ ||
+             type == BITAND || type == BITOR || type == BITXOR ||
+             type == CMPEQOQ || type == CMPNEUQ || type == BITEQ ||
              type == AND || type == OR || type == XOR;
     }
 
@@ -239,7 +251,7 @@ class Express {
 
     // Check if operation is a comparison.
     bool compare() const {
-      return type >= CMPEQOQ && type <= CMPGEOQ;
+      return (type >= CMPEQOQ && type <= CMPGEOQ) || type == BITEQ;
     }
 
     // Check if operation is a logic operation.
@@ -510,6 +522,12 @@ class Express {
   Var *Exp(Var *x);
   Var *Tanh(Var *x);
   Var *Erf(Var *x);
+
+  // Build expressions for trigonometric functions.
+  Var *Trig(OpType type, Var *x);
+  Var *Sin(Var *x) { return Trig(SIN, x); }
+  Var *Cos(Var *x) { return Trig(COS, x); }
+  Var *Tan(Var *x) { return Trig(TAN, x); }
 
   // Build expressions for composite functions.
   Var *MulAdd(Var *x, Var *y, Var *z) { return Add(Mul(x, y), z); }

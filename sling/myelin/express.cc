@@ -52,6 +52,9 @@ static std::map<string, Express::OpType> optypes = {
   {"Erf", Express::ERF},
   {"Log2", Express::LOG2},
   {"Exp2", Express::EXP2},
+  {"Sin", Express::SIN},
+  {"Cos", Express::COS},
+  {"Tan", Express::TAN},
 
   {"MulAdd132", Express::MULADD132},
   {"MulAdd213", Express::MULADD213},
@@ -78,11 +81,16 @@ static std::map<string, Express::OpType> optypes = {
 
   {"BitAnd", Express::BITAND},
   {"BitOr", Express::BITOR},
+  {"BitXor", Express::BITXOR},
+  {"BitAndNot", Express::BITANDNOT},
+  {"BitEq", Express::BITEQ},
   {"Floor", Express::FLOOR},
   {"CvtFltInt", Express::CVTFLTINT},
   {"CvtIntFlt", Express::CVTINTFLT},
   {"CvtExpInt", Express::CVTEXPINT},
   {"CvtIntExp", Express::CVTINTEXP},
+  {"QuadSign", Express::QUADSIGN},
+  {"AddInt", Express::ADDINT},
   {"SubInt", Express::SUBINT},
 
   {"Sum", Express::SUM},
@@ -97,13 +105,14 @@ static const string opname[] = {
   "Minimum", "Maximum",
   "Neg", "Abs", "Sign", "Relu", "Softsign", "Softplus", "LogSigmoid",
   "Reciprocal", "Square", "Sqrt",
-  "Log", "Exp", "Sigmoid", "Tanh", "Erf", "Log2", "Exp2",
+  "Log", "Exp", "Sigmoid", "Tanh", "Erf", "Log2", "Exp2", "Sin", "Cos", "Tan",
   "MulAdd132", "MulAdd213", "MulAdd231",
   "MulSub132", "MulSub213", "MulSub231",
   "CmpEq", "CmpNe", "CmpLt", "CmpLe", "CmpGt", "CmpGe",
   "And", "Or", "Xor", "AndNot", "Not", "Cond", "Select",
-  "BitAnd", "BitOr",
-  "Floor", "CvtFltInt", "CvtIntFlt", "CvtExpInt", "CvtIntExp", "SubInt",
+  "BitAnd", "BitOr", "BitXor", "BitAndNot", "BitEq",
+  "Floor", "CvtFltInt", "CvtIntFlt", "CvtExpInt", "CvtIntExp", "QuadSign",
+  "AddInt", "SubInt",
   "Sum", "Product", "Min", "Max",
   "???",
 };
@@ -416,6 +425,7 @@ Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
   FLTCONST(0.6931471805599453),    // LN2
   FLTCONST(-0.6931471805599453),   // NLN2
   FLTCONST(1.442695021629333),     // LOG2E
+  FLTCONST(1.27323954473516),      // FOPI (4/pi)
 
   INTCONST(0x7F800000, 0x7FF0000000000000LL),      // PINF
   INTCONST(0xFF800000, 0xFFF0000000000000LL),      // NINF
@@ -424,6 +434,13 @@ Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
   INTCONST(0x00800000, 0x0020000000000000LL),      // MIN_NORM_POS
   INTCONST(~0x7F800000, ~0x7FF0000000000000LL),    // INV_MANT_MASK
   INTCONST(0x7F, 0x3FFLL),                         // MAX_MANT
+
+  INTCONST(0x80000000, 0x8000000000000000LL),      // SIGN_MASK
+  INTCONST(~0x80000000, ~0x8000000000000000LL),    // INV_SIGN_MASK
+  INTCONST(1, 1LL),                                // I1
+  INTCONST(2, 2LL),                                // I2
+  INTCONST(4, 4LL),                                // I4
+  INTCONST(~1, ~1LL),                              // INV_I1
 
   // Polynomial coefficients for natural logarithm.
   FLTCONST(0.707106781186547524),  // CEPHES_SQRTHF
@@ -475,6 +492,17 @@ Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
   FLTCONST(-1.453152027),          // ERF_A4
   FLTCONST(1.061405429),           // ERF_A5
   FLTCONST(0.3275911),             // ERF_P
+
+  // Constants for sine and cosine functions.
+  FLTCONST(-0.78515625),                // CEPHES_MINUS_DP1
+  FLTCONST(-2.4187564849853515625e-4),  // CEPHES_MINUS_DP2
+  FLTCONST(-3.77489497744594108e-8),    // CEPHES_MINUS_DP3
+  FLTCONST(-1.9515295891e-4),           // SINCOF_P0
+  FLTCONST(8.3321608736e-3),            // SINCOF_P1
+  FLTCONST(-1.6666654611e-1),           // SINCOF_P2
+  FLTCONST(2.443315711809948e-5),       // COSCOF_P0
+  FLTCONST(-1.388731625493765e-3),      // COSCOF_P1
+  FLTCONST(4.166664568298827e-2),       // COSCOF_P2
 };
 
 int Express::IdentityValue(OpType type) {
@@ -594,6 +622,9 @@ Express::Op *Express::Function(OpType type,
         case Express::SIGMOID: result = Sigmoid(args[0]); break;
         case Express::TANH: result = Tanh(args[0]); break;
         case Express::ERF: result = Erf(args[0]); break;
+        case Express::SIN: result = Sin(args[0]); break;
+        case Express::COS: result = Cos(args[0]); break;
+        case Express::TAN: result = Tan(args[0]); break;
         default: ;
       }
     }
@@ -1746,7 +1777,7 @@ void Express::GetRegisterTypes(std::vector<bool> *regs) const {
 }
 
 // Natural logarithm.
-// See also: http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
+// See also: http://software-lisc.fbk.eu/avx_mathfun/avx_mathfun.h
 Express::Var *Express::Log(Var *x) {
   if (target_ == NVIDIA) {
     // Compute natural logarithm from base-2 logarithm.
@@ -1849,6 +1880,103 @@ Express::Var *Express::Exp(Var *x) {
 
     // Return 2^m * exp(r).
     return Maximum(Mul(y, emm0), arg);
+  }
+}
+
+// Trigonometric functions (sine, cosine, and tangent).
+// See also: http://software-lisc.fbk.eu/avx_mathfun/avx_mathfun.h
+Express::Var *Express::Trig(OpType type, Var *x) {
+  // GPU supports sin, cos, and tan directly.
+  if (target_ == NVIDIA) {
+    switch (type) {
+      case SIN: return Do(SIN, x);
+      case COS: return Do(COS, x);
+      case TAN: return Div(Do(SIN, x), Do(COS, x));
+      default: LOG(FATAL) << "Unsupported trigonometric function";
+    }
+  }
+
+  // Extract the sign bit for sine.
+  Var *sign = nullptr;
+  if (type == SIN || type == TAN) {
+    sign = Do(BITAND, x, Number(SIGN_MASK));
+  }
+
+  // Take the absolute value.
+  x = Do(BITAND, x, Number(INV_SIGN_MASK));
+
+  // Scale by 4/pi.
+  Var *y = Mul(x, Number(FOPI));
+
+  // Get the integer part of y.
+  Var *j = Do(CVTFLTINT, y);
+
+  // Compute j=(j+1) & (~1).
+  j = Do(ADDINT, j, Number(I1));
+  j = Do(BITAND, j, Number(INV_I1));
+  y = Do(CVTINTFLT, j);
+
+  // Get the sign swap masks.
+  Var *signswap_sin = nullptr;
+  Var *signswap_cos = nullptr;
+  Var *four = Number(I4);
+  if (type == SIN || type == TAN) {
+    signswap_sin = Do(BITXOR, sign, Do(QUADSIGN, Do(BITAND, j, four)));
+  }
+  if (type == COS || type == TAN) {
+    signswap_cos = Do(QUADSIGN, Do(BITANDNOT, Do(SUBINT, j, Number(I2)), four));
+  }
+
+  // Get the polynomial selection mask. There is one polynomial for 0<=x<=pi/4
+  // and another one for pi/4<x<=pi/2. Both branches will be computed.
+  Var *polymask = Do(BITEQ, Do(BITAND, j, Number(I2)), Zero());
+
+  // Extended precision modular arithmetic.
+  // x = ((x - y * DP1) - y * DP2) - y * DP3
+  x = Add(x, Mul(y, Number(CEPHES_MINUS_DP1)));
+  x = Add(x, Mul(y, Number(CEPHES_MINUS_DP2)));
+  x = Add(x, Mul(y, Number(CEPHES_MINUS_DP3)));
+
+  // Evaluate the first polynomial (0<=x<=pi/4).
+  Var *z = Mul(x, x);
+  Var *p1 = Number(COSCOF_P0);
+  p1 = Mul(p1, z);
+  p1 = Add(p1, Number(COSCOF_P1));
+  p1 = Mul(p1, z);
+  p1 = Add(p1, Number(COSCOF_P2));
+  p1 = Mul(p1, z);
+  p1 = Mul(p1, z);
+  p1 = Sub(p1, Mul(z, Number(HALF)));
+  p1 = Add(p1, One());
+
+  // Evaluate the second polynomial (pi/4<=x<=pi/2).
+  Var *p2 = Number(SINCOF_P0);
+  p2 = Mul(p2, z);
+  p2 = Add(p2, Number(SINCOF_P1));
+  p2 = Mul(p2, z);
+  p2 = Add(p2, Number(SINCOF_P2));
+  p2 = Mul(p2, z);
+  p2 = Mul(p2, x);
+  p2 = Add(p2, x);
+
+  switch (type) {
+    case SIN: {
+      return Do(BITXOR, Cond(polymask, p2, p1), signswap_sin);
+    }
+    case COS: {
+      Var *y1 = Sub(p1, Select(Not(polymask), p1));
+      Var *y2 = Sub(p2, Select(polymask, p2));
+      return Do(BITXOR, Add(y1, y2), signswap_cos);
+    }
+    case TAN: {
+      Var *y1 = Sub(p1, Select(Not(polymask), p1));
+      Var *y2 = Sub(p2, Select(polymask, p2));
+      Var *sin = Do(BITXOR, Cond(polymask, p2, p1), signswap_sin);
+      Var *cos = Do(BITXOR, Add(y1, y2), signswap_cos);
+      return Div(sin, cos);
+    }
+    default:
+      LOG(FATAL) << "Unsupported trigonometric function";
   }
 }
 

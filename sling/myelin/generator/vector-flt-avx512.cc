@@ -226,6 +226,23 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
             &Assembler::vorps, &Assembler::vorpd,
             masm);
         break;
+      case Express::BITXOR:
+        GenerateZMMFltOp(instr,
+            &Assembler::vxorps, &Assembler::vxorpd,
+            nullptr, nullptr,
+            &Assembler::vxorps, &Assembler::vxorpd,
+            masm);
+        break;
+      case Express::BITANDNOT:
+        GenerateZMMFltOp(instr,
+            &Assembler::vandnps, &Assembler::vandnpd,
+            nullptr, nullptr,
+            &Assembler::vandnps, &Assembler::vandnpd,
+            masm);
+        break;
+      case Express::BITEQ:
+        GenerateBitEqual(instr, masm);
+        break;
       case Express::FLOOR:
         GenerateZMMFltOp(instr,
             &Assembler::vrndscaleps, &Assembler::vrndscalepd,
@@ -251,6 +268,16 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
         break;
       case Express::CVTINTEXP:
         GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 23 : 52);
+        break;
+      case Express::QUADSIGN:
+        GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 29 : 61);
+        break;
+      case Express::ADDINT:
+        GenerateZMMFltOp(instr,
+            &Assembler::vpaddd, &Assembler::vpaddq,
+            nullptr, nullptr,
+            &Assembler::vpaddd, &Assembler::vpaddq,
+            masm);
         break;
       case Express::SUBINT:
         GenerateZMMFltOp(instr,
@@ -418,6 +445,33 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
         case DT_DOUBLE:
           __ vcmppd(kk(instr->dst), zmm(instr->src), addr(instr->args[1]),
                     code);
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate bitwise compare equal.
+  void GenerateBitEqual(Express::Op *instr, MacroAssembler *masm) {
+    if (instr->src != -1 && instr->src2 != -1) {
+      switch (type_) {
+        case DT_FLOAT:
+          __ vpcmpeqd(kk(instr->dst), zmm(instr->src), zmm(instr->src2));
+          break;
+        case DT_DOUBLE:
+          __ vpcmpeqq(kk(instr->dst), zmm(instr->src), zmm(instr->src2));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (instr->src != -1 && instr->src2 == -1) {
+      switch (type_) {
+        case DT_FLOAT:
+          __ vpcmpeqd(kk(instr->dst), zmm(instr->src), addr(instr->args[1]));
+          break;
+        case DT_DOUBLE:
+          __ vpcmpeqq(kk(instr->dst), zmm(instr->src), addr(instr->args[1]));
           break;
         default: UNSUPPORTED;
       }

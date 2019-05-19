@@ -57,12 +57,16 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
     int num_rr_aux = 0;
     if (instructions_.Has(Express::BITAND) ||
         instructions_.Has(Express::BITOR) ||
+        instructions_.Has(Express::BITXOR) ||
+        instructions_.Has(Express::BITANDNOT) ||
+        instructions_.Has(Express::BITEQ) ||
         instructions_.Has(Express::AND) ||
         instructions_.Has(Express::OR) ||
         instructions_.Has(Express::XOR) ||
         instructions_.Has(Express::ANDNOT) ||
         instructions_.Has(Express::CVTFLTINT) ||
         instructions_.Has(Express::CVTINTFLT) ||
+        instructions_.Has(Express::ADDINT) ||
         instructions_.Has(Express::SUBINT)) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
@@ -200,10 +204,13 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         break;
       case Express::BITAND:
       case Express::BITOR:
+      case Express::BITXOR:
+      case Express::BITANDNOT:
       case Express::AND:
       case Express::OR:
       case Express::XOR:
       case Express::ANDNOT:
+      case Express::BITEQ:
         GenerateRegisterOp(instr, masm);
         break;
       case Express::NOT:
@@ -222,6 +229,10 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
       case Express::CVTINTEXP:
         GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 23 : 52);
         break;
+      case Express::QUADSIGN:
+        GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 29 : 61);
+        break;
+      case Express::ADDINT:
       case Express::SUBINT:
         GenerateRegisterOp(instr, masm);
         break;
@@ -389,9 +400,18 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           __ vmovss(src2, addr(instr->args[1]));
         }
         switch (instr->type) {
-          case Express::CVTFLTINT: __ vcvttps2dq(dst, src); break;
-          case Express::CVTINTFLT: __ vcvtdq2ps(dst, src); break;
-          case Express::SUBINT: __ vpsubd(dst, src, src2); break;
+          case Express::CVTFLTINT:
+            __ vcvttps2dq(dst, src);
+            break;
+          case Express::CVTINTFLT:
+            __ vcvtdq2ps(dst, src);
+            break;
+          case Express::ADDINT:
+            __ vpaddd(dst, src, src2);
+            break;
+          case Express::SUBINT:
+            __ vpsubd(dst, src, src2);
+            break;
           case Express::BITAND:
           case Express::AND:
             __ vandps(dst, src, src2);
@@ -400,9 +420,11 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           case Express::OR:
             __ vorps(dst, src, src2);
             break;
+          case Express::BITXOR:
           case Express::XOR:
             __ vxorps(dst, src, src2);
             break;
+          case Express::BITANDNOT:
           case Express::ANDNOT:
             __ vandnps(dst, src, src2);
             break;
@@ -410,6 +432,9 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
             __ movl(aux(0), Immediate(-1));
             __ vmovd(xmmaux(1), aux(0));
             __ vxorps(dst, src, xmmaux(1));
+            break;
+          case Express::BITEQ:
+            __ vpcmpeqd(dst, src, src2);
             break;
           default: UNSUPPORTED;
         }
@@ -428,6 +453,9 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           case Express::CVTINTFLT:
             __ vcvtdq2pd(dst, src);
             break;
+          case Express::ADDINT:
+            __ vpaddq(dst, src, src2);
+            break;
           case Express::SUBINT:
             __ vpsubq(dst, src, src2);
             break;
@@ -439,9 +467,11 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           case Express::OR:
             __ vorpd(dst, src, src2);
             break;
+          case Express::BITXOR:
           case Express::XOR:
             __ vxorpd(dst, src, src2);
             break;
+          case Express::BITANDNOT:
           case Express::ANDNOT:
             __ vandnpd(dst, src, src2);
             break;
@@ -449,6 +479,9 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
             __ movq(aux(0), Immediate(-1));
             __ vmovq(xmmaux(1), aux(0));
             __ vxorpd(dst, src, xmmaux(1));
+            break;
+          case Express::BITEQ:
+            __ vpcmpeqq(dst, src, src2);
             break;
           default: UNSUPPORTED;
         }

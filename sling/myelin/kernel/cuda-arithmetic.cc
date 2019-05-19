@@ -256,6 +256,12 @@ class CUDACalculate : public CUDAKernel {
         case Express::EXP2:
           GenerateUnaryOp("ex2.approx", instr, &comp, comp.dtype == DT_DOUBLE);
           break;
+        case Express::SIN:
+          GenerateUnaryOp("sin.approx", instr, &comp, comp.dtype == DT_DOUBLE);
+          break;
+        case Express::COS:
+          GenerateUnaryOp("cos.approx", instr, &comp, comp.dtype == DT_DOUBLE);
+          break;
         case Express::CMPEQOQ:
           GenerateBinaryOp("setp.eq", instr, &comp);
           break;

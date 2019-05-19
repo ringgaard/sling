@@ -52,12 +52,16 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
     int num_rr_aux = 0;
     if (instructions_.Has(Express::BITAND) ||
         instructions_.Has(Express::BITOR) ||
+        instructions_.Has(Express::BITXOR) ||
+        instructions_.Has(Express::BITANDNOT) ||
+        instructions_.Has(Express::BITEQ) ||
         instructions_.Has(Express::AND) ||
         instructions_.Has(Express::OR) ||
         instructions_.Has(Express::XOR) ||
         instructions_.Has(Express::ANDNOT) ||
         instructions_.Has(Express::CVTFLTINT) ||
         instructions_.Has(Express::CVTINTFLT) ||
+        instructions_.Has(Express::ADDINT) ||
         instructions_.Has(Express::SUBINT)) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
@@ -162,6 +166,9 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         break;
       case Express::BITAND:
       case Express::BITOR:
+      case Express::BITXOR:
+      case Express::BITANDNOT:
+      case Express::BITEQ:
       case Express::AND:
       case Express::OR:
       case Express::XOR:
@@ -193,6 +200,10 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
       case Express::CVTINTEXP:
         GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 23 : 52);
         break;
+      case Express::QUADSIGN:
+        GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 29 : 61);
+        break;
+      case Express::ADDINT:
       case Express::SUBINT:
         GenerateRegisterOp(instr, masm);
         break;
@@ -302,6 +313,9 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
           case Express::CVTINTFLT:
             __ cvtdq2ps(dst, src);
             break;
+          case Express::ADDINT:
+            __ paddd(dst, src);
+            break;
           case Express::SUBINT:
             __ psubd(dst, src);
             break;
@@ -314,9 +328,11 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
             __ orps(dst, src);
             break;
           case Express::XOR:
+          case Express::BITXOR:
             __ xorps(dst, src);
             break;
           case Express::ANDNOT:
+          case Express::BITANDNOT:
             __ andnps(dst, src);
             break;
           case Express::NOT:
@@ -327,6 +343,13 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
             } else {
               __ movd(dst, aux(0));
               __ xorps(dst, src);
+            }
+            break;
+          case Express::BITEQ:
+            if (CPU::Enabled(SSE2)) {
+              __ pcmpeqd(dst, src);
+            } else {
+              UNSUPPORTED;
             }
             break;
           default: UNSUPPORTED;
@@ -344,6 +367,9 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
           case Express::CVTINTFLT:
             __ cvtdq2pd(dst, src);
             break;
+          case Express::ADDINT:
+            __ paddq(dst, src);
+            break;
           case Express::SUBINT:
             __ psubq(dst, src);
             break;
@@ -356,9 +382,11 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
             __ orpd(dst, src);
             break;
           case Express::XOR:
+          case Express::BITXOR:
             __ xorpd(dst, src);
             break;
           case Express::ANDNOT:
+          case Express::BITANDNOT:
             __ andnpd(dst, src);
             break;
           case Express::NOT:
@@ -369,6 +397,13 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
             } else {
               __ movq(dst, aux(0));
               __ xorpd(dst, src);
+            }
+            break;
+          case Express::BITEQ:
+            if (CPU::Enabled(SSE4_1)) {
+              __ pcmpeqq(dst, src);
+            } else {
+              UNSUPPORTED;
             }
             break;
           default: UNSUPPORTED;

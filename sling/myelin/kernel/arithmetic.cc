@@ -55,6 +55,9 @@ static Express::OpType OpType(const string &op) {
     {"Log", Express::LOG},
     {"Exp", Express::EXP},
     {"Sigmoid", Express::SIGMOID},
+    {"Sin", Express::SIN},
+    {"Cos", Express::COS},
+    {"Tan", Express::TAN},
     {"Tanh", Express::TANH},
     {"Erf", Express::ERF},
 
@@ -907,6 +910,9 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("LogExpr", "Log", 1));
   library->Register(new Calculate("ExpExpr", "Exp", 1));
   library->Register(new Calculate("SigmoidExpr", "Sigmoid", 1));
+  library->Register(new Calculate("SinExpr", "Sin", 1));
+  library->Register(new Calculate("CosExpr", "Cos", 1));
+  library->Register(new Calculate("TanExpr", "Tan", 1));
   library->Register(new Calculate("TanhExpr", "Tanh", 1));
   library->Register(new Calculate("ErfExpr", "Erf", 1));
   library->Register(new Calculate("Calculate", "Calculate"));

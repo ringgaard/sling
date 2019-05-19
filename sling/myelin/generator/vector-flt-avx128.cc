@@ -54,7 +54,8 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
 
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
-    if (instructions_.Has(Express::SUM) ||
+    if (instructions_.Has(Express::NOT) ||
+        instructions_.Has(Express::SUM) ||
         instructions_.Has(Express::PRODUCT) ||
         instructions_.Has(Express::MIN) ||
         instructions_.Has(Express::MAX)) {
@@ -200,12 +201,14 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
             masm);
         break;
       case Express::XOR:
+      case Express::BITXOR:
         GenerateXMMFltOp(instr,
             &Assembler::vxorps, &Assembler::vxorpd,
             &Assembler::vxorps, &Assembler::vxorpd,
             masm);
         break;
       case Express::ANDNOT:
+      case Express::BITANDNOT:
         GenerateXMMFltOp(instr,
             &Assembler::vandnps, &Assembler::vandnpd,
             &Assembler::vandnps, &Assembler::vandnpd,
@@ -213,6 +216,12 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
         break;
       case Express::NOT:
         GenerateNot(instr, masm);
+        break;
+      case Express::BITEQ:
+        GenerateXMMFltOp(instr,
+            &Assembler::vpcmpeqd, &Assembler::vpcmpeqq,
+            &Assembler::vpcmpeqd, &Assembler::vpcmpeqq,
+            masm);
         break;
       case Express::FLOOR:
         GenerateXMMFltOp(instr,
@@ -231,6 +240,15 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
         break;
       case Express::CVTINTEXP:
         GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 23 : 52);
+        break;
+      case Express::QUADSIGN:
+        GenerateShift(instr, masm, true, type_ == DT_FLOAT ? 29 : 61);
+        break;
+      case Express::ADDINT:
+        GenerateXMMFltOp(instr,
+            &Assembler::vpaddd, &Assembler::vpaddq,
+            &Assembler::vpaddd, &Assembler::vpaddq,
+            masm);
         break;
       case Express::SUBINT:
         GenerateXMMFltOp(instr,
@@ -298,10 +316,10 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
       }
 
       // Convert two int64s to two int32s.
-      __ vshufps(xmm(src), xmm(src), xmm(src), 0xD8);
+      __ vshufps(xmm(instr->dst), xmm(src), xmm(src), 0xD8);
 
       // Convert two int32s to doubles.
-      __ vcvtdq2pd(xmm(instr->dst), xmm(src));
+      __ vcvtdq2pd(xmm(instr->dst), xmm(instr->dst));
     } else {
       UNSUPPORTED;
     }
@@ -349,15 +367,15 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
   // Generate logical not.
   void GenerateNot(Express::Op *instr, MacroAssembler *masm) {
     // Compute not(x) = xor(1,x).
-    __ vpcmpeqd(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+    __ vpcmpeqd(xmmaux(0), xmmaux(0), xmmaux(0));
     if (instr->src != -1) {
       // NOT dst,reg
       switch (type_) {
         case DT_FLOAT:
-          __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+          __ vxorps(xmm(instr->dst), xmmaux(0), xmm(instr->src));
           break;
         case DT_DOUBLE:
-          __ vxorpd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+          __ vxorpd(xmm(instr->dst), xmmaux(0), xmm(instr->src));
           break;
         default: UNSUPPORTED;
       }
@@ -365,10 +383,10 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
       // NOT dst,[mem]
       switch (type_) {
         case DT_FLOAT:
-          __ vxorps(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+          __ vxorps(xmm(instr->dst), xmmaux(0), addr(instr->args[0]));
           break;
         case DT_DOUBLE:
-          __ vxorpd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+          __ vxorpd(xmm(instr->dst), xmmaux(0), addr(instr->args[0]));
           break;
         default: UNSUPPORTED;
       }
