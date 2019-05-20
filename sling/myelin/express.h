@@ -98,6 +98,9 @@ class Express {
     SIN,         // sine function, r=sin(x)
     COS,         // cosine function, r=cos(x)
     TAN,         // tangent function, r=tan(x)
+    COT,         // cotangent, r=cot(x)=1/tan(x)=cos(x)/sin(x)
+    SEC,         // secant, r=sec(x)=1/cos(x)
+    CSC,         // cosecant, r=csc(x)=1/sin(x)
 
     // Fused multiply.
     MULADD132,   // fused multiply/add, r=a*c+b
@@ -528,6 +531,9 @@ class Express {
   Var *Sin(Var *x) { return Trig(SIN, x); }
   Var *Cos(Var *x) { return Trig(COS, x); }
   Var *Tan(Var *x) { return Trig(TAN, x); }
+  Var *Cot(Var *x) { return Trig(COT, x); }
+  Var *Sec(Var *x) { return Trig(SEC, x); }
+  Var *Csc(Var *x) { return Trig(CSC, x); }
 
   // Build expressions for composite functions.
   Var *MulAdd(Var *x, Var *y, Var *z) { return Add(Mul(x, y), z); }

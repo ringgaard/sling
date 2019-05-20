@@ -1066,6 +1066,9 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
   library->Register(new CUDACalculate("CUDALog", "Log", 1));
   library->Register(new CUDACalculate("CUDAExp", "Exp", 1));
   library->Register(new CUDACalculate("CUDASigmoid", "Sigmoid", 1));
+  library->Register(new CUDACalculate("CUDASin", "Sin", 1));
+  library->Register(new CUDACalculate("CUDACos", "Cos", 1));
+  library->Register(new CUDACalculate("CUDATan", "Tan", 1));
   library->Register(new CUDACalculate("CUDATanh", "Tanh", 1));
   library->Register(new CUDACalculate("CUDAErf", "Erf", 1));
   library->Register(new CUDACalculate("CUDACalculate", "Calculate"));

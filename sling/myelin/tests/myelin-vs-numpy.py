@@ -400,21 +400,30 @@ def sin_test(n):
   f = flow.define("sin")
   x = f.var("x", dt, [n])
   y = f.sin(x)
-  check(flow, n)
+  if flags.arg.gpu:
+    check(flow, n, atol=1e-6)
+  else:
+    check(flow, n)
 
 def cos_test(n):
   flow = myelin.Flow()
   f = flow.define("cos")
   x = f.var("x", dt, [n])
   y = f.cos(x)
-  check(flow, n)
+  if flags.arg.gpu:
+    check(flow, n, atol=1e-6)
+  else:
+    check(flow, n)
 
 def tan_test(n):
   flow = myelin.Flow()
   f = flow.define("tan")
   x = f.var("x", dt, [n])
   y = f.tan(x)
-  check(flow, n)
+  if flags.arg.gpu:
+    check(flow, n, atol=1e-6, rtol=1e-4)
+  else:
+    check(flow, n)
 
 def trig_test(n):
   flow = myelin.Flow()
@@ -423,7 +432,10 @@ def trig_test(n):
   ys = f.sin(x)
   yc = f.cos(x)
   yt = f.tan(x)
-  check(flow, n)
+  if flags.arg.gpu:
+    check(flow, n, atol=1e-6, rtol=1e-4)
+  else:
+    check(flow, n)
 
 def sqrt_test(n):
   flow = myelin.Flow()

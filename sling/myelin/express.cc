@@ -55,6 +55,9 @@ static std::map<string, Express::OpType> optypes = {
   {"Sin", Express::SIN},
   {"Cos", Express::COS},
   {"Tan", Express::TAN},
+  {"Cot", Express::COT},
+  {"Sec", Express::SEC},
+  {"Csc", Express::CSC},
 
   {"MulAdd132", Express::MULADD132},
   {"MulAdd213", Express::MULADD213},
@@ -105,7 +108,8 @@ static const string opname[] = {
   "Minimum", "Maximum",
   "Neg", "Abs", "Sign", "Relu", "Softsign", "Softplus", "LogSigmoid",
   "Reciprocal", "Square", "Sqrt",
-  "Log", "Exp", "Sigmoid", "Tanh", "Erf", "Log2", "Exp2", "Sin", "Cos", "Tan",
+  "Log", "Exp", "Sigmoid", "Tanh", "Erf", "Log2", "Exp2",
+  "Sin", "Cos", "Tan", "Cot", "Sec", "Csc",
   "MulAdd132", "MulAdd213", "MulAdd231",
   "MulSub132", "MulSub213", "MulSub231",
   "CmpEq", "CmpNe", "CmpLt", "CmpLe", "CmpGt", "CmpGe",
@@ -625,6 +629,9 @@ Express::Op *Express::Function(OpType type,
         case Express::SIN: result = Sin(args[0]); break;
         case Express::COS: result = Cos(args[0]); break;
         case Express::TAN: result = Tan(args[0]); break;
+        case Express::COT: result = Cot(args[0]); break;
+        case Express::SEC: result = Sec(args[0]); break;
+        case Express::CSC: result = Csc(args[0]); break;
         default: ;
       }
     }
@@ -1883,7 +1890,7 @@ Express::Var *Express::Exp(Var *x) {
   }
 }
 
-// Trigonometric functions (sine, cosine, and tangent).
+// Trigonometric functions.
 // See also: http://software-lisc.fbk.eu/avx_mathfun/avx_mathfun.h
 Express::Var *Express::Trig(OpType type, Var *x) {
   // GPU supports sin, cos, and tan directly.
@@ -1892,6 +1899,9 @@ Express::Var *Express::Trig(OpType type, Var *x) {
       case SIN: return Do(SIN, x);
       case COS: return Do(COS, x);
       case TAN: return Div(Do(SIN, x), Do(COS, x));
+      case COT: return Div(Do(COS, x), Do(SIN, x));
+      case SEC: return Div(One(), Do(COS, x));
+      case CSC: return Div(One(), Do(SIN, x));
       default: LOG(FATAL) << "Unsupported trigonometric function";
     }
   }
@@ -1959,24 +1969,27 @@ Express::Var *Express::Trig(OpType type, Var *x) {
   p2 = Mul(p2, x);
   p2 = Add(p2, x);
 
+  // Compute sine and cosine.
+  Var *sin = nullptr;
+  Var *cos = nullptr;
+  if (type == SIN || type == TAN || type == COT || type == CSC) {
+    sin = Do(BITXOR, Cond(polymask, p2, p1), signswap_sin);
+  }
+  if (type == COS || type == TAN || type == COT || type == SEC) {
+    Var *y1 = Sub(p1, Select(Not(polymask), p1));
+    Var *y2 = Sub(p2, Select(polymask, p2));
+    cos = Do(BITXOR, Add(y1, y2), signswap_cos);
+  }
+
+  // Return result.
   switch (type) {
-    case SIN: {
-      return Do(BITXOR, Cond(polymask, p2, p1), signswap_sin);
-    }
-    case COS: {
-      Var *y1 = Sub(p1, Select(Not(polymask), p1));
-      Var *y2 = Sub(p2, Select(polymask, p2));
-      return Do(BITXOR, Add(y1, y2), signswap_cos);
-    }
-    case TAN: {
-      Var *y1 = Sub(p1, Select(Not(polymask), p1));
-      Var *y2 = Sub(p2, Select(polymask, p2));
-      Var *sin = Do(BITXOR, Cond(polymask, p2, p1), signswap_sin);
-      Var *cos = Do(BITXOR, Add(y1, y2), signswap_cos);
-      return Div(sin, cos);
-    }
-    default:
-      LOG(FATAL) << "Unsupported trigonometric function";
+    case SIN: return sin;
+    case COS: return cos;
+    case TAN: return Div(sin, cos);
+    case COT: return Div(cos, sin);
+    case SEC: return Div(One(), cos);
+    case CSC: return Div(One(), sin);
+    default: LOG(FATAL) << "Unsupported trigonometric function";
   }
 }
 
