@@ -98,8 +98,6 @@ def simulate(flow, f, data):
       v[o[0]] = sigmoid(v[i[0]])
     elif op.type == "Log":
       v[o[0]] = np.log(v[i[0]])
-    elif op.type == "Tanh":
-      v[o[0]] = np.tanh(v[i[0]])
     elif op.type == "Erf":
       v[o[0]] = erf(v[i[0]])
     elif op.type == "Sin":
@@ -108,6 +106,24 @@ def simulate(flow, f, data):
       v[o[0]] = np.cos(v[i[0]])
     elif op.type == "Tan":
       v[o[0]] = np.tan(v[i[0]])
+    elif op.type == "Asin":
+      v[o[0]] = np.arcsin(v[i[0]])
+    elif op.type == "Acos":
+      v[o[0]] = np.arccos(v[i[0]])
+    elif op.type == "Atan":
+      v[o[0]] = np.arctan(v[i[0]])
+    elif op.type == "Sinh":
+      v[o[0]] = np.sinh(v[i[0]])
+    elif op.type == "Cosh":
+      v[o[0]] = np.cosh(v[i[0]])
+    elif op.type == "Tanh":
+      v[o[0]] = np.tanh(v[i[0]])
+    elif op.type == "Asinh":
+      v[o[0]] = np.arcsinh(v[i[0]])
+    elif op.type == "Acosh":
+      v[o[0]] = np.arccosh(v[i[0]])
+    elif op.type == "Atanh":
+      v[o[0]] = np.arctanh(v[i[0]])
     elif op.type == "Relu":
       v[o[0]] = relu(v[i[0]])
     elif op.type == "Sqrt":
@@ -437,6 +453,70 @@ def trig_test(n):
   else:
     check(flow, n)
 
+def asin_test(n):
+  flow = myelin.Flow()
+  f = flow.define("asin")
+  x = f.var("x", dt, [n])
+  y = f.asin(x)
+  check(flow, n, -1.0, 1.0)
+
+def acos_test(n):
+  flow = myelin.Flow()
+  f = flow.define("acos")
+  x = f.var("x", dt, [n])
+  y = f.acos(x)
+  check(flow, n, -1.0, 1.0)
+
+def atan_test(n):
+  flow = myelin.Flow()
+  f = flow.define("atan")
+  x = f.var("x", dt, [n])
+  y = f.atan(x)
+  check(flow, n)
+
+def sinh_test(n):
+  flow = myelin.Flow()
+  f = flow.define("sinh")
+  x = f.var("x", dt, [n])
+  y = f.sinh(x)
+  check(flow, n)
+
+def cosh_test(n):
+  flow = myelin.Flow()
+  f = flow.define("cosh")
+  x = f.var("x", dt, [n])
+  y = f.cosh(x)
+  check(flow, n)
+
+def tanh_test(n):
+  flow = myelin.Flow()
+  f = flow.define("tanh")
+  x = f.var("x", dt, [n])
+  y = f.tanh(x)
+  check(flow, n)
+
+def asinh_test(n):
+  flow = myelin.Flow()
+  f = flow.define("asinh")
+  x = f.var("x", dt, [n])
+  y = f.asinh(x)
+  check(flow, n, -1.0, 1.0, atol=1e-6)
+
+def acosh_test(n):
+  flow = myelin.Flow()
+  f = flow.define("acosh")
+  x = f.var("x", dt, [n])
+  y = f.acosh(x)
+  check(flow, n, 1.0, 10.0, atol=1e-6)
+
+def atanh_test(n):
+  flow = myelin.Flow()
+  f = flow.define("atanh")
+  x = f.var("x", dt, [n])
+  y = f.atanh(x)
+  check(flow, n, -1.0, -0.1)
+  check(flow, n, 0.1, 1.0)
+
 def sqrt_test(n):
   flow = myelin.Flow()
   f = flow.define("sqrt")
@@ -720,8 +800,16 @@ for i in sizes:
     sin_test(i)
     cos_test(i)
     tan_test(i)
-    trig_test(i)
+    asin_test(i)
+    acos_test(i)
+    atan_test(i)
+    sinh_test(i)
+    cosh_test(i)
     tanh_test(i)
+    asinh_test(i)
+    acosh_test(i)
+    atanh_test(i)
+    trig_test(i)
     erf_test(i)
     sigmoid_test(i)
     softmax_test(i)

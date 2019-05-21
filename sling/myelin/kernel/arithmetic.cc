@@ -55,11 +55,35 @@ static Express::OpType OpType(const string &op) {
     {"Log", Express::LOG},
     {"Exp", Express::EXP},
     {"Sigmoid", Express::SIGMOID},
+    {"Erf", Express::ERF},
+
     {"Sin", Express::SIN},
     {"Cos", Express::COS},
     {"Tan", Express::TAN},
+    {"Cot", Express::COT},
+    {"Sec", Express::SEC},
+    {"Csc", Express::CSC},
+
+    {"Asin", Express::ASIN},
+    {"Acos", Express::ACOS},
+    {"Atan", Express::ATAN},
+    {"Acot", Express::ACOT},
+    {"Asec", Express::ASEC},
+    {"Acsc", Express::ACSC},
+
+    {"Sinh", Express::SINH},
+    {"Cosh", Express::COSH},
     {"Tanh", Express::TANH},
-    {"Erf", Express::ERF},
+    {"Coth", Express::COTH},
+    {"Sech", Express::SECH},
+    {"Csch", Express::CSCH},
+
+    {"Asinh", Express::ASINH},
+    {"Acosh", Express::ACOSH},
+    {"Atanh", Express::ATANH},
+    {"Acoth", Express::ACOTH},
+    {"Asech", Express::ASECH},
+    {"Acsch", Express::ACSCH},
 
     {"Neg", Express::NEG},
     {"Abs", Express::ABS},
@@ -92,6 +116,8 @@ static Express::OpType OpType(const string &op) {
     {"Product", Express::PRODUCT},
     {"Min", Express::MIN},
     {"Max", Express::MAX},
+    {"All", Express::ALL},
+    {"Any", Express::ANY},
 
     {"Identity", Express::MOV},
   };
@@ -910,13 +936,37 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("LogExpr", "Log", 1));
   library->Register(new Calculate("ExpExpr", "Exp", 1));
   library->Register(new Calculate("SigmoidExpr", "Sigmoid", 1));
-  library->Register(new Calculate("SinExpr", "Sin", 1));
-  library->Register(new Calculate("CosExpr", "Cos", 1));
-  library->Register(new Calculate("TanExpr", "Tan", 1));
-  library->Register(new Calculate("TanhExpr", "Tanh", 1));
   library->Register(new Calculate("ErfExpr", "Erf", 1));
   library->Register(new Calculate("Calculate", "Calculate"));
   library->Register(new Calculate("Assign", "Assign"));
+
+  library->Register(new Calculate("SinExpr", "Sin", 1));
+  library->Register(new Calculate("CosExpr", "Cos", 1));
+  library->Register(new Calculate("TanExpr", "Tan", 1));
+  library->Register(new Calculate("CotExpr", "Cot", 1));
+  library->Register(new Calculate("SecExpr", "Sec", 1));
+  library->Register(new Calculate("CscExpr", "Csc", 1));
+
+  library->Register(new Calculate("AsinExpr", "Asin", 1));
+  library->Register(new Calculate("AcosExpr", "Acos", 1));
+  library->Register(new Calculate("AtanExpr", "Atan", 1));
+  library->Register(new Calculate("AcotExpr", "Acot", 1));
+  library->Register(new Calculate("AsecExpr", "Asec", 1));
+  library->Register(new Calculate("AcscExpr", "Acsc", 1));
+
+  library->Register(new Calculate("SinhExpr", "Sinh", 1));
+  library->Register(new Calculate("CoshExpr", "Cosh", 1));
+  library->Register(new Calculate("TanhExpr", "Tanh", 1));
+  library->Register(new Calculate("CothExpr", "Coth", 1));
+  library->Register(new Calculate("SechExpr", "Sech", 1));
+  library->Register(new Calculate("CschExpr", "Csch", 1));
+
+  library->Register(new Calculate("AsinhExpr", "Asinh", 1));
+  library->Register(new Calculate("AcoshExpr", "Acosh", 1));
+  library->Register(new Calculate("AtanhExpr", "Atanh", 1));
+  library->Register(new Calculate("AcothExpr", "Acoth", 1));
+  library->Register(new Calculate("AsechExpr", "Asech", 1));
+  library->Register(new Calculate("AcschExpr", "Acsch", 1));
 
   library->Register(new Calculate("NegExpr", "Neg", 1));
   library->Register(new Calculate("AbsExpr", "Abs", 1));
@@ -949,6 +999,8 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("ProductExpr", "Product", 1));
   library->Register(new Calculate("MaxExpr", "Max", 1));
   library->Register(new Calculate("MinExpr", "Min", 1));
+  library->Register(new Calculate("AllExpr", "All", 1));
+  library->Register(new Calculate("AnyExpr", "Any", 1));
 
   library->Register(new Calculate("IdExpr", "Identity", 1));
 }

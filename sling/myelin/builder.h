@@ -161,14 +161,42 @@ class FlowBuilder : public Scope {
   Variable *Sign(Variable *x) { return Op("Sign", {x}); }
   Variable *Log(Variable *x) { return Op("Log", {x}); }
   Variable *Exp(Variable *x) { return Op("Exp", {x}); }
-  Variable *Tanh(Variable *x) { return Op("Tanh", {x}); }
   Variable *Erf(Variable *x) { return Op("Erf", {x}); }
   Variable *Sigmoid(Variable *x) { return Op("Sigmoid", {x}); }
   Variable *Relu(Variable *x) { return Op("Relu", {x}); }
   Variable *Identity(Variable *x) { return Op("Identity", {x}); }
+
+  // Trigonometric functions.
   Variable *Cos(Variable *x) { return Op("Cos", {x}); }
   Variable *Sin(Variable *x) { return Op("Sin", {x}); }
   Variable *Tan(Variable *x) { return Op("Tan", {x}); }
+  Variable *Cot(Variable *x) { return Op("Cot", {x}); }
+  Variable *Sec(Variable *x) { return Op("Sec", {x}); }
+  Variable *Csc(Variable *x) { return Op("Csc", {x}); }
+
+  // Inverse trigonometric functions.
+  Variable *Acos(Variable *x) { return Op("Acos", {x}); }
+  Variable *Asin(Variable *x) { return Op("ASin", {x}); }
+  Variable *Atan(Variable *x) { return Op("Atan", {x}); }
+  Variable *Acot(Variable *x) { return Op("Acot", {x}); }
+  Variable *Asec(Variable *x) { return Op("Asec", {x}); }
+  Variable *Acsc(Variable *x) { return Op("Acsc", {x}); }
+
+  // Hyperbolic functions.
+  Variable *Cosh(Variable *x) { return Op("Cosh", {x}); }
+  Variable *Sinh(Variable *x) { return Op("Sinh", {x}); }
+  Variable *Tanh(Variable *x) { return Op("Tanh", {x}); }
+  Variable *Coth(Variable *x) { return Op("Coth", {x}); }
+  Variable *Sech(Variable *x) { return Op("Sech", {x}); }
+  Variable *Csch(Variable *x) { return Op("Csch", {x}); }
+
+  // Inverse hyperbolic functions.
+  Variable *Acosh(Variable *x) { return Op("Acosh", {x}); }
+  Variable *Asinh(Variable *x) { return Op("ASinh", {x}); }
+  Variable *Atanh(Variable *x) { return Op("Atanh", {x}); }
+  Variable *Acoth(Variable *x) { return Op("Acoth", {x}); }
+  Variable *Asech(Variable *x) { return Op("Asech", {x}); }
+  Variable *Acsch(Variable *x) { return Op("Acsch", {x}); }
 
   // Comparison.
   Variable *Equal(Variable *x, Variable *y) {
@@ -235,6 +263,8 @@ class FlowBuilder : public Scope {
   Variable *Product(Variable *x) { return Op("Product", {x}, x->type, {}); }
   Variable *Max(Variable *x) { return Op("Max", {x}, x->type, {}); }
   Variable *Min(Variable *x) { return Op("Min", {x}, x->type, {}); }
+  Variable *All(Variable *x) { return Op("All", {x}, x->type, {}); }
+  Variable *Any(Variable *x) { return Op("Any", {x}, x->type, {}); }
   Variable *Mean(Variable *x) {
     float size = x->elements();
     return Div(Sum(x), Const(size));

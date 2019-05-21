@@ -246,9 +246,6 @@ class Builder:
   def exp(self, x, name=None):
     return self.op("Exp", [x], name)
 
-  def tanh(self, x, name=None):
-    return self.op("Tanh", [x], name)
-
   def erf(self, x, name=None):
     return self.op("Erf", [x], name)
 
@@ -266,6 +263,69 @@ class Builder:
 
   def tan(self, x, name=None):
     return self.op("Tan", [x], name)
+
+  def cot(self, x, name=None):
+    return self.op("Cot", [x], name)
+
+  def sec(self, x, name=None):
+    return self.op("Sec", [x], name)
+
+  def csc(self, x, name=None):
+    return self.op("Csc", [x], name)
+
+  def asin(self, x, name=None):
+    return self.op("Asin", [x], name)
+
+  def acos(self, x, name=None):
+    return self.op("Acos", [x], name)
+
+  def atan(self, x, name=None):
+    return self.op("Atan", [x], name)
+
+  def acot(self, x, name=None):
+    return self.op("Acot", [x], name)
+
+  def asec(self, x, name=None):
+    return self.op("Asec", [x], name)
+
+  def acsc(self, x, name=None):
+    return self.op("Acsc", [x], name)
+
+  def sinh(self, x, name=None):
+    return self.op("Sinh", [x], name)
+
+  def cosh(self, x, name=None):
+    return self.op("Cosh", [x], name)
+
+  def tanh(self, x, name=None):
+    return self.op("Tanh", [x], name)
+
+  def coth(self, x, name=None):
+    return self.op("Coth", [x], name)
+
+  def sech(self, x, name=None):
+    return self.op("Sech", [x], name)
+
+  def csch(self, x, name=None):
+    return self.op("Csch", [x], name)
+
+  def asinh(self, x, name=None):
+    return self.op("Asinh", [x], name)
+
+  def acosh(self, x, name=None):
+    return self.op("Acosh", [x], name)
+
+  def atanh(self, x, name=None):
+    return self.op("Atanh", [x], name)
+
+  def acoth(self, x, name=None):
+    return self.op("Acoth", [x], name)
+
+  def asech(self, x, name=None):
+    return self.op("Asech", [x], name)
+
+  def acsch(self, x, name=None):
+    return self.op("Acsch", [x], name)
 
   def square(self, x, name=None):
     return self.op("Square", [x], name)
@@ -340,6 +400,12 @@ class Builder:
 
   def max(self, x, name=None):
     return self.reduce("Max", x, name)
+
+  def all(self, x, name=None):
+    return self.reduce("All", x, name)
+
+  def any(self, x, name=None):
+    return self.reduce("Any", x, name)
 
   def norm(self, x, name=None):
     return self.sqrt(self.sum(self.square(x)), name)

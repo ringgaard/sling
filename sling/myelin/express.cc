@@ -48,16 +48,37 @@ static std::map<string, Express::OpType> optypes = {
   {"Log", Express::LOG},
   {"Exp", Express::EXP},
   {"Sigmoid", Express::SIGMOID},
-  {"Tanh", Express::TANH},
   {"Erf", Express::ERF},
   {"Log2", Express::LOG2},
   {"Exp2", Express::EXP2},
+
   {"Sin", Express::SIN},
   {"Cos", Express::COS},
   {"Tan", Express::TAN},
   {"Cot", Express::COT},
   {"Sec", Express::SEC},
   {"Csc", Express::CSC},
+
+  {"Asin", Express::ASIN},
+  {"Acos", Express::ACOS},
+  {"Atan", Express::ATAN},
+  {"Acot", Express::ACOT},
+  {"Asec", Express::ASEC},
+  {"Acsc", Express::ACSC},
+
+  {"Sinh", Express::SINH},
+  {"Cosh", Express::COSH},
+  {"Tanh", Express::TANH},
+  {"Coth", Express::COTH},
+  {"Sech", Express::SECH},
+  {"Csch", Express::CSCH},
+
+  {"Asinh", Express::ASINH},
+  {"Acosh", Express::ACOSH},
+  {"Atanh", Express::ATANH},
+  {"Acoth", Express::ACOTH},
+  {"Asech", Express::ASECH},
+  {"Acsch", Express::ACSCH},
 
   {"MulAdd132", Express::MULADD132},
   {"MulAdd213", Express::MULADD213},
@@ -100,6 +121,8 @@ static std::map<string, Express::OpType> optypes = {
   {"Product", Express::PRODUCT},
   {"Min", Express::MIN},
   {"Max", Express::MAX},
+  {"All", Express::ALL},
+  {"Any", Express::ANY},
 };
 
 static const string opname[] = {
@@ -108,8 +131,11 @@ static const string opname[] = {
   "Minimum", "Maximum",
   "Neg", "Abs", "Sign", "Relu", "Softsign", "Softplus", "LogSigmoid",
   "Reciprocal", "Square", "Sqrt",
-  "Log", "Exp", "Sigmoid", "Tanh", "Erf", "Log2", "Exp2",
+  "Log", "Exp", "Sigmoid", "Erf", "Log2", "Exp2",
   "Sin", "Cos", "Tan", "Cot", "Sec", "Csc",
+  "Asin", "Acos", "Atan", "Acot", "Asec", "Acsc",
+  "Sinh", "Cosh", "Tanh", "Coth", "Sech", "Csch",
+  "Asinh", "Acosh", "Atanh", "Acoth", "Asech", "Acsch",
   "MulAdd132", "MulAdd213", "MulAdd231",
   "MulSub132", "MulSub213", "MulSub231",
   "CmpEq", "CmpNe", "CmpLt", "CmpLe", "CmpGt", "CmpGe",
@@ -117,7 +143,7 @@ static const string opname[] = {
   "BitAnd", "BitOr", "BitXor", "BitAndNot", "BitEq",
   "Floor", "CvtFltInt", "CvtIntFlt", "CvtExpInt", "CvtIntExp", "QuadSign",
   "AddInt", "SubInt",
-  "Sum", "Product", "Min", "Max",
+  "Sum", "Product", "Min", "Max", "All", "Any",
   "???",
 };
 
@@ -426,10 +452,15 @@ Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
   FLTCONST(9.0),    // P9
   FLTCONST(-9.0),   // N9
 
-  FLTCONST(0.6931471805599453),    // LN2
-  FLTCONST(-0.6931471805599453),   // NLN2
-  FLTCONST(1.442695021629333),     // LOG2E
-  FLTCONST(1.27323954473516),      // FOPI (4/pi)
+  FLTCONST(0.6931471805599453),      // LN2
+  FLTCONST(-0.6931471805599453),     // NLN2
+  FLTCONST(1.442695021629333),       // LOG2E
+  FLTCONST(3.14159265358979323846),  // PI
+  FLTCONST(1.5707963267948966192),   // PIO2 (pi/2)
+  FLTCONST(0.7853981633974483096),   // PIO4 (pi/4)
+  FLTCONST(1.27323954473516),        // FOPI (4/pi)
+  FLTCONST(0.4142135623730950),      // TANPIO8 (tan pi/8)
+  FLTCONST(2.414213562373095),       // TAN3PIO8 (tan 3pi/8)
 
   INTCONST(0x7F800000, 0x7FF0000000000000LL),      // PINF
   INTCONST(0xFF800000, 0xFFF0000000000000LL),      // NINF
@@ -507,14 +538,22 @@ Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
   FLTCONST(2.443315711809948e-5),       // COSCOF_P0
   FLTCONST(-1.388731625493765e-3),      // COSCOF_P1
   FLTCONST(4.166664568298827e-2),       // COSCOF_P2
+
+  // Constants for arctan.
+  FLTCONST(8.05374449538e-2),           // ATAN_P0
+  FLTCONST(-1.38776856032e-1),          // ATAN_P1
+  FLTCONST(1.99777106478e-1),           // ATAN_P2
+  FLTCONST(-3.33329491539e-1),          // ATAN_P3
 };
 
-int Express::IdentityValue(OpType type) {
+int Express::NeutralValue(OpType type) {
   switch (type) {
     case SUM: return ZERO;
     case PRODUCT: return ONE;
     case MIN: return PINF;
     case MAX: return NINF;
+    case ALL: return QNAN;
+    case ANY: return ZERO;
     default: return ZERO;
   }
 }
@@ -624,7 +663,6 @@ Express::Op *Express::Function(OpType type,
         case Express::LOG: result = Log(args[0]); break;
         case Express::EXP: result = Exp(args[0]); break;
         case Express::SIGMOID: result = Sigmoid(args[0]); break;
-        case Express::TANH: result = Tanh(args[0]); break;
         case Express::ERF: result = Erf(args[0]); break;
         case Express::SIN: result = Sin(args[0]); break;
         case Express::COS: result = Cos(args[0]); break;
@@ -632,6 +670,24 @@ Express::Op *Express::Function(OpType type,
         case Express::COT: result = Cot(args[0]); break;
         case Express::SEC: result = Sec(args[0]); break;
         case Express::CSC: result = Csc(args[0]); break;
+        case Express::ASIN: result = Asin(args[0]); break;
+        case Express::ACOS: result = Acos(args[0]); break;
+        case Express::ATAN: result = Atan(args[0]); break;
+        case Express::ACOT: result = Acot(args[0]); break;
+        case Express::ASEC: result = Asec(args[0]); break;
+        case Express::ACSC: result = Acsc(args[0]); break;
+        case Express::SINH: result = Sinh(args[0]); break;
+        case Express::COSH: result = Cosh(args[0]); break;
+        case Express::TANH: result = Tanh(args[0]); break;
+        case Express::COTH: result = Coth(args[0]); break;
+        case Express::SECH: result = Sech(args[0]); break;
+        case Express::CSCH: result = Csch(args[0]); break;
+        case Express::ASINH: result = Asinh(args[0]); break;
+        case Express::ACOSH: result = Acosh(args[0]); break;
+        case Express::ATANH: result = Atanh(args[0]); break;
+        case Express::ACOTH: result = Acoth(args[0]); break;
+        case Express::ASECH: result = Asech(args[0]); break;
+        case Express::ACSCH: result = Acsch(args[0]); break;
         default: ;
       }
     }
@@ -1993,6 +2049,66 @@ Express::Var *Express::Trig(OpType type, Var *x) {
   }
 }
 
+Express::Var *Express::Asin(Var *x) {
+  return Atan(Div(x, Sqrt(Mul(Add(One(), x), Sub(One(), x)))));
+}
+
+Express::Var *Express::Acos(Var *x) {
+  return Add(Atan(Div(Sqrt(Mul(Add(One(), x), Sub(One(), x))), x)),
+             Select(CmpLt(x, Zero()), Number(PI)));
+}
+
+Express::Var *Express::Atan(Var *x) {
+  // Extract the sign bit.
+  Var *sign = Do(BITAND, x, Number(SIGN_MASK));
+
+  // Take the absolute value.
+  x = Do(BITAND, x, Number(INV_SIGN_MASK));
+
+  // Range reduction.
+  Var *over_tan3pio8 = CmpGt(x, Number(TAN3PIO8));
+  Var *over_tanpio8 = CmpGt(x, Number(TANPIO8));
+  x = Cond(over_tan3pio8, Div(Number(N1), x),
+           Cond(over_tanpio8, Div(Sub(x, One()), Add(x, One())), x));
+  Var *y = Cond(over_tan3pio8, Number(PIO2),
+                Cond(over_tanpio8, Number(PIO4), Zero()));
+
+  // Compute polynomial.
+  Var *z = Square(x);
+  Var *p = Number(ATAN_P0);
+  p = MulAdd(p, z, Number(ATAN_P1));
+  p = MulAdd(p, z, Number(ATAN_P2));
+  p = MulAdd(p, z, Number(ATAN_P3));
+  y = Add(y, Add(Mul(Mul(p, z), x), x));
+
+  // Adjust sign.
+  y = Do(BITXOR, y, sign);
+  return y;
+}
+
+Express::Var *Express::HyperTrig(OpType type, Var *x) {
+  // Compute exp(x), exp(-x), and exp(2x).
+  Var *pexp = nullptr;
+  Var *nexp = nullptr;
+  Var *texp = nullptr;
+  if (type == TANH || type == COTH) {
+    texp = Exp(Mul(x, Two()));
+  } else {
+    pexp = Exp(x);
+    nexp = Exp(Neg(x));
+  }
+
+  switch (type) {
+    case SINH: return Div(Sub(pexp, nexp), Two());
+    case COSH: return Div(Add(pexp, nexp), Two());
+    case TANH: return Div(Sub(texp, One()), Add(texp, One()));
+    case COTH: return Div(Add(texp, One()), Sub(texp, One()));
+    case SECH: return Div(Two(), Add(pexp, nexp));
+    case CSCH: return Div(Two(), Sub(pexp, nexp));
+    default: LOG(FATAL) << "Unsupported hyperbolic function";
+  }
+}
+
 // Hyperbolic tangent function.
 // Compute 13/6-degree rational interpolant which is accurate up to a couple of
 // ulp in the range [-9, 9], outside of which the fl(tanh(x)) = +/-1.
@@ -2179,7 +2295,7 @@ void Express::Op::Assign(Var *var, bool reassign) {
   var->producer = this;
 
   // Set predicate flag for result.
-  var->predicate = logic() || compare();
+  var->predicate = logic() || compare() || type == ALL || type == ANY;
 }
 
 void Express::Op::AddArgument(Var *arg) {

@@ -438,7 +438,7 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         }
         break;
       case DT_DOUBLE:
-        if (instr->src != -1) {
+        if (instr->src2 != -1) {
           __ andnpd(xmmaux(1), xmm(instr->src2));
         } else {
           __ andnpd(xmmaux(1), addr(instr->args[2]));

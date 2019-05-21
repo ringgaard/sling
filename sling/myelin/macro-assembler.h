@@ -22,7 +22,14 @@ namespace sling {
 namespace myelin {
 
 // Reduction operations.
-enum Reduction {REDUCE_ADD, REDUCE_MUL, REDUCE_MIN, REDUCE_MAX};
+enum Reduction {
+  REDUCE_ADD,
+  REDUCE_MUL,
+  REDUCE_MIN,
+  REDUCE_MAX,
+  REDUCE_AND,
+  REDUCE_OR
+};
 
 // Register allocation.
 class Registers {

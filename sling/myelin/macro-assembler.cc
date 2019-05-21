@@ -618,6 +618,20 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
             maxps(acc, r);
           }
           break;
+        case REDUCE_AND:
+          if (avx) {
+            vandps(acc, acc, r);
+          } else {
+            andps(acc, r);
+          }
+          break;
+        case REDUCE_OR:
+          if (avx) {
+            vorps(acc, acc, r);
+          } else {
+            orps(acc, r);
+          }
+          break;
       }
       break;
     case DT_DOUBLE:
@@ -650,6 +664,20 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
             maxpd(acc, r);
           }
           break;
+        case REDUCE_AND:
+          if (avx) {
+            vandpd(acc, acc, r);
+          } else {
+            andpd(acc, r);
+          }
+          break;
+        case REDUCE_OR:
+          if (avx) {
+            vorpd(acc, acc, r);
+          } else {
+            orpd(acc, r);
+          }
+          break;
       }
       break;
     default:
@@ -674,6 +702,12 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
         case REDUCE_MAX:
           vmaxps(acc, acc, r);
           break;
+        case REDUCE_AND:
+          vandps(acc, acc, r);
+          break;
+        case REDUCE_OR:
+          vorps(acc, acc, r);
+          break;
       }
       break;
     case DT_DOUBLE:
@@ -689,6 +723,12 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
         case REDUCE_MAX:
           vmaxpd(acc, acc, r);
+          break;
+        case REDUCE_AND:
+          vandpd(acc, acc, r);
+          break;
+        case REDUCE_OR:
+          vorpd(acc, acc, r);
           break;
       }
       break;
@@ -714,6 +754,12 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
         case REDUCE_MAX:
           vmaxps(acc, acc, r);
           break;
+        case REDUCE_AND:
+          vandps(acc, acc, r);
+          break;
+        case REDUCE_OR:
+          vorps(acc, acc, r);
+          break;
       }
       break;
     case DT_DOUBLE:
@@ -729,6 +775,12 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
         case REDUCE_MAX:
           vmaxpd(acc, acc, r);
+          break;
+        case REDUCE_AND:
+          vandpd(acc, acc, r);
+          break;
+        case REDUCE_OR:
+          vorpd(acc, acc, r);
           break;
       }
       break;

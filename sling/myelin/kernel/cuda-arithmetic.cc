@@ -627,6 +627,8 @@ class CUDAReduce : public CUDAKernel {
       case REDUCE_MUL: return "Product";
       case REDUCE_MIN: return "Min";
       case REDUCE_MAX: return "Max";
+      case REDUCE_AND: return "All";
+      case REDUCE_OR: return "Any";
     }
     return "???";
   }
@@ -804,6 +806,9 @@ class CUDAReduce : public CUDAKernel {
       case REDUCE_MAX:
         ptx->emit(PTXInstr("max", type), acc, acc, value);
         break;
+      case REDUCE_AND:
+      case REDUCE_OR:
+        LOG(FATAL) << "Unsupported reduction";
     }
   }
 
@@ -1066,13 +1071,37 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
   library->Register(new CUDACalculate("CUDALog", "Log", 1));
   library->Register(new CUDACalculate("CUDAExp", "Exp", 1));
   library->Register(new CUDACalculate("CUDASigmoid", "Sigmoid", 1));
-  library->Register(new CUDACalculate("CUDASin", "Sin", 1));
-  library->Register(new CUDACalculate("CUDACos", "Cos", 1));
-  library->Register(new CUDACalculate("CUDATan", "Tan", 1));
-  library->Register(new CUDACalculate("CUDATanh", "Tanh", 1));
   library->Register(new CUDACalculate("CUDAErf", "Erf", 1));
   library->Register(new CUDACalculate("CUDACalculate", "Calculate"));
   library->Register(new CUDACalculate("CUDAAssign", "Assign"));
+
+  library->Register(new CUDACalculate("CUDASin", "Sin", 1));
+  library->Register(new CUDACalculate("CUDACos", "Cos", 1));
+  library->Register(new CUDACalculate("CUDATan", "Tan", 1));
+  library->Register(new CUDACalculate("CUDACot", "Cot", 1));
+  library->Register(new CUDACalculate("CUDASec", "Sec", 1));
+  library->Register(new CUDACalculate("CUDACsc", "Csc", 1));
+
+  library->Register(new CUDACalculate("CUDAAsin", "Asin", 1));
+  library->Register(new CUDACalculate("CUDAAcos", "Acos", 1));
+  library->Register(new CUDACalculate("CUDAAtan", "Atan", 1));
+  library->Register(new CUDACalculate("CUDAAcot", "Acot", 1));
+  library->Register(new CUDACalculate("CUDAAsec", "Asec", 1));
+  library->Register(new CUDACalculate("CUDAAcsc", "Acsc", 1));
+
+  library->Register(new CUDACalculate("CUDASinh", "Sinh", 1));
+  library->Register(new CUDACalculate("CUDACosh", "Cosh", 1));
+  library->Register(new CUDACalculate("CUDATanh", "Tanh", 1));
+  library->Register(new CUDACalculate("CUDACoth", "Coth", 1));
+  library->Register(new CUDACalculate("CUDASech", "Sech", 1));
+  library->Register(new CUDACalculate("CUDACsch", "Csch", 1));
+
+  library->Register(new CUDACalculate("CUDAAsin", "Asinh", 1));
+  library->Register(new CUDACalculate("CUDAAcos", "Acosh", 1));
+  library->Register(new CUDACalculate("CUDAAtan", "Atanh", 1));
+  library->Register(new CUDACalculate("CUDAAcot", "Acoth", 1));
+  library->Register(new CUDACalculate("CUDAAsec", "Asech", 1));
+  library->Register(new CUDACalculate("CUDAAcsc", "Acsch", 1));
 
   library->Register(new CUDACalculate("CUDANeg", "Neg", 1));
   library->Register(new CUDACalculate("CUDAAbs", "Abs", 1));
@@ -1100,6 +1129,8 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
   library->Register(new CUDAReduce(REDUCE_MUL));
   library->Register(new CUDAReduce(REDUCE_MIN));
   library->Register(new CUDAReduce(REDUCE_MAX));
+  library->Register(new CUDAReduce(REDUCE_AND));
+  library->Register(new CUDAReduce(REDUCE_OR));
   library->Register(new CUDAArgMax(false));
   library->Register(new CUDAArgMax(true));
 

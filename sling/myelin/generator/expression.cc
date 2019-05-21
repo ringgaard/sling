@@ -74,8 +74,8 @@ void ExpressionGenerator::GenerateInit(MacroAssembler *masm) {
     if (op->acc == -1) continue;
     CHECK(op->reduction());
 
-    // Generate code for a "MOV acc,#identity" instruction.
-    Express::Var value(Express::NUMBER, Express::IdentityValue(op->type));
+    // Generate code for a "MOV acc,#neutral" instruction.
+    Express::Var value(Express::NUMBER, Express::NeutralValue(op->type));
     Express::Var acc(Express::REGISTER, -1);
     Express::Op mov(Express::MOV);
     mov.Assign(&acc);
@@ -1586,6 +1586,8 @@ Reduction ReduceOp(Express::Op *instr) {
     case Express::PRODUCT: return REDUCE_MUL;
     case Express::MIN: return REDUCE_MIN;
     case Express::MAX: return REDUCE_MAX;
+    case Express::ALL: return REDUCE_AND;
+    case Express::ANY: return REDUCE_OR;
     default: UNSUPPORTED;
   }
   return REDUCE_ADD;

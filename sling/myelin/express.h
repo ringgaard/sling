@@ -91,16 +91,41 @@ class Express {
     LOG,         // natural logarithm, r=log(x)
     EXP,         // natural exponential function, r=exp(x)
     SIGMOID,     // sigmoid function, r=1/(1+exp(-x))
-    TANH,        // hyperbolic tangent, r=tanh(x)
     ERF,         // error function, r=erf(x)
     LOG2,        // base-2 logarithm, r=log2(x)
     EXP2,        // base-2 exponential function, r=2^x
+
+    // Trigonometric functions.
     SIN,         // sine function, r=sin(x)
     COS,         // cosine function, r=cos(x)
     TAN,         // tangent function, r=tan(x)
     COT,         // cotangent, r=cot(x)=1/tan(x)=cos(x)/sin(x)
     SEC,         // secant, r=sec(x)=1/cos(x)
     CSC,         // cosecant, r=csc(x)=1/sin(x)
+
+    // Inverse trigonometric functions.
+    ASIN,        // inverse sine function, r=asin(x)
+    ACOS,        // inverse cosine function, r=acos(x)
+    ATAN,        // inverse tangent function, r=atan(x)
+    ACOT,        // inverse cotangent, r=acot(x)
+    ASEC,        // inverse secant, r=asec(x)
+    ACSC,        // inverse cosecant, r=acsc(x)
+
+    // Hyperbolic functions.
+    SINH,        // hyperbolic sine function, r=sinh(x)
+    COSH,        // hyperbolic cosine function, r=cosh(x)
+    TANH,        // hyperbolic tangent, r=tanh(x)
+    COTH,        // hyperbolic cotangent, r=coth(x)
+    SECH,        // hyperbolic secant, r=sech(x)
+    CSCH,        // hyperbolic cosecant, r=csch(x)
+
+    // Inverse hyperbolic functions.
+    ASINH,       // inverse hyperbolic sine function, r=asinh(x)
+    ACOSH,       // inverse hyperbolic cosine function, r=acosh(x)
+    ATANH,       // inverse hyperbolic tangent, r=atanh(x)
+    ACOTH,       // inverse hyperbolic cotangent, r=acoth(x)
+    ASECH,       // inverse hyperbolic secant, r=asech(x)
+    ACSCH,       // inverse hyperbolic cosecant, r=acsch(x)
 
     // Fused multiply.
     MULADD132,   // fused multiply/add, r=a*c+b
@@ -129,7 +154,7 @@ class Express {
     COND,       // conditional expression, r=p?a:b
     SELECT,     // conditional selection, r=p?a:0
 
-    // Miscellaneous.
+    // Integer operations.
     BITAND,      // bitwise and
     BITOR,       // bitwise or
     BITXOR,      // bitwise xor
@@ -149,13 +174,16 @@ class Express {
     PRODUCT,     // product reduction
     MIN,         // min reduction
     MAX,         // max reduction
+    ALL,         // and reduction
+    ANY,         // or reduction
 
     INVALID,     // invalid operation
   };
 
   // System-defined numeric constants.
   enum ConstantNumber {
-    ZERO, ONE, TWO, HALF, N1, P9, N9, LN2, NLN2, LOG2E, FOPI,
+    ZERO, ONE, TWO, HALF, N1, P9, N9, LN2, NLN2, LOG2E,
+    PI, PIO2, PIO4, FOPI, TANPIO8, TAN3PIO8,
     PINF, NINF, QNAN, MIN_NORM_POS, INV_MANT_MASK, MAX_MANT,
     SIGN_MASK, INV_SIGN_MASK, I1, I2, I4, INV_I1,
     CEPHES_SQRTHF,
@@ -171,6 +199,7 @@ class Express {
     CEPHES_MINUS_DP1, CEPHES_MINUS_DP2, CEPHES_MINUS_DP3,
     SINCOF_P0, SINCOF_P1, SINCOF_P2,
     COSCOF_P0, COSCOF_P1, COSCOF_P2,
+    ATAN_P0, ATAN_P1, ATAN_P2, ATAN_P3,
     NUM_CONSTANTS,
   };
 
@@ -269,7 +298,7 @@ class Express {
 
     // Check if operation is a reduction.
     bool reduction() const {
-      return type >= SUM && type <= MAX;
+      return type >= SUM && type <= ANY;
     }
 
     // Check if operation is a no-op.
@@ -523,7 +552,6 @@ class Express {
   // Build expressions for intrinsic functions.
   Var *Log(Var *x);
   Var *Exp(Var *x);
-  Var *Tanh(Var *x);
   Var *Erf(Var *x);
 
   // Build expressions for trigonometric functions.
@@ -534,6 +562,43 @@ class Express {
   Var *Cot(Var *x) { return Trig(COT, x); }
   Var *Sec(Var *x) { return Trig(SEC, x); }
   Var *Csc(Var *x) { return Trig(CSC, x); }
+
+  // Build expressions for inverse trigonometric functions.
+  Var *Asin(Var *x);
+  Var *Acos(Var *x);
+  Var *Atan(Var *x);
+  Var *Acot(Var *x) { return Sub(Number(PIO2), Atan(x)); }
+  Var *Asec(Var *x) { return Reciprocal(Acos(x)); }
+  Var *Acsc(Var *x) { return Reciprocal(Asin(x)); }
+
+  // Build expressions for hyperbolic functions.
+  Var *HyperTrig(OpType type, Var *x);
+  Var *Sinh(Var *x) { return HyperTrig(SINH, x); }
+  Var *Cosh(Var *x) { return HyperTrig(COSH, x); }
+  Var *Tanh(Var *x);
+  Var *Coth(Var *x) { return HyperTrig(COTH, x); }
+  Var *Sech(Var *x) { return HyperTrig(SECH, x); }
+  Var *Csch(Var *x) { return HyperTrig(CSCH, x); }
+
+  // Build expressions for inverse hyperbolic functions.
+  Var *Asinh(Var *x) {
+    return Log(Add(x, Sqrt(Add(Square(x), One()))));
+  }
+  Var *Acosh(Var *x) {
+    return Log(Add(x, Sqrt(Sub(Square(x), One()))));
+  }
+  Var *Atanh(Var *x) {
+    return Mul(Log(Div(Add(One(), x), Sub(One(), x))), Number(HALF));
+  }
+  Var *Acoth(Var *x) {
+    return Mul(Log(Div(Add(x, One()), Sub(x, One()))), Number(HALF));
+  }
+  Var *Asech(Var *x) {
+    return Log(Add(Reciprocal(x), Sqrt(Sub(Square(Reciprocal(x)), One()))));
+  }
+  Var *Acsch(Var *x) {
+    return Log(Add(Reciprocal(x), Sqrt(Add(Square(Reciprocal(x)), One()))));
+  }
 
   // Build expressions for composite functions.
   Var *MulAdd(Var *x, Var *y, Var *z) { return Add(Mul(x, y), z); }
@@ -569,8 +634,8 @@ class Express {
   static float NumericFlt32(int number) { return constants[number].flt; }
   static double NumericFlt64(int number) { return constants[number].dbl; }
 
-  // Return system constant number for identity value for op.
-  static int IdentityValue(OpType type);
+  // Return system constant number for neutral element for op.
+  static int NeutralValue(OpType type);
 
  private:
   // Try to eliminate identical operations from expression. Return true if any
