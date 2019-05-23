@@ -1506,6 +1506,42 @@ class UpdateTransformer : public Transformer {
       updates++;
     }
 
+    // Transform double sparse update.
+    for (Flow::Operation *op : flow->Find("Scatter|1:Add|1:Add|1:Assign")) {
+      Flow::Operation *assign = op;
+      Flow::Operation *add1 = assign->inputs[1]->producer;
+      Flow::Operation *add2 = add1->inputs[1]->producer;
+      Flow::Operation *scatter1 = add2->inputs[1]->producer;
+      Flow::Operation *scatter2 = add2->inputs[0]->producer;
+
+      if (assign->inputs[0] != add1->inputs[0]) continue;
+      if (add1->outputs[0]->usages() != 1) continue;
+      if (add2->outputs[0]->usages() != 1) continue;
+      if (scatter2->type != "Scatter") continue;
+
+      Flow::Variable *target = assign->inputs[0];
+      if (target != add1->inputs[0]) continue;
+
+      Flow::Variable *s1 = scatter1->outputs[0];
+      Flow::Variable *s2 = scatter2->outputs[0];
+      Flow::Variable *a2 = add2->outputs[0];
+      if (s1->usages() != 1) continue;
+      if (s2->usages() != 1) continue;
+
+      // Decompose scatter updates.
+      add1->RemoveInput(a2);
+      add2->RemoveInput(s1);
+      add2->RemoveInput(s2);
+      add1->AddInput(s1);
+      add2->AddInput(target);
+      add2->AddInput(s2);
+      auto *a = flow->AddOperation(add2->func, assign->name + "X", "Assign");
+      a->AddInput(target);
+      a->AddInput(a2);
+
+      updates++;
+    }
+
     // Transform sparse update.
     for (Flow::Operation *op : flow->Find("Scatter|1:Add|1:Assign")) {
       Flow::Operation *assign = op;

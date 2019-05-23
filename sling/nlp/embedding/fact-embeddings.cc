@@ -44,8 +44,8 @@ class FactLexiconExtractor : public Process {
     // Get parameters.
     int64 bloom_size = task->Get("bloom_size", 4000000000L);
     int bloom_hashes = task->Get("bloom_hashes", 4);
-    int fact_threshold = task->Get("fact_threshold", 10);
-    int category_threshold = task->Get("category_threshold", 10);
+    int fact_threshold = task->Get("fact_threshold", 30);
+    int category_threshold = task->Get("category_threshold", 30);
 
     // Set up counters.
     Counter *num_items = task->GetCounter("items");

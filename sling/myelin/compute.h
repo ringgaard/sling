@@ -1021,6 +1021,7 @@ class Instance {
     DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(data_ + param->offset());
   }
+  template<typename T> T *Get(const Flow::Variable *var);
 
   // Get pointer to location of element of parameter in instance memory.
   template<typename T> T *Get(const Tensor *param, int r) {
@@ -1054,6 +1055,7 @@ class Instance {
     DCHECK(param->cell() == cell_) << param->name();
     *reinterpret_cast<char **>(data_ + param->offset()) = instance->data();
   }
+  inline void Set(const Flow::Variable *var, Instance *instance);
 
   // Sets a reference parameter to an address. Caller is responsible for
   // ensuring proper alignment and any other constraints.
@@ -1493,6 +1495,14 @@ inline TensorData Instance::operator[](const string &name) {
   Tensor *param = cell_->GetParameter(name);
   DCHECK(param != nullptr) << "Unknown parameter: " << name;
   return TensorData(data_ + param->offset(), param);
+}
+
+template<typename T> T *Instance::Get(const Flow::Variable *var) {
+  return Get<T>(cell_->GetParameter(var));
+}
+
+inline void Instance::Set(const Flow::Variable *var, Instance *instance) {
+  Set(cell_->GetParameter(var), instance);
 }
 
 }  // namespace myelin

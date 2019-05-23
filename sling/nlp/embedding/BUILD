@@ -65,6 +65,25 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "fact-plausibility",
+  srcs = ["fact-plausibility.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:textmap",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/myelin:builder",
+    "//sling/myelin:compiler",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
+    "//sling/task:frames",
+    "//sling/task:learner",
+    "//sling/util:random",
+  ],
+  alwayslink = 1,
+)
+
 cc_binary(
   name = "category-facts",
   srcs = ["category-facts.cc"],
