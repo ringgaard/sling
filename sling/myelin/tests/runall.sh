@@ -16,7 +16,7 @@
 
 # Run all Myelin tests.
 
-TESTPGM="python3 sling/myelin/tests/myelin-vs-numpy.py"
+TESTPGM="python3 sling/myelin/tests/opcheck.py"
 EXTRA=$@
 
 # Determine CPU feature support.

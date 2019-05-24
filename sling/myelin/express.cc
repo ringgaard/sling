@@ -164,6 +164,7 @@ class VariableMap {
       // Copy variable and update mapping.
       m = expr_->Variable(var->type, var->id);
       m->predicate = var->predicate;
+      m->single = var->single;
     }
     return m;
   }
