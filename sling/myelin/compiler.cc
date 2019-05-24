@@ -159,6 +159,9 @@ void Compiler::Compile(Flow *flow, Network *net) {
 
   CHECK(net->Compile(*flow, *library_));
 
+  // Bind flow artifacts to network tensors, cells, and steps.
+  net->Bind(flow);
+
   // Optionally dump cells to log.
   if (FLAGS_dump_cells) {
     for (Cell *cell : net->cells()) {

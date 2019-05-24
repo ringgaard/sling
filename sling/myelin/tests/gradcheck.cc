@@ -82,7 +82,7 @@ bool CheckGrad(Flow *flow, Flow::Function *func, float eps = 1e-6) {
   // Compile network.
   Network net;
   compiler.Compile(flow, &net);
-  Cell *forward = net.GetCell(func);
+  Cell *forward = net.GetCell(func->name);
   //Cell *backward = net.GetCell(gradient);
 
   // Get inputs and outputs.

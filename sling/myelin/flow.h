@@ -28,6 +28,10 @@ namespace myelin {
 class Gradients;
 class Transformations;
 
+class Cell;
+class Step;
+class Tensor;
+
 // Data types.
 enum Type {
   DT_INVALID        = 0,      // invalid data type
@@ -433,6 +437,7 @@ class Flow {
 
     Operation *producer = nullptr;       // operation producing variable
     std::vector<Operation *> consumers;  // list of consumers of variable
+    Tensor *tensor = nullptr;            // tensor for variable
   };
 
   // Flow operation.
@@ -497,6 +502,7 @@ class Flow {
     int priority = 3;                 // task priority for op compute ordering
     int order = -1;                   // placement in computation order
     int missing = 0;                  // number of inputs that are not yet ready
+    Step *step = nullptr;             // step for operation
   };
 
   // Flow function.
@@ -531,6 +537,7 @@ class Flow {
 
     std::vector<Operation *> ops;     // ops for function in compute order
     std::vector<Variable *> unused;   // unused input variables
+    Cell *cell = nullptr;             // cell for function
   };
 
   // Flow connector.

@@ -12,22 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#if 0
-#include <math.h>
-#include <atomic>
-#include <utility>
-
-#include "sling/frame/serialization.h"
-#include "sling/nlp/embedding/embedding-model.h"
-#include "sling/nlp/kb/facts.h"
-#include "sling/util/bloom.h"
-#include "sling/util/embeddings.h"
-#include "sling/util/random.h"
-#include "sling/util/sortmap.h"
-#endif
-
 #include "sling/file/textmap.h"
 #include "sling/frame/object.h"
+#include "sling/frame/serialization.h"
 #include "sling/frame/store.h"
 #include "sling/myelin/compiler.h"
 #include "sling/myelin/builder.h"
@@ -43,78 +30,41 @@ namespace nlp {
 using namespace task;
 using namespace myelin;
 
-// Fact plausibility model.
+// Fact plausibility flow.
 struct FactPlausibilityFlow : public Flow {
   // Build fact plausibility model.
   void Build(const Transformations &library) {
-    // Build encoder.
-    encoder = AddFunction("encoder");
-    FlowBuilder e(this, encoder);
-    auto *embeddings =
-        e.Random(e.Parameter("embeddings", DT_FLOAT, {facts, dims}));
-    pfeatures = e.Placeholder("pfeatures", DT_INT32, {1, max_features});
-    hfeatures = e.Placeholder("hfeatures", DT_INT32, {1, max_features});
-    auto *psum = e.GatherSum(embeddings, pfeatures);
-    auto *hsum = e.GatherSum(embeddings, hfeatures);
-    pencoding = e.Name(psum, "pencoding");
-    hencoding = e.Name(hsum, "hencoding");
-
-    // Build scorer.
     scorer = AddFunction("scorer");
-    FlowBuilder s(this, scorer);
-    premise = s.Placeholder("premise", DT_FLOAT, {1, dims});
-    premise->set_ref()->set_unique();
-    hypothesis = s.Placeholder("hypothesis", DT_FLOAT, {1, dims});
-    hypothesis->set_ref()->set_unique();
-    auto *fv = s.Concat({premise, hypothesis});
-    logits = s.Name(s.FFLayers(fv, {dims * 2, 2}, -1, true, "Tanh"), "logits");
+    FlowBuilder f(this, scorer);
+    auto *embeddings =
+        f.Random(f.Parameter("embeddings", DT_FLOAT, {facts, dims}));
+
+    premise = f.Placeholder("premise", DT_INT32, {1, max_features});
+    auto *pencoding = f.GatherSum(embeddings, premise);
+
+    hypothesis = f.Placeholder("hypothesis", DT_INT32, {1, max_features});
+    auto *hencoding = f.GatherSum(embeddings, hypothesis);
+
+    auto *fv = f.Concat({pencoding, hencoding});
+    logits = f.Name(f.FFLayers(fv, {dims * 2, 2}, -1, true, "Tanh"), "logits");
 
     // Create gradient computations.
-    gencoder = Gradient(this, encoder, library);
     gscorer = Gradient(this, scorer, library);
-
     d_logits = GradientVar(logits);
-    d_premise = GradientVar(premise);
-    d_hypothesis = GradientVar(hypothesis);
-    d_pencoding = GradientVar(pencoding);
-    d_hencoding = GradientVar(hencoding);
-
-    encoder_primal = PrimalVar(encoder);
-    scorer_primal = PrimalVar(scorer);
-
-    // Connect fact encodings to premise and hypothesis.
-    Connect({pencoding, premise});
-    Connect({hencoding, hypothesis});
-    Connect({d_pencoding, d_premise});
-    Connect({d_hencoding, d_hypothesis});
+    primal = PrimalVar(scorer);
   }
 
   int facts = 1;                   // number of fact types
   int dims = 64;                   // dimension of embedding vectors
   int max_features = 512;          // maximum number of features per example
 
-  // Fact encoder.
-  Function *encoder;               // encoder function
-  Function *gencoder;              // encoder gradient function
-  Variable *embeddings;            // fact embedding matrix
-  Variable *pfeatures;             // premise feature input
-  Variable *hfeatures;             // hypothesis feature input
-  Variable *pencoding;             // premise encoding
-  Variable *hencoding;             // hypothesis encoding
-  Variable *d_pencoding;           // premise gradient
-  Variable *d_hencoding;           // hypothesis gradient
-  Variable *encoder_primal;        // primal reference for encoder
-
-  // Fact scorer.
   Function *scorer;                // plausibility scoring function
   Function *gscorer;               // plausibility scoring gradient function
-  Variable *premise;               // premise encoding
-  Variable *hypothesis;            // hypothesis encoding
+  Variable *premise;               // premise facts
+  Variable *hypothesis;            // hypothesis facts
   Variable *logits;                // plausibility prediction
-  Variable *d_premise;             // premise encoding gradient
-  Variable *d_hypothesis;          // hypothesis encoding gradient
   Variable *d_logits;              // plausibility gradient
-  Variable *scorer_primal;         // primal reference for scorer
+  Variable *primal;                // primal reference for scorer
 };
 
 // Trainer for fact plausibility model.
@@ -141,8 +91,13 @@ class FactPlausibilityTrainer : public LearnerTask {
 
     // Read fact lexicon.
     TextMapInput factmap(task->GetInputFile("factmap"));
-    while (factmap.Next()) fact_lexicon_.push_back(factmap.key());
-    task->GetCounter("facts")->Increment(fact_lexicon_.size());
+    Handles facts(&store_);
+    while (factmap.Next()) {
+      Object fact = FromText(&store_, factmap.key());
+      facts.push_back(fact.handle());
+    }
+    fact_lexicon_ = Array(&store_, facts);
+    task->GetCounter("facts")->Increment(fact_lexicon_.length());
 
     // Build plausibility model.
     Build(&flow_);
@@ -151,7 +106,7 @@ class FactPlausibilityTrainer : public LearnerTask {
     optimizer_->Build(&flow_);
 
     // Compile plausibility model.
-    myelin::Network model;
+    Network model;
     compiler_.Compile(&flow_, &model);
     optimizer_->Initialize(model);
     loss_.Initialize(model);
@@ -183,79 +138,40 @@ class FactPlausibilityTrainer : public LearnerTask {
     Train(task, &model);
 
     // Output profile.
-    myelin::LogProfile(model);
-
-#if 0
-    // Write fact embeddings to output file.
-    LOG(INFO) << "Writing embeddings";
-    myelin::TensorData W0 = model[flow_.left.embeddings];
-    std::vector<float> embedding(embedding_dims_);
-    EmbeddingWriter fact_writer(task->GetOutputFile("factvecs"),
-                                fact_lexicon.size(), embedding_dims_);
-    for (int i = 0; i < fact_lexicon.size(); ++i) {
-      for (int j = 0; j < embedding_dims_; ++j) {
-        embedding[j] = W0.at<float>(i, j);
-      }
-      fact_writer.Write(fact_lexicon[i], embedding);
-    }
-    CHECK(fact_writer.Close());
-
-    // Write category embeddings to output file.
-    myelin::TensorData W1 =  model[flow_.right.embeddings];
-    EmbeddingWriter category_writer(task->GetOutputFile("catvecs"),
-                                    category_lexicon.size(), embedding_dims_);
-    for (int i = 0; i < category_lexicon.size(); ++i) {
-      for (int j = 0; j < embedding_dims_; ++j) {
-        embedding[j] = W1.at<float>(i, j);
-      }
-      category_writer.Write(category_lexicon[i], embedding);
-    }
-    CHECK(category_writer.Close());
-
-#endif
+    LogProfile(model);
 
     delete optimizer_;
   }
 
   // Add plausibility model to flow.
   void Build(FactPlausibilityFlow *flow) {
-    flow->facts = fact_lexicon_.size();
+    flow->facts = fact_lexicon_.length();
     flow->dims = embedding_dims_;
     flow->max_features = max_features_;
     flow->Build(*compiler_.library());
   }
 
   // Worker thread for training embedding model.
-  void Worker(int index, myelin::Network *model) override {
-    // Initialize batch.
+  void Worker(int index, Network *model) override {
+    // Initialize random number generator.
     Random rnd;
     rnd.seed(index);
 
-    std::vector<Instance *> samples;
-    Cell *encoder = model->GetCell(flow_.encoder);
-    Tensor *pfeatures = encoder->GetParameter(flow_.pfeatures);
-    Tensor *hfeatures = encoder->GetParameter(flow_.hfeatures);
-    Tensor *pencoding = encoder->GetParameter(flow_.pencoding);
-    Tensor *hencoding = encoder->GetParameter(flow_.hencoding);
-    for (int i = 0; i < batch_size_; ++i) {
-      samples.push_back(new Instance(encoder));
-    }
+    // Premises and hypotheses for one batch.
+    std::vector<std::vector<int>> premises(batch_size_);
+    std::vector<std::vector<int>> hypotheses(batch_size_);
 
-    Instance scorer(model->GetCell(flow_.scorer));
-    Tensor *premise = scorer.cell()->GetParameter(flow_.premise);
-    Tensor *hypothesis = scorer.cell()->GetParameter(flow_.hypothesis);
-
-    Instance gscorer(model->GetCell(flow_.gscorer));
-    //Tensor *dpremise = gscorer.cell()->GetParameter(flow_.d_premise);
-    //Tensor *dhypothesis = gscorer.cell()->GetParameter(flow_.d_hypothesis);
-
+    // Set up plausibility scorer.
+    Instance scorer(flow_.scorer);
+    Instance gscorer(flow_.gscorer);
     float *logits = scorer.Get<float>(flow_.logits);
     float *dlogits = gscorer.Get<float>(flow_.d_logits);
+    std::vector<myelin::Instance *> gradients{&gscorer};
 
     for (;;) {
       // Compute gradients for epoch.
       gscorer.Clear();
-      gscorer.Set(flow_.scorer_primal, &scorer);
+      gscorer.Set(flow_.primal, &scorer);
       float epoch_loss = 0.0;
 
       for (int b = 0; b < batches_per_update_; ++b) {
@@ -269,10 +185,10 @@ class FactPlausibilityTrainer : public LearnerTask {
 
           // Add facts to premise, except for one heldout fact group which is
           // added to the hypothesis.
-          int *p = samples[i]->Get<int>(pfeatures);
-          int *pend = p + flow_.max_features;
-          int *h = samples[i]->Get<int>(hfeatures);
-          int *hend = h + flow_.max_features;
+          auto &premise = premises[i];
+          auto &hypothesis = hypotheses[i];
+          premise.clear();
+          hypothesis.clear();
           int heldout = rnd.UniformInt(num_groups);
           for (int g = 0; g < num_groups; ++g) {
             // Get range for fact group.
@@ -282,28 +198,22 @@ class FactPlausibilityTrainer : public LearnerTask {
             if (g == heldout) {
               // Add fact group to hyothesis.
               for (int f = start; f < end; ++f) {
-                if (h == hend) {
-                  num_feature_overflows_->Increment();
-                  break;
-                }
-                *h++ = facts.get(f).AsInt();
+                hypothesis.push_back(facts.get(f).AsInt());
               }
             } else {
               // Add fact group to premise.
               for (int f = start; f < end; ++f) {
-                if (p == pend) {
-                  num_feature_overflows_->Increment();
-                  break;
-                }
-                *p++ = facts.get(f).AsInt();
+                premise.push_back(facts.get(f).AsInt());
               }
             }
           }
-          if (p < pend) *p = -1;
-          if (h < hend) *h = -1;
 
-          // Compute encodings for premise and hypothesis.
-          samples[b]->Compute();
+          if (premise.size() > max_features_) {
+            premise.resize(max_features_);
+          }
+          if (hypothesis.size() > max_features_) {
+            hypothesis.resize(max_features_);
+          }
         }
 
         // Do forward and backward propagation for each premise/hypothesis pair.
@@ -312,13 +222,18 @@ class FactPlausibilityTrainer : public LearnerTask {
         // another item.
         for (int i = 0; i < batch_size_; ++i) {
           for (int j = 0; j < batch_size_; ++j) {
-            // Set premise and hypothesis encodings for example.
-            float *p = samples[i]->Get<float>(pencoding);
-            float *h = samples[j]->Get<float>(hencoding);
-            scorer.SetReference(premise, p);
-            scorer.SetReference(hypothesis, h);
+            // Set premise and hypothesis for example.
+            int *p = scorer.Get<int>(flow_.premise);
+            int *pend = p + max_features_;
+            for (int f : premises[i]) *p++ = f;
+            if (p < pend) *p = -1;
 
-            // Compute logits.
+            int *h = scorer.Get<int>(flow_.hypothesis);
+            int *hend = h + max_features_;
+            for (int f : hypotheses[j]) *h++ = f;
+            if (h < hend) *h = -1;
+
+            // Compute plausibility scores.
             scorer.Compute();
 
             // Compute loss.
@@ -326,39 +241,26 @@ class FactPlausibilityTrainer : public LearnerTask {
             float loss = loss_.Compute(logits, label, dlogits);
             epoch_loss += loss;
 
-            // Propagate loss back through scorer.
-
-
+            // Backpropagate.
+            gscorer.Compute();
           }
         }
-
-#if 0
-        // Process batch.
-        float loss = batch.Compute();
-#endif
       }
 
-#if 0
       // Update parameters.
       optimizer_mu_.Lock();
-      optimizer_->Apply(batch.gradients());
+      optimizer_->Apply(gradients);
       loss_sum_ += epoch_loss;
-      loss_count_ += batches_per_update_;
+      loss_count_ += batches_per_update_ * batch_size_ * batch_size_;
       optimizer_mu_.Unlock();
-#endif
 
       // Check if we are done.
       if (EpochCompleted()) break;
-    }
-
-    for (int i = 0; i < batch_size_; ++i) {
-      delete samples[i];
     }
   }
 
   // Evaluate model.
   bool Evaluate(int64 epoch, myelin::Network *model) override {
-#if 0
     // Skip evaluation if there are no data.
     if (loss_count_ == 0) return true;
 
@@ -380,8 +282,6 @@ class FactPlausibilityTrainer : public LearnerTask {
               << ", lr=" << learning_rate_
               << ", loss=" << loss
               << ", p=" << p;
-#endif
-
     return true;
   }
 
@@ -397,7 +297,7 @@ class FactPlausibilityTrainer : public LearnerTask {
   Store store_;
 
   // Fact lexicon.
-  std::vector<string> fact_lexicon_;
+  Array fact_lexicon_;
 
   // Evaluation statistics.
   float learning_rate_ = 1.0;
@@ -412,14 +312,12 @@ class FactPlausibilityTrainer : public LearnerTask {
   // Training instances.
   Handles instances_{&store_};
 
-#if 0
   // Mutex for serializing access to optimizer.
   Mutex optimizer_mu_;
 
   float prev_loss_ = 0.0;
   float loss_sum_ = 0.0;
   int loss_count_ = 0.0;
-#endif
 
   // Symbols.
   Names names_;

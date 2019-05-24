@@ -259,8 +259,8 @@ bool FltKernelComparator::Check(int iterations) {
     // Fill inputs with random data.
     for (int i = 0; i < inputs_.size(); ++i) {
       Flow::Variable *var = inputs_[i];
-      TensorData b = base_data[base.func->GetParameter(var)];
-      TensorData t = test_data[test.func->GetParameter(var)];
+      TensorData b = base_data[base.func->GetParameter(var->name)];
+      TensorData t = test_data[test.func->GetParameter(var->name)];
       float bias = low_[i];
       float scale = high_[i] - low_[i];
       for (int j = 0; j < var->elements(); ++j) {
@@ -280,8 +280,8 @@ bool FltKernelComparator::Check(int iterations) {
     // Compare output from base and test.
     for (int i = 0; i < outputs_.size(); ++i) {
       Flow::Variable *var = outputs_[i];
-      TensorData b = base_data[base.func->GetParameter(var)];
-      TensorData t = test_data[test.func->GetParameter(var)];
+      TensorData b = base_data[base.func->GetParameter(var->name)];
+      TensorData t = test_data[test.func->GetParameter(var->name)];
       num_elements += var->elements();
       if (FLAGS_log_output) {
         LOG(INFO) << "base " << var->name << "=" << b.ToString();

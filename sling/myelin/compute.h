@@ -994,6 +994,7 @@ class Instance {
  public:
   // Create data instance.
   Instance(const Cell *cell);
+  Instance(const Flow::Function *func) : Instance(func->cell) {}
 
   // Delete data instance.
   ~Instance();
@@ -1021,7 +1022,10 @@ class Instance {
     DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
     return reinterpret_cast<T *>(data_ + param->offset());
   }
-  template<typename T> T *Get(const Flow::Variable *var);
+  template<typename T> T *Get(const Flow::Variable *var) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    return Get<T>(var->tensor);
+  }
 
   // Get pointer to location of element of parameter in instance memory.
   template<typename T> T *Get(const Tensor *param, int r) {
@@ -1041,6 +1045,14 @@ class Instance {
     return reinterpret_cast<T *>(
         data_ + param->offset() + param->offset(r, c));
   }
+  template<typename T> T *Get(const Flow::Variable *var, int r) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    return Get<T>(var->tensor, r);
+  }
+  template<typename T> T *Get(const Flow::Variable *var, int r, int c) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    return Get<T>(var->tensor, r, c);
+  }
 
   // Set link to element in channel.
   void Set(const Tensor *param, Channel *channel, int index = 0) {
@@ -1055,7 +1067,10 @@ class Instance {
     DCHECK(param->cell() == cell_) << param->name();
     *reinterpret_cast<char **>(data_ + param->offset()) = instance->data();
   }
-  inline void Set(const Flow::Variable *var, Instance *instance);
+  void Set(const Flow::Variable *var, Instance *instance) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    return Set(var->tensor, instance);
+  }
 
   // Sets a reference parameter to an address. Caller is responsible for
   // ensuring proper alignment and any other constraints.
@@ -1067,10 +1082,18 @@ class Instance {
     DCHECK(param->IsAligned(address)) << param->name();
     *reinterpret_cast<void **>(data_ + param->offset()) = address;
   }
+  void SetReference(const Flow::Variable *var, void *address) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    return SetReference(var->tensor, address);
+  }
 
   // Clear instance tensor.
   void Clear(const Tensor *param) {
     memset(GetAddress(param), 0, param->space());
+  }
+  void Clear(const Flow::Variable *var) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    Clear(var->tensor);
   }
 
   // Set profiling summary for collecting profiling data for instance.
@@ -1079,6 +1102,10 @@ class Instance {
   // Return tensor data object for parameter in instance.
   TensorData operator[](const Tensor *param) {
     return TensorData(data_ + param->offset(), param);
+  }
+  TensorData operator[](const Flow::Variable *var) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    return TensorData(data_ + var->tensor->offset(), var->tensor);
   }
   inline TensorData operator[](const string &name);
 
@@ -1131,15 +1158,12 @@ class Cell {
 
   // Look up parameter and return null if it is not found.
   Tensor *LookupParameter(const string &name) const;
-  Tensor *LookupParameter(const Flow::Variable *var) const {
-    return LookupParameter(var->name);
-  }
 
   // Get parameter.
   Tensor *GetParameter(const string &name) const;
-  Tensor *GetParameter(const Flow::Variable *var) const {
-    return GetParameter(var->name);
-  }
+
+  // Look up step and return null if it is not found.
+  Step *LookupStep(const string &name) const;
 
   // Write code to file.
   void WriteCodeToFile(const string &filename) const;
@@ -1276,43 +1300,36 @@ class Network {
   // Load flow from file and compile all the cells.
   bool Compile(const string &flowfile, const Library &library);
 
+  // Bind artifacts in flow to tensors, steps and cells in network.
+  void Bind(Flow *flow);
+
   // Look up cell returning null if it is not found.
   Cell *LookupCell(const string &name) const;
-  Cell *LookupCell(const Flow::Function *func) const {
-    return LookupCell(func->name);
-  }
 
   // Get cell.
   Cell *GetCell(const string &name) const;
-  Cell *GetCell(const Flow::Function *func) const {
-    return GetCell(func->name);
-  }
 
   // Look up up parameter tensor returning null if it is not found.
   Tensor *LookupParameter(const string &name) const;
-  Tensor *LookupParameter(const Flow::Variable *var) const {
-    return LookupParameter(var->name);
-  }
 
   // Get parameter tensor.
   Tensor *GetParameter(const string &name) const;
-  Tensor *GetParameter(const Flow::Variable *var) const {
-    return GetParameter(var->name);
-  }
 
   // Return tensor data object for global tensor.
   TensorData operator[](Tensor *global) {
     CHECK(global->IsGlobal());
     return TensorData(global->data(), global);
   }
+  TensorData operator[](const Flow::Variable *var) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    CHECK(var->tensor->IsGlobal());
+    return TensorData(var->tensor->data(), var->tensor);
+  }
   TensorData operator[](const string &name) {
     Tensor *global = GetParameter(name);
     DCHECK(global != nullptr) << "Unknown parameter: " << name;
     CHECK(global->IsGlobal());
     return TensorData(global->data(), global);
-  }
-  TensorData operator[](const Flow::Variable *var) {
-    return (*this)[var->name];
   }
 
   // Allocate memory in memory pool.
@@ -1495,14 +1512,6 @@ inline TensorData Instance::operator[](const string &name) {
   Tensor *param = cell_->GetParameter(name);
   DCHECK(param != nullptr) << "Unknown parameter: " << name;
   return TensorData(data_ + param->offset(), param);
-}
-
-template<typename T> T *Instance::Get(const Flow::Variable *var) {
-  return Get<T>(cell_->GetParameter(var));
-}
-
-inline void Instance::Set(const Flow::Variable *var, Instance *instance) {
-  Set(cell_->GetParameter(var), instance);
 }
 
 }  // namespace myelin

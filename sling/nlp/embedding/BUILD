@@ -73,6 +73,7 @@ cc_library(
     "//sling/file:textmap",
     "//sling/frame:object",
     "//sling/frame:store",
+    "//sling/frame:serialization",
     "//sling/myelin:builder",
     "//sling/myelin:compiler",
     "//sling/myelin:gradient",

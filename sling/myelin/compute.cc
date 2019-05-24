@@ -1882,6 +1882,23 @@ bool Network::Compile(const string &flowfile, const Library &library) {
   return Compile(flow, library);
 }
 
+void Network::Bind(Flow *flow) {
+  // Bind functions to cells and operations to steps.
+  for (auto *func : flow->funcs()) {
+    func->cell = LookupCell(func->name);
+    if (func->cell != nullptr) {
+      for (auto *op : func->ops) {
+        op->step = func->cell->LookupStep(op->name);
+      }
+    }
+  }
+
+  // Bind variables to tensors.
+  for (auto *var : flow->vars()) {
+    var->tensor = LookupParameter(var->name);
+  }
+}
+
 void Network::ComputeLiveRanges() {
   // All inputs and outputs from the network must be alive before and after the
   // computation.
@@ -1991,6 +2008,13 @@ Tensor *Cell::LookupParameter(const string &name) const {
 
 Tensor *Cell::GetParameter(const string &name) const {
   return network_->GetParameter(name);
+}
+
+Step *Cell::LookupStep(const string &name) const {
+  for (Step *step : steps_) {
+    if (step->name() == name) return step;
+  }
+  return nullptr;
 }
 
 Cell *Cell::Gradient() const {
