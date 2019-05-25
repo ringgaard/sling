@@ -144,15 +144,15 @@ class Express {
     CMPGEOQ,     // compare greater than or equal (ordered, non-signaling)
 
     // Logical operators.
-    AND,        // logical and, p=a&b
-    OR,         // logical or, p=a|b
-    XOR,        // logical exclusive or, p=a^b
-    ANDNOT,     // logical and not, p=a&!b
-    NOT,        // logical not, p=!a
+    AND,         // logical and, p=a&b
+    OR,          // logical or, p=a|b
+    XOR,         // logical exclusive or, p=a^b
+    ANDNOT,      // logical and not, p=a&!b
+    NOT,         // logical not, p=!a
 
     // Conditionals operators.
-    COND,       // conditional expression, r=p?a:b
-    SELECT,     // conditional selection, r=p?a:0
+    COND,        // conditional expression, r=p?a:b
+    SELECT,      // conditional selection, r=p?a:0
 
     // Integer operations.
     BITAND,      // bitwise and
@@ -178,6 +178,7 @@ class Express {
     ANY,         // or reduction
 
     INVALID,     // invalid operation
+    NUM_OPTYPES
   };
 
   // System-defined numeric constants.
@@ -319,12 +320,12 @@ class Express {
     int index = -1;               // operation index
   };
 
-  // Target platform.
-  enum Target {INTEL, NVIDIA};
-
   // Instruction model with instruction forms supported by target architecture
-  // for rewriting expression operations.
+  // for translating and rewriting expressions.
   struct Model {
+    // Instruction model name.
+    const char *name = "Generic";
+
     // Move instruction formats.
     bool mov_reg_reg = false;       // dst = src
     bool mov_reg_imm = false;       // dst = imm
@@ -368,14 +369,23 @@ class Express {
 
     // Only use register operands for logic ops.
     bool logic_in_regs = false;
+
+    // Supported instructions.
+    bool instr[NUM_OPTYPES] = {false};
+
+    // Set supported instructions.
+    void instruction_set(std::initializer_list<OpType> ops) {
+      for (OpType op : ops) instr[op] = true;
+    }
   };
 
-  Express(Target target = INTEL) : target_(target) {}
+  Express() : model_(nullptr) {}
+  Express(const Model *model) : model_(model) {}
   ~Express();
 
   // Parse an expression recipe and add it to the expression. Intrinsic
   // functions can be expanded into basic operations.
-  void Parse(const string &recipe, bool expand = false);
+  void Parse(const string &recipe);
 
   // Return recipe for expression.
   void GetRecipe(string *recipe) const;
@@ -392,7 +402,10 @@ class Express {
 
   // Add function with optional intrinsics expansion. The result variable is not
   // set for the returned op.
-  Op *Function(OpType type, std::vector<Var *> &args, bool expand = false);
+  Op *Function(OpType type, std::vector<Var *> &args);
+
+  // Expand intrinsic operation or return null if no expansion is available.
+  Var *Expand(OpType type, std::vector<Var *> &args);
 
   // Find variable in expression or add a new variable if it does not exist.
   Var *Variable(VarType type, int id);
@@ -414,6 +427,9 @@ class Express {
 
   // Check if expression has node of a certain type.
   bool Has(OpType type) const { return NumOps(type) > 0; }
+
+  // Check if expression has any nodes of a set of type.
+  bool Has(std::initializer_list<OpType> ops) const;
 
   // Compact temporary variable ids and return the number of temporary variable.
   int CompactTempVars();
@@ -447,6 +463,10 @@ class Express {
   // expression. The variables are mapped through the mapping which maps
   // variables in the other expression to variables in this expression.
   void Merge(Express *other, const Map &varmap);
+
+  // Translate expression replacing instructions that are not supported by
+  // instruction model with more basic instructions.
+  void Translate(Express *translated) const;
 
   // Fuse operations. All occurrences of outer(inner(a,b),c) are changed to
   // left(a,b,c) and all occurrences of outer(a,inner(b,c)) to right(a,b,c).
@@ -534,6 +554,7 @@ class Express {
   Var *Zero() { return Number(ZERO); }
   Var *One() { return Number(ONE); }
   Var *Two() { return Number(TWO); }
+  Var *Ones() { return Number(QNAN); }
 
   Var *CmpEq(Var *x, Var *y) { return Do(CMPEQOQ, x, y); }
   Var *CmpNe(Var *x, Var *y) { return Do(CMPNEUQ, x, y); }
@@ -544,10 +565,18 @@ class Express {
 
   Var *And(Var *x, Var *y) { return Do(AND, x, y); }
   Var *Or(Var *x, Var *y) { return Do(OR, x, y); }
-  Var *Not(Var *x) { return Do(NOT, x); }
+  Var *Xor(Var *x, Var *y) { return Do(XOR, x, y); }
+  Var *Not(Var *x) {
+    return Supports(NOT) ? Do(NOT, x) : Xor(Ones(), x);
+  }
+  Var *AndNot(Var *x, Var *y) {
+    return Supports(ANDNOT) ? Do(ANDNOT, x) : And(Not(x), y);
+  }
 
   Var *Cond(Var *p, Var *x, Var *y) { return Do(COND, p, x, y); }
-  Var *Select(Var *p, Var *x) { return Do(SELECT, p, x); }
+  Var *Select(Var *p, Var *x) {
+    return Supports(SELECT) ? Do(SELECT, p, x) : Cond(p, x, Zero());
+  }
 
   // Build expressions for intrinsic functions.
   Var *Log(Var *x);
@@ -602,22 +631,29 @@ class Express {
 
   // Build expressions for composite functions.
   Var *MulAdd(Var *x, Var *y, Var *z) { return Add(Mul(x, y), z); }
-  Var *Neg(Var *x) { return target_ == NVIDIA ? Do(NEG, x) : Sub(Zero(), x); }
+  Var *Neg(Var *x) {
+    return Supports(NEG) ? Do(NEG, x) : Sub(Zero(), x);
+  }
   Var *Abs(Var *x) {
-    return target_ == NVIDIA ? Do(ABS, x) : Maximum(x, Neg(x));
+    return Supports(ABS) ? Do(ABS, x) : Maximum(x, Neg(x));
   }
   Var *Sign(Var *x) {
+    if (Supports(SIGN)) return Do(SIGN, x);
     return Cond(CmpLt(x, Zero()), Number(N1),
                                   Cond(CmpGt(x, Zero()), One(), Zero()));
   }
-  Var *Relu(Var *x) { return Maximum(x, Zero()); }
+  Var *Relu(Var *x) {
+    return Supports(RELU) ? Do(RELU, x) : Maximum(x, Zero());
+  }
   Var *Softsign(Var *x) { return Div(x, Add(Abs(x), One())); }
   Var *Softplus(Var *x) { return Log(Add(Exp(x), One())); }
   Var *LogSigmoid(Var *x) { return Neg(Softplus(Neg(x))); }
   Var *Reciprocal(Var *x) {
-    return target_ == NVIDIA ? Do(RECIPROCAL, x) : Div(One(), x);
+    return Supports(RECIPROCAL) ? Do(RECIPROCAL, x) : Div(One(), x);
   }
-  Var *Square(Var *x) { return Mul(x, x); }
+  Var *Square(Var *x) {
+    return Supports(SQUARE) ? Do(SQUARE, x) : Mul(x, x);
+  }
   Var *Sqrt(Var *x) { return Do(SQRT, x); }
   Var *Sigmoid(Var *x) { return Reciprocal(Add(One(), Exp(Neg(x)))); }
 
@@ -654,6 +690,11 @@ class Express {
   // Remove operation.
   void RemoveOp(Op *op);
 
+  // Check if operation is supported by instruction model.
+  bool Supports(OpType type) const {
+    return model_ == nullptr || model_->instr[type];
+  }
+
   // Variables in expression.
   std::vector<Var *> vars_;
 
@@ -664,8 +705,8 @@ class Express {
   // body is 0 (the default), there are no loop invariant instructions.
   int body_ = 0;
 
-  // Target platform.
-  Target target_;
+  // Target instruction model.
+  const Model *model_ = nullptr;
 
   // System-defined numeric constants.
   struct Constant { float flt; double dbl; };

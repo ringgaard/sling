@@ -28,7 +28,7 @@ void RegisterArithmeticLibrary(Library *library);
 void RegisterArithmeticTransforms(Library *library);
 
 // Initialize expression for step.
-void InitExpression(const Step *step, Express *expr, bool expand);
+void InitExpression(const Step *step, Express *expr);
 
 }  // namespace myelin
 }  // namespace sling

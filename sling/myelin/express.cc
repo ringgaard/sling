@@ -169,6 +169,14 @@ class VariableMap {
     return m;
   }
 
+  void rename(Express::Var *from, Express::Var *to) {
+    mapping_[from] = to;
+    to->type = from->type;
+    to->id = from->id;
+    to->predicate = from->predicate;
+    to->single = from->single;
+  }
+
  private:
   Express *expr_;
   std::map<Express::Var *, Express::Var *> mapping_;
@@ -273,11 +281,10 @@ inline Dest bit_cast(const Source &source) {
 class RecipeParser {
  public:
   // Initialize parser.
-  RecipeParser(const string &recipe, Express *expr, bool expand) {
+  RecipeParser(const string &recipe, Express *expr) {
     recipe_ = ptr_ = recipe.data();
     end_ = ptr_ + recipe.size();
     expr_ = expr;
-    expand_ = expand;
   }
 
   // Parse recipe.
@@ -338,7 +345,7 @@ class RecipeParser {
     // Create operation.
     Express::OpType optype = Express::Lookup(opname);
     CHECK(optype != Express::INVALID) << opname;
-    return expr_->Function(optype, args, expand_);
+    return expr_->Function(optype, args);
   }
 
   // Parse argument.
@@ -432,7 +439,6 @@ class RecipeParser {
   const char *ptr_;            // current position for parser
   const char *end_;            // end of parsed recipe
   Express *expr_;              // target expression
-  bool expand_;                // expand intrinsic function into basic ops
 };
 
 }  // namespace
@@ -578,8 +584,8 @@ const string &Express::OpName(OpType type) {
   return opname[type];
 }
 
-void Express::Parse(const string &recipe, bool expand) {
-  RecipeParser parser(recipe, this, expand);
+void Express::Parse(const string &recipe) {
+  RecipeParser parser(recipe, this);
   parser.Parse();
 }
 
@@ -644,67 +650,66 @@ Express::Op *Express::OperationAfter(Op *pos, OpType type) {
   return op;
 }
 
-Express::Op *Express::Function(OpType type,
-                               std::vector<Var *> &args,
-                               bool expand) {
-  // Expand intrinsics.
-  if (expand) {
-    Express::Var *result = nullptr;
-    if (args.size() == 1) {
-      switch (type) {
-        case Express::NEG: result = Neg(args[0]); break;
-        case Express::ABS: result = Abs(args[0]); break;
-        case Express::SIGN: result = Sign(args[0]); break;
-        case Express::RELU: result = Relu(args[0]); break;
-        case Express::SOFTSIGN: result = Softsign(args[0]); break;
-        case Express::SOFTPLUS: result = Softplus(args[0]); break;
-        case Express::LOGSIGMOID: result = LogSigmoid(args[0]); break;
-        case Express::RECIPROCAL: result = Reciprocal(args[0]); break;
-        case Express::SQUARE: result = Square(args[0]); break;
-        case Express::LOG: result = Log(args[0]); break;
-        case Express::EXP: result = Exp(args[0]); break;
-        case Express::SIGMOID: result = Sigmoid(args[0]); break;
-        case Express::ERF: result = Erf(args[0]); break;
-        case Express::SIN: result = Sin(args[0]); break;
-        case Express::COS: result = Cos(args[0]); break;
-        case Express::TAN: result = Tan(args[0]); break;
-        case Express::COT: result = Cot(args[0]); break;
-        case Express::SEC: result = Sec(args[0]); break;
-        case Express::CSC: result = Csc(args[0]); break;
-        case Express::ASIN: result = Asin(args[0]); break;
-        case Express::ACOS: result = Acos(args[0]); break;
-        case Express::ATAN: result = Atan(args[0]); break;
-        case Express::ACOT: result = Acot(args[0]); break;
-        case Express::ASEC: result = Asec(args[0]); break;
-        case Express::ACSC: result = Acsc(args[0]); break;
-        case Express::SINH: result = Sinh(args[0]); break;
-        case Express::COSH: result = Cosh(args[0]); break;
-        case Express::TANH: result = Tanh(args[0]); break;
-        case Express::COTH: result = Coth(args[0]); break;
-        case Express::SECH: result = Sech(args[0]); break;
-        case Express::CSCH: result = Csch(args[0]); break;
-        case Express::ASINH: result = Asinh(args[0]); break;
-        case Express::ACOSH: result = Acosh(args[0]); break;
-        case Express::ATANH: result = Atanh(args[0]); break;
-        case Express::ACOTH: result = Acoth(args[0]); break;
-        case Express::ASECH: result = Asech(args[0]); break;
-        case Express::ACSCH: result = Acsch(args[0]); break;
-        default: ;
-      }
-    }
-
-    // Create result node.
-    if (result != nullptr) {
-      Express::Op *op = Operation(Express::MOV);
-      op->AddArgument(result);
-      return op;
-    }
-  }
-
+Express::Op *Express::Function(OpType type, std::vector<Var *> &args) {
   // Create new op with arguments.
   Express::Op *op = Operation(type);
   for (Var *arg : args) op->AddArgument(arg);
   return op;
+}
+
+Express::Var *Express::Expand(OpType type, std::vector<Var *> &args) {
+  Express::Var *result = nullptr;
+  if (args.size() == 1) {
+    switch (type) {
+      case Express::NEG: result = Neg(args[0]); break;
+      case Express::NOT: result = Not(args[0]); break;
+      case Express::ABS: result = Abs(args[0]); break;
+      case Express::SIGN: result = Sign(args[0]); break;
+      case Express::RELU: result = Relu(args[0]); break;
+      case Express::SOFTSIGN: result = Softsign(args[0]); break;
+      case Express::SOFTPLUS: result = Softplus(args[0]); break;
+      case Express::LOGSIGMOID: result = LogSigmoid(args[0]); break;
+      case Express::RECIPROCAL: result = Reciprocal(args[0]); break;
+      case Express::SQUARE: result = Square(args[0]); break;
+      case Express::LOG: result = Log(args[0]); break;
+      case Express::EXP: result = Exp(args[0]); break;
+      case Express::SIGMOID: result = Sigmoid(args[0]); break;
+      case Express::ERF: result = Erf(args[0]); break;
+      case Express::SIN: result = Sin(args[0]); break;
+      case Express::COS: result = Cos(args[0]); break;
+      case Express::TAN: result = Tan(args[0]); break;
+      case Express::COT: result = Cot(args[0]); break;
+      case Express::SEC: result = Sec(args[0]); break;
+      case Express::CSC: result = Csc(args[0]); break;
+      case Express::ASIN: result = Asin(args[0]); break;
+      case Express::ACOS: result = Acos(args[0]); break;
+      case Express::ATAN: result = Atan(args[0]); break;
+      case Express::ACOT: result = Acot(args[0]); break;
+      case Express::ASEC: result = Asec(args[0]); break;
+      case Express::ACSC: result = Acsc(args[0]); break;
+      case Express::SINH: result = Sinh(args[0]); break;
+      case Express::COSH: result = Cosh(args[0]); break;
+      case Express::TANH: result = Tanh(args[0]); break;
+      case Express::COTH: result = Coth(args[0]); break;
+      case Express::SECH: result = Sech(args[0]); break;
+      case Express::CSCH: result = Csch(args[0]); break;
+      case Express::ASINH: result = Asinh(args[0]); break;
+      case Express::ACOSH: result = Acosh(args[0]); break;
+      case Express::ATANH: result = Atanh(args[0]); break;
+      case Express::ACOTH: result = Acoth(args[0]); break;
+      case Express::ASECH: result = Asech(args[0]); break;
+      case Express::ACSCH: result = Acsch(args[0]); break;
+      default: ;
+    }
+  } else if (args.size() == 2) {
+    switch (type) {
+      case Express::ANDNOT: result = AndNot(args[0], args[1]); break;
+      case Express::SELECT: result = Select(args[0], args[1]); break;
+      default: ;
+    }
+  }
+
+  return result;
 }
 
 Express::Var *Express::Number(ConstantNumber number) {
@@ -757,6 +762,18 @@ int Express::NumOps(OpType type) const {
     if (op->type == type) n++;
   }
   return n;
+}
+
+bool Express::Has(std::initializer_list<OpType> ops) const {
+  // Build instruction set.
+  bool instr[NUM_OPTYPES] = {false};
+  for (OpType op : ops) instr[op] = true;
+
+  // Check if expression contains any instructions in the set.
+  for (Op *op : ops_) {
+    if (instr[op->type]) return true;
+  }
+  return false;
 }
 
 int Express::Complexity() const {
@@ -1134,6 +1151,36 @@ void Express::Merge(Express *other, const Map &varmap) {
   if (temps_moved) CompactTempVars();
 }
 
+void Express::Translate(Express *translated) const {
+  VariableMap varmap(translated);
+  std::vector<Var *> args;
+  for (Op *op : ops_) {
+    // Translate arguments.
+    args.clear();
+    for (Var *arg : op->args) args.push_back(varmap[arg]);
+
+    // Translate operation.
+    Var *result = nullptr;
+    if (!translated->Supports(op->type)) {
+      // Try to expand unsupported operation.
+      result = translated->Expand(op->type, args);
+      if (result != nullptr) {
+        varmap.rename(op->result, result);
+      } else {
+        LOG(WARNING) << "Cannot translate unsupported op " << OpName(op->type)
+                     << " in " << AsRecipe();
+      }
+    }
+    if (result == nullptr) {
+      // Copy operation verbatim.
+      Op *copy = translated->Operation(op->type);
+      for (Var *arg : args) copy->AddArgument(arg);
+      copy->Assign(varmap[op->result]);
+    }
+  }
+  translated->CompactTempVars();
+}
+
 void Express::Fuse(OpType outer, OpType inner, OpType left, OpType right) {
   bool again = true;
   while (again) {
@@ -1218,7 +1265,7 @@ void Express::Optimize(bool fma, int spare_regs) {
   // Optionally fuse multiply and add/sub.
   if (fma) {
     FuseMulAdd();
-    if (target_ != NVIDIA) FuseMulSub();
+    if (Supports(MULSUB132)) FuseMulSub();
   }
 
   // Cache inputs and results used in multiple ops in temporary variables.
@@ -1237,7 +1284,6 @@ bool Express::Rewrite(const Model &model, Express *rewritten) const {
   VariableMap varmap(rewritten);
 
   // Translate all ops to conform to target model.
-  rewritten->target_ = target_;
   bool success = true;
   for (Op *op : ops_) {
     // Get operation type, result, and arguments.
@@ -1843,7 +1889,7 @@ void Express::GetRegisterTypes(std::vector<bool> *regs) const {
 // Natural logarithm.
 // See also: http://software-lisc.fbk.eu/avx_mathfun/avx_mathfun.h
 Express::Var *Express::Log(Var *x) {
-  if (target_ == NVIDIA) {
+  if (Supports(LOG2)) {
     // Compute natural logarithm from base-2 logarithm.
     return Mul(Do(LOG2, x), Number(LN2));
   } else {
@@ -1911,7 +1957,7 @@ Express::Var *Express::Log(Var *x) {
 // range [-1,1).
 // See also: https://git.io/vHyVR
 Express::Var *Express::Exp(Var *x) {
-  if (target_ == NVIDIA) {
+  if (Supports(EXP2)) {
     // Compute e^x = 2^(x * log2(e)).
     return Do(EXP2, Mul(x, Number(LOG2E)));
   } else {
@@ -1950,8 +1996,8 @@ Express::Var *Express::Exp(Var *x) {
 // Trigonometric functions.
 // See also: http://software-lisc.fbk.eu/avx_mathfun/avx_mathfun.h
 Express::Var *Express::Trig(OpType type, Var *x) {
-  // GPU supports sin, cos, and tan directly.
-  if (target_ == NVIDIA) {
+  // Compute directly using sin and cos if supported.
+  if (Supports(SIN) && Supports(COS)) {
     switch (type) {
       case SIN: return Do(SIN, x);
       case COS: return Do(COS, x);
@@ -2115,7 +2161,7 @@ Express::Var *Express::HyperTrig(OpType type, Var *x) {
 // ulp in the range [-9, 9], outside of which the fl(tanh(x)) = +/-1.
 // See: https://git.io/vHyiz
 Express::Var *Express::Tanh(Var *x) {
-  if (target_ == NVIDIA) {
+  if (Supports(EXP) || Supports(EXP2)) {
     // Compute tanh(x) = 2*sigmoid(2*x) - 1.
     return Sub(Mul(Sigmoid(Mul(x, Two())), Two()), One());
   } else {

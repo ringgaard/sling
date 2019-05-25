@@ -25,6 +25,7 @@ using namespace jit;
 class ScalarIntGenerator : public ExpressionGenerator {
  public:
   ScalarIntGenerator() {
+    model_.name = "Int";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
     model_.mov_reg_mem = true;
@@ -35,9 +36,13 @@ class ScalarIntGenerator : public ExpressionGenerator {
     model_.func_reg_reg = true;
     model_.func_reg_imm = true;
     model_.func_reg_mem = true;
+    model_.instruction_set({
+      Express::MOV,
+      Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+      Express::MINIMUM, Express::MAXIMUM,
+    });
   }
 
-  string Name() override { return "Int"; }
   bool ImmediateOperands() override { return true; }
 
   void Reserve() override {
@@ -51,8 +56,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
     } else if (instructions_.Has(Express::MUL) && type_ == DT_INT8) {
       // Reserve al for int8 multiplication.
       index_->ReserveFixedRegister(rax);
-    } else if (instructions_.Has(Express::MINIMUM) ||
-               instructions_.Has(Express::MAXIMUM)) {
+    } else if (instructions_.Has({Express::MINIMUM, Express::MAXIMUM})) {
       // Reserve rax for as aux register.
       index_->ReserveFixedRegister(rax);
     }
@@ -116,7 +120,8 @@ class ScalarIntGenerator : public ExpressionGenerator {
       case Express::MAXIMUM:
         GenerateMinMax(instr, masm);
         break;
-      default: UNSUPPORTED;
+      default:
+        LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
     }
   }
 

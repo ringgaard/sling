@@ -25,6 +25,7 @@ using namespace jit;
 class VectorFltSSEGenerator : public ExpressionGenerator {
  public:
   VectorFltSSEGenerator() {
+    model_.name = "VFltSSE";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
     model_.mov_reg_mem = true;
@@ -39,9 +40,22 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     model_.cond_reg_mem_reg = true;
     model_.cond_reg_reg_mem = true;
     model_.cond_reg_mem_mem = true;
+    model_.instruction_set({
+      Express::MOV,
+      Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+      Express::MINIMUM, Express::MAXIMUM, Express::SQRT,
+      Express::CMPEQOQ, Express::CMPNEUQ, Express::CMPLTOQ,
+      Express::CMPLEOQ, Express::CMPGTOQ, Express::CMPGEOQ,
+      Express::COND, Express::SELECT,
+      Express::AND, Express::OR, Express::XOR, Express::ANDNOT,
+      Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
+      Express::BITEQ, Express::FLOOR, Express::QUADSIGN,
+      Express::CVTFLTINT, Express::CVTINTFLT,
+      Express::CVTEXPINT, Express::CVTINTEXP,
+      Express::ADDINT, Express::SUBINT,
+      Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+    });
   }
-
-  string Name() override { return "VFltSSE"; }
 
   int VectorSize() override { return XMMRegSize; }
 
@@ -51,11 +65,8 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
 
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
-    if (instructions_.Has(Express::NOT) ||
-        instructions_.Has(Express::SUM) ||
-        instructions_.Has(Express::PRODUCT) ||
-        instructions_.Has(Express::MIN) ||
-        instructions_.Has(Express::MAX)) {
+    if (instructions_.Has({Express::SUM, Express::PRODUCT,
+                           Express::MIN, Express::MAX})) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
     if (instructions_.Has(Express::COND)) {
@@ -178,9 +189,6 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
             &Assembler::andnps, &Assembler::andnpd,
             masm);
         break;
-      case Express::NOT:
-        GenerateNot(instr, masm);
-        break;
       case Express::BITEQ:
         if (CPU::Enabled(SSE4_1)) {
           GenerateXMMFltOp(instr,
@@ -246,8 +254,7 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
             masm);
         break;
       default:
-        LOG(INFO) << "Unsupported: " << instr->AsInstruction();
-        UNSUPPORTED;
+        LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
     }
   }
 
@@ -350,47 +357,6 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
 
     } else {
       UNSUPPORTED;
-    }
-  }
-
-  // Generate logical not.
-  void GenerateNot(Express::Op *instr, MacroAssembler *masm) {
-    // Compute not(x) = xor(1,x).
-    if (instr->src != -1) {
-      // NOT dst,reg
-      switch (type_) {
-        case DT_FLOAT:
-          if (instr->dst == instr->src) {
-            __ pcmpeqd(xmmaux(0), xmmaux(0));
-            __ xorps(xmm(instr->dst), xmmaux(0));
-          } else {
-            __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
-            __ xorps(xmm(instr->dst), xmm(instr->src));
-          }
-          break;
-        case DT_DOUBLE:
-          if (instr->dst == instr->src) {
-            __ pcmpeqd(xmmaux(0), xmmaux(0));
-            __ xorpd(xmm(instr->dst), xmmaux(0));
-          } else {
-            __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
-            __ xorpd(xmm(instr->dst), xmm(instr->src));
-          }
-          break;
-        default: UNSUPPORTED;
-      }
-    } else {
-      // NOT dst,[mem]
-      __ pcmpeqd(xmm(instr->dst), xmm(instr->dst));
-      switch (type_) {
-        case DT_FLOAT:
-          __ xorps(xmm(instr->dst), addr(instr->args[0]));
-          break;
-        case DT_DOUBLE:
-          __ xorpd(xmm(instr->dst), addr(instr->args[0]));
-          break;
-        default: UNSUPPORTED;
-      }
     }
   }
 

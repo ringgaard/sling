@@ -37,6 +37,9 @@ namespace myelin {
 
 using namespace jit;
 
+// Generic instruction model for complexity calculation.
+static Express::Model generic_model;
+
 // Mapping from flow variables to expression variables.
 typedef std::map<Flow::Variable *, Express::Var *> VarMap;
 
@@ -137,14 +140,14 @@ static bool IsAssignmentOp(Flow::Operation *op) {
 }
 
 // Initialize expression for flow operation.
-static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
+static void InitExpression(Flow::Operation *op, Express *expr) {
   if (op->type == "Calculate") {
     // Build expression from expression recipe attribute on op.
     const string &recipe = op->GetAttr("expr");
-    if (!recipe.empty()) expr->Parse(recipe, expand);
+    if (!recipe.empty()) expr->Parse(recipe);
   } else if (op->type == "Assign") {
     const string &recipe = op->GetAttr("expr");
-    expr->Parse(recipe.empty() ? "@0=Id(%1)" : recipe, expand);
+    expr->Parse(recipe.empty() ? "@0=Id(%1)" : recipe);
   } else {
     // Add op with inputs and output.
     CHECK_EQ(op->outdegree(), 1);
@@ -152,7 +155,7 @@ static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
     for (int i = 0; i < op->indegree(); ++i) {
       args[i] = expr->Variable(Express::INPUT, i);
     }
-    Express::Op *func = expr->Function(OpType(op->type), args, expand);
+    Express::Op *func = expr->Function(OpType(op->type), args);
     func->Assign(expr->Variable(Express::OUTPUT, 0));
     expr->CompactTempVars();
   }
@@ -197,14 +200,14 @@ static void InitExpression(Flow::Operation *op, Express *expr, bool expand) {
 }
 
 // Initialize expression for step.
-void InitExpression(const Step *step, Express *expr, bool expand) {
+void InitExpression(const Step *step, Express *expr) {
   if (step->type() == "Calculate") {
     // Build expression from expression recipe attribute on op.
     const string &recipe = step->GetAttr("expr");
-    if (!recipe.empty()) expr->Parse(recipe, expand);
+    if (!recipe.empty()) expr->Parse(recipe);
   } else if (step->type() == "Assign") {
     const string &recipe = step->GetAttr("expr");
-    expr->Parse(recipe.empty() ? "@0=Id(%1)" : recipe, expand);
+    expr->Parse(recipe.empty() ? "@0=Id(%1)" : recipe);
   } else {
     // Add op with inputs and output.
     CHECK_EQ(step->outdegree(), 1);
@@ -212,7 +215,7 @@ void InitExpression(const Step *step, Express *expr, bool expand) {
     for (int i = 0; i < step->indegree(); ++i) {
       args[i] = expr->Variable(Express::INPUT, i);
     }
-    Express::Op *func = expr->Function(OpType(step->type()), args, expand);
+    Express::Op *func = expr->Function(OpType(step->type()), args);
     func->Assign(expr->Variable(Express::OUTPUT, 0));
     expr->CompactTempVars();
   }
@@ -250,7 +253,7 @@ struct Expression {
     }
 
     // Compile expression to be computed.
-    InitExpression(step, &expr, true);
+    InitExpression(step, &expr);
 
     // Clear single flag for scalar ops since broadcasting and hoisting is not
     // needed in this case.
@@ -285,7 +288,9 @@ struct Expression {
 
   // Compute complexity.
   int64 Complexity() {
-    return prototype->shape().elements() * expr.Complexity();
+    Express basic(&generic_model);
+    expr.Translate(&basic);
+    return prototype->shape().elements() * basic.Complexity();
   }
 
   // Compute how many spare register we have for hoisting constant out of the
@@ -555,7 +560,7 @@ class ExpressionTransformer : public Transformer {
 
       // Swap target variable with first input.
       Express expr;
-      expr.Parse(fused_recipe, false);
+      expr.Parse(fused_recipe);
       auto *vt = expr.Variable(Express::INPUT, target_index);
       auto *v0 = expr.Variable(Express::INPUT, 0);
       vt->id = 0;
@@ -573,14 +578,14 @@ class ExpressionTransformer : public Transformer {
   string FuseExpressions(Flow::Operation *first, Flow::Operation *second) {
     // Build first expression.
     Express expr1;
-    InitExpression(first, &expr1, false);
+    InitExpression(first, &expr1);
     VarMap vars1;
     MapVars(first, &expr1, &vars1);
 
     // Build second expression.
     bool assign = IsAssignmentOp(second);
     Express expr2;
-    InitExpression(second, &expr2, false);
+    InitExpression(second, &expr2);
     VarMap vars2;
     MapVars(second, &expr2, &vars2);
 
@@ -701,7 +706,7 @@ class RemoveUnusedInputs : public Transformer {
       bool assign = op->type == "Assign";
       if (calculate || assign) {
         Express expr;
-        InitExpression(op, &expr, false);
+        InitExpression(op, &expr);
         for (int i = 0; i < op->inputs.size(); ++i) {
           if (expr.Lookup(Express::INPUT, i) == nullptr &&
               expr.Lookup(Express::CONST, i) == nullptr) {
@@ -926,6 +931,25 @@ class Calculate : public Kernel {
 
 // Register arithmetic library.
 void RegisterArithmeticLibrary(Library *library) {
+  generic_model.instruction_set({
+    Express::MOV, Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+    Express::MINIMUM, Express::MAXIMUM, Express::NEG, Express::ABS,
+    Express::SIGN, Express::SQUARE, Express::SQRT,
+    Express::MULADD132, Express::MULADD213, Express::MULADD231,
+    Express::MULSUB132, Express::MULSUB213, Express::MULSUB231,
+    Express::CMPEQOQ, Express::CMPNEUQ, Express::CMPLTOQ,
+    Express::CMPLEOQ, Express::CMPGTOQ, Express::CMPGEOQ,
+    Express::AND, Express::OR, Express::XOR, Express::ANDNOT, Express::NOT,
+    Express::COND, Express::SELECT,
+    Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
+    Express::BITEQ, Express::FLOOR,
+    Express::CVTFLTINT, Express::CVTINTFLT,
+    Express::CVTEXPINT, Express::CVTINTEXP,
+    Express::QUADSIGN, Express::ADDINT, Express::SUBINT,
+    Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+    Express::ALL, Express::ANY,
+  });
+
   library->Register(new Calculate("AddExpr", "Add", 2));
   library->Register(new Calculate("SubExpr", "Sub", 2));
   library->Register(new Calculate("MulExpr", "Mul", 2));

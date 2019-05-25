@@ -25,6 +25,7 @@ using namespace jit;
 class VectorIntAVX128Generator : public ExpressionGenerator {
  public:
   VectorIntAVX128Generator() {
+    model_.name = "VIntAVX128";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
     model_.mov_reg_mem = true;
@@ -35,9 +36,12 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
     model_.func_reg_reg = true;
     model_.func_reg_imm = true;
     model_.func_reg_mem = true;
+    model_.instruction_set({
+      Express::MOV,
+      Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+      Express::MINIMUM, Express::MAXIMUM,
+    });
   }
-
-  string Name() override { return "VIntAVX128"; }
 
   int VectorSize() override { return XMMRegSize; }
 
@@ -57,8 +61,7 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
         num_mm_aux = std::max(num_mm_aux, 1);
       }
     }
-    if (instructions_.Has(Express::MINIMUM) ||
-        instructions_.Has(Express::MAXIMUM)) {
+    if (instructions_.Has({Express::MINIMUM, Express::MAXIMUM})) {
       if (type_ == DT_INT64) {
         num_rr_aux = std::max(num_rr_aux, 2);
         num_mm_aux = std::max(num_mm_aux, 1);
@@ -142,7 +145,8 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
               masm);
         }
         break;
-      default: UNSUPPORTED;
+      default:
+        LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
     }
   }
 

@@ -25,6 +25,7 @@ using namespace jit;
 class VectorFltAVX512Generator : public ExpressionGenerator {
  public:
   VectorFltAVX512Generator() {
+    model_.name = "VFltAVX512";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
     model_.mov_reg_mem = true;
@@ -39,14 +40,31 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
       model_.fm_reg_reg_reg = true;
       model_.fm_reg_reg_imm = true;
       model_.fm_reg_reg_mem = true;
+      model_.instruction_set({
+        Express::MULADD132, Express::MULADD213, Express::MULADD231,
+        Express::MULSUB132, Express::MULSUB213, Express::MULSUB231,
+      });
     }
     model_.cond_reg_reg_reg = true;
     model_.cond_reg_mem_reg = true;
     model_.predicate_regs = true;
     model_.logic_in_regs = true;
+    model_.instruction_set({
+      Express::MOV,
+      Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+      Express::MINIMUM, Express::MAXIMUM, Express::SQRT,
+      Express::CMPEQOQ, Express::CMPNEUQ, Express::CMPLTOQ,
+      Express::CMPLEOQ, Express::CMPGTOQ, Express::CMPGEOQ,
+      Express::COND, Express::SELECT, Express::QUADSIGN,
+      Express::AND, Express::OR, Express::XOR, Express::ANDNOT, Express::NOT,
+      Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
+      Express::BITEQ, Express::FLOOR,
+      Express::CVTFLTINT, Express::CVTINTFLT,
+      Express::CVTEXPINT, Express::CVTINTEXP,
+      Express::ADDINT, Express::SUBINT,
+      Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+    });
   }
-
-  string Name() override { return "VFltAVX512"; }
 
   int VectorSize() override { return ZMMRegSize; }
 
@@ -58,12 +76,19 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
 
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
-    if (instructions_.Has(Express::MOV) ||
-        instructions_.Has(Express::SUM) ||
-        instructions_.Has(Express::PRODUCT) ||
-        instructions_.Has(Express::MIN) ||
-        instructions_.Has(Express::MAX)) {
+    if (instructions_.Has({Express::SUM, Express::PRODUCT,
+                           Express::MIN, Express::MAX})) {
       num_mm_aux = std::max(num_mm_aux, 1);
+    }
+    if (instructions_.Has(Express::MOV)) {
+      bool pred_mov = false;
+      for (auto *op : instructions_.ops()) {
+        if (op->result->predicate || op->args[0]->predicate) {
+          pred_mov = true;
+          break;
+        }
+      }
+      if (pred_mov) num_mm_aux = std::max(num_mm_aux, 1);
     }
     index_->ReserveAuxZMMRegisters(num_mm_aux);
   }
@@ -315,7 +340,7 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
             masm);
         break;
       default:
-        UNSUPPORTED;
+        LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
     }
   }
 

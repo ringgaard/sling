@@ -106,8 +106,8 @@ class CUDACalculate : public CUDAKernel {
       }
     } else {
       // Enable sharing of inputs and outputs.
-      Express expr(Express::NVIDIA);
-      InitExpression(step, &expr, true);
+      Express expr(&ptx_model);
+      InitExpression(step, &expr);
       expr.ComputeLiveRanges();
       for (int i = 0; i < step->indegree(); ++i) {
         Tensor *input = step->input(i);
@@ -133,8 +133,10 @@ class CUDACalculate : public CUDAKernel {
 
   void GeneratePTX(Step *step, PTXMacroAssembler *ptx)  override {
     // Parse expression for evaluation.
-    Express expr(Express::NVIDIA);
-    InitExpression(step, &expr, true);
+    Express expr(&ptx_model);
+    InitExpression(step, &expr);
+    Express translated(&ptx_model);
+    expr.Translate(&translated);
 
     // Set grid size. Use one thread for each element.
     Tensor *output = step->output(0);
@@ -153,12 +155,12 @@ class CUDACalculate : public CUDAKernel {
     comp.size = traits.size();
 
     // Optimize expression.
-    expr.EliminateCommonSubexpressions();
-    expr.CacheResults();
+    translated.EliminateCommonSubexpressions();
+    translated.CacheResults();
 
     // Rewrite expression.
     Express instrs;
-    CHECK(expr.Generate(ptx_model, &instrs));
+    CHECK(translated.Generate(ptx_model, &instrs));
 
     // Get grid location.
     ptx_decl(b32, idx);
@@ -291,9 +293,6 @@ class CUDACalculate : public CUDAKernel {
         case Express::XOR:
           GenerateBinaryOp("xor", instr, &comp);
           break;
-        case Express::ANDNOT:
-          GenerateAndNot(instr, &comp);
-          break;
         case Express::NOT:
           GenerateUnaryOp("not", instr, &comp);
           break;
@@ -322,10 +321,12 @@ class CUDACalculate : public CUDAKernel {
   }
 
   int64 Complexity(const Step *step) override {
-    Express expr(Express::NVIDIA);
-    InitExpression(step, &expr, true);
+    Express expr(&ptx_model);
+    InitExpression(step, &expr);
+    Express translated(&ptx_model);
+    expr.Translate(&translated);
     Tensor *output = step->output(0);
-    return output->shape().elements() * expr.Complexity();
+    return output->shape().elements() * translated.Complexity();
   }
 
   void GenerateLoad(Express::Op *instr, Compilation *comp) {
@@ -559,17 +560,6 @@ class CUDACalculate : public CUDAKernel {
       default:
         LOG(FATAL) << "Unsupported: " << instr->AsInstruction();
     }
-  }
-
-  void GenerateAndNot(Express::Op *instr, Compilation *comp) {
-    // Negate first argument.
-    comp->ptx->emit("not.pred", comp->reg[instr->dst], comp->reg[instr->src]);
-
-    // Compute logical and with second argument.
-    int tmp = instr->src;
-    instr->src = instr->dst;
-    GenerateBinaryOp("and", instr, comp);
-    instr->src = tmp;
   }
 
   PTXArg *GetNumberArg(Express::Var *var, Type dtype) {
@@ -1060,6 +1050,19 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
   ptx_model.fm_reg_reg_imm = true;
   ptx_model.cond_reg_reg_reg = true;
   ptx_model.predicate_regs = true;
+  ptx_model.instruction_set({
+    Express::MOV,
+    Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+    Express::MINIMUM, Express::MAXIMUM,
+    Express::NEG, Express::ABS, Express::RECIPROCAL,
+    Express::LOG2, Express::EXP2, Express::SIN, Express::COS,
+    Express::CMPEQOQ, Express::CMPNEUQ, Express::CMPLTOQ,
+    Express::CMPLEOQ, Express::CMPGTOQ, Express::CMPGEOQ,
+    Express::BITAND, Express::BITOR,
+    Express::AND, Express::OR, Express::XOR, Express::NOT,
+    Express::COND, Express::SELECT,
+    Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+  });
 
   library->Register(new CUDACalculate("CUDAAdd", "Add", 2));
   library->Register(new CUDACalculate("CUDASub", "Sub", 2));

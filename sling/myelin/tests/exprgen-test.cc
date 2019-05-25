@@ -17,7 +17,7 @@ void Test(const string &expression) {
   Compiler compiler;
 
   Express expr;
-  expr.Parse(expression, true);
+  expr.Parse(expression);
 
   Flow flow;
   auto *func = flow.AddFunction("test");

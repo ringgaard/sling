@@ -38,8 +38,8 @@ void ExpressionGenerator::Initialize(const Express &expression,
                                      Type type,
                                      int spare_regs,
                                      IndexGenerator *index) {
-  // Copy expression.
-  expression_.Copy(expression);
+  // Translate expression into instructions supported by the generator.
+  expression.Translate(&expression_);
   type_ = type;
   index_ = index;
   index_->set_extended_regs(ExtendedRegs());

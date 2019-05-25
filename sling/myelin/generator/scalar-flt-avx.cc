@@ -25,6 +25,7 @@ using namespace jit;
 class ScalarFltAVXGenerator : public ExpressionGenerator {
  public:
   ScalarFltAVXGenerator() {
+    model_.name = "FltAVX";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
     model_.mov_reg_mem = true;
@@ -39,14 +40,31 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
       model_.fm_reg_reg_reg = true;
       model_.fm_reg_reg_imm = true;
       model_.fm_reg_reg_mem = true;
+      model_.instruction_set({
+        Express::MULADD132, Express::MULADD213, Express::MULADD231,
+        Express::MULSUB132, Express::MULSUB213, Express::MULSUB231,
+      });
     }
     model_.cond_reg_reg_reg = true;
     model_.cond_reg_mem_reg = true;
     model_.cond_reg_reg_mem = true;
     model_.cond_reg_mem_mem = true;
+    model_.instruction_set({
+      Express::MOV,
+      Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+      Express::MINIMUM, Express::MAXIMUM, Express::SQRT,
+      Express::CMPEQOQ, Express::CMPNEUQ, Express::CMPLTOQ,
+      Express::CMPLEOQ, Express::CMPGTOQ, Express::CMPGEOQ,
+      Express::COND, Express::SELECT,
+      Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
+      Express::AND, Express::OR, Express::XOR, Express::ANDNOT,
+      Express::BITEQ, Express::FLOOR, Express::QUADSIGN,
+      Express::CVTFLTINT, Express::CVTINTFLT,
+      Express::CVTEXPINT, Express::CVTINTEXP,
+      Express::ADDINT, Express::SUBINT,
+      Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+    });
   }
-
-  string Name() override { return "FltAVX"; }
 
   void Reserve() override {
     // Reserve XMM registers.
@@ -55,27 +73,14 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
     int num_rr_aux = 0;
-    if (instructions_.Has(Express::BITAND) ||
-        instructions_.Has(Express::BITOR) ||
-        instructions_.Has(Express::BITXOR) ||
-        instructions_.Has(Express::BITANDNOT) ||
-        instructions_.Has(Express::BITEQ) ||
-        instructions_.Has(Express::AND) ||
-        instructions_.Has(Express::OR) ||
-        instructions_.Has(Express::XOR) ||
-        instructions_.Has(Express::ANDNOT) ||
-        instructions_.Has(Express::CVTFLTINT) ||
-        instructions_.Has(Express::CVTINTFLT) ||
-        instructions_.Has(Express::ADDINT) ||
-        instructions_.Has(Express::SUBINT)) {
+    if (instructions_.Has({
+        Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
+        Express::BITEQ, Express::AND, Express::OR, Express::XOR,
+        Express::ANDNOT, Express::CVTFLTINT, Express::CVTINTFLT,
+        Express::ADDINT, Express::SUBINT})) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
-    if (instructions_.Has(Express::NOT)) {
-      num_mm_aux = std::max(num_mm_aux, 2);
-      num_rr_aux = std::max(num_rr_aux, 1);
-    }
-    if (instructions_.Has(Express::SELECT) ||
-        instructions_.Has(Express::COND)) {
+    if (instructions_.Has({Express::SELECT, Express::COND})) {
       num_rr_aux = std::max(num_rr_aux, 1);
     }
 
@@ -213,9 +218,6 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
       case Express::BITEQ:
         GenerateRegisterOp(instr, masm);
         break;
-      case Express::NOT:
-        GenerateRegisterOp(instr, masm, true);
-        break;
       case Express::FLOOR:
         GenerateRound(instr, masm, round_down);
         break;
@@ -260,7 +262,8 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
             &Assembler::vmaxss, &Assembler::vmaxsd,
             masm);
         break;
-      default: UNSUPPORTED;
+      default:
+        LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
     }
   }
 
@@ -428,11 +431,6 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           case Express::ANDNOT:
             __ vandnps(dst, src, src2);
             break;
-          case Express::NOT:
-            __ movl(aux(0), Immediate(-1));
-            __ vmovd(xmmaux(1), aux(0));
-            __ vxorps(dst, src, xmmaux(1));
-            break;
           case Express::BITEQ:
             __ vpcmpeqd(dst, src, src2);
             break;
@@ -474,11 +472,6 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           case Express::BITANDNOT:
           case Express::ANDNOT:
             __ vandnpd(dst, src, src2);
-            break;
-          case Express::NOT:
-            __ movq(aux(0), Immediate(-1));
-            __ vmovq(xmmaux(1), aux(0));
-            __ vxorpd(dst, src, xmmaux(1));
             break;
           case Express::BITEQ:
             __ vpcmpeqq(dst, src, src2);

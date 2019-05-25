@@ -11,13 +11,13 @@ using namespace sling::myelin;
 
 void Test(const string &str) {
   bool three_arg_ops = false;
-  Express::Target target = Express::INTEL;
+  bool gpu = false;
   bool fma = false;
   int hoist = 0;
   bool live_ranges = false;
 
   Express::Model model;
-  if (target == Express::NVIDIA) {
+  if (gpu) {
     model.mov_reg_reg = true;
     model.mov_reg_imm = true;
     model.mov_reg_mem = true;
@@ -75,8 +75,8 @@ void Test(const string &str) {
   }
 
   LOG(INFO) << "Expression: " << str;
-  Express expr(target);
-  expr.Parse(str, true);
+  Express expr(&model);
+  expr.Parse(str);
 
   bool raw = false;
   if (raw) {

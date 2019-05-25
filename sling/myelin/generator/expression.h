@@ -45,9 +45,6 @@ class ExpressionGenerator {
 
   virtual ~ExpressionGenerator() = default;
 
-  // Return generator name.
-  virtual string Name() = 0;
-
   // Return vector size in bytes.
   virtual int VectorSize() { return TypeTraits::of(type_).size(); }
 
@@ -83,6 +80,9 @@ class ExpressionGenerator {
 
   // Return register number for variable.
   int RegisterNumber(Express::VarType type, int id) const;
+
+  // Return generator name.
+  string Name() { return model_.name; }
 
   // Select expression generator for expression that is supported by the CPU.
   static ExpressionGenerator *Select(const Express &expr, Type type, int size);
@@ -488,10 +488,10 @@ class ExpressionGenerator {
   Express::Model model_;
 
   // Expression that should be generated.
-  Express expression_;
+  Express expression_{&model_};
 
   // Instructions for generating expression.
-  Express instructions_;
+  Express instructions_{&model_};
 };
 
 // Return reduction operator for reduction instruction.

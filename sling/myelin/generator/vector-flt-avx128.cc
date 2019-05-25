@@ -25,6 +25,7 @@ using namespace jit;
 class VectorFltAVX128Generator : public ExpressionGenerator {
  public:
   VectorFltAVX128Generator() {
+    model_.name = "VFltAVX128";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
     model_.mov_reg_mem = true;
@@ -39,12 +40,29 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
       model_.fm_reg_reg_reg = true;
       model_.fm_reg_reg_imm = true;
       model_.fm_reg_reg_mem = true;
+      model_.instruction_set({
+        Express::MULADD132, Express::MULADD213, Express::MULADD231,
+        Express::MULSUB132, Express::MULSUB213, Express::MULSUB231,
+      });
     }
     model_.cond_reg_reg_reg = true;
     model_.cond_reg_mem_reg = true;
+    model_.instruction_set({
+      Express::MOV,
+      Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+      Express::MINIMUM, Express::MAXIMUM,
+      Express::CMPEQOQ, Express::CMPNEUQ, Express::CMPLTOQ,
+      Express::CMPLEOQ, Express::CMPGTOQ, Express::CMPGEOQ,
+      Express::COND, Express::SELECT,
+      Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
+      Express::AND, Express::OR, Express::XOR, Express::ANDNOT,
+      Express::BITEQ, Express::QUADSIGN, Express::FLOOR, Express::SQRT,
+      Express::CVTFLTINT, Express::CVTINTFLT,
+      Express::CVTEXPINT, Express::CVTINTEXP,
+      Express::ADDINT, Express::SUBINT,
+      Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+    });
   }
-
-  string Name() override { return "VFltAVX128"; }
 
   int VectorSize() override { return XMMRegSize; }
 
@@ -54,11 +72,8 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
 
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
-    if (instructions_.Has(Express::NOT) ||
-        instructions_.Has(Express::SUM) ||
-        instructions_.Has(Express::PRODUCT) ||
-        instructions_.Has(Express::MIN) ||
-        instructions_.Has(Express::MAX)) {
+    if (instructions_.Has({
+        Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX})) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
     index_->ReserveAuxXMMRegisters(num_mm_aux);
@@ -214,9 +229,6 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
             &Assembler::vandnps, &Assembler::vandnpd,
             masm);
         break;
-      case Express::NOT:
-        GenerateNot(instr, masm);
-        break;
       case Express::BITEQ:
         GenerateXMMFltOp(instr,
             &Assembler::vpcmpeqd, &Assembler::vpcmpeqq,
@@ -280,7 +292,8 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
             &Assembler::vmaxps, &Assembler::vmaxpd,
             masm);
         break;
-      default: UNSUPPORTED;
+      default:
+        LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
     }
   }
 
@@ -361,35 +374,6 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
         }
         break;
       default: UNSUPPORTED;
-    }
-  }
-
-  // Generate logical not.
-  void GenerateNot(Express::Op *instr, MacroAssembler *masm) {
-    // Compute not(x) = xor(1,x).
-    __ vpcmpeqd(xmmaux(0), xmmaux(0), xmmaux(0));
-    if (instr->src != -1) {
-      // NOT dst,reg
-      switch (type_) {
-        case DT_FLOAT:
-          __ vxorps(xmm(instr->dst), xmmaux(0), xmm(instr->src));
-          break;
-        case DT_DOUBLE:
-          __ vxorpd(xmm(instr->dst), xmmaux(0), xmm(instr->src));
-          break;
-        default: UNSUPPORTED;
-      }
-    } else {
-      // NOT dst,[mem]
-      switch (type_) {
-        case DT_FLOAT:
-          __ vxorps(xmm(instr->dst), xmmaux(0), addr(instr->args[0]));
-          break;
-        case DT_DOUBLE:
-          __ vxorpd(xmm(instr->dst), xmmaux(0), addr(instr->args[0]));
-          break;
-        default: UNSUPPORTED;
-      }
     }
   }
 

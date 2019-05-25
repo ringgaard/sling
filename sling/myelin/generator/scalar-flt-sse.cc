@@ -25,6 +25,7 @@ using namespace jit;
 class ScalarFltSSEGenerator : public ExpressionGenerator {
  public:
   ScalarFltSSEGenerator() {
+    model_.name = "FltSSE";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
     model_.mov_reg_mem = true;
@@ -39,9 +40,22 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
     model_.cond_reg_mem_reg = true;
     model_.cond_reg_reg_mem = true;
     model_.cond_reg_mem_mem = true;
+    model_.instruction_set({
+      Express::MOV, Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+      Express::MINIMUM, Express::MAXIMUM, Express::SQRT,
+      Express::CMPEQOQ, Express::CMPNEUQ, Express::CMPLTOQ,
+      Express::CMPLEOQ, Express::CMPGTOQ, Express::CMPGEOQ,
+      Express::COND, Express::SELECT,
+      Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
+      Express::BITEQ, Express::QUADSIGN,
+      Express::AND, Express::OR, Express::XOR, Express::ANDNOT,
+      Express::FLOOR,
+      Express::CVTFLTINT, Express::CVTINTFLT,
+      Express::CVTEXPINT, Express::CVTINTEXP,
+      Express::ADDINT, Express::SUBINT,
+      Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+    });
   }
-
-  string Name() override { return "FltSSE"; }
 
   void Reserve() override {
     // Reserve XMM registers.
@@ -50,27 +64,14 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
     int num_rr_aux = 0;
-    if (instructions_.Has(Express::BITAND) ||
-        instructions_.Has(Express::BITOR) ||
-        instructions_.Has(Express::BITXOR) ||
-        instructions_.Has(Express::BITANDNOT) ||
-        instructions_.Has(Express::BITEQ) ||
-        instructions_.Has(Express::AND) ||
-        instructions_.Has(Express::OR) ||
-        instructions_.Has(Express::XOR) ||
-        instructions_.Has(Express::ANDNOT) ||
-        instructions_.Has(Express::CVTFLTINT) ||
-        instructions_.Has(Express::CVTINTFLT) ||
-        instructions_.Has(Express::ADDINT) ||
-        instructions_.Has(Express::SUBINT)) {
+    if (instructions_.Has({
+        Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
+        Express::BITEQ, Express::AND, Express::OR, Express::XOR,
+        Express::ANDNOT, Express::CVTFLTINT, Express::CVTINTFLT,
+        Express::ADDINT, Express::SUBINT})) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
-    if (instructions_.Has(Express::NOT)) {
-      num_mm_aux = std::max(num_mm_aux, 2);
-      num_rr_aux = std::max(num_rr_aux, 1);
-    }
-    if (instructions_.Has(Express::SELECT) ||
-        instructions_.Has(Express::COND)) {
+    if (instructions_.Has({Express::SELECT, Express::COND})) {
       num_rr_aux = std::max(num_rr_aux, 1);
     }
 
@@ -173,7 +174,6 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
       case Express::OR:
       case Express::XOR:
       case Express::ANDNOT:
-      case Express::NOT:
         GenerateRegisterOp(instr, masm);
         break;
       case Express::FLOOR:
@@ -231,7 +231,8 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
             &Assembler::maxss, &Assembler::maxsd,
             masm);
         break;
-      default: UNSUPPORTED;
+      default:
+        LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
     }
   }
 
@@ -335,16 +336,6 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
           case Express::BITANDNOT:
             __ andnps(dst, src);
             break;
-          case Express::NOT:
-            __ movl(aux(0), Immediate(-1));
-            if (dst.code() == src.code()) {
-              __ movd(xmmaux(1), aux(0));
-              __ xorps(dst, xmmaux(1));
-            } else {
-              __ movd(dst, aux(0));
-              __ xorps(dst, src);
-            }
-            break;
           case Express::BITEQ:
             if (CPU::Enabled(SSE2)) {
               __ pcmpeqd(dst, src);
@@ -388,16 +379,6 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
           case Express::ANDNOT:
           case Express::BITANDNOT:
             __ andnpd(dst, src);
-            break;
-          case Express::NOT:
-            __ movq(aux(0), Immediate(-1));
-            if (dst.code() == src.code()) {
-              __ movq(xmmaux(1), aux(0));
-              __ xorpd(dst, xmmaux(1));
-            } else {
-              __ movq(dst, aux(0));
-              __ xorpd(dst, src);
-            }
             break;
           case Express::BITEQ:
             if (CPU::Enabled(SSE4_1)) {

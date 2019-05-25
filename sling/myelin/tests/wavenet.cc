@@ -785,7 +785,7 @@ class ZigZagTanhMulSigmoid : public Kernel {
   void Generate(Step *step, MacroAssembler *masm) override {
     // Compile expression.
     Express expr;
-    expr.Parse("@0=Mul(Tanh(!0),Sigmoid(!1))", true);
+    expr.Parse("@0=Mul(Tanh(!0),Sigmoid(!1))");
 
     // Initialize zigzag index generator.
     Tensor *input = step->input(1);
@@ -814,7 +814,7 @@ class ZigZagTanhMulSigmoid : public Kernel {
 
   int64 Complexity(const Step *step) override {
     Express expr;
-    expr.Parse("@0=Mul(Tanh(!0),Sigmoid(!1))", true);
+    expr.Parse("@0=Mul(Tanh(!0),Sigmoid(!1))");
     return step->output(0)->elements() * expr.Complexity();
   }
 };
