@@ -87,6 +87,10 @@ class ExpressionGenerator {
   // Select expression generator for expression that is supported by the CPU.
   static ExpressionGenerator *Select(const Express &expr, Type type, int size);
 
+  // Set approximate math flag.
+  bool approx() const { return approx_; }
+  void set_approx(bool approx) { approx_ = approx; }
+
  protected:
   // Comparison types. These are Intel comparison predicates used by CMPSS.
   enum Comparison {
@@ -492,6 +496,9 @@ class ExpressionGenerator {
 
   // Instructions for generating expression.
   Express instructions_{&model_};
+
+  // Allow approximate math functions.
+  bool approx_ = false;
 };
 
 // Return reduction operator for reduction instruction.

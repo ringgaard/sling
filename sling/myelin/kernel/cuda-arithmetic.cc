@@ -245,6 +245,13 @@ class CUDACalculate : public CUDAKernel {
             GenerateUnaryOp("sqrt.rn", instr, &comp);
           }
           break;
+        case Express::RSQRT:
+          if (comp.dtype == DT_FLOAT) {
+            GenerateUnaryOp("rsqrt.approx", instr, &comp);
+          } else {
+            GenerateUnaryOp("rsqrt.rn", instr, &comp);
+          }
+          break;
         case Express::RECIPROCAL:
           if (comp.dtype == DT_FLOAT) {
             GenerateUnaryOp("rcp.approx", instr, &comp);
@@ -1055,6 +1062,7 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
     Express::ADD, Express::SUB, Express::MUL, Express::DIV,
     Express::MINIMUM, Express::MAXIMUM,
     Express::NEG, Express::ABS, Express::RECIPROCAL,
+    Express::SQRT, Express::RSQRT,
     Express::LOG2, Express::EXP2, Express::SIN, Express::COS,
     Express::CMPEQOQ, Express::CMPNEUQ, Express::CMPLTOQ,
     Express::CMPLEOQ, Express::CMPGTOQ, Express::CMPGEOQ,
@@ -1116,6 +1124,7 @@ void RegisterCUDAArithmeticLibrary(Library *library) {
   library->Register(new CUDACalculate("CUDAReciprocal", "Reciprocal", 1));
   library->Register(new CUDACalculate("CUDASquare", "Square", 1));
   library->Register(new CUDACalculate("CUDASqrt", "Sqrt", 1));
+  library->Register(new CUDACalculate("CUDARsqrt", "Rsqrt", 1));
 
   library->Register(new CUDACalculate("CUDACond", "Cond", 3));
   library->Register(new CUDACalculate("CUDASelect", "Select", 2));

@@ -45,6 +45,7 @@ static std::map<string, Express::OpType> optypes = {
   {"Reciprocal", Express::RECIPROCAL},
   {"Square", Express::SQUARE},
   {"Sqrt", Express::SQRT},
+  {"Rsqrt", Express::RSQRT},
   {"Log", Express::LOG},
   {"Exp", Express::EXP},
   {"Sigmoid", Express::SIGMOID},
@@ -123,6 +124,7 @@ static std::map<string, Express::OpType> optypes = {
   {"Max", Express::MAX},
   {"All", Express::ALL},
   {"Any", Express::ANY},
+  {"Count", Express::COUNT},
 };
 
 static const string opname[] = {
@@ -130,7 +132,7 @@ static const string opname[] = {
   "Add", "Sub", "Mul", "Div",
   "Minimum", "Maximum",
   "Neg", "Abs", "Sign", "Relu", "Softsign", "Softplus", "LogSigmoid",
-  "Reciprocal", "Square", "Sqrt",
+  "Reciprocal", "Square", "Sqrt", "Rsqrt",
   "Log", "Exp", "Sigmoid", "Erf", "Log2", "Exp2",
   "Sin", "Cos", "Tan", "Cot", "Sec", "Csc",
   "Asin", "Acos", "Atan", "Acot", "Asec", "Acsc",
@@ -143,7 +145,7 @@ static const string opname[] = {
   "BitAnd", "BitOr", "BitXor", "BitAndNot", "BitEq",
   "Floor", "CvtFltInt", "CvtIntFlt", "CvtExpInt", "CvtIntExp", "QuadSign",
   "AddInt", "SubInt",
-  "Sum", "Product", "Min", "Max", "All", "Any",
+  "Sum", "Product", "Min", "Max", "All", "Any", "Count",
   "???",
 };
 
@@ -671,6 +673,7 @@ Express::Var *Express::Expand(OpType type, std::vector<Var *> &args) {
       case Express::LOGSIGMOID: result = LogSigmoid(args[0]); break;
       case Express::RECIPROCAL: result = Reciprocal(args[0]); break;
       case Express::SQUARE: result = Square(args[0]); break;
+      case Express::RSQRT: result = Rsqrt(args[0]); break;
       case Express::LOG: result = Log(args[0]); break;
       case Express::EXP: result = Exp(args[0]); break;
       case Express::SIGMOID: result = Sigmoid(args[0]); break;
@@ -699,6 +702,7 @@ Express::Var *Express::Expand(OpType type, std::vector<Var *> &args) {
       case Express::ACOTH: result = Acoth(args[0]); break;
       case Express::ASECH: result = Asech(args[0]); break;
       case Express::ACSCH: result = Acsch(args[0]); break;
+      case Express::COUNT: result = Count(args[0]); break;
       default: ;
     }
   } else if (args.size() == 2) {
@@ -2353,7 +2357,7 @@ void Express::Op::AddArgument(Var *arg) {
   args.push_back(arg);
 
   // Set predicate flag for argument.
-  if (logic() || (conditional() && args.size() == 1)) {
+  if (logic() || type == COUNT || (conditional() && args.size() == 1)) {
     arg->predicate = true;
   }
 }

@@ -24,7 +24,7 @@ using namespace jit;
 // Generate vector float expression using AVX and YMM registers.
 class VectorFltAVX256Generator : public ExpressionGenerator {
  public:
-  VectorFltAVX256Generator() {
+  VectorFltAVX256Generator(Type type) {
     model_.name = "VFltAVX256";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
@@ -62,6 +62,9 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
     });
+    if (type == DT_FLOAT) {
+      model_.instruction_set({Express::RECIPROCAL, Express::RSQRT});
+    }
   }
 
   int VectorSize() override { return YMMRegSize; }
@@ -154,6 +157,18 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         GenerateYMMFltOp(instr,
             &Assembler::vsqrtps, &Assembler::vsqrtpd,
             &Assembler::vsqrtps, &Assembler::vsqrtpd,
+            masm);
+        break;
+      case Express::RSQRT:
+        GenerateYMMFltOp(instr,
+            &Assembler::vrsqrtps, &Assembler::vrsqrtps,
+            &Assembler::vrsqrtps, &Assembler::vrsqrtps,
+            masm);
+        break;
+      case Express::RECIPROCAL:
+        GenerateYMMFltOp(instr,
+            &Assembler::vrcpps, &Assembler::vrcpps,
+            &Assembler::vrcpps, &Assembler::vrcpps,
             masm);
         break;
       case Express::MULADD132:
@@ -618,8 +633,8 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
   }
 };
 
-ExpressionGenerator *CreateVectorFltAVX256Generator() {
-  return new VectorFltAVX256Generator();
+ExpressionGenerator *CreateVectorFltAVX256Generator(Type type) {
+  return new VectorFltAVX256Generator(type);
 }
 
 }  // namespace myelin

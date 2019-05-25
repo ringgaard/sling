@@ -24,7 +24,7 @@ using namespace jit;
 // Generate vector int expression using SSE and XMM registers.
 class VectorIntSSEGenerator : public ExpressionGenerator {
  public:
-  VectorIntSSEGenerator() {
+  VectorIntSSEGenerator(Type type) {
     model_.name = "VIntSSE";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
@@ -237,8 +237,8 @@ class VectorIntSSEGenerator : public ExpressionGenerator {
   }
 };
 
-ExpressionGenerator *CreateVectorIntSSEGenerator() {
-  return new VectorIntSSEGenerator();
+ExpressionGenerator *CreateVectorIntSSEGenerator(Type type) {
+  return new VectorIntSSEGenerator(type);
 }
 
 }  // namespace myelin

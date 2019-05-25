@@ -24,7 +24,7 @@ using namespace jit;
 // Generate vector float expression using AVX and YMM registers.
 class VectorFltAVX512Generator : public ExpressionGenerator {
  public:
-  VectorFltAVX512Generator() {
+  VectorFltAVX512Generator(Type type) {
     model_.name = "VFltAVX512";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
@@ -52,7 +52,8 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
     model_.instruction_set({
       Express::MOV,
       Express::ADD, Express::SUB, Express::MUL, Express::DIV,
-      Express::MINIMUM, Express::MAXIMUM, Express::SQRT,
+      Express::RECIPROCAL, Express::SQRT, Express::RSQRT,
+      Express::MINIMUM, Express::MAXIMUM,
       Express::CMPEQOQ, Express::CMPNEUQ, Express::CMPLTOQ,
       Express::CMPLEOQ, Express::CMPGTOQ, Express::CMPGEOQ,
       Express::COND, Express::SELECT, Express::QUADSIGN,
@@ -162,6 +163,20 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
             nullptr, nullptr,
             &Assembler::vsqrtps, &Assembler::vsqrtpd,
             &Assembler::vsqrtps, &Assembler::vsqrtpd,
+            masm);
+        break;
+      case Express::RSQRT:
+        GenerateZMMFltOp(instr,
+            &Assembler::vrsqrt14ps, &Assembler::vrsqrt14pd,
+            nullptr, nullptr,
+            &Assembler::vrsqrt14ps, &Assembler::vrsqrt14pd,
+            masm);
+        break;
+      case Express::RECIPROCAL:
+        GenerateZMMFltOp(instr,
+            &Assembler::vrcp14ps, &Assembler::vrcp14ps,
+            nullptr, nullptr,
+            &Assembler::vrcp14ps, &Assembler::vrcp14ps,
             masm);
         break;
       case Express::MULADD132:
@@ -592,8 +607,8 @@ class VectorFltAVX512Generator : public ExpressionGenerator {
   }
 };
 
-ExpressionGenerator *CreateVectorFltAVX512Generator() {
-  return new VectorFltAVX512Generator();
+ExpressionGenerator *CreateVectorFltAVX512Generator(Type type) {
+  return new VectorFltAVX512Generator(type);
 }
 
 }  // namespace myelin

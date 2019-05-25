@@ -50,6 +50,7 @@ DEFINE_bool(check_flow_consistency, false, "Check that flow is consistent");
 DEFINE_bool(dynamic_instance_allocation, false, "Dynamic instance allocation");
 DEFINE_bool(dragnn, false, "Use DRAGNN kernels");
 DEFINE_bool(sync_steps, false, "Synchronize all compute steps");
+DEFINE_bool(fast_math, false, "Fast approximate math ops");
 DEFINE_bool(graph_all_vars, false, "Include all variables in DOT graph");
 DEFINE_string(graph_layout, "", "DOT graph layout");
 DEFINE_bool(jit_debug, false, "Debug break in jit code");
@@ -156,6 +157,7 @@ void Compiler::Compile(Flow *flow, Network *net) {
   }
   if (FLAGS_sync_steps) net->options().sync_steps = true;
   if (FLAGS_jit_debug) net->options().debug = true;
+  if (FLAGS_fast_math) net->options().fast_math = true;
 
   CHECK(net->Compile(*flow, *library_));
 

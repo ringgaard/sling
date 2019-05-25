@@ -333,6 +333,9 @@ class Builder:
   def sqrt(self, x, name=None):
     return self.op("Sqrt", [x], name)
 
+  def rsqrt(self, x, name=None):
+    return self.op("Rsqrt", [x], name)
+
   def neg(self, x, name=None):
     return self.op("Neg", [x], name)
 
@@ -406,6 +409,11 @@ class Builder:
 
   def any(self, x, name=None):
     return self.reduce("Any", x, name)
+
+  def count(self, p, dtype=DT_FLOAT32, name=None):
+    r = self.reduce("Count", p, name)
+    r.type = dtype
+    return r
 
   def norm(self, x, name=None):
     return self.sqrt(self.sum(self.square(x)), name)

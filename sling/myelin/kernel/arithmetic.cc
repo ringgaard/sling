@@ -98,6 +98,7 @@ static Express::OpType OpType(const string &op) {
     {"Reciprocal", Express::RECIPROCAL},
     {"Square", Express::SQUARE},
     {"Sqrt", Express::SQRT},
+    {"Rsqrt", Express::RSQRT},
 
     {"Equal", Express::CMPEQOQ},
     {"NotEqual", Express::CMPNEUQ},
@@ -121,6 +122,7 @@ static Express::OpType OpType(const string &op) {
     {"Max", Express::MAX},
     {"All", Express::ALL},
     {"Any", Express::ANY},
+    {"Count", Express::COUNT},
 
     {"Identity", Express::MOV},
   };
@@ -264,6 +266,7 @@ struct Expression {
     // Select expression generator.
     generator = ExpressionGenerator::Select(expr, type, elements);
     CHECK(generator != nullptr);
+    if (masm != nullptr) generator->set_approx(masm->options().fast_math);
 
     // Initialize expression and index generators.
     generator->Initialize(expr, type, spare_regs, &index);
@@ -327,30 +330,55 @@ struct Expression {
 };
 
 // Convert division with constant c to multiplication with constant 1/c to
-// take advantage of mul being much faster than div.
-class DivToMulTransformer : public Transformer {
+// take advantage of mul being much faster than div. Also transforms div(1,x)
+// to rcp(x) and rcp(sqrt(x)) to rsqrt(x).
+class DivTransformer : public Transformer {
  public:
-  string Name() override { return "DivToMulTransformer"; }
+  string Name() override { return "DivTransformer"; }
 
   bool Transform(Flow *flow) override {
     int updates = 0;
     for (Flow::Operation *op : flow->ops()) {
-      // Look for Div(x, c) where c is a non-shared scalar float constant.
       if (op->type != "Div" && op->type != "RealDiv") continue;
       if (op->indegree() != 2) continue;
-      Flow::Variable *second = op->inputs[1];
-      if (second->type != DT_FLOAT || second->elements() != 1) continue;
-      if (!second->constant() || second->usages() != 1) continue;
 
-      // Change Div(x,c) to Mul(x,1/c).
-      CHECK_EQ(second->size, sizeof(float));
-      op->type = "Mul";
-      float multiplier = 1.0 / *reinterpret_cast<const float *>(second->data);
-      char *buffer = flow->AllocateMemory(sizeof(float));
-      *reinterpret_cast<float *>(buffer) = multiplier;
-      second->data = buffer;
+      Flow::Variable *first = op->inputs[0];
+      Flow::Variable *second = op->inputs[1];
+
+      if (second->type == DT_FLOAT && second->elements() == 1 &&
+          second->constant() && second->usages() == 1) {
+        // Change Div(x,c) to Mul(x,1/c).
+        CHECK_EQ(second->size, sizeof(float));
+        op->type = "Mul";
+        float multiplier = 1.0 / *reinterpret_cast<const float *>(second->data);
+        char *buffer = flow->AllocateMemory(sizeof(float));
+        *reinterpret_cast<float *>(buffer) = multiplier;
+        second->data = buffer;
+        updates++;
+      } else if (first->type == DT_FLOAT && first->elements() == 1 &&
+                 first->constant()) {
+        float value;
+        if (first->GetData<float>(&value) && value == 1.0) {
+          // Change Div(1,x) to Reciprocal(x).
+          op->type = "Reciprocal";
+          op->RemoveInput(first);
+          updates++;
+        }
+      }
+    }
+
+    for (Flow::Operation *op : flow->Find("Sqrt|Reciprocal")) {
+      Flow::Operation *rcp = op;
+      Flow::Operation *sqrt = rcp->inputs[0]->producer;
+      if (sqrt->outputs[0]->usages() > 1) continue;
+      if (sqrt->outputs[0]->out()) continue;
+
+      // Convert Reciprocal(Sqrt(x)) to Rsqrt(x).
+      flow->Eliminate(sqrt);
+      rcp->type = "Rsqrt";
       updates++;
     }
+
     return updates > 0;
   }
 };
@@ -1002,6 +1030,7 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("ReciprocalExpr", "Reciprocal", 1));
   library->Register(new Calculate("SquareExpr", "Square", 1));
   library->Register(new Calculate("SqrtExpr", "Sqrt", 1));
+  library->Register(new Calculate("RsqrtExpr", "Rsqrt", 1));
 
   library->Register(new Calculate("EqualExpr", "Equal", 2));
   library->Register(new Calculate("NotEqualExpr", "NotEqual", 2));
@@ -1025,6 +1054,7 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("MinExpr", "Min", 1));
   library->Register(new Calculate("AllExpr", "All", 1));
   library->Register(new Calculate("AnyExpr", "Any", 1));
+  library->Register(new Calculate("CountExpr", "Count", 1));
 
   library->Register(new Calculate("IdExpr", "Identity", 1));
 }
@@ -1033,7 +1063,7 @@ void RegisterArithmeticLibrary(Library *library) {
 void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new ExpressionTransformer());
   library->RegisterTransformer(new RemoveUnusedInputs());
-  library->RegisterTransformer(new DivToMulTransformer());
+  library->RegisterTransformer(new DivTransformer());
   library->RegisterTransformer(new AddNegToSubTransformer());
   library->RegisterTransformer(new LogicTransformer());
 }

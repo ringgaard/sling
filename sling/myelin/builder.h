@@ -156,6 +156,7 @@ class FlowBuilder : public Scope {
   Variable *Neg(Variable *x) { return Op("Neg", {x}); }
   Variable *Square(Variable *x) { return Op("Square", {x}); }
   Variable *Sqrt(Variable *x) { return Op("Sqrt", {x}); }
+  Variable *Rsqrt(Variable *x) { return Op("Rsqrt", {x}); }
   Variable *Reciprocal(Variable *x) { return Op("Reciprocal", {x}); }
   Variable *Abs(Variable *x) { return Op("Abs", {x}); }
   Variable *Sign(Variable *x) { return Op("Sign", {x}); }
@@ -268,6 +269,9 @@ class FlowBuilder : public Scope {
   Variable *Mean(Variable *x) {
     float size = x->elements();
     return Div(Sum(x), Const(size));
+  }
+  Variable *Count(Variable *p, Type type = DT_FLOAT) {
+    return Op("Count", {p}, type, {});
   }
   Variable *ArgMin(Variable *x) { return Op("ArgMin", {x}, DT_INT32, {}); }
   Variable *ArgMax(Variable *x) { return Op("ArgMax", {x}, DT_INT32, {}); }

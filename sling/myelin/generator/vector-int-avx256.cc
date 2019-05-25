@@ -24,7 +24,7 @@ using namespace jit;
 // Generate vector int expression using AVX and YMM registers.
 class VectorIntAVX256Generator : public ExpressionGenerator {
  public:
-  VectorIntAVX256Generator() {
+  VectorIntAVX256Generator(Type type) {
     model_.name = "VIntAVX256";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
@@ -171,8 +171,8 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
   }
 };
 
-ExpressionGenerator *CreateVectorIntAVX256Generator() {
-  return new VectorIntAVX256Generator();
+ExpressionGenerator *CreateVectorIntAVX256Generator(Type type) {
+  return new VectorIntAVX256Generator(type);
 }
 
 }  // namespace myelin

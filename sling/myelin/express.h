@@ -87,6 +87,7 @@ class Express {
     RECIPROCAL,  // reciprocal value, r=1/x
     SQUARE,      // square, r=x*x
     SQRT,        // square root, r=x^(1/2)
+    RSQRT,       // reciprocal square root, r=1/sqrt(x)=x^(-1/2)
 
     LOG,         // natural logarithm, r=log(x)
     EXP,         // natural exponential function, r=exp(x)
@@ -176,6 +177,7 @@ class Express {
     MAX,         // max reduction
     ALL,         // and reduction
     ANY,         // or reduction
+    COUNT,       // predicate reduction
 
     INVALID,     // invalid operation
     NUM_OPTYPES
@@ -299,7 +301,7 @@ class Express {
 
     // Check if operation is a reduction.
     bool reduction() const {
-      return type >= SUM && type <= ANY;
+      return type >= SUM && type <= COUNT;
     }
 
     // Check if operation is a no-op.
@@ -655,7 +657,15 @@ class Express {
     return Supports(SQUARE) ? Do(SQUARE, x) : Mul(x, x);
   }
   Var *Sqrt(Var *x) { return Do(SQRT, x); }
+  Var *Rsqrt(Var *x) {
+    return Supports(RSQRT) ? Do(RSQRT, x) : Reciprocal(Sqrt(x));
+  }
   Var *Sigmoid(Var *x) { return Reciprocal(Add(One(), Exp(Neg(x)))); }
+
+  Var *Sum(Var *x) { return Do(SUM, x); }
+  Var *Count(Var *p) {
+    return Supports(COUNT) ? Do(COUNT, p) : Sum(Select(p, One()));
+  }
 
   // Commute operation so op(a,b) = commute(op)(b,a).
   static OpType Commute(OpType type);
@@ -672,6 +682,10 @@ class Express {
 
   // Return system constant number for neutral element for op.
   static int NeutralValue(OpType type);
+
+  // Set approximate math flag.
+  bool approx() const { return approx_; }
+  void set_approx(bool approx) { approx_ = approx; }
 
  private:
   // Try to eliminate identical operations from expression. Return true if any
@@ -692,6 +706,7 @@ class Express {
 
   // Check if operation is supported by instruction model.
   bool Supports(OpType type) const {
+    if (!approx_ && (type == RECIPROCAL || type == RSQRT)) return false;
     return model_ == nullptr || model_->instr[type];
   }
 
@@ -707,6 +722,9 @@ class Express {
 
   // Target instruction model.
   const Model *model_ = nullptr;
+
+  // Allow approximate math functions.
+  bool approx_ = false;
 
   // System-defined numeric constants.
   struct Constant { float flt; double dbl; };

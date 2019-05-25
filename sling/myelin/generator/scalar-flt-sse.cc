@@ -24,7 +24,7 @@ using namespace jit;
 // Generate scalar float expression using SSE and XMM registers.
 class ScalarFltSSEGenerator : public ExpressionGenerator {
  public:
-  ScalarFltSSEGenerator() {
+  ScalarFltSSEGenerator(Type type) {
     model_.name = "FltSSE";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
@@ -55,6 +55,9 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
     });
+    if (type == DT_FLOAT) {
+      model_.instruction_set({Express::RECIPROCAL, Express::RSQRT});
+    }
   }
 
   void Reserve() override {
@@ -139,6 +142,18 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         GenerateXMMFltOp(instr,
             &Assembler::sqrtss, &Assembler::sqrtsd,
             &Assembler::sqrtss, &Assembler::sqrtsd,
+            masm, 0);
+        break;
+      case Express::RSQRT:
+        GenerateXMMFltOp(instr,
+            &Assembler::rsqrtss, &Assembler::rsqrtss,
+            &Assembler::rsqrtss, &Assembler::rsqrtss,
+            masm, 0);
+        break;
+      case Express::RECIPROCAL:
+        GenerateXMMFltOp(instr,
+            &Assembler::rcpss, &Assembler::rcpss,
+            &Assembler::rcpss, &Assembler::rcpss,
             masm, 0);
         break;
       case Express::CMPEQOQ:
@@ -512,8 +527,8 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
   }
 };
 
-ExpressionGenerator *CreateScalarFltSSEGenerator() {
-  return new ScalarFltSSEGenerator();
+ExpressionGenerator *CreateScalarFltSSEGenerator(Type type) {
+  return new ScalarFltSSEGenerator(type);
 }
 
 }  // namespace myelin

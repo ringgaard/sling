@@ -23,22 +23,23 @@ namespace myelin {
 using namespace jit;
 
 // Expression generator factory methods.
-ExpressionGenerator *CreateScalarFltSSEGenerator();
-ExpressionGenerator *CreateVectorFltSSEGenerator();
-ExpressionGenerator *CreateScalarFltAVXGenerator();
-ExpressionGenerator *CreateVectorFltAVX128Generator();
-ExpressionGenerator *CreateVectorFltAVX256Generator();
-ExpressionGenerator *CreateVectorFltAVX512Generator();
-ExpressionGenerator *CreateScalarIntGenerator();
-ExpressionGenerator *CreateVectorIntSSEGenerator();
-ExpressionGenerator *CreateVectorIntAVX128Generator();
-ExpressionGenerator *CreateVectorIntAVX256Generator();
+ExpressionGenerator *CreateScalarFltSSEGenerator(Type type);
+ExpressionGenerator *CreateVectorFltSSEGenerator(Type type);
+ExpressionGenerator *CreateScalarFltAVXGenerator(Type type);
+ExpressionGenerator *CreateVectorFltAVX128Generator(Type type);
+ExpressionGenerator *CreateVectorFltAVX256Generator(Type type);
+ExpressionGenerator *CreateVectorFltAVX512Generator(Type type);
+ExpressionGenerator *CreateScalarIntGenerator(Type type);
+ExpressionGenerator *CreateVectorIntSSEGenerator(Type type);
+ExpressionGenerator *CreateVectorIntAVX128Generator(Type type);
+ExpressionGenerator *CreateVectorIntAVX256Generator(Type type);
 
 void ExpressionGenerator::Initialize(const Express &expression,
                                      Type type,
                                      int spare_regs,
                                      IndexGenerator *index) {
   // Translate expression into instructions supported by the generator.
+  expression_.set_approx(approx_);
   expression.Translate(&expression_);
   type_ = type;
   index_ = index;
@@ -120,27 +121,27 @@ ExpressionGenerator *ExpressionGenerator::Select(const Express &expr,
     case DT_FLOAT:
       if (CPU::Enabled(AVX512F)) {
         if (IsVector(size, 16)) {
-          generator = CreateVectorFltAVX512Generator();
+          generator = CreateVectorFltAVX512Generator(DT_FLOAT);
         } else if (IsVector(size, 8)) {
-          generator = CreateVectorFltAVX256Generator();
+          generator = CreateVectorFltAVX256Generator(DT_FLOAT);
         } else if (IsVector(size, 4)) {
-          generator = CreateVectorFltAVX128Generator();
+          generator = CreateVectorFltAVX128Generator(DT_FLOAT);
         } else {
-          generator = CreateScalarFltAVXGenerator();
+          generator = CreateScalarFltAVXGenerator(DT_FLOAT);
         }
       } else if (CPU::Enabled(AVX)) {
         if (IsVector(size, 8)) {
-          generator = CreateVectorFltAVX256Generator();
+          generator = CreateVectorFltAVX256Generator(DT_FLOAT);
         } else if (IsVector(size, 4)) {
-          generator = CreateVectorFltAVX128Generator();
+          generator = CreateVectorFltAVX128Generator(DT_FLOAT);
         } else {
-          generator = CreateScalarFltAVXGenerator();
+          generator = CreateScalarFltAVXGenerator(DT_FLOAT);
         }
       } else if (CPU::Enabled(SSE)) {
         if (IsVector(size, 4)) {
-          generator = CreateVectorFltSSEGenerator();
+          generator = CreateVectorFltSSEGenerator(DT_FLOAT);
         } else {
-          generator = CreateScalarFltSSEGenerator();
+          generator = CreateScalarFltSSEGenerator(DT_FLOAT);
         }
       }
       break;
@@ -148,82 +149,82 @@ ExpressionGenerator *ExpressionGenerator::Select(const Express &expr,
     case DT_DOUBLE:
       if (CPU::Enabled(AVX512F)) {
         if (IsVector(size, 8)) {
-          generator = CreateVectorFltAVX512Generator();
+          generator = CreateVectorFltAVX512Generator(DT_DOUBLE);
         } else if (IsVector(size, 4)) {
-          generator = CreateVectorFltAVX256Generator();
+          generator = CreateVectorFltAVX256Generator(DT_DOUBLE);
         } else if (IsVector(size, 2)) {
-          generator = CreateVectorFltAVX128Generator();
+          generator = CreateVectorFltAVX128Generator(DT_DOUBLE);
         } else {
-          generator = CreateScalarFltAVXGenerator();
+          generator = CreateScalarFltAVXGenerator(DT_DOUBLE);
         }
       } else if (CPU::Enabled(AVX)) {
         if (IsVector(size, 4)) {
-          generator = CreateVectorFltAVX256Generator();
+          generator = CreateVectorFltAVX256Generator(DT_DOUBLE);
         } else if (IsVector(size, 2)) {
-          generator = CreateVectorFltAVX128Generator();
+          generator = CreateVectorFltAVX128Generator(DT_DOUBLE);
         } else {
-          generator = CreateScalarFltAVXGenerator();
+          generator = CreateScalarFltAVXGenerator(DT_DOUBLE);
         }
       } else if (CPU::Enabled(SSE)) {
         if (CPU::Enabled(SSE2) && IsVector(size, 2)) {
-          generator = CreateVectorFltSSEGenerator();
+          generator = CreateVectorFltSSEGenerator(DT_DOUBLE);
         } else {
-          generator = CreateScalarFltSSEGenerator();
+          generator = CreateScalarFltSSEGenerator(DT_DOUBLE);
         }
       }
       break;
 
     case DT_INT8:
       if (expr.Has(Express::DIV)) {
-        generator = CreateScalarIntGenerator();
+        generator = CreateScalarIntGenerator(DT_INT8);
       } else if (CPU::Enabled(AVX2) && IsVector(size, 32)) {
-        generator = CreateVectorIntAVX256Generator();
+        generator = CreateVectorIntAVX256Generator(DT_INT8);
       } else if (CPU::Enabled(AVX) && IsVector(size, 16)) {
-        generator = CreateVectorIntAVX128Generator();
+        generator = CreateVectorIntAVX128Generator(DT_INT8);
       } else if (CPU::Enabled(SSE4_1) && IsVector(size, 16)) {
-        generator = CreateVectorIntSSEGenerator();
+        generator = CreateVectorIntSSEGenerator(DT_INT8);
       } else {
-        generator = CreateScalarIntGenerator();
+        generator = CreateScalarIntGenerator(DT_INT8);
       }
       break;
 
     case DT_INT16:
       if (expr.Has(Express::DIV)) {
-        generator = CreateScalarIntGenerator();
+        generator = CreateScalarIntGenerator(DT_INT16);
       } else if (CPU::Enabled(AVX2) && IsVector(size, 16)) {
-        generator = CreateVectorIntAVX256Generator();
+        generator = CreateVectorIntAVX256Generator(DT_INT16);
       } else if (CPU::Enabled(AVX) && IsVector(size, 8)) {
-        generator = CreateVectorIntAVX128Generator();
+        generator = CreateVectorIntAVX128Generator(DT_INT16);
       } else if (CPU::Enabled(SSE4_1) && IsVector(size, 8)) {
-        generator = CreateVectorIntSSEGenerator();
+        generator = CreateVectorIntSSEGenerator(DT_INT16);
       } else {
-        generator = CreateScalarIntGenerator();
+        generator = CreateScalarIntGenerator(DT_INT16);
       }
       break;
 
     case DT_INT32:
       if (expr.Has(Express::DIV)) {
-        generator = CreateScalarIntGenerator();
+        generator = CreateScalarIntGenerator(DT_INT32);
       } else if (CPU::Enabled(AVX2) && IsVector(size, 8)) {
-        generator = CreateVectorIntAVX256Generator();
+        generator = CreateVectorIntAVX256Generator(DT_INT32);
       } else if (CPU::Enabled(AVX) && IsVector(size, 4)) {
-        generator = CreateVectorIntAVX128Generator();
+        generator = CreateVectorIntAVX128Generator(DT_INT32);
       } else if (CPU::Enabled(SSE4_1) && IsVector(size, 4)) {
-        generator = CreateVectorIntSSEGenerator();
+        generator = CreateVectorIntSSEGenerator(DT_INT32);
       } else {
-        generator = CreateScalarIntGenerator();
+        generator = CreateScalarIntGenerator(DT_INT32);
       }
       break;
 
     case DT_INT64:
       if (expr.Has(Express::DIV)) {
-        generator = CreateScalarIntGenerator();
+        generator = CreateScalarIntGenerator(DT_INT64);
       } else if (CPU::Enabled(AVX) && IsVector(size, 2)) {
-        generator = CreateVectorIntAVX128Generator();
+        generator = CreateVectorIntAVX128Generator(DT_INT64);
       } else if (CPU::Enabled(SSE4_1) && IsVector(size, 2)) {
-        generator = CreateVectorIntSSEGenerator();
+        generator = CreateVectorIntSSEGenerator(DT_INT64);
       } else {
-        generator = CreateScalarIntGenerator();
+        generator = CreateScalarIntGenerator(DT_INT64);
       }
       break;
 

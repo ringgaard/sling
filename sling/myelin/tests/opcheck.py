@@ -128,6 +128,8 @@ def simulate(flow, f, data):
       v[o[0]] = relu(v[i[0]])
     elif op.type == "Sqrt":
       v[o[0]] = np.sqrt(v[i[0]])
+    elif op.type == "Rsqrt":
+      v[o[0]] = 1 / np.sqrt(v[i[0]])
     elif op.type == "Square":
       v[o[0]] = np.square(v[i[0]])
     elif op.type == "Neg":
@@ -158,6 +160,8 @@ def simulate(flow, f, data):
       v[o[0]] = np.min(v[i[0]])
     elif op.type == "Product":
       v[o[0]] = np.prod(v[i[0]])
+    elif op.type == "Count":
+      v[o[0]] = np.array(np.count_nonzero(v[i[0]]), nptypes[dt])
     elif op.type == "ArgMin":
       v[o[0]] = np.argmin(v[i[0]])
     elif op.type == "ArgMax":
@@ -257,6 +261,7 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
     for o in flow.outputs(f):
       t = data.tensor(o)
       b = baseline[o]
+
       if b.dtype == bool: t = np.array(t, dtype=bool)
       if not np.allclose(t, b, rtol=rtol, atol=atol):
         test.errors += 1
@@ -524,6 +529,27 @@ def sqrt_test(n):
   y = f.sqrt(x)
   check(flow, n, 0.1, 10.0)
 
+def rsqrt_test(n):
+  flow = myelin.Flow()
+  f = flow.define("rsqrt")
+  x = f.var("x", dt, [n])
+  y = f.rsqrt(x)
+  check(flow, n, 1.0, 10.0, rtol=1e-3, atol=1e-4)
+
+def rcpsqrt_test(n):
+  flow = myelin.Flow()
+  f = flow.define("rcpsqrt")
+  x = f.var("x", dt, [n])
+  y = f.div(f.const(1.0, dtype=dt), f.sqrt(x))
+  check(flow, n, 1.0, 10.0, rtol=1e-3, atol=1e-4)
+
+def onediv_test(n):
+  flow = myelin.Flow()
+  f = flow.define("onediv")
+  x = f.var("x", dt, [n])
+  y = f.div(f.const(1.0, dtype=dt), x)
+  check(flow, n, 1.0, 10.0, rtol=1e-3, atol=1e-4)
+
 def square_test(n):
   flow = myelin.Flow()
   f = flow.define("square")
@@ -579,6 +605,13 @@ def product_test(n):
   x = f.var("x", dt, [n])
   y = f.product(x)
   check(flow, n, 0.0, 1.0)
+
+def count_test(n):
+  flow = myelin.Flow()
+  f = flow.define("count")
+  x = f.var("x", dt, [n])
+  y = f.count(f.greater(x, f.const(0, dtype=dt)), dtype=dt)
+  check(flow, n)
 
 def norm_test(n):
   flow = myelin.Flow()
@@ -795,6 +828,7 @@ for i in sizes:
   if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
     rcp_test(i)
     sqrt_test(i)
+    rsqrt_test(i)
     exp_test(i)
     log_test(i)
     sin_test(i)
@@ -817,6 +851,7 @@ for i in sizes:
     product_test(i)
     min_test(i)
     max_test(i)
+    count_test(i)
     norm_test(i)
     sign_test(i)
 

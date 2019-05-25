@@ -24,7 +24,7 @@ using namespace jit;
 // Generate vector float expression using AVX and XMM registers.
 class VectorFltAVX128Generator : public ExpressionGenerator {
  public:
-  VectorFltAVX128Generator() {
+  VectorFltAVX128Generator(Type type) {
     model_.name = "VFltAVX128";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
@@ -62,6 +62,9 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
     });
+    if (type == DT_FLOAT) {
+      model_.instruction_set({Express::RECIPROCAL, Express::RSQRT});
+    }
   }
 
   int VectorSize() override { return XMMRegSize; }
@@ -139,6 +142,18 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
         GenerateXMMFltOp(instr,
             &Assembler::vsqrtps, &Assembler::vsqrtpd,
             &Assembler::vsqrtps, &Assembler::vsqrtpd,
+            masm, 0);
+        break;
+      case Express::RSQRT:
+        GenerateXMMFltOp(instr,
+            &Assembler::vrsqrtps, &Assembler::vrsqrtps,
+            &Assembler::vrsqrtps, &Assembler::vrsqrtps,
+            masm, 0);
+        break;
+      case Express::RECIPROCAL:
+        GenerateXMMFltOp(instr,
+            &Assembler::vrcpps, &Assembler::vrcpps,
+            &Assembler::vrcpps, &Assembler::vrcpps,
             masm, 0);
         break;
       case Express::MULADD132:
@@ -474,8 +489,8 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
   }
 };
 
-ExpressionGenerator *CreateVectorFltAVX128Generator() {
-  return new VectorFltAVX128Generator();
+ExpressionGenerator *CreateVectorFltAVX128Generator(Type type) {
+  return new VectorFltAVX128Generator(type);
 }
 
 }  // namespace myelin

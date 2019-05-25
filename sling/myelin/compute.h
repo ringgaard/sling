@@ -1277,6 +1277,7 @@ struct Options {
   bool global_profiler = false;              // global profiling buffer
   bool dynamic_allocation = false;           // dynamic instance allocation
   bool sync_steps = false;                   // synchronize all steps
+  bool fast_math = false;                    // fast approximate math ops
   int64 *flops_address = nullptr;            // address of FLOPs counter
 
   bool ref_profiler() const { return external_profiler || global_profiler; }

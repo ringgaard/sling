@@ -24,7 +24,7 @@ using namespace jit;
 // Generate vector float expression using SSE and XMM registers.
 class VectorFltSSEGenerator : public ExpressionGenerator {
  public:
-  VectorFltSSEGenerator() {
+  VectorFltSSEGenerator(Type type) {
     model_.name = "VFltSSE";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
@@ -55,6 +55,9 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
     });
+    if (type == DT_FLOAT) {
+      model_.instruction_set({Express::RECIPROCAL, Express::RSQRT});
+    }
   }
 
   int VectorSize() override { return XMMRegSize; }
@@ -135,6 +138,18 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         GenerateXMMFltOp(instr,
             &Assembler::sqrtps, &Assembler::sqrtpd,
             &Assembler::sqrtps, &Assembler::sqrtpd,
+            masm, 0);
+        break;
+      case Express::RSQRT:
+        GenerateXMMFltOp(instr,
+            &Assembler::rsqrtps, &Assembler::rsqrtps,
+            &Assembler::rsqrtps, &Assembler::rsqrtps,
+            masm, 0);
+        break;
+      case Express::RECIPROCAL:
+        GenerateXMMFltOp(instr,
+            &Assembler::rcpps, &Assembler::rcpps,
+            &Assembler::rcpps, &Assembler::rcpps,
             masm, 0);
         break;
       case Express::CMPEQOQ:
@@ -477,8 +492,8 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
   }
 };
 
-ExpressionGenerator *CreateVectorFltSSEGenerator() {
-  return new VectorFltSSEGenerator();
+ExpressionGenerator *CreateVectorFltSSEGenerator(Type type) {
+  return new VectorFltSSEGenerator(type);
 }
 
 }  // namespace myelin

@@ -24,7 +24,7 @@ using namespace jit;
 // Generate scalar float expression using AXV and XMM registers.
 class ScalarFltAVXGenerator : public ExpressionGenerator {
  public:
-  ScalarFltAVXGenerator() {
+  ScalarFltAVXGenerator(Type type) {
     model_.name = "FltAVX";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
@@ -64,6 +64,9 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
     });
+    if (type == DT_FLOAT || CPU::Enabled(AVX512F)) {
+      model_.instruction_set({Express::RECIPROCAL, Express::RSQRT});
+    }
   }
 
   void Reserve() override {
@@ -146,6 +149,12 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         break;
       case Express::SQRT:
         GenerateSqrt(instr, masm);
+        break;
+      case Express::RSQRT:
+        GenerateRcpSqrt(instr, masm);
+        break;
+      case Express::RECIPROCAL:
+        GenerateRcp(instr, masm);
         break;
       case Express::MULADD132:
         GenerateXMMFltOp(instr,
@@ -356,6 +365,60 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           break;
         case DT_DOUBLE:
           __ vsqrtsd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate reciprocal square root.
+  void GenerateRcpSqrt(Express::Op *instr, MacroAssembler *masm) {
+    if (instr->dst != -1 && instr->src != -1) {
+      switch (type_) {
+        case DT_FLOAT:
+          __ vrsqrtss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+          break;
+        case DT_DOUBLE:
+          __ vrsqrt14sd(zmm(instr->dst), zmm(instr->dst), zmm(instr->src));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (instr->dst != -1 && instr->src == -1) {
+      switch (type_) {
+        case DT_FLOAT:
+          __ vrsqrtss(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+          break;
+        case DT_DOUBLE:
+          __ vrsqrt14sd(zmm(instr->dst), zmm(instr->dst), addr(instr->args[0]));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate reciprocal.
+  void GenerateRcp(Express::Op *instr, MacroAssembler *masm) {
+    if (instr->dst != -1 && instr->src != -1) {
+      switch (type_) {
+        case DT_FLOAT:
+          __ vrcpss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
+          break;
+        case DT_DOUBLE:
+          __ vrcp14sd(zmm(instr->dst), zmm(instr->dst), zmm(instr->src));
+          break;
+        default: UNSUPPORTED;
+      }
+    } else if (instr->dst != -1 && instr->src == -1) {
+      switch (type_) {
+        case DT_FLOAT:
+          __ vrcpss(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+          break;
+        case DT_DOUBLE:
+          __ vrcp14sd(zmm(instr->dst), zmm(instr->dst), addr(instr->args[0]));
           break;
         default: UNSUPPORTED;
       }
@@ -601,8 +664,8 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
   }
 };
 
-ExpressionGenerator *CreateScalarFltAVXGenerator() {
-  return new ScalarFltAVXGenerator();
+ExpressionGenerator *CreateScalarFltAVXGenerator(Type type) {
+  return new ScalarFltAVXGenerator(type);
 }
 
 }  // namespace myelin

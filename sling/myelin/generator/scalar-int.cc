@@ -24,7 +24,7 @@ using namespace jit;
 // Generate scalar int expression using x64 registers.
 class ScalarIntGenerator : public ExpressionGenerator {
  public:
-  ScalarIntGenerator() {
+  ScalarIntGenerator(Type type) {
     model_.name = "Int";
     model_.mov_reg_reg = true;
     model_.mov_reg_imm = true;
@@ -345,8 +345,8 @@ class ScalarIntGenerator : public ExpressionGenerator {
   }
 };
 
-ExpressionGenerator *CreateScalarIntGenerator() {
-  return new ScalarIntGenerator();
+ExpressionGenerator *CreateScalarIntGenerator(Type type) {
+  return new ScalarIntGenerator(type);
 }
 
 }  // namespace myelin
