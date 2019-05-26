@@ -471,7 +471,9 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     CHECK(instr->mask != -1);
     switch (type_) {
       case DT_FLOAT:
-        __ movaps(xmm(instr->dst), xmm(instr->mask));
+        if (instr->dst != instr->mask) {
+          __ movaps(xmm(instr->dst), xmm(instr->mask));
+        }
         if (instr->src != -1) {
           __ andps(xmm(instr->dst), xmm(instr->src));
         } else {
@@ -479,7 +481,9 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         }
         break;
       case DT_DOUBLE:
-        __ movapd(xmm(instr->dst), xmm(instr->mask));
+        if (instr->dst != instr->mask) {
+          __ movapd(xmm(instr->dst), xmm(instr->mask));
+        }
         if (instr->src != -1) {
           __ andpd(xmm(instr->dst), xmm(instr->src));
         } else {

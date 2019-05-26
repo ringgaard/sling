@@ -679,7 +679,7 @@ class TransposeTransformer : public Transformer {
     for (Flow::Operation *op : flow->Find("MatMul")) {
       if (!op->GetAttr("transpose_c", false)) continue;
       if (op->indegree() != 2 || op->outdegree() != 1) continue;
-      std::swap(op->inputs[0], op->inputs[1]);
+      op->SwapInputs();
       bool ta = op->GetAttr("transpose_a", false);
       bool tb = op->GetAttr("transpose_b", false);
       op->SetAttr("transpose_a", !tb);

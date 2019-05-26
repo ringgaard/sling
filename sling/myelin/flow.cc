@@ -622,6 +622,12 @@ void Flow::Operation::ReplaceOutput(Variable *var, Variable *replacement) {
   }
 }
 
+void Flow::Operation::SwapInputs(int first, int second) {
+  DCHECK_LT(first, inputs.size());
+  DCHECK_LT(second, inputs.size());
+  std::swap(inputs[first], inputs[second]);
+}
+
 Flow::Variable *Flow::Operation::GetPrototype() const {
   Variable *prototype = nullptr;
   for (Variable *output : outputs) {

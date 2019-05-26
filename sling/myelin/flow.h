@@ -484,6 +484,9 @@ class Flow {
     // Replace output variable with another variable.
     void ReplaceOutput(Variable *var, Variable *replacement);
 
+    // Swap order of inputs.
+    void SwapInputs(int first = 0, int second = 1);
+
     // Get prototype variable for operation. This is the biggest output from the
     // operation, unless this is a scalar or the operation does not have any
     // outputs. In that case, the biggest input is returned.

@@ -652,7 +652,7 @@ class Express {
   Var *Sign(Var *x) {
     if (Supports(SIGN)) return Do(SIGN, x);
     return Cond(CmpLt(x, Zero()), Number(N1),
-                                  Cond(CmpGt(x, Zero()), One(), Zero()));
+                                  Select(CmpGt(x, Zero()), One()));
   }
   Var *Relu(Var *x) {
     return Supports(RELU) ? Do(RELU, x) : Maximum(x, Zero());

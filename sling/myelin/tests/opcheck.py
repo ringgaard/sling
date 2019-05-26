@@ -838,6 +838,14 @@ def mul_const_test(n, c):
   x = f.mul(x, y)
   check(flow, (n, c))
 
+def negfold_test(n):
+  flow = myelin.Flow()
+  f = flow.define("negfold_test")
+  x = f.var("x", dt, [n])
+  y = f.var("y", dt, [n])
+  z = f.sub(x, f.neg(y))
+  check(flow, n)
+
 # Check for specific test to run.
 if flags.arg.test:
   print("Running test", flags.arg.test)
