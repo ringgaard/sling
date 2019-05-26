@@ -110,6 +110,11 @@ static Express::OpType OpType(const string &op) {
     {"Cond", Express::COND},
     {"Select", Express::SELECT},
 
+    {"Floor", Express::FLOOR},
+    {"Ceil", Express::CEIL},
+    {"Round", Express::ROUND},
+    {"Trunc", Express::TRUNC},
+
     {"And", Express::AND},
     {"Or", Express::OR},
     {"Xor", Express::XOR},
@@ -1041,6 +1046,11 @@ void RegisterArithmeticLibrary(Library *library) {
 
   library->Register(new Calculate("CondExpr", "Cond", 3));
   library->Register(new Calculate("SelectExpr", "Select", 2));
+
+  library->Register(new Calculate("FloorExpr", "Floor", 1));
+  library->Register(new Calculate("CeilExpr", "Ceil", 1));
+  library->Register(new Calculate("RoundExpr", "Round", 1));
+  library->Register(new Calculate("TruncExpr", "Trunc", 1));
 
   library->Register(new Calculate("AndExpr", "And", 2));
   library->Register(new Calculate("OrExpr", "Or", 2));

@@ -152,6 +152,14 @@ def simulate(flow, f, data):
       v[o[0]] = np.maximum(v[i[0]], v[i[1]])
     elif op.type == "Reciprocal":
       v[o[0]] = np.divide(1, v[i[0]])
+    elif op.type == "Floor":
+      v[o[0]] = np.floor(v[i[0]])
+    elif op.type == "Ceil":
+      v[o[0]] = np.ceil(v[i[0]])
+    elif op.type == "Round":
+      v[o[0]] = np.round(v[i[0]])
+    elif op.type == "Trunc":
+      v[o[0]] = np.trunc(v[i[0]])
     elif op.type == "Sum":
       v[o[0]] = np.sum(v[i[0]])
     elif op.type == "Max":
@@ -160,6 +168,10 @@ def simulate(flow, f, data):
       v[o[0]] = np.min(v[i[0]])
     elif op.type == "Product":
       v[o[0]] = np.prod(v[i[0]])
+    elif op.type == "All":
+      v[o[0]] = np.all(v[i[0]])
+    elif op.type == "Any":
+      v[o[0]] = np.any(v[i[0]])
     elif op.type == "Count":
       v[o[0]] = np.array(np.count_nonzero(v[i[0]]), nptypes[dt])
     elif op.type == "ArgMin":
@@ -382,6 +394,34 @@ def sign_test(n):
   y = f.sign(x)
   check(flow, n, -10.0, 10.0)
 
+def floor_test(n):
+  flow = myelin.Flow()
+  f = flow.define("floor")
+  x = f.var("x", dt, [n])
+  y = f.floor(x)
+  check(flow, n)
+
+def ceil_test(n):
+  flow = myelin.Flow()
+  f = flow.define("ceil")
+  x = f.var("x", dt, [n])
+  y = f.ceil(x)
+  check(flow, n)
+
+def round_test(n):
+  flow = myelin.Flow()
+  f = flow.define("round")
+  x = f.var("x", dt, [n])
+  y = f.round(x)
+  check(flow, n)
+
+def trunc_test(n):
+  flow = myelin.Flow()
+  f = flow.define("trunc")
+  x = f.var("x", dt, [n])
+  y = f.trunc(x)
+  check(flow, n)
+
 def exp_test(n):
   flow = myelin.Flow()
   f = flow.define("exp")
@@ -505,7 +545,7 @@ def asinh_test(n):
   f = flow.define("asinh")
   x = f.var("x", dt, [n])
   y = f.asinh(x)
-  check(flow, n, -1.0, 1.0, atol=1e-6)
+  check(flow, n, -1.0, 1.0, rtol=1e-3, atol=1e-6)
 
 def acosh_test(n):
   flow = myelin.Flow()
@@ -605,6 +645,20 @@ def product_test(n):
   x = f.var("x", dt, [n])
   y = f.product(x)
   check(flow, n, 0.0, 1.0)
+
+def all_test(n):
+  flow = myelin.Flow()
+  f = flow.define("all")
+  x = f.var("x", dt, [n])
+  y = f.all(f.greater(x, f.const(0, dtype=dt)))
+  check(flow, -10.0, 1.0)
+
+def any_test(n):
+  flow = myelin.Flow()
+  f = flow.define("any")
+  x = f.var("x", dt, [n])
+  y = f.any(f.greater(x, f.const(0, dtype=dt)))
+  check(flow, n, -1.0, 10.0)
 
 def count_test(n):
   flow = myelin.Flow()
@@ -851,9 +905,15 @@ for i in sizes:
     product_test(i)
     min_test(i)
     max_test(i)
+    all_test(i)
+    any_test(i)
     count_test(i)
     norm_test(i)
     sign_test(i)
+    floor_test(i)
+    ceil_test(i)
+    round_test(i)
+    trunc_test(i)
 
     equal_test(i)
     not_equal_test(i)

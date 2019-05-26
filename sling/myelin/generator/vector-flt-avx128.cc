@@ -56,11 +56,13 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
       Express::COND, Express::SELECT,
       Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
       Express::AND, Express::OR, Express::XOR, Express::ANDNOT,
-      Express::BITEQ, Express::QUADSIGN, Express::FLOOR, Express::SQRT,
+      Express::BITEQ, Express::QUADSIGN, Express::SQRT,
       Express::CVTFLTINT, Express::CVTINTFLT,
       Express::CVTEXPINT, Express::CVTINTEXP,
+      Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+      Express::ALL, Express::ANY,
     });
     if (type == DT_FLOAT) {
       model_.instruction_set({Express::RECIPROCAL, Express::RSQRT});
@@ -76,7 +78,8 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
     if (instructions_.Has({
-        Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX})) {
+        Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+        Express::ALL, Express::ANY})) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
     index_->ReserveAuxXMMRegisters(num_mm_aux);
@@ -251,10 +254,28 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
             masm);
         break;
       case Express::FLOOR:
-        GenerateXMMFltOp(instr,
+        GenerateXMMUnaryFltOp(instr,
             &Assembler::vroundps, &Assembler::vroundpd,
             &Assembler::vroundps, &Assembler::vroundpd,
             round_down, masm);
+        break;
+      case Express::CEIL:
+        GenerateXMMUnaryFltOp(instr,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            round_up, masm);
+        break;
+      case Express::ROUND:
+        GenerateXMMUnaryFltOp(instr,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            round_nearest, masm);
+        break;
+      case Express::TRUNC:
+        GenerateXMMUnaryFltOp(instr,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            round_to_zero, masm);
         break;
       case Express::CVTFLTINT:
         GenerateFltToInt(instr, masm);
@@ -305,6 +326,18 @@ class VectorFltAVX128Generator : public ExpressionGenerator {
         GenerateXMMFltAccOp(instr,
             &Assembler::vmaxps, &Assembler::vmaxpd,
             &Assembler::vmaxps, &Assembler::vmaxpd,
+            masm);
+        break;
+      case Express::ALL:
+        GenerateXMMFltAccOp(instr,
+            &Assembler::vandps, &Assembler::vandpd,
+            &Assembler::vandps, &Assembler::vandpd,
+            masm);
+        break;
+      case Express::ANY:
+        GenerateXMMFltAccOp(instr,
+            &Assembler::vorps, &Assembler::vorpd,
+            &Assembler::vorps, &Assembler::vorpd,
             masm);
         break;
       default:

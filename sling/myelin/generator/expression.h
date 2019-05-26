@@ -316,6 +316,13 @@ class ExpressionGenerator {
     OpXMMRegMem fltopmem, OpXMMRegMem dblopmem,
     MacroAssembler *masm);
 
+  // Generate unary XMM float op with immediate.
+  void GenerateXMMUnaryFltOp(
+      Express::Op *instr,
+      OpXMMRegRegImm fltopreg, OpXMMRegRegImm dblopreg,
+      OpXMMRegMemImm fltopmem, OpXMMRegMemImm dblopmem,
+      int8 imm, MacroAssembler *masm);
+
   // Generate three-operand XMM float op.
   void GenerateXMMFltOp(
       Express::Op *instr,
@@ -325,13 +332,6 @@ class ExpressionGenerator {
 
   // Generate three-operand XMM float accumulate op.
   void GenerateXMMFltAccOp(
-      Express::Op *instr,
-      OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
-      OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
-      MacroAssembler *masm);
-
-  // Generate unary XMM float op.
-  void GenerateXMMUnaryFltOp(
       Express::Op *instr,
       OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
       OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,

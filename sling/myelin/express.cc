@@ -104,12 +104,16 @@ static std::map<string, Express::OpType> optypes = {
   {"Cond", Express::COND},
   {"Select", Express::SELECT},
 
+  {"Floor", Express::FLOOR},
+  {"Ceil", Express::CEIL},
+  {"Round", Express::ROUND},
+  {"Trunc", Express::TRUNC},
+
   {"BitAnd", Express::BITAND},
   {"BitOr", Express::BITOR},
   {"BitXor", Express::BITXOR},
   {"BitAndNot", Express::BITANDNOT},
   {"BitEq", Express::BITEQ},
-  {"Floor", Express::FLOOR},
   {"CvtFltInt", Express::CVTFLTINT},
   {"CvtIntFlt", Express::CVTINTFLT},
   {"CvtExpInt", Express::CVTEXPINT},
@@ -142,8 +146,9 @@ static const string opname[] = {
   "MulSub132", "MulSub213", "MulSub231",
   "CmpEq", "CmpNe", "CmpLt", "CmpLe", "CmpGt", "CmpGe",
   "And", "Or", "Xor", "AndNot", "Not", "Cond", "Select",
+  "Floor", "Ceil", "Round", "Trunc",
   "BitAnd", "BitOr", "BitXor", "BitAndNot", "BitEq",
-  "Floor", "CvtFltInt", "CvtIntFlt", "CvtExpInt", "CvtIntExp", "QuadSign",
+  "CvtFltInt", "CvtIntFlt", "CvtExpInt", "CvtIntExp", "QuadSign",
   "AddInt", "SubInt",
   "Sum", "Product", "Min", "Max", "All", "Any", "Count",
   "???",
@@ -231,11 +236,11 @@ class RegisterAllocator {
   }
 
   // Allocate spare register not assigned to variable.
-  int AllocateExtra() {
+  int AllocateExtra(bool predicate) {
     static Express::Var extra(Express::REGISTER, -1);
     int regno = reg_.size();
     reg_.push_back(&extra);
-    predicate_.push_back(false);
+    predicate_.push_back(predicate);
     return regno;
   }
 
@@ -1845,7 +1850,7 @@ int Express::AllocateRegisters(bool predicate_regs) {
 
     // Get register for accumulation.
     if (op->reduction()) {
-      op->acc = regs.AllocateExtra();
+      op->acc = regs.AllocateExtra(op->preduction());
       CHECK(op->acc != -1);
     }
   }
@@ -1887,6 +1892,7 @@ void Express::GetRegisterTypes(std::vector<bool> *regs) const {
   for (auto *op : ops_) {
     if (op->acc == -1) continue;
     if (op->acc >= regs->size()) regs->resize(op->acc + 1);
+    if (op->preduction()) (*regs)[op->acc] = true;
   }
 }
 
@@ -2346,7 +2352,7 @@ void Express::Op::Assign(Var *var, bool reassign) {
   var->producer = this;
 
   // Set predicate flag for result.
-  var->predicate = logic() || compare() || type == ALL || type == ANY;
+  if (logic() || compare() || preduction()) var->predicate = true;
 }
 
 void Express::Op::AddArgument(Var *arg) {
@@ -2357,7 +2363,9 @@ void Express::Op::AddArgument(Var *arg) {
   args.push_back(arg);
 
   // Set predicate flag for argument.
-  if (logic() || type == COUNT || (conditional() && args.size() == 1)) {
+  if (logic() || type == COUNT ||
+      (conditional() && args.size() == 1) ||
+      (type == MOV && arg->predicate)) {
     arg->predicate = true;
   }
 }

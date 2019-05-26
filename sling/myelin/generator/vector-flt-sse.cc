@@ -49,11 +49,13 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
       Express::COND, Express::SELECT,
       Express::AND, Express::OR, Express::XOR, Express::ANDNOT,
       Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
-      Express::BITEQ, Express::FLOOR, Express::QUADSIGN,
+      Express::BITEQ, Express::QUADSIGN,
+      Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
       Express::CVTFLTINT, Express::CVTINTFLT,
       Express::CVTEXPINT, Express::CVTINTEXP,
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+      Express::ALL, Express::ANY,
     });
     if (type == DT_FLOAT) {
       model_.instruction_set({Express::RECIPROCAL, Express::RSQRT});
@@ -69,7 +71,8 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     // Allocate auxiliary registers.
     int num_mm_aux = 0;
     if (instructions_.Has({Express::SUM, Express::PRODUCT,
-                           Express::MIN, Express::MAX})) {
+                           Express::MIN, Express::MAX,
+                           Express::ALL, Express::ANY})) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
     if (instructions_.Has(Express::COND)) {
@@ -215,7 +218,16 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         }
         break;
       case Express::FLOOR:
-        GenerateFloor(instr, masm);
+        GenerateRound(instr, masm, round_down);
+        break;
+      case Express::CEIL:
+        GenerateRound(instr, masm, round_up);
+        break;
+      case Express::ROUND:
+        GenerateRound(instr, masm, round_nearest);
+        break;
+      case Express::TRUNC:
+        GenerateRound(instr, masm, round_to_zero);
         break;
       case Express::CVTFLTINT:
         GenerateFltToInt(instr, masm);
@@ -266,6 +278,18 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         GenerateXMMFltAccOp(instr,
             &Assembler::maxps, &Assembler::maxpd,
             &Assembler::maxps, &Assembler::maxpd,
+            masm);
+        break;
+      case Express::ALL:
+        GenerateXMMFltAccOp(instr,
+            &Assembler::andps, &Assembler::andpd,
+            &Assembler::andps, &Assembler::andpd,
+            masm);
+        break;
+      case Express::ANY:
+        GenerateXMMFltAccOp(instr,
+            &Assembler::orps, &Assembler::orpd,
+            &Assembler::orps, &Assembler::orpd,
             masm);
         break;
       default:
@@ -320,13 +344,13 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     }
   }
 
-  // Generate floor rounding.
-  void GenerateFloor(Express::Op *instr, MacroAssembler *masm) {
+  // Generate rounding.
+  void GenerateRound(Express::Op *instr, MacroAssembler *masm, int8 code) {
     if (CPU::Enabled(SSE4_1)) {
-      GenerateXMMFltOp(instr,
+      GenerateXMMUnaryFltOp(instr,
           &Assembler::roundps, &Assembler::roundpd,
           &Assembler::roundps, &Assembler::roundpd,
-          round_down, masm);
+          code, masm);
     } else {
       UNSUPPORTED;
     }

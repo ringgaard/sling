@@ -78,6 +78,7 @@ void ExpressionGenerator::GenerateInit(MacroAssembler *masm) {
     // Generate code for a "MOV acc,#neutral" instruction.
     Express::Var value(Express::NUMBER, Express::NeutralValue(op->type));
     Express::Var acc(Express::REGISTER, -1);
+    acc.predicate = op->preduction();
     Express::Op mov(Express::MOV);
     mov.Assign(&acc);
     mov.AddArgument(&value);
@@ -772,6 +773,38 @@ void ExpressionGenerator::GenerateXMMFltOp(
   }
 }
 
+void ExpressionGenerator::GenerateXMMUnaryFltOp(
+    Express::Op *instr,
+    OpXMMRegRegImm fltopreg, OpXMMRegRegImm dblopreg,
+    OpXMMRegMemImm fltopmem, OpXMMRegMemImm dblopmem,
+    int8 imm, MacroAssembler *masm) {
+  if (instr->dst != -1 && instr->src != -1) {
+    // OP reg,reg,imm
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopreg)(xmm(instr->dst), xmm(instr->src), imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopreg)(xmm(instr->dst), xmm(instr->src), imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else if (instr->dst != -1 && instr->src == -1) {
+    // OP reg,[mem],imm
+    switch (type_) {
+      case DT_FLOAT:
+        (masm->*fltopmem)(xmm(instr->dst), addr(instr->args[0]), imm);
+        break;
+      case DT_DOUBLE:
+        (masm->*dblopmem)(xmm(instr->dst), addr(instr->args[0]), imm);
+        break;
+      default: UNSUPPORTED;
+    }
+  } else {
+    UNSUPPORTED;
+  }
+}
+
 void ExpressionGenerator::GenerateXMMFltOp(
     Express::Op *instr,
     OpXMMRegRegImm fltopreg, OpXMMRegRegImm dblopreg,
@@ -832,40 +865,6 @@ void ExpressionGenerator::GenerateXMMFltAccOp(
         break;
       default: UNSUPPORTED;
     }
-  }
-}
-
-void ExpressionGenerator::GenerateXMMUnaryFltOp(
-    Express::Op *instr,
-    OpXMMRegRegReg fltopreg, OpXMMRegRegReg dblopreg,
-    OpXMMRegRegMem fltopmem, OpXMMRegRegMem dblopmem,
-    MacroAssembler *masm) {
-  if (instr->dst != -1 && instr->src != -1) {
-    // OP reg,reg,reg
-    switch (type_) {
-      case DT_FLOAT:
-        (masm->*fltopreg)(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
-        break;
-      case DT_DOUBLE:
-        (masm->*dblopreg)(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
-        break;
-      default: UNSUPPORTED;
-    }
-  } else if (instr->dst != -1 && instr->src == -1) {
-    // OP reg,reg,[mem]
-    switch (type_) {
-      case DT_FLOAT:
-        (masm->*fltopmem)(xmm(instr->dst), xmm(instr->dst),
-                          addr(instr->args[0]));
-        break;
-      case DT_DOUBLE:
-        (masm->*dblopmem)(xmm(instr->dst), xmm(instr->dst),
-                          addr(instr->args[0]));
-        break;
-      default: UNSUPPORTED;
-    }
-  } else {
-    UNSUPPORTED;
   }
 }
 

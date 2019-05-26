@@ -155,13 +155,18 @@ class Express {
     COND,        // conditional expression, r=p?a:b
     SELECT,      // conditional selection, r=p?a:0
 
+    // Rounding operations.
+    FLOOR,       // floor function, round down towards -inf
+    CEIL,        // ceil function, round up towards +inf
+    ROUND,       // round to nearest
+    TRUNC,       // round towards zero
+
     // Integer operations.
     BITAND,      // bitwise and
     BITOR,       // bitwise or
     BITXOR,      // bitwise xor
     BITANDNOT,   // bitwise and not
     BITEQ,       // bitwise equality test
-    FLOOR,       // floor function
     CVTFLTINT,   // float to integer conversion
     CVTINTFLT,   // integer to float conversion
     CVTEXPINT,   // convert float exponent to integer
@@ -302,6 +307,11 @@ class Express {
     // Check if operation is a reduction.
     bool reduction() const {
       return type >= SUM && type <= COUNT;
+    }
+
+    // Check if operation is a predicate reduction.
+    bool preduction() const {
+      return type == ALL || type == ANY;
     }
 
     // Check if operation is a no-op.

@@ -49,11 +49,12 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
       Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
       Express::BITEQ, Express::QUADSIGN,
       Express::AND, Express::OR, Express::XOR, Express::ANDNOT,
-      Express::FLOOR,
+      Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
       Express::CVTFLTINT, Express::CVTINTFLT,
       Express::CVTEXPINT, Express::CVTINTEXP,
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+      Express::ALL, Express::ANY,
     });
     if (type == DT_FLOAT) {
       model_.instruction_set({Express::RECIPROCAL, Express::RSQRT});
@@ -71,7 +72,7 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
         Express::BITEQ, Express::AND, Express::OR, Express::XOR,
         Express::ANDNOT, Express::CVTFLTINT, Express::CVTINTFLT,
-        Express::ADDINT, Express::SUBINT})) {
+        Express::ADDINT, Express::SUBINT, Express::ALL, Express::ANY})) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
     if (instructions_.Has({Express::SELECT, Express::COND})) {
@@ -192,14 +193,16 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         GenerateRegisterOp(instr, masm);
         break;
       case Express::FLOOR:
-        if (CPU::Enabled(SSE4_1)) {
-          GenerateXMMFltOp(instr,
-              &Assembler::roundss, &Assembler::roundsd,
-              &Assembler::roundss, &Assembler::roundsd,
-              round_down, masm);
-        } else {
-          UNSUPPORTED;
-        }
+        GenerateRound(instr, masm, round_down);
+        break;
+      case Express::CEIL:
+        GenerateRound(instr, masm, round_up);
+        break;
+      case Express::ROUND:
+        GenerateRound(instr, masm, round_nearest);
+        break;
+      case Express::TRUNC:
+        GenerateRound(instr, masm, round_to_zero);
         break;
       case Express::CVTFLTINT:
       case Express::CVTINTFLT:
@@ -245,6 +248,10 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
             &Assembler::maxss, &Assembler::maxsd,
             &Assembler::maxss, &Assembler::maxsd,
             masm);
+        break;
+      case Express::ALL:
+      case Express::ANY:
+        GenerateLogicAccumulate(instr, masm);
         break;
       default:
         LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
@@ -304,6 +311,18 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         &Assembler::cmpss, &Assembler::cmpsd,
         &Assembler::cmpss, &Assembler::cmpsd,
         code, masm);
+  }
+
+  // Generate rounding.
+  void GenerateRound(Express::Op *instr, MacroAssembler *masm, int8 code) {
+    if (CPU::Enabled(SSE4_1)) {
+      GenerateXMMUnaryFltOp(instr,
+          &Assembler::roundss, &Assembler::roundsd,
+          &Assembler::roundss, &Assembler::roundsd,
+          code, masm);
+    } else {
+      UNSUPPORTED;
+    }
   }
 
   // Generate scalar op that loads memory operands into a register first.
@@ -501,6 +520,48 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         __ bind(&l2);
         break;
       }
+      default: UNSUPPORTED;
+    }
+  }
+
+  // Generate logic reduction accumulation.
+  void GenerateLogicAccumulate(Express::Op *instr, MacroAssembler *masm) {
+    XMMRegister acc = xmm(instr->acc);
+    XMMRegister src;
+    if (instr->src != -1) {
+      src = xmm(instr->src);
+    } else {
+      src = xmmaux(0);
+    }
+    switch (type_) {
+      case DT_FLOAT:
+        if (instr->src == -1) {
+          __ movss(src, addr(instr->args[0]));
+        }
+        switch (instr->type) {
+          case Express::ALL:
+            __ andps(acc, src);
+            break;
+          case Express::ANY:
+            __ orps(acc, src);
+            break;
+          default: UNSUPPORTED;
+        }
+        break;
+      case DT_DOUBLE:
+        if (instr->src == -1) {
+          __ movsd(src, addr(instr->args[0]));
+        }
+        switch (instr->type) {
+          case Express::ALL:
+            __ andpd(acc, src);
+            break;
+          case Express::ANY:
+            __ orpd(acc, src);
+            break;
+          default: UNSUPPORTED;
+        }
+        break;
       default: UNSUPPORTED;
     }
   }

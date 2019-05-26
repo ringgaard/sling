@@ -348,6 +348,18 @@ class Builder:
   def rcp(self, x, name=None):
     return self.op("Reciprocal", [x], name)
 
+  def floor(self, x, name=None):
+    return self.op("Floor", [x], name)
+
+  def ceil(self, x, name=None):
+    return self.op("Ceil", [x], name)
+
+  def round(self, x, name=None):
+    return self.op("Round", [x], name)
+
+  def trunc(self, x, name=None):
+    return self.op("Trunc", [x], name)
+
   def equal(self, x, y, name=None):
     return self.op("Equal", [x, y], name)
 

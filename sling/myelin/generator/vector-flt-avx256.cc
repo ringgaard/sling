@@ -58,9 +58,11 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
       Express::AND, Express::OR, Express::XOR, Express::ANDNOT,
       Express::CVTFLTINT, Express::CVTINTFLT,
       Express::CVTEXPINT, Express::CVTINTEXP,
-      Express::BITEQ, Express::QUADSIGN, Express::FLOOR,
+      Express::BITEQ, Express::QUADSIGN,
+      Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+      Express::ALL, Express::ANY,
     });
     if (type == DT_FLOAT) {
       model_.instruction_set({Express::RECIPROCAL, Express::RSQRT});
@@ -88,7 +90,7 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
       }
     }
     if (instructions_.Has({Express::SUM, Express::PRODUCT, Express::MIN,
-                           Express::MAX})) {
+                           Express::MAX, Express::ALL, Express::ANY})) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
     if (instructions_.Has(Express::CVTINTFLT) && type_ == DT_DOUBLE) {
@@ -268,6 +270,24 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
             &Assembler::vroundps, &Assembler::vroundpd,
             round_down, masm);
         break;
+      case Express::CEIL:
+        GenerateYMMFltOp(instr,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            round_up, masm);
+        break;
+      case Express::ROUND:
+        GenerateYMMFltOp(instr,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            round_nearest, masm);
+        break;
+      case Express::TRUNC:
+        GenerateYMMFltOp(instr,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            &Assembler::vroundps, &Assembler::vroundpd,
+            round_to_zero, masm);
+        break;
       case Express::CVTFLTINT:
         GenerateFltToInt(instr, masm);
         break;
@@ -311,6 +331,18 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         GenerateYMMFltAccOp(instr,
             &Assembler::vmaxps, &Assembler::vmaxpd,
             &Assembler::vmaxps, &Assembler::vmaxpd,
+            masm);
+        break;
+      case Express::ALL:
+        GenerateYMMFltAccOp(instr,
+            &Assembler::vandps, &Assembler::vandpd,
+            &Assembler::vandps, &Assembler::vandpd,
+            masm);
+        break;
+      case Express::ANY:
+        GenerateYMMFltAccOp(instr,
+            &Assembler::vorps, &Assembler::vorpd,
+            &Assembler::vorps, &Assembler::vorpd,
             masm);
         break;
       default:
