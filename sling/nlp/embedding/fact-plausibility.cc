@@ -46,7 +46,7 @@ struct FactPlausibilityFlow : public Flow {
     auto *hencoding = f.GatherSum(embeddings, hypothesis);
 
     auto *fv = f.Concat({pencoding, hencoding});
-    logits = f.Name(f.FFLayers(fv, {dims * 2, 2}, -1, true, "Tanh"), "logits");
+    logits = f.Name(f.FFLayers(fv, {dims * 2, 2}, -1, true, "Relu"), "logits");
 
     // Create gradient computations.
     gscorer = Gradient(this, scorer, library);
@@ -173,6 +173,10 @@ class FactPlausibilityTrainer : public LearnerTask {
       gscorer.Clear();
       gscorer.Set(flow_.primal, &scorer);
       float epoch_loss = 0.0;
+      int pos_correct = 0;
+      int pos_wrong = 0;
+      int neg_correct = 0;
+      int neg_wrong = 0;
 
       for (int b = 0; b < batches_per_update_; ++b) {
         // Random sample instances for batch.
@@ -236,6 +240,23 @@ class FactPlausibilityTrainer : public LearnerTask {
             // Compute plausibility scores.
             scorer.Compute();
 
+            // Compute accuracy.
+            if (i == j) {
+              // Positive example.
+              if (logits[1] > logits[0]) {
+                pos_correct++;
+              } else {
+                pos_wrong++;
+              }
+            } else {
+              // Negative example.
+              if (logits[0] > logits[1]) {
+                neg_correct++;
+              } else {
+                neg_wrong++;
+              }
+            }
+
             // Compute loss.
             int label = i == j ? 1 : 0;
             float loss = loss_.Compute(logits, label, dlogits);
@@ -251,6 +272,10 @@ class FactPlausibilityTrainer : public LearnerTask {
       optimizer_mu_.Lock();
       optimizer_->Apply(gradients);
       loss_sum_ += epoch_loss;
+      positive_correct_ += pos_correct;
+      positive_wrong_ += pos_wrong;
+      negative_correct_ += neg_correct;
+      negative_wrong_ += neg_wrong;
       loss_count_ += batches_per_update_ * batch_size_ * batch_size_;
       optimizer_mu_.Unlock();
 
@@ -270,6 +295,16 @@ class FactPlausibilityTrainer : public LearnerTask {
     loss_sum_ = 0.0;
     loss_count_ = 0;
 
+    // Compute accuracy for positive and negative examples.
+    float pos_total = positive_correct_ + positive_wrong_;
+    float pos_accuracy = (positive_correct_ / pos_total) * 100.0;
+    float neg_total = negative_correct_ + negative_wrong_;
+    float neg_accuracy = (negative_correct_ / neg_total) * 100.0;
+    positive_correct_ = 0;
+    positive_wrong_ = 0;
+    negative_correct_ = 0;
+    negative_wrong_ = 0;
+
     // Decay learning rate if loss increases.
     if (prev_loss_ != 0.0 &&
         prev_loss_ < loss &&
@@ -281,7 +316,9 @@ class FactPlausibilityTrainer : public LearnerTask {
     LOG(INFO) << "epoch=" << epoch
               << ", lr=" << learning_rate_
               << ", loss=" << loss
-              << ", p=" << p;
+              << ", p=" << p
+              << ", +acc=" << pos_accuracy
+              << ", -acc=" << neg_accuracy;
     return true;
   }
 
@@ -318,6 +355,10 @@ class FactPlausibilityTrainer : public LearnerTask {
   float prev_loss_ = 0.0;
   float loss_sum_ = 0.0;
   int loss_count_ = 0.0;
+  int positive_correct_ = 0;
+  int positive_wrong_ = 0;
+  int negative_correct_ = 0;
+  int negative_wrong_ = 0;
 
   // Symbols.
   Names names_;

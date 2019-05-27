@@ -180,8 +180,8 @@ class EmbeddingWorkflow:
     with self.wf.namespace("fact-plausibility"):
       trainer = self.wf.task("fact-plausibility-trainer")
       trainer.add_params({
-        "batch_size": 256,
-        "batches_per_update": 32,
+        "batch_size": 4,
+        "batches_per_update": 256,
         "min_facts": 4,
         "embedding_dims": 128,
         "epochs" : 100000,

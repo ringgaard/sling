@@ -1336,7 +1336,7 @@ void Flow::Eliminate(Operation *op) {
   VLOG(10) << "Eliminate " << op->name;
 
   if (op->inputs.size() > 0) {
-    // Update all usages of output to use the input variable instead.
+    // Check that input and output are compatible.
     CHECK_EQ(op->inputs.size(), 1);
     CHECK_EQ(op->outputs.size(), 1);
     Variable *input = op->inputs[0];
@@ -1347,57 +1347,64 @@ void Flow::Eliminate(Operation *op) {
     if (input->shape.defined() && output->shape.defined()) {
       CHECK(input->shape == output->shape) << op->name;
     }
-    if (output->in()) input->set_in();
-    if (output->out()) input->set_out();
-    if (output->ref()) input->set_ref();
-    for (Operation *target : ops_) {
-      for (int i = 0; i < target->inputs.size(); ++i) {
-        if (target->inputs[i] == output) {
-          target->inputs[i] = input;
-        }
-      }
-    }
 
-    // Remove op as consumer of input variable.
-    auto f = std::find(input->consumers.begin(), input->consumers.end(), op);
-    CHECK(f != input->consumers.end()) << op->name;
-    input->consumers.erase(f);
+    // Detach op.
+    op->RemoveInput(input);
+    op->RemoveOutput(output);
 
-    // Move consumers of output variable to input variable.
-    for (Operation *consumer : output->consumers) {
-      input->consumers.push_back(consumer);
-    }
-
-    // Merge input and output variable names.
     if (output->out()) {
-      input->AddAlias(input->name);
-      input->name = output->name;
+      // Replace input with output.
+      output->flags |= input->flags;
+
+      // Update all usages of input to use the output variable instead.
+      while (input->usages() > 0) {
+        Operation *consumer = input->consumers[0];
+        consumer->ReplaceInput(input, output);
+      }
+
+      if (input->producer != nullptr) {
+        input->producer->ReplaceOutput(input, output);
+      }
+
+      // Merge variable names.
+      output->AddAlias(input->name);
+      for (const string &alias : input->aliases) output->AddAlias(alias);
+
+      // Update connectors replacing the input with the output.
+      for (Connector *cnx : cnxs_) {
+        cnx->ReplaceLink(input, output);
+      }
+
+      // Check for unused input. The local input variable still needs to be
+      // generated even if there are no consumers.
+      if (input->local() && input->in() && input->detached()) {
+        op->func->unused.push_back(input);
+      } else {
+        DeleteVariable(input);
+      }
     } else {
+      // Replace output with input.
+      input->flags |= output->flags;
+
+      // Update all usages of output to use the input variable instead.
+      while (output->usages() > 0) {
+        Operation *consumer = output->consumers[0];
+        consumer->ReplaceInput(output, input);
+      }
+
+      // Merge variable names.
       input->AddAlias(output->name);
-    }
-    for (const string &alias : output->aliases) {
-      input->AddAlias(alias);
-    }
+      for (const string &alias : output->aliases) input->AddAlias(alias);
 
-    // Update connectors replacing the output with the input.
-    for (Connector *cnx : cnxs_) {
-      cnx->ReplaceLink(output, input);
-    }
+      // Update connectors replacing the output with the input.
+      for (Connector *cnx : cnxs_) {
+        cnx->ReplaceLink(output, input);
+      }
 
-    // Delete output variable.
-    DeleteVariable(output);
-
-    // Check for unused input. The local input variable still needs to be
-    // generated even if there are no consumers.
-    if (input->local() && input->in() && input->detached()) {
-      op->func->unused.push_back(input);
+      DeleteVariable(output);
     }
-  } else {
-    // Clear producer for outputs.
-    for (Variable *var : op->outputs) var->producer = nullptr;
   }
 
-  // Delete operation.
   DeleteOperation(op);
 }
 
