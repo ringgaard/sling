@@ -70,6 +70,9 @@ struct FactPlausibilityFlow : public Flow {
 // Trainer for fact plausibility model.
 class FactPlausibilityTrainer : public LearnerTask {
  public:
+  // Feature vector.
+  typedef std::vector<int> Features;
+
   // Run training of embedding net.
   void Run(task::Task *task) override {
     // Get training parameters.
@@ -80,10 +83,16 @@ class FactPlausibilityTrainer : public LearnerTask {
     task->Fetch("max_features", &max_features_);
     task->Fetch("learning_rate", &learning_rate_);
     task->Fetch("min_learning_rate", &min_learning_rate_);
+    task->Fetch("eval_ratio", &eval_ratio_);
+    task->Fetch("seed", &seed_);
 
     // Set up counters.
-    Counter *num_instances = task->GetCounter("instances");
-    Counter *num_instances_skipped = task->GetCounter("instances_skipped");
+    Counter *num_train_instances = task->GetCounter("training_instances");
+    Counter *num_eval_instances = task->GetCounter("evaluation_instances");
+    Counter *num_facts = task->GetCounter("facts");
+    Counter *num_fact_groups = task->GetCounter("fact_groups");
+    Counter *num_skipped_instances = task->GetCounter("skipped_instances");
+    num_training_examples_ = task->GetCounter("training_examples");
     num_feature_overflows_ = task->GetCounter("feature_overflows");
 
     // Bind names.
@@ -112,22 +121,33 @@ class FactPlausibilityTrainer : public LearnerTask {
     loss_.Initialize(model);
 
     // Initialize weights.
-    model.InitLearnableWeights(task->Get("seed", 0), 0.0, 0.01);
+    model.InitLearnableWeights(seed_, 0.0, 0.01);
 
     // Read training instances from input.
     LOG(INFO) << "Reading training data";
     Queue input(this, task->GetSources("input"));
     Message *message;
+    Random rnd;
+    rnd.seed(seed_);
     while (input.Read(&message)) {
       // Parse message into frame.
       Frame instance = DecodeMessage(&store_, message);
+      Array facts = instance.Get(p_facts_).AsArray();
       Array groups = instance.Get(p_groups_).AsArray();
       if (groups.length() >= min_facts_) {
-        instances_.push_back(instance.handle());
-        num_instances->Increment();
+        // Split into training and evaluation set.
+        if (eval_ratio_ == 0 || rnd.UniformProb() > eval_ratio_) {
+          training_instances_.push_back(instance.handle());
+          num_train_instances->Increment();
+        } else {
+          evaluation_instances_.push_back(instance.handle());
+          num_eval_instances->Increment();
+        }
       } else {
-        num_instances_skipped->Increment();
+        num_skipped_instances->Increment();
       }
+      num_facts->Increment(facts.length());
+      num_fact_groups->Increment(groups.length());
 
       delete message;
     }
@@ -155,69 +175,38 @@ class FactPlausibilityTrainer : public LearnerTask {
   void Worker(int index, Network *model) override {
     // Initialize random number generator.
     Random rnd;
-    rnd.seed(index);
+    rnd.seed(seed_ + index);
 
     // Premises and hypotheses for one batch.
-    std::vector<std::vector<int>> premises(batch_size_);
-    std::vector<std::vector<int>> hypotheses(batch_size_);
+    std::vector<Features> premises(batch_size_);
+    std::vector<Features> hypotheses(batch_size_);
 
     // Set up plausibility scorer.
     Instance scorer(flow_.scorer);
     Instance gscorer(flow_.gscorer);
+    int *premise = scorer.Get<int>(flow_.premise);
+    int *hypothesis = scorer.Get<int>(flow_.hypothesis);
     float *logits = scorer.Get<float>(flow_.logits);
     float *dlogits = gscorer.Get<float>(flow_.d_logits);
-    std::vector<myelin::Instance *> gradients{&gscorer};
+    std::vector<Instance *> gradients{&gscorer};
 
     for (;;) {
       // Compute gradients for epoch.
       gscorer.Clear();
       gscorer.Set(flow_.primal, &scorer);
       float epoch_loss = 0.0;
-      int pos_correct = 0;
-      int pos_wrong = 0;
-      int neg_correct = 0;
-      int neg_wrong = 0;
+      Benchmark batch_benchmark;
 
       for (int b = 0; b < batches_per_update_; ++b) {
         // Random sample instances for batch.
         for (int i = 0; i < batch_size_; ++i) {
-          int sample = rnd.UniformInt(instances_.size());
-          Frame instance(&store_, instances_[sample]);
-          Array facts = instance.Get(p_facts_).AsArray();
-          Array groups = instance.Get(p_groups_).AsArray();
-          int num_groups = groups.length();
+          int sample = rnd.UniformInt(training_instances_.size());
+          Frame instance(&store_, training_instances_[sample]);
 
-          // Add facts to premise, except for one heldout fact group which is
-          // added to the hypothesis.
-          auto &premise = premises[i];
-          auto &hypothesis = hypotheses[i];
-          premise.clear();
-          hypothesis.clear();
+          // Split instance into premise and hypothesis.
+          int num_groups = instance.Get(p_groups_).AsArray().length();
           int heldout = rnd.UniformInt(num_groups);
-          for (int g = 0; g < num_groups; ++g) {
-            // Get range for fact group.
-            int start = g == 0 ? 0 : groups.get(g - 1).AsInt();
-            int end = groups.get(g).AsInt();
-
-            if (g == heldout) {
-              // Add fact group to hyothesis.
-              for (int f = start; f < end; ++f) {
-                hypothesis.push_back(facts.get(f).AsInt());
-              }
-            } else {
-              // Add fact group to premise.
-              for (int f = start; f < end; ++f) {
-                premise.push_back(facts.get(f).AsInt());
-              }
-            }
-          }
-
-          if (premise.size() > max_features_) {
-            premise.resize(max_features_);
-          }
-          if (hypothesis.size() > max_features_) {
-            hypothesis.resize(max_features_);
-          }
+          Split(instance, &premises[i], &hypotheses[i], heldout);
         }
 
         // Do forward and backward propagation for each premise/hypothesis pair.
@@ -227,35 +216,14 @@ class FactPlausibilityTrainer : public LearnerTask {
         for (int i = 0; i < batch_size_; ++i) {
           for (int j = 0; j < batch_size_; ++j) {
             // Set premise and hypothesis for example.
-            int *p = scorer.Get<int>(flow_.premise);
-            int *pend = p + max_features_;
-            for (int f : premises[i]) *p++ = f;
-            if (p < pend) *p = -1;
-
-            int *h = scorer.Get<int>(flow_.hypothesis);
-            int *hend = h + max_features_;
-            for (int f : hypotheses[j]) *h++ = f;
-            if (h < hend) *h = -1;
+            Copy(premises[i], premise);
+            Copy(hypotheses[j], hypothesis);
 
             // Compute plausibility scores.
             scorer.Compute();
 
             // Compute accuracy.
-            if (i == j) {
-              // Positive example.
-              if (logits[1] > logits[0]) {
-                pos_correct++;
-              } else {
-                pos_wrong++;
-              }
-            } else {
-              // Negative example.
-              if (logits[0] > logits[1]) {
-                neg_correct++;
-              } else {
-                neg_wrong++;
-              }
-            }
+            batch_benchmark.add(i == j, logits[1] > logits[0]);
 
             // Compute loss.
             int label = i == j ? 1 : 0;
@@ -264,6 +232,7 @@ class FactPlausibilityTrainer : public LearnerTask {
 
             // Backpropagate.
             gscorer.Compute();
+            num_training_examples_->Increment();
           }
         }
       }
@@ -272,11 +241,8 @@ class FactPlausibilityTrainer : public LearnerTask {
       optimizer_mu_.Lock();
       optimizer_->Apply(gradients);
       loss_sum_ += epoch_loss;
-      positive_correct_ += pos_correct;
-      positive_wrong_ += pos_wrong;
-      negative_correct_ += neg_correct;
-      negative_wrong_ += neg_wrong;
       loss_count_ += batches_per_update_ * batch_size_ * batch_size_;
+      train_benchmark_.add(batch_benchmark);
       optimizer_mu_.Unlock();
 
       // Check if we are done.
@@ -285,7 +251,7 @@ class FactPlausibilityTrainer : public LearnerTask {
   }
 
   // Evaluate model.
-  bool Evaluate(int64 epoch, myelin::Network *model) override {
+  bool Evaluate(int64 epoch, Network *model) override {
     // Skip evaluation if there are no data.
     if (loss_count_ == 0) return true;
 
@@ -295,15 +261,14 @@ class FactPlausibilityTrainer : public LearnerTask {
     loss_sum_ = 0.0;
     loss_count_ = 0;
 
-    // Compute accuracy for positive and negative examples.
-    float pos_total = positive_correct_ + positive_wrong_;
-    float pos_accuracy = (positive_correct_ / pos_total) * 100.0;
-    float neg_total = negative_correct_ + negative_wrong_;
-    float neg_accuracy = (negative_correct_ / neg_total) * 100.0;
-    positive_correct_ = 0;
-    positive_wrong_ = 0;
-    negative_correct_ = 0;
-    negative_wrong_ = 0;
+    // Compute accuracy on training data for positive and negative examples.
+    float pos_accuracy = train_benchmark_.positive_accuracy() * 100.0;
+    float neg_accuracy = train_benchmark_.negative_accuracy() * 100.0;
+    train_benchmark_.clear();
+
+    // Compute accuracy in evaluation data.
+    Benchmark eval;
+    EvaluateModel(evaluation_instances_, &eval);
 
     // Decay learning rate if loss increases.
     if (prev_loss_ != 0.0 &&
@@ -314,21 +279,161 @@ class FactPlausibilityTrainer : public LearnerTask {
     prev_loss_ = loss;
 
     LOG(INFO) << "epoch=" << epoch
-              << ", lr=" << learning_rate_
-              << ", loss=" << loss
-              << ", p=" << p
-              << ", +acc=" << pos_accuracy
-              << ", -acc=" << neg_accuracy;
+              << " lr=" << learning_rate_
+              << " loss=" << loss
+              << " p=" << p
+              << " train: +acc=" << pos_accuracy
+              << " -acc=" << neg_accuracy
+              << " eval: +acc=" << (eval.positive_accuracy() * 100.0)
+              << " -acc=" << (eval.negative_accuracy() * 100.0);
     return true;
   }
 
+  // Split instance into premise and hypothesis.
+  void Split(const Frame &instance,
+             Features *premise, Features *hypothesis,
+             int heldout) {
+    Array facts = instance.Get(p_facts_).AsArray();
+    Array groups = instance.Get(p_groups_).AsArray();
+    int num_groups = groups.length();
+
+    // Add facts to premise, except for one heldout fact group which is
+    // added to the hypothesis.
+    premise->clear();
+    hypothesis->clear();
+    for (int g = 0; g < num_groups; ++g) {
+      // Get range for fact group.
+      int start = g == 0 ? 0 : groups.get(g - 1).AsInt();
+      int end = groups.get(g).AsInt();
+
+      if (g == heldout) {
+        // Add fact group to hyothesis.
+        for (int f = start; f < end; ++f) {
+          hypothesis->push_back(facts.get(f).AsInt());
+        }
+      } else {
+        // Add fact group to premise.
+        for (int f = start; f < end; ++f) {
+          premise->push_back(facts.get(f).AsInt());
+        }
+      }
+    }
+
+    if (premise->size() >= max_features_) {
+      premise->resize(max_features_ - 1);
+      num_feature_overflows_->Increment();
+    }
+    if (hypothesis->size() >= max_features_) {
+      hypothesis->resize(max_features_ - 1);
+      num_feature_overflows_->Increment();
+    }
+  }
+
+  // Copy features into feature vector and terminate it with -1.
+  void Copy(const Features &src, int *dest) {
+    for (int f : src) *dest++ = f;
+    *dest = -1;
+  }
+
  private:
+  // Benchmark statistics.
+  struct Benchmark {
+    // Clear statistics.
+    void clear() {
+      positive_correct = positive_wrong = negative_correct = negative_wrong = 0;
+    }
+
+    // Add result to benchmark.
+    void add(bool golden, bool predicted) {
+      if (golden) {
+        if (predicted) {
+          positive_correct++;
+        } else {
+          positive_wrong++;
+        }
+      } else {
+        if (predicted) {
+          negative_wrong++;
+        } else {
+          negative_correct++;
+        }
+      }
+    }
+
+    // Add statistics from another benchmark.
+    void add(const Benchmark &other) {
+      positive_correct += other.positive_correct;
+      positive_wrong += other.positive_wrong;
+      negative_correct += other.negative_correct;
+      negative_wrong += other.negative_wrong;
+    }
+
+    // Total nummber of positive/negative examples.
+    float positive() const { return positive_correct + positive_wrong; }
+    float negative() const { return negative_correct + negative_wrong; }
+
+    // Accuracy for positive/negative examples.
+    float positive_accuracy() const { return positive_correct / positive(); }
+    float negative_accuracy() const { return negative_correct / negative(); }
+
+    // Number of positive/negative correct/wrong predictions.
+    int positive_correct = 0;
+    int positive_wrong = 0;
+    int negative_correct = 0;
+    int negative_wrong = 0;
+  };
+
+  // Evaluate model on positive and negative examples generated from instances.
+  void EvaluateModel(const Handles &instances, Benchmark *benchmark) {
+    static const int batch_size = 2;
+    Random rnd;
+    rnd.seed(seed_);
+    std::vector<Features> premises(batch_size);
+    std::vector<Features> hypotheses(batch_size);
+
+    Instance scorer(flow_.scorer);
+    int *premise = scorer.Get<int>(flow_.premise);
+    int *hypothesis = scorer.Get<int>(flow_.hypothesis);
+    float *logits = scorer.Get<float>(flow_.logits);
+
+    for (int n = 0; n < instances.size(); ++n) {
+      // Get instances for batch.
+      for (int i = 0; i < batch_size; ++i) {
+        int sample = rnd.UniformInt(instances.size());
+        Frame instance(&store_, instances[sample]);
+
+        // Split instance into premise and hypothesis.
+        int num_groups = instance.Get(p_groups_).AsArray().length();
+        int heldout = rnd.UniformInt(num_groups);
+        Split(instance, &premises[i], &hypotheses[i], heldout);
+      }
+
+      // Compute scores for all pairs in batch.
+      for (int i = 0; i < batch_size; ++i) {
+        for (int j = 0; j < batch_size; ++j) {
+          // Set premise and hypothesis for example.
+          Copy(premises[i], premise);
+          Copy(hypotheses[j], hypothesis);
+
+          // Compute plausibility scores.
+          scorer.Compute();
+
+          // Compute accuracy.
+          benchmark->add(i == j, logits[1] > logits[0]);
+        }
+      }
+    }
+  }
+
   // Training parameters.
-  int embedding_dims_ = 256;           // size of embedding vectors
-  int min_facts_ = 2;                  // minimum number of facts for example
+  int embedding_dims_ = 128;           // size of embedding vectors
+  int min_facts_ = 4;                  // minimum number of facts for example
   int max_features_ = 512;             // maximum features per item
-  int batch_size_ = 1024;              // number of examples per batch
-  int batches_per_update_ = 1;         // number of batches per epoch
+  int batch_size_ = 4;                 // number of examples per batch
+  int batches_per_update_ = 256;       // number of batches per epoch
+  float eval_ratio_ = 0.001;           // train/eval split ratio
+  float learning_rate_ = 1.0;
+  float min_learning_rate_ = 0.001;
 
   // Store for training instances.
   Store store_;
@@ -336,29 +441,27 @@ class FactPlausibilityTrainer : public LearnerTask {
   // Fact lexicon.
   Array fact_lexicon_;
 
-  // Evaluation statistics.
-  float learning_rate_ = 1.0;
-  float min_learning_rate_ = 0.01;
-
   // Flow model for fact plausibility trainer.
   FactPlausibilityFlow flow_;
-  myelin::Compiler compiler_;
-  myelin::CrossEntropyLoss loss_;
-  myelin::Optimizer *optimizer_ = nullptr;
+  Compiler compiler_;
+  CrossEntropyLoss loss_;
+  Optimizer *optimizer_ = nullptr;
 
-  // Training instances.
-  Handles instances_{&store_};
+  // Training and test instances.
+  Handles training_instances_{&store_};
+  Handles evaluation_instances_{&store_};
 
   // Mutex for serializing access to optimizer.
   Mutex optimizer_mu_;
 
+  // Evaluation statistics.
   float prev_loss_ = 0.0;
   float loss_sum_ = 0.0;
   int loss_count_ = 0.0;
-  int positive_correct_ = 0;
-  int positive_wrong_ = 0;
-  int negative_correct_ = 0;
-  int negative_wrong_ = 0;
+  Benchmark train_benchmark_;
+
+  // Seed for random number generator.
+  int seed_ = 0;
 
   // Symbols.
   Names names_;
@@ -367,6 +470,7 @@ class FactPlausibilityTrainer : public LearnerTask {
   Name p_groups_{names_, "groups"};
 
   // Statistics.
+  Counter *num_training_examples_ = nullptr;
   Counter *num_feature_overflows_ = nullptr;
 };
 
