@@ -173,10 +173,17 @@ class EmbeddingWorkflow:
       trainer.attach_output("catvecs", category_embeddings)
     return fact_embeddings, category_embeddings
 
+  def fact_plausibility_model(self):
+    """Resource for fact plausibility model."""
+    return self.wf.resource("plausibility.flow",
+                            dir=self.fact_dir(),
+                            format="flow")
+
   def train_fact_plausibility(self):
     """Train fact plausibility model."""
     facts = self.facts()
     factmap = self.fact_lexicon()
+    model = self.fact_plausibility_model();
     with self.wf.namespace("fact-plausibility"):
       trainer = self.wf.task("fact-plausibility-trainer")
       trainer.add_params({
@@ -184,15 +191,18 @@ class EmbeddingWorkflow:
         "batches_per_update": 256,
         "min_facts": 4,
         "embedding_dims": 128,
-        "epochs" : 1000000,
+        "epochs" : 250000,
         "report_interval": 1000,
+        "checkpoint_interval": 10000,
         "learning_rate": 1.0,
         "min_learning_rate": 0.001,
         "learning_rate_decay": 0.95,
-        "rampup": 120,
         "clipping": 1,
         "optimizer": "sgd",
+        "rampup": 5 * 60,
       })
       self.wf.connect(self.wf.read(facts, name="fact-reader"), trainer)
       trainer.attach_input("factmap", factmap)
+      trainer.attach_output("model", model)
+    return model
 

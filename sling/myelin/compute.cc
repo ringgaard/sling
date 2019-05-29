@@ -985,7 +985,7 @@ void Network::InitLearnableWeights(int64 seed, float mean, float stddev) {
   }
 }
 
-void Network::SaveLearnedWeights(Flow *flow) {
+void Network::SaveLearnedWeights(Flow *flow) const {
   // Find all learnable variables in flow.
   for (Flow::Variable *var : flow->vars()) {
     if (!var->learnable()) continue;

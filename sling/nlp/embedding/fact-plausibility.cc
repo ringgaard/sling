@@ -33,7 +33,7 @@ using namespace myelin;
 // Fact plausibility flow.
 struct FactPlausibilityFlow : public Flow {
   // Build fact plausibility model.
-  void Build(const Transformations &library) {
+  void Build(const Transformations &library, bool learn) {
     scorer = AddFunction("scorer");
     FlowBuilder f(this, scorer);
     auto *embeddings =
@@ -48,10 +48,15 @@ struct FactPlausibilityFlow : public Flow {
     auto *fv = f.Concat({pencoding, hencoding});
     logits = f.Name(f.FFLayers(fv, {dims * 2, 2}, -1, true, "Relu"), "logits");
 
-    // Create gradient computations.
-    gscorer = Gradient(this, scorer, library);
-    d_logits = GradientVar(logits);
-    primal = PrimalVar(scorer);
+    if (learn) {
+      // Create gradient computations.
+      gscorer = Gradient(this, scorer, library);
+      d_logits = GradientVar(logits);
+      primal = PrimalVar(scorer);
+    } else {
+      // Output probabilities.
+      probs = f.Name(f.Softmax(logits), "probs");
+    }
   }
 
   int facts = 1;                   // number of fact types
@@ -65,6 +70,7 @@ struct FactPlausibilityFlow : public Flow {
   Variable *logits;                // plausibility prediction
   Variable *d_logits;              // plausibility gradient
   Variable *primal;                // primal reference for scorer
+  Variable *probs;                 // output probabilities
 };
 
 // Trainer for fact plausibility model.
@@ -98,6 +104,9 @@ class FactPlausibilityTrainer : public LearnerTask {
     // Bind names.
     names_.Bind(&store_);
 
+    // Get model output filename.
+    model_filename_ = task->GetOutputFile("model");
+
     // Read fact lexicon.
     TextMapInput factmap(task->GetInputFile("factmap"));
     Handles facts(&store_);
@@ -109,7 +118,7 @@ class FactPlausibilityTrainer : public LearnerTask {
     task->GetCounter("facts")->Increment(fact_lexicon_.length());
 
     // Build plausibility model.
-    Build(&flow_);
+    Build(&flow_, true);
     loss_.Build(&flow_, flow_.logits, flow_.d_logits);
     optimizer_ = GetOptimizer(task);
     optimizer_->Build(&flow_);
@@ -160,15 +169,13 @@ class FactPlausibilityTrainer : public LearnerTask {
     // Output profile.
     LogProfile(model);
 
-    delete optimizer_;
-  }
+    // Save final model.
+    if (!model_filename_.empty()) {
+      LOG(INFO) << "Saving model to " << model_filename_;
+      Save(model, model_filename_);
+    }
 
-  // Add plausibility model to flow.
-  void Build(FactPlausibilityFlow *flow) {
-    flow->facts = fact_lexicon_.length();
-    flow->dims = embedding_dims_;
-    flow->max_features = max_features_;
-    flow->Build(*compiler_.library());
+    delete optimizer_;
   }
 
   // Worker thread for training embedding model.
@@ -286,53 +293,16 @@ class FactPlausibilityTrainer : public LearnerTask {
               << " -acc=" << neg_accuracy
               << " eval: +acc=" << (eval.positive_accuracy() * 100.0)
               << " -acc=" << (eval.negative_accuracy() * 100.0);
+
     return true;
   }
 
-  // Split instance into premise and hypothesis.
-  void Split(const Frame &instance,
-             Features *premise, Features *hypothesis,
-             int heldout) {
-    Array facts = instance.Get(p_facts_).AsArray();
-    Array groups = instance.Get(p_groups_).AsArray();
-    int num_groups = groups.length();
-
-    // Add facts to premise, except for one heldout fact group which is
-    // added to the hypothesis.
-    premise->clear();
-    hypothesis->clear();
-    for (int g = 0; g < num_groups; ++g) {
-      // Get range for fact group.
-      int start = g == 0 ? 0 : groups.get(g - 1).AsInt();
-      int end = groups.get(g).AsInt();
-
-      if (g == heldout) {
-        // Add fact group to hyothesis.
-        for (int f = start; f < end; ++f) {
-          hypothesis->push_back(facts.get(f).AsInt());
-        }
-      } else {
-        // Add fact group to premise.
-        for (int f = start; f < end; ++f) {
-          premise->push_back(facts.get(f).AsInt());
-        }
-      }
+  // Checkpoint model.
+  void Checkpoint(int64 epoch, Network *model) override {
+    if (!model_filename_.empty()) {
+      LOG(INFO) << "Checkpoint model to " << model_filename_;
+      Save(*model, model_filename_);
     }
-
-    if (premise->size() >= max_features_) {
-      premise->resize(max_features_ - 1);
-      num_feature_overflows_->Increment();
-    }
-    if (hypothesis->size() >= max_features_) {
-      hypothesis->resize(max_features_ - 1);
-      num_feature_overflows_->Increment();
-    }
-  }
-
-  // Copy features into feature vector and terminate it with -1.
-  void Copy(const Features &src, int *dest) {
-    for (int f : src) *dest++ = f;
-    *dest = -1;
   }
 
  private:
@@ -425,6 +395,79 @@ class FactPlausibilityTrainer : public LearnerTask {
     }
   }
 
+  // Split instance into premise and hypothesis.
+  void Split(const Frame &instance,
+             Features *premise, Features *hypothesis,
+             int heldout) {
+    Array facts = instance.Get(p_facts_).AsArray();
+    Array groups = instance.Get(p_groups_).AsArray();
+    int num_groups = groups.length();
+
+    // Add facts to premise, except for one heldout fact group which is
+    // added to the hypothesis.
+    premise->clear();
+    hypothesis->clear();
+    for (int g = 0; g < num_groups; ++g) {
+      // Get range for fact group.
+      int start = g == 0 ? 0 : groups.get(g - 1).AsInt();
+      int end = groups.get(g).AsInt();
+
+      if (g == heldout) {
+        // Add fact group to hyothesis.
+        for (int f = start; f < end; ++f) {
+          hypothesis->push_back(facts.get(f).AsInt());
+        }
+      } else {
+        // Add fact group to premise.
+        for (int f = start; f < end; ++f) {
+          premise->push_back(facts.get(f).AsInt());
+        }
+      }
+    }
+
+    if (premise->size() >= max_features_) {
+      premise->resize(max_features_ - 1);
+      num_feature_overflows_->Increment();
+    }
+    if (hypothesis->size() >= max_features_) {
+      hypothesis->resize(max_features_ - 1);
+      num_feature_overflows_->Increment();
+    }
+  }
+
+  // Copy features into feature vector and terminate it with -1.
+  void Copy(const Features &src, int *dest) {
+    for (int f : src) *dest++ = f;
+    *dest = -1;
+  }
+
+  // Add plausibility model to flow.
+  void Build(FactPlausibilityFlow *flow, bool learn) {
+    flow->facts = fact_lexicon_.length();
+    flow->dims = embedding_dims_;
+    flow->max_features = max_features_;
+    flow->Build(*compiler_.library(), learn);
+  }
+
+  // Save trained model to file.
+  void Save(const Network &model, const string &filename) {
+    // Build model.
+    FactPlausibilityFlow flow;
+    Build(&flow, false);
+
+    // Copy weights from trained model.
+    model.SaveLearnedWeights(&flow);
+
+    // Add fact lexicon.
+    string encoded = Encode(fact_lexicon_);
+    Flow::Blob *facts = flow.AddBlob("facts", "store");
+    facts->data = flow.AllocateMemory(encoded);
+    facts->size = encoded.size();
+
+    // Save model to file.
+    flow.Save(filename);
+  }
+
   // Training parameters.
   int embedding_dims_ = 128;           // size of embedding vectors
   int min_facts_ = 4;                  // minimum number of facts for example
@@ -462,6 +505,9 @@ class FactPlausibilityTrainer : public LearnerTask {
 
   // Seed for random number generator.
   int seed_ = 0;
+
+  // Output filename for trained model.
+  string model_filename_;
 
   // Symbols.
   Names names_;

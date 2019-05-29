@@ -85,6 +85,21 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "plausibility-model",
+  srcs = ["plausibility-model.cc"],
+  hdrs = ["plausibility-model.h"],
+  deps = [
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/frame:serialization",
+    "//sling/myelin:compiler",
+    "//sling/myelin:compute",
+    "//sling/myelin:flow",
+  ],
+)
+
 cc_binary(
   name = "category-facts",
   srcs = ["category-facts.cc"],

@@ -28,6 +28,7 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
   task->Fetch("epochs", &epochs_);
   task->Fetch("report_interval", &report_interval_);
   task->Fetch("rampup", &rampup_);
+  task->Fetch("checkpoint_interval", &checkpoint_interval_);
 
   // Initialize statistics counters.
   num_workers_ = task->GetCounter("workers");
@@ -57,6 +58,12 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
 
     // Run evaluation.
     Evaluate(epoch_, model);
+
+    // Checkpoint model.
+    if (epoch_ >= last_checkpoint_ + checkpoint_interval_) {
+      Checkpoint(epoch_, model);
+      last_checkpoint_ += checkpoint_interval_;
+    }
   }
 
   // Run final evaluation.
