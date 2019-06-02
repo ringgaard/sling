@@ -95,7 +95,7 @@ Flow::Function *Gradients::Finalize() {
     if (terms != nullptr) {
       // The gradients need to be summed when backpropagating through a
       // broadcast input. Only simple broadcasting is supported.
-      bool unexpand = dv->elements() == 1 && terms->elements() > 1;
+      bool unexpand = dv->scalar() && !terms->scalar();
       if (unexpand) terms = Sum(terms);
       if (v->learnable()) {
         // Accumulate gradients for learnable variables.

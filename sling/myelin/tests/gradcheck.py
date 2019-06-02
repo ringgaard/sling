@@ -257,6 +257,13 @@ def check_log():
   y = f.log(x, "y")
   gradcheck(f, [x], [y], 0.0, 10.0)
 
+def check_pow():
+  flow = myelin.Flow()
+  f = flow.define("pow")
+  x = f.var("x", dtype, shape)
+  y = f.pow(x, f.const(3.0, dtype=dtype), "y")
+  gradcheck(f, [x], [y], 0.0, 10.0, tol=1e-3)
+
 def check_sin():
   flow = myelin.Flow()
   f = flow.define("sin")
@@ -527,6 +534,7 @@ check_abs()
 check_sign()
 check_exp()
 check_log()
+check_pow()
 check_sin()
 check_cos()
 check_tan()

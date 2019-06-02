@@ -169,7 +169,7 @@ static void InitExpression(Flow::Operation *op, Express *expr) {
   // Mark constant and scalar inputs.
   for (int i = 0; i < op->indegree(); ++i) {
     auto *input = op->inputs[i];
-    if (input->elements() == 1) {
+    if (input->scalar()) {
       int const_id = -1;
       if (input->constant()) {
         double value = input->number();
@@ -444,7 +444,7 @@ class DivTransformer : public Transformer {
       Flow::Variable *first = op->inputs[0];
       Flow::Variable *second = op->inputs[1];
 
-      if (second->type == DT_FLOAT && second->elements() == 1 &&
+      if (second->type == DT_FLOAT && second->scalar() &&
           second->constant() && second->usages() == 1) {
         // Change Div(x,c) to Mul(x,1/c).
         CHECK_EQ(second->size, sizeof(float));
@@ -454,7 +454,7 @@ class DivTransformer : public Transformer {
         *reinterpret_cast<float *>(buffer) = multiplier;
         second->data = buffer;
         updates++;
-      } else if (first->type == DT_FLOAT && first->elements() == 1 &&
+      } else if (first->type == DT_FLOAT && first->scalar() &&
                  first->constant()) {
         float value;
         if (first->GetData<float>(&value) && value == 1.0) {

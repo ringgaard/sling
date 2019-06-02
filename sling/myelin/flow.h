@@ -396,6 +396,9 @@ class Flow {
     // Check if variable is detached, i.e. no producer or consumers.
     bool detached() const { return producer == nullptr && usages() == 0; }
 
+    // Check if variable is a scalar.
+    bool scalar() const { return elements() == 1; }
+
     // Return type as string.
     string TypeString() const;
 

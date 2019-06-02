@@ -115,6 +115,7 @@ class FlowBuilder : public Scope {
   Variable *Const(float value) { return Const(&value, DT_FLOAT, {}); }
   Variable *Const(double value) { return Const(&value, DT_DOUBLE, {}); }
   Variable *Const(int value) { return Const(&value, DT_INT32, {}); }
+  Variable *Const(double value, Type type);
   Variable *Const(std::vector<float> &value) {
     int size = value.size();
     return Const(value.data(), DT_FLOAT, {size});

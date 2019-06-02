@@ -406,6 +406,22 @@ void log_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Div(g->d(y), g->v(x)));
 }
 
+// y = x^c
+// dx = c * pow(x, c - 1) * dy = c * y * dy / x
+void pow_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto c = op->inputs[1];
+  auto y = op->outputs[0];
+  CHECK(c->constant());
+  double cval = c->number();
+  if (trunc(cval) == cval) {
+    auto *minus_one = g->Const(cval - 1, c->type);
+    g->add(x, g->Mul(g->d(y), g->Mul(c, g->Pow(g->v(x), minus_one))));
+  } else {
+    g->add(x, g->Mul(g->d(y), g->Mul(c, g->Div(g->v(y), g->v(x)))));
+  }
+}
+
 // y = sigmoid(x)
 // dx = sigmoid(x) * (1 - sigmoid(x)) * dy = y * (1 - y) * dy
 void sigmoid_grad(Flow::Operation *op, Gradients *g) {
@@ -585,6 +601,7 @@ void RegisterStandardGradients(Transformations *library) {
   library->RegisterGradient("Acsch", acsch_grad);
   library->RegisterGradient("Exp", exp_grad);
   library->RegisterGradient("Log", log_grad);
+  library->RegisterGradient("Pow", pow_grad);
   library->RegisterGradient("Sigmoid", sigmoid_grad);
   library->RegisterGradient("Erf", erf_grad);
   library->RegisterGradient("Relu", relu_grad);
