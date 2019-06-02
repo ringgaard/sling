@@ -16,10 +16,11 @@
 
 #include <inttypes.h>
 #include <algorithm>
+#include <cmath>
 #include <queue>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <string>
 #include <vector>
 
 #include "sling/base/status.h"
@@ -231,6 +232,41 @@ string TypeTraits::str(const void *data) const {
 
     default:
       return "???";
+  }
+}
+
+double TypeTraits::number(const void *data) const {
+  if (data == nullptr) return NAN;
+  switch (type_) {
+    case DT_INT8:
+      return *reinterpret_cast<const int8 *>(data);
+
+    case DT_INT16:
+      return *reinterpret_cast<const int16 *>(data);
+
+    case DT_INT32:
+      return *reinterpret_cast<const int32 *>(data);
+
+    case DT_INT64:
+      return *reinterpret_cast<const int64 *>(data);
+
+    case DT_UINT8:
+      return *reinterpret_cast<const uint8 *>(data);
+
+    case DT_UINT16:
+      return *reinterpret_cast<const uint16 *>(data);
+
+    case DT_FLOAT:
+      return *reinterpret_cast<const float *>(data);
+
+    case DT_DOUBLE:
+      return *reinterpret_cast<const double *>(data);
+
+    case DT_BOOL:
+      return *reinterpret_cast<const bool *>(data);
+
+    default:
+      return NAN;
   }
 }
 
@@ -1375,13 +1411,14 @@ void Flow::Eliminate(Operation *op) {
         cnx->ReplaceLink(input, output);
       }
 
-      // Check for unused input. The local input variable still needs to be
+      DeleteVariable(input);
+
+      // Check for unused variable. The local variable still needs to be
       // generated even if there are no consumers.
-      if (input->local() && input->in() && input->detached()) {
-        op->func->unused.push_back(input);
-      } else {
-        DeleteVariable(input);
+      if (output->local() && output->in() && output->detached()) {
+        op->func->unused.push_back(output);
       }
+
     } else {
       // Replace output with input.
       input->flags |= output->flags;
@@ -2052,6 +2089,22 @@ Flow::Blob *Flow::DataBlock(const string &name) {
     if (blob->name == name) return blob;
   }
   return nullptr;
+}
+
+string Flow::VarName(const string &prefix) {
+  for (int n = 0;; ++n) {
+    string name = prefix;
+    if (n > 0) name.append(std::to_string(n));
+    if (Var(name) == nullptr) return name;
+  }
+}
+
+string Flow::OpName(const string &prefix) {
+  for (int n = 0;; ++n) {
+    string name = prefix;
+    if (n > 0) name.append(std::to_string(n));
+    if (Op(name) == nullptr) return name;
+  }
 }
 
 string GradientVarName(const string &name) {

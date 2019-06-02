@@ -1535,7 +1535,8 @@ class UpdateTransformer : public Transformer {
       add1->AddInput(s1);
       add2->AddInput(target);
       add2->AddInput(s2);
-      auto *a = flow->AddOperation(add2->func, assign->name + "X", "Assign");
+      string name = flow->OpName(assign->name);
+      auto *a = flow->AddOperation(add2->func, name, "Assign");
       a->AddInput(target);
       a->AddInput(a2);
 

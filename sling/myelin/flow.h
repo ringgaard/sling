@@ -79,6 +79,9 @@ class TypeTraits {
   // Return data formatted according to type.
   string str(const void *data) const;
 
+  // Return data as number.
+  double number(const void *data) const;
+
   // Binary representation of zero.
   const void *zero() const { return zero_; }
 
@@ -426,6 +429,16 @@ class Flow {
       return true;
     }
 
+    // Return scalar constant as number.
+    double number() const {
+      DCHECK(constant());
+      DCHECK_EQ(elements(), 1);
+      return traits().number(data);
+    }
+
+    // Return type traits for variable type.
+    const TypeTraits &traits() const { return TypeTraits::of(type); }
+
     // Check if variable has a dependency on some operation.
     bool DependsOn(const Operation *op) const;
 
@@ -726,6 +739,12 @@ class Flow {
   void Order(Function *func,
              std::vector<Operation *> *ops,
              std::vector<Variable *> *vars) const;
+
+  // Return unique variable name with prefix.
+  string VarName(const string &prefix);
+
+  // Return unique operation name with prefix.
+  string OpName(const string &prefix);
 
  private:
   // Infer which variables are inputs and outputs to functions.

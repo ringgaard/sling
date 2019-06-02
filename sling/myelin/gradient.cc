@@ -32,11 +32,7 @@ static string basename(const string &name) {
 Gradients::Gradients(Flow *flow,
                      Flow::Function *primal,
                      const std::vector<Flow::Variable *> &vars)
-    : FlowBuilder(flow, "gradients/" + primal->name) {
-  // Add instance reference.
-  instance_ = Name(Instance(primal), "primal");
-  instance_->set_in();
-
+    : FlowBuilder(flow, "gradients/" + primal->name), primal_(primal) {
   // Create adjoints.
   for (Flow::Variable *v : vars) {
     // Constants have trivial derivatives.
@@ -77,6 +73,12 @@ Flow::Variable *Gradients::GetReference(Flow::Variable *x) {
       // Global variables can be directly referenced.
       r = x;
     } else {
+      // Add primal reference.
+      if (instance_ == nullptr) {
+        instance_ = Name(Instance(primal_), "primal");
+        instance_->set_in();
+      }
+
       // Local variables need to be accessed through a reference op.
       r = Name(Ref(instance_, x), "ref_" + basename(x->name));
     }

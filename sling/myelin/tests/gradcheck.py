@@ -257,11 +257,172 @@ def check_log():
   y = f.log(x, "y")
   gradcheck(f, [x], [y], 0.0, 10.0)
 
+def check_sin():
+  flow = myelin.Flow()
+  f = flow.define("sin")
+  x = f.var("x", dtype, shape)
+  y = f.sin(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_cos():
+  flow = myelin.Flow()
+  f = flow.define("cos")
+  x = f.var("x", dtype, shape)
+  y = f.cos(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_tan():
+  flow = myelin.Flow()
+  f = flow.define("tan")
+  x = f.var("x", dtype, shape)
+  y = f.tan(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_cot():
+  flow = myelin.Flow()
+  f = flow.define("cot")
+  x = f.var("x", dtype, shape)
+  y = f.cot(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_sec():
+  flow = myelin.Flow()
+  f = flow.define("sec")
+  x = f.var("x", dtype, shape)
+  y = f.sec(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_csc():
+  flow = myelin.Flow()
+  f = flow.define("csc")
+  x = f.var("x", dtype, shape)
+  y = f.csc(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_asin():
+  flow = myelin.Flow()
+  f = flow.define("asin")
+  x = f.var("x", dtype, shape)
+  y = f.asin(x, "y")
+  gradcheck(f, [x], [y], -1.0, 1.0, tol=1e-4)
+
+def check_acos():
+  flow = myelin.Flow()
+  f = flow.define("acos")
+  x = f.var("x", dtype, shape)
+  y = f.acos(x, "y")
+  gradcheck(f, [x], [y], -1.0, 1.0, tol=1e-4)
+
+def check_atan():
+  flow = myelin.Flow()
+  f = flow.define("atan")
+  x = f.var("x", dtype, shape)
+  y = f.atan(x, "y")
+  gradcheck(f, [x], [y], tol=1e-4)
+
+def check_acot():
+  flow = myelin.Flow()
+  f = flow.define("acot")
+  x = f.var("x", dtype, shape)
+  y = f.acot(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_asec():
+  flow = myelin.Flow()
+  f = flow.define("asec")
+  x = f.var("x", dtype, shape)
+  y = f.asec(x, "y")
+  gradcheck(f, [x], [y], 1.0, 10.0, tol=1e-4)
+
+def check_acsc():
+  flow = myelin.Flow()
+  f = flow.define("acsc")
+  x = f.var("x", dtype, shape)
+  y = f.acsc(x, "y")
+  gradcheck(f, [x], [y], 1.0, 10.0, tol=1e-4)
+
+def check_sinh():
+  flow = myelin.Flow()
+  f = flow.define("sinh")
+  x = f.var("x", dtype, shape)
+  y = f.sinh(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_cosh():
+  flow = myelin.Flow()
+  f = flow.define("cosh")
+  x = f.var("x", dtype, shape)
+  y = f.cosh(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
 def check_tanh():
   flow = myelin.Flow()
   f = flow.define("tanh")
   x = f.var("x", dtype, shape)
   y = f.tanh(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_coth():
+  flow = myelin.Flow()
+  f = flow.define("coth")
+  x = f.var("x", dtype, shape)
+  y = f.coth(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_sech():
+  flow = myelin.Flow()
+  f = flow.define("sech")
+  x = f.var("x", dtype, shape)
+  y = f.sech(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_csch():
+  flow = myelin.Flow()
+  f = flow.define("csch")
+  x = f.var("x", dtype, shape)
+  y = f.csch(x, "y")
+  gradcheck(f, [x], [y])
+
+def check_asinh():
+  flow = myelin.Flow()
+  f = flow.define("asinh")
+  x = f.var("x", dtype, shape)
+  y = f.asinh(x, "y")
+  gradcheck(f, [x], [y], tol=1e-3)
+
+def check_acosh():
+  flow = myelin.Flow()
+  f = flow.define("acosh")
+  x = f.var("x", dtype, shape)
+  y = f.acosh(x, "y")
+  gradcheck(f, [x], [y], 1.0, 10.0)
+
+def check_atanh():
+  flow = myelin.Flow()
+  f = flow.define("atanh")
+  x = f.var("x", dtype, shape)
+  y = f.atanh(x, "y")
+  gradcheck(f, [x], [y], -1.0, 1.0)
+
+def check_acoth():
+  flow = myelin.Flow()
+  f = flow.define("acoth")
+  x = f.var("x", dtype, shape)
+  y = f.acoth(x, "y")
+  gradcheck(f, [x], [y], 1.0, 3.0)
+
+def check_asech():
+  flow = myelin.Flow()
+  f = flow.define("asech")
+  x = f.var("x", dtype, shape)
+  y = f.asech(x, "y")
+  gradcheck(f, [x], [y], 0.0, 1.0)
+
+def check_acsch():
+  flow = myelin.Flow()
+  f = flow.define("acsch")
+  x = f.var("x", dtype, shape)
+  y = f.acsch(x, "y")
   gradcheck(f, [x], [y])
 
 def check_sigmoid():
@@ -366,7 +527,30 @@ check_abs()
 check_sign()
 check_exp()
 check_log()
+check_sin()
+check_cos()
+check_tan()
+check_cot()
+check_sec()
+check_csc()
+check_asin()
+check_acos()
+check_atan()
+check_acot()
+check_asec()
+check_acsc()
+check_sinh()
+check_cosh()
 check_tanh()
+check_coth()
+check_sech()
+check_csch()
+check_asinh()
+check_acosh()
+check_atanh()
+check_acoth()
+check_asech()
+check_acsch()
 check_sigmoid()
 check_erf()
 check_relu()

@@ -246,6 +246,9 @@ class Builder:
   def exp(self, x, name=None):
     return self.op("Exp", [x], name)
 
+  def pow(self, x, y, name=None):
+    return self.op("Pow", [x, y], name)
+
   def erf(self, x, name=None):
     return self.op("Erf", [x], name)
 

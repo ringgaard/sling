@@ -52,6 +52,7 @@ static std::map<string, Express::OpType> optypes = {
   {"Erf", Express::ERF},
   {"Log2", Express::LOG2},
   {"Exp2", Express::EXP2},
+  {"Pow", Express::POW},
 
   {"Sin", Express::SIN},
   {"Cos", Express::COS},
@@ -137,7 +138,7 @@ static const string opname[] = {
   "Minimum", "Maximum",
   "Neg", "Abs", "Sign", "Relu", "Softsign", "Softplus", "LogSigmoid",
   "Reciprocal", "Square", "Sqrt", "Rsqrt",
-  "Log", "Exp", "Sigmoid", "Erf", "Log2", "Exp2",
+  "Log", "Exp", "Sigmoid", "Erf", "Log2", "Exp2", "Pow",
   "Sin", "Cos", "Tan", "Cot", "Sec", "Csc",
   "Asin", "Acos", "Atan", "Acot", "Asec", "Acsc",
   "Sinh", "Cosh", "Tanh", "Coth", "Sech", "Csch",
@@ -714,6 +715,7 @@ Express::Var *Express::Expand(OpType type, std::vector<Var *> &args) {
     switch (type) {
       case Express::ANDNOT: result = AndNot(args[0], args[1]); break;
       case Express::SELECT: result = Select(args[0], args[1]); break;
+      case Express::POW: result = Pow(args[0], args[1]); break;
       default: ;
     }
   }
@@ -2013,15 +2015,19 @@ Express::Var *Express::Trig(OpType type, Var *x) {
       case COS: return Do(COS, x);
       case TAN: return Div(Do(SIN, x), Do(COS, x));
       case COT: return Div(Do(COS, x), Do(SIN, x));
-      case SEC: return Div(One(), Do(COS, x));
-      case CSC: return Div(One(), Do(SIN, x));
+      case SEC: return Reciprocal(Do(COS, x));
+      case CSC: return Reciprocal(Do(SIN, x));
       default: LOG(FATAL) << "Unsupported trigonometric function";
     }
   }
 
+  // Check if sine and/or cosine are needed.
+  bool sin_needed = (type != COS && type != SEC);
+  bool cos_needed = (type != SIN && type != CSC);
+
   // Extract the sign bit for sine.
   Var *sign = nullptr;
-  if (type == SIN || type == TAN) {
+  if (sin_needed) {
     sign = Do(BITAND, x, Number(SIGN_MASK));
   }
 
@@ -2043,10 +2049,10 @@ Express::Var *Express::Trig(OpType type, Var *x) {
   Var *signswap_sin = nullptr;
   Var *signswap_cos = nullptr;
   Var *four = Number(I4);
-  if (type == SIN || type == TAN) {
+  if (sin_needed) {
     signswap_sin = Do(BITXOR, sign, Do(QUADSIGN, Do(BITAND, j, four)));
   }
-  if (type == COS || type == TAN) {
+  if (cos_needed) {
     signswap_cos = Do(QUADSIGN, Do(BITANDNOT, Do(SUBINT, j, Number(I2)), four));
   }
 
@@ -2085,10 +2091,10 @@ Express::Var *Express::Trig(OpType type, Var *x) {
   // Compute sine and cosine.
   Var *sin = nullptr;
   Var *cos = nullptr;
-  if (type == SIN || type == TAN || type == COT || type == CSC) {
+  if (sin_needed) {
     sin = Do(BITXOR, Cond(polymask, p2, p1), signswap_sin);
   }
-  if (type == COS || type == TAN || type == COT || type == SEC) {
+  if (cos_needed) {
     Var *y1 = Sub(p1, Select(Not(polymask), p1));
     Var *y2 = Sub(p2, Select(polymask, p2));
     cos = Do(BITXOR, Add(y1, y2), signswap_cos);
@@ -2100,14 +2106,14 @@ Express::Var *Express::Trig(OpType type, Var *x) {
     case COS: return cos;
     case TAN: return Div(sin, cos);
     case COT: return Div(cos, sin);
-    case SEC: return Div(One(), cos);
-    case CSC: return Div(One(), sin);
+    case SEC: return Reciprocal(cos);
+    case CSC: return Reciprocal(sin);
     default: LOG(FATAL) << "Unsupported trigonometric function";
   }
 }
 
 Express::Var *Express::Asin(Var *x) {
-  return Atan(Div(x, Sqrt(Mul(Add(One(), x), Sub(One(), x)))));
+  return Atan(Mul(x, Rsqrt(Mul(Add(One(), x), Sub(One(), x)))));
 }
 
 Express::Var *Express::Acos(Var *x) {
@@ -2211,7 +2217,7 @@ Express::Var *Express::Erf(Var *x) {
   x = Abs(x);
 
   // A&S formula 7.1.26.
-  Var *t = Div(One(), Add(One(), Mul(Number(ERF_P), x)));
+  Var *t = Reciprocal(Add(One(), Mul(Number(ERF_P), x)));
   Var *p = MulAdd(Number(ERF_A5), t, Number(ERF_A4));
   p = MulAdd(p, t, Number(ERF_A3));
   p = MulAdd(p, t, Number(ERF_A2));

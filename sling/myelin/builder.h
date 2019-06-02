@@ -162,6 +162,7 @@ class FlowBuilder : public Scope {
   Variable *Sign(Variable *x) { return Op("Sign", {x}); }
   Variable *Log(Variable *x) { return Op("Log", {x}); }
   Variable *Exp(Variable *x) { return Op("Exp", {x}); }
+  Variable *Pow(Variable *x, Variable *y) { return Op("Pow", {x, y}); }
   Variable *Erf(Variable *x) { return Op("Erf", {x}); }
   Variable *Sigmoid(Variable *x) { return Op("Sigmoid", {x}); }
   Variable *Relu(Variable *x) { return Op("Relu", {x}); }

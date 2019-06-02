@@ -30,8 +30,6 @@
 #include "sling/myelin/generator/elementwise.h"
 #include "sling/myelin/generator/expression.h"
 
-#define __ masm->
-
 namespace sling {
 namespace myelin {
 
@@ -57,6 +55,7 @@ static Express::OpType OpType(const string &op) {
 
     {"Log", Express::LOG},
     {"Exp", Express::EXP},
+    {"Pow", Express::POW},
     {"Sigmoid", Express::SIGMOID},
     {"Erf", Express::ERF},
 
@@ -173,24 +172,17 @@ static void InitExpression(Flow::Operation *op, Express *expr) {
     if (input->elements() == 1) {
       int const_id = -1;
       if (input->constant()) {
-        if (input->type == DT_FLOAT || input->type == DT_DOUBLE) {
-          double value;
-          if (input->type == DT_FLOAT) {
-             value = *reinterpret_cast<const float *>(input->data);
-          } else {
-             value = *reinterpret_cast<const double *>(input->data);
-          }
-          if (value == 0.0) {
-            const_id = Express::ZERO;
-          } else if (value == 1.0) {
-            const_id = Express::ONE;
-          } else if (value == 0.5) {
-            const_id = Express::HALF;
-          } else if (value == 2.0) {
-            const_id = Express::TWO;
-          } else if (value == -1.0) {
-            const_id = Express::N1;
-          }
+        double value = input->number();
+        if (value == 0.0) {
+          const_id = Express::ZERO;
+        } else if (value == 1.0) {
+          const_id = Express::ONE;
+        } else if (value == 0.5) {
+          const_id = Express::HALF;
+        } else if (value == 2.0) {
+          const_id = Express::TWO;
+        } else if (value == -1.0) {
+          const_id = Express::N1;
         }
       }
       auto *var = expr->Variable(Express::INPUT, i);
@@ -488,6 +480,69 @@ class DivTransformer : public Transformer {
 
     return updates > 0;
   }
+};
+
+// Convert pow(x, c)=x^c where c is a constant to corresponding optimized op.
+class PowerTransformer : public Transformer {
+ public:
+  string Name() override { return "PowerTransformer"; }
+
+  bool Transform(Flow *flow) override {
+    int updates = 0;
+    for (Flow::Operation *op : flow->Find("Pow")) {
+      if (op->indegree() != 2) continue;
+      Flow::Variable *x = op->inputs[0];
+      Flow::Variable *y = op->inputs[1];
+      Flow::Variable *result = op->outputs[0];
+      if (!y->constant() || y->elements() != 1) continue;
+      double exponent = y->number();
+      if (exponent == 0.0) {
+        // pow(x, 0) = identity(1).
+        auto &t = result->traits();
+        string name = flow->VarName("one");
+        Flow::Variable *one = flow->AddVariable(name, t.type(), {});
+        one->data = flow->AllocateMemory(t.one(), t.size());
+        one->size = t.size();
+        op->RemoveInput(y);
+        op->ReplaceInput(x, one);
+        op->type = "Identity";
+        updates++;
+      } else {
+        string replacement;
+        if (exponent == 1.0) {
+          // pow(x, 1) = identity(x).
+          replacement = "Identity";
+        } else if (exponent == 2.0) {
+          // pow(x, 2) = square(x).
+          replacement = "Square";
+        } else if (exponent == 0.5) {
+          // pow(x, 0,5) = sqrt(x).
+          replacement = "Sqrt";
+        } else if (exponent == -0.5) {
+          // pow(x, -0.5) = rsqrt(x).
+          replacement = "Rsqrt";
+        } else if (exponent == -1.0) {
+          // pow(x, -1) = reciprocal(x).
+          replacement = "Reciprocal";
+        }
+
+        if (!replacement.empty()) {
+          op->RemoveInput(y);
+          op->type = replacement;
+          updates++;
+        }
+      }
+
+      if (x->in() && x->detached()) {
+        op->func->unused.push_back(x);
+      }
+      if (y->in() && y->detached()) {
+        op->func->unused.push_back(y);
+      }
+    }
+    return updates > 0;
+  }
+
 };
 
 // Fold negated arguments into addition and subtraction.
@@ -1018,6 +1073,7 @@ void RegisterArithmeticLibrary(Library *library) {
 
   library->Register(new Calculate("LogExpr", "Log", 1));
   library->Register(new Calculate("ExpExpr", "Exp", 1));
+  library->Register(new Calculate("PowExpr", "Pow", 2));
   library->Register(new Calculate("SigmoidExpr", "Sigmoid", 1));
   library->Register(new Calculate("ErfExpr", "Erf", 1));
   library->Register(new Calculate("Calculate", "Calculate"));
@@ -1101,6 +1157,7 @@ void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new RemoveUnusedInputs());
   library->RegisterTransformer(new DivTransformer());
   library->RegisterTransformer(new AddSubNegTransformer());
+  library->RegisterTransformer(new PowerTransformer());
   library->RegisterTransformer(new LogicTransformer());
 }
 

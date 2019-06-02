@@ -98,6 +98,8 @@ def simulate(flow, f, data):
       v[o[0]] = sigmoid(v[i[0]])
     elif op.type == "Log":
       v[o[0]] = np.log(v[i[0]])
+    elif op.type == "Pow":
+      v[o[0]] = np.power(v[i[0]], v[i[1]])
     elif op.type == "Erf":
       v[o[0]] = erf(v[i[0]])
     elif op.type == "Sin":
@@ -838,9 +840,17 @@ def mul_const_test(n, c):
   x = f.mul(x, y)
   check(flow, (n, c))
 
+def pow_test(n, p):
+  flow = myelin.Flow()
+  f = flow.define("pow")
+  x = f.var("x", dt, [n])
+  y = f.const(p, dt)
+  x = f.pow(x, y)
+  check(flow, (n, p), 0.0, 10.0)
+
 def negfold_test(n):
   flow = myelin.Flow()
-  f = flow.define("negfold_test")
+  f = flow.define("negfold")
   x = f.var("x", dt, [n])
   y = f.var("y", dt, [n])
   z = f.sub(x, f.neg(y))
@@ -893,6 +903,8 @@ for i in sizes:
     rsqrt_test(i)
     exp_test(i)
     log_test(i)
+    for p in [0.0, 1.0, 2.0, 2.5, 3.0, -1.0, -2.0, 0.5, -0.5]:
+      pow_test(i, p)
     sin_test(i)
     cos_test(i)
     tan_test(i)

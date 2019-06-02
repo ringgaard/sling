@@ -95,6 +95,7 @@ class Express {
     ERF,         // error function, r=erf(x)
     LOG2,        // base-2 logarithm, r=log2(x)
     EXP2,        // base-2 exponential function, r=2^x
+    POW,         // power function, r=x^y
 
     // Trigonometric functions.
     SIN,         // sine function, r=sin(x)
@@ -609,8 +610,8 @@ class Express {
   Var *Acos(Var *x);
   Var *Atan(Var *x);
   Var *Acot(Var *x) { return Sub(Number(PIO2), Atan(x)); }
-  Var *Asec(Var *x) { return Reciprocal(Acos(x)); }
-  Var *Acsc(Var *x) { return Reciprocal(Asin(x)); }
+  Var *Asec(Var *x) { return Acos(Reciprocal(x)); }
+  Var *Acsc(Var *x) { return Asin(Reciprocal(x)); }
 
   // Build expressions for hyperbolic functions.
   Var *HyperTrig(OpType type, Var *x);
@@ -669,6 +670,11 @@ class Express {
   Var *Sqrt(Var *x) { return Do(SQRT, x); }
   Var *Rsqrt(Var *x) {
     return Supports(RSQRT) ? Do(RSQRT, x) : Reciprocal(Sqrt(x));
+  }
+  Var *Pow(Var *x, Var *y) {
+    if (Supports(POW)) return Do(POW, x, y);
+    if (Supports(EXP2) && Supports(LOG2)) return Do(EXP2, Mul(y, Do(LOG2, x)));
+    return Exp(Mul(y, Log(x)));
   }
   Var *Sigmoid(Var *x) { return Reciprocal(Add(One(), Exp(Neg(x)))); }
 

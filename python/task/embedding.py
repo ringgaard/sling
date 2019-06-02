@@ -193,7 +193,7 @@ class EmbeddingWorkflow:
         "embedding_dims": 128,
         "epochs" : 250000,
         "report_interval": 1000,
-        "checkpoint_interval": 10000,
+        "checkpoint_interval": 50000,
         "learning_rate": 1.0,
         "min_learning_rate": 0.001,
         "learning_rate_decay": 0.95,
