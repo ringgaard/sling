@@ -295,7 +295,8 @@ class PhraseTableBuilder : public task::FrameProcessor {
       std::vector<int> years;
       for (int source = 0; source < num_items; ++source) {
         // Get set of facts for item.
-        Facts facts(&catalog_, &store);
+        Facts facts(&catalog_);
+        // TODO(facts): convert to new fact format!
         facts.Extract(entity_item[source]);
         for (Handle h :  facts.list()) {
           Array fact(&store, h);

@@ -139,6 +139,36 @@ Taxonomy *FactCatalog::CreateDefaultTaxonomy() {
   return new Taxonomy(this, default_taxonomy);
 }
 
+bool FactCatalog::ItemInClosure(Handle property, Handle coarse, Handle fine) {
+  if (coarse == fine) return true;
+
+  Handles closure(store_);
+  closure.push_back(fine);
+  int current = 0;
+  while (current < closure.size()) {
+    Frame f(store_, closure[current++]);
+    for (const Slot &s : f) {
+      if (s.name == property) {
+        Handle value = store_->Resolve(s.value);
+        if (value == coarse) {
+          return true;
+        } else if (!IsBaseItem(value)) {
+          bool known = false;
+          for (Handle h : closure) {
+            if (value == h) {
+              known = true;
+              break;
+            }
+          }
+          if (!known) closure.push_back(value);
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 void Facts::Extract(Handle item) {
   // Extract facts from the properties of the item.
   auto &extractors = catalog_->property_extractors_;
@@ -150,9 +180,9 @@ void Facts::Extract(Handle item) {
     // Extract facts for property.
     FactCatalog::Extractor extractor = f->second;
     push(s.name);
-    int start = list_.size();
+    int start = delimiters_.size();
     (this->*extractor)(s.value);
-    int end = list_.size();
+    int end = delimiters_.size();
     if (end > start) groups_.push_back(end);
     pop();
   }
@@ -171,9 +201,9 @@ void Facts::ExtractFor(Handle item, const HandleSet &properties) {
     // Extract facts for property.
     FactCatalog::Extractor extractor = f->second;
     push(s.name);
-    int start = list_.size();
+    int start = delimiters_.size();
     (this->*extractor)(s.value);
-    int end = list_.size();
+    int end = delimiters_.size();
     if (end > start) groups_.push_back(end);
     pop();
   }
@@ -362,42 +392,21 @@ void Facts::ExtractTeam(Handle team) {
 
 void Facts::AddFact(Handle value) {
   if (value.IsNil()) return;
-  push(value);
-  Handle *begin = path_.data();
-  Handle *end = begin + path_.size();
-  Handle fact = store_->AllocateArray(begin, end);
-  list_.push_back(fact);
-  pop();
+  for (Handle p : path_) list_.push_back(p);
+  list_.push_back(value);
+  delimiters_.push_back(list_.size());
 }
 
-bool Facts::ItemInClosure(Handle property, Handle coarse, Handle fine) {
-  if (coarse == fine) return true;
-
-  Handles closure(store_);
-  closure.push_back(fine);
-  int current = 0;
-  while (current < closure.size()) {
-    Frame f(store_, closure[current++]);
-    for (const Slot &s : f) {
-      if (s.name == property) {
-        Handle value = store_->Resolve(s.value);
-        if (value == coarse) {
-          return true;
-        } else if (!catalog_->IsBaseItem(value)) {
-          bool known = false;
-          for (Handle h : closure) {
-            if (value == h) {
-              known = true;
-              break;
-            }
-          }
-          if (!known) closure.push_back(value);
-        }
-      }
-    }
+Handle Facts::AsArrays(Store *store) const {
+  Array array(store, delimiters_.size());
+  int pos = 0;
+  for (int i = 0; i < delimiters_.size(); ++i) {
+    int begin = pos;
+    int end = delimiters_[i];
+    array.set(i, store->AllocateArray(&list_[begin], &list_[end]));
+    pos = end;
   }
-
-  return false;
+  return array.handle();
 }
 
 Taxonomy::Taxonomy(const FactCatalog *catalog, const std::vector<Text> &types) {

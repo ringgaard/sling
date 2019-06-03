@@ -132,22 +132,20 @@ PyObject *PyFactExtractor::Facts(PyObject *args, PyObject *kw) {
   // Get store and Wikidata item.
   PyStore *pystore = nullptr;
   PyFrame *pyitem = nullptr;
-  int closure = 1;
-  if (!PyArg_ParseTuple(args, "OO|i", &pystore, &pyitem, &closure)) {
+  bool closure = false;
+  if (!PyArg_ParseTuple(args, "OO|b", &pystore, &pyitem, &closure)) {
     return nullptr;
   }
   if (!PyStore::TypeCheck(pystore)) return nullptr;
   if (!PyFrame::TypeCheck(pyitem)) return nullptr;
 
   // Extract facts.
-  nlp::Facts facts(catalog, pystore->store);
-  facts.set_closure(closure == 1);
+  nlp::Facts facts(catalog);
+  facts.set_closure(closure);
   facts.Extract(pyitem->handle());
 
   // Return array of facts.
-  const Handle *begin = facts.list().data();
-  const Handle *end = begin + facts.list().size();
-  return pystore->PyValue(pystore->store->AllocateArray(begin, end));
+  return pystore->PyValue(facts.AsArrays(pystore->store));
 }
 
 PyObject *PyFactExtractor::FactsFor(PyObject *args, PyObject *kw) {
@@ -155,9 +153,9 @@ PyObject *PyFactExtractor::FactsFor(PyObject *args, PyObject *kw) {
   PyStore *pystore = nullptr;
   PyFrame *pyitem = nullptr;
   PyObject *pyproperties = nullptr;
-  int closure = 1;
+  bool closure = false;
   if (!PyArg_ParseTuple(
-      args, "OOO|i", &pystore, &pyitem, &pyproperties, &closure)) {
+      args, "OOO|b", &pystore, &pyitem, &pyproperties, &closure)) {
     return nullptr;
   }
   if (!PyStore::TypeCheck(pystore)) return nullptr;
@@ -174,40 +172,31 @@ PyObject *PyFactExtractor::FactsFor(PyObject *args, PyObject *kw) {
   }
 
   // Extract facts.
-  nlp::Facts facts(catalog, pystore->store);
-  facts.set_closure(closure == 1);
+  nlp::Facts facts(catalog);
+  facts.set_closure(closure);
   facts.ExtractFor(pyitem->handle(), properties);
 
   // Return array of facts.
-  const Handle *begin = facts.list().data();
-  const Handle *end = begin + facts.list().size();
-  return pystore->PyValue(pystore->store->AllocateArray(begin, end));
+  return pystore->PyValue(facts.AsArrays(pystore->store));
 }
 
 PyObject *PyFactExtractor::InClosure(PyObject *args, PyObject *kw) {
   // Get store and Wikidata item.
-  PyStore *pystore = nullptr;
   PyFrame *pyproperty = nullptr;
   PyFrame *pycoarse = nullptr;
   PyFrame *pyfine = nullptr;
-  if (!PyArg_ParseTuple(
-    args, "OOOO", &pystore, &pyproperty, &pycoarse, &pyfine)) {
+  if (!PyArg_ParseTuple(args, "OOO", &pyproperty, &pycoarse, &pyfine)) {
     return nullptr;
   }
-  if (!PyStore::TypeCheck(pystore)) return nullptr;
   if (!PyFrame::TypeCheck(pyproperty)) return nullptr;
   if (!PyFrame::TypeCheck(pycoarse)) return nullptr;
   if (!PyFrame::TypeCheck(pyfine)) return nullptr;
 
-  nlp::Facts facts(catalog, pystore->store);
-  bool subsumes = facts.ItemInClosure(pyproperty->handle(),
-    pycoarse->handle(), pyfine->handle());
+  bool subsumes = catalog->ItemInClosure(pyproperty->handle(),
+                                         pycoarse->handle(),
+                                         pyfine->handle());
 
-  if (subsumes) {
-    Py_RETURN_TRUE;
-  } else {
-    Py_RETURN_FALSE;
-  }
+  return PyBool_FromLong(subsumes);
 }
 
 PyObject *PyFactExtractor::Types(PyObject *args, PyObject *kw) {
@@ -219,7 +208,7 @@ PyObject *PyFactExtractor::Types(PyObject *args, PyObject *kw) {
   if (!PyFrame::TypeCheck(pyitem)) return nullptr;
 
   // Extract types.
-  nlp::Facts facts(catalog, pystore->store);
+  nlp::Facts facts(catalog);
   Handles types(pystore->store);
   facts.ExtractItemTypes(pyitem->handle(), &types);
 

@@ -38,6 +38,10 @@ class FactCatalog {
   // Initialize and return a default taxonomy. Caller takes ownership.
   Taxonomy *CreateDefaultTaxonomy();
 
+  // Returns true if 'coarse' is in the closure of 'fine'. Closure is performed
+  // by following 'property' roles.
+  bool ItemInClosure(Handle property, Handle coarse, Handle fine);
+
  private:
   // Set extractor for property type.
   void SetExtractor(Handle property, Extractor extractor) {
@@ -101,9 +105,9 @@ class FactCatalog {
 // starting frame.
 class Facts {
  public:
-  Facts(const FactCatalog *catalog, Store *store)
-      : catalog_(catalog), store_(store), list_(store), path_(store),
-      closure_(true) {}
+  Facts(const FactCatalog *catalog)
+      : catalog_(catalog), store_(catalog_->store_), list_(store_),
+        path_(store_) {}
 
   // Accessor/mutator for whether closure will be performed on certain facts.
   bool closure() const { return closure_; }
@@ -112,7 +116,7 @@ class Facts {
   // Extract facts for item.
   void Extract(Handle item);
 
-  // Extract facts for item only for properties in 'properties'.
+  // Extract facts for a subset of properties for item.
   void ExtractFor(Handle item, const HandleSet &properties);
 
   // Extract item types (P31) with closure over subclass of (P279).
@@ -169,9 +173,8 @@ class Facts {
   // Add fact based on current path.
   void AddFact(Handle value);
 
-  // Returns true if 'coarse' is in the closure of 'fine'. Closure is performed
-  // by following 'property' roles.
-  bool ItemInClosure(Handle property, Handle coarse, Handle fine);
+  // Get facts as an array of arrays.
+  Handle AsArrays(Store *store) const;
 
   // Add value to current fact path.
   void push(Handle value) { path_.push_back(value); }
@@ -180,8 +183,11 @@ class Facts {
   // Remove last value from current fact path.
   void pop() { path_.pop_back(); }
 
-  // Fact list.
+  // Fact value list.
   const Handles &list() const { return list_; }
+
+  // Fact delimiters.
+  const std::vector<int> &delimiters() const { return delimiters_; }
 
   // Fact groups.
   const std::vector<int> &groups() const { return groups_; }
@@ -190,11 +196,16 @@ class Facts {
   // Catalog for facts.
   const FactCatalog *catalog_;
 
-  // Store for facts.
+  // Store for fact properties and values.
   Store *store_;
 
-  // List of facts in the form of [P1,..,Pn,Q] values.
+  // Each extracted fact is a property path and a value, i.e. [P1,..,Pn,Q]. All
+  // the extracted facts are concatenated together in a list, and the delimiters
+  // marks the boundaries between the facts in the list, so the first fact is
+  // stored in list[0:delimiters[0]], and the nth fact is stored in
+  // list[delimiters[n-1]:delimiters[n]].
   Handles list_;
+  std::vector<int> delimiters_;
 
   // List of fact group delimiters. A fact group is a set of facts extracted
   // from the same basic fact about the item. A group consists of the basic fact
@@ -206,8 +217,8 @@ class Facts {
   // Current fact path [P1,...,Pn].
   Handles path_;
 
-  // Whether closure is enabled.
-  bool closure_;
+  // Whether closure expansion is enabled.
+  bool closure_ = true;
 };
 
 // A taxonomy is a type system for classifying items into a list of types.

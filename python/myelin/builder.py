@@ -15,6 +15,7 @@
 
 """Myelin function builder and expression evaluator."""
 
+import array
 from .flow import set_builder_factory, Variable
 
 DT_FLOAT32 = "float32"
@@ -40,6 +41,21 @@ typemap = {
   "b": DT_INT8,
   "q": DT_INT64,
   "?": DT_BOOL,
+}
+
+typecodes = {
+  DT_FLOAT32: "f",
+  DT_FLOAT64: "d",
+  DT_INT8: "b",
+  DT_INT16: "h",
+  DT_INT32: "i",
+  DT_INT64: "q",
+  DT_BOOL: "?",
+}
+
+dtypes = {
+  int: DT_INT32,
+  float: DT_FLOAT32,
 }
 
 class Builder:
@@ -100,6 +116,18 @@ class Builder:
       if dtype is None: dtype = DT_INT
       if shape is None: shape = []
 
+    # Convert lists.
+    if type(value) is list:
+      if dtype is None:
+        dtype = dtypes[type(value[0])] if len(value) > 0 else DT_FLOAT
+      value = array.array(typecodes[dtype], value)
+
+    # Convert arrays.
+    if type(value) is array.array:
+      if dtype is None: dtype = typemap[value.typecode]
+      if shape is None: shape = [len(value)]
+      value = memoryview(value)
+
     # Get type and shape if missing.
     if dtype is None: dtype = str(value.dtype)
     if shape is None: shape = list(value.shape)
@@ -109,6 +137,11 @@ class Builder:
     return var
 
   def array(self, name, value):
+    # Convert lists to arrays that supports the buffer protocol.
+    if type(value) is list and len(value) > 0:
+      dt = dtypes[type(value[0])]
+      value = array.array(typecodes[dt], value)
+
     # Make constant from object with buffer support.
     view = memoryview(value)
     dtype = typemap[view.format]
@@ -162,6 +195,11 @@ class Builder:
       op.add_output(o)
       results.append(o)
     return tuple(results)
+
+  def reshape(self, x, shape, name=None):
+    result = self.op("Reshape", [x, self.const(shape)], name)
+    result.shape = shape
+    return result
 
   def add(self, x, y, name=None):
     return self.op("Add", [x, y], name)

@@ -100,8 +100,9 @@ class FactLexiconExtractor : public Process {
       if (cls == n_wikimedia_disambiguation) return;
 
       // Extract facts from item.
+      // TODO(facts): convert to new fact format!
       Store store(&commons);
-      Facts facts(&catalog, &store);
+      Facts facts(&catalog);
       facts.Extract(handle);
 
       // Add facts to fact lexicon.
@@ -208,7 +209,8 @@ class FactExtractor : public Process {
 
       // Extract facts from item.
       Store store(&commons_);
-      Facts facts(&catalog, &store);
+      // TODO(facts): convert to new fact format!
+      Facts facts(&catalog);
       facts.Extract(handle);
 
       // Add all facts for item found in fact lexicon.
