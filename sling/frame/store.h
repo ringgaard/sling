@@ -1010,6 +1010,7 @@ class Store {
   // become dependent on the store.
   uint64 Fingerprint(Handle handle, bool byref = false, uint64 seed = 0) const;
   uint64 Fingerprint(ArrayDatum *array, int begin, int end, int step) const;
+  uint64 Fingerprint(const Handle *begin, const Handle *end) const;
 
   // Returns a display name for the handle. This should only be used for display
   // purposes and should not be used as an alternative identifier for the

@@ -208,9 +208,8 @@ PyObject *PyFactExtractor::Types(PyObject *args, PyObject *kw) {
   if (!PyFrame::TypeCheck(pyitem)) return nullptr;
 
   // Extract types.
-  nlp::Facts facts(catalog);
   Handles types(pystore->store);
-  facts.ExtractItemTypes(pyitem->handle(), &types);
+  catalog->ExtractItemTypes(pyitem->handle(), &types);
 
   // Return array of types.
   const Handle *begin = types.data();

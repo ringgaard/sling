@@ -100,13 +100,14 @@ class FactLexiconExtractor : public Process {
       if (cls == n_wikimedia_disambiguation) return;
 
       // Extract facts from item.
-      // TODO(facts): convert to new fact format!
       Store store(&commons);
       Facts facts(&catalog);
       facts.Extract(handle);
+      Handles fact_list(&store);
+      facts.AsArrays(&store, &fact_list);
 
       // Add facts to fact lexicon.
-      for (Handle fact : facts.list()) {
+      for (Handle fact : fact_list) {
         int64 fp = store.Fingerprint(fact);
         if (filter.add(fp)) {
           auto &entry = fact_lexicon[fp];
@@ -209,9 +210,10 @@ class FactExtractor : public Process {
 
       // Extract facts from item.
       Store store(&commons_);
-      // TODO(facts): convert to new fact format!
       Facts facts(&catalog);
       facts.Extract(handle);
+      Handles fact_list(&store);
+      facts.AsArrays(&store, &fact_list);
 
       // Add all facts for item found in fact lexicon.
       Handles fact_indices(&store);
@@ -221,7 +223,7 @@ class FactExtractor : public Process {
         int end = facts.groups()[g];
         int prev = fact_indices.size();
         for (int i = start; i < end; ++i) {
-          Handle fact = facts.list()[i];
+          Handle fact = fact_list[i];
           uint64 fp = store.Fingerprint(fact);
           auto f = fact_lexicon_.find(fp);
           if (f != fact_lexicon_.end()) {

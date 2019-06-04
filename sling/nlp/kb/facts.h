@@ -42,6 +42,9 @@ class FactCatalog {
   // by following 'property' roles.
   bool ItemInClosure(Handle property, Handle coarse, Handle fine);
 
+  // Extract item types (P31) with closure over subclass of (P279).
+  void ExtractItemTypes(Handle item, std::vector<Handle> *types);
+
  private:
   // Set extractor for property type.
   void SetExtractor(Handle property, Extractor extractor) {
@@ -119,9 +122,6 @@ class Facts {
   // Extract facts for a subset of properties for item.
   void ExtractFor(Handle item, const HandleSet &properties);
 
-  // Extract item types (P31) with closure over subclass of (P279).
-  void ExtractItemTypes(Handle item, Handles *types);
-
   // Extract simple fact with no backoff.
   void ExtractSimple(Handle value);
 
@@ -175,6 +175,7 @@ class Facts {
 
   // Get facts as an array of arrays.
   Handle AsArrays(Store *store) const;
+  void AsArrays(Store *store, Handles *array) const;
 
   // Add value to current fact path.
   void push(Handle value) { path_.push_back(value); }
@@ -182,6 +183,24 @@ class Facts {
 
   // Remove last value from current fact path.
   void pop() { path_.pop_back(); }
+
+  // Return the number of extracted facts.
+  int size() const { return delimiters_.size(); }
+
+  // Return interval for fact, i.e. fact(i) = list[begin(i):end(i)].
+  int begin(int i) const { return i == 0 ? 0 : delimiters_[i - 1]; }
+  int end(int i) const { return delimiters_[i]; }
+
+  // Return base property for fact, i.e. first value in fact path.
+  Handle first(int i) const { return list_[begin(i)]; }
+
+  // Return fact value, i.e. last value in fact path.
+  Handle last(int i) const { return list_[end(i) - 1]; }
+
+  // Return fingerprint for fact.
+  uint64 fingerprint(int i) const {
+    return store_->Fingerprint(&list_[begin(i)], &list_[end(i)]);
+  }
 
   // Fact value list.
   const Handles &list() const { return list_; }

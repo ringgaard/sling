@@ -1271,13 +1271,13 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       // int64 vector with the following layout:
       //   struct TaskTiming {
       //     int64 start;
-      //     int 64 wait;
+      //     int64 wait;
       //   };
       //   struct CellTiming {
       //     int64 invocations;
       //     int64 overhead;
       //     int64 steptime[#steps];
-      //     taskprofiling tasktime[#tasks];
+      //     TaskTiming tasktime[#tasks];
       //   };
       size_t size = 2 + cell->steps_.size() + 2 * cell->tasks_.size();
       Tensor *profile = new Tensor();
