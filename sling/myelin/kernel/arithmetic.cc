@@ -603,7 +603,7 @@ class ExpressionTransformer : public Transformer {
     std::vector<Flow::Operation *> candidates;
     for (Flow::Operation *op : flow->ops()) {
       if (IsCalculateOp(op) || IsAssignmentOp(op)) {
-        if (!op->GetAttr("strict", false)) {
+        if (!op->GetAttr("strict", false) && !op->HasAttr("axis")) {
           candidates.push_back(op);
         }
       }
@@ -625,6 +625,7 @@ class ExpressionTransformer : public Transformer {
           if (producer == nullptr) continue;
           if (!IsCalculateOp(producer)) continue;
           if (producer->GetAttr("strict", false)) continue;
+          if (producer->HasAttr("axis")) continue;
 
           // Assignment must be the sole consumer of all the outputs from the
           // producer.
@@ -971,8 +972,9 @@ class Calculate : public Kernel {
       if (output->shape() != shape && output->rank() != 0) return false;
     }
 
-    // Strict math not supported.
+    // Strict math and strided reduction not supported.
     if (step->GetAttr("strict", false)) return false;
+    if (step->HasAttr("axis")) return false;
 
     return true;
   }

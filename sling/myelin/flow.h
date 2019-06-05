@@ -169,6 +169,14 @@ class Shape {
     return t;
   }
 
+  // Return permuted shape.
+  Shape permute(const Shape &perm) const {
+    CHECK_EQ(rank(), perm.rank());
+    Shape p;
+    for (int d = 0; d < rank(); ++d) p.add(dim(perm.dim(d)));
+    return p;
+  }
+
   // Return the rank of the shape, i.e. the number of dimensions.
   int rank() const  { return dims_.size(); }
 
@@ -260,6 +268,7 @@ class Attributes : public std::vector<Attribute> {
   int GetAttr(const string &name, int defval) const;
   bool GetAttr(const string &name, bool defval) const;
   float GetAttr(const string &name, float defval) const;
+  bool GetAttr(const string &name, Shape *shape) const;
 
   // Check if attribute exists.
   bool HasAttr(const string &name) const;
@@ -270,6 +279,7 @@ class Attributes : public std::vector<Attribute> {
   void SetAttr(const string &name, int value);
   void SetAttr(const string &name, bool value);
   void SetAttr(const string &name, float value);
+  void SetAttr(const string &name, const Shape &value);
 
   // Remove attribute.
   void RemoveAttr(const string &name);

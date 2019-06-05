@@ -58,6 +58,53 @@ dtypes = {
   float: DT_FLOAT32,
 }
 
+# Compute the shape of a nested list.
+def list_shape(l):
+  shape = None
+  for e in l:
+    if type(e) is list:
+      s = list_shape(e)
+      if shape is None:
+        shape = s
+      elif shape != s:
+        return None
+  if shape is None: return [len(l)]
+  return [len(l)] + shape
+
+# Flatten nested list.
+def flatten_list(flat, l):
+  for e in l:
+    if type(e) is list:
+      flatten_list(flat, e)
+    else:
+      flat.append(e)
+
+# Convert nested list to array.
+def list_to_array(l, typecode=None):
+  # Get list shape.
+  shape = list_shape(l)
+  if shape is None: raise TypeError("Unsupported list shape")
+
+  # Flatten list.
+  f = []
+  flatten_list(f, l)
+
+  # Determine list type.
+  if typecode is None:
+    for e in f:
+      et = type(e)
+      if et == float or typecode == 'f':
+        typecode = 'f'
+      elif et == int or typecode == 'i':
+        typecode = 'i'
+  if typecode is None: typecode = 'f'
+
+  # Convert list to array.
+  a = array.array(typecode, f)
+
+  # Return array, type, and shape.
+  return a, typecode, shape
+
 class Builder:
   def __init__(self, flow, func):
     self.flow = flow
@@ -108,19 +155,16 @@ class Builder:
     return op
 
   def const(self, value, dtype=None, shape=None):
-    # Convert scalars.
+    # Convert scalars and lists.
     if type(value) is float:
       if dtype is None: dtype = DT_FLOAT
       if shape is None: shape = []
     elif type(value) is int:
       if dtype is None: dtype = DT_INT
       if shape is None: shape = []
-
-    # Convert lists.
-    if type(value) is list:
-      if dtype is None:
-        dtype = dtypes[type(value[0])] if len(value) > 0 else DT_FLOAT
-      value = array.array(typecodes[dtype], value)
+    elif type(value) is list:
+      value, typecode, shape = list_to_array(value, typecodes.get(dtype))
+      dtype = typemap[typecode]
 
     # Convert arrays.
     if type(value) is array.array:
@@ -137,10 +181,9 @@ class Builder:
     return var
 
   def array(self, name, value):
-    # Convert lists to arrays that supports the buffer protocol.
-    if type(value) is list and len(value) > 0:
-      dt = dtypes[type(value[0])]
-      value = array.array(typecodes[dt], value)
+    # Convert lists to arrays that support the buffer protocol.
+    if type(value) is list:
+      value, _, _ = list_to_array(value)
 
     # Make constant from object with buffer support.
     view = memoryview(value)
@@ -261,8 +304,11 @@ class Builder:
   def gather_avg(self, embedding, indices, name=None):
     return self.pooling_gather("GatherAvg", embedding, indices, name)
 
-  def matmul(self, x, y, name=None):
+  def matmul(self, x, y, transpose_a=None, transpose_b=None, name=None):
+    # TODO: add support for batched matmul, and transpose
     result = self.op("MatMul", [x, y], name)
+    if transpose_a: result.producer.add_attr("transpose_a", True)
+    if transpose_b: result.producer.add_attr("transpose_b", True)
     result.type = x.type
     if len(x.shape) == 2 and len(y.shape) == 2:
       result.shape = [x.shape[0], y.shape[1]]
@@ -270,12 +316,22 @@ class Builder:
       result.shape = [0]
     return result
 
-  def t(self, x, name=None):
+  def t(self, x, perm=None, name=None):
+    rank = len(x.shape)
     result = self.op("Transpose", [x], name)
-    if len(x.shape) == 2:
+    if perm is None and rank == 2:
+      # Matrix transpose.
       result.shape = [x.shape[1], x.shape[0]]
     else:
-      result.shape = [0]
+      # Tensor transpose.
+      if perm is None: perm = list(reversed(range(rank)))
+      if perm == list(range(rank)):
+        result.producer.type = "Identity"
+        result.shape = x.shape
+      else:
+        result.producer.add_attr("perm", perm)
+        result.shape = [0] * rank
+        for d in range(rank): result.shape[d] = x.shape[perm[d]]
     return result
 
   def log(self, x, name=None):
@@ -440,31 +496,41 @@ class Builder:
   def identity(self, x, name=None):
     return self.op("Identity", [x], name)
 
-  def reduce(self, optype, x, name=None):
+  def reduce(self, optype, x, axis=None, keepdims=None, name=None):
     v = self.op(optype, [x], name)
-    v.shape = []
+    if axis is None:
+      v.shape = []
+    else:
+      if axis < 0: axis = len(v.shape) - axis
+      v.shape = x.shape
+      v.producer.add_attr("axis", axis)
+      if keepdims:
+        v.shape[axis] = 1
+        v.producer.add_attr("keepdims", True)
+      else:
+        del v.shape[axis]
     return v
 
-  def sum(self, x, name=None):
-    return self.reduce("Sum", x, name)
+  def sum(self, x, axis=None, keepdims=None, name=None):
+    return self.reduce("Sum", x, axis, keepdims, name)
 
-  def product(self, x, name=None):
-    return self.reduce("Product", x, name)
+  def product(self, x, axis=None, keepdims=None, name=None):
+    return self.reduce("Product", x, axis, keepdims, name)
 
-  def min(self, x, name=None):
-    return self.reduce("Min", x, name)
+  def min(self, x, axis=None, keepdims=None, name=None):
+    return self.reduce("Min", x, axis, keepdims, name)
 
-  def max(self, x, name=None):
-    return self.reduce("Max", x, name)
+  def max(self, x, axis=None, keepdims=None, name=None):
+    return self.reduce("Max", x, axis, keepdims, name)
 
-  def all(self, x, name=None):
-    return self.reduce("All", x, name)
+  def all(self, x, axis=None, keepdims=None, name=None):
+    return self.reduce("All", x, axis, keepdims, name)
 
-  def any(self, x, name=None):
-    return self.reduce("Any", x, name)
+  def any(self, x, axis=None, keepdims=None, name=None):
+    return self.reduce("Any", x, axis, keepdims, name)
 
-  def count(self, p, dtype=DT_FLOAT32, name=None):
-    r = self.reduce("Count", p, name)
+  def count(self, p, axis=None, dtype=DT_FLOAT32, name=None):
+    r = self.reduce("Count", p, axis, name)
     r.type = dtype
     return r
 

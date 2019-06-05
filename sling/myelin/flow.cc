@@ -381,6 +381,37 @@ float Attributes::GetAttr(const string &name, float defval) const {
   return defval;
 }
 
+bool Attributes::GetAttr(const string &name, Shape *shape) const {
+  string str = GetAttr(name);
+  const char *p = str.c_str();
+  if (*p == 0) return false;
+  shape->clear();
+  if (*p == '[') p++;
+  while (*p == ' ') p++;
+  while (*p != 0 && *p != ']') {
+    while (*p == ' ') p++;
+    if (shape->rank() > 0 && *p++ != ',') return false;
+    while (*p == ' ') p++;
+    if (*p >= 0 && *p <= '9') {
+      int n = 0;
+      while (*p >= 0 && *p <= '9') {
+        n = n * 10 + (*p++ - '0');
+      }
+      shape->add(n);
+    } else if (*p == ']') {
+      shape->add(-1);
+      break;
+    } else if (*p == ',') {
+      shape->add(-1);
+    } else {
+      return false;
+    }
+  }
+  if (*p == ']') p++;
+  if (*p != 0) return false;
+  return true;
+}
+
 bool Attributes::HasAttr(const string &name) const {
   for (auto &attr : *this) {
     if (attr.name == name) return true;
@@ -412,6 +443,17 @@ void Attributes::SetAttr(const string &name, bool value) {
 
 void Attributes::SetAttr(const string &name, float value) {
   SetAttr(name, std::to_string(value));
+}
+
+void Attributes::SetAttr(const string &name, const Shape &value) {
+  string str;
+  str.push_back('[');
+  for (int d = 0; d < value.rank(); ++d) {
+    if (d > 0) str.push_back(',');
+    if (value.dim(d) > 0) str.append(std::to_string(value.dim(d)));
+  }
+  str.push_back(']');
+  SetAttr(name, str);
 }
 
 void Attributes::RemoveAttr(const string &name) {

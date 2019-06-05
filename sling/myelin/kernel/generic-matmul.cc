@@ -593,6 +593,8 @@ class TransposeTransformer : public Transformer {
       Flow::Operation *t2 = t1->inputs[0]->producer;
       if (t1->outputs[0]->out()) continue;
       if (t1->outputs[0]->usages() != 1) continue;
+      if (t1->HasAttr("perm")) continue;
+      if (t2->HasAttr("perm")) continue;
 
       t2->outputs[0]->shape = t2->inputs[0]->shape;
       t1->outputs[0]->shape = t1->inputs[0]->shape;
@@ -609,10 +611,12 @@ class TransposeTransformer : public Transformer {
       if (transpose->outputs[0]->out()) continue;
       if (reference->outputs[0]->usages() != 1) continue;
       if (reference->outputs[0]->out()) continue;
+      if (transpose->HasAttr("perm")) continue;
 
       Flow::Variable *var = flow->Var(reference->GetAttr("var"));
       if (var == nullptr || var->producer == nullptr) continue;
       if (var->producer->type != "Transpose") continue;
+      if (var->producer->HasAttr("perm")) continue;
 
       // Move reference to the input of the referenced transpose and eliminate
       // transpose.
@@ -642,6 +646,7 @@ class TransposeTransformer : public Transformer {
       Flow::Operation *transpose = matmul->inputs[0]->producer;
       if (transpose->outputs[0]->usages() != 1) continue;
       if (transpose->outputs[0]->out()) continue;
+      if (transpose->HasAttr("perm")) continue;
 
       transpose->outputs[0]->shape = transpose->inputs[0]->shape;
       flow->Eliminate(transpose);
@@ -655,6 +660,7 @@ class TransposeTransformer : public Transformer {
       Flow::Operation *transpose = matmul->inputs[1]->producer;
       if (transpose->outputs[0]->usages() != 1) continue;
       if (transpose->outputs[0]->out()) continue;
+      if (transpose->HasAttr("perm")) continue;
 
       transpose->outputs[0]->shape = transpose->inputs[0]->shape;
       flow->Eliminate(transpose);
@@ -668,6 +674,7 @@ class TransposeTransformer : public Transformer {
       Flow::Operation *matmul = transpose->inputs[0]->producer;
       if (matmul->outputs[0]->usages() != 1) continue;
       if (matmul->outputs[0]->out()) continue;
+      if (transpose->HasAttr("perm")) continue;
 
       matmul->outputs[0]->shape = transpose->outputs[0]->shape;
       flow->Eliminate(transpose);

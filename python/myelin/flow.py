@@ -15,6 +15,7 @@
 
 """Myelin computation flows."""
 
+import array
 import os
 from struct import calcsize, pack, unpack, unpack_from
 
@@ -83,6 +84,10 @@ class FileWriter:
       data = pack('i', a);
       self.write_long(len(data))
       self.f.write(data)
+    elif isinstance(a, array.array):
+      m = memoryview(a)
+      self.write_long(len(m))
+      self.f.write(m)
     elif isinstance(a, memoryview):
       self.write_long(len(a))
       self.f.write(a)
