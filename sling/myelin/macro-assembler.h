@@ -260,7 +260,7 @@ class StaticData {
   Label *location() { return &location_; }
 
   // Address of data block as operand.
-  const Operand address() const { return address_; }
+  const Operand &address() const { return address_; }
 
  private:
   int alignment_;            // required alignment for data
@@ -278,6 +278,7 @@ class MacroAssembler : public jit::Assembler {
   typedef jit::ZMMRegister ZMMRegister;
   typedef jit::OpmaskRegister OpmaskRegister;
   typedef jit::Label Label;
+  typedef jit::Operand Operand;
 
   MacroAssembler(void *buffer, int buffer_size, const Options &options);
   ~MacroAssembler();
@@ -358,6 +359,10 @@ class MacroAssembler : public jit::Assembler {
   void Accumulate(Reduction op, Type type, XMMRegister acc, XMMRegister r);
   void Accumulate(Reduction op, Type type, YMMRegister acc, YMMRegister r);
   void Accumulate(Reduction op, Type type, ZMMRegister acc, ZMMRegister r);
+  void Accumulate(Reduction op, Type type, XMMRegister acc, const Operand &src);
+  void Accumulate(Reduction op, Type type, YMMRegister acc, const Operand &src);
+  void Accumulate(Reduction op, Type type, ZMMRegister acc, const Operand &src,
+                  OpmaskRegister k = jit::no_opmask_reg);
 
   // Reduction operation over all elements in an accumulator register using an
   // auxiliary register.
