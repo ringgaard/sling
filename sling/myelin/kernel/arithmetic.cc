@@ -972,7 +972,7 @@ class Calculate : public Kernel {
       if (output->shape() != shape && output->rank() != 0) return false;
     }
 
-    // Strict math and strided reduction not supported.
+    // Strict math and reduction over an axis is not supported.
     if (step->GetAttr("strict", false)) return false;
     if (step->HasAttr("axis")) return false;
 

@@ -549,7 +549,7 @@ class Builder:
       size = list_product(x.shape)
     else:
       if axis < 0: axis = len(x.shape) + axis
-      size = list_product(x.shape[axis:])
+      size = x.shape[axis]
     return self.div(sum, self.const(size, x.type), name=name)
 
   def norm(self, x, name=None):
@@ -586,9 +586,9 @@ class Builder:
     result.type = DT_INT
     return result
 
-  # TODO: TEST REMOVE
+  # Experimental!
   def batch_matmul_3d(self, x, y, name=None):
-    result = self.op("BatchMatmul", [x, y], name)
+    result = self.op("BatchMatMul", [x, y], name)
     result.type = x.type
     result.shape = [x.shape[0], x.shape[1], y.shape[-1]]
     return result

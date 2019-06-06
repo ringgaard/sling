@@ -280,9 +280,10 @@ int64 Profile::Complexity(const Step *step) {
 
 string ProfileOverview::ASCIIReport() const {
   static const char *divider =
-      "+---------+--------------+----------------------------------------\n";
+      "+---------+--------------+-------------+--------------+"
+      "--------------------------------------------------\n";
   static const char *header =
-      "| percent |         time | cell\n";
+      "| percent |    time/call | invocations |   total time | cell\n";
   string report;
   if (!cells_.empty()) {
     report.append(divider);
@@ -292,8 +293,9 @@ string ProfileOverview::ASCIIReport() const {
       double time = ci.time * ci.invocations;
       double percent = total_time_ > 0 ? time / total_time_ * 100.0 : 0.0;
       StringAppendF(&report,
-                   "| %6.2f%% |%11.3f s | %s\n",
-                   percent, time / 1e6, ci.cell->name().c_str());
+                   "| %6.2f%% |%s | %11" PRId64 " |%s | %s\n",
+                   percent, TimeStr(ci.time).c_str(), ci.invocations,
+                   TimeStr(time).c_str(), ci.cell->name().c_str());
     }
     report.append(divider);
   }

@@ -1484,6 +1484,70 @@ class ScatterAdd : public Kernel {
   bool scale_;  // scale input
 };
 
+// Reduction over an axis.
+class Reduce : public Kernel {
+ public:
+  Reduce(const string &name, Reduction op) : name_(name), op_(op) {}
+
+  string Name() override { return name_; }
+  string Operation() override { return name_; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 1 || step->outdegree() != 1) return false;
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    if (x->type() != y->type()) return false;
+    if (!step->HasAttr("axis")) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
+  }
+
+  int64 Complexity(const Step *step) override {
+    return step->input(0)->elements();
+  }
+
+ private:
+  string name_;
+  Reduction op_;
+};
+
+// Transpose tensor by permuting dimensions.
+class Transpose : public Kernel {
+ public:
+  string Name() override { return "Transpose"; }
+  string Operation() override { return "Transpose"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 1 || step->outdegree() != 1) return false;
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    if (x->type() != y->type()) return false;
+    if (!step->HasAttr("perm")) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
+  }
+
+  int64 Complexity(const Step *step) override {
+    return step->input(0)->elements();
+  }
+};
+
 // Fold multiplication into update ops.
 class UpdateTransformer : public Transformer {
  public:
@@ -1615,6 +1679,14 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new PoolingGather(PoolingGather::MAX));
   library->Register(new ScatterAdd(false));
   library->Register(new ScatterAdd(true));
+
+  library->Register(new Reduce("Sum", REDUCE_ADD));
+  library->Register(new Reduce("Product", REDUCE_MUL));
+  library->Register(new Reduce("Max", REDUCE_MAX));
+  library->Register(new Reduce("Min", REDUCE_MIN));
+  library->Register(new Reduce("All", REDUCE_AND));
+  library->Register(new Reduce("Any", REDUCE_OR));
+  library->Register(new Transpose());
 
   library->RegisterTransformer(new UpdateTransformer());
   library->RegisterTransformer(new ReshapeRefTransformer());

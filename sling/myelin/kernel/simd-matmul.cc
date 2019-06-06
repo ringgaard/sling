@@ -730,9 +730,38 @@ class SIMDMatMul : public Kernel {
   bool accumulate_;  // matmul with assignment.
 };
 
+// Dummy batch matmul.
+class BatchMatMul : public Kernel {
+ public:
+  string Name() override { return "BatchMatMul"; }
+  string Operation() override { return "BatchMatMul"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    if (x->type() != y->type()) return false;
+
+    return true;
+  }
+
+  void Adjust(Step *step) override {
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    __ nop();
+  }
+
+  int64 Complexity(const Step *step) override {
+    return 0;
+  }
+};
+
 void RegisterSIMDMatMulLibrary(Library *library) {
   library->Register(new SIMDMatMul(true));
   library->Register(new SIMDMatMul(false));
+  library->Register(new BatchMatMul());
 }
 
 }  // namespace myelin
