@@ -58,6 +58,12 @@ dtypes = {
   float: DT_FLOAT32,
 }
 
+# Compute product of elements in list.
+def list_product(l):
+  n = 1
+  for e in l: n *= e
+  return n
+
 # Compute the shape of a nested list.
 def list_shape(l):
   shape = None
@@ -189,7 +195,7 @@ class Builder:
     view = memoryview(value)
     dtype = typemap[view.format]
     shape = list(view.shape)
-    var = self.flow.var(self.func.name + "/" + name, dtype, shape)
+    var = self.flow.var(self.varname(name), dtype, shape)
     var.data = value
     return var
 
@@ -333,6 +339,9 @@ class Builder:
         result.shape = [0] * rank
         for d in range(rank): result.shape[d] = x.shape[perm[d]]
     return result
+
+  def transpose(self, x, perm=None, name=None):
+    return self.t(x, perm, name)
 
   def log(self, x, name=None):
     return self.op("Log", [x], name)
@@ -501,8 +510,8 @@ class Builder:
     if axis is None:
       v.shape = []
     else:
-      if axis < 0: axis = len(v.shape) - axis
-      v.shape = x.shape
+      if axis < 0: axis = len(x.shape) + axis
+      v.shape = x.shape.copy()
       v.producer.add_attr("axis", axis)
       if keepdims:
         v.shape[axis] = 1
@@ -533,6 +542,15 @@ class Builder:
     r = self.reduce("Count", p, axis, name)
     r.type = dtype
     return r
+
+  def mean(self, x, axis=None, keepdims=None, name=None):
+    sum = self.sum(x, axis, keepdims)
+    if axis is None:
+      size = list_product(x.shape)
+    else:
+      if axis < 0: axis = len(x.shape) + axis
+      size = list_product(x.shape[axis:])
+    return self.div(sum, self.const(size, x.type), name=name)
 
   def norm(self, x, name=None):
     return self.sqrt(self.sum(self.square(x)), name)
@@ -566,6 +584,13 @@ class Builder:
     result = self.op("Rank", [x], name)
     result.shape = []
     result.type = DT_INT
+    return result
+
+  # TODO: TEST REMOVE
+  def batch_matmul_3d(self, x, y, name=None):
+    result = self.op("BatchMatmul", [x, y], name)
+    result.type = x.type
+    result.shape = [x.shape[0], x.shape[1], y.shape[-1]]
     return result
 
 # Set builder factory for flows.
