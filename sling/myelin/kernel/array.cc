@@ -1511,7 +1511,8 @@ class Reduce : public Kernel {
   }
 
   int64 Complexity(const Step *step) override {
-    return step->input(0)->elements();
+    return 0;
+    //return step->input(0)->elements();
   }
 
  private:
@@ -1544,7 +1545,8 @@ class Transpose : public Kernel {
   }
 
   int64 Complexity(const Step *step) override {
-    return step->input(0)->elements();
+    return 0;
+    //return step->input(0)->elements();
   }
 };
 

@@ -79,7 +79,7 @@ class TransformerLayer:
         'v', np.random.randn(
             self._hidden_size, self._hidden_size).astype(np.float32))
     output_dense_layer = f.array(
-        'output', np.random.randn(
+        'o', np.random.randn(
             self._hidden_size, self._hidden_size).astype(np.float32))
 
     # Linearly project the query (q), key (k) and value (v) using different
@@ -176,14 +176,18 @@ f = myelin.Builder(flow, 'f')
 
 hidden_size = 256
 filter_size = hidden_size * 4
-seq_length = 32
+seq_length = 128
 num_heads = 8
+num_layers = 1
 
-transformer = TransformerLayer(
-    f, hidden_size, filter_size, seq_length, num_heads)
+layer_input = f.var('input', myelin.DT_FLOAT, [seq_length, hidden_size])
 
-layer_input = f.var('layer_input', myelin.DT_FLOAT, [seq_length, hidden_size])
-layer_output = transformer.build_flow(layer_input)
+for _ in range(num_layers):
+  transformer = TransformerLayer(
+      f, hidden_size, filter_size, seq_length, num_heads)
+  layer_output = transformer.build_flow(layer_input)
+  layer_input = layer_output
+f.rename(layer_output, 'output')
 
 flow.save('/tmp/transformer.flow')
 
@@ -192,8 +196,11 @@ compiler = myelin.Compiler()
 net = compiler.compile(flow)
 
 # Profile network.
-cell = net.cell("f")
+cell = net.cell(f.func.name)
 data = cell.instance()
+
+print('Testing tranformer layers:', num_layers, 'hidden:', hidden_size,
+      'filter:', filter_size, 'length:', seq_length, 'heads:', num_heads)
 
 for n in range(flags.arg.repeat):
   data.compute()

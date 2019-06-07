@@ -136,7 +136,7 @@ class Builder:
     if name is None:
       name = self.opname(optype)
     else:
-      name = self.func.name + "/" + name
+      name = self.opname(name)
     op = self.flow.op(name)
     op.type = optype
     self.func.add(op)
@@ -154,7 +154,7 @@ class Builder:
     if name is None:
       name = self.opname(optype)
     else:
-      name = self.func.name + "/" + name
+      name = self.opname(name)
     op = self.flow.op(name)
     op.type = optype
     self.func.add(op)

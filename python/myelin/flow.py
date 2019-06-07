@@ -86,10 +86,10 @@ class FileWriter:
       self.f.write(data)
     elif isinstance(a, array.array):
       m = memoryview(a)
-      self.write_long(len(m))
+      self.write_long(m.nbytes)
       self.f.write(m)
     elif isinstance(a, memoryview):
-      self.write_long(len(a))
+      self.write_long(a.nbytes)
       self.f.write(a)
     else:
       self.write_long(a.nbytes)
