@@ -117,13 +117,17 @@ class Builder:
     self.func = flow.func(func)
 
   def var(self, name, dtype=DT_FLOAT, shape=[]):
-    v = self.flow.var(self.func.name + "/" + name)
+    n = self.func.name + "/" + name
+    if n in self.flow.vars: raise IndexError("variable already defined: " + n);
+    v = self.flow.var(n)
     v.type = dtype
     v.shape = shape
     return v
 
   def rename(self, var, new_suffix):
-    var.name = self.func.name + "/" + new_suffix
+    n = self.func.name + "/" + new_suffix
+    if n in self.flow.vars: raise IndexError("variable already defined: " + n);
+    var.name = n
     return var
 
   def cnx(self, name, args):

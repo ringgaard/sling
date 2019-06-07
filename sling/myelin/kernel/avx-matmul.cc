@@ -793,7 +793,7 @@ class AVXFltDotProduct : public Kernel {
     Tensor *b = step->input(1);
 
     // Align to one SIMD register (256 bits, 32 bytes).
-    bool avx512 = CPU::Enabled(AVX512F) && a->elements() % 16  != 0;
+    bool avx512 = CPU::Enabled(AVX512F) && a->elements() % 16 == 0;
     a->SetMiniumAlignment(avx512 ? 64 : 32);
     b->SetMiniumAlignment(avx512 ? 64 : 32);
   }

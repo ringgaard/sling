@@ -36,17 +36,18 @@ class MatMulArgs {
     void Init(Tensor *tensor, bool transposed) {
       this->tensor = tensor;
       this->transposed = transposed;
-      if (transposed) {
-        this->shape = tensor->shape().transpose();
-      } else {
-        this->shape = tensor->shape();
+      int r = rank();
+      outer = r - 2;
+      inner = r - 1;
+      batch = r - 2;
+      if (tensor->order() == COLUMN_MAJOR) {
+        std::swap(outer, inner);
       }
     }
 
     // Transpose argument representation.
     void Transpose() {
       transposed = !transposed;
-      shape = shape.transpose();
     }
 
     // Element order with respect to transpose.
@@ -59,36 +60,46 @@ class MatMulArgs {
       return tensor->order();
     }
 
-    // Outer dimension in tensor array.
-    int outer() const { return tensor->order() == ROW_MAJOR ? 0 : 1; }
+    // Height (outer dimension) of matrix
+    int height() const { return tensor->dim(outer); }
 
-    // Inner dimension in tensor array.
-    int inner() const { return tensor->order() == ROW_MAJOR ? 1 : 0; }
+    // Width (inner dimension) of matrix.
+    int width() const { return tensor->dim(inner); }
 
-    // Height (outer dimension) of tensor array
-    int height() const { return tensor->dim(outer()); }
+    // Number of rows in matrix
+    int rows() const { return transposed ? width() : height(); }
 
-    // Width (inner dimension) of tensor array.
-    int width() const { return tensor->dim(inner()); }
+    // Width (inner dimension) of matrix.
+    int columns() const { return transposed ? height() : width(); }
 
-    // Number of elements in tensor array.
-    int elements() const { return tensor->elements(); }
+    // Number of elements in matrix.
+    int elements() const { return tensor->shape().inner(batch); }
 
-    // Size of tensor in bytes.
-    int size() const { return tensor->size(); }
+    // Batch size.
+    int batch_size() const { return tensor->shape().outer(batch); }
 
-    // Number of bytes per row including padding.
-    int stride() const { return tensor->stride(outer()); }
+    // Size of matrix in bytes.
+    int size() const {
+      return batch > 0 ? tensor->stride(batch - 1) : tensor->size();
+    }
 
-    // Padding bytes per row.
-    int padding() const { return tensor->padding(outer()); }
+    // Size of outer dimension including padding.
+    int stride() const { return tensor->stride(outer); }
+
+    // Padding bytes for outer dimension.
+    int padding() const { return tensor->padding(outer); }
 
     // Data type for underlying tensor.
     Type type() const { return tensor->type(); }
 
+    // Rank for underlying tensor.
+    int rank() const { return tensor->rank(); }
+
     Tensor *tensor;   // underlying tensor for argument
-    Shape shape;      // shape after transposition
     bool transposed;  // argument transposition
+    int outer;        // outer dimension for matrix
+    int inner;        // inner dimension for matrix
+    int batch;        // nunber of batch dimensions
   };
 
   // Check if inputs and outputs are valid for a matrix multiplication.
@@ -161,14 +172,14 @@ class MatMulArgs {
 
   // Check that argument shapes match a matrix multiplication.
   bool CheckShapes() const {
-    // Check that tensors are matrices.
-    if (a_.shape.rank() != 2) return false;
-    if (b_.shape.rank() != 2) return false;
-    if (c_.shape.rank() != 2) return false;
+    // Check that tensors are (same-sized batches of) matrices.
+    if (a_.rank() < 2) return false;
+    if (b_.rank() != a_.rank()) return false;
+    if (c_.rank() != a_.rank()) return false;
 
-    if (a_.shape.dim(0) != c_.shape.dim(0)) return false;
-    if (a_.shape.dim(1) != b_.shape.dim(0)) return false;
-    if (b_.shape.dim(1) != c_.shape.dim(1)) return false;
+    if (c_.rows() != a_.rows()) return false;
+    if (c_.columns() != b_.columns()) return false;
+    if (a_.columns() != b_.rows()) return false;
 
     return true;
   }
@@ -721,7 +732,7 @@ class SIMDMatMul : public Kernel {
   int64 Complexity(const Step *step) override {
     MatMulArgs args(step);
     int64 ops = args.c().tensor->elements();
-    ops *= args.a().shape.dim(1);
+    ops *= args.a().columns();
     ops *= 2;
     return  ops;
   }

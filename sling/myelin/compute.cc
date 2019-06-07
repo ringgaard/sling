@@ -1095,6 +1095,13 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       }
     }
 
+    // Set order constraint from flow.
+    if (var->is(Flow::Variable::ROW)) {
+      tensor->order_ = ROW_MAJOR;
+    } else if (var->is(Flow::Variable::COL)) {
+      tensor->order_ = COLUMN_MAJOR;
+    }
+
     // Initialize constant tensors with data from the flow variable so they can
     // be used before tensor data allocation.
     if (tensor->constant()) {

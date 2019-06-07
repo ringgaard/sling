@@ -327,14 +327,31 @@ def matmul_add_relu_test(m, k, n):
   y = f.relu(f.add(f.matmul(x, W), b))
   check(flow, (m, k, n), -10, 10)
 
-def matmul_transpose_test(m, n):
+def matmul_transpose_test(m, n, k=1):
   flow = myelin.Flow()
   f = flow.define("matmul_transpose")
-  x = f.var("x", dt, [1, m])
+  x = f.var("x", dt, [k, m])
+  y = f.var("y", dt, [n, k])
+  z = f.var("z", dt, [m, k])
   W = f.var("W", dt, [n, m])
   f.matmul(x, f.t(W))
   f.matmul(W, f.t(x))
-  check(flow, (m, n), -10, 10)
+  f.matmul(f.t(y), W)
+  f.matmul(f.t(z), f.t(W))
+  check(flow, (m, n, k), -10, 10)
+
+def matmul_order_test(m, k, n, ta, tb, ra, rb):
+  flow = myelin.Flow()
+  f = flow.define("matmul_order")
+
+  a = f.var("A", dt, [k, m] if ta else [m, k])
+  a.flags |= 128 if ra else 64
+  b = f.var("B", dt, [n, k] if tb else [k, n])
+  b.flags |= 128 if rb else 64
+  if ta: a = f.t(a)
+  if tb: a = f.t(b)
+  c = f.matmul(a, b, name="C")
+  check(flow, (m, k, n, ta, tb, ra, rb), -10, 10)
 
 def add_test(n):
   flow = myelin.Flow()

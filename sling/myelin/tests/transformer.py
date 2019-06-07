@@ -174,11 +174,11 @@ flags.parse()
 flow = myelin.Flow()
 f = myelin.Builder(flow, 'f')
 
-hidden_size = 256
-filter_size = hidden_size * 4
 seq_length = 128
-num_heads = 8
+hidden_size = 256
 num_layers = 1
+num_heads = 8
+filter_size = hidden_size * 4
 
 layer_input = f.var('input', myelin.DT_FLOAT, [seq_length, hidden_size])
 
@@ -199,8 +199,8 @@ net = compiler.compile(flow)
 cell = net.cell(f.func.name)
 data = cell.instance()
 
-print('Testing tranformer layers:', num_layers, 'hidden:', hidden_size,
-      'filter:', filter_size, 'length:', seq_length, 'heads:', num_heads)
+print('Testing transformer layers:', num_layers, 'length:', seq_length,
+      'hidden:', hidden_size, 'filter:', filter_size, 'heads:', num_heads)
 
 for n in range(flags.arg.repeat):
   data.compute()
