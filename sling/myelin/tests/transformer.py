@@ -4,7 +4,8 @@ import numpy as np
 import sling.myelin as myelin
 import sling.flags as flags
 
-flags.define("--repeat", default=1, type=int)
+flags.define('--repeat', default=1, type=int)
+flags.define('--flow')
 
 class TransformerLayer:
   """Builds a flow graph for single transformer layer."""
@@ -189,7 +190,8 @@ for _ in range(num_layers):
   layer_input = layer_output
 f.rename(layer_output, 'output')
 
-flow.save('/tmp/transformer.flow')
+if flags.arg.flow:
+  flow.save(flags.arg.flow)
 
 # Compile flow to network.
 compiler = myelin.Compiler()

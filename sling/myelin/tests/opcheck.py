@@ -340,18 +340,41 @@ def matmul_transpose_test(m, n, k=1):
   f.matmul(f.t(z), f.t(W))
   check(flow, (m, n, k), -10, 10)
 
-def matmul_order_test(m, k, n, ta, tb, ra, rb):
+def matmul_order_test(m, k, n,
+                      ta=False, tb=False, tc=False,
+                      ra=None, rb=None, rc=None):
   flow = myelin.Flow()
   f = flow.define("matmul_order")
 
   a = f.var("A", dt, [k, m] if ta else [m, k])
-  a.flags |= 128 if ra else 64
   b = f.var("B", dt, [n, k] if tb else [k, n])
-  b.flags |= 128 if rb else 64
+
+  if ra is True: a.flags |= 128
+  if ra is False: a.flags |= 64
+
+  if rb is True: b.flags |= 128
+  if rb is False: b.flags |= 64
+
   if ta: a = f.t(a)
-  if tb: a = f.t(b)
-  c = f.matmul(a, b, name="C")
-  check(flow, (m, k, n, ta, tb, ra, rb), -10, 10)
+  if tb: b = f.t(b)
+
+  if tc:
+    c = f.t(f.matmul(a, b, name="C"))
+  else:
+    c = f.matmul(a, b, name="C")
+
+  if rc is True: c.flags |= 128
+  if rc is False: c.flags |= 64
+
+  check(flow, ([m, k, n], [ta, tb, tc], [ra, rb, rc]), -10, 10)
+
+def matmul_all_orders_test(m, k, n):
+  for ra in [False, True]:
+    for rb in [False, True]:
+      for ta in [False, True]:
+        for tb in [False, True]:
+          for tc in [False, True]:
+            matmul_order_test(m, k, n, ta, tb, tc, ra, rb)
 
 def add_test(n):
   flow = myelin.Flow()
@@ -730,6 +753,14 @@ def bcast_test(n):
   y = f.mul(x, f.const(7, dt))
   check(flow, n)
 
+def bcast_repeat_test(n):
+  flow = myelin.Flow()
+  f = flow.define("bcast_repeat")
+  x = f.var("x", dt, [n, 256])
+  y = f.var("y", dt, [n, 1])
+  z = f.square(f.sub(x, y))
+  check(flow, n)
+
 def shape_test(n):
   flow = myelin.Flow()
   f = flow.define("shape")
@@ -905,6 +936,7 @@ for i in sizes:
   square_test(i)
   relu_test(i)
   bcast_test(i)
+  bcast_repeat_test(i)
   shape_test(i)
   size_test(i)
   if i < 32: rank_test(i)
@@ -970,9 +1002,11 @@ for i in sizes:
 for i in sizes:
   for j in sizes:
     matmul_transpose_test(i, j)
+    matmul_all_orders_test(i, j, 32)
     for k in sizes:
       matmul_test(i, j, k)
       matmul_add_test(i, j, k)
+      if flags.arg.thorough: matmul_all_orders_test(i, j, k)
       if dt != myelin.DT_INT8:
         # Rounding with MatMulAddRelu not compatible with NymPy for INT8.
         matmul_add_relu_test(i, j, k)

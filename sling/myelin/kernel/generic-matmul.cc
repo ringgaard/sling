@@ -349,6 +349,11 @@ class GenericIntVecMatMulBase : public Kernel {
     if (x->dim(0) != 1 || x->dim(1) != W->dim(0)) return false;
     if (y->dim(0) != x->dim(0) || y->dim(1) != W->dim(1)) return false;
 
+    // Transpose not supported.
+    if (step->GetAttr("transpose_a", false)) return false;
+    if (step->GetAttr("transpose_b", false)) return false;
+    if (step->GetAttr("transpose_c", false)) return false;
+
     // The matrix must support column-major order.
     if (!W->SupportsOrder(COLUMN_MAJOR)) return false;
 

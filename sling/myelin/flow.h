@@ -334,8 +334,8 @@ class Flow {
       LEARNABLE = 8,  // learnable global variable
       UNIQUE = 16,    // input with single gradient
       RANDOM = 32,    // initialize with random values
-      ROW = 64,       // request column-major order
-      COL = 128,      // request row-major order
+      ROW = 64,       // request row-major order
+      COL = 128,      // request column-major order
     };
 
     // Add alias for variable.

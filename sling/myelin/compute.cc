@@ -63,7 +63,7 @@ static Order CombinedOrder(Order a, Order b) {
     return ROW_MAJOR;
   }
   if (b == ROW_MAJOR) {
-    if (b == COLUMN_MAJOR) return CONFLICTING_ORDER;
+    if (a == COLUMN_MAJOR) return CONFLICTING_ORDER;
     return ROW_MAJOR;
   }
 

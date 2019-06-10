@@ -60,23 +60,24 @@ class MatMulArgs {
       return tensor->order();
     }
 
-    // Height (outer dimension) of matrix
+    // Height (outer dimension) of matrix w.r.t. physical layout.
     int height() const { return tensor->dim(outer); }
 
-    // Width (inner dimension) of matrix.
+    // Width (inner dimension) of matrix  w.r.t. physical layout.
     int width() const { return tensor->dim(inner); }
 
-    // Number of rows in matrix
-    int rows() const { return transposed ? width() : height(); }
+    // Number of rows in (transposed) matrix  w.r.t. logical layout.
+    int rows() const {
+      return tensor->dim(tensor->rank() - (transposed ? 1 : 2));
+    }
 
-    // Width (inner dimension) of matrix.
-    int columns() const { return transposed ? height() : width(); }
+    // Number of columns in (transposed) matrix  w.r.t. logical layout.
+    int columns() const {
+      return tensor->dim(tensor->rank() - (transposed ? 2 : 1));
+    }
 
     // Number of elements in matrix.
     int elements() const { return tensor->shape().inner(batch); }
-
-    // Batch size.
-    int batch_size() const { return tensor->shape().outer(batch); }
 
     // Size of matrix in bytes.
     int size() const {
@@ -89,6 +90,14 @@ class MatMulArgs {
     // Padding bytes for outer dimension.
     int padding() const { return tensor->padding(outer); }
 
+    // Batch size.
+    int batch_size() const { return tensor->shape().outer(batch); }
+
+    // Batch stride.
+    int batch_stride() const {
+      return batch == 0 ? tensor->size() : tensor->stride(batch - 1);
+    }
+
     // Data type for underlying tensor.
     Type type() const { return tensor->type(); }
 
@@ -99,7 +108,7 @@ class MatMulArgs {
     bool transposed;  // argument transposition
     int outer;        // outer dimension for matrix
     int inner;        // inner dimension for matrix
-    int batch;        // nunber of batch dimensions
+    int batch;        // number of batch dimensions
   };
 
   // Check if inputs and outputs are valid for a matrix multiplication.

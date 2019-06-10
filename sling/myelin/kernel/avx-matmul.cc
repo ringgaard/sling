@@ -956,7 +956,8 @@ class AVXFltAssignAddOuter : public Kernel {
     if (c->type() != DT_FLOAT || c->rank() != 2) return false;
     if (a->dim(0) != 1 || a->dim(1) != c->dim(0)) return false;
     if (b->dim(0) != 1 || b->dim(1) != c->dim(1)) return false;
-    if (!step->GetAttr("transpose_a", false)) return false;
+
+    if (step->GetAttr("transpose_a", false)) return false;
     if (step->GetAttr("transpose_b", false)) return false;
     if (step->GetAttr("transpose_c", false)) return false;
 
