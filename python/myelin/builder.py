@@ -314,19 +314,12 @@ class Builder:
   def gather_avg(self, embedding, indices, name=None):
     return self.pooling_gather("GatherAvg", embedding, indices, name)
 
-  def matmul(self, x, y, transpose_a=None, transpose_b=None, name=None):
-    # TODO: add support for batched matmul, and transpose
+  def matmul(self, x, y, name=None):
     result = self.op("MatMul", [x, y], name)
-    if transpose_a: result.producer.add_attr("transpose_a", True)
-    if transpose_b: result.producer.add_attr("transpose_b", True)
-    result.type = x.type
-    if len(x.shape) == 2 and len(y.shape) == 2:
-      result.shape = [x.shape[0], y.shape[1]]
-    else:
-      result.shape = [0]
+    result.shape = x.shape[:-2] + [x.shape[-2], y.shape[-1]]
     return result
 
-  def t(self, x, perm=None, name=None):
+  def transpose(self, x, perm=None, name=None):
     rank = len(x.shape)
     result = self.op("Transpose", [x], name)
     if perm is None and rank == 2:
@@ -344,8 +337,8 @@ class Builder:
         for d in range(rank): result.shape[d] = x.shape[perm[d]]
     return result
 
-  def transpose(self, x, perm=None, name=None):
-    return self.t(x, perm, name)
+  def t(self, x, perm=None, name=None):
+    return self.transpose(x, perm, name)
 
   def log(self, x, name=None):
     return self.op("Log", [x], name)
@@ -590,12 +583,6 @@ class Builder:
     result.type = DT_INT
     return result
 
-  # Experimental!
-  def batch_matmul_3d(self, x, y, name=None):
-    result = self.op("BatchMatMul", [x, y], name)
-    result.type = x.type
-    result.shape = [x.shape[0], x.shape[1], y.shape[-1]]
-    return result
 
 # Set builder factory for flows.
 def builder_factory(flow, name):

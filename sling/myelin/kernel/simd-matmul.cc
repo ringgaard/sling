@@ -179,7 +179,7 @@ class MatMulArgs {
     c_.tensor->RequireOrder(required);
   }
 
-  // Check that argument shapes match a matrix multiplication.
+  // Check that argument shapes match a (batched) matrix multiplication.
   bool CheckShapes() const {
     // Check that tensors are (same-sized batches of) matrices.
     if (a_.rank() < 2) return false;
@@ -189,6 +189,9 @@ class MatMulArgs {
     if (c_.rows() != a_.rows()) return false;
     if (c_.columns() != b_.columns()) return false;
     if (a_.columns() != b_.rows()) return false;
+
+    if (a_.batch_size() != c_.batch_size()) return false;
+    if (b_.batch_size() != c_.batch_size()) return false;
 
     return true;
   }
@@ -255,6 +258,12 @@ class SIMDMatMul : public Kernel {
     MatMulArgs args(step);
     args.RequireOrder(ROW_MAJOR);
 
+    // Inputs must be row-major for batched matmul.
+    if (args.a().batch_size() != 1) {
+      args.a().tensor->RequireOrder(ROW_MAJOR);
+      args.b().tensor->RequireOrder(ROW_MAJOR);
+    }
+
     // Set alignment.
     Type type = args.c().type();
     int vecbytes = SIMDAssembler::VectorBytes(type);
@@ -284,6 +293,12 @@ class SIMDMatMul : public Kernel {
     } else {
       LOG(FATAL) << "Unsupported element order";
     }
+
+    // Add batch size to variant.
+    int batch_size = args.a().batch_size();
+    if (batch_size > 1) {
+      step->set_variant(step->variant() + "*" + std::to_string(batch_size));
+    }
   }
 
   // Compute dot products between rows/columns in A and column blocks in B using
@@ -295,6 +310,7 @@ class SIMDMatMul : public Kernel {
     Type type = args.c().tensor->type();
     int dsize = TypeTraits::of(type).size();
     int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
+    int batchsize = args.a().batch_size();
     SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
     step->set_variant(sasm.name() + (strided ? "CR" : "RR"));
     if (strided) {
@@ -323,20 +339,31 @@ class SIMDMatMul : public Kernel {
     __ LoadTensorAddress(c, args.c().tensor);
 
     // Compute inner and outer dimensions.
-    int outer_step, outer_limit, inner_step, inner_limit;
+    int outer_step, outer_limit, inner_step, inner_limit, batch_skip;
     if (strided) {
       outer_step = dsize;
       outer_limit = dsize * args.a().width();
       inner_step = args.a().stride();
       inner_limit = args.a().stride() * args.a().height();
+      batch_skip = args.a().size() - outer_limit;
     } else {
       outer_step = args.a().stride();
       outer_limit = args.a().stride() * args.a().height();
       inner_step = dsize;
       inner_limit = dsize * args.a().width();
+      batch_skip = 0;
     }
     bool outer_single = outer_step == outer_limit;
     bool inner_single = inner_step == inner_limit;
+
+    // Loop over batches.
+    Register batch;
+    Label lb;
+    if (batchsize > 1) {
+      batch = masm->rr().alloc();
+      __ xorq(batch, batch);
+      __ bind(&lb);
+    }
 
     // Loop over rows/columns in A.
     Register a_end = masm->rr().alloc();
@@ -505,6 +532,19 @@ class SIMDMatMul : public Kernel {
       __ cmpq(a, a_end);
       __ j(less, &l1);
     }
+
+    // Next batch.
+    if (batchsize > 1) {
+      if (outer_single) {
+        __ addq(a, Immediate(outer_step));
+      } else if (batch_skip != 0) {
+        __ addq(a, Immediate(batch_skip));
+      }
+      __ addq(b, Immediate(args.b().batch_stride()));
+      __ incq(batch);
+      __ cmpq(batch, Immediate(batchsize));
+      __ j(less, &lb);
+    }
   }
 
   // Compute dot products between row blocks in A and row blocks in B  using
@@ -518,6 +558,7 @@ class SIMDMatMul : public Kernel {
     SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
     step->set_variant(sasm.name() + "RC");
     CHECK_EQ(args.a().width(), args.b().width());
+    CHECK_EQ(args.a().batch_size(), 1);
 
     // Compute vector processing strategy.
     SIMDStrategy strategy(&sasm, args.b().width());
@@ -663,6 +704,7 @@ class SIMDMatMul : public Kernel {
     SIMDAssembler sasm(masm, type, true);
     step->set_variant(sasm.name() + "CC");
     CHECK_EQ(args.a().height(), args.b().width());
+    CHECK_EQ(args.a().batch_size(), 1);
 
     // Allocate registers.
     Register a = masm->rr().alloc();
@@ -750,38 +792,9 @@ class SIMDMatMul : public Kernel {
   bool accumulate_;  // matmul with assignment.
 };
 
-// Dummy batch matmul.
-class BatchMatMul : public Kernel {
- public:
-  string Name() override { return "BatchMatMul"; }
-  string Operation() override { return "BatchMatMul"; }
-
-  bool Supports(Step *step) override {
-    // Check inputs and outputs.
-    if (step->indegree() != 2 || step->outdegree() != 1) return false;
-    Tensor *x = step->input(0);
-    Tensor *y = step->output(0);
-    if (x->type() != y->type()) return false;
-
-    return true;
-  }
-
-  void Adjust(Step *step) override {
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    __ nop();
-  }
-
-  int64 Complexity(const Step *step) override {
-    return 0;
-  }
-};
-
 void RegisterSIMDMatMulLibrary(Library *library) {
   library->Register(new SIMDMatMul(true));
   library->Register(new SIMDMatMul(false));
-  library->Register(new BatchMatMul());
 }
 
 }  // namespace myelin

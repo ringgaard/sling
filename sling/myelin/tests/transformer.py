@@ -103,7 +103,7 @@ class TransformerLayer:
     # Eq: logits = tf.matmul(q, k, transpose_b=True)
     # Logits is supposed to be [num_heads, seq_length, seq_length]
     k = f.transpose(k, [0, 2, 1])
-    logits = f.batch_matmul_3d(q, k)
+    logits = f.matmul(q, k)  # batched matmul
 
     # We won't need bias if we work with batch_size = 1
     # logits = f.add(logits, bias)
@@ -111,7 +111,7 @@ class TransformerLayer:
     weights = f.softmax(logits, name='attention_weights')
 
     # Output: [num_heads, seq_length, depth]
-    attention_output = f.batch_matmul_3d(weights, v)
+    attention_output = f.matmul(weights, v)  # batched matmul
 
     # Output: [seq_length, hidden_dim]
     attention_output = _combine_heads(attention_output)

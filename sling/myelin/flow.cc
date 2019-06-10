@@ -392,9 +392,9 @@ bool Attributes::GetAttr(const string &name, Shape *shape) const {
     while (*p == ' ') p++;
     if (shape->rank() > 0 && *p++ != ',') return false;
     while (*p == ' ') p++;
-    if (*p >= 0 && *p <= '9') {
+    if (*p >= '0' && *p <= '9') {
       int n = 0;
-      while (*p >= 0 && *p <= '9') {
+      while (*p >= '0' && *p <= '9') {
         n = n * 10 + (*p++ - '0');
       }
       shape->add(n);
@@ -450,7 +450,7 @@ void Attributes::SetAttr(const string &name, const Shape &value) {
   str.push_back('[');
   for (int d = 0; d < value.rank(); ++d) {
     if (d > 0) str.push_back(',');
-    if (value.dim(d) > 0) str.append(std::to_string(value.dim(d)));
+    if (value.dim(d) >= 0) str.append(std::to_string(value.dim(d)));
   }
   str.push_back(']');
   SetAttr(name, str);

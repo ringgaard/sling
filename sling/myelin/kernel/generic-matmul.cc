@@ -645,6 +645,29 @@ class TransposeTransformer : public Transformer {
       updates++;
     }
 
+    // Merge double transpose.
+    for (Flow::Operation *op : flow->Find("Transpose|Transpose")) {
+      Flow::Operation *t1 = op;
+      Flow::Operation *t2 = t1->inputs[0]->producer;
+      if (t2->outputs[0]->out()) continue;
+      if (t2->outputs[0]->usages() != 1) continue;
+
+      int rank1 = t1->outputs[0]->rank();
+      int rank2 = t2->outputs[0]->rank();
+      if (rank1 != rank2) continue;
+
+      Shape perm1;
+      Shape perm2;
+      if (!t1->GetAttr("perm", &perm1)) perm1.reverse(rank1);
+      if (!t2->GetAttr("perm", &perm2)) perm2.reverse(rank2);
+      Shape perm = perm2.permute(perm1);
+      t1->SetAttr("perm", perm);
+
+      t2->outputs[0]->shape = t2->inputs[0]->shape;
+      flow->Eliminate(t2);
+      updates++;
+    }
+
     // Fold transpose of first argument into matmul.
     for (Flow::Operation *op : flow->Find("Transpose|MatMul")) {
       Flow::Operation *matmul = op;

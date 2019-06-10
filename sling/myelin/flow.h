@@ -161,11 +161,16 @@ class Shape {
   // Add dimension to shape.
   void add(int size) { dims_.push_back(size); }
 
+  // Set shape to [rank-1, ..., 0].
+  void reverse(int rank) {
+    dims_.resize(rank);
+    for (int d = 0; d < rank; ++d) dims_[d] = rank - d - 1;
+  }
+
   // Return transposed shape.
   Shape transpose() const {
-    if (rank() < 2) return *this;
-    Shape t = *this;
-    std::swap(t.dims_[0], t.dims_[1]);
+    Shape t;
+    for (int d = rank() - 1; d >= 0; --d) t.add(dim(d));
     return t;
   }
 

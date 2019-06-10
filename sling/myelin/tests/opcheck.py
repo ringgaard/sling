@@ -376,6 +376,14 @@ def matmul_all_orders_test(m, k, n):
           for tc in [False, True]:
             matmul_order_test(m, k, n, ta, tb, tc, ra, rb)
 
+def matmul_batch_test(m, k, n, b=8):
+  flow = myelin.Flow()
+  f = flow.define("matmul_batch")
+  a = f.var("A", dt, [b, m, k])
+  b = f.var("B", dt, [b, k, n])
+  c = f.matmul(a, b, name="C")
+  check(flow, (m, k, n, b), -10, 10)
+
 def add_test(n):
   flow = myelin.Flow()
   f = flow.define("add")
@@ -1006,6 +1014,7 @@ for i in sizes:
     for k in sizes:
       matmul_test(i, j, k)
       matmul_add_test(i, j, k)
+      matmul_batch_test(i, j, k, 8)
       if flags.arg.thorough: matmul_all_orders_test(i, j, k)
       if dt != myelin.DT_INT8:
         # Rounding with MatMulAddRelu not compatible with NymPy for INT8.
