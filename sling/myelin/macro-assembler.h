@@ -64,7 +64,7 @@ class Registers {
   // Allocate fixed register.
   Register alloc_fixed(Register r);
 
-  // Allocate temporary register that is neither preserved or used as an
+  // Allocate temporary register that is neither preserved nor used as an
   // argument register.
   Register alloc_temp();
 
@@ -262,11 +262,16 @@ class StaticData {
   // Address of data block as operand.
   const Operand &address() const { return address_; }
 
+  // External symbol name.
+  const string &symbol() const { return symbol_; }
+  void set_symbol(const string &symbol) { symbol_ = symbol; }
+
  private:
   int alignment_;            // required alignment for data
   std::vector<uint8> data_;  // data in data block
   Label location_;           // location of data in generated code block
   Operand address_;          // pc-relative address of data in code block
+  string symbol_;            // external symbol name
 };
 
 // Macro assembler for generating code for computations.
@@ -293,7 +298,7 @@ class MacroAssembler : public jit::Assembler {
   StaticData *CreateDataBlock(int alignment = 1);
 
   // Find existing static data block.
-  StaticData *FindDataBlock(const void *data, int size, int repeat);
+  StaticData *FindDataBlock(const void *data, int size, int repeat = 1);
 
   // Create new static data block with (repeated) constant.
   template<typename T> StaticData *Constant(T value, int repeat = 1) {
@@ -318,6 +323,18 @@ class MacroAssembler : public jit::Assembler {
     if (data == nullptr) {
       data = CreateDataBlock(size * repeat);
       data->AddData(value, size, repeat);
+    }
+    return data;
+  }
+
+  // Get static data block for external reference.
+  StaticData *GetExtern(const string &symbol, const void *address) {
+    int size = sizeof(void *);
+    StaticData *data = FindDataBlock(&address, size);
+    if (data == nullptr || data->symbol() != symbol) {
+      data = CreateDataBlock(size);
+      data->AddData(&address, size);
+      data->set_symbol(symbol);
     }
     return data;
   }

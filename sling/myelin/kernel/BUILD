@@ -118,6 +118,19 @@ cc_library(
 )
 
 cc_library(
+  name = "mkl",
+  srcs = ["mkl.cc"],
+  hdrs = ["mkl.h"],
+  deps = [
+    "//sling/base",
+    "//sling/myelin:compute",
+  ],
+  linkopts = [
+    "-ldl",
+  ],
+)
+
+cc_library(
   name = "dragnn",
   srcs = ["dragnn.cc"],
   hdrs = ["dragnn.h"],

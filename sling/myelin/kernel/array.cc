@@ -1507,6 +1507,8 @@ class Reduce : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    LOG(WARNING) << "Generating dummy reduce op for " << step->name();
+    step->set_variant("DUMMY");
     __ nop();
   }
 
@@ -1541,6 +1543,8 @@ class Transpose : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    LOG(WARNING) << "Generating dummy transpose op for " << step->name();
+    step->set_variant("DUMMY");
     __ nop();
   }
 

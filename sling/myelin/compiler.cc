@@ -30,6 +30,7 @@
 #include "sling/myelin/cuda/cuda-runtime.h"
 #include "sling/myelin/kernel/cuda.h"
 #include "sling/myelin/kernel/dragnn.h"
+#include "sling/myelin/kernel/mkl.h"
 #include "sling/myelin/kernel/tensorflow.h"
 
 DEFINE_string(cpu, "", "Enable/disable CPU features");
@@ -48,6 +49,7 @@ DEFINE_bool(dump_cells, false, "Dump cells after compilation");
 DEFINE_bool(dump_code, false, "Dump generated assembly code");
 DEFINE_bool(check_flow_consistency, false, "Check that flow is consistent");
 DEFINE_bool(dynamic_instance_allocation, false, "Dynamic instance allocation");
+DEFINE_bool(mkl, false, "Use Intel Math Kernel Library");
 DEFINE_bool(dragnn, false, "Use DRAGNN kernels");
 DEFINE_bool(sync_steps, false, "Synchronize all compute steps");
 DEFINE_bool(fast_math, false, "Fast approximate math ops");
@@ -85,6 +87,7 @@ Compiler::Compiler() {
 
   // Add extra kernels.
   if (FLAGS_dragnn) RegisterDragnnLibrary(library_);
+  if (FLAGS_mkl) RegisterMKLLibrary(library_);
 }
 
 Compiler::~Compiler() {

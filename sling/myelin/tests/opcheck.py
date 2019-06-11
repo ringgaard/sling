@@ -271,8 +271,8 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
     if test == None:
       test = Test(f)
       tests[f.name] = test
-    test.runs += 1
     for o in flow.outputs(f):
+      test.runs += 1
       t = data.tensor(o)
       b = baseline[o]
 
@@ -304,9 +304,9 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
 def matmul_test(m, k, n):
   flow = myelin.Flow()
   f = flow.define("matmul")
-  x = f.var("x", dt, [m, k])
-  W = f.var("W", dt, [k, n])
-  y = f.matmul(x, W)
+  A = f.var("A", dt, [m, k])
+  B = f.var("B", dt, [k, n])
+  C = f.matmul(A, B, name="C")
   check(flow, (m, k, n), -10, 10)
 
 def matmul_add_test(m, k, n):
@@ -1010,12 +1010,13 @@ for i in sizes:
 for i in sizes:
   for j in sizes:
     matmul_transpose_test(i, j)
-    matmul_all_orders_test(i, j, 32)
+    if not flags.arg.mkl: matmul_all_orders_test(i, j, 32)
     for k in sizes:
       matmul_test(i, j, k)
       matmul_add_test(i, j, k)
-      matmul_batch_test(i, j, k, 8)
-      if flags.arg.thorough: matmul_all_orders_test(i, j, k)
+      if not flags.arg.mkl: matmul_batch_test(i, j, k, 8)
+      if flags.arg.thorough and not flags.arg.mkl:
+        matmul_all_orders_test(i, j, k)
       if dt != myelin.DT_INT8:
         # Rounding with MatMulAddRelu not compatible with NymPy for INT8.
         matmul_add_relu_test(i, j, k)

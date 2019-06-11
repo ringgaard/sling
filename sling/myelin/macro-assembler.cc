@@ -200,6 +200,13 @@ void StaticData::Generate(MacroAssembler *masm) {
   // Bind label to the address of the generated data block.
   masm->bind(&location_);
 
+  // Add external symbol.
+  if (!symbol_.empty()) {
+    CHECK_EQ(data_.size(), sizeof(Address));
+    Address *addr = reinterpret_cast<Address *>(data_.data());
+    masm->AddExtern(symbol_, *addr);
+  }
+
   // Emit data block.
   for (uint8 byte : data_) masm->db(byte);
 }

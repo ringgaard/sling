@@ -357,7 +357,7 @@ class SIMDMatMul : public Kernel {
     bool inner_single = inner_step == inner_limit;
 
     // Loop over batches.
-    Register batch;
+    Register batch = no_reg;
     Label lb;
     if (batchsize > 1) {
       batch = masm->rr().alloc();
