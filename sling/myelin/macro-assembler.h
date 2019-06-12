@@ -414,6 +414,11 @@ class MacroAssembler : public jit::Assembler {
   // Reset register usage.
   void ResetRegisterUsage();
 
+  // Call to external function.
+  void call_extern(void *func, const string &symbol) {
+    call(GetExtern(symbol, func)->address());
+  }
+
   // Type-dependent instructions.
   void vpermil(Type type, XMMRegister dst, XMMRegister src, int8_t imm8);
   void vpermil(Type type, YMMRegister dst, YMMRegister src, int8_t imm8);

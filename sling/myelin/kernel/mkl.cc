@@ -15,6 +15,7 @@
 #include "sling/myelin/kernel/mkl.h"
 
 #include <dlfcn.h>
+#include <map>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -24,7 +25,7 @@
 #include "sling/myelin/compute.h"
 #include "sling/myelin/macro-assembler.h"
 
-DEFINE_string(mkl_threading, "", "Intel MKL threading model: seq,par,gnu,tbb");
+DEFINE_string(mklrt, "", "Intel MKL runtime model");
 
 #define __ masm->
 
@@ -38,6 +39,7 @@ static void *mkl_lib = nullptr;
 
 // MKL functions.
 void *cblas_sgemm = nullptr;
+void *cblas_dgemm = nullptr;
 
 // Flag to check that we only try to initialize the MKL library once.
 static std::once_flag mkl_initialized;
@@ -54,42 +56,84 @@ enum CblasTranspose {
   CBLAS_CONJ_TRANS = 113,
 };
 
+// Intel MKL runtime models.
+std::map<string, std::vector<const char *>> mkl_runtimes = {
+  // Default model.
+  {"", {
+    "libmkl_core.so",
+    "libmkl_sequential.so",
+    "libmkl_intel_ilp64.so"}
+  },
+
+  // Sequential model.
+  {"seq", {
+    "libmkl_core.so",
+    "libmkl_sequential.so",
+    "libmkl_intel_ilp64.so"}
+  },
+
+  // Intel OMP threading model.
+  {"intel", {
+    "libmkl_core.so",
+    "libiomp5.so",
+    "libmkl_intel_thread.so",
+    "libmkl_intel_ilp64.so"}
+  },
+
+  // Intel Threading Building Blocks (TBB) model.
+  {"tbb", {
+    "libmkl_core.so",
+    "libtbb.so",
+    "libmkl_tbb_thread.so",
+    "libmkl_intel_ilp64.so"}
+  },
+
+  // GNU OpenMP threading model.
+  {"tbb", {
+    "libmkl_core.so",
+    "libgomp.so",
+    "libmkl_gnu_thread.so",
+    "libmkl_intel_ilp64.so"}
+  },
+
+  // Google MKL model.
+  {"g3", {
+    "libmklml_gnu.so",
+    "libmklml_intel.so"}
+  },
+
+  // MKL local model.
+  {"local", {
+    "local/mkl/libmklml_gnu.so",
+    "local/mkl/libmklml_intel.so"}
+  },
+};
+
 // Load Intel MKL library.
 static bool LoadMKLLibrary() {
   // Set up list of libraries to load.
-  std::vector<const char *> libraries;
-  libraries.push_back("libmkl_core.so");
-  if (FLAGS_mkl_threading.empty() || FLAGS_mkl_threading == "seq") {
-    libraries.push_back("libmkl_sequential.so");
-  } else if (FLAGS_mkl_threading == "par") {
-    libraries.push_back("libiomp5.so");
-    libraries.push_back("libmkl_intel_thread.so");
-  } else if (FLAGS_mkl_threading == "tbb") {
-    libraries.push_back("libtbb.so");
-    libraries.push_back("libmkl_tbb_thread.so");
-  } else if (FLAGS_mkl_threading == "gnu") {
-    libraries.push_back("libgomp.so");
-    libraries.push_back("libmkl_gnu_thread.so");
-  } else {
-    LOG(FATAL) << "Unknown MKL threading model: " << FLAGS_mkl_threading;
+  auto f = mkl_runtimes.find(FLAGS_mklrt);
+  if (f == mkl_runtimes.end()) {
+    LOG(ERROR) << "Unknown MKL runtime model: " << FLAGS_mklrt;
+    return false;
   }
-  libraries.push_back("libmkl_intel_ilp64.so");
 
   // Try to load MKL libraries.
   void *lib = nullptr;
-  for (auto *libname : libraries) {
+  for (auto *libname : f->second) {
+    VLOG(2) << "Loading MKL runtime: " << libname;
     lib = dlopen(libname, RTLD_LAZY | RTLD_GLOBAL);
     if (lib == nullptr) {
       VLOG(1) << "Error loading " << libname << ": " << dlerror();
       return false;
     }
   }
-  mkl_lib  = lib;
 
   // Resolve library functions.
-  cblas_sgemm = dlsym(mkl_lib, "cblas_sgemm");
-  CHECK(cblas_sgemm != nullptr);
+  cblas_sgemm = CHECK_NOTNULL(dlsym(lib, "cblas_sgemm"));
+  cblas_dgemm = CHECK_NOTNULL(dlsym(lib, "cblas_dgemm"));
 
+  mkl_lib  = lib;
   return true;
 }
 
@@ -106,112 +150,176 @@ class MKLMatMul : public Kernel {
   string Operation() override { return "MatMul"; }
 
   bool Supports(Step *step) override {
-    // Two float 2D tensor inputs and one 2D tensor output.
+    // Two inputs and one output.
     if (step->indegree() != 2) return false;
     if (step->outdegree() != 1) return false;
-    Tensor *A = step->input(0);
-    Tensor *B = step->input(1);
-    Tensor *C = step->output(0);
-    if (A->rank() != 2 || A->type() != DT_FLOAT) return false;
-    if (B->rank() != 2 || B->type() != DT_FLOAT) return false;
-    if (C->rank() != 2 || C->type() != DT_FLOAT) return false;
+    Args args(step);
 
     // Check shape.
-    bool tra = step->GetAttr("transpose_a", false);
-    bool trb = step->GetAttr("transpose_b", false);
-    bool trc = step->GetAttr("transpose_c", false);
-    Shape a = A->shape();
-    Shape b = B->shape();
-    Shape c = C->shape();
-    if (trc) return false;
-    if (tra) a = a.transpose();
-    if (trb) b = b.transpose();
-
-    if (a.dim(0) != c.dim(0)) return false;
-    if (a.dim(1) != b.dim(0)) return false;
-    if (b.dim(1) != c.dim(1)) return false;
+    if (!args.Compatible()) return false;
 
     // Check that MKL is supported.
-    if (!A->SupportsOrder(ROW_MAJOR)) return false;
-    if (!B->SupportsOrder(ROW_MAJOR)) return false;
-    if (!C->SupportsOrder(ROW_MAJOR)) return false;
+    if (!args.A.tensor->SupportsOrder(ROW_MAJOR)) return false;
+    if (!args.B.tensor->SupportsOrder(ROW_MAJOR)) return false;
+    if (!args.C.tensor->SupportsOrder(ROW_MAJOR)) return false;
     if (!SupportsMKL()) return false;
 
     return true;
   }
 
   void Adjust(Step *step) override {
-    Tensor *A = step->input(0);
-    Tensor *B = step->input(1);
-    Tensor *C = step->output(0);
+    Args args(step);
 
     // Only row-major supported for now.
-    A->RequireOrder(ROW_MAJOR);
-    B->RequireOrder(ROW_MAJOR);
-    C->RequireOrder(ROW_MAJOR);
+    args.A.tensor->RequireOrder(ROW_MAJOR);
+    args.B.tensor->RequireOrder(ROW_MAJOR);
+    args.C.tensor->RequireOrder(ROW_MAJOR);
 
     // Set alignment to largest vector size supported by CPU.
-    int alignment = TypeTraits::of(C->type()).size();
+    int alignment = args.traits.size();
     if (CPU::Enabled(SSE)) alignment = 16;
     if (CPU::Enabled(AVX)) alignment = 32;
     if (CPU::Enabled(AVX512F)) alignment = 64;
-    A->SetMiniumAlignment(alignment);
-    B->SetMiniumAlignment(alignment);
-    C->SetMiniumAlignment(alignment);
+    args.A.tensor->SetMiniumAlignment(alignment);
+    args.B.tensor->SetMiniumAlignment(alignment);
+    args.C.tensor->SetMiniumAlignment(alignment);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    // Get inputs and outputs.
-    Tensor *A = step->input(0);
-    Tensor *B = step->input(1);
-    Tensor *C = step->output(0);
+    // Get arguments.
+    Args args(step);
 
     // Get dimensions for matrices.
-    int dsize = sizeof(float);
-    bool tra = step->GetAttr("transpose_a", false);
-    bool trb = step->GetAttr("transpose_b", false);
-    int m = C->dim(0);
-    int n = C->dim(1);
-    int k = tra ? A->dim(0) : A->dim(1);
-    int lda = A->stride(0) / dsize;
-    int ldb = B->stride(0) / dsize;
-    int ldc = C->stride(0) / dsize;
+    int dsize = args.traits.size();
+    int m = args.C.rows();
+    int n = args.C.cols();
+    int k = args.A.cols();
+    int lda = args.A.stride() / dsize;
+    int ldb = args.B.stride() / dsize;
+    int ldc = args.C.stride() / dsize;
 
     // Set up arguments to gemm routine.
     Register tmp = masm->rr().alloc_temp();
 
     __ pushq(Immediate(ldc));
-    __ LoadTensorAddress(tmp, C);
+    __ LoadTensorAddress(tmp, args.C.tensor);
     __ pushq(tmp);
 
     __ pushq(Immediate(ldb));
-    __ LoadTensorAddress(tmp, B);
+    __ LoadTensorAddress(tmp, args.B.tensor);
     __ pushq(tmp);
 
     __ pushq(Immediate(lda));
-    __ LoadTensorAddress(tmp, A);
+    __ LoadTensorAddress(tmp, args.A.tensor);
     __ pushq(tmp);
 
-    auto *one = masm->GetConstant<float>(1.0);
-    __ movss(xmm0, one->address());  // alpha=1.0
-    __ pxor(xmm1, xmm1);  // beta=0.0
+    if (args.type == DT_FLOAT) {
+      auto *one = masm->GetConstant<float>(1.0);
+      __ movss(xmm0, one->address());  // alpha=1.0
+    } else {
+      auto *one = masm->GetConstant<double>(1.0);
+      __ movsd(xmm0, one->address());  // alpha=1.0
+    }
+    __ pxor(xmm1, xmm1); // beta=0.0
 
     __ movq(arg_reg_1, Immediate(CBLAS_ROW_MAJOR));
-    __ movq(arg_reg_2, Immediate(tra ? CBLAS_TRANS : CBLAS_NO_TRANS));
-    __ movq(arg_reg_3, Immediate(trb ? CBLAS_TRANS : CBLAS_NO_TRANS));
+    __ movq(arg_reg_2, Immediate(args.A.op()));
+    __ movq(arg_reg_3, Immediate(args.B.op()));
     __ movq(arg_reg_4, Immediate(m));
     __ movq(arg_reg_5, Immediate(n));
     __ movq(arg_reg_6, Immediate(k));
 
     // Call MKL cblas_sgemm.
-    auto *cblas_sgemm_ref = masm->GetExtern("cblas_sgemm", cblas_sgemm);
-    __ call(cblas_sgemm_ref->address());
+    if (args.type == DT_FLOAT) {
+      __ call_extern(cblas_sgemm, "cblas_sgemm");
+    } else {
+      __ call_extern(cblas_dgemm, "cblas_dgemm");
+    }
     __ addq(rsp, Immediate(6 * 8));
   }
 
   int64 Complexity(const Step *step) override {
     return step->input(0)->dim(0) * step->input(1)->elements() * 2;
   }
+
+ private:
+  // Matrix argument with optional transpose.
+  struct Matrix {
+    Matrix(Tensor *tensor, bool t) : tensor(tensor), transpose(t) {}
+
+    // Element data type.
+    Type type() const { return tensor->type(); }
+
+    // Tensor rank.
+    int rank() const { return tensor->rank(); }
+
+    // Number of batch dimensions.
+    int batchdims() const { return rank() - 2; }
+
+    // Batch size.
+    int batchsize() const { return tensor->shape().outer(batchdims()); }
+
+    // Rows and comlumns after optional transpose.
+    int rows() const { return tensor->dim(rank() - (transpose ? 1 : 2)); }
+    int cols() const { return tensor->dim(rank() - (transpose ? 2 : 1)); }
+
+    // Matrix stride for outer dimension.
+    int stride() const { return tensor->stride(batchdims()); }
+
+    // Matrix operation.
+    CblasTranspose op() const {
+      return transpose ? CBLAS_TRANS : CBLAS_NO_TRANS;
+    }
+
+    Tensor *tensor;   // underlying tensor for matrix
+    bool transpose;   // transposed matrix
+  };
+
+  // Arguments for MatMul kernel.
+  struct Args {
+    Args(const Step *step)
+      : A(step->input(0), step->GetAttr("transpose_a", false)),
+        B(step->input(1), step->GetAttr("transpose_b", false)),
+        C(step->output(0), step->GetAttr("transpose_c", false)),
+        type(C.type()),
+        traits(TypeTraits::of(type)) {
+    }
+
+    // Check that shapes and types are compatible.
+    bool Compatible() const {
+      // Check types.
+      if (type != DT_FLOAT && type != DT_DOUBLE) return false;
+      if (A.type() != type || B.type() != type) return false;
+
+      // Output cannot be transposed.
+      if (C.transpose) return false;
+
+      // Check ranks.
+      if (C.rank() < 2) return false;
+      if (A.rank() != C.rank()) return false;
+      if (B.rank() != C.rank()) return false;
+
+      // Check shapes.
+      if (A.rows() != C.rows()) return false;
+      if (A.cols() != B.rows()) return false;
+      if (B.cols() != C.cols()) return false;
+
+      // Check batch size.
+      if (C.batchsize() != A.batchsize()) return false;
+      if (C.batchsize() != B.batchsize()) return false;
+
+      return true;
+    }
+
+    // Arguments.
+    Matrix A;
+    Matrix B;
+    Matrix C;
+
+    // Datatype.
+    Type type;
+    const TypeTraits &traits;
+  };
 };
 
 void RegisterMKLLibrary(Library *library) {
