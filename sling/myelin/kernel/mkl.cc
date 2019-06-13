@@ -219,7 +219,6 @@ class MKLMatMul : public Kernel {
     if (!args.B.tensor->SupportsOrder(ROW_MAJOR)) return false;
     if (!args.C.tensor->SupportsOrder(ROW_MAJOR)) return false;
     if (!SupportsMKL()) return false;
-    if (args.C.batchsize() != 1) return false;  // TODO: remove
 
     return true;
   }
@@ -254,8 +253,9 @@ class MKLMatMul : public Kernel {
     int lda = args.A.stride() / dsize;
     int ldb = args.B.stride() / dsize;
     int ldc = args.C.stride() / dsize;
+    int batch = args.C.batchsize();
 
-    if (args.C.batchsize() == 1) {
+    if (batch == 1) {
       bool jitted = false;
       if (mkl_jit_support) {
         // Get jitter for MKL function.
@@ -294,19 +294,19 @@ class MKLMatMul : public Kernel {
 
       if (!jitted) {
         // Set up arguments to gemm routine.
-        Register tmp = masm->rr().alloc_temp();
+        Register a = masm->rr().alloc();
+        Register b = masm->rr().alloc();
+        Register c = masm->rr().alloc();
+        __ LoadTensorAddress(a, args.A.tensor);
+        __ LoadTensorAddress(b, args.B.tensor);
+        __ LoadTensorAddress(c, args.C.tensor);
 
         __ pushq(Immediate(ldc));
-        __ LoadTensorAddress(tmp, args.C.tensor);
-        __ pushq(tmp);
-
+        __ pushq(c);
         __ pushq(Immediate(ldb));
-        __ LoadTensorAddress(tmp, args.B.tensor);
-        __ pushq(tmp);
-
+        __ pushq(b);
         __ pushq(Immediate(lda));
-        __ LoadTensorAddress(tmp, args.A.tensor);
-        __ pushq(tmp);
+        __ pushq(a);
 
         if (args.type == DT_FLOAT) {
           auto *one = masm->GetConstant<float>(1.0);
@@ -335,12 +335,76 @@ class MKLMatMul : public Kernel {
         step->set_variant("STD");
       }
     } else {
-      LOG(FATAL) << "MKL batch matmul not yet supported";
+      // Build arrays of batched matrices on the stack.
+      Register a = args.A.GenerateArray(masm);
+      Register b = args.B.GenerateArray(masm);
+      Register c = args.C.GenerateArray(masm);
+
+      // Generate constant arrays.
+      auto *group_size = masm->GetConstant<mkl_int_t>(batch);
+      auto *lda_array = masm->GetConstant<mkl_int_t>(lda);
+      auto *ldb_array = masm->GetConstant<mkl_int_t>(ldb);
+      auto *ldc_array = masm->GetConstant<mkl_int_t>(ldc);
+
+      StaticData *alpha_array;
+      StaticData *beta_array;
+      if (args.type == DT_FLOAT) {
+        alpha_array = masm->GetConstant<float>(1.0);
+        beta_array = masm->GetConstant<float>(0.0);
+      } else {
+        alpha_array = masm->GetConstant<double>(1.0);
+        beta_array = masm->GetConstant<double>(0.0);
+      }
+
+      auto *transa_array = masm->GetConstant<mkl_int_t>(args.A.op());
+      auto *transb_array = masm->GetConstant<mkl_int_t>(args.B.op());
+      auto *m_array = masm->GetConstant<mkl_int_t>(m);
+      auto *n_array = masm->GetConstant<mkl_int_t>(n);
+      auto *k_array = masm->GetConstant<mkl_int_t>(k);
+
+      // Set up arguments for batch gemm.
+      Register tmp = masm->rr().alloc();
+      __ leaq(tmp, group_size->address());
+      __ pushq(tmp);
+      __ pushq(Immediate(1));  // group count
+      __ leaq(tmp, ldc_array->address());
+      __ pushq(tmp);
+      __ pushq(c);
+      __ leaq(tmp, beta_array->address());
+      __ pushq(tmp);
+      __ leaq(tmp, ldb_array->address());
+      __ pushq(tmp);
+      __ pushq(b);
+      __ leaq(tmp, lda_array->address());
+      __ pushq(tmp);
+      __ pushq(a);
+      __ leaq(tmp, alpha_array->address());
+      __ pushq(tmp);
+
+      __ movq(arg_reg_1, Immediate(MKL_ROW_MAJOR));
+      __ leaq(arg_reg_2, transa_array->address());
+      __ leaq(arg_reg_3, transb_array->address());
+      __ leaq(arg_reg_4, m_array->address());
+      __ leaq(arg_reg_5, n_array->address());
+      __ leaq(arg_reg_6, k_array->address());
+
+      // Call MKL cblas_gemm.
+      if (args.type == DT_FLOAT) {
+        __ call_extern(cblas_sgemm_batch, "cblas_sgemm_batch");
+      } else {
+        __ call_extern(cblas_dgemm_batch, "cblas_dgemm_batch");
+      }
+      __ addq(rsp, Immediate(batch * 3 * 8 + 10 * 8));
+      step->set_variant("*" + std::to_string(batch));
     }
   }
 
   int64 Complexity(const Step *step) override {
-    return step->input(0)->dim(0) * step->input(1)->elements() * 2;
+    Args args(step);
+    int64 ops = args.C.rows() * args.C.cols();
+    ops *= args.A.cols() * 2;
+    ops *= args.C.batchsize();
+    return ops;
   }
 
  private:
@@ -360,6 +424,9 @@ class MKLMatMul : public Kernel {
     // Batch size.
     int batchsize() const { return tensor->shape().outer(batchdims()); }
 
+    // Checked for batch of matrices.
+    bool batched() const { return batchsize() > 1; }
+
     // Rows and comlumns after optional transpose.
     int rows() const { return tensor->dim(rank() - (transpose ? 1 : 2)); }
     int cols() const { return tensor->dim(rank() - (transpose ? 2 : 1)); }
@@ -367,9 +434,34 @@ class MKLMatMul : public Kernel {
     // Matrix stride for outer dimension.
     int stride() const { return tensor->stride(batchdims()); }
 
+    // Size of (each) matrix.
+    int size() const {
+      return batched() ? tensor->stride(batchdims() - 1) : tensor->size();
+    }
+
     // Matrix operation.
     MKLTranspose op() const {
       return transpose ? MKL_TRANS : MKL_NO_TRANS;
+    }
+
+    // Generate array of pointers to matrices on the stack. Returns register
+    // pointing to the array.
+    Register GenerateArray(MacroAssembler *masm) {
+      Register mat = masm->rr().alloc();
+      Register cnt = masm->rr().alloc();
+      Label l;
+      __ LoadTensorAddress(mat, tensor);
+      __ addq(mat, Immediate(tensor->size()));
+      __ xorq(cnt, cnt);
+      __ bind(&l);
+      __ subq(mat, Immediate(size()));
+      __ pushq(mat);
+      __ incq(cnt);
+      __ cmpq(cnt, Immediate(batchsize()));
+      __ j(less, &l);
+      __ movq(mat, rsp);
+      masm->rr().release(cnt);
+      return mat;
     }
 
     Tensor *tensor;   // underlying tensor for matrix

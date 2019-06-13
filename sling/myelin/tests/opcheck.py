@@ -1014,7 +1014,7 @@ for i in sizes:
     for k in sizes:
       matmul_test(i, j, k)
       matmul_add_test(i, j, k)
-      if not flags.arg.mkl: matmul_batch_test(i, j, k, 8)
+      matmul_batch_test(i, j, k, 8)
       if flags.arg.thorough and not flags.arg.mkl:
         matmul_all_orders_test(i, j, k)
       if dt != myelin.DT_INT8:
