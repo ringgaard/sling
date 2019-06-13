@@ -168,18 +168,33 @@ class Shape {
   }
 
   // Return transposed shape.
-  Shape transpose() const {
+  Shape transposed() const {
     Shape t;
     for (int d = rank() - 1; d >= 0; --d) t.add(dim(d));
     return t;
   }
 
   // Return permuted shape.
-  Shape permute(const Shape &perm) const {
+  Shape permuted(const Shape &perm) const {
     CHECK_EQ(rank(), perm.rank());
     Shape p;
     for (int d = 0; d < rank(); ++d) p.add(dim(perm.dim(d)));
     return p;
+  }
+
+  // Return reduced shape.
+  Shape reduced(int axis, bool keepdims = false) const {
+    Shape r;
+    if (axis >= 0) {
+      for (int d = 0; d < rank(); ++d) {
+        if (d != axis) {
+          r.add(dim(d));
+        } else if (keepdims) {
+          r.add(1);
+        }
+      }
+    }
+    return r;
   }
 
   // Return the rank of the shape, i.e. the number of dimensions.

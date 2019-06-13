@@ -14,6 +14,7 @@
 
 #include "sling/myelin/compute.h"
 #include "sling/myelin/macro-assembler.h"
+#include "sling/myelin/simd-assembler.h"
 
 #define __ masm->
 
@@ -1497,24 +1498,167 @@ class Reduce : public Kernel {
     if (step->indegree() != 1 || step->outdegree() != 1) return false;
     Tensor *x = step->input(0);
     Tensor *y = step->output(0);
+
+    // Check type.
     if (x->type() != y->type()) return false;
-    if (!step->HasAttr("axis")) return false;
+    if (!SIMDAssembler::Supports(x->type())) return false;
+
+    // Check shape.
+    int axis = step->GetAttr("axis", -1);
+    bool keepdims = step->GetAttr("keepdims", false);
+    if (axis < 0 || axis >= x->rank()) return false;
+    if (x->shape().reduced(axis, keepdims) != y->shape()) return false;
 
     return true;
   }
 
   void Adjust(Step *step) override {
+    // Get input and output.
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+
+    // Require dense standard layout.
+    x->RequireStandardOrder();
+    y->RequireStandardOrder();
+    x->RequireDense();
+    y->RequireDense();
+
+    // Set alignment.
+    Type type = x->type();
+    int vecbytes = SIMDAssembler::VectorBytes(type);
+    x->SetMiniumAlignment(vecbytes);
+    y->SetMiniumAlignment(vecbytes);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
+    // Reduction over the last axis is done using horizontal reduction.
+    int axis = step->GetAttr("axis", -1);
+    if (axis == step->input(0)->rank() - 1) {
+      GenerateHorizontal(step, masm);
+    } else {
+      GenerateVertical(step, masm);
+    }
+  }
+
+  void GenerateHorizontal(Step *step, MacroAssembler *masm) {
+    // Get input and output.
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    int axis = step->GetAttr("axis", -1);
+
+    // Create SIMD code generators.
+    Type type = x->type();
+    int dsize = TypeTraits::of(type).size();
+    int vecbytes = SIMDAssembler::VectorBytes(type);
+    int stride = x->stride(axis - 1);
+    bool aligned = stride % vecbytes == 0;
+    SIMDAssembler sasm(masm, type, aligned);
+    step->set_variant(sasm.name() + "H");
+
+    // Compute dimensions.
+    int batch_size = x->shape().outer(axis);
+    int bulk_size = x->shape().inner(axis);
+
+    // Compute vector processing strategy.
+    SIMDStrategy strategy(&sasm, bulk_size);
+    strategy.PreloadMasks();
+
+    // Allocate registers.
+    Register in = masm->rr().alloc();
+    Register out = masm->rr().alloc();
+    Register ofs = masm->rr().alloc();
+    auto acc = sasm.alloc(strategy.MaxUnrolls());
+
+    // Load tensor addresses.
+    __ LoadTensorAddress(in, x);
+    __ LoadTensorAddress(out, y);
+
+    // Loop over batches.
+    Register batch = masm->rr().alloc();
+    Label lb;
+    if (batch_size > 1) {
+      __ xorq(batch, batch);
+      __ bind(&lb);
+    }
+
+    // Initialize reduction with neutral element.
+    for (auto r : acc) sasm.main()->LoadNeutral(op_, r);
+
+    // Reduce bulk vector.
+    bool scalar = true;
+    for (auto &phase : strategy.phases()) {
+      auto *gen = phase.generator;
+      int vecsize = gen->VectorSize();
+      int blkstart = phase.offset * dsize;
+      int blksize = phase.unrolls * vecsize * dsize;
+      if (vecsize > 1) scalar = false;
+
+      if (phase.repeat > 1) {
+        // Repeated phase.
+        Label lu;
+        if (blkstart == 0) {
+          __ xorq(ofs, ofs);
+        } else {
+          __ movq(ofs, Immediate(blkstart));
+        }
+        __ bind(&lu);
+        for (int i = 0; i < phase.unrolls; ++i) {
+          int disp = i * vecsize * dsize;
+          gen->Accumulate(op_, acc[i], Operand(in, ofs, times_1, disp));
+        }
+        __ addq(ofs, Immediate(blksize));
+        __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
+        __ j(less, &lu);
+      } else if (phase.masked == 0) {
+        // Residual phase.
+        if (phase.offset == 0 || vecsize == sasm.main()->VectorSize()) {
+          // Same vector size as bulk; unroll directly into accumulators.
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = blkstart + i * vecsize * dsize;
+            gen->Accumulate(op_, acc[i], Operand(in, disp));
+          }
+        } else {
+          // Accumulate unrolled residual and merge into first accumulator.
+          auto residual = sasm.alloc();
+          sasm.main()->LoadNeutral(op_, residual);
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = blkstart + i * vecsize * dsize;
+            gen->Accumulate(op_, residual, Operand(in, disp));
+          }
+          sasm.main()->Accumulate(op_, acc[0], residual);
+        }
+      } else {
+        // Masked phase.
+        CHECK_EQ(phase.unrolls, 1);
+        gen->MaskedAccumulate(op_, acc[0], Operand(in, blkstart));
+      }
+    }
+
+    // Horizontal reduction of results.
+    sasm.Reduce(op_, acc);
+    if (!scalar) sasm.main()->Reduce(op_, acc[0]);
+
+    // Save result in y.
+    sasm.scalar()->Store(Operand(out), acc[0]);
+
+    // Next batch.
+    if (batch_size > 1) {
+      __ addq(in, Immediate(bulk_size * dsize));
+      __ addq(out, Immediate(dsize));
+      __ incq(batch);
+      __ cmpq(batch, Immediate(batch_size));
+      __ j(less, &lb);
+    }
+  }
+
+  void GenerateVertical(Step *step, MacroAssembler *masm) {
     LOG(WARNING) << "Generating dummy reduce op for " << step->name();
     step->set_variant("DUMMY");
     __ nop();
   }
 
   int64 Complexity(const Step *step) override {
-    return 0;
-    //return step->input(0)->elements();
+    return step->input(0)->elements();
   }
 
  private:

@@ -163,17 +163,47 @@ def simulate(flow, f, data):
     elif op.type == "Trunc":
       v[o[0]] = np.trunc(v[i[0]])
     elif op.type == "Sum":
-      v[o[0]] = np.sum(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.sum(v[i[0]])
+      else:
+        keepdims = bool(op.attrs.get("keepdims"))
+        v[o[0]] = np.sum(v[i[0]], int(axis), keepdims=keepdims)
     elif op.type == "Max":
-      v[o[0]] = np.max(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.max(v[i[0]])
+      else:
+        keepdims = bool(op.attrs.get("keepdims"))
+        v[o[0]] = np.max(v[i[0]], int(axis), keepdims=keepdims)
     elif op.type == "Min":
-      v[o[0]] = np.min(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.min(v[i[0]])
+      else:
+        keepdims = bool(op.attrs.get("keepdims"))
+        v[o[0]] = np.min(v[i[0]], int(axis), keepdims=keepdims)
     elif op.type == "Product":
-      v[o[0]] = np.prod(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.prod(v[i[0]])
+      else:
+        keepdims = bool(op.attrs.get("keepdims"))
+        v[o[0]] = np.prod(v[i[0]], int(axis), keepdims=keepdims)
     elif op.type == "All":
-      v[o[0]] = np.all(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.all(v[i[0]])
+      else:
+        keepdims = bool(op.attrs.get("keepdims"))
+        v[o[0]] = np.all(v[i[0]], int(axis), keepdims=keepdims)
     elif op.type == "Any":
-      v[o[0]] = np.any(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.any(v[i[0]])
+      else:
+        keepdims = bool(op.attrs.get("keepdims"))
+        v[o[0]] = np.any(v[i[0]], axis, keepdims=keepdims)
     elif op.type == "Count":
       v[o[0]] = np.array(np.count_nonzero(v[i[0]]), nptypes[dt])
     elif op.type == "ArgMin":
@@ -717,6 +747,20 @@ def count_test(n):
   y = f.count(f.greater(x, f.const(0, dtype=dt)), dtype=dt)
   check(flow, n)
 
+def sum_axis_test(n, m, k, axis):
+  flow = myelin.Flow()
+  f = flow.define("sum_axis")
+  x = f.var("x", dt, [n, m, k])
+  y = f.sum(x, axis=axis, keepdims=True)
+  check(flow, (n, m, k, axis), 0.0, 10.0)
+
+def max_axis_test(n, m, k, axis):
+  flow = myelin.Flow()
+  f = flow.define("max_axis")
+  x = f.var("x", dt, [n, m, k])
+  y = f.max(x, axis=axis, keepdims=True)
+  check(flow, (n, m, k, axis), 0.0, 10.0)
+
 def norm_test(n):
   flow = myelin.Flow()
   f = flow.define("norm")
@@ -1020,6 +1064,10 @@ for i in sizes:
       if dt != myelin.DT_INT8:
         # Rounding with MatMulAddRelu not compatible with NymPy for INT8.
         matmul_add_relu_test(i, j, k)
+      for axis in [2]:  # only last axis for now, was: [0, 1, 2]
+        sum_axis_test(i, j, k, axis)
+        max_axis_test(i, j, k, axis)
+
 if flags.arg.thorough:
   matmul_test(1024, 1024, 1024)
 

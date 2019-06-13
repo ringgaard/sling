@@ -307,9 +307,9 @@ class SIMDMatMul : public Kernel {
   void GenerateVertical(Step *step, MacroAssembler *masm,
                         const MatMulArgs &args, bool strided) {
     // Create SIMD code generators.
-    Type type = args.c().tensor->type();
+    Type type = args.c().type();
     int dsize = TypeTraits::of(type).size();
-    int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
+    int vecbytes = SIMDAssembler::VectorBytes(type);
     int batchsize = args.a().batch_size();
     SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
     step->set_variant(sasm.name() + (strided ? "CR" : "RR"));
@@ -547,7 +547,7 @@ class SIMDMatMul : public Kernel {
     }
   }
 
-  // Compute dot products between row blocks in A and row blocks in B  using
+  // Compute dot products between row blocks in A and row blocks in B using
   // horizontal summation.
   void GenerateHorizontal(Step *step, MacroAssembler *masm,
                           const MatMulArgs &args) {

@@ -103,6 +103,10 @@ void SIMDGenerator::LoadNeutral(Reduction op, int r) {
   LOG(FATAL) << "Reduction not supported";
 }
 
+void SIMDGenerator::Accumulate(Reduction op, int acc, int src) {
+  LOG(FATAL) << "Reduction not supported";
+}
+
 void SIMDGenerator::Accumulate(Reduction op, int acc, const jit::Operand &src) {
   LOG(FATAL) << "Reduction not supported";
 }
@@ -210,6 +214,10 @@ class AVX512FloatGenerator : public SIMDGenerator {
     } else {
       masm_->vbroadcastss(zmm(r), neutral->address());
     }
+  }
+
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_FLOAT, zmm(acc), zmm(src));
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
@@ -343,6 +351,10 @@ class AVX256FloatGenerator : public SIMDGenerator {
     }
   }
 
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_FLOAT, ymm(acc), ymm(src));
+  }
+
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
     masm_->Accumulate(op, DT_FLOAT, ymm(acc), src);
   }
@@ -429,6 +441,10 @@ class AVX128FloatGenerator : public SIMDGenerator {
     } else {
       masm_->vbroadcastss(xmm(r), neutral->address());
     }
+  }
+
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_FLOAT, xmm(acc), xmm(src));
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
@@ -555,6 +571,10 @@ class SSE128FloatGenerator : public SIMDGenerator {
     }
   }
 
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_FLOAT, xmm(acc), xmm(src));
+  }
+
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
     masm_->Accumulate(op, DT_FLOAT, xmm(acc), src);
   }
@@ -633,6 +653,10 @@ class AVX512ScalarFloatGenerator : public SIMDGenerator {
     }
   }
 
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_FLOAT, zmm(acc), zmm(src));
+  }
+
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
     masm_->Accumulate(op, DT_FLOAT, zmm(acc), src, mask_);
   }
@@ -697,6 +721,10 @@ class AVXScalarFloatGenerator : public SIMDGenerator {
     } else {
       Load(r, neutral->address());
     }
+  }
+
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_FLOAT, xmm(acc), xmm(src));
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
@@ -789,6 +817,10 @@ class SSEScalarFloatGenerator : public SIMDGenerator {
     } else {
       Load(r, neutral->address());
     }
+  }
+
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_FLOAT, xmm(acc), xmm(src));
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
@@ -893,6 +925,10 @@ class AVX512DoubleGenerator : public SIMDGenerator {
     } else {
       masm_->vbroadcastsd(zmm(r), neutral->address());
     }
+  }
+
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_DOUBLE, zmm(acc), zmm(src));
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
@@ -1026,6 +1062,10 @@ class AVX256DoubleGenerator : public SIMDGenerator {
     }
   }
 
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_DOUBLE, ymm(acc), ymm(src));
+  }
+
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
     masm_->Accumulate(op, DT_DOUBLE, ymm(acc), src);
   }
@@ -1113,6 +1153,10 @@ class AVX128DoubleGenerator : public SIMDGenerator {
     } else {
       Load(r, neutral->address());
     }
+  }
+
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_DOUBLE, xmm(acc), xmm(src));
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
@@ -1239,6 +1283,10 @@ class SSE128DoubleGenerator : public SIMDGenerator {
     }
   }
 
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_DOUBLE, xmm(acc), xmm(src));
+  }
+
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
     masm_->Accumulate(op, DT_DOUBLE, xmm(acc), src);
   }
@@ -1317,6 +1365,10 @@ class AVX512ScalarDoubleGenerator : public SIMDGenerator {
     }
   }
 
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_DOUBLE, zmm(acc), zmm(src));
+  }
+
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
     masm_->Accumulate(op, DT_DOUBLE, zmm(acc), src, mask_);
   }
@@ -1381,6 +1433,10 @@ class AVXScalarDoubleGenerator : public SIMDGenerator {
     } else {
       Load(r, neutral->address());
     }
+  }
+
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_DOUBLE, xmm(acc), xmm(src));
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
@@ -1473,6 +1529,10 @@ class SSEScalarDoubleGenerator : public SIMDGenerator {
     } else {
       Load(r, neutral->address());
     }
+  }
+
+  void Accumulate(Reduction op, int acc, int src) {
+    masm_->Accumulate(op, DT_DOUBLE, xmm(acc), xmm(src));
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
@@ -1754,6 +1814,18 @@ void SIMDAssembler::Sum(const std::vector<int> &regs) {
   } else {
     for (int n = 1; n < regs.size(); ++n) {
       main()->Add(regs[0], regs[0], regs[n]);
+    }
+  }
+}
+
+void SIMDAssembler::Reduce(Reduction op, const std::vector<int> &regs) {
+  if (regs.size() == 4) {
+    main()->Accumulate(op, regs[0], regs[2]);
+    main()->Accumulate(op, regs[1], regs[3]);
+    main()->Accumulate(op, regs[0], regs[1]);
+  } else {
+    for (int n = 1; n < regs.size(); ++n) {
+      main()->Accumulate(op, regs[0], regs[n]);
     }
   }
 }
