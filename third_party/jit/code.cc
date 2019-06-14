@@ -153,7 +153,7 @@ void CodeGenerator::AddExtern(const string &symbol, Address address) {
   // Try to find existing external reference.
   int index = -1;
   for (int i = 0; i < externs_.size(); ++i) {
-    if (address == externs_[i].address) {
+    if (address == externs_[i].address && symbol == externs_[i].symbol) {
       index = i;
       break;
     }

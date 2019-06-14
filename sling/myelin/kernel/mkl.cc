@@ -26,7 +26,6 @@
 #include "sling/myelin/macro-assembler.h"
 
 DEFINE_string(mklrt, "", "Intel MKL runtime model");
-DEFINE_bool(mklnojit, false, "Disable Intel MKL JIT");
 
 #define __ masm->
 
@@ -58,17 +57,16 @@ enum MKLJITStatus : mkl_int_t {
 
 typedef void *gemm_jit_kernel_t;
 
-// Handle to MKL library.
-static void *mkl_lib = nullptr;
-
-// MKL JIT support.
+// MKL support.
+static bool mkl_support = false;
+static bool mkl_batch_support = false;
 static bool mkl_jit_support = false;
 
 // MKL functions.
-void *cblas_sgemm = nullptr;
-void *cblas_dgemm = nullptr;
-void *cblas_sgemm_batch = nullptr;
-void *cblas_dgemm_batch = nullptr;
+const void *cblas_sgemm = nullptr;
+const void *cblas_dgemm = nullptr;
+const void *cblas_sgemm_batch = nullptr;
+const void *cblas_dgemm_batch = nullptr;
 
 // MKL JIT functions.
 
@@ -173,21 +171,18 @@ static bool LoadMKLLibrary() {
   }
 
   // Resolve library functions.
-  cblas_sgemm = CHECK_NOTNULL(dlsym(lib, "cblas_sgemm"));
-  cblas_dgemm = CHECK_NOTNULL(dlsym(lib, "cblas_dgemm"));
-  cblas_sgemm_batch = CHECK_NOTNULL(dlsym(lib, "cblas_sgemm_batch"));
-  cblas_dgemm_batch = CHECK_NOTNULL(dlsym(lib, "cblas_dgemm_batch"));
+  LOAD_MKL_FUNCTION(cblas_sgemm);
+  LOAD_MKL_FUNCTION(cblas_dgemm);
+  LOAD_MKL_FUNCTION(cblas_sgemm_batch);
+  LOAD_MKL_FUNCTION(cblas_dgemm_batch);
+  LOAD_MKL_FUNCTION(mkl_cblas_jit_create_sgemm);
+  LOAD_MKL_FUNCTION(mkl_cblas_jit_create_dgemm);
+  LOAD_MKL_FUNCTION(mkl_jit_destroy);
+  LOAD_MKL_FUNCTION(mkl_jit_get_sgemm_ptr);
+  LOAD_MKL_FUNCTION(mkl_jit_get_dgemm_ptr);
 
-  // Resolve MKL JIT functions.
-  if (!FLAGS_mklnojit) {
-    LOAD_MKL_FUNCTION(mkl_cblas_jit_create_sgemm);
-    LOAD_MKL_FUNCTION(mkl_cblas_jit_create_dgemm);
-    LOAD_MKL_FUNCTION(mkl_jit_destroy);
-    LOAD_MKL_FUNCTION(mkl_jit_get_sgemm_ptr);
-    LOAD_MKL_FUNCTION(mkl_jit_get_dgemm_ptr);
-  }
-
-  mkl_lib  = lib;
+  mkl_support = (cblas_sgemm != nullptr);
+  mkl_batch_support = (cblas_sgemm_batch != nullptr);
   mkl_jit_support = (mkl_cblas_jit_create_sgemm != nullptr);
 
   return true;
@@ -196,7 +191,7 @@ static bool LoadMKLLibrary() {
 // Check if MKL is supported.
 bool SupportsMKL() {
   std::call_once(mkl_initialized, []() { LoadMKLLibrary(); });
-  return mkl_lib != nullptr;
+  return mkl_support;
 }
 
 // Matrix multiplication using Intel Math Kernel Library, C = A * B.
@@ -205,25 +200,28 @@ class MKLMatMul : public Kernel {
   string Name() override { return "MKLMatMul"; }
   string Operation() override { return "MatMul"; }
 
-  bool Supports(Step *step) override {
+  bool Supports(Step *step, const Options &options) override {
     // Two inputs and one output.
     if (step->indegree() != 2) return false;
     if (step->outdegree() != 1) return false;
     Args args(step);
 
-    // Check type and shape.
+    // Check type, shape and order.
     if (!args.Compatible()) return false;
-
-    // Check that MKL is supported.
     if (!args.A.tensor->SupportsOrder(ROW_MAJOR)) return false;
     if (!args.B.tensor->SupportsOrder(ROW_MAJOR)) return false;
     if (!args.C.tensor->SupportsOrder(ROW_MAJOR)) return false;
-    if (!SupportsMKL()) return false;
+
+    // Check that MKL is supported.
+    if (!options.aot) {
+      if (!SupportsMKL()) return false;
+      if (args.C.batchsize() > 1 && !mkl_batch_support) return false;
+    }
 
     return true;
   }
 
-  void Adjust(Step *step) override {
+  void Adjust(Step *step, const Options &options) override {
     Args args(step);
 
     // Only row-major supported for now.
@@ -231,11 +229,13 @@ class MKLMatMul : public Kernel {
     args.B.tensor->RequireOrder(ROW_MAJOR);
     args.C.tensor->RequireOrder(ROW_MAJOR);
 
-    // Set alignment to largest vector size supported by CPU.
+    // Set alignment to largest vector size supported by CPU. Assume max
+    // alignment in AOT mode.
     int alignment = args.traits.size();
     if (CPU::Enabled(SSE)) alignment = 16;
     if (CPU::Enabled(AVX)) alignment = 32;
     if (CPU::Enabled(AVX512F)) alignment = 64;
+    if (options.aot) alignment = 64;
     args.A.tensor->SetMiniumAlignment(alignment);
     args.B.tensor->SetMiniumAlignment(alignment);
     args.C.tensor->SetMiniumAlignment(alignment);
@@ -256,8 +256,9 @@ class MKLMatMul : public Kernel {
     int batch = args.C.batchsize();
 
     if (batch == 1) {
+      // Try to get JIT-compiled MKL kernel. Never use JIT in AOT mode.
       bool jitted = false;
-      if (mkl_jit_support) {
+      if (mkl_jit_support && !masm->options().aot) {
         // Get jitter for MKL function.
         MKLJITStatus status;
         void *jitter;
@@ -292,6 +293,7 @@ class MKLMatMul : public Kernel {
         }
       }
 
+      // Generate call to standard gemm function if no JIT was provided.
       if (!jitted) {
         // Set up arguments to gemm routine.
         Register a = masm->rr().alloc();

@@ -299,6 +299,7 @@ class MacroAssembler : public jit::Assembler {
 
   // Find existing static data block.
   StaticData *FindDataBlock(const void *data, int size, int repeat = 1);
+  StaticData *FindDataBlock(const void *data, int size, const string &symbol);
 
   // Create new static data block with (repeated) constant.
   template<typename T> StaticData *Constant(T value, int repeat = 1) {
@@ -330,8 +331,8 @@ class MacroAssembler : public jit::Assembler {
   // Get static data block for external reference.
   StaticData *GetExtern(const string &symbol, const void *address) {
     int size = sizeof(void *);
-    StaticData *data = FindDataBlock(&address, size);
-    if (data == nullptr || data->symbol() != symbol) {
+    StaticData *data = FindDataBlock(&address, size, symbol);
+    if (data == nullptr) {
       data = CreateDataBlock(size);
       data->AddData(&address, size);
       data->set_symbol(symbol);
@@ -415,7 +416,7 @@ class MacroAssembler : public jit::Assembler {
   void ResetRegisterUsage();
 
   // Call to external function.
-  void call_extern(void *func, const string &symbol) {
+  void call_extern(const void *func, const string &symbol) {
     call(GetExtern(symbol, func)->address());
   }
 

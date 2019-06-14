@@ -180,8 +180,29 @@ hidden_size = 256
 num_layers = 1
 num_heads = 8
 filter_size = hidden_size * 4
+max_seq_length = 128
+vocab_size = 32000
+num_segment_ids = 5
 
-layer_input = f.var('input', myelin.DT_FLOAT, [seq_length, hidden_size])
+input_ids = f.var('input_ids', myelin.DT_INT32, [seq_length])
+segment_ids = f.var('segment_ids', myelin.DT_INT32, [seq_length])
+
+wpe_embedding = f.array(
+    'wpe_embedding',
+    np.random.randn(vocab_size, hidden_size).astype(np.float32))
+segment_embeddings = f.array(
+    'segment_embeddings',
+    np.random.randn(num_segment_ids, hidden_size).astype(np.float32))
+positional_embeddings = f.array(
+    'positional_embeddings',
+    np.random.randn(max_seq_length, hidden_size).astype(np.float32))
+
+input_ids_emb = f.gather(wpe_embedding, input_ids)
+input_segment_ids_emb = f.gather(segment_embeddings, segment_ids)
+
+# Output: [seq_length, hidden_size]
+layer_input = f.add(input_ids_emb,
+                    f.add(input_segment_ids_emb, positional_embeddings))
 
 for _ in range(num_layers):
   transformer = TransformerLayer(

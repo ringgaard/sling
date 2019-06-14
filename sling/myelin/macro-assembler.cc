@@ -300,7 +300,15 @@ StaticData *MacroAssembler::CreateDataBlock(int alignment) {
 StaticData *MacroAssembler::FindDataBlock(
     const void *data, int size, int repeat) {
   for (StaticData *sd : data_blocks_) {
-    if (sd->Equals(data, size, repeat)) return sd;
+    if (sd->Equals(data, size, repeat) && sd->symbol().empty()) return sd;
+  }
+  return nullptr;
+}
+
+StaticData *MacroAssembler::FindDataBlock(
+    const void *data, int size, const string &symbol) {
+  for (StaticData *sd : data_blocks_) {
+    if (sd->Equals(data, size, 1) && sd->symbol() == symbol) return sd;
   }
   return nullptr;
 }

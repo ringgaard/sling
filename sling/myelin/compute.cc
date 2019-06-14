@@ -1233,7 +1233,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     auto &kernels = library.Lookup(step->type());
     for (int k = kernels.size() - 1; k >= 0; --k) {
       Kernel *kernel = kernels[k];
-      if (kernel->Supports(step)) {
+      if (kernel->Supports(step, options_)) {
         // Check that kernel location is compatible with task placement.
         bool compatible = true;
         if (step->task_index_ != -1) {
@@ -1268,7 +1268,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
             << step->kernel_->Name();
 
     // Let kernel adjust the input and output data alignment requirements.
-    step->kernel_->Adjust(step);
+    step->kernel_->Adjust(step, options_);
   }
 
   // Add tensors for profiling.

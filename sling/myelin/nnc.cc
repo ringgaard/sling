@@ -70,6 +70,7 @@ int main(int argc, char *argv[]) {
   // Compile flow.
   Network net;
   net.set_linker(&linker);
+  net.options().aot = true;
   Compiler compiler;
   compiler.set_perf_flopctr(false);
   compiler.Compile(&flow, &net);
