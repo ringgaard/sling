@@ -576,7 +576,14 @@ class SSE128FloatGenerator : public SIMDGenerator {
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
-    masm_->Accumulate(op, DT_FLOAT, xmm(acc), src);
+    if (aligned_) {
+      masm_->Accumulate(op, DT_FLOAT, xmm(acc), src);
+    } else {
+      XMMRegister mem = masm_->mm().allocx();
+      masm_->movups(mem, src);
+      masm_->Accumulate(op, DT_FLOAT, xmm(acc), mem);
+      masm_->mm().release(mem);
+    }
   }
 
   void Reduce(Reduction op, int r) {
@@ -1288,7 +1295,14 @@ class SSE128DoubleGenerator : public SIMDGenerator {
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) {
-    masm_->Accumulate(op, DT_DOUBLE, xmm(acc), src);
+    if (aligned_) {
+      masm_->Accumulate(op, DT_DOUBLE, xmm(acc), src);
+    } else {
+      XMMRegister mem = masm_->mm().allocx();
+      masm_->movupd(mem, src);
+      masm_->Accumulate(op, DT_DOUBLE, xmm(acc), mem);
+      masm_->mm().release(mem);
+    }
   }
 
   void Reduce(Reduction op, int r) {
@@ -1615,8 +1629,15 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
   }
 
   void Add(int dst, int src1, const jit::Operand &src2) override {
-    if (dst == src1 && type_ == DT_INT64) {
-      masm_->addq(reg(dst), src2);
+    if (dst == src1) {
+      if (type_ == DT_INT64) {
+        masm_->addq(reg(dst), src2);
+      } else {
+        Register acc = masm_->rr().alloc();
+        Load(acc.code(), src2);
+        masm_->addq(reg(dst), acc);
+        masm_->rr().release(acc);
+      }
     } else {
       Load(dst, src2);
       masm_->addq(reg(dst), reg(src1));
@@ -1624,8 +1645,15 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
   }
 
   void Mul(int dst, int src1, const jit::Operand &src2) override {
-    if (dst == src1 && type_ == DT_INT64) {
-      masm_->imulq(reg(dst), src2);
+    if (dst == src1) {
+      if (type_ == DT_INT64) {
+        masm_->imulq(reg(dst), src2);
+      } else {
+        Register acc = masm_->rr().alloc();
+        Load(acc.code(), src2);
+        masm_->imulq(reg(dst), acc);
+        masm_->rr().release(acc);
+      }
     } else {
       Load(dst, src2);
       masm_->imulq(reg(dst), reg(src1));

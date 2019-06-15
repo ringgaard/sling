@@ -406,13 +406,13 @@ def matmul_all_orders_test(m, k, n):
           for tc in [False, True]:
             matmul_order_test(m, k, n, ta, tb, tc, ra, rb)
 
-def matmul_batch_test(m, k, n, b=8):
+def matmul_batch_test(m, k, n, batch=8):
   flow = myelin.Flow()
   f = flow.define("matmul_batch")
-  a = f.var("A", dt, [b, m, k])
-  b = f.var("B", dt, [b, k, n])
+  a = f.var("A", dt, [batch, m, k])
+  b = f.var("B", dt, [batch, k, n])
   c = f.matmul(a, b, name="C")
-  check(flow, (m, k, n, b), -10, 10)
+  check(flow, (m, k, n, batch), -10, 10)
 
 def add_test(n):
   flow = myelin.Flow()
@@ -604,7 +604,7 @@ def sinh_test(n):
   f = flow.define("sinh")
   x = f.var("x", dt, [n])
   y = f.sinh(x)
-  check(flow, n)
+  check(flow, n, rtol=1e-3, atol=1e-6)
 
 def cosh_test(n):
   flow = myelin.Flow()
@@ -1062,11 +1062,11 @@ for i in sizes:
       if flags.arg.thorough and not flags.arg.mkl:
         matmul_all_orders_test(i, j, k)
       if dt != myelin.DT_INT8:
-        # Rounding with MatMulAddRelu not compatible with NymPy for INT8.
+        # Rounding not compatible with NymPy for INT8.
         matmul_add_relu_test(i, j, k)
-      for axis in [2]:  # only last axis for now, was: [0, 1, 2]
-        sum_axis_test(i, j, k, axis)
-        max_axis_test(i, j, k, axis)
+        for axis in [0, 1, 2]:
+          sum_axis_test(i, j, k, axis)
+          max_axis_test(i, j, k, axis)
 
 if flags.arg.thorough:
   matmul_test(1024, 1024, 1024)
@@ -1076,14 +1076,21 @@ print("Test results")
 print("============")
 print()
 
+passed = 0
 errors = 0
 for name in sorted(tests):
   t = tests[name]
+  passed += t.passed()
   errors += t.failed()
   if t.failed() == 0:
     print("%-20s %7d passed" % (t.name, t.passed()))
   else:
     print("%-20s %7d passed %7d failed" % (t.name, t.passed(), t.failed()))
+
+if errors == 0:
+  print("%-20s %7d passed" % ("TOTAL", passed))
+else:
+  print("%-20s %7d passed %7d failed" % ("TOTAL", passed, errors))
 print
 
 if errors > 0:

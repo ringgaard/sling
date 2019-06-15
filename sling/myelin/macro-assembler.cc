@@ -106,6 +106,17 @@ Register Registers::arg(int n) {
   return alloc_fixed(r);
 }
 
+Register Registers::alloc_extra() {
+  for (int r = 0; r < kNumRegisters; ++r) {
+    if (extra(r) && !saved(r)) {
+      reserve(r);
+      use(r);
+      return Register::from_code(r);
+    }
+  }
+  LOG(FATAL) << "Register overflow";
+}
+
 void Registers::reserve(int r) {
   CHECK(!saved(r)) << r;
   CHECK(used(r)) << r;

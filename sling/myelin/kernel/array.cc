@@ -1531,130 +1531,218 @@ class Reduce : public Kernel {
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
-    // Reduction over the last axis is done using horizontal reduction.
-    int axis = step->GetAttr("axis", -1);
-    if (axis == step->input(0)->rank() - 1) {
-      GenerateHorizontal(step, masm);
-    } else {
-      GenerateVertical(step, masm);
-    }
-  }
-
-  void GenerateHorizontal(Step *step, MacroAssembler *masm) {
     // Get input and output.
     Tensor *x = step->input(0);
     Tensor *y = step->output(0);
     int axis = step->GetAttr("axis", -1);
 
-    // Create SIMD code generators.
+    // Compute dimensions.
     Type type = x->type();
     int dsize = TypeTraits::of(type).size();
     int vecbytes = SIMDAssembler::VectorBytes(type);
-    int stride = x->stride(axis - 1);
-    bool aligned = stride % vecbytes == 0;
-    SIMDAssembler sasm(masm, type, aligned);
-    step->set_variant(sasm.name() + "H");
 
-    // Compute dimensions.
-    int batch_size = x->shape().outer(axis);
-    int bulk_size = x->shape().inner(axis);
-
-    // Compute vector processing strategy.
-    SIMDStrategy strategy(&sasm, bulk_size);
-    strategy.PreloadMasks();
+    int outer_size = x->shape().outer(axis);
+    int reduction_size = x->dim(axis);
+    int inner_size = x->shape().inner(axis + 1);
 
     // Allocate registers.
     Register in = masm->rr().alloc();
     Register out = masm->rr().alloc();
     Register ofs = masm->rr().alloc();
-    auto acc = sasm.alloc(strategy.MaxUnrolls());
 
     // Load tensor addresses.
     __ LoadTensorAddress(in, x);
     __ LoadTensorAddress(out, y);
 
-    // Loop over batches.
-    Register batch = masm->rr().alloc();
-    Label lb;
-    if (batch_size > 1) {
-      __ xorq(batch, batch);
-      __ bind(&lb);
-    }
+    // Reduction over the last axis is done using horizontal reduction whereas
+    // reduction over other axes is done using vertical reduction.
+    if (inner_size == 1) {
+      // Create SIMD code generators.
+      bool aligned = x->stride(axis - 1) % vecbytes == 0;
+      SIMDAssembler sasm(masm, type, aligned);
 
-    // Initialize reduction with neutral element.
-    for (auto r : acc) sasm.main()->LoadNeutral(op_, r);
+      // Compute vector processing strategy.
+      step->set_variant(sasm.name() + "H");
+      SIMDStrategy strategy(&sasm, reduction_size);
+      strategy.PreloadMasks();
 
-    // Reduce bulk vector.
-    bool scalar = true;
-    for (auto &phase : strategy.phases()) {
-      auto *gen = phase.generator;
-      int vecsize = gen->VectorSize();
-      int blkstart = phase.offset * dsize;
-      int blksize = phase.unrolls * vecsize * dsize;
-      if (vecsize > 1) scalar = false;
+      // Loop over batches.
+      Register batch = masm->rr().alloc();
+      Label lb;
+      if (outer_size > 1) {
+        __ xorq(batch, batch);
+        __ bind(&lb);
+      }
 
-      if (phase.repeat > 1) {
-        // Repeated phase.
-        Label lu;
-        if (blkstart == 0) {
-          __ xorq(ofs, ofs);
-        } else {
-          __ movq(ofs, Immediate(blkstart));
-        }
-        __ bind(&lu);
-        for (int i = 0; i < phase.unrolls; ++i) {
-          int disp = i * vecsize * dsize;
-          gen->Accumulate(op_, acc[i], Operand(in, ofs, times_1, disp));
-        }
-        __ addq(ofs, Immediate(blksize));
-        __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
-        __ j(less, &lu);
-      } else if (phase.masked == 0) {
-        // Residual phase.
-        if (phase.offset == 0 || vecsize == sasm.main()->VectorSize()) {
-          // Same vector size as bulk; unroll directly into accumulators.
+      // Initialize reduction with neutral element.
+      auto acc = sasm.alloc(strategy.MaxUnrolls());
+      for (auto r : acc) sasm.main()->LoadNeutral(op_, r);
+
+      // Reduce inner vector.
+      bool scalar = true;
+      for (auto &phase : strategy.phases()) {
+        auto *gen = phase.generator;
+        int vecsize = gen->VectorSize();
+        int blkstart = phase.offset * dsize;
+        int blksize = phase.unrolls * vecsize * dsize;
+        if (vecsize > 1) scalar = false;
+
+        if (phase.repeat > 1) {
+          // Repeated phase.
+          Label lu;
+          if (blkstart == 0) {
+            __ xorq(ofs, ofs);
+          } else {
+            __ movq(ofs, Immediate(blkstart));
+          }
+          __ bind(&lu);
           for (int i = 0; i < phase.unrolls; ++i) {
-            int disp = blkstart + i * vecsize * dsize;
-            gen->Accumulate(op_, acc[i], Operand(in, disp));
+            int disp = i * vecsize * dsize;
+            gen->Accumulate(op_, acc[i], Operand(in, ofs, times_1, disp));
+          }
+          __ addq(ofs, Immediate(blksize));
+          __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
+          __ j(less, &lu);
+        } else if (phase.masked == 0) {
+          // Residual phase.
+          if (phase.offset == 0 || vecsize == sasm.main()->VectorSize()) {
+            // Same vector size as bulk; unroll directly into accumulators.
+            for (int i = 0; i < phase.unrolls; ++i) {
+              int disp = blkstart + i * vecsize * dsize;
+              gen->Accumulate(op_, acc[i], Operand(in, disp));
+            }
+          } else {
+            // Accumulate unrolled residual and merge into first accumulator.
+            auto residual = sasm.alloc();
+            sasm.main()->LoadNeutral(op_, residual);
+            for (int i = 0; i < phase.unrolls; ++i) {
+              int disp = blkstart + i * vecsize * dsize;
+              gen->Accumulate(op_, residual, Operand(in, disp));
+            }
+            sasm.main()->Accumulate(op_, acc[0], residual);
           }
         } else {
-          // Accumulate unrolled residual and merge into first accumulator.
-          auto residual = sasm.alloc();
-          sasm.main()->LoadNeutral(op_, residual);
-          for (int i = 0; i < phase.unrolls; ++i) {
-            int disp = blkstart + i * vecsize * dsize;
-            gen->Accumulate(op_, residual, Operand(in, disp));
-          }
-          sasm.main()->Accumulate(op_, acc[0], residual);
+          // Masked phase.
+          CHECK_EQ(phase.unrolls, 1);
+          gen->MaskedAccumulate(op_, acc[0], Operand(in, blkstart));
         }
-      } else {
-        // Masked phase.
-        CHECK_EQ(phase.unrolls, 1);
-        gen->MaskedAccumulate(op_, acc[0], Operand(in, blkstart));
+      }
+
+      // Horizontal reduction of results.
+      sasm.Reduce(op_, acc);
+      if (!scalar) sasm.main()->Reduce(op_, acc[0]);
+
+      // Save result in y.
+      sasm.scalar()->Store(Operand(out), acc[0]);
+
+      // Next batch.
+      if (outer_size > 1) {
+        __ addq(in, Immediate(reduction_size * dsize));
+        __ addq(out, Immediate(dsize));
+        __ incq(batch);
+        __ cmpq(batch, Immediate(outer_size));
+        __ j(less, &lb);
+      }
+    } else {
+      // Create SIMD code generators.
+      bool aligned = x->stride(axis) % vecbytes == 0;
+      SIMDAssembler sasm(masm, type, aligned);
+
+      // Compute vector processing strategy.
+      step->set_variant(sasm.name() + "V");
+      SIMDStrategy strategy(&sasm, inner_size);
+      strategy.PreloadMasks();
+      auto acc = sasm.alloc(strategy.MaxUnrolls());
+
+      // Loop over batches.
+      Register batch = masm->rr().alloc();
+      Label lb;
+      if (outer_size > 1) {
+        __ xorq(batch, batch);
+        __ bind(&lb);
+      }
+
+      // Vertically reduction.
+      for (auto &phase : strategy.phases()) {
+        auto *gen = phase.generator;
+        int vecsize = gen->VectorSize();
+        int blkstart = phase.offset * dsize;
+        int blksize = phase.unrolls * vecsize * dsize;
+        int stride = axis > 0 ? x->stride(axis - 1) : x->size();
+
+        if (phase.masked == 0) {
+          // Repeated/residial phase.
+          Label l2;
+          if (phase.offset == 0) {
+            __ xorq(ofs, ofs);
+          } else {
+            __ movq(ofs, Immediate(blkstart));
+          }
+          __ bind(&l2);
+
+          // Initialize accumulators with neutral element.
+          for (int r = 0; r < phase.unrolls; ++r) {
+            gen->LoadNeutral(op_, acc[r]);
+          }
+
+          // Loop over reduction axis and reduce block vertically.
+          Label l3;
+          __ bind(&l3);
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = i * vecsize * dsize;
+            gen->Accumulate(op_, acc[i], Operand(in, ofs, times_1, disp));
+          }
+          __ addq(ofs, Immediate(inner_size * dsize));
+          __ cmpq(ofs, Immediate(stride));
+          __ j(less, &l3);
+
+          // Store result for block.
+          for (int i = 0; i < phase.unrolls; ++i) {
+            gen->Store(Operand(out, i * vecsize * dsize), acc[i]);
+          }
+          __ addq(out, Immediate(blksize));
+
+          if (phase.repeat > 1) {
+            // Next block.
+            __ subq(ofs, Immediate(stride - blksize));
+            __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
+            __ j(less, &l2);
+          }
+        } else {
+          // Masked phase.
+          CHECK_EQ(phase.unrolls, 1);
+          CHECK_EQ(phase.repeat, 1);
+          if (phase.offset == 0) {
+            __ xorq(ofs, ofs);
+          } else {
+            __ movq(ofs, Immediate(blkstart));
+          }
+
+          // Initialize accumulator with neutral element.
+          gen->LoadNeutral(op_, acc[0]);
+
+          // Loop over reduction axis and reduce block vertically.
+          Label l3;
+          __ bind(&l3);
+            gen->MaskedAccumulate(op_, acc[0], Operand(in, ofs, times_1));
+          __ addq(ofs, Immediate(inner_size * dsize));
+          __ cmpq(ofs, Immediate(stride));
+          __ j(less, &l3);
+
+          // Store result for block.
+          gen->MaskedStore(Operand(out), acc[0]);
+          __ addq(out, Immediate(blksize));
+        }
+      }
+
+      // Next batch.
+      if (outer_size > 1) {
+        __ addq(in, Immediate(reduction_size * inner_size * dsize));
+        __ incq(batch);
+        __ cmpq(batch, Immediate(outer_size));
+        __ j(less, &lb);
       }
     }
-
-    // Horizontal reduction of results.
-    sasm.Reduce(op_, acc);
-    if (!scalar) sasm.main()->Reduce(op_, acc[0]);
-
-    // Save result in y.
-    sasm.scalar()->Store(Operand(out), acc[0]);
-
-    // Next batch.
-    if (batch_size > 1) {
-      __ addq(in, Immediate(bulk_size * dsize));
-      __ addq(out, Immediate(dsize));
-      __ incq(batch);
-      __ cmpq(batch, Immediate(batch_size));
-      __ j(less, &lb);
-    }
-  }
-
-  void GenerateVertical(Step *step, MacroAssembler *masm) {
-    LOG(WARNING) << "Generating dummy reduce op for " << step->name();
-    step->set_variant("DUMMY");
-    __ nop();
   }
 
   int64 Complexity(const Step *step) override {

@@ -71,6 +71,9 @@ class Registers {
   // Allocate argument register (1-6) or return register (0).
   Register arg(int n);
 
+  // Allocate extra preserved register. This needs to be restored and freed.
+  Register alloc_extra();
+
   // Mark register as being in use.
   void use(int r) { used_regs_ |= (1 << r); }
   void use(Register r) { use(r.code()); }
@@ -106,6 +109,10 @@ class Registers {
   static bool preserved(int r) { return ((1 << r) & kPreservedRegisters) != 0; }
   static bool preserved(Register r) { return preserved(r.code()); }
 
+  // Check if register is an extra callee-saved register.
+  static bool extra(int r) { return ((1 << r) & kExtraRegisters) != 0; }
+  static bool extra(Register r) { return extra(r.code()); }
+
   // Return the number of free registers.
   int num_free() const;
 
@@ -115,6 +122,14 @@ class Registers {
     1 << Register::kCode_rbx |
     1 << Register::kCode_rsp |
     1 << Register::kCode_rbp |
+    1 << Register::kCode_r12 |
+    1 << Register::kCode_r13 |
+    1 << Register::kCode_r14 |
+    1 << Register::kCode_r15;
+
+  // Extra callee-saved registers.
+  static const int kExtraRegisters =
+    1 << Register::kCode_rbx |
     1 << Register::kCode_r12 |
     1 << Register::kCode_r13 |
     1 << Register::kCode_r14 |
