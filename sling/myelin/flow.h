@@ -248,6 +248,10 @@ class Shape {
     return n;
   }
 
+  // Index operator.
+  int &operator [](int d) { return dims_[d]; }
+  const int &operator [](int d) const { return dims_[d]; }
+
   // Check if shape is the same as another shape. Undefined dimensions are
   // not compared.
   bool IsSameSize(const Shape &other) const;

@@ -27,6 +27,7 @@ flags.define("--dt", default=myelin.DT_FLOAT)
 flags.define("--test")
 flags.define("--thorough", default=False, action='store_true')
 flags.define("--repeat", default=1, type=int)
+flags.define("--skipdiff", default=False, action='store_true')
 
 flags.parse()
 dt = flags.arg.dt
@@ -235,13 +236,19 @@ def simulate(flow, f, data):
     elif op.type == "Select":
       v[o[0]] = np.where((v[i[0]] != 0), v[i[1]], 0)
     elif op.type == "Transpose":
-      v[o[0]] = np.transpose(v[i[0]])
+      if "perm" in op.attrs:
+        perm = eval(op.attrs["perm"])
+        v[o[0]] = np.transpose(v[i[0]], axes=perm)
+      else:
+        v[o[0]] = np.transpose(v[i[0]])
     elif op.type == "Shape":
       v[o[0]] = np.array(v[i[0]].shape)
     elif op.type == "Size":
       v[o[0]] = np.array(v[i[0]].size)
     elif op.type == "Rank":
       v[o[0]] = np.array(len(v[i[0]].shape))
+    elif op.type == "Identity":
+      v[o[0]] = v[i[0]]
     elif op.type == "ConcatV2":
       n = int(op.attr("N"))
       axis = v[i[n]]
@@ -310,21 +317,22 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
       if not np.allclose(t, b, rtol=rtol, atol=atol):
         test.errors += 1
         print()
-        print("mismatch in", f.name, variant, "for", o.name)
-        print("inputs:")
-        for i in flow.inputs(f):
-          if i.data == None:
-            print(i.name)
-            print(np.asarray(data.tensor(i)))
-        print("myelin:")
-        print(np.asarray(t))
-        print("numpy:")
-        print(b)
-        if b.dtype != bool:
-          print("abs error:")
-          print(b - np.asarray(t))
-          print("rel error:")
-          print((b - np.asarray(t)) / np.asarray(t))
+        print("ERROR: mismatch in", f.name, variant, "for", o.name)
+        if not flags.arg.skipdiff:
+          print("inputs:")
+          for i in flow.inputs(f):
+            if i.data == None:
+              print(i.name)
+              print(np.asarray(data.tensor(i)))
+          print("myelin:")
+          print(np.asarray(t))
+          print("numpy:")
+          print(b)
+          if b.dtype != bool:
+            print("abs error:")
+            print(b - np.asarray(t))
+            print("rel error:")
+            print((b - np.asarray(t)) / np.asarray(t))
 
   if flags.arg.profile:
     print(net.profile())
@@ -413,6 +421,13 @@ def matmul_batch_test(m, k, n, batch=8):
   b = f.var("B", dt, [batch, k, n])
   c = f.matmul(a, b, name="C")
   check(flow, (m, k, n, batch), -10, 10)
+
+def transpose_test(m, k, n, perm):
+  flow = myelin.Flow()
+  f = flow.define("transpose")
+  x = f.var("x", dt, [m, k, n])
+  y = f.transpose(x, perm=perm)
+  check(flow, (m, k, n, perm))
 
 def add_test(n):
   flow = myelin.Flow()
@@ -1059,6 +1074,13 @@ for i in sizes:
       matmul_test(i, j, k)
       matmul_add_test(i, j, k)
       matmul_batch_test(i, j, k, 8)
+      transpose_test(i, j, k, [1, 0, 2])
+      transpose_test(i, j, k, [1, 2, 0])
+      if flags.arg.thorough:
+        transpose_test(i, j, k, [0, 1, 2])
+        transpose_test(i, j, k, [0, 2, 1])
+        transpose_test(i, j, k, [2, 0, 1])
+        transpose_test(i, j, k, [2, 1, 0])
       if flags.arg.thorough and not flags.arg.mkl:
         matmul_all_orders_test(i, j, k)
       if dt != myelin.DT_INT8:
