@@ -46,7 +46,7 @@ AOTLinker::AOTLinker(const Options &options) : options_(options) {
 
 void AOTLinker::BeginCell(Cell *cell) {
   // Align code buffer before generating new cell computation function.
-  code_.Align(16);
+  code_.Align(64);
 
   // Entry point for cell function.
   string entry_name = Sanitized(cell->name() + "_entry");

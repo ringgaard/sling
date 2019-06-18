@@ -1845,12 +1845,10 @@ class Transpose : public Kernel {
     }
 
     // Compute offset of shuffled element/block in input.
-    for (int i = 0; i < shuffle_dims; ++i) {
-      if (i == 0) {
-        __ movq(ofs, shuffle_index[i]);
-      } else {
-        __ addq(ofs, shuffle_index[i]);
-      }
+    CHECK_GE(shuffle_dims, 2);
+    __ leaq(ofs, Operand(shuffle_index[0], shuffle_index[1]));
+    for (int i = 2; i < shuffle_dims; ++i) {
+      __ addq(ofs, shuffle_index[i]);
     }
 
     // Copy element/block from input to output.
