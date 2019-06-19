@@ -516,7 +516,7 @@ class PowerTransformer : public Transformer {
           // pow(x, 2) = square(x).
           replacement = "Square";
         } else if (exponent == 0.5) {
-          // pow(x, 0,5) = sqrt(x).
+          // pow(x, 0.5) = sqrt(x).
           replacement = "Sqrt";
         } else if (exponent == -0.5) {
           // pow(x, -0.5) = rsqrt(x).
