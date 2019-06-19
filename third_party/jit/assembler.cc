@@ -743,12 +743,20 @@ void Assembler::emit_lea(Register dst, const Operand &src, int size) {
 }
 
 void Assembler::load_extern(Register dst, const void *value,
-                            const string &symbol) {
+                            const string &symbol, bool pic) {
   EnsureSpace ensure_space(this);
-  emit_rex(dst, kPointerSize);
-  emit(0xB8 | dst.low_bits());
-  AddExtern(symbol, static_cast<Address>(const_cast<void *>(value)));
-  emitp(value);
+  if (pic) {
+    LOG(INFO) << "load_extern PIC";
+    emit(0x8B);
+    emit(dst.code());
+    AddExtern(symbol, static_cast<Address>(const_cast<void *>(value)), true);
+    emitl(0);
+  } else {
+    emit_rex(dst, kPointerSize);
+    emit(0xB8 | dst.low_bits());
+    AddExtern(symbol, static_cast<Address>(const_cast<void *>(value)));
+    emitp(value);
+  }
 }
 
 void Assembler::load_rax(const void *value) {

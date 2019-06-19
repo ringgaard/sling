@@ -153,9 +153,10 @@ void AOTLinker::EndCell(Cell *cell,
     }
 
     // Add relocations to code.
-    for (int offset : e.refs) {
-      code_.AddReloc(sym, R_X86_64_64, 0, code_start + offset);
-      code_.Clear64(code_start + offset);
+    for (auto &ref : e.refs) {
+      if (ref.relative) LOG(INFO) << "Relative reloc for " << e.symbol;
+      code_.AddReloc(sym, R_X86_64_64, 0, code_start + ref.offset);
+      code_.Clear64(code_start + ref.offset);
     }
   }
 

@@ -1286,6 +1286,7 @@ struct Options {
   bool sync_steps = false;                   // synchronize all steps
   bool fast_math = false;                    // fast approximate math ops
   bool aot = false;                          // ahead-of-time compilation
+  bool pic = false;                          // position-independent code
   int64 *flops_address = nullptr;            // address of FLOPs counter
 
   bool ref_profiler() const { return external_profiler || global_profiler; }

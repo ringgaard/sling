@@ -337,7 +337,8 @@ void MacroAssembler::LoopStart(jit::Label *label) {
 void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor) {
   if (tensor->IsGlobal()) {
     DCHECK(tensor->data() != nullptr);
-    load_extern(dst, tensor->data(), tensor->name());
+    if (options_.pic) LOG(INFO) << "Fix PIC for " << tensor->name();
+    load_extern(dst, tensor->data(), tensor->name(), options_.pic);
     if (tensor->ref()) {
       movq(dst, Operand(dst));
     }
