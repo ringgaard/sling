@@ -180,7 +180,6 @@ hidden_size = 256
 num_layers = 1
 num_heads = 8
 filter_size = hidden_size * 4
-max_seq_length = 128
 vocab_size = 32000
 num_segment_ids = 5
 
@@ -195,7 +194,7 @@ segment_embeddings = f.array(
     np.random.randn(num_segment_ids, hidden_size).astype(np.float32))
 positional_embeddings = f.array(
     'positional_embeddings',
-    np.random.randn(max_seq_length, hidden_size).astype(np.float32))
+    np.random.randn(seq_length, hidden_size).astype(np.float32))
 
 input_ids_emb = f.gather(wpe_embedding, input_ids)
 input_segment_ids_emb = f.gather(segment_embeddings, segment_ids)

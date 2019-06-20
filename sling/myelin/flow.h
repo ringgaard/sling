@@ -265,6 +265,10 @@ class Shape {
   // size is the product of all the shared suffix dimensions.
   int CommonSize(const Shape &other) const;
 
+  // Check if shape is a singular broadcast, i.e. all dimensions except the
+  // last are the same, and the last dimension is scalar.
+  bool IsSingleBroadcast(const Shape &other) const;
+
   // Return shape as string.
   string ToString() const;
 
