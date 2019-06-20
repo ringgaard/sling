@@ -225,6 +225,7 @@ print('Testing transformer layers:', num_layers, 'length:', seq_length,
       'hidden:', hidden_size, 'filter:', filter_size, 'heads:', num_heads)
 
 for n in range(flags.arg.repeat):
+  data.clear()
   data.compute()
 
 if flags.arg.profile:
