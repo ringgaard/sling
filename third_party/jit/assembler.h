@@ -683,6 +683,9 @@ class Assembler : public CodeGenerator {
   // Call near absolute indirect, address in register
   void call(Register adr);
 
+  // Call external using pc-relative relocation.
+  void call(const void *target, const string &symbol);
+
   // Jumps
   // Jump short or near relative.
   // Use a 32-bit signed displacement.

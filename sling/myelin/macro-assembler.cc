@@ -337,7 +337,6 @@ void MacroAssembler::LoopStart(jit::Label *label) {
 void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor) {
   if (tensor->IsGlobal()) {
     DCHECK(tensor->data() != nullptr);
-    if (options_.pic) LOG(INFO) << "Fix PIC for " << tensor->name();
     load_extern(dst, tensor->data(), tensor->name(), options_.pic);
     if (tensor->ref()) {
       movq(dst, Operand(dst));
@@ -1317,9 +1316,8 @@ void MacroAssembler::StartTask(int offset, int32 id, int32 index,
   movl(Operand(arg_reg_1, offsetof(Task, index)), Immediate(index));
 
   // Call runtime to start task.
-  load_extern(acc, reinterpret_cast<void *>(runtime_->StartTaskFunc()),
-              "MyelinStartTask");
-  call(acc);
+  void *target = reinterpret_cast<void *>(runtime_->StartTaskFunc());
+  call_extern(target, "myelin_start_task");
 
   rr_.release(acc);
 }
@@ -1332,25 +1330,23 @@ void MacroAssembler::WaitForTask(int offset) {
   // Call runtime to wait for task to complete.
   Register acc = rr_.alloc();
   leaq(arg_reg_1, Operand(datareg, offset));
-  load_extern(acc, reinterpret_cast<void *>(runtime_->WaitTaskFunc()),
-              "MyelinWaitTask");
-  call(acc);
+  void *target = reinterpret_cast<void *>(runtime_->WaitTaskFunc());
+  call_extern(target, "myelin_wait_task");
+
   rr_.release(acc);
 }
 
 void MacroAssembler::WaitForMainTask() {
   // Call runtime to wait for main task to complete.
-  CallInstanceFunction(runtime_->SyncMainFunc(), "MyelinSyncMain");
+  CallInstanceFunction(runtime_->SyncMainFunc(), "myelin_sync_main");
 }
 
 void MacroAssembler::CallInstanceFunction(void (*func)(void *),
                                           const string &symbol) {
   if (func != nullptr) {
-    Register acc = rr_.alloc();
     movq(arg_reg_1, datareg);
-    load_extern(acc, reinterpret_cast<void *>(func), symbol);
-    call(acc);
-    rr_.release(acc);
+    void *target = reinterpret_cast<void *>(func);
+    call_extern(target, symbol);
   }
 }
 

@@ -432,8 +432,11 @@ class MacroAssembler : public jit::Assembler {
 
   // Call to external function.
   void call_extern(const void *func, const string &symbol) {
-    if (options_.pic) LOG(INFO) << "Generate PIC for " << symbol;
-    call(GetExtern(symbol, func)->address());
+    if (options_.pic) {
+      call(func, symbol);
+    } else {
+      call(GetExtern(symbol, func)->address());
+    }
   }
 
   // Type-dependent instructions.
