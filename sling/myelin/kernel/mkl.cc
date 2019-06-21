@@ -189,7 +189,7 @@ static bool LoadMKLLibrary() {
 }
 
 // Check if MKL is supported.
-bool SupportsMKL() {
+static bool SupportsMKL() {
   std::call_once(mkl_initialized, []() { LoadMKLLibrary(); });
   return mkl_support;
 }
@@ -197,14 +197,25 @@ bool SupportsMKL() {
 // Matrix multiplication using Intel Math Kernel Library, C = A * B.
 class MKLMatMul : public Kernel {
  public:
-  string Name() override { return "MKLMatMul"; }
-  string Operation() override { return "MatMul"; }
+  MKLMatMul(bool accumulate) : accumulate_(accumulate)  {}
+
+  string Name() override {
+    return accumulate_ ? "MKLAccMatMul" : "MKLMatMul";
+  }
+  string Operation() override {
+    return accumulate_ ? "AssignAddMatMul" : "MatMul";
+  }
 
   bool Supports(Step *step, const Options &options) override {
-    // Two inputs and one output.
-    if (step->indegree() != 2) return false;
-    if (step->outdegree() != 1) return false;
-    Args args(step);
+    // Check arguments.
+    if (accumulate_) {
+      if (step->indegree() != 3) return false;
+      if (step->outdegree() != 0) return false;
+    } else {
+      if (step->indegree() != 2) return false;
+      if (step->outdegree() != 1) return false;
+    }
+    Args args(step, accumulate_);
 
     // Check type, shape and order.
     if (!args.Compatible()) return false;
@@ -222,7 +233,7 @@ class MKLMatMul : public Kernel {
   }
 
   void Adjust(Step *step, const Options &options) override {
-    Args args(step);
+    Args args(step, accumulate_);
 
     // Only row-major supported for now.
     args.A.tensor->RequireOrder(ROW_MAJOR);
@@ -243,7 +254,7 @@ class MKLMatMul : public Kernel {
 
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get arguments.
-    Args args(step);
+    Args args(step, accumulate_);
 
     // Get dimensions for matrices.
     int dsize = args.traits.size();
@@ -265,11 +276,11 @@ class MKLMatMul : public Kernel {
         if (args.type == DT_FLOAT) {
           status = mkl_cblas_jit_create_sgemm(
               &jitter, MKL_ROW_MAJOR, args.A.op(), args.B.op(),
-              m, n, k, 1.0, lda, ldb, 0.0, ldc);
+              m, n, k, 1.0, lda, ldb, accumulate_ ? 1.0 : 0.0, ldc);
         } else {
           status = mkl_cblas_jit_create_dgemm(
               &jitter, MKL_ROW_MAJOR, args.A.op(), args.B.op(),
-              m, n, k, 1.0, lda, ldb, 0.0, ldc);
+              m, n, k, 1.0, lda, ldb, accumulate_ ? 1.0 : 0.0, ldc);
         }
         if (status == MKL_JIT_SUCCESS || status == MKL_NO_JIT) {
           // Get pointer to JIT function.
@@ -313,11 +324,20 @@ class MKLMatMul : public Kernel {
         if (args.type == DT_FLOAT) {
           auto *one = masm->GetConstant<float>(1.0);
           __ movss(xmm0, one->address());  // alpha=1.0
+          if (accumulate_) {
+            __ movss(xmm1, xmm0);          // beta=1.0
+          } else {
+            __ pxor(xmm1, xmm1);           // beta=0.0
+          }
         } else {
           auto *one = masm->GetConstant<double>(1.0);
           __ movsd(xmm0, one->address());  // alpha=1.0
+          if (accumulate_) {
+            __ movsd(xmm1, xmm0);          // beta=1.0
+          } else {
+            __ pxor(xmm1, xmm1);           // beta=0.0
+          }
         }
-        __ pxor(xmm1, xmm1); // beta=0.0
 
         __ movq(arg_reg_1, Immediate(MKL_ROW_MAJOR));
         __ movq(arg_reg_2, Immediate(args.A.op()));
@@ -352,10 +372,10 @@ class MKLMatMul : public Kernel {
       StaticData *beta_array;
       if (args.type == DT_FLOAT) {
         alpha_array = masm->GetConstant<float>(1.0);
-        beta_array = masm->GetConstant<float>(0.0);
+        beta_array = masm->GetConstant<float>(accumulate_ ? 1.0 : 0.0);
       } else {
         alpha_array = masm->GetConstant<double>(1.0);
-        beta_array = masm->GetConstant<double>(0.0);
+        beta_array = masm->GetConstant<double>(accumulate_ ? 1.0 : 0.0);
       }
 
       auto *transa_array = masm->GetConstant<mkl_int_t>(args.A.op());
@@ -402,7 +422,7 @@ class MKLMatMul : public Kernel {
   }
 
   int64 Complexity(const Step *step) override {
-    Args args(step);
+    Args args(step, accumulate_);
     int64 ops = args.C.rows() * args.C.cols();
     ops *= args.A.cols() * 2;
     ops *= args.C.batchsize();
@@ -472,13 +492,15 @@ class MKLMatMul : public Kernel {
 
   // Arguments for MatMul kernel.
   struct Args {
-    Args(const Step *step)
-      : A(step->input(0), step->GetAttr("transpose_a", false)),
-        B(step->input(1), step->GetAttr("transpose_b", false)),
-        C(step->output(0), step->GetAttr("transpose_c", false)),
+    Args(const Step *step, bool accumulate)
+      : A(accumulate ? step->input(1) : step->input(0),
+          step->GetAttr("transpose_a", false)),
+        B(accumulate ? step->input(2) : step->input(1),
+          step->GetAttr("transpose_b", false)),
+        C(accumulate ? step->input(0) : step->output(0),
+          step->GetAttr("transpose_c", false)),
         type(C.type()),
-        traits(TypeTraits::of(type)) {
-    }
+        traits(TypeTraits::of(type)) {}
 
     // Check that shapes and types are compatible.
     bool Compatible() const {
@@ -522,10 +544,14 @@ class MKLMatMul : public Kernel {
     ~MKLJitter() override { mkl_jit_destroy(jitter); }
     void *jitter;
   };
+
+ private:
+  bool accumulate_;  // matmul with assignment
 };
 
 void RegisterMKLLibrary(Library *library) {
-  library->Register(new MKLMatMul());
+  library->Register(new MKLMatMul(false));
+  library->Register(new MKLMatMul(true));
 }
 
 }  // namespace myelin

@@ -808,7 +808,7 @@ class SIMDMatMul : public Kernel {
   }
 
  private:
-  bool accumulate_;  // matmul with assignment.
+  bool accumulate_;  // matmul with assignment
 };
 
 void RegisterSIMDMatMulLibrary(Library *library) {
