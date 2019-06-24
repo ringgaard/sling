@@ -155,7 +155,8 @@ void AOTLinker::EndCell(Cell *cell,
     // Add relocations to code.
     for (auto &ref : e.refs) {
       if (ref.relative) {
-        code_.AddReloc(sym, R_X86_64_PC32, 0, code_start + ref.offset);
+        int addend = code_.Clear32(code_start + ref.offset);
+        code_.AddReloc(sym, R_X86_64_PC32, addend, code_start + ref.offset);
       } else {
         code_.AddReloc(sym, R_X86_64_64, 0, code_start + ref.offset);
         code_.Clear64(code_start + ref.offset);
