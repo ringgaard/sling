@@ -2,6 +2,7 @@
 
 import numpy as np
 import sling.myelin as myelin
+import sling.myelin.simulator as simulator
 import sling.flags as flags
 
 flags.define('--repeat', default=1, type=int)
@@ -217,10 +218,12 @@ if flags.arg.flow:
 compiler = myelin.Compiler()
 net = compiler.compile(flow)
 
-# Profile network.
 cell = net.cell(f.func.name)
 data = cell.instance()
 
+baseline = simulator.compute(flow, f.func, data)
+
+# Profile network.
 print('Testing transformer layers:', num_layers, 'length:', seq_length,
       'hidden:', hidden_size, 'filter:', filter_size, 'heads:', num_heads)
 
@@ -230,4 +233,16 @@ for n in range(flags.arg.repeat):
 
 if flags.arg.profile:
   print(net.profile())
+
+# Compare output of network to NumPy baseline.
+baseline_output = baseline[layer_output]
+test_output = np.array(data[layer_output])
+if np.allclose(baseline_output, test_output, atol=1e-4):
+  print("Baseline comparison: SUCCESS")
+else:
+  print("Baseline comparison: FAIL")
+  print("baseline:");
+  print(baseline_output)
+  print("test:");
+  print(test_output)
 
