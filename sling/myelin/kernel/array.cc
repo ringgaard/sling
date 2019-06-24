@@ -1731,7 +1731,7 @@ class Reduce : public Kernel {
 
           // Store result for block.
           gen->MaskedStore(Operand(out), acc[0]);
-          __ addq(out, Immediate(blksize));
+          __ addq(out, Immediate(phase.masked * dsize));
         }
       }
 
