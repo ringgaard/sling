@@ -305,7 +305,6 @@ void ElementwiseIndexGenerator::GenerateLoopEnd() {
             __ andq(loc->repeat, Immediate(loc->broadcast - 1));
             __ j(not_zero, &l2);
           } else {
-            Label l2;
             __ cmpq(loc->repeat, Immediate(loc->broadcast));
             __ j(less, &l2);
             __ xorq(loc->repeat, loc->repeat);

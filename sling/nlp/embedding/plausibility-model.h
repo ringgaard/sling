@@ -20,21 +20,32 @@
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/myelin/compute.h"
-#include "sling/myelin/flow.h"
+#include "sling/nlp/kb/facts.h"
 
 namespace sling {
 namespace nlp {
 
 class PlausibilityModel {
  public:
+  // Pseudo-scores for empty premise or hypothesis.
+  static constexpr float EMPTY_PREMISE = -1.0;
+  static constexpr float EMPTY_HYPOTHESIS = -2.0;
+
   // Load model from file.
   void Load(Store *store, const string &filename);
 
-  // Score fact.
-  float Score(const Array &premise, const Array &hypothesis) const;
+  // Predict how likely a fact (hypothesis) is to be true about an item given
+  // a set of known facts about the item (premise).
+  float Score(const Facts &premise, const Facts &hypothesis) const;
 
-  // Look up fact in lexicon.
+  // Look up fact in lexicon. Return -1 for unknown fact.
   int Lookup(const Array &fact) const;
+
+  // Look up fact fingerprint in lexicon. Return -1 for unknown fact.
+  int Lookup(uint64 fp) const;
+
+  // Return fact lexicon.
+  const Array &lexicon() const { return fact_lexicon_; }
 
  private:
   // Plausibility model.
@@ -50,11 +61,9 @@ class PlausibilityModel {
   // Mapping from fact fingerprints to fact ids.
   std::unordered_map<uint64, int> fact_mapping_;
 
-
   // Model parameters.
   int num_facts_ = 0;
   int max_features_ = 0;
-
 };
 
 }  // namespace nlp

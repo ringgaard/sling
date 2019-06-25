@@ -221,6 +221,20 @@ void Facts::Extract(Handle item) {
   }
 }
 
+void Facts::Expand(Handle property, Handle value) {
+  auto &extractors = catalog_->property_extractors_;
+  auto f = extractors.find(property);
+  if (f == extractors.end()) return;
+
+  FactCatalog::Extractor extractor = f->second;
+  push(property);
+  int start = delimiters_.size();
+  (this->*extractor)(value);
+  int end = delimiters_.size();
+  if (end > start) groups_.push_back(end);
+  pop();
+}
+
 void Facts::ExtractFor(Handle item, const HandleSet &properties) {
   // Extract facts from the properties of the item.
   auto &extractors = catalog_->property_extractors_;

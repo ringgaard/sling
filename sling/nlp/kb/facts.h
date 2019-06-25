@@ -119,6 +119,9 @@ class Facts {
   // Extract facts for item.
   void Extract(Handle item);
 
+  // Add fact expansion.
+  void Expand(Handle property, Handle value);
+
   // Extract facts for a subset of properties for item.
   void ExtractFor(Handle item, const HandleSet &properties);
 

@@ -14,6 +14,7 @@
 
 #include "sling/nlp/embedding/plausibility-model.h"
 
+#include "sling/myelin/flow.h"
 #include "sling/myelin/compiler.h"
 #include "sling/frame/serialization.h"
 
@@ -49,48 +50,57 @@ void PlausibilityModel::Load(Store *store, const string &filename) {
     premise_ = scorer_->GetParameter("scorer/premise");
     hypothesis_ = scorer_->GetParameter("scorer/hypothesis");
     probs_ = scorer_->GetParameter("scorer/probs");
-    max_features_ = premise_->dim(0);
+    max_features_ = premise_->dim(1);
   }
 }
 
-float PlausibilityModel::Score(const Array &premise,
-                               const Array &hypothesis) const {
+float PlausibilityModel::Score(const Facts &premise,
+                               const Facts &hypothesis) const {
   Instance scorer(scorer_);
-  Store *store = premise.store();
 
   // Set premise.
   int *p = scorer.Get<int>(premise_);
   int *pend = p + max_features_;
-  for (int i = 0; i < premise.length() ; ++i) {
-    int f = Lookup(Array(store, premise.get(i)));
+  bool empty_premise = true;
+  for (int i = 0; i < premise.size(); ++i) {
+    int f = Lookup(premise.fingerprint(i));
     if (f == -1) continue;
     *p++ = f;
+    empty_premise = false;
     if (p == pend) break;
   }
   if (p < pend) *p = -1;
+  if (empty_premise) return EMPTY_PREMISE;
 
   // Set hypothesis.
   int *h = scorer.Get<int>(hypothesis_);
   int *hend = h + max_features_;
-  for (int i = 0; i < hypothesis.length() ; ++i) {
-    int f = Lookup(Array(store, hypothesis.get(i)));
+  bool empty_hypothesis = true;
+  for (int i = 0; i < hypothesis.size(); ++i) {
+    int f = Lookup(hypothesis.fingerprint(i));
     if (f == -1) continue;
     *h++ = f;
-    if (h == pend) break;
+    empty_hypothesis = false;
+    if (h == hend) break;
   }
-  if (h < hend) *p = -1;
+  if (h < hend) *h = -1;
+  if (empty_hypothesis) return EMPTY_HYPOTHESIS;
 
   // Compute plausibility score.
   scorer.Compute();
+  //LOG(INFO) << "scorer:\n" << scorer.ToString();
+  return scorer.Get<float>(probs_)[1];
+}
 
-  return scorer.Get<int>(probs_)[1];
+int PlausibilityModel::Lookup(uint64 fp) const {
+  auto f = fact_mapping_.find(fp);
+  if (f == fact_mapping_.end()) return -1;
+  return f->second;
 }
 
 int PlausibilityModel::Lookup(const Array &fact) const {
   uint64 fp = fact.store()->Fingerprint(fact.handle());
-  auto f = fact_mapping_.find(fp);
-  if (f == fact_mapping_.end()) return -1;
-  return f->second;
+  return Lookup(fp);
 }
 
 }  // namespace nlp

@@ -97,6 +97,7 @@ cc_library(
     "//sling/myelin:compiler",
     "//sling/myelin:compute",
     "//sling/myelin:flow",
+    "//sling/nlp/kb:facts",
   ],
 )
 

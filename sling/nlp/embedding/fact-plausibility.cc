@@ -100,6 +100,7 @@ class FactPlausibilityTrainer : public LearnerTask {
     Counter *num_skipped_instances = task->GetCounter("skipped_instances");
     num_training_examples_ = task->GetCounter("training_examples");
     num_feature_overflows_ = task->GetCounter("feature_overflows");
+    num_contradictions_ = task->GetCounter("contradictions");
 
     // Bind names.
     names_.Bind(&store_);
@@ -222,6 +223,13 @@ class FactPlausibilityTrainer : public LearnerTask {
         // another item.
         for (int i = 0; i < batch_size_; ++i) {
           for (int j = 0; j < batch_size_; ++j) {
+            // Check that main hypothesis is not in premise for negative
+            // examples.
+            if (i != j && Has(premises[i], hypotheses[j][0])) {
+              num_contradictions_->Increment();
+              continue;
+            }
+
             // Set premise and hypothesis for example.
             Copy(premises[i], premise);
             Copy(hypotheses[j], hypothesis);
@@ -381,6 +389,9 @@ class FactPlausibilityTrainer : public LearnerTask {
       // Compute scores for all pairs in batch.
       for (int i = 0; i < batch_size; ++i) {
         for (int j = 0; j < batch_size; ++j) {
+          // Check that main hypothesis is not in premise for negative examples.
+          if (i != j && Has(premises[i], hypotheses[j][0])) continue;
+
           // Set premise and hypothesis for example.
           Copy(premises[i], premise);
           Copy(hypotheses[j], hypothesis);
@@ -436,9 +447,17 @@ class FactPlausibilityTrainer : public LearnerTask {
   }
 
   // Copy features into feature vector and terminate it with -1.
-  void Copy(const Features &src, int *dest) {
+  static void Copy(const Features &src, int *dest) {
     for (int f : src) *dest++ = f;
     *dest = -1;
+  }
+
+  // Check if feature is in feature vector.
+  static bool Has(const Features &fv, int feature) {
+    for (int f : fv) {
+      if (f == feature) return true;
+    }
+    return false;
   }
 
   // Add plausibility model to flow.
@@ -518,6 +537,7 @@ class FactPlausibilityTrainer : public LearnerTask {
   // Statistics.
   Counter *num_training_examples_ = nullptr;
   Counter *num_feature_overflows_ = nullptr;
+  Counter *num_contradictions_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("fact-plausibility-trainer", FactPlausibilityTrainer);

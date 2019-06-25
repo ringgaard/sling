@@ -48,6 +48,7 @@ cc_library(
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:lex",
     "//sling/nlp/document:phrase-tokenizer",
+    "//sling/nlp/embedding:plausibility-model",
     "//sling/nlp/kb:calendar",
     "//sling/nlp/kb:facts",
     "//sling/nlp/kb:phrase-table",

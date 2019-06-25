@@ -31,6 +31,8 @@ PyTypeObject PyFactExtractor::type;
 PyMethodTable PyFactExtractor::methods;
 PyTypeObject PyTaxonomy::type;
 PyMethodTable PyTaxonomy::methods;
+PyTypeObject PyPlausibility::type;
+PyMethodTable PyPlausibility::methods;
 
 void PyWikiConverter::Define(PyObject *module) {
   InitType(&type, "sling.WikiConverter", sizeof(PyWikiConverter), true);
@@ -132,7 +134,7 @@ PyObject *PyFactExtractor::Facts(PyObject *args, PyObject *kw) {
   // Get store and Wikidata item.
   PyStore *pystore = nullptr;
   PyFrame *pyitem = nullptr;
-  bool closure = false;
+  bool closure = true;
   if (!PyArg_ParseTuple(args, "OO|b", &pystore, &pyitem, &closure)) {
     return nullptr;
   }
@@ -153,7 +155,7 @@ PyObject *PyFactExtractor::FactsFor(PyObject *args, PyObject *kw) {
   PyStore *pystore = nullptr;
   PyFrame *pyitem = nullptr;
   PyObject *pyproperties = nullptr;
-  bool closure = false;
+  bool closure = true;
   if (!PyArg_ParseTuple(
       args, "OOO|b", &pystore, &pyitem, &pyproperties, &closure)) {
     return nullptr;
@@ -291,6 +293,69 @@ PyObject *PyTaxonomy::Classify(PyObject *item) {
   Handle type = taxonomy->Classify(pyframe->AsFrame());
 
   return pyframe->pystore->PyValue(type);
+}
+
+
+///////////////////////////
+
+
+void PyPlausibility::Define(PyObject *module) {
+  InitType(&type, "sling.PlausibilityModel", sizeof(PyPlausibility), true);
+  type.tp_init = method_cast<initproc>(&PyPlausibility::Init);
+  type.tp_dealloc = method_cast<destructor>(&PyPlausibility::Dealloc);
+
+  methods.Add("score", &PyPlausibility::Score);
+  type.tp_methods = methods.table();
+
+  RegisterType(&type, module, "PlausibilityModel");
+}
+
+int PyPlausibility::Init(PyObject *args, PyObject *kwds) {
+  // Get fact extractor and model file name arguments.
+  pyextractor = nullptr;
+  model = nullptr;
+  char *filename = nullptr;
+  if (!PyArg_ParseTuple(args, "Os", &pyextractor, &filename)) return -1;
+  if (!PyFactExtractor::TypeCheck(pyextractor)) return -1;
+
+  // Initialize plausibility model.
+  Py_INCREF(pyextractor);
+  model = new nlp::PlausibilityModel();
+  model->Load(pyextractor->pycommons->store, filename);
+
+  return 0;
+}
+
+void PyPlausibility::Dealloc() {
+  delete model;
+  if (pyextractor) Py_DECREF(pyextractor);
+  Free();
+}
+
+PyObject *PyPlausibility::Score(PyObject *args) {
+  // Get item, property and value.
+  PyFrame *pyitem = nullptr;
+  PyFrame *pyprop = nullptr;
+  PyObject *pyval = nullptr;
+  if (!PyArg_ParseTuple(args, "OOO", &pyitem, &pyprop, &pyval)) return nullptr;
+  if (!PyFrame::TypeCheck(pyitem)) return nullptr;
+  if (!PyFrame::TypeCheck(pyprop)) return nullptr;
+  Handle item = pyitem->handle();
+  Handle prop = pyprop->handle();
+  Handle value = pyextractor->pycommons->Value(pyval);
+
+  // Get facts for item.
+  nlp::Facts premise(pyextractor->catalog);
+  premise.Extract(item);
+
+  // Expand fact property and value.
+  nlp::Facts hypothesis(pyextractor->catalog);
+  hypothesis.Expand(prop, value);
+
+  // Score fact.
+  float score = model->Score(premise, hypothesis);
+
+  return PyFloat_FromDouble(score);
 }
 
 }  // namespace sling
