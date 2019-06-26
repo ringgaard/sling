@@ -1779,9 +1779,10 @@ class Transpose : public Kernel {
     Tensor *x = step->input(0);
     Tensor *y = step->output(0);
     Shape perm = GetPerm(step);
+    int shuffled = Shuffled(perm);
 
     // Trivial permutation is a no-op.
-    if (Shuffled(perm) <= 0 && step->AllowInPlace(0, 0, true)) return;
+    if (shuffled <= 0 && step->AllowInPlace(0, 0, true)) return;
 
     // Require dense standard layout.
     x->RequireStandardOrder();
@@ -1790,7 +1791,7 @@ class Transpose : public Kernel {
     y->RequireDense();
 
     // Reserve registers.
-    step->SetRegisterUsage(5 + perm.rank());
+    step->SetRegisterUsage(5 + shuffled);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
