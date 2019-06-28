@@ -54,7 +54,7 @@ tests = {}
 compiler = myelin.Compiler()
 
 # Compare flow functions against numpy.
-def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
+def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8, check=None):
   # Ensure that inputs are not overwritten.
   for i in flow.inputs(): i.output = True
 
@@ -85,19 +85,22 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8):
         r = np.random.ranf(a.shape) * (hi - lo) + lo
       np.copyto(a, r, casting="unsafe")
 
+    # Compute function using numpy.
+    baseline = simulator.compute(flow, f, data)
+
     # Compute cell.
     for n in range(flags.arg.repeat):
       data.compute()
 
-    # Compute function using numpy.
-    baseline = simulator.compute(flow, f, data)
-
-    # Check outputs.
+    # Create new test if does not already exist.
     test = tests.get(f.name)
     if test == None:
       test = Test(f)
       tests[f.name] = test
-    for o in flow.outputs(f):
+
+    # Check outputs
+    if check is None: check = flow.outputs(f)
+    for o in check:
       test.runs += 1
       t = data.tensor(o)
       b = baseline[o]
@@ -760,6 +763,24 @@ def negfold_test(n):
   z = f.sub(x, f.neg(y))
   check(flow, n)
 
+def acc_matmul_transpose_test():
+  flow = myelin.Flow()
+  f = flow.define("acc_matmul_transpose")
+  w1 = f.var("w1", dt, [32, 2])
+  l = f.var("l", dt, [1, 2])
+  r = f.var("r", dt, [1, 32])
+  f.assign(w1, f.add(w1, f.matmul(f.transpose(r), l)))
+  check(flow, [], 0, 10, check=[w1])
+
+def acc_matmul_test(m, k, n):
+  flow = myelin.Flow()
+  f = flow.define("acc_matmul")
+  c = f.var("c", dt, [m, n])
+  a = f.var("a", dt, [m, k])
+  b = f.var("b", dt, [k, n])
+  f.assign(c, f.add(c, f.matmul(a, b)))
+  check(flow, (m, k, n), 0, 10, check=[c])
+
 # Check for specific test to run.
 if flags.arg.test:
   print("Running test", flags.arg.test)
@@ -863,6 +884,7 @@ for i in sizes:
       matmul_test(i, j, k)
       matmul_add_test(i, j, k)
       matmul_batch_test(i, j, k, 8)
+      acc_matmul_test(i, j, k)
       transpose_test(i, j, k, [1, 0, 2])
       transpose_test(i, j, k, [1, 2, 0])
       if flags.arg.thorough:

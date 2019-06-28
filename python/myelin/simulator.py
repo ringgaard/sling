@@ -231,6 +231,8 @@ def compute(flow, f, data):
       v[o[0]] = gather(v[i[0]], v[i[1]])
     elif op.type == "Reshape":
       v[o[0]] = np.reshape(v[i[0]], v[i[1]])
+    elif op.type == "Assign":
+      v[i[0]] = v[i[1]]
     else:
       raise Exception("No NumPy support for " + op.type)
 

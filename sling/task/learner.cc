@@ -57,7 +57,10 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
     }
 
     // Run evaluation.
-    Evaluate(epoch_, model);
+    if (!Evaluate(epoch_, model)) {
+      done_ = true;
+      break;
+    }
 
     // Checkpoint model.
     if (epoch_ >= last_checkpoint_ + checkpoint_interval_) {
