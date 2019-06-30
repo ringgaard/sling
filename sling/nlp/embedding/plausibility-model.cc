@@ -59,37 +59,31 @@ float PlausibilityModel::Score(const Facts &premise,
   Instance scorer(scorer_);
 
   // Set premise.
-  int *p = scorer.Get<int>(premise_);
-  int *pend = p + max_features_;
-  bool empty_premise = true;
-  for (int i = 0; i < premise.size(); ++i) {
-    int f = Lookup(premise.fingerprint(i));
-    if (f == -1) continue;
-    *p++ = f;
-    empty_premise = false;
-    if (p == pend) break;
+  if (!CopyFeatures(premise, scorer.Get<int>(premise_))) {
+    return EMPTY_PREMISE;
   }
-  if (p < pend) *p = -1;
-  if (empty_premise) return EMPTY_PREMISE;
 
   // Set hypothesis.
-  int *h = scorer.Get<int>(hypothesis_);
-  int *hend = h + max_features_;
-  bool empty_hypothesis = true;
-  for (int i = 0; i < hypothesis.size(); ++i) {
-    int f = Lookup(hypothesis.fingerprint(i));
-    if (f == -1) continue;
-    *h++ = f;
-    empty_hypothesis = false;
-    if (h == hend) break;
+  if (!CopyFeatures(hypothesis, scorer.Get<int>(hypothesis_))) {
+    return EMPTY_HYPOTHESIS;
   }
-  if (h < hend) *h = -1;
-  if (empty_hypothesis) return EMPTY_HYPOTHESIS;
 
   // Compute plausibility score.
   scorer.Compute();
-  //LOG(INFO) << "scorer:\n" << scorer.ToString();
   return scorer.Get<float>(probs_)[1];
+}
+
+bool PlausibilityModel::CopyFeatures(const Facts &facts, int *features) const {
+  int *p = features;
+  int *end = features + max_features_;
+  for (int i = 0; i < facts.size(); ++i) {
+    int f = Lookup(facts.fingerprint(i));
+    if (f == -1) continue;
+    *p++ = f;
+    if (p == end) break;
+  }
+  if (p < end) *p = -1;
+  return p != features;
 }
 
 int PlausibilityModel::Lookup(uint64 fp) const {

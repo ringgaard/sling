@@ -48,6 +48,9 @@ class PlausibilityModel {
   const Array &lexicon() const { return fact_lexicon_; }
 
  private:
+  // Copy facts to feature vector.
+  bool CopyFeatures(const Facts &facts, int *features) const;
+
   // Plausibility model.
   myelin::Network model_;
   myelin::Cell *scorer_ = nullptr;

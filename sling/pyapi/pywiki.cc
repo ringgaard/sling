@@ -296,9 +296,6 @@ PyObject *PyTaxonomy::Classify(PyObject *item) {
 }
 
 
-///////////////////////////
-
-
 void PyPlausibility::Define(PyObject *module) {
   InitType(&type, "sling.PlausibilityModel", sizeof(PyPlausibility), true);
   type.tp_init = method_cast<initproc>(&PyPlausibility::Init);
