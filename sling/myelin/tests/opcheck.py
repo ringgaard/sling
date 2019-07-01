@@ -612,11 +612,11 @@ def bcast_test(n):
   y = f.mul(x, f.const(7, dt))
   check(flow, n)
 
-def bcast_repeat_test(n):
+def bcast_repeat_test(n, m, k):
   flow = myelin.Flow()
   f = flow.define("bcast_repeat")
-  x = f.var("x", dt, [n, 256])
-  y = f.var("y", dt, [n, 1])
+  x = f.var("x", dt, [n, m])
+  y = f.var("y", dt, [n, k])
   z = f.square(f.sub(x, y))
   check(flow, n)
 
@@ -813,7 +813,7 @@ for i in sizes:
   square_test(i)
   relu_test(i)
   bcast_test(i)
-  bcast_repeat_test(i)
+  bcast_repeat_test(i, 256, 1)
   shape_test(i)
   size_test(i)
   if i < 32: rank_test(i)

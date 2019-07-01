@@ -173,6 +173,7 @@ class VariableMap {
       m = expr_->Variable(var->type, var->id);
       m->predicate = var->predicate;
       m->single = var->single;
+      m->unhoistable = var->unhoistable;
     }
     return m;
   }
@@ -183,6 +184,7 @@ class VariableMap {
     to->id = from->id;
     to->predicate = from->predicate;
     to->single = from->single;
+    to->unhoistable = from->unhoistable;
   }
 
  private:
