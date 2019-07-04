@@ -178,7 +178,7 @@ f = myelin.Builder(flow, 'f')
 
 seq_length = 128
 hidden_size = 256
-num_layers = 1
+num_layers = 3
 num_heads = 8
 filter_size = hidden_size * 4
 vocab_size = 32000

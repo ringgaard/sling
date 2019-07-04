@@ -592,6 +592,12 @@ class Builder:
     op.add_input(x)
     op.add_input(y)
 
+  def scatter_add(self, m, f, v, name=None):
+    op = self.rawop("ScatterAdd", name)
+    op.add_input(m)
+    op.add_input(f)
+    op.add_input(v)
+
 # Set builder factory for flows.
 def builder_factory(flow, name):
   return Builder(flow, name)
