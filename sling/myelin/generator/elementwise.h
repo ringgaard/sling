@@ -32,6 +32,7 @@ namespace myelin {
 //  - REPEAT (iterator repeated over all the elements)
 //  - SINGLE (single element broadcast over inner dimensions)
 //  - BROADCAST (general broadcast iterator with one broadcast dimension)
+//  - SPARSE (sparse iteration over outer dimension using sparcity bitmap)
 class ElementwiseIndexGenerator : public IndexGenerator {
  public:
   // Create element-wise index generator for step.
@@ -40,6 +41,9 @@ class ElementwiseIndexGenerator : public IndexGenerator {
 
   // Initialize index generator for vector size.
   void Initialize(size_t vecsize) override;
+
+  // Enable sparse iteration.
+  void EnableSparse(Tensor *sparse) override;
 
   // Allocate registers. Return false in case of register overflow.
   bool AllocateRegisters() override;
@@ -62,7 +66,7 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   bool single() const { return single_; }
 
  private:
-  enum IteratorType {SIMPLE, SCALAR, CONST, REPEAT, SINGLE, BROADCAST};
+  enum IteratorType {SIMPLE, SCALAR, CONST, REPEAT, SINGLE, BROADCAST, SPARSE};
   struct Locator;
   struct Iterator;
 
@@ -127,6 +131,9 @@ class ElementwiseIndexGenerator : public IndexGenerator {
 
   // Whether only one iteration is needed.
   bool single_ = false;
+
+  // Bitmap tensor for sparse iteration.
+  Tensor *sparse_ = nullptr;
 
   // Output for storing reference to assignment target.
   Tensor *output_ref_ = nullptr;

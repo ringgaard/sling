@@ -61,6 +61,27 @@ ElementwiseIndexGenerator::~ElementwiseIndexGenerator() {
   for (auto *l : locators_) delete l;
 }
 
+void ElementwiseIndexGenerator::EnableSparse(Tensor *sparse) {
+#if 0
+  static const char *itnames[] = {
+    "SIMPLE", "SCALAR", "CONST", "REPEAT", "SINGLE", "BROADCAST", "SPARSE"
+  };
+
+  LOG(INFO) << "Sparse iteration over " << sparse->name();
+  LOG(INFO) << iterators_.size() << " iterators";
+  for (Iterator *it : iterators_) {
+    LOG(INFO) << "  " << itnames[it->type] << " iterator size " << it->size;
+  }
+  LOG(INFO) << locators_.size() << " locators";
+  for (Locator *loc : locators_) {
+    LOG(INFO) << "  " << itnames[loc->iterator->type]
+              << " locator for " << loc->var->name();
+  }
+#endif
+
+  sparse_ = sparse;
+}
+
 ElementwiseIndexGenerator::Iterator *ElementwiseIndexGenerator::GetIterator(
     IteratorType type,
     size_t size) {

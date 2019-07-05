@@ -1096,12 +1096,10 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
   // Create tensors for all the variables (parameters and constants).
   std::unordered_map<Flow::Variable *, Tensor *> varmap;
-  std::vector<Tensor *> tensors;
   for (Flow::Variable *var : flow.vars()) {
     // Allocate new tensor.
     Tensor *tensor = new Tensor();
     varmap[var] = tensor;
-    tensors.push_back(tensor);
     tensor->constant_ = var->constant();
     tensor->local_ = !var->global();
     tensor->random_init_ = var->global() && var->random() && var->learnable();
@@ -1317,12 +1315,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     step->kernel_->Adjust(step, options_);
   }
 
-  // Collect sparsity tensors added by kernels.
-  for (int i = 0; i < tensors.size(); ++i) {
-    Tensor *sparse = tensors[i]->sparse();
-    if (sparse != nullptr) tensors.push_back(sparse);
-  }
-
   // Add tensor for profiling.
   if (options_.profiling) {
     for (Cell *cell : cells_) {
@@ -1340,7 +1332,6 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       //   };
       size_t size = 2 + cell->steps_.size() + 2 * cell->tasks_.size();
       Tensor *profile = new Tensor();
-      tensors.push_back(profile);
       profile->name_ = "timing/" + cell->name_;
       profile->cell_ = cell;
       profile->type_ = DT_INT64;
@@ -1358,6 +1349,11 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       AddTensor(profile);
     }
   }
+
+  // Collect all tensors (global and local).
+  std::vector<Tensor *> tensors;
+  for (Tensor *t : globals_) tensors.push_back(t);
+  for (Tensor *t : parameters_) tensors.push_back(t);
 
   // Propagate constraints between linked tensors.
   bool again = true;
@@ -1975,11 +1971,15 @@ void Network::ComputeLiveRanges() {
     }
   }
 
-  // Extend live range for all shared variables.
+  // Extend live range for all shared variables and sparsity vectors.
   for (Tensor *t : parameters_) {
     if (t->shared_ != nullptr) {
       if (t->first_ < t->shared_->first_) t->shared_->first_ = t->first_;
       if (t->last_ > t->shared_->last_) t->shared_->last_ = t->last_;
+    }
+    if (t->sparse_ != nullptr) {
+      if (t->first_ < t->sparse_->first_) t->sparse_->first_ = t->first_;
+      if (t->last_ > t->sparse_->last_) t->sparse_->last_ = t->last_;
     }
   }
 }

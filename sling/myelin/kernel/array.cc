@@ -1257,7 +1257,9 @@ class ScatterAdd : public Kernel {
     Tensor *value = step->input(2);
 
     // Add sparsity bitmap index.
-    if (step->GetAttr("sparse", true)) var->MakeSparse();
+    if (var->dim(0) >= 64 && step->GetAttr("sparse", true)) {
+      var->MakeSparse();
+    }
 
     // Align to one SIMD register.
     int align = 4;
