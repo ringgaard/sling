@@ -650,7 +650,7 @@ class ZigZag : public IndexGenerator {
     ReserveAuxYMMRegisters(4);
   }
 
-  void EnableSparse(Tensor *sparse) override {}
+  bool EnableSparse(Tensor *sparse) override { return false; }
 
   bool AllocateRegisters() override {
     // Allocate temp vars.

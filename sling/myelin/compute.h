@@ -591,6 +591,7 @@ class Tensor {
 
   // Bitmap for sparse tensor.
   Tensor *sparse() const { return sparse_; }
+  void set_sparse(Tensor *sparse) { sparse_ = sparse; }
 
   // Add sparsity map to make a sparse tensor. The sparsity map is over the
   // first dimension of the tensor.
@@ -1298,6 +1299,7 @@ struct Options {
   bool fast_math = false;                    // fast approximate math ops
   bool aot = false;                          // ahead-of-time compilation
   bool pic = false;                          // position-independent code
+  int sparse_threshold = 64;                 // threshold for sparse update
   int64 *flops_address = nullptr;            // address of FLOPs counter
 
   bool ref_profiler() const { return external_profiler || global_profiler; }

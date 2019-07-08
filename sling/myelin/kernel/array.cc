@@ -1232,13 +1232,14 @@ class ScatterAdd : public Kernel {
 
     // Check inputs and outputs.
     if (step->indegree() != (scale_ ? 4 : 3)) return false;
-    if (step->outdegree() != 0) return false;
+    if (step->outdegree() > 1) return false;
 
     // Check types.
     Tensor *var = step->input(0);
     Tensor *indices = step->input(1);
     Tensor *value = step->input(2);
     Tensor *scaler = scale_ ? step->input(3) : nullptr;
+    Tensor *ref = step->outdegree() > 0 ? step->output(0) : nullptr;
     if (var->type() != DT_FLOAT || var->rank() != 2) return false;
     if (var->constant()) return false;
     if (indices->type() != DT_INT32 || indices->rank() != 2) return false;
@@ -1248,18 +1249,30 @@ class ScatterAdd : public Kernel {
       if (scaler->type() != DT_FLOAT) return false;
       if (scaler->elements() != 1) return false;
     }
+    if (ref) {
+      if (ref->type() != var->type()) return false;
+      if (ref->shape() != var->shape()) return false;
+      if (!ref->ref()) return false;
+    }
 
     return true;
   }
 
-  void Adjust(Step *step) override {
+  void Adjust(Step *step, const Options &options) override {
     Tensor *var = step->input(0);
     Tensor *value = step->input(2);
+    Tensor *ref = step->outdegree() > 0 ? step->output(0) : nullptr;
 
     // Add sparsity bitmap index.
-    if (var->dim(0) >= 64 && step->GetAttr("sparse", true)) {
-      var->MakeSparse();
+    if (options.sparse_threshold > 0 &&
+        var->dim(0) >= options.sparse_threshold &&
+        step->GetAttr("sparse", true)) {
+      Tensor *sparse = var->MakeSparse();
+      if (ref) ref->set_sparse(sparse);
     }
+
+    // Link output reference to input variable.
+    if (ref) var->Link(ref);
 
     // Align to one SIMD register.
     int align = 4;
@@ -1283,6 +1296,7 @@ class ScatterAdd : public Kernel {
     Tensor *indices = step->input(1);
     Tensor *value = step->input(2);
     Tensor *scaler = scale_ ? step->input(3) : nullptr;
+    Tensor *ref = step->outdegree() > 0 ? step->output(0) : nullptr;
     Tensor *sparse = var->sparse();
     bool single = indices->elements() == 1;
     int n = value->elements();
@@ -1307,6 +1321,13 @@ class ScatterAdd : public Kernel {
     __ LoadTensorAddress(valaddr, value);
     if (sparse) {
       __ LoadTensorAddress(bmaddr, sparse);
+    }
+
+    // Optionally output reference to assigned variable.
+    if (ref != nullptr) {
+      CHECK(ref->IsLocal());
+      CHECK(ref->ref());
+      __ movq(Operand(masm->instance(), ref->offset()), varaddr);
     }
 
     // Load scaling value.

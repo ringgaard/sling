@@ -856,7 +856,6 @@ bool Express::ZeroFixpoint(Var *x) const {
     case ASINH: case ATANH:
     case FLOOR: case CEIL: case ROUND: case TRUNC:
     case SUM:
-    case PRODUCT:
       return ZeroFixpoint(op->args[0]);
     default:
       return false;
