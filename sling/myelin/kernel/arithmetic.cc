@@ -244,7 +244,7 @@ struct Expression {
     // Compute the maximum common size between inputs and outputs. Scalars and
     // singular broadcasts are not used for computing the maximum size since
     // these can be broadcast to the vector size. Also, the expression is
-    // eligble for sparse computation if there is only one sparse non-trivial
+    // eligible for sparse computation if there is only one sparse non-trivial
     // input.
     bool assignment = step->outdegree() == 0;
     int elements = prototype->elements();

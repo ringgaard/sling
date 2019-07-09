@@ -871,11 +871,12 @@ bool Express::AlwaysZero(Var *x) const {
       return AlwaysZero(op->args[0]);
     case ADD:
     case SUB:
-      return AlwaysZero(op->args[0]) && AlwaysZero(op->args[1]);
+      return (AlwaysZero(op->args[0]) && AlwaysZero(op->args[1])) ||
+             (AlwaysOne(op->args[0]) && AlwaysOne(op->args[1]));
     case MUL:
       return AlwaysZero(op->args[0]) || AlwaysZero(op->args[1]);
     case DIV:
-      return AlwaysZero(op->args[0]);
+      return AlwaysZero(op->args[0]) && !AlwaysZero(op->args[1]);
     default:
       return false;
   }
@@ -933,6 +934,11 @@ bool Express::Additive(Var *y, Var *x) const {
     case ADD:
       return (Identical(op->args[0], x) && !DependsOn(op->args[1], x)) ||
              (Identical(op->args[1], x) && !DependsOn(op->args[0], x));
+    case SUB:
+      return Identical(op->args[0], x) && !DependsOn(op->args[1], x);
+    case MUL:
+      return (Identical(op->args[0], x) && AlwaysOne(op->args[1])) ||
+             (Identical(op->args[1], x) && AlwaysOne(op->args[0]));
     default:
       return false;
   }
