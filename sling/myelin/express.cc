@@ -891,7 +891,8 @@ bool Express::AlwaysOne(Var *x) const {
     case MOV:
       return AlwaysOne(op->args[0]);
     case ADD:
-      return (AlwaysOne(op->args[0]) && AlwaysZero(op->args[1]));
+      return (AlwaysOne(op->args[0]) && AlwaysZero(op->args[1])) ||
+             (AlwaysZero(op->args[0]) && AlwaysOne(op->args[1]));
     case SUB:
       return AlwaysOne(op->args[0]) && AlwaysZero(op->args[1]);
     case MUL:
