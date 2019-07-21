@@ -38,6 +38,7 @@ cc_library(
     "//sling/file:recordio",
     "//sling/frame",
     "//sling/frame:json",
+    "//sling/frame:turtle",
     "//sling/frame:xml",
     "//sling/http:http-server",
     "//sling/myelin:flow",

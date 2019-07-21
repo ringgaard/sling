@@ -56,8 +56,8 @@ class TurtleTokenizer : public Scanner {
   // Read the next input token.
   int NextToken();
 
-  // Return position of colon in prefixed name.
-  int colon() const { return colon_; }
+  // Return prefix for name token.
+  const string &prefix() const { return prefix_; }
 
  private:
   // Parse <URI>.
@@ -74,30 +74,66 @@ class TurtleTokenizer : public Scanner {
   // treated as a name token.
   int LookupKeyword();
 
-  // Position of colon in prefixed name.
-  int colon_ = -1;
+  // Name prefix for name token.
+  string prefix_;
 };
 
 // Parser for Turtle (Terse RDF Triple Language or TTL) syntax.
 class TurtleParser : public TurtleTokenizer {
  public:
   // Initialize parser with input.
-  explicit TurtleParser(Store *store, Input *input)
-    : TurtleTokenizer(input), store_(store),  stack_(store), tracking_(store) {}
+  explicit TurtleParser(Store *store, Input *input);
+
+  // Read all objects from the input and return the last value.
+  Object ReadAll();
 
   // Read next object from input.
   Object Read();
 
+  // Read next object from input and return handle to it.
+  Handle ReadObject();
+
  private:
-  // Read directive.
-  void ReadDirective();
+  // Parse directive.
+  bool ParseDirective();
 
-  // Read collection, i.e. array.
-  Handle ReadCollection();
+  // Parse blank node as anonymous frame.
+  Handle ParseBlankNode();
 
-  // Read identifier. Return symbol if subject is true. Otherwise, an object
-  // or proxy is returned.
-  Handle ReadIdentifier(bool subject);
+  // Parse predicate object list and push slots onto stack.
+  bool ParsePredicateObjectList();
+
+  // Parse collection as array.
+  Handle ParseCollection();
+
+  // Parse identifier.
+  Handle ParseIdentifier(bool subject);
+
+  // Parse predicate.
+  Handle ParsePredicate();
+
+  // Parse value.
+  Handle ParseValue();
+
+  // Get the current location in the handle stack.
+  Word Mark() { return stack_.offset(stack_.end()); }
+
+  // Pop elements off the stack.
+  void Release(Word mark) { stack_.set_end(stack_.address(mark)); }
+
+  // Push value onto stack.
+  void Push(Handle h) { *stack_.push() = h; }
+
+  // Push frame slots onto stack.
+  void PushFrame(FrameDatum *frame) {
+    for (Slot *s = frame->begin(); s < frame->end(); ++s) {
+      Push(s->name);
+      Push(s->value);
+    }
+  }
+
+  // Check if URI is relative.
+  static bool IsRelativeURI(const string &uri);
 
   // Object store for storing parsed objects.
   Store *store_;
@@ -106,15 +142,15 @@ class TurtleParser : public TurtleTokenizer {
   HandleSpace stack_;
 
   // Reference tracking for blank nodes, i.e anonymous frames.
-  Handles tracking_;
+  Handles references_;
 
-  // Mapping from local names to blank nodes.
-  HandleMap<string> locals_;
+  // Mapping from local name to index of blank node reference.
+  std::unordered_map<string, int> locals_;
 
   // Base URI.
   string base_;
 
-  // Name space map.
+  // Namespace map for prefixed names.
   std::unordered_map<string, string> namespaces_;
 };
 
