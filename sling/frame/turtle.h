@@ -15,9 +15,12 @@
 #ifndef SLING_FRAME_TURTLE_H_
 #define SLING_FRAME_TURTLE_H_
 
+#include <unordered_map>
 #include <string>
 
 #include "sling/frame/scanner.h"
+#include "sling/frame/object.h"
+#include "sling/frame/store.h"
 #include "sling/stream/input.h"
 
 namespace sling {
@@ -47,38 +50,74 @@ class TurtleTokenizer : public Scanner {
     BASE_TOKEN,
   };
 
-  // Initializes tokenizer with input.
+  // Initialize tokenizer with input.
   explicit TurtleTokenizer(Input *input);
 
-  // Reads the next input token.
+  // Read the next input token.
   int NextToken();
 
-  // Returns name prefix.
-  const string &prefix() const { return prefix_; }
+  // Return position of colon in prefixed name.
+  int colon() const { return colon_; }
 
  private:
   // Parse <URI>.
   int ParseURI();
 
-  // Parses string from input.
+  // Parse string from input.
   int ParseString();
 
-  // Parses number from input.
+  // Parse number from input.
   int ParseNumber();
 
-  // Parses name token from input. Returns false if symbol is invalid.
-  bool ParseName();
-
-  // Looks up keyword for the token in the token buffer. If this matches a
+  // Look up keyword for the token in the token buffer. If this matches a
   // reserved keyword, it returns the keyword token number. Otherwise it is
   // treated as a name token.
   int LookupKeyword();
 
-  // Name prefix for name tokens.
-  string prefix_;
+  // Position of colon in prefixed name.
+  int colon_ = -1;
+};
+
+// Parser for Turtle (Terse RDF Triple Language or TTL) syntax.
+class TurtleParser : public TurtleTokenizer {
+ public:
+  // Initialize parser with input.
+  explicit TurtleParser(Store *store, Input *input)
+    : TurtleTokenizer(input), store_(store),  stack_(store), tracking_(store) {}
+
+  // Read next object from input.
+  Object Read();
+
+ private:
+  // Read directive.
+  void ReadDirective();
+
+  // Read collection, i.e. array.
+  Handle ReadCollection();
+
+  // Read identifier. Return symbol if subject is true. Otherwise, an object
+  // or proxy is returned.
+  Handle ReadIdentifier(bool subject);
+
+  // Object store for storing parsed objects.
+  Store *store_;
+
+  // Stack for storing intermediate objects while parsing.
+  HandleSpace stack_;
+
+  // Reference tracking for blank nodes, i.e anonymous frames.
+  Handles tracking_;
+
+  // Mapping from local names to blank nodes.
+  HandleMap<string> locals_;
+
+  // Base URI.
+  string base_;
+
+  // Name space map.
+  std::unordered_map<string, string> namespaces_;
 };
 
 }  // namespace sling
 
 #endif  // SLING_FRAME_TURTLE_H_
-

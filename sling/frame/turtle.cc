@@ -65,14 +65,47 @@ int TurtleTokenizer::NextToken() {
         return Select(current_);
 
       default:
-        if (ParseName()) {
-          if (prefix_.empty()) {
-            return Token(LookupKeyword());
+        for (;;) {
+          if (current_ == -1) {
+            break;
+          } else if (current_ == ':') {
+            // First colon ends the name prefix.
+            if (colon_ != -1) colon_ = token_text_.size();
+            Append(':');
+            NextChar();
+          } else if (current_ == '\\') {
+            // Parse character escape (\c).
+            NextChar();
+            if (current_ == -1) return Error("invalid escape sequence in name");
+            Append(current_);
+            NextChar();
+          } else if (current_ == '%') {
+            // Parse hex escape (%00).
+            NextChar();
+            int ch = HexToDigit(current_);
+            NextChar();
+            ch = (ch << 4) + HexToDigit(current_);
+            NextChar();
+            if (ch < 0) return Error("invalid hex escape in name");
+            Append(ch);
+          } else if (current_ >= 128 || ascii_isalnum(current_) ||
+                    current_ == '_' || current_ == '.' || current_ == '-') {
+            Append(current_);
+            NextChar();
           } else {
-            return Token(NAME_TOKEN);
+            break;
           }
-        } else {
+        }
+
+        if (token_text_.size() == 0) {
+          // Single-character token.
           return Select(current_);
+        } else if (colon_ != -1) {
+          // Prefixed name.
+          return NAME_TOKEN;
+        } else {
+          // Name or reserved word.
+          return Token(LookupKeyword());
         }
     }
   }
@@ -254,52 +287,6 @@ int TurtleTokenizer::ParseNumber() {
   }
 }
 
-bool TurtleTokenizer::ParseName() {
-  prefix_.clear();
-  bool done = false;
-  bool colon = false;
-  while (!done) {
-    if (current_ == -1) {
-      done = true;
-    } else if (current_ == ':') {
-      // First colon ends the name prefix.
-      if (colon) {
-        Append(':');
-        NextChar();
-      } else {
-        prefix_ = token_text_;
-        token_text_.clear();
-        colon = true;
-        NextChar();
-      }
-    } else if (current_ == '\\') {
-      // Parse character escape (\c).
-      NextChar();
-      if (current_ == -1) return false;
-      Append(current_);
-      NextChar();
-    } else if (current_ == '%') {
-      // Parse hex escape (%00).
-      NextChar();
-      int ch = HexToDigit(current_);
-      NextChar();
-      ch = (ch << 4) + HexToDigit(current_);
-      NextChar();
-      if (ch < 0) return false;
-      Append(ch);
-    } else if (current_ >= 128 || ascii_isalnum(current_) ||
-               current_ == '_' || current_ == '.' || current_ == '-') {
-      Append(current_);
-      NextChar();
-    } else {
-      done = true;
-    }
-  }
-
-  if (colon && prefix_.empty()) prefix_ = "*";
-  return !prefix_.empty() || !token_text_.empty();
-}
-
 int TurtleTokenizer::LookupKeyword() {
   const char *name = token_text_.data();
   int first = *name;
@@ -327,5 +314,8 @@ int TurtleTokenizer::LookupKeyword() {
   return NAME_TOKEN;
 }
 
-}  // namespace sling
+Object TurtleParser::Read() {
+  return Frame::nil();
+}
 
+}  // namespace sling

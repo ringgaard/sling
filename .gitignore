@@ -9,3 +9,4 @@ local
 *.out
 *.pdf_tex
 doc/report/sling.pdf
+.vscode
