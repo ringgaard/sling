@@ -37,6 +37,18 @@ cc_library(
 )
 
 cc_library(
+  name = "wordpiece-builder",
+  srcs = ["wordpiece-builder.cc"],
+  hdrs = ["wordpiece-builder.h"],
+  deps = [
+    "//sling/base",
+    "//sling/string:text",
+    "//sling/util:unicode",
+    "//sling/util:vocabulary",
+  ],
+)
+
+cc_library(
   name = "fingerprinter",
   srcs = ["fingerprinter.cc"],
   hdrs = ["fingerprinter.h"],
