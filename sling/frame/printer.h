@@ -66,6 +66,9 @@ class Printer {
     output_->WriteChar(ch2);
   }
 
+  // Prints character as two hex digits.
+  void WriteHex(unsigned char c);
+
   // Prints UTF-8 encoded character from input buffer.
   int WriteUTF8(const unsigned char *str, const unsigned char *end);
   int WriteUTF8(const char *str, const char *end) {

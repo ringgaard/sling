@@ -328,10 +328,18 @@ int Tokenizer::ParseNumber(bool negative, bool fractional) {
 
 bool Tokenizer::ParseName(int first) {
   // Save first character in symbol name.
+  int ch;
   if (first == '\\') {
     if (current_ == -1) return false;
     Append(current_);
     NextChar();
+  } else if (first == '%') {
+    ch = HexToDigit(current_);
+    NextChar();
+    ch = (ch << 4) + HexToDigit(current_);
+    NextChar();
+    if (ch < 0) return Error("Invalid hex escape in symbol");
+    Append(ch);
   } else {
     Append(first);
   }
@@ -361,6 +369,16 @@ bool Tokenizer::ParseName(int first) {
         if (current_ == -1) return false;
         Append(current_);
         NextChar();
+        break;
+
+      case '%':
+        NextChar();
+        ch = HexToDigit(current_);
+        NextChar();
+        ch = (ch << 4) + HexToDigit(current_);
+        NextChar();
+        if (ch < 0) return Error("Invalid hex escape in symbol");
+        Append(ch);
         break;
 
       default:

@@ -197,11 +197,13 @@ bool UTF8::Valid(const char *s, int len) {
     if ((c & 0x80) == 0) continue;
     int len;
     if ((c & 0xe0) == 0xc0) {
-      len = 1;
-    } else if ((c & 0xf0) == 0xe0) {
       len = 2;
-    } else if ((c & 0xf8) == 0xf0) {
+    } else if ((c & 0xf0) == 0xe0) {
+      if (c == 0xed) return false;
       len = 3;
+    } else if ((c & 0xf8) == 0xf0) {
+      if (c == 0xf4) return false;
+      len = 4;
     } else {
       return false;
     }
