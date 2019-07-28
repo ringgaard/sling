@@ -24,7 +24,7 @@ void WordPieceBuilder::Symbol::AppendToString(string *str) const {
     left->AppendToString(str);
     right->AppendToString(str);
   } else if (code == -1) {
-    str->append("<OOV>");
+    str->append("<UNKNOWN>");
   } else {
     UTF8::Encode(code, str);
   }
@@ -45,7 +45,7 @@ void WordPieceBuilder::Build(Vocabulary::Iterator *vocabulary,
   emit(oov);
 
   // Create unigram symbols for all words in vocabulary and add initial encoding
-  // of all words using unigrams.
+  // of all words using character unigrams.
   words_.resize(vocabulary->Size());
   vocabulary->Reset();
   Text str;

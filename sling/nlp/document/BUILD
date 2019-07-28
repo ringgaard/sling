@@ -178,6 +178,20 @@ cc_library(
 )
 
 cc_library(
+  name = "vocabulary-builder",
+  srcs = ["vocabulary-builder.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:textmap",
+    "//sling/nlp/document",
+    "//sling/task:accumulator",
+    "//sling/task:documents",
+    "//sling/util:unicode",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "document-service",
   srcs = ["document-service.cc"],
   hdrs = ["document-service.h"],
