@@ -187,6 +187,8 @@ Task::Task(Environment *env, int id, const string &type,
   processor_ = Processor::Create(type);
 }
 
+Task::Task(Environment *env) : env_(env), id_(0), processor_(nullptr) {}
+
 Task::~Task() {
   delete processor_;
   for (auto b : inputs_) delete b;
@@ -399,6 +401,10 @@ void Task::AddParameter(const string &name, float value) {
 
 void Task::AddParameter(const string &name, bool value) {
   AddParameter(name, value ? "true" : "false");
+}
+
+void Task::AddAnnotator(const string &annotator) {
+  annotators_.push_back(annotator);
 }
 
 Counter *Task::GetCounter(const string &name) {

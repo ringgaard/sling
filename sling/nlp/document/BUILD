@@ -23,6 +23,20 @@ cc_library(
 )
 
 cc_library(
+  name = "annotator",
+  srcs = ["annotator.cc"],
+  hdrs = ["annotator.h"],
+  deps = [
+    ":document",
+    "//sling/base",
+    "//sling/file",
+    "//sling/frame:object",
+    "//sling/frame:serialization",
+    "//sling/task:task",
+  ],
+)
+
+cc_library(
   name = "text-tokenizer",
   srcs = ["text-tokenizer.cc"],
   hdrs = ["text-tokenizer.h"],

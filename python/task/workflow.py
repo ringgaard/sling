@@ -201,6 +201,7 @@ class Task:
     self.sources = []
     self.sinks = []
     self.params = {}
+    self.annotators = []
 
   def attach_input(self, name, resource):
     """Attach named input resource(s) to task."""
