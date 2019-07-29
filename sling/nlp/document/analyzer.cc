@@ -19,30 +19,36 @@
 #include "sling/http/http-server.h"
 #include "sling/http/static-content.h"
 #include "sling/http/web-service.h"
+#include "sling/nlp/document/annotator.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-service.h"
 #include "sling/nlp/kb/knowledge-service.h"
 
 DEFINE_int32(port, 8080, "HTTP server port");
-DEFINE_string(commons, "", "Commons store");
+DEFINE_string(spec, "", "Document analyzer specification");
 DEFINE_bool(kb, false, "Start knowledge base browser");
 DEFINE_string(names, "local/data/e/wiki/en/name-table.repo", "Name table");
 
 using namespace sling;
 using namespace sling::nlp;
 
-class LEXViewer : public DocumentService {
+class Analyzer : public DocumentService {
  public:
-  LEXViewer(Store *commons) : DocumentService(commons) {}
+  Analyzer(Store *commons, const string &spec) : DocumentService(commons) {
+    LOG(INFO) << "Loading analyzer";
+    annotation_.Init(commons, spec);
+  }
 
   // Register service.
   void Register(HTTPServer *http) {
-    http->Register("/convert", this, &LEXViewer::HandleConvert);
+    http->Register("/annotate", this, &Analyzer::HandleAnnotate);
+    http->Register("/analyze", this, &Analyzer::HandleAnalyze);
     app_content_.Register(http);
     common_content_.Register(http);
   }
 
-  void HandleConvert(HTTPRequest *request, HTTPResponse *response) {
+  // Annotate document and return analyzed document in DocView JSON format.
+  void HandleAnnotate(HTTPRequest *request, HTTPResponse *response) {
     WebService ws(commons_, request, response);
 
     // Get input document.
@@ -52,13 +58,38 @@ class LEXViewer : public DocumentService {
       return;
     }
 
+    // Analyze document.
+    annotation_.Annotate(document);
+
     // Return document in JSON format.
     Frame json = Convert(*document);
     ws.set_output(json);
     delete document;
   }
 
+  // Annotate document and return analyzed document in requested format.
+  void HandleAnalyze(HTTPRequest *request, HTTPResponse *response) {
+    WebService ws(commons_, request, response);
+
+    // Get input document.
+    Document *document = GetInputDocument(&ws);
+    if (document == nullptr) {
+      response->SendError(400, "Bad Request", "document missing");
+      return;
+    }
+
+    // Analyze document.
+    annotation_.Annotate(document);
+
+    // Return analyzed document.
+    ws.set_output(document->top());
+    delete document;
+  }
+
  private:
+  // Document analyzer.
+  DocumentAnnotation annotation_;
+
   // Static web content.
   StaticContent app_content_{"/doc", "sling/nlp/document/app"};
   StaticContent common_content_{"/common", "app"};
@@ -66,35 +97,27 @@ class LEXViewer : public DocumentService {
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
-
-  // Load commons store.
   Store commons;
-  if (FLAGS_kb && FLAGS_commons.empty()) {
-    FLAGS_commons = "local/data/e/wiki/kb.sling";
-  }
-  if (!FLAGS_commons.empty()) {
-    LOG(INFO) << "Loading " << FLAGS_commons;
-    LoadStore(FLAGS_commons, &commons);
-  }
+
+  // Initialize analyzer.
+  Analyzer analyzer(&commons, FLAGS_spec);
 
   // Initialize knowledge base service.
   KnowledgeService kb;
   if (FLAGS_kb) kb.Load(&commons, FLAGS_names);
 
-  // Initialize LEX viewer.
-  LEXViewer viewer(&commons);
   commons.Freeze();
 
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   HTTPServerOptions httpopts;
   HTTPServer http(httpopts, FLAGS_port);
 
-  viewer.Register(&http);
+  analyzer.Register(&http);
   if (FLAGS_kb) kb.Register(&http);
 
   http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
     if (strcmp(req->path(), "/") == 0) {
-      rsp->RedirectTo("/doc/lex.html");
+      rsp->RedirectTo("/doc/analyzer.html");
     } else {
       rsp->SendError(404, "Not found", "file not found");
     }

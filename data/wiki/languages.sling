@@ -69,6 +69,10 @@
   /lang/wikilang/wiki_category: "Категория"
   /lang/wikilang/wiki_image: "Файл"
   /lang/wikilang/wiki_template: "Шаблон"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/ca
@@ -79,6 +83,10 @@
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Fitxer"
   /lang/wikilang/wiki_template: "Plantilla"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/cs
@@ -89,6 +97,10 @@
   /lang/wikilang/wiki_category: "Kategorie"
   /lang/wikilang/wiki_image: "Soubor"
   /lang/wikilang/wiki_template: "Šablona"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/da
@@ -99,6 +111,10 @@
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fil"
   /lang/wikilang/wiki_template: "Skabelon"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/de
@@ -109,6 +125,10 @@
   /lang/wikilang/wiki_category: "Kategorie"
   /lang/wikilang/wiki_image: "Datei"
   /lang/wikilang/wiki_template: "Vorlage"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/el
@@ -119,6 +139,10 @@
   /lang/wikilang/wiki_category: "Κατηγορία"
   /lang/wikilang/wiki_image: "File"
   /lang/wikilang/wiki_template: "Πρότυπο"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/en
@@ -145,6 +169,10 @@
   /lang/wikilang/wiki_category: "Categoría"
   /lang/wikilang/wiki_image: "Archivo"
   /lang/wikilang/wiki_template: "Plantilla"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/eo
@@ -155,6 +183,10 @@
   /lang/wikilang/wiki_category: "Kategorio"
   /lang/wikilang/wiki_image: "Dosiero"
   /lang/wikilang/wiki_template: "Ŝablono"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/eu
@@ -165,6 +197,10 @@
   /lang/wikilang/wiki_category: "Kategoria"
   /lang/wikilang/wiki_image: "Fitxategi"
   /lang/wikilang/wiki_template: "Txantiloi"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/fi
@@ -175,6 +211,10 @@
   /lang/wikilang/wiki_category: "Luokka"
   /lang/wikilang/wiki_image: "Tiedosto"
   /lang/wikilang/wiki_template: "Malline"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/fr
@@ -185,6 +225,10 @@
   /lang/wikilang/wiki_category: "Catégorie"
   /lang/wikilang/wiki_image: "Fichier"
   /lang/wikilang/wiki_template: "Modèle"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/hu
@@ -195,6 +239,10 @@
   /lang/wikilang/wiki_category: "Kategória"
   /lang/wikilang/wiki_image: "Fájl"
   /lang/wikilang/wiki_template: "Sablon"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/it
@@ -205,6 +253,10 @@
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Immagine"
   /lang/wikilang/wiki_template: "Template"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/la
@@ -215,6 +267,10 @@
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Fasciculus"
   /lang/wikilang/wiki_template: "Formula"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/nl
@@ -225,6 +281,10 @@
   /lang/wikilang/wiki_category: "Categorie"
   /lang/wikilang/wiki_image: "Bestand"
   /lang/wikilang/wiki_template: "Sjabloon"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/no
@@ -235,6 +295,10 @@
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fil"
   /lang/wikilang/wiki_template: "Mal"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/pl
@@ -245,6 +309,10 @@
   /lang/wikilang/wiki_category: "Kategoria"
   /lang/wikilang/wiki_image: "Plik"
   /lang/wikilang/wiki_template: "Szablon"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/pt
@@ -255,6 +323,10 @@
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Ficheiro"
   /lang/wikilang/wiki_template: "Predefinição"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/ro
@@ -265,6 +337,10 @@
   /lang/wikilang/wiki_category: "Categorie"
   /lang/wikilang/wiki_image: "Fișier"
   /lang/wikilang/wiki_template: "Format"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/ru
@@ -275,6 +351,10 @@
   /lang/wikilang/wiki_category: "Категория"
   /lang/wikilang/wiki_image: "Файл"
   /lang/wikilang/wiki_template: "Шаблон"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/sh
@@ -285,6 +365,10 @@
   /lang/wikilang/wiki_category: "Kategorija"
   /lang/wikilang/wiki_image: "Datoteka"
   /lang/wikilang/wiki_template: "Šablon"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/sr
@@ -295,6 +379,10 @@
   /lang/wikilang/wiki_category: "Категорија"
   /lang/wikilang/wiki_image: "Датотека"
   /lang/wikilang/wiki_template: "Шаблон"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/sv
@@ -305,6 +393,10 @@
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fil"
   /lang/wikilang/wiki_template: "Mall"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/uk
@@ -315,6 +407,10 @@
   /lang/wikilang/wiki_category: "Категорія"
   /lang/wikilang/wiki_image: "Файл"
   /lang/wikilang/wiki_template: "Шаблон"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/mul

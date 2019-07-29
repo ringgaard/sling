@@ -250,22 +250,32 @@ cc_binary(
   ],
 )
 
+cc_library(
+  name = "annotator-components",
+  deps = [
+    "//sling/nlp/ner:labeler",
+    "//sling/nlp/parser:parser-annotator",
+  ],
+)
+
 embed_data(
-  name = "lex-app",
+  name = "analyzer-app",
   srcs = [
-    "app/lex.html",
-    "app/lex.js",
-    "app/lex.css",
+    "app/analyzer.html",
+    "app/analyzer.js",
+    "app/analyzer.css",
   ],
 )
 
 cc_binary(
-  name = "lex-viewer",
-  srcs = ["lex-viewer.cc"],
+  name = "analyzer",
+  srcs = ["analyzer.cc"],
   deps = [
+    ":analyzer-app",
+    ":annotator",
+    ":annotator-components",
     ":document",
     ":document-service",
-    ":lex-app",
     "//app",
     "//sling/base",
     "//sling/file",

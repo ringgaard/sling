@@ -3,7 +3,7 @@ import {Layout, Button, Icon} from "/common/lib/mdl.js";
 import {Document, DocumentViewer} from "/common/lib/docview.js";
 import {stylesheet} from "/common/lib/util.js";
 
-stylesheet("/doc/lex.css");
+stylesheet("/doc/analyzer.css");
 
 class DocumentEditor extends Component {
   constructor(props) {
@@ -33,18 +33,18 @@ class App extends Component {
     this.text = "";
   }
 
-  view(e) {
-    console.log("view", e);
+  annotate(e) {
+    console.log("annotate", e);
     var self = this;
     let headers = new Headers({
       "Content-Type": "text/lex",
     });
-    fetch("/convert?fmt=cjson", {method: "POST", body: this.text, headers})
+    fetch("/annotate?fmt=cjson", {method: "POST", body: this.text, headers})
       .then(response => {
         if (response.ok) {
           return response.json();
         } else {
-          console.log("convert error", response.status, response.message);
+          console.log("annotation error", response.status, response.message);
           return null;
         }
       })
@@ -65,12 +65,16 @@ class App extends Component {
     var action, content;
     if (state.editmode) {
       let icon = h(Icon, {icon: "send"});
-      action = h(Button, {icon: true, onclick: e => this.view(e)}, icon);
+      action = h(Button,
+                 {icon: true, onclick: e => this.annotate(e), accesskey: "g"},
+                 icon);
       content = h(DocumentEditor,
                   {text: this.text, oninput: e => this.oninput(e)});
     } else {
       let icon = h(Icon, {icon: "edit"});
-      action = h(Button, {icon: true, onclick: e => this.edit(e)}, icon);
+      action = h(Button,
+                 {icon: true, onclick: e => this.edit(e), accesskey: "g"},
+                 icon);
       content = h(DocumentViewer, {document: state.document});
     }
 
@@ -79,7 +83,7 @@ class App extends Component {
         h(Layout, null,
           h(Layout.Header, null,
             h(Layout.HeaderRow, null,
-              h(Layout.Title, null, "LEX document viewer"),
+              h(Layout.Title, null, "SLING document analyzer"),
               h(Layout.Spacer),
               action
             ),

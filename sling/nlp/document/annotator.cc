@@ -53,12 +53,23 @@ DocumentAnnotation::~DocumentAnnotation() {
 }
 
 void DocumentAnnotation::Init(Store *commons, const string &spec) {
+  // Initialize pipeline annotation task from specification.
   InitTaskFromSpec(spec);
+
+  // Load commons store from file.
+  for (Binding *binding : task_.GetInputs("commons")) {
+    LoadStore(binding->resource()->name(), commons);
+  }
+
+  // Initialize annotators.
   pipeline_.Init(&task_, commons);
 }
 
 void DocumentAnnotation::Annotate(Document *document) {
-  pipeline_.Annotate(document);
+ if (!pipeline_.empty()) {
+   pipeline_.Annotate(document);
+   document->Update();
+ }
 }
 
 Counter *DocumentAnnotation::GetCounter(const string &name) { return &dummy_; }
@@ -90,15 +101,22 @@ void DocumentAnnotation::InitTaskFromSpec(const string &spec) {
       for (const Slot &si : inputs) {
         string name = Frame(&store, si.name).Id().str();
         Frame input(&store, si.value);
+        string pattern = input.GetString(n_file);
         std::vector<string> files;
-        File::Match(input.GetString(n_file), &files);
+        File::Match(pattern, &files);
         Format format(input.GetString(n_format));
-        int parts = files.size();
-        for (int i = 0; i < parts; ++i) {
-          Shard shard =  parts == 1? Shard(i, parts) : Shard();
-          Resource *r = new Resource(rid++, files[i],  shard, format);
+        if (files.empty()) {
+          Resource *r = new Resource(rid++, pattern,  Shard(), format);
           resources_.push_back(r);
           task_.AttachInput(new Binding(name, r));
+        } else {
+          int parts = files.size();
+          for (int i = 0; i < parts; ++i) {
+            Shard shard =  parts == 1 ? Shard(i, parts) : Shard();
+            Resource *r = new Resource(rid++, files[i],  shard, format);
+            resources_.push_back(r);
+            task_.AttachInput(new Binding(name, r));
+          }
         }
       }
     } else if (s.name == n_parameters) {
@@ -106,8 +124,16 @@ void DocumentAnnotation::InitTaskFromSpec(const string &spec) {
       Frame parameters(&store, s.value);
       for (const Slot &sp : parameters) {
         string name = Frame(&store, sp.name).Id().str();
-        string value = String(&store, sp.value).value();
-        task_.AddParameter(name, value);
+        Object value(&store, sp.value);
+        if (value.IsString()) {
+          task_.AddParameter(name, value.AsString().value());
+        } else if (value.IsInt()) {
+          task_.AddParameter(name, value.AsInt());
+        } else if (value.IsFloat()) {
+          task_.AddParameter(name, value.AsFloat());
+        } else {
+          LOG(WARNING) << "Unknown value type for parameter: " << name;
+        }
       }
     }
   }

@@ -368,6 +368,7 @@ class SpanAnnotator {
     string kb;             // knowledge base with entities and metadata
     string aliases;        // phrase table with phrase to entity mapping
     string dictionary;     // dictionary table with IDF scores for words
+    string language;       // language for documents
     bool resolve = false;  // resolve spans to entities in knowledge base
   };
 

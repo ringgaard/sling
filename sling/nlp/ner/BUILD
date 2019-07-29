@@ -64,7 +64,7 @@ cc_library(
   srcs = ["labeler.cc"],
   deps = [
     ":annotators",
-    "//sling/task:documents",
+    "//sling/nlp/document:annotator",
   ],
   alwayslink = 1,
 )

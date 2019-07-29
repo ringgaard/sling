@@ -1123,6 +1123,19 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
     dictionary_.Load(resources.dictionary);
   }
 
+  // Add stop words for language.
+  if (!resources.language.empty()) {
+    Frame lang(commons, "/lang/" + resources.language);
+    Handle sw = lang.GetHandle("/lang/wikilang/stop_words");
+    if (!sw.IsNil()) {
+      Array stopwords(commons, sw);
+      for (int i = 0; i < stopwords.length(); ++i) {
+        String word(commons, stopwords.get(i));
+        populator_.AddStopWord(word.value());
+      }
+    }
+  }
+
   // Initialize annotators.
   importer_.Init(commons);
   taxonomy_.Init(commons);
