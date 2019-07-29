@@ -163,8 +163,10 @@ class EntityWorkflow:
     if language == None: language = flags.arg.language
 
     with self.wf.namespace(language + "-ner"):
-      mapper = self.wf.task("document-ner-labeler", "labeler")
+      mapper = self.wf.task("document-processor", "labeler")
+      mapper.add_annotator("ner")
       mapper.add_param("resolve", True)
+      mapper.add_param("language", language)
       mapper.attach_input("commons", self.knowledge_base())
       mapper.attach_input("aliases", self.wiki.phrase_table(language))
       mapper.attach_input("dictionary", self.idftable(language))
