@@ -425,6 +425,7 @@ class SpanAnnotator {
   Name n_person_{names_, "Q215627"};
   Name n_human_{names_, "Q5"};
   Name n_page_item_{names_, "/wp/page/item"};
+  Name n_name_{names_, "name"};
 
   // Maximum phrase length.
   static constexpr int max_phrase_length = 10;

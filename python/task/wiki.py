@@ -627,7 +627,10 @@ class WikiWorkflow:
 
     # Filter and select aliases.
     selector = self.wf.reduce(merged_aliases, names, "alias-reducer",
-                              params={"language": language})
+                              params={
+                                "language": language,
+                                "anchor_threshold": 30,
+                              })
     selector.attach_input("commons", self.alias_corrections())
     return names
 

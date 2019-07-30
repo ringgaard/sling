@@ -92,7 +92,7 @@ class ResolverContext {
   void AddMention(uint64 fp, CaseForm form, Handle entity, int count);
 
   // Score candidates for alias. The alias is specified using the fingerprint
-  // and case form. Returns a the top-k entities with the highest score.
+  // and case form. Returns the top-k entities with the highest score.
   void Score(uint64 fp, CaseForm form, Candidates *candidates) const;
 
   // Resolve entity in context. Return the highest scoring entity or nil if

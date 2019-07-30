@@ -497,6 +497,7 @@ bool UTF8::IsInitials(const char *s, int len) {
   const char *end = s + len;
   bool first = true;
   bool punctuated = false;
+  bool single = false;
   while (s < end) {
     int code = Decode(s);
     bool upper = Unicode::IsUpper(code);
@@ -504,15 +505,17 @@ bool UTF8::IsInitials(const char *s, int len) {
 
     if (first) {
       if (!upper) return false;
+      if (upper) single = true;
     } else {
       if (!upper && !punct) return false;
       if (punct) punctuated = true;
+      single = false;
     }
 
     first = false;
     s = Next(s);
   }
-  return punctuated;
+  return punctuated || single;
 }
 
 CaseForm UTF8::Case(const char *s, int len) {

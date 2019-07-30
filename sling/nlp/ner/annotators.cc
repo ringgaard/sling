@@ -222,6 +222,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
     {"Q215627",    SPAN_PERSON},           // person
     {"Q11032",     0},                     // newspaper
+    {"Q35127",     0},                     // website
     {"Q838948",    SPAN_ART},              // work of art
     {"Q47461344",  SPAN_ART},              // written work
     {"Q17537576",  SPAN_ART},              // creative work
@@ -377,8 +378,15 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
     // Parse notability particle.
     if (e < size && particles.count(chart->token(e).word()) > 0) e++;
 
-    // Parse family name(s).
+    // Parse dash followed by family names.
     int family_names = 0;
+    if (e < size && given_names > 0 && chart->item(e).is(SPAN_DASH)) {
+      int de = e + 1;
+      while (de < size && chart->item(de).is(SPAN_FAMILY_NAME)) de++;
+      if (de > e + 1) e = de;
+    }
+
+    // Parse family name(s).
     while (e < size && chart->item(e).is(SPAN_FAMILY_NAME)) {
       family_names++;
       e++;
@@ -1296,10 +1304,14 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
       if (!resolved && item.aux == kPersonMarker) {
         Builder b(output->store());
         b.Add(n_instance_of_, n_person_);
+        b.Add(n_name_, document.PhraseText(begin, end));
         Frame person = b.Create();
         span->Evoke(person);
 
         if (resolve_) {
+          // Add person to context model.
+          context.AddEntity(person.handle());
+
           // Add first and last name mentions.
           AddNameParts(document, begin, end, &context, person.handle(), 1);
         }

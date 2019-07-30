@@ -75,5 +75,10 @@
   Q6700604: {
     "Political Career": blacklist  ; extra infobox
   }
+
+  ; googol
+  Q507: {
+    "Google": blacklist
+  }
 }
 
