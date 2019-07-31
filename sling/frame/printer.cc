@@ -318,7 +318,7 @@ void Printer::PrintLink(Handle handle) {
         return;
       } else {
         const FrameDatum *frame = datum->AsFrame();
-        if (frame->IsNamed()) {
+        if (frame->IsPublic()) {
           if (shallow_ || (!global_ && handle.IsGlobalRef())) {
             // Print reference.
             Print(frame->get(Handle::id()), true);

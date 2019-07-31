@@ -801,10 +801,10 @@ class Shell {
     for (auto s : frame) {
       Object name(frame.store(), s.name);
       Object value(frame.store(), s.value);
-      if (name.valid() && name.IsFrame() && name.AsFrame().IsNamed()) {
+      if (name.valid() && name.IsFrame() && name.AsFrame().IsPublic()) {
         name = name.AsFrame().id();
       }
-      if (value.valid() && value.IsFrame() && value.AsFrame().IsNamed()) {
+      if (value.valid() && value.IsFrame() && value.AsFrame().IsPublic()) {
         value = value.AsFrame().id();
       }
       std::cout << StringPrintf("%04d", i) << " " << ToText(name) << ": "

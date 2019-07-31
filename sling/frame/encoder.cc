@@ -157,7 +157,7 @@ void Encoder::EncodeLink(Handle handle) {
         link = datum->AsProxy()->symbol;
       } else {
         const FrameDatum *frame = datum->AsFrame();
-        if (frame->IsNamed()) {
+        if (frame->IsPublic()) {
           if (shallow_ || (!global_ && handle.IsGlobalRef())) {
             link = frame->get(Handle::id());
           }

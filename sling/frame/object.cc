@@ -67,8 +67,10 @@ Object &Object::operator =(const Object &other) {
 Type Object::type() const {
   if (handle_.IsRef()) {
     return datum()->type();
+  } else if (handle_.IsInt()) {
+    return INTEGER;
   } else {
-    return static_cast<Type>(handle_.tag() | Handle::kSimple);
+    return FLOAT;
   }
 }
 

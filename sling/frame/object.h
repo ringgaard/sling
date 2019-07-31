@@ -399,7 +399,7 @@ class Frame : public Object {
   bool IsProxy() const { return frame()->IsProxy(); }
 
   // Checks if frame has an id.
-  bool IsNamed() const { return frame()->IsNamed(); }
+  bool IsPublic() const { return frame()->IsPublic(); }
 
   // Checks if frame is anonymous, i.e. has no ids.
   bool IsAnonymous() const { return frame()->IsAnonymous(); }

@@ -55,6 +55,7 @@ int main(int argc, char *argv[]) {
       Store store;
       LoadStore(file, &store);
       std::cout << "freeze " << std::flush;
+      store.AllocateSymbolHeap();
       store.Freeze();
       std::cout << "snapshot " << std::flush;
       CHECK(Snapshot::Write(&store, file));
