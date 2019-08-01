@@ -471,8 +471,7 @@ class WikiWorkflow:
   def fuse_items(self, items=None, extras=None, output=None):
     if items == None:
       items = self.wikidata_items() + [self.wikipedia_items(),
-                                       self.wikipedia_members(),
-                                       self.item_popularity()]
+                                       self.wikipedia_members()]
     if flags.arg.extra_items:
       extra = self.wf.resource(flags.arg.extra_items, format="records/frame")
       if isinstance(extra, list):

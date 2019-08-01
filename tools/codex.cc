@@ -31,7 +31,7 @@
 DEFINE_bool(keys, false, "Only output keys");
 DEFINE_bool(files, false, "Output file names");
 DEFINE_bool(store, false, "Input is a SLING store");
-DEFINE_bool(frames, false, "Record values as encoded frames");
+DEFINE_bool(raw, false, "Output raw record");
 DEFINE_bool(lex, false, "Record values as lex encoded documents");
 DEFINE_string(key, "", "Only display records with matching key");
 DEFINE_int32(indent, 2, "Indentation for structured data");
@@ -75,10 +75,10 @@ void DisplayRecord(const Slice &key, const Slice &value) {
   // Display value.
   if (!FLAGS_keys) {
     if (!key.empty()) std::cout << ": ";
-    if (FLAGS_frames || FLAGS_lex) {
-      DisplayObject(value);
-    } else {
+    if (FLAGS_raw) {
       DisplayRaw(value);
+    } else {
+      DisplayObject(value);
     }
   }
 
@@ -95,7 +95,15 @@ void DisplayFile(const string &filename) {
     while (!parser.done()) {
       DisplayObject(parser.Read());
     }
-  } else  {
+  } else if (!FLAGS_key.empty()) {
+    RecordFileOptions options;
+    RecordDatabase db(filename, options);
+    Record record;
+    if (db.Lookup(FLAGS_key, &record)) {
+      // Display record.
+      DisplayRecord(record.key, record.value);
+    }
+  } else {
     RecordReader reader(filename);
     while (!reader.Done()) {
       // Read next record.

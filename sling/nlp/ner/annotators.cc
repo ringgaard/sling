@@ -223,6 +223,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q215627",    SPAN_PERSON},           // person
     {"Q11032",     0},                     // newspaper
     {"Q35127",     0},                     // website
+    {"Q167270",    0},                     // trademark
     {"Q838948",    SPAN_ART},              // work of art
     {"Q47461344",  SPAN_ART},              // written work
     {"Q17537576",  SPAN_ART},              // creative work
@@ -509,7 +510,7 @@ Handle NumberAnnotator::ParseNumber(Text str, char tsep, char dsep, char msep) {
 
   // Parse integer part. The thousand groups must be two or three digits except
   // for the last, which should always be three digits. Indian numbers use two
-  // two digit groups for lakhs and crores.
+  // digit groups for lakhs and crores.
   double value = 0.0;
   const char *group = nullptr;
   while (p < end) {

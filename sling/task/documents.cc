@@ -20,11 +20,11 @@ namespace task {
 REGISTER_TASK_PROCESSOR("document-processor", DocumentProcessor);
 
 void DocumentProcessor::InitCommons(Task *task) {
-  // Bind document names.
-  docnames_ = new nlp::DocumentNames(commons_);
-
   // Initialize document annotation pipeline.
   pipeline_.Init(task, commons_);
+
+  // Bind document names.
+  docnames_ = new nlp::DocumentNames(commons_);
 }
 
 void DocumentProcessor::Start(Task *task) {

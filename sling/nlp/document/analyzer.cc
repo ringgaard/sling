@@ -34,10 +34,8 @@ using namespace sling::nlp;
 
 class Analyzer : public DocumentService {
  public:
-  Analyzer(Store *commons, const string &spec) : DocumentService(commons) {
-    LOG(INFO) << "Loading analyzer";
-    annotation_.Init(commons, spec);
-  }
+  Analyzer(Store *commons, DocumentAnnotation *annotators)
+    : DocumentService(commons), annotators_(annotators) {}
 
   // Register service.
   void Register(HTTPServer *http) {
@@ -59,7 +57,7 @@ class Analyzer : public DocumentService {
     }
 
     // Analyze document.
-    annotation_.Annotate(document);
+    annotators_->Annotate(document);
 
     // Return document in JSON format.
     Frame json = Convert(*document);
@@ -79,7 +77,7 @@ class Analyzer : public DocumentService {
     }
 
     // Analyze document.
-    annotation_.Annotate(document);
+    annotators_->Annotate(document);
 
     // Return analyzed document.
     ws.set_output(document->top());
@@ -88,7 +86,7 @@ class Analyzer : public DocumentService {
 
  private:
   // Document analyzer.
-  DocumentAnnotation annotation_;
+  DocumentAnnotation *annotators_;
 
   // Static web content.
   StaticContent app_content_{"/doc", "sling/nlp/document/app"};
@@ -97,10 +95,15 @@ class Analyzer : public DocumentService {
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
+
+  // Load document annotation pipeline.
+  LOG(INFO) << "Loading analyzer";
+  DocumentAnnotation annotators;
   Store commons;
+  annotators.Init(&commons, FLAGS_spec);
 
   // Initialize analyzer.
-  Analyzer analyzer(&commons, FLAGS_spec);
+  Analyzer analyzer(&commons, &annotators);
 
   // Initialize knowledge base service.
   KnowledgeService kb;

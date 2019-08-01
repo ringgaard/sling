@@ -225,9 +225,9 @@ struct Handle {
   static const Word kLocalTag    = kRef | kLocal;
 
   static const Word kNil         = kGlobalTag | 0x00000000;
-  static const Word kId          = kGlobalTag | 0x00000008;
-  static const Word kIsA         = kGlobalTag | 0x00000010;
-  static const Word kIs          = kGlobalTag | 0x00000018;
+  static const Word kId          = kGlobalTag | 0x00000004;
+  static const Word kIsA         = kGlobalTag | 0x00000008;
+  static const Word kIs          = kGlobalTag | 0x0000000C;
 
   static const Word kZero        = kIntTag | (0 << kIntShift);
   static const Word kOne         = kIntTag | (1 << kIntShift);

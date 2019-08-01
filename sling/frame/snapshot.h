@@ -28,6 +28,9 @@ namespace sling {
 // than reading the frame store in encoded format.
 class Snapshot {
  public:
+  // Filename for snapshot.
+  static string Filename(const string &filename);
+
   // Check if there is a valid snapshot file for the store.
   static bool Valid(const string &filename);
 

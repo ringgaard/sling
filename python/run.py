@@ -348,7 +348,6 @@ if __name__ == '__main__':
     flags.arg.parse_wikipedia = True
     flags.arg.merge_categories = True
     flags.arg.invert_categories = True
-    flags.arg.compute_item_popularity = True
     flags.arg.fuse_items = True
     flags.arg.build_kb = True
     flags.arg.extract_names = True

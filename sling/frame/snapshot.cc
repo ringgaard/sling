@@ -22,6 +22,10 @@
 
 namespace sling {
 
+string Snapshot::Filename(const string &filename) {
+  return filename + ".snap";
+}
+
 bool Snapshot::Valid(const string &filename) {
   // Get timestamp for store.
   FileStat stat;
@@ -30,7 +34,7 @@ bool Snapshot::Valid(const string &filename) {
 
   // Try to open snapshot file.
   File *file;
-  if (!File::Open(filename + ".snap", "r", &file).ok()) return false;
+  if (!File::Open(Filename(filename), "r", &file).ok()) return false;
 
   // Check that snapshot is not stale.
   bool ok = file->Stat(&stat).ok() && mtime < stat.mtime;
@@ -51,7 +55,7 @@ Status Snapshot::Read(Store *store, const string &filename) {
 
   // Read snapshot header.
   File *file;
-  Status st = File::Open(filename + ".snap", "r", &file);
+  Status st = File::Open(Filename(filename), "r", &file);
   if (!st.ok()) return st;
 
   Header hdr;
@@ -147,7 +151,7 @@ Status Snapshot::Write(Store *store, const string &filename) {
 
   // Open output file.
   File *file;
-  Status st = File::Open(filename + ".snap", "w", &file);
+  Status st = File::Open(Filename(filename), "w", &file);
   if (!st.ok()) return st;
 
   // Write header.
