@@ -27,5 +27,6 @@ SPEC='{
 bazel-bin/sling/nlp/document/analyzer \
   --kb \
   --names local/data/e/wiki/$LANG/name-table.repo \
-  --spec "${SPEC//LANG/$LANG}"
+  --spec "${SPEC//LANG/$LANG}" \
+  --port 8081
 

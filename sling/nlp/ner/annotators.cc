@@ -62,8 +62,11 @@ void SpanPopulator::Annotate(const PhraseTable &aliases,
         if (form != CASE_TITLE && form != CASE_UPPER) continue;
       }
 
-      // Find matches in phrase table.
+      // Check if phrase has been black-listed.
       uint64 fp = chart->document()->PhraseFingerprint(b, e);
+      if (blacklist_.count(fp) > 0) continue;
+
+      // Find matches in phrase table.
       SpanChart::Item &span = chart->item(b - begin, e - begin);
       span.matches = aliases.Find(fp);
 
@@ -78,6 +81,11 @@ void SpanPopulator::Annotate(const PhraseTable &aliases,
 void SpanPopulator::AddStopWord(Text word) {
   uint64 fp = Fingerprinter::Fingerprint(word);
   stop_words_.insert(fp);
+}
+
+void SpanPopulator::Blacklist(Text phrase) {
+  uint64 fp = tokenizer_.Fingerprint(phrase);
+  blacklist_.insert(fp);
 }
 
 bool SpanPopulator::Discard(const Token &token) const {
@@ -143,6 +151,9 @@ void CommonWordPruner::Annotate(const IDFTable &dictionary, SpanChart *chart) {
     auto &item = chart->item(t);
     if (item.matches == nullptr) continue;
     const Token &token = chart->token(t);
+
+    // Keep predicates.
+    if (item.is(SPAN_PREDICATE)) continue;
 
     // Check case form.
     CaseForm form =  UTF8::Case(token.word());
@@ -222,12 +233,17 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
     {"Q215627",    SPAN_PERSON},           // person
     {"Q15632617",  SPAN_PERSON},           // fictional human
+    {"Q12737077",  SPAN_PREDICATE},        // occupation
+    {"Q4164871",   SPAN_PREDICATE},        // position
+    {"Q828803",    SPAN_PREDICATE},        // job title
+    {"Q11862829",  SPAN_PREDICATE},        // academic discipline
     {"Q11032",     0},                     // newspaper
     {"Q35127",     0},                     // website
     {"Q167270",    0},                     // trademark
     {"Q838948",    SPAN_ART},              // work of art
     {"Q47461344",  SPAN_ART},              // written work
     {"Q17537576",  SPAN_ART},              // creative work
+    {"Q215380",    SPAN_ART},              // band
     {nullptr, 0},
   };
 
@@ -1133,15 +1149,25 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
     dictionary_.Load(resources.dictionary);
   }
 
-  // Add stop words for language.
+  // Get stop words and black-listed phrases for language.
   if (!resources.language.empty()) {
     Frame lang(commons, "/lang/" + resources.language);
+
     Handle sw = lang.GetHandle("/lang/wikilang/stop_words");
     if (!sw.IsNil()) {
       Array stopwords(commons, sw);
       for (int i = 0; i < stopwords.length(); ++i) {
         String word(commons, stopwords.get(i));
         populator_.AddStopWord(word.value());
+      }
+    }
+
+    Handle bl = lang.GetHandle("/lang/wikilang/blacklisted_phrases");
+    if (!bl.IsNil()) {
+      Array blacklist(commons, bl);
+      for (int i = 0; i < blacklist.length(); ++i) {
+        String word(commons, blacklist.get(i));
+        populator_.Blacklist(word.value());
       }
     }
   }

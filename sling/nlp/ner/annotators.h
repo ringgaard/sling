@@ -23,6 +23,7 @@
 #include "sling/base/types.h"
 #include "sling/frame/store.h"
 #include "sling/nlp/document/document.h"
+#include "sling/nlp/document/phrase-tokenizer.h"
 #include "sling/nlp/kb/facts.h"
 #include "sling/nlp/kb/phrase-table.h"
 #include "sling/nlp/ner/chart.h"
@@ -61,6 +62,7 @@ enum SpanFlags {
   SPAN_ABBREVIATION      = (1 << 24),
   SPAN_PERSON            = (1 << 25),
   SPAN_ART               = (1 << 26),
+  SPAN_PREDICATE         = (1 << 27),
 };
 
 // Span markers.
@@ -81,12 +83,21 @@ class SpanPopulator {
   // Add stop word.
   void AddStopWord(Text word);
 
+  // Add black-listed phrase.
+  void Blacklist(Text phrase);
+
  private:
   // Check if token is a stop word.
   bool Discard(const Token &token) const;
 
   // Fingerprints for stop words.
   std::unordered_set<uint64> stop_words_;
+
+  // Fingerprints for black-listed phrases.
+  std::unordered_set<uint64> blacklist_;
+
+  // Phrase tokenizer for black-listed phrases.
+  PhraseTokenizer tokenizer_;
 };
 
 // Import existing spans in the underlying document into the span chart. Dates,

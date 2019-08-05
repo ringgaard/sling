@@ -159,6 +159,33 @@
     "the", "a", "an", "'s", "is", "was", "and",
     "in", "of", "by", "to", "at", "as"
   ]
+
+  /lang/wikilang/blacklisted_phrases: [
+    "A",
+    "after",
+    "After the war",
+    "attend",
+    "based on",
+    "beat",
+    "I",
+    "I'm",
+    "it",
+    "has been",
+    "he",
+    "him",
+    "his university",
+    "landed",
+    "no more",
+    "made",
+    "once",
+    "on the edge",
+    "running",
+    "she",
+    "them",
+    "today",
+    "wanted",
+    "with",
+  ]
 }
 
 {=/lang/es

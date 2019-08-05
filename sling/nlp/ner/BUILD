@@ -53,6 +53,8 @@ cc_library(
     "//sling/frame:serialization",
     "//sling/frame:store",
     "//sling/nlp/document",
+    "//sling/nlp/document:fingerprinter",
+    "//sling/nlp/document:phrase-tokenizer",
     "//sling/nlp/kb:calendar",
     "//sling/nlp/kb:facts",
     "//sling/nlp/kb:phrase-table",

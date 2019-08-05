@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
       std::cout << "done\n" << std::flush;
     } else {
       std::cout << file << ": " << std::flush;
-      CHECK(File::Delete(Snapshot::Filename(file)));
+      File::Delete(Snapshot::Filename(file));
       std::cout << "load " << std::flush;
       Store store;
       LoadStore(file, &store);
