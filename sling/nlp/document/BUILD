@@ -232,6 +232,8 @@ cc_binary(
   name = "corpus-browser",
   srcs = ["corpus-browser.cc"],
   deps = [
+    ":annotator",
+    ":annotator-components",
     ":corpus-app",
     ":document",
     ":document-service",

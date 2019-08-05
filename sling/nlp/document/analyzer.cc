@@ -97,9 +97,9 @@ int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
   // Load document annotation pipeline.
+  Store commons;
   LOG(INFO) << "Loading analyzer";
   DocumentAnnotation annotators;
-  Store commons;
   annotators.Init(&commons, FLAGS_spec);
 
   // Initialize analyzer.

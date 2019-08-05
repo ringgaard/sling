@@ -424,6 +424,7 @@ class SpanAnnotator {
   Name n_instance_of_{names_, "P31"};
   Name n_person_{names_, "Q215627"};
   Name n_human_{names_, "Q5"};
+  Name n_fictional_human_{names_, "Q15632617"};
   Name n_page_item_{names_, "/wp/page/item"};
   Name n_name_{names_, "name"};
 

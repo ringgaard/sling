@@ -221,6 +221,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q202444",    SPAN_GIVEN_NAME},       // given name
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
     {"Q215627",    SPAN_PERSON},           // person
+    {"Q15632617",  SPAN_PERSON},           // fictional human
     {"Q11032",     0},                     // newspaper
     {"Q35127",     0},                     // website
     {"Q167270",    0},                     // trademark
@@ -1326,7 +1327,10 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
 
 bool SpanAnnotator::IsHuman(const Frame &item) const {
   for (const Slot &s : item) {
-    if (s.name == n_instance_of_ && s.value == n_human_) return true;
+    if (s.name == n_instance_of_ &&
+        (s.value == n_human_ || s.value == n_fictional_human_)) {
+      return true;
+    }
   }
   return false;
 }

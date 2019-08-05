@@ -80,5 +80,15 @@
   Q507: {
     "Google": blacklist
   }
+
+  ; Goodison Park
+  Q968420: {
+    "A": blacklist
+  }
+
+  ; Hwasa
+  Q19603912: {
+    "Don't": blacklist
+  }
 }
 
