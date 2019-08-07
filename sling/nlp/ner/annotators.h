@@ -325,7 +325,7 @@ class DateAnnotator {
 
   // Find item for phrase with a certain type.
   Handle FindMatch(const PhraseTable &aliases,
-                   const PhraseTable::Phrase *phrase,
+                   const SpanChart::Item &span,
                    const Name &type,
                    Store *store);
 

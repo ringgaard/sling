@@ -1,6 +1,7 @@
 #!/bin/bash
 
-LANG=en
+LANGUAGE=${LANGUAGE:-en}
+PORT=${PORT:-8080}
 
 SPEC='{
   annotator: "ner"
@@ -20,13 +21,14 @@ SPEC='{
   }
   parameters: {
     language: "LANG"
-    resolve: 1
+    resolve: true
   }
 }'
 
 bazel-bin/sling/nlp/document/corpus-browser \
   --kb \
-  --names local/data/e/wiki/$LANG/name-table.repo \
-  --spec "${SPEC//LANG/$LANG}" \
-  local/data/e/wiki/$LANG/documents@10.rec
+  --names local/data/e/wiki/$LANGUAGE/name-table.repo \
+  --spec "${SPEC//LANG/$LANGUAGE}" \
+  --port $PORT \
+  local/data/e/wiki/$LANGUAGE/documents@10.rec
 

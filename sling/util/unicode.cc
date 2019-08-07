@@ -296,6 +296,30 @@ int UTF8::Decode(const char *s) {
   return -1;
 }
 
+void UTF8::DecodeString(const char *s, int len, ustring *result) {
+  // Clear output string.
+  result->clear();
+  result->reserve(len);
+
+  // Try fast conversion where all characters are below 128. All characters
+  // below 128 are converted to one byte codes.
+  const char *end = s + len;
+  while (s < end) {
+    uint8 c = *reinterpret_cast<const uint8 *>(s);
+    if (c & 0x80) break;
+    result->push_back(c);
+    s++;
+  }
+
+  // Handle any remaining part of the string which can contain multi-byte
+  // characters.
+  while (s < end) {
+    int code = Decode(s);
+    result->push_back(code);
+    s = Next(s);
+  }
+}
+
 int UTF8::Encode(int code, char *s) {
   uint32 c = code;
 

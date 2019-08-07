@@ -1,6 +1,7 @@
 #!/bin/bash
 
-LANG=en
+LANGUAGE=${LANGUAGE:-en}
+PORT=${PORT:-8080}
 
 SPEC='{
   annotator: "ner"
@@ -20,13 +21,13 @@ SPEC='{
   }
   parameters: {
     language: "LANG"
-    resolve: 1
+    resolve: true
   }
 }'
 
 bazel-bin/sling/nlp/document/analyzer \
   --kb \
-  --names local/data/e/wiki/$LANG/name-table.repo \
-  --spec "${SPEC//LANG/$LANG}" \
-  --port 8081
+  --names local/data/e/wiki/$LANGUAGE/name-table.repo \
+  --spec "${SPEC//LANG/$LANGUAGE}" \
+  --port $PORT
 

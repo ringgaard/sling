@@ -768,7 +768,6 @@ void MeasureAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
             unit = match.item;
             break;
           }
-          if (!unit.IsNil()) break;
         }
       } else if (store->IsFrame(span.aux)) {
         Frame item(store, span.aux);
@@ -871,12 +870,15 @@ void DateAnnotator::AddDate(SpanChart *chart, int begin, int end,
 }
 
 Handle DateAnnotator::FindMatch(const PhraseTable &aliases,
-                                const PhraseTable::Phrase *phrase,
+                                const SpanChart::Item &span,
                                 const Name &type,
                                 Store *store) {
+  // Return resolved item if present.
+  if (span.aux.IsRef() && !span.aux.IsNil()) return span.aux;
+
   // Get matches from alias table.
   Handles matches(store);
-  aliases.GetMatches(phrase, &matches);
+  aliases.GetMatches(span.matches, &matches);
 
   // Find first match with the specified type.
   for (Handle h : matches) {
@@ -908,14 +910,18 @@ int DateAnnotator::GetYear(const PhraseTable &aliases,
     // Find matching year.
     Handle year = Handle::nil();
     if (span.is(SPAN_YEAR)) {
-      year = FindMatch(aliases, span.matches, n_year_, store);
+      if (span.aux.IsInt()) {
+        year = span.aux;
+      } else {
+        year = FindMatch(aliases, span, n_year_, store);
+      }
     } else if (span.is(SPAN_YEAR_BC)) {
-      year = FindMatch(aliases, span.matches, n_year_bc_, store);
+      year = FindMatch(aliases, span, n_year_bc_, store);
     }
 
     // Get year from match. Year 0 exists (Q23104) but is not a valid year.
     if (!year.IsNil()) {
-      Date date(Object(store, year));
+      Date date(Object(store, store->Resolve(year)));
       if (date.precision == Date::YEAR && date.year != 0) {
         *end = e;
         return date.year;
@@ -937,7 +943,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
       Date date;
       if (span.is(SPAN_CALENDAR_DAY)) {
         // Date with year, month and day.
-        Handle h = FindMatch(aliases, span.matches, n_calendar_day_, store);
+        Handle h = FindMatch(aliases, span, n_calendar_day_, store);
         if (!h.IsNil()) {
           Frame item(store, h);
           date.ParseFromFrame(item);
@@ -949,7 +955,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         }
       } else if (span.is(SPAN_CALENDAR_MONTH)) {
         // Date with month and year.
-        Handle h = FindMatch(aliases, span.matches, n_calendar_month_, store);
+        Handle h = FindMatch(aliases, span, n_calendar_month_, store);
         if (!h.IsNil()) {
           Frame item(store, h);
           date.ParseFromFrame(item);
@@ -961,7 +967,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         }
       } else if (span.is(SPAN_DAY_OF_YEAR)) {
         // Day of year with day and month.
-        Handle h = FindMatch(aliases, span.matches, n_day_of_year_, store);
+        Handle h = FindMatch(aliases, span, n_day_of_year_, store);
         if (calendar_.GetDayAndMonth(h, &date)) {
           int year = GetYear(aliases, store, chart, e, &e);
           if (year != 0) {
@@ -974,7 +980,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         }
       } else if (span.is(SPAN_CALENDAR_MONTH)) {
         // Month.
-        Handle h = FindMatch(aliases, span.matches, n_month_, store);
+        Handle h = FindMatch(aliases, span, n_month_, store);
         if (calendar_.GetMonth(h, &date)) {
           int year = GetYear(aliases, store, chart, e, &e);
           if (year != 0) {
@@ -987,7 +993,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         }
       } else if (span.is(SPAN_YEAR) && !span.is(SPAN_NUMBER)) {
         // Year.
-        Handle h = FindMatch(aliases, span.matches, n_year_, store);
+        Handle h = FindMatch(aliases, span, n_year_, store);
         date.ParseFromFrame(Frame(store, h));
         if (date.precision == Date::YEAR) {
           AddDate(chart, b, e, date);
@@ -996,7 +1002,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         }
       } else if (span.is(SPAN_DECADE)) {
         // Decade.
-        Handle h = FindMatch(aliases, span.matches, n_decade_, store);
+        Handle h = FindMatch(aliases, span, n_decade_, store);
         date.ParseFromFrame(Frame(store, h));
         if (date.precision == Date::DECADE) {
           AddDate(chart, b, e, date);
@@ -1005,7 +1011,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
         }
       } else if (span.is(SPAN_CENTURY)) {
         // Century.
-        Handle h = FindMatch(aliases, span.matches, n_century_, store);
+        Handle h = FindMatch(aliases, span, n_century_, store);
         date.ParseFromFrame(Frame(store, h));
         if (date.precision == Date::CENTURY) {
           AddDate(chart, b, e, date);

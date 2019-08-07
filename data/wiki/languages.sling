@@ -115,6 +115,27 @@
   /lang/wikilang/stop_words: [
     ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
   ]
+
+  /lang/wikilang/blacklisted_phrases: [
+    "alle", "alt", "anden",
+    "bad", "bag", "blok", "bor",
+    "d.", "Da", "de mere", "denne", "det", "dog",
+    "en", "end", "et",
+    "frem",
+    "gang", "grund",
+    "han", "have", "Helt", "Her", "Herpå", "hun",
+    "I", "ind", "interesse",
+    "jeg",
+    "kom", "Kort",
+    "lade", "lavet",
+    "MA i", "minder", "mod", "modsatte", "må",
+    "nr. 6", "nu", "ny", "når",
+    "op",
+    "på",
+    "række",
+    "sad", "se", "ses", "side", "sine", "store",
+    "ville",
+  ]
 }
 
 {=/lang/de
@@ -161,30 +182,18 @@
   ]
 
   /lang/wikilang/blacklisted_phrases: [
-    "A",
-    "after",
-    "After the war",
-    "attend",
-    "based on",
-    "beat",
-    "I",
-    "I'm",
-    "it",
-    "has been",
-    "he",
-    "him",
-    "his university",
+    "A", "after", "After the war", "ask", "attend",
+    "based on", "beat",
+    "I", "I'm", "it",
+    "has been", "he", "him", "his university", "his wife",
     "landed",
     "no more",
-    "made",
-    "once",
-    "on the edge",
-    "running",
-    "she",
-    "them",
-    "today",
-    "wanted",
-    "with",
+    "made", "Maybe",
+    "once", "on the edge",
+    "re-elected", "running",
+    "she", "Step-down",
+    "them", "today",
+    "wanted", "with",
   ]
 }
 
