@@ -80,6 +80,7 @@ class FactCatalog {
   Name p_location_{names_, "P276"};
   Name p_instance_of_{names_, "P31"};
   Name p_subclass_of_{names_, "P279"};
+  Name p_of_{names_, "P642"};
   Name p_subproperty_of_{names_, "P1647"};
   Name p_educated_at_{names_, "P69"};
   Name p_occupation_{names_, "P106"};
@@ -139,6 +140,9 @@ class Facts {
 
   // Extract fact with backoff through transitive property relation.
   void ExtractClosure(Handle item, Handle relation);
+
+  // Extract super-classes.
+  void ExtractSuperclass(Handle item);
 
   // Extract type with super-class backoff.
   void ExtractType(Handle type);

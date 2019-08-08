@@ -51,6 +51,7 @@ void FactCatalog::Init(Store *store) {
 
   // Set extraction method for specific properties.
   SetExtractor(p_instance_of_, &Facts::ExtractType);
+  SetExtractor(p_subclass_of_, &Facts::ExtractSuperclass);
   SetExtractor(p_educated_at_, &Facts::ExtractAlmaMater);
   SetExtractor(p_employer_, &Facts::ExtractEmployer);
   SetExtractor(p_occupation_, &Facts::ExtractOccupation);
@@ -295,6 +296,23 @@ void Facts::ExtractClosure(Handle item, Handle relation) {
 
 void Facts::ExtractType(Handle type) {
   ExtractClosure(type, catalog_->p_subclass_of_.handle());
+}
+
+void Facts::ExtractSuperclass(Handle item) {
+  ExtractClosure(item, catalog_->p_subclass_of_.handle());
+  push(catalog_->p_subclass_of_);
+  for (const Slot &s : Frame(store_, store_->Resolve(item))) {
+    if (s.name == catalog_->p_subclass_of_) {
+      Frame superclass(store_, s.value);
+      Handle of = superclass.GetHandle(catalog_->p_of_);
+      if (!of.IsNil()) {
+        push(catalog_->p_of_);
+        AddFact(of);
+        pop();
+      }
+    }
+  }
+  pop();
 }
 
 void Facts::ExtractClass(Handle item) {

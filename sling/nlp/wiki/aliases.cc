@@ -116,8 +116,11 @@ class AliasExtractor : public task::FrameProcessor {
       } else if (s.name == n_nickname_) {
         // Output nicknames as alternative names.
         AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NAME);
-      } else if (s.name == n_short_name_ || s.name == n_unit_symbol_) {
-        // Output short names and unit symbols as alternative or foreign names.
+      } else if (s.name == n_short_name_ ||
+                 s.name == n_female_form_ ||
+                 s.name == n_male_form_ ||
+                 s.name == n_unit_symbol_) {
+        // Output names as alternative or foreign names.
         Handle lang = Handle::nil();
         if (store->IsFrame(s.value)) {
           Frame f(store, s.value);
@@ -184,6 +187,8 @@ class AliasExtractor : public task::FrameProcessor {
   Name n_demonym_{names_, "P1549"};
   Name n_short_name_{names_, "P1813"};
   Name n_nickname_{names_, "P1449"};
+  Name n_female_form_{names_, "P2521"};
+  Name n_male_form_{names_, "P3321"};
   Name n_iso3166_country_code_2_{names_, "P297"};
   Name n_iso3166_country_code_3_{names_, "P298"};
   Name n_unit_symbol_{names_, "P5061"};
