@@ -71,6 +71,22 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "phrases",
+  srcs = ["phrases.cc"],
+  deps = [
+    ":chart",
+    "//sling/frame:serialization",
+    "//sling/nlp/document",
+    "//sling/nlp/document:annotator",
+    "//sling/nlp/kb:facts",
+    "//sling/nlp/kb:phrase-table",
+    "//sling/util:fingerprint",
+    "//sling/util:mutex",
+  ],
+  alwayslink = 1,
+)
+
 cc_binary(
   name = "parse-chart",
   srcs = ["parse-chart.cc"],

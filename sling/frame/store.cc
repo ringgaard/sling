@@ -1138,19 +1138,33 @@ Handle Store::AllocateHandleSlow(Datum *object) {
   return handle;
 }
 
-Handle Store::Resolve(Handle handle) {
+Handle Store::Resolve(Handle handle) const {
   for (;;) {
     if (!handle.IsRef() || handle.IsNil()) return handle;
-    Datum *datum = Deref(handle);
+    const Datum *datum = Deref(handle);
     if (!datum->IsFrame()) return handle;
 
-    FrameDatum *frame = datum->AsFrame();
+    const FrameDatum *frame = datum->AsFrame();
     if (frame->IsPublic()) return handle;
 
     Handle qua = frame->get(Handle::is());
     if (qua == Handle::nil()) return handle;
     handle = qua;
   }
+}
+
+Text Store::FrameId(Handle handle) const {
+  if (handle.IsNil()) return Text();
+  const Datum *datum = Deref(handle);
+  if (!datum->IsFrame()) return Text();
+  const FrameDatum *frame = datum->AsFrame();
+  Handle id = frame->get(Handle::id());
+  if (id.IsNil()) return Text();
+  const Datum *iddatum = Deref(id);
+  if (!iddatum->IsSymbol()) return Text();
+  const SymbolDatum *symbol = iddatum->AsSymbol();
+  const StringDatum *symstr = GetString(symbol->name);
+  return symstr->str();
 }
 
 bool Store::Pristine() const {

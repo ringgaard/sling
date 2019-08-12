@@ -120,13 +120,7 @@ Frame::Frame(Store *store, Slot *begin, Slot *end)
 
 Text Frame::Id() const {
   if (IsNil()) return Text();
-  Handle id = frame()->get(Handle::id());
-  if (id.IsNil()) return Text();
-  Datum *datum = store_->Deref(id);
-  if (!datum->IsSymbol()) return Text();
-  SymbolDatum *symbol = datum->AsSymbol();
-  StringDatum *symstr = store_->GetString(symbol->name);
-  return symstr->str();
+  return store_->FrameId(handle());
 }
 
 Frame &Frame::operator =(const Frame &other) {

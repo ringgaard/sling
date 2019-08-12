@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/nlp/ner/annotators.h"
 #include "sling/nlp/document/annotator.h"
+#include "sling/nlp/ner/annotators.h"
 
 namespace sling {
 namespace nlp {

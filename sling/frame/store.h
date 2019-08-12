@@ -1049,7 +1049,10 @@ class Store {
   const ProxyDatum *GetProxy(Handle h) const { return Deref(h)->AsProxy(); }
 
   // Resolve handle by following is: chain.
-  Handle Resolve(Handle handle);
+  Handle Resolve(Handle handle) const;
+
+  // Get frame id.
+  Text FrameId(Handle handle) const;
 
   // Freezes the store. This will convert all handles to global handles and make
   // the store read-only.
