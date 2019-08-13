@@ -928,10 +928,10 @@ class Builder : public External {
   Builder &SetLink(Text name, Text symbol);
 
   // Creates frame from the slots in the frame builder.
-  Frame Create() const;
+  Frame Create();
 
   // Update existing frame with new slots.
-  void Update() const;
+  void Update();
 
   // Clears all the slots.
   Builder &Clear() { slots_.reset(); return *this; }
@@ -946,6 +946,9 @@ class Builder : public External {
 
   // Returns the store behind the builder.
   Store *store() { return store_; }
+
+  // Returns the handle for the builder.
+  Handle handle() { return handle_; }
 
  private:
   // Initial number of slots reserved.

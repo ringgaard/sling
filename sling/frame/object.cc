@@ -1652,13 +1652,13 @@ Builder &Builder::SetLink(Text name, Text symbol) {
   return *this;
 }
 
-Frame Builder::Create() const {
-  Handle h = store_->AllocateFrame(slots_.base(), slots_.end(), handle_);
-  return Frame(store_, h);
+Frame Builder::Create() {
+  handle_ = store_->AllocateFrame(slots_.base(), slots_.end(), handle_);
+  return Frame(store_, handle_);
 }
 
-void Builder::Update() const {
-  store_->AllocateFrame(slots_.base(), slots_.end(), handle_);
+void Builder::Update() {
+  handle_ = store_->AllocateFrame(slots_.base(), slots_.end(), handle_);
 }
 
 void Builder::GetReferences(Range *range) {

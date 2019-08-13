@@ -77,7 +77,7 @@ class PhraseStructureAnnotator : public Annotator {
         Document phrase(*document, span->begin(), span->end(), false);
 
         // Analyze phrase structure of span.
-        if (AnalyzePhrase(id, &phrase)) {
+        if (AnalyzePhrase(id, &phrase) != Handle::nil()) {
           // Add phrase annotations to document.
           Merge(document, phrase, span->begin());
         }
@@ -85,21 +85,124 @@ class PhraseStructureAnnotator : public Annotator {
     }
   }
 
-  // Analyze phrase structure. Return false if there are no phrase structure
-  // annotations.
-  bool AnalyzePhrase(const string &id, Document *phrase) {
+  // Analyze phrase structure and return frame evoke from phrase.
+  Handle AnalyzePhrase(const string &id, Document *phrase) {
     // Get facts for entity.
     Store *store = phrase->store();
     Handle item = store->LookupExisting(id);
-    if (item.IsNil()) return false;
+    if (item.IsNil()) return Handle::nil();
     Facts facts(&catalog_);
     facts.Extract(item);
+    HandleSet targets;
+    for (int i = 0; i < facts.size(); ++i) {
+      if (facts.simple(i)) targets.insert(facts.last(i));
+    }
 
-    // Create chart for finding sub-phrases.
+    // Try to match all subphrases to entities in the target set.
     int length = phrase->num_tokens();
     SpanChart chart(phrase, 0, length, length);
+    Handles matches(store);
+    bool matches_found = false;
+    for (int b = 0; b < length; ++b) {
+      if (phrase->token(b).skipped()) continue;
+      for (int e = b + 1; e <= length; ++e) {
+        if (phrase->token(e - 1).skipped()) continue;
 
-    return false;
+        // Look up subphrase in phrase table.
+        uint64 fp = phrase->PhraseFingerprint(b, e);
+        SpanChart::Item &span = chart.item(b, e);
+        span.matches = aliases_.Find(fp);
+        if (span.matches == nullptr) continue;
+
+        // Check if any target can match the subphrase.
+        aliases_.GetMatches(span.matches, &matches);
+        for (Handle h : matches) {
+          if (targets.count(h) > 0) {
+            // Match found.
+            span.aux = h;
+            break;
+          }
+        }
+
+        // Set the span cost to one if there are any matches.
+        if (!span.aux.IsNil()) {
+          span.cost = 1.0;
+          matches_found = true;
+        } else {
+          span.matches = nullptr;
+        }
+      }
+    }
+
+    // Check if any matching subphrases were found.
+    if (!matches_found) {
+      // Update cache with negative result.
+      CachePhrase(id, phrase->text(), "");
+      return Handle::nil();
+    }
+
+    // Compute best span covering.
+    chart.Solve();
+
+    // Build frame for phrase.
+    Builder frame(store);
+    frame.AddIs(item);
+
+    // Analyze all matched subphrases.
+    chart.Extract([&](int begin, int end, const SpanChart::Item &item) {
+      // Determine relation between entities for phrase and subphrase.
+      Handle target = item.aux;
+      CHECK(!target.IsNil());
+      Handle relation = Handle::nil();
+      for (int i = 0; i < facts.size(); ++i) {
+        if (facts.last(i) == target && facts.simple(i));
+      }
+      CHECK(!relation.IsNil());
+
+      // Look up subphrase in cache.
+      string subid = store->FrameId(target).str();
+      CHECK(!subid.empty());
+      string annotations;
+      Handle subevoke = Handle::nil();
+      if (LookupPhrase(subid, phrase->PhraseText(begin, end), &annotations)) {
+        if (!annotations.empty()) {
+          // Add cached phrase annotations.
+          Frame top = Decode(store, annotations).AsFrame();
+          Document subphrase(top, phrase->names());
+          Merge(phrase, subphrase, begin);
+          Span *subspan = phrase->GetSpan(begin, end);
+          if (subspan != nullptr) subevoke = subspan->evoked();
+        }
+      } else {
+        // Subphrase not found in cache. Get document for subphrase.
+        Document subphrase(*phrase, begin, end, false);
+
+        // Recursively analyze phrase structure of subphrase.
+        subevoke = AnalyzePhrase(subid, phrase);
+        if (!subevoke.IsNil()) {
+          // Add phrase annotations to document.
+          Merge(phrase, subphrase, begin);
+        }
+      }
+
+      // Add simple frame for subphrase if no structure was found.
+      if (subevoke.IsNil()) {
+        Frame subframe = Builder(store).AddIs(subid).Create();
+        phrase->AddSpan(begin, end)->Evoke(subframe);
+        subevoke = subframe.handle();
+      }
+
+      // Add relation between entities for phrase and subphrase.
+      frame.Add(relation, subevoke);
+    });
+
+    // Evoke frame for whole phrase.
+    phrase->AddSpan(0, length)->Evoke(frame.Create());
+
+    // Add phrase annotations to cache.
+    CachePhrase(id, phrase->text(), Encode(phrase->top()));
+
+    return frame.handle();
   }
 
   // Look up phrase in phrase annotation cache. Return true if the phrase is
@@ -159,7 +262,7 @@ class PhraseStructureAnnotator : public Annotator {
   }
 
  private:
-  // Phrase with name structure annotations in LEX format.
+  // Cached phrase with name structure annotations.
   struct Phrase {
     string id;             // entity id for phrase name
     string text;           // phrase text

@@ -198,6 +198,12 @@ class Facts {
   int begin(int i) const { return i == 0 ? 0 : delimiters_[i - 1]; }
   int end(int i) const { return delimiters_[i]; }
 
+  // Return length of fact chain.
+  int length(int i) const { return end(i) - begin(i); }
+
+  // Simple facts have length 2, i.e. a property and a value.
+  bool simple(int i) const { return length(i) == 2; }
+
   // Return base property for fact, i.e. first value in fact path.
   Handle first(int i) const { return list_[begin(i)]; }
 
