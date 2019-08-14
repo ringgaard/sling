@@ -5,6 +5,9 @@ PORT=${PORT:-8080}
 
 SPEC='{
   annotator: "ner"
+  annotator: "phrase-structure"
+  annotator: "mention-name"
+
   inputs: {
     commons: {
       file: "local/data/e/ner/kb.sling"

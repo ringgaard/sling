@@ -105,7 +105,7 @@ class PhraseStructureAnnotator : public Annotator {
     bool matches_found = false;
     for (int b = 0; b < length; ++b) {
       if (phrase->token(b).skipped()) continue;
-      for (int e = b + 1; e <= length; ++e) {
+      for (int e = b + 1; e <= (b == 0 ? length - 1 : length); ++e) {
         if (phrase->token(e - 1).skipped()) continue;
 
         // Look up subphrase in phrase table.
@@ -155,7 +155,10 @@ class PhraseStructureAnnotator : public Annotator {
       CHECK(!target.IsNil());
       Handle relation = Handle::nil();
       for (int i = 0; i < facts.size(); ++i) {
-        if (facts.last(i) == target && facts.simple(i));
+        if (facts.last(i) == target && facts.simple(i)) {
+          relation = facts.first(i);
+          break;
+        }
       }
       CHECK(!relation.IsNil());
 
@@ -178,7 +181,7 @@ class PhraseStructureAnnotator : public Annotator {
         Document subphrase(*phrase, begin, end, false);
 
         // Recursively analyze phrase structure of subphrase.
-        subevoke = AnalyzePhrase(subid, phrase);
+        subevoke = AnalyzePhrase(subid, &subphrase);
         if (!subevoke.IsNil()) {
           // Add phrase annotations to document.
           Merge(phrase, subphrase, begin);
@@ -200,6 +203,7 @@ class PhraseStructureAnnotator : public Annotator {
     phrase->AddSpan(0, length)->Evoke(frame.Create());
 
     // Add phrase annotations to cache.
+    phrase->Update();
     CachePhrase(id, phrase->text(), Encode(phrase->top()));
 
     return frame.handle();
@@ -241,7 +245,7 @@ class PhraseStructureAnnotator : public Annotator {
       Span *docspan = document->AddSpan(span->begin() + pos, span->end() + pos);
 
       // Get frame evoked from phrase span.
-      Handle evoked = span->evoked();
+      Frame evoked = span->Evoked();
       if (evoked.IsNil()) continue;
 
       // Import or merge evoked frame from phrase into document.
@@ -251,11 +255,14 @@ class PhraseStructureAnnotator : public Annotator {
         docspan->Evoke(evoked);
       } else if (existing.IsPublic()) {
         // Replace existing frame.
-        docspan->Replace(existing.handle(), evoked);
+        docspan->Replace(existing, evoked);
       } else {
         // Merge existing frame with phrase frame.
         Builder b(existing);
-        b.AddFrom(evoked);
+        for (const Slot &s : evoked) {
+          if (s.name == Handle::is() && existing.Is(s.value)) continue;
+          b.Add(s.name, s.value);
+        }
         b.Update();
       }
     }
