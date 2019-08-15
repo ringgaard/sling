@@ -1154,7 +1154,7 @@ Handle Store::Resolve(Handle handle) const {
 }
 
 Text Store::FrameId(Handle handle) const {
-  if (handle.IsNil()) return Text();
+  if (!handle.IsRef() || handle.IsNil()) return Text();
   const Datum *datum = Deref(handle);
   if (!datum->IsFrame()) return Text();
   const FrameDatum *frame = datum->AsFrame();

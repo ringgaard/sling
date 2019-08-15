@@ -309,7 +309,8 @@ class Document {
   const std::vector<Span *> spans() const { return spans_; }
 
   // Return the number of tokens in the document.
-  int num_tokens() const { return tokens_.size(); }
+  int length() const { return tokens_.size(); }
+  int num_tokens() const { return tokens_.size(); }  // deprecated
 
   // Return token in the document.
   const Token &token(int index) const { return tokens_[index]; }

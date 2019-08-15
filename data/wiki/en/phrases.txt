@@ -1,0 +1,11 @@
+; Custom phrase annotations for English.
+
+; New York (Q1384)
+[New York|Q1384]
+
+; South Korea (Q884)
+[South Korea|Q884]
+
+; United States of America (Q30)
+[United States|Q30]
+

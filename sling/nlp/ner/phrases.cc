@@ -18,9 +18,11 @@
 #include "sling/frame/serialization.h"
 #include "sling/nlp/document/annotator.h"
 #include "sling/nlp/document/document.h"
+#include "sling/nlp/document/lex.h"
 #include "sling/nlp/kb/facts.h"
 #include "sling/nlp/kb/phrase-table.h"
 #include "sling/nlp/ner/chart.h"
+#include "sling/stream/file-input.h"
 #include "sling/util/fingerprint.h"
 #include "sling/util/mutex.h"
 
@@ -44,6 +46,9 @@ class PhraseStructureAnnotator : public Annotator {
     // Initialize phrase cache.
     cache_size_ = task->Get("phrase_cache_size", 1024 * 1024);
     cache_.resize(cache_size_);
+    for (const string &filename : task->GetInputFiles("phrases")) {
+      LoadCache(filename);
+    }
   }
 
   // Annotate multi-word expressions in document with phrase structures.
@@ -82,6 +87,8 @@ class PhraseStructureAnnotator : public Annotator {
           Merge(document, phrase, span->begin());
         }
       }
+
+      CHECK(store->LookupExisting("Q30").IsGlobalRef()); // TEST
     }
   }
 
@@ -91,6 +98,7 @@ class PhraseStructureAnnotator : public Annotator {
     Store *store = phrase->store();
     Handle item = store->LookupExisting(id);
     if (item.IsNil()) return Handle::nil();
+    CHECK(item.IsGlobalRef());
     Facts facts(&catalog_);
     facts.Extract(item);
     HandleSet targets;
@@ -220,13 +228,59 @@ class PhraseStructureAnnotator : public Annotator {
   }
 
   // Add phrase annotations for entity alias to cache.
-  void CachePhrase(const string &id, const string &text,
-                   const string &annotations) {
+  bool CachePhrase(const string &id, const string &text,
+                   const string &annotations, bool sticky = false) {
     MutexLock lock(&mu_);
     Phrase &phrase = cache_[Hash(id, text) % cache_size_];
+    if (phrase.sticky) {
+      // Never overwrite stick annotations.
+      if (sticky) {
+        LOG(WARNING) << "Sticky phrase collsion for " << id << ": '"
+                     << phrase.text << "' and '" << text;
+      }
+      return false;
+    }
     phrase.id = id;
     phrase.text = text;
     phrase.annotations = annotations;
+    phrase.sticky = sticky;
+    return true;
+  }
+
+  // Load custom phrase annotations into cache.
+  void LoadCache(const string &filename) {
+    // Initialize document store for read phrase annotations.
+    Store store;
+    DocumentNames *names = new DocumentNames(&store);
+    DocumentTokenizer tokenizer;
+    DocumentLexer lexer(&tokenizer);
+
+    // Read phrase annotations from file.
+    FileInput input(filename);
+    string line;
+    while (input.ReadLine(&line)) {
+      // Skip blank lines and comments.
+      while (!line.empty()) {
+        char ch = line.back();
+        if (ch != ' ' && ch != '\n') break;
+        line.pop_back();
+      }
+      if (line.empty() || line[0] == ';') continue;
+
+      // Read LEX-encoded phrase annotations.
+      Document phrase(&store, names);
+      CHECK(lexer.Lex(&phrase, line)) << line;
+
+      // Get item id for phrase.
+      Span *span = phrase.GetSpan(0, phrase.length());
+      CHECK(span != nullptr) << line;
+      Text id = store.FrameId(store.Resolve(span->evoked()));
+      CHECK(!id.empty()) << line;
+
+      // Add sticky phrase annotations to cache.
+      CachePhrase(id.str(), phrase.text(), Encode(phrase.top()), true);
+    }
+    names->Release();
   }
 
   // Compute hash for id and phrase text.
@@ -274,6 +328,7 @@ class PhraseStructureAnnotator : public Annotator {
     string id;             // entity id for phrase name
     string text;           // phrase text
     string annotations;    // phrase annotations as encoded SLING frames
+    bool sticky;           // custom annotations are sticky
   };
 
   // Phrase table with aliases.

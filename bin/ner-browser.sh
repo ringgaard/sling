@@ -21,6 +21,10 @@ SPEC='{
       file: "local/data/e/ner/LANG/idf.repo"
       format: "repository"
     }
+    phrases: {
+      file: "data/wiki/LANG/phrases.txt"
+      format: "text"
+    }
   }
   parameters: {
     language: "LANG"

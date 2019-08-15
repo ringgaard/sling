@@ -269,8 +269,8 @@ class WikiWorkflow:
   def template_defs(self, language=None):
     """Resource for template definitions."""
     if language == None: language = flags.arg.language
-    return self.wf.resource("templates-" + language + ".sling",
-                            dir=corpora.repository("data/wiki"),
+    return self.wf.resource("templates.sling",
+                            dir=corpora.repository("data/wiki/" + language),
                             format="store/frame")
 
   def wikipedia_import(self, input, name=None):
