@@ -30,7 +30,8 @@ class Printer {
  public:
   // Initializes printer with store and output.
   Printer(const Store *store, Output *output)
-      : store_(store), output_(output), global_(store->globals() == nullptr) {}
+      : store_(store), output_(output),
+        global_(store != nullptr && store->globals() == nullptr) {}
 
   // Prints object on output.
   void Print(const Object &object);

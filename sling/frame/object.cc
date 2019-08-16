@@ -333,6 +333,10 @@ bool Frame::IsA(const Name &type) const {
   return IsA(type.Lookup(store_));
 }
 
+bool Frame::IsA(const Object &type) const {
+  return IsA(type.handle());
+}
+
 bool Frame::Is(Handle type) const {
   for (const Slot *slot = frame()->begin(); slot < frame()->end(); ++slot) {
     if (slot->name.IsIs() && slot->value == type) return true;
@@ -342,6 +346,10 @@ bool Frame::Is(Handle type) const {
 
 bool Frame::Is(const Name &type) const {
   return Is(type.Lookup(store_));
+}
+
+bool Frame::Is(const Object &type) const {
+  return Is(type.handle());
 }
 
 Frame &Frame::Add(Handle name, Handle value) {

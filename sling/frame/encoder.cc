@@ -25,7 +25,8 @@
 namespace sling {
 
 Encoder::Encoder(const Store *store, Output *output)
-    : store_(store), output_(output), global_(store->globals() == nullptr) {
+    : store_(store), output_(output),
+      global_(store != nullptr && store->globals() == nullptr) {
   // Insert special values in reference mapping.
   references_[Handle::nil()] = Reference(-WIRE_NIL);
   references_[Handle::id()] = Reference(-WIRE_ID);

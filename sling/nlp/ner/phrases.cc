@@ -87,8 +87,6 @@ class PhraseStructureAnnotator : public Annotator {
           Merge(document, phrase, span->begin());
         }
       }
-
-      CHECK(store->LookupExisting("Q30").IsGlobalRef()); // TEST
     }
   }
 
@@ -107,7 +105,7 @@ class PhraseStructureAnnotator : public Annotator {
     }
 
     // Try to match all subphrases to entities in the target set.
-    int length = phrase->num_tokens();
+    int length = phrase->length();
     SpanChart chart(phrase, 0, length, length);
     Handles matches(store);
     bool matches_found = false;
@@ -292,8 +290,8 @@ class PhraseStructureAnnotator : public Annotator {
 
   // Merge annotations for phrase into document at position.
   static void Merge(Document *document, const Document &phrase, int pos) {
-    int length = phrase.num_tokens();
-    CHECK_GE(document->num_tokens(), pos + length);
+    int length = phrase.length();
+    CHECK_GE(document->length(), pos + length);
     for (Span *span : phrase.spans()) {
       // Add new span to document (or get an existing span).
       Span *docspan = document->AddSpan(span->begin() + pos, span->end() + pos);
@@ -310,6 +308,9 @@ class PhraseStructureAnnotator : public Annotator {
       } else if (existing.IsPublic()) {
         // Replace existing frame.
         docspan->Replace(existing, evoked);
+      } else if (evoked.IsPublic()) {
+        // Add is: slot with evoked frame to existing frame.
+        if (!existing.Is(evoked)) existing.AddIs(evoked);
       } else {
         // Merge existing frame with phrase frame.
         Builder b(existing);

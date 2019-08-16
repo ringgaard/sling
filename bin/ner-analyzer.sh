@@ -5,6 +5,9 @@ PORT=${PORT:-8080}
 
 SPEC='{
   annotator: "ner"
+  annotator: "phrase-structure"
+  annotator: "mention-name"
+
   inputs: {
     commons: {
       file: "local/data/e/ner/kb.sling"
@@ -17,6 +20,10 @@ SPEC='{
     dictionary: {
       file: "local/data/e/ner/LANG/idf.repo"
       format: "repository"
+    }
+    phrases: {
+      file: "data/wiki/LANG/phrases.txt"
+      format: "text"
     }
   }
   parameters: {

@@ -503,8 +503,10 @@ class Frame : public Object {
   // Checks frame type, i.e. checks if frame has an isa/is slot with the type.
   bool IsA(Handle type) const;
   bool IsA(const Name &type) const;
+  bool IsA(const Object &type) const;
   bool Is(Handle type) const;
   bool Is(const Name &type) const;
+  bool Is(const Object &type) const;
 
   // Adds handle slot to frame.
   Frame &Add(Handle name, Handle value);
