@@ -113,10 +113,14 @@ class AliasExtractor : public task::FrameProcessor {
                  s.name == n_iso3166_country_code_3_) {
         // Output country codes as alternative names.
         AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NAME);
-      } else if (s.name == n_nickname_) {
-        // Output nicknames as alternative names.
+      } else if (s.name == n_nickname_ || s.name == n_pseudonym_) {
+        // Output nicknames and pseudonyms as alternative names.
         AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NAME);
       } else if (s.name == n_short_name_ ||
+                 s.name == n_generic_name_ ||
+                 s.name == n_birth_name_ ||
+                 s.name == n_married_name_ ||
+                 s.name == n_official_name_ ||
                  s.name == n_female_form_ ||
                  s.name == n_male_form_ ||
                  s.name == n_unit_symbol_) {
@@ -187,6 +191,11 @@ class AliasExtractor : public task::FrameProcessor {
   Name n_demonym_{names_, "P1549"};
   Name n_short_name_{names_, "P1813"};
   Name n_nickname_{names_, "P1449"};
+  Name n_pseudonym_{names_, "P742"};
+  Name n_generic_name_{names_, "P2561"};
+  Name n_official_name_{names_, "P1448"};
+  Name n_birth_name_{names_, "P1477"};
+  Name n_married_name_{names_, "P2562"};
   Name n_female_form_{names_, "P2521"};
   Name n_male_form_{names_, "P3321"};
   Name n_iso3166_country_code_2_{names_, "P297"};
