@@ -155,9 +155,9 @@ class PhraseStructureAnnotator : public Annotator {
     frame.AddIs(item);
 
     // Analyze all matched subphrases.
-    chart.Extract([&](int begin, int end, const SpanChart::Item &item) {
+    chart.Extract([&](int begin, int end, const SpanChart::Item &span) {
       // Determine relation between entities for phrase and subphrase.
-      Handle target = item.aux;
+      Handle target = span.aux;
       CHECK(!target.IsNil());
       Handle relation = Handle::nil();
       for (int i = 0; i < facts.size(); ++i) {
@@ -167,6 +167,9 @@ class PhraseStructureAnnotator : public Annotator {
         }
       }
       CHECK(!relation.IsNil());
+
+      // A subphrase cannot resolve to the same meaning as the whole phrase.
+      if (target == item) return;
 
       // Look up subphrase in cache.
       string subid = store->FrameId(target).str();

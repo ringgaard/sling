@@ -95,5 +95,15 @@
   Q1553195: {
     "leader": 2
   }
+
+  ; women's sports (Q920057)
+  Q920057: {
+    "women's": 2
+  }
+
+  ; men's sports (Q35555522)
+  Q35555522: {
+    "men's": 2
+  }
 }
 
