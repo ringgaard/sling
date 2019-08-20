@@ -450,7 +450,7 @@ enum FrameFlags : Word {
 // The F bit indicates if the object is a frame. The TT bits for frames encodes
 // if the frame is a proxy and whether the frame has an id. The M bit is a mark
 // bit used for marking live objects during garbage collection. The mark bit is
-// also set for all object in frozen heaps.
+// also set for all objects in frozen heaps.
 struct Datum {
   // Returns address of object payload after the object preamble.
   const Address payload() const {

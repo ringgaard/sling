@@ -24,10 +24,10 @@ namespace sling {
 
 class Tokenizer : public Scanner {
  public:
-  // Token types in the range 0-255 are used for single-character tokens.
+  // Token types.
   enum TokenType {
     // Literal types.
-    STRING_TOKEN = 260,
+    STRING_TOKEN = FIRST_AVAILABLE_TOKEN_TYPE,
     INTEGER_TOKEN,
     FLOAT_TOKEN,
     SYMBOL_TOKEN,

@@ -25,9 +25,10 @@ namespace sling {
 class Scanner {
  public:
   // Token types in the range 0-255 are used for single-character tokens.
-  enum TokenType {
+  enum ScannerTokenType {
     ERROR = 256,
-    END = 257,
+    END,
+    FIRST_AVAILABLE_TOKEN_TYPE
   };
 
   // Initializes scanner with input.
