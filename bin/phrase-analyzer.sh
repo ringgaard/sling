@@ -26,5 +26,5 @@ bazel-bin/sling/nlp/document/analyzer \
   --kb \
   --names local/data/e/wiki/$LANGUAGE/name-table.repo \
   --spec "${SPEC//LANG/$LANGUAGE}" \
-  --port $PORT
+  --port $PORT $@
 

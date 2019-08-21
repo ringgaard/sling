@@ -36,6 +36,6 @@ bazel-bin/sling/nlp/document/corpus-browser \
   --kb \
   --names local/data/e/wiki/$LANGUAGE/name-table.repo \
   --spec "${SPEC//LANG/$LANGUAGE}" \
-  --port $PORT \
+  --port $PORT $@ \
   local/data/e/wiki/$LANGUAGE/documents@10.rec
 

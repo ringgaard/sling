@@ -14,5 +14,5 @@ SPEC='{
   }
 }'
 
-bazel-bin/sling/nlp/document/analyzer --spec "${SPEC}"
+bazel-bin/sling/nlp/document/analyzer --spec "${SPEC}" $@
 
