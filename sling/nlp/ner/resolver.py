@@ -32,7 +32,6 @@ def item_name(item):
   return name
 
 kb = sling.Store()
-kb.lockgc()
 kb.load("local/data/e/ner/kb.sling")
 langdir = "local/data/e/wiki/" + flags.arg.lang
 phrasetab = sling.PhraseTable(kb, langdir + "/phrase-table.repo")
@@ -94,6 +93,7 @@ for doc in corpus:
             cscore += weight * count
         if not compatible(form, m.form()): cscore *= form_penalty
         score = cscore * m.count()
+
         scores.append((m, score, cscore))
         if m.item() == item: found = True
 

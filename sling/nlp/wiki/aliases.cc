@@ -542,8 +542,8 @@ class AliasReducer : public task::Reducer {
   // Minimum common prefix size for alias variations.
   int min_prefix_ = 2;
 
-  // Maximum edit distance for alias variations.
-  int max_edit_distance_ = 3;
+  // Maximum edit distance for alias variations (0=disabled).
+  int max_edit_distance_ = 0;
 
   // Mapping from item id to corrections for item.
   HandleMap<Handle> item_corrections_;

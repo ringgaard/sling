@@ -978,7 +978,7 @@ void DateAnnotator::Annotate(const PhraseTable &aliases, SpanChart *chart) {
             break;
           }
         }
-      } else if (span.is(SPAN_CALENDAR_MONTH)) {
+      } else if (span.is(SPAN_MONTH)) {
         // Month.
         Handle h = FindMatch(aliases, span, n_month_, store);
         if (calendar_.GetMonth(h, &date)) {
@@ -1227,8 +1227,8 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     numbers_.Annotate(&chart);
     spelled_.Annotate(aliases_, &chart);
     scales_.Annotate(aliases_, &chart);
-    measures_.Annotate(aliases_, &chart);
     dates_.Annotate(aliases_, &chart);
+    measures_.Annotate(aliases_, &chart);
     abbreviated_.Annotate(&chart, &abbreviations);
     pruner_.Annotate(dictionary_, &chart);
     case_.Annotate(&chart);

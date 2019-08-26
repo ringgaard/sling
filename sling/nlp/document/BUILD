@@ -257,6 +257,7 @@ cc_library(
   deps = [
     "//sling/nlp/ner:labeler",
     "//sling/nlp/ner:phrases",
+    "//sling/nlp/ner:relations",
     "//sling/nlp/parser:parser-annotator",
   ],
 )

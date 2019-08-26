@@ -357,6 +357,27 @@ void Facts::ExtractDate(Handle value) {
   // Convert value to date.
   Date date(Object(store_, value));
 
+  // Add numeric dates.
+  if (numeric_dates_) {
+    // Add numric date as fact.
+    int day_number = date.AsNumber();
+    if (day_number != -1) AddFact(Handle::Integer(day_number));
+
+    // Back-off to month.
+    if (date.precision == Date::DAY) {
+      Date month(date.year, date.month, 0, Date::MONTH);
+      int month_number = month.AsNumber();
+      if (month_number != -1) AddFact(Handle::Integer(month_number));
+    }
+
+    // Back-off to year.
+    if (date.precision == Date::DAY || date.precision == Date::MONTH) {
+      Date year(date.year, 0, 0, Date::YEAR);
+      int year_number = year.AsNumber();
+      if (year_number != -1) AddFact(Handle::Integer(year_number));
+    }
+  }
+
   // Add facts for year, decade, and century.
   AddFact(catalog_->calendar_.Year(date));
   AddFact(catalog_->calendar_.Decade(date));

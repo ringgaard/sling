@@ -89,6 +89,17 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "relations",
+  srcs = ["relations.cc"],
+  deps = [
+    "//sling/nlp/document",
+    "//sling/nlp/document:annotator",
+    "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+
 cc_binary(
   name = "parse-chart",
   srcs = ["parse-chart.cc"],

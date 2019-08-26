@@ -114,9 +114,13 @@ class Facts {
       : catalog_(catalog), store_(catalog_->store_), list_(store_),
         path_(store_) {}
 
-  // Accessor/mutator for whether closure will be performed on certain facts.
+  // Whether closure will be performed on certain facts.
   bool closure() const { return closure_; }
   void set_closure(bool c) { closure_ = c; }
+
+  // Whether numeric dates are extracted.
+  bool numeric_dates() const { return numeric_dates_; }
+  void set_numeric_dates(bool d) { numeric_dates_ = d; }
 
   // Extract facts for item.
   void Extract(Handle item);
@@ -252,6 +256,9 @@ class Facts {
 
   // Whether closure expansion is enabled.
   bool closure_ = true;
+
+  // Whether numeric dates are extracted.
+  bool numeric_dates_ = false;
 };
 
 // A taxonomy is a type system for classifying items into a list of types.

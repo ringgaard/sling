@@ -6,6 +6,7 @@ PORT=${PORT:-8080}
 SPEC='{
   annotator: "ner"
   annotator: "phrase-structure"
+  annotator: "relations"
   annotator: "mention-name"
 
   inputs: {
