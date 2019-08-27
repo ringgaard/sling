@@ -55,6 +55,9 @@ class RelationAnnotator : public Annotator {
           }
           if (existing) continue;
 
+          // TEST: only add top-level mentions.
+          if (span->parent() != nullptr) continue;
+
           // Add new mention.
           Mention mention;
           mention.span = span;
@@ -73,8 +76,11 @@ class RelationAnnotator : public Annotator {
       // Find facts for each mention that match a target in the sentence.
       LOG(INFO) << "Sentence: " << document->PhraseText(s.begin(), s.end());
       for (Mention &source : mentions) {
-        LOG(INFO) << "  mention " << source.span->GetText()
-                  << " item: " << store->DebugString(source.item);
+        //LOG(INFO) << "  mention " << source.span->GetText()
+        //          << " item: " << store->DebugString(source.item);
+
+        // Only consider top-level subjects for now.
+        if (source.span != source.outer) continue;
 
         // Get facts for mention.
         if (!source.item.IsGlobalRef()) continue;
@@ -84,20 +90,23 @@ class RelationAnnotator : public Annotator {
 
         // Try to find mentions of the fact targets.
         for (int i = 0; i < facts.size(); ++i) {
+          // Only search for simple facts for now.
           if (!facts.simple(i)) continue;
+
+          // Check if the fact target is mentioned in sentence.
           Handle value = facts.last(i);
           if (targets.count(value) == 0) continue;
 
-          // Find closest mention of target.
+          // Find closest mention of fact target.
           Mention *target = nullptr;
           for (Mention &t : mentions) {
             if (t.item != value) continue;
 
-            // Source and target cannot be in the same top-level span. This is
-            // handled by the phrase annotator.
+            // Source and target should not be in the same top-level span. These
+            // relations are handled by the phrase annotator.
             if (t.outer == source.outer) continue;
 
-            // Select target if it matches and
+            // Select target with the smallest distance to the source mention.
             if (target == nullptr) {
               target = &t;
             } else {
@@ -108,14 +117,20 @@ class RelationAnnotator : public Annotator {
               }
             }
           }
+          if (target == nullptr) continue;
 
-          if (target != nullptr) {
-            Handle property = facts.first(i);
-            Frame prop(store, property);
-            LOG(INFO) << "  === '" << source.span->GetText() << "' "
-                      << prop.Id() << " (" << prop.GetText("name") << ") '"
-                      <<  target->span->GetText() << "'";
-          }
+          // Ignore self-relations.
+          if (target->item == source.item) continue;
+
+          Handle property = facts.first(i);
+          Frame prop(store, property);
+          LOG(INFO) << ">>>>> '" << source.span->GetText() << "' ["
+                    << store->DebugString(source.item) << "] "
+                    << prop.Id() << " (" << prop.GetText("name") << ") '"
+                    <<  target->span->GetText() << "' ["
+                    << store->DebugString(target->item) << "]"
+                    << " dist=" << Distance(source.span, target->span)
+                    << (target->span != target->outer ? " nested" : "");
         }
       }
     }

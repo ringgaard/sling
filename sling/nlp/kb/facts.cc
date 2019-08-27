@@ -61,6 +61,7 @@ void FactCatalog::Init(Store *store) {
   SetExtractor(p_described_by_source_, &Facts::ExtractNothing);
   SetExtractor(p_different_from_, &Facts::ExtractNothing);
   SetExtractor(p_located_at_body_of_water_, &Facts::ExtractSimple);
+  SetExtractor(p_located_on_street_, &Facts::ExtractSimple);
 
   // Set up items that stops closure expansion.
   static const char *baseids[] = {

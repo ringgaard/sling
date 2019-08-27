@@ -207,6 +207,42 @@ void EmphasisAnnotator::Annotate(SpanChart *chart) {
   }
 };
 
+void IntroAnnotator::Init(Store *store) {
+  CHECK(names_.Bind(store));
+}
+
+void IntroAnnotator::Annotate(SpanChart *chart) {
+  // Only look for intro phrase in the first sentence.
+  if (chart->begin() != 0) return;
+
+  // Get topic item.
+  Handle topic = chart->document()->top().GetHandle(n_page_item_);
+  if (topic.IsNil()) return;
+
+  // Find begining of bolded span.
+  int begin = -1;
+  for (int b = 0; b < std::min(chart->size(), max_offset); ++b) {
+    if (chart->token(b).style() & BOLD_BEGIN) {
+      begin = b;
+      break;
+    }
+  }
+  if (begin == -1) return;
+
+  // Find end of bolded span.
+  int end = -1;
+  for (int e = begin + 1; e < chart->size() && e - begin < max_length; ++e) {
+    if (chart->token(e).style() & BOLD_END) {
+      end = e;
+      break;
+    }
+  }
+  if (end == -1) return;
+
+  // Annotate bolded intro span with topic item.
+  chart->item(begin, end).aux = topic;
+}
+
 SpanTaxonomy::~SpanTaxonomy() {
   delete taxonomy_;
 }
@@ -239,11 +275,12 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q11862829",  SPAN_PREDICATE},        // academic discipline
     {"Q11032",     0},                     // newspaper
     {"Q35127",     0},                     // website
+    {"Q5398426",   SPAN_ART},              // television series (brand but art)
     {"Q167270",    0},                     // trademark
-    {"Q838948",    SPAN_ART},              // work of art
-    {"Q47461344",  SPAN_ART},              // written work
-    {"Q17537576",  SPAN_ART},              // creative work
     {"Q215380",    SPAN_ART},              // band
+    {"Q17537576",  SPAN_ART},              // creative work
+    {"Q47461344",  SPAN_ART},              // written work
+    {"Q838948",    SPAN_ART},              // work of art
     {nullptr, 0},
   };
 
@@ -1186,6 +1223,7 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
   scales_.Init(commons);
   measures_.Init(commons);
   dates_.Init(commons);
+  intro_.Init(commons);
   abbreviated_.Init();
 
   // Initialize entity resolver.
@@ -1222,6 +1260,8 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     // Run annotators.
     populator_.Annotate(aliases_, &chart);
     importer_.Annotate(aliases_, &chart);
+    emphasis_.Annotate(&chart);
+    intro_.Annotate(&chart);
     taxonomy_.Annotate(aliases_, &chart);
     persons_.Annotate(&chart);
     numbers_.Annotate(&chart);
@@ -1232,7 +1272,6 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     abbreviated_.Annotate(&chart, &abbreviations);
     pruner_.Annotate(dictionary_, &chart);
     case_.Annotate(&chart);
-    emphasis_.Annotate(&chart);
 
     // Compute best span covering.
     chart.Solve();

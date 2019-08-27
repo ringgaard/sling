@@ -96,6 +96,7 @@ class FactCatalog {
   Name p_described_by_source_{names_, "P1343"};
   Name p_different_from_{names_, "P1889"};
   Name p_located_at_body_of_water_{names_, "P206"};
+  Name p_located_on_street_{names_, "P669"};
 
   Name n_time_{names_, "/w/time"};
   Name n_item_{names_, "/w/item"};

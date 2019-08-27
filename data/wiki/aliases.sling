@@ -91,6 +91,11 @@
     "Don't": blacklist
   }
 
+  ; Pakho Chau (Q6130604)
+  Q6130604: {
+    "Beginning": blacklist
+  }
+
   ; party leader
   Q1553195: {
     "leader": 2
@@ -104,6 +109,32 @@
   ; men's sports (Q35555522)
   Q35555522: {
     "men's": 2
+  }
+
+  ; person (Q215627)
+  Q215627: {
+    "personal": blacklist
+  }
+
+  ; Radio X (Q2072562)
+  Q2072562: {
+    "Born in England": blacklist
+  }
+
+  ; Kenny Wheeler (Q578219)
+  Q578219: {
+    "One of Many": blacklist
+  }
+
+  ; actor (Q33999)
+  Q33999: {
+    "American actor": blacklist
+    "American actress": blacklist
+  }
+
+  ; art of sculpture (Q11634)
+  Q11634: {
+    "American sculptor": blacklist
   }
 }
 
