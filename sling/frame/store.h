@@ -1221,6 +1221,9 @@ class Store {
   // restoring the store without overwriting any existing content.
   bool Pristine() const;
 
+  // Resize symbol table.
+  void ResizeSymbolTable();
+
   // Returns heap containing symbol table. This will return null if the heap
   // contains any objects besides the symbol table.
   Heap *GetSymbolHeap();
