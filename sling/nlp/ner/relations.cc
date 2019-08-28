@@ -30,6 +30,35 @@ class RelationAnnotator : public Annotator {
   void Init(Task *task, Store *commons) override {
     // Initialize fact extractor.
     catalog_.Init(commons);
+
+    // Set up property priorities.
+    std::vector<const char *> priority_order = {
+      "P27",    // country of citizenship
+      "P17",    // country
+      "P19",    // place of birth
+      "P20",    // place of death
+      "P119",   // place of burial
+    };
+    for (int i = 0; i < priority_order.size(); ++i) {
+      Handle property = commons->Lookup(priority_order[i]);
+      priority_[property] = priority_order.size() - i;
+    }
+
+    std::vector<const char *> blocked_properties = {
+      "P461",   // opposite of
+      "P205",   // basin country
+      "P530",   // diplomatic relation
+      "P47",    // shares border with
+      "P206",   // located in or next to body of water
+      "P706",   // located on terrain feature
+      "P1589",  // lowest point
+      "P1376",  // capital of
+      "P150",   // contains administrative territorial entity
+    };
+    for (const char *prop : blocked_properties) {
+      Handle property = commons->Lookup(prop);
+      priority_[property] = -1;
+    }
   }
 
   // Annotate relations in document.
@@ -89,6 +118,7 @@ class RelationAnnotator : public Annotator {
         facts.Extract(source.item);
 
         // Try to find mentions of the fact targets.
+        int matches = 0;
         for (int i = 0; i < facts.size(); ++i) {
           // Only search for simple facts for now.
           if (!facts.simple(i)) continue;
@@ -122,15 +152,58 @@ class RelationAnnotator : public Annotator {
           // Ignore self-relations.
           if (target->item == source.item) continue;
 
+          // Skip match if property is blocked.
           Handle property = facts.first(i);
-          Frame prop(store, property);
-          LOG(INFO) << ">>>>> '" << source.span->GetText() << "' ["
-                    << store->DebugString(source.item) << "] "
-                    << prop.Id() << " (" << prop.GetText("name") << ") '"
-                    <<  target->span->GetText() << "' ["
-                    << store->DebugString(target->item) << "]"
-                    << " dist=" << Distance(source.span, target->span)
-                    << (target->span != target->outer ? " nested" : "");
+          int priority = Priority(property);
+          if (priority < 0) continue;
+
+          // Clear property matches on first match.
+          if (matches++ == 0) {
+            for (Mention &m : mentions) m.property = Handle::nil();
+          }
+
+          // Check if this is the best match for target.
+          if (target->property.IsNil() ||
+              priority > Priority(target->property)) {
+            target->property = property;
+          }
+        }
+
+        // Add relations to source mention.
+        if (matches > 0) {
+          Frame existing(store, source.frame);
+          if (existing.IsPublic()) {
+            Builder b(store);
+            b.AddIs(existing);
+            for (const Mention &m : mentions) {
+              if (!m.property.IsNil()) {
+                b.Add(m.property, m.frame);
+              }
+            }
+            source.span->Replace(existing, b.Create());
+            source.frame = b.handle();
+          } else {
+            Builder b(existing);
+            for (const Mention &m : mentions) {
+              if (!m.property.IsNil()) {
+                b.Add(m.property, m.frame);
+              }
+            }
+            b.Update();
+          }
+
+          // Debug output.
+          for (const Mention &m : mentions) {
+            if (m.property.IsNil()) continue;
+            Frame prop(store, m.property);
+            LOG(INFO) << ">>>>> '" << source.span->GetText() << "' ["
+                      << store->DebugString(source.item) << "] "
+                      << prop.Id() << " (" << prop.GetText("name") << ") '"
+                      <<  m.span->GetText() << "' ["
+                      << store->DebugString(m.item) << "]"
+                      << " dist=" << Distance(source.span, m.span)
+                      << (m.span != m.outer ? " nested" : "");
+          }
         }
       }
     }
@@ -147,16 +220,26 @@ class RelationAnnotator : public Annotator {
     }
   }
 
+  // Get priority for property.
+  int Priority(Handle property) const {
+    auto f = priority_.find(property);
+    return f != priority_.end() ? f->second : 0;
+  }
+
   // Entity mention in sentence.
   struct Mention {
     Handle frame;     // frame annotations for entity
     Handle item;      // item describing entity
     Span *span;       // Span evoking frame
-    Span *outer;      // Top-most containing span
+    Span *outer;      // top-most containing span
+    Handle property;  // property for match
   };
 
   // Fact catalog for fact extraction.
   FactCatalog catalog_;
+
+  // Priority for properties. Priority -1 means that the property is blocked.
+  HandleMap<int> priority_;
 };
 
 REGISTER_ANNOTATOR("relations", RelationAnnotator);

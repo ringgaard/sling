@@ -136,5 +136,15 @@
   Q11634: {
     "American sculptor": blacklist
   }
+
+  ; politics of the United States (Q330963)
+  Q330963: {
+    "American politician": blacklist
+  }
+
+  ; The Presbyterian College, Montreal (Q7758054)
+  Q7758054: {
+    "affiliated with": blacklist
+  }
 }
 
