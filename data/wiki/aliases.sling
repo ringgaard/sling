@@ -146,5 +146,10 @@
   Q7758054: {
     "affiliated with": blacklist
   }
+
+  ; party leader (Q1553195)
+  Q1553195: {
+    "leader": 2
+  }
 }
 

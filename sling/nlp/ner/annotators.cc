@@ -273,6 +273,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q4164871",   SPAN_PREDICATE},        // position
     {"Q828803",    SPAN_PREDICATE},        // job title
     {"Q11862829",  SPAN_PREDICATE},        // academic discipline
+    {"Q20202269",  SPAN_PREDICATE},        // music term
     {"Q11032",     0},                     // newspaper
     {"Q35127",     0},                     // website
     {"Q5398426",   SPAN_ART},              // television series (brand but art)

@@ -72,6 +72,17 @@ cc_library(
 )
 
 cc_library(
+  name = "anaphora",
+  srcs = ["anaphora.cc"],
+  deps = [
+    "//sling/nlp/document",
+    "//sling/nlp/document:annotator",
+    "//sling/nlp/document:fingerprinter",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "phrases",
   srcs = ["phrases.cc"],
   deps = [

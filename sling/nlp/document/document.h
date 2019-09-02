@@ -176,6 +176,13 @@ class Span {
   // linked together left-to-right through the sibling pointers.
   Span *sibling() const { return sibling_; }
 
+  // Returns outer-most containing span.
+  Span *outer() {
+    Span *s = this;
+    while (s->parent_ != nullptr) s = s->parent_;
+    return s;
+  }
+
   // Adds frame evocation to span.
   void Evoke(const Frame &frame);
   void Evoke(Handle frame);
