@@ -45,6 +45,9 @@ class FactCatalog {
   // Extract item types (P31) with closure over subclass of (P279).
   void ExtractItemTypes(Handle item, std::vector<Handle> *types);
 
+  // Check if item is a direct or indirect instance of of a type.
+  bool InstanceOf(Handle item, Handle type);
+
  private:
   // Set extractor for property type.
   void SetExtractor(Handle property, Extractor extractor) {

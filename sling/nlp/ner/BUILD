@@ -78,6 +78,7 @@ cc_library(
     "//sling/nlp/document",
     "//sling/nlp/document:annotator",
     "//sling/nlp/document:fingerprinter",
+    "//sling/nlp/kb:facts",
   ],
   alwayslink = 1,
 )

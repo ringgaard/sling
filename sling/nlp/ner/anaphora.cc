@@ -18,6 +18,7 @@
 #include "sling/nlp/document/annotator.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/fingerprinter.h"
+#include "sling/nlp/kb/facts.h"
 
 namespace sling {
 namespace nlp {
@@ -31,6 +32,9 @@ class AnaphoraAnnotator : public Annotator {
     // Bind symbols.
     CHECK(names_.Bind(commons));
 
+    // Initialize fact catalog.
+    catalog_.Init(commons);
+
     // Set up pronoun descriptors for language.
     string language = task->Get("language", "en");
     if (language == "en") {
@@ -42,12 +46,15 @@ class AnaphoraAnnotator : public Annotator {
       AddPersonalPronoun("her", FEMININE);
       AddPersonalPronoun("hers", FEMININE);
       AddDefiniteArticle("the");
+      AddInitialPronoun("It", UNKNOWN);
     } else if (language == "da") {
       // Danish.
       AddPersonalPronoun("han", MASCULINE);
       AddPersonalPronoun("hans", MASCULINE);
       AddPersonalPronoun("hun", FEMININE);
       AddPersonalPronoun("hendes", FEMININE);
+      AddInitialPronoun("Det", UNKNOWN);
+      AddInitialPronoun("Den", UNKNOWN);
     } else {
       disabled_ = true;
     }
@@ -58,16 +65,26 @@ class AnaphoraAnnotator : public Annotator {
     // Skip annotation if anaphora resolution is not supported by language.
     if (disabled_) return;
 
+    // Get document topic.
+    Handle topic = document->top().GetHandle(n_page_item_);
+    std::vector<Handle> topic_types;
+    if (!topic.IsNil()) {
+      catalog_.ExtractItemTypes(topic, &topic_types);
+    }
+
     // Find all markables in the document.
     Store *store = document->store();
     std::vector<Markable> markables;
     int sentence = 0;
+    bool first_paragraph = true;
     int t = 0;
     while (t < document->length()) {
       // Increment current sentence number on begining of new sentence.
       const Token &token = document->token(t);
-      if (token.brk() >= SENTENCE_BREAK)  {
+      BreakType brk = token.brk();
+      if (t > 0 && brk >= SENTENCE_BREAK) {
         sentence++;
+        if (brk >= PARAGRAPH_BREAK) first_paragraph = false;
       }
 
       // Get top-level span at token.
@@ -81,7 +98,9 @@ class AnaphoraAnnotator : public Annotator {
         const auto f = triggers_.find(token.Fingerprint());
         if (f != triggers_.end()) {
           markable.pronoun = &f->second;
-          if (markable.pronoun->personal) {
+          bool initial = first_paragraph && (brk == SENTENCE_BREAK);
+          if (markable.pronoun->personal ||
+              (markable.pronoun->initial && initial)) {
             // Get gender from pronoun descriptor.
             markable.gender = markable.pronoun->gender;
 
@@ -114,6 +133,34 @@ class AnaphoraAnnotator : public Annotator {
               Builder b(store);
               b.AddIs(markables[antecedent].entity);
               markable.span->Evoke(b.Create());
+            }
+          } else if (markable.pronoun->definite &&
+                     first_paragraph &&
+                     t < document->length() - 1) {
+            // Try to locate type following markable.
+            Span *next = document->token(t + 1).span();
+            if (next != nullptr) {
+              next = next->outer();
+              Handle cls = next->evoked();
+              Handle type = store->Resolve(cls);
+              if (!type.IsNil()) {
+                // Check if definite reference can refer to the topic entity.
+                bool found = false;
+                for (Handle h : topic_types) {
+                  if (h == type) found = true;
+                }
+
+                // Add reference to topic if type matches topic.
+                if (found) {
+                  // Add span for definite reference.
+                  markable.span = document->AddSpan(t, next->end());
+                  markable.entity = topic;
+                  Builder b(store);
+                  b.AddIs(topic);
+                  b.Add(n_instance_of_, cls);
+                  markable.span->Evoke(b.Create());
+                }
+              }
             }
           }
         }
@@ -156,6 +203,7 @@ class AnaphoraAnnotator : public Annotator {
     Gender gender = NEUTRAL;   // grammatical gender.
     bool personal = false;     // reference to human
     bool definite = false;     // definite reference article
+    bool initial = false;      // only resolve if sentence-initial
   };
 
   // A markable is a mention of an entity that can be an antecedent for a
@@ -181,6 +229,13 @@ class AnaphoraAnnotator : public Annotator {
     p.definite = true;
   }
 
+  // Add descriptor for pronoun that is only resolved if it is sentence-initial.
+  void AddInitialPronoun(Text word, Gender gender) {
+    Pronoun &p = trigger(word);
+    p.gender = gender;
+    p.initial = true;
+  }
+
   // Get pronoun descriptor for word.
   Pronoun &trigger(Text word) {
     uint64 fp = Fingerprinter::Fingerprint(word);
@@ -204,11 +259,16 @@ class AnaphoraAnnotator : public Annotator {
   // Mapping from word fingerprint to pronoun descriptor.
   std::unordered_map<uint64, Pronoun> triggers_;
 
+  // Fact catalog.
+  FactCatalog catalog_;
+
   // Symbols.
   Names names_;
+  Name n_instance_of_{names_, "P31"};
   Name n_gender_{names_, "P21"};
   Name n_male_{names_, "Q6581097"};
   Name n_female_{names_, "Q6581072"};
+  Name n_page_item_{names_, "/wp/page/item"};
 
   // Hyperparameters.
   static const int sentence_window_ = 3;

@@ -54,6 +54,7 @@ class RelationAnnotator : public Annotator {
       "P1589",  // lowest point
       "P1376",  // capital of
       "P150",   // contains administrative territorial entity
+      "P190",   // twinned administrative body
     };
     for (const char *prop : blocked_properties) {
       Handle property = commons->Lookup(prop);

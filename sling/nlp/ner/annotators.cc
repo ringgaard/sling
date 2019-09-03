@@ -282,6 +282,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q17537576",  SPAN_ART},              // creative work
     {"Q47461344",  SPAN_ART},              // written work
     {"Q838948",    SPAN_ART},              // work of art
+    {"Q3331189",   SPAN_ART},              // version, edition, or translation
     {nullptr, 0},
   };
 

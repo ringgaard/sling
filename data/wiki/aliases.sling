@@ -150,6 +150,16 @@
   ; party leader (Q1553195)
   Q1553195: {
     "leader": 2
+
+  ; American literature (Q233762)
+  Q233762: {
+    "American writer": blacklist
+    "American author": blacklist
+  }
+
+  ; French Battalion in the Korean War (Q488964)
+  Q488964: {
+    "during the Korean War": blacklist
   }
 }
 

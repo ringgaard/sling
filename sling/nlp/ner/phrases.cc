@@ -59,6 +59,7 @@ class PhraseStructureAnnotator : public Annotator {
       "P530",   // diplomatic relation
       "P190",   // twinned administrative body
       "P1336",  // territory claimed by
+      "P1365",  // replaces
       "P1366",  // replaced by
       "P155",   // follows
       "P460",   // said to be the same as

@@ -63,7 +63,7 @@ void FactCatalog::Init(Store *store) {
   SetExtractor(p_located_at_body_of_water_, &Facts::ExtractSimple);
   SetExtractor(p_located_on_street_, &Facts::ExtractSimple);
 
-  // Set up items that stops closure expansion.
+  // Set up items that stop closure expansion.
   static const char *baseids[] = {
     "Q215627",    // person
     "Q17334923",  // location
@@ -202,6 +202,43 @@ void FactCatalog::ExtractItemTypes(Handle item, std::vector<Handle> *types) {
       if (!known) types->push_back(newitem);
     }
   }
+}
+
+bool FactCatalog::InstanceOf(Handle item, Handle type) {
+  // Check types for item.
+  Handles types(store_);
+  item = store_->Resolve(item);
+  for (const Slot &s : Frame(store_, item)) {
+    if (s.name == p_instance_of_) {
+      Handle t = store_->Resolve(s.value);
+      if (t == type) return true;
+      types.push_back(t);
+    }
+  }
+
+  // Check type closure.
+  int current = 0;
+  while (current < types.size()) {
+    Frame f(store_, types[current++]);
+    if (IsBaseItem(f.handle())) continue;
+    for (const Slot &s : f) {
+      if (s.name != p_subclass_of_) continue;
+
+      // Check if new item is already known.
+      Handle t = store_->Resolve(s.value);
+      if (t == type) return true;
+      bool known = false;
+      for (Handle h : types) {
+        if (t == h) {
+          known = true;
+          break;
+        }
+      }
+      if (!known) types.push_back(t);
+    }
+  }
+
+  return false;
 }
 
 void Facts::Extract(Handle item) {
