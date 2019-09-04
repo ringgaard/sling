@@ -76,7 +76,7 @@ class AnaphoraAnnotator : public Annotator {
     Store *store = document->store();
     std::vector<Markable> markables;
     int sentence = 0;
-    bool first_paragraph = true;
+    bool intro = true;
     int t = 0;
     while (t < document->length()) {
       // Increment current sentence number on begining of new sentence.
@@ -84,7 +84,7 @@ class AnaphoraAnnotator : public Annotator {
       BreakType brk = token.brk();
       if (t > 0 && brk >= SENTENCE_BREAK) {
         sentence++;
-        if (brk >= PARAGRAPH_BREAK) first_paragraph = false;
+        if (brk >= PARAGRAPH_BREAK) intro = false;
       }
 
       // Get top-level span at token.
@@ -98,7 +98,7 @@ class AnaphoraAnnotator : public Annotator {
         const auto f = triggers_.find(token.Fingerprint());
         if (f != triggers_.end()) {
           markable.pronoun = &f->second;
-          bool initial = first_paragraph && (brk == SENTENCE_BREAK);
+          bool initial = intro && (brk == SENTENCE_BREAK);
           if (markable.pronoun->personal ||
               (markable.pronoun->initial && initial)) {
             // Get gender from pronoun descriptor.
@@ -135,7 +135,7 @@ class AnaphoraAnnotator : public Annotator {
               markable.span->Evoke(b.Create());
             }
           } else if (markable.pronoun->definite &&
-                     first_paragraph &&
+                     initial &&
                      t < document->length() - 1) {
             // Try to locate type following markable.
             Span *next = document->token(t + 1).span();

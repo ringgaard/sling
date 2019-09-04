@@ -136,6 +136,11 @@ flags.define("--build_idf",
              default=False,
              action='store_true')
 
+flags.define("--build_wordtable",
+             help="build common word table from wikipedia",
+             default=False,
+             action='store_true')
+
 flags.define("--fuse_ner_items",
              help="fuse items from wikidata, wikipedia, and links",
              default=False,
@@ -313,6 +318,14 @@ def extract_named_entities():
     for language in flags.arg.languages:
       log.info("Build " + language + " IDF table")
       wf.build_idf(language=language)
+    workflow.run(wf.wf)
+
+  # Extract common word table.
+  if flags.arg.build_wordtable:
+    wf = entity.EntityWorkflow("word-table")
+    for language in flags.arg.languages:
+      log.info("Build " + language + " word table")
+      wf.build_wordtable(language=language)
     workflow.run(wf.wf)
 
   # Fuse NER items.

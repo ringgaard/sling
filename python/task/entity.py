@@ -102,6 +102,33 @@ class EntityWorkflow:
       builder.attach_output("repository", self.idftable(language))
 
   #---------------------------------------------------------------------------
+  # Common word vocabulary
+  #---------------------------------------------------------------------------
+
+  def wordtable(self, language=None):
+    """Resource for common word table."""
+    if language == None: language = flags.arg.language
+    return self.wf.resource("words.map",
+                            dir=self.workdir(language),
+                            format="textmap/word")
+
+  def build_wordtable(self, documents=None, output=None, language=None):
+    if language == None: language = flags.arg.language
+    if documents == None: documents = self.wiki.wikipedia_documents(language)
+    if output == None: output = self.wordtable(language)
+
+    with self.wf.namespace(language + "-words"):
+      return self.wf.mapreduce(documents, output,
+                               format="message/word:count",
+                               mapper="word-vocabulary-mapper",
+                               reducer="word-vocabulary-reducer",
+                               params={
+                                 "normalization": "dlw",
+                                 "only_lowercase": True,
+                                 "max_words": 50000,
+                               })
+
+  #---------------------------------------------------------------------------
   # Fused items
   #---------------------------------------------------------------------------
 
