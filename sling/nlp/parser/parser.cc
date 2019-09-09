@@ -72,59 +72,53 @@ void Parser::Load(Store *store, const string &model) {
 void Parser::Parse(Document *document) const {
   // Parse each sentence of the document.
   for (SentenceIterator s(document); s.more(); s.next()) {
-    // Initialize parser model instance data.
-    ParserInstance data(this, document, s.begin(), s.end());
-    LexicalEncoderInstance &encoder = data.encoder_;
+    // Set up trace if feature tracing is enabled.
+    Trace *trace = trace_ ? new Trace(s.begin(), s.end()) : nullptr;
 
-    // Run the lexical encoder.
+    // Run the lexical encoder for sentence.
+    LexicalEncoderInstance encoder(encoder_);
+    if (trace) {
+      encoder.set_trace(std::bind(&Trace::AddLSTM, trace, _1, _2, _3));
+    }
     auto bilstm = encoder.Compute(*document, s.begin(), s.end());
 
-    // Run FF to predict transitions.
-    ParserState &state = data.state_;
+    // Initialize decoder.
+    ParserState state(document, s.begin(), s.end());
+    ParserFeatureExtractor features(&feature_model_, &state);
+    myelin::Instance decoder(decoder_);
+    myelin::Channel activations(feature_model_.hidden());
+    CascadeInstance cascade(&cascade_);
+
+    // Run decoder to predict transitions.
     for (;;) {
       // Allocate space for next step.
-      data.activations_.push();
+      activations.push();
 
       // Attach instance to recurrent layers.
-      data.decoder_.Clear();
-      data.AttachChannels(bilstm);
+      decoder.Clear();
+      features.Attach(bilstm, &activations, &decoder);
 
       // Extract features.
-      data.ExtractDecoderFeatures();
+      features.Extract(&decoder);
+      if (trace) features.TraceFeatures(&decoder, trace);
 
-      // Compute FF hidden layer.
-      data.decoder_.Compute();
+      // Compute decoder activations.
+      decoder.Compute();
 
       // Apply the cascade.
       ParserAction action;
-      data.cascade_.Compute(&data.activations_, &state, &action, data.trace_);
+      cascade.Compute(&activations, &state, &action, trace);
       state.Apply(action);
 
       // Check if we are done.
       if (action.type == ParserAction::STOP) break;
     }
-    if (data.trace_ != nullptr) data.trace_->Write(document);
-  }
-}
 
-ParserInstance::ParserInstance(const Parser *parser, Document *document,
-                               int begin, int end)
-    : parser_(parser),
-      encoder_(parser->encoder()),
-      state_(document, begin, end),
-      features_(&parser->feature_model_, &state_),
-      decoder_(parser->decoder_),
-      activations_(parser->feature_model_.hidden()),
-      cascade_(&parser->cascade_),
-      trace_(nullptr) {
-  // Reserve two transitions per token.
-  int length = end - begin;
-  activations_.reserve(length * 2);
-  if (parser->trace()) {
-    trace_ = new Trace();
-    trace_->begin = begin;
-    trace_->end = end;
-    encoder_.set_trace(std::bind(&Trace::AddLSTM, trace_, _1, _2, _3));
+    // Write feature trace to document.
+    if (trace) {
+      trace->Write(document);
+      delete trace;
+    }
   }
 }
 

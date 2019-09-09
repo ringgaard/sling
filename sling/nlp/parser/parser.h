@@ -41,8 +41,6 @@
 namespace sling {
 namespace nlp {
 
-class ParserInstance;
-
 // Frame semantics parser model.
 class Parser {
  public:
@@ -94,53 +92,6 @@ class Parser {
 
   // Whether tracing is enabled.
   bool trace_;
-
-  friend class ParserInstance;
-};
-
-// Parser state for running an instance of the parser on a document.
-class ParserInstance {
- public:
-  ParserInstance(const Parser *parser, Document *document, int begin, int end);
-  ~ParserInstance() { delete trace_; }
-
-  // Attach channels for decoder.
-  void AttachChannels(const myelin::BiChannel &bilstm) {
-    features_.Attach(bilstm, &activations_, &decoder_);
-  }
-
-  // Extract features for decoder.
-  void ExtractDecoderFeatures() {
-    features_.Extract(&decoder_);
-    if (trace_ != nullptr) features_.TraceFeatures(&decoder_, trace_);
-  }
-
- private:
-  // Parser model.
-  const Parser *parser_;
-
-  // Instance for lexical encoding computation.
-  LexicalEncoderInstance encoder_;
-
-  // Parser transition state.
-  ParserState state_;
-
-  // Decoder feature extractor.
-  ParserFeatureExtractor features_;
-
-  // Decoder instance for computing decoder activations.
-  myelin::Instance decoder_;
-
-  // Decoder step activations.
-  myelin::Channel activations_;
-
-  // Instance for cascade computations.
-  CascadeInstance cascade_ = nullptr;
-
-  // Trace information.
-  Trace *trace_;
-
-  friend class Parser;
 };
 
 }  // namespace nlp
