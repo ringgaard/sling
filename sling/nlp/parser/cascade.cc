@@ -142,7 +142,6 @@ CascadeInstance::~CascadeInstance() {
 }
 
 void CascadeInstance::Compute(myelin::Channel *activations,
-                              int step,
                               ParserState *state,
                               ParserAction *output,
                               Trace *trace) {
@@ -150,7 +149,7 @@ void CascadeInstance::Compute(myelin::Channel *activations,
   const ActionTable *actions = cascade_->actions_;
   while (true) {
     // Execute the current delegate's instance.
-    instances_[current]->Compute(activations, step, output);
+    instances_[current]->Compute(activations, state->step(), output);
     if (trace != nullptr) trace->Action(*output);
 
     // If there is a cascade down the chain then follow it.

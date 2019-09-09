@@ -60,7 +60,7 @@ class Parser {
   // Returns whether tracing is enabled.
   bool trace() const { return trace_; }
 
-  // Sets tracing to 'trace'.
+  // Enable/disable tracing.
   void set_trace(bool trace) { trace_ = trace; }
 
  private:
@@ -158,20 +158,12 @@ class ParserInstance {
   }
 
   // Attach channel for FF.
-  void AttachFF(int output, const myelin::BiChannel &bilstm);
+  void AttachFF(const myelin::BiChannel &bilstm);
 
   // Extract features for FF.
-  void ExtractFeaturesFF(int step);
+  void ExtractFeaturesFF();
 
  private:
-  // Represents a token pushed on the MARK stack.
-  struct Mark {
-    Mark(int t, int s) : token(t), step(s) {}
-
-    int token;
-    int step;
-  };
-
   // Adds FF feature values to the trace.
   void TraceFFFeatures();
 
@@ -197,13 +189,6 @@ class ParserInstance {
 
   // Instance for cascade computations.
   CascadeInstance cascade_ = nullptr;
-
-  // Frame creation and focus steps.
-  HandleMap<int> create_step_;
-  HandleMap<int> focus_step_;
-
-  // Tokens pushed by MARK actions.
-  std::vector<Mark> marks_;
 
   // Trace information.
   Trace *trace_;

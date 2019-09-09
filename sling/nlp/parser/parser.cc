@@ -180,67 +180,27 @@ void Parser::Parse(Document *document) const {
 
     // Run FF to predict transitions.
     ParserState &state = data.state_;
-    bool done = false;
-    int steps_since_shift = 0;
-    int step = 0;
-    while (!done) {
+    for (;;) {
       // Allocate space for next step.
       data.ff_step_.push();
 
       // Attach instance to recurrent layers.
       data.ff_.Clear();
-      data.AttachFF(step, bilstm);
+      data.AttachFF(bilstm);
 
       // Extract features.
-      data.ExtractFeaturesFF(step);
+      data.ExtractFeaturesFF();
 
       // Compute FF hidden layer.
       data.ff_.Compute();
 
       // Apply the cascade.
       ParserAction action;
-      data.cascade_.Compute(&data.ff_step_, step, &state, &action, data.trace_);
+      data.cascade_.Compute(&data.ff_step_, &state, &action, data.trace_);
       state.Apply(action);
 
-      // Update state.
-      switch (action.type) {
-        case ParserAction::SHIFT:
-          steps_since_shift = 0;
-          break;
-
-        case ParserAction::STOP:
-          done = true;
-          break;
-
-        case ParserAction::CASCADE:
-          LOG(FATAL) << "CASCADE action should not reach ParserState.";
-          break;
-
-        case ParserAction::MARK:
-          data.marks_.emplace_back(state.current(), step);
-          break;
-
-        case ParserAction::EVOKE:
-          if (action.length == 0) data.marks_.pop_back();
-          FALLTHROUGH_INTENDED;
-
-        case ParserAction::REFER:
-        case ParserAction::CONNECT:
-        case ParserAction::ASSIGN:
-        case ParserAction::EMBED:
-        case ParserAction::ELABORATE:
-          steps_since_shift++;
-          if (state.AttentionSize() > 0) {
-            Handle focus = state.Attention(0);
-            if (data.create_step_.find(focus) == data.create_step_.end()) {
-              data.create_step_[focus] = step;
-            }
-            data.focus_step_[focus] = step;
-          }
-      }
-
-      // Next step.
-      step += 1;
+      // Check if we are done.
+      if (action.type == ParserAction::STOP) break;
     }
     if (data.trace_ != nullptr) data.trace_->Write(document);
   }
@@ -282,7 +242,8 @@ ParserInstance::ParserInstance(const Parser *parser, Document *document,
   }
 }
 
-void ParserInstance::AttachFF(int output, const myelin::BiChannel &bilstm) {
+void ParserInstance::AttachFF(const myelin::BiChannel &bilstm) {
+  int output = state_.step();
   ff_.Set(parser_->ff_.lr_lstm, bilstm.lr);
   ff_.Set(parser_->ff_.rl_lstm, bilstm.rl);
   ff_.Set(parser_->ff_.steps, &ff_step_);
@@ -316,7 +277,7 @@ void ParserInstance::TraceFFFeatures() {
     ff.labeled_roles_size, "labeled-roles");
 }
 
-void ParserInstance::ExtractFeaturesFF(int step) {
+void ParserInstance::ExtractFeaturesFF() {
   // Extract LSTM focus features.
   const Parser::FF &ff = parser_->ff_;
   int current = state_.current() - state_.begin();
@@ -330,20 +291,26 @@ void ParserInstance::ExtractFeaturesFF(int step) {
   int *lr_mark = GetFF(ff.mark_lr_feature);
   int *rl_mark = GetFF(ff.mark_rl_feature);
   int *mark_step = GetFF(ff.mark_step_feature);
+  auto &marks = state_.marks();
   for (int d = 0; d < ff.mark_depth; ++d) {
-    const auto *m =
-      (d < marks_.size()) ? &marks_[marks_.size() - 1 - d] : nullptr;
-    int token = (m != nullptr) ? (m->token - state_.begin()) : -1;
-    if (lr_mark != nullptr) lr_mark[d] = token;
-    if (rl_mark != nullptr) rl_mark[d] = token;
-    if (mark_step != nullptr) mark_step[d] = (m != nullptr) ? m->step : -1;
+    if (d < marks.size()) {
+      const auto &m = marks[marks.size() - 1 - d];
+      int token = m.token - state_.begin();
+      if (lr_mark != nullptr) lr_mark[d] = token;
+      if (rl_mark != nullptr) rl_mark[d] = token;
+      if (mark_step != nullptr) mark_step[d] = m.step;
+    } else {
+      if (lr_mark != nullptr) lr_mark[d] = -1;
+      if (rl_mark != nullptr) rl_mark[d] = -1;
+      if (mark_step != nullptr) mark_step[d] = -1;
+    }
   }
 
   int *mark_distance = GetFF(ff.mark_distance_feature);
   if (mark_distance != nullptr) {
     *mark_distance = -2;
-    if (marks_.size() > 0) {
-      int distance = state_.current() - marks_[marks_.size() - 1].token;
+    if (!marks.empty()) {
+      int distance = state_.current() - marks[marks.size() - 1].token;
       *mark_distance = ff.mark_distance_bins.back();
       if (distance < ff.mark_distance_bins.size()) {
         *mark_distance = ff.mark_distance_bins[distance];
@@ -370,8 +337,8 @@ void ParserInstance::ExtractFeaturesFF(int step) {
         if (att != -1) att -= state_.begin() + 1;
 
         // Get the step numbers that created and focused the frame.
-        created = create_step_[frame];
-        focused = focus_step_[frame];
+        created = state_.CreateStep(frame);
+        focused = state_.FocusStep(frame);
       }
       if (lr != nullptr) lr[d] = att;
       if (rl != nullptr) rl[d] = att;
@@ -384,7 +351,7 @@ void ParserInstance::ExtractFeaturesFF(int step) {
   int *history = GetFF(ff.history_feature);
   if (history != nullptr) {
     int h = 0;
-    int s = step - 1;
+    int s = state_.step() - 1;
     while (h < ff.history_size && s >= 0) history[h++] = s--;
     while (h < ff.history_size) history[h++] = -1;
   }
