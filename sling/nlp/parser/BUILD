@@ -107,6 +107,7 @@ cc_library(
   deps = [
     ":action-table",
     ":cascade",
+    ":parser-features",
     ":parser-state",
     ":roles",
     ":trace",

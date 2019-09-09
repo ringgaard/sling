@@ -37,6 +37,9 @@ class ParserFeatureModel {
             const RoleSet *roles,
             int frame_limit);
 
+  // Return tensor for hidden layer activations.
+  const myelin::Tensor *hidden() const { return hidden_; }
+
  private:
   // Get parameter tensor in decoder cell.
   myelin::Tensor *GetParam(const string &name, bool optional = false);
