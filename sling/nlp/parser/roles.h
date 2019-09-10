@@ -100,7 +100,7 @@ class RoleGraph {
     int target;
   };
 
-  // The maximum number of frame to use from the attention buffer.
+  // The maximum number of frames to use from the attention buffer.
   int limit_ = 0;
 
   // Number of roles in role set.

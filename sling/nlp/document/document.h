@@ -204,9 +204,13 @@ class Span {
   // Returns all evoked frames.
   void AllEvoked(Handles *evoked) const;
 
+  // Checks if span evokes a certain frame.
+  bool Evokes(Handle frame) const;
+  bool Evokes(const Frame &frame) const { return Evokes(frame.handle()); }
+
   // Checks if span evokes a certain type of frame.
-  bool Evokes(Handle type) const;
-  bool Evokes(const Name &type) const;
+  bool EvokesType(Handle type) const;
+  bool EvokesType(const Name &type) const;
 
   // Returns fingerprint for span phrase.
   uint64 Fingerprint() const;

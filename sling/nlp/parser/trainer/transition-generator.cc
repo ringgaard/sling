@@ -18,7 +18,7 @@
 
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
-#include "sling/nlp/parser/trainer/transition-generator.h" 
+#include "sling/nlp/parser/trainer/transition-generator.h"
 
 namespace sling {
 namespace nlp {
@@ -35,18 +35,18 @@ class FrameGraph {
     // Edge label.
     Handle role;
 
-    // Other end of the edge. 
+    // Other end of the edge.
     Handle neighbor;
 
     // Whether the edge is coming into this frame.
     bool incoming;
-      
+
     // Pointer to the reverse edge. Not owned.
-    Edge *inverse = nullptr; 
-        
+    Edge *inverse = nullptr;
+
     // Whether the edge has been used to output action(s).
     bool accounted = false;
-  };    
+  };
 
   // Information about a single frame.
   struct Node {
@@ -62,31 +62,31 @@ class FrameGraph {
   };
 
   ~FrameGraph() {
-    for (const auto &kv : entries_) delete kv.second;
+    for (const auto &n : nodes_) delete n.second;
   }
 
   // Retrieves the node for the frame 'handle'.
   Node *node(Handle handle) const {
-    auto it = entries_.find(handle);
-    return it != entries_.end() ? it->second : nullptr;
+    auto it = nodes_.find(handle);
+    return it != nodes_.end() ? it->second : nullptr;
   }
 
   // Gets or creates a node for 'handle'.
   Node *Get(Handle handle) {
-    auto it = entries_.find(handle);
-    if (it != entries_.end()) return it->second;
+    auto it = nodes_.find(handle);
+    if (it != nodes_.end()) return it->second;
 
     Node *e = new Node();
     e->handle = handle;
-    entries_[handle] = e;
+    nodes_[handle] = e;
     return e;
   }
 
  private:
-  HandleMap<Node *> entries_;
+  HandleMap<Node *> nodes_;
 };
 
-// Represents an action modulo attention indices.     
+// Represents an action modulo attention indices.
 struct Action {
   Action(ParserAction::Type type)
       : core(type), frame(nullptr), neighbor(nullptr) {}
@@ -96,21 +96,21 @@ struct Action {
   ParserAction core;                     // core action
   FrameGraph::Node *frame = nullptr;     // frame responsible for the action
   FrameGraph::Node *neighbor = nullptr;  // neighboring frame (if applicable)
-};  
+};
 
 // Map from token -> mentions starting/ending/both at it.
 struct TokenToMentions {
   void Start(const Span *span) {
     if (!starting.empty()) {
       QCHECK_GE(starting.back()->end(), span->end());
-    } 
+    }
     starting.emplace_back(span);
   }
-    
+
   void End(const Span *span) {
-    if (!ending.empty()) { 
+    if (!ending.empty()) {
       QCHECK_LE(ending.front()->begin(), span->begin());
-    }   
+    }
     ending.insert(ending.begin(), span);
   }
 
@@ -335,8 +335,7 @@ void CollectSpanActions(Store *store,
 void OutputActions(Store *store,
                    const FrameGraph &frame_graph,
                    std::deque<Action> *actions,
-                   std::function<void(const ParserAction &)> callback,
-                   std::function<void()> final_callback) {
+                   std::function<void(const ParserAction &)> callback) {
   Handles attention(store);
   while (!actions->empty()) {
     Action action = actions->front();
@@ -414,15 +413,13 @@ void OutputActions(Store *store,
       }
     }
   }
-  if (final_callback) final_callback();
 }
 
 }  // namespace
 
 void Generate(const Document &document,
               int begin, int end,
-              std::function<void(const ParserAction &)> callback,
-              std::function<void()> final_callback) {
+              std::function<void(const ParserAction &)> callback) {
   FrameGraph frame_graph;
   std::vector<TokenToMentions> token_to_mentions;
 
@@ -436,28 +433,12 @@ void Generate(const Document &document,
   CollectSpanActions(store, token_to_mentions, frame_graph, &actions);
 
   // Output all actions, including any CONNECT, ASSIGN etc.
-  OutputActions(store, frame_graph, &actions, callback, final_callback);
+  OutputActions(store, frame_graph, &actions, callback);
 }
 
-// Same as above, except doesn't require a 'final_callback'.
-void Generate(const Document &document,
-              int begin, int end,
-              std::function<void(const ParserAction &)> callback) {
-  Generate(document, begin, end, callback, nullptr);
-}
-
-// Same as above except uses [0, document.size()) as the token range.
-void Generate(const Document &document,
-              std::function<void(const ParserAction &)> callback,
-              std::function<void()> final_callback) {
-  Generate(document, 0, document.num_tokens(), callback, final_callback);
-}
-
-// Same as above except uses [0, document.size()) as the token range, and
-// doesn't use a final callback.
 void Generate(const Document &document,
               std::function<void(const ParserAction &)> callback) {
-  Generate(document, callback, nullptr);
+  Generate(document, 0, document.length(), callback);
 }
 
 }  // namespace nlp

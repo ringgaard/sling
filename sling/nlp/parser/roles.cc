@@ -41,7 +41,7 @@ void RoleGraph::Compute(const ParserState &state,
   edges_.clear();
   if (k > state.AttentionSize()) k = state.AttentionSize();
   for (int source = 0; source < k; ++source) {
-    Handle handle = state.Attention(source);
+    Handle handle = state.Attention(source).frame;
     const FrameDatum *frame = state.store()->GetFrame(handle);
     for (const Slot *slot = frame->begin(); slot < frame->end(); ++slot) {
       int target = -1;

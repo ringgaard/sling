@@ -193,23 +193,25 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
     int *create = data.Get(fm->frame_create_feature_);
     int *focus = data.Get(fm->frame_focus_feature_);
     for (int d = 0; d < fm->attention_depth_; ++d) {
-      int att = -1;
+      int token = -1;
       int created = -1;
       int focused = -1;
       if (d < state_->AttentionSize()) {
         // Get frame from attention buffer.
-        Handle frame = state_->Attention(d);
+        const auto &attention = state_->Attention(d);
 
         // Get end token for phrase that evoked frame.
-        att = state_->FrameEvokeEnd(d);
-        if (att != -1) att -= state_->begin() + 1;
+        if (attention.span != nullptr) {
+          token = attention.span->end();
+          if (token != -1) token -= state_->begin() + 1;
+        }
 
         // Get the step numbers that created and focused the frame.
-        created = state_->CreateStep(frame);
-        focused = state_->FocusStep(frame);
+        created = attention.created;
+        focused = attention.focused;
       }
-      if (lr != nullptr) lr[d] = att;
-      if (rl != nullptr) rl[d] = att;
+      if (lr != nullptr) lr[d] = token;
+      if (rl != nullptr) rl[d] = token;
       if (create != nullptr) create[d] = created;
       if (focus != nullptr) focus[d] = focused;
     }

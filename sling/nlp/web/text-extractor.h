@@ -18,7 +18,7 @@ namespace nlp {
 // Analysis results for web site.
 class WebsiteAnalysis {
  public:
-  // Add web page to analysis. Return false if this is duplicate page.
+  // Add web page to analysis. Return false if this is a duplicate page.
   bool AddPage(const string &url);
 
   // Add tag score.
@@ -76,7 +76,7 @@ class WebsiteAnalysis {
   int num_pages_ = 0;
 
   // Tag score map. The key is the nested tag signature and the value is the
-  // score. Positive scores means keep tag, negative scores means discard tag.
+  // score. Positive score means keep tag, negative score means discard tag.
   std::unordered_map<uint64, int> scores_;
 
   // Tag signatures for tags where some of the children must be kept.

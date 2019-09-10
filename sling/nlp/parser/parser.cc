@@ -46,7 +46,7 @@ void Parser::Load(Store *store, const string &model) {
   encoder_.Initialize(network_);
   encoder_.LoadLexicon(&flow);
 
-  // Load commons and action stores.
+  // Load commons store from parser model.
   myelin::Flow::Blob *commons = flow.DataBlock("commons");
   CHECK(commons != nullptr);
   StringDecoder decoder(store, commons->data, commons->size);
@@ -105,9 +105,11 @@ void Parser::Parse(Document *document) const {
       // Compute decoder activations.
       decoder.Compute();
 
-      // Apply the cascade.
+      // Run the cascade.
       ParserAction action;
       cascade.Compute(&activations, &state, &action, trace);
+
+      // Apply action to parser state.
       state.Apply(action);
 
       // Check if we are done.

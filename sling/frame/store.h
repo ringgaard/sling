@@ -643,6 +643,14 @@ struct FrameDatum : public Datum {
     return false;
   }
 
+  // Checks if frame has slot with value.
+  bool has(Handle name, Handle value) const {
+    for (const Slot *slot = begin(); slot < end(); ++slot) {
+      if (slot->name == name && slot->value == value) return true;
+    }
+    return false;
+  }
+
   // Checks if frame has isa: type.
   bool isa(Handle type) const {
     for (const Slot *slot = begin(); slot < end(); ++slot) {

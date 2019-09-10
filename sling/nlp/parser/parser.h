@@ -15,16 +15,10 @@
 #ifndef SLING_NLP_PARSER_PARSER_H_
 #define SLING_NLP_PARSER_PARSER_H_
 
-#include <limits>
 #include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
 
 #include "sling/base/logging.h"
-#include "sling/base/registry.h"
 #include "sling/base/types.h"
-#include "sling/file/file.h"
 #include "sling/frame/store.h"
 #include "sling/myelin/compiler.h"
 #include "sling/myelin/compute.h"
