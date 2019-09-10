@@ -58,6 +58,20 @@ cc_library(
 )
 
 cc_library(
+  name = "parser-features",
+  srcs = ["parser-features.cc"],
+  hdrs = ["parser-features.h"],
+  deps = [
+    ":parser-state",
+    ":roles",
+    ":trace",
+    "//sling/base",
+    "//sling/myelin:compute",
+    "//sling/myelin:rnn",
+  ],
+)
+
+cc_library(
   name = "cascade",
   srcs = ["cascade.cc"],
   hdrs = ["cascade.h"],
@@ -93,6 +107,7 @@ cc_library(
   deps = [
     ":action-table",
     ":cascade",
+    ":parser-features",
     ":parser-state",
     ":roles",
     ":trace",

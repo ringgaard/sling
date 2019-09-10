@@ -30,9 +30,17 @@ namespace nlp {
 // Parser state that represents the state of the transition-based parser.
 class ParserState {
  public:
+  // Position pushed on to the mark stack.
+  struct Marker {
+    Marker(int token, int step) : token(token), step(step) {}
+
+    int token;   // start token for the mark
+    int step;    // parse step when the mark was made
+  };
+
   // Initializes parse state.
   ParserState(Document *document, int begin, int end);
-  
+
   // Returns the underlying document.
   Document *document() const { return document_; }
 
@@ -44,6 +52,12 @@ class ParserState {
 
   // Returns current input token.
   int current() const { return current_; }
+
+  // Returns the current parse step.
+  int step() const { return step_; }
+
+  // Mark stack.
+  const std::vector<Marker> &marks() const { return marks_; }
 
   // Applies parser action to transition parser to new state. Caller should
   // ensure that 'action' is applicable using CanApply().
@@ -98,6 +112,18 @@ class ParserState {
   // the frame at the specified attention buffer index, -1 otherwise.
   int FrameEvokeEnd(int attention_index) const;
 
+  // Returns step where frame was created.
+  int CreateStep(Handle frame) const {
+    auto f = create_step_.find(frame);
+    return f != create_step_.end() ? f->second : -1;
+  }
+
+  // Returns step where frame was last brought into focus.
+  int FocusStep(Handle frame) const {
+    auto f = focus_step_.find(frame);
+    return f != focus_step_.end() ? f->second : -1;
+  }
+
  private:
   // Applies individual actions, which are assumed to be applicable.
   void Shift();
@@ -111,7 +137,7 @@ class ParserState {
   void Elaborate(int frame, Handle role, Handle type);
 
   // Adds frame to attention buffer, making it the new center of attention.
-  void Add(Handle handle) { attention_.push_back(handle); }
+  void Add(Handle frame);
 
   // Moves element in attention buffer to the center of attention.
   void Center(int index);
@@ -126,19 +152,30 @@ class ParserState {
   // Current input token.
   int current_;
 
+  // Current parse step.
+  int step_;
+
   // When we have performed the first STOP action, the parse is done.
   bool done_;
 
   // Attention buffer. This contains handles of frames in order of attention.
   Handles attention_;
 
-  // Token index for marked tokens.
-  std::vector<int> marks_;
+  // Stack with positions for marked tokens. The mark stack tracks the start of
+  // each mention.
+  std::vector<Marker> marks_;
 
   // (Source/Target frame handle, Frame type) for frames embedded or elaborated
   // at the current position. This is cleared once the position advances.
   std::vector<std::pair<Handle, Handle>> embed_;
   std::vector<std::pair<Handle, Handle>> elaborate_;
+
+  // Frame creation and focus steps.
+  HandleMap<int> create_step_;
+  HandleMap<int> focus_step_;
+
+  // Maximum mark depth.
+  static const int MAX_MARK_DEPTH = 5;
 };
 
 }  // namespace nlp

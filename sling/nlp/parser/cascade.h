@@ -138,7 +138,6 @@ class CascadeInstance {
   // The activation at index 'step' is used as input to all the delegates.
   // Adds the predicted and final actions to 'trace' if it is not nullptr.
   void Compute(myelin::Channel *activations,
-               int step,
                ParserState *state,
                ParserAction *output,
                Trace *trace = nullptr);

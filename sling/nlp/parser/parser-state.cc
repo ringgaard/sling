@@ -28,22 +28,23 @@ ParserState::ParserState(Document *document, int begin, int end)
       begin_(begin),
       end_(end),
       current_(begin),
+      step_(0),
       done_(false),
       attention_(document_->store()) {}
 
 string ParserState::DebugString() const {
-  static const int kMaxAttention = 10;
+  static const int MAX_ATTENTION = 10;
   string s =
       StrCat("Begin:", begin_, " End:", end_, " Current:", current_,
              " Done: ", (done_ ? "Y" : "N"), " AttentionSize: ",
              attention_.size(), "\n");
-  for (int i = 0; i < kMaxAttention; ++i) {
-    if (i == attention_.size()) break;
-    StrAppend(&s, "AttentionIndex: ", i, 
+  for (int i = 0; i < attention_.size(); ++i) {
+    if (i == MAX_ATTENTION) {
+      StrAppend(&s, "..and ", (attention_.size() - MAX_ATTENTION), " more.\n");
+      break;
+    }
+    StrAppend(&s, "AttentionIndex: ", i,
               " FrameType:", store()->DebugString(type(i)), "\n");
-  }
-  if (attention_.size() > kMaxAttention) {
-    StrAppend(&s, "..and ", (attention_.size() - kMaxAttention), " more.\n");
   }
 
   return s;
@@ -88,9 +89,10 @@ void ParserState::Apply(const ParserAction &action) {
       break;
 
     case ParserAction::CASCADE:
-      LOG(FATAL) << "CASCADE action shouldn't reach ParserState";
+      LOG(FATAL) << "Cannot apply CASCADE action";
       break;
   }
+  step_++;
 }
 
 // Returns if 'frame' has a 'role' slot whose value is 'value'.
@@ -106,7 +108,8 @@ bool ParserState::CanApply(const ParserAction &action) const {
   if (done_) return false;
   switch (action.type) {
     case ParserAction::CASCADE:
-      return false;
+      // Do not allow cacading back to the main cascade.
+      return action.delegate > 0;
 
     case ParserAction::SHIFT:
       // Do not allow shifting past the end of the input buffer.
@@ -117,18 +120,20 @@ bool ParserState::CanApply(const ParserAction &action) const {
       return current_ == end_;
 
     case ParserAction::MARK:
-      return current_ < end_ && marks_.size() < 5;
+      return current_ < end_ && marks_.size() < MAX_MARK_DEPTH;
 
     case ParserAction::EVOKE: {
-      int begin = current_;
-      int end = current_ + action.length;
-
+      int begin, end;
       if (action.length == 0) {
         // EVOKE paired with MARK.
-        if (marks_.size() == 0) return false;
-        begin = marks_.back();
+        if (marks_.empty()) return false;
+        begin = marks_.back().token;
         end = current_ + 1;
-      } 
+      } else {
+        // EVOKE with explicit length.
+        begin = current_;
+        end = current_ + action.length;
+      }
 
       // Check that phrase is inside the input buffer.
       if (end > end_) return false;
@@ -138,7 +143,8 @@ bool ParserState::CanApply(const ParserAction &action) const {
       if (crossing) return false;
 
       // Check for duplicates.
-      if (enclosing != nullptr && enclosing->begin() == begin &&
+      if (enclosing != nullptr &&
+          enclosing->begin() == begin &&
           enclosing->end() == end) {
         return !enclosing->Evokes(action.label);
       }
@@ -241,23 +247,32 @@ void ParserState::Stop() {
 
 void ParserState::Evoke(int length, Handle type) {
   // Create new frame.
-  Slot slot(Handle::isa(), type);
-  Handle h = store()->AllocateFrame(&slot, &slot + 1);
+  Handle frame;
+  if (type.IsNil()) {
+    // Allocate empty frame.
+    frame = store()->AllocateFrame(nullptr, nullptr);
+  } else {
+    // Allocate frame with type.
+    Slot slot(Handle::isa(), type);
+    frame = store()->AllocateFrame(&slot, &slot + 1);
+  }
 
   // Get or create a new mention.
-  int begin = current_;
-  int end = current_ + length;
+  int begin, end;
   if (length == 0) {
-    begin = marks_.back();
+    begin = marks_.back().token;
     end = current_ + 1;
     marks_.pop_back();
+  } else {
+    begin = current_;
+    end = current_ + length;
   }
-  auto *span = document_->AddSpan(begin, end);
+  Span *span = document_->AddSpan(begin, end);
   DCHECK(span != nullptr) << begin << " " << end;
-  span->Evoke(h);
+  span->Evoke(frame);
 
   // Add new frame to the attention buffer.
-  Add(h);
+  Add(frame);
 }
 
 void ParserState::Refer(int length, int index) {
@@ -265,19 +280,20 @@ void ParserState::Refer(int length, int index) {
   auto *span = document_->AddSpan(current_, current_ + length);
 
   // Refer to an existing frame.
-  Frame frame(store(), Attention(index));
+  Handle frame = Attention(index);
   span->Evoke(frame);
   Center(index);
 }
 
 void ParserState::Mark() {
-  marks_.emplace_back(current_);
+  marks_.emplace_back(current_, step_);
 }
 
 void ParserState::Connect(int source, Handle role, int target) {
   // Create new slot with the specified role linking source to target.
-  Frame source_frame(store(), Attention(source));
-  source_frame.Add(role, Attention(target));
+  Handle subject = Attention(source);
+  Handle object = Attention(target);
+  store()->Add(subject, role, object);
 
   // Move the source frame to the center of attention.
   Center(source);
@@ -285,8 +301,8 @@ void ParserState::Connect(int source, Handle role, int target) {
 
 void ParserState::Assign(int frame, Handle role, Handle value) {
   // Create new slot in the source frame.
-  Frame source_frame(store(), Attention(frame));
-  source_frame.Add(role, value);
+  Handle subject = Attention(frame);
+  store()->Add(subject, role, value);
 
   // Move the frame to the center of attention.
   Center(frame);
@@ -312,26 +328,34 @@ void ParserState::Embed(int frame, Handle role, Handle type) {
 
 void ParserState::Elaborate(int frame, Handle role, Handle type) {
   // Create new frame with the specified type.
+  Handle source = Attention(frame);
   Slot slot(Handle::isa(), type);
-  Handle h = store()->AllocateFrame(&slot, &slot + 1);
-
-  // Add link to new frame from source frame.
-  Frame source(store(), Attention(frame));
-  source.Add(role, h);
-  elaborate_.emplace_back(Attention(frame), type);
+  Handle target = store()->AllocateFrame(&slot, &slot + 1);
 
   // Add new frame to the attention buffer.
-  Add(h);
+  Add(target);
+
+  // Add link to new frame from source frame.
+  store()->Add(source, role, target);
+  elaborate_.emplace_back(Attention(frame), type);
 
   // Add new frame as a thematic frame to the document.
-  document_->AddTheme(h);
+  document_->AddTheme(target);
+}
+
+void ParserState::Add(Handle frame) {
+  attention_.push_back(frame);
+  create_step_[frame] = step_;
+  focus_step_[frame] = step_;
 }
 
 void ParserState::Center(int index) {
-  if (index == 0) return;  // already the center of attention
   Handle frame = Attention(index);
-  attention_.erase(attention_.end() - 1 - index);
-  attention_.push_back(frame);
+  if (index != 0) {
+    attention_.erase(attention_.end() - 1 - index);
+    attention_.push_back(frame);
+  }
+  focus_step_[frame] = step_;
 }
 
 void ParserState::GetFocus(int k, Handles *center) const {
