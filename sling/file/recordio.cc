@@ -494,6 +494,15 @@ bool RecordDatabase::Next(Record *record) {
   return false;
 }
 
+Status RecordDatabase::Rewind() {
+  for (auto *shard : shards_) {
+    Status s = shard->reader()->Rewind();
+    if (!s.ok()) return s;
+  }
+  current_shard_ = 0;
+  return Status::OK;
+}
+
 RecordWriter::RecordWriter(File *file, const RecordFileOptions &options)
     : file_(file) {
   // Allocate output buffer.

@@ -321,6 +321,12 @@ class RecordDatabase {
   // Retrieve the next record from the current shard.
   bool Next(Record *record);
 
+  // Return true if we have read all records in the database.
+  bool Done() { return current_shard_ >= shards_.size(); }
+
+  // Go to first record in the first shard.
+  Status Rewind();
+
   // Current shard.
   int current_shard() const { return current_shard_; }
 

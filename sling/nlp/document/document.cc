@@ -557,7 +557,7 @@ int Document::Locate(int position) const {
     int mid = index + width;
     if (tokens_[mid].begin() < position) {
       index = mid + 1;
-      len -=  width + 1;
+      len -= width + 1;
     } else {
       len = width;
     }
