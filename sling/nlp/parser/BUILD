@@ -131,3 +131,19 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "parser-trainer",
+  srcs = ["parser-trainer.cc"],
+  deps = [
+    ":action-table",
+    ":parser-action",
+    "//sling/base",
+    "//sling/frame:store",
+    "//sling/nlp/document:document",
+    "//sling/nlp/document:document-corpus",
+    "//sling/nlp/parser/trainer:transition-generator",
+    "//sling/task:learner",
+  ],
+  alwayslink = 1,
+)
+

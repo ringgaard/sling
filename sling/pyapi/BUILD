@@ -89,6 +89,8 @@ cc_library(
     "//sling/nlp/embedding:word-embeddings",
     "//sling/nlp/embedding:fact-plausibility",
 
+    "//sling/nlp/parser:parser-trainer",
+
     "//sling/nlp/ner:idf",
     "//sling/nlp/ner:labeler",
 

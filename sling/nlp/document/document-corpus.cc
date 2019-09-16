@@ -21,17 +21,17 @@ namespace nlp {
 
 DocumentCorpus::DocumentCorpus(Store *commons, const string &filepattern)
     : commons_(commons), corpus_(filepattern, RecordFileOptions()) {
-  docnames_ = new DocumentNames(commons);
+  docnames_ = commons->frozen() ? nullptr : new DocumentNames(commons);
 }
 
 DocumentCorpus::DocumentCorpus(Store *commons,
                                const std::vector<string> &filenames)
     : commons_(commons), corpus_(filenames, RecordFileOptions()) {
-  docnames_ = new DocumentNames(commons);
+  docnames_ = commons->frozen() ? nullptr : new DocumentNames(commons);
 }
 
 DocumentCorpus::~DocumentCorpus() {
-  docnames_->Release();
+  if (docnames_ != nullptr) docnames_->Release();
 }
 
 Document *DocumentCorpus::Next(Store *store) {
@@ -43,7 +43,7 @@ Document *DocumentCorpus::Next(Store *store) {
   CHECK(corpus_.Next(&record));
 
   // Decode document frame.
-  ArrayInputStream stream(record.key.data(), record.key.size());
+  ArrayInputStream stream(record.value.data(), record.value.size());
   InputParser parser(store, &stream);
   Frame frame = parser.Read().AsFrame();
   CHECK(frame.valid());

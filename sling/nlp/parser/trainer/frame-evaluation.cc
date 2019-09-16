@@ -18,7 +18,7 @@
 
 #include "sling/base/logging.h"
 #include "sling/frame/serialization.h"
-#include "sling/nlp/document/document-source.h"
+#include "sling/nlp/document/document-corpus.h"
 #include "sling/string/strcat.h"
 
 namespace sling {
@@ -30,24 +30,16 @@ class FileParallelCorpus : public ParallelCorpus {
   // Open corpora.
   FileParallelCorpus(Store *commons,
                      const string &gold_file_pattern,
-                     const string &test_file_pattern) {
-    commons_ = commons;
-    gold_corpus_ = DocumentSource::Create(gold_file_pattern);
-    test_corpus_ = DocumentSource::Create(test_file_pattern);
-  }
-
-  // Close corpora.
-  ~FileParallelCorpus() override {
-    delete gold_corpus_;
-    delete test_corpus_;
-  }
+                     const string &test_file_pattern)
+      :  commons_(commons),
+         gold_corpus_(commons, gold_file_pattern),
+         test_corpus_(commons, test_file_pattern) {}
 
   // Read next document pair from corpora.
   bool Next(Store **store, Document **golden, Document **predicted) override {
     *store = new Store(commons_);
-    *golden = gold_corpus_->Next(*store);
-    *predicted = test_corpus_->Next(*store);
-    count_++;
+    *golden = gold_corpus_.Next(*store);
+    *predicted = test_corpus_.Next(*store);
     if (*golden == nullptr) {
       CHECK(*predicted == nullptr);
       delete *store;
@@ -60,9 +52,8 @@ class FileParallelCorpus : public ParallelCorpus {
 
  private:
   Store *commons_;               // commons store for documents
-  DocumentSource *gold_corpus_;  // corpus with gold annotations
-  DocumentSource *test_corpus_;  // corpus with predicted annotations
-  int count_ = 0;
+  DocumentCorpus gold_corpus_;   // corpus with gold annotations
+  DocumentCorpus test_corpus_;   // corpus with predicted annotations
 };
 
 bool FrameEvaluation::Alignment::Map(Handle source, Handle target) {

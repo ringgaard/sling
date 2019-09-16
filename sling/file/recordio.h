@@ -331,6 +331,9 @@ class RecordDatabase {
   int current_shard() const { return current_shard_; }
 
  private:
+  // Skip forward until next shard that is not empty.
+  void Forward();
+
   // Shards in record database.
   std::vector<RecordIndex *> shards_;
 
