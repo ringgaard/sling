@@ -58,15 +58,15 @@ class ParserTrainer : public LearnerTask {
       for (const Token &t : document->tokens()) words[t.word()]++;
 
       // Update action table.
-      LOG(INFO) << "Document: " << document->PhraseText(0, document->length());
       Generate(*document, [&](const ParserAction &action) {
-        LOG(INFO) << action.ToString(&commons_);
+        actions_.Add(action);
       });
 
       delete document;
     }
 
     LOG(INFO) << "Word vocabulary: " << words.size();
+    LOG(INFO) << "Action vocabulary: " << actions_.NumActions();
   }
 
   // Worker thread for training model.

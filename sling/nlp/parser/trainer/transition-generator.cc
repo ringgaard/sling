@@ -212,7 +212,7 @@ void InitNode(
         edge->inverse = edge;
         continue;
       }
-      if (value.IsLocal()) {
+      if (value.IsAnonymous()) {
         auto *neighbor = frame_graph->Get(slot.value);
         auto *reverse = new FrameGraph::Edge(slot.name, true, handle);
         neighbor->edges.emplace_back(reverse);
@@ -232,8 +232,17 @@ void InitializeGeneration(
   HandleSet initialized;
   token_to_mentions->resize(end - begin);
 
+  std::vector<Span *> spans = document.spans();
+  std::sort(spans.begin(), spans.end(), [](Span *a, Span *b) {
+    if (a->begin() == b->begin()) {
+      return a->length() > b->length();
+    } else {
+      return a->begin() < b->begin();
+    }
+  });
+
   Handles evoked(document.store());
-  for (const Span *span : document.spans()) {
+  for (const Span *span : spans) {
     if (span->deleted() || span->begin() < begin || span->end() > end) continue;
 
     evoked.clear();
@@ -387,8 +396,7 @@ void OutputActions(Store *store,
         if (edge->accounted || edge->incoming) continue;
 
         FrameGraph::Node *neighbor = frame_graph.node(edge->neighbor);
-        if (neighbor == nullptr || neighbor->accounted ||
-            neighbor->evoked) {
+        if (neighbor == nullptr || neighbor->accounted || neighbor->evoked) {
           continue;
         }
         Action elaborate(ParserAction::EMBED, neighbor);
@@ -401,10 +409,8 @@ void OutputActions(Store *store,
 
       // ASSIGN.
       for (auto *edge : action.frame->edges) {
-        if (edge->accounted || edge->incoming ||
-            !edge->neighbor.IsGlobalRef()) {
-          continue;
-        }
+        if (edge->accounted || edge->incoming) continue;
+        if (store->GetFrame(edge->neighbor)->IsAnonymous()) continue;
         Action assign(ParserAction::ASSIGN, action.frame);
         assign.core.role = edge->role;
         assign.core.label = edge->neighbor;
