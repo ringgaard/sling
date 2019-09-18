@@ -410,7 +410,7 @@ void OutputActions(Store *store,
       // ASSIGN.
       for (auto *edge : action.frame->edges) {
         if (edge->accounted || edge->incoming) continue;
-        if (store->GetFrame(edge->neighbor)->IsAnonymous()) continue;
+        if (store->IsAnonymous(edge->neighbor)) continue;
         Action assign(ParserAction::ASSIGN, action.frame);
         assign.core.role = edge->role;
         assign.core.label = edge->neighbor;

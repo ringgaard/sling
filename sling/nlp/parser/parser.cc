@@ -60,7 +60,6 @@ void Parser::Load(Store *store, const string &model) {
   // Initialize action table.
   store_ = store;
   actions_.Init(store);
-  cascade_.set_actions(&actions_);
   roles_.Init(actions_);
 
   // Initialize decoder feature model.

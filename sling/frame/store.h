@@ -1056,6 +1056,10 @@ class Store {
   ProxyDatum *GetProxy(Handle h) { return Deref(h)->AsProxy(); }
   const ProxyDatum *GetProxy(Handle h) const { return Deref(h)->AsProxy(); }
 
+  // Check if object is public, i.e. a frame with an id.
+  bool IsPublic(Handle handle) const;
+  bool IsAnonymous(Handle handle) const { return !IsPublic(handle); }
+
   // Resolve handle by following is: chain.
   Handle Resolve(Handle handle) const;
 

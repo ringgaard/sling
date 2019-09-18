@@ -146,7 +146,6 @@ void CascadeInstance::Compute(myelin::Channel *activations,
                               ParserAction *output,
                               Trace *trace) {
   int current = 0;
-  const ActionTable *actions = cascade_->actions_;
   while (true) {
     // Execute the current delegate's instance.
     instances_[current]->Compute(activations, state->step(), output);
@@ -162,11 +161,7 @@ void CascadeInstance::Compute(myelin::Channel *activations,
     }
 
     // If we have an applicable action then we are done with the cascade.
-    if (!is_cascade &&
-        !actions->Beyond(actions->Index(*output)) &&
-        state->CanApply(*output)) {
-      return;
-    }
+    if (!is_cascade && state->CanApply(*output)) return;
 
     // Return a fallback action.
     cascade_->FallbackAction(state, output);

@@ -1189,6 +1189,14 @@ Handle Store::AllocateHandleSlow(Datum *object) {
   return handle;
 }
 
+bool Store::IsPublic(Handle handle) const {
+  if (!handle.IsRef()) return false;
+  if (handle.IsNil()) return false;
+  const Datum *datum = Deref(handle);
+  if (!datum->IsFrame()) return false;
+  return datum->AsFrame()->IsPublic();
+}
+
 Handle Store::Resolve(Handle handle) const {
   for (;;) {
     if (!handle.IsRef() || handle.IsNil()) return handle;
