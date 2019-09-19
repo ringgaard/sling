@@ -25,7 +25,6 @@
 #include "sling/myelin/flow.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/lexical-encoder.h"
-#include "sling/nlp/parser/action-table.h"
 #include "sling/nlp/parser/cascade.h"
 #include "sling/nlp/parser/parser-features.h"
 #include "sling/nlp/parser/parser-state.h"
@@ -77,9 +76,6 @@ class Parser {
 
   // Global store for parser.
   Store *store_ = nullptr;
-
-  // Parser action table.
-  ActionTable actions_;
 
   // Set of roles considered.
   RoleSet roles_;

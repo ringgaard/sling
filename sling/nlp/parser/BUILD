@@ -62,6 +62,7 @@ cc_library(
   srcs = ["parser-features.cc"],
   hdrs = ["parser-features.h"],
   deps = [
+    ":parser-action",
     ":parser-state",
     ":roles",
     ":trace",
@@ -117,7 +118,6 @@ cc_library(
     "//sling/myelin:compiler",
     "//sling/nlp/document",
     "//sling/nlp/document:lexical-encoder",
-    "//sling/string:strcat",
   ],
 )
 
@@ -138,10 +138,17 @@ cc_library(
     ":parser-action",
     "//sling/base",
     "//sling/frame:store",
+    "//sling/myelin:builder",
+    "//sling/myelin:compiler",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
     "//sling/nlp/document:document",
     "//sling/nlp/document:document-corpus",
+    "//sling/nlp/document:lexical-encoder",
+    "//sling/nlp/document:lexicon",
     "//sling/nlp/parser/trainer:transition-generator",
     "//sling/task:learner",
+    "//sling/util:unicode",
   ],
   alwayslink = 1,
 )

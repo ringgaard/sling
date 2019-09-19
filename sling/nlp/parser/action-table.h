@@ -71,6 +71,9 @@ class ActionTable {
   // Returns the ParserAction for integer index 'i'.
   const ParserAction &Action(int i) const { return actions_[i]; }
 
+  // Returns list of actions.
+  const std::vector<ParserAction> &actions() const { return actions_; }
+
   // Returns the maximum span length.
   int max_span_length() const { return max_span_length_; }
 

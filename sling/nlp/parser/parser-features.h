@@ -83,7 +83,7 @@ class ParserFeatureModel {
   int in_roles_size_ = 0;                    // max number of in roles
   int labeled_roles_size_ = 0;               // max number of unlabeled roles
   int unlabeled_roles_size_ = 0;             // max number of labeled roles
-  std::vector<int> mark_distance_bins_;      // distance->bin for mark tokens
+  std::vector<int> mark_distance_bins_;      // distance bins for mark tokens
 
   // Links.
   myelin::Tensor *lr_lstm_;                  // link to LR LSTM hidden layer

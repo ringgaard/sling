@@ -21,7 +21,7 @@
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/features.h"
 #include "sling/nlp/document/lexicon.h"
-#include "sling/string/strcat.h"
+#include "sling/nlp/parser/action-table.h"
 
 using namespace std::placeholders;
 
@@ -59,13 +59,14 @@ void Parser::Load(Store *store, const string &model) {
 
   // Initialize action table.
   store_ = store;
-  actions_.Init(store);
-  roles_.Init(actions_);
+  ActionTable actions;
+  actions.Init(store);
+  roles_.Init(actions.actions());
 
   // Initialize decoder feature model.
   myelin::Flow::Blob *spec = flow.DataBlock("spec");
   decoder_ = network_.GetCell("ff_trunk");
-  feature_model_.Init(decoder_, spec, &roles_, actions_.frame_limit());
+  feature_model_.Init(decoder_, spec, &roles_, actions.frame_limit());
 }
 
 void Parser::Parse(Document *document) const {
