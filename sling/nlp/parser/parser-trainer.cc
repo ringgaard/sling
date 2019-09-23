@@ -27,6 +27,7 @@
 #include "sling/nlp/document/lexical-encoder.h"
 #include "sling/nlp/document/lexicon.h"
 #include "sling/nlp/parser/parser-action.h"
+#include "sling/nlp/parser/roles.h"
 #include "sling/nlp/parser/trainer/transition-generator.h"
 #include "sling/util/unicode.h"
 
@@ -58,6 +59,8 @@ class ParserTrainer : public LearnerTask {
     task->Fetch("in_roles_size", &in_roles_size_);
     task->Fetch("labeled_roles_size", &labeled_roles_size_);
     task->Fetch("unlabeled_roles_size", &unlabeled_roles_size_);
+    task->Fetch("roles_dim", &roles_dim_);
+    task->Fetch("activations_dim", &activations_dim_);
 
     // Open training and evaluation corpora.
     training_corpus_ =
@@ -134,9 +137,12 @@ class ParserTrainer : public LearnerTask {
 
       delete document;
     }
+    roles_.Init(action_table_);
 
     LOG(INFO) << "Word vocabulary: " << words_.size();
     LOG(INFO) << "Action vocabulary: " << action_table_.size();
+    LOG(INFO) << "Role set: " << roles_.size();
+
   }
 
   // Add word to word vocabulary.
@@ -181,6 +187,50 @@ class ParserTrainer : public LearnerTask {
     } else {
       lstm = encoder_.Build(flow, *library, spec_, nullptr, lstm_dim_, false);
     }
+
+    // Build parser decoder.
+    FlowBuilder f(flow, "ff_trunk");
+    std::vector<Flow::Variable *> features;
+
+    // Add inputs for recurrent channels.
+    auto *lr_lstm = f.Placeholder("lr_lstm", DT_FLOAT, {1, lstm_dim_}, true);
+    auto *rl_lstm = f.Placeholder("rl_lstm", DT_FLOAT, {1, lstm_dim_}, true);
+    auto *steps = f.Placeholder("steps", DT_FLOAT, {1, activations_dim_}, true);
+
+    // Role features.
+    if (in_roles_size_ > 0) {
+      features.push_back(f.Feature("in-roles", roles_.size() * frame_limit_,
+                                   in_roles_size_, roles_dim_));
+    }
+    if (out_roles_size_ > 0) {
+      features.push_back(f.Feature("out-roles", roles_.size() * frame_limit_,
+                                   out_roles_size_, roles_dim_));
+    }
+    if (labeled_roles_size_ > 0) {
+      features.push_back(f.Feature("labeled-roles",
+                                   roles_.size() * frame_limit_ * frame_limit_,
+                                   labeled_roles_size_, roles_dim_));
+    }
+    if (unlabeled_roles_size_ > 0) {
+      features.push_back(f.Feature("unlabeled-roles",
+                                   frame_limit_ * frame_limit_,
+                                   unlabeled_roles_size_, roles_dim_));
+    }
+
+    // Concatenate mapped feature inputs.
+    auto *fv = f.Concat(features);
+    int fvsize = fv->dim(1);
+
+    // Feed-forward layer.
+    auto *W = f.Random(f.Parameter("W0", DT_FLOAT, {fvsize, activations_dim_}));
+    auto *b = f.Random(f.Parameter("b0", DT_FLOAT, {1, activations_dim_}));
+    auto *activations = f.Name(f.Relu(f.Add(f.MatMul(fv, W), b)), "activation");
+    activations->set_in()->set_out()->set_ref();
+
+    // Link recurrences.
+    flow->Connect({lstm.lr, lr_lstm});
+    flow->Connect({lstm.rl, rl_lstm});
+    flow->Connect({steps, activations});
   }
 
  private:
@@ -199,6 +249,9 @@ class ParserTrainer : public LearnerTask {
   // Parser actions.
   std::vector<ParserAction> action_table_;
   std::unordered_map<ParserAction, int, ParserActionHash> action_map_;
+
+  // Role set.
+  RoleSet roles_;
 
   // Lexical feature specification for encoder.
   LexicalFeatures::Spec spec_;
@@ -219,10 +272,12 @@ class ParserTrainer : public LearnerTask {
   int frame_limit_ = 5;
   int attention_depth_ = 5;
   int history_size_ = 5;
-  int out_roles_size_ = 16;
-  int in_roles_size_ = 16;
-  int labeled_roles_size_ = 16;
-  int unlabeled_roles_size_ = 16;
+  int out_roles_size_ = 32;
+  int in_roles_size_ = 32;
+  int labeled_roles_size_ = 32;
+  int unlabeled_roles_size_ = 32;
+  int roles_dim_ = 16;
+  int activations_dim_ = 128;
   std::vector<int> mark_distance_bins_{0, 1, 2, 3, 6, 10, 15, 20};
 };
 
