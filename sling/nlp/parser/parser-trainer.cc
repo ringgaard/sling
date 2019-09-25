@@ -27,6 +27,7 @@
 #include "sling/nlp/document/lexical-encoder.h"
 #include "sling/nlp/document/lexicon.h"
 #include "sling/nlp/parser/parser-action.h"
+#include "sling/nlp/parser/parser-features.h"
 #include "sling/nlp/parser/roles.h"
 #include "sling/nlp/parser/trainer/transition-generator.h"
 #include "sling/util/unicode.h"
@@ -61,6 +62,9 @@ class ParserTrainer : public LearnerTask {
     task->Fetch("unlabeled_roles_size", &unlabeled_roles_size_);
     task->Fetch("roles_dim", &roles_dim_);
     task->Fetch("activations_dim", &activations_dim_);
+    task->Fetch("link_dim_lstm", &link_dim_lstm_);
+    task->Fetch("link_dim_ff", &link_dim_ff_);
+    task->Fetch("mark_dim", &mark_dim_);
 
     // Open training and evaluation corpora.
     training_corpus_ =
@@ -99,6 +103,9 @@ class ParserTrainer : public LearnerTask {
     compiler_.Compile(&flow_, &net_);
 
     // Initialize model.
+    feature_model_.Init(net_.GetCell("ff_trunk"),
+                        flow_.DataBlock("spec"),
+                        &roles_, frame_limit_);
     encoder_.Initialize(net_);
     //model_.Initialize(net_);
     //loss_.Initialize(net_);
@@ -191,10 +198,11 @@ class ParserTrainer : public LearnerTask {
     // Build parser decoder.
     FlowBuilder f(flow, "ff_trunk");
     std::vector<Flow::Variable *> features;
+    Flow::Blob *spec = flow->AddBlob("spec", "");
 
     // Add inputs for recurrent channels.
-    auto *lr_lstm = f.Placeholder("lr_lstm", DT_FLOAT, {1, lstm_dim_}, true);
-    auto *rl_lstm = f.Placeholder("rl_lstm", DT_FLOAT, {1, lstm_dim_}, true);
+    auto *lr = f.Placeholder("link/lr_lstm", DT_FLOAT, {1, lstm_dim_}, true);
+    auto *rl = f.Placeholder("link/rl_lstm", DT_FLOAT, {1, lstm_dim_}, true);
     auto *steps = f.Placeholder("steps", DT_FLOAT, {1, activations_dim_}, true);
 
     // Role features.
@@ -217,6 +225,38 @@ class ParserTrainer : public LearnerTask {
                                    unlabeled_roles_size_, roles_dim_));
     }
 
+
+    // Link features.
+    features.push_back(LinkedFeature(&f, "frame-creation-steps",
+                                     steps, frame_limit_, link_dim_ff_));
+    features.push_back(LinkedFeature(&f, "frame-focus-steps",
+                                     steps, frame_limit_, link_dim_ff_));
+    features.push_back(LinkedFeature(&f, "history",
+                                     steps, history_size_, link_dim_ff_));
+    features.push_back(LinkedFeature(&f, "frame-end-lr",
+                                     lr, frame_limit_, link_dim_lstm_));
+    features.push_back(LinkedFeature(&f, "frame-end-rl",
+                                     rl, frame_limit_, link_dim_lstm_));
+    features.push_back(LinkedFeature(&f, "lr", lr, 1, link_dim_lstm_));
+    features.push_back(LinkedFeature(&f, "rl", rl, 1, link_dim_lstm_));
+
+    // Mark features.
+    features.push_back(f.Feature("mark-distance",
+                                 mark_distance_bins_.size() + 1,
+                                 mark_depth_, mark_dim_));
+    features.push_back(LinkedFeature(&f, "mark-lr",
+                                     lr, mark_depth_, link_dim_lstm_));
+    features.push_back(LinkedFeature(&f, "mark-rl",
+                                     rl, mark_depth_, link_dim_lstm_));
+    features.push_back(LinkedFeature(&f, "mark-step",
+                                     steps, mark_depth_, link_dim_ff_));
+    string bins;
+    for (int d : mark_distance_bins_) {
+      if (!bins.empty()) bins.push_back(' ');
+      bins.append(std::to_string(d));
+    }
+    spec->SetAttr("mark_distance_bins", bins);
+
     // Concatenate mapped feature inputs.
     auto *fv = f.Concat(features);
     int fvsize = fv->dim(1);
@@ -224,13 +264,32 @@ class ParserTrainer : public LearnerTask {
     // Feed-forward layer.
     auto *W = f.Random(f.Parameter("W0", DT_FLOAT, {fvsize, activations_dim_}));
     auto *b = f.Random(f.Parameter("b0", DT_FLOAT, {1, activations_dim_}));
-    auto *activations = f.Name(f.Relu(f.Add(f.MatMul(fv, W), b)), "activation");
+    auto *activations = f.Name(f.Relu(f.Add(f.MatMul(fv, W), b)), "hidden");
     activations->set_in()->set_out()->set_ref();
 
     // Link recurrences.
-    flow->Connect({lstm.lr, lr_lstm});
-    flow->Connect({lstm.rl, rl_lstm});
+    flow->Connect({lstm.lr, lr});
+    flow->Connect({lstm.rl, rl});
     flow->Connect({steps, activations});
+
+    // Build gradient function decoder.
+    if (learn) {
+      Gradient(flow, f.func(), *library);
+    }
+  }
+
+  // Build linked feature.
+  static Flow::Variable *LinkedFeature(FlowBuilder *f,
+                                       const string &name,
+                                       Flow::Variable *embeddings,
+                                       int size, int dim) {
+    int link_dim = embeddings->dim(1);
+    auto *features = f->Placeholder(name, DT_INT32, {1, size});
+    auto *oov = f->Parameter(name + "_oov", DT_FLOAT, {1, link_dim});
+    auto *gather = f->Gather(embeddings, features, oov);
+    auto *transform = f->Parameter(name + "_transform", DT_FLOAT,
+                                   {link_dim, dim});
+    return f->Reshape(f->MatMul(gather, transform), {1, size * dim});
   }
 
  private:
@@ -264,6 +323,9 @@ class ParserTrainer : public LearnerTask {
   // Document input encoder.
   LexicalEncoder encoder_;
 
+  // Parser feature model.
+  ParserFeatureModel feature_model_;
+
   // Model dimensions.
   int lstm_dim_ = 256;
   int max_source_ = 5;
@@ -278,6 +340,9 @@ class ParserTrainer : public LearnerTask {
   int unlabeled_roles_size_ = 32;
   int roles_dim_ = 16;
   int activations_dim_ = 128;
+  int link_dim_lstm_ = 32;
+  int link_dim_ff_ = 64;
+  int mark_dim_ = 32;
   std::vector<int> mark_distance_bins_{0, 1, 2, 3, 6, 10, 15, 20};
 };
 

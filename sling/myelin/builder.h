@@ -336,6 +336,10 @@ class FlowBuilder : public Scope {
     int n = f->rank() == 0 ? 1 : f->dim(1);
     return Op("Gather", {M, f}, M->type, {n, M->dim(1)});
   }
+  Variable *Gather(Variable *M, Variable *f, Variable *oov) {
+    int n = f->rank() == 0 ? 1 : f->dim(1);
+    return Op("Gather", {M, f, oov}, M->type, {n, M->dim(1)});
+  }
   Variable *GatherSum(Variable *M, Variable *f) {
     return Op("GatherSum", {M, f}, M->type, {1, M->dim(1)});
   }

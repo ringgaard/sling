@@ -136,6 +136,7 @@ cc_library(
   srcs = ["parser-trainer.cc"],
   deps = [
     ":parser-action",
+    ":parser-features",
     ":roles",
     "//sling/base",
     "//sling/frame:store",
