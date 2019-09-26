@@ -1216,14 +1216,14 @@ class PoolingGather : public Kernel {
   Pooling pooling_;  // pooling operation for combining vectors
 };
 
-// Add sparse (scaled) input to variable.
-class ScatterAdd : public Kernel {
+// Accumulate sparse (scaled) input.
+class AssignAddScatter : public Kernel {
  public:
-  ScatterAdd(bool scale) : scale_(scale) {}
+  AssignAddScatter(bool scale) : scale_(scale) {}
 
   string Name() override { return Operation(); }
   string Operation() override {
-    return scale_ ? "ScatterMulAdd" : "ScatterAdd";
+    return scale_ ? "AssignAddMulScatter" : "AssignAddScatter";
   }
 
   bool Supports(Step *step) override {
@@ -1986,9 +1986,37 @@ class UpdateTransformer : public Transformer {
   string Name() override { return "UpdateTransformer"; }
 
   bool Transform(Flow *flow) override {
-    int updates = 0;
+    bool updated = false;
+    bool again = true;
+    while (again) {
+      again = false;
+      if (TransformMatMul(flow)) {
+        again = true;
+        updated = true;
+      }
+      if (TransformAddScatter(flow)) {
+        again = true;
+        updated = true;
+      }
+      //if (TransformDoubleSparseUpdate(flow)) {
+      //  again = true;
+      //  updated = true;
+      //}
+      if (TransformSparseUpdate(flow)) {
+        again = true;
+        updated = true;
+      }
+      if (TransformScaledSparseUpdate(flow)) {
+        again = true;
+        updated = true;
+      }
+    }
+    return updated;
+  }
 
-    // Transform matrix multiplication update.
+  // Transform matrix multiplication updates.
+  bool TransformMatMul(Flow *flow) {
+    int updates = 0;
     for (Flow::Operation *op : flow->Find("MatMul|1:Add|1:Assign")) {
       Flow::Operation *assign = op;
       Flow::Operation *add = assign->inputs[1]->producer;
@@ -2001,8 +2029,45 @@ class UpdateTransformer : public Transformer {
       flow->Fuse(assign, flow->Fuse(add, matmul, ""), "AssignAddMatMul", true);
       updates++;
     }
+    return updates > 0;
+  }
 
-    // Transform double sparse update.
+  // Transform sparse accumulating updates.
+  bool TransformAddScatter(Flow *flow) {
+    // Fuse Scatter and Add ops.
+    int updates = 0;
+    for (Flow::Operation *op : flow->Find("Scatter|1:Add")) {
+      Flow::Operation *add = op;
+      Flow::Operation *scatter = add->inputs[1]->producer;
+      if (scatter->outputs[0]->usages() != 1) continue;
+      if (add->inputs[0]->shape != add->inputs[1]->shape) continue;
+
+      LOG(INFO) << "AddScatter: " << scatter->name << "->" << add->name;
+      flow->Fuse(add, scatter, "AddScatter", true);
+      updates++;
+    }
+
+    // Find chains of Scatter->AddScatter*->Add and replace the first Scatter
+    // and the last Add with one AddScatter op.
+    for (Flow::Operation *op : flow->Find("Scatter|AddScatter")) {
+      Flow::Operation *scatter = op->inputs[0]->producer;
+      while (op->type == "AddScatter") {
+        Flow::Variable *v = op->outputs[0];
+        if (v->usages() != 1) break;
+        op = v->consumers[0];
+      }
+      if (op->type != "Add") continue;
+
+      // TODO: replace add with scatter add (and move the f and M inputs)
+      // and eliminate original scatter.
+      LOG(INFO) << "Raise " << scatter->name << " to " << op->name;
+    }
+    return updates > 0;
+  }
+
+  // Transform double sparse updates.
+  bool TransformDoubleSparseUpdate(Flow *flow) {
+    int updates = 0;
     for (Flow::Operation *op : flow->Find("Scatter|1:Add|1:Add|1:Assign")) {
       Flow::Operation *assign = op;
       Flow::Operation *add1 = assign->inputs[1]->producer;
@@ -2038,8 +2103,12 @@ class UpdateTransformer : public Transformer {
 
       updates++;
     }
+    return updates > 0;
+  }
 
-    // Transform sparse update.
+  // Transform sparse updates.
+  bool TransformSparseUpdate(Flow *flow) {
+    int updates = 0;
     for (Flow::Operation *op : flow->Find("Scatter|1:Add|1:Assign")) {
       Flow::Operation *assign = op;
       Flow::Operation *add = assign->inputs[1]->producer;
@@ -2048,20 +2117,24 @@ class UpdateTransformer : public Transformer {
       if (add->outputs[0]->usages() != 1) continue;
       if (scatter->outputs[0]->usages() != 1) continue;
 
-      flow->Fuse(assign, flow->Fuse(add, scatter, ""), "ScatterAdd", true);
+      Flow::Operation *add_scatter = flow->Fuse(add, scatter, "");
+      flow->Fuse(assign, add_scatter, "AssignAddScatter", true);
       updates++;
     }
+    return updates > 0;
+  }
 
-    // Transform sparse update scaling.
-    for (Flow::Operation *op : flow->Find("Mul|2:ScatterAdd")) {
+  // Transform sparse update scalings.
+  bool TransformScaledSparseUpdate(Flow *flow) {
+    int updates = 0;
+    for (Flow::Operation *op : flow->Find("Mul|2:AssignAddScatter")) {
       Flow::Operation *scatter = op;
       Flow::Operation *mul = scatter->inputs[2]->producer;
       if (scatter->indegree() != 3) continue;
       if (mul->outputs[0]->usages() != 1) continue;
-      flow->Fuse(scatter, mul, "ScatterMulAdd");
+      flow->Fuse(scatter, mul, "AssignAddMulScatter");
       updates++;
     }
-
     return updates > 0;
   }
 };
@@ -2109,8 +2182,8 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new PoolingGather(PoolingGather::SUM));
   library->Register(new PoolingGather(PoolingGather::AVG));
   library->Register(new PoolingGather(PoolingGather::MAX));
-  library->Register(new ScatterAdd(false));
-  library->Register(new ScatterAdd(true));
+  library->Register(new AssignAddScatter(false));
+  library->Register(new AssignAddScatter(true));
 
   library->Register(new Reduce("Sum", REDUCE_ADD));
   library->Register(new Reduce("Product", REDUCE_MUL));

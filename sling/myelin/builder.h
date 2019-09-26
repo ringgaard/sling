@@ -368,8 +368,8 @@ class FlowBuilder : public Scope {
     return Op("Assign", {var, value})->set_ref();
   }
 
-  Operation *ScatterAdd(Variable *M, Variable *f, Variable *v) {
-    return RawOp("ScatterAdd", {M, f, v});
+  Operation *AssignAddScatter(Variable *M, Variable *f, Variable *v) {
+    return RawOp("AssignAddScatter", {M, f, v});
   }
 
   // Concatenation.
