@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <set>
+
 #include "sling/myelin/compute.h"
 #include "sling/myelin/macro-assembler.h"
 #include "sling/myelin/simd-assembler.h"
@@ -1994,14 +1996,10 @@ class UpdateTransformer : public Transformer {
         again = true;
         updated = true;
       }
-      if (TransformAddScatter(flow)) {
+      if (TransformDistributiveUpdate(flow)) {
         again = true;
         updated = true;
       }
-      //if (TransformDoubleSparseUpdate(flow)) {
-      //  again = true;
-      //  updated = true;
-      //}
       if (TransformSparseUpdate(flow)) {
         again = true;
         updated = true;
@@ -2032,75 +2030,37 @@ class UpdateTransformer : public Transformer {
     return updates > 0;
   }
 
-  // Transform sparse accumulating updates.
-  bool TransformAddScatter(Flow *flow) {
-    // Fuse Scatter and Add ops.
-    int updates = 0;
-    for (Flow::Operation *op : flow->Find("Scatter|1:Add")) {
-      Flow::Operation *add = op;
-      Flow::Operation *scatter = add->inputs[1]->producer;
-      if (scatter->outputs[0]->usages() != 1) continue;
-      if (add->inputs[0]->shape != add->inputs[1]->shape) continue;
-
-      LOG(INFO) << "AddScatter: " << scatter->name << "->" << add->name;
-      flow->Fuse(add, scatter, "AddScatter", true);
-      updates++;
-    }
-
-    // Find chains of Scatter->AddScatter*->Add and replace the first Scatter
-    // and the last Add with one AddScatter op.
-    for (Flow::Operation *op : flow->Find("Scatter|AddScatter")) {
-      Flow::Operation *scatter = op->inputs[0]->producer;
-      while (op->type == "AddScatter") {
-        Flow::Variable *v = op->outputs[0];
-        if (v->usages() != 1) break;
-        op = v->consumers[0];
+  // Transform distributive scatter udates.
+  bool TransformDistributiveUpdate(Flow *flow) {
+    // Find assignments for scatter operations.
+    std::set<Flow::Operation *> scatter_assigns;
+    for (Flow::Operation *op : flow->Find("Scatter")) {
+      while (op->outdegree() == 1 && op->outputs[0]->usages() == 1) {
+        op = op->outputs[0]->consumers[0];
       }
-      if (op->type != "Add") continue;
-
-      // TODO: replace add with scatter add (and move the f and M inputs)
-      // and eliminate original scatter.
-      LOG(INFO) << "Raise " << scatter->name << " to " << op->name;
+      if (op->type == "Assign") scatter_assigns.insert(op);
     }
-    return updates > 0;
-  }
 
-  // Transform double sparse updates.
-  bool TransformDoubleSparseUpdate(Flow *flow) {
+    // Split additive updates.
     int updates = 0;
-    for (Flow::Operation *op : flow->Find("Scatter|1:Add|1:Add|1:Assign")) {
-      Flow::Operation *assign = op;
-      Flow::Operation *add1 = assign->inputs[1]->producer;
+    for (Flow::Operation *op : flow->Find("Add|1:Add|1:Assign")) {
+      Flow::Operation *assign1 = op;
+      Flow::Operation *add1 = assign1->inputs[1]->producer;
       Flow::Operation *add2 = add1->inputs[1]->producer;
-      Flow::Operation *scatter1 = add2->inputs[1]->producer;
-      Flow::Operation *scatter2 = add2->inputs[0]->producer;
+      Flow::Variable *target = assign1->inputs[0];
 
-      if (assign->inputs[0] != add1->inputs[0]) continue;
       if (add1->outputs[0]->usages() != 1) continue;
       if (add2->outputs[0]->usages() != 1) continue;
-      if (scatter2->type != "Scatter") continue;
+      if (add1->inputs[0] != target) continue;
+      if (scatter_assigns.count(assign1) == 0) continue;
 
-      Flow::Variable *target = assign->inputs[0];
-      if (target != add1->inputs[0]) continue;
-
-      Flow::Variable *s1 = scatter1->outputs[0];
-      Flow::Variable *s2 = scatter2->outputs[0];
-      Flow::Variable *a2 = add2->outputs[0];
-      if (s1->usages() != 1) continue;
-      if (s2->usages() != 1) continue;
-
-      // Decompose scatter updates.
-      add1->RemoveInput(a2);
-      add2->RemoveInput(s1);
-      add2->RemoveInput(s2);
-      add1->AddInput(s1);
-      add2->AddInput(target);
-      add2->AddInput(s2);
-      string name = flow->OpName(assign->name);
-      auto *a = flow->AddOperation(add2->func, name, "Assign");
-      a->AddInput(target);
-      a->AddInput(a2);
-
+      // Split into two accumulative updates.
+      Flow::Function *func = assign1->func;
+      Flow::Operation *assign2 = flow->AddOperation(func, "", "Assign");
+      assign2->AddInput(target);
+      assign2->AddInput(add2->outputs[0]);
+      add1->ReplaceInput(add1->inputs[1], add2->inputs[0]);
+      add2->ReplaceInput(add2->inputs[0], target);
       updates++;
     }
     return updates > 0;
