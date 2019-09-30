@@ -592,8 +592,8 @@ class Builder:
     op.add_input(x)
     op.add_input(y)
 
-  def scatter_add(self, m, f, v, ref=False, name=None):
-    op = self.rawop("ScatterAdd", name)
+  def assign_add_scatter(self, m, f, v, ref=False, name=None):
+    op = self.rawop("AssignAddScatter", name)
     op.add_input(m)
     op.add_input(f)
     op.add_input(v)

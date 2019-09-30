@@ -41,9 +41,6 @@ class DocumentCorpus {
   void Rewind();
 
  private:
-  // Commons store for documents.
-  Store *commons_;
-
   // Record files with documents.
   RecordDatabase corpus_;
 

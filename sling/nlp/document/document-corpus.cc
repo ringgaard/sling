@@ -20,13 +20,13 @@ namespace sling {
 namespace nlp {
 
 DocumentCorpus::DocumentCorpus(Store *commons, const string &filepattern)
-    : commons_(commons), corpus_(filepattern, RecordFileOptions()) {
+    : corpus_(filepattern, RecordFileOptions()) {
   docnames_ = commons->frozen() ? nullptr : new DocumentNames(commons);
 }
 
 DocumentCorpus::DocumentCorpus(Store *commons,
                                const std::vector<string> &filenames)
-    : commons_(commons), corpus_(filenames, RecordFileOptions()) {
+    : corpus_(filenames, RecordFileOptions()) {
   docnames_ = commons->frozen() ? nullptr : new DocumentNames(commons);
 }
 

@@ -221,7 +221,8 @@ void IntroAnnotator::Annotate(SpanChart *chart) {
 
   // Find begining of bolded span.
   int begin = -1;
-  for (int b = 0; b < std::min(chart->size(), max_offset); ++b) {
+  int blimit = chart->size() < max_offset ? chart->size() : max_offset;
+  for (int b = 0; b < blimit; ++b) {
     if (chart->token(b).style() & BOLD_BEGIN) {
       begin = b;
       break;

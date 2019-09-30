@@ -90,7 +90,6 @@ class ParserFeatureModel {
   myelin::Tensor *rl_lstm_;                  // link to RL LSTM hidden layer
   myelin::Tensor *steps_;                    // link to FF step hidden layer
   myelin::Tensor *hidden_;                   // link to FF hidden layer output
-  myelin::Tensor *output_;                   // link to FF logit layer output
 
   friend class ParserFeatureExtractor;
 };

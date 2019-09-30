@@ -763,13 +763,37 @@ def gather_test(n, d, s):
   v = f.gather(emb, ind)
   check(flow, (n, d, s), 0, n)
 
+def gather_sum_test(n, d, s):
+  flow = myelin.Flow()
+  f = flow.define("gather")
+  emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
+  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  v = f.gather_sum(emb, ind)
+  check(flow, (n, d, s), 0, n)
+
+def gather_max_test(n, d, s):
+  flow = myelin.Flow()
+  f = flow.define("gather")
+  emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
+  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  v = f.gather_max(emb, ind)
+  check(flow, (n, d, s), 0, n)
+
+def gather_avg_test(n, d, s):
+  flow = myelin.Flow()
+  f = flow.define("gather")
+  emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
+  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  v = f.gather_avg(emb, ind)
+  check(flow, (n, d, s), 0, n, rtol=1e-3)
+
 def scatter_add_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("scatter_add")
   m = f.var("m", dt, [n, d])
   ind = f.var("ind", myelin.DT_INT32, [1, s])
   v = f.var("v", dt, [1, d])
-  f.scatter_add(m, ind, v)
+  f.assign_add_scatter(m, ind, v)
   check(flow, (n, d, s), 0, n, check=[m])
 
 def negfold_test(n):
