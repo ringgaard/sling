@@ -35,7 +35,7 @@ typemap = {
   "f": DT_FLOAT32,
   "d": DT_FLOAT64,
   "i": DT_INT32,
-  "l": DT_INT32,
+  "l": DT_INT64,
   "B": DT_INT8,
   "h": DT_INT16,
   "b": DT_INT8,

@@ -65,7 +65,7 @@ class SIMDGenerator {
   // Multiply src1 and src2 and store it in dst.
   virtual void Mul(int dst, int src1, const jit::Operand &src2) = 0;
 
-  // Multiply src1 and src2 and add it to dst. If the keep flag is false the
+  // Multiply src1 and src2 and add it to dst. If the retain flag is false the
   // contents of src1 can possibly be destroyed.
   virtual void MulAdd(int dst, int src1, const jit::Operand &src2,
                       bool retain) = 0;

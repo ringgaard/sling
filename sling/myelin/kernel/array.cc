@@ -25,38 +25,6 @@ namespace myelin {
 
 using namespace jit;
 
-// Allocate registers for unrolling.
-static int SIMDUnrolls(int size, int vecsize, int max_unrolls) {
-  int unrolls = 0;
-  for (int i = 1; i <= max_unrolls; ++i) {
-    int batch_size = i * vecsize;
-    if (size >= batch_size && size % batch_size == 0) unrolls = i;
-  }
-  return unrolls;
-}
-
-static int AllocateYMMUnrolls(MacroAssembler *masm,
-                              int size,
-                              int max_unrolls,
-                              std::vector<YMMRegister> *regs) {
-  int unrolls = SIMDUnrolls(size, 8, max_unrolls);
-  for (int i = 0; i < std::max(unrolls, 1); ++i) {
-    regs->push_back(masm->mm().allocy());
-  }
-  return unrolls;
-}
-
-static int AllocateZMMUnrolls(MacroAssembler *masm,
-                              int size,
-                              int max_unrolls,
-                              std::vector<ZMMRegister> *regs) {
-  int unrolls = SIMDUnrolls(size, 16, max_unrolls);
-  for (int i = 0; i < std::max(unrolls, 1); ++i) {
-    regs->push_back(masm->mm().allocz());
-  }
-  return unrolls;
-}
-
 // Reshape tensor while preserving the underlying data.
 class Reshape : public Kernel {
  public:
@@ -656,10 +624,11 @@ class SingleGather : public Kernel {
     Tensor *f = step->input(1);
     Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
     Tensor *v = step->output(0);
+    Type type = M->type();
     if (f->type() != DT_INT32) return false;
-    if (M->type() != DT_FLOAT || M->rank() != 2) return false;
-    if (v->type() != DT_FLOAT) return false;
-    if (oov != nullptr && oov->type() != DT_FLOAT) return false;
+    if (M->rank() != 2) return false;
+    if (v->type() != type) return false;
+    if (oov != nullptr && oov->type() != type) return false;
     int n = f->elements();
     int d = M->dim(1);
     int r = v->rank() - 1;
@@ -757,10 +726,11 @@ class MultiGather : public Kernel {
     Tensor *f = step->input(1);
     Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
     Tensor *v = step->output(0);
+    Type type = M->type();
     if (f->type() != DT_INT32) return false;
-    if (M->type() != DT_FLOAT || M->rank() != 2) return false;
-    if (v->type() != DT_FLOAT) return false;
-    if (oov != nullptr && oov->type() != DT_FLOAT) return false;
+    if (M->rank() != 2) return false;
+    if (v->type() != type) return false;
+    if (oov != nullptr && oov->type() != type) return false;
     int n = f->elements();
     int d = M->dim(1);
     int r = v->rank() - 1;
@@ -1119,9 +1089,6 @@ class AssignAddScatter : public Kernel {
   }
 
   bool Supports(Step *step) override {
-    // Requires SSE or AVX support.
-    if (!CPU::Enabled(AVX) && !CPU::Enabled(SSE)) return false;
-
     // Check inputs and outputs.
     if (step->indegree() != (scale_ ? 4 : 3)) return false;
     if (step->outdegree() > 1) return false;
@@ -1132,17 +1099,20 @@ class AssignAddScatter : public Kernel {
     Tensor *value = step->input(2);
     Tensor *scaler = scale_ ? step->input(3) : nullptr;
     Tensor *ref = step->outdegree() > 0 ? step->output(0) : nullptr;
-    if (var->type() != DT_FLOAT || var->rank() != 2) return false;
+
+    Type type = var->type();
+    if (!SIMDAssembler::Supports(type)) return false;
+    if (var->rank() != 2) return false;
     if (var->constant()) return false;
     if (indices->type() != DT_INT32 || indices->rank() != 2) return false;
-    if (value->type() != DT_FLOAT) return false;
+    if (value->type() != type) return false;
     if (value->elements() != var->dim(1)) return false;
     if (scale_) {
-      if (scaler->type() != DT_FLOAT) return false;
+      if (scaler->type() != type) return false;
       if (scaler->elements() != 1) return false;
     }
     if (ref) {
-      if (ref->type() != var->type()) return false;
+      if (ref->type() != type) return false;
       if (ref->shape() != var->shape()) return false;
       if (!ref->ref()) return false;
     }
@@ -1166,20 +1136,18 @@ class AssignAddScatter : public Kernel {
     // Link output reference to input variable.
     if (ref) var->Link(ref);
 
-    // Align to one SIMD register.
-    int align = 4;
-    if (CPU::Enabled(AVX)) align = 8;
-    if (CPU::Enabled(AVX512F)) align = 16;
-    var->SetMiniumAlignment(align * sizeof(float));
-    value->SetMiniumAlignment(align * sizeof(float));
+    // Align to one vector register.
+    Type type = var->type();
+    int vecbytes = SIMDAssembler::VectorBytes(type);
+    var->SetMiniumAlignment(vecbytes);
+    value->SetMiniumAlignment(vecbytes);
 
     // Embedding matrix must be row-major.
     var->RequireOrder(ROW_MAJOR);
-    int minalign = 1;
-    if (var->dim(1) >= 4) minalign = 4;
-    if (CPU::Enabled(AVX) && var->dim(1) >= 8) minalign = 8;
-    if (CPU::Enabled(AVX512F) && var->dim(1) >= 16) minalign = 16;
-    var->MinAlign({1, minalign});
+
+    // Reserve registers.
+    int regs = SIMDAssembler::RegisterUsage(type) + 8;
+    step->SetRegisterUsage(regs);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -1193,11 +1161,16 @@ class AssignAddScatter : public Kernel {
     bool single = indices->elements() == 1;
     int n = value->elements();
 
-    // Set up mask.
-    OpmaskRegister mask = masm->kk().alloc();
-    if (CPU::Enabled(AVX512F) && n % 16 != 0) {
-      __ LoadMask(n % 16, mask);
-    }
+    // Create SIMD code generators.
+    Type type = var->type();
+    int dsize = TypeTraits::of(type).size();
+    int vecbytes = SIMDAssembler::VectorBytes(type);
+    bool aligned = var->stride(0) % vecbytes == 0;
+    SIMDAssembler sasm(masm, type, aligned);
+
+    // Compute vector processing strategy.
+    SIMDStrategy strategy(&sasm, n);
+    strategy.PreloadMasks();
 
     // Allocate registers.
     Register bit = masm->rr().alloc_fixed(rcx);
@@ -1210,8 +1183,8 @@ class AssignAddScatter : public Kernel {
     Register ofs = masm->rr().alloc();
     Register src = bit;
     Register aux = ofs;
-
-    ZMMRegister factor = masm->mm().allocz(false);
+    auto elem = sasm.alloc(strategy.MaxUnrolls());
+    int factor = scaler ? sasm.alloc() : -1;
 
     // Load tensor locations.
     __ LoadTensorAddress(varaddr, var);
@@ -1231,14 +1204,7 @@ class AssignAddScatter : public Kernel {
     // Load scaling value.
     if (scaler) {
       __ LoadTensorAddress(src, scaler);
-      if (masm->Enabled(AVX512F)) {
-        __ vbroadcastss(factor, Operand(src));
-      } else if (masm->Enabled(AVX)) {
-        __ vbroadcastss(factor.ymm(), Operand(src));
-      } else {
-        __ movss(factor.xmm(), Operand(src));
-        __ shufps(factor.xmm(), factor.xmm(), 0);
-      }
+      sasm.main()->Broadcast(factor, Operand(src));
     }
 
     // Loop over features.
@@ -1269,136 +1235,57 @@ class AssignAddScatter : public Kernel {
     __ addq(acc, varaddr);
 
     // Add (scaled) input vector for feature to embedding vector.
-    if (masm->Enabled(AVX512F)) {
-      // Update elements using AVX-512 vectors.
-      std::vector<ZMMRegister> elem;
-      int main = (n / 16) * 16;
-      int unrolls = AllocateZMMUnrolls(masm, main, 4, &elem);
-      if (unrolls > 0) {
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 16 * sizeof(float);
+    for (auto &phase : strategy.phases()) {
+      auto *gen = phase.generator;
+      int vecsize = gen->VectorSize();
+      int blkstart = phase.offset * dsize;
+      int blksize = phase.unrolls * vecsize * dsize;
+
+      if (phase.repeat > 1) {
+        // Repeated phase.
+        Label lu;
+        if (blkstart == 0) {
+          __ xorq(ofs, ofs);
+        } else {
+          __ movq(ofs, Immediate(blkstart));
+        }
+        __ bind(&lu);
+        for (int i = 0; i < phase.unrolls; ++i) {
+          int disp = i * vecsize * dsize;
+          gen->Load(elem[i], Operand(acc, ofs, times_1, disp));
           if (scale_) {
-            __ vmulps(elem[i], factor, Operand(valaddr, ofs, times_1, disp));
+            gen->MulAdd(elem[i], factor, Operand(valaddr, ofs, times_1, disp),
+                        true);
           } else {
-            __ vmovaps(elem[i], Operand(valaddr, ofs, times_1, disp));
+            gen->Add(elem[i], elem[i], Operand(valaddr, ofs, times_1, disp));
           }
+          gen->Store(Operand(acc, ofs, times_1, disp), elem[i]);
         }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 16 * sizeof(float);
-          __ vaddps(elem[i], elem[i], Operand(acc, ofs, times_1, disp));
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 16 * sizeof(float);
-          __ vmovaps(Operand(acc, ofs, times_1, disp), elem[i]);
-        }
-        if (main > 16 * unrolls) {
-          __ addq(ofs, Immediate(16 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-      }
-
-      // Update residual elements.
-      if (n % 16 != 0) {
-        int disp = main * sizeof(float);
-        if (scale_) {
-          __ vmulps(elem[0], factor, Operand(valaddr, disp),
-                    Mask(mask, zeroing));
-        } else {
-          __ vmovups(elem[0], Operand(valaddr, disp), Mask(mask, zeroing));
-        }
-        __ vaddps(elem[0], elem[0], Operand(acc, disp),
-                  Mask(mask, zeroing));
-        __ vmovups(Operand(acc, disp), elem[0], Mask(mask, merging));
-      }
-    } else if (masm->Enabled(AVX)) {
-      // Update elements using AVX vectors.
-      std::vector<YMMRegister> elem;
-      int main = (n / 8) * 8;
-      int unrolls = AllocateYMMUnrolls(masm, main, 4, &elem);
-      if (unrolls > 0) {
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 8 * sizeof(float);
+        __ addq(ofs, Immediate(blksize));
+        __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
+        __ j(less, &lu);
+      } else if (phase.masked == 0) {
+        // Residual phase.
+        for (int i = 0; i < phase.unrolls; ++i) {
+          int disp = blkstart + i * vecsize * dsize;
+          gen->Load(elem[i], Operand(acc, disp));
           if (scale_) {
-            __ vmulps(elem[i], factor.ymm(),
-                      Operand(valaddr, ofs, times_1, disp));
+            gen->MulAdd(elem[i], factor, Operand(valaddr, disp), true);
           } else {
-            __ vmovaps(elem[i], Operand(valaddr, ofs, times_1, disp));
+            gen->Add(elem[i], elem[i], Operand(valaddr, disp));
           }
+          gen->Store(Operand(acc, disp), elem[i]);
         }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 8 * sizeof(float);
-          __ vaddps(elem[i], elem[i], Operand(acc, ofs, times_1, disp));
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 8 * sizeof(float);
-          __ vmovaps(Operand(acc, ofs, times_1, disp), elem[i]);
-        }
-        if (main > 8 * unrolls) {
-          __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-      }
-
-      // Update residual elements.
-      int disp = main * sizeof(float);
-      if (n % 8 >= 4) {
+      } else {
+        // Masked phase.
+        CHECK_EQ(phase.unrolls, 1);
+        gen->MaskedLoad(elem[0], Operand(acc, blkstart));
         if (scale_) {
-          __ vmulps(elem[0].xmm(), factor.xmm(), Operand(valaddr, disp));
+          gen->MaskedMulAdd(elem[0], factor, Operand(valaddr, blkstart));
         } else {
-          __ vmovaps(elem[0].xmm(), Operand(valaddr, disp));
+          gen->MaskedAdd(elem[0], elem[0], Operand(valaddr, blkstart));
         }
-        __ vaddps(elem[0].xmm(), elem[0].xmm(), Operand(acc, disp));
-        __ vmovaps(Operand(acc, disp), elem[0].xmm());
-        disp += 4 * sizeof(float);
-      }
-      for (int i = 0; i < n % 4; ++i) {
-        int r = i % std::max(unrolls, 1);
-        if (scale_) {
-          __ vmulss(elem[r].xmm(), factor.xmm(), Operand(valaddr, disp));
-        } else {
-          __ vmovss(elem[r].xmm(), Operand(valaddr, disp));
-        }
-        __ vaddss(elem[r].xmm(), elem[r].xmm(), Operand(acc, disp));
-        __ vmovss(Operand(acc, disp), elem[r].xmm());
-        disp += sizeof(float);
-      }
-    } else {
-      // Update elements using SSE vectors.
-      XMMRegister elem = masm->mm().allocx();
-      int main = (n / 4) * 4;
-      if (n >= 4) {
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        __ movaps(elem, Operand(valaddr, ofs));
-        if (scale_) {
-          __ mulps(elem, factor.xmm());
-        }
-        __ addps(elem, Operand(acc, ofs));
-        __ movaps(Operand(acc, ofs), elem);
-        __ addq(ofs, Immediate(4 * sizeof(float)));
-        __ cmpq(ofs, Immediate(main * sizeof(float)));
-        __ j(less, &next);
-      }
-
-      // Update residual elements.
-      int disp = main * sizeof(float);
-      for (int i = 0; i < n % 4; ++i) {
-        __ movss(elem, Operand(valaddr, disp));
-        if (scale_) {
-          __ mulss(elem, factor.xmm());
-        }
-        __ addss(elem, Operand(acc, disp));
-        __ movss(Operand(acc, disp), elem);
-        disp += sizeof(float);
+        gen->MaskedStore(Operand(acc, blkstart), elem[0]);
       }
     }
 
