@@ -862,9 +862,6 @@ class PoolingGather : public Kernel {
   }
 
   bool Supports(Step *step) override {
-    // Requires SSE or AVX support.
-    if (!CPU::Enabled(AVX) && !CPU::Enabled(SSE)) return false;
-
     // Check inputs and outputs.
     if (step->indegree() != 2 || step->outdegree() != 1) return false;
 
@@ -875,6 +872,10 @@ class PoolingGather : public Kernel {
     if (!SIMDAssembler::Supports(M->type()) || M->rank() != 2) return false;
     if (f->type() != DT_INT32 || f->rank() != 2) return false;
     if (v->type() != M->type() || v->elements() != M->dim(1)) return false;
+    if (pooling_ == AVG) {
+      if (M->type() != DT_FLOAT && M->type() != DT_DOUBLE) return false;
+      if (!CPU::Enabled(SSE2)) return false;
+    }
 
     return true;
   }
@@ -884,23 +885,24 @@ class PoolingGather : public Kernel {
     Tensor *v = step->output(0);
 
     // Align to one vector register.
-    int vecbytes = SIMDAssembler::VectorBytes(M->type());
+    Type type = M->type();
+    int vecbytes = SIMDAssembler::VectorBytes(type);
     M->SetMiniumAlignment(vecbytes);
     v->SetMiniumAlignment(vecbytes);
 
     // Embedding matrix must be row-major.
     M->RequireOrder(ROW_MAJOR);
-    M->MinAlign({1, vecbytes});
+
+    // Reserve registers.
+    int regs = SIMDAssembler::RegisterUsage(type) + 8;
+    step->SetRegisterUsage(regs);
   }
 
-#if 0
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get inputs and outputs.
     Tensor *M = step->input(0);
     Tensor *f = step->input(1);
     Tensor *v = step->output(0);
-    CHECK(f->IsLocal()) << f->name();
-    CHECK(v->IsLocal()) << v->name();
     int n = v->elements();
 
     // Create SIMD code generators.
@@ -925,6 +927,7 @@ class PoolingGather : public Kernel {
     Register embeddings = masm->rr().alloc();
     Register input = masm->rr().alloc();
     Register output = masm->rr().alloc();
+    auto elem = sasm.alloc(strategy.MaxUnrolls());
 
     // Load tensor locations.
     __ LoadTensorAddress(embeddings, M);
@@ -985,6 +988,7 @@ class PoolingGather : public Kernel {
     __ addq(src, acc);
 
     // Update output vector with embedding vector for feature.
+    Reduction op = pooling_ == MAX ? REDUCE_MAX : REDUCE_ADD;
     for (auto &phase : strategy.phases()) {
       auto *gen = phase.generator;
       int vecsize = gen->VectorSize();
@@ -1002,159 +1006,27 @@ class PoolingGather : public Kernel {
         __ bind(&lu);
         for (int i = 0; i < phase.unrolls; ++i) {
           int disp = i * vecsize * dsize;
-          gen->Accumulate(op_, acc[i], Operand(in, ofs, times_1, disp));
+          gen->Load(elem[i], Operand(src, ofs, times_1, disp));
+          gen->Accumulate(op, elem[i], Operand(output, ofs, times_1, disp));
+          gen->Store(Operand(output, ofs, times_1, disp), elem[i]);
         }
         __ addq(ofs, Immediate(blksize));
         __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
         __ j(less, &lu);
       } else if (phase.masked == 0) {
         // Residual phase.
-        if (phase.offset == 0 || vecsize == sasm.main()->VectorSize()) {
-          // Same vector size as bulk; unroll directly into accumulators.
-          for (int i = 0; i < phase.unrolls; ++i) {
-            int disp = blkstart + i * vecsize * dsize;
-            gen->Accumulate(op_, acc[i], Operand(in, disp));
-          }
-        } else {
-          // Accumulate unrolled residual and merge into first accumulator.
-          auto residual = sasm.alloc();
-          sasm.main()->LoadNeutral(op_, residual);
-          for (int i = 0; i < phase.unrolls; ++i) {
-            int disp = blkstart + i * vecsize * dsize;
-            gen->Accumulate(op_, residual, Operand(in, disp));
-          }
-          sasm.main()->Accumulate(op_, acc[0], residual);
+        for (int i = 0; i < phase.unrolls; ++i) {
+          int disp = blkstart + i * vecsize * dsize;
+          gen->Load(elem[i], Operand(src, disp));
+          gen->Accumulate(op, elem[i], Operand(output, disp));
+          gen->Store(Operand(output, disp), elem[i]);
         }
       } else {
         // Masked phase.
         CHECK_EQ(phase.unrolls, 1);
-        gen->MaskedAccumulate(op_, acc[0], Operand(in, blkstart));
-      }
-    }
-
-    if (masm->Enabled(AVX512F)) {
-      // Combine elements using AVX512 vectors.
-      std::vector<ZMMRegister> elem;
-      int main = (n / 16) * 16;
-      int unrolls = AllocateZMMUnrolls(masm, main, 4, &elem);
-      if (unrolls > 0) {
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 16 * sizeof(float);
-          __ vmovaps(elem[i], Operand(src, ofs, times_1, disp));
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 16 * sizeof(float);
-          if (pooling_ == MAX) {
-            __ vmaxps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
-          } else {
-            __ vaddps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
-          }
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 16 * sizeof(float);
-          __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
-        }
-
-        if (main > 16 * unrolls) {
-          __ addq(ofs, Immediate(16 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-      }
-
-      // Combine residual elements.
-      if (n % 16 > 0) {
-        int disp = main * sizeof(float);
-        __ vmovaps(elem[0], Operand(src, disp), Mask(mask, zeroing));
-        if (pooling_ == MAX) {
-          __ vmaxps(elem[0], elem[0], Operand(output, disp),
-                    Mask(mask, zeroing));
-        } else {
-          __ vaddps(elem[0], elem[0], Operand(output, disp),
-                    Mask(mask, zeroing));
-        }
-        __ vmovaps(Operand(output, disp), elem[0], Mask(mask, merging));
-      }
-    } else if (masm->Enabled(AVX)) {
-      // Combine elements using AVX vectors.
-      std::vector<YMMRegister> elem;
-      int main = (n / 8) * 8;
-      int unrolls = AllocateYMMUnrolls(masm, main, 4, &elem);
-      if (unrolls > 0) {
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 8 * sizeof(float);
-          __ vmovaps(elem[i], Operand(src, ofs, times_1, disp));
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 8 * sizeof(float);
-          if (pooling_ == MAX) {
-            __ vmaxps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
-          } else {
-            __ vaddps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
-          }
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 8 * sizeof(float);
-          __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
-        }
-
-        if (main > 8 * unrolls) {
-          __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-      }
-
-      // Combine residual elements.
-      int disp = main * sizeof(float);
-      for (int i = 0; i < n % 8; ++i) {
-        int r = i % std::max(unrolls, 1);
-        __ vmovss(elem[r], Operand(src, disp));
-        if (pooling_ == MAX) {
-          __ vmaxss(elem[r], elem[r], Operand(output, disp));
-        } else {
-          __ vaddss(elem[r], elem[r], Operand(output, disp));
-        }
-        __ vmovss(Operand(output, disp), elem[r]);
-        disp += sizeof(float);
-      }
-    } else {
-      // Combine elements using SSE vectors.
-      int main = (n / 4) * 4;
-      XMMRegister elem = masm->mm().allocx();
-      if (n >= 4) {
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        __ movaps(elem, Operand(src, ofs));
-        if (pooling_ == MAX) {
-          __ maxps(elem, Operand(output, ofs));
-        } else {
-          __ addps(elem, Operand(output, ofs));
-        }
-        __ movaps(Operand(output, ofs), elem);
-        __ addq(ofs, Immediate(4 * sizeof(float)));
-        __ cmpq(ofs, Immediate(main * sizeof(float)));
-        __ j(less, &next);
-      }
-
-      // Combine residual elements.
-      int disp = main * sizeof(float);
-      for (int i = 0; i < n % 4; ++i) {
-        __ movss(elem, Operand(src, disp));
-        if (pooling_ == MAX) {
-          __ maxss(elem, Operand(output, disp));
-        } else {
-          __ addss(elem, Operand(output, disp));
-        }
-        __ movss(Operand(output, disp), elem);
-        disp += sizeof(float);
+        gen->MaskedLoad(elem[0], Operand(src, blkstart));
+        gen->MaskedAccumulate(op, elem[0], Operand(output, blkstart));
+        gen->MaskedStore(Operand(output, blkstart), elem[0]);
       }
     }
 
@@ -1164,414 +1036,67 @@ class PoolingGather : public Kernel {
 
     // Compute average.
     if (pooling_ == AVG) {
-      if (masm->Enabled(AVX512F)) {
-        // Compute 1/fcnt.
-        ZMMRegister scalar = masm->mm().allocz();
-        __ vcvtqsi2ss(scalar.xmm(), scalar.xmm(), fcnt);
-        __ vrcpss(scalar.xmm(), scalar.xmm(), scalar.xmm());
-        __ vbroadcastss(scalar, scalar);
-
-        // Multiply all output elements with scalar to get the average.
-        std::vector<ZMMRegister> elem;
-        int main = (n / 16) * 16;
-        int unrolls = AllocateZMMUnrolls(masm, main, 4, &elem);
-        if (unrolls > 0) {
-          Label next;
-          __ xorq(ofs, ofs);
-          __ bind(&next);
-          for (int i = 0; i < unrolls; ++i) {
-            int disp = i * 16 * sizeof(float);
-            __ vmulps(elem[i], scalar, Operand(output, ofs, times_1, disp));
-          }
-          for (int i = 0; i < unrolls; ++i) {
-            int disp = i * 16 * sizeof(float);
-            __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
-          }
-          __ addq(ofs, Immediate(16 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-        if (n % 16 > 0) {
-          int disp = main * sizeof(float);
-          __ vmulps(elem[0], scalar, Operand(output, disp),
-                    Mask(mask, zeroing));
-          __ vmovaps(Operand(output, disp), elem[0], Mask(mask, merging));
-        }
-      } else if (masm->Enabled(AVX)) {
-        // Compute 1/fcnt.
-        YMMRegister scalar = masm->mm().allocy();
-        __ vcvtqsi2ss(scalar.xmm(), scalar.xmm(), fcnt);
-        __ vrcpss(scalar.xmm(), scalar.xmm(), scalar.xmm());
-        if (masm->Enabled(AVX2)) {
-          __ vbroadcastss(scalar, scalar);
-        } else {
-          __ vshufps(scalar, scalar, scalar, 0);
-          __ vperm2f128(scalar, scalar, scalar, 0);
-        }
-
-        // Multiply all output elements with scalar to get the average.
-        std::vector<YMMRegister> elem;
-        int main = (n / 8) * 8;
-        int unrolls = AllocateYMMUnrolls(masm, main, 4, &elem);
-        if (unrolls > 0) {
-          Label next;
-          __ xorq(ofs, ofs);
-          __ bind(&next);
-          for (int i = 0; i < unrolls; ++i) {
-            int disp = i * 8 * sizeof(float);
-            __ vmulps(elem[i], scalar, Operand(output, ofs, times_1, disp));
-          }
-          for (int i = 0; i < unrolls; ++i) {
-            int disp = i * 8 * sizeof(float);
-            __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
-          }
-          __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-        int disp = main * sizeof(float);
-        for (int i = 0; i < n % 8; ++i) {
-          int r = i % std::max(unrolls, 1);
-          __ vmulss(elem[r].xmm(), scalar.xmm(), Operand(output, disp));
-          __ vmovss(Operand(output, disp), elem[r].xmm());
-          disp += sizeof(float);
+      // Compute 1/fcnt.
+      int scalar = sasm.alloc();
+      XMMRegister sr = jit::XMMRegister::from_code(scalar);
+      if (masm->Enabled(AVX)) {
+        __ vcvtqsi2ss(sr, sr, fcnt);
+        __ vrcpss(sr, sr, sr);
+        if (type == DT_DOUBLE) {
+          __ vcvtss2sd(sr, sr, sr);
         }
       } else {
-        // Compute 1/fcnt.
-        XMMRegister scalar = masm->mm().allocx();
-        __ cvtqsi2ss(scalar, fcnt);
-        __ rcpss(scalar, scalar);
+        __ cvtqsi2ss(sr, fcnt);
+        __ rcpss(sr, sr);
+        if (type == DT_DOUBLE) {
+          CHECK(masm->Enabled(SSE2));
+          __ cvtss2sd(sr, sr);
+        }
+      }
+      sasm.main()->Broadcast(scalar, scalar);
 
-        // Multiply all output elements with scalar to get the average.
-        XMMRegister elem = masm->mm().allocx();
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        __ movss(elem, Operand(output, ofs));
-        __ mulss(elem, scalar);
-        __ movss(Operand(output, ofs), elem);
-        __ addq(ofs, Immediate(sizeof(float)));
-        __ cmpq(ofs, Immediate(v->size()));
-        __ j(less, &next);
+      // Multiply all output elements with scalar to get the average.
+      for (auto &phase : strategy.phases()) {
+        auto *gen = phase.generator;
+        int vecsize = gen->VectorSize();
+        int blkstart = phase.offset * dsize;
+        int blksize = phase.unrolls * vecsize * dsize;
+
+        if (phase.repeat > 1) {
+          // Repeated phase.
+          Label lu;
+          if (blkstart == 0) {
+            __ xorq(ofs, ofs);
+          } else {
+            __ movq(ofs, Immediate(blkstart));
+          }
+          __ bind(&lu);
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = i * vecsize * dsize;
+            gen->Mul(elem[i], scalar, Operand(output, ofs, times_1, disp));
+            gen->Store(Operand(output, ofs, times_1, disp), elem[i]);
+          }
+          __ addq(ofs, Immediate(blksize));
+          __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
+          __ j(less, &lu);
+        } else if (phase.masked == 0) {
+          // Residual phase.
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = blkstart + i * vecsize * dsize;
+            gen->Mul(elem[i], scalar, Operand(output, disp));
+            gen->Store(Operand(output, disp), elem[i]);
+          }
+        } else {
+          // Masked phase.
+          CHECK_EQ(phase.unrolls, 1);
+          gen->MaskedMul(elem[0], scalar, Operand(output, blkstart));
+          gen->MaskedStore(Operand(output, blkstart), elem[0]);
+        }
       }
     }
 
     __ bind(&done);
   }
-#else
-  void Generate(Step *step, MacroAssembler *masm) override {
-    // Get inputs and outputs.
-    Tensor *M = step->input(0);
-    Tensor *f = step->input(1);
-    Tensor *v = step->output(0);
-    CHECK(f->IsLocal()) << f->name();
-    CHECK(v->IsLocal()) << v->name();
-    int n = v->elements();
-
-    // Set up mask.
-    OpmaskRegister mask = masm->kk().alloc();
-    if (CPU::Enabled(AVX512F) && n % 16 != 0) {
-      __ LoadMask(n % 16, mask);
-    }
-
-    // Allocate registers.
-    Register acc = masm->rr().alloc_fixed(rax);
-    Register src = masm->rr().alloc_fixed(rsi);
-    Register dst = masm->rr().alloc_fixed(rdi);
-    Register cnt = masm->rr().alloc_fixed(rcx);
-    Register ofs = cnt;
-    Register fidx = masm->rr().alloc();
-    Register fcnt = masm->rr().alloc();
-    Register embeddings = masm->rr().alloc();
-    Register input = masm->rr().alloc();
-    Register output = masm->rr().alloc();
-
-    // Load tensor locations.
-    __ LoadTensorAddress(embeddings, M);
-    __ LoadTensorAddress(input, f);
-    __ LoadTensorAddress(output, v);
-
-    // Zero feature index and feature count.
-    __ xorq(fidx, fidx);
-    if (pooling_ == AVG) {
-      __ xorq(fcnt, fcnt);
-    }
-
-    // Find first (non-negative) feature.
-    Label l1, l2, done;
-    __ bind(&l1);
-    __ movsxlq(acc, Operand(input, fidx, times_4));
-    __ testq(acc, acc);
-    __ j(positive, &l2);
-    __ incq(fidx);
-    __ cmpq(fidx, Immediate(f->elements()));
-    __ j(less, &l1);
-
-    // No feature found; zero output vector.
-    __ xorq(acc, acc);
-    __ movq(dst, output);
-    __ movq(cnt, Immediate(v->size()));
-    __ repstosb();
-    __ jmp(&done);
-
-    // First non-negative feature found; copy its embedding vector to output.
-    __ bind(&l2);
-    __ movq(src, embeddings);
-    __ Multiply(acc, M->stride(0));
-    __ addq(src, acc);
-    __ movq(dst, output);
-    __ movq(cnt, Immediate(M->stride(0)));
-    __ repmovsb();
-    if (pooling_ == AVG) {
-      __ incq(fcnt);
-    }
-
-    // Go over the remaining features.
-    Label l3, l4;
-    __ bind(&l3);
-    __ incq(fidx);
-    __ cmpq(fidx, Immediate(f->elements()));
-    __ j(equal, &l4);
-    __ movsxlq(acc, Operand(input, fidx, times_4));
-    __ testq(acc, acc);
-    __ j(negative, &l4);
-
-    // Combine embedding vector for feature with current result.
-    if (pooling_ == AVG) {
-      __ incq(fcnt);
-    }
-    __ movq(src, embeddings);
-    __ Multiply(acc, M->stride(0));
-    __ addq(src, acc);
-
-    // Update output vector with embedding vector for feature.
-    if (masm->Enabled(AVX512F)) {
-      // Combine elements using AVX512 vectors.
-      std::vector<ZMMRegister> elem;
-      int main = (n / 16) * 16;
-      int unrolls = AllocateZMMUnrolls(masm, main, 4, &elem);
-      if (unrolls > 0) {
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 16 * sizeof(float);
-          __ vmovaps(elem[i], Operand(src, ofs, times_1, disp));
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 16 * sizeof(float);
-          if (pooling_ == MAX) {
-            __ vmaxps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
-          } else {
-            __ vaddps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
-          }
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 16 * sizeof(float);
-          __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
-        }
-
-        if (main > 16 * unrolls) {
-          __ addq(ofs, Immediate(16 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-      }
-
-      // Combine residual elements.
-      if (n % 16 > 0) {
-        int disp = main * sizeof(float);
-        __ vmovaps(elem[0], Operand(src, disp), Mask(mask, zeroing));
-        if (pooling_ == MAX) {
-          __ vmaxps(elem[0], elem[0], Operand(output, disp),
-                    Mask(mask, zeroing));
-        } else {
-          __ vaddps(elem[0], elem[0], Operand(output, disp),
-                    Mask(mask, zeroing));
-        }
-        __ vmovaps(Operand(output, disp), elem[0], Mask(mask, merging));
-      }
-    } else if (masm->Enabled(AVX)) {
-      // Combine elements using AVX vectors.
-      std::vector<YMMRegister> elem;
-      int main = (n / 8) * 8;
-      int unrolls = AllocateYMMUnrolls(masm, main, 4, &elem);
-      if (unrolls > 0) {
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 8 * sizeof(float);
-          __ vmovaps(elem[i], Operand(src, ofs, times_1, disp));
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 8 * sizeof(float);
-          if (pooling_ == MAX) {
-            __ vmaxps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
-          } else {
-            __ vaddps(elem[i], elem[i], Operand(output, ofs, times_1, disp));
-          }
-        }
-        for (int i = 0; i < unrolls; ++i) {
-          int disp = i * 8 * sizeof(float);
-          __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
-        }
-
-        if (main > 8 * unrolls) {
-          __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-      }
-
-      // Combine residual elements.
-      int disp = main * sizeof(float);
-      for (int i = 0; i < n % 8; ++i) {
-        int r = i % std::max(unrolls, 1);
-        __ vmovss(elem[r], Operand(src, disp));
-        if (pooling_ == MAX) {
-          __ vmaxss(elem[r], elem[r], Operand(output, disp));
-        } else {
-          __ vaddss(elem[r], elem[r], Operand(output, disp));
-        }
-        __ vmovss(Operand(output, disp), elem[r]);
-        disp += sizeof(float);
-      }
-    } else {
-      // Combine elements using SSE vectors.
-      int main = (n / 4) * 4;
-      XMMRegister elem = masm->mm().allocx();
-      if (n >= 4) {
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        __ movaps(elem, Operand(src, ofs));
-        if (pooling_ == MAX) {
-          __ maxps(elem, Operand(output, ofs));
-        } else {
-          __ addps(elem, Operand(output, ofs));
-        }
-        __ movaps(Operand(output, ofs), elem);
-        __ addq(ofs, Immediate(4 * sizeof(float)));
-        __ cmpq(ofs, Immediate(main * sizeof(float)));
-        __ j(less, &next);
-      }
-
-      // Combine residual elements.
-      int disp = main * sizeof(float);
-      for (int i = 0; i < n % 4; ++i) {
-        __ movss(elem, Operand(src, disp));
-        if (pooling_ == MAX) {
-          __ maxss(elem, Operand(output, disp));
-        } else {
-          __ addss(elem, Operand(output, disp));
-        }
-        __ movss(Operand(output, disp), elem);
-        disp += sizeof(float);
-      }
-    }
-
-    // Next feature.
-    __ jmp(&l3);
-    __ bind(&l4);
-
-    // Compute average.
-    if (pooling_ == AVG) {
-      if (masm->Enabled(AVX512F)) {
-        // Compute 1/fcnt.
-        ZMMRegister scalar = masm->mm().allocz();
-        __ vcvtqsi2ss(scalar.xmm(), scalar.xmm(), fcnt);
-        __ vrcpss(scalar.xmm(), scalar.xmm(), scalar.xmm());
-        __ vbroadcastss(scalar, scalar);
-
-        // Multiply all output elements with scalar to get the average.
-        std::vector<ZMMRegister> elem;
-        int main = (n / 16) * 16;
-        int unrolls = AllocateZMMUnrolls(masm, main, 4, &elem);
-        if (unrolls > 0) {
-          Label next;
-          __ xorq(ofs, ofs);
-          __ bind(&next);
-          for (int i = 0; i < unrolls; ++i) {
-            int disp = i * 16 * sizeof(float);
-            __ vmulps(elem[i], scalar, Operand(output, ofs, times_1, disp));
-          }
-          for (int i = 0; i < unrolls; ++i) {
-            int disp = i * 16 * sizeof(float);
-            __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
-          }
-          __ addq(ofs, Immediate(16 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-        if (n % 16 > 0) {
-          int disp = main * sizeof(float);
-          __ vmulps(elem[0], scalar, Operand(output, disp),
-                    Mask(mask, zeroing));
-          __ vmovaps(Operand(output, disp), elem[0], Mask(mask, merging));
-        }
-      } else if (masm->Enabled(AVX)) {
-        // Compute 1/fcnt.
-        YMMRegister scalar = masm->mm().allocy();
-        __ vcvtqsi2ss(scalar.xmm(), scalar.xmm(), fcnt);
-        __ vrcpss(scalar.xmm(), scalar.xmm(), scalar.xmm());
-        if (masm->Enabled(AVX2)) {
-          __ vbroadcastss(scalar, scalar);
-        } else {
-          __ vshufps(scalar, scalar, scalar, 0);
-          __ vperm2f128(scalar, scalar, scalar, 0);
-        }
-
-        // Multiply all output elements with scalar to get the average.
-        std::vector<YMMRegister> elem;
-        int main = (n / 8) * 8;
-        int unrolls = AllocateYMMUnrolls(masm, main, 4, &elem);
-        if (unrolls > 0) {
-          Label next;
-          __ xorq(ofs, ofs);
-          __ bind(&next);
-          for (int i = 0; i < unrolls; ++i) {
-            int disp = i * 8 * sizeof(float);
-            __ vmulps(elem[i], scalar, Operand(output, ofs, times_1, disp));
-          }
-          for (int i = 0; i < unrolls; ++i) {
-            int disp = i * 8 * sizeof(float);
-            __ vmovaps(Operand(output, ofs, times_1, disp), elem[i]);
-          }
-          __ addq(ofs, Immediate(8 * unrolls * sizeof(float)));
-          __ cmpq(ofs, Immediate(main * sizeof(float)));
-          __ j(less, &next);
-        }
-        int disp = main * sizeof(float);
-        for (int i = 0; i < n % 8; ++i) {
-          int r = i % std::max(unrolls, 1);
-          __ vmulss(elem[r].xmm(), scalar.xmm(), Operand(output, disp));
-          __ vmovss(Operand(output, disp), elem[r].xmm());
-          disp += sizeof(float);
-        }
-      } else {
-        // Compute 1/fcnt.
-        XMMRegister scalar = masm->mm().allocx();
-        __ cvtqsi2ss(scalar, fcnt);
-        __ rcpss(scalar, scalar);
-
-        // Multiply all output elements with scalar to get the average.
-        XMMRegister elem = masm->mm().allocx();
-        Label next;
-        __ xorq(ofs, ofs);
-        __ bind(&next);
-        __ movss(elem, Operand(output, ofs));
-        __ mulss(elem, scalar);
-        __ movss(Operand(output, ofs), elem);
-        __ addq(ofs, Immediate(sizeof(float)));
-        __ cmpq(ofs, Immediate(v->size()));
-        __ j(less, &next);
-      }
-    }
-
-    __ bind(&done);
-  }
-#endif
 
   int64 Complexity(const Step *step) override {
     Tensor *M = step->input(0);
