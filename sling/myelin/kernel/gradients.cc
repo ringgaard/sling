@@ -486,7 +486,12 @@ void gather_grad(Flow::Operation *op, Gradients *g) {
   auto M = op->inputs[0];
   auto f = op->inputs[1];
   auto v = op->outputs[0];
-  g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0)));
+  if (op->indegree() == 3) {
+    auto oov = op->inputs[2];
+    g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0), g->d(oov)));
+  } else {
+    g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0)));
+  }
 }
 
 // v = gather_sum(M, f)

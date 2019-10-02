@@ -78,6 +78,7 @@ class ParserTrainer : public LearnerTask {
     spec_.lexicon.threshold = task->Get("lexicon_threshold", 0);
     spec_.lexicon.max_prefix = task->Get("max_prefix", 0);
     spec_.lexicon.max_suffix = task->Get("max_suffix", 3);
+    spec_.feature_padding = 16;
 
     // Set up word embeddings.
     spec_.word_dim = task->Get("word_dim", 32);
@@ -98,6 +99,8 @@ class ParserTrainer : public LearnerTask {
 
     // Build parser model flow graph.
     BuildFlow(&flow_, true);
+    optimizer_ = GetOptimizer(task);
+    optimizer_->Build(&flow_);
 
     // Compile model.
     compiler_.Compile(&flow_, &net_);
@@ -107,9 +110,9 @@ class ParserTrainer : public LearnerTask {
                         flow_.DataBlock("spec"),
                         &roles_, frame_limit_);
     encoder_.Initialize(net_);
-    //model_.Initialize(net_);
-    //loss_.Initialize(net_);
-    //optimizer_->Initialize(net_);
+    optimizer_->Initialize(net_);
+
+    delete optimizer_;
   }
 
   // Worker thread for training model.
@@ -272,7 +275,7 @@ class ParserTrainer : public LearnerTask {
     flow->Connect({lstm.rl, rl});
     flow->Connect({steps, activations});
 
-    // Build gradient function decoder.
+    // Build function decoder gradient.
     if (learn) {
       Gradient(flow, f.func(), *library);
     }
@@ -319,6 +322,7 @@ class ParserTrainer : public LearnerTask {
   Flow flow_;
   Network net_;
   Compiler compiler_;
+  Optimizer *optimizer_ = nullptr;
 
   // Document input encoder.
   LexicalEncoder encoder_;

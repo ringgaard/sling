@@ -354,6 +354,9 @@ class FlowBuilder : public Scope {
   Variable *Scatter(Variable *f, Variable *v, int size) {
     return Op("Scatter", {f, v}, v->type, {size, v->dim(1)});
   }
+  Variable *Scatter(Variable *f, Variable *v, int size, Variable *oov) {
+    return Op("Scatter", {f, v, oov}, v->type, {size, v->dim(1)});
+  }
 
   // Assignment.
   Operation *Assign(Variable *var, Variable *value) {

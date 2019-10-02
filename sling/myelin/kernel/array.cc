@@ -1090,60 +1090,57 @@ class AssignAddScatter : public Kernel {
 
   bool Supports(Step *step) override {
     // Check inputs and outputs.
-    if (step->indegree() != (scale_ ? 4 : 3)) return false;
-    if (step->outdegree() > 1) return false;
+    Args args(step, scale_);
+    if (!args.valid) return false;
 
-    // Check types.
-    Tensor *var = step->input(0);
-    Tensor *indices = step->input(1);
-    Tensor *value = step->input(2);
-    Tensor *scaler = scale_ ? step->input(3) : nullptr;
-    Tensor *ref = step->outdegree() > 0 ? step->output(0) : nullptr;
-
-    Type type = var->type();
+    // Check arguments.
+    Type type = args.var->type();
     if (!SIMDAssembler::Supports(type)) return false;
-    if (var->rank() != 2) return false;
-    if (var->constant()) return false;
-    if (indices->type() != DT_INT32 || indices->rank() != 2) return false;
-    if (value->type() != type) return false;
-    if (value->elements() != var->dim(1)) return false;
-    if (scale_) {
-      if (scaler->type() != type) return false;
-      if (scaler->elements() != 1) return false;
+    if (args.var->rank() != 2) return false;
+    if (args.var->constant()) return false;
+    if (args.indices->type() != DT_INT32) return false;
+    if (args.indices->rank() != 2) return false;
+    if (args.value->type() != type || args.value->rank() != 2) return false;
+    if (args.value->dim(1) != args.var->dim(1)) return false;
+    if (args.value->dim(0) != 1 &&
+        args.value->dim(0) != args.indices->dim(1)) {
+      return false;
     }
-    if (ref) {
-      if (ref->type() != type) return false;
-      if (ref->shape() != var->shape()) return false;
-      if (!ref->ref()) return false;
+    if (scale_) {
+      if (args.scaler->type() != type) return false;
+      if (args.scaler->elements() != 1) return false;
+    }
+    if (args.ref) {
+      if (args.ref->type() != type) return false;
+      if (args.ref->shape() != args.var->shape()) return false;
+      if (!args.ref->ref()) return false;
     }
 
     return true;
   }
 
   void Adjust(Step *step, const Options &options) override {
-    Tensor *var = step->input(0);
-    Tensor *value = step->input(2);
-    Tensor *ref = step->outdegree() > 0 ? step->output(0) : nullptr;
+    Args args(step, scale_);
 
     // Add sparsity bitmap index.
     if (options.sparse_threshold > 0 &&
-        var->dim(0) >= options.sparse_threshold &&
+        args.var->dim(0) >= options.sparse_threshold &&
         step->GetAttr("sparse", true)) {
-      Tensor *sparse = var->MakeSparse();
-      if (ref) ref->set_sparse(sparse);
+      Tensor *sparse = args.var->MakeSparse();
+      if (args.ref) args.ref->set_sparse(sparse);
     }
 
     // Link output reference to input variable.
-    if (ref) var->Link(ref);
+    if (args.ref) args.var->Link(args.ref);
 
     // Align to one vector register.
-    Type type = var->type();
+    Type type = args.var->type();
     int vecbytes = SIMDAssembler::VectorBytes(type);
-    var->SetMiniumAlignment(vecbytes);
-    value->SetMiniumAlignment(vecbytes);
+    args.var->SetMiniumAlignment(vecbytes);
+    args.value->SetMiniumAlignment(vecbytes);
 
     // Embedding matrix must be row-major.
-    var->RequireOrder(ROW_MAJOR);
+    args.var->RequireOrder(ROW_MAJOR);
 
     // Reserve registers.
     int regs = SIMDAssembler::RegisterUsage(type) + 8;
@@ -1152,20 +1149,16 @@ class AssignAddScatter : public Kernel {
 
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get inputs.
-    Tensor *var = step->input(0);
-    Tensor *indices = step->input(1);
-    Tensor *value = step->input(2);
-    Tensor *scaler = scale_ ? step->input(3) : nullptr;
-    Tensor *ref = step->outdegree() > 0 ? step->output(0) : nullptr;
-    Tensor *sparse = var->sparse();
-    bool single = indices->elements() == 1;
-    int n = value->elements();
+    Args args(step, scale_);
+    Tensor *sparse = args.var->sparse();
+    bool single = args.indices->elements() == 1;
+    int n = args.value->dim(1);
 
     // Create SIMD code generators.
-    Type type = var->type();
+    Type type = args.var->type();
     int dsize = TypeTraits::of(type).size();
     int vecbytes = SIMDAssembler::VectorBytes(type);
-    bool aligned = var->stride(0) % vecbytes == 0;
+    bool aligned = args.var->stride(0) % vecbytes == 0;
     SIMDAssembler sasm(masm, type, aligned);
 
     // Compute vector processing strategy.
@@ -1184,26 +1177,26 @@ class AssignAddScatter : public Kernel {
     Register src = bit;
     Register aux = ofs;
     auto elem = sasm.alloc(strategy.MaxUnrolls());
-    int factor = scaler ? sasm.alloc() : -1;
+    int factor = args.scaler ? sasm.alloc() : -1;
 
     // Load tensor locations.
-    __ LoadTensorAddress(varaddr, var);
-    __ LoadTensorAddress(idxaddr, indices);
-    __ LoadTensorAddress(valaddr, value);
+    __ LoadTensorAddress(varaddr, args.var);
+    __ LoadTensorAddress(idxaddr, args.indices);
+    __ LoadTensorAddress(valaddr, args.value);
     if (sparse) {
       __ LoadTensorAddress(bmaddr, sparse);
     }
 
     // Optionally output reference to assigned variable.
-    if (ref != nullptr) {
-      CHECK(ref->IsLocal());
-      CHECK(ref->ref());
-      __ movq(Operand(masm->instance(), ref->offset()), varaddr);
+    if (args.ref != nullptr) {
+      CHECK(args.ref->IsLocal());
+      CHECK(args.ref->ref());
+      __ movq(Operand(masm->instance(), args.ref->offset()), varaddr);
     }
 
     // Load scaling value.
-    if (scaler) {
-      __ LoadTensorAddress(src, scaler);
+    if (args.scaler) {
+      __ LoadTensorAddress(src, args.scaler);
       sasm.main()->Broadcast(factor, Operand(src));
     }
 
@@ -1231,8 +1224,17 @@ class AssignAddScatter : public Kernel {
     }
 
     //  Look up address of index in embedding.
-    __ Multiply(acc, var->stride(0));
+    __ Multiply(acc, args.var->stride(0));
     __ addq(acc, varaddr);
+
+    // Update OOV vector for missing features.
+    if (args.oov) {
+      Label l3;
+      __ jmp(&l3);
+      __ bind(&l2);
+      __ LoadTensorAddress(acc, args.oov);
+      __  bind(&l3);
+    }
 
     // Add (scaled) input vector for feature to embedding vector.
     for (auto &phase : strategy.phases()) {
@@ -1289,12 +1291,18 @@ class AssignAddScatter : public Kernel {
       }
     }
 
+    if (args.value->dim(0) != 1) {
+      __ addq(valaddr, Immediate(args.value->stride(0)));
+    }
+
     if (!single) {
       __ incq(fidx);
-      __ cmpq(fidx, Immediate(indices->elements()));
+      __ cmpq(fidx, Immediate(args.indices->elements()));
       __ j(less, &l1);
     }
-    __ bind(&l2);
+    if (args.oov == nullptr) {
+      __ bind(&l2);
+    }
   }
 
   int64 Complexity(const Step *step) override {
@@ -1304,6 +1312,36 @@ class AssignAddScatter : public Kernel {
   }
 
  private:
+  // Arguments to scatter op.
+  struct Args {
+    Args(Step *step, bool scale) {
+      if (step->indegree() < 3) return;
+      if (step->outdegree() > 1) return;
+      var = step->input(0);
+      indices = step->input(1);
+      value = step->input(2);
+      if (step->outdegree() > 0) ref = step->output(0);
+
+      if (scale) {
+        if (step->indegree() != 4 && step->indegree() != 5) return;
+        if (step->indegree() > 3) scaler = step->input(3);
+        if (step->indegree() > 4) oov = step->input(4);
+      } else {
+        if (step->indegree() != 3 && step->indegree() != 4) return;
+        if (step->indegree() > 3) oov = step->input(3);
+      }
+      valid = true;
+    }
+
+    bool valid = false;
+    Tensor *var = nullptr;
+    Tensor *indices = nullptr;
+    Tensor *value = nullptr;
+    Tensor *scaler = nullptr;
+    Tensor *ref = nullptr;
+    Tensor *oov = nullptr;
+  };
+
   bool scale_;  // scale input
 };
 
