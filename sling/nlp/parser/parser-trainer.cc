@@ -26,6 +26,7 @@
 #include "sling/nlp/document/document-corpus.h"
 #include "sling/nlp/document/lexical-encoder.h"
 #include "sling/nlp/document/lexicon.h"
+#include "sling/nlp/parser/action-table.h"
 #include "sling/nlp/parser/parser-action.h"
 #include "sling/nlp/parser/parser-features.h"
 #include "sling/nlp/parser/roles.h"
@@ -38,10 +39,71 @@ namespace nlp {
 using namespace task;
 using namespace myelin;
 
+// Interface for delegate learner.
+class DelegateLearner {
+ public:
+  virtual ~DelegateLearner() = default;
+
+  // Build flow for delegate learner.
+  virtual void Build(Flow *flow, Library *library,
+                     Flow::Variable *activations,
+                     Flow::Variable *dactivations) = 0;
+};
+
+// Main delegate for coarse-grained shift/mark/other classification.
+class ShiftMarkOtherDelegateLearner : public DelegateLearner {
+ public:
+  ShiftMarkOtherDelegateLearner(int other) {
+    actions_.emplace_back(ParserAction::SHIFT);
+    actions_.emplace_back(ParserAction::MARK);
+    actions_.emplace_back(ParserAction::CASCADE, other);
+  }
+
+  void Build(Flow *flow, Library *library,
+             Flow::Variable *activations,
+             Flow::Variable *dactivations) override {
+    FlowBuilder f(flow, "coarse");
+    int dim = activations->elements();
+    int size = actions_.size();
+    auto *input = f.Placeholder("input", DT_FLOAT, {1, dim}, true);
+    auto *W = f.Random(f.Parameter("W", DT_FLOAT, {dim, size}));
+    auto *b = f.Random(f.Parameter("b", DT_FLOAT, {1, size}));
+    auto *logits = f.Name(f.Add(f.MatMul(input, W), b), "logits");
+
+    flow->Connect({activations, input});
+    if (library != nullptr) {
+      Gradient(flow, f.func(), *library);
+      auto *dlogits = flow->GradientVar(logits);
+      loss_.Build(flow, logits, dlogits);
+    }
+  }
+
+ private:
+  std::vector<ParserAction> actions_;
+  CrossEntropyLoss loss_{"coarse_loss"};
+};
+
+// Delegate for fine-grained parser action classification.
+class ClassificationDelegateLearner : public DelegateLearner {
+ public:
+  ClassificationDelegateLearner(const ActionTable &actions)
+      : actions_(actions) {}
+
+  void Build(Flow *flow, Library *library,
+             Flow::Variable *activations,
+             Flow::Variable *dactivations) override {
+
+  }
+
+ private:
+  const ActionTable &actions_;
+};
+
 // Trainer for transition-based frame-semantic parser.
 class ParserTrainer : public LearnerTask {
  public:
   ~ParserTrainer() {
+    for (auto *d : delegates_) delete d;
     delete training_corpus_;
     delete evaluation_corpus_;
   }
@@ -85,7 +147,7 @@ class ParserTrainer : public LearnerTask {
     spec_.word_embeddings = task->GetInputFile("word_embeddings");
     spec_.train_word_embeddings = task->Get("train_word_embeddings", true);
 
-    // Set up lexical bakc-off features.
+    // Set up lexical back-off features.
     spec_.prefix_dim = task->Get("prefix_dim", 0);
     spec_.suffix_dim = task->Get("suffix_dim", 16);
     spec_.hyphen_dim = task->Get("hypen_dim", 8);
@@ -96,6 +158,9 @@ class ParserTrainer : public LearnerTask {
 
     // Build word and action vocabularies.
     BuildVocabularies();
+
+    // Set up delegates.
+    InitDelegates();
 
     // Build parser model flow graph.
     BuildFlow(&flow_, true);
@@ -147,10 +212,10 @@ class ParserTrainer : public LearnerTask {
 
       delete document;
     }
-    roles_.Init(action_table_);
+    roles_.Init(actions_.actions());
 
     LOG(INFO) << "Word vocabulary: " << words_.size();
-    LOG(INFO) << "Action vocabulary: " << action_table_.size();
+    LOG(INFO) << "Action vocabulary: " << actions_.NumActions();
     LOG(INFO) << "Role set: " << roles_.size();
 
   }
@@ -164,6 +229,9 @@ class ParserTrainer : public LearnerTask {
   void AddAction(const ParserAction &action) {
     // Check context bounds.
     switch (action.type) {
+      case ParserAction::SHIFT:
+      case ParserAction::MARK:
+        return;
       case ParserAction::CONNECT:
         if (action.source > max_source_) return;
         if (action.target > max_target_) return;
@@ -177,13 +245,7 @@ class ParserTrainer : public LearnerTask {
         break;
     }
 
-    // Check if action is already in vocabulary.
-    if (action_map_.find(action) != action_map_.end()) return;
-
-    // Add action to action index and mapping.
-    int index = action_table_.size();
-    action_table_.push_back(action);
-    action_map_[action] = index;
+    actions_.Add(action);
   }
 
   // Build flow graph for parser model.
@@ -270,14 +332,25 @@ class ParserTrainer : public LearnerTask {
     auto *activations = f.Name(f.Relu(f.Add(f.MatMul(fv, W), b)), "hidden");
     activations->set_in()->set_out()->set_ref();
 
+    // Build function decoder gradient.
+    Flow::Variable *dactivations = nullptr;
+    if (learn) {
+      Gradient(flow, f.func(), *library);
+      dactivations = flow->GradientVar(activations);
+    }
+
+    // Build flows for delegates.
+    for (DelegateLearner *delegate : delegates_) {
+      delegate->Build(flow, library, activations, dactivations);
+    }
+
     // Link recurrences.
     flow->Connect({lstm.lr, lr});
     flow->Connect({lstm.rl, rl});
     flow->Connect({steps, activations});
-
-    // Build function decoder gradient.
     if (learn) {
-      Gradient(flow, f.func(), *library);
+      auto *dsteps = flow->GradientVar(steps);
+      flow->Connect({dsteps, dactivations});
     }
   }
 
@@ -295,6 +368,11 @@ class ParserTrainer : public LearnerTask {
     return f->Reshape(f->MatMul(gather, transform), {1, size * dim});
   }
 
+  void InitDelegates() {
+    delegates_.push_back(new ShiftMarkOtherDelegateLearner(1));
+    delegates_.push_back(new ClassificationDelegateLearner(actions_));
+  }
+
  private:
   // Commons store for parser.
   Store commons_;
@@ -309,8 +387,7 @@ class ParserTrainer : public LearnerTask {
   std::unordered_map<string, int> words_;
 
   // Parser actions.
-  std::vector<ParserAction> action_table_;
-  std::unordered_map<ParserAction, int, ParserActionHash> action_map_;
+  ActionTable actions_;
 
   // Role set.
   RoleSet roles_;
@@ -329,6 +406,9 @@ class ParserTrainer : public LearnerTask {
 
   // Parser feature model.
   ParserFeatureModel feature_model_;
+
+  // Delegates.
+  std::vector<DelegateLearner *> delegates_;
 
   // Model dimensions.
   int lstm_dim_ = 256;

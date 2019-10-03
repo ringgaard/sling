@@ -1901,9 +1901,12 @@ SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type, bool aligned) {
         add(new AVX256DoubleGenerator(masm, aligned));
         add(new AVX128DoubleGenerator(masm, aligned));
         add(new AVXScalarDoubleGenerator(masm, aligned));
+      } else if (masm->Enabled(SSE2)) {
+        name_ = "SSE2Dbl";
+        add(new SSE128DoubleGenerator(masm, aligned));
+        add(new SSEScalarDoubleGenerator(masm, aligned));
       } else if (masm->Enabled(SSE)) {
         name_ = "SSEDbl";
-        add(new SSE128DoubleGenerator(masm, aligned));
         add(new SSEScalarDoubleGenerator(masm, aligned));
       }
       break;

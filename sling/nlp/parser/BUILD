@@ -135,6 +135,7 @@ cc_library(
   name = "parser-trainer",
   srcs = ["parser-trainer.cc"],
   deps = [
+    ":action-table",
     ":parser-action",
     ":parser-features",
     ":roles",

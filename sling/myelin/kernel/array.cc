@@ -534,7 +534,7 @@ class GeneralConcat : public Kernel {
   }
 };
 
-// Split input tensors input tensor into chunks along a dimension.
+// Split input tensors into chunks along a dimension.
 class Split : public Kernel {
  public:
   string Name() override { return "Split"; }
