@@ -486,7 +486,7 @@ class AliasReducer : public task::Reducer {
     }
 
     // Pure anchors need high counts to be selected.
-    if (alias->sources & (WIKIPEDIA_ANCHOR  | WIKIPEDIA_LINK)) {
+    if (alias->sources & (WIKIPEDIA_ANCHOR | WIKIPEDIA_LINK)) {
       if (alias->count >= anchor_threshold_) return true;
     }
 

@@ -61,7 +61,7 @@ void Parser::Load(Store *store, const string &model) {
   store_ = store;
   ActionTable actions;
   actions.Init(store);
-  roles_.Init(actions.actions());
+  roles_.Init(actions.list());
 
   // Initialize decoder feature model.
   myelin::Flow::Blob *spec = flow.DataBlock("spec");

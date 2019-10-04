@@ -50,19 +50,17 @@ class DelegateLearner {
                      Flow::Variable *dactivations) = 0;
 };
 
-// Main delegate for coarse-grained shift/mark/other classification.
-class ShiftMarkOtherDelegateLearner : public DelegateLearner {
+// Deletegate for fixed action classification using a softmax cross-entropy
+// loss.
+class MultiClassDelegateLearner : public DelegateLearner {
  public:
-  ShiftMarkOtherDelegateLearner(int other) {
-    actions_.emplace_back(ParserAction::SHIFT);
-    actions_.emplace_back(ParserAction::MARK);
-    actions_.emplace_back(ParserAction::CASCADE, other);
-  }
+  MultiClassDelegateLearner(const string &name)
+      : name_(name), loss_(name + "_loss") {}
 
   void Build(Flow *flow, Library *library,
              Flow::Variable *activations,
              Flow::Variable *dactivations) override {
-    FlowBuilder f(flow, "coarse");
+    FlowBuilder f(flow, name_);
     int dim = activations->elements();
     int size = actions_.size();
     auto *input = f.Placeholder("input", DT_FLOAT, {1, dim}, true);
@@ -78,25 +76,33 @@ class ShiftMarkOtherDelegateLearner : public DelegateLearner {
     }
   }
 
- private:
-  std::vector<ParserAction> actions_;
-  CrossEntropyLoss loss_{"coarse_loss"};
+ protected:
+  string name_;               // delegate name
+  ActionTable actions_;       // action table for multi-class classification
+  CrossEntropyLoss loss_;     // loss function
+};
+
+// Main delegate for coarse-grained shift/mark/other classification.
+class ShiftMarkOtherDelegateLearner : public MultiClassDelegateLearner {
+ public:
+  ShiftMarkOtherDelegateLearner(int other)
+      : MultiClassDelegateLearner("coarse") {
+    // Set up coarse actions.
+    actions_.Add(ParserAction(ParserAction::SHIFT));
+    actions_.Add(ParserAction(ParserAction::MARK));
+    actions_.Add(ParserAction(ParserAction::CASCADE, other));
+  }
 };
 
 // Delegate for fine-grained parser action classification.
-class ClassificationDelegateLearner : public DelegateLearner {
+class ClassificationDelegateLearner : public MultiClassDelegateLearner {
  public:
   ClassificationDelegateLearner(const ActionTable &actions)
-      : actions_(actions) {}
-
-  void Build(Flow *flow, Library *library,
-             Flow::Variable *activations,
-             Flow::Variable *dactivations) override {
-
+      : MultiClassDelegateLearner("fine") {
+    for (const ParserAction &action : actions.list()) {
+      actions_.Add(action);
+    }
   }
-
- private:
-  const ActionTable &actions_;
 };
 
 // Trainer for transition-based frame-semantic parser.
@@ -212,10 +218,10 @@ class ParserTrainer : public LearnerTask {
 
       delete document;
     }
-    roles_.Init(actions_.actions());
+    roles_.Init(actions_.list());
 
     LOG(INFO) << "Word vocabulary: " << words_.size();
-    LOG(INFO) << "Action vocabulary: " << actions_.NumActions();
+    LOG(INFO) << "Action vocabulary: " << actions_.size();
     LOG(INFO) << "Role set: " << roles_.size();
 
   }

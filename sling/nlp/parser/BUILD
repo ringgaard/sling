@@ -39,10 +39,7 @@ cc_library(
     "//sling/frame:object",
     "//sling/frame:serialization",
     "//sling/frame:store",
-    "//sling/string:numbers",
-    "//sling/string:strcat",
     "//sling/string:text",
-    "//sling/util:table-writer",
   ],
 )
 
