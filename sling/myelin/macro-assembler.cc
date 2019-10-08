@@ -752,6 +752,52 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
       }
       break;
+    case DT_INT16:
+      switch (op) {
+        case REDUCE_ADD:
+          if (avx) {
+            vpaddw(acc, acc, r);
+          } else {
+            paddw(acc, r);
+          }
+          break;
+        case REDUCE_MUL:
+          if (avx) {
+            vpmullw(acc, acc, r);
+          } else {
+            pmullw(acc, r);
+          }
+          break;
+        case REDUCE_MIN:
+          if (avx) {
+            vpminsw(acc, acc, r);
+          } else {
+            pminsw(acc, r);
+          }
+          break;
+        case REDUCE_MAX:
+          if (avx) {
+            vpmaxsw(acc, acc, r);
+          } else {
+            pmaxsw(acc, r);
+          }
+          break;
+        case REDUCE_AND:
+          if (avx) {
+            vpand(acc, acc, r);
+          } else {
+            pand(acc, r);
+          }
+          break;
+        case REDUCE_OR:
+          if (avx) {
+            vpor(acc, acc, r);
+          } else {
+            por(acc, r);
+          }
+          break;
+      }
+      break;
     default:
       LOG(FATAL) << "Reduction for type not supported";
   }
@@ -899,6 +945,52 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
       }
       break;
+    case DT_INT16:
+      switch (op) {
+        case REDUCE_ADD:
+          if (avx) {
+            vpaddw(acc, acc, src);
+          } else {
+            paddw(acc, src);
+          }
+          break;
+        case REDUCE_MUL:
+          if (avx) {
+            vpmullw(acc, acc, src);
+          } else {
+            pmullw(acc, src);
+          }
+          break;
+        case REDUCE_MIN:
+          if (avx) {
+            vpminsw(acc, acc, src);
+          } else {
+            pminsw(acc, src);
+          }
+          break;
+        case REDUCE_MAX:
+          if (avx) {
+            vpmaxsw(acc, acc, src);
+          } else {
+            pmaxsw(acc, src);
+          }
+          break;
+        case REDUCE_AND:
+          if (avx) {
+            vpand(acc, acc, src);
+          } else {
+            pand(acc, src);
+          }
+          break;
+        case REDUCE_OR:
+          if (avx) {
+            vpor(acc, acc, src);
+          } else {
+            por(acc, src);
+          }
+          break;
+      }
+      break;
     default:
       LOG(FATAL) << "Reduction for type not supported";
   }
@@ -966,6 +1058,29 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
         case REDUCE_MAX:
           vpmaxsd(acc, acc, r);
+          break;
+        case REDUCE_AND:
+          vpand(acc, acc, r);
+          break;
+        case REDUCE_OR:
+          vpor(acc, acc, r);
+          break;
+      }
+      break;
+    case DT_INT16:
+      CHECK(Enabled(AVX2));
+      switch (op) {
+        case REDUCE_ADD:
+          vpaddw(acc, acc, r);
+          break;
+        case REDUCE_MUL:
+          vpmullw(acc, acc, r);
+          break;
+        case REDUCE_MIN:
+          vpminsw(acc, acc, r);
+          break;
+        case REDUCE_MAX:
+          vpmaxsw(acc, acc, r);
           break;
         case REDUCE_AND:
           vpand(acc, acc, r);
@@ -1051,6 +1166,29 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
       }
       break;
+    case DT_INT16:
+      CHECK(Enabled(AVX2));
+      switch (op) {
+        case REDUCE_ADD:
+          vpaddw(acc, acc, src);
+          break;
+        case REDUCE_MUL:
+          vpmullw(acc, acc, src);
+          break;
+        case REDUCE_MIN:
+          vpminsw(acc, acc, src);
+          break;
+        case REDUCE_MAX:
+          vpmaxsw(acc, acc, src);
+          break;
+        case REDUCE_AND:
+          vpand(acc, acc, src);
+          break;
+        case REDUCE_OR:
+          vpor(acc, acc, src);
+          break;
+      }
+      break;
     default:
       LOG(FATAL) << "Reduction for type not supported";
   }
@@ -1117,6 +1255,28 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
         case REDUCE_MAX:
           vpmaxsd(acc, acc, r);
+          break;
+        case REDUCE_AND:
+          vpandd(acc, acc, r);
+          break;
+        case REDUCE_OR:
+          vpord(acc, acc, r);
+          break;
+      }
+      break;
+    case DT_INT16:
+      switch (op) {
+        case REDUCE_ADD:
+          vpaddw(acc, acc, r);
+          break;
+        case REDUCE_MUL:
+          vpmullw(acc, acc, r);
+          break;
+        case REDUCE_MIN:
+          vpminsw(acc, acc, r);
+          break;
+        case REDUCE_MAX:
+          vpmaxsw(acc, acc, r);
           break;
         case REDUCE_AND:
           vpandd(acc, acc, r);
@@ -1200,6 +1360,30 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
         case REDUCE_OR:
           vpord(acc, acc, src, mask);
+          break;
+      }
+      break;
+    case DT_INT16:
+      switch (op) {
+        case REDUCE_ADD:
+          vpaddw(acc, acc, src, mask);
+          break;
+        case REDUCE_MUL:
+          vpmullw(acc, acc, src, mask);
+          break;
+        case REDUCE_MIN:
+          vpminsw(acc, acc, src, mask);
+          break;
+        case REDUCE_MAX:
+          vpmaxsw(acc, acc, src, mask);
+          break;
+        case REDUCE_AND:
+          CHECK(!k.is_valid()) << "16-bit masking not supported for vpand";
+          vpandd(acc, acc, src);
+          break;
+        case REDUCE_OR:
+          CHECK(!k.is_valid()) << "16-bit masking not supported for vpor";
+          vpord(acc, acc, src);
           break;
       }
       break;

@@ -643,7 +643,7 @@ struct FrameDatum : public Datum {
     return false;
   }
 
-  // Checks if frame has slot with value.
+  // Checks if frame has a slot with name and value.
   bool has(Handle name, Handle value) const {
     for (const Slot *slot = begin(); slot < end(); ++slot) {
       if (slot->name == name && slot->value == value) return true;
