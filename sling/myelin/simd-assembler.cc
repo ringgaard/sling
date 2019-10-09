@@ -2240,11 +2240,11 @@ class AVX512ScalarInt32Generator : public SIMDGenerator {
   }
 
   void Accumulate(Reduction op, int acc, int src) override {
-    masm_->Accumulate(op, DT_FLOAT, zmm(acc), zmm(src));
+    masm_->Accumulate(op, DT_INT32, zmm(acc), zmm(src));
   }
 
   void Accumulate(Reduction op, int acc, const jit::Operand &src) override {
-    masm_->Accumulate(op, DT_FLOAT, zmm(acc), src, mask_);
+    masm_->Accumulate(op, DT_INT32, zmm(acc), src, mask_);
   }
 
  private:
