@@ -153,9 +153,12 @@ int Registers::num_free() const {
 }
 
 int SIMDRegisters::try_alloc(bool extended) {
-  for (int r = 0; r < (extended ? kNumZRegisters : kNumXRegisters); ++r) {
+  int n = extended ? kNumZRegisters : kNumXRegisters;
+  for (int i = next_; i < n + next_; ++i) {
+    int r = i % n;
     if ((used_regs_ & (1 << r)) == 0) {
       use(r);
+      next_ = (r + 1) % n;
       return r;
     }
   }

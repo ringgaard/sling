@@ -2264,10 +2264,10 @@ void Assembler::movq(XMMRegister dst, XMMRegister src) {
   EnsureSpace ensure_space(this);
   if (dst.low_bits() == 4) {
     // Avoid unnecessary SIB byte.
-    emit(0xf3);
+    emit(0xF3);
     emit_optional_rex_32(dst, src);
     emit(0x0F);
-    emit(0x7e);
+    emit(0x7E);
     emit_sse_operand(dst, src);
   } else {
     emit(0x66);
@@ -2311,10 +2311,10 @@ void Assembler::movdqa(XMMRegister dst, const Operand &src) {
 void Assembler::movdqu(XMMRegister dst, XMMRegister src) {
   DCHECK(Enabled(SSE2));
   EnsureSpace ensure_space(this);
-  emit(0xf3);
+  emit(0xF3);
   emit_optional_rex_32(dst, src);
   emit(0x0F);
-  emit(0x6f);
+  emit(0x6F);
   emit_sse_operand(dst, src);
 }
 
@@ -4118,8 +4118,8 @@ void Assembler::rorxl(Register dst, const Operand &src, byte imm8) {
 
 void Assembler::rcpss(XMMRegister dst, XMMRegister src) {
   EnsureSpace ensure_space(this);
-  emit_optional_rex_32(dst, src);
   emit(0xF3);
+  emit_optional_rex_32(dst, src);
   emit(0x0F);
   emit(0x53);
   emit_sse_operand(dst, src);
@@ -4127,8 +4127,8 @@ void Assembler::rcpss(XMMRegister dst, XMMRegister src) {
 
 void Assembler::rcpss(XMMRegister dst, const Operand &src) {
   EnsureSpace ensure_space(this);
-  emit_optional_rex_32(dst, src);
   emit(0xF3);
+  emit_optional_rex_32(dst, src);
   emit(0x0F);
   emit(0x53);
   emit_sse_operand(dst, src);
