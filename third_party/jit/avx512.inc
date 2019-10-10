@@ -1640,6 +1640,12 @@ void vpmulld(ZMMRegister dst, ZMMRegister src1, ZMMRegister src2, Mask mask = no
 void vpmulld(ZMMRegister dst, ZMMRegister src1, const Operand &src2, Mask mask = nomask) {
   zinstr(0x40, dst, src1, src2, 0, mask, EVEX_BCST | EVEX_BT4 | EVEX_ENDS | EVEX_L128 | EVEX_L256 | EVEX_L512 | EVEX_M0F38 | EVEX_P66 | EVEX_W0);
 }
+void vpmullq(ZMMRegister dst, ZMMRegister src1, ZMMRegister src2, Mask mask = nomask) {
+  zinstr(0x40, dst, src1, src2, 0, mask, EVEX_BT8 | EVEX_L128 | EVEX_L256 | EVEX_L512 | EVEX_M0F38 | EVEX_P66 | EVEX_W1);
+}
+void vpmullq(ZMMRegister dst, ZMMRegister src1, const Operand &src2, Mask mask = nomask) {
+  zinstr(0x40, dst, src1, src2, 0, mask, EVEX_BCST | EVEX_BT8 | EVEX_L128 | EVEX_L256 | EVEX_L512 | EVEX_M0F38 | EVEX_P66 | EVEX_W1);
+}
 void vpmullw(ZMMRegister dst, ZMMRegister src1, ZMMRegister src2, Mask mask = nomask) {
   zinstr(0xD5, dst, src1, src2, 0, mask, EVEX_L128 | EVEX_L256 | EVEX_L512 | EVEX_M0F | EVEX_P66 | EVEX_WIG);
 }

@@ -1242,6 +1242,28 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
       }
       break;
+    case DT_INT64:
+      switch (op) {
+        case REDUCE_ADD:
+          vpaddq(acc, acc, r);
+          break;
+        case REDUCE_MUL:
+          vpmullq(acc, acc, r);
+          break;
+        case REDUCE_MIN:
+          vpminsq(acc, acc, r);
+          break;
+        case REDUCE_MAX:
+          vpmaxsq(acc, acc, r);
+          break;
+        case REDUCE_AND:
+          vpandq(acc, acc, r);
+          break;
+        case REDUCE_OR:
+          vporq(acc, acc, r);
+          break;
+      }
+      break;
     case DT_INT32:
       switch (op) {
         case REDUCE_ADD:
@@ -1338,6 +1360,28 @@ void MacroAssembler::Accumulate(Reduction op, Type type,
           break;
         case REDUCE_OR:
           vorpd(acc, acc, src, mask);
+          break;
+      }
+      break;
+    case DT_INT64:
+      switch (op) {
+        case REDUCE_ADD:
+          vpaddq(acc, acc, src, mask);
+          break;
+        case REDUCE_MUL:
+          vpmullq(acc, acc, src, mask);
+          break;
+        case REDUCE_MIN:
+          vpminsq(acc, acc, src, mask);
+          break;
+        case REDUCE_MAX:
+          vpmaxsq(acc, acc, src, mask);
+          break;
+        case REDUCE_AND:
+          vpandq(acc, acc, src, mask);
+          break;
+        case REDUCE_OR:
+          vporq(acc, acc, src, mask);
           break;
       }
       break;
