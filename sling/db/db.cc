@@ -17,37 +17,29 @@
 namespace sling {
 
 Database::Database(const string &idxfile,
-                   const string &recfile,
+                   const std::vector<string> &recfiles,
                    const RecordFileOptions &options) : idxfile_(idxfile) {
-  // Open data record file for reading and appending. The reader and writer
-  // share the same underlying file.
-  File *file;
-  CHECK(File::Open(recfile, "a+", &file));
-  reader_ = new RecordReader(file, options, false);
-  writer_ = new RecordWriter(reader_, options);
+  // Open data record files for reading and appending. The reader and writer
+  // for each data shard share the same underlying file.
+  CHECK(!recfiles.empty());
+  shards_.resize(recfiles.size());
+  datasize_ = 0;
+  for (int i = 0; i < recfiles.size(); ++i) {
+    Shard &shard = shards_[i];
+    File *file;
+    CHECK(File::Open(recfiles[i], "a+", &file));
+    shard.reader = new RecordReader(file, options, false);
+    shard.writer = new RecordWriter(shard.reader, options);
+    datasize_ += shard.reader->size();
+  }
 }
 
 Database::~Database() {
-  // Close data record file.
-  delete reader_;
-  delete writer_;
-}
-
-Status Database::ReadRecord(uint64 position,
-                            Record *record,
-                            const RecordHeader **hdr) {
-  // Read record at position.
-  Status st = reader_->Seek(position);
-  if (!st) return st;
-  st = reader_->Read(record);
-  if (!st) return st;
-
-  // Get record header.
-  CHECK_GE(record->value.size(), sizeof(RecordHeader));
-  *hdr = reinterpret_cast<const RecordHeader *>(record->value.data());
-  record->value.remove_prefix(sizeof(RecordHeader));
-
-  return Status::OK;
+  // Close data record files.
+  for (Shard &shard : shards_) {
+    delete shard.reader;
+    delete shard.writer;
+  }
 }
 
 void Database::InitializeIndex() {
