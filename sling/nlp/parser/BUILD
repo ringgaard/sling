@@ -131,8 +131,8 @@ cc_library(
 cc_library(
   name = "parser-trainer",
   srcs = ["parser-trainer.cc"],
+  hdrs = ["parser-trainer.h"],
   deps = [
-    ":action-table",
     ":parser-action",
     ":parser-features",
     ":roles",
@@ -146,9 +146,25 @@ cc_library(
     "//sling/nlp/document:document-corpus",
     "//sling/nlp/document:lexical-encoder",
     "//sling/nlp/document:lexicon",
-    "//sling/nlp/parser/trainer:transition-generator",
     "//sling/task:learner",
+    "//sling/util:mutex",
     "//sling/util:unicode",
+  ],
+)
+
+cc_library(
+  name = "caspar-trainer",
+  srcs = ["caspar-trainer.cc"],
+  deps = [
+    ":parser-trainer",
+    "//sling/base",
+    "//sling/myelin:builder",
+    "//sling/myelin:flow",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
+    "//sling/nlp/document:document",
+    "//sling/nlp/document:document-corpus",
+    "//sling/nlp/parser/trainer:transition-generator",
   ],
   alwayslink = 1,
 )
