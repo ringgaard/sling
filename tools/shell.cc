@@ -5,7 +5,6 @@
 #include "sling/base/clock.h"
 #include "sling/base/flags.h"
 #include "sling/base/init.h"
-#include "sling/base/strtoint.h"
 #include "sling/base/types.h"
 #include "sling/file/posix.h"
 #include "sling/frame/json.h"
@@ -560,12 +559,12 @@ class Shell {
 
   // Sets trace level.
   void TraceCommand(const string &args) {
-    trace_ = atoi32(args);
+    trace_ = atoi(args.c_str());
   }
 
   // Sets indentation level.
   void IndentCommand(const string &args) {
-    indent_ = atoi32(args);
+    indent_ = atoi(args.c_str());
   }
 
   // Sets shallow printing.
