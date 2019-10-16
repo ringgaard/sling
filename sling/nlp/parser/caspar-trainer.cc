@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "sling/myelin/builder.h"
+#include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
 #include "sling/myelin/gradient.h"
 #include "sling/myelin/learning.h"
@@ -58,14 +59,59 @@ class MultiClassDelegateLearner : public DelegateLearner {
     logits_ = cell_->GetParameter(name_ + "/logits");
 
     dcell_ = cell_->Gradient();
+    primal_ = cell_->Primal();
     dinput_ = input_->Gradient();
     dlogits_ = logits_->Gradient();
   }
 
-  DelegateLearnerInstance *Instance() override {
-    // TODO: implement MultiClassDelegateLearnerInstance.
-    return nullptr;
+  DelegateLearnerInstance *CreateInstance() override {
+    return new DelegateInstance(this);
   }
+
+  // Multi-class delegate instance.
+  class DelegateInstance : public DelegateLearnerInstance {
+   public:
+    DelegateInstance(MultiClassDelegateLearner *learner)
+        : learner_(learner),
+          forward_(learner->cell_),
+          backward_(learner->dcell_) {
+    }
+
+    void CollectGradients(std::vector<myelin::Instance *> *gradients) override {
+      gradients->push_back(&backward_);
+    }
+
+    void ClearGradients() override {
+      backward_.Clear();
+    }
+
+    float Compute(float *activations,
+                  float *dactivations,
+                  const ParserAction &action) override {
+      // Compute logits from activations.
+      forward_.SetReference(learner_->input_, activations);
+      forward_.Compute();
+
+      // Compute loss.
+      int target = learner_->actions_.Index(action);
+      CHECK(target != -1);
+      float *logits = forward_.Get<float>(learner_->logits_);
+      float *dlogits = backward_.Get<float>(learner_->dlogits_);
+      float loss = learner_->loss_.Compute(logits, target, dlogits);
+
+      // Backpropagate loss.
+      backward_.Set(learner_->primal_, &forward_);
+      backward_.SetReference(learner_->dinput_, dactivations);
+      backward_.Compute();
+
+      return loss;
+    }
+
+   private:
+    MultiClassDelegateLearner *learner_;
+    Instance forward_;
+    Instance backward_;
+  };
 
  protected:
   string name_;                // delegate name
@@ -77,6 +123,7 @@ class MultiClassDelegateLearner : public DelegateLearner {
   Tensor *logits_ = nullptr;   // output with logits
 
   Cell *dcell_ = nullptr;      // cell for backward computation
+  Tensor *primal_ = nullptr;   // primal reference
   Tensor *dinput_ = nullptr;   // gradient for activations
   Tensor *dlogits_ = nullptr;  // gradient for logits
 };
@@ -150,6 +197,19 @@ class CasparTrainer : public ParserTrainer {
     // Set up delegates.
     delegates_.push_back(new ShiftMarkOtherDelegateLearner(1));
     delegates_.push_back(new ClassificationDelegateLearner(actions_));
+  }
+
+  // Transition generator.
+  void GenerateTransitions(const Document &document,
+                           std::vector<ParserAction> *transitions) override {
+    transitions->clear();
+    Generate(document, [&](const ParserAction &action) {
+      if (action.type != ParserAction::SHIFT &&
+          action.type != ParserAction::MARK) {
+        transitions->emplace_back(ParserAction::CASCADE, 1);
+      }
+      transitions->push_back(action);
+    });
   }
 
  private:

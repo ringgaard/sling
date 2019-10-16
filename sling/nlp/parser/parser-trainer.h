@@ -52,13 +52,19 @@ class DelegateLearner {
   virtual void Initialize(const myelin::Network &network) = 0;
 
   // Create instance of delegate.
-  virtual DelegateLearnerInstance *Instance() = 0;
+  virtual DelegateLearnerInstance *CreateInstance() = 0;
 };
 
 // Interface for delegate learner instance.
 class DelegateLearnerInstance {
  public:
   virtual ~DelegateLearnerInstance() = default;
+
+  // Collect gradients.
+  virtual void CollectGradients(std::vector<myelin::Instance *> *gradients) = 0;
+
+  // Clear gradients.
+  virtual void ClearGradients() = 0;
 
   // Compute loss and gradient for delegate with respect to golden action.
   virtual float Compute(float *activations,
@@ -80,6 +86,10 @@ class ParserTrainer : public task::LearnerTask {
   // Abstract method for setting up parser trainer.
   virtual void Setup(task::Task *task) = 0;
 
+  // Abstract method for converting document to transition sequence.
+  virtual void GenerateTransitions(const Document &document,
+                                   std::vector<ParserAction> *transitions) = 0;
+
  private:
   // Build flow graph for parser model.
   void BuildFlow(myelin::Flow *flow, bool learn);
@@ -91,8 +101,9 @@ class ParserTrainer : public task::LearnerTask {
       myelin::Flow::Variable *embeddings,
       int size, int dim);
 
-  // Get next training document. The caller owns the returned document.
-  Document *GetNextTrainingDocument();
+  // Read next training document into store. The caller owns the returned
+  // document.
+  Document *GetNextTrainingDocument(Store *store);
 
  protected:
   // Commons store for parser.
@@ -125,10 +136,17 @@ class ParserTrainer : public task::LearnerTask {
   // Parser feature model.
   ParserFeatureModel feature_model_;
 
+  // Decoder model.
+  myelin::Cell *decoder_ = nullptr;
+  myelin::Tensor *activations_ = nullptr;
+  myelin::Cell *gdecoder_ = nullptr;
+  myelin::Tensor *dactivations_ = nullptr;
+  myelin::Tensor *primal_ = nullptr;
+
   // Delegates.
   std::vector<DelegateLearner *> delegates_;
 
-  // Mutex for serializing access to training data.
+  // Mutex for serializing access to global state.
   Mutex mu_;
 
   // Model hyperparameters.
@@ -149,6 +167,11 @@ class ParserTrainer : public task::LearnerTask {
   int link_dim_ff_ = 64;
   int mark_dim_ = 32;
   std::vector<int> mark_distance_bins_{0, 1, 2, 3, 6, 10, 15, 20};
+  int seed_ = 0;
+
+  // Statistics.
+  task::Counter *num_documents_;
+  task::Counter *num_tokens_;
 };
 
 }  // namespace nlp

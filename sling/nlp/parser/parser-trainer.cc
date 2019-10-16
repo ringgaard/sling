@@ -49,6 +49,11 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("link_dim_lstm", &link_dim_lstm_);
   task->Fetch("link_dim_ff", &link_dim_ff_);
   task->Fetch("mark_dim", &mark_dim_);
+  task->Fetch("seed", &seed_);
+
+  // Statistics.
+  num_tokens_ = task->GetCounter("tokens");
+  num_documents_ = task->GetCounter("documents");
 
   // Open training and evaluation corpora.
   training_corpus_ =
@@ -90,20 +95,68 @@ void ParserTrainer::Run(task::Task *task) {
   // Compile model.
   compiler_.Compile(&flow_, &net_);
 
+  // Get decoder cells and tensors.
+  decoder_ = net_.GetCell("ff_trunk");
+  gdecoder_ = decoder_->Gradient();
+  //myelin::Tensor *activations_ = nullptr;
+  //myelin::Tensor *dactivations_ = nullptr;
+  //myelin::Tensor *primal_ = nullptr;
+
   // Initialize model.
   feature_model_.Init(net_.GetCell("ff_trunk"),
                       flow_.DataBlock("spec"),
                       &roles_, frame_limit_);
+  net_.InitLearnableWeights(seed_, 0.0, 0.01);
   encoder_.Initialize(net_);
   optimizer_->Initialize(net_);
   for (auto *d : delegates_) d->Initialize(net_);
   commons_.Freeze();
+
+  // Run training.
+  LOG(INFO) << "Starting training";
+  Train(task, &net_);
+
+  // Optionally output profiling information.
+  LogProfile(net_);
 
   // Clean up.
   delete optimizer_;
 }
 
 void ParserTrainer::Worker(int index, Network *model) {
+  // Create instances work training worker thread.
+  LexicalEncoderLearner encoder(encoder_);
+  Instance gdecoder(gdecoder_);
+  std::vector<DelegateLearnerInstance *> delegates;
+  for (auto *d : delegates_) delegates.push_back(d->CreateInstance());
+
+  // Collect gradients.
+  std::vector<Instance *> gradients;
+  encoder.CollectGradients(&gradients);
+  gradients.push_back(&gdecoder);
+  for (auto *d : delegates) d->CollectGradients(&gradients);
+
+  for (;;) {
+    // Get next training document.
+    Store store(&commons_);
+    Document *document = GetNextTrainingDocument(&store);
+    CHECK(document != nullptr);
+    num_documents_->Increment();
+    num_tokens_->Increment(document->length());
+
+    // Run document through lexical encoder.
+    auto lstm = encoder.Compute(*document, 0, document->length());
+
+    CHECK(lstm.lr != nullptr); // TODO: remove
+
+    delete document;
+
+    // Check if we are done.
+    if (EpochCompleted()) break;
+  }
+
+  // Clean up.
+  for (auto *d : delegates) delete d;
 }
 
 bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
@@ -231,13 +284,13 @@ Flow::Variable *ParserTrainer::LinkedFeature(FlowBuilder *f,
   return f->Reshape(f->MatMul(gather, transform), {1, size * dim});
 }
 
-Document *ParserTrainer::GetNextTrainingDocument() {
+Document *ParserTrainer::GetNextTrainingDocument(Store *store) {
   MutexLock lock(&mu_);
-  Document *document = training_corpus_->Next(&commons_);
+  Document *document = training_corpus_->Next(store);
   if (document == nullptr) {
     // Loop around when end of training corpus reached.
     training_corpus_->Rewind();
-    document = training_corpus_->Next(&commons_);
+    document = training_corpus_->Next(store);
   }
   return document;
 }
