@@ -111,7 +111,7 @@ struct ParserAction {
   }
   ParserAction(Type t, uint8 arg) : ParserAction() {
     type = t;
-    if (arg == CASCADE) {
+    if (t == CASCADE) {
       delegate = arg;
     } else {
       length = arg;

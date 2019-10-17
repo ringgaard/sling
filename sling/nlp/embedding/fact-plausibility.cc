@@ -167,11 +167,7 @@ class FactPlausibilityTrainer : public LearnerTask {
     store_.Freeze();
 
     // Run training.
-    LOG(INFO) << "Starting training";
     Train(task, &model);
-
-    // Output profile.
-    LogProfile(model);
 
     // Save final model.
     if (!model_filename_.empty()) {

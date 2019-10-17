@@ -116,11 +116,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
     store_.Freeze();
 
     // Run training.
-    LOG(INFO) << "Starting training";
     Train(task, &model);
-
-    // Output profile.
-    myelin::LogProfile(model);
 
     // Write fact embeddings to output file.
     LOG(INFO) << "Writing embeddings";

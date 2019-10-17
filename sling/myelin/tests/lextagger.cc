@@ -21,6 +21,7 @@
 #include "sling/myelin/compiler.h"
 #include "sling/myelin/gradient.h"
 #include "sling/myelin/learning.h"
+#include "sling/myelin/profile.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/lexical-encoder.h"
 #include "sling/nlp/document/lexicon.h"

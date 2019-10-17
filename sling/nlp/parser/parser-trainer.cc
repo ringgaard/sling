@@ -54,6 +54,7 @@ void ParserTrainer::Run(task::Task *task) {
   // Statistics.
   num_tokens_ = task->GetCounter("tokens");
   num_documents_ = task->GetCounter("documents");
+  num_transitions_ = task->GetCounter("transitions");
 
   // Open training and evaluation corpora.
   training_corpus_ =
@@ -97,10 +98,13 @@ void ParserTrainer::Run(task::Task *task) {
 
   // Get decoder cells and tensors.
   decoder_ = net_.GetCell("ff_trunk");
+  activations_ = decoder_->GetParameter("ff_trunk/steps");
   gdecoder_ = decoder_->Gradient();
-  //myelin::Tensor *activations_ = nullptr;
-  //myelin::Tensor *dactivations_ = nullptr;
-  //myelin::Tensor *primal_ = nullptr;
+  primal_ = decoder_->Primal();
+  dactivations_ = activations_->Gradient();
+  dactivation_ = gdecoder_->GetParameter("ff_trunk/hidden")->Gradient();
+  dlr_ = gdecoder_->GetParameter("gradients/ff_trunk/d_lr_lstm");
+  drl_ = gdecoder_->GetParameter("gradients/ff_trunk/d_rl_lstm");
 
   // Initialize model.
   feature_model_.Init(net_.GetCell("ff_trunk"),
@@ -112,19 +116,15 @@ void ParserTrainer::Run(task::Task *task) {
   for (auto *d : delegates_) d->Initialize(net_);
   commons_.Freeze();
 
-  // Run training.
-  LOG(INFO) << "Starting training";
+  // Train model.
   Train(task, &net_);
-
-  // Optionally output profiling information.
-  LogProfile(net_);
 
   // Clean up.
   delete optimizer_;
 }
 
 void ParserTrainer::Worker(int index, Network *model) {
-  // Create instances work training worker thread.
+  // Create instances.
   LexicalEncoderLearner encoder(encoder_);
   Instance gdecoder(gdecoder_);
   std::vector<DelegateLearnerInstance *> delegates;
@@ -136,6 +136,10 @@ void ParserTrainer::Worker(int index, Network *model) {
   gradients.push_back(&gdecoder);
   for (auto *d : delegates) d->CollectGradients(&gradients);
 
+  std::vector<ParserAction> transitions;
+  std::vector<Instance *> decoders;
+  myelin::Channel activations(activations_);
+  myelin::Channel dactivations(dactivations_);
   for (;;) {
     // Get next training document.
     Store store(&commons_);
@@ -144,10 +148,78 @@ void ParserTrainer::Worker(int index, Network *model) {
     num_documents_->Increment();
     num_tokens_->Increment(document->length());
 
-    // Run document through lexical encoder.
-    auto lstm = encoder.Compute(*document, 0, document->length());
+    // Generate transitions for document.
+    GenerateTransitions(*document, &transitions);
+    num_transitions_->Increment(transitions.size());
+    document->ClearAnnotations();
 
-    CHECK(lstm.lr != nullptr); // TODO: remove
+    // Compute the number of decoder steps.
+    int steps = 0;
+    for (const ParserAction &action : transitions) {
+      if (action.type != ParserAction::CASCADE) steps++;
+    }
+
+    // Set up parser state.
+    ParserState state(document, 0, document->length());
+    ParserFeatureExtractor features(&feature_model_, &state);
+
+    // Set up channels and instances for decoder.
+    activations.resize(steps);
+    dactivations.resize(steps);
+    while (decoders.size() < steps) decoders.push_back(new Instance(decoder_));
+
+    // Run document through encoder to produce contextual token encodings.
+    auto bilstm = encoder.Compute(*document, 0, document->length());
+
+    // Run decoder and delegates on all steps in the transition sequence.
+    int t = 0;
+    for (int s = 0; s < steps; ++s) {
+      // Run next step of decoder.
+      Instance *decoder = decoders[s];
+      activations.zero(s);
+      dactivations.zero(s);
+
+      // Attach instance to recurrent layers.
+      decoder->Clear();
+      features.Attach(bilstm, &activations, decoder);
+
+      // Extract features.
+      features.Extract(decoder);
+
+      // Compute decoder activations.
+      decoder->Compute();
+
+      // Run the cascade.
+      float *fwd = reinterpret_cast<float *>(activations.at(s));
+      float *bkw = reinterpret_cast<float *>(dactivations.at(s));
+      int d = 0;
+      float loss = 0.0;
+      for (;;) {
+        ParserAction &action = transitions[t];
+        loss += delegates[d]->Compute(fwd, bkw, action);
+        if (action.type != ParserAction::CASCADE) break;
+        CHECK_GT(action.delegate, d);
+        d = action.delegate;
+        t++;
+      }
+
+      // Apply action to parser state.
+      state.Apply(transitions[t++]);
+    }
+
+    // Propagate gradients back through decoder.
+    auto grad = encoder.PrepareGradientChannels(document->length());
+    for (int s = steps - 1; s >= 0; --s) {
+      gdecoder.Set(primal_, decoders[s]);
+      gdecoder.Set(dactivations_, &dactivations);
+      gdecoder.Set(dactivation_, &dactivations, s);
+      gdecoder.Set(dlr_, grad.lr);
+      gdecoder.Set(drl_, grad.rl);
+      gdecoder.Compute();
+    }
+
+    // Propagate gradients back through encoder.
+    encoder.Backpropagate();
 
     delete document;
 
@@ -156,6 +228,7 @@ void ParserTrainer::Worker(int index, Network *model) {
   }
 
   // Clean up.
+  for (auto *d : decoders) delete d;
   for (auto *d : delegates) delete d;
 }
 
@@ -288,7 +361,7 @@ Document *ParserTrainer::GetNextTrainingDocument(Store *store) {
   MutexLock lock(&mu_);
   Document *document = training_corpus_->Next(store);
   if (document == nullptr) {
-    // Loop around when end of training corpus reached.
+    // Loop around if the end of the training corpus has been reached.
     training_corpus_->Rewind();
     document = training_corpus_->Next(store);
   }

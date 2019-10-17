@@ -62,6 +62,7 @@ class MultiClassDelegateLearner : public DelegateLearner {
     primal_ = cell_->Primal();
     dinput_ = input_->Gradient();
     dlogits_ = logits_->Gradient();
+    loss_.Initialize(network);
   }
 
   DelegateLearnerInstance *CreateInstance() override {
@@ -88,13 +89,15 @@ class MultiClassDelegateLearner : public DelegateLearner {
     float Compute(float *activations,
                   float *dactivations,
                   const ParserAction &action) override {
+      // Look up index for action. Skip backpropagation if action is unknown.
+      int target = learner_->actions_.Index(action);
+      if (target == -1) return 0.0;
+
       // Compute logits from activations.
       forward_.SetReference(learner_->input_, activations);
       forward_.Compute();
 
       // Compute loss.
-      int target = learner_->actions_.Index(action);
-      CHECK(target != -1);
       float *logits = forward_.Get<float>(learner_->logits_);
       float *dlogits = backward_.Get<float>(learner_->dlogits_);
       float loss = learner_->loss_.Compute(logits, target, dlogits);

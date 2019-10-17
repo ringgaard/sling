@@ -78,6 +78,7 @@ cc_binary(
     "//sling/myelin:compiler",
     "//sling/myelin:gradient",
     "//sling/myelin:learning",
+    "//sling/myelin:profile",
     "//sling/nlp/document",
     "//sling/nlp/document:lexical-encoder",
     "//sling/util:mutex",

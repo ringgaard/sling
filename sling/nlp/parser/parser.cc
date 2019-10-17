@@ -17,6 +17,7 @@
 #include "sling/nlp/parser/parser.h"
 
 #include "sling/frame/serialization.h"
+#include "sling/myelin/profile.h"
 #include "sling/myelin/kernel/dragnn.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/features.h"

@@ -142,6 +142,9 @@ class ParserTrainer : public task::LearnerTask {
   myelin::Cell *gdecoder_ = nullptr;
   myelin::Tensor *dactivations_ = nullptr;
   myelin::Tensor *primal_ = nullptr;
+  myelin::Tensor *dactivation_ = nullptr;
+  myelin::Tensor *dlr_ = nullptr;
+  myelin::Tensor *drl_ = nullptr;
 
   // Delegates.
   std::vector<DelegateLearner *> delegates_;
@@ -172,6 +175,7 @@ class ParserTrainer : public task::LearnerTask {
   // Statistics.
   task::Counter *num_documents_;
   task::Counter *num_tokens_;
+  task::Counter *num_transitions_;
 };
 
 }  // namespace nlp

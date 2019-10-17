@@ -16,6 +16,7 @@
 
 #include "sling/myelin/flow.h"
 #include "sling/myelin/gradient.h"
+#include "sling/myelin/profile.h"
 
 namespace sling {
 
