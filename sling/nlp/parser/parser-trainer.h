@@ -149,8 +149,9 @@ class ParserTrainer : public task::LearnerTask {
   // Delegates.
   std::vector<DelegateLearner *> delegates_;
 
-  // Mutex for serializing access to global state.
-  Mutex mu_;
+  // Mutexes for serializing access to global state.
+  Mutex input_mu_;
+  Mutex update_mu_;
 
   // Model hyperparameters.
   int lstm_dim_ = 256;
@@ -171,6 +172,14 @@ class ParserTrainer : public task::LearnerTask {
   int mark_dim_ = 32;
   std::vector<int> mark_distance_bins_{0, 1, 2, 3, 6, 10, 15, 20};
   int seed_ = 0;
+  int batch_size_ = 32;
+  float learning_rate_ = 1.0;
+  float min_learning_rate_ = 0.001;
+
+  // Evaluation statistics.
+  float prev_loss_ = 0.0;
+  float loss_sum_ = 0.0;
+  int loss_count_ = 0.0;
 
   // Statistics.
   task::Counter *num_documents_;

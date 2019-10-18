@@ -14,6 +14,8 @@
 
 #include "sling/nlp/parser/parser-trainer.h"
 
+#include <math.h>
+
 #include "sling/myelin/gradient.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/lexicon.h"
@@ -50,6 +52,9 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("link_dim_ff", &link_dim_ff_);
   task->Fetch("mark_dim", &mark_dim_);
   task->Fetch("seed", &seed_);
+  task->Fetch("batch_size", &batch_size_);
+  task->Fetch("learning_rate", &learning_rate_);
+  task->Fetch("min_learning_rate", &min_learning_rate_);
 
   // Statistics.
   num_tokens_ = task->GetCounter("tokens");
@@ -136,92 +141,110 @@ void ParserTrainer::Worker(int index, Network *model) {
   gradients.push_back(&gdecoder);
   for (auto *d : delegates) d->CollectGradients(&gradients);
 
+  // Training loop.
   std::vector<ParserAction> transitions;
   std::vector<Instance *> decoders;
   myelin::Channel activations(activations_);
   myelin::Channel dactivations(dactivations_);
   for (;;) {
-    // Get next training document.
-    Store store(&commons_);
-    Document *document = GetNextTrainingDocument(&store);
-    CHECK(document != nullptr);
-    num_documents_->Increment();
-    num_tokens_->Increment(document->length());
+    // Prepare next batch.
+    for (auto *g : gradients) g->Clear();
+    float epoch_loss = 0.0;
+    int epoch_count = 0;
 
-    // Generate transitions for document.
-    GenerateTransitions(*document, &transitions);
-    num_transitions_->Increment(transitions.size());
-    document->ClearAnnotations();
+    for (int b = 0; b < batch_size_; b++) {
+      // Get next training document.
+      Store store(&commons_);
+      Document *document = GetNextTrainingDocument(&store);
+      CHECK(document != nullptr);
+      num_documents_->Increment();
+      num_tokens_->Increment(document->length());
 
-    // Compute the number of decoder steps.
-    int steps = 0;
-    for (const ParserAction &action : transitions) {
-      if (action.type != ParserAction::CASCADE) steps++;
-    }
+      // Generate transitions for document.
+      GenerateTransitions(*document, &transitions);
+      num_transitions_->Increment(transitions.size());
+      document->ClearAnnotations();
 
-    // Set up parser state.
-    ParserState state(document, 0, document->length());
-    ParserFeatureExtractor features(&feature_model_, &state);
-
-    // Set up channels and instances for decoder.
-    activations.resize(steps);
-    dactivations.resize(steps);
-    while (decoders.size() < steps) decoders.push_back(new Instance(decoder_));
-
-    // Run document through encoder to produce contextual token encodings.
-    auto bilstm = encoder.Compute(*document, 0, document->length());
-
-    // Run decoder and delegates on all steps in the transition sequence.
-    int t = 0;
-    for (int s = 0; s < steps; ++s) {
-      // Run next step of decoder.
-      Instance *decoder = decoders[s];
-      activations.zero(s);
-      dactivations.zero(s);
-
-      // Attach instance to recurrent layers.
-      decoder->Clear();
-      features.Attach(bilstm, &activations, decoder);
-
-      // Extract features.
-      features.Extract(decoder);
-
-      // Compute decoder activations.
-      decoder->Compute();
-
-      // Run the cascade.
-      float *fwd = reinterpret_cast<float *>(activations.at(s));
-      float *bkw = reinterpret_cast<float *>(dactivations.at(s));
-      int d = 0;
-      float loss = 0.0;
-      for (;;) {
-        ParserAction &action = transitions[t];
-        loss += delegates[d]->Compute(fwd, bkw, action);
-        if (action.type != ParserAction::CASCADE) break;
-        CHECK_GT(action.delegate, d);
-        d = action.delegate;
-        t++;
+      // Compute the number of decoder steps.
+      int steps = 0;
+      for (const ParserAction &action : transitions) {
+        if (action.type != ParserAction::CASCADE) steps++;
       }
 
-      // Apply action to parser state.
-      state.Apply(transitions[t++]);
+      // Set up parser state.
+      ParserState state(document, 0, document->length());
+      ParserFeatureExtractor features(&feature_model_, &state);
+
+      // Set up channels and instances for decoder.
+      activations.resize(steps);
+      dactivations.resize(steps);
+      while (decoders.size() < steps) {
+        decoders.push_back(new Instance(decoder_));
+      }
+
+      // Run document through encoder to produce contextual token encodings.
+      auto bilstm = encoder.Compute(*document, 0, document->length());
+
+      // Run decoder and delegates on all steps in the transition sequence.
+      int t = 0;
+      for (int s = 0; s < steps; ++s) {
+        // Run next step of decoder.
+        Instance *decoder = decoders[s];
+        activations.zero(s);
+        dactivations.zero(s);
+
+        // Attach instance to recurrent layers.
+        decoder->Clear();
+        features.Attach(bilstm, &activations, decoder);
+
+        // Extract features.
+        features.Extract(decoder);
+
+        // Compute decoder activations.
+        decoder->Compute();
+
+        // Run the cascade.
+        float *fwd = reinterpret_cast<float *>(activations.at(s));
+        float *bkw = reinterpret_cast<float *>(dactivations.at(s));
+        int d = 0;
+        for (;;) {
+          ParserAction &action = transitions[t];
+          float loss = delegates[d]->Compute(fwd, bkw, action);
+          epoch_loss += loss;
+          epoch_count++;
+          if (action.type != ParserAction::CASCADE) break;
+          CHECK_GT(action.delegate, d);
+          d = action.delegate;
+          t++;
+        }
+
+        // Apply action to parser state.
+        state.Apply(transitions[t++]);
+      }
+
+      // Propagate gradients back through decoder.
+      auto grad = encoder.PrepareGradientChannels(document->length());
+      for (int s = steps - 1; s >= 0; --s) {
+        gdecoder.Set(primal_, decoders[s]);
+        gdecoder.Set(dactivations_, &dactivations);
+        gdecoder.Set(dactivation_, &dactivations, s);
+        gdecoder.Set(dlr_, grad.lr);
+        gdecoder.Set(drl_, grad.rl);
+        gdecoder.Compute();
+      }
+
+      // Propagate gradients back through encoder.
+      encoder.Backpropagate();
+
+      delete document;
     }
 
-    // Propagate gradients back through decoder.
-    auto grad = encoder.PrepareGradientChannels(document->length());
-    for (int s = steps - 1; s >= 0; --s) {
-      gdecoder.Set(primal_, decoders[s]);
-      gdecoder.Set(dactivations_, &dactivations);
-      gdecoder.Set(dactivation_, &dactivations, s);
-      gdecoder.Set(dlr_, grad.lr);
-      gdecoder.Set(drl_, grad.rl);
-      gdecoder.Compute();
-    }
-
-    // Propagate gradients back through encoder.
-    encoder.Backpropagate();
-
-    delete document;
+    // Update parameters.
+    update_mu_.Lock();
+    optimizer_->Apply(gradients);
+    loss_sum_ += epoch_loss;
+    loss_count_ += epoch_count;
+    update_mu_.Unlock();
 
     // Check if we are done.
     if (EpochCompleted()) break;
@@ -233,6 +256,28 @@ void ParserTrainer::Worker(int index, Network *model) {
 }
 
 bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
+  // Skip evaluation if there are no data.
+  if (loss_count_ == 0) return true;
+
+  // Compute average loss of epochs since last eval.
+  float loss = loss_sum_ / loss_count_;
+  float p = exp(-loss) * 100.0;
+  loss_sum_ = 0.0;
+  loss_count_ = 0;
+
+  // Decay learning rate if loss increases.
+  if (prev_loss_ != 0.0 &&
+      prev_loss_ < loss &&
+      learning_rate_ > min_learning_rate_) {
+    learning_rate_ = optimizer_->DecayLearningRate();
+  }
+  prev_loss_ = loss;
+
+  LOG(INFO) << "epoch=" << epoch
+            << " lr=" << learning_rate_
+            << " loss=" << loss
+            << " p=" << p;
+
   return true;
 }
 
@@ -358,7 +403,7 @@ Flow::Variable *ParserTrainer::LinkedFeature(FlowBuilder *f,
 }
 
 Document *ParserTrainer::GetNextTrainingDocument(Store *store) {
-  MutexLock lock(&mu_);
+  MutexLock lock(&input_mu_);
   Document *document = training_corpus_->Next(store);
   if (document == nullptr) {
     // Loop around if the end of the training corpus has been reached.

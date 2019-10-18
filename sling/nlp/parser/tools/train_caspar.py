@@ -8,7 +8,7 @@ workflow.startup()
 wf = workflow.Workflow("parser-training")
 
 training_corpus = wf.resource(
-  "local/data/corpora/caspar/train.rec",
+  "local/data/corpora/caspar/train_shuffled.rec",
   format="record/document"
 )
 
@@ -30,6 +30,9 @@ trainer.add_params({
   "clipping": 1,
   "optimizer": "sgd",
   "epochs": 100000,
+  "batch_size": 32,
+  "learning_rate": 1.0,
+  "rampup": 120,
 })
 
 trainer.attach_input("training_corpus", training_corpus)
