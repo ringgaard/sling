@@ -255,6 +255,63 @@ void ParserTrainer::Worker(int index, Network *model) {
   for (auto *d : delegates) delete d;
 }
 
+void ParserTrainer::Parse(Document *document) const {
+  // Parse each sentence of the document.
+  for (SentenceIterator s(document); s.more(); s.next()) {
+    // Run the lexical encoder for sentence.
+    LexicalEncoderInstance encoder(encoder_);
+    auto bilstm = encoder.Compute(*document, s.begin(), s.end());
+
+    // Initialize decoder.
+    ParserState state(document, s.begin(), s.end());
+    ParserFeatureExtractor features(&feature_model_, &state);
+    myelin::Instance decoder(decoder_);
+    myelin::Channel activations(feature_model_.hidden());
+
+    // Run decoder to predict transitions.
+    for (;;) {
+      // Allocate space for next step.
+      activations.push();
+
+      // Attach instance to recurrent layers.
+      decoder.Clear();
+      features.Attach(bilstm, &activations, &decoder);
+
+      // Extract features.
+      features.Extract(&decoder);
+
+      // Compute decoder activations.
+      decoder.Compute();
+
+      // Run the cascade.
+      ParserAction action;
+#if 0
+      float *fwd = reinterpret_cast<float *>(activations.at(s));
+      float *bkw = reinterpret_cast<float *>(dactivations.at(s));
+      int d = 0;
+      for (;;) {
+        ParserAction &action = transitions[t];
+        float loss = delegates[d]->Compute(fwd, bkw, action);
+        epoch_loss += loss;
+        epoch_count++;
+        if (action.type != ParserAction::CASCADE) break;
+        CHECK_GT(action.delegate, d);
+        d = action.delegate;
+        t++;
+      }
+
+      //cascade.Compute(&activations, &state, &action, trace);
+#endif
+
+      // Apply action to parser state.
+      state.Apply(action);
+
+      // Check if we are done.
+      if (action.type == ParserAction::STOP) break;
+    }
+  }
+}
+
 bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
   // Skip evaluation if there are no data.
   if (loss_count_ == 0) return true;
@@ -410,6 +467,17 @@ Document *ParserTrainer::GetNextTrainingDocument(Store *store) {
     document = training_corpus_->Next(store);
   }
   return document;
+}
+
+ParserTrainer::ParserEvaulationCorpus::ParserEvaulationCorpus(
+    ParserTrainer *trainer) : trainer_(trainer) {
+  trainer_->evaluation_corpus_->Rewind();
+}
+
+bool ParserTrainer::ParserEvaulationCorpus::Next(Store **store,
+                                                 Document **golden,
+                                                 Document **predicted) {
+  return false;
 }
 
 }  // namespace nlp

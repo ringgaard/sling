@@ -30,6 +30,7 @@
 #include "sling/nlp/parser/parser-action.h"
 #include "sling/nlp/parser/parser-features.h"
 #include "sling/nlp/parser/roles.h"
+#include "sling/nlp/parser/trainer/frame-evaluation.h"
 #include "sling/task/learner.h"
 #include "sling/util/mutex.h"
 
@@ -106,7 +107,22 @@ class ParserTrainer : public task::LearnerTask {
   // document.
   Document *GetNextTrainingDocument(Store *store);
 
+  // Parse document using current model.
+  void Parse(Document *document) const;
+
  protected:
+  // Parallel corpus for evaluating parser on golden corpus.
+  class ParserEvaulationCorpus : public ParallelCorpus {
+   public:
+    ParserEvaulationCorpus(ParserTrainer *trainer);
+
+    // Parse next evaluation document using parser model.
+    bool Next(Store **store, Document **golden, Document **predicted) override;
+
+   private:
+    ParserTrainer *trainer_;   // parser trainer with current model
+  };
+
   // Commons store for parser.
   Store commons_;
 

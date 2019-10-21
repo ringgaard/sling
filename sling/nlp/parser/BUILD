@@ -147,6 +147,7 @@ cc_library(
     "//sling/nlp/document:document-corpus",
     "//sling/nlp/document:lexical-encoder",
     "//sling/nlp/document:lexicon",
+    "//sling/nlp/parser/trainer:frame-evaluation",
     "//sling/task:learner",
     "//sling/util:mutex",
     "//sling/util:unicode",
