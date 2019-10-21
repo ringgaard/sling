@@ -177,7 +177,6 @@ class Tagger {
 
   // Build tagger flow.
   void BuildFlow(Flow *flow, bool learn) {
-    Library *library = compiler_.library();
     BiLSTM::Outputs lstm;
     if (learn) {
       // Build lexicon.
@@ -193,9 +192,9 @@ class Tagger {
       Vocabulary::HashMapIterator vocab(words);
 
       // Build document input encoder.
-      lstm = encoder_.Build(flow, *library, spec_, &vocab, FLAGS_lstm, true);
+      lstm = encoder_.Build(flow, spec_, &vocab, FLAGS_lstm, true);
     } else {
-      lstm = encoder_.Build(flow, *library, spec_, nullptr, FLAGS_lstm, false);
+      lstm = encoder_.Build(flow, spec_, nullptr, FLAGS_lstm, false);
     }
 
     // Build flow for POS tagger.
@@ -210,7 +209,7 @@ class Tagger {
 
     if (learn) {
       // Build gradient for tagger.
-      Gradient(flow, tagger, *library);
+      Gradient(flow, tagger);
       auto *dlogits = flow->GradientVar(logits);
 
       // Build loss computation.

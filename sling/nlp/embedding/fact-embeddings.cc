@@ -81,7 +81,7 @@ class FactEmbeddingsTrainer : public LearnerTask {
     flow_.left.max_features = max_features_;
     flow_.right.dims = category_dims;
     flow_.right.max_features = max_features_;
-    flow_.Build(*compiler.library());
+    flow_.Build();
     loss_.Build(&flow_, flow_.sim_cosine, flow_.gsim_d_cosine);
     optimizer_ = GetOptimizer(task);
     optimizer_->Build(&flow_);

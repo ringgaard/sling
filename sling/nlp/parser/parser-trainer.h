@@ -44,9 +44,10 @@ class DelegateLearner {
   virtual ~DelegateLearner() = default;
 
   // Build flow for delegate learner.
-  virtual void Build(myelin::Flow *flow, myelin::Library *library,
+  virtual void Build(myelin::Flow *flow,
                      myelin::Flow::Variable *activations,
-                     myelin::Flow::Variable *dactivations) = 0;
+                     myelin::Flow::Variable *dactivations,
+                     bool learn) = 0;
 
   // Initialize network for delegate.
   virtual void Initialize(const myelin::Network &network) = 0;

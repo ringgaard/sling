@@ -206,7 +206,7 @@ PyObject *PyCompiler::Compile(PyObject *arg) {
   // Create gradient functions.
   for (Flow::Function *func : flow.funcs()) {
     if (func->backprop()) {
-      Gradient(&flow, func, *compiler->library());
+      Gradient(&flow, func);
     }
   }
 

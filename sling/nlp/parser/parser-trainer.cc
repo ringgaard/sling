@@ -286,13 +286,12 @@ void ParserTrainer::Checkpoint(int64 epoch, Network *model) {
 
 void ParserTrainer::BuildFlow(Flow *flow, bool learn) {
   // Build document input encoder.
-  Library *library = compiler_.library();
   BiLSTM::Outputs lstm;
   if (learn) {
     Vocabulary::HashMapIterator vocab(words_);
-    lstm = encoder_.Build(flow, *library, spec_, &vocab, lstm_dim_, true);
+    lstm = encoder_.Build(flow, spec_, &vocab, lstm_dim_, true);
   } else {
-    lstm = encoder_.Build(flow, *library, spec_, nullptr, lstm_dim_, false);
+    lstm = encoder_.Build(flow, spec_, nullptr, lstm_dim_, false);
   }
 
   // Build parser decoder.
@@ -370,13 +369,13 @@ void ParserTrainer::BuildFlow(Flow *flow, bool learn) {
   // Build function decoder gradient.
   Flow::Variable *dactivations = nullptr;
   if (learn) {
-    Gradient(flow, f.func(), *library);
+    Gradient(flow, f.func());
     dactivations = flow->GradientVar(activations);
   }
 
   // Build flows for delegates.
   for (DelegateLearner *delegate : delegates_) {
-    delegate->Build(flow, library, activations, dactivations);
+    delegate->Build(flow, activations, dactivations, learn);
   }
 
   // Link recurrences.

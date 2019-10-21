@@ -34,9 +34,10 @@ class MultiClassDelegateLearner : public DelegateLearner {
   MultiClassDelegateLearner(const string &name)
       : name_(name), loss_(name + "_loss") {}
 
-  void Build(Flow *flow, Library *library,
+  void Build(Flow *flow,
              Flow::Variable *activations,
-             Flow::Variable *dactivations) override {
+             Flow::Variable *dactivations,
+             bool learn) override {
     FlowBuilder f(flow, name_);
     int dim = activations->elements();
     int size = actions_.size();
@@ -46,8 +47,8 @@ class MultiClassDelegateLearner : public DelegateLearner {
     auto *logits = f.Name(f.Add(f.MatMul(input, W), b), "logits");
 
     flow->Connect({activations, input});
-    if (library != nullptr) {
-      Gradient(flow, f.func(), *library);
+    if (learn) {
+      Gradient(flow, f.func());
       auto *dlogits = flow->GradientVar(logits);
       loss_.Build(flow, logits, dlogits);
     }
