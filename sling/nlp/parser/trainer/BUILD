@@ -13,6 +13,7 @@ cc_library(
     "//sling/nlp/document:document",
     "//sling/nlp/document:document-corpus",
     "//sling/string:strcat",
+    "//sling/string:printf",
   ],
 )
 

@@ -72,6 +72,9 @@ class DelegateLearnerInstance {
   virtual float Compute(float *activations,
                         float *dactivations,
                         const ParserAction &action) = 0;
+
+  // Predict action for delegate.
+  virtual void Predict(float *activations, ParserAction *action) = 0;
 };
 
 // Basic task for training for transition-based frame-semantic parser.

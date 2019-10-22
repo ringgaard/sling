@@ -176,10 +176,9 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
 
   int *mark_distance = data.Get(fm->mark_distance_feature_);
   if (mark_distance != nullptr) {
-    *mark_distance = -2;
+    *mark_distance = fm->mark_distance_bins_.back();
     if (!marks.empty()) {
       int distance = state_->current() - marks[marks.size() - 1].token;
-      *mark_distance = fm->mark_distance_bins_.back();
       if (distance < fm->mark_distance_bins_.size()) {
         *mark_distance = fm->mark_distance_bins_[distance];
       }

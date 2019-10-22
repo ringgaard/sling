@@ -46,6 +46,7 @@ class MultiClassDelegateLearner : public DelegateLearner {
 
     auto *input = f.Placeholder("input", DT_FLOAT, {1, dim}, true);
     auto *logits = f.Name(f.Add(f.MatMul(input, W), b), "logits");
+    logits->set_out();
     f.Name(f.ArgMax(logits), "output");
 
     flow->Connect({activations, input});
@@ -60,6 +61,7 @@ class MultiClassDelegateLearner : public DelegateLearner {
     cell_ = network.GetCell(name_);
     input_ = cell_->GetParameter(name_ + "/input");
     logits_ = cell_->GetParameter(name_ + "/logits");
+    output_ = cell_->GetParameter(name_ + "/output");
 
     dcell_ = cell_->Gradient();
     primal_ = cell_->Primal();
@@ -113,6 +115,14 @@ class MultiClassDelegateLearner : public DelegateLearner {
       return loss;
     }
 
+    void Predict(float *activations, ParserAction *action) override {
+      // Predict action from activations.
+      forward_.SetReference(learner_->input_, activations);
+      forward_.Compute();
+      int argmax = *forward_.Get<int>(learner_->output_);
+      *action = learner_->actions_.Action(argmax);
+    }
+
    private:
     MultiClassDelegateLearner *learner_;
     Instance forward_;
@@ -126,7 +136,8 @@ class MultiClassDelegateLearner : public DelegateLearner {
 
   Cell *cell_ = nullptr;       // cell for forward computation
   Tensor *input_ = nullptr;    // input for activations
-  Tensor *logits_ = nullptr;   // output with logits
+  Tensor *logits_ = nullptr;   // logits for actions
+  Tensor *output_ = nullptr;   // output prediction
 
   Cell *dcell_ = nullptr;      // cell for backward computation
   Tensor *primal_ = nullptr;   // primal reference

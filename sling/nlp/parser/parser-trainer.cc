@@ -256,6 +256,10 @@ void ParserTrainer::Worker(int index, Network *model) {
 }
 
 void ParserTrainer::Parse(Document *document) const {
+  // Create delegates.
+  std::vector<DelegateLearnerInstance *> delegates;
+  for (auto *d : delegates_) delegates.push_back(d->CreateInstance());
+
   // Parse each sentence of the document.
   for (SentenceIterator s(document); s.more(); s.next()) {
     // Run the lexical encoder for sentence.
@@ -284,24 +288,25 @@ void ParserTrainer::Parse(Document *document) const {
       decoder.Compute();
 
       // Run the cascade.
-      ParserAction action;
-#if 0
-      float *fwd = reinterpret_cast<float *>(activations.at(s));
-      float *bkw = reinterpret_cast<float *>(dactivations.at(s));
+      ParserAction action(ParserAction::CASCADE, 0);
+      int step = state.step();
+      float *activation = reinterpret_cast<float *>(activations.at(step));
       int d = 0;
       for (;;) {
-        ParserAction &action = transitions[t];
-        float loss = delegates[d]->Compute(fwd, bkw, action);
-        epoch_loss += loss;
-        epoch_count++;
+        delegates[d]->Predict(activation, &action);
         if (action.type != ParserAction::CASCADE) break;
         CHECK_GT(action.delegate, d);
         d = action.delegate;
-        t++;
       }
 
-      //cascade.Compute(&activations, &state, &action, trace);
-#endif
+      // Shift or stop if predicted action is invalid.
+      if (!state.CanApply(action)) {
+        if (state.current() < state.end()) {
+          action.type = ParserAction::SHIFT;
+        } else {
+          action.type = ParserAction::STOP;
+        }
+      }
 
       // Apply action to parser state.
       state.Apply(action);
@@ -310,6 +315,8 @@ void ParserTrainer::Parse(Document *document) const {
       if (action.type == ParserAction::STOP) break;
     }
   }
+
+  for (auto *d : delegates) delete d;
 }
 
 bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
@@ -334,6 +341,18 @@ bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
             << " lr=" << learning_rate_
             << " loss=" << loss
             << " p=" << p;
+
+  // Evaluate current model on held-out evaluation corpus.
+  ParserEvaulationCorpus corpus(this);
+  FrameEvaluation::Output eval;
+  FrameEvaluation::Evaluate(&corpus, &eval);
+  LOG(INFO) << "SPAN:  " << eval.mention.Summary();
+  LOG(INFO) << "FRAME: " << eval.frame.Summary();
+  LOG(INFO) << "TYPE:  " << eval.type.Summary();
+  LOG(INFO) << "ROLE:  " << eval.role.Summary();
+  LOG(INFO) << "LABEL: " << eval.label.Summary();
+  LOG(INFO) << "SLOT:  " << eval.slot.Summary();
+  LOG(INFO) << "TOTAL: " << eval.combined.Summary();
 
   return true;
 }
@@ -477,7 +496,29 @@ ParserTrainer::ParserEvaulationCorpus::ParserEvaulationCorpus(
 bool ParserTrainer::ParserEvaulationCorpus::Next(Store **store,
                                                  Document **golden,
                                                  Document **predicted) {
-  return false;
+  // Create a store for both golden and parsed document.
+  Store *local = new Store(&trainer_->commons_);
+
+  // Read next document from corpus.
+  Document *document = trainer_->evaluation_corpus_->Next(local);
+  if (document == nullptr) {
+    delete local;
+    return false;
+  }
+
+  // Clone document without annotations.
+  Document *parsed = new Document(*document, false);
+
+  // Parse the document using the current model.
+  trainer_->Parse(parsed);
+  parsed->Update();
+
+  // Return golden and predicted documents.
+  *store = local;
+  *golden = document;
+  *predicted = parsed;
+
+  return true;
 }
 
 }  // namespace nlp

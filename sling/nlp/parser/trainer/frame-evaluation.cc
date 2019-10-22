@@ -20,6 +20,7 @@
 #include "sling/frame/serialization.h"
 #include "sling/nlp/document/document-corpus.h"
 #include "sling/string/strcat.h"
+#include "sling/string/printf.h"
 
 namespace sling {
 namespace nlp {
@@ -219,6 +220,13 @@ void FrameEvaluation::Benchmark::GetScores(const string &name,
   scores->emplace_back(StrCat(name, "_Precision"), p * 100.0);
   scores->emplace_back(StrCat(name, "_Recall"), r * 100.0);
   scores->emplace_back(StrCat(name, "_F1"), f1 * 100.0);
+}
+
+string FrameEvaluation::Benchmark::Summary() const {
+  double p = precision.accuracy() * 100.0;
+  double r = recall.accuracy() * 100.0;
+  double f1 = fscore() * 100.0;
+  return StringPrintf("P=%5.2f, R=%5.2f, F1=%5.2f", p, r, f1);
 }
 
 void FrameEvaluation::Output::GetScores(Scores *scores) const {

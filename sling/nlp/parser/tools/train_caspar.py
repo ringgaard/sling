@@ -29,10 +29,11 @@ trainer.add_params({
   "learning_rate_decay": 0.95,
   "clipping": 1,
   "optimizer": "sgd",
-  "epochs": 100000,
+  "epochs": 50000,
   "batch_size": 32,
   "learning_rate": 1.0,
   "rampup": 120,
+  "report_interval": 250,
 })
 
 trainer.attach_input("training_corpus", training_corpus)
