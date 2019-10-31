@@ -400,7 +400,6 @@ void ParserTrainer::BuildFlow(Flow *flow, bool learn) {
                                  unlabeled_roles_size_, roles_dim_));
   }
 
-
   // Link features.
   features.push_back(LinkedFeature(&f, "frame-creation-steps",
                                    steps, frame_limit_, link_dim_ff_));
