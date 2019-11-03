@@ -77,7 +77,10 @@ void ParserTrainer::Run(task::Task *task) {
 
   // Set up word embeddings.
   spec_.word_dim = task->Get("word_dim", 32);
-  spec_.word_embeddings = task->GetInputFile("word_embeddings");
+  auto *word_embeddings_input = task->GetInput("word_embeddings");
+  if (word_embeddings_input != nullptr) {
+    spec_.word_embeddings = word_embeddings_input->resource()->name();
+  }
   spec_.train_word_embeddings = task->Get("train_word_embeddings", true);
 
   // Set up lexical back-off features.
