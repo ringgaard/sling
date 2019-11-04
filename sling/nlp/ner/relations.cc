@@ -64,7 +64,6 @@ class RelationAnnotator : public Annotator {
 
   // Annotate relations in document.
   void Annotate(Document *document) override {
-    LOG(INFO) << "==========================================================";
     // Process each sentence separately so we do not annotate relations between
     // mentions in different sentences.
     Store *store = document->store();
@@ -104,11 +103,7 @@ class RelationAnnotator : public Annotator {
       }
 
       // Find facts for each mention that match a target in the sentence.
-      LOG(INFO) << "Sentence: " << document->PhraseText(s.begin(), s.end());
       for (Mention &source : mentions) {
-        //LOG(INFO) << "  mention " << source.span->GetText()
-        //          << " item: " << store->DebugString(source.item);
-
         // Only consider top-level subjects for now.
         if (source.span != source.outer) continue;
 
@@ -191,19 +186,6 @@ class RelationAnnotator : public Annotator {
               }
             }
             b.Update();
-          }
-
-          // Debug output.
-          for (const Mention &m : mentions) {
-            if (m.property.IsNil()) continue;
-            Frame prop(store, m.property);
-            LOG(INFO) << ">>>>> '" << source.span->GetText() << "' ["
-                      << store->DebugString(source.item) << "] "
-                      << prop.Id() << " (" << prop.GetText("name") << ") '"
-                      <<  m.span->GetText() << "' ["
-                      << store->DebugString(m.item) << "]"
-                      << " dist=" << Distance(source.span, m.span)
-                      << (m.span != m.outer ? " nested" : "");
           }
         }
       }
