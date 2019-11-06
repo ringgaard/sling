@@ -55,6 +55,9 @@ class DelegateLearner {
 
   // Create instance of delegate.
   virtual DelegateLearnerInstance *CreateInstance() = 0;
+
+  // Save model data to flow.
+  virtual void Save(myelin::Flow *flow, Builder *data) = 0;
 };
 
 // Interface for delegate learner instance.
@@ -94,6 +97,9 @@ class ParserTrainer : public task::LearnerTask {
   // Abstract method for converting document to transition sequence.
   virtual void GenerateTransitions(const Document &document,
                                    std::vector<ParserAction> *transitions) = 0;
+
+  // Abstract method for saving extra data in final model.
+  virtual void SaveModel(myelin::Flow *flow, Store *store) = 0;
 
  private:
   // Build flow graph for parser model.

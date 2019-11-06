@@ -16,6 +16,7 @@
 
 #include <math.h>
 
+#include "sling/frame/serialization.h"
 #include "sling/myelin/gradient.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/lexicon.h"
@@ -440,6 +441,7 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
     bins.append(std::to_string(d));
   }
   spec->SetAttr("mark_distance_bins", bins);
+  spec->SetAttr("frame_limit", frame_limit_);
 
   // Concatenate mapped feature inputs.
   auto *fv = f.Concat(features);
@@ -507,6 +509,30 @@ void ParserTrainer::Save(const string &filename) {
 
   // Save lexicon.
   encoder_.SaveLexicon(&flow);
+
+  // Save extra model data in store.
+  Store store(&commons_);
+  SaveModel(&flow, &store);
+
+  // Save delegates.
+  Builder cascade(&store);
+  cascade.AddId("/cascade");
+  Array delegates(&store, delegates_.size());
+  for (int i = 0; i < delegates_.size(); ++i) {
+    Builder data(&store);
+    delegates_[i]->Save(&flow, &data);
+    delegates.set(i, data.Create().handle());
+  }
+  cascade.Add("delegates", delegates);
+  cascade.Create();
+
+  // Save store in flow.
+  StringEncoder encoder(&store);
+  encoder.EncodeAll();
+
+  Flow::Blob *blob = flow.AddBlob("commons", "frames");
+  blob->data = flow.AllocateMemory(encoder.buffer());
+  blob->size = encoder.buffer().size();
 
   // Save model to file.
   flow.Save(filename);

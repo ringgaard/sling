@@ -38,8 +38,8 @@ void ActionTable::Init(Store *store) {
   CHECK(top.valid());
 
   // Get all the integer fields.
-  max_actions_per_token_ = top.GetInt("/table/max_actions_per_token");
-  frame_limit_ = top.GetInt("/table/frame_limit");
+  max_actions_per_token_ = top.GetInt("/table/max_actions_per_token", 5);
+  frame_limit_ = top.GetInt("/table/frame_limit", 5);
 
   // Read the action index.
   Array actions = top.Get("/table/actions").AsArray();
@@ -82,23 +82,32 @@ void ActionTable::Save(const Store *global, const string &file) const {
 }
 
 string ActionTable::Serialize(const Store *global) const {
+  // Build frame with action table.
   Store store(global);
-  Builder top(&store);
-  top.AddId("/table");
+  Builder table(&store);
+  table.AddId("/table");
+  Write(&table);
 
+  StringEncoder encoder(&store);
+  encoder.Encode(table.Create());
+  return encoder.buffer();
+}
+
+void ActionTable::Write(Builder *frame) const {
   // Save the action table.
-  Handle action_type = store.Lookup("/table/action/type");
-  Handle action_length = store.Lookup("/table/action/length");
-  Handle action_source = store.Lookup("/table/action/source");
-  Handle action_target = store.Lookup("/table/action/target");
-  Handle action_role = store.Lookup("/table/action/role");
-  Handle action_label = store.Lookup("/table/action/label");
+  Store *store = frame->store();
+  Handle action_type = store->Lookup("/table/action/type");
+  Handle action_length = store->Lookup("/table/action/length");
+  Handle action_source = store->Lookup("/table/action/source");
+  Handle action_target = store->Lookup("/table/action/target");
+  Handle action_role = store->Lookup("/table/action/role");
+  Handle action_label = store->Lookup("/table/action/label");
 
-  Array actions(&store, actions_.size());
+  Array actions(store, actions_.size());
   int index = 0;
   for (const ParserAction &action : actions_) {
     auto type = action.type;
-    Builder b(&store);
+    Builder b(store);
     b.Add(action_type, static_cast<int>(type));
 
     if (type == ParserAction::REFER || type == ParserAction::EVOKE) {
@@ -124,7 +133,7 @@ string ActionTable::Serialize(const Store *global) const {
     if (!action.label.IsNil()) b.Add(action_label, action.label);
     actions.set(index++, b.Create().handle());
   }
-  top.Add("/table/actions", actions);
+  frame->Add("/table/actions", actions);
 
   // Add artificial links to symbols used in serialization. This is needed as
   // some action types might be unseen, so their corresponding symbols won't be
@@ -136,12 +145,8 @@ string ActionTable::Serialize(const Store *global) const {
     action_type, action_length, action_source, action_target,
     action_role, action_label
   };
-  Array symbols_array(&store, symbols);
-  top.Add("/table/symbols", symbols_array);
-
-  StringEncoder encoder(&store);
-  encoder.Encode(top.Create());
-  return encoder.buffer();
+  Array symbols_array(store, symbols);
+  frame->Add("/table/symbols", symbols_array);
 }
 
 }  // namespace nlp

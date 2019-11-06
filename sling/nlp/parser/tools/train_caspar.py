@@ -26,7 +26,7 @@ word_embeddings = wf.resource(
 )
 
 parser_model = wf.resource(
-  "local/data/e/caspar/parser.flow",
+  "local/data/e/caspar/caspar.flow",
   format="flow"
 )
 
