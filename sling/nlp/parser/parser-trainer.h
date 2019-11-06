@@ -97,7 +97,7 @@ class ParserTrainer : public task::LearnerTask {
 
  private:
   // Build flow graph for parser model.
-  void BuildFlow(myelin::Flow *flow, bool learn);
+  void Build(myelin::Flow *flow, bool learn);
 
   // Build linked feature.
   static myelin::Flow::Variable *LinkedFeature(
@@ -112,6 +112,9 @@ class ParserTrainer : public task::LearnerTask {
 
   // Parse document using current model.
   void Parse(Document *document) const;
+
+  // Save trained model to file.
+  void Save(const string &filename);
 
  protected:
   // Parallel corpus for evaluating parser on golden corpus.
@@ -135,6 +138,9 @@ class ParserTrainer : public task::LearnerTask {
   // Evaluation corpus.
   DocumentCorpus *evaluation_corpus_ = nullptr;
 
+  // File name for trained model.
+  string model_filename_;
+
   // Word vocabulary.
   std::unordered_map<string, int> words_;
 
@@ -146,7 +152,7 @@ class ParserTrainer : public task::LearnerTask {
 
   // Neural network.
   myelin::Flow flow_;
-  myelin::Network net_;
+  myelin::Network model_;
   myelin::Compiler compiler_;
   myelin::Optimizer *optimizer_ = nullptr;
 
