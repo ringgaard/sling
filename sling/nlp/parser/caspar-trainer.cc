@@ -88,6 +88,7 @@ class MultiClassDelegateLearner : public DelegateLearner {
     Handle n_target = store->Lookup("/table/action/target");
     Handle n_role = store->Lookup("/table/action/role");
     Handle n_label = store->Lookup("/table/action/label");
+    Handle n_delegate = store->Lookup("/table/action/delegate");
 
     Array actions(store, actions_.size());
     int index = 0;
@@ -114,6 +115,9 @@ class MultiClassDelegateLearner : public DelegateLearner {
         if (action.target != 0) {
           b.Add(n_target, static_cast<int>(action.target));
         }
+      }
+      if (type == ParserAction::CASCADE) {
+        b.Add(n_delegate, static_cast<int>(action.delegate));
       }
       if (!action.role.IsNil()) b.Add(n_role, action.role);
       if (!action.label.IsNil()) b.Add(n_label, action.label);

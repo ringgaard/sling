@@ -56,7 +56,6 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("batch_size", &batch_size_);
   task->Fetch("learning_rate", &learning_rate_);
   task->Fetch("min_learning_rate", &min_learning_rate_);
-  model_filename_ = task->GetOutputFile("model");
 
   // Statistics.
   num_tokens_ = task->GetCounter("tokens");
@@ -68,6 +67,12 @@ void ParserTrainer::Run(task::Task *task) {
     new DocumentCorpus(&commons_, task->GetInputFiles("training_corpus"));
   evaluation_corpus_ =
     new DocumentCorpus(&commons_, task->GetInputFiles("evaluation_corpus"));
+
+  // Output file for model.
+  auto *model_file = task->GetOutput("model");
+  if (model_file != nullptr) {
+    model_filename_ = model_file->resource()->name();
+  }
 
   // Set up encoder lexicon.
   string normalization = task->Get("normalization", "d");
@@ -130,8 +135,10 @@ void ParserTrainer::Run(task::Task *task) {
   Train(task, &model_);
 
   // Save final model.
-  LOG(INFO) << "Writing parser model to " << model_filename_;
-  Save(model_filename_);
+  if (!model_filename_.empty()) {
+    LOG(INFO) << "Writing parser model to " << model_filename_;
+    Save(model_filename_);
+  }
 
   // Clean up.
   delete optimizer_;
@@ -367,8 +374,10 @@ bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
 }
 
 void ParserTrainer::Checkpoint(int64 epoch, Network *model) {
-  LOG(INFO) << "Checkpoint model to " << model_filename_;
-  Save(model_filename_);
+  if (!model_filename_.empty()) {
+    LOG(INFO) << "Checkpointing model to " << model_filename_;
+    Save(model_filename_);
+  }
 }
 
 void ParserTrainer::Build(Flow *flow, bool learn) {

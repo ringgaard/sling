@@ -38,9 +38,8 @@ trainer.add_params({
   "learning_rate_decay": 0.8,
   "clipping": 1,
   "optimizer": "sgd",
-  "epochs": 1000, #50000,
+  "epochs": 50000,
   "batch_size": 32,
-  "learning_rate": 1.0,
   "rampup": 120,
   "report_interval": 500
 })
