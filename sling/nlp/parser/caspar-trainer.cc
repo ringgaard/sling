@@ -243,7 +243,7 @@ class CasparTrainer : public ParserTrainer {
           case ParserAction::SHIFT:
           case ParserAction::MARK:
             skip = true;
-            return;
+            break;
           case ParserAction::CONNECT:
             if (action.source > max_source_) skip = true;
             if (action.target > max_target_) skip = true;
