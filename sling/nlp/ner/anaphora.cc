@@ -197,7 +197,7 @@ class AnaphoraAnnotator : public Annotator {
   // Pronoun gender.
   enum Gender {UNKNOWN, MASCULINE, FEMININE, NEUTRAL};
 
-  // Pronoun descriptor. This also convers trigger words that might not
+  // Pronoun descriptor. This also covers trigger words that might not
   // grammatically be pronouns like definite articles.
   struct Pronoun {
     Gender gender = NEUTRAL;   // grammatical gender.

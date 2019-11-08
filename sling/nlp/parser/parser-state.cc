@@ -98,7 +98,7 @@ bool ParserState::CanApply(const ParserAction &action) const {
   if (done_) return false;
   switch (action.type) {
     case ParserAction::CASCADE:
-      // Do not allow cacading back to the main cascade.
+      // Do not allow cascading back to the main cascade.
       return action.delegate > 0;
 
     case ParserAction::SHIFT:
