@@ -43,6 +43,11 @@ flags.define("--extra_items",
              default=None,
              metavar="RECFILES")
 
+flags.define("--lbzip2",
+             help="use lbzip2 for parallel decompression",
+             default=False,
+             action='store_true')
+
 class WikiWorkflow:
   def __init__(self, name=None, wf=None):
     if wf == None: wf = Workflow(name)
@@ -120,7 +125,13 @@ class WikiWorkflow:
     Returns the item and property output files."""
     if dump == None: dump = self.wikidata_dump()
     with self.wf.namespace("wikidata"):
-      input = self.wf.parallel(self.wf.read(dump), threads=5)
+      if flags.arg.lbzip2:
+        input = self.wf.pipe("lbzip2 -d -c " + dump.name,
+                             name="wiki-decompress",
+                             format="text/json")
+      else:
+        input = self.wf.read(dump)
+      input = self.wf.parallel(input, threads=5)
       items, properties = self.wikidata_import(input)
       items_output = self.wikidata_items()
       self.wf.write(items, items_output, name="item-writer")
