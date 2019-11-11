@@ -61,11 +61,6 @@ flags.define("--invert_categories",
              default=False,
              action='store_true')
 
-flags.define("--compute_item_popularity",
-             help="compute item popularity from alias counts",
-             default=False,
-             action='store_true')
-
 flags.define("--fuse_items",
              help="fuse items from wikidata and wikipedia",
              default=False,
@@ -133,11 +128,6 @@ flags.define("--extract_wikilinks",
 
 flags.define("--build_idf",
              help="build IDF table from wikipedia",
-             default=False,
-             action='store_true')
-
-flags.define("--build_wordtable",
-             help="build common word table from wikipedia",
              default=False,
              action='store_true')
 
@@ -209,13 +199,6 @@ def fuse_items():
     log.info("Invert categories")
     wf = wiki.WikiWorkflow("category-inversion")
     wf.invert_wikipedia_categories()
-    workflow.run(wf.wf)
-
-  # Compute item popularity.
-  if flags.arg.compute_item_popularity:
-    log.info("Compute item popularity")
-    wf = wiki.WikiWorkflow("item-popularity")
-    wf.compute_item_popularity()
     workflow.run(wf.wf)
 
   # Fuse items.
@@ -318,14 +301,6 @@ def extract_named_entities():
     for language in flags.arg.languages:
       log.info("Build " + language + " IDF table")
       wf.build_idf(language=language)
-    workflow.run(wf.wf)
-
-  # Extract common word table.
-  if flags.arg.build_wordtable:
-    wf = entity.EntityWorkflow("word-table")
-    for language in flags.arg.languages:
-      log.info("Build " + language + " word table")
-      wf.build_wordtable(language=language)
     workflow.run(wf.wf)
 
   # Fuse NER items.

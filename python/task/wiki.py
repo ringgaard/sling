@@ -447,26 +447,6 @@ class WikiWorkflow:
                                format="message/string",
                                params={"threshold": 100000})
 
-  def item_popularity(self):
-    """Resource for item popularity."""
-    return self.wf.resource("item-popularity.rec",
-                            dir=corpora.wikidir(),
-                            format="records/frame")
-
-  def compute_item_popularity(self, languages=None):
-    """Compute item popularity using alias counts across languages."""
-    if languages == None: languages = flags.arg.languages
-
-    with self.wf.namespace("item-popularity"):
-      aliases = []
-      for language in languages:
-        aliases.extend(self.wikipedia_aliases(language))
-      return self.wf.mapreduce(input=aliases,
-                               output=self.item_popularity(),
-                               mapper="item-popularity-mapper",
-                               reducer="item-popularity-reducer",
-                               format="message/int")
-
   #---------------------------------------------------------------------------
   # Fused items
   #---------------------------------------------------------------------------
