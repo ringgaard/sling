@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Workflow builder for Wikidata and Wikipedia processing"""
+"""Workflow for Wikidata and Wikipedia processing"""
 
 import sling.flags as flags
 from sling.task import *
@@ -286,7 +286,7 @@ class WikiWorkflow:
 
   def wikipedia_import(self, input, name=None):
     """Task for converting Wikipedia dump to SLING articles and redirects.
-    Returns article and redirect channels."""
+    Returns article, categories, and redirect channels."""
     task = self.wf.task("wikipedia-importer", name=name)
     task.attach_input("input", input)
     articles = self.wf.channel(task, name="articles", format="message/frame")

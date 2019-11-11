@@ -60,6 +60,7 @@ class PipeReader : public Process {
     // Close pipe and output channel.
     int status = pclose(pipe);
     CHECK(WIFEXITED(status)) << status;
+    CHECK_EQ(WEXITSTATUS(status), 0);
     output->Close();
   }
 };
