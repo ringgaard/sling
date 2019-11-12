@@ -170,7 +170,7 @@ class FactTargetExtractor : public task::FrameProcessor {
     Store *store = frame.store();
     for (const Slot &slot : frame) {
       if (slot.name == Handle::isa()) continue;
-      if (slot.name == n_lang_)) continue;
+      if (slot.name == n_lang_) continue;
 
       Handle target = store->Resolve(slot.value);
       if (!store->IsFrame(target)) continue;
