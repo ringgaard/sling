@@ -169,10 +169,15 @@ class FactTargetExtractor : public task::FrameProcessor {
     // Accumulate fact targets for the item.
     Store *store = frame.store();
     for (const Slot &slot : frame) {
+      if (slot.name == Handle::isa()) continue;
+      if (slot.name == n_lang_)) continue;
+
       Handle target = store->Resolve(slot.value);
       if (!store->IsFrame(target)) continue;
+
       Text id = store->FrameId(target);
       if (id.empty()) continue;
+
       if (!store->IsFrame(target)) continue;
        accumulator_.Increment(id);
     }
@@ -185,6 +190,9 @@ class FactTargetExtractor : public task::FrameProcessor {
  private:
   // Accumulator for fanin counts.
   task::Accumulator accumulator_;
+
+  // Symbols.
+  Name n_lang_{names_, "lang"};
 };
 
 REGISTER_TASK_PROCESSOR("fact-target-extractor", FactTargetExtractor);

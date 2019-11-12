@@ -201,6 +201,13 @@ def fuse_items():
     wf.invert_wikipedia_categories()
     workflow.run(wf.wf)
 
+  # Extract link graph.
+  if flags.arg.extract_wikilinks:
+    log.info("Extract link graph")
+    wf = wiki.WikiWorkflow("link-graph")
+    wf.extract_links()
+    workflow.run(wf.wf)
+
   # Fuse items.
   if flags.arg.fuse_items:
     log.info("Fuse items")
@@ -288,13 +295,6 @@ def train_embeddings():
 
 
 def extract_named_entities():
-  # Extract Wikipedia link graph.
-  if flags.arg.extract_wikilinks:
-    log.info("Extract Wikipedia link graph")
-    wf = entity.EntityWorkflow("wiki-links")
-    wf.extract_wikilinks()
-    workflow.run(wf.wf)
-
   # Extract IDF table.
   if flags.arg.build_idf:
     wf = entity.EntityWorkflow("idf-table")
@@ -336,6 +336,7 @@ if __name__ == '__main__':
     flags.arg.parse_wikipedia = True
     flags.arg.merge_categories = True
     flags.arg.invert_categories = True
+    flags.arg.extract_wikilinks = True
     flags.arg.fuse_items = True
     flags.arg.build_kb = True
     flags.arg.extract_names = True

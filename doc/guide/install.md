@@ -38,7 +38,7 @@ git clone https://github.com/google/sling.git
 cd sling
 ```
 
-Next, run the `seup.sh` script to set up the SLING development environment
+Next, run the `setup.sh` script to set up the SLING development environment
 and build the code:
 ```shell
 ./setup.sh
