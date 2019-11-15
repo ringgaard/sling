@@ -1,9 +1,9 @@
 # CASPAR frame semantics parser
 
 CASPAR is a frame semantics parser trained on OntoNotes 5 data. Mentions,
-entity types, and [PropBank](https://propbank.github.io/) semantic role labels
-are extracted from this corpus to produce a frame semantic corpus in SLING
-document format.
+entity types (partial), and 
+[PropBank](https://propbank.github.io/) semantic role labels are extracted from 
+this corpus to produce a frame semantic corpus in SLING document format.
 
 We use the standard [CoNLL-2012](http://conll.cemantix.org/2012/data.html) split
 of the data to produce training, development, and test corpora.
@@ -11,12 +11,12 @@ of the data to produce training, development, and test corpora.
 ## Preparing the training data
 
 The LDC2013T19 OntoNotes 5 corpus is needed to produce the training data for
-CASPAR. This is licensed by LDC and you need an LDC license to use the corpus:
+CASPAR. This is licensed by LDC and you need a LDC license to use the corpus:
 
 https://catalog.ldc.upenn.edu/LDC2013T19
 
-First, place `LDC2013T19.tar.gz` in `local/data/corpora/ontonotes` and run
-the `make_corpus.sh` script:
+To prepare the training data for the parser, place `LDC2013T19.tar.gz` in 
+`local/data/corpora/ontonotes` and run the `make_corpus.sh` script:
 
 ```
 sling/nlp/parser/ontonotes/make_corpus.sh
@@ -25,7 +25,7 @@ sling/nlp/parser/ontonotes/make_corpus.sh
 This script will perform the following steps to produce the training data:
 
 * Unpack OntoNotes 5.
-* Download and unpack the CoNLL formated OntoNotes 5 data.
+* Download and unpack the CoNLL formated OntoNotes 5 data and tools.
 * Generate CoNLL files from the OntoNotes data.
 * Convert CoNLL files to SLING format.
 * Shuffle the training data.
