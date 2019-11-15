@@ -20,7 +20,7 @@ SPEC='{
       format: "repository"
     }
     dictionary: {
-      file: "local/data/e/ner/LANG/idf.repo"
+      file: "local/data/e/silver/LANG/idf.repo"
       format: "repository"
     }
     phrases: {
