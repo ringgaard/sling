@@ -7,8 +7,8 @@ Build system: Bazel<br>
 
 ## Python
 
-If you just want to use SLING from Pyton, e.g. want to try out the parser on a 
-pre-trained model, you can install the wheel with pip. On a Linux machine
+If you just want to use SLING from Python, e.g. want to try out the parser on a 
+pre-trained model, you can install the SLING wheel with pip. On a Linux machine
 with Python 3 you can install a pre-built wheel:
 
 ```

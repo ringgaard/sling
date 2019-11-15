@@ -18,14 +18,11 @@ The Wiki processing pipeline performs the following tasks:
   * Import Wikipedia dump(s) (`wikipedia-import`)
   * Construct mapping from Wikipedia to Wikidata (`wikipedia-mapping`)
   * Wikipedia parsing (`wikipedia-parsing`)
-
   * Extract link graph from Wikipedia and Wikidata (`wiki-link`)
   * Merging of Wikipedia categories across languages (`category-merging`)
   * Inversion of category membership graph (`category-inversion`)
-
   * Fusing information about items to produce final item frame (`item-fusing`)
   * Build frame store with knowledge base (`knowledge-base`)
-
   * Extract and select aliases for entities from Wikidata and Wikipedia (`name-extraction`)
   * Build name table for searching for entities (`name-table`)
   * Build phrase table for matching phrases in text to entities (`phrase-table`)
