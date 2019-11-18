@@ -11,7 +11,7 @@ of the data to produce training, development, and test corpora.
 ## Preparing the training data
 
 The LDC2013T19 OntoNotes 5 corpus is needed to produce the training data for
-CASPAR. This is licensed by LDC and you need a LDC license to use the corpus:
+CASPAR. This is licensed by LDC and you need an LDC license to use the corpus:
 
 https://catalog.ldc.upenn.edu/LDC2013T19
 
@@ -38,7 +38,7 @@ This will put the training and evaluation data into `local/data/corpora/caspar`:
 
 ## Pre-trained word embeddings
 
-The CASPAR parser uses pre-trained word embeddings which can be download from
+The CASPAR parser uses pre-trained word embeddings which can be downloaded from
 here:
 ```
 curl http://www.jbox.dk/sling/word2vec-32-embeddings.bin -o /tmp/word2vec-32-embeddings.bin

@@ -15,7 +15,7 @@ with Python 3 you can install a pre-built wheel:
 sudo -H pip3 install http://www.jbox.dk/sling/sling-2.0.0-py3-none-linux_x86_64.whl
 ```
 
-You can test the installing by trying to import the `sling` package:
+You can test the installation by trying to import the `sling` package:
 ```
 python3 -c "import sling; print(sling)"
 ```

@@ -178,8 +178,7 @@ class FactTargetExtractor : public task::FrameProcessor {
       Text id = store->FrameId(target);
       if (id.empty()) continue;
 
-      if (!store->IsFrame(target)) continue;
-       accumulator_.Increment(id);
+      accumulator_.Increment(id);
     }
   }
 

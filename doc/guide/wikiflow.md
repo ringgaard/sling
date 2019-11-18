@@ -310,8 +310,8 @@ All the links in the Wikipedia documents are collected and turned into a link
 graph that is stored in the `/w/item/links` property for each item. The link
 graph is built over all the Wikipedias being processed. The fan-in,
 i.e. the number of links to the item, is also computed and stored in the
-`/w/item/popularity` property. Tge popularity count also includes the number of
-times the item is a fact taget in other items.
+`/w/item/popularity` property. The popularity count also includes the number of
+times the item is a fact target in other items.
 
 Wikipedia categories are collected from Wikipedia documents in the
 `category-merging` task and the category membership graph is inverted in the
