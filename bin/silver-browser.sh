@@ -4,7 +4,7 @@ LANGUAGE=${LANGUAGE:-en}
 PORT=${PORT:-8080}
 
 SPEC='{
-  annotator: "ner"
+  annotator: "mentions"
   annotator: "anaphora"
   annotator: "phrase-structure"
   annotator: "relations"
