@@ -102,16 +102,12 @@ class MultiClassDelegateLearner : public DelegateLearner {
           b.Add(n_length, static_cast<int>(action.length));
         }
       }
-      if (type == ParserAction::ASSIGN ||
-          type == ParserAction::ELABORATE ||
-          type == ParserAction::CONNECT) {
+      if (type == ParserAction::ASSIGN || type == ParserAction::CONNECT) {
         if (action.source != 0) {
           b.Add(n_source, static_cast<int>(action.source));
         }
       }
-      if (type == ParserAction::EMBED ||
-          type == ParserAction::REFER ||
-          type == ParserAction::CONNECT) {
+      if (type == ParserAction::REFER || type == ParserAction::CONNECT) {
         if (action.target != 0) {
           b.Add(n_target, static_cast<int>(action.target));
         }
@@ -249,8 +245,6 @@ class CasparTrainer : public ParserTrainer {
             if (action.target > max_target_) skip = true;
             break;
           case ParserAction::ASSIGN:
-          case ParserAction::EMBED:
-          case ParserAction::ELABORATE:
             if (action.source > max_source_) skip = true;
             break;
           default:

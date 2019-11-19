@@ -122,8 +122,6 @@ class ParserState {
   void Refer(int length, int frame);
   void Connect(int source, Handle role, int target);
   void Assign(int frame, Handle role, Handle value);
-  void Embed(int frame, Handle role, Handle type);
-  void Elaborate(int frame, Handle role, Handle type);
 
   // Adds frame to attention buffer, making it the new center of attention.
   void Add(Handle frame, Span *span);
@@ -155,11 +153,6 @@ class ParserState {
   // Stack with positions for marked tokens. The mark stack tracks the start of
   // each mention.
   std::vector<Marker> marks_;
-
-  // (Source/Target frame handle, Frame type) for frames embedded or elaborated
-  // at the current position. This is cleared once the position advances.
-  std::vector<std::pair<Handle, Handle>> embed_;
-  std::vector<std::pair<Handle, Handle>> elaborate_;
 
   // Maximum mark depth.
   static const int MAX_MARK_DEPTH = 5;
