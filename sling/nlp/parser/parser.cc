@@ -91,7 +91,7 @@ void Parser::Parse(Document *document) const {
     CascadeInstance cascade(&cascade_);
 
     // Run decoder to predict transitions.
-    for (;;) {
+    while (!state.done()) {
       // Allocate space for next step.
       activations.push();
 
@@ -112,9 +112,6 @@ void Parser::Parse(Document *document) const {
 
       // Apply action to parser state.
       state.Apply(action);
-
-      // Check if we are done.
-      if (action.type == ParserAction::STOP) break;
     }
 
     // Write feature trace to document.

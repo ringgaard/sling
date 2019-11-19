@@ -78,7 +78,6 @@ class Delegate : public Component<Delegate> {
 // Cascade model.
 class Cascade {
  public:
-  Cascade();
   ~Cascade();
 
   // Initializes the cascade by reading its specification from 'spec'
@@ -89,18 +88,11 @@ class Cascade {
   Delegate *delegate(int i) const { return delegates_[i]; }
   int size() const { return delegates_.size(); }
 
-  // Sets 'action' to the fallback action for 'state'.
-  void FallbackAction(const ParserState *state, ParserAction *action) const;
-
  private:
   friend class CascadeInstance;
 
   // List of delegates.
   std::vector<Delegate *> delegates_;
-
-  // Fallback actions.
-  ParserAction shift_;
-  ParserAction stop_;
 };
 
 // Instance for running a single delegate.

@@ -331,7 +331,6 @@ void CollectSpanActions(Store *store,
 
     actions->emplace_back(ParserAction::SHIFT, nullptr);
   }
-  actions->emplace_back(ParserAction::STOP, nullptr);
 }
 
 void OutputActions(Store *store,

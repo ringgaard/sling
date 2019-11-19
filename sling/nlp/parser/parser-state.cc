@@ -28,15 +28,13 @@ ParserState::ParserState(Document *document, int begin, int end)
       begin_(begin),
       end_(end),
       current_(begin),
-      step_(0),
-      done_(false) {}
+      step_(0) {}
 
 string ParserState::DebugString() const {
   static const int MAX_ATTENTION = 10;
   string s =
       StrCat("Begin:", begin_, " End:", end_, " Current:", current_,
-             " Done: ", (done_ ? "Y" : "N"), " AttentionSize: ",
-             attention_.size(), "\n");
+             " AttentionSize: ", attention_.size(), "\n");
   for (int i = 0; i < attention_.size(); ++i) {
     if (i == MAX_ATTENTION) {
       StrAppend(&s, "..and ", (attention_.size() - MAX_ATTENTION), " more.\n");
@@ -53,10 +51,6 @@ void ParserState::Apply(const ParserAction &action) {
   switch (action.type) {
     case ParserAction::SHIFT:
       Shift();
-      break;
-
-    case ParserAction::STOP:
-      Stop();
       break;
 
     case ParserAction::MARK:
@@ -87,7 +81,6 @@ void ParserState::Apply(const ParserAction &action) {
 }
 
 bool ParserState::CanApply(const ParserAction &action) const {
-  if (done_) return false;
   switch (action.type) {
     case ParserAction::CASCADE:
       // Do not allow cascading back to the main cascade.
@@ -96,10 +89,6 @@ bool ParserState::CanApply(const ParserAction &action) const {
     case ParserAction::SHIFT:
       // Do not allow shifting past the end of the input buffer.
       return current_ < end_;
-
-    case ParserAction::STOP:
-      // Only allow stop if we are at the end of the input buffer.
-      return current_ == end_;
 
     case ParserAction::MARK:
       return current_ < end_ && marks_.size() < MAX_MARK_DEPTH;
@@ -199,10 +188,6 @@ bool ParserState::CanApply(const ParserAction &action) const {
 void ParserState::Shift() {
   // Move to the next token in the input buffer.
   current_++;
-}
-
-void ParserState::Stop() {
-  done_ = true;
 }
 
 void ParserState::Evoke(int length, Handle type) {

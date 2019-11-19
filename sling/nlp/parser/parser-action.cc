@@ -28,7 +28,6 @@ string ParserAction::TypeName(Type type) {
     case ParserAction::CASCADE: return "CASCADE";
     case ParserAction::MARK: return "MARK";
     case ParserAction::SHIFT: return "SHIFT";
-    case ParserAction::STOP: return "STOP";
   }
 
   return "<ERROR>";
@@ -78,7 +77,6 @@ string ParserAction::ToString(Store *store) const {
       break;
     case ParserAction::SHIFT:
     case ParserAction::MARK:
-    case ParserAction::STOP:
     default:
       s.pop_back();
       break;

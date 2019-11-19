@@ -90,8 +90,8 @@ class ParserState {
   // limited to the top-k frames that are closest to the center of attention.
   int AttentionIndex(Handle frame, int k = -1) const;
 
-  // The parse is done when we have performed the first STOP action.
-  bool done() const { return done_; }
+  // The parse is done when we have reached the end of the sentence.
+  bool done() const { return current_ == end_; }
 
   // Returns slot in attention buffer. The center of attention has index 0.
   const AttentionSlot &Attention(int index) const {
@@ -116,7 +116,6 @@ class ParserState {
  private:
   // Applies individual actions, which are assumed to be applicable.
   void Shift();
-  void Stop();
   void Mark();
   void Evoke(int length, Handle type);
   void Refer(int length, int frame);
@@ -142,9 +141,6 @@ class ParserState {
 
   // Current parse step.
   int step_;
-
-  // When we have performed the first STOP action, the parse is done.
-  bool done_;
 
   // Attention buffer. This contains evoked frames in order of attention. The
   // last element is the center of attention.

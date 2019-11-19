@@ -289,7 +289,7 @@ void ParserTrainer::Parse(Document *document) const {
     myelin::Channel activations(feature_model_.hidden());
 
     // Run decoder to predict transitions.
-    for (;;) {
+    while (!state.done()) {
       // Allocate space for next step.
       activations.push();
 
@@ -315,20 +315,13 @@ void ParserTrainer::Parse(Document *document) const {
         d = action.delegate;
       }
 
-      // Shift or stop if predicted action is invalid.
+      // Shift if predicted action is not invalid.
       if (!state.CanApply(action)) {
-        if (state.current() < state.end()) {
-          action.type = ParserAction::SHIFT;
-        } else {
-          action.type = ParserAction::STOP;
-        }
+        action.type = ParserAction::SHIFT;
       }
 
       // Apply action to parser state.
       state.Apply(action);
-
-      // Check if we are done.
-      if (action.type == ParserAction::STOP) break;
     }
   }
 

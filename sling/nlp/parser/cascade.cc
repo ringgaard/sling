@@ -75,11 +75,6 @@ class SoftmaxDelegate : public Delegate {
 
 REGISTER_DELEGATE_RUNTIME("SoftmaxDelegate", SoftmaxDelegate);
 
-Cascade::Cascade() {
-  shift_.type = ParserAction::SHIFT;
-  stop_.type = ParserAction::STOP;
-}
-
 Cascade::~Cascade() {
   for (auto *d : delegates_) delete d;
 }
@@ -115,11 +110,6 @@ void Cascade::Initialize(const myelin::Network &network, const Frame &spec) {
   for (auto *d : delegates_) {
     d->Initialize(this, delegate_specs[i++]);
   }
-}
-
-void Cascade::FallbackAction(
-    const ParserState *state, ParserAction *action) const {
-  *action = (state->current() < state->end()) ? shift_ : stop_;
 }
 
 void DelegateInstance::Compute(
@@ -163,8 +153,8 @@ void CascadeInstance::Compute(myelin::Channel *activations,
     // If we have an applicable action then we are done with the cascade.
     if (!is_cascade && state->CanApply(*output)) return;
 
-    // Return a fallback action.
-    cascade_->FallbackAction(state, output);
+    // Use SHIFT as fallback action.
+    *output = ParserAction::Shift();
     if (trace != nullptr) trace->Fallback(*output);
     return;
   }
