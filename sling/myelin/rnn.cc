@@ -20,249 +20,467 @@
 namespace sling {
 namespace myelin {
 
-void BiLSTM::LSTM::Initialize(const Network &net, const string &name) {
-  // Initialize LSTM cell.
+RNN::Outputs RNN::Build(Flow *flow, Type type, int dim,
+                        Flow::Variable *input,
+                        Flow::Variable *dinput) {
+  Outputs out;
+
+  // Build RNN cell.
+  FlowBuilder f(flow, name);
+  auto *in = f.Placeholder("input", input->type, input->shape, true);
+  switch (type) {
+    case DRAGNN_LSTM:
+      out.hidden = f.LSTMLayer(in, dim);
+      break;
+    default:
+      LOG(FATAL) << "RNN type not supported: " << type;
+  }
+
+  // Make zero and sink elements for channels.
+  auto *zero = f.Name(f.Const(nullptr, input->type, {1, dim}), "zero");
+  auto *sink = f.Name(f.Const(nullptr, input->type, {1, dim}), "sink");
+  flow->Connect({out.hidden, zero, sink});
+
+  // Connect input to RNN.
+  flow->Connect({input, in});
+
+  // Build gradients for learning.
+  if (dinput != nullptr) {
+    Gradient(flow, f.func());
+    out.dinput = flow->GradientVar(in);
+    flow->Connect({dinput, out.dinput});
+  } else {
+    out.dinput = nullptr;
+  }
+
+  return out;
+}
+
+void RNN::Initialize(const Network &net) {
+  // Initialize RNN cell. Control channel is optional.
   cell = net.GetCell(name);
   input = net.GetParameter(name + "/input");
   h_in = net.GetParameter(name + "/h_in");
   h_out = net.GetParameter(name + "/h_out");
-  c_in = net.GetParameter(name + "/c_in");
-  c_out = net.GetParameter(name + "/c_out");
+  c_in = net.LookupParameter(name + "/c_in");
+  c_out = net.LookupParameter(name + "/c_out");
 
-  // Initialize gradient cell for LSTM.
+  zero = net.GetParameter(name + "/zero");
+  sink = net.GetParameter(name + "/sink");
+
+  // Initialize gradient cell for RNN.
   gcell = cell->Gradient();
   if (gcell != nullptr) {
     primal = cell->Primal();
     dinput = input->Gradient();
     dh_in = h_in->Gradient();
     dh_out = h_out->Gradient();
-    dc_in = c_in->Gradient();
-    dc_out = c_out->Gradient();
+    dc_in = c_in == nullptr ? nullptr : c_in->Gradient();
+    dc_out = c_out == nullptr ? nullptr : c_out->Gradient();
   }
 }
 
-// Build flows for LSTMs.
-BiLSTM::Outputs BiLSTM::Build(Flow *flow, int dim,
-                              Flow::Variable *input,
-                              Flow::Variable *dinput) {
-  Outputs out;
+// Forward RNN instance for prediction.
+class ForwardRNNInstance : public RNNInstance {
+ public:
+  ForwardRNNInstance(const RNN &rnn)
+    : rnn_(rnn),
+      data_(rnn.cell),
+      hidden_(rnn.h_out),
+      control_(rnn.c_out) {}
 
-  // Build left-to-right LSTM flow.
-  FlowBuilder lr(flow, name_ + "/lr");
-  auto *lr_input = lr.Placeholder("input", input->type, input->shape, true);
-  out.lr = lr.LSTMLayer(lr_input, dim);
+  Channel *Compute(Channel *input) override {
+    // Reset hidden and control channels.
+    int length = input->size();
+    bool ctrl = rnn_.has_control();
+    hidden_.resize(length);
+    if (ctrl) control_.resize(length);
 
-  // Build right-to-left LSTM flow.
-  FlowBuilder rl(flow, name_ + "/rl");
-  auto *rl_input = rl.Placeholder("input", input->type, input->shape, true);
-  out.rl = rl.LSTMLayer(rl_input, dim);
+    // Compute first RNN cell.
+    if (length > 0) {
+      data_.Set(rnn_.input, input, 0);
+      data_.SetReference(rnn_.h_in, rnn_.zero->data());
+      data_.Set(rnn_.h_out, &hidden_, 0);
+      if (ctrl) {
+        data_.SetReference(rnn_.c_in, rnn_.zero->data());
+        data_.Set(rnn_.c_out, &control_, 0);
+      }
+      data_.Compute();
+    }
 
-  // Connect input to LSTMs.
-  flow->Connect({input, lr_input, rl_input});
+    // Compute remaining RNN cells left-to-right.
+    for (int i = 1; i < length; ++i) {
+      data_.Set(rnn_.input, input, i);
+      data_.Set(rnn_.h_in, &hidden_, i - 1);
+      data_.Set(rnn_.h_out, &hidden_, i);
+      if (ctrl) {
+        data_.Set(rnn_.c_in, &control_, i - 1);
+        data_.Set(rnn_.c_out, &control_, i);
+      }
+      data_.Compute();
+    }
 
-  // Build gradients for learning.
-  if (dinput != nullptr) {
-    Gradient(flow, lr.func());
-    Gradient(flow, rl.func());
-    out.dlr = flow->GradientVar(lr_input);
-    out.drl = flow->GradientVar(rl_input);
-    flow->Connect({dinput, out.dlr, out.drl});
-  } else {
-    out.dlr = nullptr;
-    out.drl = nullptr;
+    return &hidden_;
   }
 
-  return out;
-}
+ private:
+  const RNN &rnn_;           // RNN cell
+  Instance data_;            // RNN instance data
+  Channel hidden_;           // hidden channel
+  Channel control_;          // control channel (optional)
+};
 
-void BiLSTM::Initialize(const Network &net) {
-  lr_.Initialize(net, name_ + "/lr");
-  rl_.Initialize(net, name_ + "/rl");
-}
+// Forward RNN instance for learning.
+class ForwardRNNLearner : public RNNLearner {
+ public:
+  ForwardRNNLearner(const RNN &rnn)
+    : rnn_(rnn),
+      bkw_(rnn.gcell),
+      hidden_(rnn.h_out),
+      control_(rnn.c_out),
+      dhidden_(rnn.dh_in),
+      dcontrol_(rnn.dc_in),
+      dinput_(rnn.dinput) {}
 
-BiLSTMInstance::BiLSTMInstance(const BiLSTM &bilstm)
-    : bilstm_(bilstm),
-      lr_(bilstm.lr_.cell),
-      rl_(bilstm.rl_.cell),
-      lr_hidden_(bilstm.lr_.h_out),
-      lr_control_(bilstm.lr_.c_out),
-      rl_hidden_(bilstm.rl_.h_out),
-      rl_control_(bilstm.rl_.c_out) {}
-
-BiChannel BiLSTMInstance::Compute(Channel *input) {
-  // Reset hidden and control channels.
-  int length = input->size();
-  lr_hidden_.reset(length + 1);
-  rl_hidden_.reset(length + 1);
-  lr_control_.resize(length + 1);
-  rl_control_.resize(length + 1);
-  lr_control_.zero(length);
-  rl_control_.zero(length);
-
-  // Compute left-to-right LSTM.
-  for (int i = 0; i < length; ++i) {
-    // Input.
-    lr_.Set(bilstm_.lr_.input, input, i);
-    lr_.Set(bilstm_.lr_.h_in, &lr_hidden_, i > 0 ? i - 1 : length);
-    lr_.Set(bilstm_.lr_.c_in, &lr_control_, i > 0 ? i - 1 : length);
-
-    // Output.
-    lr_.Set(bilstm_.lr_.h_out, &lr_hidden_, i);
-    lr_.Set(bilstm_.lr_.c_out, &lr_control_, i);
-
-    // Compute LSTM cell.
-    lr_.Compute();
+  ~ForwardRNNLearner() {
+    for (Instance *data : fwd_) delete data;
   }
 
-  // Compute right-to-left LSTM.
-  for (int i = length - 1; i >= 0; --i) {
-    // Input.
-    rl_.Set(bilstm_.rl_.input, input, i);
-    rl_.Set(bilstm_.rl_.h_in, &rl_hidden_, i + 1);
-    rl_.Set(bilstm_.rl_.c_in, &rl_control_, i + 1);
+  Channel *Compute(Channel *input) override {
+    // Allocate instances.
+    int length = input->size();
+    for (auto *data : fwd_) delete data;
+    fwd_.resize(length);
+    for (int i = 0; i < length; ++i) {
+      fwd_[i] = new Instance(rnn_.cell);
+    }
 
-    // Output.
-    rl_.Set(bilstm_.rl_.h_out, &rl_hidden_, i);
-    rl_.Set(bilstm_.rl_.c_out, &rl_control_, i);
+    // Reset hidden and control channels.
+    bool ctrl = rnn_.has_control();
+    hidden_.resize(length);
+    if (ctrl) control_.resize(length);
 
-    // Compute LSTM cell.
-    rl_.Compute();
+    // Compute first RNN cell.
+    if (length > 0) {
+      Instance *data = fwd_[0];
+      data->Set(rnn_.input, input, 0);
+      data->SetReference(rnn_.h_in, rnn_.zero->data());
+      data->Set(rnn_.h_out, &hidden_, 0);
+      if (ctrl) {
+        data->SetReference(rnn_.c_in, rnn_.zero->data());
+        data->Set(rnn_.c_out, &control_, 0);
+      }
+      data->Compute();
+    }
+
+    // Compute remaining RNN cells left-to-right.
+    for (int i = 1; i < length; ++i) {
+      Instance *data = fwd_[i];
+      data->Set(rnn_.input, input, i);
+      data->Set(rnn_.h_in, &hidden_, i - 1);
+      data->Set(rnn_.h_out, &hidden_, i);
+      if (ctrl) {
+        data->Set(rnn_.c_in, &control_, i - 1);
+        data->Set(rnn_.c_out, &control_, i);
+      }
+      data->Compute();
+    }
+
+    return &hidden_;
   }
 
-  return BiChannel(&lr_hidden_, &rl_hidden_);
-}
-
-BiLSTMLearner::BiLSTMLearner(const BiLSTM &bilstm)
-    : bilstm_(bilstm),
-      lr_gradient_(bilstm.lr_.gcell),
-      rl_gradient_(bilstm.rl_.gcell),
-      lr_hidden_(bilstm.lr_.h_out),
-      lr_control_(bilstm.lr_.c_out),
-      rl_hidden_(bilstm.rl_.h_out),
-      rl_control_(bilstm.rl_.c_out),
-      dlr_hidden_(bilstm.lr_.dh_in),
-      dlr_control_(bilstm.lr_.dc_in),
-      drl_hidden_(bilstm.rl_.dh_in),
-      drl_control_(bilstm.rl_.dc_in),
-      dinput_(bilstm.lr_.dinput) {}
-
-BiLSTMLearner::~BiLSTMLearner() {
-  for (Instance *data : lr_) delete data;
-  for (Instance *data : rl_) delete data;
-}
-
-BiChannel BiLSTMLearner::Compute(Channel *input) {
-  // Allocate instances.
-  int length = input->size();
-  for (auto *data : lr_) delete data;
-  for (auto *data : rl_) delete data;
-  lr_.resize(length);
-  rl_.resize(length);
-  for (int i = 0; i < length; ++i) {
-    lr_[i] = new Instance(bilstm_.lr_.cell);
-    rl_[i] = new Instance(bilstm_.rl_.cell);
+  void CollectGradients(std::vector<Instance *> *gradients) override {
+    gradients->push_back(&bkw_);
   }
 
-  // Reset hidden and control channels.
-  lr_hidden_.reset(length + 1);
-  rl_hidden_.reset(length + 1);
-  lr_control_.resize(length + 1);
-  rl_control_.resize(length + 1);
-  lr_control_.zero(length);
-  rl_control_.zero(length);
-
-  // Compute left-to-right LSTM.
-  for (int i = 0; i < length; ++i) {
-    Instance *lr = lr_[i];
-
-    // Input.
-    lr->Set(bilstm_.lr_.input, input, i);
-    lr->Set(bilstm_.lr_.h_in, &lr_hidden_, i > 0 ? i - 1 : length);
-    lr->Set(bilstm_.lr_.c_in, &lr_control_, i > 0 ? i - 1 : length);
-
-    /// Output.
-    lr->Set(bilstm_.lr_.h_out, &lr_hidden_, i);
-    lr->Set(bilstm_.lr_.c_out, &lr_control_, i);
-
-    // Compute LSTM cell.
-    lr->Compute();
+  Channel *GetGradient() override {
+    int length = fwd_.size();
+    dhidden_.reset(length);
+    if (rnn_.has_control()) dcontrol_.reset(length);
+    return &dhidden_;
   }
 
-  // Compute right-to-left LSTM.
-  for (int i = length - 1; i >= 0; --i) {
-    Instance *rl = rl_[i];
+  Channel *Backpropagate() override {
+    // Clear input gradient.
+    int length = fwd_.size();
+    dinput_.reset(length);
+    bool ctrl = rnn_.has_control();
 
-    // Input.
-    rl->Set(bilstm_.rl_.input, input, i);
-    rl->Set(bilstm_.rl_.h_in, &rl_hidden_, i + 1);
-    rl->Set(bilstm_.rl_.c_in, &rl_control_, i + 1);
+    // Propagate gradients right-to-left.
+    for (int i = length - 1; i >= 2; --i) {
+      bkw_.Set(rnn_.primal, fwd_[i]);
+      bkw_.Set(rnn_.dh_out, &dhidden_, i);
+      bkw_.Set(rnn_.dh_in, &dhidden_, i - 1);
+      bkw_.Set(rnn_.dinput, &dinput_, i);
+      if (ctrl) {
+        bkw_.Set(rnn_.dc_out, &dcontrol_, i);
+        bkw_.Set(rnn_.dc_in, &dcontrol_, i - 1);
+      }
+      bkw_.Compute();
+    }
 
-    // Output.
-    rl->Set(bilstm_.rl_.h_out, &rl_hidden_, i);
-    rl->Set(bilstm_.rl_.c_out, &rl_control_, i);
+    // Propagate gradients for first element.
+    if (length > 0) {
+      bkw_.Set(rnn_.primal, fwd_[0]);
+      bkw_.Set(rnn_.dh_out, &dhidden_, 0);
+      bkw_.SetReference(rnn_.dh_in, rnn_.sink->data());
+      bkw_.Set(rnn_.dinput, &dinput_, 0);
+      if (ctrl) {
+        bkw_.Set(rnn_.dc_out, &dcontrol_, 0);
+        bkw_.SetReference(rnn_.dc_in, rnn_.sink->data());
+      }
+      bkw_.Compute();
+    }
 
-    // Compute LSTM cell.
-    rl->Compute();
+    // Return input gradient.
+    return &dinput_;
   }
 
-  return BiChannel(&lr_hidden_, &rl_hidden_);
-}
-
-BiChannel BiLSTMLearner::PrepareGradientChannels(int length) {
-  dlr_hidden_.reset(length + 1);
-  drl_hidden_.reset(length + 1);
-  dlr_control_.resize(length + 1);
-  drl_control_.resize(length + 1);
-  dlr_control_.zero(length);
-  drl_control_.zero(length);
-
-  return BiChannel(&dlr_hidden_, &drl_hidden_);
-}
-
-Channel *BiLSTMLearner::Backpropagate() {
-  // Clear input gradient.
-  int length = lr_.size();
-  dinput_.reset(length);
-
-  // Propagate gradients for left-to-right LSTM.
-  for (int i = length - 1; i >= 0; --i) {
-    // Set reference to primal cell.
-    lr_gradient_.Set(bilstm_.lr_.primal, lr_[i]);
-
-    // Gradient inputs.
-    lr_gradient_.Set(bilstm_.lr_.dh_out, &dlr_hidden_, i);
-    lr_gradient_.Set(bilstm_.lr_.dc_out, &dlr_control_, i);
-
-    // Gradient outputs.
-    lr_gradient_.Set(bilstm_.lr_.dh_in, &dlr_hidden_, i > 0 ? i - 1 : length);
-    lr_gradient_.Set(bilstm_.lr_.dc_in, &dlr_control_, i > 0 ? i - 1 : length);
-    lr_gradient_.Set(bilstm_.lr_.dinput, &dinput_, i);
-
-    // Compute backward.
-    lr_gradient_.Compute();
+  void Clear() override {
+    bkw_.Clear();
   }
 
-  // Propagate gradients for right-to-left LSTM.
-  for (int i = 0; i < length; ++i) {
-    // Set reference to primal cell.
-    rl_gradient_.Set(bilstm_.rl_.primal, rl_[i]);
+ private:
+  const RNN &rnn_;                // RNN cell
 
-    // Gradient inputs.
-    rl_gradient_.Set(bilstm_.rl_.dh_out, &drl_hidden_, i);
-    rl_gradient_.Set(bilstm_.rl_.dc_out, &drl_control_, i);
+  std::vector<Instance *> fwd_;   // RNN forward instances
+  Instance bkw_;                  // RNN gradients
 
-    // Gradient outputs.
-    rl_gradient_.Set(bilstm_.rl_.dh_in, &drl_hidden_, i + 1);
-    rl_gradient_.Set(bilstm_.rl_.dc_in, &drl_control_, i + 1);
-    rl_gradient_.Set(bilstm_.rl_.dinput, &dinput_, i);
+  Channel hidden_;                // RNN hidden channel
+  Channel control_;               // RNN control channel (optional)
 
-    // Compute backward.
-    rl_gradient_.Compute();
+  Channel dhidden_;               // RNN hidden gradient channel
+  Channel dcontrol_;              // RNN control gradient channel
+
+  Channel dinput_;                // input gradient channel
+};
+
+// Forward RNN layer.
+class ForwardRNNLayer : public RNNLayer {
+ public:
+  ForwardRNNLayer(const string &name) : rnn_(name) {}
+
+  RNN::Outputs Build(Flow *flow, RNN::Type type, int dim,
+                     Flow::Variable *input,
+                     Flow::Variable *dinput) override {
+    return rnn_.Build(flow, type, dim, input, dinput);
   }
 
-  // Return input gradient.
-  return &dinput_;
-}
+  void Initialize(const Network &net) override {
+    rnn_.Initialize(net);
+  }
+
+  RNNInstance *CreateInstance() override {
+    return new ForwardRNNInstance(rnn_);
+  }
+
+  RNNLearner *CreateLearner() override {
+    return new ForwardRNNLearner(rnn_);
+  }
+
+ private:
+  // RNN cell.
+  RNN rnn_;
+};
+
+// Reverse RNN instance for prediction.
+class ReverseRNNInstance : public RNNInstance {
+ public:
+  ReverseRNNInstance(const RNN &rnn)
+    : rnn_(rnn),
+      data_(rnn.cell),
+      hidden_(rnn.h_out),
+      control_(rnn.c_out) {}
+
+  Channel *Compute(Channel *input) override {
+    // Reset hidden and control channels.
+    int length = input->size();
+    bool ctrl = rnn_.has_control();
+    hidden_.resize(length);
+    if (ctrl) control_.resize(length);
+
+    // Compute last RNN cell.
+    if (length > 0) {
+      data_.Set(rnn_.input, input, length - 1);
+      data_.SetReference(rnn_.h_in, rnn_.zero->data());
+      data_.Set(rnn_.h_out, &hidden_, length - 1);
+      if (ctrl) {
+        data_.SetReference(rnn_.c_in, rnn_.zero->data());
+        data_.Set(rnn_.c_out, &control_, length - 1);
+      }
+      data_.Compute();
+    }
+
+    // Compute remaining RNN cells right-to-left.
+    for (int i = length - 2; i >= 0; --i) {
+      data_.Set(rnn_.input, input, i);
+      data_.Set(rnn_.h_in, &hidden_, i + 1);
+      data_.Set(rnn_.h_out, &hidden_, i);
+      if (ctrl) {
+        data_.Set(rnn_.c_in, &control_, i + 1);
+        data_.Set(rnn_.c_out, &control_, i);
+      }
+      data_.Compute();
+    }
+
+    return &hidden_;
+  }
+
+ private:
+  const RNN &rnn_;           // RNN cell
+  Instance data_;            // RNN instance data
+  Channel hidden_;           // hidden channel
+  Channel control_;          // control channel (optional)
+};
+
+// Reverse RNN instance for learning.
+class ReverseRNNLearner : public RNNLearner {
+ public:
+  ReverseRNNLearner(const RNN &rnn)
+    : rnn_(rnn),
+      bkw_(rnn.gcell),
+      hidden_(rnn.h_out),
+      control_(rnn.c_out),
+      dhidden_(rnn.dh_in),
+      dcontrol_(rnn.dc_in),
+      dinput_(rnn.dinput) {}
+
+  Channel *Compute(Channel *input) override {
+    // Allocate instances.
+    int length = input->size();
+    for (auto *data : fwd_) delete data;
+    fwd_.resize(length);
+    for (int i = 0; i < length; ++i) {
+      fwd_[i] = new Instance(rnn_.cell);
+    }
+
+    // Reset hidden and control channels.
+    bool ctrl = rnn_.has_control();
+    hidden_.resize(length);
+    if (ctrl) control_.resize(length);
+
+    // Compute last RNN cell.
+    if (length > 0) {
+      Instance *data = fwd_[length - 1];
+      data->Set(rnn_.input, input, length - 1);
+      data->SetReference(rnn_.h_out, rnn_.zero->data());
+      data->Set(rnn_.h_in, &hidden_, length - 1);
+      if (ctrl) {
+        data->SetReference(rnn_.c_out, rnn_.zero->data());
+        data->Set(rnn_.c_in, &control_, length - 1);
+      }
+      data->Compute();
+    }
+
+    // Compute remaining RNN cells right-to-left.
+    for (int i = length - 2; i >= 0; --i) {
+      Instance *data = fwd_[i];
+      data->Set(rnn_.input, input, i);
+      data->Set(rnn_.h_out, &hidden_, i + 1);
+      data->Set(rnn_.h_in, &hidden_, i);
+      if (ctrl) {
+        data->Set(rnn_.c_out, &control_, i + 1);
+        data->Set(rnn_.c_in, &control_, i);
+      }
+      data->Compute();
+    }
+
+    return &hidden_;
+  }
+
+  void CollectGradients(std::vector<Instance *> *gradients) override {
+    gradients->push_back(&bkw_);
+  }
+
+  Channel *GetGradient() override {
+    int length = fwd_.size();
+    dhidden_.reset(length);
+    if (rnn_.has_control()) dcontrol_.reset(length);
+    return &dhidden_;
+  }
+
+  Channel *Backpropagate() override {
+    // Clear input gradient.
+    int length = fwd_.size();
+    dinput_.reset(length);
+    bool ctrl = rnn_.has_control();
+
+    // Propagate gradients left-to-right.
+    for (int i = 0; i < length - 1; ++i) {
+      bkw_.Set(rnn_.primal, fwd_[i]);
+      bkw_.Set(rnn_.dh_out, &dhidden_, i);
+      bkw_.Set(rnn_.dh_in, &dhidden_, i + 1);
+      bkw_.Set(rnn_.dinput, &dinput_, i);
+      if (ctrl) {
+        bkw_.Set(rnn_.dc_out, &dcontrol_, i);
+        bkw_.Set(rnn_.dc_in, &dcontrol_, i + 1);
+      }
+      bkw_.Compute();
+    }
+
+    // Propagate gradients for last element.
+    if (length > 0) {
+      bkw_.Set(rnn_.primal, fwd_[length - 1]);
+      bkw_.Set(rnn_.dh_out, &dhidden_, length - 1);
+      bkw_.SetReference(rnn_.dh_in, rnn_.sink->data());
+      bkw_.Set(rnn_.dinput, &dinput_, length - 1);
+      if (ctrl) {
+        bkw_.Set(rnn_.dc_out, &dcontrol_, length - 1);
+        bkw_.SetReference(rnn_.dc_in, rnn_.sink->data());
+      }
+      bkw_.Compute();
+    }
+
+    // Return input gradient.
+    return &dinput_;
+  }
+
+  void Clear() override {
+    bkw_.Clear();
+  }
+
+ private:
+  const RNN &rnn_;                // RNN cell
+
+  std::vector<Instance *> fwd_;   // RNN forward instances
+  Instance bkw_;                  // RNN gradients
+
+  Channel hidden_;                // RNN hidden channel
+  Channel control_;               // RNN control channel (optional)
+
+  Channel dhidden_;               // RNN hidden gradient channel
+  Channel dcontrol_;              // RNN control gradient channel
+
+  Channel dinput_;                // input gradient channel
+};
+
+// Reverse RNN layer.
+class ReverseRNNLayer : public RNNLayer {
+ public:
+  ReverseRNNLayer(const string &name) : rnn_(name) {}
+
+  RNN::Outputs Build(Flow *flow, RNN::Type type, int dim,
+                     Flow::Variable *input,
+                     Flow::Variable *dinput) override {
+    return rnn_.Build(flow, type, dim, input, dinput);
+  }
+
+  void Initialize(const Network &net) override {
+    rnn_.Initialize(net);
+  }
+
+  RNNInstance *CreateInstance() override {
+    return new ReverseRNNInstance(rnn_);
+  }
+
+  RNNLearner *CreateLearner() override {
+    return new ReverseRNNLearner(rnn_);
+  }
+
+ private:
+  // RNN cell.
+  RNN rnn_;
+};
 
 }  // namespace myelin
 }  // namespace sling

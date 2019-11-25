@@ -21,7 +21,7 @@
 #include "sling/base/types.h"
 #include "sling/myelin/flow.h"
 #include "sling/myelin/compute.h"
-#include "sling/myelin/rnn.h"
+#include "sling/myelin/bilstm.h"
 #include "sling/nlp/document/features.h"
 #include "sling/nlp/document/lexicon.h"
 
@@ -126,7 +126,7 @@ typedef std::function<
   void(int token, const string &feature, int value)> LexicalFeatureTrace;
 
 // Lexical feature extractor for extracting features from document tokens and
-// mapping these though feature embeddings.
+// mapping these through feature embeddings.
 class LexicalFeatureExtractor {
  public:
   LexicalFeatureExtractor(const LexicalFeatures &lex)

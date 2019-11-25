@@ -401,7 +401,7 @@ class Slice : public Kernel {
 class BasicConcat : public Kernel {
  public:
   string Name() override { return "BasicConcat"; }
-  string Operation() override { return "ConcatV2"; }
+  string Operation() override { return "Concat"; }
 
   bool Supports(Step *step) override {
     // Check inputs and outputs.
@@ -454,7 +454,7 @@ class BasicConcat : public Kernel {
 class GeneralConcat : public Kernel {
  public:
   string Name() override { return "GeneralConcat"; }
-  string Operation() override { return "ConcatV2"; }
+  string Operation() override { return "Concat"; }
 
   bool Supports(Step *step) override {
     // Check inputs and outputs.

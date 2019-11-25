@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "sling/myelin/compute.h"
-#include "sling/myelin/rnn.h"
+#include "sling/myelin/bilstm.h"
 #include "sling/nlp/parser/parser-state.h"
 #include "sling/nlp/parser/roles.h"
 #include "sling/nlp/parser/trace.h"

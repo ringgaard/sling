@@ -397,6 +397,10 @@ class Tensor {
   bool ref() const { return ref_; }
   void set_ref(bool ref) { ref_ = ref; }
 
+  // Reference to dynamically sized tensor channel.
+  bool dynamic() const { return dynamic_; }
+  void set_dynamic(bool dynamic) { dynamic_ = dynamic_; }
+
   // Tensor shape.
   const Shape &shape() const { return shape_; }
   int rank() const { return shape_.rank(); }
@@ -637,6 +641,9 @@ class Tensor {
   // Tensor reference.
   bool ref_ = false;
 
+  // Reference to dynamically sized tensor channel.
+  bool dynamic_ = false;
+
   // Tensor shape.
   Shape shape_;
 
@@ -845,19 +852,19 @@ class Channel {
   void clear() { resize(0); }
 
   // Change size of channel.
-  void resize(int n);
+  void resize(size_t n);
 
   // Change size of channel and clear all elements.
-  void reset(int n);
+  void reset(size_t n);
 
   // Reserve space for channel elements.
-  void reserve(int n);
+  void reserve(size_t n);
 
   // Zero-fill element in channel.
-  void zero(int n);
+  void zero(size_t n);
 
   // Return pointer to channel element.
-  char *at(int index) const {
+  char *at(size_t index) const {
     return data_ + (index * element_size_);
   }
 
@@ -868,7 +875,7 @@ class Channel {
   void pop() { resize(size_ - 1); }
 
   // Return the number of elements in the channel.
-  int size() const { return size_; }
+  size_t size() const { return size_; }
 
   // Return placement of channel.
   Placement placement() const {
@@ -889,10 +896,10 @@ class Channel {
   char *data_ = nullptr;
 
   // Number of elements in channel.
-  int size_ = 0;
+  size_t size_ = 0;
 
   // Number of allocated elements.
-  int capacity_ = 0;
+  size_t capacity_ = 0;
 
   // A tensor describing the element type of the channel.
   const Tensor *format_;

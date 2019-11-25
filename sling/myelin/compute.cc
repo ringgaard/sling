@@ -649,6 +649,7 @@ string Tensor::TypeString() const {
   string str;
   if (ref_) str.append("&");
   str.append(TypeTraits::of(type_).name());
+  if (dynamic_) str.append("<>");
   if (!shape_.scalar()) {
     str.append("[");
     str.append(shape_.ToString());
@@ -659,7 +660,15 @@ string Tensor::TypeString() const {
 
 string Tensor::ToString(const char *data, bool deref) const {
   // Resolve references.
-  if (deref && ref()) data = *reinterpret_cast<const char * const *>(data);
+  if (deref) {
+    if (dynamic()) {
+      data = *reinterpret_cast<const char * const *>(data);
+      if (data == nullptr) return "null";
+      data = *reinterpret_cast<const char * const *>(data);
+    } else if (ref()) {
+      data = *reinterpret_cast<const char * const *>(data);
+    }
+  }
 
   // Check for shape and null.
   if (!shape().defined()) return "*";
@@ -702,26 +711,30 @@ string Tensor::ToString(const char *data, bool deref) const {
 }
 
 Channel::Channel(const Tensor *format) : format_(format) {
-  // Align the element size to the byte alignment of the format tensor to ensure
-  // proper alignment of the elements in the channel array.
-  DCHECK(format->order() == ROW_MAJOR) << format->name();
-  DCHECK_GE(format->rank(), 1) << format->name();
-  DCHECK_EQ(format->dim(0), 1) << format->name();
-  element_size_ = format->ChannelElementSize();
+  if (format != nullptr) {
+    // Align the element size to the byte alignment of the format tensor to
+    // ensure proper alignment of the elements in the channel array.
+    DCHECK(format->order() == ROW_MAJOR) << format->name();
+    DCHECK_GE(format->rank(), 1) << format->name();
+    DCHECK_EQ(format->dim(0), 1) << format->name();
+    element_size_ = format->ChannelElementSize();
 
-  // Channel are aligned to the element alignment and cache lines.
-  EnsureAlignment(&alignment_, format->byte_alignment());
-  EnsureAlignment(&alignment_, jit::CPU::CacheLineSize());
+    // Channel are aligned to the element alignment and cache lines.
+    EnsureAlignment(&alignment_, format->byte_alignment());
+    EnsureAlignment(&alignment_, jit::CPU::CacheLineSize());
+  }
 }
 
 Channel::~Channel() {
-  runtime()->FreeChannel(data_, placement());
+  if (data_ != nullptr) {
+    runtime()->FreeChannel(data_, placement());
+  }
 }
 
-void Channel::resize(int n) {
+void Channel::resize(size_t n) {
   // Allocate more space if needed.
   if (n > capacity_) {
-    int cap = capacity_ * 2;
+    size_t cap = capacity_ * 2;
     if (cap < n) cap = n;
     if (cap < 8) cap = 8;
     reserve(cap);
@@ -738,10 +751,10 @@ void Channel::resize(int n) {
   size_ = n;
 }
 
-void Channel::reset(int n) {
+void Channel::reset(size_t n) {
   // Allocate more space if needed.
   if (n > capacity_) {
-    int cap = capacity_ * 2;
+    size_t cap = capacity_ * 2;
     if (cap < n) cap = n;
     if (cap < 8) cap = 8;
     reserve(cap);
@@ -754,7 +767,7 @@ void Channel::reset(int n) {
   size_ = n;
 }
 
-void Channel::reserve(int n) {
+void Channel::reserve(size_t n) {
   // Never remove any existing elements.
   if (n < size_) return;
   if (n == capacity_) return;
@@ -770,7 +783,7 @@ void Channel::reserve(int n) {
   capacity_ = n;
 }
 
-void Channel::zero(int n) {
+void Channel::zero(size_t n) {
   runtime()->ClearChannel(data_, n * element_size_, element_size_, placement());
 }
 
@@ -1109,6 +1122,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     }
     tensor->type_ = var->type;
     tensor->ref_ = var->ref();
+    tensor->dynamic_ = var->dynamic();
     tensor->shape_ = var->shape;
     tensor->aligned_ = var->shape;
     tensor->minalign_.fill(var->rank(), 1);
@@ -1462,7 +1476,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
 
     // Set tensor size.
     tensor->size_ = size;
-    tensor->space_ = tensor->ref() ? sizeof(void *) : size;
+    tensor->space_ = tensor->ref() || tensor->dynamic() ? sizeof(void *) : size;
 
     // Determine placement for tensor based on producer and consumer locations.
     if (tensor->producer_ != nullptr) {

@@ -364,6 +364,7 @@ class Flow {
       RANDOM = 32,    // initialize with random values
       ROW = 64,       // request row-major order
       COL = 128,      // request column-major order
+      DYNAMIC = 256,  // dynamically sized tensor channel
     };
 
     // Add alias for variable.
@@ -421,6 +422,15 @@ class Flow {
     }
     Variable *clear_random(bool disable = true) {
       return clear(RANDOM, disable);
+    }
+
+    // Dynamic size flag.
+    bool dynamic() const { return is(DYNAMIC); }
+    Variable *set_dynamic(bool enable = true) {
+      return set(DYNAMIC, enable);
+    }
+    Variable *clear_dynamic(bool disable = true) {
+      return clear(DYNAMIC, disable);
     }
 
     // Check if variable is a constant.

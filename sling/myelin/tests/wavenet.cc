@@ -61,7 +61,7 @@ class WaveNetTransformer : public Transformer {
     }
 
     // Convert concat into shift op.
-    for (Flow::Operation *op : flow->Find("ConcatV2|StridedSlice")) {
+    for (Flow::Operation *op : flow->Find("Concat|StridedSlice")) {
       VLOG(5) << "Convert to Shift " << op->name;
       Flow::Operation *slice = op;
       Flow::Operation *concat = slice->inputs[0]->producer;

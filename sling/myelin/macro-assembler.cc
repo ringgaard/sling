@@ -341,18 +341,27 @@ void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor) {
   if (tensor->IsGlobal()) {
     DCHECK(tensor->data() != nullptr);
     load_extern(dst, tensor->data(), tensor->name(), options_.pic);
-    if (tensor->ref()) {
+    if (tensor->dynamic()) {
+      movq(dst, Operand(dst));
+      movq(dst, Operand(dst));
+    } else if (tensor->ref()) {
       movq(dst, Operand(dst));
     }
   } else if (tensor->offset() == 0) {
-    if (tensor->ref()) {
+    if (tensor->dynamic()) {
+      movq(dst, Operand(datareg));
+      movq(dst, Operand(dst));
+    } else if (tensor->ref()) {
       movq(dst, Operand(datareg));
     } else {
       movq(dst, datareg);
     }
   } else {
     DCHECK(tensor->offset() != -1) << tensor->name();
-    if (tensor->ref()) {
+    if (tensor->dynamic()) {
+      movq(dst, Operand(datareg, tensor->offset()));
+      movq(dst, Operand(dst));
+    } else if (tensor->ref()) {
       movq(dst, Operand(datareg, tensor->offset()));
     } else {
       leaq(dst, Operand(datareg, tensor->offset()));
@@ -371,7 +380,7 @@ void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor,
       std::vector<int> index;
       CHECK(indices->GetData(&index));
       int offset = tensor->offset(index);
-      if (tensor->IsGlobal() || tensor->ref()) {
+      if (tensor->IsGlobal() || tensor->ref() || tensor->dynamic()) {
         LoadTensorAddress(dst, tensor);
         if (offset != 0) addq(dst, Immediate(offset));
       } else {
@@ -383,7 +392,11 @@ void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor,
       Register acc = rr_.alloc();
       if (indices->rank() < 2) {
         LoadTensorAddress(dst, tensor);
-        if (indices->ref()) {
+        if (indices->dynamic()) {
+          movq(iptr, Operand(instance(), indices->offset()));
+          movq(iptr, Operand(iptr));
+          movsxlq(acc, Operand(iptr));
+        } else if (indices->ref()) {
           movq(iptr, Operand(instance(), indices->offset()));
           movsxlq(acc, Operand(iptr));
         } else if (indices->IsGlobal()) {

@@ -180,7 +180,7 @@ cc_library(
     "//sling/myelin:compute",
     "//sling/myelin:flow",
     "//sling/myelin:gradient",
-    "//sling/myelin:rnn",
+    "//sling/myelin:bilstm",
     "//sling/util:embeddings",
     "//sling/util:unicode",
   ],

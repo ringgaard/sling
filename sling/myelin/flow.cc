@@ -490,6 +490,7 @@ string Flow::Variable::TypeString() const {
   string str;
   if (ref()) str.append("&");
   str.append(TypeTraits::of(type).name());
+  if (dynamic()) str.append("<>");
   if (!shape.scalar()) {
     str.append("[");
     str.append(shape.ToString());
@@ -502,7 +503,12 @@ string Flow::Variable::DataString() const {
   // Locate data.
   const char *p = data;
   if (p == nullptr) return "∅";
-  if (ref()) {
+  if (dynamic()) {
+    p = *reinterpret_cast<const char * const *>(p);
+    if (p == nullptr) return "null";
+    p = *reinterpret_cast<const char * const *>(p);
+    if (p == nullptr) return "null";
+  } else if (ref()) {
     p = *reinterpret_cast<const char * const *>(p);
     if (p == nullptr) return "null";
   }

@@ -623,7 +623,7 @@ void RegisterStandardGradients() {
   RegisterGradient("Reshape", reshape_grad);
   RegisterGradient("Gather", gather_grad);
   RegisterGradient("GatherSum", gathersum_grad);
-  RegisterGradient("ConcatV2", concat_grad);
+  RegisterGradient("Concat", concat_grad);
   RegisterGradient("Sum", sum_grad);
   RegisterGradient("Min", min_grad);
   RegisterGradient("Max", max_grad);

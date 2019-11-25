@@ -224,7 +224,7 @@ Flow::Variable *FlowBuilder::Concat(const std::vector<Variable *> &parts,
   shape.set(axis, width);
   std::vector<Variable *> args = parts;
   args.push_back(Const(axis));
-  auto *concat = Op("ConcatV2", args, parts[0]->type, shape);
+  auto *concat = Op("Concat", args, parts[0]->type, shape);
   concat->producer->SetAttr("N", n);
   return concat;
 }
