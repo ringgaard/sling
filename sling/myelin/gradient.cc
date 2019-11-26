@@ -49,6 +49,7 @@ Gradients::Gradients(Flow *flow,
     if (v->in()) dv->set_out();
     if (v->out()) dv->set_in();
     dv->set_ref(v->ref());
+    dv->set_dynamic(v->dynamic());
 
     // Connect adjoint to primal variable to ensure common layout.
     if (v->learnable()) flow->Connect({dv, v});

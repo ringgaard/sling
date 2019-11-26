@@ -36,19 +36,24 @@ RNN::Outputs RNN::Build(Flow *flow, Type type, int dim,
       LOG(FATAL) << "RNN type not supported: " << type;
   }
 
-  // Make zero and sink elements for channels.
+  // Make zero element.
   auto *zero = f.Name(f.Const(nullptr, input->type, {1, dim}), "zero");
-  auto *sink = f.Name(f.Const(nullptr, input->type, {1, dim}), "sink");
-  flow->Connect({out.hidden, zero, sink});
+  zero->set_out();
+  flow->Connect({out.hidden, zero});
 
   // Connect input to RNN.
   flow->Connect({input, in});
 
   // Build gradients for learning.
   if (dinput != nullptr) {
-    Gradient(flow, f.func());
+    auto *gf = Gradient(flow, f.func());
     out.dinput = flow->GradientVar(in);
     flow->Connect({dinput, out.dinput});
+
+    // Make sink variable for final channel gradients.
+    auto *sink = f.Var("sink", input->type, {1, dim})->set_out();
+    gf->unused.push_back(sink);
+    flow->Connect({sink, flow->Var(gf->name + "/dh_out")});
   } else {
     out.dinput = nullptr;
   }
@@ -64,9 +69,7 @@ void RNN::Initialize(const Network &net) {
   h_out = net.GetParameter(name + "/h_out");
   c_in = net.LookupParameter(name + "/c_in");
   c_out = net.LookupParameter(name + "/c_out");
-
   zero = net.GetParameter(name + "/zero");
-  sink = net.GetParameter(name + "/sink");
 
   // Initialize gradient cell for RNN.
   gcell = cell->Gradient();
@@ -77,6 +80,7 @@ void RNN::Initialize(const Network &net) {
     dh_out = h_out->Gradient();
     dc_in = c_in == nullptr ? nullptr : c_in->Gradient();
     dc_out = c_out == nullptr ? nullptr : c_out->Gradient();
+    sink = net.GetParameter(name + "/sink");
   }
 }
 
@@ -223,11 +227,11 @@ class ForwardRNNLearner : public RNNLearner {
     if (length > 0) {
       bkw_.Set(rnn_.primal, fwd_[0]);
       bkw_.Set(rnn_.dh_out, &dhidden_, 0);
-      bkw_.SetReference(rnn_.dh_in, rnn_.sink->data());
+      bkw_.SetReference(rnn_.dh_in, bkw_.GetAddress(rnn_.sink));
       bkw_.Set(rnn_.dinput, &dinput_, 0);
       if (ctrl) {
         bkw_.Set(rnn_.dc_out, &dcontrol_, 0);
-        bkw_.SetReference(rnn_.dc_in, rnn_.sink->data());
+        bkw_.SetReference(rnn_.dc_in, bkw_.GetAddress(rnn_.sink));
       }
       bkw_.Compute();
     }
@@ -422,11 +426,11 @@ class ReverseRNNLearner : public RNNLearner {
     if (length > 0) {
       bkw_.Set(rnn_.primal, fwd_[length - 1]);
       bkw_.Set(rnn_.dh_out, &dhidden_, length - 1);
-      bkw_.SetReference(rnn_.dh_in, rnn_.sink->data());
+      bkw_.SetReference(rnn_.dh_in, bkw_.GetAddress(rnn_.sink));
       bkw_.Set(rnn_.dinput, &dinput_, length - 1);
       if (ctrl) {
         bkw_.Set(rnn_.dc_out, &dcontrol_, length - 1);
-        bkw_.SetReference(rnn_.dc_in, rnn_.sink->data());
+        bkw_.SetReference(rnn_.dc_in, bkw_.GetAddress(rnn_.sink));
       }
       bkw_.Compute();
     }
@@ -481,6 +485,261 @@ class ReverseRNNLayer : public RNNLayer {
   // RNN cell.
   RNN rnn_;
 };
+
+// Channel merger cell for merging the outputs from two RNNs.
+struct ChannelMerger {
+  // Flow output variables.
+  struct Outputs {
+    Flow::Variable *merged;  // merged output from forward path
+    Flow::Variable *dleft;   // left gradient output from backward path
+    Flow::Variable *dright;  // right gradient output from backward path
+  };
+
+  // Initialize channel merger.
+  ChannelMerger(const string &name) : name(name) {}
+
+  // Build flow for channel merger. If dleft and dright is not null, the
+  // corresponding gradient function is also built.
+  Outputs Build(Flow *flow,
+                Flow::Variable *left, Flow::Variable *right,
+                Flow::Variable *dleft, Flow::Variable *dright) {
+    Outputs out;
+
+    // Build merger cell.
+    FlowBuilder f(flow, name);
+    auto *l = f.Placeholder("left", left->type, left->shape, true);
+    l->set_dynamic();
+    auto *r = f.Placeholder("right", right->type, right->shape, true);
+    r->set_dynamic();
+    out.merged = f.Name(f.Concat({l, r}, 2), "merged");
+    out.merged->set_dynamic();
+
+    // Build gradients for learning.
+    if (dleft != nullptr && dright != nullptr) {
+      Gradient(flow, f.func());
+      out.dleft = flow->GradientVar(l);
+      out.dright = flow->GradientVar(r);
+      flow->Connect({dleft, out.dleft});
+      flow->Connect({dright, out.dright});
+    } else {
+      out.dleft = nullptr;
+      out.dright = nullptr;
+    }
+
+    return out;
+  }
+
+  // Initialize channel merger.
+  void Initialize(const Network &net) {
+    cell = net.GetCell(name);
+    left = net.GetParameter(name + "/left");
+    right = net.GetParameter(name + "/right");
+    merged = net.GetParameter(name + "/merged");
+
+    gcell = cell->Gradient();
+    if (gcell != nullptr) {
+      dmerged = merged->Gradient();
+      dleft = left->Gradient();
+      dright = right->Gradient();
+    }
+  }
+
+  string name;                     // cell name
+
+  Cell *cell = nullptr;            // merger cell
+  Tensor *left = nullptr;          // left channel input
+  Tensor *right = nullptr;         // right channel input
+  Tensor *merged = nullptr;        // merged output channel
+
+  Cell *gcell = nullptr;           // merger gradient cell
+  Tensor *dmerged = nullptr;       // gradient for merged channel
+  Tensor *dleft = nullptr;         // gradient for left channel
+  Tensor *dright = nullptr;        // gradient for right channel
+};
+
+// Bidirectional RNN instance for prediction.
+class BiRNNInstance : public RNNInstance {
+ public:
+  BiRNNInstance(const RNN &lr, const RNN &rl, const ChannelMerger &merger)
+    : lr_(lr),
+      rl_(rl),
+      merger_(merger),
+      data_(merger.cell),
+      merged_(merger.merged) {}
+
+  Channel *Compute(Channel *input) override {
+    // Compute left-to-right and right-to-left RNNs.
+    Channel *l = lr_.Compute(input);
+    Channel *r = rl_.Compute(input);
+
+    // Merge outputs.
+    data_.SetChannel(merger_.left, l);
+    data_.SetChannel(merger_.right, r);
+    data_.SetChannel(merger_.merged, &merged_);
+    data_.Compute();
+
+    return &merged_;
+  }
+
+ private:
+  ForwardRNNInstance lr_;        // forward RNN
+  ReverseRNNInstance rl_;        // reverse RNN
+
+  const ChannelMerger &merger_;  // channel merger cell
+  Instance data_;                // channel merger instance
+  Channel merged_;               // channel with merged output
+};
+
+// Bidirectional RNN instance for learning.
+class BiRNNLearner : public RNNLearner {
+ public:
+  BiRNNLearner(const RNN &lr, const RNN &rl, const ChannelMerger &cm)
+    : lr_(lr),
+      rl_(rl),
+      cm_(cm),
+      merger_(cm.cell),
+      splitter_(cm.gcell),
+      merged_(cm.merged),
+      dmerged_(cm.dmerged) {}
+
+  Channel *Compute(Channel *input) override {
+    // Compute left-to-right and right-to-left RNNs.
+    Channel *l = lr_.Compute(input);
+    Channel *r = rl_.Compute(input);
+
+    // Merge outputs.
+    merger_.SetChannel(cm_.left, l);
+    merger_.SetChannel(cm_.right, r);
+    merger_.SetChannel(cm_.merged, &merged_);
+    merger_.Compute();
+
+    return &merged_;
+  }
+
+  void CollectGradients(std::vector<Instance *> *gradients) override {
+    lr_.CollectGradients(gradients);
+    rl_.CollectGradients(gradients);
+  }
+
+  Channel *GetGradient() override {
+    int length = merged_.size();
+    dmerged_.reset(length);
+    return &dmerged_;
+  }
+
+  Channel *Backpropagate() override {
+    // Split gradients.
+    Channel *l = lr_.GetGradient();
+    Channel *r = rl_.GetGradient();
+    splitter_.SetChannel(cm_.dmerged, &dmerged_);
+    splitter_.SetChannel(cm_.dleft, l);
+    splitter_.SetChannel(cm_.dright, r);
+    splitter_.Compute();
+
+    // Backpropagate through RNNs.
+    Channel *dinput = lr_.Backpropagate();
+    rl_.Backpropagate();
+
+    // Return input gradient.
+    return dinput;
+  }
+
+  void Clear() override {
+    lr_.Clear();
+    rl_.Clear();
+  }
+
+ private:
+  ForwardRNNLearner lr_;        // forward RNN
+  ReverseRNNLearner rl_;        // reverse RNN
+
+  const ChannelMerger &cm_;     // channel merger cell
+  Instance merger_;             // channel merger instance
+  Instance splitter_;           // gradient channel splitter instance
+  Channel merged_;              // channel with merged output
+  Channel dmerged_;             // channel with merged gradients
+};
+
+// Bidirectional RNN layer.
+class BiRNNLayer : public RNNLayer {
+ public:
+  BiRNNLayer(const string &name)
+      : lr_(name + "/lr"),
+        rl_(name + "/rl"),
+        merger_(name) {}
+
+  RNN::Outputs Build(Flow *flow, RNN::Type type, int dim,
+                     Flow::Variable *input,
+                     Flow::Variable *dinput) override {
+    // Build left-to-right and right-to-left RNNs.
+    RNN::Outputs l = lr_.Build(flow, type, dim, input, dinput);
+    RNN::Outputs r = rl_.Build(flow, type, dim, input, dinput);
+    flow->Connect({l.dinput, r.dinput});
+
+    // Build channel merger.
+    ChannelMerger::Outputs m = merger_.Build(flow,
+        l.hidden, r.hidden,
+        flow->GradientVar(l.hidden), flow->GradientVar(r.hidden));
+
+    // Return outputs.
+    RNN::Outputs out;
+    out.hidden = m.merged;
+    out.dinput = l.dinput;
+    return out;
+  }
+
+  void Initialize(const Network &net) override {
+    lr_.Initialize(net);
+    rl_.Initialize(net);
+    merger_.Initialize(net);
+  }
+
+  RNNInstance *CreateInstance() override {
+    return new BiRNNInstance(lr_, rl_, merger_);
+  }
+
+  RNNLearner *CreateLearner() override {
+    return new BiRNNLearner(lr_, rl_, merger_);
+  }
+
+ private:
+  RNN lr_;                // cell for left-to-right RNN
+  RNN rl_;                // cell for right-to-left RNN
+  ChannelMerger merger_;  // cell for channel merger
+};
+
+RNNStack::~RNNStack() {
+  for (auto &l : layers_) delete l.factory;
+}
+
+void RNNStack::AddLayer(RNN::Type type, int dim, RNN::Direction dir) {
+  string layer_name = name_ + "/rnn" + std::to_string(layers_.size());
+  RNNLayer *factory;
+  switch (dir) {
+    case RNN::FORWARD: factory = new ForwardRNNLayer(layer_name); break;
+    case RNN::REVERSE: factory = new ReverseRNNLayer(layer_name); break;
+    case RNN::BIDIR: factory = new BiRNNLayer(layer_name); break;
+    default: LOG(FATAL) << "Unsupported RNN direction";
+  }
+  layers_.emplace_back(factory, type, dim);
+}
+
+void RNNStack::AddLayers(int layers, RNN::Type type, int dim,
+                         RNN::Direction dir) {
+  for (int l = 0; l < layers; ++l) {
+    AddLayer(type, dim, dir);
+  }
+}
+
+RNN::Outputs RNNStack::Build(Flow *flow,
+                             Flow::Variable *input,
+                             Flow::Variable *dinput) {
+  RNN::Outputs out;
+  //for (Layer &l : layers_) {
+    // TODO: implemnent
+  //}
+  return out;
+}
 
 }  // namespace myelin
 }  // namespace sling

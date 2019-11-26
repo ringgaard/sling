@@ -31,6 +31,9 @@ struct RNN {
     DRAGNN_LSTM,  // DRAGNN-variant of LSTM
   };
 
+  // RNN direction.
+  enum Direction {FORWARD, REVERSE, BIDIR};
+
   // Flow output variables.
   struct Outputs {
     Flow::Variable *hidden;  // output from forward path
@@ -60,6 +63,7 @@ struct RNN {
   Tensor *h_out = nullptr;         // link to RNN hidden output
   Tensor *c_in = nullptr;          // link to RNN control input
   Tensor *c_out = nullptr;         // link to RNN control output
+  Tensor *zero = nullptr;          // zero element for channels
 
   Cell *gcell = nullptr;           // RNN gradient cell
   Tensor *dinput = nullptr;        // input gradient
@@ -68,15 +72,7 @@ struct RNN {
   Tensor *dh_out = nullptr;        // gradient for RNN hidden output
   Tensor *dc_in = nullptr;         // gradient for RNN control input
   Tensor *dc_out = nullptr;        // gradient for RNN control output
-
-  Tensor *zero = nullptr;          // zero element for channels
   Tensor *sink = nullptr;          // scratch element for channels
-};
-
-// RNN stack with multiple layers.
-struct RNNStack {
-  string name;
-  //std::vector<RNN>
 };
 
 // Interface for instance of RNN layer for prediction.
@@ -106,7 +102,7 @@ class RNNLearner : public RNNInstance {
   virtual void Clear() = 0;
 };
 
-// Factory interface for making instances for prediction and learning.
+// Factory interface for making RNN instances for prediction and learning.
 class RNNLayer {
  public:
   virtual ~RNNLayer() = default;
@@ -125,6 +121,37 @@ class RNNLayer {
 
   // Create RNN instance for learning.
   virtual RNNLearner *CreateLearner() = 0;
+};
+
+// Multi-layer RNN.
+class RNNStack {
+ public:
+  RNNStack(const string &name) : name_(name) {}
+  ~RNNStack();
+
+  // Add RNN layer.
+  void AddLayer(RNN::Type type, int dim, RNN::Direction dir);
+
+  // Add multiple RNN layers.
+  void AddLayers(int layers, RNN::Type type, int dim, RNN::Direction dir);
+
+  // Build flow for RNNs.
+  RNN::Outputs Build(Flow *flow,
+                     Flow::Variable *input,
+                     Flow::Variable *dinput = nullptr);
+
+ private:
+  struct Layer {
+    Layer(RNNLayer *factory, RNN::Type type, int dim)
+        : factory(factory), type(type), dim(dim) {}
+
+    RNNLayer *factory;
+    RNN::Type type;
+    int dim;
+  };
+
+  string name_;
+  std::vector<Layer> layers_;
 };
 
 }  // namespace myelin

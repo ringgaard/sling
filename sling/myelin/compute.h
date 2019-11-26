@@ -1113,6 +1113,19 @@ class Instance {
     return SetReference(var->tensor, address);
   }
 
+  // Sets a dynamic tensor to channel.
+  void SetChannel(const Tensor *param, Channel *channel) {
+    DCHECK(param != nullptr);
+    DCHECK(param->IsLocal()) << param->name();
+    DCHECK(param->dynamic()) << param->name();
+    DCHECK(param->cell() == cell_) << param->name();
+    *reinterpret_cast<Channel **>(data_ + param->offset()) = channel;
+  }
+  void SetChannel(const Flow::Variable *var, Channel *channel) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    return SetChannel(var->tensor, channel);
+  }
+
   // Clear instance tensor.
   void Clear(const Tensor *param) {
     memset(GetAddress(param), 0, param->space());

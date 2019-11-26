@@ -605,7 +605,7 @@ class Flow {
     }
 
     std::vector<Operation *> ops;     // ops for function in compute order
-    std::vector<Variable *> unused;   // unused input variables
+    std::vector<Variable *> unused;   // unused input/output variables
     Cell *cell = nullptr;             // cell for function
   };
 
