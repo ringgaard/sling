@@ -34,20 +34,23 @@ struct RNN {
   // RNN direction.
   enum Direction {FORWARD, REVERSE, BIDIR};
 
-  // Flow output variables.
-  struct Outputs {
-    Flow::Variable *hidden;  // output from forward path
-    Flow::Variable *dinput;  // gradient output from backward path
+  // Flow input/output variables.
+  struct Variables {
+    Flow::Variable *input = nullptr;    // input to forward path
+    Flow::Variable *output = nullptr;   // output from forward path
+    Flow::Variable *doutput = nullptr;  // gradient input to backward path
+    Flow::Variable *dinput = nullptr;   // gradient output from backward path
   };
 
   // Initialize RNN.
-  RNN(const string &name = "rnn") : name(name) {}
+  RNN(const string &name, Type type, int dim) 
+      : name(name), type(type), dim(dim) {}
 
   // Build flow for RNN. If dinput is not null, the corresponding gradient
   // function is also built.
-  Outputs Build(Flow *flow, Type type, int dim,
-                Flow::Variable *input,
-                Flow::Variable *dinput = nullptr);
+  Variables Build(Flow *flow, 
+                  Flow::Variable *input, 
+                  Flow::Variable *dinput = nullptr);
 
   // Initialize RNN.
   void Initialize(const Network &net);
@@ -56,6 +59,8 @@ struct RNN {
   bool has_control() const { return c_in != nullptr; }
 
   string name;                     // RNN cell name
+  Type type;                       // RNN type
+  int dim;                         // RNN dimension
 
   Cell *cell = nullptr;            // RNN cell
   Tensor *input = nullptr;         // RNN feature input
@@ -87,19 +92,15 @@ class RNNInstance {
 // Interface for instance of RNN layer for learning.
 class RNNLearner : public RNNInstance {
  public:
-  // Collect instances with gradient updates.
-  virtual void CollectGradients(std::vector<Instance *> *gradients) = 0;
-
-  // Get channel with input to backpropagation, i.e. gradient of output
-  // sequence.
-  virtual Channel *GetGradient() = 0;
-
   // Backpropagate gradients returning the output of backpropagation, i.e. the
   // gradient of the input sequence.
-  virtual Channel *Backpropagate() = 0;
+  virtual Channel *Backpropagate(Channel *doutput) = 0;
 
   // Clear accumulated gradients.
   virtual void Clear() = 0;
+
+  // Collect instances with gradient updates.
+  virtual void CollectGradients(std::vector<Instance *> *gradients) = 0;
 };
 
 // Factory interface for making RNN instances for prediction and learning.
@@ -109,9 +110,9 @@ class RNNLayer {
 
   // Build flow for RNN. If dinput is not null, the corresponding gradient
   // function is also built.
-  virtual RNN::Outputs Build(Flow *flow, RNN::Type type, int dim,
-                             Flow::Variable *input,
-                             Flow::Variable *dinput) = 0;
+  virtual RNN::Variables Build(Flow *flow, 
+                               Flow::Variable *input,
+                               Flow::Variable *dinput) = 0;
 
   // Initialize RNN.
   virtual void Initialize(const Network &net) = 0;
@@ -132,26 +133,31 @@ class RNNStack {
   // Add RNN layer.
   void AddLayer(RNN::Type type, int dim, RNN::Direction dir);
 
-  // Add multiple RNN layers.
+  // Add multiple RNN layers of the same type.
   void AddLayers(int layers, RNN::Type type, int dim, RNN::Direction dir);
 
   // Build flow for RNNs.
-  RNN::Outputs Build(Flow *flow,
-                     Flow::Variable *input,
-                     Flow::Variable *dinput = nullptr);
+  RNN::Variables Build(Flow *flow,
+                       Flow::Variable *input,
+                       Flow::Variable *dinput = nullptr);
 
+  // Initialize RNN stack.
+  void Initialize(const Network &net);
+
+  // Create RNN stack instance for prediction.
+  RNNInstance *CreateInstance();
+
+  // Create RNN stack instance for learning.
+  RNNLearner *CreateLearner();
+
+  // Layers in RNN stack.
+  const std::vector<RNNLayer *> layers() const { return layers_; }
  private:
-  struct Layer {
-    Layer(RNNLayer *factory, RNN::Type type, int dim)
-        : factory(factory), type(type), dim(dim) {}
-
-    RNNLayer *factory;
-    RNN::Type type;
-    int dim;
-  };
-
+  // Name prefix for RNN cells.
   string name_;
-  std::vector<Layer> layers_;
+  
+  // RNN layers.
+  std::vector<RNNLayer *> layers_;
 };
 
 }  // namespace myelin
