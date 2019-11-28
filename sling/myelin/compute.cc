@@ -818,11 +818,15 @@ ProfileSummary::~ProfileSummary() {
 }
 
 Instance::Instance(const Cell *cell) : cell_(cell) {
-  cell_->runtime()->AllocateInstance(this);
+  if (cell_ != nullptr) {
+    cell_->runtime()->AllocateInstance(this);
+  }
 }
 
 Instance::~Instance() {
-  cell_->runtime()->FreeInstance(this);
+  if (cell_ != nullptr) {
+    cell_->runtime()->FreeInstance(this);
+  }
 }
 
 void Instance::Clear() {

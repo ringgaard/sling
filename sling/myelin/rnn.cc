@@ -82,6 +82,289 @@ void RNN::Initialize(const Network &net) {
   }
 }
 
+RNNMerger::Variables RNNMerger::Build(Flow *flow,
+                                      Flow::Variable *left,
+                                      Flow::Variable *right,
+                                      Flow::Variable *dleft,
+                                      Flow::Variable *dright) {
+  Variables vars;
+
+  // Build merger cell.
+  FlowBuilder f(flow, name);
+  vars.left = f.Placeholder("left", left->type, left->shape, true);
+  vars.left->set_dynamic();
+
+  vars.right = f.Placeholder("right", right->type, right->shape, true);
+  vars.right->set_dynamic();
+
+  vars.merged = f.Name(f.Concat({vars.left, vars.right}, 2), "merged");
+  vars.merged->set_dynamic();
+  flow->Connect({vars.left, left});
+  flow->Connect({vars.right, right});
+
+  // Build gradients for learning.
+  if (dleft != nullptr && dright != nullptr) {
+    Gradient(flow, f.func());
+    vars.dmerged = flow->GradientVar(vars.merged);
+    vars.dleft = flow->GradientVar(vars.left);
+    vars.dright = flow->GradientVar(vars.right);
+    flow->Connect({vars.dleft, dleft});
+    flow->Connect({vars.dright, dright});
+  }
+
+  return vars;
+}
+
+void RNNMerger::Initialize(const Network &net) {
+  cell = net.GetCell(name);
+  left = net.GetParameter(name + "/left");
+  right = net.GetParameter(name + "/right");
+  merged = net.GetParameter(name + "/merged");
+
+  gcell = cell->Gradient();
+  if (gcell != nullptr) {
+    dmerged = merged->Gradient();
+    dleft = left->Gradient();
+    dright = right->Gradient();
+  }
+}
+
+RNNLayer::RNNLayer(const string &name, RNN::Type type, int dim, bool bidir)
+    : name_(name),
+      bidir_(bidir),
+      lr_(name + "/lr", type, dim),
+      rl_(name + "/rl", type, dim),
+      merger_(name) {
+  if (!bidir) lr_.name = name;
+}
+
+RNN::Variables RNNLayer::Build(Flow *flow,
+                               Flow::Variable *input,
+                               Flow::Variable *dinput) {
+  if (bidir_) {
+    // Build left-to-right and right-to-left RNNs.
+    auto l = lr_.Build(flow, input, dinput);
+    auto r = rl_.Build(flow, input, dinput);
+
+    // Build channel merger.
+    auto m = merger_.Build(flow, l.output, r.output, l.doutput, r.output);
+
+    // Return outputs.
+    RNN::Variables vars;
+    vars.input = l.input;
+    vars.output = m.merged;
+    vars.dinput = l.dinput;
+    vars.doutput = m.dmerged;
+
+    return vars;
+  } else {
+    return lr_.Build(flow, input, dinput);
+  }
+}
+
+void RNNLayer::Initialize(const Network &net) {
+  lr_.Initialize(net);
+  if (bidir_) {
+    rl_.Initialize(net);
+    merger_.Initialize(net);
+  }
+}
+
+RNNInstance::RNNInstance(const RNNLayer *rnn)
+    : rnn_(rnn),
+      lr_(rnn->lr_.cell),
+      lr_hidden_(rnn->lr_.h_out),
+      lr_control_(rnn->lr_.c_out),
+      rl_(rnn->rl_.cell),
+      rl_hidden_(rnn->rl_.h_out),
+      rl_control_(rnn->rl_.c_out),
+      merger_(rnn->merger_.cell),
+      merged_(rnn->merger_.merged) {}
+
+Channel *RNNInstance::Compute(Channel *input) {
+  // Get sequence length.
+  int length = input->size();
+  bool ctrl = rnn_->lr_.has_control();
+
+  // Compute left-to-right RNN.
+  lr_hidden_.resize(length);
+  if (ctrl) lr_control_.resize(length);
+
+  if (length > 0) {
+    lr_.Set(rnn_->lr_.input, input, 0);
+    lr_.SetReference(rnn_->lr_.h_in, rnn_->lr_.zero->data());
+    lr_.Set(rnn_->lr_.h_out, &lr_hidden_, 0);
+    if (ctrl) {
+      lr_.SetReference(rnn_->lr_.c_in, rnn_->lr_.zero->data());
+      lr_.Set(rnn_->lr_.c_out, &lr_control_, 0);
+    }
+    lr_.Compute();
+  }
+
+  for (int i = 1; i < length; ++i) {
+    lr_.Set(rnn_->lr_.input, input, i);
+    lr_.Set(rnn_->lr_.h_in, &lr_hidden_, i - 1);
+    lr_.Set(rnn_->lr_.h_out, &lr_hidden_, i);
+    if (ctrl) {
+      lr_.Set(rnn_->lr_.c_in, &lr_control_, i - 1);
+      lr_.Set(rnn_->lr_.c_out, &lr_control_, i);
+    }
+    lr_.Compute();
+  }
+
+  // Return left-to-right hidden channel for unidirectional RNN.
+  if (!rnn_->bidir_) return &lr_hidden_;
+
+  // Compute right-to-left RNN.
+  rl_hidden_.resize(length);
+  if (ctrl) rl_control_.resize(length);
+
+  if (length > 0) {
+    rl_.Set(rnn_->rl_.input, input, length - 1);
+    rl_.SetReference(rnn_->rl_.h_in, rnn_->rl_.zero->data());
+    rl_.Set(rnn_->rl_.h_out, &rl_hidden_, length - 1);
+    if (ctrl) {
+      rl_.SetReference(rnn_->rl_.c_in, rnn_->rl_.zero->data());
+      rl_.Set(rnn_->rl_.c_out, &rl_control_, length - 1);
+    }
+    rl_.Compute();
+  }
+
+  for (int i = length - 2; i >= 0; --i) {
+    rl_.Set(rnn_->rl_.input, input, i);
+    rl_.Set(rnn_->rl_.h_in, &rl_hidden_, i + 1);
+    rl_.Set(rnn_->rl_.h_out, &rl_hidden_, i);
+    if (ctrl) {
+      rl_.Set(rnn_->rl_.c_in, &rl_control_, i + 1);
+      rl_.Set(rnn_->rl_.c_out, &rl_control_, i);
+    }
+    rl_.Compute();
+  }
+
+  // Merge outputs.
+  merged_.resize(length);
+  merger_.SetChannel(rnn_->merger_.left, &lr_hidden_);
+  merger_.SetChannel(rnn_->merger_.right, &rl_hidden_);
+  merger_.SetChannel(rnn_->merger_.merged, &merged_);
+  merger_.Compute();
+
+  return &merged_;
+}
+
+RNNLearner::RNNLearner(const RNNLayer *rnn)
+    : rnn_(rnn),
+      lr_hidden_(rnn->lr_.h_out),
+      lr_control_(rnn->lr_.c_out),
+      lr_bkw_(rnn->lr_.gcell),
+      lr_dhidden_(rnn->lr_.dh_in),
+      lr_dcontrol_(rnn->lr_.dc_in),
+      rl_hidden_(rnn->rl_.h_out),
+      rl_control_(rnn->rl_.c_out),
+      rl_bkw_(rnn->rl_.gcell),
+      rl_dhidden_(rnn->rl_.dh_in),
+      rl_dcontrol_(rnn->rl_.dc_in),
+      merger_(rnn->merger_.cell),
+      splitter_(rnn->merger_.gcell),
+      merged_(rnn->merger_.merged),
+      dleft_(rnn->merger_.dleft),
+      dright_(rnn->merger_.dright) {}
+
+Channel *RNNLearner::Compute(Channel *input) {
+  // Get sequence length.
+  int length = input->size();
+  bool ctrl = rnn_->lr_.has_control();
+
+  // Compute left-to-right RNN.
+  if (lr_fwd_.size() > length) lr_fwd_.resize(length);
+  while (lr_fwd_.size() < length) lr_fwd_.emplace_back(rnn_->lr_.cell);
+
+  lr_hidden_.resize(length);
+  if (ctrl) lr_control_.resize(length);
+
+  if (length > 0) {
+    Instance &data = lr_fwd_[0];
+    data.Set(rnn_->lr_.input, input, 0);
+    data.SetReference(rnn_->lr_.h_in, rnn_->lr_.zero->data());
+    data.Set(rnn_->lr_.h_out, &lr_hidden_, 0);
+    if (ctrl) {
+      data.SetReference(rnn_->lr_.c_in, rnn_->lr_.zero->data());
+      data.Set(rnn_->lr_.c_out, &lr_control_, 0);
+    }
+    data.Compute();
+  }
+
+  for (int i = 1; i < length; ++i) {
+    Instance &data = lr_fwd_[i];
+    data.Set(rnn_->lr_.input, input, i);
+    data.Set(rnn_->lr_.h_in, &lr_hidden_, i - 1);
+    data.Set(rnn_->lr_.h_out, &lr_hidden_, i);
+    if (ctrl) {
+      data.Set(rnn_->lr_.c_in, &lr_control_, i - 1);
+      data.Set(rnn_->lr_.c_out, &lr_control_, i);
+    }
+    data.Compute();
+  }
+
+  // Return left-to-right hidden channel for unidirectional RNN.
+  if (!rnn_->bidir_) return &lr_hidden_;
+
+  // Compute right-to-left RNN.
+  if (rl_fwd_.size() > length) rl_fwd_.resize(length);
+  while (rl_fwd_.size() < length) rl_fwd_.emplace_back(rnn_->rl_.cell);
+
+  rl_hidden_.resize(length);
+  if (ctrl) rl_control_.resize(length);
+
+  if (length > 0) {
+    Instance &data = rl_fwd_[length - 1];
+    data.Set(rnn_->rl_.input, input, length - 1);
+    data.SetReference(rnn_->rl_.h_in, rnn_->rl_.zero->data());
+    data.Set(rnn_->rl_.h_out, &rl_hidden_, length - 1);
+    if (ctrl) {
+      data.SetReference(rnn_->rl_.c_in, rnn_->rl_.zero->data());
+      data.Set(rnn_->rl_.c_out, &rl_control_, length - 1);
+    }
+    data.Compute();
+  }
+
+  for (int i = length - 2; i >= 0; --i) {
+    Instance &data = rl_fwd_[i];
+    data.Set(rnn_->rl_.input, input, i);
+    data.Set(rnn_->rl_.h_in, &rl_hidden_, i + 1);
+    data.Set(rnn_->rl_.h_out, &rl_hidden_, i);
+    if (ctrl) {
+      data.Set(rnn_->rl_.c_in, &rl_control_, i + 1);
+      data.Set(rnn_->rl_.c_out, &rl_control_, i);
+    }
+    data.Compute();
+  }
+
+  // Merge outputs.
+  merged_.resize(length);
+  merger_.SetChannel(rnn_->merger_.left, &lr_hidden_);
+  merger_.SetChannel(rnn_->merger_.right, &rl_hidden_);
+  merger_.SetChannel(rnn_->merger_.merged, &merged_);
+  merger_.Compute();
+
+  return &merged_;
+}
+
+Channel *RNNLearner::Backpropagate(Channel *doutput) {
+  // TODO: implement
+  return nullptr;
+}
+
+void RNNLearner::Clear() {
+  lr_bkw_.Clear();
+  if (rnn_->bidir_) rl_bkw_.Clear();
+}
+
+void RNNLearner::CollectGradients(std::vector<Instance *> *gradients) {
+  gradients->push_back(&lr_bkw_);
+  if (rnn_->bidir_) gradients->push_back(&rl_bkw_);
+}
+
+#if 0
 // Forward RNN instance for prediction.
 class ForwardRNNInstance : public RNNInstance {
  public:
@@ -250,10 +533,10 @@ class ForwardRNNLearner : public RNNLearner {
 // Forward RNN layer.
 class ForwardRNNLayer : public RNNLayer {
  public:
-  ForwardRNNLayer(const string &name, RNN::Type type, int dim) 
+  ForwardRNNLayer(const string &name, RNN::Type type, int dim)
       : rnn_(name, type, dim) {}
 
-  RNN::Variables Build(Flow *flow, 
+  RNN::Variables Build(Flow *flow,
                        Flow::Variable *input,
                        Flow::Variable *dinput) override {
     return rnn_.Build(flow, input, dinput);
@@ -440,7 +723,7 @@ class ReverseRNNLearner : public RNNLearner {
 // Reverse RNN layer.
 class ReverseRNNLayer : public RNNLayer {
  public:
-  ReverseRNNLayer(const string &name, RNN::Type type, int dim) 
+  ReverseRNNLayer(const string &name, RNN::Type type, int dim)
       : rnn_(name, type, dim) {}
 
   RNN::Variables Build(Flow *flow,
@@ -493,7 +776,7 @@ struct ChannelMerger {
     FlowBuilder f(flow, name);
     vars.left = f.Placeholder("left", left->type, left->shape, true);
     vars.left->set_dynamic();
-    
+
     vars.right = f.Placeholder("right", right->type, right->shape, true);
     vars.right->set_dynamic();
 
@@ -705,7 +988,7 @@ class RNNStackInstance : public RNNInstance {
     }
     return channel;
   }
-  
+
  private:
   std::vector<RNNInstance *> layers_;
 };
@@ -760,16 +1043,16 @@ void RNNStack::AddLayer(RNN::Type type, int dim, RNN::Direction dir) {
   string layer_name = name_ + "/rnn" + std::to_string(layers_.size());
   RNNLayer *layer;
   switch (dir) {
-    case RNN::FORWARD: 
-      layer = new ForwardRNNLayer(layer_name, type, dim); 
+    case RNN::FORWARD:
+      layer = new ForwardRNNLayer(layer_name, type, dim);
       break;
-    case RNN::REVERSE: 
-      layer = new ReverseRNNLayer(layer_name, type, dim); 
+    case RNN::REVERSE:
+      layer = new ReverseRNNLayer(layer_name, type, dim);
       break;
-    case RNN::BIDIR: 
-      layer = new BiRNNLayer(layer_name, type, dim); 
+    case RNN::BIDIR:
+      layer = new BiRNNLayer(layer_name, type, dim);
       break;
-    default: 
+    default:
       LOG(FATAL) << "Unsupported RNN direction";
   }
   layers_.push_back(layer);
@@ -813,6 +1096,8 @@ RNNInstance *RNNStack::CreateInstance() {
 RNNLearner *RNNStack::CreateLearner() {
   return new RNNStackLearner(*this);
 }
+
+#endif
 
 }  // namespace myelin
 }  // namespace sling

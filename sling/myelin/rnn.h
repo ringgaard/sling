@@ -23,6 +23,9 @@
 namespace sling {
 namespace myelin {
 
+class RNNInstance;
+class RNNLearner;
+
 // Recurrent Neural Network (RNN) cell.
 struct RNN {
   // RNN types.
@@ -30,9 +33,6 @@ struct RNN {
     LSTM,         // vanilla LSTM
     DRAGNN_LSTM,  // DRAGNN-variant of LSTM
   };
-
-  // RNN direction.
-  enum Direction {FORWARD, REVERSE, BIDIR};
 
   // Flow input/output variables.
   struct Variables {
@@ -43,13 +43,13 @@ struct RNN {
   };
 
   // Initialize RNN.
-  RNN(const string &name, Type type, int dim) 
+  RNN(const string &name, Type type, int dim)
       : name(name), type(type), dim(dim) {}
 
   // Build flow for RNN. If dinput is not null, the corresponding gradient
   // function is also built.
-  Variables Build(Flow *flow, 
-                  Flow::Variable *input, 
+  Variables Build(Flow *flow,
+                  Flow::Variable *input,
                   Flow::Variable *dinput = nullptr);
 
   // Initialize RNN.
@@ -79,6 +79,150 @@ struct RNN {
   Tensor *dc_out = nullptr;        // gradient for RNN control output
   Tensor *sink = nullptr;          // scratch element for channels
 };
+
+// Channel merger cell for merging the outputs from two RNNs.
+struct RNNMerger {
+  // Flow input/output variables.
+  struct Variables {
+    Flow::Variable *left;     // left input to forward path
+    Flow::Variable *right;    // right input to forward path
+    Flow::Variable *merged;   // merged output from forward path
+
+    Flow::Variable *dmerged;  // merged gradient from backward path
+    Flow::Variable *dleft;    // left gradient output from backward path
+    Flow::Variable *dright;   // right gradient output from backward path
+  };
+
+  // Initialize RNN merger.
+  RNNMerger(const string &name) : name(name) {}
+
+  // Build flow for channel merger. If dleft and dright are not null, the
+  // corresponding gradient function is also built.
+  Variables Build(Flow *flow,
+                  Flow::Variable *left, Flow::Variable *right,
+                  Flow::Variable *dleft, Flow::Variable *dright);
+
+  // Initialize channel merger.
+  void Initialize(const Network &net);
+
+  string name;                     // cell name
+
+  Cell *cell = nullptr;            // merger cell
+  Tensor *left = nullptr;          // left channel input
+  Tensor *right = nullptr;         // right channel input
+  Tensor *merged = nullptr;        // merged output channel
+
+  Cell *gcell = nullptr;           // merger gradient cell
+  Tensor *dmerged = nullptr;       // gradient for merged channel
+  Tensor *dleft = nullptr;         // gradient for left channel
+  Tensor *dright = nullptr;        // gradient for right channel
+};
+
+// An RNN layer can be either unidirectional (left-to-right) or bidirectional
+// (both left-to-right and right-to-left). The outputs from the the two RNNs
+// in a bidirectional RNN are merged using an RNN channel merger.
+class RNNLayer {
+ public:
+  // Set up RNN layer.
+  RNNLayer(const string &name, RNN::Type type, int dim, bool bidir);
+
+  // Build flow for RNN. If dinput is not null, the corresponding gradient
+  // function is also built.
+  RNN::Variables Build(Flow *flow,
+                       Flow::Variable *input,
+                       Flow::Variable *dinput = nullptr);
+
+  // Initialize RNN.
+  void Initialize(const Network &net);
+
+ private:
+  string name_;       // cell name prefix
+  bool bidir_;        // bidirectional RNN
+
+  RNN lr_;            // left-to-right RNN
+  RNN rl_;            // right-to-left RNN (if bidirectional)
+  RNNMerger merger_;  // channel merger for bidirectional RNN
+
+  friend class RNNInstance;
+  friend class RNNLearner;
+};
+
+// Instance of RNN layer for inference.
+class RNNInstance {
+ public:
+  RNNInstance(const RNNLayer *rnn);
+
+  // Compute RNN over input sequence and return output sequence.
+  Channel *Compute(Channel *input);
+
+ private:
+  // Descriptor for RNN layer.
+  const RNNLayer *rnn_;
+
+  // Left-to-right RNN.
+  Instance lr_;
+  Channel lr_hidden_;
+  Channel lr_control_;
+
+  // Right-to-left RNN for bidirectional RNN.
+  Instance rl_;
+  Channel rl_hidden_;
+  Channel rl_control_;
+
+  // RNN channel merger for bidirectional RNN.
+  Instance merger_;
+  Channel merged_;
+};
+
+// Instance of RNN layer for learning.
+class RNNLearner {
+ public:
+  RNNLearner(const RNNLayer *rnn);
+
+  // Compute RNN over input sequence and return output sequence.
+  Channel *Compute(Channel *input);
+
+  // Backpropagate gradients returning the output of backpropagation, i.e. the
+  // gradient of the input sequence.
+  Channel *Backpropagate(Channel *doutput);
+
+  // Clear accumulated gradients.
+  void Clear();
+
+  // Collect instances with gradient updates.
+  void CollectGradients(std::vector<Instance *> *gradients);
+
+ private:
+  // Descriptor for RNN layer.
+  const RNNLayer *rnn_;
+
+  // Left-to-right RNN.
+  std::vector<Instance> lr_fwd_;
+  Channel lr_hidden_;
+  Channel lr_control_;
+  Instance lr_bkw_;
+  Channel lr_dhidden_;
+  Channel lr_dcontrol_;
+
+  // Right-to-left RNN for bidirectional RNN.
+  std::vector<Instance> rl_fwd_;
+  Channel rl_hidden_;
+  Channel rl_control_;
+  Instance rl_bkw_;
+  Channel rl_dhidden_;
+  Channel rl_dcontrol_;
+
+  // RNN channel merger for bidirectional RNN.
+  Instance merger_;
+  Instance splitter_;
+  Channel merged_;
+  Channel dleft_;
+  Channel dright_;
+};
+
+#if 0
+  // RNN direction.
+  enum Direction {FORWARD, REVERSE, BIDIR};
 
 // Interface for instance of RNN layer for prediction.
 class RNNInstance {
@@ -110,7 +254,7 @@ class RNNLayer {
 
   // Build flow for RNN. If dinput is not null, the corresponding gradient
   // function is also built.
-  virtual RNN::Variables Build(Flow *flow, 
+  virtual RNN::Variables Build(Flow *flow,
                                Flow::Variable *input,
                                Flow::Variable *dinput) = 0;
 
@@ -152,13 +296,15 @@ class RNNStack {
 
   // Layers in RNN stack.
   const std::vector<RNNLayer *> layers() const { return layers_; }
+
  private:
   // Name prefix for RNN cells.
   string name_;
-  
+
   // RNN layers.
   std::vector<RNNLayer *> layers_;
 };
+#endif
 
 }  // namespace myelin
 }  // namespace sling

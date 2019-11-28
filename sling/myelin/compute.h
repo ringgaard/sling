@@ -1019,6 +1019,7 @@ class ProfileSummary {
 class Instance {
  public:
   // Create data instance.
+  Instance() : data_(nullptr), cell_(nullptr) {}
   Instance(const Cell *cell);
   Instance(const Flow::Function *func) : Instance(func->cell) {}
 
