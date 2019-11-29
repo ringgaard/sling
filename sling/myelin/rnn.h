@@ -200,6 +200,7 @@ class RNNLearner {
   std::vector<Instance> lr_fwd_;
   Channel lr_hidden_;
   Channel lr_control_;
+
   Instance lr_bkw_;
   Channel lr_dhidden_;
   Channel lr_dcontrol_;
@@ -208,9 +209,13 @@ class RNNLearner {
   std::vector<Instance> rl_fwd_;
   Channel rl_hidden_;
   Channel rl_control_;
+
   Instance rl_bkw_;
   Channel rl_dhidden_;
   Channel rl_dcontrol_;
+
+  // Channel for gradient output.
+  Channel dinput_;
 
   // RNN channel merger for bidirectional RNN.
   Instance merger_;
@@ -220,65 +225,16 @@ class RNNLearner {
   Channel dright_;
 };
 
-#if 0
-  // RNN direction.
-  enum Direction {FORWARD, REVERSE, BIDIR};
-
-// Interface for instance of RNN layer for prediction.
-class RNNInstance {
- public:
-  virtual ~RNNInstance() = default;
-
-  // Compute RNN over input sequence and return output sequence.
-  virtual Channel *Compute(Channel *input) = 0;
-};
-
-// Interface for instance of RNN layer for learning.
-class RNNLearner : public RNNInstance {
- public:
-  // Backpropagate gradients returning the output of backpropagation, i.e. the
-  // gradient of the input sequence.
-  virtual Channel *Backpropagate(Channel *doutput) = 0;
-
-  // Clear accumulated gradients.
-  virtual void Clear() = 0;
-
-  // Collect instances with gradient updates.
-  virtual void CollectGradients(std::vector<Instance *> *gradients) = 0;
-};
-
-// Factory interface for making RNN instances for prediction and learning.
-class RNNLayer {
- public:
-  virtual ~RNNLayer() = default;
-
-  // Build flow for RNN. If dinput is not null, the corresponding gradient
-  // function is also built.
-  virtual RNN::Variables Build(Flow *flow,
-                               Flow::Variable *input,
-                               Flow::Variable *dinput) = 0;
-
-  // Initialize RNN.
-  virtual void Initialize(const Network &net) = 0;
-
-  // Create RNN instance for prediction.
-  virtual RNNInstance *CreateInstance() = 0;
-
-  // Create RNN instance for learning.
-  virtual RNNLearner *CreateLearner() = 0;
-};
-
 // Multi-layer RNN.
 class RNNStack {
  public:
   RNNStack(const string &name) : name_(name) {}
-  ~RNNStack();
 
   // Add RNN layer.
-  void AddLayer(RNN::Type type, int dim, RNN::Direction dir);
+  void AddLayer(RNN::Type type, int dim, bool bidir);
 
   // Add multiple RNN layers of the same type.
-  void AddLayers(int layers, RNN::Type type, int dim, RNN::Direction dir);
+  void AddLayers(int layers, RNN::Type type, int dim, bool bidir);
 
   // Build flow for RNNs.
   RNN::Variables Build(Flow *flow,
@@ -288,23 +244,52 @@ class RNNStack {
   // Initialize RNN stack.
   void Initialize(const Network &net);
 
-  // Create RNN stack instance for prediction.
-  RNNInstance *CreateInstance();
-
-  // Create RNN stack instance for learning.
-  RNNLearner *CreateLearner();
-
   // Layers in RNN stack.
-  const std::vector<RNNLayer *> layers() const { return layers_; }
+  const std::vector<RNNLayer> layers() const { return layers_; }
 
  private:
   // Name prefix for RNN cells.
   string name_;
 
   // RNN layers.
-  std::vector<RNNLayer *> layers_;
+  std::vector<RNNLayer> layers_;
 };
-#endif
+
+// Multi-layer RNN instance for prediction.
+class RNNStackInstance {
+ public:
+  RNNStackInstance(const RNNStack &stack);
+
+  // Compute RNN over input sequence and return output sequence.
+  Channel *Compute(Channel *input);
+
+ private:
+  // RNN prediction instances for all layers.
+  std::vector<RNNInstance> layers_;
+};
+
+// Multi-layer RNN layer for learning.
+class RNNStackLearner {
+ public:
+  RNNStackLearner(const RNNStack &stack);
+
+  // Compute RNN over input sequence and return output sequence.
+  Channel *Compute(Channel *input);
+
+  // Backpropagate gradients returning the output of backpropagation, i.e. the
+  // gradient of the input sequence.
+  Channel *Backpropagate(Channel *doutput);
+
+  // Clear accumulated gradients.
+  void Clear();
+
+  // Collect instances with gradient updates.
+  void CollectGradients(std::vector<Instance *> *gradients);
+
+ private:
+  // RNN learner instances for all layers.
+  std::vector<RNNLearner> layers_;
+};
 
 }  // namespace myelin
 }  // namespace sling

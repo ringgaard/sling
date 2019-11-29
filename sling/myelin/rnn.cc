@@ -97,7 +97,7 @@ RNNMerger::Variables RNNMerger::Build(Flow *flow,
   vars.right = f.Placeholder("right", right->type, right->shape, true);
   vars.right->set_dynamic();
 
-  vars.merged = f.Name(f.Concat({vars.left, vars.right}, 2), "merged");
+  vars.merged = f.Name(f.Concat({vars.left, vars.right}, 1), "merged");
   vars.merged->set_dynamic();
   flow->Connect({vars.left, left});
   flow->Connect({vars.right, right});
@@ -263,6 +263,7 @@ RNNLearner::RNNLearner(const RNNLayer *rnn)
       rl_bkw_(rnn->rl_.gcell),
       rl_dhidden_(rnn->rl_.dh_in),
       rl_dcontrol_(rnn->rl_.dc_in),
+      dinput_(rnn_->rl_.dinput),
       merger_(rnn->merger_.cell),
       splitter_(rnn->merger_.gcell),
       merged_(rnn->merger_.merged),
@@ -350,8 +351,89 @@ Channel *RNNLearner::Compute(Channel *input) {
 }
 
 Channel *RNNLearner::Backpropagate(Channel *doutput) {
-  // TODO: implement
-  return nullptr;
+  // Clear input gradient.
+  int length = doutput->size();
+  dinput_.reset(length);
+  bool ctrl = rnn_->lr_.has_control();
+
+  // Split gradient for bidirectional RNN.
+  Channel *dleft;
+  Channel *dright;
+  if (rnn_->bidir_) {
+    // Split gradients.
+    dleft_.resize(length);
+    dright_.resize(length);
+    splitter_.SetChannel(rnn_->merger_.dmerged, doutput);
+    splitter_.SetChannel(rnn_->merger_.dleft, &dleft_);
+    splitter_.SetChannel(rnn_->merger_.dright, &dright_);
+    splitter_.Compute();
+    dleft = &dleft_;
+    dright = &dright_;
+  } else {
+    dleft = doutput;
+    dright = nullptr;
+  }
+
+  // Propagate gradients for left-to-right RNN.
+  if (dleft != nullptr) {
+    if (ctrl) lr_dcontrol_.reset(length);
+    for (int i = length - 1; i >= 2; --i) {
+      lr_bkw_.Set(rnn_->lr_.primal, &lr_fwd_[i]);
+      lr_bkw_.Set(rnn_->lr_.dh_out, dleft, i);
+      lr_bkw_.Set(rnn_->lr_.dh_in, dleft, i - 1);
+      lr_bkw_.Set(rnn_->lr_.dinput, &dinput_, i);
+      if (ctrl) {
+        lr_bkw_.Set(rnn_->lr_.dc_out, &lr_dcontrol_, i);
+        lr_bkw_.Set(rnn_->lr_.dc_in, &lr_dcontrol_, i - 1);
+      }
+      lr_bkw_.Compute();
+    }
+
+    if (length > 0) {
+      void *sink = lr_bkw_.GetAddress(rnn_->lr_.sink);
+      lr_bkw_.Set(rnn_->lr_.primal, &lr_fwd_[0]);
+      lr_bkw_.Set(rnn_->lr_.dh_out, dleft, 0);
+      lr_bkw_.SetReference(rnn_->lr_.dh_in, sink);
+      lr_bkw_.Set(rnn_->lr_.dinput, &dinput_, 0);
+      if (ctrl) {
+        lr_bkw_.Set(rnn_->lr_.dc_out, &lr_dcontrol_, 0);
+        lr_bkw_.SetReference(rnn_->lr_.dc_in, sink);
+      }
+      lr_bkw_.Compute();
+    }
+  }
+
+  // Propagate gradients for right-to-left RNN.
+  if (dright != nullptr) {
+    if (ctrl) rl_dcontrol_.reset(length);
+    for (int i = 0; i < length - 1; ++i) {
+      rl_bkw_.Set(rnn_->rl_.primal, &rl_fwd_[i]);
+      rl_bkw_.Set(rnn_->rl_.dh_out, dright, i);
+      rl_bkw_.Set(rnn_->rl_.dh_in, dright, i + 1);
+      rl_bkw_.Set(rnn_->rl_.dinput, &dinput_, i);
+      if (ctrl) {
+        rl_bkw_.Set(rnn_->rl_.dc_out, &rl_dcontrol_, i);
+        rl_bkw_.Set(rnn_->rl_.dc_in, &rl_dcontrol_, i + 1);
+      }
+      rl_bkw_.Compute();
+    }
+
+    if (length > 0) {
+      void *sink = rl_bkw_.GetAddress(rnn_->rl_.sink);
+      rl_bkw_.Set(rnn_->rl_.primal, &rl_fwd_[length - 1]);
+      rl_bkw_.Set(rnn_->rl_.dh_out, dright, length - 1);
+      rl_bkw_.SetReference(rnn_->rl_.dh_in, sink);
+      rl_bkw_.Set(rnn_->rl_.dinput, &dinput_, length - 1);
+      if (ctrl) {
+        rl_bkw_.Set(rnn_->rl_.dc_out, &rl_dcontrol_, length - 1);
+        rl_bkw_.SetReference(rnn_->rl_.dc_in, sink);
+      }
+      rl_bkw_.Compute();
+    }
+  }
+
+  // Return input gradient.
+  return &dinput_;
 }
 
 void RNNLearner::Clear() {
@@ -364,704 +446,14 @@ void RNNLearner::CollectGradients(std::vector<Instance *> *gradients) {
   if (rnn_->bidir_) gradients->push_back(&rl_bkw_);
 }
 
-#if 0
-// Forward RNN instance for prediction.
-class ForwardRNNInstance : public RNNInstance {
- public:
-  ForwardRNNInstance(const RNN &rnn)
-    : rnn_(rnn),
-      data_(rnn.cell),
-      hidden_(rnn.h_out),
-      control_(rnn.c_out) {}
-
-  Channel *Compute(Channel *input) override {
-    // Reset hidden and control channels.
-    int length = input->size();
-    bool ctrl = rnn_.has_control();
-    hidden_.resize(length);
-    if (ctrl) control_.resize(length);
-
-    // Compute first RNN cell.
-    if (length > 0) {
-      data_.Set(rnn_.input, input, 0);
-      data_.SetReference(rnn_.h_in, rnn_.zero->data());
-      data_.Set(rnn_.h_out, &hidden_, 0);
-      if (ctrl) {
-        data_.SetReference(rnn_.c_in, rnn_.zero->data());
-        data_.Set(rnn_.c_out, &control_, 0);
-      }
-      data_.Compute();
-    }
-
-    // Compute remaining RNN cells left-to-right.
-    for (int i = 1; i < length; ++i) {
-      data_.Set(rnn_.input, input, i);
-      data_.Set(rnn_.h_in, &hidden_, i - 1);
-      data_.Set(rnn_.h_out, &hidden_, i);
-      if (ctrl) {
-        data_.Set(rnn_.c_in, &control_, i - 1);
-        data_.Set(rnn_.c_out, &control_, i);
-      }
-      data_.Compute();
-    }
-
-    return &hidden_;
-  }
-
- private:
-  const RNN &rnn_;           // RNN cell
-  Instance data_;            // RNN instance data
-  Channel hidden_;           // hidden channel
-  Channel control_;          // control channel (optional)
-};
-
-// Forward RNN instance for learning.
-class ForwardRNNLearner : public RNNLearner {
- public:
-  ForwardRNNLearner(const RNN &rnn)
-    : rnn_(rnn),
-      bkw_(rnn.gcell),
-      hidden_(rnn.h_out),
-      control_(rnn.c_out),
-      dcontrol_(rnn.dc_in),
-      dinput_(rnn.dinput) {}
-
-  ~ForwardRNNLearner() {
-    for (Instance *data : fwd_) delete data;
-  }
-
-  Channel *Compute(Channel *input) override {
-    // Allocate instances.
-    int length = input->size();
-    for (auto *data : fwd_) delete data;
-    fwd_.resize(length);
-    for (int i = 0; i < length; ++i) {
-      fwd_[i] = new Instance(rnn_.cell);
-    }
-
-    // Reset hidden and control channels.
-    bool ctrl = rnn_.has_control();
-    hidden_.resize(length);
-    if (ctrl) control_.resize(length);
-
-    // Compute first RNN cell.
-    if (length > 0) {
-      Instance *data = fwd_[0];
-      data->Set(rnn_.input, input, 0);
-      data->SetReference(rnn_.h_in, rnn_.zero->data());
-      data->Set(rnn_.h_out, &hidden_, 0);
-      if (ctrl) {
-        data->SetReference(rnn_.c_in, rnn_.zero->data());
-        data->Set(rnn_.c_out, &control_, 0);
-      }
-      data->Compute();
-    }
-
-    // Compute remaining RNN cells left-to-right.
-    for (int i = 1; i < length; ++i) {
-      Instance *data = fwd_[i];
-      data->Set(rnn_.input, input, i);
-      data->Set(rnn_.h_in, &hidden_, i - 1);
-      data->Set(rnn_.h_out, &hidden_, i);
-      if (ctrl) {
-        data->Set(rnn_.c_in, &control_, i - 1);
-        data->Set(rnn_.c_out, &control_, i);
-      }
-      data->Compute();
-    }
-
-    return &hidden_;
-  }
-
-  Channel *Backpropagate(Channel *doutput) override {
-    // Clear input gradient.
-    int length = fwd_.size();
-    bool ctrl = rnn_.has_control();
-    dinput_.reset(length);
-    if (ctrl) dcontrol_.reset(length);
-
-    // Propagate gradients right-to-left.
-    for (int i = length - 1; i >= 2; --i) {
-      bkw_.Set(rnn_.primal, fwd_[i]);
-      bkw_.Set(rnn_.dh_out, doutput, i);
-      bkw_.Set(rnn_.dh_in, doutput, i - 1);
-      bkw_.Set(rnn_.dinput, &dinput_, i);
-      if (ctrl) {
-        bkw_.Set(rnn_.dc_out, &dcontrol_, i);
-        bkw_.Set(rnn_.dc_in, &dcontrol_, i - 1);
-      }
-      bkw_.Compute();
-    }
-
-    // Propagate gradients for first element.
-    if (length > 0) {
-      bkw_.Set(rnn_.primal, fwd_[0]);
-      bkw_.Set(rnn_.dh_out, doutput, 0);
-      bkw_.SetReference(rnn_.dh_in, bkw_.GetAddress(rnn_.sink));
-      bkw_.Set(rnn_.dinput, &dinput_, 0);
-      if (ctrl) {
-        bkw_.Set(rnn_.dc_out, &dcontrol_, 0);
-        bkw_.SetReference(rnn_.dc_in, bkw_.GetAddress(rnn_.sink));
-      }
-      bkw_.Compute();
-    }
-
-    // Return input gradient.
-    return &dinput_;
-  }
-
-  void Clear() override {
-    bkw_.Clear();
-  }
-
-  void CollectGradients(std::vector<Instance *> *gradients) override {
-    gradients->push_back(&bkw_);
-  }
-
- private:
-  const RNN &rnn_;                // RNN cell
-
-  std::vector<Instance *> fwd_;   // RNN forward instances
-  Instance bkw_;                  // RNN gradients
-
-  Channel hidden_;                // RNN hidden channel
-  Channel control_;               // RNN control channel (optional)
-  Channel dcontrol_;              // RNN control gradient channel
-  Channel dinput_;                // input gradient channel
-};
-
-// Forward RNN layer.
-class ForwardRNNLayer : public RNNLayer {
- public:
-  ForwardRNNLayer(const string &name, RNN::Type type, int dim)
-      : rnn_(name, type, dim) {}
-
-  RNN::Variables Build(Flow *flow,
-                       Flow::Variable *input,
-                       Flow::Variable *dinput) override {
-    return rnn_.Build(flow, input, dinput);
-  }
-
-  void Initialize(const Network &net) override {
-    rnn_.Initialize(net);
-  }
-
-  RNNInstance *CreateInstance() override {
-    return new ForwardRNNInstance(rnn_);
-  }
-
-  RNNLearner *CreateLearner() override {
-    return new ForwardRNNLearner(rnn_);
-  }
-
- private:
-  // RNN cell.
-  RNN rnn_;
-};
-
-// Reverse RNN instance for prediction.
-class ReverseRNNInstance : public RNNInstance {
- public:
-  ReverseRNNInstance(const RNN &rnn)
-    : rnn_(rnn),
-      data_(rnn.cell),
-      hidden_(rnn.h_out),
-      control_(rnn.c_out) {}
-
-  Channel *Compute(Channel *input) override {
-    // Reset hidden and control channels.
-    int length = input->size();
-    bool ctrl = rnn_.has_control();
-    hidden_.resize(length);
-    if (ctrl) control_.resize(length);
-
-    // Compute last RNN cell.
-    if (length > 0) {
-      data_.Set(rnn_.input, input, length - 1);
-      data_.SetReference(rnn_.h_in, rnn_.zero->data());
-      data_.Set(rnn_.h_out, &hidden_, length - 1);
-      if (ctrl) {
-        data_.SetReference(rnn_.c_in, rnn_.zero->data());
-        data_.Set(rnn_.c_out, &control_, length - 1);
-      }
-      data_.Compute();
-    }
-
-    // Compute remaining RNN cells right-to-left.
-    for (int i = length - 2; i >= 0; --i) {
-      data_.Set(rnn_.input, input, i);
-      data_.Set(rnn_.h_in, &hidden_, i + 1);
-      data_.Set(rnn_.h_out, &hidden_, i);
-      if (ctrl) {
-        data_.Set(rnn_.c_in, &control_, i + 1);
-        data_.Set(rnn_.c_out, &control_, i);
-      }
-      data_.Compute();
-    }
-
-    return &hidden_;
-  }
-
- private:
-  const RNN &rnn_;           // RNN cell
-  Instance data_;            // RNN instance data
-  Channel hidden_;           // hidden channel
-  Channel control_;          // control channel (optional)
-};
-
-// Reverse RNN instance for learning.
-class ReverseRNNLearner : public RNNLearner {
- public:
-  ReverseRNNLearner(const RNN &rnn)
-    : rnn_(rnn),
-      bkw_(rnn.gcell),
-      hidden_(rnn.h_out),
-      control_(rnn.c_out),
-      dcontrol_(rnn.dc_in),
-      dinput_(rnn.dinput) {}
-
-  Channel *Compute(Channel *input) override {
-    // Allocate instances.
-    int length = input->size();
-    for (auto *data : fwd_) delete data;
-    fwd_.resize(length);
-    for (int i = 0; i < length; ++i) {
-      fwd_[i] = new Instance(rnn_.cell);
-    }
-
-    // Reset hidden and control channels.
-    bool ctrl = rnn_.has_control();
-    hidden_.resize(length);
-    if (ctrl) control_.resize(length);
-
-    // Compute last RNN cell.
-    if (length > 0) {
-      Instance *data = fwd_[length - 1];
-      data->Set(rnn_.input, input, length - 1);
-      data->SetReference(rnn_.h_out, rnn_.zero->data());
-      data->Set(rnn_.h_in, &hidden_, length - 1);
-      if (ctrl) {
-        data->SetReference(rnn_.c_out, rnn_.zero->data());
-        data->Set(rnn_.c_in, &control_, length - 1);
-      }
-      data->Compute();
-    }
-
-    // Compute remaining RNN cells right-to-left.
-    for (int i = length - 2; i >= 0; --i) {
-      Instance *data = fwd_[i];
-      data->Set(rnn_.input, input, i);
-      data->Set(rnn_.h_out, &hidden_, i + 1);
-      data->Set(rnn_.h_in, &hidden_, i);
-      if (ctrl) {
-        data->Set(rnn_.c_out, &control_, i + 1);
-        data->Set(rnn_.c_in, &control_, i);
-      }
-      data->Compute();
-    }
-
-    return &hidden_;
-  }
-
-  Channel *Backpropagate(Channel *doutput) override {
-    // Clear input gradient.
-    int length = fwd_.size();
-    bool ctrl = rnn_.has_control();
-    dinput_.reset(length);
-    if (ctrl) dcontrol_.reset(length);
-
-    // Propagate gradients left-to-right.
-    for (int i = 0; i < length - 1; ++i) {
-      bkw_.Set(rnn_.primal, fwd_[i]);
-      bkw_.Set(rnn_.dh_out, doutput, i);
-      bkw_.Set(rnn_.dh_in, doutput, i + 1);
-      bkw_.Set(rnn_.dinput, &dinput_, i);
-      if (ctrl) {
-        bkw_.Set(rnn_.dc_out, &dcontrol_, i);
-        bkw_.Set(rnn_.dc_in, &dcontrol_, i + 1);
-      }
-      bkw_.Compute();
-    }
-
-    // Propagate gradients for last element.
-    if (length > 0) {
-      bkw_.Set(rnn_.primal, fwd_[length - 1]);
-      bkw_.Set(rnn_.dh_out, doutput, length - 1);
-      bkw_.SetReference(rnn_.dh_in, bkw_.GetAddress(rnn_.sink));
-      bkw_.Set(rnn_.dinput, &dinput_, length - 1);
-      if (ctrl) {
-        bkw_.Set(rnn_.dc_out, &dcontrol_, length - 1);
-        bkw_.SetReference(rnn_.dc_in, bkw_.GetAddress(rnn_.sink));
-      }
-      bkw_.Compute();
-    }
-
-    // Return input gradient.
-    return &dinput_;
-  }
-
-  void Clear() override {
-    bkw_.Clear();
-  }
-
-  void CollectGradients(std::vector<Instance *> *gradients) override {
-    gradients->push_back(&bkw_);
-  }
-
- private:
-  const RNN &rnn_;                // RNN cell
-
-  std::vector<Instance *> fwd_;   // RNN forward instances
-  Instance bkw_;                  // RNN gradients
-
-  Channel hidden_;                // RNN hidden channel
-  Channel control_;               // RNN control channel (optional)
-  Channel dcontrol_;              // RNN control gradient channel
-  Channel dinput_;                // input gradient channel
-};
-
-// Reverse RNN layer.
-class ReverseRNNLayer : public RNNLayer {
- public:
-  ReverseRNNLayer(const string &name, RNN::Type type, int dim)
-      : rnn_(name, type, dim) {}
-
-  RNN::Variables Build(Flow *flow,
-                       Flow::Variable *input,
-                       Flow::Variable *dinput) override {
-    return rnn_.Build(flow, input, dinput);
-  }
-
-  void Initialize(const Network &net) override {
-    rnn_.Initialize(net);
-  }
-
-  RNNInstance *CreateInstance() override {
-    return new ReverseRNNInstance(rnn_);
-  }
-
-  RNNLearner *CreateLearner() override {
-    return new ReverseRNNLearner(rnn_);
-  }
-
- private:
-  // RNN cell.
-  RNN rnn_;
-};
-
-// Channel merger cell for merging the outputs from two RNNs.
-struct ChannelMerger {
-  // Flow input/output variables.
-  struct Variables {
-    Flow::Variable *left;     // left input to forward path
-    Flow::Variable *right;    // right input to forward path
-    Flow::Variable *merged;   // merged output from forward path
-
-    Flow::Variable *dmerged;  // merged gradient from backward path
-    Flow::Variable *dleft;    // left gradient output from backward path
-    Flow::Variable *dright;   // right gradient output from backward path
-  };
-
-  // Initialize channel merger.
-  ChannelMerger(const string &name) : name(name) {}
-
-  // Build flow for channel merger. If dleft and dright are not null, the
-  // corresponding gradient function is also built.
-  Variables Build(Flow *flow,
-                  Flow::Variable *left, Flow::Variable *right,
-                  Flow::Variable *dleft, Flow::Variable *dright) {
-    Variables vars;
-
-    // Build merger cell.
-    FlowBuilder f(flow, name);
-    vars.left = f.Placeholder("left", left->type, left->shape, true);
-    vars.left->set_dynamic();
-
-    vars.right = f.Placeholder("right", right->type, right->shape, true);
-    vars.right->set_dynamic();
-
-    vars.merged = f.Name(f.Concat({vars.left, vars.right}, 2), "merged");
-    vars.merged->set_dynamic();
-    flow->Connect({vars.left, left});
-    flow->Connect({vars.right, right});
-
-    // Build gradients for learning.
-    if (dleft != nullptr && dright != nullptr) {
-      Gradient(flow, f.func());
-      vars.dmerged = flow->GradientVar(vars.merged);
-      vars.dleft = flow->GradientVar(vars.left);
-      vars.dright = flow->GradientVar(vars.right);
-      flow->Connect({vars.dleft, dleft});
-      flow->Connect({vars.dright, dright});
-    }
-
-    return vars;
-  }
-
-  // Initialize channel merger.
-  void Initialize(const Network &net) {
-    cell = net.GetCell(name);
-    left = net.GetParameter(name + "/left");
-    right = net.GetParameter(name + "/right");
-    merged = net.GetParameter(name + "/merged");
-
-    gcell = cell->Gradient();
-    if (gcell != nullptr) {
-      dmerged = merged->Gradient();
-      dleft = left->Gradient();
-      dright = right->Gradient();
-    }
-  }
-
-  string name;                     // cell name
-
-  Cell *cell = nullptr;            // merger cell
-  Tensor *left = nullptr;          // left channel input
-  Tensor *right = nullptr;         // right channel input
-  Tensor *merged = nullptr;        // merged output channel
-
-  Cell *gcell = nullptr;           // merger gradient cell
-  Tensor *dmerged = nullptr;       // gradient for merged channel
-  Tensor *dleft = nullptr;         // gradient for left channel
-  Tensor *dright = nullptr;        // gradient for right channel
-};
-
-// Bidirectional RNN instance for prediction.
-class BiRNNInstance : public RNNInstance {
- public:
-  BiRNNInstance(const RNN &lr, const RNN &rl, const ChannelMerger &merger)
-    : lr_(lr),
-      rl_(rl),
-      merger_(merger),
-      data_(merger.cell),
-      merged_(merger.merged) {}
-
-  Channel *Compute(Channel *input) override {
-    // Compute left-to-right and right-to-left RNNs.
-    Channel *l = lr_.Compute(input);
-    Channel *r = rl_.Compute(input);
-
-    // Merge outputs.
-    data_.SetChannel(merger_.left, l);
-    data_.SetChannel(merger_.right, r);
-    data_.SetChannel(merger_.merged, &merged_);
-    data_.Compute();
-
-    return &merged_;
-  }
-
- private:
-  ForwardRNNInstance lr_;        // forward RNN
-  ReverseRNNInstance rl_;        // reverse RNN
-
-  const ChannelMerger &merger_;  // channel merger cell
-  Instance data_;                // channel merger instance
-  Channel merged_;               // channel with merged output
-};
-
-// Bidirectional RNN instance for learning.
-class BiRNNLearner : public RNNLearner {
- public:
-  BiRNNLearner(const RNN &lr, const RNN &rl, const ChannelMerger &cm)
-    : lr_(lr),
-      rl_(rl),
-      cm_(cm),
-      merger_(cm.cell),
-      splitter_(cm.gcell),
-      merged_(cm.merged),
-      dleft_(cm.dleft),
-      dright_(cm.dright) {}
-
-  Channel *Compute(Channel *input) override {
-    // Compute left-to-right and right-to-left RNNs.
-    Channel *l = lr_.Compute(input);
-    Channel *r = rl_.Compute(input);
-
-    // Merge outputs.
-    merger_.SetChannel(cm_.left, l);
-    merger_.SetChannel(cm_.right, r);
-    merger_.SetChannel(cm_.merged, &merged_);
-    merger_.Compute();
-
-    return &merged_;
-  }
-
-  Channel *Backpropagate(Channel *doutput) override {
-    // Split gradients.
-    splitter_.SetChannel(cm_.dmerged, doutput);
-    splitter_.SetChannel(cm_.dleft, &dleft_);
-    splitter_.SetChannel(cm_.dright, &dright_);
-    splitter_.Compute();
-
-    // Backpropagate through RNNs.
-    Channel *dinput = lr_.Backpropagate(&dleft_);
-    rl_.Backpropagate(&dright_);
-
-    // Return input gradient.
-    return dinput;
-  }
-
-  void Clear() override {
-    lr_.Clear();
-    rl_.Clear();
-  }
-
-  void CollectGradients(std::vector<Instance *> *gradients) override {
-    lr_.CollectGradients(gradients);
-    rl_.CollectGradients(gradients);
-  }
-
- private:
-  ForwardRNNLearner lr_;        // forward RNN
-  ReverseRNNLearner rl_;        // reverse RNN
-
-  const ChannelMerger &cm_;     // channel merger cell
-  Instance merger_;             // channel merger instance
-  Instance splitter_;           // gradient channel splitter instance
-  Channel merged_;              // channel with merged output
-  Channel dleft_;               // channel with left gradient output
-  Channel dright_;              // channel with right gradient output
-};
-
-// Bidirectional RNN layer.
-class BiRNNLayer : public RNNLayer {
- public:
-  BiRNNLayer(const string &name, RNN::Type type, int dim)
-      : lr_(name + "/lr", type, dim),
-        rl_(name + "/rl", type, dim),
-        merger_(name) {}
-
-  RNN::Variables Build(Flow *flow,
-                       Flow::Variable *input,
-                       Flow::Variable *dinput) override {
-    // Build left-to-right and right-to-left RNNs.
-    auto l = lr_.Build(flow, input, dinput);
-    auto r = rl_.Build(flow, input, dinput);
-
-    // Build channel merger.
-    auto m = merger_.Build(flow, l.output, r.output, l.doutput, r.output);
-
-    // Return outputs.
-    RNN::Variables vars;
-    vars.input = l.input;
-    vars.output = m.merged;
-    vars.dinput = l.dinput;
-    vars.doutput = m.dmerged;
-
-    return vars;
-  }
-
-  void Initialize(const Network &net) override {
-    lr_.Initialize(net);
-    rl_.Initialize(net);
-    merger_.Initialize(net);
-  }
-
-  RNNInstance *CreateInstance() override {
-    return new BiRNNInstance(lr_, rl_, merger_);
-  }
-
-  RNNLearner *CreateLearner() override {
-    return new BiRNNLearner(lr_, rl_, merger_);
-  }
-
- private:
-  RNN lr_;                // cell for left-to-right RNN
-  RNN rl_;                // cell for right-to-left RNN
-  ChannelMerger merger_;  // cell for channel merger
-};
-
-// RNN stack instance for prediction.
-class RNNStackInstance : public RNNInstance {
- public:
-  RNNStackInstance(const RNNStack &stack) {
-    layers_.reserve(stack.layers().size());
-    for (RNNLayer *l : stack.layers()) {
-      layers_.push_back(l->CreateInstance());
-    }
-  }
-
-  Channel *Compute(Channel *input) override {
-    Channel *channel = input;
-    for (RNNInstance *l : layers_) {
-      channel = l->Compute(channel);
-    }
-    return channel;
-  }
-
- private:
-  std::vector<RNNInstance *> layers_;
-};
-
-// RNN stack instance for learning.
-class RNNStackLearner : public RNNLearner {
- public:
-  RNNStackLearner(const RNNStack &stack) {
-    layers_.reserve(stack.layers().size());
-    for (RNNLayer *l : stack.layers()) {
-      layers_.push_back(l->CreateLearner());
-    }
-  }
-
-  Channel *Compute(Channel *input) override {
-    Channel *channel = input;
-    for (RNNLearner *l : layers_) {
-      channel = l->Compute(channel);
-    }
-    return channel;
-  }
-
-  Channel *Backpropagate(Channel *doutput) override {
-    Channel *channel = doutput;
-    for (int i = layers_.size() - 1; i >= 0; --i) {
-      channel = layers_[i]->Backpropagate(channel);
-    }
-    return channel;
-  }
-
-  void Clear() override {
-    for (RNNLearner *l : layers_) {
-      l->Clear();
-    }
-  }
-
-  void CollectGradients(std::vector<Instance *> *gradients) override {
-    for (RNNLearner *l : layers_) {
-      l->CollectGradients(gradients);
-    }
-  }
-
- private:
-  std::vector<RNNLearner *> layers_;
-};
-
-RNNStack::~RNNStack() {
-  for (RNNLayer *l : layers_) delete l;
+void RNNStack::AddLayer(RNN::Type type, int dim, bool bidir) {
+  string name = name_ + "/rnn" + std::to_string(layers_.size());
+  layers_.emplace_back(name, type, dim, bidir);
 }
 
-void RNNStack::AddLayer(RNN::Type type, int dim, RNN::Direction dir) {
-  string layer_name = name_ + "/rnn" + std::to_string(layers_.size());
-  RNNLayer *layer;
-  switch (dir) {
-    case RNN::FORWARD:
-      layer = new ForwardRNNLayer(layer_name, type, dim);
-      break;
-    case RNN::REVERSE:
-      layer = new ReverseRNNLayer(layer_name, type, dim);
-      break;
-    case RNN::BIDIR:
-      layer = new BiRNNLayer(layer_name, type, dim);
-      break;
-    default:
-      LOG(FATAL) << "Unsupported RNN direction";
-  }
-  layers_.push_back(layer);
-}
-
-void RNNStack::AddLayers(int layers, RNN::Type type, int dim,
-                         RNN::Direction dir) {
+void RNNStack::AddLayers(int layers, RNN::Type type, int dim, bool bidir) {
   for (int l = 0; l < layers; ++l) {
-    AddLayer(type, dim, dir);
+    AddLayer(type, dim, bidir);
   }
 }
 
@@ -1069,8 +461,8 @@ RNN::Variables RNNStack::Build(Flow *flow,
                                Flow::Variable *input,
                                Flow::Variable *dinput) {
   RNN::Variables vars;
-  for (RNNLayer *l : layers_) {
-    RNN::Variables v = l->Build(flow, input, dinput);
+  for (RNNLayer &l : layers_) {
+    RNN::Variables v = l.Build(flow, input, dinput);
     if (vars.input == nullptr) {
       vars.input = v.input;
       vars.dinput = v.dinput;
@@ -1084,20 +476,58 @@ RNN::Variables RNNStack::Build(Flow *flow,
 }
 
 void RNNStack::Initialize(const Network &net) {
-  for (RNNLayer *l : layers_) {
-    l->Initialize(net);
+  for (RNNLayer &l : layers_) {
+    l.Initialize(net);
   }
 }
 
-RNNInstance *RNNStack::CreateInstance() {
-  return new RNNStackInstance(*this);
+RNNStackInstance::RNNStackInstance(const RNNStack &stack) {
+  for (const RNNLayer &l : stack.layers()) {
+    layers_.emplace_back(&l);
+  }
 }
 
-RNNLearner *RNNStack::CreateLearner() {
-  return new RNNStackLearner(*this);
+Channel *RNNStackInstance::Compute(Channel *input) {
+  Channel *channel = input;
+  for (RNNInstance &l : layers_) {
+    channel = l.Compute(channel);
+  }
+  return channel;
 }
 
-#endif
+RNNStackLearner::RNNStackLearner(const RNNStack &stack) {
+  for (const RNNLayer &l : stack.layers()) {
+    layers_.emplace_back(&l);
+  }
+}
+
+Channel *RNNStackLearner::Compute(Channel *input) {
+  Channel *channel = input;
+  for (RNNLearner &l : layers_) {
+    channel = l.Compute(channel);
+  }
+  return channel;
+}
+
+Channel *RNNStackLearner::Backpropagate(Channel *doutput) {
+  Channel *channel = doutput;
+  for (int i = layers_.size() - 1; i >= 0; --i) {
+    channel = layers_[i].Backpropagate(channel);
+  }
+  return channel;
+}
+
+void RNNStackLearner::Clear() {
+  for (RNNLearner &l : layers_) {
+    l.Clear();
+  }
+}
+
+void RNNStackLearner::CollectGradients(std::vector<Instance *> *gradients) {
+  for (RNNLearner &l : layers_) {
+    l.CollectGradients(gradients);
+  }
+}
 
 }  // namespace myelin
 }  // namespace sling
