@@ -510,12 +510,27 @@ void concat_grad(Flow::Operation *op, Gradients *g) {
   int N = op->GetAttr("N", 0);
   int axis;
   CHECK(op->inputs.back()->GetData(&axis));
-  Shape begin;
-  begin.redim(op->outputs[0]->rank());
+
+  // If all inputs have the same size the gradient is a Split. Otherwise a
+  // number of Slice ops are used.
+  bool equisized = true;
   for (int i = 0; i < N; ++i) {
-    auto vi = op->inputs[i];
-    g->add(vi, g->Slice(g->d(v), g->Const(begin), vi->shape));
-    begin.set(axis, begin.dim(axis) + vi->shape.dim(axis));
+    if (op->inputs[0]->shape != op->inputs[i]->shape) equisized = false;
+  }
+
+  if (equisized) {
+    auto parts = g->Split(g->d(v), N, axis);
+    for (int i = 0; i < N; ++i) {
+      g->add(op->inputs[i], parts[i]);
+    }
+  } else {
+    Shape begin;
+    begin.redim(op->outputs[0]->rank());
+    for (int i = 0; i < N; ++i) {
+      auto vi = op->inputs[i];
+      g->add(vi, g->Slice(g->d(v), g->Const(begin), vi->shape));
+      begin.set(axis, begin.dim(axis) + vi->shape.dim(axis));
+    }
   }
 }
 

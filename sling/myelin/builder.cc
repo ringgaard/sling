@@ -229,6 +229,24 @@ Flow::Variable *FlowBuilder::Concat(const std::vector<Variable *> &parts,
   return concat;
 }
 
+std::vector<Flow::Variable *> FlowBuilder::Split(Variable *v, int splits,
+                                                 int axis) {
+  CHECK(v->dim(axis) % splits == 0)
+    << "Cannot split " << v->shape.ToString() << " into " << splits
+    << " parts along dimension " << axis;
+  std::vector<Variable *> parts;
+  Operation *op = RawOp("Split", {v, Const(splits), Const(axis)});
+  Shape shape = v->shape;
+  shape.set(axis, shape.dim(axis) / splits);
+  for (int i = 0; i < splits; ++i) {
+    string name = op->name + ":" + std::to_string(i);
+    Variable *out = flow_->AddVariable(name, v->type, shape);
+    op->AddOutput(out);
+    parts.push_back(out);
+  }
+  return parts;
+}
+
 Flow::Variable *FlowBuilder::FFLayers(Variable *input,
                                       std::vector<int> layers,
                                       int hidden,

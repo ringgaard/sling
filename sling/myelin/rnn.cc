@@ -39,9 +39,10 @@ RNN::Variables RNN::Build(Flow *flow,
   // Make zero element.
   auto *zero = f.Name(f.Const(nullptr, input->type, {1, dim}), "zero");
   zero->set_out();
+  flow->Connect({vars.output, zero});
 
   // Connect input to RNN.
-  flow->Connect({vars.input, input, zero});
+  flow->Connect({vars.input, input});
 
   // Build gradients for learning.
   if (dinput != nullptr) {
@@ -53,7 +54,7 @@ RNN::Variables RNN::Build(Flow *flow,
     // Make sink variable for final channel gradients.
     auto *sink = f.Var("sink", input->type, {1, dim})->set_out();
     gf->unused.push_back(sink);
-    flow->Connect({sink, flow->Var(gf->name + "/dh_out")});
+    flow->Connect({sink, flow->Var(gf->name + "/d_h_out")});
   }
 
   return vars;
@@ -91,11 +92,11 @@ RNNMerger::Variables RNNMerger::Build(Flow *flow,
 
   // Build merger cell.
   FlowBuilder f(flow, name);
-  vars.left = f.Placeholder("left", left->type, left->shape, true);
-  vars.left->set_dynamic();
+  vars.left = f.Placeholder("left", left->type, left->shape);
+  vars.left->set_dynamic()->set_unique();
 
-  vars.right = f.Placeholder("right", right->type, right->shape, true);
-  vars.right->set_dynamic();
+  vars.right = f.Placeholder("right", right->type, right->shape);
+  vars.right->set_dynamic()->set_unique();
 
   vars.merged = f.Name(f.Concat({vars.left, vars.right}, 1), "merged");
   vars.merged->set_dynamic();
@@ -277,7 +278,13 @@ Channel *RNNLearner::Compute(Channel *input) {
 
   // Compute left-to-right RNN.
   if (lr_fwd_.size() > length) lr_fwd_.resize(length);
-  while (lr_fwd_.size() < length) lr_fwd_.emplace_back(rnn_->lr_.cell);
+  LOG(INFO) << "st";
+  while (lr_fwd_.size() < length) {
+    LOG(INFO) << "add size " << lr_fwd_.size() << " of " << length;
+    lr_fwd_.emplace_back(rnn_->lr_.cell);
+    LOG(INFO) << "now " << lr_fwd_.size() << " of " << length;
+  }
+  LOG(INFO) << "dn";
 
   lr_hidden_.resize(length);
   if (ctrl) lr_control_.resize(length);

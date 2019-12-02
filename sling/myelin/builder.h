@@ -382,6 +382,9 @@ class FlowBuilder : public Scope {
   // Concatenation.
   Variable *Concat(const std::vector<Variable *> &parts, int axis = 1);
 
+  // Splitting.
+  std::vector<Variable *> Split(Variable *v, int splits, int axis = 1);
+
   // Slicing.
   Variable *Slice(Variable *v, Variable *begin, const Shape &size) {
     return Op("Slice", {v, begin, Const(size)}, v->type, size);

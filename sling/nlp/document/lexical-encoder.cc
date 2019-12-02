@@ -51,7 +51,7 @@ void LexicalFeatures::LoadLexicon(Flow *flow) {
   lexicon_.PrecomputeShapes();
 }
 
-void LexicalFeatures::SaveLexicon(myelin::Flow *flow) const {
+void LexicalFeatures::SaveLexicon(Flow *flow) const {
   // Save word vocabulary.
   Flow::Blob *vocabulary = flow->AddBlob("lexicon", "dict");
   vocabulary->SetAttr("delimiter", 0);
@@ -417,7 +417,7 @@ void LexicalFeatureExtractor::OutputTrace(int token) {
   OutputTrace(token, lex_.digit_feature_);
 }
 
-void LexicalFeatureExtractor::OutputTrace(int token, myelin::Tensor *feature) {
+void LexicalFeatureExtractor::OutputTrace(int token, Tensor *feature) {
   if (feature == nullptr) return;
   const int *values = data_.Get<int>(feature);
   for (int i = 0; i < feature->elements(); ++i) {
@@ -467,13 +467,13 @@ BiLSTM::Outputs LexicalEncoder::Build(Flow *flow,
   return bilstm_.Build(flow, dim, lexvars.fv, lexvars.dfv);
 }
 
-void LexicalEncoder::Initialize(const myelin::Network &net) {
+void LexicalEncoder::Initialize(const Network &net) {
   lex_.Initialize(net);
   bilstm_.Initialize(net);
 }
 
-myelin::BiChannel LexicalEncoderInstance::Compute(const Document &document,
-                                                  int begin, int end) {
+BiChannel LexicalEncoderInstance::Compute(const Document &document,
+                                          int begin, int end) {
   // Extract feature and map through feature embeddings.
   features_.Extract(document, begin, end, &fv_);
 
@@ -481,10 +481,10 @@ myelin::BiChannel LexicalEncoderInstance::Compute(const Document &document,
   return bilstm_.Compute(&fv_);
 }
 
-myelin::BiChannel LexicalEncoderLearner::Compute(const Document &document,
-                                                 int begin, int end) {
+BiChannel LexicalEncoderLearner::Compute(const Document &document,
+                                         int begin, int end) {
   // Extract feature and map through feature embeddings.
-  myelin::Channel *fv = features_.Extract(document, begin, end);
+  Channel *fv = features_.Extract(document, begin, end);
 
   // Compute hidden states of LSTMs.
   return bilstm_.Compute(fv);
@@ -492,7 +492,51 @@ myelin::BiChannel LexicalEncoderLearner::Compute(const Document &document,
 
 void LexicalEncoderLearner::Backpropagate() {
   // Backpropagate hidden state gradients through LSTMs.
-  myelin::Channel *dfv = bilstm_.Backpropagate();
+  Channel *dfv = bilstm_.Backpropagate();
+
+  // Backpropagate feature vector gradients to feature embeddings.
+  features_.Backpropagate(dfv);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+RNN::Variables LexicalEncoder2::Build(Flow *flow,
+                                      const LexicalFeatures::Spec &spec,
+                                      Vocabulary::Iterator *words,
+                                      bool learn) {
+  if (words != nullptr) {
+    lex_.InitializeLexicon(words, spec.lexicon);
+  }
+  auto lexvars = lex_.Build(flow, spec, learn);
+  return rnn_.Build(flow, lexvars.fv, lexvars.dfv);
+}
+
+void LexicalEncoder2::Initialize(const Network &net) {
+  lex_.Initialize(net);
+  rnn_.Initialize(net);
+}
+
+Channel *LexicalEncoderInstance2::Compute(const Document &document,
+                                          int begin, int end) {
+  // Extract feature and map through feature embeddings.
+  features_.Extract(document, begin, end, &fv_);
+
+  // Compute hidden states for RNN.
+  return rnn_.Compute(&fv_);
+}
+
+Channel *LexicalEncoderLearner2::Compute(const Document &document,
+                                         int begin, int end) {
+  // Extract feature and map through feature embeddings.
+  Channel *fv = features_.Extract(document, begin, end);
+
+  // Compute hidden states for RNN.
+  return rnn_.Compute(fv);
+}
+
+void LexicalEncoderLearner2::Backpropagate(Channel *doutput) {
+  // Backpropagate hidden state gradients through RNN.
+  Channel *dfv = rnn_.Backpropagate(doutput);
 
   // Backpropagate feature vector gradients to feature embeddings.
   features_.Backpropagate(dfv);

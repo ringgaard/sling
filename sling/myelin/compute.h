@@ -1020,6 +1020,9 @@ class Instance {
  public:
   // Create data instance.
   Instance() : data_(nullptr), cell_(nullptr) {}
+  Instance(const Instance &other) = delete;
+  Instance(Instance &&other)
+    : data_(std::move(other.data_)),  cell_(std::move(other.cell_)) {}
   Instance(const Cell *cell);
   Instance(const Flow::Function *func) : Instance(func->cell) {}
 
