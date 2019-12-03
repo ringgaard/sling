@@ -254,11 +254,13 @@ Channel *RNNInstance::Compute(Channel *input) {
 
 RNNLearner::RNNLearner(const RNNLayer *rnn)
     : rnn_(rnn),
+      lr_fwd_(rnn->lr_.cell),
       lr_hidden_(rnn->lr_.h_out),
       lr_control_(rnn->lr_.c_out),
       lr_bkw_(rnn->lr_.gcell),
       lr_dhidden_(rnn->lr_.dh_in),
       lr_dcontrol_(rnn->lr_.dc_in),
+      rl_fwd_(rnn->rl_.cell),
       rl_hidden_(rnn->rl_.h_out),
       rl_control_(rnn->rl_.c_out),
       rl_bkw_(rnn->rl_.gcell),
@@ -277,15 +279,7 @@ Channel *RNNLearner::Compute(Channel *input) {
   bool ctrl = rnn_->lr_.has_control();
 
   // Compute left-to-right RNN.
-  if (lr_fwd_.size() > length) lr_fwd_.resize(length);
-  LOG(INFO) << "st";
-  while (lr_fwd_.size() < length) {
-    LOG(INFO) << "add size " << lr_fwd_.size() << " of " << length;
-    lr_fwd_.emplace_back(rnn_->lr_.cell);
-    LOG(INFO) << "now " << lr_fwd_.size() << " of " << length;
-  }
-  LOG(INFO) << "dn";
-
+  lr_fwd_.resize(length);
   lr_hidden_.resize(length);
   if (ctrl) lr_control_.resize(length);
 
@@ -317,9 +311,7 @@ Channel *RNNLearner::Compute(Channel *input) {
   if (!rnn_->bidir_) return &lr_hidden_;
 
   // Compute right-to-left RNN.
-  if (rl_fwd_.size() > length) rl_fwd_.resize(length);
-  while (rl_fwd_.size() < length) rl_fwd_.emplace_back(rnn_->rl_.cell);
-
+  rl_fwd_.resize(length);
   rl_hidden_.resize(length);
   if (ctrl) rl_control_.resize(length);
 
@@ -489,6 +481,7 @@ void RNNStack::Initialize(const Network &net) {
 }
 
 RNNStackInstance::RNNStackInstance(const RNNStack &stack) {
+  layers_.reserve(stack.layers().size());
   for (const RNNLayer &l : stack.layers()) {
     layers_.emplace_back(&l);
   }
@@ -503,6 +496,7 @@ Channel *RNNStackInstance::Compute(Channel *input) {
 }
 
 RNNStackLearner::RNNStackLearner(const RNNStack &stack) {
+  layers_.reserve(stack.layers().size());
   for (const RNNLayer &l : stack.layers()) {
     layers_.emplace_back(&l);
   }

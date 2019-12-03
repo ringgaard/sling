@@ -574,6 +574,12 @@ int Tensor::ChannelElementSize() const {
   return Align(size(), byte_alignment());
 }
 
+int Tensor::AxisSize(int axis) const {
+  if (axis > 0) return stride(axis - 1);
+  if (dynamic_) return ChannelElementSize();
+  return size_;
+}
+
 bool Tensor::SupportsOrder(Order order) {
   return CombinedOrder(order_, order) != CONFLICTING_ORDER;
 }
@@ -820,6 +826,8 @@ ProfileSummary::~ProfileSummary() {
 Instance::Instance(const Cell *cell) : cell_(cell) {
   if (cell_ != nullptr) {
     cell_->runtime()->AllocateInstance(this);
+  } else {
+    data_ = nullptr;
   }
 }
 

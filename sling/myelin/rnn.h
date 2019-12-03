@@ -197,7 +197,7 @@ class RNNLearner {
   const RNNLayer *rnn_;
 
   // Left-to-right RNN.
-  std::vector<Instance> lr_fwd_;
+  InstanceArray lr_fwd_;
   Channel lr_hidden_;
   Channel lr_control_;
 
@@ -206,7 +206,7 @@ class RNNLearner {
   Channel lr_dcontrol_;
 
   // Right-to-left RNN for bidirectional RNN.
-  std::vector<Instance> rl_fwd_;
+  InstanceArray rl_fwd_;
   Channel rl_hidden_;
   Channel rl_control_;
 
@@ -245,7 +245,7 @@ class RNNStack {
   void Initialize(const Network &net);
 
   // Layers in RNN stack.
-  const std::vector<RNNLayer> layers() const { return layers_; }
+  const std::vector<RNNLayer> &layers() const { return layers_; }
 
  private:
   // Name prefix for RNN cells.

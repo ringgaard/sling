@@ -371,7 +371,7 @@ class Tagger {
       Channel *encodings = encoder.Compute(*sentence, 0, length);
 
       // Run tagger and compute loss.
-      grad.resize(length);
+      grad.reset(length);
       for (int i = 0; i < length; ++i) {
         // Set hidden state from RNN as input to tagger.
         tagger.Set(model_.encoding, encodings, i);

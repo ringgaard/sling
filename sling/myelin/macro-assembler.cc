@@ -447,6 +447,15 @@ void MacroAssembler::LoadTensorDeviceAddress(Register dst, Tensor *tensor) {
   }
 }
 
+void MacroAssembler::LoadDynamicSize(Register dst, Tensor *tensor, int scalar) {
+  CHECK(tensor->dynamic());
+  CHECK(!tensor->ref());
+  CHECK(tensor->IsLocal());
+  movq(dst, Operand(datareg, tensor->offset()));
+  movq(dst, Operand(dst, sizeof(char *)));
+  Multiply(dst, scalar);
+}
+
 void MacroAssembler::Copy(Register dst, int ddisp,
                           Register src, int sdisp,
                           int size) {
