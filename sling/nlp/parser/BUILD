@@ -64,7 +64,6 @@ cc_library(
     ":roles",
     ":trace",
     "//sling/base",
-    "//sling/myelin:bilstm",
     "//sling/myelin:compute",
   ],
 )

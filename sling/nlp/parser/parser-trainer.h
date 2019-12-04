@@ -170,13 +170,15 @@ class ParserTrainer : public task::LearnerTask {
 
   // Decoder model.
   myelin::Cell *decoder_ = nullptr;
+  myelin::Tensor *encodings_ = nullptr;
   myelin::Tensor *activations_ = nullptr;
+  myelin::Tensor *activation_ = nullptr;
+
   myelin::Cell *gdecoder_ = nullptr;
-  myelin::Tensor *dactivations_ = nullptr;
   myelin::Tensor *primal_ = nullptr;
+  myelin::Tensor *dencodings_ = nullptr;
+  myelin::Tensor *dactivations_ = nullptr;
   myelin::Tensor *dactivation_ = nullptr;
-  myelin::Tensor *dlr_ = nullptr;
-  myelin::Tensor *drl_ = nullptr;
 
   // Delegates.
   std::vector<DelegateLearner *> delegates_;

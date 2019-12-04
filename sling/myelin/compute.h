@@ -848,29 +848,6 @@ class Channel {
   // Initialize empty channel.
   Channel(const Tensor *format);
 
-  // Disallow copying.
-  Channel(const Channel &other) = delete;
-  Channel &operator=(const Channel &other) = delete;
-
-  // Move semantics.
-  Channel(Channel &&other)
-    : data_(std::move(other.data_)),
-      size_(std::move(other.size_)),
-      capacity_(std::move(other.capacity_)),
-      format_(std::move(other.format_)),
-      element_size_(std::move(other.element_size_)),
-      alignment_(std::move(other.alignment_)) {}
-
-  Channel &operator=(Channel &&other) {
-    data_ = std::move(other.data_);
-    size_ = std::move(other.size_);
-    capacity_ = std::move(other.capacity_);
-    format_ = std::move(other.format_);
-    element_size_ = std::move(other.element_size_);
-    alignment_ = std::move(other.alignment_);
-    return *this;
-  }
-
   // Delete channel.
   ~Channel();
 
@@ -1049,21 +1026,6 @@ class Instance {
   Instance(const Cell *cell);
   Instance(const Flow::Function *func) : Instance(func->cell) {}
 
-  // Disallow copying.
-  Instance(const Instance &other) = delete;
-  Instance &operator=(const Instance &other) = delete;
-
-  // Move semantics.
-  Instance(Instance &&other)
-    : data_(std::move(other.data_)),
-      cell_(std::move(other.cell_)) {}
-
-  Instance &operator=(Instance &&other) {
-   data_ = std::move(other.data_);
-   cell_ = std::move(other.cell_);
-   return *this;
-  }
-
   // Delete data instance.
   ~Instance();
 
@@ -1226,19 +1188,14 @@ class Instance {
   const Cell *cell_;
 };
 
-// Resizable array of instances.
+// Resizable array of cell instances.
 class InstanceArray {
  public:
-  InstanceArray(Cell *cell)
-    : cell_(cell), begin_(nullptr), end_(nullptr), limit_(nullptr) {}
+  // Create empty array of cell instances.
+  InstanceArray(Cell *cell);
 
-  ~InstanceArray() {
-    // Destruct all elements.
-    for (Instance *d = begin_; d < limit_; ++d) d->~Instance();
-
-    // Free array.
-    free(begin_);
-  }
+  // Deallocate instance array.
+  ~InstanceArray();
 
   // Index operator.
   Instance &operator[](size_t index) { return *(begin_ + index); }
@@ -1248,19 +1205,11 @@ class InstanceArray {
   size_t size() const { return end_ - begin_; }
   size_t capacity() const { return limit_ - begin_; }
 
-  // Resize array.
-  void resize(size_t size) {
-    int cap = capacity();
-    if (size < cap) {
-      end_ = begin_ + size;
-    } else if (size > cap) {
-      size_t bytes = size * sizeof(Instance);
-      begin_ = reinterpret_cast<Instance *>(realloc(begin_, bytes));
-      end_ = begin_ + cap;
-      limit_ = begin_ + size;
-      while (end_ < limit_) new (end_++) Instance(cell_);
-    }
-  }
+  // Resize array. This will never shrink the capacity of the array.
+  void Resize(size_t size);
+
+  // Deallocate all the instances and reset the capacity to zero.
+  void Clear();
 
  private:
   Cell *cell_;        // cell type for instances

@@ -456,54 +456,10 @@ void LexicalFeatureLearner::Backpropagate(Channel *dfv) {
   }
 }
 
-BiLSTM::Outputs LexicalEncoder::Build(Flow *flow,
-                                      const LexicalFeatures::Spec &spec,
-                                      Vocabulary::Iterator *words,
-                                      int dim, bool learn) {
-  if (words != nullptr) {
-    lex_.InitializeLexicon(words, spec.lexicon);
-  }
-  auto lexvars = lex_.Build(flow, spec, learn);
-  return bilstm_.Build(flow, dim, lexvars.fv, lexvars.dfv);
-}
-
-void LexicalEncoder::Initialize(const Network &net) {
-  lex_.Initialize(net);
-  bilstm_.Initialize(net);
-}
-
-BiChannel LexicalEncoderInstance::Compute(const Document &document,
-                                          int begin, int end) {
-  // Extract feature and map through feature embeddings.
-  features_.Extract(document, begin, end, &fv_);
-
-  // Compute hidden states of LSTMs.
-  return bilstm_.Compute(&fv_);
-}
-
-BiChannel LexicalEncoderLearner::Compute(const Document &document,
-                                         int begin, int end) {
-  // Extract feature and map through feature embeddings.
-  Channel *fv = features_.Extract(document, begin, end);
-
-  // Compute hidden states of LSTMs.
-  return bilstm_.Compute(fv);
-}
-
-void LexicalEncoderLearner::Backpropagate() {
-  // Backpropagate hidden state gradients through LSTMs.
-  Channel *dfv = bilstm_.Backpropagate();
-
-  // Backpropagate feature vector gradients to feature embeddings.
-  features_.Backpropagate(dfv);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-RNN::Variables LexicalEncoder2::Build(Flow *flow,
-                                      const LexicalFeatures::Spec &spec,
-                                      Vocabulary::Iterator *words,
-                                      bool learn) {
+RNN::Variables LexicalEncoder::Build(Flow *flow,
+                                     const LexicalFeatures::Spec &spec,
+                                     Vocabulary::Iterator *words,
+                                     bool learn) {
   if (words != nullptr) {
     lex_.InitializeLexicon(words, spec.lexicon);
   }
@@ -511,13 +467,13 @@ RNN::Variables LexicalEncoder2::Build(Flow *flow,
   return rnn_.Build(flow, lexvars.fv, lexvars.dfv);
 }
 
-void LexicalEncoder2::Initialize(const Network &net) {
+void LexicalEncoder::Initialize(const Network &net) {
   lex_.Initialize(net);
   rnn_.Initialize(net);
 }
 
-Channel *LexicalEncoderInstance2::Compute(const Document &document,
-                                          int begin, int end) {
+Channel *LexicalEncoderInstance::Compute(const Document &document,
+                                         int begin, int end) {
   // Extract feature and map through feature embeddings.
   features_.Extract(document, begin, end, &fv_);
 
@@ -525,8 +481,8 @@ Channel *LexicalEncoderInstance2::Compute(const Document &document,
   return rnn_.Compute(&fv_);
 }
 
-Channel *LexicalEncoderLearner2::Compute(const Document &document,
-                                         int begin, int end) {
+Channel *LexicalEncoderLearner::Compute(const Document &document,
+                                        int begin, int end) {
   // Extract feature and map through feature embeddings.
   Channel *fv = features_.Extract(document, begin, end);
 
@@ -534,7 +490,7 @@ Channel *LexicalEncoderLearner2::Compute(const Document &document,
   return rnn_.Compute(fv);
 }
 
-void LexicalEncoderLearner2::Backpropagate(Channel *doutput) {
+void LexicalEncoderLearner::Backpropagate(Channel *doutput) {
   // Backpropagate hidden state gradients through RNN.
   Channel *dfv = rnn_.Backpropagate(doutput);
 

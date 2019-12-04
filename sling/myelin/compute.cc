@@ -884,6 +884,43 @@ string Instance::ToString() const {
   return str;
 }
 
+InstanceArray::InstanceArray(Cell *cell)
+  : cell_(cell), begin_(nullptr), end_(nullptr), limit_(nullptr) {}
+
+InstanceArray::~InstanceArray() {
+  // Destruct all elements.
+  for (Instance *d = begin_; d < limit_; ++d) d->~Instance();
+
+  // Free array.
+  free(begin_);
+}
+
+// Disable class-memaccess warning to allow instance objects to be moved when
+// resizing the array.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+
+void InstanceArray::Resize(size_t size) {
+  int cap = capacity();
+  if (size < cap) {
+    end_ = begin_ + size;
+  } else if (size > cap) {
+    size_t bytes = size * sizeof(Instance);
+    begin_ = reinterpret_cast<Instance *>(realloc(begin_, bytes));
+    end_ = begin_ + cap;
+    limit_ = begin_ + size;
+    while (end_ < limit_) new (end_++) Instance(cell_);
+  }
+}
+
+#pragma GCC diagnostic pop
+
+void InstanceArray::Clear() {
+  for (Instance *d = begin_; d < limit_; ++d) d->~Instance();
+  free(begin_);
+  begin_ = end_ = limit_ = nullptr;
+}
+
 void Step::SetRegisterUsage(int regs) {
   if (cell_ != nullptr && cell_->register_usage_ < regs) {
     cell_->register_usage_ = regs;

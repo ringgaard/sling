@@ -42,15 +42,12 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   frame_limit_ = frame_limit;
 
   // Get feature inputs.
-  lr_focus_feature_ = GetParam("lr", true);
-  rl_focus_feature_ = GetParam("rl", true);
-  lr_attention_feature_ = GetParam("frame-end-lr", true);
-  rl_attention_feature_ = GetParam("frame-end-rl", true);
+  focus_feature_ = GetParam("focus", true);
+  attention_feature_ = GetParam("attention", true);
   frame_create_feature_ = GetParam("frame-creation-steps", true);
   frame_focus_feature_ = GetParam("frame-focus-steps", true);
   history_feature_ = GetParam("history", true);
-  mark_lr_feature_ = GetParam("mark-lr", true);
-  mark_rl_feature_ = GetParam("mark-rl", true);
+  mark_token_feature_ = GetParam("mark-token", true);
   mark_step_feature_ = GetParam("mark-step", true);
   mark_distance_feature_ = GetParam("mark-distance", true);
   out_roles_feature_ = GetParam("out-roles", true);
@@ -60,8 +57,7 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
 
   // Get feature sizes.
   std::vector<myelin::Tensor *> attention_features {
-    lr_attention_feature_,
-    rl_attention_feature_,
+    attention_feature_,
     frame_create_feature_,
     frame_focus_feature_,
   };
@@ -90,15 +86,8 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   if (labeled_roles_feature_ != nullptr) {
     labeled_roles_size_ = labeled_roles_feature_->elements();
   }
-  if (mark_lr_feature_ != nullptr) {
-    mark_depth_ = mark_lr_feature_->elements();
-  }
-  if (mark_rl_feature_ != nullptr) {
-    if (mark_depth_ == 0) {
-      mark_depth_ = mark_rl_feature_->elements();
-    } else {
-      CHECK_EQ(mark_depth_, mark_rl_feature_->elements());
-    }
+  if (mark_token_feature_ != nullptr) {
+    mark_depth_ = mark_token_feature_->elements();
   }
   if (mark_distance_feature_ != nullptr) {
     CHECK(spec != nullptr);
@@ -127,18 +116,16 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   }
 
   // Get links.
-  lr_lstm_ = GetParam("link/lr_lstm");
-  rl_lstm_ = GetParam("link/rl_lstm");
+  tokens_ = GetParam("tokens");
   steps_ = GetParam("steps");
   hidden_ = GetParam("hidden");
 };
 
-void ParserFeatureExtractor::Attach(const myelin::BiChannel &bilstm,
+void ParserFeatureExtractor::Attach(myelin::Channel *encodings,
                                     myelin::Channel *activations,
                                     myelin::Instance *instance) {
   const ParserFeatureModel *fm = features_;
-  instance->Set(fm->lr_lstm_, bilstm.lr);
-  instance->Set(fm->rl_lstm_, bilstm.rl);
+  instance->Set(fm->tokens_, encodings);
   instance->Set(fm->steps_, activations);
   instance->Set(fm->hidden_, activations, state_->step());
 }
@@ -150,26 +137,21 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
   // Extract LSTM focus features.
   int current = state_->current() - state_->begin();
   if (state_->current() == state_->end()) current = -1;
-  int *lr_focus = data.Get(fm->lr_focus_feature_);
-  int *rl_focus = data.Get(fm->rl_focus_feature_);
-  if (lr_focus != nullptr) *lr_focus = current;
-  if (rl_focus != nullptr) *rl_focus = current;
+  int *focus = data.Get(fm->focus_feature_);
+  if (focus != nullptr) *focus = current;
 
   // Extract features from the mark stack.
   auto &marks = state_->marks();
-  int *lr_mark = data.Get(fm->mark_lr_feature_);
-  int *rl_mark = data.Get(fm->mark_rl_feature_);
+  int *mark_token = data.Get(fm->mark_token_feature_);
   int *mark_step = data.Get(fm->mark_step_feature_);
   for (int d = 0; d < fm->mark_depth_; ++d) {
     if (d < marks.size()) {
       const auto &m = marks[marks.size() - 1 - d];
       int token = m.token - state_->begin();
-      if (lr_mark != nullptr) lr_mark[d] = token;
-      if (rl_mark != nullptr) rl_mark[d] = token;
+      if (mark_token != nullptr) mark_token[d] = token;
       if (mark_step != nullptr) mark_step[d] = m.step;
     } else {
-      if (lr_mark != nullptr) lr_mark[d] = -1;
-      if (rl_mark != nullptr) rl_mark[d] = -1;
+      if (mark_token != nullptr) mark_token[d] = -1;
       if (mark_step != nullptr) mark_step[d] = -1;
     }
   }
@@ -187,8 +169,7 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
 
   // Extract frame attention, create, and focus features.
   if (fm->attention_depth_ > 0) {
-    int *lr = data.Get(fm->lr_attention_feature_);
-    int *rl = data.Get(fm->rl_attention_feature_);
+    int *att = data.Get(fm->attention_feature_);
     int *create = data.Get(fm->frame_create_feature_);
     int *focus = data.Get(fm->frame_focus_feature_);
     for (int d = 0; d < fm->attention_depth_; ++d) {
@@ -209,8 +190,7 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
         created = attention.created;
         focused = attention.focused;
       }
-      if (lr != nullptr) lr[d] = token;
-      if (rl != nullptr) rl[d] = token;
+      if (att != nullptr) att[d] = token;
       if (create != nullptr) create[d] = created;
       if (focus != nullptr) focus[d] = focused;
     }
@@ -281,15 +261,12 @@ void ParserFeatureExtractor::TraceFeatures(myelin::Instance *instance,
 
   Data data(instance);
   const ParserFeatureModel *fm = features_;
-  step.Add(data.Get(fm->lr_focus_feature_), 1, "lr");
-  step.Add(data.Get(fm->rl_focus_feature_), 1, "rl");
-  step.Add(data.Get(fm->mark_lr_feature_), fm->mark_depth_, "mark-lr");
-  step.Add(data.Get(fm->mark_rl_feature_), fm->mark_depth_, "mark-rl");
+  step.Add(data.Get(fm->focus_feature_), 1, "focus");
+  step.Add(data.Get(fm->mark_token_feature_), fm->mark_depth_, "mark-token");
   step.Add(data.Get(fm->mark_step_feature_), fm->mark_depth_, "mark-step");
 
   int depth = fm->attention_depth_;
-  step.Add(data.Get(fm->lr_attention_feature_), depth, "frame-end-lr");
-  step.Add(data.Get(fm->rl_attention_feature_), depth, "frame-end-rl");
+  step.Add(data.Get(fm->attention_feature_), depth, "attention");
   step.Add(data.Get(fm->frame_create_feature_), depth, "frame-creation-steps");
   step.Add(data.Get(fm->frame_focus_feature_), depth, "frame-focus-steps");
   step.Add(data.Get(fm->history_feature_), fm->history_size_, "history");

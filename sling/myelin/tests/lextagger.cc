@@ -341,7 +341,7 @@ class Tagger {
     num_workers_++;
 
     // Lexical encoder learner.
-    LexicalEncoderLearner2 encoder(encoder_);
+    LexicalEncoderLearner encoder(encoder_);
 
     // POS tagger instance.
     Instance tagger(model_.tagger);
@@ -442,7 +442,7 @@ class Tagger {
   // Evaulate model on corpus returning accuracy.
   float Evaluate(Corpus *corpus) {
     // Create tagger instance with channels.
-    LexicalEncoderInstance2 encoder(encoder_);
+    LexicalEncoderInstance encoder(encoder_);
     Instance tagger(model_.tagger);
 
     // Run tagger on corpus and compare with gold tags.
@@ -505,7 +505,7 @@ class Tagger {
   Compiler compiler_;           // neural network compiler
 
   // Document input encoder.
-  LexicalEncoder2 encoder_;
+  LexicalEncoder encoder_;
 
   // Tagger model.
   TaggerModel model_;

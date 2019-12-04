@@ -18,7 +18,6 @@
 
 #include "sling/frame/serialization.h"
 #include "sling/myelin/profile.h"
-#include "sling/myelin/kernel/dragnn.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/features.h"
 #include "sling/nlp/document/lexicon.h"
@@ -33,12 +32,6 @@ void Parser::Load(Store *store, const string &model) {
   // Load and analyze parser flow file.
   myelin::Flow flow;
   CHECK(flow.Load(model));
-
-  // FIXME(ringgaard): Patch feature cell output.
-  flow.Var("features/feature_vector")->set_in();
-
-  // Register DRAGNN kernel to support legacy parser models.
-  RegisterDragnnLibrary(compiler_.library());
 
   // Compile parser flow.
   compiler_.Compile(&flow, &network_);
@@ -66,7 +59,7 @@ void Parser::Load(Store *store, const string &model) {
 
   // Initialize decoder feature model.
   myelin::Flow::Blob *spec = flow.DataBlock("spec");
-  decoder_ = network_.GetCell("ff_trunk");
+  decoder_ = network_.GetCell("decoder");
   feature_model_.Init(decoder_, spec, &roles_, actions.frame_limit());
 }
 
@@ -81,7 +74,7 @@ void Parser::Parse(Document *document) const {
     if (trace) {
       encoder.set_trace(std::bind(&Trace::AddLSTM, trace, _1, _2, _3));
     }
-    auto bilstm = encoder.Compute(*document, s.begin(), s.end());
+    myelin::Channel *encodings = encoder.Compute(*document, s.begin(), s.end());
 
     // Initialize decoder.
     ParserState state(document, s.begin(), s.end());
@@ -97,7 +90,7 @@ void Parser::Parse(Document *document) const {
 
       // Attach instance to recurrent layers.
       decoder.Clear();
-      features.Attach(bilstm, &activations, &decoder);
+      features.Attach(encodings, &activations, &decoder);
 
       // Extract features.
       features.Extract(&decoder);

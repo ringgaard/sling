@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "sling/myelin/compute.h"
-#include "sling/myelin/bilstm.h"
 #include "sling/nlp/parser/parser-state.h"
 #include "sling/nlp/parser/roles.h"
 #include "sling/nlp/parser/trace.h"
@@ -54,20 +53,16 @@ class ParserFeatureModel {
   int frame_limit_;
 
   // Features.
-  myelin::Tensor *lr_focus_feature_;         // LR LSTM input focus feature
-  myelin::Tensor *rl_focus_feature_;         // RL LSTM input focus feature
-
-  myelin::Tensor *lr_attention_feature_;     // LR LSTM frame attention feature
-  myelin::Tensor *rl_attention_feature_;     // LR LSTM frame attention feature
+  myelin::Tensor *focus_feature_;            // RNN input focus feature
+  myelin::Tensor *attention_feature_;        // RNN frame attention feature
 
   myelin::Tensor *frame_create_feature_;     // FF frame create feature
   myelin::Tensor *frame_focus_feature_;      // FF frame focus feature
 
   myelin::Tensor *history_feature_;          // history feature
 
-  myelin::Tensor *mark_lr_feature_;          // LR LSTM mark-token feature
-  myelin::Tensor *mark_rl_feature_;          // RL LSTM mark-token feature
-  myelin::Tensor *mark_step_feature_;        // mark token step feature
+  myelin::Tensor *mark_token_feature_;       // mark token feature
+  myelin::Tensor *mark_step_feature_;        // mark step feature
   myelin::Tensor *mark_distance_feature_;    // mark token distance feature
 
   myelin::Tensor *out_roles_feature_;        // out roles feature
@@ -86,8 +81,7 @@ class ParserFeatureModel {
   std::vector<int> mark_distance_bins_;      // distance bins for mark tokens
 
   // Links.
-  myelin::Tensor *lr_lstm_;                  // link to LR LSTM hidden layer
-  myelin::Tensor *rl_lstm_;                  // link to RL LSTM hidden layer
+  myelin::Tensor *tokens_;                   // link to token encodings
   myelin::Tensor *steps_;                    // link to FF step hidden layer
   myelin::Tensor *hidden_;                   // link to FF hidden layer output
 
@@ -103,7 +97,7 @@ class ParserFeatureExtractor {
       : features_(features), state_(state) {}
 
   // Attach instance to input and output channels.
-  void Attach(const myelin::BiChannel &bilstm,
+  void Attach(myelin::Channel *encodings,
               myelin::Channel *activations,
               myelin::Instance *instance);
 

@@ -74,7 +74,6 @@ cc_binary(
     "//sling/file:recordio",
     "//sling/frame:serialization",
     "//sling/frame:store",
-    "//sling/myelin:bilstm",
     "//sling/myelin:builder",
     "//sling/myelin:compiler",
     "//sling/myelin:gradient",

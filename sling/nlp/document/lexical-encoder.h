@@ -21,7 +21,6 @@
 #include "sling/base/types.h"
 #include "sling/myelin/flow.h"
 #include "sling/myelin/compute.h"
-#include "sling/myelin/bilstm.h"
 #include "sling/myelin/rnn.h"
 #include "sling/nlp/document/features.h"
 #include "sling/nlp/document/lexicon.h"
@@ -186,113 +185,11 @@ class LexicalFeatureLearner {
   myelin::Instance gradient_;
 };
 
-// A lexical encoder is a lexical feature extractor with a bi-directional LSTM
-// on top.
+// A lexical encoder is a lexical feature extractor with an RNN on top.
 class LexicalEncoder {
  public:
   LexicalEncoder(const string &lexname = "features",
-                 const string &lstmname = "lstm")
-      : lex_(lexname), bilstm_(lstmname) {}
-
-  // Build flow for lexical encoder. Returns the output variables from the
-  // LSTMs.
-  myelin::BiLSTM::Outputs Build(myelin::Flow *flow,
-                                const LexicalFeatures::Spec &spec,
-                                Vocabulary::Iterator *words,
-                                int dim, bool learn);
-
-  // Initialize feature extractor from existing model.
-  void Initialize(const myelin::Network &net);
-
-  // Lexical features module.
-  const LexicalFeatures &lex() const { return lex_; }
-
-  // Save lexicon.
-  void SaveLexicon(myelin::Flow *flow) const { lex_.SaveLexicon(flow); }
-
-  // Load lexicon.
-  void LoadLexicon(myelin::Flow *flow) { lex_.LoadLexicon(flow); }
-
- private:
-  // Lexical feature extractor with embeddings.
-  LexicalFeatures lex_;
-
-  // Bi-directional LSTM.
-  myelin::BiLSTM bilstm_;
-
-  friend class LexicalEncoderInstance;
-  friend class LexicalEncoderLearner;
-};
-
-// Lexical encoder instance.
-class LexicalEncoderInstance {
- public:
-  LexicalEncoderInstance(const LexicalEncoder &encoder)
-    : encoder_(encoder),
-      features_(encoder_.lex_),
-      bilstm_(encoder_.bilstm_),
-      fv_(encoder.lex().feature_vector()) {}
-
-  // Extract lexical features from a range of tokens in a document, map the
-  // features through the feature embeddings, and run the bi-directional LSTM
-  // encoder. Returns the left-to-right and right-to-left channels for the
-  // hidden state of the LSTMs.
-  myelin::BiChannel Compute(const Document &document, int begin, int end);
-
-  // Sets feature extraction tracing callback.
-  void set_trace(LexicalFeatureTrace trace) { features_.set_trace(trace); }
-
- private:
-  const LexicalEncoder &encoder_;
-  LexicalFeatureExtractor features_;
-  myelin::BiLSTMInstance bilstm_;
-  myelin::Channel fv_;
-};
-
-// Lexical encoder learner.
-class LexicalEncoderLearner {
- public:
-  LexicalEncoderLearner(const LexicalEncoder &encoder)
-      : encoder_(encoder),
-        features_(encoder.lex_),
-        bilstm_(encoder_.bilstm_) {}
-
-  // Compute hidden states for the LSTMs from input document.
-  myelin::BiChannel Compute(const Document &document, int begin, int end);
-
-  // Prepare gradient channels.
-  myelin::BiChannel PrepareGradientChannels(int length) {
-    return bilstm_.PrepareGradientChannels(length);
-  }
-
-  // Backpropagate hidden state gradients.
-  void Backpropagate();
-
-  // Collect gradients.
-  void CollectGradients(std::vector<myelin::Instance *> *gradients) {
-    features_.CollectGradients(gradients);
-    bilstm_.CollectGradients(gradients);
-  }
-
-  // Clear gradients.
-  void Clear() {
-    features_.Clear();
-    bilstm_.Clear();
-  }
-
- private:
-  const LexicalEncoder &encoder_;
-  LexicalFeatureLearner features_;
-  myelin::BiLSTMLearner bilstm_;
-};
-
-//////////////////////////////////////////////////////////////////////////////
-
-// A lexical encoder is a lexical feature extractor with an RNN on top.
-class LexicalEncoder2 {
- public:
-  LexicalEncoder2(const string &lexname = "features",
-                  const string &rnnname = "encoder")
+                 const string &rnnname = "encoder")
       : lex_(lexname), rnn_(rnnname) {}
 
   // Add RNN layers to encoder.
@@ -324,14 +221,14 @@ class LexicalEncoder2 {
   // RNN encoder.
   myelin::RNNStack rnn_;
 
-  friend class LexicalEncoderInstance2;
-  friend class LexicalEncoderLearner2;
+  friend class LexicalEncoderInstance;
+  friend class LexicalEncoderLearner;
 };
 
 // Lexical encoder instance.
-class LexicalEncoderInstance2 {
+class LexicalEncoderInstance {
  public:
-  LexicalEncoderInstance2(const LexicalEncoder2 &encoder)
+  LexicalEncoderInstance(const LexicalEncoder &encoder)
     : encoder_(encoder),
       features_(encoder_.lex_),
       rnn_(encoder_.rnn_),
@@ -346,16 +243,16 @@ class LexicalEncoderInstance2 {
   void set_trace(LexicalFeatureTrace trace) { features_.set_trace(trace); }
 
  private:
-  const LexicalEncoder2 &encoder_;
+  const LexicalEncoder &encoder_;
   LexicalFeatureExtractor features_;
   myelin::RNNStackInstance rnn_;
   myelin::Channel fv_;
 };
 
 // Lexical encoder learner.
-class LexicalEncoderLearner2 {
+class LexicalEncoderLearner {
  public:
-  LexicalEncoderLearner2(const LexicalEncoder2 &encoder)
+  LexicalEncoderLearner(const LexicalEncoder &encoder)
       : encoder_(encoder),
         features_(encoder.lex_),
         rnn_(encoder_.rnn_) {}
@@ -379,7 +276,7 @@ class LexicalEncoderLearner2 {
   }
 
  private:
-  const LexicalEncoder2 &encoder_;
+  const LexicalEncoder &encoder_;
   LexicalFeatureLearner features_;
   myelin::RNNStackLearner rnn_;
 };

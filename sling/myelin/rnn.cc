@@ -279,7 +279,7 @@ Channel *RNNLearner::Compute(Channel *input) {
   bool ctrl = rnn_->lr_.has_control();
 
   // Compute left-to-right RNN.
-  lr_fwd_.resize(length);
+  lr_fwd_.Resize(length);
   lr_hidden_.resize(length);
   if (ctrl) lr_control_.resize(length);
 
@@ -311,7 +311,7 @@ Channel *RNNLearner::Compute(Channel *input) {
   if (!rnn_->bidir_) return &lr_hidden_;
 
   // Compute right-to-left RNN.
-  rl_fwd_.resize(length);
+  rl_fwd_.Resize(length);
   rl_hidden_.resize(length);
   if (ctrl) rl_control_.resize(length);
 

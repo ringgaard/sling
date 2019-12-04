@@ -104,6 +104,7 @@ void ParserTrainer::Run(task::Task *task) {
   Setup(task);
 
   // Build parser model flow graph.
+  encoder_.AddLayers(1, RNN::DRAGNN_LSTM, lstm_dim_, true);
   Build(&flow_, true);
   optimizer_ = GetOptimizer(task);
   optimizer_->Build(&flow_);
@@ -112,17 +113,19 @@ void ParserTrainer::Run(task::Task *task) {
   compiler_.Compile(&flow_, &model_);
 
   // Get decoder cells and tensors.
-  decoder_ = model_.GetCell("ff_trunk");
-  activations_ = decoder_->GetParameter("ff_trunk/steps");
+  decoder_ = model_.GetCell("decoder");
+  encodings_ = decoder_->GetParameter("decoder/tokens");
+  activations_ = decoder_->GetParameter("decoder/steps");
+  activation_ = decoder_->GetParameter("decoder/hidden");
+
   gdecoder_ = decoder_->Gradient();
   primal_ = decoder_->Primal();
+  dencodings_ = encodings_->Gradient();
   dactivations_ = activations_->Gradient();
-  dactivation_ = gdecoder_->GetParameter("ff_trunk/hidden")->Gradient();
-  dlr_ = gdecoder_->GetParameter("gradients/ff_trunk/d_lr_lstm");
-  drl_ = gdecoder_->GetParameter("gradients/ff_trunk/d_rl_lstm");
+  dactivation_ = activation_->Gradient();
 
   // Initialize model.
-  feature_model_.Init(model_.GetCell("ff_trunk"),
+  feature_model_.Init(decoder_,
                       flow_.DataBlock("spec"),
                       &roles_, frame_limit_);
   model_.InitLearnableWeights(seed_, 0.0, 0.01);
@@ -162,6 +165,7 @@ void ParserTrainer::Worker(int index, Network *model) {
   std::vector<Instance *> decoders;
   myelin::Channel activations(activations_);
   myelin::Channel dactivations(dactivations_);
+  myelin::Channel dencodings(dencodings_);
   for (;;) {
     // Prepare next batch.
     for (auto *g : gradients) g->Clear();
@@ -199,7 +203,8 @@ void ParserTrainer::Worker(int index, Network *model) {
       }
 
       // Run document through encoder to produce contextual token encodings.
-      auto bilstm = encoder.Compute(*document, 0, document->length());
+      myelin::Channel *encodings =
+          encoder.Compute(*document, 0, document->length());
 
       // Run decoder and delegates on all steps in the transition sequence.
       int t = 0;
@@ -211,7 +216,7 @@ void ParserTrainer::Worker(int index, Network *model) {
 
         // Attach instance to recurrent layers.
         decoder->Clear();
-        features.Attach(bilstm, &activations, decoder);
+        features.Attach(encodings, &activations, decoder);
 
         // Extract features.
         features.Extract(decoder);
@@ -239,18 +244,17 @@ void ParserTrainer::Worker(int index, Network *model) {
       }
 
       // Propagate gradients back through decoder.
-      auto grad = encoder.PrepareGradientChannels(document->length());
+      dencodings.reset(document->length());
       for (int s = steps - 1; s >= 0; --s) {
         gdecoder.Set(primal_, decoders[s]);
+        gdecoder.Set(dencodings_, &dencodings);
         gdecoder.Set(dactivations_, &dactivations);
         gdecoder.Set(dactivation_, &dactivations, s);
-        gdecoder.Set(dlr_, grad.lr);
-        gdecoder.Set(drl_, grad.rl);
         gdecoder.Compute();
       }
 
       // Propagate gradients back through encoder.
-      encoder.Backpropagate();
+      encoder.Backpropagate(&dencodings);
 
       delete document;
     }
@@ -280,7 +284,7 @@ void ParserTrainer::Parse(Document *document) const {
   for (SentenceIterator s(document); s.more(); s.next()) {
     // Run the lexical encoder for sentence.
     LexicalEncoderInstance encoder(encoder_);
-    auto bilstm = encoder.Compute(*document, s.begin(), s.end());
+    myelin::Channel *encodings = encoder.Compute(*document, s.begin(), s.end());
 
     // Initialize decoder.
     ParserState state(document, s.begin(), s.end());
@@ -295,7 +299,7 @@ void ParserTrainer::Parse(Document *document) const {
 
       // Attach instance to recurrent layers.
       decoder.Clear();
-      features.Attach(bilstm, &activations, &decoder);
+      features.Attach(encodings, &activations, &decoder);
 
       // Extract features.
       features.Extract(&decoder);
@@ -375,22 +379,22 @@ void ParserTrainer::Checkpoint(int64 epoch, Network *model) {
 
 void ParserTrainer::Build(Flow *flow, bool learn) {
   // Build document input encoder.
-  BiLSTM::Outputs lstm;
+  RNN::Variables rnn;
   if (learn) {
     Vocabulary::HashMapIterator vocab(words_);
-    lstm = encoder_.Build(flow, spec_, &vocab, lstm_dim_, true);
+    rnn = encoder_.Build(flow, spec_, &vocab, true);
   } else {
-    lstm = encoder_.Build(flow, spec_, nullptr, lstm_dim_, false);
+    rnn = encoder_.Build(flow, spec_, nullptr, false);
   }
+  int token_dim = rnn.output->elements();
 
   // Build parser decoder.
-  FlowBuilder f(flow, "ff_trunk");
+  FlowBuilder f(flow, "decoder");
   std::vector<Flow::Variable *> features;
   Flow::Blob *spec = flow->AddBlob("spec", "");
 
   // Add inputs for recurrent channels.
-  auto *lr = f.Placeholder("link/lr_lstm", DT_FLOAT, {1, lstm_dim_}, true);
-  auto *rl = f.Placeholder("link/rl_lstm", DT_FLOAT, {1, lstm_dim_}, true);
+  auto *tokens = f.Placeholder("tokens", DT_FLOAT, {1, token_dim}, true);
   auto *steps = f.Placeholder("steps", DT_FLOAT, {1, activations_dim_}, true);
 
   // Role features.
@@ -420,21 +424,16 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
                                    steps, frame_limit_, link_dim_ff_));
   features.push_back(LinkedFeature(&f, "history",
                                    steps, history_size_, link_dim_ff_));
-  features.push_back(LinkedFeature(&f, "frame-end-lr",
-                                   lr, frame_limit_, link_dim_lstm_));
-  features.push_back(LinkedFeature(&f, "frame-end-rl",
-                                   rl, frame_limit_, link_dim_lstm_));
-  features.push_back(LinkedFeature(&f, "lr", lr, 1, link_dim_lstm_));
-  features.push_back(LinkedFeature(&f, "rl", rl, 1, link_dim_lstm_));
+  features.push_back(LinkedFeature(&f, "attention",
+                                   tokens, frame_limit_, link_dim_lstm_));
+  features.push_back(LinkedFeature(&f, "focus", tokens, 1, link_dim_lstm_));
 
   // Mark features.
   features.push_back(f.Feature("mark-distance",
                                mark_distance_bins_.size() + 1,
                                mark_depth_, mark_dim_));
-  features.push_back(LinkedFeature(&f, "mark-lr",
-                                   lr, mark_depth_, link_dim_lstm_));
-  features.push_back(LinkedFeature(&f, "mark-rl",
-                                   rl, mark_depth_, link_dim_lstm_));
+  features.push_back(LinkedFeature(&f, "mark-token",
+                                   tokens, mark_depth_, link_dim_lstm_));
   features.push_back(LinkedFeature(&f, "mark-step",
                                    steps, mark_depth_, link_dim_ff_));
   string bins;
@@ -468,8 +467,7 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   }
 
   // Link recurrences.
-  flow->Connect({lstm.lr, lr});
-  flow->Connect({lstm.rl, rl});
+  flow->Connect({tokens, rnn.output});
   flow->Connect({steps, activations});
   if (learn) {
     auto *dsteps = flow->GradientVar(steps);
