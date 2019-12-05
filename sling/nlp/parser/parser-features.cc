@@ -33,7 +33,6 @@ myelin::Tensor *ParserFeatureModel::GetParam(const string &name,
 }
 
 void ParserFeatureModel::Init(myelin::Cell *cell,
-                              myelin::Flow::Blob *spec,
                               const RoleSet *roles,
                               int frame_limit) {
   // Store cell that contains the feature inputs.
@@ -42,14 +41,17 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   frame_limit_ = frame_limit;
 
   // Get feature inputs.
-  focus_feature_ = GetParam("focus", true);
-  attention_feature_ = GetParam("attention", true);
-  frame_create_feature_ = GetParam("frame-creation-steps", true);
-  frame_focus_feature_ = GetParam("frame-focus-steps", true);
+  token_feature_ = GetParam("token", true);
+
+  attention_evoke_feature_ = GetParam("attention-evoke", true);
+  attention_create_feature_ = GetParam("attention-create", true);
+  attention_focus_feature_ = GetParam("attention-focus", true);
+
   history_feature_ = GetParam("history", true);
+
   mark_token_feature_ = GetParam("mark-token", true);
   mark_step_feature_ = GetParam("mark-step", true);
-  mark_distance_feature_ = GetParam("mark-distance", true);
+
   out_roles_feature_ = GetParam("out-roles", true);
   in_roles_feature_ = GetParam("in-roles", true);
   unlabeled_roles_feature_ = GetParam("unlabeled-roles", true);
@@ -57,19 +59,14 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
 
   // Get feature sizes.
   std::vector<myelin::Tensor *> attention_features {
-    attention_feature_,
-    frame_create_feature_,
-    frame_focus_feature_,
+    attention_evoke_feature_,
+    attention_create_feature_,
+    attention_focus_feature_,
   };
   for (auto *f : attention_features) {
-    if (!f) continue;
-    if (f->elements() > attention_depth_) {
+    if (f != nullptr && f->elements() > attention_depth_) {
       attention_depth_ = f->elements();
     }
-  }
-  for (auto *f : attention_features) {
-    if (!f) continue;
-    CHECK_EQ(attention_depth_, f->elements());
   }
   if (history_feature_ != nullptr) {
     history_size_ = history_feature_->elements();
@@ -89,36 +86,13 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   if (mark_token_feature_ != nullptr) {
     mark_depth_ = mark_token_feature_->elements();
   }
-  if (mark_distance_feature_ != nullptr) {
-    CHECK(spec != nullptr);
-    string bins_str = spec->GetAttr("mark_distance_bins");
-    std::vector<int> bins;
-    int start = 0;
-    while (true) {
-      ssize_t index = bins_str.find(' ', start);
-      if (index != string::npos) {
-        string s = bins_str.substr(start, index - start);
-        bins.push_back(std::stoi(s));
-        start = index + 1;
-      } else {
-        bins.push_back(std::stoi(bins_str.substr(start)));
-        break;
-      }
-    }
-    int distance = 0;
-    for (int i = 0; i < bins.size(); ++i) {
-      while (distance <= bins[i]) {
-        mark_distance_bins_.push_back(i);
-        distance++;
-      }
-    }
-    mark_distance_bins_.push_back(bins.size());
-  }
 
-  // Get links.
+  // Get channel links.
   tokens_ = GetParam("tokens");
   steps_ = GetParam("steps");
-  hidden_ = GetParam("hidden");
+
+  // Get output step activation from decoder.
+  activation_ = GetParam("activation");
 };
 
 void ParserFeatureExtractor::Attach(myelin::Channel *encodings,
@@ -127,18 +101,17 @@ void ParserFeatureExtractor::Attach(myelin::Channel *encodings,
   const ParserFeatureModel *fm = features_;
   instance->Set(fm->tokens_, encodings);
   instance->Set(fm->steps_, activations);
-  instance->Set(fm->hidden_, activations, state_->step());
+  instance->Set(fm->activation_, activations, state_->step());
 }
 
 void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
   const ParserFeatureModel *fm = features_;
   Data data(instance);
 
-  // Extract LSTM focus features.
+  // Extract current token feature.
   int current = state_->current() - state_->begin();
-  if (state_->current() == state_->end()) current = -1;
-  int *focus = data.Get(fm->focus_feature_);
-  if (focus != nullptr) *focus = current;
+  int *token = data.Get(fm->token_feature_);
+  if (token != nullptr) *token = current;
 
   // Extract features from the mark stack.
   auto &marks = state_->marks();
@@ -156,24 +129,13 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
     }
   }
 
-  int *mark_distance = data.Get(fm->mark_distance_feature_);
-  if (mark_distance != nullptr) {
-    *mark_distance = fm->mark_distance_bins_.back();
-    if (!marks.empty()) {
-      int distance = state_->current() - marks[marks.size() - 1].token;
-      if (distance < fm->mark_distance_bins_.size()) {
-        *mark_distance = fm->mark_distance_bins_[distance];
-      }
-    }
-  }
-
-  // Extract frame attention, create, and focus features.
+  // Extract token, create, and focus attention features.
   if (fm->attention_depth_ > 0) {
-    int *att = data.Get(fm->attention_feature_);
-    int *create = data.Get(fm->frame_create_feature_);
-    int *focus = data.Get(fm->frame_focus_feature_);
+    int *evoke = data.Get(fm->attention_evoke_feature_);
+    int *create = data.Get(fm->attention_create_feature_);
+    int *focus = data.Get(fm->attention_focus_feature_);
     for (int d = 0; d < fm->attention_depth_; ++d) {
-      int token = -1;
+      int evoked = -1;
       int created = -1;
       int focused = -1;
       if (d < state_->AttentionSize()) {
@@ -182,15 +144,15 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
 
         // Get end token for phrase that evoked frame.
         if (attention.span != nullptr) {
-          token = attention.span->end();
-          if (token != -1) token -= state_->begin() + 1;
+          evoked = attention.span->end();
+          if (evoked != -1) evoked -= state_->begin() + 1;
         }
 
         // Get the step numbers that created and focused the frame.
         created = attention.created;
         focused = attention.focused;
       }
-      if (att != nullptr) att[d] = token;
+      if (evoke != nullptr) evoke[d] = evoked;
       if (create != nullptr) create[d] = created;
       if (focus != nullptr) focus[d] = focused;
     }
@@ -261,16 +223,15 @@ void ParserFeatureExtractor::TraceFeatures(myelin::Instance *instance,
 
   Data data(instance);
   const ParserFeatureModel *fm = features_;
-  step.Add(data.Get(fm->focus_feature_), 1, "focus");
+  step.Add(data.Get(fm->token_feature_), 1, "token");
   step.Add(data.Get(fm->mark_token_feature_), fm->mark_depth_, "mark-token");
   step.Add(data.Get(fm->mark_step_feature_), fm->mark_depth_, "mark-step");
 
   int depth = fm->attention_depth_;
-  step.Add(data.Get(fm->attention_feature_), depth, "attention");
-  step.Add(data.Get(fm->frame_create_feature_), depth, "frame-creation-steps");
-  step.Add(data.Get(fm->frame_focus_feature_), depth, "frame-focus-steps");
+  step.Add(data.Get(fm->attention_evoke_feature_), depth, "attention-token");
+  step.Add(data.Get(fm->attention_create_feature_), depth, "attention-create");
+  step.Add(data.Get(fm->attention_focus_feature_), depth, "attention-focus");
   step.Add(data.Get(fm->history_feature_), fm->history_size_, "history");
-  step.Add(data.Get(fm->mark_distance_feature_), 1, "mark-distance");
   step.Add(data.Get(fm->out_roles_feature_), fm->out_roles_size_, "out-roles");
   step.Add(data.Get(fm->in_roles_feature_), fm->in_roles_size_, "in-roles");
   step.Add(data.Get(fm->unlabeled_roles_feature_),

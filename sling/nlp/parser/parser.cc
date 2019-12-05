@@ -59,8 +59,9 @@ void Parser::Load(Store *store, const string &model) {
 
   // Initialize decoder feature model.
   myelin::Flow::Blob *spec = flow.DataBlock("spec");
+  int frame_limit = spec->GetAttr("frame_limit", 5);
   decoder_ = network_.GetCell("decoder");
-  feature_model_.Init(decoder_, spec, &roles_, actions.frame_limit());
+  feature_model_.Init(decoder_, &roles_, frame_limit);
 }
 
 void Parser::Parse(Document *document) const {
@@ -80,7 +81,7 @@ void Parser::Parse(Document *document) const {
     ParserState state(document, s.begin(), s.end());
     ParserFeatureExtractor features(&feature_model_, &state);
     myelin::Instance decoder(decoder_);
-    myelin::Channel activations(feature_model_.hidden());
+    myelin::Channel activations(feature_model_.activation());
     CascadeInstance cascade(&cascade_);
 
     // Run decoder to predict transitions.

@@ -46,8 +46,8 @@ class DelegateLearner {
 
   // Build flow for delegate learner.
   virtual void Build(myelin::Flow *flow,
-                     myelin::Flow::Variable *activations,
-                     myelin::Flow::Variable *dactivations,
+                     myelin::Flow::Variable *activation,
+                     myelin::Flow::Variable *dactivation,
                      bool learn) = 0;
 
   // Initialize network for delegate.
@@ -72,8 +72,8 @@ class DelegateLearnerInstance {
   virtual void ClearGradients() = 0;
 
   // Compute loss and gradient for delegate with respect to golden action.
-  virtual float Compute(float *activations,
-                        float *dactivations,
+  virtual float Compute(float *activation,
+                        float *dactivation,
                         const ParserAction &action) = 0;
 
   // Predict action for delegate.
@@ -188,7 +188,7 @@ class ParserTrainer : public task::LearnerTask {
   Mutex update_mu_;
 
   // Model hyperparameters.
-  int lstm_dim_ = 256;
+  int rnn_dim_ = 256;
   int max_source_ = 5;
   int max_target_ = 10;
   int mark_depth_ = 1;
@@ -201,10 +201,9 @@ class ParserTrainer : public task::LearnerTask {
   int unlabeled_roles_size_ = 32;
   int roles_dim_ = 16;
   int activations_dim_ = 128;
-  int link_dim_lstm_ = 32;
-  int link_dim_ff_ = 64;
+  int link_dim_token_ = 32;
+  int link_dim_step_ = 64;
   int mark_dim_ = 32;
-  std::vector<int> mark_distance_bins_{0, 1, 2, 3, 6, 10, 15, 20};
   int seed_ = 0;
   int batch_size_ = 32;
   float learning_rate_ = 1.0;

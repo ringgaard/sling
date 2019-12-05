@@ -77,7 +77,7 @@ class ParserState {
   void Apply(const ParserAction &action);
 
   // Returns the first type for a frame in the attention buffer. This will be
-  // the type specified when the frame was created with EVOKE/EMBED/ELABORATE.
+  // the type specified when the frame was created with EVOKE.
   Handle Type(int index) const;
 
   // Gets the handles of the k frames that are closest to the center of
@@ -104,7 +104,7 @@ class ParserState {
   // Returns the size of the attention buffer.
   int AttentionSize() const { return attention_.size(); }
 
-  // Returns whether 'action' can be applied to the state.
+  // Returns whether action can be applied to the state.
   bool CanApply(const ParserAction &action) const;
 
   // Returns a human-readable representation of the state.

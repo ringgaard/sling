@@ -60,28 +60,12 @@ class ActionTable {
   // Initialize the action table from store.
   void Init(Store *store);
 
-  // Maximum number of actions per token.
-  int max_actions_per_token() const { return max_actions_per_token_; }
-  void set_max_actions_per_token(int m) {
-    if (max_actions_per_token_ < m) max_actions_per_token_ = m;
-  }
-
-  // Frame limit for source and target in parser actions.
-  int frame_limit() const { return frame_limit_; }
-  void set_frame_limit(int limit) { frame_limit_ = limit; }
-
  private:
   // List of actions.
   std::vector<ParserAction> actions_;
 
   // Mapping from parser action to index.
   std::unordered_map<ParserAction, int, ParserActionHash> mapping_;
-
-  // Maximum index of source and target for actions.
-  int frame_limit_ = 5;
-
-  // Maximum number of actions taken per token.
-  int max_actions_per_token_ = -1;
 };
 
 }  // namespace nlp

@@ -32,12 +32,11 @@ class ParserFeatureModel {
  public:
   // Initialize feature model.
   void Init(myelin::Cell *cell,
-            myelin::Flow::Blob *spec,
             const RoleSet *roles,
             int frame_limit);
 
-  // Return tensor for hidden layer activations.
-  const myelin::Tensor *hidden() const { return hidden_; }
+  // Return output with activation for current step.
+  const myelin::Tensor *activation() const { return activation_; }
 
  private:
   // Get parameter tensor in decoder cell.
@@ -49,41 +48,42 @@ class ParserFeatureModel {
   // Set of roles considered.
   const RoleSet *roles_;
 
-  // Maximum attention index considered (exclusive).
+  // Maximum frame attention index considered (exclusive).
   int frame_limit_;
 
   // Features.
-  myelin::Tensor *focus_feature_;            // RNN input focus feature
-  myelin::Tensor *attention_feature_;        // RNN frame attention feature
+  myelin::Tensor *token_feature_;             // current token feature
 
-  myelin::Tensor *frame_create_feature_;     // FF frame create feature
-  myelin::Tensor *frame_focus_feature_;      // FF frame focus feature
+  myelin::Tensor *attention_evoke_feature_;   // attention evoke feature
+  myelin::Tensor *attention_create_feature_;  // attention frame create feature
+  myelin::Tensor *attention_focus_feature_;   // attention frame focus feature
 
-  myelin::Tensor *history_feature_;          // history feature
+  myelin::Tensor *history_feature_;           // history feature
 
-  myelin::Tensor *mark_token_feature_;       // mark token feature
-  myelin::Tensor *mark_step_feature_;        // mark step feature
-  myelin::Tensor *mark_distance_feature_;    // mark token distance feature
+  myelin::Tensor *mark_token_feature_;        // mark token feature
+  myelin::Tensor *mark_step_feature_;         // mark step feature
 
-  myelin::Tensor *out_roles_feature_;        // out roles feature
-  myelin::Tensor *in_roles_feature_;         // in roles feature
-  myelin::Tensor *unlabeled_roles_feature_;  // unlabeled roles feature
-  myelin::Tensor *labeled_roles_feature_;    // labeled roles feature
+  myelin::Tensor *out_roles_feature_;         // out roles feature
+  myelin::Tensor *in_roles_feature_;          // in roles feature
+  myelin::Tensor *unlabeled_roles_feature_;   // unlabeled roles feature
+  myelin::Tensor *labeled_roles_feature_;     // labeled roles feature
 
   // Feature dimensions.
-  int mark_depth_ = 0;                       // mark stack depth to use
-  int attention_depth_ = 0;                  // number of attention features
-  int history_size_ = 0;                     // number of history features
-  int out_roles_size_ = 0;                   // max number of out roles
-  int in_roles_size_ = 0;                    // max number of in roles
-  int labeled_roles_size_ = 0;               // max number of unlabeled roles
-  int unlabeled_roles_size_ = 0;             // max number of labeled roles
-  std::vector<int> mark_distance_bins_;      // distance bins for mark tokens
+  int mark_depth_ = 0;                        // mark stack depth to use
+  int attention_depth_ = 0;                   // number of attention features
+  int history_size_ = 0;                      // number of history features
+  int out_roles_size_ = 0;                    // max number of out roles
+  int in_roles_size_ = 0;                     // max number of in roles
+  int labeled_roles_size_ = 0;                // max number of unlabeled roles
+  int unlabeled_roles_size_ = 0;              // max number of labeled roles
 
-  // Links.
-  myelin::Tensor *tokens_;                   // link to token encodings
-  myelin::Tensor *steps_;                    // link to FF step hidden layer
-  myelin::Tensor *hidden_;                   // link to FF hidden layer output
+  // Channel links.
+  myelin::Tensor *tokens_;                    // link to token encodings
+  myelin::Tensor *steps_;                     // link to step activations
+
+
+  // Output with activation for current step.
+  myelin::Tensor *activation_;
 
   friend class ParserFeatureExtractor;
 };

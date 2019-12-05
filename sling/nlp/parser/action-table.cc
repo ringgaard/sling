@@ -37,10 +37,6 @@ void ActionTable::Init(Store *store) {
   Frame top(store, "/table");
   CHECK(top.valid());
 
-  // Get all the integer fields.
-  max_actions_per_token_ = top.GetInt("/table/max_actions_per_token", 5);
-  frame_limit_ = top.GetInt("/table/frame_limit", 5);
-
   // Read the action index.
   Array actions = top.Get("/table/actions").AsArray();
   CHECK(actions.valid());

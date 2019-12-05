@@ -35,11 +35,11 @@ class MultiClassDelegateLearner : public DelegateLearner {
       : name_(name), loss_(name + "_loss") {}
 
   void Build(Flow *flow,
-             Flow::Variable *activations,
-             Flow::Variable *dactivations,
+             Flow::Variable *activation,
+             Flow::Variable *dactivation,
              bool learn) override {
     FlowBuilder f(flow, name_);
-    int dim = activations->elements();
+    int dim = activation->elements();
     int size = actions_.size();
     auto *W = f.Random(f.Parameter("W", DT_FLOAT, {dim, size}));
     auto *b = f.Random(f.Parameter("b", DT_FLOAT, {1, size}));
@@ -49,7 +49,7 @@ class MultiClassDelegateLearner : public DelegateLearner {
     logits->set_out();
     f.Name(f.ArgMax(logits), "output");
 
-    flow->Connect({activations, input});
+    flow->Connect({activation, input});
     if (learn) {
       Gradient(flow, f.func());
       auto *dlogits = flow->GradientVar(logits);
@@ -139,15 +139,15 @@ class MultiClassDelegateLearner : public DelegateLearner {
       backward_.Clear();
     }
 
-    float Compute(float *activations,
-                  float *dactivations,
+    float Compute(float *activation,
+                  float *dactivation,
                   const ParserAction &action) override {
       // Look up index for action. Skip backpropagation if action is unknown.
       int target = learner_->actions_.Index(action);
       if (target == -1) return 0.0;
 
-      // Compute logits from activations.
-      forward_.SetReference(learner_->input_, activations);
+      // Compute logits from activation.
+      forward_.SetReference(learner_->input_, activation);
       forward_.Compute();
 
       // Compute loss.
@@ -157,15 +157,15 @@ class MultiClassDelegateLearner : public DelegateLearner {
 
       // Backpropagate loss.
       backward_.Set(learner_->primal_, &forward_);
-      backward_.SetReference(learner_->dinput_, dactivations);
+      backward_.SetReference(learner_->dinput_, dactivation);
       backward_.Compute();
 
       return loss;
     }
 
-    void Predict(float *activations, ParserAction *action) override {
+    void Predict(float *activation, ParserAction *action) override {
       // Predict action from activations.
-      forward_.SetReference(learner_->input_, activations);
+      forward_.SetReference(learner_->input_, activation);
       forward_.Compute();
       int argmax = *forward_.Get<int>(learner_->output_);
       *action = learner_->actions_.Action(argmax);

@@ -36,10 +36,11 @@ ParserTrainer::~ParserTrainer() {
 
 void ParserTrainer::Run(task::Task *task) {
   // Get training parameters.
-  task->Fetch("lstm_dim", &lstm_dim_);
+  task->Fetch("rnn_dim", &rnn_dim_);
   task->Fetch("max_source", &max_source_);
   task->Fetch("max_target", &max_target_);
   task->Fetch("mark_depth", &mark_depth_);
+  task->Fetch("mark_dim", &mark_dim_);
   task->Fetch("frame_limit", &frame_limit_);
   task->Fetch("attention_depth", &attention_depth_);
   task->Fetch("history_size", &history_size_);
@@ -49,9 +50,8 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("unlabeled_roles_size", &unlabeled_roles_size_);
   task->Fetch("roles_dim", &roles_dim_);
   task->Fetch("activations_dim", &activations_dim_);
-  task->Fetch("link_dim_lstm", &link_dim_lstm_);
-  task->Fetch("link_dim_ff", &link_dim_ff_);
-  task->Fetch("mark_dim", &mark_dim_);
+  task->Fetch("link_dim_token", &link_dim_token_);
+  task->Fetch("link_dim_step", &link_dim_step_);
   task->Fetch("seed", &seed_);
   task->Fetch("batch_size", &batch_size_);
   task->Fetch("learning_rate", &learning_rate_);
@@ -104,7 +104,7 @@ void ParserTrainer::Run(task::Task *task) {
   Setup(task);
 
   // Build parser model flow graph.
-  encoder_.AddLayers(1, RNN::DRAGNN_LSTM, lstm_dim_, true);
+  encoder_.AddLayers(1, RNN::DRAGNN_LSTM, rnn_dim_, true);
   Build(&flow_, true);
   optimizer_ = GetOptimizer(task);
   optimizer_->Build(&flow_);
@@ -116,7 +116,7 @@ void ParserTrainer::Run(task::Task *task) {
   decoder_ = model_.GetCell("decoder");
   encodings_ = decoder_->GetParameter("decoder/tokens");
   activations_ = decoder_->GetParameter("decoder/steps");
-  activation_ = decoder_->GetParameter("decoder/hidden");
+  activation_ = decoder_->GetParameter("decoder/activation");
 
   gdecoder_ = decoder_->Gradient();
   primal_ = decoder_->Primal();
@@ -125,9 +125,7 @@ void ParserTrainer::Run(task::Task *task) {
   dactivation_ = activation_->Gradient();
 
   // Initialize model.
-  feature_model_.Init(decoder_,
-                      flow_.DataBlock("spec"),
-                      &roles_, frame_limit_);
+  feature_model_.Init(decoder_, &roles_, frame_limit_);
   model_.InitLearnableWeights(seed_, 0.0, 0.01);
   encoder_.Initialize(model_);
   optimizer_->Initialize(model_);
@@ -290,7 +288,7 @@ void ParserTrainer::Parse(Document *document) const {
     ParserState state(document, s.begin(), s.end());
     ParserFeatureExtractor features(&feature_model_, &state);
     myelin::Instance decoder(decoder_);
-    myelin::Channel activations(feature_model_.hidden());
+    myelin::Channel activations(feature_model_.activation());
 
     // Run decoder to predict transitions.
     while (!state.done()) {
@@ -392,6 +390,7 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   FlowBuilder f(flow, "decoder");
   std::vector<Flow::Variable *> features;
   Flow::Blob *spec = flow->AddBlob("spec", "");
+  spec->SetAttr("frame_limit", frame_limit_);
 
   // Add inputs for recurrent channels.
   auto *tokens = f.Placeholder("tokens", DT_FLOAT, {1, token_dim}, true);
@@ -418,31 +417,21 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   }
 
   // Link features.
-  features.push_back(LinkedFeature(&f, "frame-creation-steps",
-                                   steps, frame_limit_, link_dim_ff_));
-  features.push_back(LinkedFeature(&f, "frame-focus-steps",
-                                   steps, frame_limit_, link_dim_ff_));
+  features.push_back(LinkedFeature(&f, "token", tokens, 1, link_dim_token_));
+  features.push_back(LinkedFeature(&f, "attention-evoke",
+                                   tokens, frame_limit_, link_dim_token_));
+  features.push_back(LinkedFeature(&f, "attention-create",
+                                   steps, frame_limit_, link_dim_step_));
+  features.push_back(LinkedFeature(&f, "attention-focus",
+                                   steps, frame_limit_, link_dim_step_));
   features.push_back(LinkedFeature(&f, "history",
-                                   steps, history_size_, link_dim_ff_));
-  features.push_back(LinkedFeature(&f, "attention",
-                                   tokens, frame_limit_, link_dim_lstm_));
-  features.push_back(LinkedFeature(&f, "focus", tokens, 1, link_dim_lstm_));
+                                   steps, history_size_, link_dim_step_));
 
   // Mark features.
-  features.push_back(f.Feature("mark-distance",
-                               mark_distance_bins_.size() + 1,
-                               mark_depth_, mark_dim_));
   features.push_back(LinkedFeature(&f, "mark-token",
-                                   tokens, mark_depth_, link_dim_lstm_));
+                                   tokens, mark_depth_, link_dim_token_));
   features.push_back(LinkedFeature(&f, "mark-step",
-                                   steps, mark_depth_, link_dim_ff_));
-  string bins;
-  for (int d : mark_distance_bins_) {
-    if (!bins.empty()) bins.push_back(' ');
-    bins.append(std::to_string(d));
-  }
-  spec->SetAttr("mark_distance_bins", bins);
-  spec->SetAttr("frame_limit", frame_limit_);
+                                   steps, mark_depth_, link_dim_step_));
 
   // Concatenate mapped feature inputs.
   auto *fv = f.Concat(features);
@@ -451,27 +440,27 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   // Feed-forward layer.
   auto *W = f.Random(f.Parameter("W0", DT_FLOAT, {fvsize, activations_dim_}));
   auto *b = f.Random(f.Parameter("b0", DT_FLOAT, {1, activations_dim_}));
-  auto *activations = f.Name(f.Relu(f.Add(f.MatMul(fv, W), b)), "hidden");
-  activations->set_in()->set_out()->set_ref();
+  auto *activation = f.Name(f.Relu(f.Add(f.MatMul(fv, W), b)), "activation");
+  activation->set_in()->set_out()->set_ref();
 
   // Build function decoder gradient.
-  Flow::Variable *dactivations = nullptr;
+  Flow::Variable *dactivation = nullptr;
   if (learn) {
     Gradient(flow, f.func());
-    dactivations = flow->GradientVar(activations);
+    dactivation = flow->GradientVar(activation);
   }
 
   // Build flows for delegates.
   for (DelegateLearner *delegate : delegates_) {
-    delegate->Build(flow, activations, dactivations, learn);
+    delegate->Build(flow, activation, dactivation, learn);
   }
 
   // Link recurrences.
   flow->Connect({tokens, rnn.output});
-  flow->Connect({steps, activations});
+  flow->Connect({steps, activation});
   if (learn) {
     auto *dsteps = flow->GradientVar(steps);
-    flow->Connect({dsteps, dactivations});
+    flow->Connect({dsteps, dactivation});
   }
 }
 

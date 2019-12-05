@@ -895,25 +895,20 @@ InstanceArray::~InstanceArray() {
   free(begin_);
 }
 
-// Disable class-memaccess warning to allow instance objects to be moved when
-// resizing the array.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-
 void InstanceArray::Resize(size_t size) {
   int cap = capacity();
   if (size < cap) {
     end_ = begin_ + size;
   } else if (size > cap) {
+    // This awkward way of assigning the new data buffer to begin_ is needed to
+    // avoid getting a GCC 8+ class-memaccess warning.
     size_t bytes = size * sizeof(Instance);
-    begin_ = reinterpret_cast<Instance *>(realloc(begin_, bytes));
+    *reinterpret_cast<void **>(&begin_) = realloc(begin_, bytes);
     end_ = begin_ + cap;
     limit_ = begin_ + size;
     while (end_ < limit_) new (end_++) Instance(cell_);
   }
 }
-
-#pragma GCC diagnostic pop
 
 void InstanceArray::Clear() {
   for (Instance *d = begin_; d < limit_; ++d) d->~Instance();
