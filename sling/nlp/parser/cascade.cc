@@ -133,13 +133,11 @@ CascadeInstance::~CascadeInstance() {
 
 void CascadeInstance::Compute(myelin::Channel *activations,
                               ParserState *state,
-                              ParserAction *output,
-                              Trace *trace) {
+                              ParserAction *output) {
   int current = 0;
   while (true) {
     // Execute the current delegate's instance.
     instances_[current]->Compute(activations, state->step(), output);
-    if (trace != nullptr) trace->Action(*output);
 
     // If there is a cascade down the chain then follow it.
     // To avoid potential infinite loops, cascades to delegates
@@ -155,7 +153,6 @@ void CascadeInstance::Compute(myelin::Channel *activations,
 
     // Use SHIFT as fallback action.
     *output = ParserAction::Shift();
-    if (trace != nullptr) trace->Fallback(*output);
     return;
   }
 }

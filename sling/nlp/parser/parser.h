@@ -29,7 +29,6 @@
 #include "sling/nlp/parser/parser-features.h"
 #include "sling/nlp/parser/parser-state.h"
 #include "sling/nlp/parser/roles.h"
-#include "sling/nlp/parser/trace.h"
 
 namespace sling {
 namespace nlp {
@@ -48,12 +47,6 @@ class Parser {
 
   // Return the lexical encoder.
   const LexicalEncoder &encoder() const { return encoder_; }
-
-  // Returns whether tracing is enabled.
-  bool trace() const { return trace_; }
-
-  // Enable/disable tracing.
-  void set_trace(bool trace) { trace_ = trace; }
 
  private:
   // JIT compiler.
@@ -79,9 +72,6 @@ class Parser {
 
   // Set of roles considered.
   RoleSet roles_;
-
-  // Whether tracing is enabled.
-  bool trace_;
 };
 
 }  // namespace nlp

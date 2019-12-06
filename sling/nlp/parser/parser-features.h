@@ -20,7 +20,6 @@
 #include "sling/myelin/compute.h"
 #include "sling/nlp/parser/parser-state.h"
 #include "sling/nlp/parser/roles.h"
-#include "sling/nlp/parser/trace.h"
 
 namespace sling {
 namespace nlp {
@@ -103,9 +102,6 @@ class ParserFeatureExtractor {
 
   // Extract features from current state and add these to the data instance.
   void Extract(myelin::Instance *data);
-
-  // Add extracted features to trace.
-  void TraceFeatures(myelin::Instance *instance, Trace *trace) const;
 
  private:
   // Wrapper for data instance for looking up feature input tensors.

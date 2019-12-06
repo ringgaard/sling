@@ -903,7 +903,8 @@ void InstanceArray::Resize(size_t size) {
     // This awkward way of assigning the new data buffer to begin_ is needed to
     // avoid getting a GCC 8+ class-memaccess warning.
     size_t bytes = size * sizeof(Instance);
-    *reinterpret_cast<void **>(&begin_) = realloc(begin_, bytes);
+    void **data = reinterpret_cast<void **>(&begin_);
+    *data = realloc(*data, bytes);
     end_ = begin_ + cap;
     limit_ = begin_ + size;
     while (end_ < limit_) new (end_++) Instance(cell_);

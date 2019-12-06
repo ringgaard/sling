@@ -25,7 +25,6 @@
 #include "sling/myelin/flow.h"
 #include "sling/nlp/parser/parser-action.h"
 #include "sling/nlp/parser/parser-state.h"
-#include "sling/nlp/parser/trace.h"
 
 namespace sling {
 namespace nlp {
@@ -120,11 +119,9 @@ class CascadeInstance {
 
   // Outputs in 'output' the result of running the whole cascade on 'state'.
   // The activation at index 'step' is used as input to all the delegates.
-  // Adds the predicted and final actions to 'trace' if it is not nullptr.
   void Compute(myelin::Channel *activations,
                ParserState *state,
-               ParserAction *output,
-               Trace *trace = nullptr);
+               ParserAction *output);
 
  private:
   const Cascade *const cascade_ = nullptr;     // cascade; not owned

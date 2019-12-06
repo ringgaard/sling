@@ -67,14 +67,8 @@ void Parser::Load(Store *store, const string &model) {
 void Parser::Parse(Document *document) const {
   // Parse each sentence of the document.
   for (SentenceIterator s(document); s.more(); s.next()) {
-    // Set up trace if feature tracing is enabled.
-    Trace *trace = trace_ ? new Trace(s.begin(), s.end()) : nullptr;
-
     // Run the lexical encoder for sentence.
     LexicalEncoderInstance encoder(encoder_);
-    if (trace) {
-      encoder.set_trace(std::bind(&Trace::AddLSTM, trace, _1, _2, _3));
-    }
     myelin::Channel *encodings = encoder.Compute(*document, s.begin(), s.end());
 
     // Initialize decoder.
@@ -95,23 +89,16 @@ void Parser::Parse(Document *document) const {
 
       // Extract features.
       features.Extract(&decoder);
-      if (trace) features.TraceFeatures(&decoder, trace);
 
       // Compute decoder activations.
       decoder.Compute();
 
       // Run the cascade.
       ParserAction action;
-      cascade.Compute(&activations, &state, &action, trace);
+      cascade.Compute(&activations, &state, &action);
 
       // Apply action to parser state.
       state.Apply(action);
-    }
-
-    // Write feature trace to document.
-    if (trace) {
-      trace->Write(document);
-      delete trace;
     }
   }
 }

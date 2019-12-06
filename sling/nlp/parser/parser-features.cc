@@ -215,31 +215,6 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
   }
 };
 
-void ParserFeatureExtractor::TraceFeatures(myelin::Instance *instance,
-                                           Trace *trace) const {
-  trace->steps.emplace_back();
-  auto &step = trace->steps.back();
-  step.current = state_->current();
-
-  Data data(instance);
-  const ParserFeatureModel *fm = features_;
-  step.Add(data.Get(fm->token_feature_), 1, "token");
-  step.Add(data.Get(fm->mark_token_feature_), fm->mark_depth_, "mark-token");
-  step.Add(data.Get(fm->mark_step_feature_), fm->mark_depth_, "mark-step");
-
-  int depth = fm->attention_depth_;
-  step.Add(data.Get(fm->attention_evoke_feature_), depth, "attention-token");
-  step.Add(data.Get(fm->attention_create_feature_), depth, "attention-create");
-  step.Add(data.Get(fm->attention_focus_feature_), depth, "attention-focus");
-  step.Add(data.Get(fm->history_feature_), fm->history_size_, "history");
-  step.Add(data.Get(fm->out_roles_feature_), fm->out_roles_size_, "out-roles");
-  step.Add(data.Get(fm->in_roles_feature_), fm->in_roles_size_, "in-roles");
-  step.Add(data.Get(fm->unlabeled_roles_feature_),
-    fm->unlabeled_roles_size_, "unlabeled-roles");
-  step.Add(data.Get(fm->labeled_roles_feature_),
-    fm->labeled_roles_size_, "labeled-roles");
-}
-
 }  // namespace nlp
 }  // namespace sling
 
