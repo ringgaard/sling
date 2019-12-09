@@ -18,7 +18,6 @@
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/nlp/document/document.h"
-#include "sling/string/strcat.h"
 
 namespace sling {
 namespace nlp {
@@ -29,23 +28,6 @@ ParserState::ParserState(Document *document, int begin, int end)
       end_(end),
       current_(begin),
       step_(0) {}
-
-string ParserState::DebugString() const {
-  static const int MAX_ATTENTION = 10;
-  string s =
-      StrCat("Begin:", begin_, " End:", end_, " Current:", current_,
-             " AttentionSize: ", attention_.size(), "\n");
-  for (int i = 0; i < attention_.size(); ++i) {
-    if (i == MAX_ATTENTION) {
-      StrAppend(&s, "..and ", (attention_.size() - MAX_ATTENTION), " more.\n");
-      break;
-    }
-    StrAppend(&s, "AttentionIndex: ", i,
-              " FrameType:", store()->DebugString(Type(i)), "\n");
-  }
-
-  return s;
-}
 
 void ParserState::Apply(const ParserAction &action) {
   switch (action.type) {
@@ -295,10 +277,6 @@ int ParserState::AttentionIndex(Handle frame, int k) const {
     if (Attention(i).frame == frame) return i;
   }
   return -1;
-}
-
-Handle ParserState::Type(int index) const {
-  return store()->GetFrame(Attention(index).frame)->get(Handle::isa());
 }
 
 }  // namespace nlp

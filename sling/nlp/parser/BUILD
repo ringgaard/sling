@@ -23,7 +23,6 @@ cc_library(
     "//sling/frame:object",
     "//sling/frame:store",
     "//sling/nlp/document",
-    "//sling/string:strcat",
   ],
 )
 
@@ -33,13 +32,10 @@ cc_library(
   hdrs = ["action-table.h"],
   deps = [
     ":parser-action",
-    ":parser-state",
     "//sling/base",
-    "//sling/file",
     "//sling/frame:object",
     "//sling/frame:serialization",
     "//sling/frame:store",
-    "//sling/string:text",
   ],
 )
 
@@ -68,27 +64,10 @@ cc_library(
 )
 
 cc_library(
-  name = "cascade",
-  srcs = ["cascade.cc"],
-  hdrs = ["cascade.h"],
-  deps = [
-    ":action-table",
-    ":parser-state",
-    "//sling/base",
-    "//sling/frame:serialization",
-    "//sling/frame:store",
-    "//sling/myelin:compute",
-    "//sling/myelin:flow",
-  ],
-)
-
-cc_library(
   name = "parser",
   srcs = ["parser.cc"],
   hdrs = ["parser.h"],
   deps = [
-    ":action-table",
-    ":cascade",
     ":parser-features",
     ":parser-state",
     ":roles",
@@ -107,6 +86,7 @@ cc_library(
   srcs = ["parser-annotator.cc"],
   deps = [
     ":parser",
+    ":multiclass-delegate",
     "//sling/nlp/document:annotator",
   ],
   alwayslink = 1,
@@ -182,6 +162,16 @@ cc_library(
     "//sling/myelin:learning",
     "//sling/nlp/document:document",
     "//sling/nlp/document:document-corpus",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "multiclass-delegate",
+  srcs = ["multiclass-delegate.cc"],
+  deps = [
+    ":action-table",
+    ":parser",
   ],
   alwayslink = 1,
 )

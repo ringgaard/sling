@@ -37,8 +37,9 @@ ParserTrainer::~ParserTrainer() {
 void ParserTrainer::Run(task::Task *task) {
   // Get training parameters.
   task->Fetch("rnn_dim", &rnn_dim_);
-  task->Fetch("max_source", &max_source_);
-  task->Fetch("max_target", &max_target_);
+  task->Fetch("rnn_layers", &rnn_layers_);
+  task->Fetch("rnn_type", &rnn_type_);
+  task->Fetch("rnn_bidir", &rnn_bidir_);
   task->Fetch("mark_depth", &mark_depth_);
   task->Fetch("mark_dim", &mark_dim_);
   task->Fetch("frame_limit", &frame_limit_);
@@ -99,12 +100,17 @@ void ParserTrainer::Run(task::Task *task) {
   spec_.quote_dim = task->Get("quote_dim", 8);;
   spec_.digit_dim = task->Get("digit_dim", 8);;
 
+  // Set up RNNs.
+  RNN::Spec rnn_spec;
+  rnn_spec.type = static_cast<RNN::Type>(rnn_type_);
+  rnn_spec.dim = rnn_dim_;
+  encoder_.AddLayers(rnn_layers_, rnn_spec, rnn_bidir_);
+
   // Custom parser model initialization. This should set up the word and role
   // vocabularies as well as the delegate cascade.
   Setup(task);
 
   // Build parser model flow graph.
-  encoder_.AddLayers(1, RNN::DRAGNN_LSTM, rnn_dim_, true);
   Build(&flow_, true);
   optimizer_ = GetOptimizer(task);
   optimizer_->Build(&flow_);
@@ -389,8 +395,6 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   // Build parser decoder.
   FlowBuilder f(flow, "decoder");
   std::vector<Flow::Variable *> features;
-  Flow::Blob *spec = flow->AddBlob("spec", "");
-  spec->SetAttr("frame_limit", frame_limit_);
 
   // Add inputs for recurrent channels.
   auto *tokens = f.Placeholder("tokens", DT_FLOAT, {1, token_dim}, true);
@@ -398,39 +402,39 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
 
   // Role features.
   if (in_roles_size_ > 0) {
-    features.push_back(f.Feature("in-roles", roles_.size() * frame_limit_,
+    features.push_back(f.Feature("in_roles", roles_.size() * frame_limit_,
                                  in_roles_size_, roles_dim_));
   }
   if (out_roles_size_ > 0) {
-    features.push_back(f.Feature("out-roles", roles_.size() * frame_limit_,
+    features.push_back(f.Feature("out_roles", roles_.size() * frame_limit_,
                                  out_roles_size_, roles_dim_));
   }
   if (labeled_roles_size_ > 0) {
-    features.push_back(f.Feature("labeled-roles",
+    features.push_back(f.Feature("labeled_roles",
                                  roles_.size() * frame_limit_ * frame_limit_,
                                  labeled_roles_size_, roles_dim_));
   }
   if (unlabeled_roles_size_ > 0) {
-    features.push_back(f.Feature("unlabeled-roles",
+    features.push_back(f.Feature("unlabeled_roles",
                                  frame_limit_ * frame_limit_,
                                  unlabeled_roles_size_, roles_dim_));
   }
 
   // Link features.
   features.push_back(LinkedFeature(&f, "token", tokens, 1, link_dim_token_));
-  features.push_back(LinkedFeature(&f, "attention-evoke",
+  features.push_back(LinkedFeature(&f, "attention_evoke",
                                    tokens, frame_limit_, link_dim_token_));
-  features.push_back(LinkedFeature(&f, "attention-create",
+  features.push_back(LinkedFeature(&f, "attention_create",
                                    steps, frame_limit_, link_dim_step_));
-  features.push_back(LinkedFeature(&f, "attention-focus",
+  features.push_back(LinkedFeature(&f, "attention_focus",
                                    steps, frame_limit_, link_dim_step_));
   features.push_back(LinkedFeature(&f, "history",
                                    steps, history_size_, link_dim_step_));
 
   // Mark features.
-  features.push_back(LinkedFeature(&f, "mark-token",
+  features.push_back(LinkedFeature(&f, "mark_token",
                                    tokens, mark_depth_, link_dim_token_));
-  features.push_back(LinkedFeature(&f, "mark-step",
+  features.push_back(LinkedFeature(&f, "mark_step",
                                    steps, mark_depth_, link_dim_step_));
 
   // Concatenate mapped feature inputs.
@@ -499,27 +503,43 @@ void ParserTrainer::Save(const string &filename) {
   // Save lexicon.
   encoder_.SaveLexicon(&flow);
 
-  // Save extra model data in store.
+  // Make parser specification frame.
   Store store(&commons_);
-  SaveModel(&flow, &store);
+  Builder spec(&store);
 
-  // Save delegates.
-  Builder cascade(&store);
-  cascade.AddId("/cascade");
+  // Save encoder spec.
+  Builder encoder_spec(&store);
+  encoder_spec.Add("type", "lexrnn");
+  encoder_spec.Add("rnn", static_cast<int>(rnn_type_));
+  encoder_spec.Add("dim", rnn_dim_);
+  encoder_spec.Add("layers", rnn_layers_);
+  encoder_spec.Add("bidir", rnn_bidir_);
+  spec.Set("encoder", encoder_spec.Create());
+
+  // Save decoder spec.
+  Builder decoder_spec(&store);
+  decoder_spec.Add("type", "transition");
+  decoder_spec.Set("frame_limit", frame_limit_);
+
+  Handles role_list(&store);
+  roles_.GetList(&role_list);
+  decoder_spec.Set("roles", Array(&store, role_list));
+
   Array delegates(&store, delegates_.size());
   for (int i = 0; i < delegates_.size(); ++i) {
-    Builder data(&store);
-    delegates_[i]->Save(&flow, &data);
-    delegates.set(i, data.Create().handle());
+    Builder delegate_spec(&store);
+    delegates_[i]->Save(&flow, &delegate_spec);
+    delegates.set(i, delegate_spec.Create().handle());
   }
-  cascade.Add("delegates", delegates);
-  cascade.Create();
+  decoder_spec.Set("delegates", delegates);
 
-  // Save store in flow.
+  spec.Set("decoder", decoder_spec.Create());
+
+  // Save parser spec in flow.
   StringEncoder encoder(&store);
-  encoder.EncodeAll();
+  encoder.Encode(spec.Create());
 
-  Flow::Blob *blob = flow.AddBlob("commons", "frames");
+  Flow::Blob *blob = flow.AddBlob("parser", "frame");
   blob->data = flow.AllocateMemory(encoder.buffer());
   blob->size = encoder.buffer().size();
 

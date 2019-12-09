@@ -29,7 +29,11 @@
 #include "sling/util/thread.h"
 #include "third_party/jit/cpu.h"
 
-const int cpu_cores = sling::jit::CPU::Processors();
+using namespace sling;
+using namespace sling::myelin;
+using namespace sling::nlp;
+
+const int cpu_cores = jit::CPU::Processors();
 
 DEFINE_string(train, "local/data/corpora/stanford/train.rec", "Train corpus");
 DEFINE_string(dev, "local/data/corpora/stanford/dev.rec", "Test corpus");
@@ -56,17 +60,16 @@ DEFINE_int32(rampup, 10, "Number of seconds between thread starts");
 DEFINE_bool(lock, true, "Locked gradient updates");
 DEFINE_int32(lexthres, 0, "Lexicon threshold");
 DEFINE_int32(worddim, 32, "Word embedding dimensions");
-DEFINE_int32(rnndim, 128, "RNN size");
+DEFINE_int32(rnn_type, RNN::DRAGNN, "RNN type");
+DEFINE_int32(rnn_dim, 128, "RNN size");
+DEFINE_int32(rnn_layers, 1, "RNN layers");
+DEFINE_bool(rnn_bidir, true, "Bidirectional RNNs");
 DEFINE_string(flow, "", "Flow file for saving trained POS tagger");
 DEFINE_bool(adam, false, "Use Adam optimizer");
 DEFINE_bool(momentum, false, "Use Momentum optimizer");
 DEFINE_bool(optacc, false, "Decay learning rate based on accuracy");
 DEFINE_string(normalization, "d", "Token normalization");
 DEFINE_int32(tagset_align, 1, "Tag set size alignment");
-
-using namespace sling;
-using namespace sling::myelin;
-using namespace sling::nlp;
 
 int64 flops_counter = 0;
 
@@ -173,8 +176,13 @@ class Tagger {
 
   // Build tagger flow.
   void BuildFlow(Flow *flow, bool learn) {
+    // Set up RNNs.
+    RNN::Spec rnn_spec;
+    rnn_spec.type = static_cast<RNN::Type>(FLAGS_rnn_type);
+    rnn_spec.dim = FLAGS_rnn_dim;
+    encoder_.AddLayers(FLAGS_rnn_layers, rnn_spec, FLAGS_rnn_bidir);
+
     RNN::Variables rnn;
-    encoder_.AddLayers(1, RNN::DRAGNN_LSTM, FLAGS_rnndim, true);
     if (learn) {
       // Build lexicon.
       std::unordered_map<string, int> words;

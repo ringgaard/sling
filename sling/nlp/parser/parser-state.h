@@ -76,10 +76,6 @@ class ParserState {
   // ensure that 'action' is applicable using CanApply().
   void Apply(const ParserAction &action);
 
-  // Returns the first type for a frame in the attention buffer. This will be
-  // the type specified when the frame was created with EVOKE.
-  Handle Type(int index) const;
-
   // Gets the handles of the k frames that are closest to the center of
   // attention in the order of attention. There might be less than k frames if
   // there are fewer elements in the attention buffer.
@@ -106,9 +102,6 @@ class ParserState {
 
   // Returns whether action can be applied to the state.
   bool CanApply(const ParserAction &action) const;
-
-  // Returns a human-readable representation of the state.
-  string DebugString() const;
 
   // Returns the underlying store.
   Store *store() const { return document_->store(); }

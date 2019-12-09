@@ -57,7 +57,7 @@ class DelegateLearner {
   virtual DelegateLearnerInstance *CreateInstance() = 0;
 
   // Save model data to flow.
-  virtual void Save(myelin::Flow *flow, Builder *data) = 0;
+  virtual void Save(myelin::Flow *flow, Builder *spec) = 0;
 };
 
 // Interface for delegate learner instance.
@@ -97,9 +97,6 @@ class ParserTrainer : public task::LearnerTask {
   // Abstract method for converting document to transition sequence.
   virtual void GenerateTransitions(const Document &document,
                                    std::vector<ParserAction> *transitions) = 0;
-
-  // Abstract method for saving extra data in final model.
-  virtual void SaveModel(myelin::Flow *flow, Store *store) = 0;
 
  private:
   // Build flow graph for parser model.
@@ -188,9 +185,10 @@ class ParserTrainer : public task::LearnerTask {
   Mutex update_mu_;
 
   // Model hyperparameters.
+  int rnn_type_ = myelin::RNN::DRAGNN;
   int rnn_dim_ = 256;
-  int max_source_ = 5;
-  int max_target_ = 10;
+  int rnn_layers_ = 1;
+  int rnn_bidir_ = true;
   int mark_depth_ = 1;
   int frame_limit_ = 5;
   int attention_depth_ = 5;

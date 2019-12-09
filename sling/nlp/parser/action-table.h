@@ -22,7 +22,6 @@
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/nlp/parser/parser-action.h"
-#include "sling/nlp/parser/parser-state.h"
 
 namespace sling {
 namespace nlp {
@@ -48,17 +47,11 @@ class ActionTable {
   // Return list of actions.
   const std::vector<ParserAction> &list() const { return actions_; }
 
-  // Saves the action table.
-  void Save(const Store *global, const string &file) const;
+  // Read action table from frame.
+  void Read(const Frame &frame);
 
-  // Returns the serialization of the table.
-  string Serialize(const Store *global) const;
-
-  // Write action table in frame.
+  // Write action table to frame.
   void Write(Builder *frame) const;
-
-  // Initialize the action table from store.
-  void Init(Store *store);
 
  private:
   // List of actions.

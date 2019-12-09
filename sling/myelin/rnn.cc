@@ -28,16 +28,16 @@ RNN::Variables RNN::Build(Flow *flow,
   // Build RNN cell.
   FlowBuilder f(flow, name);
   vars.input = f.Placeholder("input", input->type, input->shape, true);
-  switch (type) {
-    case DRAGNN_LSTM:
-      vars.output = f.LSTMLayer(vars.input, dim);
+  switch (spec.type) {
+    case DRAGNN:
+      vars.output = f.LSTMLayer(vars.input, spec.dim);
       break;
     default:
-      LOG(FATAL) << "RNN type not supported: " << type;
+      LOG(FATAL) << "RNN type not supported: " << spec.type;
   }
 
   // Make zero element.
-  auto *zero = f.Name(f.Const(nullptr, input->type, {1, dim}), "zero");
+  auto *zero = f.Name(f.Const(nullptr, input->type, {1, spec.dim}), "zero");
   zero->set_out();
   flow->Connect({vars.output, zero});
 
@@ -52,7 +52,7 @@ RNN::Variables RNN::Build(Flow *flow,
     flow->Connect({vars.dinput, dinput});
 
     // Make sink variable for final channel gradients.
-    auto *sink = f.Var("sink", input->type, {1, dim})->set_out();
+    auto *sink = f.Var("sink", input->type, {1, spec.dim})->set_out();
     gf->unused.push_back(sink);
     flow->Connect({sink, flow->Var(gf->name + "/d_h_out")});
   }
@@ -130,14 +130,12 @@ void RNNMerger::Initialize(const Network &net) {
   }
 }
 
-RNNLayer::RNNLayer(const string &name, RNN::Type type, int dim, bool bidir)
+RNNLayer::RNNLayer(const string &name, const RNN::Spec &spec, bool bidir)
     : name_(name),
       bidir_(bidir),
-      lr_(name + "/lr", type, dim),
-      rl_(name + "/rl", type, dim),
-      merger_(name) {
-  if (!bidir) lr_.name = name;
-}
+      lr_(bidir ? name + "/lr" : name, spec),
+      rl_(name + "/rl", spec),
+      merger_(name) {}
 
 RNN::Variables RNNLayer::Build(Flow *flow,
                                Flow::Variable *input,
@@ -266,7 +264,7 @@ RNNLearner::RNNLearner(const RNNLayer *rnn)
       rl_bkw_(rnn->rl_.gcell),
       rl_dhidden_(rnn->rl_.dh_in),
       rl_dcontrol_(rnn->rl_.dc_in),
-      dinput_(rnn_->rl_.dinput),
+      dinput_(rnn_->lr_.dinput),
       merger_(rnn->merger_.cell),
       splitter_(rnn->merger_.gcell),
       merged_(rnn->merger_.merged),
@@ -445,14 +443,14 @@ void RNNLearner::CollectGradients(std::vector<Instance *> *gradients) {
   if (rnn_->bidir_) gradients->push_back(&rl_bkw_);
 }
 
-void RNNStack::AddLayer(RNN::Type type, int dim, bool bidir) {
+void RNNStack::AddLayer(const RNN::Spec &spec, bool bidir) {
   string name = name_ + "/rnn" + std::to_string(layers_.size());
-  layers_.emplace_back(name, type, dim, bidir);
+  layers_.emplace_back(name, spec, bidir);
 }
 
-void RNNStack::AddLayers(int layers, RNN::Type type, int dim, bool bidir) {
+void RNNStack::AddLayers(int layers, const RNN::Spec &spec, bool bidir) {
   for (int l = 0; l < layers; ++l) {
-    AddLayer(type, dim, bidir);
+    AddLayer(spec, bidir);
   }
 }
 
@@ -460,16 +458,12 @@ RNN::Variables RNNStack::Build(Flow *flow,
                                Flow::Variable *input,
                                Flow::Variable *dinput) {
   RNN::Variables vars;
+  vars.input = vars.output = input;
+  vars.dinput = vars.doutput = dinput;
   for (RNNLayer &l : layers_) {
-    RNN::Variables v = l.Build(flow, input, dinput);
-    if (vars.input == nullptr) {
-      vars.input = v.input;
-      vars.dinput = v.dinput;
-    }
+    RNN::Variables v = l.Build(flow, vars.output, vars.doutput);
     vars.output = v.output;
     vars.doutput = v.doutput;
-    input = v.output;
-    dinput = v.doutput;
   }
   return vars;
 }

@@ -43,19 +43,19 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   // Get feature inputs.
   token_feature_ = GetParam("token", true);
 
-  attention_evoke_feature_ = GetParam("attention-evoke", true);
-  attention_create_feature_ = GetParam("attention-create", true);
-  attention_focus_feature_ = GetParam("attention-focus", true);
+  attention_evoke_feature_ = GetParam("attention_evoke", true);
+  attention_create_feature_ = GetParam("attention_create", true);
+  attention_focus_feature_ = GetParam("attention_focus", true);
 
   history_feature_ = GetParam("history", true);
 
-  mark_token_feature_ = GetParam("mark-token", true);
-  mark_step_feature_ = GetParam("mark-step", true);
+  mark_token_feature_ = GetParam("mark_token", true);
+  mark_step_feature_ = GetParam("mark_step", true);
 
-  out_roles_feature_ = GetParam("out-roles", true);
-  in_roles_feature_ = GetParam("in-roles", true);
-  unlabeled_roles_feature_ = GetParam("unlabeled-roles", true);
-  labeled_roles_feature_ = GetParam("labeled-roles", true);
+  out_roles_feature_ = GetParam("out_roles", true);
+  in_roles_feature_ = GetParam("in_roles", true);
+  unlabeled_roles_feature_ = GetParam("unlabeled_roles", true);
+  labeled_roles_feature_ = GetParam("labeled_roles", true);
 
   // Get feature sizes.
   std::vector<myelin::Tensor *> attention_features {

@@ -16,9 +16,7 @@
 
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
-#include "sling/file/file.h"
 #include "sling/frame/serialization.h"
-#include "sling/string/text.h"
 
 namespace sling {
 namespace nlp {
@@ -33,21 +31,18 @@ void ActionTable::Add(const ParserAction &action) {
   }
 }
 
-void ActionTable::Init(Store *store) {
-  Frame top(store, "/table");
-  CHECK(top.valid());
-
-  // Read the action index.
-  Array actions = top.Get("/table/actions").AsArray();
+void ActionTable::Read(const Frame &frame) {
+  Array actions = frame.Get("actions").AsArray();
   CHECK(actions.valid());
 
-  Handle n_type = store->Lookup("/table/action/type");
-  Handle n_length = store->Lookup("/table/action/length");
-  Handle n_source = store->Lookup("/table/action/source");
-  Handle n_target = store->Lookup("/table/action/target");
-  Handle n_role = store->Lookup("/table/action/role");
-  Handle n_label = store->Lookup("/table/action/label");
-  Handle n_delegate = store->Lookup("/table/action/delegate");
+  Store *store = frame.store();
+  Handle n_type = store->Lookup("type");
+  Handle n_length = store->Lookup("length");
+  Handle n_source = store->Lookup("source");
+  Handle n_target = store->Lookup("target");
+  Handle n_role = store->Lookup("role");
+  Handle n_label = store->Lookup("label");
+  Handle n_delegate = store->Lookup("delegate");
   for (int i = 0; i < actions.length(); ++i) {
     ParserAction action;
     Frame item(store, actions.get(i));
@@ -75,33 +70,16 @@ void ActionTable::Init(Store *store) {
   }
 }
 
-void ActionTable::Save(const Store *global, const string &file) const {
-  string s = Serialize(global);
-  CHECK(File::WriteContents(file, s));
-}
-
-string ActionTable::Serialize(const Store *global) const {
-  // Build frame with action table.
-  Store store(global);
-  Builder table(&store);
-  table.AddId("/table");
-  Write(&table);
-
-  StringEncoder encoder(&store);
-  encoder.Encode(table.Create());
-  return encoder.buffer();
-}
-
 void ActionTable::Write(Builder *frame) const {
   // Save the action table.
   Store *store = frame->store();
-  Handle n_type = store->Lookup("/table/action/type");
-  Handle n_length = store->Lookup("/table/action/length");
-  Handle n_source = store->Lookup("/table/action/source");
-  Handle n_target = store->Lookup("/table/action/target");
-  Handle n_role = store->Lookup("/table/action/role");
-  Handle n_label = store->Lookup("/table/action/label");
-  Handle n_delegate = store->Lookup("/table/action/delegate");
+  Handle n_type = store->Lookup("type");
+  Handle n_length = store->Lookup("length");
+  Handle n_source = store->Lookup("source");
+  Handle n_target = store->Lookup("target");
+  Handle n_role = store->Lookup("role");
+  Handle n_label = store->Lookup("label");
+  Handle n_delegate = store->Lookup("delegate");
 
   Array actions(store, actions_.size());
   int index = 0;
@@ -132,7 +110,7 @@ void ActionTable::Write(Builder *frame) const {
     if (!action.label.IsNil()) b.Add(n_label, action.label);
     actions.set(index++, b.Create().handle());
   }
-  frame->Add("/table/actions", actions);
+  frame->Add("actions", actions);
 }
 
 }  // namespace nlp

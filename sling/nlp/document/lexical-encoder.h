@@ -181,8 +181,8 @@ class LexicalEncoder {
       : lex_(lexname), rnn_(rnnname) {}
 
   // Add RNN layers to encoder.
-  void AddLayers(int layers, myelin::RNN::Type type, int dim, bool bidir) {
-    rnn_.AddLayers(layers, type, dim, bidir);
+  void AddLayers(int layers, const myelin::RNN::Spec spec, bool bidir) {
+    rnn_.AddLayers(layers, spec, bidir);
   }
 
   // Build flow for lexical encoder. Returns the output variables from the RNN.

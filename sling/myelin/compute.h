@@ -399,7 +399,7 @@ class Tensor {
 
   // Reference to dynamically sized tensor channel.
   bool dynamic() const { return dynamic_; }
-  void set_dynamic(bool dynamic) { dynamic_ = dynamic_; }
+  void set_dynamic(bool dynamic) { dynamic_ = dynamic; }
 
   // Tensor shape.
   const Shape &shape() const { return shape_; }

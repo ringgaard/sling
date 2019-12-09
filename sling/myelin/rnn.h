@@ -30,8 +30,14 @@ class RNNLearner;
 struct RNN {
   // RNN types.
   enum Type {
-    LSTM,         // vanilla LSTM
-    DRAGNN_LSTM,  // DRAGNN-variant of LSTM
+    LSTM = 0,          // vanilla LSTM
+    DRAGNN = 1,        // DRAGNN-variant of LSTM
+  };
+
+  // RNN specification.
+  struct Spec {
+    Type type = LSTM;  // RNN type
+    int dim = 128;     // RNN dimension
   };
 
   // Flow input/output variables.
@@ -43,8 +49,7 @@ struct RNN {
   };
 
   // Initialize RNN.
-  RNN(const string &name, Type type, int dim)
-      : name(name), type(type), dim(dim) {}
+  RNN(const string &name, const Spec &spec) : name(name), spec(spec) {}
 
   // Build flow for RNN. If dinput is not null, the corresponding gradient
   // function is also built.
@@ -59,8 +64,7 @@ struct RNN {
   bool has_control() const { return c_in != nullptr; }
 
   string name;                     // RNN cell name
-  Type type;                       // RNN type
-  int dim;                         // RNN dimension
+  Spec spec;                       // RNN specification
 
   Cell *cell = nullptr;            // RNN cell
   Tensor *input = nullptr;         // RNN feature input
@@ -124,7 +128,7 @@ struct RNNMerger {
 class RNNLayer {
  public:
   // Set up RNN layer.
-  RNNLayer(const string &name, RNN::Type type, int dim, bool bidir);
+  RNNLayer(const string &name, const RNN::Spec &spec, bool bidir);
 
   // Build flow for RNN. If dinput is not null, the corresponding gradient
   // function is also built.
@@ -231,10 +235,10 @@ class RNNStack {
   RNNStack(const string &name) : name_(name) {}
 
   // Add RNN layer.
-  void AddLayer(RNN::Type type, int dim, bool bidir);
+  void AddLayer(const RNN::Spec &spec, bool bidir);
 
   // Add multiple RNN layers of the same type.
-  void AddLayers(int layers, RNN::Type type, int dim, bool bidir);
+  void AddLayers(int layers, const RNN::Spec &spec, bool bidir);
 
   // Build flow for RNNs.
   RNN::Variables Build(Flow *flow,

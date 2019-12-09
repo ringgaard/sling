@@ -5,7 +5,7 @@ SPEC='{
   annotator: "mention-name"
   inputs: {
     parser: {
-      file: "local/data/corpora/caspar/caspar.flow"
+      file: "local/data/e/caspar/caspar.flow"
       format: "flow"
     }
   }
