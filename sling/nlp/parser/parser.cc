@@ -65,9 +65,6 @@ void Parser::Load(Store *store, const string &model) {
   CHECK_EQ(decoder_spec.GetText("type"), "transition");
   int frame_limit = decoder_spec.GetInt("frame_limit");
 
-  // patch for roles bug. TODO: REMOVE
-  decoder_spec.Set("roles", decoder_spec.Get("actions"));
-
   // Initialize roles.
   Array roles = decoder_spec.Get("roles").AsArray();
   if (roles.valid()) {

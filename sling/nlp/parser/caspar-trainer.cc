@@ -46,8 +46,9 @@ class MultiClassDelegateLearner : public DelegateLearner {
 
     auto *input = f.Placeholder("input", DT_FLOAT, {1, dim}, true);
     auto *logits = f.Name(f.Add(f.MatMul(input, W), b), "logits");
-    logits->set_out();
-    f.Name(f.ArgMax(logits), "output");
+    if (learn) logits->set_out();
+    auto *output = f.Name(f.ArgMax(logits), "output");
+    if (!learn) output->set_out();
 
     flow->Connect({activation, input});
     if (learn) {

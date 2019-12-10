@@ -23,38 +23,150 @@ namespace myelin {
 RNN::Variables RNN::Build(Flow *flow,
                           Flow::Variable *input,
                           Flow::Variable *dinput) {
-  Variables vars;
-
   // Build RNN cell.
-  FlowBuilder f(flow, name);
-  vars.input = f.Placeholder("input", input->type, input->shape, true);
+  Variables vars;
+  FlowBuilder fb(flow, name);
+  auto dt = input->type;
+  int input_dim = input->dim(1);
+  int rnn_dim = spec.dim;
+
+  // Build inputs.
+  auto *x = fb.Placeholder("input", dt, input->shape, true);
+  auto *h_in = fb.Placeholder("h_in", dt, {1, rnn_dim}, true);
+  auto *c_in = fb.Placeholder("c_in", dt, {1, rnn_dim}, true);
+
+  // Build recurrent unit.
+  Flow::Variable *h_out = nullptr;
+  Flow::Variable *c_out = nullptr;
   switch (spec.type) {
-    case DRAGNN:
-      vars.output = f.LSTMLayer(vars.input, spec.dim);
+    case LSTM: {
+      // Standard LSTM.
+      auto *x2i = fb.Random(fb.Parameter("x2i", dt, {input_dim, rnn_dim}));
+      auto *h2i = fb.Random(fb.Parameter("h2i", dt, {rnn_dim, rnn_dim}));
+      auto *bi = fb.Parameter("bi", dt, {1, rnn_dim});
+
+      auto *x2f = fb.Random(fb.Parameter("x2f", dt, {input_dim, rnn_dim}));
+      auto *h2f = fb.Random(fb.Parameter("h2f", dt, {rnn_dim, rnn_dim}));
+      auto *bf = fb.Parameter("bf", dt, {1, rnn_dim});
+
+      auto *x2k = fb.Random(fb.Parameter("x2k", dt, {input_dim, rnn_dim}));
+      auto *h2k = fb.Random(fb.Parameter("h2k", dt, {rnn_dim, rnn_dim}));
+      auto *bk = fb.Parameter("bk", dt, {1, rnn_dim});
+
+      auto *x2o = fb.Random(fb.Parameter("x2o", dt, {input_dim, rnn_dim}));
+      auto *h2o = fb.Random(fb.Parameter("h2o", dt, {rnn_dim, rnn_dim}));
+      auto *bo = fb.Parameter("bo", dt, {1, rnn_dim});
+
+      // i = sigmoid(x * x2i + h_in * h2i + c_in * c2i + bi)
+      auto *ia = fb.Add(fb.MatMul(x, x2i),
+                 fb.Add(fb.MatMul(h_in, h2i),bi));
+      auto *i = fb.Name(fb.Sigmoid(ia), "i");
+
+      // f = sigmoid(x * x2f + h_in * h2f + bf)
+      auto *fa = fb.Add(fb.MatMul(x, x2f),
+                 fb.Add(fb.MatMul(h_in, h2f),bf));
+      auto *f = fb.Name(fb.Sigmoid(fa), "f");
+
+      // k = tanh(x * x2k + h_in * h2k + bk)
+      auto *ka = fb.Add(fb.MatMul(x, x2k),
+                 fb.Add(fb.MatMul(h_in, h2k),bk));
+      auto *k = fb.Name(fb.Tanh(ka), "k");
+
+      // o = sigmoid(x * x2o + h_in * h2o + bo)
+      auto *oa = fb.Add(fb.MatMul(x, x2o),
+                 fb.Add(fb.MatMul(h_in, h2o),bo));
+      auto *o = fb.Name(fb.Tanh(oa), "o");
+
+      // c_out = f * c_in + i * k
+      c_out = fb.Name(fb.Add(fb.Mul(f, c_in), fb.Mul(i, k)), "c_out");
+
+      // h_out = o * tanh(c_out)
+      h_out = fb.Name(fb.Mul(o, fb.Tanh(c_out)), "h_out");
       break;
+    }
+    case DRAGNN: {
+      // DRAGNN LSTM with peephole and couples gates.
+      auto *x2i = fb.Random(fb.Parameter("x2i", dt, {input_dim, rnn_dim}));
+      auto *h2i = fb.Random(fb.Parameter("h2i", dt, {rnn_dim, rnn_dim}));
+      auto *c2i = fb.Random(fb.Parameter("c2i", dt, {rnn_dim, rnn_dim}));
+      auto *bi = fb.Parameter("bi", dt, {1, rnn_dim});
+
+      auto *x2o = fb.Random(fb.Parameter("x2o", dt, {input_dim, rnn_dim}));
+      auto *h2o = fb.Random(fb.Parameter("h2o", dt, {rnn_dim, rnn_dim}));
+      auto *c2o = fb.Random(fb.Parameter("c2o", dt, {rnn_dim, rnn_dim}));
+      auto *bo = fb.Parameter("bo", dt, {1, rnn_dim});
+
+      auto *x2c = fb.Random(fb.Parameter("x2c", dt, {input_dim, rnn_dim}));
+      auto *h2c = fb.Random(fb.Parameter("h2c", dt, {rnn_dim, rnn_dim}));
+      auto *bc = fb.Parameter("bc", dt, {1, rnn_dim});
+
+      // i = sigmoid(x * x2i + h_in * h2i + c_in * c2i + bi)
+      auto *ia = fb.Add(fb.MatMul(x, x2i),
+                 fb.Add(fb.MatMul(h_in, h2i),
+                 fb.Add(fb.MatMul(c_in, c2i), bi)));
+      auto *i = fb.Name(fb.Sigmoid(ia), "i");
+
+      // f = 1 - i
+      auto *f = fb.Name(fb.Sub(fb.One(), i), "f");
+
+      // w = tanh(x * x2c + h_in * h2c + bc)
+      auto *wa = fb.Add(fb.MatMul(x, x2c),
+                 fb.Add(fb.MatMul(h_in, h2c), bc));
+      auto *w = fb.Name(fb.Tanh(wa), "w");
+
+      // c_out = i * w + f * c_in
+      c_out = fb.Name(fb.Add(fb.Mul(i, w), fb.Mul(f, c_in)), "c_out");
+
+      // o = sigmoid(x * x2o + c_out * c2o + h_in * h2o + bo)
+      auto *oa = fb.Add(fb.MatMul(x, x2o),
+                 fb.Add(fb.MatMul(c_out, c2o),
+                 fb.Add(fb.MatMul(h_in, h2o), bo)));
+      auto *o = fb.Name(fb.Sigmoid(oa), "o");
+
+      // h_out = o * tanh(c_out)
+      h_out = fb.Name(fb.Mul(o, fb.Tanh(c_out)), "h_out");
+      break;
+    }
     default:
       LOG(FATAL) << "RNN type not supported: " << spec.type;
   }
 
   // Make zero element.
-  auto *zero = f.Name(f.Const(nullptr, input->type, {1, spec.dim}), "zero");
+  auto *zero = fb.Name(fb.Const(nullptr, dt, {1, rnn_dim}), "zero");
   zero->set_out();
-  flow->Connect({vars.output, zero});
 
-  // Connect input to RNN.
-  flow->Connect({vars.input, input});
+  // Connect RNN units.
+  vars.input = x;
+  vars.output = h_out;
+  flow->Connect({x, input});
+  h_out->set_out()->set_ref();
+  flow->Connect({h_in, h_out, zero});
+  if (c_in != nullptr) {
+    c_out->set_out()->set_ref();
+    flow->Connect({c_in, c_out, zero});
+
+    // The control channel has a single-source gradient.
+    c_in->set_unique();
+  }
 
   // Build gradients for learning.
   if (dinput != nullptr) {
-    auto *gf = Gradient(flow, f.func());
+    auto *gf = Gradient(flow, fb.func());
     vars.dinput = flow->GradientVar(vars.input);
     vars.doutput = flow->GradientVar(vars.output);
     flow->Connect({vars.dinput, dinput});
 
     // Make sink variable for final channel gradients.
-    auto *sink = f.Var("sink", input->type, {1, spec.dim})->set_out();
+    auto *sink = fb.Var("sink", dt, {1, rnn_dim})->set_out();
     gf->unused.push_back(sink);
-    flow->Connect({sink, flow->Var(gf->name + "/d_h_out")});
+    auto *dh_in = flow->GradientVar(h_in);
+    auto *dh_out = flow->GradientVar(h_out);
+    flow->Connect({dh_in, dh_out, sink});
+    if (c_out != nullptr) {
+      auto *dc_in = flow->GradientVar(c_in);
+      auto *dc_out = flow->GradientVar(c_out);
+      flow->Connect({dc_in, dc_out, sink});
+    }
   }
 
   return vars;

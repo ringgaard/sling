@@ -350,6 +350,8 @@ struct Expression {
     if (type == DT_FLOAT || type == DT_DOUBLE) {
       // Perform dry-run to estimate the number of SIMD registers needed.
       MacroAssembler masm(nullptr, 0, options);
+      // TODO: remember number of registers used.
+      masm.rr().usage(13);
       Expression expr(step, &masm, 0);
       CHECK(expr.AllocateRegisters()) << "Register overflow";
 
@@ -1071,6 +1073,9 @@ class Calculate : public Kernel {
         }
       }
     }
+
+    // TODO: compute actual register usage for expression.
+    step->SetRegisterUsage(12);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {

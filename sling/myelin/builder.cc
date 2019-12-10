@@ -319,7 +319,7 @@ Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
   // Forget -- f_t = 1 - i_t
   auto *i_ft = Name(Sub(One(), i_it), "i_ft");
 
-  // Memory -- tanh(x_t * x2c + h_in * h2c + h_in * h2c + bc)
+  // Memory -- tanh(x_t * x2c + h_in * h2c + bc)
   auto *i_awt = Name(Add(MatMul(input, x2c),
                      Add(MatMul(h_in, h2c), bc)),
                      "i_awt");

@@ -30,8 +30,12 @@ class RNNLearner;
 struct RNN {
   // RNN types.
   enum Type {
-    LSTM = 0,          // vanilla LSTM
-    DRAGNN = 1,        // DRAGNN-variant of LSTM
+    // Standard LSTM (Hochreiter & Schmidhuber 1997).
+    LSTM = 0,
+
+    // DRAGNN LSTM with peephole connections (Gers & Schmidhuber (2000) and
+    // coupled forget and input gates (Greff et al 2015).
+    DRAGNN = 1,
   };
 
   // RNN specification.
