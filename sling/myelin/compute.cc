@@ -924,8 +924,8 @@ void Step::SetRegisterUsage(int regs) {
 }
 
 void Step::SetPreservedRegisterUsage(int regs) {
-  // There are eight caller-saved registers.
-  SetRegisterUsage(8 + regs);
+  // There are nine caller-saved registers.
+  SetRegisterUsage(9 + regs);
 }
 
 bool Step::AllowInPlace(int input, int output, bool preserved) {

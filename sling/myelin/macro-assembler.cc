@@ -25,6 +25,25 @@ namespace myelin {
 
 using namespace jit;
 
+// Register usage:
+//
+// rax: 1st return register, temporary register
+// rbx: extra register, caller-preserved
+// rcx: 4th argument register, temporary register
+// rdx: 3rd argument register, 2nd return register, temporary register
+// rdi: 1st argument register, temporary register
+// rsi: 2nd argument register, temporary register
+// rbp: data instance address, caller-preserved
+// rsp: stack pointer
+// r8 : 5th argument register, temporary register
+// r9 : 6th argument register, temporary register
+// r10: temporary register
+// r11: temporary register
+// r12: extra register, caller-preserved
+// r13: extra register, caller-preserved
+// r14: extra register, caller-preserved
+// r15: extra register, caller-preserved, profiler timestamp register
+
 #ifdef NDEBUG
 // Base register for data instance.
 static Register datareg = rbp;
@@ -38,7 +57,7 @@ static Register tsreg = r14;
 #endif
 
 Register Registers::try_alloc() {
-  for (int r = 0; r < kNumRegisters; ++r) {
+  for (int r = 0; r < NUM_REGISTERS; ++r) {
     if (!used(r)) {
       use(r);
       return Register::from_code(r);
@@ -54,7 +73,7 @@ Register Registers::alloc() {
 }
 
 Register Registers::try_alloc_preserved() {
-  for (int r = 0; r < kNumRegisters; ++r) {
+  for (int r = 0; r < NUM_REGISTERS; ++r) {
     if (!used(r) && preserved(r)) {
       use(r);
       return Register::from_code(r);
@@ -107,7 +126,7 @@ Register Registers::arg(int n) {
 }
 
 Register Registers::alloc_extra() {
-  for (int r = 0; r < kNumRegisters; ++r) {
+  for (int r = 0; r < NUM_REGISTERS; ++r) {
     if (extra(r) && !saved(r)) {
       reserve(r);
       use(r);
@@ -124,6 +143,14 @@ void Registers::reserve(int r) {
   used_regs_ &= ~(1 << r);
 }
 
+void Registers::reserve_all() {
+  for (int r = 0; r < NUM_REGISTERS; ++r) {
+    if (extra(r) && !saved(r)) {
+      reserve(r);
+    }
+  }
+}
+
 void Registers::free(int r) {
   CHECK(saved(r)) << r;
   CHECK(!used(r)) << r;
@@ -131,14 +158,16 @@ void Registers::free(int r) {
   used_regs_ |= (1 << r);
 }
 
+
 bool Registers::usage(int n) {
   switch (n) {
-    case 13: reserve(r15); FALLTHROUGH_INTENDED;
-    case 12: reserve(r14); FALLTHROUGH_INTENDED;
-    case 11: reserve(r13); FALLTHROUGH_INTENDED;
-    case 10: reserve(r12); FALLTHROUGH_INTENDED;
-    case 9: reserve(rbx); FALLTHROUGH_INTENDED;
-    case 8: case 7: case 6: case 5: case 4: case 3: case 2: case 1: case 0:
+    case 14: reserve(r15); FALLTHROUGH_INTENDED;
+    case 13: reserve(r14); FALLTHROUGH_INTENDED;
+    case 12: reserve(r13); FALLTHROUGH_INTENDED;
+    case 11: reserve(r12); FALLTHROUGH_INTENDED;
+    case 10: reserve(rbx); FALLTHROUGH_INTENDED;
+    case 9: case 8: case 7: case 6: case 5:
+    case 4: case 3: case 2: case 1: case 0:
       return true;
   }
   return false;
@@ -146,14 +175,14 @@ bool Registers::usage(int n) {
 
 int Registers::num_free() const {
   int n = 0;
-  for (int r = 0; r < kNumRegisters; ++r) {
+  for (int r = 0; r < NUM_REGISTERS; ++r) {
     if (!used(r)) n++;
   }
   return n;
 }
 
 int SIMDRegisters::try_alloc(bool extended) {
-  int n = extended ? kNumZRegisters : kNumXRegisters;
+  int n = extended ? NUM_Z_REGISTERS : NUM_X_REGISTERS;
   for (int i = next_; i < n + next_; ++i) {
     int r = i % n;
     if ((used_regs_ & (1 << r)) == 0) {
@@ -172,7 +201,7 @@ int SIMDRegisters::alloc(bool extended) {
 }
 
 OpmaskRegister OpmaskRegisters::try_alloc() {
-  for (int r = 0; r < kNumRegisters; ++r) {
+  for (int r = 0; r < NUM_REGISTERS; ++r) {
     OpmaskRegister k = OpmaskRegister::from_code(r);
     if (!used(k)) {
       use(k);
@@ -237,13 +266,7 @@ Register MacroAssembler::instance() const {
   return datareg;
 }
 
-void MacroAssembler::Prologue() {
-  // Zero upper part of YMM register if CPU needs it to avoid AVX-SSE transition
-  // penalties.
-  if (CPU::VZeroNeeded() && Enabled(AVX)) {
-    vzeroupper();
-  }
-
+void MacroAssembler::AllocateFunctionRegisters() {
   // Reserve data instance register.
   rr_.reserve(datareg);
   rr_.use(datareg);
@@ -253,6 +276,17 @@ void MacroAssembler::Prologue() {
     rr_.reserve(tsreg);
     rr_.use(tsreg);
   }
+}
+
+void MacroAssembler::Prologue() {
+  // Zero upper part of YMM register if CPU needs it to avoid AVX-SSE transition
+  // penalties.
+  if (CPU::VZeroNeeded() && Enabled(AVX)) {
+    vzeroupper();
+  }
+
+  // Reserve registers for function.
+  AllocateFunctionRegisters();
 
   // Save preserved registers on stack.
   if (rr_.saved(rbp)) pushq(rbp);

@@ -197,7 +197,7 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
       case SIMPLE:
       case SCALAR:
         // Allocate base register for non-instance variables.
-        if (loc->var->offset() == -1 || loc->var->ref()) {
+        if (loc->var->IsGlobal() || loc->var->ref()) {
           loc->base = rr.try_alloc();
           if (!loc->base.is_valid()) return false;
         }
@@ -208,7 +208,7 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
         break;
       case REPEAT:
         // Allocate base register for non-instance variables.
-        if (loc->var->offset() == -1 || loc->var->ref()) {
+        if (loc->var->IsGlobal() || loc->var->ref()) {
           loc->base = rr.try_alloc();
           if (!loc->base.is_valid()) return false;
         }
@@ -268,7 +268,7 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
               base_regs[loc->var->offset()] = loc->base;
             }
           }
-        } else {
+        } else if (loc->var->IsGlobal()) {
           loc->base = rr.try_alloc();
         }
       }

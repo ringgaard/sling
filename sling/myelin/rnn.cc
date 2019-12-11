@@ -75,7 +75,7 @@ RNN::Variables RNN::Build(Flow *flow,
       // o = sigmoid(x * x2o + h_in * h2o + bo)
       auto *oa = fb.Add(fb.MatMul(x, x2o),
                  fb.Add(fb.MatMul(h_in, h2o),bo));
-      auto *o = fb.Name(fb.Tanh(oa), "o");
+      auto *o = fb.Name(fb.Sigmoid(oa), "o");
 
       // c_out = f * c_in + i * k
       c_out = fb.Name(fb.Add(fb.Mul(f, c_in), fb.Mul(i, k)), "c_out");
