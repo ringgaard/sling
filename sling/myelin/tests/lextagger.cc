@@ -60,7 +60,7 @@ DEFINE_int32(rampup, 10, "Number of seconds between thread starts");
 DEFINE_bool(lock, true, "Locked gradient updates");
 DEFINE_int32(lexthres, 0, "Lexicon threshold");
 DEFINE_int32(worddim, 32, "Word embedding dimensions");
-DEFINE_int32(rnn_type, RNN::DRAGNN, "RNN type");
+DEFINE_int32(rnn_type, RNN::DRAGNN_LSTM, "RNN type");
 DEFINE_int32(rnn_dim, 128, "RNN size");
 DEFINE_int32(rnn_layers, 1, "RNN layers");
 DEFINE_bool(rnn_bidir, true, "Bidirectional RNNs");

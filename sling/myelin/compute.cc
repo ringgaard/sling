@@ -946,12 +946,14 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
       if (t->out()) return false;
     }
     if (t->ref() != out->ref()) return false;
+    if (t->dynamic() != out->dynamic()) return false;
     in = t;
     t = t->shared();
   }
 
   // Check if output can be shared.
   if (out->shared()) return false;
+  if (out->ref() && out->out() && in->in()) return false;
 
   // Share input and output.
   out->set_shared(in);

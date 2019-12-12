@@ -185,7 +185,7 @@ class ParserTrainer : public task::LearnerTask {
   Mutex update_mu_;
 
   // Model hyperparameters.
-  int rnn_type_ = myelin::RNN::DRAGNN;
+  int rnn_type_ = myelin::RNN::LSTM;
   int rnn_dim_ = 256;
   int rnn_layers_ = 1;
   int rnn_bidir_ = true;

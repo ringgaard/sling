@@ -33,9 +33,15 @@ struct RNN {
     // Standard LSTM (Hochreiter & Schmidhuber 1997).
     LSTM = 0,
 
-    // DRAGNN LSTM with peephole connections (Gers & Schmidhuber (2000) and
-    // coupled forget and input gates (Greff et al 2015).
-    DRAGNN = 1,
+    // LSTM with peephole connections (Gers & Schmidhuber (2000) and coupled
+    // forget and input gates (Greff et al 2015).
+    DRAGNN_LSTM = 1,
+
+    // Standard LSTM with one matrix multiplication (Dozat & Manning 2017).
+    DOZAT_LSTM = 2,
+
+    // Standard LSTM with two matrix multiplications.
+    PYTORCH_LSTM = 3,
   };
 
   // RNN specification.

@@ -579,7 +579,6 @@ class Split : public Kernel {
     Tensor *input = step->input(0);
     int n = step->input(1)->value<int32>();
     int axis = step->input(2)->value<int32>();
-    int stride = input->AxisSize(axis);
     int repeat = input->shape().outer(axis);
 
     // Allocate registers.
@@ -636,9 +635,6 @@ class Split : public Kernel {
         __ LoadTensorAddress(dst, step->output(i));
         __ movq(cnt, Immediate(size));
         __ repmovsb();
-        if (stride != size && i != n - 1) {
-          __ addq(src, Immediate(stride - size));
-        }
       }
     }
   }

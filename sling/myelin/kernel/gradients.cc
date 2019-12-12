@@ -534,6 +534,17 @@ void concat_grad(Flow::Operation *op, Gradients *g) {
   }
 }
 
+// v_1, ..., v_n = split(v, n, axis)
+// dv = concat({v_1, ..., v_n}, axis)
+void split_grad(Flow::Operation *op, Gradients *g) {
+  auto v = op->inputs[0];
+  int axis;
+  CHECK(op->inputs[2]->GetData(&axis));
+  auto parts = op->outputs;
+  for (auto &p : parts) p = g->d(p);
+  g->add(v, g->Concat(parts, axis));
+}
+
 // y = sum(x)
 // dx = dy
 void sum_grad(Flow::Operation *op, Gradients *g) {
@@ -639,6 +650,7 @@ void RegisterStandardGradients() {
   RegisterGradient("Gather", gather_grad);
   RegisterGradient("GatherSum", gathersum_grad);
   RegisterGradient("Concat", concat_grad);
+  RegisterGradient("Split", split_grad);
   RegisterGradient("Sum", sum_grad);
   RegisterGradient("Min", min_grad);
   RegisterGradient("Max", max_grad);

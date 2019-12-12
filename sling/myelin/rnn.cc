@@ -25,15 +25,15 @@ RNN::Variables RNN::Build(Flow *flow,
                           Flow::Variable *dinput) {
   // Build RNN cell.
   Variables vars;
-  FlowBuilder fb(flow, name);
+  FlowBuilder tf(flow, name);
   auto dt = input->type;
   int input_dim = input->dim(1);
   int rnn_dim = spec.dim;
 
   // Build inputs.
-  auto *x = fb.Placeholder("input", dt, input->shape, true);
-  auto *h_in = fb.Placeholder("h_in", dt, {1, rnn_dim}, true);
-  auto *c_in = fb.Placeholder("c_in", dt, {1, rnn_dim}, true);
+  auto *x = tf.Placeholder("input", dt, input->shape, true);
+  auto *h_in = tf.Placeholder("h_in", dt, {1, rnn_dim}, true);
+  auto *c_in = tf.Placeholder("c_in", dt, {1, rnn_dim}, true);
 
   // Build recurrent unit.
   Flow::Variable *h_out = nullptr;
@@ -41,90 +41,135 @@ RNN::Variables RNN::Build(Flow *flow,
   switch (spec.type) {
     case LSTM: {
       // Standard LSTM.
-      auto *x2i = fb.Random(fb.Parameter("x2i", dt, {input_dim, rnn_dim}));
-      auto *h2i = fb.Random(fb.Parameter("h2i", dt, {rnn_dim, rnn_dim}));
-      auto *bi = fb.Parameter("bi", dt, {1, rnn_dim});
+      auto *x2i = tf.Random(tf.Parameter("x2i", dt, {input_dim, rnn_dim}));
+      auto *h2i = tf.Random(tf.Parameter("h2i", dt, {rnn_dim, rnn_dim}));
+      auto *bi = tf.Parameter("bi", dt, {1, rnn_dim});
 
-      auto *x2f = fb.Random(fb.Parameter("x2f", dt, {input_dim, rnn_dim}));
-      auto *h2f = fb.Random(fb.Parameter("h2f", dt, {rnn_dim, rnn_dim}));
-      auto *bf = fb.Parameter("bf", dt, {1, rnn_dim});
+      auto *x2f = tf.Random(tf.Parameter("x2f", dt, {input_dim, rnn_dim}));
+      auto *h2f = tf.Random(tf.Parameter("h2f", dt, {rnn_dim, rnn_dim}));
+      auto *bf = tf.Parameter("bf", dt, {1, rnn_dim});
 
-      auto *x2k = fb.Random(fb.Parameter("x2k", dt, {input_dim, rnn_dim}));
-      auto *h2k = fb.Random(fb.Parameter("h2k", dt, {rnn_dim, rnn_dim}));
-      auto *bk = fb.Parameter("bk", dt, {1, rnn_dim});
+      auto *x2g = tf.Random(tf.Parameter("x2g", dt, {input_dim, rnn_dim}));
+      auto *h2g = tf.Random(tf.Parameter("h2g", dt, {rnn_dim, rnn_dim}));
+      auto *bg = tf.Parameter("bg", dt, {1, rnn_dim});
 
-      auto *x2o = fb.Random(fb.Parameter("x2o", dt, {input_dim, rnn_dim}));
-      auto *h2o = fb.Random(fb.Parameter("h2o", dt, {rnn_dim, rnn_dim}));
-      auto *bo = fb.Parameter("bo", dt, {1, rnn_dim});
+      auto *x2o = tf.Random(tf.Parameter("x2o", dt, {input_dim, rnn_dim}));
+      auto *h2o = tf.Random(tf.Parameter("h2o", dt, {rnn_dim, rnn_dim}));
+      auto *bo = tf.Parameter("bo", dt, {1, rnn_dim});
 
       // i = sigmoid(x * x2i + h_in * h2i + c_in * c2i + bi)
-      auto *ia = fb.Add(fb.MatMul(x, x2i),
-                 fb.Add(fb.MatMul(h_in, h2i),bi));
-      auto *i = fb.Name(fb.Sigmoid(ia), "i");
+      auto *ia = tf.Add(tf.MatMul(x, x2i),
+                 tf.Add(tf.MatMul(h_in, h2i),bi));
+      auto *i = tf.Name(tf.Sigmoid(ia), "i");
 
       // f = sigmoid(x * x2f + h_in * h2f + bf)
-      auto *fa = fb.Add(fb.MatMul(x, x2f),
-                 fb.Add(fb.MatMul(h_in, h2f),bf));
-      auto *f = fb.Name(fb.Sigmoid(fa), "f");
+      auto *fa = tf.Add(tf.MatMul(x, x2f),
+                 tf.Add(tf.MatMul(h_in, h2f),bf));
+      auto *f = tf.Name(tf.Sigmoid(fa), "f");
 
-      // k = tanh(x * x2k + h_in * h2k + bk)
-      auto *ka = fb.Add(fb.MatMul(x, x2k),
-                 fb.Add(fb.MatMul(h_in, h2k),bk));
-      auto *k = fb.Name(fb.Tanh(ka), "k");
+      // g = tanh(x * x2g + h_in * h2g + bg)
+      auto *ga = tf.Add(tf.MatMul(x, x2g),
+                 tf.Add(tf.MatMul(h_in, h2g),bg));
+      auto *g = tf.Name(tf.Tanh(ga), "g");
 
       // o = sigmoid(x * x2o + h_in * h2o + bo)
-      auto *oa = fb.Add(fb.MatMul(x, x2o),
-                 fb.Add(fb.MatMul(h_in, h2o),bo));
-      auto *o = fb.Name(fb.Sigmoid(oa), "o");
+      auto *oa = tf.Add(tf.MatMul(x, x2o),
+                 tf.Add(tf.MatMul(h_in, h2o),bo));
+      auto *o = tf.Name(tf.Sigmoid(oa), "o");
 
-      // c_out = f * c_in + i * k
-      c_out = fb.Name(fb.Add(fb.Mul(f, c_in), fb.Mul(i, k)), "c_out");
+      // c_out = f * c_in + i * g
+      c_out = tf.Name(tf.Add(tf.Mul(f, c_in), tf.Mul(i, g)), "c_out");
 
       // h_out = o * tanh(c_out)
-      h_out = fb.Name(fb.Mul(o, fb.Tanh(c_out)), "h_out");
+      h_out = tf.Name(tf.Mul(o, tf.Tanh(c_out)), "h_out");
       break;
     }
-    case DRAGNN: {
+    case DRAGNN_LSTM: {
       // DRAGNN LSTM with peephole and couples gates.
-      auto *x2i = fb.Random(fb.Parameter("x2i", dt, {input_dim, rnn_dim}));
-      auto *h2i = fb.Random(fb.Parameter("h2i", dt, {rnn_dim, rnn_dim}));
-      auto *c2i = fb.Random(fb.Parameter("c2i", dt, {rnn_dim, rnn_dim}));
-      auto *bi = fb.Parameter("bi", dt, {1, rnn_dim});
+      auto *x2i = tf.Random(tf.Parameter("x2i", dt, {input_dim, rnn_dim}));
+      auto *h2i = tf.Random(tf.Parameter("h2i", dt, {rnn_dim, rnn_dim}));
+      auto *c2i = tf.Random(tf.Parameter("c2i", dt, {rnn_dim, rnn_dim}));
+      auto *bi = tf.Parameter("bi", dt, {1, rnn_dim});
 
-      auto *x2o = fb.Random(fb.Parameter("x2o", dt, {input_dim, rnn_dim}));
-      auto *h2o = fb.Random(fb.Parameter("h2o", dt, {rnn_dim, rnn_dim}));
-      auto *c2o = fb.Random(fb.Parameter("c2o", dt, {rnn_dim, rnn_dim}));
-      auto *bo = fb.Parameter("bo", dt, {1, rnn_dim});
+      auto *x2o = tf.Random(tf.Parameter("x2o", dt, {input_dim, rnn_dim}));
+      auto *h2o = tf.Random(tf.Parameter("h2o", dt, {rnn_dim, rnn_dim}));
+      auto *c2o = tf.Random(tf.Parameter("c2o", dt, {rnn_dim, rnn_dim}));
+      auto *bo = tf.Parameter("bo", dt, {1, rnn_dim});
 
-      auto *x2c = fb.Random(fb.Parameter("x2c", dt, {input_dim, rnn_dim}));
-      auto *h2c = fb.Random(fb.Parameter("h2c", dt, {rnn_dim, rnn_dim}));
-      auto *bc = fb.Parameter("bc", dt, {1, rnn_dim});
+      auto *x2c = tf.Random(tf.Parameter("x2c", dt, {input_dim, rnn_dim}));
+      auto *h2c = tf.Random(tf.Parameter("h2c", dt, {rnn_dim, rnn_dim}));
+      auto *bc = tf.Parameter("bc", dt, {1, rnn_dim});
 
       // i = sigmoid(x * x2i + h_in * h2i + c_in * c2i + bi)
-      auto *ia = fb.Add(fb.MatMul(x, x2i),
-                 fb.Add(fb.MatMul(h_in, h2i),
-                 fb.Add(fb.MatMul(c_in, c2i), bi)));
-      auto *i = fb.Name(fb.Sigmoid(ia), "i");
+      auto *ia = tf.Add(tf.MatMul(x, x2i),
+                 tf.Add(tf.MatMul(h_in, h2i),
+                 tf.Add(tf.MatMul(c_in, c2i), bi)));
+      auto *i = tf.Name(tf.Sigmoid(ia), "i");
 
       // f = 1 - i
-      auto *f = fb.Name(fb.Sub(fb.One(), i), "f");
+      auto *f = tf.Name(tf.Sub(tf.One(), i), "f");
 
       // w = tanh(x * x2c + h_in * h2c + bc)
-      auto *wa = fb.Add(fb.MatMul(x, x2c),
-                 fb.Add(fb.MatMul(h_in, h2c), bc));
-      auto *w = fb.Name(fb.Tanh(wa), "w");
+      auto *wa = tf.Add(tf.MatMul(x, x2c),
+                 tf.Add(tf.MatMul(h_in, h2c), bc));
+      auto *w = tf.Name(tf.Tanh(wa), "w");
 
       // c_out = i * w + f * c_in
-      c_out = fb.Name(fb.Add(fb.Mul(i, w), fb.Mul(f, c_in)), "c_out");
+      c_out = tf.Name(tf.Add(tf.Mul(i, w), tf.Mul(f, c_in)), "c_out");
 
       // o = sigmoid(x * x2o + c_out * c2o + h_in * h2o + bo)
-      auto *oa = fb.Add(fb.MatMul(x, x2o),
-                 fb.Add(fb.MatMul(c_out, c2o),
-                 fb.Add(fb.MatMul(h_in, h2o), bo)));
-      auto *o = fb.Name(fb.Sigmoid(oa), "o");
+      auto *oa = tf.Add(tf.MatMul(x, x2o),
+                 tf.Add(tf.MatMul(c_out, c2o),
+                 tf.Add(tf.MatMul(h_in, h2o), bo)));
+      auto *o = tf.Name(tf.Sigmoid(oa), "o");
 
       // h_out = o * tanh(c_out)
-      h_out = fb.Name(fb.Mul(o, fb.Tanh(c_out)), "h_out");
+      h_out = tf.Name(tf.Mul(o, tf.Tanh(c_out)), "h_out");
+      break;
+    }
+    case DOZAT_LSTM: {
+      // Standard LSTM with one matrix multiplication.
+      auto *w = tf.Parameter("W", dt, {input_dim + rnn_dim, 4 * rnn_dim});
+      tf.Random(w);
+      auto *b = tf.Parameter("b", dt, {1, 4 * rnn_dim});
+
+      // Preactivations.
+      auto p = tf.Split(tf.Add(tf.MatMul(tf.Concat({x, h_in}), w), b), 4, 1);
+
+      // Gates.
+      auto *f = tf.Name(tf.Sigmoid(p[0]), "f");
+      auto *i = tf.Name(tf.Sigmoid(p[1]), "i");
+      auto *o = tf.Name(tf.Sigmoid(p[2]), "o");
+      auto *g = tf.Name(tf.Tanh(p[3]), "g");
+
+      // Outputs.
+      c_out = tf.Name(tf.Add(tf.Mul(f, c_in), tf.Mul(i, g)), "c_out");
+      h_out = tf.Name(tf.Mul(o, tf.Tanh(c_out)), "h_out");
+      break;
+    }
+    case PYTORCH_LSTM: {
+      // Standard LSTM with two matrix multiplications.
+      auto *w_ih = tf.Parameter("w_ih", dt, {input_dim, 4 * rnn_dim});
+      auto *w_hh = tf.Parameter("w_hh", dt, {rnn_dim, 4 * rnn_dim});
+      tf.Random(w_ih);
+      tf.Random(w_hh);
+      auto *b_ih = tf.Parameter("b_ih", dt, {1, 4 * rnn_dim});
+      auto *b_hh = tf.Parameter("b_hh", dt, {1, 4 * rnn_dim});
+
+      // Preactivations.
+      auto *ih = tf.Add(tf.MatMul(x, w_ih), b_ih);
+      auto *hh = tf.Add(tf.MatMul(h_in, w_hh), b_hh);
+      auto p = tf.Split(tf.Add(ih, hh), 4, 1);
+
+      // Gates.
+      auto *f = tf.Name(tf.Sigmoid(p[0]), "f");
+      auto *i = tf.Name(tf.Sigmoid(p[1]), "i");
+      auto *o = tf.Name(tf.Sigmoid(p[2]), "o");
+      auto *g = tf.Name(tf.Tanh(p[3]), "g");
+
+      // Outputs.
+      c_out = tf.Name(tf.Add(tf.Mul(f, c_in), tf.Mul(i, g)), "c_out");
+      h_out = tf.Name(tf.Mul(o, tf.Tanh(c_out)), "h_out");
       break;
     }
     default:
@@ -132,7 +177,7 @@ RNN::Variables RNN::Build(Flow *flow,
   }
 
   // Make zero element.
-  auto *zero = fb.Name(fb.Const(nullptr, dt, {1, rnn_dim}), "zero");
+  auto *zero = tf.Name(tf.Const(nullptr, dt, {1, rnn_dim}), "zero");
   zero->set_out();
 
   // Connect RNN units.
@@ -151,13 +196,13 @@ RNN::Variables RNN::Build(Flow *flow,
 
   // Build gradients for learning.
   if (dinput != nullptr) {
-    auto *gf = Gradient(flow, fb.func());
+    auto *gf = Gradient(flow, tf.func());
     vars.dinput = flow->GradientVar(vars.input);
     vars.doutput = flow->GradientVar(vars.output);
     flow->Connect({vars.dinput, dinput});
 
     // Make sink variable for final channel gradients.
-    auto *sink = fb.Var("sink", dt, {1, rnn_dim})->set_out();
+    auto *sink = tf.Var("sink", dt, {1, rnn_dim})->set_out();
     gf->unused.push_back(sink);
     auto *dh_in = flow->GradientVar(h_in);
     auto *dh_out = flow->GradientVar(h_out);
