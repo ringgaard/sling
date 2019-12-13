@@ -30,24 +30,28 @@ class RNNLearner;
 struct RNN {
   // RNN types.
   enum Type {
-    // Standard LSTM (Hochreiter & Schmidhuber 1997).
+    // Standard LSTM [Hochreiter & Schmidhuber 1997].
     LSTM = 0,
 
-    // LSTM with peephole connections (Gers & Schmidhuber (2000) and coupled
-    // forget and input gates (Greff et al 2015).
+    // LSTM with peephole connections [Gers & Schmidhuber 2000] and coupled
+    // forget and input gates [Greff et al. 2015].
     DRAGNN_LSTM = 1,
 
-    // Standard LSTM with one matrix multiplication (Dozat & Manning 2017).
+    // Standard LSTM with one matrix multiplication [Dozat & Manning 2017].
     DOZAT_LSTM = 2,
 
     // Standard LSTM with two matrix multiplications.
     PYTORCH_LSTM = 3,
+
+    // Gated Recurrent Unit (GRU) [Cho et al. 2014].
+    GRU = 4,
   };
 
   // RNN specification.
   struct Spec {
-    Type type = LSTM;  // RNN type
-    int dim = 128;     // RNN dimension
+    Type type = LSTM;        // RNN type
+    int dim = 128;           // RNN dimension
+    bool highways = false;   // use highway connections between layers
   };
 
   // Flow input/output variables.

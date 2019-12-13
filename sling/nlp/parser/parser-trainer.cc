@@ -40,6 +40,7 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("rnn_layers", &rnn_layers_);
   task->Fetch("rnn_type", &rnn_type_);
   task->Fetch("rnn_bidir", &rnn_bidir_);
+  task->Fetch("rnn_highways", &rnn_highways_);
   task->Fetch("mark_depth", &mark_depth_);
   task->Fetch("mark_dim", &mark_dim_);
   task->Fetch("frame_limit", &frame_limit_);
@@ -104,6 +105,7 @@ void ParserTrainer::Run(task::Task *task) {
   RNN::Spec rnn_spec;
   rnn_spec.type = static_cast<RNN::Type>(rnn_type_);
   rnn_spec.dim = rnn_dim_;
+  rnn_spec.highways = rnn_highways_;
   encoder_.AddLayers(rnn_layers_, rnn_spec, rnn_bidir_);
 
   // Custom parser model initialization. This should set up the word and role
@@ -514,6 +516,7 @@ void ParserTrainer::Save(const string &filename) {
   encoder_spec.Add("dim", rnn_dim_);
   encoder_spec.Add("layers", rnn_layers_);
   encoder_spec.Add("bidir", rnn_bidir_);
+  encoder_spec.Add("highways", rnn_highways_);
   spec.Set("encoder", encoder_spec.Create());
 
   // Save decoder spec.

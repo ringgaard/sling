@@ -188,7 +188,8 @@ class ParserTrainer : public task::LearnerTask {
   int rnn_type_ = myelin::RNN::LSTM;
   int rnn_dim_ = 256;
   int rnn_layers_ = 1;
-  int rnn_bidir_ = true;
+  bool rnn_bidir_ = true;
+  bool rnn_highways_ = false;
   int mark_depth_ = 1;
   int frame_limit_ = 5;
   int attention_depth_ = 5;

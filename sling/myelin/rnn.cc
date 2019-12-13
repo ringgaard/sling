@@ -24,6 +24,7 @@ RNN::Variables RNN::Build(Flow *flow,
                           Flow::Variable *input,
                           Flow::Variable *dinput) {
   // Build RNN cell.
+  bool learn = dinput != nullptr;
   Variables vars;
   FlowBuilder tf(flow, name);
   auto dt = input->type;
@@ -33,11 +34,15 @@ RNN::Variables RNN::Build(Flow *flow,
   // Build inputs.
   auto *x = tf.Placeholder("input", dt, input->shape, true);
   auto *h_in = tf.Placeholder("h_in", dt, {1, rnn_dim}, true);
-  auto *c_in = tf.Placeholder("c_in", dt, {1, rnn_dim}, true);
+  Flow::Variable *c_in = nullptr;
+  if (spec.type != GRU) {
+    c_in = tf.Placeholder("c_in", dt, {1, rnn_dim}, true);
+  }
 
   // Build recurrent unit.
-  Flow::Variable *h_out = nullptr;
-  Flow::Variable *c_out = nullptr;
+  Flow::Variable *h_out = nullptr;     // hidden output
+  Flow::Variable *c_out = nullptr;     // control output
+  Flow::Variable *residual = nullptr;  // residial gate for highway connection
   switch (spec.type) {
     case LSTM: {
       // Standard LSTM.
@@ -58,32 +63,38 @@ RNN::Variables RNN::Build(Flow *flow,
       auto *bo = tf.Parameter("bo", dt, {1, rnn_dim});
 
       // i = sigmoid(x * x2i + h_in * h2i + c_in * c2i + bi)
-      auto *ia = tf.Add(tf.MatMul(x, x2i),
-                 tf.Add(tf.MatMul(h_in, h2i),bi));
+      auto *ia = tf.Add(tf.MatMul(x, x2i), tf.Add(tf.MatMul(h_in, h2i), bi));
       auto *i = tf.Name(tf.Sigmoid(ia), "i");
 
       // f = sigmoid(x * x2f + h_in * h2f + bf)
-      auto *fa = tf.Add(tf.MatMul(x, x2f),
-                 tf.Add(tf.MatMul(h_in, h2f),bf));
+      auto *fa = tf.Add(tf.MatMul(x, x2f), tf.Add(tf.MatMul(h_in, h2f), bf));
       auto *f = tf.Name(tf.Sigmoid(fa), "f");
 
       // g = tanh(x * x2g + h_in * h2g + bg)
-      auto *ga = tf.Add(tf.MatMul(x, x2g),
-                 tf.Add(tf.MatMul(h_in, h2g),bg));
+      auto *ga = tf.Add(tf.MatMul(x, x2g), tf.Add(tf.MatMul(h_in, h2g), bg));
       auto *g = tf.Name(tf.Tanh(ga), "g");
 
       // o = sigmoid(x * x2o + h_in * h2o + bo)
-      auto *oa = tf.Add(tf.MatMul(x, x2o),
-                 tf.Add(tf.MatMul(h_in, h2o),bo));
+      auto *oa = tf.Add(tf.MatMul(x, x2o), tf.Add(tf.MatMul(h_in, h2o), bo));
       auto *o = tf.Name(tf.Sigmoid(oa), "o");
 
+      // residual = sigmoid(x * x2r + h_in * h2r + br)
+      if (spec.highways) {
+        auto *x2r = tf.Random(tf.Parameter("x2r", dt, {input_dim, rnn_dim}));
+        auto *h2r = tf.Random(tf.Parameter("h2r", dt, {rnn_dim, rnn_dim}));
+        auto *br = tf.Parameter("br", dt, {1, rnn_dim});
+        auto *ra = tf.Add(tf.Add(tf.MatMul(x, x2r),tf.MatMul(h_in, h2r)), br);
+        residual = tf.Name(tf.Sigmoid(ra), "r");
+      }
+
       // c_out = f * c_in + i * g
-      c_out = tf.Name(tf.Add(tf.Mul(f, c_in), tf.Mul(i, g)), "c_out");
+      c_out = tf.Add(tf.Mul(f, c_in), tf.Mul(i, g));
 
       // h_out = o * tanh(c_out)
-      h_out = tf.Name(tf.Mul(o, tf.Tanh(c_out)), "h_out");
+      h_out = tf.Mul(o, tf.Tanh(c_out));
       break;
     }
+
     case DRAGNN_LSTM: {
       // DRAGNN LSTM with peephole and couples gates.
       auto *x2i = tf.Random(tf.Parameter("x2i", dt, {input_dim, rnn_dim}));
@@ -115,7 +126,7 @@ RNN::Variables RNN::Build(Flow *flow,
       auto *w = tf.Name(tf.Tanh(wa), "w");
 
       // c_out = i * w + f * c_in
-      c_out = tf.Name(tf.Add(tf.Mul(i, w), tf.Mul(f, c_in)), "c_out");
+      c_out = tf.Add(tf.Mul(i, w), tf.Mul(f, c_in));
 
       // o = sigmoid(x * x2o + c_out * c2o + h_in * h2o + bo)
       auto *oa = tf.Add(tf.MatMul(x, x2o),
@@ -123,58 +134,132 @@ RNN::Variables RNN::Build(Flow *flow,
                  tf.Add(tf.MatMul(h_in, h2o), bo)));
       auto *o = tf.Name(tf.Sigmoid(oa), "o");
 
+      // r = sigmoid(x * x2r + h_in * h2r + br)
+      if (spec.highways) {
+        auto *x2r = tf.Random(tf.Parameter("x2r", dt, {input_dim, rnn_dim}));
+        auto *h2r = tf.Random(tf.Parameter("h2r", dt, {rnn_dim, rnn_dim}));
+        auto *br = tf.Parameter("br", dt, {1, rnn_dim});
+        auto *ra = tf.Add(tf.Add(tf.MatMul(x, x2r),tf.MatMul(h_in, h2r)), br);
+        residual = tf.Name(tf.Sigmoid(ra), "r");
+      }
+
       // h_out = o * tanh(c_out)
-      h_out = tf.Name(tf.Mul(o, tf.Tanh(c_out)), "h_out");
+      h_out = tf.Mul(o, tf.Tanh(c_out));
       break;
     }
+
     case DOZAT_LSTM: {
       // Standard LSTM with one matrix multiplication.
-      auto *w = tf.Parameter("W", dt, {input_dim + rnn_dim, 4 * rnn_dim});
+      int gates = spec.highways ? 5 : 4;
+      auto *w = tf.Parameter("W", dt, {input_dim + rnn_dim, gates * rnn_dim});
       tf.Random(w);
-      auto *b = tf.Parameter("b", dt, {1, 4 * rnn_dim});
+      auto *b = tf.Parameter("b", dt, {1, gates * rnn_dim});
 
       // Preactivations.
-      auto p = tf.Split(tf.Add(tf.MatMul(tf.Concat({x, h_in}), w), b), 4, 1);
+      auto *xh = tf.Concat({x, h_in});
+      auto p = tf.Split(tf.Add(tf.MatMul(xh, w), b), gates, 1);
 
       // Gates.
       auto *f = tf.Name(tf.Sigmoid(p[0]), "f");
       auto *i = tf.Name(tf.Sigmoid(p[1]), "i");
       auto *o = tf.Name(tf.Sigmoid(p[2]), "o");
       auto *g = tf.Name(tf.Tanh(p[3]), "g");
+      if (spec.highways) {
+        residual = tf.Name(tf.Sigmoid(p[4]), "r");
+      }
 
       // Outputs.
-      c_out = tf.Name(tf.Add(tf.Mul(f, c_in), tf.Mul(i, g)), "c_out");
-      h_out = tf.Name(tf.Mul(o, tf.Tanh(c_out)), "h_out");
+      c_out = tf.Add(tf.Mul(f, c_in), tf.Mul(i, g));
+      h_out = tf.Mul(o, tf.Tanh(c_out));
       break;
     }
+
     case PYTORCH_LSTM: {
       // Standard LSTM with two matrix multiplications.
-      auto *w_ih = tf.Parameter("w_ih", dt, {input_dim, 4 * rnn_dim});
-      auto *w_hh = tf.Parameter("w_hh", dt, {rnn_dim, 4 * rnn_dim});
+      int gates = spec.highways ? 5 : 4;
+      auto *w_ih = tf.Parameter("w_ih", dt, {input_dim, gates * rnn_dim});
+      auto *w_hh = tf.Parameter("w_hh", dt, {rnn_dim, gates * rnn_dim});
       tf.Random(w_ih);
       tf.Random(w_hh);
-      auto *b_ih = tf.Parameter("b_ih", dt, {1, 4 * rnn_dim});
-      auto *b_hh = tf.Parameter("b_hh", dt, {1, 4 * rnn_dim});
+      auto *b_ih = tf.Parameter("b_ih", dt, {1, gates * rnn_dim});
+      auto *b_hh = tf.Parameter("b_hh", dt, {1, gates * rnn_dim});
 
       // Preactivations.
       auto *ih = tf.Add(tf.MatMul(x, w_ih), b_ih);
       auto *hh = tf.Add(tf.MatMul(h_in, w_hh), b_hh);
-      auto p = tf.Split(tf.Add(ih, hh), 4, 1);
+      auto p = tf.Split(tf.Add(ih, hh), gates, 1);
 
       // Gates.
       auto *f = tf.Name(tf.Sigmoid(p[0]), "f");
       auto *i = tf.Name(tf.Sigmoid(p[1]), "i");
       auto *o = tf.Name(tf.Sigmoid(p[2]), "o");
       auto *g = tf.Name(tf.Tanh(p[3]), "g");
+      if (spec.highways) {
+        residual = tf.Name(tf.Sigmoid(p[4]), "r");
+      }
 
       // Outputs.
-      c_out = tf.Name(tf.Add(tf.Mul(f, c_in), tf.Mul(i, g)), "c_out");
-      h_out = tf.Name(tf.Mul(o, tf.Tanh(c_out)), "h_out");
+      c_out = tf.Add(tf.Mul(f, c_in), tf.Mul(i, g));
+      h_out = tf.Mul(o, tf.Tanh(c_out));
       break;
     }
+
+    case GRU: {
+      // Gated Recurrent Unit.
+      auto *x2z = tf.Random(tf.Parameter("x2z", dt, {input_dim, rnn_dim}));
+      auto *h2z = tf.Random(tf.Parameter("h2z", dt, {rnn_dim, rnn_dim}));
+
+      auto *x2r = tf.Random(tf.Parameter("x2r", dt, {input_dim, rnn_dim}));
+      auto *h2r = tf.Random(tf.Parameter("h2r", dt, {rnn_dim, rnn_dim}));
+
+      auto *x2h = tf.Random(tf.Parameter("x2h", dt, {input_dim, rnn_dim}));
+      auto *h2h = tf.Random(tf.Parameter("h2h", dt, {rnn_dim, rnn_dim}));
+
+      // z = sigmoid(x * x2z + h_in * h2z)
+      auto *za = tf.Add(tf.MatMul(x, x2z), tf.MatMul(h_in, h2z));
+      auto *z = tf.Name(tf.Sigmoid(za), "z");
+
+      // r = sigmoid(x * x2r + h_in * h2r)
+      auto *ra = tf.Add(tf.MatMul(x, x2r), tf.MatMul(h_in, h2r));
+      auto *r = tf.Name(tf.Sigmoid(ra), "r");
+
+      // h = tanh(x * x2h + (r * h_in) * h2h)
+      auto *ha = tf.Add(tf.MatMul(x, x2h), tf.MatMul(tf.Mul(r, h_in), h2h));
+      auto *h = tf.Name(tf.Tanh(ha), "h");
+
+      // residual = sigmoid(x * x2b + h_in * h2b)
+      if (spec.highways) {
+        auto *x2b = tf.Random(tf.Parameter("x2b", dt, {input_dim, rnn_dim}));
+        auto *h2b = tf.Random(tf.Parameter("h2b", dt, {rnn_dim, rnn_dim}));
+        auto *ra = tf.Add(tf.MatMul(x, x2b),tf.MatMul(h_in, h2b));
+        residual = tf.Name(tf.Sigmoid(ra), "r");
+      }
+
+      // h_out = (1 - z) * h_in + z * h
+      h_out = tf.Add(tf.Mul(tf.Sub(tf.One(), z), h_in), tf.Mul(z, h));
+      break;
+    }
+
     default:
       LOG(FATAL) << "RNN type not supported: " << spec.type;
   }
+
+  // Highway connection.
+  if (residual != nullptr) {
+    // Highway connection.
+    auto *bypass = x;
+    if (input_dim != rnn_dim) {
+      // Linear transform from input to output dimension.
+      auto *wx = tf.Random(tf.Parameter("Wr", dt, {input_dim, rnn_dim}));
+      bypass = tf.MatMul(x, wx);
+    }
+    h_out = tf.Add(tf.Mul(residual, h_out),
+                   tf.Mul(tf.Sub(tf.One(), residual), bypass));
+  }
+
+  // Name RNN outputs.
+  if (h_out != nullptr) tf.Name(h_out, "h_out");
+  if (c_out != nullptr) tf.Name(c_out, "c_out");
 
   // Make zero element.
   auto *zero = tf.Name(tf.Const(nullptr, dt, {1, rnn_dim}), "zero");
@@ -195,7 +280,7 @@ RNN::Variables RNN::Build(Flow *flow,
   }
 
   // Build gradients for learning.
-  if (dinput != nullptr) {
+  if (learn) {
     auto *gf = Gradient(flow, tf.func());
     vars.dinput = flow->GradientVar(vars.input);
     vars.doutput = flow->GradientVar(vars.output);

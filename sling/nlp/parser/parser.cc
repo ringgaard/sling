@@ -52,6 +52,7 @@ void Parser::Load(Store *store, const string &model) {
   myelin::RNN::Spec rnn_spec;
   rnn_spec.type = static_cast<myelin::RNN::Type>(encoder_spec.GetInt("rnn"));
   rnn_spec.dim = encoder_spec.GetInt("dim");
+  rnn_spec.highways = encoder_spec.GetBool("highways");
   int rnn_layers = encoder_spec.GetInt("layers");
   bool rnn_bidir = encoder_spec.GetBool("bidir");
 
