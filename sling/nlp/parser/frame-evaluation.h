@@ -147,6 +147,7 @@ class FrameEvaluation {
     Benchmark role;
     Benchmark label;
     Benchmark slot;
+    Benchmark edge;
     Benchmark combined;
 
     // Counters.
@@ -213,13 +214,17 @@ class FrameEvaluation {
 
   // Computes role accuracy.
   static void RoleAccuracy(Store *store, const Alignment &alignment,
-                           Metric *type, Metric *role, Metric *label);
+                           Metric *type, Metric *role,
+                           Metric *label, Metric *edge);
 
   // Counts the number of slots with a given name.
   static int SlotCount(const Frame &f, Handle name);
 
-  // Checks if frame has a role with a given name and value.
-  static bool HasRole(const Frame &f, Handle name, Handle value);
+  // Checks if frame has a slot with a given name and value.
+  static bool HasSlot(const Frame &f, Handle name, Handle value);
+
+  // Checks if frame has a slot with a given value.
+  static bool HasValue(const Frame &f, Handle value);
 };
 
 }  // namespace nlp

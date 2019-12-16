@@ -207,6 +207,7 @@ class ParserTrainer : public task::LearnerTask {
   int batch_size_ = 32;
   float learning_rate_ = 1.0;
   float min_learning_rate_ = 0.001;
+  float dropout_ = 0.0;
 
   // Evaluation statistics.
   float prev_loss_ = 0.0;

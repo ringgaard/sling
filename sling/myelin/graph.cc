@@ -242,6 +242,7 @@ static void AppendVar(string *str,
   if (var->in()) str->append("in ");
   if (var->out()) str->append("out ");
   if (var->unique()) str->append("unique ");
+  if (var->is(Flow::Variable::NOGRADIENT)) str->append("nograd ");
   str->append("var ");
   str->append(var->name);
   if (!var->aliases.empty()) {

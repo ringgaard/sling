@@ -58,6 +58,7 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("batch_size", &batch_size_);
   task->Fetch("learning_rate", &learning_rate_);
   task->Fetch("min_learning_rate", &min_learning_rate_);
+  task->Fetch("dropout", &dropout_);
 
   // Statistics.
   num_tokens_ = task->GetCounter("tokens");
@@ -106,6 +107,7 @@ void ParserTrainer::Run(task::Task *task) {
   rnn_spec.type = static_cast<RNN::Type>(rnn_type_);
   rnn_spec.dim = rnn_dim_;
   rnn_spec.highways = rnn_highways_;
+  rnn_spec.dropout = dropout_;
   encoder_.AddLayers(rnn_layers_, rnn_spec, rnn_bidir_);
 
   // Custom parser model initialization. This should set up the word and role
@@ -368,8 +370,9 @@ bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
   LOG(INFO) << "SPAN:  " << eval.mention.Summary();
   LOG(INFO) << "FRAME: " << eval.frame.Summary();
   LOG(INFO) << "TYPE:  " << eval.type.Summary();
-  LOG(INFO) << "ROLE:  " << eval.role.Summary();
   LOG(INFO) << "LABEL: " << eval.label.Summary();
+  LOG(INFO) << "EDGE:  " << eval.edge.Summary();
+  LOG(INFO) << "ROLE:  " << eval.role.Summary();
   LOG(INFO) << "SLOT:  " << eval.slot.Summary();
   LOG(INFO) << "TOTAL: " << eval.combined.Summary();
 

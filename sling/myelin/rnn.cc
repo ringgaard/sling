@@ -257,6 +257,20 @@ RNN::Variables RNN::Build(Flow *flow,
                    tf.Mul(tf.Sub(tf.One(), residual), bypass));
   }
 
+  // Apply dropout to output.
+  if (learn && spec.dropout != 0.0) {
+    auto *mask = tf.Placeholder("mask", DT_FLOAT, {1, rnn_dim}, true);
+    mask->set(Flow::Variable::NOGRADIENT);
+    h_out = tf.Mul(h_out, mask);
+
+    // The no-dropout mask is used for testing during training when no dropout
+    // should be applied.
+    std::vector<float> ones(rnn_dim, 1.0);
+    auto *nodropout = tf.Name(tf.Const(ones), "nodropout");
+    nodropout->set_out();
+    flow->Connect({nodropout, mask});
+  }
+
   // Name RNN outputs.
   if (h_out != nullptr) tf.Name(h_out, "h_out");
   if (c_out != nullptr) tf.Name(c_out, "c_out");
@@ -323,6 +337,12 @@ void RNN::Initialize(const Network &net) {
     dc_out = c_out == nullptr ? nullptr : c_out->Gradient();
     sink = net.GetParameter(name + "/sink");
   }
+
+  // Initialize dropout mask.
+  if (spec.dropout != 0.0) {
+    mask = net.GetParameter(name + "/mask");
+    nodropout = net.GetParameter(name + "/nodropout");
+  }
 }
 
 RNNMerger::Variables RNNMerger::Build(Flow *flow,
@@ -375,6 +395,7 @@ void RNNMerger::Initialize(const Network &net) {
 RNNLayer::RNNLayer(const string &name, const RNN::Spec &spec, bool bidir)
     : name_(name),
       bidir_(bidir),
+      dropout_(spec.dropout),
       lr_(bidir ? name + "/lr" : name, spec),
       rl_(name + "/rl", spec),
       merger_(name) {}
@@ -427,6 +448,11 @@ Channel *RNNInstance::Compute(Channel *input) {
   int length = input->size();
   bool ctrl = rnn_->lr_.has_control();
 
+  // Set pass-through dropout mask.
+  if (rnn_->lr_.has_mask()) {
+    lr_.SetReference(rnn_->lr_.mask, rnn_->lr_.nodropout->data());
+  }
+
   // Compute left-to-right RNN.
   lr_hidden_.resize(length);
   if (ctrl) lr_control_.resize(length);
@@ -455,6 +481,11 @@ Channel *RNNInstance::Compute(Channel *input) {
 
   // Return left-to-right hidden channel for unidirectional RNN.
   if (!rnn_->bidir_) return &lr_hidden_;
+
+  // Set pass-through dropout mask.
+  if (rnn_->rl_.has_mask()) {
+    rl_.SetReference(rnn_->rl_.mask, rnn_->rl_.nodropout->data());
+  }
 
   // Compute right-to-left RNN.
   rl_hidden_.resize(length);
@@ -511,12 +542,26 @@ RNNLearner::RNNLearner(const RNNLayer *rnn)
       splitter_(rnn->merger_.gcell),
       merged_(rnn->merger_.merged),
       dleft_(rnn->merger_.dleft),
-      dright_(rnn->merger_.dright) {}
+      dright_(rnn->merger_.dright),
+      mask_(rnn_->lr_.mask) {}
 
 Channel *RNNLearner::Compute(Channel *input) {
   // Get sequence length.
   int length = input->size();
   bool ctrl = rnn_->lr_.has_control();
+
+  // Set up dropout mask.
+  bool dropout = rnn_->dropout_ != 0.0;
+  if (dropout) {
+    mask_.resize(1);
+    float *mask = reinterpret_cast<float *>(mask_.at(0));
+    float rate = rnn_->dropout_;
+    float scaler = 1.0 / (1.0 - rate);
+    int size = rnn_->lr_.spec.dim;
+    for (int i = 0; i < size; ++i) {
+      mask[i] = Random() < rate ? 0.0 : scaler;
+    }
+  }
 
   // Compute left-to-right RNN.
   lr_fwd_.Resize(length);
@@ -532,6 +577,9 @@ Channel *RNNLearner::Compute(Channel *input) {
       data.SetReference(rnn_->lr_.c_in, rnn_->lr_.zero->data());
       data.Set(rnn_->lr_.c_out, &lr_control_, 0);
     }
+    if (dropout) {
+      data.Set(rnn_->lr_.mask, &mask_, 0);
+    }
     data.Compute();
   }
 
@@ -543,6 +591,9 @@ Channel *RNNLearner::Compute(Channel *input) {
     if (ctrl) {
       data.Set(rnn_->lr_.c_in, &lr_control_, i - 1);
       data.Set(rnn_->lr_.c_out, &lr_control_, i);
+    }
+    if (dropout) {
+      data.Set(rnn_->lr_.mask, &mask_, 0);
     }
     data.Compute();
   }
@@ -564,6 +615,9 @@ Channel *RNNLearner::Compute(Channel *input) {
       data.SetReference(rnn_->rl_.c_in, rnn_->rl_.zero->data());
       data.Set(rnn_->rl_.c_out, &rl_control_, length - 1);
     }
+    if (dropout) {
+      data.Set(rnn_->rl_.mask, &mask_, 0);
+    }
     data.Compute();
   }
 
@@ -575,6 +629,9 @@ Channel *RNNLearner::Compute(Channel *input) {
     if (ctrl) {
       data.Set(rnn_->rl_.c_in, &rl_control_, i + 1);
       data.Set(rnn_->rl_.c_out, &rl_control_, i);
+    }
+    if (dropout) {
+      data.Set(rnn_->rl_.mask, &mask_, 0);
     }
     data.Compute();
   }
@@ -616,6 +673,7 @@ Channel *RNNLearner::Backpropagate(Channel *doutput) {
   // Propagate gradients for left-to-right RNN.
   if (dleft != nullptr) {
     if (ctrl) lr_dcontrol_.reset(length);
+
     for (int i = length - 1; i >= 2; --i) {
       lr_bkw_.Set(rnn_->lr_.primal, &lr_fwd_[i]);
       lr_bkw_.Set(rnn_->lr_.dh_out, dleft, i);
@@ -645,6 +703,7 @@ Channel *RNNLearner::Backpropagate(Channel *doutput) {
   // Propagate gradients for right-to-left RNN.
   if (dright != nullptr) {
     if (ctrl) rl_dcontrol_.reset(length);
+
     for (int i = 0; i < length - 1; ++i) {
       rl_bkw_.Set(rnn_->rl_.primal, &rl_fwd_[i]);
       rl_bkw_.Set(rnn_->rl_.dh_out, dright, i);

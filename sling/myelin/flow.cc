@@ -291,7 +291,7 @@ class Parser {
   Parser(const char *ptr, const char *end) : ptr_(ptr), end_(end) {}
 
   // Get data buffer from input and advance the current input pointer.
-  const char *Get(int len) {
+  const char *Get(size_t len) {
     CHECK_LE(len, end_ - ptr_) << "Unexpected end of input";
     const char *p = ptr_;
     ptr_ += len;
@@ -2020,6 +2020,7 @@ string Flow::ToString() const {
     if (var->in()) StringAppendF(&str, " in");
     if (var->out()) StringAppendF(&str, " out");
     if (var->unique()) StringAppendF(&str, " unique");
+    if (var->is(Flow::Variable::NOGRADIENT)) StringAppendF(&str, " nograd");
     if (var->constant()) {
       StringAppendF(&str, ", %" PRIu64 " bytes", var->size);
     }

@@ -83,6 +83,7 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
   auto &type = output->type;
   auto &role = output->role;
   auto &label = output->label;
+  auto &edge = output->edge;
 
   // Statistics counters.
   output->num_golden_spans = 0;
@@ -134,9 +135,11 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
 
     // Compute role precision and recall.
     RoleAccuracy(store, g2p_frame_alignment,
-                 &type.recall, &role.recall, &label.recall);
+                 &type.recall, &role.recall,
+                 &label.recall, &edge.recall);
     RoleAccuracy(store, p2g_frame_alignment,
-                 &type.precision, &role.precision, &label.precision);
+                 &type.precision, &role.precision,
+                 &label.precision, &edge.precision);
 
     // Update statistics.
     output->num_golden_spans += golden_mentions.size();
@@ -233,8 +236,9 @@ void FrameEvaluation::Output::GetScores(Scores *scores) const {
   mention.GetScores("SPAN", scores);
   frame.GetScores("FRAME", scores);
   type.GetScores("TYPE", scores);
-  role.GetScores("ROLE", scores);
   label.GetScores("LABEL", scores);
+  edge.GetScores("EDGE", scores);
+  role.GetScores("ROLE", scores);
   slot.GetScores("SLOT", scores);
   combined.GetScores("COMBINED", scores);
   scores->emplace_back("#GOLDEN_SPANS", num_golden_spans);
@@ -403,7 +407,7 @@ void FrameEvaluation::AlignmentAccuracy(
 
 void FrameEvaluation::RoleAccuracy(
     Store *store, const Alignment &alignment,
-    Metric *type, Metric *role, Metric *label) {
+    Metric *type, Metric *role, Metric *label, Metric *edge) {
   for (const auto &a : alignment) {
     Frame source(store, a.first);
     Frame target(store, a.second);
@@ -412,15 +416,17 @@ void FrameEvaluation::RoleAccuracy(
     for (const Slot &s : source) {
       if (s.name.IsIsA()) {
         // Check type.
-        type->prediction(HasRole(target, Handle::isa(), s.value));
+        type->prediction(HasSlot(target, Handle::isa(), s.value));
       } else if (s.name.IsId() || s.name.IsIs()) {
         // Ignore special roles.
       } else if (s.value.IsLocalRef()) {
         // Check frame-to-frame role.
-        role->prediction(HasRole(target, s.name, alignment.Lookup(s.value)));
+        Handle value = alignment.Lookup(s.value);
+        role->prediction(HasSlot(target, s.name, value));
+        edge->prediction(HasValue(target, value));
       } else {
         // Check label role.
-        label->prediction(HasRole(target, s.name, s.value));
+        label->prediction(HasSlot(target, s.name, s.value));
       }
     }
   }
@@ -434,10 +440,18 @@ int FrameEvaluation::SlotCount(const Frame &f, Handle name) {
   return n;
 }
 
-bool FrameEvaluation::HasRole(const Frame &f, Handle name, Handle value) {
+bool FrameEvaluation::HasSlot(const Frame &f, Handle name, Handle value) {
   if (f.invalid() || name.IsNil() || value.IsNil()) return false;
   for (const Slot &s : f) {
     if (s.name == name && s.value == value) return true;
+  }
+  return false;
+}
+
+bool FrameEvaluation::HasValue(const Frame &f, Handle value) {
+  if (f.invalid() || value.IsNil()) return false;
+  for (const Slot &s : f) {
+    if (s.value == value) return true;
   }
   return false;
 }

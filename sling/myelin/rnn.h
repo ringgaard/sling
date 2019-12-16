@@ -15,6 +15,8 @@
 #ifndef SLING_MYELIN_RNN_H_
 #define SLING_MYELIN_RNN_H_
 
+#include <string>
+#include <random>
 #include <vector>
 
 #include "sling/myelin/compute.h"
@@ -52,6 +54,7 @@ struct RNN {
     Type type = LSTM;        // RNN type
     int dim = 128;           // RNN dimension
     bool highways = false;   // use highway connections between layers
+    float dropout = 0.0;     // dropout rate during training (0=no dropout)
   };
 
   // Flow input/output variables.
@@ -77,6 +80,9 @@ struct RNN {
   // Control channel is optional for RNN.
   bool has_control() const { return c_in != nullptr; }
 
+  // Dropout is only needed during training.
+  bool has_mask() const { return mask != nullptr; }
+
   string name;                     // RNN cell name
   Spec spec;                       // RNN specification
 
@@ -87,6 +93,9 @@ struct RNN {
   Tensor *c_in = nullptr;          // link to RNN control input
   Tensor *c_out = nullptr;         // link to RNN control output
   Tensor *zero = nullptr;          // zero element for channels
+  Tensor *mask = nullptr;          // dropout mask input
+
+  Tensor *nodropout = nullptr;     // dropout mask with no dropout
 
   Cell *gcell = nullptr;           // RNN gradient cell
   Tensor *dinput = nullptr;        // input gradient
@@ -156,6 +165,7 @@ class RNNLayer {
  private:
   string name_;       // cell name prefix
   bool bidir_;        // bidirectional RNN
+  float dropout_;     // dropout ratio during learning.
 
   RNN lr_;            // left-to-right RNN
   RNN rl_;            // right-to-left RNN (if bidirectional)
@@ -197,7 +207,8 @@ class RNNLearner {
  public:
   RNNLearner(const RNNLayer *rnn);
 
-  // Compute RNN over input sequence and return output sequence.
+  // Compute RNN over input sequence and return output sequence. Dropout is
+  // only applied in learning mode.
   Channel *Compute(Channel *input);
 
   // Backpropagate gradients returning the output of backpropagation, i.e. the
@@ -211,6 +222,9 @@ class RNNLearner {
   void CollectGradients(std::vector<Instance *> *gradients);
 
  private:
+  // Generate uniform random number between 0 and 1.
+  float Random() { return prob_(prng_); }
+
   // Descriptor for RNN layer.
   const RNNLayer *rnn_;
 
@@ -241,6 +255,13 @@ class RNNLearner {
   Channel merged_;
   Channel dleft_;
   Channel dright_;
+
+  // Channel for dropout mask.
+  Channel mask_;
+
+  // Random generator for dropout.
+  std::mt19937_64 prng_;
+  std::uniform_real_distribution<float> prob_{0.0, 1.0};
 };
 
 // Multi-layer RNN.

@@ -355,16 +355,17 @@ class Flow {
   struct Variable : public Artifact<Variable> {
     // Variable flags.
     enum Flag {
-      NONE = 0,       // no flags
-      IN = 1,         // input variable
-      OUT = 2,        // output variable
-      REF = 4,        // reference variable
-      LEARNABLE = 8,  // learnable global variable
-      UNIQUE = 16,    // input with single gradient
-      RANDOM = 32,    // initialize with random values
-      ROW = 64,       // request row-major order
-      COL = 128,      // request column-major order
-      DYNAMIC = 256,  // dynamically sized tensor channel
+      NONE       = 0,    // no flags
+      IN         = 1,    // input variable
+      OUT        = 2,    // output variable
+      REF        = 4,    // reference variable
+      LEARNABLE  = 8,    // learnable global variable
+      UNIQUE     = 16,   // input with single gradient
+      RANDOM     = 32,   // initialize with random values
+      ROW        = 64,   // request row-major order
+      COL        = 128,  // request column-major order
+      DYNAMIC    = 256,  // dynamically sized tensor channel
+      NOGRADIENT = 512,  // do not compute gradient for variable
     };
 
     // Add alias for variable.
@@ -510,7 +511,7 @@ class Flow {
   struct Operation : public Artifact<Operation>, public Attributes {
     // Variable flags.
     enum Flag {
-      NONE = 0,         // no flags
+      NONE       = 0,   // no flags
       NOGRADIENT = 1,   // do not compute gradient for op
     };
 
@@ -578,7 +579,7 @@ class Flow {
   struct Function : public Artifact<Function> {
     // Variable flags.
     enum Flag {
-      NONE = 0,       // no flags
+      NONE     = 0,   // no flags
       TRAINING = 1,   // function only needed for training
       BACKPROP = 2,   // build gradient for function
     };
