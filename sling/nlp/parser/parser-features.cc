@@ -43,6 +43,7 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   // Get feature inputs.
   token_feature_ = GetParam("token", true);
 
+  attention_feature_ = GetParam("attention", true);
   attention_evoke_feature_ = GetParam("attention_evoke", true);
   attention_create_feature_ = GetParam("attention_create", true);
   attention_focus_feature_ = GetParam("attention_focus", true);
@@ -131,6 +132,7 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
 
   // Extract token, create, and focus attention features.
   if (fm->attention_depth_ > 0) {
+    int *attention = data.Get(fm->attention_feature_);
     int *evoke = data.Get(fm->attention_evoke_feature_);
     int *create = data.Get(fm->attention_create_feature_);
     int *focus = data.Get(fm->attention_focus_feature_);
@@ -152,6 +154,7 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
         created = attention.created;
         focused = attention.focused;
       }
+      if (attention != nullptr) attention[d] = focused;
       if (evoke != nullptr) evoke[d] = evoked;
       if (create != nullptr) create[d] = created;
       if (focus != nullptr) focus[d] = focused;

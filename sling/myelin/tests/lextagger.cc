@@ -441,7 +441,7 @@ class Tagger {
       LOG(INFO) << "Saving model to " << FLAGS_flow;
       Flow flow;
       BuildFlow(&flow, false);
-      net_.SaveLearnedWeights(&flow);
+      net_.SaveParameters(&flow);
       encoder_.SaveLexicon(&flow);
       flow.Save(FLAGS_flow);
     }

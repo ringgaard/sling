@@ -144,10 +144,11 @@ class FrameEvaluation {
     Benchmark mention;
     Benchmark frame;
     Benchmark type;
-    Benchmark role;
     Benchmark label;
-    Benchmark slot;
+    Benchmark pair;
     Benchmark edge;
+    Benchmark role;
+    Benchmark slot;
     Benchmark combined;
 
     // Counters.
@@ -214,8 +215,8 @@ class FrameEvaluation {
 
   // Computes role accuracy.
   static void RoleAccuracy(Store *store, const Alignment &alignment,
-                           Metric *type, Metric *role,
-                           Metric *label, Metric *edge);
+                           Metric *pair, Metric *edge, Metric *role,
+                           Metric *type, Metric *label);
 
   // Counts the number of slots with a given name.
   static int SlotCount(const Frame &f, Handle name);

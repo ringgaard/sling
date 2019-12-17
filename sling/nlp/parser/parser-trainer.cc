@@ -41,8 +41,10 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("rnn_type", &rnn_type_);
   task->Fetch("rnn_bidir", &rnn_bidir_);
   task->Fetch("rnn_highways", &rnn_highways_);
+
   task->Fetch("mark_depth", &mark_depth_);
   task->Fetch("mark_dim", &mark_dim_);
+  task->Fetch("biaff_dim", &biaff_dim_);
   task->Fetch("frame_limit", &frame_limit_);
   task->Fetch("attention_depth", &attention_depth_);
   task->Fetch("history_size", &history_size_);
@@ -54,6 +56,7 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("activations_dim", &activations_dim_);
   task->Fetch("link_dim_token", &link_dim_token_);
   task->Fetch("link_dim_step", &link_dim_step_);
+
   task->Fetch("seed", &seed_);
   task->Fetch("batch_size", &batch_size_);
   task->Fetch("learning_rate", &learning_rate_);
@@ -141,6 +144,14 @@ void ParserTrainer::Run(task::Task *task) {
   optimizer_->Initialize(model_);
   for (auto *d : delegates_) d->Initialize(model_);
   commons_.Freeze();
+
+  // Optionally load initial model parameters for restart.
+  if (task->Get("restart", false) && !model_filename_.empty()) {
+    LOG(INFO) << "Load model parameters from " << model_filename_;
+    Flow initial;
+    CHECK(initial.Load(model_filename_));
+    model_.LoadParameters(initial);
+  }
 
   // Train model.
   Train(task, &model_);
@@ -369,10 +380,11 @@ bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
   FrameEvaluation::Evaluate(&corpus, &eval);
   LOG(INFO) << "SPAN:  " << eval.mention.Summary();
   LOG(INFO) << "FRAME: " << eval.frame.Summary();
-  LOG(INFO) << "TYPE:  " << eval.type.Summary();
-  LOG(INFO) << "LABEL: " << eval.label.Summary();
+  LOG(INFO) << "PAIR:  " << eval.pair.Summary();
   LOG(INFO) << "EDGE:  " << eval.edge.Summary();
   LOG(INFO) << "ROLE:  " << eval.role.Summary();
+  LOG(INFO) << "TYPE:  " << eval.type.Summary();
+  LOG(INFO) << "LABEL: " << eval.label.Summary();
   LOG(INFO) << "SLOT:  " << eval.slot.Summary();
   LOG(INFO) << "TOTAL: " << eval.combined.Summary();
 
@@ -436,11 +448,39 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   features.push_back(LinkedFeature(&f, "history",
                                    steps, history_size_, link_dim_step_));
 
+  // Bi-affine scoring feature.
+  if (biaff_dim_ > 0) {
+    auto *attention = f.Placeholder("attention", DT_INT32, {1, frame_limit_});
+    auto *biaff_oov = f.Parameter("attention_oov", DT_FLOAT,
+                                  {1, activations_dim_});
+    auto *x = f.Gather(steps, attention, biaff_oov);
+
+    auto *biaf_h = f.Parameter("biaf_h", DT_FLOAT,
+                               {activations_dim_, biaff_dim_});
+    auto *biaf_m = f.Parameter("biaf_m", DT_FLOAT,
+                               {activations_dim_, biaff_dim_});
+
+    auto *x_h = f.MatMul(x, biaf_h);
+    auto *x_m = f.MatMul(x, biaf_m);
+    auto *bilin = f.MatMul(x_h, f.Transpose(x_m));
+    features.push_back(f.Reshape(bilin, {1, frame_limit_ * frame_limit_}));
+  }
+
   // Mark features.
   features.push_back(LinkedFeature(&f, "mark_token",
                                    tokens, mark_depth_, link_dim_token_));
   features.push_back(LinkedFeature(&f, "mark_step",
                                    steps, mark_depth_, link_dim_step_));
+
+  // Pad feature vector.
+  const static int alignment = 16;
+  int n = 0;
+  for (auto *f : features) n += f->elements();
+  if (n % alignment != 0) {
+    int padding = alignment - n % alignment;
+    auto *zeroes = f.Const(nullptr, DT_FLOAT, {1, padding});
+    features.push_back(zeroes);
+  }
 
   // Concatenate mapped feature inputs.
   auto *fv = f.Concat(features);
@@ -503,7 +543,7 @@ void ParserTrainer::Save(const string &filename) {
   Build(&flow, false);
 
   // Copy weights from trained model.
-  model_.SaveLearnedWeights(&flow);
+  model_.SaveParameters(&flow);
 
   // Save lexicon.
   encoder_.SaveLexicon(&flow);

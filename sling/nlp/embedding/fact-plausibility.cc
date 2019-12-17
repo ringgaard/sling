@@ -476,7 +476,7 @@ class FactPlausibilityTrainer : public LearnerTask {
     Build(&flow, false);
 
     // Copy weights from trained model.
-    model.SaveLearnedWeights(&flow);
+    model.SaveParameters(&flow);
 
     // Add fact lexicon.
     string encoded = Encode(fact_lexicon_);

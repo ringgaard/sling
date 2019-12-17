@@ -1074,7 +1074,7 @@ void Network::InitLearnableWeights(int64 seed, float mean, float stddev) {
   }
 }
 
-void Network::SaveLearnedWeights(Flow *flow) const {
+void Network::SaveParameters(Flow *flow) const {
   // Find all learnable variables in flow.
   for (Flow::Variable *var : flow->vars()) {
     if (!var->learnable()) continue;
@@ -1107,6 +1107,43 @@ void Network::SaveLearnedWeights(Flow *flow) const {
       }
     }
     var->clear_learnable();
+  }
+}
+
+void Network::LoadParameters(const Flow &flow) {
+  // Find all learnable variables in flow.
+  for (const Flow::Variable *var : flow.vars()) {
+    // Find tensor for variable.
+    Tensor *tensor = LookupParameter(var->name);
+    if (tensor == nullptr) continue;
+    if (!tensor->learnable()) continue;
+
+    // Check that type and shape match.
+    if (tensor->type() != var->type || tensor->shape() != var->shape) {
+      LOG(WARNING) << "Tensor " << tensor->name() << " type mismatch: "
+                   << tensor->TypeString() << " vs " << var->TypeString();
+      continue;
+    }
+
+    // If tensor data has standard layout we can copy the data directly.
+    // Otherwise, tensor data is copied element-by-element.
+    if (tensor->HasStandardLayout()) {
+      // Copy directly.
+      memcpy(tensor->data(), var->data, var->size);
+    } else {
+      // Allocate data.
+      int elements = tensor->shape().elements();
+      int element_size = tensor->element_size();
+      char *dst = tensor->data();
+      char *src = var->data;
+
+      // Copy elements one at a time.
+      for (int i = 0; i < elements; ++i) {
+        size_t offset = tensor->LinearOffset(i);
+        memcpy(dst + offset, src, element_size);
+        src += element_size;
+      }
+    }
   }
 }
 

@@ -1426,7 +1426,10 @@ class Network {
   // Save weights after training. This copies the value of each learnable tensor
   // in the network to the corresponding variable in the flow. This clears the
   // learning flag for the variable and turns it into a constant.
-  void SaveLearnedWeights(Flow *flow) const;
+  void SaveParameters(Flow *flow) const;
+
+  // Copy weight from flow for learnable tensors.
+  void LoadParameters(const Flow &flow);
 
   // Runtime support functions.
   Runtime *runtime() const { return runtime_; }

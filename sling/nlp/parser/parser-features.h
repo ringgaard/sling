@@ -53,6 +53,7 @@ class ParserFeatureModel {
   // Features.
   myelin::Tensor *token_feature_;             // current token feature
 
+  myelin::Tensor *attention_feature_;         // attention feature
   myelin::Tensor *attention_evoke_feature_;   // attention evoke feature
   myelin::Tensor *attention_create_feature_;  // attention frame create feature
   myelin::Tensor *attention_focus_feature_;   // attention frame focus feature
