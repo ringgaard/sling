@@ -215,7 +215,7 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
     switch (loc->iterator->type) {
       case SIMPLE:
       case SCALAR:
-        // Base register only needed for non-instance variables. Allocation of 
+        // Base register only needed for non-instance variables. Allocation of
         // a register is deferred until registers for other locators have been
         // allocated.
         if (loc->var->IsGlobal() || loc->var->ref()) {
@@ -521,7 +521,7 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
     // Get locator.
     CHECK(Valid(var));
     Locator *loc = LookupLocator(var);
-    
+
     // Load base address on demand if needed.
     Register base = loc->base;
     if (loc->ondemand) {

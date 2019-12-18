@@ -38,16 +38,18 @@ trainer.add_params({
   "rnn_dim": 128,
   "rnn_highways": True,
   "rnn_layers": 1,
+
   "learning_rate": 1.0,
   "learning_rate_decay": 0.8,
   "clipping": 1,
   "optimizer": "sgd",
-  "epochs": 50000,
   "batch_size": 32,
   "rampup": 120,
   "report_interval": 1000,
+  "learning_rate_cliff": 40000,
+  "epochs": 50000,
 
-  "biaff_dim": 32,
+  #"rnn_highways": False,
   #"dropout": 0.5,
 
   #"restart": True,

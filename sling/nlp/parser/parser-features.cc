@@ -43,15 +43,13 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   // Get feature inputs.
   token_feature_ = GetParam("token", true);
 
-  attention_feature_ = GetParam("attention", true);
-  attention_evoke_feature_ = GetParam("attention_evoke", true);
-  attention_create_feature_ = GetParam("attention_create", true);
-  attention_focus_feature_ = GetParam("attention_focus", true);
+  attention_tokens_feature_ = GetParam("attention_tokens", true);
+  attention_steps_feature_ = GetParam("attention_steps", true);
+
+  mark_tokens_feature_ = GetParam("mark_tokens", true);
+  mark_steps_feature_ = GetParam("mark_steps", true);
 
   history_feature_ = GetParam("history", true);
-
-  mark_token_feature_ = GetParam("mark_token", true);
-  mark_step_feature_ = GetParam("mark_step", true);
 
   out_roles_feature_ = GetParam("out_roles", true);
   in_roles_feature_ = GetParam("in_roles", true);
@@ -59,16 +57,6 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   labeled_roles_feature_ = GetParam("labeled_roles", true);
 
   // Get feature sizes.
-  std::vector<myelin::Tensor *> attention_features {
-    attention_evoke_feature_,
-    attention_create_feature_,
-    attention_focus_feature_,
-  };
-  for (auto *f : attention_features) {
-    if (f != nullptr && f->elements() > attention_depth_) {
-      attention_depth_ = f->elements();
-    }
-  }
   if (history_feature_ != nullptr) {
     history_size_ = history_feature_->elements();
   }
@@ -84,8 +72,8 @@ void ParserFeatureModel::Init(myelin::Cell *cell,
   if (labeled_roles_feature_ != nullptr) {
     labeled_roles_size_ = labeled_roles_feature_->elements();
   }
-  if (mark_token_feature_ != nullptr) {
-    mark_depth_ = mark_token_feature_->elements();
+  if (mark_tokens_feature_ != nullptr) {
+    mark_depth_ = mark_tokens_feature_->elements();
   }
 
   // Get channel links.
@@ -116,29 +104,26 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
 
   // Extract features from the mark stack.
   auto &marks = state_->marks();
-  int *mark_token = data.Get(fm->mark_token_feature_);
-  int *mark_step = data.Get(fm->mark_step_feature_);
+  int *mark_tokens = data.Get(fm->mark_tokens_feature_);
+  int *mark_steps = data.Get(fm->mark_steps_feature_);
   for (int d = 0; d < fm->mark_depth_; ++d) {
     if (d < marks.size()) {
       const auto &m = marks[marks.size() - 1 - d];
       int token = m.token - state_->begin();
-      if (mark_token != nullptr) mark_token[d] = token;
-      if (mark_step != nullptr) mark_step[d] = m.step;
+      if (mark_tokens != nullptr) mark_tokens[d] = token;
+      if (mark_steps != nullptr) mark_steps[d] = m.step;
     } else {
-      if (mark_token != nullptr) mark_token[d] = -1;
-      if (mark_step != nullptr) mark_step[d] = -1;
+      if (mark_tokens != nullptr) mark_tokens[d] = -1;
+      if (mark_steps != nullptr) mark_steps[d] = -1;
     }
   }
 
-  // Extract token, create, and focus attention features.
-  if (fm->attention_depth_ > 0) {
-    int *attention = data.Get(fm->attention_feature_);
-    int *evoke = data.Get(fm->attention_evoke_feature_);
-    int *create = data.Get(fm->attention_create_feature_);
-    int *focus = data.Get(fm->attention_focus_feature_);
-    for (int d = 0; d < fm->attention_depth_; ++d) {
+  // Extract token and step attention features.
+  if (fm->frame_limit_ > 0) {
+    int *token_attention = data.Get(fm->attention_tokens_feature_);
+    int *step_attention = data.Get(fm->attention_steps_feature_);
+    for (int d = 0; d < fm->frame_limit_; ++d) {
       int evoked = -1;
-      int created = -1;
       int focused = -1;
       if (d < state_->AttentionSize()) {
         // Get frame from attention buffer.
@@ -150,14 +135,11 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
           if (evoked != -1) evoked -= state_->begin() + 1;
         }
 
-        // Get the step numbers that created and focused the frame.
-        created = attention.created;
+        // Get the step numbers that focused the frame.
         focused = attention.focused;
       }
-      if (attention != nullptr) attention[d] = focused;
-      if (evoke != nullptr) evoke[d] = evoked;
-      if (create != nullptr) create[d] = created;
-      if (focus != nullptr) focus[d] = focused;
+      if (token_attention != nullptr) token_attention[d] = evoked;
+      if (step_attention != nullptr) step_attention[d] = focused;
     }
   }
 

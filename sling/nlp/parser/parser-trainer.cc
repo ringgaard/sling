@@ -46,7 +46,6 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("mark_dim", &mark_dim_);
   task->Fetch("biaff_dim", &biaff_dim_);
   task->Fetch("frame_limit", &frame_limit_);
-  task->Fetch("attention_depth", &attention_depth_);
   task->Fetch("history_size", &history_size_);
   task->Fetch("out_roles_size", &out_roles_size_);
   task->Fetch("in_roles_size", &in_roles_size_);
@@ -61,6 +60,8 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("batch_size", &batch_size_);
   task->Fetch("learning_rate", &learning_rate_);
   task->Fetch("min_learning_rate", &min_learning_rate_);
+  task->Fetch("learning_rate_cliff", &learning_rate_cliff_);
+
   task->Fetch("dropout", &dropout_);
 
   // Statistics.
@@ -362,11 +363,10 @@ bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
   loss_count_ = 0;
 
   // Decay learning rate if loss increases.
-  if (prev_loss_ != 0.0 &&
-      prev_loss_ < loss &&
-      learning_rate_ > min_learning_rate_) {
-    learning_rate_ = optimizer_->DecayLearningRate();
-  }
+  bool decay = prev_loss_ != 0.0 && prev_loss_ < loss;
+  if (learning_rate_cliff_ != 0 && epoch >= learning_rate_cliff_) decay = true;
+  if (learning_rate_ <= min_learning_rate_) decay = false;
+  if (decay) learning_rate_ = optimizer_->DecayLearningRate();
   prev_loss_ = loss;
 
   LOG(INFO) << "epoch=" << epoch
@@ -438,38 +438,33 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   }
 
   // Link features.
+  Flow::Variable *attention = nullptr;
   features.push_back(LinkedFeature(&f, "token", tokens, 1, link_dim_token_));
-  features.push_back(LinkedFeature(&f, "attention_evoke",
+  features.push_back(LinkedFeature(&f, "attention_tokens",
                                    tokens, frame_limit_, link_dim_token_));
-  features.push_back(LinkedFeature(&f, "attention_create",
-                                   steps, frame_limit_, link_dim_step_));
-  features.push_back(LinkedFeature(&f, "attention_focus",
-                                   steps, frame_limit_, link_dim_step_));
+  features.push_back(LinkedFeature(&f, "attention_steps",
+                                   steps, frame_limit_, link_dim_step_,
+                                   &attention));
   features.push_back(LinkedFeature(&f, "history",
                                    steps, history_size_, link_dim_step_));
 
-  // Bi-affine scoring feature.
+  // Bi-linear attention scoring feature.
   if (biaff_dim_ > 0) {
-    auto *attention = f.Placeholder("attention", DT_INT32, {1, frame_limit_});
-    auto *biaff_oov = f.Parameter("attention_oov", DT_FLOAT,
-                                  {1, activations_dim_});
-    auto *x = f.Gather(steps, attention, biaff_oov);
-
     auto *biaf_h = f.Parameter("biaf_h", DT_FLOAT,
                                {activations_dim_, biaff_dim_});
     auto *biaf_m = f.Parameter("biaf_m", DT_FLOAT,
                                {activations_dim_, biaff_dim_});
 
-    auto *x_h = f.MatMul(x, biaf_h);
-    auto *x_m = f.MatMul(x, biaf_m);
+    auto *x_h = f.MatMul(attention, biaf_h);
+    auto *x_m = f.MatMul(attention, biaf_m);
     auto *bilin = f.MatMul(x_h, f.Transpose(x_m));
     features.push_back(f.Reshape(bilin, {1, frame_limit_ * frame_limit_}));
   }
 
   // Mark features.
-  features.push_back(LinkedFeature(&f, "mark_token",
+  features.push_back(LinkedFeature(&f, "mark_tokens",
                                    tokens, mark_depth_, link_dim_token_));
-  features.push_back(LinkedFeature(&f, "mark_step",
+  features.push_back(LinkedFeature(&f, "mark_steps",
                                    steps, mark_depth_, link_dim_step_));
 
   // Pad feature vector.
@@ -516,13 +511,16 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
 Flow::Variable *ParserTrainer::LinkedFeature(FlowBuilder *f,
                                              const string &name,
                                              Flow::Variable *embeddings,
-                                             int size, int dim) {
+                                             int size, int dim,
+                                             Flow::Variable **representation) {
   int link_dim = embeddings->dim(1);
   auto *features = f->Placeholder(name, DT_INT32, {1, size});
   auto *oov = f->Parameter(name + "_oov", DT_FLOAT, {1, link_dim});
   auto *gather = f->Gather(embeddings, features, oov);
   auto *transform = f->Parameter(name + "_transform", DT_FLOAT,
                                  {link_dim, dim});
+
+  if (representation != nullptr) *representation = gather;
   return f->Reshape(f->MatMul(gather, transform), {1, size * dim});
 }
 

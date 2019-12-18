@@ -107,7 +107,8 @@ class ParserTrainer : public task::LearnerTask {
       myelin::FlowBuilder *f,
       const string &name,
       myelin::Flow::Variable *embeddings,
-      int size, int dim);
+      int size, int dim,
+      myelin::Flow::Variable **representation = nullptr);
 
   // Read next training document into store. The caller owns the returned
   // document.
@@ -192,7 +193,6 @@ class ParserTrainer : public task::LearnerTask {
   bool rnn_highways_ = false;
   int mark_depth_ = 1;
   int frame_limit_ = 5;
-  int attention_depth_ = 5;
   int history_size_ = 5;
   int out_roles_size_ = 32;
   int in_roles_size_ = 32;
@@ -206,6 +206,7 @@ class ParserTrainer : public task::LearnerTask {
   int biaff_dim_ = 0;
   int seed_ = 0;
   int batch_size_ = 32;
+  int learning_rate_cliff_ = 0;
   float learning_rate_ = 1.0;
   float min_learning_rate_ = 0.001;
   float dropout_ = 0.0;

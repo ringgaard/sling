@@ -53,15 +53,13 @@ class ParserFeatureModel {
   // Features.
   myelin::Tensor *token_feature_;             // current token feature
 
-  myelin::Tensor *attention_feature_;         // attention feature
-  myelin::Tensor *attention_evoke_feature_;   // attention evoke feature
-  myelin::Tensor *attention_create_feature_;  // attention frame create feature
-  myelin::Tensor *attention_focus_feature_;   // attention frame focus feature
+  myelin::Tensor *attention_tokens_feature_;  // token attention feature
+  myelin::Tensor *attention_steps_feature_;   // step attention feature
 
   myelin::Tensor *history_feature_;           // history feature
 
-  myelin::Tensor *mark_token_feature_;        // mark token feature
-  myelin::Tensor *mark_step_feature_;         // mark step feature
+  myelin::Tensor *mark_tokens_feature_;       // mark tokens feature
+  myelin::Tensor *mark_steps_feature_;        // mark steps feature
 
   myelin::Tensor *out_roles_feature_;         // out roles feature
   myelin::Tensor *in_roles_feature_;          // in roles feature
@@ -70,7 +68,6 @@ class ParserFeatureModel {
 
   // Feature dimensions.
   int mark_depth_ = 0;                        // mark stack depth to use
-  int attention_depth_ = 0;                   // number of attention features
   int history_size_ = 0;                      // number of history features
   int out_roles_size_ = 0;                    // max number of out roles
   int in_roles_size_ = 0;                     // max number of in roles
