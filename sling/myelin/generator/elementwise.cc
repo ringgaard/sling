@@ -182,56 +182,6 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
     if (!offset_.is_valid()) return false;
   }
 
-  // Allocate registers for iterators.
-  for (auto *it : iterators_) {
-    if (it->type == REPEAT || it->type == BROADCAST) {
-      // Allocate index register.
-      it->offset = rr.try_alloc();
-      if (!it->offset.is_valid()) return false;
-    }
-  }
-
-  // Allocate registers for locators.
-  for (auto *loc : locators_) {
-    switch (loc->iterator->type) {
-      case SIMPLE:
-      case SCALAR:
-        // Allocate base register for non-instance variables.
-        if (loc->var->IsGlobal() || loc->var->ref()) {
-          loc->base = rr.try_alloc();
-          if (!loc->base.is_valid()) return false;
-        }
-        break;
-      case CONST:
-        // Constants use pc-relative addressing, so no extra registers are
-        // needed.
-        break;
-      case REPEAT:
-        // Allocate base register for non-instance variables.
-        if (loc->var->IsGlobal() || loc->var->ref()) {
-          loc->base = rr.try_alloc();
-          if (!loc->base.is_valid()) return false;
-        }
-        break;
-      case SINGLE:
-      case BROADCAST:
-        // Allocate base and broadcast registers.
-        loc->base = rr.try_alloc();
-        if (!loc->base.is_valid()) return false;
-        loc->repeat = rr.try_alloc();
-        if (!loc->repeat.is_valid()) return false;
-        break;
-      default:
-        return false;
-    };
-  }
-
-  // Assignment target needs a base register.
-  if (output_ref_ != nullptr && !input_[0]->base.is_valid()) {
-    input_[0]->base = rr.try_alloc();
-    if (!input_[0]->base.is_valid()) return false;
-  }
-
   // Allocate registers for sparse iterator.
   if (sparse_) {
     bitmap_ = rr.try_alloc();
@@ -242,6 +192,71 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
     if (!mask_.is_valid()) return false;
     iend_ = rr.try_alloc();
     if (!iend_.is_valid()) return false;
+  }
+
+  // Assignment target needs a base register.
+  if (output_ref_ != nullptr) {
+    input_[0]->base = rr.try_alloc();
+    if (!input_[0]->base.is_valid()) return false;
+  }
+
+  // Allocate registers for iterators.
+  for (auto *it : iterators_) {
+    if (it->type == REPEAT || it->type == BROADCAST) {
+      // Allocate index register.
+      it->offset = rr.try_alloc();
+      if (!it->offset.is_valid()) return false;
+    }
+  }
+
+  // Allocate registers for locators.
+  std::vector<Locator *> simple_locators;
+  for (auto *loc : locators_) {
+    switch (loc->iterator->type) {
+      case SIMPLE:
+      case SCALAR:
+        // Base register only needed for non-instance variables. Allocation of 
+        // a register is deferred until registers for other locators have been
+        // allocated.
+        if (loc->var->IsGlobal() || loc->var->ref()) {
+          if (!loc->base.is_valid()) simple_locators.push_back(loc);
+        }
+        break;
+      case CONST:
+        // Constants use pc-relative addressing, so no extra registers are
+        // needed.
+        break;
+      case REPEAT:
+        // Allocate base register for non-instance variables.
+        if (loc->var->IsGlobal() || loc->var->ref()) {
+          if (!loc->base.is_valid()) loc->base = rr.try_alloc();
+          if (!loc->base.is_valid()) return false;
+        }
+        break;
+      case SINGLE:
+      case BROADCAST:
+        // Allocate base and broadcast registers.
+        if (!loc->base.is_valid()) loc->base = rr.try_alloc();
+        if (!loc->base.is_valid()) return false;
+        loc->repeat = rr.try_alloc();
+        if (!loc->repeat.is_valid()) return false;
+        break;
+      default:
+        return false;
+    };
+  }
+
+  // Allocate registers for simple locators. These locators are loop-invariant
+  // and can either be initialized before the loop or on demand inside the
+  // loop depending on how many registers are available.
+  bool ondemand = rr.num_free() < simple_locators.size();
+  if (ondemand) {
+    scratch_ = rr.try_alloc();
+    if (!scratch_.is_valid()) return false;
+  }
+  for (auto *loc : simple_locators) {
+    loc->base = rr.try_alloc();
+    if (!loc->base.is_valid()) loc->ondemand = true;
   }
 
   // Try to allocate extra base registers as an optimization. The base registers
@@ -506,24 +521,31 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
     // Get locator.
     CHECK(Valid(var));
     Locator *loc = LookupLocator(var);
+    
+    // Load base address on demand if needed.
+    Register base = loc->base;
+    if (loc->ondemand) {
+      masm_->LoadTensorAddress(scratch_, loc->var);
+      base = scratch_;
+    }
 
     // Return operand for accessing variable.
     switch (loc->iterator->type) {
       case SIMPLE:
         if (single_) {
           // Single iteration.
-          if (loc->base.is_valid()) {
+          if (base.is_valid()) {
             // Index single element using base register.
-            return Operand(loc->base);
+            return Operand(base);
           } else {
             // Index single element using offset in instance.
             return Operand(masm_->instance(), loc->var->offset());
           }
         } else {
           // Multiple iterations.
-          if (loc->base.is_valid()) {
+          if (base.is_valid()) {
             // Index element using base register and index.
-            return Operand(loc->base, offset_);
+            return Operand(base, offset_);
           } else {
             // Index element using offset in instance and index.
             return Operand(masm_->instance(), offset_, times_1,
@@ -531,9 +553,9 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
           }
         }
       case SCALAR:
-        if (loc->base.is_valid()) {
+        if (base.is_valid()) {
           // Index scalar using base register.
-          return Operand(loc->base);
+          return Operand(base);
         } else {
           // Index scalar using offset in instance.
           return Operand(masm_->instance(), loc->var->offset());
