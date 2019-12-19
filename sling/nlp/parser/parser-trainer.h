@@ -151,6 +151,9 @@ class ParserTrainer : public task::LearnerTask {
   // Role set.
   RoleSet roles_;
 
+  // Reset parser state between sentences in a document.
+  bool sentence_reset_ = false;
+
   // Lexical feature specification for encoder.
   LexicalFeatures::Spec spec_;
 

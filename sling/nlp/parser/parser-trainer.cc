@@ -564,6 +564,7 @@ void ParserTrainer::Save(const string &filename) {
   Builder decoder_spec(&store);
   decoder_spec.Add("type", "transition");
   decoder_spec.Set("frame_limit", frame_limit_);
+  decoder_spec.Set("sentence_reset", sentence_reset_);
 
   Handles role_list(&store);
   roles_.GetList(&role_list);

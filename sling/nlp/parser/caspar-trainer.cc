@@ -185,6 +185,9 @@ class CasparTrainer : public ParserTrainer {
     task->Fetch("max_source", &max_source_);
     task->Fetch("max_target", &max_target_);
 
+    // Reset parser state between sentences.
+    sentence_reset_ = true;
+
     // Collect word and action vocabularies from training corpus.
     ActionTable actions;
     training_corpus_->Rewind();

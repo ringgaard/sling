@@ -249,14 +249,18 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
   // Allocate registers for simple locators. These locators are loop-invariant
   // and can either be initialized before the loop or on demand inside the
   // loop depending on how many registers are available.
+  jit::Register scratch = jit::no_reg;
   bool ondemand = rr.num_free() < simple_locators.size();
   if (ondemand) {
-    scratch_ = rr.try_alloc();
-    if (!scratch_.is_valid()) return false;
+    scratch = rr.try_alloc();
+    if (!scratch.is_valid()) return false;
   }
   for (auto *loc : simple_locators) {
     loc->base = rr.try_alloc();
-    if (!loc->base.is_valid()) loc->ondemand = true;
+    if (!loc->base.is_valid()) {
+      loc->base = scratch;
+      loc->ondemand = true;
+    }
   }
 
   // Try to allocate extra base registers as an optimization. The base registers
@@ -297,7 +301,7 @@ void ElementwiseIndexGenerator::GenerateInit() {
   // Load tensor addresses and initialize index registers.
   MacroAssembler *masm = masm_;
   for (auto *loc : locators_) {
-    if (loc->base.is_valid() && !loc->shared) {
+    if (loc->base.is_valid() && !loc->shared && !loc->ondemand) {
       __ LoadTensorAddress(loc->base, loc->var);
     }
     if (loc->repeat.is_valid()) {
@@ -523,10 +527,8 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
     Locator *loc = LookupLocator(var);
 
     // Load base address on demand if needed.
-    Register base = loc->base;
     if (loc->ondemand) {
-      masm_->LoadTensorAddress(scratch_, loc->var);
-      base = scratch_;
+      masm_->LoadTensorAddress(loc->base, loc->var);
     }
 
     // Return operand for accessing variable.
@@ -534,18 +536,18 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
       case SIMPLE:
         if (single_) {
           // Single iteration.
-          if (base.is_valid()) {
+          if (loc->base.is_valid()) {
             // Index single element using base register.
-            return Operand(base);
+            return Operand(loc->base);
           } else {
             // Index single element using offset in instance.
             return Operand(masm_->instance(), loc->var->offset());
           }
         } else {
           // Multiple iterations.
-          if (base.is_valid()) {
+          if (loc->base.is_valid()) {
             // Index element using base register and index.
-            return Operand(base, offset_);
+            return Operand(loc->base, offset_);
           } else {
             // Index element using offset in instance and index.
             return Operand(masm_->instance(), offset_, times_1,
@@ -553,9 +555,9 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
           }
         }
       case SCALAR:
-        if (base.is_valid()) {
+        if (loc->base.is_valid()) {
           // Index scalar using base register.
-          return Operand(base);
+          return Operand(loc->base);
         } else {
           // Index scalar using offset in instance.
           return Operand(masm_->instance(), loc->var->offset());

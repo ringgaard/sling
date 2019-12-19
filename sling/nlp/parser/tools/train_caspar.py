@@ -50,7 +50,11 @@ trainer.add_params({
   "epochs": 50000,
 
   #"rnn_highways": False,
-  #"dropout": 0.5,
+
+  #"rnn_type": 1,
+  #"rnn_dim": 256,
+
+  #dropout": 0.5,
 
   #"restart": True,
   #"learning_rate": 0.1,

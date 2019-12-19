@@ -129,9 +129,6 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   // Output offset register.
   jit::Register offset_;
 
-  // Scratch register for loading base addresses of tensors on demand.
-  jit::Register scratch_ = jit::no_reg;
-
   // Whether only one iteration is needed.
   bool single_ = false;
 
