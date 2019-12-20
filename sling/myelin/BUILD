@@ -201,3 +201,12 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "init",
+  srcs = ["init.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:posix",
+  ],
+)
+
