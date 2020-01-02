@@ -42,7 +42,7 @@ struct RNN {
     // Standard LSTM with one matrix multiplication [Dozat & Manning 2017].
     DOZAT_LSTM = 2,
 
-    // Standard LSTM with two matrix multiplications.
+    // Standard LSTM with two matrix multiplications [Paszke et al. 2019].
     PYTORCH_LSTM = 3,
 
     // Gated Recurrent Unit (GRU) [Cho et al. 2014].

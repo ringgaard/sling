@@ -2007,6 +2007,18 @@ bool Flow::IsConsistent() const {
     }
   }
 
+  // Check connectors.
+  for (const Connector *cnx : cnxs_) {
+    for (const Variable *link : cnx->links) {
+      // Check that link variable is in flow.
+      if (std::find(vars_.begin(), vars_.end(), link) == vars_.end()) {
+        LOG(WARNING) << "Link variable " << link->name << " is not in flow "
+                     << "for connector " << cnx->name;
+        return false;
+      }
+    }
+  }
+
   return true;
 }
 

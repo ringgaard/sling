@@ -46,21 +46,29 @@ RNN::Variables RNN::Build(Flow *flow,
   switch (spec.type) {
     case LSTM: {
       // Standard LSTM.
-      auto *x2i = tf.Random(tf.Parameter("x2i", dt, {input_dim, rnn_dim}));
-      auto *h2i = tf.Random(tf.Parameter("h2i", dt, {rnn_dim, rnn_dim}));
+      auto *x2i = tf.Parameter("x2i", dt, {input_dim, rnn_dim});
+      auto *h2i = tf.Parameter("h2i", dt, {rnn_dim, rnn_dim});
       auto *bi = tf.Parameter("bi", dt, {1, rnn_dim});
+      tf.RandomOrtho(x2i);
+      tf.RandomOrtho(h2i);
 
-      auto *x2f = tf.Random(tf.Parameter("x2f", dt, {input_dim, rnn_dim}));
-      auto *h2f = tf.Random(tf.Parameter("h2f", dt, {rnn_dim, rnn_dim}));
+      auto *x2f = tf.Parameter("x2f", dt, {input_dim, rnn_dim});
+      auto *h2f = tf.Parameter("h2f", dt, {rnn_dim, rnn_dim});
       auto *bf = tf.Parameter("bf", dt, {1, rnn_dim});
+      tf.RandomOrtho(x2f);
+      tf.RandomOrtho(h2f);
 
-      auto *x2g = tf.Random(tf.Parameter("x2g", dt, {input_dim, rnn_dim}));
-      auto *h2g = tf.Random(tf.Parameter("h2g", dt, {rnn_dim, rnn_dim}));
+      auto *x2g = tf.Parameter("x2g", dt, {input_dim, rnn_dim});
+      auto *h2g = tf.Parameter("h2g", dt, {rnn_dim, rnn_dim});
       auto *bg = tf.Parameter("bg", dt, {1, rnn_dim});
+      tf.RandomOrtho(x2g);
+      tf.RandomOrtho(h2g);
 
-      auto *x2o = tf.Random(tf.Parameter("x2o", dt, {input_dim, rnn_dim}));
-      auto *h2o = tf.Random(tf.Parameter("h2o", dt, {rnn_dim, rnn_dim}));
+      auto *x2o = tf.Parameter("x2o", dt, {input_dim, rnn_dim});
+      auto *h2o = tf.Parameter("h2o", dt, {rnn_dim, rnn_dim});
       auto *bo = tf.Parameter("bo", dt, {1, rnn_dim});
+      tf.RandomOrtho(x2o);
+      tf.RandomOrtho(h2o);
 
       // i = sigmoid(x * x2i + h_in * h2i + c_in * c2i + bi)
       auto *ia = tf.Add(tf.MatMul(x, x2i), tf.Add(tf.MatMul(h_in, h2i), bi));
@@ -80,9 +88,12 @@ RNN::Variables RNN::Build(Flow *flow,
 
       // residual = sigmoid(x * x2r + h_in * h2r + br)
       if (spec.highways) {
-        auto *x2r = tf.Random(tf.Parameter("x2r", dt, {input_dim, rnn_dim}));
-        auto *h2r = tf.Random(tf.Parameter("h2r", dt, {rnn_dim, rnn_dim}));
+        auto *x2r = tf.Parameter("x2r", dt, {input_dim, rnn_dim});
+        auto *h2r = tf.Parameter("h2r", dt, {rnn_dim, rnn_dim});
         auto *br = tf.Parameter("br", dt, {1, rnn_dim});
+        tf.RandomOrtho(x2r);
+        tf.RandomOrtho(h2r);
+
         auto *ra = tf.Add(tf.Add(tf.MatMul(x, x2r),tf.MatMul(h_in, h2r)), br);
         residual = tf.Name(tf.Sigmoid(ra), "r");
       }
@@ -96,20 +107,28 @@ RNN::Variables RNN::Build(Flow *flow,
     }
 
     case DRAGNN_LSTM: {
-      // DRAGNN LSTM with peephole and couples gates.
-      auto *x2i = tf.Random(tf.Parameter("x2i", dt, {input_dim, rnn_dim}));
-      auto *h2i = tf.Random(tf.Parameter("h2i", dt, {rnn_dim, rnn_dim}));
-      auto *c2i = tf.Random(tf.Parameter("c2i", dt, {rnn_dim, rnn_dim}));
+      // DRAGNN LSTM with peephole and coupled gates.
+      auto *x2i = tf.Parameter("x2i", dt, {input_dim, rnn_dim});
+      auto *h2i = tf.Parameter("h2i", dt, {rnn_dim, rnn_dim});
+      auto *c2i = tf.Parameter("c2i", dt, {rnn_dim, rnn_dim});
       auto *bi = tf.Parameter("bi", dt, {1, rnn_dim});
+      tf.RandomOrtho(x2i);
+      tf.RandomOrtho(h2i);
+      tf.RandomOrtho(c2i);
 
-      auto *x2o = tf.Random(tf.Parameter("x2o", dt, {input_dim, rnn_dim}));
-      auto *h2o = tf.Random(tf.Parameter("h2o", dt, {rnn_dim, rnn_dim}));
-      auto *c2o = tf.Random(tf.Parameter("c2o", dt, {rnn_dim, rnn_dim}));
+      auto *x2o = tf.Parameter("x2o", dt, {input_dim, rnn_dim});
+      auto *h2o = tf.Parameter("h2o", dt, {rnn_dim, rnn_dim});
+      auto *c2o = tf.Parameter("c2o", dt, {rnn_dim, rnn_dim});
       auto *bo = tf.Parameter("bo", dt, {1, rnn_dim});
+      tf.RandomOrtho(x2o);
+      tf.RandomOrtho(h2o);
+      tf.RandomOrtho(c2o);
 
-      auto *x2c = tf.Random(tf.Parameter("x2c", dt, {input_dim, rnn_dim}));
-      auto *h2c = tf.Random(tf.Parameter("h2c", dt, {rnn_dim, rnn_dim}));
+      auto *x2c = tf.Parameter("x2c", dt, {input_dim, rnn_dim});
+      auto *h2c = tf.Parameter("h2c", dt, {rnn_dim, rnn_dim});
       auto *bc = tf.Parameter("bc", dt, {1, rnn_dim});
+      tf.RandomOrtho(x2c);
+      tf.RandomOrtho(h2c);
 
       // i = sigmoid(x * x2i + h_in * h2i + c_in * c2i + bi)
       auto *ia = tf.Add(tf.MatMul(x, x2i),
@@ -136,9 +155,11 @@ RNN::Variables RNN::Build(Flow *flow,
 
       // r = sigmoid(x * x2r + h_in * h2r + br)
       if (spec.highways) {
-        auto *x2r = tf.Random(tf.Parameter("x2r", dt, {input_dim, rnn_dim}));
-        auto *h2r = tf.Random(tf.Parameter("h2r", dt, {rnn_dim, rnn_dim}));
+        auto *x2r = tf.Parameter("x2r", dt, {input_dim, rnn_dim});
+        auto *h2r = tf.Parameter("h2r", dt, {rnn_dim, rnn_dim});
         auto *br = tf.Parameter("br", dt, {1, rnn_dim});
+        tf.RandomOrtho(x2r);
+        tf.RandomOrtho(h2r);
         auto *ra = tf.Add(tf.Add(tf.MatMul(x, x2r),tf.MatMul(h_in, h2r)), br);
         residual = tf.Name(tf.Sigmoid(ra), "r");
       }
@@ -152,8 +173,8 @@ RNN::Variables RNN::Build(Flow *flow,
       // Standard LSTM with one matrix multiplication.
       int gates = spec.highways ? 5 : 4;
       auto *w = tf.Parameter("W", dt, {input_dim + rnn_dim, gates * rnn_dim});
-      tf.Random(w);
       auto *b = tf.Parameter("b", dt, {1, gates * rnn_dim});
+      tf.RandomOrtho(w);
 
       // Preactivations.
       auto *xh = tf.Concat({x, h_in});
@@ -179,10 +200,10 @@ RNN::Variables RNN::Build(Flow *flow,
       int gates = spec.highways ? 5 : 4;
       auto *w_ih = tf.Parameter("w_ih", dt, {input_dim, gates * rnn_dim});
       auto *w_hh = tf.Parameter("w_hh", dt, {rnn_dim, gates * rnn_dim});
-      tf.Random(w_ih);
-      tf.Random(w_hh);
       auto *b_ih = tf.Parameter("b_ih", dt, {1, gates * rnn_dim});
       auto *b_hh = tf.Parameter("b_hh", dt, {1, gates * rnn_dim});
+      tf.RandomOrtho(w_ih);
+      tf.RandomOrtho(w_hh);
 
       // Preactivations.
       auto *ih = tf.Add(tf.MatMul(x, w_ih), b_ih);
@@ -206,14 +227,20 @@ RNN::Variables RNN::Build(Flow *flow,
 
     case GRU: {
       // Gated Recurrent Unit.
-      auto *x2z = tf.Random(tf.Parameter("x2z", dt, {input_dim, rnn_dim}));
-      auto *h2z = tf.Random(tf.Parameter("h2z", dt, {rnn_dim, rnn_dim}));
+      auto *x2z = tf.Parameter("x2z", dt, {input_dim, rnn_dim});
+      auto *h2z = tf.Parameter("h2z", dt, {rnn_dim, rnn_dim});
+      tf.RandomOrtho(x2z);
+      tf.RandomOrtho(h2z);
 
-      auto *x2r = tf.Random(tf.Parameter("x2r", dt, {input_dim, rnn_dim}));
-      auto *h2r = tf.Random(tf.Parameter("h2r", dt, {rnn_dim, rnn_dim}));
+      auto *x2r = tf.Parameter("x2r", dt, {input_dim, rnn_dim});
+      auto *h2r = tf.Parameter("h2r", dt, {rnn_dim, rnn_dim});
+      tf.RandomOrtho(x2r);
+      tf.RandomOrtho(h2r);
 
-      auto *x2h = tf.Random(tf.Parameter("x2h", dt, {input_dim, rnn_dim}));
-      auto *h2h = tf.Random(tf.Parameter("h2h", dt, {rnn_dim, rnn_dim}));
+      auto *x2h = tf.Parameter("x2h", dt, {input_dim, rnn_dim});
+      auto *h2h = tf.Parameter("h2h", dt, {rnn_dim, rnn_dim});
+      tf.RandomOrtho(x2h);
+      tf.RandomOrtho(h2h);
 
       // z = sigmoid(x * x2z + h_in * h2z)
       auto *za = tf.Add(tf.MatMul(x, x2z), tf.MatMul(h_in, h2z));
@@ -229,8 +256,10 @@ RNN::Variables RNN::Build(Flow *flow,
 
       // residual = sigmoid(x * x2b + h_in * h2b)
       if (spec.highways) {
-        auto *x2b = tf.Random(tf.Parameter("x2b", dt, {input_dim, rnn_dim}));
-        auto *h2b = tf.Random(tf.Parameter("h2b", dt, {rnn_dim, rnn_dim}));
+        auto *x2b = tf.Parameter("x2b", dt, {input_dim, rnn_dim});
+        auto *h2b = tf.Parameter("h2b", dt, {rnn_dim, rnn_dim});
+        tf.RandomOrtho(x2b);
+        tf.RandomOrtho(h2b);
         auto *ra = tf.Add(tf.MatMul(x, x2b),tf.MatMul(h_in, h2b));
         residual = tf.Name(tf.Sigmoid(ra), "r");
       }
@@ -250,7 +279,7 @@ RNN::Variables RNN::Build(Flow *flow,
     auto *bypass = x;
     if (input_dim != rnn_dim) {
       // Linear transform from input to output dimension.
-      auto *wx = tf.Random(tf.Parameter("Wr", dt, {input_dim, rnn_dim}));
+      auto *wx = tf.RandomOrtho(tf.Parameter("Wr", dt, {input_dim, rnn_dim}));
       bypass = tf.MatMul(x, wx);
     }
     h_out = tf.Add(tf.Mul(residual, h_out),
@@ -373,6 +402,8 @@ RNNMerger::Variables RNNMerger::Build(Flow *flow,
     vars.dright = flow->GradientVar(vars.right);
     flow->Connect({vars.dleft, dleft});
     flow->Connect({vars.dright, dright});
+  } else {
+    vars.dmerged = vars.dleft = vars.dright = nullptr;
   }
 
   return vars;
@@ -409,7 +440,7 @@ RNN::Variables RNNLayer::Build(Flow *flow,
     auto r = rl_.Build(flow, input, dinput);
 
     // Build channel merger.
-    auto m = merger_.Build(flow, l.output, r.output, l.doutput, r.output);
+    auto m = merger_.Build(flow, l.output, r.output, l.doutput, r.doutput);
 
     // Return outputs.
     RNN::Variables vars;
@@ -543,7 +574,11 @@ RNNLearner::RNNLearner(const RNNLayer *rnn)
       merged_(rnn->merger_.merged),
       dleft_(rnn->merger_.dleft),
       dright_(rnn->merger_.dright),
-      mask_(rnn_->lr_.mask) {}
+      mask_(rnn_->lr_.mask) {
+  if (rnn->dropout_ != 0.0) {
+    mask_.resize(1);
+  }
+}
 
 Channel *RNNLearner::Compute(Channel *input) {
   // Get sequence length.
@@ -553,7 +588,6 @@ Channel *RNNLearner::Compute(Channel *input) {
   // Set up dropout mask.
   bool dropout = rnn_->dropout_ != 0.0;
   if (dropout) {
-    mask_.resize(1);
     float *mask = reinterpret_cast<float *>(mask_.at(0));
     float rate = rnn_->dropout_;
     float scaler = 1.0 / (1.0 - rate);
@@ -674,7 +708,7 @@ Channel *RNNLearner::Backpropagate(Channel *doutput) {
   if (dleft != nullptr) {
     if (ctrl) lr_dcontrol_.reset(length);
 
-    for (int i = length - 1; i >= 2; --i) {
+    for (int i = length - 1; i > 0; --i) {
       lr_bkw_.Set(rnn_->lr_.primal, &lr_fwd_[i]);
       lr_bkw_.Set(rnn_->lr_.dh_out, dleft, i);
       lr_bkw_.Set(rnn_->lr_.dh_in, dleft, i - 1);

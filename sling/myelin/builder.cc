@@ -60,8 +60,18 @@ Flow::Variable *FlowBuilder::Parameter(const string &name,
   return var;
 }
 
-Flow::Variable *FlowBuilder::Random(Variable *var) {
-  var->set_random(true);
+Flow::Variable *FlowBuilder::RandomUniform(Variable *var) {
+  var->init = Flow::Variable::INIT_UNIFORM;
+  return var;
+}
+
+Flow::Variable *FlowBuilder::RandomNormal(Variable *var) {
+  var->init = Flow::Variable::INIT_NORMAL;
+  return var;
+}
+
+Flow::Variable *FlowBuilder::RandomOrtho(Variable *var) {
+  var->init = Flow::Variable::INIT_ORTHO;
   return var;
 }
 
@@ -260,7 +270,8 @@ Flow::Variable *FlowBuilder::FFLayers(Variable *input,
     int width = layers[l];
 
     // Add weight matrix.
-    auto *W = Random(Parameter("W" + std::to_string(l), type, {height, width}));
+    auto *W = Parameter("W" + std::to_string(l), type, {height, width});
+    RandomNormal(W);
     v = MatMul(v, W);
 
     // Optionally add bias.
@@ -283,71 +294,6 @@ Flow::Variable *FlowBuilder::FFLayers(Variable *input,
 
   auto *logits = Name(Identity(v), "logits");
   return logits;
-}
-
-Flow::Variable *FlowBuilder::LSTMLayer(Variable *input, int size) {
-  // Get LSTM dimensions.
-  Type type = input->type;
-  int input_dim = input->dim(1);
-
-  // Define parameters.
-  auto *x2i = Random(Parameter("x2i", type, {input_dim, size}));
-  auto *h2i = Random(Parameter("h2i", type, {size, size}));
-  auto *c2i = Random(Parameter("c2i", type, {size, size}));
-  auto *bi = Parameter("bi", type, {1, size});
-
-  auto *x2o = Random(Parameter("x2o", type, {input_dim, size}));
-  auto *h2o = Random(Parameter("h2o", type, {size, size}));
-  auto *c2o = Random(Parameter("c2o", type, {size, size}));
-  auto *bo = Parameter("bo", type, {1, size});
-
-  auto *x2c = Random(Parameter("x2c", type, {input_dim, size}));
-  auto *h2c = Random(Parameter("h2c", type, {size, size}));
-  auto *bc = Parameter("bc", type, {1, size});
-
-  // Channels -- h_in, c_in = h_{t-1}, c_{t-1}
-  auto *h_in = Placeholder("h_in", type, {1, size}, true);
-  auto *c_in = Placeholder("c_in", type, {1, size}, true);
-
-  // Input -- i_t = sigmoid(x_t * x2i + h_in * h2i + c_in * c2i + bi)
-  auto *i_ait = Name(Add(MatMul(input, x2i),
-                     Add(MatMul(h_in, h2i),
-                     Add(MatMul(c_in, c2i), bi))),
-                     "i_ait");
-  auto *i_it = Name(Sigmoid(i_ait), "i_it");
-
-  // Forget -- f_t = 1 - i_t
-  auto *i_ft = Name(Sub(One(), i_it), "i_ft");
-
-  // Memory -- tanh(x_t * x2c + h_in * h2c + bc)
-  auto *i_awt = Name(Add(MatMul(input, x2c),
-                     Add(MatMul(h_in, h2c), bc)),
-                     "i_awt");
-  auto *i_wt = Name(Tanh(i_awt), "i_wt");
-
-  // Control -- c_out = c_t = i_t * w_t + f_t * c_in
-  auto *c_out = Name(Add(Mul(i_it, i_wt), Mul(i_ft, c_in)), "c_out");
-  c_out->set_out()->set_ref();
-
-  // Output -- o_t = sigmoid(x_t * x2o + c_t * c2o + h_in * h2o + bo)
-  auto *i_aot = Name(Add(MatMul(input, x2o),
-                     Add(MatMul(c_out, c2o),
-                     Add(MatMul(h_in, h2o), bo))),
-                     "i_aot");
-  auto *i_ot = Name(Sigmoid(i_aot), "i_ot");
-
-  // Hidden -- h_out = h_t = o_t * tanh(c_out)
-  auto *h_out = Name(Mul(i_ot, Tanh(c_out)), "h_out");
-  h_out->set_out()->set_ref();
-
-  // Connectors for hidden and control channels.
-  flow_->Connect({h_in, h_out});
-  flow_->Connect({c_in, c_out});
-
-  // The control channel has a single-source gradient.
-  c_in->set_unique();
-
-  return h_out;
 }
 
 }  // namespace myelin

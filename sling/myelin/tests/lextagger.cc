@@ -277,7 +277,7 @@ class Tagger {
   // Initialize model weights.
   void Initialize() {
     // Initialize parameters with Gaussian noise.
-    net_.InitLearnableWeights(FLAGS_seed, 0.0, 1e-4);
+    net_.InitModelParameters(FLAGS_seed);
   }
 
   // Train model.

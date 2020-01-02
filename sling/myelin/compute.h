@@ -131,12 +131,6 @@ class Library : public Transformations {
   // Find kernels implementing operation.
   const Kernels &Lookup(const string &op) const;
 
-  // Find kernel and add to singleton library. The singleton library does not
-  // own the kernel.
-  bool Singleton(const string &op,
-                 const string &name,
-                 Library *singleton) const;
-
  private:
   // Register custom kernel.
   CustomKernel &RegisterCustomKernel(const string &op, const string &name,
@@ -144,9 +138,6 @@ class Library : public Transformations {
 
   // Map from op name to kernels implementing the op.
   std::unordered_map<string, Kernels> kernels_;
-
-  // Whether kernels are owned by library.
-  bool owns_kernels_ = true;
 
   // Empty kernel list.
   Kernels no_kernels_;
@@ -691,8 +682,8 @@ class Tensor {
   // Constant tensors are global and cannot be modified.
   bool constant_ = false;
 
-  // Initialize tensor with random values from normal distribution.
-  bool random_init_ = false;
+  // Initialization for tensor.
+  Flow::Variable::Initialization init_ = Flow::Variable::INIT_ZERO;
 
   // Local tensors are allocated in the instance data block.
   bool local_ = true;
@@ -1418,10 +1409,8 @@ class Network {
   // Add resource to network. This is deleted together with the network.
   void AddResource(Resource *resource) { resources_.push_back(resource); }
 
-  // Initialize learnable weights with random values from a normal distribution.
-  void InitLearnableWeights(int64 seed = 0,
-                            float mean = 0.0,
-                            float stddev = 1e-4);
+  // Initialize model parameters.
+  void InitModelParameters(int64 seed = 0);
 
   // Save weights after training. This copies the value of each learnable tensor
   // in the network to the corresponding variable in the flow. This clears the

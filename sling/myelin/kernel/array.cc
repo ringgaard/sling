@@ -42,7 +42,7 @@ class Reshape : public Kernel {
   }
 
   void Adjust(Step *step) override {
-    CHECK(step->AllowInPlace(0, 0, true));
+    CHECK(step->AllowInPlace(0, 0, true)) << step->name();
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -127,7 +127,7 @@ class Resize : public Kernel {
  public:
   bool Supports(Step *step) override {
     // Check inputs and outputs.
-    if (step->indegree() != 3 || step->outdegree() != 1) return false;
+    if (step->indegree() != 1 || step->outdegree() != 1) return false;
     Tensor *x = step->input(0);
     Tensor *y = step->output(0);
     if (x->type() != y->type()) return false;

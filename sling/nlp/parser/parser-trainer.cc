@@ -140,7 +140,7 @@ void ParserTrainer::Run(task::Task *task) {
 
   // Initialize model.
   feature_model_.Init(decoder_, &roles_, frame_limit_);
-  model_.InitLearnableWeights(seed_, 0.0, 0.01);
+  model_.InitModelParameters(seed_);
   encoder_.Initialize(model_);
   optimizer_->Initialize(model_);
   for (auto *d : delegates_) d->Initialize(model_);
@@ -482,8 +482,9 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   int fvsize = fv->dim(1);
 
   // Feed-forward layer.
-  auto *W = f.Random(f.Parameter("W0", DT_FLOAT, {fvsize, activations_dim_}));
-  auto *b = f.Random(f.Parameter("b0", DT_FLOAT, {1, activations_dim_}));
+  auto *W = f.Parameter("W0", DT_FLOAT, {fvsize, activations_dim_});
+  auto *b = f.Parameter("b0", DT_FLOAT, {1, activations_dim_});
+  f.RandomNormal(W);
   auto *activation = f.Name(f.Relu(f.Add(f.MatMul(fv, W), b)), "activation");
   activation->set_in()->set_out()->set_ref();
 
@@ -589,6 +590,7 @@ void ParserTrainer::Save(const string &filename) {
   blob->size = encoder.buffer().size();
 
   // Save model to file.
+  DCHECK(flow.IsConsistent());
   flow.Save(filename);
 }
 

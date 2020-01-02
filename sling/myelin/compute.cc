@@ -434,10 +434,8 @@ class InstanceAllocator {
 };
 
 Library::~Library() {
-  if (owns_kernels_) {
-    for (auto o : kernels_) {
-      for (auto k : o.second) delete k;
-    }
+  for (auto o : kernels_) {
+    for (auto k : o.second) delete k;
   }
 }
 
@@ -490,25 +488,6 @@ const Library::Kernels &Library::Lookup(const string &op) const {
   auto f = kernels_.find(op);
   if (f == kernels_.end()) return no_kernels_;
   return f->second;
-}
-
-bool Library::Singleton(const string &op,
-                        const string &name,
-                        Library *singleton) const {
-  // Singleton library must be empty or already non-owning.
-  CHECK(!singleton->owns_kernels_ || singleton->kernels_.empty());
-  singleton->owns_kernels_ = false;
-
-  // Find kernel.
-  auto f = kernels_.find(op);
-  if (f == kernels_.end()) return false;
-  for (Kernel *kernel : f->second) {
-    if (kernel->Name() == name) {
-      singleton->kernels_[kernel->Operation()].push_back(kernel);
-      return true;
-    }
-  }
-  return false;
 }
 
 void Tensor::Link(Tensor *link) {
@@ -953,7 +932,13 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
 
   // Check if output can be shared.
   if (out->shared()) return false;
-  if (out->ref() && out->out() && in->in()) return false;
+  if (out->ref()) {
+    if (preserved) {
+      if (out->out() && in->in()) return false;
+    } else {
+      if (out->out() || in->in()) return false;
+    }
+  }
 
   // Share input and output.
   out->set_shared(in);
@@ -1048,27 +1033,151 @@ Network::~Network() {
   for (auto *s : steps_) delete s;
 }
 
-void Network::InitLearnableWeights(int64 seed, float mean, float stddev) {
+// Orthogonalize a set of vectors stored as the columns of matrix A (m x n)
+// using the Gram-Schmidt process.
+static void OrthogonalizeColumns(float *A, int m, int n) {
+  // Orthogonalize one column vector at a time.
+  float *aj, *ak;
+  for (int j = 0; j < n; ++j) {
+    // To orthogonalize the vector in column j with respect to the previous
+    // vectors, subtract from it its projection onto each of the previous
+    // vectors.
+    for (int k = 0; k < j; ++k) {
+      // Compute dot product r = A_k * A_j.
+      float r = 0.0;
+      ak = A + k;
+      aj = A + j;
+      for (int i = 0; i < m; ++i, ak += n, aj += n) r += *ak * *aj;
+
+      // Update A_j -= r * A_k.
+      ak = A + k;
+      aj = A + j;
+      for (int i = 0; i < m; ++i, ak += n, aj += n) *aj -= r * *ak;
+    }
+
+    // Normalize A_j.
+    aj = A + j;
+    float sum = 0.0;
+    for (int i = 0; i < m; ++i, aj += n) sum += *aj * *aj;
+    float scaler = 1.0/ sqrt(sum);
+    aj = A + j;
+    for (int i = 0; i < m; ++i, aj += n) *aj *= scaler;
+  }
+}
+
+// Orthogonalize a set of vectors stored as the rows of matrix A (m x n)
+// using the Gram-Schmidt process.
+static void OrthogonalizeRows(float *A, int m, int n) {
+  // Orthogonalize one row vector at a time.
+  float *aj, *ak;
+  for (int j = 0; j < m; ++j) {
+    // To orthogonalize the vector in row j with respect to the previous
+    // vectors, subtract from it its projection onto each of the previous
+    // vectors.
+    aj = A + j * n;
+    for (int k = 0; k < j; ++k) {
+      // Compute dot product r = A_k * A_j.
+      float r = 0.0;
+      ak = A + k * n;
+      for (int i = 0; i < n; ++i) r += ak[i] * aj[i];
+
+      // Update A_j -= r * A_k.
+      for (int i = 0; i < n; ++i) aj[i] -= r * ak[i];
+    }
+
+    // Normalize A_j.
+    float sum = 0.0;
+    for (int i = 0; i < n; ++i) sum += aj[i] * aj[i];
+    float scaler = 1.0/ sqrt(sum);
+    for (int i = 0; i < n; ++i) aj[i] *= scaler;
+  }
+}
+
+void Network::InitModelParameters(int64 seed) {
   // Initialize random generator.
   std::mt19937_64 prng;
   prng.seed(seed);
-  std::uniform_real_distribution<float> dist(mean, stddev);
+  std::normal_distribution<float> normal(0, 1.0);
+  std::uniform_real_distribution<float> uniform(-1.0, 1.0);
 
-  // Initialize learnable variable with Gaussian noise.
+  // Initialize model parameters.
   for (auto *tensor : globals_) {
-    if (!tensor->random_init_) continue;
     if (tensor->type() != DT_FLOAT) continue;
     if (tensor->data() == nullptr) continue;
 
+    float dim = tensor->elements();
+    float scale = 1.0 / sqrt(dim);
+
     if (tensor->HasStandardLayout()) {
       float *data = reinterpret_cast<float *>(tensor->data());
-      for (int i = 0; i < tensor->elements(); ++i) {
-        data[i] = dist(prng);
+      switch (tensor->init_) {
+        case Flow::Variable::INIT_ZERO:
+          // Variables are already zero-initialized.
+          break;
+        case Flow::Variable::INIT_UNIFORM: {
+          for (int i = 0; i < tensor->elements(); ++i) {
+            data[i] = uniform(prng) * scale;
+          }
+          break;
+        }
+        case Flow::Variable::INIT_NORMAL: {
+          for (int i = 0; i < tensor->elements(); ++i) {
+            data[i] = normal(prng) * scale;
+          }
+          break;
+        }
+        case Flow::Variable::INIT_ORTHO: {
+          for (int i = 0; i < tensor->elements(); ++i) {
+            data[i] = normal(prng);
+          }
+
+          if (tensor->rank() >= 2) {
+            int m = tensor->dim(0);
+            int n = tensor->elements() / m;
+            if (n > m) {
+              OrthogonalizeRows(data, m, n);
+            } else {
+              OrthogonalizeColumns(data, m, n);
+            }
+          }
+          break;
+        }
+        default:
+          LOG(WARNING) << "Unknown initialization for " << tensor->name();
       }
     } else {
-      for (int i = 0; i < tensor->elements(); ++i) {
-        size_t offset = tensor->LinearOffset(i);
-        *reinterpret_cast<float *>(tensor->data() + offset) = dist(prng);
+      switch (tensor->init_) {
+        case Flow::Variable::INIT_ZERO:
+          // Variables are already zero-initialized.
+          break;
+        case Flow::Variable::INIT_UNIFORM: {
+          for (int i = 0; i < tensor->elements(); ++i) {
+            size_t offset = tensor->LinearOffset(i);
+            float *p = reinterpret_cast<float *>(tensor->data() + offset);
+            *p = uniform(prng) * scale;
+          }
+          break;
+        }
+        case Flow::Variable::INIT_NORMAL: {
+          for (int i = 0; i < tensor->elements(); ++i) {
+            size_t offset = tensor->LinearOffset(i);
+            float *p = reinterpret_cast<float *>(tensor->data() + offset);
+            *p = normal(prng) * scale;
+          }
+          break;
+        }
+        case Flow::Variable::INIT_ORTHO: {
+          LOG(WARNING) << "Cannot initialize tensor with non-standard layout "
+                       << "with orthogonal vectors: " << tensor->name();
+          for (int i = 0; i < tensor->elements(); ++i) {
+            size_t offset = tensor->LinearOffset(i);
+            float *p = reinterpret_cast<float *>(tensor->data() + offset);
+            *p = normal(prng) * scale;
+          }
+          break;
+        }
+        default:
+          LOG(WARNING) << "Unknown initialization for " << tensor->name();
       }
     }
   }
@@ -1199,7 +1308,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     varmap[var] = tensor;
     tensor->constant_ = var->constant();
     tensor->local_ = !var->global();
-    tensor->random_init_ = var->global() && var->random() && var->learnable();
+    tensor->init_ = var->init;
     tensor->name_ = var->name;
     for (const string &alias : var->aliases) {
       names_[alias] = tensor;

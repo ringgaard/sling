@@ -41,8 +41,9 @@ class MultiClassDelegateLearner : public DelegateLearner {
     FlowBuilder f(flow, name_);
     int dim = activation->elements();
     int size = actions_.size();
-    auto *W = f.Random(f.Parameter("W", DT_FLOAT, {dim, size}));
-    auto *b = f.Random(f.Parameter("b", DT_FLOAT, {1, size}));
+    auto *W = f.Parameter("W", DT_FLOAT, {dim, size});
+    auto *b = f.Parameter("b", DT_FLOAT, {1, size});
+    f.RandomNormal(W);
 
     auto *input = f.Placeholder("input", DT_FLOAT, {1, dim}, true);
     auto *logits = f.Name(f.Add(f.MatMul(input, W), b), "logits");

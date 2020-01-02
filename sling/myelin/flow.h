@@ -361,11 +361,18 @@ class Flow {
       REF        = 4,    // reference variable
       LEARNABLE  = 8,    // learnable global variable
       UNIQUE     = 16,   // input with single gradient
-      RANDOM     = 32,   // initialize with random values
+      DYNAMIC    = 32,   // dynamically sized tensor channel
       ROW        = 64,   // request row-major order
       COL        = 128,  // request column-major order
-      DYNAMIC    = 256,  // dynamically sized tensor channel
-      NOGRADIENT = 512,  // do not compute gradient for variable
+      NOGRADIENT = 256,  // do not compute gradient for variable
+    };
+
+    // Initialization for learnable parameters.
+    enum Initialization {
+      INIT_ZERO    = 0,  // initialize to zero
+      INIT_UNIFORM = 1,  // uniform random initialization
+      INIT_NORMAL  = 2,  // normal-distributed initialization
+      INIT_ORTHO   = 3,  // normal-distributed orthogonal initialization
     };
 
     // Add alias for variable.
@@ -407,24 +414,6 @@ class Flow {
       return clear(LEARNABLE, disable);
     }
 
-    // Unique gradient flag.
-    bool unique() const { return is(UNIQUE); }
-    Variable *set_unique(bool enable = true) {
-      return set(UNIQUE, enable);
-    }
-    Variable *clear_unique(bool disable = true) {
-      return clear(UNIQUE, disable);
-    }
-
-    // Random intialize flag.
-    bool random() const { return is(RANDOM); }
-    Variable *set_random(bool enable = true) {
-      return set(RANDOM, enable);
-    }
-    Variable *clear_random(bool disable = true) {
-      return clear(RANDOM, disable);
-    }
-
     // Dynamic size flag.
     bool dynamic() const { return is(DYNAMIC); }
     Variable *set_dynamic(bool enable = true) {
@@ -432,6 +421,15 @@ class Flow {
     }
     Variable *clear_dynamic(bool disable = true) {
       return clear(DYNAMIC, disable);
+    }
+
+    // Unique gradient flag.
+    bool unique() const { return is(UNIQUE); }
+    Variable *set_unique(bool enable = true) {
+      return set(UNIQUE, enable);
+    }
+    Variable *clear_unique(bool disable = true) {
+      return clear(UNIQUE, disable);
     }
 
     // Check if variable is a constant.
@@ -501,6 +499,7 @@ class Flow {
     Shape shape;                         // variable shape
     char *data = nullptr;                // data for constants (owned by flow)
     uint64_t size = 0;                   // size of data in bytes
+    Initialization init = INIT_ZERO;     // initialization
 
     Operation *producer = nullptr;       // operation producing variable
     std::vector<Operation *> consumers;  // list of consumers of variable

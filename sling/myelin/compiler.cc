@@ -61,6 +61,7 @@ DEFINE_bool(jit_debug, false, "Debug break in jit code");
 DEFINE_int32(cuda_device, -1, "CUDA device number");
 DEFINE_int32(cuda_context_flags, 0, "CUDA context flags");
 DEFINE_int32(sparse_threshold, 64, "Minimum dimension size for sparse update");
+DEFINE_bool(compile_only, false, "Stop after compilation");
 
 namespace sling {
 namespace myelin {
@@ -231,6 +232,12 @@ void Compiler::Compile(Flow *flow, Network *net) {
       close(fd);
       unlink(tmpname);
     }
+  }
+
+  // Stop after compilation if requested.
+  if (FLAGS_compile_only) {
+    LOG(INFO) << "Stop after compilation";
+    exit(1);
   }
 }
 

@@ -34,10 +34,11 @@ parser_model = wf.resource(
 trainer = wf.task("caspar-trainer")
 
 trainer.add_params({
-  "rnn_type": 2,
+  "rnn_type": 1,
   "rnn_dim": 128,
   "rnn_highways": True,
   "rnn_layers": 1,
+  "dropout": 0.2,
 
   "learning_rate": 1.0,
   "learning_rate_decay": 0.8,
@@ -48,16 +49,6 @@ trainer.add_params({
   "report_interval": 1000,
   "learning_rate_cliff": 40000,
   "epochs": 50000,
-
-  #"rnn_highways": False,
-
-  #"rnn_type": 1,
-  #"rnn_dim": 256,
-
-  #dropout": 0.5,
-
-  #"restart": True,
-  #"learning_rate": 0.1,
 })
 
 trainer.attach_input("training_corpus", training_corpus)
