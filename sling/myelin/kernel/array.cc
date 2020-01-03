@@ -900,7 +900,7 @@ class PoolingGather : public Kernel {
     M->RequireOrder(ROW_MAJOR);
 
     // Reserve registers.
-    int regs = SIMDAssembler::RegisterUsage(type) + 8;
+    int regs = SIMDAssembler::RegisterUsage(type) + 9;
     step->SetRegisterUsage(regs);
   }
 
@@ -1181,6 +1181,7 @@ class AssignAddScatter : public Kernel {
 
     // Reserve registers.
     int regs = SIMDAssembler::RegisterUsage(type) + 8;
+    if (args.scaler) regs++;
     step->SetRegisterUsage(regs);
   }
 

@@ -44,7 +44,6 @@ void ParserTrainer::Run(task::Task *task) {
 
   task->Fetch("mark_depth", &mark_depth_);
   task->Fetch("mark_dim", &mark_dim_);
-  task->Fetch("biaff_dim", &biaff_dim_);
   task->Fetch("frame_limit", &frame_limit_);
   task->Fetch("history_size", &history_size_);
   task->Fetch("out_roles_size", &out_roles_size_);
@@ -438,28 +437,13 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   }
 
   // Link features.
-  Flow::Variable *attention = nullptr;
   features.push_back(LinkedFeature(&f, "token", tokens, 1, link_dim_token_));
   features.push_back(LinkedFeature(&f, "attention_tokens",
                                    tokens, frame_limit_, link_dim_token_));
   features.push_back(LinkedFeature(&f, "attention_steps",
-                                   steps, frame_limit_, link_dim_step_,
-                                   &attention));
+                                   steps, frame_limit_, link_dim_step_));
   features.push_back(LinkedFeature(&f, "history",
                                    steps, history_size_, link_dim_step_));
-
-  // Bi-linear attention scoring feature.
-  if (biaff_dim_ > 0) {
-    auto *biaf_h = f.Parameter("biaf_h", DT_FLOAT,
-                               {activations_dim_, biaff_dim_});
-    auto *biaf_m = f.Parameter("biaf_m", DT_FLOAT,
-                               {activations_dim_, biaff_dim_});
-
-    auto *x_h = f.MatMul(attention, biaf_h);
-    auto *x_m = f.MatMul(attention, biaf_m);
-    auto *bilin = f.MatMul(x_h, f.Transpose(x_m));
-    features.push_back(f.Reshape(bilin, {1, frame_limit_ * frame_limit_}));
-  }
 
   // Mark features.
   features.push_back(LinkedFeature(&f, "mark_tokens",
@@ -512,16 +496,13 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
 Flow::Variable *ParserTrainer::LinkedFeature(FlowBuilder *f,
                                              const string &name,
                                              Flow::Variable *embeddings,
-                                             int size, int dim,
-                                             Flow::Variable **representation) {
+                                             int size, int dim) {
   int link_dim = embeddings->dim(1);
   auto *features = f->Placeholder(name, DT_INT32, {1, size});
   auto *oov = f->Parameter(name + "_oov", DT_FLOAT, {1, link_dim});
   auto *gather = f->Gather(embeddings, features, oov);
   auto *transform = f->Parameter(name + "_transform", DT_FLOAT,
                                  {link_dim, dim});
-
-  if (representation != nullptr) *representation = gather;
   return f->Reshape(f->MatMul(gather, transform), {1, size * dim});
 }
 

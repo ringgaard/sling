@@ -2815,15 +2815,15 @@ int SIMDAssembler::RegisterUsage(Type type) {
   switch (type) {
     case DT_INT8:
     case DT_INT16:
-      return 1;
+      return 2;
     case DT_INT32:
       if (CPU::Enabled(AVX512F)) return 0;
       if (CPU::Enabled(AVX2)) return 0;
       if (CPU::Enabled(SSE4_1) && CPU::Enabled(SSSE3)) return 0;
-      return 1;
+      return 2;
     case DT_INT64:
       if (CPU::Enabled(AVX512F)) return 0;
-      return 1;
+      return 2;
     default:
       return 0;
   }
