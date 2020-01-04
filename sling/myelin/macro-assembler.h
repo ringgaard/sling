@@ -15,6 +15,8 @@
 #ifndef SLING_MYELIN_MACRO_ASSEMBLER_H_
 #define SLING_MYELIN_MACRO_ASSEMBLER_H_
 
+#include <limits>
+
 #include "sling/myelin/compute.h"
 #include "third_party/jit/assembler.h"
 
@@ -361,6 +363,16 @@ class MacroAssembler : public jit::Assembler {
       data->set_symbol(symbol);
     }
     return data;
+  }
+
+  // Get data block for minimum value for type.
+  template<typename T> StaticData *MinVal(int repeat = 1) {
+    return GetConstant<T>(std::numeric_limits<T>::lowest(), repeat);
+  }
+
+  // Get data block for maximum value for type.
+  template<typename T> StaticData *MaxVal(int repeat = 1) {
+    return GetConstant<T>(std::numeric_limits<T>::max(), repeat);
   }
 
   // Generate static data blocks in the code buffer.
