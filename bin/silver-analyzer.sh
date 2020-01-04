@@ -12,7 +12,7 @@ SPEC='{
 
   inputs: {
     commons: {
-      file: "local/data/e/ner/kb.sling"
+      file: "local/data/e/wiki/kb.sling"
       format: "store/frame"
     }
     aliases: {

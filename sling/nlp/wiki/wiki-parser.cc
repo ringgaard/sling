@@ -35,8 +35,8 @@ namespace {
 // AST node names.
 static const char *node_names[] = {
   "DOCUMENT", "ARG", "ATTR",
-  "TEXT", "FONT", "TEMPLATE", "LINK", "IMAGE", "CATEGORY", "URL",
-  "COMMENT", "TAG", "BTAG", "ETAG", "MATH", "GALLERY", "REF", "NOWIKI",
+  "TEXT", "FONT", "TEMPLATE", "LINK", "IMAGE", "CATEGORY", "URL", "COMMENT",
+  "TAG", "BTAG", "ETAG", "MATH", "TIMELINE", "GALLERY", "REF", "NOWIKI",
   "HEADING", "INDENT", "TERM", "UL", "OL", "HR", "SWITCH",
   "TABLE", "CAPTION", "ROW", "HEADER", "CELL", "BREAK",
 };
@@ -578,6 +578,16 @@ void WikiParser::ParseTag() {
       ptr_++;
     }
     if (*ptr_ != 0) ptr_ += 7;
+    nodes_[node].end = ptr_;
+    txt_ = ptr_;
+  } else if (Matches("<timeline>")) {
+    int node = Add(TIMELINE);
+    ptr_ += 10;
+    while (*ptr_ != 0) {
+      if (*ptr_ == '<' && Matches("</timeline>")) break;
+      ptr_++;
+    }
+    if (*ptr_ != 0) ptr_ += 11;
     nodes_[node].end = ptr_;
     txt_ = ptr_;
   } else if (Matches("<nowiki>")) {

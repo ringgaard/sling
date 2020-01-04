@@ -951,7 +951,7 @@ int DateAnnotator::GetYear(const PhraseTable &aliases,
     // Find matching year.
     Handle year = Handle::nil();
     if (span.is(SPAN_YEAR)) {
-      if (span.aux.IsInt()) {
+      if (span.aux.IsInt() && span.aux.AsInt() > 0) {
         year = span.aux;
       } else {
         year = FindMatch(aliases, span, n_year_, store);

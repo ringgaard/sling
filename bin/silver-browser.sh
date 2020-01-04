@@ -12,7 +12,7 @@ SPEC='{
 
   inputs: {
     commons: {
-      file: "local/data/e/ner/kb.sling"
+      file: "local/data/e/wiki/kb.sling"
       format: "store/frame"
     }
     aliases: {
@@ -34,7 +34,7 @@ SPEC='{
   }
 }'
 
-bazel-bin/sling/nlp/document/corpus-browser \
+gdb --args bazel-bin/sling/nlp/document/corpus-browser \
   --kb \
   --names local/data/e/wiki/$LANGUAGE/name-table.repo \
   --spec "${SPEC//LANG/$LANGUAGE}" \

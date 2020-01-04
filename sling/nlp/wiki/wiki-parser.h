@@ -48,6 +48,7 @@ class WikiParser {
     BTAG,        // <tag attr=''>
     ETAG,        // </tag>
     MATH,        // <math>...</math>
+    TIMELINE,    // <timeline>...</timeline>
     GALLERY,     // <gallery>...</gallery>
     REF,         // <ref>...</ref>
     NOWIKI,      // <nowiki>...</nowiki>

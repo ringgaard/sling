@@ -106,6 +106,7 @@ class WikiExtractor {
   void ExtractBeginTag(const Node &node);
   void ExtractEndTag(const Node &node);
   void ExtractMath(const Node &node);
+  void ExtractTimeline(const Node &node);
   void ExtractGallery(const Node &node);
   void ExtractReference(const Node &node);
   void ExtractNoWiki(const Node &node);
