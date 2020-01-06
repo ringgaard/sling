@@ -60,8 +60,8 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("learning_rate", &learning_rate_);
   task->Fetch("min_learning_rate", &min_learning_rate_);
   task->Fetch("learning_rate_cliff", &learning_rate_cliff_);
-
   task->Fetch("dropout", &dropout_);
+  task->Fetch("ff_l2reg", &ff_l2reg_);
 
   // Statistics.
   num_tokens_ = task->GetCounter("tokens");
@@ -469,6 +469,7 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   auto *W = f.Parameter("W0", DT_FLOAT, {fvsize, activations_dim_});
   auto *b = f.Parameter("b0", DT_FLOAT, {1, activations_dim_});
   f.RandomNormal(W);
+  if (ff_l2reg_ != 0.0) W->SetAttr("l2reg", ff_l2reg_);
   auto *activation = f.Name(f.Relu(f.Add(f.MatMul(fv, W), b)), "activation");
   activation->set_in()->set_out()->set_ref();
 

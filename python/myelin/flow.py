@@ -155,6 +155,7 @@ class Variable(object):
     self.aliases = []
     self.type = None
     self.shape = []
+    self.attrs = {}
     self.data = None
     self.producer = None
     self.consumers = []
@@ -213,6 +214,15 @@ class Variable(object):
       self.flags |= 16
     else:
       self.flags &= ~16
+
+  def add_attr(self, name, value):
+    if type(value) is bool:
+      if value == True: value = 1
+      elif value == False: value = 0
+    self.attrs[name] = str(value)
+
+  def attr(self, name):
+    return self.attrs.get(name, None)
 
   def shape_defined(self):
     for d in self.shape:
@@ -560,7 +570,7 @@ class Flow:
     # Write flow file header
     f = FileWriter(filename)
     f.write('flow')
-    f.write_int(5)
+    f.write_int(6)
     f.write_int(self.flags)
 
     # Write variables.
@@ -574,6 +584,10 @@ class Flow:
       f.write_string(var.type)
       f.write_int(len(var.shape))
       for d in var.shape: f.write_int(d)
+      f.write_int(len(var.attrs))
+      for a in var.attrs:
+        f.write_string(a)
+        f.write_string(op.attrs[a])
       f.write_object(var.data)
 
     # Write operations.
@@ -636,7 +650,7 @@ class Flow:
     assert magic == memoryview(b'flow'), magic.tobytes()
 
     version = f.read_int()
-    assert version == 4 or version == 5, version
+    assert version == 4 or version == 5 or version == 6, version
     if version >= 5: self.flags = f.read_int()
 
     num_vars = f.read_int()
@@ -658,6 +672,12 @@ class Flow:
         shape.append(f.read_int())
       var = self.var(name, type=t, shape=shape)
       var.flags = flags
+      if version >= 6:
+        num_attr = f.read_int()
+        for _ in range(num_attr):
+          attr_name = f.read_string()
+          attr_val = f.read_string()
+          var.add_attr(attr_name, attr_val)
       size = f.read_long()
       if size > 0:
         var.data = f.slice(size)  # avoid creating a copy

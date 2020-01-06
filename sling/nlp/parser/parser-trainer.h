@@ -211,6 +211,7 @@ class ParserTrainer : public task::LearnerTask {
   float learning_rate_ = 1.0;
   float min_learning_rate_ = 0.001;
   float dropout_ = 0.0;
+  float ff_l2reg_ = 0.0;
 
   // Evaluation statistics.
   float prev_loss_ = 0.0;

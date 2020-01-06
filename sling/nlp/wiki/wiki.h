@@ -115,6 +115,7 @@ class WikimediaTypes {
   // Names.
   Names names_;
   Name n_disambiguation_{names_, "Q4167410"};
+  Name n_human_name_disambiguation_{names_, "Q22808320"};
   Name n_list_{names_, "Q13406463"};
   Name n_template_{names_, "Q11266439"};
   Name n_infobox_{names_, "Q19887878"};

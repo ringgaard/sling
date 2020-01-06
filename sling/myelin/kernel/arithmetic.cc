@@ -840,9 +840,11 @@ class ExpressionTransformer : public Transformer {
       Express expr;
       expr.Parse(fused_recipe);
       auto *vt = expr.Variable(Express::INPUT, target_index);
-      auto *v0 = expr.Variable(Express::INPUT, 0);
+      auto *v0 = expr.Variable(InputType(fused->inputs[0]), 0);
       vt->id = 0;
+      vt->type = Express::INPUT;
       v0->id = target_index;
+      v0->type = InputType(fused->inputs[0]);
       fused_recipe = expr.AsRecipe();
       fused->SwapInputs(0, target_index);
     }

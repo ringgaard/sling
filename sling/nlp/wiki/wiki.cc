@@ -122,7 +122,7 @@ bool WikimediaTypes::IsCategory(Handle type) {
 }
 
 bool WikimediaTypes::IsDisambiguation(Handle type) {
-  return type == n_disambiguation_;
+  return type == n_disambiguation_ || type == n_human_name_disambiguation_;
 }
 
 bool WikimediaTypes::IsList(Handle type) {
@@ -151,6 +151,7 @@ void AuxFilter::Init(Store *store) {
     "Q16521",     // taxon
     "Q8054",      // protein
     "Q11173",     // chemical compound
+    "Q30612",     // clinical trial
     nullptr,
   };
   for (const char **type = kAuxItemtypes; *type; ++type) {

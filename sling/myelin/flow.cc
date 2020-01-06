@@ -810,9 +810,9 @@ void Flow::Read(const char *data, size_t size) {
   // Read header.
   Parser parser(data, data + size);
   int magic = parser.GetInt();
-  CHECK_EQ(magic, kMagic) << "not a flow file";
+  CHECK_EQ(magic, MAGIC) << "not a flow file";
   int version = parser.GetInt();
-  CHECK(version >= 3 && version <= 5)
+  CHECK(version >= 3 && version <= 6)
       << "unsupported flow file version " << version;
   if (version >= 5) parser.GetInt();  // unused flags
 
@@ -854,6 +854,16 @@ void Flow::Read(const char *data, size_t size) {
     for (int d = 0; d < rank; ++d) {
       int size = parser.GetInt();
       var->shape.add(size == -1 ? batch_size_ : size);
+    }
+
+    // Get attributes.
+    if (version >= 6) {
+      int num_attrs = parser.GetInt();
+      for (int j = 0; j < num_attrs; ++j) {
+        string name = parser.GetString();
+        string value = parser.GetString();
+        var->SetAttr(name, value);
+      }
     }
 
     // Get optional variable constant.
@@ -981,8 +991,8 @@ void Flow::Save(const string &filename, int version) const {
 
   // Write header (magic and version).
   CHECK_GE(version, 3);
-  CHECK_LE(version, kVersion);
-  file.WriteInt(kMagic);
+  CHECK_LE(version, VERSION);
+  file.WriteInt(MAGIC);
   file.WriteInt(version);
   if (version >= 5) file.WriteInt(0);  // unused flags
 
@@ -1012,6 +1022,15 @@ void Flow::Save(const string &filename, int version) const {
     file.WriteInt(var->shape.rank());
     for (int d = 0; d < var->shape.rank(); ++d) {
       file.WriteInt(var->shape.dim(d));
+    }
+
+    // Write attributes.
+    if (version >= 6) {
+      file.WriteInt(var->attrs().size());
+      for (const auto &attr : var->attrs()) {
+        file.WriteString(attr.name);
+        file.WriteString(attr.value);
+      }
     }
 
     // Write size.

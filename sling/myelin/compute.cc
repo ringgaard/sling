@@ -1215,7 +1215,7 @@ void Network::SaveParameters(Flow *flow) const {
         dst += element_size;
       }
     }
-    var->clear_learnable();
+    var->set_learnable(false);
   }
 }
 

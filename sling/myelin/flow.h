@@ -326,8 +326,8 @@ class Flow {
   struct Function;
 
   // Flow file version
-  static const int kVersion = 5;
-  static const int kMagic = 0x776f6c66;
+  static const int VERSION = 6;
+  static const int MAGIC = 0x776f6c66;
 
   // Flow artifact.
   template<typename T> struct Artifact {
@@ -343,16 +343,13 @@ class Flow {
       }
       return static_cast<T *>(this);
     }
-    T *clear(uint32 flag, bool disable = true) {
-      return set(flag, !disable);
-    }
 
     string name;         // artifact name
     uint32 flags = 0;    // artifact flags (meaning depends on artifact type)
   };
 
   // Flow variable.
-  struct Variable : public Artifact<Variable> {
+  struct Variable : public Artifact<Variable>, public Attributes {
     // Variable flags.
     enum Flag {
       NONE       = 0,    // no flags
@@ -393,25 +390,19 @@ class Flow {
     // Input variable flag.
     bool in() const { return is(IN); }
     Variable *set_in(bool enable = true) { return set(IN, enable); }
-    Variable *clear_in(bool disable = true) { return clear(IN, disable); }
 
     // Output variable flag.
     bool out() const { return is(OUT); }
     Variable *set_out(bool enable = true) { return set(OUT, enable); }
-    Variable *clear_out(bool disable = true) { return clear(OUT, disable); }
 
     // Reference variable flag.
     bool ref() const { return is(REF); }
     Variable *set_ref(bool enable = true) { return set(REF, enable); }
-    Variable *clear_ref(bool disable = true) { return clear(REF, disable); }
 
     // Learnable variable flag.
     bool learnable() const { return is(LEARNABLE); }
     Variable *set_learnable(bool enable = true) {
       return set(LEARNABLE, enable);
-    }
-    Variable *clear_learnable(bool disable = true) {
-      return clear(LEARNABLE, disable);
     }
 
     // Dynamic size flag.
@@ -419,17 +410,11 @@ class Flow {
     Variable *set_dynamic(bool enable = true) {
       return set(DYNAMIC, enable);
     }
-    Variable *clear_dynamic(bool disable = true) {
-      return clear(DYNAMIC, disable);
-    }
 
     // Unique gradient flag.
     bool unique() const { return is(UNIQUE); }
     Variable *set_unique(bool enable = true) {
       return set(UNIQUE, enable);
-    }
-    Variable *clear_unique(bool disable = true) {
-      return clear(UNIQUE, disable);
     }
 
     // Check if variable is a constant.
@@ -591,17 +576,11 @@ class Flow {
     Function *set_training(bool enable = true) {
       return set(TRAINING, enable);
     }
-    Function *clear_training(bool disable = true) {
-      return clear(TRAINING, disable);
-    }
 
     // Back-propagation flag.
     bool backprop() const { return is(BACKPROP); }
     Function *set_backkprop(bool enable = true) {
       return set(BACKPROP, enable);
-    }
-    Function *clear_backprop(bool disable = true) {
-      return clear(BACKPROP, disable);
     }
 
     std::vector<Operation *> ops;     // ops for function in compute order
@@ -660,7 +639,7 @@ class Flow {
   void Read(const char *data, size_t size);
 
   // Save flow to file.
-  void Save(const string &filename, int version = kVersion) const;
+  void Save(const string &filename, int version = VERSION) const;
 
   // Analyze flow.
   void Analyze(const Transformations &transformations);

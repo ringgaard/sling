@@ -39,6 +39,7 @@ trainer.add_params({
   "rnn_highways": True,
   "rnn_layers": 1,
   "dropout": 0.2,
+  "ff_l2reg": 0.0001,
 
   "learning_rate": 1.0,
   "learning_rate_decay": 0.8,
