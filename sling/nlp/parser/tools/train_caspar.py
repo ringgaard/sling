@@ -14,7 +14,7 @@ else:
   modelfn = "local/data/e/caspar/caspar.flow"
   rnn_layers = 1
   rnn_dim = 128
-  
+
 # Start up workflow system.
 workflow.startup()
 
