@@ -178,15 +178,15 @@
   /lang/wikilang/stop_words: [
     ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
     "the", "a", "an", "'s", "is", "was", "and",
-    "in", "of", "by", "to", "at", "as"
+    "in", "of", "by", "to", "at", "as",
   ]
 
   /lang/wikilang/blacklisted_phrases: [
     "A", "after", "After the war", "ask", "attend",
-    "based on", "beat",
+    "based on", "be", "beat",
     "for the people",
     "I", "I'm", "it",
-    "has been", "he", "him", "his university", "his wife",
+    "has been", "he", "him", "his", "his university", "his wife",
     "landed",
     "no more",
     "made", "Maybe",
@@ -195,6 +195,7 @@
     "she", "Step-down",
     "them", "today",
     "wanted", "with",
+    "you",
   ]
 }
 
