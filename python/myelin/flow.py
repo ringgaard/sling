@@ -216,9 +216,7 @@ class Variable(object):
       self.flags &= ~16
 
   def add_attr(self, name, value):
-    if type(value) is bool:
-      if value == True: value = 1
-      elif value == False: value = 0
+    if type(value) is bool: value = int(value)
     self.attrs[name] = str(value)
 
   def attr(self, name):

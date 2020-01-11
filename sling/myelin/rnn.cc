@@ -70,7 +70,7 @@ RNN::Variables RNN::Build(Flow *flow,
       tf.RandomOrtho(x2o);
       tf.RandomOrtho(h2o);
 
-      // i = sigmoid(x * x2i + h_in * h2i + c_in * c2i + bi)
+      // i = sigmoid(x * x2i + h_in * h2i + bi)
       auto *ia = tf.Add(tf.MatMul(x, x2i), tf.Add(tf.MatMul(h_in, h2i), bi));
       auto *i = tf.Name(tf.Sigmoid(ia), "i");
 

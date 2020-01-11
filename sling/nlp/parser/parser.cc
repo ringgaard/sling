@@ -134,7 +134,7 @@ void Parser::Parse(Document *document) const {
         d = action.delegate;
       }
 
-      // Shift if predicted action is not invalid.
+      // Fall back to SHIFT if predicted action is not valid.
       if (!state.CanApply(action)) {
         action.type = ParserAction::SHIFT;
       }
