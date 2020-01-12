@@ -1,0 +1,4 @@
+bazel-*
+.git
+local
+sling

@@ -31,6 +31,7 @@ import hashlib
 import base64
 import zipfile
 import distutils.util;
+import sling
 
 def sha256_checksum(filename, block_size=65536):
   """ Compute SHA256 digest for file."""
@@ -54,12 +55,12 @@ abi = "none"
 platform = distutils.util.get_platform().replace("-", "_")
 tag = "py" + pyversion + "-" + abi + "-" + platform
 package = "sling"
-version = "2.0.0"
+version = sling.VERSION
 dist_dir = package + "-" + version + ".dist-info"
 data_dir = package + "-" + version + ".data/purelib"
 record_filename = dist_dir + "/RECORD"
 
-wheel_dir = "/tmp"
+wheel_dir = "wheel"
 wheel_basename = package + "-" + version + "-" + tag + ".whl"
 wheel_filename = wheel_dir + "/" + wheel_basename
 
@@ -91,6 +92,7 @@ files = {
 }
 
 # Create new wheel zip archive.
+os.makedirs(wheel_dir, exist_ok=True)
 wheel = zipfile.ZipFile(wheel_filename, "w")
 record = ""
 

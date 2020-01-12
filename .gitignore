@@ -1,6 +1,7 @@
 bazel-*
 examples
 local
+wheel
 *.pyc
 *.aux
 *.bbl
