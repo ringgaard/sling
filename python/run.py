@@ -300,8 +300,7 @@ def silver_annotation():
       wf.silver_annotation(language=language)
       workflow.run(wf.wf)
 
-
-if __name__ == '__main__':
+def main():
   # Parse command-line arguments.
   flags.parse()
 
@@ -331,4 +330,7 @@ if __name__ == '__main__':
 
   # Done.
   log.info("Done")
+
+if __name__ == '__main__':
+  main()
 

@@ -1,4 +1,4 @@
 #!/bin/sh
 
-python3 python/run.py $*
+python3 -m sling $*
 
