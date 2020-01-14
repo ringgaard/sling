@@ -760,7 +760,7 @@ void NumberScaleAnnotator::Annotate(const PhraseTable &aliases,
   }
 }
 
-void MeasureAnnotator::Init(Store *store) {
+void MeasureAnnotator::Init(Store *store, bool detailed) {
   static const char *unit_types[] = {
     "Q10387685",   // unit of density
     "Q10387689",   // unit of power
@@ -779,6 +779,7 @@ void MeasureAnnotator::Init(Store *store) {
     nullptr,
   };
 
+  detailed_ = detailed;
   CHECK(names_.Bind(store));
   for (const char **type = unit_types; *type != nullptr; ++type) {
     units_.insert(store->Lookup(*type));
@@ -884,17 +885,20 @@ void MeasureAnnotator::AddQuantity(SpanChart *chart, int begin, int end,
   Store *store = chart->document()->store();
   Builder builder(store);
   builder.AddIsA(n_quantity_);
-  builder.Add(n_amount_, amount);
-  builder.Add(n_unit_, unit);
+  if (detailed_) {
+    builder.Add(n_amount_, amount);
+    builder.Add(n_unit_, unit);
+  }
   Handle h = builder.Create().handle();
 
   // Add quantity annotation to chart.
   chart->Add(begin + chart->begin(), end + chart->begin(), h, SPAN_MEASURE);
 }
 
-void DateAnnotator::Init(Store *store) {
+void DateAnnotator::Init(Store *store, bool detailed) {
   CHECK(names_.Bind(store));
   calendar_.Init(store);
+  detailed_ = detailed;
 }
 
 void DateAnnotator::AddDate(SpanChart *chart, int begin, int end,
@@ -903,7 +907,9 @@ void DateAnnotator::AddDate(SpanChart *chart, int begin, int end,
   Store *store = chart->document()->store();
   Builder builder(store);
   builder.AddIsA(n_time_);
-  builder.AddIs(date.AsHandle(store));
+  if (detailed_) {
+    builder.AddIs(date.AsHandle(store));
+  }
   Handle h = builder.Create().handle();
 
   // Add date annotation to chart.
@@ -1220,13 +1226,14 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
   }
 
   // Initialize annotators.
+  detailed_ = resources.detailed;
   importer_.Init(commons);
   taxonomy_.Init(commons);
   numbers_.Init(commons);
   spelled_.Init(commons);
   scales_.Init(commons);
-  measures_.Init(commons);
-  dates_.Init(commons);
+  measures_.Init(commons, detailed_);
+  dates_.Init(commons, detailed_);
   intro_.Init(commons);
   abbreviated_.Init();
 
@@ -1305,7 +1312,11 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
         span = output->AddSpan(begin, end);
         if (!item.aux.IsNumber()) {
           // Span has already been resolved.
-          span->Evoke(Builder(store).AddIs(item.aux).Create());
+          if (store->IsPublic(item.aux)) {
+            span->Evoke(Builder(store).AddIs(item.aux).Create());
+          } else {
+            span->Evoke(item.aux);
+          }
 
           // Add annotated entity to resolver context model.
           resolve_span = false;
@@ -1322,7 +1333,9 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
           // Output stand-alone quantity annotation.
           Builder b(store);
           b.AddIsA(n_quantity_);
-          b.Add(n_amount_, item.aux);
+          if (detailed_) {
+            b.Add(n_amount_, item.aux);
+          }
           span->Evoke(b.Create());
           resolve_span = false;
         }
@@ -1381,7 +1394,6 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
       if (!resolved && item.aux == kPersonMarker) {
         Builder b(output->store());
         b.Add(n_instance_of_, n_human_);
-        b.Add(n_name_, document.PhraseText(begin, end));
         Frame person = b.Create();
         span->Evoke(person);
 
@@ -1439,6 +1451,7 @@ class MentionAnnotator : public Annotator {
     resources.aliases = task->GetInputFile("aliases");
     resources.dictionary = task->GetInputFile("dictionary");
     resources.resolve = task->Get("resolve", false);
+    resources.detailed = task->Get("detailed", true);
     resources.language = task->Get("language", "en");
 
     annotator_.Init(commons, resources);

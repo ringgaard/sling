@@ -6,9 +6,6 @@ PORT=${PORT:-8080}
 SPEC='{
   annotator: "mentions"
   annotator: "anaphora"
-  annotator: "phrase-structure"
-  annotator: "relations"
-  annotator: "mention-name"
 
   inputs: {
     commons: {
@@ -23,21 +20,18 @@ SPEC='{
       file: "local/data/e/silver/LANG/idf.repo"
       format: "repository"
     }
-    phrases: {
-      file: "data/wiki/LANG/phrases.txt"
-      format: "text"
-    }
   }
   parameters: {
     language: "LANG"
     resolve: true
-    detailed: true
+    detailed: false
   }
 }'
 
-bazel-bin/sling/nlp/document/analyzer \
+bazel-bin/sling/nlp/document/corpus-browser \
   --kb \
   --names local/data/e/wiki/$LANGUAGE/name-table.repo \
   --spec "${SPEC//LANG/$LANGUAGE}" \
-  --port $PORT $@
+  --port $PORT $@ \
+  local/data/e/wiki/$LANGUAGE/documents@10.rec
 

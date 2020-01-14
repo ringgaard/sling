@@ -304,7 +304,7 @@ class NumberScaleAnnotator {
 class MeasureAnnotator {
  public:
   // Initialize measure annotator.
-  void Init(Store *store);
+  void Init(Store *store, bool detailed);
 
   // Annotate measure spans.
   void Annotate(const PhraseTable &aliases, SpanChart *chart);
@@ -320,6 +320,9 @@ class MeasureAnnotator {
   // Set of types for units.
   HandleSet units_;
 
+  // Detailed annotations.
+  bool detailed_ = true;
+
   // Symbols.
   Names names_;
   Name n_instance_of_{names_, "P31"};
@@ -334,7 +337,7 @@ class MeasureAnnotator {
 class DateAnnotator {
  public:
   // Initialize date annotator.
-  void Init(Store *store);
+  void Init(Store *store, bool detailed);
 
   // Annotate date spans.
   void Annotate(const PhraseTable &aliases, SpanChart *chart);
@@ -356,6 +359,9 @@ class DateAnnotator {
 
   // Calendar for date computations.
   Calendar calendar_;
+
+  // Detailed annotations.
+  bool detailed_ = true;
 
   // Symbols.
   Names names_;
@@ -404,6 +410,7 @@ class SpanAnnotator {
     string dictionary;     // dictionary table with IDF scores for words
     string language;       // language for documents
     bool resolve = false;  // resolve spans to entities in knowledge base
+    bool detailed = true;  // annotate frames attributes
   };
 
   // Initialize annotator.
@@ -432,6 +439,9 @@ class SpanAnnotator {
 
   // Resolve spans to entities in the knowledge base.
   bool resolve_ = false;
+
+  // Detailed annotations.
+  bool detailed_ = true;
 
   // Entity resolver.
   EntityResolver resolver_;
