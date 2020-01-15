@@ -243,7 +243,7 @@ class AliasReducer : public task::Reducer {
       return n;
     }
     
-    // Check if the other alias contains the same digits.
+    // Check if the other alias contains the same sequence of digits.
     bool SameDigits(const Alias *other) {
       int m = 0;
       for (int n = 0; n < chars.size(); ++n) {
@@ -258,6 +258,9 @@ class AliasReducer : public task::Reducer {
           }
           if (!match) return false;
         }
+      }
+      while (m < other->chars.size()) {
+        if (Unicode::IsDigit(other->chars[m++])) return false;
       }
       return true;
     }
