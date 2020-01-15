@@ -242,9 +242,28 @@ class AliasReducer : public task::Reducer {
       }
       return n;
     }
+    
+    // Check if the other alias contains the same digits.
+    bool SameDigits(const Alias *other) {
+      int m = 0;
+      for (int n = 0; n < chars.size(); ++n) {
+        if (Unicode::IsDigit(chars[n])) {
+          // Try to find matching digit in other alias.
+          bool match = false;
+          while (m < other->chars.size()) {
+            if (chars[n] == other->chars[m++]) {
+              match = true;
+              break;
+            }
+          }
+          if (!match) return false;
+        }
+      }
+      return true;
+    }
 
     // Compute edit distance between this alias and another alias.
-    int EditDistance(const Alias *other) {
+    int EditDistance(const Alias *other) const {
       return LevenshteinDistance(chars.data(), chars.size(),
                                  other->chars.data(), other->chars.size());
     }
@@ -404,9 +423,11 @@ class AliasReducer : public task::Reducer {
           if (a->sources & VARIATION) continue;
 
           // A variation must have a common prefix with existing alias of a
-          // minimum size and the edit distance must be below a threshold.
+          // minimum size and the edit distance must be below a threshold. The
+          // variation must also contain the same sequence of digits.
           if (alias->CommonPrefix(a) < min_prefix_) continue;
           if (alias->EditDistance(a) > max_edit_distance_) continue;
+          if (!alias->SameDigits(a)) continue;
 
           // Variation found.
           variation = true;

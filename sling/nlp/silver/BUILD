@@ -91,12 +91,24 @@ cc_library(
 )
 
 cc_library(
+  name = "types",
+  srcs = ["types.cc"],
+  deps = [
+    "//sling/nlp/document",
+    "//sling/nlp/document:annotator",
+    "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "annotators",
   deps = [
     ":mentions",
     ":anaphora",
     ":phrases",
     ":relations",
+    ":types",
   ],
 )
 

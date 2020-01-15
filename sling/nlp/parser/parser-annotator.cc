@@ -67,6 +67,5 @@ class MentionNameAnnotator : public Annotator {
 
 REGISTER_ANNOTATOR("mention-name", MentionNameAnnotator);
 
-
 }  // namespace nlp
 }  // namespace sling

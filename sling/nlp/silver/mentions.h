@@ -423,8 +423,8 @@ class SpanAnnotator {
   void Annotate(const Document &document, Document *output);
 
  private:
-  // Check if item is a human.
-  bool IsHuman(const Frame &item) const;
+  // Check if item is a person.
+  bool IsPerson(const Frame &item) const;
 
   // Add person name parts as local mentions to context.
   void AddNameParts(const Document &document, int begin, int end,
@@ -468,6 +468,7 @@ class SpanAnnotator {
   Name n_amount_{names_, "/w/amount"};
   Name n_instance_of_{names_, "P31"};
   Name n_human_{names_, "Q5"};
+  Name n_person_{names_, "Q215627"};
   Name n_fictional_human_{names_, "Q15632617"};
   Name n_page_item_{names_, "/wp/page/item"};
   Name n_name_{names_, "name"};

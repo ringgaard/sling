@@ -1324,7 +1324,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
             context.AddEntity(item.aux);
 
             // Add first and last names to mention model for persons.
-            if (item.is(SPAN_PERSON) && IsHuman(Frame(store, item.aux))) {
+            if (item.is(SPAN_PERSON) && IsPerson(Frame(store, item.aux))) {
               int count = context.GetPopularity(item.aux);
               AddNameParts(document, begin, end, &context, item.aux, count);
             }
@@ -1376,7 +1376,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
           resolved = true;
 
           // Add first and last names to mention model for persons.
-          if (item.is(SPAN_PERSON) && IsHuman(Frame(store, entity))) {
+          if (item.is(SPAN_PERSON) && IsPerson(Frame(store, entity))) {
             AddNameParts(document, begin, end, &context, entity, winner.count);
           }
 
@@ -1393,7 +1393,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
       // Mark unresolved person name spans.
       if (!resolved && item.aux == kPersonMarker) {
         Builder b(output->store());
-        b.Add(n_instance_of_, n_human_);
+        b.AddIsA(n_person_);
         Frame person = b.Create();
         span->Evoke(person);
 
@@ -1412,10 +1412,12 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
   output->Update();
 }
 
-bool SpanAnnotator::IsHuman(const Frame &item) const {
+bool SpanAnnotator::IsPerson(const Frame &item) const {
   for (const Slot &s : item) {
-    if (s.name == n_instance_of_ &&
-        (s.value == n_human_ || s.value == n_fictional_human_)) {
+    if ((s.name == n_instance_of_ || s.name == Handle::isa()) &&
+        (s.value == n_human_ || 
+         s.value ==  n_person_ ||
+         s.value == n_fictional_human_)) {
       return true;
     }
   }

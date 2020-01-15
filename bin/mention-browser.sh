@@ -6,6 +6,8 @@ PORT=${PORT:-8080}
 SPEC='{
   annotator: "mentions"
   annotator: "anaphora"
+  annotator: "types"
+  annotator: "clear-references"
 
   inputs: {
     commons: {
