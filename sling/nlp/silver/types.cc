@@ -28,20 +28,24 @@ using namespace task;
 class TypeAnnotator : public Annotator {
  public:
   ~TypeAnnotator() { delete taxonomy_; }
-  
+
   void Init(Task *task, Store *commons) override {
     // Taxonomy used for entity types.
     static const char *types[] = {
-      "Q215627",     // person
-      "Q13226383",   // facility
-      "Q17334923",   // location
-      "Q43229",      // organization
-      "Q12737077",   // occupation
-      "Q216353",     // title
+      "Q215627",      // person
+      "Q13226383",    // facility
+      "Q17334923",    // location
+      "Q43229",       // organization
+      "Q12737077",    // occupation
+      "Q216353",      // title
+      "Q1047113",     // specialty
       "Q1656682",     // event
+      "/w/quantity",  // quantity
+      "/w/time",      // time
+      "/w/geo",       // geopoint
       nullptr,
     };
-    
+
     catalog_.Init(commons);
     taxonomy_ = new Taxonomy(&catalog_, types);
   }
@@ -70,7 +74,7 @@ class TypeAnnotator : public Annotator {
   // Fact catalog for fact extraction.
   FactCatalog catalog_;
 
-  // Entity type taxonomy.  
+  // Entity type taxonomy.
   Taxonomy *taxonomy_ = nullptr;
 };
 

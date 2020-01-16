@@ -7,7 +7,7 @@ SPEC='{
   annotator: "mentions"
   annotator: "anaphora"
   annotator: "types"
-  annotator: "clear-references"
+  ;annotator: "clear-references"
 
   inputs: {
     commons: {
@@ -27,6 +27,8 @@ SPEC='{
     language: "LANG"
     resolve: true
     detailed: false
+    initial_reference: false
+    definite_reference: false
   }
 }'
 

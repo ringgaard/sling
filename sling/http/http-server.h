@@ -480,8 +480,11 @@ class HTTPResponse {
   // Return HTTP error message.
   void SendError(int status, const char *title, const char *msg);
 
-  // Redirect to another URL.
+  // Permanent redirect to another URL.
   void RedirectTo(const char *uri);
+
+  // Temporary redirect to another URL.
+  void TempRedirectTo(const char *uri);
 
   // HTTP response body buffer.
   HTTPBuffer *buffer() { return conn_->response_buffer(); }

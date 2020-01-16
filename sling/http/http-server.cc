@@ -58,6 +58,7 @@ const char *StatusText(int status) {
     case 301: return "Moved Permanently";
     case 302: return "Moved";
     case 304: return "Not Modified";
+    case 307: return "Temporary Redirect";
     case 400: return "Bad Request";
     case 401: return "Not Authorized";
     case 403: return "Forbidden";
@@ -1262,6 +1263,20 @@ void HTTPResponse::RedirectTo(const char *uri) {
 
   Set("Location", uri);
   SendError(301, "Moved Permanently", msg.c_str());
+}
+
+void HTTPResponse::TempRedirectTo(const char *uri) {
+  string msg;
+  string escaped_uri = HTMLEscape(uri);
+  msg.append("<h1>Moved</h1>\n");
+  msg.append("<p>This page has moved to <a href=\"");
+  msg.append(escaped_uri);
+  msg.append("\">");
+  msg.append(escaped_uri);
+  msg.append("</a>.</p>\n");
+
+  Set("Location", uri);
+  SendError(307, "Moved Temporary", msg.c_str());
 }
 
 void HTTPResponse::WriteHeader(HTTPBuffer *hdr) {
