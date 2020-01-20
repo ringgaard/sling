@@ -102,6 +102,16 @@ cc_library(
 )
 
 cc_library(
+  name = "corpus-split",
+  srcs = ["corpus-split.cc"],
+  deps = [
+    "//sling/task:documents",
+    "//sling/util:fingerprint",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "annotators",
   deps = [
     ":mentions",

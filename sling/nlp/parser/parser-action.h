@@ -112,17 +112,16 @@ struct ParserAction {
     return !(*this == other);
   }
 
-  // Returns the type name of the action.
-  string TypeName() const;
-
   // Returns name of action type.
   static string TypeName(Type type);
 
+  // Returns the type name of the action.
+  string TypeName() const {
+    return TypeName(type);
+  }
+
   // Returns a human-readable representation of the action.
   string ToString(Store *store) const;
-
-  // Returns a frame representation of the action.
-  Frame AsFrame(Store *store, const string &prefix) const;
 
   // Returns a SHIFT action.
   static ParserAction Shift() {

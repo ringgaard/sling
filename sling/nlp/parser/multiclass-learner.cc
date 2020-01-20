@@ -1,0 +1,122 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "sling/nlp/parser/multiclass-learner.h"
+
+#include "sling/myelin/builder.h"
+#include "sling/myelin/gradient.h"
+#include "sling/myelin/learning.h"
+
+namespace sling {
+namespace nlp {
+
+using namespace task;
+using namespace myelin;
+
+void MultiClassDelegateLearner::Build(Flow *flow,
+                                      Flow::Variable *activation,
+                                      Flow::Variable *dactivation,
+                                      bool learn) {
+  FlowBuilder f(flow, name_);
+  int dim = activation->elements();
+  int size = actions_.size();
+  auto *W = f.Parameter("W", DT_FLOAT, {dim, size});
+  auto *b = f.Parameter("b", DT_FLOAT, {1, size});
+  f.RandomNormal(W);
+
+  auto *input = f.Placeholder("input", DT_FLOAT, {1, dim}, true);
+  auto *logits = f.Name(f.Add(f.MatMul(input, W), b), "logits");
+  if (learn) logits->set_out();
+  auto *output = f.Name(f.ArgMax(logits), "output");
+  if (!learn) output->set_out();
+
+  flow->Connect({activation, input});
+  if (learn) {
+    Gradient(flow, f.func());
+    auto *dlogits = flow->GradientVar(logits);
+    loss_.Build(flow, logits, dlogits);
+  }
+}
+
+void MultiClassDelegateLearner::Initialize(const Network &network) {
+  cell_ = network.GetCell(name_);
+  input_ = cell_->GetParameter(name_ + "/input");
+  logits_ = cell_->GetParameter(name_ + "/logits");
+  output_ = cell_->GetParameter(name_ + "/output");
+
+  dcell_ = cell_->Gradient();
+  primal_ = cell_->Primal();
+  dinput_ = input_->Gradient();
+  dlogits_ = logits_->Gradient();
+  loss_.Initialize(network);
+}
+
+DelegateLearnerInstance *MultiClassDelegateLearner::CreateInstance() {
+  return new DelegateInstance(this);
+}
+
+void MultiClassDelegateLearner::Save(Flow *flow, Builder *spec) {
+  spec->Add("name", name_);
+  spec->Add("type", "multiclass");
+  spec->Add("cell", cell_->name());
+  actions_.Write(spec);
+}
+
+void MultiClassDelegateLearner::DelegateInstance::CollectGradients(
+    std::vector<myelin::Instance *> *gradients) {
+  gradients->push_back(&backward_);
+}
+
+void MultiClassDelegateLearner::DelegateInstance::ClearGradients() {
+  backward_.Clear();
+}
+
+float MultiClassDelegateLearner::DelegateInstance::Compute(
+    float *activation,
+    float *dactivation,
+    const ParserAction &action) {
+  // Look up index for action. Skip backpropagation if action is unknown.
+  int target = learner_->actions_.Index(action);
+  if (target == -1) return 0.0;
+
+  // Compute logits from activation.
+  forward_.SetReference(learner_->input_, activation);
+  forward_.Compute();
+
+  // Compute loss.
+  float *logits = forward_.Get<float>(learner_->logits_);
+  float *dlogits = backward_.Get<float>(learner_->dlogits_);
+  float loss = learner_->loss_.Compute(logits, target, dlogits);
+
+  // Backpropagate loss.
+  backward_.Set(learner_->primal_, &forward_);
+  backward_.SetReference(learner_->dinput_, dactivation);
+  backward_.Compute();
+
+  return loss;
+}
+
+void MultiClassDelegateLearner::DelegateInstance::Predict(
+    float *activation, 
+    ParserAction *action) {
+  // Predict action from activations.
+  forward_.SetReference(learner_->input_, activation);
+  forward_.Compute();
+  int argmax = *forward_.Get<int>(learner_->output_);
+  *action = learner_->actions_.Action(argmax);
+}
+
+}  // namespace nlp
+}  // namespace sling
+

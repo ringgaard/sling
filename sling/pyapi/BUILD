@@ -95,6 +95,7 @@ cc_library(
 
     "//sling/nlp/silver:idf",
     "//sling/nlp/silver:annotators",
+    "//sling/nlp/silver:corpus-split",
 
     "//sling/task:documents",
     "//sling/task:frame-store-reader",

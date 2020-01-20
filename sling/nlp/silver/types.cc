@@ -38,7 +38,9 @@ class TypeAnnotator : public Annotator {
       "Q43229",       // organization
       "Q12737077",    // occupation
       "Q216353",      // title
+      "Q4164871",     // position
       "Q1047113",     // specialty
+      "Q205892",      // calendar date
       "Q1656682",     // event
       "/w/quantity",  // quantity
       "/w/time",      // time

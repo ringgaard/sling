@@ -150,20 +150,17 @@ cc_library(
 )
 
 cc_library(
-  name = "caspar-trainer",
-  srcs = ["caspar-trainer.cc"],
+  name = "multiclass-learner",
+  srcs = ["multiclass-learner.cc"],
+  hdrs = ["multiclass-learner.h"],
   deps = [
+    ":action-table",
     ":parser-trainer",
-    ":transition-generator",
     "//sling/base",
-    "//sling/myelin:builder",
     "//sling/myelin:flow",
-    "//sling/myelin:gradient",
+    "//sling/myelin:compute",
     "//sling/myelin:learning",
-    "//sling/nlp/document:document",
-    "//sling/nlp/document:document-corpus",
   ],
-  alwayslink = 1,
 )
 
 cc_library(
@@ -172,6 +169,17 @@ cc_library(
   deps = [
     ":action-table",
     ":parser",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "caspar-trainer",
+  srcs = ["caspar-trainer.cc"],
+  deps = [
+    ":parser-trainer",
+    ":multiclass-learner",
+    ":transition-generator",
   ],
   alwayslink = 1,
 )

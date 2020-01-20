@@ -136,6 +136,11 @@ flags.define("--silver_annotation",
              default=False,
              action='store_true')
 
+flags.define("--extract_parser_vocabulary",
+             help="extract vocabulary for parser",
+             default=False,
+             action='store_true')
+
 def download_corpora():
   if flags.arg.download_wikidata or flags.arg.download_wikipedia:
     wf = download.DownloadWorkflow("wiki-download")
@@ -299,6 +304,15 @@ def silver_annotation():
       wf = silver.SilverWorkflow(language + "-silver")
       wf.silver_annotation(language=language)
       workflow.run(wf.wf)
+
+  # Extract vocabulary for parser.
+  if flags.arg.extract_parser_vocabulary:
+    for language in flags.arg.languages:
+      log.info("Extract " + language + " parser vocabulary")
+      wf = silver.SilverWorkflow(language + "-parser-vocabulary")
+      wf.extract_vocabulary(language=language)
+      workflow.run(wf.wf)
+
 
 def main():
   # Parse command-line arguments.

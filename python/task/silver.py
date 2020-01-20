@@ -64,39 +64,93 @@ class SilverWorkflow:
       builder.attach_output("repository", self.idftable(language))
 
   #---------------------------------------------------------------------------
-  # Silver-labeled documents
+  # Silver-labeled training and evaluation documents
   #---------------------------------------------------------------------------
 
-  def silver_documents(self, language=None):
-    """Resource for silver-labeled documents."""
+  def training_documents(self, language=None):
+    """Resource for silver-labeled training documents."""
     if language == None: language = flags.arg.language
-    return self.wf.resource("silver@10.rec",
+    return self.wf.resource("train@10.rec",
                             dir=self.workdir(language),
                             format="records/document")
 
-  def silver_annotation(self, indocs=None, outdocs=None, language=None):
-    if indocs == None: indocs = self.wiki.wikipedia_documents(language)
-    if outdocs == None: outdocs = self.silver_documents(language)
+  def evaluation_documents(self, language=None):
+    """Resource for silver-labeled evaluation documents."""
     if language == None: language = flags.arg.language
+    return self.wf.resource("eval.rec",
+                            dir=self.workdir(language),
+                            format="records/document")
+
+  def silver_annotation(self, docs=None, language=None):
+    if language == None: language = flags.arg.language
+    if docs == None: docs = self.wiki.wikipedia_documents(language)
+    train_docs = self.training_documents(language)
+    eval_docs = self.evaluation_documents(language)
     phrases = corpora.repository("data/wiki/" + language) + "/phrases.txt"
 
     with self.wf.namespace(language + "-silver"):
-      mapper = self.wf.task("document-processor", "labeler")
+      # Map document through silver annotation pipeline and split corpus.
+      mapper = self.wf.task("corpus-split", "labeler")
 
       mapper.add_annotator("mentions")
       mapper.add_annotator("anaphora")
-      mapper.add_annotator("phrase-structure")
-      mapper.add_annotator("relations")
+      mapper.add_annotator("types")
+      mapper.add_annotator("clear-references")
 
       mapper.add_param("resolve", True)
       mapper.add_param("language", language)
+      mapper.add_param("detailed", False)
+      mapper.add_param("initial_reference", False)
+      mapper.add_param("definite_reference", False)
+      mapper.add_param("split_ratio", 5000)
+
       mapper.attach_input("commons", self.wiki.knowledge_base())
       mapper.attach_input("aliases", self.wiki.phrase_table(language))
       mapper.attach_input("dictionary", self.idftable(language))
-      if os.path.isfile(phrases):
-        mapper.attach_input("phrases", self.wf.resource(phrases, format="lex"))
 
-      self.wf.connect(self.wf.read(indocs), mapper)
-      output = self.wf.channel(mapper, format="message/document")
-      return self.wf.write(output, outdocs)
+      self.wf.connect(self.wf.read(docs), mapper, name="docs")
+      train_channel = self.wf.channel(mapper, name="train", 
+                                      format="message/document")
+      eval_channel = self.wf.channel(mapper, name="eval", 
+                                     format="message/document")
+
+      # Write shuffled training documents.
+      train_shards = length_of(train_docs)
+      train_shuffled = self.wf.shuffle(train_channel, shards=train_shards)
+      self.wf.write(train_shuffled, train_docs, name="train")
+
+      # Write evaluation documents.
+      self.wf.write(eval_channel, eval_docs, name="eval")
+      
+    return train_docs, eval_docs
+
+  #---------------------------------------------------------------------------
+  # Vocabulary
+  #---------------------------------------------------------------------------
+
+  def vocabulary(self, language=None):
+    """Resource for word vocabulary. This is a text map with (normalized) words 
+    and counts.
+    """
+    if language == None: language = flags.arg.language
+    return self.wf.resource("vocabulary.map",
+                            dir=self.workdir(language),
+                            format="textmap/word")
+
+  def extract_vocabulary(self, documents=None, output=None, language=None):
+    if language == None: language = flags.arg.language
+    if documents == None: documents = self.training_documents(language)
+    if output == None: output = self.vocabulary(language)
+
+    with self.wf.namespace(language + "-vocabulary"):
+      return self.wf.mapreduce(documents, output,
+                               format="message/word:count",
+                               mapper="word-vocabulary-mapper",
+                               reducer="word-vocabulary-reducer",
+                               params={
+                                 "normalization": "d",
+                                 "min_freq": 100,
+                                 "max_words": 50000,
+                                 "skip_section_titles": True,
+                               })
 

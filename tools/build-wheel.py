@@ -17,7 +17,7 @@
 # The Python wheel produced by this script can be installed with the following
 # command:
 #
-#   sudo -H pip install /tmp/sling-2.0.0-py3-abi3-linux_x86_64.whl
+#   sudo -H pip install /wheel/sling-2.0.0-py3-none-linux_x86_64.whl
 #
 # If you are developing the SLING system, it is convenient to just add a
 # link to the SLING repository directly from the Python package directory
