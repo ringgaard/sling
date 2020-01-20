@@ -44,7 +44,6 @@ struct DocumentNames : public SharedNames {
   Name n_mention{*this, "mention"};
   Name n_theme{*this, "theme"};
 
-  Name n_token{*this, "token"};
   Name n_index{*this, "index"};
   Name n_start{*this, "start"};
   Name n_size{*this, "size"};
@@ -52,7 +51,6 @@ struct DocumentNames : public SharedNames {
   Name n_break{*this, "break"};
   Name n_style{*this, "style"};
 
-  Name n_phrase{*this, "phrase"};
   Name n_begin{*this, "begin"};
   Name n_length{*this, "length"};
   Name n_evokes{*this, "evokes"};
