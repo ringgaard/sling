@@ -109,19 +109,21 @@ class SilverWorkflow:
       mapper.attach_input("dictionary", self.idftable(language))
 
       self.wf.connect(self.wf.read(docs), mapper, name="docs")
-      train_channel = self.wf.channel(mapper, name="train", 
+      train_channel = self.wf.channel(mapper, name="train",
                                       format="message/document")
-      eval_channel = self.wf.channel(mapper, name="eval", 
+      eval_channel = self.wf.channel(mapper, name="eval",
                                      format="message/document")
 
       # Write shuffled training documents.
       train_shards = length_of(train_docs)
-      train_shuffled = self.wf.shuffle(train_channel, shards=train_shards)
+      train_shuffled = self.wf.shuffle(train_channel,
+                                       shards=train_shards,
+                                       bufsize=256 * 1024 * 1024)
       self.wf.write(train_shuffled, train_docs, name="train")
 
       # Write evaluation documents.
       self.wf.write(eval_channel, eval_docs, name="eval")
-      
+
     return train_docs, eval_docs
 
   #---------------------------------------------------------------------------
@@ -129,7 +131,7 @@ class SilverWorkflow:
   #---------------------------------------------------------------------------
 
   def vocabulary(self, language=None):
-    """Resource for word vocabulary. This is a text map with (normalized) words 
+    """Resource for word vocabulary. This is a text map with (normalized) words
     and counts.
     """
     if language == None: language = flags.arg.language

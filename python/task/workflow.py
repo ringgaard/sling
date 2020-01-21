@@ -596,7 +596,7 @@ class Workflow(object):
 
     return output
 
-  def shuffle(self, input, shards=None):
+  def shuffle(self, input, shards=None, bufsize=None):
     """Shard and sort the input messages."""
     if shards != None:
       # Create sharder and connect input.
@@ -608,10 +608,12 @@ class Workflow(object):
       sorters = []
       for i in range(shards):
         sorter = self.task("sorter", shard=Shard(i, shards))
+        if bufsize is not None: sorter.add_param("sort_buffer_size", bufsize)
         self.connect(pipes[i], sorter)
         sorters.append(sorter)
     else:
       sorters = self.task("sorter")
+      if bufsize is not None: sorters.add_param("sort_buffer_size", bufsize)
       self.connect(input, sorters)
 
     # Return output channel from sorters.
