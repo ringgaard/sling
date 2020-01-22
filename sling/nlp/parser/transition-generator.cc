@@ -192,6 +192,7 @@ void InitNode(
   auto *node = frame_graph->Get(handle);
   for (const Slot &slot : frame) {
     if (slot.name.IsId()) continue;
+    if (slot.value.IsNumber()) continue;
 
     Frame value(frame.store(), slot.value);
     if (!value.IsFrame()) continue;

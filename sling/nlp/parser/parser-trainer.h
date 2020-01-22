@@ -96,6 +96,7 @@ class ParserTrainer : public task::LearnerTask {
 
   // Abstract method for converting document to transition sequence.
   virtual void GenerateTransitions(const Document &document,
+                                   int begin, int end,
                                    std::vector<ParserAction> *transitions) = 0;
 
  private:

@@ -14,8 +14,6 @@
 
 #include "sling/nlp/parser/parser-trainer.h"
 
-#include <math.h>
-
 #include "sling/frame/serialization.h"
 #include "sling/myelin/gradient.h"
 #include "sling/nlp/document/document.h"
@@ -67,6 +65,11 @@ void ParserTrainer::Run(task::Task *task) {
   num_tokens_ = task->GetCounter("tokens");
   num_documents_ = task->GetCounter("documents");
   num_transitions_ = task->GetCounter("transitions");
+
+  // Load commons store from file.
+  for (Binding *binding : task->GetInputs("commons")) {
+    LoadStore(binding->resource()->name(), &commons_);
+  }
 
   // Open training and evaluation corpora.
   training_corpus_ =
@@ -194,88 +197,89 @@ void ParserTrainer::Worker(int index, Network *model) {
     for (int b = 0; b < batch_size_; b++) {
       // Get next training document.
       Store store(&commons_);
-      Document *document = GetNextTrainingDocument(&store);
-      CHECK(document != nullptr);
+      Document *original = GetNextTrainingDocument(&store);
+      CHECK(original != nullptr);
       num_documents_->Increment();
-      num_tokens_->Increment(document->length());
+      num_tokens_->Increment(original->length());
+      Document document(*original, false);
 
-      // Generate transitions for document.
-      GenerateTransitions(*document, &transitions);
-      num_transitions_->Increment(transitions.size());
-      document->ClearAnnotations();
+      for (SentenceIterator s(original); s.more(); s.next()) {
+        // Generate transitions for sentence.
+        GenerateTransitions(*original, s.begin(), s.end(), &transitions);
+        num_transitions_->Increment(transitions.size());
 
-      // Compute the number of decoder steps.
-      int steps = 0;
-      for (const ParserAction &action : transitions) {
-        if (action.type != ParserAction::CASCADE) steps++;
-      }
-
-      // Set up parser state.
-      ParserState state(document, 0, document->length());
-      ParserFeatureExtractor features(&feature_model_, &state);
-
-      // Set up channels and instances for decoder.
-      activations.resize(steps);
-      dactivations.resize(steps);
-      while (decoders.size() < steps) {
-        decoders.push_back(new Instance(decoder_));
-      }
-
-      // Run document through encoder to produce contextual token encodings.
-      myelin::Channel *encodings =
-          encoder.Compute(*document, 0, document->length());
-
-      // Run decoder and delegates on all steps in the transition sequence.
-      int t = 0;
-      for (int s = 0; s < steps; ++s) {
-        // Run next step of decoder.
-        Instance *decoder = decoders[s];
-        activations.zero(s);
-        dactivations.zero(s);
-
-        // Attach instance to recurrent layers.
-        decoder->Clear();
-        features.Attach(encodings, &activations, decoder);
-
-        // Extract features.
-        features.Extract(decoder);
-
-        // Compute decoder activations.
-        decoder->Compute();
-
-        // Run the cascade.
-        float *fwd = reinterpret_cast<float *>(activations.at(s));
-        float *bkw = reinterpret_cast<float *>(dactivations.at(s));
-        int d = 0;
-        for (;;) {
-          ParserAction &action = transitions[t];
-          float loss = delegates[d]->Compute(fwd, bkw, action);
-          epoch_loss += loss;
-          epoch_count++;
-          if (action.type != ParserAction::CASCADE) break;
-          CHECK_GT(action.delegate, d);
-          d = action.delegate;
-          t++;
+        // Compute the number of decoder steps.
+        int steps = 0;
+        for (const ParserAction &action : transitions) {
+          if (action.type != ParserAction::CASCADE) steps++;
         }
 
-        // Apply action to parser state.
-        state.Apply(transitions[t++]);
+        // Set up parser state.
+        ParserState state(&document, s.begin(), s.end());
+        ParserFeatureExtractor features(&feature_model_, &state);
+
+        // Set up channels and instances for decoder.
+        activations.resize(steps);
+        dactivations.resize(steps);
+        while (decoders.size() < steps) {
+          decoders.push_back(new Instance(decoder_));
+        }
+
+        // Run document through encoder to produce contextual token encodings.
+        auto *encodings = encoder.Compute(document, s.begin(), s.end());
+
+        // Run decoder and delegates on all steps in the transition sequence.
+        int t = 0;
+        for (int s = 0; s < steps; ++s) {
+          // Run next step of decoder.
+          Instance *decoder = decoders[s];
+          activations.zero(s);
+          dactivations.zero(s);
+
+          // Attach instance to recurrent layers.
+          decoder->Clear();
+          features.Attach(encodings, &activations, decoder);
+
+          // Extract features.
+          features.Extract(decoder);
+
+          // Compute decoder activations.
+          decoder->Compute();
+
+          // Run the cascade.
+          float *fwd = reinterpret_cast<float *>(activations.at(s));
+          float *bkw = reinterpret_cast<float *>(dactivations.at(s));
+          int d = 0;
+          for (;;) {
+            ParserAction &action = transitions[t];
+            float loss = delegates[d]->Compute(fwd, bkw, action);
+            epoch_loss += loss;
+            epoch_count++;
+            if (action.type != ParserAction::CASCADE) break;
+            CHECK_GT(action.delegate, d);
+            d = action.delegate;
+            t++;
+          }
+
+          // Apply action to parser state.
+          state.Apply(transitions[t++]);
+        }
+
+        // Propagate gradients back through decoder.
+        dencodings.reset(s.length());
+        for (int step = steps - 1; step >= 0; --step) {
+          gdecoder.Set(primal_, decoders[step]);
+          gdecoder.Set(dencodings_, &dencodings);
+          gdecoder.Set(dactivations_, &dactivations);
+          gdecoder.Set(dactivation_, &dactivations, step);
+          gdecoder.Compute();
+        }
+
+        // Propagate gradients back through encoder.
+        encoder.Backpropagate(&dencodings);
       }
 
-      // Propagate gradients back through decoder.
-      dencodings.reset(document->length());
-      for (int s = steps - 1; s >= 0; --s) {
-        gdecoder.Set(primal_, decoders[s]);
-        gdecoder.Set(dencodings_, &dencodings);
-        gdecoder.Set(dactivations_, &dactivations);
-        gdecoder.Set(dactivation_, &dactivations, s);
-        gdecoder.Compute();
-      }
-
-      // Propagate gradients back through encoder.
-      encoder.Backpropagate(&dencodings);
-
-      delete document;
+      delete original;
     }
 
     // Update parameters.
@@ -303,7 +307,7 @@ void ParserTrainer::Parse(Document *document) const {
   for (SentenceIterator s(document); s.more(); s.next()) {
     // Run the lexical encoder for sentence.
     LexicalEncoderInstance encoder(encoder_);
-    myelin::Channel *encodings = encoder.Compute(*document, s.begin(), s.end());
+    auto *encodings = encoder.Compute(*document, s.begin(), s.end());
 
     // Initialize decoder.
     ParserState state(document, s.begin(), s.end());
@@ -417,20 +421,20 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   auto *steps = f.Placeholder("steps", DT_FLOAT, {1, activations_dim_}, true);
 
   // Role features.
-  if (in_roles_size_ > 0) {
+  if (roles_.size() > 0 && in_roles_size_ > 0) {
     features.push_back(f.Feature("in_roles", roles_.size() * frame_limit_,
                                  in_roles_size_, roles_dim_));
   }
-  if (out_roles_size_ > 0) {
+  if (roles_.size() > 0 && out_roles_size_ > 0) {
     features.push_back(f.Feature("out_roles", roles_.size() * frame_limit_,
                                  out_roles_size_, roles_dim_));
   }
-  if (labeled_roles_size_ > 0) {
+  if (roles_.size() > 0 && labeled_roles_size_ > 0) {
     features.push_back(f.Feature("labeled_roles",
                                  roles_.size() * frame_limit_ * frame_limit_,
                                  labeled_roles_size_, roles_dim_));
   }
-  if (unlabeled_roles_size_ > 0) {
+  if (roles_.size() > 0 && unlabeled_roles_size_ > 0) {
     features.push_back(f.Feature("unlabeled_roles",
                                  frame_limit_ * frame_limit_,
                                  unlabeled_roles_size_, roles_dim_));

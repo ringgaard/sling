@@ -101,10 +101,10 @@ class CasparTrainer : public ParserTrainer {
   }
 
   // Transition generator.
-  void GenerateTransitions(const Document &document,
+  void GenerateTransitions(const Document &document, int begin, int end,
                            std::vector<ParserAction> *transitions) override {
     transitions->clear();
-    Generate(document, [&](const ParserAction &action) {
+    Generate(document, begin, end, [&](const ParserAction &action) {
       if (action.type != ParserAction::SHIFT &&
           action.type != ParserAction::MARK) {
         transitions->emplace_back(ParserAction::CASCADE, 1);

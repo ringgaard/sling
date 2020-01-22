@@ -129,7 +129,11 @@ bool Span::EvokesType(Handle type) const {
   for (const Slot &slot : mention_) {
     if (slot.name != n_evokes) continue;
     Frame frame(document_->store(), slot.value);
-    if (frame.IsA(type)) return true;
+    if (type.IsNil()) {
+      if (frame.GetHandle(Handle::isa()).IsNil()) return true;
+    } else {
+      if (frame.IsA(type)) return true;
+    }
   }
 
   return false;

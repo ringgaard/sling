@@ -184,3 +184,16 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "knolex-trainer",
+  srcs = ["knolex-trainer.cc"],
+  deps = [
+    ":parser-trainer",
+    ":multiclass-learner",
+    ":transition-generator",
+    "//sling/file:textmap",
+    "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+

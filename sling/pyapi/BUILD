@@ -92,6 +92,7 @@ cc_library(
     "//sling/nlp/embedding:fact-plausibility",
 
     "//sling/nlp/parser:caspar-trainer",
+    "//sling/nlp/parser:knolex-trainer",
 
     "//sling/nlp/silver:idf",
     "//sling/nlp/silver:annotators",
