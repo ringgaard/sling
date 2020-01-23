@@ -381,15 +381,15 @@ bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
   ParserEvaulationCorpus corpus(this);
   FrameEvaluation::Output eval;
   FrameEvaluation::Evaluate(&corpus, &eval);
-  LOG(INFO) << "SPAN:  " << eval.mention.Summary();
-  LOG(INFO) << "FRAME: " << eval.frame.Summary();
-  LOG(INFO) << "PAIR:  " << eval.pair.Summary();
-  LOG(INFO) << "EDGE:  " << eval.edge.Summary();
-  LOG(INFO) << "ROLE:  " << eval.role.Summary();
-  LOG(INFO) << "TYPE:  " << eval.type.Summary();
-  LOG(INFO) << "LABEL: " << eval.label.Summary();
-  LOG(INFO) << "SLOT:  " << eval.slot.Summary();
-  LOG(INFO) << "TOTAL: " << eval.combined.Summary();
+  if (eval.mention.used()) LOG(INFO) << "SPAN:  " << eval.mention.Summary();
+  if (eval.frame.used()) LOG(INFO) << "FRAME: " << eval.frame.Summary();
+  if (eval.pair.used()) LOG(INFO) << "PAIR:  " << eval.pair.Summary();
+  if (eval.edge.used()) LOG(INFO) << "EDGE:  " << eval.edge.Summary();
+  if (eval.role.used()) LOG(INFO) << "ROLE:  " << eval.role.Summary();
+  if (eval.type.used()) LOG(INFO) << "TYPE:  " << eval.type.Summary();
+  if (eval.label.used()) LOG(INFO) << "LABEL: " << eval.label.Summary();
+  if (eval.slot.used()) LOG(INFO) << "SLOT:  " << eval.slot.Summary();
+  if (eval.combined.used()) LOG(INFO) << "TOTAL: " << eval.combined.Summary();
 
   return true;
 }

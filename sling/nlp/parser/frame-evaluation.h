@@ -106,6 +106,9 @@ class FrameEvaluation {
       return static_cast<double>(correct) / static_cast<double>(total());
     }
 
+    // Check if metric is being used.
+    bool used() const { return correct > 0 || wrong > 0; }
+
     // Number of correct and wrong predictions.
     int correct = 0;
     int wrong = 0;
@@ -136,6 +139,9 @@ class FrameEvaluation {
 
     // Return benchmark summary with precision, recall, and F1.
     string Summary() const;
+
+    // Check if benchmark is being used.
+    bool used() const { return recall.used() || precision.used(); }
   };
 
   // Holds evaluation output.

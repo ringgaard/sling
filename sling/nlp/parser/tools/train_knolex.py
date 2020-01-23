@@ -64,13 +64,11 @@ trainer.add_params({
   "learning_rate_decay": 0.8,
   "clipping": 1,
   "optimizer": "sgd",
-  "batch_size": 32,
-  "rampup": 120,
-  "report_interval": 10, #1000,
+  "batch_size": 128,
+  "rampup": 20 * 60,
+  "report_interval": 100,
   "learning_rate_cliff": 40000,
   "epochs": 50000,
-
-  "workers": 1,
 })
 
 trainer.attach_input("commons", kb)
