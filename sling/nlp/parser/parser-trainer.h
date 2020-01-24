@@ -153,6 +153,9 @@ class ParserTrainer : public task::LearnerTask {
 
   // Reset parser state between sentences in a document.
   bool sentence_reset_ = false;
+  
+  // Skip section titles.
+  bool skip_section_titles_ = false;
 
   // Lexical feature specification for encoder.
   LexicalFeatures::Spec spec_;

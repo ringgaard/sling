@@ -107,12 +107,15 @@ class SpanPopulator {
 class SpanImporter {
  public:
   // Initialize span importer.
-  void Init(Store *store);
+  void Init(Store *store, bool detailed);
 
   // Import spans from document.
   void Annotate(const PhraseTable &aliases, SpanChart *chart);
 
  private:
+  // Detailed annotations.
+  bool detailed_ = true;
+
   // Symbols.
   Names names_;
   Name n_time_{names_, "/w/time"};

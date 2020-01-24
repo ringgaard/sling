@@ -93,7 +93,8 @@ bool SpanPopulator::Discard(const Token &token) const {
   return stop_words_.count(token.Fingerprint()) > 0;
 }
 
-void SpanImporter::Init(Store *store) {
+void SpanImporter::Init(Store *store, bool detailed) {
+  detailed_ = detailed;
   CHECK(names_.Bind(store));
 }
 
@@ -121,6 +122,14 @@ void SpanImporter::Annotate(const PhraseTable &aliases, SpanChart *chart) {
     if (evoked.IsA(n_time_)) flags |= SPAN_DATE;
     if (evoked.IsA(n_quantity_)) flags |= SPAN_MEASURE;
     if (evoked.IsA(n_geo_)) flags |= SPAN_GEO;
+    if (!detailed_ && flags != 0) {
+      // Only output simple frame with type.
+      Builder b(document->store());
+      if (flags & SPAN_DATE) b.AddIsA(n_time_);
+      if (flags & SPAN_MEASURE) b.AddIsA(n_quantity_);
+      if (flags & SPAN_GEO) b.AddIsA(n_geo_);
+      evoked = b.Create();
+    }
 
     auto &item = chart->item(span->begin() - begin, span->end() - begin);
     if (flags != 0) {
@@ -1227,7 +1236,7 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
 
   // Initialize annotators.
   detailed_ = resources.detailed;
-  importer_.Init(commons);
+  importer_.Init(commons, detailed_);
   taxonomy_.Init(commons);
   numbers_.Init(commons);
   spelled_.Init(commons);

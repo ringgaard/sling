@@ -59,6 +59,7 @@ trainer.add_params({
   "rnn_layers": rnn_layers,
   "dropout": 0.2,
   "ff_l2reg": 0.0001,
+  "skip_section_titles": True,
 
   "learning_rate": 1.0,
   "learning_rate_decay": 0.8,
@@ -67,8 +68,8 @@ trainer.add_params({
   "batch_size": 128,
   "rampup": 20 * 60,
   "report_interval": 100,
-  "learning_rate_cliff": 40000,
-  "epochs": 50000,
+  "learning_rate_cliff": 4000,
+  "epochs": 5000,
 })
 
 trainer.attach_input("commons", kb)
