@@ -153,7 +153,7 @@ class ParserTrainer : public task::LearnerTask {
 
   // Reset parser state between sentences in a document.
   bool sentence_reset_ = false;
-  
+
   // Skip section titles.
   bool skip_section_titles_ = false;
 
@@ -221,6 +221,9 @@ class ParserTrainer : public task::LearnerTask {
   float prev_loss_ = 0.0;
   float loss_sum_ = 0.0;
   int loss_count_ = 0.0;
+
+  // Training task parameters.
+  std::vector<std::pair<string, string>> hparams_;
 
   // Statistics.
   task::Counter *num_documents_;

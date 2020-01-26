@@ -57,6 +57,7 @@ DEFINE_bool(parse, false, "Parse input corpus");
 DEFINE_bool(benchmark, false, "Benchmark parser");
 DEFINE_bool(lex, false, "Output documents in LEX format");
 DEFINE_bool(evaluate, false, "Evaluate parser");
+DEFINE_bool(hparams, false, "Output hyperparameters");
 DEFINE_int32(maxdocs, -1, "Maximum number of documents to process");
 
 using namespace sling;
@@ -136,6 +137,13 @@ int main(int argc, char *argv[]) {
   commons.Freeze();
   clock.stop();
   LOG(INFO) << clock.ms() << " ms loading parser";
+
+  // Output hyperparameter.
+  if (FLAGS_hparams) {
+    for (auto &p : parser.hparams()) {
+      std::cout << p.first << " = " << p.second << "\n";
+    }
+  }
 
   // Parse input text.
   if (!FLAGS_text.empty()) {

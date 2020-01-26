@@ -55,7 +55,7 @@ class EmbeddingWorkflow:
                                format="message/word:count",
                                mapper="word-vocabulary-mapper",
                                reducer="word-vocabulary-reducer",
-                               params={"normalization": "dlw"})
+                               params={"normalization": "d"})
 
   def train_word_embeddings(self, documents=None, vocabulary=None, output=None,
                             language=None):
@@ -75,7 +75,7 @@ class EmbeddingWorkflow:
         "min_learning_rate": 0.0001,
         "embedding_dims": 32,
         "subsampling": 1e-3,
-        "normalization": "dlw",
+        "normalization": "d",
       })
       trainer.attach_input("documents", documents)
       trainer.attach_input("vocabulary", vocabulary)
@@ -172,6 +172,10 @@ class EmbeddingWorkflow:
       trainer.attach_output("factvecs", fact_embeddings)
       trainer.attach_output("catvecs", category_embeddings)
     return fact_embeddings, category_embeddings
+
+  #---------------------------------------------------------------------------
+  # Fact plausibility model
+  #---------------------------------------------------------------------------
 
   def fact_plausibility_model(self):
     """Resource for fact plausibility model."""

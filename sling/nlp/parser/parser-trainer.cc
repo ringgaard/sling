@@ -60,8 +60,13 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("learning_rate_cliff", &learning_rate_cliff_);
   task->Fetch("dropout", &dropout_);
   task->Fetch("ff_l2reg", &ff_l2reg_);
-  
+
   task->Fetch("skip_section_titles", &skip_section_titles_);
+
+  // Save task parameters.
+  for (auto &p : task->parameters()) {
+    hparams_.emplace_back(p.name, p.value);
+  }
 
   // Statistics.
   num_tokens_ = task->GetCounter("tokens");
@@ -211,7 +216,7 @@ void ParserTrainer::Worker(int index, Network *model) {
           const Token &first = document.token(s.begin());
           if (first.style() & HEADING_BEGIN) continue;
         }
-        
+
         // Generate transitions for sentence.
         GenerateTransitions(*original, s.begin(), s.end(), &transitions);
         num_transitions_->Increment(transitions.size());
@@ -318,7 +323,7 @@ void ParserTrainer::Parse(Document *document) const {
       const Token &first = document->token(s.begin());
       if (first.style() & HEADING_BEGIN) continue;
     }
-        
+
     // Run the lexical encoder for sentence.
     LexicalEncoderInstance encoder(encoder_);
     auto *encodings = encoder.Compute(*document, s.begin(), s.end());
@@ -580,6 +585,13 @@ void ParserTrainer::Save(const string &filename) {
   decoder_spec.Set("delegates", delegates);
 
   spec.Set("decoder", decoder_spec.Create());
+
+  // Save hyperparameters in flow.
+  Builder params(&store);
+  for (auto &p : hparams_) {
+    params.Add(String(&store, p.first), p.second);
+  }
+  spec.Set("hparams", params.Create());
 
   // Save parser spec in flow.
   StringEncoder encoder(&store);

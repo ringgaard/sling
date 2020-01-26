@@ -51,7 +51,7 @@ void MikolovFlow::BuildLayer1() {
   alpha = tf.Var("alpha", DT_FLOAT, {});
   label = tf.Var("label", DT_FLOAT, {1, 1});
   target = tf.Var("target", DT_INT32, {1, out_features});
-  error = tf.Var("error", DT_FLOAT, {dims});
+  error = tf.Var("error", DT_FLOAT, {1, dims});
   l1_l0 = tf.Instance(layer0);
   auto *h = tf.Ref(l1_l0, hidden);
 

@@ -44,6 +44,7 @@ vocabulary = wf.resource(
 
 word_embeddings = wf.resource(
   "local/data/corpora/caspar/word2vec-32-embeddings.bin",
+  #"local/data/e/wiki/en/word-embeddings.vec",
   format="embeddings"
 )
 
@@ -65,11 +66,12 @@ trainer.add_params({
   "learning_rate_decay": 0.8,
   "clipping": 1,
   "optimizer": "sgd",
-  "batch_size": 128,
+  "batch_size": 64,
   "rampup": 20 * 60,
   "report_interval": 100,
-  "learning_rate_cliff": 4000,
-  "epochs": 5000,
+  "learning_rate_cliff": 9000,
+  "epochs": 10000,
+  "checkpoint_interval": 1000,
 })
 
 trainer.attach_input("commons", kb)

@@ -1162,6 +1162,7 @@ class AssignAddScatter : public Kernel {
     // Add sparsity bitmap index.
     if (options.sparse_threshold > 0 &&
         args.var->dim(0) >= options.sparse_threshold &&
+        args.var->IsLocal() &&
         step->GetAttr("sparse", true)) {
       Tensor *sparse = args.var->MakeSparse();
       if (args.ref) args.ref->set_sparse(sparse);

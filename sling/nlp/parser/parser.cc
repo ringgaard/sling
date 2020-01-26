@@ -45,6 +45,16 @@ void Parser::Load(Store *store, const string &model) {
   Frame spec = spec_decoder.Decode().AsFrame();
   CHECK(spec.valid());
 
+  // Get parser model hyperparameters.
+  Frame hparams = spec.GetFrame("hparams");
+  if (hparams.valid()) {
+    for (const Slot &p : hparams) {
+      string name = String(store, p.name).value();
+      string value = String(store, p.value).value();
+      hparams_.emplace_back(name, value);
+    }
+  }
+
   // Initialize encoder.
   Frame encoder_spec = spec.GetFrame("encoder");
   CHECK(encoder_spec.valid());

@@ -15,6 +15,8 @@
 #ifndef SLING_NLP_PARSER_PARSER_H_
 #define SLING_NLP_PARSER_PARSER_H_
 
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "sling/base/logging.h"
@@ -74,6 +76,11 @@ class Parser {
   // Neural network for parser.
   const myelin::Network &network() const { return network_; }
 
+  // Hyperparameters for parser model.
+  const std::vector<std::pair<string, string>> &hparams() const {
+    return hparams_;
+  }
+
  private:
   // JIT compiler.
   myelin::Compiler compiler_;
@@ -95,6 +102,9 @@ class Parser {
 
   // Set of roles considered.
   RoleSet roles_;
+
+  // Hyperparameters for parser model.
+  std::vector<std::pair<string, string>> hparams_;
 };
 
 }  // namespace nlp

@@ -353,6 +353,9 @@ class Task {
   // Get sink channels.
   const std::vector<Channel *> &sinks() const { return sinks_; }
 
+  // Get task parameters.
+  const std::vector<Parameter> &parameters() const { return parameters_; }
+
   // Get task parameter value.
   const string &Get(const string &name, const string &defval);
   string Get(const string &name, const char *defval);
