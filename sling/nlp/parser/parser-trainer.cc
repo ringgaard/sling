@@ -527,6 +527,7 @@ Flow::Variable *ParserTrainer::LinkedFeature(FlowBuilder *f,
   auto *gather = f->Gather(embeddings, features, oov);
   auto *transform = f->Parameter(name + "_transform", DT_FLOAT,
                                  {link_dim, dim});
+  f->RandomNormal(transform);
   return f->Reshape(f->MatMul(gather, transform), {1, size * dim});
 }
 

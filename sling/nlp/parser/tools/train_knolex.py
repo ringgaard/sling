@@ -42,12 +42,6 @@ vocabulary = wf.resource(
   format="textmap/word"
 )
 
-word_embeddings = wf.resource(
-  "local/data/corpora/caspar/word2vec-32-embeddings.bin",
-  #"local/data/e/wiki/en/word-embeddings.vec",
-  format="embeddings"
-)
-
 parser_model = wf.resource(modelfn, format="flow")
 
 # Parser trainer task.
@@ -78,7 +72,6 @@ trainer.attach_input("commons", kb)
 trainer.attach_input("training_corpus", training_corpus)
 trainer.attach_input("evaluation_corpus", evaluation_corpus)
 trainer.attach_input("vocabulary", vocabulary)
-trainer.attach_input("word_embeddings", word_embeddings)
 trainer.attach_output("model", parser_model)
 
 # Run parser trainer.

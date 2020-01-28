@@ -395,6 +395,7 @@ class FlowBuilder : public Scope {
   // Add input mapped through embedding.
   Variable *Feature(const string &name, int range, int size, int dim) {
     auto *M = Parameter(name + "_embeddings", DT_FLOAT, {range, dim});
+    RandomNormal(M);
     auto *f = Placeholder(name, DT_INT32, {1, size});
     return size == 1 ? Gather(M, f) : GatherSum(M, f);
   }

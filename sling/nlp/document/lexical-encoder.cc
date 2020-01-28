@@ -136,6 +136,7 @@ LexicalFeatures::Variables LexicalFeatures::Build(Flow *flow,
     if (spec.train_word_embeddings) {
       word_embeddings = tf.Parameter("word_embeddings", DT_FLOAT,
                                      {num_words, spec.word_dim});
+      tf.RandomNormal(word_embeddings);
     } else {
       word_embeddings =
           tf.Name(tf.Const(nullptr, DT_FLOAT, {num_words, spec.word_dim}),
@@ -248,7 +249,8 @@ void LexicalFeatures::Initialize(const Network &net) {
 
   // Load pre-trained word embeddings.
   if (!pretrained_embeddings_.empty()) {
-    InitWordEmbeddings(pretrained_embeddings_);
+    int found = InitWordEmbeddings(pretrained_embeddings_);
+    VLOG(1) << found << " of " << lexicon_.size() << " word embeddings found";
   }
 }
 

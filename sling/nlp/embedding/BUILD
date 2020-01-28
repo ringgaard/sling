@@ -94,3 +94,17 @@ cc_library(
   ],
 )
 
+cc_binary(
+  name = "word-similarity",
+  srcs = ["word-similarity.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/file:textmap",
+    "//sling/myelin:builder",
+    "//sling/myelin:compiler",
+    "//sling/util:embeddings",
+    "//sling/util:top",
+  ],
+)
+
