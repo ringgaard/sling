@@ -143,6 +143,7 @@ bool WikimediaTypes::IsDuplicate(Handle type) {
 
 void AuxFilter::Init(Store *store) {
   const char *kAuxItemtypes[] = {
+    "Q13442814",  // scholarly article
     "Q13442814",  // scientific article
     "Q17329259",  // encyclopedic article
     "Q17633526",  // Wikinews article

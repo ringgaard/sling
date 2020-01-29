@@ -6,7 +6,7 @@ SPEC='{
   inputs: {
     parser: {
       ;file: "local/data/e/caspar/caspar.flow"
-      file: "local/data/e/knolex/knolex-en-1.flow"
+      file: "local/data/e/knolex/knolex-en.flow"
       format: "flow"
     }
     commons: {

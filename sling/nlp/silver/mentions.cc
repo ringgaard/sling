@@ -386,7 +386,7 @@ int SpanTaxonomy::Classify(const Frame &item) {
 }
 
 std::unordered_set<string> PersonNameAnnotator::particles = {
-  "de", "du", "di", "von", "van", "bin", "ibn",
+  "de", "du", "di", "dos", "von", "van", "bin", "ibn",
 };
 
 void PersonNameAnnotator::Annotate(SpanChart *chart) {
