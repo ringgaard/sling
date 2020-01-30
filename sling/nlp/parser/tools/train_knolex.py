@@ -54,9 +54,11 @@ trainer.add_params({
   "rnn_layers": rnn_layers,
   "dropout": 0.2,
   "ff_l2reg": 0.0001,
+
   "skip_section_titles": True,
   "word_dim": 64,
   "link_dim_token": 64,
+  "normalization": "ln",
 
   "learning_rate": 1.0,
   "learning_rate_decay": 0.8,

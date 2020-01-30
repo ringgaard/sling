@@ -216,6 +216,13 @@ class Span {
   // Returns case form for span phrase.
   CaseForm Form() const;
 
+  // Returns first/last token in span.
+  inline const Token &first() const;
+  inline const Token &last() const;
+
+  // Check for initial span in a sentence.
+  bool initial() const { return first().initial(); }
+
  private:
   // Document that span belongs to.
   Document *document_;
@@ -469,6 +476,9 @@ class SentenceIterator : public DocumentIterator {
   SentenceIterator(const Document *document)
       : DocumentIterator(document, SENTENCE_BREAK) {}
 };
+
+inline const Token &Span::first() const { return document_->token(begin_); }
+inline const Token &Span::last() const { return document_->token(end_ - 1); }
 
 }  // namespace nlp
 }  // namespace sling

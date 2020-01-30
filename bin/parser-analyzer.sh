@@ -2,7 +2,9 @@
 
 SPEC='{
   annotator: "parser"
-  annotator: "mention-name"
+  annotator: "prune-nominals"
+  ;annotator: "mention-name"
+
   inputs: {
     parser: {
       ;file: "local/data/e/caspar/caspar.flow"

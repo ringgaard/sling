@@ -68,8 +68,8 @@ class EmbeddingWorkflow:
     with self.wf.namespace(language + "-word-embeddings"):
       trainer = self.wf.task("word-embeddings-trainer")
       trainer.add_params({
-        "iterations" : 5,
-        "negative": 5,
+        "iterations" : 1,
+        "negative": 300,
         "window": 5,
         "learning_rate": 0.025,
         "min_learning_rate": 0.0001,

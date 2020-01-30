@@ -150,9 +150,9 @@ class SilverWorkflow:
                                mapper="word-vocabulary-mapper",
                                reducer="word-vocabulary-reducer",
                                params={
-                                 "normalization": "d",
+                                 "normalization": "ln",
                                  "min_freq": 100,
-                                 "max_words": 50000,
+                                 "max_words": 100000,
                                  "skip_section_titles": True,
                                })
 

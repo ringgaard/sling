@@ -102,6 +102,16 @@ cc_library(
 )
 
 cc_library(
+  name = "nominal-pruning",
+  srcs = ["nominal-pruning.cc"],
+  deps = [
+    "//sling/nlp/document",
+    "//sling/nlp/document:annotator",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "corpus-split",
   srcs = ["corpus-split.cc"],
   deps = [
@@ -119,6 +129,7 @@ cc_library(
     ":phrases",
     ":relations",
     ":types",
+    ":nominal-pruning",
   ],
 )
 

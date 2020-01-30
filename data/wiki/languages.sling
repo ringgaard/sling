@@ -176,7 +176,7 @@
   /lang/wikilang/wiki_template: "Template"
 
   /lang/wikilang/stop_words: [
-    ".", ",", "-", ":", ";", "``", "''", "'", "--", "/", "&",
+    ".", ",", "-", ":", ";", "``", "''", "'", "--", "/", "&", "?",
     "(", ")", "[", "]", "{", "}",
     "the", "a", "an", "'s", "is", "was", "and", "or",
     "in", "of", "by", "to", "at", "as",
@@ -190,7 +190,7 @@
     "has been", "he", "him", "his", "his university", "his wife",
     "landed",
     "no more",
-    "made", "Maybe",
+    "made", "Maybe", "my",
     "once", "on the edge",
     "re-elected", "running",
     "she", "Step-down",
