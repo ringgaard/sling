@@ -51,6 +51,9 @@ class FileParallelCorpus : public ParallelCorpus {
     }
   }
 
+  // Return commons store for corpus.
+  Store *Commons() override { return commons_; }
+
  private:
   Store *commons_;               // commons store for documents
   DocumentCorpus gold_corpus_;   // corpus with gold annotations
@@ -142,6 +145,10 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
                  &pair.precision, &edge.precision, &role.precision,
                  &type.precision, &label.precision);
 
+    // Compute type precision and recall.
+    TypeAccuracy(store, g2p_frame_alignment, &output->types, true);
+    TypeAccuracy(store, p2g_frame_alignment, &output->types, false);
+    
     // Update statistics.
     output->num_golden_spans += golden_mentions.size();
     output->num_predicted_spans += predicted_mentions.size();
@@ -166,6 +173,16 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
   combined.add(type);
   combined.add(role);
   combined.add(label);
+
+  // Add labels to type benchmark.
+  Handle n_name = corpus->Commons()->LookupExisting("name");
+  for (auto &it : output->types) {
+    Frame type(corpus->Commons(), it.first);
+    it.second.name = type.GetString(n_name);
+    if (it.second.name.empty()) {
+      it.second.name = corpus->Commons()->DebugString(it.first);
+    }
+  }
 }
 
 void FrameEvaluation::Evaluate(Store *commons,
@@ -176,44 +193,7 @@ void FrameEvaluation::Evaluate(Store *commons,
   Evaluate(&corpus, output);
 }
 
-std::vector<string> FrameEvaluation::EvaluateAndSummarize(
-    const string &commons_file,
-    const string &gold_file_pattern,
-    const string &test_file_pattern) {
-  Store commons;
-  FileDecoder decoder(&commons, commons_file);
-  decoder.DecodeAll();
-  commons.Freeze();
-
-  Output eval;
-  Evaluate(&commons, gold_file_pattern, test_file_pattern, &eval);
-
-  // Write output to output_file.
-  Scores scores;
-  eval.GetScores(&scores);
-
-  std::vector<string> lines;
-  for (auto &score : scores) {
-    lines.emplace_back(StrCat(score.first, "\t", score.second));
-  }
-  return lines;
-}
-
-void FrameEvaluation::EvaluateAndWrite(const string &commons_file,
-                                       const string &gold_file_pattern,
-                                       const string &test_file_pattern,
-                                       const string &output_file) {
-  std::vector<string> summary =
-      EvaluateAndSummarize(commons_file, gold_file_pattern, test_file_pattern);
-  File *f = File::Open(output_file, "w");
-  for (const string &line : summary) {
-    f->WriteLine(line);
-  }
-  f->Close();
-}
-
-void FrameEvaluation::Benchmark::GetScores(const string &name,
-                                           Scores *scores) const {
+void FrameEvaluation::Benchmark::GetScores(Scores *scores) const {
   double p = precision.accuracy();
   double r = recall.accuracy();
   double f1 = fscore();
@@ -226,27 +206,40 @@ void FrameEvaluation::Benchmark::GetScores(const string &name,
   scores->emplace_back(StrCat(name, "_F1"), f1 * 100.0);
 }
 
-string FrameEvaluation::Benchmark::Summary() const {
+string FrameEvaluation::Benchmark::Summary(int width) const {
   double p = precision.accuracy() * 100.0;
   double r = recall.accuracy() * 100.0;
   double f1 = fscore() * 100.0;
-  return StringPrintf("P=%5.2f, R=%5.2f, F1=%5.2f", p, r, f1);
+  return StringPrintf("%*s P=%5.2f, R=%5.2f, F1=%5.2f", 
+                      -width, name.c_str(), p, r, f1);
 }
 
 void FrameEvaluation::Output::GetScores(Scores *scores) const {
-  mention.GetScores("SPAN", scores);
-  frame.GetScores("FRAME", scores);
-  pair.GetScores("PAIR", scores);
-  edge.GetScores("EDGE", scores);
-  role.GetScores("ROLE", scores);
-  type.GetScores("TYPE", scores);
-  label.GetScores("LABEL", scores);
-  slot.GetScores("SLOT", scores);
-  combined.GetScores("COMBINED", scores);
+  mention.GetScores(scores);
+  frame.GetScores(scores);
+  pair.GetScores(scores);
+  edge.GetScores(scores);
+  role.GetScores(scores);
+  type.GetScores(scores);
+  label.GetScores(scores);
+  slot.GetScores(scores);
+  combined.GetScores(scores);
   scores->emplace_back("#GOLDEN_SPANS", num_golden_spans);
   scores->emplace_back("#PREDICTED_SPANS", num_predicted_spans);
   scores->emplace_back("#GOLDEN_FRAMES", num_golden_frames);
   scores->emplace_back("#PREDICTED_FRAMES", num_predicted_frames);
+}
+
+void FrameEvaluation::Output::GetBenchmarks(Benchmarks *benchmarks) const {
+  if (mention.used()) benchmarks->emplace_back(mention);
+  if (frame.used()) benchmarks->emplace_back(frame);
+  if (pair.used()) benchmarks->emplace_back(pair);
+  if (edge.used()) benchmarks->emplace_back(edge);
+  if (role.used()) benchmarks->emplace_back(role);
+  if (type.used()) benchmarks->emplace_back(type);
+  if (label.used()) benchmarks->emplace_back(label);
+  if (slot.used()) benchmarks->emplace_back(slot);
+  if (combined.used()) benchmarks->emplace_back(combined);
 }
 
 void FrameEvaluation::GetMentionMap(
@@ -431,6 +424,26 @@ void FrameEvaluation::RoleAccuracy(
       } else {
         // Check label role.
         label->prediction(HasSlot(target, s.name, s.value));
+      }
+    }
+  }
+}
+
+void FrameEvaluation::TypeAccuracy(Store *store, const Alignment &alignment,
+                                   BenchmarkMap *types, bool recall) {
+  for (const auto &a : alignment) {
+    Frame source(store, a.first);
+    Frame target(store, a.second);
+
+    for (const Slot &s : source) {
+      if (s.name.IsIsA()) {
+        Benchmark &b = (*types)[s.value];
+        bool matched = HasSlot(target, Handle::isa(), s.value);
+        if (recall) {
+          b.recall.prediction(matched);
+        } else {
+          b.precision.prediction(matched);
+        }
       }
     }
   }

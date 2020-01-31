@@ -37,6 +37,9 @@ class ParallelCorpus {
   // Read next pair of documents. Return false when there are no more documents.
   // Ownership of the store and documents is transferred to the caller.
   virtual bool Next(Store **store, Document **golden, Document **predicted) = 0;
+
+  // Return global store for corpus.
+  virtual Store *Commons() = 0;
 };
 
 // Compute precision and recall for frame annotations in an annotated corpus
@@ -116,6 +119,9 @@ class FrameEvaluation {
 
   // Benchmark with precision and recall.
   struct Benchmark {
+    Benchmark() {}
+    Benchmark(const string &name) : name(name) {}
+    
     // Computes F-score from precision and recall.
     double fscore() const {
       double p = precision.accuracy();
@@ -130,32 +136,39 @@ class FrameEvaluation {
       precision.add(other.precision);
     }
 
-    // Precision and recall statistics for benchmark.
-    Metric recall;
-    Metric precision;
-
     // Get scores for benchmark.
-    void GetScores(const string &name, Scores *scores) const;
+    void GetScores(Scores *scores) const;
 
     // Return benchmark summary with precision, recall, and F1.
-    string Summary() const;
+    string Summary(int width = 6) const;
 
     // Check if benchmark is being used.
     bool used() const { return recall.used() || precision.used(); }
+
+    // Precision and recall statistics for benchmark.
+    string name;
+    Metric recall;
+    Metric precision;
   };
+
+  typedef std::vector<Benchmark> Benchmarks;
+  typedef HandleMap<Benchmark> BenchmarkMap;
 
   // Holds evaluation output.
   struct Output {
     // Benchmarks of various aspects.
-    Benchmark mention;
-    Benchmark frame;
-    Benchmark type;
-    Benchmark label;
-    Benchmark pair;
-    Benchmark edge;
-    Benchmark role;
-    Benchmark slot;
-    Benchmark combined;
+    Benchmark mention{"SPAN"};
+    Benchmark frame{"FRAME"};
+    Benchmark pair{"PAIR"};
+    Benchmark edge{"EDGE"};
+    Benchmark role{"ROLE"};
+    Benchmark type{"TYPE"};
+    Benchmark label{"LABEL"};
+    Benchmark slot{"SLOT"};
+    Benchmark combined{"TOTAL"};
+
+    // Type benchmark.
+    BenchmarkMap types;
 
     // Counters.
     int64 num_golden_spans = 0;
@@ -165,6 +178,9 @@ class FrameEvaluation {
 
     // Get evaluation scores.
     void GetScores(Scores *scores) const;
+    
+    // Get all used benchmarks.
+    void GetBenchmarks(Benchmarks *benchmarks) const;
   };
 
   // Evaluates parallel corpus (gold and test) and returns the evaluation in
@@ -177,20 +193,6 @@ class FrameEvaluation {
                        const string &gold_file_pattern,
                        const string &test_file_pattern,
                        Output *output);
-
-  // Same as above, except it reads the commons from 'commons_file', and
-  // saves the final evaluation in the file with path 'output_file'.
-  static void EvaluateAndWrite(const string &commons_file,
-                               const string &gold_file_pattern,
-                               const string &test_file_pattern,
-                               const string &output_file);
-
-  // Same as above, but returns the summary lines instead of dumping them to a
-  // file. Each line is a tab-separated (metric name, metric value) pair.
-  static std::vector<string> EvaluateAndSummarize(
-      const string &commons_file,
-      const string &gold_file_pattern,
-      const string &test_file_pattern);
 
  private:
   // Constructs mention map from spans to mention frames.
@@ -223,6 +225,10 @@ class FrameEvaluation {
   static void RoleAccuracy(Store *store, const Alignment &alignment,
                            Metric *pair, Metric *edge, Metric *role,
                            Metric *type, Metric *label);
+
+  // Computes type accuracy.
+  static void TypeAccuracy(Store *store, const Alignment &alignment,
+                           BenchmarkMap *types, bool recall);
 
   // Counts the number of slots with a given name.
   static int SlotCount(const Frame &f, Handle name);

@@ -105,6 +105,9 @@ class Parser {
 
   // Hyperparameters for parser model.
   std::vector<std::pair<string, string>> hparams_;
+
+  // Skip section titles.
+  bool skip_section_titles_ = false;
 };
 
 }  // namespace nlp

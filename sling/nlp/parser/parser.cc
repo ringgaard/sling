@@ -75,6 +75,7 @@ void Parser::Load(Store *store, const string &model) {
   CHECK(decoder_spec.valid());
   CHECK_EQ(decoder_spec.GetText("type"), "transition");
   int frame_limit = decoder_spec.GetInt("frame_limit");
+  skip_section_titles_ = decoder_spec.GetBool("skip_section_titles", true);
 
   // Initialize roles.
   Array roles = decoder_spec.Get("roles").AsArray();
@@ -108,6 +109,12 @@ void Parser::Parse(Document *document) const {
   // Parse each sentence of the document.
   LexicalEncoderInstance encoder(encoder_);
   for (SentenceIterator s(document); s.more(); s.next()) {
+    // Skip section titles if requested.
+    if (skip_section_titles_) {
+      const Token &first = document->token(s.begin());
+      if (first.style() & HEADING_BEGIN) continue;
+    }
+
     // Run the lexical encoder for sentence.
     myelin::Channel *encodings = encoder.Compute(*document, s.begin(), s.end());
 

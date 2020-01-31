@@ -129,6 +129,9 @@ class ParserTrainer : public task::LearnerTask {
     // Parse next evaluation document using parser model.
     bool Next(Store **store, Document **golden, Document **predicted) override;
 
+    // Return commons store for corpus.
+    Store *Commons() override { return &trainer_->commons_; }
+
    private:
     ParserTrainer *trainer_;   // parser trainer with current model
   };

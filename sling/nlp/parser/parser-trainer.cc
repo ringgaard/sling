@@ -400,15 +400,9 @@ bool ParserTrainer::Evaluate(int64 epoch, Network *model) {
   ParserEvaulationCorpus corpus(this);
   FrameEvaluation::Output eval;
   FrameEvaluation::Evaluate(&corpus, &eval);
-  if (eval.mention.used()) LOG(INFO) << "SPAN:  " << eval.mention.Summary();
-  if (eval.frame.used()) LOG(INFO) << "FRAME: " << eval.frame.Summary();
-  if (eval.pair.used()) LOG(INFO) << "PAIR:  " << eval.pair.Summary();
-  if (eval.edge.used()) LOG(INFO) << "EDGE:  " << eval.edge.Summary();
-  if (eval.role.used()) LOG(INFO) << "ROLE:  " << eval.role.Summary();
-  if (eval.type.used()) LOG(INFO) << "TYPE:  " << eval.type.Summary();
-  if (eval.label.used()) LOG(INFO) << "LABEL: " << eval.label.Summary();
-  if (eval.slot.used()) LOG(INFO) << "SLOT:  " << eval.slot.Summary();
-  if (eval.combined.used()) LOG(INFO) << "TOTAL: " << eval.combined.Summary();
+  FrameEvaluation::Benchmarks benchmarks;
+  eval.GetBenchmarks(&benchmarks);
+  for (const auto &benchmark : benchmarks) LOG(INFO) << benchmark.Summary();
 
   return true;
 }
@@ -572,6 +566,7 @@ void ParserTrainer::Save(const string &filename) {
   decoder_spec.Add("type", "transition");
   decoder_spec.Set("frame_limit", frame_limit_);
   decoder_spec.Set("sentence_reset", sentence_reset_);
+  decoder_spec.Set("skip_section_titles", skip_section_titles_);
 
   Handles role_list(&store);
   roles_.GetList(&role_list);

@@ -2,6 +2,7 @@
 !Dockerfile
 !wheel/**
 !python/**
-!run.sh
+!data/wiki/**
+!data/nlp/schemas/**
 !.
 

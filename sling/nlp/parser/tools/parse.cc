@@ -57,8 +57,10 @@ DEFINE_bool(parse, false, "Parse input corpus");
 DEFINE_bool(benchmark, false, "Benchmark parser");
 DEFINE_bool(lex, false, "Output documents in LEX format");
 DEFINE_bool(evaluate, false, "Evaluate parser");
+DEFINE_bool(evaluate_types, false, "Evaluate types");
 DEFINE_bool(hparams, false, "Output hyperparameters");
 DEFINE_int32(maxdocs, -1, "Maximum number of documents to process");
+DEFINE_string(commons, "", "Commons store");
 
 using namespace sling;
 using namespace sling::nlp;
@@ -117,6 +119,9 @@ class ParserEvaulationCorpus : public ParallelCorpus {
     return true;
   }
 
+  // Return commons store for corpus.
+  Store *Commons() override { return commons_; }
+
  private:
   Store *commons_;           // commons store
   const Parser *parser_;     // parser being evaluated
@@ -127,11 +132,17 @@ class ParserEvaulationCorpus : public ParallelCorpus {
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
+  // Initialize commons store.
+  Store commons;
+  if (!FLAGS_commons.empty()) {
+    LOG(INFO) << "Load store from " << FLAGS_commons;
+    LoadStore(FLAGS_commons, &commons);
+  }
+
   // Load parser.
   LOG(INFO) << "Load parser from " << FLAGS_parser;
   Clock clock;
   clock.start();
-  Store commons;
   Parser parser;
   parser.Load(&commons, FLAGS_parser);
   commons.Freeze();
@@ -241,10 +252,16 @@ int main(int argc, char *argv[]) {
     ParserEvaulationCorpus corpus(&commons, &parser, FLAGS_corpus);
     FrameEvaluation::Output eval;
     FrameEvaluation::Evaluate(&corpus, &eval);
-    FrameEvaluation::Scores scores;
-    eval.GetScores(&scores);
-    for (const auto &score : scores) {
-      std::cout << score.first << "=" << score.second << "\n";
+    FrameEvaluation::Benchmarks benchmarks;
+    eval.GetBenchmarks(&benchmarks);
+    for (const auto &benchmark : benchmarks) {
+      std::cout << benchmark.Summary() << "\n";
+    }
+    if (FLAGS_evaluate_types) {
+      std::cout << "Type benchmark:\n";
+      for (const auto &it : eval.types) {
+        std::cout << it.second.Summary(20) << "\n";
+      }
     }
   }
 
