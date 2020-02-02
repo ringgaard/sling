@@ -148,7 +148,7 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
     // Compute type precision and recall.
     TypeAccuracy(store, g2p_frame_alignment, &output->types, true);
     TypeAccuracy(store, p2g_frame_alignment, &output->types, false);
-    
+
     // Update statistics.
     output->num_golden_spans += golden_mentions.size();
     output->num_predicted_spans += predicted_mentions.size();
@@ -210,7 +210,7 @@ string FrameEvaluation::Benchmark::Summary(int width) const {
   double p = precision.accuracy() * 100.0;
   double r = recall.accuracy() * 100.0;
   double f1 = fscore() * 100.0;
-  return StringPrintf("%*s P=%5.2f, R=%5.2f, F1=%5.2f", 
+  return StringPrintf("%*s P=%5.2f, R=%5.2f, F1=%5.2f",
                       -width, name.c_str(), p, r, f1);
 }
 
@@ -438,12 +438,8 @@ void FrameEvaluation::TypeAccuracy(Store *store, const Alignment &alignment,
     for (const Slot &s : source) {
       if (s.name.IsIsA()) {
         Benchmark &b = (*types)[s.value];
-        bool matched = HasSlot(target, Handle::isa(), s.value);
-        if (recall) {
-          b.recall.prediction(matched);
-        } else {
-          b.precision.prediction(matched);
-        }
+        Metric &m = recall ? b.recall : b.precision;
+        m.prediction(HasSlot(target, Handle::isa(), s.value));
       }
     }
   }
