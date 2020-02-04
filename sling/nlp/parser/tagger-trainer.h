@@ -1,0 +1,142 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef SLING_NLP_PARSER_TAGGER_TRAINER_H_
+#define SLING_NLP_PARSER_TAGGER_TRAINER_H_
+
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "sling/frame/store.h"
+#include "sling/myelin/flow.h"
+#include "sling/myelin/builder.h"
+#include "sling/myelin/compiler.h"
+#include "sling/myelin/compute.h"
+#include "sling/nlp/document/document.h"
+#include "sling/nlp/document/document-corpus.h"
+#include "sling/nlp/document/lexical-encoder.h"
+#include "sling/nlp/parser/frame-evaluation.h"
+#include "sling/task/learner.h"
+#include "sling/util/mutex.h"
+
+namespace sling {
+namespace nlp {
+
+// Task for training for BIO tagger.
+class TaggerTrainer : public task::LearnerTask {
+ public:
+  ~TaggerTrainer();
+
+  // Learner task interface.
+  void Run(task::Task *task) override;
+  void Worker(int index, myelin::Network *model) override;
+  bool Evaluate(int64 epoch, myelin::Network *model) override;
+  void Checkpoint(int64 epoch, myelin::Network *model) override;
+
+ private:
+  // Build flow graph for tagger model.
+  void Build(myelin::Flow *flow, bool learn);
+
+  // Read next training document into store. The caller owns the returned
+  // document.
+  Document *GetNextTrainingDocument(Store *store);
+
+  // Tag document using current model.
+  void Tag(Document *document) const;
+
+  // Save trained model to file.
+  void Save(const string &filename);
+
+ protected:
+  // Parallel corpus for evaluating tagger on golden corpus.
+  class TaggerEvaulationCorpus : public ParallelCorpus {
+   public:
+    TaggerEvaulationCorpus(TaggerTrainer *trainer);
+
+    // Tag next evaluation document using parser model.
+    bool Next(Store **store, Document **golden, Document **predicted) override;
+
+    // Return commons store for corpus.
+    Store *Commons() override { return &trainer_->commons_; }
+
+   private:
+    TaggerTrainer *trainer_;   // tagger trainer with current model
+  };
+
+  // Commons store for parser.
+  Store commons_;
+
+  // Training corpus.
+  DocumentCorpus *training_corpus_ = nullptr;
+
+  // Evaluation corpus.
+  DocumentCorpus *evaluation_corpus_ = nullptr;
+
+  // File name for trained model.
+  string model_filename_;
+
+  // Word vocabulary.
+  std::unordered_map<string, int> words_;
+
+  // Skip section titles.
+  bool skip_section_titles_ = false;
+
+  // Lexical feature specification for encoder.
+  LexicalFeatures::Spec spec_;
+
+  // Neural network.
+  myelin::Flow flow_;
+  myelin::Network model_;
+  myelin::Compiler compiler_;
+  myelin::Optimizer *optimizer_ = nullptr;
+
+  // Document input encoder.
+  LexicalEncoder encoder_;
+
+  // Mutexes for serializing access to global state.
+  Mutex input_mu_;
+  Mutex update_mu_;
+
+  // Model hyperparameters.
+  int rnn_type_ = myelin::RNN::LSTM;
+  int rnn_dim_ = 256;
+  int rnn_layers_ = 1;
+  bool rnn_bidir_ = true;
+  bool rnn_highways_ = false;
+  int seed_ = 0;
+  int batch_size_ = 32;
+  int learning_rate_cliff_ = 0;
+  float learning_rate_ = 1.0;
+  float min_learning_rate_ = 0.001;
+  float dropout_ = 0.0;
+
+  // Evaluation statistics.
+  float prev_loss_ = 0.0;
+  float loss_sum_ = 0.0;
+  int loss_count_ = 0.0;
+
+  // Training task parameters.
+  std::vector<std::pair<string, string>> hparams_;
+
+  // Statistics.
+  task::Counter *num_documents_;
+  task::Counter *num_tokens_;
+};
+
+}  // namespace nlp
+}  // namespace sling
+
+#endif  // SLING_NLP_PARSER_TAGGER_TRAINER_H_
+

@@ -21,25 +21,28 @@ REGISTER_COMPONENT_REGISTRY("parser delegate", sling::nlp::Delegate);
 namespace sling {
 namespace nlp {
 
+using namespace myelin;
+
 Parser::~Parser() {
+  delete encoder_;
   for (auto *d : delegates_) delete d;
 }
 
 void Parser::Load(Store *store, const string &model) {
   // Load and compile parser flow.
-  myelin::Flow flow;
+  Flow flow;
   CHECK(flow.Load(model));
   compiler_.Compile(&flow, &network_);
 
   // Load commons store from parser model.
-  myelin::Flow::Blob *commons = flow.DataBlock("commons");
+  Flow::Blob *commons = flow.DataBlock("commons");
   if (commons != nullptr) {
     StringDecoder decoder(store, commons->data, commons->size);
     decoder.DecodeAll();
   }
 
   // Get parser specification.
-  myelin::Flow::Blob *spec_data = flow.DataBlock("parser");
+  Flow::Blob *spec_data = flow.DataBlock("parser");
   CHECK(spec_data != nullptr) << "No parser specification in model: " << model;
   StringDecoder spec_decoder(store, spec_data->data, spec_data->size);
   Frame spec = spec_decoder.Decode().AsFrame();
@@ -58,17 +61,10 @@ void Parser::Load(Store *store, const string &model) {
   // Initialize encoder.
   Frame encoder_spec = spec.GetFrame("encoder");
   CHECK(encoder_spec.valid());
-  CHECK_EQ(encoder_spec.GetText("type"), "lexrnn");
-  myelin::RNN::Spec rnn_spec;
-  rnn_spec.type = static_cast<myelin::RNN::Type>(encoder_spec.GetInt("rnn"));
-  rnn_spec.dim = encoder_spec.GetInt("dim");
-  rnn_spec.highways = encoder_spec.GetBool("highways");
-  int rnn_layers = encoder_spec.GetInt("layers");
-  bool rnn_bidir = encoder_spec.GetBool("bidir");
-
-  encoder_.AddLayers(rnn_layers, rnn_spec, rnn_bidir);
-  encoder_.Initialize(network_);
-  encoder_.LoadLexicon(&flow);
+  string encoder_type = encoder_spec.GetString("type");
+  encoder_ = Encoder::Create(encoder_type);
+  encoder_->Load(&flow, encoder_spec);
+  encoder_->Initialize(network_);
 
   // Initialize decoder.
   Frame decoder_spec = spec.GetFrame("decoder");
@@ -102,12 +98,12 @@ void Parser::Load(Store *store, const string &model) {
 }
 
 void Parser::Parse(Document *document) const {
-  // Create delegates.
+  // Create encoder and delegate instances.
   std::vector<DelegateInstance *> delegates;
   for (auto *d : delegates_) delegates.push_back(d->CreateInstance());
+  EncoderInstance *encoder = encoder_->CreateInstance();
 
   // Parse each sentence of the document.
-  LexicalEncoderInstance encoder(encoder_);
   for (SentenceIterator s(document); s.more(); s.next()) {
     // Skip section titles if requested.
     if (skip_section_titles_) {
@@ -115,14 +111,14 @@ void Parser::Parse(Document *document) const {
       if (first.style() & HEADING_BEGIN) continue;
     }
 
-    // Run the lexical encoder for sentence.
-    myelin::Channel *encodings = encoder.Compute(*document, s.begin(), s.end());
+    // Get encodings for tokens in the sentence.
+    Channel *encodings = encoder->Compute(*document, s.begin(), s.end());
 
     // Initialize decoder.
     ParserState state(document, s.begin(), s.end());
     ParserFeatureExtractor features(&feature_model_, &state);
-    myelin::Instance decoder(decoder_);
-    myelin::Channel activations(feature_model_.activation());
+    Instance decoder(decoder_);
+    Channel activations(feature_model_.activation());
 
     // Run decoder to predict transitions.
     while (!state.done()) {
@@ -161,6 +157,7 @@ void Parser::Parse(Document *document) const {
     }
   }
 
+  delete encoder;
   for (auto *d : delegates) delete d;
 }
 

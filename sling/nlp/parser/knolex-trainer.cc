@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/file/textmap.h"
 #include "sling/nlp/kb/facts.h"
 #include "sling/nlp/parser/action-table.h"
 #include "sling/nlp/parser/multiclass-learner.h"
@@ -39,7 +38,7 @@ class MainDelegateLearner : public MultiClassDelegateLearner {
 // Delegate for evoking frames.
 class EvokeDelegateLearner : public MultiClassDelegateLearner {
  public:
-  EvokeDelegateLearner(const ActionTable &actions) 
+  EvokeDelegateLearner(const ActionTable &actions)
       : MultiClassDelegateLearner("evoke") {
     for (const ParserAction &action : actions.list()) {
       actions_.Add(action);
@@ -54,12 +53,6 @@ class KnolexTrainer : public ParserTrainer {
    void Setup(task::Task *task) override {
     // Reset parser state between sentences.
     sentence_reset_ = true;
-
-    // Read word vocabulary.
-    TextMapInput vocabulary(task->GetInputFile("vocabulary"));
-    string word;
-    int64 count;
-    while (vocabulary.Read(nullptr, &word, &count)) words_[word] += count;
 
     // Set up evokes for all entity types.
     ActionTable evokes;

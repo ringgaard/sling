@@ -64,20 +64,37 @@ cc_library(
 )
 
 cc_library(
+  name = "encoder",
+  srcs = ["encoder.cc"],
+  hdrs = ["encoder.h"],
+  deps = [
+    "//sling/base",
+    "//sling/base:registry",
+    "//sling/frame:object",
+    "//sling/myelin:compute",
+    "//sling/myelin:flow",
+    "//sling/nlp/document",
+    "//sling/task",
+    "//sling/util:vocabulary",
+  ],
+)
+
+cc_library(
   name = "parser",
   srcs = ["parser.cc"],
   hdrs = ["parser.h"],
   deps = [
+    ":encoder",
     ":parser-features",
     ":parser-state",
     ":roles",
     "//sling/base",
+    "//sling/base:registry",
     "//sling/frame:serialization",
     "//sling/frame:store",
     "//sling/myelin:compiler",
     "//sling/myelin:profile",
     "//sling/nlp/document",
-    "//sling/nlp/document:lexical-encoder",
   ],
 )
 
@@ -124,15 +141,27 @@ cc_library(
 )
 
 cc_library(
+  name = "lexrnn-encoder",
+  srcs = ["lexrnn-encoder.cc"],
+  deps = [
+    ":encoder",
+    "//sling/nlp/document:lexical-encoder",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "parser-trainer",
   srcs = ["parser-trainer.cc"],
   hdrs = ["parser-trainer.h"],
   deps = [
-    "frame-evaluation",
+    ":encoder",
+    ":frame-evaluation",
     ":parser-action",
     ":parser-features",
     ":roles",
     "//sling/base",
+    "//sling/file:textmap",
     "//sling/frame:store",
     "//sling/frame:serialization",
     "//sling/myelin:builder",
@@ -141,11 +170,8 @@ cc_library(
     "//sling/myelin:learning",
     "//sling/nlp/document:document",
     "//sling/nlp/document:document-corpus",
-    "//sling/nlp/document:lexical-encoder",
-    "//sling/nlp/document:lexicon",
     "//sling/task:learner",
     "//sling/util:mutex",
-    "//sling/util:unicode",
   ],
 )
 
@@ -191,8 +217,31 @@ cc_library(
     ":parser-trainer",
     ":multiclass-learner",
     ":transition-generator",
-    "//sling/file:textmap",
     "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "tagger-trainer",
+  srcs = ["tagger-trainer.cc"],
+  hdrs = ["tagger-trainer.h"],
+  deps = [
+    "frame-evaluation",
+    "//sling/base",
+    "//sling/frame:store",
+    "//sling/frame:serialization",
+    "//sling/myelin:builder",
+    "//sling/myelin:compiler",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
+    "//sling/nlp/document:document",
+    "//sling/nlp/document:document-corpus",
+    "//sling/nlp/document:lexical-encoder",
+    "//sling/nlp/document:lexicon",
+    "//sling/task:learner",
+    "//sling/util:mutex",
+    "//sling/util:unicode",
   ],
   alwayslink = 1,
 )

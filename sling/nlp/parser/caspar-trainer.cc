@@ -59,16 +59,13 @@ class CasparTrainer : public ParserTrainer {
     // Reset parser state between sentences.
     sentence_reset_ = true;
 
-    // Collect word and action vocabularies from training corpus.
+    // Collect action vocabularies from training corpus.
     ActionTable actions;
     training_corpus_->Rewind();
     for (;;) {
       // Get next document.
       Document *document = training_corpus_->Next(&commons_);
       if (document == nullptr) break;
-
-      // Update word vocabulary.
-      for (const Token &t : document->tokens()) words_[t.word()]++;
 
       // Generate action table for fine-grained classifier.
       Generate(*document, [&](const ParserAction &action) {

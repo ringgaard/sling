@@ -14,11 +14,12 @@
 
 #include "sling/nlp/parser/parser-trainer.h"
 
+#include <math.h>
+
+#include "sling/file/textmap.h"
 #include "sling/frame/serialization.h"
 #include "sling/myelin/gradient.h"
 #include "sling/nlp/document/document.h"
-#include "sling/nlp/document/lexicon.h"
-#include "sling/util/unicode.h"
 
 namespace sling {
 namespace nlp {
@@ -27,6 +28,7 @@ using namespace task;
 using namespace myelin;
 
 ParserTrainer::~ParserTrainer() {
+  delete encoder_;
   for (auto *d : delegates_) delete d;
   delete training_corpus_;
   delete evaluation_corpus_;
@@ -34,12 +36,7 @@ ParserTrainer::~ParserTrainer() {
 
 void ParserTrainer::Run(task::Task *task) {
   // Get training parameters.
-  task->Fetch("rnn_dim", &rnn_dim_);
-  task->Fetch("rnn_layers", &rnn_layers_);
-  task->Fetch("rnn_type", &rnn_type_);
-  task->Fetch("rnn_bidir", &rnn_bidir_);
-  task->Fetch("rnn_highways", &rnn_highways_);
-
+  task->Fetch("encoder", &encoder_type_);
   task->Fetch("mark_depth", &mark_depth_);
   task->Fetch("mark_dim", &mark_dim_);
   task->Fetch("frame_limit", &frame_limit_);
@@ -58,7 +55,6 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("learning_rate", &learning_rate_);
   task->Fetch("min_learning_rate", &min_learning_rate_);
   task->Fetch("learning_rate_cliff", &learning_rate_cliff_);
-  task->Fetch("dropout", &dropout_);
   task->Fetch("ff_l2reg", &ff_l2reg_);
 
   task->Fetch("skip_section_titles", &skip_section_titles_);
@@ -90,38 +86,28 @@ void ParserTrainer::Run(task::Task *task) {
     model_filename_ = model_file->resource()->name();
   }
 
-  // Set up encoder lexicon.
-  string normalization = task->Get("normalization", "d");
-  spec_.lexicon.normalization = ParseNormalization(normalization);
-  spec_.lexicon.threshold = task->Get("lexicon_threshold", 0);
-  spec_.lexicon.max_prefix = task->Get("max_prefix", 0);
-  spec_.lexicon.max_suffix = task->Get("max_suffix", 3);
-  spec_.feature_padding = 16;
-
-  // Set up word embeddings.
-  spec_.word_dim = task->Get("word_dim", 32);
-  auto *word_embeddings_input = task->GetInput("word_embeddings");
-  if (word_embeddings_input != nullptr) {
-    spec_.word_embeddings = word_embeddings_input->resource()->name();
+  // Initialize word vocabulary.
+  auto *vocabulary = task->GetInput("vocabulary");
+  if (vocabulary != nullptr) {
+    // Read vocabulary from text map file.
+    TextMapInput input(vocabulary->filename());
+    string word;
+    int64 count;
+    while (input.Read(nullptr, &word, &count)) words_[word] += count;
+  } else {
+    // Initialize word vocabulary from training data.
+    training_corpus_->Rewind();
+    for (;;) {
+      Document *document = training_corpus_->Next(&commons_);
+      if (document == nullptr) break;
+      for (const Token &t : document->tokens()) words_[t.word()]++;
+      delete document;
+    }
   }
-  spec_.train_word_embeddings = task->Get("train_word_embeddings", true);
 
-  // Set up lexical back-off features.
-  spec_.prefix_dim = task->Get("prefix_dim", 0);
-  spec_.suffix_dim = task->Get("suffix_dim", 16);
-  spec_.hyphen_dim = task->Get("hypen_dim", 8);
-  spec_.caps_dim = task->Get("caps_dim", 8);;
-  spec_.punct_dim = task->Get("punct_dim", 8);;
-  spec_.quote_dim = task->Get("quote_dim", 8);;
-  spec_.digit_dim = task->Get("digit_dim", 8);;
-
-  // Set up RNNs.
-  RNN::Spec rnn_spec;
-  rnn_spec.type = static_cast<RNN::Type>(rnn_type_);
-  rnn_spec.dim = rnn_dim_;
-  rnn_spec.highways = rnn_highways_;
-  rnn_spec.dropout = dropout_;
-  encoder_.AddLayers(rnn_layers_, rnn_spec, rnn_bidir_);
+  // Set up encoder.
+  encoder_ = Encoder::Create(encoder_type_);
+  encoder_->Setup(task);
 
   // Custom parser model initialization. This should set up the word and role
   // vocabularies as well as the delegate cascade.
@@ -150,7 +136,7 @@ void ParserTrainer::Run(task::Task *task) {
   // Initialize model.
   feature_model_.Init(decoder_, &roles_, frame_limit_);
   model_.InitModelParameters(seed_);
-  encoder_.Initialize(model_);
+  encoder_->Initialize(model_);
   optimizer_->Initialize(model_);
   for (auto *d : delegates_) d->Initialize(model_);
   commons_.Freeze();
@@ -178,14 +164,14 @@ void ParserTrainer::Run(task::Task *task) {
 
 void ParserTrainer::Worker(int index, Network *model) {
   // Create instances.
-  LexicalEncoderLearner encoder(encoder_);
+  EncoderLearner *encoder = encoder_->CreateLearner();
   Instance gdecoder(gdecoder_);
   std::vector<DelegateLearnerInstance *> delegates;
   for (auto *d : delegates_) delegates.push_back(d->CreateInstance());
 
   // Collect gradients.
   std::vector<Instance *> gradients;
-  encoder.CollectGradients(&gradients);
+  encoder->CollectGradients(&gradients);
   gradients.push_back(&gdecoder);
   for (auto *d : delegates) d->CollectGradients(&gradients);
 
@@ -239,7 +225,7 @@ void ParserTrainer::Worker(int index, Network *model) {
         }
 
         // Run document through encoder to produce contextual token encodings.
-        auto *encodings = encoder.Compute(document, s.begin(), s.end());
+        auto *encodings = encoder->Compute(document, s.begin(), s.end());
 
         // Run decoder and delegates on all steps in the transition sequence.
         int t = 0;
@@ -289,7 +275,7 @@ void ParserTrainer::Worker(int index, Network *model) {
         }
 
         // Propagate gradients back through encoder.
-        encoder.Backpropagate(&dencodings);
+        encoder->Backpropagate(&dencodings);
       }
 
       delete original;
@@ -307,12 +293,14 @@ void ParserTrainer::Worker(int index, Network *model) {
   }
 
   // Clean up.
+  delete encoder;
   for (auto *d : decoders) delete d;
   for (auto *d : delegates) delete d;
 }
 
 void ParserTrainer::Parse(Document *document) const {
   // Create delegates.
+  EncoderInstance *encoder = encoder_->CreateInstance();
   std::vector<DelegateLearnerInstance *> delegates;
   for (auto *d : delegates_) delegates.push_back(d->CreateInstance());
 
@@ -324,9 +312,8 @@ void ParserTrainer::Parse(Document *document) const {
       if (first.style() & HEADING_BEGIN) continue;
     }
 
-    // Run the lexical encoder for sentence.
-    LexicalEncoderInstance encoder(encoder_);
-    auto *encodings = encoder.Compute(*document, s.begin(), s.end());
+    // Run the encoder on tokens in the sentence.
+    auto *encodings = encoder->Compute(*document, s.begin(), s.end());
 
     // Initialize decoder.
     ParserState state(document, s.begin(), s.end());
@@ -371,6 +358,7 @@ void ParserTrainer::Parse(Document *document) const {
     }
   }
 
+  delete encoder;
   for (auto *d : delegates) delete d;
 }
 
@@ -416,14 +404,14 @@ void ParserTrainer::Checkpoint(int64 epoch, Network *model) {
 
 void ParserTrainer::Build(Flow *flow, bool learn) {
   // Build document input encoder.
-  RNN::Variables rnn;
+  Flow::Variable *encoding;
   if (learn) {
     Vocabulary::HashMapIterator vocab(words_);
-    rnn = encoder_.Build(flow, spec_, &vocab, true);
+    encoding = encoder_->Build(flow, &vocab, true);
   } else {
-    rnn = encoder_.Build(flow, spec_, nullptr, false);
+    encoding = encoder_->Build(flow, nullptr, false);
   }
-  int token_dim = rnn.output->elements();
+  int token_dim = encoding->elements();
 
   // Build parser decoder.
   FlowBuilder f(flow, "decoder");
@@ -503,7 +491,7 @@ void ParserTrainer::Build(Flow *flow, bool learn) {
   }
 
   // Link recurrences.
-  flow->Connect({tokens, rnn.output});
+  flow->Connect({tokens, encoding});
   flow->Connect({steps, activation});
   if (learn) {
     auto *dsteps = flow->GradientVar(steps);
@@ -544,21 +532,13 @@ void ParserTrainer::Save(const string &filename) {
   // Copy weights from trained model.
   model_.SaveParameters(&flow);
 
-  // Save lexicon.
-  encoder_.SaveLexicon(&flow);
-
   // Make parser specification frame.
   Store store(&commons_);
   Builder spec(&store);
 
-  // Save encoder spec.
+  // Save encoder.
   Builder encoder_spec(&store);
-  encoder_spec.Add("type", "lexrnn");
-  encoder_spec.Add("rnn", static_cast<int>(rnn_type_));
-  encoder_spec.Add("dim", rnn_dim_);
-  encoder_spec.Add("layers", rnn_layers_);
-  encoder_spec.Add("bidir", rnn_bidir_);
-  encoder_spec.Add("highways", rnn_highways_);
+  encoder_->Save(&flow, &encoder_spec);
   spec.Set("encoder", encoder_spec.Create());
 
   // Save decoder spec.

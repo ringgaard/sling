@@ -26,7 +26,7 @@
 #include "sling/myelin/compute.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-corpus.h"
-#include "sling/nlp/document/lexical-encoder.h"
+#include "sling/nlp/parser/encoder.h"
 #include "sling/nlp/parser/frame-evaluation.h"
 #include "sling/nlp/parser/parser-action.h"
 #include "sling/nlp/parser/parser-features.h"
@@ -160,9 +160,6 @@ class ParserTrainer : public task::LearnerTask {
   // Skip section titles.
   bool skip_section_titles_ = false;
 
-  // Lexical feature specification for encoder.
-  LexicalFeatures::Spec spec_;
-
   // Neural network.
   myelin::Flow flow_;
   myelin::Network model_;
@@ -170,7 +167,8 @@ class ParserTrainer : public task::LearnerTask {
   myelin::Optimizer *optimizer_ = nullptr;
 
   // Document input encoder.
-  LexicalEncoder encoder_;
+  string encoder_type_ = "lexrnn";
+  Encoder *encoder_ = nullptr;
 
   // Parser feature model.
   ParserFeatureModel feature_model_;
@@ -195,11 +193,6 @@ class ParserTrainer : public task::LearnerTask {
   Mutex update_mu_;
 
   // Model hyperparameters.
-  int rnn_type_ = myelin::RNN::LSTM;
-  int rnn_dim_ = 256;
-  int rnn_layers_ = 1;
-  bool rnn_bidir_ = true;
-  bool rnn_highways_ = false;
   int mark_depth_ = 1;
   int frame_limit_ = 5;
   int history_size_ = 5;
@@ -217,7 +210,6 @@ class ParserTrainer : public task::LearnerTask {
   int learning_rate_cliff_ = 0;
   float learning_rate_ = 1.0;
   float min_learning_rate_ = 0.001;
-  float dropout_ = 0.0;
   float ff_l2reg_ = 0.0;
 
   // Evaluation statistics.

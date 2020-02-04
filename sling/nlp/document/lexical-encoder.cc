@@ -456,7 +456,7 @@ void LexicalEncoder::Initialize(const Network &net) {
 
 Channel *LexicalEncoderInstance::Compute(const Document &document,
                                          int begin, int end) {
-  // Extract feature and map through feature embeddings.
+  // Extract features and map through feature embeddings.
   features_.Extract(document, begin, end, &fv_);
 
   // Compute hidden states for RNN.
@@ -465,7 +465,7 @@ Channel *LexicalEncoderInstance::Compute(const Document &document,
 
 Channel *LexicalEncoderLearner::Compute(const Document &document,
                                         int begin, int end) {
-  // Extract feature and map through feature embeddings.
+  // Extract features and map through feature embeddings.
   Channel *fv = features_.Extract(document, begin, end);
 
   // Compute hidden states for RNN.

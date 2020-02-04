@@ -138,6 +138,7 @@ class Binding {
 
   const string &name() const { return name_; }
   Resource *resource() const { return resource_; }
+  const string &filename() const { return resource_->name(); }
 
  private:
   // Input or output name.

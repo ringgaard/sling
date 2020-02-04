@@ -27,7 +27,7 @@
 #include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
 #include "sling/nlp/document/document.h"
-#include "sling/nlp/document/lexical-encoder.h"
+#include "sling/nlp/parser/encoder.h"
 #include "sling/nlp/parser/parser-features.h"
 #include "sling/nlp/parser/parser-state.h"
 #include "sling/nlp/parser/roles.h"
@@ -88,8 +88,8 @@ class Parser {
   // Parser network.
   myelin::Network network_;
 
-  // Lexical encoder.
-  LexicalEncoder encoder_;
+  // Token encoder.
+  Encoder *encoder_ = nullptr;
 
   // Parser decoder.
   myelin::Cell *decoder_ = nullptr;
