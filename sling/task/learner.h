@@ -54,6 +54,9 @@ class LearnerTask : public Process {
   // Number of seconds between starting up workers.
   int64 rampup_ = 0;
 
+  // Number of seconds between starting the first and the rest of the workers.
+  int64 warmup_ = 0;
+
   // Current number of completed epochs.
   std::atomic<int64> epoch_{0};
 

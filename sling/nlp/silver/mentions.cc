@@ -1267,12 +1267,8 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     if (!topic.IsNil()) context.AddEntity(topic);
   }
 
-  // Run annotators on each sentence in the input document.
-  for (SentenceIterator s(&document); s.more(); s.next()) {
-    // Skip headings.
-    const Token &first = document.token(s.begin());
-    if (first.style() & HEADING_BEGIN) continue;
-
+  // Run annotators on each non-heading sentence in the input document.
+  for (SentenceIterator s(&document, HEADING_BEGIN); s.more(); s.next()) {
     // Make chart for sentence.
     AbbreviationAnnotator::Abbreviations abbreviations;
     SpanChart chart(&document, s.begin(), s.end(), max_phrase_length);

@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/nlp/document/lexical-encoder.h"
-#include "sling/nlp/parser/encoder.h"
+#include "sling/myelin/rnn.h"
+#include "sling/nlp/document/lexical-features.h"
+#include "sling/nlp/parser/parser-codec.h"
 
 namespace sling {
 namespace nlp {
@@ -21,7 +22,7 @@ namespace nlp {
 using namespace sling::myelin;
 
 // Token encoder using lexical features and RNNs.
-class LexicalRNNEncoder : public Encoder {
+class LexicalRNNEncoder : public ParserEncoder {
  public:
   // Set up lexical RNN encoder for training.
   void Setup(task::Task *task) override {
@@ -116,9 +117,68 @@ class LexicalRNNEncoder : public Encoder {
     rnn_.Initialize(net);
   }
 
-  // Create instance for prediction and learning.
-  EncoderInstance *CreateInstance() override;
-  EncoderLearner *CreateLearner() override;
+  // Encoder predictor.
+  class LexicalRNNEncoderPredictor : public Predictor {
+   public:
+    LexicalRNNEncoderPredictor(const LexicalRNNEncoder *encoder)
+        : features_(encoder->lex_),
+          rnn_(encoder->rnn_),
+          fv_(encoder->lex_.feature_vector()) {}
+
+    Channel *Encode(const Document &document, int begin, int end) override {
+      // Extract features and map through feature embeddings.
+      features_.Extract(document, begin, end, &fv_);
+
+      // Compute hidden states for RNN.
+      return rnn_.Compute(&fv_);
+    }
+
+   private:
+    LexicalFeatureExtractor features_;
+    RNNStackInstance rnn_;
+    Channel fv_;
+  };
+
+  Predictor *CreatePredictor() override { 
+    return new LexicalRNNEncoderPredictor(this); 
+  }
+  
+  // Encoder learner.
+  class LexicalRNNEncoderLearner : public Learner {
+   public:
+    LexicalRNNEncoderLearner(const LexicalRNNEncoder *encoder)
+        : features_(encoder->lex_),
+          rnn_(encoder->rnn_) {}
+
+    Channel *Encode(const Document &document, int begin, int end) override {
+      // Extract features and map through feature embeddings.
+      Channel *fv = features_.Extract(document, begin, end);
+
+      // Compute hidden states for RNN.
+      return rnn_.Compute(fv);
+    }
+
+    void Backpropagate(myelin::Channel *doutput) override {
+      // Backpropagate hidden state gradients through RNN.
+      Channel *dfv = rnn_.Backpropagate(doutput);
+
+      // Backpropagate feature vector gradients to feature embeddings.
+      features_.Backpropagate(dfv);
+    }
+
+    void CollectGradients(Gradients *gradients) override {
+      features_.CollectGradients(gradients);
+      rnn_.CollectGradients(gradients);
+    }
+
+   private:
+    LexicalFeatureLearner features_;
+    RNNStackLearner rnn_;
+  };
+
+  Learner *CreateLearner() override { 
+    return new LexicalRNNEncoderLearner(this); 
+  }
 
  private:
   // Lexical feature specification for encoder.
@@ -136,73 +196,9 @@ class LexicalRNNEncoder : public Encoder {
 
   // RNN encoder.
   myelin::RNNStack rnn_{"encoder"};
-
-  friend class LexicalRNNEncoderInstance;
-  friend class LexicalRNNEncoderLearner;
 };
 
-REGISTER_ENCODER("lexrnn", LexicalRNNEncoder);
-
-class LexicalRNNEncoderInstance : public EncoderInstance {
- public:
-  LexicalRNNEncoderInstance(const LexicalRNNEncoder *encoder)
-      : features_(encoder->lex_),
-        rnn_(encoder->rnn_),
-        fv_(encoder->lex_.feature_vector()) {}
-
-  Channel *Compute(const Document &document, int begin, int end) override {
-    // Extract features and map through feature embeddings.
-    features_.Extract(document, begin, end, &fv_);
-
-    // Compute hidden states for RNN.
-    return rnn_.Compute(&fv_);
-  }
-
- private:
-  LexicalFeatureExtractor features_;
-  RNNStackInstance rnn_;
-  Channel fv_;
-};
-
-class LexicalRNNEncoderLearner : public EncoderLearner {
- public:
-  LexicalRNNEncoderLearner(const LexicalRNNEncoder *encoder)
-      : features_(encoder->lex_),
-        rnn_(encoder->rnn_) {}
-
-  Channel *Compute(const Document &document, int begin, int end) override {
-    // Extract features and map through feature embeddings.
-    Channel *fv = features_.Extract(document, begin, end);
-
-    // Compute hidden states for RNN.
-    return rnn_.Compute(fv);
-  }
-
-  void Backpropagate(myelin::Channel *doutput) override {
-    // Backpropagate hidden state gradients through RNN.
-    Channel *dfv = rnn_.Backpropagate(doutput);
-
-    // Backpropagate feature vector gradients to feature embeddings.
-    features_.Backpropagate(dfv);
-  }
-
-  void CollectGradients(std::vector<Instance *> *gradients) override {
-    features_.CollectGradients(gradients);
-    rnn_.CollectGradients(gradients);
-  }
-
- private:
-  LexicalFeatureLearner features_;
-  RNNStackLearner rnn_;
-};
-
-EncoderInstance *LexicalRNNEncoder::CreateInstance() {
-  return new LexicalRNNEncoderInstance(this);
-}
-
-EncoderLearner *LexicalRNNEncoder::CreateLearner() {
-  return new LexicalRNNEncoderLearner(this);
-}
+REGISTER_PARSER_ENCODER("lexrnn", LexicalRNNEncoder);
 
 }  // namespace nlp
 }  // namespace sling

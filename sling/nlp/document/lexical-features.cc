@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/nlp/document/lexical-encoder.h"
+#include "sling/nlp/document/lexical-features.h"
 
 #include "sling/myelin/builder.h"
 #include "sling/myelin/gradient.h"
@@ -436,48 +436,6 @@ void LexicalFeatureLearner::Backpropagate(Channel *dfv) {
     gradient_.Set(lex_.primal_, extractors_[i]->data());
     gradient_.Compute();
   }
-}
-
-RNN::Variables LexicalEncoder::Build(Flow *flow,
-                                     const LexicalFeatures::Spec &spec,
-                                     Vocabulary::Iterator *words,
-                                     bool learn) {
-  if (words != nullptr) {
-    lex_.InitializeLexicon(words, spec.lexicon);
-  }
-  auto lexvars = lex_.Build(flow, spec, learn);
-  return rnn_.Build(flow, lexvars.fv, lexvars.dfv);
-}
-
-void LexicalEncoder::Initialize(const Network &net) {
-  lex_.Initialize(net);
-  rnn_.Initialize(net);
-}
-
-Channel *LexicalEncoderInstance::Compute(const Document &document,
-                                         int begin, int end) {
-  // Extract features and map through feature embeddings.
-  features_.Extract(document, begin, end, &fv_);
-
-  // Compute hidden states for RNN.
-  return rnn_.Compute(&fv_);
-}
-
-Channel *LexicalEncoderLearner::Compute(const Document &document,
-                                        int begin, int end) {
-  // Extract features and map through feature embeddings.
-  Channel *fv = features_.Extract(document, begin, end);
-
-  // Compute hidden states for RNN.
-  return rnn_.Compute(fv);
-}
-
-void LexicalEncoderLearner::Backpropagate(Channel *doutput) {
-  // Backpropagate hidden state gradients through RNN.
-  Channel *dfv = rnn_.Backpropagate(doutput);
-
-  // Backpropagate feature vector gradients to feature embeddings.
-  features_.Backpropagate(dfv);
 }
 
 }  // namespace nlp

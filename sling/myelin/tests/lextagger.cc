@@ -22,8 +22,9 @@
 #include "sling/myelin/gradient.h"
 #include "sling/myelin/learning.h"
 #include "sling/myelin/profile.h"
+#include "sling/myelin/rnn.h"
 #include "sling/nlp/document/document.h"
-#include "sling/nlp/document/lexical-encoder.h"
+#include "sling/nlp/document/lexical-features.h"
 #include "sling/nlp/document/lexicon.h"
 #include "sling/util/mutex.h"
 #include "sling/util/thread.h"
@@ -72,6 +73,141 @@ DEFINE_string(normalization, "d", "Token normalization");
 DEFINE_int32(tagset_align, 1, "Tag set size alignment");
 
 int64 flops_counter = 0;
+
+// A lexical encoder is a lexical feature extractor with an RNN on top.
+class LexicalEncoder {
+ public:
+  LexicalEncoder(const string &lexname = "features",
+                 const string &rnnname = "encoder")
+      : lex_(lexname), rnn_(rnnname) {}
+
+  // Add RNN layers to encoder.
+  void AddLayers(int layers, const myelin::RNN::Spec spec, bool bidir) {
+    rnn_.AddLayers(layers, spec, bidir);
+  }
+
+  // Build flow for lexical encoder. Returns the output variables from the RNN.
+  myelin::RNN::Variables Build(myelin::Flow *flow,
+                               const LexicalFeatures::Spec &spec,
+                               Vocabulary::Iterator *words, bool learn);
+
+  // Initialize feature extractor from existing model.
+  void Initialize(const myelin::Network &net);
+
+  // Lexical features module.
+  const LexicalFeatures &lex() const { return lex_; }
+
+  // Save lexicon.
+  void SaveLexicon(myelin::Flow *flow) const { lex_.SaveLexicon(flow); }
+
+  // Load lexicon.
+  void LoadLexicon(myelin::Flow *flow) { lex_.LoadLexicon(flow); }
+
+ private:
+  // Lexical feature extractor with embeddings.
+  LexicalFeatures lex_;
+
+  // RNN encoder.
+  myelin::RNNStack rnn_;
+
+  friend class LexicalEncoderInstance;
+  friend class LexicalEncoderLearner;
+};
+
+// Lexical encoder instance.
+class LexicalEncoderInstance {
+ public:
+  LexicalEncoderInstance(const LexicalEncoder &encoder)
+    : encoder_(encoder),
+      features_(encoder_.lex_),
+      rnn_(encoder_.rnn_),
+      fv_(encoder.lex().feature_vector()) {}
+
+  // Extract lexical features from a range of tokens in a document, map the
+  // features through the feature embeddings, and run the RNN encoder. Returns
+  // the channel for the hidden state of the RNN.
+  myelin::Channel *Compute(const Document &document, int begin, int end);
+
+ private:
+  const LexicalEncoder &encoder_;
+  LexicalFeatureExtractor features_;
+  myelin::RNNStackInstance rnn_;
+  myelin::Channel fv_;
+};
+
+// Lexical encoder learner.
+class LexicalEncoderLearner {
+ public:
+  LexicalEncoderLearner(const LexicalEncoder &encoder)
+      : encoder_(encoder),
+        features_(encoder.lex_),
+        rnn_(encoder_.rnn_) {}
+
+  // Compute hidden state for the RNN from input document.
+  myelin::Channel *Compute(const Document &document, int begin, int end);
+
+  // Backpropagate hidden state gradients.
+  void Backpropagate(myelin::Channel *doutput);
+
+  // Collect gradients.
+  void CollectGradients(std::vector<myelin::Instance *> *gradients) {
+    features_.CollectGradients(gradients);
+    rnn_.CollectGradients(gradients);
+  }
+
+  // Clear gradients.
+  void Clear() {
+    features_.Clear();
+    rnn_.Clear();
+  }
+
+ private:
+  const LexicalEncoder &encoder_;
+  LexicalFeatureLearner features_;
+  myelin::RNNStackLearner rnn_;
+};
+
+RNN::Variables LexicalEncoder::Build(Flow *flow,
+                                     const LexicalFeatures::Spec &spec,
+                                     Vocabulary::Iterator *words,
+                                     bool learn) {
+  if (words != nullptr) {
+    lex_.InitializeLexicon(words, spec.lexicon);
+  }
+  auto lexvars = lex_.Build(flow, spec, learn);
+  return rnn_.Build(flow, lexvars.fv, lexvars.dfv);
+}
+
+void LexicalEncoder::Initialize(const Network &net) {
+  lex_.Initialize(net);
+  rnn_.Initialize(net);
+}
+
+Channel *LexicalEncoderInstance::Compute(const Document &document,
+                                         int begin, int end) {
+  // Extract features and map through feature embeddings.
+  features_.Extract(document, begin, end, &fv_);
+
+  // Compute hidden states for RNN.
+  return rnn_.Compute(&fv_);
+}
+
+Channel *LexicalEncoderLearner::Compute(const Document &document,
+                                        int begin, int end) {
+  // Extract features and map through feature embeddings.
+  Channel *fv = features_.Extract(document, begin, end);
+
+  // Compute hidden states for RNN.
+  return rnn_.Compute(fv);
+}
+
+void LexicalEncoderLearner::Backpropagate(Channel *doutput) {
+  // Backpropagate hidden state gradients through RNN.
+  Channel *dfv = rnn_.Backpropagate(doutput);
+
+  // Backpropagate feature vector gradients to feature embeddings.
+  features_.Backpropagate(dfv);
+}
 
 double WallTime() {
   struct timeval tv;

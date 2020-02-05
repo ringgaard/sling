@@ -427,23 +427,25 @@ class Document {
 class DocumentIterator {
  public:
   // Initialize iterator for iterating over document based on break level.
-  DocumentIterator(const Document *document, BreakType brk)
-      : document_(document), brk_(brk) {
+  DocumentIterator(const Document *document, BreakType brk, int skip = 0)
+      : document_(document), brk_(brk), skip_(skip) {
     next();
   }
 
   // Check if there are more parts in the document
-  bool more() const { return begin_ < document_->num_tokens(); }
+  bool more() const { return begin_ < document_->length(); }
 
   // Go to next document part.
   void next() {
-    // Check if we are already done.
-    int n = document_->num_tokens();
-    if (begin_ >= n) return;
+    int n = document_->length();
+    do {
+      // Check if we are already done.
+      if (begin_ >= n) return;
 
-    // Find start of next part.
-    begin_ = end_++;
-    while (end_ < n && document_->token(end_).brk() < brk_) end_++;
+      // Find start of next part.
+      begin_ = end_++;
+      while (end_ < n && document_->token(end_).brk() < brk_) end_++;
+    } while ((document_->token(begin_).style() & skip_) != 0);
   }
 
   // Return the span for the current document part.
@@ -460,6 +462,9 @@ class DocumentIterator {
   // Break level for document parts.
   BreakType brk_;
 
+  // Token style mask for skipping parts.
+  int skip_;
+
   // Current document part.
   int begin_ = 0;
   int end_ = 0;
@@ -473,8 +478,8 @@ class DocumentIterator {
 //
 class SentenceIterator : public DocumentIterator {
  public:
-  SentenceIterator(const Document *document)
-      : DocumentIterator(document, SENTENCE_BREAK) {}
+  SentenceIterator(const Document *document, int skip = 0)
+      : DocumentIterator(document, SENTENCE_BREAK, skip) {}
 };
 
 inline const Token &Span::first() const { return document_->token(begin_); }

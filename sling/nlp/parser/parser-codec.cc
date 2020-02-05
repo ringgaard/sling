@@ -12,13 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/nlp/parser/encoder.h"
+#include "sling/nlp/parser/parser-codec.h"
 
-REGISTER_COMPONENT_REGISTRY("token encoder", sling::nlp::Encoder);
-
-namespace sling {
-namespace nlp {
-
-}  // namespace nlp
-}  // namespace sling
+REGISTER_COMPONENT_REGISTRY("parser encoder", sling::nlp::ParserEncoder);
+REGISTER_COMPONENT_REGISTRY("parser decoder", sling::nlp::ParserDecoder);
 

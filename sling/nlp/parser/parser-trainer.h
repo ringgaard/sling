@@ -26,7 +26,7 @@
 #include "sling/myelin/compute.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-corpus.h"
-#include "sling/nlp/parser/encoder.h"
+#include "sling/nlp/parser/parser-codec.h"
 #include "sling/nlp/parser/frame-evaluation.h"
 #include "sling/nlp/parser/parser-action.h"
 #include "sling/nlp/parser/parser-features.h"
@@ -157,8 +157,8 @@ class ParserTrainer : public task::LearnerTask {
   // Reset parser state between sentences in a document.
   bool sentence_reset_ = false;
 
-  // Skip section titles.
-  bool skip_section_titles_ = false;
+  // Sentence skip mask. Default to skipping headings.
+  int skip_mask_ = HEADING_BEGIN;
 
   // Neural network.
   myelin::Flow flow_;
@@ -166,9 +166,9 @@ class ParserTrainer : public task::LearnerTask {
   myelin::Compiler compiler_;
   myelin::Optimizer *optimizer_ = nullptr;
 
-  // Document input encoder.
+  // Document encoder.
   string encoder_type_ = "lexrnn";
-  Encoder *encoder_ = nullptr;
+  ParserEncoder *encoder_ = nullptr;
 
   // Parser feature model.
   ParserFeatureModel feature_model_;

@@ -37,6 +37,7 @@ ParserTrainer::~ParserTrainer() {
 void ParserTrainer::Run(task::Task *task) {
   // Get training parameters.
   task->Fetch("encoder", &encoder_type_);
+
   task->Fetch("mark_depth", &mark_depth_);
   task->Fetch("mark_dim", &mark_dim_);
   task->Fetch("frame_limit", &frame_limit_);
@@ -49,15 +50,15 @@ void ParserTrainer::Run(task::Task *task) {
   task->Fetch("activations_dim", &activations_dim_);
   task->Fetch("link_dim_token", &link_dim_token_);
   task->Fetch("link_dim_step", &link_dim_step_);
+  task->Fetch("ff_l2reg", &ff_l2reg_);
 
   task->Fetch("seed", &seed_);
   task->Fetch("batch_size", &batch_size_);
   task->Fetch("learning_rate", &learning_rate_);
   task->Fetch("min_learning_rate", &min_learning_rate_);
   task->Fetch("learning_rate_cliff", &learning_rate_cliff_);
-  task->Fetch("ff_l2reg", &ff_l2reg_);
 
-  task->Fetch("skip_section_titles", &skip_section_titles_);
+  task->Fetch("skip_mask", &skip_mask_);
 
   // Save task parameters.
   for (auto &p : task->parameters()) {
@@ -106,7 +107,7 @@ void ParserTrainer::Run(task::Task *task) {
   }
 
   // Set up encoder.
-  encoder_ = Encoder::Create(encoder_type_);
+  encoder_ = ParserEncoder::Create(encoder_type_);
   encoder_->Setup(task);
 
   // Custom parser model initialization. This should set up the word and role
@@ -164,7 +165,7 @@ void ParserTrainer::Run(task::Task *task) {
 
 void ParserTrainer::Worker(int index, Network *model) {
   // Create instances.
-  EncoderLearner *encoder = encoder_->CreateLearner();
+  ParserEncoder::Learner *encoder = encoder_->CreateLearner();
   Instance gdecoder(gdecoder_);
   std::vector<DelegateLearnerInstance *> delegates;
   for (auto *d : delegates_) delegates.push_back(d->CreateInstance());
@@ -196,13 +197,7 @@ void ParserTrainer::Worker(int index, Network *model) {
       num_tokens_->Increment(original->length());
       Document document(*original, false);
 
-      for (SentenceIterator s(original); s.more(); s.next()) {
-        // Skip section titles if requested.
-        if (skip_section_titles_) {
-          const Token &first = document.token(s.begin());
-          if (first.style() & HEADING_BEGIN) continue;
-        }
-
+      for (SentenceIterator s(original, skip_mask_); s.more(); s.next()) {
         // Generate transitions for sentence.
         GenerateTransitions(*original, s.begin(), s.end(), &transitions);
         num_transitions_->Increment(transitions.size());
@@ -225,7 +220,7 @@ void ParserTrainer::Worker(int index, Network *model) {
         }
 
         // Run document through encoder to produce contextual token encodings.
-        auto *encodings = encoder->Compute(document, s.begin(), s.end());
+        auto *encodings = encoder->Encode(document, s.begin(), s.end());
 
         // Run decoder and delegates on all steps in the transition sequence.
         int t = 0;
@@ -300,20 +295,14 @@ void ParserTrainer::Worker(int index, Network *model) {
 
 void ParserTrainer::Parse(Document *document) const {
   // Create delegates.
-  EncoderInstance *encoder = encoder_->CreateInstance();
+  ParserEncoder::Predictor *encoder = encoder_->CreatePredictor();
   std::vector<DelegateLearnerInstance *> delegates;
   for (auto *d : delegates_) delegates.push_back(d->CreateInstance());
 
   // Parse each sentence of the document.
-  for (SentenceIterator s(document); s.more(); s.next()) {
-    // Skip section titles if requested.
-    if (skip_section_titles_) {
-      const Token &first = document->token(s.begin());
-      if (first.style() & HEADING_BEGIN) continue;
-    }
-
+  for (SentenceIterator s(document, skip_mask_); s.more(); s.next()) {
     // Run the encoder on tokens in the sentence.
-    auto *encodings = encoder->Compute(*document, s.begin(), s.end());
+    auto *encodings = encoder->Encode(*document, s.begin(), s.end());
 
     // Initialize decoder.
     ParserState state(document, s.begin(), s.end());
@@ -535,6 +524,7 @@ void ParserTrainer::Save(const string &filename) {
   // Make parser specification frame.
   Store store(&commons_);
   Builder spec(&store);
+  spec.Set("skip_mask", skip_mask_);
 
   // Save encoder.
   Builder encoder_spec(&store);
@@ -546,7 +536,6 @@ void ParserTrainer::Save(const string &filename) {
   decoder_spec.Add("type", "transition");
   decoder_spec.Set("frame_limit", frame_limit_);
   decoder_spec.Set("sentence_reset", sentence_reset_);
-  decoder_spec.Set("skip_section_titles", skip_section_titles_);
 
   Handles role_list(&store);
   roles_.GetList(&role_list);

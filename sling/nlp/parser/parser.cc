@@ -47,6 +47,7 @@ void Parser::Load(Store *store, const string &model) {
   StringDecoder spec_decoder(store, spec_data->data, spec_data->size);
   Frame spec = spec_decoder.Decode().AsFrame();
   CHECK(spec.valid());
+  skip_mask_ = spec.GetInt("skip_mask", skip_mask_);
 
   // Get parser model hyperparameters.
   Frame hparams = spec.GetFrame("hparams");
@@ -62,7 +63,7 @@ void Parser::Load(Store *store, const string &model) {
   Frame encoder_spec = spec.GetFrame("encoder");
   CHECK(encoder_spec.valid());
   string encoder_type = encoder_spec.GetString("type");
-  encoder_ = Encoder::Create(encoder_type);
+  encoder_ = ParserEncoder::Create(encoder_type);
   encoder_->Load(&flow, encoder_spec);
   encoder_->Initialize(network_);
 
@@ -71,7 +72,6 @@ void Parser::Load(Store *store, const string &model) {
   CHECK(decoder_spec.valid());
   CHECK_EQ(decoder_spec.GetText("type"), "transition");
   int frame_limit = decoder_spec.GetInt("frame_limit");
-  skip_section_titles_ = decoder_spec.GetBool("skip_section_titles", true);
 
   // Initialize roles.
   Array roles = decoder_spec.Get("roles").AsArray();
@@ -88,7 +88,8 @@ void Parser::Load(Store *store, const string &model) {
     Frame delegate_spec(store, delegates.get(i));
     string type = delegate_spec.GetString("type");
     Delegate *delegate = Delegate::Create(type);
-    delegate->Initialize(network_, delegate_spec);
+    delegate->Load(&flow, delegate_spec);
+    delegate->Initialize(network_);
     delegates_.push_back(delegate);
   }
 
@@ -98,21 +99,15 @@ void Parser::Load(Store *store, const string &model) {
 }
 
 void Parser::Parse(Document *document) const {
-  // Create encoder and delegate instances.
-  std::vector<DelegateInstance *> delegates;
-  for (auto *d : delegates_) delegates.push_back(d->CreateInstance());
-  EncoderInstance *encoder = encoder_->CreateInstance();
+  // Create encoder and delegate predictors.
+  std::vector<Delegate::Predictor *> delegates;
+  for (auto *d : delegates_) delegates.push_back(d->CreatePredictor());
+  ParserEncoder::Predictor *encoder = encoder_->CreatePredictor();
 
   // Parse each sentence of the document.
-  for (SentenceIterator s(document); s.more(); s.next()) {
-    // Skip section titles if requested.
-    if (skip_section_titles_) {
-      const Token &first = document->token(s.begin());
-      if (first.style() & HEADING_BEGIN) continue;
-    }
-
+  for (SentenceIterator s(document, skip_mask_); s.more(); s.next()) {
     // Get encodings for tokens in the sentence.
-    Channel *encodings = encoder->Compute(*document, s.begin(), s.end());
+    Channel *encodings = encoder->Encode(*document, s.begin(), s.end());
 
     // Initialize decoder.
     ParserState state(document, s.begin(), s.end());

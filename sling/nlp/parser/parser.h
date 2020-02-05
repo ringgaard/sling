@@ -27,40 +27,14 @@
 #include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
 #include "sling/nlp/document/document.h"
-#include "sling/nlp/parser/encoder.h"
+#include "sling/nlp/parser/delegate.h"
+#include "sling/nlp/parser/parser-codec.h"
 #include "sling/nlp/parser/parser-features.h"
 #include "sling/nlp/parser/parser-state.h"
 #include "sling/nlp/parser/roles.h"
 
 namespace sling {
 namespace nlp {
-
-class DelegateInstance;
-
-// Interface for delegate component at prediction time.
-class Delegate : public Component<Delegate> {
- public:
-  virtual ~Delegate() = default;
-
-  // Initialize delegate from specification.
-  virtual void Initialize(const myelin::Network &network,
-                          const Frame &spec) = 0;
-
-  // Create new delegate instance for action prediction.
-  virtual DelegateInstance *CreateInstance() = 0;
-};
-
-#define REGISTER_DELEGATE(type, component) \
-    REGISTER_COMPONENT_TYPE(sling::nlp::Delegate, type, component)
-
-// Interface for delegate instance at prediction time.
-class DelegateInstance {
- public:
-  virtual ~DelegateInstance() = default;
-
-  // Predict action for delegate.
-  virtual void Predict(float *activations, ParserAction *action) = 0;
-};
 
 // Frame semantics parser.
 class Parser {
@@ -88,8 +62,8 @@ class Parser {
   // Parser network.
   myelin::Network network_;
 
-  // Token encoder.
-  Encoder *encoder_ = nullptr;
+  // Parser encoder.
+  ParserEncoder *encoder_ = nullptr;
 
   // Parser decoder.
   myelin::Cell *decoder_ = nullptr;
@@ -106,8 +80,8 @@ class Parser {
   // Hyperparameters for parser model.
   std::vector<std::pair<string, string>> hparams_;
 
-  // Skip section titles.
-  bool skip_section_titles_ = false;
+  // Sentence skip mask. Default to skipping headings.
+  int skip_mask_ = HEADING_BEGIN;
 };
 
 }  // namespace nlp

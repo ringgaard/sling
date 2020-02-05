@@ -64,9 +64,22 @@ cc_library(
 )
 
 cc_library(
-  name = "encoder",
-  srcs = ["encoder.cc"],
-  hdrs = ["encoder.h"],
+  name = "delegate",
+  srcs = ["delegate.cc"],
+  hdrs = ["delegate.h"],
+  deps = [
+    ":parser-action",
+    "//sling/base",
+    "//sling/base:registry",
+    "//sling/frame:object",
+    "//sling/myelin:compute",
+  ],
+)
+
+cc_library(
+  name = "parser-codec",
+  srcs = ["parser-codec.cc"],
+  hdrs = ["parser-codec.h"],
   deps = [
     "//sling/base",
     "//sling/base:registry",
@@ -84,7 +97,8 @@ cc_library(
   srcs = ["parser.cc"],
   hdrs = ["parser.h"],
   deps = [
-    ":encoder",
+    ":delegate",
+    ":parser-codec",
     ":parser-features",
     ":parser-state",
     ":roles",
@@ -128,8 +142,8 @@ cc_library(
 
 cc_library(
   name = "transition-generator",
-  hdrs = ["transition-generator.h"],
   srcs = ["transition-generator.cc"],
+  hdrs = ["transition-generator.h"],
   deps = [
     ":parser-action",
     "//sling/base",
@@ -144,10 +158,25 @@ cc_library(
   name = "lexrnn-encoder",
   srcs = ["lexrnn-encoder.cc"],
   deps = [
-    ":encoder",
-    "//sling/nlp/document:lexical-encoder",
+    ":parser-codec",
+    "//sling/myelin:rnn",
+    "//sling/nlp/document:lexical-features",
   ],
   alwayslink = 1,
+)
+
+cc_library(
+  name = "transition-decoder",
+  srcs = ["transition-decoder.cc"],
+  hdrs = ["transition-decoder.h"],
+  deps = [
+    ":parser-action",
+    ":parser-codec",
+    ":parser-features",
+    ":roles",
+    "//sling/myelin:builder",
+    "//sling/myelin:gradient",
+  ],
 )
 
 cc_library(
@@ -155,9 +184,9 @@ cc_library(
   srcs = ["parser-trainer.cc"],
   hdrs = ["parser-trainer.h"],
   deps = [
-    ":encoder",
     ":frame-evaluation",
     ":parser-action",
+    ":parser-codec",
     ":parser-features",
     ":roles",
     "//sling/base",
@@ -192,9 +221,15 @@ cc_library(
 cc_library(
   name = "multiclass-delegate",
   srcs = ["multiclass-delegate.cc"],
+  hdrs = ["multiclass-delegate.h"],
   deps = [
     ":action-table",
-    ":parser",
+    ":delegate",
+    "//sling/base",
+    "//sling/myelin:flow",
+    "//sling/myelin:compute",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
   ],
   alwayslink = 1,
 )
@@ -218,30 +253,6 @@ cc_library(
     ":multiclass-learner",
     ":transition-generator",
     "//sling/nlp/kb:facts",
-  ],
-  alwayslink = 1,
-)
-
-cc_library(
-  name = "tagger-trainer",
-  srcs = ["tagger-trainer.cc"],
-  hdrs = ["tagger-trainer.h"],
-  deps = [
-    "frame-evaluation",
-    "//sling/base",
-    "//sling/frame:store",
-    "//sling/frame:serialization",
-    "//sling/myelin:builder",
-    "//sling/myelin:compiler",
-    "//sling/myelin:gradient",
-    "//sling/myelin:learning",
-    "//sling/nlp/document:document",
-    "//sling/nlp/document:document-corpus",
-    "//sling/nlp/document:lexical-encoder",
-    "//sling/nlp/document:lexicon",
-    "//sling/task:learner",
-    "//sling/util:mutex",
-    "//sling/util:unicode",
   ],
   alwayslink = 1,
 )

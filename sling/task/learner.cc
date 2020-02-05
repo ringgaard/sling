@@ -28,8 +28,9 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
   // Get training parameters.
   task->Fetch("epochs", &epochs_);
   task->Fetch("report_interval", &report_interval_);
-  task->Fetch("rampup", &rampup_);
   task->Fetch("checkpoint_interval", &checkpoint_interval_);
+  task->Fetch("rampup", &rampup_);
+  warmup_ = task->Get("warmup", rampup_);
 
   // Initialize statistics counters.
   num_workers_ = task->GetCounter("workers");
@@ -44,7 +45,8 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
   int threads = task->Get("workers", jit::CPU::Processors());
   WorkerPool pool;
   pool.Start(threads, [this, model](int index) {
-    for (int i = 0; i < index * rampup_ && !done_; ++i) sleep(1);
+    int delay = index == 0 ? 0 : (index - 1) * rampup_ + warmup_;
+    for (int i = 0; i < delay && !done_; ++i) sleep(1);
     num_workers_->Increment();
     if (!done_) Worker(index, model);
   });
