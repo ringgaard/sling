@@ -22,12 +22,29 @@
 namespace sling {
 namespace nlp {
 
+ParserState::ParserState()
+    : document_(nullptr),
+      begin_(-1),
+      end_(-1),
+      current_(-1),
+      step_(0) {}
+
 ParserState::ParserState(Document *document, int begin, int end)
     : document_(document),
       begin_(begin),
       end_(end),
       current_(begin),
       step_(0) {}
+
+void ParserState::Switch(Document *document, int begin, int end, bool reset) {
+  document_ = document;
+  begin_ = begin;
+  end_ = end;
+  current_ = begin;
+  step_ = 0;
+  marks_.clear();
+  if (reset) attention_.clear();
+}
 
 void ParserState::Apply(const ParserAction &action) {
   switch (action.type) {

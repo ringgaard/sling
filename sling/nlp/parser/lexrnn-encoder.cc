@@ -25,7 +25,7 @@ using namespace sling::myelin;
 class LexicalRNNEncoder : public ParserEncoder {
  public:
   // Set up lexical RNN encoder for training.
-  void Setup(task::Task *task) override {
+  void Setup(task::Task *task, Store *commons) override {
     // Set up encoder lexicon.
     string normalization = task->Get("normalization", "d");
     spec_.lexicon.normalization = ParseNormalization(normalization);
@@ -118,9 +118,9 @@ class LexicalRNNEncoder : public ParserEncoder {
   }
 
   // Encoder predictor.
-  class LexicalRNNEncoderPredictor : public Predictor {
+  class Predictor : public ParserEncoder::Predictor {
    public:
-    LexicalRNNEncoderPredictor(const LexicalRNNEncoder *encoder)
+    Predictor(const LexicalRNNEncoder *encoder)
         : features_(encoder->lex_),
           rnn_(encoder->rnn_),
           fv_(encoder->lex_.feature_vector()) {}
@@ -139,14 +139,12 @@ class LexicalRNNEncoder : public ParserEncoder {
     Channel fv_;
   };
 
-  Predictor *CreatePredictor() override { 
-    return new LexicalRNNEncoderPredictor(this); 
-  }
-  
+  Predictor *CreatePredictor() override { return new Predictor(this); }
+
   // Encoder learner.
-  class LexicalRNNEncoderLearner : public Learner {
+  class Learner : public ParserEncoder::Learner {
    public:
-    LexicalRNNEncoderLearner(const LexicalRNNEncoder *encoder)
+    Learner(const LexicalRNNEncoder *encoder)
         : features_(encoder->lex_),
           rnn_(encoder->rnn_) {}
 
@@ -176,9 +174,7 @@ class LexicalRNNEncoder : public ParserEncoder {
     RNNStackLearner rnn_;
   };
 
-  Learner *CreateLearner() override { 
-    return new LexicalRNNEncoderLearner(this); 
-  }
+  Learner *CreateLearner() override { return new Learner(this); }
 
  private:
   // Lexical feature specification for encoder.

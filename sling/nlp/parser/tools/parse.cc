@@ -266,7 +266,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Output profile report.
-  LogProfile(parser.network());
+  LogProfile(parser.model());
 
   return 0;
 }

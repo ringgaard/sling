@@ -45,8 +45,8 @@ class Delegate : public Component<Delegate> {
   // Load delegate from flow.
   virtual void Load(myelin::Flow *flow, const Frame &spec) = 0;
 
-  // Initialize delegate from specification.
-  virtual void Initialize(const myelin::Network &net) = 0;
+  // Initialize delegate from model.
+  virtual void Initialize(const myelin::Network &model) = 0;
 
   // Interface for delegate instance at prediction time.
   class Predictor {

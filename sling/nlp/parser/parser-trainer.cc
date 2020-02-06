@@ -108,7 +108,7 @@ void ParserTrainer::Run(task::Task *task) {
 
   // Set up encoder.
   encoder_ = ParserEncoder::Create(encoder_type_);
-  encoder_->Setup(task);
+  encoder_->Setup(task, &commons_);
 
   // Custom parser model initialization. This should set up the word and role
   // vocabularies as well as the delegate cascade.

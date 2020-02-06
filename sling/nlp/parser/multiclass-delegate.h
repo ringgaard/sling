@@ -42,75 +42,36 @@ class MultiClassDelegate : public Delegate {
              bool learn) override;
   void Save(myelin::Flow *flow, Builder *spec) override;
   void Load(myelin::Flow *flow, const Frame &spec) override;
-  void Initialize(const myelin::Network &net) override;
+  void Initialize(const myelin::Network &model) override;
 
   // Multi-class delegate predictor.
-  class MultiClassPredictor : public Predictor {
+  class Predictor : public Delegate::Predictor {
    public:
-    MultiClassPredictor(MultiClassDelegate *delegate) 
+    Predictor(MultiClassDelegate *delegate)
       : delegate_(delegate), data_(delegate->cell_) {}
-      
 
-    void Predict(float *activation, ParserAction *action) override {
-      // Predict action from activations.
-      data_.SetReference(delegate_->input_, activation);
-      data_.Compute();
-      int argmax = *data_.Get<int>(delegate_->output_);
-      *action = delegate_->actions_.Action(argmax);
-    }
+    void Predict(float *activation, ParserAction *action) override;
 
    private:
     MultiClassDelegate *delegate_;
     myelin::Instance data_;
   };
-  
-  Predictor *CreatePredictor() override { 
-    return new MultiClassPredictor(this); 
-  }
+
+  Predictor *CreatePredictor() override { return new Predictor(this); }
 
   // Multi-class delegate learner.
-  class MultiClassLearner : public Learner {
+  class Learner : public Delegate::Learner {
    public:
-    MultiClassLearner(MultiClassDelegate *delegate)
+    Learner(MultiClassDelegate *delegate)
         : delegate_(delegate),
           forward_(delegate->cell_),
           backward_(delegate->dcell_) {}
 
-    void Predict(float *activation, ParserAction *action) override {
-      // Predict action from activations.
-      forward_.SetReference(delegate_->input_, activation);
-      forward_.Compute();
-      int argmax = *forward_.Get<int>(delegate_->output_);
-      *action = delegate_->actions_.Action(argmax);
-    }
-
+    void Predict(float *activation, ParserAction *action) override;
     float Compute(float *activation,
                   float *dactivation,
-                  const ParserAction &action) override {
-      // Look up index for action. Skip backpropagation if action is unknown.
-      int target = delegate_->actions_.Index(action);
-      if (target == -1) return 0.0;
-
-      // Compute logits from activation.
-      forward_.SetReference(delegate_->input_, activation);
-      forward_.Compute();
-
-      // Compute loss.
-      float *logits = forward_.Get<float>(delegate_->logits_);
-      float *dlogits = backward_.Get<float>(delegate_->dlogits_);
-      float loss = delegate_->loss_.Compute(logits, target, dlogits);
-
-      // Backpropagate loss.
-      backward_.Set(delegate_->primal_, &forward_);
-      backward_.SetReference(delegate_->dinput_, dactivation);
-      backward_.Compute();
-
-      return loss;
-    }
-    
-    void CollectGradients(Gradients *gradients) override {
-      gradients->push_back(&backward_);
-    }
+                  const ParserAction &action) override;
+    void CollectGradients(Gradients *gradients) override;
 
    private:
     MultiClassDelegate *delegate_;
@@ -118,9 +79,7 @@ class MultiClassDelegate : public Delegate {
     myelin::Instance backward_;
   };
 
-  Learner *CreateLearner() override { 
-    return new MultiClassLearner(this);
-  }
+  Learner *CreateLearner() override { return new Learner(this); }
 
  protected:
   string name_;                        // delegate name

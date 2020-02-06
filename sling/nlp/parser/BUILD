@@ -97,30 +97,13 @@ cc_library(
   srcs = ["parser.cc"],
   hdrs = ["parser.h"],
   deps = [
-    ":delegate",
     ":parser-codec",
-    ":parser-features",
-    ":parser-state",
-    ":roles",
     "//sling/base",
-    "//sling/base:registry",
     "//sling/frame:serialization",
     "//sling/frame:store",
     "//sling/myelin:compiler",
-    "//sling/myelin:profile",
     "//sling/nlp/document",
   ],
-)
-
-cc_library(
-  name = "parser-annotator",
-  srcs = ["parser-annotator.cc"],
-  deps = [
-    ":parser",
-    ":multiclass-delegate",
-    "//sling/nlp/document:annotator",
-  ],
-  alwayslink = 1,
 )
 
 cc_library(
@@ -151,31 +134,6 @@ cc_library(
     "//sling/frame:serialization",
     "//sling/frame:store",
     "//sling/nlp/document:document",
-  ],
-)
-
-cc_library(
-  name = "lexrnn-encoder",
-  srcs = ["lexrnn-encoder.cc"],
-  deps = [
-    ":parser-codec",
-    "//sling/myelin:rnn",
-    "//sling/nlp/document:lexical-features",
-  ],
-  alwayslink = 1,
-)
-
-cc_library(
-  name = "transition-decoder",
-  srcs = ["transition-decoder.cc"],
-  hdrs = ["transition-decoder.h"],
-  deps = [
-    ":parser-action",
-    ":parser-codec",
-    ":parser-features",
-    ":roles",
-    "//sling/myelin:builder",
-    "//sling/myelin:gradient",
   ],
 )
 
@@ -219,22 +177,6 @@ cc_library(
 )
 
 cc_library(
-  name = "multiclass-delegate",
-  srcs = ["multiclass-delegate.cc"],
-  hdrs = ["multiclass-delegate.h"],
-  deps = [
-    ":action-table",
-    ":delegate",
-    "//sling/base",
-    "//sling/myelin:flow",
-    "//sling/myelin:compute",
-    "//sling/myelin:gradient",
-    "//sling/myelin:learning",
-  ],
-  alwayslink = 1,
-)
-
-cc_library(
   name = "caspar-trainer",
   srcs = ["caspar-trainer.cc"],
   deps = [
@@ -255,5 +197,95 @@ cc_library(
     "//sling/nlp/kb:facts",
   ],
   alwayslink = 1,
+)
+
+cc_library(
+  name = "lexrnn-encoder",
+  srcs = ["lexrnn-encoder.cc"],
+  deps = [
+    ":parser-codec",
+    "//sling/myelin:rnn",
+    "//sling/nlp/document:lexical-features",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "transition-decoder",
+  srcs = ["transition-decoder.cc"],
+  hdrs = ["transition-decoder.h"],
+  deps = [
+    ":delegate",
+    ":parser-action",
+    ":parser-codec",
+    ":parser-features",
+    ":roles",
+    ":transition-generator",
+    "//sling/myelin:builder",
+    "//sling/myelin:gradient",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "multiclass-delegate",
+  srcs = ["multiclass-delegate.cc"],
+  hdrs = ["multiclass-delegate.h"],
+  deps = [
+    ":action-table",
+    ":delegate",
+    "//sling/base",
+    "//sling/myelin:flow",
+    "//sling/myelin:compute",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "caspar-decoder",
+  srcs = ["caspar-decoder.cc"],
+  deps = [
+    ":transition-decoder",
+    ":multiclass-delegate",
+    ":transition-generator",
+    "//sling/nlp/document:document-corpus",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "knolex-decoder",
+  srcs = ["knolex-decoder.cc"],
+  deps = [
+    ":transition-decoder",
+    ":multiclass-delegate",
+    ":transition-generator",
+    "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "parser-annotator",
+  srcs = ["parser-annotator.cc"],
+  deps = [
+    ":parser",
+    "//sling/nlp/document:annotator",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "components",
+  deps = [
+    ":parser-annotator",
+    ":lexrnn-encoder",
+    ":transition-decoder",
+    ":caspar-decoder",
+    ":knolex-decoder",
+    ":multiclass-delegate",
+  ],
 )
 

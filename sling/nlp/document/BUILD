@@ -250,7 +250,7 @@ cc_binary(
 cc_library(
   name = "annotator-components",
   deps = [
-    "//sling/nlp/parser:parser-annotator",
+    "//sling/nlp/parser:components",
     "//sling/nlp/silver:annotators",
   ],
 )

@@ -15,6 +15,7 @@
 #ifndef SLING_NLP_PARSER_TRANSITION_DECODER_H_
 #define SLING_NLP_PARSER_TRANSITION_DECODER_H_
 
+#include "sling/nlp/parser/delegate.h"
 #include "sling/nlp/parser/parser-action.h"
 #include "sling/nlp/parser/parser-codec.h"
 #include "sling/nlp/parser/parser-features.h"
@@ -25,36 +26,80 @@ namespace nlp {
 
 class TransitionDecoder : public ParserDecoder {
  public:
+  ~TransitionDecoder();
+
   // Decoder interface.
-  void Setup(task::Task *task) override;
-  void Build(myelin::Flow *flow, 
-             myelin::Flow::Variable *encodings, 
+  void Setup(task::Task *task, Store *commons) override;
+  void Build(myelin::Flow *flow,
+             myelin::Flow::Variable *encodings,
              bool learn) override;
   void Save(myelin::Flow *flow, Builder *spec) override;
   void Load(myelin::Flow *flow, const Frame &spec) override;
-  void Initialize(const myelin::Network &net) override;
+  void Initialize(const myelin::Network &model) override;
 
+  // Convert document part to transition sequence. The method can be overridden
+  // in subclasses to implement cascasded transition systems.
+  typedef std::vector<ParserAction> Transitions;
+  virtual void GenerateTransitions(const Document &document,
+                                   int begin, int end,
+                                   Transitions *transitions) const;
   // Decoder predictor.
-  class TransitionDecoderPredictor : public Predictor {
+  class Predictor : public ParserDecoder::Predictor {
    public:
-    TransitionDecoderPredictor(const TransitionDecoder *decoder) {}
+    Predictor(const TransitionDecoder *decoder);
+    ~Predictor();
+
+    void Switch(Document *document) override;
+    void Decode(int begin, int end, myelin::Channel *encodings) override;
+
+  private:
+    const TransitionDecoder *decoder_;
+    ParserState state_;
+    ParserFeatureExtractor features_;
+    myelin::Instance data_;
+    myelin::Channel activations_;
+    std::vector<Delegate::Predictor *> delegates_;
   };
 
-  Predictor *CreatePredictor() override { 
-    return new TransitionDecoderPredictor(this); 
-  }
-  
+  Predictor *CreatePredictor() override { return new Predictor(this); }
+
   // Decoder learner.
-  class TransitionDecoderLearner : public Learner {
+  class Learner : public ParserDecoder::Learner {
    public:
-    TransitionDecoderLearner(const TransitionDecoder *encoder) {}
+    Learner(const TransitionDecoder *encoder);
+    ~Learner();
+
+    void Switch(Document *document) override;
+    myelin::Channel *Learn(int begin, int end,
+                           myelin::Channel *encodings) override;
+    void UpdateLoss(float *loss_sum, int *loss_count) override;
+    void CollectGradients(Gradients *gradients) override;
+
+   private:
+    const TransitionDecoder *decoder_;
+    std::vector<Delegate::Learner *> delegates_;
+
+    Document *golden_ = nullptr;    // not owned
+    Document *document_ = nullptr;  // owned
+
+    ParserState state_;
+    ParserFeatureExtractor features_;
+
+    Transitions transitions_;
+    std::vector<myelin::Instance *> decoders_;
+    myelin::Instance gdecoder_;
+
+    myelin::Channel activations_;
+    myelin::Channel dactivations_;
+    myelin::Channel dencodings_;
+
+    float loss_sum_ = 0.0;
+    int loss_count_ = 0;
   };
 
-  Learner *CreateLearner() override { 
-    return new TransitionDecoderLearner(this); 
-  }
+  Learner *CreateLearner() override { return new Learner(this); }
 
- private:
+ protected:
   // Model hyperparameters.
   int mark_depth_ = 1;
   int frame_limit_ = 5;
@@ -71,12 +116,12 @@ class TransitionDecoder : public ParserDecoder {
   float ff_l2reg_ = 0.0;
 
   // Decoder model.
-  myelin::Cell *decoder_ = nullptr;
+  myelin::Cell *cell_ = nullptr;
   myelin::Tensor *encodings_ = nullptr;
   myelin::Tensor *activations_ = nullptr;
   myelin::Tensor *activation_ = nullptr;
 
-  myelin::Cell *gdecoder_ = nullptr;
+  myelin::Cell *gcell_ = nullptr;
   myelin::Tensor *primal_ = nullptr;
   myelin::Tensor *dencodings_ = nullptr;
   myelin::Tensor *dactivations_ = nullptr;
@@ -90,6 +135,9 @@ class TransitionDecoder : public ParserDecoder {
 
   // Reset parser state between sentences in a document.
   bool sentence_reset_ = true;
+
+  // Delegates.
+  std::vector<Delegate *> delegates_;
 };
 
 }  // namespace nlp

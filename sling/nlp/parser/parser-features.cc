@@ -135,7 +135,7 @@ void ParserFeatureExtractor::Extract(myelin::Instance *instance) {
           if (evoked != -1) evoked -= state_->begin() + 1;
         }
 
-        // Get the step numbers that focused the frame.
+        // Get the step number that focused the frame.
         focused = attention.focused;
       }
       if (token_attention != nullptr) token_attention[d] = evoked;

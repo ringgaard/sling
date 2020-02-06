@@ -19,19 +19,13 @@
 #include <utility>
 #include <vector>
 
-#include "sling/base/logging.h"
-#include "sling/base/registry.h"
 #include "sling/base/types.h"
 #include "sling/frame/store.h"
 #include "sling/myelin/compiler.h"
 #include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
 #include "sling/nlp/document/document.h"
-#include "sling/nlp/parser/delegate.h"
 #include "sling/nlp/parser/parser-codec.h"
-#include "sling/nlp/parser/parser-features.h"
-#include "sling/nlp/parser/parser-state.h"
-#include "sling/nlp/parser/roles.h"
 
 namespace sling {
 namespace nlp {
@@ -39,6 +33,9 @@ namespace nlp {
 // Frame semantics parser.
 class Parser {
  public:
+  // List of hyperparameter names and values.
+  typedef std::vector<std::pair<string, string>> HyperParams;
+
   ~Parser();
 
   // Load and initialize parser model.
@@ -47,38 +44,27 @@ class Parser {
   // Parse document.
   void Parse(Document *document) const;
 
-  // Neural network for parser.
-  const myelin::Network &network() const { return network_; }
+  // Neural network model for parser.
+  const myelin::Network &model() const { return model_; }
 
   // Hyperparameters for parser model.
-  const std::vector<std::pair<string, string>> &hparams() const {
-    return hparams_;
-  }
+  const HyperParams &hparams() const { return hparams_; }
 
  private:
   // JIT compiler.
   myelin::Compiler compiler_;
 
   // Parser network.
-  myelin::Network network_;
+  myelin::Network model_;
 
   // Parser encoder.
   ParserEncoder *encoder_ = nullptr;
 
-  // Parser decoder.
-  myelin::Cell *decoder_ = nullptr;
-
-  // Parser feature model for feature extraction in the decoder.
-  ParserFeatureModel feature_model_;
-
-  // Cascade with parser action prediction delegates.
-  std::vector<Delegate *> delegates_;
-
-  // Set of roles considered.
-  RoleSet roles_;
+  // Parser encoder.
+  ParserDecoder *decoder_ = nullptr;
 
   // Hyperparameters for parser model.
-  std::vector<std::pair<string, string>> hparams_;
+  HyperParams hparams_;
 
   // Sentence skip mask. Default to skipping headings.
   int skip_mask_ = HEADING_BEGIN;
