@@ -34,11 +34,9 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
 
   // Initialize statistics counters.
   num_workers_ = task->GetCounter("workers");
-  num_epochs_total_ = task->GetCounter("epochs_total");
-  num_epochs_completed_ = task->GetCounter("epochs_completed");
+  num_epochs_ = task->GetCounter("epochs");
 
   epoch_ = 0;
-  num_epochs_total_->Increment(epochs_);
 
   // Start training threads.
   LOG(INFO) << "Starting training";
@@ -88,7 +86,7 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
 }
 
 bool LearnerTask::EpochCompleted() {
-  num_epochs_completed_->Increment();
+  num_epochs_->Increment();
   int64 current_epoch = ++epoch_;
   if (current_epoch >= epochs_) done_ = true;
   bool eval = current_epoch % report_interval_ == 0;

@@ -45,9 +45,12 @@ vocabulary = wf.resource(
 parser_model = wf.resource(modelfn, format="flow")
 
 # Parser trainer task.
-trainer = wf.task("knolex-trainer")
+trainer = wf.task("parser-trainer")
 
 trainer.add_params({
+  "encoder": "lexrnn",
+  "decoder": "knolex",
+
   "rnn_type": 1,
   "rnn_dim": rnn_dim,
   "rnn_highways": True,

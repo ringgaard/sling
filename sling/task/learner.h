@@ -73,8 +73,7 @@ class LearnerTask : public Process {
 
   // Staticstics.
   Counter *num_workers_ = nullptr;
-  Counter *num_epochs_total_ = nullptr;
-  Counter *num_epochs_completed_ = nullptr;
+  Counter *num_epochs_ = nullptr;
 };
 
 // Initialize optimizer from task parameters.

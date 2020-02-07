@@ -438,14 +438,15 @@ class DocumentIterator {
   // Go to next document part.
   void next() {
     int n = document_->length();
-    do {
-      // Check if we are already done.
-      if (begin_ >= n) return;
-
+    while (begin_ < n) {
       // Find start of next part.
       begin_ = end_++;
+      if (begin_ >= n) break;
       while (end_ < n && document_->token(end_).brk() < brk_) end_++;
-    } while ((document_->token(begin_).style() & skip_) != 0);
+
+      // Stop unless document part should be skipped.
+      if ((document_->token(begin_).style() & skip_) == 0) break;
+    }
   }
 
   // Return the span for the current document part.
