@@ -2,18 +2,7 @@ import sling
 import sling.flags as flags
 import sling.task.workflow as workflow
 
-flags.define("--accurate", default=False,action='store_true')
-
 flags.parse()
-
-if flags.arg.accurate:
-  modelfn = "local/data/e/knolex/knolex-accurate-en.flow"
-  rnn_layers = 3
-  rnn_dim = 192
-else:
-  modelfn = "local/data/e/knolex/knolex-en.flow"
-  rnn_layers = 1
-  rnn_dim = 128
 
 # Start up workflow system.
 workflow.startup()
@@ -42,7 +31,7 @@ vocabulary = wf.resource(
   format="textmap/word"
 )
 
-parser_model = wf.resource(modelfn, format="flow")
+parser_model = wf.resource("local/data/e/knolex/knolex-en.flow", format="flow")
 
 # Parser trainer task.
 trainer = wf.task("parser-trainer")
@@ -52,9 +41,9 @@ trainer.add_params({
   "decoder": "knolex",
 
   "rnn_type": 1,
-  "rnn_dim": rnn_dim,
+  "rnn_dim": 128,
   "rnn_highways": True,
-  "rnn_layers": rnn_layers,
+  "rnn_layers": 1,
   "dropout": 0.2,
   "ff_l2reg": 0.0001,
 

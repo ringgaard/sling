@@ -101,6 +101,8 @@ bool DecodeURLComponent(const char *url, int length, string *output) {
       char x2 = *url++;
       if (!ascii_isxdigit(x2)) return false;
       output->push_back((HexDigit(x1) << 4) + HexDigit(x2));
+    } else if (c == '+') {
+      output->push_back(' ');
     } else {
       output->push_back(c);
     }

@@ -201,7 +201,7 @@ RecordReader::RecordReader(File *file,
   // Allocate input buffer.
   CHECK_GE(options.buffer_size, sizeof(FileHeader));
   input_.resize(options.buffer_size);
-  CHECK(Fill());
+  CHECK(Fill(sizeof(FileHeader)));
 
   // Read record file header.
   CHECK_GE(input_.size(), 8)
@@ -247,10 +247,10 @@ Status RecordReader::Close() {
   return Status::OK;
 }
 
-Status RecordReader::Fill() {
+Status RecordReader::Fill(uint64 sizehint) {
   input_.flush();
-  uint64 bytes;
-  Status s = file_->Read(input_.end(), input_.remaining(), &bytes);
+  uint64 bytes = readahead_ ? input_.remaining() : sizehint;
+  Status s = file_->Read(input_.end(), bytes, &bytes);
   if (!s.ok()) return s;
   input_.appended(bytes);
   return Status::OK;
@@ -260,7 +260,7 @@ Status RecordReader::Read(Record *record) {
   for (;;) {
     // Fill input buffer if it is nearly empty.
     if (input_.size() < MAX_HEADER_LEN) {
-      Status s = Fill();
+      Status s = Fill(MAX_HEADER_LEN);
       if (!s.ok()) return s;
     }
 
@@ -289,7 +289,7 @@ Status RecordReader::Read(Record *record) {
       }
 
       // Read more data into input buffer.
-      Status s = Fill();
+      Status s = Fill(hdr.record_size);
       if (!s.ok()) return s;
 
       // Make sure we have enough data.
@@ -324,6 +324,7 @@ Status RecordReader::Read(Record *record) {
     }
 
     position_ += hdr.record_size;
+    readahead_ = true;
     return Status::OK;
   }
 }
@@ -340,6 +341,7 @@ Status RecordReader::Skip(int64 n) {
   // Clear input buffer and seek to new position.
   int64 offset = n - input_.size();
   input_.clear();
+  readahead_ = false;
   return file_->Skip(offset);
 }
 
@@ -355,6 +357,7 @@ Status RecordReader::Seek(uint64 pos) {
 
   // Clear input buffer and seek to new position.
   input_.clear();
+  readahead_ = false;
   return file_->Seek(pos);
 }
 

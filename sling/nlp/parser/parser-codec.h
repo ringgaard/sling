@@ -84,7 +84,7 @@ class ParserEncoder : public Component<ParserEncoder> {
 #define REGISTER_PARSER_ENCODER(type, component) \
     REGISTER_COMPONENT_TYPE(sling::nlp::ParserEncoder, type, component)
 
-// An decoder takes sentences represented as sequences of token embeddings and
+// A decoder takes sentences represented as sequences of token embeddings and
 // decodes these into annotations on the document. This is the upper part in a
 // sequence-to-sequence model.
 class ParserDecoder : public Component<ParserDecoder> {

@@ -239,7 +239,7 @@ class RecordReader : public RecordFile {
 
  private:
   // Fill input buffer.
-  Status Fill();
+  Status Fill(uint64 sizehint);
 
   // Input file.
   File *file_;
@@ -252,6 +252,10 @@ class RecordReader : public RecordFile {
 
   // Current position in record file.
   uint64 position_;
+
+  // In readahead mode the input buffer is filled to prefetch the next records.
+  // The readahead flag is cleared when seeking to a new position in the file.
+  bool readahead_ = true;
 
   // Record file meta information.
   FileHeader info_;
@@ -357,6 +361,9 @@ class RecordWriter : public RecordFile {
   // Close record file.
   Status Close();
 
+  // Flush output buffer to disk.
+  Status Flush();
+
   // Write record to record file.
   Status Write(const Record &record);
 
@@ -378,9 +385,6 @@ class RecordWriter : public RecordFile {
                          const RecordFileOptions &options);
 
  private:
-  // Flush output buffer to disk.
-  Status Flush();
-
   // Write index to disk.
   Status WriteIndex();
 

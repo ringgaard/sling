@@ -41,7 +41,7 @@ class DatabaseIndex {
    // Create new index file.
    DatabaseIndex(const string &filename, int64 capacity);
 
-   // Flish and close database index.
+   // Flush and close database index.
    ~DatabaseIndex();
 
    // Flush changes to disk.
@@ -52,7 +52,7 @@ class DatabaseIndex {
 
    // Look up value in index. Search for first value if pos is not specified.
    // Otherwise, search for the next value after position. Return the (next)
-   // value for the key and update posotion or NVAL if no match is found.
+   // value for the key and update position or NVAL if no match is found.
    uint64 Get(uint64 key, uint64 *pos);
    uint64 Get(uint64 key) {
      uint64 pos = NPOS;
@@ -79,7 +79,7 @@ class DatabaseIndex {
 
   // Special hash values for empty and deleted slots in the index.
   static const uint64 EMPTY = 0;
-  static const uint64 DELETED = 0;
+  static const uint64 DELETED = NVAL;
 
   // Index file header.
   struct Header {
