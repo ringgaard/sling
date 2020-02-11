@@ -121,7 +121,7 @@ class FrameEvaluation {
   struct Benchmark {
     Benchmark() {}
     Benchmark(const string &name) : name(name) {}
-    
+
     // Computes F-score from precision and recall.
     double fscore() const {
       double p = precision.accuracy();
@@ -178,7 +178,7 @@ class FrameEvaluation {
 
     // Get evaluation scores.
     void GetScores(Scores *scores) const;
-    
+
     // Get all used benchmarks.
     void GetBenchmarks(Benchmarks *benchmarks) const;
   };

@@ -93,6 +93,22 @@ cc_library(
   alwayslink = 1,
 )
 
+# Decoders.
+
+cc_library(
+  name = "bio-decoder",
+  srcs = ["bio-decoder.cc"],
+  deps = [
+    ":parser-codec",
+    "//sling/base",
+    "//sling/frame:store",
+    "//sling/myelin:builder",
+    "//sling/myelin:gradient",
+    "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+
 # Transition-based parsing.
 
 cc_library(
@@ -247,11 +263,19 @@ cc_library(
 cc_library(
   name = "components",
   deps = [
+    # Annotators.
     ":parser-annotator",
+
+    # Encoders.
     ":lexrnn-encoder",
+
+    # Decoders.
     ":transition-decoder",
     ":caspar-decoder",
     ":knolex-decoder",
+    ":bio-decoder",
+
+    # Delegates.
     ":multiclass-delegate",
   ],
 )

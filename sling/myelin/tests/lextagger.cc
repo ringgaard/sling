@@ -110,14 +110,14 @@ class LexicalEncoder {
   // RNN encoder.
   myelin::RNNStack rnn_;
 
-  friend class LexicalEncoderInstance;
+  friend class LexicalEncoderPredictor;
   friend class LexicalEncoderLearner;
 };
 
 // Lexical encoder instance.
-class LexicalEncoderInstance {
+class LexicalEncoderPredictor {
  public:
-  LexicalEncoderInstance(const LexicalEncoder &encoder)
+  LexicalEncoderPredictor(const LexicalEncoder &encoder)
     : encoder_(encoder),
       features_(encoder_.lex_),
       rnn_(encoder_.rnn_),
@@ -131,7 +131,7 @@ class LexicalEncoderInstance {
  private:
   const LexicalEncoder &encoder_;
   LexicalFeatureExtractor features_;
-  myelin::RNNStackInstance rnn_;
+  myelin::RNNStackPredictor rnn_;
   myelin::Channel fv_;
 };
 
@@ -150,15 +150,9 @@ class LexicalEncoderLearner {
   void Backpropagate(myelin::Channel *doutput);
 
   // Collect gradients.
-  void CollectGradients(std::vector<myelin::Instance *> *gradients) {
+  void CollectGradients(Instances *gradients) {
     features_.CollectGradients(gradients);
     rnn_.CollectGradients(gradients);
-  }
-
-  // Clear gradients.
-  void Clear() {
-    features_.Clear();
-    rnn_.Clear();
   }
 
  private:
@@ -183,7 +177,7 @@ void LexicalEncoder::Initialize(const Network &net) {
   rnn_.Initialize(net);
 }
 
-Channel *LexicalEncoderInstance::Compute(const Document &document,
+Channel *LexicalEncoderPredictor::Compute(const Document &document,
                                          int begin, int end) {
   // Extract features and map through feature embeddings.
   features_.Extract(document, begin, end, &fv_);
@@ -492,10 +486,10 @@ class Tagger {
     Channel grad(model_.dencoding);
 
     // Allocate gradients.
-    std::vector<Instance *> gradients;
+    Instances gradients;
     Instance gtagger(model_.dtagger);
     encoder.CollectGradients(&gradients);
-    gradients.push_back(&gtagger);
+    gradients.Add(&gtagger);
 
     std::mt19937 prng(FLAGS_seed + index);
     std::uniform_real_distribution<float> rndprob(0.0, 1.0);
@@ -550,8 +544,7 @@ class Tagger {
         num_tokens_ += local_tokens;
         if (FLAGS_lock) update_mu_.Unlock();
 
-        gtagger.Clear();
-        encoder.Clear();
+        gradients.Clear();
         local_loss_sum = 0;
         local_loss_count = 0;
         local_tokens = 0;
@@ -586,7 +579,7 @@ class Tagger {
   // Evaulate model on corpus returning accuracy.
   float Evaluate(Corpus *corpus) {
     // Create tagger instance with channels.
-    LexicalEncoderInstance encoder(encoder_);
+    LexicalEncoderPredictor encoder(encoder_);
     Instance tagger(model_.tagger);
 
     // Run tagger on corpus and compare with gold tags.

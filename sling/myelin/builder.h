@@ -336,6 +336,11 @@ class FlowBuilder : public Scope {
   Variable *Broadcast(Variable *x, const Shape &shape) {
     return Op("Identity", {x}, x->type, shape);
   }
+  Variable *Resize(Variable *x, const Shape &shape) {
+    auto *y = Op("Resize", {x}, x->type, shape);
+    y->producer->SetAttr("shape", shape);
+    return y;
+  }
 
   // Gather for embedding lookups.
   Variable *Gather(Variable *M, Variable *f) {

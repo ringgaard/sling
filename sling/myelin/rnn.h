@@ -25,9 +25,6 @@
 namespace sling {
 namespace myelin {
 
-class RNNInstance;
-class RNNLearner;
-
 // Recurrent Neural Network (RNN) cell.
 struct RNN {
   // RNN types.
@@ -171,14 +168,14 @@ class RNNLayer {
   RNN rl_;            // right-to-left RNN (if bidirectional)
   RNNMerger merger_;  // channel merger for bidirectional RNN
 
-  friend class RNNInstance;
+  friend class RNNPredictor;
   friend class RNNLearner;
 };
 
-// Instance of RNN layer for inference.
-class RNNInstance {
+// Instance of RNN layer for prediction.
+class RNNPredictor {
  public:
-  RNNInstance(const RNNLayer *rnn);
+  RNNPredictor(const RNNLayer *rnn);
 
   // Compute RNN over input sequence and return output sequence.
   Channel *Compute(Channel *input);
@@ -215,11 +212,8 @@ class RNNLearner {
   // gradient of the input sequence.
   Channel *Backpropagate(Channel *doutput);
 
-  // Clear accumulated gradients.
-  void Clear();
-
   // Collect instances with gradient updates.
-  void CollectGradients(std::vector<Instance *> *gradients);
+  void CollectGradients(Instances *gradients);
 
  private:
   // Generate uniform random number between 0 and 1.
@@ -295,16 +289,16 @@ class RNNStack {
 };
 
 // Multi-layer RNN instance for prediction.
-class RNNStackInstance {
+class RNNStackPredictor {
  public:
-  RNNStackInstance(const RNNStack &stack);
+  RNNStackPredictor(const RNNStack &stack);
 
   // Compute RNN over input sequence and return output sequence.
   Channel *Compute(Channel *input);
 
  private:
   // RNN prediction instances for all layers.
-  std::vector<RNNInstance> layers_;
+  std::vector<RNNPredictor> layers_;
 };
 
 // Multi-layer RNN layer for learning.
@@ -319,11 +313,8 @@ class RNNStackLearner {
   // gradient of the input sequence.
   Channel *Backpropagate(Channel *doutput);
 
-  // Clear accumulated gradients.
-  void Clear();
-
   // Collect instances with gradient updates.
-  void CollectGradients(std::vector<Instance *> *gradients);
+  void CollectGradients(Instances *gradients);
 
  private:
   // RNN learner instances for all layers.

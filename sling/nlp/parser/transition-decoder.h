@@ -26,7 +26,7 @@ namespace nlp {
 
 class TransitionDecoder : public ParserDecoder {
  public:
-  ~TransitionDecoder();
+  ~TransitionDecoder() override;
 
   // Decoder interface.
   void Setup(task::Task *task, Store *commons) override;
@@ -47,7 +47,7 @@ class TransitionDecoder : public ParserDecoder {
   class Predictor : public ParserDecoder::Predictor {
    public:
     Predictor(const TransitionDecoder *decoder);
-    ~Predictor();
+    ~Predictor() override;
 
     void Switch(Document *document) override;
     void Decode(int begin, int end, myelin::Channel *encodings) override;
@@ -66,14 +66,14 @@ class TransitionDecoder : public ParserDecoder {
   // Decoder learner.
   class Learner : public ParserDecoder::Learner {
    public:
-    Learner(const TransitionDecoder *encoder);
-    ~Learner();
+    Learner(const TransitionDecoder *decoder);
+    ~Learner() override;
 
     void Switch(Document *document) override;
     myelin::Channel *Learn(int begin, int end,
                            myelin::Channel *encodings) override;
     void UpdateLoss(float *loss_sum, int *loss_count) override;
-    void CollectGradients(Gradients *gradients) override;
+    void CollectGradients(myelin::Instances *gradients) override;
 
    private:
     const TransitionDecoder *decoder_;

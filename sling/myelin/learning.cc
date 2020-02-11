@@ -167,7 +167,7 @@ void Optimizer::Initialize(const Network &network) {
   InitializeOptimizer();
 }
 
-void Optimizer::Apply(const std::vector<Instance *> &gradients) {
+void Optimizer::Apply(const Instances &gradients) {
   // Set instance references to gradients in update.
   for (Instance *g : gradients) {
     auto f = refs_.find(g->cell());
@@ -266,10 +266,6 @@ void MomentumOptimizer::InitializeOptimizer() {
   }
 }
 
-void MomentumOptimizer::Apply(const std::vector<Instance *> &gradients) {
-  Optimizer::Apply(gradients);
-}
-
 float MomentumOptimizer::DecayLearningRate() {
   float &lr = *data_->Get<float>(alpha_);
   lr *= decay_;
@@ -341,10 +337,6 @@ void AdamOptimizer::InitializeOptimizer() {
   auto *beta2_t = GetParameter(name_ + "/beta2_t");
   *data_->Get<float>(beta1_t) = 1.0;
   *data_->Get<float>(beta2_t) = 1.0;
-}
-
-void AdamOptimizer::Apply(const std::vector<Instance *> &gradients) {
-  Optimizer::Apply(gradients);
 }
 
 float AdamOptimizer::DecayLearningRate() {

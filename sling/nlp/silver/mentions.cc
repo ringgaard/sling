@@ -1420,7 +1420,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
 bool SpanAnnotator::IsPerson(const Frame &item) const {
   for (const Slot &s : item) {
     if ((s.name == n_instance_of_ || s.name == Handle::isa()) &&
-        (s.value == n_human_ || 
+        (s.value == n_human_ ||
          s.value ==  n_person_ ||
          s.value == n_fictional_human_)) {
       return true;

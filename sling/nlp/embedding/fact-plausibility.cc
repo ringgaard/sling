@@ -195,7 +195,8 @@ class FactPlausibilityTrainer : public LearnerTask {
     int *hypothesis = scorer.Get<int>(flow_.hypothesis);
     float *logits = scorer.Get<float>(flow_.logits);
     float *dlogits = gscorer.Get<float>(flow_.d_logits);
-    std::vector<Instance *> gradients{&gscorer};
+    Instances gradients;
+    gradients.Add(&gscorer);
 
     for (;;) {
       // Compute gradients for epoch.

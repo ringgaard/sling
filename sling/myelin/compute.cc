@@ -886,7 +886,7 @@ void InstanceArray::Resize(size_t size) {
     *data = realloc(*data, bytes);
     end_ = begin_ + cap;
     limit_ = begin_ + size;
-    while (end_ < limit_) new (end_++) Instance(cell_);
+    while (end_ < limit_) new(end_++) Instance(cell_);
   }
 }
 

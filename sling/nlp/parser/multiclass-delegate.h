@@ -71,7 +71,7 @@ class MultiClassDelegate : public Delegate {
     float Compute(float *activation,
                   float *dactivation,
                   const ParserAction &action) override;
-    void CollectGradients(Gradients *gradients) override;
+    void CollectGradients(myelin::Instances *gradients) override;
 
    private:
     MultiClassDelegate *delegate_;

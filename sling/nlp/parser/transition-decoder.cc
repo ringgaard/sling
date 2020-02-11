@@ -394,8 +394,8 @@ void TransitionDecoder::Learner::UpdateLoss(float *loss_sum, int *loss_count) {
   loss_count_ = 0;
 }
 
-void TransitionDecoder::Learner::CollectGradients(Gradients *gradients) {
-  gradients->push_back(&gdecoder_);
+void TransitionDecoder::Learner::CollectGradients(Instances *gradients) {
+  gradients->Add(&gdecoder_);
   for (auto *d : delegates_) d->CollectGradients(gradients);
 }
 

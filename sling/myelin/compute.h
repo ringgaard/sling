@@ -1179,7 +1179,22 @@ class Instance {
   const Cell *cell_;
 };
 
-// Resizable array of cell instances.
+// Array of references to cell instances. The instances are not owned by the
+// array.
+class Instances : public std::vector<Instance *> {
+ public:
+  // Add instace to array.
+  void Add(Instance *data) {
+    push_back(data);
+  }
+
+  // Clear all instances.
+  void Clear() {
+    for (Instance *data : *this) data->Clear();
+  }
+};
+
+// Resizable array of cell instances. The instances are owned by the array.
 class InstanceArray {
  public:
   // Create empty array of cell instances.

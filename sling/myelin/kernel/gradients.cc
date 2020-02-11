@@ -480,6 +480,14 @@ void reshape_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Reshape(g->d(y), g->v(x)->shape));
 }
 
+// y = resize(x, shape)
+// dx = resize(dy, shape(x))
+void resize_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  g->add(x, g->Resize(g->d(y), g->v(x)->shape));
+}
+
 // v = gather(M, f)
 // dM = scatter(dv, f)
 void gather_grad(Flow::Operation *op, Gradients *g) {
@@ -647,6 +655,7 @@ void RegisterStandardGradients() {
   RegisterGradient("Norm", norm_grad);
   RegisterGradient("Identity", identity_grad);
   RegisterGradient("Reshape", reshape_grad);
+  RegisterGradient("Resize", resize_grad);
   RegisterGradient("Gather", gather_grad);
   RegisterGradient("GatherSum", gathersum_grad);
   RegisterGradient("Concat", concat_grad);

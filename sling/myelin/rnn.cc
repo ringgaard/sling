@@ -463,7 +463,7 @@ void RNNLayer::Initialize(const Network &net) {
   }
 }
 
-RNNInstance::RNNInstance(const RNNLayer *rnn)
+RNNPredictor::RNNPredictor(const RNNLayer *rnn)
     : rnn_(rnn),
       lr_(rnn->lr_.cell),
       lr_hidden_(rnn->lr_.h_out),
@@ -474,7 +474,7 @@ RNNInstance::RNNInstance(const RNNLayer *rnn)
       merger_(rnn->merger_.cell),
       merged_(rnn->merger_.merged) {}
 
-Channel *RNNInstance::Compute(Channel *input) {
+Channel *RNNPredictor::Compute(Channel *input) {
   // Get sequence length.
   int length = input->size();
   bool ctrl = rnn_->lr_.has_control();
@@ -768,14 +768,9 @@ Channel *RNNLearner::Backpropagate(Channel *doutput) {
   return &dinput_;
 }
 
-void RNNLearner::Clear() {
-  lr_bkw_.Clear();
-  if (rnn_->bidir_) rl_bkw_.Clear();
-}
-
-void RNNLearner::CollectGradients(std::vector<Instance *> *gradients) {
-  gradients->push_back(&lr_bkw_);
-  if (rnn_->bidir_) gradients->push_back(&rl_bkw_);
+void RNNLearner::CollectGradients(Instances *gradients) {
+  gradients->Add(&lr_bkw_);
+  if (rnn_->bidir_) gradients->Add(&rl_bkw_);
 }
 
 void RNNStack::AddLayer(const RNN::Spec &spec, bool bidir) {
@@ -809,16 +804,16 @@ void RNNStack::Initialize(const Network &net) {
   }
 }
 
-RNNStackInstance::RNNStackInstance(const RNNStack &stack) {
+RNNStackPredictor::RNNStackPredictor(const RNNStack &stack) {
   layers_.reserve(stack.layers().size());
   for (const RNNLayer &l : stack.layers()) {
     layers_.emplace_back(&l);
   }
 }
 
-Channel *RNNStackInstance::Compute(Channel *input) {
+Channel *RNNStackPredictor::Compute(Channel *input) {
   Channel *channel = input;
-  for (RNNInstance &l : layers_) {
+  for (RNNPredictor &l : layers_) {
     channel = l.Compute(channel);
   }
   return channel;
@@ -847,13 +842,7 @@ Channel *RNNStackLearner::Backpropagate(Channel *doutput) {
   return channel;
 }
 
-void RNNStackLearner::Clear() {
-  for (RNNLearner &l : layers_) {
-    l.Clear();
-  }
-}
-
-void RNNStackLearner::CollectGradients(std::vector<Instance *> *gradients) {
+void RNNStackLearner::CollectGradients(Instances *gradients) {
   for (RNNLearner &l : layers_) {
     l.CollectGradients(gradients);
   }

@@ -159,12 +159,9 @@ class LexicalFeatureLearner {
   void Backpropagate(myelin::Channel *dfv);
 
   // Collect gradients.
-  void CollectGradients(std::vector<myelin::Instance *> *gradients) {
-    gradients->push_back(&gradient_);
+  void CollectGradients(myelin::Instances *gradients) {
+    gradients->Add(&gradient_);
   }
-
-  // Clear gradients.
-  void Clear() { gradient_.Clear(); }
 
  private:
   const LexicalFeatures &lex_;

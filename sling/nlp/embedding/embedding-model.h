@@ -151,7 +151,7 @@ class DualEncoderBatch {
   void Reset();
 
   // Get gradient instances.
-  const std::vector<myelin::Instance *> &gradients() const {
+  const myelin::Instances &gradients() const {
     return gradients_;
   }
 
@@ -177,7 +177,7 @@ class DualEncoderBatch {
   // Gradient computation for encoders.
   myelin::Instance gleft_;
   myelin::Instance gright_;
-  std::vector<myelin::Instance *> gradients_{&gleft_, &gright_};
+  myelin::Instances gradients_;
 
   // Batch elements.
   std::vector<Element> elements_;

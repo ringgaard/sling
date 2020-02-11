@@ -115,8 +115,8 @@ float MultiClassDelegate::Learner::Compute(float *activation,
   return loss;
 }
 
-void MultiClassDelegate::Learner::CollectGradients(Gradients *gradients) {
-  gradients->push_back(&backward_);
+void MultiClassDelegate::Learner::CollectGradients(Instances *gradients) {
+  gradients->Add(&backward_);
 }
 
 REGISTER_DELEGATE("multiclass", MultiClassDelegate);

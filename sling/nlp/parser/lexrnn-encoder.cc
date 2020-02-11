@@ -135,7 +135,7 @@ class LexicalRNNEncoder : public ParserEncoder {
 
    private:
     LexicalFeatureExtractor features_;
-    RNNStackInstance rnn_;
+    RNNStackPredictor rnn_;
     Channel fv_;
   };
 
@@ -164,7 +164,7 @@ class LexicalRNNEncoder : public ParserEncoder {
       features_.Backpropagate(dfv);
     }
 
-    void CollectGradients(Gradients *gradients) override {
+    void CollectGradients(Instances *gradients) override {
       features_.CollectGradients(gradients);
       rnn_.CollectGradients(gradients);
     }

@@ -68,8 +68,7 @@ class Delegate : public Component<Delegate> {
                           float *dactivation,
                           const ParserAction &action) = 0;
     // Collect gradients.
-    typedef std::vector<myelin::Instance *> Gradients;
-    virtual void CollectGradients(Gradients *gradients) = 0;
+    virtual void CollectGradients(myelin::Instances *gradients) = 0;
   };
 
   // Create new delegate learner.

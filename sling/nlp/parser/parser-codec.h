@@ -73,8 +73,7 @@ class ParserEncoder : public Component<ParserEncoder> {
     virtual void Backpropagate(myelin::Channel *doutput) = 0;
 
     // Collect gradients.
-    typedef std::vector<myelin::Instance *> Gradients;
-    virtual void CollectGradients(Gradients *gradients) = 0;
+    virtual void CollectGradients(myelin::Instances *gradients) = 0;
   };
 
   // Create learner learner.
@@ -141,8 +140,7 @@ class ParserDecoder : public Component<ParserDecoder> {
     virtual void UpdateLoss(float *loss_sum, int *loss_count) = 0;
 
     // Collect gradients.
-    typedef std::vector<myelin::Instance *> Gradients;
-    virtual void CollectGradients(Gradients *gradients) = 0;
+    virtual void CollectGradients(myelin::Instances *gradients) = 0;
   };
 
   // Create learner learner.

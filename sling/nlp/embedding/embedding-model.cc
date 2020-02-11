@@ -138,6 +138,10 @@ DualEncoderBatch::DualEncoderBatch(const DualEncoderFlow &flow,
       gsim_(flow.gsim),
       gleft_(flow.left.backward),
       gright_(flow.right.backward) {
+  // Set up gradients.
+  gradients_.Add(&gleft_);
+  gradients_.Add(&gright_);
+
   // Allocate instances for all batch elements.
   elements_.reserve(flow.batch_size);
   for (int i = 0; i < flow.batch_size; ++i) elements_.emplace_back(flow);

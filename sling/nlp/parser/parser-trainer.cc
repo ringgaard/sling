@@ -152,14 +152,14 @@ class ParserTrainer : public task::LearnerTask {
     ParserDecoder::Learner *decoder = decoder_->CreateLearner();
 
     // Collect gradients.
-    std::vector<Instance *> gradients;
+    Instances gradients;
     encoder->CollectGradients(&gradients);
     decoder->CollectGradients(&gradients);
 
     // Training loop.
     for (;;) {
       // Prepare next batch.
-      for (auto *g : gradients) g->Clear();
+      gradients.Clear();
 
       for (int b = 0; b < batch_size_; b++) {
         // Get next training document.

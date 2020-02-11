@@ -35,7 +35,7 @@ class CorpusSplitter : public DocumentProcessor {
     // Get parameters.
     task->Fetch("split_ratio", &split_ratio_);
   }
- 
+
   void Process(Slice key, const Document &document) override {
     uint64 fp = Fingerprint(document.text().data(), document.text().size());
     if (fp % split_ratio_ == (split_ratio_ - 1)) {

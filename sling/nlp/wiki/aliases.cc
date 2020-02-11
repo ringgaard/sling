@@ -242,7 +242,7 @@ class AliasReducer : public task::Reducer {
       }
       return n;
     }
-    
+
     // Check if the other alias contains the same sequence of digits.
     bool SameDigits(const Alias *other) {
       int m = 0;
