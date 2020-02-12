@@ -156,3 +156,29 @@ class SilverWorkflow:
                                  "skip_section_titles": True,
                                })
 
+# Commands.
+
+def build_idf():
+  # Extract IDF table.
+  wf = SilverWorkflow("idf-table")
+  for language in flags.arg.languages:
+    log.info("Build " + language + " IDF table")
+    wf.build_idf(language=language)
+  run(wf.wf)
+
+def silver_annotation():
+  # Run silver-labeling of Wikipedia documents.
+  for language in flags.arg.languages:
+    log.info("Silver-label " + language + " wikipedia")
+    wf = SilverWorkflow(language + "-silver")
+    wf.silver_annotation(language=language)
+    run(wf.wf)
+
+def extract_parser_vocabulary():
+  # Extract vocabulary for parser.
+  for language in flags.arg.languages:
+    log.info("Extract " + language + " parser vocabulary")
+    wf = SilverWorkflow(language + "-parser-vocabulary")
+    wf.extract_vocabulary(language=language)
+    run(wf.wf)
+

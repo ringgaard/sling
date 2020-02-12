@@ -490,6 +490,21 @@ void MacroAssembler::LoadDynamicSize(Register dst, Tensor *tensor, int scalar) {
   Multiply(dst, scalar);
 }
 
+void MacroAssembler::LoadTensorAddressAndSize(Register addr,
+                                              Register size,
+                                              Tensor *tensor) {
+  if (tensor->dynamic()) {
+    CHECK(tensor->IsLocal());
+    movq(addr, Operand(datareg, tensor->offset()));
+    movq(size, Operand(addr, sizeof(char *)));
+    Multiply(size, tensor->ChannelElementSize());
+    movq(addr, Operand(addr));
+  } else {
+    LoadTensorAddress(addr, tensor);
+    movq(size, Immediate(tensor->size()));
+  }
+}
+
 void MacroAssembler::Copy(Register dst, int ddisp,
                           Register src, int sdisp,
                           int size) {

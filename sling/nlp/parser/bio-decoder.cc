@@ -19,6 +19,7 @@
 #include "sling/frame/store.h"
 #include "sling/myelin/builder.h"
 #include "sling/myelin/gradient.h"
+#include "sling/myelin/learning.h"
 #include "sling/nlp/kb/facts.h"
 #include "sling/nlp/parser/parser-codec.h"
 
@@ -66,6 +67,10 @@ class BIODecoder : public ParserDecoder {
 
   // Set up BIO decoder.
   void Setup(task::Task *task, Store *commons) override {
+    // Get parameters.
+    task->Fetch("max_sentence", &max_sentence_);
+    task->Fetch("ff_dims", &max_sentence_);
+
     // Get entity types.
     FactCatalog catalog;
     catalog.Init(commons);
@@ -97,18 +102,17 @@ class BIODecoder : public ParserDecoder {
     auto *sentence = f.Resize(tokens, {max_sentence_, token_dim});
     f.Name(sentence, "sentence");
 
-    // Feed-forward layer.
-    auto *W0 = f.Parameter("W0", DT_FLOAT, {token_dim, num_tags_});
-    auto *b0 = f.Parameter("b0", DT_FLOAT, {1, num_tags_});
-    f.RandomNormal(W0);
-    auto *scores = f.Name(f.Add(f.MatMul(sentence, W0), b0), "scores");
+    // Feed-forward layer(s).
+    std::vector<int> layers = ff_dims_;
+    layers.push_back(num_tags_);
+    auto *scores = f.Name(f.FFN(sentence, layers, true), "scores");
     scores->set_out();
 
     // Build tagger gradient.
-    //Flow::Variable *dscores = nullptr;
     if (learn) {
       Gradient(flow, f.func());
-      //dscores = flow->GradientVar(scores);
+      auto *dscores = flow->GradientVar(scores);
+      loss_.Build(flow, scores, dscores);
     }
 
     // Link recurrences.
@@ -181,6 +185,9 @@ class BIODecoder : public ParserDecoder {
   // Maximum sentence length.
   int max_sentence_ = 128;
 
+  // Feed-forward hidden layer dimensions.
+  std::vector<int> ff_dims_;
+
   // Tagger model.
   myelin::Cell *cell_ = nullptr;
   myelin::Tensor *encodings_ = nullptr;
@@ -190,6 +197,9 @@ class BIODecoder : public ParserDecoder {
   myelin::Tensor *primal_ = nullptr;
   myelin::Tensor *dencodings_ = nullptr;
   myelin::Tensor *dscores_ = nullptr;
+
+  // Loss function.
+  myelin::CrossEntropyLoss loss_;
 };
 
 REGISTER_PARSER_DECODER("bio", BIODecoder);

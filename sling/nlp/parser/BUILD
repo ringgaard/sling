@@ -104,6 +104,7 @@ cc_library(
     "//sling/frame:store",
     "//sling/myelin:builder",
     "//sling/myelin:gradient",
+    "//sling/myelin:learning",
     "//sling/nlp/kb:facts",
   ],
   alwayslink = 1,

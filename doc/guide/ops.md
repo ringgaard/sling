@@ -80,6 +80,7 @@
 * [Reference](#reference) (tensor reference)
 * [Relu](#relu) (rectified linear unit)
 * [Reshape](#) (tensor reshaping)
+* [Resize](#) (resize tensor by cropping and padding)
 * [Round](#round) (round to nearest)
 * [Rsqrt](#rsqrt) (reciprocal square root)
 * [Scatter](#) (scatter embedding)
@@ -1556,8 +1557,9 @@ of the slices `m[f[i]]`.
 
 ## Arrays
     Concat
-    OneHot
     Split
+    OneHot
+    Resize
 
 ## Linear algebra
 

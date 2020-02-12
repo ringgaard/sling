@@ -46,7 +46,7 @@ struct FactPlausibilityFlow : public Flow {
     auto *hencoding = f.GatherSum(embeddings, hypothesis);
 
     auto *fv = f.Concat({pencoding, hencoding});
-    logits = f.Name(f.FFLayers(fv, {dims * 2, 2}, -1, true, "Relu"), "logits");
+    logits = f.Name(f.FFN(fv, {dims * 2, 2}, true, "Relu"), "logits");
 
     if (learn) {
       // Create gradient computations.

@@ -390,6 +390,9 @@ class MacroAssembler : public jit::Assembler {
   // Load size of dynamic tensor (e.g. channel) and multiply with scalar.
   void LoadDynamicSize(Register dst, Tensor *tensor, int scalar = 1);
 
+  // Load address and size of (dynamic) tensor.
+  void LoadTensorAddressAndSize(Register addr, Register size, Tensor *tensor);
+
   // Emit breakpoint.
   void Breakpoint() { int3(); }
 

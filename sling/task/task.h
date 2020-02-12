@@ -366,6 +366,10 @@ class Task {
   float Get(const string &name, float defval);
   bool Get(const string &name, bool defval);
 
+  std::vector<string> Get(const string &name,
+                          const std::vector<string> &defval);
+  std::vector<int> Get(const string &name, const std::vector<int> &defval);
+
   // Fetch task parameter value.
   void Fetch(const string &name, string *value);
   void Fetch(const string &name, int32 *value);
@@ -373,6 +377,9 @@ class Task {
   void Fetch(const string &name, double *value);
   void Fetch(const string &name, float *value);
   void Fetch(const string &name, bool *value);
+
+  void Fetch(const string &name, std::vector<string> *value);
+  void Fetch(const string &name, std::vector<int> *value);
 
   // Add task parameter.
   void AddParameter(const string &name, const string &value);

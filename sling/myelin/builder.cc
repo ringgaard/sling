@@ -257,11 +257,10 @@ std::vector<Flow::Variable *> FlowBuilder::Split(Variable *v, int splits,
   return parts;
 }
 
-Flow::Variable *FlowBuilder::FFLayers(Variable *input,
-                                      std::vector<int> layers,
-                                      int hidden,
-                                      bool bias,
-                                      const string &activation) {
+Flow::Variable *FlowBuilder::FFN(Variable *input,
+                                 std::vector<int> layers,
+                                 bool bias,
+                                 const string &activation) {
   Variable *v = input;
   for (int l = 0; l < layers.size(); ++l) {
     // Get dimensions for next layer.
@@ -284,16 +283,9 @@ Flow::Variable *FlowBuilder::FFLayers(Variable *input,
     if (l != layers.size() - 1) {
       v = Op(activation, {v});
     }
-
-    // Make hidden layer a reference.
-    if (l == hidden) {
-      v = Name(Identity(v), "hidden");
-      v->set_in()->set_out()->set_ref();
-    }
   }
 
-  auto *logits = Name(Identity(v), "logits");
-  return logits;
+  return v;
 }
 
 }  // namespace myelin

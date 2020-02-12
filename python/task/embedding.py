@@ -210,3 +210,49 @@ class EmbeddingWorkflow:
       trainer.attach_output("model", model)
     return model
 
+# Commands.
+
+def extract_vocabulary():
+  # Extract vocabulary for word embeddings.
+  for language in flags.arg.languages:
+    log.info("Extract " + language + " vocabulary")
+    wf = EmbeddingWorkflow(language + "-vocabulary")
+    wf.extract_vocabulary(language=language)
+    run(wf.wf)
+
+def train_word_embeddings():
+  # Train word embeddings.
+  for language in flags.arg.languages:
+    log.info("Train " + language + " word embeddings")
+    wf = EmbeddingWorkflow(language + "-word-embeddings")
+    wf.train_word_embeddings(language=language)
+    run(wf.wf)
+
+def extract_fact_lexicon():
+  # Extract vocabulary for fact and category embeddings.
+  log.info("Extract fact and category lexicons")
+  wf = EmbeddingWorkflow("fact-lexicon")
+  wf.extract_fact_lexicon()
+  run(wf.wf)
+
+def extract_facts():
+  # Extract facts from knowledge base.
+  log.info("Extract facts from knowledge base")
+  wf = EmbeddingWorkflow("fact-extraction")
+  wf.extract_facts()
+  run(wf.wf)
+
+def train_fact_embeddings():
+  # Train fact and category embeddings.
+  log.info("Train fact and category embeddings")
+  wf = EmbeddingWorkflow("fact-embeddings")
+  wf.train_fact_embeddings()
+  run(wf.wf)
+
+def train_fact_plausibility():
+  # Train fact plausibility model.
+  log.info("Train fact plausibility model")
+  wf = EmbeddingWorkflow("plausibility")
+  wf.train_fact_plausibility()
+  run(wf.wf)
+

@@ -733,3 +733,104 @@ class WikiWorkflow:
       builder.attach_output("repository", repo)
     return repo
 
+# Commands.
+
+wikidata_import = False
+wikipedia_import = False
+
+def build_wiki():
+  pass
+
+def import_wikidata():
+  # Trigger import of wikidata dump.
+  global wikidata_import
+  wikidata_import = True
+
+def import_wikipedia():
+  # Trigger import of wikipedia dump.
+  global wikipedia_import
+  wikipedia_import = True
+
+def import_wiki():
+  wf = WikiWorkflow("wiki-import")
+
+  # Import wikidata.
+  if wikidata_import:
+    log.info("Import wikidata")
+    wf.wikidata()
+
+  # Import wikipedia(s).
+  if wikipedia_import:
+    for language in flags.arg.languages:
+      log.info("Import " + language + " wikipedia")
+      wf.wikipedia(language=language)
+
+  run(wf.wf)
+
+def parse_wikipedia():
+  # Convert wikipedia pages to SLING documents.
+  for language in flags.arg.languages:
+    log.info("Parse " + language + " wikipedia")
+    wf = WikiWorkflow(language + "-wikipedia-parsing")
+    wf.parse_wikipedia(language=language)
+    run(wf.wf)
+
+def merge_categories():
+  # Merge categories from wikipedias.
+  log.info("Merge wikipedia categories")
+  wf = WikiWorkflow("category-merging")
+  wf.merge_wikipedia_categories()
+  run(wf.wf)
+
+def invert_categories():
+  # Invert categories.
+  log.info("Invert categories")
+  wf = WikiWorkflow("category-inversion")
+  wf.invert_wikipedia_categories()
+  run(wf.wf)
+
+def extract_wikilinks():
+  # Extract link graph.
+  log.info("Extract link graph")
+  wf = WikiWorkflow("link-graph")
+  wf.extract_links()
+  run(wf.wf)
+
+def fuse_items():
+  # Fuse items.
+  log.info("Fuse items")
+  wf = WikiWorkflow("fuse-items")
+  wf.fuse_items()
+  run(wf.wf)
+
+def build_kb():
+  # Build knowledge base repository.
+  log.info("Build knowledge base repository")
+  wf = WikiWorkflow("knowledge-base")
+  wf.build_knowledge_base()
+  run(wf.wf)
+
+def extract_names():
+  # Extract item names from wikidata and wikipedia.
+  for language in flags.arg.languages:
+    log.info("Extract " + language + " names")
+    wf = WikiWorkflow(language + "-name-extraction")
+    wf.extract_names(language=language)
+    run(wf.wf)
+
+def build_nametab():
+  # Build name table.
+  for language in flags.arg.languages:
+    log.info("Build " + language + " name table")
+    wf = WikiWorkflow(language + "-name-table")
+    wf.build_name_table(language=language)
+    run(wf.wf)
+
+def build_phrasetab():
+  # Build phrase table.
+  for language in flags.arg.languages:
+    log.info("Build " + language + " phrase table")
+    wf = WikiWorkflow(language + "-phrase-table")
+    wf.build_phrase_table(language=language)
+    run(wf.wf)
+

@@ -405,14 +405,13 @@ class FlowBuilder : public Scope {
     return size == 1 ? Gather(M, f) : GatherSum(M, f);
   }
 
-  // Feed-forward (FF) layer(s).
-  Variable *FFLayers(Variable *input,
-                     std::vector<int> layers,
-                     int hidden = -1,
-                     bool bias = false,
-                     const string &activation = "Relu");
-  Variable *FFLayer(Variable *input, int size, bool bias = false) {
-    return FFLayers(input, {size}, -1, bias);
+  // Feed-forward (FF) network.
+  Variable *FFN(Variable *input,
+                std::vector<int> layers,
+                bool bias = false,
+                const string &activation = "Relu");
+  Variable *FFN(Variable *input, int size, bool bias = false) {
+    return FFN(input, {size}, bias);
   }
 
   // Return function for builder.

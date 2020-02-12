@@ -125,6 +125,9 @@ class ExpandDims : public Kernel {
 // Kernel for resizing the input by padding or cropping.
 class Resize : public Kernel {
  public:
+  string Name() override { return "Resize"; }
+  string Operation() override { return "Resize"; }
+
   bool Supports(Step *step) override {
     // Check inputs and outputs.
     if (step->indegree() != 1 || step->outdegree() != 1) return false;
@@ -137,7 +140,9 @@ class Resize : public Kernel {
   void Adjust(Step *step) override {
     Tensor *x = step->input(0);
     Tensor *y = step->output(0);
-    step->AllowInPlace(0, 0, x->elements() == y->elements());
+    if (!x->dynamic() && !y->dynamic()) {
+      step->AllowInPlace(0, 0, x->elements() == y->elements());
+    }
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
@@ -147,7 +152,10 @@ class Resize : public Kernel {
     bool shared = x->SharedWith(y);
     bool pad = y->size() > x->size();
     bool crop = y->size() < x->size();
-    if (shared && !pad && !crop) {
+    bool dynamic = x->dynamic() || y->dynamic();
+    if (dynamic) {
+      step->set_variant("dyn");
+    } else if (shared && !pad && !crop) {
       step->set_variant("nop");
       return;
     } else if (!shared) {
@@ -164,7 +172,31 @@ class Resize : public Kernel {
     Register cnt = masm->rr().alloc_fixed(rcx);
     Register acc = masm->rr().alloc_fixed(rax);
 
-    if (shared) {
+    if (dynamic) {
+      // Resize dynamically-sized tensor.
+      Register xsize = masm->rr().alloc();
+      Register ysize = masm->rr().alloc();
+
+      // Load tensors and (dynamic) sizes.
+      __ LoadTensorAddressAndSize(src, xsize, x);
+      __ LoadTensorAddressAndSize(dst, ysize, y);
+
+      // Copy input to output.
+      __ movq(cnt, xsize);
+      __ cmpq(cnt, ysize);
+      __ cmovq(less, cnt, ysize);
+      __ repmovsb();
+
+      // Pad output if needed.
+      Label skip;
+      __ movq(cnt, ysize);
+      __ subq(cnt, xsize);
+      __ j(less_equal, &skip);
+      __ xorq(acc, acc);
+      __ repstosb();
+      __ bind(&skip);
+
+    } else if (shared) {
      // Pad output if needed.
      if (pad) {
        __ LoadTensorAddress(dst, y);
@@ -1983,6 +2015,7 @@ void RegisterArrayKernels(Library *library) {
   library->Register(new Reshape());
   library->Register(new Squeeze());
   library->Register(new ExpandDims());
+  library->Register(new Resize());
   library->Register(new SpaceToBatch());
   library->Register(new BatchToSpace());
   library->Register(new Pack());
