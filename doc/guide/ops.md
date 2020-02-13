@@ -21,7 +21,6 @@
 * [Assign](#assign) (assignment)
 * [Atan](#atan) (inverse tangent)
 * [Atanh](#atanh) inverse hyperbolic tangent)
-* [BatchToSpace](#batchtospace) (batch to space)
 * [Broadcast](#broadcast) (broadcast argument)
 * [Calculate](#calculate) (calculate expression)
 * [Ceil](#ceil) (round up towards infinity)
@@ -41,7 +40,6 @@
 * [Equal](#equal) (compare equal)
 * [Erf](#erf) (Gauss error function)
 * [Exp](#exp) (exponential)
-* [ExpandDims](#expanddims) (expand dimensions)
 * [Floor](#floor) (round down towards negative infinity)
 * [Gather](#gather) (gather embeddings)
 * [GatherAvg](#gatheravg) (gather average embeddings)
@@ -72,7 +70,6 @@
 * [NotEqual](#notqqual) (compare not equal)
 * [OneHot](#onehot) (one-hot vector)
 * [Or](#or) (logic or)
-* [Pack](#pack) (pack dimensions)
 * [Pow](#pow) (power function)
 * [Product](#product) (product reduction)
 * [Rank](#rank) (tensor rank)
@@ -96,18 +93,15 @@
 * [Softmax](#softmax) (softmax)
 * [Softplus](#softplus) (softplus)
 * [Softsign](#softsign) (softsign)
-* [SpaceToBatch](#spacetobatch) (space to batch)
 * [Split](#split) (split tensor)
 * [Sqrt](#sqrt) (square root)
 * [Square](#square) (square)
-* [Squeeze](#squeeze) (squeeze dimensions)
 * [Sub](#sub) (subtraction)
 * [Sum](#sum) (sum reduction)
 * [Tan](#tan) (tangent)
 * [Tanh](#tanh) (hyperbolic tangent)
 * [Transpose](#transpose) (permute dimensions)
 * [Trunc](#trunc) (round towards zero)
-* [Unpack](#unpack) (unpack dimensions)
 * [Xor](#xor) (logic exclusive or)
 
 ## Math
@@ -1572,16 +1566,10 @@ of the slices `m[f[i]]`.
     Transpose
 
 ## Shape
-    BatchToSpace
-    ExpandDims
-    Pack
     Rank
     Reshape
     Shape
     Size
-    SpaceToBatch
-    Squeeze
-    Unpack
 
 ## Assignment
 

@@ -257,6 +257,14 @@ std::vector<Flow::Variable *> FlowBuilder::Split(Variable *v, int splits,
   return parts;
 }
 
+Flow::Variable *FlowBuilder::Reduce(const string &op, Variable *x, 
+                                    int axis, bool keepdims) {
+  auto *reduce = Op(op, {x}, x->type, x->shape.reduced(axis, keepdims));
+  if (axis != -1) reduce->producer->SetAttr("axis", axis);
+  if (keepdims) reduce->producer->SetAttr("keepdims", true);
+  return reduce;
+}
+
 Flow::Variable *FlowBuilder::FFN(Variable *input,
                                  std::vector<int> layers,
                                  bool bias,

@@ -56,72 +56,6 @@ class Reshape : public Kernel {
   }
 };
 
-// Removes dimensions of size 1 from the shape of a tensor while preserving the
-// underlying data.
-class Squeeze : public Kernel {
- public:
-  string Name() override { return "Squeeze"; }
-  string Operation() override { return "Squeeze"; }
-
-  bool Supports(Step *step) override {
-    // Check inputs and outputs.
-    if (step->indegree() != 1 || step->outdegree() != 1) return false;
-    Tensor *x = step->input(0);
-    Tensor *y = step->output(0);
-    if (x->type() != y->type()) return false;
-    if (x->elements() != y->elements()) return false;
-    return true;
-  }
-
-  void Adjust(Step *step) override {
-    step->output(0)->set_ref(step->input(0)->ref());
-    CHECK(step->AllowInPlace(0, 0, true));
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    CHECK(step->input(0)->SharedWith(step->output(0)));
-  }
-
-  Placement Location() override { return NOWHERE; }
-
-  int64 Complexity(const Step *step) override {
-    return 0;
-  }
-};
-
-// Inserts a dimension of 1 into a tensor's shape while preserving the
-// underlying data.
-class ExpandDims : public Kernel {
- public:
-  string Name() override { return "ExpandDims"; }
-  string Operation() override { return "ExpandDims"; }
-
-  bool Supports(Step *step) override {
-    // Check inputs and outputs.
-    if (step->indegree() != 2 || step->outdegree() != 1) return false;
-    Tensor *x = step->input(0);
-    Tensor *y = step->output(0);
-    if (x->type() != y->type()) return false;
-    if (x->elements() != y->elements()) return false;
-    return true;
-  }
-
-  void Adjust(Step *step) override {
-    step->output(0)->set_ref(step->input(0)->ref());
-    CHECK(step->AllowInPlace(0, 0, true));
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    CHECK(step->input(0)->SharedWith(step->output(0)));
-  }
-
-  Placement Location() override { return NOWHERE; }
-
-  int64 Complexity(const Step *step) override {
-    return 0;
-  }
-};
-
 // Kernel for resizing the input by padding or cropping.
 class Resize : public Kernel {
  public:
@@ -228,87 +162,14 @@ class Resize : public Kernel {
   }
 };
 
-// Divide "spatial" dimensions [1, ..., M] of the input, and interleaves these
-// with the "batch" dimension (0).
-class SpaceToBatch : public Resize {
- public:
-  string Name() override { return "SpaceToBatch"; }
-  string Operation() override { return "SpaceToBatchND"; }
-};
+// Output a one-hot vector, OneHot(index, [value], {size})
+// value is optional.
+// size is shape attribute.
+//
+// index: int32[F;{rank(size)}]
+// value: T[V]
+// returns: T[F;size;V]
 
-// Reshapes the "batch" dimension 0 into M + 1 dimensions, and interleaves these
-// back into the spatial dimensions [1, ..., M].
-class BatchToSpace : public Resize {
- public:
-  string Name() override { return "BatchToSpace"; }
-  string Operation() override { return "BatchToSpaceND"; }
-};
-
-// Packs an array of rank-R tensors into one rank-(R+1) tensor.
-class Pack : public Kernel {
- public:
-  string Name() override { return "Pack"; }
-  string Operation() override { return "Pack"; }
-
-  bool Supports(Step *step) override {
-    // Check inputs and outputs.
-    if (step->indegree() != 1 || step->outdegree() != 1) return false;
-    Tensor *x = step->input(0);
-    Tensor *y = step->output(0);
-    if (x->type() != y->type()) return false;
-    if (x->elements() != y->elements()) return false;
-    return true;
-  }
-
-  void Adjust(Step *step) override {
-    step->output(0)->set_ref(step->input(0)->ref());
-    CHECK(step->AllowInPlace(0, 0, true));
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    CHECK(step->input(0)->SharedWith(step->output(0)));
-  }
-
-  Placement Location() override { return NOWHERE; }
-
-  int64 Complexity(const Step *step) override {
-    return 0;
-  }
-};
-
-// Unpacks an array of a rank-R tensor into rank-(R-1) tensors.
-class Unpack : public Kernel {
- public:
-  string Name() override { return "Unpack"; }
-  string Operation() override { return "Unpack"; }
-
-  bool Supports(Step *step) override {
-    // Check inputs and outputs.
-    if (step->indegree() != 2 || step->outdegree() != 1) return false;
-    Tensor *x = step->input(0);
-    Tensor *y = step->output(0);
-    if (x->type() != y->type()) return false;
-    if (x->elements() != y->elements()) return false;
-    return true;
-  }
-
-  void Adjust(Step *step) override {
-    step->output(0)->set_ref(step->input(0)->ref());
-    CHECK(step->AllowInPlace(0, 0, true));
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    CHECK(step->input(0)->SharedWith(step->output(0)));
-  }
-
-  Placement Location() override { return NOWHERE; }
-
-  int64 Complexity(const Step *step) override {
-    return 0;
-  }
-};
-
-// Output a one-hot vector.
 class OneHot : public Kernel {
  public:
   string Name() override { return "OneHot"; }
@@ -2013,13 +1874,7 @@ class ReshapeRefTransformer : public Transformer {
 // Register array kernels.
 void RegisterArrayKernels(Library *library) {
   library->Register(new Reshape());
-  library->Register(new Squeeze());
-  library->Register(new ExpandDims());
   library->Register(new Resize());
-  library->Register(new SpaceToBatch());
-  library->Register(new BatchToSpace());
-  library->Register(new Pack());
-  library->Register(new Unpack());
   library->Register(new OneHot());
   library->Register(new GeneralConcat());
   library->Register(new BasicConcat());

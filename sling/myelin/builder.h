@@ -132,11 +132,22 @@ class FlowBuilder : public Scope {
   }
   Variable *Const(const Shape &shape) { return Const(shape.dims()); }
 
+  Variable *OneHot(Variable *index, Variable *value, const Shape &size) {
+    Shape features = index->shape.outside(index->shape.rank() - 1);
+    Shape shape = features + size + value->shape;
+    auto *result = Op("OneHot", {index, value}, value->type, shape);
+    result->SetAttr("size", size);
+    return result;
+  }
   Variable *OneHot(Variable *index, int size) {
-    return Op("OneHot", {index}, DT_FLOAT, {size});
+    auto *result = Op("OneHot", {index}, DT_FLOAT, {size});
+    result->SetAttr("size", size);
+    return result;
   }
   Variable *OneHot(Variable *index, Variable *value, int size) {
-    return Op("OneHot", {index, value}, DT_FLOAT, {size});
+    auto *result = Op("OneHot", {index, value}, DT_FLOAT, {size});
+    result->SetAttr("size", size);
+    return result;
   }
 
   Variable *Zero(Type type = DT_FLOAT);
@@ -271,15 +282,30 @@ class FlowBuilder : public Scope {
   }
 
   // Reductions.
-  Variable *Sum(Variable *x) { return Op("Sum", {x}, x->type, {}); }
-  Variable *Product(Variable *x) { return Op("Product", {x}, x->type, {}); }
-  Variable *Max(Variable *x) { return Op("Max", {x}, x->type, {}); }
-  Variable *Min(Variable *x) { return Op("Min", {x}, x->type, {}); }
-  Variable *All(Variable *x) { return Op("All", {x}, x->type, {}); }
-  Variable *Any(Variable *x) { return Op("Any", {x}, x->type, {}); }
-  Variable *Mean(Variable *x) {
-    float size = x->elements();
-    return Div(Sum(x), Const(size));
+  Variable *Reduce(const string &op, Variable *x, 
+                   int axis = -1, bool keepdims = false);
+  
+  Variable *Sum(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Sum", x, axis, keepdims);
+  }
+  Variable *Product(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Product", x, axis, keepdims);
+  }
+  Variable *Max(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Max", x, axis, keepdims);
+  }
+  Variable *Min(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Min", x, axis, keepdims);
+  }
+  Variable *All(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("All", x, axis, keepdims);
+  }
+  Variable *Any(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Any", x, axis, keepdims);
+  }
+  Variable *Mean(Variable *x, int axis = -1, bool keepdims = false) {
+    float size = x->shape.axisdim(axis);
+    return Div(Sum(x, axis, keepdims), Const(size));
   }
   Variable *Count(Variable *p, Type type = DT_FLOAT) {
     return NoGradient(Op("Count", {p}, type, {}));

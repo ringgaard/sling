@@ -42,6 +42,9 @@ def erf(x):
 def gather(d, i):
   return np.take(d, i, axis=0)
 
+def onehot(x, size):
+  return np.eye(size)[x]
+
 # Compute flow function using numpy.
 def compute(flow, f, data):
   # Copy input tensors.
@@ -242,6 +245,8 @@ def compute(flow, f, data):
       m[f] += x
     elif op.type == "Reshape":
       v[o[0]] = np.reshape(v[i[0]], v[i[1]])
+    elif op.type == "OneHot":
+      v[o[0]] = onehot(v[i[0]], o[0].shape[-1])
     elif op.type == "Assign":
       v[i[0]] = v[i[1]]
     else:

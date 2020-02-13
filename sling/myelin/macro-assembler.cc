@@ -456,6 +456,35 @@ void MacroAssembler::LoadTensorAddress(Register dst, Tensor *tensor,
   }
 }
 
+void MacroAssembler::LoadOffset(Register dst, Register indices, 
+                                Tensor *tensor, Label *oov) {
+  if (tensor->rank() == 0) {
+    // Offset is always zero for scalar.
+    xorq(dst, dst);
+  } else {
+    // Compute offset of first dimension.
+    movsxlq(dst, Operand(indices));
+    if (oov != nullptr) {
+      testq(dst, dst);
+      j(negative, oov);
+    }
+    Multiply(dst, tensor->stride(0));
+    
+    // Compute offset of remaining dimensions.
+    Register acc = rr_.alloc();
+    for (int d = 1; d < tensor->rank(); ++d) {
+      movsxlq(acc, Operand(indices, d * sizeof(int)));
+      if (oov != nullptr) {
+        testq(acc, acc);
+        j(negative, oov);
+      }
+      Multiply(acc, tensor->stride(d));
+      addq(dst, acc);
+    }
+    rr_.release(acc);
+  }
+}
+
 void MacroAssembler::LoadTensorDeviceAddress(Register dst, Tensor *tensor) {
   DCHECK(tensor->placement() & DEVICE);
   if (tensor->IsGlobal()) {
@@ -557,7 +586,7 @@ void MacroAssembler::Copy(Register dst, int ddisp,
     }
 
     // Set up source and destination.
-    if (src.is(rdi) && dst.is(rdi)) {
+    if (src.is(rdi) && dst.is(rsi)) {
       xchgq(dst, src);
       if (ddisp != 0) addq(rdi, Immediate(ddisp));
       if (sdisp != 0) addq(rsi, Immediate(sdisp));

@@ -154,6 +154,11 @@ class Shape {
   void assign(int d1) { clear(); add(d1); }
   void assign(int d1, int d2) { clear(); add(d1); add(d2); }
 
+  // Append other shape to this shape.
+  void append(const Shape &other) {
+    dims_.insert(dims_.end(), other.dims_.begin(), other.dims_.end());
+  }
+
   // Set all dimensions to a certain size.
   void fill(int size) { dims_.assign(rank(), size); }
   void fill(int rank, int size) { dims_.assign(rank, size); }
@@ -197,6 +202,24 @@ class Shape {
     return r;
   }
 
+  // Return outside shape with respect to axis.
+  Shape outside(int axis) const {
+    Shape s;
+    for (int d = 0; d < axis; d++) {
+      s.add(dims_[d]);
+    }
+    return s;
+  }
+  
+  // Return inside shape with respect to axis.
+  Shape inside(int axis) const {
+    Shape s;
+    for (int d = axis; d < rank(); ++d) {
+      if (d >= 0) s.add(dims_[d]);
+    }
+    return s;
+  }
+
   // Return the rank of the shape, i.e. the number of dimensions.
   int rank() const  { return dims_.size(); }
 
@@ -205,6 +228,9 @@ class Shape {
 
   // Return size of dimension.
   int dim(int d) const { return dims_[d]; }
+
+  // Return size of axis.
+  int axisdim(int axis) const { return axis < 0 ? elements() : dim(axis); }
 
   // Return the total number of elements.
   int elements() const {
@@ -229,20 +255,20 @@ class Shape {
   }
 
   // Return the number of outer elements relative to dimension.
-  int outer(int d) const {
+  int outer(int axis) const {
     int n = 1;
-    for (int i = 0; i < d; ++i) {
-      n *= dims_[i];
+    for (int d = 0; d < axis; ++d) {
+      n *= dims_[d];
       if (n < 0) return -1;
     }
     return n;
   }
 
   // Return the number of inner elements relative to dimension.
-  int inner(int d) const {
+  int inner(int axis) const {
     int n = 1;
-    for (int i = d; i < dims_.size(); ++i) {
-      n *= dims_[i];
+    for (int d = axis; d < rank(); ++d) {
+      if (d >= 0) n *= dims_[d];
       if (n < 0) return -1;
     }
     return n;
@@ -252,6 +278,13 @@ class Shape {
   int &operator [](int d) { return dims_[d]; }
   const int &operator [](int d) const { return dims_[d]; }
 
+  // Combine two shapes.
+  Shape operator+(const Shape &other) const { 
+    Shape combined(*this);
+    combined.append(other);
+    return combined;
+  }
+  
   // Check if shape is the same as another shape. Undefined dimensions are
   // not compared.
   bool IsSameSize(const Shape &other) const;

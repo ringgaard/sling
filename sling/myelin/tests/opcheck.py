@@ -796,6 +796,13 @@ def scatter_add_test(n, d, s):
   f.assign_add_scatter(m, ind, v)
   check(flow, (n, d, s), 0, n, check=[m])
 
+def onehot_test(n, m):
+  flow = myelin.Flow()
+  f = flow.define("onehot")
+  ind = f.var("x", myelin.DT_INT32, [n])
+  f.onehot(ind, m)
+  check(flow, (n, m), 0, m)
+
 def negfold_test(n):
   flow = myelin.Flow()
   f = flow.define("negfold")
