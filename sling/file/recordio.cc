@@ -201,6 +201,7 @@ RecordReader::RecordReader(File *file,
   // Allocate input buffer.
   CHECK_GE(options.buffer_size, sizeof(FileHeader));
   input_.resize(options.buffer_size);
+  position_ = 0;
   CHECK(Fill(sizeof(FileHeader)));
 
   // Read record file header.
@@ -247,12 +248,20 @@ Status RecordReader::Close() {
   return Status::OK;
 }
 
-Status RecordReader::Fill(uint64 sizehint) {
+Status RecordReader::Fill(uint64 needed) {
+  // Flush input buffer to make room for more data.
   input_.flush();
-  uint64 bytes = readahead_ ? input_.remaining() : sizehint;
-  Status s = file_->Read(input_.end(), bytes, &bytes);
+
+  // Determine how many bytes need to be read.
+  DCHECK_LE(needed, input_.capacity());
+  uint64 requested = readahead_ ? input_.remaining() : needed - input_.size();
+  DCHECK_GT(requested, 0);
+
+  // Fill buffer from file.
+  uint64 read;
+  Status s = file_->Read(input_.end(), requested, &read);
   if (!s.ok()) return s;
-  input_.appended(bytes);
+  input_.appended(read);
   return Status::OK;
 }
 
@@ -331,6 +340,7 @@ Status RecordReader::Read(Record *record) {
 
 Status RecordReader::Skip(int64 n) {
   // Check if we can skip to position in input buffer.
+  if (n == 0) return Status::OK;
   position_ += n;
   char *ptr = input_.begin() + n;
   if (ptr >= input_.floor() && ptr < input_.end()) {
@@ -347,6 +357,7 @@ Status RecordReader::Skip(int64 n) {
 
 Status RecordReader::Seek(uint64 pos) {
   // Check if we can skip to position in input buffer.
+  if (pos == position_) return Status::OK;
   int64 offset = pos - position_;
   position_ = pos;
   char *ptr = input_.begin() + offset;

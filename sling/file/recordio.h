@@ -239,7 +239,7 @@ class RecordReader : public RecordFile {
 
  private:
   // Fill input buffer.
-  Status Fill(uint64 sizehint);
+  Status Fill(uint64 needed);
 
   // Input file.
   File *file_;
