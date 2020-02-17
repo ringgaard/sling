@@ -566,7 +566,7 @@ void sum_grad(Flow::Operation *op, Gradients *g) {
 void min_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->OneHot(g->ArgMin(g->v(x)), g->d(y), x->elements()));
+  g->add(x, g->OneHot(g->ArgMin(g->v(x)), x->elements(), g->d(y)));
 }
 
 // y = max(x)
@@ -574,7 +574,7 @@ void min_grad(Flow::Operation *op, Gradients *g) {
 void max_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->OneHot(g->ArgMax(g->v(x)), g->d(y), x->elements()));
+  g->add(x, g->OneHot(g->ArgMax(g->v(x)), x->elements(), g->d(y)));
 }
 
 // y = x^T

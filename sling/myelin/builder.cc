@@ -90,7 +90,7 @@ Flow::Variable *FlowBuilder::Name(Variable *var, const string &name) {
 }
 
 Flow::Variable *FlowBuilder::Op(const string &op,
-                                const std::vector<Flow::Variable *> &args,
+                                const Args &args,
                                 Type type,
                                 const Shape &shape) {
   string name = OpName(op);
@@ -100,7 +100,7 @@ Flow::Variable *FlowBuilder::Op(const string &op,
 }
 
 Flow::Variable *FlowBuilder::Op(const string &op,
-                                const std::vector<Flow::Variable *> &args) {
+                                const Args &args) {
   // Use first argument for return type.
   Type type = args.empty() ? DT_INVALID : args[0]->type;
 
@@ -125,8 +125,7 @@ Flow::Variable *FlowBuilder::Op(const string &op,
   return Op(op, args, type, shape);
 }
 
-Flow::Operation *FlowBuilder::RawOp(const string &op,
-                                    const std::vector<Flow::Variable *> &args) {
+Flow::Operation *FlowBuilder::RawOp(const string &op, const Args &args) {
   string name = OpName(op);
   return flow_->AddOperation(func_, name, op, args, {});
 }
@@ -199,6 +198,22 @@ Flow::Variable *FlowBuilder::Two(Type type) {
     case DT_INT32: return Const(2);
     default: LOG(FATAL) << "Constant type not supported";
   }
+}
+
+Flow::Variable *FlowBuilder::OneHot(Variable *index, 
+                                    int depth, 
+                                    Variable *value) {
+  Shape s = index->shape;
+  s.add(depth);
+  Variable *result;
+  if (value != nullptr) {
+    s.append(value->shape);
+    result = Op("OneHot", {index, value}, value->type, s);
+  } else {
+    result = Op("OneHot", {index}, DT_FLOAT, s);
+  }
+  result->producer->SetAttr("depth", depth);
+  return result;
 }
 
 Flow::Variable *FlowBuilder::Instance(Function *func) {

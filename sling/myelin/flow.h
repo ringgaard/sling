@@ -210,7 +210,7 @@ class Shape {
     }
     return s;
   }
-  
+
   // Return inside shape with respect to axis.
   Shape inside(int axis) const {
     Shape s;
@@ -227,7 +227,7 @@ class Shape {
   bool scalar() const { return rank() == 0; }
 
   // Return size of dimension.
-  int dim(int d) const { return dims_[d]; }
+  int dim(int d) const { return dims_[d < 0 ? dims_.size() + d : d]; }
 
   // Return size of axis.
   int axisdim(int axis) const { return axis < 0 ? elements() : dim(axis); }
@@ -275,8 +275,12 @@ class Shape {
   }
 
   // Index operator.
-  int &operator [](int d) { return dims_[d]; }
-  const int &operator [](int d) const { return dims_[d]; }
+  int &operator [](int d) { 
+    return dims_[d < 0 ? dims_.size() + d : d];
+  }
+  const int &operator [](int d) const { 
+    return dims_[d < 0 ? dims_.size() + d : d]; 
+  }
 
   // Combine two shapes.
   Shape operator+(const Shape &other) const { 

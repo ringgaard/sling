@@ -634,9 +634,9 @@ string Tensor::TypeString() const {
   string str;
   if (ref_) str.append("&");
   str.append(TypeTraits::of(type_).name());
-  if (dynamic_) str.append("<>");
   if (!shape_.scalar()) {
     str.append("[");
+    if (dynamic_) str.append("*,");
     str.append(shape_.ToString());
     str.append("]");
   }

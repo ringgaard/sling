@@ -60,6 +60,7 @@ class FlowBuilder : public Scope {
   typedef Flow::Variable Variable;
   typedef Flow::Operation Operation;
   typedef Flow::Function Function;
+  typedef std::vector<Variable *> Args;
 
   // Initialize builder for existing function.
   FlowBuilder(Flow *flow, Function *func)
@@ -93,16 +94,16 @@ class FlowBuilder : public Scope {
 
   // Add operation to function and return output variable.
   Variable *Op(const string &op,
-               const std::vector<Variable *> &args,
+               const Args &args,
                Type type,
                const Shape &shape);
 
   // Add operation to function and return output variable. The output is
   // shaped using broadcast semantics.
-  Variable *Op(const string &op, const std::vector<Variable *> &args);
+  Variable *Op(const string &op, const Args &args);
 
   // Add operation with no output to function.
-  Operation *RawOp(const string &op, const std::vector<Variable *> &args);
+  Operation *RawOp(const string &op, const Args &args);
 
   // Mark variable as non-differentiable.
   Variable *NoGradient(Variable *x) {
@@ -132,27 +133,10 @@ class FlowBuilder : public Scope {
   }
   Variable *Const(const Shape &shape) { return Const(shape.dims()); }
 
-  Variable *OneHot(Variable *index, Variable *value, const Shape &size) {
-    Shape features = index->shape.outside(index->shape.rank() - 1);
-    Shape shape = features + size + value->shape;
-    auto *result = Op("OneHot", {index, value}, value->type, shape);
-    result->SetAttr("size", size);
-    return result;
-  }
-  Variable *OneHot(Variable *index, int size) {
-    auto *result = Op("OneHot", {index}, DT_FLOAT, {size});
-    result->SetAttr("size", size);
-    return result;
-  }
-  Variable *OneHot(Variable *index, Variable *value, int size) {
-    auto *result = Op("OneHot", {index, value}, DT_FLOAT, {size});
-    result->SetAttr("size", size);
-    return result;
-  }
-
   Variable *Zero(Type type = DT_FLOAT);
   Variable *One(Type type = DT_FLOAT);
   Variable *Two(Type type = DT_FLOAT);
+  Variable *OneHot(Variable *index, int depth, Variable *value = nullptr);
 
   // Add instance reference to other function.
   Variable *Instance(Function *func);

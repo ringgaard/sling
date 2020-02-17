@@ -162,14 +162,14 @@ class Resize : public Kernel {
   }
 };
 
-// Output a one-hot vector, OneHot(index, [value], {size})
-// value is optional.
-// size is shape attribute.
+// Output a one-hot tensor.
+// 
+// OneHot(index, {depth}, [value])
 //
-// index: int32[F;{rank(size)}]
-// value: T[V]
-// returns: T[F;size;V]
-
+// indices: tensor of indices (int32[B]).
+// depth: scalar defining the depth of the one hot dimension (int32).
+// value: optional value (T[S]) defining the value to fill in (default: 1)
+// output: one hot tensor (T[Bx{depth}xS])
 class OneHot : public Kernel {
  public:
   string Name() override { return "OneHot"; }
@@ -182,13 +182,20 @@ class OneHot : public Kernel {
     Tensor *index = step->input(0);
     Tensor *value = step->indegree() > 1 ? step->input(1) : nullptr;
     Tensor *onehot = step->output(0);
+    int depth = step->GetAttr("depth", 0);
+    if (depth == 0 && onehot->rank() > 0) depth = onehot->shape().dim(-1);
+    if (depth <= 0) return false;
+
+    // Check output shape.
     if (index->type() != DT_INT32) return false;
-    if (index->elements() != 1) return false;
-    if (onehot->type() != DT_FLOAT) return false;
+    Shape s = index->shape();
+    s.add(depth);
     if (value != nullptr) {
-      if (value->type() != DT_FLOAT) return false;
-      if (value->elements() != 1) return false;
+      s.append(value->shape());
     }
+    if (onehot->shape() != s) return false;
+    if (value != nullptr && value->type() != onehot->type()) return false;
+
     return true;
   }
 
@@ -198,6 +205,7 @@ class OneHot : public Kernel {
     Tensor *onehot = step->output(0);
 
     // Allocate registers.
+    Register src = masm->rr().alloc_fixed(rsi);
     Register dst = masm->rr().alloc_fixed(rdi);
     Register cnt = masm->rr().alloc_fixed(rcx);
     Register acc = masm->rr().alloc_fixed(rax);
@@ -205,23 +213,48 @@ class OneHot : public Kernel {
     Register output = masm->rr().alloc();
 
     // Zero output tensor.
+    __ LoadTensorAddress(input, index);
     __ LoadTensorAddress(output, onehot);
     __ movq(dst, output);
     __ movq(cnt, Immediate(onehot->size()));
     __ xorq(acc, acc);
     __ repstosb();
 
-    // Set one-hot index.
-    __ LoadTensorAddress(input, index);
-    __ movsxlq(acc, Operand(input));
-    if (value != nullptr) {
-      Register vaddr = masm->rr().alloc();
-      __ LoadTensorAddress(vaddr, value);
-      XMMRegister v = masm->mm().allocx();
-      __ movss(v, Operand(vaddr));
-      __ movss(Operand(output, acc, times_4), v);
+    // Loop over batches.
+    bool batched = index->elements() > 1;
+    Register batch = masm->rr().alloc();
+    Label lb;
+    if (batched) {
+      __ xorq(batch, batch);
+      __ bind(&lb);
+    }
+
+    // Compute address of onehot element.
+    if (batched) {
+      __ movq(dst, output);
     } else {
-      __ movq(Operand(output, acc, times_4), Immediate(0x3F800000));
+      dst = output;
+    }
+    __ movsxlq(acc, Operand(input));
+    __ Multiply(acc, value != nullptr ? value->size() : sizeof(float));
+    __ addq(dst, acc);
+
+    // Set one-hot index.
+    if (value != nullptr) {
+      __ LoadTensorAddress(src, value);
+      __ movq(cnt, value->size());
+      __ repmovsb();
+    } else {
+      __ movq(Operand(dst), Immediate(0x3F800000));
+    }
+
+    // Next batch.
+    if (batched) {
+      __ addq(input, Immediate(sizeof(uint32)));
+      __ addq(output, Immediate(onehot->AxisSize(index->rank())));
+      __ incq(batch);
+      __ cmpq(batch, Immediate(index->elements()));
+      __ j(less, &lb);
     }
   }
 

@@ -318,10 +318,16 @@ class Builder:
   def gather_avg(self, embedding, indices, name=None):
     return self.pooling_gather("GatherAvg", embedding, indices, name)
 
-  def onehot(self, x, size, name=None):
-    result = self.op("OneHot", [x], name)
-    result.type = DT_FLOAT
-    result.shape = result.shape + [size]
+  def onehot(self, index, depth, value=None, name=None):
+    if value is None:
+      result = self.op("OneHot", [index], name)
+      result.type = DT_FLOAT
+      result.shape = index.shape + [depth]
+    else:
+      result = self.op("OneHot", [index, value], name)
+      result.type = value.type
+      result.shape = index.shape + [depth] + value.shape
+    result.producer.add_attr("depth", depth)
     return result
   
   def matmul(self, x, y, name=None):

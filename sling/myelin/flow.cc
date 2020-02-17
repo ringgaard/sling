@@ -190,7 +190,7 @@ bool Shape::IsSingleBroadcast(const Shape &other) const {
 string Shape::ToString() const {
   string str;
   for (int d = 0; d < rank(); ++d) {
-    if (d > 0) str.append("x");
+    if (d > 0) str.append(",");
     if (dim(d) == -1) {
       str.append("?");
     } else {
@@ -490,9 +490,9 @@ string Flow::Variable::TypeString() const {
   string str;
   if (ref()) str.append("&");
   str.append(TypeTraits::of(type).name());
-  if (dynamic()) str.append("<>");
   if (!shape.scalar()) {
     str.append("[");
+    if (dynamic()) str.append("*,");
     str.append(shape.ToString());
     str.append("]");
   }

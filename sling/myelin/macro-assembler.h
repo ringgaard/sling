@@ -384,10 +384,6 @@ class MacroAssembler : public jit::Assembler {
   // Load address of element in tensor.
   void LoadTensorAddress(Register dst, Tensor *tensor, Tensor *indices);
 
-  // Load offset of element in tensor.
-  void LoadOffset(Register dst, Register indices, Tensor *tensor, 
-                  Label *oov = nullptr);
-
   // Load address of tensor on device.
   void LoadTensorDeviceAddress(Register dst, Tensor *tensor);
 
