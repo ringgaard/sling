@@ -27,7 +27,7 @@ flags.define("--dt", default=myelin.DT_FLOAT)
 flags.define("--test")
 flags.define("--thorough", default=False, action='store_true')
 flags.define("--repeat", default=1, type=int)
-flags.define("--compute", default=False, action='store_true')
+flags.define("-c", default=False, action='store_true')
 flags.define("--skipdiff", default=False, action='store_true')
 
 flags.parse()
@@ -86,7 +86,7 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8, check=None):
         r = np.random.ranf(a.shape) * (hi - lo) + lo
       np.copyto(a, r, casting="unsafe")
 
-    if flags.arg.compute:
+    if flags.arg.c:
       # Compute cell.
       for n in range(flags.arg.repeat): data.compute()
 
@@ -120,6 +120,8 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8, check=None):
         t = data.tensor(o)
         b = baseline[o]
 
+        if t.shape() != list(b.shape):
+          print("shape mismatch:", t.shape(), "vs", list(b.shape))
         if b.dtype == bool: t = np.array(t, dtype=bool)
         if not np.allclose(t, b, rtol=rtol, atol=atol):
           test.errors += 1
@@ -774,7 +776,23 @@ def gather_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("gather")
   emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
+  v = f.gather(emb, ind)
+  check(flow, (n, d, s), 0, n)
+
+def gather_scalar_test(n):
+  flow = myelin.Flow()
+  f = flow.define("gather_scalar")
+  emb = f.array("emb", np.random.ranf((n)).astype(simulator.nptypes[dt]))
+  ind = f.var("ind", myelin.DT_INT32, [])
+  v = f.gather(emb, ind)
+  check(flow, (n), 0, n)
+
+def gather_twodim_test(n, d, s):
+  flow = myelin.Flow()
+  f = flow.define("gather")
+  emb = f.array("emb", np.random.ranf((n, n, d)).astype(simulator.nptypes[dt]))
+  ind = f.var("ind", myelin.DT_INT32, [s, 2])
   v = f.gather(emb, ind)
   check(flow, (n, d, s), 0, n)
 
@@ -782,7 +800,7 @@ def gather_sum_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("gather_sum")
   emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
   v = f.gather_sum(emb, ind)
   check(flow, (n, d, s), 0, n)
 
@@ -790,7 +808,7 @@ def gather_max_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("gather_max")
   emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
   v = f.gather_max(emb, ind)
   check(flow, (n, d, s), 0, n)
 
@@ -798,9 +816,17 @@ def gather_avg_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("gather_avg")
   emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
   v = f.gather_avg(emb, ind)
   check(flow, (n, d, s), 0, n, rtol=1e-3)
+
+def scatter_test(n, d, s):
+  flow = myelin.Flow()
+  f = flow.define("scatter")
+  ind = f.var("ind", myelin.DT_INT32, [1, s])  # [s, 1]
+  v = f.var("v", dt, [1, d])
+  m = f.scatter(ind, v, [n, d])
+  check(flow, (n, d, s), 0, n, check=[m])
 
 def scatter_add_test(n, d, s):
   flow = myelin.Flow()
@@ -885,12 +911,13 @@ for i in sizes:
 
   embsize = 32
   for f in [1, 2, 5]:
-    gather_test(embsize, i, f)
-    gather_sum_test(embsize, i, f)
-    gather_max_test(embsize, i, f)
+    gather_test(i, embsize, f)
+    gather_sum_test(i, embsize, f)
+    gather_max_test(i, embsize, f)
     if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
-      gather_avg_test(embsize, i, f)
-    scatter_add_test(embsize, i, f)
+      gather_avg_test(i, embsize, f)
+    scatter_add_test(i, embsize, f)
+  gather_scalar_test(i)
 
   for c in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]:
     add_const_test(i, c)

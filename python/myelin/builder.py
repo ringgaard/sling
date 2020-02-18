@@ -288,35 +288,49 @@ class Builder:
     result.type = DT_INT
     return result
 
-  def gather(self, embedding, indices, oov=None, name=None):
-    inputs = [embedding, indices]
-    if oov is not None:
-      inputs.append(oov)
+  def gather(self, params, indices, oov=None, name=None):
+    inputs = [params, indices]
+    if oov is not None: inputs.append(oov)
     result = self.op("Gather", inputs, name)
-    result.type = embedding.type
-    if len(embedding.shape) == 2 and len(indices.shape) == 2:
-      result.shape = [indices.shape[1], embedding.shape[1]]
+    if len(indices.shape) == 0:
+      result.shape = params.shape[1:]
     else:
-      result.shape = [0]
+      result.shape = indices.shape[:-1] + params.shape[indices.shape[-1]:]
     return result
 
-  def pooling_gather(self, optype, embedding, indices, name=None):
-    result = self.op(optype, [embedding, indices], name)
-    result.type = embedding.type
-    if len(embedding.shape) == 2:
-      result.shape = [1, embedding.shape[1]]
+  def pooling_gather(self, optype, params, indices, name=None):
+    result = self.op(optype, [params, indices], name)
+    if len(indices.shape) == 0:
+      result.shape = params.shape[1:]
     else:
-      result.shape = [0]
+      result.shape = params.shape[indices.shape[-1]:]
     return result
 
-  def gather_sum(self, embedding, indices, name=None):
-    return self.pooling_gather("GatherSum", embedding, indices, name)
+  def gather_sum(self, params, indices, name=None):
+    return self.pooling_gather("GatherSum", params, indices, name)
 
-  def gather_max(self, embedding, indices, name=None):
-    return self.pooling_gather("GatherMax", embedding, indices, name)
+  def gather_max(self, params, indices, name=None):
+    return self.pooling_gather("GatherMax", params, indices, name)
 
-  def gather_avg(self, embedding, indices, name=None):
-    return self.pooling_gather("GatherAvg", embedding, indices, name)
+  def gather_avg(self, params, indices, name=None):
+    return self.pooling_gather("GatherAvg", params, indices, name)
+
+  def scatter(self, indices, value, shape, name=None):
+    result = self.op("Scatter", [indices, value], name)
+    result.type = value.type
+    result.shape = shape
+    return result
+
+  def assign_add_scatter(self, var, indices, value, ref=False, name=None):
+    op = self.rawop("AssignAddScatter", name)
+    op.add_input(var)
+    op.add_input(indices)
+    op.add_input(value)
+    if ref:
+      r = self.var(op.name + "/ref", var.type, var.shape)
+      r.ref = True
+      op.add_output(r)
+      return r
 
   def onehot(self, index, depth, value=None, name=None):
     if value is None:
@@ -329,7 +343,7 @@ class Builder:
       result.shape = index.shape + [depth] + value.shape
     result.producer.add_attr("depth", depth)
     return result
-  
+
   def matmul(self, x, y, name=None):
     result = self.op("MatMul", [x, y], name)
     result.shape = x.shape[:-2] + [x.shape[-2], y.shape[-1]]
@@ -603,17 +617,6 @@ class Builder:
     op = self.rawop("Assign", name)
     op.add_input(x)
     op.add_input(y)
-
-  def assign_add_scatter(self, m, f, v, ref=False, name=None):
-    op = self.rawop("AssignAddScatter", name)
-    op.add_input(m)
-    op.add_input(f)
-    op.add_input(v)
-    if ref:
-      r = self.var(op.name + "/ref", m.type, m.shape)
-      r.ref = True
-      op.add_output(r)
-      return r
 
 
 # Set builder factory for flows.

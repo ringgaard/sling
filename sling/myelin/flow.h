@@ -275,20 +275,20 @@ class Shape {
   }
 
   // Index operator.
-  int &operator [](int d) { 
+  int &operator[](int d) {
     return dims_[d < 0 ? dims_.size() + d : d];
   }
-  const int &operator [](int d) const { 
-    return dims_[d < 0 ? dims_.size() + d : d]; 
+  const int &operator[](int d) const {
+    return dims_[d < 0 ? dims_.size() + d : d];
   }
 
   // Combine two shapes.
-  Shape operator+(const Shape &other) const { 
-    Shape combined(*this);
-    combined.append(other);
+  friend Shape operator+(const Shape &s1, const Shape &s2) {
+    Shape combined(s1);
+    combined.append(s2);
     return combined;
   }
-  
+
   // Check if shape is the same as another shape. Undefined dimensions are
   // not compared.
   bool IsSameSize(const Shape &other) const;

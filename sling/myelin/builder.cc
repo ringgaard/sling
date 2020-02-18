@@ -200,8 +200,8 @@ Flow::Variable *FlowBuilder::Two(Type type) {
   }
 }
 
-Flow::Variable *FlowBuilder::OneHot(Variable *index, 
-                                    int depth, 
+Flow::Variable *FlowBuilder::OneHot(Variable *index,
+                                    int depth,
                                     Variable *value) {
   Shape s = index->shape;
   s.add(depth);
@@ -272,7 +272,32 @@ std::vector<Flow::Variable *> FlowBuilder::Split(Variable *v, int splits,
   return parts;
 }
 
-Flow::Variable *FlowBuilder::Reduce(const string &op, Variable *x, 
+Flow::Variable *FlowBuilder::Gather(Variable *params,
+                                    Variable *indices,
+                                    Variable *oov) {
+  std::vector<Variable *> args = {params, indices};
+  if (oov != nullptr) args.push_back(oov);
+
+  Shape s;
+  if (!indices->shape.scalar()) {
+    s = params->shape.inside(params->rank() - 1);
+  } else {
+    int b = indices->shape.rank() - 1;
+    int n = indices->dim(-1);
+    s = indices->shape.outside(b) + params->shape.inside(n);
+  }
+
+  return Op("Gather", args, params->type, s);
+}
+
+Flow::Variable *FlowBuilder::PoolingGather(const string &op,
+                                           Variable *params,
+                                           Variable *indices) {
+  int n = indices->shape.scalar() ? 1 : indices->dim(-1);
+  return Op(op, {params, indices}, params->type, params->shape.inside(n));
+}
+
+Flow::Variable *FlowBuilder::Reduce(const string &op, Variable *x,
                                     int axis, bool keepdims) {
   auto *reduce = Op(op, {x}, x->type, x->shape.reduced(axis, keepdims));
   if (axis != -1) reduce->producer->SetAttr("axis", axis);

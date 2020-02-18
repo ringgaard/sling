@@ -40,7 +40,8 @@ def erf(x):
   return np.array([math.erf(v) for v in x])
 
 def gather(d, i):
-  return np.take(d, i, axis=0)
+  if len(i.shape) == 0: return np.take(d, i, axis=0)
+  return np.take(d, i, axis=0).reshape(i.shape[:-1] + d.shape[i.shape[1]:])
 
 def onehot(x, size):
   return np.eye(size)[x]
@@ -233,11 +234,16 @@ def compute(flow, f, data):
     elif op.type == "Gather":
       v[o[0]] = gather(v[i[0]], v[i[1]])
     elif op.type == "GatherSum":
-      v[o[0]] = np.sum(gather(v[i[0]], v[i[1]]), axis=1)
+      v[o[0]] = np.sum(gather(v[i[0]], v[i[1]]), axis=0)
     elif op.type == "GatherMax":
-      v[o[0]] = np.max(gather(v[i[0]], v[i[1]]), axis=1)
+      v[o[0]] = np.max(gather(v[i[0]], v[i[1]]), axis=0)
     elif op.type == "GatherAvg":
-      v[o[0]] = np.sum(gather(v[i[0]], v[i[1]]), axis=1) / v[i[1]].shape[1]
+      v[o[0]] = np.sum(gather(v[i[0]], v[i[1]]), axis=0) / v[i[1]].size
+    elif op.type == "Scatter":
+      f = v[i[0]]
+      x = v[i[1]]
+      m = v[o[0]]
+      m[f] = x
     elif op.type == "AssignAddScatter":
       m = v[i[0]]
       f = v[i[1]]

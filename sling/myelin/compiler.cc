@@ -40,11 +40,11 @@ DEFINE_string(input_flow, "", "File for saving raw input flow");
 DEFINE_string(final_flow, "", "File for saving final analyzed flow");
 DEFINE_string(input_dot, "", "File for saving raw input flow as DOT file");
 DEFINE_string(input_graph, "", "File for saving raw input flow as SVG file");
-DEFINE_string(final_graph, "", "File for saving analyzed flow as SVG file");
-DEFINE_string(final_dot, "", "File for saving analyzed flow as DOT file");
+DEFINE_string(graph, "", "File for saving analyzed flow as SVG file");
+DEFINE_string(dot, "", "File for saving analyzed flow as DOT file");
 DEFINE_string(jit_code, "", "File for saving JIT generated code");
 DEFINE_bool(dump_input_flow, false, "Dump raw input flow to log");
-DEFINE_bool(dump_final_flow, false, "Dump final analyzed flow to log");
+DEFINE_bool(dump_flow, false, "Dump final analyzed flow to log");
 DEFINE_bool(dump_cells, false, "Dump cells after compilation");
 DEFINE_bool(dump_code, false, "Dump generated assembly code");
 DEFINE_bool(param_stats, false, "Dump model parameter statistics");
@@ -123,8 +123,8 @@ void Compiler::Compile(Flow *flow, Network *net) {
   flow->Analyze(*library_);
 
   // Optionally dump final flow.
-  if (FLAGS_dump_final_flow) {
-    LOG(INFO) << "Final flow:\n" << flow->ToString();
+  if (FLAGS_dump_flow) {
+    LOG(INFO) << "Flow:\n" << flow->ToString();
   }
 
   // Optionally save final flow.
@@ -133,7 +133,7 @@ void Compiler::Compile(Flow *flow, Network *net) {
   }
 
   // Optionally output graph for final flow.
-  WriteGraph(*flow, FLAGS_final_dot, FLAGS_final_graph);
+  WriteGraph(*flow, FLAGS_dot, FLAGS_graph);
 
   // Optionally check flow consistency.
   if (FLAGS_check_flow_consistency) {

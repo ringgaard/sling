@@ -1547,7 +1547,7 @@ of the slices `m[f[i]]`.
 
     GatherMax
     GatherSum
-    Scatter (ScatterAdd, ScatterMulAdd)
+    Scatter (MulScatter, AssignAddScatter, AssignAddMulScatter)
 
 ## Arrays
     Concat

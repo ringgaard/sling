@@ -266,9 +266,9 @@ class FlowBuilder : public Scope {
   }
 
   // Reductions.
-  Variable *Reduce(const string &op, Variable *x, 
+  Variable *Reduce(const string &op, Variable *x,
                    int axis = -1, bool keepdims = false);
-  
+
   Variable *Sum(Variable *x, int axis = -1, bool keepdims = false) {
     return Reduce("Sum", x, axis, keepdims);
   }
@@ -353,22 +353,21 @@ class FlowBuilder : public Scope {
   }
 
   // Gather for embedding lookups.
-  Variable *Gather(Variable *M, Variable *f) {
-    int n = f->rank() == 0 ? 1 : f->dim(1);
-    return Op("Gather", {M, f}, M->type, {n, M->dim(1)});
+  Variable *Gather(Variable *params,
+                   Variable *indices,
+                   Variable *oov = nullptr);
+
+  Variable *PoolingGather(const string &op,
+                          Variable *params,
+                          Variable *indices);
+  Variable *GatherSum(Variable *params, Variable *indices) {
+    return PoolingGather("GatherSum", params, indices);
   }
-  Variable *Gather(Variable *M, Variable *f, Variable *oov) {
-    int n = f->rank() == 0 ? 1 : f->dim(1);
-    return Op("Gather", {M, f, oov}, M->type, {n, M->dim(1)});
+  Variable *GatherAvg(Variable *params, Variable *indices) {
+    return PoolingGather("GatherAvg", params, indices);
   }
-  Variable *GatherSum(Variable *M, Variable *f) {
-    return Op("GatherSum", {M, f}, M->type, {1, M->dim(1)});
-  }
-  Variable *GatherAvg(Variable *M, Variable *f) {
-    return Op("GatherAvg", {M, f}, M->type, {1, M->dim(1)});
-  }
-  Variable *GatherMax(Variable *M, Variable *f) {
-    return Op("GatherMax", {M, f}, M->type, {1, M->dim(1)});
+  Variable *GatherMax(Variable *params, Variable *indices) {
+    return PoolingGather("GatherMax", params, indices);
   }
 
   // Scatter for sparse embedding update.

@@ -23,6 +23,53 @@ namespace myelin {
 
 using namespace jit;
 
+// Arguments for gather op.
+struct GatherArgs {
+  GatherArgs(const Step *step, bool pooling = false) {
+    // Get arguments.
+    if (step->indegree() != 2 && step->indegree() != 3) return;
+    if (pooling && step->indegree() == 3) return;
+    if (step->outdegree() != 1) return;
+    params = step->input(0);
+    indices = step->input(1);
+    if (step->indegree() == 3) oov = step->input(2);
+    result = step->output(0);
+
+    // Check types.
+    if (indices->type() != DT_INT32) return;
+    if (result->type() != params->type()) return;
+    if (oov != nullptr && oov->type() != params->type()) return;
+
+    // Check shapes.
+    int r = indices->rank();
+    if (r > 0) n = indices->dim(-1);
+    batch = indices->shape().outside(r - 1);
+    index = params->shape().outside(n);
+    element = params->shape().inside(n);
+    if (index.rank() != n) return;
+    if (pooling) {
+      if (result->shape() != element) return;
+    } else {
+      if (result->shape() != batch + element) return;
+    }
+    if (oov != nullptr) {
+      if (oov->shape() != element) return;
+    }
+    valid = true;
+  }
+
+  bool valid = false;         // arguments are valid
+  Tensor *params = nullptr;   // T[N,E] tensor from which to gather values.
+  Tensor *indices = nullptr;  // int32[B,rank(N)] tensor with indices to gather
+  Tensor *oov = nullptr;      // optional T[E] tensor for invalid indices
+  Tensor *result = nullptr;   // T[B,E] tensor with result
+
+  int n = 1;                  // number of parameter index dimensions
+  Shape batch;                // shape of batch in indices (B)
+  Shape index;                // shape of embedding index (N)
+  Shape element;              // shape of embedding element (E)
+};
+
 // Look up single embedding.
 class SingleGather : public Kernel {
  public:
@@ -30,94 +77,77 @@ class SingleGather : public Kernel {
   string Operation() override { return "Gather"; }
 
   bool Supports(Step *step) override {
-    // Check inputs and outputs.
-    if (step->indegree() != 2 && step->indegree() != 3) return false;
-    if (step->outdegree() != 1) return false;
+    // Check arguments.
+    GatherArgs args(step);
+    if (!args.valid) return false;
 
-    // Check types.
-    Tensor *M = step->input(0);
-    Tensor *f = step->input(1);
-    Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
-    Tensor *v = step->output(0);
-    Type type = M->type();
-    if (f->type() != DT_INT32) return false;
-    if (M->rank() != 2) return false;
-    if (v->type() != type) return false;
-    if (oov != nullptr && oov->type() != type) return false;
-    int n = f->elements();
-    int d = M->dim(1);
-    int r = v->rank() - 1;
-    if (v->shape().outer(r) != n) return false;
-    if (v->shape().inner(r) != d) return false;
-    if (oov != nullptr && v->shape().inner(r) != oov->elements()) return false;
-    if (n != 1) return false;
+    // This kernel only supports single lookup.
+    if (args.indices->elements() != 1) return false;
+    if (args.n != 1) return false;
+    if (!args.indices->IsLocal()) return false;
+    if (!args.result->IsLocal()) return false;
 
     // Check that the output is not already a reference.
-    if (v->ref()) return false;
+    if (args.result->ref()) return false;
 
     return true;
   }
 
   void Adjust(Step *step) override {
     // Make output a reference into the embedding matrix.
-    Tensor *v = step->output(0);
-    DCHECK(!v->ref());
-    v->set_ref(true);
-    v->Link(step->input(0));
-    if (step->indegree() == 3) v->Link(step->input(2));
+    GatherArgs args(step);
+    DCHECK(!args.result->ref());
+    args.result->set_ref(true);
+    args.result->Link(args.params);
+    if (args.oov != nullptr) args.result->Link(args.oov);
 
     // Embedding matrix must be row-major.
-    step->input(0)->RequireOrder(ROW_MAJOR);
+    args.params->RequireOrder(ROW_MAJOR);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get inputs and outputs.
-    Tensor *M = step->input(0);
-    Tensor *f = step->input(1);
-    Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
-    Tensor *v = step->output(0);
-    CHECK(f->IsLocal());
-    CHECK(v->IsLocal());
-    CHECK(v->ref());
+    GatherArgs args(step);
+    CHECK(args.result->ref());
 
     // Allocate registers.
     Register acc = masm->rr().alloc();
     Register addr = masm->rr().alloc();
-    Register embeddings = masm->rr().alloc();
+    Register params = masm->rr().alloc();
 
     // Get feature index.
-    if (f->ref()) {
-      __ movq(addr, Operand(masm->instance(), f->offset()));
+    if (args.indices->ref()) {
+      __ movq(addr, Operand(masm->instance(), args.indices->offset()));
       __ movsxlq(acc, Operand(addr));
     } else {
-      __ movsxlq(acc, Operand(masm->instance(), f->offset()));
+      __ movsxlq(acc, Operand(masm->instance(), args.indices->offset()));
     }
 
     // Check for OOV feature.
     Label l1;
-    if (oov != nullptr) {
+    if (args.oov != nullptr) {
       __ testq(acc, acc);
       __ j(negative, &l1);
     }
 
     // Compute offset in embedding.
-    __ Multiply(acc, M->stride(0));
+    __ Multiply(acc, args.params->stride(0));
 
     // Lookup element in embedding.
-    __ LoadTensorAddress(embeddings, M);
-    __ addq(acc, embeddings);
+    __ LoadTensorAddress(params, args.params);
+    __ addq(acc, params);
 
     // Use oov vector for negative features.
-    if (oov != nullptr) {
+    if (args.oov != nullptr) {
       Label l2;
       __ jmp(&l2);
       __ bind(&l1);
-      __ LoadTensorAddress(acc, oov);
+      __ LoadTensorAddress(acc, args.oov);
       __ bind(&l2);
     }
 
     // Save reference to embedding vector.
-    __ movq(Operand(masm->instance(), v->offset()), acc);
+    __ movq(Operand(masm->instance(), args.result->offset()), acc);
   }
 
   int64 Complexity(const Step *step) override {
@@ -132,95 +162,87 @@ class MultiGather : public Kernel {
   string Operation() override { return "Gather"; }
 
   bool Supports(Step *step) override {
-    // Check inputs and outputs.
-    if (step->indegree() != 2 && step->indegree() != 3) return false;
-    if (step->outdegree() != 1) return false;
-
-    // Check types.
-    Tensor *M = step->input(0);
-    Tensor *f = step->input(1);
-    Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
-    Tensor *v = step->output(0);
-    Type type = M->type();
-    if (f->type() != DT_INT32) return false;
-    if (M->rank() != 2) return false;
-    if (v->type() != type) return false;
-    if (oov != nullptr && oov->type() != type) return false;
-    int n = f->elements();
-    int d = M->dim(1);
-    int r = v->rank() - 1;
-    if (v->shape().outer(r) != n) return false;
-    if (v->shape().inner(r) != d) return false;
-    if (oov != nullptr && v->shape().inner(r) != oov->elements()) return false;
+    // Check arguments.
+    GatherArgs args(step);
+    if (!args.valid) return false;
 
     return true;
   }
 
   void Adjust(Step *step) override {
     // Embedding matrix must be row-major.
-    step->input(0)->RequireOrder(ROW_MAJOR);
+    GatherArgs args(step);
+    args.params->RequireOrder(ROW_MAJOR);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get inputs and outputs.
-    Tensor *M = step->input(0);
-    Tensor *f = step->input(1);
-    Tensor *oov = step->indegree() == 3 ? step->input(2) : nullptr;
-    Tensor *v = step->output(0);
-    CHECK(f->IsLocal());
-    CHECK(v->IsLocal());
+    GatherArgs args(step);
 
     // Allocate registers.
     Register src = masm->rr().alloc_fixed(rsi);
     Register dst = masm->rr().alloc_fixed(rdi);
     Register cnt = masm->rr().alloc_fixed(rcx);
     Register acc = masm->rr().alloc();
-    Register index = masm->rr().alloc();
-    Register input = masm->rr().alloc();
-    Register embeddings = masm->rr().alloc();
+    Register batch = masm->rr().alloc();
+    Register indices = masm->rr().alloc();
+    Register params = masm->rr().alloc();
 
     // Load tensor locations.
-    __ LoadTensorAddress(embeddings, M);
-    __ LoadTensorAddress(input, f);
-    __ LoadTensorAddress(dst, v);
+    __ LoadTensorAddress(params, args.params);
+    __ LoadTensorAddress(indices, args.indices);
+    __ LoadTensorAddress(dst, args.result);
 
     // Loop over all feature indices.
-    Label l;
-    __ xorq(index, index);
-    __ bind(&l);
-
-    // Get feature index.
-    __ movsxlq(acc, Operand(input, index, times_4));
-
-    // Check for OOV feature.
-    Label l1;
-    if (oov != nullptr) {
-      __ testq(acc, acc);
-      __ j(negative, &l1);
+    Label lb;
+    if (args.batch.elements() > 1) {
+      __ xorq(batch, batch);
+      __ bind(&lb);
     }
 
-    // Compute address in embedding.
-    __ movq(src, embeddings);
-    __ Multiply(acc, M->stride(0));
-    __ addq(src, acc);
+    // Compute address in embedding for index.
+    Label l1;
+    __ movq(src, params);
+    for (int d = 0; d < args.n; ++d) {
+      if (args.params->dim(d) != 1) {
+        // Get feature index.
+        __ movsxlq(acc, Operand(indices, d * sizeof(int32)));
+      }
+
+      // Check for OOV feature.
+      if (args.oov != nullptr) {
+        __ testq(acc, acc);
+        __ j(negative, &l1);
+      }
+
+      if (args.params->dim(d) != 1) {
+        // Compute offset for index dimension.
+        __ Multiply(acc, args.params->stride(d));
+        __ addq(src, acc);
+      }
+    }
+
 
     // Use oov vector for negative features.
-    if (oov != nullptr) {
+    if (args.oov != nullptr) {
       Label l2;
       __ jmp(&l2);
       __ bind(&l1);
-      __ LoadTensorAddress(src, oov);
+      __ LoadTensorAddress(src, args.oov);
       __ bind(&l2);
     }
 
     // Copy embedding vector to output.
-    __ movq(cnt, Immediate(M->stride(0)));
+    __ movq(cnt, Immediate(args.params->stride(args.n - 1)));
     __ repmovsb();
 
     // Next feature index.
-    __ incq(index);
-    __ cmpq(index, Immediate(f->elements()));
-    __ j(less, &l);
+    if (args.batch.elements() > 1) {
+      __ addq(indices, Immediate(args.n * sizeof(int32)));
+      __ incq(batch);
+      __ cmpq(batch, Immediate(args.batch.elements()));
+      __ j(less, &lb);
+    }
   }
 
   int64 Complexity(const Step *step) override {
@@ -247,18 +269,15 @@ class PoolingGather : public Kernel {
   }
 
   bool Supports(Step *step) override {
-    // Check inputs and outputs.
-    if (step->indegree() != 2 || step->outdegree() != 1) return false;
+    // Check arguments.
+    GatherArgs args(step, true);
+    if (!args.valid) return false;
 
     // Check types.
-    Tensor *M = step->input(0);
-    Tensor *f = step->input(1);
-    Tensor *v = step->output(0);
-    if (!SIMDAssembler::Supports(M->type()) || M->rank() != 2) return false;
-    if (f->type() != DT_INT32 || f->rank() != 2) return false;
-    if (v->type() != M->type() || v->elements() != M->dim(1)) return false;
+    Type type = args.params->type();
+    if (!SIMDAssembler::Supports(type)) return false;
     if (pooling_ == AVG) {
-      if (M->type() != DT_FLOAT && M->type() != DT_DOUBLE) return false;
+      if (type != DT_FLOAT && type != DT_DOUBLE) return false;
       if (!CPU::Enabled(SSE2)) return false;
     }
 
@@ -266,17 +285,16 @@ class PoolingGather : public Kernel {
   }
 
   void Adjust(Step *step) override {
-    Tensor *M = step->input(0);
-    Tensor *v = step->output(0);
+    GatherArgs args(step, true);
 
     // Align to one vector register.
-    Type type = M->type();
+    Type type = args.params->type();
     int vecbytes = SIMDAssembler::VectorBytes(type);
-    M->SetMiniumAlignment(vecbytes);
-    v->SetMiniumAlignment(vecbytes);
+    args.params->SetMiniumAlignment(vecbytes);
+    args.result->SetMiniumAlignment(vecbytes);
 
     // Embedding matrix must be row-major.
-    M->RequireOrder(ROW_MAJOR);
+    args.params->RequireOrder(ROW_MAJOR);
 
     // Reserve registers.
     int regs = SIMDAssembler::RegisterUsage(type) + 9;
@@ -285,21 +303,18 @@ class PoolingGather : public Kernel {
 
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get inputs and outputs.
-    Tensor *M = step->input(0);
-    Tensor *f = step->input(1);
-    Tensor *v = step->output(0);
-    int n = v->elements();
+    GatherArgs args(step, true);
 
     // Create SIMD code generators.
-    Type type = M->type();
+    Type type = args.params->type();
     int dsize = TypeTraits::of(type).size();
     int vecbytes = SIMDAssembler::VectorBytes(type);
-    bool aligned = M->stride(0) % vecbytes == 0;
+    bool aligned = args.params->stride(args.n - 1) % vecbytes == 0;
     SIMDAssembler sasm(masm, type, aligned);
     step->set_variant(sasm.name());
 
     // Compute vector processing strategy.
-    SIMDStrategy strategy(&sasm, n);
+    SIMDStrategy strategy(&sasm, args.result->elements());
     strategy.PreloadMasks();
 
     // Allocate registers.
@@ -310,15 +325,15 @@ class PoolingGather : public Kernel {
     Register ofs = cnt;
     Register fidx = masm->rr().alloc();
     Register fcnt = masm->rr().alloc();
-    Register embeddings = masm->rr().alloc();
-    Register input = masm->rr().alloc();
-    Register output = masm->rr().alloc();
+    Register params = masm->rr().alloc();
+    Register indices = masm->rr().alloc();
+    Register result = masm->rr().alloc();
     auto elem = sasm.alloc(strategy.MaxUnrolls());
 
     // Load tensor locations.
-    __ LoadTensorAddress(embeddings, M);
-    __ LoadTensorAddress(input, f);
-    __ LoadTensorAddress(output, v);
+    __ LoadTensorAddress(params, args.params);
+    __ LoadTensorAddress(indices, args.indices);
+    __ LoadTensorAddress(result, args.result);
 
     // Zero feature index and feature count.
     __ xorq(fidx, fidx);
@@ -326,30 +341,36 @@ class PoolingGather : public Kernel {
       __ xorq(fcnt, fcnt);
     }
 
-    // Find first (non-negative) feature.
+    // Find first (non-negative) feature. Only first index is tested.
     Label l1, l2, done;
     __ bind(&l1);
-    __ movsxlq(acc, Operand(input, fidx, times_4));
+    __ movsxlq(acc, Operand(indices));
     __ testq(acc, acc);
     __ j(positive, &l2);
+
+    __ addq(indices, Immediate(args.n * sizeof(int32)));
     __ incq(fidx);
-    __ cmpq(fidx, Immediate(f->elements()));
+    __ cmpq(fidx, Immediate(args.batch.elements()));
     __ j(less, &l1);
 
     // No feature found; zero output vector.
     __ xorq(acc, acc);
-    __ movq(dst, output);
-    __ movq(cnt, Immediate(v->size()));
+    __ movq(dst, result);
+    __ movq(cnt, Immediate(args.result->size()));
     __ repstosb();
     __ jmp(&done);
 
     // First non-negative feature found; copy its embedding vector to output.
     __ bind(&l2);
-    __ movq(src, embeddings);
-    __ Multiply(acc, M->stride(0));
-    __ addq(src, acc);
-    __ movq(dst, output);
-    __ movq(cnt, Immediate(M->stride(0)));
+    __ movq(src, params);
+    for (int d = 0; d < args.n; ++d) {
+      __ movsxlq(acc, Operand(indices, d * sizeof(int32)));
+      __ Multiply(acc, args.params->stride(d));
+      __ addq(src, acc);
+    }
+    __ addq(indices, Immediate(args.n * sizeof(int32)));
+    __ movq(dst, result);
+    __ movq(cnt, Immediate(args.result->size()));
     __ repmovsb();
     if (pooling_ == AVG) {
       __ incq(fcnt);
@@ -359,21 +380,26 @@ class PoolingGather : public Kernel {
     Label l3, l4;
     __ bind(&l3);
     __ incq(fidx);
-    __ cmpq(fidx, Immediate(f->elements()));
+    __ cmpq(fidx, Immediate(Immediate(args.batch.elements())));
     __ j(equal, &l4);
-    __ movsxlq(acc, Operand(input, fidx, times_4));
-    __ testq(acc, acc);
-    __ j(negative, &l4);
 
-    // Combine embedding vector for feature with current result.
+    // Look up element in params.
+    __ movq(src, params);
+    for (int d = 0; d < args.n; ++d) {
+      __ movsxlq(acc, Operand(indices, d * sizeof(int32)));
+      if (d == 0) {
+        __ testq(acc, acc);
+        __ j(negative, &l4);
+      }
+      __ Multiply(acc, args.params->stride(d));
+      __ addq(src, acc);
+    }
+    __ addq(indices, Immediate(args.n * sizeof(int32)));
     if (pooling_ == AVG) {
       __ incq(fcnt);
     }
-    __ movq(src, embeddings);
-    __ Multiply(acc, M->stride(0));
-    __ addq(src, acc);
 
-    // Update output vector with embedding vector for feature.
+    // Combine embedding vector for feature with current result.
     Reduction op = pooling_ == MAX ? REDUCE_MAX : REDUCE_ADD;
     for (auto &phase : strategy.phases()) {
       auto *gen = phase.generator;
@@ -393,8 +419,8 @@ class PoolingGather : public Kernel {
         for (int i = 0; i < phase.unrolls; ++i) {
           int disp = i * vecsize * dsize;
           gen->Load(elem[i], Operand(src, ofs, times_1, disp));
-          gen->Accumulate(op, elem[i], Operand(output, ofs, times_1, disp));
-          gen->Store(Operand(output, ofs, times_1, disp), elem[i]);
+          gen->Accumulate(op, elem[i], Operand(result, ofs, times_1, disp));
+          gen->Store(Operand(result, ofs, times_1, disp), elem[i]);
         }
         __ addq(ofs, Immediate(blksize));
         __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
@@ -404,15 +430,15 @@ class PoolingGather : public Kernel {
         for (int i = 0; i < phase.unrolls; ++i) {
           int disp = blkstart + i * vecsize * dsize;
           gen->Load(elem[i], Operand(src, disp));
-          gen->Accumulate(op, elem[i], Operand(output, disp));
-          gen->Store(Operand(output, disp), elem[i]);
+          gen->Accumulate(op, elem[i], Operand(result, disp));
+          gen->Store(Operand(result, disp), elem[i]);
         }
       } else {
         // Masked phase.
         CHECK_EQ(phase.unrolls, 1);
         gen->MaskedLoad(elem[0], Operand(src, blkstart));
-        gen->MaskedAccumulate(op, elem[0], Operand(output, blkstart));
-        gen->MaskedStore(Operand(output, blkstart), elem[0]);
+        gen->MaskedAccumulate(op, elem[0], Operand(result, blkstart));
+        gen->MaskedStore(Operand(result, blkstart), elem[0]);
       }
     }
 
@@ -459,8 +485,8 @@ class PoolingGather : public Kernel {
           __ bind(&lu);
           for (int i = 0; i < phase.unrolls; ++i) {
             int disp = i * vecsize * dsize;
-            gen->Mul(elem[i], scalar, Operand(output, ofs, times_1, disp));
-            gen->Store(Operand(output, ofs, times_1, disp), elem[i]);
+            gen->Mul(elem[i], scalar, Operand(result, ofs, times_1, disp));
+            gen->Store(Operand(result, ofs, times_1, disp), elem[i]);
           }
           __ addq(ofs, Immediate(blksize));
           __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
@@ -469,14 +495,14 @@ class PoolingGather : public Kernel {
           // Residual phase.
           for (int i = 0; i < phase.unrolls; ++i) {
             int disp = blkstart + i * vecsize * dsize;
-            gen->Mul(elem[i], scalar, Operand(output, disp));
-            gen->Store(Operand(output, disp), elem[i]);
+            gen->Mul(elem[i], scalar, Operand(result, disp));
+            gen->Store(Operand(result, disp), elem[i]);
           }
         } else {
           // Masked phase.
           CHECK_EQ(phase.unrolls, 1);
-          gen->MaskedMul(elem[0], scalar, Operand(output, blkstart));
-          gen->MaskedStore(Operand(output, blkstart), elem[0]);
+          gen->MaskedMul(elem[0], scalar, Operand(result, blkstart));
+          gen->MaskedStore(Operand(result, blkstart), elem[0]);
         }
       }
     }
@@ -485,9 +511,10 @@ class PoolingGather : public Kernel {
   }
 
   int64 Complexity(const Step *step) override {
-    Tensor *M = step->input(0);
-    Tensor *f = step->input(1);
-    return M->dim(1) * f->elements() + (pooling_ == AVG ? M->dim(1) : 0);
+    GatherArgs args(step, true);
+    int64 ops = args.params->dim(1) * args.indices->elements();
+    if (pooling_ == AVG) ops += args.params->dim(1);
+    return  ops;
   }
 
  private:
@@ -497,16 +524,22 @@ class PoolingGather : public Kernel {
 // Accumulate sparse (scaled) input.
 class AssignAddScatter : public Kernel {
  public:
-  AssignAddScatter(bool scale) : scale_(scale) {}
+  AssignAddScatter(bool accumulate, bool scale)
+    : accumulate_(accumulate), scale_(scale) {}
 
   string Name() override { return Operation(); }
+
   string Operation() override {
-    return scale_ ? "AssignAddMulScatter" : "AssignAddScatter";
+    if (accumulate_) {
+      return scale_ ? "AssignAddMulScatter" : "AssignAddScatter";
+    } else {
+      return scale_ ? "MulScatter" : "Scatter";
+    }
   }
 
   bool Supports(Step *step) override {
     // Check inputs and outputs.
-    Args args(step, scale_);
+    Args args(step, accumulate_, scale_);
     if (!args.valid) return false;
 
     // Check arguments.
@@ -536,7 +569,7 @@ class AssignAddScatter : public Kernel {
   }
 
   void Adjust(Step *step, const Options &options) override {
-    Args args(step, scale_);
+    Args args(step, accumulate_, scale_);
 
     // Add sparsity bitmap index.
     if (options.sparse_threshold > 0 &&
@@ -567,7 +600,7 @@ class AssignAddScatter : public Kernel {
 
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get inputs.
-    Args args(step, scale_);
+    Args args(step, accumulate_, scale_);
     Tensor *sparse = args.var->sparse();
     bool single = args.indices->elements() == 1;
     int n = args.value->dim(1);
@@ -731,24 +764,40 @@ class AssignAddScatter : public Kernel {
   }
 
  private:
-  // Arguments to scatter op.
+  // Arguments to scatter ops.
+  // var = Scatter(indices, value, [oov])
+  // var = MulScatter(indices, value, [scaler], [oov])
+  // [ref] = AssignAddScatter(var, indices, value, [oov])
+  // [ref] = AssignAddMulScatter(var, indices, value, [scaler], [oov])
   struct Args {
-    Args(Step *step, bool scale) {
-      if (step->indegree() < 3) return;
-      if (step->outdegree() > 1) return;
-      var = step->input(0);
-      indices = step->input(1);
-      value = step->input(2);
-      if (step->outdegree() > 0) ref = step->output(0);
+    Args(Step *step, bool accumulate, bool scale) {
+      int i;
+      if (accumulate) {
+        i = 3;
+        if (step->indegree() < 3) return;
+        if (step->outdegree() > 1) return;
+        var = step->input(0);
+        indices = step->input(1);
+        value = step->input(2);
+        if (step->outdegree() > 0) ref = step->output(0);
+      } else {
+        i = 2;
+        if (step->indegree() < 2) return;
+        if (step->outdegree() != 1) return;
+        indices = step->input(1);
+        value = step->input(2);
+        var = step->output(0);
+      }
 
       if (scale) {
-        if (step->indegree() != 4 && step->indegree() != 5) return;
-        if (step->indegree() > 3) scaler = step->input(3);
-        if (step->indegree() > 4) oov = step->input(4);
+        if (step->indegree() != i + 1 && step->indegree() != i + 2) return;
+        if (step->indegree() > i) scaler = step->input(i);
+        if (step->indegree() > i + 1) oov = step->input(i + 1);
       } else {
-        if (step->indegree() != 3 && step->indegree() != 4) return;
-        if (step->indegree() > 3) oov = step->input(3);
+        if (step->indegree() != i && step->indegree() != i + 1) return;
+        if (step->indegree() > i) oov = step->input(i);
       }
+
       valid = true;
     }
 
@@ -761,7 +810,8 @@ class AssignAddScatter : public Kernel {
     Tensor *oov = nullptr;
   };
 
-  bool scale_;  // scale input
+  bool accumulate_;  // accumulate output
+  bool scale_;       // scale input
 };
 
 // Register gather/scatter kernels.
@@ -771,8 +821,10 @@ void RegisterGatherKernels(Library *library) {
   library->Register(new PoolingGather(PoolingGather::SUM));
   library->Register(new PoolingGather(PoolingGather::AVG));
   library->Register(new PoolingGather(PoolingGather::MAX));
-  library->Register(new AssignAddScatter(false));
-  library->Register(new AssignAddScatter(true));
+  library->Register(new AssignAddScatter(false, false));
+  library->Register(new AssignAddScatter(false, true));
+  library->Register(new AssignAddScatter(true, false));
+  library->Register(new AssignAddScatter(true, true));
 }
 
 }  // namespace myelin
