@@ -20,10 +20,6 @@
 namespace sling {
 namespace myelin {
 
-// SSE vectors.
-typedef float FloatVec4[8] __attribute__ ((aligned (16)));
-#define CONST4(x) {x, x, x, x}
-
 // Register SSE library.
 void RegisterSSELibrary(Library *library);
 

@@ -27,17 +27,29 @@ namespace myelin {
 
 using namespace jit;
 
+// argmax.cc
+void RegisterArgMax(Library *library);
+
 // array.cc
 void RegisterArrayKernels(Library *library);
 
-// generic-math.cc
-void RegisterGenericMath(Library *library);
+// concat.cc
+void RegisterConcatKernels(Library *library);
+
+// gather.cc
+void RegisterGatherKernels(Library *library);
 
 // generic-matmul.cc
 void RegisterGenericMatMul(Library *library);
 
 // generic-operators.cc
 void RegisterGenericOperators(Library *library);
+
+// reduce.cc
+void RegisterReduceKernels(Library *library);
+
+// transpose.cc
+void RegisterTranspose(Library *library);
 
 // Reference op for accessing parameters in other cells of the network. Looks up
 // tensor 'var' in instance and outputs a reference to the tensor.
@@ -583,8 +595,12 @@ void RegisterGenericTransforms(Library *library) {
 // Register generic library.
 void RegisterGenericLibrary(Library *library) {
   library->Register(new Reference());
+  RegisterConcatKernels(library);
+  RegisterGatherKernels(library);
+  RegisterReduceKernels(library);
+  RegisterTranspose(library);
   RegisterArrayKernels(library);
-  RegisterGenericMath(library);
+  RegisterArgMax(library);
   RegisterGenericMatMul(library);
   RegisterGenericOperators(library);
 }

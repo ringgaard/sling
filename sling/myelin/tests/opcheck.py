@@ -27,6 +27,7 @@ flags.define("--dt", default=myelin.DT_FLOAT)
 flags.define("--test")
 flags.define("--thorough", default=False, action='store_true')
 flags.define("--repeat", default=1, type=int)
+flags.define("--compute", default=False, action='store_true')
 flags.define("--skipdiff", default=False, action='store_true')
 
 flags.parse()
@@ -85,46 +86,60 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8, check=None):
         r = np.random.ranf(a.shape) * (hi - lo) + lo
       np.copyto(a, r, casting="unsafe")
 
-    # Compute function using numpy.
-    baseline = simulator.compute(flow, f, data)
+    if flags.arg.compute:
+      # Compute cell.
+      for n in range(flags.arg.repeat): data.compute()
 
-    # Compute cell.
-    for n in range(flags.arg.repeat):
-      data.compute()
+      # Print inputs.
+      for i in flow.inputs(f):
+        if i.data is None:
+          print("input", i.name)
+          print(np.asarray(data.tensor(i)))
 
-    # Create new test if does not already exist.
-    test = tests.get(f.name)
-    if test is None:
-      test = Test(f)
-      tests[f.name] = test
+      # Print outputs.
+      for o in flow.outputs(f):
+        print("output", o.name)
+        print(np.asarray(data.tensor(o)))
+    else:
+      # Compute function using numpy.
+      baseline = simulator.compute(flow, f, data)
 
-    # Check outputs
-    if check is None: check = flow.outputs(f)
-    for o in check:
-      test.runs += 1
-      t = data.tensor(o)
-      b = baseline[o]
+      # Compute function using myelin.
+      for n in range(flags.arg.repeat): data.compute()
 
-      if b.dtype == bool: t = np.array(t, dtype=bool)
-      if not np.allclose(t, b, rtol=rtol, atol=atol):
-        test.errors += 1
-        print()
-        print("ERROR: mismatch in", f.name, variant, "for", o.name)
-        if not flags.arg.skipdiff:
-          print("inputs:")
-          for i in flow.inputs(f):
-            if i.data is None:
-              print(i.name)
-              print(np.asarray(data.tensor(i)))
-          print("myelin:")
-          print(np.asarray(t))
-          print("numpy:")
-          print(b)
-          if b.dtype != bool:
-            print("abs error:")
-            print(b - np.asarray(t))
-            print("rel error:")
-            print((b - np.asarray(t)) / np.asarray(t))
+      # Create new test if does not already exist.
+      test = tests.get(f.name)
+      if test is None:
+        test = Test(f)
+        tests[f.name] = test
+
+      # Check outputs.
+      if check is None: check = flow.outputs(f)
+      for o in check:
+        test.runs += 1
+        t = data.tensor(o)
+        b = baseline[o]
+
+        if b.dtype == bool: t = np.array(t, dtype=bool)
+        if not np.allclose(t, b, rtol=rtol, atol=atol):
+          test.errors += 1
+          print()
+          print("ERROR: mismatch in", f.name, variant, "for", o.name)
+          if not flags.arg.skipdiff:
+            print("inputs:")
+            for i in flow.inputs(f):
+              if i.data is None:
+                print(i.name)
+                print(np.asarray(data.tensor(i)))
+            print("myelin:")
+            print(np.asarray(t))
+            print("numpy:")
+            print(b)
+            if b.dtype != bool:
+              print("abs error:")
+              print(b - np.asarray(t))
+              print("rel error:")
+              print((b - np.asarray(t)) / np.asarray(t))
 
   if flags.arg.profile:
     print(net.profile())

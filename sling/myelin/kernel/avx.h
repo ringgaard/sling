@@ -20,10 +20,6 @@
 namespace sling {
 namespace myelin {
 
-// AVX vectors.
-typedef float FloatVec8[8] __attribute__ ((aligned (32)));
-#define CONST8(x) {x, x, x, x, x, x, x, x}
-
 // Register AVX library.
 void RegisterAVXLibrary(Library *library);
 

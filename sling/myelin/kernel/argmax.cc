@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/myelin/kernel/avx.h"
-
 #include <math.h>
-#include <string>
 
 #include "sling/myelin/compute.h"
 #include "sling/myelin/macro-assembler.h"
@@ -26,6 +23,145 @@ namespace sling {
 namespace myelin {
 
 using namespace jit;
+
+// Compute argmax (or argmin) of input.
+class GenericFltArgMax : public Kernel {
+ public:
+  GenericFltArgMax(bool minimum) : minimum_(minimum) {}
+
+  string Name() override { return minimum_ ? "GenFltArgMin" : "GenFltArgMax"; }
+  string Operation() override { return minimum_ ? "ArgMin" : "ArgMax"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 1) return false;
+    if (step->outdegree() != 1) return false;
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+
+    // Check type.
+    if (x->type() != DT_FLOAT && x->type() != DT_DOUBLE &&
+        x->type() != DT_INT8 && x->type() != DT_INT16 &&
+        x->type() != DT_INT32 && x->type() != DT_INT64) {
+      return false;
+    }
+    if (y->type() != DT_INT32 && y->type() != DT_INT64) return false;
+    if (y->elements() != 1) return false;
+
+    return true;
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get input and output.
+    Tensor *x = step->input(0);
+    Tensor *y = step->output(0);
+    Type dt = x->type();
+
+    // Assign registers.
+    Register input = masm->rr().alloc();
+    Register output = masm->rr().alloc();
+    Register idx = masm->rr().alloc();
+    Register best = masm->rr().alloc();
+    Register ivalue = masm->rr().alloc();
+    Register iextremum = masm->rr().alloc();
+    XMMRegister fvalue = masm->mm().allocx();
+    XMMRegister fextremum = masm->mm().allocx();
+
+    // Load tensor locations.
+    __ LoadTensorAddress(input, x);
+    __ LoadTensorAddress(output, y);
+
+    // Initialize min/max value.
+    __ movq(best, Immediate(-1));
+    if (minimum_) {
+      switch (dt) {
+        case DT_INT8:
+        case DT_INT16:
+        case DT_INT32:
+        case DT_INT64:
+          __ movq(iextremum, masm->MaxVal<int64>()->address());
+          break;
+        case DT_FLOAT:
+          __ movss(fextremum, masm->MaxVal<float>()->address());
+          break;
+        case DT_DOUBLE:
+          __ movsd(fextremum, masm->MaxVal<double>()->address());
+          break;
+        default: ;
+      }
+    } else {
+      switch (dt) {
+        case DT_INT8:
+        case DT_INT16:
+        case DT_INT32:
+        case DT_INT64:
+          __ movq(iextremum, masm->MinVal<int64>()->address());
+          break;
+        case DT_FLOAT:
+          __ movss(fextremum, masm->MinVal<float>()->address());
+          break;
+        case DT_DOUBLE:
+          __ movsd(fextremum, masm->MinVal<double>()->address());
+          break;
+        default: ;
+      }
+    }
+
+    // Loop over elements in tensor.
+    __ xorq(idx, idx);
+    Label loop;
+    __ LoopStart(&loop);
+
+
+    // Check if next value is greater/less than current extremum.
+    Label l1;
+    switch (dt) {
+      case DT_INT8:
+      case DT_INT16:
+      case DT_INT32:
+      case DT_INT64:
+        __ LoadInteger(ivalue, input, idx, dt);
+        __ cmpq(ivalue, iextremum);
+        __ j(minimum_ ? greater_equal : less_equal, &l1);
+        __ movq(iextremum, ivalue);
+        break;
+      case DT_FLOAT:
+        __ movss(fvalue, Operand(input, idx, times_4));
+        __ ucomiss(fvalue, fextremum);
+        __ j(minimum_ ? above_equal : below_equal, &l1);
+        __ movss(fextremum, fvalue);
+        break;
+      case DT_DOUBLE:
+        __ movsd(fvalue, Operand(input, idx, times_8));
+        __ ucomisd(fvalue, fextremum);
+        __ j(minimum_ ? above_equal : below_equal, &l1);
+        __ movsd(fextremum, fvalue);
+        break;
+      default: ;
+    }
+    __ movq(best, idx);
+    __ bind(&l1);
+
+    // Next element.
+    __ incq(idx);
+    __ cmpq(idx, Immediate(x->elements()));
+    __ j(less, &loop);
+
+    // Save output.
+    if (y->type() == DT_INT32) {
+      __ movl(Operand(output), best);
+    } else {
+      __ movq(Operand(output), best);
+    }
+  }
+
+  int64 Complexity(const Step *step) override {
+    return step->input(0)->elements();
+  }
+
+ private:
+  bool minimum_;  // compute argmin instead of argmax
+};
 
 // Compute argmax (or argmin) of input using AVX.
 class AVXFltArgMax : public Kernel {
@@ -180,17 +316,11 @@ class AVXFltArgMax : public Kernel {
   bool minimum_;  // compute argmin instead of argmax
 };
 
-void RegisterAVXMath(Library *library) {
-  // Computes  : y = argmax(x)
-  // Input     : x: float32[d1,...,dn]
-  // Output    : y: int32/int64
-  // Requires  : AVX
-  library->Register(new AVXFltArgMax(false));
+void RegisterArgMax(Library *library) {
+  library->Register(new GenericFltArgMax(false));
+  library->Register(new GenericFltArgMax(true));
 
-  // Computes  : y = argmin(x)
-  // Input     : x: float32[d1,...,dn]
-  // Output    : y: int32/int64
-  // Requires  : AVX
+  library->Register(new AVXFltArgMax(false));
   library->Register(new AVXFltArgMax(true));
 }
 
