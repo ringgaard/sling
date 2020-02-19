@@ -318,7 +318,9 @@ class PoolingGather : public Kernel {
     args.params->RequireOrder(ROW_MAJOR);
 
     // Reserve registers.
-    int regs = SIMDAssembler::RegisterUsage(type) + 9;
+    int regs = SIMDAssembler::RegisterUsage(type) + 8;
+    if (pooling_ == AVG) regs++;
+    if (args.batch.elements() > 1) regs++;
     step->SetRegisterUsage(regs);
   }
 
@@ -339,16 +341,18 @@ class PoolingGather : public Kernel {
     strategy.PreloadMasks();
 
     // Allocate registers.
+    bool batched = args.batch.elements() > 1;
     Register acc = masm->rr().alloc_fixed(rax);
     Register src = masm->rr().alloc_fixed(rsi);
     Register dst = masm->rr().alloc_fixed(rdi);
     Register cnt = masm->rr().alloc_fixed(rcx);
     Register ofs = cnt;
     Register fidx = masm->rr().alloc();
-    Register fcnt = masm->rr().alloc();
     Register params = masm->rr().alloc();
     Register indices = masm->rr().alloc();
     Register result = masm->rr().alloc();
+    Register fcnt = pooling_ == AVG ? masm->rr().alloc() : no_reg;
+    Register batch = batched ? masm->rr().alloc() : no_reg;
     auto elem = sasm.alloc(strategy.MaxUnrolls());
 
     // Load tensor locations.
@@ -356,7 +360,12 @@ class PoolingGather : public Kernel {
     __ LoadTensorAddress(indices, args.indices);
     __ LoadTensorAddress(result, args.result);
 
-    // TODO: implement batch loop.
+    // Loop over batches.
+    Label lb;
+    if (batched) {
+      __ xorq(batch, batch);
+      __ bind(&lb);
+    }
 
     // Zero feature index and feature count.
     __ xorq(fidx, fidx);
@@ -365,7 +374,7 @@ class PoolingGather : public Kernel {
     }
 
     // Find first (non-negative) feature. Only first index is tested.
-    Label l1, l2, done;
+    Label l1, l2, next;
     __ bind(&l1);
     __ movsxlq(acc, Operand(indices));
     __ testq(acc, acc);
@@ -381,7 +390,7 @@ class PoolingGather : public Kernel {
     __ movq(dst, result);
     __ movq(cnt, Immediate(args.slice_size()));
     __ repstosb();
-    __ jmp(&done);
+    __ jmp(&next);
 
     // First non-negative feature found; copy its embedding vector to output.
     __ bind(&l2);
@@ -400,11 +409,11 @@ class PoolingGather : public Kernel {
     }
 
     // Go over the remaining features.
-    Label l3, l4;
+    Label l3, l4, l5;
     __ bind(&l3);
     __ incq(fidx);
     __ cmpq(fidx, Immediate(Immediate(args.feature.elements())));
-    __ j(equal, &l4);
+    __ j(equal, &l5);
 
     // Look up element in params.
     __ movq(src, params);
@@ -467,9 +476,18 @@ class PoolingGather : public Kernel {
 
     // Next feature.
     __ jmp(&l3);
+    
+    // Skip remaining features.
     __ bind(&l4);
+    if (batched) {
+      __ movq(cnt, Immediate(Immediate(args.feature.elements())));
+      __ subq(cnt, fidx);
+      __ Multiply(cnt, args.n * sizeof(int32));
+      __ addq(indices, cnt);
+    }
 
     // Compute average.
+    __ bind(&l5);
     if (pooling_ == AVG) {
       // Compute 1/fcnt.
       int scalar = sasm.alloc();
@@ -530,7 +548,14 @@ class PoolingGather : public Kernel {
       }
     }
 
-    __ bind(&done);
+    // Next batch.
+    __ bind(&next);
+    if (batched) {
+      __ addq(result, Immediate(args.slice_size()));
+      __ incq(batch);
+      __ cmpq(batch, Immediate(args.batch.elements()));
+      __ j(less, &lb);
+    }
   }
 
   int64 Complexity(const Step *step) override {
@@ -544,59 +569,53 @@ class PoolingGather : public Kernel {
   Pooling pooling_;  // pooling operation for combining vectors
 };
 
-// Accumulate sparse (scaled) input.
+// Scatter input to sparse output.
 class Scatter : public Kernel {
  public:
-  Scatter(bool accumulate, bool scale)
-    : accumulate_(accumulate), scale_(scale) {}
+  Scatter(bool accumulate) : accumulate_(accumulate) {}
 
   string Name() override { return Operation(); }
 
   string Operation() override {
-    if (accumulate_) {
-      return scale_ ? "AssignAddMulScatter" : "AssignAddScatter";
-    } else {
-      return scale_ ? "MulScatter" : "Scatter";
-    }
+    return accumulate_ ? "AssignAddScatter" : "Scatter";
   }
 
   bool Supports(Step *step) override {
     // Check inputs and outputs.
-    Args args(step, accumulate_, scale_);
+    Args args(step, accumulate_);
     if (!args.valid) return false;
 
-    // Check arguments.
+    // Check types.
     Type type = args.var->type();
-    if (!SIMDAssembler::Supports(type)) return false;
-    if (args.var->rank() != 2) return false;
-    if (args.var->constant()) return false;
+    if (args.value->type() != type) return false;
     if (args.indices->type() != DT_INT32) return false;
-    if (args.indices->rank() != 2) return false;
-    if (args.value->type() != type || args.value->rank() != 2) return false;
-    if (args.value->dim(1) != args.var->dim(1)) return false;
-    if (args.value->dim(0) != 1 &&
-        args.value->dim(0) != args.indices->dim(1)) {
-      return false;
-    }
-    if (scale_) {
-      if (args.scaler->type() != type) return false;
-      if (args.scaler->elements() != 1) return false;
-    }
-    if (args.ref) {
+    
+    // Check shapes.
+    if (args.index.rank() != args.n) return false;
+    if (args.value->shape() != args.element) return false;
+
+    // Check optional arguments.
+    if (args.ref != nullptr) {
       if (args.ref->type() != type) return false;
       if (args.ref->shape() != args.var->shape()) return false;
-      if (!args.ref->ref()) return false;
     }
+    if (args.oov != nullptr) {
+      if (args.oov->shape() != args.element) return false;
+    }
+
+    // Check for SIMD support.
+    if (!SIMDAssembler::Supports(args.var->type())) return false;
+    if (args.var->constant()) return false;
 
     return true;
   }
 
   void Adjust(Step *step, const Options &options) override {
-    Args args(step, accumulate_, scale_);
+    Args args(step, accumulate_);
 
     // Add sparsity bitmap index.
     if (options.sparse_threshold > 0 &&
-        args.var->dim(0) >= options.sparse_threshold &&
+        args.index.elements() >= options.sparse_threshold &&
         args.var->IsLocal() &&
         step->GetAttr("sparse", true)) {
       Tensor *sparse = args.var->MakeSparse();
@@ -616,17 +635,17 @@ class Scatter : public Kernel {
     args.var->RequireOrder(ROW_MAJOR);
 
     // Reserve registers.
-    int regs = SIMDAssembler::RegisterUsage(type) + 8;
-    if (args.scaler) regs++;
+    int regs = SIMDAssembler::RegisterUsage(type) + 9;
+    if (args.var->sparse()) regs++;
     step->SetRegisterUsage(regs);
   }
 
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get inputs.
-    Args args(step, accumulate_, scale_);
+    Args args(step, accumulate_);
     Tensor *sparse = args.var->sparse();
-    bool single = args.indices->elements() == 1;
-    int n = args.value->dim(1);
+    bool single = args.feature.elements() == 1;
+    int n = args.element.elements();
 
     // Create SIMD code generators.
     Type type = args.var->type();
@@ -641,18 +660,20 @@ class Scatter : public Kernel {
     strategy.PreloadMasks();
 
     // Allocate registers.
-    Register bit = masm->rr().alloc_fixed(rcx);
-    Register acc = masm->rr().alloc();
+    Register acc = masm->rr().alloc_fixed(rax);
+    Register dst = masm->rr().alloc_fixed(rdi);
+    Register cnt = masm->rr().alloc_fixed(rcx);
+    Register bit = cnt;
+
+    Register fidx = masm->rr().alloc();
+    Register ofs = masm->rr().alloc();
+
     Register varaddr = masm->rr().alloc();
     Register idxaddr = masm->rr().alloc();
     Register valaddr = masm->rr().alloc();
-    Register bmaddr = masm->rr().alloc();
-    Register fidx = masm->rr().alloc();
-    Register ofs = masm->rr().alloc();
-    Register src = bit;
-    Register aux = ofs;
+    Register bmaddr = sparse ? masm->rr().alloc() : no_reg;
+    
     auto elem = sasm.alloc(strategy.MaxUnrolls());
-    int factor = args.scaler ? sasm.alloc() : -1;
 
     // Load tensor locations.
     __ LoadTensorAddress(varaddr, args.var);
@@ -662,6 +683,14 @@ class Scatter : public Kernel {
       __ LoadTensorAddress(bmaddr, sparse);
     }
 
+    // Clear output for non-accumulating scatter.
+    if (!accumulate_) {
+      __ xorq(acc, acc);
+      __ movq(dst, varaddr);
+      __ movq(cnt, Immediate(args.var->size()));
+      __ repstosb();
+    }
+
     // Optionally output reference to assigned variable.
     if (args.ref != nullptr) {
       CHECK(args.ref->IsLocal());
@@ -669,49 +698,47 @@ class Scatter : public Kernel {
       __ movq(Operand(masm->instance(), args.ref->offset()), varaddr);
     }
 
-    // Load scaling value.
-    if (args.scaler) {
-      __ LoadTensorAddress(src, args.scaler);
-      sasm.main()->Broadcast(factor, Operand(src));
-    }
-
     // Loop over features.
+    Label loop;
     if (!single) {
       __ xorq(fidx, fidx);
+      __ bind(&loop);
     }
-    Label l1, l2;
-    __ bind(&l1);
-    if (single) {
-      __ movsxlq(acc, Operand(idxaddr));
-    } else {
-      __ movsxlq(acc, Operand(idxaddr, fidx, times_4));
+
+    // Compute index into scatter variable.
+    Label loov;
+    __ movsxlq(ofs, Operand(idxaddr));
+    __ testq(ofs, ofs);
+    __ j(negative, &loov);
+    for (int d = 1; d < args.n; ++d) {
+      __ Multiply(ofs, args.var->dim(d - 1));
+      __ movsxlq(acc, Operand(idxaddr, d * sizeof(int32)));
+      __ addq(ofs, acc);
     }
-    __ testq(acc, acc);
-    __ j(negative, &l2);
 
     // Update sparsity bitmap.
     if (sparse) {
-      __ movq(bit, acc);
-      __ movq(aux, Immediate(1));
-      __ shlq_cl(aux);
+      __ movq(bit, ofs);
+      __ movq(acc, Immediate(1));
+      __ shlq_cl(acc);
       __ shrq(bit, Immediate(6));
-      __ orq(Operand(bmaddr, bit, times_8), aux);
+      __ orq(Operand(bmaddr, bit, times_8), acc);
     }
 
-    //  Look up address of index in embedding.
-    __ Multiply(acc, args.var->stride(0));
-    __ addq(acc, varaddr);
+    // Compute address of slice in scatter variable.
+    __ Multiply(ofs, args.var->stride(args.n - 1));
+    __ leaq(dst, Operand(varaddr, ofs));
 
     // Update OOV vector for missing features.
     if (args.oov) {
-      Label l3;
-      __ jmp(&l3);
-      __ bind(&l2);
-      __ LoadTensorAddress(acc, args.oov);
-      __  bind(&l3);
+      Label lskip;
+      __ jmp(&lskip);
+      __ bind(&loov);
+      __ LoadTensorAddress(dst, args.oov);
+      __  bind(&lskip);
     }
 
-    // Add (scaled) input vector for feature to embedding vector.
+    // Add input vector for feature to embedding vector.
     for (auto &phase : strategy.phases()) {
       auto *gen = phase.generator;
       int vecsize = gen->VectorSize();
@@ -729,14 +756,9 @@ class Scatter : public Kernel {
         __ bind(&lu);
         for (int i = 0; i < phase.unrolls; ++i) {
           int disp = i * vecsize * dsize;
-          gen->Load(elem[i], Operand(acc, ofs, times_1, disp));
-          if (scale_) {
-            gen->MulAdd(elem[i], factor, Operand(valaddr, ofs, times_1, disp),
-                        true);
-          } else {
-            gen->Add(elem[i], elem[i], Operand(valaddr, ofs, times_1, disp));
-          }
-          gen->Store(Operand(acc, ofs, times_1, disp), elem[i]);
+          gen->Load(elem[i], Operand(dst, ofs, times_1, disp));
+          gen->Add(elem[i], elem[i], Operand(valaddr, ofs, times_1, disp));
+          gen->Store(Operand(dst, ofs, times_1, disp), elem[i]);
         }
         __ addq(ofs, Immediate(blksize));
         __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
@@ -745,96 +767,87 @@ class Scatter : public Kernel {
         // Residual phase.
         for (int i = 0; i < phase.unrolls; ++i) {
           int disp = blkstart + i * vecsize * dsize;
-          gen->Load(elem[i], Operand(acc, disp));
-          if (scale_) {
-            gen->MulAdd(elem[i], factor, Operand(valaddr, disp), true);
-          } else {
-            gen->Add(elem[i], elem[i], Operand(valaddr, disp));
-          }
-          gen->Store(Operand(acc, disp), elem[i]);
+          gen->Load(elem[i], Operand(dst, disp));
+          gen->Add(elem[i], elem[i], Operand(valaddr, disp));
+          gen->Store(Operand(dst, disp), elem[i]);
         }
       } else {
         // Masked phase.
         CHECK_EQ(phase.unrolls, 1);
-        gen->MaskedLoad(elem[0], Operand(acc, blkstart));
-        if (scale_) {
-          gen->MaskedMulAdd(elem[0], factor, Operand(valaddr, blkstart));
-        } else {
-          gen->MaskedAdd(elem[0], elem[0], Operand(valaddr, blkstart));
-        }
-        gen->MaskedStore(Operand(acc, blkstart), elem[0]);
+        gen->MaskedLoad(elem[0], Operand(dst, blkstart));
+        gen->MaskedAdd(elem[0], elem[0], Operand(valaddr, blkstart));
+        gen->MaskedStore(Operand(dst, blkstart), elem[0]);
       }
     }
 
-    if (args.value->dim(0) != 1) {
-      __ addq(valaddr, Immediate(args.value->stride(0)));
-    }
+    //if (args.value->dim(0) != 1) {
+    //  __ addq(valaddr, Immediate(args.value->stride(0)));
+    //}
 
     if (!single) {
+      __ addq(idxaddr, Immediate(args.n * sizeof(int32)));
       __ incq(fidx);
       __ cmpq(fidx, Immediate(args.indices->elements()));
-      __ j(less, &l1);
+      __ j(less, &loop);
     }
     if (args.oov == nullptr) {
-      __ bind(&l2);
+      __ bind(&loov);
     }
   }
 
   int64 Complexity(const Step *step) override {
-    Tensor *indices = step->input(1);
-    Tensor *value = step->input(2);
-    return value->elements() * indices->elements() * (scale_ ? 2 : 1);
+    Args args(step, accumulate_);
+    return args.feature.elements() * args.element.elements();
   }
 
  private:
   // Arguments to scatter ops.
   // var = Scatter(indices, value, [oov])
-  // var = MulScatter(indices, value, [scaler], [oov])
   // [ref] = AssignAddScatter(var, indices, value, [oov])
-  // [ref] = AssignAddMulScatter(var, indices, value, [scaler], [oov])
   struct Args {
-    Args(Step *step, bool accumulate, bool scale) {
-      int i;
+    Args(const Step *step, bool accumulate) {
+      // Get fixed arguments.
       if (accumulate) {
-        i = 3;
         if (step->indegree() < 3) return;
         if (step->outdegree() > 1) return;
         var = step->input(0);
         indices = step->input(1);
         value = step->input(2);
+        if (step->indegree() > 3) oov = step->input(3);
         if (step->outdegree() > 0) ref = step->output(0);
       } else {
-        i = 2;
         if (step->indegree() < 2) return;
         if (step->outdegree() != 1) return;
-        indices = step->input(1);
-        value = step->input(2);
+        indices = step->input(0);
+        value = step->input(1);
+        if (step->indegree() > 2) oov = step->input(2);
         var = step->output(0);
       }
 
-      if (scale) {
-        if (step->indegree() != i + 1 && step->indegree() != i + 2) return;
-        if (step->indegree() > i) scaler = step->input(i);
-        if (step->indegree() > i + 1) oov = step->input(i + 1);
-      } else {
-        if (step->indegree() != i && step->indegree() != i + 1) return;
-        if (step->indegree() > i) oov = step->input(i);
-      }
-
+      // Compute index shapes.
+      int r = indices->rank();
+      if (r > 0) n = indices->dim(-1);
+      feature = indices->shape().outside(r - 1);
+      index = var->shape().outside(n);
+      element = var->shape().inside(n);
+      
       valid = true;
     }
 
-    bool valid = false;
-    Tensor *var = nullptr;
-    Tensor *indices = nullptr;
-    Tensor *value = nullptr;
-    Tensor *scaler = nullptr;
-    Tensor *ref = nullptr;
-    Tensor *oov = nullptr;
+    bool valid = false;         // arguments are valid
+    Tensor *var = nullptr;      // T[N,E] tensor to scatter values into
+    Tensor *indices = nullptr;  // int32[B,F,{N}] tensor with indices to scatter
+    Tensor *value = nullptr;    // T[F,E] tensor with value to scatter
+    Tensor *ref = nullptr;      // &T[N,E] tensor with reference to var
+    Tensor *oov = nullptr;      // optional T[E] tensor for invalid indices
+
+    int n = 1;                  // number of parameter index dimensions
+    Shape feature;              // feature shape in indices (F)
+    Shape index;                // embedding index shape (N)
+    Shape element;              // embedding element shape (E)
   };
 
   bool accumulate_;  // accumulate output
-  bool scale_;       // scale input
 };
 
 // Register gather/scatter kernels.
@@ -844,10 +857,8 @@ void RegisterGatherKernels(Library *library) {
   library->Register(new PoolingGather(PoolingGather::SUM));
   library->Register(new PoolingGather(PoolingGather::AVG));
   library->Register(new PoolingGather(PoolingGather::MAX));
-  library->Register(new Scatter(false, false));
-  library->Register(new Scatter(false, true));
-  library->Register(new Scatter(true, false));
-  library->Register(new Scatter(true, true));
+  library->Register(new Scatter(false));
+  library->Register(new Scatter(true));
 }
 
 }  // namespace myelin

@@ -359,15 +359,16 @@ class FlowBuilder : public Scope {
 
   Variable *PoolingGather(const string &op,
                           Variable *params,
-                          Variable *indices);
-  Variable *GatherSum(Variable *params, Variable *indices) {
-    return PoolingGather("GatherSum", params, indices);
+                          Variable *indices,
+                          int batch = 0);
+  Variable *GatherSum(Variable *params, Variable *indices, int batch = 0) {
+    return PoolingGather("GatherSum", params, indices, batch);
   }
-  Variable *GatherAvg(Variable *params, Variable *indices) {
-    return PoolingGather("GatherAvg", params, indices);
+  Variable *GatherAvg(Variable *params, Variable *indices, int batch = 0) {
+    return PoolingGather("GatherAvg", params, indices, batch);
   }
-  Variable *GatherMax(Variable *params, Variable *indices) {
-    return PoolingGather("GatherMax", params, indices);
+  Variable *GatherMax(Variable *params, Variable *indices, int batch = 0) {
+    return PoolingGather("GatherMax", params, indices, batch);
   }
 
   // Scatter for sparse embedding update.

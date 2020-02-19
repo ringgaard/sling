@@ -298,22 +298,25 @@ class Builder:
       result.shape = indices.shape[:-1] + params.shape[indices.shape[-1]:]
     return result
 
-  def pooling_gather(self, optype, params, indices, name=None):
+  def pooling_gather(self, optype, params, indices, batch=None, name=None):
     result = self.op(optype, [params, indices], name)
     if len(indices.shape) == 0:
       result.shape = params.shape[1:]
     else:
       result.shape = params.shape[indices.shape[-1]:]
+    if batch is not None: 
+      result.producer.add_attr("batch", batch)
+      result.shape = indices.shape[:batch] + result.shape
     return result
 
-  def gather_sum(self, params, indices, name=None):
-    return self.pooling_gather("GatherSum", params, indices, name)
+  def gather_sum(self, params, indices, batch=None, name=None):
+    return self.pooling_gather("GatherSum", params, indices, batch, name)
 
-  def gather_max(self, params, indices, name=None):
-    return self.pooling_gather("GatherMax", params, indices, name)
+  def gather_max(self, params, indices, batch=None, name=None):
+    return self.pooling_gather("GatherMax", params, indices, batch, name)
 
-  def gather_avg(self, params, indices, name=None):
-    return self.pooling_gather("GatherAvg", params, indices, name)
+  def gather_avg(self, params, indices, batch=None, name=None):
+    return self.pooling_gather("GatherAvg", params, indices, batch, name)
 
   def scatter(self, indices, value, shape, name=None):
     result = self.op("Scatter", [indices, value], name)

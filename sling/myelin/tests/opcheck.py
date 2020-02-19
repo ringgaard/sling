@@ -804,6 +804,14 @@ def gather_sum_test(n, d, s):
   v = f.gather_sum(emb, ind)
   check(flow, (n, d, s), 0, n)
 
+def gather_sum_batch_test(n, d, s, b):
+  flow = myelin.Flow()
+  f = flow.define("gather_sum")
+  emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
+  ind = f.var("ind", myelin.DT_INT32, [b, s, 1])
+  v = f.gather_sum(emb, ind, batch=1)
+  check(flow, (n, d, s, b), 0, n)
+
 def gather_max_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("gather_max")
@@ -823,8 +831,8 @@ def gather_avg_test(n, d, s):
 def scatter_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("scatter")
-  ind = f.var("ind", myelin.DT_INT32, [1, s])  # [s, 1]
-  v = f.var("v", dt, [1, d])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
+  v = f.var("v", dt, [d])
   m = f.scatter(ind, v, [n, d])
   check(flow, (n, d, s), 0, n, check=[m])
 
@@ -832,8 +840,8 @@ def scatter_add_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("scatter_add")
   m = f.var("m", dt, [n, d])
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
-  v = f.var("v", dt, [1, d])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
+  v = f.var("v", dt, [d])
   f.assign_add_scatter(m, ind, v)
   check(flow, (n, d, s), 0, n, check=[m])
 

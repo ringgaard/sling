@@ -292,9 +292,15 @@ Flow::Variable *FlowBuilder::Gather(Variable *params,
 
 Flow::Variable *FlowBuilder::PoolingGather(const string &op,
                                            Variable *params,
-                                           Variable *indices) {
+                                           Variable *indices,
+                                           int batch) {
   int n = indices->shape.scalar() ? 1 : indices->dim(-1);
-  return Op(op, {params, indices}, params->type, params->shape.inside(n));
+  auto *r = Op(op, {params, indices}, params->type, params->shape.inside(n));
+  if (batch != 0) {
+    r->producer->SetAttr("batch", batch);
+    r->shape = indices->shape.outside(batch) + params->shape.inside(n);
+  }
+  return r;
 }
 
 Flow::Variable *FlowBuilder::Reduce(const string &op, Variable *x,

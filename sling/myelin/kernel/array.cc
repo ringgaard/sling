@@ -342,10 +342,6 @@ class UpdateTransformer : public Transformer {
         again = true;
         updated = true;
       }
-      if (TransformScaledSparseUpdate(flow)) {
-        again = true;
-        updated = true;
-      }
     }
     return updated;
   }
@@ -417,20 +413,6 @@ class UpdateTransformer : public Transformer {
 
       Flow::Operation *add_scatter = flow->Fuse(add, scatter, "");
       flow->Fuse(assign, add_scatter, "AssignAddScatter", true);
-      updates++;
-    }
-    return updates > 0;
-  }
-
-  // Transform sparse update scalings.
-  bool TransformScaledSparseUpdate(Flow *flow) {
-    int updates = 0;
-    for (Flow::Operation *op : flow->Find("Mul|2:AssignAddScatter")) {
-      Flow::Operation *scatter = op;
-      Flow::Operation *mul = scatter->inputs[2]->producer;
-      if (scatter->indegree() != 3) continue;
-      if (mul->outputs[0]->usages() != 1) continue;
-      flow->Fuse(scatter, mul, "AssignAddMulScatter");
       updates++;
     }
     return updates > 0;
