@@ -41,16 +41,21 @@ struct GatherArgs {
     if (oov != nullptr && oov->type() != params->type()) return;
 
     // Check shapes.
+    int b = step->GetAttr("batch", -1);
     int r = indices->rank();
     if (r > 0) n = indices->dim(-1);
-    batch = indices->shape().outside(r - 1);
+    feature = indices->shape().outside(r - 1);
+    if (b >= 0) {
+      batch = feature.outside(b);
+      feature = feature.inside(b);
+    }
     index = params->shape().outside(n);
     element = params->shape().inside(n);
     if (index.rank() != n) return;
     if (pooling) {
-      if (result->shape() != element) return;
-    } else {
       if (result->shape() != batch + element) return;
+    } else {
+      if (result->shape() != batch + feature + element) return;
     }
     if (oov != nullptr) {
       if (oov->shape() != element) return;
@@ -58,16 +63,32 @@ struct GatherArgs {
     valid = true;
   }
 
+  // Return the number of outer elements (batch + feature).
+  int outer_elements() const {
+    return batch.elements() * feature.elements();
+  }
+
+  // Return the number of elements in parameter slices.
+  int slice_elements() const {
+    return element.elements();
+  }
+
+  // Return the parameter slices size.
+  int slice_size() const {
+    return params->stride(n - 1);
+  }
+
   bool valid = false;         // arguments are valid
-  Tensor *params = nullptr;   // T[N,E] tensor from which to gather values.
-  Tensor *indices = nullptr;  // int32[B,rank(N)] tensor with indices to gather
+  Tensor *params = nullptr;   // T[N,E] tensor from which to gather values
+  Tensor *indices = nullptr;  // int32[B,F,{N}] tensor with indices to gather
   Tensor *oov = nullptr;      // optional T[E] tensor for invalid indices
-  Tensor *result = nullptr;   // T[B,E] tensor with result
+  Tensor *result = nullptr;   // T[B,F,E] tensor with result
 
   int n = 1;                  // number of parameter index dimensions
-  Shape batch;                // shape of batch in indices (B)
-  Shape index;                // shape of embedding index (N)
-  Shape element;              // shape of embedding element (E)
+  Shape batch;                // batch shape in indices (B)
+  Shape feature;              // feature shape in indices (F)
+  Shape index;                // embedding index shape (N)
+  Shape element;              // embedding element shape (E)
 };
 
 // Look up single embedding.
@@ -184,7 +205,7 @@ class MultiGather : public Kernel {
     Register dst = masm->rr().alloc_fixed(rdi);
     Register cnt = masm->rr().alloc_fixed(rcx);
     Register acc = masm->rr().alloc();
-    Register batch = masm->rr().alloc();
+    Register feature = masm->rr().alloc();
     Register indices = masm->rr().alloc();
     Register params = masm->rr().alloc();
 
@@ -193,11 +214,11 @@ class MultiGather : public Kernel {
     __ LoadTensorAddress(indices, args.indices);
     __ LoadTensorAddress(dst, args.result);
 
-    // Loop over all feature indices.
-    Label lb;
-    if (args.batch.elements() > 1) {
-      __ xorq(batch, batch);
-      __ bind(&lb);
+    // Loop over all batch and feature indices.
+    Label lf;
+    if (args.outer_elements() > 1) {
+      __ xorq(feature, feature);
+      __ bind(&lf);
     }
 
     // Compute address in embedding for index.
@@ -233,15 +254,15 @@ class MultiGather : public Kernel {
     }
 
     // Copy embedding vector to output.
-    __ movq(cnt, Immediate(args.params->stride(args.n - 1)));
+    __ movq(cnt, Immediate(args.slice_size()));
     __ repmovsb();
 
     // Next feature index.
-    if (args.batch.elements() > 1) {
+    if (args.outer_elements() > 1) {
       __ addq(indices, Immediate(args.n * sizeof(int32)));
-      __ incq(batch);
-      __ cmpq(batch, Immediate(args.batch.elements()));
-      __ j(less, &lb);
+      __ incq(feature);
+      __ cmpq(feature, Immediate(args.outer_elements()));
+      __ j(less, &lf);
     }
   }
 
@@ -309,12 +330,12 @@ class PoolingGather : public Kernel {
     Type type = args.params->type();
     int dsize = TypeTraits::of(type).size();
     int vecbytes = SIMDAssembler::VectorBytes(type);
-    bool aligned = args.params->stride(args.n - 1) % vecbytes == 0;
+    bool aligned = args.slice_size() % vecbytes == 0;
     SIMDAssembler sasm(masm, type, aligned);
     step->set_variant(sasm.name());
 
     // Compute vector processing strategy.
-    SIMDStrategy strategy(&sasm, args.result->elements());
+    SIMDStrategy strategy(&sasm, args.slice_elements());
     strategy.PreloadMasks();
 
     // Allocate registers.
@@ -335,6 +356,8 @@ class PoolingGather : public Kernel {
     __ LoadTensorAddress(indices, args.indices);
     __ LoadTensorAddress(result, args.result);
 
+    // TODO: implement batch loop.
+
     // Zero feature index and feature count.
     __ xorq(fidx, fidx);
     if (pooling_ == AVG) {
@@ -350,13 +373,13 @@ class PoolingGather : public Kernel {
 
     __ addq(indices, Immediate(args.n * sizeof(int32)));
     __ incq(fidx);
-    __ cmpq(fidx, Immediate(args.batch.elements()));
+    __ cmpq(fidx, Immediate(args.feature.elements()));
     __ j(less, &l1);
 
     // No feature found; zero output vector.
     __ xorq(acc, acc);
     __ movq(dst, result);
-    __ movq(cnt, Immediate(args.result->size()));
+    __ movq(cnt, Immediate(args.slice_size()));
     __ repstosb();
     __ jmp(&done);
 
@@ -370,7 +393,7 @@ class PoolingGather : public Kernel {
     }
     __ addq(indices, Immediate(args.n * sizeof(int32)));
     __ movq(dst, result);
-    __ movq(cnt, Immediate(args.result->size()));
+    __ movq(cnt, Immediate(args.slice_size()));
     __ repmovsb();
     if (pooling_ == AVG) {
       __ incq(fcnt);
@@ -380,7 +403,7 @@ class PoolingGather : public Kernel {
     Label l3, l4;
     __ bind(&l3);
     __ incq(fidx);
-    __ cmpq(fidx, Immediate(Immediate(args.batch.elements())));
+    __ cmpq(fidx, Immediate(Immediate(args.feature.elements())));
     __ j(equal, &l4);
 
     // Look up element in params.
@@ -512,8 +535,8 @@ class PoolingGather : public Kernel {
 
   int64 Complexity(const Step *step) override {
     GatherArgs args(step, true);
-    int64 ops = args.params->dim(1) * args.indices->elements();
-    if (pooling_ == AVG) ops += args.params->dim(1);
+    int64 ops = args.outer_elements() * args.slice_elements();
+    if (pooling_ == AVG) ops += args.slice_elements();
     return  ops;
   }
 
@@ -522,9 +545,9 @@ class PoolingGather : public Kernel {
 };
 
 // Accumulate sparse (scaled) input.
-class AssignAddScatter : public Kernel {
+class Scatter : public Kernel {
  public:
-  AssignAddScatter(bool accumulate, bool scale)
+  Scatter(bool accumulate, bool scale)
     : accumulate_(accumulate), scale_(scale) {}
 
   string Name() override { return Operation(); }
@@ -821,10 +844,10 @@ void RegisterGatherKernels(Library *library) {
   library->Register(new PoolingGather(PoolingGather::SUM));
   library->Register(new PoolingGather(PoolingGather::AVG));
   library->Register(new PoolingGather(PoolingGather::MAX));
-  library->Register(new AssignAddScatter(false, false));
-  library->Register(new AssignAddScatter(false, true));
-  library->Register(new AssignAddScatter(true, false));
-  library->Register(new AssignAddScatter(true, true));
+  library->Register(new Scatter(false, false));
+  library->Register(new Scatter(false, true));
+  library->Register(new Scatter(true, false));
+  library->Register(new Scatter(true, true));
 }
 
 }  // namespace myelin
