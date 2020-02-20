@@ -304,7 +304,7 @@ class Builder:
       result.shape = params.shape[1:]
     else:
       result.shape = params.shape[indices.shape[-1]:]
-    if batch is not None: 
+    if batch is not None:
       result.producer.add_attr("batch", batch)
       result.shape = indices.shape[:batch] + result.shape
     return result
@@ -318,14 +318,17 @@ class Builder:
   def gather_avg(self, params, indices, batch=None, name=None):
     return self.pooling_gather("GatherAvg", params, indices, batch, name)
 
-  def scatter(self, indices, value, shape, name=None):
+  def scatter(self, indices, value, shape, batch=None, name=None):
     result = self.op("Scatter", [indices, value], name)
+    if batch is not None: result.producer.add_attr("batch", batch)
     result.type = value.type
     result.shape = shape
     return result
 
-  def assign_add_scatter(self, var, indices, value, ref=False, name=None):
+  def assign_add_scatter(self, var, indices, value, ref=False, batch=None,
+                         name=None):
     op = self.rawop("AssignAddScatter", name)
+    if batch is not None: op.add_attr("batch", batch)
     op.add_input(var)
     op.add_input(indices)
     op.add_input(value)

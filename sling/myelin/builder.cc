@@ -245,7 +245,10 @@ Flow::Variable *FlowBuilder::Concat(const std::vector<Variable *> &parts,
   Shape shape = parts[0]->shape;
   int n = parts.size();
   int width = 0;
-  for (Variable *v : parts) width += v->shape.dim(axis);
+  for (Variable *v : parts) {
+    DCHECK_LT(axis, v->rank()) << v->name;
+    width += v->shape.dim(axis);
+  }
   shape.set(axis, width);
   std::vector<Variable *> args = parts;
   args.push_back(Const(axis));
@@ -279,7 +282,7 @@ Flow::Variable *FlowBuilder::Gather(Variable *params,
   if (oov != nullptr) args.push_back(oov);
 
   Shape s;
-  if (!indices->shape.scalar()) {
+  if (indices->shape.scalar()) {
     s = params->shape.inside(params->rank() - 1);
   } else {
     int b = indices->shape.rank() - 1;

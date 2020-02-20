@@ -227,7 +227,11 @@ class Shape {
   bool scalar() const { return rank() == 0; }
 
   // Return size of dimension.
-  int dim(int d) const { return dims_[d < 0 ? dims_.size() + d : d]; }
+  int dim(int d) const {
+    if (d < 0) d = dims_.size() + d;
+    CHECK_LT(d, rank());
+    return dims_[d];
+  }
 
   // Return size of axis.
   int axisdim(int axis) const { return axis < 0 ? elements() : dim(axis); }

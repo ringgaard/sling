@@ -496,9 +496,9 @@ void gather_grad(Flow::Operation *op, Gradients *g) {
   auto v = op->outputs[0];
   if (op->indegree() == 3) {
     auto oov = op->inputs[2];
-    g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0), g->d(oov)));
+    g->add(M, g->Scatter(g->v(f), g->d(v), g->d(oov), M->shape));
   } else {
-    g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0)));
+    g->add(M, g->Scatter(g->v(f), g->d(v), M->shape));
   }
 }
 
@@ -508,7 +508,8 @@ void gathersum_grad(Flow::Operation *op, Gradients *g) {
   auto M = op->inputs[0];
   auto f = op->inputs[1];
   auto v = op->outputs[0];
-  g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0)));
+  int batch = op->GetAttr("batch", 0);
+  g->add(M, g->Scatter(g->v(f), g->d(v), M->shape, batch, true));
 }
 
 // v = concat(v_1, ..., v_n, axis)

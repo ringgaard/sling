@@ -372,11 +372,19 @@ class FlowBuilder : public Scope {
   }
 
   // Scatter for sparse embedding update.
-  Variable *Scatter(Variable *f, Variable *v, int size) {
-    return Op("Scatter", {f, v}, v->type, {size, v->dim(1)});
+  Variable *Scatter(Variable *f, Variable *v, Shape shape,
+                    int batch = 0, bool pooled = false) {
+    auto *r = Op("Scatter", {f, v}, v->type, shape);
+    if (batch != 0) r->producer->SetAttr("batch", batch);
+    if (pooled) r->producer->SetAttr("pooled", true);
+    return r;
   }
-  Variable *Scatter(Variable *f, Variable *v, int size, Variable *oov) {
-    return Op("Scatter", {f, v, oov}, v->type, {size, v->dim(1)});
+  Variable *Scatter(Variable *f, Variable *v, Variable *oov, Shape shape,
+                    int batch = 0, bool pooled = false) {
+    auto *r = Op("Scatter", {f, v, oov}, v->type, shape);
+    if (batch != 0) r->producer->SetAttr("batch", batch);
+    if (pooled) r->producer->SetAttr("pooled", true);
+    return r;
   }
 
   // Assignment.
@@ -397,10 +405,10 @@ class FlowBuilder : public Scope {
   }
 
   // Concatenation.
-  Variable *Concat(const std::vector<Variable *> &parts, int axis = 1);
+  Variable *Concat(const std::vector<Variable *> &parts, int axis = 0);
 
   // Splitting.
-  std::vector<Variable *> Split(Variable *v, int splits, int axis = 1);
+  std::vector<Variable *> Split(Variable *v, int splits, int axis = 0);
 
   // Slicing.
   Variable *Slice(Variable *v, Variable *begin, const Shape &size) {
@@ -411,8 +419,13 @@ class FlowBuilder : public Scope {
   Variable *Feature(const string &name, int range, int size, int dim) {
     auto *M = Parameter(name + "_embeddings", DT_FLOAT, {range, dim});
     RandomNormal(M);
-    auto *f = Placeholder(name, DT_INT32, {1, size});
-    return size == 1 ? Gather(M, f) : GatherSum(M, f);
+    if (size == 1) {
+      auto *f = Placeholder(name, DT_INT32, {size, 1});
+      return Gather(M, f);
+    } else {
+      auto *f = Placeholder(name, DT_INT32, {1, size, 1});
+      return GatherSum(M, f, 1);
+    }
   }
 
   // Feed-forward (FF) network.

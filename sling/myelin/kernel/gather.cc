@@ -412,7 +412,7 @@ class PoolingGather : public Kernel {
     Label l3, l4, l5;
     __ bind(&l3);
     __ incq(fidx);
-    __ cmpq(fidx, Immediate(Immediate(args.feature.elements())));
+    __ cmpq(fidx, Immediate(args.feature.elements()));
     __ j(equal, &l5);
 
     // Look up element in params.
@@ -476,11 +476,11 @@ class PoolingGather : public Kernel {
 
     // Next feature.
     __ jmp(&l3);
-    
+
     // Skip remaining features.
     __ bind(&l4);
     if (batched) {
-      __ movq(cnt, Immediate(Immediate(args.feature.elements())));
+      __ movq(cnt, Immediate(args.feature.elements()));
       __ subq(cnt, fidx);
       __ Multiply(cnt, args.n * sizeof(int32));
       __ addq(indices, cnt);
@@ -589,10 +589,10 @@ class Scatter : public Kernel {
     Type type = args.var->type();
     if (args.value->type() != type) return false;
     if (args.indices->type() != DT_INT32) return false;
-    
+
     // Check shapes.
     if (args.index.rank() != args.n) return false;
-    if (args.value->shape() != args.element) return false;
+    if (args.value->shape() != args.value_shape()) return false;
 
     // Check optional arguments.
     if (args.ref != nullptr) {
@@ -635,7 +635,8 @@ class Scatter : public Kernel {
     args.var->RequireOrder(ROW_MAJOR);
 
     // Reserve registers.
-    int regs = SIMDAssembler::RegisterUsage(type) + 9;
+    int regs = SIMDAssembler::RegisterUsage(type) + 7;
+    if (args.batch.elements() > 1) regs++;
     if (args.var->sparse()) regs++;
     step->SetRegisterUsage(regs);
   }
@@ -644,6 +645,7 @@ class Scatter : public Kernel {
     // Get inputs.
     Args args(step, accumulate_);
     Tensor *sparse = args.var->sparse();
+    bool batched = args.batch.elements() > 1;
     bool single = args.feature.elements() == 1;
     int n = args.element.elements();
 
@@ -663,16 +665,12 @@ class Scatter : public Kernel {
     Register acc = masm->rr().alloc_fixed(rax);
     Register dst = masm->rr().alloc_fixed(rdi);
     Register cnt = masm->rr().alloc_fixed(rcx);
-    Register bit = cnt;
-
+    Register batch = batched ? masm->rr().alloc() : no_reg;
     Register fidx = masm->rr().alloc();
-    Register ofs = masm->rr().alloc();
-
     Register varaddr = masm->rr().alloc();
     Register idxaddr = masm->rr().alloc();
     Register valaddr = masm->rr().alloc();
     Register bmaddr = sparse ? masm->rr().alloc() : no_reg;
-    
     auto elem = sasm.alloc(strategy.MaxUnrolls());
 
     // Load tensor locations.
@@ -698,45 +696,62 @@ class Scatter : public Kernel {
       __ movq(Operand(masm->instance(), args.ref->offset()), varaddr);
     }
 
+    // Loop over batches.
+    Label lbatch;
+    if (batched) {
+      __ xorq(batch, batch);
+      __ bind(&lbatch);
+    }
+
     // Loop over features.
-    Label loop;
+    Label lfeature;
     if (!single) {
       __ xorq(fidx, fidx);
-      __ bind(&loop);
+      __ bind(&lfeature);
     }
 
     // Compute index into scatter variable.
     Label loov;
-    __ movsxlq(ofs, Operand(idxaddr));
-    __ testq(ofs, ofs);
+    __ movsxlq(dst, Operand(idxaddr));
+    __ testq(dst, dst);
     __ j(negative, &loov);
     for (int d = 1; d < args.n; ++d) {
-      __ Multiply(ofs, args.var->dim(d - 1));
+      __ Multiply(dst, args.var->dim(d - 1));
       __ movsxlq(acc, Operand(idxaddr, d * sizeof(int32)));
-      __ addq(ofs, acc);
+      __ addq(dst, acc);
     }
 
     // Update sparsity bitmap.
     if (sparse) {
-      __ movq(bit, ofs);
+      __ movq(cnt, dst);
       __ movq(acc, Immediate(1));
       __ shlq_cl(acc);
-      __ shrq(bit, Immediate(6));
-      __ orq(Operand(bmaddr, bit, times_8), acc);
+      __ shrq(cnt, Immediate(6));
+      __ orq(Operand(bmaddr, cnt, times_8), acc);
     }
 
     // Compute address of slice in scatter variable.
-    __ Multiply(ofs, args.var->stride(args.n - 1));
-    __ leaq(dst, Operand(varaddr, ofs));
+    __ Multiply(dst, args.var->stride(args.n - 1));
+    __ addq(dst, varaddr);
 
-    // Update OOV vector for missing features.
+    // Handle missing features.
+    Label lskip, lnext;
     if (args.oov) {
-      Label lskip;
+      // Update OOV vector for missing features.
       __ jmp(&lskip);
       __ bind(&loov);
       __ LoadTensorAddress(dst, args.oov);
-      __  bind(&lskip);
+    } else if (batched) {
+      // Skip unused features..
+      __ jmp(&lskip);
+      __ bind(&loov);
+      __ movq(cnt, Immediate(args.feature.elements()));
+      __ subq(cnt, fidx);
+      __ Multiply(cnt, args.n * sizeof(int32));
+      __ addq(idxaddr, cnt);
+      __ jmp(&lnext);
     }
+    __  bind(&lskip);
 
     // Add input vector for feature to embedding vector.
     for (auto &phase : strategy.phases()) {
@@ -749,19 +764,19 @@ class Scatter : public Kernel {
         // Repeated phase.
         Label lu;
         if (blkstart == 0) {
-          __ xorq(ofs, ofs);
+          __ xorq(cnt, cnt);
         } else {
-          __ movq(ofs, Immediate(blkstart));
+          __ movq(cnt, Immediate(blkstart));
         }
         __ bind(&lu);
         for (int i = 0; i < phase.unrolls; ++i) {
           int disp = i * vecsize * dsize;
-          gen->Load(elem[i], Operand(dst, ofs, times_1, disp));
-          gen->Add(elem[i], elem[i], Operand(valaddr, ofs, times_1, disp));
-          gen->Store(Operand(dst, ofs, times_1, disp), elem[i]);
+          gen->Load(elem[i], Operand(dst, cnt, times_1, disp));
+          gen->Add(elem[i], elem[i], Operand(valaddr, cnt, times_1, disp));
+          gen->Store(Operand(dst, cnt, times_1, disp), elem[i]);
         }
-        __ addq(ofs, Immediate(blksize));
-        __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
+        __ addq(cnt, Immediate(blksize));
+        __ cmpq(cnt, Immediate(blkstart + phase.repeat * blksize));
         __ j(less, &lu);
       } else if (phase.masked == 0) {
         // Residual phase.
@@ -780,17 +795,27 @@ class Scatter : public Kernel {
       }
     }
 
-    //if (args.value->dim(0) != 1) {
-    //  __ addq(valaddr, Immediate(args.value->stride(0)));
-    //}
-
+    // Next feature.
     if (!single) {
+      if (!args.pooled) {
+        __ addq(valaddr, Immediate(args.value->stride(args.batch.rank() - 1)));
+      }
       __ addq(idxaddr, Immediate(args.n * sizeof(int32)));
       __ incq(fidx);
-      __ cmpq(fidx, Immediate(args.indices->elements()));
-      __ j(less, &loop);
+      __ cmpq(fidx, Immediate(args.feature.elements()));
+      __ j(less, &lfeature);
     }
-    if (args.oov == nullptr) {
+
+    // Next batch.
+    if (batched) {
+      __ bind(&lnext);
+      if (args.pooled) {
+        __ addq(valaddr, Immediate(args.value->stride(args.batch.rank() - 1)));
+      }
+      __ incq(batch);
+      __ cmpq(batch, Immediate(args.batch.elements()));
+      __ j(less, &lbatch);
+    } else if (args.oov == nullptr) {
       __ bind(&loov);
     }
   }
@@ -825,23 +850,40 @@ class Scatter : public Kernel {
       }
 
       // Compute index shapes.
+      pooled = step->GetAttr("pooled", false);
+      int b = step->GetAttr("batch", -1);
       int r = indices->rank();
       if (r > 0) n = indices->dim(-1);
       feature = indices->shape().outside(r - 1);
+      if (b >= 0) {
+        batch = feature.outside(b);
+        feature = feature.inside(b);
+      }
       index = var->shape().outside(n);
       element = var->shape().inside(n);
-      
+
       valid = true;
+    }
+
+    // Return expected shape for value.
+    Shape value_shape() const {
+      if (pooled) {
+        return batch + element;
+      } else {
+        return batch + feature + element;
+      }
     }
 
     bool valid = false;         // arguments are valid
     Tensor *var = nullptr;      // T[N,E] tensor to scatter values into
     Tensor *indices = nullptr;  // int32[B,F,{N}] tensor with indices to scatter
-    Tensor *value = nullptr;    // T[F,E] tensor with value to scatter
+    Tensor *value = nullptr;    // T[B,(F),E] tensor with values to scatter
     Tensor *ref = nullptr;      // &T[N,E] tensor with reference to var
     Tensor *oov = nullptr;      // optional T[E] tensor for invalid indices
 
     int n = 1;                  // number of parameter index dimensions
+    bool pooled = false;        // value is pooled, i.e. no feature shape
+    Shape batch;                // batch shape in indices (B)
     Shape feature;              // feature shape in indices (F)
     Shape index;                // embedding index shape (N)
     Shape element;              // embedding element shape (E)

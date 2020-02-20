@@ -836,6 +836,14 @@ def scatter_test(n, d, s):
   m = f.scatter(ind, v, [n, d])
   check(flow, (n, d, s), 0, n, check=[m])
 
+def scatter_batch_test(n, d, s, b):
+  flow = myelin.Flow()
+  f = flow.define("scatter")
+  ind = f.var("ind", myelin.DT_INT32, [b, s, 1])
+  v = f.var("v", dt, [b, d])
+  m = f.scatter(ind, v, [n, d], batch=1)
+  check(flow, (n, d, s, b), 0, n, check=[m])
+
 def scatter_add_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("scatter_add")
