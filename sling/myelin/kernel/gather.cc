@@ -225,10 +225,8 @@ class MultiGather : public Kernel {
     Label l1;
     __ movq(src, params);
     for (int d = 0; d < args.n; ++d) {
-      if (args.params->dim(d) != 1) {
-        // Get feature index.
-        __ movsxlq(acc, Operand(indices, d * sizeof(int32)));
-      }
+      // Get feature index.
+      __ movsxlq(acc, Operand(indices, d * sizeof(int32)));
 
       // Check for OOV feature.
       if (args.oov != nullptr) {
@@ -236,13 +234,10 @@ class MultiGather : public Kernel {
         __ j(negative, &l1);
       }
 
-      if (args.params->dim(d) != 1) {
-        // Compute offset for index dimension.
-        __ Multiply(acc, args.params->stride(d));
-        __ addq(src, acc);
-      }
+      // Compute offset for index dimension.
+      __ Multiply(acc, args.params->stride(d));
+      __ addq(src, acc);
     }
-
 
     // Use oov vector for negative features.
     if (args.oov != nullptr) {
