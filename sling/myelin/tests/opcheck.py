@@ -27,7 +27,7 @@ flags.define("--dt", default=myelin.DT_FLOAT)
 flags.define("--test")
 flags.define("--thorough", default=False, action='store_true')
 flags.define("--repeat", default=1, type=int)
-flags.define("-c", default=False, action='store_true')
+flags.define("--c", default=False, action='store_true')
 flags.define("--skipdiff", default=False, action='store_true')
 
 flags.parse()
@@ -832,26 +832,25 @@ def scatter_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("scatter")
   ind = f.var("ind", myelin.DT_INT32, [s, 1])
-  v = f.var("v", dt, [d])
+  v = f.var("v", dt, [s, d])
   m = f.scatter(ind, v, [n, d])
-  check(flow, (n, d, s), 0, n, check=[m])
+  check(flow, (n, d, s), 0, n)
 
 def scatter_batch_test(n, d, s, b):
   flow = myelin.Flow()
-  f = flow.define("scatter")
+  f = flow.define("scatter_batch")
+  ind = f.var("ind", myelin.DT_INT32, [b, s, 1])
+  v = f.var("v", dt, [b, s, d])
+  m = f.scatter(ind, v, [n, d], batch=1)
+  check(flow, (n, d, s, b), 0, n)
+
+def scatter_batch_pooled_test(n, d, s, b):
+  flow = myelin.Flow()
+  f = flow.define("scatter_pooled")
   ind = f.var("ind", myelin.DT_INT32, [b, s, 1])
   v = f.var("v", dt, [b, d])
-  m = f.scatter(ind, v, [n, d], batch=1)
-  check(flow, (n, d, s, b), 0, n, check=[m])
-
-def scatter_add_test(n, d, s):
-  flow = myelin.Flow()
-  f = flow.define("scatter_add")
-  m = f.var("m", dt, [n, d])
-  ind = f.var("ind", myelin.DT_INT32, [s, 1])
-  v = f.var("v", dt, [d])
-  f.assign_add_scatter(m, ind, v)
-  check(flow, (n, d, s), 0, n, check=[m])
+  m = f.scatter(ind, v, [n, d], batch=1, pooled=True)
+  check(flow, (n, d, s, b), 0, n)
 
 def onehot_test(n, m, k):
   flow = myelin.Flow()
@@ -932,7 +931,6 @@ for i in sizes:
     gather_max_test(i, embsize, f)
     if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
       gather_avg_test(i, embsize, f)
-    scatter_add_test(i, embsize, f)
   gather_scalar_test(i)
 
   for c in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]:

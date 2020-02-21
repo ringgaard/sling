@@ -742,7 +742,7 @@ class Scatter : public Kernel {
       __ bind(&loov);
       __ LoadTensorAddress(dst, args.oov);
     } else if (batched) {
-      // Skip unused features..
+      // Skip unused features.
       __ jmp(&lskip);
       __ bind(&loov);
       __ movq(cnt, Immediate(args.feature.elements()));
@@ -798,7 +798,7 @@ class Scatter : public Kernel {
     // Next feature.
     if (!single) {
       if (!args.pooled) {
-        __ addq(valaddr, Immediate(args.value->stride(args.batch.rank() - 1)));
+        __ addq(valaddr, Immediate(args.value_element_size()));
       }
       __ addq(idxaddr, Immediate(args.n * sizeof(int32)));
       __ incq(fidx);
@@ -808,10 +808,10 @@ class Scatter : public Kernel {
 
     // Next batch.
     if (batched) {
-      __ bind(&lnext);
       if (args.pooled) {
-        __ addq(valaddr, Immediate(args.value->stride(args.batch.rank() - 1)));
+        __ addq(valaddr, Immediate(args.value_element_size()));
       }
+      __ bind(&lnext);
       __ incq(batch);
       __ cmpq(batch, Immediate(args.batch.elements()));
       __ j(less, &lbatch);
@@ -871,6 +871,15 @@ class Scatter : public Kernel {
         return batch + element;
       } else {
         return batch + feature + element;
+      }
+    }
+
+    // Return value element size.
+    int value_element_size() const {
+      if (pooled) {
+        return value->stride(batch.rank() - 1);
+      } else {
+        return value->stride(batch.rank() + feature.rank() - 1);
       }
     }
 
