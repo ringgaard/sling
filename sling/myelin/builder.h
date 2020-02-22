@@ -249,10 +249,6 @@ class FlowBuilder : public Scope {
   // Matrix multiplication.
   Variable *MatMul(Variable *x, Variable *y);
 
-  Variable *Dot(Variable *x, Variable *y, int size) {
-    return MatMul(Reshape(x, {1, size}), Reshape(y, {size, 1}));
-  }
-
   // Matrix transpose.
   Variable *Transpose(Variable *x) {
     return Op("Transpose", {x}, x->type, x->shape.transposed());
@@ -429,13 +425,10 @@ class FlowBuilder : public Scope {
   }
 
   // Feed-forward (FF) network.
-  Variable *FFN(Variable *input,
+  Variable *FNN(Variable *input,
                 std::vector<int> layers,
                 bool bias = false,
                 const string &activation = "Relu");
-  Variable *FFN(Variable *input, int size, bool bias = false) {
-    return FFN(input, {size}, bias);
-  }
 
   // Return function for builder.
   Function *func() const { return func_; }

@@ -105,7 +105,7 @@ class BIODecoder : public ParserDecoder {
     // Feed-forward layer(s).
     std::vector<int> layers = ff_dims_;
     layers.push_back(num_tags_);
-    auto *scores = f.Name(f.FFN(sentence, layers, true), "scores");
+    auto *scores = f.Name(f.FNN(sentence, layers, true), "scores");
     scores->set_out();
 
     // Build tagger gradient.

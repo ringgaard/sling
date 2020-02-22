@@ -41,11 +41,11 @@ struct GatherArgs {
     if (oov != nullptr && oov->type() != params->type()) return;
 
     // Check shapes.
-    int b = step->GetAttr("batch", -1);
+    int b = step->GetAttr("batch", 0);
     int r = indices->rank();
     if (r > 0) n = indices->dim(-1);
     feature = indices->shape().outside(r - 1);
-    if (b >= 0) {
+    if (b > 0) {
       batch = feature.outside(b);
       feature = feature.inside(b);
     }
@@ -846,11 +846,11 @@ class Scatter : public Kernel {
 
       // Compute index shapes.
       pooled = step->GetAttr("pooled", false);
-      int b = step->GetAttr("batch", -1);
+      int b = step->GetAttr("batch", 0);
       int r = indices->rank();
       if (r > 0) n = indices->dim(-1);
       feature = indices->shape().outside(r - 1);
-      if (b >= 0) {
+      if (b > 0) {
         batch = feature.outside(b);
         feature = feature.inside(b);
       }

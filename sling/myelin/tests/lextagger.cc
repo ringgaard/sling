@@ -338,7 +338,7 @@ class Tagger {
     auto *encoding = tf.Placeholder("encoding",
                                     rnn.output->type, rnn.output->shape,
                                     true);
-    auto *logits = tf.Name(tf.FFN(encoding, num_tags_, true), "logits");
+    auto *logits = tf.Name(tf.FNN(encoding, {num_tags_}, true), "logits");
     flow_.Connect({encoding, rnn.output});
 
     if (learn) {

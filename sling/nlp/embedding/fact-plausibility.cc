@@ -39,14 +39,14 @@ struct FactPlausibilityFlow : public Flow {
     auto *embeddings =
         f.RandomNormal(f.Parameter("embeddings", DT_FLOAT, {facts, dims}));
 
-    premise = f.Placeholder("premise", DT_INT32, {1, max_features});
-    auto *pencoding = f.GatherSum(embeddings, premise);
+    premise = f.Placeholder("premise", DT_INT32, {1, max_features, 1});
+    auto *pencoding = f.GatherSum(embeddings, premise, 1);
 
-    hypothesis = f.Placeholder("hypothesis", DT_INT32, {1, max_features});
-    auto *hencoding = f.GatherSum(embeddings, hypothesis);
+    hypothesis = f.Placeholder("hypothesis", DT_INT32, {1, max_features, 1});
+    auto *hencoding = f.GatherSum(embeddings, hypothesis, 1);
 
-    auto *fv = f.Concat({pencoding, hencoding});
-    logits = f.Name(f.FFN(fv, {dims * 2, 2}, true, "Relu"), "logits");
+    auto *fv = f.Concat({pencoding, hencoding}, 1);
+    logits = f.Name(f.FNN(fv, {dims * 2, 2}, true, "Relu"), "logits");
 
     if (learn) {
       // Create gradient computations.

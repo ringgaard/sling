@@ -314,7 +314,7 @@ Flow::Variable *FlowBuilder::Reduce(const string &op, Variable *x,
   return reduce;
 }
 
-Flow::Variable *FlowBuilder::FFN(Variable *input,
+Flow::Variable *FlowBuilder::FNN(Variable *input,
                                  std::vector<int> layers,
                                  bool bias,
                                  const string &activation) {
