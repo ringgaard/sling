@@ -357,6 +357,7 @@ Status RecordReader::Skip(int64 n) {
 
 Status RecordReader::Seek(uint64 pos) {
   // Check if we can skip to position in input buffer.
+  if (pos == 0) pos = info_.hdrlen;
   if (pos == position_) return Status::OK;
   int64 offset = pos - position_;
   position_ = pos;
@@ -559,6 +560,7 @@ RecordWriter::RecordWriter(const string &filename)
 
 RecordWriter::RecordWriter(RecordReader *reader,
                            const RecordFileOptions &options) {
+  reader_ = reader;
   output_.resize(options.buffer_size);
   file_ = reader->file();
   info_ = reader->info();
@@ -584,11 +586,17 @@ Status RecordWriter::Close() {
   Status s = Flush();
   if (!s.ok()) return s;
 
-  // Close output file.
-  s = file_->Close();
-  file_ = nullptr;
+  if (reader_ != nullptr) {
+    // Transfer ownership of file to shared reader.
+    reader_->owned_ = true;
+  } else {
+    // Close output file.
+    s = file_->Close();
+    if (!s.ok()) return s;
+  }
 
-  return s;
+  file_ = nullptr;
+  return Status::OK;
 }
 
 Status RecordWriter::Flush() {
@@ -596,10 +604,11 @@ Status RecordWriter::Flush() {
   Status s = file_->Write(output_.begin(), output_.size());
   if (!s.ok()) return s;
   output_.clear();
+  if (reader_ != nullptr) reader_->size_ = position_;
   return Status::OK;
 }
 
-Status RecordWriter::Write(const Record &record) {
+Status RecordWriter::Write(const Record &record, uint64 *position) {
   // Compress record value if requested.
   Slice value;
   if (info_.compression == SNAPPY) {
@@ -668,6 +677,7 @@ Status RecordWriter::Write(const Record &record) {
   output_.ensure(maxsize);
   int hdrlen = WriteHeader(hdr, output_.end());
   output_.appended(hdrlen);
+  if (position != nullptr) *position = position_;
   position_ += hdrlen;
 
   // Write record key.

@@ -19,134 +19,134 @@
 #include <vector>
 
 #include "sling/base/logging.h"
+#include "sling/base/status.h"
 #include "sling/base/types.h"
+#include "sling/db/dbindex.h"
 #include "sling/file/file.h"
 #include "sling/file/recordio.h"
 
 namespace sling {
 
-// Database index. The index is implemented as a file-backed hash table with
-// linear probing. The index allows multiple keys with the same value.
-class DatabaseIndex {
- public:
-   // Invalid index position.
-   const static uint64 NPOS = -1;
-
-   // Invalid value.
-   const static uint64 NVAL = -1;
-
-   // Open existing index file.
-   DatabaseIndex(const string &filename);
-
-   // Create new index file.
-   DatabaseIndex(const string &filename, int64 capacity);
-
-   // Flush and close database index.
-   ~DatabaseIndex();
-
-   // Flush changes to disk.
-   Status Flush(uint64 epoch);
-
-   // Add new entry to index. Returns position of new entry.
-   uint64 Add(uint64 key, uint64 value);
-
-   // Look up value in index. Search for first value if pos is not specified.
-   // Otherwise, search for the next value after position. Return the (next)
-   // value for the key and update position or NVAL if no match is found.
-   uint64 Get(uint64 key, uint64 *pos);
-   uint64 Get(uint64 key) {
-     uint64 pos = NPOS;
-     return Get(key, &pos);
-   }
-
-   // Update value of existing entry. Returns position of updated entry or NPOS
-   // if the entry was not found.
-   uint64 Update(uint64 key, uint64 value, uint64 pos = NPOS);
-
-   // Delete entry in index. Return the value for the deleted entry, or NVAL if
-   // entry was not found.
-   uint64 Delete(uint64 key, uint64 pos = NPOS);
-
-   // Check for index overflow, i.e. the fill factor is above the limit.
-   bool overflow() const {
-     return header_->size + header_->deletions > limit_;
-   }
-
- private:
-  // Magic number and version for identifying database index file.
-  static const uint32 MAGIC = 0x46584449;  // IDXF
-  static const uint32 VERSION = 1;
-
-  // Special hash values for empty and deleted slots in the index.
-  static const uint64 EMPTY = 0;
-  static const uint64 DELETED = NVAL;
-
-  // Index file header.
-  struct Header {
-    uint32 magic;     // magic number for identifying database index file
-    uint32 version;   // index file format version
-    uint64 offset;    // offset of entry table in index
-    uint64 epoch;     // epoch when index was created/updated
-    uint64 size;      // number of used entries in index
-    uint64 capacity;  // maximum capacity of index
-    uint64 deletions; // number of deleted entries in index
-  };
-
-  // Index entry.
-  struct Entry {
-    uint64 hash;      // hash value for entry
-    uint64 value;     // value for entry
-  };
-
-  // Index file.
-  File *file_;
-
-  // Index file mapped to memory.
-  char *mapped_;
-
-  // Pointer to index header.
-  Header *header_;
-
-  // Pointer to index entries.
-  Entry *entries_;
-
-  // Index position mask, i.e. capacity - 1.
-  uint64 mask_;
-
-  // Index size limit based on fill factor, i.e. capacity * fill factor.
-  uint64 limit_;
-};
-
+// Each database is stored in a separate directory (<dbdir>) with an index file
+// (<dbdir>/index) and one or more data shards (<dbdir>/data-99999999). The
+// data shards are recordio files and all new records are written sequentially
+// to the data files. Record deletion is performed by writing a record with the
+// deleted key and an empty value.
 class Database {
  public:
-  Database(const string &idxfile,
-           const std::vector<string> &recfiles,
-           const RecordFileOptions &options);
-  Database(const string &idxfile,
-           const string &recfiles,
-           const RecordFileOptions &options)
-      : Database(idxfile, File::Match(recfiles), options) {}
-
   ~Database();
 
- private:
-  // Data shard.
-  struct Shard {
-    RecordReader *reader;
-    RecordWriter *writer;
+  // Open existing database. In recovery mode, the index is recreated if it is
+  // missing, invalid, or stale.
+  Status Open(const string &dbdir, bool recover = false);
+
+  // Create new database.
+  Status Create(const string &dbdir);
+
+  // Flush changes to database.
+  Status Flush();
+
+  // Get record from database. Return true if found.
+  bool Get(const Slice &key, Record *record);
+
+  // Add or update record in database. Return record id of new record.
+  uint64 Put(const Slice &key, const Slice &value, bool overwrite = true);
+  uint64 Add(const Slice &key, const Slice &value) {
+    return Put(key, value, false);
+  }
+
+  // Delete record in database. Return true if record was deleted.
+  bool Delete(const Slice &key);
+
+  // Iterate all active records in database, e.g.
+  //   uint64 iterator = 0;
+  //   Record record;
+  //   while (db->Next(&record, &iterator)) { ... }
+  bool Next(Record *record, uint64 *iterator);
+
+  // Error codes.
+  enum Errors {
+    E_DB_NOT_FOUND = 1000,  // database not found
+    E_NO_DATA_FILES,        // no data files for database
+    E_STALE_INDEX,          // database index is not up-to-date
+    E_DB_ALREADY_EXISTS,    // database already exists
   };
 
-  // Initialize database index.
-  void InitializeIndex();
+ private:
+  // Record IDs encode a shard and a position within the shard. The upper
+  // 16 bits are used for the shard, and the lower 48 bits are used for the
+  // position.
+  static uint64 RecordID(uint64 shard, uint64 position) {
+    return shard << 48 | position;
+  }
+  static uint64 Shard(uint64 recid) {
+    return recid >> 48;
+  }
+  static uint64 Position(uint64 recid) {
+    return recid & ((1ULL << 48) - 1);
+  }
 
-  // Record reader and writer for each shard.
-  std::vector<Shard> shards_;
+  // Configuration options for database.
+  struct Config {
+    // Data file configuration.
+    RecordFileOptions record;
 
-  // Filename for database index.
-  string idxfile_;
+    // Initial index capacity (default 1M).
+    uint64 initial_index_capacity = 1 << 20;
 
-  // Total size of all data files.
-  uint64 datasize_;
+    // Size of each data shard (256 GB).
+    uint64 data_shard_size = 256 * (1ULL << 30);
+
+    // Index load factor.
+    double load_factor = 0.75;
+  };
+
+  // Return filename for index.
+  string IndexFile() const;
+
+  // Return filename for data shard.
+  string DataFile(int shard) const;
+
+  // Read data record.
+  void ReadRecord(uint64 recid, Record *record);
+
+  // Append data record. Return position of new record.
+  uint64 AppendRecord(const Record &record);
+
+  // Add new empty data shard.
+  Status AddDataShard();
+
+  // Expand index to accommodate more entries.
+  Status ExpandIndex(uint64 capacity);
+
+  // Expand database for next record.
+  void Expand();
+
+  // Recover index from data files.
+  Status Recover(uint64 capacity);
+
+  // Database directory.
+  string dbdir_;
+
+  // Database configuration.
+  Config config_;
+
+  // Record readers for all shards.
+  std::vector<RecordReader *> readers_;
+
+  // Record writer for the last shard.
+  RecordWriter *writer_ = nullptr;
+
+  // Database index.
+  DatabaseIndex *index_ = nullptr;
+
+  // Total size of all data files. This is used as the epoch in the index
+  // checkpointing. If the index epoch does not match the data size, the
+  // index needs to be rebuilt.
+  uint64 datasize_ = 0;
+
+  // Flag for tracking unwritten changes to database.
+  bool dirty_ = false;
 };
 
 }  // namespace sling

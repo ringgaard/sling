@@ -265,6 +265,8 @@ class RecordReader : public RecordFile {
 
   // Buffer for decompressed record data.
   RecordBuffer decompressed_data_;
+
+  friend class RecordWriter;
 };
 
 // Index for looking up records in an indexed record file.
@@ -364,8 +366,9 @@ class RecordWriter : public RecordFile {
   // Flush output buffer to disk.
   Status Flush();
 
-  // Write record to record file.
-  Status Write(const Record &record);
+  // Write record to record file. If position is not null, it is set to the
+  // position of the new record.
+  Status Write(const Record &record, uint64 *position = nullptr);
 
   // Write key/value pair to file.
   Status Write(const Slice &key, const Slice &value) {
@@ -408,6 +411,9 @@ class RecordWriter : public RecordFile {
 
   // Index entries for building index.
   Index index_;
+
+  // Record reader with shared file.
+  RecordReader *reader_ = nullptr;
 };
 
 }  // namespace sling
