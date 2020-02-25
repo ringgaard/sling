@@ -78,7 +78,7 @@ extern Handle kAbbreviationMarker;
 // cannot start or end on a stop word.
 class SpanPopulator {
  public:
-  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+  void Annotate(const PhraseTable *aliases, SpanChart *chart);
 
   // Add stop word.
   void AddStopWord(Text word);
@@ -110,7 +110,7 @@ class SpanImporter {
   void Init(Store *store, bool detailed);
 
   // Import spans from document.
-  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+  void Annotate(const PhraseTable *aliases, SpanChart *chart);
 
  private:
   // Detailed annotations.
@@ -181,7 +181,7 @@ class SpanTaxonomy {
   void Init(Store *store);
 
   // Annotate spans in the chart with type-based flags.
-  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+  void Annotate(const PhraseTable *aliases, SpanChart *chart);
 
  private:
   // Classify item according to taxonomy and return flags for item.
@@ -275,7 +275,7 @@ class SpelledNumberAnnotator {
   void Init(Store *store);
 
   // Annotate chart with spelled number spans.
-  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+  void Annotate(const PhraseTable *aliases, SpanChart *chart);
 
  private:
   // Symbols.
@@ -291,7 +291,7 @@ class NumberScaleAnnotator {
   void Init(Store *store);
 
   // Annotate scaled numbers.
-  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+  void Annotate(const PhraseTable *aliases, SpanChart *chart);
 
  private:
   // Mapping from item for scale to scalar.
@@ -310,7 +310,7 @@ class MeasureAnnotator {
   void Init(Store *store, bool detailed);
 
   // Annotate measure spans.
-  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+  void Annotate(const PhraseTable *aliases, SpanChart *chart);
 
  private:
   // Check if item is a unit.
@@ -343,16 +343,16 @@ class DateAnnotator {
   void Init(Store *store, bool detailed);
 
   // Annotate date spans.
-  void Annotate(const PhraseTable &aliases, SpanChart *chart);
+  void Annotate(const PhraseTable *aliases, SpanChart *chart);
 
  private:
   // Try to find year at position in chart. Returns the year if found (and
   // set the end) or 0 if no year was found.
-  int GetYear(const PhraseTable &aliases, Store *store, SpanChart *chart,
+  int GetYear(const PhraseTable *aliases, Store *store, SpanChart *chart,
               int pos, int *end);
 
   // Find item for phrase with a certain type.
-  Handle FindMatch(const PhraseTable &aliases,
+  Handle FindMatch(const PhraseTable *aliases,
                    const SpanChart::Item &span,
                    const Name &type,
                    Store *store);
@@ -409,9 +409,12 @@ class SpanAnnotator {
   // Resources for initializing span annotator.
   struct Resources {
     string kb;             // knowledge base with entities and metadata
-    string aliases;        // phrase table with phrase to entity mapping
     string dictionary;     // dictionary table with IDF scores for words
     string language;       // language for documents
+
+    // Phrase table with phrase to entity mapping
+    const PhraseTable *aliases = nullptr;
+
     bool resolve = false;  // resolve spans to entities in knowledge base
     bool detailed = true;  // annotate frames attributes
   };
@@ -435,7 +438,7 @@ class SpanAnnotator {
                     Handle entity, int count);
 
   // Phrase table with aliases.
-  PhraseTable aliases_;
+  const PhraseTable *aliases_;
 
   // Dictionary with IDF scores.
   IDFTable dictionary_;

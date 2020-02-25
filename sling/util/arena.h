@@ -28,7 +28,7 @@ namespace sling {
 template<typename T = char> class Arena {
  public:
   // Initialize arena.
-  Arena(size_t region_size = 1 << 20) : region_size_(region_size) {}
+  Arena(size_t chunk = 1 << 20) : chunk_(chunk) {}
 
   // Deallocate arena.
   ~Arena() { for (T *r : regions_) free(r); }
@@ -60,20 +60,20 @@ template<typename T = char> class Arena {
  private:
   // Allocate a new region.
   void expand() {
-    T *memory = static_cast<T *>(malloc(region_size_ * sizeof(T)));
+    T *memory = static_cast<T *>(malloc(chunk_ * sizeof(T)));
     heap_ = memory;
-    free_ = region_size_;
+    free_ = chunk_;
     regions_.push_back(memory);
   }
 
   // Pointer to the unused part of the current region.
   T *heap_ = nullptr;
 
-  // Bytes remaining in the unallocated part of of the current regions.
+  // Bytes remaining in the unallocated part of of the current region.
   size_t free_ = 0;
 
   // Size of each region.
-  size_t region_size_;
+  size_t chunk_;
 
   // List of allocated regions.
   std::vector<T *> regions_;

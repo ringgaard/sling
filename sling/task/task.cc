@@ -527,6 +527,9 @@ void Task::Done() {
     for (Channel *channel : sinks_) {
       if (!channel->closed()) channel->Close();
     }
+
+    // Dispose of shared assets managed by task.
+    DisposeAssets();
   }
 }
 

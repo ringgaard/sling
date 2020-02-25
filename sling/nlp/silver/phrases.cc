@@ -38,7 +38,8 @@ class PhraseStructureAnnotator : public Annotator {
  public:
   void Init(Task *task, Store *commons) override {
     // Load phrase table.
-    aliases_.Load(commons, task->GetInputFile("aliases"));
+    string alias_file = task->GetInputFile("aliases");
+    aliases_ = PhraseTable::Acquire(task, commons, alias_file);
 
     // Initialize fact extractor.
     catalog_.Init(commons);
@@ -143,11 +144,11 @@ class PhraseStructureAnnotator : public Annotator {
         // Look up subphrase in phrase table.
         uint64 fp = phrase->PhraseFingerprint(b, e);
         SpanChart::Item &span = chart.item(b, e);
-        span.matches = aliases_.Find(fp);
+        span.matches = aliases_->Find(fp);
         if (span.matches == nullptr) continue;
 
         // Check if any target can match the subphrase.
-        aliases_.GetMatches(span.matches, &matches);
+        aliases_->GetMatches(span.matches, &matches);
         for (Handle h : matches) {
           if (targets.count(h) > 0) {
             // Match found.
@@ -365,7 +366,7 @@ class PhraseStructureAnnotator : public Annotator {
   };
 
   // Phrase table with aliases.
-  PhraseTable aliases_;
+  const PhraseTable *aliases_ = nullptr;
 
   // Fact catalog for fact extraction.
   FactCatalog catalog_;

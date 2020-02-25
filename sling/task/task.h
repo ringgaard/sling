@@ -25,6 +25,7 @@
 #include "sling/base/types.h"
 #include "sling/task/environment.h"
 #include "sling/task/message.h"
+#include "sling/util/asset.h"
 
 namespace sling {
 namespace task {
@@ -277,7 +278,7 @@ class Processor : public Component<Processor> {
 
 // A task is a node in the job computation graph. A processor is used for
 // processing the input data and producing the output data.
-class Task {
+class Task : public AssetManager {
  public:
   // Parameter with name and value.
   struct Parameter {
