@@ -161,7 +161,6 @@ bool DatabaseIndex::Exists(uint64 key, uint64 value) {
     if (e.key == key && e.value == value) {
       // Match found.
       return true;
-      return pos;
     } else if (e.key == EMPTY) {
       // No match found.
       return false;

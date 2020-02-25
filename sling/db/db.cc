@@ -158,6 +158,7 @@ bool Database::Get(const Slice &key, Record *record) {
     // Return record if key matches.
     if (key == record->key) return true;
   }
+
   return false;
 }
 
@@ -175,7 +176,7 @@ uint64 Database::Put(const Slice &key, const Slice &value, bool overwrite) {
   Record record;
   for (;;) {
     // Get next match in index.
-    uint64 recid = index_->Get(fp, &pos);
+    recid = index_->Get(fp, &pos);
     if (recid == DatabaseIndex::NVAL) break;
 
     // Read record from data file and check if keys match.
@@ -222,7 +223,7 @@ bool Database::Delete(const Slice &key) {
   Record record;
   for (;;) {
     // Get next match in index.
-    uint64 recid = index_->Get(fp, &pos);
+    recid = index_->Get(fp, &pos);
     if (recid == DatabaseIndex::NVAL) return false;
 
     // Read record from data file and check if keys match.
