@@ -101,6 +101,7 @@ cc_library(
   deps = [
     ":parser-codec",
     "//sling/base",
+    "//sling/frame:object",
     "//sling/frame:store",
     "//sling/myelin:builder",
     "//sling/myelin:gradient",
