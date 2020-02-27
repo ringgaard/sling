@@ -321,6 +321,10 @@ class FlowBuilder : public Scope {
   // Softmax.
   Variable *Softmax(Variable *x) { return Normalize(Exp(Sub(x, Max(x)))); }
   Variable *LogSoftmax(Variable *x) { return Log(Softmax(x)); }
+  Variable *LogSumExp(Variable *x) {
+    Variable *max = Max(x);
+    return Add(Log(Sum(Exp(Sub(x, max)))), max);
+  }
 
   // Shape.
   Variable *TensorShape(Variable *x) {

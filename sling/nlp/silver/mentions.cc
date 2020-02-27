@@ -1460,6 +1460,7 @@ class MentionAnnotator : public Annotator {
 
     string alias_file = task->GetInputFile("aliases");
     resources.aliases = PhraseTable::Acquire(task, commons, alias_file);
+    CHECK(resources.aliases != nullptr);
 
     annotator_.Init(commons, resources);
   }

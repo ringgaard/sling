@@ -45,7 +45,9 @@ trainer.add_params({
   "rnn_highways": True,
   "rnn_layers": 1,
   "dropout": 0.2,
-  "ff_l2reg": 0.0001,
+
+  "ff_dims": [128],
+  #"ff_l2reg": 0.0001,
 
   "skip_section_titles": True,
   "word_dim": 64,

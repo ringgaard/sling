@@ -94,6 +94,8 @@ class SilverWorkflow:
 
       mapper.add_annotator("mentions")
       mapper.add_annotator("anaphora")
+      #mapper.add_annotator("phrase-structure")
+      #mapper.add_annotator("relations")
       mapper.add_annotator("types")
       mapper.add_annotator("clear-references")
 

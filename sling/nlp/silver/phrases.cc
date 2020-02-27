@@ -99,8 +99,12 @@ class PhraseStructureAnnotator : public Annotator {
           Frame top = Decode(store, annotations).AsFrame();
           Document phrase(top, document->names());
 
-          // Add phrase annotations to document.
-          Merge(document, phrase, span->begin());
+          // Make sure the cached phrase has the same length as the span. These
+          // can differ in rare cases because of context-dependent tokenization.
+          if (phrase.length() == span->length()) {
+            // Add phrase annotations to document.
+            Merge(document, phrase, span->begin());
+          }
         }
       } else {
         // Get sub document with phrase span.
@@ -211,9 +215,14 @@ class PhraseStructureAnnotator : public Annotator {
           // Add cached phrase annotations.
           Frame top = Decode(store, annotations).AsFrame();
           Document subphrase(top, phrase->names());
-          Merge(phrase, subphrase, begin);
-          Span *subspan = phrase->GetSpan(begin, end);
-          if (subspan != nullptr) subevoke = subspan->evoked();
+
+          // Make sure the cached phrase has the same length as the span. These
+          // can differ in rare cases because of context-dependent tokenization.
+          if (subphrase.length() == end - begin) {
+            Merge(phrase, subphrase, begin);
+            Span *subspan = phrase->GetSpan(begin, end);
+            if (subspan != nullptr) subevoke = subspan->evoked();
+          }
         }
       } else {
         // Subphrase not found in cache. Get document for subphrase.

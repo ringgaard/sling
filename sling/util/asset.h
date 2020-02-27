@@ -56,7 +56,7 @@ class AssetManager {
       std::function<T *()> init) {
     Key key(TypeId<T>(), name);
     Asset *&a = assets_[key];
-    if (a != nullptr) a = init();
+    if (a == nullptr) a = init();
     return reinterpret_cast<const T *>(a);
   }
 
@@ -77,7 +77,6 @@ class AssetManager {
 };
 
 }  // namespace sling
-
 
 #endif  // SLING_UTIL_ASSET_H_
 
