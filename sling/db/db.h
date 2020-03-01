@@ -50,10 +50,8 @@ class Database {
   bool Get(const Slice &key, Record *record);
 
   // Add or update record in database. Return record id of new record.
-  uint64 Put(const Slice &key, const Slice &value, bool overwrite = true);
-  uint64 Add(const Slice &key, const Slice &value) {
-    return Put(key, value, false);
-  }
+  uint64 Put(const Record &record, bool overwrite = true);
+  uint64 Add(const Record &record) { return Put(record, false); }
 
   // Delete record in database. Return true if record was deleted.
   bool Delete(const Slice &key);
@@ -63,6 +61,12 @@ class Database {
   //   Record record;
   //   while (db->Next(&record, &iterator)) { ... }
   bool Next(Record *record, uint64 *iterator);
+
+  // Check if record id is valid.
+  bool Valid(uint64 recid);
+
+  // Check if database has unflushed changed.
+  bool dirty() const { return dirty_; }
 
   // Error codes.
   enum Errors {
@@ -84,6 +88,16 @@ class Database {
   }
   static uint64 Position(uint64 recid) {
     return recid & ((1ULL << 48) - 1);
+  }
+
+  // Return the current shard for writing to the database.
+  int CurrentShard() const {
+    return readers_.size() - 1;
+  }
+
+  // Return the current epoch for the database.
+  uint64 Epoch() const {
+    return RecordID(CurrentShard(), writer_->Tell());
   }
 
   // Configuration options for database.
@@ -110,7 +124,7 @@ class Database {
   // Read data record.
   void ReadRecord(uint64 recid, Record *record);
 
-  // Append data record. Return position of new record.
+  // Append data record. Return record id of new record.
   uint64 AppendRecord(const Record &record);
 
   // Add new empty data shard.
@@ -139,11 +153,6 @@ class Database {
 
   // Database index.
   DatabaseIndex *index_ = nullptr;
-
-  // Total size of all data files. This is used as the epoch in the index
-  // checkpointing. If the index epoch does not match the data size, the
-  // index needs to be rebuilt.
-  uint64 datasize_ = 0;
 
   // Flag for tracking unwritten changes to database.
   bool dirty_ = false;

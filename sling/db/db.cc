@@ -50,28 +50,21 @@ Status Database::Open(const string &dbdir, bool recover) {
   std::sort(datafiles.begin(), datafiles.end());
 
   // Open readers for all data files.
-  datasize_ = 0;
-  for (int i = 0; i < datafiles.size() - 1; ++i) {
+  for (int i = 0; i < datafiles.size(); ++i) {
     RecordReader *reader = new RecordReader(datafiles[i], config_.record);
     readers_.push_back(reader);
-    datasize_ += reader->size();
   }
 
   // The last shard also has a writer for adding records to the database.
-  File *file;
-  Status st = File::Open(datafiles.back(), "r+", &file);
-  if (!st.ok()) return st;
-  RecordReader *reader = new RecordReader(file, config_.record, false);
-  readers_.push_back(reader);
-  datasize_ += reader->size();
-  writer_ = new RecordWriter(reader, config_.record);
+  config_.record.append = true;
+  writer_ = new RecordWriter(datafiles.back(), config_.record);
 
   // Open database index.
   index_ = new DatabaseIndex();
-  st = index_->Open(IndexFile());
+  Status st = index_->Open(IndexFile());
   if (!st.ok()) {
     if (recover) {
-      VLOG(1) << "Recover database index for " << dbdir << " due to " << st;
+      LOG(INFO) << "Recover database index for " << dbdir << " due to: " << st;
       uint64 capacity = index_->capacity();
       delete index_;
       index_ = nullptr;
@@ -81,9 +74,9 @@ Status Database::Open(const string &dbdir, bool recover) {
   }
 
   // Check that index is up-to-date.
-  if (index_->epoch() != datasize_) {
+  if (index_->epoch() != Epoch()) {
     if (recover) {
-      VLOG(1) << "Recover stale database index for " << dbdir;
+      LOG(INFO) << "Recover stale database index for " << dbdir;
       uint64 capacity = index_->capacity();
       delete index_;
       index_ = nullptr;
@@ -132,12 +125,13 @@ Status Database::Flush() {
 
     // Flush index to disk.
     if (index_ != nullptr) {
-      Status st = index_->Flush(datasize_);
+      Status st = index_->Flush(Epoch());
       if (!st.ok()) return st;
     }
+
+    dirty_ = false;
   }
 
-  dirty_ = false;
   return Status::OK;
 }
 
@@ -162,26 +156,23 @@ bool Database::Get(const Slice &key, Record *record) {
   return false;
 }
 
-uint64 Database::Put(const Slice &key, const Slice &value, bool overwrite) {
-  // Make room for more records.
-  Expand();
-
+uint64 Database::Put(const Record &record, bool overwrite) {
   // Compute record key fingerprint.
-  uint64 fp = Fingerprint(key.data(), key.size());
+  uint64 fp = Fingerprint(record.key.data(), record.key.size());
 
   // Loop over matching records in index to check if there is already a record
   // with a matching key.
   uint64 recid = DatabaseIndex::NVAL;
   uint64 pos = DatabaseIndex::NPOS;
-  Record record;
+  Record rec;
   for (;;) {
     // Get next match in index.
     recid = index_->Get(fp, &pos);
     if (recid == DatabaseIndex::NVAL) break;
 
     // Read record from data file and check if keys match.
-    ReadRecord(recid, &record);
-    if (key == record.key) break;
+    ReadRecord(recid, &rec);
+    if (rec.key == record.key) break;
   }
 
   if (recid != DatabaseIndex::NVAL) {
@@ -189,12 +180,13 @@ uint64 Database::Put(const Slice &key, const Slice &value, bool overwrite) {
     if (!overwrite) return DatabaseIndex::NVAL;
 
     // Check if existing record value matches.
-    if (value == record.value) return recid;
+    if (rec.value == record.value) return recid;
   }
 
+  // Make room for more records.
+  Expand();
+
   // Write new record.
-  record.key = key;
-  record.value = value;
   uint64 newid = AppendRecord(record);
 
   // Update index.
@@ -202,7 +194,7 @@ uint64 Database::Put(const Slice &key, const Slice &value, bool overwrite) {
     // Add new entry to index.
     index_->Add(fp, newid);
   } else {
-    // Update existing index to point to the new record.
+    // Update existing index entry to point to the new record.
     index_->Update(fp, recid, newid);
   }
 
@@ -211,9 +203,6 @@ uint64 Database::Put(const Slice &key, const Slice &value, bool overwrite) {
 }
 
 bool Database::Delete(const Slice &key) {
-  // Make room for more records.
-  Expand();
-
   // Compute record key fingerprint.
   uint64 fp = Fingerprint(key.data(), key.size());
 
@@ -230,6 +219,9 @@ bool Database::Delete(const Slice &key) {
     ReadRecord(recid, &record);
     if (key == record.key) break;
   }
+
+  // Make room for more records.
+  Expand();
 
   // Write empty record to mark key as deleted.
   record.key = key;
@@ -254,7 +246,10 @@ bool Database::Next(Record *record, uint64 *iterator) {
     }
 
     // Flush writer before reading from the last shard.
-    if (shard == readers_.size() - 1) CHECK(writer_->Flush());
+    if (shard == CurrentShard()) {
+      CHECK(writer_->Flush());
+      writer_->Sync(readers_.back());
+    }
 
     // Seek to position in shard.
     RecordReader *reader = readers_[shard];
@@ -291,6 +286,18 @@ bool Database::Next(Record *record, uint64 *iterator) {
   }
 }
 
+bool Database::Valid(uint64 recid) {
+  uint64 shard = Shard(recid);
+  uint64 pos = Position(recid);
+  if (shard >= readers_.size()) return false;
+  if (shard == readers_.size() - 1) {
+    if (pos >= writer_->Tell()) return false;
+  } else {
+    if (pos >= readers_[shard]->size()) return false;
+  }
+  return true;
+}
+
 string Database::DataFile(int shard) const {
   string fn = dbdir_ + "/data-";
   string number = std::to_string(shard);
@@ -305,10 +312,10 @@ string Database::IndexFile() const {
 
 void Database::ReadRecord(uint64 recid, Record *record) {
   uint64 shard = Shard(recid);
-  CHECK_LT(shard, readers_.size());
-  if (shard == readers_.size() - 1) {
+  if (shard == CurrentShard()) {
     // Flush writer before reading from the last shard.
     CHECK(writer_->Flush());
+    writer_->Sync(readers_.back());
   }
   RecordReader *reader = readers_[shard];
   CHECK(reader->Seek(Position(recid)));
@@ -316,29 +323,31 @@ void Database::ReadRecord(uint64 recid, Record *record) {
 }
 
 uint64 Database::AppendRecord(const Record &record) {
-  uint64 before = writer_->Tell();
   uint64 pos;
   CHECK(writer_->Write(record, &pos));
-  datasize_ += writer_->Tell() - before;
-  return pos;
+  return RecordID(CurrentShard(), pos);
 }
 
 Status Database::AddDataShard() {
+  // Close current writer.
+  if (writer_ != nullptr) {
+    Status st = writer_->Close();
+    if (!st.ok()) return st;
+    delete writer_;
+    writer_ = nullptr;
+  }
+
   // Create new empty shard.
-  VLOG(1) << "Add shard " << readers_.size() << " to db " << dbdir_;
+  LOG(INFO) << "Add shard " << readers_.size() << " to db " << dbdir_;
   string datafn = DataFile(readers_.size());
-  RecordWriter initial(datafn, config_.record);
-  Status st = initial.Close();
+  config_.record.append = false;
+  writer_ = new RecordWriter(datafn, config_.record);
+  Status st = writer_->Flush();
   if (!st.ok()) return st;
 
-  // Create reader/writer pair for new shard.
-  File *file;
-  st = File::Open(datafn, "r+", &file);
-  if (!st.ok()) return st;
-  RecordReader *reader = new RecordReader(file, config_.record, false);
+  // Create reader for new shard.
+  RecordReader *reader = new RecordReader(datafn, config_.record);
   readers_.push_back(reader);
-  datasize_ += reader->size();
-  writer_ = new RecordWriter(reader, config_.record);
   dirty_ = true;
 
   return Status::OK;
@@ -346,7 +355,7 @@ Status Database::AddDataShard() {
 
 Status Database::ExpandIndex(uint64 capacity) {
   // Rehash index by copying it to a new larger index.
-  VLOG(1) << "Expand index to " << capacity << " entries for db " << dbdir_;
+  LOG(INFO) << "Expand index to " << capacity << " entries for db " << dbdir_;
   DatabaseIndex *new_index = new DatabaseIndex();
 
   // Unlink current index.
@@ -402,10 +411,10 @@ Status Database::Recover(uint64 capacity) {
   Status st = index_->Create(IndexFile(), capacity, limit);
   if (!st.ok()) return st;
 
-  // Add all records from the data shards to the index.
+  // Replay all records from the data shards to restore the index.
   Record record;
   for (int shard = 0; shard < readers_.size(); ++shard) {
-    VLOG(1) << "Recover shard " << shard << " of db " << dbdir_;
+    LOG(INFO) << "Recover shard " << shard << " of db " << dbdir_;
     RecordReader *reader = readers_[shard];
     st = reader->Rewind();
     if (!st.ok()) return st;
@@ -422,7 +431,7 @@ Status Database::Recover(uint64 capacity) {
       uint64 fp = Fingerprint(record.key.data(), record.key.size());
       uint64 recid = RecordID(shard, record.position);
 
-      // Empty records indicates deletion.
+      // Empty record indicates deletion.
       if (record.value.empty()) {
         index_->Delete(fp, recid);
       } else {
@@ -459,7 +468,11 @@ Status Database::Recover(uint64 capacity) {
     }
   }
 
-  dirty_ = true;
+  st = index_->Flush(Epoch());
+  if (!st.ok()) return st;
+
+  LOG(INFO) << "Recovery successful for: " << dbdir_;
+  dirty_ = false;
   return Status::OK;
 }
 

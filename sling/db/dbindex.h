@@ -95,6 +95,7 @@ class DatabaseIndex {
     E_OVERFULL,              // overfull index
     E_LOAD_FACTOR,           // invalid index load factor
     E_ALIGNMENT,             // index capacity not aligned to page size
+    E_MISSING,               // index file is missing or empty
   };
 
  private:

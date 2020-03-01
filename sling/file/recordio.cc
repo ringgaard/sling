@@ -160,7 +160,7 @@ int RecordFile::ReadHeader(const char *data, Header *header) {
   // Read record type.
   const char *p = data;
   header->record_type = static_cast<RecordType>(*p++);
-  if (header->record_type > INDEX_RECORD) return -1;
+  if (header->record_type > TSDATA_RECORD) return -1;
 
   // Read record length.
   p = Varint::Parse64(p, &header->record_size);
@@ -171,6 +171,13 @@ int RecordFile::ReadHeader(const char *data, Header *header) {
     header->key_size = 0;
   } else {
     p = Varint::Parse64(p, &header->key_size);
+  }
+
+  // Read timestamp.
+  if (header->record_type == TSDATA_RECORD) {
+    p = Varint::Parse64(p, &header->timestamp);
+  } else {
+    header->timestamp = -1;
   }
 
   // Return number of bytes consumed.
@@ -188,6 +195,11 @@ int RecordFile::WriteHeader(const Header &header, char *data) {
   // Write key length.
   if (header.record_type != FILLER_RECORD) {
     p = Varint::Encode64(p, header.key_size);
+  }
+
+  // Write timestamp.
+  if (header.record_type == TSDATA_RECORD) {
+    p = Varint::Encode64(p, header.timestamp);
   }
 
   // Return number of bytes written.
@@ -287,6 +299,7 @@ Status RecordReader::Read(Record *record) {
       input_.consumed(hdrsize);
       record->position = position_;
       record->type = hdr.record_type;
+      record->timestamp = hdr.timestamp;
       position_ += hdrsize;
     }
 
@@ -534,23 +547,40 @@ RecordWriter::RecordWriter(File *file, const RecordFileOptions &options)
   output_.resize(options.buffer_size);
   position_ = 0;
 
-  // Write file header.
-  memset(&info_, 0, sizeof(info_));
-  info_.magic = MAGIC2;
-  info_.hdrlen = sizeof(info_);
-  info_.compression = options.compression;
-  info_.chunk_size = options.chunk_size;
-  if (options.indexed) {
-    info_.index_page_size = options.index_page_size;
+  // Read existing header in append mode.
+  size_t size = file->Size();
+  if (options.append && size > 0) {
+    // Read record file header.
+    CHECK(file->Seek(0));
+    CHECK(file->Read(&info_, sizeof(FileHeader)));
+    CHECK(info_.magic == MAGIC1 || info_.magic == MAGIC2)
+        << "Not a record file: " << file->filename();
+    CHECK_EQ(info_.hdrlen, sizeof(FileHeader));
+    CHECK(info_.index_start == 0) << "Cannot append to indexed record file";
+
+    // Seek to end of file.
+    CHECK(file_->Seek(size));
+    position_ = size;
+  } else {
+    // Write file header.
+    memset(&info_, 0, sizeof(info_));
+    info_.magic = MAGIC2;
+    info_.hdrlen = sizeof(info_);
+    info_.compression = options.compression;
+    info_.chunk_size = options.chunk_size;
+    if (options.indexed) {
+      info_.index_page_size = options.index_page_size;
+    }
+    memcpy(output_.end(), &info_, sizeof(info_));
+    output_.appended(sizeof(info_));
+    position_ += sizeof(info_);
   }
-  memcpy(output_.end(), &info_, sizeof(info_));
-  output_.appended(sizeof(info_));
-  position_ += sizeof(info_);
 }
 
 RecordWriter::RecordWriter(const string &filename,
                            const RecordFileOptions &options)
-    : RecordWriter(File::OpenOrDie(filename, "w"), options) {}
+    : RecordWriter(File::OpenOrDie(filename, options.append ? "r+" : "w"),
+                   options) {}
 
 RecordWriter::RecordWriter(File *file)
     : RecordWriter(file, default_options) {}
@@ -564,7 +594,9 @@ RecordWriter::RecordWriter(RecordReader *reader,
   output_.resize(options.buffer_size);
   file_ = reader->file();
   info_ = reader->info();
-  info_.index_page_size = options.index_page_size;
+  if (options.indexed) {
+    info_.index_page_size = options.index_page_size;
+  }
   position_ = reader->size();
 }
 
@@ -664,7 +696,7 @@ Status RecordWriter::Write(const Record &record, uint64 *position) {
   }
 
   // Add record to index.
-  if (info_.index_page_size > 0 && record.type == DATA_RECORD) {
+  if (info_.index_page_size > 0 && record.type != INDEX_RECORD) {
     uint64 fp = Fingerprint(record.key.data(), record.key.size());
     index_.emplace_back(fp, position_);
   }
@@ -674,6 +706,10 @@ Status RecordWriter::Write(const Record &record, uint64 *position) {
   hdr.record_type = record.type;
   hdr.record_size = record.key.size() + value.size();
   hdr.key_size = record.key.size();
+  hdr.timestamp = record.timestamp;
+  if (hdr.timestamp != -1 && hdr.record_type == DATA_RECORD) {
+    hdr.record_type = TSDATA_RECORD;
+  }
   output_.ensure(maxsize);
   int hdrlen = WriteHeader(hdr, output_.end());
   output_.appended(hdrlen);
@@ -776,6 +812,7 @@ Status RecordWriter::AddIndex(const string &filename,
   }
 
   // Open writer that takes ownership of the underlying file.
+  CHECK(options.indexed);
   RecordWriter *writer = new RecordWriter(reader, options);
 
   // Build record index.

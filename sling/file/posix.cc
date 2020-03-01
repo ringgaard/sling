@@ -108,6 +108,11 @@ class PosixFile : public File {
     return mapping == MAP_FAILED ? nullptr : mapping;
   }
 
+  Status Resize(uint64 size) override {
+    if (ftruncate(fd_, size) == -1) return IOError(filename_, errno);
+    return Status::OK;
+  }
+
   Status Seek(uint64 pos) override {
     if (lseek(fd_, pos, SEEK_SET) == -1) return IOError(filename_, errno);
     return Status::OK;

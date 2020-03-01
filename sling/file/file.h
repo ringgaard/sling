@@ -75,6 +75,9 @@ class File {
   // Map file region into memory. Return null on error or if not supported.
   virtual void *MapMemory(uint64 pos, size_t size, bool writable = false);
 
+  // Resize file.
+  virtual Status Resize(uint64 size) = 0;
+
   // Set the current file position.
   virtual Status Seek(uint64 pos) = 0;
 

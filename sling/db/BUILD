@@ -23,3 +23,17 @@ cc_library(
   ],
 )
 
+cc_binary(
+  name = "dbserver",
+  srcs = ["dbserver.cc"],
+  deps = [
+    ":db",
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/http:http-server",
+    "//sling/string:numbers",
+    "//sling/util:mutex",
+    "//sling/util:thread",
+  ],
+)
+

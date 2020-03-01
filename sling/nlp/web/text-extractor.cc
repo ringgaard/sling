@@ -350,6 +350,12 @@ bool WebPageTextExtractor::StartElement(const XMLElement &e) {
           date_ = content;
         }
       }
+    } else if (TagEqual(e.name, "link")) {
+      const char *rel = e.Get("rel");
+      const char *href = e.Get("href");
+      if (rel && href && TagEqual(rel, "canonical")) {
+        url_ = href;
+      }
     } else if (TagEqual(e.name, "title")) {
       in_title_ = true;
     }

@@ -27,9 +27,10 @@ namespace sling {
 
 // Record types.
 enum RecordType {
-  DATA_RECORD = 1,
-  FILLER_RECORD = 2,
-  INDEX_RECORD = 3,
+  DATA_RECORD   = 1,     // data record with key and value
+  FILLER_RECORD = 2,     // filler record to avoid records crossing chunks
+  INDEX_RECORD  = 3,     // index page
+  TSDATA_RECORD = 4,     // time-stamped data record
 };
 
 // Record with key and value.
@@ -37,10 +38,11 @@ struct Record {
   Record() {}
   Record(const Slice &k, const Slice &v) : key(k), value(v) {}
 
+  RecordType type = DATA_RECORD;
   Slice key;
   Slice value;
+  int64 timestamp = -1;
   int64 position = -1;
-  RecordType type = DATA_RECORD;
 };
 
 // Record buffer.
@@ -106,7 +108,7 @@ class RecordBuffer : public snappy::Sink, public snappy::Source {
 class RecordFile {
  public:
   // Maximum record header length.
-  static const int MAX_HEADER_LEN = 21;
+  static const int MAX_HEADER_LEN = 31;
 
   // Maximum skip record length.
   static const int MAX_SKIP_LEN = 12;
@@ -139,6 +141,7 @@ class RecordFile {
     RecordType record_type;
     uint64 record_size;
     uint64 key_size;
+    uint64 timestamp;
   };
 
   // An index record consists of a list of index entries containing the key
@@ -186,6 +189,9 @@ struct RecordFileOptions {
 
   // Record files can be indexed for fast retrieval by key.
   bool indexed = false;
+
+  // Open record writer in append mode.
+  bool append = false;
 
   // Number of entries in each index record.
   int index_page_size = 1024;
@@ -358,7 +364,7 @@ class RecordWriter : public RecordFile {
   ~RecordWriter();
 
   // Open record file for shared reading and writing.
-  explicit RecordWriter(RecordReader *reader, const RecordFileOptions &options);
+  RecordWriter(RecordReader *reader, const RecordFileOptions &options);
 
   // Close record file.
   Status Close();
@@ -382,6 +388,11 @@ class RecordWriter : public RecordFile {
 
   // Return current position in record file.
   uint64 Tell() const { return position_; }
+
+  // Sync a record reader to this writer.
+  void Sync(RecordReader *reader) const {
+    reader->size_ = position_;
+  }
 
   // Add index to existing record file.
   static Status AddIndex(const string &filename,

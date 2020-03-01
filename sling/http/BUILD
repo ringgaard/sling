@@ -7,6 +7,8 @@ cc_library(
   deps = [
     "//sling/base",
     "//sling/string:ctype",
+    "//sling/string:text",
+    "//sling/string:numbers",
   ],
 )
 
@@ -52,6 +54,7 @@ cc_library(
   deps = [
     ":http-server",
     ":http-stream",
+    ":http-utils",
     "//sling/base",
     "//sling/frame:decoder",
     "//sling/frame:encoder",

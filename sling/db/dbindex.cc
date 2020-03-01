@@ -30,6 +30,10 @@ Status DatabaseIndex::Open(const string &filename) {
 
   // Map index file into memory.
   mapped_size_ = file_->Size();
+  LOG(INFO) << "index size: " << mapped_size_;
+  if (mapped_size_ == 0) {
+    return Status(E_MISSING, "Missing index file: ", filename);
+  }
   mapped_addr_ = static_cast<char *>(file_->MapMemory(0, mapped_size_, true));
   if (mapped_addr_ == nullptr) {
     return Status(E_MEMMAP, "Unable to map index into memory: ", filename);
@@ -79,7 +83,7 @@ Status DatabaseIndex::Create(const string &filename,
   if (limit >= capacity) {
     return Status(E_LOAD_FACTOR, "Invalid index load factor");
   }
-  if (!IsPowerOfTwo32(header_->capacity)) {
+  if (!IsPowerOfTwo32(capacity)) {
     return Status(E_CAPACITY, "Capacity must be power of two");
   }
 
@@ -91,6 +95,8 @@ Status DatabaseIndex::Create(const string &filename,
   uint64 offset = 0;
   while (offset < sizeof(Header)) offset += page_size;
   mapped_size_ = offset + capacity * sizeof(Entry);
+  st = file_->Resize(mapped_size_);
+  if (!st.ok()) return st;
 
   // Map index file into memory.
   mapped_addr_ = static_cast<char *>(file_->MapMemory(0, mapped_size_, true));
@@ -129,13 +135,19 @@ Status DatabaseIndex::Flush(uint64 epoch) {
 
 Status DatabaseIndex::Close() {
   // Remove memory mapping.
-  Status st = File::FreeMappedMemory(mapped_addr_, mapped_size_);
-  if (!st.ok()) return st;
+  if (mapped_addr_ != nullptr) {
+    Status st = File::FreeMappedMemory(mapped_addr_, mapped_size_);
+    if (!st.ok()) return st;
+  }
 
   // Close index file.
-  st = file_->Close();
-  file_ = nullptr;
-  return st;
+  if (file_ != nullptr) {
+    Status st = file_->Close();
+    file_ = nullptr;
+    if (!st.ok()) return st;
+  }
+
+  return Status::OK;
 }
 
 uint64 DatabaseIndex::Get(uint64 key, uint64 *pos) const {

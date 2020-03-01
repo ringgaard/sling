@@ -36,14 +36,6 @@ Status Error(const char *context) {
   return Status(errno, context, strerror(errno));
 }
 
-// Convert time to RFC date format.
-char *RFCTime(time_t t, char *buf) {
-  struct tm tm;
-  gmtime_r(&t, &tm);
-  strftime(buf, 31, "%a, %d %b %Y %H:%M:%S GMT", &tm);
-  return buf;
-}
-
 // Return text for HTTP status code.
 const char *StatusText(int status) {
   switch (status) {
@@ -725,13 +717,16 @@ void HTTPConnection::Dispatch() {
   handler(request_, response_);
 
   // Add Date: and Server: headers.
-  char datebuf[32];
+  char datebuf[RFCTIME_SIZE];
   response_->Set("Server", server()->options().server_name.c_str(), false);
   response_->Set("Date", RFCTime(time(nullptr), datebuf), false);
 
   // Set content length.
   if (!response_body_.empty()) {
     response_->SetContentLength(response_body_.size());
+  } else if (response_->status() == 200) {
+    // Return status code 204 (No Content) if response body is empty.
+    response_->set_status(204);
   }
 
   // Check for persistent connection.
@@ -1072,6 +1067,13 @@ void HTTPResponse::Set(const char *name, const char *value, bool overwrite) {
     }
   }
   headers_.emplace_back(strdup(name), strdup(value));
+}
+
+void HTTPResponse::Add(const char *name, const char *value, int len) {
+  char *v = static_cast<char *>(malloc(len + 1));
+  memcpy(v, value, len);
+  v[len] = 0;
+  headers_.emplace_back(strdup(name), v);
 }
 
 void HTTPResponse::SendError(int status, const char *title, const char *msg) {

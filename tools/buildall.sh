@@ -2,6 +2,7 @@
 
 bazel build -c opt $* \
   sling/base:* \
+  sling/db:* \
   sling/file:* \
   sling/frame:* \
   sling/http:* \

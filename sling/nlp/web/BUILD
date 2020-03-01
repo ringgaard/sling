@@ -19,10 +19,10 @@ cc_binary(
   name = "extract-text",
   srcs = ["extract-text.cc"],
   deps = [
+    ":text-extractor",
     "//sling/base",
     "//sling/file",
     "//sling/file:posix",
-    "//sling/nlp/web:text-extractor",
     "//sling/stream:file-input",
     "//sling/string:strip",
     "//sling/web:rfc822-headers",

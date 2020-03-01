@@ -302,6 +302,7 @@ class HTTPRequest {
 
   // HTTP method.
   const char *method() const { return method_; }
+  HTTPMethod Method() const { return GetHTTPMethod(method_); }
 
   // HTTP URL path.
   const char *full_path() const { return full_path_; }
@@ -408,6 +409,9 @@ class HTTPResponse {
   // Set response header.
   void Set(const char *name, const char *value, bool overwrite = true);
 
+  // Add response header.
+  void Add(const char *name, const char *value, int len);
+
   // HTTP response headers.
   const std::vector<HTTPHeader> &headers() const { return headers_; }
 
@@ -425,7 +429,9 @@ class HTTPResponse {
   void SendFile(File *file) { conn_->SendFile(file); }
 
   // Return HTTP error message.
-  void SendError(int status, const char *title, const char *msg);
+  void SendError(int status,
+                 const char *title = nullptr,
+                 const char *msg = nullptr);
 
   // Permanent redirect to another URL.
   void RedirectTo(const char *uri);
