@@ -104,6 +104,7 @@ cc_library(
     "//sling/frame:object",
     "//sling/frame:store",
     "//sling/myelin:builder",
+    "//sling/myelin:crf",
     "//sling/myelin:gradient",
     "//sling/myelin:learning",
     "//sling/nlp/kb:facts",

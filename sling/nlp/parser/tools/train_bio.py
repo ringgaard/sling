@@ -48,6 +48,7 @@ trainer.add_params({
 
   "ff_dims": [128],
   #"ff_l2reg": 0.0001,
+  "crf": True,
 
   "skip_section_titles": True,
   "word_dim": 64,

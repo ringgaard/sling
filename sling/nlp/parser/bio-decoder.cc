@@ -20,6 +20,7 @@
 #include "sling/frame/store.h"
 #include "sling/frame/object.h"
 #include "sling/myelin/builder.h"
+#include "sling/myelin/crf.h"
 #include "sling/myelin/gradient.h"
 #include "sling/myelin/learning.h"
 #include "sling/nlp/kb/facts.h"
@@ -100,6 +101,7 @@ class BIODecoder : public ParserDecoder {
   void Setup(task::Task *task, Store *commons) override {
     // Get parameters.
     task->Fetch("ff_dims", &ff_dims_);
+    task->Fetch("crf", &use_crf_);
 
     // Get entity types.
     FactCatalog catalog;
@@ -133,6 +135,11 @@ class BIODecoder : public ParserDecoder {
     layers.push_back(num_labels_);
     auto *scores = f.Name(f.FNN(token, layers, true), "scores");
     scores->set_out();
+
+    // Build CRF.
+    if (use_crf_) {
+      crf_.Build(flow, scores, learn);
+    }
 
     // Build tagger gradient.
     if (learn) {
@@ -367,6 +374,10 @@ class BIODecoder : public ParserDecoder {
 
   // Feed-forward hidden layer dimensions.
   std::vector<int> ff_dims_;
+
+  // CRF decoder.
+  bool use_crf_ = false;
+  CRF crf_;
 
   // Tagger model.
   myelin::Cell *cell_ = nullptr;
