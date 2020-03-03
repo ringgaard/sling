@@ -310,6 +310,10 @@ class Shape {
   // last are the same, and the last dimension is scalar.
   bool IsSingleBroadcast(const Shape &other) const;
 
+  // Check if shape is a reduction of another shape and determine the reduction
+  // axis and whether the reduction dimension is kept.
+  bool IsReduction(const Shape &other, int *axis, bool *keepdims) const;
+
   // Return shape as string.
   string ToString() const;
 
@@ -693,6 +697,12 @@ class Flow {
   Variable *AddWeights(const string &name, Type type, const Shape &shape) {
     return AddVariable(name, type, shape, Variable::LEARNABLE);
   }
+
+  // Add constant variable.
+  Variable *AddConstant(const string &name,
+                        Type type,
+                        const Shape &shape,
+                        const void *data = nullptr);
 
   // Add operation.
   Operation *AddOperation(const string &name, const string &type);

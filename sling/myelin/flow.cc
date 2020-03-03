@@ -187,6 +187,45 @@ bool Shape::IsSingleBroadcast(const Shape &other) const {
   return dim(r - 1) > 1 && other.dim(r - 1) == 1;
 }
 
+bool Shape::IsReduction(const Shape &other, int *axis, bool *keepdims) const {
+  if (rank() == 0) {
+    *axis = -1;
+    *keepdims = false;
+    return true;
+  } else if (rank() == other.rank()) {
+    int a = -1;
+    for (int d = 0; d < rank(); ++d) {
+      if (dim(d) != other.dim(d)) {
+        if (dim(d) != 1) return false;
+        if (a != -1) return false;
+        a = d;
+      }
+    }
+    if (a == -1) return false;
+    *axis = a;
+    *keepdims = true;
+    return true;
+  } else if (rank() == other.rank() - 1) {
+    int a = -1;
+    int d1 = 0;
+    int d2 = 0;
+    while (d1 < rank() && d2 < other.rank()) {
+      if (dim(d1) != other.dim(d2)) {
+        if (a != -1) return false;
+        a = d2++;
+      }
+      d1++;
+      d2++;
+    }
+    if (a == -1) return false;
+    *axis = a;
+    *keepdims = true;
+    return true;
+  } else {
+    return false;
+  }
+}
+
 string Shape::ToString() const {
   string str;
   for (int d = 0; d < rank(); ++d) {
@@ -1798,6 +1837,22 @@ Flow::Variable *Flow::AddVariable(const string &name,
   var->type = type;
   var->shape = shape;
   var->flags = flags;
+  return var;
+}
+
+Flow::Variable *Flow::AddConstant(const string &name,
+                                  Type type,
+                                  const Shape &shape,
+                                  const void *data) {
+  Variable *var = AddVariable(name, type, shape);
+  var->size = TypeTraits::of(type).size() * shape.elements();
+  char *buffer = AllocateMemory(var->size);
+  var->data = buffer;
+  if (data != nullptr) {
+    memcpy(buffer, data, var->size);
+  } else {
+    memset(buffer, 0, var->size);
+  }
   return var;
 }
 

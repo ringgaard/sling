@@ -114,7 +114,9 @@ class FlowBuilder : public Scope {
   }
 
   // Add constant to flow.
-  Variable *Const(const void *data, Type type, const Shape &shape);
+  Variable *Const(const void *data, Type type, const Shape &shape) {
+    return flow_->AddConstant(OpName("const"), type, shape, data);
+  }
   Variable *Const(float value) { return Const(&value, DT_FLOAT, {}); }
   Variable *Const(double value) { return Const(&value, DT_DOUBLE, {}); }
   Variable *Const(int value) { return Const(&value, DT_INT32, {}); }

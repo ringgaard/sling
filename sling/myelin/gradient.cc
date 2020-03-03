@@ -98,12 +98,15 @@ Flow::Function *Gradients::Finalize() {
     Flow::Variable *terms = terms_[dv];
     if (terms != nullptr) {
       // The gradients need to be summed when backpropagating through a
-      // broadcast input. Only simple broadcasting is supported.
+      // broadcast input.
       if (dv->shape != terms->shape) {
-        LOG(INFO) << "dv: " << dv->name << " " << dv->TypeString() << " terms: " << terms->name << " " << terms->TypeString();
+        int axis;
+        bool keepdims;
+        if (dv->shape.IsReduction(terms->shape, &axis, &keepdims)) {
+          terms = Sum(terms, axis, keepdims);
+        }
       }
-      bool unexpand = dv->scalar() && !terms->scalar();
-      if (unexpand) terms = Sum(terms);
+
       if (v->learnable()) {
         // Accumulate gradients for learnable variables.
         CHECK(dv->consumers.empty());

@@ -24,10 +24,21 @@ namespace myelin {
 // Conditional Random Field (CRF) cell.
 class CRF {
  public:
+  // Flow input/output variables.
+  struct Variables {
+    Flow::Variable *input;         // input emissions
+    Flow::Variable *dinput;        // emissions gradient
+
+    Flow::Variable *alpha_in;      // alpha input
+    Flow::Variable *alpha_out;     // alpha output
+    Flow::Variable *beta_in;       // alpha input gradient
+    Flow::Variable *beta_out;      // alpha output gradient
+  };
+
   CRF(const string &name = "crf") : name_(name) {}
 
-  // Build flow for CRF. Returns gradient output in learning mode.
-  Flow::Variable *Build(Flow *flow, Flow::Variable *input, bool learn);
+  // Build flow for CRF.
+  Variables Build(Flow *flow, Flow::Variable *emissions, bool learn);
 
   // Initialize CRF.
   void Initialize(const Network &net);

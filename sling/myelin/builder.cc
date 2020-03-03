@@ -130,20 +130,6 @@ Flow::Operation *FlowBuilder::RawOp(const string &op, const Args &args) {
   return flow_->AddOperation(func_, name, op, args, {});
 }
 
-Flow::Variable *FlowBuilder::Const(const void *data, Type type,
-                                   const Shape &shape) {
-  Variable *var = flow_->AddVariable(OpName("const"), type, shape);
-  var->size = TypeTraits::of(type).size() * shape.elements();
-  char *buffer = flow_->AllocateMemory(var->size);
-  var->data = buffer;
-  if (data != nullptr) {
-    memcpy(buffer, data, var->size);
-  } else {
-    memset(buffer, 0, var->size);
-  }
-  return var;
-}
-
 Flow::Variable *FlowBuilder::Const(double value, Type type) {
   switch (type) {
     case DT_FLOAT: {

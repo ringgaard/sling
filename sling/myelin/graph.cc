@@ -82,6 +82,20 @@ static bool Exclusive(Flow::Variable *var, Flow::Function *func) {
   return true;
 }
 
+static bool Excluded(Flow::Function *func, const GraphOptions &options) {
+  if (options.exclude_optimizer) {
+    if (func->name == "optimizer") return true;
+  }
+  if (options.exclude_gradients) {
+    if (func->name.rfind("gradients/", 0) == 0) return true;
+  }
+  return false;
+}
+
+static bool Excluded(Flow::Operation *op, const GraphOptions &options) {
+  return op->func != nullptr && Excluded(op->func, options);
+}
+
 static void AppendOpId(string *str, const Flow::Operation *op) {
   str->push_back('"');
   str->append(op->name);
@@ -289,6 +303,14 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
   int cluster_id = 0;
   std::set<Flow::Variable *> exclusive;
   for (Flow::Function *func : flow.funcs()) {
+    // Check if function should be excluded from the graph.
+    if (Excluded(func, options)) {
+      for (Flow::Variable *var : flow.vars()) {
+        if (Exclusive(var, func)) exclusive.insert(var);
+      }
+      continue;
+    }
+
     // Optionally make a cluster for each function.
     if (options.cluster_functions) {
       StringAppendF(&str, "subgraph cluster_%d {\n", cluster_id++);
@@ -339,7 +361,7 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
   for (Flow::Variable *var : flow.vars()) {
     if (!options.include_constants && var->constant()) continue;
     if (options.include_intermediates || Intermediate(var)) {
-      if (var->producer != nullptr) {
+      if (var->producer != nullptr && !Excluded(var->producer, options)) {
         // Output edge between producer and variable.
         AppendOpId(&str, var->producer);
         str.append(" -> ");
@@ -357,45 +379,49 @@ string FlowToDotGraph(const Flow &flow, const GraphOptions &options) {
 
       // Output edges between variable and consumers.
       for (Flow::Operation *consumer : var->consumers) {
-        AppendVarId(&str, var);
-        str.append(" -> ");
-        AppendOpId(&str, consumer);
-        str.append(" [");
-        str.append("tooltip=\"");
-        if (consumer->inputs.size() > 1) {
-          StringAppendF(&str, "%%%d = ", consumer->InputIndex(var));
+        if (!Excluded(consumer, options)) {
+          AppendVarId(&str, var);
+          str.append(" -> ");
+          AppendOpId(&str, consumer);
+          str.append(" [");
+          str.append("tooltip=\"");
+          if (consumer->inputs.size() > 1) {
+            StringAppendF(&str, "%%%d = ", consumer->InputIndex(var));
+          }
+          str.append(var->name);
+          str.append("\" ");
+          AppendPenWidth(&str, var, options);
+          str.append("];\n");
         }
-        str.append(var->name);
-        str.append("\" ");
-        AppendPenWidth(&str, var, options);
-        str.append("];\n");
       }
-    } else if (var->producer != nullptr) {
+    } else if (var->producer != nullptr && !Excluded(var->producer, options)) {
       // Output edges between producer and consumers.
       Flow::Operation *producer = var->producer;
       for (Flow::Operation *consumer : var->consumers) {
-        AppendOpId(&str, producer);
-        str.append(" -> ");
-        AppendOpId(&str, consumer);
-        str.append(" [");
-        str.append("tooltip=\"");
-        if (consumer->inputs.size() > 1) {
-          StringAppendF(&str, "%%%d = ", consumer->InputIndex(var));
-        }
-        str.append(var->name);
-        if (producer->outputs.size() > 1) {
-          StringAppendF(&str, " (@%d)", producer->OutputIndex(var));
-        }
-        if (!var->aliases.empty()) {
-          str.append("&#10;alias:");
-          for (const string &alias : var->aliases) {
-            str.append("&#10;  ");
-            str.append(alias);
+        if (!Excluded(consumer, options)) {
+          AppendOpId(&str, producer);
+          str.append(" -> ");
+          AppendOpId(&str, consumer);
+          str.append(" [");
+          str.append("tooltip=\"");
+          if (consumer->inputs.size() > 1) {
+            StringAppendF(&str, "%%%d = ", consumer->InputIndex(var));
           }
+          str.append(var->name);
+          if (producer->outputs.size() > 1) {
+            StringAppendF(&str, " (@%d)", producer->OutputIndex(var));
+          }
+          if (!var->aliases.empty()) {
+            str.append("&#10;alias:");
+            for (const string &alias : var->aliases) {
+              str.append("&#10;  ");
+              str.append(alias);
+            }
+          }
+          str.append("\" ");
+          AppendPenWidth(&str, var, options);
+          str.append("];\n");
         }
-        str.append("\" ");
-        AppendPenWidth(&str, var, options);
-        str.append("];\n");
       }
     }
   }

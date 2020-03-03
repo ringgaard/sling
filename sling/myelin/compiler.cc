@@ -55,6 +55,8 @@ DEFINE_bool(dragnn, false, "Use DRAGNN kernels");
 DEFINE_bool(sync_steps, false, "Synchronize all compute steps");
 DEFINE_bool(fast_math, false, "Fast approximate math ops");
 DEFINE_bool(graph_all_vars, false, "Include all variables in DOT graph");
+DEFINE_bool(graph_gradients, false, "Include gradients in DOT graph");
+DEFINE_bool(graph_optimizer, false, "Include optimizer in DOT graph");
 DEFINE_string(graph_layout, "", "DOT graph layout");
 DEFINE_string(data_profile, "", "File name prefix for data instance diagrams");
 DEFINE_bool(jit_debug, false, "Debug break in jit code");
@@ -249,6 +251,8 @@ void Compiler::WriteGraph(const Flow &flow,
   // Generate GraphViz DOT script.
   GraphOptions opts;
   if (FLAGS_graph_all_vars) opts.include_intermediates = true;
+  if (!FLAGS_graph_optimizer) opts.exclude_optimizer = true;
+  if (!FLAGS_graph_gradients) opts.exclude_gradients = true;
   if (!FLAGS_graph_layout.empty()) opts.direction = FLAGS_graph_layout.c_str();
   string graph = FlowToDotGraph(flow, opts);
 

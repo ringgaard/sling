@@ -20,43 +20,54 @@
 namespace sling {
 namespace myelin {
 
-Flow::Variable *CRF::Build(Flow *flow, Flow::Variable *input, bool learn) {
-  // Build CRF cell.
-  FlowBuilder f(flow, name_);
+CRF::Variables CRF::Build(Flow *flow, Flow::Variable *input, bool learn) {
+  // TODO: compute both partition function and sentence score in the same
+  // step cell and compute the final scores in a loss cell. The step cell takes
+  // the input emissions, the previous alpha, and the tag pair (next, prev)
+  // as input.
+  Variables vars;
   auto dt = input->type;
   int num_labels = input->dim(1) + 2;
 
-  // Build inputs.
-  auto *x = f.Placeholder("input", dt, input->shape, true);
-  auto *alpha_in = f.Placeholder("alpha_in", dt, {1, num_labels}, true);
-  flow->Connect({input, x});
+  // Build function for computing one step of the forward pass of the
+  // partition function.
+  FlowBuilder fwd(flow, name_ + "/forward");
+
+  // Build inputs: the unary score and the alpha from the previous step.
+  vars.input = fwd.Placeholder("input", dt, input->shape, true);
+  vars.alpha_in = fwd.Placeholder("alpha_in", dt, {1, num_labels}, true);
+  flow->Connect({input, vars.input});
+  vars.input->set_unique();
+  vars.alpha_in->set_unique();
 
   // Add BOS and EOS labels to input emissions.
-  auto *zeroes = f.Const(nullptr, dt, {1, 2});
-  auto *emissions = f.Name(f.Concat({x, zeroes}, 1), "emissions");
+  auto *padding = fwd.Const(nullptr, dt, {1, 2});
+  auto *emissions = fwd.Name(fwd.Concat({vars.input, padding}, 1), "emissions");
 
-  // Transition weights.
-  auto *transitions = f.Parameter("transitions", dt, {num_labels, num_labels});
+  // Transition weights (next, prev).
+  auto *transitions = fwd.Parameter("transitions", dt, {num_labels, num_labels});
 
   // Compute scores.
-  auto *scores = f.Add(f.Add(emissions, alpha_in), transitions);
+  auto *scores = fwd.Add(fwd.Add(emissions, vars.alpha_in), transitions);
 
   // Compute alpha_out.
-  auto *alpha_out = f.Name(f.LogSumExp(scores, 0, true), "alpha_out");
-  alpha_out->set_out()->set_ref();
+  vars.alpha_out = fwd.Name(fwd.LogSumExp(scores, 0, true), "alpha_out");
+  vars.alpha_out->set_out()->set_ref();
 
-  CHECK(alpha_out);
+  // Create empty input element.
+  auto *empty = flow->AddConstant(name_ + "/empty", input->type, input->shape);
+  empty->set_out();
+  flow->Connect({input, empty});
 
   // Build gradients for learning.
-  Flow::Variable *dinput = nullptr;
   if (learn) {
-    Gradient(flow, f.func());
-    dinput = flow->GradientVar(x);
-    CHECK(dinput != nullptr);
-    flow->Connect({dinput, input});
+    Gradient(flow, fwd.func());
+    vars.dinput = flow->GradientVar(vars.input);
+    vars.beta_in = flow->GradientVar(vars.alpha_out);
+    vars.beta_out = flow->GradientVar(vars.alpha_in);
   }
 
-  return dinput;
+  return vars;
 }
 
 void CRF::Initialize(const Network &net) {
