@@ -99,8 +99,8 @@ class DatabaseService {
   // Process database requests.
   void Process(HTTPRequest *request, HTTPResponse *response) {
     switch (request->Method()) {
-      case HTTP_GET: Get(request, response); break;
-      case HTTP_HEAD: Head(request, response); break;
+      case HTTP_GET: Get(request, response, true); break;
+      case HTTP_HEAD: Get(request, response, false); break;
       case HTTP_PUT: Put(request, response); break;
       case HTTP_DELETE: Delete(request, response); break;
 
@@ -126,7 +126,7 @@ class DatabaseService {
   }
 
   // Get database record.
-  void Get(HTTPRequest *request, HTTPResponse *response) {
+  void Get(HTTPRequest *request, HTTPResponse *response, bool body) {
     // Get database and resource from request.
     ResourceLock l(this, request->path());
     if (l.mount() == nullptr) {
@@ -162,7 +162,9 @@ class DatabaseService {
       }
 
       // Return record with key and id.
-      response->Append(record.value.data(), record.value.size());
+      if (body) {
+        response->Append(record.value.data(), record.value.size());
+      }
       response->Add("Key", record.key.data(), record.key.size());
       if (pos != -1) {
         string next = std::to_string(pos);
@@ -244,9 +246,12 @@ class DatabaseService {
       return;
     }
 
+    // Get database configuration from request body.
+    string config(request->content(), request->content_size());
+
     // Create database.
     DBMount *mount = new DBMount(name);
-    Status st = mount->db.Create(dbdir_ + "/" + name);
+    Status st = mount->db.Create(dbdir_ + "/" + name, config);
     if (!st.ok()) {
       delete mount;
       response->SendError(500, nullptr, HTMLEscape(st.ToString()).c_str());

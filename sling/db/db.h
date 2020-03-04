@@ -41,7 +41,7 @@ class Database {
   Status Open(const string &dbdir, bool recover = false);
 
   // Create new database.
-  Status Create(const string &dbdir);
+  Status Create(const string &dbdir, const string &config);
 
   // Flush changes to database.
   Status Flush();

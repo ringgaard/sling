@@ -90,7 +90,7 @@ Status Database::Open(const string &dbdir, bool recover) {
   return Status::OK;
 }
 
-Status Database::Create(const string &dbdir) {
+Status Database::Create(const string &dbdir, const string &config) {
   // Check that database directory does not exist.
   if (File::Exists(dbdir)) {
     return Status(E_DB_ALREADY_EXISTS, "Database already exists: ", dbdir);
@@ -100,6 +100,12 @@ Status Database::Create(const string &dbdir) {
   // Create database directory.
   Status st = File::Mkdir(dbdir);
   if (!st.ok()) return st;
+
+  // Write configuration file.
+  if (!config.empty()) {
+    st = File::WriteContents(dbdir + "/config", config);
+    if (!st.ok()) return st;
+  }
 
   // Add initial data shard.
   st = AddDataShard();
