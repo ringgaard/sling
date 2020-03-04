@@ -330,39 +330,6 @@ class FlattenConcatTransformer : public Transformer {
   }
 };
 
-// Normalizes "Gather" operations. Removes the "axis" input when it is zero.
-class GatherTransformer : public Transformer {
- public:
-  string Name() override { return "GatherTransformer"; }
-
-  bool Transform(Flow *flow) override {
-    // Remove the "axis" input when it is zero.
-    bool transformed = false;
-    for (Flow::Operation *op : flow->ops()) {
-      if (op->type != "Gather") continue;  // types were normalized above
-
-      // When present, the axis is the third argument.
-      if (op->indegree() != 3) continue;
-      Flow::Variable *axis = op->inputs.back();
-
-      // The axis must be constant and zero.
-      int32 axis32 = -1;
-      if (!axis->GetData(&axis32)) continue;
-      if (axis32 != 0) continue;
-
-      // The axis will be pruned, so it should have no other dependencies.
-      if (axis->usages() != 1) continue;
-      if (axis->producer != nullptr) continue;
-
-      op->RemoveInput(axis);
-      flow->DeleteVariable(axis);
-      transformed = true;
-    }
-
-    return transformed;
-  }
-};
-
 // Type inference for standard ops.
 class StandardTyper : public Typer {
  public:
@@ -586,7 +553,6 @@ void RegisterGenericTransforms(Library *library) {
   library->RegisterTransformer(new RenameTransformer());
   library->RegisterTransformer(new IdentityTransformer());
   library->RegisterTransformer(new FlattenConcatTransformer());
-  library->RegisterTransformer(new GatherTransformer());
 
   // Register type inference.
   library->RegisterTyper(new StandardTyper());

@@ -38,11 +38,11 @@ Gradients::Gradients(Flow *flow,
     : FlowBuilder(flow, "gradients/" + primal->name), primal_(primal) {
   // Create adjoints.
   for (Flow::Variable *v : vars) {
-    // Constants have trivial derivatives.
-    if (v->constant() || v->is(Flow::Variable::NOGRADIENT)) continue;
-
     // Only floats are differentiable.
-    if (v->type != DT_FLOAT && v->type != DT_DOUBLE) continue;
+    if (!v->Differentiable()) continue;
+
+    // Constants have trivial derivatives.
+    if (v->constant()) continue;
 
     // Create adjoint corresponding to the primal variable.
     auto *dv = Var("d_" + basename(v->name), v->type, v->shape);
@@ -156,7 +156,7 @@ Flow::Function *Gradient(Flow *flow,
   Gradients g(flow, func, vars);
   for (int i = ops.size() - 1; i >= 0; --i) {
     Flow::Operation *op = ops[i];
-    if (op->is(Flow::Operation::NOGRADIENT)) continue;
+    if (!op->Differentiable()) continue;
 
     auto f = funcs.find(op->type);
     if (f == funcs.end()) {

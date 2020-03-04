@@ -17,6 +17,7 @@
 
 #include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
+#include "sling/myelin/learning.h"
 
 namespace sling {
 namespace myelin {
@@ -28,6 +29,9 @@ class CRF {
   struct Variables {
     Flow::Variable *input;         // input emissions
     Flow::Variable *dinput;        // emissions gradient
+    Flow::Variable *prev;          // previous tag
+    Flow::Variable *curr;          // current tag
+    Flow::Variable *score;         // score
 
     Flow::Variable *alpha_in;      // alpha input
     Flow::Variable *alpha_out;     // alpha output
@@ -35,10 +39,12 @@ class CRF {
     Flow::Variable *beta_out;      // alpha output gradient
   };
 
-  CRF(const string &name = "crf") : name_(name) {}
+  CRF(const string &name = "crf") : name_(name), loss_(name + "/loss") {}
 
   // Build flow for CRF.
-  Variables Build(Flow *flow, Flow::Variable *emissions, bool learn);
+  Variables Build(Flow *flow,
+                  Flow::Variable *input,
+                  Flow::Variable *dinput = nullptr);
 
   // Initialize CRF.
   void Initialize(const Network &net);
@@ -50,7 +56,8 @@ class CRF {
   };
 
  private:
-  string name_;                     // CRF cell name
+  string name_;                    // CRF cell name
+  NLLLoss loss_;                   // CRF loss function
 };
 
 }  // namespace myelin

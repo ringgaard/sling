@@ -77,6 +77,43 @@ float CrossEntropyLoss::Compute(float *logits, int target,
   return *data.Get<float>(loss_);
 }
 
+void NLLLoss::Build(Flow *flow) {
+  // Build loss and loss gradient computation.
+  FlowBuilder tf(flow, name_);
+
+  // Inputs are logits and target label.
+  auto *p = tf.Placeholder("likelihood", DT_FLOAT, {});
+
+  // Compute loss (negative log-likelihood).
+  auto *loss = tf.Name(tf.Neg(tf.Log(p)), "loss");
+  loss->set_out();
+
+  // Compute gradient.
+  auto *gradient = tf.Name(tf.Neg(tf.Reciprocal(p)), "d_likelihood");
+  gradient->set_out();
+
+  // Loss is only needed at training-time.
+  tf.func()->set_training();
+}
+
+void NLLLoss::Initialize(const Network &network) {
+  // Get loss computation cell.
+  cell_ = network.GetCell(name_);
+
+  // Get tensors.
+  likelihood_ = network.GetParameter(name_ + "/likelihood");
+  loss_ = network.GetParameter(name_ + "/loss");
+  dlikelihood_ = network.GetParameter(name_ + "/d_likelihood");
+}
+
+float NLLLoss::Compute(float likelihood, float *dlikelihood) const {
+  Instance data(cell_);
+  *data.Get<float>(likelihood_) = likelihood;
+  data.Compute();
+  *dlikelihood = *data.Get<float>(dlikelihood_);
+  return *data.Get<float>(loss_);
+}
+
 void Optimizer::Build(Flow *flow) {
   // Build mapping from learnable variable to gradient for variable.
   FlowBuilder tf(flow, name_);

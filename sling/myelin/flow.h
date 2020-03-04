@@ -524,6 +524,9 @@ class Flow {
     // Check if variable has a dependency on some operation.
     bool DependsOn(const Operation *op) const;
 
+    // Check if variable is differentiable.
+    bool Differentiable() const;
+
     std::vector<string> aliases;         // additional aliases for variable
     Type type = DT_INVALID;              // element type for variable
     Shape shape;                         // variable shape
@@ -587,6 +590,9 @@ class Flow {
     // operation, unless this is a scalar or the operation does not have any
     // outputs. In that case, the biggest input is returned.
     Variable *GetPrototype() const;
+
+    // Check if operation is differentiable.
+    bool Differentiable() const;
 
     // Return in and out degree.
     int indegree() const { return inputs.size(); }

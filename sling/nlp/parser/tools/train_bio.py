@@ -12,7 +12,8 @@ wf = workflow.Workflow("bio-training")
 
 # Parser trainer inputs and outputs.
 kb = wf.resource(
-  "local/data/e/wiki/kb.sling",
+  #"local/data/e/wiki/kb.sling",
+  "data/dev/types.sling",
   format="store/frame"
 )
 

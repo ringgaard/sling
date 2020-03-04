@@ -177,7 +177,7 @@ RNN::Variables RNN::Build(Flow *flow,
       tf.RandomOrtho(w);
 
       // Preactivations.
-      auto *xh = tf.Concat({x, h_in});
+      auto *xh = tf.Concat({x, h_in}, 1);
       auto p = tf.Split(tf.Add(tf.MatMul(xh, w), b), gates, 1);
 
       // Gates.

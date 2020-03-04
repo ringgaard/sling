@@ -1,0 +1,15 @@
+; Entity types.
+{=Q215627      name: "person"}
+{=Q13226383    name: "facility"}
+{=Q17334923    name: "location"}
+{=Q43229       name: "organization"}
+{=Q12737077    name: "occupation"}
+{=Q216353      name: "title"}
+{=Q4164871     name: "position"}
+{=Q1047113     name: "specialty"}
+{=Q205892      name: "calendar date"}
+{=Q1656682     name: "event"}
+{=/w/quantity  name: "quantity"}
+{=/w/time      name: "time"}
+{=/w/geo       name: "geopoint"}
+

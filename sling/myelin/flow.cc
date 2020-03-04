@@ -628,6 +628,12 @@ bool Flow::Variable::DependsOn(const Operation *op) const {
   return false;
 }
 
+bool Flow::Variable::Differentiable() const {
+  if (is(NOGRADIENT)) return false;
+  if (type != DT_FLOAT && type != DT_DOUBLE) return false;
+  return true;
+}
+
 void Flow::Operation::AddInput(Variable *var) {
   inputs.push_back(var);
   var->consumers.push_back(this);
@@ -775,6 +781,15 @@ Flow::Variable *Flow::Operation::GetPrototype() const {
     }
   }
   return prototype;
+}
+
+bool Flow::Operation::Differentiable() const {
+  if (is(NOGRADIENT)) return false;
+  bool differentiable = false;
+  for (auto *v : outputs) {
+    if (v->Differentiable()) differentiable = true;
+  }
+  return differentiable;
 }
 
 void Flow::Function::AddOperation(Operation *op) {

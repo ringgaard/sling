@@ -36,7 +36,7 @@ class CrossEntropyLoss {
   // Initialize loss for model.
   void Initialize(const Network &network);
 
-  // Compute loss from logits and output loss gradient.
+  // Compute loss from logits and output loss and gradient.
   float Compute(float *logits, int target, float *dlogits) const;
 
  private:
@@ -51,6 +51,33 @@ class CrossEntropyLoss {
   Tensor *target_ = nullptr;
   Tensor *loss_ = nullptr;
   Tensor *dlogits_ = nullptr;
+};
+
+// Negative log-likelihood loss function.
+class NLLLoss {
+ public:
+  NLLLoss(const string &name = "loss") : name_(name) {}
+
+  // Build loss function together with gradient computation.
+  void Build(Flow *flow);
+
+  // Initialize loss for model.
+  void Initialize(const Network &network);
+
+  // Compute loss from likelihood and output loss and gradient.
+  float Compute(float likelihood, float *dlikelihood) const;
+
+ private:
+  // Name of loss function.
+  string name_;
+
+  // Cell for loss computation.
+  Cell *cell_ = nullptr;
+
+  // Tensors for loss computation.
+  Tensor *likelihood_ = nullptr;
+  Tensor *loss_ = nullptr;
+  Tensor *dlikelihood_ = nullptr;
 };
 
 // A parameter optimizer applies updates to the learnable parameters of a model

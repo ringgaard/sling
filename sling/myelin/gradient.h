@@ -34,7 +34,10 @@ class Gradients : public FlowBuilder {
 
   // Get adjoint for primal variable.
   Flow::Variable *d(Flow::Variable *x) {
-    return x->constant() ? Const(0.0f) : adjoints_[x];
+    if (x->constant()) return Zero(x->type);
+    auto f = adjoints_.find(x);
+    CHECK(f != adjoints_.end()) << "No adjoint for " << x->name;
+    return f->second;
   }
 
   // Get primal variable reference.

@@ -136,16 +136,19 @@ class BIODecoder : public ParserDecoder {
     auto *scores = f.Name(f.FNN(token, layers, true), "scores");
     scores->set_out();
 
-    // Build CRF.
-    if (use_crf_) {
-      crf_.Build(flow, scores, learn);
-    }
-
     // Build tagger gradient.
+    Flow::Variable *dscores = nullptr;
     if (learn) {
       Gradient(flow, f.func());
-      auto *dscores = flow->GradientVar(scores);
-      loss_.Build(flow, scores, dscores);
+      dscores = flow->GradientVar(scores);
+      if (!use_crf_) {
+        loss_.Build(flow, scores, dscores);
+      }
+    }
+
+    // Build CRF.
+    if (use_crf_) {
+      crf_.Build(flow, scores, dscores);
     }
 
     // Link recurrences.
