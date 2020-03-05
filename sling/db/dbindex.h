@@ -84,6 +84,12 @@ class DatabaseIndex {
   // Return capacity of current index.
   uint64 capacity() const { return header_ != nullptr ? header_->capacity : 0; }
 
+  // Return number of active records.
+  uint64 num_records() const { return header_->size - header_->deletions; }
+
+  // Return number of deleted records.
+  uint64 num_deleted() const { return header_->deletions; }
+
   // Error codes.
   enum Errors {
     E_MEMMAP = 2000,         // unable to map index into memory

@@ -92,7 +92,9 @@ class DatabaseService {
     mounts_[name] = mount;
 
     // Database mounted sucessfully.
-    LOG(INFO) << "Database mounted: " << name;
+    LOG(INFO) << "Database mounted: " << name << ", "
+              << mount->db.num_records() << " records, "
+              << mount->db.num_deleted() << " deleted" ;
     return Status::OK;
   }
 
@@ -134,48 +136,50 @@ class DatabaseService {
       return;
     }
 
+    Record record;
     if (!l.resource().empty()) {
       // Fetch record from database.
-      Record record;
       if (!l.db()->Get(l.resource(), &record)) {
         response->SendError(404, nullptr, "Record not found");
         return;
       }
-
-      // Return record.
-      response->Append(record.value.data(), record.value.size());
     } else {
       // Read first/next record in iterator.
       URLQuery query(request->query());
       uint64 pos = 0;
-      string id = query.Get("id").str();
-      if (!id.empty() && !safe_strtou64(id, &pos)) {
+      Text id = query.Get("id");
+      if (!id.empty() && !safe_strtou64(id.data(), id.size(), &pos)) {
         response->SendError(400, nullptr, "Invalid record id");
         return;
       }
 
       // Fetch next record from database.
-      Record record;
       if (!l.db()->Next(&record, &pos)) {
         response->SendError(404, nullptr, "Record not found");
         return;
       }
 
-      // Return record with key and id.
-      if (body) {
-        response->Append(record.value.data(), record.value.size());
-      }
+      // Add key to response.
       response->Add("Key", record.key.data(), record.key.size());
+
+      // Add next record id to response.
       if (pos != -1) {
-        string next = std::to_string(pos);
-        response->Add("Next", next.data(), next.size());
+        char buffer[kFastToBufferSize];
+        char *next = FastUInt64ToBuffer(pos, buffer);
+        response->Set("Next", next);
       }
     }
-  }
 
-  // Get database record information.
-  void Head(HTTPRequest *request, HTTPResponse *response) {
-    response->SendError(501);
+    // Return timestamp if available.
+    if (record.timestamp != -1) {
+      char datebuf[RFCTIME_SIZE];
+      response->Set("Last-Modified", RFCTime(record.timestamp, datebuf));
+    }
+
+    // Return record value.
+    if (body) {
+      response->Append(record.value.data(), record.value.size());
+    }
   }
 
   // Add or update database record.
@@ -198,6 +202,14 @@ class DatabaseService {
     // Add or update record in database.
     Slice value(request->content(), request->content_size());
     Record record(l.resource(), value);
+    const char *ts = request->Get("Last-Modified");
+    if (ts != nullptr) {
+      record.timestamp = ParseRFCTime(ts);
+      if (record.timestamp == -1) {
+        response->SendError(400, nullptr, "Invalid timestamp");
+        return;
+      }
+    }
     uint64 recid = l.db()->Put(record);
 
     // Return error if record could not be written.
@@ -210,13 +222,32 @@ class DatabaseService {
     l.mount()->last_update = time(0);
 
     // Return new record id.
-    string id = std::to_string(recid);
-    response->Add("RecordID", id.data(), id.size());
+    char buffer[kFastToBufferSize];
+    char *id = FastUInt64ToBuffer(recid, buffer);
+    response->Set("RecordID", id);
   }
 
   // Delete database record.
   void Delete(HTTPRequest *request, HTTPResponse *response) {
-    response->SendError(501);
+    // Get database and resource from request.
+    ResourceLock l(this, request->path());
+    if (l.mount() == nullptr) {
+      response->SendError(404, nullptr, "Database not found");
+      return;
+    }
+    if (l.resource().empty()) {
+      response->SendError(400, nullptr, "Record key missing");
+      return;
+    }
+
+    // Delete record.
+    if (!l.db()->Delete(l.resource())) {
+      response->SendError(404, nullptr, "Record not found");
+      return;
+    }
+
+    // Update last modification time.
+    l.mount()->last_update = time(0);
   }
 
   // Create new database.

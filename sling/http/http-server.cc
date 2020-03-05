@@ -231,7 +231,7 @@ void HTTPServer::Worker() {
           }
           rc = epoll_ctl(pollfd_, EPOLL_CTL_DEL, conn->sock_, ev);
           if (rc < 0) {
-            VLOG(2) << Error("epoll_ctl");
+            VLOG(4) << Error("epoll_ctl");
           } else {
             // Delete client connection.
             VLOG(3) << "Close HTTP connection " << conn->sock_;

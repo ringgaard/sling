@@ -30,7 +30,6 @@ Status DatabaseIndex::Open(const string &filename) {
 
   // Map index file into memory.
   mapped_size_ = file_->Size();
-  LOG(INFO) << "index size: " << mapped_size_;
   if (mapped_size_ == 0) {
     return Status(E_MISSING, "Missing index file: ", filename);
   }

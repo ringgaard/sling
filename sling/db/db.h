@@ -68,6 +68,12 @@ class Database {
   // Check if database has unflushed changed.
   bool dirty() const { return dirty_; }
 
+  // Return number of active records.
+  uint64 num_records() const { return index_->num_records(); }
+
+  // Return number of deleted records.
+  uint64 num_deleted() const { return index_->num_deleted(); }
+
   // Error codes.
   enum Errors {
     E_DB_NOT_FOUND = 1000,  // database not found

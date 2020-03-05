@@ -457,6 +457,14 @@ bool safe_strto64(const char *startptr, const int buffer_size, int64 *value) {
   return safe_int_internal<int64>(startptr, startptr + buffer_size, 10, value);
 }
 
+bool safe_strtou32(const char *startptr, const int buffer_size, uint32 *value) {
+  return safe_int_internal<uint32>(startptr, startptr + buffer_size, 10, value);
+}
+
+bool safe_strtou64(const char *startptr, const int buffer_size, uint64 *value) {
+  return safe_int_internal<uint64>(startptr, startptr + buffer_size, 10, value);
+}
+
 bool safe_strtou32_base(const char *str, int buffer_size,
                         uint32 *value, int base) {
   return safe_uint_internal<uint32>(str, str + buffer_size, base, value);
