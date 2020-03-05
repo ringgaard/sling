@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "sling/string/numbers.h"
 #include "sling/util/fingerprint.h"
 
 namespace sling {
@@ -40,6 +41,16 @@ Status Database::Open(const string &dbdir, bool recover) {
     return Status(E_DB_NOT_FOUND, "Database not found: ", dbdir);
   }
   dbdir_ = dbdir;
+
+  // Read configuration.
+  if (File::Exists(ConfigFile())) {
+    string config;
+    Status st = File::ReadContents(ConfigFile(), &config);
+    if (!st.ok()) return st;
+    if (!ParseConfig(config)) {
+      return Status(E_CONFIG, "Invalid database configuration");
+    }
+  }
 
   // Get data shards.
   std::vector<string> datafiles;
@@ -97,6 +108,11 @@ Status Database::Create(const string &dbdir, const string &config) {
   }
   dbdir_ = dbdir;
 
+  // Parse database configuration.
+  if (!ParseConfig(config)) {
+    return Status(E_CONFIG, "Invalid database configuration");
+  }
+
   // Create database directory.
   Status st = File::Mkdir(dbdir);
   if (!st.ok()) return st;
@@ -113,7 +129,7 @@ Status Database::Create(const string &dbdir, const string &config) {
   // Create database index.
   index_ = new DatabaseIndex();
   uint64 capacity = config_.initial_index_capacity;
-  uint64 limit = capacity * config_.load_factor;
+  uint64 limit = capacity * config_.index_load_factor;
   st = index_->Create(IndexFile(), capacity, limit);
   if (!st.ok()) return st;
   dirty_ = true;
@@ -304,16 +320,20 @@ bool Database::Valid(uint64 recid) {
   return true;
 }
 
+string Database::ConfigFile() const {
+  return dbdir_ + "/config";
+}
+
+string Database::IndexFile() const {
+  return dbdir_ + "/index";
+}
+
 string Database::DataFile(int shard) const {
   string fn = dbdir_ + "/data-";
   string number = std::to_string(shard);
   for (int z = 0; z < 8 - number.size(); ++z) fn.push_back('0');
   fn.append(number);
   return fn;
-}
-
-string Database::IndexFile() const {
-  return dbdir_ + "/index";
 }
 
 void Database::ReadRecord(uint64 recid, Record *record) {
@@ -337,6 +357,7 @@ uint64 Database::AppendRecord(const Record &record) {
 Status Database::AddDataShard() {
   // Close current writer.
   if (writer_ != nullptr) {
+    writer_->Sync(readers_.back());
     Status st = writer_->Close();
     if (!st.ok()) return st;
     delete writer_;
@@ -369,7 +390,7 @@ Status Database::ExpandIndex(uint64 capacity) {
   if (!st.ok()) return st;
 
   // Create new index.
-  uint64 limit = capacity * config_.load_factor;
+  uint64 limit = capacity * config_.index_load_factor;
   st = new_index->Create(IndexFile(), capacity, limit);
   if (!st.ok()) return st;
 
@@ -389,12 +410,6 @@ Status Database::ExpandIndex(uint64 capacity) {
 void Database::Expand() {
   // Check for data shard overflow.
   if (writer_->Tell() >= config_.data_shard_size) {
-    // Switch to writing data to new shard. Closing the writer will transfer
-    // ownership of the underlying file to the reader.
-    CHECK(writer_->Close());
-    delete writer_;
-    writer_ = nullptr;
-
     // Add new data shard.
     CHECK(AddDataShard());
   }
@@ -411,7 +426,7 @@ Status Database::Recover(uint64 capacity) {
   if (capacity < config_.initial_index_capacity) {
     capacity = config_.initial_index_capacity;
   }
-  uint64 limit = capacity * config_.load_factor;
+  uint64 limit = capacity * config_.index_load_factor;
 
   index_ = new DatabaseIndex();
   Status st = index_->Create(IndexFile(), capacity, limit);
@@ -480,6 +495,102 @@ Status Database::Recover(uint64 capacity) {
   LOG(INFO) << "Recovery successful for: " << dbdir_;
   dirty_ = false;
   return Status::OK;
+}
+
+static int64 ParseNumber(Text number) {
+  int64 scaler = 1;
+  if (number.ends_with("K")) {
+    scaler = 1LL << 10;
+    number.remove_suffix(1);
+  } else if (number.ends_with("M")) {
+    scaler = 1LL << 20;
+    number.remove_suffix(1);
+  } else if (number.ends_with("G")) {
+    scaler = 1LL << 30;
+    number.remove_suffix(1);
+  } else if (number.ends_with("T")) {
+    scaler = 1LL << 40;
+    number.remove_suffix(1);
+  }
+  int64 n;
+  if (!safe_strto64(number.data(), number.size(), &n)) return -1;
+  return n * scaler;
+}
+
+static float ParseFloat(Text number) {
+  float n;
+  if (!safe_strtof(number.str(), &n)) return -1.0;
+  return n;
+}
+
+bool Database::ParseConfig(Text config) {
+  for (Text &line : config.split('\n')) {
+    // Skip comments.
+    line = line.trim();
+    if (line.empty() || line[0] == '#') continue;
+
+    // Split line into key and value.
+    int colon = line.find(':');
+    if (colon == -1) {
+      LOG(ERROR) << "Colon missing in config line: " << line;
+      return false;
+    }
+    Text key = line.substr(0, colon).trim();
+    Text value = line.substr(colon + 1).trim();
+    if (key.empty() || value.empty()) {
+      LOG(ERROR) << "Bad config line: " << line;
+      return false;
+    }
+
+    // Update configuration parameter.
+    if (key == "initial_index_capacity") {
+      uint64 n = ParseNumber(value);
+      if (n <= 0) {
+        LOG(ERROR) << "Invalid capacity: " << line;
+        return false;
+      }
+      config_.initial_index_capacity = n;
+    } else if (key == "index_load_factor") {
+      float n = ParseFloat(value);
+      if (n <= 0.0 || n >= 1.0) {
+        LOG(ERROR) << "Invalid load factor: " << line;
+        return false;
+      }
+      config_.index_load_factor = n;
+    } else if (key == "data_shard_size") {
+      uint64 n = ParseNumber(value);
+      if (n <= 0) {
+        LOG(ERROR) << "Invalid data shard size: " << line;
+        return false;
+      }
+      config_.data_shard_size = n;
+    } else if (key == "buffer_size") {
+      int n = ParseNumber(value);
+      if (n <= 0) {
+        LOG(ERROR) << "Invalid buffer size: " << line;
+        return false;
+      }
+      config_.record.buffer_size = n;
+    } else if (key == "chunk_size") {
+      int n = ParseNumber(value);
+      if (n < 0) {
+        LOG(ERROR) << "Invalid chunk size: " << line;
+        return false;
+      }
+      config_.record.chunk_size = n;
+    } else if (key == "compression") {
+      int n = ParseNumber(value);
+      if (n != RecordFile::UNCOMPRESSED && n != RecordFile::SNAPPY) {
+        LOG(ERROR) << "Invalid compression: " << line;
+        return false;
+      }
+      config_.record.compression = static_cast<RecordFile::CompressionType>(n);
+    } else {
+      LOG(ERROR) << "Unknown configuration parameter: " << line;
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace sling

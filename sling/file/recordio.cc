@@ -659,12 +659,6 @@ Status RecordWriter::Write(const Record &record, uint64 *position) {
   // Compute on-disk record size estimate.
   size_t maxsize = MAX_HEADER_LEN + record.key.size() + value.size();
 
-  // Records cannot be bigger than the chunk size.
-  size_t size_with_skip = maxsize + MAX_SKIP_LEN;
-  CHECK_LE(size_with_skip, info_.chunk_size)
-      << "Record too big (" << size_with_skip << " bytes), "
-      << "maximum is " << info_.chunk_size << " bytes";
-
   // Flush output buffer if it does not have room for record.
   if (maxsize > output_.remaining()) {
     Status s = Flush();
@@ -673,6 +667,12 @@ Status RecordWriter::Write(const Record &record, uint64 *position) {
 
   // Check if record will cross chunk boundary.
   if (info_.chunk_size != 0) {
+    // Records cannot be bigger than the chunk size.
+    size_t size_with_skip = maxsize + MAX_SKIP_LEN;
+    CHECK_LE(size_with_skip, info_.chunk_size)
+        << "Record too big (" << size_with_skip << " bytes), "
+        << "maximum is " << info_.chunk_size << " bytes";
+
     uint64 chunk_used = position_ % info_.chunk_size;
     if (chunk_used + size_with_skip > info_.chunk_size) {
       // Write filler record. For a filler record, the record size includes

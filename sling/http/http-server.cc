@@ -1103,9 +1103,9 @@ void HTTPResponse::SendError(int status, const char *title, const char *msg) {
       Append(": ");
       Append(title);
     }
-    Append("</p>\n");
+    Append("</p>");
   }
-  Append("</body></html>\n");
+  Append("\n</body></html>\n");
 }
 
 void HTTPResponse::RedirectTo(const char *uri) {

@@ -22,6 +22,7 @@
 
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
+#include "sling/string/ctype.h"
 
 namespace sling {
 
@@ -219,6 +220,26 @@ Text Text::substr(size_type pos, size_type n) const {
   if (pos > length_) pos = length_;
   if (n > length_ - pos) n = length_ - pos;
   return Text(ptr_ + pos, n);
+}
+
+std::vector<Text> Text::split(char c) const {
+  std::vector<Text> parts;
+  ssize_t start = 0;
+  while (start < length_) {
+    ssize_t end = find('\n', start);
+    if (end == npos) end = length_;
+    parts.emplace_back(ptr_ + start, end - start);
+    start = end + 1;
+  }
+  return parts;
+}
+
+Text Text::trim() const {
+  const char *ptr = ptr_;
+  const char *end = ptr_ + length_;
+  while (ptr < end && ascii_isspace(*ptr)) ptr++;
+  while (end > ptr && ascii_isspace(end[-1])) end--;
+  return Text(ptr, end - ptr);
 }
 
 std::ostream &operator <<(std::ostream &o, Text t) {

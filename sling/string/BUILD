@@ -93,6 +93,7 @@ cc_library(
   hdrs = ["text.h"],
   srcs = ["text.cc"],
   deps = [
+    ":ctype",
     "//sling/base",
     "//sling/util:city",
   ],

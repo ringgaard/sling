@@ -19,6 +19,8 @@ cc_library(
     "//sling/base",
     "//sling/file",
     "//sling/file:recordio",
+    "//sling/string:numbers",
+    "//sling/string:text",
     "//sling/util:fingerprint",
   ],
 )

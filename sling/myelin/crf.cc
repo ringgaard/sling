@@ -96,7 +96,21 @@ CRF::Variables CRF::Build(Flow *flow,
 }
 
 void CRF::Initialize(const Network &net) {
-  loss_.Initialize(net);
+  step_ = net.GetCell(name_ + "/step");
+  gstep_ = step_->Gradient();
+  if (gstep_ != nullptr) {
+    likelihood_ = net.GetCell(name_ + "/likelihood");
+    glikelihood_ = likelihood_->Gradient();
+
+    alpha_ = likelihood_->GetParameter(likelihood_->name() + "/alpha");
+    beta_ = likelihood_->GetParameter(glikelihood_->name() + "/d_alpha");
+
+    loss_.Initialize(net);
+  }
+}
+
+void CRF::Learner::CollectGradients(Instances *gradients) {
+  gradients->Add(&backward_);
 }
 
 }  // namespace myelin

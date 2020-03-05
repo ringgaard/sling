@@ -49,15 +49,63 @@ class CRF {
   // Initialize CRF.
   void Initialize(const Network &net);
 
+  // CRF sequence predictor.
   class Predictor {
+   public:
+    Predictor(const CRF *crf) : crf_(crf) {}
+
+    // Predict label sequence for input.
+    void Predict(Channel *input, std::vector<int> *labels);
+
+   private:
+    const CRF *crf_;
   };
 
+  // CRF sequence learner.
   class Learner {
+   public:
+    Learner(const CRF *crf)
+        : crf_(crf),
+          forward_(crf->step_),
+          backward_(crf->gstep_),
+          likelihood_(crf->likelihood_),
+          glikelihood_(crf->glikelihood_),
+          alpha_(crf->alpha_),
+          beta_(crf->beta_) {}
+
+    // Learn label sequence for input. Returns loss and input gradient.
+    float Learn(Channel *input,
+                const std::vector<int> &labels,
+                Channel *dinput);
+
+    // Collect instances with gradient updates.
+    void CollectGradients(Instances *gradients);
+
+   private:
+    const CRF *crf_;
+
+    InstanceArray forward_;
+    Instance backward_;
+    Instance likelihood_;
+    Instance glikelihood_;
+    Channel alpha_;
+    Channel beta_;
   };
 
  private:
-  string name_;                    // CRF cell name
-  NLLLoss loss_;                   // CRF loss function
+  // CRF cell name.
+  string name_;
+
+  // CRF cells and tensors.
+  Cell *step_ = nullptr;
+  Cell *gstep_ = nullptr;
+  Cell *likelihood_ = nullptr;
+  Cell *glikelihood_ = nullptr;
+  Tensor *alpha_ = nullptr;
+  Tensor *beta_ = nullptr;
+
+  // CRF loss function.
+  NLLLoss loss_;
 };
 
 }  // namespace myelin

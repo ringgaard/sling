@@ -21,6 +21,7 @@
 #include <iosfwd>
 #include <limits>
 #include <string>
+#include <vector>
 
 #include "sling/base/logging.h"
 #include "sling/base/port.h"
@@ -199,6 +200,12 @@ class Text {
 
   // Substring.
   Text substr(size_type pos, size_type n = npos) const;
+
+  // Split text on delimiter character.
+  std::vector<Text> split(char c) const;
+
+  // Trim whitespace from begining and end of text.
+  Text trim() const;
 };
 
 // Comparison operators.

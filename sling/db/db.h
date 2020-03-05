@@ -24,6 +24,7 @@
 #include "sling/db/dbindex.h"
 #include "sling/file/file.h"
 #include "sling/file/recordio.h"
+#include "sling/string/text.h"
 
 namespace sling {
 
@@ -80,6 +81,7 @@ class Database {
     E_NO_DATA_FILES,        // no data files for database
     E_STALE_INDEX,          // database index is not up-to-date
     E_DB_ALREADY_EXISTS,    // database already exists
+    E_CONFIG,               // invalid configuration file
   };
 
  private:
@@ -118,8 +120,14 @@ class Database {
     uint64 data_shard_size = 256 * (1ULL << 30);
 
     // Index load factor.
-    double load_factor = 0.75;
+    double index_load_factor = 0.75;
   };
+
+  // Parse configuration.
+  bool ParseConfig(Text config);
+
+  // Return filename for configuation.
+  string ConfigFile() const;
 
   // Return filename for index.
   string IndexFile() const;
