@@ -21,6 +21,7 @@
 #include "sling/base/status.h"
 #include "sling/base/types.h"
 #include "sling/file/file.h"
+#include "sling/stream/buffer.h"
 #include "sling/util/snappy.h"
 
 namespace sling {
@@ -46,33 +47,10 @@ struct Record {
 };
 
 // Record buffer.
-class RecordBuffer : public snappy::Sink, public snappy::Source {
+class RecordBuffer : public snappy::Sink, public snappy::Source, public Buffer {
  public:
-  ~RecordBuffer();
-
-  // Check if the buffer is empty.
-  bool empty() { return begin_ == end_; }
-
-  // Returns the number of used bytes in the buffer.
-  size_t size() { return end_ - begin_; }
-
-  // Returns the capacity of the buffer.
-  size_t capacity() { return ceil_ - floor_; }
-
-  // Returns number of unused bytes remaining in the buffer.
-  size_t remaining() { return ceil_ - end_; }
-
-  // Clear buffer.
-  void clear() { begin_ = end_ = floor_; }
-
-  // Change buffer capacity.
-  void resize(size_t bytes);
-
-  // Ensure space is available for writing.
-  void ensure(size_t bytes);
-
-  // Flush buffer so the used portion is at the beginning.
-  void flush();
+  using Buffer::Append;
+  ~RecordBuffer() override;
 
   // Sink interface for decompression.
   void Append(const char *bytes, size_t n) override;
@@ -85,24 +63,6 @@ class RecordBuffer : public snappy::Sink, public snappy::Source {
   size_t Available() const override;
   const char *Peek(size_t *len) override;
   void Skip(size_t n) override;
-
-  // Data appended to buffer.
-  void appended(size_t n) { end_ += n; }
-
-  // Data consumed from buffer.
-  void consumed(size_t n) { begin_ += n; }
-
-  // Buffer access.
-  char *floor() const { return floor_; }
-  char *ceil() const { return ceil_; }
-  char *begin() const { return begin_; }
-  char *end() const { return end_; }
-
- private:
-  char *floor_ = nullptr;  // start of allocated memory
-  char *ceil_ = nullptr;   // end of allocated memory
-  char *begin_ = nullptr;  // start of used part of buffer
-  char *end_ = nullptr;    // end of used part of buffer
 };
 
 class RecordFile {
@@ -170,10 +130,10 @@ class RecordFile {
   };
 
   // Parse header from data. Returns the number of bytes read or -1 on error.
-  static int ReadHeader(const char *data, Header *header);
+  static size_t ReadHeader(const char *data, Header *header);
 
   // Write header to data. Returns number of bytes written.
-  static int WriteHeader(const Header &header, char *data);
+  static size_t WriteHeader(const Header &header, char *data);
 };
 
 // Configuration options for record file.

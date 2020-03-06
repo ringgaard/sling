@@ -75,17 +75,23 @@ char *Buffer::Append(size_t size) {
   return data;
 }
 
-void Buffer::Append(const char *data, size_t size) {
-  Ensure(size);
-  if (data != end_) memcpy(end_, data, size);
-  end_ += size;
-}
-
 char *Buffer::Consume(size_t size) {
   DCHECK_LE(size, available());
   char *data = begin_;
   begin_ += size;
   return data;
+}
+
+void Buffer::Read(void *data, size_t size) {
+  CHECK_LE(size, available());
+  memcpy(data, begin_, size);
+  begin_ += size;
+}
+
+void Buffer::Write(const void *data, size_t size) {
+  Ensure(size);
+  memcpy(end_, data, size);
+  end_ += size;
 }
 
 BufferInputStream::BufferInputStream(Buffer *buffer) : buffer_(buffer) {}

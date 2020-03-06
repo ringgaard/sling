@@ -16,13 +16,14 @@
 #define SLING_STREAM_BUFFER_H_
 
 #include "sling/base/types.h"
+#include "sling/base/slice.h"
 #include "sling/stream/stream.h"
 
 namespace sling {
 
-// Memory buffer that owns a block of allocated memory. Data is consumed from
-// the used portion of the buffer, and data is appended to the unused portion
-// of the buffer.
+// Memory buffer that owns a block of allocated memory. Data is written/appended
+// to the unused portion of the buffer and is read/consumed from the used
+// portion of the buffer.
 //
 //     +---------------------------------------------------------------+
 //     |     consumed    |        used        |         unused         |
@@ -55,6 +56,13 @@ class Buffer {
   // Whether buffer is full.
   bool full() const { return end_ == ceil_; }
 
+  // Beginning and end of used portion of the buffer.
+  char *begin() const { return begin_; }
+  char *end() const { return end_; }
+
+  // Return used data.
+  Slice data() const { return Slice(begin_, end_); }
+
   // Clear buffer and allocate space.
   void Reset(size_t size);
 
@@ -72,18 +80,18 @@ class Buffer {
 
   // Append data to buffer.
   char *Append(size_t size);
-  void Append(const char *data, size_t size);
-  void Append(const char *str) { if (str) Append(str, strlen(str)); }
-  void Append(const string &str) { Append(str.data(), str.size()); }
 
   // Consume data from buffer.
   char *Consume(size_t size);
 
-  // Buffer access.
-  char *floor() const { return floor_; }
-  char *ceil() const { return ceil_; }
-  char *begin() const { return begin_; }
-  char *end() const { return end_; }
+  // Read data from buffer.
+  void Read(void *data, size_t size);
+
+  // Write data to buffer.
+  void Write(const void *data, size_t size);
+  void Write(const char *str) { if (str) Write(str, strlen(str)); }
+  void Write(const string &str) { Write(str.data(), str.size()); }
+  void Write(const Slice &slice) { Write(slice.data(), slice.size()); }
 
  private:
   char *floor_ = nullptr;  // start of allocated memory
