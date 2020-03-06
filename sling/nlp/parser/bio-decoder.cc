@@ -185,7 +185,13 @@ class BIODecoder : public ParserDecoder {
       primal_ = cell_->Primal();
       dtoken_ = token_->Gradient();
       dscores_ = scores_->Gradient();
-      loss_.Initialize(model);
+      if (!use_crf_) {
+        loss_.Initialize(model);
+      }
+    }
+
+    if (!use_crf_) {
+      crf_.Initialize(model);
     }
   }
 

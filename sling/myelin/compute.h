@@ -862,6 +862,11 @@ class Channel {
     return data_ + (index * element_size_);
   }
 
+  // Return typed pointer to channel element.
+  template<typename T> T *get(size_t index) const {
+    return reinterpret_cast<T *>(at(index));
+  }
+
   // Add element to channel and return the last element.
   char *push() { resize(size_ + 1); return at(size_ - 1); }
 

@@ -70,10 +70,10 @@ CRF::Variables CRF::Build(Flow *flow,
   auto *p = fl.Name(fl.Sub(score, fl.LogSumExp(alpha)), "p");
   p->set_out();
 
-  // Create empty input element.
-  auto *empty = flow->AddConstant(name_ + "/empty", input->type, input->shape);
-  empty->set_out();
-  flow->Connect({input, empty});
+  // Create zero input tensor.
+  auto *zero = flow->AddConstant(name_ + "/zero", input->type, input->shape);
+  zero->set_out();
+  flow->Connect({input, zero});
 
   // Connect variables.
   flow->Connect({input, vars.input});
@@ -97,16 +97,118 @@ CRF::Variables CRF::Build(Flow *flow,
 
 void CRF::Initialize(const Network &net) {
   step_ = net.GetCell(name_ + "/step");
+  step_input_ = net.GetParameter(name_ + "/step/input");
+  step_prev_ = net.GetParameter(name_ + "/step/prev");
+  step_curr_ = net.GetParameter(name_ + "/step/curr");
+  step_alpha_in_ = net.GetParameter(name_ + "/step/alpha_in");
+  step_alpha_out_ = net.GetParameter(name_ + "/step/alpha_out");
+  step_score_ = net.GetParameter(name_ + "/step/score");
+  zero_ = net.GetParameter(name_ + "/zero");
+
   gstep_ = step_->Gradient();
   if (gstep_ != nullptr) {
-    likelihood_ = net.GetCell(name_ + "/likelihood");
-    glikelihood_ = likelihood_->Gradient();
+    gstep_primal_ = step_->Primal();
+    gstep_dscore_ = step_score_->Gradient();
+    gstep_beta_in_ = step_alpha_out_->Gradient();
+    gstep_beta_out_ = step_alpha_in_->Gradient();
+    gstep_dinput_ = step_input_->Gradient();
 
-    alpha_ = likelihood_->GetParameter(likelihood_->name() + "/alpha");
-    beta_ = likelihood_->GetParameter(glikelihood_->name() + "/d_alpha");
+    likelihood_ = net.GetCell(name_ + "/likelihood");
+    likelihood_alpha_ = net.GetParameter(name_ + "/likelihood/alpha");
+    likelihood_score_ = net.GetParameter(name_ + "/likelihood/score");
+    likelihood_p_ = net.GetParameter(name_ + "/likelihood/p");
+
+    glikelihood_ = likelihood_->Gradient();
+    glikelihood_primal_ = likelihood_->Primal();
+    glikelihood_dscore_ = likelihood_score_->Gradient();
+    glikelihood_beta_ = likelihood_alpha_->Gradient();
 
     loss_.Initialize(net);
   }
+
+  // Get label indices for BOS and EOS.
+  num_labels_ = step_input_->elements();
+  bos_ = num_labels_;
+  eos_ = num_labels_ + 1;
+}
+
+float CRF::Learner::Learn(Channel *input,
+                          const std::vector<int> &labels,
+                          Channel *dinput) {
+  // Get input size.
+  int length = input->size();
+  alpha_.resize(length + 2);
+  beta_.resize(length + 2);
+
+  // Set up initial alpha where only BOS is allowed.
+  float *alpha0 = alpha_.get<float>(0);
+  for (int i = 0; i < length + 2; ++i) {
+    alpha0[i] = i == crf_->bos_ ? 0 : CRF::IMPOSSIBLE;
+  }
+
+  // Run forward pass.
+  float score = 0.0;
+  forward_.Resize(length + 1);
+  int prev = crf_->bos_;
+  for (int i = 0; i < length; ++i) {
+    Instance &data = forward_[i];
+    int curr = labels[i];
+    data.Set(crf_->step_input_, input, i);
+    *data.Get<int>(crf_->step_prev_) = prev;
+    *data.Get<int>(crf_->step_curr_) = curr;
+    data.Set(crf_->step_alpha_in_, &alpha_, i);
+    data.Set(crf_->step_alpha_out_, &alpha_, i + 1);
+    data.Compute();
+    score += *data.Get<float>(crf_->step_score_);
+    prev = curr;
+  }
+
+  // Run last forward step for EOS.
+  Instance &data = forward_[length];
+  data.SetReference(crf_->step_input_, crf_->zero_->data());
+  *data.Get<int>(crf_->step_prev_) = prev;
+  *data.Get<int>(crf_->step_curr_) = crf_->eos_;
+  data.Set(crf_->step_alpha_in_, &alpha_, length);
+  data.Set(crf_->step_alpha_out_, &alpha_, length + 1);
+  data.Compute();
+  score += *data.Get<float>(crf_->step_score_);
+
+  // Compute likelihood.
+  likelihood_.Set(crf_->likelihood_alpha_, &alpha_, length + 1);
+  *likelihood_.Get<float>(crf_->likelihood_score_) = score;
+  likelihood_.Compute();
+  float p = *data.Get<int>(crf_->likelihood_p_);
+
+  // Compute loss.
+  float dp;
+  float loss = crf_->loss_.Compute(p, &dp);
+
+  // Compute likelihood gradient.
+  glikelihood_.Set(crf_->glikelihood_primal_, &likelihood_);
+  *glikelihood_.Get<float>(crf_->glikelihood_dscore_) = dp;
+  glikelihood_.Set(crf_->glikelihood_beta_, &beta_, length + 1);
+  glikelihood_.Compute();
+
+  // Run first gradient step for EOS.
+  backward_.Set(crf_->gstep_primal_, &forward_[length]);
+  *backward_.Get<float>(crf_->gstep_dscore_) = dp;
+  backward_.Set(crf_->gstep_beta_in_, &beta_, length + 1);
+  backward_.Set(crf_->gstep_beta_out_, &beta_, length);
+  backward_.SetReference(crf_->gstep_dinput_, nullptr);  // TODO: fix
+  backward_.Compute();
+
+  // Run backward pass.
+  for (int i = length - 1; i >= 0; --i) {
+    backward_.Set(crf_->gstep_primal_, &forward_[i]);
+    *backward_.Get<float>(crf_->gstep_dscore_) = dp;
+    backward_.Set(crf_->gstep_beta_in_, &beta_, i + 1);
+    backward_.Set(crf_->gstep_beta_out_, &beta_, i);
+    backward_.Set(crf_->gstep_dinput_, dinput, i);
+    backward_.Compute();
+  }
+
+  // Return loss.
+  return loss;
 }
 
 void CRF::Learner::CollectGradients(Instances *gradients) {

@@ -25,6 +25,9 @@ namespace myelin {
 // Conditional Random Field (CRF) cell.
 class CRF {
  public:
+  // Score for impossible label.
+  static constexpr float IMPOSSIBLE = -1e2;
+
   // Flow input/output variables.
   struct Variables {
     Flow::Variable *input;         // input emissions
@@ -70,8 +73,8 @@ class CRF {
           backward_(crf->gstep_),
           likelihood_(crf->likelihood_),
           glikelihood_(crf->glikelihood_),
-          alpha_(crf->alpha_),
-          beta_(crf->beta_) {}
+          alpha_(crf->likelihood_alpha_),
+          beta_(crf->glikelihood_beta_) {}
 
     // Learn label sequence for input. Returns loss and input gradient.
     float Learn(Channel *input,
@@ -96,13 +99,42 @@ class CRF {
   // CRF cell name.
   string name_;
 
-  // CRF cells and tensors.
+  // Number of labels (excluding BOS and EOS).
+  int num_labels_ = 0;
+
+  // Indices for begin (BOS) and end (EOS) labels.
+  int bos_;
+  int eos_;
+
+  // CRF step cell.
   Cell *step_ = nullptr;
+  Tensor *step_input_ = nullptr;
+  Tensor *step_prev_ = nullptr;
+  Tensor *step_curr_ = nullptr;
+  Tensor *step_alpha_in_ = nullptr;
+  Tensor *step_alpha_out_ = nullptr;
+  Tensor *step_score_ = nullptr;
+  Tensor *zero_ = nullptr;
+
+  // CRF step gradient cell.
   Cell *gstep_ = nullptr;
+  Tensor *gstep_primal_ = nullptr;
+  Tensor *gstep_dscore_ = nullptr;
+  Tensor *gstep_beta_in_ = nullptr;
+  Tensor *gstep_beta_out_ = nullptr;
+  Tensor *gstep_dinput_ = nullptr;
+
+  // CRF likelihood cell.
   Cell *likelihood_ = nullptr;
+  Tensor *likelihood_alpha_ = nullptr;
+  Tensor *likelihood_score_ = nullptr;
+  Tensor *likelihood_p_ = nullptr;
+
+  // CRF likelihood gradient cell.
   Cell *glikelihood_ = nullptr;
-  Tensor *alpha_ = nullptr;
-  Tensor *beta_ = nullptr;
+  Tensor *glikelihood_primal_ = nullptr;
+  Tensor *glikelihood_dscore_ = nullptr;
+  Tensor *glikelihood_beta_ = nullptr;
 
   // CRF loss function.
   NLLLoss loss_;
