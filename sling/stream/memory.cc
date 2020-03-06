@@ -132,5 +132,58 @@ int64 StringOutputStream::ByteCount() const {
   return buffer_->size();
 }
 
+BufferInputStream::BufferInputStream(Buffer *buffer) : buffer_(buffer) {}
+
+bool BufferInputStream::Next(const void **data, int *size) {
+  int n = buffer_->available();
+  if (n > 0) {
+    *data = buffer_->Consume(n);
+    *size = n;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void BufferInputStream::BackUp(int count) {
+  buffer_->Consume(-count);
+}
+
+bool BufferInputStream::Skip(int count) {
+  int left = buffer_->available();
+  if (count > left) {
+    buffer_->Consume(left);
+    return false;
+  } else {
+    buffer_->Consume(count);
+    return true;
+  }
+}
+
+int64 BufferInputStream::ByteCount() const {
+  return buffer_->consumed();
+}
+
+BufferOutputStream::BufferOutputStream(Buffer *buffer, int block_size)
+    : buffer_(buffer), block_size_(block_size) {}
+
+bool BufferOutputStream::Next(void **data, int *size) {
+  if (buffer_->full()) buffer_->Ensure(block_size_);
+
+  int n = buffer_->remaining();
+  if (n > block_size_) n = block_size_;
+  *data = buffer_->Append(n);
+  *size = n;
+  return true;
+}
+
+void BufferOutputStream::BackUp(int count) {
+  buffer_->Append(-count);
+}
+
+int64 BufferOutputStream::ByteCount() const {
+  return buffer_->available();
+}
+
 }  // namespace sling
 

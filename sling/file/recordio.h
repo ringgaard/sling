@@ -17,12 +17,11 @@
 
 #include <vector>
 
+#include "sling/base/buffer.h"
 #include "sling/base/slice.h"
 #include "sling/base/status.h"
 #include "sling/base/types.h"
 #include "sling/file/file.h"
-#include "sling/stream/buffer.h"
-#include "sling/util/snappy.h"
 
 namespace sling {
 
@@ -44,25 +43,6 @@ struct Record {
   Slice value;
   int64 timestamp = -1;
   int64 position = -1;
-};
-
-// Record buffer.
-class RecordBuffer : public snappy::Sink, public snappy::Source, public Buffer {
- public:
-  using Buffer::Append;
-  ~RecordBuffer() override;
-
-  // Sink interface for decompression.
-  void Append(const char *bytes, size_t n) override;
-  char *GetAppendBuffer(size_t length, char *scratch) override;
-  char *GetAppendBufferVariable(size_t min_size, size_t desired_size_hint,
-                                char *scratch, size_t scratch_size,
-                                size_t *allocated_size) override;
-
-  // Source interface for compression.
-  size_t Available() const override;
-  const char *Peek(size_t *len) override;
-  void Skip(size_t n) override;
 };
 
 class RecordFile {
@@ -227,10 +207,10 @@ class RecordReader : public RecordFile {
   FileHeader info_;
 
   // Input buffer.
-  RecordBuffer input_;
+  Buffer input_;
 
   // Buffer for decompressed record data.
-  RecordBuffer decompressed_data_;
+  Buffer decompressed_data_;
 
   friend class RecordWriter;
 };
@@ -375,10 +355,10 @@ class RecordWriter : public RecordFile {
   FileHeader info_;
 
   // Output buffer.
-  RecordBuffer output_;
+  Buffer output_;
 
   // Buffer for compressed record data.
-  RecordBuffer compressed_data_;
+  Buffer compressed_data_;
 
   // Index entries for building index.
   Index index_;

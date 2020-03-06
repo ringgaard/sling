@@ -53,43 +53,36 @@ class SliceSource : public snappy::Source {
   int pos_ = 0;
 };
 
-}  // namespace
+// Buffer compression sink.
+class BufferSink : public snappy::Sink {
+ public:
+  BufferSink(Buffer *buffer) : buffer_(buffer) {}
 
-RecordBuffer::~RecordBuffer() {}
-
-void RecordBuffer::Append(const char *bytes, size_t n) {
-  Write(bytes, n);
-}
-
-char *RecordBuffer::GetAppendBuffer(size_t length, char *scratch) {
-  Ensure(length);
-  return end();
-}
-
-char *RecordBuffer::GetAppendBufferVariable(
-    size_t min_size, size_t desired_size_hint,
-    char *scratch, size_t scratch_size,
-    size_t *allocated_size) {
-  if (available() < min_size) {
-    Ensure(desired_size_hint > 0 ? desired_size_hint : min_size);
+  void Append(const char *bytes, size_t n) override {
+    buffer_->Write(bytes, n);
   }
-  *allocated_size = remaining();
-  return end();
-}
 
-size_t RecordBuffer::Available() const {
-  return available();
-}
+  char *GetAppendBuffer(size_t length, char *scratch) override {
+    buffer_->Ensure(length);
+    return buffer_->end();
+  }
 
-const char *RecordBuffer::Peek(size_t *len) {
-  *len = available();
-  return begin();
-}
+  char *GetAppendBufferVariable(
+      size_t min_size, size_t desired_size_hint,
+      char *scratch, size_t scratch_size,
+      size_t *allocated_size) override {
+    if (buffer_->available() < min_size) {
+      buffer_->Ensure(desired_size_hint > 0 ? desired_size_hint : min_size);
+    }
+    *allocated_size = buffer_->remaining();
+    return buffer_->end();
+  }
 
-void RecordBuffer::Skip(size_t n) {
-  DCHECK_LE(n, available());
-  Consume(n);
-}
+ private:
+  Buffer *buffer_;
+};
+
+}  // namespace
 
 RecordFile::IndexPage::IndexPage(uint64 pos, const Slice &data) {
   position = pos;
@@ -301,7 +294,8 @@ Status RecordReader::Read(Record *record) {
       // Decompress record value.
       decompressed_data_.Clear();
       snappy::ByteArraySource source(input_.Consume(value_size), value_size);
-      CHECK(snappy::Uncompress(&source, &decompressed_data_));
+      BufferSink sink(&decompressed_data_);
+      CHECK(snappy::Uncompress(&source, &sink));
       record->value = decompressed_data_.data();
     } else if (info_.compression == UNCOMPRESSED) {
       record->value = Slice(input_.Consume(value_size), value_size);
@@ -609,7 +603,8 @@ Status RecordWriter::Write(const Record &record, uint64 *position) {
     // Compress record value.
     SliceSource source(record.value);
     compressed_data_.Clear();
-    snappy::Compress(&source, &compressed_data_);
+    BufferSink sink(&compressed_data_);
+    snappy::Compress(&source, &sink);
     value = compressed_data_.data();
   } else if (info_.compression == UNCOMPRESSED) {
     // Store uncompressed record value.

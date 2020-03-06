@@ -30,16 +30,6 @@ cc_library(
 )
 
 cc_library(
-  name = "buffer",
-  srcs = ["buffer.cc"],
-  hdrs = ["buffer.h"],
-  deps = [
-    ":stream",
-    "//sling/base",
-  ],
-)
-
-cc_library(
   name = "input",
   srcs = ["input.cc"],
   hdrs = ["input.h"],

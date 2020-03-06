@@ -17,6 +17,7 @@
 
 #include <string>
 
+#include "sling/base/buffer.h"
 #include "sling/base/slice.h"
 #include "sling/base/types.h"
 #include "sling/stream/stream.h"
@@ -93,6 +94,36 @@ class StringOutputStream : public OutputStream {
 
  private:
   string *buffer_;
+};
+
+// An InputStream for reading from a Buffer.
+class BufferInputStream : public InputStream {
+ public:
+  BufferInputStream(Buffer *buffer);
+
+  // InputStream interface.
+  bool Next(const void **data, int *size) override;
+  void BackUp(int count) override;
+  bool Skip(int count) override;
+  int64 ByteCount() const override;
+
+ private:
+  Buffer *buffer_;
+};
+
+// An OutputStream backed by a Buffer.
+class BufferOutputStream : public OutputStream {
+ public:
+  BufferOutputStream(Buffer *buffer, int block_size = 4096);
+
+  // OutputStream interface.
+  bool Next(void **data, int *size) override;
+  void BackUp(int count) override;
+  int64 ByteCount() const override;
+
+ private:
+  Buffer *buffer_;
+  int block_size_;
 };
 
 }  // namespace sling
