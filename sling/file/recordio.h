@@ -169,7 +169,7 @@ class RecordReader : public RecordFile {
   Status Rewind() { return Seek(info_.hdrlen); }
 
   // Skip bytes in input. The offset can be negative.
-  Status Skip(int64 n);
+  Status Skip(int64 n) { return Seek(position_ + n); }
 
   // Read index page. Ownership of the index page is transferred to the caller.
   IndexPage *ReadIndexPage(uint64 position);

@@ -62,6 +62,9 @@ class Buffer {
   // Return used data.
   Slice data() const { return Slice(begin_, end_); }
 
+  // Clear buffer.
+  void Clear();
+
   // Clear buffer and allocate space.
   void Reset(size_t size);
 
@@ -71,11 +74,8 @@ class Buffer {
   // Flush buffer by moving the used part to the beginning of the buffer.
   void Flush();
 
-  // Make room in buffer.
+  // Make sure that at least 'size' bytes can be written/appended to buffer .
   void Ensure(size_t size);
-
-  // Clear buffer;
-  void Clear();
 
   // Append data to buffer.
   char *Append(size_t size);

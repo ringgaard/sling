@@ -34,6 +34,7 @@ cc_binary(
     "//sling/file:posix",
     "//sling/http:http-server",
     "//sling/string:numbers",
+    "//sling/util:fingerprint",
     "//sling/util:mutex",
     "//sling/util:thread",
   ],

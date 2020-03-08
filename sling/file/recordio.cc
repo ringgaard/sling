@@ -225,8 +225,12 @@ Status RecordReader::Fill(uint64 needed) {
 
   // Determine how many bytes need to be read.
   DCHECK_LE(needed, input_.capacity());
-  uint64 requested =
-      readahead_ ? input_.remaining() : needed - input_.available();
+  uint64 requested;
+  if (readahead_) {
+    requested = needed - input_.available();
+  } else {
+    requested = input_.remaining();
+  }
   DCHECK_GT(requested, 0);
 
   // Fill buffer from file.
@@ -309,30 +313,13 @@ Status RecordReader::Read(Record *record) {
   }
 }
 
-Status RecordReader::Skip(int64 n) {
-  // Check if we can skip to position in input buffer.
-  if (n == 0) return Status::OK;
-  position_ += n;
-  if (n >= 0 && n <= input_.available()) {
-    input_.Consume(n);
-    return Status::OK;
-  }
-
-  // Clear input buffer and seek to new position.
-  int64 offset = n - input_.available();
-  input_.Clear();
-  readahead_ = false;
-  return file_->Skip(offset);
-}
-
 Status RecordReader::Seek(uint64 pos) {
   // Check if we can skip to position in input buffer.
   if (pos == 0) pos = info_.hdrlen;
   if (pos == position_) return Status::OK;
-  position_ = pos;
-
   int64 offset = pos - position_;
-  if (offset >= 0 && offset <= input_.available()) {
+  position_ = pos;
+  if (offset > 0 && offset <= input_.available()) {
     input_.Consume(offset);
     return Status::OK;
   }

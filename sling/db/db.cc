@@ -85,7 +85,7 @@ Status Database::Open(const string &dbdir, bool recover) {
   }
 
   // Check that index is up-to-date.
-  if (index_->epoch() != Epoch()) {
+  if (index_->epoch() != epoch()) {
     if (recover) {
       LOG(INFO) << "Recover stale database index for " << dbdir;
       uint64 capacity = index_->capacity();
@@ -147,7 +147,7 @@ Status Database::Flush() {
 
     // Flush index to disk.
     if (index_ != nullptr) {
-      Status st = index_->Flush(Epoch());
+      Status st = index_->Flush(epoch());
       if (!st.ok()) return st;
     }
 
@@ -178,7 +178,10 @@ bool Database::Get(const Slice &key, Record *record) {
   return false;
 }
 
-uint64 Database::Put(const Record &record, bool overwrite) {
+uint64 Database::Put(const Record &record, bool overwrite, Action *action) {
+  // Check if database is read-only.
+  if (config_.read_only) return DatabaseIndex::NVAL;
+
   // Compute record key fingerprint.
   uint64 fp = Fingerprint(record.key.data(), record.key.size());
 
@@ -199,10 +202,16 @@ uint64 Database::Put(const Record &record, bool overwrite) {
 
   if (recid != DatabaseIndex::NVAL) {
     // Only overwrite existing record if requested.
-    if (!overwrite) return DatabaseIndex::NVAL;
+    if (!overwrite) {
+      if (action != nullptr) *action = EXISTS;
+      return recid;
+    }
 
     // Check if existing record value matches.
-    if (rec.value == record.value) return recid;
+    if (rec.value == record.value) {
+      if (action != nullptr) *action = UNCHANGED;
+      return recid;
+    }
   }
 
   // Make room for more records.
@@ -215,9 +224,11 @@ uint64 Database::Put(const Record &record, bool overwrite) {
   if (recid == DatabaseIndex::NVAL) {
     // Add new entry to index.
     index_->Add(fp, newid);
+    if (action != nullptr) *action = NEW;
   } else {
     // Update existing index entry to point to the new record.
     index_->Update(fp, recid, newid);
+    if (action != nullptr) *action = UPDATED;
   }
 
   dirty_ = true;
@@ -225,6 +236,9 @@ uint64 Database::Put(const Record &record, bool overwrite) {
 }
 
 bool Database::Delete(const Slice &key) {
+  // Check if database is read-only.
+  if (config_.read_only) return false;
+
   // Compute record key fingerprint.
   uint64 fp = Fingerprint(key.data(), key.size());
 
@@ -451,7 +465,6 @@ Status Database::Recover(uint64 capacity) {
       if (!st.ok()) return st;
       uint64 fp = Fingerprint(record.key.data(), record.key.size());
       uint64 recid = RecordID(shard, record.position);
-
       // Empty record indicates deletion.
       if (record.value.empty()) {
         index_->Delete(fp, recid);
@@ -489,7 +502,7 @@ Status Database::Recover(uint64 capacity) {
     }
   }
 
-  st = index_->Flush(Epoch());
+  st = index_->Flush(epoch());
   if (!st.ok()) return st;
 
   LOG(INFO) << "Recovery successful for: " << dbdir_;
@@ -521,6 +534,12 @@ static float ParseFloat(Text number) {
   float n;
   if (!safe_strtof(number.str(), &n)) return -1.0;
   return n;
+}
+
+static bool ParseBool(Text b, bool defval) {
+  if (b == "0" || b == "false" || b == "n" || b == "no") return false;
+  if (b == "1" || b == "true" || b == "y" || b == "yes") return true;
+  return defval;
 }
 
 bool Database::ParseConfig(Text config) {
@@ -585,6 +604,8 @@ bool Database::ParseConfig(Text config) {
         return false;
       }
       config_.record.compression = static_cast<RecordFile::CompressionType>(n);
+    } else if (key == "read_only") {
+      config_.read_only = ParseBool(value, false);
     } else {
       LOG(ERROR) << "Unknown configuration parameter: " << line;
       return false;

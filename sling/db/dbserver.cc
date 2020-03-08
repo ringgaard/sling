@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <signal.h>
+#include <time.h>
 #include <string>
 #include <unistd.h>
 #include <unordered_map>
@@ -23,6 +24,7 @@
 #include "sling/db/db.h"
 #include "sling/http/http-server.h"
 #include "sling/string/numbers.h"
+#include "sling/util/fingerprint.h"
 #include "sling/util/thread.h"
 
 DEFINE_int32(port, 7070, "HTTP server port");
@@ -93,8 +95,7 @@ class DatabaseService {
 
     // Database mounted sucessfully.
     LOG(INFO) << "Database mounted: " << name << ", "
-              << mount->db.num_records() << " records, "
-              << mount->db.num_deleted() << " deleted" ;
+              << mount->db.num_records() << " records";
     return Status::OK;
   }
 
@@ -143,42 +144,124 @@ class DatabaseService {
         response->SendError(404, nullptr, "Record not found");
         return;
       }
+
+      // Return record.
+      ReturnSingle(response, record, body, false, -1);
     } else {
       // Read first/next record in iterator.
       URLQuery query(request->query());
-      uint64 pos = 0;
+
+      // Get record position.
+      uint64 recid = 0;
       Text id = query.Get("id");
-      if (!id.empty() && !safe_strtou64(id.data(), id.size(), &pos)) {
+      if (!id.empty() && !safe_strtou64(id.data(), id.size(), &recid)) {
         response->SendError(400, nullptr, "Invalid record id");
         return;
       }
 
-      // Fetch next record from database.
-      if (!l.db()->Next(&record, &pos)) {
-        response->SendError(404, nullptr, "Record not found");
-        return;
+      // Get batch size.
+      int batch = 1;
+      Text n = query.Get("n");
+      if (!n.empty()) {
+        if (!safe_strto32(n.data(), n.size(), &batch)) {
+          response->SendError(400, nullptr, "Invalid batch size");
+          return;
+        }
       }
+      if (batch < 0) batch = 1;
+      if (batch > max_batch_) batch = max_batch_;
 
-      // Add key to response.
-      response->Add("Key", record.key.data(), record.key.size());
+      if (batch == 1) {
+        // Fetch next record from database.
+        if (!l.db()->Next(&record, &recid)) {
+          response->SendError(404, nullptr, "Record not found");
+          return;
+        }
 
-      // Add next record id to response.
-      if (pos != -1) {
-        char buffer[kFastToBufferSize];
-        char *next = FastUInt64ToBuffer(pos, buffer);
-        response->Set("Next", next);
+        // Return record.
+        ReturnSingle(response, record, body, true, recid);
+      } else {
+        // Fetch multiple records.
+        ReturnMultiple(response, l.db(), recid, batch, body);
       }
     }
+  }
 
-    // Return timestamp if available.
+  // Return single record.
+  void ReturnSingle(HTTPResponse *response,
+                    const Record &record,
+                    bool body, bool key, uint64 next) {
+    // Add timestamp if available.
     if (record.timestamp != -1) {
       char datebuf[RFCTIME_SIZE];
       response->Set("Last-Modified", RFCTime(record.timestamp, datebuf));
     }
 
+    // Add record key.
+    if (key) {
+      response->Add("Key", record.key.data(), record.key.size());
+    }
+
+    // Add next record id.
+    if (next != -1) {
+      response->Set("Next", next);
+    }
+
     // Return record value.
     if (body) {
       response->Append(record.value.data(), record.value.size());
+    }
+  }
+
+  // Return multiple documents.
+  void ReturnMultiple(HTTPResponse *response, Database *db,
+                      uint64 recid, int batch, bool body) {
+    string boundary = std::to_string(FingerprintCat(db->epoch(), time(0)));
+    bool empty = true;
+    Record record;
+    for (int n = 0; n < batch; ++n) {
+      // Fetch next record.
+      if (!db->Next(&record, &recid)) break;
+
+      // Add MIME part to response.
+      response->Append("--");
+      response->Append(boundary);
+      response->Append("\r\n");
+
+      response->Append("Content-Length: ");
+      response->AppendNumber(record.value.size());
+      response->Append("\r\n");
+
+      response->Append("Key: ");
+      response->Append(record.key.data(), record.key.size());
+      response->Append("\r\n");
+
+      if (record.timestamp != -1) {
+        char datebuf[RFCTIME_SIZE];
+        response->Append("Last-Modified: ");
+        response->Append(RFCTime(record.timestamp, datebuf));
+        response->Append("\r\n");
+      }
+
+      response->Append("\r\n");
+      if (body) {
+        response->Append(record.value.data(), record.value.size());
+      }
+
+      empty = false;
+    }
+
+    if (empty) {
+      response->SendError(404, nullptr, "Record not found");
+    } else {
+      response->Append("--");
+      response->Append(boundary);
+      response->Append("--\r\n");
+
+      string ct = "multipart/mixed; boundary=" + boundary;
+      response->Set("Mime-Version", "1.0");
+      response->SetContentType(ct.c_str());
+      response->Set("Next", recid);
     }
   }
 
@@ -198,6 +281,10 @@ class DatabaseService {
       response->SendError(400, nullptr, "Record value missing");
       return;
     }
+    if (l.db()->read_only()) {
+      response->SendError(405, nullptr, "Database is read-only");
+      return;
+    }
 
     // Add or update record in database.
     Slice value(request->content(), request->content_size());
@@ -210,7 +297,8 @@ class DatabaseService {
         return;
       }
     }
-    uint64 recid = l.db()->Put(record);
+    Database::Action action;
+    uint64 recid = l.db()->Put(record, true, &action);
 
     // Return error if record could not be written.
     if (recid == -1) {
@@ -218,13 +306,21 @@ class DatabaseService {
       return;
     }
 
+    // Return status.
+    const char *status = nullptr;
+    switch (action) {
+      case Database::NEW: status = "new"; break;
+      case Database::UPDATED: status = "updated"; break;
+      case Database::UNCHANGED: status = "unchanged"; break;
+      case Database::EXISTS: status = "exists"; break;
+    }
+    if (status != nullptr) response->Set("Status", status);
+
     // Update last modification time.
     l.mount()->last_update = time(0);
 
     // Return new record id.
-    char buffer[kFastToBufferSize];
-    char *id = FastUInt64ToBuffer(recid, buffer);
-    response->Set("RecordID", id);
+    response->Set("RecordID", recid);
   }
 
   // Delete database record.
@@ -237,6 +333,10 @@ class DatabaseService {
     }
     if (l.resource().empty()) {
       response->SendError(400, nullptr, "Record key missing");
+      return;
+    }
+    if (l.db()->read_only()) {
+      response->SendError(405, nullptr, "Database is read-only");
       return;
     }
 
@@ -258,6 +358,7 @@ class DatabaseService {
 
     // Check that database name is valid.
     bool valid = name.size() > 0 && name.size() < 128;
+    if (name[0] == '_' || name[0] == '-') valid = false;
     for (char ch : name) {
       if (ch >= 'A' && ch <= 'Z') continue;
       if (ch >= 'a' && ch <= 'z') continue;
@@ -457,6 +558,9 @@ class DatabaseService {
 
   // Flag indicating that the database service is terminating.
   bool terminate_ = false;
+
+  // Maximum batch size.
+  const int max_batch_ = 1000;
 
   // Mutex for accessing global database server state.
   Mutex mu_;

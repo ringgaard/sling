@@ -20,6 +20,10 @@
 
 namespace sling {
 
+void Buffer::Clear() {
+  begin_ = end_ = floor_;
+}
+
 void Buffer::Reset(size_t size) {
   if (size != capacity()) {
     if (size == 0) {
@@ -56,16 +60,13 @@ void Buffer::Flush() {
 }
 
 void Buffer::Ensure(size_t size) {
-  size_t minsize = end_ - floor_ + size;
-  size_t newsize = ceil_ - floor_;
-  if (newsize == 0) newsize = 4096;
-  while (newsize < minsize) newsize *= 2;
-  Resize(newsize);
-}
-
-void Buffer::Clear() {
-  free(floor_);
-  floor_ = ceil_ = begin_ = end_ = nullptr;
+  if (size < remaining()) {
+    size_t minsize = end_ - floor_ + size;
+    size_t newsize = ceil_ - floor_;
+    if (newsize == 0) newsize = 4096;
+    while (newsize < minsize) newsize *= 2;
+    Resize(newsize);
+  }
 }
 
 char *Buffer::Append(size_t size) {

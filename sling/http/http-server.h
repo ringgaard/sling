@@ -408,6 +408,7 @@ class HTTPResponse {
 
   // Set response header.
   void Set(const char *name, const char *value, bool overwrite = true);
+  void Set(const char *name, int64 value, bool overwrite = true);
 
   // Add response header.
   void Add(const char *name, const char *value, int len);
@@ -421,6 +422,7 @@ class HTTPResponse {
   }
   void Append(const char *str) { if (str) Append(str, strlen(str)); }
   void Append(const string &str) { Append(str.data(), str.size()); }
+  void AppendNumber(int64 value);
 
   // Write HTTP header to buffer.
   void WriteHeader(HTTPBuffer *rsp);

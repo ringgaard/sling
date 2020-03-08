@@ -1044,7 +1044,7 @@ int HTTPResponse::ContentLength() const {
 }
 
 void HTTPResponse::SetContentLength(int length) {
-  char number[16];
+  char number[kFastToBufferSize];
   FastInt32ToBufferLeft(length, number);
   Set("Content-Length", number);
 }
@@ -1069,11 +1069,23 @@ void HTTPResponse::Set(const char *name, const char *value, bool overwrite) {
   headers_.emplace_back(strdup(name), strdup(value));
 }
 
+void HTTPResponse::Set(const char *name, int64 value, bool overwrite) {
+  char buffer[kFastToBufferSize];
+  char *num = FastInt64ToBuffer(value, buffer);
+  Set(name, num, overwrite);
+}
+
 void HTTPResponse::Add(const char *name, const char *value, int len) {
   char *v = static_cast<char *>(malloc(len + 1));
   memcpy(v, value, len);
   v[len] = 0;
   headers_.emplace_back(strdup(name), v);
+}
+
+void HTTPResponse::AppendNumber(int64 value) {
+  char buffer[kFastToBufferSize];
+  char *num = FastInt64ToBuffer(value, buffer);
+  Append(num);
 }
 
 void HTTPResponse::SendError(int status, const char *title, const char *msg) {

@@ -35,6 +35,15 @@ namespace sling {
 // deleted key and an empty value.
 class Database {
  public:
+  // Action taken on put.
+  enum Action {
+    NEW,        // new record added
+    UPDATED,    // existing record updated
+    UNCHANGED,  // record not updated because value is unchanged
+    EXISTS      // record already exists and overwrite not allowed
+  };
+
+  // Deallocate database instance.
   ~Database();
 
   // Open existing database. In recovery mode, the index is recreated if it is
@@ -51,7 +60,9 @@ class Database {
   bool Get(const Slice &key, Record *record);
 
   // Add or update record in database. Return record id of new record.
-  uint64 Put(const Record &record, bool overwrite = true);
+  uint64 Put(const Record &record,
+             bool overwrite = true,
+             Action *action = nullptr);
   uint64 Add(const Record &record) { return Put(record, false); }
 
   // Delete record in database. Return true if record was deleted.
@@ -66,14 +77,17 @@ class Database {
   // Check if record id is valid.
   bool Valid(uint64 recid);
 
+  // Return the current epoch for the database.
+  uint64 epoch() const { return RecordID(CurrentShard(), writer_->Tell()); }
+
   // Check if database has unflushed changed.
   bool dirty() const { return dirty_; }
 
+  // Check if database is read-only.
+  bool read_only() const { return config_.read_only; }
+
   // Return number of active records.
   uint64 num_records() const { return index_->num_records(); }
-
-  // Return number of deleted records.
-  uint64 num_deleted() const { return index_->num_deleted(); }
 
   // Error codes.
   enum Errors {
@@ -103,11 +117,6 @@ class Database {
     return readers_.size() - 1;
   }
 
-  // Return the current epoch for the database.
-  uint64 Epoch() const {
-    return RecordID(CurrentShard(), writer_->Tell());
-  }
-
   // Configuration options for database.
   struct Config {
     // Data file configuration.
@@ -121,6 +130,9 @@ class Database {
 
     // Index load factor.
     double index_load_factor = 0.75;
+
+    // Read-only mode.
+    bool read_only = false;
   };
 
   // Parse configuration.
