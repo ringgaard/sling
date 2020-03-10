@@ -21,6 +21,7 @@ Date=api.Date
 WikiConverter=api.WikiConverter
 FactExtractor=api.FactExtractor
 PlausibilityModel=api.PlausibilityModel
+WebArchive=api.WebArchive
 
 MILLENNIUM=api.MILLENNIUM
 CENTURY=api.CENTURY

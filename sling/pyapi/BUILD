@@ -15,6 +15,7 @@ cc_library(
     "pyrecordio.cc",
     "pystore.cc",
     "pytask.cc",
+    "pyweb.cc",
     "pywiki.cc",
   ],
   hdrs = [
@@ -29,6 +30,7 @@ cc_library(
     "pyrecordio.h",
     "pystore.h",
     "pytask.h",
+    "pyweb.h",
     "pywiki.h",
   ],
   deps = [
@@ -61,8 +63,11 @@ cc_library(
     "//sling/task:job",
     "//sling/task:process",
     "//sling/stream:file",
+    "//sling/stream:file-input",
+    "//sling/stream:input",
     "//sling/stream:memory",
     "//sling/string:text",
+    "//sling/web:web-archive",
   ],
   copts = [
     "-Wno-write-strings",

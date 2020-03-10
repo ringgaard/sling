@@ -218,7 +218,7 @@ void SocketServer::AcceptConnection(Endpoint *ep) {
   socklen_t len = sizeof(addr);
   int sock = accept(ep->sock, reinterpret_cast<struct sockaddr *>(&addr), &len);
   if (sock < 0) {
-    if (errno != EAGAIN) LOG(WARNING) << Error("listen");
+    if (errno != EAGAIN) LOG(WARNING) << Error("accept");
     return;
   }
 
@@ -282,10 +282,13 @@ SocketConnection::SocketConnection(SocketServer *server, int sock,
 SocketConnection::~SocketConnection() {
   MutexLock lock(&mu_);
 
+  // Delete session.
+  delete session_;
+
   // Close client connection.
   close(sock_);
 
-  // Cleanup.
+  // Close response file.
   if (file_ != nullptr) file_->Close();
 }
 
@@ -387,7 +390,7 @@ Status SocketConnection::Process() {
         }
       }
 
-      // Reset buffer and go back to idle if connection should be kept.
+      // Reset buffer and go back to idle if connection should be kept open.
       if (!close_) {
         // Clear buffers.
         request_.Flush();

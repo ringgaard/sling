@@ -111,7 +111,7 @@ class BufferInputStream : public InputStream {
   Buffer *buffer_;
 };
 
-// An OutputStream backed by a Buffer.
+// An OutputStream for writing to a Buffer.
 class BufferOutputStream : public OutputStream {
  public:
   BufferOutputStream(Buffer *buffer, int block_size = 4096);

@@ -27,6 +27,7 @@
 #ifndef SLING_GOOGLE3
 #include "sling/pyapi/pymisc.h"
 #include "sling/pyapi/pytask.h"
+#include "sling/pyapi/pyweb.h"
 #endif
 
 namespace sling {
@@ -97,6 +98,7 @@ static PyObject *RegisterPythonModule() {
   PyJob::Define(module);
   PyResource::Define(module);
   PyTask::Define(module);
+  PyWebArchive::Define(module);
 #endif
 
   return module;
