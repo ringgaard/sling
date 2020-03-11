@@ -705,8 +705,8 @@ wikiconv = sling.WikiConverter(store)
 
 qid = "Q1254"
 url = "https://www.wikidata.org/wiki/Special:EntityData/" + qid + ".json"
-json = urlopen(url).read()[len(qid) + 16:-2]
+json = urlopen(url).read()]
 
-item = wikiconv.convert_wikidata(store, json)
+item revision = wikiconv.convert_wikidata(store, json)
 print(item.data(pretty=True, utf8=True))
 ```

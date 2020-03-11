@@ -1022,6 +1022,15 @@ const char *HTTPRequest::Get(const char *name, const char *defval) const {
   return defval;
 }
 
+int64 HTTPRequest::Get(const char *name, int64 defval) const {
+  const char *value = Get(name);
+  if (value == nullptr) return defval;
+  char *ptr = nullptr;
+  int64 num = strtoll(value, &ptr, 10);
+  if (ptr != value + strlen(value)) return defval;
+  return num;
+}
+
 HTTPResponse::~HTTPResponse() {
   for (HTTPHeader &h : headers_) {
     free(h.name);

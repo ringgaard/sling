@@ -178,7 +178,7 @@ bool Database::Get(const Slice &key, Record *record) {
   return false;
 }
 
-uint64 Database::Put(const Record &record, bool overwrite, Action *action) {
+uint64 Database::Put(const Record &record, Mode mode, Outcome *outcome) {
   // Check if database is read-only.
   if (config_.read_only) return DatabaseIndex::NVAL;
 
@@ -201,15 +201,23 @@ uint64 Database::Put(const Record &record, bool overwrite, Action *action) {
   }
 
   if (recid != DatabaseIndex::NVAL) {
-    // Only overwrite existing record if requested.
-    if (!overwrite) {
-      if (action != nullptr) *action = EXISTS;
+    // Do not overwrite exisitng records in ADD mode.
+    if (mode == ADD) {
+      if (outcome != nullptr) *outcome = EXISTS;
       return recid;
+    }
+
+    // Do not overwrite newer records in SERIAL mode.
+    if (mode == SERIAL) {
+      if (rec.timestamp != -1 && rec.timestamp < record.timestamp) {
+        if (outcome != nullptr) *outcome = STALE;
+        return recid;
+      }
     }
 
     // Check if existing record value matches.
     if (rec.value == record.value) {
-      if (action != nullptr) *action = UNCHANGED;
+      if (outcome != nullptr) *outcome = UNCHANGED;
       return recid;
     }
   }
@@ -224,11 +232,11 @@ uint64 Database::Put(const Record &record, bool overwrite, Action *action) {
   if (recid == DatabaseIndex::NVAL) {
     // Add new entry to index.
     index_->Add(fp, newid);
-    if (action != nullptr) *action = NEW;
+    if (outcome != nullptr) *outcome = NEW;
   } else {
     // Update existing index entry to point to the new record.
     index_->Update(fp, recid, newid);
-    if (action != nullptr) *action = UPDATED;
+    if (outcome != nullptr) *outcome = UPDATED;
   }
 
   dirty_ = true;
@@ -606,6 +614,8 @@ bool Database::ParseConfig(Text config) {
       config_.record.compression = static_cast<RecordFile::CompressionType>(n);
     } else if (key == "read_only") {
       config_.read_only = ParseBool(value, false);
+    } else if (key == "numeric_timestamps") {
+      config_.numeric_timestamps = ParseBool(value, false);
     } else {
       LOG(ERROR) << "Unknown configuration parameter: " << line;
       return false;

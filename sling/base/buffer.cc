@@ -60,7 +60,7 @@ void Buffer::Flush() {
 }
 
 void Buffer::Ensure(size_t size) {
-  if (size < remaining()) {
+  if (remaining() < size) {
     size_t minsize = end_ - floor_ + size;
     size_t newsize = ceil_ - floor_;
     if (newsize == 0) newsize = 4096;

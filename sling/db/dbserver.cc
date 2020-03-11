@@ -286,19 +286,43 @@ class DatabaseService {
       return;
     }
 
-    // Add or update record in database.
+    // Get record from request.
     Slice value(request->content(), request->content_size());
     Record record(l.resource(), value);
-    const char *ts = request->Get("Last-Modified");
-    if (ts != nullptr) {
-      record.timestamp = ParseRFCTime(ts);
+    if (l.db()->numeric_timestamps()) {
+      record.timestamp = request->Get("Revision", -1);
       if (record.timestamp == -1) {
-        response->SendError(400, nullptr, "Invalid timestamp");
+        response->SendError(400, nullptr, "Invalid revision");
+        return;
+      }
+    } else {
+      const char *ts = request->Get("Last-Modified");
+      if (ts != nullptr) {
+        record.timestamp = ParseRFCTime(ts);
+        if (record.timestamp == -1) {
+          response->SendError(400, nullptr, "Invalid timestamp");
+          return;
+        }
+      }
+    }
+    Database::Mode mode = Database::OVERWRITE;
+    const char *m = request->Get("Mode");
+    if (m != nullptr) {
+      if (strcmp(m, "overwrite") == 0) {
+        mode = Database::OVERWRITE;
+      } else if (strcmp(m, "add") == 0) {
+        mode = Database::ADD;
+      } else if (strcmp(m, "serial") == 0) {
+        mode = Database::SERIAL;
+      } else {
+        response->SendError(400, nullptr, "Invalid mode");
         return;
       }
     }
-    Database::Action action;
-    uint64 recid = l.db()->Put(record, true, &action);
+
+    // Add or update record in database.
+    Database::Outcome outcome;
+    uint64 recid = l.db()->Put(record, mode, &outcome);
 
     // Return error if record could not be written.
     if (recid == -1) {
@@ -306,21 +330,22 @@ class DatabaseService {
       return;
     }
 
-    // Return status.
-    const char *status = nullptr;
-    switch (action) {
-      case Database::NEW: status = "new"; break;
-      case Database::UPDATED: status = "updated"; break;
-      case Database::UNCHANGED: status = "unchanged"; break;
-      case Database::EXISTS: status = "exists"; break;
+    // Return outcome.
+    const char *result = nullptr;
+    switch (outcome) {
+      case Database::NEW: result = "new"; break;
+      case Database::UPDATED: result = "updated"; break;
+      case Database::UNCHANGED: result = "unchanged"; break;
+      case Database::EXISTS: result = "exists"; break;
+      case Database::STALE: result = "stale"; break;
     }
-    if (status != nullptr) response->Set("Status", status);
-
-    // Update last modification time.
-    l.mount()->last_update = time(0);
+    if (result != nullptr) response->Set("Outcome", result);
 
     // Return new record id.
     response->Set("RecordID", recid);
+
+    // Update last modification time.
+    l.mount()->last_update = time(0);
   }
 
   // Delete database record.

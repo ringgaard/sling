@@ -35,12 +35,20 @@ namespace sling {
 // deleted key and an empty value.
 class Database {
  public:
-  // Action taken on put.
-  enum Action {
+  // Write mode for updating records.
+  enum Mode {
+    OVERWRITE,  // overwrite existing records
+    ADD,        // only add new records, do not overwrite existing records
+    SERIAL,     // do not overwrite records with newer timestamps
+  };
+
+  // Outcome of put operation.
+  enum Outcome {
     NEW,        // new record added
     UPDATED,    // existing record updated
     UNCHANGED,  // record not updated because value is unchanged
-    EXISTS      // record already exists and overwrite not allowed
+    EXISTS,     // record already exists and overwrite not allowed
+    STALE,      // record not updated because timstamp is not newer
   };
 
   // Deallocate database instance.
@@ -61,9 +69,9 @@ class Database {
 
   // Add or update record in database. Return record id of new record.
   uint64 Put(const Record &record,
-             bool overwrite = true,
-             Action *action = nullptr);
-  uint64 Add(const Record &record) { return Put(record, false); }
+             Mode mode = OVERWRITE,
+             Outcome *outcome = nullptr);
+  uint64 Add(const Record &record) { return Put(record, ADD); }
 
   // Delete record in database. Return true if record was deleted.
   bool Delete(const Slice &key);
@@ -85,6 +93,9 @@ class Database {
 
   // Check if database is read-only.
   bool read_only() const { return config_.read_only; }
+
+  // Check if database uses numeric timestamps.
+  bool numeric_timestamps() const { return config_.numeric_timestamps; }
 
   // Return number of active records.
   uint64 num_records() const { return index_->num_records(); }
@@ -133,6 +144,9 @@ class Database {
 
     // Read-only mode.
     bool read_only = false;
+
+    // Timestamp is number instead of time_t.
+    bool numeric_timestamps = false;
   };
 
   // Parse configuration.

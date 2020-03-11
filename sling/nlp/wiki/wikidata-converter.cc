@@ -86,17 +86,32 @@ WikidataConverter::WikidataConverter(Store *commons, const string &language) {
     language_map_[*lang] = info.language;
     lang++;
   }
+  languages_[primary_language_].priority = 0;
   language_map_["mul"] = n_lang_mul_.handle();
   language_map_["zxx"] = n_lang_none_.handle();
 }
 
-Frame WikidataConverter::Convert(const Frame &item) {
+Frame WikidataConverter::Convert(const Frame &item, int64 *revision) {
   // Get top-level item attributes.
   Store *store = item.store();
   string id = item.GetString(s_id_);
   string type = item.GetString(s_type_);
   Frame labels = item.GetFrame(s_labels_);
   Frame descriptions = item.GetFrame(s_descriptions_);
+
+  // Get revision.
+  if (revision != nullptr) {
+    *revision = -1;
+    Handle lastrevid = item.GetHandle(s_lastrevid_);
+    if (!lastrevid.IsNil()) {
+      if (lastrevid.IsInt()) {
+        *revision = lastrevid.AsInt();
+      } else if (store->IsString(lastrevid)) {
+        Text str = String(store, lastrevid).text();
+        safe_strto64(str.data(), str.size(), revision);
+      }
+    }
+  }
 
   // Create builder for constructing the frame for the item.
   Builder builder(store);

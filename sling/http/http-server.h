@@ -329,6 +329,7 @@ class HTTPRequest {
 
   // Get HTTP header.
   const char *Get(const char *name, const char *defval = nullptr) const;
+  int64 Get(const char *name, int64 defval) const;
 
   // HTTP request headers.
   const std::vector<HTTPHeader> &headers() const { return headers_; }

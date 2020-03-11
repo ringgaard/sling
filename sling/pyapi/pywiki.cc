@@ -49,12 +49,14 @@ int PyWikiConverter::Init(PyObject *args, PyObject *kwds) {
   // Get store argument.
   pycommons = nullptr;
   converter = nullptr;
-  if (!PyArg_ParseTuple(args, "O", &pycommons)) return -1;
+  const char *language = "en";
+  if (!PyArg_ParseTuple(args, "O|s", &pycommons, &language)) return -1;
   if (!PyStore::TypeCheck(pycommons)) return -1;
 
   // Initialize converter.
   Py_INCREF(pycommons);
-  converter = new nlp::WikidataConverter(pycommons->store, "");
+  converter = new nlp::WikidataConverter(pycommons->store, language);
+  s_entities = pycommons->store->Lookup("entities");
 
   return 0;
 }
@@ -88,10 +90,23 @@ PyObject *PyWikiConverter::ConvertWikidata(PyObject *args, PyObject *kw) {
     return nullptr;
   }
 
-  // Convert Wikidata JSON to SLING frame.
-  const Frame &item = converter->Convert(obj.AsFrame());
+  // Skip the "entities" level added in Wikidata JSON requests.
+  Frame item = obj.AsFrame();
+  Frame entities = item.GetFrame(s_entities);
+  if (entities.valid() && entities.size() == 1) {
+    Frame subitem(item.store(), entities.value(0));
+    if (subitem.valid()) item = subitem;
+  }
 
-  return pystore->PyValue(item.handle());
+  // Convert Wikidata JSON to SLING frame.
+  int64 revision = -1;
+  const Frame &wikiitem = converter->Convert(item, &revision);
+
+  // Return Wikidata item frame and revision.
+  PyObject *pair = PyTuple_New(2);
+  PyTuple_SetItem(pair, 0, pystore->PyValue(wikiitem.handle()));
+  PyTuple_SetItem(pair, 1, PyLong_FromLong(revision));
+  return pair;
 }
 
 void PyFactExtractor::Define(PyObject *module) {

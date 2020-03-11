@@ -19,13 +19,18 @@
 namespace sling {
 namespace task {
 
-Buffer::Buffer(Slice source) {
+Message::Buffer::Buffer(size_t n) {
+  data_ = n == 0 ? nullptr : static_cast<char *>(malloc(n));
+  size_ = n;
+}
+
+Message::Buffer::Buffer(Slice source) {
   if (source.empty()) {
     data_ = nullptr;
     size_ = 0;
   } else {
     size_ = source.size();
-    data_ = new char[size_];
+    data_ = static_cast<char *>(malloc(size_));
     memcpy(data_, source.data(), size_);
   }
 }
