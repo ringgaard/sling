@@ -917,6 +917,7 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   Tensor *out = outputs_[output];
 
   // Check if input can be shared.
+  if (!cell()->network()->options().shared_tensors) return false;
   Tensor *t = in;
   while (t != nullptr) {
     if (!preserved) {

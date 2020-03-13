@@ -611,7 +611,7 @@ class Scatter : public Kernel {
     // Add sparsity bitmap index.
     if (options.sparse_threshold > 0 &&
         args.index.elements() >= options.sparse_threshold &&
-        args.var->IsLocal() &&
+        args.var->IsLocal() && args.n == 1 &&
         step->GetAttr("sparse", true)) {
       Tensor *sparse = args.var->MakeSparse();
       if (args.ref) args.ref->set_sparse(sparse);

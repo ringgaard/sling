@@ -593,8 +593,14 @@ class Builder:
   def normalize(self, x, name=None):
     return self.mul(x, self.rcp(self.norm(x)), name)
 
-  def softmax(self, x, name=None):
-    return self.normalize(self.exp(self.sub(x, self.max(x))), name)
+  def softmax(self, x, axis=None, name=None):
+    if axis is None:
+      return self.op("SoftMax", [x], name)
+    else:
+      return self.reduce("SoftMax", x, axis, False, name)
+
+  def logsumexp(self, x, axis=None, keepdims=None, name=None):
+    return self.reduce("LogSumExp", x, axis, keepdims, name)
 
   def ref(self, instance, var, name=None):
     r = self.op("Reference", [instance], name)

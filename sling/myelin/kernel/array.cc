@@ -230,11 +230,7 @@ class OneHot : public Kernel {
     }
 
     // Compute address of onehot element.
-    if (batched) {
-      __ movq(dst, output);
-    } else {
-      dst = output;
-    }
+    __ movq(dst, output);
     __ movsxlq(acc, Operand(input));
     __ Multiply(acc, value != nullptr ? value->size() : sizeof(float));
     __ addq(dst, acc);
@@ -242,7 +238,7 @@ class OneHot : public Kernel {
     // Set one-hot index.
     if (value != nullptr) {
       __ LoadTensorAddress(src, value);
-      __ movq(cnt, value->size());
+      __ movq(cnt, Immediate(value->size()));
       __ repmovsb();
     } else {
       __ movq(Operand(dst), Immediate(0x3F800000));

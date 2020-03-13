@@ -17,7 +17,8 @@
 namespace sling {
 namespace myelin {
 
-Scope::Scope(Scope *parent, const string &name) : parent_(parent) {
+Scope::Scope(Scope *parent, const string &name, bool relative)
+    : parent_(parent) {
   if (parent == nullptr) {
     // Top-level scope.
     root_ = current_ = this;
@@ -27,7 +28,11 @@ Scope::Scope(Scope *parent, const string &name) : parent_(parent) {
     root_ = parent_->root_;
     CHECK(root_->current_ == parent_);
     root_->current_ = current_ = this;
-    name_ = parent_->name_ + "/" + name;
+    if (relative) {
+      name_ = parent_->name_ + "/" + name;
+    } else {
+      name_ = name;
+    }
   }
 }
 

@@ -86,7 +86,9 @@ CRF::Variables CRF::Build(Flow *flow,
     vars.dinput = flow->GradientVar(vars.input);
     vars.beta_in = flow->GradientVar(vars.alpha_out);
     vars.beta_out = flow->GradientVar(vars.alpha_in);
+    auto *beta = flow->GradientVar(alpha);
     flow->Connect({dinput, vars.dinput});
+    flow->Connect({vars.beta_out, vars.beta_in, beta});
   }
 
   // Build loss function.
@@ -159,6 +161,8 @@ float CRF::Learner::Learn(Channel *input,
     data.Set(crf_->step_alpha_in_, &alpha_, i);
     data.Set(crf_->step_alpha_out_, &alpha_, i + 1);
     data.Compute();
+    //LOG(INFO) << "crf fwd" << i << ":\n" << data.ToString();
+
     score += *data.Get<float>(crf_->step_score_);
     prev = curr;
   }
@@ -171,17 +175,19 @@ float CRF::Learner::Learn(Channel *input,
   data.Set(crf_->step_alpha_in_, &alpha_, length);
   data.Set(crf_->step_alpha_out_, &alpha_, length + 1);
   data.Compute();
+  //LOG(INFO) << "crf fwd last:\n" << data.ToString();
   score += *data.Get<float>(crf_->step_score_);
 
   // Compute likelihood.
   likelihood_.Set(crf_->likelihood_alpha_, &alpha_, length + 1);
   *likelihood_.Get<float>(crf_->likelihood_score_) = score;
   likelihood_.Compute();
-  float p = *data.Get<int>(crf_->likelihood_p_);
+  float p = *likelihood_.Get<float>(crf_->likelihood_p_);
 
   // Compute loss.
   float dp;
   float loss = crf_->loss_.Compute(p, &dp);
+  LOG(INFO) << "score=" << score << " p=" << p << " dp=" << dp << " loss=" << loss;
 
   // Compute likelihood gradient.
   glikelihood_.Set(crf_->glikelihood_primal_, &likelihood_);
@@ -194,7 +200,7 @@ float CRF::Learner::Learn(Channel *input,
   *backward_.Get<float>(crf_->gstep_dscore_) = dp;
   backward_.Set(crf_->gstep_beta_in_, &beta_, length + 1);
   backward_.Set(crf_->gstep_beta_out_, &beta_, length);
-  backward_.SetReference(crf_->gstep_dinput_, nullptr);  // TODO: fix
+  backward_.Set(crf_->gstep_dinput_, dinput, 0);
   backward_.Compute();
 
   // Run backward pass.

@@ -1360,6 +1360,7 @@ struct Options {
   bool external_profiler = false;            // external profiling buffer
   bool global_profiler = false;              // global profiling buffer
   bool dynamic_allocation = false;           // dynamic instance allocation
+  bool shared_tensors = true;                // share data for tensors
   bool sync_steps = false;                   // synchronize all steps
   bool fast_math = false;                    // fast approximate math ops
   bool aot = false;                          // ahead-of-time compilation

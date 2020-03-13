@@ -58,7 +58,7 @@ struct FactPlausibilityFlow : public Flow {
       // probability that the fact is false (implausible) and the second is the
       // probability that the fact is true (plausible), such that
       // p(plausible) + p(implausible) = 1.
-      probs = f.Name(f.Softmax(logits), "probs");
+      probs = f.Name(f.SoftMax(logits), "probs");
     }
   }
 

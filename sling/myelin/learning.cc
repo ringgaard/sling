@@ -37,7 +37,7 @@ void CrossEntropyLoss::Build(Flow *flow,
   auto *target = tf.Placeholder("target", DT_INT32, {});
 
   // Compute softmax for logits.
-  auto *softmax = tf.Softmax(tf.Reshape(input, {size}));
+  auto *softmax = tf.SoftMax(tf.Reshape(input, {size}));
 
   // Compute loss (negative log-likelihood).
   auto *loss = tf.Name(tf.Neg(tf.Log(tf.Slice(softmax, target, {1}))), "loss");

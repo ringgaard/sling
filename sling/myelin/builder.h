@@ -27,7 +27,7 @@ namespace myelin {
 // A scope is used for defined a name space for variables and operations.
 class Scope {
  public:
-  Scope(Scope *parent, const string &name);
+  Scope(Scope *parent, const string &name, bool relative = true);
   ~Scope();
 
  protected:
@@ -305,7 +305,9 @@ class FlowBuilder : public Scope {
   }
 
   // L2 norm of vector.
-  Variable *Norm(Variable *v) { return Sqrt(Sum(Square(v))); }
+  Variable *Norm(Variable *v, int axis = -1, bool keepdims = false) {
+    return Sqrt(Sum(Square(v), axis, keepdims));
+  }
 
   // Cosine similarity.
   Variable *CosSim(Variable *x, Variable *y) {
@@ -318,15 +320,21 @@ class FlowBuilder : public Scope {
   }
 
   // Normalize.
-  Variable *Normalize(Variable *x) { return Mul(x, Reciprocal(Sum(x))); }
+  Variable *Normalize(Variable *x, int axis = -1, bool keepdims = false) {
+    return Mul(x, Reciprocal(Sum(x, axis, keepdims)));
+  }
 
-  // Softmax.
-  Variable *Softmax(Variable *x) { return Normalize(Exp(Sub(x, Max(x)))); }
-  Variable *LogSoftmax(Variable *x) { return Log(Softmax(x)); }
+  // SoftMax.
+  Variable *SoftMax(Variable *x, int axis = -1) {
+    if (axis == -1) {
+      return Op("SoftMax", {x});
+    } else {
+      return Reduce("SoftMax", x, axis, false);
+    }
+  }
+  Variable *LogSoftMax(Variable *x) { return Log(SoftMax(x)); }
   Variable *LogSumExp(Variable *x, int axis = -1, bool keepdims = false) {
-    //Variable *max = Max(x, axis);
-    //return Add(Log(Sum(Exp(Sub(x, max)), axis)), max);
-    return Log(Sum(Exp(x), axis, keepdims));
+    return Reduce("LogSumExp", x, axis, keepdims);
   }
 
   // Shape.
@@ -405,6 +413,12 @@ class FlowBuilder : public Scope {
 
   Operation *AssignAddScatter(Variable *M, Variable *f, Variable *v) {
     return RawOp("AssignAddScatter", {M, f, v});
+  }
+
+  // Bind variable to existing variable.
+  void Bind(Variable *target, Variable *x) {
+    auto *op = RawOp("Identity", {x});
+    op->AddOutput(target);
   }
 
   // Concatenation.

@@ -46,6 +46,14 @@ def gather(d, i):
 def onehot(x, size):
   return np.eye(size)[x]
 
+def softmax(x):
+  e = np.exp(x - np.max(x))
+  return e / e.sum()
+
+def logsumexp(x):
+  m = np.max(x)
+  return np.log(np.sum(np.exp(x - m))) + m
+
 # Compute flow function using numpy.
 def compute(flow, f, data):
   # Copy input tensors.
@@ -178,6 +186,10 @@ def compute(flow, f, data):
       else:
         keepdims = bool(op.attrs.get("keepdims"))
         v[o[0]] = np.any(v[i[0]], axis, keepdims=keepdims)
+    elif op.type == "SoftMax":
+      v[o[0]] = softmax(v[i[0]])
+    elif op.type == "LogSumExp":
+      v[o[0]] = logsumexp(v[i[0]])
     elif op.type == "Count":
       v[o[0]] = np.array(np.count_nonzero(v[i[0]]), nptypes[o[0].type])
     elif op.type == "ArgMin":

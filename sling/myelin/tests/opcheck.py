@@ -515,6 +515,13 @@ def softmax_test(n):
   y = f.softmax(x)
   check(flow, n)
 
+def logsumexp_test(n):
+  flow = myelin.Flow()
+  f = flow.define("logsumexp")
+  x = f.var("x", dt, [n])
+  y = f.logsumexp(x)
+  check(flow, n)
+
 def relu_test(n):
   flow = myelin.Flow()
   f = flow.define("relu")
@@ -962,6 +969,7 @@ for i in sizes:
     erf_test(i)
     sigmoid_test(i)
     softmax_test(i)
+    logsumexp_test(i)
     sum_test(i)
     product_test(i)
     min_test(i)

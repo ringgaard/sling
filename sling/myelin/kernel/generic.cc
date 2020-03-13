@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "sling/myelin/compute.h"
+#include "sling/myelin/builder.h"
 #include "sling/myelin/macro-assembler.h"
 
 #define __ masm->
@@ -229,6 +230,65 @@ class IdentityTransformer : public Transformer {
     }
 
     return !noops.empty();
+  }
+};
+
+// Expand composite functions to basic operations.
+class CompositeTransformer : public Transformer {
+ public:
+  string Name() override { return "CompositeTransformer"; }
+
+  bool Transform(Flow *flow) override {
+    int updates = 0;
+
+    // SoftMax is defined as:
+    //   SoftMax(x) = Normalize(Exp(x)))
+    // but is computed as:
+    //  SoftMax(x) = Normalize(Exp(Sub(x, Max(x))))
+    // for better numeric stablity.
+    for (Flow::Operation *op : flow->Find("SoftMax")) {
+      if (op->indegree() != 1 || op->outdegree() != 1) continue;
+
+      Flow::Variable *x = op->inputs[0];
+      Flow::Variable *y = op->outputs[0];
+      int axis = op->GetAttr("axis", -1);
+
+      FlowBuilder f(flow, op->func);
+      Scope s(&f, op->name, false);
+      auto *softmax = f.Normalize(f.Exp(f.Sub(x, f.Max(x, axis))), axis);
+
+      flow->RemoveOperation(op);
+      f.Bind(y, softmax);
+
+      updates++;
+    }
+
+    // LogSumExp is defined as:
+    //   LogSumExp(x) = Log(Sum(Exp(x)))
+    // but is computed as:
+    //  LogSumExp(x) = Add(Log(Sum(Exp(Sub(x, Max(x))))), Max(x))
+    // for better numeric stablity.
+    for (Flow::Operation *op : flow->Find("LogSumExp")) {
+      if (op->indegree() != 1 || op->outdegree() != 1) continue;
+
+      Flow::Variable *x = op->inputs[0];
+      Flow::Variable *y = op->outputs[0];
+      int axis = op->GetAttr("axis", -1);
+      bool keepdims = op->GetAttr("keepdims", false);
+
+      FlowBuilder f(flow, op->func);
+      Scope s(&f, op->name, false);
+      auto *max = f.Max(x, axis);
+      auto *sub = f.Sub(x, max);
+      auto *lse = f.Add(f.Log(f.Sum(f.Exp(sub), axis, keepdims)), max);
+
+      flow->RemoveOperation(op);
+      f.Bind(y, lse);
+
+      updates++;
+    }
+
+    return updates > 0;
   }
 };
 
@@ -553,6 +613,7 @@ void RegisterGenericTransforms(Library *library) {
   library->RegisterTransformer(new RenameTransformer());
   library->RegisterTransformer(new IdentityTransformer());
   library->RegisterTransformer(new FlattenConcatTransformer());
+  library->RegisterTransformer(new CompositeTransformer());
 
   // Register type inference.
   library->RegisterTyper(new StandardTyper());

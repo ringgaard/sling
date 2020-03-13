@@ -135,6 +135,7 @@ class BIODecoder : public ParserDecoder {
     layers.push_back(num_labels_);
     auto *scores = f.Name(f.FNN(token, layers, true), "scores");
     scores->set_out();
+    if (use_crf_) scores->set_ref();
 
     // Build tagger gradient.
     Flow::Variable *dscores = nullptr;
@@ -159,6 +160,7 @@ class BIODecoder : public ParserDecoder {
   void Save(Flow *flow, Builder *spec) override {
     spec->Set("type", "bio");
     spec->Set("types", Array(spec->store(), types_));
+    spec->Set("crf", use_crf_);
   }
 
   // Load model.
@@ -170,6 +172,7 @@ class BIODecoder : public ParserDecoder {
         types_.push_back(types.get(i));
       }
     }
+    use_crf_ = spec.GetBool("crf");
     num_labels_ = BIOLabel::labels(types_.size());
   }
 
@@ -190,7 +193,7 @@ class BIODecoder : public ParserDecoder {
       }
     }
 
-    if (!use_crf_) {
+    if (use_crf_) {
       crf_.Initialize(model);
     }
   }
@@ -269,15 +272,15 @@ class BIODecoder : public ParserDecoder {
 
   Predictor *CreatePredictor() override { return new Predictor(this); }
 
-  // Decoder learner.
-  class Learner : public ParserDecoder::Learner {
+  // BIO decoder learner.
+  class BIOLearner : public ParserDecoder::Learner {
    public:
-    Learner(const BIODecoder *decoder)
+    BIOLearner(const BIODecoder *decoder)
         : decoder_(decoder),
           forward_(decoder->cell_),
           backward_(decoder->gcell_),
           dencodings_(decoder->dtoken_) {}
-    ~Learner() override {}
+    ~BIOLearner() override {}
 
     void Switch(Document *document) override {
       // Generate golden labels for document. First, set all the tags to OUTSIDE
@@ -363,7 +366,121 @@ class BIODecoder : public ParserDecoder {
     int loss_count_ = 0;
   };
 
-  Learner *CreateLearner() override { return new Learner(this); }
+  // CRF decoder learner.
+  class CRFLearner : public ParserDecoder::Learner {
+   public:
+    CRFLearner(const BIODecoder *decoder)
+        : decoder_(decoder),
+          forward_(decoder->cell_),
+          backward_(decoder->gcell_),
+          dencodings_(decoder->dtoken_),
+          emissions_(decoder->scores_),
+          demissions_(decoder->dscores_),
+          crf_(&decoder->crf_)  {}
+    ~CRFLearner() override {}
+
+    void Switch(Document *document) override {
+      // Generate golden labels for document. First, set all the tags to OUTSIDE
+      // and then go over all the spans marking these with BEGIN-END,
+      // BEGIN-INSIDE-END, or SINGLE tags.
+      golden_.resize(document->length());
+      int outside = BIOLabel(OUTSIDE).index();
+      for (int i = 0; i < document->length(); i++) {
+        golden_[i] = outside;
+      }
+      for (Span *span : document->spans()) {
+        // Get type for evoked frame.
+        Frame frame = span->Evoked();
+        if (!frame.valid()) continue;
+        int type = decoder_->GetType(frame);
+        if (type == -1) continue;
+
+        // Add labels for span.
+        if (span->length() == 1) {
+          golden_[span->begin()] = BIOLabel(SINGLE, type).index();
+        } else {
+          for (int t = span->begin(); t < span->end(); ++t) {
+            BIOTag tag = INSIDE;
+            if (t == span->begin()) {
+              tag = BEGIN;
+            } else if (t == span->end() - 1) {
+              tag = END;
+            }
+            golden_[t] = BIOLabel(tag, type).index();
+          }
+        }
+      }
+    }
+
+    Channel *Learn(int begin, int end, Channel *encodings) override {
+      // Compute forward and backward pass for all tokens in document part.
+      int length = end - begin;
+      dencodings_.reset(length);
+      emissions_.reset(length);
+      demissions_.reset(length);
+
+      // Compute emission scores from token encodings.
+      forward_.Resize(length + 1);
+      for (int t = 0; t < length; ++t) {
+        Instance &fwd = forward_[t];
+        fwd.Set(decoder_->token_, encodings, t);
+        fwd.Set(decoder_->scores_, &emissions_, t);
+        fwd.Compute();
+      }
+
+      // Run CRF.
+      std::vector<int> labels(golden_.begin() + begin, golden_.begin() + end);
+      float loss = crf_.Learn(&emissions_, labels, &demissions_);
+      loss_sum_ += loss;
+      loss_count_ += length;
+
+      // Backpropagate loss.
+      for (int t = 0; t < length; ++t) {
+        backward_.Set(decoder_->primal_, &forward_[t]);
+        backward_.Set(decoder_->dtoken_, &dencodings_, t);
+        backward_.Set(decoder_->dscores_, &demissions_, t);
+        backward_.Compute();
+      }
+
+      return &dencodings_;
+    }
+
+    void UpdateLoss(float *loss_sum, int *loss_count) override {
+      *loss_sum += loss_sum_;
+      *loss_count += loss_count_;
+      loss_sum_ = 0.0;
+      loss_count_ = 0;
+    }
+
+    void CollectGradients(Instances *gradients) override {
+      gradients->Add(&backward_);
+      crf_.CollectGradients(gradients);
+    }
+
+   private:
+    const BIODecoder *decoder_;
+
+    std::vector<int> golden_;
+
+    myelin::InstanceArray forward_;
+    myelin::Instance backward_;
+    myelin::Channel dencodings_;
+    myelin::Channel emissions_;
+    myelin::Channel demissions_;
+    CRF::Learner crf_;
+
+
+    float loss_sum_ = 0.0;
+    int loss_count_ = 0;
+  };
+
+  Learner *CreateLearner() override {
+    if (use_crf_) {
+      return new CRFLearner(this);
+    } else {
+      return new BIOLearner(this);
+    }
+  }
 
  private:
   // Get type id for frame. Return -1 if type is missing.

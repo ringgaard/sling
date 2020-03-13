@@ -26,7 +26,7 @@ namespace myelin {
 class CRF {
  public:
   // Score for impossible label.
-  static constexpr float IMPOSSIBLE = -1e2;
+  static constexpr float IMPOSSIBLE = 1e-2;
 
   // Flow input/output variables.
   struct Variables {
