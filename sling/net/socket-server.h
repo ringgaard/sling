@@ -155,6 +155,11 @@ class SocketConnection {
   // Process I/O for connection.
   Status Process();
 
+  // Upgrade to another protocol. This should only be called in the Process()
+  // method of the current session. The current session will be deleted when
+  // the Process() method completes.
+  void Upgrade(SocketSession *session);
+
   // Server for connection.
   SocketServer *server() const { return server_; }
 
@@ -231,16 +236,12 @@ class SocketSession {
   enum Continuation {
     CONTINUE,    // keep receiving data for request
     RESPOND,     // send back response and flush request
+    UPGRADE,     // send back response and switch to new protocol session
     CLOSE,       // send back response and close connection
     TERMINATE,   // terminate session
   };
 
   virtual ~SocketSession() = default;
-
-  // Return number of bytes in request packet. Return -1 for terminating the
-  // session or 0 if more data is needed to determine the request packet
-  // size.
-  virtual int OnReceive(SocketConnection *conn) = 0;
 
   // Process the request in the request buffer and return the response header
   // and body. Return false to terminate the session.

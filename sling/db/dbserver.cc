@@ -48,12 +48,15 @@ class DatabaseService {
     terminate_ = true;
     monitor_.Join();
 
+    // Flush all changes to disk.
+    Flush();
+
     // Close all mounted databases.
     MutexLock lock(&mu_);
     for (auto &it : mounts_) {
       DBMount *mount = it.second;
-      LOG(INFO) << "Closing database " << mount->name;
       mount->Acquire();
+      LOG(INFO) << "Closing database " << mount->name;
       delete mount;
     }
   }
@@ -63,9 +66,9 @@ class DatabaseService {
     MutexLock lock(&mu_);
     for (auto &it : mounts_) {
       DBMount *mount = it.second;
+      mount->Acquire();
       if (mount->db.dirty()) {
         LOG(INFO) << "Flushing database " << mount->name << " to disk";
-        mount->Acquire();
         Status st = mount->db.Flush();
         if (!st.ok()) {
           LOG(ERROR) << "Shutdown failed for db " << mount->name << ": " << st;
@@ -101,11 +104,17 @@ class DatabaseService {
 
   // Process database requests.
   void Process(HTTPRequest *request, HTTPResponse *response) {
+    if (terminate_) {
+      response->SendError(500);
+      return;
+    }
+
     switch (request->Method()) {
       case HTTP_GET: Get(request, response, true); break;
       case HTTP_HEAD: Get(request, response, false); break;
       case HTTP_PUT: Put(request, response); break;
       case HTTP_DELETE: Delete(request, response); break;
+      case HTTP_OPTIONS: Options(request, response); break;
 
       case HTTP_POST: {
         // Perform database command.
@@ -136,6 +145,7 @@ class DatabaseService {
       response->SendError(404, nullptr, "Database not found");
       return;
     }
+    bool timestamped = l.db()->timestamped();
 
     Record record;
     if (!l.resource().empty()) {
@@ -146,7 +156,7 @@ class DatabaseService {
       }
 
       // Return record.
-      ReturnSingle(response, record, body, false, -1);
+      ReturnSingle(response, record, body, false, timestamped, -1);
     } else {
       // Read first/next record in iterator.
       URLQuery query(request->query());
@@ -179,7 +189,7 @@ class DatabaseService {
         }
 
         // Return record.
-        ReturnSingle(response, record, body, true, recid);
+        ReturnSingle(response, record, body, true, timestamped, recid);
       } else {
         // Fetch multiple records.
         ReturnMultiple(response, l.db(), recid, batch, body);
@@ -190,11 +200,15 @@ class DatabaseService {
   // Return single record.
   void ReturnSingle(HTTPResponse *response,
                     const Record &record,
-                    bool body, bool key, uint64 next) {
-    // Add timestamp if available.
-    if (record.timestamp != -1) {
-      char datebuf[RFCTIME_SIZE];
-      response->Set("Last-Modified", RFCTime(record.timestamp, datebuf));
+                    bool body, bool key, bool timestamp, uint64 next) {
+    // Add revision/timestamp if available.
+    if (record.version != 0) {
+      if (timestamp) {
+        char datebuf[RFCTIME_SIZE];
+        response->Set("Last-Modified", RFCTime(record.version, datebuf));
+      } else {
+        response->Set("Version", record.version);
+      }
     }
 
     // Add record key.
@@ -217,11 +231,14 @@ class DatabaseService {
   void ReturnMultiple(HTTPResponse *response, Database *db,
                       uint64 recid, int batch, bool body) {
     string boundary = std::to_string(FingerprintCat(db->epoch(), time(0)));
-    bool empty = true;
     Record record;
+    uint64 next = -1;
+    int num_recs = 0;
     for (int n = 0; n < batch; ++n) {
       // Fetch next record.
       if (!db->Next(&record, &recid)) break;
+      next = recid;
+      num_recs++;
 
       // Add MIME part to response.
       response->Append("--");
@@ -236,10 +253,15 @@ class DatabaseService {
       response->Append(record.key.data(), record.key.size());
       response->Append("\r\n");
 
-      if (record.timestamp != -1) {
-        char datebuf[RFCTIME_SIZE];
-        response->Append("Last-Modified: ");
-        response->Append(RFCTime(record.timestamp, datebuf));
+      if (record.version != 0) {
+        if (db->timestamped()) {
+          char datebuf[RFCTIME_SIZE];
+          response->Append("Last-Modified: ");
+          response->Append(RFCTime(record.version, datebuf));
+        } else {
+          response->Append("Version: ");
+          response->AppendNumber(record.version);
+        }
         response->Append("\r\n");
       }
 
@@ -247,11 +269,9 @@ class DatabaseService {
       if (body) {
         response->Append(record.value.data(), record.value.size());
       }
-
-      empty = false;
     }
 
-    if (empty) {
+    if (next == -1) {
       response->SendError(404, nullptr, "Record not found");
     } else {
       response->Append("--");
@@ -259,9 +279,10 @@ class DatabaseService {
       response->Append("--\r\n");
 
       string ct = "multipart/mixed; boundary=" + boundary;
-      response->Set("Mime-Version", "1.0");
+      response->Set("MIME-Version", "1.0");
       response->SetContentType(ct.c_str());
-      response->Set("Next", recid);
+      response->Set("Records", num_recs);
+      response->Set("Next", next);
     }
   }
 
@@ -289,20 +310,20 @@ class DatabaseService {
     // Get record from request.
     Slice value(request->content(), request->content_size());
     Record record(l.resource(), value);
-    if (l.db()->numeric_timestamps()) {
-      record.timestamp = request->Get("Revision", -1);
-      if (record.timestamp == -1) {
-        response->SendError(400, nullptr, "Invalid revision");
-        return;
-      }
-    } else {
+    if (l.db()->timestamped()) {
       const char *ts = request->Get("Last-Modified");
       if (ts != nullptr) {
-        record.timestamp = ParseRFCTime(ts);
-        if (record.timestamp == -1) {
+        record.version = ParseRFCTime(ts);
+        if (record.version == -1) {
           response->SendError(400, nullptr, "Invalid timestamp");
           return;
         }
+      }
+    } else {
+      record.version = request->Get("Version", -1);
+      if (record.version == -1) {
+        response->SendError(400, nullptr, "Invalid record version");
+        return;
       }
     }
     Database::Mode mode = Database::OVERWRITE;
@@ -312,8 +333,8 @@ class DatabaseService {
         mode = Database::OVERWRITE;
       } else if (strcmp(m, "add") == 0) {
         mode = Database::ADD;
-      } else if (strcmp(m, "serial") == 0) {
-        mode = Database::SERIAL;
+      } else if (strcmp(m, "ordered") == 0) {
+        mode = Database::ORDERED;
       } else {
         response->SendError(400, nullptr, "Invalid mode");
         return;
@@ -373,6 +394,88 @@ class DatabaseService {
 
     // Update last modification time.
     l.mount()->last_update = time(0);
+  }
+
+  // Return server information.
+  void Options(HTTPRequest *request, HTTPResponse *response) {
+    // Handle ping.
+    if (strcmp(request->path(), "*") == 0) {
+      response->Set("Allow", "GET, HEAD, PUT, DELETE, POST, OPTIONS");
+      return;
+    }
+
+    // General server information.
+    if (strcmp(request->path(), "/") == 0) {
+      response->Append("{\n");
+      response->Append("databases: [\n");
+      MutexLock lock(&mu_);
+      for (auto &it : mounts_) {
+        DBMount *mount = it.second;
+        mount->Acquire();
+        response->Append("  {\"name\": \"");
+        response->Append(mount->name);
+        response->Append("\", \"records\": ");
+        response->AppendNumber(mount->db.num_records());
+        response->Append("}\n");
+      }
+      response->Append("]\n");
+      response->Append("}\n");
+      response->SetContentType("text/json");
+      return;
+    }
+
+    // Database-specific information.
+    ResourceLock l(this, request->path());
+    if (l.mount() == nullptr) {
+      response->SendError(404, nullptr, "Database not found");
+      return;
+    }
+    response->Append("{\n");
+    Database *db = l.db();
+    AddPair(response, "name", l.mount()->name);
+    AddNumPair(response, "epoch", db->epoch());
+    AddPair(response, "dbdir", db->dbdir());
+    AddBoolPair(response, "dirty", db->dirty());
+    AddBoolPair(response, "read_only", db->read_only());
+    AddBoolPair(response, "timestamped", db->timestamped());
+    AddNumPair(response, "records", db->num_records());
+    AddNumPair(response, "deletions", db->num_deleted());
+    AddNumPair(response, "index_capacity", db->index_capacity(), true);
+    response->Append("}\n");
+    response->SetContentType("text/json");
+    response->Set("Epoch", l.db()->epoch());
+  }
+
+  // Add key/value pair to response.
+  static void AddPair(HTTPResponse *response, const char *key,
+                      const string &value, bool last = false) {
+    response->Append("\"");
+    response->Append(key);
+    response->Append("\": \"");
+    response->Append(value);
+    response->Append("\"");
+    if (!last) response->Append(",");
+    response->Append("\n");
+  }
+
+  static void AddNumPair(HTTPResponse *response, const char *key,
+                      int64 value, bool last = false) {
+    response->Append("\"");
+    response->Append(key);
+    response->Append("\": ");
+    response->AppendNumber(value);
+    if (!last) response->Append(",");
+    response->Append("\n");
+  }
+
+  static void AddBoolPair(HTTPResponse *response, const char *key,
+                          bool value, bool last = false) {
+    response->Append("\"");
+    response->Append(key);
+    response->Append("\": ");
+    response->Append(value ? "true" : "false");
+    if (!last) response->Append(",");
+    response->Append("\n");
   }
 
   // Create new database.
@@ -464,8 +567,7 @@ class DatabaseService {
 
     // Acquire database lock to ensure exclusive access.
     DBMount *mount = f->second;
-    mount->mu.Lock();
-    mount->mu.Unlock();
+    mount->Acquire();
 
     // Shut down database.
     LOG(INFO) << "Unmounting database: " << name;
@@ -518,6 +620,7 @@ class DatabaseService {
 
       // Find mount for database.
       MutexLock lock(&dbs->mu_);
+      if (dbs->terminate_) return;
       string dbname = string(path, p - path);
       auto f = dbs->mounts_.find(dbname);
       if (f == dbs->mounts_.end()) return;
@@ -569,7 +672,8 @@ class DatabaseService {
             LOG(ERROR) << "Checkpoint failed for " << mount->name << ": " << st;
           }
           mount->last_flush = now;
-          LOG(INFO) << "Checkpointed " << mount->name;
+          VLOG(1) << "Checkpointed " << mount->name
+                  << ", " << mount->db.num_records() << " records";
         }
       }
     }
@@ -598,7 +702,6 @@ DatabaseService *dbservice = nullptr;
 void terminate(int signum) {
   LOG(INFO) << "Starting shutdown";
   if (dbservice != nullptr) {
-    dbservice->Flush();
     delete dbservice;
     dbservice = nullptr;
   }

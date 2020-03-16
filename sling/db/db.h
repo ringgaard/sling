@@ -39,7 +39,7 @@ class Database {
   enum Mode {
     OVERWRITE,  // overwrite existing records
     ADD,        // only add new records, do not overwrite existing records
-    SERIAL,     // do not overwrite records with newer timestamps
+    ORDERED,    // do not overwrite records with newer timestamps
   };
 
   // Outcome of put operation.
@@ -49,6 +49,27 @@ class Database {
     UNCHANGED,  // record not updated because value is unchanged
     EXISTS,     // record already exists and overwrite not allowed
     STALE,      // record not updated because timstamp is not newer
+  };
+
+  // Configuration options for database.
+  struct Config {
+    // Data file configuration.
+    RecordFileOptions record;
+
+    // Initial index capacity (default 1M).
+    uint64 initial_index_capacity = 1 << 20;
+
+    // Size of each data shard (256 GB).
+    uint64 data_shard_size = 256 * (1ULL << 30);
+
+    // Index load factor.
+    double index_load_factor = 0.75;
+
+    // Read-only mode.
+    bool read_only = false;
+
+    // Record version number is timestamp.
+    bool timestamped = false;
   };
 
   // Deallocate database instance.
@@ -94,11 +115,23 @@ class Database {
   // Check if database is read-only.
   bool read_only() const { return config_.read_only; }
 
-  // Check if database uses numeric timestamps.
-  bool numeric_timestamps() const { return config_.numeric_timestamps; }
+  // Use timestamps for record version numbers.
+  bool timestamped() const { return config_.timestamped; }
 
   // Return number of active records.
   uint64 num_records() const { return index_->num_records(); }
+
+  // Return number of deleted records.
+  uint64 num_deleted() const { return index_->num_deleted(); }
+
+  // Return index capacity.
+  uint64 index_capacity() const { return index_->capacity(); }
+
+  // Database directory.
+  const string &dbdir() const { return dbdir_; }
+
+  // Database configuration.
+  const Config &config() const { return config_; }
 
   // Error codes.
   enum Errors {
@@ -127,27 +160,6 @@ class Database {
   int CurrentShard() const {
     return readers_.size() - 1;
   }
-
-  // Configuration options for database.
-  struct Config {
-    // Data file configuration.
-    RecordFileOptions record;
-
-    // Initial index capacity (default 1M).
-    uint64 initial_index_capacity = 1 << 20;
-
-    // Size of each data shard (256 GB).
-    uint64 data_shard_size = 256 * (1ULL << 30);
-
-    // Index load factor.
-    double index_load_factor = 0.75;
-
-    // Read-only mode.
-    bool read_only = false;
-
-    // Timestamp is number instead of time_t.
-    bool numeric_timestamps = false;
-  };
 
   // Parse configuration.
   bool ParseConfig(Text config);

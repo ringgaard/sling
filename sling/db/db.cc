@@ -207,9 +207,9 @@ uint64 Database::Put(const Record &record, Mode mode, Outcome *outcome) {
       return recid;
     }
 
-    // Do not overwrite newer records in SERIAL mode.
-    if (mode == SERIAL) {
-      if (rec.timestamp != -1 && rec.timestamp < record.timestamp) {
+    // Do not overwrite newer records in ORDERED mode.
+    if (mode == ORDERED) {
+      if (rec.version != 0 && record.version < rec.version) {
         if (outcome != nullptr) *outcome = STALE;
         return recid;
       }
@@ -614,8 +614,8 @@ bool Database::ParseConfig(Text config) {
       config_.record.compression = static_cast<RecordFile::CompressionType>(n);
     } else if (key == "read_only") {
       config_.read_only = ParseBool(value, false);
-    } else if (key == "numeric_timestamps") {
-      config_.numeric_timestamps = ParseBool(value, false);
+    } else if (key == "timestamped") {
+      config_.timestamped = ParseBool(value, false);
     } else {
       LOG(ERROR) << "Unknown configuration parameter: " << line;
       return false;

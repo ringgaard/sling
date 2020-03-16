@@ -119,7 +119,7 @@ size_t RecordFile::ReadHeader(const char *data, Header *header) {
   // Read record type.
   const char *p = data;
   header->record_type = static_cast<RecordType>(*p++);
-  if (header->record_type > TSDATA_RECORD) return -1;
+  if (header->record_type > VDATA_RECORD) return -1;
 
   // Read record length.
   p = Varint::Parse64(p, &header->record_size);
@@ -132,11 +132,11 @@ size_t RecordFile::ReadHeader(const char *data, Header *header) {
     p = Varint::Parse64(p, &header->key_size);
   }
 
-  // Read timestamp.
-  if (header->record_type == TSDATA_RECORD) {
-    p = Varint::Parse64(p, &header->timestamp);
+  // Read version.
+  if (header->record_type == VDATA_RECORD) {
+    p = Varint::Parse64(p, &header->version);
   } else {
-    header->timestamp = -1;
+    header->version = 0;
   }
 
   // Return number of bytes consumed.
@@ -156,9 +156,9 @@ size_t RecordFile::WriteHeader(const Header &header, char *data) {
     p = Varint::Encode64(p, header.key_size);
   }
 
-  // Write timestamp.
-  if (header.record_type == TSDATA_RECORD) {
-    p = Varint::Encode64(p, header.timestamp);
+  // Write version.
+  if (header.record_type == VDATA_RECORD) {
+    p = Varint::Encode64(p, header.version);
   }
 
   // Return number of bytes written.
@@ -263,7 +263,7 @@ Status RecordReader::Read(Record *record) {
       input_.Consume(hdrsize);
       record->position = position_;
       record->type = hdr.record_type;
-      record->timestamp = hdr.timestamp;
+      record->version = hdr.version;
       position_ += hdrsize;
     }
 
@@ -290,6 +290,13 @@ Status RecordReader::Read(Record *record) {
       input_.Consume(hdr.key_size);
     } else {
       record->key = Slice();
+    }
+
+    // Get record version.
+    if (hdr.record_type == VDATA_RECORD) {
+      record->version = hdr.version;
+    } else {
+      record->version = 0;
     }
 
     // Get record value.
@@ -651,9 +658,9 @@ Status RecordWriter::Write(const Record &record, uint64 *position) {
   hdr.record_type = record.type;
   hdr.record_size = record.key.size() + value.size();
   hdr.key_size = record.key.size();
-  hdr.timestamp = record.timestamp;
-  if (hdr.timestamp != -1 && hdr.record_type == DATA_RECORD) {
-    hdr.record_type = TSDATA_RECORD;
+  hdr.version = record.version;
+  if (hdr.version != 0 && hdr.record_type == DATA_RECORD) {
+    hdr.record_type = VDATA_RECORD;
   }
   output_.Ensure(maxsize);
   size_t hdrsize = WriteHeader(hdr, output_.end());

@@ -30,7 +30,7 @@ enum RecordType {
   DATA_RECORD   = 1,     // data record with key and value
   FILLER_RECORD = 2,     // filler record to avoid records crossing chunks
   INDEX_RECORD  = 3,     // index page
-  TSDATA_RECORD = 4,     // time-stamped data record
+  VDATA_RECORD = 4,      // versioned data record
 };
 
 // Record with key and value.
@@ -41,7 +41,7 @@ struct Record {
   RecordType type = DATA_RECORD;
   Slice key;
   Slice value;
-  int64 timestamp = -1;
+  uint64 version = 0;
   int64 position = -1;
 };
 
@@ -81,7 +81,7 @@ class RecordFile {
     RecordType record_type;
     uint64 record_size;
     uint64 key_size;
-    uint64 timestamp;
+    uint64 version;
   };
 
   // An index record consists of a list of index entries containing the key

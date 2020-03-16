@@ -295,6 +295,7 @@ SocketConnection::~SocketConnection() {
 Status SocketConnection::Process() {
   MutexLock lock(&mu_);
   bool done;
+  SocketSession *session = session_;
   switch (state_) {
     case SOCKET_STATE_IDLE:
       // Allocate request buffer.
@@ -329,6 +330,12 @@ Status SocketConnection::Process() {
           state_ = SOCKET_STATE_RECEIVE;
           return Status::OK;
         case SocketSession::RESPOND:
+          break;
+        case SocketSession::UPGRADE:
+          if (session != session_) {
+            delete session;
+            session = session_;
+          }
           break;
         case SocketSession::CLOSE:
           close_ = true;
@@ -460,6 +467,12 @@ Status SocketConnection::Send(Buffer *buffer, bool *done) {
   VLOG(6) << "Send " << sock_ << ", " << rc << " bytes";
   buffer->Consume(rc);
   return Status::OK;
+}
+
+void SocketConnection::Upgrade(SocketSession *session) {
+  CHECK_EQ(state_, SOCKET_STATE_PROCESS)
+      << "Socket protocol upgrade only allows in PROCESS state";
+  session_ = session;
 }
 
 void SocketConnection::Shutdown() {
