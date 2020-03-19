@@ -716,16 +716,19 @@ void HTTPConnection::Dispatch() {
   // Dispatch request to handler.
   handler(request_, response_);
 
+  // Use response body size as content length if it has not been set.
+  if (response_->ContentLength() == 0 && !response_body_.empty()) {
+    response_->SetContentLength(response_body_.size());
+  }
+
   // Add Date: and Server: headers.
   char datebuf[RFCTIME_SIZE];
   response_->Set("Server", server()->options().server_name.c_str(), false);
   response_->Set("Date", RFCTime(time(nullptr), datebuf), false);
+  response_->Set("Content-Length", response_->ContentLength());
 
-  // Set content length.
-  if (!response_body_.empty()) {
-    response_->SetContentLength(response_body_.size());
-  } else if (response_->status() == 200) {
-    // Return status code 204 (No Content) if response body is empty.
+  // Return status code 204 (No Content) if response body is empty.
+  if (response_->status() == 200 && response_->ContentLength() == 0) {
     response_->set_status(204);
   }
 
@@ -1046,6 +1049,7 @@ void HTTPResponse::SetContentType(const char *type) {
   Set("Content-Type", type);
 }
 
+#if 0
 int HTTPResponse::ContentLength() const {
   const char *result = Get("Content-Length");
   if (result == nullptr) return -1;
@@ -1057,6 +1061,7 @@ void HTTPResponse::SetContentLength(int length) {
   FastInt32ToBufferLeft(length, number);
   Set("Content-Length", number);
 }
+#endif
 
 const char *HTTPResponse::Get(const char *name, const char *defval) const {
   for (const HTTPHeader &h : headers_) {

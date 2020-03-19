@@ -401,8 +401,8 @@ class HTTPResponse {
   void SetContentType(const char *type);
 
   // HTTP content length.
-  int ContentLength() const;
-  void SetContentLength(int length);
+  int ContentLength() const { return content_length_; }
+  void SetContentLength(int length) { content_length_ = length; }
 
   // Get response header. Returns null if header is not set.
   const char *Get(const char *name, const char *defval = nullptr) const;
@@ -451,6 +451,9 @@ class HTTPResponse {
 
   // HTTP status code for response.
   int status_ = 200;
+
+  // Content length for response.
+  int content_length_ = 0;
 
   // HTTP response headers.
   std::vector<HTTPHeader> headers_;
