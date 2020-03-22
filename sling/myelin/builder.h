@@ -299,6 +299,14 @@ class FlowBuilder : public Scope {
     return NoGradient(Op("ArgMax", {x}, DT_INT32, {}));
   }
 
+  // Clip value.
+  Variable *Clip(Variable *x, Variable *low, Variable *high) {
+    return Minimum(Maximum(x, low), high);
+  }
+  Variable *Clip(Variable *x, float low, float high) {
+    return Clip(x, Const(low), Const(high));
+  }
+
   // Dot product between two vectors.
   Variable *DotProduct(Variable *x, Variable *y) {
     return Sum(Mul(x,y));

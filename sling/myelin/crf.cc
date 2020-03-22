@@ -14,8 +14,9 @@
 
 #include "sling/myelin/crf.h"
 
+#include <math.h>
+
 #include "sling/myelin/builder.h"
-#include "sling/myelin/gradient.h"
 
 namespace sling {
 namespace myelin {
@@ -26,49 +27,81 @@ CRF::Variables CRF::Build(Flow *flow,
   Variables vars;
   auto dt = input->type;
   int num_labels = input->dim(1) + 2;
-  bool learn = dinput != nullptr;
+  //bool learn = dinput != nullptr;
 
-  // Build function for one step of computing parition function and score.
-  FlowBuilder f(flow, name_ + "/step");
+  // Build forward function.
+  FlowBuilder f(flow, name_ + "/forward");
 
   // Build inputs.
   vars.input = f.Placeholder("input", dt, input->shape, true);
   vars.alpha_in = f.Placeholder("alpha_in", dt, {1, num_labels}, true);
-  vars.input->set_unique();
-  vars.alpha_in->set_unique();
+  vars.input->set_out();
   vars.prev = f.Placeholder("prev", DT_INT32, {1});
   vars.curr = f.Placeholder("curr", DT_INT32, {1});
 
   // Add BOS and EOS labels to input emissions.
   auto *padding = f.Const(nullptr, dt, {1, 2});
   auto *emissions = f.Name(f.Concat({vars.input, padding}, 1), "emissions");
+  //f.RandomUniform(emissions);
 
   // Transition weights (prev, curr).
   auto *transitions = f.Parameter("transitions", dt, {num_labels, num_labels});
 
+  // Compute potentials.
+  auto *potentials = f.Name(f.Add(emissions, transitions), "potentials");
+  potentials->set_out();
+
   // Compute scores.
-  auto *scores = f.Add(f.Add(emissions, vars.alpha_in), transitions);
+  auto *scores = f.Add(potentials, vars.alpha_in);
 
   // Compute alpha_out.
-  vars.alpha_out = f.Name(f.LogSumExp(scores, 0, true), "alpha_out");
+  vars.alpha_out = f.Reshape(f.LogSumExp(scores, 1), {1, num_labels});
+  f.Name(vars.alpha_out , "alpha_out");
   vars.alpha_out->set_out()->set_ref();
 
   // Compute score for element.
-  std::vector<int> one{1};
-  auto *e_index = f.Concat({f.Const(one), vars.curr});
+  std::vector<int> first{0};
+  auto *e_index = f.Concat({f.Const(first), vars.curr});
   auto *e_score = f.Gather(emissions, e_index);
-  auto *t_index = f.Concat({vars.prev, vars.curr});
-  auto *t_score = f.Gather(transitions, t_index);
+
+  auto *prev_curr = f.Concat({vars.prev, vars.curr})->set_out();
+  auto *t_score = f.Gather(transitions, prev_curr);
+
   vars.score = f.Name(f.Add(t_score, e_score), "score");
   vars.score->set_out();
 
   // Build likelihood function.
-  FlowBuilder fl(flow, name_ + "/likelihood");
-  auto *score = fl.Placeholder("score", dt, {});
-  auto *alpha = fl.Placeholder("alpha", dt, {1, num_labels}, true);
-  alpha->set_unique();
-  auto *p = fl.Name(fl.Sub(score, fl.LogSumExp(alpha)), "p");
+  FlowBuilder l(flow, name_ + "/likelihood");
+  auto *score = l.Placeholder("score", dt, {});
+  auto *alpha = l.Placeholder("alpha", dt, {1, num_labels}, true);
+  auto *logz = l.Name(l.LogSumExp(alpha), "logz")->set_out();
+  l.Name(l.Sub(logz, score), "nll")->set_out();
+
+  // Build backward function.
+  FlowBuilder b(flow, name_ + "/backward");
+  auto *primal = b.Name(b.Instance(b.func()), "primal");
+  auto *b_logz = b.Placeholder("logz", dt, {});
+  vars.beta_in = b.Placeholder("beta_in", dt, {1, num_labels}, true);
+
+  auto *b_potentials = b.Name(b.Ref(primal, potentials), "potentials");
+  auto *b_alpha_in = b.Name(b.Ref(primal, vars.alpha_in), "alpha_in");
+  auto *b_prev_curr = b.Name(b.Ref(primal, prev_curr), "prev_curr");
+
+  auto *beta = b.LogSumExp(b.Add(b_potentials, vars.beta_in), 1);
+  vars.beta_out = b.Name(b.Reshape(beta, {1, num_labels}), "beta_out");
+  vars.beta_out->set_ref()->set_out();
+
+  auto *outer = b.Add(b.Reshape(b_alpha_in, {num_labels, 1}), vars.beta_out);
+  auto *p = b.Exp(b.Sub(b.Add(outer, b_potentials), b_logz));
+  //p = b.Clip(p, 0.0, 1.0);
   p->set_out();
+  b.Name(p, "p");
+
+  auto *d_transitions = b.Var("d_transitions", dt, {num_labels, num_labels});
+  transitions->SetAttr("gradient", d_transitions->name);
+
+  b.AssignAdd(d_transitions, p);
+  b.AssignAddScatter(d_transitions, b_prev_curr, b.Const(-1.0f));
 
   // Create zero input tensor.
   auto *zero = flow->AddConstant(name_ + "/zero", input->type, input->shape);
@@ -78,60 +111,42 @@ CRF::Variables CRF::Build(Flow *flow,
   // Connect variables.
   flow->Connect({input, vars.input});
   flow->Connect({vars.alpha_out, vars.alpha_in, alpha});
-
-  // Build gradients for learning.
-  if (learn) {
-    Gradient(flow, f.func());
-    Gradient(flow, fl.func());
-    vars.dinput = flow->GradientVar(vars.input);
-    vars.beta_in = flow->GradientVar(vars.alpha_out);
-    vars.beta_out = flow->GradientVar(vars.alpha_in);
-    auto *beta = flow->GradientVar(alpha);
-    flow->Connect({dinput, vars.dinput});
-    flow->Connect({vars.beta_out, vars.beta_in, beta});
-  }
-
-  // Build loss function.
-  loss_.Build(flow);
+  flow->Connect({vars.beta_out, vars.beta_in});
+  flow->Connect({transitions, d_transitions});
 
   return vars;
 }
 
 void CRF::Initialize(const Network &net) {
-  step_ = net.GetCell(name_ + "/step");
-  step_input_ = net.GetParameter(name_ + "/step/input");
-  step_prev_ = net.GetParameter(name_ + "/step/prev");
-  step_curr_ = net.GetParameter(name_ + "/step/curr");
-  step_alpha_in_ = net.GetParameter(name_ + "/step/alpha_in");
-  step_alpha_out_ = net.GetParameter(name_ + "/step/alpha_out");
-  step_score_ = net.GetParameter(name_ + "/step/score");
+  forward_ = net.GetCell(name_ + "/forward");
+  forward_input_ = net.GetParameter(name_ + "/forward/input");
+  forward_prev_ = net.GetParameter(name_ + "/forward/prev");
+  forward_curr_ = net.GetParameter(name_ + "/forward/curr");
+  forward_alpha_in_ = net.GetParameter(name_ + "/forward/alpha_in");
+  forward_alpha_out_ = net.GetParameter(name_ + "/forward/alpha_out");
+  forward_score_ = net.GetParameter(name_ + "/forward/score");
   zero_ = net.GetParameter(name_ + "/zero");
 
-  gstep_ = step_->Gradient();
-  if (gstep_ != nullptr) {
-    gstep_primal_ = step_->Primal();
-    gstep_dscore_ = step_score_->Gradient();
-    gstep_beta_in_ = step_alpha_out_->Gradient();
-    gstep_beta_out_ = step_alpha_in_->Gradient();
-    gstep_dinput_ = step_input_->Gradient();
+  backward_ = net.GetCell(name_ + "/backward");
+  if (backward_ != nullptr) {
+    backward_primal_ = net.GetParameter(name_ + "/backward/primal");
+    backward_logz_ = net.GetParameter(name_ + "/backward/logz");
+    backward_beta_in_ = net.GetParameter(name_ + "/backward/beta_in");
+    backward_beta_out_ = net.GetParameter(name_ + "/backward/beta_out");
+
+    backward_p_ = net.GetParameter(name_ + "/backward/p");
 
     likelihood_ = net.GetCell(name_ + "/likelihood");
     likelihood_alpha_ = net.GetParameter(name_ + "/likelihood/alpha");
     likelihood_score_ = net.GetParameter(name_ + "/likelihood/score");
-    likelihood_p_ = net.GetParameter(name_ + "/likelihood/p");
-
-    glikelihood_ = likelihood_->Gradient();
-    glikelihood_primal_ = likelihood_->Primal();
-    glikelihood_dscore_ = likelihood_score_->Gradient();
-    glikelihood_beta_ = likelihood_alpha_->Gradient();
-
-    loss_.Initialize(net);
+    likelihood_logz_ = net.GetParameter(name_ + "/likelihood/logz");
+    likelihood_nll_ = net.GetParameter(name_ + "/likelihood/nll");
   }
 
   // Get label indices for BOS and EOS.
-  num_labels_ = step_input_->elements();
-  bos_ = num_labels_;
-  eos_ = num_labels_ + 1;
+  num_labels_ = forward_input_->elements() + 2;
+  bos_ = num_labels_ - 2;
+  eos_ = num_labels_ - 1;
 }
 
 float CRF::Learner::Learn(Channel *input,
@@ -143,78 +158,101 @@ float CRF::Learner::Learn(Channel *input,
   beta_.resize(length + 2);
 
   // Set up initial alpha where only BOS is allowed.
+  alpha_.zero(0);
   float *alpha0 = alpha_.get<float>(0);
-  for (int i = 0; i < length + 2; ++i) {
-    alpha0[i] = i == crf_->bos_ ? 0 : CRF::IMPOSSIBLE;
+  alpha0[crf_->bos_] = 1.0;
+
+#if 0
+  for (int i = 0; i < crf_->num_labels_; ++i) {
+    //alpha0[i] = i == crf_->bos_ ? 0.0 : CRF::IMPOSSIBLE;
+    alpha0[i] = i == crf_->bos_ ? 1.0 : 0.0;
   }
+#endif
 
   // Run forward pass.
   float score = 0.0;
   forward_.Resize(length + 1);
   int prev = crf_->bos_;
-  for (int i = 0; i < length; ++i) {
-    Instance &data = forward_[i];
-    int curr = labels[i];
-    data.Set(crf_->step_input_, input, i);
-    *data.Get<int>(crf_->step_prev_) = prev;
-    *data.Get<int>(crf_->step_curr_) = curr;
-    data.Set(crf_->step_alpha_in_, &alpha_, i);
-    data.Set(crf_->step_alpha_out_, &alpha_, i + 1);
+  for (int t = 0; t < length; ++t) {
+    Instance &data = forward_[t];
+    int curr = labels[t];
+    data.Set(crf_->forward_input_, input, t);
+    *data.Get<int>(crf_->forward_prev_) = prev;
+    *data.Get<int>(crf_->forward_curr_) = curr;
+    data.Set(crf_->forward_alpha_in_, &alpha_, t);
+    data.Set(crf_->forward_alpha_out_, &alpha_, t + 1);
     data.Compute();
-    //LOG(INFO) << "crf fwd" << i << ":\n" << data.ToString();
-
-    score += *data.Get<float>(crf_->step_score_);
+    score += *data.Get<float>(crf_->forward_score_);
     prev = curr;
+
+    //LOG(INFO) << "crf fwd " << t << ":\n" << data.ToString();
+    LOG(INFO) << "crf fwd" << t << " score=" << (*data.Get<float>(crf_->forward_score_)); // << ":\n" << data.ToString();
+    //LOG(INFO) << "crf fwd input " << t << ":\n" << data.ToString(crf_->forward_input_);
   }
 
   // Run last forward step for EOS.
   Instance &data = forward_[length];
-  data.SetReference(crf_->step_input_, crf_->zero_->data());
-  *data.Get<int>(crf_->step_prev_) = prev;
-  *data.Get<int>(crf_->step_curr_) = crf_->eos_;
-  data.Set(crf_->step_alpha_in_, &alpha_, length);
-  data.Set(crf_->step_alpha_out_, &alpha_, length + 1);
+  data.SetReference(crf_->forward_input_, crf_->zero_->data());
+  *data.Get<int>(crf_->forward_prev_) = prev;
+  *data.Get<int>(crf_->forward_curr_) = crf_->eos_;
+  data.Set(crf_->forward_alpha_in_, &alpha_, length);
+  data.Set(crf_->forward_alpha_out_, &alpha_, length + 1);
   data.Compute();
-  //LOG(INFO) << "crf fwd last:\n" << data.ToString();
-  score += *data.Get<float>(crf_->step_score_);
+  score += *data.Get<float>(crf_->forward_score_);
 
-  // Compute likelihood.
+  //LOG(INFO) << "crf fwd last:\n" << data.ToString();
+
+  // Compute partition function and loss (negative log-likelihood).
   likelihood_.Set(crf_->likelihood_alpha_, &alpha_, length + 1);
   *likelihood_.Get<float>(crf_->likelihood_score_) = score;
   likelihood_.Compute();
-  float p = *likelihood_.Get<float>(crf_->likelihood_p_);
+  float logz = *likelihood_.Get<float>(crf_->likelihood_logz_);
+  float nll = *likelihood_.Get<float>(crf_->likelihood_nll_);
 
-  // Compute loss.
-  float dp;
-  float loss = crf_->loss_.Compute(p, &dp);
-  LOG(INFO) << "score=" << score << " p=" << p << " dp=" << dp << " loss=" << loss;
+  LOG(INFO) << "score=" << score << " nll=" << nll << " p=" << exp(-nll) << " logz=" << logz;
 
-  // Compute likelihood gradient.
-  glikelihood_.Set(crf_->glikelihood_primal_, &likelihood_);
-  *glikelihood_.Get<float>(crf_->glikelihood_dscore_) = dp;
-  glikelihood_.Set(crf_->glikelihood_beta_, &beta_, length + 1);
-  glikelihood_.Compute();
-
-  // Run first gradient step for EOS.
-  backward_.Set(crf_->gstep_primal_, &forward_[length]);
-  *backward_.Get<float>(crf_->gstep_dscore_) = dp;
-  backward_.Set(crf_->gstep_beta_in_, &beta_, length + 1);
-  backward_.Set(crf_->gstep_beta_out_, &beta_, length);
-  backward_.Set(crf_->gstep_dinput_, dinput, 0);
+  // Run first backward step for EOS.
+  beta_.zero(length + 1);
+  backward_.Set(crf_->backward_primal_, &forward_[length]);
+  *backward_.Get<float>(crf_->backward_logz_) = logz;
+  backward_.Set(crf_->backward_beta_in_, &beta_, length + 1);
+  backward_.Set(crf_->backward_beta_out_, &beta_, length);
   backward_.Compute();
 
   // Run backward pass.
-  for (int i = length - 1; i >= 0; --i) {
-    backward_.Set(crf_->gstep_primal_, &forward_[i]);
-    *backward_.Get<float>(crf_->gstep_dscore_) = dp;
-    backward_.Set(crf_->gstep_beta_in_, &beta_, i + 1);
-    backward_.Set(crf_->gstep_beta_out_, &beta_, i);
-    backward_.Set(crf_->gstep_dinput_, dinput, i);
+  for (int t = length - 1; t >= 0; --t) {
+    backward_.Set(crf_->backward_primal_, &forward_[t]);
+    *backward_.Get<float>(crf_->backward_logz_) = logz;
+    backward_.Set(crf_->backward_beta_in_, &beta_, t + 1);
+    backward_.Set(crf_->backward_beta_out_, &beta_, t);
     backward_.Compute();
+
+    //LOG(INFO) << "crf bkw " << t << ":\n" << beta_.ToString(i);
+    LOG(INFO) << "crf p bkw " << t << ":\n" << backward_.ToString(crf_->backward_p_);
+
+    auto p = backward_[crf_->backward_p_];
+    for (int i = 0; i < crf_->num_labels_; ++i) {
+      float sum = 0.0;
+      for (int j = 0; j < crf_->num_labels_; ++j) {
+        sum += p.at<float>(j, i);
+      }
+      LOG(INFO) << "sum(" << i << ")=" << sum;
+    }
+
+    dinput->zero(t);
   }
 
+  //auto *d_transition = crf_->backward_->GetParameter("crf/backward/d_transitions");
+  //LOG(INFO) << "crf d_transition:\n" << backward_.ToString(d_transition);
+
+  //auto *transitions = crf_->backward_->GetParameter("crf/forward/transitions");
+  //LOG(INFO) << "crf transitions:\n" << transitions->ToString();
+
+  LOG(INFO) << "alpha:\n" << alpha_.ToString();
+  LOG(INFO) << "beta:\n" << beta_.ToString();
+
   // Return loss.
-  return loss;
+  return nll;
 }
 
 void CRF::Learner::CollectGradients(Instances *gradients) {

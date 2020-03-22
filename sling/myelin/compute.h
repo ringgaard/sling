@@ -833,83 +833,6 @@ class Step : public Attributes {
   friend class Network;
 };
 
-// A channel is an array of tensors used for connecting cells in a network.
-class Channel {
- public:
-  // Initialize empty channel.
-  Channel(const Tensor *format);
-
-  // Delete channel.
-  ~Channel();
-
-  // Remove all elements from channel.
-  void clear() { resize(0); }
-
-  // Change size of channel.
-  void resize(size_t n);
-
-  // Change size of channel and clear all elements.
-  void reset(size_t n);
-
-  // Reserve space for channel elements.
-  void reserve(size_t n);
-
-  // Zero-fill element in channel.
-  void zero(size_t n);
-
-  // Return pointer to channel element.
-  char *at(size_t index) const {
-    return data_ + (index * element_size_);
-  }
-
-  // Return typed pointer to channel element.
-  template<typename T> T *get(size_t index) const {
-    return reinterpret_cast<T *>(at(index));
-  }
-
-  // Add element to channel and return the last element.
-  char *push() { resize(size_ + 1); return at(size_ - 1); }
-
-  // Remove the last element from the channel.
-  void pop() { resize(size_ - 1); }
-
-  // Return the number of elements in the channel.
-  size_t size() const { return size_; }
-
-  // Return placement of channel.
-  Placement placement() const {
-    return format_->ref() ? format_->ref_placement() : format_->placement();
-  }
-
-  // Return runtime for channel.
-  inline Runtime *runtime() const;
-
-  // Return tensor format for channel elements.
-  const Tensor *format() const { return format_; }
-
-  // Return contents of channel as string.
-  string ToString() const;
-
- private:
-  // Data for the channel.
-  char *data_ = nullptr;
-
-  // Number of elements in channel.
-  size_t size_ = 0;
-
-  // Number of allocated elements.
-  size_t capacity_ = 0;
-
-  // A tensor describing the element type of the channel.
-  const Tensor *format_;
-
-  // Element size.
-  int element_size_;
-
-  // Byte alignment.
-  int alignment_ = kMinDataAlignment;
-};
-
 // A tensor data object is a reference to a tensor value. It does not own the
 // underlying storage for the tensor.
 class TensorData {
@@ -991,6 +914,94 @@ class TensorData {
  private:
   char *data_;            // data for tensor
   const Tensor *format_;  // tensor format
+};
+
+// A channel is an array of tensors used for connecting cells in a network.
+class Channel {
+ public:
+  // Initialize empty channel.
+  Channel(const Tensor *format);
+  Channel(const Flow::Variable *format) : Channel(format->tensor) {}
+
+  // Delete channel.
+  ~Channel();
+
+  // Remove all elements from channel.
+  void clear() { resize(0); }
+
+  // Change size of channel.
+  void resize(size_t n);
+
+  // Change size of channel and clear all elements.
+  void reset(size_t n);
+
+  // Reserve space for channel elements.
+  void reserve(size_t n);
+
+  // Zero-fill element in channel.
+  void zero(size_t n);
+
+  // Return pointer to channel element.
+  char *at(size_t index) const {
+    return data_ + (index * element_size_);
+  }
+
+  // Return typed pointer to channel element.
+  template<typename T> T *get(size_t index) const {
+    return reinterpret_cast<T *>(at(index));
+  }
+
+  // Add element to channel and return the last element.
+  char *push() { resize(size_ + 1); return at(size_ - 1); }
+
+  // Remove the last element from the channel.
+  void pop() { resize(size_ - 1); }
+
+  // Return the number of elements in the channel.
+  size_t size() const { return size_; }
+
+  // Return placement of channel.
+  Placement placement() const {
+    return format_->ref() ? format_->ref_placement() : format_->placement();
+  }
+
+  // Return runtime for channel.
+  inline Runtime *runtime() const;
+
+  // Return tensor format for channel elements.
+  const Tensor *format() const { return format_; }
+
+  // Return tensor data object for parameter in instance.
+  TensorData operator[](int index) {
+    return TensorData(at(index), format_);
+  }
+
+  // Return contents of channel as string.
+  string ToString() const;
+
+  // Return element of channel as string.
+  string ToString(size_t index) const {
+    return format_->ToString(at(index), false);
+  }
+
+ private:
+  // Data for the channel.
+  char *data_ = nullptr;
+
+  // Number of elements in channel.
+  size_t size_ = 0;
+
+  // Number of allocated elements.
+  size_t capacity_ = 0;
+
+  // A tensor describing the element type of the channel.
+  const Tensor *format_;
+
+  // Element size.
+  int element_size_;
+
+  // Byte alignment.
+  int alignment_ = kMinDataAlignment;
 };
 
 // A profile summary stores the profiling data for a cell and can be used for

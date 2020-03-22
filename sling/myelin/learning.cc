@@ -82,7 +82,7 @@ void NLLLoss::Build(Flow *flow) {
   FlowBuilder tf(flow, name_);
 
   // Inputs are logits and target label.
-  auto *p = tf.Placeholder("likelihood", DT_FLOAT, {});
+  auto *p = tf.Placeholder("likelihood", DT_FLOAT, {}, true);
 
   // Compute loss (negative log-likelihood).
   auto *loss = tf.Name(tf.Neg(tf.Log(p)), "loss");
@@ -90,7 +90,7 @@ void NLLLoss::Build(Flow *flow) {
 
   // Compute gradient.
   auto *gradient = tf.Name(tf.Neg(tf.Reciprocal(p)), "d_likelihood");
-  gradient->set_out();
+  gradient->set_out()->set_ref();
 
   // Loss is only needed at training-time.
   tf.func()->set_training();
@@ -106,11 +106,11 @@ void NLLLoss::Initialize(const Network &network) {
   dlikelihood_ = network.GetParameter(name_ + "/d_likelihood");
 }
 
-float NLLLoss::Compute(float likelihood, float *dlikelihood) const {
+float NLLLoss::Compute(float *likelihood, float *dlikelihood) const {
   Instance data(cell_);
-  *data.Get<float>(likelihood_) = likelihood;
+  data.SetReference(likelihood_, likelihood);
+  data.SetReference(dlikelihood_, dlikelihood);
   data.Compute();
-  *dlikelihood = *data.Get<float>(dlikelihood_);
   return *data.Get<float>(loss_);
 }
 

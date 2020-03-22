@@ -81,11 +81,11 @@ class FileWriter:
       self.write_long(len(a))
       self.f.write(a)
     elif isinstance(a, float):
-      data = pack('f', a);
+      data = pack('f', a)
       self.write_long(len(data))
       self.f.write(data)
     elif isinstance(a, int):
-      data = pack('i', a);
+      data = pack('i', a)
       self.write_long(len(data))
       self.f.write(data)
     elif isinstance(a, array.array):
@@ -549,7 +549,7 @@ class Flow:
       op = ready.pop()
 
       # Add it to the ordered set of ops.
-      ordered_ops.append(op);
+      ordered_ops.append(op)
 
       # Propagate readiness to consumers.
       for v in op.outputs:

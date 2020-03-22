@@ -109,20 +109,26 @@ Flow::Variable *FlowBuilder::Op(const string &op,
   // Use first argument for return type.
   Type type = args.empty() ? DT_INVALID : args[0]->type;
 
-  // Determine output rank.
+  // Determine output shape.
   Shape shape;
-  int rank = 0;
-  for (Flow::Variable *arg : args) {
-    if (arg->rank() > rank) rank = arg->rank();
-  }
-  shape.fill(rank, 1);
+  if (args.size() == 1) {
+    // Output shape is input shape for single-argument ops.
+    shape = args[0]->shape;
+  } else {
+    // Determine output rank.
+    int rank = 0;
+    for (Flow::Variable *arg : args) {
+      if (arg->rank() > rank) rank = arg->rank();
+    }
+    shape.fill(rank, 1);
 
-  // Determine output shape based on broadcast semantics.
-  for (Flow::Variable *arg : args) {
-    int depth = rank - arg->rank();
-    for (int d = 0; d < arg->rank(); ++d) {
-      if (shape.dim(d + depth) < arg->dim(d)) {
-        shape.set(d + depth, arg->dim(d));
+    // Determine output shape based on broadcast semantics.
+    for (Flow::Variable *arg : args) {
+      int depth = rank - arg->rank();
+      for (int d = 0; d < arg->rank(); ++d) {
+        if (shape.dim(d + depth) < arg->dim(d)) {
+          shape.set(d + depth, arg->dim(d));
+        }
       }
     }
   }

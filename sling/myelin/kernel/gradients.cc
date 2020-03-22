@@ -445,7 +445,8 @@ void softmax_grad(Flow::Operation *op, Gradients *g) {
 void logsumexp_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->Mul(g->SoftMax(g->v(x)), g->d(y)));
+  int axis = op->GetAttr("axis", -1);
+  g->add(x, g->Mul(g->SoftMax(g->v(x), axis), g->d(y)));
 }
 
 // y = erf(x)

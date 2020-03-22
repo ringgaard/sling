@@ -32,7 +32,15 @@ vocabulary = wf.resource(
   format="textmap/word"
 )
 
-parser_model = wf.resource("local/data/e/knolex/bio-en.flow", format="flow")
+initial_model = wf.resource(
+  "local/data/e/knolex/bio-en-baseline.flow",
+  format="flow"
+)
+
+parser_model = wf.resource(
+  "local/data/e/knolex/bio-en.flow",
+  format="flow"
+)
 
 # Parser trainer task.
 trainer = wf.task("parser-trainer")
@@ -72,6 +80,7 @@ trainer.attach_input("commons", kb)
 trainer.attach_input("training_corpus", training_corpus)
 trainer.attach_input("evaluation_corpus", evaluation_corpus)
 trainer.attach_input("vocabulary", vocabulary)
+trainer.attach_input("initial_model", initial_model)
 trainer.attach_output("model", parser_model)
 
 # Run parser trainer.

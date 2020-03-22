@@ -2214,7 +2214,9 @@ Flow::Variable *Flow::Var(const string &name) {
 }
 
 Flow::Variable *Flow::GradientVar(Variable *var) {
-  return Var(GradientVarName(var->name));
+  string name = var->GetAttr("gradient");
+  if (name.empty()) name = GradientVarName(var->name);
+  return Var(name);
 }
 
 Flow::Function *Flow::GradientFunc(Function *func) {

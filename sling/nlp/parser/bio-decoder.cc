@@ -198,13 +198,13 @@ class BIODecoder : public ParserDecoder {
     }
   }
 
-  // Decoder predictor.
-  class Predictor : public ParserDecoder::Predictor {
+  // BIO decoder predictor.
+  class BIOPredictor : public ParserDecoder::Predictor {
    public:
-    Predictor(const BIODecoder *decoder)
+    BIOPredictor(const BIODecoder *decoder)
         : decoder_(decoder),
           forward_(decoder->cell_) {}
-    ~Predictor() override {}
+    ~BIOPredictor() override {}
 
     void Switch(Document *document) override {
       document_ = document;
@@ -270,7 +270,34 @@ class BIODecoder : public ParserDecoder {
     myelin::Instance forward_;
   };
 
-  Predictor *CreatePredictor() override { return new Predictor(this); }
+  // CRF decoder predictor.
+  class CRFPredictor : public ParserDecoder::Predictor {
+   public:
+    CRFPredictor(const BIODecoder *decoder)
+        : decoder_(decoder),
+          forward_(decoder->cell_) {}
+    ~CRFPredictor() override {}
+
+    void Switch(Document *document) override {
+      document_ = document;
+    }
+
+    void Decode(int begin, int end, Channel *encodings) override {
+    }
+
+  private:
+    const BIODecoder *decoder_;
+    Document *document_;
+    myelin::Instance forward_;
+  };
+
+  Predictor *CreatePredictor() override {
+    if (use_crf_) {
+      return new CRFPredictor(this);
+    } else {
+      return new BIOPredictor(this);
+    }
+  }
 
   // BIO decoder learner.
   class BIOLearner : public ParserDecoder::Learner {

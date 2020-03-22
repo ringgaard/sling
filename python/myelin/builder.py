@@ -118,7 +118,7 @@ class Builder:
 
   def var(self, name, dtype=DT_FLOAT, shape=[]):
     n = self.func.name + "/" + name
-    if n in self.flow.vars: raise IndexError("variable already defined: " + n);
+    if n in self.flow.vars: raise IndexError("variable already defined: " + n)
     v = self.flow.var(n)
     v.type = dtype
     v.shape = shape
@@ -126,7 +126,7 @@ class Builder:
 
   def rename(self, var, new_suffix):
     n = self.func.name + "/" + new_suffix
-    if n in self.flow.vars: raise IndexError("variable already defined: " + n);
+    if n in self.flow.vars: raise IndexError("variable already defined: " + n)
     var.name = n
     return var
 
@@ -144,11 +144,20 @@ class Builder:
     op = self.flow.op(name)
     op.type = optype
     self.func.add(op)
-    shape = []
+    for i in range(len(args)):
+      if not isinstance(args[i], Variable): args[i] = self.const(args[i])
+      op.add_input(args[i])
+
+    rank = 0
     for a in args:
-      if not isinstance(a, Variable): a = self.const(a)
-      op.add_input(a)
-      if len(a.shape) > len(shape): shape = a.shape
+      if a.rank() > rank: rank = a.rank()
+    shape = [1] * rank
+    for a in args:
+      depth = rank - a.rank()
+      for d in range(a.rank()):
+        if shape[d + depth] < a.shape[d]:
+          shape[d + depth] = a.shape[d]
+
     dtype = op.inputs[0].type if len(op.inputs) > 0 else DT_FLOAT
     result = self.flow.var(name + ":0", dtype, shape)
     op.add_output(result)

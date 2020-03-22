@@ -917,7 +917,7 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   Tensor *out = outputs_[output];
 
   // Check if input can be shared.
-  if (!cell()->network()->options().shared_tensors) return false;
+  if (!preserved && !cell()->network()->options().shared_tensors) return false;
   Tensor *t = in;
   while (t != nullptr) {
     if (!preserved) {
@@ -1275,15 +1275,18 @@ char *Network::AllocateMemory(size_t size, int alignment) {
 static bool CompareUsage(const std::pair<int, Tensor *> &a,
                          const std::pair<int, Tensor *> &b) {
   if (a.first == b.first) {
-    // Inputs are sorted before outputs.
     Tensor *va = a.second;
     Tensor *vb = b.second;
+
+    // Producers are sorted before consumers.
     for (auto *op : va->consumers()) {
       if (op == vb->producer()) return true;
     }
     for (auto *op : vb->consumers()) {
       if (op == va->producer()) return false;
     }
+
+    // Inputs are sorted before outputs.
     if (va->in() && !vb->in()) return true;
     if (vb->in() && !va->in()) return false;
   }
@@ -1734,8 +1737,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (var->first_ != -1) enter.emplace_back(var->first_, var);
     if (var->last_ != -1) leave.emplace_back(var->last_, var);
   }
-  std::sort(enter.begin(), enter.end(), CompareUsage);
-  std::sort(leave.begin(), leave.end(), CompareUsage);
+  std::stable_sort(enter.begin(), enter.end(), CompareUsage);
+  std::stable_sort(leave.begin(), leave.end(), CompareUsage);
 
   // Compute cell instance size and offset of each parameter.
   for (Cell *cell : cells_) {

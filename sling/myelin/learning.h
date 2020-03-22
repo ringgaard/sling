@@ -65,7 +65,7 @@ class NLLLoss {
   void Initialize(const Network &network);
 
   // Compute loss from likelihood and output loss and gradient.
-  float Compute(float likelihood, float *dlikelihood) const;
+  float Compute(float *likelihood, float *dlikelihood) const;
 
  private:
   // Name of loss function.

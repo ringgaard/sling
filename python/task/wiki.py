@@ -528,7 +528,7 @@ class WikiWorkflow:
       else:
         items.append(extras)
 
-    if output == None: output = self.fused_items();
+    if output == None: output = self.fused_items()
 
     with self.wf.namespace("fused-items"):
       return self.wf.mapreduce(input=items,

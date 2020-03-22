@@ -17,7 +17,6 @@
 
 #include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
-#include "sling/myelin/learning.h"
 
 namespace sling {
 namespace myelin {
@@ -26,7 +25,7 @@ namespace myelin {
 class CRF {
  public:
   // Score for impossible label.
-  static constexpr float IMPOSSIBLE = 1e-2;
+  static constexpr float IMPOSSIBLE = -1e3; //-1.0; //-1e3;
 
   // Flow input/output variables.
   struct Variables {
@@ -42,7 +41,7 @@ class CRF {
     Flow::Variable *beta_out;      // alpha output gradient
   };
 
-  CRF(const string &name = "crf") : name_(name), loss_(name + "/loss") {}
+  CRF(const string &name = "crf") : name_(name) {}
 
   // Build flow for CRF.
   Variables Build(Flow *flow,
@@ -69,12 +68,11 @@ class CRF {
    public:
     Learner(const CRF *crf)
         : crf_(crf),
-          forward_(crf->step_),
-          backward_(crf->gstep_),
+          forward_(crf->forward_),
+          backward_(crf->backward_),
           likelihood_(crf->likelihood_),
-          glikelihood_(crf->glikelihood_),
-          alpha_(crf->likelihood_alpha_),
-          beta_(crf->glikelihood_beta_) {}
+          alpha_(crf->forward_alpha_in_),
+          beta_(crf->backward_beta_in_) {}
 
     // Learn label sequence for input. Returns loss and input gradient.
     float Learn(Channel *input,
@@ -90,7 +88,6 @@ class CRF {
     InstanceArray forward_;
     Instance backward_;
     Instance likelihood_;
-    Instance glikelihood_;
     Channel alpha_;
     Channel beta_;
   };
@@ -106,38 +103,32 @@ class CRF {
   int bos_;
   int eos_;
 
-  // CRF step cell.
-  Cell *step_ = nullptr;
-  Tensor *step_input_ = nullptr;
-  Tensor *step_prev_ = nullptr;
-  Tensor *step_curr_ = nullptr;
-  Tensor *step_alpha_in_ = nullptr;
-  Tensor *step_alpha_out_ = nullptr;
-  Tensor *step_score_ = nullptr;
+  // CRF forward cell.
+  Cell *forward_ = nullptr;
+  Tensor *forward_input_ = nullptr;
+  Tensor *forward_prev_ = nullptr;
+  Tensor *forward_curr_ = nullptr;
+  Tensor *forward_alpha_in_ = nullptr;
+  Tensor *forward_alpha_out_ = nullptr;
+  Tensor *forward_score_ = nullptr;
   Tensor *zero_ = nullptr;
 
-  // CRF step gradient cell.
-  Cell *gstep_ = nullptr;
-  Tensor *gstep_primal_ = nullptr;
-  Tensor *gstep_dscore_ = nullptr;
-  Tensor *gstep_beta_in_ = nullptr;
-  Tensor *gstep_beta_out_ = nullptr;
-  Tensor *gstep_dinput_ = nullptr;
+  // CRF backward cell.
+  Cell *backward_ = nullptr;
+  Tensor *backward_primal_ = nullptr;
+  Tensor *backward_logz_ = nullptr;
+  Tensor *backward_beta_in_ = nullptr;
+  Tensor *backward_beta_out_ = nullptr;
+  //Tensor *backward_dinput_ = nullptr;
+  Tensor *backward_p_ = nullptr;
+  Tensor *backward_prev_curr_ = nullptr;
 
   // CRF likelihood cell.
   Cell *likelihood_ = nullptr;
   Tensor *likelihood_alpha_ = nullptr;
   Tensor *likelihood_score_ = nullptr;
-  Tensor *likelihood_p_ = nullptr;
-
-  // CRF likelihood gradient cell.
-  Cell *glikelihood_ = nullptr;
-  Tensor *glikelihood_primal_ = nullptr;
-  Tensor *glikelihood_dscore_ = nullptr;
-  Tensor *glikelihood_beta_ = nullptr;
-
-  // CRF loss function.
-  NLLLoss loss_;
+  Tensor *likelihood_logz_ = nullptr;
+  Tensor *likelihood_nll_ = nullptr;
 };
 
 }  // namespace myelin

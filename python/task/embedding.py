@@ -187,7 +187,7 @@ class EmbeddingWorkflow:
     """Train fact plausibility model."""
     facts = self.facts()
     factmap = self.fact_lexicon()
-    model = self.fact_plausibility_model();
+    model = self.fact_plausibility_model()
     with self.wf.namespace("fact-plausibility"):
       trainer = self.wf.task("fact-plausibility-trainer")
       trainer.add_params({

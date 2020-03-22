@@ -156,3 +156,15 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "crf-test",
+  srcs = ["crf-test.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/myelin:compiler",
+    "//sling/myelin:crf",
+    "//sling/myelin:flow",
+    "//sling/myelin:builder",
+  ],
+)
+

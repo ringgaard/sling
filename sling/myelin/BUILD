@@ -137,8 +137,6 @@ cc_library(
     ":builder",
     ":compute",
     ":flow",
-    ":gradient",
-    ":learning",
   ],
 )
 
