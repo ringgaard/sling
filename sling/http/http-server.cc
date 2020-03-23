@@ -1049,20 +1049,6 @@ void HTTPResponse::SetContentType(const char *type) {
   Set("Content-Type", type);
 }
 
-#if 0
-int HTTPResponse::ContentLength() const {
-  const char *result = Get("Content-Length");
-  if (result == nullptr) return -1;
-  return atoi(result);
-}
-
-void HTTPResponse::SetContentLength(int length) {
-  char number[kFastToBufferSize];
-  FastInt32ToBufferLeft(length, number);
-  Set("Content-Length", number);
-}
-#endif
-
 const char *HTTPResponse::Get(const char *name, const char *defval) const {
   for (const HTTPHeader &h : headers_) {
     if (strcasecmp(name, h.name) == 0) return h.value;

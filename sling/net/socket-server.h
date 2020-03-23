@@ -87,6 +87,9 @@ class SocketServer {
   // Configuration options.
   const SocketServerOptions &options() const { return options_; }
 
+  // Output connection information as HTML.
+  void OutputConnectionZ(Buffer *out) const;
+
  private:
   // Endpoint for listening for new connections for protocol.
   struct Endpoint {
@@ -160,11 +163,19 @@ class SocketConnection {
   // the Process() method completes.
   void Upgrade(SocketSession *session);
 
+  // Set file for streaming response. This will take ownership of the file.
+  void SendFile(File *file) { file_ = file; }
+
   // Server for connection.
   SocketServer *server() const { return server_; }
 
-  // Set file for streaming response. This will take ownership of the file.
-  void SendFile(File *file) { file_ = file; }
+  // I/O buffers.
+  Buffer *request() { return &request_; }
+  Buffer *response_header() { return &response_header_; }
+  Buffer *response_body() { return &response_body_; }
+
+  // Return connection session.
+  SocketSession *session() { return session_; }
 
   // Return connection state name.
   const char *State() const;
@@ -223,9 +234,6 @@ class SocketProtocol {
  public:
   virtual ~SocketProtocol() = default;
 
-  // Return protocol name.
-  virtual const char *Name() = 0;
-
   // Create new session for protocol.
   virtual SocketSession *NewSession(SocketConnection *conn) = 0;
 };
@@ -242,6 +250,9 @@ class SocketSession {
   };
 
   virtual ~SocketSession() = default;
+
+  // Return protocol name.
+  virtual const char *ProtocolName() = 0;
 
   // Process the request in the request buffer and return the response header
   // and body. Return false to terminate the session.

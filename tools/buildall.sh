@@ -11,6 +11,7 @@ bazel build -c opt $* \
   sling/myelin/generator:* \
   sling/myelin/tests:* \
   sling/myelin/cuda:* \
+  sling/net:* \
   sling/nlp/document:* \
   sling/nlp/embedding:* \
   sling/nlp/kb:* \

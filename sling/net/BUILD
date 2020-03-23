@@ -12,3 +12,16 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "http-protocol",
+  srcs = ["http-protocol.cc"],
+  hdrs = ["http-protocol.h"],
+  deps = [
+    ":socket-server",
+    "//sling/base",
+    "//sling/http:http-utils",
+    "//sling/string:numbers",
+    "//sling/util:mutex",
+  ],
+)
+

@@ -22,6 +22,7 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <string>
 
 #include "sling/base/logging.h"
 
@@ -270,6 +271,78 @@ void SocketServer::ShutdownIdleConnections() {
   }
 }
 
+void SocketServer::OutputConnectionZ(Buffer *out) const {
+  MutexLock lock(&mu_);
+
+  out->Write("<html><head><title>connz</title></head><body>\n");
+  out->Write("<table border=\"1\"><tr>\n");
+  out->Write("<td>Socket</td>");
+  out->Write("<td>Protocol</td>");
+  out->Write("<td>Client address</td>");
+  out->Write("<td>Socket status</td>");
+  out->Write("<td>State</td>");
+  out->Write("<td>Idle</td>");
+  out->Write("</tr>\n");
+
+  SocketConnection *conn = connections_;
+  time_t now = time(0);
+  while (conn != nullptr) {
+    out->Write("<tr>");
+
+    // Socket.
+    out->Write("<td>" + std::to_string(conn->sock_) + "</td>");
+
+    // Protocol.
+    out->Write("<td>");
+    out->Write(conn->session()->ProtocolName());
+    out->Write("</td>");
+
+    // Client address.
+    struct sockaddr_in peer;
+    socklen_t plen = sizeof(peer);
+    struct sockaddr *saddr = reinterpret_cast<sockaddr *>(&peer);
+    if (getpeername(conn->sock_, saddr, &plen) == -1) {
+      out->Write("<td>?</td>");
+    } else {
+      out->Write("<td>");
+      out->Write(inet_ntoa(peer.sin_addr));
+      out->Write(":");
+      out->Write(std::to_string(ntohs(peer.sin_port)));
+      out->Write("</td>");
+    }
+
+    // Socket state.
+    int err = 0;
+    socklen_t errlen = sizeof(err);
+    int rc  = getsockopt(conn->sock_, SOL_SOCKET, SO_ERROR, &err, &errlen);
+    const char *error = "OK";
+    if (rc != 0) {
+      error = strerror(rc);
+    } else if (err != 0) {
+      error = strerror(err);
+    }
+    out->Write("<td>");
+    out->Write(error);
+    out->Write("</td>");
+
+    // Connection state.
+    out->Write("<td>");
+    out->Write(conn->State());
+    out->Write("</td>");
+
+    // Idle time.
+    out->Write("<td>" + std::to_string(now - conn->last_) + "</td>");
+
+    out->Write("</tr>\n");
+    conn = conn->next_;
+  }
+  out->Write("</table>\n");
+  out->Write("<p>" + std::to_string(workers_.size()) + " worker threads, " +
+              std::to_string(active_) + " active, " +
+              std::to_string(idle_) + " idle</p>\n");
+  out->Write("</body></html>\n");
+}
+
 SocketConnection::SocketConnection(SocketServer *server, int sock,
                                    SocketProtocol *protocol)
     : server_(server), sock_(sock) {
@@ -294,22 +367,22 @@ SocketConnection::~SocketConnection() {
 
 Status SocketConnection::Process() {
   MutexLock lock(&mu_);
-  bool done;
   SocketSession *session = session_;
   switch (state_) {
     case SOCKET_STATE_IDLE:
       // Allocate request buffer.
-      if (request_.empty()) {
+      if (request_.capacity() == 0) {
         request_.Reset(server_->options().initial_bufsiz);
       }
 
       // Prepare for receiving request.
       state_ = SOCKET_STATE_RECEIVE;
-      // Fall through
+      FALLTHROUGH_INTENDED;
 
-    case SOCKET_STATE_RECEIVE:
+    case SOCKET_STATE_RECEIVE: {
       // Keep reading until input is exhausted.
-      done = false;
+      bool done = false;
+      size_t before = request_.available();
       while (!done) {
         // Expand request buffer to ensure we have room to read data.
         request_.Ensure(1);
@@ -320,8 +393,13 @@ Status SocketConnection::Process() {
         if (state_ == SOCKET_STATE_TERMINATE) return Status::OK;
       }
 
+      // Check if any input was received.
+      size_t after = request_.available();
+      if (after == before) return Status::OK;
+
       state_ = SOCKET_STATE_PROCESS;
-      // Fall through
+      FALLTHROUGH_INTENDED;
+    }
 
     case SOCKET_STATE_PROCESS:
       // Process received data.
@@ -346,11 +424,12 @@ Status SocketConnection::Process() {
       }
 
       state_ = SOCKET_STATE_SEND;
-      // Fall through
+      FALLTHROUGH_INTENDED;
 
-    case SOCKET_STATE_SEND:
+    case SOCKET_STATE_SEND: {
       // Send response header.
       while (response_header_.available() > 0) {
+        bool done;
         Status st = Send(&response_header_, &done);
         if (!st.ok()) return st;
         if (done) return Status::OK;
@@ -358,6 +437,7 @@ Status SocketConnection::Process() {
 
       // Send response body.
       while (response_body_.available() > 0) {
+        bool done;
         Status st = Send(&response_body_, &done);
         if (!st.ok()) return st;
         if (done) return Status::OK;
@@ -391,6 +471,7 @@ Status SocketConnection::Process() {
 
         // Send next file chunk.
         while (response_body_.available() > 0) {
+          bool done;
           Status st = Send(&response_body_, &done);
           if (!st.ok()) return st;
           if (done) return Status::OK;
@@ -410,7 +491,8 @@ Status SocketConnection::Process() {
       }
 
       state_ = SOCKET_STATE_TERMINATE;
-      // Fall through
+      FALLTHROUGH_INTENDED;
+    }
 
     case SOCKET_STATE_TERMINATE:
       return Status::OK;
