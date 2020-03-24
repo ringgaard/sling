@@ -21,24 +21,21 @@
 namespace sling {
 namespace myelin {
 
-// Conditional Random Field (CRF) cell.
+// Conditional Random Field (CRF) module.
 class CRF {
  public:
-  // Score for impossible label.
-  static constexpr float IMPOSSIBLE = -1e3; //-1.0; //-1e3;
-
   // Flow input/output variables.
   struct Variables {
-    Flow::Variable *input;         // input emissions
-    Flow::Variable *dinput;        // emissions gradient
-    Flow::Variable *prev;          // previous tag
-    Flow::Variable *curr;          // current tag
-    Flow::Variable *score;         // score
+    Flow::Variable *input;              // input emissions
+    Flow::Variable *dinput;             // emissions gradient
+    Flow::Variable *prev;               // previous tag
+    Flow::Variable *curr;               // current tag
+    Flow::Variable *score;              // score
 
-    Flow::Variable *alpha_in;      // alpha input
-    Flow::Variable *alpha_out;     // alpha output
-    Flow::Variable *beta_in;       // alpha input gradient
-    Flow::Variable *beta_out;      // alpha output gradient
+    Flow::Variable *alpha_in;           // alpha input
+    Flow::Variable *alpha_out;          // alpha output
+    Flow::Variable *beta_in;            // alpha input gradient
+    Flow::Variable *beta_out;           // alpha output gradient
   };
 
   CRF(const string &name = "crf") : name_(name) {}
@@ -54,13 +51,21 @@ class CRF {
   // CRF sequence predictor.
   class Predictor {
    public:
-    Predictor(const CRF *crf) : crf_(crf) {}
+    Predictor(const CRF *crf)
+        : crf_(crf),
+          viterbi_(crf->viterbi_),
+          alpha_(crf->viterbi_alpha_in_),
+          bp_(crf->viterbi_bp_) {}
 
-    // Predict label sequence for input.
+    // Predict label sequence for input using Viterbi decoding.
     void Predict(Channel *input, std::vector<int> *labels);
 
    private:
     const CRF *crf_;
+
+    Instance viterbi_;
+    Channel alpha_;
+    Channel bp_;
   };
 
   // CRF sequence learner.
@@ -96,12 +101,8 @@ class CRF {
   // CRF cell name.
   string name_;
 
-  // Number of labels (excluding BOS and EOS).
+  // Number of labels.
   int num_labels_ = 0;
-
-  // Indices for begin (BOS) and end (EOS) labels.
-  int bos_;
-  int eos_;
 
   // CRF forward cell.
   Cell *forward_ = nullptr;
@@ -111,7 +112,6 @@ class CRF {
   Tensor *forward_alpha_in_ = nullptr;
   Tensor *forward_alpha_out_ = nullptr;
   Tensor *forward_score_ = nullptr;
-  Tensor *zero_ = nullptr;
 
   // CRF backward cell.
   Cell *backward_ = nullptr;
@@ -119,8 +119,7 @@ class CRF {
   Tensor *backward_logz_ = nullptr;
   Tensor *backward_beta_in_ = nullptr;
   Tensor *backward_beta_out_ = nullptr;
-  //Tensor *backward_dinput_ = nullptr;
-  Tensor *backward_p_ = nullptr;
+  Tensor *backward_dinput_ = nullptr;
   Tensor *backward_prev_curr_ = nullptr;
 
   // CRF likelihood cell.
@@ -129,6 +128,13 @@ class CRF {
   Tensor *likelihood_score_ = nullptr;
   Tensor *likelihood_logz_ = nullptr;
   Tensor *likelihood_nll_ = nullptr;
+
+  // CRF viterbi cell.
+  Cell *viterbi_ = nullptr;
+  Tensor *viterbi_input_ = nullptr;
+  Tensor *viterbi_alpha_in_ = nullptr;
+  Tensor *viterbi_alpha_out_ = nullptr;
+  Tensor *viterbi_bp_ = nullptr;
 };
 
 }  // namespace myelin

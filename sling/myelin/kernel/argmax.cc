@@ -24,12 +24,57 @@ namespace myelin {
 
 using namespace jit;
 
-// Compute argmax (or argmin) of input.
-class GenericFltArgMax : public Kernel {
+// Compute argmax (or argmin) over an axis.
+class GeneralArgMax : public Kernel {
  public:
-  GenericFltArgMax(bool minimum) : minimum_(minimum) {}
+  GeneralArgMax(bool minimum) : minimum_(minimum) {}
 
-  string Name() override { return minimum_ ? "GenFltArgMin" : "GenFltArgMax"; }
+  string Name() override { return "General" + Operation(); }
+  string Operation() override { return minimum_ ? "ArgMin" : "ArgMax"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 1) return false;
+    if (step->outdegree() != 1 && step->outdegree() != 2) return false;
+    Tensor *x = step->input(0);
+    Tensor *argmax = step->output(0);
+    Tensor *max = step->outdegree() ==  2 ? step->output(1) : nullptr;
+
+    // Check type.
+    Type dt = x->type();
+    if (dt != DT_FLOAT && dt != DT_DOUBLE &&
+        dt != DT_INT8 && dt != DT_INT16 &&
+        dt != DT_INT32 && dt != DT_INT64) {
+      return false;
+    }
+    if (argmax->type() != DT_INT32 && argmax->type() != DT_INT64) return false;
+    if (max != nullptr && max->type() != dt) return false;
+
+    // Check shape.
+    int axis = step->GetAttr("axis", -1);
+    if (axis < 0 || axis >= x->rank()) return false;
+    Shape output = x->shape().reduced(axis, false);
+    if (argmax->shape() != output) return false;
+    if (max != nullptr && max->shape() != output) return false;
+
+    return true;
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // TODO: implement
+    __ nop();
+  }
+
+ private:
+  bool minimum_;  // compute argmin instead of argmax
+};
+
+// Compute argmax (or argmin) of input.
+class GenericArgMax : public Kernel {
+ public:
+  GenericArgMax(bool minimum) : minimum_(minimum) {}
+
+  string Name() override { return "Generic" + Operation(); }
   string Operation() override { return minimum_ ? "ArgMin" : "ArgMax"; }
 
   bool Supports(Step *step) override {
@@ -317,8 +362,11 @@ class AVXFltArgMax : public Kernel {
 };
 
 void RegisterArgMax(Library *library) {
-  library->Register(new GenericFltArgMax(false));
-  library->Register(new GenericFltArgMax(true));
+  library->Register(new GeneralArgMax(false));
+  library->Register(new GeneralArgMax(true));
+
+  library->Register(new GenericArgMax(false));
+  library->Register(new GenericArgMax(true));
 
   library->Register(new AVXFltArgMax(false));
   library->Register(new AVXFltArgMax(true));

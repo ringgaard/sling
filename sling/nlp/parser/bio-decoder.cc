@@ -204,7 +204,6 @@ class BIODecoder : public ParserDecoder {
     BIOPredictor(const BIODecoder *decoder)
         : decoder_(decoder),
           forward_(decoder->cell_) {}
-    ~BIOPredictor() override {}
 
     void Switch(Document *document) override {
       document_ = document;
@@ -267,7 +266,7 @@ class BIODecoder : public ParserDecoder {
   private:
     const BIODecoder *decoder_;
     Document *document_;
-    myelin::Instance forward_;
+    Instance forward_;
   };
 
   // CRF decoder predictor.
@@ -275,20 +274,70 @@ class BIODecoder : public ParserDecoder {
    public:
     CRFPredictor(const BIODecoder *decoder)
         : decoder_(decoder),
-          forward_(decoder->cell_) {}
-    ~CRFPredictor() override {}
+          forward_(decoder->cell_),
+          scores_(decoder->scores_),
+          crf_(&decoder->crf_) {}
 
     void Switch(Document *document) override {
       document_ = document;
     }
 
     void Decode(int begin, int end, Channel *encodings) override {
+      // Compute scores from feed-forward layer.
+      int length = end - begin;
+      scores_.resize(length);
+      for (int t = 0; t < length; ++t) {
+        // Compute logits from token encoding.
+        forward_.Set(decoder_->token_, encodings, t);
+        forward_.Set(decoder_->scores_, &scores_, t);
+        forward_.Compute();
+      }
+
+      // Predict label sequence using CRF.
+      std::vector<int> labels(length);
+      crf_.Predict(&scores_, &labels);
+
+      // Decode label sequence.
+      int t = 0;
+      while (t < length) {
+        BIOLabel label(labels[t]);
+        if (label.tag == SINGLE) {
+          // Add single-token mention.
+          Handle type = decoder_->types_[label.type];
+          Span *span = document_->AddSpan(begin + t, begin + t + 1);
+          Builder builder(document_->store());
+          if (!type.IsNil()) builder.AddIsA(type);
+          span->Evoke(builder.Create());
+          t++;
+        } else if (label.tag == BEGIN) {
+          // Find end tag.
+          int b = t++;
+          int e = t;
+          BIOLabel prev = label;
+          while (t < length) {
+            BIOLabel next(labels[t]);
+            if (!next.CanFollow(prev)) break;
+            t++;
+            if (next.tag == END) break;
+            prev = next;
+          }
+
+          // Add multi-token mention.
+          Handle type = decoder_->types_[label.type];
+          Span *span = document_->AddSpan(begin + b, begin + e);
+          Builder builder(document_->store());
+          if (!type.IsNil()) builder.AddIsA(type);
+          span->Evoke(builder.Create());
+        }
+      }
     }
 
   private:
     const BIODecoder *decoder_;
     Document *document_;
-    myelin::Instance forward_;
+    Instance forward_;
+    Channel scores_;
+    CRF::Predictor crf_;
   };
 
   Predictor *CreatePredictor() override {
@@ -307,7 +356,6 @@ class BIODecoder : public ParserDecoder {
           forward_(decoder->cell_),
           backward_(decoder->gcell_),
           dencodings_(decoder->dtoken_) {}
-    ~BIOLearner() override {}
 
     void Switch(Document *document) override {
       // Generate golden labels for document. First, set all the tags to OUTSIDE
@@ -385,9 +433,9 @@ class BIODecoder : public ParserDecoder {
 
     std::vector<BIOLabel> golden_;
 
-    myelin::Instance forward_;
-    myelin::Instance backward_;
-    myelin::Channel dencodings_;
+    Instance forward_;
+    Instance backward_;
+    Channel dencodings_;
 
     float loss_sum_ = 0.0;
     int loss_count_ = 0;
@@ -404,7 +452,6 @@ class BIODecoder : public ParserDecoder {
           emissions_(decoder->scores_),
           demissions_(decoder->dscores_),
           crf_(&decoder->crf_)  {}
-    ~CRFLearner() override {}
 
     void Switch(Document *document) override {
       // Generate golden labels for document. First, set all the tags to OUTSIDE
@@ -489,13 +536,12 @@ class BIODecoder : public ParserDecoder {
 
     std::vector<int> golden_;
 
-    myelin::InstanceArray forward_;
-    myelin::Instance backward_;
-    myelin::Channel dencodings_;
-    myelin::Channel emissions_;
-    myelin::Channel demissions_;
+    InstanceArray forward_;
+    Instance backward_;
+    Channel dencodings_;
+    Channel emissions_;
+    Channel demissions_;
     CRF::Learner crf_;
-
 
     float loss_sum_ = 0.0;
     int loss_count_ = 0;
@@ -533,17 +579,17 @@ class BIODecoder : public ParserDecoder {
   CRF crf_;
 
   // Tagger model.
-  myelin::Cell *cell_ = nullptr;
-  myelin::Tensor *token_ = nullptr;
-  myelin::Tensor *scores_ = nullptr;
+  Cell *cell_ = nullptr;
+  Tensor *token_ = nullptr;
+  Tensor *scores_ = nullptr;
 
-  myelin::Cell *gcell_ = nullptr;
-  myelin::Tensor *primal_ = nullptr;
-  myelin::Tensor *dtoken_ = nullptr;
-  myelin::Tensor *dscores_ = nullptr;
+  Cell *gcell_ = nullptr;
+  Tensor *primal_ = nullptr;
+  Tensor *dtoken_ = nullptr;
+  Tensor *dscores_ = nullptr;
 
   // Loss function.
-  myelin::CrossEntropyLoss loss_;
+  CrossEntropyLoss loss_;
 };
 
 REGISTER_PARSER_DECODER("bio", BIODecoder);

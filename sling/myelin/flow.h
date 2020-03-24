@@ -202,6 +202,25 @@ class Shape {
     return r;
   }
 
+  // Return squeezed shape with single dimension removed.
+  Shape squeezed(int axis) const {
+    Shape s;
+    for (int d = 0; d < rank(); d++) {
+      if (d != axis) s.add(dims_[d]);
+    }
+    return s;
+  }
+
+  // Return expanded shape with single dimension added.
+  Shape expanded(int axis) const {
+    Shape s;
+    for (int d = 0; d < rank(); d++) {
+      if (d == axis) s.add(1);
+      s.add(dims_[d]);
+    }
+    return s;
+  }
+
   // Return outside shape with respect to axis.
   Shape outside(int axis) const {
     Shape s;

@@ -30,13 +30,13 @@ int main(int argc, char *argv[]) {
 
   crf.Initialize(net);
 
-  TensorData transitions = net["crf/forward/transitions"];
-  for (int i = 0; i < L + 2; ++i) {
-    for (int j = 0; j < L + 2; ++j) {
+  TensorData transitions = net["crf/transitions"];
+  for (int i = 0; i < L; ++i) {
+    for (int j = 0; j < L; ++j) {
       transitions.at<float>(i, j) = i == j ? 1.0 : 0.0;
     }
   }
-  LOG(INFO) << "transitions: " << transitions.ToString();
+  LOG(INFO) << "transitions:\n" << transitions.ToString();
 
   CRF::Learner learner(&crf);
 
@@ -60,6 +60,8 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "input:\n" << input.ToString();
 
   float loss = learner.Learn(&input, labels, &dinput);
+
+  LOG(INFO) << "dinput:\n" << dinput.ToString();
 
   LOG(INFO) << "loss: " << loss;
   return 0;

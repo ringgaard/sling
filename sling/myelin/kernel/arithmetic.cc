@@ -777,6 +777,9 @@ class ExpressionTransformer : public Transformer {
   }
 
   bool Combine(Flow *flow, Flow::Operation *first, Flow::Operation *second) {
+    // Check that ops belongs to the same function.
+    if (first->func != second->func) return false;
+
     // Check if merging has been disabled.
     if (first->GetAttr("nomerge", false)) return false;
     if (second->GetAttr("nomerge", false)) return false;

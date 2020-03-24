@@ -292,11 +292,29 @@ class FlowBuilder : public Scope {
   Variable *Count(Variable *p, Type type = DT_FLOAT) {
     return NoGradient(Op("Count", {p}, type, {}));
   }
-  Variable *ArgMin(Variable *x) {
-    return NoGradient(Op("ArgMin", {x}, DT_INT32, {}));
+
+  // Arg Min/Max.
+  Variable *ArgM(const string &op, Variable *x, int axis, Variable **m) {
+    Variable *argm;
+    if (axis == -1) {
+      argm = Op(op, {x}, DT_INT32, {});
+    } else {
+      argm = Reduce(op, x, axis);
+      argm->type = DT_INT32;
+    }
+    if (m != nullptr) {
+      string name = argm->producer->name + ":1";
+      *m = flow_->AddVariable(name, x->type, argm->shape);
+      argm->producer->AddOutput(*m);
+    }
+    return NoGradient(argm);
   }
-  Variable *ArgMax(Variable *x) {
-    return NoGradient(Op("ArgMax", {x}, DT_INT32, {}));
+
+  Variable *ArgMin(Variable *x, int axis = -1, Variable **min = nullptr) {
+    return ArgM("ArgMin", x, axis, min);
+  }
+  Variable *ArgMax(Variable *x, int axis = -1, Variable **max = nullptr) {
+    return ArgM("ArgMax", x, axis, max);
   }
 
   // Clip value.
@@ -360,7 +378,13 @@ class FlowBuilder : public Scope {
     return Op("Reshape", {x, shape});
   }
   Variable *Reshape(Variable *x, const Shape &shape) {
-    return Op("Reshape", {x, Const(shape.dims())}, x->type, shape);
+    return Op("Reshape", {x, Const(shape)}, x->type, shape);
+  }
+  Variable *Squeeze(Variable *x, int axis) {
+    return Reshape(x, x->shape.squeezed(axis));
+  }
+  Variable *ExpandDims(Variable *x, int axis) {
+    return Reshape(x, x->shape.expanded(axis));
   }
   Variable *Broadcast(Variable *x, const Shape &shape) {
     return Op("Identity", {x}, x->type, shape);
@@ -438,6 +462,9 @@ class FlowBuilder : public Scope {
   // Slicing.
   Variable *Slice(Variable *v, Variable *begin, const Shape &size) {
     return Op("Slice", {v, begin, Const(size)}, v->type, size);
+  }
+  Variable *Slice(Variable *v, const Shape &begin, const Shape &size) {
+    return Op("Slice", {v, Const(begin), Const(size)}, v->type, size);
   }
 
   // Add input mapped through embedding.

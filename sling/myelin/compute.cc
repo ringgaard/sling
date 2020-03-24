@@ -679,7 +679,10 @@ string Tensor::ToString(const char *data, bool deref) const {
     // Matrix.
     str.append("[");
     for (int r = 0; r < dim(0); ++r) {
-      if (r > 0) str.append(",");
+      if (r > 0) {
+        str.append(",");
+        if (dim(0) > 1) str.append("\n ");
+      }
       str.append("[");
       for (int c = 0; c < dim(1); ++c) {
         if (c > 0) str.append(",");
