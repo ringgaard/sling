@@ -50,6 +50,7 @@ class HTTPProtocol : public SocketProtocol {
   }
 
   // Socket protocol interface.
+  const char *Name() override { return "HTTP"; }
   SocketSession *NewSession(SocketConnection *conn) override;
 
   // Find handler for request.
@@ -68,8 +69,8 @@ class HTTPProtocol : public SocketProtocol {
   // Handler for /helpz.
   void HelpHandler(HTTPRequest *req, HTTPResponse *rsp);
 
-  // Handler for /connz.
-  void ConnectionHandler(HTTPRequest *req, HTTPResponse *rsp);
+  // Handler for /sockz.
+  void SocketHandler(HTTPRequest *req, HTTPResponse *rsp);
 
   // Registered HTTP handlers.
   std::vector<Context> contexts_;
@@ -115,8 +116,8 @@ class HTTPSession : public SocketSession {
   ~HTTPSession() override;
 
   // Socket session interface.
+  const char *Name() override { return "HTTP"; }
   Continuation Process(SocketConnection *conn) override;
-  const char *ProtocolName() override { return "HTTP"; }
 
   // Parse header. Returns true when header has been parsed.
   bool ParseHeader();

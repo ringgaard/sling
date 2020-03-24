@@ -98,7 +98,7 @@ static char *ReadLine(Buffer *hdr) {
 HTTPProtocol::HTTPProtocol() {
   // Register standard handlers.
   Register("/helpz", this, &HTTPProtocol::HelpHandler);
-  Register("/connz", this, &HTTPProtocol::ConnectionHandler);
+  Register("/sockz", this, &HTTPProtocol::SocketHandler);
 }
 
 void HTTPProtocol::Register(const string &uri, const Handler &handler) {
@@ -161,10 +161,10 @@ void HTTPProtocol::HelpHandler(HTTPRequest *req, HTTPResponse *rsp) {
   rsp->Append("</body></html>\n");
 }
 
-void HTTPProtocol::ConnectionHandler(HTTPRequest *req, HTTPResponse *rsp) {
+void HTTPProtocol::SocketHandler(HTTPRequest *req, HTTPResponse *rsp) {
   rsp->set_content_type("text/html");
   rsp->set_status(200);
-  req->conn()->server()->OutputConnectionZ(rsp->buffer());
+  req->conn()->server()->OutputSocketZ(rsp->buffer());
 }
 
 HTTPSession::HTTPSession(HTTPProtocol *http, SocketConnection *conn)

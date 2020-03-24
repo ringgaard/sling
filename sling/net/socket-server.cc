@@ -239,6 +239,7 @@ void SocketServer::AcceptConnection(Endpoint *ep) {
   ev.data.ptr = conn;
   rc = epoll_ctl(pollfd_, EPOLL_CTL_ADD, sock, &ev);
   if (rc < 0) LOG(WARNING) << Error("epoll_ctl");
+  ep->num_connects++;
 }
 
 void SocketServer::AddConnection(SocketConnection *conn) {
@@ -271,22 +272,26 @@ void SocketServer::ShutdownIdleConnections() {
   }
 }
 
-void SocketServer::OutputConnectionZ(Buffer *out) const {
+void SocketServer::OutputSocketZ(Buffer *out) const {
   MutexLock lock(&mu_);
 
-  out->Write("<html><head><title>connz</title></head><body>\n");
+  out->Write("<html><head><title>sockz</title></head><body>\n");
+
+  out->Write("<h1>Connections</h1>\n");
   out->Write("<table border=\"1\"><tr>\n");
   out->Write("<td>Socket</td>");
   out->Write("<td>Protocol</td>");
   out->Write("<td>Client address</td>");
+  out->Write("<td>Received</td>");
+  out->Write("<td>Sent</td>");
+  out->Write("<td>Requests</td>");
   out->Write("<td>Socket status</td>");
   out->Write("<td>State</td>");
   out->Write("<td>Idle</td>");
   out->Write("</tr>\n");
 
-  SocketConnection *conn = connections_;
   time_t now = time(0);
-  while (conn != nullptr) {
+  for (auto *conn = connections_; conn != nullptr; conn = conn->next_) {
     out->Write("<tr>");
 
     // Socket.
@@ -294,7 +299,7 @@ void SocketServer::OutputConnectionZ(Buffer *out) const {
 
     // Protocol.
     out->Write("<td>");
-    out->Write(conn->session()->ProtocolName());
+    out->Write(conn->session()->Name());
     out->Write("</td>");
 
     // Client address.
@@ -310,6 +315,11 @@ void SocketServer::OutputConnectionZ(Buffer *out) const {
       out->Write(std::to_string(ntohs(peer.sin_port)));
       out->Write("</td>");
     }
+
+    // Received, transmitted, and number of requests.
+    out->Write("<td>" + std::to_string(conn->rx_bytes_) + "</td>");
+    out->Write("<td>" + std::to_string(conn->tx_bytes_) + "</td>");
+    out->Write("<td>" + std::to_string(conn->num_requests_) + "</td>");
 
     // Socket state.
     int err = 0;
@@ -334,12 +344,40 @@ void SocketServer::OutputConnectionZ(Buffer *out) const {
     out->Write("<td>" + std::to_string(now - conn->last_) + "</td>");
 
     out->Write("</tr>\n");
-    conn = conn->next_;
   }
   out->Write("</table>\n");
+
+  out->Write("<h1>Endpoints</h1>\n");
+  out->Write("<table border=\"1\"><tr>\n");
+  out->Write("<td>Port</td>");
+  out->Write("<td>Socket</td>");
+  out->Write("<td>Protocol</td>");
+  out->Write("<td>Connects</td>");
+  out->Write("</tr>\n");
+  for (auto *ep = endpoints_; ep != nullptr; ep = ep->next) {
+    // Port.
+    out->Write("<td>" + std::to_string(ep->port) + "</td>");
+
+    // Socket.
+    out->Write("<td>" + std::to_string(ep->sock) + "</td>");
+
+    // Protocol.
+    out->Write("<td>");
+    out->Write(ep->protocol->Name());
+    out->Write("</td>");
+
+    // Connects.
+    out->Write("<td>" + std::to_string(ep->num_connects) + "</td>");
+
+    out->Write("</tr>\n");
+  }
+  out->Write("</table>\n");
+
+  out->Write("<h1>Worker threads</h1>\n");
   out->Write("<p>" + std::to_string(workers_.size()) + " worker threads, " +
               std::to_string(active_) + " active, " +
               std::to_string(idle_) + " idle</p>\n");
+
   out->Write("</body></html>\n");
 }
 
@@ -423,6 +461,7 @@ Status SocketConnection::Process() {
           return Status::OK;
       }
 
+      num_requests_++;
       state_ = SOCKET_STATE_SEND;
       FALLTHROUGH_INTENDED;
 
@@ -523,6 +562,7 @@ Status SocketConnection::Recv(Buffer *buffer, bool *done) {
   }
   VLOG(6) << "Recv " << sock_ << ", " << rc << " bytes";
   buffer->Append(rc);
+  rx_bytes_ += rc;
   return Status::OK;
 }
 
@@ -548,6 +588,7 @@ Status SocketConnection::Send(Buffer *buffer, bool *done) {
   }
   VLOG(6) << "Send " << sock_ << ", " << rc << " bytes";
   buffer->Consume(rc);
+  tx_bytes_ += rc;
   return Status::OK;
 }
 

@@ -67,8 +67,10 @@ Status Database::Open(const string &dbdir, bool recover) {
   }
 
   // The last shard also has a writer for adding records to the database.
-  config_.record.append = true;
-  writer_ = new RecordWriter(datafiles.back(), config_.record);
+  if (!config_.read_only) {
+    config_.record.append = true;
+    writer_ = new RecordWriter(datafiles.back(), config_.record);
+  }
 
   // Open database index.
   index_ = new DatabaseIndex();
@@ -290,7 +292,7 @@ bool Database::Next(Record *record, uint64 *iterator) {
     }
 
     // Flush writer before reading from the last shard.
-    if (shard == CurrentShard()) {
+    if (writer_ != nullptr && shard == CurrentShard()) {
       CHECK(writer_->Flush());
       writer_->Sync(readers_.back());
     }
@@ -334,7 +336,7 @@ bool Database::Valid(uint64 recid) {
   uint64 shard = Shard(recid);
   uint64 pos = Position(recid);
   if (shard >= readers_.size()) return false;
-  if (shard == readers_.size() - 1) {
+  if (writer_ != nullptr && shard == readers_.size() - 1) {
     if (pos >= writer_->Tell()) return false;
   } else {
     if (pos >= readers_[shard]->size()) return false;
@@ -360,7 +362,7 @@ string Database::DataFile(int shard) const {
 
 void Database::ReadRecord(uint64 recid, Record *record) {
   uint64 shard = Shard(recid);
-  if (shard == CurrentShard()) {
+  if (writer_ != nullptr && shard == CurrentShard()) {
     // Flush writer before reading from the last shard.
     CHECK(writer_->Flush());
     writer_->Sync(readers_.back());

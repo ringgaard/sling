@@ -88,7 +88,7 @@ class SocketServer {
   const SocketServerOptions &options() const { return options_; }
 
   // Output connection information as HTML.
-  void OutputConnectionZ(Buffer *out) const;
+  void OutputSocketZ(Buffer *out) const;
 
  private:
   // Endpoint for listening for new connections for protocol.
@@ -99,6 +99,7 @@ class SocketServer {
     int port;                  // port for listening for new connections.
     SocketProtocol *protocol;  // protocol handler for endpoint
     int sock = -1;             // listen socket
+    uint64 num_connects = 0;   // number of connections accepted
     Endpoint *next;            // next endpoint
   };
 
@@ -222,6 +223,11 @@ class SocketConnection {
   // Close connection after response has been sent.
   bool close_ = false;
 
+  // Statistics.
+  uint64 rx_bytes_ = 0;
+  uint64 tx_bytes_ = 0;
+  uint64 num_requests_ = 0;
+
   // Mutex for serializing access to connection state.
   Mutex mu_;
 
@@ -233,6 +239,9 @@ class SocketConnection {
 class SocketProtocol {
  public:
   virtual ~SocketProtocol() = default;
+
+  // Return protocol name.
+  virtual const char *Name() = 0;
 
   // Create new session for protocol.
   virtual SocketSession *NewSession(SocketConnection *conn) = 0;
@@ -251,8 +260,8 @@ class SocketSession {
 
   virtual ~SocketSession() = default;
 
-  // Return protocol name.
-  virtual const char *ProtocolName() = 0;
+  // Return protocol name for session.
+  virtual const char *Name() = 0;
 
   // Process the request in the request buffer and return the response header
   // and body. Return false to terminate the session.
