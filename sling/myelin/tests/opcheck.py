@@ -29,6 +29,7 @@ flags.define("--thorough", default=False, action='store_true')
 flags.define("--repeat", default=1, type=int)
 flags.define("--c", default=False, action='store_true')
 flags.define("--skipdiff", default=False, action='store_true')
+flags.define("--reldiff", default=False, action='store_true')
 
 flags.parse()
 dt = flags.arg.dt
@@ -140,8 +141,9 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8, check=None):
             if b.dtype != bool:
               print("abs error:")
               print(b - np.asarray(t))
-              print("rel error:")
-              print((b - np.asarray(t)) / np.asarray(t))
+              if flags.arg.reldiff:
+                print("rel error:")
+                print((b - np.asarray(t)) / np.asarray(t))
 
   if flags.arg.profile:
     print(net.profile())
@@ -613,6 +615,20 @@ def argmax_test(n):
   y = f.argmax(x)
   check(flow, n)
 
+def argmin_axis_test(shape, axis):
+  flow = myelin.Flow()
+  f = flow.define("argmin_axis")
+  x = f.var("x", dt, shape)
+  arg, m = f.argmin(x, axis, True)
+  check(flow, (shape, axis))
+
+def argmax_axis_test(shape, axis):
+  flow = myelin.Flow()
+  f = flow.define("argmax_axis")
+  x = f.var("x", dt, shape)
+  arg, m = f.argmax(x, axis, True)
+  check(flow, (shape, axis))
+
 def minimum_test(n):
   flow = myelin.Flow()
   f = flow.define("minimum")
@@ -996,6 +1012,13 @@ for i in sizes:
 
 for i in sizes:
   for j in sizes:
+    argmin_axis_test([i, j], None)
+    argmin_axis_test([i, j], 0)
+    argmin_axis_test([i, j], 1)
+    argmax_axis_test([i, j], None)
+    argmax_axis_test([i, j], 0)
+    argmax_axis_test([i, j], 1)
+
     matmul_transpose_test(i, j)
     if not flags.arg.mkl: matmul_all_orders_test(i, j, 32)
     for k in sizes:

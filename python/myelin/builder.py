@@ -285,17 +285,28 @@ class Builder:
   def maximum(self, x, y, name=None):
     return self.op("Maximum", [x, y], name)
 
-  def argmin(self, x, name=None):
-    result = self.op("ArgMin", [x], name)
-    result.shape = []
-    result.type = DT_INT
-    return result
+  def argm(self, optype, x, axis=None, ouput_value=False, name=None):
+    v = self.op(optype, [x], name)
+    v.type = DT_INT
+    if axis is None:
+      v.shape = []
+    else:
+      if axis < 0: axis = len(x.shape) + axis
+      v.shape = x.shape.copy()
+      v.producer.add_attr("axis", axis)
+      del v.shape[axis]
+    if ouput_value:
+      m = self.flow.var(v.producer.name + ":1", x.type, v.shape)
+      v.producer.add_output(m)
+      return v, m
+    else:
+      return v
 
-  def argmax(self, x, name=None):
-    result = self.op("ArgMax", [x], name)
-    result.shape = []
-    result.type = DT_INT
-    return result
+  def argmin(self, x, axis=None, ouput_value=False, name=None):
+    return self.argm("ArgMin", x, axis, ouput_value, name)
+
+  def argmax(self, x, axis=None, ouput_value=False, name=None):
+    return self.argm("ArgMax", x, axis, ouput_value, name)
 
   def gather(self, params, indices, oov=None, name=None):
     inputs = [params, indices]

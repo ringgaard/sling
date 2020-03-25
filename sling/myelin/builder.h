@@ -146,7 +146,7 @@ class FlowBuilder : public Scope {
   // Add reference to variable in external instance.
   Variable *Ref(Variable *instance, Variable *external);
 
-  // Builder methods for common operations.
+  // Math functions.
   Variable *Add(Variable *x, Variable *y) { return Op("Add", {x, y}); }
   Variable *Sub(Variable *x, Variable *y) { return Op("Sub", {x, y}); }
   Variable *Mul(Variable *x, Variable *y) { return Op("Mul", {x, y}); }

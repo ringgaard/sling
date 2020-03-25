@@ -193,9 +193,25 @@ def compute(flow, f, data):
     elif op.type == "Count":
       v[o[0]] = np.array(np.count_nonzero(v[i[0]]), nptypes[o[0].type])
     elif op.type == "ArgMin":
-      v[o[0]] = np.argmin(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.argmin(v[i[0]])
+        if len(o) == 2:
+          v[o[1]] = np.amin(v[i[0]])
+      else:
+        v[o[0]] = np.argmin(v[i[0]], axis=int(axis))
+        if len(o) == 2:
+          v[o[1]] = np.amin(v[i[0]], axis=int(axis))
     elif op.type == "ArgMax":
-      v[o[0]] = np.argmax(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.argmax(v[i[0]])
+        if len(o) == 2:
+          v[o[1]] = np.amax(v[i[0]])
+      else:
+        v[o[0]] = np.argmax(v[i[0]], axis=int(axis))
+        if len(o) == 2:
+          v[o[1]] = np.amax(v[i[0]], axis=int(axis))
     elif op.type == "Equal":
       v[o[0]] = np.equal(v[i[0]], v[i[1]])
     elif op.type == "NotEqual":

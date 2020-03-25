@@ -16,6 +16,7 @@
 
 #include "sling/myelin/compute.h"
 #include "sling/myelin/macro-assembler.h"
+#include "sling/myelin/simd-assembler.h"
 
 #define __ masm->
 
@@ -24,7 +25,8 @@ namespace myelin {
 
 using namespace jit;
 
-// Compute argmax (or argmin) over an axis.
+// Compute argmax (or argmin) over an axis optionally also outputting the
+// maximum (or minimum) value.
 class GeneralArgMax : public Kernel {
  public:
   GeneralArgMax(bool minimum) : minimum_(minimum) {}
@@ -37,61 +39,26 @@ class GeneralArgMax : public Kernel {
     if (step->indegree() != 1) return false;
     if (step->outdegree() != 1 && step->outdegree() != 2) return false;
     Tensor *x = step->input(0);
-    Tensor *argmax = step->output(0);
-    Tensor *max = step->outdegree() ==  2 ? step->output(1) : nullptr;
+    Tensor *argm = step->output(0);
+    Tensor *mval = step->outdegree() ==  2 ? step->output(1) : nullptr;
 
     // Check type.
     Type dt = x->type();
-    if (dt != DT_FLOAT && dt != DT_DOUBLE &&
-        dt != DT_INT8 && dt != DT_INT16 &&
-        dt != DT_INT32 && dt != DT_INT64) {
-      return false;
-    }
-    if (argmax->type() != DT_INT32 && argmax->type() != DT_INT64) return false;
-    if (max != nullptr && max->type() != dt) return false;
+    if (!SIMDAssembler::Supports(x->type())) return false;
+    if (!TypeTraits::of(argm->type()).isint()) return false;
+    if (mval != nullptr && mval->type() != dt) return false;
 
     // Check shape.
     int axis = step->GetAttr("axis", -1);
-    if (axis < 0 || axis >= x->rank()) return false;
-    Shape output = x->shape().reduced(axis, false);
-    if (argmax->shape() != output) return false;
-    if (max != nullptr && max->shape() != output) return false;
-
-    return true;
-  }
-
-  void Generate(Step *step, MacroAssembler *masm) override {
-    // TODO: implement
-    __ nop();
-  }
-
- private:
-  bool minimum_;  // compute argmin instead of argmax
-};
-
-// Compute argmax (or argmin) of input.
-class GenericArgMax : public Kernel {
- public:
-  GenericArgMax(bool minimum) : minimum_(minimum) {}
-
-  string Name() override { return "Generic" + Operation(); }
-  string Operation() override { return minimum_ ? "ArgMin" : "ArgMax"; }
-
-  bool Supports(Step *step) override {
-    // Check inputs and outputs.
-    if (step->indegree() != 1) return false;
-    if (step->outdegree() != 1) return false;
-    Tensor *x = step->input(0);
-    Tensor *y = step->output(0);
-
-    // Check type.
-    if (x->type() != DT_FLOAT && x->type() != DT_DOUBLE &&
-        x->type() != DT_INT8 && x->type() != DT_INT16 &&
-        x->type() != DT_INT32 && x->type() != DT_INT64) {
-      return false;
+    if (axis < -1 || axis >= x->rank()) return false;
+    if (axis == -1) {
+      if (argm->elements() != 1) return false;
+      if (mval != nullptr && mval->elements() != 1) return false;
+    } else {
+      Shape reduced = x->shape().reduced(axis, false);
+      if (argm->shape() != reduced) return false;
+      if (mval != nullptr && mval->shape() != reduced) return false;
     }
-    if (y->type() != DT_INT32 && y->type() != DT_INT64) return false;
-    if (y->elements() != 1) return false;
 
     return true;
   }
@@ -99,109 +66,117 @@ class GenericArgMax : public Kernel {
   void Generate(Step *step, MacroAssembler *masm) override {
     // Get input and output.
     Tensor *x = step->input(0);
-    Tensor *y = step->output(0);
+    Tensor *argm = step->output(0);
+    Tensor *mval = step->outdegree() ==  2 ? step->output(1) : nullptr;
     Type dt = x->type();
+    int axis = step->GetAttr("axis", -1);
 
-    // Assign registers.
-    Register input = masm->rr().alloc();
-    Register output = masm->rr().alloc();
-    Register idx = masm->rr().alloc();
+    int outer_size = 1;
+    int redux_size = x->elements();
+    int inner_size = 1;
+    if (axis != -1) {
+      outer_size = x->shape().outer(axis);
+      redux_size = x->dim(axis);
+      inner_size = x->shape().inner(axis + 1);
+    }
+
+    // Create SIMD code generator.
+    SIMDAssembler sasm(masm, dt, false, true);
+    step->set_variant(sasm.name());
+
+    // Allocate registers.
+    Register in = masm->rr().alloc();
+    Register arg_out = masm->rr().alloc();
+    Register val_out = masm->rr().alloc();
+    Register outer = masm->rr().alloc();
+    Register inner = masm->rr().alloc();
+    Register redux = masm->rr().alloc();
     Register best = masm->rr().alloc();
-    Register ivalue = masm->rr().alloc();
-    Register iextremum = masm->rr().alloc();
-    XMMRegister fvalue = masm->mm().allocx();
-    XMMRegister fextremum = masm->mm().allocx();
 
-    // Load tensor locations.
-    __ LoadTensorAddress(input, x);
-    __ LoadTensorAddress(output, y);
+    int value = sasm.alloc();
+    int extremum = sasm.alloc();
 
-    // Initialize min/max value.
-    __ movq(best, Immediate(-1));
-    if (minimum_) {
-      switch (dt) {
-        case DT_INT8:
-        case DT_INT16:
-        case DT_INT32:
-        case DT_INT64:
-          __ movq(iextremum, masm->MaxVal<int64>()->address());
-          break;
-        case DT_FLOAT:
-          __ movss(fextremum, masm->MaxVal<float>()->address());
-          break;
-        case DT_DOUBLE:
-          __ movsd(fextremum, masm->MaxVal<double>()->address());
-          break;
-        default: ;
-      }
-    } else {
-      switch (dt) {
-        case DT_INT8:
-        case DT_INT16:
-        case DT_INT32:
-        case DT_INT64:
-          __ movq(iextremum, masm->MinVal<int64>()->address());
-          break;
-        case DT_FLOAT:
-          __ movss(fextremum, masm->MinVal<float>()->address());
-          break;
-        case DT_DOUBLE:
-          __ movsd(fextremum, masm->MinVal<double>()->address());
-          break;
-        default: ;
-      }
+    // Load tensor addresses.
+    __ LoadTensorAddress(in, x);
+    __ LoadTensorAddress(arg_out, argm);
+    if (mval != nullptr) {
+      __ LoadTensorAddress(val_out, mval);
     }
 
-    // Loop over elements in tensor.
-    __ xorq(idx, idx);
-    Label loop;
-    __ LoopStart(&loop);
+    // Loop over outer dimensions.
+    Label louter;
+    if (outer_size > 1) {
+      __ xorq(outer, outer);
+      __ bind(&louter);
+    }
 
+    // Loop over inner dimensions.
+    Label linner;
+    if (inner_size > 1) {
+      __ xorq(inner, inner);
+      __ bind(&linner);
+    }
 
-    // Check if next value is greater/less than current extremum.
-    Label l1;
-    switch (dt) {
-      case DT_INT8:
-      case DT_INT16:
-      case DT_INT32:
-      case DT_INT64:
-        __ LoadInteger(ivalue, input, idx, dt);
-        __ cmpq(ivalue, iextremum);
+    // Load first element in reduction.
+    sasm.scalar()->Load(extremum, Operand(in));
+    __ xorq(best, best);
+    __ addq(in, Immediate(x->stride(axis)));
+
+    // Loop over remaining elements in reduction.
+    if (redux_size > 1) {
+      Label lredux;
+      __ movq(redux, Immediate(1));
+      __ bind(&lredux);
+
+      // Check if next value is greater/less than current extremum.
+      Label l1;
+      sasm.scalar()->Load(value, Operand(in));
+      sasm.scalar()->Compare(value, extremum);
+      if (TypeTraits::of(dt).isfloat()) {
+        __ j(minimum_ ? above_equal : below_equal, &l1);
+      } else {
         __ j(minimum_ ? greater_equal : less_equal, &l1);
-        __ movq(iextremum, ivalue);
-        break;
-      case DT_FLOAT:
-        __ movss(fvalue, Operand(input, idx, times_4));
-        __ ucomiss(fvalue, fextremum);
-        __ j(minimum_ ? above_equal : below_equal, &l1);
-        __ movss(fextremum, fvalue);
-        break;
-      case DT_DOUBLE:
-        __ movsd(fvalue, Operand(input, idx, times_8));
-        __ ucomisd(fvalue, fextremum);
-        __ j(minimum_ ? above_equal : below_equal, &l1);
-        __ movsd(fextremum, fvalue);
-        break;
-      default: ;
+      }
+      sasm.scalar()->Move(extremum, value);
+      __ movq(best, redux);
+      __ bind(&l1);
+
+      // Next reduction element.
+      __ addq(in, Immediate(x->stride(axis)));
+      __ incq(redux);
+      __ cmpq(redux, Immediate(redux_size));
+      __ j(less, &lredux);
     }
-    __ movq(best, idx);
-    __ bind(&l1);
 
-    // Next element.
-    __ incq(idx);
-    __ cmpq(idx, Immediate(x->elements()));
-    __ j(less, &loop);
-
-    // Save output.
-    if (y->type() == DT_INT32) {
-      __ movl(Operand(output), best);
-    } else {
-      __ movq(Operand(output), best);
+    // Output min/max index and value.
+    __ StoreInteger(arg_out, best, argm->type());
+    if (outer_size * inner_size > 1) {
+      __ addq(arg_out, Immediate(argm->element_size()));
     }
-  }
+    if (mval != nullptr) {
+      sasm.scalar()->Store(Operand(val_out), extremum);
+      if (outer_size * inner_size > 1) {
+        __ addq(val_out, Immediate(mval->element_size()));
+      }
+    }
 
-  int64 Complexity(const Step *step) override {
-    return step->input(0)->elements();
+    // Next inner element.
+    if (inner_size > 1) {
+      __ subq(in, Immediate(x->AxisSize(axis) - x->element_size()));
+      __ incq(inner);
+      __ cmpq(inner, Immediate(inner_size));
+      __ j(less, &linner);
+    }
+
+    // Next outer element.
+    if (outer_size > 1) {
+      if (inner_size > 1) {
+        __ addq(in, Immediate(x->AxisSize(axis) - x->stride(axis)));
+      }
+      __ incq(outer);
+      __ cmpq(outer, Immediate(outer_size));
+      __ j(less, &louter);
+    }
   }
 
  private:
@@ -230,6 +205,9 @@ class AVXFltArgMax : public Kernel {
     if (x->type() != DT_FLOAT) return false;
     if (y->type() != DT_INT32 && y->type() != DT_INT64) return false;
     if (y->elements() != 1) return false;
+
+    // Reduction over axis is not supported.
+    if (step->GetAttr("axis", -1) != -1) return false;
 
     return true;
   }
@@ -364,9 +342,6 @@ class AVXFltArgMax : public Kernel {
 void RegisterArgMax(Library *library) {
   library->Register(new GeneralArgMax(false));
   library->Register(new GeneralArgMax(true));
-
-  library->Register(new GenericArgMax(false));
-  library->Register(new GenericArgMax(true));
 
   library->Register(new AVXFltArgMax(false));
   library->Register(new AVXFltArgMax(true));

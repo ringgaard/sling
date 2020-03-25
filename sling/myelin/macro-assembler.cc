@@ -597,6 +597,38 @@ void MacroAssembler::Copy(Register dst, int ddisp,
 }
 
 void MacroAssembler::LoadInteger(jit::Register dst, jit::Register base,
+                                 Type type) {
+  switch (type) {
+    case DT_INT8:
+      movsxbq(dst, Operand(base));
+      break;
+
+    case DT_UINT8:
+      movb(dst, Operand(base));
+      break;
+
+    case DT_INT16:
+      movsxwq(dst, Operand(base));
+      break;
+
+    case DT_UINT16:
+      movw(dst, Operand(base));
+      break;
+
+    case DT_INT32:
+      movsxlq(dst, Operand(base));
+      break;
+
+    case DT_INT64:
+      movq(dst, Operand(base));
+      break;
+
+    default:
+      LOG(FATAL) << "Invalid integer type: " << type;
+  }
+}
+
+void MacroAssembler::LoadInteger(jit::Register dst, jit::Register base,
                                  jit::Register index, Type type) {
   switch (type) {
     case DT_INT8:
@@ -621,6 +653,32 @@ void MacroAssembler::LoadInteger(jit::Register dst, jit::Register base,
 
     case DT_INT64:
       movq(dst, Operand(base, index, times_8));
+      break;
+
+    default:
+      LOG(FATAL) << "Invalid integer type: " << type;
+  }
+}
+
+void MacroAssembler::StoreInteger(jit::Register base, jit::Register src,
+                                  Type type) {
+  switch (type) {
+    case DT_INT8:
+    case DT_UINT8:
+      movb(Operand(base), src);
+      break;
+
+    case DT_INT16:
+    case DT_UINT16:
+      movw(Operand(base), src);
+      break;
+
+    case DT_INT32:
+      movl(Operand(base), src);
+      break;
+
+    case DT_INT64:
+      movq(Operand(base), src);
       break;
 
     default:

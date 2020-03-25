@@ -62,10 +62,10 @@ class TypeTraits {
  public:
   TypeTraits(Type type, const char *name, int size,
              const char *ctype, const char *ptx, int cuda, const char *pytype,
-             void *zero, void *one)
+             bool isint, bool isfloat, void *zero, void *one)
       : type_(type), name_(name), size_(size),
         ctype_(ctype), ptx_(ptx), cuda_(cuda), pytype_(pytype),
-        zero_(zero), one_(one) {}
+        isint_(isint), isfloat_(isfloat), zero_(zero), one_(one) {}
 
   Type type() const { return type_; }
   const string &name() const { return name_; }
@@ -75,6 +75,9 @@ class TypeTraits {
   const char *ptx() const { return ptx_; }
   int cuda() const { return cuda_; }
   const char *pytype() const { return pytype_; }
+  bool isint() const { return isint_; }
+  bool isfloat() const { return isfloat_; }
+
 
   // Return data formatted according to type.
   string str(const void *data) const;
@@ -102,6 +105,8 @@ class TypeTraits {
   const char *ptx_;     // CUDA PTX type
   int cuda_;            // CUDA CUBLAS type
   const char *pytype_;  // Python type
+  bool isint_;          // integer type
+  bool isfloat_;        // floating-point type
 
   const void *zero_;    // binary representation of zero for type
   const void *one_;     // binary representation of one for type

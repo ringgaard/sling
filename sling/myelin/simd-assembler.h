@@ -91,6 +91,10 @@ class SIMDGenerator {
   virtual void MaskedMulAdd(int dst, int src1, const jit::Operand &src2);
   virtual void MaskedAccumulate(Reduction op, int acc, const jit::Operand &src);
 
+  // Compare two values in registers and set flags. This is only supported for
+  // scalar code generators.
+  virtual void Compare(int r1, int r2);
+
  protected:
   // Get neutral element for operation and type. Returns null for zero.
   StaticData *NeutralElement(Reduction op, Type type, int repeat = 1);
@@ -111,7 +115,8 @@ class SIMDGenerator {
 // elements ending with a handler for scalars.
 class SIMDAssembler {
  public:
-  SIMDAssembler(MacroAssembler *masm, Type type, bool aligned);
+  SIMDAssembler(MacroAssembler *masm, Type type, bool aligned,
+                bool scalar = false);
   ~SIMDAssembler();
 
   // The first generator is the main generator.
