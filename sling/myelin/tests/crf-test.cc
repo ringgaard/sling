@@ -64,6 +64,14 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "dinput:\n" << dinput.ToString();
 
   LOG(INFO) << "loss: " << loss;
+
+  LOG(INFO) << "Predictions:";
+  CRF::Predictor predictor(&crf);
+  std::vector<int> predictions;
+
+  predictor.Predict(&input, &predictions);
+  for (int l : predictions) LOG(INFO) << "label: " << l;
+
   return 0;
 }
 

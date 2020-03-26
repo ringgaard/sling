@@ -140,8 +140,9 @@ void SIMDGenerator::MaskedAccumulate(Reduction op, int acc,
   LOG(FATAL) << "Masking not supported";
 }
 
-void SIMDGenerator::Compare(int r1, int r2) {
+bool SIMDGenerator::Compare(int r1, int r2) {
   LOG(FATAL) << "Compare not supported";
+  return false;
 }
 
 // AVX512 float SIMD generator using 512-bit ZMM registers.
@@ -706,8 +707,9 @@ class AVX512ScalarFloatGenerator : public SIMDGenerator {
     masm_->Accumulate(op, DT_FLOAT, zmm(acc), src, mask_);
   }
 
-  void Compare(int r1, int r2) override {
+  bool Compare(int r1, int r2) override {
     masm_->vucomiss(zmm(r1), zmm(r2));
+    return true;
   }
 
  private:
@@ -811,8 +813,9 @@ class AVXScalarFloatGenerator : public SIMDGenerator {
     }
   }
 
-  void Compare(int r1, int r2) override {
+  bool Compare(int r1, int r2) override {
     masm_->vucomiss(xmm(r1), xmm(r2));
+    return true;
   }
 };
 
@@ -915,8 +918,9 @@ class SSEScalarFloatGenerator : public SIMDGenerator {
     }
   }
 
-  void Compare(int r1, int r2) override {
+  bool Compare(int r1, int r2) override {
     masm_->ucomiss(xmm(r1), xmm(r2));
+    return true;
   }
 };
 
@@ -1055,8 +1059,9 @@ class AVX512DoubleGenerator : public SIMDGenerator {
     masm_->Accumulate(op, DT_DOUBLE, zmm(acc), src, mask_);
   }
 
-  void Compare(int r1, int r2) override {
+  bool Compare(int r1, int r2) override {
     masm_->vucomisd(zmm(r1), zmm(r2));
+    return true;
   }
 
  private:
@@ -1488,8 +1493,9 @@ class AVX512ScalarDoubleGenerator : public SIMDGenerator {
     masm_->Accumulate(op, DT_DOUBLE, zmm(acc), src, mask_);
   }
 
-  void Compare(int r1, int r2) override {
+  bool Compare(int r1, int r2) override {
     masm_->vucomisd(zmm(r1), zmm(r2));
+    return true;
   }
 
  private:
@@ -1593,8 +1599,9 @@ class AVXScalarDoubleGenerator : public SIMDGenerator {
     }
   }
 
-  void Compare(int r1, int r2) override {
+  bool Compare(int r1, int r2) override {
     masm_->vucomisd(xmm(r1), xmm(r2));
+    return true;
   }
 };
 
@@ -1697,8 +1704,9 @@ class SSEScalarDoubleGenerator : public SIMDGenerator {
     }
   }
 
-  void Compare(int r1, int r2) override {
+  bool Compare(int r1, int r2) override {
     masm_->ucomisd(xmm(r1), xmm(r2));
+    return true;
   }
 };
 
@@ -2823,7 +2831,7 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
     }
   }
 
-  void Compare(int r1, int r2) override {
+  bool Compare(int r1, int r2) override {
     switch (type_) {
       case DT_INT8:  masm_->cmpb(reg(r1), reg(r2)); break;
       case DT_INT16: masm_->cmpw(reg(r1), reg(r2)); break;
@@ -2831,6 +2839,7 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
       case DT_INT64: masm_->cmpq(reg(r1), reg(r2)); break;
       default: LOG(FATAL) << "Unsupported integer type: " << type_;
     }
+    return false;
   }
 
  public:

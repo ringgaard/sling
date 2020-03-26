@@ -328,6 +328,9 @@ class BIODecoder : public ParserDecoder {
           Builder builder(document_->store());
           if (!type.IsNil()) builder.AddIsA(type);
           span->Evoke(builder.Create());
+        } else {
+          // Ignore invalid tag.
+          t++;
         }
       }
     }

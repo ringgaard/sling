@@ -1064,6 +1064,19 @@ class Instance {
     return Get<T>(var->tensor);
   }
 
+  // Get value of reference parameter in instance memory.
+  template<typename T> T *GetRef(const Tensor *param) {
+    DCHECK(param != nullptr);
+    DCHECK(param->IsLocal()) << param->name();
+    DCHECK(param->cell() == cell_) << param->name();
+    DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
+    return *reinterpret_cast<T **>(data_ + param->offset());
+  }
+  template<typename T> T *GetRef(const Flow::Variable *var) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    return GetRef<T>(var->tensor);
+  }
+
   // Get pointer to location of element of parameter in instance memory.
   template<typename T> T *Get(const Tensor *param, int r) {
     DCHECK(param != nullptr);

@@ -131,8 +131,7 @@ class GeneralArgMax : public Kernel {
       // Check if next value is greater/less than current extremum.
       Label l1;
       sasm.scalar()->Load(value, Operand(in));
-      sasm.scalar()->Compare(value, extremum);
-      if (TypeTraits::of(dt).isfloat()) {
+      if (sasm.scalar()->Compare(value, extremum)) {
         __ j(minimum_ ? above_equal : below_equal, &l1);
       } else {
         __ j(minimum_ ? greater_equal : less_equal, &l1);

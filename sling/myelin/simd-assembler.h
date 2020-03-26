@@ -91,9 +91,9 @@ class SIMDGenerator {
   virtual void MaskedMulAdd(int dst, int src1, const jit::Operand &src2);
   virtual void MaskedAccumulate(Reduction op, int acc, const jit::Operand &src);
 
-  // Compare two values in registers and set flags. This is only supported for
-  // scalar code generators.
-  virtual void Compare(int r1, int r2);
+  // Compare two values in registers and set CPU flags. Returns true if type
+  // requires unsigned compare. This is only supported for scalars.
+  virtual bool Compare(int r1, int r2);
 
  protected:
   // Get neutral element for operation and type. Returns null for zero.

@@ -1689,6 +1689,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       tensor->AddPlace(consumer->placement());
       if (tensor->ref()) tensor->AddRefPlace(consumer->placement());
     }
+    if (tensor->placement() == NOWHERE) tensor->AddPlace(HOST);
+    if (tensor->ref_placement() == NOWHERE) tensor->AddRefPlace(HOST);
 
     VLOG(5) << "Tensor " << tensor->name_ << ": " << tensor->TypeString()
             << " align " << tensor->minalign_.ToString()

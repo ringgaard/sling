@@ -124,7 +124,7 @@ CRF::Variables CRF::Build(Flow *flow,
   // Compute max-marginals.
   auto *v_scores = v.Add(v_potentials, v_alpha_in);
   Flow::Variable *max;
-  auto *bp = v.Name(v.ArgMax(v_scores, 0, &max), "bp");
+  auto *bp = v.Name(v.ExpandDims(v.ArgMax(v_scores, 0, &max), 0), "bp");
   bp->set_out()->set_ref();
   auto *v_alpha_out = v.Name(v.Add(v_alpha_in, max), "alpha_out");
   v_alpha_out->set_out()->set_ref();
@@ -192,7 +192,7 @@ void CRF::Predictor::Predict(Channel *input, std::vector<int> *labels) {
   }
 
   // Find best label for last element.
-  float *alpha = viterbi_.Get<float>(crf_->viterbi_alpha_out_);
+  float *alpha = viterbi_.GetRef<float>(crf_->viterbi_alpha_out_);
   int label = -1;
   float score = -INFINITY;
   for (int i = 0; i < crf_->num_labels_; ++i) {
@@ -204,7 +204,7 @@ void CRF::Predictor::Predict(Channel *input, std::vector<int> *labels) {
 
   // Extract the best path by brack-tracking.
   labels->resize(length);
-  for (int t = length - 1; t >= 0; t++) {
+  for (int t = length - 1; t >= 0; --t) {
     (*labels)[t] = label;
     int *bp = bp_.get<int>(t);
     label = bp[label];
