@@ -3,7 +3,6 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
   name = "base",
   srcs = [
-    "buffer.cc",
     "flags.cc",
     "init.cc",
     "logging.cc",
@@ -11,7 +10,6 @@ cc_library(
   ],
   hdrs = [
     "bitcast.h",
-    "buffer.h",
     "flags.h",
     "init.h",
     "logging.h",

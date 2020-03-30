@@ -148,3 +148,13 @@ cc_library(
     "//third_party/snappy",
   ],
 )
+
+cc_library(
+  name = "iobuffer",
+  srcs = ["iobuffer.cc"],
+  hdrs = ["iobuffer.h"],
+  deps = [
+    "//sling/base",
+  ],
+)
+

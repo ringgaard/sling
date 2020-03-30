@@ -56,7 +56,7 @@ class SliceSource : public snappy::Source {
 // Buffer compression sink.
 class BufferSink : public snappy::Sink {
  public:
-  BufferSink(Buffer *buffer) : buffer_(buffer) {}
+  BufferSink(IOBuffer *buffer) : buffer_(buffer) {}
 
   void Append(const char *bytes, size_t n) override {
     buffer_->Write(bytes, n);
@@ -79,7 +79,7 @@ class BufferSink : public snappy::Sink {
   }
 
  private:
-  Buffer *buffer_;
+  IOBuffer *buffer_;
 };
 
 }  // namespace

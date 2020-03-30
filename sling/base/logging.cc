@@ -27,6 +27,7 @@
 DEFINE_int32(v, 0, "Log level for VLOG");
 DEFINE_int32(loglevel, 0, "Discard messages logged at a lower severity");
 DEFINE_bool(logtostderr, false, "Log messages to stderr");
+DEFINE_bool(flushlog, false, "Flush log output");
 
 namespace sling {
 
@@ -50,9 +51,11 @@ void LogMessage::GenerateLogMessage() {
   strftime(timestr, BUFSIZE, "%Y-%m-%d %H:%M:%S", localtime(&tv.tv_sec));
 
   // TODO: Replace this with something that logs through a log sink.
-  fprintf(FLAGS_logtostderr ? stderr : stdout,
+  auto log = FLAGS_logtostderr ? stderr : stdout;
+  fprintf(log,
           "[%s.%06d: %c %s:%d] %s\n",
           timestr, usec, "IWEF"[severity_], fname_, line_, str().c_str());
+  if (FLAGS_flushlog) fflush(log);
 }
 
 LogMessage::~LogMessage() {

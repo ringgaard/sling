@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SLING_BASE_BUFFER_H_
-#define SLING_BASE_BUFFER_H_
+#ifndef SLING_UTIL_IOBUFFER_H_
+#define SLING_UTIL_IOBUFFER_H_
 
 #include "sling/base/types.h"
 #include "sling/base/slice.h"
@@ -33,9 +33,9 @@ namespace sling {
 //     <-- consumed() --><---- available() ---><----- remaining() ----->
 //     <-------------------------- capacity() ------------------------->
 //
-class Buffer {
+class IOBuffer {
  public:
-  ~Buffer() { free(floor_); }
+  ~IOBuffer() { free(floor_); }
 
   // Buffer capacity.
   size_t capacity() const { return ceil_ - floor_; }
@@ -101,5 +101,5 @@ class Buffer {
 
 }  // namespace sling
 
-#endif  // SLING_BASE_BUFFER_H_
+#endif  // SLING_UTIL_IOBUFFER_H_
 

@@ -272,7 +272,7 @@ void SocketServer::ShutdownIdleConnections() {
   }
 }
 
-void SocketServer::OutputSocketZ(Buffer *out) const {
+void SocketServer::OutputSocketZ(IOBuffer *out) const {
   MutexLock lock(&mu_);
 
   out->Write("<html><head><title>sockz</title></head><body>\n");
@@ -541,7 +541,7 @@ Status SocketConnection::Process() {
   }
 }
 
-Status SocketConnection::Recv(Buffer *buffer, bool *done) {
+Status SocketConnection::Recv(IOBuffer *buffer, bool *done) {
   *done = false;
   int rc = recv(sock_, buffer->end(), buffer->remaining(), 0);
   if (rc <= 0) {
@@ -566,7 +566,7 @@ Status SocketConnection::Recv(Buffer *buffer, bool *done) {
   return Status::OK;
 }
 
-Status SocketConnection::Send(Buffer *buffer, bool *done) {
+Status SocketConnection::Send(IOBuffer *buffer, bool *done) {
   *done = false;
   int rc  = send(sock_, buffer->begin(), buffer->available(), MSG_NOSIGNAL);
   if (rc <= 0) {

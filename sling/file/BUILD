@@ -47,6 +47,7 @@ cc_library(
     ":file",
     "//sling/base",
     "//sling/util:fingerprint",
+    "//sling/util:iobuffer",
     "//sling/util:snappy",
     "//sling/util:varint",
   ],

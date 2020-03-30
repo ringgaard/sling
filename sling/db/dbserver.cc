@@ -22,7 +22,8 @@
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
 #include "sling/db/db.h"
-#include "sling/http/http-server.h"
+#include "sling/db/dbprotocol.h"
+#include "sling/net/http-protocol.h"
 #include "sling/string/numbers.h"
 #include "sling/util/fingerprint.h"
 #include "sling/util/thread.h"
@@ -34,16 +35,16 @@ DEFINE_bool(auto_mount, false, "Automatically mount databases in db dir");
 
 using namespace sling;
 
-// HTTP interface for database engine.
-class DatabaseService {
+// HTTP/SLINGDB interface for database engine.
+class DBService {
  public:
-  DatabaseService(const string &dbdir) : dbdir_(dbdir) {
+  DBService(const string &dbdir) : dbdir_(dbdir) {
     // Start checkpoint monitor.
     monitor_.SetJoinable(true);
     monitor_.Start();
   }
 
-  ~DatabaseService() {
+  ~DBService() {
     // Stop checkpoint monitor.
     terminate_ = true;
     monitor_.Join();
@@ -79,7 +80,7 @@ class DatabaseService {
 
   // Register database web interface.
   void Register(HTTPServer *http) {
-    http->Register("/", this, &DatabaseService::Process);
+    http->Register("/", this, &DBService::Process);
   }
 
   // Mount database.
@@ -102,7 +103,7 @@ class DatabaseService {
     return Status::OK;
   }
 
-  // Process database requests.
+  // Process HTTP database requests.
   void Process(HTTPRequest *request, HTTPResponse *response) {
     if (terminate_) {
       response->SendError(500);
@@ -110,11 +111,29 @@ class DatabaseService {
     }
 
     switch (request->Method()) {
-      case HTTP_GET: Get(request, response, true); break;
-      case HTTP_HEAD: Get(request, response, false); break;
-      case HTTP_PUT: Put(request, response); break;
-      case HTTP_DELETE: Delete(request, response); break;
-      case HTTP_OPTIONS: Options(request, response); break;
+      case HTTP_GET:
+        if (strcmp(request->path(), "/") == 0) {
+          Upgrade(request, response);
+        } else {
+          Get(request, response, true);
+        }
+        break;
+
+      case HTTP_HEAD:
+        Get(request, response, false);
+        break;
+
+      case HTTP_PUT:
+        Put(request, response);
+        break;
+
+      case HTTP_DELETE:
+        Delete(request, response);
+        break;
+
+      case HTTP_OPTIONS:
+        Options(request, response);
+        break;
 
       case HTTP_POST: {
         // Perform database command.
@@ -137,10 +156,29 @@ class DatabaseService {
     }
   }
 
+  // Upgrade client protocol.
+  void Upgrade(HTTPRequest *request, HTTPResponse *response) {
+    // Check for upgrade request.
+    const char *connection = request->Get("Connection");
+    const char *upgrade = request->Get("Upgrade");
+    if (connection == nullptr || strcasecmp(connection, "upgrade") != 0 ||
+        upgrade == nullptr || strcasecmp(upgrade, "slingdb") != 0) {
+      response->SendError(404);
+      return;
+    }
+
+    // Upgrade to SLINGDB protocol.
+    DBClient *client = new DBClient(this, request->conn());
+    response->Upgrade(client);
+    response->set_status(101);
+    response->Set("Connection", "upgrade");
+    response->Set("Upgrade", "slingdb");
+  }
+
   // Get database record.
   void Get(HTTPRequest *request, HTTPResponse *response, bool body) {
     // Get database and resource from request.
-    ResourceLock l(this, request->path());
+    DBLock l(this, request->path());
     if (l.mount() == nullptr) {
       response->SendError(404, nullptr, "Database not found");
       return;
@@ -179,7 +217,7 @@ class DatabaseService {
         }
       }
       if (batch < 0) batch = 1;
-      if (batch > max_batch_) batch = max_batch_;
+      if (batch > MAX_BATCH) batch = MAX_BATCH;
 
       if (batch == 1) {
         // Fetch next record from database.
@@ -227,7 +265,7 @@ class DatabaseService {
     }
   }
 
-  // Return multiple documents.
+  // Return multiple records.
   void ReturnMultiple(HTTPResponse *response, Database *db,
                       uint64 recid, int batch, bool body) {
     string boundary = std::to_string(FingerprintCat(db->epoch(), time(0)));
@@ -280,7 +318,7 @@ class DatabaseService {
 
       string ct = "multipart/mixed; boundary=" + boundary;
       response->Set("MIME-Version", "1.0");
-      response->SetContentType(ct.c_str());
+      response->Set("Content-Type", ct.c_str());
       response->Set("Records", num_recs);
       response->Set("Next", next);
     }
@@ -289,7 +327,7 @@ class DatabaseService {
   // Add or update database record.
   void Put(HTTPRequest *request, HTTPResponse *response) {
     // Get database and resource from request.
-    ResourceLock l(this, request->path());
+    DBLock l(this, request->path());
     if (l.mount() == nullptr) {
       response->SendError(404, nullptr, "Database not found");
       return;
@@ -345,7 +383,7 @@ class DatabaseService {
     Database::Outcome outcome;
     uint64 recid = l.db()->Put(record, mode, &outcome);
 
-    // Return error if record could not be written.
+    // Return error if record could not be written to database.
     if (recid == -1) {
       response->SendError(403, nullptr);
       return;
@@ -372,7 +410,7 @@ class DatabaseService {
   // Delete database record.
   void Delete(HTTPRequest *request, HTTPResponse *response) {
     // Get database and resource from request.
-    ResourceLock l(this, request->path());
+    DBLock l(this, request->path());
     if (l.mount() == nullptr) {
       response->SendError(404, nullptr, "Database not found");
       return;
@@ -407,7 +445,8 @@ class DatabaseService {
     // General server information.
     if (strcmp(request->path(), "/") == 0) {
       response->Append("{\n");
-      response->Append("databases: [\n");
+
+      response->Append("\"databases\": [\n");
       MutexLock lock(&mu_);
       for (auto &it : mounts_) {
         DBMount *mount = it.second;
@@ -418,14 +457,17 @@ class DatabaseService {
         response->AppendNumber(mount->db.num_records());
         response->Append("}\n");
       }
-      response->Append("]\n");
+      response->Append("],\n");
+
+      AddNumPair(response, "pid", getpid(), true);
+
       response->Append("}\n");
-      response->SetContentType("text/json");
+      response->set_content_type("text/json");
       return;
     }
 
     // Database-specific information.
-    ResourceLock l(this, request->path());
+    DBLock l(this, request->path());
     if (l.mount() == nullptr) {
       response->SendError(404, nullptr, "Database not found");
       return;
@@ -442,7 +484,7 @@ class DatabaseService {
     AddNumPair(response, "deletions", db->num_deleted());
     AddNumPair(response, "index_capacity", db->index_capacity(), true);
     response->Append("}\n");
-    response->SetContentType("text/json");
+    response->set_content_type("text/json");
     response->Set("Epoch", l.db()->epoch());
   }
 
@@ -485,16 +527,7 @@ class DatabaseService {
     string name = query.Get("name").str();
 
     // Check that database name is valid.
-    bool valid = name.size() > 0 && name.size() < 128;
-    if (name[0] == '_' || name[0] == '-') valid = false;
-    for (char ch : name) {
-      if (ch >= 'A' && ch <= 'Z') continue;
-      if (ch >= 'a' && ch <= 'z') continue;
-      if (ch >= '0' && ch <= '9') continue;
-      if (ch == '_' || ch == '-') continue;
-      valid = false;
-    }
-    if (!valid) {
+    if (!ValidDatabaseName(name)) {
       response->SendError(400, nullptr, "Invalid database name");
       return;
     }
@@ -569,6 +602,11 @@ class DatabaseService {
     DBMount *mount = f->second;
     mount->Acquire();
 
+    // Release database from active clients.
+    for (auto *client = clients_; client != nullptr; client = client->next_) {
+      if (client->mount_ == mount) client->mount_ = nullptr;
+    }
+
     // Shut down database.
     LOG(INFO) << "Unmounting database: " << name;
     Status st = mount->db.Flush();
@@ -583,6 +621,20 @@ class DatabaseService {
     // Database unmounted sucessfully.
     LOG(INFO) << "Database unmounted: " << name;
     response->SendError(200, nullptr, "Database unmounted");
+  }
+
+  // Check that database name is valid.
+  static bool ValidDatabaseName(const string &name) {
+    if (name.empty() || name.size() > MAX_DBNAME_SIZE) return false;
+    if (name[0] == '_' || name[0] == '-') return false;
+    for (char ch : name) {
+      if (ch >= 'A' && ch <= 'Z') continue;
+      if (ch >= 'a' && ch <= 'z') continue;
+      if (ch >= '0' && ch <= '9') continue;
+      if (ch == '_' || ch == '-') continue;
+      return false;
+    }
+    return true;
   }
 
  private:
@@ -607,10 +659,10 @@ class DatabaseService {
     time_t last_flush;    // time of last database flush
   };
 
-  // Resource lock on database.
-  class ResourceLock {
+  // Lock on database.
+  class DBLock {
    public:
-    ResourceLock(DatabaseService *dbs, const char *path) {
+    DBLock(DBService *dbs, const char *path) {
       if (path == nullptr) return;
 
       // Get database name from path.
@@ -634,7 +686,19 @@ class DatabaseService {
       if (!DecodeURLComponent(p, &resource_)) resource_.clear();
     }
 
-    ~ResourceLock() {
+    DBLock(DBService *dbs, const string &dbname) {
+      // Find mount for database.
+      MutexLock lock(&dbs->mu_);
+      if (dbs->terminate_) return;
+      auto f = dbs->mounts_.find(dbname);
+      if (f == dbs->mounts_.end()) return;
+
+      // Lock database.
+      mount_ = f->second;
+      mount_->mu.Lock();
+    }
+
+    ~DBLock() {
       if (mount_ != nullptr) mount_->mu.Unlock();
     }
 
@@ -645,6 +709,94 @@ class DatabaseService {
    private:
     DBMount *mount_ = nullptr;       // database for resource
     string resource_;                // resource name
+  };
+
+  // Database client connection using the binary SLINGDB protocol.
+  class DBClient : public SocketSession {
+   public:
+    DBClient(DBService *dbs, SocketConnection *conn)
+        : dbs_(dbs), conn_(conn) {
+      // Add client to client list.
+      MutexLock lock(&dbs_->mu_);
+      next_ = dbs_->clients_;
+      prev_ = nullptr;
+      if (dbs_->clients_ != nullptr) dbs_->clients_->prev_ = this;
+      dbs_->clients_ = this;
+   }
+
+    ~DBClient() override {
+      // Remove client from client list.
+      MutexLock lock(&dbs_->mu_);
+      if (prev_ != nullptr) prev_->next_ = next_;
+      if (next_ != nullptr) next_->prev_ = prev_;
+      if (this == dbs_->clients_) dbs_->clients_ = next_;
+    }
+
+    // Return protocol name.
+    const char *Name() override { return "DB"; }
+
+    // Process SLINGDB database request.
+    Continuation Process(SocketConnection *conn) override {
+      // Check if we have received a complete header.
+      auto *req = conn->request();
+      if (req->available() < sizeof(DBHeader)) return CONTINUE;
+
+      // Check if request body has been received.
+      auto *hdr = DBHeader::from(req->begin());
+      if (req->available() < hdr->size + sizeof(DBHeader)) return CONTINUE;
+
+      // Dispatch request.
+      req->Consume(sizeof(DBHeader));
+      char *body = req->Consume(hdr->size);
+      switch (hdr->verb) {
+        case DBUSE: return Use(body, hdr->size);
+
+        case DBGET:
+        case DBPUT:
+        case DBDELETE:
+        case DBNEXT:
+        default:
+          return Error("command verb not supported");
+      }
+
+      return TERMINATE;
+    }
+
+    // Switch to using another database.
+    Continuation Use(char *req, int size) {
+      string dbname(req, size);
+      DBLock l(dbs_, dbname);
+      if (l.mount() == nullptr) return Error("database not found");
+      mount_ = l.mount();
+      Header(DBOK, 0);
+      return RESPOND;
+    }
+
+    // Return error message to client.
+    Continuation Error(const char *msg) {
+      int msgsize = strlen(msg);
+      Header(DBERROR, msgsize);
+      conn_->response_body()->Write(msg, msgsize);
+      return RESPOND;
+    }
+
+    // Add header to response.
+    void Header(int verb, int size) {
+      char *hdr = conn_->response_header()->Append(sizeof(DBHeader));
+      DBHeader::from(hdr)->verb = verb;
+      DBHeader::from(hdr)->size = size;
+    }
+
+   private:
+    DBService *dbs_;                // database server
+    SocketConnection *conn_;        // client connection
+    DBMount *mount_ = nullptr;      // active database for client
+
+    // Client list.
+    DBClient *next_;
+    DBClient *prev_;
+
+    friend class DBService;
   };
 
   // Monitor thread for flushing changes to disk.
@@ -685,39 +837,39 @@ class DatabaseService {
   // Directory for new databases.
   string dbdir_;
 
+  // List of client connections.
+  DBClient *clients_ = nullptr;
+
   // Flag indicating that the database service is terminating.
   bool terminate_ = false;
 
   // Maximum batch size.
-  const int max_batch_ = 1000;
+  static const int MAX_BATCH = 1000;
+
+  // Maximum database name size.
+  static const int MAX_DBNAME_SIZE = 128;
 
   // Mutex for accessing global database server state.
   Mutex mu_;
 };
 
+// HTTP server.
+HTTPServer *httpd = nullptr;
+
 // Database service.
-DatabaseService *dbservice = nullptr;
+DBService *dbservice = nullptr;
 
 // Termination handler.
 void terminate(int signum) {
-  LOG(INFO) << "Starting shutdown";
-  if (dbservice != nullptr) {
-    delete dbservice;
-    dbservice = nullptr;
-  }
-  LOG(INFO) << "Shutdown complete";
-  exit(signum);
+  LOG(INFO) << "Shutdown requested";
+  if (httpd != nullptr) httpd->Shutdown();
 }
 
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
   // Initialize database service.
-  dbservice = new DatabaseService(FLAGS_dbdir);
-
-  // Install signal handlers to handle termination.
-  signal(SIGTERM, terminate);
-  signal(SIGINT, terminate);
+  dbservice = new DBService(FLAGS_dbdir);
 
   // Mount databases.
   if (FLAGS_auto_mount) {
@@ -729,19 +881,28 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Install signal handlers to handle termination.
+  signal(SIGTERM, terminate);
+  signal(SIGINT, terminate);
+
   // Start HTTP server.
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
-  HTTPServerOptions http_opts;
-  HTTPServer http(http_opts, FLAGS_port);
-  dbservice->Register(&http);
-  CHECK(http.Start());
+  SocketServerOptions sockopts;
+  httpd = new HTTPServer(sockopts, FLAGS_port);
+  dbservice->Register(httpd);
+  CHECK(httpd->Start());
   LOG(INFO) << "Database server running";
-  http.Wait();
+  httpd->Wait();
 
   // Shut down.
-  dbservice->Flush();
+  LOG(INFO) << "Shutting down connections";
+  delete httpd;
+  httpd = nullptr;
+
+  LOG(INFO) << "Shutting database sever";
   delete dbservice;
   dbservice = nullptr;
+
   LOG(INFO) << "Done";
   return 0;
 }

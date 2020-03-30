@@ -26,6 +26,7 @@ cc_library(
   deps = [
     ":stream",
     "//sling/base",
+    "//sling/util:iobuffer",
   ],
 )
 

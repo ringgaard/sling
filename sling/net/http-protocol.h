@@ -19,9 +19,9 @@
 #include  <string>
 #include  <vector>
 
-#include "sling/base/buffer.h"
 #include "sling/http/http-utils.h"
 #include "sling/net/socket-server.h"
+#include "sling/util/iobuffer.h"
 
 namespace sling {
 
@@ -132,14 +132,16 @@ class HTTPSession : public SocketSession {
   HTTPResponse *response() const { return response_; }
 
   // Append data to response.
-  void AppendResponse(const char *data, int size);
+  void AppendResponse(const char *data, int size) {
+    conn_->response_body()->Write(data, size);
+  }
 
   // Set file for streaming response. This will take ownership of the file.
   void SendFile(File *file) { conn_->SendFile(file); }
 
   // Request and response body buffers.
-  Buffer *request_buffer() { return conn_->request(); }
-  Buffer *response_buffer() { return conn_->response_body(); }
+  IOBuffer *request_buffer() { return conn_->request(); }
+  IOBuffer *response_buffer() { return conn_->response_body(); }
 
   // Return session connection.
   SocketConnection *conn() const { return conn_; }
@@ -164,7 +166,7 @@ class HTTPSession : public SocketSession {
   HTTPResponse *response_ = nullptr;
 
   // HTTP request header buffer.
-  Buffer request_header_;
+  IOBuffer request_header_;
 
   // Action taken after request has been processed.
   Continuation action_ = CLOSE;
@@ -174,7 +176,7 @@ class HTTPSession : public SocketSession {
 class HTTPRequest {
  public:
   // Initialize request form HTTP header.
-  HTTPRequest(HTTPSession *session, Buffer *hdr);
+  HTTPRequest(HTTPSession *session, IOBuffer *hdr);
 
   // Is this a valid HTTP request?
   bool valid() const { return valid_; }
@@ -319,10 +321,10 @@ class HTTPResponse {
   void Upgrade(SocketSession *session) { session_->Upgrade(session); }
 
   // Write HTTP header to buffer.
-  void WriteHeader(Buffer *rsp);
+  void WriteHeader(IOBuffer *rsp);
 
   // HTTP response body buffer.
-  Buffer *buffer() { return session_->response_buffer(); }
+  IOBuffer *buffer() { return session_->response_buffer(); }
 
  private:
   // HTTP session for request.

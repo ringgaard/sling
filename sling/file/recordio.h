@@ -17,11 +17,11 @@
 
 #include <vector>
 
-#include "sling/base/buffer.h"
 #include "sling/base/slice.h"
 #include "sling/base/status.h"
 #include "sling/base/types.h"
 #include "sling/file/file.h"
+#include "sling/util/iobuffer.h"
 
 namespace sling {
 
@@ -207,10 +207,10 @@ class RecordReader : public RecordFile {
   FileHeader info_;
 
   // Input buffer.
-  Buffer input_;
+  IOBuffer input_;
 
   // Buffer for decompressed record data.
-  Buffer decompressed_data_;
+  IOBuffer decompressed_data_;
 
   friend class RecordWriter;
 };
@@ -355,10 +355,10 @@ class RecordWriter : public RecordFile {
   FileHeader info_;
 
   // Output buffer.
-  Buffer output_;
+  IOBuffer output_;
 
   // Buffer for compressed record data.
-  Buffer compressed_data_;
+  IOBuffer compressed_data_;
 
   // Index entries for building index.
   Index index_;

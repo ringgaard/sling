@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/base/buffer.h"
+#include "sling/util/iobuffer.h"
 
 #include <string.h>
 
@@ -20,11 +20,11 @@
 
 namespace sling {
 
-void Buffer::Clear() {
+void IOBuffer::Clear() {
   begin_ = end_ = floor_;
 }
 
-void Buffer::Reset(size_t size) {
+void IOBuffer::Reset(size_t size) {
   if (size != capacity()) {
     if (size == 0) {
       free(floor_);
@@ -38,7 +38,7 @@ void Buffer::Reset(size_t size) {
   begin_ = end_ = floor_;
 }
 
-void Buffer::Resize(size_t size) {
+void IOBuffer::Resize(size_t size) {
   if (size != capacity()) {
     size_t offset = begin_ - floor_;
     size_t used = end_ - begin_;
@@ -50,7 +50,7 @@ void Buffer::Resize(size_t size) {
   }
 }
 
-void Buffer::Flush() {
+void IOBuffer::Flush() {
   if (begin_ > floor_) {
     size_t used = end_ - begin_;
     memmove(floor_, begin_, used);
@@ -59,7 +59,7 @@ void Buffer::Flush() {
   }
 }
 
-void Buffer::Ensure(size_t size) {
+void IOBuffer::Ensure(size_t size) {
   if (remaining() < size) {
     size_t minsize = end_ - floor_ + size;
     size_t newsize = ceil_ - floor_;
@@ -69,27 +69,27 @@ void Buffer::Ensure(size_t size) {
   }
 }
 
-char *Buffer::Append(size_t size) {
+char *IOBuffer::Append(size_t size) {
   Ensure(size);
   char *data = end_;
   end_ += size;
   return data;
 }
 
-char *Buffer::Consume(size_t size) {
+char *IOBuffer::Consume(size_t size) {
   DCHECK_LE(size, available());
   char *data = begin_;
   begin_ += size;
   return data;
 }
 
-void Buffer::Read(void *data, size_t size) {
+void IOBuffer::Read(void *data, size_t size) {
   CHECK_LE(size, available());
   memcpy(data, begin_, size);
   begin_ += size;
 }
 
-void Buffer::Write(const void *data, size_t size) {
+void IOBuffer::Write(const void *data, size_t size) {
   Ensure(size);
   memcpy(end_, data, size);
   end_ += size;

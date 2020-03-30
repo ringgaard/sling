@@ -19,10 +19,10 @@
 #include <atomic>
 #include <vector>
 
-#include "sling/base/buffer.h"
 #include "sling/base/status.h"
 #include "sling/base/types.h"
 #include "sling/file/file.h"
+#include "sling/util/iobuffer.h"
 #include "sling/util/mutex.h"
 #include "sling/util/thread.h"
 
@@ -88,7 +88,7 @@ class SocketServer {
   const SocketServerOptions &options() const { return options_; }
 
   // Output connection information as HTML.
-  void OutputSocketZ(Buffer *out) const;
+  void OutputSocketZ(IOBuffer *out) const;
 
  private:
   // Endpoint for listening for new connections for protocol.
@@ -171,9 +171,9 @@ class SocketConnection {
   SocketServer *server() const { return server_; }
 
   // I/O buffers.
-  Buffer *request() { return &request_; }
-  Buffer *response_header() { return &response_header_; }
-  Buffer *response_body() { return &response_body_; }
+  IOBuffer *request() { return &request_; }
+  IOBuffer *response_header() { return &response_header_; }
+  IOBuffer *response_body() { return &response_body_; }
 
   // Return connection session.
   SocketSession *session() { return session_; }
@@ -184,11 +184,11 @@ class SocketConnection {
  private:
   // Receive data into buffer until it is full or all data that can be received
   // without blocking has been received.
-  Status Recv(Buffer *buffer, bool *done);
+  Status Recv(IOBuffer *buffer, bool *done);
 
   // Send data from buffer until all data has been sent or all the data that can
   // be sent without blocking has been sent.
-  Status Send(Buffer *buffer, bool *done);
+  Status Send(IOBuffer *buffer, bool *done);
 
   // Shut down connection.
   void Shutdown();
@@ -212,10 +212,10 @@ class SocketConnection {
   SocketConnection *next_;
   SocketConnection *prev_;
 
-  // Buffers for request/response header/body.
-  Buffer request_;
-  Buffer response_header_;
-  Buffer response_body_;
+  // Buffers for request and response header/body.
+  IOBuffer request_;
+  IOBuffer response_header_;
+  IOBuffer response_body_;
 
   // File for streaming response.
   File *file_ = nullptr;

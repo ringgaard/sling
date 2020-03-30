@@ -132,9 +132,9 @@ int64 StringOutputStream::ByteCount() const {
   return buffer_->size();
 }
 
-BufferInputStream::BufferInputStream(Buffer *buffer) : buffer_(buffer) {}
+IOBufferInputStream::IOBufferInputStream(IOBuffer *buffer) : buffer_(buffer) {}
 
-bool BufferInputStream::Next(const void **data, int *size) {
+bool IOBufferInputStream::Next(const void **data, int *size) {
   int n = buffer_->available();
   if (n > 0) {
     *data = buffer_->Consume(n);
@@ -145,11 +145,11 @@ bool BufferInputStream::Next(const void **data, int *size) {
   }
 }
 
-void BufferInputStream::BackUp(int count) {
+void IOBufferInputStream::BackUp(int count) {
   buffer_->Consume(-count);
 }
 
-bool BufferInputStream::Skip(int count) {
+bool IOBufferInputStream::Skip(int count) {
   int left = buffer_->available();
   if (count > left) {
     buffer_->Consume(left);
@@ -160,14 +160,14 @@ bool BufferInputStream::Skip(int count) {
   }
 }
 
-int64 BufferInputStream::ByteCount() const {
+int64 IOBufferInputStream::ByteCount() const {
   return buffer_->consumed();
 }
 
-BufferOutputStream::BufferOutputStream(Buffer *buffer, int block_size)
+IOBufferOutputStream::IOBufferOutputStream(IOBuffer *buffer, int block_size)
     : buffer_(buffer), block_size_(block_size) {}
 
-bool BufferOutputStream::Next(void **data, int *size) {
+bool IOBufferOutputStream::Next(void **data, int *size) {
   if (buffer_->full()) buffer_->Ensure(block_size_);
 
   int n = buffer_->remaining();
@@ -177,11 +177,11 @@ bool BufferOutputStream::Next(void **data, int *size) {
   return true;
 }
 
-void BufferOutputStream::BackUp(int count) {
+void IOBufferOutputStream::BackUp(int count) {
   buffer_->Append(-count);
 }
 
-int64 BufferOutputStream::ByteCount() const {
+int64 IOBufferOutputStream::ByteCount() const {
   return buffer_->available();
 }
 

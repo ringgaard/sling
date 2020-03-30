@@ -25,18 +25,38 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "dbprotocol",
+  hdrs = ["dbprotocol.h"],
+  deps = [
+    "//sling/base",
+  ],
+)
+
 cc_binary(
   name = "dbserver",
   srcs = ["dbserver.cc"],
   deps = [
     ":db",
+    ":dbprotocol",
     "//sling/base",
     "//sling/file:posix",
-    "//sling/http:http-server",
+    "//sling/net:http-protocol",
     "//sling/string:numbers",
     "//sling/util:fingerprint",
     "//sling/util:mutex",
     "//sling/util:thread",
+  ],
+)
+
+cc_library(
+  name = "dbclient",
+  srcs = ["dbclient.cc"],
+  hdrs = ["dbclient.h"],
+  deps = [
+    ":dbprotocol",
+    "//sling/base",
+    "//sling/util:iobuffer",
   ],
 )
 

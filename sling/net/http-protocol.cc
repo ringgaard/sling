@@ -23,6 +23,7 @@ static const char *HTTP_SERVER_NAME = "HTTPServer/1.0";
 // Return text for HTTP status code.
 static const char *StatusText(int status) {
   switch (status) {
+    case 101: return "Switching Protocols";
     case 200: return "OK";
     case 204: return "No Content";
     case 301: return "Moved Permanently";
@@ -58,7 +59,7 @@ static void Handle404(HTTPRequest *request, HTTPResponse *response) {
 }
 
 // Read HTTP header line.
-static char *ReadLine(Buffer *hdr) {
+static char *ReadLine(IOBuffer *hdr) {
   char *line = hdr->begin();
   char *end = hdr->end();
   char *s = line;
@@ -259,7 +260,8 @@ void HTTPSession::Dispatch() {
   response_->WriteHeader(conn_->response_header());
 }
 
-HTTPRequest::HTTPRequest(HTTPSession *session, Buffer *hdr) {
+HTTPRequest::HTTPRequest(HTTPSession *session, IOBuffer *hdr)
+    : session_(session) {
   // Get HTTP line.
   char *s = ReadLine(hdr);
   if (!s) return;
@@ -453,7 +455,7 @@ void HTTPResponse::TempRedirectTo(const char *uri) {
   SendError(307, "Moved Temporary", msg.c_str());
 }
 
-void HTTPResponse::WriteHeader(Buffer *rsp) {
+void HTTPResponse::WriteHeader(IOBuffer *rsp) {
   // Output HTTP header line.
   if (session_->request()->http11()) {
     rsp->Write("HTTP/1.1");

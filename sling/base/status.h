@@ -34,6 +34,7 @@ class Status {
 
   // Create an error status.
   Status(int code, const char *msg);
+  Status(int code, const char *msg, int length);
   Status(int code, const char *msg1, const char *msg2);
   Status(int code, const string &msg);
   Status(int code, const char *msg1, const string &msg2);

@@ -17,10 +17,10 @@
 
 #include <string>
 
-#include "sling/base/buffer.h"
 #include "sling/base/slice.h"
 #include "sling/base/types.h"
 #include "sling/stream/stream.h"
+#include "sling/util/iobuffer.h"
 
 namespace sling {
 
@@ -96,10 +96,10 @@ class StringOutputStream : public OutputStream {
   string *buffer_;
 };
 
-// An InputStream for reading from a Buffer.
-class BufferInputStream : public InputStream {
+// An InputStream for reading from an I/O buffer.
+class IOBufferInputStream : public InputStream {
  public:
-  BufferInputStream(Buffer *buffer);
+  IOBufferInputStream(IOBuffer *buffer);
 
   // InputStream interface.
   bool Next(const void **data, int *size) override;
@@ -108,13 +108,13 @@ class BufferInputStream : public InputStream {
   int64 ByteCount() const override;
 
  private:
-  Buffer *buffer_;
+  IOBuffer *buffer_;
 };
 
-// An OutputStream for writing to a Buffer.
-class BufferOutputStream : public OutputStream {
+// An OutputStream for writing to an  I/O buffer.
+class IOBufferOutputStream : public OutputStream {
  public:
-  BufferOutputStream(Buffer *buffer, int block_size = 4096);
+  IOBufferOutputStream(IOBuffer *buffer, int block_size = 4096);
 
   // OutputStream interface.
   bool Next(void **data, int *size) override;
@@ -122,7 +122,7 @@ class BufferOutputStream : public OutputStream {
   int64 ByteCount() const override;
 
  private:
-  Buffer *buffer_;
+  IOBuffer *buffer_;
   int block_size_;
 };
 

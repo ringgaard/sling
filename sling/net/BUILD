@@ -7,6 +7,7 @@ cc_library(
   deps = [
     "//sling/base",
     "//sling/file",
+    "//sling/util:iobuffer",
     "//sling/util:mutex",
     "//sling/util:thread",
   ],
@@ -21,6 +22,7 @@ cc_library(
     "//sling/base",
     "//sling/http:http-utils",
     "//sling/string:numbers",
+    "//sling/util:iobuffer",
     "//sling/util:mutex",
   ],
 )
