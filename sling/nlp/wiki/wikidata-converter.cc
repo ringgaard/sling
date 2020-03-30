@@ -91,7 +91,9 @@ WikidataConverter::WikidataConverter(Store *commons, const string &language) {
   language_map_["zxx"] = n_lang_none_.handle();
 }
 
-Frame WikidataConverter::Convert(const Frame &item, int64 *revision) {
+Frame WikidataConverter::Convert(const Frame &item,
+                                 uint64 *revision,
+                                 string *modified) {
   // Get top-level item attributes.
   Store *store = item.store();
   string id = item.GetString(s_id_);
@@ -108,8 +110,16 @@ Frame WikidataConverter::Convert(const Frame &item, int64 *revision) {
         *revision = lastrevid.AsInt();
       } else if (store->IsString(lastrevid)) {
         Text str = String(store, lastrevid).text();
-        safe_strto64(str.data(), str.size(), revision);
+        safe_strtou64(str.data(), str.size(), revision);
       }
+    }
+  }
+
+  // Get last modification date.
+  if (modified != nullptr) {
+    Handle modtime = item.GetHandle(s_modified_);
+    if (!modtime.IsNil() && store->IsString(modtime)) {
+      *modified = String(store, modtime).value();
     }
   }
 

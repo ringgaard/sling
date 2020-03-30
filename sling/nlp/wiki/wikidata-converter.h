@@ -33,7 +33,9 @@ class WikidataConverter {
   WikidataConverter(Store *commons, const string &language);
 
   // Convert Wikidata JSON item to frame representation.
-  Frame Convert(const Frame &item, int64 *revision = nullptr);
+  Frame Convert(const Frame &item,
+                uint64 *revision = nullptr,
+                string *modified = nullptr);
 
   // Only import labels and description in primary language.
   bool only_primary_language() const { return only_primary_language_; }
@@ -171,6 +173,7 @@ class WikidataConverter {
   Name s_property_{names_, "property"};
   Name s_title_{names_, "title"};
   Name s_lastrevid_{names_, "lastrevid"};
+  Name s_modified_{names_, "modified"};
 
   // Wikidata types.
   Name s_string_{names_, "string"};

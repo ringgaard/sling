@@ -69,7 +69,7 @@ class RecordFileReader : public Process {
       value_bytes_read->Increment(record.value.size());
 
       // Send message with record to output channel.
-      Message *message = new Message(record.key, record.value);
+      Message *message = new Message(record.key, record.version, record.value);
       output->Send(message);
 
       // Check for early stopping.

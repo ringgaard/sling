@@ -36,7 +36,10 @@ enum RecordType {
 // Record with key and value.
 struct Record {
   Record() {}
-  Record(const Slice &k, const Slice &v) : key(k), value(v) {}
+  Record(const Slice &key, const Slice &value)
+      : key(key), value(value) {}
+  Record(const Slice &key, uint64 version, const Slice &value)
+      : key(key), value(value), version(version) {}
 
   RecordType type = DATA_RECORD;
   Slice key;
@@ -319,6 +322,11 @@ class RecordWriter : public RecordFile {
   // Write key/value pair to file.
   Status Write(const Slice &key, const Slice &value) {
     return Write(Record(key, value));
+  }
+
+  // Write key/version/value triple to file.
+  Status Write(const Slice &key, uint64 version, const Slice &value) {
+    return Write(Record(key, version, value));
   }
 
   // Write record with empty key.

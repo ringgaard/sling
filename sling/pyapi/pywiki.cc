@@ -99,7 +99,7 @@ PyObject *PyWikiConverter::ConvertWikidata(PyObject *args, PyObject *kw) {
   }
 
   // Convert Wikidata JSON to SLING frame.
-  int64 revision = -1;
+  uint64 revision = 0;
   const Frame &wikiitem = converter->Convert(item, &revision);
 
   // Return Wikidata item frame and revision.

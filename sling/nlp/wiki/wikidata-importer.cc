@@ -32,6 +32,7 @@
 #include "sling/task/frames.h"
 #include "sling/task/reducer.h"
 #include "sling/task/task.h"
+#include "sling/util/mutex.h"
 
 namespace sling {
 namespace nlp {
@@ -90,29 +91,57 @@ class WikidataImporter : public task::Processor {
     CHECK(obj.IsFrame()) << message->value();
 
     // Create SLING frame for item.
-    Frame profile = converter_->Convert(obj.AsFrame());
+    uint64 revision = 0;
+    string modified;
+    Frame profile = converter_->Convert(obj.AsFrame(), &revision, &modified);
     bool is_property = profile.IsA(n_property_);
     bool is_lexeme = profile.IsA(n_lexeme_);
+
+    // Keep track of the lastest modification.
+    UpdateRevision(revision, modified);
 
     // Output property or item.
     if (is_lexeme) {
       // Discard lexemes for now since lexicographic data is still in beta.
       num_lexemes_->Increment();
-    } else if (is_property) {
-      property_channel_->Send(task::CreateMessage(profile));
-      num_properties_->Increment();
     } else {
-      item_channel_->Send(task::CreateMessage(profile));
-      num_items_->Increment();
+      task::Message *m = task::CreateMessage(profile);
+      m->set_serial(revision);
+      if (is_property) {
+        property_channel_->Send(m);
+        num_properties_->Increment();
+      } else {
+        item_channel_->Send(m);
+        num_items_->Increment();
+      }
     }
   }
 
-  // Clean up.
+  // Task complete.
   void Done(task::Task *task) override {
+    // Write latest modification to file.
+    auto *timestamp = task->GetOutput("timestamp");
+    if (timestamp != nullptr) {
+      string data =
+          latests_modified_ + "\t" + std::to_string(latests_revision_);
+      Status st = File::WriteContents(timestamp->resource()->name(), data);
+      CHECK(st) << "Error writing timestamp file: " << st;
+    }
+
+    // Clean up.
     delete converter_;
     converter_ = nullptr;
     delete commons_;
     commons_ = nullptr;
+  }
+
+  // Update latest revision and modification time.
+  void UpdateRevision(uint64 revision, const string &modified) {
+    MutexLock lock(&mu_);
+    if (revision > latests_revision_) {
+      latests_revision_ = revision;
+      latests_modified_ = modified;
+    }
   }
 
  private:
@@ -125,6 +154,12 @@ class WikidataImporter : public task::Processor {
 
   // Wikidata converter.
   WikidataConverter *converter_ = nullptr;
+
+  // Latest revision and modification time seen in items. Updates to these
+  // are serialized though a mutex.
+  uint64 latests_revision_ = 0;
+  string latests_modified_;
+  Mutex mu_;
 
   // Statistics.
   task::Counter *num_items_ = nullptr;
