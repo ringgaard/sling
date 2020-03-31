@@ -25,6 +25,11 @@ static Status Error(const char *context) {
   return Status(errno, context, strerror(errno));
 }
 
+// Return truncation error.
+static Status Truncated() {
+  return Status(EBADMSG, "packet truncated");
+}
+
 Status DBClient::Connect(const string &database) {
   // Parse database specification.
   string hostname = "localhost";
@@ -119,6 +124,139 @@ Status DBClient::Use(const string &dbname) {
   return Do(DBUSE);
 }
 
+Status DBClient::Get(const Slice &key, DBRecord *record) {
+  request_.Clear();
+  WriteKey(key);
+  Status st = Do(DBGET);
+  if (!st) return st;
+  return ReadRecord(record);
+}
+
+Status DBClient::Get(const std::vector<Slice> &keys,
+                     std::vector<DBRecord> *records) {
+  request_.Clear();
+  for (auto &key : keys) WriteKey(key);
+  Status st = Do(DBGET);
+  if (!st) return st;
+  records->resize(keys.size());
+  for (int i = 0; i < keys.size(); ++i) {
+    Status st = ReadRecord(&records->at(i));
+    if (!st) return st;
+  }
+  return Status::OK;
+}
+
+Status DBClient::Put(DBRecord *record, DBUpdateMode mode) {
+  request_.Clear();
+  request_.Write(&mode, 4);
+  WriteRecord(record);
+  Status st = Do(DBPUT);
+  if (!st) return st;
+  if (!response_.Read(&record->outcome, 4)) return Truncated();
+  return Status::OK;
+}
+
+Status DBClient::Put(std::vector<DBRecord> *records, DBUpdateMode mode) {
+  request_.Clear();
+  request_.Write(&mode, 4);
+  for (auto &record : *records) WriteRecord(&record);
+  Status st = Do(DBPUT);
+  if (!st) return st;
+  for (int i = 0; i < records->size(); ++i) {
+    if (!response_.Read(&records->at(i).outcome, 4)) return Truncated();
+  }
+  return Status::OK;
+}
+
+Status DBClient::Delete(const Slice &key) {
+  request_.Clear();
+  WriteKey(key);
+  return Do(DBDELETE);
+}
+
+Status DBClient::Next(uint64 *iterator, DBRecord *record) {
+  uint32 num = 1;
+  request_.Clear();
+  request_.Write(iterator, 8);
+  request_.Write(&num, 4);
+  Status st = Do(DBNEXT);
+  if (!st) return st;
+  if (reply_ == DBDONE) return Status(ENOENT, "No more records");
+  st = ReadRecord(record);
+  if (!st) return st;
+  if (!response_.Read(iterator, 8)) return Truncated();
+  return Status::OK;
+}
+
+Status DBClient::Next(uint64 *iterator, int num,
+                      std::vector<DBRecord> *records) {
+  request_.Clear();
+  request_.Write(iterator, 8);
+  request_.Write(&num, 4);
+  Status st = Do(DBNEXT);
+  if (!st) return st;
+  if (reply_ == DBDONE) return Status(ENOENT, "No more records");
+  records->clear();
+  DBRecord record;
+  while (response_.available() > 8) {
+    st = ReadRecord(&record);
+    if (!st) return st;
+    records->push_back(record);
+  }
+  if (!response_.Read(iterator, 8)) return Truncated();
+  return Status::OK;
+}
+
+void DBClient::WriteKey(const Slice &key) {
+  uint32 size = key.size();
+  request_.Write(&size, 4);
+  request_.Write(key.data(), key.size());
+}
+
+void DBClient::WriteRecord(DBRecord *record) {
+  uint32 ksize = record->key.size() << 1;
+  if (record->version != 0) ksize |= 1;
+  request_.Write(&ksize, 4);
+  request_.Write(record->key.data(), record->key.size());
+
+  if (record->version != 0) {
+    request_.Write(&record->version, 8);
+  }
+
+  uint32 vsize = record->value.size();
+  request_.Write(&vsize, 4);
+  request_.Write(record->value.data(), record->value.size());
+}
+
+Status DBClient::ReadRecord(DBRecord *record) {
+  // Read key size with version bit.
+  uint32 ksize;
+  if (!response_.Read(&ksize, 4)) return Truncated();
+  bool has_version = ksize & 1;
+  ksize >>= 1;
+
+  // Read key.
+  if (response_.available() < ksize) return Truncated();
+  record->key = Slice(response_.Consume(ksize), ksize);
+
+  // Optionally read version.
+  if (has_version) {
+    if (!response_.Read(&record->version, 8)) return Truncated();
+  } else {
+    record->version = 0;
+  }
+
+  // Read value size.
+  uint32 vsize;
+  if (!response_.Read(&vsize, 4)) return Truncated();
+
+  // Read value.
+  if (response_.available() < vsize) return Truncated();
+  record->value = Slice(response_.Consume(vsize), vsize);
+
+  return Status::OK;
+}
+
 Status DBClient::Do(int verb) {
   // Send header.
   DBHeader reqhdr;
@@ -152,11 +290,11 @@ Status DBClient::Do(int verb) {
     }
   }
   if (response_.available() > size) {
-    return Status(EOVERFLOW, "Response too long");
+    return Status(EMSGSIZE, "Response too long");
   }
 
   // Consume header.
-  auto *rsphdr = DBHeader::from(response_.Consume(sizeof(DBHeader)));
+  DBHeader *rsphdr = response_.consume<DBHeader>();
   reply_ = rsphdr->verb;
 
   // Check for errors.

@@ -90,11 +90,10 @@ struct DBHeader {
 //     value:byte[vsize];
 //   }
 //
-// DBPUT mode:uint32 {record}* -> DBRESULT {outcome:uint32; recid:uint64}*
+// DBPUT mode:uint32 {record}* -> DBRESULT {outcome:uint32}*
 //
 // Add/update record(s) in database. The mode controls under which circumstances
-// a new record should be written. Returns the outcome and recid for each
-// record.
+// a new record should be written. Returns the outcome for each record.
 //
 // DBDELETE: {key}* -> DBOK
 //

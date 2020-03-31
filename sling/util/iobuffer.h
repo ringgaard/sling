@@ -79,12 +79,18 @@ class IOBuffer {
 
   // Append data to buffer.
   char *Append(size_t size);
+  template<typename T> T *append(size_t n = 1) {
+    return reinterpret_cast<T *>(Append(n * sizeof(T)));
+  }
 
   // Consume data from buffer.
   char *Consume(size_t size);
+  template<typename T> T *consume(size_t n = 1) {
+    return reinterpret_cast<T *>(Consume(n * sizeof(T)));
+  }
 
-  // Read data from buffer.
-  void Read(void *data, size_t size);
+  // Read data from buffer. Returns false if not enough data is available.
+  bool Read(void *data, size_t size);
 
   // Write data to buffer.
   void Write(const void *data, size_t size);

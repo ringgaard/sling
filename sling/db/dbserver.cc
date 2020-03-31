@@ -782,9 +782,9 @@ class DBService {
 
     // Add header to response.
     void Header(int verb, int size) {
-      char *hdr = conn_->response_header()->Append(sizeof(DBHeader));
-      DBHeader::from(hdr)->verb = verb;
-      DBHeader::from(hdr)->size = size;
+      DBHeader *hdr = conn_->response_header()->append<DBHeader>();
+      hdr->verb = verb;
+      hdr->size = size;
     }
 
    private:

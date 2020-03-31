@@ -70,11 +70,20 @@ class DBClient {
   // Iterate all active records in database, e.g.
   //   uint64 iterator = 0;
   //   Record record;
-  //   while (db->Next(&record, &iterator)) { ... }
-  Status Next(DBRecord *record, uint64 *iterator);
-  Status Next(std::vector<DBRecord> *records, int num, uint64 *iterator);
+  //   while (db->Next(&iterator, &record)) { ... }
+  Status Next(uint64 *iterator, DBRecord *record);
+  Status Next(uint64 *iterator, int num, std::vector<DBRecord> *records);
 
  private:
+  // Write key to request.
+  void WriteKey(const Slice &key);
+
+  // Write record to request.
+  void WriteRecord(DBRecord *record);
+
+  // Read record from response.
+  Status ReadRecord(DBRecord *record);
+
   // Send request to server and receive reply.
   Status Do(int verb);
 

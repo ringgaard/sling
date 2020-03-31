@@ -83,10 +83,11 @@ char *IOBuffer::Consume(size_t size) {
   return data;
 }
 
-void IOBuffer::Read(void *data, size_t size) {
-  CHECK_LE(size, available());
+bool IOBuffer::Read(void *data, size_t size) {
+  if (size < available()) return false;
   memcpy(data, begin_, size);
   begin_ += size;
+  return true;
 }
 
 void IOBuffer::Write(const void *data, size_t size) {
