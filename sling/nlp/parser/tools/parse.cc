@@ -235,6 +235,7 @@ int main(int argc, char *argv[]) {
         std::cout << num_documents << " documents\r";
         std::cout.flush();
       }
+      document->ClearAnnotations();
       parser.Parse(document);
 
       delete document;

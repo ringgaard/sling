@@ -951,6 +951,11 @@ class Channel {
     return reinterpret_cast<T *>(at(index));
   }
 
+  // Set channel element.
+  void set(size_t index, void *data) {
+    memcpy(at(index), data, element_size());
+  }
+
   // Add element to channel and return the last element.
   char *push() { resize(size_ + 1); return at(size_ - 1); }
 
@@ -970,6 +975,9 @@ class Channel {
 
   // Return tensor format for channel elements.
   const Tensor *format() const { return format_; }
+
+  // Return size of each element in channel.
+  int element_size() const { return element_size_; }
 
   // Return tensor data object for parameter in instance.
   TensorData operator[](int index) {

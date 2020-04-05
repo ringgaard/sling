@@ -256,6 +256,8 @@ struct Expression {
       if (input->elements() == 1) continue;
       if (prototype->shape().IsSingleBroadcast(input->shape())) {
         single_bcast = true;
+        int common = prototype->dim(prototype->rank() - 1);
+        if (common < elements) elements = common;
         continue;
       }
       if (input->sparse()) {

@@ -386,6 +386,9 @@ class FlowBuilder : public Scope {
   Variable *ExpandDims(Variable *x, int axis) {
     return Reshape(x, x->shape.expanded(axis));
   }
+  Variable *ReverseDims(Variable *x) {
+    return Reshape(x, x->shape.transposed());
+  }
   Variable *Broadcast(Variable *x, const Shape &shape) {
     return Op("Identity", {x}, x->type, shape);
   }

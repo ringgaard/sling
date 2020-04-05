@@ -3016,6 +3016,7 @@ SIMDStrategy::SIMDStrategy(SIMDAssembler *sasm, int size) {
   // Use scalar generator for singletons.
   if (size == 1) {
     phases_.emplace_back(sasm->scalar());
+    phases_.back().last = true;
     return;
   }
 
@@ -3064,6 +3065,7 @@ SIMDStrategy::SIMDStrategy(SIMDAssembler *sasm, int size) {
       remaining = 0;
     }
   }
+  phases_.back().last = true;
 }
 
 int SIMDStrategy::MaxUnrolls() {

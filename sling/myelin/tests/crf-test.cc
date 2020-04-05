@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <random>
 
 #include "sling/base/init.h"
 #include "sling/myelin/compiler.h"
@@ -9,16 +10,27 @@
 using namespace sling;
 using namespace sling::myelin;
 
+float nextval = 0.0;
+float next() {
+  nextval += 1.0;
+  return nextval;
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
-  int N = 15;
-  int L = 3;
+  //std::mt19937_64 prng;
+  //prng.seed(time(0));
+  //std::normal_distribution<float> normal(0, 1.0);
+  //std::uniform_real_distribution<float> uniform(-1.0, 1.0);
+
+  int N = 5;
+  int K = 3;
 
   Flow flow;
   FlowBuilder f(&flow, "f");
-  auto *x = f.Placeholder("x", DT_FLOAT, {1, L})->set_out();
-  auto *dx = f.Placeholder("dx", DT_FLOAT, {1, L})->set_out();
+  auto *x = f.Placeholder("x", DT_FLOAT, {1, K})->set_out();
+  auto *dx = f.Placeholder("dx", DT_FLOAT, {1, K})->set_out();
   f.Add(x, dx);
 
   CRF crf;
@@ -27,13 +39,14 @@ int main(int argc, char *argv[]) {
   Compiler compiler;
   Network net;
   compiler.Compile(&flow, &net);
+  net.InitModelParameters();
 
   crf.Initialize(net);
 
   TensorData transitions = net["crf/transitions"];
-  for (int i = 0; i < L; ++i) {
-    for (int j = 0; j < L; ++j) {
-      transitions.at<float>(i, j) = i == j ? 1.0 : 0.0;
+  for (int i = 0; i < K; ++i) {
+    for (int j = 0; j < K; ++j) {
+      transitions.at<float>(i, j) = next();
     }
   }
   LOG(INFO) << "transitions:\n" << transitions.ToString();
@@ -48,13 +61,14 @@ int main(int argc, char *argv[]) {
 
   std::vector<int> labels(N);
   for (int t = 0; t < N; ++t) {
-    labels[t] = 2;
+    labels[t] = (t + 1) % K;
+    LOG(INFO) << "label " << t << ": " << labels[t];
   }
 
   for (int t = 0; t < N; ++t) {
     TensorData x = input[t];
-    for (int y = 0; y < L; ++y) {
-      x.at<float>(0, y) = ((y + t) % 2) ? 10.0 : -10.0;
+    for (int y = 0; y < K; ++y) {
+      x.at<float>(0, y) = next();
     }
   }
   LOG(INFO) << "input:\n" << input.ToString();

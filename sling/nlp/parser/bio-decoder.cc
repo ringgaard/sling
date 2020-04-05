@@ -88,6 +88,16 @@ struct BIOLabel {
   // Compute the number of labels for a given number of types.
   static int labels(int types) { return 1 + 4 * types; }
 
+  // Convert tag to string.
+  string ToString() const {
+    static const char tagname[] = "OBIES";
+    if (tag == OUTSIDE) {
+      return "O";
+    } else {
+      return tagname[tag] + std::to_string(type);
+    }
+  }
+
   BIOTag tag = OUTSIDE;  // tag for label
   int type = 0;          // entity type for label
 };
@@ -243,9 +253,11 @@ class BIODecoder : public ParserDecoder {
           // Add single-token mention.
           Handle type = decoder_->types_[labels[t].type];
           Span *span = document_->AddSpan(begin + t, begin + t + 1);
-          Builder builder(document_->store());
-          if (!type.IsNil()) builder.AddIsA(type);
-          span->Evoke(builder.Create());
+          if (span != nullptr) {
+            Builder builder(document_->store());
+            if (!type.IsNil()) builder.AddIsA(type);
+            span->Evoke(builder.Create());
+          }
         } else if (labels[t].tag == BEGIN) {
           // Find end tag.
           int b = t++;
@@ -255,9 +267,11 @@ class BIODecoder : public ParserDecoder {
           // Add multi-token mention.
           Handle type = decoder_->types_[labels[b].type];
           Span *span = document_->AddSpan(begin + b, begin + e);
-          Builder builder(document_->store());
-          if (!type.IsNil()) builder.AddIsA(type);
-          span->Evoke(builder.Create());
+          if (span != nullptr) {
+            Builder builder(document_->store());
+            if (!type.IsNil()) builder.AddIsA(type);
+            span->Evoke(builder.Create());
+          }
         }
         t++;
       }
@@ -305,19 +319,21 @@ class BIODecoder : public ParserDecoder {
           // Add single-token mention.
           Handle type = decoder_->types_[label.type];
           Span *span = document_->AddSpan(begin + t, begin + t + 1);
-          Builder builder(document_->store());
-          if (!type.IsNil()) builder.AddIsA(type);
-          span->Evoke(builder.Create());
+          if (span != nullptr) {
+            Builder builder(document_->store());
+            if (!type.IsNil()) builder.AddIsA(type);
+            span->Evoke(builder.Create());
+          }
           t++;
         } else if (label.tag == BEGIN) {
           // Find end tag.
-          int b = t++;
-          int e = t;
+          int b = t;
+          int e = ++t;
           BIOLabel prev = label;
           while (t < length) {
             BIOLabel next(labels[t]);
             if (!next.CanFollow(prev)) break;
-            t++;
+            e = ++t;
             if (next.tag == END) break;
             prev = next;
           }
@@ -325,11 +341,13 @@ class BIODecoder : public ParserDecoder {
           // Add multi-token mention.
           Handle type = decoder_->types_[label.type];
           Span *span = document_->AddSpan(begin + b, begin + e);
-          Builder builder(document_->store());
-          if (!type.IsNil()) builder.AddIsA(type);
-          span->Evoke(builder.Create());
+          if (span != nullptr) {
+            Builder builder(document_->store());
+            if (!type.IsNil()) builder.AddIsA(type);
+            span->Evoke(builder.Create());
+          }
         } else {
-          // Ignore invalid tag.
+          // Skip OUTSIDE and invalid tags.
           t++;
         }
       }

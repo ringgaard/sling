@@ -50,9 +50,12 @@ def softmax(x):
   e = np.exp(x - np.max(x))
   return e / e.sum()
 
-def logsumexp(x):
-  m = np.max(x)
-  return np.log(np.sum(np.exp(x - m))) + m
+def logsumexp(x, axis=None, keepdims=False):
+  m = np.amax(x, axis=axis, keepdims=True)
+  y = np.log(np.sum(np.exp(x - m), axis=axis, keepdims=keepdims))
+  if not keepdims: m = np.squeeze(m, axis=axis)
+  y += m
+  return y
 
 # Compute flow function using numpy.
 def compute(flow, f, data):
@@ -189,7 +192,12 @@ def compute(flow, f, data):
     elif op.type == "SoftMax":
       v[o[0]] = softmax(v[i[0]])
     elif op.type == "LogSumExp":
-      v[o[0]] = logsumexp(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = logsumexp(v[i[0]])
+      else:
+        keepdims = bool(op.attrs.get("keepdims"))
+        v[o[0]] = logsumexp(v[i[0]], int(axis), keepdims=keepdims)
     elif op.type == "Count":
       v[o[0]] = np.array(np.count_nonzero(v[i[0]]), nptypes[o[0].type])
     elif op.type == "ArgMin":

@@ -241,7 +241,7 @@ class OneHot : public Kernel {
       __ movq(cnt, Immediate(value->size()));
       __ repmovsb();
     } else {
-      __ movq(Operand(dst), Immediate(0x3F800000));
+      __ movl(Operand(dst), Immediate(0x3F800000));
     }
 
     // Next batch.

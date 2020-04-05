@@ -435,7 +435,7 @@ class InstanceAllocator {
 
 Library::~Library() {
   for (auto o : kernels_) {
-    for (auto k : o.second) delete k;
+    for (const auto &k : o.second) delete k;
   }
 }
 
@@ -858,7 +858,11 @@ string Instance::ToString() const {
   for (Tensor *t : cell()->network()->parameters()) {
     if (t->cell() == cell() && t->shared() == nullptr) {
       str.append(t->name());
-      str.append(" = ");
+      if (t->rank() > 1 && t->dim(0) > 1) {
+        str.append(" =\n");
+      } else {
+        str.append(" = ");
+      }
       str.append(ToString(t));
       str.append("\n");
     }

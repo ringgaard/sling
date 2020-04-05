@@ -181,6 +181,7 @@ class SIMDStrategy {
     int repeat = 1;             // number of repeats of unrolled operation
     int masked = 0;             // number of elements for masked operation
     int regs = 1;               // number of registers used for operation
+    bool last = false;          // last phase in strategy
     SIMDGenerator *generator;   // code generator for phase
   };
 

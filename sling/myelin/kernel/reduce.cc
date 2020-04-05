@@ -207,6 +207,7 @@ class Reduce : public Kernel {
         int blkstart = phase.offset * dsize;
         int blksize = phase.unrolls * vecsize * dsize;
         int stride = axis > 0 ? x->stride(axis - 1) : x->size();
+        bool last = outer_size == 1 && phase.last;
 
         if (phase.masked == 0) {
           // Repeated/residial phase.
@@ -238,7 +239,9 @@ class Reduce : public Kernel {
           for (int i = 0; i < phase.unrolls; ++i) {
             gen->Store(Operand(out, i * vecsize * dsize), acc[i]);
           }
-          __ addq(out, Immediate(blksize));
+          if (!last || phase.repeat > 1) {
+            __ addq(out, Immediate(blksize));
+          }
 
           if (phase.repeat > 1) {
             // Next block.
@@ -269,7 +272,9 @@ class Reduce : public Kernel {
 
           // Store result for block.
           gen->MaskedStore(Operand(out), acc[0]);
-          __ addq(out, Immediate(phase.masked * dsize));
+          if (!last) {
+            __ addq(out, Immediate(phase.masked * dsize));
+          }
         }
       }
 

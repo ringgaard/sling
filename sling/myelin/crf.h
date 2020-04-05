@@ -24,26 +24,12 @@ namespace myelin {
 // Conditional Random Field (CRF) module.
 class CRF {
  public:
-  // Flow input/output variables.
-  struct Variables {
-    Flow::Variable *input;              // input emissions
-    Flow::Variable *dinput;             // emissions gradient
-    Flow::Variable *prev;               // previous tag
-    Flow::Variable *curr;               // current tag
-    Flow::Variable *score;              // score
-
-    Flow::Variable *alpha_in;           // alpha input
-    Flow::Variable *alpha_out;          // alpha output
-    Flow::Variable *beta_in;            // alpha input gradient
-    Flow::Variable *beta_out;           // alpha output gradient
-  };
-
   CRF(const string &name = "crf") : name_(name) {}
 
   // Build flow for CRF.
-  Variables Build(Flow *flow,
-                  Flow::Variable *input,
-                  Flow::Variable *dinput = nullptr);
+  void Build(Flow *flow,
+             Flow::Variable *input,
+             Flow::Variable *dinput = nullptr);
 
   // Initialize CRF.
   void Initialize(const Network &net);
@@ -76,6 +62,8 @@ class CRF {
           forward_(crf->forward_),
           backward_(crf->backward_),
           likelihood_(crf->likelihood_),
+          gradient0_(crf->gradient0_),
+          gradient_(crf->gradient_),
           alpha_(crf->forward_alpha_in_),
           beta_(crf->backward_beta_in_) {}
 
@@ -90,9 +78,11 @@ class CRF {
    private:
     const CRF *crf_;
 
-    InstanceArray forward_;
+    Instance forward_;
     Instance backward_;
     Instance likelihood_;
+    Instance gradient0_;
+    Instance gradient_;
     Channel alpha_;
     Channel beta_;
   };
@@ -115,12 +105,9 @@ class CRF {
 
   // CRF backward cell.
   Cell *backward_ = nullptr;
-  Tensor *backward_primal_ = nullptr;
-  Tensor *backward_logz_ = nullptr;
+  Tensor *backward_input_ = nullptr;
   Tensor *backward_beta_in_ = nullptr;
   Tensor *backward_beta_out_ = nullptr;
-  Tensor *backward_dinput_ = nullptr;
-  Tensor *backward_prev_curr_ = nullptr;
 
   // CRF likelihood cell.
   Cell *likelihood_ = nullptr;
@@ -128,6 +115,24 @@ class CRF {
   Tensor *likelihood_score_ = nullptr;
   Tensor *likelihood_logz_ = nullptr;
   Tensor *likelihood_nll_ = nullptr;
+
+  // CRF gradient cell for first token.
+  Cell *gradient0_ = nullptr;
+  Tensor *gradient0_input_ = nullptr;
+  Tensor *gradient0_curr_ = nullptr;
+  Tensor *gradient0_logz_ = nullptr;
+  Tensor *gradient0_beta_ = nullptr;
+  Tensor *gradient0_dinput_ = nullptr;
+
+  // CRF gradient cell.
+  Cell *gradient_ = nullptr;
+  Tensor *gradient_input_ = nullptr;
+  Tensor *gradient_prev_ = nullptr;
+  Tensor *gradient_curr_ = nullptr;
+  Tensor *gradient_logz_ = nullptr;
+  Tensor *gradient_alpha_ = nullptr;
+  Tensor *gradient_beta_ = nullptr;
+  Tensor *gradient_dinput_ = nullptr;
 
   // CRF viterbi cell.
   Cell *viterbi_ = nullptr;

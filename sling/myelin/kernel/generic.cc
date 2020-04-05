@@ -278,8 +278,9 @@ class CompositeTransformer : public Transformer {
 
       FlowBuilder f(flow, op->func);
       Scope s(&f, op->name, false);
-      auto *max = f.Max(x, axis);
+      auto *max = f.Max(x, axis, axis != -1);
       auto *sub = f.Sub(x, max);
+      if (axis != -1 && !keepdims) max = f.Squeeze(max, axis);
       auto *lse = f.Add(f.Log(f.Sum(f.Exp(sub), axis, keepdims)), max);
 
       flow->RemoveOperation(op);

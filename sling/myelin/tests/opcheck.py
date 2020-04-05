@@ -524,6 +524,13 @@ def logsumexp_test(n):
   y = f.logsumexp(x)
   check(flow, n)
 
+def logsumexp_axis_test(n, m, a, k):
+  flow = myelin.Flow()
+  f = flow.define("logsumexp_axis")
+  x = f.var("x", dt, [n, m])
+  y = f.logsumexp(x, axis=a, keepdims=k)
+  check(flow, (n, m, a, k))
+
 def relu_test(n):
   flow = myelin.Flow()
   f = flow.define("relu")
@@ -908,6 +915,14 @@ def acc_matmul_test(m, k, n):
   f.assign(c, f.add(c, f.matmul(a, b)))
   check(flow, (m, k, n), 0, 10, check=[c])
 
+def bcast_outer_test(m, n):
+  flow = myelin.Flow()
+  f = flow.define("bcast_outer")
+  x = f.var("x", dt, [m, n])
+  y = f.var("y", dt, [m, 1])
+  z = f.add(x, y)
+  check(flow, (m, n))
+
 # Check for specific test to run.
 if flags.arg.test:
   print("Running test", flags.arg.test)
@@ -1012,15 +1027,17 @@ for i in sizes:
 
 for i in sizes:
   for j in sizes:
-    argmin_axis_test([i, j], None)
-    argmin_axis_test([i, j], 0)
-    argmin_axis_test([i, j], 1)
-    argmax_axis_test([i, j], None)
-    argmax_axis_test([i, j], 0)
-    argmax_axis_test([i, j], 1)
+    for axis in [None, 0, 1]:
+      argmin_axis_test([i, j], axis)
+      argmax_axis_test([i, j], axis)
+      if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
+        for keepdims in [False, True]:
+          logsumexp_axis_test(i, j, axis, keepdims)
 
+    bcast_outer_test(i, j)
     matmul_transpose_test(i, j)
     if not flags.arg.mkl: matmul_all_orders_test(i, j, 32)
+
     for k in sizes:
       matmul_test(i, j, k)
       matmul_add_test(i, j, k)
