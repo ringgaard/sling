@@ -373,6 +373,8 @@ class DBService {
         mode = Database::ADD;
       } else if (strcmp(m, "ordered") == 0) {
         mode = Database::ORDERED;
+      } else if (strcmp(m, "newer") == 0) {
+        mode = Database::NEWER;
       } else {
         response->SendError(400, nullptr, "Invalid mode");
         return;

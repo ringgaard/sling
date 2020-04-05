@@ -217,6 +217,17 @@ uint64 Database::Put(const Record &record, Mode mode, Outcome *outcome) {
       }
     }
 
+    // Only overwrite with newer version number in NEWER mode.
+    if (mode == NEWER) {
+      if (record.version < rec.version) {
+        if (outcome != nullptr) *outcome = STALE;
+        return recid;
+      } else if (record.version == rec.version) {
+        if (outcome != nullptr) *outcome = UNCHANGED;
+        return recid;
+      }
+    }
+
     // Check if existing record value matches.
     if (rec.value == record.value) {
       if (outcome != nullptr) *outcome = UNCHANGED;

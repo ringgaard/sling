@@ -45,6 +45,7 @@ enum DBUpdateMode {
   DBOVERWRITE = 0,     // overwrite existing records
   DBADD       = 1,     // only add new records, do not overwrite existing ones
   DBORDERED   = 2,     // do not overwrite records with higher version
+  DBNEWER     = 3,     // only overwrite existing record if version is newer
 };
 
 // Update outcome for DBPUT.

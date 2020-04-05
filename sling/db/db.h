@@ -39,7 +39,8 @@ class Database {
   enum Mode {
     OVERWRITE,  // overwrite existing records
     ADD,        // only add new records, do not overwrite existing records
-    ORDERED,    // do not overwrite records with newer timestamps
+    ORDERED,    // do not overwrite records with newer version
+    NEWER,      // only overwrite existing record if version is newer
   };
 
   // Outcome of put operation.
