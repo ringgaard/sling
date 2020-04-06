@@ -14,6 +14,11 @@ flags.define("--wiki_changes_stream",
              default="https://stream.wikimedia.org/v2/stream/recentchange",
              metavar="URL")
 
+flags.define("--since",
+             help="retrieve event starting from a specific time",
+             default=None,
+             metavar="YYYY-MM-DDThh:mm:ssZ")
+
 flags.define("--wiki_fetch_url",
              help="url for fetching items from wikidata",
              default="https://www.wikidata.org/wiki/Special:EntityData",
@@ -66,16 +71,28 @@ def process_change(edit):
     # Handle redirects by adding {=Q<old> +Q<new>} frames.
     item = store.parse("{id: %s +%s}" % (qid, redir))
   else:
-    try:
-      # Fetch item revision from Wikidata.
-      url = "%s?id=%s&revision=%d&format=json" % (
-        flags.arg.wiki_fetch_url, qid, revision)
-      reply = wdsession.get(url)
+    again = True
+    while again:
+      again = False
+      try:
+        # Fetch item revision from Wikidata.
+        url = "%s?id=%s&revision=%d&format=json" % (
+          flags.arg.wiki_fetch_url, qid, revision)
+        reply = wdsession.get(url)
+        if reply.status_code == 429:
+          # Too many requests.
+          print("throttle down...")
+          time.sleep(30)
+          again = True;
+      except Exception as e:
+        print("Error fetching item:", e, ":", edit[3])
+        return
 
+    try:
       # Convert item to SLING format.
       item, _ = wikiconv.convert_wikidata(store, reply.text)
     except Exception as e:
-      print("Error fetching item:", e, ":", edit[3])
+      print("Error converting item:", e, "status", reply.status_code, ":", reply.text)
       return
 
   # Save item in database.
@@ -131,7 +148,11 @@ redir_pat = re.compile("\/\* wbcreateredirect:\d+\|\|(Q\d+)\|(Q\d+) \*\/")
 # Event listener for receiving Wikidata updates.
 while True:
   try:
-    for event in SSEClient(flags.arg.wiki_changes_stream):
+    url = flags.arg.wiki_changes_stream
+    if flags.arg.since:
+      url += "?since=" + flags.arg.since
+      flags.arg.since = None
+    for event in SSEClient(url):
       if event.event != "message" or event.data == "": continue
       try:
         change = json.loads(event.data)
