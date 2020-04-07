@@ -128,7 +128,7 @@ Status DBClient::Get(const Slice &key, DBRecord *record) {
   request_.Clear();
   WriteKey(key);
   Status st = Do(DBGET);
-  if (!st) return st;
+  if (!st.ok()) return st;
   return ReadRecord(record);
 }
 
@@ -137,33 +137,33 @@ Status DBClient::Get(const std::vector<Slice> &keys,
   request_.Clear();
   for (auto &key : keys) WriteKey(key);
   Status st = Do(DBGET);
-  if (!st) return st;
+  if (!st.ok()) return st;
   records->resize(keys.size());
   for (int i = 0; i < keys.size(); ++i) {
     Status st = ReadRecord(&records->at(i));
-    if (!st) return st;
+    if (!st.ok()) return st;
   }
   return Status::OK;
 }
 
-Status DBClient::Put(DBRecord *record, DBUpdateMode mode) {
+Status DBClient::Put(DBRecord *record, DBMode mode) {
   request_.Clear();
   request_.Write(&mode, 4);
   WriteRecord(record);
   Status st = Do(DBPUT);
-  if (!st) return st;
-  if (!response_.Read(&record->outcome, 4)) return Truncated();
+  if (!st.ok()) return st;
+  if (!response_.Read(&record->result, 4)) return Truncated();
   return Status::OK;
 }
 
-Status DBClient::Put(std::vector<DBRecord> *records, DBUpdateMode mode) {
+Status DBClient::Put(std::vector<DBRecord> *records, DBMode mode) {
   request_.Clear();
   request_.Write(&mode, 4);
   for (auto &record : *records) WriteRecord(&record);
   Status st = Do(DBPUT);
-  if (!st) return st;
+  if (!st.ok()) return st;
   for (int i = 0; i < records->size(); ++i) {
-    if (!response_.Read(&records->at(i).outcome, 4)) return Truncated();
+    if (!response_.Read(&records->at(i).result, 4)) return Truncated();
   }
   return Status::OK;
 }
@@ -180,10 +180,10 @@ Status DBClient::Next(uint64 *iterator, DBRecord *record) {
   request_.Write(iterator, 8);
   request_.Write(&num, 4);
   Status st = Do(DBNEXT);
-  if (!st) return st;
+  if (!st.ok()) return st;
   if (reply_ == DBDONE) return Status(ENOENT, "No more records");
   st = ReadRecord(record);
-  if (!st) return st;
+  if (!st.ok()) return st;
   if (!response_.Read(iterator, 8)) return Truncated();
   return Status::OK;
 }
@@ -194,13 +194,13 @@ Status DBClient::Next(uint64 *iterator, int num,
   request_.Write(iterator, 8);
   request_.Write(&num, 4);
   Status st = Do(DBNEXT);
-  if (!st) return st;
+  if (!st.ok()) return st;
   if (reply_ == DBDONE) return Status(ENOENT, "No more records");
   records->clear();
   DBRecord record;
   while (response_.available() > 8) {
     st = ReadRecord(&record);
-    if (!st) return st;
+    if (!st.ok()) return st;
     records->push_back(record);
   }
   if (!response_.Read(iterator, 8)) return Truncated();
@@ -257,22 +257,24 @@ Status DBClient::ReadRecord(DBRecord *record) {
   return Status::OK;
 }
 
-Status DBClient::Do(int verb) {
-  // Send header.
+Status DBClient::Do(DBVerb verb) {
+  // Send request.
   DBHeader reqhdr;
   reqhdr.verb = verb;
   reqhdr.size = request_.available();
-  int rc = send(sock_, &reqhdr, sizeof(reqhdr), 0);
-  if (rc == 0) return Status(EIO, "Connection closed");
-  if (rc != sizeof(reqhdr)) return Error("send");
 
-  // Send body.
-  while (!request_.empty()) {
-    int rc = send(sock_, request_.begin(), request_.available(), 0);
-    if (rc == 0) return Status(EIO, "Connection closed");
-    if (rc < 0) return Error("send");
-    request_.Consume(rc);
-  }
+  size_t reqsize = request_.available();
+  size_t bufsize = sizeof(DBHeader) + reqsize;
+  iovec buf[2];
+  buf[0].iov_base = &reqhdr;
+  buf[0].iov_len = sizeof(DBHeader);
+  buf[1].iov_base = request_.Consume(reqsize);
+  buf[1].iov_len = reqsize;
+
+  int rc = writev(sock_, buf, 2);
+  if (rc == 0) return Status(EIO, "Connection closed");
+  if (rc < 0) return Error("send");
+  if (rc != bufsize) return Status(EMSGSIZE, "Send truncated");
 
   // Receive response.
   response_.Clear();

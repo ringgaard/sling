@@ -84,7 +84,7 @@ char *IOBuffer::Consume(size_t size) {
 }
 
 bool IOBuffer::Read(void *data, size_t size) {
-  if (size < available()) return false;
+  if (size > available()) return false;
   memcpy(data, begin_, size);
   begin_ += size;
   return true;

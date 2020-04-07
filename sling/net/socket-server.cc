@@ -17,6 +17,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
@@ -227,6 +228,11 @@ void SocketServer::AcceptConnection(Endpoint *ep) {
   int flags = fcntl(sock, F_GETFL, 0);
   rc = fcntl(sock, F_SETFL, flags | O_NONBLOCK);
   if (rc < 0) LOG(WARNING) << Error("fcntl");
+
+  // Disable Nagle's algorithm.
+  int val = 1;
+  rc = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(int));
+  if (rc < 0) LOG(WARNING) << Error("setsockopt(TCP_NODELAY)");
 
   // Create new connection.
   VLOG(3) << "New socket connection " << sock;

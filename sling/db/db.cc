@@ -180,7 +180,7 @@ bool Database::Get(const Slice &key, Record *record) {
   return false;
 }
 
-uint64 Database::Put(const Record &record, Mode mode, Outcome *outcome) {
+uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
   // Check if database is read-only.
   if (config_.read_only) return DatabaseIndex::NVAL;
 
@@ -204,33 +204,33 @@ uint64 Database::Put(const Record &record, Mode mode, Outcome *outcome) {
 
   if (recid != DatabaseIndex::NVAL) {
     // Do not overwrite exisitng records in ADD mode.
-    if (mode == ADD) {
-      if (outcome != nullptr) *outcome = EXISTS;
+    if (mode == DBADD) {
+      if (result != nullptr) *result = DBEXISTS;
       return recid;
     }
 
     // Do not overwrite newer records in ORDERED mode.
-    if (mode == ORDERED) {
+    if (mode == DBORDERED) {
       if (rec.version != 0 && record.version < rec.version) {
-        if (outcome != nullptr) *outcome = STALE;
+        if (result != nullptr) *result = DBSTALE;
         return recid;
       }
     }
 
     // Only overwrite with newer version number in NEWER mode.
-    if (mode == NEWER) {
+    if (mode == DBNEWER) {
       if (record.version < rec.version) {
-        if (outcome != nullptr) *outcome = STALE;
+        if (result != nullptr) *result = DBSTALE;
         return recid;
       } else if (record.version == rec.version) {
-        if (outcome != nullptr) *outcome = UNCHANGED;
+        if (result != nullptr) *result = DBUNCHANGED;
         return recid;
       }
     }
 
     // Check if existing record value matches.
     if (rec.value == record.value) {
-      if (outcome != nullptr) *outcome = UNCHANGED;
+      if (result != nullptr) *result = DBUNCHANGED;
       return recid;
     }
   }
@@ -245,11 +245,11 @@ uint64 Database::Put(const Record &record, Mode mode, Outcome *outcome) {
   if (recid == DatabaseIndex::NVAL) {
     // Add new entry to index.
     index_->Add(fp, newid);
-    if (outcome != nullptr) *outcome = NEW;
+    if (result != nullptr) *result = DBNEW;
   } else {
     // Update existing index entry to point to the new record.
     index_->Update(fp, recid, newid);
-    if (outcome != nullptr) *outcome = UPDATED;
+    if (result != nullptr) *result = DBUPDATED;
   }
 
   dirty_ = true;

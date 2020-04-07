@@ -22,6 +22,7 @@
 #include "sling/base/status.h"
 #include "sling/base/types.h"
 #include "sling/db/dbindex.h"
+#include "sling/db/dbprotocol.h"
 #include "sling/file/file.h"
 #include "sling/file/recordio.h"
 #include "sling/string/text.h"
@@ -35,23 +36,6 @@ namespace sling {
 // deleted key and an empty value.
 class Database {
  public:
-  // Write mode for updating records.
-  enum Mode {
-    OVERWRITE,  // overwrite existing records
-    ADD,        // only add new records, do not overwrite existing records
-    ORDERED,    // do not overwrite records with newer version
-    NEWER,      // only overwrite existing record if version is newer
-  };
-
-  // Outcome of put operation.
-  enum Outcome {
-    NEW,        // new record added
-    UPDATED,    // existing record updated
-    UNCHANGED,  // record not updated because value is unchanged
-    EXISTS,     // record already exists and overwrite not allowed
-    STALE,      // record not updated because timstamp is not newer
-  };
-
   // Configuration options for database.
   struct Config {
     // Data file configuration.
@@ -91,9 +75,9 @@ class Database {
 
   // Add or update record in database. Return record id of new record.
   uint64 Put(const Record &record,
-             Mode mode = OVERWRITE,
-             Outcome *outcome = nullptr);
-  uint64 Add(const Record &record) { return Put(record, ADD); }
+             DBMode mode = DBOVERWRITE,
+             DBResult *result = nullptr);
+  uint64 Add(const Record &record) { return Put(record, DBADD); }
 
   // Delete record in database. Return true if record was deleted.
   bool Delete(const Slice &key);

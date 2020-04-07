@@ -24,7 +24,7 @@ namespace sling {
 // consists of a fixed header followed by a verb-specific body.
 
 // Database protocol verbs.
-enum DBVerb {
+enum DBVerb : uint32 {
   // Command verbs.
   DBUSE       = 0,     // select database to use
   DBGET       = 1,     // read record(s) from database
@@ -41,15 +41,19 @@ enum DBVerb {
 };
 
 // Update mode for DBPUT.
-enum DBUpdateMode {
+enum DBMode : uint32 {
   DBOVERWRITE = 0,     // overwrite existing records
   DBADD       = 1,     // only add new records, do not overwrite existing ones
   DBORDERED   = 2,     // do not overwrite records with higher version
   DBNEWER     = 3,     // only overwrite existing record if version is newer
 };
 
-// Update outcome for DBPUT.
-enum DBUpdateOutcome {
+inline bool ValidDBMode(DBMode mode) {
+  return mode >= DBOVERWRITE && mode <= DBNEWER;
+}
+
+// Update result for DBPUT.
+enum DBResult : uint32 {
   DBNEW       = 0,     // new record added
   DBUPDATED   = 1,     // existing record updated
   DBUNCHANGED = 2,     // record not updated because value is unchanged
@@ -57,9 +61,13 @@ enum DBUpdateOutcome {
   DBSTALE     = 4,     // record not updated because version is lower
 };
 
+inline bool ValidDBResult(DBResult result) {
+  return result >= DBNEW && result <= DBSTALE;
+}
+
 // Database protocol packet header.
 struct DBHeader {
-  uint32 verb;   // command or reply type
+  DBVerb verb;   // command or reply type
   uint32 size;   // size of packet body
 
   static DBHeader *from(char *buf) { return reinterpret_cast<DBHeader *>(buf); }
@@ -70,7 +78,7 @@ struct DBHeader {
 // DBUSE "dbname" -> DBOK
 //
 // The DBUSE command selects the database to use for the following commands.
-// The request body contains the datanase name and the reply is DBOK if the
+// The request body contains the database name and the reply is DBOK if the
 // database was selected. Otherwise an error reply is returned.
 //
 // DBGET {key}* -> DBRECORD {record}*
@@ -91,10 +99,10 @@ struct DBHeader {
 //     value:byte[vsize];
 //   }
 //
-// DBPUT mode:uint32 {record}* -> DBRESULT {outcome:uint32}*
+// DBPUT mode:uint32 {record}* -> DBRESULT {result:uint32}*
 //
 // Add/update record(s) in database. The mode controls under which circumstances
-// a new record should be written. Returns the outcome for each record.
+// a new record should be written. Returns the result for each record.
 //
 // DBDELETE: {key}* -> DBOK
 //
@@ -104,7 +112,7 @@ struct DBHeader {
 //
 // Retrieves the next record(s) for a cursor. The recid is the initial cursor
 // value, which should be zero to start retrieving from the begining of the
-// datanase, and next is the next cursor value for retrieving more records.
+// database, and next is the next cursor value for retrieving more records.
 // Returns DBDONE when there are no more records to retrieve.
 //
 // All requests can return a DBERROR message:char[] reply if an error occurs.

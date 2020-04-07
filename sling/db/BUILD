@@ -1,6 +1,14 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+  name = "dbprotocol",
+  hdrs = ["dbprotocol.h"],
+  deps = [
+    "//sling/base",
+  ],
+)
+
+cc_library(
   name = "dbindex",
   srcs = ["dbindex.cc"],
   hdrs = ["dbindex.h"],
@@ -16,20 +24,13 @@ cc_library(
   hdrs = ["db.h"],
   deps = [
     ":dbindex",
+    ":dbprotocol",
     "//sling/base",
     "//sling/file",
     "//sling/file:recordio",
     "//sling/string:numbers",
     "//sling/string:text",
     "//sling/util:fingerprint",
-  ],
-)
-
-cc_library(
-  name = "dbprotocol",
-  hdrs = ["dbprotocol.h"],
-  deps = [
-    "//sling/base",
   ],
 )
 

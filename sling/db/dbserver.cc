@@ -364,17 +364,17 @@ class DBService {
         return;
       }
     }
-    Database::Mode mode = Database::OVERWRITE;
+    DBMode mode = DBOVERWRITE;
     const char *m = request->Get("Mode");
     if (m != nullptr) {
       if (strcmp(m, "overwrite") == 0) {
-        mode = Database::OVERWRITE;
+        mode = DBOVERWRITE;
       } else if (strcmp(m, "add") == 0) {
-        mode = Database::ADD;
+        mode = DBADD;
       } else if (strcmp(m, "ordered") == 0) {
-        mode = Database::ORDERED;
+        mode = DBORDERED;
       } else if (strcmp(m, "newer") == 0) {
-        mode = Database::NEWER;
+        mode = DBNEWER;
       } else {
         response->SendError(400, nullptr, "Invalid mode");
         return;
@@ -382,8 +382,8 @@ class DBService {
     }
 
     // Add or update record in database.
-    Database::Outcome outcome;
-    uint64 recid = l.db()->Put(record, mode, &outcome);
+    DBResult result;
+    uint64 recid = l.db()->Put(record, mode, &result);
 
     // Return error if record could not be written to database.
     if (recid == -1) {
@@ -391,16 +391,16 @@ class DBService {
       return;
     }
 
-    // Return outcome.
-    const char *result = nullptr;
-    switch (outcome) {
-      case Database::NEW: result = "new"; break;
-      case Database::UPDATED: result = "updated"; break;
-      case Database::UNCHANGED: result = "unchanged"; break;
-      case Database::EXISTS: result = "exists"; break;
-      case Database::STALE: result = "stale"; break;
+    // Return result.
+    const char *outcome = nullptr;
+    switch (result) {
+      case DBNEW: outcome = "new"; break;
+      case DBUPDATED: outcome = "updated"; break;
+      case DBUNCHANGED: outcome = "unchanged"; break;
+      case DBEXISTS: outcome = "exists"; break;
+      case DBSTALE: outcome = "stale"; break;
     }
-    if (result != nullptr) response->Set("Outcome", result);
+    if (outcome != nullptr) response->Set("Result", outcome);
 
     // Return new record id.
     response->Set("RecordID", recid);
@@ -664,6 +664,7 @@ class DBService {
   // Lock on database.
   class DBLock {
    public:
+    // Look up database from URL path and lock it.
     DBLock(DBService *dbs, const char *path) {
       if (path == nullptr) return;
 
@@ -688,6 +689,7 @@ class DBService {
       if (!DecodeURLComponent(p, &resource_)) resource_.clear();
     }
 
+    // Look up database and lock it.
     DBLock(DBService *dbs, const string &dbname) {
       // Find mount for database.
       MutexLock lock(&dbs->mu_);
@@ -700,6 +702,13 @@ class DBService {
       mount_->mu.Lock();
     }
 
+    // Lock database.
+    DBLock(DBMount *mount) {
+      mount_ = mount;
+      if (mount_ != nullptr) mount_->mu.Lock();
+    }
+
+    // Unlock database.
     ~DBLock() {
       if (mount_ != nullptr) mount_->mu.Unlock();
     }
@@ -713,7 +722,7 @@ class DBService {
     string resource_;                // resource name
   };
 
-  // Database client connection using the binary SLINGDB protocol.
+  // Database client connection that uses the binary SLINGDB protocol.
   class DBClient : public SocketSession {
    public:
     DBClient(DBService *dbs, SocketConnection *conn)
@@ -749,44 +758,210 @@ class DBService {
 
       // Dispatch request.
       req->Consume(sizeof(DBHeader));
-      char *body = req->Consume(hdr->size);
+      if (req->available() != hdr->size) return TERMINATE;
+      Continuation cont = TERMINATE;
       switch (hdr->verb) {
-        case DBUSE: return Use(body, hdr->size);
-
-        case DBGET:
-        case DBPUT:
-        case DBDELETE:
-        case DBNEXT:
-        default:
-          return Error("command verb not supported");
+        case DBUSE: cont = Use(); break;
+        case DBGET: cont = Get(); break;
+        case DBPUT: cont = Put(); break;
+        case DBDELETE: cont = Delete(); break;
+        case DBNEXT: cont = Next(); break;
+        default: return Error("command verb not supported");
       }
 
-      return TERMINATE;
+      // Make sure the whole request has been consumed.
+      if (req->available() > 0) req->Consume(req->available());
+
+      return cont;
     }
 
     // Switch to using another database.
-    Continuation Use(char *req, int size) {
-      string dbname(req, size);
+    Continuation Use() {
+      auto *req = conn_->request();
+      int namelen = req->available();
+      string dbname(req->Consume(namelen), namelen);
       DBLock l(dbs_, dbname);
       if (l.mount() == nullptr) return Error("database not found");
       mount_ = l.mount();
-      Header(DBOK, 0);
-      return RESPOND;
+
+      return Response(DBOK);
+    }
+
+    // Get record(s) from database.
+    Continuation Get() {
+      if (mount_ == nullptr) return Error("no database");
+      DBLock l(mount_);
+      auto *req = conn_->request();
+      while (!req->empty()) {
+        // Read key for next record.
+        Slice key;
+        if (!ReadKey(&key)) return TERMINATE;
+
+        // Read record from database.
+        Record record;
+        if (!l.db()->Get(key, &record)) {
+          // Return empty value if record is not found.
+          record.key = key;
+          record.value.clear();
+        }
+
+        // Add record to response.
+        WriteRecord(record);
+      }
+
+      return Response(DBRECORD);
+    }
+
+    // Add or update database record(s).
+    Continuation Put() {
+      if (mount_ == nullptr) return Error("no database");
+      DBLock l(mount_);
+      auto *req = conn_->request();
+      auto *rsp = conn_->response_body();
+
+      DBMode mode;
+      if (!req->Read(&mode, 4)) return TERMINATE;
+      if (!ValidDBMode(mode)) return TERMINATE;
+
+      while (!req->empty()) {
+        // Read next record.
+        Record record;
+        if (!ReadRecord(&record)) return TERMINATE;
+
+        // Add/update record in database.
+        DBResult result;
+        l.db()->Put(record, mode, &result);
+
+        // Return result.
+        rsp->Write(&result, 4);
+      }
+
+      return Response(DBRESULT);
+    }
+
+    // Delete record(s) from database.
+    Continuation Delete() {
+      if (mount_ == nullptr) return Error("no database");
+      DBLock l(mount_);
+      auto *req = conn_->request();
+      while (!req->empty()) {
+        // Read next key.
+        Slice key;
+        if (!ReadKey(&key)) return TERMINATE;
+
+        // Delete record from database.
+        if (!l.db()->Delete(key)) return Error("record not found");
+      }
+
+      return Response(DBOK);
+    }
+
+    // Retrieve the next record(s) for a cursor.
+    Continuation Next() {
+      if (mount_ == nullptr) return Error("no database");
+      DBLock l(mount_);
+      auto *req = conn_->request();
+      auto *rsp = conn_->response_body();
+
+      uint64 iterator;
+      if (!req->Read(&iterator, 8)) return TERMINATE;
+      uint32 num;
+      if (!req->Read(&num, 4)) return TERMINATE;
+
+      Record record;
+      for (int n = 0; n < num; ++n) {
+        // Fetch next record.
+        if (!l.db()->Next(&record, &iterator)) {
+          if (n == 0) return Response(DBDONE);
+          break;
+        }
+        if (iterator == -1) return Error("error fetching next record");
+
+        // Add record to response.
+        WriteRecord(record);
+      }
+
+      rsp->Write(&iterator, 8);
+      return Response(DBRECORD);
     }
 
     // Return error message to client.
     Continuation Error(const char *msg) {
+      // Clear existing (partial) response.
+      conn_->response_header()->Clear();
+      conn_->response_body()->Clear();
+
+      // Return error message.
       int msgsize = strlen(msg);
-      Header(DBERROR, msgsize);
       conn_->response_body()->Write(msg, msgsize);
-      return RESPOND;
+
+      return Response(DBERROR);
     }
 
     // Add header to response.
-    void Header(int verb, int size) {
+    Continuation Response(DBVerb verb) {
       DBHeader *hdr = conn_->response_header()->append<DBHeader>();
       hdr->verb = verb;
-      hdr->size = size;
+      hdr->size = conn_->response_body()->available();
+      return RESPOND;
+    }
+
+    // Read key from request.
+    bool ReadKey(Slice *key) {
+      auto *req = conn_->request();
+      uint32 len;
+      if (!req->Read(&len, 4)) return false;
+      if (req->available() < len) return false;
+      *key = Slice(req->Consume(len), len);
+      return true;
+    }
+
+    // Read record from request.
+    bool ReadRecord(Record *record) {
+      // Read key size with version bit.
+      auto *req = conn_->request();
+      uint32 ksize;
+      if (!req->Read(&ksize, 4)) return false;
+      bool has_version = ksize & 1;
+      ksize >>= 1;
+
+      // Read key.
+      if (req->available() < ksize) return false;
+      record->key = Slice(req->Consume(ksize), ksize);
+
+      // Optionally read version.
+      if (has_version) {
+        if (!req->Read(&record->version, 8)) return false;
+      } else {
+        record->version = 0;
+      }
+
+      // Read value size.
+      uint32 vsize;
+      if (!req->Read(&vsize, 4)) return false;
+
+      // Read value.
+      if (req->available() < vsize) return false;
+      record->value = Slice(req->Consume(vsize), vsize);
+
+      return true;
+    }
+
+    // Write record to response.
+    void WriteRecord(const Record &record) {
+      auto *rsp = conn_->response_body();
+      uint32 ksize = record.key.size() << 1;
+      if (record.version != 0) ksize |= 1;
+      rsp->Write(&ksize, 4);
+      rsp->Write(record.key.data(), record.key.size());
+
+      if (record.version != 0) {
+        rsp->Write(&record.version, 8);
+      }
+
+      uint32 vsize = record.value.size();
+      rsp->Write(&vsize, 4);
+      rsp->Write(record.value.data(), record.value.size());
     }
 
    private:
@@ -901,7 +1076,7 @@ int main(int argc, char *argv[]) {
   delete httpd;
   httpd = nullptr;
 
-  LOG(INFO) << "Shutting database sever";
+  LOG(INFO) << "Shutting down database sever";
   delete dbservice;
   dbservice = nullptr;
 

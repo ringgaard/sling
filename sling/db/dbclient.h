@@ -33,7 +33,7 @@ struct DBRecord {
   Slice key;
   Slice value;
   uint64 version = 0;
-  DBUpdateOutcome outcome = DBUNCHANGED;
+  DBResult result = DBUNCHANGED;
 };
 
 // Database connection to database server. This uses the binary SLINGDB
@@ -59,8 +59,8 @@ class DBClient {
 
   // Add or update record(s) in database. The records(s) are updated with the
   // outcome.
-  Status Put(DBRecord *record, DBUpdateMode mode = DBOVERWRITE);
-  Status Put(std::vector<DBRecord> *records, DBUpdateMode mode = DBOVERWRITE);
+  Status Put(DBRecord *record, DBMode mode = DBOVERWRITE);
+  Status Put(std::vector<DBRecord> *records, DBMode mode = DBOVERWRITE);
   Status Add(DBRecord *record) { return Put(record, DBADD); }
   Status Add(std::vector<DBRecord> *records) { return Put(records, DBADD); }
 
@@ -85,7 +85,7 @@ class DBClient {
   Status ReadRecord(DBRecord *record);
 
   // Send request to server and receive reply.
-  Status Do(int verb);
+  Status Do(DBVerb verb);
 
   // Socket for connection.
   int sock_ = -1;
@@ -95,7 +95,7 @@ class DBClient {
   IOBuffer response_;
 
   // Reply verb from last request.
-  int reply_ = DBOK;
+  DBVerb reply_ = DBOK;
 };
 
 }  // namespace sling
