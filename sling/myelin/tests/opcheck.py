@@ -522,14 +522,14 @@ def logsumexp_test(n):
   f = flow.define("logsumexp")
   x = f.var("x", dt, [n])
   y = f.logsumexp(x)
-  check(flow, n)
+  check(flow, n, atol=1e-6)
 
 def logsumexp_axis_test(n, m, a, k):
   flow = myelin.Flow()
   f = flow.define("logsumexp_axis")
   x = f.var("x", dt, [n, m])
   y = f.logsumexp(x, axis=a, keepdims=k)
-  check(flow, (n, m, a, k))
+  check(flow, (n, m, a, k), atol=1e-6)
 
 def relu_test(n):
   flow = myelin.Flow()

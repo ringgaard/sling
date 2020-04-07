@@ -572,14 +572,14 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         __ testl(aux(0), aux(0));
         __ j(zero, &l1);
         if (instr->src != -1) {
-          __ vmovaps(xmm(instr->dst), xmm(instr->src));
+          __ vmovss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
         } else {
           __ vmovss(xmm(instr->dst), addr(instr->args[1]));
         }
         __ jmp(&l2);
         __ bind(&l1);
         if (instr->src2 != -1) {
-          __ vmovaps(xmm(instr->dst), xmm(instr->src2));
+          __ vmovss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src2));
         } else {
           __ vmovss(xmm(instr->dst), addr(instr->args[2]));
         }
@@ -591,14 +591,14 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         __ testq(aux(0), aux(0));
         __ j(zero, &l1);
         if (instr->src != -1) {
-          __ vmovapd(xmm(instr->dst), xmm(instr->src));
+          __ vmovsd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
         } else {
           __ vmovsd(xmm(instr->dst), addr(instr->args[1]));
         }
         __ jmp(&l2);
         __ bind(&l1);
         if (instr->src2 != -1) {
-          __ vmovapd(xmm(instr->dst), xmm(instr->src2));
+          __ vmovsd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src2));
         } else {
           __ vmovsd(xmm(instr->dst), addr(instr->args[2]));
         }
@@ -626,7 +626,7 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           __ jmp(&l2);
           __ bind(&l1);
           if (instr->src != -1) {
-            __ vmovaps(xmm(instr->dst), xmm(instr->src));
+            __ vmovss(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
           } else {
             __ vmovss(xmm(instr->dst), addr(instr->args[1]));
           }
@@ -645,7 +645,7 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
           __ jmp(&l2);
           __ bind(&l1);
           if (instr->src != -1) {
-            __ vmovaps(xmm(instr->dst), xmm(instr->src));
+            __ vmovsd(xmm(instr->dst), xmm(instr->dst), xmm(instr->src));
           } else {
             __ vmovsd(xmm(instr->dst), addr(instr->args[1]));
           }

@@ -31,6 +31,10 @@ namespace nlp {
 
 using namespace sling::myelin;
 
+static size_t Align(size_t n, int align) {
+  return (n + align - 1) & ~(align - 1);
+}
+
 // BIO tags.
 enum BIOTag : int32 {
   OUTSIDE = 0,  // no chunk
@@ -142,7 +146,7 @@ class BIODecoder : public ParserDecoder {
 
     // Feed-forward layer(s).
     std::vector<int> layers = ff_dims_;
-    layers.push_back(num_labels_);
+    layers.push_back(Align(num_labels_, 16));
     auto *scores = f.Name(f.FNN(token, layers, true), "scores");
     scores->set_out();
     if (use_crf_) scores->set_ref();
@@ -310,6 +314,9 @@ class BIODecoder : public ParserDecoder {
       // Predict label sequence using CRF.
       std::vector<int> labels(length);
       crf_.Predict(&scores_, &labels);
+
+      // Clear illegal labels resulting from alignment.
+      for (int &l : labels) if (l >= decoder_->num_labels_) l = 0;
 
       // Decode label sequence.
       int t = 0;

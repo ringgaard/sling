@@ -26,7 +26,7 @@ const char *Wiki::language_priority[] = {
   "en", "da", "sv", "no", "de", "fr", "es", "it", "nl", "pt", "pl", "fi",
   "ca", "eu", "la", "eo", "cs", "sh", "hu", "ro",
   "el", "ru", "uk", "sr", "bg",
-  "af",
+  "id", "af",
   nullptr,
 };
 

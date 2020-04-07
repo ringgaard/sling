@@ -48,6 +48,7 @@ typedef std::unordered_map<string, WikiParser::Special> TemplatePrefixMap;
 static const LinkPrefixMap link_prefix = {
   {"Archivo",    WikiParser::IMAGE},       // es
   {"Bestand",    WikiParser::IMAGE},       // nl
+  {"Berkas",     WikiParser::IMAGE},       // id
   {"Categoría",  WikiParser::CATEGORY},    // es
   {"Categoria",  WikiParser::CATEGORY},    // it, pt, ca, la
   {"Catégorie",  WikiParser::CATEGORY},    // fr
@@ -72,7 +73,7 @@ static const LinkPrefixMap link_prefix = {
   {"Kategorie",  WikiParser::CATEGORY},    // de, cs, af
   {"Kategorija", WikiParser::CATEGORY},    // sh
   {"Kategorio",  WikiParser::CATEGORY},    // eo
-  {"Kategori",   WikiParser::CATEGORY},    // da, no, sv
+  {"Kategori",   WikiParser::CATEGORY},    // da, no, sv, id
   {"Lêer",       WikiParser::IMAGE},       // af
   {"Luokka",     WikiParser::CATEGORY},    // fi
   {"Media",      WikiParser::IMAGE},       // en

@@ -31,6 +31,7 @@
     source: /lang/wikilang
   }
 
+  value: /lang/af
   value: /lang/bg
   value: /lang/ca
   value: /lang/cs
@@ -44,6 +45,7 @@
   value: /lang/fi
   value: /lang/fr
   value: /lang/hu
+  value: /lang/id
   value: /lang/it
   value: /lang/la
   value: /lang/nl
@@ -59,6 +61,20 @@
 
   value: /lang/mul
   value: /lang/zxx
+}
+
+{=/lang/af
+  :language :/lang/wikilang
+  name: "Afrikaans"
+  code: "af"
+
+  /lang/wikilang/wiki_category: "Kategorie"
+  /lang/wikilang/wiki_image: "Sjabloon"
+  /lang/wikilang/wiki_template: "Lêer"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
 }
 
 {=/lang/bg
@@ -278,6 +294,20 @@
   /lang/wikilang/wiki_category: "Kategória"
   /lang/wikilang/wiki_image: "Fájl"
   /lang/wikilang/wiki_template: "Sablon"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
+}
+
+{=/lang/id
+  :language :/lang/wikilang
+  name: "Indonesian"
+  code: "id"
+
+  /lang/wikilang/wiki_category: "Kategori"
+  /lang/wikilang/wiki_image: "Berkas"
+  /lang/wikilang/wiki_template: "Templat"
 
   /lang/wikilang/stop_words: [
     ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
