@@ -836,6 +836,7 @@ class DBService {
         rsp->Write(&result, 4);
       }
 
+      l.mount()->last_update = time(0);
       return Response(DBRESULT);
     }
 
@@ -853,6 +854,7 @@ class DBService {
         if (!l.db()->Delete(key)) return Error("record not found");
       }
 
+      l.mount()->last_update = time(0);
       return Response(DBOK);
     }
 
@@ -993,8 +995,8 @@ class DBService {
         DBMount *mount = it.second;
         if (!mount->db.dirty()) continue;
 
-        // Checkpoint every 60 seconds or after 10 seconds of no activity.
-        if (now - mount->last_flush > 60 || now - mount->last_update > 10) {
+        // Checkpoint every five minutes or after 10 seconds of no activity.
+        if (now - mount->last_flush > 300 || now - mount->last_update > 10) {
           mount->Acquire();
           Status st = mount->db.Flush();
           if (!st.ok()) {

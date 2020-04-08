@@ -120,12 +120,12 @@ class WikidataImporter : public task::Processor {
   // Task complete.
   void Done(task::Task *task) override {
     // Write latest modification to file.
-    auto *timestamp = task->GetOutput("timestamp");
-    if (timestamp != nullptr) {
+    auto *checkpoint = task->GetOutput("checkpoint");
+    if (checkpoint != nullptr) {
       string data =
           latests_modified_ + "\t" + std::to_string(latests_revision_);
-      Status st = File::WriteContents(timestamp->resource()->name(), data);
-      CHECK(st) << "Error writing timestamp file: " << st;
+      Status st = File::WriteContents(checkpoint->resource()->name(), data);
+      CHECK(st) << "Error writing checkpoint file: " << st;
     }
 
     // Clean up.

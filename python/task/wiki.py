@@ -107,7 +107,7 @@ class WikiWorkflow:
                             dir=corpora.wikidir(),
                             format="records/frame")
 
-  def wikidata_import(self, input, name=None):
+  def wikidata_import(self, input, checkpoint=False, name=None):
     """Task for converting Wikidata JSON to SLING items and properties."""
     task = self.wf.task("wikidata-importer", name=name)
     task.add_param("primary_language", flags.arg.language)
@@ -117,6 +117,8 @@ class WikiWorkflow:
     items = self.wf.channel(task, name="items", format="message/frame")
     properties = self.wf.channel(task, name="properties",
                                  format="message/frame")
+    if checkpoint:
+      task.attach_output("checkpoint", self.wikidata_checkpoint())
     return items, properties
 
   def wikidata(self, dump=None):
@@ -138,6 +140,36 @@ class WikiWorkflow:
       properties_output = self.wikidata_properties()
       self.wf.write(properties, properties_output, name="property-writer")
       return items_output, properties_output
+
+  def wikidatadb(self):
+    """Resource for Wikidata database."""
+    return self.wf.resource(corpora.wikidatadb(), format="db/frames")
+
+  def wikidata_checkpoint(self):
+    """Resource for Wikidata checkpoint. This contains the the date and revision
+    of the latest update."""
+    return self.wf.resource("wikidata.chkpt",
+                            dir=corpora.wikidir(),
+                            format="text")
+
+  def wikidata_load(self, dump=None):
+    """Load Wikidata dump into a database. It takes a Wikidata dump in JSON
+    format as input and converts each item and property to a SLING frame."""
+    if dump == None: dump = self.wikidata_dump()
+    with self.wf.namespace("wikidata"):
+      if flags.arg.lbzip2:
+        input = self.wf.pipe("lbzip2 -d -c " + dump.name,
+                             name="wiki-decompress",
+                             format="text/json")
+      else:
+        input = self.wf.read(dump)
+
+      input = self.wf.parallel(input, threads=5)
+      items, properties = self.wikidata_import(input, checkpoint=True)
+
+      db = self.wikidatadb()
+      self.wf.write([items, properties], db, name="db-writer")
+      return db
 
   #---------------------------------------------------------------------------
   # Wikipedia
@@ -765,6 +797,13 @@ def import_wiki():
       log.info("Import " + language + " wikipedia")
       wf.wikipedia(language=language)
 
+  run(wf.wf)
+
+def load_wikidata():
+  # Load Wikidata into database.
+  wf = WikiWorkflow("wikidata-load")
+  log.info("Load wikidata")
+  wf.wikidata_load()
   run(wf.wf)
 
 def parse_wikipedia():

@@ -49,7 +49,7 @@ class DatabaseReader : public Process {
     if (!st.ok()) {
       LOG(FATAL) << "Error connecting to database " << dbname << ": " << st;
     }
-    int batch = task->Get("db_read_batch", 1);
+    int batch = task->Get("db_read_batch", 1000);
 
     // Statistics counters.
     Counter *db_records_read = task->GetCounter("db_records_read");
@@ -87,7 +87,7 @@ class DatabaseReader : public Process {
   }
 };
 
-REGISTER_TASK_PROCESSOR("datanase-reader", DatabaseReader);
+REGISTER_TASK_PROCESSOR("database-reader", DatabaseReader);
 
 }  // namespace task
 }  // namespace sling
