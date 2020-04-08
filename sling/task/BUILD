@@ -168,6 +168,30 @@ cc_library(
 )
 
 cc_library(
+  name = "database-reader",
+  srcs = ["database-reader.cc"],
+  deps = [
+    ":process",
+    ":task",
+    "//sling/base",
+    "//sling/db:dbclient",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "database-writer",
+  srcs = ["database-writer.cc"],
+  deps = [
+    ":task",
+    "//sling/base",
+    "//sling/db:dbclient",
+    "//sling/util:mutex",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "pipe-reader",
   srcs = ["pipe-reader.cc"],
   deps = [

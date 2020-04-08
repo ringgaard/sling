@@ -1072,7 +1072,7 @@ int main(int argc, char *argv[]) {
   httpd->Wait();
 
   // Shut down.
-  LOG(INFO) << "Shutting down connections";
+  LOG(INFO) << "Shutting down HTTP server";
   delete httpd;
   httpd = nullptr;
 

@@ -48,6 +48,7 @@ readers = {
   "store": "frame-store-reader",
   "textmap": "text-map-reader",
   "text": "text-file-reader",
+  "db": "database-reader",
 }
 
 # Output writers.
@@ -56,6 +57,7 @@ writers = {
   "store": "frame-store-writer",
   "textmap": "text-map-writer",
   "text": "text-file-writer",
+  "db": "database-writer",
 }
 
 # Track if workflow system has been activated, i.e. any workflow has been run.
