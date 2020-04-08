@@ -31,6 +31,7 @@ enum DBVerb : uint32 {
   DBPUT       = 2,     // write record(s) to database
   DBDELETE    = 3,     // delete record(s) from database
   DBNEXT      = 4,     // retrieve the next record(s) from database
+  DBBULK      = 5,     // enable/disable bulk mode for database
 
   // Reply verbs.
   DBOK        = 128,   // success reply
@@ -114,6 +115,11 @@ struct DBHeader {
 // value, which should be zero to start retrieving from the begining of the
 // database, and next is the next cursor value for retrieving more records.
 // Returns DBDONE when there are no more records to retrieve.
+//
+// DBBULK: enable:uint32 -> DBOK
+//
+// Enable/disable bulk mode for database. In bulk mode, there is no periodical
+// forced checkpoints.
 //
 // All requests can return a DBERROR message:char[] reply if an error occurs.
 

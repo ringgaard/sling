@@ -480,6 +480,7 @@ class DBService {
     AddNumPair(response, "epoch", db->epoch());
     AddPair(response, "dbdir", db->dbdir());
     AddBoolPair(response, "dirty", db->dirty());
+    AddBoolPair(response, "bulk", l.mount()->bulk);
     AddBoolPair(response, "read_only", db->read_only());
     AddBoolPair(response, "timestamped", db->timestamped());
     AddNumPair(response, "records", db->num_records());
@@ -659,6 +660,7 @@ class DBService {
     Mutex mu;             // mutex for serializing access to database
     time_t last_update;   // time of last database update
     time_t last_flush;    // time of last database flush
+    bool bulk = false;    // in bulk mode there are no forced checkpoints
   };
 
   // Lock on database.
@@ -766,6 +768,7 @@ class DBService {
         case DBPUT: cont = Put(); break;
         case DBDELETE: cont = Delete(); break;
         case DBNEXT: cont = Next(); break;
+        case DBBULK: cont = Bulk(); break;
         default: return Error("command verb not supported");
       }
 
@@ -784,6 +787,17 @@ class DBService {
       if (l.mount() == nullptr) return Error("database not found");
       mount_ = l.mount();
 
+      return Response(DBOK);
+    }
+
+    // Enable/disable bulk mode for database.
+    Continuation Bulk() {
+      if (mount_ == nullptr) return Error("no database");
+      DBLock l(mount_);
+      auto *req = conn_->request();
+      uint32 enable;
+      if (!req->Read(&enable, 4)) return TERMINATE;
+      l.mount()->bulk = enable;
       return Response(DBOK);
     }
 
@@ -995,14 +1009,16 @@ class DBService {
         DBMount *mount = it.second;
         if (!mount->db.dirty()) continue;
 
-        // Checkpoint every five minutes or after 10 seconds of no activity.
-        if (now - mount->last_flush > 300 || now - mount->last_update > 10) {
+        // Checkpoint every five minutes unless database is in bulk mode or
+        // after 10 seconds of no activity.
+        if ((!mount->bulk && now - mount->last_flush > 300) ||
+            now - mount->last_update > 10) {
           mount->Acquire();
           Status st = mount->db.Flush();
           if (!st.ok()) {
             LOG(ERROR) << "Checkpoint failed for " << mount->name << ": " << st;
           }
-          mount->last_flush = now;
+          mount->last_flush = mount->last_update = time(0);
           VLOG(1) << "Checkpointed " << mount->name
                   << ", " << mount->db.num_records() << " records";
         }

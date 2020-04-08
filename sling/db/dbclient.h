@@ -53,6 +53,10 @@ class DBClient {
   // Switch to using another database on server.
   Status Use(const string &dbname);
 
+  // Enable/disable bulk mode for database to avoid excessive checkpointing
+  // activity during bulk load of database.
+  Status Bulk(bool enable);
+
   // Get record(s) form database.
   Status Get(const Slice &key, DBRecord *record);
   Status Get(const std::vector<Slice> &keys, std::vector<DBRecord> *records);

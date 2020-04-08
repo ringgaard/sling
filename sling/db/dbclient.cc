@@ -124,6 +124,13 @@ Status DBClient::Use(const string &dbname) {
   return Do(DBUSE);
 }
 
+Status DBClient::Bulk(bool enable) {
+  uint32 value = enable;
+  request_.Clear();
+  request_.Write(&value, 4);
+  return Do(DBBULK);
+}
+
 Status DBClient::Get(const Slice &key, DBRecord *record) {
   request_.Clear();
   WriteKey(key);

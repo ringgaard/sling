@@ -38,16 +38,22 @@ class DatabaseWriter : public Processor {
       return;
     }
 
-    // Open database connection.
+    // Get parameters.
     string dbname = output->resource()->name();
-    Status st = db_.Connect(dbname);
-    if (!st.ok()) {
-      LOG(FATAL) << "Error connecting to database " << dbname << ": " << st;
-    }
     task->Fetch("db_write_batch", &batch_size_);
     int mode = mode_;
     task->Fetch("db_write_mode", &mode);
     mode_ = static_cast<DBMode>(mode);
+
+    // Open database connection.
+    Status st = db_.Connect(dbname);
+    if (!st.ok()) {
+      LOG(FATAL) << "Error connecting to database " << dbname << ": " << st;
+    }
+
+    // Switch database to bulk mode to avoid excessive checkpointing during
+    // loading of large datasets.
+    CHECK(db_.Bulk(true));
   }
 
   void Receive(Channel *channel, Message *message) override {
@@ -65,6 +71,9 @@ class DatabaseWriter : public Processor {
 
     // Flush remaining messages in batch.
     if (!batch_.empty()) FlushBatch();
+
+    // Clear bulk mode.
+    CHECK(db_.Bulk(false));
 
     // Close database connection.
     CHECK(db_.Close());
