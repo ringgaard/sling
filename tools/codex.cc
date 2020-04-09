@@ -19,6 +19,7 @@
 #include "sling/base/flags.h"
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
+#include "sling/db/dbclient.h"
 #include "sling/file/file.h"
 #include "sling/file/recordio.h"
 #include "sling/frame/serialization.h"
@@ -36,7 +37,9 @@ DEFINE_bool(lex, false, "Record values as lex encoded documents");
 DEFINE_string(key, "", "Only display records with matching key");
 DEFINE_int32(indent, 2, "Indentation for structured data");
 DEFINE_int32(limit, 0, "Maximum number of records to output");
-DEFINE_bool(utf8, false, "Allow UTF8-encoded output");
+DEFINE_bool(utf8, true, "Allow UTF8-encoded output");
+DEFINE_bool(db, false, "Read input from database");
+DEFINE_bool(version, false, "Output record version");
 
 using namespace sling;
 using namespace sling::nlp;
@@ -68,9 +71,14 @@ void DisplayRaw(const Slice &value) {
   std::cout.write(value.data(), value.size());
 }
 
-void DisplayRecord(const Slice &key, const Slice &value) {
+void DisplayRecord(const Slice &key, uint64 version, const Slice &value) {
   // Display key.
   DisplayRaw(key);
+
+  // Display version.
+  if (FLAGS_version && version != 0) {
+    std::cout << " [" << version << "]";
+  }
 
   // Display value.
   if (!FLAGS_keys) {
@@ -95,13 +103,34 @@ void DisplayFile(const string &filename) {
     while (!parser.done()) {
       DisplayObject(parser.Read());
     }
+  } else if (FLAGS_db) {
+    DBClient db;
+    CHECK(db.Connect(filename));
+    if (FLAGS_key.empty()) {
+      uint64 iterator = 0;
+      DBRecord record;
+      for (;;) {
+        Status st = db.Next(&iterator, &record);
+        if (!st.ok()) {
+          if (st.code() == ENOENT) break;
+          LOG(FATAL) << "Error reading from database "
+                     << filename << ": " << st;
+        }
+        DisplayRecord(record.key, record.version, record.value);
+      }
+    } else {
+      DBRecord record;
+      CHECK(db.Get(FLAGS_key, &record));
+      DisplayRecord(record.key, record.version, record.value);
+    }
+    CHECK(db.Close());
   } else if (!FLAGS_key.empty()) {
     RecordFileOptions options;
     RecordDatabase db(filename, options);
     Record record;
     if (db.Lookup(FLAGS_key, &record)) {
       // Display record.
-      DisplayRecord(record.key, record.value);
+      DisplayRecord(record.key, record.version, record.value);
     }
   } else {
     RecordReader reader(filename);
@@ -114,7 +143,7 @@ void DisplayFile(const string &filename) {
       if (!FLAGS_key.empty() && record.key != FLAGS_key) continue;
 
       // Display record.
-      DisplayRecord(record.key, record.value);
+      DisplayRecord(record.key, record.version, record.value);
 
       // Check record limit.
       if (FLAGS_limit > 0 && records_output >= FLAGS_limit) break;
@@ -132,7 +161,11 @@ int main(int argc, char *argv[]) {
 
   std::vector<string> files;
   for (int i = 1; i < argc; ++i) {
-    File::Match(argv[i], &files);
+    if (FLAGS_db) {
+      files.push_back(argv[i]);
+    } else {
+      File::Match(argv[i], &files);
+    }
   }
 
   if (FLAGS_key.empty()) {

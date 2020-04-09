@@ -27,6 +27,7 @@ cc_binary(
   srcs = ["codex.cc"],
   deps = [
     "//sling/base",
+    "//sling/db:dbclient",
     "//sling/file",
     "//sling/file:recordio",
     "//sling/file:posix",

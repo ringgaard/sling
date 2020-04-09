@@ -107,7 +107,7 @@ class WikiWorkflow:
                             dir=corpora.wikidir(),
                             format="records/frame")
 
-  def wikidata_import(self, input, checkpoint=False, name=None):
+  def wikidata_import(self, input, latest=False, name=None):
     """Task for converting Wikidata JSON to SLING items and properties."""
     task = self.wf.task("wikidata-importer", name=name)
     task.add_param("primary_language", flags.arg.language)
@@ -117,9 +117,18 @@ class WikiWorkflow:
     items = self.wf.channel(task, name="items", format="message/frame")
     properties = self.wf.channel(task, name="properties",
                                  format="message/frame")
-    if checkpoint:
-      task.attach_output("checkpoint", self.wikidata_checkpoint())
+    if latest:
+      task.attach_output("latest", self.wikidata_latest())
     return items, properties
+
+  def wikidata_input(self, dump):
+    if flags.arg.lbzip2:
+      input = self.wf.pipe("lbzip2 -d -c " + dump.name,
+                           name="wiki-decompress",
+                           format="text/json")
+    else:
+      input = self.wf.read(dump)
+    return self.wf.parallel(input, threads=10)
 
   def wikidata(self, dump=None):
     """Import Wikidata dump to frame format. It takes a Wikidata dump in JSON
@@ -127,13 +136,7 @@ class WikiWorkflow:
     Returns the item and property output files."""
     if dump == None: dump = self.wikidata_dump()
     with self.wf.namespace("wikidata"):
-      if flags.arg.lbzip2:
-        input = self.wf.pipe("lbzip2 -d -c " + dump.name,
-                             name="wiki-decompress",
-                             format="text/json")
-      else:
-        input = self.wf.read(dump)
-      input = self.wf.parallel(input, threads=5)
+      input = self.wikidata_input(dump)
       items, properties = self.wikidata_import(input)
       items_output = self.wikidata_items()
       self.wf.write(items, items_output, name="item-writer")
@@ -145,28 +148,18 @@ class WikiWorkflow:
     """Resource for Wikidata database."""
     return self.wf.resource(corpora.wikidatadb(), format="db/frames")
 
-  def wikidata_checkpoint(self):
-    """Resource for Wikidata checkpoint. This contains the the date and revision
-    of the latest update."""
-    return self.wf.resource("wikidata.chkpt",
-                            dir=corpora.wikidir(),
-                            format="text")
+  def wikidata_latest(self):
+    """Resource for latest Wikidata update. This contains the the QID and
+    revision of the latest update."""
+    return self.wf.resource("latest", dir=corpora.wikidir(), format="text")
 
   def wikidata_load(self, dump=None):
     """Load Wikidata dump into a database. It takes a Wikidata dump in JSON
     format as input and converts each item and property to a SLING frame."""
     if dump == None: dump = self.wikidata_dump()
     with self.wf.namespace("wikidata"):
-      if flags.arg.lbzip2:
-        input = self.wf.pipe("lbzip2 -d -c " + dump.name,
-                             name="wiki-decompress",
-                             format="text/json")
-      else:
-        input = self.wf.read(dump)
-
-      input = self.wf.parallel(input, threads=5)
-      items, properties = self.wikidata_import(input, checkpoint=True)
-
+      input = self.wikidata_input(dump)
+      items, properties = self.wikidata_import(input, latest=True)
       db = self.wikidatadb()
       self.wf.write([items, properties], db, name="db-writer")
       return db

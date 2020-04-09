@@ -56,7 +56,6 @@ class DatabaseReader : public Process {
     Counter *db_bytes_read = task->GetCounter("db_bytes_read");
 
     // Read records from database and output to output channel.
-    DBRecord record;
     uint64 iterator = 0;
     std::vector<DBRecord> records;
     for (;;) {

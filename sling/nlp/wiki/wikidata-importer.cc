@@ -92,13 +92,12 @@ class WikidataImporter : public task::Processor {
 
     // Create SLING frame for item.
     uint64 revision = 0;
-    string modified;
-    Frame profile = converter_->Convert(obj.AsFrame(), &revision, &modified);
+    Frame profile = converter_->Convert(obj.AsFrame(), &revision);
     bool is_property = profile.IsA(n_property_);
     bool is_lexeme = profile.IsA(n_lexeme_);
 
     // Keep track of the lastest modification.
-    UpdateRevision(revision, modified);
+    UpdateRevision(revision, profile.Id().str());
 
     // Output property or item.
     if (is_lexeme) {
@@ -120,12 +119,11 @@ class WikidataImporter : public task::Processor {
   // Task complete.
   void Done(task::Task *task) override {
     // Write latest modification to file.
-    auto *checkpoint = task->GetOutput("checkpoint");
-    if (checkpoint != nullptr) {
+    auto *latest = task->GetOutput("latest");
+    if (latest != nullptr) {
       string data =
-          latests_modified_ + "\t" + std::to_string(latests_revision_);
-      Status st = File::WriteContents(checkpoint->resource()->name(), data);
-      CHECK(st) << "Error writing checkpoint file: " << st;
+          latests_qid_ + "\t" + std::to_string(latests_revision_);
+      CHECK(File::WriteContents(latest->resource()->name(), data));
     }
 
     // Clean up.
@@ -135,12 +133,12 @@ class WikidataImporter : public task::Processor {
     commons_ = nullptr;
   }
 
-  // Update latest revision and modification time.
-  void UpdateRevision(uint64 revision, const string &modified) {
+  // Update latest revision.
+  void UpdateRevision(uint64 revision, const string &qid) {
     MutexLock lock(&mu_);
     if (revision > latests_revision_) {
       latests_revision_ = revision;
-      latests_modified_ = modified;
+      latests_qid_ = qid;
     }
   }
 
@@ -155,10 +153,10 @@ class WikidataImporter : public task::Processor {
   // Wikidata converter.
   WikidataConverter *converter_ = nullptr;
 
-  // Latest revision and modification time seen in items. Updates to these
-  // are serialized though a mutex.
+  // Latest revision for item seen in items. Updates to these are serialized
+  // through a mutex.
   uint64 latests_revision_ = 0;
-  string latests_modified_;
+  string latests_qid_;
   Mutex mu_;
 
   // Statistics.
