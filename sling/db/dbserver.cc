@@ -1026,6 +1026,7 @@ class DBService {
       if (mount != nullptr) {
         // Flush database.
         DBLock l(mount);
+        mu_.Unlock();
         Status st = mount->db.Flush();
         if (!st.ok()) {
           LOG(ERROR) << "Checkpoint failed for " << mount->name << ": " << st;
@@ -1033,7 +1034,6 @@ class DBService {
         mount->last_flush = mount->last_update = time(0);
         VLOG(1) << "Checkpointed " << mount->name
                 << ", " << mount->db.num_records() << " records";
-        mu_.Unlock();
       } else {
         mu_.Unlock();
       }

@@ -26,7 +26,7 @@ flags.define("--wiki_fetch_url",
 
 flags.define("--dburl",
              help="wiki database url for collecting changes",
-             default="http://compute02.jbox.dk:7070/wikilive",
+             default="http://localhost:7070/wikidata",
              metavar="URL")
 
 flags.define("--checkpoint",

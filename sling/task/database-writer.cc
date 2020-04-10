@@ -26,7 +26,7 @@ namespace task {
 class DatabaseWriter : public Processor {
  public:
   ~DatabaseWriter() override {
-    for (Message *message : batch_) delete message;
+    for (Message *message : queue_) delete message;
     CHECK(db_.Close());
   }
 
@@ -57,20 +57,30 @@ class DatabaseWriter : public Processor {
   }
 
   void Receive(Channel *channel, Message *message) override {
-    MutexLock lock(&mu_);
+    queue_mu_.Lock();
 
-    // Add message to batch.
-    batch_.push_back(message);
+    // Add message to queue.
+    queue_.push_back(message);
 
-    // Write batch when batch size has been reached.
-    if (batch_.size() >= batch_size_) FlushBatch();
+    // Write batch when queue has a full batch.
+    if (queue_.size() >= batch_size_) {
+      // Move messages out of queue and release queue lock.
+      std::vector<Message *> batch;
+      queue_.swap(batch);
+      queue_mu_.Unlock();
+
+      // Write batch to database.
+      WriteBatch(&batch);
+    } else {
+      queue_mu_.Unlock();
+    }
   }
 
   void Done(Task *task) override {
-    MutexLock lock(&mu_);
+    MutexLock lock(&queue_mu_);
 
-    // Flush remaining messages in batch.
-    if (!batch_.empty()) FlushBatch();
+    // Flush remaining messages in queue.
+    if (!queue_.empty()) WriteBatch(&queue_);
 
     // Clear bulk mode.
     CHECK(db_.Bulk(false));
@@ -79,11 +89,13 @@ class DatabaseWriter : public Processor {
     CHECK(db_.Close());
   }
 
-  void FlushBatch() {
+  void WriteBatch(std::vector<Message *> *batch) {
+    MutexLock lock(&db_mu_);
+
     // Prepare batch of record updates.
-    std::vector<DBRecord> recs(batch_.size());
-    for (int i = 0; i < batch_.size(); ++i) {
-      Message *message = batch_[i];
+    std::vector<DBRecord> recs(batch->size());
+    for (int i = 0; i < batch->size(); ++i) {
+      Message *message = (*batch)[i];
       recs[i].key = message->key();
       recs[i].version = message->serial();
       recs[i].value = message->value();
@@ -94,8 +106,8 @@ class DatabaseWriter : public Processor {
     if (!st.ok()) LOG(FATAL) << "Error writing to database: " << st;
 
     // Clear batch.
-    for (Message *message : batch_) delete message;
-    batch_.clear();
+    for (Message *message : *batch) delete message;
+    batch->clear();
   }
 
  private:
@@ -108,11 +120,12 @@ class DatabaseWriter : public Processor {
   // Number of records to write in one batch.
   int batch_size_ = 100;
 
-  // Current batch of messages that have not been written to database.
-  std::vector<Message *> batch_;
+  // Current queue of messages that have not been written to database.
+  std::vector<Message *> queue_;
 
-  // Mutex for database writer.
-  Mutex mu_;
+  // Mutex for queue and database writer.
+  Mutex queue_mu_;
+  Mutex db_mu_;
 };
 
 REGISTER_TASK_PROCESSOR("database-writer", DatabaseWriter);
