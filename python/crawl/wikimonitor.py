@@ -3,11 +3,11 @@ import re
 import sys
 import requests
 import time
-from sseclient import SSEClient
 from threading import Thread
 from queue import Queue
 import sling
 import sling.flags as flags
+from sling.crawl.sse import SSEStream
 
 flags.define("--wiki_changes_stream",
              help="stream for monitoring updates to wikidata",
@@ -29,10 +29,16 @@ flags.define("--dburl",
              default="http://compute02.jbox.dk:7070/wikilive",
              metavar="URL")
 
-flags.define("--checkpoints",
-             help="log file for checkpoint records",
-             default="",
+flags.define("--checkpoint",
+             help="file with latest checkpoint",
+             default=None,
              metavar="FILE")
+
+flags.define("--checkpoint_interval",
+             help="how often checkpoint is written to disk",
+             default=1000,
+             type=int,
+             metavar="NUM")
 
 flags.define("--threads",
              help="number of thread for worker pool",
@@ -42,7 +48,7 @@ flags.define("--threads",
 
 flags.define("--qsize",
              help="queue size",
-             default=1024 * 1024,
+             default=1024,
              type=int,
              metavar="NUM")
 
@@ -53,73 +59,101 @@ commons = sling.Store()
 wikiconv = sling.WikiConverter(commons)
 commons.freeze()
 
-# URL sessions for Wikidata and database.
+# Global variables.
 dbsession = requests.Session()
 wdsession = requests.Session()
+redir_pat = re.compile("\/\* wbcreateredirect:\d+\|\|(Q\d+)\|(Q\d+) \*\/")
+num_changes = 0
 
 # Fetch changed item and update database.
-def process_change(edit):
-  # Get event data.
-  qid = str(edit[0])
-  revision = edit[1]
-  redir = edit[2]
+def process_change(change):
+  qid = change["title"]
+  if qid.startswith("Property:"): qid = qid[9:]
+  ts = change["timestamp"]
+  kind = change["type"]
 
-  # Fetch item.
-  store = sling.Store(commons)
-  item = None
-  if redir != None:
-    # Handle redirects by adding {=Q<old> +Q<new>} frames.
-    item = store.parse("{id: %s +%s}" % (qid, redir))
-  else:
-    again = True
-    while again:
-      again = False
+  if kind == "log" and change["log_action"] == "delete":
+    # Delete item/property from database.
+    try:
+      print("[%d] %s DELETE" % (queue.qsize(), qid))
+      reply = dbsession.delete(flags.arg.dburl + "/" + qid)
+      reply.raise_for_status()
+    except Exception as e:
+      print("DB delete error:", e)
+  elif kind == "edit":
+    revision = change["revision"]["new"]
+    store = sling.Store(commons)
+    item = None
+
+    m = redir_pat.fullmatch(change["comment"])
+    redir = None
+    if m != None:
+      # Handle redirects by adding {=Q<old> +Q<new>} frames.
+      redir = m.group(2)
+      item = store.parse("{id: %s +%s}" % (qid, redir))
+    else:
+      # Fetch item.
+      again = True
+      while again:
+        again = False
+        try:
+          # Fetch item revision from Wikidata.
+          url = "%s?id=%s&revision=%d&format=json" % (
+            flags.arg.wiki_fetch_url, qid, revision)
+          reply = wdsession.get(url)
+          if reply.status_code == 429:
+            # Too many requests.
+            print("throttle down...")
+            time.sleep(30)
+            again = True;
+          reply.raise_for_status()
+        except Exception as e:
+          print("Error fetching item:", e, ":", change)
+          return
+
+      # Convert item to SLING format.
       try:
-        # Fetch item revision from Wikidata.
-        url = "%s?id=%s&revision=%d&format=json" % (
-          flags.arg.wiki_fetch_url, qid, revision)
-        reply = wdsession.get(url)
-        if reply.status_code == 429:
-          # Too many requests.
-          print("throttle down...")
-          time.sleep(30)
-          again = True;
+        item, _ = wikiconv.convert_wikidata(store, reply.text)
       except Exception as e:
-        print("Error fetching item:", e, ":", edit[3])
+        print("Error converting item:", e, reply.text)
         return
 
-    try:
-      # Convert item to SLING format.
-      item, _ = wikiconv.convert_wikidata(store, reply.text)
-    except Exception as e:
-      print("Error converting item:", e, "status", reply.status_code, ":", reply.text)
-      return
+    # Save item in database.
+    saved = False
+    while not saved:
+      try:
+        reply = None
+        reply = dbsession.put(
+          flags.arg.dburl + "/" + qid,
+          data=item.data(binary=True),
+          headers={
+            "Version": str(revision),
+            "Mode": "ordered",
+          }
+        )
+        reply.raise_for_status()
+        result = reply.headers["Result"]
+        saved = True
+      except Exception as e:
+        print("DB error:", e, ":", reply.text if reply != None else "")
+        time.sleep(30)
 
-  # Save item in database.
-  saved = False
-  while not saved:
-    try:
-      db_reply = None
-      db_reply = dbsession.put(
-        flags.arg.dburl + "/" + qid,
-        data=item.data(binary=True),
-        headers={
-          "Version": str(revision),
-          "Mode": "ordered",
-        }
-      )
-      db_reply.raise_for_status()
-      outcome = db_reply.headers["Outcome"]
-      saved = True
-    except Exception as e:
-      print("DB error:", e, ":", db_reply.text if db_reply != None else "")
-      time.sleep(30)
+    if redir:
+      print("[%d] %s REDIR %s" % (queue.qsize(), qid, redir))
+    else:
+      print("[%d] %d %s %s (%s)" % (queue.qsize(), revision, item["id"],
+            item["name"], result))
 
-  if redir != None:
-    print("[%d] %d %s REDIRECT %s" % (queue.qsize(), revision, qid, redir))
-  else:
-    print("[%d] %d %s %s (%s)" % (queue.qsize(), revision,
-                                  item["id"], item["name"], outcome))
+  # Update checkpoint.
+  global num_changes
+  num_changes += 1
+  if flags.arg.checkpoint != None:
+    if num_changes % flags.arg.checkpoint_interval == 0:
+      dt = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))
+      print("CHECKPOINT", ts, dt)
+      with open(flags.arg.checkpoint, 'w') as ckpt:
+        ckpt.write(str(ts))
+
   sys.stdout.flush()
 
 # Thread worker pool for process changes in the background.
@@ -127,9 +161,11 @@ queue = Queue(flags.arg.qsize)
 
 def worker():
   while True:
-    edit = queue.get()
+    event = queue.get()
     try:
-      process_change(edit)
+      process_change(event)
+    except:
+      print("Error processing event:", sys.exc_info()[0])
     finally:
       queue.task_done()
 
@@ -138,57 +174,44 @@ for i in range(flags.arg.threads):
   t.daemon = True
   t.start()
 
-# Get current date.
-tm = time.gmtime(time.time())
-day = tm.tm_mday
+# Determine checkpoint for restart.
+since = flags.arg.since
+if since is None and flags.arg.checkpoint is not None:
+  try:
+    with open(flags.arg.checkpoint, 'r') as ckpt:
+      ts = int(ckpt.read())
+      since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))
+  except:
+    print("No checkpoint file:", flags.arg.checkpoint)
 
-# Pattern for redirect events.
-redir_pat = re.compile("\/\* wbcreateredirect:\d+\|\|(Q\d+)\|(Q\d+) \*\/")
+if since:
+  print("Restart at", since)
 
 # Event listener for receiving Wikidata updates.
+stream = SSEStream(flags.arg.wiki_changes_stream, since=since)
 while True:
   try:
-    url = flags.arg.wiki_changes_stream
-    if flags.arg.since:
-      url += "?since=" + flags.arg.since
-      flags.arg.since = None
-    for event in SSEClient(url):
-      if event.event != "message" or event.data == "": continue
+    for event in stream:
+      if event.event != b"message": continue
+      if event.data is None: continue
+      if b"wikidatawiki" not in event.data: continue
+
       try:
-        change = json.loads(event.data)
+        change = json.loads(event.data.decode("utf8"))
       except Exception as e:
         # Ignore JSON parse errors.
+        print("JSON error: ", e)
         continue
 
       # Filter messages.
-      if change["wiki"] != "wikidatawiki": continue
-      qid = change["title"]
-      if qid[0] != "Q": continue
-      if change["type"] == "log": continue
-      ts = change["timestamp"]
-      revision = change["revision"]["new"]
+      wiki = change["wiki"]
+      if wiki != "wikidatawiki": continue
+      title = change["title"]
+      if not (title.startswith("Q") or title.startswith("Property:")): continue
 
-      # Output checkpoint when a new day starts.
-      if flags.arg.checkpoints != "":
-        tm = time.gmtime(ts)
-        if tm.tm_mday != day:
-          day = tm.tm_mday
-
-          # Get current epoch from database server.
-          epoch = dbsession.options(flags.arg.dburl).headers["Epoch"]
-
-          # Add entry to checkpoint file.
-          with open(flags.arg.checkpoints, 'a') as ckpt:
-            ckpt.write("%04d-%02d-%02d %s\n" % (year, month, day, epoch))
-
-      # Detect redirects.
-      redir = None
-      m = redir_pat.fullmatch(change["comment"])
-      if m != None: redir = m.group(2)
-
-      # Add update to queue.
-      queue.put((qid, revision, redir, event.data))
+      # Add event to queue.
+      queue.put(change)
 
   except Exception as e:
-    print("Error receiving event:", e)
+    print("SSE error:", e)
 

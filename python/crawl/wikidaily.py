@@ -147,10 +147,10 @@ for page in tree.getroot().iterfind("wd:page", ns):
     }
   )
   r.raise_for_status()
-  outcome = r.headers["Outcome"]
+  result = r.headers["Result"]
 
   if redir is None:
-    print("%d %s %s (%s)" % (revision, item["id"], item["name"], outcome))
+    print("%d %s %s (%s)" % (revision, item["id"], item["name"], result))
   else:
     print("%d %s REDIRECT %s" % (revision, qid, redir))
 

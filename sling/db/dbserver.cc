@@ -1002,26 +1002,40 @@ class DBService {
       sleep(1);
       if (terminate_) return;
 
-      // Checkpoint databases.
-      MutexLock lock(&mu_);
+      // Find next database that needs to be flushed.
+      mu_.Lock();
       time_t now = time(0);
+      DBMount *mount = nullptr;
       for (auto &it : mounts_) {
-        DBMount *mount = it.second;
-        if (!mount->db.dirty()) continue;
+        DBMount *m = it.second;
+
+        // Only checkpoint dirty databases.
+        if (!m->db.dirty()) continue;
 
         // Checkpoint every five minutes unless database is in bulk mode or
         // after 10 seconds of no activity.
-        if ((!mount->bulk && now - mount->last_flush > 300) ||
-            now - mount->last_update > 10) {
-          mount->Acquire();
-          Status st = mount->db.Flush();
-          if (!st.ok()) {
-            LOG(ERROR) << "Checkpoint failed for " << mount->name << ": " << st;
-          }
-          mount->last_flush = mount->last_update = time(0);
-          VLOG(1) << "Checkpointed " << mount->name
-                  << ", " << mount->db.num_records() << " records";
+        if (m->bulk) continue;
+        if (now - m->last_flush < 300) continue;
+        if (now - m->last_update < 10) continue;
+
+        // Select database which has not been flushed for the longest time.
+        if (mount != nullptr && mount->last_flush < m->last_flush) continue;
+        mount = m;
+      }
+
+      if (mount != nullptr) {
+        // Flush database.
+        DBLock l(mount);
+        Status st = mount->db.Flush();
+        if (!st.ok()) {
+          LOG(ERROR) << "Checkpoint failed for " << mount->name << ": " << st;
         }
+        mount->last_flush = mount->last_update = time(0);
+        VLOG(1) << "Checkpointed " << mount->name
+                << ", " << mount->db.num_records() << " records";
+        mu_.Unlock();
+      } else {
+        mu_.Unlock();
       }
     }
   }};

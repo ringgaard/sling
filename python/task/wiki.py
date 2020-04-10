@@ -128,7 +128,7 @@ class WikiWorkflow:
                            format="text/json")
     else:
       input = self.wf.read(dump)
-    return self.wf.parallel(input, threads=10)
+    return self.wf.parallel(input, threads=10, queue=1000)
 
   def wikidata(self, dump=None):
     """Import Wikidata dump to frame format. It takes a Wikidata dump in JSON
