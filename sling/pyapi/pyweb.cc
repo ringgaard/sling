@@ -63,31 +63,36 @@ PyObject *PyWebArchive::Next() {
     return nullptr;
   }
 
-  // Create url and content tuple.
-  PyObject *k = Py_None;
-  PyObject *v = Py_None;
+  // Create (url, date, content) tuple.
+  PyObject *uri = Py_None;
+  PyObject *date = Py_None;
+  PyObject *content = Py_None;
   if (!warc->uri().empty()) {
-    k = PyBytes_FromStringAndSize(warc->uri().data(), warc->uri().size());
+    uri = PyBytes_FromStringAndSize(warc->uri().data(), warc->uri().size());
+  }
+  if (!warc->date().empty()) {
+    date = AllocateString(warc->date());
   }
   int length = warc->content_length();
   if (warc->content_length() > 0) {
     // Create byte array.
-    v = PyBytes_FromStringAndSize(nullptr, length);
+    content = PyBytes_FromStringAndSize(nullptr, length);
 
     // Get buffer for byte array.
     Py_buffer buffer;
-    if (PyObject_GetBuffer(v, &buffer, PyBUF_SIMPLE) < 0) return nullptr;
+    if (PyObject_GetBuffer(content, &buffer, PyBUF_SIMPLE) < 0) return nullptr;
 
     // Copy content into buffer.
     Input input(warc->content());
     CHECK(input.Read(static_cast<char *>(buffer.buf), length));
     PyBuffer_Release(&buffer);
   }
-  PyObject *pair = PyTuple_Pack(2, k, v);
-  if (k != Py_None) Py_DECREF(k);
-  if (v != Py_None) Py_DECREF(v);
+  PyObject *tuple = PyTuple_Pack(3, uri, date, content);
+  if (uri != Py_None) Py_DECREF(uri);
+  if (date != Py_None) Py_DECREF(date);
+  if (content != Py_None) Py_DECREF(content);
 
-  return pair;
+  return tuple;
 }
 
 }  // namespace sling

@@ -121,7 +121,9 @@ void DisplayFile(const string &filename) {
     } else {
       DBRecord record;
       CHECK(db.Get(FLAGS_key, &record));
-      DisplayRecord(record.key, record.version, record.value);
+      if (!record.value.empty()) {
+        DisplayRecord(record.key, record.version, record.value);
+      }
     }
     CHECK(db.Close());
   } else if (!FLAGS_key.empty()) {
