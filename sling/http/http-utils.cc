@@ -64,7 +64,7 @@ bool DecodeURLComponent(const char *url, int length, string *output) {
   while (url < end) {
     char c = *url++;
     if (c == '%') {
-      if (url + 2 >= end) return false;
+      if (url + 2 > end) return false;
       char x1 = *url++;
       if (!ascii_isxdigit(x1)) return false;
       char x2 = *url++;
