@@ -35,6 +35,8 @@ class DatabaseIndex {
   // Invalid value.
   const static uint64 NVAL = -1;
 
+  ~DatabaseIndex() { Close(); }
+
   // Open existing index file.
   Status Open(const string &filename);
 
@@ -71,7 +73,14 @@ class DatabaseIndex {
   uint64 Delete(uint64 key, uint64 value);
 
   // Transfer all used index entries to another index.
-  void Transfer(DatabaseIndex *index) const;
+  void TransferTo(DatabaseIndex *index) const;
+
+  // Copy index from another index. This requires that the other index has the
+  // same capacity as this index.
+  void CopyFrom(const DatabaseIndex *index);
+
+  // Write index to file.
+  Status Write(File *file) const;
 
   // Check for index overflow, i.e. the fill factor is above the limit.
   bool full() const {
@@ -83,6 +92,9 @@ class DatabaseIndex {
 
   // Return capacity of current index.
   uint64 capacity() const { return header_ != nullptr ? header_->capacity : 0; }
+
+  // Return limit for current index.
+  uint64 limit() const { return header_ != nullptr ? header_->limit : 0; }
 
   // Return number of active records.
   uint64 num_records() const { return header_->size - header_->deletions; }

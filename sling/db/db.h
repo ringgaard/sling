@@ -33,7 +33,8 @@ namespace sling {
 // (<dbdir>/index) and one or more data shards (<dbdir>/data-99999999). The
 // data shards are recordio files and all new records are written sequentially
 // to the data files. Record deletion is performed by writing a record with the
-// deleted key and an empty value.
+// deleted key and an empty value. Please notice that the database methods are
+// not thread-safe and requires synchronized access, e.g. using a mutex.
 class Database {
  public:
   // Configuration options for database.
@@ -69,6 +70,13 @@ class Database {
 
   // Flush changes to database.
   Status Flush();
+
+  // Enable or disable bulk mode. In bulk mode, a memory-based index is used to
+  // avoid excessive paging during database loading.
+  Status Bulk(bool enable);
+
+  // Back up database by making a snapshot of the index.
+  Status Backup();
 
   // Get record from database. Return true if found.
   bool Get(const Slice &key, Record *record);
@@ -111,6 +119,9 @@ class Database {
 
   // Return index capacity.
   uint64 index_capacity() const { return index_->capacity(); }
+
+  // Return bulk mode.
+  bool bulk() const { return bulk_; }
 
   // Database directory.
   const string &dbdir() const { return dbdir_; }
@@ -155,14 +166,14 @@ class Database {
   // Return filename for index.
   string IndexFile() const;
 
+  // Return filename for index backup.
+  string IndexBackupFile() const;
+
   // Return filename for data shard.
   string DataFile(int shard) const;
 
   // Read data record.
-  void ReadRecord(uint64 recid, Record *record);
-
-  // Append data record. Return record id of new record.
-  uint64 AppendRecord(const Record &record);
+  Status ReadRecord(uint64 recid, Record *record);
 
   // Add new empty data shard.
   Status AddDataShard();
@@ -171,7 +182,7 @@ class Database {
   Status ExpandIndex(uint64 capacity);
 
   // Expand database for next record.
-  void Expand();
+  Status Expand();
 
   // Recover index from data files.
   Status Recover(uint64 capacity);
@@ -193,6 +204,9 @@ class Database {
 
   // Flag for tracking unwritten changes to database.
   bool dirty_ = false;
+
+  // Bulk mode is used for initial loading of a database.
+  bool bulk_ = false;
 };
 
 }  // namespace sling

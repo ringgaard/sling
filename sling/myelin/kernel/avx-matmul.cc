@@ -93,10 +93,10 @@ class AVXVecMatMulBase : public Kernel {
 class AVXFltVecMatMulBase : public AVXVecMatMulBase {
  public:
   // Maximum number of loop unrolls.
-  static const int kMaxUnrolls = 8;
+  static constexpr int kMaxUnrolls = 8;
 
   // Maximum number of adder registers.
-  static const int kMaxAdders = 4;
+  static constexpr int kMaxAdders = 4;
 
   AVXFltVecMatMulBase(bool bias, bool relu)
       : AVXVecMatMulBase(bias, relu, ANY_ORDER, DT_FLOAT, DT_FLOAT) {}
@@ -751,10 +751,10 @@ class AVXFltVecMatMulAddRelu : public AVXFltVecMatMulBase {
 class AVXFltDotProduct : public Kernel {
  public:
   // Maximum number of loop unrolls.
-  static const int kMaxUnrolls = 4;
+  static constexpr int kMaxUnrolls = 4;
 
   // Maximum number of adder registers.
-  static const int kMaxAdders = 4;
+  static constexpr int kMaxAdders = 4;
 
   string Name() override { return "AVXFltDotProduct"; }
   string Operation() override { return "MatMul"; }
@@ -936,8 +936,8 @@ class AVXFltDotProduct : public Kernel {
 class AVXFltAssignAddOuter : public Kernel {
  public:
   // Block size.
-  static const int kRowRegs = 4;
-  static const int kColRegs = 4;
+  static constexpr int kRowRegs = 4;
+  static constexpr int kColRegs = 4;
 
   string Name() override { return "AVXFltAssignAddOuter"; }
   string Operation() override { return "AssignAddMatMul"; }

@@ -36,12 +36,15 @@ static Status Error(const char *context) {
 
 SocketServer::~SocketServer() {
   // Wait for workers to terminate.
+  LOG(INFO) << "Wait for workers to complete";
   workers_.Join();
 
   // Close poll descriptor.
+  LOG(INFO) << "Stop event polling";
   if (pollfd_ != -1) close(pollfd_);
 
   // Delete listeners.
+  LOG(INFO) << "Stop listeners";
   Endpoint *endpoint = endpoints_;
   while (endpoint != nullptr) {
     Endpoint *next = endpoint->next;
@@ -51,12 +54,14 @@ SocketServer::~SocketServer() {
   }
 
   // Delete connections.
+  LOG(INFO) << "Close connections";
   SocketConnection *conn = connections_;
   while (conn != nullptr) {
     SocketConnection *next = conn->next_;
     delete conn;
     conn = next;
   }
+  LOG(INFO) << "Socket server shut down";
 }
 
 void SocketServer::Listen(int port, SocketProtocol *protocol) {

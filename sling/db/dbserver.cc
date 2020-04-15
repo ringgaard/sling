@@ -14,8 +14,8 @@
 
 #include <signal.h>
 #include <time.h>
-#include <string>
 #include <unistd.h>
+#include <string>
 #include <unordered_map>
 
 #include "sling/base/flags.h"
@@ -46,13 +46,16 @@ class DBService {
 
   ~DBService() {
     // Stop checkpoint monitor.
+    LOG(INFO) << "Stop checkpoint monitor";
     terminate_ = true;
     monitor_.Join();
 
     // Flush all changes to disk.
+    LOG(INFO) << "Flush databases";
     Flush();
 
     // Close all mounted databases.
+    LOG(INFO) << "Close all mounted databases";
     MutexLock lock(&mu_);
     for (auto &it : mounts_) {
       DBMount *mount = it.second;
@@ -60,6 +63,7 @@ class DBService {
       LOG(INFO) << "Closing database " << mount->name;
       delete mount;
     }
+    LOG(INFO) << "Database service shut down";
   }
 
   // Flush mounted databases.
@@ -72,7 +76,7 @@ class DBService {
         LOG(INFO) << "Flushing database " << mount->name << " to disk";
         Status st = mount->db.Flush();
         if (!st.ok()) {
-          LOG(ERROR) << "Shutdown failed for db " << mount->name << ": " << st;
+          LOG(ERROR) << "Flush failed for db " << mount->name << ": " << st;
         }
       }
     }
@@ -145,6 +149,8 @@ class DBService {
           Mount(request, response);
         } else if (strcmp(cmd, "unmount") == 0) {
           Unmount(request, response);
+        } else if (strcmp(cmd, "backup") == 0) {
+          Backup(request, response);
         } else {
           response->SendError(501, nullptr, "Unknown DB command");
         }
@@ -358,11 +364,7 @@ class DBService {
         }
       }
     } else {
-      record.version = request->Get("Version", -1);
-      if (record.version == -1) {
-        response->SendError(400, nullptr, "Invalid record version");
-        return;
-      }
+      record.version = request->Get("Version", 0L);
     }
     DBMode mode = DBOVERWRITE;
     const char *m = request->Get("Mode");
@@ -399,6 +401,7 @@ class DBService {
       case DBUNCHANGED: outcome = "unchanged"; break;
       case DBEXISTS: outcome = "exists"; break;
       case DBSTALE: outcome = "stale"; break;
+      case DBFAULT: outcome = "fault"; break;
     }
     if (outcome != nullptr) response->Set("Result", outcome);
 
@@ -480,7 +483,7 @@ class DBService {
     AddNumPair(response, "epoch", db->epoch());
     AddPair(response, "dbdir", db->dbdir());
     AddBoolPair(response, "dirty", db->dirty());
-    AddBoolPair(response, "bulk", l.mount()->bulk);
+    AddBoolPair(response, "bulk", db->bulk());
     AddBoolPair(response, "read_only", db->read_only());
     AddBoolPair(response, "timestamped", db->timestamped());
     AddNumPair(response, "records", db->num_records());
@@ -626,6 +629,32 @@ class DBService {
     response->SendError(200, nullptr, "Database unmounted");
   }
 
+  // Back up database.
+  void Backup(HTTPRequest *request, HTTPResponse *response) {
+    // Get parameters.
+    URLQuery query(request->query());
+    string name = query.Get("name").str();
+
+    // Lock database.
+    DBLock l(this, name);
+    if (l.mount() == nullptr) {
+      response->SendError(404, nullptr, "Database not found");
+      return;
+    }
+
+    // Back up database.
+    LOG(INFO) << "Backing up database: " << name;
+    Status st = l.db()->Backup();
+    if (!st.ok()) {
+      response->SendError(500, nullptr, "Unable to back up database");
+      return;
+    }
+
+    // Database backup sucessfully.
+    LOG(INFO) << "Database backed up: " << name;
+    response->SendError(200, nullptr, "Database backed up");
+  }
+
   // Check that database name is valid.
   static bool ValidDatabaseName(const string &name) {
     if (name.empty() || name.size() > MAX_DBNAME_SIZE) return false;
@@ -660,7 +689,6 @@ class DBService {
     Mutex mu;             // mutex for serializing access to database
     time_t last_update;   // time of last database update
     time_t last_flush;    // time of last database flush
-    bool bulk = false;    // in bulk mode there are no forced checkpoints
   };
 
   // Lock on database.
@@ -797,7 +825,16 @@ class DBService {
       auto *req = conn_->request();
       uint32 enable;
       if (!req->Read(&enable, 4)) return TERMINATE;
-      l.mount()->bulk = enable;
+
+      Status st = l.db()->Bulk(enable);
+      if (!st) return Error("bulk mode cannot be changed");
+
+      if (enable) {
+        LOG(INFO) << "Enter bulk mode: " << mount_->name;
+      } else {
+        LOG(INFO) << "Leave bulk mode: " << mount_->name;
+      }
+
       return Response(DBOK);
     }
 
@@ -844,7 +881,9 @@ class DBService {
 
         // Add/update record in database.
         DBResult result;
-        l.db()->Put(record, mode, &result);
+        if (l.db()->Put(record, mode, &result) == -1) {
+          return Error("error writing record");
+        }
 
         // Return result.
         rsp->Write(&result, 4);
@@ -1014,7 +1053,7 @@ class DBService {
 
         // Checkpoint every five minutes unless database is in bulk mode or
         // after 10 seconds of no activity.
-        if (m->bulk) continue;
+        if (m->db.bulk()) continue;
         if (now - m->last_flush < 300) continue;
         if (now - m->last_update < 10) continue;
 

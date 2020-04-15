@@ -31,7 +31,6 @@ Database::~Database() {
   for (RecordReader *reader : readers_) delete reader;
 
   // Close index.
-  if (index_ != nullptr) CHECK(index_->Close());
   delete index_;
 }
 
@@ -104,7 +103,7 @@ Status Database::Open(const string &dbdir, bool recover) {
 }
 
 Status Database::Create(const string &dbdir, const string &config) {
-  // Check that database directory does not exist.
+  // Check that database directory does not already exist.
   if (File::Exists(dbdir)) {
     return Status(E_DB_ALREADY_EXISTS, "Database already exists: ", dbdir);
   }
@@ -127,6 +126,7 @@ Status Database::Create(const string &dbdir, const string &config) {
 
   // Add initial data shard.
   st = AddDataShard();
+  if (!st.ok()) return st;
 
   // Create database index.
   index_ = new DatabaseIndex();
@@ -147,7 +147,8 @@ Status Database::Flush() {
       if (!st.ok()) return st;
     }
 
-    // Flush index to disk.
+    // Flush index to disk. For a memory-based index, this will just update
+    // the epoch in the index header.
     if (index_ != nullptr) {
       Status st = index_->Flush(epoch());
       if (!st.ok()) return st;
@@ -157,6 +158,37 @@ Status Database::Flush() {
   }
 
   return Status::OK;
+}
+
+Status Database::Bulk(bool enable) {
+  if (bulk_ == enable) return Status::OK;
+  bulk_ = enable;
+
+  // Switch index. Use memory-based index in bulk mode.
+  DatabaseIndex *newidx = new DatabaseIndex();
+  Status st = newidx->Create(IndexFile(), index_->capacity(), index_->limit());
+  if (!st.ok()) return st;
+  newidx->CopyFrom(index_);
+  delete index_;
+  index_ = newidx;
+
+  // Mark database as dirty when leaving bulk mode to trigger an index flush.
+  if (!bulk_) dirty_ = true;
+
+  return Status::OK;
+}
+
+Status Database::Backup() {
+  // First flush database to ensure we have a consistent state.
+  Status st = Flush();
+  if (!st.ok()) return st;
+
+  // Write snapshot of index to backup file.
+  File *backup;
+  st = File::Open(IndexBackupFile(), "w", &backup);
+  if (st.ok()) st = index_->Write(backup);
+  if (st.ok()) st = backup->Close();
+  return st;
 }
 
 bool Database::Get(const Slice &key, Record *record) {
@@ -171,7 +203,8 @@ bool Database::Get(const Slice &key, Record *record) {
     if (recid == DatabaseIndex::NVAL) break;
 
     // Read record from data file.
-    ReadRecord(recid, record);
+    Status st = ReadRecord(recid, record);
+    if (!st) return false;
 
     // Return record if key matches.
     if (key == record->key) return true;
@@ -198,7 +231,11 @@ uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
     if (recid == DatabaseIndex::NVAL) break;
 
     // Read record from data file and check if keys match.
-    ReadRecord(recid, &rec);
+    Status st = ReadRecord(recid, &rec);
+    if (!st) {
+      if (result != nullptr) *result = DBFAULT;
+      return -1;
+    }
     if (rec.key == record.key) break;
   }
 
@@ -236,10 +273,13 @@ uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
   }
 
   // Make room for more records.
-  Expand();
+  Status st = Expand();
+  if (!st) return -1;
 
   // Write new record.
-  uint64 newid = AppendRecord(record);
+  st = writer_->Write(record, &pos);
+  if (!st) return -1;
+  uint64 newid = RecordID(CurrentShard(), pos);
 
   // Update index.
   if (recid == DatabaseIndex::NVAL) {
@@ -273,17 +313,20 @@ bool Database::Delete(const Slice &key) {
     if (recid == DatabaseIndex::NVAL) return false;
 
     // Read record from data file and check if keys match.
-    ReadRecord(recid, &record);
+    Status st = ReadRecord(recid, &record);
+    if (!st) return false;
     if (key == record.key) break;
   }
 
   // Make room for more records.
-  Expand();
+  Status st = Expand();
+  if (!st) return false;
 
   // Write empty record to mark key as deleted.
   record.key = key;
   record.value = Slice();
-  AppendRecord(record);
+  st = writer_->Write(record, &pos);
+  if (!st) return false;
 
   // Remove key from index.
   index_->Delete(fp, recid);
@@ -304,17 +347,20 @@ bool Database::Next(Record *record, uint64 *iterator) {
 
     // Flush writer before reading from the last shard.
     if (writer_ != nullptr && shard == CurrentShard()) {
-      CHECK(writer_->Flush());
+      Status st = writer_->Flush();
+      if (!st) return false;
       writer_->Sync(readers_.back());
     }
 
     // Seek to position in shard.
     RecordReader *reader = readers_[shard];
     if (pos == 0) {
-      CHECK(reader->Rewind());
+      Status st = reader->Rewind();
+      if (!st) return false;
       pos = reader->Tell();
     } else {
-      CHECK(reader->Seek(pos));
+      Status st = reader->Seek(pos);
+      if (!st) return false;
     }
 
     // Check for end of shard.
@@ -326,7 +372,8 @@ bool Database::Next(Record *record, uint64 *iterator) {
     }
 
     // Read record.
-    CHECK(reader->Read(record));
+    Status st = reader->Read(record);
+    if (!st) return false;
     pos = reader->Tell();
 
     // Check for deleted record.
@@ -360,7 +407,13 @@ string Database::ConfigFile() const {
 }
 
 string Database::IndexFile() const {
+  // In bulk mode, an empty index file name means a memory-only index.
+  if (bulk_) return "";
   return dbdir_ + "/index";
+}
+
+string Database::IndexBackupFile() const {
+  return dbdir_ + "/index.bak";
 }
 
 string Database::DataFile(int shard) const {
@@ -371,22 +424,23 @@ string Database::DataFile(int shard) const {
   return fn;
 }
 
-void Database::ReadRecord(uint64 recid, Record *record) {
+Status Database::ReadRecord(uint64 recid, Record *record) {
+  Status st;
   uint64 shard = Shard(recid);
   if (writer_ != nullptr && shard == CurrentShard()) {
     // Flush writer before reading from the last shard.
-    CHECK(writer_->Flush());
+    st = writer_->Flush();
+    if (!st) return st;
     writer_->Sync(readers_.back());
   }
   RecordReader *reader = readers_[shard];
-  CHECK(reader->Seek(Position(recid)));
-  CHECK(reader->Read(record));
-}
 
-uint64 Database::AppendRecord(const Record &record) {
-  uint64 pos;
-  CHECK(writer_->Write(record, &pos));
-  return RecordID(CurrentShard(), pos);
+  st = reader->Seek(Position(recid));
+  if (!st) return st;
+  st = reader->Read(record);
+  if (!st) return st;
+
+  return Status::OK;
 }
 
 Status Database::AddDataShard() {
@@ -417,12 +471,15 @@ Status Database::AddDataShard() {
 
 Status Database::ExpandIndex(uint64 capacity) {
   // Rehash index by copying it to a new larger index.
+  Status st;
   LOG(INFO) << "Expand index to " << capacity << " entries for db " << dbdir_;
   DatabaseIndex *new_index = new DatabaseIndex();
 
   // Unlink current index.
-  Status st = File::Delete(IndexFile());
-  if (!st.ok()) return st;
+  if (!bulk_) {
+    st = File::Delete(IndexFile());
+    if (!st.ok()) return st;
+  }
 
   // Create new index.
   uint64 limit = capacity * config_.index_load_factor;
@@ -430,7 +487,7 @@ Status Database::ExpandIndex(uint64 capacity) {
   if (!st.ok()) return st;
 
   // Transfer all entries to the new index.
-  index_->Transfer(new_index);
+  index_->TransferTo(new_index);
 
   // Switch to new index.
   st = index_->Close();
@@ -442,43 +499,86 @@ Status Database::ExpandIndex(uint64 capacity) {
   return Status::OK;
 }
 
-void Database::Expand() {
+Status Database::Expand() {
   // Check for data shard overflow.
   if (writer_->Tell() >= config_.data_shard_size) {
     // Add new data shard.
-    CHECK(AddDataShard());
+    Status st = AddDataShard();
+    if (!st.ok()) return st;
   }
 
   // Check for index overflow.
   if (index_->full()) {
     // Rehash index by copying it to a new larger index.
-    CHECK(ExpandIndex(index_->capacity() * 2));
+    Status st = ExpandIndex(index_->capacity() * 2);
+    if (!st.ok()) return st;
   }
+
+  return Status::OK;
 }
 
 Status Database::Recover(uint64 capacity) {
-  // Create new database index.
-  if (capacity < config_.initial_index_capacity) {
-    capacity = config_.initial_index_capacity;
-  }
-  uint64 limit = capacity * config_.index_load_factor;
+  // Recover index into a memory index first to avoid excessive paging during
+  // recovery.
+  Status st;
+  DatabaseIndex idx;
+  CHECK(index_ == nullptr);
+  dirty_ = true;
 
-  index_ = new DatabaseIndex();
-  Status st = index_->Create(IndexFile(), capacity, limit);
-  if (!st.ok()) return st;
+  // Use index backup if available.
+  if (File::Exists(IndexBackupFile())) {
+    // Copy index backup to memory index.
+    DatabaseIndex backup;
+    st = backup.Open(IndexBackupFile());
+    if (!st.ok()) return st;
+    st = idx.Create("", backup.capacity(), backup.limit());
+    if (!st.ok()) return st;
+    idx.CopyFrom(&backup);
+    LOG(INFO) << "Using " << IndexBackupFile() << " for recovery "
+              << "starting at " << Position(idx.epoch()) << " in shard "
+              << Shard(idx.epoch());
+  } else {
+    // Create new memory-based database index for recovery.
+    if (capacity < config_.initial_index_capacity) {
+      capacity = config_.initial_index_capacity;
+    }
+    uint64 limit = capacity * config_.index_load_factor;
+    st = idx.Create("", capacity, limit);
+    if (!st.ok()) return st;
+    LOG(INFO) << "Recover from scratch with capacity " << capacity;
+  }
+
+  // Find starting point for recovery.
+  int start_shard = Shard(idx.epoch());
+  uint64 start_pos = Position(idx.epoch());
 
   // Replay all records from the data shards to restore the index.
   Record record;
-  for (int shard = 0; shard < readers_.size(); ++shard) {
+  for (int shard = start_shard; shard < readers_.size(); ++shard) {
     LOG(INFO) << "Recover shard " << shard << " of db " << dbdir_;
     RecordReader *reader = readers_[shard];
-    st = reader->Rewind();
-    if (!st.ok()) return st;
+    if (shard == start_shard && start_pos != 0) {
+      st = reader->Seek(start_pos);
+      if (!st.ok()) return st;
+    } else {
+      st = reader->Rewind();
+      if (!st.ok()) return st;
+    }
     while (!reader->Done()) {
       // Expand index if needed.
-      if (index_->full()) {
-        st = ExpandIndex(index_->capacity() * 2);
+      if (idx.full()) {
+        // Create new index.
+        DatabaseIndex newidx;
+        uint64 capacity = idx.capacity() * 2;
+        uint64 limit = capacity * config_.index_load_factor;
+        st = newidx.Create("", capacity, limit);
         if (!st.ok()) return st;
+
+        // Transfer all entries to the new index and switch to new index.
+        idx.TransferTo(&newidx);
+        st = idx.Close();
+        if (!st.ok()) return st;
+        std::swap(idx, newidx);
       }
 
       // Read next record.
@@ -486,9 +586,10 @@ Status Database::Recover(uint64 capacity) {
       if (!st.ok()) return st;
       uint64 fp = Fingerprint(record.key.data(), record.key.size());
       uint64 recid = RecordID(shard, record.position);
+
       // Empty record indicates deletion.
       if (record.value.empty()) {
-        index_->Delete(fp, recid);
+        idx.Delete(fp, recid);
       } else {
         // Try to locate exising record for key in index.
         uint64 val = DatabaseIndex::NVAL;
@@ -496,17 +597,19 @@ Status Database::Recover(uint64 capacity) {
         string key = record.key.str();
         for (;;) {
           // Get next match in index.
-          val = index_->Get(fp, &pos);
+          val = idx.Get(fp, &pos);
           if (val == DatabaseIndex::NVAL) break;
 
           // Save current position in reader.
           uint64 current = reader->Tell();
 
           // Read record from data file.
-          ReadRecord(val, &record);
+          st = ReadRecord(val, &record);
+          if (!st.ok()) return st;
 
           // Restore current position in reader.
-          CHECK(reader->Seek(current));
+          st = reader->Seek(current);
+          if (!st.ok()) return st;
 
           // Check if key matches.
           if (record.key == Slice(key)) break;
@@ -515,19 +618,23 @@ Status Database::Recover(uint64 capacity) {
         // If an existing record with the same key is found, update the index
         // entry, otherwise add a new entry.
         if (val == DatabaseIndex::NVAL) {
-          index_->Add(fp, recid);
+          idx.Add(fp, recid);
         } else {
-          index_->Update(fp, val, recid);
+          idx.Update(fp, val, recid);
         }
       }
     }
   }
 
+  // Create new index from the memory index.
+  index_ = new DatabaseIndex();
+  st = index_->Create(IndexFile(), idx.capacity(), idx.limit());
+  if (!st.ok()) return st;
+  index_->CopyFrom(&idx);
   st = index_->Flush(epoch());
   if (!st.ok()) return st;
 
   LOG(INFO) << "Recovery successful for: " << dbdir_;
-  dirty_ = false;
   return Status::OK;
 }
 

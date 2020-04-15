@@ -60,10 +60,11 @@ enum DBResult : uint32 {
   DBUNCHANGED = 2,     // record not updated because value is unchanged
   DBEXISTS    = 3,     // record already exists and overwrite not allowed
   DBSTALE     = 4,     // record not updated because version is lower
+  DBFAULT     = 5,     // record not updated because of write error
 };
 
 inline bool ValidDBResult(DBResult result) {
-  return result >= DBNEW && result <= DBSTALE;
+  return result >= DBNEW && result <= DBFAULT;
 }
 
 // Database protocol packet header.

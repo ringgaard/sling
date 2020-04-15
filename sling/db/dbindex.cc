@@ -14,8 +14,6 @@
 
 #include "sling/db/dbindex.h"
 
-#include <unistd.h>
-
 namespace sling {
 
 // Returns true iff value is a power of 2.
@@ -73,7 +71,7 @@ Status DatabaseIndex::Open(const string &filename) {
 Status DatabaseIndex::Create(const string &filename,
                              int64 capacity, int64 limit) {
   // Get memory page size.
-  uint64 page_size = sysconf(_SC_PAGESIZE);
+  uint64 page_size = File::PageSize();
 
   // Check that index size is valid.
   if (((capacity * sizeof(Entry)) & page_size) != 0) {
@@ -86,21 +84,37 @@ Status DatabaseIndex::Create(const string &filename,
     return Status(E_CAPACITY, "Capacity must be power of two");
   }
 
-  // Create index file.
-  Status st = File::Open(filename, "w+", &file_);
-  if (!st.ok()) return st;
+  // Create index file. If filename is empty, a memory index without
+  // file-backing is created.
+  if (!filename.empty()) {
+    // File-backed index.
+    Status st = File::Open(filename, "w+", &file_);
+    if (!st.ok()) return st;
+  } else {
+    // Memory-only index.
+    file_ = nullptr;
+  }
 
   // Compute size of index file.
   uint64 offset = 0;
   while (offset < sizeof(Header)) offset += page_size;
   mapped_size_ = offset + capacity * sizeof(Entry);
-  st = file_->Resize(mapped_size_);
-  if (!st.ok()) return st;
 
-  // Map index file into memory.
-  mapped_addr_ = static_cast<char *>(file_->MapMemory(0, mapped_size_, true));
-  if (mapped_addr_ == nullptr) {
-    return Status(E_MEMMAP, "Unable to map index into memory: ", filename);
+  // Create file mapping.
+  if (file_ != nullptr) {
+    Status st = file_->Resize(mapped_size_);
+    if (!st.ok()) return st;
+
+    // Map index file into memory.
+    mapped_addr_ = static_cast<char *>(file_->MapMemory(0, mapped_size_, true));
+    if (mapped_addr_ == nullptr) {
+      return Status(E_MEMMAP, "Unable to map index into memory: ", filename);
+    }
+  } else {
+    mapped_addr_ = static_cast<char *>(malloc(mapped_size_));
+    if (mapped_addr_ == nullptr) {
+      return Status(E_MEMMAP, "Unable to allocate memory index");
+    }
   }
   header_ = reinterpret_cast<Header *>(mapped_addr_);
 
@@ -122,28 +136,42 @@ Status DatabaseIndex::Create(const string &filename,
 }
 
 Status DatabaseIndex::Flush(uint64 epoch) {
-  // Flush index table to disk.
-  uint64 entry_table_size = header_->capacity * sizeof(Entry);
-  Status st = File::FlushMappedMemory(entries_, entry_table_size);
-  if (!st.ok()) return st;
+  if (file_ != nullptr) {
+    // Flush index table to disk.
+    uint64 entry_table_size = header_->capacity * sizeof(Entry);
+    Status st = File::FlushMappedMemory(entries_, entry_table_size);
+    if (!st.ok()) return st;
 
-  // Update epoch in header and flush it to disk.
-  header_->epoch = epoch;
-  return File::FlushMappedMemory(header_, header_->offset);
+    // Update epoch in header and flush it to disk.
+    header_->epoch = epoch;
+    return File::FlushMappedMemory(header_, header_->offset);
+  } else {
+    // Just update epoch in header for memory index.
+    header_->epoch = epoch;
+  }
+
+  return Status::OK;
 }
 
 Status DatabaseIndex::Close() {
-  // Remove memory mapping.
-  if (mapped_addr_ != nullptr) {
-    Status st = File::FreeMappedMemory(mapped_addr_, mapped_size_);
-    if (!st.ok()) return st;
-  }
-
-  // Close index file.
   if (file_ != nullptr) {
-    Status st = file_->Close();
-    file_ = nullptr;
-    if (!st.ok()) return st;
+    // Remove memory mapping.
+    if (mapped_addr_ != nullptr) {
+      Status st = File::FreeMappedMemory(mapped_addr_, mapped_size_);
+      if (!st.ok()) return st;
+      mapped_addr_ = nullptr;
+    }
+
+    // Close index file.
+    if (file_ != nullptr) {
+      Status st = file_->Close();
+      file_ = nullptr;
+      if (!st.ok()) return st;
+    }
+  } else {
+    // Deallocate memory index.
+    free(mapped_addr_);
+    mapped_addr_ = nullptr;
   }
 
   return Status::OK;
@@ -232,7 +260,7 @@ uint64 DatabaseIndex::Delete(uint64 key, uint64 value) {
   }
 }
 
-void DatabaseIndex::Transfer(DatabaseIndex *index) const {
+void DatabaseIndex::TransferTo(DatabaseIndex *index) const {
   CHECK_GE(index->header_->limit, header_->size);
   Entry *entry = entries_;
   Entry *end = entries_ + header_->capacity;
@@ -242,6 +270,19 @@ void DatabaseIndex::Transfer(DatabaseIndex *index) const {
     }
     entry++;
   }
+}
+
+void DatabaseIndex::CopyFrom(const DatabaseIndex *index) {
+  // Check that index sizes match.
+  CHECK_EQ(mapped_size_, index->mapped_size_);
+  CHECK_EQ(mask_, index->mask_);
+
+  // Copy content from the other index.
+  memcpy(mapped_addr_, index->mapped_addr_, mapped_size_);
+}
+
+Status DatabaseIndex::Write(File *file) const {
+  return file->Write(mapped_addr_, mapped_size_);
 }
 
 }  // namespace sling

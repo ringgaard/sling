@@ -96,9 +96,20 @@ class PosixFile : public File {
   }
 
   Status Write(const void *buffer, size_t size) override {
-    ssize_t rc = write(fd_, buffer, size);
-    if (rc < 0) IOError(filename_, errno);
-    if (rc < size) IOError(filename_, EIO);
+    // On Linux, write() will transfer at most 0x7ffff000 bytes.
+    if (size <= 0x7ffff000) {
+      ssize_t rc = write(fd_, buffer, size);
+      if (rc < 0) IOError(filename_, errno);
+      if (rc != size) IOError(filename_, EIO);
+    } else {
+      while (size > 0) {
+        size_t bytes = size;
+        if (bytes > 0x7ffff000) bytes = 0x7ffff000;
+        ssize_t rc = write(fd_, buffer, bytes);
+        if (rc < 0) IOError(filename_, errno);
+        size -= bytes;
+      }
+    }
     return Status::OK;
   }
 

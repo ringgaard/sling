@@ -25,7 +25,7 @@ namespace myelin {
 class CUDAMatMulBase : public CUDAKernel {
  public:
   // Maximum number of loop unrolls.
-  static const int MAX_UNROLLS = 8;
+  static constexpr int MAX_UNROLLS = 8;
 
   CUDAMatMulBase(bool bias, bool relu) : bias_(bias), relu_(relu) {}
 
