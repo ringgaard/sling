@@ -19,6 +19,7 @@ blocked_urls = set([
   "http://www.couriermail.com.au/nocookies",
   "https://www.heraldsun.com.au/nocookies",
   "https://www.washingtonpost.com/gdpr-consent",
+  "https://www.forbes.com/forbes/welcome",
 
   "https://www.news.com.au/video/",
   "https://video.foxnews.com/",

@@ -1,3 +1,7 @@
+"""
+Load web pages in a web archive (WARC file) into a database.
+"""
+
 import requests
 import sling
 import sling.flags as flags
@@ -41,7 +45,7 @@ for warc in flags.arg.warc:
 
     # Discard large articles.
     if len(content) > flags.arg.max_article_size:
-      print("Article too big:", uri, ",", len(content), "bytes")
+      print("Article too big:", url, ",", len(content), "bytes")
       continue
 
     # Get canonical URL.

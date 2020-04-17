@@ -89,7 +89,7 @@ class IOBuffer {
     return reinterpret_cast<T *>(Consume(n * sizeof(T)));
   }
 
-  // Read data from buffer. Returns false if not enough data is available.
+  // Read data from buffer. Return false if not enough data is available.
   bool Read(void *data, size_t size);
 
   // Write data to buffer.
@@ -97,6 +97,11 @@ class IOBuffer {
   void Write(const char *str) { if (str) Write(str, strlen(str)); }
   void Write(const string &str) { Write(str.data(), str.size()); }
   void Write(const Slice &slice) { Write(slice.data(), slice.size()); }
+
+  // Copy data from another buffer.
+  void Copy(IOBuffer *buffer, size_t size) {
+    Write(buffer->Consume(size), size);
+  }
 
  private:
   char *floor_ = nullptr;  // start of allocated memory

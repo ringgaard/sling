@@ -33,6 +33,10 @@ enum RecordType {
   VDATA_RECORD = 4,      // versioned data record
 };
 
+inline bool ValidRecordType(RecordType type) {
+  return type >= DATA_RECORD && type <= VDATA_RECORD;
+}
+
 // Record with key and value.
 struct Record {
   Record() {}
@@ -162,6 +166,9 @@ class RecordReader : public RecordFile {
   // Read next record from record file.
   Status Read(Record *record);
 
+  // Read key from next record and skip value.
+  Status ReadKey(Record *record);
+
   // Return current position in record file.
   uint64 Tell() { return position_; }
 
@@ -190,6 +197,9 @@ class RecordReader : public RecordFile {
   // Fill input buffer.
   Status Fill(uint64 needed);
 
+  // Ensure that at least 'size' bytes are available in input buffer.
+  Status Ensure(uint64 size);
+
   // Input file.
   File *file_;
 
@@ -213,7 +223,7 @@ class RecordReader : public RecordFile {
   IOBuffer input_;
 
   // Buffer for decompressed record data.
-  IOBuffer decompressed_data_;
+  IOBuffer buffer_;
 
   friend class RecordWriter;
 };
@@ -366,7 +376,7 @@ class RecordWriter : public RecordFile {
   IOBuffer output_;
 
   // Buffer for compressed record data.
-  IOBuffer compressed_data_;
+  IOBuffer buffer_;
 
   // Index entries for building index.
   Index index_;

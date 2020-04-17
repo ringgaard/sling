@@ -203,7 +203,7 @@ bool Database::Get(const Slice &key, Record *record) {
     if (recid == DatabaseIndex::NVAL) break;
 
     // Read record from data file.
-    Status st = ReadRecord(recid, record);
+    Status st = ReadRecord(recid, record, true);
     if (!st) return false;
 
     // Return record if key matches.
@@ -230,8 +230,9 @@ uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
     recid = index_->Get(fp, &pos);
     if (recid == DatabaseIndex::NVAL) break;
 
-    // Read record from data file and check if keys match.
-    Status st = ReadRecord(recid, &rec);
+    // Read record from data file and check if keys match. In ADD mode we only
+    // need the record key.
+    Status st = ReadRecord(recid, &rec, mode != DBADD);
     if (!st) {
       if (result != nullptr) *result = DBFAULT;
       return -1;
@@ -312,8 +313,8 @@ bool Database::Delete(const Slice &key) {
     recid = index_->Get(fp, &pos);
     if (recid == DatabaseIndex::NVAL) return false;
 
-    // Read record from data file and check if keys match.
-    Status st = ReadRecord(recid, &record);
+    // Read record key from data file and check if keys match.
+    Status st = ReadRecord(recid, &record, false);
     if (!st) return false;
     if (key == record.key) break;
   }
@@ -424,7 +425,7 @@ string Database::DataFile(int shard) const {
   return fn;
 }
 
-Status Database::ReadRecord(uint64 recid, Record *record) {
+Status Database::ReadRecord(uint64 recid, Record *record, bool with_value) {
   Status st;
   uint64 shard = Shard(recid);
   if (writer_ != nullptr && shard == CurrentShard()) {
@@ -437,7 +438,11 @@ Status Database::ReadRecord(uint64 recid, Record *record) {
 
   st = reader->Seek(Position(recid));
   if (!st) return st;
-  st = reader->Read(record);
+  if (with_value) {
+    st = reader->Read(record);
+  } else {
+    st = reader->ReadKey(record);
+  }
   if (!st) return st;
 
   return Status::OK;
@@ -581,8 +586,8 @@ Status Database::Recover(uint64 capacity) {
         std::swap(idx, newidx);
       }
 
-      // Read next record.
-      st = reader->Read(&record);
+      // Read next record key.
+      st = reader->ReadKey(&record);
       if (!st.ok()) return st;
       uint64 fp = Fingerprint(record.key.data(), record.key.size());
       uint64 recid = RecordID(shard, record.position);
@@ -603,8 +608,8 @@ Status Database::Recover(uint64 capacity) {
           // Save current position in reader.
           uint64 current = reader->Tell();
 
-          // Read record from data file.
-          st = ReadRecord(val, &record);
+          // Read record key from data file.
+          st = ReadRecord(val, &record, false);
           if (!st.ok()) return st;
 
           // Restore current position in reader.

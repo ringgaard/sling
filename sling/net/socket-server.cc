@@ -605,7 +605,7 @@ Status SocketConnection::Send(IOBuffer *buffer, bool *done) {
 
 void SocketConnection::Upgrade(SocketSession *session) {
   CHECK_EQ(state_, SOCKET_STATE_PROCESS)
-      << "Socket protocol upgrade only allows in PROCESS state";
+      << "Socket protocol upgrade only allowed in PROCESS state";
   session_ = session;
 }
 

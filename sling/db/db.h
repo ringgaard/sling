@@ -172,8 +172,8 @@ class Database {
   // Return filename for data shard.
   string DataFile(int shard) const;
 
-  // Read data record.
-  Status ReadRecord(uint64 recid, Record *record);
+  // Read data record (key).
+  Status ReadRecord(uint64 recid, Record *record, bool with_value);
 
   // Add new empty data shard.
   Status AddDataShard();
