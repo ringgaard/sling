@@ -1,0 +1,138 @@
+# Arbejderen
+arbejderen.dk http://arbejderen.dk/feeds/seneste-nyt.xml
+
+# Avisen
+avisen.dk https://www.avisen.dk/Handlers/GetFeed.ashx?type=Nyeste20Alle
+avisen.dk https://www.avisen.dk/Handlers/GetFeed.ashx?type=MestLaeste
+avisen.dk https://www.avisen.dk/Handlers/GetFeed.ashx?type=TopNyheder
+
+# BT
+bt.dk http://www.bt.dk/bt/seneste/rss
+bt.dk http://www.bt.dk/nyheder/top/rss
+bt.dk http://www.bt.dk/nyheder/seneste/rss
+bt.dk http://www.bt.dk/underholdning/seneste/rss
+bt.dk http://www.bt.dk/forbrug/seneste/rss
+bt.dk http://www.bt.dk/sundhed/seneste/rss
+bt.dk http://www.bt.dk/krimi/seneste/rss
+bt.dk http://www.bt.dk/politik/seneste/rss
+bt.dk http://www.bt.dk/musik/seneste/rss
+bt.dk http://www.bt.dk/utroligt/seneste/rss
+bt.dk http://www.bt.dk/biler/seneste/rss
+bt.dk http://www.bt.dk/digital/seneste/rss
+
+# Berlingske
+b.dk https://www.berlingske.dk/content/rss
+b.dk https://www.berlingske.dk/content/3/rss
+b.dk https://www.berlingske.dk/content/66/rss
+b.dk https://www.berlingske.dk/content/21/rss
+b.dk https://www.berlingske.dk/content/69/rss
+
+# Borsen
+borsen.dk http://borsen.dk/rss/
+borsen.dk http://borsen.dk/rss/breaking/
+borsen.dk http://borsen.dk/rss/penge/
+borsen.dk http://borsen.dk/rss/topnyheder/
+borsen.dk http://borsen.dk/rss/privatoekonomi/
+borsen.dk http://borsen.dk/rss/oekonomi/
+borsen.dk http://borsen.dk/rss/politik/
+borsen.dk http://borsen.dk/rss/sport/
+borsen.dk http://finans.borsen.dk/rss/
+
+# Computerworld
+computerworld.dk http://www.computerworld.dk/rss/all
+
+# Dagens Medicin
+dagensmedicin.dk http://dagensmedicin.dk/feed/
+
+# Danmarks Radio
+dr.dk http://www.dr.dk/Nyheder/Service/feeds/Allenyheder
+dr.dk http://www.dr.dk/Nyheder/Service/feeds/Indland
+dr.dk http://www.dr.dk/Nyheder/Service/feeds/Udland
+dr.dk http://www.dr.dk/Nyheder/Service/feeds/Penge
+dr.dk http://www.dr.dk/Nyheder/Service/feeds/Politik
+dr.dk http://www.dr.dk/Nyheder/Service/feeds/Kultur
+dr.dk http://www.dr.dk/Nyheder/Service/feeds/Levnu
+dr.dk http://www.dr.dk/Nyheder/Service/feeds/Viden
+dr.dk http://www.dr.dk/Nyheder/Service/feeds/Sporten
+
+# Ekstra Bladet
+ekstrabladet.dk http://ekstrabladet.dk/rss2/?mode=normal
+
+# EuroInvestor
+euroinvestor.dk http://www.euroinvestor.dk/RSS/News.aspx
+euroinvestor.dk http://www.euroinvestor.dk/RSS/News.aspx?ArticleMaxAgeDays=7&ViewCountMaxAgeDays=7
+
+# FinansWatch
+finanswatch.dk http://finanswatch.dk/rss/seneste.rss
+finanswatch.dk http://finanswatch.dk/rss/top.rss
+finanswatch.dk http://finanswatch.dk/rss/mestleste.rss
+finanswatch.dk http://finanswatch.dk/rss/finansnyt.rss
+finanswatch.dk http://finanswatch.dk/rss/finansliv.rss
+
+# Fyens Stifttidende
+fyens.dk http://www.fyens.dk/rss.xml
+
+# Information
+information.dk https://www.information.dk/feed
+
+# Ingenioren
+ing.dk https://ing.dk/rss/nyheder
+
+# Jydske Vestkysten
+jv.dk http://www.jv.dk/rss/nyheder
+
+# Jyllands Posten
+jp.dk http://jyllands-posten.dk/?service=rssfeed
+jp.dk http://feeds.jp.dk/live/rss/
+
+# Kristeligt Dagblad
+kristeligt-dagblad.dk http://www.kristeligt-dagblad.dk/rss/nyheder
+
+# Landbrugsavisen
+landbrugsavisen.dk http://landbrugsavisen.dk/rss/articles/all
+
+# Nordjyske
+nordjyske.dk http://nordjyske.dk/rss/nyheder
+
+# Penge og privatokonomi
+penge.dk http://penge.dk/feed
+
+# Politiken
+politiken.dk http://politiken.dk/rss/mestlaeste.rss
+politiken.dk http://politiken.dk/rss/senestenyt.rss
+politiken.dk http://politiken.dk/rss/tophistorier.rss
+politiken.dk http://politiken.dk/rss/indland.rss
+politiken.dk http://politiken.dk/rss/magasinet.rss
+politiken.dk http://politiken.dk/rss/udland.rss
+politiken.dk http://politiken.dk/rss/kultur.rss
+politiken.dk http://politiken.dk/rss/debat.rss
+politiken.dk http://politiken.dk/rss/oekonomi.rss
+politiken.dk http://politiken.dk/rss/forbrugogliv.rss
+politiken.dk http://politiken.dk/rss/ibyen.rss
+politiken.dk http://politiken.dk/rss/sport.rss
+politiken.dk http://politiken.dk/rss/motion.rss
+politiken.dk http://politiken.dk/rss/mad.rss
+politiken.dk http://politiken.dk/rss/rejser.rss
+politiken.dk http://politiken.dk/rss/viden.rss
+politiken.dk http://politiken.dk/rss/navne.rss
+politiken.dk http://politiken.dk/rss/bagsiden.rss
+
+# TV2
+tv2.dk http://feeds.tv2.dk/nyheder/rss
+tv2.dk http://feeds.tv2.dk/nyhederne_seneste/rss
+tv2.dk http://feeds.tv2.dk/beep_seneste/rss
+tv2.dk http://feeds.tv2.dk/politik_seneste/rss
+tv2.dk http://feeds.tv2.dk/finans_seneste/rss
+tv2.dk http://feeds.tv2.dk/sporten_seneste/rss
+tv2.dk http://feeds.tv2.dk/livsstil_seneste/rss
+tv2.dk http://feeds.tv2.dk/underholdning_seneste/rss
+
+# Ugens Erhverv
+ue.dk http://www.ue.dk/feed/alle-nyheder.rss
+ue.dk http://www.ue.dk/feed/byggeri.rss
+ue.dk http://www.ue.dk/feed/emballage.rss
+ue.dk http://www.ue.dk/feed/lager-transport.rss
+ue.dk http://www.ue.dk/feed/telekommunikation.rss
+
+# Version2
+version2.dk https://www.version2.dk/it-nyheder/rss

@@ -1,0 +1,662 @@
+247wallst.com,Q68896999,24/7 Wall St.
+9news.com.au,Q7038406,Nine News
+abc13.com,Q381717,KTRK-TV
+abc-7.com,Q3029971,KABC-TV
+abc7news.com,Q645086,KGO-TV
+abc7ny.com,Q2699014,WABC-TV
+abc.net.au,Q781365,Australian Broadcasting Corporation
+abcnews.com,Q287171,ABC News
+abcnews.go.com,Q287171,ABC News
+adn.com,Q489214,Alaska Dispatch News
+advisorperspectives.com,Q68900473,Advisor Perspectives
+adweek.com,Q1134747,Adweek
+afp.com,Q40464,Agence France-Presse
+af.reuters.com,Q130879,Reuters
+ajc.com,Q3092348,The Atlanta Journal-Constitution
+ala.org,Q465584,American Library Association
+al.com,Q68901679,Alabama Media Group
+aljazeera.com,Q4727585,Aljazeera.com
+allaccess.com,Q68904077,All Access Music Group
+alternet.org,Q2927330,AlterNet
+americanthinker.com,Q4050936,American Thinker
+amna.gr,Q2634425,Athens News Agency
+anandtech.com,Q4751228,AnandTech
+androidcentral.com,Q66798140,Android Central
+anncoulter.com,Q266611,Ann Coulter
+annistonstar.com,Q7713857,Anniston Star
+anonews.co,Q68906861,AnonNews
+ansa.it,Q392934,Agenzia Nazionale Stampa Associata
+antaranews.com,Q571116,Antara
+ap.org,Q40469,Associated Press
+app.com,Q4803751,Asbury Park Press
+arkansasmatters.com,Q6325247,KARK-TV
+arstechnica.com,Q584152,Ars Technica
+asahi.com,Q720503,Asahi Shimbun
+asia.nikkei.com,Q1077694,Nihon Keizai Shimbun
+asiaradiotoday.com,Q68908550,AsiaRadioToday
+astrobio.net,Q29017985,Astrobiology Magazine
+auburnpub.com,Q7723133,The Citizen
+azbusinessdaily.com,Q68914209,Arizona Business Daily
+azcentral.com,Q1514991,The Arizona Republic
+azfamily.com,Q3191538,KTVK
+backchannel.com,Q20311948,Backchannel
+bakersfield.com,Q7715364,The Bakersfield Californian
+baltictimes.com,Q1806290,The Baltic Times
+baltimore.cbslocal.com,Q3564704,WJZ-TV
+baltimoresun.com,Q47287,The Baltimore Sun
+bangkokpost.com,Q806491,Bangkok Post
+baptistmessenger.com,Q4857659,Baptist Messenger
+baselinemag.com,Q68916049,Baseline Magazine
+bbc.com,Q747860,BBC Online
+bbc.co.uk,Q747860,BBC Online
+bgr.com,Q4952075,Boy Genius Report
+bigstory.ap.org,Q40469,Associated Press
+bitcoinist.com,Q68918228,Bitcoinist
+bleacherreport.com,Q2906353,Bleacher Report
+bleepingcomputer.com,Q4925939,Bleeping Computer
+bloomberg.com,Q14270642,Bloomberg News
+bna.bh,Q4842752,Bahrain News Agency
+borneobulletin.com.bn,Q4946070,Borneo Bulletin
+boston.cbslocal.com,Q7947559,WBZ-TV
+boston.com,Q4947705,Boston.com
+bostonherald.com,Q773802,Boston Herald
+bradenton.com,Q7719788,The Bradenton Herald
+breitbart.com,Q4960434,Breitbart News
+britznbeatz.co.uk,Q68921530,Britznbeatz
+buchanan.org,Q149127,Pat Buchanan
+buffalonews.com,Q1390786,The Buffalo News
+bundyranch.blogspot.com,Q22082722,Cliven Bundy
+burlingtoncountytimes.com,Q4999230,Burlington County Times
+businessinsider.com,Q286707,Business Insider
+businesslive.co.za,Q5001709,Business Day
+business-standard.com,Q2307816,Business Standard
+buzzfeed.com,Q5003490,BuzzFeed
+caintv.com,Q491019,Herman Cain
+cambodiadaily.com,Q3057820,The Cambodia Daily
+capitalgazette.com,Q3520197,The Capital
+ca.reuters.com,Q130879,Reuters
+catholicherald.co.uk,Q633906,Catholic Herald
+cato.org,Q1051256,Cato Institute
+cbc.ca,Q461761,Canadian Broadcasting Corporation
+cbs5az.com,Q3191480,KPHO-TV
+cbs8.com,Q6329080,KFMB-TV
+cbsnews.com,Q861764,CBS News
+cbssports.com,Q2931052,CBS Sports
+channel4.com,Q501070,Channel 4
+channelnewsasia.com,Q40238,CNA
+channelnews.com.au,Q68922421,ChannelNews
+charlotteobserver.com,Q5486310,The Charlotte Observer
+chicago.cbslocal.com,Q7947005,WBBM-TV
+chicago.suntimes.com,Q577417,Chicago Sun-Times
+chicagotribune.com,Q47596,Chicago Tribune
+chinadailyasia.com,Q851422,China Daily
+chinadaily.com.cn,Q851422,China Daily
+china.org.cn,Q907111,China Internet Information Center
+chinapost.com.tw,Q699007,The China Post
+christianpost.com,Q7722722,The Christian Post
+christiantoday.com,Q43261592,Christian Today
+cio.com,Q5011807,CIO magazine
+cioinsight.com,Q68926203,CIO Insight
+citizensvoice.com,Q7723138,Citizens Voice
+clarkstown.dailyvoice.com,Q7728736,The Daily Voice
+cleveland.com,Q286036,The Plain Dealer
+cnbc.com,Q1023912,CNBC
+cnet.com,Q1544247,CNET
+cnn.com,Q48340,CNN
+cnsnews.com,Q5197758,Cybercast News Service
+coindesk.com,Q18348227,CoinDesk
+commercialappeal.com,Q7726978,The Commercial Appeal
+computerworld.com,Q1755724,Computerworld
+concordmonitor.com,Q5158825,Concord Monitor
+courant.com,Q1587159,Hartford Courant
+couriermail.com.au,Q2095955,The Courier-Mail
+crn.com,Q5013923,CRN Magazine
+crooksandliars.com,Q5187910,Crooks and Liars
+csmonitor.com,Q284947,The Christian Science Monitor
+ctvnews.ca,Q5014635,CTV News
+cullmantimes.com,Q7728375,The Cullman Times
+cw33.com,Q6327613,KDAF
+dailycaller.com,Q7728625,The Daily Caller
+dailygalaxy.com,Q68928690,The Daily Galaxy
+dailyherald.com,Q5209265,Daily Herald
+dailykos.com,Q1272560,Daily Kos
+dailymail.co.uk,Q210534,Daily Mail
+dailynews.com,Q499188,Los Angeles Daily News
+dailyrecord.com,Q5209353,Daily Record
+dailyrecord.co.uk,Q2390965,Daily Record
+dailystandard.com,Q56236864,Daily Standard
+dailystar.com.lb,Q494370,The Daily Star
+dailytimes.com.pk,Q3012097,Daily Times
+dallasnews.com,Q889935,The Dallas Morning News
+dangerandplay.com,Q19877764,Mike Cernovich
+darkreading.com,Q68931675,Dark Reading
+datamation.com,Q4037061,Datamation
+dcourier.com,Q7728640,The Daily Courier
+deadline.com,Q4037100,Deadline Hollywood
+decaturdaily.com,Q7729492,Decatur Daily
+defensenews.com,Q3021206,Defense News
+defenseone.com,Q68932557,Defense One
+delawareonline.com,Q7753915,The News Journal
+delawarestatenews.net,Q55665963,Delaware State News
+delcotimes.com,Q5253265,Delaware County Daily Times
+denverpost.com,Q2668654,Denver Post
+descrier.co.uk,Q68933597,Descrier
+detroit.cbslocal.com,Q3564854,WWJ-TV
+dfw.cbslocal.com,Q14710809,KTVT
+digitaltrends.com,Q5276019,Digital Trends
+dispatch.com,Q3520347,The Columbus Dispatch
+dnjournal.com,Q68934490,Domain Name Journal
+domaining.com,Q68935450,Domaining.com
+domaininvesting.com,Q68935716,DomainInvesting.com
+domainnamewire.com,Q68936468,Domain Name Wire
+dothaneagle.com,Q5299433,Dothan Eagle
+dw.com,Q153770,Deutsche Welle
+echo.net.au,Q5004471,Byron Shire Echo
+echonews.com.au,Q68939712,Lismore Echo
+ecns.cn,Q969272,China News Service
+economicpolicyjournal.com,Q68940801,Robert Wenzel
+economist.com,Q180089,The Economist
+eff.org,Q624023,Electronic Frontier Foundation
+elizabethton.com,Q55671036,Elizabethton Star
+emirates247.com,Q5372553,Emirates 24/7
+en.alalam.ir,Q32026,Al-Alam News Network
+en.delfi.lt,Q1184119,Delfi
+en.farsnews.com,Q1397143,Fars News Agency
+engadget.com,Q196105,Engadget
+english.alarabiya.net,Q310172,Al Arabiya
+englishnews.ftv.com.tw,Q710437,Formosa Television
+english.thesaigontimes.vn,Q7400083,Saigon Times
+english.yonhapnews.co.kr,Q333206,Yonhap News Agency
+eng.lsm.lv,Q945592,Latvijas Televīzija
+en.isna.ir,Q1672387,Iranian Students News Agency
+en.mehrnews.com,Q1475722,Mehr News Agency
+en.people.cn,Q5967721,People's Daily Online
+en.rfi.fr,Q19912,Radio France Internationale
+espn.com,Q17085515,ESPN Inc.
+etonline.com,Q3055086,Entertainment Tonight
+euractiv.com,Q1310000,Euractiv
+eurekalert.org,Q40358,American Association for the Advancement of Science
+euronews.com,Q8478,Euronews
+eveningexpress.co.uk,Q5416603,Evening Express
+ew.com,Q275033,Entertainment Weekly
+eweek.com,Q4037850,EWeek
+express.co.uk,Q610190,Daily Express
+external.polskieradio.pl,Q1067189,Polskie Radio
+extremetech.com,Q5422302,ExtremeTech
+fayobserver.com,Q7733570,The Fayetteville Observer)
+federalnewsradio.com,Q2403250,WFED
+fivethirtyeight.com,Q600669,FiveThirtyEight
+focustaiwan.cna.com.tw,Q697130,Central News Agency
+fondriest.com,Q68945285,Fondriest Environmental
+fool.com,Q7752442,The Motley Fool
+forbes.com,Q25161472,Forbes
+foreignpolicy.com,Q1063573,Foreign Policy
+fortune.com,Q372989,Fortune
+fossbytes.com,Q68946464,Fossbytes
+fosters.com,Q5473558,Foster's Daily Democrat
+fox10phoenix.com,Q10854613,KSAZ-TV
+fox25boston.com,Q7949607,WFXT
+fox26houston.com,Q6336743,KRIV
+fox2now.com,Q14704402,KTVI
+fox46charlotte.com,Q7951489,WJZY
+fox4news.com,Q6327814,KDFW
+fox5ny.com,Q1540364,WNYW
+fox5vegas.com,Q6340338,KVVU-TV
+fox8.com,Q3564702,WJW
+foxbusiness.com,Q3735740,Fox Business Network
+foxnews.com,Q186068,Fox News
+foxsports.com,Q75776,Fox Sports
+france24.com,Q166180,France 24
+freebeacon.com,Q7773639,The Washington Free Beacon
+freep.com,Q601669,Detroit Free Press
+fresnobee.com,Q7735278,The Fresno Bee
+ft.com,Q183399,Financial Times
+ftvlive.com,Q69031831,FTVLive
+gadgets.ndtv.com,Q2985356,NDTV
+gadsdentimes.com,Q7735596,The Gadsden Times
+gazette.com,Q7736011,The Gazette
+gdnonline.com,Q3120741,Gulf Daily News
+geekwire.com,Q19827845,GeekWire
+gizmodo.com,Q1528871,Gizmodo
+globalnews.ca,Q5570514,Global News
+gloucestertimes.com,Q5572043,Gloucester Daily Times
+goodnewsnetwork.org,Q18927154,Good News Network
+gulf-times.com,Q1554284,Gulf Times
+haaretz.com,Q216393,Haaretz
+hackaday.com,Q5637185,Hackaday
+hastingstribune.com,Q16994920,Hastings Tribune
+hcn.org,Q5755188,High Country News
+heatst.com,Q24590031,Heat Street
+helpnetsecurity.com,Q69033353,Help Net Security
+heraldonline.com,Q7739402,The Herald
+heraldscotland.com,Q3179178,The Herald
+heraldtribune.com,Q2843705,Sarasota Herald-Tribune
+hindustantimes.com,Q41595,Hindustan Times
+hollywoodreporter.com,Q61503,The Hollywood Reporter
+honey.nine.com.au,Q7038497,Ninemsn
+hosted.ap.org,Q40469,Associated Press
+hotair.com,Q5909737,Hot Air
+huffingtonpost.com,Q18049522,HuffPost
+humanevents.com,Q1025062,Human Events
+i24news.tv,Q13612085,i24NEWS
+ianslive.in,Q16947382,Indo-Asian News Service
+ibtimes.com,Q6510653,International Business Times
+ibtimes.co.uk,Q6510653,International Business Times
+independent.co.uk,Q11149,The Independent
+independent.ie,Q1590833,Irish Independent
+indianexpress.com,Q1954843,The Indian Express
+indiatimes.com,Q46807,The Times of India
+informationweek.com,Q10302149,InformationWeek
+infowars.com,Q46997916,InfoWars
+infoworld.com,Q2474544,InfoWorld
+inquirer.net,Q1831242,Philippine Daily Inquirer
+inquisitr.com,Q22080989,The Inquisitr
+interfax.com,Q379271,Interfax
+international.la-croix.com,Q1230298,La Croix
+intoday.in,Q1661219,India Today
+inverse.com,Q25206369,Inverse
+irinnews.org,Q1665444,IRIN
+irishtimes.com,Q1134208,The Irish Times
+irna.ir,Q649695,Islamic Republic News Agency
+ishtartv.com,Q2208702,Ishtar TV
+israel21c.org,Q65069771,ISRAEL21c
+israelnationalnews.com,Q716861,Arutz Sheva
+itbusinessedge.com,Q66798787,IT Business Edge
+itv.com,Q6095197,itv.com
+itworld.com,Q1360149,International Data Group
+jakartaglobe.id,Q367157,Jakarta Globe
+japantimes.co.jp,Q1190886,The Japan Times
+jihadwatch.org,Q3317441,Jihad Watch
+jordantimes.com,Q7743519,The Jordan Times
+jpl.nasa.gov,Q189325,Jet Propulsion Laboratory
+jpost.com,Q35438,The Jerusalem Post
+judicialwatch.org,Q3187968,Judicial Watch
+juneauempire.com,Q6312479,Juneau Empire
+kansascity.com,Q3521457,The Kansas City Star
+kdminer.com,Q6412812,Kingman Daily Miner
+kgun9.com,Q3191398,KGUN-TV
+kgw.com,Q3191397,KGW
+khou.com,Q731804,KHOU
+khq.com,Q6330303,KHQ-TV
+king5.com,Q3191412,KING-TV
+klfy.com,Q6332632,KLFY-TV
+kmov.com,Q3191457,KMOV
+knoxnews.com,Q3198071,Knoxville News Sentinel
+kodiakdailymirror.com,Q6425295,Kodiak Daily Mirror
+koreajoongangdaily.joins.com,Q489520,Korea JoongAng Daily
+koreatimes.co.kr,Q486950,The Korea Times
+kplctv.com,Q6335637,KPLC
+krem.com,Q6336640,KREM
+krgv.com,Q10313559,KRGV-TV
+ksdk.com,Q6337579,KSDK
+ksl.com,Q6337865,KSL-TV
+kstp.com,Q6338256,KSTP-TV
+ktuu.com,Q2889083,KTUU-TV
+ktva.com,Q6339252,KTVA
+ktvb.com,Q6339250,KTVB
+kuna.net.kw,Q1794764,Kuwait News Agency
+kuow.org,Q6339681,KUOW
+kvoa.com,Q6340160,KVOA
+kxan.com,Q6341047,KXAN-TV
+kyivpost.com,Q1795015,Kyiv Post
+kyma.com,Q6341907,KYMA-DT
+laptopmag.com,Q66803748,Laptop Magazine
+lasvegasnow.com,Q6332381,KLAS-TV
+lasvegassun.com,Q4260860,Las Vegas Sun
+latimes.com,Q188515,Los Angeles Times
+lawnewz.com,Q15505371,Dan Abrams
+lewrockwell.com,Q149451,Lew Rockwell
+libertyblitzkrieg.com,Q69050337,Michael Krieger
+lifezette.com,Q24590057,LifeZette
+livemint.com,Q2271133,Mint
+livescience.com,Q6654574,LiveScience
+lohud.com,Q15059324,The Journal News
+lrt.lt,Q1550538,Lithuanian National Radio and Television
+lsm.lv,Q945592,Latvijas Televīzija
+macon.com,Q7768282,The Telegraph
+mainichi.jp,Q1136866,Mainichi Shinbun
+mansfieldnewsjournal.com,Q6751666,Mansfield News Journal
+marketwatch.com,Q17068426,MarketWatch
+mashable.com,Q619899,Mashable
+mcall.com,Q3910677,The Morning Call
+mcclatchydc.com,Q1660027,The McClatchy Company
+mcphersonsentinel.com,Q17068636,McPherson Sentinel
+mediaite.com,Q3853695,Mediaite
+mediamatters.org,Q16932985,Media Matters for America
+mediapart.fr,Q619342,Mediapart
+medicaldaily.com,Q69052919,Medical Daily
+medicalnewstoday.com,Q6806391,Medical News Today
+medicalxpress.com,Q69053481,Medical Xpress
+medscape.com,Q4043898,Medscape
+menshealth.com,Q384671,Men's Health
+mercurynews.com,Q575741,The Mercury News
+metro.co.uk,Q3307433,Metro
+mg.co.za,Q1509944,Mail & Guardian
+miami.cbslocal.com,Q7949446,WFOR-TV
+miamiherald.com,Q1706651,Miami Herald
+michellemalkin.com,Q454388,Michelle Malkin
+mirror.co.uk,Q217623,Daily Mirror
+mises.org,Q2457448,Mises Institute
+mlive.com,Q2910549,Booth Newspapers
+mohavedailynews.com,Q6893724,Mohave Valley Daily News
+mondediplo.com,Q858121,Le Monde diplomatique
+money.cnn.com,Q48340,CNN
+montgomeryadvertiser.com,Q6905642,Montgomery Advertiser
+montrealgazette.com,Q1549535,The Gazette
+motherjones.com,Q851510,Mother Jones
+mrctv.org,Q4260569,Media Research Center
+msnbc.com,Q13973,MSNBC
+napavalleyregister.com,Q6964800,Napa Valley Register
+nashuatelegraph.com,Q7768283,The Telegraph
+nationalreview.com,Q1699649,National Review
+nation.co.ke,Q1768677,Daily Nation
+nation.com.pk,Q1972142,The Nation
+nationmultimedia.com,Q2305581,The Nation
+naturalnews.com,Q17070960,NaturalNews
+nature.com,Q180445,Nature
+nautil.us,Q22080568,Nautilus
+nbcconnecticut.com,Q7956853,WVIT
+nbcdfw.com,Q3191571,KXAS-TV
+nbcnews.com,Q2877626,NBC News
+nbcsandiego.com,Q6334551,KNSD
+ndtv.com,Q2985356,NDTV
+networkcomputing.com,Q7863870,UBM plc
+newindianexpress.com,Q1955025,The New Indian Express
+news24.com,Q2909223,News24
+news3lv.com,Q14705168,KSNV
+newsbusters.org,Q4260569,Media Research Center
+newscientist.com,Q525592,New Scientist
+news.com.au,Q16903296,news.com.au
+newsday.com,Q1140593,Newsday
+news.err.ee,Q438543,Estonian Public Broadcasting
+newsfilecorp.com,Q69058017,Newsfile Corp.
+newshub.co.nz,Q16823702,Newshub
+newsmax.com,Q27037115,Newsmax
+Newsmax.com,Q27037115,Newsmax
+news.mb.com.ph,Q1858373,Manila Bulletin
+newsminer.com,Q5430011,Fairbanks Daily News-Miner
+news.nationalgeographic.com,Q5973845,National Geographic
+news.nationalpost.com,Q1812075,National Post
+newsok.com,Q7754787,The Oklahoman
+news.radio-online.com,Q69059090,RADIO ONLINE
+news.sky.com,Q918390,Sky
+news.softpedia.com,Q1440347,Softpedia
+news.vice.com,Q249838,Vice
+newsweek.com,Q188413,Newsweek
+news.yahoo.com,Q3044717,Yahoo! News
+newyork.cbslocal.com,Q3043497,WCBS-TV
+newyorker.com,Q217305,The New Yorker
+nextgov.com,Q69060002,Nextgov
+nj.com,Q16930465,NJ.com
+northjersey.com,Q7055737,North Jersey Media Group
+norwichbulletin.com,Q7720576,The Bulletin
+npr.org,Q671510,NPR
+nrcu.gov.ua,Q848966,Radio Ukraine
+nst.com.my,Q1953092,New Straits Times
+ny1.com,Q3278402,NY1
+nydailynews.com,Q627827,New York Daily News
+nymag.com,Q1507987,New York Magazine
+nypost.com,Q211374,New York Post
+nytimes.com,Q9684,The New York Times
+oann.com,Q17107494,One America News Network
+oathkeepers.org,Q7074463,Oath Keepers
+observer.com,Q2038698,New York Observer
+observertoday.com,Q7075487,Observer
+ocregister.com,Q2413231,The Orange County Register
+odishasuntimes.com,Q69061911,Odisha Sun Times
+odt.co.nz,Q311369,Otago Daily Times
+okgazette.com,Q7082232,Oklahoma Gazette
+omanobserver.om,Q7089529,Oman Daily Observer
+oregonlive.com,Q1547338,The Oregonian
+original.antiwar.com,Q149670,Antiwar.com
+orlandosentinel.com,Q746424,Orlando Sentinel
+pakistantribune.com.pk,Q7732865,The Express Tribune
+pamelageller.com,Q4115004,Pamela Geller
+pcmag.com,Q631830,PC Magazine
+pcper.com,Q55628242,PC Perspective
+pcworld.com,Q707291,PC World
+pe.com,Q7758089,The Press-Enterprise
+pennlive.com,Q7756349,The Patriot-News
+people.com,Q33659,People
+pewresearch.org,Q1635722,Pew Research Center
+philadelphia.cbslocal.com,Q15231900,KYW
+philly.com,Q600111,Philadelphia Inquirer
+philstar.com,Q6489289,The Philippine Star
+phnompenhpost.com,Q921095,The Phnom Penh Post
+physicsworld.com,Q1989782,Physics World
+phys.org,Q619096,Phys.org
+pinalcentral.com,Q5047824,Casa Grande Dispatch
+pjmedia.com,Q7119481,PJ Media
+pktribune.com,Q69067194,Pakistan Tribune
+poconorecord.com,Q17022163,Pocono Record
+politico.com,Q3109740,Politico
+popsci.com,Q773087,Popular Science
+post-gazette.com,Q3063794,Pittsburgh Post-Gazette
+poststar.com,Q7757852,The Post-Star
+poughkeepsiejournal.com,Q15059327,Poughkeepsie Journal
+pravdareport.com,Q4375795,Pravda.ru
+pressandjournal.co.uk,Q7758095,The Press and Journal
+pressconnects.com,Q7241600,Press & Sun-Bulletin
+presstv.ir,Q912429,Press TV
+providencejournal.com,Q3522349,The Providence Journal
+ptinews.com,Q268897,Press Trust of India
+q13fox.com,Q3191344,KCPQ
+qna.org.qa,Q517525,Qatar News Agency
+quantamagazine.org,Q28403687,Quanta Magazine
+qz.com,Q7269379,Quartz
+radaronline.com,Q7279976,Radar Online
+radioaustralia.net.au,Q164921,Radio Australia
+radio.cz,Q1939322,Radio Prague
+radioink.com,Q7280852,Radio Ink
+radioinsight.com,Q69074765,RadioInsight
+radionz.co.nz,Q1626518,Radio New Zealand
+radiotimes.com,Q3461827,Radio Times
+rare.us,Q22908139,Rare
+rawstory.com,Q7759518,The Raw Story
+realclearpolitics.com,Q7300807,RealClearPolitics
+reason.com,Q1454090,Reason
+recordonline.com,Q7806534,Times Herald-Record
+redorbit.com,Q66805738,redOrbit
+reuters.com,Q130879,Reuters
+reviewjournal.com,Q3632498,Las Vegas Review-Journal
+rfa.org,Q40322,Radio Free Asia
+rferl.org,Q485500,Radio Free Europe/Radio Liberty
+rocklandtimes.com,Q55668343,Rockland County Times
+rollcall.com,Q7360873,Roll Call
+romea.cz,Q12048431,ROMEA
+ronpaulinstitute.org,Q13257129,Ron Paul Institute for Peace and Prosperity
+rri.ro,Q1142390,Radio Romania International
+rt.com,Q22868,RT
+rte.ie,Q329494,Raidió Teilifís Éireann
+rtvslo.si,Q960061,Radiotelevizija Slovenija
+sabanews.net,Q7395787,Saba News Agency
+sabc.co.za,Q1419926,South African Broadcasting Corporation
+sacbee.com,Q356300,The Sacramento Bee
+salon.com,Q1150423,Salon
+sandiegouniontribune.com,Q3547109,San Diego Union-Tribune
+savannahnow.com,Q7427865,Savannah Morning News
+sciencedaily.com,Q679509,Science Daily
+sciencemag.org,Q192864,Science
+sciencenews.org,Q2313730,Science News
+scientificamerican.com,Q39379,Scientific American
+scmp.com,Q1198574,South China Morning Post
+scotsman.com,Q1049657,The Scotsman
+seacoastonline.com,Q7757825,The Portsmouth Herald
+seattletimes.com,Q221718,The Seattle Times
+seeker.com,Q28162659,Seeker
+seenews.com,Q69083169,SeeNews
+sentinelsource.com,Q7744031,The Keene Sentinel
+sfgate.com,Q139103,San Francisco Chronicle
+shanghaidaily.com,Q2037854,Shanghai Daily
+sheppnews.com.au,Q65060717,Shepparton News
+showbiz411.com,Q7503123,Showbiz411
+si.com,Q275837,Sports Illustrated
+skyandtelescope.com,Q1328902,Sky & Telescope
+skynews.com,Q217228,Sky News
+smh.com.au,Q390216,Sydney Morning Herald
+smithsonianmag.com,Q3487014,Smithsonian
+space.com,Q3112835,Space.com
+spa.gov.sa,Q12251169,Saudi Press Agency
+spectrum.ieee.org,Q2509689,IEEE Spectrum
+spiegel.de,Q278151,Spiegel Online
+sputniknews.com,Q18572033,Sputnik
+stamfordadvocate.com,Q3519722,The Advocate
+standard.co.uk,Q666494,London Evening Standard
+standardmedia.co.ke,Q7766218,The Standard
+standardspeaker.com,Q56236912,Standard-Speaker
+star-telegram.com,Q2408536,Fort Worth Star-Telegram
+startribune.com,Q862148,Star Tribune
+statesman.com,Q3629935,Austin American-Statesman
+stlouis.cbslocal.com,Q6333790,KMOX
+stltoday.com,Q3495288,St. Louis Post-Dispatch
+straitstimes.com,Q498921,The Straits Times
+studiobriefing.net,Q7628158,Studio Briefing
+stuff.co.nz,Q7628506,Stuff.co.nz
+sunherald.com,Q7638323,Sun Herald
+sunjournal.com,Q7638356,Sun Journal
+sun-sentinel.com,Q7638122,Sun-Sentinel
+svherald.com,Q7511612,Sierra Vista Herald
+taipeitimes.com,Q714427,Taipei Times
+taiwannews.com.tw,Q697286,Taiwan News
+taiwantoday.tw,Q11250466,Taiwan Today
+takimag.com,Q7678269,Taki's Magazine
+talkingpointsmemo.com,Q7679836,Talking Points Memo
+tampabay.com,Q1714356,Tampa Bay Times
+tasnimnews.com,Q17070845,Tasnim News Agency
+tass.com,Q223799,TASS
+tbo.com,Q7768079,The Tampa Tribune
+techcrunch.com,Q1022366,TechCrunch
+techdirt.com,Q1647664,Techdirt
+techinasia.com,Q58004112,Tech In Asia
+techmalak.com,Q69093128,TechMalak
+technowize.com,Q69094310,Technowize
+techradar.com,Q611515,TechRadar
+techtimes.com,Q69095483,Tech Times
+telegraph.co.uk,Q192621,The Daily Telegraph
+telegraphindia.com,Q1954990,The Telegraph
+tennessean.com,Q4808006,The Tennessean
+theage.com.au,Q631893,The Age
+theatlantic.com,Q1542536,The Atlantic
+theaustralian.com.au,Q1478700,The Australian
+theblaze.com,Q7711621,Blaze Media
+theconversation.com,Q7727516,The Conversation
+thecourier.co.uk,Q7727832,The Courier
+thecwtucson.com,Q6340412,KWBA-TV
+thedailybeast.com,Q1308139,The Daily Beast
+thedailyrecord.com,Q5209352,Daily Record
+theday.com,Q7729145,The Day
+thefederalist.com,Q17086113,The Federalist
+thegatewaypundit.com,Q30589935,The Gateway Pundit
+theglobeandmail.com,Q604525,The Globe and Mail
+theguardian.com,Q11148,The Guardian
+thehill.com,Q7739683,The Hill
+thehindu.com,Q926175,The Hindu
+theinformation.com,Q30609005,The Information
+theinquirer.net,Q4051134,The Inquirer
+theintercept.com,Q15725297,The Intercept
+thejakartapost.com,Q2136977,The Jakarta Post
+the-japan-news.com,Q11306616,The Japan News
+thelibertarianrepublic.com,Q22007397,Austin Petersen
+thelocal.de,Q3065033,The Local
+thelocal.es,Q3065033,The Local
+themalaymailonline.com,Q4808924,The Malay Mail
+themoscowtimes.com,The Q1202611,Moscow Times
+thenextweb.com,Q2913725,The Next Web
+theoccidentalobserver.net,Q7075688,Occidental Observer
+thequint.com,Q48734478,The Quint
+therebel.media,Q19866755,The Rebel Media
+theregister.co.uk,Q1363733,The Register
+therightstuff.biz,Q25223484,The Right Stuff
+thestandard.com.ph,Q12810713,Manila Standard
+thestar.com,Q3522843,The Star
+thesun.co.uk,Q208875,The Sun
+thesundaily.my,Q7767315,The Sun
+thetibetpost.com,Q7800400,Tibet Post
+thetimes-tribune.com,Q7769386,The Times-Tribune
+theverge.com,Q2155442,The Verge
+thevermontstandard.com,Q57983527,Vermont Standard
+thewest.com.au,Q1810152,The West Australian
+thinkprogress.org,Q7784458,ThinkProgress
+time.com,Q43297,Time
+timesdaily.com,Q7806515,TimesDaily
+timesfreepress.com,Q5087898,Chattanooga Times Free Press
+timesleader.com,Q7769401,Times Leader
+times-news.com,Q5193970,Cumberland Times-News
+timesofindia.indiatimes.com,Q46807,The Times of India
+timesofisrael.com,Q6449319,The Times of Israel
+tmz.com,Q2630118,TMZ
+todayonline.com,Q477719,Today
+tomshardware.com,Q575769,Tom's Hardware
+tomwoods.com,Q2608419,Thomas Woods
+treehugger.com,Q7837524,TreeHugger
+tucson.com,Q1982939,Arizona Daily Star
+tucsonnewsnow.com,Q6334982,KOLD-TV
+TucsonNewsNow.com,Q6334982,KOLD-TV
+tulsaworld.com,Q7852377,Tulsa World
+tuscaloosanews.com,Q3989726,Tuscaloosa News
+tvbythenumbers.zap2it.com,Q4050634,TV by the Numbers
+tvnz.co.nz,Q1186424,Television New Zealand
+twitchy.com,Q19881578,Twitchy
+uk.reuters.com,Q130879,Reuters
+unionleader.com,Q7008331,New Hampshire Union Leader
+universetoday.com,Q7894217,Universe Today
+upi.com,Q493845,United Press International
+usa.chinadaily.com.cn,Q851422,China Daily
+usatoday.com,Q39681,USA Today
+usnews.com,Q848629,U.S. News & World Report
+vancouversun.com,Q2004274,The Vancouver Sun
+vanityfair.com,Q158283,Vanity Fair
+variety.com,Q471728,Variety
+vdare.com,Q17101595,VDARE
+venturebeat.com,Q4052640,VentureBeat
+vietnamnews.vn,Q7938092,Việt Nam News
+view.koreaherald.com,Q562824,The Korea Herald
+vnews.com,Q7912156,Valley News
+voanews.com,Q228389,Voice of America
+vulture.com,Q27881700,Vulture.com
+waaytv.com,Q3301789,WAAY-TV
+washingtonexaminer.com,Q255700,Washington Examiner
+washingtonpost.com,Q166032,The Washington Post
+washingtontimes.com,Q494170,The Washington Times
+wbrc.com,Q3564623,WBRC
+wbtv.com,Q945827,WBTV
+wcax.com,Q952537,WCAX-TV
+wcnc.com,Q3564634,WCNC-TV
+wcsh6.com,Q7948087,WCSH
+wcvb.com,Q7948158,WCVB-TV
+weeklystandard.com,Q1790889,The Weekly Standard
+westchester.news12.com,Q17071643,News 12 Networks
+westernjournalism.com,Q29096488,The Western Journal
+wfaa.com,Q3044445,WFAA
+wfsb.com,Q7949496,WFSB
+wgme.com,Q1509872,WGME-TV
+wgrz.com,Q2373405,WGRZ
+whdh.com,Q3564679,WHDH
+wired.com,Q520154,Wired
+wivb.com,Q7950987,WIVB-TV
+wkbw.com,Q3564713,WKBW-TV
+wktv.com,Q7951962,WKTV
+wlbz2.com,Q7952143,WLBZ
+wmtw.com,Q7953108,WMTW
+wmur.com,Q7953134,WMUR-TV
+wnct.com,Q7953301,WNCT-TV
+wnd.com,Q3569943,WorldNetDaily
+wolfstreet.com,Q69134692,Wolf Street
+world.kbs.co.kr,Q496898,KBS World Radio
+wral.com,Q1390360,WRAL-TV
+wshu.org,Q7955659,WSHU
+wsj.com,Q164746,The Wall Street Journal
+wsoctv.com,Q10392812,WSOC-TV
+wsvn.com,Q7956000,WSVN
+wtnh.com,Q7956308,WTNH
+wtop.com,Q6464640,WTOP-FM
+wvtm13.com,Q7957034,WVTM-TV
+www2c.cdc.gov,Q583725,Centers for Disease Control and Prevention
+www3.nhk.or.jp,Q1191688,NHK World-Japan
+wxii12.com,Q7957644,WXII-TV
+xinhuanet.com,Q204839,Xinhua News Agency
+yahoo.com,Q37093,Yahoo
+ynetnews.com,Q1132126,Yedioth Ahronoth
+yumasun.com,Q8061046,Yuma Sun
+zdnet.com,Q2457578,ZDNet
+zerohedge.com,Q3575278,Zero Hedge

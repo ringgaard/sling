@@ -1,0 +1,852 @@
+# ABC News
+abcnews.com http://feeds.abcnews.com/abcnews/topstories
+abcnews.com http://feeds.abcnews.com/abcnews/internationalheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/usheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/politicsheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/blotterheadlines
+#abcnews.com http://feeds.abcnews.com/abcnews/thelawheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/moneyheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/technologyheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/healthheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/entertainmentheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/travelheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/sportsheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/worldnewsheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/2020headlines
+#abcnews.com http://feeds.abcnews.com/abcnews/primetimeheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/nightlineheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/gmaheadlines
+abcnews.com http://feeds.abcnews.com/abcnews/thisweekheadlines
+
+# ABC News Australia
+abc.net.au http://www.abc.net.au/news/feed/51120/rss.xml
+abc.net.au http://www.abc.net.au/news/feed/45910/rss.xml
+abc.net.au http://www.abc.net.au/news/feed/52278/rss.xml
+abc.net.au http://www.abc.net.au/news/feed/46182/rss.xml
+abc.net.au http://www.abc.net.au/news/feed/51892/rss.xml
+abc.net.au http://www.abc.net.au/news/feed/46800/rss.xml
+abc.net.au http://www.abc.net.au/news/feed/45924/rss.xml
+abc.net.au http://www.abc.net.au/news/feed/1054578/rss.xml
+
+# ABC 7 News
+abc7news.com http://abc7news.com/feed/
+
+# Al Arabiya
+#alarabiya.net http://english.alarabiya.net/.mrss/en.xml
+#alarabiya.net http://english.alarabiya.net/.mrss/en/News.xml
+#alarabiya.net http://english.alarabiya.net/.mrss/en/perspective.xml
+#alarabiya.net http://english.alarabiya.net/.mrss/en/business.xml
+#alarabiya.net http://english.alarabiya.net/.mrss/en/views.xml
+#alarabiya.net http://english.alarabiya.net/.mrss/en/life-style.xml
+#alarabiya.net http://english.alarabiya.net/.mrss/en/sports.xml
+
+# Al Jazeera
+aljazeera.com http://www.aljazeera.com/xml/rss/all.xml
+
+# ArabNews
+arabnews.com http://www.arabnews.com/rss.xml
+
+# Ars Technica
+arstechnica.com http://arstechnica.com/feed/
+
+# Associated Press
+ap.org http://hosted.ap.org/lineups/TOPHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/USHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/WORLDHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/POLITICSHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/WASHINGTONHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/BUSINESSHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/TECHHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/SPORTSHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/ENTERTAINMENT.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/HEALTHHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/SCIENCEHEADS.rss?SITE=AP&SECTION=HOME
+ap.org http://hosted.ap.org/lineups/STRANGEHEADS.rss?SITE=AP&SECTION=HOME
+
+# The Australian
+#theaustralian.com.au http://www.theaustralian.com.au/rss
+
+# Baltimore Sun
+baltimoresun.com http://www.baltimoresun.com/news/maryland/rss2.0.xml
+baltimoresun.com http://www.baltimoresun.com/news/nation-world/rss2.0.xml
+baltimoresun.com http://www.baltimoresun.com/news/breaking/rss2.0.xml
+baltimoresun.com http://www.baltimoresun.com/business/rss2.0.xml
+baltimoresun.com http://www.baltimoresun.com/entertainment/rss2.0.xml
+baltimoresun.com http://www.baltimoresun.com/sports/rss2.0.xml
+baltimoresun.com http://www.baltimoresun.com/features/rss2.0.xml
+
+# Bangkok Post
+bangkokpost.com http://www.bangkokpost.com/rss/data/most-recent.xml
+bangkokpost.com http://www.bangkokpost.com/rss/data/topstories.xml
+
+# BBC
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/front_page/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/world/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/uk/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/england/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/northern_ireland/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/scotland/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/wales/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/business/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/uk_politics/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/health/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/education/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/sci/tech/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/technology/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/entertainment/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/talking_point/rss.xml
+bbc.co.uk http://newsrss.bbc.co.uk/rss/newsonline_uk_edition/magazine/rss.xml
+#bbc.co.uk  http://feeds.bbci.co.uk/news/system/latest_published_content/rss.xml
+
+# Business Insider
+businessinsider.com http://feeds2.feedburner.com/businessinsider
+
+# Bloomberg
+bloomberg.com https://www.bloomberg.com/politics/feeds/site.xml
+
+# Boston Herald
+bostonherald.com http://www.bostonherald.com/feed
+
+# CBC News
+cbc.ca http://rss.cbc.ca/lineup/topstories.xml
+cbc.ca http://rss.cbc.ca/lineup/world.xml
+cbc.ca http://rss.cbc.ca/lineup/canada.xml
+cbc.ca http://rss.cbc.ca/lineup/politics.xml
+cbc.ca http://rss.cbc.ca/lineup/business.xml
+cbc.ca http://rss.cbc.ca/lineup/health.xml
+cbc.ca http://rss.cbc.ca/lineup/arts.xml
+cbc.ca http://rss.cbc.ca/lineup/technology.xml
+cbc.ca http://rss.cbc.ca/lineup/offbeat.xml
+cbc.ca http://rss.cbc.ca/lineup/sports.xml
+
+# CBS News
+cbsnews.com http://www.cbsnews.com/latest/rss/main
+cbsnews.com http://www.cbsnews.com/latest/rss/us
+cbsnews.com http://www.cbsnews.com/latest/rss/politics
+cbsnews.com http://www.cbsnews.com/latest/rss/world
+cbsnews.com http://www.cbsnews.com/latest/rss/tech
+cbsnews.com http://www.cbsnews.com/latest/rss/health
+cbsnews.com http://www.cbsnews.com/latest/rss/entertainment
+cbsnews.com http://www.cbsnews.com/latest/rss/moneywatch
+cbsnews.com http://www.cbsnews.com/feeds/rss/cbsnews_investigates.rss
+cbsnews.com http://www.cbsnews.com/feeds/rss/opinion.rss
+cbsnews.com http://www.cbsnews.com/latest/rss/cbs-this-morning
+cbsnews.com http://www.cbsnews.com/latest/rss/evening-news
+cbsnews.com http://www.cbsnews.com/latest/rss/48-hours
+cbsnews.com http://www.cbsnews.com/latest/rss/60-minutes
+cbsnews.com http://www.cbsnews.com/latest/rss/sunday-morning
+cbsnews.com http://www.cbsnews.com/latest/rss/face-the-nation
+cbsnews.com http://feeds.cbsnews.com/CBSNewsUTTM
+cbsnews.com http://www.cbsnews.com/latest/rss/strange
+cbsnews.com http://www.cbsnews.com/latest/rss/scitech-gamecore
+
+# Chicago Daily Herald
+dailyherald.com http://www.dailyherald.com/rss/feed/?feed=news_top5
+dailyherald.com http://www.dailyherald.com/rss/feed/?feed=sports_all
+dailyherald.com http://www.dailyherald.com/rss/feed/?feed=business_all
+dailyherald.com http://www.dailyherald.com/rss/feed/?feed=entlife
+dailyherald.com http://www.dailyherald.com/rss/feed/?feed=news_nationworld
+dailyherald.com http://www.dailyherald.com/rss/feed/?feed=news_chicago
+
+# Chicago Tribune
+chicagotribune.com http://www.chicagotribune.com/rss2.0.xml
+chicagotribune.com http://www.chicagotribune.com/news/local/breaking/rss2.0.xml
+
+# China Daily
+chinadailyasia.com http://www.chinadailyasia.com/rss/rss.xml
+
+# The Christian Science Monitor
+csmonitor.com http://rss.csmonitor.com/feeds/csm
+csmonitor.com http://rss.csmonitor.com/feeds/arts
+csmonitor.com http://rss.csmonitor.com/feeds/books
+csmonitor.com http://rss.csmonitor.com/feeds/commentary
+csmonitor.com http://rss.csmonitor.com/feeds/dcdecoder
+csmonitor.com http://rss.csmonitor.com/feeds/environment
+csmonitor.com http://rss.csmonitor.com/feeds/scitech
+csmonitor.com http://rss.csmonitor.com/feeds/living
+csmonitor.com http://rss.csmonitor.com/feeds/wam
+csmonitor.com http://rss.csmonitor.com/feeds/passcode
+csmonitor.com http://rss.csmonitor.com/feeds/politics
+csmonitor.com http://rss.csmonitor.com/feeds/science
+csmonitor.com http://rss.csmonitor.com/feeds/usa
+csmonitor.com http://rss.csmonitor.com/feeds/world
+
+# CNBC
+cnbc.com http://www.cnbc.com/id/100003114/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/100727362/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/15837362/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/19832390/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/19794221/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10001147/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/15839135/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/100370673/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/20910258/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10000664/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/19854910/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10000113/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10000108/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10000115/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10001054/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10000101/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/19836768/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10000110/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10000116/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/10000739/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/44877279/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/15839069/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/100646281/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/21324812/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/23103686/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/17646093/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/20409666/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/38818154/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/20398120/device/rss/rss.html
+cnbc.com http://www.cnbc.com/id/19206666/device/rss/rss.html
+
+# CNET
+cnet.com https://www.cnet.com/rss/news/
+cnet.com https://www.cnet.com/rss/all/
+
+# CNN
+cnn.com http://rss.cnn.com/rss/edition.rss
+cnn.com http://rss.cnn.com/rss/edition_world.rss
+cnn.com http://rss.cnn.com/rss/edition_africa.rss
+cnn.com http://rss.cnn.com/rss/edition_americas.rss
+cnn.com http://rss.cnn.com/rss/edition_asia.rss
+cnn.com http://rss.cnn.com/rss/edition_europe.rss
+cnn.com http://rss.cnn.com/rss/edition_meast.rss
+cnn.com http://rss.cnn.com/rss/edition_us.rss
+cnn.com http://rss.cnn.com/rss/money_news_international.rss
+cnn.com http://rss.cnn.com/rss/edition_technology.rss
+cnn.com http://rss.cnn.com/rss/edition_space.rss
+cnn.com http://rss.cnn.com/rss/edition_entertainment.rss
+cnn.com http://rss.cnn.com/rss/edition_sport.rss
+cnn.com http://rss.cnn.com/rss/edition_football.rss
+cnn.com http://rss.cnn.com/rss/edition_golf.rss
+cnn.com http://rss.cnn.com/rss/edition_motorsport.rss
+cnn.com http://rss.cnn.com/rss/edition_tennis.rss
+cnn.com http://rss.cnn.com/rss/edition_travel.rss
+cnn.com http://rss.cnn.com/rss/cnn_freevideo.rss
+cnn.com http://rss.cnn.com/rss/cnn_latest.rss
+
+# The Columbus Dispatch
+dispatch.com http://www.dispatch.com/content/syndication/news_local-state.xml
+dispatch.com http://www.dispatch.com/content/syndication/news_national.xml
+dispatch.com http://www.dispatch.com/content/syndication/news_ohio_politics.xml
+dispatch.com http://www.dispatch.com/content/syndication/news_business.xml
+dispatch.com http://www.dispatch.com/content/syndication/news_health.xml
+dispatch.com http://www.dispatch.com/content/syndication/news_science.xml
+dispatch.com http://www.dispatch.com/content/syndication/news_religion.xml
+
+# Computerworld
+computerworld.com http://www.computerworld.com/index.rss
+computerworld.com http://www.computerworld.com/news/index.rss
+
+# Daily Mail
+dailymail.co.uk http://www.dailymail.co.uk/articles.rss
+dailymail.co.uk http://www.dailymail.co.uk/home/index.rss
+dailymail.co.uk http://www.dailymail.co.uk/news/index.rss
+dailymail.co.uk http://www.dailymail.co.uk/ushome/index.rss
+dailymail.co.uk http://www.dailymail.co.uk/auhome/index.rss
+dailymail.co.uk http://www.dailymail.co.uk/sport/index.rss
+dailymail.co.uk http://www.dailymail.co.uk/health/index.rss
+dailymail.co.uk http://www.dailymail.co.uk/sciencetech/index.rss
+dailymail.co.uk http://www.dailymail.co.uk/money/index.rss
+dailymail.co.uk http://www.dailymail.co.uk/travel/index.rss
+
+# Denver Post
+denverpost.com http://www.denverpost.com/feed/
+
+# Deutsche Welle
+dw.com http://rss.dw.com/xml/rss-en-all
+
+# The Economist
+#economist.com http://www.economist.com/sections/business-finance/rss.xml
+#economist.com http://www.economist.com/sections/economics/rss.xml
+#economist.com http://www.economist.com/sections/science-technology/rss.xml
+#economist.com http://www.economist.com/sections/culture/rss.xml
+#economist.com http://www.economist.com/sections/markets-data/rss.xml
+#economist.com http://www.economist.com/sections/united-states/rss.xml
+#economist.com http://www.economist.com/sections/britain/rss.xml
+#economist.com http://www.economist.com/sections/china/rss.xml
+#economist.com http://www.economist.com/sections/americas/rss.xml
+#economist.com http://www.economist.com/sections/middle-east-africa/rss.xml
+#economist.com http://www.economist.com/sections/obituary/rss.xml
+#economist.com http://www.economist.com/sections/leaders/rss.xml
+#economist.com http://www.economist.com/sections/international/rss.xml
+#economist.com http://www.economist.com/sections/europe/rss.xml
+#economist.com http://www.economist.com/sections/asia/rss.xml
+
+# Engadget
+engadget.com https://www.engadget.com/rss.xml
+
+# Evening Standard
+standard.co.uk http://www.standard.co.uk/news/rss
+
+# ESPN
+espn.com http://www.espn.com/rss
+
+# Financial Times
+#ft.com http://www.ft.com/rss/home/asia
+#ft.com http://www.ft.com/rss/home/europe
+#ft.com http://www.ft.com/rss/home/india
+#ft.com http://www.ft.com/rss/home/middleeast
+#ft.com http://www.ft.com/rss/home/uk
+#ft.com http://www.ft.com/rss/home/us
+
+# FiveThirtyEight
+fivethirtyeight.com https://fivethirtyeight.com/all/feed
+
+# Fortune
+fortune.com http://fortune.com/feed/
+
+# Fox News
+foxnews.com http://feeds.foxnews.com/foxnews/latest
+foxnews.com http://feeds.foxnews.com/foxnews/most-popular
+foxnews.com http://feeds.foxnews.com/foxnews/entertainment
+foxnews.com http://feeds.foxnews.com/foxnews/health
+foxnews.com http://feeds.foxnews.com/foxnews/section/lifestyle
+foxnews.com http://feeds.foxnews.com/foxnews/opinion
+foxnews.com http://feeds.foxnews.com/foxnews/politics
+foxnews.com http://feeds.foxnews.com/foxnews/science
+foxnews.com http://feeds.foxnews.com/foxnews/sports
+foxnews.com http://feeds.foxnews.com/foxnews/tech
+foxnews.com http://feeds.foxnews.com/foxnews/internal/travel/mixed
+foxnews.com http://feeds.foxnews.com/foxnews/national
+foxnews.com http://feeds.foxnews.com/foxnews/world
+
+# FOX 4 Dallas
+fox4news.com http://fox-obfeeds.endplay.com/feeds/rssFeed?obfType=RSS_FEED&siteId=200007
+
+# Fox 8 Cleveland
+fox8.com http://fox8.com/feed/
+
+# France 24
+france24.com http://www.france24.com/en/top-stories/rss
+france24.com http://www.france24.com/en/europe/rss
+france24.com http://www.france24.com/en/france/rss
+france24.com http://www.france24.com/en/africa/rss
+france24.com http://www.france24.com/en/middle-east/rss
+france24.com http://www.france24.com/en/americas/rss
+france24.com http://www.france24.com/en/asia-pacific/rss
+
+# The Guardian
+theguardian.com https://www.theguardian.com/international/rss
+theguardian.com https://www.theguardian.com/world/rss
+theguardian.com https://www.theguardian.com/uk/rss
+theguardian.com https://www.theguardian.com/sport/rss
+theguardian.com https://www.theguardian.com/football/rss
+theguardian.com https://www.theguardian.com/commentisfree/rss
+theguardian.com https://www.theguardian.com/culture/rss
+theguardian.com https://www.theguardian.com/business/rss
+theguardian.com https://www.theguardian.com/politics/rss
+theguardian.com https://www.theguardian.com/lifeandstyle/rss
+theguardian.com https://www.theguardian.com/fashion/rss
+theguardian.com https://www.theguardian.com/environment/rss
+theguardian.com https://www.theguardian.com/technology/rss
+theguardian.com https://www.theguardian.com/travel/rss
+theguardian.com https://www.theguardian.com/money/rss
+
+# Haaretz
+#haaretz.com http://www.haaretz.com/cmlink/1.263335
+
+# Harvard Business Review
+#hbr.org http://feeds.hbr.org/harvardbusiness/
+
+# The Herald Scotland
+heraldscotland.com http://www.heraldscotland.com/news/rss/
+heraldscotland.com http://www.heraldscotland.com/politics/rss/
+heraldscotland.com http://www.heraldscotland.com/sport/rss/
+heraldscotland.com http://www.heraldscotland.com/business/rss/
+heraldscotland.com http://www.heraldscotland.com/opinion/rss/
+heraldscotland.com http://www.heraldscotland.com/arts_ents/rss/
+heraldscotland.com http://www.heraldscotland.com/life_style/rss/
+
+# Huffington Post
+#huffingtonpost.com http://www.huffingtonpost.com/feeds/index.xml
+#huffingtonpost.com http://www.huffingtonpost.com/feeds/news.xml
+
+# The Independent
+independent.co.uk http://www.independent.co.uk/rss
+independent.co.uk http://www.independent.co.uk/news/uk/rss
+independent.co.uk http://www.independent.co.uk/news/world/rss
+independent.co.uk http://www.independent.co.uk/news/business/rss
+independent.co.uk http://www.independent.co.uk/news/people/rss
+independent.co.uk http://www.independent.co.uk/news/science/rss
+independent.co.uk http://www.independent.co.uk/news/media/rss
+independent.co.uk http://www.independent.co.uk/news/education/rss
+independent.co.uk http://www.independent.co.uk/news/obituaries/rss
+
+# The Indian Express
+indianexpress.com http://indianexpress.com/feed/
+
+# India Today
+intoday.in http://indiatoday.intoday.in/rss/homepage-topstories.jsp
+intoday.in http://indiatoday.intoday.in/rss/article.jsp?sid=36
+intoday.in http://indiatoday.intoday.in/rss/article.jsp?sid=120
+intoday.in http://indiatoday.intoday.in/rss/article.jsp?sid=34
+intoday.in http://indiatoday.intoday.in/rss/article.jsp?sid=61
+intoday.in http://indiatoday.intoday.in/rss/article.jsp?sid=41
+
+# Info World
+infoworld.com http://www.infoworld.com/index.rss
+infoworld.com http://www.infoworld.com/news/index.rss
+
+# Irish Post
+#irishpost.co.uk http://irishpost.co.uk/feed/
+
+# Irish Independent
+independent.ie http://www.independent.ie/rss/
+
+# International Business Times
+ibtimes.co.uk http://www.ibtimes.co.uk/rss/feed
+ibtimes.co.uk http://www.ibtimes.co.uk/rss/world
+ibtimes.co.uk http://www.ibtimes.co.uk/rss/uk
+ibtimes.co.uk http://www.ibtimes.co.uk/rss/companies
+ibtimes.co.uk http://www.ibtimes.co.uk/rss/sports
+ibtimes.co.uk http://www.ibtimes.co.uk/rss/economy
+ibtimes.co.uk http://www.ibtimes.co.uk/rss/technology
+ibtimes.co.uk http://www.ibtimes.co.uk/rss/science
+ibtimes.co.uk http://www.ibtimes.co.uk/rss/entertainment
+
+# Janes
+#janes.com http://www.janes.com/rss
+
+# The Japan Times
+japantimes.co.jp http://www.japantimes.co.jp/rss
+
+# The Jerusalem Post
+jpost.com http://www.jpost.com/Rss/RssFeedsHeadlines.aspx
+
+# Biz Journals
+#bizjournals.com http://feeds.bizjournals.com/bizj_sanjose
+#bizjournals.com http://feeds.bizjournals.com/bizj_losangeles
+
+# Los Angeles Times
+#latimes.com http://www.latimes.com/rss2.0.xml
+#latimes.com http://www.latimes.com/local/rss2.0.xml
+#latimes.com http://www.latimes.com/sports/rss2.0.xml
+#latimes.com http://www.latimes.com/entertainment/rss2.0.xml
+#latimes.com http://www.latimes.com/nation/rss2.0.xml
+#latimes.com http://www.latimes.com/world/rss2.0.xml
+#latimes.com http://www.latimes.com/business/rss2.0.xml
+#latimes.com http://www.latimes.com/opinion/rss2.0.xml
+#latimes.com http://www.latimes.com/style/rss2.0.xml
+#latimes.com http://www.latimes.com/travel/rss2.0.xml
+
+# MarketWatch
+marketwatch.com http://feeds.marketwatch.com/marketwatch/topstories?format=xml
+
+# Mashable
+mashable.com http://feeds.mashable.com/Mashable
+
+# Medical Xpress
+medicalxpress.com https://medicalxpress.com/rss-feed/
+
+# Miami Herald
+#miamiherald.com http://www.miamiherald.com/news/?widgetName=rssfeed&widgetContentId=712015&getXmlFeed=true
+#miamiherald.com http://www.miamiherald.com/sports/?widgetName=rssfeed&widgetContentId=712015&getXmlFeed=true
+#miamiherald.com http://www.miamiherald.com/news/business/?widgetName=rssfeed&widgetContentId=712015&getXmlFeed=true
+#miamiherald.com http://www.miamiherald.com/living/?widgetName=rssfeed&widgetContentId=712015&getXmlFeed=true
+#miamiherald.com http://www.miamiherald.com/entertainment/?widgetName=rssfeed&widgetContentId=712015&getXmlFeed=true
+#miamiherald.com http://www.miamiherald.com/opinion/?widgetName=rssfeed&widgetContentId=712015&getXmlFeed=true
+
+# The Moscow Times
+themoscowtimes.com https://themoscowtimes.com/feeds/main.xml
+
+# New York Daily News
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.TopNews.Article.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.Local.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.Local.Bronx.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.Local.Brooklyn.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.Local.Queens.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.Local.Education.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.News.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.News.National.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.News.World.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.News.Politics.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.News.Crime.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.Sports.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.Entertainment.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.Opinion.rss
+nydailynews.com http://www.nydailynews.com/cmlink/NYDN.Life_Style.rss
+
+# New York Magazine
+#nymag.com http://feeds.feedburner.com/nymag/vulture?format=xml
+#nymag.com http://feeds.feedburner.com/nymag/intelligencer?format=xml
+#nymag.com http://feeds.feedburner.com/nymag/fashion?format=xml
+#nymag.com http://feeds.feedburner.com/nymag/grubstreet?format=xml
+#nymag.com http://feeds.feedburner.com/nymag/scienceofus?format=xml
+
+# The New York Post
+nypost.com http://nypost.com/feed
+nypost.com http://nypost.com/news/feed
+nypost.com http://nypost.com/metro/feed/
+nypost.com http://nypost.com/sports/feed/
+nypost.com http://nypost.com/business/feed/
+nypost.com http://nypost.com/opinion/feed/
+nypost.com http://nypost.com/entertainment/feed/
+nypost.com http://nypost.com/fashion/feed/
+nypost.com http://nypost.com/living/feed/
+nypost.com http://nypost.com/tech/feed/
+nypost.com http://nypost.com/media/feed/
+
+# The New York Times
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/HomePage.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/World.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Africa.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Americas.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/AsiaPacific.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Europe.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/MiddleEast.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/US.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Education.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Politics.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/NYRegion.xml
+#nytimes.com http://feeds.nytimes.com/nyt/rss/Business
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/EnergyEnvironment.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/SmallBusiness.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Economy.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Dealbook.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/MediaandAdvertising.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/YourMoney.xml
+#nytimes.com http://feeds.nytimes.com/nyt/rss/Technology
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/PersonalTech.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Sports.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Baseball.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/CollegeBasketball.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/CollegeFootball.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Golf.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Hockey.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/ProBasketball.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/ProFootball.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Soccer.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Tennis.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Science.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Environment.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Space.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Health.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Research.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Nutrition.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/HealthCarePolicy.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Views.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Arts.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/ArtandDesign.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Books.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Dance.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Movies.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Music.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Television.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Theater.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/FashionandStyle.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/DiningandWine.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/HomeandGarden.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Weddings.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/tmagazine.xml
+#nytimes.com http://www.nytimes.com/services/xml/rss/nyt/Travel.xml
+
+# The New Yorker
+newyorker.com http://www.newyorker.com/feed/everything
+
+# Newsweek
+newsweek.com http://europe.newsweek.com/rss
+
+# NPR
+npr.org http://www.npr.org/rss/rss.php?id=1000
+npr.org http://www.npr.org/rss/rss.php?id=1001
+npr.org http://www.npr.org/rss/rss.php?id=1003
+npr.org http://www.npr.org/rss/rss.php?id=1004
+npr.org http://www.npr.org/rss/rss.php?id=1006
+npr.org http://www.npr.org/rss/rss.php?id=1007
+npr.org http://www.npr.org/rss/rss.php?id=1008
+npr.org http://www.npr.org/rss/rss.php?id=1009
+npr.org http://www.npr.org/rss/rss.php?id=1014
+npr.org http://www.npr.org/rss/rss.php?id=1017
+npr.org http://www.npr.org/rss/rss.php?id=1018
+npr.org http://www.npr.org/rss/rss.php?id=1019
+
+# Observer
+observer.com http://observer.com/feed/
+
+# Orlando Sentinel
+orlandosentinel.com http://feeds.feedburner.com/orlandosentinel
+
+# People
+people.com http://people.com/feed/
+
+# Pew Research Center
+pewresearch.org http://www.pewresearch.org/feed/
+
+# Pittsburgh Post-Gazette
+post-gazette.com http://www.post-gazette.com/rss/news
+post-gazette.com http://www.post-gazette.com/rss/news/world
+post-gazette.com http://www.post-gazette.com/rss/news/transportation
+post-gazette.com http://www.post-gazette.com/rss/news/science
+post-gazette.com http://www.post-gazette.com/rss/news/politics-nation
+post-gazette.com http://www.post-gazette.com/rss/news/obituaries
+post-gazette.com http://www.post-gazette.com/rss/news/health
+post-gazette.com http://www.post-gazette.com/rss/news/environment
+post-gazette.com http://www.post-gazette.com/rss/news/education
+post-gazette.com http://www.post-gazette.com/rss/business
+
+# Politico
+politico.com http://www.politico.com/rss/congress.xml
+politico.com http://www.politico.com/rss/healthcare.xml
+politico.com http://www.politico.com/rss/defense.xml
+politico.com http://www.politico.com/rss/economy.xml
+politico.com http://www.politico.com/rss/energy.xml
+politico.com http://www.politico.com/rss/politics08.xml
+politico.com http://www.politico.com/rss/rogersimon.xml
+
+# Pravda
+pravdareport.com http://www.pravdareport.com/export-articles.xml
+
+# Providence Journal
+providencejournal.com http://www.providencejournal.com/news?template=rss&mime=xml
+providencejournal.com http://www.providencejournal.com/politics?template=rss&mime=xml
+providencejournal.com http://www.providencejournal.com/sports?template=rss&mime=xml
+providencejournal.com http://www.providencejournal.com/business?template=rss&mime=xml
+providencejournal.com http://www.providencejournal.com/opinion?template=rss&mime=xml
+providencejournal.com http://www.providencejournal.com/entertainment?template=rss&mime=xml
+
+# Q13 FOX News
+q13fox.com http://q13fox.com/feed/
+
+# Quartz
+qz.com https://qz.com/feed/
+
+# Recode
+recode.net https://www.recode.net/rss/index.xml
+
+# Reuters
+reuters.com http://feeds.reuters.com/news/artsculture
+reuters.com http://feeds.reuters.com/reuters/businessNews
+reuters.com http://feeds.reuters.com/reuters/companyNews
+reuters.com http://feeds.reuters.com/reuters/entertainment
+reuters.com http://feeds.reuters.com/reuters/environment
+reuters.com http://feeds.reuters.com/reuters/healthNews
+reuters.com http://feeds.reuters.com/reuters/lifestyle
+reuters.com http://feeds.reuters.com/news/wealth
+reuters.com http://feeds.reuters.com/reuters/MostRead
+reuters.com http://feeds.reuters.com/reuters/oddlyEnoughNews
+reuters.com http://feeds.reuters.com/reuters/peopleNews
+reuters.com http://feeds.reuters.com/Reuters/PoliticsNews
+reuters.com http://feeds.reuters.com/reuters/scienceNews
+reuters.com http://feeds.reuters.com/reuters/sportsNews
+reuters.com http://feeds.reuters.com/reuters/technologyNews
+reuters.com http://feeds.reuters.com/reuters/topNews
+reuters.com http://feeds.reuters.com/Reuters/domesticNews
+reuters.com http://feeds.reuters.com/Reuters/worldNews
+
+# San Francisco Chronicle
+sfgate.com https://www.sfgate.com/bayarea/feed/Bay-Area-News-429.php
+sfgate.com https://www.sfgate.com/rss/feed/Business-and-Technology-News-448.php
+sfgate.com https://www.sfgate.com/rss/feed/Entertainment-530.php
+sfgate.com https://www.sfgate.com/rss/feed/Top-Sports-Stories-RSS-Feed-487.php
+sfgate.com https://www.sfgate.com/rss/feed/Business-and-Technology-News-448.php
+sfgate.com https://www.sfgate.com/rss/feed/Tech-News-449.php
+
+# Science Daily
+#sciencedaily.com https://rss.sciencedaily.com/all.xml
+#sciencedaily.com https://rss.sciencedaily.com/top.xml
+
+# Scientific American
+scientificamerican.com http://rss.sciam.com/ScientificAmerican-Global
+
+# Seattle Times
+seattletimes.com http://www.seattletimes.com/feed/
+
+# SKY News
+skynews.com http://feeds.skynews.com/feeds/rss/home.xml
+skynews.com http://feeds.skynews.com/feeds/rss/uk.xml
+skynews.com http://feeds.skynews.com/feeds/rss/world.xml
+skynews.com http://feeds.skynews.com/feeds/rss/us.xml
+skynews.com http://feeds.skynews.com/feeds/rss/business.xml
+skynews.com http://feeds.skynews.com/feeds/rss/politics.xml
+skynews.com http://feeds.skynews.com/feeds/rss/technology.xml
+skynews.com http://feeds.skynews.com/feeds/rss/entertainment.xml
+skynews.com http://feeds.skynews.com/feeds/rss/strange.xml
+
+
+# Smithsonian
+smithsonianmag.com http://www.smithsonianmag.com/rss/articles/
+smithsonianmag.com http://www.smithsonianmag.com/rss/latest_articles/
+
+# South China Morning Post
+scmp.com http://www.scmp.com/rss/91/feed
+
+# Der Spiegel
+spiegel.de http://www.spiegel.de/international/index.rss
+
+# StarTribune
+startribune.com http://www.startribune.com/rss/
+
+# Sunday Express
+express.co.uk http://www.express.co.uk/posts/rss/77/news
+
+# The Sun Daily
+thesundaily.my https://www.thesundaily.my/rss/home
+thesundaily.my https://www.thesundaily.my/rss/local
+thesundaily.my https://www.thesundaily.my/rss/world
+thesundaily.my https://www.thesundaily.my/rss/business
+thesundaily.my https://www.thesundaily.my/rss/sport
+thesundaily.my https://www.thesundaily.my/rss/style-life
+thesundaily.my https://www.thesundaily.my/rss/spotlight
+thesundaily.my https://www.thesundaily.my/rss/opinion
+thesundaily.my https://www.thesundaily.my/rss/supplement
+
+# The Sydney Morning Herald
+smh.com.au http://feeds.smh.com.au/rssheadlines/top.xml
+#smh.com.au http://www.smh.com.au/rssheadlines/federal-politics/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/nsw/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/world/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/national/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/comment/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/business/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/entertainment/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/technology/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/environment/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/lifestyle/article/rss.xml
+smh.com.au http://www.smh.com.au/rssheadlines/sport/article/rss.xml
+
+# TechCrunch
+techcrunch.com http://feeds.feedburner.com/TechCrunch/
+
+# The Telegraph
+telegraph.co.uk http://www.telegraph.co.uk/rss.xml
+
+# TIME
+time.com http://time.com/feed/
+
+# The Times of India
+indiatimes.com http://timesofindia.indiatimes.com/rssfeedstopstories.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/1221656.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/296589292.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/7098551.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/4719161.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/4719148.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/3908999.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/2647163.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/5880659.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/913168846.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/784865811.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeeds/1081479906.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeedmostread.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeedmostemailed.cms
+indiatimes.com http://timesofindia.indiatimes.com/rssfeedmostcommented.cms
+
+# Times of Israel
+timesofisrael.com http://www.timesofisrael.com/feed/
+
+# Toronto Star
+thestar.com http://www.thestar.com/feeds.articles.news.rss
+
+# USA Today
+usatoday.com http://rssfeeds.usatoday.com/usatoday-NewsTopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomWorld-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomNation-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/News-Opinion&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomWashington-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomSports-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomGolf-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/topmotorsports&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomNfl-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/topfantasy&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodayTennis-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomCollegeFootball-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomNhl-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodayCycling-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomMlb-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomCollegeMensBasketball-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomOlympicsCoverage-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomNba-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomSoccer-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/usatoday-LifeTopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomMovies-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/toppeople&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomMusic-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomTelevision-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomBooks-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomMoney-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomMoney-Healey&x=1
+usatoday.com http://rssfeeds.usatoday.com/usatoday-TechTopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomTech-PersonalTalk&x=1
+usatoday.com http://rssfeeds.usatoday.com/topgaming&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodaycomTravel-TopStories&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodayTravel-Destinations&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodayTravel-Flights&x=1
+usatoday.com http://rssfeeds.usatoday.com/TP-TheCruiseLog&x=1
+usatoday.com http://rssfeeds.usatoday.com/UsatodayTravel-Hotels&x=1
+
+# Vanity Fair
+vanityfair.com http://www.vanityfair.com/rss
+
+# Variety
+variety.com http://feeds.feedburner.com/variety/news/frontpage
+
+# Voice of America
+voanews.com http://www.voanews.com/api/zq$omekvi_
+voanews.com http://www.voanews.com/api/z-$otevtiq
+voanews.com http://www.voanews.com/api/zo$o_egviy
+voanews.com http://www.voanews.com/api/z-ipq_evjpqy
+voanews.com http://www.voanews.com/api/zr$opeuvim
+voanews.com http://www.voanews.com/api/zj$oveytit
+voanews.com http://www.voanews.com/api/zoripegtim
+voanews.com http://www.voanews.com/api/zyritequir
+voanews.com http://www.voanews.com/api/zy$oqeqtii
+voanews.com http://www.voanews.com/api/zt$opeitim
+
+# VOX
+#vox.com http://www.vox.com/rss/index.xml
+
+# Wall Street Journal
+#wsj.com http://www.wsj.com/xml/rss/3_7041.xml
+#wsj.com http://www.wsj.com/xml/rss/3_7085.xml
+#wsj.com http://www.wsj.com/xml/rss/3_7014.xml
+#wsj.com http://www.wsj.com/xml/rss/3_7031.xml
+#wsj.com http://www.wsj.com/xml/rss/3_7455.xml
+#wsj.com http://www.wsj.com/xml/rss/3_7201.xml
+
+# Washington Post
+#washingtonpost.com http://feeds.washingtonpost.com/rss/politics
+#washingtonpost.com http://feeds.washingtonpost.com/rss/opinions
+#washingtonpost.com http://feeds.washingtonpost.com/rss/local
+#washingtonpost.com http://feeds.washingtonpost.com/rss/sports
+#washingtonpost.com http://feeds.washingtonpost.com/rss/national
+#washingtonpost.com http://feeds.washingtonpost.com/rss/world
+#washingtonpost.com http://feeds.washingtonpost.com/rss/business
+#washingtonpost.com http://feeds.washingtonpost.com/rss/lifestyle
+#washingtonpost.com http://feeds.washingtonpost.com/rss/entertainment
+
+# Wired
+wired.com https://www.wired.com/feed/
+wired.com https://www.wired.com/category/business/feed/
+wired.com https://www.wired.com/category/design/feed/
+#wired.com https://www.wired.com/category/underwire/feed/
+wired.com https://www.wired.com/category/gear/feed/
+#wired.com https://www.wired.com/category/reviews/feed/
+wired.com https://www.wired.com/category/science/feed/
+#wired.com https://www.wired.com/category/science/science-blogs/feed/
+wired.com https://www.wired.com/category/security/feed/
+wired.com https://www.wired.com/category/transportation/feed/
+
+# WSVN 7News Miami
+wsvn.com http://wsvn.com/feed/
+
+# Xinhua News
+xinhuanet.com http://www.xinhuanet.com/english/rss/worldrss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/businessrss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/sportsrss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/scirss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/travelrss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/oddrss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/chinarss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/culturerss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/entertainmentrss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/healthrss.xml
+xinhuanet.com http://www.xinhuanet.com/english/rss/indepthrss.xml
+
+# Yahoo
+yahoo.com https://www.yahoo.com/news/rss
+

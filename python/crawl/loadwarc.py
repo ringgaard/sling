@@ -13,12 +13,6 @@ flags.define("warc",
              help="WARC file(s) with news articles",
              metavar="FILE")
 
-flags.define("--max_article_size",
-             help="Skip articles larger than the max size",
-             default=8 * 1024 * 1024,
-             type=int,
-             metavar="SIZE")
-
 flags.parse()
 
 for warc in flags.arg.warc:
@@ -60,7 +54,7 @@ for warc in flags.arg.warc:
     else:
       num_dups += 1
 
-    # Add redirect if original URL is difference from the canonical URL.
+    # Add redirect if original URL is different from the canonical URL.
     if url != canonical:
       result = news.redirect(url, canonical)
       if result == "new":
