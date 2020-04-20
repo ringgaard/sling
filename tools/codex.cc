@@ -37,6 +37,7 @@ DEFINE_bool(lex, false, "Record values as lex encoded documents");
 DEFINE_string(key, "", "Only display records with matching key");
 DEFINE_int32(indent, 2, "Indentation for structured data");
 DEFINE_int32(limit, 0, "Maximum number of records to output");
+DEFINE_int32(batch, 1, "Batch size for fetching records from database");
 DEFINE_bool(utf8, true, "Allow UTF8-encoded output");
 DEFINE_bool(db, false, "Read input from database");
 DEFINE_bool(version, false, "Output record version");
@@ -108,15 +109,17 @@ void DisplayFile(const string &filename) {
     CHECK(db.Connect(filename));
     if (FLAGS_key.empty()) {
       uint64 iterator = 0;
-      DBRecord record;
+      std::vector<DBRecord> records;
       for (;;) {
-        Status st = db.Next(&iterator, &record);
+        Status st = db.Next(&iterator, FLAGS_batch, &records);
         if (!st.ok()) {
           if (st.code() == ENOENT) break;
           LOG(FATAL) << "Error reading from database "
                      << filename << ": " << st;
         }
-        DisplayRecord(record.key, record.version, record.value);
+        for (auto &record : records) {
+          DisplayRecord(record.key, record.version, record.value);
+        }
       }
     } else {
       DBRecord record;

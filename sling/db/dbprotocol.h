@@ -32,6 +32,7 @@ enum DBVerb : uint32 {
   DBDELETE    = 3,     // delete record(s) from database
   DBNEXT      = 4,     // retrieve the next record(s) from database
   DBBULK      = 5,     // enable/disable bulk mode for database
+  DBEPOCH     = 6,     // get epoch for database
 
   // Reply verbs.
   DBOK        = 128,   // success reply
@@ -39,6 +40,7 @@ enum DBVerb : uint32 {
   DBRECORD    = 130,   // reply with record(s)
   DBRESULT    = 131,   // reply with update result(s)
   DBDONE      = 132,   // no more records
+  DBRECID     = 133,   // reply recid for current epoch
 };
 
 // Update mode for DBPUT.
@@ -106,18 +108,23 @@ struct DBHeader {
 // Add/update record(s) in database. The mode controls under which circumstances
 // a new record should be written. Returns the result for each record.
 //
-// DBDELETE: {key}* -> DBOK
+// DBDELETE {key}* -> DBOK
 //
 // Delete record(s) from database. Returns DBOK if all records were deleted.
 //
-// DBNEXT: recid:uint64 num:uint32 -> DBRECORD {record}* next:uint64 | DBDONE
+// DBNEXT recid:uint64 num:uint32 -> DBRECORD {record}* next:uint64 | DBDONE
 //
 // Retrieves the next record(s) for a cursor. The recid is the initial cursor
 // value, which should be zero to start retrieving from the begining of the
 // database, and next is the next cursor value for retrieving more records.
 // Returns DBDONE when there are no more records to retrieve.
 //
-// DBBULK: enable:uint32 -> DBOK
+// DBBULK enable:uint32 -> DBOK
+//
+// Enable/disable bulk mode for database. In bulk mode, there is no periodical
+// forced checkpoints.
+//
+// DBEPOCH -> DBRECID epoch:uint64
 //
 // Enable/disable bulk mode for database. In bulk mode, there is no periodical
 // forced checkpoints.

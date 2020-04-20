@@ -194,7 +194,7 @@ class DBService {
     Record record;
     if (!l.resource().empty()) {
       // Fetch record from database.
-      if (!l.db()->Get(l.resource(), &record)) {
+      if (!l.db()->Get(l.resource(), &record, body)) {
         response->SendError(404, nullptr, "Record not found");
         return;
       }
@@ -797,6 +797,7 @@ class DBService {
         case DBDELETE: cont = Delete(); break;
         case DBNEXT: cont = Next(); break;
         case DBBULK: cont = Bulk(); break;
+        case DBEPOCH: cont = Epoch(); break;
         default: return Error("command verb not supported");
       }
 
@@ -882,7 +883,11 @@ class DBService {
         // Add/update record in database.
         DBResult result;
         if (l.db()->Put(record, mode, &result) == -1) {
-          return Error("error writing record");
+          if (record.value.empty()) {
+            return Error("record value cannot be empty");
+          } else {
+            return Error("error writing record");
+          }
         }
 
         // Return result.
@@ -938,6 +943,15 @@ class DBService {
 
       rsp->Write(&iterator, 8);
       return Response(DBRECORD);
+    }
+
+    // Return current epoch for database.
+    Continuation Epoch() {
+      if (mount_ == nullptr) return Error("no database");
+      DBLock l(mount_);
+      uint64 epoch = l.db()->epoch();
+      conn_->response_body()->Write(&epoch, 8);
+      return Response(DBRECID);
     }
 
     // Return error message to client.

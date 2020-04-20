@@ -79,7 +79,7 @@ class Database {
   Status Backup();
 
   // Get record from database. Return true if found.
-  bool Get(const Slice &key, Record *record);
+  bool Get(const Slice &key, Record *record, bool with_value = true);
 
   // Add or update record in database. Return record id of new record.
   uint64 Put(const Record &record,

@@ -191,7 +191,7 @@ Status Database::Backup() {
   return st;
 }
 
-bool Database::Get(const Slice &key, Record *record) {
+bool Database::Get(const Slice &key, Record *record, bool with_value) {
   // Compute record key fingerprint.
   uint64 fp = Fingerprint(key.data(), key.size());
 
@@ -203,7 +203,7 @@ bool Database::Get(const Slice &key, Record *record) {
     if (recid == DatabaseIndex::NVAL) break;
 
     // Read record from data file.
-    Status st = ReadRecord(recid, record, true);
+    Status st = ReadRecord(recid, record, with_value);
     if (!st) return false;
 
     // Return record if key matches.
@@ -216,6 +216,9 @@ bool Database::Get(const Slice &key, Record *record) {
 uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
   // Check if database is read-only.
   if (config_.read_only) return DatabaseIndex::NVAL;
+
+  // The value cannot be empty, since this is used for marking deleted records.
+  if (record.value.empty()) return -1;
 
   // Compute record key fingerprint.
   uint64 fp = Fingerprint(record.key.data(), record.key.size());

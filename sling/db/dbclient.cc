@@ -16,6 +16,7 @@
 
 #include <netdb.h>
 #include <unistd.h>
+#include <sys/uio.h>
 #include <sys/socket.h>
 
 namespace sling {
@@ -211,6 +212,16 @@ Status DBClient::Next(uint64 *iterator, int num,
     records->push_back(record);
   }
   if (!response_.Read(iterator, 8)) return Truncated();
+  return Status::OK;
+}
+
+
+Status DBClient::Epoch(uint64 *epoch) {
+  request_.Clear();
+  Status st = Do(DBEPOCH);
+  if (!st.ok()) return st;
+  if (reply_ != DBRECID) return Status(ENOSYS, "Not supported");
+  if (!response_.Read(epoch, 8)) return Truncated();
   return Status::OK;
 }
 

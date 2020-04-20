@@ -78,6 +78,10 @@ class DBClient {
   Status Next(uint64 *iterator, DBRecord *record);
   Status Next(uint64 *iterator, int num, std::vector<DBRecord> *records);
 
+  // Get current epoch for database. This can be used as the initial iterator
+  // value for reading new records from the database.
+  Status Epoch(uint64 *epoch);
+
  private:
   // Write key to request.
   void WriteKey(const Slice &key);
