@@ -141,6 +141,7 @@ cc_library(
     "//sling/http:http-server",
     "//sling/http:static-content",
     "//sling/http:web-service",
+    "//sling/util:sortmap",
   ],
 )
 

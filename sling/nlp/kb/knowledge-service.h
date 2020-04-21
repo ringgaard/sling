@@ -35,15 +35,13 @@ class KnowledgeService {
     Item(Store *store)
         : properties(store),
           xrefs(store),
-          categories(store),
-          image(Handle::nil()),
-          alternate_image(Handle::nil()) {}
+          categories(store) {}
 
     Handles properties;
     Handles xrefs;
     Handles categories;
     Handle image = Handle::nil();
-    Handle alternate_image;
+    Handle alternate_image = Handle::nil();
   };
 
   // Load and initialize knowledge base.
@@ -68,6 +66,15 @@ class KnowledgeService {
   // Get standard properties (ref, name, and description).
   void GetStandardProperties(const Frame &item, Builder *builder) const;
 
+  // Sort items in cronological order.
+  void SortChronologically(Store *store, Handles *values) const;
+
+  // Get canonical date for frame.
+  Date GetCanonicalDate(const Frame &frame) const;
+
+  // Get canonical order for frame.
+  int GetCanonicalOrder(const Frame &frame) const;
+
   // Get unit name.
   string UnitName(const Frame &unit);
 
@@ -82,6 +89,7 @@ class KnowledgeService {
     string url;
     bool image;
     bool alternate_image;
+    int order = kint32max;
   };
 
   // Knowledge base store.
@@ -145,6 +153,11 @@ class KnowledgeService {
   Name n_latin_script_{names_, "Q8229"};
   Name n_language_{names_, "P2439"};
   Name n_name_language_{names_, "P407"};
+
+  Name n_start_time_{names_, "P580"};
+  Name n_end_time_{names_, "P582"};
+  Name n_point_in_time_{names_, "P585"};
+  Name n_series_ordinal_{names_, "P1545"};
 };
 
 }  // namespace nlp

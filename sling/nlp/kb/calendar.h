@@ -62,6 +62,9 @@ class Date {
   // Return an integer or string handle representing date.
   Handle AsHandle(Store *store) const;
 
+  // Three-way comparison of dates.
+  int Compare(const Date &other) const;
+
   // Convert date to string format. The date format depends on the precision:
   // DAY:        [+|-]YYYY-MM-DD
   // MONTH:      [+|-]YYYY-MM
@@ -83,6 +86,31 @@ class Date {
   // Date precision.
   Precision precision = NONE;
 };
+
+// Date comparison.
+inline bool operator ==(const Date &x, const Date &y) {
+  return x.Compare(y) == 0;
+}
+
+inline bool operator !=(const Date &x, const Date &y) {
+  return x.Compare(y) != 0;
+}
+
+inline bool operator <(const Date &x, const Date &y) {
+  return x.Compare(y) < 0;
+}
+
+inline bool operator >(const Date &x, const Date &y) {
+  return x.Compare(y) > 0;
+}
+
+inline bool operator <=(const Date &x, const Date &y) {
+  return x.Compare(y) <= 0;
+}
+
+inline bool operator >=(const Date &x, const Date &y) {
+  return x.Compare(y) >= 0;
+}
 
 // Calendar with items about (Gregorian) calendar concepts.
 class Calendar {

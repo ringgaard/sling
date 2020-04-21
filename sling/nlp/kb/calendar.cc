@@ -245,6 +245,18 @@ string Date::AsString() const {
   return str;
 }
 
+int Date::Compare(const Date &other) const {
+  if (year != other.year) {
+    return year - other.year;
+  } else {
+    if (month != other.month) {
+      return month - other.month;
+    } else {
+      return day - other.day;
+    }
+  }
+}
+
 void Calendar::Init(Store *store) {
   // Get symbols.
   store_ = store;
