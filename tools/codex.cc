@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <unistd.h>
 #include <iostream>
 #include <string>
 
@@ -41,6 +42,10 @@ DEFINE_int32(batch, 1, "Batch size for fetching records from database");
 DEFINE_bool(utf8, true, "Allow UTF8-encoded output");
 DEFINE_bool(db, false, "Read input from database");
 DEFINE_bool(version, false, "Output record version");
+DEFINE_bool(follow, false, "Incrementally fetch new changes");
+DEFINE_int32(poll, 1000, "Poll interval (in ms) for incremental fetching");
+DEFINE_string(field, "", "Only display a single field from frame");
+DEFINE_bool(timestamp, false, "Output version as timestamp");
 
 using namespace sling;
 using namespace sling::nlp;
@@ -56,7 +61,13 @@ void DisplayObject(const Object &object) {
     printer.printer()->set_indent(FLAGS_indent);
     printer.printer()->set_shallow(false);
     printer.printer()->set_utf8(FLAGS_utf8);
-    printer.Print(object);
+    if (!FLAGS_field.empty() && object.IsFrame()) {
+      Frame frame = object.AsFrame();
+      Handle value = frame.GetHandle(FLAGS_field);
+      printer.Print(value);
+    } else {
+      printer.Print(object);
+    }
     std::cout << printer.text();
   }
 }
@@ -78,7 +89,14 @@ void DisplayRecord(const Slice &key, uint64 version, const Slice &value) {
 
   // Display version.
   if (FLAGS_version && version != 0) {
-    std::cout << " [" << version << "]";
+    if (FLAGS_timestamp) {
+      char datebuf[32];
+      time_t time = version;
+      strftime(datebuf, sizeof(datebuf), "%FT%TZ", gmtime(&time));
+      std::cout << " [" << datebuf << "]";
+    } else {
+      std::cout << " [" << version << "]";
+    }
   }
 
   // Display value.
@@ -108,14 +126,19 @@ void DisplayFile(const string &filename) {
     DBClient db;
     CHECK(db.Connect(filename));
     if (FLAGS_key.empty()) {
-      uint64 iterator = 0;
       std::vector<DBRecord> records;
+      uint64 iterator = 0;
+      if (FLAGS_follow) CHECK(db.Epoch(&iterator));
       for (;;) {
         Status st = db.Next(&iterator, FLAGS_batch, &records);
         if (!st.ok()) {
-          if (st.code() == ENOENT) break;
-          LOG(FATAL) << "Error reading from database "
-                     << filename << ": " << st;
+          if (st.code() == ENOENT) {
+            if (!FLAGS_follow) break;
+            usleep(FLAGS_poll * 1000);
+          } else {
+            LOG(FATAL) << "Error reading from database "
+                       << filename << ": " << st;
+          }
         }
         for (auto &record : records) {
           DisplayRecord(record.key, record.version, record.value);

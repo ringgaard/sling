@@ -198,13 +198,13 @@ Status DBClient::Next(uint64 *iterator, DBRecord *record) {
 
 Status DBClient::Next(uint64 *iterator, int num,
                       std::vector<DBRecord> *records) {
+  records->clear();
   request_.Clear();
   request_.Write(iterator, 8);
   request_.Write(&num, 4);
   Status st = Do(DBNEXT);
   if (!st.ok()) return st;
   if (reply_ == DBDONE) return Status(ENOENT, "No more records");
-  records->clear();
   DBRecord record;
   while (response_.available() > 8) {
     st = ReadRecord(&record);
@@ -214,7 +214,6 @@ Status DBClient::Next(uint64 *iterator, int num,
   if (!response_.Read(iterator, 8)) return Truncated();
   return Status::OK;
 }
-
 
 Status DBClient::Epoch(uint64 *epoch) {
   request_.Clear();
