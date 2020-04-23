@@ -107,7 +107,10 @@ commands = [
   Command("load_wikidata",
     help="Load Wikidata dump into database",
     package="sling.task.wiki",
-    triggers=["load_wikidata"]
+  ),
+  Command("snapshot_wikidata",
+    help="Make Wikidata snapshot from database",
+    package="sling.task.wiki",
   ),
 
   # Wikipedia processing.

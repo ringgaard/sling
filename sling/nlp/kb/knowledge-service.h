@@ -73,7 +73,7 @@ class KnowledgeService {
   Date GetCanonicalDate(const Frame &frame) const;
 
   // Get canonical order for frame.
-  int GetCanonicalOrder(const Frame &frame) const;
+  int64 GetCanonicalOrder(const Frame &frame) const;
 
   // Get unit name.
   string UnitName(const Frame &unit);

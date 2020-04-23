@@ -143,7 +143,7 @@ class WikidataImporter : public task::Processor {
   }
 
  private:
-  // Output channel for items and properties.
+  // Output channels for items and properties.
   task::Channel *item_channel_ = nullptr;
   task::Channel *property_channel_ = nullptr;
 
@@ -171,6 +171,77 @@ class WikidataImporter : public task::Processor {
 };
 
 REGISTER_TASK_PROCESSOR("wikidata-importer", WikidataImporter);
+
+// Split Wikidata frames into items, properties, and redirects.
+class WikidataSplitter : public task::Processor {
+ public:
+  // Initialize Wikidata splitter.
+  void Start(task::Task *task) override {
+    // Get output channels.
+    item_channel_ = task->GetSink("items");
+    CHECK(item_channel_ != nullptr);
+    property_channel_ = task->GetSink("properties");
+    CHECK(property_channel_ != nullptr);
+    redirect_channel_ = task->GetSink("redirects");
+    CHECK(redirect_channel_ != nullptr);
+
+    // Initialize counters.
+    num_items_ = task->GetCounter("items");
+    num_properties_ = task->GetCounter("properties");
+    num_redirects_ = task->GetCounter("redirects");
+
+    // Bind symbols.
+    CHECK(names_.Bind(&commons_));
+    commons_.Freeze();
+  }
+
+  // Split Wikidata frames.
+  void Receive(task::Channel *channel, task::Message *message) override {
+    // Decode frame from message.
+    Store store(&commons_);
+    Frame frame = DecodeMessage(&store, message);
+    CHECK(frame.valid());
+
+    // Output frame to appropriate channel.
+    if (frame.IsA(n_property_)) {
+      property_channel_->Send(message);
+      num_properties_->Increment();
+    } else if (IsRedirect(frame)) {
+      redirect_channel_->Send(message);
+      num_redirects_->Increment();
+    } else {
+      item_channel_->Send(message);
+      num_items_->Increment();
+    }
+  }
+
+  // Check if frame is a redirect frame.
+  static bool IsRedirect(const Frame &frame) {
+    // A redirect frame has an id: slot and an is: slot.
+    if (frame.size() != 2) return false;
+    if (frame.name(0) != Handle::id()) return false;
+    if (frame.name(1) != Handle::is()) return false;
+    return true;
+  }
+
+ private:
+  // Output channels for items, properties, and redirects.
+  task::Channel *item_channel_ = nullptr;
+  task::Channel *property_channel_ = nullptr;
+  task::Channel *redirect_channel_ = nullptr;
+
+  // Statistics.
+  task::Counter *num_items_ = nullptr;
+  task::Counter *num_properties_ = nullptr;
+  task::Counter *num_redirects_ = nullptr;
+
+  // Symbols.
+  Store commons_;
+  Names names_;
+  Name n_property_{names_, "/w/property"};
+};
+
+REGISTER_TASK_PROCESSOR("wikidata-splitter", WikidataSplitter);
 
 // Build Wikidata to Wikipedia id mapping.
 class WikipediaMapping : public task::FrameProcessor {

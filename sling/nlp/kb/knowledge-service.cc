@@ -90,6 +90,7 @@ const char *property_order[] = {
   "P576",    // dissolved, abolished or demolished
   "P36",     // capital
   "P159",    // headquarters location
+  "P291",    // place of publication
   "P115",    // home venue
   "P1001",   // applies to jurisdiction
   "P2541",   // operating area
@@ -115,7 +116,15 @@ const char *property_order[] = {
   "P156",    // followed by
   "P1365",   // replaces
   "P1366",   // replaced by
+  "P272",    // production company
+  "P449",    // original network
+  "P123",    // publisher
+  "P137",    // operator
+  "P750",    // distributor
   "P2652",   // partnership with
+  "P1327",   // partner in business or sport
+  "P664",    // organizer
+  "P710",    // participant
 
   "P1716",   // brand
   "P1056",   // product or material produced
@@ -130,11 +139,15 @@ const char *property_order[] = {
   "P169",    // chief executive officer
   "P1789",   // chief operating officer
   "P1037",   // director/manager
+  "P5126",   // assistant director
   "P7169",   // substitute director/manager
   "P2828",   // corporate officer
+  "P1075",   // rector
   "P5769",   // editor-in-chief
+  "P98",     // editor
   "P3460",   // colonel-in-chief
   "P286",    // head coach
+  "P634",    // captain
   "P488",    // chairperson
   "P3320",   // board member
   "P5052",   // supervisory board member
@@ -143,16 +156,35 @@ const char *property_order[] = {
   "P1342",   // number of seats
   "P2124",   // member count
   "P2196",   // students count
+  "P5822",   // admission rate
   "P1410",   // number of representatives in an organization/legislature
   "P1128",   // employees
   "P3362",   // operating income
   "P2295",   // net profit
+  "P2218",   // net worth
   "P2139",   // total revenue
   "P2403",   // total assets
   "P2137",   // total equity
   "P2133",   // total debt
+  "P2138",   // total liabilities
+  "P2136",   // total imports
   "P2226",   // market capitalization
+  "P2663",   // common equity tier 1 capital ratio (CETI)
   "P2769",   // budget
+  "P2130",   // cost
+  "P2142",   // box office
+
+  // Building.
+  "P149",    // architectural style
+  "P1101",   // floors above ground
+  "P1139",   // floors below ground
+  "P1301",   // number of elevators
+  "P88",     // commissioned by
+  "P466",    // occupant
+  "P84",     // architect
+  "P631",    // structural engineer
+  "P193",    // main building contractor
+  "P126",    // maintained by
 
   // Person.
   "P21",     // sex or gender
@@ -165,11 +197,19 @@ const char *property_order[] = {
   "P1884",   // hair color
   "P1340",   // eye color
   "P552",    // handedness
+  "P423",    // shooting handedness
+  "P741",    // playing hand
   "P1853",   // blood type
 
+  "P3828",   // wears
+  "P1576",   // lifestyle
+
   // Proportions.
-  "P2048",   // height
+  "P2043",   // length
   "P2049",   // width
+  "P2048",   // height
+  "P2386",   // diameter
+  "P2046",   // area
   "P2067",   // mass
 
   // Birth and death.
@@ -221,8 +261,11 @@ const char *property_order[] = {
   "P3602",   // candidacy in election
   "P463",    // member of
   "P1344",   // participant of
-  "P6087",   // coach of sports team
   "P2868",   // subject has role
+
+  "P1595",   // charge
+  "P1399",   // convicted of
+  "P2632",   // place of detention
 
   "P241",    // military branch
   "P410",    // military rank
@@ -247,23 +290,80 @@ const char *property_order[] = {
 
   // Sports.
   "P641",    // sport
+  "P2094",   // competition class
   "P1532",   // country for sport
   "P118",    // league
   "P413",    // position played on team / speciality
   "P1618",   // sport number
+  "P647",    // drafted by
+  "P6087",   // coach of sports team
   "P54",     // member of sports team
 
   "P1346",   // winner
   "P1350",   // number of matches played/races/starts
-  "P1363",   // points/goal scored by
+  "P6509",   // total goals in career
+  "P6543",   // total shots in career
+  "P6545",   // total assists in career
+  "P6544",   // total points in career
+  "P6546",   // penalty minutes in career
+  "P6547",   // career plus-minus rating
+  "P564",    // singles record
+  "P555",    // doubles record
   "P1356",   // number of losses
+  "P1363",   // points/goal scored by
   "P1352",   // ranking
+
+  // Art.
+  "P136",    // genre
+  "P921",    // main subject
+  "P1303",   // instrument
+  "P412",    // voice type
+  "P264",    // record label
+  "P358",    // discography
+  "P1283",   // filmography
+  "P135",    // movement
+
+  "P50",     // author
+  "P2679",   // author of foreword
+  "P2680",   // author of afterword
+  "P2093",   // author name string
+  "P170",    // creator
+  "P58",     // screenwriter
+  "P1040",   // film editor
+  "P2554",   // production designer
+  "P1431",   // executive producer
+  "P162",    // producer
+  "P57",     // director
+  "P344",    // director of photography
+  "P86",     // composer
+  "P676",    // lyrics by
+  "P87",     // librettist
+  "P3174",   // art director
+  "P2515",   // costume designer
+  "P175",    // performer
+  "P161",    // cast member
+  "P725",    // voice actor
+  "P3092",   // film crew member
+  "P674",    // characters
+  "P658",    // tracklist
+  "P1113",   // number of episodes
+  "P2437",   // number of seasons
+
+  "P840",    // narrative location
+  "P915",    // filming location
+
+  "P1877",   // after a work by
+  "P144",    // based on
+  "P4969",   // derivative work
+  "P179",    // part of the series
+  "P747",    // has edition
 
   // Event.
   "P585",    // point in time
   "P580",    // start time
   "P582",    // end time
   "P1619",   // date of official opening
+  "P577",    // publication date
   "P729",    // service entry
   "P2047",   // duration
 
@@ -278,10 +378,11 @@ const char *property_order[] = {
   "P1376",   // capital of
   "P150",    // contains administrative territorial entity
   "P47",     // shares border with
-  "P2046",   // area
   "P2927",   // water as percent of area
 
   "P1082",   // population
+  "P1540",   // male population
+  "P1539",   // female population
   "P2573",   // number of out-of-school children
   "P4841",   // total fertility rate
   "P3270",   // compulsory education (minimum age)
@@ -344,6 +445,8 @@ const char *property_order[] = {
 
   // Categories.
   "P910",    // topic's main category
+  "P7084",   // related category
+  "P6365",   // member category
   "P1792",   // category of associated people
   "P4195",   // category for employees of the organization
   "P3876",   // category for alumni of educational institution
@@ -760,8 +863,8 @@ void KnowledgeService::SortChronologically(Store *store,
       return a_date < b_date;
     } else {
       // Compare by series ordinal.
-      int a_series = GetCanonicalOrder(a_frame);
-      int b_series = GetCanonicalOrder(b_frame);
+      int64 a_series = GetCanonicalOrder(a_frame);
+      int64 b_series = GetCanonicalOrder(b_frame);
       return a_series < b_series;
     }
   });
@@ -785,10 +888,18 @@ Date KnowledgeService::GetCanonicalDate(const Frame &frame) const {
   return Date();
 }
 
-int KnowledgeService::GetCanonicalOrder(const Frame &frame) const {
+int64 KnowledgeService::GetCanonicalOrder(const Frame &frame) const {
   Text ordinal = frame.GetText(n_series_ordinal_);
   if (ordinal.empty()) return kint32max;
-  return std::stoi(ordinal.str());
+  int64 number = 0;
+  for (char c : ordinal) {
+    if (c >= '0' && c <= '9') {
+      number = number * 10 + (c - '0');
+    } else {
+      number = number * 128 + c;
+    }
+  }
+  return number;
 }
 
 string KnowledgeService::AsText(Handle value) {

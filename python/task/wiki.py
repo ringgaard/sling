@@ -58,12 +58,12 @@ class WikiWorkflow:
   #---------------------------------------------------------------------------
 
   def wikidata_dump(self):
-    """Resource for wikidata dump. This can be downloaded from wikimedia.org
+    """Resource for Wikidata dump. This can be downloaded from wikimedia.org
     and contains a full dump of Wikidata in JSON format."""
     return self.wf.resource(corpora.wikidata_dump(), format="text/json")
 
   def wikidata_items(self):
-    """Resource for wikidata items. This is a set of record files where each
+    """Resource for Wikidata items. This is a set of record files where each
     WikiData item is represented as a frame:
       <qid>: {
         =<qid>
@@ -91,8 +91,20 @@ class WikiWorkflow:
                             dir=corpora.wikidir(),
                             format="records/frame")
 
+  def wikidata_redirects(self):
+    """Resource for Wikidata redirects. This is a set of record files where each
+    WikiData redirect is represented as a frame:
+      <qid>: {
+        =<qid>
+        +<redirect>
+      }
+    """
+    return self.wf.resource("wikidata-redirects.rec",
+                            dir=corpora.wikidir(),
+                            format="records/frame")
+
   def wikidata_properties(self):
-    """Resource for wikidata properties. This is a record file where each
+    """Resource for Wikidata properties. This is a record file where each
     Wikidata property is represented as a frame.
       <pid>: {
         =<pid>
@@ -163,6 +175,32 @@ class WikiWorkflow:
       db = self.wikidatadb()
       self.wf.write([items, properties], db, name="db-writer")
       return db
+
+  def wikidata_snapshot(self):
+    """Read snapshot from Wikidata database and output items, properties, and
+    redirects."""
+    with self.wf.namespace("wikisnap"):
+      # Read frames from database.
+      snapshot = self.wf.read(self.wikidatadb(), name="db-reader")
+      input = self.wf.parallel(snapshot, threads=3, queue=1000)
+
+      # Split snapshot into items, properties, and redirects.
+      task = self.wf.task("wikidata-splitter")
+      self.wf.connect(input, task)
+      items = self.wf.channel(task, name="items",
+                              format="message/frame")
+      properties = self.wf.channel(task, name="properties",
+                                   format="message/frame")
+      redirects = self.wf.channel(task, name="redirects",
+                                  format="message/frame")
+
+      # Write items, properties, and redirects.
+      self.wf.write(items, self.wikidata_items(),
+                    name="item-writer")
+      self.wf.write(properties, self.wikidata_properties(),
+                    name="property-writer")
+      self.wf.write(redirects, self.wikidata_redirects(),
+                    name="redirect-writer")
 
   #---------------------------------------------------------------------------
   # Wikipedia
@@ -797,6 +835,13 @@ def load_wikidata():
   wf = WikiWorkflow("wikidata-load")
   log.info("Load wikidata")
   wf.wikidata_load()
+  run(wf.wf)
+
+def snapshot_wikidata():
+  # Make snapshot from Wikidata database.
+  wf = WikiWorkflow("wikidata-snapshot")
+  log.info("Snapshot wikidata")
+  wf.wikidata_snapshot()
   run(wf.wf)
 
 def parse_wikipedia():
