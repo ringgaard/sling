@@ -255,7 +255,8 @@ class CompositeTransformer : public Transformer {
 
       FlowBuilder f(flow, op->func);
       Scope s(&f, op->name, false);
-      auto *softmax = f.Normalize(f.Exp(f.Sub(x, f.Max(x, axis))), axis);
+      auto *max = f.Max(x, axis, true);
+      auto *softmax = f.Normalize(f.Exp(f.Sub(x, max)), axis, true);
 
       flow->RemoveOperation(op);
       f.Bind(y, softmax);

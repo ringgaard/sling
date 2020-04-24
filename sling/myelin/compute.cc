@@ -1728,11 +1728,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   for (auto it = parameters_.begin(); it != parameters_.end();) {
     // Check if tensor is shared with a constant.
     Tensor *t = *it;
-    if (t->shared_ != nullptr && t->shared_->data_ != nullptr) {
+    if (t->shared_ != nullptr && t->shared_->IsGlobal()) {
       // Move variable to global pool.
       VLOG(5) << "Convert " << t->name() << " to global";
       it = parameters_.erase(it);
       globals_.push_back(t);
+      t->local_ = false;
     } else {
       ++it;
     }
@@ -1799,6 +1800,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (tensor->shared_ != nullptr) {
       // Shared tensor. Copy reference to data.
       tensor->data_ = tensor->shared_->data_;
+      CHECK(tensor->data_ != nullptr);
       tensor->AddNewPlace(HOST);
       if (tensor->placement_ & DEVICE) {
         tensor->device_data_ = tensor->shared_->device_data_;

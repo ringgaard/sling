@@ -2,15 +2,13 @@ import sling
 import sling.flags as flags
 import sling.task.workflow as workflow
 
-flags.define("--crf", default=False,action='store_true')
-
 flags.parse()
 
 # Start up workflow system.
 workflow.startup()
 
 # Create workflow.
-wf = workflow.Workflow("bio-training")
+wf = workflow.Workflow("biaf-training")
 
 # Parser trainer inputs and outputs.
 kb = wf.resource(
@@ -35,7 +33,7 @@ vocabulary = wf.resource(
 )
 
 parser_model = wf.resource(
-  "local/data/e/knolex/" + ("bio" if flags.arg.crf else "crf") + "-en.flow",
+  "local/data/e/knolex/biaf-en.flow",
   format="flow"
 )
 
@@ -44,7 +42,7 @@ trainer = wf.task("parser-trainer")
 
 trainer.add_params({
   "encoder": "lexrnn",
-  "decoder": "bio",
+  "decoder": "biaffine",
 
   "rnn_type": 1,
   "rnn_dim": 128,
@@ -52,8 +50,7 @@ trainer.add_params({
   "rnn_layers": 1,
   "dropout": 0.2,
 
-  "ff_dims": [128],
-  "crf": flags.arg.crf,
+  "ff_dims": [64],
 
   "skip_section_titles": True,
   "word_dim": 64,

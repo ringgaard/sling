@@ -123,7 +123,10 @@ void Optimizer::Build(Flow *flow) {
 
     // Get gradient variable for learnable variable.
     Flow::Variable *dvar = flow->GradientVar(var);
-    CHECK(dvar != nullptr) << "No gradient found for " << var->name;
+    if (dvar == nullptr) {
+      LOG(WARNING) << "No gradient found for " << var->name;
+      continue;
+    }
 
     // Find function for gradient variable.
     Flow::Operation *producer = nullptr;

@@ -352,11 +352,9 @@ class FlowBuilder : public Scope {
 
   // SoftMax.
   Variable *SoftMax(Variable *x, int axis = -1) {
-    if (axis == -1) {
-      return Op("SoftMax", {x});
-    } else {
-      return Reduce("SoftMax", x, axis, false);
-    }
+    auto *softmax = Op("SoftMax", {x});
+    if (axis != -1 ) softmax->producer->SetAttr("axis", axis);
+    return softmax;
   }
   Variable *LogSoftMax(Variable *x) { return Log(SoftMax(x)); }
   Variable *LogSumExp(Variable *x, int axis = -1, bool keepdims = false) {

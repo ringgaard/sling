@@ -112,6 +112,22 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "biaffine-decoder",
+  srcs = ["biaffine-decoder.cc"],
+  deps = [
+    ":parser-codec",
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/myelin:builder",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
+    "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+
 # Transition-based parsing.
 
 cc_library(
@@ -277,6 +293,7 @@ cc_library(
     ":caspar-decoder",
     ":knolex-decoder",
     ":bio-decoder",
+    ":biaffine-decoder",
 
     # Delegates.
     ":multiclass-delegate",
