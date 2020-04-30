@@ -947,7 +947,23 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
 void StandardTokenization::Process(TokenizerText *t) {
   int i = 0;
   while (i < t->length()) {
-    // Check for number tokens. Numbers start with a digit or a number
+    // Check for "continental-style" ordinal numerals, e.g. '10.' for 10th. The
+    // ordinal cannot have more than 2 digits and must be followed by space or
+    // punctuation.
+    if (t->is(i, CHAR_DIGIT)) {
+      int j = i + 1;
+      while (j < t->length() && t->is(j, CHAR_DIGIT)) j++;
+      if (t->at(j) == '.' &&
+          (t->at(j + 1) == 0 || t->is(j + 1, CHAR_SPACE | CHAR_PUNCT)) &&
+          j - i < 3) {
+        // Mark oridinal token.
+        t->set(i, TOKEN_START);
+        i = j + 1;
+        continue;
+      }
+    }
+
+    // Check for other number tokens. Numbers start with a digit or a number
     // punctuation start character (like . , + -) followed by a digit.
     // The rest of the number token consists of digits, letters, and number
     // punctuation characters (like . , / -). The number punctuation character
