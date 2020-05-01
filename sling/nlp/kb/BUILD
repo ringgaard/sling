@@ -104,6 +104,35 @@ cc_library(
 )
 
 cc_library(
+  name = "xref",
+  srcs = ["xref.cc"],
+  hdrs = ["xref.h"],
+  deps = [
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/string:text",
+    "//sling/util:arena",
+    "//sling/util:fingerprint",
+  ],
+)
+
+cc_library(
+  name = "xref-builder",
+  srcs = ["xref-builder.cc"],
+  deps = [
+    ":xref",
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:serialization",
+    "//sling/frame:store",
+    "//sling/task:frames",
+    "//sling/util:mutex",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "resolver",
   srcs = ["resolver.cc"],
   hdrs = ["resolver.h"],

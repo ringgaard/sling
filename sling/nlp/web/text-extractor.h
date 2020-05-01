@@ -158,11 +158,11 @@ class WebPageTextExtractor : public HTMLParser {
   bool Text(const char *str) override;
 
   // Web page meta data.
-  const string url() const { return url_; }
-  const string site() const { return site_; }
-  const string type() const { return type_; }
-  const string date() const { return date_; }
-  const string title() const {
+  const string &url() const { return url_; }
+  const string &site() const { return site_; }
+  const string &type() const { return type_; }
+  const string &date() const { return date_; }
+  const string &title() const {
     return title_.empty() ? page_title_ : title_;
   }
 
@@ -175,7 +175,7 @@ class WebPageTextExtractor : public HTMLParser {
   void set_debug(bool debug) { debug_ = debug; }
 
   // Extracted text.
-  const string text() const { return text_; }
+  const string &text() const { return text_; }
 
  private:
   // Output debug information for text node.

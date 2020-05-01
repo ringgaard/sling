@@ -562,6 +562,18 @@ class WikiWorkflow:
   # Fused items
   #---------------------------------------------------------------------------
 
+  def xref_properties(self):
+    """Resource for properties tracked for cross-references."""
+    return self.wf.resource("xrefs.sling",
+                            dir=corpora.repository("data/wiki"),
+                            format="store/frame")
+
+  def xrefs(self):
+    """Resource for store with cross-reference items."""
+    return self.wf.resource("xrefs.sling",
+                            dir=corpora.wikidir(),
+                            format="store/frame")
+
   def fused_items(self):
     """Resource for merged items. This is a set of record files where each
     item is represented as a frame.
@@ -569,6 +581,18 @@ class WikiWorkflow:
     return self.wf.resource("items@10.rec",
                             dir=corpora.wikidir(),
                             format="records/frame")
+
+  def collect_xrefs(self, items=None):
+    if items == None:
+      items = [self.wikidata_redirects()] + self.wikidata_items();
+
+    with self.wf.namespace("xrefs"):
+      builder = self.wf.task("xref-builder")
+      self.wf.connect(self.wf.read(items), builder)
+      builder.attach_input("config", self.xref_properties())
+      xrefs = self.xrefs()
+      builder.attach_output("output", xrefs)
+    return xrefs
 
   def fuse_items(self, items=None, extras=None, output=None):
     if items == None:
@@ -842,6 +866,13 @@ def snapshot_wikidata():
   wf = WikiWorkflow("wikidata-snapshot")
   log.info("Snapshot wikidata")
   wf.wikidata_snapshot()
+  run(wf.wf)
+
+def collect_xrefs():
+  # Collect cross-references.
+  wf = WikiWorkflow("xref-builder")
+  log.info("Build cross references")
+  wf.collect_xrefs()
   run(wf.wf)
 
 def parse_wikipedia():

@@ -1673,6 +1673,12 @@ void Builder::Update() {
   handle_ = store_->AllocateFrame(slots_.base(), slots_.end(), handle_);
 }
 
+Builder &Builder::Clear() {
+  handle_ = Handle::nil();
+  slots_.reset();
+  return *this;
+}
+
 void Builder::GetReferences(Range *range) {
   range->begin = reinterpret_cast<Handle *>(slots_.base());
   range->end = reinterpret_cast<Handle *>(slots_.end());

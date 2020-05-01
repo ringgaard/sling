@@ -1249,12 +1249,6 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
   resolver_.Init(commons, aliases_);
 }
 
-void SpanAnnotator::AddStopWords(const std::vector<string> &words) {
-  for (const string &word : words) {
-    populator_.AddStopWord(word);
-  }
-}
-
 void SpanAnnotator::Annotate(const Document &document, Document *output) {
   // Initialize entity resolver context.
   Store *store = output->store();

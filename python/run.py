@@ -112,6 +112,10 @@ commands = [
     help="Make Wikidata snapshot from database",
     package="sling.task.wiki",
   ),
+  Command("collect_xrefs",
+    help="Collect cross-references from items",
+    package="sling.task.wiki",
+  ),
 
   # Wikipedia processing.
   Command("parse_wikipedia",

@@ -91,6 +91,7 @@ cc_library(
     "//sling/nlp/kb:fact-lexicon",
     "//sling/nlp/kb:name-table-builder",
     "//sling/nlp/kb:phrase-table-builder",
+    "//sling/nlp/kb:xref-builder",
 
     "//sling/nlp/embedding:fact-embeddings",
     "//sling/nlp/embedding:word-embeddings",

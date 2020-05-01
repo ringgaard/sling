@@ -1,0 +1,174 @@
+// Copyright 2017 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "sling/nlp/kb/xref.h"
+
+#include <algorithm>
+#include <vector>
+
+namespace sling {
+namespace nlp {
+
+XRef::XRef() {
+  // Clear hash table.
+  for (int b = 0; b < NUM_BUCKETS; ++b) buckets_[b] = nullptr;
+
+  // Add main identifier property types.
+  main_ = CreateProperty(Handle::id(), "");
+}
+
+XRef::~XRef() {
+  for (auto &it : properties_) delete it.second;
+}
+
+XRef::Property *XRef::CreateProperty(Handle handle, Text name) {
+  Property *p = new Property();
+  p->handle = handle;
+  p->priority = properties_.size();
+  p->name = name.str();
+  p->hash = Fingerprint(name.data(), name.size());
+  properties_[handle] = p;
+  property_map_[p->name] = p;
+  return p;
+}
+
+const XRef::Property *XRef::AddProperty(const Frame &property) {
+  CHECK(property.IsGlobal()) << property.Id();
+  return CreateProperty(property.handle(), property.Id());
+}
+
+const XRef::Property *XRef::LookupProperty(Handle handle) const {
+  // All properties should be global.
+  if (!handle.IsGlobalRef()) return nullptr;
+
+  // Lookup up property handle.
+  auto f = properties_.find(handle);
+  if (f == properties_.end()) return nullptr;
+  return f->second;
+}
+
+const XRef::Property *XRef::LookupProperty(Text name) const {
+  // Lookup up property name.
+  auto f = property_map_.find(name);
+  if (f == property_map_.end()) return nullptr;
+  return f->second;
+}
+
+XRef::Identifier *XRef::GetIdentifier(const Property *type,
+                                      Text value,
+                                      bool redirect) {
+  // Empty values not allowed.
+  if (value.empty()) return nullptr;
+
+  // Try to find existing identifier.
+  uint64 hash = Hash(type, value);
+  uint64 bucket = hash % NUM_BUCKETS;
+  Identifier *id = buckets_[bucket];
+  while (id != nullptr) {
+    if (id->hash == hash && id->type == type && id->value == value) {
+      if (redirect) id->redirect = true;
+      return id;
+    }
+    id = id->chain;
+  }
+
+  // Create new identifier.
+  id = id_arena_.alloc();
+  id->type = type;
+  id->value = value_arena_.dup(value.data(), value.size());
+  id->hash = hash;
+  id->redirect = redirect;
+  id->visited = false;
+  id->chain = nullptr;
+  id->ring = id;
+  id->chain = buckets_[bucket];
+  buckets_[bucket] = id;
+
+  return id;
+}
+
+XRef::Identifier *XRef::GetIdentifier(Text ref, bool redirect) {
+  // Try to split reference of the form PROP/VALUE or /PROP/VALUE.
+  auto delim = ref.find('/');
+  if (delim == 0) delim = ref.find('/', 1);
+
+  if (delim == -1) {
+    return GetIdentifier(main_, ref, redirect);
+  } else {
+    const Property *prop = LookupProperty(ref.substr(0, delim));
+    if (prop == nullptr) return nullptr;
+    Text value(ref, delim + 1);
+    return GetIdentifier(prop, value, redirect);
+  }
+}
+
+void XRef::Merge(Identifier *a, Identifier *b) {
+  // Merge clusters.
+  Identifier *na = a->ring;
+  Identifier *nb = b->ring;
+  a->ring = nb;
+  b->ring = na;
+}
+
+void XRef::Build(Store *store) {
+  // Run through all identifiers in hash table.
+  std::vector<Identifier *> cluster;
+  Builder builder(store);
+  string name;
+  for (int b = 0; b < NUM_BUCKETS; ++b) {
+    for (Identifier *i = buckets_[b]; i != nullptr; i = i->chain) {
+      // Skip identifiers that have already been visited.
+      if (i->visited) continue;
+
+      // Skip singletons.
+      if (i->singleton()) continue;
+
+      // Get all identifiers in cluster.
+      cluster.clear();
+      Identifier *id = i;
+      do {
+        cluster.push_back(id);
+        id->visited = true;
+        id = id->ring;
+      } while (id != i);
+
+      // Sort identifiers in priority order.
+      std::sort(cluster.begin(), cluster.end(),
+        [](const Identifier *a, const Identifier *b) {
+          int oa = a->order();
+          int ob = b->order();
+          return oa != ob ? oa < ob : strcmp(a->value, b->value);
+        });
+
+      // Build frame with id slots for all the identifiers in the cluster.
+      builder.Clear();
+      for (Identifier *id : cluster) {
+        if (id->type->name.empty()) {
+          builder.AddId(id->value);
+        } else {
+          name.clear();
+          name.append(id->type->name);
+          name.push_back('/');
+          name.append(id->value);
+          builder.AddId(name);
+        }
+      }
+      builder.Create();
+    }
+  }
+}
+
+}  // namespace nlp
+}  // namespace sling
+

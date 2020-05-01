@@ -96,8 +96,11 @@ class BiaffineDecoder : public ParserDecoder {
     // Build loss and loss gradient.
     FlowBuilder l(flow, "loss");
 
+    // The logits are the scores from the biaffine mapping.
     auto *logits = l.Placeholder("logits", dt, scores->shape);
     logits->set_ref();
+
+    // The true labels are set to 1.0 in y.
     auto *y = l.Placeholder("y", dt, scores->shape);
 
     // Compute softmax for logits.
@@ -105,8 +108,11 @@ class BiaffineDecoder : public ParserDecoder {
     auto *dlogits = l.Name(l.Sub(softmax, y), "d_logits");
     dlogits->set_ref();
 
-    // Compute loss (negative log-likelihood).
-    auto *loss = l.Mean(l.Neg(l.Log(l.Max(l.Mul(y, softmax), 1))));
+    // Compute loss (negative log-likelihood). Multiply the softmax with the
+    // true labels (0/1) to get the probability of the true label and zero for
+    // the false labels, and then sum these over the labels to reduce it to
+    // one loss per span. Then compute the mean negative log-likelihood.
+    auto *loss = l.Mean(l.Neg(l.Log(l.Sum(l.Mul(y, softmax), 1))));
     l.Name(loss, "loss");
 
     flow->Connect({scores, logits});

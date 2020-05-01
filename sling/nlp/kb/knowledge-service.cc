@@ -185,6 +185,8 @@ const char *property_order[] = {
   "P631",    // structural engineer
   "P193",    // main building contractor
   "P126",    // maintained by
+  "P1398",   // structure replaces
+  "P167",    // structure replaced by
 
   // Person.
   "P21",     // sex or gender
