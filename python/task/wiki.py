@@ -527,7 +527,7 @@ class WikiWorkflow:
                             format="records/frame")
 
   def extract_links(self):
-    # Build link graph over all Wikipedias and compute item popularity.
+    """Build link graph over all Wikipedias and compute item popularity."""
     documents = []
     for l in flags.arg.languages:
       documents.extend(self.wikipedia_documents(l))
@@ -559,7 +559,7 @@ class WikiWorkflow:
     return wikilinks, fanin
 
   #---------------------------------------------------------------------------
-  # Fused items
+  # Knowledge base reconcilation
   #---------------------------------------------------------------------------
 
   def xref_properties(self):
@@ -583,6 +583,7 @@ class WikiWorkflow:
                             format="records/frame")
 
   def collect_xrefs(self, items=None):
+    """Collect and cluster item identifiers."""
     if items == None:
       items = [self.wikidata_redirects()] + self.wikidata_items();
 
@@ -594,7 +595,7 @@ class WikiWorkflow:
       builder.attach_output("output", xrefs)
     return xrefs
 
-  def fuse_items(self, items=None, extras=None, output=None):
+  def standard_item_sources(self, items=None):
     if items == None:
       items = self.wikidata_items() + self.wikilinks() + [
                 self.fanin(),
@@ -609,6 +610,29 @@ class WikiWorkflow:
       else:
         items.append(extra)
 
+    return items
+
+  def reconcile_items(self, items=None, output=None):
+    """Reconcile items."""
+    items = self.standard_item_sources(items)
+    if output == None: output = self.fused_items()
+
+    with self.wf.namespace("reconciled-items"):
+      return self.wf.mapreduce(input=items,
+                               output=output,
+                               mapper="item-reconciler",
+                               reducer="item-merger",
+                               format="message/frame",
+                               params={
+                                 "indexed": flags.arg.index
+                               },
+                               auxin={
+                                 "commons": self.xrefs(),
+                               })
+
+  def fuse_items(self, items=None, extras=None, output=None):
+    """Fuse items."""
+    items = self.standard_item_sources(items)
     if extras != None:
       if isinstance(extras, list):
         items.extend(extras)
@@ -902,6 +926,13 @@ def extract_wikilinks():
   log.info("Extract link graph")
   wf = WikiWorkflow("link-graph")
   wf.extract_links()
+  run(wf.wf)
+
+def reconcile_items():
+  # Reconcile items.
+  log.info("Reconcile items")
+  wf = WikiWorkflow("reconcile-items")
+  wf.reconcile_items()
   run(wf.wf)
 
 def fuse_items():

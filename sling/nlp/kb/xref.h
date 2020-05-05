@@ -80,8 +80,10 @@ class XRef {
   // identifier is returned. Returns null if property is not tracked.
   Identifier *GetIdentifier(Text ref, bool redirect = false);
 
-  // Merge two identifiers into the same cluster.
-  void Merge(Identifier *a, Identifier *b);
+  // Merge two identifiers into the same cluster. Returns false if identifiers
+  // are already in the same cluster or if merging would lead to two main ids
+  // becoming part of the same cluster.
+  bool Merge(Identifier *a, Identifier *b);
 
   // Add identifier cluster to store. Each cluster contains id slots with the
   // identifiers in the cluster in priority order.

@@ -154,6 +154,8 @@ void AuxFilter::Init(Store *store) {
     "Q8054",      // protein
     "Q11173",     // chemical compound
     "Q30612",     // clinical trial
+    "Q523",       // star
+    "Q318",       // galaxy
     nullptr,
   };
   for (const char **type = kAuxItemtypes; *type; ++type) {

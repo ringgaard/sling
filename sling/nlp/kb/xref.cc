@@ -113,12 +113,33 @@ XRef::Identifier *XRef::GetIdentifier(Text ref, bool redirect) {
   }
 }
 
-void XRef::Merge(Identifier *a, Identifier *b) {
+bool XRef::Merge(Identifier *a, Identifier *b) {
+  // Check that identifiers are not already in the same cluster.
+  bool has_main = false;
+  Identifier *id = a;
+  do {
+    if (id == b) return false;
+    if (id->type == main_) has_main = true;
+    id = id->ring;
+  } while (id->ring != a);
+
+  // Check that merging would not lead to two main ids becoming part of the same
+  // cluster.
+  if (has_main) {
+    Identifier *id = b;
+    do {
+      if (id->type == main_) return false;
+      id = id->ring;
+    } while (id->ring != b);
+  }
+
   // Merge clusters.
   Identifier *na = a->ring;
   Identifier *nb = b->ring;
   a->ring = nb;
   b->ring = na;
+
+  return true;
 }
 
 void XRef::Build(Store *store) {

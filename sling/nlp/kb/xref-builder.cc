@@ -58,7 +58,7 @@ class XRefBuilder : public task::FrameProcessor {
       }
     }
 
-    // Skip frame unless it has multiple ids, is redirected or it has one or
+    // Skip frame unless it has multiple ids, is redirected, or it has one or
     // more tracked properties.
     if (num_ids < 2 && !redirect && num_props == 0) return;
 

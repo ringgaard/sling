@@ -581,7 +581,8 @@ class Workflow(object):
     self.connect(input, workers)
     return self.channel(workers, format=format_of(input))
 
-  def map(self, input, type=None, format=None, params=None, name=None):
+  def map(self, input, type=None, format=None, params=None, auxin=None,
+          name=None):
     """Map input through processor."""
     # Use input format if no format specified.
     if format == None: format = format_of(input).as_message()
@@ -593,6 +594,9 @@ class Workflow(object):
       reader = self.read(input)
       self.connect(reader, mapper)
       output = self.channel(mapper, format=format)
+      if auxin != None:
+        for name, resource in auxin.items():
+          mapper.attach_input(name, resource)
     else:
       output = self.read(input)
 
@@ -622,7 +626,8 @@ class Workflow(object):
     outputs = self.channel(sorters, format=format_of(input))
     return outputs
 
-  def reduce(self, input, output, type=None, params=None, name=None):
+  def reduce(self, input, output, type=None, params=None, auxin=None,
+             name=None):
     """Reduce input and write reduced output."""
     if type == None:
       # No reducer (i.e. identity reducer), just write input.
@@ -634,25 +639,28 @@ class Workflow(object):
       reduced = self.channel(reducer,
                              shards=length_of(output),
                              format=format_of(output).as_message())
+      if auxin != None:
+        for name, resource in auxin.items():
+          reducer.attach_input(name, resource)
 
     # Write reduce output.
     self.write(reduced, output, params=params)
     return reducer
 
   def mapreduce(self, input, output, mapper, reducer=None, params=None,
-                format=None):
+                auxin=None, format=None):
     """Map input files, shuffle, sort, reduce, and output to files."""
     # Determine the number of output shards.
     shards = length_of(output)
 
     # Mapping of input.
-    mapping = self.map(input, mapper, params=params, format=format)
+    mapping = self.map(input, mapper, params=params, auxin=auxin, format=format)
 
     # Shuffling of map output.
     shuffle = self.shuffle(mapping, shards=shards)
 
     # Reduction of shuffled map output.
-    self.reduce(shuffle, output, reducer, params=params)
+    self.reduce(shuffle, output, reducer, params=params, auxin=auxin)
     return output
 
   def start(self):
