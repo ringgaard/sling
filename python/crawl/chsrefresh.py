@@ -17,7 +17,7 @@ flags.define("--dump",
 
 flags.define("--chsdb",
              help="Database for Companies House records",
-             default="http://compute02.jbox.dk:7070/chs",
+             default="http://localhost:7070/chs",
              metavar="DBURL")
 
 flags.define("--new",

@@ -20,7 +20,7 @@ flags.define("--chskeys",
 
 flags.define("--chsdb",
              help="database for storing Companies House records",
-             default="http://compute02.jbox.dk:7070/chs",
+             default="http://localhost:7070/chs",
              metavar="DBURL")
 
 flags.define("--checkpoint",
