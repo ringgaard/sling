@@ -31,9 +31,11 @@
 #include "sling/util/fingerprint.h"
 
 DEFINE_bool(keys, false, "Only output keys");
+DEFINE_bool(values, false, "Only output values");
 DEFINE_bool(files, false, "Output file names");
 DEFINE_bool(store, false, "Input is a SLING store");
 DEFINE_bool(raw, false, "Output raw record");
+DEFINE_bool(json, false, "Input is JSON object");
 DEFINE_bool(lex, false, "Record values as lex encoded documents");
 DEFINE_string(key, "", "Only display records with matching key");
 DEFINE_int32(indent, 2, "Indentation for structured data");
@@ -75,8 +77,14 @@ void DisplayObject(const Object &object) {
 void DisplayObject(const Slice &value) {
   Store store;
   Text encoded(value.data(), value.size());
-  StringDecoder decoder(&store, encoded);
-  DisplayObject(decoder.Decode());
+  if (FLAGS_json) {
+    StringReader reader(&store, encoded);
+    reader.reader()->set_json(true);
+    DisplayObject(reader.Read());
+  } else {
+    StringDecoder decoder(&store, encoded);
+    DisplayObject(decoder.Decode());
+  }
 }
 
 void DisplayRaw(const Slice &value) {
@@ -85,7 +93,9 @@ void DisplayRaw(const Slice &value) {
 
 void DisplayRecord(const Slice &key, uint64 version, const Slice &value) {
   // Display key.
-  DisplayRaw(key);
+  if (!FLAGS_values) {
+    DisplayRaw(key);
+  }
 
   // Display version.
   if (FLAGS_version && version != 0) {
@@ -101,7 +111,7 @@ void DisplayRecord(const Slice &key, uint64 version, const Slice &value) {
 
   // Display value.
   if (!FLAGS_keys) {
-    if (!key.empty()) std::cout << ": ";
+    if (!FLAGS_values && !key.empty()) std::cout << ": ";
     if (FLAGS_raw) {
       DisplayRaw(value);
     } else {

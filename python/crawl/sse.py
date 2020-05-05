@@ -14,13 +14,13 @@ class SSEStream(object):
 
     # Pass additional named arguments to request.
     self.args = kwargs
-    self.headers = self.args.get('headers')
+    self.headers = self.args.get("headers")
     if self.headers is None:
       self.headers = {}
-      self.args['headers'] = self.headers
+      self.args["headers"] = self.headers
 
-    self.headers['Cache-Control'] = 'no-cache'
-    self.headers['Accept'] = 'text/event-stream'
+    self.headers["Cache-Control"] = "no-cache"
+    self.headers["Accept"] = "text/event-stream"
 
   def __iter__(self):
     while True:
@@ -28,14 +28,14 @@ class SSEStream(object):
       url = self.url
       if self.last:
         print("Restart stream from", self.last)
-        self.headers['Last-Event-ID'] = self.last
+        self.headers["Last-Event-ID"] = self.last
       elif self.since:
         url = url + "?since=" + str(self.since)
       r = self.session.get(url, stream=True, **self.args)
       r.raise_for_status()
 
       # Receive response stream and break it into messages.
-      buf = b''
+      buf = b""
       pos = 0
       for chunk in r.iter_content(self.chunk_size):
         buf = buf + chunk

@@ -11,7 +11,7 @@ flags.define("--newssites",
              help="domain names for news sites")
 
 flags.define("--apikeys",
-             default="local/reddit.json",
+             default="local/keys/reddit.json",
              help="Reddit API key file")
 
 flags.parse()

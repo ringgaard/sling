@@ -5,8 +5,7 @@ Load web pages in a web archive (WARC file) into a database.
 import requests
 import sling
 import sling.flags as flags
-#import sling.crawl.news as news
-import news
+import sling.crawl.news as news
 
 flags.define("warc",
              nargs="+",
