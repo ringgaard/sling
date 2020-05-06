@@ -25,6 +25,17 @@ flags.define("--new",
              default=False,
              action="store_true")
 
+flags.define("-v",
+             help="Output detailed information",
+             default=False,
+             action="store_true")
+
+flags.define("--max",
+             help="Maximum number of companies to output",
+             default=999999999,
+             type=int,
+             metavar="NUM")
+
 flags.parse()
 
 dbsession = requests.Session()
@@ -88,5 +99,10 @@ for row in reader:
 
   # Output company number.
   num_refresh += 1
-  print(num_refresh, "/", num_companies, company_no, company_name, latest)
+  if flags.arg.v:
+    print(num_refresh, "/", num_companies, company_no, company_name, latest)
+  else:
+    print(company_no)
+
+  if num_refresh >= flags.arg.max: break
 

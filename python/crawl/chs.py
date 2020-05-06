@@ -23,9 +23,8 @@ def init(apikeys, priority=10):
 
 # HTTP event stream.
 class CHSStream(object):
-  def __init__(self, timepoint=None, retry=60000):
+  def __init__(self, timepoint=None):
     self.timepoint = timepoint
-    self.retry = retry
     self.session = requests.Session()
 
   def __iter__(self):
@@ -35,12 +34,13 @@ class CHSStream(object):
       if self.timepoint:
         print("Restart stream from", self.timepoint)
         url = url + "?timepoint=" + str(self.timepoint)
-      r = self.session.get(url, auth=stream_credentials, stream=True)
+      r = self.session.get(url, auth=stream_credentials, stream=True,
+                           timeout=60)
       if r.status_code // 100 == 5:
         # Delay on server error.
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         print(now, r.status_code, r.reason)
-        time.sleep(self.retry / 1000.0)
+        time.sleep(60)
         continue
       r.raise_for_status()
 
@@ -62,7 +62,7 @@ class CHSStream(object):
         self.timepoint += 1
 
       # Delay before retry.
-      time.sleep(self.retry / 1000.0)
+      time.sleep(60)
 
 # Retrieve data from Companies House with rate limiting.
 def retrieve(url):
@@ -78,7 +78,7 @@ def retrieve(url):
   # Check status.
   if r.status_code != 200:
     if r.status_code == 404:
-      print("not found")
+      print("not found:", url)
       return None
     elif r.status_code == 429:
       print("too many requests")

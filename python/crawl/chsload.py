@@ -40,6 +40,12 @@ flags.define("--priority",
              type=int,
              metavar="NUM")
 
+flags.define("--delay",
+             help="Delay between updates (ms)",
+             default=0,
+             type=int,
+             metavar="NUM")
+
 flags.parse()
 
 # Initialize credentials
@@ -86,9 +92,7 @@ for line in fin:
 
   # Fetch company profile from Companies House.
   company = chs.retrieve_company(company_no)
-  if company == None:
-    print(company_no, "not found")
-    continue
+  if company == None: continue
   chs.retrieve_officers(company)
   chs.retrieve_owners(company)
 
@@ -97,8 +101,10 @@ for line in fin:
 
   num_companies_fetched += 1
   print(num_companies_fetched, "/", num_companies, company_no,
-        company.get("company_name"))
+        company.get("company_name"), "quota:", chs.quota_left)
   sys.stdout.flush()
+
+  if flags.arg.delay > 0: time.sleep(flags.arg.delay / 1000)
 
 fin.close()
 print("Done.")

@@ -127,10 +127,10 @@ while True:
 
   except requests.exceptions.ChunkedEncodingError:
     print("Stream closed")
-    time.sleep(10)
+    time.sleep(60 + queue.qsize())
 
   except Exception as e:
     print("Event error", type(e), ":", e)
     traceback.print_exc(file=sys.stdout)
-    time.sleep(10)
+    time.sleep(60)
 
