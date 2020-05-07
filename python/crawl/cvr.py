@@ -63,6 +63,7 @@ r.raise_for_status()
 # Fetch records.
 total_records = None
 num_records = 0
+num_updates = 0
 while True:
   # Parse response.
   response = json.loads(r.text)
@@ -100,6 +101,7 @@ while True:
               last_updated[:10], kind[2], cvrnr if cvrnr != None else cvrid,
               version, result)
         sys.stdout.flush()
+        num_updates += 1
 
     num_records += 1
 
@@ -111,7 +113,5 @@ while True:
                    json={"scroll": "1m", "scroll_id": scroll_id})
   r.raise_for_status()
 
-print(num_records, "/", total_records)
-
-print("Done.")
+print("Done", num_records, "/", total_records, ",", num_updates, "updates")
 
