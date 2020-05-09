@@ -29,8 +29,8 @@ flags.define("--checkpoint",
              metavar="FILE")
 
 flags.define("--checkpoint_interval",
-             help="How often checkpoint is written to disk",
-             default=100,
+             help="How often checkpoint is written to disk (seconds)",
+             default=60,
              type=int,
              metavar="NUM")
 
@@ -50,6 +50,7 @@ flags.parse()
 chs.init(flags.arg.chskeys)
 dbsession = requests.Session()
 num_changes = 0
+checkpoint = None
 
 # Determine timepoint for restart.
 timepoint = flags.arg.timepoint
@@ -92,17 +93,10 @@ def process_message(msg):
   r.raise_for_status()
   result = r.headers["Result"]
   print(timepoint, ts, company_no, company_name, result, chs.quota_left)
-
-  # Update checkpoint.
-  global num_changes
-  num_changes += 1
-  if flags.arg.checkpoint != None:
-    if num_changes % flags.arg.checkpoint_interval == 0:
-      print("CHECKPOINT", timepoint, "QUEUE:", queue.qsize())
-      with open(flags.arg.checkpoint, 'w') as ckpt:
-        ckpt.write(str(timepoint))
-
   sys.stdout.flush()
+
+  global checkpoint
+  checkpoint = timepoint
 
 # Set up event queue.
 def worker():
@@ -110,6 +104,9 @@ def worker():
     msg = queue.get()
     try:
       process_message(msg)
+    except Exception as e:
+      print("Error processing message:", msg)
+      traceback.print_exc()
     finally:
       queue.task_done()
 
@@ -117,6 +114,23 @@ queue = Queue(flags.arg.qsize)
 t = Thread(target=worker)
 t.daemon = True
 t.start()
+
+# Checkpoint thread.
+def checkpointer():
+  global checkpoint
+  while True:
+    if checkpoint != None:
+      print("CHECKPOINT", checkpoint, "QUEUE:", queue.qsize())
+      sys.stdout.flush()
+      with open(flags.arg.checkpoint, 'w') as ckpt:
+        ckpt.write(str(checkpoint))
+        checkpoint = None
+    time.sleep(flags.arg.checkpoint_interval)
+
+if flags.arg.checkpoint != None:
+  t = Thread(target=checkpointer)
+  t.daemon = True
+  t.start()
 
 # Receive events from Companies House streaming service.
 stream = chs.CHSStream(timepoint)
@@ -127,10 +141,11 @@ while True:
 
   except requests.exceptions.ChunkedEncodingError:
     print("Stream closed")
+    sys.stdout.flush()
     time.sleep(60 + queue.qsize())
 
   except Exception as e:
     print("Event error", type(e), ":", e)
-    traceback.print_exc(file=sys.stdout)
+    traceback.print_exc()
+    sys.stdout.flush()
     time.sleep(60)
-

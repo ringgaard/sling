@@ -45,9 +45,14 @@ class CHSStream(object):
       r.raise_for_status()
 
       # Receive response stream and break it into messages.
+      idle = 0
       for line in r.iter_lines():
         # Ignore keep-alive events.
-        if len(line) == 0: continue
+        if len(line) == 0:
+          # Raise error if only keep-alive messages are received.
+          idle += 1
+          if idle > 100: raise Exception("Stream inactive")
+          continue
 
         # Parse event.
         data = json.loads(line.decode("utf8"))
@@ -60,6 +65,7 @@ class CHSStream(object):
 
         # Go to next timepoint.
         self.timepoint += 1
+        idle = 0
 
       # Delay before retry.
       time.sleep(60)
