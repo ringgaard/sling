@@ -47,9 +47,9 @@ else:
   query = {"query": {
     "bool": {
       "should": [
-        {"range": {"Vrvirksomhed.sidstIndlaest": interval}},
-        {"range": {"Vrdeltagerperson.sidstIndlaest": interval}},
-        {"range": {"VrproduktionsEnhed.sidstIndlaest": interval}},
+        {"range": {"Vrvirksomhed.sidstOpdateret": interval}},
+        {"range": {"Vrdeltagerperson.sidstOpdateret": interval}},
+        {"range": {"VrproduktionsEnhed.sidstOpdateret": interval}},
       ]
     }
   }}
@@ -80,7 +80,7 @@ while True:
       # is used as the version number.
       cvrid = rec["enhedsNummer"]
       version = rec["samtId"]
-      last_updated = rec["sidstIndlaest"]
+      last_updated = rec["sidstOpdateret"]
       cvrnr = rec.get("cvrNummer")
 
       # Update company record in database. Only update record if the version
@@ -113,5 +113,5 @@ while True:
                    json={"scroll": "1m", "scroll_id": scroll_id})
   r.raise_for_status()
 
-print("Done", num_records, "/", total_records, ",", num_updates, "updates")
+print("Done,", num_records, "records,", num_updates, "updates.")
 
