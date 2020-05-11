@@ -232,11 +232,11 @@ const char *property_order[] = {
   "P53",     // family
   "P22",     // father
   "P25",     // mother
+  "P3373",   // sibling
   "P3448",   // stepparent
   "P26",     // spouse
   "P2842",   // place of marriage
   "P451",    // partner
-  "P3373",   // sibling
   "P1971",   // number of children
   "P40",     // child
   "P1038",   // relative
@@ -298,6 +298,7 @@ const char *property_order[] = {
   "P413",    // position played on team / speciality
   "P1618",   // sport number
   "P647",    // drafted by
+  "P505",    // general manager
   "P6087",   // coach of sports team
   "P54",     // member of sports team
 
@@ -336,12 +337,15 @@ const char *property_order[] = {
   "P1431",   // executive producer
   "P162",    // producer
   "P57",     // director
+  "P5126",   // assistant director
   "P344",    // director of photography
+  "P4608",   // scenographer
   "P86",     // composer
   "P676",    // lyrics by
   "P87",     // librettist
   "P3174",   // art director
   "P2515",   // costume designer
+  "P4805",   // make-up artist
   "P175",    // performer
   "P161",    // cast member
   "P725",    // voice actor

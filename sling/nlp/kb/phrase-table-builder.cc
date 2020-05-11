@@ -280,14 +280,19 @@ class PhraseTableBuilder : public task::FrameProcessor {
       Handles entity_item(commons_);
       HandleMap<int> entity_index;
       entity_item.resize(num_items);
+      bool missing = false;
       for (int i = 0; i < num_items; ++i) {
         const EntityPhrase &e = phrase->entities[i];
         const Entity &entity = entity_table_[e.index];
         Handle item = commons_->Lookup(entity.id);
-        CHECK(!item.IsNil()) << entity.id;
+        if (item.IsNil()) {
+          missing = true;
+          break;
+        }
         entity_item[i] = item;
         entity_index[item] = i;
       }
+      if (missing) continue;
 
       // Find potential targets for alias transfer.
       bool pruned = false;

@@ -33,9 +33,6 @@ class ItemReconciler : public task::FrameProcessor {
   }
 
   void Process(Slice key, const Frame &frame) override {
-    // Do not reconcile property frames.
-    if (frame.IsA(n_property_)) return;
-
     // Lookup the key in the store to get the reconciled id for the frame.
     Handle mapped = commons_->LookupExisting(key);
     Text id = key;
@@ -56,9 +53,6 @@ class ItemReconciler : public task::FrameProcessor {
   }
 
  private:
-  // Symbols.
-  Name n_property_{names_, "/w/property"};
-
   // Statistics.
   task::Counter *num_mapped_ids_ = nullptr;
 };

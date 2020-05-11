@@ -23,9 +23,11 @@ namespace nlp {
 
 // Language priority order.
 const char *Wiki::language_priority[] = {
-  "en", "da", "sv", "no", "de", "fr", "es", "it", "nl", "pt", "pl", "fi",
+  "en", "da", "sv", "no", "de", "fr", "es", "it",
+  "nl", "pt", "pl", "fi",
   "ca", "eu", "la", "eo", "cs", "sh", "hu", "ro",
   "el", "ru", "uk", "sr", "bg",
+  "ms", "sk", "hr", "lt", "lv", "et",
   "id", "af",
   nullptr,
 };
