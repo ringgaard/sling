@@ -48,6 +48,7 @@ cc_library(
     "//sling/myelin:gradient",
     "//sling/myelin:profile",
     "//sling/nlp/document",
+    "//sling/nlp/document:annotator",
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:lex",
     "//sling/nlp/document:phrase-tokenizer",
