@@ -939,7 +939,7 @@ class Builder : public External {
   void Update();
 
   // Clears all the slots.
-  Builder &Clear() { slots_.reset(); return *this; }
+  Builder &Clear();
 
   // Checks if this is a new frame, i.e. the existing handle is nil or points
   // to a proxy.
@@ -954,6 +954,10 @@ class Builder : public External {
 
   // Returns the handle for the builder.
   Handle handle() { return handle_; }
+
+  // Returns the range of slots.
+  Slot *begin() const { return slots_.base(); }
+  Slot *end() const { return slots_.end(); }
 
  private:
   // Initial number of slots reserved.

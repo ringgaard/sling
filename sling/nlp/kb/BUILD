@@ -27,6 +27,57 @@ cc_library(
 )
 
 cc_library(
+  name = "popularity",
+  srcs = ["popularity.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/task:accumulator",
+    "//sling/task:frames",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "reconciler",
+  srcs = ["reconciler.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/task:frames",
+    "//sling/task:reducer",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "xref",
+  srcs = ["xref.cc"],
+  hdrs = ["xref.h"],
+  deps = [
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/string:text",
+    "//sling/util:arena",
+    "//sling/util:fingerprint",
+  ],
+)
+
+cc_library(
+  name = "xref-builder",
+  srcs = ["xref-builder.cc"],
+  deps = [
+    ":xref",
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:serialization",
+    "//sling/frame:store",
+    "//sling/task:frames",
+    "//sling/util:mutex",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "name-table-builder",
   srcs = ["name-table-builder.cc"],
   deps = [

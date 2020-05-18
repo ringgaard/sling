@@ -71,6 +71,7 @@ static PyObject *RegisterPythonModule() {
 
   PyTokenizer::Define(module);
   PyParser::Define(module);
+  PyAnalyzer::Define(module);
 
   PyPhraseMatch::Define(module);
   PyPhraseTable::Define(module);

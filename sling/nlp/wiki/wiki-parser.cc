@@ -47,6 +47,7 @@ typedef std::unordered_map<string, WikiParser::Special> TemplatePrefixMap;
 // Link prefixes for images and categories.
 static const LinkPrefixMap link_prefix = {
   {"Archivo",    WikiParser::IMAGE},       // es
+  {"Attēls",     WikiParser::IMAGE},       // lv
   {"Bestand",    WikiParser::IMAGE},       // nl
   {"Berkas",     WikiParser::IMAGE},       // id
   {"Categoría",  WikiParser::CATEGORY},    // es
@@ -55,31 +56,34 @@ static const LinkPrefixMap link_prefix = {
   {"Categorie",  WikiParser::CATEGORY},    // nl, ro
   {"Category",   WikiParser::CATEGORY},    // en
   {"Datei",      WikiParser::IMAGE},       // de
-  {"Datoteka",   WikiParser::IMAGE},       // sh
+  {"Datoteka",   WikiParser::IMAGE},       // sh, hr
   {"Dosiero",    WikiParser::IMAGE},       // eo
   {"Fájl",       WikiParser::IMAGE},       // hu
   {"Fasciculus", WikiParser::IMAGE},       // la
   {"Ficheiro",   WikiParser::IMAGE},       // pt
   {"Fichier",    WikiParser::IMAGE},       // fr
-  {"File",       WikiParser::IMAGE},       // en, el
+  {"File",       WikiParser::IMAGE},       // en, el, ms, et
   {"Fil",        WikiParser::IMAGE},       // da, no, sv
   {"Fișier",     WikiParser::IMAGE},       // ro
   {"Fitxategi",  WikiParser::IMAGE},       // eu
   {"Fitxer",     WikiParser::IMAGE},       // ca
   {"Image",      WikiParser::IMAGE},       // en
   {"Immagine",   WikiParser::IMAGE},       // it
-  {"Kategória",  WikiParser::CATEGORY},    // hu
+  {"Kategória",  WikiParser::CATEGORY},    // hu, sk
   {"Kategoria",  WikiParser::CATEGORY},    // pl, eu
   {"Kategorie",  WikiParser::CATEGORY},    // de, cs, af
-  {"Kategorija", WikiParser::CATEGORY},    // sh
+  {"Kategooria", WikiParser::CATEGORY},    // et
+  {"Kategorija", WikiParser::CATEGORY},    // sh, hr, lt, lv
   {"Kategorio",  WikiParser::CATEGORY},    // eo
-  {"Kategori",   WikiParser::CATEGORY},    // da, no, sv, id
+  {"Kategori",   WikiParser::CATEGORY},    // da, no, sv, id, ms
   {"Lêer",       WikiParser::IMAGE},       // af
   {"Luokka",     WikiParser::CATEGORY},    // fi
   {"Media",      WikiParser::IMAGE},       // en
   {"Plik",       WikiParser::IMAGE},       // pl
   {"Soubor",     WikiParser::IMAGE},       // cs
+  {"Súbor",      WikiParser::IMAGE},       // sk
   {"Tiedosto",   WikiParser::IMAGE},       // fi
+  {"Vaizdas",    WikiParser::IMAGE},       // lt
   {"Κατηγορία",  WikiParser::CATEGORY},    // el
   {"Датотека",   WikiParser::IMAGE},       // sr
   {"Категорија", WikiParser::CATEGORY},    // sr

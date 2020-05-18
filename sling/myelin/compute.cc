@@ -691,6 +691,30 @@ string Tensor::ToString(const char *data, bool deref) const {
       str.append("]");
     }
     str.append("]");
+  } else if (rank() == 3) {
+    // 3D tensor.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) {
+        str.append(",");
+        if (dim(0) > 1) str.append("\n ");
+      }
+      str.append("[");
+      for (int c = 0; c < dim(1); ++c) {
+        if (c > 0) {
+          str.append(",");
+          if (dim(1) > 1) str.append("\n  ");
+        }
+        str.append("[");
+        for (int k = 0; k < dim(2); ++k) {
+          if (k > 0) str.append(",");
+          str.append(traits.str(data + offset(r, c, k)));
+        }
+        str.append("]");
+      }
+      str.append("]");
+    }
+    str.append("]");
   } else {
     str = "<<" + std::to_string(rank()) + "D tensor>>";
   }

@@ -1063,6 +1063,9 @@ class Store {
   // Resolve handle by following is: chain.
   Handle Resolve(Handle handle) const;
 
+  // Get symbol name.
+  Text SymbolName(Handle handle) const;
+
   // Get frame id.
   Text FrameId(Handle handle) const;
 

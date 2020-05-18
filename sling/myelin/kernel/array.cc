@@ -118,7 +118,7 @@ class Resize : public Kernel {
       // Copy input to output.
       __ movq(cnt, xsize);
       __ cmpq(cnt, ysize);
-      __ cmovq(less, cnt, ysize);
+      __ cmovq(greater, cnt, ysize);
       __ repmovsb();
 
       // Pad output if needed.
@@ -129,7 +129,6 @@ class Resize : public Kernel {
       __ xorq(acc, acc);
       __ repstosb();
       __ bind(&skip);
-
     } else if (shared) {
      // Pad output if needed.
      if (pad) {

@@ -48,6 +48,7 @@ cc_library(
     "//sling/myelin:gradient",
     "//sling/myelin:profile",
     "//sling/nlp/document",
+    "//sling/nlp/document:annotator",
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:lex",
     "//sling/nlp/document:phrase-tokenizer",
@@ -89,6 +90,9 @@ cc_library(
     "//sling/nlp/document:vocabulary-builder",
 
     "//sling/nlp/kb:fact-lexicon",
+    "//sling/nlp/kb:popularity",
+    "//sling/nlp/kb:xref-builder",
+    "//sling/nlp/kb:reconciler",
     "//sling/nlp/kb:name-table-builder",
     "//sling/nlp/kb:phrase-table-builder",
 

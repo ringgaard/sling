@@ -132,6 +132,14 @@ commands = [
   ),
 
   # Knowledge base.
+  Command("collect_xrefs",
+    help="Collect cross-references from items",
+    package="sling.task.wiki",
+  ),
+  Command("reconcile_items",
+    help="Reconcile items from Wikidata with other sources",
+    package="sling.task.wiki",
+  ),
   Command("fuse_items",
     help="Fuse items from Wikidata and Wikipedia",
     package="sling.task.wiki",

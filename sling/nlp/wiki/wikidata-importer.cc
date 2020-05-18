@@ -355,31 +355,6 @@ class WikipediaMapping : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("wikipedia-mapping", WikipediaMapping);
 
-// Merge items with the same qid.
-class ItemMerger : public task::Reducer {
- public:
-  void Reduce(const task::ReduceInput &input) override {
-    if (input.messages().size() == 1) {
-      // Only one frame for item; output directly.
-      Output(input.shard(), input.release(0));
-    } else {
-      // Merge all items.
-      Store store;
-      Builder builder(&store);
-      for (task::Message *message : input.messages()) {
-        Frame item = DecodeMessage(&store, message);
-        builder.AddFrom(item);
-      }
-
-      // Output merged categories for item.
-      Frame merged = builder.Create();
-      Output(input.shard(), task::CreateMessage(input.key(), merged));
-    }
-  }
-};
-
-REGISTER_TASK_PROCESSOR("item-merger", ItemMerger);
-
 // Prune Wikidata items for knowledge base repository.
 class WikidataPruner : public task::FrameProcessor {
  public:

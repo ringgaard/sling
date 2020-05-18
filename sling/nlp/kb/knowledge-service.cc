@@ -88,6 +88,7 @@ const char *property_order[] = {
   "P740",    // location of formation
   "P571",    // inception
   "P576",    // dissolved, abolished or demolished
+  "P1619",   // date of official opening
   "P36",     // capital
   "P159",    // headquarters location
   "P291",    // place of publication
@@ -181,10 +182,14 @@ const char *property_order[] = {
   "P1301",   // number of elevators
   "P88",     // commissioned by
   "P466",    // occupant
+  "P287",    // designed by
   "P84",     // architect
+  "P170",    // creator
   "P631",    // structural engineer
   "P193",    // main building contractor
   "P126",    // maintained by
+  "P1398",   // structure replaces
+  "P167",    // structure replaced by
 
   // Person.
   "P21",     // sex or gender
@@ -230,11 +235,11 @@ const char *property_order[] = {
   "P53",     // family
   "P22",     // father
   "P25",     // mother
+  "P3373",   // sibling
   "P3448",   // stepparent
   "P26",     // spouse
   "P2842",   // place of marriage
   "P451",    // partner
-  "P3373",   // sibling
   "P1971",   // number of children
   "P40",     // child
   "P1038",   // relative
@@ -296,6 +301,7 @@ const char *property_order[] = {
   "P413",    // position played on team / speciality
   "P1618",   // sport number
   "P647",    // drafted by
+  "P505",    // general manager
   "P6087",   // coach of sports team
   "P54",     // member of sports team
 
@@ -322,6 +328,7 @@ const char *property_order[] = {
   "P358",    // discography
   "P1283",   // filmography
   "P135",    // movement
+  "P180",    // depicts
 
   "P50",     // author
   "P2679",   // author of foreword
@@ -334,12 +341,15 @@ const char *property_order[] = {
   "P1431",   // executive producer
   "P162",    // producer
   "P57",     // director
+  "P5126",   // assistant director
   "P344",    // director of photography
+  "P4608",   // scenographer
   "P86",     // composer
   "P676",    // lyrics by
   "P87",     // librettist
   "P3174",   // art director
   "P2515",   // costume designer
+  "P4805",   // make-up artist
   "P175",    // performer
   "P161",    // cast member
   "P725",    // voice actor
@@ -357,6 +367,7 @@ const char *property_order[] = {
   "P4969",   // derivative work
   "P179",    // part of the series
   "P747",    // has edition
+  "P186",    // material used
 
   // Event.
   "P585",    // point in time

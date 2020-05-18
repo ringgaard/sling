@@ -23,9 +23,11 @@ namespace nlp {
 
 // Language priority order.
 const char *Wiki::language_priority[] = {
-  "en", "da", "sv", "no", "de", "fr", "es", "it", "nl", "pt", "pl", "fi",
+  "en", "da", "sv", "no", "de", "fr", "es", "it",
+  "nl", "pt", "pl", "fi",
   "ca", "eu", "la", "eo", "cs", "sh", "hu", "ro",
   "el", "ru", "uk", "sr", "bg",
+  "ms", "sk", "hr", "lt", "lv", "et",
   "id", "af",
   nullptr,
 };
@@ -154,6 +156,8 @@ void AuxFilter::Init(Store *store) {
     "Q8054",      // protein
     "Q11173",     // chemical compound
     "Q30612",     // clinical trial
+    "Q523",       // star
+    "Q318",       // galaxy
     nullptr,
   };
   for (const char **type = kAuxItemtypes; *type; ++type) {

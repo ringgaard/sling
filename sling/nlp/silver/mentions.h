@@ -422,9 +422,6 @@ class SpanAnnotator {
   // Initialize annotator.
   void Init(Store *commons, const Resources &resources);
 
-  // Add stop words.
-  void AddStopWords(const std::vector<string> &words);
-
   // Run annotators on document and add annotations to output document.
   void Annotate(const Document &document, Document *output);
 
