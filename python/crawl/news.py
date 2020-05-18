@@ -171,7 +171,7 @@ crawlsession = requests.Session()
 
 def store(url, date, content):
   """Store article in database."""
-  if type(date) is str: date = iso2date(date)
+  if type(date) is str: date = iso2ts(date)
   r = dbsession.put(
     flags.arg.crawldb + "/" + urllib.parse.quote(url),
     headers={

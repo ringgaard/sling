@@ -88,6 +88,7 @@ const char *property_order[] = {
   "P740",    // location of formation
   "P571",    // inception
   "P576",    // dissolved, abolished or demolished
+  "P1619",   // date of official opening
   "P36",     // capital
   "P159",    // headquarters location
   "P291",    // place of publication
@@ -181,7 +182,9 @@ const char *property_order[] = {
   "P1301",   // number of elevators
   "P88",     // commissioned by
   "P466",    // occupant
+  "P287",    // designed by
   "P84",     // architect
+  "P170",    // creator
   "P631",    // structural engineer
   "P193",    // main building contractor
   "P126",    // maintained by
@@ -325,6 +328,7 @@ const char *property_order[] = {
   "P358",    // discography
   "P1283",   // filmography
   "P135",    // movement
+  "P180",    // depicts
 
   "P50",     // author
   "P2679",   // author of foreword
@@ -363,6 +367,7 @@ const char *property_order[] = {
   "P4969",   // derivative work
   "P179",    // part of the series
   "P747",    // has edition
+  "P186",    // material used
 
   // Event.
   "P585",    // point in time

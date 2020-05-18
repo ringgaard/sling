@@ -70,10 +70,12 @@ class ParserTrainer : public task::LearnerTask {
     }
 
     // Open training and evaluation corpora.
-    training_corpus_ =
-      new DocumentCorpus(&commons_, task->GetInputFiles("training_corpus"));
-    evaluation_corpus_ =
-      new DocumentCorpus(&commons_, task->GetInputFiles("evaluation_corpus"));
+    auto train =  task->GetInputFiles("training_corpus");
+    auto eval =  task->GetInputFiles("evaluation_corpus");
+    training_corpus_ = new DocumentCorpus(&commons_, train);
+    if (!eval.empty()) {
+      evaluation_corpus_ = new DocumentCorpus(&commons_, eval);
+    }
 
     // Output file for model.
     auto *model_file = task->GetOutput("model");
@@ -224,12 +226,16 @@ class ParserTrainer : public task::LearnerTask {
               << " p=" << p;
 
     // Evaluate current model on held-out evaluation corpus.
-    ParserEvaulationCorpus corpus(this);
-    FrameEvaluation::Output eval;
-    FrameEvaluation::Evaluate(&corpus, &eval);
-    FrameEvaluation::Benchmarks benchmarks;
-    eval.GetBenchmarks(&benchmarks);
-    for (const auto &benchmark : benchmarks) LOG(INFO) << benchmark.Summary();
+    if (evaluation_corpus_ != nullptr) {
+      ParserEvaulationCorpus corpus(this);
+      FrameEvaluation::Output eval;
+      FrameEvaluation::Evaluate(&corpus, &eval);
+      FrameEvaluation::Benchmarks benchmarks;
+      eval.GetBenchmarks(&benchmarks);
+      for (const auto &benchmark : benchmarks) {
+        LOG(INFO) << benchmark.Summary();
+      }
+    }
 
     return true;
   }
