@@ -13,10 +13,13 @@ cc_binary(
   srcs = ["codex.cc"],
   deps = [
     "//sling/base",
+    "//sling/db:dbclient",
     "//sling/file",
     "//sling/file:recordio",
     "//sling/file:posix",
     "//sling/frame",
+    "//sling/nlp/document",
+    "//sling/nlp/document:lex",
     "//sling/stream:memory",
     "//sling/string:printf",
     "//sling/util:fingerprint",

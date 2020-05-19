@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <unistd.h>
 #include <iostream>
 #include <string>
 
@@ -19,54 +20,102 @@
 #include "sling/base/flags.h"
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
+#include "sling/db/dbclient.h"
 #include "sling/file/file.h"
 #include "sling/file/recordio.h"
 #include "sling/frame/serialization.h"
 #include "sling/frame/store.h"
+#include "sling/nlp/document/document.h"
+#include "sling/nlp/document/lex.h"
 #include "sling/string/printf.h"
 #include "sling/util/fingerprint.h"
 
 DEFINE_bool(keys, false, "Only output keys");
+DEFINE_bool(values, false, "Only output values");
 DEFINE_bool(files, false, "Output file names");
-DEFINE_bool(frames, false, "Record values as encoded frames");
+DEFINE_bool(store, false, "Input is a SLING store");
+DEFINE_bool(raw, false, "Output raw record");
+DEFINE_bool(json, false, "Input is JSON object");
+DEFINE_bool(lex, false, "Record values as lex encoded documents");
 DEFINE_string(key, "", "Only display records with matching key");
 DEFINE_int32(indent, 2, "Indentation for structured data");
 DEFINE_int32(limit, 0, "Maximum number of records to output");
-DEFINE_bool(utf8, false, "Allow UTF8-encoded output");
+DEFINE_int32(batch, 1, "Batch size for fetching records from database");
+DEFINE_bool(utf8, true, "Allow UTF8-encoded output");
+DEFINE_bool(db, false, "Read input from database");
+DEFINE_bool(version, false, "Output record version");
+DEFINE_bool(follow, false, "Incrementally fetch new changes");
+DEFINE_int32(poll, 1000, "Poll interval (in ms) for incremental fetching");
+DEFINE_string(field, "", "Only display a single field from frame");
+DEFINE_bool(timestamp, false, "Output version as timestamp");
 
 using namespace sling;
+using namespace sling::nlp;
 
 int records_output = 0;
 
-void DisplayFrame(const Slice &value) {
+void DisplayObject(const Object &object) {
+  if (FLAGS_lex && object.IsFrame()) {
+    Document document(object.AsFrame());
+    std::cout << ToLex(document);
+  } else {
+    StringPrinter printer(object.store());
+    printer.printer()->set_indent(FLAGS_indent);
+    printer.printer()->set_shallow(false);
+    printer.printer()->set_utf8(FLAGS_utf8);
+    if (!FLAGS_field.empty() && object.IsFrame()) {
+      Frame frame = object.AsFrame();
+      Handle value = frame.GetHandle(FLAGS_field);
+      printer.Print(value);
+    } else {
+      printer.Print(object);
+    }
+    std::cout << printer.text();
+  }
+}
+
+void DisplayObject(const Slice &value) {
   Store store;
   Text encoded(value.data(), value.size());
-  StringDecoder decoder(&store, encoded);
-
-  StringPrinter printer(&store);
-  printer.printer()->set_indent(FLAGS_indent);
-  printer.printer()->set_shallow(false);
-  printer.printer()->set_utf8(FLAGS_utf8);
-  printer.Print(decoder.Decode());
-
-  std::cout << printer.text();
+  if (FLAGS_json) {
+    StringReader reader(&store, encoded);
+    reader.reader()->set_json(true);
+    DisplayObject(reader.Read());
+  } else {
+    StringDecoder decoder(&store, encoded);
+    DisplayObject(decoder.Decode());
+  }
 }
 
 void DisplayRaw(const Slice &value) {
   std::cout.write(value.data(), value.size());
 }
 
-void DisplayRecord(const Slice &key, const Slice &value) {
+void DisplayRecord(const Slice &key, uint64 version, const Slice &value) {
   // Display key.
-  DisplayRaw(key);
+  if (!FLAGS_values) {
+    DisplayRaw(key);
+  }
+
+  // Display version.
+  if (FLAGS_version && version != 0) {
+    if (FLAGS_timestamp) {
+      char datebuf[32];
+      time_t time = version;
+      strftime(datebuf, sizeof(datebuf), "%FT%TZ", gmtime(&time));
+      std::cout << " [" << datebuf << "]";
+    } else {
+      std::cout << " [" << version << "]";
+    }
+  }
 
   // Display value.
   if (!FLAGS_keys) {
-    if (!key.empty()) std::cout << ": ";
-    if (FLAGS_frames) {
-      DisplayFrame(value);
-    } else {
+    if (!FLAGS_values && !key.empty()) std::cout << ": ";
+    if (FLAGS_raw) {
       DisplayRaw(value);
+    } else {
+      DisplayObject(value);
     }
   }
 
@@ -76,22 +125,69 @@ void DisplayRecord(const Slice &key, const Slice &value) {
 
 void DisplayFile(const string &filename) {
   if (FLAGS_files) std::cout << "File " << filename << ":\n";
-  RecordReader reader(filename);
-  while (!reader.Done()) {
-    // Read next record.
+  if (FLAGS_store) {
+    Store store;
+    FileInputStream stream(filename);
+    InputParser parser(&store, &stream);
+    while (!parser.done()) {
+      DisplayObject(parser.Read());
+    }
+  } else if (FLAGS_db) {
+    DBClient db;
+    CHECK(db.Connect(filename));
+    if (FLAGS_key.empty()) {
+      std::vector<DBRecord> records;
+      uint64 iterator = 0;
+      if (FLAGS_follow) CHECK(db.Epoch(&iterator));
+      for (;;) {
+        Status st = db.Next(&iterator, FLAGS_batch, &records);
+        if (!st.ok()) {
+          if (st.code() == ENOENT) {
+            if (!FLAGS_follow) break;
+            usleep(FLAGS_poll * 1000);
+          } else {
+            LOG(FATAL) << "Error reading from database "
+                       << filename << ": " << st;
+          }
+        }
+        for (auto &record : records) {
+          DisplayRecord(record.key, record.version, record.value);
+        }
+      }
+    } else {
+      DBRecord record;
+      CHECK(db.Get(FLAGS_key, &record));
+      if (!record.value.empty()) {
+        DisplayRecord(record.key, record.version, record.value);
+      }
+    }
+    CHECK(db.Close());
+  } else if (!FLAGS_key.empty()) {
+    RecordFileOptions options;
+    RecordDatabase db(filename, options);
     Record record;
-    CHECK(reader.Read(&record));
+    if (db.Lookup(FLAGS_key, &record)) {
+      // Display record.
+      DisplayRecord(record.key, record.version, record.value);
+    }
+  } else {
+    RecordReader reader(filename);
+    while (!reader.Done()) {
+      // Read next record.
+      Record record;
+      CHECK(reader.Read(&record));
 
-    // Check for key match.
-    if (!FLAGS_key.empty() && record.key != FLAGS_key) continue;
+      // Check for key match.
+      if (!FLAGS_key.empty() && record.key != FLAGS_key) continue;
 
-    // Display record.
-    DisplayRecord(record.key, record.value);
+      // Display record.
+      DisplayRecord(record.key, record.version, record.value);
 
-    // Check record limit.
-    if (FLAGS_limit > 0 && records_output >= FLAGS_limit) break;
+      // Check record limit.
+      if (FLAGS_limit > 0 && records_output >= FLAGS_limit) break;
+    }
+    CHECK(reader.Close());
   }
-  CHECK(reader.Close());
 }
 
 int main(int argc, char *argv[]) {
@@ -103,7 +199,11 @@ int main(int argc, char *argv[]) {
 
   std::vector<string> files;
   for (int i = 1; i < argc; ++i) {
-    File::Match(argv[i], &files);
+    if (FLAGS_db) {
+      files.push_back(argv[i]);
+    } else {
+      File::Match(argv[i], &files);
+    }
   }
 
   if (FLAGS_key.empty()) {

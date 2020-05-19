@@ -112,6 +112,10 @@ class InternalFile : public File {
     return Status::OK;
   }
 
+  Status Resize(uint64 size) override {
+    return Status(EACCES, "File read-only", file_->name);
+  }
+
   string filename() const override { return file_->name; }
 
  private:
@@ -178,6 +182,10 @@ class InternalDirectory : public File {
 
   Status Flush() override {
     return Status::OK;
+  }
+
+  Status Resize(uint64 size) override {
+    return Status(EACCES, "Directory read-only", name_);
   }
 
   string filename() const override { return name_; }

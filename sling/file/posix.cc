@@ -96,16 +96,33 @@ class PosixFile : public File {
   }
 
   Status Write(const void *buffer, size_t size) override {
-    ssize_t rc = write(fd_, buffer, size);
-    if (rc < 0) IOError(filename_, errno);
-    if (rc < size) IOError(filename_, EIO);
+    // On Linux, write() will transfer at most 0x7ffff000 bytes.
+    if (size <= 0x7ffff000) {
+      ssize_t rc = write(fd_, buffer, size);
+      if (rc < 0) IOError(filename_, errno);
+      if (rc != size) IOError(filename_, EIO);
+    } else {
+      while (size > 0) {
+        size_t bytes = size;
+        if (bytes > 0x7ffff000) bytes = 0x7ffff000;
+        ssize_t rc = write(fd_, buffer, bytes);
+        if (rc < 0) IOError(filename_, errno);
+        size -= bytes;
+      }
+    }
     return Status::OK;
   }
 
   void *MapMemory(uint64 pos, size_t size, bool writable) override {
     void *mapping = mmap(nullptr, size, PROT_READ | PROT_WRITE,
-                         writable ? MAP_SHARED : MAP_PRIVATE, fd_, pos);
+                         (writable ? MAP_SHARED : MAP_PRIVATE) | MAP_POPULATE,
+                         fd_, pos);
     return mapping == MAP_FAILED ? nullptr : mapping;
+  }
+
+  Status Resize(uint64 size) override {
+    if (ftruncate(fd_, size) == -1) return IOError(filename_, errno);
+    return Status::OK;
   }
 
   Status Seek(uint64 pos) override {

@@ -53,77 +53,36 @@ class SliceSource : public snappy::Source {
   int pos_ = 0;
 };
 
+// Buffer compression sink.
+class BufferSink : public snappy::Sink {
+ public:
+  BufferSink(IOBuffer *buffer) : buffer_(buffer) {}
+
+  void Append(const char *bytes, size_t n) override {
+    buffer_->Write(bytes, n);
+  }
+
+  char *GetAppendBuffer(size_t length, char *scratch) override {
+    buffer_->Ensure(length);
+    return buffer_->end();
+  }
+
+  char *GetAppendBufferVariable(
+      size_t min_size, size_t desired_size_hint,
+      char *scratch, size_t scratch_size,
+      size_t *allocated_size) override {
+    if (buffer_->available() < min_size) {
+      buffer_->Ensure(desired_size_hint > 0 ? desired_size_hint : min_size);
+    }
+    *allocated_size = buffer_->remaining();
+    return buffer_->end();
+  }
+
+ private:
+  IOBuffer *buffer_;
+};
+
 }  // namespace
-
-RecordBuffer::~RecordBuffer() {
-  free(floor_);
-}
-
-void RecordBuffer::resize(size_t bytes) {
-  size_t size = ceil_ - floor_;
-  if (size != bytes) {
-    size_t offset = begin_ - floor_;
-    size_t used = end_ - begin_;
-    floor_ = static_cast<char *>(realloc(floor_, bytes));
-    CHECK(floor_ != nullptr);
-    ceil_ = floor_ + bytes;
-    begin_ = floor_ + offset;
-    end_ = begin_ + used;
-  }
-}
-
-void RecordBuffer::ensure(size_t bytes) {
-  size_t minsize = end_ - floor_ + bytes;
-  size_t newsize = ceil_ - floor_;
-  if (newsize == 0) newsize = 4096;
-  while (newsize < minsize) newsize *= 2;
-  resize(newsize);
-}
-
-void RecordBuffer::flush() {
-  if (begin_ > floor_) {
-    size_t used = end_ - begin_;
-    memmove(floor_, begin_, used);
-    begin_ = floor_;
-    end_ = begin_ + used;
-  }
-}
-
-void RecordBuffer::Append(const char *bytes, size_t n) {
-  ensure(n);
-  if (bytes != end_) memcpy(end_, bytes, n);
-  end_ += n;
-}
-
-char *RecordBuffer::GetAppendBuffer(size_t length, char *scratch) {
-  ensure(length);
-  return end_;
-}
-
-char *RecordBuffer::GetAppendBufferVariable(
-    size_t min_size, size_t desired_size_hint,
-    char *scratch, size_t scratch_size,
-    size_t *allocated_size) {
-  if (size() < min_size) {
-    ensure(desired_size_hint > 0 ? desired_size_hint : min_size);
-  }
-  *allocated_size = remaining();
-  return end_;
-}
-
-size_t RecordBuffer::Available() const {
-  return end_ - begin_;
-}
-
-const char *RecordBuffer::Peek(size_t *len) {
-  *len = end_ - begin_;
-  return begin_;
-}
-
-void RecordBuffer::Skip(size_t n) {
-  DCHECK_LE(n, end_ - begin_);
-  begin_ += n;
-}
 
 RecordFile::IndexPage::IndexPage(uint64 pos, const Slice &data) {
   position = pos;
@@ -156,11 +115,11 @@ int RecordFile::IndexPage::Find(uint64 fp) const {
   return lo;
 }
 
-int RecordFile::ReadHeader(const char *data, Header *header) {
+size_t RecordFile::ReadHeader(const char *data, Header *header) {
   // Read record type.
   const char *p = data;
   header->record_type = static_cast<RecordType>(*p++);
-  if (header->record_type > INDEX_RECORD) return -1;
+  if (!ValidRecordType(header->record_type)) return -1;
 
   // Read record length.
   p = Varint::Parse64(p, &header->record_size);
@@ -173,11 +132,18 @@ int RecordFile::ReadHeader(const char *data, Header *header) {
     p = Varint::Parse64(p, &header->key_size);
   }
 
+  // Read version.
+  if (header->record_type == VDATA_RECORD) {
+    p = Varint::Parse64(p, &header->version);
+  } else {
+    header->version = 0;
+  }
+
   // Return number of bytes consumed.
   return p - data;
 }
 
-int RecordFile::WriteHeader(const Header &header, char *data) {
+size_t RecordFile::WriteHeader(const Header &header, char *data) {
   // Write record type.
   char *p = data;
   *p++ = header.record_type;
@@ -190,6 +156,11 @@ int RecordFile::WriteHeader(const Header &header, char *data) {
     p = Varint::Encode64(p, header.key_size);
   }
 
+  // Write version.
+  if (header.record_type == VDATA_RECORD) {
+    p = Varint::Encode64(p, header.version);
+  }
+
   // Return number of bytes written.
   return p - data;
 }
@@ -200,20 +171,22 @@ RecordReader::RecordReader(File *file,
     : file_(file), owned_(owned) {
   // Allocate input buffer.
   CHECK_GE(options.buffer_size, sizeof(FileHeader));
-  input_.resize(options.buffer_size);
-  CHECK(Fill());
+  CHECK_GE(options.buffer_size, MAX_HEADER_LEN);
+  input_.Reset(options.buffer_size);
+  position_ = 0;
+  CHECK(Fill(sizeof(FileHeader)));
 
   // Read record file header.
-  CHECK_GE(input_.size(), 8)
+  CHECK_GE(input_.available(), 8)
       << "Record file truncated: " << file->filename();
   memset(&info_, 0, sizeof(FileHeader));
   memcpy(&info_, input_.begin(), 8);
   CHECK(info_.magic == MAGIC1 || info_.magic == MAGIC2)
       << "Not a record file: " << file->filename();
-  CHECK_GE(input_.size(), info_.hdrlen);
+  CHECK_GE(input_.available(), info_.hdrlen);
   size_t hdrlen = info_.hdrlen;
   memcpy(&info_, input_.begin(), std::min(hdrlen, sizeof(FileHeader)));
-  input_.consumed(hdrlen);
+  input_.Consume(hdrlen);
   position_ = hdrlen;
 
   // Get size of file. The index records are always at the end of the file.
@@ -247,26 +220,59 @@ Status RecordReader::Close() {
   return Status::OK;
 }
 
-Status RecordReader::Fill() {
-  input_.flush();
-  uint64 bytes;
-  Status s = file_->Read(input_.end(), input_.remaining(), &bytes);
+Status RecordReader::Fill(uint64 needed) {
+  // Flush input buffer to make room for more data.
+  input_.Flush();
+
+  // Determine how many bytes need to be read.
+  DCHECK_LE(needed, input_.capacity());
+  uint64 requested;
+  if (readahead_) {
+    requested = needed - input_.available();
+  } else {
+    requested = input_.remaining();
+  }
+  DCHECK_GT(requested, 0);
+
+  // Fill buffer from file.
+  uint64 read;
+  Status s = file_->Read(input_.end(), requested, &read);
   if (!s.ok()) return s;
-  input_.appended(bytes);
+  input_.Append(read);
+  return Status::OK;
+}
+
+Status RecordReader::Ensure(uint64 size) {
+  if (input_.available() < size) {
+    // Expand input buffer if needed.
+    if (input_.capacity() < size) {
+      input_.Resize(size);
+    }
+
+    // Read more data into input buffer.
+    Status s = Fill(size);
+    if (!s.ok()) return s;
+
+    // Make sure we have enough data.
+    if (input_.available() < size) {
+      return Status(1, "Record truncated");
+    }
+  }
+
   return Status::OK;
 }
 
 Status RecordReader::Read(Record *record) {
   for (;;) {
     // Fill input buffer if it is nearly empty.
-    if (input_.size() < MAX_HEADER_LEN) {
-      Status s = Fill();
+    if (input_.available() < MAX_HEADER_LEN) {
+      Status s = Fill(MAX_HEADER_LEN);
       if (!s.ok()) return s;
     }
 
     // Read record header.
     Header hdr;
-    int hdrsize = ReadHeader(input_.begin(), &hdr);
+    size_t hdrsize = ReadHeader(input_.begin(), &hdr);
     if (hdrsize < 0) return Status(1, "Corrupt record header");
 
     // Skip filler records.
@@ -275,33 +281,20 @@ Status RecordReader::Read(Record *record) {
       if (!s.ok()) return s;
       continue;
     } else {
-      input_.consumed(hdrsize);
+      input_.Consume(hdrsize);
       record->position = position_;
       record->type = hdr.record_type;
+      record->version = hdr.version;
       position_ += hdrsize;
     }
 
     // Read record into input buffer.
-    if (hdr.record_size > input_.size()) {
-      // Expand input buffer if needed.
-      if (hdr.record_size > input_.capacity()) {
-        input_.resize(hdr.record_size);
-      }
-
-      // Read more data into input buffer.
-      Status s = Fill();
-      if (!s.ok()) return s;
-
-      // Make sure we have enough data.
-      if (hdr.record_size > input_.size()) {
-        return Status(1, "Record truncated");
-      }
-    }
+    Status s = Ensure(hdr.record_size);
+    if (!s.ok()) return s;
 
     // Get record key.
     if (hdr.key_size > 0) {
-      record->key = Slice(input_.begin(), hdr.key_size);
-      input_.consumed(hdr.key_size);
+      record->key = Slice(input_.Consume(hdr.key_size), hdr.key_size);
     } else {
       record->key = Slice();
     }
@@ -310,51 +303,116 @@ Status RecordReader::Read(Record *record) {
     size_t value_size = hdr.record_size - hdr.key_size;
     if (info_.compression == SNAPPY) {
       // Decompress record value.
-      decompressed_data_.clear();
-      snappy::ByteArraySource source(input_.begin(), value_size);
-      CHECK(snappy::Uncompress(&source, &decompressed_data_));
-      input_.consumed(value_size);
-      record->value =
-          Slice(decompressed_data_.begin(), decompressed_data_.end());
+      buffer_.Clear();
+      snappy::ByteArraySource source(input_.Consume(value_size), value_size);
+      BufferSink sink(&buffer_);
+      CHECK(snappy::Uncompress(&source, &sink));
+      record->value = buffer_.data();
     } else if (info_.compression == UNCOMPRESSED) {
-      record->value = Slice(input_.begin(), value_size);
-      input_.consumed(value_size);
+      record->value = Slice(input_.Consume(value_size), value_size);
     } else {
       return Status(1, "Unknown compression type");
     }
 
     position_ += hdr.record_size;
+    readahead_ = true;
+
     return Status::OK;
   }
 }
 
-Status RecordReader::Skip(int64 n) {
-  // Check if we can skip to position in input buffer.
-  position_ += n;
-  char *ptr = input_.begin() + n;
-  if (ptr >= input_.floor() && ptr < input_.end()) {
-    input_.consumed(n);
+Status RecordReader::ReadKey(Record *record) {
+  for (;;) {
+    // Fill input buffer if it is nearly empty.
+    if (input_.available() < MAX_HEADER_LEN) {
+      Status s = Fill(MAX_HEADER_LEN);
+      if (!s.ok()) return s;
+    }
+
+    // Read record header.
+    Header hdr;
+    size_t hdrsize = ReadHeader(input_.begin(), &hdr);
+    if (hdrsize < 0) return Status(1, "Corrupt record header");
+
+    // Skip filler records.
+    if (hdr.record_type == FILLER_RECORD) {
+      Status s = Skip(hdr.record_size);
+      if (!s.ok()) return s;
+      continue;
+    } else {
+      input_.Consume(hdrsize);
+      record->position = position_;
+      record->type = hdr.record_type;
+      record->version = hdr.version;
+      position_ += hdrsize;
+    }
+
+    // Get record key. The key is copied into the buffer to avoid being
+    // destroyed when skipping over the record value.
+    if (hdr.key_size > 0) {
+      Status s = Ensure(hdr.key_size);
+      if (!s.ok()) return s;
+      buffer_.Clear();
+      buffer_.Copy(&input_, hdr.key_size);
+      record->key = buffer_.data();
+      position_ += hdr.key_size;
+    } else {
+      record->key = Slice();
+    }
+
+    // Skip record value.
+    size_t value_size = hdr.record_size - hdr.key_size;
+    if (value_size > 0) {
+      // Get the uncompressed length of the record value and skip the rest of
+      // the record value.
+      size_t vsize;
+      if (info_.compression == SNAPPY) {
+        // Get decompressed length. The length is stored as a 32-bit varint at
+        // the beginning of the compressed value.
+        size_t l = Varint::kMax32;
+        if (l > value_size) l = value_size;
+        Status s = Ensure(l);
+        if (!s.ok()) return s;
+        CHECK(snappy::GetUncompressedLength(input_.Consume(l), l, &vsize));
+        position_ += l;
+
+        // Skip remaining part of record value.
+        s = Skip(value_size - l);
+        if (!s.ok()) return s;
+      } else if (info_.compression == UNCOMPRESSED) {
+        vsize = value_size;
+        Status s = Skip(value_size);
+        if (!s.ok()) return s;
+      } else {
+        return Status(1, "Unknown compression type");
+      }
+
+      // Set value to the real length but with an invalid pointer that will
+      // crash if it is accessed.
+      char *bad = reinterpret_cast<char *>(0xDECADE0FABBABABE);
+      record->value = Slice(bad, vsize);
+    } else {
+      record->value = Slice();
+    }
+
     return Status::OK;
   }
-
-  // Clear input buffer and seek to new position.
-  int64 offset = n - input_.size();
-  input_.clear();
-  return file_->Skip(offset);
 }
 
 Status RecordReader::Seek(uint64 pos) {
   // Check if we can skip to position in input buffer.
+  if (pos == 0) pos = info_.hdrlen;
+  if (pos == position_) return Status::OK;
   int64 offset = pos - position_;
   position_ = pos;
-  char *ptr = input_.begin() + offset;
-  if (ptr >= input_.floor() && ptr < input_.end()) {
-    input_.consumed(offset);
+  if (offset > 0 && offset <= input_.available()) {
+    input_.Consume(offset);
     return Status::OK;
   }
 
   // Clear input buffer and seek to new position.
-  input_.clear();
+  input_.Clear();
+  readahead_ = false;
   return file_->Seek(pos);
 }
 
@@ -516,26 +574,42 @@ Status RecordDatabase::Rewind() {
 RecordWriter::RecordWriter(File *file, const RecordFileOptions &options)
     : file_(file) {
   // Allocate output buffer.
-  output_.resize(options.buffer_size);
+  output_.Reset(options.buffer_size);
   position_ = 0;
 
-  // Write file header.
-  memset(&info_, 0, sizeof(info_));
-  info_.magic = MAGIC2;
-  info_.hdrlen = sizeof(info_);
-  info_.compression = options.compression;
-  info_.chunk_size = options.chunk_size;
-  if (options.indexed) {
-    info_.index_page_size = options.index_page_size;
+  // Read existing header in append mode.
+  size_t size = file->Size();
+  if (options.append && size > 0) {
+    // Read record file header.
+    CHECK(file->Seek(0));
+    CHECK(file->Read(&info_, sizeof(FileHeader)));
+    CHECK(info_.magic == MAGIC1 || info_.magic == MAGIC2)
+        << "Not a record file: " << file->filename();
+    CHECK_EQ(info_.hdrlen, sizeof(FileHeader));
+    CHECK(info_.index_start == 0) << "Cannot append to indexed record file";
+
+    // Seek to end of file.
+    CHECK(file_->Seek(size));
+    position_ = size;
+  } else {
+    // Write file header.
+    memset(&info_, 0, sizeof(info_));
+    info_.magic = MAGIC2;
+    info_.hdrlen = sizeof(info_);
+    info_.compression = options.compression;
+    info_.chunk_size = options.chunk_size;
+    if (options.indexed) {
+      info_.index_page_size = options.index_page_size;
+    }
+    output_.Write(&info_, sizeof(info_));
+    position_ += sizeof(info_);
   }
-  memcpy(output_.end(), &info_, sizeof(info_));
-  output_.appended(sizeof(info_));
-  position_ += sizeof(info_);
 }
 
 RecordWriter::RecordWriter(const string &filename,
                            const RecordFileOptions &options)
-    : RecordWriter(File::OpenOrDie(filename, "w"), options) {}
+    : RecordWriter(File::OpenOrDie(filename, options.append ? "r+" : "w"),
+                   options) {}
 
 RecordWriter::RecordWriter(File *file)
     : RecordWriter(file, default_options) {}
@@ -545,10 +619,13 @@ RecordWriter::RecordWriter(const string &filename)
 
 RecordWriter::RecordWriter(RecordReader *reader,
                            const RecordFileOptions &options) {
-  output_.resize(options.buffer_size);
+  reader_ = reader;
+  output_.Reset(options.buffer_size);
   file_ = reader->file();
   info_ = reader->info();
-  info_.index_page_size = options.index_page_size;
+  if (options.indexed) {
+    info_.index_page_size = options.index_page_size;
+  }
   position_ = reader->size();
 }
 
@@ -570,30 +647,38 @@ Status RecordWriter::Close() {
   Status s = Flush();
   if (!s.ok()) return s;
 
-  // Close output file.
-  s = file_->Close();
-  file_ = nullptr;
+  if (reader_ != nullptr) {
+    // Transfer ownership of file to shared reader.
+    reader_->owned_ = true;
+  } else {
+    // Close output file.
+    s = file_->Close();
+    if (!s.ok()) return s;
+  }
 
-  return s;
+  file_ = nullptr;
+  return Status::OK;
 }
 
 Status RecordWriter::Flush() {
   if (output_.empty()) return Status::OK;
-  Status s = file_->Write(output_.begin(), output_.size());
+  Status s = file_->Write(output_.begin(), output_.available());
   if (!s.ok()) return s;
-  output_.clear();
+  output_.Clear();
+  if (reader_ != nullptr) reader_->size_ = position_;
   return Status::OK;
 }
 
-Status RecordWriter::Write(const Record &record) {
+Status RecordWriter::Write(const Record &record, uint64 *position) {
   // Compress record value if requested.
   Slice value;
   if (info_.compression == SNAPPY) {
     // Compress record value.
     SliceSource source(record.value);
-    compressed_data_.clear();
-    snappy::Compress(&source, &compressed_data_);
-    value = Slice(compressed_data_.begin(), compressed_data_.end());
+    buffer_.Clear();
+    BufferSink sink(&buffer_);
+    snappy::Compress(&source, &sink);
+    value = buffer_.data();
   } else if (info_.compression == UNCOMPRESSED) {
     // Store uncompressed record value.
     value = record.value;
@@ -604,12 +689,6 @@ Status RecordWriter::Write(const Record &record) {
   // Compute on-disk record size estimate.
   size_t maxsize = MAX_HEADER_LEN + record.key.size() + value.size();
 
-  // Records cannot be bigger than the chunk size.
-  size_t size_with_skip = maxsize + MAX_SKIP_LEN;
-  CHECK_LE(size_with_skip, info_.chunk_size)
-      << "Record too big (" << size_with_skip << " bytes), "
-      << "maximum is " << info_.chunk_size << " bytes";
-
   // Flush output buffer if it does not have room for record.
   if (maxsize > output_.remaining()) {
     Status s = Flush();
@@ -618,6 +697,12 @@ Status RecordWriter::Write(const Record &record) {
 
   // Check if record will cross chunk boundary.
   if (info_.chunk_size != 0) {
+    // Records cannot be bigger than the chunk size.
+    size_t size_with_skip = maxsize + MAX_SKIP_LEN;
+    if (size_with_skip > info_.chunk_size) {
+      return Status(1, "Record too big");
+    }
+
     uint64 chunk_used = position_ % info_.chunk_size;
     if (chunk_used + size_with_skip > info_.chunk_size) {
       // Write filler record. For a filler record, the record size includes
@@ -626,8 +711,9 @@ Status RecordWriter::Write(const Record &record) {
       filler.record_type = FILLER_RECORD;
       filler.record_size = info_.chunk_size - chunk_used;
       filler.key_size = 0;
-      int hdrlen = WriteHeader(filler, output_.end());
-      output_.appended(hdrlen);
+      output_.Ensure(MAX_HEADER_LEN);
+      size_t hdrsize = WriteHeader(filler, output_.end());
+      output_.Append(hdrsize);
 
       // Flush output buffer.
       Status s = Flush();
@@ -641,7 +727,7 @@ Status RecordWriter::Write(const Record &record) {
   }
 
   // Add record to index.
-  if (info_.index_page_size > 0 && record.type == DATA_RECORD) {
+  if (info_.index_page_size > 0 && record.type != INDEX_RECORD) {
     uint64 fp = Fingerprint(record.key.data(), record.key.size());
     index_.emplace_back(fp, position_);
   }
@@ -651,21 +737,24 @@ Status RecordWriter::Write(const Record &record) {
   hdr.record_type = record.type;
   hdr.record_size = record.key.size() + value.size();
   hdr.key_size = record.key.size();
-  output_.ensure(maxsize);
-  int hdrlen = WriteHeader(hdr, output_.end());
-  output_.appended(hdrlen);
-  position_ += hdrlen;
+  hdr.version = record.version;
+  if (hdr.version != 0 && hdr.record_type == DATA_RECORD) {
+    hdr.record_type = VDATA_RECORD;
+  }
+  output_.Ensure(maxsize);
+  size_t hdrsize = WriteHeader(hdr, output_.end());
+  output_.Append(hdrsize);
+  if (position != nullptr) *position = position_;
+  position_ += hdrsize;
 
   // Write record key.
   if (record.key.size() > 0) {
-    memcpy(output_.end(), record.key.data(), record.key.size());
-    output_.appended(record.key.size());
+    output_.Write(record.key);
     position_ += record.key.size();
   }
 
   // Write record value.
-  memcpy(output_.end(), value.data(), value.size());
-  output_.appended(value.size());
+  output_.Write(value);
   position_ += value.size();
 
   return Status::OK;
@@ -752,6 +841,7 @@ Status RecordWriter::AddIndex(const string &filename,
   }
 
   // Open writer that takes ownership of the underlying file.
+  CHECK(options.indexed);
   RecordWriter *writer = new RecordWriter(reader, options);
 
   // Build record index.

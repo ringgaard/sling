@@ -36,14 +36,22 @@ struct MergeItem {
 // Comparator for elements in merge sort queue.
 struct ItemComparator {
   bool operator ()(const MergeItem *a, const MergeItem *b) {
-    return a->record.key > b->record.key;
+    if (a->record.key == b->record.key) {
+      return a->record.version > b->record.version;
+    } else {
+      return a->record.key > b->record.key;
+    }
   }
 };
 
 // Message comparator.
 struct MessageComparator {
   bool operator ()(const Message *a, const Message *b) const {
-    return a->key() < b->key();
+    if (a->key() == b->key()) {
+      return a->serial() < b->serial();
+    } else {
+      return a->key() < b->key();
+    }
   }
 };
 
@@ -136,7 +144,7 @@ class Sorter : public Processor {
     RecordFileOptions options;
     RecordWriter writer(MergeFileName(fileno), options);
     for (Message *message : messages_) {
-      CHECK(writer.Write(message->key(), message->value()));
+      CHECK(writer.Write(message->key(), message->serial(), message->value()));
       delete message;
     }
     CHECK(writer.Close());
@@ -195,7 +203,9 @@ class Sorter : public Processor {
       merger.pop();
 
       // Send message to output channel.
-      Message *message = new Message(item->record.key, item->record.value);
+      Message *message = new Message(item->record.key,
+                                     item->record.version,
+                                     item->record.value);
       output_->Send(message);
 
       // Get next item from merge file and add it to queue.

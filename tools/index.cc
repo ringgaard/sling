@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
       static_cast<RecordFile::CompressionType>(FLAGS_compression);
   options.index_page_size = FLAGS_index_page_size;
   options.index_cache_size = FLAGS_index_cache_size;
+  options.indexed = true;
 
   // Get files to index.
   std::vector<string> files;

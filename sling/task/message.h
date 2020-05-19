@@ -21,78 +21,80 @@
 namespace sling {
 namespace task {
 
-// A data buffer owns a block of memory.
-class Buffer {
- public:
-  // Create empty buffer.
-  Buffer() : data_(nullptr), size_(0) {}
-
-  // Allocate buffer with n bytes.
-  explicit Buffer(size_t n) : data_(n == 0 ? nullptr : new char[n]), size_(n) {}
-
-  // Allocate buffer and initialize it with data.
-  explicit Buffer(Slice source);
-
-  // Delete buffer.
-  ~Buffer() { delete [] data_; }
-
-  // Return buffer as slice.
-  Slice slice() const { return Slice(data_, size_); }
-
-  // Set new value for buffer.
-  void set(Slice value) {
-    delete [] data_;
-    if (value.empty()) {
-      data_ = nullptr;
-      size_ = 0;
-    } else {
-      size_ = value.size();
-      data_ = new char[size_];
-      memcpy(data_, value.data(), size_);
-    }
-  }
-
-  // Release buffer and transfer ownership to caller.
-  char *release() {
-    char *buffer = data_;
-    data_ = nullptr;
-    size_ = 0;
-    return buffer;
-  }
-
-  // Swap data with another buffer.
-  void swap(Buffer *other) {
-    char *d = other->data_;
-    size_t s = other->size_;
-    other->data_ = data_;
-    other->size_ = size_;
-    data_ = d;
-    size_ = s;
-  }
-
-  // Return pointer to buffer memory.
-  char *data() { return data_; }
-  const char *data() const { return data_; }
-
-  // Return size of buffer.
-  size_t size() const { return size_; }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Buffer);
-
-  // Data buffer.
-  char *data_;
-
-  // Data buffer size.
-  size_t size_;
-};
-
 // A task message has a key and a value data buffer which are owned by the
 // message.
 class Message {
  public:
+  // A data buffer owns a block of memory.
+  class Buffer {
+   public:
+    // Create empty buffer.
+    Buffer() : data_(nullptr), size_(0) {}
+
+    // Allocate buffer with n bytes.
+    explicit Buffer(size_t n);
+
+    // Allocate buffer and initialize it with data.
+    explicit Buffer(Slice source);
+
+    // Delete buffer.
+    ~Buffer() { free(data_); }
+
+    // Return buffer as slice.
+    Slice slice() const { return Slice(data_, size_); }
+
+    // Set new value for buffer.
+    void set(Slice value) {
+      free(data_);
+      if (value.empty()) {
+        data_ = nullptr;
+        size_ = 0;
+      } else {
+        size_ = value.size();
+        data_ = static_cast<char *>(malloc(size_));
+        memcpy(data_, value.data(), size_);
+      }
+    }
+
+    // Release buffer and transfer ownership to caller.
+    char *release() {
+      char *buffer = data_;
+      data_ = nullptr;
+      size_ = 0;
+      return buffer;
+    }
+
+    // Swap data with another buffer.
+    void swap(Buffer *other) {
+      char *d = other->data_;
+      size_t s = other->size_;
+      other->data_ = data_;
+      other->size_ = size_;
+      data_ = d;
+      size_ = s;
+    }
+
+    // Return pointer to buffer memory.
+    char *data() { return data_; }
+    const char *data() const { return data_; }
+
+    // Return size of buffer.
+    size_t size() const { return size_; }
+
+   private:
+    DISALLOW_COPY_AND_ASSIGN(Buffer);
+
+    // Data buffer.
+    char *data_;
+
+    // Data buffer size.
+    size_t size_;
+  };
+
   // Create message from key and value data slices.
   Message(Slice key, Slice value) : key_(key), value_(value) {}
+  Message(Slice key, uint64 serial, Slice value)
+      : key_(key), serial_(serial), value_(value) {}
   Message(Slice value) : key_(), value_(value) {}
 
   // Create message with uninitialized content.
@@ -101,11 +103,17 @@ class Message {
   // Return key buffer.
   Slice key() const { return key_.slice(); }
 
+  // Return serial.
+  uint64 serial() const { return serial_; }
+
   // Return value buffer.
   Slice value() const { return value_.slice(); }
 
   // Set key.
   void set_key(Slice key) { key_.set(key); }
+
+  // Set serial.
+  void set_serial(uint64 serial) { serial_ = serial; }
 
   // Set value.
   void set_value(Slice value) { value_.set(value); }
@@ -116,9 +124,10 @@ class Message {
   // Release value buffer and transfer ownership to caller.
   char *release_value() { return value_.release(); }
 
-  // Swap key and value with another message.
+  // Swap key, serial, and value with another message.
   void swap(Message *other) {
     key_.swap(&other->key_);
+    std::swap(serial_, other->serial_);
     value_.swap(&other->value_);
   }
 
@@ -131,8 +140,9 @@ class Message {
  private:
   DISALLOW_COPY_AND_ASSIGN(Message);
 
-  // Key and value data buffer.
+  // Key, serial, and value data buffer.
   Buffer key_;
+  uint64 serial_ = 0;
   Buffer value_;
 };
 

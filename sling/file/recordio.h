@@ -21,92 +21,41 @@
 #include "sling/base/status.h"
 #include "sling/base/types.h"
 #include "sling/file/file.h"
-#include "sling/util/snappy.h"
+#include "sling/util/iobuffer.h"
 
 namespace sling {
 
 // Record types.
 enum RecordType {
-  DATA_RECORD = 1,
-  FILLER_RECORD = 2,
-  INDEX_RECORD = 3,
+  DATA_RECORD   = 1,     // data record with key and value
+  FILLER_RECORD = 2,     // filler record to avoid records crossing chunks
+  INDEX_RECORD  = 3,     // index page
+  VDATA_RECORD = 4,      // versioned data record
 };
+
+inline bool ValidRecordType(RecordType type) {
+  return type >= DATA_RECORD && type <= VDATA_RECORD;
+}
 
 // Record with key and value.
 struct Record {
   Record() {}
-  Record(const Slice &k, const Slice &v) : key(k), value(v) {}
+  Record(const Slice &key, const Slice &value)
+      : key(key), value(value) {}
+  Record(const Slice &key, uint64 version, const Slice &value)
+      : key(key), value(value), version(version) {}
 
+  RecordType type = DATA_RECORD;
   Slice key;
   Slice value;
+  uint64 version = 0;
   int64 position = -1;
-  RecordType type = DATA_RECORD;
-};
-
-// Record buffer.
-class RecordBuffer : public snappy::Sink, public snappy::Source {
- public:
-  ~RecordBuffer();
-
-  // Check if the buffer is empty.
-  bool empty() { return begin_ == end_; }
-
-  // Returns the number of used bytes in the buffer.
-  size_t size() { return end_ - begin_; }
-
-  // Returns the capacity of the buffer.
-  size_t capacity() { return ceil_ - floor_; }
-
-  // Returns number of unused bytes remaining in the buffer.
-  size_t remaining() { return ceil_ - end_; }
-
-  // Clear buffer.
-  void clear() { begin_ = end_ = floor_; }
-
-  // Change buffer capacity.
-  void resize(size_t bytes);
-
-  // Ensure space is available for writing.
-  void ensure(size_t bytes);
-
-  // Flush buffer so the used portion is at the beginning.
-  void flush();
-
-  // Sink interface for decompression.
-  void Append(const char *bytes, size_t n) override;
-  char *GetAppendBuffer(size_t length, char *scratch) override;
-  char *GetAppendBufferVariable(size_t min_size, size_t desired_size_hint,
-                                char *scratch, size_t scratch_size,
-                                size_t *allocated_size) override;
-
-  // Source interface for compression.
-  size_t Available() const override;
-  const char *Peek(size_t *len) override;
-  void Skip(size_t n) override;
-
-  // Data appended to buffer.
-  void appended(size_t n) { end_ += n; }
-
-  // Data consumed from buffer.
-  void consumed(size_t n) { begin_ += n; }
-
-  // Buffer access.
-  char *floor() const { return floor_; }
-  char *ceil() const { return ceil_; }
-  char *begin() const { return begin_; }
-  char *end() const { return end_; }
-
- private:
-  char *floor_ = nullptr;  // start of allocated memory
-  char *ceil_ = nullptr;   // end of allocated memory
-  char *begin_ = nullptr;  // start of used part of buffer
-  char *end_ = nullptr;    // end of used part of buffer
 };
 
 class RecordFile {
  public:
   // Maximum record header length.
-  static const int MAX_HEADER_LEN = 21;
+  static const int MAX_HEADER_LEN = 31;
 
   // Maximum skip record length.
   static const int MAX_SKIP_LEN = 12;
@@ -139,6 +88,7 @@ class RecordFile {
     RecordType record_type;
     uint64 record_size;
     uint64 key_size;
+    uint64 version;
   };
 
   // An index record consists of a list of index entries containing the key
@@ -167,10 +117,10 @@ class RecordFile {
   };
 
   // Parse header from data. Returns the number of bytes read or -1 on error.
-  static int ReadHeader(const char *data, Header *header);
+  static size_t ReadHeader(const char *data, Header *header);
 
   // Write header to data. Returns number of bytes written.
-  static int WriteHeader(const Header &header, char *data);
+  static size_t WriteHeader(const Header &header, char *data);
 };
 
 // Configuration options for record file.
@@ -186,6 +136,9 @@ struct RecordFileOptions {
 
   // Record files can be indexed for fast retrieval by key.
   bool indexed = false;
+
+  // Open record writer in append mode.
+  bool append = false;
 
   // Number of entries in each index record.
   int index_page_size = 1024;
@@ -213,6 +166,9 @@ class RecordReader : public RecordFile {
   // Read next record from record file.
   Status Read(Record *record);
 
+  // Read key from next record and skip value.
+  Status ReadKey(Record *record);
+
   // Return current position in record file.
   uint64 Tell() { return position_; }
 
@@ -223,7 +179,7 @@ class RecordReader : public RecordFile {
   Status Rewind() { return Seek(info_.hdrlen); }
 
   // Skip bytes in input. The offset can be negative.
-  Status Skip(int64 n);
+  Status Skip(int64 n) { return Seek(position_ + n); }
 
   // Read index page. Ownership of the index page is transferred to the caller.
   IndexPage *ReadIndexPage(uint64 position);
@@ -239,7 +195,10 @@ class RecordReader : public RecordFile {
 
  private:
   // Fill input buffer.
-  Status Fill();
+  Status Fill(uint64 needed);
+
+  // Ensure that at least 'size' bytes are available in input buffer.
+  Status Ensure(uint64 size);
 
   // Input file.
   File *file_;
@@ -253,14 +212,20 @@ class RecordReader : public RecordFile {
   // Current position in record file.
   uint64 position_;
 
+  // In readahead mode the input buffer is filled to prefetch the next records.
+  // The readahead flag is cleared when seeking to a new position in the file.
+  bool readahead_ = true;
+
   // Record file meta information.
   FileHeader info_;
 
   // Input buffer.
-  RecordBuffer input_;
+  IOBuffer input_;
 
   // Buffer for decompressed record data.
-  RecordBuffer decompressed_data_;
+  IOBuffer buffer_;
+
+  friend class RecordWriter;
 };
 
 // Index for looking up records in an indexed record file.
@@ -352,17 +317,26 @@ class RecordWriter : public RecordFile {
   ~RecordWriter();
 
   // Open record file for shared reading and writing.
-  explicit RecordWriter(RecordReader *reader, const RecordFileOptions &options);
+  RecordWriter(RecordReader *reader, const RecordFileOptions &options);
 
   // Close record file.
   Status Close();
 
-  // Write record to record file.
-  Status Write(const Record &record);
+  // Flush output buffer to disk.
+  Status Flush();
+
+  // Write record to record file. If position is not null, it is set to the
+  // position of the new record.
+  Status Write(const Record &record, uint64 *position = nullptr);
 
   // Write key/value pair to file.
   Status Write(const Slice &key, const Slice &value) {
     return Write(Record(key, value));
+  }
+
+  // Write key/version/value triple to file.
+  Status Write(const Slice &key, uint64 version, const Slice &value) {
+    return Write(Record(key, version, value));
   }
 
   // Write record with empty key.
@@ -373,14 +347,16 @@ class RecordWriter : public RecordFile {
   // Return current position in record file.
   uint64 Tell() const { return position_; }
 
+  // Sync a record reader to this writer.
+  void Sync(RecordReader *reader) const {
+    reader->size_ = position_;
+  }
+
   // Add index to existing record file.
   static Status AddIndex(const string &filename,
                          const RecordFileOptions &options);
 
  private:
-  // Flush output buffer to disk.
-  Status Flush();
-
   // Write index to disk.
   Status WriteIndex();
 
@@ -397,13 +373,16 @@ class RecordWriter : public RecordFile {
   FileHeader info_;
 
   // Output buffer.
-  RecordBuffer output_;
+  IOBuffer output_;
 
   // Buffer for compressed record data.
-  RecordBuffer compressed_data_;
+  IOBuffer buffer_;
 
   // Index entries for building index.
   Index index_;
+
+  // Record reader with shared file.
+  RecordReader *reader_ = nullptr;
 };
 
 }  // namespace sling

@@ -25,7 +25,7 @@ namespace task {
 // Task processor for receiving and sending frames.
 class FrameProcessor : public Processor {
  public:
-  ~FrameProcessor() { delete commons_; }
+  ~FrameProcessor() override { delete commons_; }
 
   // Task processor implementation.
   void Start(Task *task) override;

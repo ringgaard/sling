@@ -2,14 +2,15 @@
 
 bazel build -c opt $* \
   sling/base:* \
+  sling/db:* \
   sling/file:* \
   sling/frame:* \
   sling/http:* \
-  sling/net:* \
   sling/myelin:* \
   sling/myelin/kernel:* \
   sling/myelin/generator:* \
   sling/myelin/cuda:* \
+  sling/net:* \
   sling/nlp/document:* \
   sling/nlp/embedding:* \
   sling/nlp/kb:* \
@@ -18,6 +19,7 @@ bazel build -c opt $* \
   sling/nlp/parser/tools:* \
   sling/nlp/wiki:* \
   sling/pyapi:* \
+  sling/nlp/wiki:* \
   sling/stream:* \
   sling/string:* \
   sling/task:* \

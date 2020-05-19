@@ -45,6 +45,17 @@ Status::Status(int code, const char *msg) {
   memcpy(state_->message(), msg, length + 1);
 }
 
+Status::Status(int code, const char *msg, int length) {
+  DCHECK_NE(code, 0);
+  int size = sizeof(State) + length + 1;
+  state_ = static_cast<State *>(malloc(size));
+  CHECK(state_ != nullptr);
+  state_->length = length;
+  state_->code = code;
+  memcpy(state_->message(), msg, length);
+  state_->message()[length] = 0;
+}
+
 Status::Status(int code, const char *msg1, const char *msg2)  {
   DCHECK_NE(code, 0);
   int length1 = strlen(msg1);
