@@ -56,11 +56,13 @@ Handle Reader::ParseObject() {
       break;
 
     case INTEGER_TOKEN: {
-      int32 value;
+      int64 value;
       float fvalue;
-      if (safe_strto32(token_text(), &value)) {
+      if (safe_strto64(token_text(), &value)) {
         if (value >= Handle::kMinInt && value <= Handle::kMaxInt) {
           handle = Handle::Integer(value);
+        } else if (json_) {
+          handle = store_->AllocateString(token_text());
         } else {
           handle = Handle::Float(value);
         }

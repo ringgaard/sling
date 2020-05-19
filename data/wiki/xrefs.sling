@@ -1,0 +1,6 @@
+; Properties that are cross-referenced in knowledge base.
+[
+  P1059, ; CVR number
+  P7972, ; CVR person ID
+]
+

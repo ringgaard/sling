@@ -1212,18 +1212,22 @@ Handle Store::Resolve(Handle handle) const {
   }
 }
 
+Text Store::SymbolName(Handle handle) const {
+  if (!handle.IsRef() || handle.IsNil()) return Text();
+  const Datum *datum = Deref(handle);
+  if (!datum->IsSymbol()) return Text();
+  const SymbolDatum *symbol = datum->AsSymbol();
+  const StringDatum *symstr = GetString(symbol->name);
+  return symstr->str();
+}
+
 Text Store::FrameId(Handle handle) const {
   if (!handle.IsRef() || handle.IsNil()) return Text();
   const Datum *datum = Deref(handle);
   if (!datum->IsFrame()) return Text();
   const FrameDatum *frame = datum->AsFrame();
   Handle id = frame->get(Handle::id());
-  if (id.IsNil()) return Text();
-  const Datum *iddatum = Deref(id);
-  if (!iddatum->IsSymbol()) return Text();
-  const SymbolDatum *symbol = iddatum->AsSymbol();
-  const StringDatum *symstr = GetString(symbol->name);
-  return symstr->str();
+  return SymbolName(id);
 }
 
 bool Store::Pristine() const {
