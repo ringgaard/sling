@@ -98,6 +98,7 @@ cc_library(
     "//sling/nlp/embedding:fact-plausibility",
 
     "//sling/nlp/parser:parser-trainer",
+    "//sling/nlp/parser:parser-annotator",
 
     "//sling/nlp/silver:idf",
     "//sling/nlp/silver:annotators",
