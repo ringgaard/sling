@@ -4,6 +4,8 @@ from sling.log import *
 from sling.nlp.document import *
 from sling.nlp.parser import *
 
+VERSION="2.0.0"
+
 Store=api.Store
 Frame=api.Frame
 Array=api.Array
@@ -11,12 +13,15 @@ Array=api.Array
 RecordReader=api.RecordReader
 RecordDatabase=api.RecordDatabase
 RecordWriter=api.RecordWriter
+
 PhraseTable=api.PhraseTable
 Calendar=api.Calendar
 Date=api.Date
+
 WikiConverter=api.WikiConverter
 FactExtractor=api.FactExtractor
 PlausibilityModel=api.PlausibilityModel
+WebArchive=api.WebArchive
 
 MILLENNIUM=api.MILLENNIUM
 CENTURY=api.CENTURY

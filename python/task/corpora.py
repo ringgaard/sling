@@ -42,6 +42,11 @@ flags.define("--overwrite",
              default=False,
              action='store_true')
 
+flags.define("--wikidatadb",
+             help="wikidata database",
+             default="wikidata",
+             metavar="DBURL")
+
 def post_process_flags(arg):
   if arg.languages == None:
     arg.languages = arg.language
@@ -76,6 +81,10 @@ def wikipedia_dump(language=None):
   if language == None: language = flags.arg.language
   return flags.arg.corpora + "/wikipedia/" + language + "wiki-" + \
          flags.arg.wikipedia + "-pages-articles.xml.bz2"
+
+def wikidatadb():
+  """WikiData database."""
+  return flags.arg.wikidatadb
 
 def wikidir(language=None):
   """Location of wiki datasets."""

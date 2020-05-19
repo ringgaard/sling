@@ -55,7 +55,7 @@ class EmbeddingWorkflow:
                                format="message/word:count",
                                mapper="word-vocabulary-mapper",
                                reducer="word-vocabulary-reducer",
-                               params={"normalization": "dlw"})
+                               params={"normalization": "d"})
 
   def train_word_embeddings(self, documents=None, vocabulary=None, output=None,
                             language=None):
@@ -68,14 +68,14 @@ class EmbeddingWorkflow:
     with self.wf.namespace(language + "-word-embeddings"):
       trainer = self.wf.task("word-embeddings-trainer")
       trainer.add_params({
-        "iterations" : 5,
-        "negative": 5,
+        "iterations" : 1,
+        "negative": 300,
         "window": 5,
         "learning_rate": 0.025,
         "min_learning_rate": 0.0001,
         "embedding_dims": 32,
         "subsampling": 1e-3,
-        "normalization": "dlw",
+        "normalization": "d",
       })
       trainer.attach_input("documents", documents)
       trainer.attach_input("vocabulary", vocabulary)
@@ -173,6 +173,10 @@ class EmbeddingWorkflow:
       trainer.attach_output("catvecs", category_embeddings)
     return fact_embeddings, category_embeddings
 
+  #---------------------------------------------------------------------------
+  # Fact plausibility model
+  #---------------------------------------------------------------------------
+
   def fact_plausibility_model(self):
     """Resource for fact plausibility model."""
     return self.wf.resource("plausibility.flow",
@@ -183,7 +187,7 @@ class EmbeddingWorkflow:
     """Train fact plausibility model."""
     facts = self.facts()
     factmap = self.fact_lexicon()
-    model = self.fact_plausibility_model();
+    model = self.fact_plausibility_model()
     with self.wf.namespace("fact-plausibility"):
       trainer = self.wf.task("fact-plausibility-trainer")
       trainer.add_params({
@@ -205,4 +209,50 @@ class EmbeddingWorkflow:
       trainer.attach_input("factmap", factmap)
       trainer.attach_output("model", model)
     return model
+
+# Commands.
+
+def extract_vocabulary():
+  # Extract vocabulary for word embeddings.
+  for language in flags.arg.languages:
+    log.info("Extract " + language + " vocabulary")
+    wf = EmbeddingWorkflow(language + "-vocabulary")
+    wf.extract_vocabulary(language=language)
+    run(wf.wf)
+
+def train_word_embeddings():
+  # Train word embeddings.
+  for language in flags.arg.languages:
+    log.info("Train " + language + " word embeddings")
+    wf = EmbeddingWorkflow(language + "-word-embeddings")
+    wf.train_word_embeddings(language=language)
+    run(wf.wf)
+
+def extract_fact_lexicon():
+  # Extract vocabulary for fact and category embeddings.
+  log.info("Extract fact and category lexicons")
+  wf = EmbeddingWorkflow("fact-lexicon")
+  wf.extract_fact_lexicon()
+  run(wf.wf)
+
+def extract_facts():
+  # Extract facts from knowledge base.
+  log.info("Extract facts from knowledge base")
+  wf = EmbeddingWorkflow("fact-extraction")
+  wf.extract_facts()
+  run(wf.wf)
+
+def train_fact_embeddings():
+  # Train fact and category embeddings.
+  log.info("Train fact and category embeddings")
+  wf = EmbeddingWorkflow("fact-embeddings")
+  wf.train_fact_embeddings()
+  run(wf.wf)
+
+def train_fact_plausibility():
+  # Train fact plausibility model.
+  log.info("Train fact plausibility model")
+  wf = EmbeddingWorkflow("plausibility")
+  wf.train_fact_plausibility()
+  run(wf.wf)
 

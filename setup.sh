@@ -68,6 +68,15 @@ else
   sudo ln -s $(realpath python) ${SLINGPKG}
 fi
 
+# Install sling command.
+CMD="/usr/local/bin/sling"
+if [ ! -f  "$CMD" ]; then
+  echo "Adding sling command to $CMD"
+  SCRIPT="#!$(which python3)\nimport sling.run\nsling.run.main()"
+  echo -e $SCRIPT | sudo tee $CMD > /dev/null
+  sudo chmod +x $CMD
+fi
+
 # Done.
 echo
 echo "=== SLING is now set up."

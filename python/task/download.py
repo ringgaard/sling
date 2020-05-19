@@ -136,3 +136,32 @@ class DownloadWorkflow:
       download.attach_output("output", dump)
       return dump
 
+# Commands.
+
+wikidata_download = False
+wikipedia_download = False
+
+def download_wikidata():
+  # Trigger download of wikidata dump.
+  global wikidata_download
+  wikidata_download = True
+
+def download_wikipedia():
+  # Trigger download of wikipedia dump.
+  global wikipedia_download
+  wikipedia_download = True
+
+def download_wiki():
+  wf = DownloadWorkflow("wiki-download")
+
+  # Download wikidata dump.
+  if wikidata_download:
+    wf.download_wikidata()
+
+  # Download wikipedia dumps.
+  if wikipedia_download:
+    for language in flags.arg.languages:
+      wf.download_wikipedia(language=language)
+
+  run(wf.wf)
+

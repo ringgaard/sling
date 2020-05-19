@@ -17,7 +17,7 @@
 # The Python wheel produced by this script can be installed with the following
 # command:
 #
-#   sudo -H pip install /tmp/sling-2.0.0-py3-abi3-linux_x86_64.whl
+#   sudo -H pip install /wheel/sling-2.0.0-py3-none-linux_x86_64.whl
 #
 # If you are developing the SLING system, it is convenient to just add a
 # link to the SLING repository directly from the Python package directory
@@ -31,6 +31,7 @@ import hashlib
 import base64
 import zipfile
 import distutils.util;
+import sling
 
 def sha256_checksum(filename, block_size=65536):
   """ Compute SHA256 digest for file."""
@@ -54,43 +55,54 @@ abi = "none"
 platform = distutils.util.get_platform().replace("-", "_")
 tag = "py" + pyversion + "-" + abi + "-" + platform
 package = "sling"
-version = "2.0.0"
+version = sling.VERSION
 dist_dir = package + "-" + version + ".dist-info"
-data_dir = package + "-" + version + ".data/purelib"
+purelib_dir = package + "-" + version + ".data/purelib"
+scripts_dir = package + "-" + version + ".data/scripts"
 record_filename = dist_dir + "/RECORD"
 
-wheel_dir = "/tmp"
+wheel_dir = "wheel"
 wheel_basename = package + "-" + version + "-" + tag + ".whl"
 wheel_filename = wheel_dir + "/" + wheel_basename
 
 # Files to distribute in wheel.
+
 files = {
-  'bazel-bin/sling/pyapi/pysling.so': '$DATA$/sling/pysling.so',
-
-  'python/__init__.py': '$DATA$/sling/__init__.py',
-  'python/flags.py': '$DATA$/sling/flags.py',
-  'python/log.py': '$DATA$/sling/log.py',
-
-  'python/myelin/__init__.py': '$DATA$/sling/myelin/__init__.py',
-  'python/myelin/builder.py': '$DATA$/sling/myelin/builder.py',
-  'python/myelin/flow.py': '$DATA$/sling/myelin/flow.py',
-  'python/myelin/nn.py': '$DATA$/sling/myelin/nn.py',
-  'python/myelin/tf.py': '$DATA$/sling/myelin/tf.py',
-
-  'python/nlp/__init__.py': '$DATA$/sling/nlp/__init__.py',
-  'python/nlp/document.py': '$DATA$/sling/nlp/document.py',
-  'python/nlp/parser.py': '$DATA$/sling/nlp/parser.py',
-
-  'python/task/__init__.py': '$DATA$/sling/task/__init__.py',
-  'python/task/corpora.py': '$DATA$/sling/task/corpora.py',
-  'python/task/download.py': '$DATA$/sling/task/download.py',
-  'python/task/silver.py': '$DATA$/sling/task/silver.py',
-  'python/task/embedding.py': '$DATA$/sling/task/embedding.py',
-  'python/task/wiki.py': '$DATA$/sling/task/wiki.py',
-  'python/task/workflow.py': '$DATA$/sling/task/workflow.py',
+  'bazel-bin/sling/pyapi/pysling.so': '$PURELIB$/sling/pysling.so',
+  'python/script': '$SCRIPTS$/sling',
 }
 
+pyfiles = [
+  '__init__.py',
+  '__main__.py',
+  'run.py',
+  'flags.py',
+  'log.py',
+
+  'myelin/__init__.py',
+  'myelin/builder.py',
+  'myelin/flow.py',
+  'myelin/nn.py',
+  'myelin/tf.py',
+
+  'nlp/__init__.py',
+  'nlp/document.py',
+  'nlp/parser.py',
+
+  'task/__init__.py',
+  'task/corpora.py',
+  'task/download.py',
+  'task/silver.py',
+  'task/embedding.py',
+  'task/wiki.py',
+  'task/workflow.py',
+]
+
+for f in pyfiles:
+  files['python/' + f] = '$PURELIB$/sling/' + f
+
 # Create new wheel zip archive.
+os.makedirs(wheel_dir, exist_ok=True)
 wheel = zipfile.ZipFile(wheel_filename, "w")
 record = ""
 
@@ -136,7 +148,8 @@ for source in files:
   # Get source and destination file names.
   destination = files[source]
   destination = destination.replace("$INFO$", dist_dir)
-  destination = destination.replace("$DATA$", data_dir)
+  destination = destination.replace("$PURELIB$", purelib_dir)
+  destination = destination.replace("$SCRIPTS$", scripts_dir)
   print("Install", source, "as", destination)
 
   # Write entry to RECORD file.

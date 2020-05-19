@@ -27,17 +27,17 @@ The Wiki processing pipeline performs the following tasks:
   * Build name table for searching for entities (`name-table`)
   * Build phrase table for matching phrases in text to entities (`phrase-table`)
 
-After [installing and building SLING](install.md), the `./run.sh` script can be
+After [installing and building SLING](install.md), the `sling` command can be
 used for running the pipeline:
 ```
-./run.sh --help
+sling --help
 ```
 
 ## Download dumps
 
 First, the Wikipedia and Wikidata dumps need to be downloaded:
 ```
-./run.sh --download_wikidata --download_wikipedia
+sling download_wikidata download_wikipedia
 ```
 These dumps are large, so it might take a while to download.
 For example, Wikidata and just the English Wikipedia dumps together take up ~70GB space, so make
@@ -63,21 +63,21 @@ This will put the Wikipedia dump into `local/data/corpora/wikipedia` and
 the Wikidata dump into `local/data/corpora/wikipedia`. After the dumps have been
 downloaded, the remaining processing pipeline can be executed in one go:
 ```
-./run.sh --build_wiki
+sling --build_wiki
 ```
 This is equivalent to running each of the step separately:
 ```
-./run.sh --import_wikidata
-         --import_wikipedia
-         --parse_wikipedia
-         --extract_wikilinks
-         --merge_categories
-         --invert_categories
-         --fuse_items
-         --build_kb
-         --extract_names
-         --build_nametab
-         --build_phrasetab
+sling import_wikidata
+      import_wikipedia
+      parse_wikipedia
+      extract_wikilinks
+      merge_categories
+      invert_categories
+      fuse_items
+      build_kb
+      extract_names
+      build_nametab
+      build_phrasetab
 ```
 
 The `--language LANG` flag can be used for selecting the language for Wikipedia,
@@ -94,7 +94,7 @@ defaulting to `/tmp`. So please ensure that this folder is on a partition with
 enough space.
 ```
 export TMPDIR=<folder on partition with lots of space>
-./run.sh --build_wiki
+sling --build_wiki
 ```
 
 ## Wikidata import
