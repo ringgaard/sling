@@ -18,7 +18,7 @@ flags.parse()
 
 # Consider all submission to these subreddits as news articles.
 news_reddits = [
-  "AutoNewspaper", "nofeenews",
+  "AutoNewspaper", "nofeenews", "newsdk",
 ]
 
 # Read known news sites.
