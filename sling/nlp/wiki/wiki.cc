@@ -23,9 +23,12 @@ namespace nlp {
 
 // Language priority order.
 const char *Wiki::language_priority[] = {
-  "en", "da", "sv", "no", "de", "fr", "es", "it", "nl", "pt", "pl", "fi",
+  "en", "da", "sv", "no", "de", "fr", "es", "it",
+  "nl", "pt", "pl", "fi",
   "ca", "eu", "la", "eo", "cs", "sh", "hu", "ro",
   "el", "ru", "uk", "sr", "bg",
+  "ms", "sk", "hr", "lt", "lv", "et",
+  "id", "af",
   nullptr,
 };
 
@@ -122,7 +125,7 @@ bool WikimediaTypes::IsCategory(Handle type) {
 }
 
 bool WikimediaTypes::IsDisambiguation(Handle type) {
-  return type == n_disambiguation_;
+  return type == n_disambiguation_ || type == n_human_name_disambiguation_;
 }
 
 bool WikimediaTypes::IsList(Handle type) {
@@ -143,6 +146,7 @@ bool WikimediaTypes::IsDuplicate(Handle type) {
 
 void AuxFilter::Init(Store *store) {
   const char *kAuxItemtypes[] = {
+    "Q13442814",  // scholarly article
     "Q13442814",  // scientific article
     "Q17329259",  // encyclopedic article
     "Q17633526",  // Wikinews article
@@ -151,6 +155,9 @@ void AuxFilter::Init(Store *store) {
     "Q16521",     // taxon
     "Q8054",      // protein
     "Q11173",     // chemical compound
+    "Q30612",     // clinical trial
+    "Q523",       // star
+    "Q318",       // galaxy
     nullptr,
   };
   for (const char **type = kAuxItemtypes; *type; ++type) {

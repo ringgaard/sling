@@ -66,6 +66,7 @@ void WikiExtractor::ExtractNode(const Node &node) {
     case WikiParser::BTAG: ExtractBeginTag(node); break;
     case WikiParser::ETAG: ExtractEndTag(node); break;
     case WikiParser::MATH: ExtractMath(node); break;
+    case WikiParser::TIMELINE: ExtractTimeline(node); break;
     case WikiParser::GALLERY: ExtractGallery(node); break;
     case WikiParser::REF: ExtractReference(node); break;
     case WikiParser::NOWIKI: ExtractNoWiki(node); break;
@@ -161,6 +162,10 @@ void WikiExtractor::ExtractEndTag(const Node &node) {
 }
 
 void WikiExtractor::ExtractMath(const Node &node) {
+  ExtractSkip(node);
+}
+
+void WikiExtractor::ExtractTimeline(const Node &node) {
   ExtractSkip(node);
 }
 

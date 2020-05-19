@@ -35,8 +35,8 @@ namespace {
 // AST node names.
 static const char *node_names[] = {
   "DOCUMENT", "ARG", "ATTR",
-  "TEXT", "FONT", "TEMPLATE", "LINK", "IMAGE", "CATEGORY", "URL",
-  "COMMENT", "TAG", "BTAG", "ETAG", "MATH", "GALLERY", "REF", "NOWIKI",
+  "TEXT", "FONT", "TEMPLATE", "LINK", "IMAGE", "CATEGORY", "URL", "COMMENT",
+  "TAG", "BTAG", "ETAG", "MATH", "TIMELINE", "GALLERY", "REF", "NOWIKI",
   "HEADING", "INDENT", "TERM", "UL", "OL", "HR", "SWITCH",
   "TABLE", "CAPTION", "ROW", "HEADER", "CELL", "BREAK",
 };
@@ -47,37 +47,43 @@ typedef std::unordered_map<string, WikiParser::Special> TemplatePrefixMap;
 // Link prefixes for images and categories.
 static const LinkPrefixMap link_prefix = {
   {"Archivo",    WikiParser::IMAGE},       // es
+  {"Attēls",     WikiParser::IMAGE},       // lv
   {"Bestand",    WikiParser::IMAGE},       // nl
+  {"Berkas",     WikiParser::IMAGE},       // id
   {"Categoría",  WikiParser::CATEGORY},    // es
   {"Categoria",  WikiParser::CATEGORY},    // it, pt, ca, la
   {"Catégorie",  WikiParser::CATEGORY},    // fr
   {"Categorie",  WikiParser::CATEGORY},    // nl, ro
   {"Category",   WikiParser::CATEGORY},    // en
   {"Datei",      WikiParser::IMAGE},       // de
-  {"Datoteka",   WikiParser::IMAGE},       // sh
+  {"Datoteka",   WikiParser::IMAGE},       // sh, hr
   {"Dosiero",    WikiParser::IMAGE},       // eo
   {"Fájl",       WikiParser::IMAGE},       // hu
   {"Fasciculus", WikiParser::IMAGE},       // la
   {"Ficheiro",   WikiParser::IMAGE},       // pt
   {"Fichier",    WikiParser::IMAGE},       // fr
-  {"File",       WikiParser::IMAGE},       // en, el
+  {"File",       WikiParser::IMAGE},       // en, el, ms, et
   {"Fil",        WikiParser::IMAGE},       // da, no, sv
   {"Fișier",     WikiParser::IMAGE},       // ro
   {"Fitxategi",  WikiParser::IMAGE},       // eu
   {"Fitxer",     WikiParser::IMAGE},       // ca
   {"Image",      WikiParser::IMAGE},       // en
   {"Immagine",   WikiParser::IMAGE},       // it
-  {"Kategória",  WikiParser::CATEGORY},    // hu
+  {"Kategória",  WikiParser::CATEGORY},    // hu, sk
   {"Kategoria",  WikiParser::CATEGORY},    // pl, eu
-  {"Kategorie",  WikiParser::CATEGORY},    // de, cs
-  {"Kategorija", WikiParser::CATEGORY},    // sh
+  {"Kategorie",  WikiParser::CATEGORY},    // de, cs, af
+  {"Kategooria", WikiParser::CATEGORY},    // et
+  {"Kategorija", WikiParser::CATEGORY},    // sh, hr, lt, lv
   {"Kategorio",  WikiParser::CATEGORY},    // eo
-  {"Kategori",   WikiParser::CATEGORY},    // da, no, sv
+  {"Kategori",   WikiParser::CATEGORY},    // da, no, sv, id, ms
+  {"Lêer",       WikiParser::IMAGE},       // af
   {"Luokka",     WikiParser::CATEGORY},    // fi
   {"Media",      WikiParser::IMAGE},       // en
   {"Plik",       WikiParser::IMAGE},       // pl
   {"Soubor",     WikiParser::IMAGE},       // cs
+  {"Súbor",      WikiParser::IMAGE},       // sk
   {"Tiedosto",   WikiParser::IMAGE},       // fi
+  {"Vaizdas",    WikiParser::IMAGE},       // lt
   {"Κατηγορία",  WikiParser::CATEGORY},    // el
   {"Датотека",   WikiParser::IMAGE},       // sr
   {"Категорија", WikiParser::CATEGORY},    // sr
@@ -578,6 +584,16 @@ void WikiParser::ParseTag() {
       ptr_++;
     }
     if (*ptr_ != 0) ptr_ += 7;
+    nodes_[node].end = ptr_;
+    txt_ = ptr_;
+  } else if (Matches("<timeline>")) {
+    int node = Add(TIMELINE);
+    ptr_ += 10;
+    while (*ptr_ != 0) {
+      if (*ptr_ == '<' && Matches("</timeline>")) break;
+      ptr_++;
+    }
+    if (*ptr_ != 0) ptr_ += 11;
     nodes_[node].end = ptr_;
     txt_ = ptr_;
   } else if (Matches("<nowiki>")) {

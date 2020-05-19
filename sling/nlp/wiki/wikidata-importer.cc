@@ -32,6 +32,7 @@
 #include "sling/task/frames.h"
 #include "sling/task/reducer.h"
 #include "sling/task/task.h"
+#include "sling/util/mutex.h"
 
 namespace sling {
 namespace nlp {
@@ -90,33 +91,59 @@ class WikidataImporter : public task::Processor {
     CHECK(obj.IsFrame()) << message->value();
 
     // Create SLING frame for item.
-    Frame profile = converter_->Convert(obj.AsFrame());
+    uint64 revision = 0;
+    Frame profile = converter_->Convert(obj.AsFrame(), &revision);
     bool is_property = profile.IsA(n_property_);
     bool is_lexeme = profile.IsA(n_lexeme_);
+
+    // Keep track of the lastest modification.
+    UpdateRevision(revision, profile.Id().str());
 
     // Output property or item.
     if (is_lexeme) {
       // Discard lexemes for now since lexicographic data is still in beta.
       num_lexemes_->Increment();
-    } else if (is_property) {
-      property_channel_->Send(task::CreateMessage(profile));
-      num_properties_->Increment();
     } else {
-      item_channel_->Send(task::CreateMessage(profile));
-      num_items_->Increment();
+      task::Message *m = task::CreateMessage(profile);
+      m->set_serial(revision);
+      if (is_property) {
+        property_channel_->Send(m);
+        num_properties_->Increment();
+      } else {
+        item_channel_->Send(m);
+        num_items_->Increment();
+      }
     }
   }
 
-  // Clean up.
+  // Task complete.
   void Done(task::Task *task) override {
+    // Write latest modification to file.
+    auto *latest = task->GetOutput("latest");
+    if (latest != nullptr) {
+      string data =
+          latests_qid_ + "\t" + std::to_string(latests_revision_);
+      CHECK(File::WriteContents(latest->resource()->name(), data));
+    }
+
+    // Clean up.
     delete converter_;
     converter_ = nullptr;
     delete commons_;
     commons_ = nullptr;
   }
 
+  // Update latest revision.
+  void UpdateRevision(uint64 revision, const string &qid) {
+    MutexLock lock(&mu_);
+    if (revision > latests_revision_) {
+      latests_revision_ = revision;
+      latests_qid_ = qid;
+    }
+  }
+
  private:
-  // Output channel for items and properties.
+  // Output channels for items and properties.
   task::Channel *item_channel_ = nullptr;
   task::Channel *property_channel_ = nullptr;
 
@@ -125,6 +152,12 @@ class WikidataImporter : public task::Processor {
 
   // Wikidata converter.
   WikidataConverter *converter_ = nullptr;
+
+  // Latest revision for item seen in items. Updates to these are serialized
+  // through a mutex.
+  uint64 latests_revision_ = 0;
+  string latests_qid_;
+  Mutex mu_;
 
   // Statistics.
   task::Counter *num_items_ = nullptr;
@@ -138,6 +171,77 @@ class WikidataImporter : public task::Processor {
 };
 
 REGISTER_TASK_PROCESSOR("wikidata-importer", WikidataImporter);
+
+// Split Wikidata frames into items, properties, and redirects.
+class WikidataSplitter : public task::Processor {
+ public:
+  // Initialize Wikidata splitter.
+  void Start(task::Task *task) override {
+    // Get output channels.
+    item_channel_ = task->GetSink("items");
+    CHECK(item_channel_ != nullptr);
+    property_channel_ = task->GetSink("properties");
+    CHECK(property_channel_ != nullptr);
+    redirect_channel_ = task->GetSink("redirects");
+    CHECK(redirect_channel_ != nullptr);
+
+    // Initialize counters.
+    num_items_ = task->GetCounter("items");
+    num_properties_ = task->GetCounter("properties");
+    num_redirects_ = task->GetCounter("redirects");
+
+    // Bind symbols.
+    CHECK(names_.Bind(&commons_));
+    commons_.Freeze();
+  }
+
+  // Split Wikidata frames.
+  void Receive(task::Channel *channel, task::Message *message) override {
+    // Decode frame from message.
+    Store store(&commons_);
+    Frame frame = DecodeMessage(&store, message);
+    CHECK(frame.valid());
+
+    // Output frame to appropriate channel.
+    if (frame.IsA(n_property_)) {
+      property_channel_->Send(message);
+      num_properties_->Increment();
+    } else if (IsRedirect(frame)) {
+      redirect_channel_->Send(message);
+      num_redirects_->Increment();
+    } else {
+      item_channel_->Send(message);
+      num_items_->Increment();
+    }
+  }
+
+  // Check if frame is a redirect frame.
+  static bool IsRedirect(const Frame &frame) {
+    // A redirect frame has an id: slot and an is: slot.
+    if (frame.size() != 2) return false;
+    if (frame.name(0) != Handle::id()) return false;
+    if (frame.name(1) != Handle::is()) return false;
+    return true;
+  }
+
+ private:
+  // Output channels for items, properties, and redirects.
+  task::Channel *item_channel_ = nullptr;
+  task::Channel *property_channel_ = nullptr;
+  task::Channel *redirect_channel_ = nullptr;
+
+  // Statistics.
+  task::Counter *num_items_ = nullptr;
+  task::Counter *num_properties_ = nullptr;
+  task::Counter *num_redirects_ = nullptr;
+
+  // Symbols.
+  Store commons_;
+  Names names_;
+  Name n_property_{names_, "/w/property"};
+};
+
+REGISTER_TASK_PROCESSOR("wikidata-splitter", WikidataSplitter);
 
 // Build Wikidata to Wikipedia id mapping.
 class WikipediaMapping : public task::FrameProcessor {
@@ -250,31 +354,6 @@ class WikipediaMapping : public task::FrameProcessor {
 };
 
 REGISTER_TASK_PROCESSOR("wikipedia-mapping", WikipediaMapping);
-
-// Merge items with the same qid.
-class ItemMerger : public task::Reducer {
- public:
-  void Reduce(const task::ReduceInput &input) override {
-    if (input.messages().size() == 1) {
-      // Only one frame for item; output directly.
-      Output(input.shard(), input.release(0));
-    } else {
-      // Merge all items.
-      Store store;
-      Builder builder(&store);
-      for (task::Message *message : input.messages()) {
-        Frame item = DecodeMessage(&store, message);
-        builder.AddFrom(item);
-      }
-
-      // Output merged categories for item.
-      Frame merged = builder.Create();
-      Output(input.shard(), task::CreateMessage(input.key(), merged));
-    }
-  }
-};
-
-REGISTER_TASK_PROCESSOR("item-merger", ItemMerger);
 
 // Prune Wikidata items for knowledge base repository.
 class WikidataPruner : public task::FrameProcessor {

@@ -1,0 +1,11 @@
+{=/wp/templates/cs
+
+"!!":     {type: "text" text: "||"}
+
+"((":     {type: "text" text: "{{"}
+"))":     {type: "text" text: "}}"}
+
+"=":      {type: "text" text: "="}
+
+}
+

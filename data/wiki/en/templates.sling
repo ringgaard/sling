@@ -39,6 +39,7 @@
 "2/3": {type: "text" text: "⅔"}
 "1/4": {type: "text" text: "¼"}
 "3/4": {type: "text" text: "¾"}
+"aka": {type: "text" text: "aka"}
 
 "ABW": {type: "text" text: "Aruba" link: Q21203}
 "AFG": {type: "text" text: "Afghanistan" link: Q889}
