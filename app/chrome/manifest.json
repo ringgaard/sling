@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "SLING analyzer",
+  "short_name": "SLING",
+  "description": "Analyze web page with SLING",
+  "version": "2.0.0",
+  "permissions": [
+    "contextMenus",
+    "activeTab"
+  ],
+  "icons": {
+    "16": "sling.png"
+  },
+ "background": {
+    "persistent": false,
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [{
+    "matches": ["*://*/*"],
+    "js": ["content.js"]
+  }]
+}
+
