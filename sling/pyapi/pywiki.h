@@ -37,6 +37,9 @@ struct PyWikiConverter : public PyBase {
   // Wikidata converter.
   nlp::WikidataConverter *converter;
 
+  // Handle for "entities" symbol.
+  Handle s_entities;
+
   // Registration.
   static PyTypeObject type;
   static PyMethodTable methods;

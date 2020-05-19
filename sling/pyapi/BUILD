@@ -15,6 +15,7 @@ cc_library(
     "pyrecordio.cc",
     "pystore.cc",
     "pytask.cc",
+    "pyweb.cc",
     "pywiki.cc",
   ],
   hdrs = [
@@ -29,6 +30,7 @@ cc_library(
     "pyrecordio.h",
     "pystore.h",
     "pytask.h",
+    "pyweb.h",
     "pywiki.h",
   ],
   deps = [
@@ -46,6 +48,7 @@ cc_library(
     "//sling/myelin:gradient",
     "//sling/myelin:profile",
     "//sling/nlp/document",
+    "//sling/nlp/document:annotator",
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:lex",
     "//sling/nlp/document:phrase-tokenizer",
@@ -61,8 +64,11 @@ cc_library(
     "//sling/task:job",
     "//sling/task:process",
     "//sling/stream:file",
+    "//sling/stream:file-input",
+    "//sling/stream:input",
     "//sling/stream:memory",
     "//sling/string:text",
+    "//sling/web:web-archive",
   ],
   copts = [
     "-Wno-write-strings",
@@ -95,6 +101,7 @@ cc_library(
 
     "//sling/nlp/silver:idf",
     "//sling/nlp/silver:annotators",
+    "//sling/nlp/silver:corpus-split",
 
     "//sling/task:documents",
     "//sling/task:frame-store-reader",

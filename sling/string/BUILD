@@ -3,11 +3,24 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
   name = "string",
   deps = [
+    ":charset",
     ":ctype",
     ":numbers",
     ":printf",
+    ":split",
     ":strcat",
+    ":strip",
     ":text",
+  ],
+)
+
+cc_library(
+  name = "charset",
+  hdrs = ["charset.h"],
+  srcs = ["charset.cc"],
+  deps = [
+    ":text",
+    "//sling/base",
   ],
 )
 
@@ -40,6 +53,20 @@ cc_library(
 )
 
 cc_library(
+  name = "split",
+  hdrs = ["split.h"],
+  srcs = [
+    "split.cc",
+  ],
+  deps = [
+    ":charset",
+    ":text",
+    ":strip",
+    "//sling/base",
+  ],
+)
+
+cc_library(
   name = "strcat",
   hdrs = ["strcat.h"],
   srcs = ["strcat.cc"],
@@ -48,6 +75,16 @@ cc_library(
     ":numbers",
     ":text",
     "//sling/base",
+  ],
+)
+
+cc_library(
+  name = "strip",
+  hdrs = ["strip.h"],
+  srcs = ["strip.cc"],
+  deps = [
+    ":ctype",
+    ":text",
   ],
 )
 
