@@ -39,7 +39,7 @@ void MikolovFlow::BuildLayer0() {
   layer0 = AddFunction("layer0");
   FlowBuilder tf(this, layer0);
 
-  fv = tf.Var("features", DT_INT32, {1, in_features});
+  fv = tf.Var("features", DT_INT32, {in_features, 1});
   hidden = tf.Name(tf.GatherAvg(W0, fv), "hidden");
 }
 
@@ -49,8 +49,8 @@ void MikolovFlow::BuildLayer1() {
 
   // Inputs.
   alpha = tf.Var("alpha", DT_FLOAT, {});
-  label = tf.Var("label", DT_FLOAT, {1, 1});
-  target = tf.Var("target", DT_INT32, {1, out_features});
+  label = tf.Var("label", DT_FLOAT, {});
+  target = tf.Var("target", DT_INT32, {out_features});
   error = tf.Var("error", DT_FLOAT, {dims});
   l1_l0 = tf.Instance(layer0);
   auto *h = tf.Ref(l1_l0, hidden);
@@ -58,7 +58,7 @@ void MikolovFlow::BuildLayer1() {
   // Output.
   bool single = out_features == 1;
   auto *embed = single ? tf.Gather(W1, target) : tf.GatherAvg(W1, target);
-  auto *output = tf.Dot(embed, h, dims);
+  auto *output = tf.Sum(tf.Mul(embed, h));
 
   // Likelihood.
   likelihood = tf.Name(tf.Sub(label, tf.Sigmoid(output)), "likelihood");
@@ -76,7 +76,8 @@ void MikolovFlow::BuildLayer0Back() {
 
   l0b_l0 = tf.Instance(layer0);
   l0b_l1 = tf.Instance(layer1);
-  tf.AssignAddScatter(W0, tf.Ref(l0b_l0, fv), tf.Ref(l0b_l1, error));
+  auto *s = tf.AssignAddScatter(W0, tf.Ref(l0b_l0, fv), tf.Ref(l0b_l1, error));
+  s->SetAttr("pooled", true);
 }
 
 void DualEncoderFlow::Build() {
@@ -118,7 +119,7 @@ void DualEncoderFlow::BuildEncoder(Encoder *encoder) {
       tf.Parameter("embeddings", DT_FLOAT, {encoder->dims, dims});
   tf.RandomNormal(encoder->embeddings);
   encoder->features =
-      tf.Placeholder("features", DT_INT32, {1, encoder->max_features});
+      tf.Placeholder("features", DT_INT32, {encoder->max_features, 1});
   auto *sum = tf.GatherSum(encoder->embeddings, encoder->features);
   if (normalize) {
     auto *norm = tf.Name(tf.Norm(sum), "norm");
@@ -138,6 +139,10 @@ DualEncoderBatch::DualEncoderBatch(const DualEncoderFlow &flow,
       gsim_(flow.gsim),
       gleft_(flow.left.backward),
       gright_(flow.right.backward) {
+  // Set up gradients.
+  gradients_.Add(&gleft_);
+  gradients_.Add(&gright_);
+
   // Allocate instances for all batch elements.
   elements_.reserve(flow.batch_size);
   for (int i = 0; i < flow.batch_size; ++i) elements_.emplace_back(flow);

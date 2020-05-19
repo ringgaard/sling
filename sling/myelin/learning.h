@@ -36,7 +36,7 @@ class CrossEntropyLoss {
   // Initialize loss for model.
   void Initialize(const Network &network);
 
-  // Compute loss from logits and output loss gradient.
+  // Compute loss from logits and output loss and gradient.
   float Compute(float *logits, int target, float *dlogits) const;
 
  private:
@@ -51,6 +51,33 @@ class CrossEntropyLoss {
   Tensor *target_ = nullptr;
   Tensor *loss_ = nullptr;
   Tensor *dlogits_ = nullptr;
+};
+
+// Negative log-likelihood loss function.
+class NLLLoss {
+ public:
+  NLLLoss(const string &name = "loss") : name_(name) {}
+
+  // Build loss function together with gradient computation.
+  void Build(Flow *flow);
+
+  // Initialize loss for model.
+  void Initialize(const Network &network);
+
+  // Compute loss from likelihood and output loss and gradient.
+  float Compute(float *likelihood, float *dlikelihood) const;
+
+ private:
+  // Name of loss function.
+  string name_;
+
+  // Cell for loss computation.
+  Cell *cell_ = nullptr;
+
+  // Tensors for loss computation.
+  Tensor *likelihood_ = nullptr;
+  Tensor *loss_ = nullptr;
+  Tensor *dlikelihood_ = nullptr;
 };
 
 // A parameter optimizer applies updates to the learnable parameters of a model
@@ -70,7 +97,7 @@ class Optimizer {
   void Initialize(const Network &network);
 
   // Apply gradients to update learnable parameters.
-  virtual void Apply(const std::vector<Instance *> &gradients);
+  virtual void Apply(const Instances &gradients);
 
   // Decay learning rate. Returns new learning rate.
   virtual float DecayLearningRate() { return 0.0; }
@@ -146,9 +173,6 @@ class MomentumOptimizer : public Optimizer {
  public:
   MomentumOptimizer(const string &name = "optimizer") : Optimizer(name) {}
 
-  // Apply gradients to update learnable parameters.
-  void Apply(const std::vector<Instance *> &gradients) override;
-
   // Decay learning rate.
   float DecayLearningRate() override;
 
@@ -179,9 +203,6 @@ class MomentumOptimizer : public Optimizer {
 class AdamOptimizer : public Optimizer {
  public:
   AdamOptimizer(const string &name = "optimizer") : Optimizer(name) {}
-
-  // Apply gradients to update learnable parameters.
-  void Apply(const std::vector<Instance *> &gradients) override;
 
   // Decay learning rate.
   float DecayLearningRate() override;

@@ -149,27 +149,27 @@ void sign_grad(Flow::Operation *op, Gradients *g) {
 }
 
 // z = min(x, y)
-// dx = (x<y)?x:0 * dz
-// dy = (x<y)?0:y * dz
+// dx = (x<=y)?x:0 * dz
+// dy = (x<=y)?0:y * dz
 void minimum_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->inputs[1];
   auto z = op->outputs[0];
   auto zero = g->Zero(z->type);
-  auto test = g->Less(g->v(x),g->v(y));
+  auto test = g->LessEqual(g->v(x),g->v(y));
   g->add(x, g->Cond(test, g->d(z), zero));
   g->add(y, g->Cond(test, zero, g->d(z)));
 }
 
 // z = max(x, y)
-// dx = (x>y)?x:0 * dz
-// dy = (x>y)?0:y * dz
+// dx = (x>=y)?x:0 * dz
+// dy = (x>=y)?0:y * dz
 void maximum_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->inputs[1];
   auto z = op->outputs[0];
   auto zero = g->Zero(z->type);
-  auto test = g->Greater(g->v(x),g->v(y));
+  auto test = g->GreaterEqual(g->v(x),g->v(y));
   g->add(x, g->Cond(test, g->d(z), zero));
   g->add(y, g->Cond(test, zero, g->d(z)));
 }
@@ -431,6 +431,24 @@ void sigmoid_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Mul(g->d(y), g->Mul(g->v(y), g->Sub(one, g->v(y)))));
 }
 
+// y = softmax(x)
+// dx =softmax(x) * (1 - softmax(x)) * dy = y * (1 - y) * dy
+void softmax_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  auto one = g->One(g->v(y)->type);
+  g->add(x, g->Mul(g->d(y), g->Mul(g->v(y), g->Sub(one, g->v(y)))));
+}
+
+// y = logsumexp(x)
+// dx = softmax(x) * dy
+void logsumexp_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  int axis = op->GetAttr("axis", -1);
+  g->add(x, g->Mul(g->SoftMax(g->v(x), axis), g->d(y)));
+}
+
 // y = erf(x)
 // dx = 2/sqrt(pi) exp(-x^2) * dy
 void erf_grad(Flow::Operation *op, Gradients *g) {
@@ -480,6 +498,14 @@ void reshape_grad(Flow::Operation *op, Gradients *g) {
   g->add(x, g->Reshape(g->d(y), g->v(x)->shape));
 }
 
+// y = resize(x, shape)
+// dx = resize(dy, shape(x))
+void resize_grad(Flow::Operation *op, Gradients *g) {
+  auto x = op->inputs[0];
+  auto y = op->outputs[0];
+  g->add(x, g->Resize(g->d(y), g->v(x)->shape));
+}
+
 // v = gather(M, f)
 // dM = scatter(dv, f)
 void gather_grad(Flow::Operation *op, Gradients *g) {
@@ -488,9 +514,9 @@ void gather_grad(Flow::Operation *op, Gradients *g) {
   auto v = op->outputs[0];
   if (op->indegree() == 3) {
     auto oov = op->inputs[2];
-    g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0), g->d(oov)));
+    g->add(M, g->Scatter(g->v(f), g->d(v), g->d(oov), M->shape));
   } else {
-    g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0)));
+    g->add(M, g->Scatter(g->v(f), g->d(v), M->shape));
   }
 }
 
@@ -500,7 +526,8 @@ void gathersum_grad(Flow::Operation *op, Gradients *g) {
   auto M = op->inputs[0];
   auto f = op->inputs[1];
   auto v = op->outputs[0];
-  g->add(M, g->Scatter(g->v(f), g->d(v), M->dim(0)));
+  int batch = op->GetAttr("batch", 0);
+  g->add(M, g->Scatter(g->v(f), g->d(v), M->shape, batch, true));
 }
 
 // v = concat(v_1, ..., v_n, axis)
@@ -554,19 +581,19 @@ void sum_grad(Flow::Operation *op, Gradients *g) {
 }
 
 // y = min(x)
-// dx = onehot(argmin(x), dy)
+// dx = (x=y) ? dy : 0
 void min_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->OneHot(g->ArgMin(g->v(x)), g->d(y), x->elements()));
+  g->add(x, g->Select(g->Equal(g->v(x), g->v(y)), g->d(y)));
 }
 
 // y = max(x)
-// dx = onehot(argmax(x), dy)
+// dx = (x=y) ? dy : 0
 void max_grad(Flow::Operation *op, Gradients *g) {
   auto x = op->inputs[0];
   auto y = op->outputs[0];
-  g->add(x, g->OneHot(g->ArgMax(g->v(x)), g->d(y), x->elements()));
+  g->add(x, g->Select(g->Equal(g->v(x), g->v(y)), g->d(y)));
 }
 
 // y = x^T
@@ -642,11 +669,14 @@ void RegisterStandardGradients() {
   RegisterGradient("Log", log_grad);
   RegisterGradient("Pow", pow_grad);
   RegisterGradient("Sigmoid", sigmoid_grad);
+  RegisterGradient("SoftMax", softmax_grad);
+  RegisterGradient("LogSumExp", logsumexp_grad);
   RegisterGradient("Erf", erf_grad);
   RegisterGradient("Relu", relu_grad);
   RegisterGradient("Norm", norm_grad);
   RegisterGradient("Identity", identity_grad);
   RegisterGradient("Reshape", reshape_grad);
+  RegisterGradient("Resize", resize_grad);
   RegisterGradient("Gather", gather_grad);
   RegisterGradient("GatherSum", gathersum_grad);
   RegisterGradient("Concat", concat_grad);

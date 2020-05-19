@@ -39,14 +39,14 @@ struct FactPlausibilityFlow : public Flow {
     auto *embeddings =
         f.RandomNormal(f.Parameter("embeddings", DT_FLOAT, {facts, dims}));
 
-    premise = f.Placeholder("premise", DT_INT32, {1, max_features});
-    auto *pencoding = f.GatherSum(embeddings, premise);
+    premise = f.Placeholder("premise", DT_INT32, {1, max_features, 1});
+    auto *pencoding = f.GatherSum(embeddings, premise, 1);
 
-    hypothesis = f.Placeholder("hypothesis", DT_INT32, {1, max_features});
-    auto *hencoding = f.GatherSum(embeddings, hypothesis);
+    hypothesis = f.Placeholder("hypothesis", DT_INT32, {1, max_features, 1});
+    auto *hencoding = f.GatherSum(embeddings, hypothesis, 1);
 
-    auto *fv = f.Concat({pencoding, hencoding});
-    logits = f.Name(f.FFLayers(fv, {dims * 2, 2}, -1, true, "Relu"), "logits");
+    auto *fv = f.Concat({pencoding, hencoding}, 1);
+    logits = f.Name(f.FNN(fv, {dims * 2, 2}, true, "Relu"), "logits");
 
     if (learn) {
       // Create gradient computations.
@@ -58,7 +58,7 @@ struct FactPlausibilityFlow : public Flow {
       // probability that the fact is false (implausible) and the second is the
       // probability that the fact is true (plausible), such that
       // p(plausible) + p(implausible) = 1.
-      probs = f.Name(f.Softmax(logits), "probs");
+      probs = f.Name(f.SoftMax(logits), "probs");
     }
   }
 
@@ -195,7 +195,8 @@ class FactPlausibilityTrainer : public LearnerTask {
     int *hypothesis = scorer.Get<int>(flow_.hypothesis);
     float *logits = scorer.Get<float>(flow_.logits);
     float *dlogits = gscorer.Get<float>(flow_.d_logits);
-    std::vector<Instance *> gradients{&gscorer};
+    Instances gradients;
+    gradients.Add(&gscorer);
 
     for (;;) {
       // Compute gradients for epoch.

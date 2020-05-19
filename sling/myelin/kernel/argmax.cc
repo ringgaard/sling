@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/myelin/kernel/avx.h"
-
 #include <math.h>
-#include <string>
 
 #include "sling/myelin/compute.h"
 #include "sling/myelin/macro-assembler.h"
+#include "sling/myelin/simd-assembler.h"
 
 #define __ masm->
 
@@ -26,6 +24,163 @@ namespace sling {
 namespace myelin {
 
 using namespace jit;
+
+// Compute argmax (or argmin) over an axis optionally also outputting the
+// maximum (or minimum) value.
+class GeneralArgMax : public Kernel {
+ public:
+  GeneralArgMax(bool minimum) : minimum_(minimum) {}
+
+  string Name() override { return "General" + Operation(); }
+  string Operation() override { return minimum_ ? "ArgMin" : "ArgMax"; }
+
+  bool Supports(Step *step) override {
+    // Check inputs and outputs.
+    if (step->indegree() != 1) return false;
+    if (step->outdegree() != 1 && step->outdegree() != 2) return false;
+    Tensor *x = step->input(0);
+    Tensor *argm = step->output(0);
+    Tensor *mval = step->outdegree() ==  2 ? step->output(1) : nullptr;
+
+    // Check type.
+    Type dt = x->type();
+    if (!SIMDAssembler::Supports(x->type())) return false;
+    if (!TypeTraits::of(argm->type()).isint()) return false;
+    if (mval != nullptr && mval->type() != dt) return false;
+
+    // Check shape.
+    int axis = step->GetAttr("axis", -1);
+    if (axis < -1 || axis >= x->rank()) return false;
+    if (axis == -1) {
+      if (argm->elements() != 1) return false;
+      if (mval != nullptr && mval->elements() != 1) return false;
+    } else {
+      Shape reduced = x->shape().reduced(axis, false);
+      if (argm->shape() != reduced) return false;
+      if (mval != nullptr && mval->shape() != reduced) return false;
+    }
+
+    return true;
+  }
+
+  void Generate(Step *step, MacroAssembler *masm) override {
+    // Get input and output.
+    Tensor *x = step->input(0);
+    Tensor *argm = step->output(0);
+    Tensor *mval = step->outdegree() ==  2 ? step->output(1) : nullptr;
+    Type dt = x->type();
+    int axis = step->GetAttr("axis", -1);
+
+    int outer_size = 1;
+    int redux_size = x->elements();
+    int inner_size = 1;
+    if (axis != -1) {
+      outer_size = x->shape().outer(axis);
+      redux_size = x->dim(axis);
+      inner_size = x->shape().inner(axis + 1);
+    }
+
+    // Create SIMD code generator.
+    SIMDAssembler sasm(masm, dt, false, true);
+    step->set_variant(sasm.name());
+
+    // Allocate registers.
+    Register in = masm->rr().alloc();
+    Register arg_out = masm->rr().alloc();
+    Register val_out = masm->rr().alloc();
+    Register outer = masm->rr().alloc();
+    Register inner = masm->rr().alloc();
+    Register redux = masm->rr().alloc();
+    Register best = masm->rr().alloc();
+
+    int value = sasm.alloc();
+    int extremum = sasm.alloc();
+
+    // Load tensor addresses.
+    __ LoadTensorAddress(in, x);
+    __ LoadTensorAddress(arg_out, argm);
+    if (mval != nullptr) {
+      __ LoadTensorAddress(val_out, mval);
+    }
+
+    // Loop over outer dimensions.
+    Label louter;
+    if (outer_size > 1) {
+      __ xorq(outer, outer);
+      __ bind(&louter);
+    }
+
+    // Loop over inner dimensions.
+    Label linner;
+    if (inner_size > 1) {
+      __ xorq(inner, inner);
+      __ bind(&linner);
+    }
+
+    // Load first element in reduction.
+    sasm.scalar()->Load(extremum, Operand(in));
+    __ xorq(best, best);
+    __ addq(in, Immediate(x->stride(axis)));
+
+    // Loop over remaining elements in reduction.
+    if (redux_size > 1) {
+      Label lredux;
+      __ movq(redux, Immediate(1));
+      __ bind(&lredux);
+
+      // Check if next value is greater/less than current extremum.
+      Label l1;
+      sasm.scalar()->Load(value, Operand(in));
+      if (sasm.scalar()->Compare(value, extremum)) {
+        __ j(minimum_ ? above_equal : below_equal, &l1);
+      } else {
+        __ j(minimum_ ? greater_equal : less_equal, &l1);
+      }
+      sasm.scalar()->Move(extremum, value);
+      __ movq(best, redux);
+      __ bind(&l1);
+
+      // Next reduction element.
+      __ addq(in, Immediate(x->stride(axis)));
+      __ incq(redux);
+      __ cmpq(redux, Immediate(redux_size));
+      __ j(less, &lredux);
+    }
+
+    // Output min/max index and value.
+    __ StoreInteger(arg_out, best, argm->type());
+    if (outer_size * inner_size > 1) {
+      __ addq(arg_out, Immediate(argm->element_size()));
+    }
+    if (mval != nullptr) {
+      sasm.scalar()->Store(Operand(val_out), extremum);
+      if (outer_size * inner_size > 1) {
+        __ addq(val_out, Immediate(mval->element_size()));
+      }
+    }
+
+    // Next inner element.
+    if (inner_size > 1) {
+      __ subq(in, Immediate(x->AxisSize(axis) - x->element_size()));
+      __ incq(inner);
+      __ cmpq(inner, Immediate(inner_size));
+      __ j(less, &linner);
+    }
+
+    // Next outer element.
+    if (outer_size > 1) {
+      if (inner_size > 1) {
+        __ addq(in, Immediate(x->AxisSize(axis) - x->stride(axis)));
+      }
+      __ incq(outer);
+      __ cmpq(outer, Immediate(outer_size));
+      __ j(less, &louter);
+    }
+  }
+
+ private:
+  bool minimum_;  // compute argmin instead of argmax
+};
 
 // Compute argmax (or argmin) of input using AVX.
 class AVXFltArgMax : public Kernel {
@@ -49,6 +204,9 @@ class AVXFltArgMax : public Kernel {
     if (x->type() != DT_FLOAT) return false;
     if (y->type() != DT_INT32 && y->type() != DT_INT64) return false;
     if (y->elements() != 1) return false;
+
+    // Reduction over axis is not supported.
+    if (step->GetAttr("axis", -1) != -1) return false;
 
     return true;
   }
@@ -180,17 +338,11 @@ class AVXFltArgMax : public Kernel {
   bool minimum_;  // compute argmin instead of argmax
 };
 
-void RegisterAVXMath(Library *library) {
-  // Computes  : y = argmax(x)
-  // Input     : x: float32[d1,...,dn]
-  // Output    : y: int32/int64
-  // Requires  : AVX
-  library->Register(new AVXFltArgMax(false));
+void RegisterArgMax(Library *library) {
+  library->Register(new GeneralArgMax(false));
+  library->Register(new GeneralArgMax(true));
 
-  // Computes  : y = argmin(x)
-  // Input     : x: float32[d1,...,dn]
-  // Output    : y: int32/int64
-  // Requires  : AVX
+  library->Register(new AVXFltArgMax(false));
   library->Register(new AVXFltArgMax(true));
 }
 

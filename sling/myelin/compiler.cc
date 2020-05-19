@@ -40,11 +40,11 @@ DEFINE_string(input_flow, "", "File for saving raw input flow");
 DEFINE_string(final_flow, "", "File for saving final analyzed flow");
 DEFINE_string(input_dot, "", "File for saving raw input flow as DOT file");
 DEFINE_string(input_graph, "", "File for saving raw input flow as SVG file");
-DEFINE_string(final_graph, "", "File for saving analyzed flow as SVG file");
-DEFINE_string(final_dot, "", "File for saving analyzed flow as DOT file");
+DEFINE_string(graph, "", "File for saving analyzed flow as SVG file");
+DEFINE_string(dot, "", "File for saving analyzed flow as DOT file");
 DEFINE_string(jit_code, "", "File for saving JIT generated code");
 DEFINE_bool(dump_input_flow, false, "Dump raw input flow to log");
-DEFINE_bool(dump_final_flow, false, "Dump final analyzed flow to log");
+DEFINE_bool(dump_flow, false, "Dump final analyzed flow to log");
 DEFINE_bool(dump_cells, false, "Dump cells after compilation");
 DEFINE_bool(dump_code, false, "Dump generated assembly code");
 DEFINE_bool(param_stats, false, "Dump model parameter statistics");
@@ -55,12 +55,15 @@ DEFINE_bool(dragnn, false, "Use DRAGNN kernels");
 DEFINE_bool(sync_steps, false, "Synchronize all compute steps");
 DEFINE_bool(fast_math, false, "Fast approximate math ops");
 DEFINE_bool(graph_all_vars, false, "Include all variables in DOT graph");
+DEFINE_bool(graph_gradients, false, "Include gradients in DOT graph");
+DEFINE_bool(graph_optimizer, false, "Include optimizer in DOT graph");
 DEFINE_string(graph_layout, "", "DOT graph layout");
 DEFINE_string(data_profile, "", "File name prefix for data instance diagrams");
 DEFINE_bool(jit_debug, false, "Debug break in jit code");
 DEFINE_int32(cuda_device, -1, "CUDA device number");
 DEFINE_int32(cuda_context_flags, 0, "CUDA context flags");
 DEFINE_int32(sparse_threshold, 64, "Minimum dimension size for sparse update");
+DEFINE_bool(separate_tensors, false, "Do not allow shared space for tensors");
 DEFINE_bool(compile_only, false, "Stop after compilation");
 
 namespace sling {
@@ -123,8 +126,8 @@ void Compiler::Compile(Flow *flow, Network *net) {
   flow->Analyze(*library_);
 
   // Optionally dump final flow.
-  if (FLAGS_dump_final_flow) {
-    LOG(INFO) << "Final flow:\n" << flow->ToString();
+  if (FLAGS_dump_flow) {
+    LOG(INFO) << "Flow:\n" << flow->ToString();
   }
 
   // Optionally save final flow.
@@ -133,7 +136,7 @@ void Compiler::Compile(Flow *flow, Network *net) {
   }
 
   // Optionally output graph for final flow.
-  WriteGraph(*flow, FLAGS_final_dot, FLAGS_final_graph);
+  WriteGraph(*flow, FLAGS_dot, FLAGS_graph);
 
   // Optionally check flow consistency.
   if (FLAGS_check_flow_consistency) {
@@ -165,6 +168,7 @@ void Compiler::Compile(Flow *flow, Network *net) {
   if (FLAGS_sync_steps) net->options().sync_steps = true;
   if (FLAGS_jit_debug) net->options().debug = true;
   if (FLAGS_fast_math) net->options().fast_math = true;
+  if (FLAGS_separate_tensors) net->options().shared_tensors = false;
   net->options().sparse_threshold = FLAGS_sparse_threshold;
 
   CHECK(net->Compile(*flow, *library_));
@@ -249,6 +253,8 @@ void Compiler::WriteGraph(const Flow &flow,
   // Generate GraphViz DOT script.
   GraphOptions opts;
   if (FLAGS_graph_all_vars) opts.include_intermediates = true;
+  if (!FLAGS_graph_optimizer) opts.exclude_optimizer = true;
+  if (!FLAGS_graph_gradients) opts.exclude_gradients = true;
   if (!FLAGS_graph_layout.empty()) opts.direction = FLAGS_graph_layout.c_str();
   string graph = FlowToDotGraph(flow, opts);
 

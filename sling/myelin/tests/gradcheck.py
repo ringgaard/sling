@@ -22,9 +22,13 @@ import numpy as np
 import math
 
 flags.define("--fp64", default=False, action='store_true')
+flags.define("--seed", default=None)
+flags.define("--test")
+flags.define("--dump_data", default=False, action='store_true')
 
 flags.parse()
 compiler = myelin.Compiler()
+if flags.arg.seed: np.random.seed(int(flags.arg.seed))
 
 shape = [16]
 dtype = myelin.DT_FLOAT
@@ -89,6 +93,9 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
   data = cell.instance()
   for v in inputs: data[v] = x[v]
   data.compute()
+  if flags.arg.dump_data:
+    print("%s:" % (func.name))
+    print(data)
 
   # Check gradient for each output variable element.
   minulp = None
@@ -105,6 +112,9 @@ def gradcheck(f, inputs, outputs, lo=-10.0, hi=10.0, eps=1e-3, tol=1e-4):
       if primal != -1: gdata[primal] = data
       if adjoint != -1: gdata.tensor(adjoint)[j] = 1.0
       gdata.compute()
+      if flags.arg.dump_data:
+        print("d%s_%d:" % (output.name, j))
+        print(gdata)
 
       # Check gradient for each input variable element.
       for input in inputs:
@@ -471,8 +481,15 @@ def check_softmax():
   flow = myelin.Flow()
   f = flow.define("softmax")
   x = f.var("x", dtype, shape)
-  y = f.softmax(x, "y")
+  y = f.softmax(x, name="y")
   gradcheck(f, [x], [y])
+
+def check_logsumexp():
+  flow = myelin.Flow()
+  f = flow.define("logsumexp")
+  x = f.var("x", dtype, shape)
+  y = f.logsumexp(x, name="y")
+  gradcheck(f, [x], [y], tol=1e-3)
 
 def check_sum():
   flow = myelin.Flow()
@@ -518,6 +535,12 @@ def check_bcast_mul():
   x2 = f.var("x2", dtype)
   y = f.mul(x1, x2, "y")
   gradcheck(f, [x1, x2], [y], tol=1e-3)
+
+# Check for specific test to run.
+if flags.arg.test:
+  print("Running test", flags.arg.test)
+  exec("check_" + flags.arg.test + "()")
+  quit()
 
 # Test gradients for all functions.
 check_add()
@@ -565,10 +588,10 @@ check_relu()
 check_norm()
 check_normalize()
 check_sum()
-if not flags.arg.fp64:
-  check_max()
-  check_min()
-  check_softmax()
+check_max()
+check_min()
+#check_softmax()
+check_logsumexp()
 check_matmul()
 check_bcast_add()
 check_bcast_mul()

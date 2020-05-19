@@ -19,7 +19,7 @@ else:
 workflow.startup()
 
 # Create workflow.
-wf = workflow.Workflow("parser-training")
+wf = workflow.Workflow("caspar-trainer")
 
 # Parser trainer inputs and outputs.
 training_corpus = wf.resource(
@@ -40,9 +40,12 @@ word_embeddings = wf.resource(
 parser_model = wf.resource(modelfn, format="flow")
 
 # Parser trainer task.
-trainer = wf.task("caspar-trainer")
+trainer = wf.task("parser-trainer")
 
 trainer.add_params({
+  "encoder": "lexrnn",
+  "decoder": "caspar",
+
   "rnn_type": 1,
   "rnn_dim": rnn_dim,
   "rnn_highways": True,

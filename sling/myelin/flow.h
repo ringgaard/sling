@@ -62,10 +62,10 @@ class TypeTraits {
  public:
   TypeTraits(Type type, const char *name, int size,
              const char *ctype, const char *ptx, int cuda, const char *pytype,
-             void *zero, void *one)
+             bool isint, bool isfloat, void *zero, void *one)
       : type_(type), name_(name), size_(size),
         ctype_(ctype), ptx_(ptx), cuda_(cuda), pytype_(pytype),
-        zero_(zero), one_(one) {}
+        isint_(isint), isfloat_(isfloat), zero_(zero), one_(one) {}
 
   Type type() const { return type_; }
   const string &name() const { return name_; }
@@ -75,6 +75,9 @@ class TypeTraits {
   const char *ptx() const { return ptx_; }
   int cuda() const { return cuda_; }
   const char *pytype() const { return pytype_; }
+  bool isint() const { return isint_; }
+  bool isfloat() const { return isfloat_; }
+
 
   // Return data formatted according to type.
   string str(const void *data) const;
@@ -102,6 +105,8 @@ class TypeTraits {
   const char *ptx_;     // CUDA PTX type
   int cuda_;            // CUDA CUBLAS type
   const char *pytype_;  // Python type
+  bool isint_;          // integer type
+  bool isfloat_;        // floating-point type
 
   const void *zero_;    // binary representation of zero for type
   const void *one_;     // binary representation of one for type
@@ -154,6 +159,11 @@ class Shape {
   void assign(int d1) { clear(); add(d1); }
   void assign(int d1, int d2) { clear(); add(d1); add(d2); }
 
+  // Append other shape to this shape.
+  void append(const Shape &other) {
+    dims_.insert(dims_.end(), other.dims_.begin(), other.dims_.end());
+  }
+
   // Set all dimensions to a certain size.
   void fill(int size) { dims_.assign(rank(), size); }
   void fill(int rank, int size) { dims_.assign(rank, size); }
@@ -197,6 +207,43 @@ class Shape {
     return r;
   }
 
+  // Return squeezed shape with single dimension removed.
+  Shape squeezed(int axis) const {
+    Shape s;
+    for (int d = 0; d < rank(); d++) {
+      if (d != axis) s.add(dims_[d]);
+    }
+    return s;
+  }
+
+  // Return expanded shape with single dimension added.
+  Shape expanded(int axis) const {
+    Shape s;
+    for (int d = 0; d < rank(); d++) {
+      if (d == axis) s.add(1);
+      s.add(dims_[d]);
+    }
+    return s;
+  }
+
+  // Return outside shape with respect to axis.
+  Shape outside(int axis) const {
+    Shape s;
+    for (int d = 0; d < axis; d++) {
+      s.add(dims_[d]);
+    }
+    return s;
+  }
+
+  // Return inside shape with respect to axis.
+  Shape inside(int axis) const {
+    Shape s;
+    for (int d = axis; d < rank(); ++d) {
+      if (d >= 0) s.add(dims_[d]);
+    }
+    return s;
+  }
+
   // Return the rank of the shape, i.e. the number of dimensions.
   int rank() const  { return dims_.size(); }
 
@@ -204,7 +251,14 @@ class Shape {
   bool scalar() const { return rank() == 0; }
 
   // Return size of dimension.
-  int dim(int d) const { return dims_[d]; }
+  int dim(int d) const {
+    if (d < 0) d = dims_.size() + d;
+    CHECK_LT(d, rank());
+    return dims_[d];
+  }
+
+  // Return size of axis.
+  int axisdim(int axis) const { return axis < 0 ? elements() : dim(axis); }
 
   // Return the total number of elements.
   int elements() const {
@@ -229,28 +283,39 @@ class Shape {
   }
 
   // Return the number of outer elements relative to dimension.
-  int outer(int d) const {
+  int outer(int axis) const {
     int n = 1;
-    for (int i = 0; i < d; ++i) {
-      n *= dims_[i];
+    for (int d = 0; d < axis; ++d) {
+      n *= dims_[d];
       if (n < 0) return -1;
     }
     return n;
   }
 
   // Return the number of inner elements relative to dimension.
-  int inner(int d) const {
+  int inner(int axis) const {
     int n = 1;
-    for (int i = d; i < dims_.size(); ++i) {
-      n *= dims_[i];
+    for (int d = axis; d < rank(); ++d) {
+      if (d >= 0) n *= dims_[d];
       if (n < 0) return -1;
     }
     return n;
   }
 
   // Index operator.
-  int &operator [](int d) { return dims_[d]; }
-  const int &operator [](int d) const { return dims_[d]; }
+  int &operator[](int d) {
+    return dims_[d < 0 ? dims_.size() + d : d];
+  }
+  const int &operator[](int d) const {
+    return dims_[d < 0 ? dims_.size() + d : d];
+  }
+
+  // Combine two shapes.
+  friend Shape operator+(const Shape &s1, const Shape &s2) {
+    Shape combined(s1);
+    combined.append(s2);
+    return combined;
+  }
 
   // Check if shape is the same as another shape. Undefined dimensions are
   // not compared.
@@ -268,6 +333,10 @@ class Shape {
   // Check if shape is a singular broadcast, i.e. all dimensions except the
   // last are the same, and the last dimension is scalar.
   bool IsSingleBroadcast(const Shape &other) const;
+
+  // Check if shape is a reduction of another shape and determine the reduction
+  // axis and whether the reduction dimension is kept.
+  bool IsReduction(const Shape &other, int *axis, bool *keepdims) const;
 
   // Return shape as string.
   string ToString() const;
@@ -479,6 +548,9 @@ class Flow {
     // Check if variable has a dependency on some operation.
     bool DependsOn(const Operation *op) const;
 
+    // Check if variable is differentiable.
+    bool Differentiable() const;
+
     std::vector<string> aliases;         // additional aliases for variable
     Type type = DT_INVALID;              // element type for variable
     Shape shape;                         // variable shape
@@ -542,6 +614,9 @@ class Flow {
     // operation, unless this is a scalar or the operation does not have any
     // outputs. In that case, the biggest input is returned.
     Variable *GetPrototype() const;
+
+    // Check if operation is differentiable.
+    bool Differentiable() const;
 
     // Return in and out degree.
     int indegree() const { return inputs.size(); }
@@ -652,6 +727,12 @@ class Flow {
   Variable *AddWeights(const string &name, Type type, const Shape &shape) {
     return AddVariable(name, type, shape, Variable::LEARNABLE);
   }
+
+  // Add constant variable.
+  Variable *AddConstant(const string &name,
+                        Type type,
+                        const Shape &shape,
+                        const void *data = nullptr);
 
   // Add operation.
   Operation *AddOperation(const string &name, const string &type);

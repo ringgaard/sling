@@ -24,7 +24,7 @@ namespace myelin {
 // Concatenation of input tensors along first dimension using CUDA.
 class CUDABasicConcat : public CUDAKernel {
  public:
-  static const int WORD_SIZE = 4;
+  static constexpr int WORD_SIZE = 4;
 
   string Name() override { return "CUDABasicConcat"; }
   string Operation() override { return "Concat"; }

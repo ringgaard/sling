@@ -192,6 +192,7 @@ void InitNode(
   auto *node = frame_graph->Get(handle);
   for (const Slot &slot : frame) {
     if (slot.name.IsId()) continue;
+    if (slot.value.IsNumber()) continue;
 
     Frame value(frame.store(), slot.value);
     if (!value.IsFrame()) continue;
@@ -391,7 +392,7 @@ void Generate(const Document &document,
   Store *store = document.store();
   InitializeGeneration(document, begin, end, &frame_graph, &token_to_mentions);
 
-  // Collect span-related actions, i.e. SHIFT, MARK, EVOKE, REFER, STOP.
+  // Collect span-related actions, i.e. SHIFT, MARK, EVOKE, and REFER.
   // Collected in a deque for efficiently popping them off the front.
   std::deque<Action> actions;
   CollectSpanActions(store, token_to_mentions, frame_graph, &actions);

@@ -833,78 +833,6 @@ class Step : public Attributes {
   friend class Network;
 };
 
-// A channel is an array of tensors used for connecting cells in a network.
-class Channel {
- public:
-  // Initialize empty channel.
-  Channel(const Tensor *format);
-
-  // Delete channel.
-  ~Channel();
-
-  // Remove all elements from channel.
-  void clear() { resize(0); }
-
-  // Change size of channel.
-  void resize(size_t n);
-
-  // Change size of channel and clear all elements.
-  void reset(size_t n);
-
-  // Reserve space for channel elements.
-  void reserve(size_t n);
-
-  // Zero-fill element in channel.
-  void zero(size_t n);
-
-  // Return pointer to channel element.
-  char *at(size_t index) const {
-    return data_ + (index * element_size_);
-  }
-
-  // Add element to channel and return the last element.
-  char *push() { resize(size_ + 1); return at(size_ - 1); }
-
-  // Remove the last element from the channel.
-  void pop() { resize(size_ - 1); }
-
-  // Return the number of elements in the channel.
-  size_t size() const { return size_; }
-
-  // Return placement of channel.
-  Placement placement() const {
-    return format_->ref() ? format_->ref_placement() : format_->placement();
-  }
-
-  // Return runtime for channel.
-  inline Runtime *runtime() const;
-
-  // Return tensor format for channel elements.
-  const Tensor *format() const { return format_; }
-
-  // Return contents of channel as string.
-  string ToString() const;
-
- private:
-  // Data for the channel.
-  char *data_ = nullptr;
-
-  // Number of elements in channel.
-  size_t size_ = 0;
-
-  // Number of allocated elements.
-  size_t capacity_ = 0;
-
-  // A tensor describing the element type of the channel.
-  const Tensor *format_;
-
-  // Element size.
-  int element_size_;
-
-  // Byte alignment.
-  int alignment_ = kMinDataAlignment;
-};
-
 // A tensor data object is a reference to a tensor value. It does not own the
 // underlying storage for the tensor.
 class TensorData {
@@ -988,6 +916,102 @@ class TensorData {
   const Tensor *format_;  // tensor format
 };
 
+// A channel is an array of tensors used for connecting cells in a network.
+class Channel {
+ public:
+  // Initialize empty channel.
+  Channel(const Tensor *format);
+  Channel(const Flow::Variable *format) : Channel(format->tensor) {}
+
+  // Delete channel.
+  ~Channel();
+
+  // Remove all elements from channel.
+  void clear() { resize(0); }
+
+  // Change size of channel.
+  void resize(size_t n);
+
+  // Change size of channel and clear all elements.
+  void reset(size_t n);
+
+  // Reserve space for channel elements.
+  void reserve(size_t n);
+
+  // Zero-fill element in channel.
+  void zero(size_t n);
+
+  // Return pointer to channel element.
+  char *at(size_t index) const {
+    return data_ + (index * element_size_);
+  }
+
+  // Return typed pointer to channel element.
+  template<typename T> T *get(size_t index) const {
+    return reinterpret_cast<T *>(at(index));
+  }
+
+  // Set channel element.
+  void set(size_t index, void *data) {
+    memcpy(at(index), data, element_size());
+  }
+
+  // Add element to channel and return the last element.
+  char *push() { resize(size_ + 1); return at(size_ - 1); }
+
+  // Remove the last element from the channel.
+  void pop() { resize(size_ - 1); }
+
+  // Return the number of elements in the channel.
+  size_t size() const { return size_; }
+
+  // Return placement of channel.
+  Placement placement() const {
+    return format_->ref() ? format_->ref_placement() : format_->placement();
+  }
+
+  // Return runtime for channel.
+  inline Runtime *runtime() const;
+
+  // Return tensor format for channel elements.
+  const Tensor *format() const { return format_; }
+
+  // Return size of each element in channel.
+  int element_size() const { return element_size_; }
+
+  // Return tensor data object for parameter in instance.
+  TensorData operator[](int index) {
+    return TensorData(at(index), format_);
+  }
+
+  // Return contents of channel as string.
+  string ToString() const;
+
+  // Return element of channel as string.
+  string ToString(size_t index) const {
+    return format_->ToString(at(index), false);
+  }
+
+ private:
+  // Data for the channel.
+  char *data_ = nullptr;
+
+  // Number of elements in channel.
+  size_t size_ = 0;
+
+  // Number of allocated elements.
+  size_t capacity_ = 0;
+
+  // A tensor describing the element type of the channel.
+  const Tensor *format_;
+
+  // Element size.
+  int element_size_;
+
+  // Byte alignment.
+  int alignment_ = kMinDataAlignment;
+};
+
 // A profile summary stores the profiling data for a cell and can be used for
 // external profiling where the profiling data is collected from different
 // instances. This requires that the network has been compiled for external
@@ -1046,6 +1070,19 @@ class Instance {
   template<typename T> T *Get(const Flow::Variable *var) {
     DCHECK(var->tensor != nullptr) << var->name;
     return Get<T>(var->tensor);
+  }
+
+  // Get value of reference parameter in instance memory.
+  template<typename T> T *GetRef(const Tensor *param) {
+    DCHECK(param != nullptr);
+    DCHECK(param->IsLocal()) << param->name();
+    DCHECK(param->cell() == cell_) << param->name();
+    DCHECK_EQ(Traits<T>().type(), param->type()) << param->name();
+    return *reinterpret_cast<T **>(data_ + param->offset());
+  }
+  template<typename T> T *GetRef(const Flow::Variable *var) {
+    DCHECK(var->tensor != nullptr) << var->name;
+    return GetRef<T>(var->tensor);
   }
 
   // Get pointer to location of element of parameter in instance memory.
@@ -1179,7 +1216,22 @@ class Instance {
   const Cell *cell_;
 };
 
-// Resizable array of cell instances.
+// Array of references to cell instances. The instances are not owned by the
+// array.
+class Instances : public std::vector<Instance *> {
+ public:
+  // Add instace to array.
+  void Add(Instance *data) {
+    push_back(data);
+  }
+
+  // Clear all instances.
+  void Clear() {
+    for (Instance *data : *this) data->Clear();
+  }
+};
+
+// Resizable array of cell instances. The instances are owned by the array.
 class InstanceArray {
  public:
   // Create empty array of cell instances.
@@ -1340,6 +1392,7 @@ struct Options {
   bool external_profiler = false;            // external profiling buffer
   bool global_profiler = false;              // global profiling buffer
   bool dynamic_allocation = false;           // dynamic instance allocation
+  bool shared_tensors = true;                // share data for tensors
   bool sync_steps = false;                   // synchronize all steps
   bool fast_math = false;                    // fast approximate math ops
   bool aot = false;                          // ahead-of-time compilation

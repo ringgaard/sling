@@ -27,7 +27,9 @@ flags.define("--dt", default=myelin.DT_FLOAT)
 flags.define("--test")
 flags.define("--thorough", default=False, action='store_true')
 flags.define("--repeat", default=1, type=int)
+flags.define("--c", default=False, action='store_true')
 flags.define("--skipdiff", default=False, action='store_true')
+flags.define("--reldiff", default=False, action='store_true')
 
 flags.parse()
 dt = flags.arg.dt
@@ -85,46 +87,63 @@ def check(flow, variant, lo=-10.0, hi=10.0, rtol=1e-5, atol=1e-8, check=None):
         r = np.random.ranf(a.shape) * (hi - lo) + lo
       np.copyto(a, r, casting="unsafe")
 
-    # Compute function using numpy.
-    baseline = simulator.compute(flow, f, data)
+    if flags.arg.c:
+      # Compute cell.
+      for n in range(flags.arg.repeat): data.compute()
 
-    # Compute cell.
-    for n in range(flags.arg.repeat):
-      data.compute()
+      # Print inputs.
+      for i in flow.inputs(f):
+        if i.data is None:
+          print("input", i.name)
+          print(np.asarray(data.tensor(i)))
 
-    # Create new test if does not already exist.
-    test = tests.get(f.name)
-    if test is None:
-      test = Test(f)
-      tests[f.name] = test
+      # Print outputs.
+      for o in flow.outputs(f):
+        print("output", o.name)
+        print(np.asarray(data.tensor(o)))
+    else:
+      # Compute function using numpy.
+      baseline = simulator.compute(flow, f, data)
 
-    # Check outputs
-    if check is None: check = flow.outputs(f)
-    for o in check:
-      test.runs += 1
-      t = data.tensor(o)
-      b = baseline[o]
+      # Compute function using myelin.
+      for n in range(flags.arg.repeat): data.compute()
 
-      if b.dtype == bool: t = np.array(t, dtype=bool)
-      if not np.allclose(t, b, rtol=rtol, atol=atol):
-        test.errors += 1
-        print()
-        print("ERROR: mismatch in", f.name, variant, "for", o.name)
-        if not flags.arg.skipdiff:
-          print("inputs:")
-          for i in flow.inputs(f):
-            if i.data is None:
-              print(i.name)
-              print(np.asarray(data.tensor(i)))
-          print("myelin:")
-          print(np.asarray(t))
-          print("numpy:")
-          print(b)
-          if b.dtype != bool:
-            print("abs error:")
-            print(b - np.asarray(t))
-            print("rel error:")
-            print((b - np.asarray(t)) / np.asarray(t))
+      # Create new test if does not already exist.
+      test = tests.get(f.name)
+      if test is None:
+        test = Test(f)
+        tests[f.name] = test
+
+      # Check outputs.
+      if check is None: check = flow.outputs(f)
+      for o in check:
+        test.runs += 1
+        t = data.tensor(o)
+        b = baseline[o]
+
+        if t.shape() != list(b.shape):
+          print("shape mismatch:", t.shape(), "vs", list(b.shape))
+        if b.dtype == bool: t = np.array(t, dtype=bool)
+        if not np.allclose(t, b, rtol=rtol, atol=atol):
+          test.errors += 1
+          print()
+          print("ERROR: mismatch in", f.name, variant, "for", o.name)
+          if not flags.arg.skipdiff:
+            print("inputs:")
+            for i in flow.inputs(f):
+              if i.data is None:
+                print(i.name)
+                print(np.asarray(data.tensor(i)))
+            print("myelin:")
+            print(np.asarray(t))
+            print("numpy:")
+            print(b)
+            if b.dtype != bool:
+              print("abs error:")
+              print(b - np.asarray(t))
+              if flags.arg.reldiff:
+                print("rel error:")
+                print((b - np.asarray(t)) / np.asarray(t))
 
   if flags.arg.profile:
     print(net.profile())
@@ -498,6 +517,20 @@ def softmax_test(n):
   y = f.softmax(x)
   check(flow, n)
 
+def logsumexp_test(n):
+  flow = myelin.Flow()
+  f = flow.define("logsumexp")
+  x = f.var("x", dt, [n])
+  y = f.logsumexp(x)
+  check(flow, n, atol=1e-6)
+
+def logsumexp_axis_test(n, m, a, k):
+  flow = myelin.Flow()
+  f = flow.define("logsumexp_axis")
+  x = f.var("x", dt, [n, m])
+  y = f.logsumexp(x, axis=a, keepdims=k)
+  check(flow, (n, m, a, k), atol=1e-6)
+
 def relu_test(n):
   flow = myelin.Flow()
   f = flow.define("relu")
@@ -588,6 +621,20 @@ def argmax_test(n):
   x = f.var("x", dt, [n])
   y = f.argmax(x)
   check(flow, n)
+
+def argmin_axis_test(shape, axis):
+  flow = myelin.Flow()
+  f = flow.define("argmin_axis")
+  x = f.var("x", dt, shape)
+  arg, m = f.argmin(x, axis, True)
+  check(flow, (shape, axis))
+
+def argmax_axis_test(shape, axis):
+  flow = myelin.Flow()
+  f = flow.define("argmax_axis")
+  x = f.var("x", dt, shape)
+  arg, m = f.argmax(x, axis, True)
+  check(flow, (shape, axis))
 
 def minimum_test(n):
   flow = myelin.Flow()
@@ -759,7 +806,23 @@ def gather_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("gather")
   emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
+  v = f.gather(emb, ind)
+  check(flow, (n, d, s), 0, n)
+
+def gather_scalar_test(n):
+  flow = myelin.Flow()
+  f = flow.define("gather_scalar")
+  emb = f.array("emb", np.random.ranf((n)).astype(simulator.nptypes[dt]))
+  ind = f.var("ind", myelin.DT_INT32, [])
+  v = f.gather(emb, ind)
+  check(flow, (n), 0, n)
+
+def gather_twodim_test(n, d, s):
+  flow = myelin.Flow()
+  f = flow.define("gather")
+  emb = f.array("emb", np.random.ranf((n, n, d)).astype(simulator.nptypes[dt]))
+  ind = f.var("ind", myelin.DT_INT32, [s, 2])
   v = f.gather(emb, ind)
   check(flow, (n, d, s), 0, n)
 
@@ -767,15 +830,23 @@ def gather_sum_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("gather_sum")
   emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
   v = f.gather_sum(emb, ind)
   check(flow, (n, d, s), 0, n)
+
+def gather_sum_batch_test(n, d, s, b):
+  flow = myelin.Flow()
+  f = flow.define("gather_sum")
+  emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
+  ind = f.var("ind", myelin.DT_INT32, [b, s, 1])
+  v = f.gather_sum(emb, ind, batch=1)
+  check(flow, (n, d, s, b), 0, n)
 
 def gather_max_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("gather_max")
   emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
   v = f.gather_max(emb, ind)
   check(flow, (n, d, s), 0, n)
 
@@ -783,18 +854,40 @@ def gather_avg_test(n, d, s):
   flow = myelin.Flow()
   f = flow.define("gather_avg")
   emb = f.array("emb", np.random.ranf((n, d)).astype(simulator.nptypes[dt]))
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
   v = f.gather_avg(emb, ind)
   check(flow, (n, d, s), 0, n, rtol=1e-3)
 
-def scatter_add_test(n, d, s):
+def scatter_test(n, d, s):
   flow = myelin.Flow()
-  f = flow.define("scatter_add")
-  m = f.var("m", dt, [n, d])
-  ind = f.var("ind", myelin.DT_INT32, [1, s])
-  v = f.var("v", dt, [1, d])
-  f.assign_add_scatter(m, ind, v)
-  check(flow, (n, d, s), 0, n, check=[m])
+  f = flow.define("scatter")
+  ind = f.var("ind", myelin.DT_INT32, [s, 1])
+  v = f.var("v", dt, [s, d])
+  m = f.scatter(ind, v, [n, d])
+  check(flow, (n, d, s), 0, n)
+
+def scatter_batch_test(n, d, s, b):
+  flow = myelin.Flow()
+  f = flow.define("scatter_batch")
+  ind = f.var("ind", myelin.DT_INT32, [b, s, 1])
+  v = f.var("v", dt, [b, s, d])
+  m = f.scatter(ind, v, [n, d], batch=1)
+  check(flow, (n, d, s, b), 0, n)
+
+def scatter_batch_pooled_test(n, d, s, b):
+  flow = myelin.Flow()
+  f = flow.define("scatter_pooled")
+  ind = f.var("ind", myelin.DT_INT32, [b, s, 1])
+  v = f.var("v", dt, [b, d])
+  m = f.scatter(ind, v, [n, d], batch=1, pooled=True)
+  check(flow, (n, d, s, b), 0, n)
+
+def onehot_test(n, m, k):
+  flow = myelin.Flow()
+  f = flow.define("onehot")
+  ind = f.var("x", myelin.DT_INT32, [k])
+  f.onehot(ind, m)
+  check(flow, (n, m), 0, m)
 
 def negfold_test(n):
   flow = myelin.Flow()
@@ -821,6 +914,14 @@ def acc_matmul_test(m, k, n):
   b = f.var("b", dt, [k, n])
   f.assign(c, f.add(c, f.matmul(a, b)))
   check(flow, (m, k, n), 0, 10, check=[c])
+
+def bcast_outer_test(m, n):
+  flow = myelin.Flow()
+  f = flow.define("bcast_outer")
+  x = f.var("x", dt, [m, n])
+  y = f.var("y", dt, [m, 1])
+  z = f.add(x, y)
+  check(flow, (m, n))
 
 # Check for specific test to run.
 if flags.arg.test:
@@ -863,12 +964,12 @@ for i in sizes:
 
   embsize = 32
   for f in [1, 2, 5]:
-    gather_test(embsize, i, f)
-    gather_sum_test(embsize, i, f)
-    gather_max_test(embsize, i, f)
+    gather_test(i, embsize, f)
+    gather_sum_test(i, embsize, f)
+    gather_max_test(i, embsize, f)
     if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
-      gather_avg_test(embsize, i, f)
-    scatter_add_test(embsize, i, f)
+      gather_avg_test(i, embsize, f)
+  gather_scalar_test(i)
 
   for c in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]:
     add_const_test(i, c)
@@ -899,6 +1000,7 @@ for i in sizes:
     erf_test(i)
     sigmoid_test(i)
     softmax_test(i)
+    logsumexp_test(i)
     sum_test(i)
     product_test(i)
     min_test(i)
@@ -925,8 +1027,17 @@ for i in sizes:
 
 for i in sizes:
   for j in sizes:
+    for axis in [None, 0, 1]:
+      argmin_axis_test([i, j], axis)
+      argmax_axis_test([i, j], axis)
+      if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
+        for keepdims in [False, True]:
+          logsumexp_axis_test(i, j, axis, keepdims)
+
+    bcast_outer_test(i, j)
     matmul_transpose_test(i, j)
     if not flags.arg.mkl: matmul_all_orders_test(i, j, 32)
+
     for k in sizes:
       matmul_test(i, j, k)
       matmul_add_test(i, j, k)

@@ -490,6 +490,21 @@ void MacroAssembler::LoadDynamicSize(Register dst, Tensor *tensor, int scalar) {
   Multiply(dst, scalar);
 }
 
+void MacroAssembler::LoadTensorAddressAndSize(Register addr,
+                                              Register size,
+                                              Tensor *tensor) {
+  if (tensor->dynamic()) {
+    CHECK(tensor->IsLocal());
+    movq(addr, Operand(datareg, tensor->offset()));
+    movq(size, Operand(addr, sizeof(char *)));
+    Multiply(size, tensor->ChannelElementSize());
+    movq(addr, Operand(addr));
+  } else {
+    LoadTensorAddress(addr, tensor);
+    movq(size, Immediate(tensor->size()));
+  }
+}
+
 void MacroAssembler::Copy(Register dst, int ddisp,
                           Register src, int sdisp,
                           int size) {
@@ -542,7 +557,7 @@ void MacroAssembler::Copy(Register dst, int ddisp,
     }
 
     // Set up source and destination.
-    if (src.is(rdi) && dst.is(rdi)) {
+    if (src.is(rdi) && dst.is(rsi)) {
       xchgq(dst, src);
       if (ddisp != 0) addq(rdi, Immediate(ddisp));
       if (sdisp != 0) addq(rsi, Immediate(sdisp));
@@ -582,6 +597,38 @@ void MacroAssembler::Copy(Register dst, int ddisp,
 }
 
 void MacroAssembler::LoadInteger(jit::Register dst, jit::Register base,
+                                 Type type) {
+  switch (type) {
+    case DT_INT8:
+      movsxbq(dst, Operand(base));
+      break;
+
+    case DT_UINT8:
+      movb(dst, Operand(base));
+      break;
+
+    case DT_INT16:
+      movsxwq(dst, Operand(base));
+      break;
+
+    case DT_UINT16:
+      movw(dst, Operand(base));
+      break;
+
+    case DT_INT32:
+      movsxlq(dst, Operand(base));
+      break;
+
+    case DT_INT64:
+      movq(dst, Operand(base));
+      break;
+
+    default:
+      LOG(FATAL) << "Invalid integer type: " << type;
+  }
+}
+
+void MacroAssembler::LoadInteger(jit::Register dst, jit::Register base,
                                  jit::Register index, Type type) {
   switch (type) {
     case DT_INT8:
@@ -606,6 +653,32 @@ void MacroAssembler::LoadInteger(jit::Register dst, jit::Register base,
 
     case DT_INT64:
       movq(dst, Operand(base, index, times_8));
+      break;
+
+    default:
+      LOG(FATAL) << "Invalid integer type: " << type;
+  }
+}
+
+void MacroAssembler::StoreInteger(jit::Register base, jit::Register src,
+                                  Type type) {
+  switch (type) {
+    case DT_INT8:
+    case DT_UINT8:
+      movb(Operand(base), src);
+      break;
+
+    case DT_INT16:
+    case DT_UINT16:
+      movw(Operand(base), src);
+      break;
+
+    case DT_INT32:
+      movl(Operand(base), src);
+      break;
+
+    case DT_INT64:
+      movq(Operand(base), src);
       break;
 
     default:

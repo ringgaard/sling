@@ -118,7 +118,7 @@ class Builder:
 
   def var(self, name, dtype=DT_FLOAT, shape=[]):
     n = self.func.name + "/" + name
-    if n in self.flow.vars: raise IndexError("variable already defined: " + n);
+    if n in self.flow.vars: raise IndexError("variable already defined: " + n)
     v = self.flow.var(n)
     v.type = dtype
     v.shape = shape
@@ -126,7 +126,7 @@ class Builder:
 
   def rename(self, var, new_suffix):
     n = self.func.name + "/" + new_suffix
-    if n in self.flow.vars: raise IndexError("variable already defined: " + n);
+    if n in self.flow.vars: raise IndexError("variable already defined: " + n)
     var.name = n
     return var
 
@@ -144,11 +144,20 @@ class Builder:
     op = self.flow.op(name)
     op.type = optype
     self.func.add(op)
-    shape = []
+    for i in range(len(args)):
+      if not isinstance(args[i], Variable): args[i] = self.const(args[i])
+      op.add_input(args[i])
+
+    rank = 0
     for a in args:
-      if not isinstance(a, Variable): a = self.const(a)
-      op.add_input(a)
-      if len(a.shape) > len(shape): shape = a.shape
+      if a.rank() > rank: rank = a.rank()
+    shape = [1] * rank
+    for a in args:
+      depth = rank - a.rank()
+      for d in range(a.rank()):
+        if shape[d + depth] < a.shape[d]:
+          shape[d + depth] = a.shape[d]
+
     dtype = op.inputs[0].type if len(op.inputs) > 0 else DT_FLOAT
     result = self.flow.var(name + ":0", dtype, shape)
     op.add_output(result)
@@ -276,47 +285,92 @@ class Builder:
   def maximum(self, x, y, name=None):
     return self.op("Maximum", [x, y], name)
 
-  def argmin(self, x, name=None):
-    result = self.op("ArgMin", [x], name)
-    result.shape = []
-    result.type = DT_INT
-    return result
+  def argm(self, optype, x, axis=None, ouput_value=False, name=None):
+    v = self.op(optype, [x], name)
+    v.type = DT_INT
+    if axis is None:
+      v.shape = []
+    else:
+      if axis < 0: axis = len(x.shape) + axis
+      v.shape = x.shape.copy()
+      v.producer.add_attr("axis", axis)
+      del v.shape[axis]
+    if ouput_value:
+      m = self.flow.var(v.producer.name + ":1", x.type, v.shape)
+      v.producer.add_output(m)
+      return v, m
+    else:
+      return v
 
-  def argmax(self, x, name=None):
-    result = self.op("ArgMax", [x], name)
-    result.shape = []
-    result.type = DT_INT
-    return result
+  def argmin(self, x, axis=None, ouput_value=False, name=None):
+    return self.argm("ArgMin", x, axis, ouput_value, name)
 
-  def gather(self, embedding, indices, oov=None, name=None):
-    inputs = [embedding, indices]
-    if oov is not None:
-      inputs.append(oov)
+  def argmax(self, x, axis=None, ouput_value=False, name=None):
+    return self.argm("ArgMax", x, axis, ouput_value, name)
+
+  def gather(self, params, indices, oov=None, name=None):
+    inputs = [params, indices]
+    if oov is not None: inputs.append(oov)
     result = self.op("Gather", inputs, name)
-    result.type = embedding.type
-    if len(embedding.shape) == 2 and len(indices.shape) == 2:
-      result.shape = [indices.shape[1], embedding.shape[1]]
+    if len(indices.shape) == 0:
+      result.shape = params.shape[1:]
     else:
-      result.shape = [0]
+      result.shape = indices.shape[:-1] + params.shape[indices.shape[-1]:]
     return result
 
-  def pooling_gather(self, optype, embedding, indices, name=None):
-    result = self.op(optype, [embedding, indices], name)
-    result.type = embedding.type
-    if len(embedding.shape) == 2:
-      result.shape = [1, embedding.shape[1]]
+  def pooling_gather(self, optype, params, indices, batch=None, name=None):
+    result = self.op(optype, [params, indices], name)
+    if len(indices.shape) == 0:
+      result.shape = params.shape[1:]
     else:
-      result.shape = [0]
+      result.shape = params.shape[indices.shape[-1]:]
+    if batch is not None:
+      result.producer.add_attr("batch", batch)
+      result.shape = indices.shape[:batch] + result.shape
     return result
 
-  def gather_sum(self, embedding, indices, name=None):
-    return self.pooling_gather("GatherSum", embedding, indices, name)
+  def gather_sum(self, params, indices, batch=None, name=None):
+    return self.pooling_gather("GatherSum", params, indices, batch, name)
 
-  def gather_max(self, embedding, indices, name=None):
-    return self.pooling_gather("GatherMax", embedding, indices, name)
+  def gather_max(self, params, indices, batch=None, name=None):
+    return self.pooling_gather("GatherMax", params, indices, batch, name)
 
-  def gather_avg(self, embedding, indices, name=None):
-    return self.pooling_gather("GatherAvg", embedding, indices, name)
+  def gather_avg(self, params, indices, batch=None, name=None):
+    return self.pooling_gather("GatherAvg", params, indices, batch, name)
+
+  def scatter(self, indices, value, shape, batch=None, pooled=False, name=None):
+    result = self.op("Scatter", [indices, value], name)
+    if batch is not None: result.producer.add_attr("batch", batch)
+    if pooled: result.producer.add_attr("pooled", True)
+    result.type = value.type
+    result.shape = shape
+    return result
+
+  def assign_add_scatter(self, var, indices, value, ref=False, batch=None,
+                         pooled=False, name=None):
+    op = self.rawop("AssignAddScatter", name)
+    if batch is not None: op.add_attr("batch", batch)
+    if pooled: result.producer.add_attr("pooled", True)
+    op.add_input(var)
+    op.add_input(indices)
+    op.add_input(value)
+    if ref:
+      r = self.var(op.name + "/ref", var.type, var.shape)
+      r.ref = True
+      op.add_output(r)
+      return r
+
+  def onehot(self, index, depth, value=None, name=None):
+    if value is None:
+      result = self.op("OneHot", [index], name)
+      result.type = DT_FLOAT
+      result.shape = index.shape + [depth]
+    else:
+      result = self.op("OneHot", [index, value], name)
+      result.type = value.type
+      result.shape = index.shape + [depth] + value.shape
+    result.producer.add_attr("depth", depth)
+    return result
 
   def matmul(self, x, y, name=None):
     result = self.op("MatMul", [x, y], name)
@@ -559,8 +613,14 @@ class Builder:
   def normalize(self, x, name=None):
     return self.mul(x, self.rcp(self.norm(x)), name)
 
-  def softmax(self, x, name=None):
-    return self.normalize(self.exp(self.sub(x, self.max(x))), name)
+  def softmax(self, x, axis=None, name=None):
+    if axis is None:
+      return self.op("SoftMax", [x], name)
+    else:
+      return self.reduce("SoftMax", x, axis, False, name)
+
+  def logsumexp(self, x, axis=None, keepdims=None, name=None):
+    return self.reduce("LogSumExp", x, axis, keepdims, name)
 
   def ref(self, instance, var, name=None):
     r = self.op("Reference", [instance], name)
@@ -591,17 +651,6 @@ class Builder:
     op = self.rawop("Assign", name)
     op.add_input(x)
     op.add_input(y)
-
-  def assign_add_scatter(self, m, f, v, ref=False, name=None):
-    op = self.rawop("AssignAddScatter", name)
-    op.add_input(m)
-    op.add_input(f)
-    op.add_input(v)
-    if ref:
-      r = self.var(op.name + "/ref", m.type, m.shape)
-      r.ref = True
-      op.add_output(r)
-      return r
 
 
 # Set builder factory for flows.

@@ -40,7 +40,22 @@ def erf(x):
   return np.array([math.erf(v) for v in x])
 
 def gather(d, i):
-  return np.take(d, i, axis=0)
+  if len(i.shape) == 0: return np.take(d, i, axis=0)
+  return np.take(d, i, axis=0).reshape(i.shape[:-1] + d.shape[i.shape[1]:])
+
+def onehot(x, size):
+  return np.eye(size)[x]
+
+def softmax(x):
+  e = np.exp(x - np.max(x))
+  return e / e.sum()
+
+def logsumexp(x, axis=None, keepdims=False):
+  m = np.amax(x, axis=axis, keepdims=True)
+  y = np.log(np.sum(np.exp(x - m), axis=axis, keepdims=keepdims))
+  if not keepdims: m = np.squeeze(m, axis=axis)
+  y += m
+  return y
 
 # Compute flow function using numpy.
 def compute(flow, f, data):
@@ -174,12 +189,37 @@ def compute(flow, f, data):
       else:
         keepdims = bool(op.attrs.get("keepdims"))
         v[o[0]] = np.any(v[i[0]], axis, keepdims=keepdims)
+    elif op.type == "SoftMax":
+      v[o[0]] = softmax(v[i[0]])
+    elif op.type == "LogSumExp":
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = logsumexp(v[i[0]])
+      else:
+        keepdims = bool(op.attrs.get("keepdims"))
+        v[o[0]] = logsumexp(v[i[0]], int(axis), keepdims=keepdims)
     elif op.type == "Count":
       v[o[0]] = np.array(np.count_nonzero(v[i[0]]), nptypes[o[0].type])
     elif op.type == "ArgMin":
-      v[o[0]] = np.argmin(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.argmin(v[i[0]])
+        if len(o) == 2:
+          v[o[1]] = np.amin(v[i[0]])
+      else:
+        v[o[0]] = np.argmin(v[i[0]], axis=int(axis))
+        if len(o) == 2:
+          v[o[1]] = np.amin(v[i[0]], axis=int(axis))
     elif op.type == "ArgMax":
-      v[o[0]] = np.argmax(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = np.argmax(v[i[0]])
+        if len(o) == 2:
+          v[o[1]] = np.amax(v[i[0]])
+      else:
+        v[o[0]] = np.argmax(v[i[0]], axis=int(axis))
+        if len(o) == 2:
+          v[o[1]] = np.amax(v[i[0]], axis=int(axis))
     elif op.type == "Equal":
       v[o[0]] = np.equal(v[i[0]], v[i[1]])
     elif op.type == "NotEqual":
@@ -230,11 +270,16 @@ def compute(flow, f, data):
     elif op.type == "Gather":
       v[o[0]] = gather(v[i[0]], v[i[1]])
     elif op.type == "GatherSum":
-      v[o[0]] = np.sum(gather(v[i[0]], v[i[1]]), axis=1)
+      v[o[0]] = np.sum(gather(v[i[0]], v[i[1]]), axis=0)
     elif op.type == "GatherMax":
-      v[o[0]] = np.max(gather(v[i[0]], v[i[1]]), axis=1)
+      v[o[0]] = np.max(gather(v[i[0]], v[i[1]]), axis=0)
     elif op.type == "GatherAvg":
-      v[o[0]] = np.sum(gather(v[i[0]], v[i[1]]), axis=1) / v[i[1]].shape[1]
+      v[o[0]] = np.sum(gather(v[i[0]], v[i[1]]), axis=0) / v[i[1]].size
+    elif op.type == "Scatter":
+      f = v[i[0]]
+      x = v[i[1]]
+      m = v[o[0]]
+      m[f] = x
     elif op.type == "AssignAddScatter":
       m = v[i[0]]
       f = v[i[1]]
@@ -242,6 +287,8 @@ def compute(flow, f, data):
       m[f] += x
     elif op.type == "Reshape":
       v[o[0]] = np.reshape(v[i[0]], v[i[1]])
+    elif op.type == "OneHot":
+      v[o[0]] = onehot(v[i[0]], o[0].shape[-1])
     elif op.type == "Assign":
       v[i[0]] = v[i[1]]
     else:

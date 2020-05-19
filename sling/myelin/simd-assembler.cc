@@ -140,6 +140,11 @@ void SIMDGenerator::MaskedAccumulate(Reduction op, int acc,
   LOG(FATAL) << "Masking not supported";
 }
 
+bool SIMDGenerator::Compare(int r1, int r2) {
+  LOG(FATAL) << "Compare not supported";
+  return false;
+}
+
 // AVX512 float SIMD generator using 512-bit ZMM registers.
 class AVX512FloatGenerator : public SIMDGenerator {
  public:
@@ -640,7 +645,7 @@ class AVX512ScalarFloatGenerator : public SIMDGenerator {
   int Alloc() override { return masm_->mm().alloc(true); }
 
   void Move(int dst, int src) override {
-    masm_->vmovaps(zmm(dst), zmm(src));
+    masm_->vmovss(zmm(dst), zmm(dst), zmm(src));
   }
 
   void Load(int dst, const Operand &src) override {
@@ -702,6 +707,11 @@ class AVX512ScalarFloatGenerator : public SIMDGenerator {
     masm_->Accumulate(op, DT_FLOAT, zmm(acc), src, mask_);
   }
 
+  bool Compare(int r1, int r2) override {
+    masm_->vucomiss(zmm(r1), zmm(r2));
+    return true;
+  }
+
  private:
   OpmaskRegister mask_;
 };
@@ -718,7 +728,7 @@ class AVXScalarFloatGenerator : public SIMDGenerator {
   int Alloc() override { return masm_->mm().alloc(false); }
 
   void Move(int dst, int src) override {
-    masm_->vmovaps(xmm(dst), xmm(src));
+    masm_->vmovss(xmm(dst), xmm(dst), xmm(src));
   }
 
   void Load(int dst, const Operand &src) override {
@@ -801,6 +811,11 @@ class AVXScalarFloatGenerator : public SIMDGenerator {
         break;
       }
     }
+  }
+
+  bool Compare(int r1, int r2) override {
+    masm_->vucomiss(xmm(r1), xmm(r2));
+    return true;
   }
 };
 
@@ -901,6 +916,11 @@ class SSEScalarFloatGenerator : public SIMDGenerator {
         break;
       }
     }
+  }
+
+  bool Compare(int r1, int r2) override {
+    masm_->ucomiss(xmm(r1), xmm(r2));
+    return true;
   }
 };
 
@@ -1037,6 +1057,11 @@ class AVX512DoubleGenerator : public SIMDGenerator {
   void MaskedAccumulate(Reduction op, int acc,
                         const jit::Operand &src) override {
     masm_->Accumulate(op, DT_DOUBLE, zmm(acc), src, mask_);
+  }
+
+  bool Compare(int r1, int r2) override {
+    masm_->vucomisd(zmm(r1), zmm(r2));
+    return true;
   }
 
  private:
@@ -1406,7 +1431,7 @@ class AVX512ScalarDoubleGenerator : public SIMDGenerator {
   int Alloc() override { return masm_->mm().alloc(true); }
 
   void Move(int dst, int src) override {
-    masm_->vmovapd(zmm(dst), zmm(src));
+    masm_->vmovsd(zmm(dst), zmm(dst), zmm(src));
   }
 
   void Load(int dst, const Operand &src) override {
@@ -1468,6 +1493,11 @@ class AVX512ScalarDoubleGenerator : public SIMDGenerator {
     masm_->Accumulate(op, DT_DOUBLE, zmm(acc), src, mask_);
   }
 
+  bool Compare(int r1, int r2) override {
+    masm_->vucomisd(zmm(r1), zmm(r2));
+    return true;
+  }
+
  private:
   OpmaskRegister mask_;
 };
@@ -1484,7 +1514,7 @@ class AVXScalarDoubleGenerator : public SIMDGenerator {
   int Alloc() override { return masm_->mm().alloc(false); }
 
   void Move(int dst, int src) override {
-    masm_->vmovapd(xmm(dst), xmm(src));
+    masm_->vmovsd(xmm(dst), xmm(dst), xmm(src));
   }
 
   void Load(int dst, const Operand &src) override {
@@ -1567,6 +1597,11 @@ class AVXScalarDoubleGenerator : public SIMDGenerator {
         break;
       }
     }
+  }
+
+  bool Compare(int r1, int r2) override {
+    masm_->vucomisd(xmm(r1), xmm(r2));
+    return true;
   }
 };
 
@@ -1667,6 +1702,11 @@ class SSEScalarDoubleGenerator : public SIMDGenerator {
         break;
       }
     }
+  }
+
+  bool Compare(int r1, int r2) override {
+    masm_->ucomisd(xmm(r1), xmm(r2));
+    return true;
   }
 };
 
@@ -2791,6 +2831,17 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
     }
   }
 
+  bool Compare(int r1, int r2) override {
+    switch (type_) {
+      case DT_INT8:  masm_->cmpb(reg(r1), reg(r2)); break;
+      case DT_INT16: masm_->cmpw(reg(r1), reg(r2)); break;
+      case DT_INT32: masm_->cmpl(reg(r1), reg(r2)); break;
+      case DT_INT64: masm_->cmpq(reg(r1), reg(r2)); break;
+      default: LOG(FATAL) << "Unsupported integer type: " << type_;
+    }
+    return false;
+  }
+
  public:
   Type type_;
 };
@@ -2841,7 +2892,8 @@ int SIMDAssembler::VectorBytes(Type type) {
   return TypeTraits::of(type).size();
 }
 
-SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type, bool aligned) {
+SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type,
+                             bool aligned, bool scalar) {
   switch (type) {
     case DT_FLOAT:
       if (masm->Enabled(AVX512F)) {
@@ -2891,7 +2943,10 @@ SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type, bool aligned) {
       break;
 
     case DT_INT32:
-      if (masm->Enabled(AVX512F)) {
+      if (scalar) {
+        name_ = "Int32";
+        add(new ScalarIntSIMDGenerator(masm, DT_INT32));
+      } else if (masm->Enabled(AVX512F)) {
         name_ = "AVX512Int32";
         add(new AVX512Int32Generator(masm, aligned));
         add(new AVX512ScalarInt32Generator(masm));
@@ -2911,7 +2966,10 @@ SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type, bool aligned) {
       break;
 
     case DT_INT64:
-      if (masm->Enabled(AVX512F)) {
+      if (scalar) {
+        name_ = "Int64";
+        add(new ScalarIntSIMDGenerator(masm, DT_INT64));
+      } else if (masm->Enabled(AVX512F)) {
         name_ = "AVX512Int64";
         add(new AVX512Int64Generator(masm, aligned));
         add(new AVX512ScalarInt64Generator(masm));
@@ -2958,6 +3016,7 @@ SIMDStrategy::SIMDStrategy(SIMDAssembler *sasm, int size) {
   // Use scalar generator for singletons.
   if (size == 1) {
     phases_.emplace_back(sasm->scalar());
+    phases_.back().last = true;
     return;
   }
 
@@ -3006,6 +3065,7 @@ SIMDStrategy::SIMDStrategy(SIMDAssembler *sasm, int size) {
       remaining = 0;
     }
   }
+  phases_.back().last = true;
 }
 
 int SIMDStrategy::MaxUnrolls() {

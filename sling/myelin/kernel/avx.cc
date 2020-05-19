@@ -19,9 +19,6 @@
 namespace sling {
 namespace myelin {
 
-// avx-math.cc
-void RegisterAVXMath(Library *library);
-
 // avx-matmul.cc
 void RegisterAVXMatMul(Library *library);
 
@@ -33,7 +30,6 @@ void RegisterSIMDMatMulLibrary(Library *library);
 
 // Register AVX library.
 void RegisterAVXLibrary(Library *library) {
-  RegisterAVXMath(library);
   RegisterSIMDMatMulLibrary(library);
   RegisterAVXMatMul(library);
   RegisterAVXOperators(library);

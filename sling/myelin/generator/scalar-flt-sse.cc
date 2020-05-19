@@ -263,18 +263,22 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
                      bool left, int bits) {
     // Move argument to destination register
     CHECK(instr->dst != -1);
-    if (instr->src != -1) {
-      __ movapd(xmm(instr->dst), xmm(instr->src));
-    } else {
-      switch (type_) {
-        case DT_FLOAT:
+    switch (type_) {
+      case DT_FLOAT:
+        if (instr->src != -1) {
+          __ movss(xmm(instr->dst), xmm(instr->src));
+        } else {
           __ movss(xmm(instr->dst), addr(instr->args[0]));
-          break;
-        case DT_DOUBLE:
+        }
+        break;
+      case DT_DOUBLE:
+        if (instr->src != -1) {
+          __ movsd(xmm(instr->dst), xmm(instr->src));
+        } else {
           __ movsd(xmm(instr->dst), addr(instr->args[0]));
-          break;
-        default: UNSUPPORTED;
-      }
+        }
+        break;
+      default: UNSUPPORTED;
     }
 
     // Shift xmm register.
@@ -439,14 +443,14 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         __ testl(aux(0), aux(0));
         __ j(zero, &l1);
         if (instr->src != -1) {
-          __ movaps(xmm(instr->dst), xmm(instr->src));
+          __ movss(xmm(instr->dst), xmm(instr->src));
         } else {
           __ movss(xmm(instr->dst), addr(instr->args[1]));
         }
         __ jmp(&l2);
         __ bind(&l1);
         if (instr->src2 != -1) {
-          __ movaps(xmm(instr->dst), xmm(instr->src2));
+          __ movss(xmm(instr->dst), xmm(instr->src2));
         } else {
           __ movss(xmm(instr->dst), addr(instr->args[2]));
         }
@@ -458,14 +462,14 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
         __ testq(aux(0), aux(0));
         __ j(zero, &l1);
         if (instr->src != -1) {
-          __ movapd(xmm(instr->dst), xmm(instr->src));
+          __ movsd(xmm(instr->dst), xmm(instr->src));
         } else {
           __ movsd(xmm(instr->dst), addr(instr->args[1]));
         }
         __ jmp(&l2);
         __ bind(&l1);
         if (instr->src2 != -1) {
-          __ movapd(xmm(instr->dst), xmm(instr->src2));
+          __ movsd(xmm(instr->dst), xmm(instr->src2));
         } else {
           __ movsd(xmm(instr->dst), addr(instr->args[2]));
         }
@@ -493,7 +497,7 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
           __ jmp(&l2);
           __ bind(&l1);
           if (instr->src != -1) {
-            __ movaps(xmm(instr->dst), xmm(instr->src));
+            __ movss(xmm(instr->dst), xmm(instr->src));
           } else {
             __ movss(xmm(instr->dst), addr(instr->args[1]));
           }
@@ -512,7 +516,7 @@ class ScalarFltSSEGenerator : public ExpressionGenerator {
           __ jmp(&l2);
           __ bind(&l1);
           if (instr->src != -1) {
-            __ movaps(xmm(instr->dst), xmm(instr->src));
+            __ movsd(xmm(instr->dst), xmm(instr->src));
           } else {
             __ movsd(xmm(instr->dst), addr(instr->args[1]));
           }

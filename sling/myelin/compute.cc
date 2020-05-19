@@ -435,7 +435,7 @@ class InstanceAllocator {
 
 Library::~Library() {
   for (auto o : kernels_) {
-    for (auto k : o.second) delete k;
+    for (const auto &k : o.second) delete k;
   }
 }
 
@@ -634,9 +634,9 @@ string Tensor::TypeString() const {
   string str;
   if (ref_) str.append("&");
   str.append(TypeTraits::of(type_).name());
-  if (dynamic_) str.append("<>");
   if (!shape_.scalar()) {
     str.append("[");
+    if (dynamic_) str.append("*,");
     str.append(shape_.ToString());
     str.append("]");
   }
@@ -679,11 +679,38 @@ string Tensor::ToString(const char *data, bool deref) const {
     // Matrix.
     str.append("[");
     for (int r = 0; r < dim(0); ++r) {
-      if (r > 0) str.append(",");
+      if (r > 0) {
+        str.append(",");
+        if (dim(0) > 1) str.append("\n ");
+      }
       str.append("[");
       for (int c = 0; c < dim(1); ++c) {
         if (c > 0) str.append(",");
         str.append(traits.str(data + offset(r, c)));
+      }
+      str.append("]");
+    }
+    str.append("]");
+  } else if (rank() == 3) {
+    // 3D tensor.
+    str.append("[");
+    for (int r = 0; r < dim(0); ++r) {
+      if (r > 0) {
+        str.append(",");
+        if (dim(0) > 1) str.append("\n ");
+      }
+      str.append("[");
+      for (int c = 0; c < dim(1); ++c) {
+        if (c > 0) {
+          str.append(",");
+          if (dim(1) > 1) str.append("\n  ");
+        }
+        str.append("[");
+        for (int k = 0; k < dim(2); ++k) {
+          if (k > 0) str.append(",");
+          str.append(traits.str(data + offset(r, c, k)));
+        }
+        str.append("]");
       }
       str.append("]");
     }
@@ -855,7 +882,11 @@ string Instance::ToString() const {
   for (Tensor *t : cell()->network()->parameters()) {
     if (t->cell() == cell() && t->shared() == nullptr) {
       str.append(t->name());
-      str.append(" = ");
+      if (t->rank() > 1 && t->dim(0) > 1) {
+        str.append(" =\n");
+      } else {
+        str.append(" = ");
+      }
       str.append(ToString(t));
       str.append("\n");
     }
@@ -886,7 +917,7 @@ void InstanceArray::Resize(size_t size) {
     *data = realloc(*data, bytes);
     end_ = begin_ + cap;
     limit_ = begin_ + size;
-    while (end_ < limit_) new (end_++) Instance(cell_);
+    while (end_ < limit_) new(end_++) Instance(cell_);
   }
 }
 
@@ -917,6 +948,7 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
   Tensor *out = outputs_[output];
 
   // Check if input can be shared.
+  if (!preserved && !cell()->network()->options().shared_tensors) return false;
   Tensor *t = in;
   while (t != nullptr) {
     if (!preserved) {
@@ -1274,15 +1306,18 @@ char *Network::AllocateMemory(size_t size, int alignment) {
 static bool CompareUsage(const std::pair<int, Tensor *> &a,
                          const std::pair<int, Tensor *> &b) {
   if (a.first == b.first) {
-    // Inputs are sorted before outputs.
     Tensor *va = a.second;
     Tensor *vb = b.second;
+
+    // Producers are sorted before consumers.
     for (auto *op : va->consumers()) {
       if (op == vb->producer()) return true;
     }
     for (auto *op : vb->consumers()) {
       if (op == va->producer()) return false;
     }
+
+    // Inputs are sorted before outputs.
     if (va->in() && !vb->in()) return true;
     if (vb->in() && !va->in()) return false;
   }
@@ -1682,6 +1717,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
       tensor->AddPlace(consumer->placement());
       if (tensor->ref()) tensor->AddRefPlace(consumer->placement());
     }
+    if (tensor->placement() == NOWHERE) tensor->AddPlace(HOST);
+    if (tensor->ref_placement() == NOWHERE) tensor->AddRefPlace(HOST);
 
     VLOG(5) << "Tensor " << tensor->name_ << ": " << tensor->TypeString()
             << " align " << tensor->minalign_.ToString()
@@ -1715,11 +1752,12 @@ bool Network::Compile(const Flow &flow, const Library &library) {
   for (auto it = parameters_.begin(); it != parameters_.end();) {
     // Check if tensor is shared with a constant.
     Tensor *t = *it;
-    if (t->shared_ != nullptr && t->shared_->data_ != nullptr) {
+    if (t->shared_ != nullptr && t->shared_->IsGlobal()) {
       // Move variable to global pool.
       VLOG(5) << "Convert " << t->name() << " to global";
       it = parameters_.erase(it);
       globals_.push_back(t);
+      t->local_ = false;
     } else {
       ++it;
     }
@@ -1733,8 +1771,8 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (var->first_ != -1) enter.emplace_back(var->first_, var);
     if (var->last_ != -1) leave.emplace_back(var->last_, var);
   }
-  std::sort(enter.begin(), enter.end(), CompareUsage);
-  std::sort(leave.begin(), leave.end(), CompareUsage);
+  std::stable_sort(enter.begin(), enter.end(), CompareUsage);
+  std::stable_sort(leave.begin(), leave.end(), CompareUsage);
 
   // Compute cell instance size and offset of each parameter.
   for (Cell *cell : cells_) {
@@ -1786,6 +1824,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     if (tensor->shared_ != nullptr) {
       // Shared tensor. Copy reference to data.
       tensor->data_ = tensor->shared_->data_;
+      CHECK(tensor->data_ != nullptr);
       tensor->AddNewPlace(HOST);
       if (tensor->placement_ & DEVICE) {
         tensor->device_data_ = tensor->shared_->device_data_;

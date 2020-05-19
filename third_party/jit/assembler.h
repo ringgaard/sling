@@ -404,11 +404,11 @@ class Assembler : public CodeGenerator {
   void repstosq() { emit_repstos(kInt64Size); }
 
   // Loads an external reference into a register.
-  void load_extern(Register dst, const void *ptr, const string &symbol,
+  void load_extern(Register dst, const void *value, const string &symbol,
                    bool pic = false);
 
   // Instruction to load from an immediate 64-bit pointer into RAX.
-  void load_rax(const void *ptr);
+  void load_rax(const void *value);
 
   // Conditional moves.
   void cmovq(Condition cc, Register dst, Register src);

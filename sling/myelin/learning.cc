@@ -37,7 +37,7 @@ void CrossEntropyLoss::Build(Flow *flow,
   auto *target = tf.Placeholder("target", DT_INT32, {});
 
   // Compute softmax for logits.
-  auto *softmax = tf.Softmax(tf.Reshape(input, {size}));
+  auto *softmax = tf.SoftMax(tf.Reshape(input, {size}));
 
   // Compute loss (negative log-likelihood).
   auto *loss = tf.Name(tf.Neg(tf.Log(tf.Slice(softmax, target, {1}))), "loss");
@@ -77,6 +77,43 @@ float CrossEntropyLoss::Compute(float *logits, int target,
   return *data.Get<float>(loss_);
 }
 
+void NLLLoss::Build(Flow *flow) {
+  // Build loss and loss gradient computation.
+  FlowBuilder tf(flow, name_);
+
+  // Inputs are logits and target label.
+  auto *p = tf.Placeholder("likelihood", DT_FLOAT, {}, true);
+
+  // Compute loss (negative log-likelihood).
+  auto *loss = tf.Name(tf.Neg(tf.Log(p)), "loss");
+  loss->set_out();
+
+  // Compute gradient.
+  auto *gradient = tf.Name(tf.Neg(tf.Reciprocal(p)), "d_likelihood");
+  gradient->set_out()->set_ref();
+
+  // Loss is only needed at training-time.
+  tf.func()->set_training();
+}
+
+void NLLLoss::Initialize(const Network &network) {
+  // Get loss computation cell.
+  cell_ = network.GetCell(name_);
+
+  // Get tensors.
+  likelihood_ = network.GetParameter(name_ + "/likelihood");
+  loss_ = network.GetParameter(name_ + "/loss");
+  dlikelihood_ = network.GetParameter(name_ + "/d_likelihood");
+}
+
+float NLLLoss::Compute(float *likelihood, float *dlikelihood) const {
+  Instance data(cell_);
+  data.SetReference(likelihood_, likelihood);
+  data.SetReference(dlikelihood_, dlikelihood);
+  data.Compute();
+  return *data.Get<float>(loss_);
+}
+
 void Optimizer::Build(Flow *flow) {
   // Build mapping from learnable variable to gradient for variable.
   FlowBuilder tf(flow, name_);
@@ -86,7 +123,10 @@ void Optimizer::Build(Flow *flow) {
 
     // Get gradient variable for learnable variable.
     Flow::Variable *dvar = flow->GradientVar(var);
-    CHECK(dvar != nullptr) << "No gradient found for " << var->name;
+    if (dvar == nullptr) {
+      LOG(WARNING) << "No gradient found for " << var->name;
+      continue;
+    }
 
     // Find function for gradient variable.
     Flow::Operation *producer = nullptr;
@@ -167,7 +207,7 @@ void Optimizer::Initialize(const Network &network) {
   InitializeOptimizer();
 }
 
-void Optimizer::Apply(const std::vector<Instance *> &gradients) {
+void Optimizer::Apply(const Instances &gradients) {
   // Set instance references to gradients in update.
   for (Instance *g : gradients) {
     auto f = refs_.find(g->cell());
@@ -266,10 +306,6 @@ void MomentumOptimizer::InitializeOptimizer() {
   }
 }
 
-void MomentumOptimizer::Apply(const std::vector<Instance *> &gradients) {
-  Optimizer::Apply(gradients);
-}
-
 float MomentumOptimizer::DecayLearningRate() {
   float &lr = *data_->Get<float>(alpha_);
   lr *= decay_;
@@ -341,10 +377,6 @@ void AdamOptimizer::InitializeOptimizer() {
   auto *beta2_t = GetParameter(name_ + "/beta2_t");
   *data_->Get<float>(beta1_t) = 1.0;
   *data_->Get<float>(beta2_t) = 1.0;
-}
-
-void AdamOptimizer::Apply(const std::vector<Instance *> &gradients) {
-  Optimizer::Apply(gradients);
 }
 
 float AdamOptimizer::DecayLearningRate() {

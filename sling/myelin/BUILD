@@ -130,6 +130,17 @@ cc_library(
 )
 
 cc_library(
+  name = "crf",
+  srcs = ["crf.cc"],
+  hdrs = ["crf.h"],
+  deps = [
+    ":builder",
+    ":compute",
+    ":flow",
+  ],
+)
+
+cc_library(
   name = "elf-linker",
   srcs = ["elf-linker.cc"],
   hdrs = ["elf-linker.h"],

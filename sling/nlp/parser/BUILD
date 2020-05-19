@@ -1,5 +1,119 @@
 package(default_visibility = ["//visibility:public"])
 
+# Frame semantic parser.
+
+cc_library(
+  name = "parser-codec",
+  srcs = ["parser-codec.cc"],
+  hdrs = ["parser-codec.h"],
+  deps = [
+    "//sling/base",
+    "//sling/base:registry",
+    "//sling/frame:object",
+    "//sling/myelin:compute",
+    "//sling/myelin:flow",
+    "//sling/nlp/document",
+    "//sling/task",
+    "//sling/util:vocabulary",
+  ],
+)
+
+cc_library(
+  name = "parser",
+  srcs = ["parser.cc"],
+  hdrs = ["parser.h"],
+  deps = [
+    ":parser-codec",
+    "//sling/base",
+    "//sling/frame:serialization",
+    "//sling/frame:store",
+    "//sling/myelin:compiler",
+    "//sling/nlp/document",
+  ],
+)
+
+cc_library(
+  name = "parser-annotator",
+  srcs = ["parser-annotator.cc"],
+  deps = [
+    ":parser",
+    "//sling/nlp/document:annotator",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "frame-evaluation",
+  hdrs = ["frame-evaluation.h"],
+  srcs = ["frame-evaluation.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file",
+    "//sling/frame:object",
+    "//sling/frame:serialization",
+    "//sling/frame:store",
+    "//sling/nlp/document:document",
+    "//sling/nlp/document:document-corpus",
+    "//sling/string:strcat",
+    "//sling/string:printf",
+  ],
+)
+
+cc_library(
+  name = "parser-trainer",
+  srcs = ["parser-trainer.cc"],
+  deps = [
+    ":components",
+    ":frame-evaluation",
+    ":parser-codec",
+    "//sling/base",
+    "//sling/file:textmap",
+    "//sling/frame:store",
+    "//sling/frame:serialization",
+    "//sling/myelin:compiler",
+    "//sling/myelin:learning",
+    "//sling/nlp/document:document",
+    "//sling/nlp/document:document-corpus",
+    "//sling/task:learner",
+    "//sling/util:mutex",
+  ],
+  alwayslink = 1,
+)
+
+# Encoders.
+
+cc_library(
+  name = "lexrnn-encoder",
+  srcs = ["lexrnn-encoder.cc"],
+  deps = [
+    ":parser-codec",
+    "//sling/myelin:rnn",
+    "//sling/nlp/document:lexical-features",
+  ],
+  alwayslink = 1,
+)
+
+# Decoders.
+
+cc_library(
+  name = "bio-decoder",
+  srcs = ["bio-decoder.cc"],
+  deps = [
+    ":parser-codec",
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/myelin:builder",
+    "//sling/myelin:crf",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
+    "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+
+# Transition-based parsing.
+
 cc_library(
   name = "parser-action",
   srcs = ["parser-action.cc"],
@@ -64,55 +178,9 @@ cc_library(
 )
 
 cc_library(
-  name = "parser",
-  srcs = ["parser.cc"],
-  hdrs = ["parser.h"],
-  deps = [
-    ":parser-features",
-    ":parser-state",
-    ":roles",
-    "//sling/base",
-    "//sling/frame:serialization",
-    "//sling/frame:store",
-    "//sling/myelin:compiler",
-    "//sling/myelin:profile",
-    "//sling/nlp/document",
-    "//sling/nlp/document:lexical-encoder",
-  ],
-)
-
-cc_library(
-  name = "parser-annotator",
-  srcs = ["parser-annotator.cc"],
-  deps = [
-    ":parser",
-    ":multiclass-delegate",
-    "//sling/nlp/document:annotator",
-  ],
-  alwayslink = 1,
-)
-
-cc_library(
-  name = "frame-evaluation",
-  hdrs = ["frame-evaluation.h"],
-  srcs = ["frame-evaluation.cc"],
-  deps = [
-    "//sling/base",
-    "//sling/file",
-    "//sling/frame:object",
-    "//sling/frame:serialization",
-    "//sling/frame:store",
-    "//sling/nlp/document:document",
-    "//sling/nlp/document:document-corpus",
-    "//sling/string:strcat",
-    "//sling/string:printf",
-  ],
-)
-
-cc_library(
   name = "transition-generator",
-  hdrs = ["transition-generator.h"],
   srcs = ["transition-generator.cc"],
+  hdrs = ["transition-generator.h"],
   deps = [
     ":parser-action",
     "//sling/base",
@@ -124,44 +192,31 @@ cc_library(
 )
 
 cc_library(
-  name = "parser-trainer",
-  srcs = ["parser-trainer.cc"],
-  hdrs = ["parser-trainer.h"],
+  name = "delegate",
+  srcs = ["delegate.cc"],
+  hdrs = ["delegate.h"],
   deps = [
-    "frame-evaluation",
     ":parser-action",
-    ":parser-features",
-    ":roles",
     "//sling/base",
-    "//sling/frame:store",
-    "//sling/frame:serialization",
-    "//sling/myelin:builder",
-    "//sling/myelin:compiler",
-    "//sling/myelin:gradient",
-    "//sling/myelin:learning",
-    "//sling/nlp/document:document",
-    "//sling/nlp/document:document-corpus",
-    "//sling/nlp/document:lexical-encoder",
-    "//sling/nlp/document:lexicon",
-    "//sling/task:learner",
-    "//sling/util:mutex",
-    "//sling/util:unicode",
+    "//sling/base:registry",
+    "//sling/frame:object",
+    "//sling/myelin:compute",
   ],
 )
 
 cc_library(
-  name = "caspar-trainer",
-  srcs = ["caspar-trainer.cc"],
+  name = "transition-decoder",
+  srcs = ["transition-decoder.cc"],
+  hdrs = ["transition-decoder.h"],
   deps = [
-    ":parser-trainer",
+    ":delegate",
+    ":parser-action",
+    ":parser-codec",
+    ":parser-features",
+    ":roles",
     ":transition-generator",
-    "//sling/base",
     "//sling/myelin:builder",
-    "//sling/myelin:flow",
     "//sling/myelin:gradient",
-    "//sling/myelin:learning",
-    "//sling/nlp/document:document",
-    "//sling/nlp/document:document-corpus",
   ],
   alwayslink = 1,
 )
@@ -169,10 +224,62 @@ cc_library(
 cc_library(
   name = "multiclass-delegate",
   srcs = ["multiclass-delegate.cc"],
+  hdrs = ["multiclass-delegate.h"],
   deps = [
     ":action-table",
-    ":parser",
+    ":delegate",
+    "//sling/base",
+    "//sling/myelin:flow",
+    "//sling/myelin:compute",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
   ],
   alwayslink = 1,
+)
+
+cc_library(
+  name = "caspar-decoder",
+  srcs = ["caspar-decoder.cc"],
+  deps = [
+    ":transition-decoder",
+    ":multiclass-delegate",
+    ":transition-generator",
+    "//sling/nlp/document:document-corpus",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "knolex-decoder",
+  srcs = ["knolex-decoder.cc"],
+  deps = [
+    ":transition-decoder",
+    ":multiclass-delegate",
+    ":transition-generator",
+    "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+
+# Parser components.
+
+cc_library(
+  name = "components",
+  deps = [
+    # Annotators.
+    ":parser-annotator",
+
+    # Encoders.
+    ":lexrnn-encoder",
+
+    # Decoders.
+    ":transition-decoder",
+    ":caspar-decoder",
+    ":knolex-decoder",
+    ":bio-decoder",
+
+    # Delegates.
+    ":multiclass-delegate",
+  ],
 )
 

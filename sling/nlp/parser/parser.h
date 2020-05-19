@@ -15,54 +15,27 @@
 #ifndef SLING_NLP_PARSER_PARSER_H_
 #define SLING_NLP_PARSER_PARSER_H_
 
+#include <string>
+#include <utility>
 #include <vector>
 
-#include "sling/base/logging.h"
-#include "sling/base/registry.h"
 #include "sling/base/types.h"
 #include "sling/frame/store.h"
 #include "sling/myelin/compiler.h"
 #include "sling/myelin/compute.h"
 #include "sling/myelin/flow.h"
 #include "sling/nlp/document/document.h"
-#include "sling/nlp/document/lexical-encoder.h"
-#include "sling/nlp/parser/parser-features.h"
-#include "sling/nlp/parser/parser-state.h"
-#include "sling/nlp/parser/roles.h"
+#include "sling/nlp/parser/parser-codec.h"
 
 namespace sling {
 namespace nlp {
 
-class DelegateInstance;
-
-// Interface for delegate component at prediction time.
-class Delegate : public Component<Delegate> {
- public:
-  virtual ~Delegate() = default;
-
-  // Initialize delegate from specification.
-  virtual void Initialize(const myelin::Network &network,
-                          const Frame &spec) = 0;
-
-  // Create new delegate instance for action prediction.
-  virtual DelegateInstance *CreateInstance() = 0;
-};
-
-#define REGISTER_DELEGATE(type, component) \
-    REGISTER_COMPONENT_TYPE(sling::nlp::Delegate, type, component)
-
-// Interface for delegate instance at prediction time.
-class DelegateInstance {
- public:
-  virtual ~DelegateInstance() = default;
-
-  // Predict action for delegate.
-  virtual void Predict(float *activations, ParserAction *action) = 0;
-};
-
 // Frame semantics parser.
 class Parser {
  public:
+  // List of hyperparameter names and values.
+  typedef std::vector<std::pair<string, string>> HyperParams;
+
   ~Parser();
 
   // Load and initialize parser model.
@@ -71,30 +44,30 @@ class Parser {
   // Parse document.
   void Parse(Document *document) const;
 
-  // Neural network for parser.
-  const myelin::Network &network() const { return network_; }
+  // Neural network model for parser.
+  const myelin::Network &model() const { return model_; }
+
+  // Hyperparameters for parser model.
+  const HyperParams &hparams() const { return hparams_; }
 
  private:
   // JIT compiler.
   myelin::Compiler compiler_;
 
   // Parser network.
-  myelin::Network network_;
+  myelin::Network model_;
 
-  // Lexical encoder.
-  LexicalEncoder encoder_;
+  // Parser encoder.
+  ParserEncoder *encoder_ = nullptr;
 
-  // Parser decoder.
-  myelin::Cell *decoder_ = nullptr;
+  // Parser encoder.
+  ParserDecoder *decoder_ = nullptr;
 
-  // Parser feature model for feature extraction in the decoder.
-  ParserFeatureModel feature_model_;
+  // Hyperparameters for parser model.
+  HyperParams hparams_;
 
-  // Cascade with parser action prediction delegates.
-  std::vector<Delegate *> delegates_;
-
-  // Set of roles considered.
-  RoleSet roles_;
+  // Sentence skip mask. Default to skipping headings.
+  int skip_mask_ = HEADING_BEGIN;
 };
 
 }  // namespace nlp

@@ -12,55 +12,112 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/nlp/parser/action-table.h"
-#include "sling/nlp/parser/parser.h"
+#include "sling/nlp/parser/multiclass-delegate.h"
+
+#include "sling/myelin/gradient.h"
 
 namespace sling {
 namespace nlp {
 
 using namespace myelin;
 
-// Deletegate for fixed action classification.
-class MultiClassDelegate : public Delegate {
- public:
-  void Initialize(const Network &network, const Frame &spec) override {
-    cell_ = network.GetCell(spec.GetString("cell"));
-    input_ = cell_->GetParameter(cell_->name() + "/input");
-    output_ = cell_->GetParameter(cell_->name() + "/output");
-    actions_.Read(spec);
+void MultiClassDelegate::Build(Flow *flow,
+                               Flow::Variable *activation,
+                               Flow::Variable *dactivation,
+                               bool learn) {
+  FlowBuilder f(flow, name_);
+  int dim = activation->elements();
+  int size = actions_.size();
+  auto *W = f.Parameter("W", DT_FLOAT, {dim, size});
+  auto *b = f.Parameter("b", DT_FLOAT, {1, size});
+  f.RandomNormal(W);
+
+  auto *input = f.Placeholder("input", DT_FLOAT, {1, dim}, true);
+  auto *logits = f.Name(f.Add(f.MatMul(input, W), b), "logits");
+  if (learn) logits->set_out();
+  auto *output = f.Name(f.ArgMax(logits), "output");
+  if (!learn) output->set_out();
+
+  flow->Connect({activation, input});
+  if (learn) {
+    Gradient(flow, f.func());
+    auto *dlogits = flow->GradientVar(logits);
+    loss_.Build(flow, logits, dlogits);
   }
+}
 
-  DelegateInstance *CreateInstance() override {
-    return new MultiClassDelegateInstance(this);
+void MultiClassDelegate::Save(myelin::Flow *flow, Builder *spec) {
+  spec->Add("name", name_);
+  spec->Add("type", "multiclass");
+  spec->Add("cell", cell_->name());
+  actions_.Write(spec);
+}
+
+void MultiClassDelegate::Load(myelin::Flow *flow, const Frame &spec) {
+  name_ = spec.GetString("cell");
+  actions_.Read(spec);
+}
+
+void MultiClassDelegate::Initialize(const Network &model) {
+  cell_ = model.GetCell(name_);
+  input_ = cell_->GetParameter(name_ + "/input");
+  logits_ = cell_->GetParameter(name_ + "/logits");
+  output_ = cell_->GetParameter(name_ + "/output");
+
+  dcell_ = cell_->Gradient();
+  if (dcell_ != nullptr) {
+    primal_ = cell_->Primal();
+    dinput_ = input_->Gradient();
+    dlogits_ = logits_->Gradient();
+    loss_.Initialize(model);
   }
+}
 
-  // Multi-class delegate instance.
-  class MultiClassDelegateInstance : public DelegateInstance {
-   public:
-    MultiClassDelegateInstance(MultiClassDelegate *delegate)
-        : delegate_(delegate),
-          data_(delegate->cell_) {}
+void MultiClassDelegate::Predictor::Predict(float *activation,
+                                            ParserAction *action) {
+  // Predict action from activations.
+  data_.SetReference(delegate_->input_, activation);
+  data_.Compute();
+  int argmax = *data_.Get<int>(delegate_->output_);
+  *action = delegate_->actions_.Action(argmax);
+}
 
-    void Predict(float *activation, ParserAction *action) override {
-      // Predict action from activations.
-      data_.SetReference(delegate_->input_, activation);
-      data_.Compute();
-      int argmax = *data_.Get<int>(delegate_->output_);
-      *action = delegate_->actions_.Action(argmax);
-    }
+void MultiClassDelegate::Learner::Predict(float *activation,
+                                          ParserAction *action) {
+  // Predict action from activations.
+  forward_.SetReference(delegate_->input_, activation);
+  forward_.Compute();
+  int argmax = *forward_.Get<int>(delegate_->output_);
+  *action = delegate_->actions_.Action(argmax);
+}
 
-   private:
-    MultiClassDelegate *delegate_;
-    Instance data_;
-  };
+float MultiClassDelegate::Learner::Compute(float *activation,
+                                           float *dactivation,
+                                           const ParserAction &action) {
+  // Look up index for action. Skip backpropagation if action is unknown.
+  int target = delegate_->actions_.Index(action);
+  if (target == -1) return 0.0;
 
- private:
-  ActionTable actions_;        // action table for multi-class classification
+  // Compute logits from activation.
+  forward_.SetReference(delegate_->input_, activation);
+  forward_.Compute();
 
-  Cell *cell_ = nullptr;       // cell for computation
-  Tensor *input_ = nullptr;    // input for activations
-  Tensor *output_ = nullptr;   // output prediction
-};
+  // Compute loss.
+  float *logits = forward_.Get<float>(delegate_->logits_);
+  float *dlogits = backward_.Get<float>(delegate_->dlogits_);
+  float loss = delegate_->loss_.Compute(logits, target, dlogits);
+
+  // Backpropagate loss.
+  backward_.Set(delegate_->primal_, &forward_);
+  backward_.SetReference(delegate_->dinput_, dactivation);
+  backward_.Compute();
+
+  return loss;
+}
+
+void MultiClassDelegate::Learner::CollectGradients(Instances *gradients) {
+  gradients->Add(&backward_);
+}
 
 REGISTER_DELEGATE("multiclass", MultiClassDelegate);
 

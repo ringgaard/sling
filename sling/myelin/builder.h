@@ -27,7 +27,7 @@ namespace myelin {
 // A scope is used for defined a name space for variables and operations.
 class Scope {
  public:
-  Scope(Scope *parent, const string &name);
+  Scope(Scope *parent, const string &name, bool relative = true);
   ~Scope();
 
  protected:
@@ -60,6 +60,7 @@ class FlowBuilder : public Scope {
   typedef Flow::Variable Variable;
   typedef Flow::Operation Operation;
   typedef Flow::Function Function;
+  typedef std::vector<Variable *> Args;
 
   // Initialize builder for existing function.
   FlowBuilder(Flow *flow, Function *func)
@@ -93,16 +94,16 @@ class FlowBuilder : public Scope {
 
   // Add operation to function and return output variable.
   Variable *Op(const string &op,
-               const std::vector<Variable *> &args,
+               const Args &args,
                Type type,
                const Shape &shape);
 
   // Add operation to function and return output variable. The output is
   // shaped using broadcast semantics.
-  Variable *Op(const string &op, const std::vector<Variable *> &args);
+  Variable *Op(const string &op, const Args &args);
 
   // Add operation with no output to function.
-  Operation *RawOp(const string &op, const std::vector<Variable *> &args);
+  Operation *RawOp(const string &op, const Args &args);
 
   // Mark variable as non-differentiable.
   Variable *NoGradient(Variable *x) {
@@ -113,7 +114,9 @@ class FlowBuilder : public Scope {
   }
 
   // Add constant to flow.
-  Variable *Const(const void *data, Type type, const Shape &shape);
+  Variable *Const(const void *data, Type type, const Shape &shape) {
+    return flow_->AddConstant(OpName("const"), type, shape, data);
+  }
   Variable *Const(float value) { return Const(&value, DT_FLOAT, {}); }
   Variable *Const(double value) { return Const(&value, DT_DOUBLE, {}); }
   Variable *Const(int value) { return Const(&value, DT_INT32, {}); }
@@ -132,16 +135,10 @@ class FlowBuilder : public Scope {
   }
   Variable *Const(const Shape &shape) { return Const(shape.dims()); }
 
-  Variable *OneHot(Variable *index, int size) {
-    return Op("OneHot", {index}, DT_FLOAT, {size});
-  }
-  Variable *OneHot(Variable *index, Variable *value, int size) {
-    return Op("OneHot", {index, value}, DT_FLOAT, {size});
-  }
-
   Variable *Zero(Type type = DT_FLOAT);
   Variable *One(Type type = DT_FLOAT);
   Variable *Two(Type type = DT_FLOAT);
+  Variable *OneHot(Variable *index, int depth, Variable *value = nullptr);
 
   // Add instance reference to other function.
   Variable *Instance(Function *func);
@@ -149,7 +146,7 @@ class FlowBuilder : public Scope {
   // Add reference to variable in external instance.
   Variable *Ref(Variable *instance, Variable *external);
 
-  // Builder methods for common operations.
+  // Math functions.
   Variable *Add(Variable *x, Variable *y) { return Op("Add", {x, y}); }
   Variable *Sub(Variable *x, Variable *y) { return Op("Sub", {x, y}); }
   Variable *Mul(Variable *x, Variable *y) { return Op("Mul", {x, y}); }
@@ -254,10 +251,6 @@ class FlowBuilder : public Scope {
   // Matrix multiplication.
   Variable *MatMul(Variable *x, Variable *y);
 
-  Variable *Dot(Variable *x, Variable *y, int size) {
-    return MatMul(Reshape(x, {1, size}), Reshape(y, {size, 1}));
-  }
-
   // Matrix transpose.
   Variable *Transpose(Variable *x) {
     return Op("Transpose", {x}, x->type, x->shape.transposed());
@@ -271,24 +264,65 @@ class FlowBuilder : public Scope {
   }
 
   // Reductions.
-  Variable *Sum(Variable *x) { return Op("Sum", {x}, x->type, {}); }
-  Variable *Product(Variable *x) { return Op("Product", {x}, x->type, {}); }
-  Variable *Max(Variable *x) { return Op("Max", {x}, x->type, {}); }
-  Variable *Min(Variable *x) { return Op("Min", {x}, x->type, {}); }
-  Variable *All(Variable *x) { return Op("All", {x}, x->type, {}); }
-  Variable *Any(Variable *x) { return Op("Any", {x}, x->type, {}); }
-  Variable *Mean(Variable *x) {
-    float size = x->elements();
-    return Div(Sum(x), Const(size));
+  Variable *Reduce(const string &op, Variable *x,
+                   int axis = -1, bool keepdims = false);
+
+  Variable *Sum(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Sum", x, axis, keepdims);
+  }
+  Variable *Product(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Product", x, axis, keepdims);
+  }
+  Variable *Max(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Max", x, axis, keepdims);
+  }
+  Variable *Min(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Min", x, axis, keepdims);
+  }
+  Variable *All(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("All", x, axis, keepdims);
+  }
+  Variable *Any(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("Any", x, axis, keepdims);
+  }
+  Variable *Mean(Variable *x, int axis = -1, bool keepdims = false) {
+    float size = x->shape.axisdim(axis);
+    return Div(Sum(x, axis, keepdims), Const(size));
   }
   Variable *Count(Variable *p, Type type = DT_FLOAT) {
     return NoGradient(Op("Count", {p}, type, {}));
   }
-  Variable *ArgMin(Variable *x) {
-    return NoGradient(Op("ArgMin", {x}, DT_INT32, {}));
+
+  // Arg Min/Max.
+  Variable *ArgM(const string &op, Variable *x, int axis, Variable **m) {
+    Variable *argm;
+    if (axis == -1) {
+      argm = Op(op, {x}, DT_INT32, {});
+    } else {
+      argm = Reduce(op, x, axis);
+      argm->type = DT_INT32;
+    }
+    if (m != nullptr) {
+      string name = argm->producer->name + ":1";
+      *m = flow_->AddVariable(name, x->type, argm->shape);
+      argm->producer->AddOutput(*m);
+    }
+    return NoGradient(argm);
   }
-  Variable *ArgMax(Variable *x) {
-    return NoGradient(Op("ArgMax", {x}, DT_INT32, {}));
+
+  Variable *ArgMin(Variable *x, int axis = -1, Variable **min = nullptr) {
+    return ArgM("ArgMin", x, axis, min);
+  }
+  Variable *ArgMax(Variable *x, int axis = -1, Variable **max = nullptr) {
+    return ArgM("ArgMax", x, axis, max);
+  }
+
+  // Clip value.
+  Variable *Clip(Variable *x, Variable *low, Variable *high) {
+    return Minimum(Maximum(x, low), high);
+  }
+  Variable *Clip(Variable *x, float low, float high) {
+    return Clip(x, Const(low), Const(high));
   }
 
   // Dot product between two vectors.
@@ -297,7 +331,9 @@ class FlowBuilder : public Scope {
   }
 
   // L2 norm of vector.
-  Variable *Norm(Variable *v) { return Sqrt(Sum(Square(v))); }
+  Variable *Norm(Variable *v, int axis = -1, bool keepdims = false) {
+    return Sqrt(Sum(Square(v), axis, keepdims));
+  }
 
   // Cosine similarity.
   Variable *CosSim(Variable *x, Variable *y) {
@@ -310,11 +346,20 @@ class FlowBuilder : public Scope {
   }
 
   // Normalize.
-  Variable *Normalize(Variable *x) { return Mul(x, Reciprocal(Sum(x))); }
+  Variable *Normalize(Variable *x, int axis = -1, bool keepdims = false) {
+    return Mul(x, Reciprocal(Sum(x, axis, keepdims)));
+  }
 
-  // Softmax.
-  Variable *Softmax(Variable *x) { return Normalize(Exp(Sub(x, Max(x)))); }
-  Variable *LogSoftmax(Variable *x) { return Log(Softmax(x)); }
+  // SoftMax.
+  Variable *SoftMax(Variable *x, int axis = -1) {
+    auto *softmax = Op("SoftMax", {x});
+    if (axis != -1 ) softmax->producer->SetAttr("axis", axis);
+    return softmax;
+  }
+  Variable *LogSoftMax(Variable *x) { return Log(SoftMax(x)); }
+  Variable *LogSumExp(Variable *x, int axis = -1, bool keepdims = false) {
+    return Reduce("LogSumExp", x, axis, keepdims);
+  }
 
   // Shape.
   Variable *TensorShape(Variable *x) {
@@ -331,37 +376,59 @@ class FlowBuilder : public Scope {
     return Op("Reshape", {x, shape});
   }
   Variable *Reshape(Variable *x, const Shape &shape) {
-    return Op("Reshape", {x, Const(shape.dims())}, x->type, shape);
+    return Op("Reshape", {x, Const(shape)}, x->type, shape);
+  }
+  Variable *Squeeze(Variable *x, int axis) {
+    return Reshape(x, x->shape.squeezed(axis));
+  }
+  Variable *ExpandDims(Variable *x, int axis) {
+    return Reshape(x, x->shape.expanded(axis));
+  }
+  Variable *ReverseDims(Variable *x) {
+    return Reshape(x, x->shape.transposed());
   }
   Variable *Broadcast(Variable *x, const Shape &shape) {
     return Op("Identity", {x}, x->type, shape);
   }
+  Variable *Resize(Variable *x, const Shape &shape) {
+    auto *y = Op("Resize", {x}, x->type, shape);
+    y->producer->SetAttr("shape", shape);
+    return y;
+  }
 
   // Gather for embedding lookups.
-  Variable *Gather(Variable *M, Variable *f) {
-    int n = f->rank() == 0 ? 1 : f->dim(1);
-    return Op("Gather", {M, f}, M->type, {n, M->dim(1)});
+  Variable *Gather(Variable *params,
+                   Variable *indices,
+                   Variable *oov = nullptr);
+
+  Variable *PoolingGather(const string &op,
+                          Variable *params,
+                          Variable *indices,
+                          int batch = 0);
+  Variable *GatherSum(Variable *params, Variable *indices, int batch = 0) {
+    return PoolingGather("GatherSum", params, indices, batch);
   }
-  Variable *Gather(Variable *M, Variable *f, Variable *oov) {
-    int n = f->rank() == 0 ? 1 : f->dim(1);
-    return Op("Gather", {M, f, oov}, M->type, {n, M->dim(1)});
+  Variable *GatherAvg(Variable *params, Variable *indices, int batch = 0) {
+    return PoolingGather("GatherAvg", params, indices, batch);
   }
-  Variable *GatherSum(Variable *M, Variable *f) {
-    return Op("GatherSum", {M, f}, M->type, {1, M->dim(1)});
-  }
-  Variable *GatherAvg(Variable *M, Variable *f) {
-    return Op("GatherAvg", {M, f}, M->type, {1, M->dim(1)});
-  }
-  Variable *GatherMax(Variable *M, Variable *f) {
-    return Op("GatherMax", {M, f}, M->type, {1, M->dim(1)});
+  Variable *GatherMax(Variable *params, Variable *indices, int batch = 0) {
+    return PoolingGather("GatherMax", params, indices, batch);
   }
 
   // Scatter for sparse embedding update.
-  Variable *Scatter(Variable *f, Variable *v, int size) {
-    return Op("Scatter", {f, v}, v->type, {size, v->dim(1)});
+  Variable *Scatter(Variable *f, Variable *v, Shape shape,
+                    int batch = 0, bool pooled = false) {
+    auto *r = Op("Scatter", {f, v}, v->type, shape);
+    if (batch != 0) r->producer->SetAttr("batch", batch);
+    if (pooled) r->producer->SetAttr("pooled", true);
+    return r;
   }
-  Variable *Scatter(Variable *f, Variable *v, int size, Variable *oov) {
-    return Op("Scatter", {f, v, oov}, v->type, {size, v->dim(1)});
+  Variable *Scatter(Variable *f, Variable *v, Variable *oov, Shape shape,
+                    int batch = 0, bool pooled = false) {
+    auto *r = Op("Scatter", {f, v, oov}, v->type, shape);
+    if (batch != 0) r->producer->SetAttr("batch", batch);
+    if (pooled) r->producer->SetAttr("pooled", true);
+    return r;
   }
 
   // Assignment.
@@ -381,33 +448,44 @@ class FlowBuilder : public Scope {
     return RawOp("AssignAddScatter", {M, f, v});
   }
 
+  // Bind variable to existing variable.
+  void Bind(Variable *target, Variable *x) {
+    auto *op = RawOp("Identity", {x});
+    op->AddOutput(target);
+  }
+
   // Concatenation.
-  Variable *Concat(const std::vector<Variable *> &parts, int axis = 1);
+  Variable *Concat(const std::vector<Variable *> &parts, int axis = 0);
 
   // Splitting.
-  std::vector<Variable *> Split(Variable *v, int splits, int axis = 1);
+  std::vector<Variable *> Split(Variable *v, int splits, int axis = 0);
 
   // Slicing.
   Variable *Slice(Variable *v, Variable *begin, const Shape &size) {
     return Op("Slice", {v, begin, Const(size)}, v->type, size);
   }
+  Variable *Slice(Variable *v, const Shape &begin, const Shape &size) {
+    return Op("Slice", {v, Const(begin), Const(size)}, v->type, size);
+  }
 
   // Add input mapped through embedding.
   Variable *Feature(const string &name, int range, int size, int dim) {
     auto *M = Parameter(name + "_embeddings", DT_FLOAT, {range, dim});
-    auto *f = Placeholder(name, DT_INT32, {1, size});
-    return size == 1 ? Gather(M, f) : GatherSum(M, f);
+    RandomNormal(M);
+    if (size == 1) {
+      auto *f = Placeholder(name, DT_INT32, {size, 1});
+      return Gather(M, f);
+    } else {
+      auto *f = Placeholder(name, DT_INT32, {1, size, 1});
+      return GatherSum(M, f, 1);
+    }
   }
 
-  // Feed-forward (FF) layer(s).
-  Variable *FFLayers(Variable *input,
-                     std::vector<int> layers,
-                     int hidden = -1,
-                     bool bias = false,
-                     const string &activation = "Relu");
-  Variable *FFLayer(Variable *input, int size, bool bias = false) {
-    return FFLayers(input, {size}, -1, bias);
-  }
+  // Feed-forward (FF) network.
+  Variable *FNN(Variable *input,
+                std::vector<int> layers,
+                bool bias = false,
+                const string &activation = "Relu");
 
   // Return function for builder.
   Function *func() const { return func_; }

@@ -22,12 +22,29 @@
 namespace sling {
 namespace nlp {
 
+ParserState::ParserState()
+    : document_(nullptr),
+      begin_(-1),
+      end_(-1),
+      current_(-1),
+      step_(0) {}
+
 ParserState::ParserState(Document *document, int begin, int end)
     : document_(document),
       begin_(begin),
       end_(end),
       current_(begin),
       step_(0) {}
+
+void ParserState::Switch(Document *document, int begin, int end, bool reset) {
+  document_ = document;
+  begin_ = begin;
+  end_ = end;
+  current_ = begin;
+  step_ = 0;
+  marks_.clear();
+  if (reset) attention_.clear();
+}
 
 void ParserState::Apply(const ParserAction &action) {
   switch (action.type) {
@@ -173,17 +190,6 @@ void ParserState::Shift() {
 }
 
 void ParserState::Evoke(int length, Handle type) {
-  // Create new frame.
-  Handle frame;
-  if (type.IsNil()) {
-    // Allocate empty frame.
-    frame = store()->AllocateFrame(nullptr, nullptr);
-  } else {
-    // Allocate frame with type.
-    Slot slot(Handle::isa(), type);
-    frame = store()->AllocateFrame(&slot, &slot + 1);
-  }
-
   // Get or create a new mention.
   int begin, end;
   if (length == 0) {
@@ -196,10 +202,22 @@ void ParserState::Evoke(int length, Handle type) {
   }
   Span *span = document_->AddSpan(begin, end);
   DCHECK(span != nullptr) << begin << " " << end;
+
+  // Create new frame.
+  Handle handle;
+  if (type.IsNil()) {
+    // Allocate empty frame.
+    handle = store()->AllocateFrame(nullptr, nullptr);
+  } else {
+    // Allocate frame with type.
+    Slot slot(Handle::isa(), type);
+    handle = store()->AllocateFrame(&slot, &slot + 1);
+  }
+  Frame frame(store(), handle);
   span->Evoke(frame);
 
   // Add new frame to the attention buffer.
-  Add(frame, span);
+  Add(handle, span);
 }
 
 void ParserState::Refer(int length, int index) {

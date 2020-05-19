@@ -17,7 +17,8 @@
 namespace sling {
 namespace myelin {
 
-Scope::Scope(Scope *parent, const string &name) : parent_(parent) {
+Scope::Scope(Scope *parent, const string &name, bool relative)
+    : parent_(parent) {
   if (parent == nullptr) {
     // Top-level scope.
     root_ = current_ = this;
@@ -27,7 +28,11 @@ Scope::Scope(Scope *parent, const string &name) : parent_(parent) {
     root_ = parent_->root_;
     CHECK(root_->current_ == parent_);
     root_->current_ = current_ = this;
-    name_ = parent_->name_ + "/" + name;
+    if (relative) {
+      name_ = parent_->name_ + "/" + name;
+    } else {
+      name_ = name;
+    }
   }
 }
 
@@ -90,7 +95,7 @@ Flow::Variable *FlowBuilder::Name(Variable *var, const string &name) {
 }
 
 Flow::Variable *FlowBuilder::Op(const string &op,
-                                const std::vector<Flow::Variable *> &args,
+                                const Args &args,
                                 Type type,
                                 const Shape &shape) {
   string name = OpName(op);
@@ -100,24 +105,30 @@ Flow::Variable *FlowBuilder::Op(const string &op,
 }
 
 Flow::Variable *FlowBuilder::Op(const string &op,
-                                const std::vector<Flow::Variable *> &args) {
+                                const Args &args) {
   // Use first argument for return type.
   Type type = args.empty() ? DT_INVALID : args[0]->type;
 
-  // Determine output rank.
+  // Determine output shape.
   Shape shape;
-  int rank = 0;
-  for (Flow::Variable *arg : args) {
-    if (arg->rank() > rank) rank = arg->rank();
-  }
-  shape.fill(rank, 1);
+  if (args.size() == 1) {
+    // Output shape is input shape for single-argument ops.
+    shape = args[0]->shape;
+  } else {
+    // Determine output rank.
+    int rank = 0;
+    for (Flow::Variable *arg : args) {
+      if (arg->rank() > rank) rank = arg->rank();
+    }
+    shape.fill(rank, 1);
 
-  // Determine output shape based on broadcast semantics.
-  for (Flow::Variable *arg : args) {
-    int depth = rank - arg->rank();
-    for (int d = 0; d < arg->rank(); ++d) {
-      if (shape.dim(d + depth) < arg->dim(d)) {
-        shape.set(d + depth, arg->dim(d));
+    // Determine output shape based on broadcast semantics.
+    for (Flow::Variable *arg : args) {
+      int depth = rank - arg->rank();
+      for (int d = 0; d < arg->rank(); ++d) {
+        if (shape.dim(d + depth) < arg->dim(d)) {
+          shape.set(d + depth, arg->dim(d));
+        }
       }
     }
   }
@@ -125,24 +136,9 @@ Flow::Variable *FlowBuilder::Op(const string &op,
   return Op(op, args, type, shape);
 }
 
-Flow::Operation *FlowBuilder::RawOp(const string &op,
-                                    const std::vector<Flow::Variable *> &args) {
+Flow::Operation *FlowBuilder::RawOp(const string &op, const Args &args) {
   string name = OpName(op);
   return flow_->AddOperation(func_, name, op, args, {});
-}
-
-Flow::Variable *FlowBuilder::Const(const void *data, Type type,
-                                   const Shape &shape) {
-  Variable *var = flow_->AddVariable(OpName("const"), type, shape);
-  var->size = TypeTraits::of(type).size() * shape.elements();
-  char *buffer = flow_->AllocateMemory(var->size);
-  var->data = buffer;
-  if (data != nullptr) {
-    memcpy(buffer, data, var->size);
-  } else {
-    memset(buffer, 0, var->size);
-  }
-  return var;
 }
 
 Flow::Variable *FlowBuilder::Const(double value, Type type) {
@@ -201,6 +197,22 @@ Flow::Variable *FlowBuilder::Two(Type type) {
   }
 }
 
+Flow::Variable *FlowBuilder::OneHot(Variable *index,
+                                    int depth,
+                                    Variable *value) {
+  Shape s = index->shape;
+  s.add(depth);
+  Variable *result;
+  if (value != nullptr) {
+    s.append(value->shape);
+    result = Op("OneHot", {index, value}, value->type, s);
+  } else {
+    result = Op("OneHot", {index}, DT_FLOAT, s);
+  }
+  result->producer->SetAttr("depth", depth);
+  return result;
+}
+
 Flow::Variable *FlowBuilder::Instance(Function *func) {
   Variable *instance = Var(func->name, DT_RESOURCE, {});
   instance->set_ref();
@@ -230,7 +242,10 @@ Flow::Variable *FlowBuilder::Concat(const std::vector<Variable *> &parts,
   Shape shape = parts[0]->shape;
   int n = parts.size();
   int width = 0;
-  for (Variable *v : parts) width += v->shape.dim(axis);
+  for (Variable *v : parts) {
+    DCHECK_LT(axis, v->rank()) << v->name;
+    width += v->shape.dim(axis);
+  }
   shape.set(axis, width);
   std::vector<Variable *> args = parts;
   args.push_back(Const(axis));
@@ -257,11 +272,49 @@ std::vector<Flow::Variable *> FlowBuilder::Split(Variable *v, int splits,
   return parts;
 }
 
-Flow::Variable *FlowBuilder::FFLayers(Variable *input,
-                                      std::vector<int> layers,
-                                      int hidden,
-                                      bool bias,
-                                      const string &activation) {
+Flow::Variable *FlowBuilder::Gather(Variable *params,
+                                    Variable *indices,
+                                    Variable *oov) {
+  std::vector<Variable *> args = {params, indices};
+  if (oov != nullptr) args.push_back(oov);
+
+  Shape s;
+  if (indices->shape.scalar()) {
+    s = params->shape.inside(params->rank() - 1);
+  } else {
+    int b = indices->shape.rank() - 1;
+    int n = indices->dim(-1);
+    s = indices->shape.outside(b) + params->shape.inside(n);
+  }
+
+  return Op("Gather", args, params->type, s);
+}
+
+Flow::Variable *FlowBuilder::PoolingGather(const string &op,
+                                           Variable *params,
+                                           Variable *indices,
+                                           int batch) {
+  int n = indices->shape.scalar() ? 1 : indices->dim(-1);
+  auto *r = Op(op, {params, indices}, params->type, params->shape.inside(n));
+  if (batch != 0) {
+    r->producer->SetAttr("batch", batch);
+    r->shape = indices->shape.outside(batch) + params->shape.inside(n);
+  }
+  return r;
+}
+
+Flow::Variable *FlowBuilder::Reduce(const string &op, Variable *x,
+                                    int axis, bool keepdims) {
+  auto *reduce = Op(op, {x}, x->type, x->shape.reduced(axis, keepdims));
+  if (axis != -1) reduce->producer->SetAttr("axis", axis);
+  if (keepdims) reduce->producer->SetAttr("keepdims", true);
+  return reduce;
+}
+
+Flow::Variable *FlowBuilder::FNN(Variable *input,
+                                 std::vector<int> layers,
+                                 bool bias,
+                                 const string &activation) {
   Variable *v = input;
   for (int l = 0; l < layers.size(); ++l) {
     // Get dimensions for next layer.
@@ -284,16 +337,9 @@ Flow::Variable *FlowBuilder::FFLayers(Variable *input,
     if (l != layers.size() - 1) {
       v = Op(activation, {v});
     }
-
-    // Make hidden layer a reference.
-    if (l == hidden) {
-      v = Name(Identity(v), "hidden");
-      v->set_in()->set_out()->set_ref();
-    }
   }
 
-  auto *logits = Name(Identity(v), "logits");
-  return logits;
+  return v;
 }
 
 }  // namespace myelin

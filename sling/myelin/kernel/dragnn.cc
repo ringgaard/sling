@@ -335,8 +335,8 @@ class DragnnLookupUnrolled : public Kernel {
   string Name() override { return "DragnnLookupUnrolled"; }
   string Operation() override { return "Lookup"; }
 
-  static const int kBlockSize = 8;
-  static const int kMaxEmbeddingDim = kBlockSize * 16;
+  static constexpr int kBlockSize = 8;
+  static constexpr int kMaxEmbeddingDim = kBlockSize * 16;
 
   bool Supports(Step *step) override {
     // Requires CPU with AVX support.

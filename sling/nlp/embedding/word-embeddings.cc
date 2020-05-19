@@ -189,7 +189,7 @@ class WordEmbeddingsTrainer : public Process {
     myelin::TensorData W1 = model[flow_.W1];
     for (int i = 0; i < vocabulary_size; ++i) {
       for (int j = 0; j < embedding_dims_; ++j) {
-        W0.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5);
+        W0.at<float>(i, j) = rnd.UniformFloat(1.0, -0.5) / embedding_dims_;
         W1.at<float>(i, j) = 0.0;
       }
     }

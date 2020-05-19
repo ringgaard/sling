@@ -3,16 +3,21 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
   name = "generic",
   srcs = [
+    "argmax.cc",
     "array.cc",
+    "concat.cc",
+    "gather.cc",
     "generic.cc",
-    "generic-math.cc",
     "generic-matmul.cc",
     "generic-operators.cc",
+    "reduce.cc",
+    "transpose.cc",
   ],
   hdrs = ["generic.h"],
   deps = [
     "//sling/base",
     "//sling/myelin:compute",
+    "//sling/myelin:builder",
     "//sling/myelin:simd-assembler",
   ],
 )
@@ -49,7 +54,6 @@ cc_library(
   name = "avx",
   srcs = [
     "avx.cc",
-    "avx-math.cc",
     "avx-matmul.cc",
     "avx-operators.cc",
     "simd-matmul.cc",

@@ -390,6 +390,9 @@ class MacroAssembler : public jit::Assembler {
   // Load size of dynamic tensor (e.g. channel) and multiply with scalar.
   void LoadDynamicSize(Register dst, Tensor *tensor, int scalar = 1);
 
+  // Load address and size of (dynamic) tensor.
+  void LoadTensorAddressAndSize(Register addr, Register size, Tensor *tensor);
+
   // Emit breakpoint.
   void Breakpoint() { int3(); }
 
@@ -398,10 +401,12 @@ class MacroAssembler : public jit::Assembler {
             Register src, int sdisp,
             int size);
 
-  // Load integer from array into 64-bit register.
+  // Load integer from array into 64-bit register (mov dst, [base+index*n]).
+  void LoadInteger(Register dst, Register base, Type type);
   void LoadInteger(Register dst, Register base, Register index, Type type);
 
-  // Store integer into array from 64-bit register.
+  // Store integer into array from 64-bit register (mov [base+index*n], src).
+  void StoreInteger(Register base, Register src, Type type);
   void StoreInteger(Register base, Register index, Register src, Type type);
 
   // Multiply register with constant.

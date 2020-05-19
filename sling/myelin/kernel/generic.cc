@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "sling/myelin/compute.h"
+#include "sling/myelin/builder.h"
 #include "sling/myelin/macro-assembler.h"
 
 #define __ masm->
@@ -27,17 +28,29 @@ namespace myelin {
 
 using namespace jit;
 
+// argmax.cc
+void RegisterArgMax(Library *library);
+
 // array.cc
 void RegisterArrayKernels(Library *library);
 
-// generic-math.cc
-void RegisterGenericMath(Library *library);
+// concat.cc
+void RegisterConcatKernels(Library *library);
+
+// gather.cc
+void RegisterGatherKernels(Library *library);
 
 // generic-matmul.cc
 void RegisterGenericMatMul(Library *library);
 
 // generic-operators.cc
 void RegisterGenericOperators(Library *library);
+
+// reduce.cc
+void RegisterReduceKernels(Library *library);
+
+// transpose.cc
+void RegisterTranspose(Library *library);
 
 // Reference op for accessing parameters in other cells of the network. Looks up
 // tensor 'var' in instance and outputs a reference to the tensor.
@@ -220,6 +233,67 @@ class IdentityTransformer : public Transformer {
   }
 };
 
+// Expand composite functions to basic operations.
+class CompositeTransformer : public Transformer {
+ public:
+  string Name() override { return "CompositeTransformer"; }
+
+  bool Transform(Flow *flow) override {
+    int updates = 0;
+
+    // SoftMax is defined as:
+    //   SoftMax(x) = Normalize(Exp(x)))
+    // but is computed as:
+    //  SoftMax(x) = Normalize(Exp(Sub(x, Max(x))))
+    // for better numeric stablity.
+    for (Flow::Operation *op : flow->Find("SoftMax")) {
+      if (op->indegree() != 1 || op->outdegree() != 1) continue;
+
+      Flow::Variable *x = op->inputs[0];
+      Flow::Variable *y = op->outputs[0];
+      int axis = op->GetAttr("axis", -1);
+
+      FlowBuilder f(flow, op->func);
+      Scope s(&f, op->name, false);
+      auto *max = f.Max(x, axis, true);
+      auto *softmax = f.Normalize(f.Exp(f.Sub(x, max)), axis, true);
+
+      flow->RemoveOperation(op);
+      f.Bind(y, softmax);
+
+      updates++;
+    }
+
+    // LogSumExp is defined as:
+    //   LogSumExp(x) = Log(Sum(Exp(x)))
+    // but is computed as:
+    //  LogSumExp(x) = Add(Log(Sum(Exp(Sub(x, Max(x))))), Max(x))
+    // for better numeric stablity.
+    for (Flow::Operation *op : flow->Find("LogSumExp")) {
+      if (op->indegree() != 1 || op->outdegree() != 1) continue;
+
+      Flow::Variable *x = op->inputs[0];
+      Flow::Variable *y = op->outputs[0];
+      int axis = op->GetAttr("axis", -1);
+      bool keepdims = op->GetAttr("keepdims", false);
+
+      FlowBuilder f(flow, op->func);
+      Scope s(&f, op->name, false);
+      auto *max = f.Max(x, axis, axis != -1);
+      auto *sub = f.Sub(x, max);
+      if (axis != -1 && !keepdims) max = f.Squeeze(max, axis);
+      auto *lse = f.Add(f.Log(f.Sum(f.Exp(sub), axis, keepdims)), max);
+
+      flow->RemoveOperation(op);
+      f.Bind(y, lse);
+
+      updates++;
+    }
+
+    return updates > 0;
+  }
+};
+
 // Flattens nested concatenations, if possible.  E.g.,
 // tf.concat([a, tf.concat([b, c], 1), d], 1) = tf.concat([a, b, c, d], 1)
 class FlattenConcatTransformer : public Transformer {
@@ -315,39 +389,6 @@ class FlattenConcatTransformer : public Transformer {
 
     flow->DeleteOperation(child);
     parent->SetAttr("N", static_cast<int>(parent->inputs.size() - 1));
-  }
-};
-
-// Normalizes "Gather" operations. Removes the "axis" input when it is zero.
-class GatherTransformer : public Transformer {
- public:
-  string Name() override { return "GatherTransformer"; }
-
-  bool Transform(Flow *flow) override {
-    // Remove the "axis" input when it is zero.
-    bool transformed = false;
-    for (Flow::Operation *op : flow->ops()) {
-      if (op->type != "Gather") continue;  // types were normalized above
-
-      // When present, the axis is the third argument.
-      if (op->indegree() != 3) continue;
-      Flow::Variable *axis = op->inputs.back();
-
-      // The axis must be constant and zero.
-      int32 axis32 = -1;
-      if (!axis->GetData(&axis32)) continue;
-      if (axis32 != 0) continue;
-
-      // The axis will be pruned, so it should have no other dependencies.
-      if (axis->usages() != 1) continue;
-      if (axis->producer != nullptr) continue;
-
-      op->RemoveInput(axis);
-      flow->DeleteVariable(axis);
-      transformed = true;
-    }
-
-    return transformed;
   }
 };
 
@@ -574,7 +615,7 @@ void RegisterGenericTransforms(Library *library) {
   library->RegisterTransformer(new RenameTransformer());
   library->RegisterTransformer(new IdentityTransformer());
   library->RegisterTransformer(new FlattenConcatTransformer());
-  library->RegisterTransformer(new GatherTransformer());
+  library->RegisterTransformer(new CompositeTransformer());
 
   // Register type inference.
   library->RegisterTyper(new StandardTyper());
@@ -583,8 +624,12 @@ void RegisterGenericTransforms(Library *library) {
 // Register generic library.
 void RegisterGenericLibrary(Library *library) {
   library->Register(new Reference());
+  RegisterConcatKernels(library);
+  RegisterGatherKernels(library);
+  RegisterReduceKernels(library);
+  RegisterTranspose(library);
   RegisterArrayKernels(library);
-  RegisterGenericMath(library);
+  RegisterArgMax(library);
   RegisterGenericMatMul(library);
   RegisterGenericOperators(library);
 }

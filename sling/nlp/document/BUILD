@@ -157,9 +157,9 @@ cc_library(
 )
 
 cc_library(
-  name = "lexical-encoder",
-  srcs = ["lexical-encoder.cc"],
-  hdrs = ["lexical-encoder.h"],
+  name = "lexical-features",
+  srcs = ["lexical-features.cc"],
+  hdrs = ["lexical-features.h"],
   deps = [
     ":document",
     ":features",
@@ -238,7 +238,7 @@ cc_binary(
 cc_library(
   name = "annotator-components",
   deps = [
-    "//sling/nlp/parser:parser-annotator",
+    "//sling/nlp/parser:components",
     "//sling/nlp/silver:annotators",
   ],
 )

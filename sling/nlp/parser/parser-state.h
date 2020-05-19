@@ -52,7 +52,11 @@ class ParserState {
   };
 
   // Initializes parse state.
+  ParserState();
   ParserState(Document *document, int begin, int end);
+
+  // Switch to new document part and optionally reset attention buffer.
+  void Switch(Document *document, int begin, int end, bool reset);
 
   // Returns the underlying document.
   Document *document() const { return document_; }

@@ -79,66 +79,87 @@ static bool b_one = true;
 std::vector<TypeTraits> typetraits = {
   {DT_INVALID, "void", 0,
    nullptr, nullptr, -1, nullptr,
+   false, false,
    nullptr, nullptr},
   {DT_FLOAT, "float32", sizeof(float),
    "float", "f32", 0, "f",
+   false, true,
    &f32_zero, &f32_one},
   {DT_DOUBLE, "float64", sizeof(double),
    "double", "f64", 1, "d",
+   false, true,
    &f64_zero, &f64_one},
   {DT_INT32, "int32", sizeof(int32_t),
    "int32_t", "s32", 10, "i",
+   true, false,
    &i32_zero, &i32_one},
   {DT_UINT8, "uint8", sizeof(uint8_t),
    "uint8_t", "u8", 8, "B",
+   true, false,
    &u8_zero, &u8_one},
   {DT_INT16, "int16", sizeof(int16_t),
    "int16_t", "s16", -1, "h",
+   true, false,
    &i16_zero, &i16_one},
   {DT_INT8, "int8", sizeof(int8_t),
    "int8_t", "s8", 3, "b",
+   true, false,
    &i8_zero, &i8_one},
   {DT_STRING, "string", sizeof(char *),
    "char *", "b64", -1, nullptr,
+   false, false,
    nullptr, nullptr},
   {DT_COMPLEX64, "complex64", 2 * sizeof(float),
    nullptr, nullptr, 5, nullptr,
+   false, true,
    nullptr, nullptr},
   {DT_INT64, "int64", sizeof(int64_t),
    "int64_t", "s64", -1, "q",
+   true, false,
    &i64_zero, &i64_one},
   {DT_BOOL, "bool", sizeof(bool),
    "bool", "b8", -1, "?",
+   false, false,
    &b_zero, &b_one},
   {DT_QINT8, "qint8", sizeof(int8_t),
    nullptr, nullptr, -1, nullptr,
+   true, false,
    nullptr, nullptr},
   {DT_QUINT8, "quint8", sizeof(uint8_t),
    nullptr, nullptr, -1, nullptr,
+   true, false,
    nullptr, nullptr},
   {DT_QINT32, "qint32", sizeof(int32_t),
    nullptr, nullptr, -1, nullptr,
+   true, false,
    nullptr, nullptr},
   {DT_BFLOAT16, "bfloat16", 2,
    nullptr, nullptr, -1, nullptr,
+   false, true,
    nullptr, nullptr},
   {DT_QINT16, "qint16", sizeof(int16_t),
    nullptr, nullptr, -1, nullptr,
+   true, false,
    nullptr, nullptr},
   {DT_UINT16, "uint16", sizeof(uint16_t),
    nullptr, nullptr, -1, nullptr,
+   true, false,
    &u16_zero, &u16_one},
   {DT_QUINT16, "quint16", sizeof(uint16_t),
    nullptr, nullptr, -1, nullptr,
+   true, false,
    nullptr, nullptr},
   {DT_COMPLEX128, "complex128", 2 * sizeof(double),
    nullptr, nullptr, 5, nullptr,
+   false, true,
    nullptr, nullptr},
   {DT_HALF, "float16", 2,
    nullptr, "f16", 2, nullptr,
+   false, true,
    nullptr, nullptr},
   {DT_RESOURCE, "resource", 1,
    "char *", nullptr, -1, nullptr,
+   false, false,
    nullptr, nullptr},
 };
 
@@ -187,10 +208,49 @@ bool Shape::IsSingleBroadcast(const Shape &other) const {
   return dim(r - 1) > 1 && other.dim(r - 1) == 1;
 }
 
+bool Shape::IsReduction(const Shape &other, int *axis, bool *keepdims) const {
+  if (rank() == 0) {
+    *axis = -1;
+    *keepdims = false;
+    return true;
+  } else if (rank() == other.rank()) {
+    int a = -1;
+    for (int d = 0; d < rank(); ++d) {
+      if (dim(d) != other.dim(d)) {
+        if (dim(d) != 1) return false;
+        if (a != -1) return false;
+        a = d;
+      }
+    }
+    if (a == -1) return false;
+    *axis = a;
+    *keepdims = true;
+    return true;
+  } else if (rank() == other.rank() - 1) {
+    int a = -1;
+    int d1 = 0;
+    int d2 = 0;
+    while (d1 < rank() && d2 < other.rank()) {
+      if (dim(d1) != other.dim(d2)) {
+        if (a != -1) return false;
+        a = d2++;
+      }
+      d1++;
+      d2++;
+    }
+    if (a == -1) return false;
+    *axis = a;
+    *keepdims = true;
+    return true;
+  } else {
+    return false;
+  }
+}
+
 string Shape::ToString() const {
   string str;
   for (int d = 0; d < rank(); ++d) {
-    if (d > 0) str.append("x");
+    if (d > 0) str.append(",");
     if (dim(d) == -1) {
       str.append("?");
     } else {
@@ -490,9 +550,9 @@ string Flow::Variable::TypeString() const {
   string str;
   if (ref()) str.append("&");
   str.append(TypeTraits::of(type).name());
-  if (dynamic()) str.append("<>");
   if (!shape.scalar()) {
     str.append("[");
+    if (dynamic()) str.append("*,");
     str.append(shape.ToString());
     str.append("]");
   }
@@ -587,6 +647,12 @@ bool Flow::Variable::DependsOn(const Operation *op) const {
     }
   }
   return false;
+}
+
+bool Flow::Variable::Differentiable() const {
+  if (is(NOGRADIENT)) return false;
+  if (type != DT_FLOAT && type != DT_DOUBLE) return false;
+  return true;
 }
 
 void Flow::Operation::AddInput(Variable *var) {
@@ -736,6 +802,15 @@ Flow::Variable *Flow::Operation::GetPrototype() const {
     }
   }
   return prototype;
+}
+
+bool Flow::Operation::Differentiable() const {
+  if (is(NOGRADIENT)) return false;
+  bool differentiable = false;
+  for (auto *v : outputs) {
+    if (v->Differentiable()) differentiable = true;
+  }
+  return differentiable;
 }
 
 void Flow::Function::AddOperation(Operation *op) {
@@ -1801,6 +1876,22 @@ Flow::Variable *Flow::AddVariable(const string &name,
   return var;
 }
 
+Flow::Variable *Flow::AddConstant(const string &name,
+                                  Type type,
+                                  const Shape &shape,
+                                  const void *data) {
+  Variable *var = AddVariable(name, type, shape);
+  var->size = TypeTraits::of(type).size() * shape.elements();
+  char *buffer = AllocateMemory(var->size);
+  var->data = buffer;
+  if (data != nullptr) {
+    memcpy(buffer, data, var->size);
+  } else {
+    memset(buffer, 0, var->size);
+  }
+  return var;
+}
+
 Flow::Operation *Flow::AddOperation(const string &name,
                                     const string &type) {
   Operation *op = new Operation;
@@ -2144,7 +2235,9 @@ Flow::Variable *Flow::Var(const string &name) {
 }
 
 Flow::Variable *Flow::GradientVar(Variable *var) {
-  return Var(GradientVarName(var->name));
+  string name = var->GetAttr("gradient");
+  if (name.empty()) name = GradientVarName(var->name);
+  return Var(name);
 }
 
 Flow::Function *Flow::GradientFunc(Function *func) {

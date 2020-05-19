@@ -49,8 +49,10 @@ struct GraphOptions {
   bool types_in_labels = true;
   bool include_constants = true;
   bool include_intermediates = false;
+  bool exclude_optimizer = false;
+  bool exclude_gradients = false;
   bool cluster_functions = true;
-  int max_value_size = 8;
+  int max_value_size = 4;
   int edge_thickness_scalar = 0;
 
   // Options for operations, inputs, outputs, and constants.

@@ -147,7 +147,7 @@ class ConstantFolding : public Transformer {
 
         // Shape, Type, and Size can be pre-computed.
         if ((op->type == "Shape" || op->type == "Rank" || op->type == "Size") &&
-             op->inputs[0]->shape.defined()) {
+             op->inputs[0]->shape.defined() && !op->inputs[0]->dynamic()) {
           // Get input and output.
           CHECK_EQ(op->indegree(), 1);
           CHECK_EQ(op->outdegree(), 1);
@@ -176,7 +176,7 @@ class ConstantFolding : public Transformer {
             result[0] = shape.elements();
           }
 
-          // Mark Shape op for removal.
+          // Mark op for removal.
           op->RemoveInput(input);
           op->RemoveOutput(output);
           remove.push_back(op);

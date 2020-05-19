@@ -30,10 +30,10 @@ using namespace jit;
 class SSEFltVecMatMulBase : public Kernel {
  public:
   // Maximum number of loop unrolls.
-  static const int kMaxUnrolls = 4;
+  static constexpr int kMaxUnrolls = 4;
 
   // Maximum number of adder registers.
-  static const int kMaxAdders = 2;
+  static constexpr int kMaxAdders = 2;
 
   SSEFltVecMatMulBase(bool bias, bool relu)
       : bias_(bias), relu_(relu) {}

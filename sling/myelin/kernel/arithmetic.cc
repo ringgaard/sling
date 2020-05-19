@@ -256,6 +256,8 @@ struct Expression {
       if (input->elements() == 1) continue;
       if (prototype->shape().IsSingleBroadcast(input->shape())) {
         single_bcast = true;
+        int common = prototype->dim(prototype->rank() - 1);
+        if (common < elements) elements = common;
         continue;
       }
       if (input->sparse()) {
@@ -777,6 +779,9 @@ class ExpressionTransformer : public Transformer {
   }
 
   bool Combine(Flow *flow, Flow::Operation *first, Flow::Operation *second) {
+    // Check that ops belongs to the same function.
+    if (first->func != second->func) return false;
+
     // Check if merging has been disabled.
     if (first->GetAttr("nomerge", false)) return false;
     if (second->GetAttr("nomerge", false)) return false;

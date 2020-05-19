@@ -33,55 +33,30 @@ string ParserAction::TypeName(Type type) {
   return "<ERROR>";
 }
 
-string ParserAction::TypeName() const {
-  return TypeName(type);
-}
-
-Frame ParserAction::AsFrame(Store *store, const string &prefix) const {
-  Builder builder(store);
-  builder.Add(prefix + "type", type);
-  if (length != 0) builder.Add(prefix + "length", length);
-  if (!label.IsNil()) builder.Add(prefix + "label", label);
-  if (!role.IsNil()) builder.Add(prefix + "role", role);
-  if (type == REFER || type == CONNECT) {
-    builder.Add(prefix + "target", target);
-  }
-  if (type == ASSIGN || type == CONNECT) {
-    builder.Add(prefix + "source", source);
-  }
-  if (type == CASCADE) {
-    builder.Add(prefix + "delegate", delegate);
-  }
-  builder.Add(prefix + "_str", ToString(store));
-  return builder.Create();
-}
-
 string ParserAction::ToString(Store *store) const {
-  string s = StrCat(TypeName(), ":");
+  string s = StrCat(TypeName(), "(");
   switch (type) {
     case ParserAction::EVOKE:
-      StrAppend(&s, "len=", length, ":", store->DebugString(label));
+      StrAppend(&s, "len=", length, ",label=", store->DebugString(label));
       break;
     case ParserAction::REFER:
-      StrAppend(&s, "len=", length, ":", target);
+      StrAppend(&s, "len=", length, ",target=", target);
       break;
     case ParserAction::CONNECT:
-      StrAppend(&s, source, " -> ", store->DebugString(role), " -> ", target);
+      StrAppend(&s, source, "->", store->DebugString(role), "->", target);
       break;
     case ParserAction::ASSIGN:
-      StrAppend(&s, source, " -> ", store->DebugString(role), " -> ",
+      StrAppend(&s, source, "->", store->DebugString(role), "->",
                 store->DebugString(label));
       break;
     case ParserAction::CASCADE:
-      StrAppend(&s, "(delegate=", delegate, ")");
+      StrAppend(&s, "delegate=", delegate);
       break;
-    case ParserAction::SHIFT:
-    case ParserAction::MARK:
     default:
-      s.pop_back();
       break;
   }
 
+  StrAppend(&s, ")");
   return s;
 }
 
