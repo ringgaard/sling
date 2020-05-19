@@ -32,6 +32,7 @@ sling/frame/parser.cc
 sling/frame/parser.h
 sling/myelin/tests/BUILD
 sling/myelin/tests/convert-tagger-flow.cc
+sling/myelin/tests/crf-test.cc
 sling/myelin/tests/cuda-test.cc
 sling/myelin/tests/express-test.cc
 sling/myelin/tests/exprgen-test.cc

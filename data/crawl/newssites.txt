@@ -660,3 +660,32 @@ ynetnews.com,Q1132126,Yedioth Ahronoth
 yumasun.com,Q8061046,Yuma Sun
 zdnet.com,Q2457578,ZDNet
 zerohedge.com,Q3575278,Zero Hedge
+
+arbejderen.dk|Q55215862|Arbejderen
+avisen.dk|Q12302548|Avisen
+altinget.dk|Q12301201|Altinget
+bt.dk|Q327821|B.T.
+b.dk|Q59055|Berlingske
+berlingske.dk|Q59055|Berlingske
+borsen.dk|Q5208470|Dagbladet Børsen
+computerworld.dk|Q1755724|Computerworld
+dagensmedicin.dk|Q12307011|Dagens Medicin
+dr.dk|Q79955373|DR.dk
+ekstrabladet.dk|Q1226253|Ekstra Bladet
+euroinvestor.dk|Q12310709|Euroinvestor.dk
+finans.dk|Q66794281|Finans.dk
+finanswatch.dk|Q12311333|FinansWatch
+fyens.dk|Q1326391|Fyens Stiftstidende
+information.dk|Q761660|Dagbladet Information
+ing.dk|Q1758835|Ingeniøren
+jv.dk|Q1714734|JydskeVestkysten
+jp.dk|Q815527|Jyllands-Posten
+kristeligt-dagblad.dk|Q1433145|Kristeligt Dagblad
+landbrugsavisen.dk|Q12323634|Landbrugsavisen
+nordjyske.dk|Q11991840|Nordjyske Stiftstidende
+penge.dk|Q12331256|Penge.dk
+politiken.dk|Q373133|Politiken
+nyheder.tv2.dk|Q86599934|TV2.dk
+ue.dk|Q94797926|Ugens Erhverv
+version2.dk|Q12343821|Version2
+
