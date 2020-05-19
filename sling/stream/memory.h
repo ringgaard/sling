@@ -20,6 +20,7 @@
 #include "sling/base/slice.h"
 #include "sling/base/types.h"
 #include "sling/stream/stream.h"
+#include "sling/util/iobuffer.h"
 
 namespace sling {
 
@@ -93,6 +94,36 @@ class StringOutputStream : public OutputStream {
 
  private:
   string *buffer_;
+};
+
+// An InputStream for reading from an I/O buffer.
+class IOBufferInputStream : public InputStream {
+ public:
+  IOBufferInputStream(IOBuffer *buffer);
+
+  // InputStream interface.
+  bool Next(const void **data, int *size) override;
+  void BackUp(int count) override;
+  bool Skip(int count) override;
+  int64 ByteCount() const override;
+
+ private:
+  IOBuffer *buffer_;
+};
+
+// An OutputStream for writing to an  I/O buffer.
+class IOBufferOutputStream : public OutputStream {
+ public:
+  IOBufferOutputStream(IOBuffer *buffer, int block_size = 4096);
+
+  // OutputStream interface.
+  bool Next(void **data, int *size) override;
+  void BackUp(int count) override;
+  int64 ByteCount() const override;
+
+ private:
+  IOBuffer *buffer_;
+  int block_size_;
 };
 
 }  // namespace sling

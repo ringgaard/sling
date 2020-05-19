@@ -132,5 +132,58 @@ int64 StringOutputStream::ByteCount() const {
   return buffer_->size();
 }
 
+IOBufferInputStream::IOBufferInputStream(IOBuffer *buffer) : buffer_(buffer) {}
+
+bool IOBufferInputStream::Next(const void **data, int *size) {
+  int n = buffer_->available();
+  if (n > 0) {
+    *data = buffer_->Consume(n);
+    *size = n;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void IOBufferInputStream::BackUp(int count) {
+  buffer_->Consume(-count);
+}
+
+bool IOBufferInputStream::Skip(int count) {
+  int left = buffer_->available();
+  if (count > left) {
+    buffer_->Consume(left);
+    return false;
+  } else {
+    buffer_->Consume(count);
+    return true;
+  }
+}
+
+int64 IOBufferInputStream::ByteCount() const {
+  return buffer_->consumed();
+}
+
+IOBufferOutputStream::IOBufferOutputStream(IOBuffer *buffer, int block_size)
+    : buffer_(buffer), block_size_(block_size) {}
+
+bool IOBufferOutputStream::Next(void **data, int *size) {
+  if (buffer_->full()) buffer_->Ensure(block_size_);
+
+  int n = buffer_->remaining();
+  if (n > block_size_) n = block_size_;
+  *data = buffer_->Append(n);
+  *size = n;
+  return true;
+}
+
+void IOBufferOutputStream::BackUp(int count) {
+  buffer_->Append(-count);
+}
+
+int64 IOBufferOutputStream::ByteCount() const {
+  return buffer_->available();
+}
+
 }  // namespace sling
 

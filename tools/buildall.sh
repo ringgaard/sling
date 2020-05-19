@@ -5,6 +5,7 @@ bazel build -c opt $* \
   sling/file:* \
   sling/frame:* \
   sling/http:* \
+  sling/net:* \
   sling/myelin:* \
   sling/myelin/kernel:* \
   sling/myelin/generator:* \

@@ -31,44 +31,13 @@ namespace sling {
 WebService::WebService(Store *commons,
                        HTTPRequest *request,
                        HTTPResponse *response)
-    : store_(commons), request_(request), response_(response) {
+    : store_(commons),
+      request_(request),
+      response_(response),
+      query_(request->query()) {
   // Initialize input and output.
   input_ = Frame(&store_, Handle::nil());
   output_ = Frame(&store_, Handle::nil());
-
-  // Parse URL query.
-  const char *q = request->query();
-  if (q != nullptr) {
-    // Split query string into ampersand-separated parts.
-    std::vector<Text> parts;
-    const char *p = q;
-    while (*q) {
-      if (*q == '&') {
-        parts.emplace_back(p, q - p);
-        q++;
-        p = q;
-      } else {
-        q++;
-      }
-    }
-    parts.emplace_back(p, q - p);
-
-    // Each part is a parameter with a name and a value.
-    string name;
-    string value;
-    for (const Text part : parts) {
-      name.clear();
-      value.clear();
-      int eq = part.find('=');
-      if (eq != -1) {
-        DecodeURLComponent(part.data(), eq, &name);
-        DecodeURLComponent(part.data() + eq + 1, part.size() - eq - 1, &value);
-      } else {
-        DecodeURLComponent(part.data(), part.size(), &name);
-      }
-      parameters_.emplace_back(name, value);
-    }
-  }
 
   // Determine input format.
   Text content_type = request->content_type();
@@ -245,37 +214,6 @@ WebService::~WebService() {
       // Ignore empty or unknown output formats.
       break;
   }
-}
-
-Text WebService::Get(Text name) const {
-  for (auto &p : parameters_) {
-    if (p.name == name) return p.value;
-  }
-  return Text();
-}
-
-int WebService::Get(Text name, int defval) const {
-  Text value = Get(name);
-  if (value.empty()) return defval;
-  int number;
-  if (!safe_strto32(value.data(), value.size(), &number)) return defval;
-  return number;
-}
-
-bool WebService::Get(Text name, bool defval) const {
-  for (auto &p : parameters_) {
-    if (p.name == name) {
-      if (p.value.empty()) return true;
-      if (p.value == "0") return false;
-      if (p.value == "1") return true;
-      if (p.value == "false") return false;
-      if (p.value == "true") return true;
-      if (p.value == "no") return false;
-      if (p.value == "yes") return true;
-      return defval;
-    }
-  }
-  return defval;
 }
 
 }  // namespace sling

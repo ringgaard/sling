@@ -20,6 +20,7 @@
 #include "sling/base/types.h"
 #include "sling/frame/object.h"
 #include "sling/http/http-server.h"
+#include "sling/http/http-utils.h"
 #include "sling/string/text.h"
 
 namespace sling {
@@ -46,9 +47,9 @@ class WebService {
   ~WebService();
 
   // Get URL query parameters.
-  Text Get(Text name) const;
-  int Get(Text name, int defval) const;
-  bool Get(Text name, bool defval) const;
+  Text Get(Text name) const { return query_.Get(name); }
+  int Get(Text name, int defval) const { return query_.Get(name, defval); }
+  bool Get(Text name, bool defval) const { return query_.Get(name, defval); }
 
   // Parsed input and output.
   const Object &input() const { return input_; }
@@ -74,13 +75,6 @@ class WebService {
   void set_byref(bool byref) { byref_ = byref; }
 
  private:
-  // URL query parameter.
-  struct Parameter {
-    Parameter(const string &n, const string &v) : name(n), value(v) {}
-    string name;
-    string value;
-  };
-
   // Store for request and response.
   Store store_;
 
@@ -89,7 +83,7 @@ class WebService {
   HTTPResponse *response_;
 
   // URL query parameters.
-  std::vector<Parameter> parameters_;
+  URLQuery query_;
 
   // Parsed input and output.
   Object input_;

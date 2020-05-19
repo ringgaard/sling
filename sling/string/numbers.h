@@ -55,6 +55,8 @@ bool safe_strtod(const string &str, double *value);
 // Parses buffer_size many characters from startptr into value.
 bool safe_strto32(const char *startptr, int buffer_size, int32 *value);
 bool safe_strto64(const char *startptr, int buffer_size, int64 *value);
+bool safe_strtou32(const char *startptr, int buffer_size, uint32 *value);
+bool safe_strtou64(const char *startptr, int buffer_size, uint64 *value);
 
 // Parses with a fixed base between 2 and 36. For base 16, leading "0x" is ok.
 // If base is set to 0, its value is inferred from the beginning of str:
@@ -78,19 +80,6 @@ bool safe_strtou32_base(const char *startptr, int buffer_size,
                         uint32 *value, int base);
 bool safe_strtou64_base(const char *startptr, int buffer_size,
                         uint64 *value, int base);
-
-// u64tostr_base36()
-//    The inverse of safe_strtou64_base, converts the number argument to
-//    a string representation in base-36.
-//    Conversion fails if buffer is too small to to hold the string and
-//    terminating NUL.
-//    Returns number of bytes written, not including terminating NUL.
-//    Return value 0 indicates error.
-size_t u64tostr_base36(uint64 number, size_t buf_size, char *buffer);
-
-// Similar to atoi(s), except s could be like "16k", "32M", "2G", "4t".
-uint64 atoi_kmgt(const char *s);
-inline uint64 atoi_kmgt(const string &s) { return atoi_kmgt(s.c_str()); }
 
 // ----------------------------------------------------------------------
 // FastIntToBuffer()
@@ -173,177 +162,6 @@ inline char *FastUInt64ToBuffer(uint64 i, char *buffer) {
   FastUInt64ToBufferLeft(i, buffer);
   return buffer;
 }
-
-// ----------------------------------------------------------------------
-// HexDigitsPrefix()
-//  returns 1 if buf is prefixed by "num_digits" of hex digits
-//  returns 0 otherwise.
-//  The function checks for '\0' for string termination.
-// ----------------------------------------------------------------------
-int HexDigitsPrefix(const char *buf, int num_digits);
-
-// ----------------------------------------------------------------------
-// ParseLeadingInt32Value
-//    A simple parser for int32 values. Returns the parsed value
-//    if a valid integer is found; else returns deflt. It does not
-//    check if str is entirely consumed.
-//    This cannot handle decimal numbers with leading 0s, since they will be
-//    treated as octal.  If you know it's decimal, use ParseLeadingDec32Value.
-// --------------------------------------------------------------------
-int32 ParseLeadingInt32Value(const char *str, int32 deflt);
-inline int32 ParseLeadingInt32Value(const string &str, int32 deflt) {
-  return ParseLeadingInt32Value(str.c_str(), deflt);
-}
-
-// ParseLeadingUInt32Value
-//    A simple parser for uint32 values. Returns the parsed value
-//    if a valid integer is found; else returns deflt. It does not
-//    check if str is entirely consumed.
-//    This cannot handle decimal numbers with leading 0s, since they will be
-//    treated as octal.  If you know it's decimal, use ParseLeadingUDec32Value.
-// --------------------------------------------------------------------
-uint32 ParseLeadingUInt32Value(const char *str, uint32 deflt);
-inline uint32 ParseLeadingUInt32Value(const string &str, uint32 deflt) {
-  return ParseLeadingUInt32Value(str.c_str(), deflt);
-}
-
-// ----------------------------------------------------------------------
-// ParseLeadingDec32Value
-//    A simple parser for decimal int32 values. Returns the parsed value
-//    if a valid integer is found; else returns deflt. It does not
-//    check if str is entirely consumed.
-//    The string passed in is treated as *10 based*.
-//    This can handle strings with leading 0s.
-//    See also: ParseLeadingDec64Value
-// --------------------------------------------------------------------
-int32 ParseLeadingDec32Value(const char *str, int32 deflt);
-inline int32 ParseLeadingDec32Value(const string &str, int32 deflt) {
-  return ParseLeadingDec32Value(str.c_str(), deflt);
-}
-
-// ParseLeadingUDec32Value
-//    A simple parser for decimal uint32 values. Returns the parsed value
-//    if a valid integer is found; else returns deflt. It does not
-//    check if str is entirely consumed.
-//    The string passed in is treated as *10 based*.
-//    This can handle strings with leading 0s.
-//    See also: ParseLeadingUDec64Value
-// --------------------------------------------------------------------
-uint32 ParseLeadingUDec32Value(const char *str, uint32 deflt);
-inline uint32 ParseLeadingUDec32Value(const string &str, uint32 deflt) {
-  return ParseLeadingUDec32Value(str.c_str(), deflt);
-}
-
-// ----------------------------------------------------------------------
-// ParseLeadingUInt64Value
-// ParseLeadingInt64Value
-// ParseLeadingHex64Value
-// ParseLeadingDec64Value
-// ParseLeadingUDec64Value
-//    A simple parser for long long values.
-//    Returns the parsed value if a
-//    valid integer is found; else returns deflt
-// --------------------------------------------------------------------
-uint64 ParseLeadingUInt64Value(const char *str, uint64 deflt);
-inline uint64 ParseLeadingUInt64Value(const string &str, uint64 deflt) {
-  return ParseLeadingUInt64Value(str.c_str(), deflt);
-}
-int64 ParseLeadingInt64Value(const char *str, int64 deflt);
-inline int64 ParseLeadingInt64Value(const string &str, int64 deflt) {
-  return ParseLeadingInt64Value(str.c_str(), deflt);
-}
-uint64 ParseLeadingHex64Value(const char *str, uint64 deflt);
-inline uint64 ParseLeadingHex64Value(const string &str, uint64 deflt) {
-  return ParseLeadingHex64Value(str.c_str(), deflt);
-}
-int64 ParseLeadingDec64Value(const char *str, int64 deflt);
-inline int64 ParseLeadingDec64Value(const string &str, int64 deflt) {
-  return ParseLeadingDec64Value(str.c_str(), deflt);
-}
-uint64 ParseLeadingUDec64Value(const char *str, uint64 deflt);
-inline uint64 ParseLeadingUDec64Value(const string &str, uint64 deflt) {
-  return ParseLeadingUDec64Value(str.c_str(), deflt);
-}
-
-// ----------------------------------------------------------------------
-// ParseLeadingDoubleValue
-//    A simple parser for double values. Returns the parsed value
-//    if a valid double is found; else returns deflt. It does not
-//    check if str is entirely consumed.
-// --------------------------------------------------------------------
-double ParseLeadingDoubleValue(const char *str, double deflt);
-inline double ParseLeadingDoubleValue(const string &str, double deflt) {
-  return ParseLeadingDoubleValue(str.c_str(), deflt);
-}
-
-// ----------------------------------------------------------------------
-// ParseLeadingBoolValue()
-//    A recognizer of boolean string values. Returns the parsed value
-//    if a valid value is found; else returns deflt.  This skips leading
-//    whitespace, is case insensitive, and recognizes these forms:
-//    0/1, false/true, no/yes, n/y
-// --------------------------------------------------------------------
-bool ParseLeadingBoolValue(const char *str, bool deflt);
-inline bool ParseLeadingBoolValue(const string &str, bool deflt) {
-  return ParseLeadingBoolValue(str.c_str(), deflt);
-}
-
-// ----------------------------------------------------------------------
-// AutoDigitStrCmp
-// AutoDigitLessThan
-// StrictAutoDigitLessThan
-// autodigit_less
-// autodigit_greater
-// strict_autodigit_less
-// strict_autodigit_greater
-//    These are like less<string> and greater<string>, except when a
-//    run of digits is encountered at corresponding points in the two
-//    arguments.  Such digit strings are compared numerically instead
-//    of lexicographically.  Therefore if you sort by
-//    "autodigit_less", some machine names might get sorted as:
-//        exaf1
-//        exaf2
-//        exaf10
-//    When using "strict" comparison (AutoDigitStrCmp with the strict flag
-//    set to true, or the strict version of the other functions),
-//    strings that represent equal numbers will not be considered equal if
-//    the string representations are not identical.  That is, "01" < "1" in
-//    strict mode, but "01" == "1" otherwise.
-// ----------------------------------------------------------------------
-
-int AutoDigitStrCmp(const char *a, int alen,
-                    const char *b, int blen,
-                    bool strict);
-
-bool AutoDigitLessThan(const char *a, int alen,
-                       const char *b, int blen);
-
-bool StrictAutoDigitLessThan(const char *a, int alen,
-                             const char *b, int blen);
-
-struct autodigit_less {
-  bool operator()(const string &a, const string &b) const {
-    return AutoDigitLessThan(a.data(), a.size(), b.data(), b.size());
-  }
-};
-
-struct autodigit_greater {
-  bool operator()(const string &a, const string &b) const {
-    return AutoDigitLessThan(b.data(), b.size(), a.data(), a.size());
-  }
-};
-
-struct strict_autodigit_less {
-  bool operator()(const string &a, const string &b) const {
-    return StrictAutoDigitLessThan(a.data(), a.size(), b.data(), b.size());
-  }
-};
-
-struct strict_autodigit_greater {
-  bool operator()(const string &a, const string &b) const {
-    return StrictAutoDigitLessThan(b.data(), b.size(), a.data(), a.size());
-  }
-};
 
 // ----------------------------------------------------------------------
 // SimpleItoa()
@@ -438,19 +256,6 @@ char *FloatToBuffer(float i, char *buffer);
 // overestimate to be safe.
 static const int kDoubleToBufferSize = 32;
 static const int kFloatToBufferSize = 24;
-
-// ----------------------------------------------------------------------
-// SimpleItoaWithCommas()
-//    Description: converts an integer to a string.
-//    Puts commas every 3 spaces.
-//    Faster than printf("%d")?
-//
-//    Return value: string
-// ----------------------------------------------------------------------
-string SimpleItoaWithCommas(int32 i);
-string SimpleItoaWithCommas(uint32 i);
-string SimpleItoaWithCommas(int64 i);
-string SimpleItoaWithCommas(uint64 i);
 
 }  // namespace sling
 

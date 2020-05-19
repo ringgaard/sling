@@ -302,6 +302,7 @@ class HTTPRequest {
 
   // HTTP method.
   const char *method() const { return method_; }
+  HTTPMethod Method() const { return GetHTTPMethod(method_); }
 
   // HTTP URL path.
   const char *full_path() const { return full_path_; }
@@ -328,6 +329,7 @@ class HTTPRequest {
 
   // Get HTTP header.
   const char *Get(const char *name, const char *defval = nullptr) const;
+  int64 Get(const char *name, int64 defval) const;
 
   // HTTP request headers.
   const std::vector<HTTPHeader> &headers() const { return headers_; }
@@ -399,14 +401,18 @@ class HTTPResponse {
   void SetContentType(const char *type);
 
   // HTTP content length.
-  int ContentLength() const;
-  void SetContentLength(int length);
+  int ContentLength() const { return content_length_; }
+  void SetContentLength(int length) { content_length_ = length; }
 
   // Get response header. Returns null if header is not set.
   const char *Get(const char *name, const char *defval = nullptr) const;
 
   // Set response header.
   void Set(const char *name, const char *value, bool overwrite = true);
+  void Set(const char *name, int64 value, bool overwrite = true);
+
+  // Add response header.
+  void Add(const char *name, const char *value, int len);
 
   // HTTP response headers.
   const std::vector<HTTPHeader> &headers() const { return headers_; }
@@ -417,6 +423,7 @@ class HTTPResponse {
   }
   void Append(const char *str) { if (str) Append(str, strlen(str)); }
   void Append(const string &str) { Append(str.data(), str.size()); }
+  void AppendNumber(int64 value);
 
   // Write HTTP header to buffer.
   void WriteHeader(HTTPBuffer *rsp);
@@ -425,7 +432,9 @@ class HTTPResponse {
   void SendFile(File *file) { conn_->SendFile(file); }
 
   // Return HTTP error message.
-  void SendError(int status, const char *title, const char *msg);
+  void SendError(int status,
+                 const char *title = nullptr,
+                 const char *msg = nullptr);
 
   // Permanent redirect to another URL.
   void RedirectTo(const char *uri);
@@ -442,6 +451,9 @@ class HTTPResponse {
 
   // HTTP status code for response.
   int status_ = 200;
+
+  // Content length for response.
+  int content_length_ = 0;
 
   // HTTP response headers.
   std::vector<HTTPHeader> headers_;

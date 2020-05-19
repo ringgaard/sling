@@ -36,14 +36,6 @@ Status Error(const char *context) {
   return Status(errno, context, strerror(errno));
 }
 
-// Convert time to RFC date format.
-char *RFCTime(time_t t, char *buf) {
-  struct tm tm;
-  gmtime_r(&t, &tm);
-  strftime(buf, 31, "%a, %d %b %Y %H:%M:%S GMT", &tm);
-  return buf;
-}
-
 // Return text for HTTP status code.
 const char *StatusText(int status) {
   switch (status) {
@@ -239,7 +231,7 @@ void HTTPServer::Worker() {
           }
           rc = epoll_ctl(pollfd_, EPOLL_CTL_DEL, conn->sock_, ev);
           if (rc < 0) {
-            VLOG(2) << Error("epoll_ctl");
+            VLOG(4) << Error("epoll_ctl");
           } else {
             // Delete client connection.
             VLOG(3) << "Close HTTP connection " << conn->sock_;
@@ -724,14 +716,20 @@ void HTTPConnection::Dispatch() {
   // Dispatch request to handler.
   handler(request_, response_);
 
+  // Use response body size as content length if it has not been set.
+  if (response_->ContentLength() == 0 && !response_body_.empty()) {
+    response_->SetContentLength(response_body_.size());
+  }
+
   // Add Date: and Server: headers.
-  char datebuf[32];
+  char datebuf[RFCTIME_SIZE];
   response_->Set("Server", server()->options().server_name.c_str(), false);
   response_->Set("Date", RFCTime(time(nullptr), datebuf), false);
+  response_->Set("Content-Length", response_->ContentLength());
 
-  // Set content length.
-  if (!response_body_.empty()) {
-    response_->SetContentLength(response_body_.size());
+  // Return status code 204 (No Content) if response body is empty.
+  if (response_->status() == 200 && response_->ContentLength() == 0) {
+    response_->set_status(204);
   }
 
   // Check for persistent connection.
@@ -1027,6 +1025,15 @@ const char *HTTPRequest::Get(const char *name, const char *defval) const {
   return defval;
 }
 
+int64 HTTPRequest::Get(const char *name, int64 defval) const {
+  const char *value = Get(name);
+  if (value == nullptr) return defval;
+  char *ptr = nullptr;
+  int64 num = strtoll(value, &ptr, 10);
+  if (ptr != value + strlen(value)) return defval;
+  return num;
+}
+
 HTTPResponse::~HTTPResponse() {
   for (HTTPHeader &h : headers_) {
     free(h.name);
@@ -1040,18 +1047,6 @@ const char *HTTPResponse::ContentType() const {
 
 void HTTPResponse::SetContentType(const char *type) {
   Set("Content-Type", type);
-}
-
-int HTTPResponse::ContentLength() const {
-  const char *result = Get("Content-Length");
-  if (result == nullptr) return -1;
-  return atoi(result);
-}
-
-void HTTPResponse::SetContentLength(int length) {
-  char number[16];
-  FastInt32ToBufferLeft(length, number);
-  Set("Content-Length", number);
 }
 
 const char *HTTPResponse::Get(const char *name, const char *defval) const {
@@ -1072,6 +1067,25 @@ void HTTPResponse::Set(const char *name, const char *value, bool overwrite) {
     }
   }
   headers_.emplace_back(strdup(name), strdup(value));
+}
+
+void HTTPResponse::Set(const char *name, int64 value, bool overwrite) {
+  char buffer[kFastToBufferSize];
+  char *num = FastInt64ToBuffer(value, buffer);
+  Set(name, num, overwrite);
+}
+
+void HTTPResponse::Add(const char *name, const char *value, int len) {
+  char *v = static_cast<char *>(malloc(len + 1));
+  memcpy(v, value, len);
+  v[len] = 0;
+  headers_.emplace_back(strdup(name), v);
+}
+
+void HTTPResponse::AppendNumber(int64 value) {
+  char buffer[kFastToBufferSize];
+  char *num = FastInt64ToBuffer(value, buffer);
+  Append(num);
 }
 
 void HTTPResponse::SendError(int status, const char *title, const char *msg) {
@@ -1101,9 +1115,9 @@ void HTTPResponse::SendError(int status, const char *title, const char *msg) {
       Append(": ");
       Append(title);
     }
-    Append("</p>\n");
+    Append("</p>");
   }
-  Append("</body></html>\n");
+  Append("\n</body></html>\n");
 }
 
 void HTTPResponse::RedirectTo(const char *uri) {

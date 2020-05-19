@@ -35,10 +35,11 @@ template<typename T = char> class Arena {
 
   // Allocate memory from arena.
   T *alloc(size_t size = 1) {
-    if (free_ < size) expand();
+    size_t bytes = size * sizeof(T);
+    if (free_ < bytes) expand();
     T *ptr = heap_;
-    heap_ += size;
-    free_ -= size;
+    heap_ += bytes;
+    free_ -= bytes;
     return ptr;
   }
 
@@ -87,12 +88,17 @@ class StringArena : public Arena<char> {
     return Arena::dup(str, strlen(str) + 1);
   }
 
+  // Create nul-terminated string from memory block.
+  char *dup(const char *str, size_t size) {
+    char *ptr = alloc(size + 1);
+    memcpy(ptr, str, size);
+    ptr[size] = 0;
+    return ptr;
+  }
+
   // Allocate nul-terminated string from string object.
   char *dup(const std::string &str) {
-    char *ptr = alloc(str.size() + 1);
-    memcpy(ptr, str.data(), str.size());
-    ptr[str.size()] = 0;
-    return ptr;
+    return dup(str.data(), str.size());
   }
 };
 

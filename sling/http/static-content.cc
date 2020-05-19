@@ -15,7 +15,6 @@
 #include "sling/http/static-content.h"
 
 #include <string.h>
-#include <time.h>
 #include <string>
 
 #include "sling/base/flags.h"
@@ -88,24 +87,6 @@ static bool IsValidPath(const char *filename) {
     while (*p == '/') p++;
   }
   return true;
-}
-
-// Convert time to RFC date format.
-static char *RFCTime(time_t t, char *buf) {
-  struct tm tm;
-  gmtime_r(&t, &tm);
-  strftime(buf, 31, "%a, %d %b %Y %H:%M:%S GMT", &tm);
-  return buf;
-}
-
-// Parse RFC date as time stamp.
-static time_t ParseRFCTime(const char *timestr) {
-  struct tm tm;
-  if (strptime(timestr, "%a, %d %b %Y %H:%M:%S GMT", &tm) != nullptr) {
-    return timegm(&tm);
-  } else {
-    return -1;
-  }
 }
 
 StaticContent::StaticContent(const string &url, const string &path)
@@ -228,7 +209,7 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
     response->Set("Cache-Control", "no-cache");
   } else {
     // Set file modified time.
-    char datebuf[32];
+    char datebuf[RFCTIME_SIZE];
     response->Set("Last-Modified", RFCTime(stat.mtime, datebuf));
   }
 
