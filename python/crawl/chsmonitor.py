@@ -106,7 +106,7 @@ def worker():
       process_message(msg)
     except Exception as e:
       print("Error processing message:", msg)
-      traceback.print_exc()
+      traceback.print_exc(file=sys.stdout)
     finally:
       queue.task_done()
 
@@ -121,10 +121,10 @@ def checkpointer():
   while True:
     if checkpoint != None:
       print("CHECKPOINT", checkpoint, "QUEUE:", queue.qsize())
-      sys.stdout.flush()
       with open(flags.arg.checkpoint, 'w') as ckpt:
         ckpt.write(str(checkpoint))
         checkpoint = None
+    sys.stdout.flush()
     time.sleep(flags.arg.checkpoint_interval)
 
 if flags.arg.checkpoint != None:
@@ -146,6 +146,6 @@ while True:
 
   except Exception as e:
     print("Event error", type(e), ":", e)
-    traceback.print_exc()
+    traceback.print_exc(file=sys.stdout)
     sys.stdout.flush()
     time.sleep(60)

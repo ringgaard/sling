@@ -1,5 +1,6 @@
 import calendar
 import html
+import sys
 import re
 import requests
 import time
@@ -171,7 +172,7 @@ crawlsession = requests.Session()
 
 def store(url, date, content):
   """Store article in database."""
-  if type(date) is str: date = iso2date(date)
+  if type(date) is str: date = iso2ts(date)
   r = dbsession.put(
     flags.arg.crawldb + "/" + urllib.parse.quote(url),
     headers={
@@ -249,6 +250,7 @@ class Crawler:
     self.num_big = 0
 
     # Per-site retrieval errors.
+    self.max_errors = flags.arg.max_errors_per_site
     self.site_errors = {}
 
   def wait(self):
@@ -269,7 +271,8 @@ class Crawler:
 
     # Check if error threshold for site has been reached.
     site = sitename(url)
-    if self.site_errors.get(site, 0) >= flags.arg.max_errors_per_site:
+    site_errors = self.site_errors.get(site, 0)
+    if self.max_errors != 0 and site_errors >= self.max_errors:
       print("*** Ignore:", url)
       self.num_ignored += 1
       return
@@ -334,7 +337,8 @@ class Crawler:
       if result == "new":
         self.num_redirects += 1
 
-    print(self.num_retrieved, url)
+    print(self.num_retrieved, canonical_url)
+    sys.stdout.flush()
 
   def dumpstats(self):
     stats = [

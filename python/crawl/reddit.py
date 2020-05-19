@@ -59,8 +59,11 @@ while True:
         if site not in newssites: continue
 
       # Crawl URL.
-      #print("Crawl", subreddit, url)
+      domain = str(submission.domain)
+      title = str(submission.title)
+      print("---", subreddit, domain, "-", title)
       crawler.crawl(url)
+      sys.stdout.flush()
 
     print("restart submission stream")
     time.sleep(20)
@@ -70,6 +73,6 @@ while True:
     sys.exit()
 
   except:
-    traceback.print_exc()
+    traceback.print_exc(file=sys.stdout)
     time.sleep(60)
 

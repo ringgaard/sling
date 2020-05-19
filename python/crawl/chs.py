@@ -51,6 +51,7 @@ class CHSStream(object):
         if len(line) == 0:
           # Raise error if only keep-alive messages are received.
           idle += 1
+          print("idle", idle)
           if idle > 100: raise Exception("Stream inactive")
           continue
 
@@ -59,6 +60,7 @@ class CHSStream(object):
 
         # Get latests timepoint.
         self.timepoint = int(data["event"]["timepoint"])
+        print("event", self.timepoint)
 
         # Return next event.
         yield data
