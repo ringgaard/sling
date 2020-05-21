@@ -63,6 +63,7 @@ blocked_urls = [
   "https://uk.reuters.com/video/",
   "https://www.reuters.com/video/",
   "https://www.bbc.co.uk/news/video_and_audio/",
+  "https://youtube.com/",
 ]
 
 # Sites where the URL query is part of the unique identifier.

@@ -696,3 +696,134 @@ tv2nord.dk,Q1616154,TV 2 Danmark
 ue.dk,Q94797926,Ugens Erhverv
 version2.dk,Q12343821,Version2
 
+bild.de,Q156203,Bild
+cicero.de,Q781987,Cicero
+faz.net,Q10184,Frankfurter Allgemeine Zeitung
+focus.de,Q700473,Focus
+fr-online.de,Q326068,Frankfurter Rundschau
+heute.de,Q132108,ZDF heute
+nzz.ch,Q658945,Neue Zürcher Zeitung
+spiegel.de,Q131478,Der Spiegel
+stern.de,Q158322,Stern
+sueddeutsche.de,Q158870,Süddeutsche Zeitung
+sz.de,Q158870,Süddeutsche Zeitung
+tagesschau.de,Q703907,Tagesschau
+taz.de,Q161423,Die Tageszeitung
+welt.de,Q29872,Die Welt
+zeit.de,Q157142,Die Zeit
+
+20minutes.fr,Q7245532,20 minutes
+charentelibre.fr,Q2957712,Charente libre
+courrierinternational.com,Q1137712,Courrier International
+francesoir.fr,Q1440784,France Soir
+humanite.fr,Q1137404,L'Humanité
+la-croix.com,Q1230298,La Croix
+latribune.fr,Q1799197,La Tribune
+lefigaro.fr,Q216047,Le Figaro
+lemonde.fr,Q12461,Le Monde
+leparisien.fr,Q142348,Le Parisien
+lequipe.fr,Q815748,L'Équipe
+lesechos.fr,Q923193,Les Échos
+lexpress.fr,Q770596,L'Express
+liberation.fr,Q13717,Libération
+lopinion.fr,Q14940658,L'Opinion
+mediapart.fr,Q619342,Mediapart
+nouvelobs.com,Q1044328,L'Obs
+
+20minutos.es,Q2077548,20 minutos
+abc.es,Q287076,ABC
+diarioinformacion.com,Q8355294,Información
+diariosur.es,Q1209144,Sur
+diariovasco.com,Q913303,El Diario Vasco
+elconfidencial.com,Q5821545,El Confidencial
+elcorreo.com,Q1324043,El Correo
+eldiario.es,Q8774265,El Diario
+elmundo.es,Q921217,El Mundo
+elpais.es,Q50009,El País
+elperiodico.com,Q35638,El Periódico de Catalunya
+europapress.es,Q3060712,Europa Press
+expansion.com,Q556902,Expansión
+lainformacion.com,Q28112600,La Información
+larazon.es,Q191433,La Razón
+lavanguardia.com,Q511533,La Vanguardia
+lavozdegalicia.com,Q3312427,La Voz de Galicia
+lavozdegalicia.es,La Voz de Galicia
+levante-emv.com,Q1999224,Levante-EMV
+libertaddigital.com,Q3101925,Libertad Digital
+lne.es,Q2227240,La Nueva España
+vozpopuli.com,Q27862962,Vozpópuli
+
+adnkronos.com,Q359875,Adnkronos
+altoadige.it,Q443329,Alto Adige
+ansa.it,Q392934,Agenzia Nazionale Stampa Associata
+corriere.it,Q309135,Corriere della Sera
+gazzettadelsud.it,Q598457,Gazzetta del Sud
+gds.it,Q1069383,Giornale di Sicilia
+ilcentro.it,Q1052020,Il Centro
+ilfattoquotidiano.it,Q1051087,Il Fatto Quotidiano
+ilgazzettino.it,Q902507,Il Gazzettino
+ilgiornale.it,Q1051115,Il Giornale
+ilgiorno.it,Q3148459,Il Giorno
+ilmessaggero.it,Q1658225,Il Messaggero
+ilrestodelcarlino.it,Q1050786,Il Resto del Carlino
+ilsole24ore.com,Q1658262,Il Sole 24 Ore
+iltempo.it,Q1077230,Il Tempo
+italiaoggi.it,Q3804150,Italia Oggi
+lanazione.it,Q911585,La Nazione
+lastampa.it,Q923353,La Stampa
+leggo.it,Q1079880,Leggo
+metronews.it,Q16951677,Metro
+repubblica.it,Q85329,la Repubblica
+unita.it,Q1051163,L'Unità
+
+ad.nl,Q290764,Algemeen Dagblad
+fd.nl,Q689171,Het Financieele Dagblad
+metronieuws.nl
+nd.nl,Q689481,Nederlands Dagblad
+nrcnext.nl,Q292891,NRC Next
+nrc.nl,Q1402057,NRC Handelsblad
+parool.nl,Q1482551,Het Parool
+rd.nl,Q1639174,Reformatorisch Dagblad
+refdag.nl,Q1639174,Reformatorisch Dagblad
+telegraaf.nl,Q1180344,De Telegraaf
+trouw.nl,Q1789749,Trouw
+volkskrant.nl,Q284183,De Volkskrant
+
+cmjornal.pt,Q1135311,Correio da Manhã
+dn.pt,Q508252,Diário de Notícias
+expresso.pt,Q1384864,Expresso
+jn.pt,Q1704037,Jornal de Notícias
+publico.pt,Q1757086,Público
+record.pt,Q639033,Record
+
+dziennik.pl,Q9248480,Dziennik Gazeta Prawna
+fakt.pl,Q1318217,Fakt
+parkiet.com,Q11811699,Parkiet
+pb.pl,Q7259612,Puls Biznesu
+przegladsportowy.pl,Q7253369,Przegląd Sportowy
+rp.pl,Q2164678,Rzeczpospolita
+se.pl,Q494902,Super Express
+wyborcza.pl,Q741296,Gazeta Wyborcza
+
+hs.fi,Q366921,Helsingin Sanomat
+kauppalehti.fi,Q6378858,Kauppalehti
+aamulehti.fi,Q301000,Aamulehti
+is.fi,Q1001384,Ilta-Sanomat
+iltalehti.fi,Q2421561,Iltalehti
+kansanuutiset.fi,Q3192723,Kansan Uutiset
+kaleva.fi,Q3192167,Kaleva
+
+aftonbladet.se,Q389458,Aftonbladet
+di.se,Q734293,Dagens Industri
+dn.se,Q1126918,Dagens Nyheter
+expressen.se,Q971383,Expressen
+gp.se,Q1559719,Göteborgs-Posten
+svd.se,Q1504847,Svenska Dagbladet
+sydsvenskan.se,Q1371686,Sydsvenskan
+
+aftenposten.no,Q388841,Aftenposten
+bt.no,Q819558,Bergens Tidende
+dagbladet.no,Q1157193,Dagbladet
+dnavis.no,Q780402,Dagens Næringsliv
+vg.no,Q1139355,VG
+
