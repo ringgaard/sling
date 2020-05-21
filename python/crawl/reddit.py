@@ -22,6 +22,11 @@ news_reddits = [
   "qualitynews", "worldnews", "worldevents",
 ]
 
+# Ignored subreddits.
+ignored_reddits = [
+  "u_toronto_news",
+]
+
 # Read known news sites.
 newssites = set()
 with open(flags.arg.newssites, "r") as f:
@@ -57,12 +62,13 @@ while True:
       if news.blocked(url): continue
       site = news.sitename(url)
       if subreddit not in news_reddits:
+        if subreddit in ignored_reddits: continue
         if site not in newssites: continue
 
       # Crawl URL.
       domain = str(submission.domain)
       title = str(submission.title)
-      print("---", subreddit, domain, "-", title)
+      print("---", domain, subreddit, "-", title)
       crawler.crawl(url)
       sys.stdout.flush()
 

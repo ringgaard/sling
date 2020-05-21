@@ -55,15 +55,11 @@ blocked_urls = [
   "https://www.washingtonpost.com/gdpr-consent",
   "https://www.forbes.com/forbes/welcome",
 
-  "https://www.news.com.au/video/",
-  "https://video.foxnews.com/",
-  "http://www.espn.com/video/",
-  "https://www.ctvnews.ca/video",
   "http://www.espn.com/espnradio/",
-  "https://uk.reuters.com/video/",
-  "https://www.reuters.com/video/",
   "https://www.bbc.co.uk/news/video_and_audio/",
   "https://youtube.com/",
+  "https://www.youtube.com/",
+  "https://news.google.com/",
 ]
 
 # Sites where the URL query is part of the unique identifier.
@@ -90,6 +86,7 @@ urls_with_query_pat = re.compile("|".join(urls_with_query))
 canonical_tag_pat = re.compile(b'<link [^>]*rel=\"canonical\"[^>]*>')
 href_attr_pat = re.compile(b' href=\"([^\"]*)\"')
 prefix_pat = re.compile('https?:\/\/[^\/]+\/?')
+video_pat = re.compile('https?:\/\/.*\/videos?\/.*')
 
 http_req_headers = {
   "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " \
@@ -161,6 +158,7 @@ def blocked(url):
   if blocked_pat.match(url) is not None: return True
   for ext in media_extensions:
     if url.endswith(ext): return True
+  if video_pat.match(url): return True
   return False
 
 def iso2ts(date):
