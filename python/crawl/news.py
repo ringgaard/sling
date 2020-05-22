@@ -36,7 +36,7 @@ flags.define("--timeout",
 
 flags.define("--max_errors_per_site",
              help="maximum number of crawl errors for site",
-             default=5,
+             default=10,
              type=int,
              metavar="NUM")
 
@@ -54,12 +54,14 @@ blocked_urls = [
   "https://www.heraldsun.com.au/nocookies",
   "https://www.washingtonpost.com/gdpr-consent",
   "https://www.forbes.com/forbes/welcome",
+  "https://consent.yahoo.com/"
 
   "http://www.espn.com/espnradio/",
   "https://www.bbc.co.uk/news/video_and_audio/",
   "https://youtube.com/",
   "https://www.youtube.com/",
   "https://news.google.com/",
+  "http://video.foxnews.com/",
 ]
 
 # Sites where the URL query is part of the unique identifier.
@@ -293,6 +295,9 @@ class Crawler:
 
       r.raise_for_status()
 
+      # Get target for redirected URL.
+      target_url = r.url
+
       # Build HTML header.
       h = ["HTTP/1.0 200 OK\r\n"]
       for key, value in r.headers.items():
@@ -319,7 +324,7 @@ class Crawler:
 
     # Get canonical url.
     canonical_url = get_canonical_url(trimmed_url, content)
-    if canonical_url is None: canonical_url = trimmed_url
+    if canonical_url is None: canonical_url = target_url
 
     # Save article in database.
     now = int(time.time())
