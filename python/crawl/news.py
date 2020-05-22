@@ -85,8 +85,8 @@ blocked = [url.replace("/", "\\/") for url in blocked_urls]
 blocked_pat = re.compile("|".join(blocked))
 urls_with_query_pat = re.compile("|".join(urls_with_query))
 
-canonical_tag_pat = re.compile(b'<link [^>]*rel=\"canonical\"[^>]*>')
-href_attr_pat = re.compile(b' href=\"([^\"]*)\"')
+canonical_tag_pat = re.compile(b'<link\s+[^>]*rel=\"canonical\"[^>]*>')
+href_attr_pat = re.compile(b'\shref=\"([^\"]*)\"')
 prefix_pat = re.compile('https?:\/\/[^\/]+\/?')
 video_pat = re.compile('https?:\/\/.*\/videos?\/.*')
 
@@ -325,6 +325,11 @@ class Crawler:
     # Get canonical url.
     canonical_url = get_canonical_url(trimmed_url, content)
     if canonical_url is None: canonical_url = target_url
+
+    # Check if canonical url is blocked.
+    if blocked(canonical_url):
+      self.num_blocked += 1
+      return
 
     # Save article in database.
     now = int(time.time())

@@ -848,5 +848,5 @@ xinhuanet.com http://www.xinhuanet.com/english/rss/healthrss.xml
 xinhuanet.com http://www.xinhuanet.com/english/rss/indepthrss.xml
 
 # Yahoo
-yahoo.com https://www.yahoo.com/news/rss
+#yahoo.com https://www.yahoo.com/news/rss
 
