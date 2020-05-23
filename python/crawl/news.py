@@ -54,7 +54,8 @@ blocked_urls = [
   "https://www.heraldsun.com.au/nocookies",
   "https://www.washingtonpost.com/gdpr-consent",
   "https://www.forbes.com/forbes/welcome",
-  "https://consent.yahoo.com/"
+  "https://consent.yahoo.com/",
+  "https://www.bloomberg.com/tosv2.html",
 
   "http://www.espn.com/espnradio/",
   "https://www.bbc.co.uk/news/video_and_audio/",
@@ -291,6 +292,7 @@ class Crawler:
       if r.status_code == 451:
         print("*** Banned:", url)
         self.num_banned += 1
+        self.site_errors[site] = self.site_errors.get(site, 0) + 1
         return
 
       r.raise_for_status()
@@ -345,6 +347,9 @@ class Crawler:
       result = redirect(trimmed_url, canonical_url)
       if result == "new":
         self.num_redirects += 1
+
+    # Clear site error counter.
+    self.site_errors[site] = 0
 
     print(self.num_retrieved, canonical_url)
     sys.stdout.flush()
