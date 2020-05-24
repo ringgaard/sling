@@ -48,21 +48,21 @@ flags.define("--max_article_size",
 
 # Blocked sites.
 blocked_urls = [
-  "https://www.theaustralian.com.au/nocookies",
-  "https://www.couriermail.com.au/nocookies",
-  "http://www.couriermail.com.au/nocookies",
-  "https://www.heraldsun.com.au/nocookies",
-  "https://www.washingtonpost.com/gdpr-consent",
-  "https://www.forbes.com/forbes/welcome",
-  "https://consent.yahoo.com/",
-  "https://www.bloomberg.com/tosv2.html",
+  "www.theaustralian.com.au/nocookies",
+  "www.couriermail.com.au/nocookies",
+  "www.couriermail.com.au/nocookies",
+  "www.heraldsun.com.au/nocookies",
+  "www.washingtonpost.com/gdpr-consent",
+  "www.forbes.com/forbes/welcome",
+  "consent.yahoo.com/",
+  "www.bloomberg.com/tosv2.html",
 
-  "http://www.espn.com/espnradio/",
-  "https://www.bbc.co.uk/news/video_and_audio/",
-  "https://youtube.com/",
-  "https://www.youtube.com/",
-  "https://news.google.com/",
-  "http://video.foxnews.com/",
+  "www.espn.com/espnradio/",
+  "www.bbc.co.uk/news/video_and_audio/",
+  "youtube.com/",
+  "www.youtube.com/",
+  "news.google.com/",
+  "video.foxnews.com/",
 ]
 
 # Sites where the URL query is part of the unique identifier.
@@ -82,7 +82,7 @@ urls_with_query = [
 # Extensions for media file like images and videos.
 media_extensions = [".jpg", ".gif", ".png", ".m4v", ".mp4"]
 
-blocked = [url.replace("/", "\\/") for url in blocked_urls]
+blocked = [("https?://" + url).replace("/", "\\/") for url in blocked_urls]
 blocked_pat = re.compile("|".join(blocked))
 urls_with_query_pat = re.compile("|".join(urls_with_query))
 
