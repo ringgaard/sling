@@ -48,14 +48,12 @@ flags.define("--max_article_size",
 
 # Blocked sites.
 blocked_urls = [
-  "www.theaustralian.com.au/nocookies",
-  "www.couriermail.com.au/nocookies",
-  "www.couriermail.com.au/nocookies",
-  "www.heraldsun.com.au/nocookies",
+  "www.\w+.com.au/nocookies",
   "www.washingtonpost.com/gdpr-consent",
   "www.forbes.com/forbes/welcome",
   "consent.yahoo.com/",
   "www.bloomberg.com/tosv2.html",
+  "www.\w+.com/_services/v1/client_captcha/",
 
   "www.espn.com/espnradio/",
   "www.bbc.co.uk/news/video_and_audio/",
@@ -268,6 +266,7 @@ class Crawler:
     """Fetch article and store it in the database."""
     # Check if url is blocked.
     if blocked(url):
+      print("*** Blocked:", url)
       self.num_blocked += 1
       return
 
@@ -330,6 +329,7 @@ class Crawler:
 
     # Check if canonical url is blocked.
     if blocked(canonical_url):
+      print("*** Blocked:", canonical_url)
       self.num_blocked += 1
       return
 
