@@ -28,38 +28,46 @@ flags.define("--backlog",
              type=int,
              metavar="DAYS")
 
+flags.define("--dryrun",
+             help="Display command instead of running them",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 dt = datetime.date.fromisoformat(flags.arg.date)
 earliest = datetime.date.fromisoformat(flags.arg.earliest)
 
 for _ in range(flags.arg.backlog):
+  # Compute URL for date.
+  basename = "%04d%02d%02d.nc.tar.gz" % (dt.year, dt.month, dt.day)
+  quarter = ((dt.month - 1) // 3) + 1
+  url = "https://www.sec.gov/Archives/edgar/Feed/%04d/QTR%d/%s" % (
+         dt.year, quarter, basename)
+  filename = flags.arg.dir + "/" + basename
+
   # No SEC fillings during weekend.
   if dt.weekday() < 5:
-    # Compute URL for date.
-    basename = "%04d%02d%02d.nc.tar.gz" % (dt.year, dt.month, dt.day)
-    quarter = ((dt.month - 1) // 4) + 1
-    url = "https://www.sec.gov/Archives/edgar/Feed/%04d/QTR%d/%s" % (
-           dt.year, quarter, basename)
-    filename = flags.arg.dir + "/" + basename
-
     # Download file.
-    print("Downloading", basename)
-    sys.stdout.flush()
-    r = requests.get(url, stream=True)
-    if r.status_code == 403:
-      print("Missing:", url)
+    if flags.arg.dryrun:
+      print("Fetch", url)
     else:
-      r.raise_for_status()
-      with open(filename, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=65536):
-          f.write(chunk)
+      print("Downloading", basename)
+      r = requests.get(url, stream=True)
+      if r.status_code == 403:
+        print("Missing:", url)
+      else:
+        r.raise_for_status()
+        with open(filename, 'wb') as f:
+          for chunk in r.iter_content(chunk_size=65536):
+            f.write(chunk)
   else:
     print("Skipping", basename)
 
   # Previous day.
   dt -= datetime.timedelta(days=1)
   if dt < earliest: break
+  sys.stdout.flush()
 
 print("Done.")
 
