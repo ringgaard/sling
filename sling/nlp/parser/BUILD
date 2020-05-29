@@ -73,6 +73,7 @@ cc_library(
     "//sling/myelin:compiler",
     "//sling/myelin:learning",
     "//sling/nlp/document:document",
+    "//sling/nlp/document:annotator",
     "//sling/nlp/document:document-corpus",
     "//sling/task:learner",
     "//sling/util:mutex",

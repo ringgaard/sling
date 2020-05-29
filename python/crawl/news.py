@@ -52,6 +52,7 @@ blocked_urls = [
   "www.washingtonpost.com/gdpr-consent",
   "www.forbes.com/forbes/welcome",
   "consent.yahoo.com/",
+  "choice.npr.org/",
   "www.bloomberg.com/tosv2.html",
   "www.\w+.com/_services/v1/client_captcha/",
 

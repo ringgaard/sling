@@ -67,5 +67,15 @@ class MentionNameAnnotator : public Annotator {
 
 REGISTER_ANNOTATOR("mention-name", MentionNameAnnotator);
 
+// Document annotator for deleting existing annotations.
+class ClearAnnotator : public Annotator {
+ public:
+  void Annotate(Document *document) override {
+    document->ClearAnnotations();
+  }
+};
+
+REGISTER_ANNOTATOR("clear", ClearAnnotator);
+
 }  // namespace nlp
 }  // namespace sling

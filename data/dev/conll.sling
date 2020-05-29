@@ -1,0 +1,6 @@
+; CoNLL entity types.
+{=PER name: "person"}
+{=LOC name: "location"}
+{=ORG name: "organization"}
+{=MISC name: "misc"}
+

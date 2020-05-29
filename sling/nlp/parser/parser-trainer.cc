@@ -23,6 +23,7 @@
 #include "sling/myelin/flow.h"
 #include "sling/myelin/compiler.h"
 #include "sling/myelin/compute.h"
+#include "sling/nlp/document/annotator.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-corpus.h"
 #include "sling/nlp/parser/parser-codec.h"
@@ -69,6 +70,9 @@ class ParserTrainer : public task::LearnerTask {
       LoadStore(binding->filename(), &commons_);
     }
 
+    // Initialize preprocessing pipeline.
+    pipeline_.Init(task, &commons_);
+
     // Open training and evaluation corpora.
     auto train =  task->GetInputFiles("training_corpus");
     auto eval =  task->GetInputFiles("evaluation_corpus");
@@ -97,6 +101,7 @@ class ParserTrainer : public task::LearnerTask {
       for (;;) {
         Document *document = training_corpus_->Next(&commons_);
         if (document == nullptr) break;
+        pipeline_.Annotate(document);
         for (const Token &t : document->tokens()) words_[t.word()]++;
         delete document;
       }
@@ -162,11 +167,14 @@ class ParserTrainer : public task::LearnerTask {
     for (;;) {
       // Prepare next batch.
       gradients.Clear();
+      encoder->NextBatch();
+      decoder->NextBatch();
 
       for (int b = 0; b < batch_size_; b++) {
         // Get next training document.
         Store store(&commons_);
         Document *document = GetNextTrainingDocument(&store);
+        pipeline_.Annotate(document);
         num_documents_->Increment();
         num_tokens_->Increment(document->length());
 
@@ -267,6 +275,9 @@ class ParserTrainer : public task::LearnerTask {
         delete local;
         return false;
       }
+
+      // Preprocess document.
+      trainer_->pipeline_.Annotate(document);
 
       // Clone document without annotations.
       Document *parsed = new Document(*document, false);
@@ -384,6 +395,9 @@ class ParserTrainer : public task::LearnerTask {
 
   // Commons store for parser.
   Store commons_;
+
+  // Pipeline for preprocessing training and evaluation documents.
+  Pipeline pipeline_;
 
   // Training corpus.
   DocumentCorpus *training_corpus_ = nullptr;

@@ -74,6 +74,9 @@ class ParserEncoder : public Component<ParserEncoder> {
 
     // Collect gradients.
     virtual void CollectGradients(myelin::Instances *gradients) = 0;
+
+    // Start a new batch.
+    virtual void NextBatch() {}
   };
 
   // Create learner learner.
@@ -141,6 +144,9 @@ class ParserDecoder : public Component<ParserDecoder> {
 
     // Collect gradients.
     virtual void CollectGradients(myelin::Instances *gradients) = 0;
+
+    // Start a new batch.
+    virtual void NextBatch() {}
   };
 
   // Create learner learner.

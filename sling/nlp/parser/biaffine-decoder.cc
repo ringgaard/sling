@@ -14,6 +14,7 @@
 
 #include <math.h>
 #include <algorithm>
+#include <random>
 #include <unordered_map>
 #include <vector>
 
@@ -32,8 +33,7 @@ namespace nlp {
 
 using namespace sling::myelin;
 
-// Float predicate values.
-static const float PRED_FALSE = bit_cast<float>(0);
+// Float predicate value for mask.
 static const float PRED_TRUE = bit_cast<float>(-1);
 
 // Biaffine decoder.
@@ -47,19 +47,28 @@ class BiaffineDecoder : public ParserDecoder {
     task->Fetch("max_sentence_length", &max_sentence_length_);
     task->Fetch("max_phrase_length", &max_phrase_length_);
     task->Fetch("ff_dims", &ff_dims_);
+    task->Fetch("ff_l2reg", &ff_l2reg_);
+    task->Fetch("ff_dropout", &ff_dropout_);
 
     // Get entity types.
-    FactCatalog catalog;
-    catalog.Init(commons);
-    Taxonomy *types = catalog.CreateEntityTaxonomy();
-    type_map_[Handle::nil()] = 0;
-    types_.push_back(Handle::nil());
-    for (auto &it : types->typemap()) {
-      Handle type = it.first;
-      type_map_[type] = types_.size();
-      types_.push_back(type);
+    if (task->Get("conll", false)) {
+      types_.push_back(commons->Lookup("PER"));
+      types_.push_back(commons->Lookup("LOC"));
+      types_.push_back(commons->Lookup("ORG"));
+      types_.push_back(commons->Lookup("MISC"));
+    } else {
+      FactCatalog catalog;
+      catalog.Init(commons);
+      Taxonomy *types = catalog.CreateEntityTaxonomy();
+      types_.push_back(Handle::nil());
+      for (auto &it : types->typemap()) {
+        Handle type = it.first;
+        types_.push_back(type);
+      }
+      delete types;
     }
-    delete types;
+
+    for (int i = 0; i < types_.size(); ++i) type_map_[types_[i]] = i;
   }
 
   // Build model for biaffine decoder.
@@ -83,12 +92,28 @@ class BiaffineDecoder : public ParserDecoder {
 
     // FFNNs for start and end.
     std::vector<int> layers = ff_dims_;
-    auto *start = f.Name(FFNN(&f, tokens, layers, "S"), "start");
-    auto *end = f.Name(FFNN(&f, tokens, layers, "E"), "end");
+    int D = layers.back();
+    auto *start = FFNN(&f, tokens, layers, "S");
+    auto *end = FFNN(&f, tokens, layers, "E");
+    if (learn && ff_dropout_ != 0.0) {
+      // Apply dropout.
+      auto *dropout = f.Placeholder("dropout", DT_FLOAT, {1, D}, true);
+      dropout->set(Flow::Variable::NOGRADIENT);
+      start = f.Mul(start, dropout);
+      end = f.Mul(end, dropout);
+
+      // The no-dropout mask is used for testing during training when no dropout
+      // should be applied.
+      std::vector<float> ones(D, 1.0);
+      auto *nodropout = f.Name(f.Const(ones), "nodropout");
+      nodropout->set_out();
+      flow->Connect({nodropout, dropout});
+    }
+    f.Name(start, "start");
+    f.Name(end, "end");
 
     // Bilinear mapping to compute scores.
     int L = max_sentence_length_;
-    int D = layers.back();
     auto *U = f.Parameter("U", dt, {D, K * D});
     f.RandomNormal(U);
     auto *scores =
@@ -147,10 +172,10 @@ class BiaffineDecoder : public ParserDecoder {
   }
 
   // Build FFNN for input transformation.
-  static Flow::Variable *FFNN(FlowBuilder *f,
-                              Flow::Variable *input,
-                              std::vector<int> &layers,
-                              const string &prefix) {
+  Flow::Variable *FFNN(FlowBuilder *f,
+                       Flow::Variable *input,
+                       std::vector<int> &layers,
+                       const string &prefix) {
     Flow::Variable *v = input;
     for (int l = 0; l < layers.size(); ++l) {
       int height = v->dim(1);
@@ -161,6 +186,7 @@ class BiaffineDecoder : public ParserDecoder {
       auto *W = f->Parameter(prefix + "W" + idx, v->type, {height, width});
       auto *b = f->Parameter(prefix + "b" + idx, v->type, {width});
       f->RandomNormal(W);
+      if (ff_l2reg_ != 0.0) W->SetAttr("l2reg", ff_l2reg_);
       v = f->Add(f->MatMul(v, W), b);
       if (l != layers.size() - 1) v = f->Relu(v);
     }
@@ -197,6 +223,9 @@ class BiaffineDecoder : public ParserDecoder {
 
     gbiaffine_ = biaffine_->Gradient();
     if (gbiaffine_ != nullptr) {
+      dropout_ = model.GetParameter("biaffine/dropout");
+      nodropout_ = model.GetParameter("biaffine/nodropout");
+
       primal_ = biaffine_->Primal();
       dtokens_ = tokens_->Gradient();
       dscores_ = scores_->Gradient();
@@ -237,6 +266,12 @@ class BiaffineDecoder : public ParserDecoder {
         length = max_sent;
       }
 
+      // Set pass-through dropout mask.
+      if (decoder_->dropout_) {
+        char *ones = decoder_->nodropout_->data();
+        biaffine_.SetReference(decoder_->dropout_, ones);
+      }
+
       // Compute scores for all spans, i.e. [begin;end] intervals.
       biaffine_.SetChannel(decoder_->tokens_, encodings);
       biaffine_.Compute();
@@ -248,8 +283,6 @@ class BiaffineDecoder : public ParserDecoder {
       int *label = labeler_.Get<int>(decoder_->labeler_label_);
       float *score = labeler_.Get<float>(decoder_->labeler_score_);
 
-      //LOG(INFO) << "logits:\n" << biaffine_.ToString(decoder_->scores_);
-
       // Create list of all predicted spans.
       candidates_.clear();
       for (int b = 0; b < length; ++b) {
@@ -257,7 +290,6 @@ class BiaffineDecoder : public ParserDecoder {
         if (limit > length) limit = length;
         for (int e = b; e < limit; ++e) {
           // Ignore if prediction is "no span".
-          //LOG(INFO) << "[" << b << ";" << e << "] " <<  label[e] << " score: " << score[e];
           if (label[e] == 0) continue;
           candidates_.emplace_back(b, e, label[e], score[e]);
         }
@@ -314,9 +346,26 @@ class BiaffineDecoder : public ParserDecoder {
           biaffine_(decoder->biaffine_),
           gbiaffine_(decoder->gbiaffine_),
           loss_(decoder_->loss_),
-          dencodings_(decoder->tokens_) {
+          dencodings_(decoder->tokens_),
+          dropout_(decoder->dropout_) {
       mask_ = loss_.Get<float>(decoder->loss_mask_);
       y_ = loss_.Get<float>(decoder->loss_y_);
+      if (decoder->dropout_) {
+        dropout_.resize(1);
+      }
+    }
+
+    void NextBatch() override {
+      // Set up dropout mask.
+      if (decoder_->dropout_) {
+        float *mask = reinterpret_cast<float *>(dropout_.at(0));
+        float rate = decoder_->ff_dropout_;
+        float scaler = 1.0 / (1.0 - rate);
+        int size = dropout_.format()->elements();
+        for (int i = 0; i < size; ++i) {
+          mask[i] = Random() < rate ? 0.0 : scaler;
+        }
+      }
     }
 
     void Switch(Document *document) override {
@@ -335,6 +384,9 @@ class BiaffineDecoder : public ParserDecoder {
 
       // Compute scores for all spans, i.e. [begin;end] intervals.
       biaffine_.SetChannel(decoder_->tokens_, encodings);
+      if (decoder_->dropout_) {
+        biaffine_.Set(decoder_->dropout_, &dropout_, 0);
+      }
       biaffine_.Compute();
 
       // Set up mask for spans that are considered for the loss and gradient
@@ -394,8 +446,6 @@ class BiaffineDecoder : public ParserDecoder {
       gbiaffine_.SetChannel(decoder_->dtokens_, &dencodings_);
       gbiaffine_.Compute();
 
-      //LOG(INFO) << "length: " << length << " gbiaffine:\n" << gbiaffine_.ToString();
-
       return &dencodings_;
     }
 
@@ -411,6 +461,9 @@ class BiaffineDecoder : public ParserDecoder {
     }
 
    private:
+    // Generate uniform random number between 0 and 1.
+    float Random() { return prob_(prng_); }
+
     const BiaffineDecoder *decoder_;
     Document *document_;
 
@@ -424,6 +477,11 @@ class BiaffineDecoder : public ParserDecoder {
 
     float loss_sum_ = 0.0;
     int loss_count_ = 0;
+
+    // Dropout mask.
+    Channel dropout_;
+    std::mt19937_64 prng_;
+    std::uniform_real_distribution<float> prob_{0.0, 1.0};
   };
 
   Learner *CreateLearner() override { return new Learner(this); }
@@ -452,15 +510,20 @@ class BiaffineDecoder : public ParserDecoder {
   int max_sentence_length_ = 128;
 
   // Maximum phrase length.
-  int max_phrase_length_ = 128; //15;
+  int max_phrase_length_ = 15;
 
-  // Feed-forward hidden layer dimensions.
+  // Feed-forward hidden layer hyperparameters.
   std::vector<int> ff_dims_;
+  float ff_l2reg_ = 0.0;
+  float ff_dropout_ = 0.0;
 
   // Biaffine model.
   Cell *biaffine_ = nullptr;
   Tensor *tokens_ = nullptr;
   Tensor *scores_ = nullptr;
+
+  Tensor *dropout_ = nullptr;
+  Tensor *nodropout_ = nullptr;
 
   Cell *gbiaffine_ = nullptr;
   Tensor *primal_ = nullptr;

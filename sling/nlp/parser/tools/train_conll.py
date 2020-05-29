@@ -2,38 +2,49 @@ import sling
 import sling.flags as flags
 import sling.task.workflow as workflow
 
+flags.define("--bio", default=False,action='store_true')
+flags.define("--crf", default=False,action='store_true')
+flags.define("--biaf", default=False,action='store_true')
+
 flags.parse()
+
+if flags.arg.crf:
+  parser_name = "crf"
+  decoder = "bio"
+elif flags.arg.bio:
+  parser_name = "bio"
+  decoder = "bio"
+elif flags.arg.biaf:
+  parser_name = "biaf"
+  decoder = "biaffine"
+else:
+  parser_name = "caspar"
+  decoder = "caspar"
 
 # Start up workflow system.
 workflow.startup()
 
 # Create workflow.
-wf = workflow.Workflow("biaf-training")
+wf = workflow.Workflow("conll-training")
 
 # Parser trainer inputs and outputs.
 kb = wf.resource(
-  #"local/data/e/wiki/kb.sling",
-  "data/dev/types.sling",
+  "data/dev/conll.sling",
   format="store/frame"
 )
 
 training_corpus = wf.resource(
-  "local/data/e/silver/en/train@10.rec",
+  "local/data/corpora/conll2003/train.rec",
   format="record/document"
 )
 
 evaluation_corpus = wf.resource(
-  "local/data/e/silver/en/eval.rec",
+  "local/data/corpora/conll2003/eval.rec",
   format="record/document"
 )
 
-vocabulary = wf.resource(
-  "local/data/e/silver/en/vocabulary.map",
-  format="textmap/word"
-)
-
 parser_model = wf.resource(
-  "local/data/e/knolex/biaf-en.flow",
+  "local/data/e/conll/" + parser_name + ".flow",
   format="flow"
 )
 
@@ -41,8 +52,10 @@ parser_model = wf.resource(
 trainer = wf.task("parser-trainer")
 
 trainer.add_params({
+  "conll": True,
+
   "encoder": "lexrnn",
-  "decoder": "biaffine",
+  "decoder": decoder,
 
   "rnn_type": 1,
   "rnn_dim": 128,
@@ -50,8 +63,10 @@ trainer.add_params({
   "rnn_layers": 1,
   "dropout": 0.2,
 
-  "ff_dims": [64],
+  "ff_dims": [128],
+  #"ff_l2reg": 0.0001,
   "ff_dropout": 0.2,
+  "crf": flags.arg.crf,
 
   "skip_section_titles": True,
   "word_dim": 64,
@@ -73,7 +88,6 @@ trainer.add_params({
 trainer.attach_input("commons", kb)
 trainer.attach_input("training_corpus", training_corpus)
 trainer.attach_input("evaluation_corpus", evaluation_corpus)
-trainer.attach_input("vocabulary", vocabulary)
 trainer.attach_output("model", parser_model)
 
 # Run parser trainer.
