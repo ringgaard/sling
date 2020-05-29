@@ -1,0 +1,2 @@
+; Custom phrase annotations for Danish.
+
