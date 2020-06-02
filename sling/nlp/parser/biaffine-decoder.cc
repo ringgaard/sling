@@ -223,8 +223,8 @@ class BiaffineDecoder : public ParserDecoder {
 
     gbiaffine_ = biaffine_->Gradient();
     if (gbiaffine_ != nullptr) {
-      dropout_ = model.GetParameter("biaffine/dropout");
-      nodropout_ = model.GetParameter("biaffine/nodropout");
+      dropout_ = model.LookupParameter("biaffine/dropout");
+      nodropout_ = model.LookupParameter("biaffine/nodropout");
 
       primal_ = biaffine_->Primal();
       dtokens_ = tokens_->Gradient();

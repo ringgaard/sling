@@ -55,7 +55,9 @@ blocked_urls = [
   "choice.npr.org/",
   "www.bloomberg.com/tosv2.html",
   "www.\w+.com/_services/v1/client_captcha/",
+  "www.zeit.de/zustimmung",
 
+  "pjmedia.com/instapundit/",
   "www.espn.com/espnradio/",
   "www.bbc.co.uk/news/video_and_audio/",
   "youtube.com/",
@@ -79,7 +81,7 @@ urls_with_query = [
 ]
 
 # Extensions for media file like images and videos.
-media_extensions = [".jpg", ".gif", ".png", ".m4v", ".mp4"]
+media_extensions = [".jpg", ".gif", ".png", ".m4v", ".mp4", ".webm"]
 
 blocked = [("https?://" + url).replace("/", "\\/") for url in blocked_urls]
 blocked_pat = re.compile("|".join(blocked))
@@ -90,10 +92,40 @@ href_attr_pat = re.compile(b'\shref=\"([^\"]*)\"')
 prefix_pat = re.compile('https?:\/\/[^\/]+\/?')
 video_pat = re.compile('https?:\/\/.*\/videos?\/.*')
 
-http_req_headers = {
+# HTTP headers.
+
+default_headers = {
   "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " \
                 "(KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36",
   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
+
+curl_headers = {
+  "User-Agent": "curl",
+}
+
+gbot_headers = {
+  "User-Agent": "GoogleBot",
+}
+
+http_site_headers = {
+  "bloomberg.com": gbot_headers,
+  "engadget.com": curl_headers,
+  "forbes.com": curl_headers,
+  "usnews.com": {
+    "User-Agent": "Mozilla/5.0",
+    "Cookie": "gdpr_agreed=4;usprivacy=1YNY",
+  },
+  "news.yahoo.com": curl_headers,
+  "npr.org": {
+    "Cookie": "trackingChoice=true;choiceVersion=1"
+  },
+  "techcrunch.com": curl_headers,
+  "zeit.de": curl_headers,
+  "washingtonpost.com":  {
+    "Cookie": "wp_gdpr=1|1;wp_devicetype=0;wp_country=US"
+  },
+  "yahoo.com": curl_headers,
 }
 
 def trim_url(url):
@@ -285,9 +317,14 @@ class Crawler:
       self.num_known += 1
       return
 
+    # Determine HTTP headers for crawling site.
+    http_headers = default_headers
+    if site in http_site_headers:
+      http_headers = http_site_headers[site]
+
     # Fetch news article from site.
     try:
-      r = crawlsession.get(url, headers=http_req_headers,
+      r = crawlsession.get(url, headers=http_headers,
                            timeout=flags.arg.timeout)
       if r.status_code == 451:
         print("*** Banned:", url)
@@ -330,7 +367,7 @@ class Crawler:
 
     # Check if canonical url is blocked.
     if blocked(canonical_url):
-      print("*** Blocked:", canonical_url)
+      print("*** Blocked:", canonical_url, "from", url)
       self.num_blocked += 1
       return
 
