@@ -16,6 +16,10 @@ flags.define("--crawldb",
              default="http://localhost:7070/crawl",
              metavar="URL")
 
+flags.define("--newssites",
+             default="data/crawl/newssites.txt",
+             help="list of news sites")
+
 flags.define("--threads",
              help="number of thread for crawler worker pool",
              default=10,
@@ -56,14 +60,18 @@ blocked_urls = [
   "www.bloomberg.com/tosv2.html",
   "www.\w+.com/_services/v1/client_captcha/",
   "www.zeit.de/zustimmung",
+  "myprivacy.dpgmedia.net/",
+  "www.tribpub.com/gdpr/",
 
   "pjmedia.com/instapundit/",
   "www.espn.com/espnradio/",
   "www.bbc.co.uk/news/video_and_audio/",
   "youtube.com/",
+  "youtu.be/",
   "www.youtube.com/",
   "news.google.com/",
   "video.foxnews.com/",
+  "www.facebook.com/",
 ]
 
 # Sites where the URL query is part of the unique identifier.
@@ -78,6 +86,7 @@ urls_with_query = [
   "https://en.delfi.lt/",
   "https://www.japantimes.co.jp/",
   "https://www.espn.com/",
+  "http://www.koreaherald.com/",
 ]
 
 # Extensions for media file like images and videos.
@@ -121,12 +130,58 @@ http_site_headers = {
     "Cookie": "trackingChoice=true;choiceVersion=1"
   },
   "techcrunch.com": curl_headers,
-  "zeit.de": curl_headers,
+  "volkskrant.nl": curl_headers,
   "washingtonpost.com":  {
     "Cookie": "wp_gdpr=1|1;wp_devicetype=0;wp_country=US"
   },
+  "zeit.de": curl_headers,
   "yahoo.com": curl_headers,
+  "yhoo.it": curl_headers,
 }
+
+class NewsSite:
+  def __init__(self, domain, qid, name, twitter=None, altdomain=None):
+    self.domain = domain
+    self.qid = qid
+    self.name = name
+    self.twitter = twitter
+    self.altdomain = altdomain
+
+sites = {}
+
+def init():
+  # Load news site list.
+  with open(flags.arg.newssites, "r") as f:
+    for line in f.readlines():
+      line = line.strip()
+      if len(line) == 0 or line[0] == '#': continue
+      fields = line.split(",")
+      if len(fields) < 3:
+        print("too few fields for news site:", line)
+        continue
+      domain = fields[0]
+      qid = fields[1]
+      name = fields[2]
+
+      twitter = None
+      if len(fields) >= 4:
+        twitter = fields[3]
+        if len(twitter) == 0:
+          twitter = None
+        else:
+          if not twitter.startswith("@"):
+            print("illegal twitter id:", line)
+            continue
+
+      altdomain = None
+      if len(fields) >= 5:
+        altdomain = fields[4]
+
+      if domain in sites:
+        print("multiple news sites for domain", domain)
+        continue
+      sites[domain] = NewsSite(domain, qid, name, twitter, altdomain)
+      if altdomain: sites[altdomain] = sites[domain]
 
 def trim_url(url):
   """Trim parts of news url that are not needed for uniqueness."""
@@ -147,12 +202,15 @@ def trim_url(url):
 
   return url
 
+url_prefixes = ["www.", "eu.", "rss.", "rssfeeds."]
+
 def sitename(url):
   """Return trimmed domain name for URL."""
   site = url
   if site.find("://") != -1: site = site[site.find("://") + 3:]
   if site.find(":/") != -1: site = site[site.find(":/") + 2:]
-  if site.startswith("www."): site = site[4:]
+  for prefix in url_prefixes:
+    if site.startswith(prefix): site = site[len(prefix):]
   if site.find("/") != -1: site = site[:site.find("/")]
   return site
 
@@ -278,6 +336,7 @@ class Crawler:
     self.num_failed = 0
     self.num_ignored = 0
     self.num_blocked = 0
+    self.num_filtered = 0
     self.num_banned = 0
     self.num_redirects = 0
     self.num_big = 0
@@ -335,7 +394,7 @@ class Crawler:
       r.raise_for_status()
 
       # Get target for redirected URL.
-      target_url = r.url
+      target_url = trim_url(r.url)
 
       # Build HTML header.
       h = ["HTTP/1.0 200 OK\r\n"]
@@ -358,7 +417,7 @@ class Crawler:
     # Discard large articles.
     if len(content) > flags.arg.max_article_size:
       print("Article too big:", url, ",", len(content), "bytes")
-      self.num_toobig += 1
+      self.num_big += 1
       return
 
     # Get canonical url.
@@ -369,6 +428,13 @@ class Crawler:
     if blocked(canonical_url):
       print("*** Blocked:", canonical_url, "from", url)
       self.num_blocked += 1
+      return
+
+    # Check if canonical url site is white-listed.
+    if len(sites) > 0 and sitename(canonical_url) not in sites:
+      print("*** Filtered:", canonical_url, "from", url,
+            "site:", sitename(canonical_url))
+      self.num_filtered += 1
       return
 
     # Save article in database.
@@ -400,6 +466,7 @@ class Crawler:
       (self.num_failed, "failed"),
       (self.num_ignored, "ignored"),
       (self.num_blocked, "blocked"),
+      (self.num_filtered, "filtered"),
       (self.num_banned, "banned"),
       (self.num_redirects, "redirects"),
       (self.num_big, "big"),
