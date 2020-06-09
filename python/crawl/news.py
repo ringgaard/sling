@@ -62,6 +62,7 @@ blocked_urls = [
   "www.zeit.de/zustimmung",
   "myprivacy.dpgmedia.net/",
   "www.tribpub.com/gdpr/",
+  "myprivacy.dpgmedia.net",
 
   "pjmedia.com/instapundit/",
   "www.espn.com/espnradio/",
