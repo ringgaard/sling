@@ -49,6 +49,7 @@ class BiaffineDecoder : public ParserDecoder {
     task->Fetch("ff_dims", &ff_dims_);
     task->Fetch("ff_l2reg", &ff_l2reg_);
     task->Fetch("ff_dropout", &ff_dropout_);
+    task->Fetch("ff_bias", &ff_bias_);
 
     // Get entity types.
     if (task->Get("conll", false)) {
@@ -116,14 +117,26 @@ class BiaffineDecoder : public ParserDecoder {
     int L = max_sentence_length_;
     auto *U = f.Parameter("U", dt, {D, K * D});
     f.RandomNormal(U);
-    auto *scores =
+    auto *bilin =
         f.Reshape(
           f.MatMul(
             f.Reshape(f.MatMul(start, U), {L * K, D}),
             f.Transpose(end)),
           {L, K, L});
-    f.Name(scores, "scores");
-    scores->set_out();
+    f.Name(bilin, "bilin");
+
+    // Bias terms for biaffine scorer.
+    auto *bs = f.Parameter("bs", dt, {D, K});
+    auto *be = f.Parameter("be", dt, {D, K});
+    auto *bc = f.Parameter("bc", dt, {1, K, 1});
+    f.RandomNormal(bs);
+    f.RandomNormal(be);
+    auto *start_bias = f.Reshape(f.MatMul(start, bs), {L, K, 1});
+    auto *end_bias = f.Reshape(f.Transpose(f.MatMul(end, be)), {1, K, L});
+    auto *bias = f.Name(f.Add(f.Add(bc, start_bias), end_bias), "bias");
+
+    auto *scores = f.Add(bilin, bias);
+    f.Name(scores, "scores")->set_out();
 
     // Build loss and loss gradient.
     if (learn) {
@@ -181,13 +194,17 @@ class BiaffineDecoder : public ParserDecoder {
       int height = v->dim(1);
       int width = layers[l];
 
-      // Add weight matrix.
       string idx = std::to_string(l);
       auto *W = f->Parameter(prefix + "W" + idx, v->type, {height, width});
-      auto *b = f->Parameter(prefix + "b" + idx, v->type, {width});
       f->RandomNormal(W);
       if (ff_l2reg_ != 0.0) W->SetAttr("l2reg", ff_l2reg_);
-      v = f->Add(f->MatMul(v, W), b);
+      v = f->MatMul(v, W);
+
+      if (ff_bias_) {
+        auto *b = f->Parameter(prefix + "b" + idx, v->type, {width});
+        v = f->Add(v, b);
+      }
+
       if (l != layers.size() - 1) v = f->Relu(v);
     }
     return v;
@@ -516,6 +533,7 @@ class BiaffineDecoder : public ParserDecoder {
   std::vector<int> ff_dims_;
   float ff_l2reg_ = 0.0;
   float ff_dropout_ = 0.0;
+  bool ff_bias_ = false;
 
   // Biaffine model.
   Cell *biaffine_ = nullptr;

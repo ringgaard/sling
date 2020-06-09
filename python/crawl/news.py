@@ -203,7 +203,7 @@ def trim_url(url):
 
   return url
 
-url_prefixes = ["www.", "eu.", "rss.", "rssfeeds."]
+url_prefixes = ["www.", "eu.", "rss.", "rssfeeds.", "m."]
 
 def sitename(url):
   """Return trimmed domain name for URL."""
@@ -243,8 +243,8 @@ def get_canonical_url(uri, page):
   # Discard if canonical URL is empty.
   if len(url.strip()) == 0: return None
 
-  # Unescape HTML entities.
-  return html.unescape(url)
+  # Trim URL and Unescape HTML entities.
+  return html.unescape(trim_url(url))
 
 def blocked(url):
   """Check if site is blocked."""

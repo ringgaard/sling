@@ -3,15 +3,22 @@ import sling.flags as flags
 import sling.task.workflow as workflow
 
 flags.define("--accurate", default=False,action='store_true')
+flags.define("--conll", default=False,action='store_true')
+flags.define("--pretrained_embeddings", default=False,action='store_true')
 
 flags.parse()
 
+if flags.arg.conll:
+  basefn = "local/data/e/conll/caspar"
+else:
+  basefn = "local/data/e/caspar/caspar"
+
 if flags.arg.accurate:
-  modelfn = "local/data/e/caspar/caspar-accurate.flow"
+  modelfn = basefn + "-accurate.flow"
   rnn_layers = 3
   rnn_dim = 192
 else:
-  modelfn = "local/data/e/caspar/caspar.flow"
+  modelfn = basefn + ".flow"
   rnn_layers = 1
   rnn_dim = 128
 
@@ -22,20 +29,30 @@ workflow.startup()
 wf = workflow.Workflow("caspar-trainer")
 
 # Parser trainer inputs and outputs.
-training_corpus = wf.resource(
-  "local/data/corpora/caspar/train_shuffled.rec",
-  format="record/document"
-)
+if flags.arg.conll:
+  # CoNLL-2003 corpus.
+  training_corpus = wf.resource(
+    #"local/data/corpora/conll2003/train.rec",
+    "/tmp/train.rec",
+    format="record/document"
+  )
 
-evaluation_corpus = wf.resource(
-  "local/data/corpora/caspar/dev.rec",
-  format="record/document"
-)
+  evaluation_corpus = wf.resource(
+    #"local/data/corpora/conll2003/eval.rec",
+    "/tmp/eval.rec",
+    format="record/document"
+  )
+else:
+  # OntoNotes corpus.
+  training_corpus = wf.resource(
+    "local/data/corpora/caspar/train_shuffled.rec",
+    format="record/document"
+  )
 
-word_embeddings = wf.resource(
-  "local/data/corpora/caspar/word2vec-32-embeddings.bin",
-  format="embeddings"
-)
+  evaluation_corpus = wf.resource(
+    "local/data/corpora/caspar/dev.rec",
+    format="record/document"
+  )
 
 parser_model = wf.resource(modelfn, format="flow")
 
@@ -66,8 +83,15 @@ trainer.add_params({
 
 trainer.attach_input("training_corpus", training_corpus)
 trainer.attach_input("evaluation_corpus", evaluation_corpus)
-trainer.attach_input("word_embeddings", word_embeddings)
-trainer.attach_output("model", parser_model)
+
+if flags.arg.pretrained_embeddings:
+  word_embeddings = wf.resource(
+    "local/data/corpora/caspar/word2vec-32-embeddings.bin",
+    format="embeddings"
+  )
+  trainer.attach_input("word_embeddings", word_embeddings)
+
+#trainer.attach_output("model", parser_model)
 
 # Run parser trainer.
 workflow.run(wf)

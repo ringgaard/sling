@@ -68,7 +68,6 @@ trainer.add_params({
   "ff_dropout": 0.2,
   "crf": flags.arg.crf,
 
-  "skip_section_titles": True,
   "word_dim": 64,
   "normalization": "ln",
 
