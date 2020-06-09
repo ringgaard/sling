@@ -211,6 +211,10 @@ commands = [
     help="Extract vocabulary for parser",
     package="sling.task.silver",
   ),
+  Command("train_parser",
+    help="Train parser on silver data",
+    package="sling.task.silver",
+  ),
 ]
 
 def main():

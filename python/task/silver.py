@@ -20,6 +20,11 @@ import sling.task.corpora as corpora
 from sling.task import *
 from sling.task.wiki import WikiWorkflow
 
+flags.define("--simple_types",
+             help="use simple commons store with basic types",
+             default=False,
+             action='store_true')
+
 class SilverWorkflow:
   def __init__(self, name=None, wf=None):
     if wf == None: wf = Workflow(name)
@@ -141,6 +146,13 @@ class SilverWorkflow:
                             dir=self.workdir(language),
                             format="textmap/word")
 
+  def parser_model(self, arch, language=None):
+    """Resource for parser model."""
+    if language == None: language = flags.arg.language
+    return self.wf.resource(arch + ".flow",
+                            dir=self.workdir(language),
+                            format="flow")
+
   def extract_vocabulary(self, documents=None, output=None, language=None):
     if language == None: language = flags.arg.language
     if documents == None: documents = self.training_documents(language)
@@ -157,6 +169,58 @@ class SilverWorkflow:
                                  "max_words": 100000,
                                  "skip_section_titles": True,
                                })
+
+  def train_parser(self, language=None):
+    if language == None: language = flags.arg.language
+    with self.wf.namespace(language + "-parser"):
+      # Parser trainer task.
+      trainer = self.wf.task("parser-trainer", params={
+        "encoder": "lexrnn",
+        "decoder": "knolex",
+
+        "rnn_type": 1,
+        "rnn_dim": 128,
+        "rnn_highways": True,
+        "rnn_layers": 1,
+        "dropout": 0.2,
+        "ff_l2reg": 0.0001,
+
+        "skip_section_titles": True,
+        "word_dim": 64,
+        "link_dim_token": 64,
+        "normalization": "ln",
+
+        "learning_rate": 1.0,
+        "learning_rate_decay": 0.8,
+        "clipping": 1,
+        "optimizer": "sgd",
+        "batch_size": 64,
+        "warmup": 20 * 60,
+        "rampup": 5 * 60,
+        "report_interval": 100,
+        "learning_rate_cliff": 9000,
+        "epochs": 10000,
+        "checkpoint_interval": 1000,
+      })
+
+      # Inputs.
+      if flags.arg.simple_types:
+        kb = self.wf.resource("data/dev/types.sling", format="store/frame")
+      else:
+        kb = self.wiki.knowledge_base()
+
+      trainer.attach_input("commons", kb)
+      trainer.attach_input("training_corpus",
+                           self.training_documents(language))
+      trainer.attach_input("evaluation_corpus",
+                           self.evaluation_documents(language))
+      trainer.attach_input("vocabulary", self.vocabulary(language))
+
+      # Parser model.
+      model = self.parser_model("knolex", language)
+      trainer.attach_output("model", model)
+
+    return model
 
 # Commands.
 
@@ -182,5 +246,13 @@ def extract_parser_vocabulary():
     log.info("Extract " + language + " parser vocabulary")
     wf = SilverWorkflow(language + "-parser-vocabulary")
     wf.extract_vocabulary(language=language)
+    run(wf.wf)
+
+def train_parser():
+  # Train parser on silver data.
+  for language in flags.arg.languages:
+    log.info("Train " + language + " parser")
+    wf = SilverWorkflow(language + "-parser")
+    wf.train_parser(language=language)
     run(wf.wf)
 

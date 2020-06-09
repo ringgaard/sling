@@ -32,14 +32,12 @@ wf = workflow.Workflow("caspar-trainer")
 if flags.arg.conll:
   # CoNLL-2003 corpus.
   training_corpus = wf.resource(
-    #"local/data/corpora/conll2003/train.rec",
-    "/tmp/train.rec",
+    "local/data/corpora/conll2003/train.rec",
     format="record/document"
   )
 
   evaluation_corpus = wf.resource(
-    #"local/data/corpora/conll2003/eval.rec",
-    "/tmp/eval.rec",
+    "local/data/corpora/conll2003/eval.rec",
     format="record/document"
   )
 else:

@@ -163,6 +163,8 @@ def init():
       domain = fields[0]
       qid = fields[1]
       name = fields[2]
+      if not qid.startswith("Q"): print("warning:", qid)
+      if "@" in name: print("warning:", name)
 
       twitter = None
       if len(fields) >= 4:
