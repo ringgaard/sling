@@ -49,8 +49,12 @@ if len(feed) == 0:
 
 # Back up news feed to disk.
 if flags.arg.backupdir:
-  today = str(datetime.date.today())
-  backup_fn = flags.arg.backupdir + "/daily-" + today + ".xml"
+  if flags.arg.hourly:
+    now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M")
+    backup_fn = flags.arg.backupdir + "/hourly-" + now + ".xml"
+  else:
+    now = str(datetime.date.today())
+    backup_fn = flags.arg.backupdir + "/daily-" + now + ".xml"
   f = open(backup_fn, "wb")
   f.write(feed)
   f.close()

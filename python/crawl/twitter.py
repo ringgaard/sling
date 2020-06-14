@@ -64,10 +64,11 @@ crawler = news.Crawler("twitter")
 
 class NewsStreamListener(tweepy.StreamListener):
   def on_status(self, status):
-    # Ignore retweets and tweets without urls.
-    if status.text.startswith("RT @"):
-      if not flags.arg.retweets: return
+    # Ignore tweets without urls.
     if len(status.entities["urls"]) == 0: return
+
+    # Check for retweet.
+    retweet = status.text.startswith("RT @")
 
     # Get urls.
     urls = []
@@ -79,16 +80,17 @@ class NewsStreamListener(tweepy.StreamListener):
       urls.append(expanded_url)
     if len(urls) == 0: return
 
+    user = status.user.screen_name.lower()
     for url in urls:
       # Check for blocked sites.
       if news.blocked(url): continue
 
       # Check for news site. Try to crawl all urls in tweets from feeds.
       # Otherwise the site must be in the whitelist.
-      user = status.user.screen_name.lower()
       site = news.sitename(url)
-      if site not in news.sites:
-        if user not in users: continue
+      if user not in users:
+        if retweet and not flags.arg.retweets: continue
+        if site not in news.sites: continue
 
       # Crawl URL.
       print("---", user, "-", news.trim_url(url))
@@ -103,7 +105,7 @@ class NewsStreamListener(tweepy.StreamListener):
 while True:
   try:
     print("Start twitter stream")
-    stream = tweepy.Stream(auth, NewsStreamListener())
+    stream = tweepy.Stream(auth, NewsStreamListener(), tweet_mode="extended")
     stream.filter(follow=feeds)
     time.sleep(20)
 

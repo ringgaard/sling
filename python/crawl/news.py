@@ -75,6 +75,14 @@ blocked_urls = [
   "www.facebook.com/",
 ]
 
+# Sites that should never be ignored because of too many errors.
+noignore_sites = set([
+  "bit.ly",
+  "buff.ly",
+  "dlvr.it",
+  "trib.al",
+])
+
 # Sites where the URL query is part of the unique identifier.
 urls_with_query = [
   "https?://abcnews.go.com/",
@@ -184,7 +192,11 @@ def init():
         print("multiple news sites for domain", domain)
         continue
       sites[domain] = NewsSite(domain, qid, name, twitter, altdomain)
-      if altdomain: sites[altdomain] = sites[domain]
+      if altdomain:
+        if altdomain in sites:
+          print("multiple news sites for domain", altdomains)
+        else:
+          sites[altdomain] = sites[domain]
 
 def trim_url(url):
   """Trim parts of news url that are not needed for uniqueness."""
@@ -205,7 +217,7 @@ def trim_url(url):
 
   return url
 
-url_prefixes = ["www.", "eu.", "rss.", "rssfeeds.", "m."]
+url_prefixes = ["www.", "eu.", "uk.", "rss.", "rssfeeds.", "m."]
 
 def sitename(url):
   """Return trimmed domain name for URL."""
@@ -369,9 +381,10 @@ class Crawler:
     site = sitename(url)
     site_errors = self.site_errors.get(site, 0)
     if self.max_errors != 0 and site_errors >= self.max_errors:
-      print("*** Ignore:", url)
-      self.num_ignored += 1
-      return
+      if site not in noignore_sites:
+        print("*** Ignore:", url)
+        self.num_ignored += 1
+        return
 
     # Check if article is already in database.
     trimmed_url = trim_url(url)
@@ -398,6 +411,7 @@ class Crawler:
 
       # Get target for redirected URL.
       target_url = trim_url(r.url)
+      if r.url != url: site = sitename(r.url)
 
       # Build HTML header.
       h = ["HTTP/1.0 200 OK\r\n"]

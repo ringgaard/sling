@@ -56,11 +56,8 @@ dr.dk http://www.dr.dk/Nyheder/Service/feeds/Viden
 dr.dk http://www.dr.dk/Nyheder/Service/feeds/Sporten
 
 # Ekstra Bladet
-ekstrabladet.dk http://ekstrabladet.dk/rss2/?mode=normal
-
-# EuroInvestor
-euroinvestor.dk http://www.euroinvestor.dk/RSS/News.aspx
-euroinvestor.dk http://www.euroinvestor.dk/RSS/News.aspx?ArticleMaxAgeDays=7&ViewCountMaxAgeDays=7
+ekstrabladet.dk https://ekstrabladet.dk/rssfeed/all/
+ekstrabladet.dk https://ekstrabladet.dk/rssfeed/nyheder/
 
 # FinansWatch
 finanswatch.dk http://finanswatch.dk/rss/seneste.rss
@@ -129,10 +126,6 @@ tv2.dk http://feeds.tv2.dk/underholdning_seneste/rss
 
 # Ugens Erhverv
 ue.dk http://www.ue.dk/feed/alle-nyheder.rss
-ue.dk http://www.ue.dk/feed/byggeri.rss
-ue.dk http://www.ue.dk/feed/emballage.rss
-ue.dk http://www.ue.dk/feed/lager-transport.rss
-ue.dk http://www.ue.dk/feed/telekommunikation.rss
 
 # Version2
 version2.dk https://www.version2.dk/it-nyheder/rss
