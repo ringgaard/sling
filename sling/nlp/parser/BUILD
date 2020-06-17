@@ -94,6 +94,22 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "subrnn-encoder",
+  srcs = ["subrnn-encoder.cc"],
+  deps = [
+    ":parser-codec",
+    "//sling/file:textmap",
+    "//sling/myelin:builder",
+    "//sling/myelin:gradient",
+    "//sling/myelin:rnn",
+    "//sling/nlp/document:subword-tokenizer",
+    "//sling/nlp/document:wordpiece-builder",
+    "//sling/util:unicode",
+  ],
+  alwayslink = 1,
+)
+
 # Decoders.
 
 cc_library(
@@ -288,6 +304,7 @@ cc_library(
 
     # Encoders.
     ":lexrnn-encoder",
+    ":subrnn-encoder",
 
     # Decoders.
     ":transition-decoder",

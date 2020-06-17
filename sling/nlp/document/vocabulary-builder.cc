@@ -18,6 +18,7 @@
 
 #include "sling/file/textmap.h"
 #include "sling/nlp/document/document.h"
+#include "sling/nlp/document/wordpiece-builder.h"
 #include "sling/task/accumulator.h"
 #include "sling/task/documents.h"
 #include "sling/util/unicode.h"
@@ -91,15 +92,20 @@ class WordVocabularyReducer : public SumReducer {
     // Initialize sum reducer.
     SumReducer::Start(task);
 
+    // Get output channel for subwords.
+    subword_channel_ = task->GetSink("subwords");
+
     // Get max vocabulary size and threshold for discarding words.
-    min_freq_ = task->Get("min_freq", 30);
-    max_words_ = task->Get("max_words", 1000000);
+    task->Fetch("min_freq", &min_freq_);
+    task->Fetch("max_words", &max_words_);
+    task->Fetch("max_subwords", &max_subwords_);
 
     // Add OOV item to vocabulary as the first entry.
     vocabulary_.emplace_back("<UNKNOWN>", 0);
 
     // Statistics.
     num_words_ = task->GetCounter("words");
+    num_subwords_ = task->GetCounter("subwords");
     word_count_ = task->GetCounter("word_count");
     num_words_discarded_ = task->GetCounter("num_words_discarded");
   }
@@ -136,6 +142,38 @@ class WordVocabularyReducer : public SumReducer {
       if (++words > max_words_) break;
       Output(0, new Message(entry.word, std::to_string(entry.count)));
     }
+
+    // Build subword vocabulary if requested.
+    if (subword_channel_ != nullptr) {
+      LOG(INFO) << "Building subword vocabulary";
+      WordEntryIterator it(vocabulary_);
+      std::vector<const WordPieceBuilder::Symbol *> symbols;
+      WordPieceBuilder wordpieces(max_subwords_);
+      wordpieces.Build(&it, [&](const WordPieceBuilder::Symbol *sym) {
+        symbols.push_back(sym);
+        num_subwords_->Increment();
+      });
+
+      std::sort(symbols.begin() + 1, symbols.end(),
+        [](const WordPieceBuilder::Symbol *a,
+           const WordPieceBuilder::Symbol *b) {
+          return a->freq > b->freq;
+        });
+
+      for (const WordPieceBuilder::Symbol *sym : symbols) {
+        string text;
+        uint64 freq;
+        if (sym->code == -1) {
+          text = "<UNKNOWN>";
+          freq = vocabulary_[0].count;
+        } else {
+          text.push_back(sym->trailing ? '#' : '_');
+          sym->AppendToString(&text);
+          freq = sym->freq;
+        }
+        subword_channel_->Send(new Message(text, std::to_string(freq)));
+      }
+    }
   }
 
  private:
@@ -146,17 +184,45 @@ class WordVocabularyReducer : public SumReducer {
     int64 count;
   };
 
+  // Vocabulary iterator for word entries.
+  class WordEntryIterator : public Vocabulary::Iterator {
+   public:
+    WordEntryIterator(const std::vector<Entry> &words) : words_(words) {}
+
+    // Iterator interface.
+    int Size() override { return words_.size() - 1; }
+    void Reset() override { current_ = 1; }
+    bool Next(Text *word, int *count) {
+      if (current_ == words_.size()) return false;
+      const Entry &entry = words_[current_++];
+      word->set(entry.word.data(), entry.word.size());
+      if (count != nullptr) *count = entry.count;
+      return true;
+    }
+
+   private:
+    const std::vector<Entry> &words_;
+    int current_ = 1;
+  };
+
   // Threshold for discarding words.
-  int min_freq_;
+  int min_freq_ = 0;
 
   // Maximum number of words in vocabulary.
-  int max_words_;
+  int max_words_ = 1000000;
+
+  // Maximum number of subwords in vocabulary.
+  int max_subwords_ = 30000;
 
   // Vocabulary. The first item is the OOV item.
   std::vector<Entry> vocabulary_;
 
+  // Output channel for subwords.
+  Channel *subword_channel_ = nullptr;
+
   // Statistics.
   Counter *num_words_ = nullptr;
+  Counter *num_subwords_ = nullptr;
   Counter *word_count_ = nullptr;
   Counter *num_words_discarded_ = nullptr;
 };

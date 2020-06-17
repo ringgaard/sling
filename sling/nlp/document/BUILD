@@ -37,20 +37,6 @@ cc_library(
 )
 
 cc_library(
-  name = "text-tokenizer",
-  srcs = ["text-tokenizer.cc"],
-  hdrs = ["text-tokenizer.h"],
-  deps = [
-    ":token-properties",
-    "//sling/base",
-    "//sling/string:ctype",
-    "//sling/string:text",
-    "//sling/util:unicode",
-    "//sling/web:entity-ref",
-  ],
-)
-
-cc_library(
   name = "wordpiece-builder",
   srcs = ["wordpiece-builder.cc"],
   hdrs = ["wordpiece-builder.h"],
@@ -71,6 +57,31 @@ cc_library(
     "//sling/string:text",
     "//sling/util:fingerprint",
     "//sling/util:unicode",
+  ],
+)
+
+cc_library(
+  name = "text-tokenizer",
+  srcs = ["text-tokenizer.cc"],
+  hdrs = ["text-tokenizer.h"],
+  deps = [
+    ":token-properties",
+    "//sling/base",
+    "//sling/string:ctype",
+    "//sling/string:text",
+    "//sling/util:unicode",
+    "//sling/web:entity-ref",
+  ],
+)
+
+cc_library(
+  name = "subword-tokenizer",
+  srcs = ["subword-tokenizer.cc"],
+  hdrs = ["subword-tokenizer.h"],
+  deps = [
+    "//sling/base",
+    "//sling/util:unicode",
+    "//sling/util:vocabulary",
   ],
 )
 
@@ -190,12 +201,14 @@ cc_library(
   name = "vocabulary-builder",
   srcs = ["vocabulary-builder.cc"],
   deps = [
+    ":wordpiece-builder",
     "//sling/base",
     "//sling/file:textmap",
     "//sling/nlp/document",
     "//sling/task:accumulator",
     "//sling/task:documents",
     "//sling/util:unicode",
+    "//sling/util:vocabulary",
   ],
   alwayslink = 1,
 )

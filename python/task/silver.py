@@ -25,6 +25,11 @@ flags.define("--simple_types",
              default=False,
              action='store_true')
 
+flags.define("--subwords",
+             help="use subword tokenization",
+             default=False,
+             action='store_true')
+
 class SilverWorkflow:
   def __init__(self, name=None, wf=None):
     if wf == None: wf = Workflow(name)
@@ -146,12 +151,14 @@ class SilverWorkflow:
                             dir=self.workdir(language),
                             format="textmap/word")
 
-  def parser_model(self, arch, language=None):
-    """Resource for parser model."""
+  def subwords(self, language=None):
+    """Resource for subword vocabulary. This is a text map with (normalized)
+    subwords and counts.
+    """
     if language == None: language = flags.arg.language
-    return self.wf.resource(arch + ".flow",
+    return self.wf.resource("subwords.map",
                             dir=self.workdir(language),
-                            format="flow")
+                            format="textmap/word")
 
   def extract_vocabulary(self, documents=None, output=None, language=None):
     if language == None: language = flags.arg.language
@@ -159,23 +166,46 @@ class SilverWorkflow:
     if output == None: output = self.vocabulary(language)
 
     with self.wf.namespace(language + "-vocabulary"):
-      return self.wf.mapreduce(documents, output,
-                               format="message/word:count",
-                               mapper="word-vocabulary-mapper",
-                               reducer="word-vocabulary-reducer",
-                               params={
-                                 "normalization": "ln",
-                                 "min_freq": 100,
-                                 "max_words": 100000,
-                                 "skip_section_titles": True,
-                               })
+      # Extract words from documents.
+      words = self.wf.shuffle(
+        self.wf.map(documents, "word-vocabulary-mapper",
+                    format="message/word:count",
+                    params={
+                      "normalization": "l",
+                      "skip_section_titles": True,
+                    }))
+
+      # Build vocabulary from words in documents.
+      vocab = self.wf.reduce(words, output, "word-vocabulary-reducer")
+      vocab.add_param("min_freq", 100)
+      vocab.add_param("max_words", 100000)
+
+      # Also produce subword vocabulary if requested
+      if flags.arg.subwords:
+        vocab.add_param("max_subwords", 30000)
+        subwords = self.wf.channel(vocab, name="subwords",
+                                   format="message/word")
+        self.wf.write(subwords, self.subwords(language))
+
+    return output
+
+  #---------------------------------------------------------------------------
+  # Parser training
+  #---------------------------------------------------------------------------
+
+  def parser_model(self, arch, language=None):
+    """Resource for parser model."""
+    if language == None: language = flags.arg.language
+    return self.wf.resource(arch + ".flow",
+                            dir=self.workdir(language),
+                            format="flow")
 
   def train_parser(self, language=None):
     if language == None: language = flags.arg.language
     with self.wf.namespace(language + "-parser"):
       # Parser trainer task.
       trainer = self.wf.task("parser-trainer", params={
-        "encoder": "lexrnn",
+        "encoder": "subrnn" if flags.arg.subwords else "lexrnn",
         "decoder": "knolex",
 
         "rnn_type": 1,
@@ -186,9 +216,8 @@ class SilverWorkflow:
         "ff_l2reg": 0.0001,
 
         "skip_section_titles": True,
-        "word_dim": 64,
         "link_dim_token": 64,
-        "normalization": "ln",
+        "normalization": "l",
 
         "learning_rate": 1.0,
         "learning_rate_decay": 0.8,
@@ -215,6 +244,12 @@ class SilverWorkflow:
       trainer.attach_input("evaluation_corpus",
                            self.evaluation_documents(language))
       trainer.attach_input("vocabulary", self.vocabulary(language))
+      if flags.arg.subwords:
+        trainer.add_param("subword_dim", 128)
+        trainer.attach_input("subwords", self.subwords(language))
+      else:
+        trainer.add_param("word_dim", 64)
+
 
       # Parser model.
       model = self.parser_model("knolex", language)

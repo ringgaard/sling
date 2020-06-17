@@ -57,28 +57,34 @@ for domain, site in news.sites.items():
       except Exception as e:
         print("Ignore bad feed for domain", domain, ":", site.twitter, e)
 
-print("Follow", len(feeds), "twitter feeds")
-
 # Initialize news crawler.
 crawler = news.Crawler("twitter")
 
-class NewsStreamListener(tweepy.StreamListener):
-  def on_status(self, status):
-    # Ignore tweets without urls.
-    if len(status.entities["urls"]) == 0: return
-
-    # Check for retweet.
-    retweet = status.text.startswith("RT @")
-
-    # Get urls.
-    urls = []
-    for url in status.entities["urls"]:
+def collect_urls(obj, urls):
+  if "entities" in obj:
+    entities = obj["entities"]
+    for url in entities["urls"]:
       expanded_url = url["expanded_url"]
       if expanded_url.startswith("https://twitter.com/"): continue
       if expanded_url.startswith("https://www.twitter.com/"): continue
       if expanded_url.startswith("https://mobile.twitter.com/"): continue
-      urls.append(expanded_url)
-    if len(urls) == 0: return
+      urls.add(expanded_url)
+
+  if "retweeted_status" in obj:
+    retweet = obj["retweeted_status"]
+    collect_urls(retweet, urls)
+  if "extended_tweet" in obj:
+    extended = obj["extended_tweet"]
+    collect_urls(extended, urls)
+
+class NewsStreamListener(tweepy.StreamListener):
+  def on_status(self, status):
+    # Check for retweet.
+    retweet = status.text.startswith("RT @")
+
+    # Get urls.
+    urls = set([])
+    collect_urls(status._json, urls)
 
     user = status.user.screen_name.lower()
     for url in urls:
@@ -102,6 +108,7 @@ class NewsStreamListener(tweepy.StreamListener):
     return False
 
 # Monitor live twitter stream for news articles.
+print("Follow", len(feeds), "twitter feeds")
 while True:
   try:
     print("Start twitter stream")
