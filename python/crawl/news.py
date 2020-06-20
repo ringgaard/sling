@@ -63,6 +63,7 @@ blocked_urls = [
   "myprivacy.dpgmedia.net/",
   "www.tribpub.com/gdpr/",
   "myprivacy.dpgmedia.net",
+  "tolonews.com/fa/",
 
   "pjmedia.com/instapundit/",
   "www.espn.com/espnradio/",
@@ -80,6 +81,7 @@ noignore_sites = set([
   "bit.ly",
   "buff.ly",
   "dlvr.it",
+  "ift.tt",
   "trib.al",
 ])
 
