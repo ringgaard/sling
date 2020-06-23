@@ -20,15 +20,19 @@ import sling.task.corpora as corpora
 from sling.task import *
 from sling.task.wiki import WikiWorkflow
 
+flags.define("--decoder",
+             help="parser decoder type",
+             default="knolex")
+
 flags.define("--simple_types",
              help="use simple commons store with basic types",
              default=False,
-             action='store_true')
+             action="store_true")
 
 flags.define("--subwords",
              help="use subword tokenization",
              default=False,
-             action='store_true')
+             action="store_true")
 
 class SilverWorkflow:
   def __init__(self, name=None, wf=None):
@@ -158,7 +162,7 @@ class SilverWorkflow:
     if language == None: language = flags.arg.language
     return self.wf.resource("subwords.map",
                             dir=self.workdir(language),
-                            format="textmap/word")
+                            format="textmap/subword")
 
   def extract_vocabulary(self, documents=None, output=None, language=None):
     if language == None: language = flags.arg.language
@@ -204,24 +208,21 @@ class SilverWorkflow:
     if language == None: language = flags.arg.language
     with self.wf.namespace(language + "-parser"):
       # Parser trainer task.
-      trainer = self.wf.task("parser-trainer", params={
-        "encoder": "subrnn" if flags.arg.subwords else "lexrnn",
-        "decoder": "knolex",
+      params = {
+        "normalization": "l",
 
         "rnn_type": 1,
         "rnn_dim": 128,
         "rnn_highways": True,
         "rnn_layers": 1,
+        "rnn_bidir": True,
         "dropout": 0.2,
-        "ff_l2reg": 0.0001,
 
         "skip_section_titles": True,
-        "link_dim_token": 64,
-        "normalization": "l",
-
-        "learning_rate": 1.0,
+        "learning_rate": 0.1,
         "learning_rate_decay": 0.8,
         "clipping": 1,
+        "local_clipping": True,
         "optimizer": "sgd",
         "batch_size": 64,
         "warmup": 20 * 60,
@@ -230,7 +231,34 @@ class SilverWorkflow:
         "learning_rate_cliff": 9000,
         "epochs": 10000,
         "checkpoint_interval": 1000,
-      })
+      }
+
+      if flags.arg.subwords:
+        params["encoder"] = "subrnn"
+        params["subword_dim"] = 64
+      else:
+        params["encoder"] = "lexrnn"
+        params["word_dim"] = 64
+
+      if flags.arg.decoder == "knolex":
+        params["decoder"] = "knolex"
+        params["link_dim_token"] = 64
+        params["ff_l2reg"] = 0.0001
+      elif flags.arg.decoder == "bio":
+        params["decoder"] = "bio"
+        params["ff_dims"] = [128]
+      elif flags.arg.decoder == "crf":
+        params["decoder"] = "bio"
+        params["crf"] = True
+        params["ff_dims"] = [128]
+      elif flags.arg.decoder == "biaffine":
+        params["decoder"] = "biaffine"
+        params["ff_dims"] = [64]
+        params["ff_dropout"] = 0.2
+      else:
+        params["decoder"] = flags.arg.decoder
+
+      trainer = self.wf.task("parser-trainer", params=params)
 
       # Inputs.
       if flags.arg.simple_types:
@@ -245,14 +273,10 @@ class SilverWorkflow:
                            self.evaluation_documents(language))
       trainer.attach_input("vocabulary", self.vocabulary(language))
       if flags.arg.subwords:
-        trainer.add_param("subword_dim", 128)
         trainer.attach_input("subwords", self.subwords(language))
-      else:
-        trainer.add_param("word_dim", 64)
-
 
       # Parser model.
-      model = self.parser_model("knolex", language)
+      model = self.parser_model(flags.arg.decoder, language)
       trainer.attach_output("model", model)
 
     return model

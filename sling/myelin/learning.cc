@@ -118,7 +118,8 @@ void Optimizer::Build(Flow *flow) {
   // Build mapping from learnable variable to gradient for variable.
   FlowBuilder tf(flow, name_);
   GradientMap gradmap;
-  for (Flow::Variable *var : flow->vars()) {
+  auto vars = flow->vars();
+  for (Flow::Variable *var : vars) {
     if (!var->learnable()) continue;
 
     // Get gradient variable for learnable variable.

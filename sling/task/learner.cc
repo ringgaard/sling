@@ -102,11 +102,13 @@ Optimizer *GetOptimizer(Task *task) {
   float lr = task->Get("learning_rate", 0.01);
   float decay = task->Get("learning_rate_decay", 1.0);
   float clip = task->Get("clipping", 0.0);
+  bool local_clipping = task->Get("local_clipping", false);
   if (type == "sgd") {
     GradientDescentOptimizer *sgd = new GradientDescentOptimizer();
     sgd->set_learning_rate(lr);
     sgd->set_decay(decay);
     sgd->set_clipping_threshold(clip);
+    sgd->set_local_clipping(local_clipping);
     sgd->set_lambda(task->Get("l2reg", 0.0));
     return sgd;
   } else if (type == "momentum") {
@@ -114,6 +116,7 @@ Optimizer *GetOptimizer(Task *task) {
     momentum->set_learning_rate(lr);
     momentum->set_decay(decay);
     momentum->set_clipping_threshold(clip);
+    momentum->set_local_clipping(local_clipping);
     momentum->set_momentum(task->Get("momentum", 0.9));
     return momentum;
   } else if (type == "adam") {
@@ -121,6 +124,7 @@ Optimizer *GetOptimizer(Task *task) {
     adam->set_learning_rate(lr);
     adam->set_decay(decay);
     adam->set_clipping_threshold(clip);
+    adam->set_local_clipping(local_clipping);
     adam->set_beta1(task->Get("beta1", 0.9));
     adam->set_beta2(task->Get("beta2", 0.99));
     adam->set_epsilon(task->Get("epsilon", 1e-8));

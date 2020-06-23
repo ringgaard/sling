@@ -112,7 +112,7 @@ class Vocabulary {
   // Initialize dictionary from list of words.
   void Init(Iterator *words);
 
-  // Look up word in dictionary. Returns - 1 if word is not found.
+  // Look up word in dictionary. Returns -1 if word is not found.
   int64 Lookup(Text word) const;
 
   // Return the vocabulary size.

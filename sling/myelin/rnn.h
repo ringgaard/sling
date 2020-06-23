@@ -159,6 +159,12 @@ class RNNLayer {
   // Initialize RNN.
   void Initialize(const Network &net);
 
+  // Get tensor for output.
+  Tensor *output() const { return bidir_ ? merger_.merged : lr_.h_out; }
+
+  // Get tensor for output gradient.
+  Tensor *doutput() const { return bidir_ ? merger_.dmerged : lr_.dh_out; }
+
  private:
   string name_;       // cell name prefix
   bool bidir_;        // bidirectional RNN
@@ -279,6 +285,16 @@ class RNNStack {
 
   // Layers in RNN stack.
   const std::vector<RNNLayer> &layers() const { return layers_; }
+
+  // Get tensor for output.
+  Tensor *output() const {
+    return layers_.empty() ? nullptr : layers_.back().output();
+  }
+
+  // Get tensor for output gradient.
+  Tensor *doutput() const {
+    return layers_.empty() ? nullptr : layers_.back().doutput();
+  }
 
  private:
   // Name prefix for RNN cells.

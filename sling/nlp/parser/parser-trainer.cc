@@ -116,12 +116,13 @@ class ParserTrainer : public task::LearnerTask {
     decoder_->Setup(task, &commons_);
 
     // Build parser model flow graph.
-    Build(&flow_, true);
+    Flow flow;
+    Build(&flow, true);
     optimizer_ = GetOptimizer(task);
-    optimizer_->Build(&flow_);
+    optimizer_->Build(&flow);
 
     // Compile model.
-    compiler_.Compile(&flow_, &model_);
+    compiler_.Compile(&flow, &model_);
 
     // Initialize model.
     model_.InitModelParameters(task->Get("seed", 0));
@@ -415,7 +416,6 @@ class ParserTrainer : public task::LearnerTask {
   int skip_mask_ = HEADING_BEGIN;
 
   // Neural network.
-  Flow flow_;
   Network model_;
   Compiler compiler_;
   Optimizer *optimizer_ = nullptr;

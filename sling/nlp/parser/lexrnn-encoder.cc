@@ -67,9 +67,9 @@ class LexicalRNNEncoder : public ParserEncoder {
   }
 
   // Build encoder model.
-  myelin::Flow::Variable *Build(myelin::Flow *flow,
-                                Vocabulary::Iterator *words,
-                                bool learn) override {
+  Flow::Variable *Build(Flow *flow,
+                        Vocabulary::Iterator *words,
+                        bool learn) override {
     if (words != nullptr) {
       lex_.InitializeLexicon(words, spec_.lexicon);
     }
@@ -105,14 +105,14 @@ class LexicalRNNEncoder : public ParserEncoder {
     rnn_highways_ = spec.GetBool("highways");
 
     RNN::Spec rnn_spec;
-    rnn_spec.type = static_cast<myelin::RNN::Type>(rnn_type_);
+    rnn_spec.type = static_cast<RNN::Type>(rnn_type_);
     rnn_spec.dim = rnn_dim_;
     rnn_spec.highways = rnn_highways_;
     rnn_.AddLayers(rnn_layers_, rnn_spec, rnn_bidir_);
   }
 
   // Initialize encoder model.
-  void Initialize(const myelin::Network &net) override {
+  void Initialize(const Network &net) override {
     lex_.Initialize(net);
     rnn_.Initialize(net);
   }
@@ -156,7 +156,7 @@ class LexicalRNNEncoder : public ParserEncoder {
       return rnn_.Compute(fv);
     }
 
-    void Backpropagate(myelin::Channel *doutput) override {
+    void Backpropagate(Channel *doutput) override {
       // Backpropagate hidden state gradients through RNN.
       Channel *dfv = rnn_.Backpropagate(doutput);
 
@@ -181,7 +181,7 @@ class LexicalRNNEncoder : public ParserEncoder {
   LexicalFeatures::Spec spec_;
 
   // RNN specification.
-  int rnn_type_ = myelin::RNN::LSTM;
+  int rnn_type_ = RNN::LSTM;
   int rnn_dim_ = 256;
   int rnn_layers_ = 1;
   bool rnn_bidir_ = true;
@@ -191,7 +191,7 @@ class LexicalRNNEncoder : public ParserEncoder {
   LexicalFeatures lex_{"features"};
 
   // RNN encoder.
-  myelin::RNNStack rnn_{"encoder"};
+  RNNStack rnn_{"encoder"};
 };
 
 REGISTER_PARSER_ENCODER("lexrnn", LexicalRNNEncoder);
