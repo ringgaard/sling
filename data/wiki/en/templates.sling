@@ -436,6 +436,8 @@
 "death-date and age": {type: "date" full: 1 format: /w/dates/en}
 "death year and age": {type: "date" year: 1 format: /w/dates/en}
 
+"Baseball year": {type: "date" year: 1 format: /w/dates/en}
+
 "as of": {type: "date" year: 1 month: 2 day: 3 pre: "As of " format: /w/dates/en}
 "marriage": {type: "marriage" format: /w/dates/en}
 "ce": {type: "year" post: " CE"}
