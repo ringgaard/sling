@@ -953,7 +953,7 @@ class Channel {
 
   // Set channel element.
   void set(size_t index, void *data) {
-    memcpy(at(index), data, element_size());
+    memcpy(at(index), data, element_size_);
   }
 
   // Add element to channel and return the last element.

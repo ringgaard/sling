@@ -118,17 +118,25 @@ class BIODecoder : public ParserDecoder {
     task->Fetch("crf", &use_crf_);
 
     // Get entity types.
-    FactCatalog catalog;
-    catalog.Init(commons);
-    Taxonomy *types = catalog.CreateEntityTaxonomy();
-    type_map_[Handle::nil()] = 0;
-    types_.push_back(Handle::nil());
-    for (auto &it : types->typemap()) {
-      Handle type = it.first;
-      type_map_[type] = types_.size();
-      types_.push_back(type);
+    if (task->Get("conll", false)) {
+      types_.push_back(commons->Lookup("PER"));
+      types_.push_back(commons->Lookup("LOC"));
+      types_.push_back(commons->Lookup("ORG"));
+      types_.push_back(commons->Lookup("MISC"));
+    } else {
+      FactCatalog catalog;
+      catalog.Init(commons);
+      Taxonomy *types = catalog.CreateEntityTaxonomy();
+      types_.push_back(Handle::nil());
+      for (auto &it : types->typemap()) {
+        Handle type = it.first;
+        type_map_[type] = types_.size();
+        types_.push_back(type);
+      }
+      delete types;
     }
-    delete types;
+
+    for (int i = 0; i < types_.size(); ++i) type_map_[types_[i]] = i;
     num_labels_ = BIOLabel::labels(types_.size());
   }
 

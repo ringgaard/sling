@@ -187,12 +187,12 @@ class Document(object):
   def store(self):
     return self.frame.store()
 
-  def add_token(self, word=None, start=None, length=None, brk=SPACE_BREAK):
+  def add_token(self, word=None, start=None, length=None, brk=None):
     slots = []
     if word != None: slots.append((self.schema.token_word, word))
     if start != None: slots.append((self.schema.token_start, start))
     if length != None: slots.append((self.schema.token_length, length))
-    if brk != SPACE_BREAK: slots.append((self.schema.token_break, brk))
+    if brk != None: slots.append((self.schema.token_break, brk))
     token = Token(self, self.store.frame(slots), len(self.tokens))
     self.tokens.append(token)
     self.tokens_dirty = True

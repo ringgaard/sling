@@ -73,6 +73,7 @@ cc_library(
     "//sling/myelin:compiler",
     "//sling/myelin:learning",
     "//sling/nlp/document:document",
+    "//sling/nlp/document:annotator",
     "//sling/nlp/document:document-corpus",
     "//sling/task:learner",
     "//sling/util:mutex",
@@ -93,6 +94,22 @@ cc_library(
   alwayslink = 1,
 )
 
+cc_library(
+  name = "subrnn-encoder",
+  srcs = ["subrnn-encoder.cc"],
+  deps = [
+    ":parser-codec",
+    "//sling/file:textmap",
+    "//sling/myelin:builder",
+    "//sling/myelin:gradient",
+    "//sling/myelin:rnn",
+    "//sling/nlp/document:subword-tokenizer",
+    "//sling/nlp/document:wordpiece-builder",
+    "//sling/util:unicode",
+  ],
+  alwayslink = 1,
+)
+
 # Decoders.
 
 cc_library(
@@ -105,6 +122,22 @@ cc_library(
     "//sling/frame:store",
     "//sling/myelin:builder",
     "//sling/myelin:crf",
+    "//sling/myelin:gradient",
+    "//sling/myelin:learning",
+    "//sling/nlp/kb:facts",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
+  name = "biaffine-decoder",
+  srcs = ["biaffine-decoder.cc"],
+  deps = [
+    ":parser-codec",
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:store",
+    "//sling/myelin:builder",
     "//sling/myelin:gradient",
     "//sling/myelin:learning",
     "//sling/nlp/kb:facts",
@@ -271,12 +304,14 @@ cc_library(
 
     # Encoders.
     ":lexrnn-encoder",
+    ":subrnn-encoder",
 
     # Decoders.
     ":transition-decoder",
     ":caspar-decoder",
     ":knolex-decoder",
     ":bio-decoder",
+    ":biaffine-decoder",
 
     # Delegates.
     ":multiclass-delegate",
