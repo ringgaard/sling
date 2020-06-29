@@ -12,9 +12,7 @@ SPEC='{
   inputs: {
     parser: {
       ;file: "local/data/e/caspar/caspar.flow"
-      ;file: "local/data/e/knolex/knolex-en.flow"
-      ;file: "local/data/e/knolex/bio-en.flow"
-      file: "local/data/e/knolex/biaf-en.flow"
+      file: "local/data/e/silver/LANG/knolex.flow"
       format: "flow"
     }
     commons: {

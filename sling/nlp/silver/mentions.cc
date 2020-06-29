@@ -293,6 +293,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q5398426",   SPAN_ART},              // television series (brand but art)
     {"Q167270",    0},                     // trademark
     {"Q215380",    SPAN_ART},              // band
+    {"Q2031291",   SPAN_ART},              // release
     {"Q17537576",  SPAN_ART},              // creative work
     {"Q47461344",  SPAN_ART},              // written work
     {"Q838948",    SPAN_ART},              // work of art
@@ -343,7 +344,7 @@ void SpanTaxonomy::Annotate(const PhraseTable *aliases, SpanChart *chart) {
         for (const auto &match : matchlist) {
           // Skip unknown items.
           if (match.item.IsNil()) {
-            LOG(WARNING) << "Unknown item: " << match.id;
+            VLOG(1) << "Unknown item: " << match.id;
             continue;
           }
 

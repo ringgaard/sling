@@ -95,6 +95,7 @@ boston.com,Q4947705,Boston.com,@BostonDotCom
 bostonherald.com,Q773802,Boston Herald,@bostonherald
 bournemouthecho.co.uk,Q4950276,Bournemouth Daily Echo,@Bournemouthecho
 bradenton.com,Q7719788,The Bradenton Herald,@bradentonherald
+breakingnews.ie,Q96677732,BreakingNews.ie,@breakingnewsie
 breitbart.com,Q4960434,Breitbart News,@BreitbartNews
 brisbanetimes.com.au,Q3307775,Brisbane Times,@brisbanetimes
 bristolpost.co.uk,Q7757848,Bristol Post,@BristolLive

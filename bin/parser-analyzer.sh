@@ -1,5 +1,8 @@
 #!/bin/bash
 
+LANGUAGE=${LANGUAGE:-en}
+PORT=${PORT:-8080}
+
 SPEC='{
   annotator: "parser"
   annotator: "prune-nominals"
@@ -8,8 +11,8 @@ SPEC='{
   inputs: {
     parser: {
       ;file: "local/data/e/caspar/caspar.flow"
-      ;file: "local/data/e/knolex/knolex-en.flow"
-      file: "local/data/e/knolex/biaf-en.flow"
+      file: "local/data/e/silver/LANG/knolex.flow"
+      ;file: "local/data/e/silver/LANG/bio.flow"
       format: "flow"
     }
     commons: {
@@ -19,9 +22,12 @@ SPEC='{
     }
   }
   parameters: {
-    language: "en"
+    language: "LANG"
   }
 }'
 
-bazel-bin/sling/nlp/document/analyzer --spec "${SPEC}" $@
+bazel-bin/sling/nlp/document/analyzer \
+  --spec "${SPEC//LANG/$LANGUAGE}" \
+  --port $PORT $@ \
+  $@
 

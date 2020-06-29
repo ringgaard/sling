@@ -413,7 +413,7 @@ class ParserTrainer : public task::LearnerTask {
   std::unordered_map<string, int> words_;
 
   // Sentence skip mask. Default to skipping headings.
-  int skip_mask_ = HEADING_BEGIN;
+  int skip_mask_ = HEADING_BEGIN | LISTITEM_BEGIN;
 
   // Neural network.
   Network model_;

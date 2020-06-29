@@ -109,7 +109,7 @@ class SilverWorkflow:
       mapper.add_annotator("mentions")
       mapper.add_annotator("anaphora")
       #mapper.add_annotator("phrase-structure")
-      #mapper.add_annotator("relations")
+      mapper.add_annotator("relations")
       mapper.add_annotator("types")
       mapper.add_annotator("clear-references")
 
@@ -219,7 +219,7 @@ class SilverWorkflow:
         "dropout": 0.2,
 
         "skip_section_titles": True,
-        "learning_rate": 0.1,
+        "learning_rate": 0.5,
         "learning_rate_decay": 0.8,
         "clipping": 1,
         "local_clipping": True,

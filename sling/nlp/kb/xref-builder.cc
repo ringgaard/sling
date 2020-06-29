@@ -38,6 +38,7 @@ class XRefBuilder : public task::FrameProcessor {
     // Statistics.
     num_ids_ = task->GetCounter("ids");
     num_redirects_ = task->GetCounter("redirects");
+    num_conflicts_ = task->GetCounter("conflicts");
     num_property_ids_ = task->GetCounter("property_ids");
   }
 
@@ -115,7 +116,12 @@ class XRefBuilder : public task::FrameProcessor {
     } else if (anchor == nullptr) {
       return id;
     } else {
-      xref_.Merge(anchor, id);
+      bool merged = xref_.Merge(anchor, id);
+      if (!merged) {
+        LOG(WARNING) << "Merge conflict between " << anchor->ToString()
+                     << " and " << id->ToString();
+        num_conflicts_->Increment();
+      }
       return anchor;
     }
   }
@@ -126,6 +132,7 @@ class XRefBuilder : public task::FrameProcessor {
   // Statistics.
   task::Counter *num_ids_ = nullptr;
   task::Counter *num_redirects_ = nullptr;
+  task::Counter *num_conflicts_ = nullptr;
   task::Counter *num_property_ids_ = nullptr;
 
   // Mutex for serializing access to cross-reference table.

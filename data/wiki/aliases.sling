@@ -66,6 +66,11 @@
     "Has Been": blacklist
   }
 
+  ; Has-been
+  Q3128054: {
+    "has been": blacklist
+  }
+
   ; female
   Q6581072: {
     "women": 2
@@ -158,7 +163,7 @@
     "during the Korean War": blacklist
   }
 
-  ; association football)
+  ; association football
   Q2736: {
     "professional footballer": blacklist
   }
