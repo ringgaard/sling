@@ -119,26 +119,22 @@ bool XRef::Merge(Identifier *a, Identifier *b) {
   Identifier *id = a;
   do {
     if (id == b) return false;
-    if (id->type == main_) has_main = true;
+    if (id->type == main_ && !id->redirect) has_main = true;
     id = id->ring;
-  } while (id->ring != a);
+  } while (id != a);
 
   // Check that merging would not lead to two main ids becoming part of the same
   // cluster.
   if (has_main) {
     Identifier *id = b;
     do {
-      if (id->type == main_) return false;
+      if (id->type == main_ && !id->redirect) return false;
       id = id->ring;
-    } while (id->ring != b);
+    } while (id != b);
   }
 
   // Merge clusters.
-  Identifier *na = a->ring;
-  Identifier *nb = b->ring;
-  a->ring = nb;
-  b->ring = na;
-
+  std::swap(a->ring, b->ring);
   return true;
 }
 
@@ -169,7 +165,7 @@ void XRef::Build(Store *store) {
         [](const Identifier *a, const Identifier *b) {
           int oa = a->order();
           int ob = b->order();
-          return oa != ob ? oa < ob : strcmp(a->value, b->value);
+          return oa != ob ? oa < ob : strcmp(a->value, b->value) < 0;
         });
 
       // Build frame with id slots for all the identifiers in the cluster.
@@ -188,6 +184,25 @@ void XRef::Build(Store *store) {
       builder.Create();
     }
   }
+}
+
+string XRef::Identifier::ToString() const {
+  string str;
+  str.push_back('[');
+  const Identifier *id = this;
+  do {
+    if (id != this) str.push_back(' ');
+    if (id->redirect) str.push_back('>');
+    if (!id->type->name.empty()) {
+      str.append(id->type->name);
+      str.push_back('/');
+    }
+    str.append(id->value);
+    id = id->ring;
+  } while (id != this);
+  str.push_back(']');
+
+  return str;
 }
 
 }  // namespace nlp

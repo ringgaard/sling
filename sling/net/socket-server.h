@@ -48,7 +48,7 @@ struct SocketServerOptions {
   int num_workers = 5;
 
   // Maximum number of worker threads.
-  int max_workers = 200;
+  int max_workers = 100;
 
   // Number of events per worker poll.
   int max_events = 1;

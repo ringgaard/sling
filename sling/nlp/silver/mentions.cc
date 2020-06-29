@@ -267,6 +267,9 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q41825",     SPAN_WEEKDAY},          // day of the week
     {"Q47018901",  SPAN_MONTH},            // calendar month
     {"Q577",       SPAN_YEAR},             // year
+    {"Q3186692",   SPAN_YEAR},             // calendar year
+    {"Q235729",    SPAN_YEAR},             // common year
+    {"Q19828",     SPAN_YEAR},             // leap year
     {"Q29964144",  SPAN_YEAR_BC},          // year BC
     {"Q39911",     SPAN_DECADE},           // decade
     {"Q578",       SPAN_CENTURY},          // century
@@ -290,6 +293,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q5398426",   SPAN_ART},              // television series (brand but art)
     {"Q167270",    0},                     // trademark
     {"Q215380",    SPAN_ART},              // band
+    {"Q2031291",   SPAN_ART},              // release
     {"Q17537576",  SPAN_ART},              // creative work
     {"Q47461344",  SPAN_ART},              // written work
     {"Q838948",    SPAN_ART},              // work of art
@@ -340,7 +344,7 @@ void SpanTaxonomy::Annotate(const PhraseTable *aliases, SpanChart *chart) {
         for (const auto &match : matchlist) {
           // Skip unknown items.
           if (match.item.IsNil()) {
-            LOG(WARNING) << "Unknown item: " << match.id;
+            VLOG(1) << "Unknown item: " << match.id;
             continue;
           }
 
