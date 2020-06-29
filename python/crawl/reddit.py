@@ -6,10 +6,6 @@ import time
 import sling.crawl.news as news
 import sling.flags as flags
 
-flags.define("--newssites",
-             default="data/crawl/newssites.txt",
-             help="domain names for news sites")
-
 flags.define("--apikeys",
              default="local/keys/reddit.json",
              help="Reddit API key file")
@@ -18,18 +14,18 @@ flags.parse()
 
 # Consider all submission to these subreddits as news articles.
 news_reddits = [
-  "AutoNewspaper", "nofeenews",
+  "AutoNewspaper", "nofeenews", "newsdk", "news", "Full_news",
+  "qualitynews", "worldnews", "worldevents",
 ]
 
-# Read known news sites.
-newssites = set()
-with open(flags.arg.newssites, "r") as f:
-  for line in f.readlines():
-    line = line.strip()
-    fields = line.split(",")
-    if len(fields) >= 1:
-      site = fields[0]
-      if len(site) > 0: newssites.add(site)
+# Ignored subreddits.
+ignored_reddits = [
+  "u_toronto_news",
+  "newsokur",
+]
+
+# Load news site list.
+news.init()
 
 # Connect to Reddit.
 with open(flags.arg.apikeys, "r") as f:
@@ -56,12 +52,13 @@ while True:
       if news.blocked(url): continue
       site = news.sitename(url)
       if subreddit not in news_reddits:
-        if site not in newssites: continue
+        if subreddit in ignored_reddits: continue
+        if site not in news.sites: continue
 
       # Crawl URL.
       domain = str(submission.domain)
       title = str(submission.title)
-      print("---", subreddit, domain, "-", title)
+      print("---", domain, subreddit, "-", title)
       crawler.crawl(url)
       sys.stdout.flush()
 

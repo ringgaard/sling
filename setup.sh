@@ -77,6 +77,10 @@ if [ ! -f  "$CMD" ]; then
   sudo chmod +x $CMD
 fi
 
+# Extra Python packages:
+#   tweepy (twitter)
+#   praw (reddit)
+
 # Done.
 echo
 echo "=== SLING is now set up."

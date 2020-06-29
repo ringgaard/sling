@@ -21,10 +21,10 @@ abcnews.com http://feeds.abcnews.com/abcnews/thisweekheadlines
 # ABC News Australia
 abc.net.au http://www.abc.net.au/news/feed/51120/rss.xml
 abc.net.au http://www.abc.net.au/news/feed/45910/rss.xml
-abc.net.au http://www.abc.net.au/news/feed/52278/rss.xml
+#abc.net.au http://www.abc.net.au/news/feed/52278/rss.xml
 abc.net.au http://www.abc.net.au/news/feed/46182/rss.xml
 abc.net.au http://www.abc.net.au/news/feed/51892/rss.xml
-abc.net.au http://www.abc.net.au/news/feed/46800/rss.xml
+#abc.net.au http://www.abc.net.au/news/feed/46800/rss.xml
 abc.net.au http://www.abc.net.au/news/feed/45924/rss.xml
 abc.net.au http://www.abc.net.au/news/feed/1054578/rss.xml
 
@@ -67,13 +67,13 @@ ap.org http://hosted.ap.org/lineups/STRANGEHEADS.rss?SITE=AP&SECTION=HOME
 #theaustralian.com.au http://www.theaustralian.com.au/rss
 
 # Baltimore Sun
-baltimoresun.com http://www.baltimoresun.com/news/maryland/rss2.0.xml
-baltimoresun.com http://www.baltimoresun.com/news/nation-world/rss2.0.xml
-baltimoresun.com http://www.baltimoresun.com/news/breaking/rss2.0.xml
-baltimoresun.com http://www.baltimoresun.com/business/rss2.0.xml
-baltimoresun.com http://www.baltimoresun.com/entertainment/rss2.0.xml
-baltimoresun.com http://www.baltimoresun.com/sports/rss2.0.xml
-baltimoresun.com http://www.baltimoresun.com/features/rss2.0.xml
+#baltimoresun.com http://www.baltimoresun.com/news/maryland/rss2.0.xml
+#baltimoresun.com http://www.baltimoresun.com/news/nation-world/rss2.0.xml
+#baltimoresun.com http://www.baltimoresun.com/news/breaking/rss2.0.xml
+#baltimoresun.com http://www.baltimoresun.com/business/rss2.0.xml
+#baltimoresun.com http://www.baltimoresun.com/entertainment/rss2.0.xml
+#baltimoresun.com http://www.baltimoresun.com/sports/rss2.0.xml
+#baltimoresun.com http://www.baltimoresun.com/features/rss2.0.xml
 
 # Bangkok Post
 bangkokpost.com http://www.bangkokpost.com/rss/data/most-recent.xml
@@ -848,5 +848,5 @@ xinhuanet.com http://www.xinhuanet.com/english/rss/healthrss.xml
 xinhuanet.com http://www.xinhuanet.com/english/rss/indepthrss.xml
 
 # Yahoo
-yahoo.com https://www.yahoo.com/news/rss
+#yahoo.com https://www.yahoo.com/news/rss
 

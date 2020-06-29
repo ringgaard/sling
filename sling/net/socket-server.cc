@@ -35,10 +35,6 @@ static Status Error(const char *context) {
 }
 
 SocketServer::~SocketServer() {
-  // Wait for workers to terminate.
-  LOG(INFO) << "Wait for workers to complete";
-  workers_.Join();
-
   // Close poll descriptor.
   LOG(INFO) << "Stop event polling";
   if (pollfd_ != -1) close(pollfd_);
