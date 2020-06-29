@@ -66,6 +66,11 @@
     "Has Been": blacklist
   }
 
+  ; Has-been
+  Q3128054: {
+    "has been": blacklist
+  }
+
   ; female
   Q6581072: {
     "women": 2
@@ -91,7 +96,7 @@
     "Don't": blacklist
   }
 
-  ; Pakho Chau (Q6130604)
+  ; Pakho Chau
   Q6130604: {
     "Beginning": blacklist
   }
@@ -101,61 +106,66 @@
     "leader": 2
   }
 
-  ; women's sports (Q920057)
+  ; women's sports)
   Q920057: {
     "women's": 2
   }
 
-  ; men's sports (Q35555522)
+  ; men's sports)
   Q35555522: {
     "men's": 2
   }
 
-  ; person (Q215627)
+  ; person
   Q215627: {
     "personal": blacklist
   }
 
-  ; Radio X (Q2072562)
+  ; Radio X
   Q2072562: {
     "Born in England": blacklist
   }
 
-  ; Kenny Wheeler (Q578219)
+  ; Kenny Wheeler
   Q578219: {
     "One of Many": blacklist
   }
 
-  ; actor (Q33999)
+  ; actor
   Q33999: {
     "American actor": blacklist
     "American actress": blacklist
   }
 
-  ; art of sculpture (Q11634)
+  ; art of sculpture
   Q11634: {
     "American sculptor": blacklist
   }
 
-  ; politics of the United States (Q330963)
+  ; politics of the United States
   Q330963: {
     "American politician": blacklist
   }
 
-  ; The Presbyterian College, Montreal (Q7758054)
+  ; The Presbyterian College, Montreal)
   Q7758054: {
     "affiliated with": blacklist
   }
 
-  ; American literature (Q233762)
+  ; American literature
   Q233762: {
     "American writer": blacklist
     "American author": blacklist
   }
 
-  ; French Battalion in the Korean War (Q488964)
+  ; French Battalion in the Korean War
   Q488964: {
     "during the Korean War": blacklist
+  }
+
+  ; association football
+  Q2736: {
+    "professional footballer": blacklist
   }
 }
 
