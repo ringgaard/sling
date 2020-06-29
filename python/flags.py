@@ -21,8 +21,7 @@ import sling.pysling as api
 arg = argparse.Namespace()
 
 # Initialize command-line argument parser.
-parser = argparse.ArgumentParser(
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
 # Post-processing hooks.
 hooks = []
@@ -45,6 +44,11 @@ def parse():
                           help=help,
                           default=default,
                           action="store_true")
+      if default:
+        parser.add_argument("--no" + name,
+                            default=default,
+                            dest=name,
+                            action="store_false")
     else:
       parser.add_argument("--" + name,
                           help=help,

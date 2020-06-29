@@ -15,17 +15,15 @@
 
 """Run SLING command"""
 
-import sys
 import importlib
+import subprocess
+import sys
+import time
 
 import sling
 import sling.flags as flags
 import sling.log as log
 import sling.task.workflow as workflow
-
-# Import modules for defining flags.
-import sling.task.corpora
-import sling.task.wiki
 
 # Command-line flags.
 flags.define("COMMAND",
@@ -35,6 +33,11 @@ flags.define("COMMAND",
 
 flags.define("-l", "--list",
              help="list commands",
+             default=False,
+             action="store_true")
+
+flags.define("--spawn",
+             help="run command in background",
              default=False,
              action="store_true")
 
@@ -208,10 +211,21 @@ commands = [
     help="Extract vocabulary for parser",
     package="sling.task.silver",
   ),
+  Command("train_parser",
+    help="Train parser on silver data",
+    package="sling.task.silver",
+  ),
 ]
 
 def main():
-  # Parse command-line arguments.
+  # Parse command-line arguments. Load modules for commands before parsing
+  # flags to allow each of these to register more flags.
+  for arg in sys.argv:
+    if arg.startswith("-"): continue
+    for cmd in commands:
+      if arg == cmd.name:
+        importlib.import_module(cmd.package)
+        break
   flags.parse()
 
   # List commands.
@@ -220,6 +234,24 @@ def main():
     for cmd in commands:
       if not cmd.internal:
         print("  %-30s %s" % (cmd.name, cmd.help))
+    sys.exit(0)
+
+  # Run command in background if requested.
+  if flags.arg.spawn:
+    # Build command.
+    cmd = []
+    for arg in sys.argv:
+      if arg != "--spawn": cmd.append(arg)
+
+    # Output to log file.
+    logfn = flags.arg.logdir + "/" + time.strftime("%Y%m%d-%H%M%S") + ".log"
+    logfile = open(logfn, "w")
+
+    # Start background job.
+    print("Running in background logging to", logfn)
+    subprocess.Popen(cmd, stdin=None, stdout=logfile, stderr=subprocess.STDOUT,
+                     bufsize=1, close_fds=True)
+    logfile.close()
     sys.exit(0)
 
   # Start up workflow system.

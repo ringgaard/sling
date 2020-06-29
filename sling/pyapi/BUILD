@@ -90,6 +90,9 @@ cc_library(
     "//sling/nlp/document:vocabulary-builder",
 
     "//sling/nlp/kb:fact-lexicon",
+    "//sling/nlp/kb:popularity",
+    "//sling/nlp/kb:xref-builder",
+    "//sling/nlp/kb:reconciler",
     "//sling/nlp/kb:name-table-builder",
     "//sling/nlp/kb:phrase-table-builder",
 
@@ -98,7 +101,6 @@ cc_library(
     "//sling/nlp/embedding:fact-plausibility",
 
     "//sling/nlp/parser:parser-trainer",
-    "//sling/nlp/parser:parser-annotator",
 
     "//sling/nlp/silver:idf",
     "//sling/nlp/silver:annotators",
@@ -115,6 +117,8 @@ cc_library(
     "//sling/task:text-file-writer",
     "//sling/task:text-map-reader",
     "//sling/task:text-map-writer",
+    "//sling/task:database-reader",
+    "//sling/task:database-writer",
     "//sling/task:pipe-reader",
     "//sling/task:workers",
   ],
