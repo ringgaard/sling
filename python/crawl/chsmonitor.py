@@ -45,6 +45,11 @@ flags.define("--qsize",
              type=int,
              metavar="NUM")
 
+flags.define("--confirmations",
+             help="Only update when confirmation date is changed",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 chs.init(flags.arg.chskeys)
@@ -60,6 +65,32 @@ if timepoint is None and flags.arg.checkpoint is not None:
       timepoint = int(ckpt.read())
   except:
     print("No checkpoint file:", flags.arg.checkpoint)
+
+# Convert date from YYYY-MM-DD to SLING format.
+def get_date(s):
+  if len(s) == 0: return None
+  year = int(s[0:4])
+  month = int(s[5:7])
+  day = int(s[8:10])
+  return year * 10000 + month * 100 + day
+
+# Get confirmation date for company.
+def get_confirmation(company):
+  if company is None: return None
+  if "confirmation_statement" not in company: return None
+  confstmt = company["confirmation_statement"]
+  if "last_made_up_to" not in confstmt: return None
+  return get_date(confstmt["last_made_up_to"])
+
+# Look up company in database.
+def lookup_company(company_no):
+  r = dbsession.get(flags.arg.chsdb + "/" + company_no)
+  if r.status_code == 200:
+    return json.loads(r.text)
+  elif r.status_code == 404:
+    return None
+  else:
+    r.raise_for_status()
 
 # Event handler.
 def process_message(msg):
@@ -77,21 +108,35 @@ def process_message(msg):
   company_no = company["company_number"]
   company_name = company["company_name"]
 
-  # Fetch officers and owners.
-  chs.retrieve_officers(company)
-  chs.retrieve_owners(company)
+  # Check if confirmation date has changed in confirmation mode.
+  skip = False
+  if flags.arg.confirmations:
+    current = lookup_company(company_no)
+    latest_confirmation = get_confirmation(company)
+    current_confirmation = get_confirmation(current)
+    if latest_confirmation != None and current_confirmation != None:
+      if current_confirmation >= latest_confirmation:
+        skip = True
+        result = "skip"
 
-  # Write company record to database.
-  r = dbsession.put(
-    flags.arg.chsdb + "/" + company_no,
-    json=company,
-    headers={
-      "Version": str(version),
-      "Mode": "ordered",
-    }
-  )
-  r.raise_for_status()
-  result = r.headers["Result"]
+  # Fetch company profile from Companies House.
+  if not skip:
+    # Fetch officers and owners.
+    chs.retrieve_officers(company)
+    chs.retrieve_owners(company)
+
+    # Write company record to database.
+    r = dbsession.put(
+      flags.arg.chsdb + "/" + company_no,
+      json=company,
+      headers={
+        "Version": str(version),
+        "Mode": "ordered",
+      }
+    )
+    r.raise_for_status()
+    result = r.headers["Result"]
+
   print(timepoint, ts, company_no, company_name, result, chs.quota_left)
   sys.stdout.flush()
 
@@ -142,7 +187,10 @@ while True:
   except requests.exceptions.ChunkedEncodingError:
     print("Stream closed")
     sys.stdout.flush()
-    time.sleep(60 + queue.qsize())
+    if flags.arg.confirmations:
+      time.sleep(60)
+    else:
+      time.sleep(60 + queue.qsize())
 
   except Exception as e:
     print("Event error", type(e), ":", e)

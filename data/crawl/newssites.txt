@@ -86,6 +86,7 @@ blackmountainnews.com,Q4921344,Black Mountain News,@BlkMtnNews
 bleacherreport.com,Q2906353,Bleacher Report,@BleacherReport
 bleepingcomputer.com,Q4925939,Bleeping Computer,@BleepinComputer
 bloomberg.com,Q14270642,Bloomberg News,@business
+bloombergquint.com,Q39052731,BloombergQuint,@BloombergQuint
 bna.bh,Q4842752,Bahrain News Agency,@bna_en
 bnnbloomberg.ca,Q1017576,BNN Bloomberg,@BNNBloomberg
 borneobulletin.com.bn,Q4946070,Borneo Bulletin,@borneo_bulletin
@@ -258,6 +259,7 @@ domaininvesting.com,Q68935716,DomainInvesting.com
 domainnamewire.com,Q68936468,Domain Name Wire
 dorsetecho.co.uk,Q5298850,Dorset Echo,@Dorsetecho
 dothaneagle.com,Q5299433,Dothan Eagle
+dpa-international.com,Q312653,Deutsche Presse-Agentur,@dpa_intl
 dw.com,Q153770,Deutsche Welle,@dwnews
 
 eastbaytimes.com,Q5165605,East Bay Times,@EastBayTimes
@@ -363,6 +365,7 @@ gothamgazette.com,Q5587808,Gotham Gazette,@GothamGazette
 govexec.com,Q5588830,Government Executive,@GovExec
 greenwichtime.com,Q5604879,Greenwich Time,@GreenwichTime
 guampdn.com,Q7122425,Pacific Daily News,@GuamPDN
+guardianonline.co.nz,Q4804670,Ashburton Guardian,@AshGuardian
 gulf-times.com,Q1554284,Gulf Times,@gulftimes_qatar
 
 haaretz.com,Q216393,Haaretz,@haaretzcom
@@ -499,6 +502,7 @@ kotatv.com,Q6328719,KOTA-TV,@kotatweets
 kpax.com,Q6335429,KPAX-TV,@kpaxnews
 kplctv.com,Q6335637,KPLC,@KPLC7News
 kpq.com,Q6335815,KPQ-FM,@KPQNews
+krcgtv.com,Q6336552,KRCG,@KRCG13
 krcrtv.com,Q3191490,KRCR-TV,@KRCR7
 krdo.com,Q6336601,KRDO-TV,@KRDONC13
 krem.com,Q6336640,KREM
@@ -527,6 +531,7 @@ kuow.org,Q6339681,KUOW,@KUOW
 kutv.com,Q6339773,KUTV,@KUTV2News
 kval.com,Q6339891,KVAL-TV,@KVALnews
 kvia.com,Q6340047,KVIA-TV,@abc7breaking
+kvrr.com,Q6340253,KVRR,@KVRRTV
 kvoa.com,Q6340160,KVOA,@KVOA
 kxan.com,Q6341047,KXAN-TV
 kxii.com,Q6341225,KXII,@KXIITV
@@ -963,7 +968,7 @@ thestandard.com.ph,Q12810713,Manila Standard,@mlastandard
 thestar.com,Q3522843,The Star,@staronline,thestar.com.my
 thestarphoenix.com,Q3522837,The StarPhoenix,@TheStarPhoenix
 thestreet.com,Q7711656,TheStreet.com,@TheStreet
-thesun.co.uk,Q208875,The Sun,@thesun
+thesun.co.uk,Q208875,The Sun,@thesun,the-sun.com
 thesundaily.my,Q7767315,The Sun,@theSundaily
 thetelegraphandargus.co.uk,Q7696216,Telegraph & Argus,@Bradford_TandA
 thetelegram.com,Q7696200,Telegram & Gazette,@telegramdotcom
@@ -1086,6 +1091,7 @@ wflx.com,Q7949376,WFLX,@FOX29WFLX
 wfsb.com,Q7949496,WFSB
 wftv.com,Q7949550,WFTV,@WFTV
 wfxb.com,Q7949584,WFXB,@WFXB
+wfxg.com,Q7949590,WFXG,@WFXGFOX54
 wfxl.com,Q7949597,WFXL,@WFXL
 wgem.com,Q7949720,WGEM-TV,@WGEM
 wgme.com,Q1509872,WGME-TV,@WGME
@@ -1153,6 +1159,7 @@ wtov9.com,Q7956348,WTOV-TV,@WTOV9
 wtva.com,Q7956464,WTVA,@wtva9news
 wtvr.com,Q7956482,WTVR-TV,@CBS6
 wtxl.com,Q7956509,WTXL-TV,,@abc27
+wutv29.com,Q7956705,WUTV,@FOX29Buffalo
 wvah.com,Q7956733,WVAH-TV,@wchs8fox11
 wvtm13.com,Q7957034,WVTM-TV
 wwmt.com,Q7957379,WWMT,@wwmtnews
@@ -1269,6 +1276,7 @@ foxbusiness.com,Q3735740,Fox Business Network,@FoxBusiness
 foxcharleston.com,Q7956065,WTAT-TV,@FOX24Charleston
 foxchattanooga.com,Q7956466,WTVC,@FOX_Chattanooga
 foxillinois.com,Q7955302,WRSP-TV,@foxillinois
+foxkansas.com,Q6337455,KSAS-TV,@FoxKansas
 foxla.com,Q3077406,KTTV,@FOXLA
 foxlexington.com,Q7948436,WDKY-TV,@FoxLexington
 foxnebraska.com,Q6329360,KFXL-TV,@KFXLFoxNebraska
@@ -1285,18 +1293,21 @@ myfox23.com,Q7950367,WHPM-LD,@MyFOX23
 myfox47.com,Q6341339,KXLT-TV,@FOX47Roch
 okcfox.com,Q6334955,KOKH-TV,@OKCFOX
 
-boston.cbslocal.com,Q7947559,WBZ-TV,@wbz
-baltimore.cbslocal.com,Q3564704,WJZ-TV,@wjz
 cbs2iowa.com,Q6329498,KGAN
 cbs4local.com,Q11687008,KDBC-TV,@CBS4Local
 cbs5az.com,Q3191480,KPHO-TV
 cbs6albany.com,Q7955018,WRGB,@CBS6Albany
 cbs8.com,Q6329080,KFMB-TV
 cbs12.com,Q7954227,WPEC,@CBS12
+cbs19news.com,Q7947606,WCAV,@CBS19News
 cbs58.com,Q7948424,WDJT-TV,@CBS58
 cbsaustin.com,Q6328769,KEYE-TV,@cbsaustin
 cbsnews.com,Q861764,CBS News,@CBSNews
+cbslocal.com,Q43380,CBS,@cbslocal
 cbssports.com,Q2931052,CBS Sports,@CBSSports
+
+boston.cbslocal.com,Q7947559,WBZ-TV,@wbz
+baltimore.cbslocal.com,Q3564704,WJZ-TV,@wjz
 chicago.cbslocal.com,Q7947005,WBBM-TV,@cbschicago
 detroit.cbslocal.com,Q3564854,WWJ-TV,@CBSDetroit
 dfw.cbslocal.com,Q14710809,KTVT,@CBSDFW
@@ -1667,6 +1678,17 @@ expresso.pt,Q1384864,Expresso,@expresso
 jn.pt,Q1704037,Jornal de Notícias,@JornalNoticias
 publico.pt,Q1757086,Público,@Publico
 record.pt,Q639033,Record,@record_portugal
+
+correiobraziliense.com.br,Q3283333,Correio Braziliense,@correio
+diariodepernambuco.com.br,Q3480197,Diário de Pernambuco,@DiarioPE
+em.com.br,Q3058830,Estado de Minas,@em_com
+estadao.com.br,Q1628345,O Estado de São Paulo,@Estadao
+folha.uol.com.br,Q1435379,Folha de S. Paulo,@folha
+gauchazh.clicrbs.com.br,Q3575279,Zero Hora,@GauchaZH,zerohora.com
+gazetadopovo.com.br,Q10288580,Gazeta do Povo,@gazetadopovo
+jb.com.br,Q2537063,Jornal do Brasil,@JornaldoBrasil
+odia.ig.com.br,Q3347781,O Dia,@jornalodia
+oglobo.globo.com,Q970729,O Globo,@JornalOGlobo
 
 #
 # Polish
