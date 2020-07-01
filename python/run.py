@@ -242,16 +242,21 @@ def main():
     cmd = []
     for arg in sys.argv:
       if arg != "--spawn": cmd.append(arg)
+    cmd.append("--flushlog")
 
     # Output to log file.
     logfn = flags.arg.logdir + "/" + time.strftime("%Y%m%d-%H%M%S") + ".log"
     logfile = open(logfn, "w")
 
     # Start background job.
-    print("Running in background logging to", logfn)
-    subprocess.Popen(cmd, stdin=None, stdout=logfile, stderr=subprocess.STDOUT,
-                     bufsize=1, close_fds=True)
-    logfile.close()
+    process = subprocess.Popen(cmd,
+                               stdin=None,
+                               stdout=logfile,
+                               stderr=subprocess.STDOUT,
+                               bufsize=1,
+                               shell=False,
+                               close_fds=True)
+    print("Running process", process.pid, "in background logging to", logfn)
     sys.exit(0)
 
   # Start up workflow system.
