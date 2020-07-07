@@ -82,7 +82,9 @@ noignore_sites = set([
   "buff.ly",
   "dlvr.it",
   "ift.tt",
+  "ow.ly",
   "trib.al",
+  "zpr.io",
 ])
 
 # Sites where the URL query is part of the unique identifier.

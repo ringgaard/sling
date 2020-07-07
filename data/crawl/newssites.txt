@@ -486,6 +486,7 @@ jamaica-gleaner.com,Q30717056,The Gleaner,@JamaicaGleaner
 jamaicaobserver.com,Q1755863,The Jamaica Observer,@JamaicaObserver
 japantimes.co.jp,Q1190886,The Japan Times,@japantimes
 japantoday.com,Q876842,Japan Today,@JapanToday
+jaxdailyrecord.com,Q5449625,Financial News & Daily Record,@JaxDailyRecord
 jezebel.com,Q6190313,Jezebel,@Jezebel
 jihadwatch.org,Q3317441,Jihad Watch
 jordantimes.com,Q7743519,The Jordan Times,@jordantimes

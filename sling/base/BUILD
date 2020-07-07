@@ -7,6 +7,8 @@ cc_library(
     "init.cc",
     "logging.cc",
     "status.cc",
+    "stacktrace.cc",
+    "symbolize.cc",
   ],
   hdrs = [
     "bitcast.h",
@@ -17,6 +19,8 @@ cc_library(
     "port.h",
     "slice.h",
     "status.h",
+    "stacktrace.h",
+    "symbolize.h",
     "types.h",
   ],
   linkopts = [
