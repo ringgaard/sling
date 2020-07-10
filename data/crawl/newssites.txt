@@ -453,7 +453,7 @@ hosted.ap.org,Q40469,Associated Press
 hotair.com,Q5909737,Hot Air,@hotairblog
 houstonchronicle.com,Q595564,Houston Chronicle,@HoustonChron,chron.com
 htrnews.com,Q7739414,The Herald Times Reporter,@htrnews
-huffingtonpost.com,Q18049522,HuffPost,@HuffPost,huffp.st
+huffingtonpost.com,Q18049522,HuffPost,@HuffPost,huffpost.com
 hulldailymail.co.uk,Q5935900,Hull Daily Mail,@hulllive
 humanevents.com,Q1025062,Human Events
 hurriyetdailynews.com,Q1507755,Hürriyet Daily News,@HDNER
@@ -1347,6 +1347,7 @@ wxyz.com,Q3564870,WXYZ-TV,@wxyzdetroit
 
 xinhuanet.com,Q204839,Xinhua News Agency,@XHNews
 
+yahoo.com,Q37093,Yahoo
 yakimaherald.com,Q8047089,Yakima Herald-Republic,@Yakima_Herald
 ydr.com,Q8055436,York Daily Record,@ydrcom
 ynetnews.com,Q1132126,Yedioth Ahronoth,@YediotAhronot
@@ -1603,7 +1604,7 @@ fr.de,Q326068,Frankfurter Rundschau,@fr,fr-online.de
 freiepresse.de,Q896460,Freie Presse,@freie_presse
 freitag.de,Q265362,Der Freitag,@derfreitag
 fuldaerzeitung.de,Q1225989,Fuldaer Zeitung,@fuldaerzeitung
-general-anzeiger-bonn.de,Q880953,General-Anzeiger Bonn,@gabonn
+general-anzeiger-bonn.de,Q880953,General-Anzeiger Bonn,@gabonn,ga.de
 handelsblatt.com,Q819697,Handelsblatt,@handelsblatt
 haz.de,Q1576266,Hannoversche Allgemeine Zeitung,@HAZ
 heute.de,Q132108,ZDF heute,@ZDFheute

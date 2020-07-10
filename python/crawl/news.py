@@ -1,5 +1,8 @@
 import calendar
 import html
+import http.cookiejar
+import json
+import os
 import sys
 import re
 import requests
@@ -19,6 +22,10 @@ flags.define("--crawldb",
 flags.define("--newssites",
              default="data/crawl/newssites.txt",
              help="list of news sites")
+
+flags.define("--cookiedir",
+             default="local/cookies",
+             help="directory for site-specific cookies")
 
 flags.define("--threads",
              help="number of thread for crawler worker pool",
@@ -50,6 +57,10 @@ flags.define("--max_article_size",
              type=int,
              metavar="SIZE")
 
+# URL request sessions.
+dbsession = requests.Session()
+crawlsession = requests.Session()
+
 # Blocked sites.
 blocked_urls = [
   "www.\w+.com.au/nocookies",
@@ -62,7 +73,6 @@ blocked_urls = [
   "www.zeit.de/zustimmung",
   "myprivacy.dpgmedia.net/",
   "www.tribpub.com/gdpr/",
-  "myprivacy.dpgmedia.net",
   "tolonews.com/fa/",
 
   "pjmedia.com/instapundit/",
@@ -152,6 +162,33 @@ http_site_headers = {
   "yhoo.it": curl_headers,
 }
 
+def init_cookies():
+  if os.path.isdir(flags.arg.cookiedir):
+    jar = http.cookiejar.CookieJar()
+    crawlsession.cookies = jar
+    for filename in os.listdir(flags.arg.cookiedir):
+      with open(flags.arg.cookiedir + '/' + filename) as f:
+        cookies = json.load(f)
+      for cookie in cookies:
+        jar.set_cookie(http.cookiejar.Cookie(
+          version=0,
+          name=cookie["name"],
+          value=cookie["value"],
+          port=None,
+          port_specified=False,
+          domain=cookie["domain"],
+          domain_specified=True,
+          domain_initial_dot=cookie["domain"].startswith('.'),
+          path=cookie["path"],
+          path_specified=True,
+          secure=cookie["secure"],
+          expires=None,
+          discard=True,
+          comment=None,
+          comment_url=None,
+          rest={'HttpOnly': None},
+          rfc2109=False))
+
 class NewsSite:
   def __init__(self, domain, qid, name, twitter=None, altdomain=None):
     self.domain = domain
@@ -163,6 +200,9 @@ class NewsSite:
 sites = {}
 
 def init():
+  # Load cookies.
+  init_cookies()
+
   # Load news site list.
   with open(flags.arg.newssites, "r") as f:
     for line in f.readlines():
@@ -277,9 +317,6 @@ def iso2ts(date):
   if date is None: return 0
   return calendar.timegm(time.strptime(date, "%Y-%m-%dT%H:%M:%SZ"))
 
-dbsession = requests.Session()
-crawlsession = requests.Session()
-
 def store(url, date, content):
   """Store article in database."""
   if type(date) is str: date = iso2ts(date)
@@ -330,7 +367,7 @@ class Worker(Thread):
   def run(self):
     """Run worker fetching urls from the task queue."""
     while True:
-      url = self.crawler.queue.get();
+      url = self.crawler.queue.get()
       try:
         self.crawler.fetch(url)
       except Exception as e:
