@@ -101,10 +101,7 @@ bool TextMapInput::Read(int *index, string *name, int64 *count) {
   return true;
 }
 
-TextMapOutput::TextMapOutput(const string &filename, int buffer_size) {
-  // Open output file.
-  file_ = File::OpenOrDie(filename, "w");
-
+TextMapOutput::TextMapOutput(File *file, int buffer_size) : file_(file) {
   // Allocate output buffer.
   buffer_ = static_cast<char *>(malloc(buffer_size));
   next_ = buffer_;

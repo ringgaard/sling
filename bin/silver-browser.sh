@@ -9,7 +9,8 @@ SPEC='{
   ;annotator: "phrase-structure"
   annotator: "relations"
   annotator: "types"
-  annotator: "mention-name"
+  annotator: "clear-references"
+  ;annotator: "mention-name"
 
   inputs: {
     commons: {
@@ -32,6 +33,9 @@ SPEC='{
   parameters: {
     language: "LANG"
     resolve: true
+    definite_reference: false
+    initial_reference: false
+    detailed: false
   }
 }'
 

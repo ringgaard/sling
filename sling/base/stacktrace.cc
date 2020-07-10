@@ -29,7 +29,7 @@ static const int MAX_STACK_FRAMES = 32;
 // This structure mirrors the one found in /usr/include/asm/ucontext.h.
 struct sig_ucontext_t {
   unsigned long uc_flags;
-  ucontext *uc_link;
+  ucontext_t *uc_link;
   stack_t uc_stack;
   sigcontext uc_mcontext;
   sigset_t uc_sigmask;
@@ -84,15 +84,16 @@ void DumpStackTrace(int fd, void *address) {
   int num_frames = backtrace(stack, MAX_STACK_FRAMES);
 
   // Find first frame to output.
-  int first_frame = 0;
+  int first_frame = 1;
   if (address != nullptr) {
-    for (int i = 0; i < num_frames; ++i) {
+    for (int i = 1; i < num_frames; ++i) {
       if (stack[i] == address) {
         first_frame = i;
         break;
       }
     }
   }
+
   // Output symbolic names for each stack frame.
   Symbolizer symbolizer;
   for (int i = first_frame; i < num_frames; ++i) {

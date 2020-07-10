@@ -65,6 +65,17 @@ cc_binary(
 )
 
 cc_binary(
+  name = "dbkeys",
+  srcs = ["dbkeys.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/file:textmap",
+    "//sling/db:dbclient",
+  ],
+)
+
+cc_binary(
   name = "templgen",
   srcs = ["templgen.cc"],
   deps = [
