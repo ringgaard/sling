@@ -344,10 +344,7 @@ bool Database::Next(Record *record, uint64 *iterator) {
   uint64 pos = Position(*iterator);
   for (;;) {
     // Check for valid shard.
-    if (shard >= readers_.size()) {
-      *iterator = -1;
-      return false;
-    }
+    if (shard >= readers_.size()) return false;
 
     // Flush writer before reading from the last shard.
     if (writer_ != nullptr && shard == CurrentShard()) {

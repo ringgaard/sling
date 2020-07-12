@@ -648,6 +648,7 @@ live5news.com,Q7948081,WCSC-TV,@Live5News
 livemint.com,Q2271133,Mint,@livemint
 liverpoolecho.co.uk,Q6658415,Liverpool Echo,@LivEchonews
 livescience.com,Q6654574,LiveScience,@LiveScience
+livingstondaily.com,Q6659641,Livingston County Daily Press & Argus,@LivingstonDaily
 local10.com,Q7954357,WPLG,@WPLGLocal10
 local12.com,Q14716868,WKRC-TV,@Local12
 local21news.com,Q7950357,WHP-TV,@CBS21NEWS
@@ -857,6 +858,7 @@ poconorecord.com,Q17022163,Pocono Record,@poconorecord
 politico.com,Q3109740,Politico,@politico,politico.eu
 politifact.com,Q3394318,PolitiFact.com,@PolitiFact
 popsci.com,Q773087,Popular Science,@PopSci
+portclintonnewsherald.com,Q56236888,News Herald,@pcnewsherald
 postandcourier.com,Q7757866,Post and Courier,@postandcourier
 postcrescent.com,Q7757849,The Post-Crescent,@PostCrescent
 post-gazette.com,Q3063794,Pittsburgh Post-Gazette,@pittsburghpg
@@ -1164,7 +1166,7 @@ tmz.com,Q2630118,TMZ,@TMZ
 today.com,Q130838,Today,@TODAYshow
 todayonline.com,Q477719,Today,@TODAYonline
 toledoblade.com,Q442288,The Blade,@toledonews
-tolonews.com,Q7670977,TOLOnews,@TOLOnews
+tolonews.com,Q7670977,TOLOnews
 tomshardware.com,Q575769,Tom's Hardware,@tomshardware
 tomwoods.com,Q2608419,Thomas Woods
 torontosun.com,Q2301245,Toronto Sun,@TheTorontoSun
@@ -1623,10 +1625,12 @@ ndr.de,Q201275,Norddeutscher Rundfunk,@ndr
 neues-deutschland.de,Q158547,Neues Deutschland,@ndaktuell
 nordkurier.de,Q19842504,Nordkurier,@Nordkurier
 nordschleswiger.dk,Q874582,Der Nordschleswiger,@nordschleswiger
+nrz.de,Q776079,Neue Ruhr Zeitung
 paz.de,Q1425047,Preußische Allgemeine Zeitung
 pnp.de,Q896978,Passauer Neue Presse,@pnp
 pz-news.de,Q1382514,Pforzheimer Zeitung,@pznews
 rheinpfalz.de,Q884463,Die Rheinpfalz,@rheinpfalz
+rnd.de,Q86223626,RND.de,@RND_de
 rp-online.de,Q33094,Rheinische Post,@rponline
 saechsische.de,Q2378692,Sächsische Zeitung,@saechsischeDE
 spiegel.de,Q131478,Der Spiegel,@derspiegel
@@ -1732,6 +1736,7 @@ ouest-france.fr,Q660769,Ouest-France,@OuestFrance
 republicain-lorrain.fr,Q3226748,Le Républicain Lorrain,@lerepu
 rfi.fr,Q19912,Radio France Internationale,@RFI
 sudouest.fr,Q2608774,Sud-Ouest,@sudouest
+varmatin.com,Q3554661,Var-Matin,@Var_Matin
 
 latribune.fr,Q1799197,La Tribune,@LaTribune
 marseille.latribune.fr,Q1799197,La Tribune
@@ -2159,7 +2164,7 @@ correio.rac.com.br,Q2997890,Correio Popular,@correiopontocom
 diariodepernambuco.com.br,Q3480197,Diário de Pernambuco,@DiarioPE
 em.com.br,Q3058830,Estado de Minas,@em_com
 estadao.com.br,Q1628345,O Estado de São Paulo,@Estadao
-folha.uol.com.br,Q1435379,Folha de S. Paulo,@folha
+folha.uol.com.br,Q1435379,Folha de S. Paulo,@folha,www1.folha.uol.com.br
 gauchazh.clicrbs.com.br,Q3575279,Zero Hora,@GauchaZH,zerohora.com
 gazetadopovo.com.br,Q10288580,Gazeta do Povo,@gazetadopovo
 jb.com.br,Q2537063,Jornal do Brasil,@JornaldoBrasil
