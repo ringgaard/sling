@@ -32,6 +32,9 @@ flags.define("--backupdir",
 
 flags.parse()
 
+# Intialize.
+news.init_cookies()
+
 # Read news feed.
 if flags.arg.daily:
   r = requests.get("http://downloads.newslookup.com/daily.xml")

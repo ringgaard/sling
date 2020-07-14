@@ -48,6 +48,7 @@ DEFINE_bool(follow, false, "Incrementally fetch new changes");
 DEFINE_int32(poll, 1000, "Poll interval (in ms) for incremental fetching");
 DEFINE_string(field, "", "Only display a single field from frame");
 DEFINE_bool(timestamp, false, "Output version as timestamp");
+DEFINE_bool(position, false, "Output file position");
 
 using namespace sling;
 using namespace sling::nlp;
@@ -167,6 +168,9 @@ void DisplayFile(const string &filename) {
     RecordDatabase db(filename, options);
     Record record;
     if (db.Lookup(FLAGS_key, &record)) {
+      // Optionally output position.
+      if (FLAGS_position) std::cout << "@" << record.position << " ";
+
       // Display record.
       DisplayRecord(record.key, record.version, record.value);
     }
@@ -179,6 +183,9 @@ void DisplayFile(const string &filename) {
 
       // Check for key match.
       if (!FLAGS_key.empty() && record.key != FLAGS_key) continue;
+
+      // Optionally output position.
+      if (FLAGS_position) std::cout << "@" << record.position << " ";
 
       // Display record.
       DisplayRecord(record.key, record.version, record.value);

@@ -199,10 +199,7 @@ class NewsSite:
 
 sites = {}
 
-def init():
-  # Load cookies.
-  init_cookies()
-
+def init_sites():
   # Load news site list.
   with open(flags.arg.newssites, "r") as f:
     for line in f.readlines():
@@ -241,6 +238,13 @@ def init():
           print("multiple news sites for domain", altdomains)
         else:
           sites[altdomain] = sites[domain]
+
+def init():
+  # Load cookies.
+  init_cookies()
+
+  # Initialize news sites.
+  init_sites()
 
 def trim_url(url):
   """Trim parts of news url that are not needed for uniqueness."""
