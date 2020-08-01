@@ -74,6 +74,7 @@ blocked_urls = [
   "myprivacy.dpgmedia.net/",
   "www.tribpub.com/gdpr/",
   "tolonews.com/fa/",
+  "www.theaustralian.com.au/subscribe/news/1",
 
   "pjmedia.com/instapundit/",
   "www.espn.com/espnradio/",
@@ -91,6 +92,7 @@ noignore_sites = set([
   "bit.ly",
   "buff.ly",
   "dlvr.it",
+  "hill.cm",
   "ift.tt",
   "ow.ly",
   "trib.al",
@@ -248,6 +250,9 @@ def init():
 
 def trim_url(url):
   """Trim parts of news url that are not needed for uniqueness."""
+  # Strip leading and trailing whitespace.
+  url = url.strip()
+
   # Remove URL fragment.
   h = url.find("#")
   if h != -1: url = url[:h]
@@ -301,6 +306,7 @@ def get_canonical_url(uri, page):
 
   # Discard if canonical url if it is just the front page.
   if prefix_pat.fullmatch(url) != None: return None
+  if url == "https://www.theaustralian.com.au/subscribe/news/1": return None
 
   # Discard if canonical URL is empty.
   if len(url.strip()) == 0: return None

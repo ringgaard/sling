@@ -48,6 +48,8 @@
   value: /lang/id
   value: /lang/it
   value: /lang/la
+  value: /lang/lt
+  value: /lang/ms
   value: /lang/nl
   value: /lang/no
   value: /lang/pl
@@ -55,6 +57,7 @@
   value: /lang/ro
   value: /lang/ru
   value: /lang/sh
+  value: /lang/sk
   value: /lang/sr
   value: /lang/sv
   value: /lang/uk
@@ -342,6 +345,34 @@
   ]
 }
 
+{=/lang/lt
+  :language :/lang/wikilang
+  name: "Lithuanian"
+  code: "lt"
+
+  /lang/wikilang/wiki_category: "Kategorija"
+  /lang/wikilang/wiki_image: "Vaizdas"
+  /lang/wikilang/wiki_template: "Šablonas"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
+}
+
+{=/lang/ms
+  :language :/lang/wikilang
+  name: "Malay"
+  code: "ms"
+
+  /lang/wikilang/wiki_category: "Kategori"
+  /lang/wikilang/wiki_image: "Fail"
+  /lang/wikilang/wiki_template: "Templat"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
+}
+
 {=/lang/nl
   :language :/lang/wikilang
   name: "Dutch"
@@ -434,6 +465,20 @@
   /lang/wikilang/wiki_category: "Kategorija"
   /lang/wikilang/wiki_image: "Datoteka"
   /lang/wikilang/wiki_template: "Šablon"
+
+  /lang/wikilang/stop_words: [
+    ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",
+  ]
+}
+
+{=/lang/sk
+  :language :/lang/wikilang
+  name: "Slovak"
+  code: "sk"
+
+  /lang/wikilang/wiki_category: "Kategória"
+  /lang/wikilang/wiki_image: "Súbor"
+  /lang/wikilang/wiki_template: "Šablóna"
 
   /lang/wikilang/stop_words: [
     ".", ",", "-", ":", ";", "(", ")", "``", "''", "'", "--", "/", "&",

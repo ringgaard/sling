@@ -330,6 +330,12 @@ france24.com http://www.france24.com/en/middle-east/rss
 france24.com http://www.france24.com/en/americas/rss
 france24.com http://www.france24.com/en/asia-pacific/rss
 
+# Globe Newswire
+globenewswire.com https://www.globenewswire.com/RssFeed/orgclass/1/feedTitle/GlobeNewswire%20-%20News%20about%20Public%20Companies
+globenewswire.com https://www.globenewswire.com/RssFeed/subjectcode/12-Dividend%20Reports%20And%20Estimates/feedTitle/GlobeNewswire%20-%20Dividend%20Reports%20And%20Estimates
+globenewswire.com https://www.globenewswire.com/RssFeed/subjectcode/13-Earnings%20Releases%20And%20Operating%20Results/feedTitle/GlobeNewswire%20-%20Earnings%20Releases%20And%20Operating%20Results
+globenewswire.com https://www.globenewswire.com/RssFeed/subjectcode/27-Mergers%20And%20Acquisitions/feedTitle/GlobeNewswire%20-%20Mergers%20And%20Acquisitions
+
 # The Guardian
 theguardian.com https://www.theguardian.com/international/rss
 theguardian.com https://www.theguardian.com/world/rss

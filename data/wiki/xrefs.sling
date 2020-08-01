@@ -1,12 +1,57 @@
-; Properties that are cross-referenced in knowledge base.
-[
-  P1059, ; CVR number
-  P7972, ; CVR person ID
-  P1278, ; Legal Entity Identifier
-  P1320, ; OpenCorporates ID
-  P2622, ; Companies House ID
-  P5297, ; Companies House officer ID
-  P5531, ; Central Index Key
-  P1297, ; IRS Employer Identification Number
-]
+{
+  ; Properties that are cross-referenced in knowledge base in priority order.
+  properties: [
+    P1059, ; CVR number
+    P7972, ; CVR person ID
+    P2814, ; CVR P-number
+    P2622, ; Companies House ID
+    P5297, ; Companies House officer ID
+    P1278, ; Legal Entity Identifier
+    P1320, ; OpenCorporates ID
+    P5531, ; Central Index Key
+    P1297, ; IRS Employer Identification Number
+  ]
+
+  ; Pre-resolved reference mappings for ambiguous references.
+  mappings: {
+    ; EMI Group Limited
+    P2622/00229231: Q63341202
+    P1320/gb/00229231: Q63341202
+
+    ; EMI Records Limited
+    P2622/00068172: Q55965569
+
+    ; Sony Music Entertainment UK Limited
+    P2622/01471066: Q56858960
+    P1278/549300LSDEH0HIYM1X50: Q56858960
+
+    ; Sony Music Entertainment Arista Records, Ltd.
+    P2622/01442233: Q61792050
+
+    ; Island Records Limited
+    P2622/00723336: Q59491306
+
+    ; Warner Bros. Records Limited
+    P2622/00920982: Q56526867
+
+    ; Virgin Enterprises Limited
+    P2622/01073929: Q64211565
+
+    ; EMI Music Publishing Ltd.
+    P2622/00594758: Q13218786
+
+    ; Northern Rock
+    P2622/03273685: Q1130757
+
+    ; NETS Denmark A/S
+    P1059/20016175: Q28888546
+    P1320/dk/20016175: Q28888546
+
+    ; Enigma / Post & Tele Museum
+    P1059/19286592: Q28226147
+
+    ; Aromas
+    P1320/fr/200071348: Q28723514
+  }
+}
 

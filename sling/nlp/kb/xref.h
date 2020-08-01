@@ -47,6 +47,7 @@ class XRef {
     const char *value;       // property value for identifier
     uint64 hash;             // hash code for identifier
     bool redirect;           // redirected identifiers have lower priority
+    bool fixed;              // identifier has predefined mapping
     bool visited;            // identifier has been added to cluster frame
 
     Identifier *chain;       // bucket chain for hash table

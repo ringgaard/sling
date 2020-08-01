@@ -67,6 +67,7 @@ while True:
 
   except KeyboardInterrupt as error:
     print("Stopped")
+    crawler.dumpstats()
     sys.exit()
 
   except:

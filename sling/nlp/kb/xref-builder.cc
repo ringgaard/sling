@@ -25,19 +25,41 @@ namespace nlp {
 class XRefBuilder : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
-    // Read xref property priority list.
+    // Read xref configuration.
     FileInputStream stream(task->GetInputFile("config"));
     InputParser parser(commons_, &stream);
-    Array properties = parser.Read().AsArray();
+    Frame config = parser.Read().AsFrame();
+    CHECK(config.valid());
+
+    // Get property priority list.
+    Array properties = config.Get("properties").AsArray();
     CHECK(properties.valid());
     for (int i = 0; i < properties.length(); ++i) {
       Frame property(commons_, properties.get(i));
       xref_.AddProperty(property);
     }
 
+    // Get pre-resolved reference mappings.
+    Frame mappings = config.GetFrame("mappings");
+    CHECK(mappings.valid());
+    for (const Slot &s : mappings) {
+      auto *ref =  xref_.GetIdentifier(commons_->FrameId(s.name), false);
+      CHECK(ref != nullptr);
+      ref->fixed = true;
+      auto *item =  xref_.GetIdentifier(commons_->FrameId(s.value), false);
+      CHECK(item != nullptr);
+
+      bool merged = xref_.Merge(ref, item);
+      if (!merged) {
+        LOG(WARNING) << "Mapping conflict between " << ref->ToString()
+                     << " and " << item->ToString();
+      }
+    }
+
     // Statistics.
     num_ids_ = task->GetCounter("ids");
     num_redirects_ = task->GetCounter("redirects");
+    num_skipped_ = task->GetCounter("skipped");
     num_conflicts_ = task->GetCounter("conflicts");
     num_property_ids_ = task->GetCounter("property_ids");
   }
@@ -118,9 +140,15 @@ class XRefBuilder : public task::FrameProcessor {
     } else {
       bool merged = xref_.Merge(anchor, id);
       if (!merged) {
-        LOG(WARNING) << "Merge conflict between " << anchor->ToString()
-                     << " and " << id->ToString();
-        num_conflicts_->Increment();
+        if (anchor->fixed || id->fixed) {
+          VLOG(1) << "Skipped merging of " << anchor->ToString()
+                  << " and " << id->ToString();
+          num_skipped_->Increment();
+        } else {
+          LOG(WARNING) << "Merge conflict between " << anchor->ToString()
+                       << " and " << id->ToString();
+          num_conflicts_->Increment();
+        }
       }
       return anchor;
     }
@@ -132,6 +160,7 @@ class XRefBuilder : public task::FrameProcessor {
   // Statistics.
   task::Counter *num_ids_ = nullptr;
   task::Counter *num_redirects_ = nullptr;
+  task::Counter *num_skipped_ = nullptr;
   task::Counter *num_conflicts_ = nullptr;
   task::Counter *num_property_ids_ = nullptr;
 

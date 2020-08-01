@@ -89,6 +89,7 @@ XRef::Identifier *XRef::GetIdentifier(const Property *type,
   id->value = value_arena_.dup(value.data(), value.size());
   id->hash = hash;
   id->redirect = redirect;
+  id->fixed = false;
   id->visited = false;
   id->chain = nullptr;
   id->ring = id;
