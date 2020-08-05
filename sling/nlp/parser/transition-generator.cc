@@ -132,16 +132,13 @@ void Generate(const Document &document,
           Handle type = frame.GetHandle(Handle::isa());
           callback(ParserAction::Evoke(length, type));
           attention.add(h);
-          index = 0;
 
           // Emit deferred CONNECTs.
           for (auto it = deferred.begin(); it != deferred.end(); ++it) {
             if (it->target == h) {
               int source = attention.index(it->source);
               DCHECK(source != -1);
-              callback(ParserAction::Connect(source, it->role, index));
-              attention.move(source, 0);
-              index = attention.index(h);
+              callback(ParserAction::Connect(source, it->role, 0));
               deferred.erase(it--);
             }
           }
@@ -157,18 +154,14 @@ void Generate(const Document &document,
             int target = attention.index(value);
             if (target != -1) {
               // Emit CONNECT for value already in the attention buffer.
-              callback(ParserAction::Connect(index, role, target));
-              attention.move(index, 0);
-              index = 0;
+              callback(ParserAction::Connect(0, role, target));
             } else if (IsAnonymousFrame(store, value)) {
               // Defer CONNECT for anonymous frame that is not in the
               // attention buffer.
               deferred.emplace_back(h, role, value);
             } else {
               // Emit ASSIGN for other values.
-              callback(ParserAction::Assign(index, role, value));
-              attention.move(index, 0);
-              index = 0;
+              callback(ParserAction::Assign(0, role, value));
             }
           }
         }

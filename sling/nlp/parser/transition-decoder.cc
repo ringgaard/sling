@@ -24,7 +24,7 @@ namespace nlp {
 using namespace sling::myelin;
 
 // Transition decoder version number.
-static const int DECODER_VERSION = 0;
+static const int DECODER_VERSION = 1;
 
 TransitionDecoder::~TransitionDecoder() {
   for (auto *d : delegates_) delete d;
