@@ -954,9 +954,9 @@ void StandardTokenization::Process(TokenizerText *t) {
       int j = i + 1;
       while (j < t->length() && t->is(j, CHAR_DIGIT)) j++;
       if (t->at(j) == '.' &&
-          (t->at(j + 1) == 0
-           || t->at(j + 1) == '-'
-           || t->is(j + 1, CHAR_SPACE | CHAR_PUNCT)) &&
+          (t->at(j + 1) == 0 ||
+           t->at(j + 1) == '-' ||
+           t->is(j + 1, CHAR_SPACE | CHAR_PUNCT)) &&
           j - i < 3) {
         // Mark ordinal token.
         t->set(i, TOKEN_START);
@@ -965,6 +965,7 @@ void StandardTokenization::Process(TokenizerText *t) {
         continue;
       }
     }
+
     // Check for other number tokens. Numbers start with a digit or a number
     // punctuation start character (like . , + -) followed by a digit.
     // The rest of the number token consists of digits, letters, and number

@@ -943,7 +943,6 @@ news.mongabay.com,Q1944430,Mongabay,@mongabay
 news.nationalgeographic.com,Q5973845,National Geographic,@NatGeoMag
 newsobserver.com,Q7753904,News and Observer,@newsobserver
 news-press.com,Q7753897,The News-Press,@TheNewsPress
-newsobserver.com,Q7753904,News and Observer,@newsobserver
 newson6.com,Q6335295,KOTV-DT,@NewsOn6
 news.radio-online.com,Q69059090,RADIO ONLINE
 news.softpedia.com,Q1440347,Softpedia

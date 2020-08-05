@@ -29,8 +29,8 @@ namespace nlp {
 struct ParserAction {
   // Transition type.
   enum Type : uint8 {
-    // Skips the next input token. Only valid when not at the end of the input
-    // buffer.
+    // Moves to the next input token. Only valid when not at the end of the
+    // input buffer.
     SHIFT = 0,
 
     // Evokes frame of with type 'type' from the next 'length' tokens in the
@@ -45,7 +45,7 @@ struct ParserAction {
     // source frame become the new center of attention.
     CONNECT = 4,
 
-    // Adds slot to frame 'source' with name 'role' and value 'type' and moves
+    // Adds slot to frame 'source' with name 'role' and value 'label' and moves
     // frame to the center of attention.
     ASSIGN = 5,
 
@@ -102,36 +102,66 @@ struct ParserAction {
     }
   }
 
-  // Checks for equality with 'other'.
+  // Check for equality with 'other'.
   inline bool operator ==(const ParserAction &other) const {
     return memcmp(this, &other, sizeof(struct ParserAction)) == 0;
   }
 
-  // Checks for inequality with 'other'.
+  // Check for inequality with 'other'.
   inline bool operator !=(const ParserAction &other) const {
     return !(*this == other);
   }
 
-  // Returns name of action type.
+  // Return name of action type.
   static string TypeName(Type type);
 
-  // Returns the type name of the action.
+  // Return the type name of the action.
   string TypeName() const {
     return TypeName(type);
   }
 
-  // Returns a human-readable representation of the action.
+  // Return a human-readable representation of the action.
   string ToString(Store *store) const;
 
-  // Returns a SHIFT action.
+  // Return a MARK action.
+  static ParserAction Mark() {
+    return ParserAction(ParserAction::MARK);
+  }
+
+  // Return a SHIFT action.
   static ParserAction Shift() {
     return ParserAction(ParserAction::SHIFT);
   }
 
-  // Returns an EVOKE action.
+  // Return an EVOKE action.
   static ParserAction Evoke(uint8 length, Handle type) {
     ParserAction action(ParserAction::EVOKE, length);
     action.label = type;
+    return action;
+  }
+
+  // Returns a REFER action.
+  static ParserAction Refer(uint8 length, uint8 target) {
+    ParserAction action(ParserAction::REFER, length);
+    action.target = target;
+    return action;
+  }
+
+  // Return a CONNECT action.
+  static ParserAction Connect(int source, Handle role, int target) {
+    ParserAction action(ParserAction::CONNECT);
+    action.source = source;
+    action.role = role;
+    action.target = target;
+    return action;
+  }
+
+  // Return an ASSIGN action.
+  static ParserAction Assign(int frame, Handle role, Handle value) {
+    ParserAction action(ParserAction::ASSIGN);
+    action.source = frame;
+    action.role = role;
+    action.label = value;
     return action;
   }
 } __attribute__ ((packed));

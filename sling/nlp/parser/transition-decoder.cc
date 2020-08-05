@@ -23,6 +23,9 @@ namespace nlp {
 
 using namespace sling::myelin;
 
+// Transition decoder version number.
+static const int DECODER_VERSION = 0;
+
 TransitionDecoder::~TransitionDecoder() {
   for (auto *d : delegates_) delete d;
 }
@@ -150,6 +153,7 @@ void TransitionDecoder::Build(Flow *flow,  Flow::Variable *encodings,
 
 void TransitionDecoder::Save(Flow *flow, Builder *spec) {
   spec->Set("type", "transition");
+  spec->Set("version", DECODER_VERSION);
   spec->Set("frame_limit", frame_limit_);
   spec->Set("sentence_reset", sentence_reset_);
 
@@ -170,6 +174,11 @@ void TransitionDecoder::Load(Flow *flow, const Frame &spec) {
   // Initialize decoder.
   frame_limit_ = spec.GetInt("frame_limit", frame_limit_);
   sentence_reset_ = spec.GetBool("sentence_reset", sentence_reset_);
+
+  // Check compatibility.
+  int version = spec.GetInt("version", 0);
+  CHECK_EQ(version, DECODER_VERSION)
+      << "Unsupported transition decoder version";
 
   // Initialize roles.
   Array roles = spec.Get("roles").AsArray();
