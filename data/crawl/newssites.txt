@@ -21,6 +21,7 @@ actionnewsjax.com,Q7946863,WFOX-TV,@ActionNewsJax,fox30jax.com
 adelaidenow.com.au,Q1519246,The Advertiser,@theTiser
 adn.com,Q489214,Alaska Dispatch News,@adndotcom
 advisorperspectives.com,Q68900473,Advisor Perspectives,@AdvPerspectives
+advocate-news.com,Q55665526,Fort Bragg Advocate-News,@FBAdvocateNews
 adweek.com,Q1134747,Adweek,@adweek
 afp.com,Q40464,Agence France-Presse,@AFP
 afr.com,Q1809545,The Australian Financial Review,@FinancialReview
@@ -107,7 +108,7 @@ berkshireeagle.com,Q7716555,The Berkshire Eagle,@BerkshireEagle
 bgr.com,Q4952075,Boy Genius Report,@BGR
 bigleaguepolitics.com,Q48966934,Big League Politics,@bigleaguepol
 bigstory.ap.org,Q40469,Associated Press
-billboard.com,Q485240,Billboard,@billboard
+billboard.com,Q485240,Billboard,@billboard,blbrd.cm
 birminghammail.co.uk,Q4916749,Birmingham Mail,@birmingham_live
 bitcoinist.com,Q68918228,Bitcoinist,@bitcoinist
 bizjournals.com,Q2842874,American City Business Journals,@bizjournals
@@ -125,6 +126,7 @@ bnn-news.com,Q87807006,Baltic News Network,@BNNNEWSCOM
 bnonews.com,Q975695,BNO News,@BNONews
 bordermail.com.au,Q7719396,The Border Mail,@bordermail
 borneobulletin.com.bn,Q4946070,Borneo Bulletin,@borneo_bulletin
+bossip.com,Q4947602,Bossip,@Bossip
 boston25news.com,Q7949607,WFXT,@boston25
 bostonglobe.com,Q824451,Boston Globe,@BostonGlobe,bos.gl
 boston.com,Q4947705,Boston.com,@BostonDotCom
@@ -163,6 +165,7 @@ businessinsider.in,Q286707,Business Insider,@BiIndia
 businessinsider.com.au,Q286707,Business Insider,@BIAUS
 businessinsider.co.za,Q286707,Business Insider,@BISouthAfrica
 businessinsider.nl,Q286707,Business Insider,@BINederland
+business-live.co.uk,Q98104278,Business Live UK,@businesslive
 businesslive.co.za,Q5001709,Business Day,@BusinessLiveSA
 businesspost.ie,Q3522922,The Sunday Business Post,@sundaybusiness
 businesstimes.com.sg,Q2928751,Business Times,@BusinessTimes
@@ -192,6 +195,7 @@ cbc.ca,Q461761,Canadian Broadcasting Corporation,@cbc
 cebudailynews.inquirer.net,Q45185044,Cebu Daily News,@cebudailynews
 centralmaine.com,Q6389544,Kennebec Journal,@KJ_Online
 centralwesterndaily.com.au,Q5062031,Central Western Daily,@CWD_Orange
+centredaily.com,Q5062255,Centre Daily Times,@centredaily
 channel3000.com,Q14714634,WISC-TV,@WISCTV_News3
 channel4.com,Q501070,Channel 4,@Channel4
 channelnewsasia.com,Q40238,CNA,@channelnewsasia
@@ -248,6 +252,7 @@ cnsnews.com,Q5197758,Cybercast News Service
 cochranetimespost.ca,Q5139447,Cochrane Times-Post,@CTimesPost
 coindesk.com,Q18348227,CoinDesk,@coindesk
 cointelegraph.com,Q87170395,Cointelegraph,@Cointelegraph
+colombiareports.com,Q5147884,Colombia Reports,@colombiareports
 columbian.com,Q3520345,The Columbian,@thecolumbian
 columbiamissourian.com,Q5149772,Columbia Missourian,@CoMissourian
 commercialappeal.com,Q7726978,The Commercial Appeal,@memphisnews
@@ -263,6 +268,7 @@ connecticut.news12.com,Q17071643,News 12 Networks,@News12CT
 connexionfrance.com,Q7727374,The Connexion,@ConnexionFrance
 conservativereview.com,Q19879161,Conservative review,@CR
 corkindependent.com,Q2997390,Cork Independent,@corkindo
+cosmopolitan.com,Q333644,Cosmopolitan,@Cosmopolitan
 courant.com,Q1587159,Hartford Courant,@hartfordcourant
 couriermail.com.au,Q2095955,The Courier-Mail,@couriermail
 coventrytelegraph.net,Q5179118,Coventry Telegraph,@live_coventry
@@ -346,6 +352,7 @@ desmoinesregister.com,Q3917258,The Des Moines Register,@DMRegister
 denverpost.com,Q2668654,Denver Post,@denverpost
 descrier.co.uk,Q68933597,Descrier
 deseret.com,Q1056889,Deseret News,@DeseretNews,deseretnews.com
+dhakatribune.com,Q17064633,Dhaka Tribune,@DhakaTribune
 digitaljournal.com,Q5275764,DigitalJournal.com,@digitaljournal
 digitalspy.com,Q1111380,Digital Spy,@digitalspy
 digitaltrends.com,Q5276019,Digital Trends,@DigitalTrends
@@ -383,6 +390,7 @@ eetimes.com,Q5322946,EE Times,@eetimes
 eff.org,Q624023,Electronic Frontier Foundation,@EFF
 ekathimerini.com,Q144999,Kathimerini,@ekathimerini
 elizabethton.com,Q55671036,Elizabethton Star,@ElizStarNews
+elle.com,Q154020,Elle,@ELLEmagazine
 elpasotimes.com,Q3720972,El Paso Times,@elpasotimes
 emirates247.com,Q5372553,Emirates 24/7,@Emirates247
 en.alalam.ir,Q32026,Al-Alam News Network
@@ -426,6 +434,7 @@ eveningtelegraph.co.uk,Q5416639,Evening Telegraph,@Evening_Tele
 ew.com,Q275033,Entertainment Weekly,@ew
 eweek.com,Q4037850,EWeek,@eWEEKNews
 ewn.co.za,Q22908304,Eyewitness News,@ewnupdates
+examiner.com.au,Q7732737,The Examiner,@ExaminerOnline
 express.co.uk,Q610190,Daily Express,@Daily_Express
 expressandstar.com,Q5421650,Express & Star,@ExpressandStar
 expressnews.com,Q3946733,San Antonio Express-News,@ExpressNews
@@ -602,6 +611,7 @@ irishtimes.com,Q1134208,The Irish Times,@IrishTime
 irna.ir,Q649695,Islamic Republic News Agency,@IrnaEnglish,en.irna.ir
 ishtartv.com,Q2208702,Ishtar TV
 insightcrime.org,Q16997015,InSight Crime,@InSightCrime
+islandpacket.com,Q7742679,The Island Packet,@islandpacket
 israel21c.org,Q65069771,ISRAEL21c,@ISRAEL21C
 israelnationalnews.com,Q716861,Arutz Sheva,@ArutzSheva_En
 israeltoday.co.il,Q1632726,Israel Hayom,@israeltoday
@@ -844,6 +854,7 @@ miamiherald.com,Q1706651,Miami Herald,@MiamiHerald
 miaminewtimes.com,Q6827370,Miami New Times,@MiamiNewTimes
 michellemalkin.com,Q454388,Michelle Malkin
 michigandaily.com,Q7751250,The Michigan Daily,@michigandaily
+middleeasteye.net,Q18085829,Middle East Eye,@MiddleEastEye
 middleeastmonitor.com,Q19896204,Middle East Monitor,@MiddleEastMnt
 middletownpress.com,Q29641526,The Middletown Press,@Middletownpress
 military.com,Q6851947,Military.com,@Militarydotcom
@@ -908,6 +919,7 @@ newindianexpress.com,Q1955025,The New Indian Express,@NewIndianXpress
 newjersey.news12.com,Q17071643,News 12 Networks,@News12NJ
 newrepublic.com,Q1329873,The New Republic,@newrepublic
 news18.com,Q1023924,CNN-News18,@CNNnews18
+news12.com,Q17071643,News 12 Networks,@News12
 news24.com,Q2909223,News24,@news24,fin24.com
 news3lv.com,Q14705168,KSNV,@News3LV
 news4jax.com,Q7951457,WJXT,@wjxt4
@@ -946,6 +958,7 @@ news-press.com,Q7753897,The News-Press,@TheNewsPress
 newson6.com,Q6335295,KOTV-DT,@NewsOn6
 news.radio-online.com,Q69059090,RADIO ONLINE
 news.softpedia.com,Q1440347,Softpedia
+newsshopper.co.uk,Q16861578,News Shopper,@NewsShopper
 newstatesman.com,Q1566255,New Statesman,@StatesmanWorld
 newstimes.com,Q7753901,The News-Times,@NewsTimes
 news.trust.org,Q7795895,Thomson Reuters Foundation,@TRF_Stories
@@ -1099,6 +1112,7 @@ reviewjournal.com,Q3632498,Las Vegas Review-Journal,@reviewjournal
 rfa.org,Q40322,Radio Free Asia,@RadioFreeAsia
 rferl.org,Q485500,Radio Free Europe/Radio Liberty,@RFERL
 rgj.com,Q7313391,Reno Gazette-Journal,@rgj
+richmond-news.com,Q57525653,Richmond News,@TheRichmondNews
 riotimesonline.com,Q7760823,The Rio Times,@TheRioTimes
 riverfronttimes.com,Q7761036,The Riverfront Times,@RiverfrontTimes
 rnz.co.nz,Q1626518,Radio New Zealand,@rnz_news
@@ -1414,6 +1428,7 @@ triblive.com,Q3044967,Pittsburgh Tribune-Review,@TribLIVE
 tri-cityherald.com,Q7839676,Tri-City Herald,@TriCityHerald
 tribuneindia.com,Q1922367,The Tribune,@thetribunechd
 trinidadexpress.com,Q7842386,Trinidad Express Newspapers,@expressupdates
+trtworld.com,Q6063045,TRT World,@trtworld
 tucson.com,Q1982939,Arizona Daily Star,@TucsonStar
 tucsonnewsnow.com,Q6334982,KOLD-TV,@KOLDNews,TucsonNewsNow.com
 tucsonweekly.com,Q7851177,Tucson Weekly,@tucsonweekly
@@ -1522,7 +1537,7 @@ westmeathexaminer.ie,Q7989086,Westmeath Examiner,@WHExaminer
 westport-news.com,Q56236421,Westport News,@wptnews
 wfaa.com,Q3044445,WFAA,@wfaa
 wfft.com,Q7949273,WFFT-TV,@FOX55FortWayne
-wflx.com,Q7949376,WFLX,@FOX29WFLX
+wflx.com,Q7949376,WFLX,@FOX29WFLX,southfloridaweekend.com
 wfmj.com,Q3564673,WFMJ-TV,@21WFMJ
 wfmz.com,Q7949410,WFMZ-TV,@69News
 wfpl.org,Q7949458,WFPL,@WFPLNews
@@ -1544,6 +1559,7 @@ whsv.com,Q55279,WHSV-TV,@WHSVnews
 wibw.com,Q7950582,WIBW-TV,@wibw
 wicz.com,Q7950612,WICZ-TV,@wicztv
 wifr.com,Q7950652,WIFR-LD,@23WIFR
+willitsnews.com,Q54958774,Willits News,@TheWillitsNews
 wilsoncountynews.com,Q55671143,Wilson County News,@wcnonline
 wilx.com,Q7950736,WILX-TV,@wilxTV
 windsorstar.com,Q3569304,Windsor Star,@TheWindsorStar
@@ -1558,6 +1574,7 @@ witf.org,Q7950956,WITF-TV,@witfnews
 witn.com,Q7950968,WITN-TV,@WITN
 wivb.com,Q7950987,WIVB-TV
 wjactv.com,Q3310314,WJAC-TV,@WJACTV
+wjfw.com,Q7951174,WJFW-TV,@WJFW12
 wjhg.com,Q7951183,WJHG-TV,@WJHG_TV
 wkbw.com,Q3564713,WKBW-TV,@WKBW
 wkow.com,Q7951834,WKOW,@WKOW
@@ -1576,6 +1593,7 @@ wmur.com,Q7953134,WMUR-TV
 wnct.com,Q7953301,WNCT-TV
 wnd.com,Q3569943,WorldNetDaily,@worldnetdaily
 wndu.com,Q7953321,WNDU-TV,@WNDU
+wnky.com,Q7953483,WNKY,@wnkytv
 wnyt.com,Q7953706,WNYT,@WNYT
 wogx.com,Q7953825,WOGX,@WOGXFOX51
 wokv.com,Q14686562,WOKV,@WOKVNews
@@ -1744,6 +1762,7 @@ fox56.com,Q3564757,WOLF-TV,@FOX56WOLF
 fox5atlanta.com,Q7946400,WAGA-TV,@FOX5Atlanta
 fox5dc.com,Q7956433,WTTG,@fox5dc
 fox5ny.com,Q1540364,WNYW,@fox5ny
+fox6now.com,Q7950963,WITI,@fox6now
 fox5vegas.com,Q6340338,KVVU-TV,@fox5vegas
 fox7austin.com,Q6338498,KTBC,@fox7austin,myfoxaustin.com
 fox8.com,Q3564702,WJW,@fox8news
@@ -2038,6 +2057,7 @@ lexpansion.lexpress.fr,Q3203380,L'Expansion,@lexpansion
 lexpress.fr,Q770596,L'Express,@LEXPRESS
 lindependant.fr,Q2269524,L'Indépendant,@lindependant
 lopinion.fr,Q14940658,L'Opinion,@lopinion_fr
+lorientlejour.com,Q1788906,L'Orient-Le Jour,@LOrientLeJour
 madame.lefigaro.fr,Q3275273,Madame Figaro,@Madamefigaro
 mediapart.fr,Q619342,Mediapart,@mediapart
 midilibre.fr,Q1465340,Midi Libre,@Midilibre
@@ -2350,7 +2370,9 @@ vita.it,Q295496,Vita,@VITAnonprofit
 corrierealpi.gelocal.it,Q2997969,Corriere delle Alpi,@CorriereAlpi
 gazzettadimantova.gelocal.it,Q3099813,La Gazzetta di Mantova,@gazzettamantova
 gazzettadireggio.gelocal.it,Q3099811,Gazzetta di Reggio,@gazzettaReggioE
+gazzettadimodena.gelocal.it,Q3346455,Gazzetta di Modena,@gazzettamodena
 iltirreno.gelocal.it,Q3148477,Il Tirreno,@iltirreno
+laprovinciapavese.gelocal.it,Q3212020,La Provincia Pavese,@provinciapavese
 mattinopadova.gelocal.it,Q3148462,Il Mattino di Padova,@mattinodipadova
 messaggeroveneto.gelocal.it,Q1092909,Messaggero Veneto – Giornale del Friuli,@messveneto
 nuovavenezia.gelocal.it,Q3211278,La Nuova Venezia,@nuova_venezia

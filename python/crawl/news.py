@@ -93,6 +93,7 @@ noignore_sites = set([
   "buff.ly",
   "dlvr.it",
   "hill.cm",
+  "hrld.us",
   "ift.tt",
   "ow.ly",
   "trib.al",
@@ -132,6 +133,7 @@ default_headers = {
   "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " \
                 "(KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36",
   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "*",
 }
 
 curl_headers = {
@@ -146,15 +148,15 @@ http_site_headers = {
   "bloomberg.com": gbot_headers,
   "engadget.com": curl_headers,
   "forbes.com": curl_headers,
-  "usnews.com": {
-    "User-Agent": "Mozilla/5.0",
-    "Cookie": "gdpr_agreed=4;usprivacy=1YNY",
-  },
   "news.yahoo.com": curl_headers,
   "npr.org": {
     "Cookie": "trackingChoice=true;choiceVersion=1"
   },
   "techcrunch.com": curl_headers,
+  "usnews.com": {
+    "User-Agent": "Mozilla/5.0",
+    "Cookie": "gdpr_agreed=4;usprivacy=1YNY",
+  },
   "volkskrant.nl": curl_headers,
   "washingtonpost.com":  {
     "Cookie": "wp_gdpr=1|1;wp_devicetype=0;wp_country=US"
