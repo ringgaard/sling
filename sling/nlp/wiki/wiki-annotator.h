@@ -143,7 +143,7 @@ class WikiTemplateRepository {
   // Intialize repository from configuration.
   void Init(WikiLinkResolver *resolver, const Frame &frame);
 
-  // Look up macro processor for temaplate name .
+  // Look up macro processor for template name.
   WikiMacro *Lookup(Text name);
 
  private:

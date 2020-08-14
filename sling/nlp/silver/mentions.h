@@ -107,15 +107,12 @@ class SpanPopulator {
 class SpanImporter {
  public:
   // Initialize span importer.
-  void Init(Store *store, bool detailed);
+  void Init(Store *store);
 
   // Import spans from document.
   void Annotate(const PhraseTable *aliases, SpanChart *chart);
 
  private:
-  // Detailed annotations.
-  bool detailed_ = true;
-
   // Symbols.
   Names names_;
   Name n_time_{names_, "/w/time"};
@@ -217,8 +214,16 @@ class PersonNameAnnotator {
   // Check if span covers golden annotation.
   bool Covered(SpanChart *chart, int begin, int end);
 
+  // Check if name token is blacklisted.
+  static bool Blacklisted(const Token &token) {
+    return blacklist.count(token.word()) > 0;
+  }
+
   // Notability particles.
   static std::unordered_set<string> particles;
+
+  // Blacklisted names.
+  static std::unordered_set<string> blacklist;
 };
 
 // Score annotated spans based on case patterns. Adds a penalty if a span starts
@@ -307,7 +312,7 @@ class NumberScaleAnnotator {
 class MeasureAnnotator {
  public:
   // Initialize measure annotator.
-  void Init(Store *store, bool detailed);
+  void Init(Store *store);
 
   // Annotate measure spans.
   void Annotate(const PhraseTable *aliases, SpanChart *chart);
@@ -323,9 +328,6 @@ class MeasureAnnotator {
   // Set of types for units.
   HandleSet units_;
 
-  // Detailed annotations.
-  bool detailed_ = true;
-
   // Symbols.
   Names names_;
   Name n_instance_of_{names_, "P31"};
@@ -340,7 +342,7 @@ class MeasureAnnotator {
 class DateAnnotator {
  public:
   // Initialize date annotator.
-  void Init(Store *store, bool detailed);
+  void Init(Store *store);
 
   // Annotate date spans.
   void Annotate(const PhraseTable *aliases, SpanChart *chart);
@@ -362,9 +364,6 @@ class DateAnnotator {
 
   // Calendar for date computations.
   Calendar calendar_;
-
-  // Detailed annotations.
-  bool detailed_ = true;
 
   // Symbols.
   Names names_;
@@ -416,7 +415,6 @@ class SpanAnnotator {
     const PhraseTable *aliases = nullptr;
 
     bool resolve = false;  // resolve spans to entities in knowledge base
-    bool detailed = true;  // annotate frames attributes
   };
 
   // Initialize annotator.
@@ -442,9 +440,6 @@ class SpanAnnotator {
 
   // Resolve spans to entities in the knowledge base.
   bool resolve_ = false;
-
-  // Detailed annotations.
-  bool detailed_ = true;
 
   // Entity resolver.
   EntityResolver resolver_;

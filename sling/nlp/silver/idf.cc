@@ -16,7 +16,6 @@
 
 #include <math.h>
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -53,6 +52,9 @@ class VocabularyMapper : public DocumentProcessor {
       num_short_tokens_ = task->GetCounter("short_tokens");
     }
 
+    // Skip first paragraph.
+    task->Fetch("skip_intro", &skip_intro_);
+
     // Only extract lowercase words.
     task->Fetch("only_lowercase", &only_lowercase_);
     if (only_lowercase_) {
@@ -73,7 +75,12 @@ class VocabularyMapper : public DocumentProcessor {
 
     // Collect fingerprints for all the words in the document.
     std::unordered_set<uint64> fingerprints;
+    int paragraph = 0;
     for (const Token &token : document.tokens()) {
+      // Skip first paragraph if requested.
+      if (token.brk() >= PARAGRAPH_BREAK) paragraph++;
+      if (skip_intro_ && paragraph == 0) continue;
+
       // Get fingerprint for token.
       uint64 fp = Fingerprinter:: Fingerprint(token.word(), normalization_);
 
@@ -116,6 +123,9 @@ class VocabularyMapper : public DocumentProcessor {
   // Only extract lowercase words.
   bool only_lowercase_ = false;
   Counter *num_discarded_tokens_ = nullptr;
+
+  // Skip first paragraph.
+  bool skip_intro_ = false;
 
   // Counter for aggregating the total number of documents. This is used in the
   // reducer for computing IDF.
@@ -201,7 +211,7 @@ class IDFTableBuilder : public SumReducer {
     uint64 Hash() const override { return fingerprint; }
 
     uint64 fingerprint;      // word fingerprint
-    uint64 count;            // number of document containing word
+    uint64 count;            // number of documents containing word
     float idf = 0.0;         // inverse document frequency
   };
 

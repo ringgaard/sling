@@ -93,8 +93,7 @@ bool SpanPopulator::Discard(const Token &token) const {
   return stop_words_.count(token.Fingerprint()) > 0;
 }
 
-void SpanImporter::Init(Store *store, bool detailed) {
-  detailed_ = detailed;
+void SpanImporter::Init(Store *store) {
   CHECK(names_.Bind(store));
 }
 
@@ -122,7 +121,7 @@ void SpanImporter::Annotate(const PhraseTable *aliases, SpanChart *chart) {
     if (evoked.IsA(n_time_)) flags |= SPAN_DATE;
     if (evoked.IsA(n_quantity_)) flags |= SPAN_MEASURE;
     if (evoked.IsA(n_geo_)) flags |= SPAN_GEO;
-    if (!detailed_ && flags != 0) {
+    if (flags != 0) {
       // Only output simple frame with type.
       Builder b(document->store());
       if (flags & SPAN_DATE) b.AddIsA(n_time_);
@@ -282,6 +281,7 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q202444",    SPAN_GIVEN_NAME},       // given name
     {"Q19838177",  SPAN_SUFFIX},           // suffix for person name
     {"Q215627",    SPAN_PERSON},           // person
+    {"Q50386450",  SPAN_ART},              // operatic character
     {"Q15632617",  SPAN_PERSON},           // fictional human
     {"Q12737077",  SPAN_PREDICATE},        // occupation
     {"Q4164871",   SPAN_PREDICATE},        // position
@@ -293,11 +293,14 @@ void SpanTaxonomy::Init(Store *store) {
     {"Q5398426",   SPAN_ART},              // television series (brand but art)
     {"Q167270",    0},                     // trademark
     {"Q215380",    SPAN_ART},              // band
+    {"Q482994",    SPAN_ART},              // album
+    {"Q134556",    SPAN_ART},              // single
     {"Q2031291",   SPAN_ART},              // release
     {"Q17537576",  SPAN_ART},              // creative work
     {"Q47461344",  SPAN_ART},              // written work
     {"Q838948",    SPAN_ART},              // work of art
     {"Q3331189",   SPAN_ART},              // version, edition, or translation
+
     {nullptr, 0},
   };
 
@@ -393,6 +396,10 @@ std::unordered_set<string> PersonNameAnnotator::particles = {
   "de", "du", "di", "dos", "von", "van", "bin", "ibn",
 };
 
+std::unordered_set<string> PersonNameAnnotator::blacklist = {
+  "General", "Sir",
+};
+
 void PersonNameAnnotator::Annotate(SpanChart *chart) {
   // Mark initials and dashes.
   int size = chart->size();
@@ -416,6 +423,7 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
     // Parse given name(s).
     int given_names = 0;
     while (e < size && chart->item(e).is(SPAN_GIVEN_NAME)) {
+      if (Blacklisted(chart->token(e))) break;
       given_names++;
       e++;
     }
@@ -460,6 +468,7 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
 
     // Parse family name(s).
     while (e < size && chart->item(e).is(SPAN_FAMILY_NAME)) {
+      if (Blacklisted(chart->token(e))) break;
       family_names++;
       e++;
     }
@@ -773,7 +782,7 @@ void NumberScaleAnnotator::Annotate(const PhraseTable *aliases,
   }
 }
 
-void MeasureAnnotator::Init(Store *store, bool detailed) {
+void MeasureAnnotator::Init(Store *store) {
   static const char *unit_types[] = {
     "Q10387685",   // unit of density
     "Q10387689",   // unit of power
@@ -792,7 +801,6 @@ void MeasureAnnotator::Init(Store *store, bool detailed) {
     nullptr,
   };
 
-  detailed_ = detailed;
   CHECK(names_.Bind(store));
   for (const char **type = unit_types; *type != nullptr; ++type) {
     units_.insert(store->Lookup(*type));
@@ -898,20 +906,17 @@ void MeasureAnnotator::AddQuantity(SpanChart *chart, int begin, int end,
   Store *store = chart->document()->store();
   Builder builder(store);
   builder.AddIsA(n_quantity_);
-  if (detailed_) {
-    builder.Add(n_amount_, amount);
-    builder.Add(n_unit_, unit);
-  }
+  builder.Add(n_amount_, amount);
+  builder.Add(n_unit_, unit);
   Handle h = builder.Create().handle();
 
   // Add quantity annotation to chart.
   chart->Add(begin + chart->begin(), end + chart->begin(), h, SPAN_MEASURE);
 }
 
-void DateAnnotator::Init(Store *store, bool detailed) {
+void DateAnnotator::Init(Store *store) {
   CHECK(names_.Bind(store));
   calendar_.Init(store);
-  detailed_ = detailed;
 }
 
 void DateAnnotator::AddDate(SpanChart *chart, int begin, int end,
@@ -920,9 +925,7 @@ void DateAnnotator::AddDate(SpanChart *chart, int begin, int end,
   Store *store = chart->document()->store();
   Builder builder(store);
   builder.AddIsA(n_time_);
-  if (detailed_) {
-    builder.AddIs(date.AsHandle(store));
-  }
+  builder.AddIs(date.AsHandle(store));
   Handle h = builder.Create().handle();
 
   // Add date annotation to chart.
@@ -1237,14 +1240,13 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
   }
 
   // Initialize annotators.
-  detailed_ = resources.detailed;
-  importer_.Init(commons, detailed_);
+  importer_.Init(commons);
   taxonomy_.Init(commons);
   numbers_.Init(commons);
   spelled_.Init(commons);
   scales_.Init(commons);
-  measures_.Init(commons, detailed_);
-  dates_.Init(commons, detailed_);
+  measures_.Init(commons);
+  dates_.Init(commons);
   intro_.Init(commons);
   abbreviated_.Init();
 
@@ -1334,9 +1336,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
           // Output stand-alone quantity annotation.
           Builder b(store);
           b.AddIsA(n_quantity_);
-          if (detailed_) {
-            b.Add(n_amount_, item.aux);
-          }
+          b.Add(n_amount_, item.aux);
           span->Evoke(b.Create());
           resolve_span = false;
         }
@@ -1453,7 +1453,6 @@ class MentionAnnotator : public Annotator {
     SpanAnnotator::Resources resources;
     resources.dictionary = task->GetInputFile("dictionary");
     resources.resolve = task->Get("resolve", false);
-    resources.detailed = task->Get("detailed", true);
     resources.language = task->Get("language", "en");
 
     string alias_file = task->GetInputFile("aliases");

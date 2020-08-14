@@ -316,9 +316,9 @@ class AliasReducer : public task::Reducer {
     if (f != item_corrections_.end()) {
       Frame correction_list(&store, f->second);
       for (const Slot &s : correction_list) {
-        // Get alias and source.
+        // Get alias and modifier.
         string name = String(&store, s.name).value();
-        Handle source = s.value;
+        Handle modifier = s.value;
 
         // Compute fingerprint and case form.
         uint64 fp;
@@ -326,7 +326,7 @@ class AliasReducer : public task::Reducer {
         tokenizer_.FingerprintAndForm(name, &fp, &form);
         if (form == CASE_INVALID) continue;
 
-        if (source == n_blacklist_) {
+        if (modifier == n_blacklist_) {
           // Blacklist alias for item.
           blacklist.insert(fp);
         } else {
@@ -336,10 +336,15 @@ class AliasReducer : public task::Reducer {
             a = new Alias();
             aliases[fp] = a;
           }
-          a->sources |= (1 << source.AsInt());
-          a->count += 1;
-          a->variants[name] += 1;
-          a->forms[form] += 1;
+          int count = 1;
+          if (modifier.IsIndex()) {
+            a->sources |= (1 << modifier.AsIndex());
+          } else if (modifier.IsInt()) {
+            count = modifier.AsInt();
+          }
+          a->count += count;
+          a->variants[name] += count;
+          a->forms[form] += count;
         }
       }
     }

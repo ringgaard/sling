@@ -115,7 +115,6 @@ class SilverWorkflow:
 
       mapper.add_param("resolve", True)
       mapper.add_param("language", language)
-      mapper.add_param("detailed", False)
       mapper.add_param("initial_reference", False)
       mapper.add_param("definite_reference", False)
       mapper.add_param("split_ratio", 5000)
@@ -186,7 +185,7 @@ class SilverWorkflow:
 
       # Also produce subword vocabulary if requested
       if flags.arg.subwords:
-        vocab.add_param("max_subwords", 30000)
+        vocab.add_param("max_subwords", 50000)
         subwords = self.wf.channel(vocab, name="subwords",
                                    format="message/word")
         self.wf.write(subwords, self.subwords(language))
@@ -220,7 +219,7 @@ class SilverWorkflow:
 
         "skip_section_titles": True,
         "learning_rate": 0.5,
-        "learning_rate_decay": 0.8,
+        "learning_rate_decay": 0.9,
         "clipping": 1,
         "local_clipping": True,
         "optimizer": "sgd",

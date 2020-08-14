@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SLING_NLP_NER_CHART_H_
-#define SLING_NLP_NER_CHART_H_
+#ifndef SLING_NLP_SILVER_CHART_H_
+#define SLING_NLP_SILVER_CHART_H_
 
 #include <functional>
 #include <unordered_set>
@@ -127,4 +127,4 @@ class SpanChart {
 }  // namespace nlp
 }  // namespace sling
 
-#endif  // SLING_NLP_NER_CHART_H_
+#endif  // SLING_NLP_SILVER_CHART_H_

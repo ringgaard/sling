@@ -114,6 +114,8 @@ bool WikimediaTypes::IsCategory(Handle type) {
   return type == n_category_ ||
          type == n_disambiguation_category_ ||
          type == n_list_category_ ||
+         type == n_set_category_ ||
+         type == n_topic_category_ ||
          type == n_template_category_ ||
          type == n_admin_category_ ||
          type == n_user_category_ ||

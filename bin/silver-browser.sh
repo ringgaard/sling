@@ -10,7 +10,7 @@ SPEC='{
   annotator: "relations"
   annotator: "types"
   annotator: "clear-references"
-  ;annotator: "mention-name"
+  annotator: "mention-name"
 
   inputs: {
     commons: {
@@ -35,7 +35,6 @@ SPEC='{
     resolve: true
     definite_reference: false
     initial_reference: false
-    detailed: false
   }
 }'
 
