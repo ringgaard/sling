@@ -1,6 +1,7 @@
 import datetime
 import requests
 import sys
+import collections
 import xml.etree.ElementTree as ET
 import sling.flags as flags
 import sling.crawl.dnscache
@@ -16,6 +17,11 @@ flags.define("--hourly",
              action="store_true",
              help="fetch hourly news feed from newslookup.com")
 
+flags.define("--newsites",
+             default=False,
+             action="store_true",
+             help="output new unknown news sites")
+
 flags.define("--file",
              default=None,
              help="fetch news articles from newslookup file")
@@ -25,6 +31,9 @@ flags.define("--backupdir",
              help="backup directory for newslookup files")
 
 flags.parse()
+
+# Intialize.
+news.init_cookies()
 
 # Read news feed.
 if flags.arg.daily:
@@ -72,15 +81,29 @@ except Exception as e:
   print("*** XML parse error:", e, "in parsing news feed")
   sys.exit(1)
 
-# Fetch articles.
-crawler = news.Crawler("newslookup")
-for item in root.iter("item"):
-  child = item.find("link")
-  if child is None: continue
-  url = child.text
-  if url == "https://newslookup.com/": continue
-  crawler.crawl(url)
+if flags.arg.newsites:
+  # Check for unknown news sites.
+  news.init()
+  newsites = collections.defaultdict(int)
+  for item in root.iter("item"):
+    child = item.find("link")
+    if child is None: continue
+    url = child.text
+    if url == "https://newslookup.com/": continue
+    site = news.sitename(url)
+    if site not in news.sites: newsites[site] += 1
+  for site in sorted(newsites, key=newsites.get, reverse=True):
+    print(newsites[site], site)
+else:
+  # Fetch articles.
+  crawler = news.Crawler("newslookup")
+  for item in root.iter("item"):
+    child = item.find("link")
+    if child is None: continue
+    url = child.text
+    if url == "https://newslookup.com/": continue
+    crawler.crawl(url)
 
-crawler.wait()
-crawler.dumpstats()
+  crawler.wait()
+  crawler.dumpstats()
 

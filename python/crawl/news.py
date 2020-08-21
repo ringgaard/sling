@@ -1,5 +1,8 @@
 import calendar
 import html
+import http.cookiejar
+import json
+import os
 import sys
 import re
 import requests
@@ -19,6 +22,10 @@ flags.define("--crawldb",
 flags.define("--newssites",
              default="data/crawl/newssites.txt",
              help="list of news sites")
+
+flags.define("--cookiedir",
+             default="local/cookies",
+             help="directory for site-specific cookies")
 
 flags.define("--threads",
              help="number of thread for crawler worker pool",
@@ -50,6 +57,10 @@ flags.define("--max_article_size",
              type=int,
              metavar="SIZE")
 
+# URL request sessions.
+dbsession = requests.Session()
+crawlsession = requests.Session()
+
 # Blocked sites.
 blocked_urls = [
   "www.\w+.com.au/nocookies",
@@ -62,8 +73,8 @@ blocked_urls = [
   "www.zeit.de/zustimmung",
   "myprivacy.dpgmedia.net/",
   "www.tribpub.com/gdpr/",
-  "myprivacy.dpgmedia.net",
   "tolonews.com/fa/",
+  "www.theaustralian.com.au/subscribe/news/1",
 
   "pjmedia.com/instapundit/",
   "www.espn.com/espnradio/",
@@ -81,8 +92,13 @@ noignore_sites = set([
   "bit.ly",
   "buff.ly",
   "dlvr.it",
+  "hill.cm",
+  "hrld.us",
   "ift.tt",
+  "ow.ly",
+  "tinyurl.com",
   "trib.al",
+  "zpr.io",
 ])
 
 # Sites where the URL query is part of the unique identifier.
@@ -118,6 +134,7 @@ default_headers = {
   "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " \
                 "(KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36",
   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "*",
 }
 
 curl_headers = {
@@ -132,15 +149,15 @@ http_site_headers = {
   "bloomberg.com": gbot_headers,
   "engadget.com": curl_headers,
   "forbes.com": curl_headers,
-  "usnews.com": {
-    "User-Agent": "Mozilla/5.0",
-    "Cookie": "gdpr_agreed=4;usprivacy=1YNY",
-  },
   "news.yahoo.com": curl_headers,
   "npr.org": {
     "Cookie": "trackingChoice=true;choiceVersion=1"
   },
   "techcrunch.com": curl_headers,
+  "usnews.com": {
+    "User-Agent": "Mozilla/5.0",
+    "Cookie": "gdpr_agreed=4;usprivacy=1YNY",
+  },
   "volkskrant.nl": curl_headers,
   "washingtonpost.com":  {
     "Cookie": "wp_gdpr=1|1;wp_devicetype=0;wp_country=US"
@@ -149,6 +166,33 @@ http_site_headers = {
   "yahoo.com": curl_headers,
   "yhoo.it": curl_headers,
 }
+
+def init_cookies():
+  if os.path.isdir(flags.arg.cookiedir):
+    jar = http.cookiejar.CookieJar()
+    crawlsession.cookies = jar
+    for filename in os.listdir(flags.arg.cookiedir):
+      with open(flags.arg.cookiedir + '/' + filename) as f:
+        cookies = json.load(f)
+      for cookie in cookies:
+        jar.set_cookie(http.cookiejar.Cookie(
+          version=0,
+          name=cookie["name"],
+          value=cookie["value"],
+          port=None,
+          port_specified=False,
+          domain=cookie["domain"],
+          domain_specified=True,
+          domain_initial_dot=cookie["domain"].startswith('.'),
+          path=cookie["path"],
+          path_specified=True,
+          secure=cookie["secure"],
+          expires=None,
+          discard=True,
+          comment=None,
+          comment_url=None,
+          rest={'HttpOnly': None},
+          rfc2109=False))
 
 class NewsSite:
   def __init__(self, domain, qid, name, twitter=None, altdomain=None):
@@ -160,7 +204,7 @@ class NewsSite:
 
 sites = {}
 
-def init():
+def init_sites():
   # Load news site list.
   with open(flags.arg.newssites, "r") as f:
     for line in f.readlines():
@@ -200,8 +244,18 @@ def init():
         else:
           sites[altdomain] = sites[domain]
 
+def init():
+  # Load cookies.
+  init_cookies()
+
+  # Initialize news sites.
+  init_sites()
+
 def trim_url(url):
   """Trim parts of news url that are not needed for uniqueness."""
+  # Strip leading and trailing whitespace.
+  url = url.strip()
+
   # Remove URL fragment.
   h = url.find("#")
   if h != -1: url = url[:h]
@@ -255,6 +309,7 @@ def get_canonical_url(uri, page):
 
   # Discard if canonical url if it is just the front page.
   if prefix_pat.fullmatch(url) != None: return None
+  if url == "https://www.theaustralian.com.au/subscribe/news/1": return None
 
   # Discard if canonical URL is empty.
   if len(url.strip()) == 0: return None
@@ -274,9 +329,6 @@ def iso2ts(date):
   """Convert ISO 8601 date to timestamp, i.e. seconds since epoch."""
   if date is None: return 0
   return calendar.timegm(time.strptime(date, "%Y-%m-%dT%H:%M:%SZ"))
-
-dbsession = requests.Session()
-crawlsession = requests.Session()
 
 def store(url, date, content):
   """Store article in database."""
@@ -328,7 +380,7 @@ class Worker(Thread):
   def run(self):
     """Run worker fetching urls from the task queue."""
     while True:
-      url = self.crawler.queue.get();
+      url = self.crawler.queue.get()
       try:
         self.crawler.fetch(url)
       except Exception as e:

@@ -77,11 +77,17 @@ def retrieve(url):
   # Send query.
   r = apisession.get(url, auth=credentials)
 
-  # Try again on 502 Bad Gateway error.
   if r.status_code == 502:
+    # Try again on 502 Bad Gateway error.
     print("bad gateway, try again")
     time.sleep(10)
     r = apisession.get(url, auth=credentials)
+  elif r.status_code == 401:
+    # Keep trying on authorization errors.
+    while r.status_code == 401:
+      print("auth error", r.headers)
+      time.sleep(60)
+      r = apisession.get(url, auth=credentials)
 
   # Check status.
   if r.status_code != 200:
@@ -92,11 +98,6 @@ def retrieve(url):
       print("too many requests")
       time.sleep(10)
       return None
-    elif r.status_code == 401:
-      # Stop on authorization errors.
-      while r.status_code == 401:
-        print("auth error", r.headers)
-        exit(1)
 
     print("Error retrieving", url, ":", r.status_code, r.headers)
     return None
