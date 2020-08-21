@@ -88,7 +88,9 @@ class TextMapInput {
 class TextMapOutput {
  public:
   // Open text map file for writing.
-  TextMapOutput(const string &filename, int buffer_size = 1 << 16);
+  TextMapOutput(File *file, int buffer_size = 1 << 16);
+  TextMapOutput(const string &filename, int buffer_size = 1 << 16)
+    : TextMapOutput(File::OpenOrDie(filename, "w"), buffer_size) {}
   ~TextMapOutput();
 
   // Flush and close text map.

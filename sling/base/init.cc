@@ -18,6 +18,7 @@
 
 #include "sling/base/flags.h"
 #include "sling/base/logging.h"
+#include "sling/base/stacktrace.h"
 #include "sling/base/types.h"
 
 namespace sling {
@@ -43,6 +44,9 @@ static void RunModuleInitializers() {
 }
 
 void InitProgram(int *argc, char ***argv) {
+  // Install failure signal handlers.
+  InstallFailureSignalHandlers();
+
   // Initialize command line flags.
   if (*argc > 0) {
     string usage;
@@ -57,6 +61,9 @@ void InitProgram(int *argc, char ***argv) {
 }
 
 void InitSharedLibrary() {
+  // Install failure signal handlers.
+  InstallFailureSignalHandlers();
+
   // Run module initializers.
   RunModuleInitializers();
 }
