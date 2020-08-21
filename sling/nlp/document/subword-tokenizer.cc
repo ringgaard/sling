@@ -122,9 +122,8 @@ int SubwordTokenizer::Tokenize(Text word, std::vector<int> *subwords) const {
       p = q;
       num_subwords++;
     } else {
-      // Out of vocabulary. Remove subwords already added and replace with OOV.
-      subwords->resize(subwords->size() - num_subwords);
-      subwords->push_back(OOV);
+      // Out of vocabulary.
+      if (num_subwords == 0) subwords->push_back(OOV);
       return -1;
     }
   }

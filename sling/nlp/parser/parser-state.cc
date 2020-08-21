@@ -248,18 +248,12 @@ void ParserState::Connect(int source, Handle role, int target) {
   Handle subject = Attention(source).frame;
   Handle object = Attention(target).frame;
   store()->Add(subject, role, object);
-
-  // Move the source frame to the center of attention.
-  Center(source, nullptr);
 }
 
 void ParserState::Assign(int frame, Handle role, Handle value) {
   // Create new slot in the source frame.
   Handle subject = Attention(frame).frame;
   store()->Add(subject, role, value);
-
-  // Move the frame to the center of attention.
-  Center(frame, nullptr);
 }
 
 void ParserState::Add(Handle frame, Span *span) {

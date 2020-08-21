@@ -94,6 +94,7 @@ class CasparDecoder : public TransitionDecoder {
       delete document;
     }
     roles_.Add(actions.list());
+    VLOG(1) << actions.size() << " parser actions";
 
     // Set up delegates.
     delegates_.push_back(new ShiftMarkOtherDelegate(1));
