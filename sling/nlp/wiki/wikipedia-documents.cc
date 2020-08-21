@@ -293,7 +293,9 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
 
   Text ResolveTemplate(Text link) override {
     WikipediaMap::PageInfo info;
-    if (!wikimap_.GetPageInfo(language_, template_prefix_, link, &info)) {
+    string name;
+    UTF8::ToTitleCase(link.str(), &name);
+    if (!wikimap_.GetPageInfo(language_, template_prefix_, name, &info)) {
       num_unknown_templates_->Increment();
       return Text();
     }

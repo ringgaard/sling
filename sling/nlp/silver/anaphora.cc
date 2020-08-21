@@ -69,7 +69,7 @@ class AnaphoraAnnotator : public Annotator {
     }
   }
 
-  // Annotate relations in document.
+  // Resolve anaphora in document.
   void Annotate(Document *document) override {
     // Skip annotation if anaphora resolution is not supported by language.
     if (disabled_) return;
@@ -77,7 +77,7 @@ class AnaphoraAnnotator : public Annotator {
     // Get document topic.
     Handle topic = document->top().GetHandle(n_page_item_);
     std::vector<Handle> topic_types;
-    if (!topic.IsNil()) {
+    if (!topic.IsNil() && topic.IsGlobalRef()) {
       catalog_.ExtractItemTypes(topic, &topic_types);
     }
 

@@ -33,10 +33,10 @@ class WikipediaLinkExtractor : public task::DocumentProcessor {
     task->Fetch("extract_theme_links", &extract_theme_links_);
     task->Fetch("extract_infobox_links", &extract_infobox_links_);
 
-    // Initialize fan-in output.
-    fanin_ = task->GetSink("fanin");
-    if (fanin_ != nullptr) {
-      fanin_counts_.Init(fanin_);
+    // Initialize link target output.
+    target_ = task->GetSink("target");
+    if (target_ != nullptr) {
+      target_counts_.Init(target_);
     }
 
     // Statistics.
@@ -59,19 +59,19 @@ class WikipediaLinkExtractor : public task::DocumentProcessor {
       }
       FrameProcessor::Output(key, b.Create());
 
-      // Accumulate fan-in statistics.
-      if (fanin_ != nullptr) {
+      // Accumulate target statistics.
+      if (target_ != nullptr) {
         for (auto it : links) {
           Frame target(store, it.first);
-          fanin_counts_.Increment(target.Id(), it.second);
+          target_counts_.Increment(target.Id(), it.second);
         }
       }
     }
   }
 
   void Flush(task::Task *task) override {
-    if (fanin_ != nullptr) {
-      fanin_counts_.Flush();
+    if (target_ != nullptr) {
+      target_counts_.Flush();
     }
   }
 
@@ -140,9 +140,9 @@ class WikipediaLinkExtractor : public task::DocumentProcessor {
   bool extract_theme_links_ = true;
   bool extract_infobox_links_ = true;
 
-  // Output channel and accumulator for fan-in statistics.
-  task::Channel *fanin_ = nullptr;
-  task::Accumulator fanin_counts_;
+  // Output channel and accumulator for popularity statistics.
+  task::Channel *target_ = nullptr;
+  task::Accumulator target_counts_;
 
   // Symbols.
   Name n_infobox_{names_, "/wp/infobox"};
@@ -203,6 +203,35 @@ class WikipediaLinkMerger : public task::Reducer {
 };
 
 REGISTER_TASK_PROCESSOR("wikipedia-link-merger", WikipediaLinkMerger);
+
+// Sum item popularity and output popularity frame for each item.
+class ItemPopularityReducer : public task::SumReducer {
+ public:
+  void Aggregate(int shard, const Slice &key, uint64 sum) override {
+    // Skip popularity counts for properties to prevent properties appearing
+    // in the reconciliation pipeline.
+    if (IsProperty(key)) return;
+
+    // Output popularity frame for item.
+    Store store;
+    Builder b(&store);
+    int popularity = sum;
+    b.Add("/w/item/popularity", popularity);
+    Output(shard, task::CreateMessage(key, b.Create()));
+  }
+
+  // Check if key is a property id, i.e. has the form 'P9+'.
+  static bool IsProperty(const Slice &key) {
+    if (key.size() < 2) return false;
+    if (key[0] != 'P') return false;
+    for (int i = 1; i < key.size(); ++i) {
+      if (key[i] < '0' || key[i] > '9') return false;
+    }
+    return true;
+  }
+};
+
+REGISTER_TASK_PROCESSOR("item-popularity-reducer", ItemPopularityReducer);
 
 }  // namespace nlp
 }  // namespace sling

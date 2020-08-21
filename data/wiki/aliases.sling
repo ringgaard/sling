@@ -49,6 +49,7 @@
   ; States and union territories of India
   Q131541: {
     "state": blacklist
+    "state's": blacklist
   }
 
   ; Regions of France
@@ -73,7 +74,7 @@
 
   ; female
   Q6581072: {
-    "women": 2
+    "women": @2
   }
 
   ; Luis Félix López
@@ -103,17 +104,17 @@
 
   ; party leader
   Q1553195: {
-    "leader": 2
+    "leader": @2
   }
 
-  ; women's sports)
+  ; women's sports
   Q920057: {
-    "women's": 2
+    "women's": @2
   }
 
-  ; men's sports)
+  ; men's sports
   Q35555522: {
-    "men's": 2
+    "men's": @2
   }
 
   ; person
@@ -147,7 +148,17 @@
     "American politician": blacklist
   }
 
-  ; The Presbyterian College, Montreal)
+  ; politics of Canada
+  Q276861: {
+    "Canadian politician": blacklist
+  }
+
+  ; politics of Australia
+  Q1153672: {
+    "Australian politician": blacklist
+  }
+
+  ; The Presbyterian College, Montreal
   Q7758054: {
     "affiliated with": blacklist
   }
@@ -166,6 +177,86 @@
   ; association football
   Q2736: {
     "professional footballer": blacklist
+  }
+
+  ; Miguel Ángel Rodríguez
+  Q28124547: {
+    "actor, director": blacklist
+  }
+
+  ; American Dream
+  Q214100: {
+    "American model": blacklist
+  }
+
+  ; Her Majesty's Diplomatic Service
+  Q16973793: {
+    "British diplomat": blacklist
+  }
+
+  ; Timeline of British diplomatic history
+  Q7805654: {
+    "British diplomat": blacklist
+  }
+
+  ; teenage girl
+  Q798417: {
+    "young woman": 10
+  }
+
+  ; political parties in the United States
+  Q81665: {
+    "American political party": blacklist
+  }
+
+  ; architecture of England
+  Q16821738: {
+    "English architect": blacklist
+  }
+
+  ; Virgin Mary
+  Q345: {
+    "His mother": blacklist
+  }
+
+  ; 2004
+  Q2014: {
+    "died in": blacklist
+  }
+
+  ; history of American Journalism
+  Q5774966: {
+    "American journalist": blacklist
+  }
+
+  ; US american journalist
+  Q19346706: {
+    "American journalist": blacklist
+  }
+
+  ; birthday
+  Q47223: {
+    "18th birthday": blacklist
+  }
+
+  ; aging of wine
+  Q439086: {
+    "young age": blacklist
+  }
+
+  ; Comparison of Portuguese and Spanish
+  Q251434: {
+    "Spanish and Portuguese": blacklist
+  }
+
+  ; cinema of Italy
+  Q903165: {
+    "Italian film": blacklist
+  }
+
+  ; American Musical Supply
+  Q4744547: {
+    "American musical": blacklist
   }
 }
 

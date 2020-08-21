@@ -1,0 +1,39 @@
+; English silver annotation configuration.
+
+{=/silver/en
+  /silver/stopwords: [
+    "the", "a", "an", "'s", "is", "was", "and", "or",
+    "in", "of", "by", "to", "at", "as",
+  ]
+
+  /silver/blacklisted: [
+    "A", "All", "after", "After the war", "ask", "attend", "able", "age",
+    "ago", "announced",
+    "Born", "based on", "be", "beat", "back",
+    "control", "cross", "called",
+    "detached", "draws", "dynamic",
+    "e.g.", "end",
+    "Few", "for the people", "find", "fit", "form", "forms", "found", "founded",
+    "generally",
+    "headed",
+    "I", "I'm", "Its", "it", "if",
+    "has been", "he", "him", "his", "his university", "his wife",
+    "Later", "landed", "led", "lie", "loved", "lead",
+    "Meanwhile", "made", "Maybe", "my", "main", "making", "marks", "member",
+    "members", "middle",
+    "No", "no more", "no", "number",
+    "On", "Only", "operate", "operated", "over",
+    "presented",
+    "qualities", "quality",
+    "once", "on the edge",
+    "re-elected", "running", "run",
+    "Some", "Standing", "Starring", "Still", "she", "Step-down", "sat", "see",
+    "strong", "support",
+    "There", "them", "today", "tell", "telling", "tells", "time", "traced",
+    "tries", "try", "trying",
+    "via",
+    "When", "Working", "wanted", "with", "working",
+    "you",
+  ]
+}
+

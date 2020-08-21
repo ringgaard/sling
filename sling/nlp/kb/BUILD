@@ -27,8 +27,8 @@ cc_library(
 )
 
 cc_library(
-  name = "popularity",
-  srcs = ["popularity.cc"],
+  name = "fanin",
+  srcs = ["fanin.cc"],
   deps = [
     "//sling/base",
     "//sling/task:accumulator",

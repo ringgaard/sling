@@ -122,6 +122,8 @@ class WikimediaTypes {
   Name n_category_{names_, "Q4167836"};
   Name n_disambiguation_category_{names_, "Q15407973"};
   Name n_list_category_{names_, "Q56428020"};
+  Name n_set_category_{names_, "Q59542487"};
+  Name n_topic_category_{names_, "Q59541917"};
   Name n_template_category_{names_, "Q23894233"};
   Name n_stub_category_{names_, "Q24046192"};
   Name n_admin_category_{names_, "Q15647814"};

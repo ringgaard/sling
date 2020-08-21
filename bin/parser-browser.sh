@@ -4,15 +4,15 @@ LANGUAGE=${LANGUAGE:-en}
 PORT=${PORT:-8080}
 
 SPEC='{
+  annotator: "clear"
   annotator: "parser"
-  annotator: "prune-nominals"
-  ;annotator: "mention-name"
+  ;annotator: "prune-nominals"
+  annotator: "mention-name"
 
   inputs: {
     parser: {
       ;file: "local/data/e/caspar/caspar.flow"
       file: "local/data/e/silver/LANG/knolex.flow"
-      ;file: "local/data/e/silver/LANG/bio.flow"
       format: "flow"
     }
     commons: {
@@ -26,8 +26,9 @@ SPEC='{
   }
 }'
 
-bazel-bin/sling/nlp/document/analyzer \
+bazel-bin/sling/nlp/document/corpus-browser \
+  --commons data/dev/types.sling \
   --spec "${SPEC//LANG/$LANGUAGE}" \
   --port $PORT $@ \
-  $@
+  local/data/e/wiki/$LANGUAGE/documents@10.rec
 

@@ -20,6 +20,26 @@ import sling.task.corpora as corpora
 from sling.task import *
 from sling.task.wiki import WikiWorkflow
 
+flags.define("--silver_corpus_size",
+             help="maximum number of documents in silver corpus",
+             default=None,
+             type=int,
+             metavar="NUM")
+
+flags.define("--decoder",
+             help="parser decoder type",
+             default="knolex")
+
+flags.define("--simple_types",
+             help="use simple commons store with basic types",
+             default=False,
+             action="store_true")
+
+flags.define("--subwords",
+             help="use subword tokenization",
+             default=False,
+             action="store_true")
+
 class SilverWorkflow:
   def __init__(self, name=None, wf=None):
     if wf == None: wf = Workflow(name)
@@ -88,6 +108,10 @@ class SilverWorkflow:
     eval_docs = self.evaluation_documents(language)
     phrases = corpora.repository("data/wiki/" + language) + "/phrases.txt"
 
+    split_ratio = 5000
+    if flags.arg.silver_corpus_size:
+      split_ratio = int(flags.arg.silver_corpus_size / 100)
+
     with self.wf.namespace(language + "-silver"):
       # Map document through silver annotation pipeline and split corpus.
       mapper = self.wf.task("corpus-split", "labeler")
@@ -95,22 +119,34 @@ class SilverWorkflow:
       mapper.add_annotator("mentions")
       mapper.add_annotator("anaphora")
       #mapper.add_annotator("phrase-structure")
-      #mapper.add_annotator("relations")
+      mapper.add_annotator("relations")
       mapper.add_annotator("types")
       mapper.add_annotator("clear-references")
 
       mapper.add_param("resolve", True)
       mapper.add_param("language", language)
-      mapper.add_param("detailed", False)
       mapper.add_param("initial_reference", False)
       mapper.add_param("definite_reference", False)
-      mapper.add_param("split_ratio", 5000)
+      mapper.add_param("split_ratio", split_ratio)
 
       mapper.attach_input("commons", self.wiki.knowledge_base())
       mapper.attach_input("aliases", self.wiki.phrase_table(language))
       mapper.attach_input("dictionary", self.idftable(language))
 
-      self.wf.connect(self.wf.read(docs), mapper, name="docs")
+      config = corpora.repository("data/wiki/" + language +
+      if os.path.os.path.isfile(config):
+        mapper.attach_input("commons", self.wf.resource(config,
+                                                        format="store/frame"))
+
+      reader_params = None
+      if flags.arg.silver_corpus_size:
+        reader_params = {
+          "limit": int(flags.arg.silver_corpus_size / length_of(docs))
+        }
+
+      self.wf.connect(self.wf.read(docs, params=reader_params),
+                      mapper, name="docs")
+
       train_channel = self.wf.channel(mapper, name="train",
                                       format="message/document")
       eval_channel = self.wf.channel(mapper, name="eval",
@@ -141,22 +177,131 @@ class SilverWorkflow:
                             dir=self.workdir(language),
                             format="textmap/word")
 
+  def subwords(self, language=None):
+    """Resource for subword vocabulary. This is a text map with (normalized)
+    subwords and counts.
+    """
+    if language == None: language = flags.arg.language
+    return self.wf.resource("subwords.map",
+                            dir=self.workdir(language),
+                            format="textmap/subword")
+
   def extract_vocabulary(self, documents=None, output=None, language=None):
     if language == None: language = flags.arg.language
     if documents == None: documents = self.training_documents(language)
     if output == None: output = self.vocabulary(language)
 
     with self.wf.namespace(language + "-vocabulary"):
-      return self.wf.mapreduce(documents, output,
-                               format="message/word:count",
-                               mapper="word-vocabulary-mapper",
-                               reducer="word-vocabulary-reducer",
-                               params={
-                                 "normalization": "ln",
-                                 "min_freq": 100,
-                                 "max_words": 100000,
-                                 "skip_section_titles": True,
-                               })
+      # Extract words from documents.
+      words = self.wf.shuffle(
+        self.wf.map(documents, "word-vocabulary-mapper",
+                    format="message/word:count",
+                    params={
+                      "normalization": "l",
+                      "skip_section_titles": True,
+                    }))
+
+      # Build vocabulary from words in documents.
+      vocab = self.wf.reduce(words, output, "word-vocabulary-reducer")
+      vocab.add_param("min_freq", 100)
+      vocab.add_param("max_words", 100000)
+
+      # Also produce subword vocabulary if requested
+      if flags.arg.subwords:
+        vocab.add_param("max_subwords", 50000)
+        subwords = self.wf.channel(vocab, name="subwords",
+                                   format="message/word")
+        self.wf.write(subwords, self.subwords(language))
+
+    return output
+
+  #---------------------------------------------------------------------------
+  # Parser training
+  #---------------------------------------------------------------------------
+
+  def parser_model(self, arch, language=None):
+    """Resource for parser model."""
+    if language == None: language = flags.arg.language
+    return self.wf.resource(arch + ".flow",
+                            dir=self.workdir(language),
+                            format="flow")
+
+  def train_parser(self, language=None):
+    if language == None: language = flags.arg.language
+    with self.wf.namespace(language + "-parser"):
+      # Parser trainer task.
+      params = {
+        "normalization": "l",
+
+        "rnn_type": 1,
+        "rnn_dim": 128,
+        "rnn_highways": True,
+        "rnn_layers": 1,
+        "rnn_bidir": True,
+        "dropout": 0.2,
+
+        "skip_section_titles": True,
+        "learning_rate": 0.5,
+        "learning_rate_decay": 0.9,
+        "clipping": 1,
+        "local_clipping": True,
+        "optimizer": "sgd",
+        "batch_size": 8,
+        "warmup": 20 * 60,
+        "rampup": 5 * 60,
+        "report_interval": 100,
+        "learning_rate_cliff": 9000,
+        "epochs": 10000,
+        "checkpoint_interval": 1000,
+      }
+
+      if flags.arg.subwords:
+        params["encoder"] = "subrnn"
+        params["subword_dim"] = 64
+      else:
+        params["encoder"] = "lexrnn"
+        params["word_dim"] = 64
+
+      if flags.arg.decoder == "knolex":
+        params["decoder"] = "knolex"
+        params["link_dim_token"] = 64
+        params["ff_l2reg"] = 0.0001
+      elif flags.arg.decoder == "bio":
+        params["decoder"] = "bio"
+        params["ff_dims"] = [128]
+      elif flags.arg.decoder == "crf":
+        params["decoder"] = "bio"
+        params["crf"] = True
+        params["ff_dims"] = [128]
+      elif flags.arg.decoder == "biaffine":
+        params["decoder"] = "biaffine"
+        params["ff_dims"] = [64]
+        params["ff_dropout"] = 0.2
+      else:
+        params["decoder"] = flags.arg.decoder
+
+      trainer = self.wf.task("parser-trainer", params=params)
+
+      # Inputs.
+      if flags.arg.simple_types:
+        kb = self.wf.resource("data/dev/types.sling", format="store/frame")
+      else:
+        kb = self.wiki.knowledge_base()
+
+      trainer.attach_input("commons", kb)
+      trainer.attach_input("training_corpus",
+                           self.training_documents(language))
+      trainer.attach_input("evaluation_corpus",
+                           self.evaluation_documents(language))
+      trainer.attach_input("vocabulary", self.vocabulary(language))
+      if flags.arg.subwords:
+        trainer.attach_input("subwords", self.subwords(language))
+
+      # Parser model.
+      model = self.parser_model(flags.arg.decoder, language)
+      trainer.attach_output("model", model)
+
+    return model
 
 # Commands.
 
@@ -182,5 +327,13 @@ def extract_parser_vocabulary():
     log.info("Extract " + language + " parser vocabulary")
     wf = SilverWorkflow(language + "-parser-vocabulary")
     wf.extract_vocabulary(language=language)
+    run(wf.wf)
+
+def train_parser():
+  # Train parser on silver data.
+  for language in flags.arg.languages:
+    log.info("Train " + language + " parser")
+    wf = SilverWorkflow(language + "-parser")
+    wf.train_parser(language=language)
     run(wf.wf)
 

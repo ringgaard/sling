@@ -65,6 +65,7 @@ class TypeAnnotator : public Annotator {
 REGISTER_ANNOTATOR("types", TypeAnnotator);
 
 // Document annotator for deleting references to other frames (i.e. is: slots).
+// This also removes value qualifiers for quantity and geo annotations.
 class ClearReferencesAnnotator : public Annotator {
  public:
   void Init(task::Task *task, Store *commons) override {
@@ -77,18 +78,23 @@ class ClearReferencesAnnotator : public Annotator {
     for (Span *span : document->spans()) {
       span->AllEvoked(&evoked);
       for (Handle h : evoked) {
-        Frame f(store, h);
-        if (f.Has(Handle::is())) {
-          // Delete all is: slots.
-          Builder(f).Delete(Handle::is()).Update();
-        }
+        Builder b(store, h);
+        b.Delete(Handle::is());
+        b.Delete(n_amount_);
+        b.Delete(n_unit_);
+        b.Delete(n_lat_);
+        b.Delete(n_lng_);
+        b.Update();
       }
     }
   }
 
  private:
   Names names_;
-  Name n_name_{names_, "name"};
+  Name n_amount_{names_, "/w/amount"};
+  Name n_unit_{names_, "/w/unit"};
+  Name n_lat_{names_, "/w/lat"};
+  Name n_lng_{names_, "/w/lng"};
 };
 
 REGISTER_ANNOTATOR("clear-references", ClearReferencesAnnotator);

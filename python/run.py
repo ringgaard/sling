@@ -68,6 +68,7 @@ commands = [
       "merge_categories",
       "invert_categories",
       "extract_wikilinks",
+      "compute_fanin",
       "fuse_items",
       "build_kb",
       "extract_names",
@@ -135,6 +136,10 @@ commands = [
   ),
 
   # Knowledge base.
+  Command("compute_fanin",
+    help="Compute item fan-in",
+    package="sling.task.wiki",
+  ),
   Command("collect_xrefs",
     help="Collect cross-references from items",
     package="sling.task.wiki",
@@ -242,16 +247,21 @@ def main():
     cmd = []
     for arg in sys.argv:
       if arg != "--spawn": cmd.append(arg)
+    cmd.append("--flushlog")
 
     # Output to log file.
     logfn = flags.arg.logdir + "/" + time.strftime("%Y%m%d-%H%M%S") + ".log"
     logfile = open(logfn, "w")
 
     # Start background job.
-    print("Running in background logging to", logfn)
-    subprocess.Popen(cmd, stdin=None, stdout=logfile, stderr=subprocess.STDOUT,
-                     bufsize=1, close_fds=True)
-    logfile.close()
+    process = subprocess.Popen(cmd,
+                               stdin=None,
+                               stdout=logfile,
+                               stderr=subprocess.STDOUT,
+                               bufsize=1,
+                               shell=False,
+                               close_fds=True)
+    print("Running process", process.pid, "in background logging to", logfn)
     sys.exit(0)
 
   # Start up workflow system.
