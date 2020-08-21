@@ -760,6 +760,10 @@ class CoordinateTemplate : public WikiMacro {
     float lng = 0.0;
     int numargs = templ.NumArgs();
     switch (numargs) {
+      case 0:
+      case 1:
+        break;
+
       case 2:
       case 3:
         lat = templ.GetFloat(1);
@@ -783,7 +787,7 @@ class CoordinateTemplate : public WikiMacro {
         break;
 
       case 8:
-      case 9:
+      default:
         lat = templ.GetFloat(1) +
               templ.GetFloat(2) / 60.0 +
               templ.GetFloat(3) / 3600.0;

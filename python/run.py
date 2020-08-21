@@ -68,6 +68,7 @@ commands = [
       "merge_categories",
       "invert_categories",
       "extract_wikilinks",
+      "compute_fanin",
       "fuse_items",
       "build_kb",
       "extract_names",
@@ -135,6 +136,10 @@ commands = [
   ),
 
   # Knowledge base.
+  Command("compute_fanin",
+    help="Compute item fan-in",
+    package="sling.task.wiki",
+  ),
   Command("collect_xrefs",
     help="Collect cross-references from items",
     package="sling.task.wiki",

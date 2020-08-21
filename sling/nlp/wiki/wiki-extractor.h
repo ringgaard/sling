@@ -184,7 +184,12 @@ class WikiTextSink : public WikiSink {
   const string &text() const { return text_; }
 
   // Return current text position.
-  int position() const { return text_.size(); }
+  int position() const {
+    int pos = text_.size();
+    if (line_breaks_ > 0) pos += 1;  // pending \n
+    if (line_breaks_ > 1) pos += 3;  // pending <p>
+    return pos;
+  }
 
  protected:
   // Extracted text.

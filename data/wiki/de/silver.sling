@@ -1,0 +1,18 @@
+; German silver annotation configuration.
+
+{=/silver/de
+  /silver/stopwords: [
+  ]
+
+  /silver/blacklisted: [
+    "Ab", "akzeptierten",
+    "Die", "Drängen", "durch",
+    "früh",
+    "in", "ist eine",
+    "nieder",
+    "von der",
+    "wo",
+    "z. B.",
+  ]
+}
+

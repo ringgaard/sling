@@ -57,19 +57,19 @@ class FactTargetExtractor : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("fact-target-extractor", FactTargetExtractor);
 
-// Sum item popularity and output popularity frame for each item.
-class ItemPopularityReducer : public task::SumReducer {
+// Aggregate fan-in for each item.
+class ItemFaninReducer : public task::SumReducer {
  public:
   void Aggregate(int shard, const Slice &key, uint64 sum) override {
-    // Skip popularity counts for properties to prevent properties appearing
+    // Skip fan-in counts for properties to prevent properties appearing
     // in the reconciliation pipeline.
     if (IsProperty(key)) return;
 
-    // Output popularity frame for item.
+    // Output fan-in for item.
     Store store;
     Builder b(&store);
-    int popularity = sum;
-    b.Add("/w/item/popularity", popularity);
+    int fanin = sum;
+    b.Add("/w/item/fanin", fanin);
     Output(shard, task::CreateMessage(key, b.Create()));
   }
 
@@ -84,7 +84,7 @@ class ItemPopularityReducer : public task::SumReducer {
   }
 };
 
-REGISTER_TASK_PROCESSOR("item-popularity-reducer", ItemPopularityReducer);
+REGISTER_TASK_PROCESSOR("item-fanin-reducer", ItemFaninReducer);
 
 }  // namespace nlp
 }  // namespace sling

@@ -320,6 +320,7 @@ void SpanTaxonomy::Init(Store *store) {
 
   catalog_.Init(store);
   taxonomy_ = new Taxonomy(&catalog_, types);
+  CHECK(names_.Bind(store));
 }
 
 void SpanTaxonomy::Annotate(const PhraseTable *aliases, SpanChart *chart) {
@@ -363,13 +364,20 @@ void SpanTaxonomy::Annotate(const PhraseTable *aliases, SpanChart *chart) {
           int flags = Classify(item);
           span.flags |= flags;
 
-          // Titles of works of art can add a lot of spurious matches to the
-          // chart because almost any word or short phrase can be the title
-          // of a song, book, painting, etc. These are only included if the
-          // length of the matching phrase is above a threshold and not all
-          // lower case.
           if (flags & SPAN_ART) {
+            // Titles of works of art can add a lot of spurious matches to the
+            // chart because almost any word or short phrase can be the title
+            // of a song, book, painting, etc. These are only included if the
+            // length of the matching phrase is above a threshold and not all
+            // lower case.
             if (form != CASE_LOWER && e - b > min_art_length) matches = true;
+          } else if (form == CASE_LOWER) {
+            // Lower case phrases are usually common concepts which can have
+            // many spurious matches. These phrases are mostly useful as
+            // property values (i.e. relation targets). If the item has low
+            // fan-in it is unlikely to be a property value.
+            int fanin = item.GetInt(n_fanin_);
+            if (fanin >= min_fanin) matches = true;
           } else {
             matches = true;
           }
@@ -450,8 +458,10 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
     }
 
     // Parse initials. Initials count as given names, e.g. J. K. Rowling.
+    int initials = 0;
     while (e < size && chart->item(e).is(SPAN_INITIALS)) {
       given_names++;
+      initials++;
       e++;
     }
 
@@ -482,6 +492,9 @@ void PersonNameAnnotator::Annotate(SpanChart *chart) {
 
     // Parse suffix, e.g. Jr.
     if (e < size && chart->item(e).is(SPAN_SUFFIX)) e++;
+
+    // Person name cannot consist of just initials.
+    if (given_names == initials && family_names == 0) given_names = 0;
 
     // Mark span if person name found except if it covers a golden span.
     if (given_names > 0 && !Covered(chart, b, e)) {
@@ -1216,25 +1229,36 @@ void SpanAnnotator::Init(Store *commons, const Resources &resources) {
     dictionary_.Load(resources.dictionary);
   }
 
+  // Add punctuation as stopwords.
+  static const char *stopwords[] = {
+    ".", ",", "-", ":", ";", "``", "''", "'", "--", "/", "&", "?", "!",
+    "(", ")", "[", "]", "{", "}",
+    nullptr,
+  };
+  for (const char **word = stopwords; *word != nullptr; ++word) {
+    populator_.AddStopWord(*word);
+  }
+
   // Get stop words and black-listed phrases for language.
   if (!resources.language.empty()) {
-    Frame lang(commons, "/lang/" + resources.language);
-
-    Handle sw = lang.GetHandle("/lang/wikilang/stop_words");
-    if (!sw.IsNil()) {
-      Array stopwords(commons, sw);
-      for (int i = 0; i < stopwords.length(); ++i) {
-        String word(commons, stopwords.get(i));
-        populator_.AddStopWord(word.value());
+    Frame config(commons, "/silver/" + resources.language);
+    if (config.valid()) {
+      Handle sw = config.GetHandle("/silver/stopwords");
+      if (!sw.IsNil()) {
+        Array stopwords(commons, sw);
+        for (int i = 0; i < stopwords.length(); ++i) {
+          String word(commons, stopwords.get(i));
+          populator_.AddStopWord(word.value());
+        }
       }
-    }
 
-    Handle bl = lang.GetHandle("/lang/wikilang/blacklisted_phrases");
-    if (!bl.IsNil()) {
-      Array blacklist(commons, bl);
-      for (int i = 0; i < blacklist.length(); ++i) {
-        String word(commons, blacklist.get(i));
-        populator_.Blacklist(word.value());
+      Handle bl = config.GetHandle("/silver/blacklisted");
+      if (!bl.IsNil()) {
+        Array blacklist(commons, bl);
+        for (int i = 0; i < blacklist.length(); ++i) {
+          String word(commons, blacklist.get(i));
+          populator_.Blacklist(word.value());
+        }
       }
     }
   }
@@ -1294,7 +1318,7 @@ void SpanAnnotator::Annotate(const Document &document, Document *output) {
     if (FLAGS_dump_chart) {
       for (int b = 0; b < chart.size(); ++b) {
         for (int e = b + 1; e <= chart.size(); ++e) {
-          auto &item= chart.item(b, e);
+          auto &item = chart.item(b, e);
           if (item.split != -1) {
             LOG(INFO) << chart.phrase(b, b + item.split) << "|"
                       << chart.phrase(b + item.split, e)

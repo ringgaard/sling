@@ -193,8 +193,15 @@ class SpanTaxonomy {
   // Mapping from type to span flags.
   HandleMap<int> type_flags_;
 
+  // Symbols.
+  Names names_;
+  Name n_fanin_{names_, "/w/item/fanin"};
+
   // Minimum length for work of art span.
   static constexpr int min_art_length = 4;
+
+  // Minimum fan-in for lower case spans.
+  static constexpr int min_fanin = 100;
 };
 
 // Annotate person name spans. A person name consists of the following parts

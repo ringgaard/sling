@@ -9,12 +9,16 @@ SPEC='{
   ;annotator: "phrase-structure"
   annotator: "relations"
   annotator: "types"
-  annotator: "clear-references"
+  ;annotator: "clear-references"
   annotator: "mention-name"
 
   inputs: {
     commons: {
       file: "local/data/e/wiki/kb.sling"
+      format: "store/frame"
+    }
+    commons: {
+      file: "data/wiki/LANG/blacklist.sling"
       format: "store/frame"
     }
     aliases: {

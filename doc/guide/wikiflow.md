@@ -21,6 +21,7 @@ The Wiki processing pipeline performs the following tasks:
   * Extract link graph from Wikipedia and Wikidata (`wiki-link`)
   * Merging of Wikipedia categories across languages (`category-merging`)
   * Inversion of category membership graph (`category-inversion`)
+  * Compute item fan-in (`item-fanin`)
   * Fusing information about items to produce final item frame (`item-fusing`)
   * Build frame store with knowledge base (`knowledge-base`)
   * Extract and select aliases for entities from Wikidata and Wikipedia (`name-extraction`)
@@ -73,6 +74,7 @@ sling import_wikidata
       extract_wikilinks
       merge_categories
       invert_categories
+      compute_fanin
       fuse_items
       build_kb
       extract_names
@@ -362,7 +364,8 @@ The Wiki processing pipeline produces the following data sets in
   * `wikipedia-items.rec` (produced by `category-merging` task)
   * `wikipedia-members.rec` (produced by `category-inversion` task)
   * `links-?????-of-?????.rec` (produced by `link-graph` task)
-  * `fanin.rec` (produced by `link-graph` task)
+  * `popularity.rec` (produced by `link-graph` task)
+  * `fanin.rec` (produced by `item-fanin` task)
   * `items-?????-of-?????.rec` (produced by `item-fusing` task)
   * `kb.sling` (produced by `knowledge-base` task)
 

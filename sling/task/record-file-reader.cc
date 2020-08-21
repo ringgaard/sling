@@ -57,6 +57,7 @@ class RecordFileReader : public Process {
 
     // Read records from file and output to output channel.
     Record record;
+    int64 num_records = 0;
     while (!reader.Done()) {
       // Read record.
       CHECK(reader.Read(&record))
@@ -73,7 +74,7 @@ class RecordFileReader : public Process {
       output->Send(message);
 
       // Check for early stopping.
-      if (limit != -1 && records_read->value() >= limit) break;
+      if (limit != -1 && ++num_records >= limit) break;
     }
 
     // Close reader.

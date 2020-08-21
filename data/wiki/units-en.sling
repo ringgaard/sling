@@ -71,6 +71,7 @@
   "mpm": {/w/unit: Q21014455 name: "metre per minute"}
   "µin2": {/w/unit: Q39462789 name: "square microinch"}
   "ac": {/w/unit: Q81292 name: "acre"}
+  "acre": {/w/unit: Q81292 name: "acre"}
   "t_P": {/w/unit: Q202642 name: "Planck time"}
   "ms": {/w/unit: Q723733 name: "millisecond"}
   "mam": {/w/unit: Q1970718 name: "myriametre"}
@@ -121,7 +122,6 @@
   "cm": {/w/unit: Q174728 name: "centimeter"}
   "Ba": {/w/unit: Q809678 name: "barye"}
   "kN": {/w/unit: Q56402798 name: "kilonewton"}
-  "bhp EDR": {/w/unit: Q39710113 name: "boiler horsepower equivalent direct radiation"}
   "nl": {/w/unit: Q9048643 name: "nanoliter"}
   "YJ": {/w/unit: Q53393898 name: "yottajoule"}
   "km/s": {/w/unit: Q3674704 name: "kilometre per second"}

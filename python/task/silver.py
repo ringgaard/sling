@@ -20,6 +20,12 @@ import sling.task.corpora as corpora
 from sling.task import *
 from sling.task.wiki import WikiWorkflow
 
+flags.define("--silver_corpus_size",
+             help="maximum number of documents in silver corpus",
+             default=None,
+             type=int,
+             metavar="NUM")
+
 flags.define("--decoder",
              help="parser decoder type",
              default="knolex")
@@ -102,6 +108,10 @@ class SilverWorkflow:
     eval_docs = self.evaluation_documents(language)
     phrases = corpora.repository("data/wiki/" + language) + "/phrases.txt"
 
+    split_ratio = 5000
+    if flags.arg.silver_corpus_size:
+      split_ratio = int(flags.arg.silver_corpus_size / 100)
+
     with self.wf.namespace(language + "-silver"):
       # Map document through silver annotation pipeline and split corpus.
       mapper = self.wf.task("corpus-split", "labeler")
@@ -117,13 +127,26 @@ class SilverWorkflow:
       mapper.add_param("language", language)
       mapper.add_param("initial_reference", False)
       mapper.add_param("definite_reference", False)
-      mapper.add_param("split_ratio", 5000)
+      mapper.add_param("split_ratio", split_ratio)
 
       mapper.attach_input("commons", self.wiki.knowledge_base())
       mapper.attach_input("aliases", self.wiki.phrase_table(language))
       mapper.attach_input("dictionary", self.idftable(language))
 
-      self.wf.connect(self.wf.read(docs), mapper, name="docs")
+      config = corpora.repository("data/wiki/" + language +
+      if os.path.os.path.isfile(config):
+        mapper.attach_input("commons", self.wf.resource(config,
+                                                        format="store/frame"))
+
+      reader_params = None
+      if flags.arg.silver_corpus_size:
+        reader_params = {
+          "limit": int(flags.arg.silver_corpus_size / length_of(docs))
+        }
+
+      self.wf.connect(self.wf.read(docs, params=reader_params),
+                      mapper, name="docs")
+
       train_channel = self.wf.channel(mapper, name="train",
                                       format="message/document")
       eval_channel = self.wf.channel(mapper, name="eval",
@@ -223,7 +246,7 @@ class SilverWorkflow:
         "clipping": 1,
         "local_clipping": True,
         "optimizer": "sgd",
-        "batch_size": 64,
+        "batch_size": 8,
         "warmup": 20 * 60,
         "rampup": 5 * 60,
         "report_interval": 100,

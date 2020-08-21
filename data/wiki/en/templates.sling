@@ -407,6 +407,7 @@
 "lang": {type: "tag" argnum: 2 argname: "text"}
 "nts": {type: "tag" argnum: 1}
 "nihongo": {type: "tag" argnum: 1}
+"nihongo foot": {type: "tag" argnum: 1}
 
 "plainlist": {type: "tag" argnum: 1 open: "<div>" close: "</div>"}
 "flatlist": {type: "tag" argnum: 1 open: "<div>" close: "</div>"}
@@ -515,7 +516,7 @@
     "notable_works": /wp/info/notable_works
     "notable works": /wp/info/notable_works
     "works": /wp/info/notable_works
-    "credits": /wp/info/notable_works
+    "credits": /wp/info/credits
     "style": /wp/info/style
     "home_town": /wp/info/home_town
     "home town": /wp/info/home_town
@@ -657,6 +658,30 @@
     "doctoral_students": /wp/info/doctoral_students
     "notable_students": /wp/info/notable_students
     "influences": /wp/info/influences
+    "influenced": /wp/info/influenced
+  }
+}
+
+"Infobox academic": {
+  type: "infobox"
+  class: /wp/infobox/academic
+  fields: /wp/infobox/person/fields
+  fields: {
+    "thesis_title": /wp/info/thesis_title
+    "thesis_url": /wp/info/thesis_url
+    "thesis_year": /wp/info/thesis_year
+    "school_tradition": /wp/info/school_tradition
+    "doctoral_advisor": /wp/info/doctoral_advisor
+    "academic_advisors": /wp/info/academic_advisors
+    "influences": /wp/info/influences
+    "era": /wp/info/era
+    "discipline": /wp/info/discipline
+    "sub_discipline": /wp/info/sub_discipline
+    "workplaces": /wp/info/workplaces
+    "doctoral_students": /wp/info/doctoral_students
+    "notable_students": /wp/info/notable_students
+    "main_interests": /wp/info/main_interests
+    "notable_ideas": /wp/info/notable_ideas
     "influenced": /wp/info/influenced
   }
 }

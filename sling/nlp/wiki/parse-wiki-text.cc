@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     resolver.Init();
     LoadStore("data/wiki/calendar.sling", store);
     LoadStore("data/wiki/countries.sling", store);
-    LoadStore("data/wiki/templates-" + FLAGS_lang + ".sling", store);
+    LoadStore("data/wiki/" + FLAGS_lang + "/templates.sling", store);
     LoadStore("data/wiki/units.sling", store);
   }
 

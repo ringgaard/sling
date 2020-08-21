@@ -1,0 +1,28 @@
+; Danish silver annotation configuration.
+
+{=/silver/da
+  /silver/stopwords: [
+  ]
+
+  /silver/blacklisted: [
+    "alle", "alt", "anden",
+    "bad", "bag", "blok", "bor",
+    "d.", "Da", "de mere", "denne", "det", "dog",
+    "en", "end", "er en", "er et", "et",
+    "Fra 2016", "frem",
+    "gang", "grund",
+    "han", "have", "Helt", "Her", "Herpå", "hun", "hører"
+    "I", "I Annestad", "ind", "interesse",
+    "jeg",
+    "kom", "Kort",
+    "lade", "lavet",
+    "MA i", "minder", "mod", "modsatte", "må",
+    "nr. 2", "nr. 3", "nr. 4", "nr. 5", "nr. 6", "nu", "ny", "når",
+    "op",
+    "på",
+    "række",
+    "sad", "se", "ses", "side", "sine", "store", "så",
+    "ville",
+  ]
+}
+

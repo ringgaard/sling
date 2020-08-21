@@ -90,7 +90,7 @@ cc_library(
     "//sling/nlp/document:vocabulary-builder",
 
     "//sling/nlp/kb:fact-lexicon",
-    "//sling/nlp/kb:popularity",
+    "//sling/nlp/kb:fanin",
     "//sling/nlp/kb:xref-builder",
     "//sling/nlp/kb:reconciler",
     "//sling/nlp/kb:name-table-builder",

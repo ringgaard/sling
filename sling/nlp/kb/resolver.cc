@@ -25,6 +25,7 @@ void EntityResolver::Init(Store *commons, const PhraseTable *aliases) {
 ResolverContext::ResolverContext(Store *store, const EntityResolver *resolver)
     : store_(store), resolver_(resolver), tracking_(store),
       n_popularity_(resolver->n_popularity_.handle()),
+      n_fanin_(resolver->n_fanin_.handle()),
       n_links_(resolver->n_links_.handle()) {}
 
 void ResolverContext::AddTopic(Handle entity) {
@@ -134,6 +135,19 @@ Handle ResolverContext::Resolve(uint64 fp, CaseForm form) const {
   Candidates best(1);
   Score(fp, form, &best);
   return best.empty() ? Handle::nil() : best[0].entity;
+}
+
+int ResolverContext::GetPopularity(Handle entity) const {
+  FrameDatum *frame = store_->GetFrame(entity);
+  int count = 0;
+
+  Handle popularity = frame->get(n_popularity_);
+  if (!popularity.IsNil()) count += popularity.AsInt();
+
+  Handle fanin = frame->get(n_fanin_);
+  if (!fanin.IsNil()) count += fanin.AsInt();
+
+  return count > 0 ? count : 1;
 }
 
 }  // namespace nlp

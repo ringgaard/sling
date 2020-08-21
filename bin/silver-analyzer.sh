@@ -6,13 +6,19 @@ PORT=${PORT:-8080}
 SPEC='{
   annotator: "mentions"
   annotator: "anaphora"
-  annotator: "phrase-structure"
+  ;annotator: "phrase-structure"
   annotator: "relations"
+  annotator: "types"
+  ;annotator: "clear-references"
   annotator: "mention-name"
 
   inputs: {
     commons: {
       file: "local/data/e/wiki/kb.sling"
+      format: "store/frame"
+    }
+    commons: {
+      file: "data/wiki/LANG/blacklist.sling"
       format: "store/frame"
     }
     aliases: {
@@ -31,7 +37,8 @@ SPEC='{
   parameters: {
     language: "LANG"
     resolve: true
-    detailed: true
+    definite_reference: false
+    initial_reference: false
   }
 }'
 

@@ -96,6 +96,7 @@ noignore_sites = set([
   "hrld.us",
   "ift.tt",
   "ow.ly",
+  "tinyurl.com",
   "trib.al",
   "zpr.io",
 ])

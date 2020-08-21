@@ -29,7 +29,8 @@ namespace nlp {
 
 class ResolverContext;
 
-// Entity resolver.
+// An entity resolver has a knowledge base with entities and a phrase table with
+// entity aliases.
 class EntityResolver {
  public:
   // Initialize entity resolver.
@@ -39,9 +40,10 @@ class EntityResolver {
   // Phrase table with aliases for entities.
   const PhraseTable *aliases_ = nullptr;
 
-  // Symbols
+  // Symbols.
   Names names_;
   Name n_popularity_{names_, "/w/item/popularity"};
+  Name n_fanin_{names_, "/w/item/fanin"};
   Name n_links_{names_, "/w/item/links"};
 
   // Hyperparameters.
@@ -101,10 +103,7 @@ class ResolverContext {
   Handle Resolve(uint64 fp, CaseForm form) const;
 
   // Get entity popularity.
-  int GetPopularity(Handle entity) const {
-    Handle popularity = store_->GetFrame(entity)->get(n_popularity_);
-    return popularity.IsNil() ? 1 : popularity.AsInt();
-  }
+  int GetPopularity(Handle entity) const;
 
  private:
   // Add tracking of anonymous frame to prevent it from being reclaimed.
@@ -144,6 +143,7 @@ class ResolverContext {
 
   // Symbols.
   Handle n_popularity_;
+  Handle n_fanin_;
   Handle n_links_;
 };
 

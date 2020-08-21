@@ -202,6 +202,22 @@ class WikiWorkflow:
       self.wf.write(redirects, self.wikidata_redirects(),
                     name="redirect-writer")
 
+  def fanin(self):
+    """Resource for item fan-in, i.e. the number of times an item is a target
+    in a relation."""
+    return self.wf.resource("fanin.rec",
+                            dir=corpora.wikidir(),
+                            format="records/frame")
+
+  def compute_fanin(self):
+    """Compute item fan-in, i.e. the number of times an item is the target in
+    a relation."""
+    return self.wf.mapreduce(input=self.wikidata_items(),
+                             output=self.fanin(),
+                             mapper="fact-target-extractor",
+                             reducer="item-fanin-reducer",
+                             format="message/int")
+
   #---------------------------------------------------------------------------
   # Wikipedia
   #---------------------------------------------------------------------------
@@ -520,9 +536,9 @@ class WikiWorkflow:
                             dir=corpora.wikidir(),
                             format="records/frame")
 
-  def fanin(self):
-    """Resource for link fan-in."""
-    return self.wf.resource("fanin.rec",
+  def popularity(self):
+    """Resource for item popularity."""
+    return self.wf.resource("popularity.rec",
                             dir=corpora.wikidir(),
                             format="records/frame")
 
@@ -535,28 +551,24 @@ class WikiWorkflow:
     # Extract links from documents.
     mapper = self.wf.task("wikipedia-link-extractor")
     self.wf.connect(self.wf.read(documents), mapper)
-    wiki_links = self.wf.channel(mapper, format="message/frame", name="output")
-    wiki_counts = self.wf.channel(mapper, format="message/int", name="fanin")
-
-    # Extract fact targets from items.
-    target_extractor = self.wf.task("fact-target-extractor")
-    self.wf.connect(self.wf.read(self.wikidata_items()), target_extractor)
-    item_counts = self.wf.channel(target_extractor, format="message/int")
+    links = self.wf.channel(mapper, format="message/frame",
+                            name="output")
+    targets = self.wf.channel(mapper, format="message/int",
+                              name="target")
 
     # Reduce links.
     with self.wf.namespace("links"):
       wikilinks = self.wikilinks()
-      self.wf.reduce(self.wf.shuffle(wiki_links, shards=length_of(wikilinks)),
+      self.wf.reduce(self.wf.shuffle(links, shards=length_of(wikilinks)),
                      wikilinks, "wikipedia-link-merger")
 
-    # Reduce fan-in.
-    with self.wf.namespace("popularity"):
-      counts = self.wf.collect(wiki_counts, item_counts)
-      fanin = self.fanin()
-      self.wf.reduce(self.wf.shuffle(counts, shards=length_of(fanin)),
-                     fanin, "item-popularity-reducer")
+    # Reduce link targets.
+    with self.wf.namespace("targets"):
+      popularity = self.popularity()
+      self.wf.reduce(self.wf.shuffle(targets, shards=length_of(popularity)),
+                     popularity, "item-popularity-reducer")
 
-    return wikilinks, fanin
+    return wikilinks, popularity
 
   #---------------------------------------------------------------------------
   # Knowledge base reconcilation
@@ -598,6 +610,7 @@ class WikiWorkflow:
   def standard_item_sources(self, items=None):
     if items == None:
       items = self.wikidata_items() + self.wikilinks() + [
+                self.popularity(),
                 self.fanin(),
                 self.wikipedia_items(),
                 self.wikipedia_members()
@@ -892,13 +905,6 @@ def snapshot_wikidata():
   wf.wikidata_snapshot()
   run(wf.wf)
 
-def collect_xrefs():
-  # Collect cross-references.
-  wf = WikiWorkflow("xref-builder")
-  log.info("Build cross references")
-  wf.collect_xrefs()
-  run(wf.wf)
-
 def parse_wikipedia():
   # Convert wikipedia pages to SLING documents.
   for language in flags.arg.languages:
@@ -926,6 +932,20 @@ def extract_wikilinks():
   log.info("Extract link graph")
   wf = WikiWorkflow("link-graph")
   wf.extract_links()
+  run(wf.wf)
+
+def compute_fanin():
+  # Compute item fan-in.
+  log.info("Compute item fan-in")
+  wf = WikiWorkflow("fanin")
+  wf.compute_fanin()
+  run(wf.wf)
+
+def collect_xrefs():
+  # Collect cross-references.
+  wf = WikiWorkflow("xref-builder")
+  log.info("Build cross references")
+  wf.collect_xrefs()
   run(wf.wf)
 
 def reconcile_items():

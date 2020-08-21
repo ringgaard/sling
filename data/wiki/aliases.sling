@@ -49,6 +49,7 @@
   ; States and union territories of India
   Q131541: {
     "state": blacklist
+    "state's": blacklist
   }
 
   ; Regions of France
@@ -147,6 +148,16 @@
     "American politician": blacklist
   }
 
+  ; politics of Canada
+  Q276861: {
+    "Canadian politician": blacklist
+  }
+
+  ; politics of Australia
+  Q1153672: {
+    "Australian politician": blacklist
+  }
+
   ; The Presbyterian College, Montreal
   Q7758054: {
     "affiliated with": blacklist
@@ -226,6 +237,26 @@
   ; birthday
   Q47223: {
     "18th birthday": blacklist
+  }
+
+  ; aging of wine
+  Q439086: {
+    "young age": blacklist
+  }
+
+  ; Comparison of Portuguese and Spanish
+  Q251434: {
+    "Spanish and Portuguese": blacklist
+  }
+
+  ; cinema of Italy
+  Q903165: {
+    "Italian film": blacklist
+  }
+
+  ; American Musical Supply
+  Q4744547: {
+    "American musical": blacklist
   }
 }
 
