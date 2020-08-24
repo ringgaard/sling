@@ -4,7 +4,7 @@ from sling.log import *
 from sling.nlp.document import *
 from sling.nlp.parser import *
 
-VERSION="2.0.0"
+VERSION="3.0.0"
 
 Store=api.Store
 Frame=api.Frame

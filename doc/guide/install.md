@@ -7,12 +7,12 @@ Build system: Bazel<br>
 
 ## Python
 
-If you just want to use SLING from Python, e.g. want to try out the parser on a 
+If you just want to use SLING from Python, e.g. want to try out the parser on a
 pre-trained model, you can install the SLING wheel with pip. On a Linux machine
 with Python 3 you can install a pre-built wheel:
 
 ```
-sudo -H pip3 install http://www.jbox.dk/sling/sling-2.0.0-py3-none-linux_x86_64.whl
+sudo -H pip3 install http://www.jbox.dk/sling/sling-3.0.0-py3-none-linux_x86_64.whl
 ```
 
 You can test the installation by trying to import the `sling` package:
@@ -39,7 +39,7 @@ for m in doc.mentions:
 
 ## C++
 
-If you want to use SLING for C++ development, you need to download the source 
+If you want to use SLING for C++ development, you need to download the source
 code and build it.
 
 First, clone the GitHub repository.
