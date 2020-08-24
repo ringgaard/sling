@@ -133,8 +133,8 @@ class SilverWorkflow:
       mapper.attach_input("aliases", self.wiki.phrase_table(language))
       mapper.attach_input("dictionary", self.idftable(language))
 
-      config = corpora.repository("data/wiki/" + language +
-      if os.path.os.path.isfile(config):
+      config = corpora.repository("data/wiki/" + language + "/silver.sling")
+      if os.path.isfile(config):
         mapper.attach_input("commons", self.wf.resource(config,
                                                         format="store/frame"))
 
@@ -246,13 +246,13 @@ class SilverWorkflow:
         "clipping": 1,
         "local_clipping": True,
         "optimizer": "sgd",
-        "batch_size": 8,
+        "batch_size": 16,
         "warmup": 20 * 60,
         "rampup": 5 * 60,
-        "report_interval": 100,
-        "learning_rate_cliff": 9000,
-        "epochs": 10000,
-        "checkpoint_interval": 1000,
+        "report_interval": 1000,
+        "learning_rate_cliff": 90000,
+        "epochs": 100000,
+        "checkpoint_interval": 10000,
       }
 
       if flags.arg.subwords:

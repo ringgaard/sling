@@ -1,6 +1,7 @@
 bazel-*
 examples
 local
+wheel
 *.pyc
 *.aux
 *.bbl
@@ -9,3 +10,4 @@ local
 *.out
 *.pdf_tex
 doc/report/sling.pdf
+.vscode

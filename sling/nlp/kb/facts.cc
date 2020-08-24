@@ -146,15 +146,17 @@ Taxonomy *FactCatalog::CreateEntityTaxonomy() {
   // Taxonomy used for entity types.
   static const char *entity_types[] = {
     "Q215627",      // person
+    "Q2385804",     // educational institution
     "Q13226383",    // facility
     "Q17334923",    // location
     "Q43229",       // organization
     "Q12737077",    // occupation
     "Q216353",      // title
     "Q4164871",     // position
-    "Q1047113",     // specialty
-    "Q205892",      // calendar date
     "Q1656682",     // event
+    "Q386724",      // work
+    "Q1047113",     // specialty
+    "Q14795564",    // relative point in time
     "/w/quantity",  // quantity
     "/w/time",      // time
     "/w/geo",       // geopoint
