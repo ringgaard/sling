@@ -28,6 +28,9 @@ using namespace task;
 class RelationAnnotator : public Annotator {
  public:
   void Init(Task *task, Store *commons) override {
+    // Get configuration.
+    task->Fetch("subphrase_relations", &subphrase_relations_);
+
     // Initialize fact extractor.
     catalog_.Init(commons);
 
@@ -45,6 +48,7 @@ class RelationAnnotator : public Annotator {
     }
 
     std::vector<const char *> blocked_properties = {
+      "P279",   // subclass of
       "P461",   // opposite of
       "P205",   // basin country
       "P530",   // diplomatic relation
@@ -74,29 +78,27 @@ class RelationAnnotator : public Annotator {
       for (int t = s.begin(); t < s.end(); ++t) {
         // Get spans starting on this token.
         for (Span *span = document->GetSpanAt(t); span; span = span->parent()) {
-          // Discard spans  we already have.
-          bool existing = false;
-          for (Mention &m : mentions) {
-            if (m.span == span) {
-              existing = true;
-              break;
-            }
-          }
-          if (existing) continue;
+          if (span->begin() != t) continue;
 
-          // TEST: only add top-level mentions.
-          if (span->parent() != nullptr) continue;
+          // Only add top-level mentions if we don't extract phrase relations.
+          if (!subphrase_relations_ && span->parent() != nullptr) continue;
 
-          // Add new mention.
+          // Find outer containing span for mention.
           Mention mention;
           mention.span = span;
           mention.outer = span;
           while (mention.outer->parent() != nullptr) {
             mention.outer = mention.outer->parent();
           }
+
+          // Get evoked frame and resolved item.
           mention.frame = span->evoked();
           if (mention.frame.IsNil()) continue;
+          if (store->IsPublic(mention.frame)) continue;
           mention.item = store->Resolve(mention.frame);
+          if (mention.item.IsNil()) continue;
+
+          // Add new mention.
           mentions.emplace_back(mention);
           targets.insert(mention.item);
         }
@@ -128,9 +130,9 @@ class RelationAnnotator : public Annotator {
           for (Mention &t : mentions) {
             if (t.item != value) continue;
 
-            // Source and target should not be in the same top-level span. These
-            // relations are handled by the phrase annotator.
-            if (t.outer == source.outer) continue;
+            // Source and target should not be in the same top-level span if we
+            // don't extract phrase relations.
+            if (!subphrase_relations_ && t.outer == source.outer) continue;
 
             // Select target with the smallest distance to the source mention.
             if (target == nullptr) {
@@ -153,6 +155,9 @@ class RelationAnnotator : public Annotator {
           int priority = Priority(property);
           if (priority < 0) continue;
 
+          // A mention can only be the target in one relation.
+          if (target->usage > 0) continue;
+
           // Clear property matches on first match.
           if (matches++ == 0) {
             for (Mention &m : mentions) m.property = Handle::nil();
@@ -162,31 +167,19 @@ class RelationAnnotator : public Annotator {
           if (target->property.IsNil() ||
               priority > Priority(target->property)) {
             target->property = property;
+            target->usage++;
           }
         }
 
         // Add relations to source mention.
         if (matches > 0) {
-          Frame existing(store, source.frame);
-          if (existing.IsPublic()) {
-            Builder b(store);
-            b.AddIs(existing);
-            for (const Mention &m : mentions) {
-              if (!m.property.IsNil()) {
-                b.Add(m.property, m.frame);
-              }
+          Builder b(store, source.frame);
+          for (const Mention &m : mentions) {
+            if (!m.property.IsNil()) {
+              b.Add(m.property, m.frame);
             }
-            source.span->Replace(existing, b.Create());
-            source.frame = b.handle();
-          } else {
-            Builder b(existing);
-            for (const Mention &m : mentions) {
-              if (!m.property.IsNil()) {
-                b.Add(m.property, m.frame);
-              }
-            }
-            b.Update();
           }
+          b.Update();
         }
       }
     }
@@ -211,11 +204,12 @@ class RelationAnnotator : public Annotator {
 
   // Entity mention in sentence.
   struct Mention {
-    Handle frame;     // frame annotations for entity
-    Handle item;      // item describing entity
-    Span *span;       // Span evoking frame
-    Span *outer;      // top-most containing span
-    Handle property;  // property for match
+    Handle frame;         // frame annotations for entity
+    Handle item;          // item describing entity
+    Span *span;           // Span evoking frame
+    Span *outer;          // top-most containing span
+    Handle property;      // property for match
+    int usage = 0;        // number of times mention is the target in a relation
   };
 
   // Fact catalog for fact extraction.
@@ -223,6 +217,9 @@ class RelationAnnotator : public Annotator {
 
   // Priority for properties. Priority -1 means that the property is blocked.
   HandleMap<int> priority_;
+
+  // Extracted relation for nested mentions.
+  bool subphrase_relations_ = false;
 };
 
 REGISTER_ANNOTATOR("relations", RelationAnnotator);

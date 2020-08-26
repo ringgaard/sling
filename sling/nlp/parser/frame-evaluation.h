@@ -47,25 +47,12 @@ class ParallelCorpus {
 // frames into account yet.
 class FrameEvaluation {
  public:
-  // Span with begin and end.
-  typedef std::pair<int, int> Span;
-
   // Pair of frames.
   typedef std::pair<Handle, Handle> FramePair;
 
   // Named scores.
   typedef std::pair<string, float> Score;
   typedef std::vector<Score> Scores;
-
-  // Hasher for Span.
-  struct SpanHash {
-    size_t operator()(const Span &span) const {
-      return (span.first << 20) | (span.second - span.first);
-    }
-  };
-
-  // Mapping from span to mention frame.
-  typedef std::unordered_map<Span, Handle, SpanHash> MentionMap;
 
   // Frame alignment.
   class Alignment : public HandleMap<Handle> {
@@ -195,12 +182,9 @@ class FrameEvaluation {
                        Output *output);
 
  private:
-  // Constructs mention map from spans to mention frames.
-  static void GetMentionMap(const Frame &frame, MentionMap *mentions);
-
   // Computes mention alignment from source to target.
-  static void AlignMentions(const MentionMap &source,
-                            const MentionMap &target,
+  static void AlignMentions(const Document &source,
+                            const Document &target,
                             Alignment *alignment);
 
   // Computes alignment between evoked frames for each mention.

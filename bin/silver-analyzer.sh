@@ -18,7 +18,7 @@ SPEC='{
       format: "store/frame"
     }
     commons: {
-      file: "data/wiki/LANG/blacklist.sling"
+      file: "data/wiki/LANG/silver.sling"
       format: "store/frame"
     }
     aliases: {
