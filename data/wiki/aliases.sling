@@ -158,6 +158,11 @@
     "Australian politician": blacklist
   }
 
+  ; politics of India
+  Q1123156: {
+    "Indian politician": blacklist
+  }
+
   ; The Presbyterian College, Montreal
   Q7758054: {
     "affiliated with": blacklist
@@ -177,6 +182,21 @@
   ; association football
   Q2736: {
     "professional footballer": blacklist
+  }
+
+  ; football in Morocco
+  Q3076613: {
+    "Moroccan footballer": blacklist
+  }
+
+  ; football in Iran
+  Q2297862: {
+    "Iranian football": blacklist
+  }
+
+  ; football in England
+  Q1478144: {
+    "English footballer": blacklist
   }
 
   ; Miguel Ángel Rodríguez
@@ -257,6 +277,26 @@
   ; American Musical Supply
   Q4744547: {
     "American musical": blacklist
+  }
+
+  ; Documentary Now!
+  Q20642667: {
+    "American documentary": blacklist
+  }
+
+  ; Women in Thailand
+  Q6632965: {
+    "Thai female": blacklist
+  }
+
+  ; politics of Israel
+  Q1130120: {
+    "Israeli politician": blacklist
+  }
+
+  ; Cynthia López Castro
+  Q76700114: {
+    "Mexican politician": blacklist
   }
 }
 

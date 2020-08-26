@@ -420,7 +420,7 @@ void Facts::ExtractDate(Handle value) {
 
   // Add numeric dates.
   if (numeric_dates_) {
-    // Add numric date as fact.
+    // Add numeric date as fact.
     int day_number = date.AsNumber();
     if (day_number != -1) AddFact(Handle::Integer(day_number));
 

@@ -61,7 +61,7 @@ purelib_dir = package + "-" + version + ".data/purelib"
 scripts_dir = package + "-" + version + ".data/scripts"
 record_filename = dist_dir + "/RECORD"
 
-wheel_dir = "wheel"
+wheel_dir = "dist"
 wheel_basename = package + "-" + version + "-" + tag + ".whl"
 wheel_filename = wheel_dir + "/" + wheel_basename
 
@@ -123,11 +123,11 @@ package_metadata = """Metadata-Version: 2.0
 Name: sling
 Version: $VERSION$
 Summary: SLING frame semantic parsing framework
-Home-page: https://github.com/google/sling
-Author: Google
-Author-email: sling-team@google.com
+Home-page: https://github.com/ringgaard/sling
+Author: Michael Ringgaard
+Author-email: michael@ringgaard.com
 License: Apache 2.0
-Download-URL: https://github.com/google/sling/releases
+Download-URL: https://github.com/ringgaard/sling/releases
 Platform: UNKNOWN
 Classifier: Programming Language :: Python
 Classifier: Programming Language :: Python :: $PYVERSION$

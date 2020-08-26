@@ -100,24 +100,12 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
   Document *predicted;
   while (corpus->Next(&store, &golden, &predicted)) {
     CHECK_EQ(golden->num_tokens(), predicted->num_tokens());
-    Frame golden_top = golden->top();
-    Frame predicted_top = predicted->top();
-
-    // Get mention maps.
-    MentionMap golden_mentions;
-    MentionMap predicted_mentions;
-    GetMentionMap(golden_top, &golden_mentions);
-    GetMentionMap(predicted_top, &predicted_mentions);
 
     // Compute mention span alignments.
     Alignment g2p_mention_alignment;
     Alignment p2g_mention_alignment;
-    AlignMentions(golden_mentions,
-                  predicted_mentions,
-                  &g2p_mention_alignment);
-    AlignMentions(predicted_mentions,
-                  golden_mentions,
-                  &p2g_mention_alignment);
+    AlignMentions(*golden, *predicted, &g2p_mention_alignment);
+    AlignMentions(*predicted, *golden, &p2g_mention_alignment);
 
     // Compute evoked frame alignment.
     Alignment g2p_frame_alignment;
@@ -150,8 +138,8 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
     TypeAccuracy(store, p2g_frame_alignment, &output->types, false);
 
     // Update statistics.
-    output->num_golden_spans += golden_mentions.size();
-    output->num_predicted_spans += predicted_mentions.size();
+    output->num_golden_spans += golden->num_spans();
+    output->num_predicted_spans += predicted->num_spans();
     output->num_golden_frames += g2p_frame_alignment.size();
     output->num_predicted_frames += p2g_frame_alignment.size();
 
@@ -242,38 +230,19 @@ void FrameEvaluation::Output::GetBenchmarks(Benchmarks *benchmarks) const {
   if (combined.used()) benchmarks->emplace_back(combined);
 }
 
-void FrameEvaluation::GetMentionMap(
-    const Frame &frame, MentionMap *mentions) {
-  Store *store = frame.store();
-  Handle n_mention = store->Lookup("mention");
-  Handle n_begin = store->Lookup("begin");
-  Handle n_length = store->Lookup("length");
-
-  for (const Slot &slot : frame) {
-    if (slot.name ==  n_mention) {
-      Frame mention(store, slot.value);
-      int begin = mention.GetInt(n_begin);
-      int length = mention.GetInt(n_length);
-      int end = length == 0 ? begin + 1 : begin + length;
-      FrameEvaluation::Span span(begin, end);
-      (*mentions)[span] = mention.handle();
-    }
-  }
-}
-
-void FrameEvaluation::AlignMentions(const MentionMap &source,
-                                    const MentionMap &target,
+void FrameEvaluation::AlignMentions(const Document &source,
+                                    const Document &target,
                                     Alignment *alignment) {
   // Iterate over all spans in source.
-  for (const auto &s : source) {
-    // Try to match matching span in target.
-    auto f = target.find(s.first);
-    if (f == target.end()) {
-      // No matching span in b. Insert nil alignment.
-      alignment->Map(s.second, Handle::nil());
+  for (Span *s : source.spans()) {
+    // Try to find matching span in target.
+    Span *t = target.GetSpan(s->begin(), s->end());
+    if (t == nullptr) {
+      // No matching span in target. Insert nil alignment.
+      alignment->Map(s->mention().handle(), Handle::nil());
     } else {
       // Matching span found. Add mention pair to alignment.
-      alignment->Map(s.second, f->second);
+      alignment->Map(s->mention().handle(), t->mention().handle());
     }
   }
 }
@@ -385,7 +354,7 @@ void FrameEvaluation::AlignFrames(Store *store, Alignment *alignment) {
       // Add alignment for role value. An entry is added even in the case
       // where there is no target to ensure that all source frames will have
       // an entry in the alignment.
-      alignment->Map(value.handle(), h);
+      if (!alignment->Map(value.handle(), h)) continue;
 
       // Add frame pair to the pending frame alignment queue.
       if (!h.IsNil()) pending.emplace_back(value.handle(), h);
