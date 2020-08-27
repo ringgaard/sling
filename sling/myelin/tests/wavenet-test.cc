@@ -11,7 +11,7 @@
 #include "sling/myelin/flow.h"
 #include "sling/myelin/graph.h"
 #include "sling/myelin/profile.h"
-#include "sling/myelin/kernel/tensorflow.h"
+#include "sling/myelin/kernel/library.h"
 #include "sling/myelin/macro-assembler.h"
 #include "sling/myelin/tests/wavenet.h"
 
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
 
   // Set up kernel library.
   Library library;
-  RegisterTensorflowLibrary(&library);
+  RegisterStandardLibrary(&library);
   RegisterWaveNetLibrary(&library);
   if (FLAGS_custom_deconv) {
     library.Register("Deconv1D", "CostumDeconv1D", Deconv1D);

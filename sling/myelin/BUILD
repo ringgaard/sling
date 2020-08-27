@@ -177,27 +177,8 @@ cc_library(
     "//sling/base:perf",
     "//sling/myelin/cuda:cuda-runtime",
     "//sling/myelin/kernel:cuda",
-    "//sling/myelin/kernel:dragnn",
     "//sling/myelin/kernel:mkl",
-    "//sling/myelin/kernel:tensorflow",
-  ],
-)
-
-cc_binary(
-  name = "analyze",
-  srcs = ["analyze.cc"],
-  deps = [
-    ":compute",
-    ":elf-linker",
-    ":flow",
-    ":graph",
-    ":profile",
-    "//sling/base",
-    "//sling/file:posix",
-    "//sling/myelin/cuda:cuda-runtime",
-    "//sling/myelin/kernel:cuda",
-    "//sling/myelin/kernel:dragnn",
-    "//sling/myelin/kernel:tensorflow",
+    "//sling/myelin/kernel:library",
   ],
 )
 

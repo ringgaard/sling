@@ -29,9 +29,8 @@
 #include "sling/myelin/profile.h"
 #include "sling/myelin/cuda/cuda-runtime.h"
 #include "sling/myelin/kernel/cuda.h"
-#include "sling/myelin/kernel/dragnn.h"
 #include "sling/myelin/kernel/mkl.h"
-#include "sling/myelin/kernel/tensorflow.h"
+#include "sling/myelin/kernel/library.h"
 
 DEFINE_string(cpu, "", "Enable/disable CPU features");
 DEFINE_bool(gpu, false, "Run kernels on GPU");
@@ -51,7 +50,6 @@ DEFINE_bool(param_stats, false, "Dump model parameter statistics");
 DEFINE_bool(check_flow_consistency, false, "Check that flow is consistent");
 DEFINE_bool(dynamic_instance_allocation, false, "Dynamic instance allocation");
 DEFINE_bool(mkl, false, "Use Intel Math Kernel Library");
-DEFINE_bool(dragnn, false, "Use DRAGNN kernels");
 DEFINE_bool(sync_steps, false, "Synchronize all compute steps");
 DEFINE_bool(fast_math, false, "Fast approximate math ops");
 DEFINE_bool(graph_all_vars, false, "Include all variables in DOT graph");
@@ -76,7 +74,7 @@ static int cudart_refs = 0;
 Compiler::Compiler() {
   // Register standard kernels.
   library_ = new Library();
-  RegisterTensorflowLibrary(library_);
+  RegisterStandardLibrary(library_);
 
   // Parse CPU feature flags and enable/disable CPU features.
   if (!FLAGS_cpu.empty()) SetCPUFeatures(FLAGS_cpu);
@@ -93,7 +91,6 @@ Compiler::Compiler() {
   }
 
   // Add extra kernels.
-  if (FLAGS_dragnn) RegisterDragnnLibrary(library_);
   if (FLAGS_mkl) RegisterMKLLibrary(library_);
 }
 

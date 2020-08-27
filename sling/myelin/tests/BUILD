@@ -42,26 +42,7 @@ cc_binary(
     "//sling/myelin:flow",
     "//sling/myelin:graph",
     "//sling/myelin:profile",
-    "//sling/myelin/kernel:tensorflow",
-  ],
-)
-
-cc_binary(
-  name = "tagger-test",
-  srcs = ["tagger-test.cc"],
-  deps = [
-    "//sling/base",
-    "//sling/base:clock",
-    "//sling/file",
-    "//sling/file:posix",
-    "//sling/myelin:compute",
-    "//sling/myelin:flow",
-    "//sling/myelin:graph",
-    "//sling/myelin:profile",
-    "//sling/myelin/cuda:cuda-runtime",
-    "//sling/myelin/kernel:cuda",
-    "//sling/myelin/kernel:dragnn",
-    "//sling/myelin/kernel:tensorflow",
+    "//sling/myelin/kernel:library",
   ],
 )
 
@@ -120,22 +101,7 @@ cc_binary(
     "//sling/myelin:profile",
     "//sling/myelin/cuda:cuda-runtime",
     "//sling/myelin/kernel:cuda",
-    "//sling/myelin/kernel:tensorflow",
-  ],
-)
-
-cc_binary(
-  name = "sempar-test",
-  srcs = ["sempar-test.cc"],
-  deps = [
-    "//sling/base",
-    "//sling/file:posix",
-    "//sling/myelin:compute",
-    "//sling/myelin:flow",
-    "//sling/myelin:graph",
-    "//sling/myelin:profile",
-    "//sling/myelin/kernel:dragnn",
-    "//sling/myelin/kernel:tensorflow",
+    "//sling/myelin/kernel:library",
   ],
 )
 
@@ -152,7 +118,7 @@ cc_binary(
     "//sling/myelin:builder",
     "//sling/myelin/cuda:cuda-runtime",
     "//sling/myelin/kernel:cuda",
-    "//sling/myelin/kernel:tensorflow",
+    "//sling/myelin/kernel:library",
   ],
 )
 

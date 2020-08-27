@@ -12,7 +12,7 @@
 #include "sling/myelin/builder.h"
 #include "sling/myelin/cuda/cuda-runtime.h"
 #include "sling/myelin/kernel/cuda.h"
-#include "sling/myelin/kernel/tensorflow.h"
+#include "sling/myelin/kernel/library.h"
 
 DEFINE_bool(dump_flow, false, "Dump analyzed flow to stdout");
 DEFINE_bool(profile, false, "Profile computation");
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
 
   // Set up kernel library.
   Library library;
-  RegisterTensorflowLibrary(&library);
+  RegisterStandardLibrary(&library);
   RegisterCUDALibrary(&library);
 
   // Set up CUDA runtime.

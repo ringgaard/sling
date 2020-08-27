@@ -10,7 +10,7 @@
 #include "sling/myelin/profile.h"
 #include "sling/myelin/cuda/cuda-runtime.h"
 #include "sling/myelin/kernel/cuda.h"
-#include "sling/myelin/kernel/tensorflow.h"
+#include "sling/myelin/kernel/library.h"
 
 DEFINE_string(input, "/tmp/mnist.flow", "input file with flow model");
 DEFINE_int32(repeat, 100, "Number of times test is repeated");
@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 
   // Set up kernel library.
   Library library;
-  RegisterTensorflowLibrary(&library);
+  RegisterStandardLibrary(&library);
   if (FLAGS_gpu) RegisterCUDALibrary(&library);
 
   // Load model.

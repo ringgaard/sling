@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/myelin/kernel/tensorflow.h"
+#include "sling/myelin/kernel/library.h"
 
 #include <mutex>
 
@@ -29,8 +29,8 @@ namespace myelin {
 
 static std::once_flag gradients_initialized;
 
-// Register Tensorflow ops.
-void RegisterTensorflowLibrary(Library *library) {
+// Register standard ops.
+void RegisterStandardLibrary(Library *library) {
   RegisterArithmeticTransforms(library);
   RegisterGenericLibrary(library);
   RegisterSSELibrary(library);
