@@ -90,9 +90,9 @@ cc_library(
 )
 
 cc_library(
-  name = "tensorflow",
-  srcs = ["tensorflow.cc"],
-  hdrs = ["tensorflow.h"],
+  name = "library",
+  srcs = ["library.cc"],
+  hdrs = ["library.h"],
   deps = [
     ":arithmetic",
     ":avx",
@@ -132,16 +132,6 @@ cc_library(
   ],
   linkopts = [
     "-ldl",
-  ],
-)
-
-cc_library(
-  name = "dragnn",
-  srcs = ["dragnn.cc"],
-  hdrs = ["dragnn.h"],
-  deps = [
-    "//sling/base",
-    "//sling/myelin:compute",
   ],
 )
 

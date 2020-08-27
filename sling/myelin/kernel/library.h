@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SLING_MYELIN_KERNEL_TENSORFLOW_H_
-#define SLING_MYELIN_KERNEL_TENSORFLOW_H_
+#ifndef SLING_MYELIN_KERNEL_LIBRARY_H_
+#define SLING_MYELIN_KERNEL_LIBRARY_H_
 
 #include "sling/myelin/compute.h"
 
 namespace sling {
 namespace myelin {
 
-// Register Tensorflow library.
-void RegisterTensorflowLibrary(Library *library);
+// Register standard kernel library.
+void RegisterStandardLibrary(Library *library);
 
 }  // namespace myelin
 }  // namespace sling
 
-#endif  // SLING_MYELIN_KERNEL_TENSORFLOW_H_
+#endif  // SLING_MYELIN_KERNEL_LIBRARY_H_
 
