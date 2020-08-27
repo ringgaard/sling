@@ -96,7 +96,7 @@ class StringOutputStream : public OutputStream {
   string *buffer_;
 };
 
-// An InputStream for reading from an I/O buffer.
+// An input stream for reading from an I/O buffer.
 class IOBufferInputStream : public InputStream {
  public:
   IOBufferInputStream(IOBuffer *buffer);
@@ -111,10 +111,10 @@ class IOBufferInputStream : public InputStream {
   IOBuffer *buffer_;
 };
 
-// An OutputStream for writing to an  I/O buffer.
+// An output stream writing to an I/O buffer.
 class IOBufferOutputStream : public OutputStream {
  public:
-  IOBufferOutputStream(IOBuffer *buffer, int block_size = 4096);
+  IOBufferOutputStream(IOBuffer *buffer, int block_size = 8192);
 
   // OutputStream interface.
   bool Next(void **data, int *size) override;

@@ -16,7 +16,7 @@
 #define SLING_NLP_DOCUMENT_DOCUMENT_SERVICE_H_
 
 #include "sling/frame/object.h"
-#include "sling/http/web-service.h"
+#include "sling/net/web-service.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/document/lex.h"

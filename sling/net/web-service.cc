@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/http/web-service.h"
+#include "sling/net/web-service.h"
 
 #include "sling/stream/stream.h"
 #include "sling/frame/decoder.h"
@@ -22,8 +22,8 @@
 #include "sling/frame/object.h"
 #include "sling/frame/reader.h"
 #include "sling/frame/store.h"
-#include "sling/http/http-server.h"
-#include "sling/http/http-stream.h"
+#include "sling/net/http-server.h"
+#include "sling/stream/memory.h"
 #include "sling/string/numbers.h"
 
 namespace sling {
@@ -59,7 +59,7 @@ WebService::WebService(Store *commons,
 
   // Decode input.
   if (request->content_length() > 0) {
-    HTTPInputStream stream(request->buffer());
+    ArrayInputStream stream(request->content(), request->content_length());
     Input in(&stream);
     switch (input_format_) {
       case ENCODED: {
@@ -138,12 +138,12 @@ WebService::~WebService() {
   }
 
   // Output response.
-  HTTPOutputStream stream(response_->buffer());
+  IOBufferOutputStream stream(response_->buffer());
   Output out(&stream);
   switch (output_format_) {
     case ENCODED: {
       // Output as encoded SLING frames.
-      response_->SetContentType("application/sling");
+      response_->set_content_type("application/sling");
       Encoder encoder(&store_, &out);
       encoder.Encode(output_);
       break;
@@ -151,7 +151,7 @@ WebService::~WebService() {
 
     case TEXT: {
       // Output as human-readable SLING frames.
-      response_->SetContentType("text/sling; charset=utf-8");
+      response_->set_content_type("text/sling; charset=utf-8");
       Printer printer(&store_, &out);
       printer.set_indent(2);
       printer.set_byref(byref_);
@@ -161,7 +161,7 @@ WebService::~WebService() {
 
     case COMPACT: {
       // Output compact SLING text.
-      response_->SetContentType("text/sling; charset=utf-8");
+      response_->set_content_type("text/sling; charset=utf-8");
       Printer printer(&store_, &out);
       printer.set_byref(byref_);
       printer.Print(output_);
@@ -170,7 +170,7 @@ WebService::~WebService() {
 
     case JSON: {
       // Output in JSON format.
-      response_->SetContentType("text/json; charset=utf-8");
+      response_->set_content_type("text/json; charset=utf-8");
       JSONWriter writer(&store_, &out);
       writer.set_indent(2);
       writer.set_byref(byref_);
@@ -180,7 +180,7 @@ WebService::~WebService() {
 
     case CJSON: {
       // Output in compact JSON format.
-      response_->SetContentType("application/json; charset=utf-8");
+      response_->set_content_type("application/json; charset=utf-8");
       JSONWriter writer(&store_, &out);
       writer.set_byref(byref_);
       writer.Write(output_);
@@ -192,7 +192,7 @@ WebService::~WebService() {
       if (!output_.IsString()) {
         response_->SendError(500, "Internal Server Error", "no lex output");
       } else {
-        response_->SetContentType("text/lex");
+        response_->set_content_type("text/lex");
         out.Write(output_.AsString().text());
       }
       break;
@@ -203,7 +203,7 @@ WebService::~WebService() {
       if (!output_.IsString()) {
         response_->SendError(500, "Internal Server Error", "no output");
       } else {
-        response_->SetContentType("text/plain");
+        response_->set_content_type("text/plain");
         out.Write(output_.AsString().text());
       }
       break;

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SLING_NET_HTTP_PROTOCOL_H_
-#define SLING_NET_HTTP_PROTOCOL_H_
+#ifndef SLING_NET_HTTP_SERVER_H_
+#define SLING_NET_HTTP_SERVER_H_
 
 #include  <functional>
 #include  <string>
 #include  <vector>
 
-#include "sling/http/http-utils.h"
+#include "sling/net/http-utils.h"
 #include "sling/net/socket-server.h"
 #include "sling/util/iobuffer.h"
 
@@ -342,5 +342,5 @@ class HTTPResponse {
 
 }  // namespace sling
 
-#endif  // SLING_NET_HTTP_PROTOCOL_H_
+#endif  // SLING_NET_HTTP_SERVER_H_
 

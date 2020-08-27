@@ -42,7 +42,7 @@ cc_binary(
     ":dbprotocol",
     "//sling/base",
     "//sling/file:posix",
-    "//sling/net:http-protocol",
+    "//sling/net:http-server",
     "//sling/string:numbers",
     "//sling/util:fingerprint",
     "//sling/util:mutex",

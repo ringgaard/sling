@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SLING_HTTP_STATIC_CONTENT_H_
-#define SLING_HTTP_STATIC_CONTENT_H_
+#ifndef SLING_NET_STATIC_CONTENT_H_
+#define SLING_NET_STATIC_CONTENT_H_
 
 #include <string>
 
 #include "sling/base/types.h"
-#include "sling/http/http-server.h"
+#include "sling/net/http-server.h"
 
 namespace sling {
 
@@ -44,5 +44,5 @@ class StaticContent {
 
 }  // namespace sling
 
-#endif  // SLING_HTTP_STATIC_CONTENT_H_
+#endif  // SLING_NET_STATIC_CONTENT_H_
 

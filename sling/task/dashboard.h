@@ -21,8 +21,8 @@
 #include <vector>
 
 #include "sling/base/types.h"
-#include "sling/http/http-server.h"
-#include "sling/http/static-content.h"
+#include "sling/net/http-server.h"
+#include "sling/net/static-content.h"
 #include "sling/task/job.h"
 #include "sling/util/mutex.h"
 

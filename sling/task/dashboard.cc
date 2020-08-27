@@ -111,7 +111,7 @@ string Dashboard::GetStatus() {
 }
 
 void Dashboard::HandleStatus(HTTPRequest *request, HTTPResponse *response) {
-  response->SetContentType("text/json; charset=utf-8");
+  response->set_content_type("text/json; charset=utf-8");
   response->Append(GetStatus());
   if (status_ == IDLE) status_ = MONITORED;
   if (status_ == FINAL) status_ = SYNCHED;

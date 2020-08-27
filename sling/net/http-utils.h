@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SLING_HTTP_HTTP_UTILS_H_
-#define SLING_HTTP_HTTP_UTILS_H_
+#ifndef SLING_NET_HTTP_UTILS_H_
+#define SLING_NET_HTTP_UTILS_H_
 
 #include <string.h>
 #include <string>
@@ -23,53 +23,6 @@
 #include "sling/string/text.h"
 
 namespace sling {
-
-// HTTP memory buffer.
-struct HTTPBuffer {
- public:
-  ~HTTPBuffer() { free(floor); }
-
-  // Buffer size.
-  int size() const { return end - start; }
-
-  // Buffer capacity.
-  int capacity() const { return ceil - floor; }
-
-  // Number of bytes left in buffer.
-  int remaining() const { return ceil - end; }
-
-  // Whether buffer is empty.
-  bool empty() const { return start == end; }
-
-  // Whether buffer is full.
-  bool full() const { return end == ceil; }
-
-  // Clear buffer and allocate space.
-  void reset(int size);
-
-  // Flush buffer by moving the used part to the beginning of the buffer.
-  void flush();
-
-  // Make room in buffer.
-  void ensure(int minfree);
-
-  // Clear buffer;
-  void clear();
-
-  // Get next line from buffer and nul terminate it. Returns null if no newline
-  // is found. White space and HTTP header continuations are replaced with
-  // spaces and trailing whitespace is removed.
-  char *gets();
-
-  // Append string to buffer.
-  void append(const char *data, int size);
-  void append(const char *str) { if (str) append(str, strlen(str)); }
-
-  char *floor = nullptr;  // start of allocated memory
-  char *ceil = nullptr;   // end of allocated memory
-  char *start = nullptr;  // start of used part of buffer
-  char *end = nullptr;    // end of used part of buffer
-};
 
 // HTTP header.
 struct HTTPHeader {
@@ -142,5 +95,5 @@ time_t ParseRFCTime(const char *timestr);
 
 }  // namespace sling
 
-#endif  // SLING_HTTP_HTTP_UTILS_H_
+#endif  // SLING_NET_HTTP_UTILS_H_
 

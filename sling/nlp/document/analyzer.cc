@@ -16,9 +16,9 @@
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
 #include "sling/frame/serialization.h"
-#include "sling/http/http-server.h"
-#include "sling/http/static-content.h"
-#include "sling/http/web-service.h"
+#include "sling/net/http-server.h"
+#include "sling/net/static-content.h"
+#include "sling/net/web-service.h"
 #include "sling/nlp/document/annotator.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-service.h"
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
   commons.Freeze();
 
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
-  HTTPServerOptions httpopts;
+  SocketServerOptions httpopts;
   HTTPServer http(httpopts, FLAGS_port);
 
   analyzer.Register(&http);

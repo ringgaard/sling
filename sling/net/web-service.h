@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SLING_HTTP_WEB_SERVICE_H_
-#define SLING_HTTP_WEB_SERVICE_H_
+#ifndef SLING_NET_WEB_SERVICE_H_
+#define SLING_NET_WEB_SERVICE_H_
 
 #include <string>
 
 #include "sling/base/types.h"
 #include "sling/frame/object.h"
-#include "sling/http/http-server.h"
-#include "sling/http/http-utils.h"
+#include "sling/net/http-server.h"
+#include "sling/net/http-utils.h"
 #include "sling/string/text.h"
 
 namespace sling {
@@ -99,5 +99,5 @@ class WebService {
 
 }  // namespace sling
 
-#endif  // SLING_HTTP_WEB_SERVICE_H_
+#endif  // SLING_NET_WEB_SERVICE_H_
 

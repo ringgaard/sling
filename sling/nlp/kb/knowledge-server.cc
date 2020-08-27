@@ -16,7 +16,7 @@
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
 #include "sling/frame/serialization.h"
-#include "sling/http/http-server.h"
+#include "sling/net/http-server.h"
 #include "sling/nlp/kb/knowledge-service.h"
 
 DEFINE_int32(port, 8080, "HTTP server port");
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
   LoadStore(FLAGS_kb, &commons);
 
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
-  HTTPServerOptions options;
+  SocketServerOptions options;
   HTTPServer http(options, FLAGS_port);
 
   KnowledgeService kb;

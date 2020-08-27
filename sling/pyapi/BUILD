@@ -41,7 +41,7 @@ cc_library(
     "//sling/frame:json",
     "//sling/frame:turtle",
     "//sling/frame:xml",
-    "//sling/http:http-server",
+    "//sling/net:http-server",
     "//sling/myelin:flow",
     "//sling/myelin:compiler",
     "//sling/myelin:compute",

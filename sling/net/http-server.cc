@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/net/http-protocol.h"
+#include "sling/net/http-server.h"
 
 #include "sling/string/numbers.h"
 

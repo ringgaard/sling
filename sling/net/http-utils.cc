@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/http/http-utils.h"
+#include "sling/net/http-utils.h"
 
 #include <time.h>
 
@@ -101,102 +101,6 @@ string HTMLEscape(const char *text, int size) {
     }
   }
   return escaped;
-}
-
-void HTTPBuffer::reset(int size) {
-  if (size != capacity()) {
-    if (size == 0) {
-      free(floor);
-      floor = ceil = start = end = nullptr;
-    } else {
-      floor = static_cast<char *>(realloc(floor, size));
-      CHECK(floor != nullptr) << "Out of memory, " << size << " bytes";
-      ceil = floor + size;
-    }
-  }
-  start = end = floor;
-}
-
-void HTTPBuffer::flush() {
-  if (start > floor) {
-    int size = end - start;
-    memcpy(floor, start, size);
-    start = floor;
-    end = start + size;
-  }
-}
-
-void HTTPBuffer::ensure(int minfree) {
-  // Check if there is enough free space in buffer.
-  if (ceil - end >= minfree) return;
-
-  // Compute new size of buffer.
-  int size = ceil - floor;
-  int minsize = end + minfree - floor;
-  while (size < minsize) {
-    if (size == 0) {
-      size = 1024;
-    } else {
-      size *= 2;
-    }
-  }
-
-  // Expand buffer.
-  char *p = static_cast<char *>(realloc(floor, size));
-  CHECK(p != nullptr) << "Out of memory, " << size << " bytes";
-
-  // Adjust pointers.
-  start += p - floor;
-  end += p - floor;
-  floor = p;
-  ceil = p + size;
-}
-
-void HTTPBuffer::clear() {
-  free(floor);
-  floor = ceil = start = end = nullptr;
-}
-
-char *HTTPBuffer::gets() {
-  char *line = start;
-  char *s = line;
-  while (s < end) {
-    switch (*s) {
-      case '\n':
-        if (s + 1 < end && (s[1] == ' ' || s[1] == '\t')) {
-          // Replace HTTP header continuation with space.
-          *s++ = ' ';
-        } else {
-          //  End of line found. Strip trailing whitespace.
-          *s = 0;
-          start = s + 1;
-          while (s > line) {
-            s--;
-            if (*s != ' ' && *s != '\t') break;
-            *s = 0;
-          }
-          return line;
-        }
-        break;
-
-      case '\r':
-      case '\t':
-        // Replace whitespace with space.
-        *s++ = ' ';
-        break;
-
-      default:
-        s++;
-    }
-  }
-
-  return nullptr;
-}
-
-void HTTPBuffer::append(const char *data, int size) {
-  ensure(size);
-  memcpy(end, data, size);
-  end += size;
 }
 
 URLQuery::URLQuery(const char *query) {

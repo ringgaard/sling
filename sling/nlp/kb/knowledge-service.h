@@ -20,8 +20,8 @@
 #include "sling/base/types.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
-#include "sling/http/http-server.h"
-#include "sling/http/static-content.h"
+#include "sling/net/http-server.h"
+#include "sling/net/static-content.h"
 #include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/kb/name-table.h"
 

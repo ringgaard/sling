@@ -23,7 +23,7 @@
 #include "sling/base/logging.h"
 #include "sling/db/db.h"
 #include "sling/db/dbprotocol.h"
-#include "sling/net/http-protocol.h"
+#include "sling/net/http-server.h"
 #include "sling/string/numbers.h"
 #include "sling/util/fingerprint.h"
 #include "sling/util/thread.h"

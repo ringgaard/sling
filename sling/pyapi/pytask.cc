@@ -16,7 +16,7 @@
 
 #include <string.h>
 
-#include "sling/http/http-server.h"
+#include "sling/net/http-server.h"
 #include "sling/task/dashboard.h"
 
 using namespace sling::task;
@@ -518,7 +518,7 @@ PyObject *PyStartTaskMonitor(PyObject *self, PyObject *args) {
   bool start_http_server = false;
   if (http == nullptr) {
     LOG(INFO) << "Start HTTP server on port " << port;
-    HTTPServerOptions options;
+    SocketServerOptions options;
     http = new HTTPServer(options, port);
     start_http_server = true;
   }

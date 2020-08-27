@@ -96,5 +96,15 @@ void IOBuffer::Write(const void *data, size_t size) {
   end_ += size;
 }
 
+void IOBuffer::Unread(size_t size) {
+  DCHECK_LE(size, consumed());
+  begin_ -= size;
+}
+
+void IOBuffer::Unwrite(size_t size) {
+  DCHECK_LE(size, available());
+  end_ -= size;
+}
+
 }  // namespace sling
 
