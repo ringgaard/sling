@@ -70,8 +70,8 @@ cc_library(
     "//sling/base",
     "//sling/base:perf",
     "//sling/file:embed",
-    "//sling/http:http-server",
-    "//sling/http:static-content",
+    "//sling/net:http-server",
+    "//sling/net:static-content",
     "//sling/util:mutex",
   ],
 )

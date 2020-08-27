@@ -27,8 +27,8 @@ cc_binary(
   deps = [
     "//sling/base",
     "//sling/file:posix",
-    "//sling/http:http-server",
-    "//sling/http:web-service",
+    "//sling/net:http-server",
+    "//sling/net:web-service",
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/parser",
     "//sling/nlp/parser:components",

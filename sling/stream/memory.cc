@@ -135,7 +135,7 @@ int64 StringOutputStream::ByteCount() const {
 IOBufferInputStream::IOBufferInputStream(IOBuffer *buffer) : buffer_(buffer) {}
 
 bool IOBufferInputStream::Next(const void **data, int *size) {
-  int n = buffer_->available();
+  size_t n = buffer_->available();
   if (n > 0) {
     *data = buffer_->Consume(n);
     *size = n;
@@ -146,11 +146,11 @@ bool IOBufferInputStream::Next(const void **data, int *size) {
 }
 
 void IOBufferInputStream::BackUp(int count) {
-  buffer_->Consume(-count);
+  buffer_->Unread(count);
 }
 
 bool IOBufferInputStream::Skip(int count) {
-  int left = buffer_->available();
+  size_t left = buffer_->available();
   if (count > left) {
     buffer_->Consume(left);
     return false;
@@ -170,15 +170,16 @@ IOBufferOutputStream::IOBufferOutputStream(IOBuffer *buffer, int block_size)
 bool IOBufferOutputStream::Next(void **data, int *size) {
   if (buffer_->full()) buffer_->Ensure(block_size_);
 
-  int n = buffer_->remaining();
+  size_t n = buffer_->remaining();
   if (n > block_size_) n = block_size_;
   *data = buffer_->Append(n);
   *size = n;
+
   return true;
 }
 
 void IOBufferOutputStream::BackUp(int count) {
-  buffer_->Append(-count);
+  buffer_->Unwrite(count);
 }
 
 int64 IOBufferOutputStream::ByteCount() const {

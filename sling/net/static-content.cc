@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/http/static-content.h"
+#include "sling/net/static-content.h"
 
 #include <string.h>
 #include <string>
@@ -20,7 +20,7 @@
 #include "sling/base/flags.h"
 #include "sling/base/status.h"
 #include "sling/file/file.h"
-#include "sling/http/http-server.h"
+#include "sling/net/http-server.h"
 
 // Use internal embedded file system for web content by default.
 DEFINE_string(webdir, "/intern", "Base directory for serving web contents");
@@ -112,9 +112,8 @@ void StaticContent::Register(HTTPServer *http) {
 
 void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   // Only GET and HEAD methods allowed.
-  bool get_request = strcmp(request->method(), "GET") == 0;
-  bool head_request = strcmp(request->method(), "HEAD") == 0;
-  if (!get_request && !head_request) {
+  HTTPMethod method = GetHTTPMethod(request->method());
+  if (method != HTTP_GET && method != HTTP_HEAD) {
     response->SendError(405, "Method Not Allowed", nullptr);
     return;
   }
@@ -193,7 +192,7 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   if (!refresh && cached) {
     if (ParseRFCTime(cached) == stat.mtime) {
       response->set_status(304);
-      response->SetContentLength(0);
+      response->set_content_length(0);
       return;
     }
   }
@@ -201,7 +200,7 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   // Set content type from file extension.
   const char *mimetype = GetMimeType(GetExtension(filename.c_str()));
   if (mimetype != nullptr) {
-    response->SetContentType(mimetype);
+    response->set_content_type(mimetype);
   }
 
   // Do not cache content if requested.
@@ -214,7 +213,7 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   }
 
   // Do not return file content if only headers were requested.
-  if (head_request) return;
+  if (method == HTTP_HEAD) return;
 
   // Open requested file.
   File *file;
@@ -232,7 +231,7 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   }
 
   // Set content length to file size.
-  response->SetContentLength(stat.size);
+  response->set_content_length(stat.size);
 
   // Return file contents.
   response->SendFile(file);

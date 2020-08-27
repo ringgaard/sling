@@ -103,6 +103,12 @@ class IOBuffer {
     Write(buffer->Consume(size), size);
   }
 
+  // Unread already read data.
+  void Unread(size_t size);
+
+  // Unwrite already written data.
+  void Unwrite(size_t size);
+
  private:
   char *floor_ = nullptr;  // start of allocated memory
   char *ceil_ = nullptr;   // end of allocated memory

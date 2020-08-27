@@ -14,16 +14,59 @@ cc_library(
 )
 
 cc_library(
-  name = "http-protocol",
-  srcs = ["http-protocol.cc"],
-  hdrs = ["http-protocol.h"],
+  name = "http-utils",
+  srcs = ["http-utils.cc"],
+  hdrs = ["http-utils.h"],
+  deps = [
+    "//sling/base",
+    "//sling/string:ctype",
+    "//sling/string:text",
+    "//sling/string:numbers",
+  ],
+)
+
+cc_library(
+  name = "http-server",
+  srcs = ["http-server.cc"],
+  hdrs = ["http-server.h"],
   deps = [
     ":socket-server",
+    ":http-utils",
     "//sling/base",
-    "//sling/http:http-utils",
     "//sling/string:numbers",
     "//sling/util:iobuffer",
     "//sling/util:mutex",
+  ],
+)
+
+cc_library(
+  name = "static-content",
+  srcs = ["static-content.cc"],
+  hdrs = ["static-content.h"],
+  deps = [
+    ":http-server",
+    "//sling/base",
+    "//sling/file",
+  ],
+)
+
+cc_library(
+  name = "web-service",
+  srcs = ["web-service.cc"],
+  hdrs = ["web-service.h"],
+  deps = [
+    ":http-server",
+    ":http-utils",
+    "//sling/base",
+    "//sling/frame:decoder",
+    "//sling/frame:encoder",
+    "//sling/frame:json",
+    "//sling/frame:printer",
+    "//sling/frame:object",
+    "//sling/frame:reader",
+    "//sling/frame:store",
+    "//sling/stream:memory",
+    "//sling/string:text",
   ],
 )
 

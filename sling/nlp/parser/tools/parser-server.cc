@@ -15,8 +15,8 @@
 #include "sling/base/flags.h"
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
-#include "sling/http/http-server.h"
-#include "sling/http/web-service.h"
+#include "sling/net/http-server.h"
+#include "sling/net/web-service.h"
 #include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/parser/parser.h"
 
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
-  HTTPServerOptions options;
+  SocketServerOptions options;
   HTTPServer http(options, FLAGS_port);
 
   ParserService service;
