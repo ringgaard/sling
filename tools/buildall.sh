@@ -15,7 +15,6 @@ bazel build -c opt $* \
   sling/nlp/kb:* \
   sling/nlp/silver:* \
   sling/nlp/parser:* \
-  sling/nlp/parser/tools:* \
   sling/nlp/wiki:* \
   sling/pyapi:* \
   sling/nlp/wiki:* \
