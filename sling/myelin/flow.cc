@@ -341,7 +341,6 @@ double TypeTraits::number(const void *data) const {
 
 Transformations::~Transformations() {
   for (auto *t : transformers_) delete t;
-  for (auto *t : typers_) delete t;
 }
 
 // Flow file parser.
@@ -1195,20 +1194,11 @@ void Flow::Analyze(const Transformations &transformations) {
   // Infer input and output variables.
   InferInputsAndOutputs();
 
-  // Run first round of transformations.
+  // Run transformations.
   Transform(transformations);
 
   // Sort ops and vars in dependency order.
   Sort();
-
-  // Infer missing types and shapes for variables.
-  InferTypes(transformations);
-
-  // Run second round of transformations after types have been resolved.
-  if (Transform(transformations)) {
-    // Make sure ops are still sorted after second round of transformations.
-    Sort();
-  }
 }
 
 void Flow::InferInputsAndOutputs() {
@@ -1738,78 +1728,6 @@ void Flow::Sort() {
   for (Function *func : funcs_) {
     std::sort(func->ops.begin(), func->ops.end(), CompareOpOrder);
   }
-}
-
-bool Flow::InferTypes(const Transformations &transformations) {
-  // Assume that operations have been topologically ordered so the inputs for
-  // an operation come before the operation itself.
-  int num_unresolved = 0;
-  int num_skipped = 0;
-  for (Operation *op : ops_) {
-    // Check that all inputs have type information.
-    bool missing = false;
-    for (Variable *input : op->inputs) {
-      if (input->type == DT_INVALID) {
-        missing = true;
-        LOG(WARNING) << "Skipping type inference for " << op->name
-                     << " because input " << input->name
-                     << " is missing type";
-      }
-      if (input->shape.missing()) {
-        missing = true;
-        LOG(WARNING) << "Skipping type inference for " << op->name
-                     << " because input " << input->name
-                     << " is missing shape";
-      }
-    }
-    if (missing) {
-      num_skipped++;
-      continue;
-    }
-
-    // Check if any of the outputs are missing type or shape information.
-    bool infer = false;
-    for (Variable *output : op->outputs) {
-      if (output->type == DT_INVALID || output->shape.missing()) infer = true;
-    }
-    if (!infer) continue;
-
-    // Try to infer type and shape for operation outputs.
-    auto &typers = transformations.typers();
-    for (int t = typers.size() -1; t >= 0; --t) {
-      Typer *typer = typers[t];
-      bool done = typer->InferTypes(this, op);
-      if (done) {
-        VLOG(4) << "Types for " << op->name << " inferred by " << typer->Name();
-        break;
-      } else {
-        VLOG(9) << "Types for " << op->name << " could not be inferred by "
-                << typer->Name();
-      }
-    }
-
-    // Check that all outputs are now resolved.
-    bool resolved = true;
-    for (Variable *output : op->outputs) {
-      if (output->type == DT_INVALID) {
-        LOG(WARNING) << "Variable " << output->name << " is missing type";
-        resolved = false;
-      }
-      if (output->shape.missing()) {
-        LOG(WARNING) << "Variable " << output->name << " is missing shape";
-        resolved = false;
-      }
-    }
-    if (!resolved) num_unresolved++;
-  }
-
-  if (num_unresolved > 0 || num_skipped > 0) {
-    LOG(WARNING) << (num_unresolved + num_skipped) << " ops with unresolved"
-                 << " types, " << num_skipped << " skipped";
-    return false;
-  }
-
-  return true;
 }
 
 void Flow::Order(Function *func,

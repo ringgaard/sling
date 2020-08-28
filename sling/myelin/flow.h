@@ -870,9 +870,6 @@ class Flow {
   // Sort operations in topological order of computation.
   void Sort();
 
-  // Infer types of variables. Return false if some variables are unresolved.
-  bool InferTypes(const Transformations &transformations);
-
   // Variables.
   std::vector<Variable *> vars_;
 
@@ -893,19 +890,6 @@ class Flow {
 
   // Batch size.
   int batch_size_ = 1;
-};
-
-// Component type for inferring types and shapes of operation outputs.
-class Typer {
- public:
-  virtual ~Typer() = default;
-
-  // Return descriptive name for typer.
-  virtual string Name() = 0;
-
-  // Return true if the type of the outputs of the operations has been
-  // inferred.
-  virtual bool InferTypes(Flow *flow, Flow::Operation *op) = 0;
 };
 
 // Component type for applying transformations to a flow.
@@ -931,27 +915,14 @@ class Transformations {
     transformers_.emplace_back(transformer);
   }
 
-  // Register type inference component. Transfers ownership from caller.
-  void RegisterTyper(Typer *typer) {
-    typers_.emplace_back(typer);
-  }
-
   // Flow transformation components.
   const std::vector<Transformer *> &transformers() const {
     return transformers_;
   }
 
-  // Type inference components.
-  const std::vector<Typer *> &typers() const {
-    return typers_;
-  }
-
  private:
   // Flow transformation components.
   std::vector<Transformer *> transformers_;
-
-  // Type inference components.
-  std::vector<Typer *> typers_;
 };
 
 // Return name of corresponding gradient variable.
