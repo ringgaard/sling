@@ -40,12 +40,6 @@ void RegisterConcatKernels(Library *library);
 // gather.cc
 void RegisterGatherKernels(Library *library);
 
-// generic-matmul.cc
-void RegisterGenericMatMul(Library *library);
-
-// generic-operators.cc
-void RegisterGenericOperators(Library *library);
-
 // reduce.cc
 void RegisterReduceKernels(Library *library);
 
@@ -141,33 +135,6 @@ class Reference : public Kernel {
   }
 };
 
-// Rename operations with aliases.
-class RenameTransformer : public Transformer {
- public:
-  string Name() override { return "RenameTransformer"; }
-
-  bool Transform(Flow *flow) override {
-    // Rename BiasAdd to Add.
-    int renames = 0;
-    for (Flow::Operation *op : flow->ops()) {
-      if (op->type == "BiasAdd") {
-        op->type = "Add";
-        renames++;
-      }
-      if (op->type == "ConcatV2") {
-        op->type = "Concat";
-        renames++;
-      }
-      if (op->type == "GatherV2") {
-        op->type = "Gather";
-        renames++;
-      }
-    }
-
-    return renames > 0;
-  }
-};
-
 // Remove identity ops.
 class IdentityTransformer : public Transformer {
  public:
@@ -177,13 +144,7 @@ class IdentityTransformer : public Transformer {
     // Eliminate no-ops.
     std::vector<Flow::Operation *> noops;
     for (Flow::Operation *op : flow->ops()) {
-      if (op->type == "Const" ||
-          op->type == "Variable" ||
-          op->type == "VariableV2" ||
-          op->type == "Placeholder" ||
-          op->type == "Enter") {
-        noops.push_back(op);
-      } else if (op->type == "Identity") {
+      if (op->type == "Identity") {
         // Eliminate identity if there is no implicit broadcasting involved.
         if (op->indegree() == 1 && op->outdegree() == 1) {
           Flow::Variable *in = op->inputs[0];
@@ -392,233 +353,11 @@ class FlattenConcatTransformer : public Transformer {
   }
 };
 
-// Type inference for standard ops.
-class StandardTyper : public Typer {
- public:
-  string Name() override { return "StandardTyper"; }
-
-  bool InferTypes(Flow *flow, Flow::Operation *op) override {
-    // Infer shape for matrix multiplication.
-    if (op->type == "MatMul" ||
-        op->type == "MatMulAdd" ||
-        op->type == "MatMulRelu" ||
-        op->type == "MatMulAddRelu") {
-      if (op->indegree() >= 2 && op->outdegree() == 1) {
-        Flow::Variable *a = op->inputs[0];
-        Flow::Variable *b = op->inputs[1];
-        Flow::Variable *c = op->outputs[0];
-
-        if (c->type == DT_INVALID) c->type = a->type;
-
-        // Matrix multiplied by matrix.
-        if (a->rank() == 2 && b->rank() == 2) {
-          bool ta = op->GetAttr("transpose_a", false);
-          bool tb = op->GetAttr("transpose_b", false);
-          bool tc = op->GetAttr("transpose_c", false);
-          int a_rows =  ta ? a->dim(1) : a->dim(0);
-          int a_cols =  ta ? a->dim(0) : a->dim(1);
-          int b_rows =  tb ? b->dim(1) : b->dim(0);
-          int b_cols =  tb ? b->dim(0) : b->dim(1);
-          if (a_cols == b_rows) {
-            if (tc) {
-              c->shape.assign(b_cols, a_rows);
-            } else {
-              c->shape.assign(a_rows, b_cols);
-            }
-            return true;
-          }
-        }
-      }
-    }
-
-    // Infer shape for element-wise operation.
-    if (op->type == "Add" ||
-        op->type == "BiasAdd" ||
-        op->type == "Mul" ||
-        op->type == "Sub" ||
-        op->type == "Tanh" ||
-        op->type == "Sigmoid" ||
-        op->type == "Relu" ||
-        op->type == "Calculate") {
-      if (op->indegree() > 0 && op->outdegree() > 0) {
-        // Determine output rank.
-        Shape shape;
-        int rank = 0;
-        for (Flow::Variable *in : op->inputs) {
-          if (in->rank() > rank) rank = in->rank();
-        }
-        shape.fill(rank, 1);
-
-        // Determine output shape based on broadcast semantics.
-        for (Flow::Variable *in : op->inputs) {
-          int depth = rank - in->rank();
-          for (int d = 0; d < in->rank(); ++d) {
-            if (shape.dim(d + depth) < in->dim(d)) {
-              shape.set(d + depth, in->dim(d));
-            }
-          }
-        }
-
-        // Set shape for outputs.
-        for (Flow::Variable *out : op->outputs) {
-          out->shape = shape;
-        }
-
-        if (op->outputs[0]->type == DT_INVALID) {
-          op->outputs[0]->type = op->inputs[0]->type;
-        }
-        return true;
-      }
-    }
-
-    // Infer shape for concat operation.
-    if (op->type == "Concat") {
-      int n = op->GetAttr("N", 0);
-      if (n > op->indegree()) return false;
-      int axis;
-      if (op->indegree() != n + 1 || !op->inputs[n]->GetData(&axis)) axis = 0;
-
-      if (n > 0 && op->outdegree() == 1) {
-        Flow::Variable *result = op->outputs[0];
-        Shape concat = op->inputs[0]->shape;
-        bool compatible = true;
-        for (int i = 1; i < n; ++i) {
-          Flow::Variable *input = op->inputs[i];
-          if (input->shape.rank() == concat.rank()) {
-            for (int d = 0; d < concat.rank(); ++d) {
-              if (d == axis) {
-                concat.set(d, concat.dim(d) + input->shape.dim(d));
-              } else if (concat.dim(d) != input->shape.dim(d)) {
-                compatible = false;
-              }
-            }
-          } else {
-            compatible = false;
-          }
-        }
-        if (compatible) {
-          result->shape = concat;
-          return true;
-        }
-      }
-    }
-
-    // Infer shape for identity operation.
-    if (op->type == "Identity") {
-      if (op->indegree() == 1 && op->outdegree() == 1) {
-        Flow::Variable *input = op->inputs[0];
-        Flow::Variable *output = op->outputs[0];
-        if (output->shape.missing()) {
-          output->shape = input->shape;
-        }
-        if (output->type == DT_INVALID) {
-          output->type = input->type;
-        }
-        return true;
-      }
-    }
-
-    // Infer shape for reshaping operation.
-    if (op->type == "Reshape") {
-      if (op->indegree() == 2 && op->outdegree() == 1) {
-        Flow::Variable *shape = op->inputs[1];
-        Flow::Variable *result = op->outputs[0];
-        std::vector<int> dims;
-        if (shape->GetData(&dims)) {
-          result->shape.clear();
-          for (int dim : dims) {
-            // Unspecified dimensions (-1) typically correspond to to the input
-            // sequence length.  Since Myelin cells process one input element at
-            // a time, -1 can be replaced with 1.
-            result->shape.add(dim == -1 ? 1 : dim);
-          }
-          if (op->outputs[0]->type == DT_INVALID) {
-            op->outputs[0]->type = op->inputs[0]->type;
-          }
-          return true;
-        }
-      }
-    }
-
-    // Infer shape for gather operation.
-    if (op->type == "Gather") {
-      // For the 2-arg form tf.gather(params, indices):
-      //   result.type = params.dtype.
-      //   result.shape = indices.shape + params.shape[1:].
-      // https://www.tensorflow.org/api_docs/python/tf/gather
-      // Note that there is also a 3-arg form tf.gather(params, indices, axis).
-      if (op->indegree() == 2 && op->outdegree() == 1) {
-        Flow::Variable *params = op->inputs[0];
-        Flow::Variable *indices = op->inputs[1];
-        Flow::Variable *result = op->outputs[0];
-        result->type = params->type;
-        result->shape = indices->shape;
-        for (int i = 1; i < params->shape.rank(); ++i) {
-          result->shape.add(params->shape.dim(i));
-        }
-        return true;
-      }
-    }
-
-    // Infer shape for pooling gather operation.
-    if (op->type == "GatherAvg" ||
-        op->type == "GatherSum" ||
-        op->type == "GatherMax") {
-      if (op->indegree() == 2 && op->outdegree() == 1) {
-        Flow::Variable *params = op->inputs[0];
-        Flow::Variable *result = op->outputs[0];
-        result->type = params->type;
-        result->shape = params->shape;
-        result->shape.set(0, 1);
-        return true;
-      }
-    }
-
-    // Infer shape for argmax operation.
-    if (op->type == "ArgMax") {
-      if (op->indegree() == 1 && op->outdegree() == 1) {
-        Flow::Variable *y = op->outputs[0];
-        if (y->type == DT_INVALID) y->type = DT_INT32;
-        y->shape.redim(0);
-        return true;
-      }
-    }
-
-    // Infer shape for reference operation.
-    if (op->type == "Reference") {
-      if (op->indegree() == 1 && op->outdegree() == 1) {
-        Flow::Variable *ref = op->outputs[0];
-        Flow::Variable *external = flow->Var(op->GetAttr("var"));
-        ref->type = external->type;
-        ref->shape = external->shape;
-        ref->set_ref();
-        return true;
-      }
-    }
-
-    // Infer shape for tf.fill(dims, value).
-    if (op->type == "Fill") {
-      std::vector<int> dims;
-      if (op->indegree() == 2 && op->outdegree() == 1 &&
-          op->inputs[0]->GetData(&dims)) {
-        op->outputs[0]->shape = Shape(dims);
-        return true;
-      }
-    }
-
-    return false;
-  }
-};
-
 // Register generic transforms.
 void RegisterGenericTransforms(Library *library) {
-  library->RegisterTransformer(new RenameTransformer());
   library->RegisterTransformer(new IdentityTransformer());
   library->RegisterTransformer(new FlattenConcatTransformer());
   library->RegisterTransformer(new CompositeTransformer());
-
-  // Register type inference.
-  library->RegisterTyper(new StandardTyper());
 }
 
 // Register generic library.
@@ -630,8 +369,6 @@ void RegisterGenericLibrary(Library *library) {
   RegisterTranspose(library);
   RegisterArrayKernels(library);
   RegisterArgMax(library);
-  RegisterGenericMatMul(library);
-  RegisterGenericOperators(library);
 }
 
 }  // namespace myelin

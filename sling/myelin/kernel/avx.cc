@@ -22,9 +22,6 @@ namespace myelin {
 // avx-matmul.cc
 void RegisterAVXMatMul(Library *library);
 
-// avx-operators.cc
-void RegisterAVXOperators(Library *library);
-
 // simd-matmul.cc
 void RegisterSIMDMatMulLibrary(Library *library);
 
@@ -32,7 +29,6 @@ void RegisterSIMDMatMulLibrary(Library *library);
 void RegisterAVXLibrary(Library *library) {
   RegisterSIMDMatMulLibrary(library);
   RegisterAVXMatMul(library);
-  RegisterAVXOperators(library);
 }
 
 }  // namespace myelin

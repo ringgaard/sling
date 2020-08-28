@@ -21,7 +21,6 @@
 #include "sling/myelin/kernel/avx.h"
 #include "sling/myelin/kernel/generic.h"
 #include "sling/myelin/kernel/gradients.h"
-#include "sling/myelin/kernel/sse.h"
 #include "sling/myelin/kernel/precompute.h"
 
 namespace sling {
@@ -33,7 +32,6 @@ static std::once_flag gradients_initialized;
 void RegisterStandardLibrary(Library *library) {
   RegisterArithmeticTransforms(library);
   RegisterGenericLibrary(library);
-  RegisterSSELibrary(library);
   RegisterAVXLibrary(library);
   RegisterArithmeticLibrary(library);
   RegisterPrecomputeLibrary(library);

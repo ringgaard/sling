@@ -22,19 +22,20 @@ namespace sling {
 namespace myelin {
 
 // Matrix multiplication using CUDA.
-class CUDAMatMulBase : public CUDAKernel {
+class CUDAMatMul : public CUDAKernel {
  public:
   // Maximum number of loop unrolls.
   static constexpr int MAX_UNROLLS = 8;
 
-  CUDAMatMulBase(bool bias, bool relu) : bias_(bias), relu_(relu) {}
+  string Name() override { return "CUDAMatMul"; }
+  string Operation() override { return "MatMul"; }
 
   bool Supports(Step *step) override {
     // Requires CUDA support.
     if (!CUDAKernel::Supports(step)) return false;
 
-    // Two or three 2D tensor inputs and one 2D tensor output.
-    if (step->inputs().size() != (bias_ ? 3 : 2)) return false;
+    // Two 2D tensor inputs and one 2D tensor output.
+    if (step->inputs().size() != 2) return false;
     if (step->outputs().size() != 1) return false;
     Args args(step);
     Matrix &A = args.A;
@@ -55,19 +56,6 @@ class CUDAMatMulBase : public CUDAKernel {
     Type type = A.type();
     if (TypeTraits::of(type).ptx() == nullptr) return false;
     if (B.type() != type || C.type() != type) return false;
-
-    // Check bias vector.
-    if (bias_) {
-      Matrix &v = args.v;
-      if (v.type() != type) return false;
-      if (v.rank() == 1) {
-        if (v.tensor()->dim(0) != C.width()) return false;
-      } else if (v.rank() == 2) {
-        if (v.height() != 1 || v.width() != C.width()) return false;
-      } else {
-        return false;
-      }
-    }
 
     return true;
   }
@@ -100,7 +88,6 @@ class CUDAMatMulBase : public CUDAKernel {
     Matrix &A = args.A;
     Matrix &B = args.B;
     Matrix &C = args.C;
-    Matrix &v = args.v;
 
     int width = C.width();
     int height = C.height();
@@ -111,7 +98,6 @@ class CUDAMatMulBase : public CUDAKernel {
     const char *type = traits.ptx();
     bool fp = dtype == DT_FLOAT || dtype == DT_DOUBLE || dtype == DT_HALF;
     bool vec = height == 1;
-    int dsize = traits.size();
 
     // Compute number of unrolls.
     int unrolls = 0;
@@ -195,22 +181,6 @@ class CUDAMatMulBase : public CUDAKernel {
       ptx_endif();
     }
 
-    // Optionally add bias.
-    if (bias_) {
-      ptx_decl(b64, vptr);
-      ptx->LoadTensorAddress(vptr, v.tensor());
-      ptx_emit(mad.wide.u32, vptr, col, PTXImm(dsize), vptr);
-
-      PTXReg bias = ptx->reg(type, "bias");
-      ptx->emit(PTXInstr("ld.global", type), bias, PTXAddr(vptr));
-      ptx->emit(PTXInstr("add", type), sum, sum, bias);
-    }
-
-    // Optionally compute relu.
-    if (relu_) {
-      ptx->emit(PTXInstr("max", type), sum, sum, zero);
-    }
-
     // Save result in C[row,col].
     ptx_decl(b64, cptr);
     ptx->LoadTensorAddress(cptr, C.tensor());
@@ -231,7 +201,6 @@ class CUDAMatMulBase : public CUDAKernel {
     Matrix &A = args.A;
     Matrix &B = args.B;
     Matrix &C = args.C;
-    Matrix &v = args.v;
 
     int width = C.width();
     int height = C.height();
@@ -356,22 +325,6 @@ class CUDAMatMulBase : public CUDAKernel {
     ptx_jump(loop);
     ptx_endif();
 
-    // Optionally add bias.
-    if (bias_) {
-      ptx_decl(b64, vptr);
-      ptx->LoadTensorAddress(vptr, v.tensor());
-      ptx_emit(mad.wide.u32, vptr, x, PTXImm(dsize), vptr);
-
-      PTXReg bias = ptx->reg(type, "bias");
-      ptx->emit(PTXInstr("ld.global", type), bias, PTXAddr(vptr));
-      ptx->emit(PTXInstr("add", type), c, c, bias);
-    }
-
-    // Optionally compute relu.
-    if (relu_) {
-      ptx->emit(PTXInstr("max", type), c, c, zero);
-    }
-
     // Store result in C[row,col].
     ptx_decl(b64, cptr);
     ptx->LoadTensorAddress(cptr, C.tensor());
@@ -388,8 +341,6 @@ class CUDAMatMulBase : public CUDAKernel {
     Args args(step);
     int64 ops = args.A.height();
     ops *= args.B.tensor()->elements() * 2;
-    if (bias_) ops += args.v.tensor()->elements();
-    if (relu_) ops += args.C.tensor()->elements();
     return ops;
   }
 
@@ -446,56 +397,16 @@ class CUDAMatMulBase : public CUDAKernel {
     Args(const Step *step)
       : A(step->input(0), step->GetAttr("transpose_a", false)),
         B(step->input(1), step->GetAttr("transpose_b", false)),
-        C(step->output(0), step->GetAttr("transpose_c", false)),
-        v(step->indegree() < 3 ? nullptr : step->input(2), false) {}
+        C(step->output(0), step->GetAttr("transpose_c", false)) {}
 
     Matrix A;
     Matrix B;
     Matrix C;
-    Matrix v;
   };
-
-  bool bias_;    // add bias vector to result, y=Wx+b
-  bool relu_;    // apply rectified linear unit, y=max(0,Wx+b)
-};
-
-class CUDAMatMul : public CUDAMatMulBase {
- public:
-  CUDAMatMul() : CUDAMatMulBase(false, false) {}
-
-  string Name() override { return "CUDAMatMul"; }
-  string Operation() override { return "MatMul"; }
-};
-
-class CUDAMatMulAdd : public CUDAMatMulBase {
- public:
-  CUDAMatMulAdd() : CUDAMatMulBase(true, false) {}
-
-  string Name() override { return "CUDAMatMulAdd"; }
-  string Operation() override { return "MatMulAdd"; }
-};
-
-class CUDAMatMulRelu : public CUDAMatMulBase {
- public:
-  CUDAMatMulRelu() : CUDAMatMulBase(false, true) {}
-
-  string Name() override { return "CUDAMatMulRelu"; }
-  string Operation() override { return "MatMulRelu"; }
-};
-
-class CUDAMatMulAddRelu : public CUDAMatMulBase {
- public:
-  CUDAMatMulAddRelu() : CUDAMatMulBase(true, true) {}
-
-  string Name() override { return "CUDAMatMulAddRelu"; }
-  string Operation() override { return "MatMulAddRelu"; }
 };
 
 void RegisterCUDAMatMulLibrary(Library *library) {
   library->Register(new CUDAMatMul());
-  library->Register(new CUDAMatMulAdd());
-  library->Register(new CUDAMatMulRelu());
-  library->Register(new CUDAMatMulAddRelu());
 }
 
 }  // namespace myelin

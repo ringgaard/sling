@@ -8,8 +8,6 @@ cc_library(
     "concat.cc",
     "gather.cc",
     "generic.cc",
-    "generic-matmul.cc",
-    "generic-operators.cc",
     "reduce.cc",
     "transpose.cc",
   ],
@@ -38,24 +36,10 @@ cc_library(
 )
 
 cc_library(
-  name = "sse",
-  srcs = [
-    "sse.cc",
-    "sse-matmul.cc",
-  ],
-  hdrs = ["sse.h"],
-  deps = [
-    "//sling/base",
-    "//sling/myelin:compute",
-  ],
-)
-
-cc_library(
   name = "avx",
   srcs = [
     "avx.cc",
     "avx-matmul.cc",
-    "avx-operators.cc",
     "simd-matmul.cc",
   ],
   hdrs = [
@@ -99,7 +83,6 @@ cc_library(
     ":generic",
     ":gradients",
     ":precompute",
-    ":sse",
     "//sling/myelin:compute",
   ],
 )
