@@ -17,25 +17,29 @@
 #include <mutex>
 
 #include "sling/myelin/compute.h"
-#include "sling/myelin/kernel/arithmetic.h"
-#include "sling/myelin/kernel/avx.h"
-#include "sling/myelin/kernel/generic.h"
-#include "sling/myelin/kernel/gradients.h"
-#include "sling/myelin/kernel/precompute.h"
 
 namespace sling {
 namespace myelin {
 
 static std::once_flag gradients_initialized;
 
-// Register standard ops.
-void RegisterStandardLibrary(Library *library) {
+// Register standard kernels.
+void RegisterStandardLibrary(Library *library, int flags) {
   RegisterArithmeticTransforms(library);
   RegisterGenericLibrary(library);
-  RegisterAVXLibrary(library);
+  RegisterConcatKernels(library);
+  RegisterGatherKernels(library);
+  RegisterReduceKernels(library);
+  RegisterTransposeKernels(library);
+  RegisterArrayKernels(library);
+  RegisterArgMax(library);
+  RegisterSIMDMatMulLibrary(library);
   RegisterArithmeticLibrary(library);
-  RegisterPrecomputeLibrary(library);
+  if ((flags & LIBRARY_NOPRECOMPUTE) == 0) {
+    RegisterPrecomputeLibrary(library);
+  }
   RegisterGenericTransforms(library);
+  RegisterTransposeTransforms(library);
 
   std::call_once(gradients_initialized, RegisterStandardGradients);
 }

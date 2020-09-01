@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/myelin/kernel/gradients.h"
-
 #include <math.h>
+
+#include "sling/myelin/gradient.h"
+#include "sling/myelin/flow.h"
 
 namespace sling {
 namespace myelin {

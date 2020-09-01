@@ -16,12 +16,55 @@
 #define SLING_MYELIN_KERNEL_LIBRARY_H_
 
 #include "sling/myelin/compute.h"
+#include "sling/myelin/express.h"
 
 namespace sling {
 namespace myelin {
 
+// Library registration flags.
+enum LibraryOptions {
+  LIBRARY_NOPRECOMPUTE = 1,
+};
+
+// argmax.cc
+void RegisterArgMax(Library *library);
+
+// arithmetic.cc
+void RegisterArithmeticLibrary(Library *library);
+void RegisterArithmeticTransforms(Library *library);
+void InitExpression(const Step *step, Express *expr);
+
+// array.cc
+void RegisterArrayKernels(Library *library);
+
+// concat.cc
+void RegisterConcatKernels(Library *library);
+
+// gather.cc
+void RegisterGatherKernels(Library *library);
+
+// generic.cc
+void RegisterGenericTransforms(Library *library);
+void RegisterGenericLibrary(Library *library);
+
+// gradients.cc
+void RegisterStandardGradients();
+
+// precompute.cc
+void RegisterPrecomputeLibrary(Library *library);
+
+// reduce.cc
+void RegisterReduceKernels(Library *library);
+
+// transpose.cc
+void RegisterTransposeTransforms(Library *library);
+void RegisterTransposeKernels(Library *library);
+
+// simd-matmul.cc
+void RegisterSIMDMatMulLibrary(Library *library);
+
 // Register standard kernel library.
-void RegisterStandardLibrary(Library *library);
+void RegisterStandardLibrary(Library *library, int flags = 0);
 
 }  // namespace myelin
 }  // namespace sling

@@ -343,12 +343,39 @@ class TransposeTransformer : public Transformer {
       op->RemoveAttr("transpose_c");
     }
 
+    // Convert scalar MatMul into Mul.
+    for (Flow::Operation *op : flow->Find("MatMul")) {
+      if (op->indegree() != 2 || op->outdegree() != 1) continue;
+      auto *a = op->inputs[0];
+      auto *b = op->inputs[1];
+      auto *c = op->outputs[0];
+
+      if (!a->scalar() && !b->scalar()) continue;
+
+      if (a->is(Flow::Variable::ROW | Flow::Variable::COL)) continue;
+      if (b->is(Flow::Variable::ROW | Flow::Variable::COL)) continue;
+      if (c->is(Flow::Variable::ROW | Flow::Variable::COL)) continue;
+
+      if (!a->scalar() && op->GetAttr("transpose_a", false)) continue;
+      if (!b->scalar() && op->GetAttr("transpose_b", false)) continue;
+      if (op->GetAttr("transpose_c", false)) continue;
+
+      op->type = "Mul";
+      updates++;
+    }
+
     return updates > 0;
   }
 };
 
+// Register transpose transform.
+void RegisterTransposeTransforms(Library *library) {
+  library->RegisterTransformer(new TransposeTransformer());
+  library->Register(new Transpose());
+}
+
 // Register transpose kernel.
-void RegisterTranspose(Library *library) {
+void RegisterTransposeKernels(Library *library) {
   library->RegisterTransformer(new TransposeTransformer());
   library->Register(new Transpose());
 }

@@ -708,7 +708,7 @@ class Express {
   // zero when the non-single inputs are zero.
   bool SparseCompatible() const;
 
-  // Check if expression sparse assignment compatible, i.e. it evaluates to
+  // Check if expression is sparse assignment compatible, i.e. it evaluates to
   // zero plus the first input when the remaining non-single inputs are zero.
   bool SparseAssignCompatible() const;
 
