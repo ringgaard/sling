@@ -18,7 +18,7 @@
 
 #include "sling/myelin/express.h"
 #include "sling/myelin/cuda/cuda-kernel.h"
-#include "sling/myelin/kernel/arithmetic.h"
+#include "sling/myelin/kernel/library.h"
 
 namespace sling {
 namespace myelin {

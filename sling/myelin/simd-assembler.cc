@@ -201,8 +201,16 @@ class AVX512FloatGenerator : public SIMDGenerator {
     masm_->vaddps(zmm(dst), zmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulps(zmm(dst), zmm(src1), zmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulps(zmm(dst), zmm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    masm_->vfmadd231ps(zmm(dst), zmm(src1), zmm(src2));
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -335,8 +343,26 @@ class AVX256FloatGenerator : public SIMDGenerator {
     masm_->vaddps(ymm(dst), ymm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulps(ymm(dst), ymm(src1), ymm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulps(ymm(dst), ymm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (masm_->Enabled(FMA3)) {
+      masm_->vfmadd231ps(ymm(dst), ymm(src1), ymm(src2));
+    } else if (retain) {
+      YMMRegister acc = masm_->mm().allocy();
+      masm_->vmulps(acc, ymm(src1), ymm(src2));
+      masm_->vaddps(ymm(dst), ymm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vmulps(ymm(src1), ymm(src1), ymm(src2));
+      masm_->vaddps(ymm(dst), ymm(dst), ymm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -435,8 +461,26 @@ class AVX128FloatGenerator : public SIMDGenerator {
     masm_->vaddps(xmm(dst), xmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulps(xmm(dst), xmm(src1), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulps(xmm(dst), xmm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (masm_->Enabled(FMA3)) {
+      masm_->vfmadd231ps(xmm(dst), xmm(src1), xmm(src2));
+    } else if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->vmulps(acc, xmm(src1), xmm(src2));
+      masm_->vaddps(xmm(dst), xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vmulps(xmm(src1), xmm(src1), xmm(src2));
+      masm_->vaddps(xmm(dst), xmm(dst), xmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -546,6 +590,11 @@ class SSE128FloatGenerator : public SIMDGenerator {
     }
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    if (dst != src1) masm_->movaps(xmm(dst), xmm(src1));
+    masm_->mulps(xmm(dst), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     if (dst != src1) masm_->movaps(xmm(dst), xmm(src1));
     if (aligned_) {
@@ -555,6 +604,19 @@ class SSE128FloatGenerator : public SIMDGenerator {
       masm_->movups(mem, src2);
       masm_->mulps(xmm(dst), mem);
       masm_->mm().release(mem);
+    }
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->movaps(acc, xmm(src1));
+      masm_->mulps(acc, xmm(src2));
+      masm_->addps(xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->mulps(xmm(src1), xmm(src2));
+      masm_->addps(xmm(dst), xmm(src1));
     }
   }
 
@@ -668,22 +730,20 @@ class AVX512ScalarFloatGenerator : public SIMDGenerator {
     masm_->vaddss(zmm(dst), zmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulss(zmm(dst), zmm(src1), zmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulss(zmm(dst), zmm(src1), src2);
   }
 
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    masm_->vfmadd231ss(zmm(dst), zmm(src1), zmm(src2));
+  }
+
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
-    if (masm_->Enabled(FMA3)) {
-      masm_->vfmadd231ss(zmm(dst), zmm(src1), src2);
-    } else if (retain) {
-      ZMMRegister acc = masm_->mm().allocz();
-      masm_->vmulss(acc, zmm(src1), src2);
-      masm_->vaddss(zmm(dst), zmm(dst), acc);
-      masm_->mm().release(acc);
-    } else {
-      masm_->vmulss(zmm(src1), zmm(src1), src2);
-      masm_->vaddss(zmm(dst), zmm(dst), zmm(src1));
-    }
+    masm_->vfmadd231ss(zmm(dst), zmm(src1), src2);
   }
 
   void SetMask(int bits) override {
@@ -751,8 +811,26 @@ class AVXScalarFloatGenerator : public SIMDGenerator {
     masm_->vaddss(xmm(dst), xmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulss(xmm(dst), xmm(src1), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulss(xmm(dst), xmm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (masm_->Enabled(FMA3)) {
+      masm_->vfmadd231ss(xmm(dst), xmm(src1), xmm(src2));
+    } else if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->vmulss(acc, xmm(src1), xmm(src2));
+      masm_->vaddss(xmm(dst), xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vmulss(xmm(src1), xmm(src1), xmm(src2));
+      masm_->vaddss(xmm(dst), xmm(dst), xmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -856,9 +934,27 @@ class SSEScalarFloatGenerator : public SIMDGenerator {
     masm_->addss(xmm(dst), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    if (dst != src1) masm_->movss(xmm(dst), xmm(src1));
+    masm_->mulss(xmm(dst), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     if (dst != src1) masm_->movss(xmm(dst), xmm(src1));
     masm_->mulss(xmm(dst), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->movss(acc, xmm(src1));
+      masm_->mulss(acc, xmm(src2));
+      masm_->addss(xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->mulss(xmm(src1), xmm(src2));
+      masm_->addss(xmm(dst), xmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -980,8 +1076,16 @@ class AVX512DoubleGenerator : public SIMDGenerator {
     masm_->vaddpd(zmm(dst), zmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulpd(zmm(dst), zmm(src1), zmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulpd(zmm(dst), zmm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    masm_->vfmadd231pd(zmm(dst), zmm(src1), zmm(src2));
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -1119,8 +1223,26 @@ class AVX256DoubleGenerator : public SIMDGenerator {
     masm_->vaddpd(ymm(dst), ymm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulpd(ymm(dst), ymm(src1), ymm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulpd(ymm(dst), ymm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (masm_->Enabled(FMA3)) {
+      masm_->vfmadd231pd(ymm(dst), ymm(src1), ymm(src2));
+    } else if (retain) {
+      YMMRegister acc = masm_->mm().allocy();
+      masm_->vmulpd(acc, ymm(src1), ymm(src2));
+      masm_->vaddpd(ymm(dst), ymm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vmulpd(ymm(src1), ymm(src1), ymm(src2));
+      masm_->vaddpd(ymm(dst), ymm(dst), ymm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -1221,8 +1343,26 @@ class AVX128DoubleGenerator : public SIMDGenerator {
     masm_->vaddpd(xmm(dst), xmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulpd(xmm(dst), xmm(src1), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulpd(xmm(dst), xmm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (masm_->Enabled(FMA3)) {
+      masm_->vfmadd231pd(xmm(dst), xmm(src1), xmm(src2));
+    } else if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->vmulpd(acc, xmm(src1), xmm(src2));
+      masm_->vaddpd(xmm(dst), xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vmulpd(xmm(src1), xmm(src1), xmm(src2));
+      masm_->vaddpd(xmm(dst), xmm(dst), xmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -1332,6 +1472,11 @@ class SSE128DoubleGenerator : public SIMDGenerator {
     }
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    if (dst != src1) masm_->movapd(xmm(dst), xmm(src1));
+    masm_->mulpd(xmm(dst), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     if (dst != src1) masm_->movapd(xmm(dst), xmm(src1));
     if (aligned_) {
@@ -1341,6 +1486,19 @@ class SSE128DoubleGenerator : public SIMDGenerator {
       masm_->movupd(mem, src2);
       masm_->mulpd(xmm(dst), mem);
       masm_->mm().release(mem);
+    }
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->movapd(acc, xmm(src1));
+      masm_->mulpd(acc, xmm(src2));
+      masm_->addpd(xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->mulpd(xmm(src1), xmm(src2));
+      masm_->addpd(xmm(dst), xmm(src1));
     }
   }
 
@@ -1454,22 +1612,20 @@ class AVX512ScalarDoubleGenerator : public SIMDGenerator {
     masm_->vaddsd(zmm(dst), zmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulsd(zmm(dst), zmm(src1), zmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulsd(zmm(dst), zmm(src1), src2);
   }
 
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    masm_->vfmadd231sd(zmm(dst), zmm(src1), zmm(src2));
+  }
+
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
-    if (masm_->Enabled(FMA3)) {
-      masm_->vfmadd231sd(zmm(dst), zmm(src1), src2);
-    } else if (retain) {
-      ZMMRegister acc = masm_->mm().allocz();
-      masm_->vmulsd(acc, zmm(src1), src2);
-      masm_->vaddsd(zmm(dst), zmm(dst), acc);
-      masm_->mm().release(acc);
-    } else {
-      masm_->vmulsd(zmm(src1), zmm(src1), src2);
-      masm_->vaddsd(zmm(dst), zmm(dst), zmm(src1));
-    }
+    masm_->vfmadd231sd(zmm(dst), zmm(src1), src2);
   }
 
   void SetMask(int bits) override {
@@ -1537,8 +1693,26 @@ class AVXScalarDoubleGenerator : public SIMDGenerator {
     masm_->vaddsd(xmm(dst), xmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vmulsd(xmm(dst), xmm(src1), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vmulsd(xmm(dst), xmm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (masm_->Enabled(FMA3)) {
+      masm_->vfmadd231sd(xmm(dst), xmm(src1), xmm(src2));
+    } else if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->vmulsd(acc, xmm(src1), xmm(src2));
+      masm_->vaddsd(xmm(dst), xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vmulsd(xmm(src1), xmm(src1), xmm(src2));
+      masm_->vaddsd(xmm(dst), xmm(dst), xmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -1642,9 +1816,27 @@ class SSEScalarDoubleGenerator : public SIMDGenerator {
     masm_->addsd(xmm(dst), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    if (dst != src1) masm_->movsd(xmm(dst), xmm(src1));
+    masm_->mulsd(xmm(dst), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     if (dst != src1) masm_->movsd(xmm(dst), xmm(src1));
     masm_->mulsd(xmm(dst), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->movsd(acc, xmm(src1));
+      masm_->mulsd(acc, xmm(src2));
+      masm_->addsd(xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->mulsd(xmm(src1), xmm(src2));
+      masm_->addsd(xmm(dst), xmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -1766,8 +1958,24 @@ class AVX512Int32Generator : public SIMDGenerator {
     masm_->vpaddd(zmm(dst), zmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vpmulld(zmm(dst), zmm(src1), zmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vpmulld(zmm(dst), zmm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      ZMMRegister acc = masm_->mm().allocz();
+      masm_->vpmulld(acc, zmm(src1), zmm(src2));
+      masm_->vpaddd(zmm(dst), zmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vpmulld(zmm(src1), zmm(src1), zmm(src2));
+      masm_->vpaddd(zmm(dst), zmm(dst), zmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -1911,8 +2119,24 @@ class AVX256Int32Generator : public SIMDGenerator {
     masm_->vpaddd(ymm(dst), ymm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vpmulld(ymm(dst), ymm(src1), ymm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vpmulld(ymm(dst), ymm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      YMMRegister acc = masm_->mm().allocy();
+      masm_->vpmulld(acc, ymm(src1), ymm(src2));
+      masm_->vpaddd(ymm(dst), ymm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vpmulld(ymm(src1), ymm(src1), ymm(src2));
+      masm_->vpaddd(ymm(dst), ymm(dst), ymm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -2009,8 +2233,24 @@ class AVX128Int32Generator : public SIMDGenerator {
     masm_->vpaddd(xmm(dst), xmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vpmulld(xmm(dst), xmm(src1), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vpmulld(xmm(dst), xmm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->vpmulld(acc, xmm(src1), xmm(src2));
+      masm_->vpaddd(xmm(dst), xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vpmulld(xmm(src1), xmm(src1), xmm(src2));
+      masm_->vpaddd(xmm(dst), xmm(dst), xmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -2118,6 +2358,11 @@ class SSE128Int32Generator : public SIMDGenerator {
     }
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    if (dst != src1) masm_->movdqa(xmm(dst), xmm(src1));
+    masm_->pmulld(xmm(dst), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     if (dst != src1) masm_->movdqa(xmm(dst), xmm(src1));
     if (aligned_) {
@@ -2127,6 +2372,19 @@ class SSE128Int32Generator : public SIMDGenerator {
       masm_->movdqu(mem, src2);
       masm_->pmulld(xmm(dst), mem);
       masm_->mm().release(mem);
+    }
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->movdqa(acc, xmm(src1));
+      masm_->pmulld(acc, xmm(src2));
+      masm_->paddd(xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->pmulld(xmm(src1), xmm(src2));
+      masm_->paddd(xmm(dst), xmm(src1));
     }
   }
 
@@ -2240,8 +2498,24 @@ class AVX512ScalarInt32Generator : public SIMDGenerator {
     masm_->vpaddd(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vpmulld(zmm(dst), zmm(src1), zmm(src2), Mask(mask_, zeroing));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vpmulld(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      ZMMRegister acc = masm_->mm().allocz();
+      masm_->vpmulld(acc, zmm(src1), zmm(src2), Mask(mask_, zeroing));
+      masm_->vpaddd(zmm(dst), zmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vpmulld(zmm(src1), zmm(src1), zmm(src2), Mask(mask_, zeroing));
+      masm_->vpaddd(zmm(dst), zmm(dst), zmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -2319,11 +2593,28 @@ class AVXScalarInt32Generator : public SIMDGenerator {
     masm_->mm().release(acc);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vpmulld(xmm(dst), xmm(src1), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     XMMRegister acc = masm_->mm().allocx();
     masm_->vmovd(acc, src2);
     masm_->vpmulld(xmm(dst), xmm(src1), acc);
     masm_->mm().release(acc);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->vmovdqa(acc, xmm(src1));
+      masm_->vpmulld(acc, acc, xmm(src2));
+      masm_->vpaddd(xmm(dst), xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vpmulld(xmm(src1), xmm(src1), xmm(src2));
+      masm_->vpaddd(xmm(dst), xmm(dst), xmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -2399,12 +2690,30 @@ class SSEScalarInt32Generator : public SIMDGenerator {
     }
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    if (dst != src1) masm_->movdqa(xmm(dst), xmm(src1));
+    masm_->pmulld(xmm(dst), xmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     if (dst != src1) masm_->movdqa(xmm(dst), xmm(src1));
     XMMRegister acc = masm_->mm().allocx();
     masm_->movd(acc, src2);
     masm_->pmulld(xmm(dst), acc);
     masm_->mm().release(acc);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      XMMRegister acc = masm_->mm().allocx();
+      masm_->movdqa(acc, xmm(src1));
+      masm_->pmulld(acc, xmm(src2));
+      masm_->paddd(xmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->pmulld(xmm(src1), xmm(src2));
+      masm_->paddd(xmm(dst), xmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -2492,8 +2801,24 @@ class AVX512Int64Generator : public SIMDGenerator {
     masm_->vpaddq(zmm(dst), zmm(src1), src2);
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vpmullq(zmm(dst), zmm(src1), zmm(src2));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vpmullq(zmm(dst), zmm(src1), src2);
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      ZMMRegister acc = masm_->mm().allocz();
+      masm_->vpmullq(acc, zmm(src1), zmm(src2));
+      masm_->vpaddq(zmm(dst), zmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vpmullq(zmm(src1), zmm(src1), zmm(src2));
+      masm_->vpaddq(zmm(dst), zmm(dst), zmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -2626,8 +2951,24 @@ class AVX512ScalarInt64Generator : public SIMDGenerator {
     masm_->vpaddq(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    masm_->vpmullq(zmm(dst), zmm(src1), zmm(src2), Mask(mask_, zeroing));
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     masm_->vpmullq(zmm(dst), zmm(src1), src2, Mask(mask_, zeroing));
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (retain) {
+      ZMMRegister acc = masm_->mm().allocz();
+      masm_->vpmullq(acc, zmm(src1), zmm(src2), Mask(mask_, zeroing));
+      masm_->vpaddq(zmm(dst), zmm(dst), acc);
+      masm_->mm().release(acc);
+    } else {
+      masm_->vpmullq(zmm(src1), zmm(src1), zmm(src2), Mask(mask_, zeroing));
+      masm_->vpaddq(zmm(dst), zmm(dst), zmm(src1));
+    }
   }
 
   void MulAdd(int dst, int src1, const Operand &src2, bool retain) override {
@@ -2734,6 +3075,17 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
     }
   }
 
+  void Mul(int dst, int src1, int src2) override {
+    if (dst == src1) {
+      masm_->imulq(reg(dst), reg(src2));
+    } else if (dst == src2) {
+      masm_->imulq(reg(dst), reg(src1));
+    } else {
+      masm_->movq(reg(dst), reg(src1));
+      masm_->imulq(reg(dst), reg(src2));
+    }
+  }
+
   void Mul(int dst, int src1, const jit::Operand &src2) override {
     if (dst == src1) {
       if (type_ == DT_INT64) {
@@ -2747,6 +3099,19 @@ class ScalarIntSIMDGenerator : public SIMDGenerator {
     } else {
       Load(dst, src2);
       masm_->imulq(reg(dst), reg(src1));
+    }
+  }
+
+  void MulAdd(int dst, int src1, int src2, bool retain) override {
+    if (!retain) {
+      masm_->imulq(reg(src1), reg(src2));
+      masm_->addq(reg(dst), reg(src1));
+    } else {
+      Register acc = masm_->rr().alloc();
+      masm_->movq(acc, reg(src1));
+      masm_->imulq(acc, reg(src2));
+      masm_->addq(reg(dst), acc);
+      masm_->rr().release(acc);
     }
   }
 

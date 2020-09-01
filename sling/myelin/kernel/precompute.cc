@@ -12,119 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/myelin/kernel/precompute.h"
-
 #include <vector>
 
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
 #include "sling/myelin/compute.h"
-#include "sling/myelin/kernel/arithmetic.h"
-#include "sling/myelin/kernel/generic.h"
+#include "sling/myelin/kernel/library.h"
 
 namespace sling {
 namespace myelin {
-
-// Strided slice for integer vectors.
-static void StridedSlice(const TensorData &input,
-                         const TensorData &begin,
-                         const TensorData &end,
-                         const TensorData &strides,
-                         TensorData *result) {
-  int *r = &result->value<int>();
-  for (int i = begin.at<int>(0); i < end.at<int>(0); ++i) {
-    *r++ = input.at<int>(i);
-  }
-}
-
-// Pack two integer scalars.
-static void Pack2(const TensorData &a,
-                  const TensorData &b,
-                  TensorData *result) {
-  int *r = &result->value<int>();
-  *r++ = a.value<int>();
-  *r++ = b.value<int>();
-}
-
-// Pack three integer scalars.
-static void Pack3(const TensorData &a,
-                  const TensorData &b,
-                  const TensorData &c,
-                  TensorData *result) {
-  int *r = &result->value<int>();
-  *r++ = a.value<int>();
-  *r++ = b.value<int>();
-  *r++ = c.value<int>();
-}
-
-// Pack four integer scalars.
-static void Pack4(const TensorData &a,
-                  const TensorData &b,
-                  const TensorData &c,
-                  const TensorData &d,
-                  TensorData *result) {
-  int *r = &result->value<int>();
-  *r++ = a.value<int>();
-  *r++ = b.value<int>();
-  *r++ = c.value<int>();
-  *r++ = d.value<int>();
-}
-
-// Fill float tensor with scalar value.
-static void Fill1(const TensorData &dims,
-                  const TensorData &value,
-                  TensorData *result) {
-  int n = 1;
-  for (int d = 0; d < dims.dim(0); d++) n *= dims.at<int>(d);
-  float v = value.value<float>();
-  float *r = &result->value<float>();
-  for (int i = 0; i < n; i++) *r++ = v;
-}
-
-// Transpose matrix.
-static void Transpose(const TensorData &m, TensorData *result) {
-  for (int r = 0; r < m.dim(0); ++r) {
-    for (int c = 0; c < m.dim(1); ++c) {
-      result->at<float>(c, r) = m.at<float>(r, c);
-    }
-  }
-}
 
 // Replace ops with constant input variables with new computed constant
 // variables.
 class ConstantFolding : public Transformer {
  public:
   ConstantFolding() {
-    RegisterArithmeticLibrary(&library_);
-    RegisterGenericLibrary(&library_);
-    library_.Register("StridedSlice", "StridedSlice", StridedSlice)
-       .Input(0, DT_INT32)
-       .Input(1, DT_INT32, 1)
-       .Input(2, DT_INT32, 1)
-       .Input(3, DT_INT32, 1)
-       .Output(0, DT_INT32);
-    library_.Register("Pack", "Pack2", Pack2)
-       .Input(0, DT_INT32, 0)
-       .Input(1, DT_INT32, 0)
-       .Output(0, DT_INT32, 1);
-    library_.Register("Pack", "Pack3", Pack3)
-       .Input(0, DT_INT32, 0)
-       .Input(1, DT_INT32, 0)
-       .Input(2, DT_INT32, 0)
-       .Output(0, DT_INT32, 1);
-    library_.Register("Pack", "Pack4", Pack4)
-       .Input(0, DT_INT32, 0)
-       .Input(1, DT_INT32, 0)
-       .Input(2, DT_INT32, 0)
-       .Input(3, DT_INT32, 0)
-       .Output(0, DT_INT32, 1);
-    library_.Register("Fill", "Fill1", Fill1)
-       .Input(0, DT_INT32, 1)
-       .Input(1, DT_FLOAT, 0)
-       .Output(0, DT_FLOAT);
-    library_.Register("Transpose", "Transpose", Transpose)
-       .Input(0, DT_FLOAT, 2)
-       .Output(0, DT_FLOAT, 2);
+    RegisterStandardLibrary(&library_, LIBRARY_NOPRECOMPUTE);
   }
 
   string Name() override { return "ConstantFolding"; }

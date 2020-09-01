@@ -98,6 +98,17 @@ class MatMulArgs {
       return batch == 0 ? tensor->size() : tensor->stride(batch - 1);
     }
 
+    // Check if matrix has dense layout.
+    bool dense() const { return tensor->HasDenseLayout(); }
+
+    // Check if matrix is a row or column vector.
+    bool vector() const { return rows() == 1 || columns() == 1; }
+
+    // Check if all elements are aligned.
+    bool aligned(int align) const {
+      return stride() % align == 0 || elements() == 1;
+    }
+
     // Data type for underlying tensor.
     Type type() const { return tensor->type(); }
 
@@ -198,9 +209,7 @@ class MatMulArgs {
 
   // Check if all elements are aligned.
   bool Aligned(int align) const {
-    return a_.stride() % align == 0 &&
-           b_.stride() % align == 0 &&
-           c_.stride() % align == 0;
+    return a_.aligned(align) && b_.aligned(align) && c_.aligned(align);
   }
 
   // Whether this is an accumulating matmul.
@@ -280,24 +289,40 @@ class SIMDMatMul : public Kernel {
   void Generate(Step *step, MacroAssembler *masm) override {
     MatMulArgs args(step);
     CHECK(args.EnsureOutputOrder(ROW_MAJOR));
+    auto &a = args.a();
+    auto &b = args.b();
 
-    // Use the input element order to choose matrix multiplication algorithm.
-    Order a = args.a().order();
-    Order b = args.b().order();
-    if (a == ROW_MAJOR && b == ROW_MAJOR) {
-      GenerateVertical(step, masm, args, false);
-    } else if (a == ROW_MAJOR && b == COLUMN_MAJOR) {
-      GenerateHorizontal(step, masm, args);
-    } else if (a == COLUMN_MAJOR && b == ROW_MAJOR) {
-      GenerateVertical(step, masm, args, true);
-    } else if (a == COLUMN_MAJOR && b == COLUMN_MAJOR) {
-      GenerateColCol(step, masm, args);
+    // Check for vector product.
+    if (a.vector() && a.dense() &&
+        b.vector() && b.dense() &&
+        a.elements() == b.elements()) {
+      // Inner or outer product.
+      if (a.rows() == 1) {
+        GenerateInner(step, masm, args);
+      } else if (b.rows() == 1) {
+        GenerateOuter(step, masm, args);
+      } else {
+        LOG(FATAL) << "Unsupported vector product";
+      }
     } else {
-      LOG(FATAL) << "Unsupported element order";
+      // Use the input element order to choose matrix multiplication algorithm.
+      Order oa = a.order();
+      Order ob = b.order();
+      if (oa == ROW_MAJOR && ob == ROW_MAJOR) {
+        GenerateVertical(step, masm, args, false);
+      } else if (oa == ROW_MAJOR && ob == COLUMN_MAJOR) {
+        GenerateHorizontal(step, masm, args);
+      } else if (oa == COLUMN_MAJOR && ob == ROW_MAJOR) {
+        GenerateVertical(step, masm, args, true);
+      } else if (oa == COLUMN_MAJOR && ob == COLUMN_MAJOR) {
+        GenerateColCol(step, masm, args);
+      } else {
+        LOG(FATAL) << "Unsupported element order";
+      }
     }
 
     // Add batch size to variant.
-    int batch_size = args.a().batch_size();
+    int batch_size = a.batch_size();
     if (batch_size > 1) {
       step->set_variant(step->variant() + "*" + std::to_string(batch_size));
     }
@@ -381,6 +406,7 @@ class SIMDMatMul : public Kernel {
       int vecsize = gen->VectorSize();
       int blkstart = phase.offset * dsize;
       int blksize = phase.unrolls * vecsize * dsize;
+      bool last = phase.last && batchsize == 1;
 
       if (phase.repeat > 1) {
         // Repeated phase.
@@ -487,7 +513,10 @@ class SIMDMatMul : public Kernel {
             gen->Store(Operand(c, i * vecsize * dsize), sum[i]);
           }
         }
-        __ addq(c, Immediate(blksize));
+
+        if (!last || !outer_single) {
+          __ addq(c, Immediate(blksize));
+        }
       } else {
         // Masked phase.
         CHECK_EQ(phase.unrolls, 1);
@@ -521,7 +550,9 @@ class SIMDMatMul : public Kernel {
           }
           gen->MaskedStore(Operand(c), sum[0]);
         }
-        __ addq(c, Immediate(phase.masked * dsize));
+        if (!last || !outer_single) {
+          __ addq(c, Immediate(phase.masked * dsize));
+        }
       }
     }
 
@@ -797,6 +828,307 @@ class SIMDMatMul : public Kernel {
     masm->rr().free(a);
     masm->rr().free(b);
     masm->rr().free(c);
+  }
+
+  // Compute inner product between A and B.
+  void GenerateInner(Step *step, MacroAssembler *masm, const MatMulArgs &args) {
+    // Create SIMD code generators.
+    Type type = args.c().tensor->type();
+    int dsize = TypeTraits::of(type).size();
+    int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
+    SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
+    step->set_variant(sasm.name() + "VI");
+
+    // Compute vector processing strategy.
+    SIMDStrategy strategy(&sasm, args.a().columns());
+    strategy.PreloadMasks();
+
+    // Allocate registers.
+    Register a = masm->rr().alloc();
+    Register b = masm->rr().alloc();
+    Register c = masm->rr().alloc();
+    Register ofs = masm->rr().alloc();
+    auto sum = sasm.alloc(strategy.MaxUnrolls());
+    auto elem = sasm.alloc(strategy.MaxUnrolls());
+
+    // Load tensor addresses.
+    __ LoadTensorAddress(a, args.a().tensor);
+    __ LoadTensorAddress(b, args.b().tensor);
+    __ LoadTensorAddress(c, args.c().tensor);
+
+    // Loop over batches.
+    int batchsize = args.a().batch_size();
+    Register batch = no_reg;
+    Label lb;
+    if (batchsize > 1) {
+      batch = masm->rr().alloc();
+      __ xorq(batch, batch);
+      __ bind(&lb);
+    }
+
+    // Clear accumulators.
+    for (auto r : sum) sasm.main()->Zero(r);
+
+    // Compute dot product between A and B vectors.
+    bool scalar = true;
+    for (auto &phase : strategy.phases()) {
+      auto *gen = phase.generator;
+      int vecsize = gen->VectorSize();
+      int blkstart = phase.offset * dsize;
+      int blksize = phase.unrolls * vecsize * dsize;
+      if (vecsize > 1) scalar = false;
+
+      if (phase.repeat > 1) {
+        // Repeated phase.
+        Label l1;
+        if (blkstart == 0) {
+          __ xorq(ofs, ofs);
+        } else {
+          __ movq(ofs, Immediate(blkstart));
+        }
+        __ bind(&l1);
+        for (int i = 0; i < phase.unrolls; ++i) {
+          int disp = i * vecsize * dsize;
+          gen->Load(elem[i], Operand(a, ofs, times_1, disp));
+          gen->MulAdd(sum[i], elem[i], Operand(b, ofs, times_1, disp),
+                      false);
+        }
+        __ addq(ofs, Immediate(blksize));
+        __ cmpq(ofs, Immediate(blkstart + phase.repeat * blksize));
+        __ j(less, &l1);
+      } else if (phase.masked == 0) {
+        // Residual phase.
+        if (phase.offset == 0 || vecsize == sasm.main()->VectorSize()) {
+          // Same vector size as bulk; unroll directly into sum registers.
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = blkstart + i * vecsize * dsize;
+            gen->Load(elem[i], Operand(a, disp));
+            gen->MulAdd(sum[i], elem[i], Operand(b, disp), false);
+          }
+        } else if (phase.unrolls == 1) {
+          // Single residual; merge into first sum register.
+          gen->Load(elem[0], Operand(a, blkstart));
+          gen->Mul(elem[0], elem[0], Operand(b, blkstart));
+          sasm.main()->Add(sum[0], sum[0], elem[0]);
+        } else {
+          // Accumulate unrolled residual and merge into first sum register.
+          auto acc = sasm.alloc();
+          gen->Zero(acc);
+          for (int i = 0; i < phase.unrolls; ++i) {
+            int disp = blkstart + i * vecsize * dsize;
+            gen->Load(elem[i], Operand(a, disp));
+            gen->MulAdd(acc, elem[i], Operand(b, disp), false);
+          }
+          sasm.main()->Add(sum[0], sum[0], acc);
+        }
+      } else {
+        // Masked phase.
+        CHECK_EQ(phase.unrolls, 1);
+        gen->MaskedLoad(elem[0], Operand(a, blkstart));
+        gen->MaskedMulAdd(sum[0], elem[0], Operand(b, blkstart));
+      }
+    }
+
+    // Horizontal sum of results.
+    sasm.Sum(sum);
+    if (!scalar) sasm.main()->Sum(sum[0]);
+
+    // Save result in C.
+    if (accumulate_) {
+      sasm.scalar()->Add(sum[0], sum[0], Operand(c));
+    }
+    sasm.scalar()->Store(Operand(c), sum[0]);
+
+    // Next batch.
+    if (batchsize > 1) {
+      __ addq(a, Immediate(args.a().size()));
+      __ addq(b, Immediate(args.b().size()));
+      __ addq(c, Immediate(dsize));
+      __ incq(batch);
+      __ cmpq(batch, Immediate(batchsize));
+      __ j(less, &lb);
+    }
+  }
+
+  // Compute outer product between A and B.
+  void GenerateOuter(Step *step, MacroAssembler *masm, const MatMulArgs &args) {
+    // Create SIMD code generators.
+    Type type = args.c().tensor->type();
+    int dsize = TypeTraits::of(type).size();
+    int vecbytes = SIMDAssembler::VectorBytes(args.c().type());
+    SIMDAssembler sasm(masm, type, args.Aligned(vecbytes));
+    step->set_variant(sasm.name() + "VO");
+
+    // Compute vector processing strategy.
+    SIMDStrategy strategy(&sasm, args.a().rows());
+    strategy.PreloadMasks();
+
+    // Get matrix dimensions.
+    int rows = args.c().rows();
+    int rowsize = args.c().stride();
+    int blksize = sasm.main()->SupportsUnroll() ? 4 : 1;
+
+    // Allocate general registers.
+    Register aptr = masm->rr().alloc();
+    Register bptr = masm->rr().alloc();
+    Register cptr = masm->rr().alloc();
+    Register colofs = masm->rr().alloc();
+    Register rowofs = masm->rr().alloc();
+
+    // Allocate SIMD registers.
+    auto areg = sasm.alloc(blksize);
+    auto breg = sasm.alloc(strategy.MaxUnrolls());
+    auto creg = sasm.alloc(strategy.MaxUnrolls());
+
+    // Load tensor locations.
+    __ LoadTensorAddress(aptr, args.a().tensor);
+    __ LoadTensorAddress(bptr, args.b().tensor);
+    __ LoadTensorAddress(cptr, args.c().tensor);
+
+    // Loop over batches.
+    int batchsize = args.a().batch_size();
+    Register batch = no_reg;
+    Label lb;
+    if (batchsize > 1) {
+      batch = masm->rr().alloc();
+      __ xorq(batch, batch);
+      __ bind(&lb);
+    }
+
+    // First compute rows in blocks (stage 0) and then the remaining ones one
+    // row at a time (stage 1).
+    __ xorq(rowofs, rowofs);
+    for (int stage = 0; stage < 2; ++stage) {
+      // Determine the row block size.
+      int rowblk;
+      int rowend;
+      bool single;
+      bool more;
+      if (stage == 0) {
+        if (rows < blksize) continue;
+        rowblk = blksize;
+        rowend = (rows / blksize) * blksize;
+        single = (rows == blksize);
+        more = !single || rows % blksize != 0;
+      } else {
+        if (rows % blksize == 0) continue;
+        rowblk = 1;
+        rowend = rows;
+        single = (rows % blksize == 1);
+        more = !single;
+      }
+
+      // Outer loop over row blocks.
+      Label l1;
+      __ bind(&l1);
+
+      // Load a[row] block.
+      for (int r = 0; r < rowblk; ++r) {
+        int disp = r * dsize;
+        sasm.main()->Broadcast(areg[r], Operand(aptr, rowofs, times_1, disp));
+      }
+
+      for (auto &phase : strategy.phases()) {
+        auto *gen = phase.generator;
+        int vecsize = gen->VectorSize();
+        int blkstart = phase.offset * dsize;
+        int blksize = phase.unrolls * vecsize * dsize;
+
+        if (phase.repeat > 1) {
+          // Repeated phase.
+          if (blkstart == 0) {
+            __ xorq(colofs, colofs);
+          } else {
+            __ movq(colofs, Immediate(blkstart));
+          }
+
+          Label l2;
+          __ bind(&l2);
+
+          // Load b[col] block.
+          for (int c = 0; c < phase.unrolls; ++c) {
+            int disp = c * vecsize * dsize;
+            gen->Load(breg[c], Operand(bptr, colofs, times_1, disp));
+          }
+
+          // Multiply a[row] block with b[col] block.
+          for (int r = 0; r < rowblk; ++r) {
+            for (int c = 0; c < phase.unrolls; ++c) {
+              int disp = r * rowsize + c * vecsize * dsize;
+              if (accumulate_) {
+                gen->Load(creg[c], Operand(cptr, colofs, times_1, disp));
+                gen->MulAdd(creg[c], areg[r], breg[c], true);
+              } else {
+                gen->Mul(creg[c], areg[r], breg[c]);
+              }
+              gen->Store(Operand(cptr, colofs, times_1, disp), creg[c]);
+            }
+          }
+
+          // Next column block.
+          __ addq(colofs, Immediate(blksize));
+          __ cmpq(colofs, Immediate(blkstart + phase.repeat * blksize));
+          __ j(less, &l2);
+        } else if (phase.masked == 0) {
+          // Load b[col] block.
+          for (int c = 0; c < phase.unrolls; ++c) {
+            int disp = blkstart + c * vecsize * dsize;
+            gen->Load(breg[c], Operand(bptr, disp));
+          }
+
+          // Multiply a[row] block with b[col] block.
+          for (int r = 0; r < rowblk; ++r) {
+            for (int c = 0; c < phase.unrolls; ++c) {
+              int disp = blkstart + r * rowsize + c * vecsize * dsize;
+              if (accumulate_) {
+                gen->Load(creg[c], Operand(cptr, disp));
+                gen->MulAdd(creg[c], areg[r], breg[c], true);
+              } else {
+                gen->Mul(creg[c], areg[r], breg[c]);
+              }
+              gen->Store(Operand(cptr, disp), creg[c]);
+            }
+          }
+        } else {
+          // Masked phase.
+          CHECK_EQ(phase.unrolls, 1);
+
+          // Load b[col].
+          gen->MaskedLoad(breg[0], Operand(bptr, blkstart));
+
+          // Multiply a[row] block with b[col].
+          for (int r = 0; r < rowblk; ++r) {
+            int disp = blkstart + r * rowsize;
+            if (accumulate_) {
+              gen->MaskedLoad(creg[0], Operand(cptr, disp));
+              gen->MulAdd(creg[0], areg[r], breg[0], true);
+            } else {
+              gen->Mul(creg[0], areg[r], breg[0]);
+            }
+            gen->MaskedStore(Operand(cptr, disp), creg[0]);
+          }
+        }
+      }
+
+      // Next row block.
+      if (more || batchsize > 1) {
+        __ addq(cptr, Immediate(rowblk * rowsize));
+      }
+      if (!single) {
+        __ addq(rowofs, Immediate(rowblk * dsize));
+        __ cmpq(rowofs, Immediate(rowend * dsize));
+        __ j(less, &l1);
+      }
+    }
+
+    // Next batch.
+    if (batchsize > 1) {
+      __ addq(aptr, Immediate(args.a().size()));
+      __ addq(bptr, Immediate(args.b().size()));
+      __ incq(batch);
+      __ cmpq(batch, Immediate(batchsize));
+      __ j(less, &lb);
+    }
   }
 
   int64 Complexity(const Step *step) override {

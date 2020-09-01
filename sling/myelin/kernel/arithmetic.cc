@@ -12,14 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/myelin/kernel/arithmetic.h"
-
-#include <math.h>
 #include <map>
-#include <set>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "sling/base/logging.h"
@@ -666,7 +661,7 @@ class ExpressionTransformer : public Transformer {
     std::vector<Flow::Operation *> candidates;
     for (Flow::Operation *op : flow->ops()) {
       if (IsCalculateOp(op) || IsAssignmentOp(op)) {
-        if (!op->GetAttr("strict", false) && !op->HasAttr("axis")) {
+        if (!op->HasAttr("axis")) {
           candidates.push_back(op);
         }
       }
@@ -687,7 +682,6 @@ class ExpressionTransformer : public Transformer {
           Flow::Operation *producer = input->producer;
           if (producer == nullptr) continue;
           if (!IsCalculateOp(producer)) continue;
-          if (producer->GetAttr("strict", false)) continue;
           if (producer->HasAttr("axis")) continue;
 
           // Assignment must be the sole consumer of all the outputs from the
@@ -728,7 +722,6 @@ class ExpressionTransformer : public Transformer {
           Flow::Operation *producer = input->producer;
           if (producer == nullptr) continue;
           if (!IsCalculateOp(producer)) continue;
-          if (producer->GetAttr("strict", false)) continue;
 
           // Try to combine op with producer.
           if (Combine(flow, producer, op)) {
@@ -755,7 +748,6 @@ class ExpressionTransformer : public Transformer {
         Flow::Operation *second = nullptr;
         for (Flow::Operation *op : var->consumers) {
           if (!IsCalculateOp(op)) continue;
-          if (op->GetAttr("strict", false)) continue;
           if (first == nullptr) {
             first = op;
           } else {
@@ -1040,8 +1032,7 @@ class Calculate : public Kernel {
       if (output->shape() != shape && output->rank() != 0) return false;
     }
 
-    // Strict math and reduction over an axis is not supported.
-    if (step->GetAttr("strict", false)) return false;
+    // Reduction over an axis is not supported.
     if (step->HasAttr("axis")) return false;
 
     return true;
