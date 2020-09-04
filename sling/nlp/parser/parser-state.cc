@@ -248,6 +248,13 @@ void ParserState::Connect(int source, Handle role, int target) {
   Handle subject = Attention(source).frame;
   Handle object = Attention(target).frame;
   store()->Add(subject, role, object);
+
+  // Re-focus source or target so they are adjacent in the attention buffer.
+  if (source < target) {
+    Move(target, source + 1, nullptr);
+  } else if (source > target) {
+    Move(source, target + 1, nullptr);
+  }
 }
 
 void ParserState::Assign(int frame, Handle role, Handle value) {
@@ -260,19 +267,24 @@ void ParserState::Add(Handle frame, Span *span) {
   attention_.emplace_back(frame, step_, span);
 }
 
-void ParserState::Center(int index, Span *span) {
-  if (index == 0) {
-    // Already center of attention.
+void ParserState::Move(int index, int position, Span *span) {
+  if (index == position) {
     AttentionSlot &attention = Attention(index);
     attention.focused = step_;
     if (span != nullptr) attention.span = span;
   } else {
-    // Move slot to the center of attention.
-    AttentionSlot attention = Attention(index);
+    DCHECK_GT(index, position);
+    int start = attention_.size() - index - 1;
+    int end = attention_.size() - position - 1;
+
+    AttentionSlot attention = attention_[start];
     attention.focused = step_;
     if (span != nullptr) attention.span = span;
-    attention_.erase(attention_.end() - 1 - index);
-    attention_.push_back(attention);
+
+    for (int i = start; i < end; ++i) {
+      attention_[i] = attention_[i + 1];
+    }
+    attention_[end] = attention;
   }
 }
 

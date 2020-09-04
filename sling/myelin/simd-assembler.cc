@@ -3320,7 +3320,7 @@ SIMDAssembler::SIMDAssembler(MacroAssembler *masm, Type type,
         add(new AVX256Int32Generator(masm, aligned));
         add(new AVX128Int32Generator(masm, aligned));
         add(new AVXScalarInt32Generator(masm));
-      } else if (CPU::Enabled(SSE4_1) && CPU::Enabled(SSSE3)) {
+      } else if (masm->Enabled(SSE4_1) && masm->Enabled(SSSE3)) {
         name_ = "SSEInt32";
         add(new SSE128Int32Generator(masm, aligned));
         add(new SSEScalarInt32Generator(masm));
