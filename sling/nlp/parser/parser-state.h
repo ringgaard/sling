@@ -122,8 +122,12 @@ class ParserState {
   // Adds frame to attention buffer, making it the new center of attention.
   void Add(Handle frame, Span *span);
 
+  // Moves frame to new position in attention buffer. Frames are always moved
+  // towards the center of attention.
+  void Move(int index, int position, Span *span);
+
   // Moves element in attention buffer to the center of attention.
-  void Center(int index, Span *span);
+  void Center(int index, Span *span) { Move(index, 0, span); }
 
   // Document for the parser state. New frames and mentions are added to this
   // document when

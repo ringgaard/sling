@@ -63,9 +63,9 @@ class Attention {
   // towards the center of attention.
   void move(int index, int position) {
     if (index != position) {
+      DCHECK_GT(index, position);
       int start = size() - index - 1;
       int end = size() - position - 1;
-      DCHECK_LE(index, position);
       Handle frame = slots_[start];
       for (int i = start; i < end; ++i) {
         slots_[i] = slots_[i + 1];
@@ -140,6 +140,7 @@ void Generate(const Document &document,
               DCHECK(source != -1);
               callback(ParserAction::Connect(source, it->role, 0));
               deferred.erase(it--);
+              attention.move(source, 1);
             }
           }
 
@@ -155,6 +156,7 @@ void Generate(const Document &document,
             if (target != -1) {
               // Emit CONNECT for value already in the attention buffer.
               callback(ParserAction::Connect(0, role, target));
+              attention.move(target, 1);
             } else if (IsAnonymousFrame(store, value)) {
               // Defer CONNECT for anonymous frame that is not in the
               // attention buffer.
