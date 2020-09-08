@@ -24,7 +24,7 @@ namespace nlp {
 using namespace sling::myelin;
 
 // Transition decoder version number.
-static const int DECODER_VERSION = 1;
+static const int DECODER_VERSION = 2;
 
 TransitionDecoder::~TransitionDecoder() {
   for (auto *d : delegates_) delete d;
@@ -54,10 +54,14 @@ static Flow::Variable *LinkedFeature(
   auto *features = f->Placeholder(name, DT_INT32, {size, 1});
   auto *oov = f->Parameter(name + "_oov", DT_FLOAT, {link_dim});
   auto *gather = f->Gather(embeddings, features, oov);
-  auto *transform = f->Parameter(name + "_transform", DT_FLOAT,
-                                 {link_dim, dim});
-  f->RandomNormal(transform);
-  return f->Reshape(f->MatMul(gather, transform), {1, size * dim});
+  if (dim == 0) {
+    return f->Reshape(gather, {1, size * link_dim});
+  } else {
+    auto *transform = f->Parameter(name + "_transform", DT_FLOAT,
+                                   {link_dim, dim});
+    f->RandomNormal(transform);
+    return f->Reshape(f->MatMul(gather, transform), {1, size * dim});
+  }
 }
 
 void TransitionDecoder::Build(Flow *flow,  Flow::Variable *encodings,

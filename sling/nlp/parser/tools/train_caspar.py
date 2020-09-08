@@ -3,6 +3,7 @@ import sling.flags as flags
 import sling.task.workflow as workflow
 
 flags.define("--accurate", default=False,action='store_true')
+flags.define("--gpu_friendly", default=False,action='store_true')
 flags.define("--conll", default=False,action='store_true')
 flags.define("--pretrained_embeddings", default=False,action='store_true')
 
@@ -57,7 +58,7 @@ parser_model = wf.resource(modelfn, format="flow")
 # Parser trainer task.
 trainer = wf.task("parser-trainer")
 
-trainer.add_params({
+params = {
   "encoder": "lexrnn",
   "decoder": "caspar",
 
@@ -77,7 +78,14 @@ trainer.add_params({
   "report_interval": 1000,
   "learning_rate_cliff": 40000,
   "epochs": 50000,
-})
+}
+
+if flags.arg.gpu_friendly:
+  params["rnn_type"] = 3
+  params["link_dim_token"] = 0
+  params["link_dim_step"] = 0
+
+trainer.add_params(params)
 
 trainer.attach_input("training_corpus", training_corpus)
 trainer.attach_input("evaluation_corpus", evaluation_corpus)
@@ -89,7 +97,7 @@ if flags.arg.pretrained_embeddings:
   )
   trainer.attach_input("word_embeddings", word_embeddings)
 
-#trainer.attach_output("model", parser_model)
+trainer.attach_output("model", parser_model)
 
 # Run parser trainer.
 workflow.run(wf)
