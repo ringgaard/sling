@@ -128,10 +128,12 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
     // Compute role precision and recall.
     RoleAccuracy(store, g2p_frame_alignment,
                  &pair.recall, &edge.recall, &role.recall,
-                 &type.recall, &label.recall);
+                 &type.recall, &label.recall,
+                 &output->roles, true);
     RoleAccuracy(store, p2g_frame_alignment,
                  &pair.precision, &edge.precision, &role.precision,
-                 &type.precision, &label.precision);
+                 &type.precision, &label.precision,
+                 &output->roles, false);
 
     // Compute type precision and recall.
     TypeAccuracy(store, g2p_frame_alignment, &output->types, true);
@@ -162,11 +164,18 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
   combined.add(role);
   combined.add(label);
 
-  // Add labels to type benchmark.
+  // Add labels to type and role benchmarks.
   Handle n_name = corpus->Commons()->LookupExisting("name");
   for (auto &it : output->types) {
     Frame type(corpus->Commons(), it.first);
     it.second.name = type.GetString(n_name);
+    if (it.second.name.empty()) {
+      it.second.name = corpus->Commons()->DebugString(it.first);
+    }
+  }
+  for (auto &it : output->roles) {
+    Frame role(corpus->Commons(), it.first);
+    it.second.name = role.GetString(n_name);
     if (it.second.name.empty()) {
       it.second.name = corpus->Commons()->DebugString(it.first);
     }
@@ -372,7 +381,8 @@ void FrameEvaluation::AlignmentAccuracy(
 void FrameEvaluation::RoleAccuracy(
     Store *store, const Alignment &alignment,
     Metric *pair, Metric *edge, Metric *role,
-    Metric *type, Metric *label) {
+    Metric *type, Metric *label,
+    BenchmarkMap *roles, bool recall) {
   for (const auto &a : alignment) {
     Frame source(store, a.first);
     Frame target(store, a.second);
@@ -390,6 +400,12 @@ void FrameEvaluation::RoleAccuracy(
         pair->prediction(!value.IsNil());
         edge->prediction(HasValue(target, value));
         role->prediction(HasSlot(target, s.name, value));
+
+        if (s.name.IsGlobalRef()) {
+          Benchmark &b = (*roles)[s.name];
+          Metric &m = recall ? b.recall : b.precision;
+          m.prediction(HasSlot(target, s.name, value));
+        }
       } else {
         // Check label role.
         label->prediction(HasSlot(target, s.name, s.value));

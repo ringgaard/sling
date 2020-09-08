@@ -46,7 +46,7 @@ class File {
   // Read up to "size" bytes from the file at the current position.
   virtual Status Read(void *buffer, size_t size, uint64 *read) = 0;
 
-  // Reads "size" bytes to buffer from file. Returns errors if less than "size"
+  // Reads "size" bytes to buffer from file. Returns error if less than "size"
   // bytes read.
   Status Read(void *buffer, size_t size);
 

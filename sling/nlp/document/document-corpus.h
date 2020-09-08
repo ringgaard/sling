@@ -33,8 +33,8 @@ class DocumentCorpus {
   DocumentCorpus(Store *commons, const std::vector<string> &filenames);
   ~DocumentCorpus();
 
-  // Read next document into store and return it or null of there are no
-  // more document. The returned document is owned by the caller.
+  // Read next document into store and return it or null if there are no
+  // more documents. The returned document is owned by the caller.
   Document *Next(Store *store);
 
   // Rewind to the start of the corpus.
