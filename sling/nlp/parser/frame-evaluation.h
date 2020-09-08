@@ -154,8 +154,9 @@ class FrameEvaluation {
     Benchmark slot{"SLOT"};
     Benchmark combined{"TOTAL"};
 
-    // Type benchmark.
+    // Type and role benchmarks.
     BenchmarkMap types;
+    BenchmarkMap roles;
 
     // Counters.
     int64 num_golden_spans = 0;
@@ -208,7 +209,8 @@ class FrameEvaluation {
   // Computes role accuracy.
   static void RoleAccuracy(Store *store, const Alignment &alignment,
                            Metric *pair, Metric *edge, Metric *role,
-                           Metric *type, Metric *label);
+                           Metric *type, Metric *label,
+                           BenchmarkMap *roles, bool recall);
 
   // Computes type accuracy.
   static void TypeAccuracy(Store *store, const Alignment &alignment,

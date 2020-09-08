@@ -57,7 +57,8 @@ DEFINE_bool(parse, false, "Parse input corpus");
 DEFINE_bool(benchmark, false, "Benchmark parser");
 DEFINE_bool(lex, false, "Output documents in LEX format");
 DEFINE_bool(evaluate, false, "Evaluate parser");
-DEFINE_bool(evaluate_types, false, "Evaluate types");
+DEFINE_bool(evaluate_types, false, "Detailed type evaluation");
+DEFINE_bool(evaluate_roles, false, "Detailed role evaluation");
 DEFINE_bool(hparams, false, "Output hyperparameters");
 DEFINE_int32(maxdocs, -1, "Maximum number of documents to process");
 DEFINE_string(commons, "", "Commons store");
@@ -261,7 +262,13 @@ int main(int argc, char *argv[]) {
     if (FLAGS_evaluate_types) {
       std::cout << "Type benchmark:\n";
       for (const auto &it : eval.types) {
-        std::cout << it.second.Summary(20) << "\n";
+        std::cout << it.second.Summary(25) << "\n";
+      }
+    }
+    if (FLAGS_evaluate_roles) {
+      std::cout << "Role benchmark:\n";
+      for (const auto &it : eval.roles) {
+        std::cout << it.second.Summary(25) << "\n";
       }
     }
   }
