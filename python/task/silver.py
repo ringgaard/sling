@@ -40,6 +40,11 @@ flags.define("--subwords",
              default=False,
              action="store_true")
 
+flags.define("--gpu_friendly",
+             help="GPU-friendly model",
+             default=False,
+             action="store_true")
+
 class SilverWorkflow:
   def __init__(self, name=None, wf=None):
     if wf == None: wf = Workflow(name)
@@ -279,6 +284,11 @@ class SilverWorkflow:
         params["ff_dropout"] = 0.2
       else:
         params["decoder"] = flags.arg.decoder
+
+      if flags.arg.gpu_friendly:
+        params["rnn_type"] = 2
+        params["link_dim_token"] = 0
+        params["link_dim_step"] = 0
 
       trainer = self.wf.task("parser-trainer", params=params)
 
