@@ -339,6 +339,94 @@ double TypeTraits::number(const void *data) const {
   }
 }
 
+void TypeTraits::assign(double number, void *data) const {
+  DCHECK(data != nullptr);
+  switch (type_) {
+    case DT_INT8:
+      *reinterpret_cast<int8 *>(data) = number;
+      break;
+
+    case DT_INT16:
+      *reinterpret_cast<int16 *>(data) = number;
+      break;
+
+    case DT_INT32:
+      *reinterpret_cast<int32 *>(data) = number;
+      break;
+
+    case DT_INT64:
+      *reinterpret_cast<int64 *>(data) = number;
+      break;
+
+    case DT_UINT8:
+      *reinterpret_cast<uint8 *>(data) = number;
+      break;
+
+    case DT_UINT16:
+      *reinterpret_cast<uint16 *>(data) = number;
+      break;
+
+    case DT_FLOAT:
+      *reinterpret_cast<float *>(data) = number;
+      break;
+
+    case DT_DOUBLE:
+      *reinterpret_cast<double *>(data) = number;
+      break;
+
+    case DT_BOOL:
+      *reinterpret_cast<bool *>(data) = number;
+      break;
+
+    default:
+      LOG(FATAL) << "Cannot assign to type " << name_;
+  }
+}
+
+void TypeTraits::assign(int64 number, void *data) const {
+  DCHECK(data != nullptr);
+  switch (type_) {
+    case DT_INT8:
+      *reinterpret_cast<int8 *>(data) = number;
+      break;
+
+    case DT_INT16:
+      *reinterpret_cast<int16 *>(data) = number;
+      break;
+
+    case DT_INT32:
+      *reinterpret_cast<int32 *>(data) = number;
+      break;
+
+    case DT_INT64:
+      *reinterpret_cast<int64 *>(data) = number;
+      break;
+
+    case DT_UINT8:
+      *reinterpret_cast<uint8 *>(data) = number;
+      break;
+
+    case DT_UINT16:
+      *reinterpret_cast<uint16 *>(data) = number;
+      break;
+
+    case DT_FLOAT:
+      *reinterpret_cast<float *>(data) = number;
+      break;
+
+    case DT_DOUBLE:
+      *reinterpret_cast<double *>(data) = number;
+      break;
+
+    case DT_BOOL:
+      *reinterpret_cast<bool *>(data) = number;
+      break;
+
+    default:
+      LOG(FATAL) << "Cannot assign to type " << name_;
+  }
+}
+
 Transformations::~Transformations() {
   for (auto *t : transformers_) delete t;
 }

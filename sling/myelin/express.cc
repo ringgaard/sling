@@ -32,6 +32,7 @@ static std::map<string, Express::OpType> optypes = {
   {"Sub", Express::SUB},
   {"Mul", Express::MUL},
   {"Div", Express::DIV},
+  {"Mod", Express::MOD},
   {"Minimum", Express::MINIMUM},
   {"Maximum", Express::MAXIMUM},
 
@@ -134,7 +135,7 @@ static std::map<string, Express::OpType> optypes = {
 
 static const string opname[] = {
   "Id",
-  "Add", "Sub", "Mul", "Div",
+  "Add", "Sub", "Mul", "Div", "Mod",
   "Minimum", "Maximum",
   "Neg", "Abs", "Sign", "Relu", "Softsign", "Softplus", "LogSigmoid",
   "Reciprocal", "Square", "Sqrt", "Rsqrt",
@@ -718,6 +719,7 @@ Express::Var *Express::Expand(OpType type, std::vector<Var *> &args) {
       case Express::ANDNOT: result = AndNot(args[0], args[1]); break;
       case Express::SELECT: result = Select(args[0], args[1]); break;
       case Express::POW: result = Pow(args[0], args[1]); break;
+      case Express::MOD: result = Mod(args[0], args[1]); break;
       default: ;
     }
   }
@@ -846,6 +848,7 @@ bool Express::ZeroFixpoint(Var *x) const {
     case BITOR:
       return ZeroFixpoint(op->args[0]) || ZeroFixpoint(op->args[1]);
     case DIV:
+    case MOD:
     case POW:
       return ZeroFixpoint(op->args[0]);
     case NEG: case ABS: case SIGN: case RELU: case SOFTSIGN:
@@ -877,6 +880,7 @@ bool Express::AlwaysZero(Var *x) const {
     case MUL:
       return AlwaysZero(op->args[0]) || AlwaysZero(op->args[1]);
     case DIV:
+    case MOD:
       return AlwaysZero(op->args[0]) && !AlwaysZero(op->args[1]);
     default:
       return op->arity() == 1 && AlwaysZero(op->args[0]) && ZeroFixpoint(x);
@@ -897,6 +901,7 @@ bool Express::AlwaysOne(Var *x) const {
       return AlwaysOne(op->args[0]) && AlwaysZero(op->args[1]);
     case MUL:
     case DIV:
+    case MOD:
       return AlwaysOne(op->args[0]) && AlwaysOne(op->args[1]);
     default:
       return false;
@@ -919,6 +924,7 @@ bool Express::Identical(Var *y, Var *x) const {
     case SUB:
       return Identical(op->args[0], x) && AlwaysZero(op->args[1]);
     case DIV:
+    case MOD:
       return Identical(op->args[0], x) && AlwaysOne(op->args[1]);
     default:
       return false;

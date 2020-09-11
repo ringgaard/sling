@@ -133,6 +133,8 @@ def compute(flow, f, data):
       v[o[0]] = v[i[0]] * v[i[1]]
     elif op.type == "Div":
       v[o[0]] = np.divide(v[i[0]], v[i[1]]).astype(nptypes[o[0].type])
+    elif op.type == "Mod":
+      v[o[0]] = np.remainder(v[i[0]], v[i[1]]).astype(nptypes[o[0].type])
     elif op.type == "Minimum":
       v[o[0]] = np.minimum(v[i[0]], v[i[1]])
     elif op.type == "Maximum":

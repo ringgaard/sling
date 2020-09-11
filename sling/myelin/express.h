@@ -73,6 +73,7 @@ class Express {
     SUB,         // subtraction, r=a-b
     MUL,         // multiplication, r=a*b
     DIV,         // division, r=a/b
+    MOD,         // modulus, r=a%b=a-trunc(a/b)*b
     MINIMUM,     // minimum, r=max(a,b)
     MAXIMUM,     // maximum, r=min(a,b)
 
@@ -563,6 +564,9 @@ class Express {
   Var *Sub(Var *x, Var *y) { return Do(SUB, x, y); }
   Var *Mul(Var *x, Var *y) { return Do(MUL, x, y); }
   Var *Div(Var *x, Var *y) { return Do(DIV, x, y); }
+  Var *Mod(Var *x, Var *y) {
+    return Supports(MOD) ? Do(MOD, x, y) : Sub(x, Mul(Trunc(Div(x, y)), y));
+  }
   Var *Minimum(Var *x, Var *y) { return Do(MINIMUM, x, y); }
   Var *Maximum(Var *x, Var *y) { return Do(MAXIMUM, x, y); }
   Var *Zero() { return Number(ZERO); }
@@ -591,6 +595,11 @@ class Express {
   Var *Select(Var *p, Var *x) {
     return Supports(SELECT) ? Do(SELECT, p, x) : Cond(p, x, Zero());
   }
+
+  Var *Floor(Var *x) { return Do(FLOOR, x); }
+  Var *Ceil(Var *x) { return Do(CEIL, x); }
+  Var *Round(Var *x) { return Do(ROUND, x); }
+  Var *Trunc(Var *x) { return Do(TRUNC, x); }
 
   // Build expressions for intrinsic functions.
   Var *Log(Var *x);

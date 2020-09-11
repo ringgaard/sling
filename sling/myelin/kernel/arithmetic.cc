@@ -44,7 +44,7 @@ static Express::OpType OpType(const string &op) {
     {"Sub", Express::SUB},
     {"Mul", Express::MUL},
     {"Div", Express::DIV},
-    {"RealDiv", Express::DIV},
+    {"Mod", Express::MOD},
     {"Minimum", Express::MINIMUM},
     {"Maximum", Express::MAXIMUM},
 
@@ -486,36 +486,35 @@ class LogicTransformer : public Transformer {
   }
 };
 
-// Convert division with constant c to multiplication with constant 1/c to
-// take advantage of mul being much faster than div. Also transforms div(1,x)
-// to rcp(x) and rcp(sqrt(x)) to rsqrt(x).
-class DivTransformer : public Transformer {
+// Multiplicative transforms:
+// - Convert division with constant c to multiplication with constant 1/c to
+//   take advantage of mul being much faster than div.
+// - Transforms div(1,x) to rcp(x) and rcp(sqrt(x)) to rsqrt(x).
+class MultiplicativeTransformer : public Transformer {
  public:
-  string Name() override { return "DivTransformer"; }
+  string Name() override { return "MultiplicativeTransformer"; }
 
   bool Transform(Flow *flow) override {
     int updates = 0;
     for (Flow::Operation *op : flow->ops()) {
-      if (op->type != "Div" && op->type != "RealDiv") continue;
+      if (op->type != "Div") continue;
       if (op->indegree() != 2) continue;
 
       Flow::Variable *first = op->inputs[0];
       Flow::Variable *second = op->inputs[1];
 
-      if (second->type == DT_FLOAT && second->scalar() &&
-          second->constant() && second->usages() == 1) {
+      if (second->isfloat() &&
+          second->scalar() &&
+          second->constant() &&
+          second->usages() == 1) {
         // Change Div(x,c) to Mul(x,1/c).
-        CHECK_EQ(second->size, sizeof(float));
         op->type = "Mul";
-        float multiplier = 1.0 / *reinterpret_cast<const float *>(second->data);
-        char *buffer = flow->AllocateMemory(sizeof(float));
-        *reinterpret_cast<float *>(buffer) = multiplier;
-        second->data = buffer;
+        second->assign(1.0 / second->number());
         updates++;
-      } else if (first->type == DT_FLOAT && first->scalar() &&
+      } else if (first->isfloat() &&
+                 first->scalar() &&
                  first->constant()) {
-        float value;
-        if (first->GetData<float>(&value) && value == 1.0) {
+        if (first->number() == 1.0) {
           // Change Div(1,x) to Reciprocal(x).
           op->type = "Reciprocal";
           op->RemoveInput(first);
@@ -604,9 +603,9 @@ class PowerTransformer : public Transformer {
 };
 
 // Fold negated arguments into addition and subtraction.
-class AddSubNegTransformer : public Transformer {
+class AdditiveTransformer : public Transformer {
  public:
-  string Name() override { return "AddSubNegTransformer"; }
+  string Name() override { return "AdditiveTransformer"; }
 
   bool Transform(Flow *flow) override {
     int updates = 0;
@@ -1133,6 +1132,7 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("SubExpr", "Sub", 2));
   library->Register(new Calculate("MulExpr", "Mul", 2));
   library->Register(new Calculate("DivExpr", "Div", 2));
+  library->Register(new Calculate("ModExpr", "Mod", 2));
   library->Register(new Calculate("MaximumExpr", "Maximum", 2));
   library->Register(new Calculate("MinimumExpr", "Minimum", 2));
 
@@ -1220,8 +1220,8 @@ void RegisterArithmeticLibrary(Library *library) {
 void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new ExpressionTransformer());
   library->RegisterTransformer(new RemoveUnusedInputs());
-  library->RegisterTransformer(new DivTransformer());
-  library->RegisterTransformer(new AddSubNegTransformer());
+  library->RegisterTransformer(new MultiplicativeTransformer());
+  library->RegisterTransformer(new AdditiveTransformer());
   library->RegisterTransformer(new PowerTransformer());
   library->RegisterTransformer(new LogicTransformer());
 }

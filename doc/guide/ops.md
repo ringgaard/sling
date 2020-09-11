@@ -24,6 +24,7 @@
 * [Broadcast](#broadcast) (broadcast argument)
 * [Calculate](#calculate) (calculate expression)
 * [Ceil](#ceil) (round up towards infinity)
+* [Clip](#clip) (clip value to range)
 * [Concat](#concat) (concatenate tensors)
 * [Cond](#cond) (conditional computation)
 * [Cos](#cos) (cosine)
@@ -56,12 +57,14 @@
 * [Log](#log) (natural logarithm)
 * [LogSigmoid](#logsigmoid) (log sigmoid)
 * [LogSoftmax](#logsoftmax) (log softmax)
+* [LogSumExp](#logsumexp) (log-sum of exponentials)
 * [MatMul](#matmul) (matrix multiplication)
 * [Max](#max) (max reduction)
 * [Maximum](#maximum) (maximum)
 * [Mean](#mean) (mean reduction)
 * [Min](#min) (min reduction)
 * [Minimum](#minimum) (minimum)
+* [Mod](#mod) (modulus)
 * [Mul](#mul) (product)
 * [Neg](#neg) (negation)
 * [Norm](#norm) (vector norm)
@@ -178,6 +181,27 @@ grammar:
 
 ------------------------------------------------------------------------------
 
+### Clip
+
+Clips value to be within range.
+```
+Clip(x, min, max)
+```
+**Arguments:**
+- `x`: Tensor of type float32, float64, int8, int16, int32, or int64.
+- `min`: Tensor of same type as `x`.
+- `max`: Tensor of same type as `x`.
+
+**Returns:**
+
+A tensor where values of x are clipped to be with the range `[min;max]` such
+that `min <= x <= max`. This operation supports broadcasting.
+
+This macro operation is implemented as
+`Minimum(Maximum(x, min), max)`
+
+------------------------------------------------------------------------------
+
 ### Div
 
 Computes the division of `x` by `y` element-wise.
@@ -290,6 +314,24 @@ Minimum(x, y)
 
 A tensor with the minimum of `x` and `y`, i.e. `min(x, y)` or `x < y ? x : y`.
 This operation supports broadcasting.
+
+------------------------------------------------------------------------------
+
+### Mod
+
+Computes the remainder of `x` divided by `y` element-wise.
+
+```
+Mod(x, y)
+```
+**Arguments:**
+- `x`: Tensor of type float32, float64, int8, int16, int32, or int64.
+- `y`: Tensor of same type as `x`.
+
+**Returns:**
+
+A tensor with the remainder of `x` divided by `y`, i.e. `x / y`. This operation
+supports broadcasting. The remainder is defined as `x - trunc(x / y) * y`.
 
 ------------------------------------------------------------------------------
 
@@ -510,8 +552,8 @@ Sub(x, y)
 
 **Returns:**
 
-A tensor with the sum of `x` and `y`, i.e. `x - y`. This operation supports
-broadcasting.
+A tensor with the difference between `x` and `y`, i.e. `x - y`.
+This operation supports broadcasting.
 
 ------------------------------------------------------------------------------
 
@@ -529,8 +571,11 @@ Softmax(x)
 A tensor of the same type and shape as `x` with the softmax,
 i.e. `exp(x) / sum(exp(x))`, of each element of `x`.
 
-This macro operation is implemented as
+This macro operation is defined as
+`SoftMax(x) = Normalize(Exp(x)))`
+but is implemented as
 `Softmax(x)=Normalize(Exp(Sub(x, Max(x))))`
+for numeric stability.
 
 ------------------------------------------------------------------------------
 
@@ -552,6 +597,28 @@ This macro operation is implemented as
 `LogSoftmax(x)=Log(Softmax(x))`
 
 
+------------------------------------------------------------------------------
+
+### LogSumExp
+
+Computes the logarithm of sum of exponentials element-wise.
+```
+LogSumExp(x)
+```
+**Arguments:**
+- `x`: Tensor of type float32 or float64.
+
+**Returns:**
+
+A tensor of the same type and shape as `x` with the logsumexp,
+i.e. `log(sum(exp(x)))`, of each element of `x`.
+
+This macro operation is defined as
+`LogSumExp(x)=Log(Sum(Exp(x))))`
+but is implements implemented as
+`LogSumExp(x)=Add(Log(Sum(Exp(Sub(x, Max(x))))),Max(x))`
+for numeric stability.
+
 ## Rounding
 
 ### Ceil
@@ -561,12 +628,12 @@ Rounds tensor up towards infinity element-wise.
 Ceil(x)
 ```
 **Arguments:**
-- `x`: Tensor of type float32 or float64.
+- `x`: Tensor of type float32, float64, int8, int16, int32, or int64.
 
 **Returns:**
 
 A tensor of the same type and shape as `x` with each element rounded to the
-smallest integer not less than `x`.
+smallest integer not less than `x`. This is a no-op for integers.
 
 ------------------------------------------------------------------------------
 
@@ -577,12 +644,12 @@ Rounds tensor down towards negative infinity element-wise.
 Floor(x)
 ```
 **Arguments:**
-- `x`: Tensor of type float32 or float64.
+- `x`: Tensor of type float32, float64, int8, int16, int32, or int64.
 
 **Returns:**
 
 A tensor of the same type and shape as `x` with each element rounded to the
-largest integer not greater than `x`.
+largest integer not greater than `x`. This is a no-op for integers.
 
 ------------------------------------------------------------------------------
 
@@ -593,12 +660,12 @@ Rounds tensor to nearest integer element-wise.
 Round(x)
 ```
 **Arguments:**
-- `x`: Tensor of type float32 or float64.
+- `x`: Tensor of type float32, float64, int8, int16, int32, or int64.
 
 **Returns:**
 
 A tensor of the same type and shape as `x` with each element rounded to the
-nearest integer of `x`.
+nearest integer of `x`. This is a no-op for integers.
 
 ------------------------------------------------------------------------------
 
@@ -609,12 +676,12 @@ Rounds tensor towards zero element-wise.
 Round(x)
 ```
 **Arguments:**
-- `x`: Tensor of type float32 or float64.
+- `x`: Tensor of type float32, float64, int8, int16, int32, or int64.
 
 **Returns:**
 
 A tensor of the same type and shape as `x` with each element rounded towards
-zero.
+zero. This is a no-op for integers.
 
 
 ## Trigonometry
@@ -1051,33 +1118,43 @@ reduced to a scalar if reducing over all dimensions.
 
 ### ArgMax
 
-Finds the index with the largest value of a tensor.
-
+Finds the index with the largest value across a dimension of a tensor.
 ```
 ArgMax(x)
 ```
 **Arguments:**
-- `x`: Tensor of type float32.
+- `x`: Tensor of type float32, float64, int8, int16, int32, or int64.
+
+**Attributes:**
+- `axis`: The dimension to reduce. If missing, `x` is reduced over all
+dimensions.
 
 **Returns:**
 
-An integer (int32), with the index of the element with the largest value.
+A reduced int32 tensor with the rank of the input tensor reduced by 1, or
+reduced to a scalar if reducing over all dimensions. Optionally also returns
+a tensor with the maximum value.
 
 ------------------------------------------------------------------------------
 
 ### ArgMin
 
-Finds the index with the smallest value of a tensor.
-
+Finds the index with the smallest value across a dimension of a tensor.
 ```
 ArgMin(x)
 ```
 **Arguments:**
-- `x`: Tensor of type float32.
+- `x`: Tensor of type float32, float64, int8, int16, int32, or int64.
+
+**Attributes:**
+- `axis`: The dimension to reduce. If missing, `x` is reduced over all
+dimensions.
 
 **Returns:**
 
-An integer (int32), with the index of the element with the smallest value.
+A reduced int32 tensor with the rank of the input tensor reduced by 1, or
+reduced to a scalar if reducing over all dimensions. Optionally also returns
+a tensor with the minimum value.
 
 ------------------------------------------------------------------------------
 
@@ -1167,6 +1244,60 @@ A reduced tensor of the same type as `x`. Reduces `x` along the dimension given
 in `axis` (or all dimensions). If `keepdims` is true, the reduced dimension is
 retained with length 1. Otherwise, the rank of the tensor is reduced by 1, or
 reduced to a scalar if reducing over all dimensions.
+
+------------------------------------------------------------------------------
+
+### Norm
+
+Computes the L2-norm of all values across a dimension of a tensor.
+```
+Norm(x)
+```
+**Arguments:**
+- `x`: Tensor of type float32 or float64.
+
+**Attributes:**
+- `axis`: The dimension to reduce. If missing, `x` is reduced over all
+dimensions.
+- `keepdims`: If true, keep reduced dimension with length 1.
+
+**Returns:**
+
+A reduced tensor of the same type as `x` with the L2-norm, i.e.
+`sqrt(sum(x^2))`. Reduces `x` along the dimension given in `axis` (or all
+dimensions). If `keepdims` is true, the reduced dimension is
+retained with length 1. Otherwise, the rank of the tensor is reduced by 1, or
+reduced to a scalar if reducing over all dimensions.
+
+This macro operation is implemented as
+`Norm(x)=Sqrt(Sum(Square(x)))`
+
+------------------------------------------------------------------------------
+
+### Normalize
+
+Normalize values to sum to one across a dimension of a tensor.
+```
+Normalize(x)
+```
+**Arguments:**
+- `x`: Tensor of type float32 or float64.
+
+**Attributes:**
+- `axis`: The dimension to reduce. If missing, `x` is reduced over all
+dimensions.
+- `keepdims`: If true, keep reduced dimension with length 1.
+
+**Returns:**
+
+A reduced tensor of the same type as `x` where each dimension sums to one.
+Reduces `x` along the dimension given in `axis` (or all dimensions).
+If `keepdims` is true, the reduced dimension is retained with length 1.
+Otherwise, the rank of the tensor is reduced by 1, or reduced to a scalar
+if reducing over all dimensions.
+
+This macro operation is implemented as
+`Normalize(x)=Mul(x, Reciprocal(Sum(x)))`
 
 ------------------------------------------------------------------------------
 
@@ -1525,6 +1656,8 @@ vector is used instead of the embedding vector in `m`.
 A float32 tensor with shape [p, v_1, ..., v_d] tensor where the i'th slice
 is `m[f[i]]` or `oov` if `f[i]` is not in the range [0;n-1].
 
+TODO: update to generalized version with batch support.
+
 ------------------------------------------------------------------------------
 
 ### GatherAvg
@@ -1543,33 +1676,36 @@ that contains d embedding vectors of size d.
 A float32 tensor with shape [1, d] tensor which is the element-wise average
 of the slices `m[f[i]]`.
 
+TODO: update to generalized version with batch support.
+
 ------------------------------------------------------------------------------
 
     GatherMax
     GatherSum
-    Scatter (MulScatter, AssignAddScatter, AssignAddMulScatter)
+    Scatter (AssignAddScatter)
 
 ## Arrays
     Concat
     Split
     OneHot
     Resize
+    Slice
 
 ## Linear algebra
 
     DotProduct
     CosDist
     CosSim
-    MatMul (MatMulAdd, MatMulRelu, MatMulAddRelu)
-    Norm
-    Normalize
+    MatMul
     Transpose
 
 ## Shape
+    ExpandDims
     Rank
     Reshape
     Shape
     Size
+    Squeeze
 
 ## Assignment
 

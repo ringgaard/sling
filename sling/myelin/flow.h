@@ -78,12 +78,15 @@ class TypeTraits {
   bool isint() const { return isint_; }
   bool isfloat() const { return isfloat_; }
 
-
   // Return data formatted according to type.
   string str(const void *data) const;
 
   // Return data as number.
   double number(const void *data) const;
+
+  // Set numeric data.
+  void assign(double number, void *data) const;
+  void assign(int64 number, void *data) const;
 
   // Binary representation of zero.
   const void *zero() const { return zero_; }
@@ -541,6 +544,25 @@ class Flow {
       DCHECK_EQ(elements(), 1);
       return traits().number(data);
     }
+
+    // Assign value to scalar constant.
+    void assign(double number) {
+      DCHECK(constant());
+      DCHECK_EQ(elements(), 1);
+      traits().assign(number, data);
+    }
+
+    void assign(int64 number) {
+      DCHECK(constant());
+      DCHECK_EQ(elements(), 1);
+      traits().assign(number, data);
+    }
+
+    // Check if variable is a floating-point type.
+    bool isfloat() const { return traits().isfloat(); }
+
+    // Check if variable is an integer type.
+    bool isint() const { return traits().isint(); }
 
     // Return type traits for variable type.
     const TypeTraits &traits() const { return TypeTraits::of(type); }
