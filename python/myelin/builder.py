@@ -279,6 +279,9 @@ class Builder:
   def div(self, x, y, name=None):
     return self.op("Div", [x, y], name)
 
+  def mod(self, x, y, name=None):
+    return self.op("Mod", [x, y], name)
+
   def minimum(self, x, y, name=None):
     return self.op("Minimum", [x, y], name)
 

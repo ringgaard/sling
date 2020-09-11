@@ -151,6 +151,7 @@ class FlowBuilder : public Scope {
   Variable *Sub(Variable *x, Variable *y) { return Op("Sub", {x, y}); }
   Variable *Mul(Variable *x, Variable *y) { return Op("Mul", {x, y}); }
   Variable *Div(Variable *x, Variable *y) { return Op("Div", {x, y}); }
+  Variable *Mod(Variable *x, Variable *y) { return Op("Mod", {x, y}); }
   Variable *Minimum(Variable *x, Variable *y) { return Op("Minimum", {x, y}); }
   Variable *Maximum(Variable *x, Variable *y) { return Op("Maximum", {x, y}); }
   Variable *Neg(Variable *x) { return Op("Neg", {x}); }

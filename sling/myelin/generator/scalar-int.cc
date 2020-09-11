@@ -38,8 +38,9 @@ class ScalarIntGenerator : public ExpressionGenerator {
     model_.func_reg_mem = true;
     model_.instruction_set({
       Express::MOV,
-      Express::ADD, Express::SUB, Express::MUL, Express::DIV,
+      Express::ADD, Express::SUB, Express::MUL, Express::DIV, Express::MOD,
       Express::MINIMUM, Express::MAXIMUM,
+      Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
     });
   }
 
@@ -49,7 +50,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
     // Reserve registers for temps.
     index_->ReserveRegisters(instructions_.NumRegs());
 
-    if (instructions_.Has(Express::DIV)) {
+    if (instructions_.Has({Express::DIV, Express::MOD})) {
       // Reserve rax and rdx for integer division.
       index_->ReserveFixedRegister(rax);
       index_->ReserveFixedRegister(rdx);
@@ -114,11 +115,21 @@ class ScalarIntGenerator : public ExpressionGenerator {
         }
         break;
       case Express::DIV:
-        GenerateDiv(instr, masm);
+      case Express::MOD:
+        GenerateDivMod(instr, masm);
         break;
       case Express::MINIMUM:
       case Express::MAXIMUM:
         GenerateMinMax(instr, masm);
+        break;
+      case Express::FLOOR:
+      case Express::CEIL:
+      case Express::ROUND:
+      case Express::TRUNC:
+        // Rounding is a no-op for integers.
+        if (instr->dst != instr->src) {
+          GenerateScalarIntMove(instr, masm);
+        }
         break;
       default:
         LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
@@ -263,16 +274,23 @@ class ScalarIntGenerator : public ExpressionGenerator {
     __ movq(reg(instr->dst), rax);
   }
 
-  // Generate division.
-  void GenerateDiv(Express::Op *instr, MacroAssembler *masm) {
+  // Generate division or modulus.
+  void GenerateDivMod(Express::Op *instr, MacroAssembler *masm) {
     CHECK(instr->dst != -1);
+    bool modulus = instr->type == Express::MOD;
+
     if (instr->args[1]->type == Express::CONST) {
-      // Division by one is a no-op.
       int64 imm = GetConstant(instr->args[1]);
-      if (imm == 1) return;
+      if (imm == 1) {
+        // Modulus by one is zero and division by one is a nop-op.
+        if (modulus) {
+          __ xorq(reg(instr->dst), reg(instr->dst));
+        }
+        return;
+      }
       if (imm == 0) LOG(WARNING) << "Division by zero";
 
-      // Shift instead of divide if immediate is a power of two.
+      // Shift/mask instead of division/modulus if immediate is a power of two.
       int shift = 0;
       int64 value = 1;
       while (value < imm) {
@@ -281,12 +299,18 @@ class ScalarIntGenerator : public ExpressionGenerator {
       }
       if (value == imm) {
         Register dst = reg(instr->dst);
-        switch (type_) {
-          case DT_INT8:  __ sarb(dst, Immediate(shift)); break;
-          case DT_INT16: __ sarw(dst, Immediate(shift)); break;
-          case DT_INT32: __ sarl(dst, Immediate(shift)); break;
-          case DT_INT64: __ sarq(dst, Immediate(shift)); break;
-          default: UNSUPPORTED;
+        if (modulus) {
+          // Mask instead of modulus.
+          __ andq(dst, Immediate(imm - 1));
+        } else {
+          // Shift instead of division.
+          switch (type_) {
+            case DT_INT8:  __ sarb(dst, Immediate(shift)); break;
+            case DT_INT16: __ sarw(dst, Immediate(shift)); break;
+            case DT_INT32: __ sarl(dst, Immediate(shift)); break;
+            case DT_INT64: __ sarq(dst, Immediate(shift)); break;
+            default: UNSUPPORTED;
+          }
         }
         return;
       }
@@ -311,8 +335,15 @@ class ScalarIntGenerator : public ExpressionGenerator {
         &Assembler::idivl, &Assembler::idivl,
         &Assembler::idivq, &Assembler::idivq,
         masm, 1);
-    if (reg(instr->dst).code() != rax.code()) {
-      __ movq(reg(instr->dst), rax);
+
+    if (modulus) {
+      if (reg(instr->dst).code() != rdx.code()) {
+        __ movq(reg(instr->dst), rdx);
+      }
+    } else {
+      if (reg(instr->dst).code() != rax.code()) {
+        __ movq(reg(instr->dst), rax);
+      }
     }
   }
 

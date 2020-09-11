@@ -272,6 +272,14 @@ def div_test(n):
   f.div(x, y)
   check(flow, n, 1.0, 100.0)
 
+def mod_test(n):
+  flow = myelin.Flow()
+  f = flow.define("mod")
+  x = f.var("x", dt, [n])
+  y = f.var("y", dt, [n])
+  f.mod(x, y)
+  check(flow, n, 1.0, 100.0, atol=1e-5)
+
 def neg_test(n):
   flow = myelin.Flow()
   f = flow.define("neg")
@@ -897,6 +905,58 @@ def negfold_test(n):
   z = f.sub(x, f.neg(y))
   check(flow, n)
 
+def divtomul_test(n):
+  flow = myelin.Flow()
+  f = flow.define("divtomul")
+  x = f.var("x", dt, [n])
+  y = f.const(0.25, dtype=dt)
+  z = f.div(x, y)
+  check(flow, n)
+
+def mul_const_test(n, c):
+  flow = myelin.Flow()
+  f = flow.define("mul_const")
+  x = f.var("x", dt, [n])
+  y = f.const(c, dtype=dt)
+  z = f.mul(x, y)
+  check(flow, n)
+
+def add_const_test(n, c):
+  flow = myelin.Flow()
+  f = flow.define("add_const")
+  x = f.var("x", dt, [n])
+  y = f.const(c, dtype=dt)
+  z = f.add(x, y)
+  check(flow, n)
+
+def div_const_test(n, c):
+  flow = myelin.Flow()
+  f = flow.define("div_const")
+  x = f.var("x", dt, [n])
+  y = f.const(c, dtype=dt)
+  z = f.div(x, y)
+  check(flow, n, 0, 1024)
+
+def mod_const_test(n, c):
+  flow = myelin.Flow()
+  f = flow.define("mod_const")
+  x = f.var("x", dt, [n])
+  y = f.const(c, dtype=dt)
+  z = f.mod(x, y)
+  check(flow, n, 0, 1024)
+
+def const_test(n, c):
+  flow = myelin.Flow()
+  f = flow.define("const")
+  x = f.var("x", dt, [n])
+  y = f.const(c, dtype=dt)
+  f.add(x, y)
+  f.sub(x, y)
+  f.mul(x, y)
+  f.div(x, y)
+  f.mod(x, y)
+  check(flow, n, 0, 1024)
+
 def acc_matmul_transpose_test():
   flow = myelin.Flow()
   f = flow.define("acc_matmul_transpose")
@@ -948,6 +1008,9 @@ for i in sizes:
   sub_test(i)
   mul_test(i)
   div_test(i)
+  if dt != myelin.DT_INT8:
+    # Causes overflow.
+    mod_test(i)
   minimum_test(i)
   maximum_test(i)
   argmax_test(i)
@@ -956,6 +1019,10 @@ for i in sizes:
   abs_test(i)
   square_test(i)
   relu_test(i)
+  floor_test(i)
+  ceil_test(i)
+  round_test(i)
+  trunc_test(i)
   bcast_test(i)
   bcast_repeat_test(i, 256, 1)
   shape_test(i)
@@ -1010,10 +1077,6 @@ for i in sizes:
     count_test(i)
     norm_test(i)
     sign_test(i)
-    floor_test(i)
-    ceil_test(i)
-    round_test(i)
-    trunc_test(i)
 
     equal_test(i)
     not_equal_test(i)

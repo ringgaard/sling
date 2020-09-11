@@ -176,7 +176,7 @@ ExpressionGenerator *ExpressionGenerator::Select(const Express &expr,
       break;
 
     case DT_INT8:
-      if (expr.Has(Express::DIV)) {
+      if (expr.Has({Express::DIV, Express::MOD})) {
         generator = CreateScalarIntGenerator(DT_INT8);
       } else if (CPU::Enabled(AVX2) && IsVector(size, 32)) {
         generator = CreateVectorIntAVX256Generator(DT_INT8);
@@ -190,7 +190,7 @@ ExpressionGenerator *ExpressionGenerator::Select(const Express &expr,
       break;
 
     case DT_INT16:
-      if (expr.Has(Express::DIV)) {
+      if (expr.Has({Express::DIV, Express::MOD})) {
         generator = CreateScalarIntGenerator(DT_INT16);
       } else if (CPU::Enabled(AVX2) && IsVector(size, 16)) {
         generator = CreateVectorIntAVX256Generator(DT_INT16);
@@ -204,7 +204,7 @@ ExpressionGenerator *ExpressionGenerator::Select(const Express &expr,
       break;
 
     case DT_INT32:
-      if (expr.Has(Express::DIV)) {
+      if (expr.Has({Express::DIV, Express::MOD})) {
         generator = CreateScalarIntGenerator(DT_INT32);
       } else if (CPU::Enabled(AVX2) && IsVector(size, 8)) {
         generator = CreateVectorIntAVX256Generator(DT_INT32);
@@ -218,7 +218,7 @@ ExpressionGenerator *ExpressionGenerator::Select(const Express &expr,
       break;
 
     case DT_INT64:
-      if (expr.Has(Express::DIV)) {
+      if (expr.Has({Express::DIV, Express::MOD})) {
         generator = CreateScalarIntGenerator(DT_INT64);
       } else if (CPU::Enabled(AVX) && IsVector(size, 2)) {
         generator = CreateVectorIntAVX128Generator(DT_INT64);

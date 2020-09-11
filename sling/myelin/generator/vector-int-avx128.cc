@@ -40,6 +40,7 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
       Express::MOV,
       Express::ADD, Express::SUB, Express::MUL, Express::DIV,
       Express::MINIMUM, Express::MAXIMUM,
+      Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
     });
   }
 
@@ -143,6 +144,15 @@ class VectorIntAVX128Generator : public ExpressionGenerator {
               &Assembler::vpmaxsd, &Assembler::vpmaxsd,
               &Assembler::vpmaxsd, &Assembler::vpmaxsd,  // dummy
               masm);
+        }
+        break;
+      case Express::FLOOR:
+      case Express::CEIL:
+      case Express::ROUND:
+      case Express::TRUNC:
+        // Rounding is a no-op for integers.
+        if (instr->dst != instr->src) {
+          GenerateXMMVectorIntMove(instr, masm);
         }
         break;
       default:
