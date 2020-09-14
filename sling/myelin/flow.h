@@ -35,41 +35,42 @@ class Tensor;
 // Data types.
 enum Type {
   DT_INVALID        = 0,      // invalid data type
-  DT_FLOAT          = 1,      // 32-bit IEEE floating point number
-  DT_DOUBLE         = 2,      // 64-bit IEEE floating point number
+
+  DT_INT8           = 1,      // 8-bit signed integer
+  DT_INT16          = 2,      // 16-bit signed integer
   DT_INT32          = 3,      // 32-bit signed integer
-  DT_UINT8          = 4,      // 8-bit unsigned integer
-  DT_INT16          = 5,      // 16-bit signed integer
-  DT_INT8           = 6,      // 8-bit signed integer
-  DT_STRING         = 7,      // string
-  DT_COMPLEX64      = 8,      // single-precision complex
-  DT_INT64          = 9,      // 64-bit signed integer
-  DT_BOOL           = 10,     // boolean
-  DT_QINT8          = 11,     // quantized 8-bit signed integer
-  DT_QUINT8         = 12,     // quantized 8-bit unsigned integer
-  DT_QINT32         = 13,     // quantized 32-bit signed integer
-  DT_BFLOAT16       = 14,     // float32 truncated to 16 bits
-  DT_QINT16         = 15,     // quantized 16-bit signed integer
-  DT_QUINT16        = 16,     // quantized 16-bit unsigned integer
-  DT_UINT16         = 17,     // 16-bit unsigned integer
-  DT_COMPLEX128     = 18,     // double-precision complex
-  DT_HALF           = 19,     // 16-bit IEEE floating point number
-  DT_RESOURCE       = 20,     // resource
+  DT_INT64          = 4,      // 64-bit signed integer
+
+  DT_UINT8          = 5,      // 8-bit unsigned integer
+  DT_UINT16         = 6,      // 16-bit unsigned integer
+  DT_UINT32         = 7,      // 32-bit unsigned integer
+  DT_UINT64         = 8,      // 32-bit unsigned integer
+
+  DT_BOOL           = 9,      // boolean
+
+  DT_FLOAT          = 10,     // 32-bit IEEE floating point number
+  DT_DOUBLE         = 11,     // 64-bit IEEE floating point number
+  DT_HALF           = 12,     // 16-bit IEEE floating point number
+  DT_BFLOAT16       = 13,     // float32 truncated to 16 bits
+
+  DT_STRING         = 14,     // string
+  DT_RESOURCE       = 15,     // resource
 };
 
 // Type properties.
 class TypeTraits {
  public:
-  TypeTraits(Type type, const char *name, int size,
+  TypeTraits(Type type, const char *name, int size, int bits,
              const char *ctype, const char *ptx, int cuda, const char *pytype,
              bool isint, bool isfloat, void *zero, void *one)
-      : type_(type), name_(name), size_(size),
+      : type_(type), name_(name), size_(size), bits_(bits),
         ctype_(ctype), ptx_(ptx), cuda_(cuda), pytype_(pytype),
         isint_(isint), isfloat_(isfloat), zero_(zero), one_(one) {}
 
   Type type() const { return type_; }
   const string &name() const { return name_; }
   size_t size() const { return size_; }
+  int bits() const { return bits_; }
   bool valid() const { return type_ != DT_INVALID; }
   const char *ctype() const { return ctype_; }
   const char *ptx() const { return ptx_; }
@@ -104,6 +105,7 @@ class TypeTraits {
   Type type_;           // basic type
   string name_;         // type name
   size_t size_;         // size in bytes
+  int bits_;            // number of bits in integer part
   const char *ctype_;   // C type
   const char *ptx_;     // CUDA PTX type
   int cuda_;            // CUDA CUBLAS type

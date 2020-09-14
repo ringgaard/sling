@@ -32,132 +32,138 @@ namespace myelin {
 
 std::unordered_map<string, Type> typemap = {
   {"void", DT_INVALID},
-  {"float16", DT_HALF},
-  {"float32", DT_FLOAT},
-  {"float64", DT_DOUBLE},
-  {"float", DT_FLOAT},
-  {"bfloat16", DT_BFLOAT16},
+
   {"int8", DT_INT8},
   {"int16", DT_INT16},
   {"int32", DT_INT32},
   {"int64", DT_INT64},
   {"int", DT_INT32},
+
   {"uint8", DT_UINT8},
   {"uint16", DT_UINT16},
+  {"uint32", DT_UINT32},
+  {"uint64", DT_UINT64},
+  {"uint", DT_UINT32},
+
   {"bool", DT_BOOL},
+
+  {"float16", DT_HALF},
+  {"float32", DT_FLOAT},
+  {"float64", DT_DOUBLE},
+  {"bfloat16", DT_BFLOAT16},
+  {"half", DT_HALF},
+  {"float", DT_FLOAT},
+  {"double", DT_DOUBLE},
+
   {"string", DT_STRING},
-  {"complex64", DT_COMPLEX64},
-  {"complex128", DT_COMPLEX128},
-  {"qint8", DT_QINT8},
-  {"qint32", DT_QINT32},
-  {"qint16", DT_QINT16},
-  {"quint8", DT_QUINT8},
-  {"quint16", DT_QUINT16},
   {"resource", DT_RESOURCE},
 };
 
-static double f64_zero = 0.0;
-static float f32_zero = 0.0;
-static int64_t i64_zero = 0;
-static int32_t i32_zero = 0;
-static int16_t i16_zero = 0;
-static uint16_t u16_zero = 0;
 static int8_t i8_zero = 0;
-static uint8_t u8_zero = 0;
-static bool b_zero = false;
+static int16_t i16_zero = 0;
+static int32_t i32_zero = 0;
+static int64_t i64_zero = 0;
 
-static double f64_one = 1.0;
-static float f32_one = 1.0;
-static int64_t i64_one = 1;
-static int32_t i32_one = 1;
-static int16_t i16_one = 1;
-static uint16_t u16_one = 1;
+static uint8_t u8_zero = 0;
+static uint16_t u16_zero = 0;
+static uint32_t u32_zero = 0;
+static uint64_t u64_zero = 0;
+
+static bool b_zero = false;
+static float f32_zero = 0.0;
+static double f64_zero = 0.0;
+
 static int8_t i8_one = 1;
+static int16_t i16_one = 1;
+static int32_t i32_one = 1;
+static int64_t i64_one = 1;
+
 static uint8_t u8_one = 1;
+static uint16_t u16_one = 1;
+static uint32_t u32_one = 1;
+static uint64_t u64_one = 1;
+
 static bool b_one = true;
+static float f32_one = 1.0;
+static double f64_one = 1.0;
 
 std::vector<TypeTraits> typetraits = {
-  {DT_INVALID, "void", 0,
+  {DT_INVALID, "void", 0, 0,
    nullptr, nullptr, -1, nullptr,
    false, false,
    nullptr, nullptr},
-  {DT_FLOAT, "float32", sizeof(float),
-   "float", "f32", 0, "f",
-   false, true,
-   &f32_zero, &f32_one},
-  {DT_DOUBLE, "float64", sizeof(double),
-   "double", "f64", 1, "d",
-   false, true,
-   &f64_zero, &f64_one},
-  {DT_INT32, "int32", sizeof(int32_t),
-   "int32_t", "s32", 10, "i",
-   true, false,
-   &i32_zero, &i32_one},
-  {DT_UINT8, "uint8", sizeof(uint8_t),
-   "uint8_t", "u8", 8, "B",
-   true, false,
-   &u8_zero, &u8_one},
-  {DT_INT16, "int16", sizeof(int16_t),
-   "int16_t", "s16", -1, "h",
-   true, false,
-   &i16_zero, &i16_one},
-  {DT_INT8, "int8", sizeof(int8_t),
+
+  {DT_INT8, "int8", sizeof(int8_t), 7,
    "int8_t", "s8", 3, "b",
    true, false,
    &i8_zero, &i8_one},
-  {DT_STRING, "string", sizeof(char *),
-   "char *", "b64", -1, nullptr,
-   false, false,
-   nullptr, nullptr},
-  {DT_COMPLEX64, "complex64", 2 * sizeof(float),
-   nullptr, nullptr, 5, nullptr,
-   false, true,
-   nullptr, nullptr},
-  {DT_INT64, "int64", sizeof(int64_t),
+
+  {DT_INT16, "int16", sizeof(int16_t), 15,
+   "int16_t", "s16", -1, "h",
+   true, false,
+   &i16_zero, &i16_one},
+
+  {DT_INT32, "int32", sizeof(int32_t), 31,
+   "int32_t", "s32", 10, "i",
+   true, false,
+   &i32_zero, &i32_one},
+
+  {DT_INT64, "int64", sizeof(int64_t), 63,
    "int64_t", "s64", -1, "q",
    true, false,
    &i64_zero, &i64_one},
-  {DT_BOOL, "bool", sizeof(bool),
+
+  {DT_UINT8, "uint8", sizeof(uint8_t), 8,
+   "uint8_t", "u8", 8, "B",
+   true, false,
+   &u8_zero, &u8_one},
+
+  {DT_UINT16, "uint16", sizeof(uint16_t), 16,
+   "uint16_t", nullptr, -1, "H",
+   true, false,
+   &u16_zero, &u16_one},
+
+  {DT_UINT32, "uint32", sizeof(uint32_t), 32,
+   "unit32_t", nullptr, -1, "I",
+   true, false,
+   &u32_zero, &u32_one},
+
+  {DT_UINT64, "uint64", sizeof(uint64_t), 64,
+   "unit64_t", nullptr, -1, "Q",
+   true, false,
+   &u64_zero, &u64_one},
+
+  {DT_BOOL, "bool", sizeof(bool), 1,
    "bool", "b8", -1, "?",
    false, false,
    &b_zero, &b_one},
-  {DT_QINT8, "qint8", sizeof(int8_t),
-   nullptr, nullptr, -1, nullptr,
-   true, false,
-   nullptr, nullptr},
-  {DT_QUINT8, "quint8", sizeof(uint8_t),
-   nullptr, nullptr, -1, nullptr,
-   true, false,
-   nullptr, nullptr},
-  {DT_QINT32, "qint32", sizeof(int32_t),
-   nullptr, nullptr, -1, nullptr,
-   true, false,
-   nullptr, nullptr},
-  {DT_BFLOAT16, "bfloat16", 2,
-   nullptr, nullptr, -1, nullptr,
+
+  {DT_FLOAT, "float32", sizeof(float), 23,
+   "float", "f32", 0, "f",
    false, true,
-   nullptr, nullptr},
-  {DT_QINT16, "qint16", sizeof(int16_t),
-   nullptr, nullptr, -1, nullptr,
-   true, false,
-   nullptr, nullptr},
-  {DT_UINT16, "uint16", sizeof(uint16_t),
-   nullptr, nullptr, -1, nullptr,
-   true, false,
-   &u16_zero, &u16_one},
-  {DT_QUINT16, "quint16", sizeof(uint16_t),
-   nullptr, nullptr, -1, nullptr,
-   true, false,
-   nullptr, nullptr},
-  {DT_COMPLEX128, "complex128", 2 * sizeof(double),
-   nullptr, nullptr, 5, nullptr,
+   &f32_zero, &f32_one},
+
+  {DT_DOUBLE, "float64", sizeof(double), 52,
+   "double", "f64", 1, "d",
    false, true,
-   nullptr, nullptr},
-  {DT_HALF, "float16", 2,
+   &f64_zero, &f64_one},
+
+  {DT_HALF, "float16", 2, 10,
    nullptr, "f16", 2, nullptr,
    false, true,
    nullptr, nullptr},
-  {DT_RESOURCE, "resource", 1,
+
+  {DT_BFLOAT16, "bfloat16", 2, 7,
+   nullptr, nullptr, -1, nullptr,
+   false, true,
+   nullptr, nullptr},
+
+  {DT_STRING, "string", sizeof(char *), 0,
+   "char *", "b64", -1, nullptr,
+   false, false,
+   nullptr, nullptr},
+
+  {DT_RESOURCE, "resource", 1, 0,
    "char *", nullptr, -1, nullptr,
    false, false,
    nullptr, nullptr},
@@ -290,14 +296,20 @@ string TypeTraits::str(const void *data) const {
     case DT_UINT16:
       return std::to_string(*reinterpret_cast<const uint16 *>(data));
 
+    case DT_UINT32:
+      return std::to_string(*reinterpret_cast<const uint32 *>(data));
+
+    case DT_UINT64:
+      return std::to_string(*reinterpret_cast<const uint64 *>(data));
+
+    case DT_BOOL:
+      return (*reinterpret_cast<const bool *>(data)) ? "true" : "false";
+
     case DT_FLOAT:
       return std::to_string(*reinterpret_cast<const float *>(data));
 
     case DT_DOUBLE:
       return std::to_string(*reinterpret_cast<const double *>(data));
-
-    case DT_BOOL:
-      return (*reinterpret_cast<const bool *>(data)) ? "true" : "false";
 
     default:
       return "???";
@@ -325,14 +337,20 @@ double TypeTraits::number(const void *data) const {
     case DT_UINT16:
       return *reinterpret_cast<const uint16 *>(data);
 
+    case DT_UINT32:
+      return *reinterpret_cast<const uint32 *>(data);
+
+    case DT_UINT64:
+      return *reinterpret_cast<const uint64 *>(data);
+
+    case DT_BOOL:
+      return *reinterpret_cast<const bool *>(data);
+
     case DT_FLOAT:
       return *reinterpret_cast<const float *>(data);
 
     case DT_DOUBLE:
       return *reinterpret_cast<const double *>(data);
-
-    case DT_BOOL:
-      return *reinterpret_cast<const bool *>(data);
 
     default:
       return NAN;
@@ -366,16 +384,24 @@ void TypeTraits::assign(double number, void *data) const {
       *reinterpret_cast<uint16 *>(data) = number;
       break;
 
+    case DT_UINT32:
+      *reinterpret_cast<uint32 *>(data) = number;
+      break;
+
+    case DT_UINT64:
+      *reinterpret_cast<uint64 *>(data) = number;
+      break;
+
+    case DT_BOOL:
+      *reinterpret_cast<bool *>(data) = number;
+      break;
+
     case DT_FLOAT:
       *reinterpret_cast<float *>(data) = number;
       break;
 
     case DT_DOUBLE:
       *reinterpret_cast<double *>(data) = number;
-      break;
-
-    case DT_BOOL:
-      *reinterpret_cast<bool *>(data) = number;
       break;
 
     default:
@@ -410,16 +436,24 @@ void TypeTraits::assign(int64 number, void *data) const {
       *reinterpret_cast<uint16 *>(data) = number;
       break;
 
+    case DT_UINT32:
+      *reinterpret_cast<uint32 *>(data) = number;
+      break;
+
+    case DT_UINT64:
+      *reinterpret_cast<uint64 *>(data) = number;
+      break;
+
+    case DT_BOOL:
+      *reinterpret_cast<bool *>(data) = number;
+      break;
+
     case DT_FLOAT:
       *reinterpret_cast<float *>(data) = number;
       break;
 
     case DT_DOUBLE:
       *reinterpret_cast<double *>(data) = number;
-      break;
-
-    case DT_BOOL:
-      *reinterpret_cast<bool *>(data) = number;
       break;
 
     default:
