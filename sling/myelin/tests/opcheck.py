@@ -996,6 +996,19 @@ if flags.arg.thorough:
 else:
   sizes = list(range(1, 8)) + [9, 14, 15, 16, 31, 32, 33, 64]
 
+shifts = {
+  myelin.DT_INT8: 7,
+  myelin.DT_INT16: 15,
+  myelin.DT_INT32: 31,
+  myelin.DT_INT64: 63,
+}
+
+if dt in shifts:
+  for b in range(0, shifts[dt]):
+    mul_const_test(128, 1 << b)
+    div_const_test(128, 1 << b)
+    mod_const_test(128, 1 << b)
+
 for i in sizes:
   for j in sizes:
     concat_test(i, j)
