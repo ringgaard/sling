@@ -46,6 +46,7 @@ DEFINE_bool(dump_input_flow, false, "Dump raw input flow to log");
 DEFINE_bool(dump_flow, false, "Dump final analyzed flow to log");
 DEFINE_bool(dump_cells, false, "Dump cells after compilation");
 DEFINE_bool(dump_code, false, "Dump generated assembly code");
+DEFINE_bool(dump_raw_code, false, "Dump raw generated assembly code");
 DEFINE_bool(param_stats, false, "Dump model parameter statistics");
 DEFINE_bool(check_flow_consistency, false, "Check that flow is consistent");
 DEFINE_bool(dynamic_instance_allocation, false, "Dynamic instance allocation");
@@ -156,7 +157,7 @@ void Compiler::Compile(Flow *flow, Network *net) {
 
   // Compile flow to network.
   ElfLinker linker;
-  if (!FLAGS_jit_code.empty() || FLAGS_dump_code) {
+  if (!FLAGS_jit_code.empty() || FLAGS_dump_code || FLAGS_dump_raw_code) {
     net->set_linker(&linker);
   }
   if (FLAGS_dynamic_instance_allocation) {
@@ -202,7 +203,7 @@ void Compiler::Compile(Flow *flow, Network *net) {
   }
 
   // Optionally output generated code to ELF file.
-  if (!FLAGS_jit_code.empty() || FLAGS_dump_code) {
+  if (!FLAGS_jit_code.empty() || FLAGS_dump_code || FLAGS_dump_raw_code) {
     // Link code.
     linker.Link();
 
@@ -224,7 +225,8 @@ void Compiler::Compile(Flow *flow, Network *net) {
       // Run objdump to output assembly.
       fflush(stdout);
       fflush(stderr);
-      string cmd = "objdump -xrtdw -C -M intel --no-show-raw-insn ";
+      string cmd = "objdump -xrtdw -C -M intel ";
+      if (!FLAGS_dump_raw_code) cmd.append("--no-show-raw-insn ");
       cmd.append(tmpname);
       int rc = system(cmd.c_str());
       if (rc != 0) LOG(WARNING) << "Error dumping jit code";

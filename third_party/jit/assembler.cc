@@ -147,52 +147,49 @@ void Assembler::CodeTargetAlign() {
 }
 
 void Assembler::shift(Register dst,
-                      Immediate shift_amount,
+                      Immediate bits,
                       int subcode,
                       int size) {
   EnsureSpace ensure_space(this);
-  DCHECK(size == kInt64Size ? is_uint6(shift_amount.value_)
-                            : is_uint5(shift_amount.value_));
-  if (shift_amount.value_ == 1) {
-    emit_rex(dst, size);
-    emit(0xD1);
+  if (size == 2) emit(0x66);  // operand size override prefix
+  emit_rex(dst, size);
+  if (bits.value_ == 1) {
+    emit(size == 1 ? 0xD0 : 0xD1);
     emit_modrm(subcode, dst);
   } else {
-    emit_rex(dst, size);
-    emit(0xC1);
+    emit(size == 1 ? 0xC0 : 0xC1);
     emit_modrm(subcode, dst);
-    emit(shift_amount.value_);
+    emit(bits.value_);
   }
 }
 
-void Assembler::shift(Operand dst, Immediate shift_amount, int subcode,
-                      int size) {
+void Assembler::shift(Operand dst, Immediate bits, int subcode, int size) {
   EnsureSpace ensure_space(this);
-  DCHECK(size == kInt64Size ? is_uint6(shift_amount.value_)
-                            : is_uint5(shift_amount.value_));
-  if (shift_amount.value_ == 1) {
-    emit_rex(dst, size);
-    emit(0xD1);
+  if (size == 2) emit(0x66);  // operand size override prefix
+  emit_rex(dst, size);
+  if (bits.value_ == 1) {
+    emit(size == 1 ? 0xD0 : 0xD1);
     emit_operand(subcode, dst);
   } else {
-    emit_rex(dst, size);
-    emit(0xC1);
+    emit(size == 1 ? 0xC0 : 0xC1);
     emit_operand(subcode, dst, 1);
-    emit(shift_amount.value_);
+    emit(bits.value_);
   }
 }
 
 void Assembler::shift(Register dst, int subcode, int size) {
   EnsureSpace ensure_space(this);
+  if (size == 2) emit(0x66);  // operand size override prefix
   emit_rex(dst, size);
-  emit(0xD3);
+  emit(size == 1 ? 0xD2 : 0xD3);
   emit_modrm(subcode, dst);
 }
 
 void Assembler::shift(Operand dst, int subcode, int size) {
   EnsureSpace ensure_space(this);
+  if (size == 2) emit(0x66);  // operand size override prefix
   emit_rex(dst, size);
-  emit(0xD3);
+  emit(size == 1 ? 0xD2 : 0xD3);
   emit_operand(subcode, dst);
 }
 

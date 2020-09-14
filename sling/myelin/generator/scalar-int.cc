@@ -277,6 +277,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
   // Generate division or modulus.
   void GenerateDivMod(Express::Op *instr, MacroAssembler *masm) {
     CHECK(instr->dst != -1);
+    Register dst = reg(instr->dst);
     bool modulus = instr->type == Express::MOD;
 
     if (instr->args[1]->type == Express::CONST) {
@@ -284,7 +285,7 @@ class ScalarIntGenerator : public ExpressionGenerator {
       if (imm == 1) {
         // Modulus by one is zero and division by one is a nop-op.
         if (modulus) {
-          __ xorq(reg(instr->dst), reg(instr->dst));
+          __ xorq(dst, dst);
         }
         return;
       }
@@ -298,26 +299,98 @@ class ScalarIntGenerator : public ExpressionGenerator {
         shift++;
       }
       if (value == imm) {
-        Register dst = reg(instr->dst);
         if (modulus) {
-          // Mask instead of modulus.
-          __ andq(dst, Immediate(imm - 1));
-        } else {
-          // Shift instead of division.
           switch (type_) {
-            case DT_INT8:  __ sarb(dst, Immediate(shift)); break;
-            case DT_INT16: __ sarw(dst, Immediate(shift)); break;
-            case DT_INT32: __ sarl(dst, Immediate(shift)); break;
-            case DT_INT64: __ sarq(dst, Immediate(shift)); break;
-            default: UNSUPPORTED;
+            case DT_INT16:
+              __ testw(dst, dst);
+              __ leal(rax, Operand(dst, imm - 1));
+              __ cmovl(not_sign, rax, dst);
+              __ andw(rax, Immediate(-imm));
+              __ subw(dst, rax);
+              break;
+            case DT_INT8:
+            case DT_INT32:
+              __ testl(dst, dst);
+              __ leal(rax, Operand(dst, imm - 1));
+              __ cmovl(not_sign, rax, dst);
+              __ andl(rax, Immediate(-imm));
+              __ subl(dst, rax);
+              break;
+            case DT_INT64:
+              __ testq(dst, dst);
+              __ leaq(rax, Operand(dst, imm - 1));
+              __ cmovq(not_sign, rax, dst);
+              __ andq(rax, Immediate(-imm));
+              __ subq(dst, rax);
+              break;
+            case DT_UINT8:
+              __ andb(dst, Immediate(imm - 1));
+              break;
+            case DT_UINT16:
+              __ andw(dst, Immediate(imm - 1));
+              break;
+            case DT_UINT32:
+              __ andl(dst, Immediate(imm - 1));
+              break;
+            case DT_UINT64:
+              __ andq(dst, Immediate(imm - 1));
+              break;
+            default:
+              UNSUPPORTED;
+          }
+        } else {
+          switch (type_) {
+            case DT_INT8:
+              __ testb(dst, dst);
+              __ leal(rax, Operand(dst, imm - 1));
+              __ cmovl(sign, dst, rax);
+              __ sarb(dst, Immediate(shift));
+              break;
+            case DT_INT16:
+              __ testw(dst, dst);
+              __ leal(rax, Operand(dst, imm - 1));
+              __ cmovl(sign, dst, rax);
+              __ sarw(dst, Immediate(shift));
+              break;
+            case DT_INT32:
+              __ testl(dst, dst);
+              __ leal(rax, Operand(dst, imm - 1));
+              __ cmovl(sign, dst, rax);
+              __ sarl(dst, Immediate(shift));
+              break;
+            case DT_INT64:
+              __ testq(dst, dst);
+              if (shift < 32) {
+                __ leaq(rax, Operand(dst, imm - 1));
+              } else {
+                __ movq(rax, imm - 1);
+                __ addq(rax, dst);
+              }
+              __ cmovq(sign, dst, rax);
+              __ sarq(dst, Immediate(shift));
+              break;
+            case DT_UINT8:
+              __ sarb(dst, Immediate(shift));
+              break;
+            case DT_UINT16:
+              __ sarw(dst, Immediate(shift));
+              break;
+            case DT_UINT32:
+              __ sarl(dst, Immediate(shift));
+              break;
+            case DT_UINT64:
+              __ sarq(dst, Immediate(shift));
+              break;
+            default:
+              UNSUPPORTED;
           }
         }
         return;
       }
     }
 
-    if (reg(instr->dst).code() != rax.code()) {
-      __ movq(rax, reg(instr->dst));
+    if (dst.code() != rax.code()) {
+      __ movq(rax, dst);
     }
 
     // Sign-extend rax into rdx:rax.
@@ -337,12 +410,12 @@ class ScalarIntGenerator : public ExpressionGenerator {
         masm, 1);
 
     if (modulus) {
-      if (reg(instr->dst).code() != rdx.code()) {
-        __ movq(reg(instr->dst), rdx);
+      if (dst.code() != rdx.code()) {
+        __ movq(dst, rdx);
       }
     } else {
-      if (reg(instr->dst).code() != rax.code()) {
-        __ movq(reg(instr->dst), rax);
+      if (dst.code() != rax.code()) {
+        __ movq(dst, rax);
       }
     }
   }

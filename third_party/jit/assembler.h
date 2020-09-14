@@ -155,7 +155,7 @@ class Operand {
     DCHECK_EQ(1, len_);
     int64_t *p = reinterpret_cast<int64_t *>(&buf_[len_]);
     *p = disp;
-    len_ += sizeof(disp);
+    len_ += sizeof(int64_t);
   }
 
   friend class Assembler;
@@ -457,6 +457,9 @@ class Assembler : public CodeGenerator {
 
   void andb(Register dst, Immediate src) {
     immediate_arithmetic_op_8(0x4, dst, src);
+  }
+  void andw(Register dst, Immediate src) {
+    immediate_arithmetic_op_16(0x4, dst, src);
   }
 
   // Lock prefix.
@@ -3428,8 +3431,8 @@ class Assembler : public CodeGenerator {
                                int size);
 
   // Emit machine code for a shift operation.
-  void shift(Operand dst, Immediate shift_amount, int subcode, int size);
-  void shift(Register dst, Immediate shift_amount, int subcode, int size);
+  void shift(Operand dst, Immediate bits, int subcode, int size);
+  void shift(Register dst, Immediate bits, int subcode, int size);
 
   // Shift dst by cl % 64 bits.
   void shift(Register dst, int subcode, int size);
