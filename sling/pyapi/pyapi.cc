@@ -24,16 +24,13 @@
 #include "sling/pyapi/pyrecordio.h"
 #include "sling/pyapi/pystore.h"
 #include "sling/pyapi/pywiki.h"
-#ifndef SLING_GOOGLE3
 #include "sling/pyapi/pymisc.h"
 #include "sling/pyapi/pytask.h"
 #include "sling/pyapi/pyweb.h"
-#endif
 
 namespace sling {
 
 static PyMethodDef py_funcs[] = {
-#ifndef SLING_GOOGLE3
   {"get_flags", (PyCFunction) PyGetFlags, METH_NOARGS, ""},
   {"set_flag", (PyCFunction) PySetFlag, METH_VARARGS, ""},
   {"log_message", (PyCFunction) PyLogMessage, METH_VARARGS, ""},
@@ -41,7 +38,6 @@ static PyMethodDef py_funcs[] = {
   {"start_task_monitor", (PyCFunction) PyStartTaskMonitor, METH_VARARGS, ""},
   {"get_job_statistics", (PyCFunction) PyGetJobStatistics, METH_NOARGS, ""},
   {"finalize_dashboard", (PyCFunction) PyFinalizeDashboard, METH_NOARGS, ""},
-#endif
   {"tolex", (PyCFunction) PyToLex, METH_VARARGS, ""},
   {"evaluate_frames", (PyCFunction) PyEvaluateFrames, METH_VARARGS, ""},
   {nullptr, nullptr, 0, nullptr}
@@ -95,12 +91,10 @@ static PyObject *RegisterPythonModule() {
   PyChannel::Define(module);
   PyTensor::Define(module);
 
-#ifndef SLING_GOOGLE3
   PyJob::Define(module);
   PyResource::Define(module);
   PyTask::Define(module);
   PyWebArchive::Define(module);
-#endif
 
   return module;
 }
@@ -108,9 +102,7 @@ static PyObject *RegisterPythonModule() {
 }  // namespace sling
 
 PyMODINIT_FUNC PyInit_pysling() {
-#ifndef SLING_GOOGLE3
   sling::InitSharedLibrary();
-#endif
   return sling::RegisterPythonModule();
 }
 

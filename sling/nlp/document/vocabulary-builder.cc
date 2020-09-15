@@ -192,7 +192,7 @@ class WordVocabularyReducer : public SumReducer {
     // Iterator interface.
     int Size() override { return words_.size() - 1; }
     void Reset() override { current_ = 1; }
-    bool Next(Text *word, int *count) {
+    bool Next(Text *word, int *count) override {
       if (current_ == words_.size()) return false;
       const Entry &entry = words_[current_++];
       word->set(entry.word.data(), entry.word.size());
