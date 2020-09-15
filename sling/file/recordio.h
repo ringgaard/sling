@@ -117,7 +117,7 @@ class RecordFile {
   };
 
   // Parse header from data. Returns the number of bytes read or -1 on error.
-  static size_t ReadHeader(const char *data, Header *header);
+  static ssize_t ReadHeader(const char *data, Header *header);
 
   // Write header to data. Returns number of bytes written.
   static size_t WriteHeader(const Header &header, char *data);

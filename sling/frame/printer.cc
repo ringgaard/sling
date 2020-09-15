@@ -161,7 +161,7 @@ void Printer::PrintString(const StringDatum *str) {
             break;
           }
         }
-        [[fallthrough]];
+        FALLTHROUGH_INTENDED;
       case HEX:
         WriteChars('\\', 'x');
         WriteHex(*t++);

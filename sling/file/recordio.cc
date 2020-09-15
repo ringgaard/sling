@@ -115,7 +115,7 @@ int RecordFile::IndexPage::Find(uint64 fp) const {
   return lo;
 }
 
-size_t RecordFile::ReadHeader(const char *data, Header *header) {
+ssize_t RecordFile::ReadHeader(const char *data, Header *header) {
   // Read record type.
   const char *p = data;
   header->record_type = static_cast<RecordType>(*p++);
@@ -272,7 +272,7 @@ Status RecordReader::Read(Record *record) {
 
     // Read record header.
     Header hdr;
-    size_t hdrsize = ReadHeader(input_.begin(), &hdr);
+    ssize_t hdrsize = ReadHeader(input_.begin(), &hdr);
     if (hdrsize < 0) return Status(1, "Corrupt record header");
 
     // Skip filler records.
@@ -331,7 +331,7 @@ Status RecordReader::ReadKey(Record *record) {
 
     // Read record header.
     Header hdr;
-    size_t hdrsize = ReadHeader(input_.begin(), &hdr);
+    ssize_t hdrsize = ReadHeader(input_.begin(), &hdr);
     if (hdrsize < 0) return Status(1, "Corrupt record header");
 
     // Skip filler records.

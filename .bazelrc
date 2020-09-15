@@ -1,10 +1,3 @@
-build --color=yes
-build --cxxopt=-Wno-unknown-warning-option
-build --cxxopt=-Wno-unused-command-line-argument
-build --cxxopt=-Wno-deprecated
 build --cxxopt=-Wno-sign-compare
-build --cxxopt=-Wno-unused-local-typedefs
-build --cxxopt=-Wno-undefined-var-template
-build --cxxopt=-Wno-attributes
-build --spawn_strategy=standalone
+build --spawn_strategy=local
 

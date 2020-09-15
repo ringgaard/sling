@@ -15,10 +15,7 @@
 #ifndef SLING_PYAPI_PYBASE_H_
 #define SLING_PYAPI_PYBASE_H_
 
-#ifdef SLING_GOOGLE3
-#include <Python.h>
-#include <structmember.h>
-#elif PYVER==35
+#if PYVER==35
 #include <python3.5/Python.h>
 #include <python3.5/structmember.h>
 #elif PYVER==36
@@ -27,6 +24,9 @@
 #elif PYVER==37
 #include <python3.7/Python.h>
 #include <python3.7/structmember.h>
+#elif PYVER==38
+#include <python3.8/Python.h>
+#include <python3.8/structmember.h>
 #else
 #include <Python.h>
 #include <structmember.h>
