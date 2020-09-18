@@ -41,7 +41,7 @@ void PlausibilityModel::Load(Store *store, const string &filename) {
     // Build fact mapping.
     num_facts_ = fact_lexicon_.length();
     for (int i = 0; i < num_facts_; ++i) {
-      uint64 fp = store->Fingerprint(fact_lexicon_.get(i));
+      uint64 fp = store->Fingerprint(fact_lexicon_.get(i), true);
       fact_mapping_[fp] = i;
     }
 
@@ -93,7 +93,7 @@ int PlausibilityModel::Lookup(uint64 fp) const {
 }
 
 int PlausibilityModel::Lookup(const Array &fact) const {
-  uint64 fp = fact.store()->Fingerprint(fact.handle());
+  uint64 fp = fact.store()->Fingerprint(fact.handle(), true);
   return Lookup(fp);
 }
 

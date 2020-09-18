@@ -99,10 +99,16 @@ class FactCatalog {
   Name p_time_period_{names_, "P2348"};
   Name p_start_time_{names_, "P580"};
   Name p_end_time_{names_, "P582"};
+  Name p_point_in_time_{names_, "P585"};
   Name p_described_by_source_{names_, "P1343"};
   Name p_different_from_{names_, "P1889"};
   Name p_located_at_body_of_water_{names_, "P206"};
   Name p_located_on_street_{names_, "P669"};
+  Name p_country_{names_, "P17"};
+  Name p_subject_role_{names_, "P2868"};
+  Name p_given_name_{names_, "P735"};
+  Name p_family_name_{names_, "P734"};
+  Name p_language_{names_, "P407"};
 
   Name n_time_{names_, "/w/time"};
   Name n_item_{names_, "/w/item"};
@@ -140,6 +146,7 @@ class Facts {
 
   // Extract simple fact with no backoff.
   void ExtractSimple(Handle value);
+  void ExtractSimple(const Name &property, Handle value);
 
   // Skip extraction.
   void ExtractNothing(Handle value);
@@ -168,6 +175,9 @@ class Facts {
   // Extract time period.
   void ExtractTimePeriod(Handle period);
 
+  // Extract start/end time for event.
+  void ExtractTime(Handle event);
+
   // Extract location of item with containment backoff.
   void ExtractPlacement(Handle item);
 
@@ -189,8 +199,20 @@ class Facts {
   // Extract team.
   void ExtractTeam(Handle team);
 
+  // Extract name.
+  void ExtractName(Handle name);
+
   // Add fact based on current path.
   void AddFact(Handle value);
+
+  // Find group with base fact. Returns -1 if group not found.
+  int FindGroup(Handle property, Handle value) const;
+
+  // Remove group.
+  void RemoveGroup(int group);
+
+  // Copy fact group from another set of facts.
+  void CopyGroup(const Facts &facts, int group);
 
   // Get facts as an array of arrays.
   Handle AsArrays(Store *store) const;
@@ -202,6 +224,13 @@ class Facts {
 
   // Remove last value from current fact path.
   void pop() { path_.pop_back(); }
+
+  // Clear all extracted facts.
+  void clear() {
+    list_.clear();
+    delimiters_.clear();
+    groups_.clear();
+  }
 
   // Return the number of extracted facts.
   int size() const { return delimiters_.size(); }
@@ -221,6 +250,10 @@ class Facts {
 
   // Return fact value, i.e. last value in fact path.
   Handle last(int i) const { return list_[end(i) - 1]; }
+
+  // Return interval for fact group.
+  int group_begin(int i) const { return i == 0 ? 0 : groups_[i - 1]; }
+  int group_end(int i) const { return groups_[i]; }
 
   // Return fingerprint for fact.
   uint64 fingerprint(int i) const {
@@ -279,6 +312,12 @@ class Taxonomy {
 
   // Classify item according to taxonomy.
   Handle Classify(const Frame &item);
+
+  // Return rank for type, or -1 if not found.
+  int rank(Handle type) const {
+    auto f = typemap_.find(type);
+    return f != typemap_.end() ? f->second : -1;
+  }
 
   // Type mapping for taxonomy.
   const HandleMap<int> &typemap() const { return typemap_; }

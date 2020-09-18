@@ -102,7 +102,7 @@ class FactLexiconExtractor : public Process {
 
       // Add facts to fact lexicon.
       for (Handle fact : fact_list) {
-        int64 fp = store.Fingerprint(fact);
+        int64 fp = store.Fingerprint(fact, true);
         if (filter.add(fp)) {
           auto &entry = fact_lexicon[fp];
           if (entry.second == nullptr) {
@@ -185,6 +185,13 @@ class FactExtractor : public Process {
     catalog.Init(&commons_);
     commons_.Freeze();
 
+    // Taxonomy for sections.
+    Taxonomy taxonomy(&catalog, {
+      "Q215627",      // person
+      "Q17334923",    // location
+      "Q43229",       // organization
+    });
+
     // Read fact and category lexicons.
     ReadFactLexicon(task->GetInputFile("factmap"));
     ReadCategoryLexicon(task->GetInputFile("catmap"));
@@ -202,6 +209,16 @@ class FactExtractor : public Process {
       if (cls == n_wikimedia_category_) return;
       if (cls == n_wikimedia_disambiguation_) return;
 
+      // Determine item section.
+      int section = 0;
+      Handle type = taxonomy.Classify(item);
+      if (!type.IsNil()) {
+        auto f = taxonomy.typemap().find(type);
+        if (f != taxonomy.typemap().end()) {
+          section = f->second + 1;
+        }
+      }
+
       // Extract facts from item.
       Store store(&commons_);
       Facts facts(&catalog);
@@ -218,7 +235,7 @@ class FactExtractor : public Process {
         int prev = fact_indices.size();
         for (int i = start; i < end; ++i) {
           Handle fact = fact_list[i];
-          uint64 fp = store.Fingerprint(fact);
+          uint64 fp = store.Fingerprint(fact, true);
           auto f = fact_lexicon_.find(fp);
           if (f != fact_lexicon_.end()) {
             fact_indices.push_back(Handle::Integer(f->second));
@@ -259,6 +276,7 @@ class FactExtractor : public Process {
       // Build frame with resolved facts.
       Builder builder(&store);
       builder.Add(p_item_, item);
+      builder.Add(p_section_, section);
       builder.Add(p_facts_, Array(&store, fact_indices));
       builder.Add(p_groups_, Array(&store, group_indices));
       builder.Add(p_categories_, Array(&store, category_indices));
@@ -311,6 +329,7 @@ class FactExtractor : public Process {
   Name n_wikimedia_disambiguation_{names_, "Q4167410"};
 
   Name p_item_{names_, "item"};
+  Name p_section_{names_, "section"};
   Name p_facts_{names_, "facts"};
   Name p_groups_{names_, "groups"};
   Name p_categories_{names_, "categories"};

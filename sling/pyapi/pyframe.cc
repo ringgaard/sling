@@ -56,7 +56,6 @@ void PyFrame::Define(PyObject *module) {
   methods.Add("isglobal", &PyFrame::IsGlobal);
   methods.Add("isanonymous", &PyFrame::IsAnonymous);
   methods.Add("ispublic", &PyFrame::IsPublic);
-  methods.Add("isnamed", &PyFrame::IsPublic);  // legacy
   methods.Add("resolve", &PyFrame::Resolve);
   type.tp_methods = methods.table();
 
