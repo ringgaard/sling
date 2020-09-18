@@ -62,13 +62,18 @@ void FactCatalog::Init(Store *store) {
   SetExtractor(p_different_from_, &Facts::ExtractNothing);
   SetExtractor(p_located_at_body_of_water_, &Facts::ExtractSimple);
   SetExtractor(p_located_on_street_, &Facts::ExtractSimple);
+  SetExtractor(p_given_name_, &Facts::ExtractName);
+  SetExtractor(p_family_name_, &Facts::ExtractName);
 
   // Set up items that stop closure expansion.
   static const char *baseids[] = {
+    "Q5",         // human
     "Q215627",    // person
     "Q17334923",  // location
     "Q811430",    // construction
     "Q43229",     // organization
+    "Q6881511",   // enterprise
+    "Q783794",    // company
     "Q2385804",   // educational institution
     "Q294163",    // public institution
     "Q15401930",  // product
@@ -179,13 +184,7 @@ bool FactCatalog::ItemInClosure(Handle property, Handle coarse, Handle fine) {
         if (value == coarse) {
           return true;
         } else if (!IsBaseItem(value)) {
-          bool known = false;
-          for (Handle h : closure) {
-            if (value == h) {
-              known = true;
-              break;
-            }
-          }
+          bool known = closure.contains(value);
           if (!known) closure.push_back(value);
         }
       }
@@ -213,7 +212,7 @@ void FactCatalog::ExtractItemTypes(Handle item, std::vector<Handle> *types) {
     for (const Slot &s : f) {
       if (s.name != p_subclass_of_) continue;
 
-      // Check if new item is already known.
+      // Add new item unless it is already known.
       Handle newitem = store_->Resolve(s.value);
       bool known = false;
       for (Handle h : *types) {
@@ -247,16 +246,10 @@ bool FactCatalog::InstanceOf(Handle item, Handle type) {
     for (const Slot &s : f) {
       if (s.name != p_subclass_of_) continue;
 
-      // Check if new item is already known.
+      // Add new item unless it is already known.
       Handle t = store_->Resolve(s.value);
       if (t == type) return true;
-      bool known = false;
-      for (Handle h : types) {
-        if (t == h) {
-          known = true;
-          break;
-        }
-      }
+      bool known = types.contains(t);
       if (!known) types.push_back(t);
     }
   }
@@ -301,6 +294,7 @@ void Facts::ExtractFor(Handle item, const HandleSet &properties) {
   // Extract facts from the properties of the item.
   auto &extractors = catalog_->property_extractors_;
   for (const Slot &s : Frame(store_, item)) {
+    // Ignore if property is not in the property set.
     if (properties.find(s.name) == properties.end()) continue;
 
     // Look up extractor for property.
@@ -320,6 +314,13 @@ void Facts::ExtractFor(Handle item, const HandleSet &properties) {
 
 void Facts::ExtractSimple(Handle value) {
   AddFact(store_->Resolve(value));
+}
+
+void Facts::ExtractSimple(const Name &property, Handle value) {
+  if (value.IsNil()) return;
+  push(property);
+  ExtractSimple(value);
+  pop();
 }
 
 void Facts::ExtractNothing(Handle value) {
@@ -342,15 +343,9 @@ void Facts::ExtractClosure(Handle item, Handle relation) {
     for (const Slot &s : f) {
       if (s.name != relation) continue;
 
-      // Check if new item is already known.
+      // Add new item unless it is already known.
       Handle newitem = store_->Resolve(s.value);
-      bool known = false;
-      for (Handle h : closure) {
-        if (newitem == h) {
-          known = true;
-          break;
-        }
-      }
+      bool known = closure.contains(newitem);
       if (!known) closure.push_back(newitem);
     }
   }
@@ -362,6 +357,7 @@ void Facts::ExtractType(Handle type) {
 
 void Facts::ExtractSuperclass(Handle item) {
   ExtractClosure(item, catalog_->p_subclass_of_.handle());
+
   push(catalog_->p_subclass_of_);
   for (const Slot &s : Frame(store_, store_->Resolve(item))) {
     if (s.name == catalog_->p_subclass_of_) {
@@ -390,22 +386,14 @@ void Facts::ExtractClass(Handle item) {
 void Facts::ExtractProperty(Handle item, const Name &property) {
   Frame f(store_, store_->Resolve(item));
   Handle value = f.GetHandle(property);
-  if (!value.IsNil()) {
-    push(property);
-    ExtractSimple(value);
-    pop();
-  }
+  ExtractSimple(property, value);
 }
 
 void Facts::ExtractQualifier(Handle item, const Name &qualifier) {
   Frame f(store_, item);
   if (!f.Has(Handle::is())) return;
   Handle value = f.GetHandle(qualifier);
-  if (!value.IsNil()) {
-    push(qualifier);
-    ExtractSimple(value);
-    pop();
-  }
+  ExtractSimple(qualifier, value);
 }
 
 void Facts::ExtractDate(Handle value) {
@@ -465,6 +453,30 @@ void Facts::ExtractTimePeriod(Handle period) {
   }
 }
 
+void Facts::ExtractTime(Handle event) {
+  Frame f(store_, event);
+  if (f.invalid()) return;
+
+  Handle time = f.GetHandle(catalog_->p_point_in_time_);
+  if (!time.IsNil()) {
+    push(catalog_->p_point_in_time_);
+    ExtractDate(time);
+    pop();
+  }
+  Handle start = f.GetHandle(catalog_->p_start_time_);
+  if (!start.IsNil()) {
+    push(catalog_->p_start_time_);
+    ExtractDate(start);
+    pop();
+  }
+  Handle end = f.GetHandle(catalog_->p_end_time_);
+  if (!end.IsNil()) {
+    push(catalog_->p_end_time_);
+    ExtractDate(end);
+    pop();
+  }
+}
+
 void Facts::ExtractLocation(Handle location) {
   ExtractClosure(location, catalog_->p_located_in_.handle());
 }
@@ -477,6 +489,8 @@ void Facts::ExtractPlacement(Handle item) {
     ExtractLocation(value);
     pop();
   }
+  Handle country = f.GetHandle(catalog_->p_country_);
+  ExtractSimple(catalog_->p_country_, country);
 }
 
 void Facts::ExtractAlmaMater(Handle institution) {
@@ -484,11 +498,13 @@ void Facts::ExtractAlmaMater(Handle institution) {
   ExtractClass(institution);
   ExtractPlacement(institution);
   ExtractQualifier(institution, catalog_->p_academic_degree_);
+  ExtractTime(institution);
 }
 
 void Facts::ExtractEmployer(Handle employer) {
   ExtractSimple(employer);
   ExtractClass(employer);
+  ExtractPlacement(employer);
 }
 
 void Facts::ExtractOccupation(Handle occupation) {
@@ -496,13 +512,36 @@ void Facts::ExtractOccupation(Handle occupation) {
 }
 
 void Facts::ExtractPosition(Handle position) {
+  Frame f(store_, position);
   ExtractType(position);
-  ExtractProperty(position, catalog_->p_jurisdiction_);
+  ExtractTime(position);
+  ExtractQualifier(position, catalog_->p_jurisdiction_);
+
+  Handle organization = f.GetHandle(catalog_->p_of_);
+  if (!organization.IsNil()) {
+    push(catalog_->p_of_);
+    ExtractEmployer(organization);
+    pop();
+  }
+
+  Handle role = f.GetHandle(catalog_->p_subject_role_);
+  if (!role.IsNil()) {
+    push(catalog_->p_subject_role_);
+    ExtractOccupation(role);
+    pop();
+  }
 }
 
 void Facts::ExtractTeam(Handle team) {
   ExtractSimple(team);
+  ExtractTime(team);
   ExtractProperty(team, catalog_->p_league_);
+}
+
+void Facts::ExtractName(Handle name) {
+  ExtractSimple(name);
+  ExtractProperty(name, catalog_->p_instance_of_);
+  ExtractProperty(name, catalog_->p_language_);
 }
 
 void Facts::AddFact(Handle value) {
@@ -510,6 +549,50 @@ void Facts::AddFact(Handle value) {
   for (Handle p : path_) list_.push_back(p);
   list_.push_back(value);
   delimiters_.push_back(list_.size());
+}
+
+int Facts::FindGroup(Handle property, Handle value) const {
+  for (int g = 0; g < groups_.size(); ++g) {
+    int f = group_begin(g);
+    if (simple(f) && first(f) == property && last(f) == value) return g;
+  }
+  return -1;
+}
+
+void Facts::RemoveGroup(int group) {
+  DCHECK_LT(group, groups_.size());
+  int gb = group_begin(group);
+  int ge = group_end(group);
+  int gn = ge - gb;
+
+  // Remove fact predicates from list.
+  int b = begin(gb);
+  int e = end(ge - 1);
+  int n = e - b;
+  list_.erase(list_.begin() + b, list_.begin() + e);
+
+  // Adjust fact delimiters.
+  for (int f = ge; f < delimiters_.size(); ++f) {
+    delimiters_[f - gn] = delimiters_[f] - n;
+  }
+  delimiters_.resize(delimiters_.size() - gn);
+
+  // Adjust fact groups.
+  for (int g = group + 1; g < groups_.size(); ++g) {
+    groups_[g - 1] = groups_[g] - gn;
+  }
+  groups_.resize(groups_.size() - 1);
+}
+
+void Facts::CopyGroup(const Facts &facts, int group) {
+  DCHECK_LT(group, facts.groups_.size());
+  for (int f = facts.group_begin(group); f < facts.group_end(group); ++f) {
+    for (int p = facts.begin(f); p < facts.end(f); ++p) {
+      list_.push_back(facts.list_[p]);
+    }
+    delimiters_.push_back(list_.size());
+  }
+  groups_.push_back(delimiters_.size());
 }
 
 Handle Facts::AsArrays(Store *store) const {
@@ -591,15 +674,9 @@ Handle Taxonomy::Classify(const Frame &item) {
     for (const Slot &s : type) {
       if (s.name != catalog_->p_subclass_of_) continue;
 
-      // Check if new type is already known.
+      // Add new type unless it is already known.
       Handle newtype = store->Resolve(s.value);
-      bool known = false;
-      for (Handle h : types) {
-        if (newtype == h) {
-          known = true;
-          break;
-        }
-      }
+      bool known = types.contains(newtype);
       if (!known) types.push_back(newtype);
     }
   }

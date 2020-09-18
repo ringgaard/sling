@@ -360,6 +360,10 @@ PyObject *PyPlausibility::Score(PyObject *args) {
   nlp::Facts premise(pyextractor->catalog);
   premise.Extract(item);
 
+  // Remove fact from premise.
+  int g = premise.FindGroup(prop, value);
+  if (g != -1) premise.RemoveGroup(g);
+
   // Expand fact property and value.
   nlp::Facts hypothesis(pyextractor->catalog);
   hypothesis.Expand(prop, value);

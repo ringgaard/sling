@@ -108,3 +108,17 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "category-facts",
+  srcs = ["category-facts.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/frame",
+    "//sling/myelin:builder",
+    "//sling/myelin:compiler",
+    "//sling/util:embeddings",
+    "//sling/util:top",
+  ],
+)
+

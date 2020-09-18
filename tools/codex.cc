@@ -32,7 +32,7 @@
 
 DEFINE_bool(keys, false, "Only output keys");
 DEFINE_bool(values, false, "Only output values");
-DEFINE_bool(files, false, "Output file names");
+DEFINE_bool(filenames, false, "Output file names");
 DEFINE_bool(store, false, "Input is a SLING store");
 DEFINE_bool(raw, false, "Output raw record");
 DEFINE_bool(json, false, "Input is JSON object");
@@ -124,76 +124,92 @@ void DisplayRecord(const Slice &key, uint64 version, const Slice &value) {
   records_output++;
 }
 
-void DisplayFile(const string &filename) {
-  if (FLAGS_files) std::cout << "File " << filename << ":\n";
-  if (FLAGS_store) {
-    Store store;
-    FileInputStream stream(filename);
-    InputParser parser(&store, &stream);
-    while (!parser.done()) {
-      DisplayObject(parser.Read());
-    }
-  } else if (FLAGS_db) {
-    DBClient db;
-    CHECK(db.Connect(filename));
-    if (FLAGS_key.empty()) {
-      std::vector<DBRecord> records;
-      uint64 iterator = 0;
-      if (FLAGS_follow) CHECK(db.Epoch(&iterator));
-      for (;;) {
-        Status st = db.Next(&iterator, FLAGS_batch, &records);
-        if (!st.ok()) {
-          if (st.code() == ENOENT) {
-            if (!FLAGS_follow) break;
-            usleep(FLAGS_poll * 1000);
-          } else {
-            LOG(FATAL) << "Error reading from database "
-                       << filename << ": " << st;
-          }
-        }
-        for (auto &record : records) {
-          DisplayRecord(record.key, record.version, record.value);
+void DisplayStore(const string &filename) {
+  Store store;
+  FileInputStream stream(filename);
+  InputParser parser(&store, &stream);
+  while (!parser.done()) {
+    DisplayObject(parser.Read());
+  }
+}
+
+void DisplayDatabase(const string &filename) {
+  DBClient db;
+  CHECK(db.Connect(filename));
+  if (FLAGS_key.empty()) {
+    std::vector<DBRecord> records;
+    uint64 iterator = 0;
+    if (FLAGS_follow) CHECK(db.Epoch(&iterator));
+    for (;;) {
+      Status st = db.Next(&iterator, FLAGS_batch, &records);
+      if (!st.ok()) {
+        if (st.code() == ENOENT) {
+          if (!FLAGS_follow) break;
+          usleep(FLAGS_poll * 1000);
+        } else {
+          LOG(FATAL) << "Error reading from database "
+                     << filename << ": " << st;
         }
       }
-    } else {
-      DBRecord record;
-      CHECK(db.Get(FLAGS_key, &record));
-      if (!record.value.empty()) {
+      for (auto &record : records) {
         DisplayRecord(record.key, record.version, record.value);
       }
     }
-    CHECK(db.Close());
-  } else if (!FLAGS_key.empty()) {
-    RecordFileOptions options;
-    RecordDatabase db(filename, options);
-    Record record;
-    if (db.Lookup(FLAGS_key, &record)) {
-      // Optionally output position.
-      if (FLAGS_position) std::cout << "@" << record.position << " ";
-
-      // Display record.
-      DisplayRecord(record.key, record.version, record.value);
-    }
   } else {
-    RecordReader reader(filename);
-    while (!reader.Done()) {
-      // Read next record.
-      Record record;
-      CHECK(reader.Read(&record));
-
-      // Check for key match.
-      if (!FLAGS_key.empty() && record.key != FLAGS_key) continue;
-
-      // Optionally output position.
-      if (FLAGS_position) std::cout << "@" << record.position << " ";
-
-      // Display record.
+    DBRecord record;
+    CHECK(db.Get(FLAGS_key, &record));
+    if (!record.value.empty()) {
       DisplayRecord(record.key, record.version, record.value);
-
-      // Check record limit.
-      if (FLAGS_limit > 0 && records_output >= FLAGS_limit) break;
     }
-    CHECK(reader.Close());
+  }
+  CHECK(db.Close());
+}
+
+void DisplayRecordDatabase(const string &filename) {
+  RecordFileOptions options;
+  RecordDatabase db(filename, options);
+  Record record;
+  if (db.Lookup(FLAGS_key, &record)) {
+    // Optionally output position.
+    if (FLAGS_position) std::cout << "@" << record.position << " ";
+
+    // Display record.
+    DisplayRecord(record.key, record.version, record.value);
+  }
+}
+
+void DisplayRecordFile(const string &filename) {
+  RecordReader reader(filename);
+  while (!reader.Done()) {
+    // Read next record.
+    Record record;
+    CHECK(reader.Read(&record));
+
+    // Check for key match.
+    if (!FLAGS_key.empty() && record.key != FLAGS_key) continue;
+
+    // Optionally output position.
+    if (FLAGS_position) std::cout << "@" << record.position << " ";
+
+    // Display record.
+    DisplayRecord(record.key, record.version, record.value);
+
+    // Check record limit.
+    if (FLAGS_limit > 0 && records_output >= FLAGS_limit) break;
+  }
+  CHECK(reader.Close());
+}
+
+void DisplayFile(const string &filename) {
+  if (FLAGS_filenames) std::cout << "File " << filename << ":\n";
+  if (FLAGS_store) {
+    DisplayStore(filename);
+  } else if (FLAGS_db) {
+    DisplayDatabase(filename);
+  } else if (!FLAGS_key.empty()) {
+    DisplayRecordDatabase(filename);
+  } else {
+    DisplayRecordFile(filename);
   }
 }
 
