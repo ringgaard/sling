@@ -44,6 +44,14 @@ class Handles : public std::vector<Handle>, public External {
     range->begin = data();
     range->end = data() + size();
   }
+
+  // Check if vector contains handle.
+  bool contains(Handle handle) const {
+    for (Handle h : *this) {
+      if (h == handle) return true;
+    }
+    return false;
+  }
 };
 
 // Vector of slots that are tracked as external references.
@@ -242,7 +250,7 @@ class Object : public Root {
 
   // Returns fingerprint for object.
   uint64 Fingerprint(uint64 seed = 0) const {
-    return store_->Fingerprint(handle_, seed);
+    return store_->Fingerprint(handle_, true, seed);
   }
 
   // Returns handle for value.
@@ -646,6 +654,11 @@ class Frame : public Object {
   Frame &SetLink(const Object &name, Text symbol);
   Frame &SetLink(const Name &name, Text symbol);
   Frame &SetLink(Text name, Text symbol);
+
+  // Traverse all slots in this frame and all anonymous frames reachable from
+  // this frame.
+  typedef std::function<void(Slot *slot)> SlotIterator;
+  void TraverseSlots(SlotIterator iterator);
 
   // Iterator for iterating over all slots in a frame.
   class iterator {
