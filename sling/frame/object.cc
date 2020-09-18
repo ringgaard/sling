@@ -882,6 +882,30 @@ Frame &Frame::SetLink(Text name, Text symbol) {
   return *this;
 }
 
+void Frame::TraverseSlots(SlotIterator iterator) {
+  Handles closure(store());
+  closure.push_back(handle());
+  int current = 0;
+  while (current < closure.size()) {
+    FrameDatum *frame = store()->GetFrame(closure[current++]);
+    for (Slot *slot = frame->begin(); slot < frame->end(); ++slot) {
+      iterator(slot);
+
+      if (store()->IsFrame(slot->name) &&
+          store()->IsAnonymous(slot->name) &&
+          !closure.contains(slot->name)) {
+        closure.push_back(slot->name);
+      }
+
+      if (store()->IsFrame(slot->value) &&
+          store()->IsAnonymous(slot->value) &&
+          !closure.contains(slot->value)) {
+        closure.push_back(slot->value);
+      }
+    }
+  }
+}
+
 Symbol::Symbol(Store *store, Handle handle) : Object(store, handle) {
   DCHECK(IsNil() || IsSymbol()) << Type();
 }

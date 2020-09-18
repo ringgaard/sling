@@ -72,12 +72,19 @@ class ItemMerger : public task::Reducer {
   void Reduce(const task::ReduceInput &input) override {
     // Create frame with reconciled id.
     Store store;
+    Handle id = store.Lookup(input.key());
     Builder builder(&store);
-    builder.AddId(input.key());
+    builder.AddId(id);
 
-    // Merge all items.
+    // Merge all items. Since the merged frames are anonymous, self-references
+    // need to be updated to the reconciled frame.
     for (task::Message *message : input.messages()) {
       Frame item = DecodeMessage(&store, message);
+      Handle h = item.handle();
+      item.TraverseSlots([h, id](Slot *s) {
+        if (s->name == h) s->name = id;
+        if (s->value == h) s->value = id;
+      });
       builder.AddFrom(item);
     }
 
