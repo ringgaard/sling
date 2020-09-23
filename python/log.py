@@ -23,21 +23,26 @@ WARNING = 1
 ERROR = 2
 FATAL = 3
 
-def _log_message(msg, severity):
+def _log_message(severity, msg):
   caller = inspect.stack()[2]
   fn = os.path.basename(caller[1])
   line = caller[2]
   api.log_message(severity, fn, line, msg)
 
-def info(msg):
-  _log_message(msg, INFO)
+def _message(args):
+  msgs = []
+  for arg in args: msgs.append(str(arg))
+  return ' '.join(msgs)
 
-def warning(msg):
-  _log_message(msg, WARNING)
+def info(*args):
+  _log_message(INFO, _message(args))
 
-def error(msg):
-  _log_message(msg, ERROR)
+def warning(*args):
+  _log_message(WARNING, _message(args))
 
-def fatal(msg):
-  _log_message(msg, FATAL)
+def error(*args):
+  _log_message(ERROR, _message(args))
+
+def fatal(*args):
+  _log_message(FATAL, _message(args))
 

@@ -41,6 +41,11 @@ flags.define("--logdir",
              default="local/logs",
              metavar="DIR")
 
+flags.define("--jobid",
+             help="unique job identifier",
+             default=None,
+             metavar="ID")
+
 # Input readers.
 readers = {
   "records": "record-file-reader",
@@ -759,7 +764,9 @@ def save_workflow_log(path):
   if not active: return False
   if path is None or len(path) == 0: return False
   if not os.path.exists(path): return False
-  logfn = path + "/" + time.strftime("%Y%m%d-%H%M%S") + ".json"
+  jobid = flags.arg.jobid
+  if jobid is None: jobid = time.strftime("%Y%m%d-%H%M%S")
+  logfn = path + "/" + jobid + ".json"
   logfile = open(logfn, "w")
   logfile.write(statistics())
   logfile.close()
