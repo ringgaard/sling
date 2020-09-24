@@ -72,7 +72,7 @@ def parse():
 # Standard command-line flags.
 define("--data",
        help="data directory",
-       default="local/data",
+       default="./data",
        metavar="DIR")
 
 define("--corpora",
@@ -89,7 +89,7 @@ define("--repository",
        metavar="DIR")
 
 def post_process_flags(arg):
-  if arg.corpora == None: arg.corpora = arg.data + "/corpora"
+  if arg.corpora == None: arg.corpora = arg.data + "/d"
   if arg.workdir == None: arg.workdir = arg.data + "/e"
 
 hook(post_process_flags)

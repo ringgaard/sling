@@ -1,4 +1,6 @@
 bazel-*
+data/c
+data/e
 examples
 local
 dist
