@@ -79,6 +79,7 @@ class Task:
   def __init__(self, config):
     self.name = config.name
     self.description = config.description
+    self.shell = config.shell == True
     self.program = None
     self.args = []
     argv = config.program
@@ -229,7 +230,7 @@ class Queue(threading.Thread):
                                stdout=out,
                                stderr=err,
                                bufsize=1,
-                               shell=False,
+                               shell=job.task.shell,
                                close_fds=True)
     except Exception as e:
       job.error = e
@@ -712,11 +713,14 @@ class SchedulerService(BaseHTTPRequestHandler):
       running.append("<td>")
       if job.port:
         statusurl = "http://%s:%d" % (hostname, job.port)
-        running.append('<a href="', statusurl, '">status</a> ')
+        running.append(
+          '<a href="%s" target="_blank">status</a> ' % (statusurl))
       if job.stdout:
-        running.append('<a href="/log/%s">log</a> ' % (job.id))
+        running.append(
+          '<a href="/log/%s" target="_blank">log</a> ' % (job.id))
       if job.stderr:
-        running.append('<a href="/errors/%s">errors</a> ' % (job.id))
+        running.append(
+          '<a href="/errors/%s" target="_blank">errors</a> ' % (job.id))
       running.append("</td>")
       running.append("</tr>")
 
@@ -752,11 +756,14 @@ class SchedulerService(BaseHTTPRequestHandler):
 
       terminated.append("<td>")
       if job.stdout:
-        terminated.append('<a href="/log/%s">log</a> ' % (job.id))
+        terminated.append(
+          '<a href="/log/%s" target="_blank">log</a> ' % (job.id))
       if job.stderr:
-        terminated.append('<a href="/errors/%s">errors</a> ' % (job.id))
+        terminated.append(
+          '<a href="/errors/%s" target="_blank">errors</a> ' % (job.id))
       if job.status:
-        terminated.append('<a href="/status/%s">status</a> ' % (job.id))
+        terminated.append(
+          '<a href="/status/%s" target="_blank">status</a> ' % (job.id))
       if job.error:
         terminated.extend(("\n<pre>\n", str(job.error), "\n</pre>\n"))
       terminated.append("</td>")
