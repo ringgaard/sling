@@ -65,19 +65,14 @@ def ts2str(ts):
 
 # Duration to string.
 def dur2str(duration):
-  days = int(duration / (24 * 60 * 60))
-  duration -= days * (24 * 60 * 60)
-  hours = int(duration / (60 * 60))
-  duration -= hours * (60 * 60)
-  mins = int(duration / 60)
-  duration -= mins * 60
-  secs = int(duration)
+  hours = int(duration / 3600)
+  mins = int((duration % 3600) / 60)
+  secs = int(duration % 60);
 
   s = []
-  if days > 0: s.append(str(days) + "d")
-  if hours > 0: s.append(str(hours) + "h")
-  if mins > 0: s.append(str(mins) + "m")
-  s.append(str(secs) + "s")
+  if hours > 0: s.append("%dh " % (hours))
+  if mins > 0: s.append("%2dm " % (mins))
+  s.append("%2ds" % (secs))
   return "".join(s)
 
 class Task:
@@ -336,12 +331,324 @@ def get_job(jobid):
     if job.id == jobid: return job
   return None
 
+stylesheet = """
+@import url(https://fonts.googleapis.com/css?family=Roboto:400,400italic,500,500italic,700,700italic,900,900italic,300italic,300,100italic,100);
+
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/materialicons/v55/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2) format('woff2');
+}
+
+html {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  position:relative;
+}
+
+body {
+  font-family: Roboto,Helvetica,sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  position:relative;
+}
+
+.mdt-column-layout {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.mdt-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background-color: #00ACEE;
+  color: rgb(255,255,255);
+  height: 56px;
+  max-height: 56px;
+  font-size: 20px;
+  padding: 0px 16px;
+  margin: 0;
+  box-shadow: 0 1px 8px 0 rgba(0,0,0,.2),
+              0 3px 4px 0 rgba(0,0,0,.14),
+              0 3px 3px -2px rgba(0,0,0,.12);
+  z-index: 2;
+}
+
+.mdt-icon-button {
+  border-radius: 50%;
+  border: 0;
+  height: 40px;
+  width: 40px;
+  margin: 0 6px;
+  padding: 8px;
+  background: transparent;
+  user-select: none;
+  cursor: pointer;
+}
+
+.mdt-icon-button:hover {
+  background-color: rgba(0,0,0,0.07);
+}
+
+.mdt-toolbar .mdt-icon-button {
+  color: rgb(255,255,255);
+}
+
+.mdt-toolbar>.mdt-icon-button:first-child {
+  margin-left: -8px;
+}
+
+.mdt-icon-button:focus {
+  outline: none;
+}
+
+.mdt-icon {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}
+
+.mdt-spacer {
+  flex: 1;
+}
+
+.mdt-content {
+  flex: 1;
+  padding: 8px;
+  display: block;
+  overflow: auto;
+  color: rgb(0,0,0);
+  background-color: rgb(250,250,250);
+
+  position:relative;
+
+  flex-basis: 0%;
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.mdt-card {
+  background-color: rgb(255, 255, 255);
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 2px 4px 0px,
+              rgba(0, 0, 0, 0.23) 0px 2px 4px 0px;
+  margin: 10px 5px;
+  padding: 10px;
+}
+
+.mdt-card-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  line-height:32px;
+
+  font-size: 24px;
+  margin-bottom: 8px;
+  margin-top: 3px;
+}
+
+.mdt-data-table {
+  border: 0;
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 14px;
+  text-align: left;
+}
+
+.mdt-data-table tr td {
+  vertical-align: top;
+}
+
+.mdt-numeric-1 td:nth-child(1), .mdt-numeric-1 th:nth-child(1) {
+  text-align: right;
+}
+
+.mdt-numeric-2 td:nth-child(2), .mdt-numeric-2 th:nth-child(2) {
+  text-align: right;
+}
+
+.mdt-numeric-3 td:nth-child(3), .mdt-numeric-3 th:nth-child(3) {
+  text-align: right;
+}
+
+.mdt-numeric-4 td:nth-child(4), .mdt-numeric-4 th:nth-child(4) {
+  text-align: right;
+}
+
+.mdt-numeric-5 td:nth-child(5), .mdt-numeric-5 th:nth-child(5) {
+  text-align: right;
+}
+
+.mdt-numeric-6 td:nth-child(6), .mdt-numeric-6 th:nth-child(6) {
+  text-align: right;
+}
+
+.mdt-numeric-7 td:nth-child(7), .mdt-numeric-7 th:nth-child(7) {
+  text-align: right;
+}
+
+.mdt-numeric-8 td:nth-child(8), .mdt-numeric-8 th:nth-child(8) {
+  text-align: right;
+}
+
+.mdt-numeric-9 td:nth-child(9), .mdt-numeric-8 th:nth-child(9) {
+  text-align: right;
+}
+
+.mdt-data-table thead {
+  padding-bottom: 3px;
+}
+
+.mdt-left thead {
+  text-align: left;
+}
+
+.mdt-right thead {
+  text-align: right;
+}
+
+.mdt-data-table th {
+  vertical-align: bottom;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+  color: rgba(0,0,0,.54);
+}
+
+.mdt-data-table td {
+  vertical-align: middle;
+  border-top: 1px solid rgba(0,0,0,.12);
+  border-bottom: 1px solid rgba(0,0,0,.12);
+  padding: 8px 12px;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+}
+
+.mdt-data-table td:first-of-type, .mdt-data-table th:first-of-type {
+  padding-left: 24px;
+}
+"""
+
+job_template = """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SLING Job Scheduler</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="mdt-column-layout">
+
+<div class="mdt-toolbar">
+  <button class="mdt-icon-button">
+    <i class="mdt-icon">menu</i>
+  </button>
+  <div>SLING Job Scheduler</div>
+  <div class="mdt-spacer"></div>
+  <button class="mdt-icon-button">
+    <i class="mdt-icon" onclick="window.location.reload()">refresh</i>
+  </button>
+</div>
+
+<div class="mdt-content">
+  <div class="mdt-card">
+    <div class="mdt-card-toolbar">Running jobs</div>
+      <table class="mdt-data-table mdt-numeric-6">
+        <thead>
+          <tr>
+            <th>Job</th>
+            <th>Task</th>
+            <th>Command</th>
+            <th>Queue</th>
+            <th>Started</th>
+            <th>Time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          %s
+        </tbody>
+      </table>
+  </div>
+
+  <div class="mdt-card">
+    <div class="mdt-card-toolbar">Pending jobs</div>
+      <table class="mdt-data-table mdt-numeric-5">
+        <thead>
+          <tr>
+            <th>Job</th>
+            <th>Task</th>
+            <th>Command</th>
+            <th>Queue</th>
+            <th>Submitted</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          %s
+        </tbody>
+      </table>
+  </div>
+
+  <div class="mdt-card">
+    <div class="mdt-card-toolbar">Terminated jobs</div>
+      <table class="mdt-data-table mdt-numeric-7">
+        <thead>
+          <tr>
+            <th>Job</th>
+            <th>Task</th>
+            <th>Command</th>
+            <th>Queue</th>
+            <th>Started</th>
+            <th>Ended</th>
+            <th>Time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          %s
+        </tbody>
+      </table>
+  </div>
+
+</div>
+
+</body>
+</html>
+"""
+
 class SchedulerService(BaseHTTPRequestHandler):
   def do_GET(self):
     url = urlsplit(self.path)
 
     if url.path == '/favicon.ico':
-      self.send_response(404)
+      self.reply(404, "no fav icon")
+      return
+
+    if url.path == '/style.css':
+      self.reply(200, stylesheet, "text/css")
       return
 
     if url.path.startswith("/log/"):
@@ -386,114 +693,79 @@ class SchedulerService(BaseHTTPRequestHandler):
     self.send_header("Content-type", "text/html")
     self.end_headers()
 
-    self.out("<html>")
-    self.out("<head>")
-    self.out("<title>SLING Job Scheduler</title>")
-    self.out("<meta charset='UTF-8'>")
-    self.out("</head>")
-    self.out("<body>")
+    running = []
+    pending = []
+    terminated = []
 
-    self.out("<h1><a href='/'>SLING Job Scheduler</a></h1>")
-
-    self.out("<h2>Running</h2>")
-    self.out("<table border=1>")
-    self.out("<tr>")
-    self.out("<th>Job</th>")
-    self.out("<th>Task</th>")
-    self.out("<th>Command</th>")
-    self.out("<th>Queue</th>")
-    self.out("<th>Started</th>")
-    self.out("<th>Time</th>")
-    self.out("<th>Status</th>")
-    self.out("</tr>")
     for job in jobs:
       if job.state != Job.RUNNING: continue;
-      self.out("<tr>")
-      self.out("<td>" + job.id + "</td>")
-      self.out("<td>" + job.task.description + "</td>")
-      self.out("<td>" + str(job) + "</td>")
-      self.out("<td>" + job.queuename() + "</td>")
-      self.out("<td>"+ ts2str(job.started) + "</td>")
-      self.out("<td>" + dur2str(job.runtime()) + "</td>")
+      running.extend((
+        "\n<tr>",
+        "<td>", job.id, "</td>",
+        "<td>", job.task.description, "</td>",
+        "<td>", str(job), "</td>",
+        "<td>", job.queuename(), "</td>",
+        "<td>", ts2str(job.started), "</td>",
+        "<td>", dur2str(job.runtime()), "</td>",
+      ))
 
-      self.out("<td>")
+      running.append("<td>")
       if job.port:
-        self.out('<a href="http://%s:%d">status</a> ' % (hostname, job.port))
+        statusurl = "http://%s:%d" % (hostname, job.port)
+        running.append('<a href="', statusurl, '">status</a> ')
       if job.stdout:
-        self.out('<a href="/log/%s">log</a> ' % (job.id))
+        running.append('<a href="/log/%s">log</a> ' % (job.id))
       if job.stderr:
-        self.out('<a href="/errors/%s">errors</a> ' % (job.id))
-      self.out("</td>")
+        running.append('<a href="/errors/%s">errors</a> ' % (job.id))
+      running.append("</td>")
+      running.append("</tr>")
 
-      self.out("</tr>")
-    self.out("</table>")
-
-    self.out("<h2>Pending</h2>")
-    self.out("<table border=1>")
-    self.out("<tr>")
-    self.out("<th>Job</th>")
-    self.out("<th>Task</th>")
-    self.out("<th>Command</th>")
-    self.out("<th>Queue</th>")
-    self.out("<th>Submitted</th>")
-    self.out("<th>Time</th>")
-    self.out("</tr>")
     for job in jobs:
       if job.state != Job.PENDING: continue;
-      self.out("<tr>")
-      self.out("<td>" + job.id + "</td>")
-      self.out("<td>" + job.task.description + "</td>")
-      self.out("<td>" + str(job) + "</td>")
-      self.out("<td>" + job.queuename() + "</td>")
-      self.out("<td>"+ ts2str(job.submitted) + "</td>")
-      self.out("<td>" + dur2str(job.waittime()) + "</td>")
-      self.out("</tr>")
-    self.out("</table>")
+      pending.extend((
+        "\n<tr>",
+        "<td>", job.id, "</td>",
+        "<td>", job.task.description, "</td>",
+        "<td>", str(job), "</td>",
+        "<td>", job.queuename(), "</td>",
+        "<td>", ts2str(job.submitted), "</td>",
+        "<td>", dur2str(job.waittime()), "</td>",
+        "</tr>"
+      ))
 
-    self.out("<h2>Done</h2>")
-    self.out("<table border=1>")
-    self.out("<tr>")
-    self.out("<th>Job</th>")
-    self.out("<th>Task</th>")
-    self.out("<th>Command</th>")
-    self.out("<th>Queue</th>")
-    self.out("<th>Started</th>")
-    self.out("<th>Ended</th>")
-    self.out("<th>Time</th>")
-    self.out("<th>Status</th>")
-    self.out("</tr>")
     for job in reversed(jobs):
       if job.state != Job.COMPLETED and job.state != Job.FAILED: continue;
       if job.state == Job.FAILED:
-        self.out("<tr style='color: red;'>")
+        terminated.append("\n<tr style='background-color: #FCE4EC;'>")
       else:
-        self.out("<tr>")
-      self.out("<td>" + job.id + "</td>")
-      self.out("<td>" + job.task.description + "</td>")
-      self.out("<td>" + str(job) + "</td>")
-      self.out("<td>" + job.queuename() + "</td>")
-      self.out("<td>"+ ts2str(job.started) + "</td>")
-      self.out("<td>"+ ts2str(job.ended) + "</td>")
-      self.out("<td>" + dur2str(job.runtime()) + "</td>")
+        terminated.append("\n<tr>")
 
-      self.out("<td>")
+      terminated.extend((
+        "<td>", job.id, "</td>",
+        "<td>", job.task.description, "</td>",
+        "<td>", str(job), "</td>",
+        "<td>", job.queuename(), "</td>",
+        "<td>", ts2str(job.started), "</td>",
+        "<td>", ts2str(job.ended), "</td>",
+        "<td>", dur2str(job.runtime()), "</td>",
+      ))
+
+      terminated.append("<td>")
       if job.stdout:
-        self.out('<a href="/log/%s">log</a> ' % (job.id))
+        terminated.append('<a href="/log/%s">log</a> ' % (job.id))
       if job.stderr:
-        self.out('<a href="/errors/%s">errors</a> ' % (job.id))
+        terminated.append('<a href="/errors/%s">errors</a> ' % (job.id))
       if job.status:
-        self.out('<a href="/status/%s">status</a> ' % (job.id))
+        terminated.append('<a href="/status/%s">status</a> ' % (job.id))
       if job.error:
-        self.out("\n<pre>\n")
-        self.out(str(job.error))
-        self.out("\n</pre>\n")
-      self.out("</td>")
+        terminated.extend(("\n<pre>\n", str(job.error), "\n</pre>\n"))
+      terminated.append("</td>")
+      terminated.append("</tr>")
 
-      self.out("</tr>")
-    self.out("</table>")
+    fillers =  ("".join(running), "".join(pending), "".join(terminated))
+    self.out(job_template % fillers)
+    return
 
-    self.out("</body>")
-    self.out("</html>")
 
   def do_POST(self):
     url = urlsplit(self.path)
@@ -553,9 +825,9 @@ class SchedulerService(BaseHTTPRequestHandler):
   def out(self, text):
     self.wfile.write(text.encode("utf8"))
 
-  def reply(self, code, message):
+  def reply(self, code, message, ct="text/plain"):
     self.send_response(code)
-    self.send_header("Content-type", "text/plain")
+    self.send_header("Content-type", ct)
     self.end_headers()
     self.out(message)
 

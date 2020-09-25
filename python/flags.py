@@ -89,7 +89,7 @@ define("--repository",
        metavar="DIR")
 
 def post_process_flags(arg):
-  if arg.corpora == None: arg.corpora = arg.data + "/d"
+  if arg.corpora == None: arg.corpora = arg.data + "/c"
   if arg.workdir == None: arg.workdir = arg.data + "/e"
 
 hook(post_process_flags)
