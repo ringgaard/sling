@@ -67,13 +67,8 @@ def ts2str(ts):
 def dur2str(duration):
   hours = int(duration / 3600)
   mins = int((duration % 3600) / 60)
-  secs = int(duration % 60);
-
-  s = []
-  if hours > 0: s.append("%dh " % (hours))
-  if mins > 0: s.append("%2dm " % (mins))
-  s.append("%2ds" % (secs))
-  return "".join(s)
+  secs = int(duration % 60)
+  return "%dh %02dm %02ds" % (hours, mins, secs)
 
 class Task:
   def __init__(self, config):
@@ -85,6 +80,8 @@ class Task:
     argv = config.program
     if type(argv) is str:
       self.program = argv
+    elif self.shell:
+      self.program = '; '.join(argv)
     else:
       self.program = argv[0]
       for arg in argv[1:]:
@@ -147,16 +144,22 @@ class Job:
     return False
 
   def command(self):
-    cmd = [self.task.program]
+    if self.task.shell:
+      cmd = self.task.program
+      for args in [self.args, self.task.args]:
+        for arg in args:
+          if arg[0] is None or arg[1] is None: continue
+          cmd = cmd.replace("[" + arg[0] + "]", str(arg[1]))
+    else:
+      cmd = [self.task.program]
+      for arg in self.task.args:
+        if self.hasarg(arg[0]): continue
+        if arg[0] is not None: cmd.append("--" + str(arg[0]))
+        if arg[1] is not None: cmd.append(str(arg[1]))
 
-    for arg in self.task.args:
-      if self.hasarg(arg[0]): continue
-      if arg[0] is not None: cmd.append("--" + str(arg[0]))
-      if arg[1] is not None: cmd.append(str(arg[1]))
-
-    for arg in self.args:
-      if arg[0] is not None: cmd.append("--" + str(arg[0]))
-      if arg[1] is not None: cmd.append(str(arg[1]))
+      for arg in self.args:
+        if arg[0] is not None: cmd.append("--" + str(arg[0]))
+        if arg[1] is not None: cmd.append(str(arg[1]))
 
     if self.task.monitor:
       if self.port is None: self.port = get_free_port()
@@ -201,7 +204,7 @@ class Queue(threading.Thread):
 
   def submit(self, job):
     log.info("submit job", job.id, str(job))
-    job.queue = self;
+    job.queue = self
     self.pending.put(job)
     jobs.append(job)
 
@@ -212,8 +215,7 @@ class Queue(threading.Thread):
 
     # Get command for executing job.
     cmd = job.command()
-
-    log.info("command:", job.command())
+    log.info("command:", cmd)
 
     # Output files for stdout and strerr.
     job.stdout = flags.arg.logdir + "/" + job.id + ".log"
@@ -222,6 +224,8 @@ class Queue(threading.Thread):
       job.status = flags.arg.logdir + "/" + job.id + ".json"
     out = open(job.stdout, "w")
     err = open(job.stderr, "w")
+    out.write("# cmd: %s\n" % str(cmd))
+    out.flush()
 
     # Run job.
     try:
@@ -377,7 +381,7 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  background-color: #00ACEE;
+  background-color: #00A0D6;
   color: rgb(255,255,255);
   height: 56px;
   max-height: 56px;
@@ -556,7 +560,7 @@ job_template = """<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>SLING Job Scheduler</title>
+<title>%s - SLING Job Scheduler</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -566,7 +570,7 @@ job_template = """<!DOCTYPE html>
   <button class="mdt-icon-button">
     <i class="mdt-icon">menu</i>
   </button>
-  <div>SLING Job Scheduler</div>
+  <div>SLING Job Scheduler on %s</div>
   <div class="mdt-spacer"></div>
   <button class="mdt-icon-button">
     <i class="mdt-icon" onclick="window.location.reload()">refresh</i>
@@ -699,7 +703,7 @@ class SchedulerService(BaseHTTPRequestHandler):
     terminated = []
 
     for job in jobs:
-      if job.state != Job.RUNNING: continue;
+      if job.state != Job.RUNNING: continue
       running.extend((
         "\n<tr>",
         "<td>", job.id, "</td>",
@@ -725,7 +729,7 @@ class SchedulerService(BaseHTTPRequestHandler):
       running.append("</tr>")
 
     for job in jobs:
-      if job.state != Job.PENDING: continue;
+      if job.state != Job.PENDING: continue
       pending.extend((
         "\n<tr>",
         "<td>", job.id, "</td>",
@@ -738,7 +742,7 @@ class SchedulerService(BaseHTTPRequestHandler):
       ))
 
     for job in reversed(jobs):
-      if job.state != Job.COMPLETED and job.state != Job.FAILED: continue;
+      if job.state != Job.COMPLETED and job.state != Job.FAILED: continue
       if job.state == Job.FAILED:
         terminated.append("\n<tr style='background-color: #FCE4EC;'>")
       else:
@@ -769,7 +773,13 @@ class SchedulerService(BaseHTTPRequestHandler):
       terminated.append("</td>")
       terminated.append("</tr>")
 
-    fillers =  ("".join(running), "".join(pending), "".join(terminated))
+    fillers =  (
+      hostname,
+      hostname,
+      "".join(running),
+      "".join(pending),
+      "".join(terminated)
+    )
     self.out(job_template % fillers)
     return
 
