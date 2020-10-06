@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+import requests
 import queue
 import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -70,6 +71,18 @@ def dur2str(duration):
   secs = int(duration % 60)
   return "%dh %02dm %02ds" % (hours, mins, secs)
 
+class Trigger:
+  def __init__(self, config):
+    self.task = config.task
+    self.machine = config.machine
+    self.port = config.port
+    if self.port is None: self.port = 5050
+    self.queue = config.queue
+    self.args = []
+    if "args" in config:
+      for key, value in config.args:
+        self.args.append((key.id, value))
+
 class Task:
   def __init__(self, config):
     self.name = config.name
@@ -90,6 +103,9 @@ class Task:
       for key, value in config.args:
         self.args.append((key.id, value))
     self.queue = config.queue
+    self.triggers = []
+    for trigger in config("trigger"):
+      self.triggers.append(Trigger(trigger))
     self.monitor = config.monitor
     self.statistics = config.statistics
 
@@ -255,6 +271,32 @@ class Queue(threading.Thread):
       elif os.path.getsize(job.status) == 0:
         os.remove(job.status)
         job.status = None
+
+    # Submit triggers.
+    for trigger in job.task.triggers:
+      if trigger.machine is None:
+        # Submit local job.
+        log.info("trigger", trigger.task)
+        submit_job(trigger.task, trigger.queue, trigger.args)
+      else:
+        # Submit remote job.
+        log.info("trigger", trigger.task, "on", trigger.machine)
+        if trigger.queue is None:
+          url = "http://%s:%d/submit/%s" % (
+            trigger.machine, trigger.port, trigger.task)
+        else:
+          url = "http://%s:%d/submit/%s/%s" % (
+            trigger.machine, trigger.port, trigger.queue, trigger.task)
+        if len(trigger.args) > 0:
+          args = []
+          for arg in trigger.args:
+            if arg[1] is None:
+              args.append(arg[0])
+            else:
+              args.append(arg[0] + "=" + str(arg[1]))
+          url = url + "?" + "&".join(args)
+
+        requests.post(url)
 
     # Get job results.
     job.ended = time.time()
