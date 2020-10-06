@@ -14,7 +14,7 @@ SPEC='{
 
   inputs: {
     commons: {
-      file: "local/data/e/wiki/kb.sling"
+      file: "data/e/wiki/kb.sling"
       format: "store/frame"
     }
     commons: {
@@ -22,11 +22,11 @@ SPEC='{
       format: "store/frame"
     }
     aliases: {
-      file: "local/data/e/wiki/LANG/phrase-table.repo"
+      file: "data/e/wiki/LANG/phrase-table.repo"
       format: "repository"
     }
     dictionary: {
-      file: "local/data/e/silver/LANG/idf.repo"
+      file: "data/e/silver/LANG/idf.repo"
       format: "repository"
     }
     phrases: {
@@ -44,7 +44,7 @@ SPEC='{
 
 bazel-bin/sling/nlp/document/analyzer \
   --kb \
-  --names local/data/e/wiki/$LANGUAGE/name-table.repo \
+  --names data/e/wiki/$LANGUAGE/name-table.repo \
   --spec "${SPEC//LANG/$LANGUAGE}" \
   --port $PORT $@
 

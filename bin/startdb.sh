@@ -15,5 +15,5 @@ run() {
 }
 
 echo "Starting database server"
-run >> /tmp/db.log 2>&1 &
+run >> local/logs/db.log 2>&1 &
 

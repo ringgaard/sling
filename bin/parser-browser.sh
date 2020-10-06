@@ -11,12 +11,12 @@ SPEC='{
 
   inputs: {
     parser: {
-      ;file: "local/data/e/caspar/caspar.flow"
-      file: "local/data/e/silver/LANG/knolex.flow"
+      ;file: "data/e/caspar/caspar.flow"
+      file: "data/e/silver/LANG/knolex.flow"
       format: "flow"
     }
     commons: {
-      ;file: "local/data/e/wiki/kb.sling"
+      ;file: "data/e/wiki/kb.sling"
       file: "data/dev/types.sling"
       format: "store/frame"
     }
@@ -30,5 +30,5 @@ bazel-bin/sling/nlp/document/corpus-browser \
   --commons data/dev/types.sling \
   --spec "${SPEC//LANG/$LANGUAGE}" \
   --port $PORT $@ \
-  local/data/e/wiki/$LANGUAGE/documents@10.rec
+  data/e/wiki/$LANGUAGE/documents@10.rec
 

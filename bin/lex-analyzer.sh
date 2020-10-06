@@ -8,7 +8,7 @@ SPEC='{
 
   inputs: {
     commons: {
-      file: "local/data/e/wiki/kb.sling"
+      file: "data/e/wiki/kb.sling"
       format: "store/frame"
     }
   }
@@ -19,7 +19,7 @@ SPEC='{
 
 bazel-bin/sling/nlp/document/analyzer \
   --kb \
-  --names local/data/e/wiki/$LANGUAGE/name-table.repo \
+  --names data/e/wiki/$LANGUAGE/name-table.repo \
   --spec "${SPEC//LANG/$LANGUAGE}" \
   --port $PORT $@
 

@@ -10,13 +10,13 @@ SPEC='{
 
   inputs: {
     parser: {
-      ;file: "local/data/e/caspar/caspar.flow"
-      file: "local/data/e/silver/LANG/knolex.flow"
-      ;file: "local/data/e/silver/LANG/bio.flow"
+      ;file: "data/e/caspar/caspar.flow"
+      file: "data/e/silver/LANG/knolex.flow"
+      ;file: "data/e/silver/LANG/bio.flow"
       format: "flow"
     }
     commons: {
-      ;file: "local/data/e/wiki/kb.sling"
+      ;file: "data/e/wiki/kb.sling"
       file: "data/dev/types.sling"
       format: "store/frame"
     }
