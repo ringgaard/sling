@@ -46,7 +46,7 @@ flags.define("--batch",
              type=int)
 
 flags.define("--input",
-             help="File in 'local/data/e/wikibot/' to process",
+             help="File in 'data/e/wikibot/' to process",
              default="birth-dates",
              type=str)
 
@@ -67,10 +67,10 @@ class StoreFactsBot:
 
     time_str = datetime.datetime.now().isoformat("-")[:19].replace(":","-")
     if flags.arg.test:
-      record_file_name = "local/data/e/wikibot/test-" + flags.arg.input + ".rec"
+      record_file_name = "data/e/wikibot/test-" + flags.arg.input + ".rec"
       time_str = "test-" + time_str
     else:
-      record_file_name = "local/data/e/wikibot/" + flags.arg.input + ".rec"
+      record_file_name = "data/e/wikibot/" + flags.arg.input + ".rec"
     status_file_name = "local/logs/wikibotlog-" + time_str + ".rec"
     self.record_file = sling.RecordReader(record_file_name)
     self.status_file = sling.RecordWriter(status_file_name)
@@ -78,7 +78,7 @@ class StoreFactsBot:
     self.store = sling.Store()
     self.store.lockgc()
     print("loading kb")
-    self.store.load("local/data/e/wiki/kb.sling")
+    self.store.load("data/e/wiki/kb.sling")
     print("kb loaded")
 
     self.page_cat = self.store["/wp/page/category"]
@@ -111,7 +111,7 @@ class StoreFactsBot:
       source_claim.setTarget(target)
       self.wiki_sources[lang] = source_claim
     self.record_db = {}
-    fname = "local/data/e/wiki/{}/documents@10.rec"
+    fname = "data/e/wiki/{}/documents@10.rec"
     for lang in self.languages:
       self.record_db[lang] = sling.RecordDatabase(fname.format(lang))
 

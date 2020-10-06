@@ -330,11 +330,11 @@ register_task("category-parse-fact-matcher", FactMatcherTask)
 
 # Loads a KB and brings up a shell to compute and debug match statistics.
 def shell():
-  kb = load_kb("local/data/e/wiki/kb.sling")
+  kb = load_kb("data/e/wiki/kb.sling")
   extractor = sling.api.FactExtractor(kb)
   matcher = FactMatcher(kb, extractor)
 
-  parses = "local/data/e/wikicat/filtered-parses.rec"
+  parses = "data/e/wikicat/filtered-parses.rec"
   db = sling.RecordDatabase(parses)
 
   while True:
@@ -394,7 +394,7 @@ def test_fact_matcher():
     sys.stdout.write(RESET)
     print(entry)
 
-  kb = load_kb("local/data/e/wiki/kb.sling")
+  kb = load_kb("data/e/wiki/kb.sling")
   extractor = sling.api.FactExtractor(kb)
   matcher = FactMatcher(kb, extractor)
 

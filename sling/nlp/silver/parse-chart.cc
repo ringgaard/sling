@@ -48,12 +48,12 @@ int main(int argc, char *argv[]) {
   commons.LockGC();
 
   SpanAnnotator::Resources resources;
-  resources.kb = "local/data/e/ner/kb.sling";
-  resources.dictionary = "local/data/e/ner/" + FLAGS_lang + "/idf.repo";
+  resources.kb = "data/e/wiki/kb.sling";
+  resources.dictionary = "data/e/silver/" + FLAGS_lang + "/idf.repo";
   resources.language = FLAGS_lang;
   resources.resolve = FLAGS_resolve;
 
-  string alias_file = "local/data/e/wiki/" + FLAGS_lang + "/phrase-table.repo";
+  string alias_file = "data/e/wiki/" + FLAGS_lang + "/phrase-table.repo";
   PhraseTable aliases;
   aliases.Load(&commons, alias_file);
   resources.aliases = &aliases;
@@ -65,8 +65,7 @@ int main(int argc, char *argv[]) {
 
   // Open document corpus.
   RecordFileOptions options;
-  RecordDatabase db("local/data/e/wiki/" + FLAGS_lang + "/documents@10.rec",
-                    options);
+  RecordDatabase db("data/e/wiki/" + FLAGS_lang + "/documents@10.rec", options);
 
   // Initialize document.
   Store store(&commons);

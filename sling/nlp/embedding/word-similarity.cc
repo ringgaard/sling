@@ -12,7 +12,7 @@
 #include "sling/util/top.h"
 
 DEFINE_string(embeddings,
-              "local/data/e/wiki/en/word-embeddings.vec",
+              "data/e/wiki/en/word-embeddings.vec",
               "Word embeddings");
 DEFINE_int32(topk, 15, "Number of similar words to list");
 

@@ -1,6 +1,6 @@
 import sling
 
-mbpath = "local/data/corpora/musicbrainz/mbdump"
+mbpath = "data/c/musicbrainz/mbdump"
 
 def intval(s):
   return None if s == "\N" else int(s)
@@ -35,7 +35,7 @@ class Builder:
 print "Read KB"
 commons = sling.Store()
 commons.lockgc()
-commons.load("local/data/e/wiki/kb.sling")
+commons.load("data/e/wiki/kb.sling")
 n_id = commons["id"]
 n_name = commons["name"]
 n_artist_mbid = commons["P434"]
@@ -112,7 +112,7 @@ wikidata_work_items = read__inverted_links("work")
 
 commons.freeze()
 
-output = sling.RecordWriter("local/data/e/dataset/musicbrainz.sling")
+output = sling.RecordWriter("data/e/dataset/musicbrainz.sling")
 
 print "Read artists"
 f = open(mbpath + "/artist")

@@ -14,28 +14,28 @@ wf = workflow.Workflow("bio-training")
 
 # Parser trainer inputs and outputs.
 kb = wf.resource(
-  #"local/data/e/wiki/kb.sling",
+  #"data/e/wiki/kb.sling",
   "data/dev/types.sling",
   format="store/frame"
 )
 
 training_corpus = wf.resource(
-  "local/data/e/silver/en/train@10.rec",
+  "data/e/silver/en/train@10.rec",
   format="record/document"
 )
 
 evaluation_corpus = wf.resource(
-  "local/data/e/silver/en/eval.rec",
+  "data/e/silver/en/eval.rec",
   format="record/document"
 )
 
 vocabulary = wf.resource(
-  "local/data/e/silver/en/vocabulary.map",
+  "data/e/silver/en/vocabulary.map",
   format="textmap/word"
 )
 
 parser_model = wf.resource(
-  "local/data/e/knolex/" + ("bio" if flags.arg.crf else "crf") + "-en.flow",
+  "data/e/knolex/" + ("bio" if flags.arg.crf else "crf") + "-en.flow",
   format="flow"
 )
 

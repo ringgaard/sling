@@ -11,7 +11,7 @@ flags.parse()
 
 # Initialize knowledge base.
 kb = sling.Store()
-kb.load("local/data/e/wiki/kb.sling")
+kb.load("data/e/wiki/kb.sling")
 n_country_code = kb["P298"]
 
 

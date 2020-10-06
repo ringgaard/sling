@@ -2,7 +2,7 @@ import sling
 import sling.flags as flags
 import string
 
-wikidir = "local/data/e/wiki"
+wikidir = "data/e/wiki"
 
 stop_words = [
   'of', 'in', 'from', 'at', 'by', 'for', 'to', 'on',

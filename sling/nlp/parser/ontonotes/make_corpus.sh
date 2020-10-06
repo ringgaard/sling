@@ -21,13 +21,13 @@
 # licensed by LDC and you need an LDC license to get the corpus:
 #   https://catalog.ldc.upenn.edu/LDC2013T19
 #
-# LDC2013T19.tar.gz is assumed to be in local/data/corpora/ontonotes.
+# LDC2013T19.tar.gz is assumed to be in data/c/ontonotes.
 #
-# The OntoNotes SLING corpus will end up in local/data/corpora/caspar.
+# The OntoNotes SLING corpus will end up in data/c/caspar.
 
 set -e
 
-ONTONOTES=local/data/corpora/ontonotes
+ONTONOTES=data/c/ontonotes
 pushd $ONTONOTES
 
 echo "Check that OntoNotes 5 corpus is present"
@@ -64,7 +64,7 @@ echo "Convert CoNLL files to SLING"
 CONVERTER=sling/nlp/parser/ontonotes/ontonotesv5_to_sling.py
 SHUFFLE=sling/nlp/parser/ontonotes/shuffle.py
 IN=$ONTONOTES/conll-formatted-ontonotes-5.0/data
-OUT=local/data/corpora/caspar
+OUT=data/c/caspar
 
 mkdir -p $OUT
 

@@ -108,7 +108,7 @@ if __name__ == '__main__':
                metavar="PORT")
   flags.define("--output",
                help="Output directory",
-               default="local/data/e/wikicat",
+               default="data/e/wikicat",
                type=str,
                metavar="DIR")
   flags.define("--lang",

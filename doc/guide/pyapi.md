@@ -298,7 +298,7 @@ commons.freeze()
 
 num_docs = 0
 num_tokens = 0
-corpus = sling.RecordReader("local/data/corpora/sempar/train.rec")
+corpus = sling.RecordReader("data/c/sempar/train.rec")
 for _,rec in corpus:
   store = sling.Store(commons)
   doc = sling.Document(store.parse(rec), store, docschema)
@@ -458,7 +458,7 @@ The `Mention` class has the following methods and properties:
 The `Corpus` class can be used for iterating over a corpus of documents stored in
 record files:
 ```
-for document in sling.Corpus("local/data/e/wiki/en/documents@10.rec"):
+for document in sling.Corpus("data/e/wiki/en/documents@10.rec"):
   print(document.text)
 ```
 This will create a global store with the document schema symbols and create
@@ -466,7 +466,7 @@ a local store for each document. If you have a global store you can use this
 instead, but it needs to be frozen before iterating over the documents:
 ```
 kb = sling.Store()
-corpus = sling.Corpus("local/data/e/wiki/en/documents@10.rec", commons=kb)
+corpus = sling.Corpus("data/e/wiki/en/documents@10.rec", commons=kb)
 kb.freeze()
 for document in corpus:
   print(document.text)
@@ -549,8 +549,8 @@ import sling
 
 # Load knowledge base and phrase table.
 kb = sling.Store()
-kb.load("local/data/e/wiki/kb.sling")
-names = sling.PhraseTable(kb, "local/data/e/wiki/en/phrase-table.repo")
+kb.load("data/e/wiki/kb.sling")
+names = sling.PhraseTable(kb, "data/e/wiki/en/phrase-table.repo")
 kb.freeze()
 
 # Lookup entities with name 'Annette Stroyberg'.

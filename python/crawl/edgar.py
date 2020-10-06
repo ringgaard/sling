@@ -19,7 +19,7 @@ flags.define("--earliest",
 
 flags.define("--dir",
              help="Directory for SEC filings",
-             default="/archive/4/sec",
+             default="/var/data/corpora/sec",
              metavar="PATH")
 
 flags.define("--backlog",

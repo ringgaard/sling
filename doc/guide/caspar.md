@@ -1,8 +1,8 @@
 # CASPAR frame semantics parser
 
 CASPAR is a frame semantics parser trained on OntoNotes 5 data. Mentions,
-entity types (partial), and 
-[PropBank](https://propbank.github.io/) semantic role labels are extracted from 
+entity types (partial), and
+[PropBank](https://propbank.github.io/) semantic role labels are extracted from
 this corpus to produce a frame semantic corpus in SLING document format.
 
 We use the standard [CoNLL-2012](http://conll.cemantix.org/2012/data.html) split
@@ -15,8 +15,8 @@ CASPAR. This is licensed by LDC and you need an LDC license to use the corpus:
 
 https://catalog.ldc.upenn.edu/LDC2013T19
 
-To prepare the training data for the parser, place `LDC2013T19.tar.gz` in 
-`local/data/corpora/ontonotes` and run the `make_corpus.sh` script:
+To prepare the training data for the parser, place `LDC2013T19.tar.gz` in
+`data/c/ontonotes` and run the `make_corpus.sh` script:
 
 ```
 sling/nlp/parser/ontonotes/make_corpus.sh
@@ -30,7 +30,7 @@ This script will perform the following steps to produce the training data:
 * Convert CoNLL files to SLING format.
 * Shuffle the training data.
 
-This will put the training and evaluation data into `local/data/corpora/caspar`:
+This will put the training and evaluation data into `data/c/caspar`:
 * `train.rec` contains the training data.
 * `dev.rec` contains the developemnt data.
 * `test.rec` contains the evaluation data.
@@ -62,11 +62,11 @@ flags.define("--accurate", default=False,action='store_true')
 flags.parse()
 
 if flags.arg.accurate:
-  modelfn = "local/data/e/caspar/caspar-accurate.flow"
+  modelfn = "data/e/caspar/caspar-accurate.flow"
   rnn_layers = 3
   rnn_dim = 192
 else:
-  modelfn = "local/data/e/caspar/caspar.flow"
+  modelfn = "data/e/caspar/caspar.flow"
   rnn_layers = 1
   rnn_dim = 128
 
@@ -78,17 +78,17 @@ wf = workflow.Workflow("parser-training")
 
 # Parser trainer inputs and outputs.
 training_corpus = wf.resource(
-  "local/data/corpora/caspar/train_shuffled.rec",
+  "data/c/caspar/train_shuffled.rec",
   format="record/document"
 )
 
 evaluation_corpus = wf.resource(
-  "local/data/corpora/caspar/dev.rec",
+  "data/c/caspar/dev.rec",
   format="record/document"
 )
 
 word_embeddings = wf.resource(
-  "local/data/corpora/caspar/word2vec-32-embeddings.bin",
+  "data/c/caspar/word2vec-32-embeddings.bin",
   format="embeddings"
 )
 
@@ -130,7 +130,7 @@ workflow.shutdown()
 
 This model takes ~30 minutes to train. It will output evaluation metrics
 each 1000 epochs, and when it is done, the final parser model will be written
-to `local/data/e/caspar/caspar.flow`. You can train a slightly more accurate,
+to `data/e/caspar/caspar.flow`. You can train a slightly more accurate,
 but much slower parser by using the `--accurate` flag.
 
 If you don't have access to OntoNotes 5, you can download a pre-trained model
@@ -151,7 +151,7 @@ This tool takes the following commandline arguments:
    prints the annotated frame(s) in text mode, e.g.:
    ```
    $ bazel-bin/sling/nlp/parser/tools/parse \
-        --parser local/data/e/caspar/caspar.flow --text="Eric loves Hannah."
+        --parser data/e/caspar/caspar.flow --text="Eric loves Hannah."
 
     {=#1
       :document
@@ -198,11 +198,11 @@ This tool takes the following commandline arguments:
    the first N documents by specifying `--maxdocs N`.
 
    ```
-   $ bazel-bin/sling/nlp/parser/tools/parse --parser local/data/e/caspar/caspar.flow \
-       --benchmark --corpus local/data/corpora/caspar/dev.rec
-   [... I sling/nlp/parser/tools/parse.cc:131] Load parser from local/data/e/caspar/caspar.flow
+   $ bazel-bin/sling/nlp/parser/tools/parse --parser data/e/caspar/caspar.flow \
+       --benchmark --corpus data/c/caspar/dev.rec
+   [... I sling/nlp/parser/tools/parse.cc:131] Load parser from data/e/caspar/caspar.flow
    [... I sling/nlp/parser/tools/parse.cc:140] 34.7227 ms loading parser
-   [... I sling/nlp/parser/tools/parse.cc:204] Benchmarking parser on local/data/corpora/caspar/dev.rec
+   [... I sling/nlp/parser/tools/parse.cc:204] Benchmarking parser on data/c/caspar/dev.rec
    [... I sling/nlp/parser/tools/parse.cc:227] 9603 documents, 163104 tokens, 7970.69 tokens/sec
    ```
 
@@ -216,11 +216,11 @@ This tool takes the following commandline arguments:
    frames. Again, one can use `--maxdocs` to limit the evaluation to the first N
    documents.
    ```
-   $ bazel-bin/sling/nlp/parser/tools/parse --parser local/data/e/caspar/caspar.flow \
-       --evaluate --corpus local/data/corpora/caspar/dev.rec
-   [... I sling/nlp/parser/tools/parse.cc:131] Load parser from local/data/e/caspar/caspar.flow
+   $ bazel-bin/sling/nlp/parser/tools/parse --parser data/e/caspar/caspar.flow \
+       --evaluate --corpus data/c/caspar/dev.rec
+   [... I sling/nlp/parser/tools/parse.cc:131] Load parser from data/e/caspar/caspar.flow
    [... I sling/nlp/parser/tools/parse.cc:140] 34.7368 ms loading parser
-   [... I sling/nlp/parser/tools/parse.cc:235] Evaluating parser on local/data/corpora/caspar/dev.rec
+   [... I sling/nlp/parser/tools/parse.cc:235] Evaluating parser on data/c/caspar/dev.rec
    SPAN_P+=77757
    SPAN_P-=6185
    SPAN_R+=77757
@@ -297,7 +297,7 @@ API, e.g.:
 ```
 import sling
 
-parser = sling.Parser("local/data/e/caspar/caspar.flow")
+parser = sling.Parser("data/e/caspar/caspar.flow")
 
 text = input("text: ")
 doc = parser.parse(text)
@@ -319,7 +319,7 @@ the following way:
 // Load parser model.
 sling::Store commons;
 sling::nlp::Parser parser;
-parser.Load(&commons, "local/data/e/caspar/caspar.flow");
+parser.Load(&commons, "data/e/caspar/caspar.flow");
 commons.Freeze();
 
 // Create document tokenizer.

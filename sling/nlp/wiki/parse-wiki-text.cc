@@ -40,7 +40,7 @@ using namespace sling::nlp;
 class Resolver : public WikiLinkResolver {
  public:
   void Init() {
-    string dir = "local/data/e/wiki/" + FLAGS_lang;
+    string dir = "data/e/wiki/" + FLAGS_lang;
     wikimap_.LoadRedirects(dir + "/redirects.sling");
     wikimap_.LoadMapping(dir + "/mapping.sling");
   }

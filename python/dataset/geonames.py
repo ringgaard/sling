@@ -3,9 +3,9 @@ import os
 
 # Location of GeoNames dump.
 gn_dump_date = "2018-10-21"
-gn_base_path = "local/data/corpora/geonames"
+gn_base_path = "data/c/geonames"
 gn_path = gn_base_path + "/" + gn_dump_date
-output_dir = "local/data/e/dataset/geonames.sling"
+output_dir = "data/e/dataset/geonames.sling"
 output_file = output_dir + "/geonames.sling"
 if not os.path.exists(output_dir): os.makedirs(output_dir)
 
@@ -13,7 +13,7 @@ if not os.path.exists(output_dir): os.makedirs(output_dir)
 print "Load KB"
 commons = sling.Store()
 commons.lockgc()
-commons.load("local/data/e/wiki/kb.sling", snapshot=True)
+commons.load("data/e/wiki/kb.sling", snapshot=True)
 n_id = commons["id"]
 n_isa = commons["isa"]
 n_name = commons["name"]

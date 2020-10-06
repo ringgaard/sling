@@ -6,7 +6,7 @@ import time
 import BaseHTTPServer
 import urlparse
 
-wikidir = "local/data/e/wiki"
+wikidir = "data/e/wiki"
 
 prior_weight = 0.5
 

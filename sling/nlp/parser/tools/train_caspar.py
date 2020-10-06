@@ -10,9 +10,9 @@ flags.define("--pretrained_embeddings", default=False,action='store_true')
 flags.parse()
 
 if flags.arg.conll:
-  basefn = "local/data/e/conll/caspar"
+  basefn = "data/e/conll/caspar"
 else:
-  basefn = "local/data/e/caspar/caspar"
+  basefn = "data/e/caspar/caspar"
 
 if flags.arg.accurate:
   modelfn = basefn + "-accurate.flow"
@@ -33,23 +33,23 @@ wf = workflow.Workflow("caspar-trainer")
 if flags.arg.conll:
   # CoNLL-2003 corpus.
   training_corpus = wf.resource(
-    "local/data/corpora/conll2003/train.rec",
+    "data/c/conll2003/train.rec",
     format="record/document"
   )
 
   evaluation_corpus = wf.resource(
-    "local/data/corpora/conll2003/eval.rec",
+    "data/c/conll2003/eval.rec",
     format="record/document"
   )
 else:
   # OntoNotes corpus.
   training_corpus = wf.resource(
-    "local/data/corpora/caspar/train_shuffled.rec",
+    "data/c/caspar/train_shuffled.rec",
     format="record/document"
   )
 
   evaluation_corpus = wf.resource(
-    "local/data/corpora/caspar/dev.rec",
+    "data/c/caspar/dev.rec",
     format="record/document"
   )
 
@@ -92,7 +92,7 @@ trainer.attach_input("evaluation_corpus", evaluation_corpus)
 
 if flags.arg.pretrained_embeddings:
   word_embeddings = wf.resource(
-    "local/data/corpora/caspar/word2vec-32-embeddings.bin",
+    "data/c/caspar/word2vec-32-embeddings.bin",
     format="embeddings"
   )
   trainer.attach_input("word_embeddings", word_embeddings)

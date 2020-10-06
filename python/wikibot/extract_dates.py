@@ -29,7 +29,7 @@ class ExtractDates:
   def __init__(self):
     self.kb = sling.Store()
     self.kb.lockgc()
-    self.kb.load("local/data/e/wiki/kb.sling", snapshot=True)
+    self.kb.load("data/e/wiki/kb.sling", snapshot=True)
     self.instanceof = self.kb['P31']
     self.has_part = self.kb['P527']
     self.part_of = self.kb['P361']
@@ -56,8 +56,7 @@ class ExtractDates:
     self.category = self.kb["category"]
     self.method = self.kb["method"]
 
-    self.names = sling.PhraseTable(self.kb,
-                                   "local/data/e/wiki/en/phrase-table.repo")
+    self.names = sling.PhraseTable(self.kb, "data/e/wiki/en/phrase-table.repo")
     self.kb.freeze()
     self.date_type = {}
     self.conflicts = 0
@@ -152,7 +151,7 @@ class ExtractDates:
     return False
 
   def find_inceptions(self, inc_cats):
-    self.out_file = "local/data/e/wikibot/inc-dates.rec"
+    self.out_file = "data/e/wikibot/inc-dates.rec"
     record_file = sling.RecordWriter(self.out_file)
     records = 0
     store = sling.Store(self.kb)
@@ -196,7 +195,7 @@ class ExtractDates:
     print self.conflicts, "conflicts encountered"
 
   def find_deaths(self, death_cats):
-    self.out_file = "local/data/e/wikibot/death-dates.rec"
+    self.out_file = "data/e/wikibot/death-dates.rec"
     record_file = sling.RecordWriter(self.out_file)
     records = 0
 
@@ -234,7 +233,7 @@ class ExtractDates:
     print self.conflicts, "conflicts encountered"
 
   def find_births(self, birth_cats):
-    self.out_file = "local/data/e/wikibot/birth-dates.rec"
+    self.out_file = "data/e/wikibot/birth-dates.rec"
     record_file = sling.RecordWriter(self.out_file)
     records = 0
 

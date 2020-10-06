@@ -34,17 +34,17 @@ kb = wf.resource(
 )
 
 training_corpus = wf.resource(
-  "local/data/corpora/conll2003/train.rec",
+  "data/c/conll2003/train.rec",
   format="record/document"
 )
 
 evaluation_corpus = wf.resource(
-  "local/data/corpora/conll2003/eval.rec",
+  "data/c/conll2003/eval.rec",
   format="record/document"
 )
 
 parser_model = wf.resource(
-  "local/data/e/conll/" + parser_name + ".flow",
+  "data/e/conll/" + parser_name + ".flow",
   format="flow"
 )
 

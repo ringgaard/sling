@@ -29,7 +29,7 @@
 DEFINE_int32(port, 8080, "HTTP server port");
 DEFINE_string(commons, "", "Commons store");
 DEFINE_bool(kb, false, "Start knowledge base browser");
-DEFINE_string(names, "local/data/e/wiki/en/name-table.repo", "Name table");
+DEFINE_string(names, "data/e/wiki/en/name-table.repo", "Name table");
 DEFINE_string(spec, "", "Document analyzer specification");
 
 using namespace sling;

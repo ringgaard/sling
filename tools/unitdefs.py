@@ -10,7 +10,7 @@ flags.parse()
 
 # Initialize knowledge base.
 kb = sling.Store()
-kb.load("local/data/e/wiki/kb.sling")
+kb.load("data/e/wiki/kb.sling")
 n_qua = kb["is"]
 n_lang = kb["lang"]
 n_instance_of = kb["P31"]

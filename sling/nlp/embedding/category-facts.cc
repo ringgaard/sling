@@ -15,12 +15,12 @@
 #include "sling/util/top.h"
 
 DEFINE_string(fact_embeddings,
-              "local/data/e/fact/fact-embeddings.vec",
+              "data/e/fact/fact-embeddings.vec",
               "Fact embeddings");
 DEFINE_string(category_embeddings,
-              "local/data/e/fact/category-embeddings.vec",
+              "data/e/fact/category-embeddings.vec",
               "Category embeddings");
-DEFINE_string(kb, "local/data/e/wiki/kb.sling", "Knowledge base");
+DEFINE_string(kb, "data/e/wiki/kb.sling", "Knowledge base");
 DEFINE_string(similarity_flow, "", "Flow file for similarity model");
 DEFINE_int32(topk, 15, "Number of similar fact to list");
 DEFINE_string(source, "c", "source embeddings (c=category, f=facts)");

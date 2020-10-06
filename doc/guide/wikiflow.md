@@ -60,8 +60,8 @@ the download with the following flags:
     Specifies a list of language for Wikipedia. If `ALL` is specified, the
     12 "sanctioned" languages are downloaded (en,da,sv,no,de,fr,es,it,nl,pt,pl,fi).
 
-This will put the Wikipedia dump into `local/data/corpora/wikipedia` and
-the Wikidata dump into `local/data/corpora/wikipedia`. After the dumps have been
+This will put the Wikipedia dump into `data/c/wikipedia` and
+the Wikidata dump into `data/c/wikipedia`. After the dumps have been
 downloaded, the remaining processing pipeline can be executed in one go:
 ```
 sling --build_wiki
@@ -356,8 +356,7 @@ you can search for entities by name or id:
 
 # Data sets
 
-The Wiki processing pipeline produces the following data sets in
-`local/data/e/wiki`:
+The Wiki processing pipeline produces the following data sets in `data/e/wiki`:
 
   * `wikidata-items-?????-of-?????.rec` (produced by `wikidata-import` task)
   * `properties.rec` (produced by `wikidata-import` task)

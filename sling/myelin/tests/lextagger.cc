@@ -36,8 +36,8 @@ using namespace sling::nlp;
 
 const int cpu_cores = jit::CPU::Processors();
 
-DEFINE_string(train, "local/data/corpora/stanford/train.rec", "Train corpus");
-DEFINE_string(dev, "local/data/corpora/stanford/dev.rec", "Test corpus");
+DEFINE_string(train, "data/c/stanford/train.rec", "Train corpus");
+DEFINE_string(dev, "data/c/stanford/dev.rec", "Test corpus");
 DEFINE_string(embeddings, "", "Pre-trained word embeddings");
 DEFINE_bool(train_embeddings, true, "Train word embeddings jointly");
 DEFINE_int32(epochs, 1000000, "Number of training epochs");

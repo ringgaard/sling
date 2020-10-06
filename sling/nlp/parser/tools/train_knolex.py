@@ -12,26 +12,26 @@ wf = workflow.Workflow("knolex-training")
 
 # Parser trainer inputs and outputs.
 kb = wf.resource(
-  "local/data/e/wiki/kb.sling",
+  "data/e/wiki/kb.sling",
   format="store/frame"
 )
 
 training_corpus = wf.resource(
-  "local/data/e/silver/en/train@10.rec",
+  "data/e/silver/en/train@10.rec",
   format="record/document"
 )
 
 evaluation_corpus = wf.resource(
-  "local/data/e/silver/en/eval.rec",
+  "data/e/silver/en/eval.rec",
   format="record/document"
 )
 
 vocabulary = wf.resource(
-  "local/data/e/silver/en/vocabulary.map",
+  "data/e/silver/en/vocabulary.map",
   format="textmap/word"
 )
 
-parser_model = wf.resource("local/data/e/knolex/knolex-en.flow", format="flow")
+parser_model = wf.resource("data/e/knolex/knolex-en.flow", format="flow")
 
 # Parser trainer task.
 trainer = wf.task("parser-trainer")

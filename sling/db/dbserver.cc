@@ -29,7 +29,7 @@
 #include "sling/util/thread.h"
 
 DEFINE_int32(port, 7070, "HTTP server port");
-DEFINE_string(dbdir, "/var/data/db", "Database directory");
+DEFINE_string(dbdir, "db", "Database directory");
 DEFINE_bool(recover, false, "Recover databases when loading");
 DEFINE_bool(auto_mount, false, "Automatically mount databases in db dir");
 

@@ -274,7 +274,7 @@ class WikiWorkflow:
 
   def wikipedia_mapping(self, language=None):
     """Resource for wikipedia to wikidata mapping. This is a SLING frame store
-    with one frame per Wikipedia article with infomation for mapping it to
+    with one frame per Wikipedia article with information for mapping it to
     Wikidata.
       {
         =<wid>

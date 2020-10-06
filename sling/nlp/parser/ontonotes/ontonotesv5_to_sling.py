@@ -62,7 +62,7 @@ class Options:
     #
     # These are supposed to have complete coreference and higher coverage
     # SRL annotations than the other files.
-    self.allowed_ids_file = 'local/data/corpora/sempar/train.id'
+    self.allowed_ids_file = 'data/c/sempar/train.id'
 
     # Skip importing coreference annotations or not.
     self.skip_coref = True

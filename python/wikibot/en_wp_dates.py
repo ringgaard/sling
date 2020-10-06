@@ -23,7 +23,7 @@ class ExtractWikipediaDates:
     self.kb = sling.Store()
     self.kb.lockgc()
     print("loading kb")
-    self.kb.load("local/data/e/wiki/kb.sling")
+    self.kb.load("data/e/wiki/kb.sling")
     print("kb loaded")
     self.instanceof = self.kb['P31']
     self.date_of_birth = self.kb['P569']
@@ -95,13 +95,13 @@ class ExtractWikipediaDates:
     pat = "(?:[^(]|\([^0-9]*\))*?\([^0-9)]*?" + dates + "\s*\)"
     rec = re.compile(pat)
 
-    self.out_file = "local/data/e/wikibot/birth-death-dates.rec"
+    self.out_file = "data/e/wikibot/birth-death-dates.rec"
     record_file = sling.RecordWriter(self.out_file)
     records = 0
     store = sling.Store(self.kb)
 
     for i in range(10):
-      i_file = "local/data/e/wiki/en/documents-0000"+str(i)+"-of-00010.rec"
+      i_file = "data/e/wiki/en/documents-0000"+str(i)+"-of-00010.rec"
       print(i_file, records)
       for (item_id, record) in sling.RecordReader(i_file):
         item = self.kb[item_id]

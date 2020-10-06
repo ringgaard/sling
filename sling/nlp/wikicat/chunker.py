@@ -77,8 +77,8 @@ class Chart:
 
 commons = sling.Store()
 commons.lockgc()
-commons.load("local/data/e/wiki/kb.sling")
-phrasetab = sling.PhraseTable(commons, "local/data/e/wiki/en/phrase-table.repo")
+commons.load("data/e/wiki/kb.sling")
+phrasetab = sling.PhraseTable(commons, "data/e/wiki/en/phrase-table.repo")
 docschema = sling.DocumentSchema(commons)
 factex = sling.FactExtractor(commons)
 taxonomy = factex.taxonomy()
@@ -99,7 +99,7 @@ documentids = [
   'Q1687170',   # Jens Christian Skou
 ]
 
-articles = sling.RecordDatabase("local/data/e/wiki/en/documents@10.rec")
+articles = sling.RecordDatabase("data/e/wiki/en/documents@10.rec")
 output = sling.RecordWriter("/tmp/chunked.rec")
 
 for docid in documentids:

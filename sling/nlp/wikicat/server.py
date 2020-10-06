@@ -747,12 +747,12 @@ if __name__ == "__main__":
                metavar="PORT")
   flags.define("--parses",
                help="Recordio of category parses",
-               default="local/data/e/wikicat/parses-with-match-statistics.rec",
+               default="data/e/wikicat/parses-with-match-statistics.rec",
                type=str,
                metavar="FILE")
   flags.define("--output",
                help="Output dir where Wikibot recordios will be generated.",
-               default="local/data/e/wikicat/facts",
+               default="data/e/wikicat/facts",
                type=str,
                metavar="DIR")
   flags.parse()
