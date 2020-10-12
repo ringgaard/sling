@@ -95,6 +95,7 @@ noignore_sites = set([
   "hill.cm",
   "hrld.us",
   "ift.tt",
+  "j.mp",
   "ow.ly",
   "tinyurl.com",
   "trib.al",
@@ -240,7 +241,7 @@ def init_sites():
       sites[domain] = NewsSite(domain, qid, name, twitter, altdomain)
       if altdomain:
         if altdomain in sites:
-          print("multiple news sites for domain", altdomains)
+          print("multiple news sites for domain", altdomain)
         else:
           sites[altdomain] = sites[domain]
 
