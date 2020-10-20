@@ -1,4 +1,4 @@
-dist: trusty
+dist: bionic
 language:
   - cpp
   - python
@@ -12,7 +12,7 @@ addons:
     packages:
       - wget
       - pkg-config
-      - g++-4.8
+      - g++-5.7
       - python3.6-dev
 
 before_install:
