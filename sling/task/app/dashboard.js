@@ -1,102 +1,132 @@
-var app = angular.module('DashboardApp', ['ngRoute', 'ngMaterial']);
+// Workflow dashboard app.
 
-app.config(function ($locationProvider) {
-  $locationProvider.html5Mode(true);
-})
+import {Component} from "/common/lib/component.js";
 
-app.filter('padding', function () {
-  return function(num, width) {
-    return ("0000" + num).slice(-width);
-  };
-});
+function pad(num, width) {
+  return ("0000" + num).slice(-width);
+}
 
-app.filter('integer', function () {
-  return function(num) {
-    if (!isFinite(num)) return "---";
-    return Math.round(num).toString();
-  };
-});
+function int(num) {
+  if (!isFinite(num)) return "---";
+  return num.toLocaleString("en", {
+    minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
 
-app.controller('DashboardCtrl', function($scope, $location, $rootScope, $interval,
-                                         $mdToast) {
-  $scope.auto = false;
-  $scope.freq = 15;
-  $scope.done = false;
-  $scope.error = false;
-  var ticks = 0;
+function dec(num, decimals) {
+  if (!isFinite(num)) return "---";
+  return num.toLocaleString("en", {
+    minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
 
-  $scope.host = function() {
-    return $location.host() + ":" + $location.port();
-  };
+function sort(array, key) {
+  return array.sort((a, b) => {
+    let x = a[key];
+    let y = b[key];
+    return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+  });
+}
 
-  $rootScope.refresh = function() {
-    $scope.error = false;
-    $rootScope.$emit('refresh');
-  };
-
-  $scope.play = function(state, rate) {
-    $scope.auto = state;
-    $scope.error = false;
-    if (rate != undefined) $scope.freq = rate;
-    ticks = 0;
+class DashboardApp extends Component {
+  constructor() {
+    super();
+    this.auto = false;
+    this.freq = 15;
+    this.ticks = 0;
+    this.status = null;
+    this.jobs = [];
+    this.selected = 0;
+    this.census = null;
+    this.resources = null;
   }
 
-  $interval(function() {
-    ticks++;
-    if ($scope.auto && ticks++ % $scope.freq == 0) {
-      $scope.error = false;
-      $rootScope.$emit('refresh');
-    }
-  }, 1000);
-
-  $rootScope.$on('error', function(event, args) {
-    if (!$scope.error) {
-      $mdToast.show($mdToast.simple()
-          .textContent('Connection to server lost')
-          .hideDelay(3000)
-      );
-    }
-    $scope.error = true;
-    $scope.auto = false;
-  });
-
-  $rootScope.$on('done', function(event, args) {
-    if (!$scope.done) {
-      $mdToast.show($mdToast.simple()
-          .textContent('Workflow completed')
-          .hideDelay(3000)
-      );
-    }
-    $scope.error = false;
-    $scope.done = true;
-    $scope.auto = false;
-  });
-})
-
-app.controller('StatusCtrl', function($scope, $http, $rootScope) {
-  $scope.running = true;
-  $scope.status = null;
-  $scope.jobs = [];
-  $scope.selected = 0;
-  $scope.census = null;
-
-  var resources = null;
-
-  function updateTitle(msg) {
-    var host = window.location.hostname + ":" + window.location.port;
-    window.document.title = msg + " - SLING jobs on " + host;
+  onconnected() {
+    this.bind("#play5", "click", (e) => this.onplay(e, 5));
+    this.bind("#play10", "click", (e) => this.onplay(e, 10));
+    this.bind("#play30", "click", (e) => this.onplay(e, 30));
+    this.bind("#pause", "click", (e) => this.onpause(e));
+    this.bind("#refresh", "click", (e) => this.onrefresh(e));
+    this.find("#title").innerHTML = "Job status for " + this.host();
+    this.reload();
+    setInterval(() => this.tick(), 1000);
   }
 
-  $rootScope.$on('refresh', function(event, args) {
-    $scope.refresh();
-  });
+  onplay(e, interval) {
+    this.ticks = 0;
+    this.auto = true;
+    this.freq = interval;
+    this.find("#pause").enable();
+    this.reload();
+  }
 
-  $scope.update = function() {
-    var status = $scope.status
+  onpause(e) {
+    this.auto = false;
+    this.find("#pause").disable();
+  }
+
+  tick() {
+    this.ticks++;
+    if (this.auto && this.ticks % this.freq == 0) {
+      this.reload();
+    }
+  }
+
+  onrefresh(e) {
+    this.reload();
+  }
+
+  reload() {
+    fetch("/status").then(response => response.json()).then((data) => {
+      this.status = data;
+      this.refresh();
+    }).catch(err => {
+      console.log('Error fetching status', err);
+      this.done(false);
+    });
+  }
+
+  onupdate() {
+    this.find("#jobs").update(this.state);
+    this.find("#counters").update(this.state);
+    this.find("#channels").update(this.state);
+    this.find("#perf").update(this.census);
+  }
+
+  select(jobid) {
+    this.selected = jobid;
+    this.state.selected = jobid;
+    this.find("#counters").update(this.state);
+    this.find("#channels").update(this.state);
+  }
+
+  host() {
+    return window.location.hostname + ":" + window.location.port;
+  };
+
+  updateTitle(msg) {
+    window.document.title = msg + " - SLING jobs on " + this.host();
+  }
+
+  done(success) {
+    if (success) {
+      this.updateTitle("Done");
+      this.find("#done").style.display = "";
+    } else {
+      this.updateTitle("Error");
+      this.find("#error").style.display = "";
+    }
+
+    this.auto = false;
+    for (const id of ["#play5", "#play10", "#play30", "#pause", "#refresh"]) {
+      this.find(id).style.display = "none";
+    }
+  }
+
+  refresh() {
+    let status = this.status
 
     // Update resource usage.
-    var runtime = status.time - status.started;
-    var res = {};
+    let runtime = status.time - status.started;
+    let res = {};
     res.time = status.time;
     res.cpu = (status.utime + status.stime) / 1000000;
     res.gflops = status.flops / 1e9;
@@ -112,22 +142,22 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
       census.gflops = res.gflops / runtime;
       census.ram = res.ram;
       census.io = res.io / runtime;
-    } else if (resources) {
-      var dt = res.time - resources.time;
-      census.cpu = (res.cpu - resources.cpu) / dt;
-      census.gflops = (res.gflops - resources.gflops) / dt;
+    } else if (this.resources) {
+      let dt = res.time - this.resources.time;
+      census.cpu = (res.cpu - this.resources.cpu) / dt;
+      census.gflops = (res.gflops - this.resources.gflops) / dt;
       census.ram = res.ram;
-      census.io = (res.io - resources.io) / dt;
+      census.io = (res.io - this.resources.io) / dt;
     }
-    $scope.census = census;
-    resources = res;
+    this.census = census;
+    this.resources = res;
 
     // Update job list.
-    for (var i = 0; i < status.jobs.length; ++i) {
-      var jobstatus = status.jobs[i];
+    for (let i = 0; i < status.jobs.length; ++i) {
+      let jobstatus = status.jobs[i];
 
-      // Create new job tab if needed.
-      var job = $scope.jobs[i];
+      // Create new job if needed.
+      let job = this.jobs[i];
       if (job == undefined) {
         job = {};
         job.id = i;
@@ -135,23 +165,23 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
         job.prev_counters = null;
         job.prev_channels = null;
         job.prev_time = null;
-        $scope.jobs[i] = job;
-        $scope.selected = i;
-        updateTitle(job.name);
+        this.jobs[i] = job;
+        this.selected = i;
+        this.updateTitle(job.name);
       }
 
       // Compute elapsed time for job.
-      var ended = jobstatus.ended ? jobstatus.ended : status.time;
-      var elapsed = ended - jobstatus.started;
+      let ended = jobstatus.ended ? jobstatus.ended : status.time;
+      let elapsed = ended - jobstatus.started;
       job.hours = Math.floor(elapsed / 3600);
       job.mins = Math.floor((elapsed % 3600) / 60);
       job.secs = Math.floor(elapsed % 60);
 
       // Compute task progress for job.
-      var progress = "";
+      let progress = "";
       if (jobstatus.stages) {
-        for (var j = 0; j < jobstatus.stages.length; ++j) {
-          var stage = jobstatus.stages[j];
+        for (let j = 0; j < jobstatus.stages.length; ++j) {
+          let stage = jobstatus.stages[j];
           if (j > 0) progress += "│ ";
           progress += "█ ".repeat(stage.done);
           progress += "░ ".repeat(stage.tasks - stage.done);
@@ -162,16 +192,16 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
       job.progress = progress;
 
       // Process job counters.
-      var counters = [];
-      var channels = [];
-      var channel_map = {};
-      var prev_counters = job.prev_counters;
-      var prev_channels = job.prev_channels;
-      var period = status.time - job.prev_time;
-      var channel_pattern = /(input|output)_(.+)\[(.+\..+)\]/;
+      let counters = [];
+      let channels = [];
+      let channel_map = {};
+      let prev_counters = job.prev_counters;
+      let prev_channels = job.prev_channels;
+      let period = status.time - job.prev_time;
+      let channel_pattern = /(input|output)_(.+)\[(.+\..+)\]/;
       for (name in jobstatus.counters) {
         // Check for channel stat counter.
-        m = name.match(channel_pattern);
+        let m = name.match(channel_pattern);
         if (m) {
           // Look up channel.
           var direction = m[1];
@@ -201,14 +231,12 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
           }
         } else {
           // Add counter.
-          item = {};
-          item.name = name;
-          item.value = jobstatus.counters[name];
+          let item = {name: name, value: jobstatus.counters[name]};
           if (jobstatus.ended) {
             item.rate = item.value / elapsed;
           } else if (prev_counters && period > 0) {
-            var prev_value = prev_counters[name];
-            var delta = item.value - prev_value;
+            let prev_value = prev_counters[name];
+            let delta = item.value - prev_value;
             item.rate = delta / period;
           }
           counters.push(item);
@@ -217,15 +245,15 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
 
       // Compute bandwidth and throughput.
       if (prev_channels) {
-        for (var j = 0; j < channels.length; ++j) {
-          var ch = channels[j];
-          var prev = prev_channels[ch.name];
+        for (let j = 0; j < channels.length; ++j) {
+          let ch = channels[j];
+          let prev = prev_channels[ch.name];
           if (jobstatus.ended) {
             ch.bandwidth = (ch.key_bytes + ch.value_bytes) / elapsed;
             ch.throughput = ch.messages / elapsed;
           } else if (prev) {
-            var current_bytes = ch.key_bytes + ch.value_bytes;
-            var prev_bytes = prev.key_bytes + prev.value_bytes;
+            let current_bytes = ch.key_bytes + ch.value_bytes;
+            let prev_bytes = prev.key_bytes + prev.value_bytes;
             ch.bandwidth = (current_bytes - prev_bytes) / period;
             ch.throughput = (ch.messages - prev.messages) / period;
           }
@@ -241,23 +269,222 @@ app.controller('StatusCtrl', function($scope, $http, $rootScope) {
 
       // Check for workflow completed.
       if (status.finished) {
-        $scope.running = false;
-        $rootScope.$emit('done');
-        updateTitle("Done");
+        this.done(true);
       }
+
+      // Update dashboard.
+      this.update({jobs: this.jobs, selected: this.selected});
+    }
+  }
+}
+
+Component.register(DashboardApp);
+
+class DashboardJobs extends Component {
+  onupdate() {
+    // Build data table for job list.
+    let table = [];
+    for (let i = 0; i < this.state.jobs.length; ++i) {
+      let job = this.state.jobs[i];
+      table.push({
+        job: "#" + job.id,
+        name: job.name,
+        time: `${job.hours}h ${pad(job.mins, 2)}m ${pad(job.secs, 2)}s`,
+        status: job.progress,
+        select: `<md-radio-button
+                     name="job"
+                     value="${i}"
+                     selected=${this.state.selected == i}>
+                 </md-radio-button>`
+      });
+    }
+
+    // Update job list table.
+    this.find("#job-table").update(table);
+  }
+
+  onconnected() {
+    this.bind(null, "change", (e) => this.onchange(e));
+  }
+
+  onchange(e) {
+    // Select job.
+    this.match("#app").select(e.target.value);
+  }
+
+  static stylesheet() {
+    return `
+      dashboard-jobs {
+        margin: 10px;
+      }
+    `;
+  }
+}
+
+Component.register(DashboardJobs);
+
+class DashboardPerf extends Component {
+  render() {
+    let c = this.state;
+    if (!c) return "";
+    let time = c.hours + ":" + pad(c.mins, 2) + ":" + pad(c.secs, 2);
+    return `
+      <table>
+        <tbody>
+          <tr>
+            <td>TIME</td>
+            <td class="lcd" colspan=2>${time}
+            </td>
+          </tr>
+          <tr>
+            <td>CPU</td>
+            <td class="lcd">${int(c.cpu * 100)}</td>
+            <td>%</td>
+          </tr>
+          <tr>
+            <td>RAM</td>
+            <td class="lcd">${int(c.ram / (1024 * 1024))}</td>
+            <td>MB</td>
+          </tr>
+          <tr>
+            <td>I/O</td>
+            <td class="lcd">${int(c.io / 1000)}</td>
+            <td>MB/s</td>
+          </tr>
+          <tr>
+            <td>TEMP</td>
+            <td class="lcd">${int(c.temp)}</td>
+            <td>°C</td>
+          </tr>
+          <tr>
+            <td>FLOPS</td>
+            <td class="lcd">${int(c.gflops)}</td>
+            <td>G/s</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      @font-face {
+        font-family: lcd;
+        src: url(digital-7.mono.ttf);
+      }
+
+      dashboard-perf {
+        margin-top: 10px;
+        margin-right: 20px;
+      }
+
+      dashboard-perf table {
+        padding: 4px;
+        width: 160px;
+        margin-left: 8px;
+        margin-bottom: 8px;
+        margin-top: 8px;
+        border-radius: 4px;
+        box-shadow: inset 0px 0px 24px 2px rgba(0,0,0,0.2);
+        color: #303060;
+        background: #BAC2B6;
+        font-family: arial;
+        font-weight: normal;
+        font-size: 12pt;
+        text-shadow: 1px 1px 4px rgba(150, 150, 150, 1);
+      }
+
+      dashboard-perf td {
+        vertical-align: baseline;
+      }
+
+      .lcd {
+        font-family: lcd;
+        font-size: 20pt;
+        font-weight: normal;
+        text-align: right;
+        width: 100%;
+      }
+    `
+  }
+}
+
+Component.register(DashboardPerf);
+
+class DashboardCounters extends Component {
+  onupdated() {
+    let job = this.state.jobs[this.state.selected];
+    if (job && job.counters.length > 0) {
+      // Build data table for counter list.
+      let table = [];
+      for (const counter of sort(job.counters, "name")) {
+        table.push({
+          counter: counter.name.replaceAll("_", " "),
+          value: int(counter.value),
+          rate: int(counter.rate),
+        });
+      }
+
+      // Update job list table.
+      this.style.display = "block";
+      this.find("#counter-table").update(table);
+    } else {
+      // Hide counter table.
+      this.style.display = "none";
     }
   }
 
-  $scope.refresh = function() {
-    $http.get('/status').then(function(response) {
-      $scope.status = response.data;
-      $scope.update();
-    }, function(response) {
-      $rootScope.$emit('error');
-      updateTitle("Error");
-    });
+  static stylesheet() {
+    return `
+      dashboard-counters {
+        display: block;
+        margin-left: 10px;
+        margin-right: 10px;
+      }
+    `;
+  }
+}
+
+Component.register(DashboardCounters);
+
+class DashboardChannels extends Component {
+  onupdated() {
+    let job = this.state.jobs[this.state.selected];
+    if (job && job.channels.length > 0) {
+      // Build data table for counter list.
+      let table = [];
+      for (const channel of sort(job.channels, "name")) {
+        table.push({
+          channel: channel.name,
+          direction: channel.direction,
+          key_bytes: int(channel.key_bytes),
+          value_bytes: int(channel.value_bytes),
+          bandwidth: dec(channel.bandwidth / 1000000, 3) + " MB/s",
+          messages: int(channel.messages),
+          throughput: int(channel.throughput) + " MBS",
+          shards: `${channel.shards_done}/${channel.shards_total}`,
+        });
+      }
+
+      // Update job list table.
+      this.style.display = "block";
+      this.find("#channel-table").update(table);
+    } else {
+      // Hide counter table.
+      this.style.display = "none";
+    }
   }
 
-  $scope.refresh();
-})
+  static stylesheet() {
+    return `
+      dashboard-channels {
+        display: block;
+        margin-left: 10px;
+        margin-right: 10px;
+      }
+    `;
+  }
+}
+
+Component.register(DashboardChannels);
 

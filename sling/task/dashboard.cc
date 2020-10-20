@@ -33,6 +33,7 @@ Dashboard::~Dashboard() {
 
 void Dashboard::Register(HTTPServer *http) {
   http->Register("/status", this, &Dashboard::HandleStatus);
+  common_.Register(http);
   app_.Register(http);
 }
 

@@ -84,6 +84,7 @@ class Dashboard : public Monitor {
   Status status_ = IDLE;
 
   // Dashboard app.
+  StaticContent common_{"/common", "app"};
   StaticContent app_{"/", "sling/task/app"};
 
   // Start time.

@@ -54,7 +54,6 @@ embed_data(
   srcs = [
     "app/appicon.ico",
     "app/index.html",
-    "app/dashboard.css",
     "app/dashboard.js",
     "app/digital-7.mono.ttf",
   ],
@@ -67,6 +66,7 @@ cc_library(
   deps = [
     ":app",
     ":job",
+    "//app",
     "//sling/base",
     "//sling/base:perf",
     "//sling/file:embed",
