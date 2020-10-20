@@ -315,6 +315,9 @@ def get_canonical_url(uri, page):
   # Discard if canonical URL is empty.
   if len(url.strip()) == 0: return None
 
+  # Discard canonical URL if it is not valid.
+  if not url.startswith("http"): return None
+
   # Trim URL and Unescape HTML entities.
   return html.unescape(trim_url(url))
 
