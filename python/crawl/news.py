@@ -35,7 +35,7 @@ flags.define("--threads",
 
 flags.define("--qsize",
              help="crawl queue size",
-             default=1024,
+             default=100000,
              type=int,
              metavar="NUM")
 
@@ -530,7 +530,9 @@ class Crawler:
     # Clear site error counter.
     self.site_errors[site] = 0
 
-    print(self.num_retrieved, canonical_url)
+    print("[%d] %d %s" % (self.queue.qsize(),
+                          self.num_retrieved,
+                          canonical_url))
     sys.stdout.flush()
 
   def dumpstats(self):

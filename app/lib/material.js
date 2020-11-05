@@ -2,6 +2,10 @@
 
 import {Component, stylesheet} from "/common/lib/component.js";
 
+//-----------------------------------------------------------------------------
+// Global styles
+//-----------------------------------------------------------------------------
+
 stylesheet(`
 @import url(https://fonts.googleapis.com/css?family=Roboto:400,400italic,500,500italic,700,700italic,900,900italic,300italic,300,100italic,100);
 
@@ -35,17 +39,21 @@ body {
 }
 `);
 
+//-----------------------------------------------------------------------------
+// Layout
+//-----------------------------------------------------------------------------
+
 export class MdColumnLayout extends Component {
   static stylesheet() {
     return `
-      md-column-layout {
+      $ {
         display: flex;
         flex-direction: column;
         margin: 0;
         height: 100%;
         min-height: 100%;
       }
-    `
+    `;
   }
 }
 
@@ -54,23 +62,63 @@ Component.register(MdColumnLayout);
 export class MdRowLayout extends Component {
   static stylesheet() {
     return `
-      md-row-layout {
+      $ {
         display: flex;
         flex-direction: row;
         margin: 0;
         width: 100%;
         min-width: 100%;
       }
-    `
+    `;
   }
 }
 
 Component.register(MdRowLayout);
 
+export class MdContent extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        flex: 1;
+        padding: 8px;
+        display: block;
+        overflow: auto;
+        color: rgb(0,0,0);
+        background-color: rgb(250,250,250);
+
+        position: relative;
+
+        flex-basis: 0%;
+        flex-grow: 1;
+        flex-shrink: 1;
+      }
+    `;
+  }
+}
+
+Component.register(MdContent);
+
+export class MdSpacer extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+        flex: 1;
+      }
+    `;
+  }
+}
+
+Component.register(MdSpacer);
+
+//-----------------------------------------------------------------------------
+// Toolbar
+//-----------------------------------------------------------------------------
+
 export class MdToolbar extends Component {
   static stylesheet() {
     return `
-      md-toolbar {
+      $ {
         display: flex;
         flex-direction: row;
         align-items: center;
@@ -86,35 +134,110 @@ export class MdToolbar extends Component {
                     0 3px 3px -2px rgba(0,0,0,.12);
         z-index: 2;
       }
-    `
+    `;
   }
 }
 
 Component.register(MdToolbar);
 
+//-----------------------------------------------------------------------------
+// Card
+//-----------------------------------------------------------------------------
 
-export class MdContent extends Component {
+export class MdCard extends Component {
   static stylesheet() {
     return `
-      md-content {
-        flex: 1;
-        padding: 8px;
+      $ {
         display: block;
-        overflow: auto;
-        color: rgb(0,0,0);
-        background-color: rgb(250,250,250);
-
-        position:relative;
-
-        flex-basis: 0%;
-        flex-grow: 1;
-        flex-shrink: 1;
+        background-color: rgb(255, 255, 255);
+        box-shadow: rgba(0, 0, 0, 0.16) 0px 2px 4px 0px,
+                    rgba(0, 0, 0, 0.23) 0px 2px 4px 0px;
+        padding: 10px;
+        margin: 5px;
       }
-    `
+    `;
   }
 }
 
-Component.register(MdContent);
+Component.register(MdCard);
+
+export class MdCardToolbar extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        background-color: #FFFFFF;
+        color: #000000;
+        height: 56px;
+        max-height: 56px;
+        font-size: 24px;
+        margin: 0;
+      }
+    `;
+  }
+}
+
+Component.register(MdCardToolbar);
+
+//-----------------------------------------------------------------------------
+// Logo
+//-----------------------------------------------------------------------------
+
+const logo = "\
+M257.94,57.87c-16,22.9-37.86,45.41-62.54,60a60.83,60.83,0,0,0,7.66-29.64,61.\
+23,61.23,0,0,0-61.25-61.06h0c-49.88,0-96.7,40.07-126,80.91-2.86-3.22-5.58-6.\
+53-8.19-9.86S2.44,91.58,0,88.27C32.81,43.72,86,0,141.73,0,184.65,0,226.22,25\
+.65,257.94,57.87Zm18,20.32c-2.62-3.33-5.33-6.64-8.19-9.86-29.33,40.84-76.16,\
+80.91-126,80.91h0a61,61,0,0,1-53.59-90.7c-24.68,14.63-46.59,37.15-62.55,60,3\
+1.73,32.22,73.3,57.89,116.21,57.88,55.79,0,108.93-43.73,141.73-88.28C281,84.\
+88,278.52,81.53,275.91,78.19Zm-134.48-37a46.87,46.87,0,1,0,46.88,46.87A46.87\
+,46.87,0,0,0,141.43,41.18Z";
+
+export class MdLogo extends Component {
+  render() {
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 283.46 176.46">
+        <g><path d="${logo}"/></g>
+      </svg>`;
+  }
+
+  static stylesheet() {
+    return `
+      $ svg {
+        width: 100%;
+      }
+      $ path {
+        fill: #00A0D6; }
+      }
+    `;
+  }
+}
+
+Component.register(MdLogo);
+
+export class MdToolbarLogo extends MdLogo {
+  static stylesheet() {
+    return `
+      $ {
+        margin: 5px 10px 0px 0px;
+      }
+      $ svg {
+        width: 50px;
+      }
+      $ path {
+        fill: #FFFFFF; }
+      }
+    `;
+  }
+}
+
+Component.register(MdToolbarLogo);
+
+//-----------------------------------------------------------------------------
+// Button
+//-----------------------------------------------------------------------------
 
 export class MdIconButton extends Component {
   render() {
@@ -140,7 +263,7 @@ export class MdIconButton extends Component {
 
   static stylesheet() {
     return `
-      md-icon-button button {
+      $ button {
         border-radius: 50%;
         border: 0;
         height: 40px;
@@ -152,7 +275,7 @@ export class MdIconButton extends Component {
         cursor: pointer;
       }
 
-      md-icon-button button:hover:enabled {
+      $ button:hover:enabled {
         background-color: rgba(0,0,0,0.07);
       }
 
@@ -161,19 +284,19 @@ export class MdIconButton extends Component {
         cursor: default;
       }
 
-      md-toolbar md-icon-button button {
+      md-toolbar $ button {
         color: rgb(255,255,255);
       }
 
-      md-toolbar md-icon-button button:first-child {
+      md-toolbar $ button:first-child {
         margin-left: -8px;
       }
 
-      md-icon-button button:focus {
+      $ button:focus {
         outline: none;
       }
 
-      md-icon-button button i {
+      $ button i {
         font-family: 'Material Icons';
         font-weight: normal;
         font-style: normal;
@@ -186,11 +309,49 @@ export class MdIconButton extends Component {
         word-wrap: normal;
         direction: ltr;
       }
-    `
+    `;
   }
 }
 
 Component.register(MdIconButton);
+
+//-----------------------------------------------------------------------------
+// Text
+//-----------------------------------------------------------------------------
+
+export class MdText extends Component {
+  render() {
+    let text = this.state;
+    if (text) {
+      return `<div>${Component.escape(text)}</div>`;
+    } else {
+      return "";
+    }
+  }
+}
+
+Component.register(MdText);
+
+export class MdLink extends Component {
+  render() {
+    if (!this.state) return "";
+    let url = this.state.url;
+    let text = this.state.text;
+    let extra = "";
+    if (this.props.newtab || this.state.newtab) extra = 'target="_blank"';
+    if (text) {
+      return `<a href="${url}" ${extra}>${Component.escape(text)}</a>`;
+    } else {
+      return "";
+    }
+  }
+}
+
+Component.register(MdLink);
+
+//-----------------------------------------------------------------------------
+// Icon
+//-----------------------------------------------------------------------------
 
 export class MdIcon extends Component {
   render() {
@@ -199,7 +360,12 @@ export class MdIcon extends Component {
 
   static stylesheet() {
     return `
-      md-icon i {
+      $ {
+        align-items: center;
+        display: flex;
+      }
+
+      $ i {
         font-family: 'Material Icons';
         font-weight: normal;
         font-style: normal;
@@ -212,11 +378,15 @@ export class MdIcon extends Component {
         word-wrap: normal;
         direction: ltr;
       }
-    `
+    `;
   }
 }
 
 Component.register(MdIcon);
+
+//-----------------------------------------------------------------------------
+// Radio button
+//-----------------------------------------------------------------------------
 
 export class MdRadioButton extends Component {
   render() {
@@ -229,18 +399,18 @@ export class MdRadioButton extends Component {
 
   static stylesheet() {
     return `
-      md-radio-button {
+      $ {
         display: flex;
         height: 30px;
         width: 30px;
         border-radius: 50%;
       }
 
-      md-radio-button:hover {
+      $:hover {
         background-color: rgba(0,0,0,0.07);
       }
 
-      md-radio-button input {
+      $ input {
         height: 15px;
         width: 15px;
         margin: 8px;
@@ -248,24 +418,229 @@ export class MdRadioButton extends Component {
         user-select: none;
         cursor: pointer;
       }
-    `
+    `;
   }
 }
 
 Component.register(MdRadioButton);
 
-export class MdSpacer extends Component {
+//-----------------------------------------------------------------------------
+// Search box
+//-----------------------------------------------------------------------------
+
+export class MdSearch extends Component {
+  onconnected() {
+    this.bind("input", "input", e => this.oninput(e));
+    this.bind("input", "keydown", e => this.onkeydown(e));
+    this.bind(null, "focus", e => this.onfocus(e));
+    this.bind(null, "focusout", e => this.onunfocus(e));
+    this.bind(null, "click", e => this.onclick(e));
+  }
+
+  onkeydown(e) {
+    let list = this.find("md-search-list");
+    if (list) {
+      if (e.keyCode == 40) {
+        list.next();
+      } else if (e.keyCode == 38) {
+        list.prev();
+      } else if (e.keyCode == 13) {
+        list.select();
+        e.preventDefault();
+      }
+    }
+  }
+
+  oninput(e) {
+    let query = e.target.value;
+    let min_length = this.props.min_length;
+    if (min_length && query.length < min_length) {
+      this.populate(null);
+    } else {
+      this.dispatchEvent(new CustomEvent("query", {detail: query}));
+    }
+  }
+
+  onclick(e) {
+    let item = e.target.closest("md-search-item");
+    if (item) this.select(item);
+  }
+
+  onfocus(e) {
+    this.find("md-search-list").expand(true);
+  }
+
+  onunfocus(e) {
+    this.find("md-search-list").expand(false);
+  }
+
+  populate(items) {
+    let list = this.find("md-search-list");
+    list.update({items: items});
+    list.scrollTop = 0;
+  }
+
+  select(item) {
+    this.find("md-search-list").expand(false);
+    if (item != null) {
+      if (item.props.name) {
+        this.find("input").value = item.props.name;
+      }
+      this.dispatchEvent(new CustomEvent("item", {detail: item.props.value}));
+    }
+  }
+
+  render() {
+    let attrs = [];
+    if (this.props.placeholder) {
+      attrs.push(` placeholder="${this.props.placeholder}"`);
+    }
+    attrs.push(' spellcheck="false"');
+    if (this.props.autofocus != undefined) {
+      attrs.push(' autofocus');
+    }
+
+    return `
+        <input type="search" ${attrs.join("")}>
+        <md-search-list></md-search-list>
+    `;
+  }
+
   static stylesheet() {
     return `
-      md-spacer {
+      $ {
         display: block;
-        flex: 1;
+        position: relative;
+        width: 100%;
+
+        color: black;
+        font-family: Roboto,Helvetica,sans-serif;
+        font-size: 14px;
       }
-    `
+
+      $ input {
+        outline: none;
+        border: none;
+        line-height: 40px;
+        height: 40px;
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+      }
+    `;
   }
 }
 
-Component.register(MdSpacer);
+Component.register(MdSearch);
+
+export class MdSearchList extends Component {
+  constructor() {
+    super();
+    this.bind(null, "mousedown", this.onmousedown);
+    this.active = -1;
+  }
+
+  onmousedown(e) {
+    // Prevent search list from receiving focus on click.
+    e.preventDefault();
+  }
+
+  expand(expanded) {
+    if (!this.state || !this.state.items || this.state.items.length == 0) {
+      expanded = false;
+    }
+    this.style.display = expanded ? "block" : "none";
+  }
+
+  next() {
+    if (this.active < this.childElementCount - 1) {
+      if (this.active != -1) this.deactivate(this.active);
+      this.active++;
+      this.activate(this.active);
+    }
+  }
+
+  prev() {
+    if (this.active >= 0) {
+      if (this.active != -1) this.deactivate(this.active);
+      this.active--;
+      if (this.active >= 0) {
+        this.activate(this.active);
+      }
+    }
+  }
+
+  select() {
+    let item = this.active == -1 ? null : this.children[this.active];
+    this.match("md-search").select(item);
+  }
+
+  activate(n) {
+    this.children[n].classList.add("active");
+    this.children[n].scrollIntoView({block: "nearest"});
+  }
+
+  deactivate(n) {
+    this.children[n].classList.remove("active");
+  }
+
+  onupdated() {
+    this.active = -1;
+  }
+
+  render() {
+    if (!this.state || !this.state.items || this.state.items.length == 0) {
+      this.expand(false);
+    } else {
+      this.expand(true);
+      return this.state.items;
+    }
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: none;
+        position: absolute;
+        background-color: white;
+        box-shadow: rgba(0, 0, 0, 0.16) 0px 2px 4px 0px,
+                    rgba(0, 0, 0, 0.23) 0px 2px 4px 0px;
+        z-index: 99;
+        width: 100%;
+        max-height: 400px;
+        overflow: auto;
+        cursor: pointer;
+      }
+
+      $ .active {
+        background-color: #d0d0d0;
+      }
+    `;
+  }
+}
+
+Component.register(MdSearchList);
+
+export class MdSearchItem extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+        border-top: 1px solid #d4d4d4;
+      }
+
+      $:hover {
+        background-color: #f0f0f0;
+      }
+    `;
+  }
+}
+
+Component.register(MdSearchItem);
+
+//-----------------------------------------------------------------------------
+// Data table
+//-----------------------------------------------------------------------------
 
 export class MdDataField extends Component {}
 
@@ -330,7 +705,7 @@ export class MdDataTable extends Component {
 
   static stylesheet() {
     return `
-      md-data-table {
+      $ {
         border: 0;
         border-collapse: collapse;
         white-space: nowrap;
@@ -338,11 +713,11 @@ export class MdDataTable extends Component {
         text-align: left;
       }
 
-      md-data-table thead {
+      $ thead {
         padding-bottom: 3px;
       }
 
-      md-data-table th {
+      $ th {
         vertical-align: bottom;
         padding: 8px 12px;
         box-sizing: border-box;
@@ -351,7 +726,7 @@ export class MdDataTable extends Component {
         color: rgba(0,0,0,.54);
       }
 
-      md-data-table td {
+      $ td {
         vertical-align: middle;
         border-bottom: 1px solid rgba(0,0,0,.12);
         padding: 8px 12px;
@@ -359,28 +734,12 @@ export class MdDataTable extends Component {
         text-overflow: ellipsis;
       }
 
-      md-data-table td:first-of-type, md-data-table th:first-of-type {
+      $ td:first-of-type, $ th:first-of-type {
         padding-left: 24px;
       }
-    `
+    `;
   }
 }
 
 Component.register(MdDataTable);
-
-export class MdCard extends Component {
-  static stylesheet() {
-    return `
-      md-card {
-        display: block;
-        background-color: rgb(255, 255, 255);
-        box-shadow: rgba(0, 0, 0, 0.16) 0px 2px 4px 0px,
-                    rgba(0, 0, 0, 0.23) 0px 2px 4px 0px;
-        margin: 10px 5px;
-        padding: 10px;
-    `
-  }
-}
-
-Component.register(MdCard);
 

@@ -15,6 +15,7 @@ export class Component extends HTMLElement {
   connectedCallback () {
     // Add attributes to properties.
     for (const attr of this.attributes) {
+      let name = attr.name.replaceAll("-", "_");
       let value = attr.value;
 
       if (value == "null") {
@@ -28,25 +29,50 @@ export class Component extends HTMLElement {
         if (!isNaN(n) && isFinite(n)) value = n;
       }
 
-      this.props[attr.name] = value;
+      this.props[name] = value;
     }
 
     // Render component.
     this.onconnect && this.onconnect();
-    if (this.render) {
-      this.innerHTML = this.render();
-    }
+    this.generate();
     this.onconnected && this.onconnected();
   }
 
   // Update component state.
   update(state) {
-    this.state = state || this.state;
-    this.onupdate && this.onupdate();
-    if (this.render) {
-      this.innerHTML = this.render();
+    this.state = state;
+    let show = true;
+    if (this.visible) show = this.visible();
+    if (show) {
+      this.onupdate && this.onupdate();
+      this.generate();
+      this.onupdated && this.onupdated();
+    } else {
+      this.style.display = "none";
     }
-    this.onupdated && this.onupdated();
+  }
+
+  // Generate component content.
+  generate() {
+    let show = true;
+    if (this.visible) show = this.visible();
+    if (show) {
+      this.style.display = "";
+      if (this.render) {
+        let content = this.render();
+        if (content instanceof Array) {
+          while (this.firstChild) this.removeChild(this.lastChild);
+          for (let n of content) this.appendChild(n);
+        } else if (content instanceof Node) {
+          while (this.firstChild) this.removeChild(this.lastChild);
+          this.appendChild(content);
+        } else {
+          this.innerHTML = content;
+        }
+      }
+    } else {
+      this.style.display = "none";
+    }
   }
 
   // Generate HTML for template.
@@ -55,7 +81,8 @@ export class Component extends HTMLElement {
     for (let i = 0; i < strings.length; ++i) {
       parts.push(strings[i]);
       if (i >= values.length) continue;
-      parts.push(values[i].toString());
+      let value = values[i];
+      parts.push(value);
     }
     return parts.join("");
   }
@@ -75,6 +102,9 @@ export class Component extends HTMLElement {
   // Bind event handler to selected element.
   bind(selector, event, handler) {
     let elem = this.find(selector);
+    if (!elem) {
+      throw new Error(`element '${selector}' not found`);
+    }
     elem.addEventListener(event, handler);
   }
 
@@ -106,11 +136,12 @@ export class Component extends HTMLElement {
     // Register custom element.
     window.customElements.define(tagname, cls);
 
-    // Register global style sheet.
+    // Register style sheet for web component.
     if (cls.stylesheet) {
       if (!Component.stylesheets.includes(cls.stylesheet)) {
         Component.stylesheets.push(cls.stylesheet);
-        stylesheet(cls.stylesheet());
+        let css = cls.stylesheet().replaceAll("$", tagname);
+        stylesheet(css);
       }
     }
   }

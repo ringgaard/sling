@@ -171,9 +171,7 @@ cc_library(
 embed_data(
   name = "app",
   srcs = [
-    "app/appicon.ico",
     "app/index.html",
-    "app/kb.css",
     "app/kb.js",
   ],
 )
@@ -186,6 +184,7 @@ cc_library(
     ":app",
     ":calendar",
     ":name-table",
+    "//app",
     "//sling/frame:object",
     "//sling/frame:serialization",
     "//sling/frame:store",

@@ -105,6 +105,7 @@ class KnowledgeService {
   NameTable aliases_;
 
   // Knowledge base browser app.
+  StaticContent common_{"/common", "app"};
   StaticContent app_{"/kb", "sling/nlp/kb/app"};
 
   // Symbols.

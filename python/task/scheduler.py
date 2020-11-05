@@ -810,8 +810,7 @@ class SchedulerService(BaseHTTPRequestHandler):
       if job.status:
         terminated.append(
           '<a href="/status/%s" target="_blank">status</a> ' % (job.id))
-      if job.error:
-        terminated.extend(("\n<pre>\n", str(job.error), "\n</pre>\n"))
+      if job.error: terminated.append(str(job.error));
       terminated.append("</td>")
       terminated.append("</tr>")
 

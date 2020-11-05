@@ -568,6 +568,7 @@ void KnowledgeService::Register(HTTPServer *http) {
   http->Register("/kb/query", this, &KnowledgeService::HandleQuery);
   http->Register("/kb/item", this, &KnowledgeService::HandleGetItem);
   http->Register("/kb/frame", this, &KnowledgeService::HandleGetFrame);
+  common_.Register(http);
   app_.Register(http);
 }
 

@@ -167,7 +167,6 @@ void InstallFailureSignalHandlers() {
   InstallSignalHandler(SIGILL, FailureSignalHandler);
   InstallSignalHandler(SIGFPE, FailureSignalHandler);
   InstallSignalHandler(SIGABRT, FailureSignalHandler);
-  InstallSignalHandler(SIGTERM, FailureSignalHandler);
   InstallSignalHandler(SIGBUS, FailureSignalHandler);
   InstallSignalHandler(SIGTRAP, FailureSignalHandler);
 }

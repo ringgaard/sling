@@ -214,4 +214,5 @@ while True:
 
   except Exception as e:
     print("SSE error:", e)
+    time.sleep(60)
 

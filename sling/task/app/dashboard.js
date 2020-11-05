@@ -8,8 +8,7 @@ function pad(num, width) {
 
 function int(num) {
   if (!isFinite(num)) return "---";
-  return num.toLocaleString("en", {
-    minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return Math.round(num).toString();
 }
 
 function dec(num, decimals) {
@@ -314,7 +313,7 @@ class DashboardJobs extends Component {
 
   static stylesheet() {
     return `
-      dashboard-jobs {
+      $ {
         margin: 10px;
       }
     `;
@@ -373,12 +372,12 @@ class DashboardPerf extends Component {
         src: url(digital-7.mono.ttf);
       }
 
-      dashboard-perf {
+      $ {
         margin-top: 10px;
         margin-right: 20px;
       }
 
-      dashboard-perf table {
+      $ table {
         padding: 4px;
         width: 160px;
         margin-left: 8px;
@@ -394,7 +393,7 @@ class DashboardPerf extends Component {
         text-shadow: 1px 1px 4px rgba(150, 150, 150, 1);
       }
 
-      dashboard-perf td {
+      $ td {
         vertical-align: baseline;
       }
 
@@ -420,8 +419,8 @@ class DashboardCounters extends Component {
       for (const counter of sort(job.counters, "name")) {
         table.push({
           counter: counter.name.replaceAll("_", " "),
-          value: int(counter.value),
-          rate: int(counter.rate),
+          value: dec(counter.value, 0),
+          rate: dec(counter.rate, 0),
         });
       }
 
@@ -436,7 +435,7 @@ class DashboardCounters extends Component {
 
   static stylesheet() {
     return `
-      dashboard-counters {
+      $ {
         display: block;
         margin-left: 10px;
         margin-right: 10px;
@@ -457,11 +456,11 @@ class DashboardChannels extends Component {
         table.push({
           channel: channel.name,
           direction: channel.direction,
-          key_bytes: int(channel.key_bytes),
-          value_bytes: int(channel.value_bytes),
+          key_bytes: dec(channel.key_bytes, 0),
+          value_bytes: dec(channel.value_bytes, 0),
           bandwidth: dec(channel.bandwidth / 1000000, 3) + " MB/s",
-          messages: int(channel.messages),
-          throughput: int(channel.throughput) + " MBS",
+          messages: dec(channel.messages, 0),
+          throughput: dec(channel.throughput, 0) + " MPS",
           shards: `${channel.shards_done}/${channel.shards_total}`,
         });
       }
@@ -477,7 +476,7 @@ class DashboardChannels extends Component {
 
   static stylesheet() {
     return `
-      dashboard-channels {
+      $ {
         display: block;
         margin-left: 10px;
         margin-right: 10px;

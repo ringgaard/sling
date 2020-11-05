@@ -20,6 +20,11 @@ flags.define("--chsdb",
              default="http://localhost:7070/chs",
              metavar="DBURL")
 
+flags.define("--output",
+             help="Output file with company ids",
+             default=None,
+             metavar="FILE")
+
 flags.define("--new",
              help="Only output new companies",
              default=False,
@@ -63,6 +68,10 @@ def lookup_company(company_no):
   else:
     r.raise_for_status()
 
+# Open output file.
+fout = None
+if flags.arg.output: fout = open(flags.arg.output, "w")
+
 # Open company data file.
 dump = zipfile.ZipFile(flags.arg.dump, "r")
 fn = os.path.basename(flags.arg.dump).replace(".zip", ".csv")
@@ -103,6 +112,9 @@ for row in reader:
     print(num_refresh, "/", num_companies, company_no, company_name, latest)
   else:
     print(company_no)
+  if fout: fout.write(company_no + "\n")
 
   if num_refresh >= flags.arg.max: break
+
+if fout: fout.close()
 
