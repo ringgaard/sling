@@ -34,12 +34,19 @@ class StaticContent {
   // Serve static web content from directory.
   void HandleFile(HTTPRequest *request, HTTPResponse *response);
 
+  // Fall back to index page if file not found.
+  bool index_fallback() const { return index_fallback_; }
+  void set_index_fallback(bool b) { index_fallback_ = b; }
+
  private:
   // URL path for static content.
   string url_;
 
   // Directory with static web content to be served.
   string dir_;
+
+  // Return index page if file not found.
+  bool index_fallback_ = false;
 };
 
 }  // namespace sling

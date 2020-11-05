@@ -21,6 +21,12 @@ class KbApp extends Component {
 
   onconnected() {
     window.onpopstate = e => this.onpopstate(e);
+
+    let path = window.location.pathname;
+    let id = path.substring(path.indexOf('/', 1) + 1);
+    if (id.length > 0) {
+      this.navigate(id);
+    }
   }
 
   navigate(id) {

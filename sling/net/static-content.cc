@@ -147,13 +147,25 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
   if (!st.ok()) {
     if (st.code() == EACCES) {
       response->SendError(403, "Forbidden", nullptr);
+      return;
     } else if (st.code() == ENOENT) {
-      response->SendError(404, "Not Found", nullptr);
+      if (index_fallback_) {
+        // Fall back to index page for unknown files.
+        filename = dir_ + "/index.html";
+        st = File::Stat(filename, &stat);
+        if (!st.ok()) {
+          response->SendError(404, "Index file not Found", nullptr);
+          return;
+        }
+      } else {
+        response->SendError(404, "Not Found", nullptr);
+        return;
+      }
     } else {
       string error = HTMLEscape(st.message());
       response->SendError(500, "Internal Server Error", error.c_str());
+      return;
     }
-    return;
   }
 
   // Redirect to index page for directory.

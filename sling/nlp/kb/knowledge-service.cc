@@ -570,6 +570,7 @@ void KnowledgeService::Register(HTTPServer *http) {
   http->Register("/kb/frame", this, &KnowledgeService::HandleGetFrame);
   common_.Register(http);
   app_.Register(http);
+  app_.set_index_fallback(true);
 }
 
 void KnowledgeService::HandleQuery(HTTPRequest *request,
