@@ -61,7 +61,11 @@ class KbLink extends Component {
   }
 
   onclick(e) {
-    this.match("#app").navigate(this.props.ref);
+    if (e.ctrlKey) {
+      window.open("/kb/" + this.props.ref, '_blank', 'noreferrer');
+    } else {
+      this.match("#app").navigate(this.props.ref);
+    }
   }
 
   static stylesheet() {
@@ -281,6 +285,10 @@ class KbPropertyTable extends Component {
         border-top: 1px solid lightgrey;
       }
 
+      $ .prop-row:first-child {
+        border-top: none;
+      }
+
       $ .prop-name {
         font-weight: bold;
         width: 20%;
@@ -397,6 +405,10 @@ class KbItemList extends Component {
 
       $ tr {
         border-top: 1px solid lightgrey;
+      }
+
+      $ tr:first-child {
+        border-top: none;
       }
 
       $ td {

@@ -337,9 +337,15 @@ export class MdLink extends Component {
     if (!this.state) return "";
     let url = this.state.url;
     let text = this.state.text;
-    let extra = "";
-    if (this.props.newtab || this.state.newtab) extra = 'target="_blank"';
+    let attrs = [];
+    if (this.props.newtab || this.state.newtab) {
+      attrs.push('target="_blank"');
+    }
+    if (this.props.external || this.state.external) {
+      attrs.push('rel="noreferrer"');
+    }
     if (text) {
+      let extra = attrs.join(" ");
       return `<a href="${url}" ${extra}>${Component.escape(text)}</a>`;
     } else {
       return "";
@@ -445,7 +451,7 @@ export class MdSearch extends Component {
       } else if (e.keyCode == 38) {
         list.prev();
       } else if (e.keyCode == 13) {
-        list.select();
+        list.select(e.ctrlKey);
         e.preventDefault();
       }
     }
@@ -463,7 +469,7 @@ export class MdSearch extends Component {
 
   onclick(e) {
     let item = e.target.closest("md-search-item");
-    if (item) this.select(item);
+    if (item) this.select(item, e.ctrlKey);
   }
 
   onfocus(e) {
@@ -480,8 +486,8 @@ export class MdSearch extends Component {
     list.scrollTop = 0;
   }
 
-  select(item) {
-    this.find("md-search-list").expand(false);
+  select(item, keep) {
+    if (!keep) this.find("md-search-list").expand(false);
     if (item != null) {
       if (item.props.name) {
         this.find("input").value = item.props.name;
@@ -537,7 +543,7 @@ export class MdSearchList extends Component {
   constructor() {
     super();
     this.bind(null, "mousedown", this.onmousedown);
-    this.active = -1;
+    this.active = null;
   }
 
   onmousedown(e) {
@@ -553,39 +559,39 @@ export class MdSearchList extends Component {
   }
 
   next() {
-    if (this.active < this.childElementCount - 1) {
-      if (this.active != -1) this.deactivate(this.active);
-      this.active++;
-      this.activate(this.active);
+    if (this.active) {
+      if (this.active.nextSibling) {
+        this.activate(this.active.nextSibling);
+      }
+    } else if (this.firstChild) {
+      this.activate(this.firstChild);
     }
   }
 
   prev() {
-    if (this.active >= 0) {
-      if (this.active != -1) this.deactivate(this.active);
-      this.active--;
-      if (this.active >= 0) {
-        this.activate(this.active);
-      }
+    if (this.active) {
+      this.activate(this.active.previousSibling);
     }
   }
 
-  select() {
-    let item = this.active == -1 ? null : this.children[this.active];
-    this.match("md-search").select(item);
+  select(keep) {
+    this.match("md-search").select(this.active, keep);
   }
 
-  activate(n) {
-    this.children[n].classList.add("active");
-    this.children[n].scrollIntoView({block: "nearest"});
-  }
+  activate(item) {
+    if (this.active) {
+      this.active.highlight(false);
+    }
 
-  deactivate(n) {
-    this.children[n].classList.remove("active");
+    if (item) {
+      item.highlight(true);
+      item.scrollIntoView({block: "nearest"});
+    }
+    this.active = item;
   }
 
   onupdated() {
-    this.active = -1;
+    this.active = null;
   }
 
   render() {
@@ -602,7 +608,7 @@ export class MdSearchList extends Component {
       $ {
         display: none;
         position: absolute;
-        background-color: white;
+        background: #ffffff;
         box-shadow: rgba(0, 0, 0, 0.16) 0px 2px 4px 0px,
                     rgba(0, 0, 0, 0.23) 0px 2px 4px 0px;
         z-index: 99;
@@ -611,10 +617,6 @@ export class MdSearchList extends Component {
         overflow: auto;
         cursor: pointer;
       }
-
-      $ .active {
-        background-color: #d0d0d0;
-      }
     `;
   }
 }
@@ -622,15 +624,23 @@ export class MdSearchList extends Component {
 Component.register(MdSearchList);
 
 export class MdSearchItem extends Component {
+  onconnected() {
+    this.bind(null, "mousemove", this.onmousemove);
+  }
+
+  onmousemove(e) {
+    this.match("md-search-list").activate(this);
+  }
+
+  highlight(on) {
+    this.style.background = on ? "#f0f0f0" : "#ffffff";
+  }
+
   static stylesheet() {
     return `
       $ {
         display: block;
         border-top: 1px solid #d4d4d4;
-      }
-
-      $:hover {
-        background-color: #f0f0f0;
       }
     `;
   }

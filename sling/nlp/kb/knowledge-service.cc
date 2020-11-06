@@ -580,7 +580,7 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
   // Get query
   Text query = ws.Get("q");
   int window = ws.Get("window", 5000);
-  int limit = ws.Get("limit", 30);
+  int limit = ws.Get("limit", 50);
   int boost = ws.Get("boost", 1000);
   LOG(INFO) << "Name query: " << query;
 
