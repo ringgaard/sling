@@ -40,11 +40,13 @@ void Thread::Start() {
 
 void Thread::Join() {
   if (!running_) return;
-  CHECK(joinable_);
-
-  void *unused;
-  pthread_join(thread_, &unused);
-  running_ = false;
+  if (joinable_) {
+    void *unused;
+    pthread_join(thread_, &unused);
+    running_ = false;
+  } else {
+    LOG(WARNING) << "Thread " << thread_ << " is not joinable";
+  }
 }
 
 void Thread::SetJoinable(bool joinable) {
@@ -65,7 +67,8 @@ void WorkerPool::Start(int num_workers, const Worker &worker) {
   // Create worker threads.
   int first = workers_.size();
   for (int i = 0; i < num_workers; ++i) {
-    workers_.emplace_back([worker, i]() { worker(i); });
+    int index = first + i;
+    workers_.emplace_back([worker, index]() { worker(index); });
   }
 
   // Start worker threads.
