@@ -20,8 +20,9 @@ class KbApp extends Component {
   }
 
   onconnected() {
-    window.onpopstate = e => this.onpopstate(e);
+    this.bind("#websearch", "click", e => this.onwebsearch(e));
 
+    window.onpopstate = e => this.onpopstate(e);
     let path = window.location.pathname;
     let id = path.substring(path.indexOf('/', 1) + 1);
     if (id.length > 0) {
@@ -50,6 +51,22 @@ class KbApp extends Component {
 
   onpopstate(e) {
     this.display(e.state);
+  }
+
+  onwebsearch(e) {
+    let query = this.find("#search").query();
+    if (query && query.length > 0) {
+      let url = "https://www.google.com/search?q=" + encodeURIComponent(query);
+      window.open(url,'_blank');
+    }
+  }
+
+  static stylesheet() {
+    return `
+      #websearch {
+        padding-left: 12px;
+      }
+    `;
   }
 }
 
@@ -98,7 +115,7 @@ class KbSearchBox extends Component {
     if (this.populating) return;
     this.populating = true;
 
-    let query = e.detail;
+    let query = e.detail.trimStart();
     let target = e.target;
     fetch("/kb/query?fmt=cjson&q=" + encodeURIComponent(query))
       .then(response => response.json())
@@ -131,6 +148,10 @@ class KbSearchBox extends Component {
   onitem(e) {
     let id = e.detail;
     this.match("#app").navigate(id);
+  }
+
+  query() {
+    return this.find("md-search").query();
   }
 
   render() {
@@ -438,16 +459,16 @@ class KbItemCard extends MdCard {
     return MdCard.stylesheet() + `
       $ #title {
         display: block;
-        margin-top: 10px;
-        font-size: 24px;
+        font-size: 28px;
       }
 
       $ #ref a {
         display: block;
         font-size: 13px;
         color: #808080;
-        margin-bottom: 10px;
         text-decoration: none;
+        width: fit-content;
+        margin-top: 5px;
       }
 
       $ #description {
@@ -455,7 +476,6 @@ class KbItemCard extends MdCard {
       }
 
       $ #datatype {
-        margin-top: 20px;
         font-size: 16px;
       }
     `;
@@ -509,35 +529,9 @@ class KbPictureCard extends MdCard {
     return item && item.thumbnail;
   }
 
-  onupdated() {
-    let item = this.state;
-    let thumbnail = item.thumbnail;
-    if (!thumbnail) return;
-
-    // Clear picture while loading.
-    let a = this.find("a");
-    let img = this.find("img");
-    a.href = "";
-    img.src = "";
-
-    // Get image info from Wikipedia Commons.
-    fetch(commons_service + encodeURIComponent(thumbnail))
-      .then(response => response.json())
-      .then((data) => {
-        for (let p in data.query.pages) {
-          let page = data.query.pages[p];
-          img.src = page.imageinfo[0].thumburl;
-          a.href = commons_url + encodeURIComponent(thumbnail);
-          break;
-        }
-      })
-      .catch((error) => {
-        console.error('error', error);
-      });
-  }
-
   render() {
-    return '<a href="" target="_blank"><img src=""></a>';
+    let url = this.state.thumbnail;
+    return `<a href="${url}" target="_blank"><img src="${url}"></a>`;
   }
 
   static stylesheet() {
@@ -549,6 +543,7 @@ class KbPictureCard extends MdCard {
       $ img {
         max-width: 100%;
         max-height: 480px;
+        vertical-align: middle
       }
     `;
   }

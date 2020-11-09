@@ -29,6 +29,7 @@
 #include "sling/nlp/kb/calendar.h"
 #include "sling/string/text.h"
 #include "sling/string/strcat.h"
+#include "sling/util/md5.h"
 #include "sling/util/sortmap.h"
 
 namespace sling {
@@ -502,6 +503,33 @@ static string ConvertGeoCoord(double coord, bool latitude) {
   return StrCat(degrees, "°", minutes, "′", seconds, "″", sign);
 }
 
+// Make Wikimedia Commons url for file.
+static string CommonsUrl(Text filename) {
+  // Replace spaces with underscores.
+  string fn = filename.str();
+  for (char &c : fn) {
+    if (c == ' ') c = '_';
+  }
+
+  // Compute MD5 digest for filename.
+  unsigned char digest[16];
+  MD5Digest(digest, fn.data(), fn.size());
+  char d1 = "0123456789abcdef"[digest[0] >> 4];
+  char d2 = "0123456789abcdef"[digest[0] & 0x0f];
+
+  // Commons files are stored in subdirectories based on the MD5 digest of the
+  // filename.
+  string url = "https://upload.wikimedia.org/wikipedia/commons/";
+  url.push_back(d1);
+  url.push_back('/');
+  url.push_back(d1);
+  url.push_back(d2);
+  url.push_back('/');
+  url.append(fn);
+
+  return url;
+}
+
 void KnowledgeService::Load(Store *kb, const string &name_table) {
   // Bind names and freeze store.
   kb_ = kb;
@@ -655,10 +683,15 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   b.Add(n_categories_, Array(ws.store(), info.categories));
 
   // Set item image.
+  Handle thumbnail = Handle::nil();
   if (!info.image.IsNil()) {
-    b.Add(n_thumbnail_, info.image);
+    thumbnail = info.image;
   } else if (!info.alternate_image.IsNil()) {
-    b.Add(n_thumbnail_, info.alternate_image);
+    thumbnail = info.alternate_image;
+  }
+  if (!thumbnail.IsNil()) {
+    Text filename = String(item.store(), thumbnail).text();
+    b.Add(n_thumbnail_, CommonsUrl(filename));
   }
 
   // Return response.
@@ -710,7 +743,9 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
     p.Add(n_type_, property->datatype);
 
     // Add property values.
-    SortChronologically(item.store(), group->second);
+    if (!property->image) {
+      SortChronologically(item.store(), group->second);
+    }
     Handles values(item.store());
     for (Handle h : *group->second) {
       // Resolve value.

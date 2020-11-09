@@ -16,6 +16,7 @@
         <md-toolbar-logo></md-toolbar-logo>
         <div>Knowledge</div>
         <kb-search-box id="search"></kb-search-box>
+        <md-icon-button id="websearch" icon="search"></md-icon-button>
       </md-toolbar>
 
       <md-content>
@@ -24,10 +25,14 @@
 
             <!-- Item card -->
             <kb-item-card id="item">
-              <md-text id="title"></md-text>
-              <md-link id="ref" newtab="true" external="true"></md-link>
-              <md-text id="description"></md-text>
-              <md-text id="datatype"></md-text>
+              <md-card-toolbar>
+                <div>
+                  <md-text id="title"></md-text>
+                  <md-link id="ref" newtab="true" external="true"></md-link>
+                </div>
+              </md-card-toolbar>
+              <div><md-text id="description"></md-text></div>
+              <div><md-text id="datatype"></md-text></div>
             </kb-item-card>
 
             <!-- Item properties card -->

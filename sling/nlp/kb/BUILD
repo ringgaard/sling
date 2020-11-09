@@ -191,6 +191,7 @@ cc_library(
     "//sling/net:http-server",
     "//sling/net:static-content",
     "//sling/net:web-service",
+    "//sling/util:md5",
     "//sling/util:sortmap",
   ],
 )

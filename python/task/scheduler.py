@@ -528,42 +528,6 @@ body {
   vertical-align: top;
 }
 
-.mdt-numeric-1 td:nth-child(1), .mdt-numeric-1 th:nth-child(1) {
-  text-align: right;
-}
-
-.mdt-numeric-2 td:nth-child(2), .mdt-numeric-2 th:nth-child(2) {
-  text-align: right;
-}
-
-.mdt-numeric-3 td:nth-child(3), .mdt-numeric-3 th:nth-child(3) {
-  text-align: right;
-}
-
-.mdt-numeric-4 td:nth-child(4), .mdt-numeric-4 th:nth-child(4) {
-  text-align: right;
-}
-
-.mdt-numeric-5 td:nth-child(5), .mdt-numeric-5 th:nth-child(5) {
-  text-align: right;
-}
-
-.mdt-numeric-6 td:nth-child(6), .mdt-numeric-6 th:nth-child(6) {
-  text-align: right;
-}
-
-.mdt-numeric-7 td:nth-child(7), .mdt-numeric-7 th:nth-child(7) {
-  text-align: right;
-}
-
-.mdt-numeric-8 td:nth-child(8), .mdt-numeric-8 th:nth-child(8) {
-  text-align: right;
-}
-
-.mdt-numeric-9 td:nth-child(9), .mdt-numeric-8 th:nth-child(9) {
-  text-align: right;
-}
-
 .mdt-data-table thead {
   padding-bottom: 3px;
 }
@@ -622,7 +586,7 @@ job_template = """<!DOCTYPE html>
 <div class="mdt-content">
   <div class="mdt-card">
     <div class="mdt-card-toolbar">Running jobs</div>
-      <table class="mdt-data-table mdt-numeric-6">
+      <table class="mdt-data-table">
         <thead>
           <tr>
             <th>Job</th>
@@ -642,7 +606,7 @@ job_template = """<!DOCTYPE html>
 
   <div class="mdt-card">
     <div class="mdt-card-toolbar">Pending jobs</div>
-      <table class="mdt-data-table mdt-numeric-5">
+      <table class="mdt-data-table">
         <thead>
           <tr>
             <th>Job</th>
@@ -661,7 +625,7 @@ job_template = """<!DOCTYPE html>
 
   <div class="mdt-card">
     <div class="mdt-card-toolbar">Terminated jobs</div>
-      <table class="mdt-data-table mdt-numeric-7">
+      <table class="mdt-data-table">
         <thead>
           <tr>
             <th>Job</th>

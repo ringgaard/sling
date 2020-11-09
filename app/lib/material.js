@@ -323,7 +323,7 @@ export class MdText extends Component {
   render() {
     let text = this.state;
     if (text) {
-      return `<div>${Component.escape(text)}</div>`;
+      return `${Component.escape(text)}`;
     } else {
       return "";
     }
@@ -438,7 +438,7 @@ export class MdSearch extends Component {
   onconnected() {
     this.bind("input", "input", e => this.oninput(e));
     this.bind("input", "keydown", e => this.onkeydown(e));
-    this.bind(null, "focus", e => this.onfocus(e));
+    this.bind(null, "focusin", e => this.onfocus(e));
     this.bind(null, "focusout", e => this.onunfocus(e));
     this.bind(null, "click", e => this.onclick(e));
   }
@@ -494,6 +494,10 @@ export class MdSearch extends Component {
       }
       this.dispatchEvent(new CustomEvent("item", {detail: item.props.value}));
     }
+  }
+
+  query() {
+    return this.find("input").value;
   }
 
   render() {
