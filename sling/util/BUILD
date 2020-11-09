@@ -19,6 +19,15 @@ cc_library(
 )
 
 cc_library(
+  name = "md5",
+  srcs = ["md5.cc"],
+  hdrs = ["md5.h"],
+  deps = [
+    "//sling/base",
+  ],
+)
+
+cc_library(
   name = "fingerprint",
   srcs = ["fingerprint.cc"],
   hdrs = ["fingerprint.h"],
