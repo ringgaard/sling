@@ -288,10 +288,6 @@ export class MdIconButton extends Component {
         color: rgb(255,255,255);
       }
 
-      md-toolbar $ button:first-child {
-        margin-left: -8px;
-      }
-
       $ button:focus {
         outline: none;
       }
@@ -343,6 +339,9 @@ export class MdLink extends Component {
     }
     if (this.props.external || this.state.external) {
       attrs.push('rel="noreferrer"');
+    }
+    if (this.props.notab || this.state.notab) {
+      attrs.push('tabindex="-1"');
     }
     if (text) {
       let extra = attrs.join(" ");
@@ -431,6 +430,58 @@ export class MdRadioButton extends Component {
 Component.register(MdRadioButton);
 
 //-----------------------------------------------------------------------------
+// Input box
+//-----------------------------------------------------------------------------
+
+export class MdInput extends Component {
+  value() {
+    return this.find("input").value;
+  }
+
+  render() {
+    let attrs = [];
+    if (this.props.type) {
+      attrs.push(` type="${this.props.type}"`);
+    }
+    if (this.props.placeholder) {
+      attrs.push(` placeholder="${this.props.placeholder}"`);
+    }
+    attrs.push(' spellcheck="false"');
+    if (this.props.autofocus != undefined) {
+      attrs.push(' autofocus');
+    }
+
+    return `<input ${attrs.join("")}>`;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+        position: relative;
+        width: 100%;
+
+        color: black;
+        font-family: Roboto,Helvetica,sans-serif;
+        font-size: 14px;
+      }
+
+      $ input {
+        outline: none;
+        border: none;
+        line-height: 40px;
+        height: 40px;
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+      }
+    `;
+  }
+}
+
+Component.register(MdInput);
+
+//-----------------------------------------------------------------------------
 // Search box
 //-----------------------------------------------------------------------------
 
@@ -488,10 +539,10 @@ export class MdSearch extends Component {
 
   select(item, keep) {
     if (!keep) this.find("md-search-list").expand(false);
+    let input = this.find("input");
     if (item != null) {
-      if (item.props.name) {
-        this.find("input").value = item.props.name;
-      }
+      if (item.props.name) input.value = item.props.name;
+      input.blur();
       this.dispatchEvent(new CustomEvent("item", {detail: item.props.value}));
     }
   }

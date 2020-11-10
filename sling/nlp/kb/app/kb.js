@@ -450,7 +450,11 @@ class KbItemCard extends MdCard {
   onupdate() {
     let item = this.state;
     this.find("#title").update(item.text);
-    this.find("#ref").update({url: wikiurl(item.ref), text: item.ref});
+    this.find("#ref").update({
+      url: wikiurl(item.ref),
+      text: item.ref,
+      external: true,
+    });
     this.find("#description").update(item.description);
     this.find("#datatype").update(item.type ? "Datatype: " + item.type : "");
   }
