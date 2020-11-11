@@ -541,7 +541,6 @@ export class MdSearch extends Component {
     if (!keep) this.find("md-search-list").expand(false);
     let input = this.find("input");
     if (item != null) {
-      if (item.props.name) input.value = item.props.name;
       input.blur();
       this.dispatchEvent(new CustomEvent("item", {detail: item.props.value}));
     }

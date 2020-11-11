@@ -79,7 +79,7 @@ class KbLink extends Component {
 
   onclick(e) {
     if (e.ctrlKey) {
-      window.open("/kb/" + this.props.ref, '_blank', 'noreferrer');
+      window.open("/kb/" + this.props.ref, '_blank');
     } else {
       this.match("#app").navigate(this.props.ref);
     }
@@ -221,7 +221,7 @@ class KbPropertyTable extends Component {
       } else if (val.url) {
         out.push('<a href="');
         out.push(val.url);
-        out.push('" target="_blank">');
+        out.push('" target="_blank" rel="noreferrer" tabindex="-1">');
       }
       if (val.text) {
         out.push(Component.escape(val.text));
@@ -317,12 +317,6 @@ class KbPropertyTable extends Component {
         vertical-align: top;
       }
 
-      $ .prop-name a {
-        color: #0b0080;
-        text-decoration: none;
-        cursor: pointer;
-      }
-
       $ .prop-values {
         vertical-align: top;
       }
@@ -340,6 +334,7 @@ class KbPropertyTable extends Component {
         color: #0b0080;
         text-decoration: none;
         cursor: pointer;
+        outline: none
       }
 
       $ .qual-tab {
@@ -356,12 +351,6 @@ class KbPropertyTable extends Component {
         width: 150px;
       }
 
-      $ .qprop-name a {
-        color: #0b0080;
-        text-decoration: none;
-        cursor: pointer;
-      }
-
       $ .qprop-values {
         vertical-align: top;
       }
@@ -375,6 +364,7 @@ class KbPropertyTable extends Component {
         color: #0b0080;
         text-decoration: none;
         cursor: pointer;
+        outline: none
       }
     `;
   }
@@ -473,6 +463,7 @@ class KbItemCard extends MdCard {
         text-decoration: none;
         width: fit-content;
         margin-top: 5px;
+        outline: none;
       }
 
       $ #description {
@@ -535,13 +526,19 @@ class KbPictureCard extends MdCard {
 
   render() {
     let url = this.state.thumbnail;
-    return `<a href="${url}" target="_blank"><img src="${url}"></a>`;
+    return `<a href="${url}" target="_blank" rel="noreferrer" tabindex="-1">
+              <img src="${url}" rel="noreferrer">
+            </a>`;
   }
 
   static stylesheet() {
     return MdCard.stylesheet() + `
       $ {
         text-align: center;
+      }
+
+      $ a {
+        outline: none;
       }
 
       $ img {
