@@ -1,80 +1,73 @@
-import {Component, h, render} from "/common/external/preact.js";
-import {Layout, TextField, Button, Icon} from "/common/lib/mdl.js";
-import {Document, DocumentViewer} from "/common/lib/docview.js";
-import {stylesheet} from "/common/lib/util.js";
+// Corpus browser app.
 
-stylesheet("/doc/corpus.css");
+import {Component} from "/common/lib/component.js";
+import {Document} from "/common/lib/docview.js";
 
-class App extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { document: null };
-  }
-
-  update(url) {
-    var self = this;
+class CorpusApp extends Component {
+  display(url) {
     fetch(url)
       .then(response => {
-        if (response.ok) {
-          return response.json();
-        } else {
-          console.log("fetch error", response.status, response.message);
-          return null;
-        }
+        if (!response.ok) throw new Error(response.statusText);
+        return response;
       })
-      .then(response => {
-        self.setState({document: new Document(response)});
+      .then(data => data.json())
+      .then(data => {
+        let doc = new Document(data);
+        this.find("document-viewer").update(doc);
+        this.find("corpus-navigation").setDocId(doc.key);
+      })
+      .catch((error) => {
+        console.log('Fetch error:', error);
       });
-  }
-
-  search(e) {
-    var docid = e.target.value
-    if (docid) {
-      this.update("/fetch?docid=" + docid + "&fmt=cjson");
-    }
-  }
-
-  forward(e) {
-    this.update("/forward?fmt=cjson");
-  }
-
-  back(e) {
-    this.update("/back?fmt=cjson");
-  }
-
-  render(props, state) {
-    return (
-      h("div", {id: "app"},
-        h(Layout, null,
-          h(Layout.Header, null,
-            h(Layout.HeaderRow, null,
-              h(Layout.Title, null, "Corpus Browser"),
-              h(Layout.Spacer),
-              h(TextField, {
-                id: "docid",
-                placeholder: "Document ID",
-                type: "search",
-                value: state.document ? state.document.key : "",
-                onsearch: e => this.search(e),
-              }),
-              h(Button, {icon: true, onclick: e => this.back(e)},
-                h(Icon, {icon: "arrow_backward"})
-              ),
-              h(Button, {icon: true, onclick: e => this.forward(e)},
-                h(Icon, {icon: "arrow_forward"})
-              ),
-            ),
-          ),
-          h(Layout.Drawer, null, h(Layout.Title, null, "Menu")),
-          h(Layout.DrawerButton),
-
-          h(Layout.Content, {id: "main"},
-            h(DocumentViewer, {document: state.document})
-          )
-        )
-      )
-    );
   }
 }
 
-render(h(App), document.body);
+Component.register(CorpusApp);
+
+class CorpusNavigation extends Component {
+  onconnected() {
+    this.bind("#docid", "change", e => this.onchange(e));
+    this.bind("#back", "click", e => this.onback(e));
+    this.bind("#forward", "click", e => this.onforward(e));
+  }
+
+  onchange(e) {
+    var docid = e.target.value
+    if (docid) {
+      let url = "/fetch?docid=" + encodeURIComponent(docid) + "&fmt=cjson";
+      this.match("#app").display(url);
+    }
+  }
+
+  onforward(e) {
+    this.match("#app").display("/forward?fmt=cjson");
+  }
+
+  onback(e) {
+    this.match("#app").display("/back?fmt=cjson");
+  }
+
+  setDocId(docid) {
+    this.find("#docid").value = docid;
+  }
+
+  render() {
+    return `
+      <md-input id="docid" type="search" placeholder="Document ID"></md-input>
+      <md-icon-button id="back" icon="arrow_back"></md-icon-button>
+      <md-icon-button id="forward" icon="arrow_forward"></md-icon-button>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        width: 400px;
+      }
+    `;
+  }
+}
+
+Component.register(CorpusNavigation);
+

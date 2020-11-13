@@ -232,7 +232,6 @@ embed_data(
   srcs = [
     "app/corpus.html",
     "app/corpus.js",
-    "app/corpus.css",
   ],
 )
 

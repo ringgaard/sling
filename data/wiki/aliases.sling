@@ -298,5 +298,10 @@
   Q76700114: {
     "Mexican politician": blacklist
   }
+
+  ; businessperson
+  Q43845: {
+    "American businessman": blacklist
+  }
 }
 

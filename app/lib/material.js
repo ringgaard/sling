@@ -84,7 +84,7 @@ export class MdContent extends Component {
         display: block;
         overflow: auto;
         color: rgb(0,0,0);
-        background-color: rgb(250,250,250);
+        background-color: #eeeeee;
 
         position: relative;
 

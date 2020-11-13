@@ -1,12 +1,8 @@
-import {Component, h} from "/common/external/preact.js";
-import {Grid} from "/common/lib/mdl.js";
-import {stylesheet} from "/common/lib/util.js";
+import {Component} from "/common/lib/component.js";
 
-stylesheet("/common/style/docview.css");
+const kb_url = '/kb/';
 
-let kb_url = '/kb/?id=';
-
-let type_color = {
+const type_color = {
   '/s': '#FF8000',
   '/saft': '#38761D',
   '/pb': '#990000',
@@ -14,27 +10,27 @@ let type_color = {
   '/w': '#0B5394',
 };
 
-let begin_styles = [
-  {mask: (1 << 5), tag: "h2"},
-  {mask: (1 << 11), tag: "blockquote"},
-  {mask: (1 << 7), tag: "ul"},
-  {mask: (1 << 9), tag: "li"},
-  {mask: (1 << 1), tag: "b"},
-  {mask: (1 << 3), tag: "em"},
+const begin_styles = [
+  {mask: (1 << 5),  tag: "<h2>"},
+  {mask: (1 << 11), tag: "<blockquote>"},
+  {mask: (1 << 7),  tag: "<ul>"},
+  {mask: (1 << 9),  tag: "<li>"},
+  {mask: (1 << 1),  tag: "<b>"},
+  {mask: (1 << 3),  tag: "<em>"},
 ];
 
-let end_styles = [
-  {mask: (1 << 4), tag: "em", para: false},
-  {mask: (1 << 2), tag: "b", para: false},
-  {mask: (1 << 10), tag: "li", para: true},
-  {mask: (1 << 8), tag: "ul", para: true},
-  {mask: (1 << 12), tag: "blockquote", para: true},
-  {mask: (1 << 6), tag: "h2", para: true},
+const end_styles = [
+  {mask: (1 << 4),  tag: "</em>",         para: false},
+  {mask: (1 << 2),  tag: "</b>",          para: false},
+  {mask: (1 << 10), tag: "</li>",         para: true},
+  {mask: (1 << 8),  tag: "</ul>",         para: true},
+  {mask: (1 << 12), tag: "</blockquote>", para: true},
+  {mask: (1 << 6),  tag: "</h2>",         para: true},
 ];
 
-let notchgif = 'data:image/gif;base64,R0lGODlhDAAWAJEAAP/68NK8jv///' +
-               'wAAACH5BAUUAAIALAAAAAAMABYAAAIrlI8SmQF83INyNoBtzPhy' +
-               'XXHb1ylkZp5dSBqs6KrIq6Xw/FG3V+M9DpkVAAA7';
+const notchgif = 'data:image/gif;base64,R0lGODlhDAAWAJEAAP/68NK8jv///' +
+                 'wAAACH5BAUUAAIALAAAAAAMABYAAAIrlI8SmQF83INyNoBtzPhy' +
+                 'XXHb1ylkZp5dSBqs6KrIq6Xw/FG3V+M9DpkVAAA7';
 
 let next_panel = 1;
 let next_docno = 1;
@@ -112,178 +108,26 @@ export class DocumentViewer extends Component {
   }
 
   docno() {
-    if (this.document) {
-      return this.document.docno;
-    } else {
-      return 0;
-    }
+    return this.document.docno;
   }
 
-  render(props) {
-    // Get document for rendering.
-    this.document = props.document;
-    if (!this.document) return h(Grid, {class: "docviewer"});
-
-    // Render document text.
-    let doc = this.document;
-    let spans = doc.spans;
-    let nesting = [];
-    let styles = [];
-    let next = 0;
-    let elements = [];
-    if (doc.title) {
-      let headline = []
-      if (doc.url) {
-        let props = {href: doc.url, class: "titlelink", target: "_blank"}
-        headline.push(h("a", props, doc.title));
-      } else {
-        headline.push(doc.title);
-      }
-      if (doc.key) {
-        let url = kb_url + doc.key;
-        let props = {href: url, class: "topiclink", target: "_blank"}
-        headline.push(h("span", {class: "docref"},
-                        "(", h("a", props, doc.key), ")"));
-      }
-      elements.push(h("h1", {class: "title"}, headline));
-    } else if (doc.url) {
-      elements.push(
-        h("div", {class: "title"},
-          "url: ",
-          h("a", {href: doc.url}, doc.url),
-          h("br"),
-        )
-      );
-    }
-    for (let index = 0; index < doc.tokens.length; ++index) {
-      let token = doc.tokens[index];
-      let brk = token.break;
-
-      // Pop elements for end of style.
-      if (token.style) {
-        for (let ts of end_styles) {
-          if (ts.mask & token.style) {
-            if (styles.length == 0) break;
-            let style = styles.pop();
-            let subelements = elements.slice(style.mark);
-            elements.length = style.mark;
-            elements.push(h(style.tag, null, subelements));
-            if (ts.para && brk == PARAGRAPH_BREAK) brk = undefined;
-          }
-        }
-      }
-
-      // Render token break.
-      if (index > 0) {
-        if (brk === undefined) {
-          elements.push(" ");
-        } else if (brk >= CHAPTER_BREAK) {
-          elements.push(h("hr"));
-        } else if (brk >= SECTION_BREAK) {
-          elements.push(h("center", null, "***"));
-        } else if (brk >= PARAGRAPH_BREAK) {
-          elements.push(h("p"));
-        } else if (brk >= SENTENCE_BREAK) {
-          elements.push(" 	");
-        } else if (brk >= SPACE_BREAK) {
-          elements.push(" ");
-        }
-      }
-
-      // Push elements for start of style.
-      if (token.style) {
-        for (let ts of begin_styles) {
-          if (ts.mask & token.style) {
-            styles.push({mark: elements.length, tag: ts.tag});
-          }
-        }
-      }
-
-      // Stack spans that begin on this token.
-      while (next < spans.length && spans[next].begin == index) {
-        let span = spans[next];
-        span.mark = elements.length;
-        nesting.push(span);
-        next++;
-      }
-
-      // Render token word.
-      let word = doc.Word(index);
-      if (word == "``") {
-        word = "“";
-      } else if (word == "''") {
-        word = "”";
-      } else if (word == "--") {
-        word = "–";
-      } else if (word == "...") {
-        word = "…";
-      }
-      elements.push(word);
-
-      // Pop spans that end on this token.
-      while (nesting.length > 0 &&
-             nesting[nesting.length - 1].end == index + 1) {
-        let depth = nesting.length;
-        let span = nesting.pop();
-        let subelements = elements.slice(span.mark);
-        elements.length = span.mark;
-
-        let fidx = span.frame;
-        let text = doc.Phrase(span.begin, span.end);
-        if (depth > 3) depth = 3;
-        let attrs = {
-          id: "s" + this.docno() + "-" + fidx,
-          frame: fidx,
-          class: "b" + depth,
-          phrase: text
-        };
-        elements.push(h("span", attrs, subelements));
-      }
-    }
-
-    // Terminate remaining styles.
-    while (styles.length > 0) {
-      let style = styles.pop();
-      let subelements = elements.slice(style.mark);
-      elements.length = style.mark;
-      elements.push(h(style.tag, null, subelements));
-    }
-
-    // Add container for theme chips.
-    elements.push(h("div", {id: "themes" + this.docno(), class: "themes"}));
-
-    // Render document viewer with text to the left, panels to the right.
-    let key = "doc-" + this.docno();
-    return (
-      h("div", {id: "docview" + this.docno(), class: "docviewer", key},
-        h("div", {id: "text" + this.docno(), class: "doctext", key}, elements),
-        h("div", {class: "docspacer"}),
-        h("div", {id: "panels" + this.docno(), class: "docpanels"})
-      )
-    );
+  visible() {
+    let doc = this.state;
+    return doc;
   }
 
-  componentDidMount() {
-    this.Initialize();
-  }
-
-  componentDidUpdate() {
-    let panels = document.getElementById("panels" + this.docno());
-    while (panels.firstChild) panels.removeChild(panels.firstChild);
-    this.panels = {}
-    this.Initialize();
-  }
-
-  Initialize() {
+  onupdated() {
     // Bail out if there is no document.
+    this.document = this.state;
     if (!this.document) return;
+    this.panels = {};
 
     let docno = this.document.docno;
     for (let i = 0; i < this.document.spans.length; ++i) {
       let fidx = this.document.spans[i].frame;
 
       // Bind event handlers for spans.
-      let span = document.getElementById('s' + docno + "-" + fidx);
+      let span = this.find("#s" + docno + "-" + fidx);
       if (span) {
         span.addEventListener('click', this.OpenPanel.bind(this), false);
         span.addEventListener('mouseenter', this.EnterSpan.bind(this), false);
@@ -306,6 +150,161 @@ export class DocumentViewer extends Component {
     for (let i = 0; i < this.document.themes.length; ++i) {
       this.AddChip(this.document.themes[i]);
     }
+  }
+
+  render() {
+    // Render document viewer with text to the left, panels to the right.
+    let h = [];
+    h.push('<div class="doctext">');
+
+    // Render document.
+    let doc = this.state;
+    let docid = doc.key;
+    let docno = doc.docno.toString();
+    let spans = doc.spans;
+    let nesting = [];
+    let next = 0;
+
+    // Render document title.
+    if (doc.title) {
+      let headline = Component.escape(doc.title);
+      h.push('<h1 class="title">');
+      if (doc.url) {
+        h.push('<a class="titlelink" target="_blank" rel="noreferer" href="');
+        h.push(doc.url);
+        h.push('">');
+        h.push(headline);
+        h.push('</a>');
+      } else {
+        p.push(headline);
+      }
+      if (docid) {
+        let url = kb_url + docid;
+        h.push('<span class="docref">(');
+        h.push('<a class="topiclink" target="_blank" href="');
+        h.push(url);
+        h.push('">');
+        h.push(docid);
+        h.push('</a>)</span>');
+      }
+      h.push('</h1>');
+    } else if (doc.url) {
+      h.push('<div class="title">');
+      h.push('url: <a target="_blank" rel="noreferer" href="');
+      h.push(doc.url);
+      h.push('">');
+      h.push(Component.escape(doc.url));
+      h.push('</a><br></div>');
+    }
+
+    // Render document text.
+    let stylebits = 0;
+    for (let index = 0; index < doc.tokens.length; ++index) {
+      let token = doc.tokens[index];
+      let brk = token.break;
+
+      // Render style end.
+      if (token.style) {
+        for (let ts of end_styles) {
+          if (ts.mask & token.style) {
+            h.push(ts.tag);
+            stylebits &= ~ts.mask;
+            if (ts.para && brk == PARAGRAPH_BREAK) brk = undefined;
+          }
+        }
+      }
+
+      // Render token break.
+      if (index > 0) {
+        if (brk === undefined) {
+          h.push(" ");
+        } else if (brk >= CHAPTER_BREAK) {
+          h.push("<hr>");
+        } else if (brk >= SECTION_BREAK) {
+          h.push("<center>***</center>");
+        } else if (brk >= PARAGRAPH_BREAK) {
+          h.push("<p>");
+        } else if (brk >= SENTENCE_BREAK) {
+          h.push(" 	");
+        } else if (brk >= SPACE_BREAK) {
+          h.push(" ");
+        }
+      }
+
+      // Render style start.
+      if (token.style) {
+        for (let ts of begin_styles) {
+          if (ts.mask & token.style) {
+            h.push(ts.tag);
+            stylebits |= ts.mask << 1;
+          }
+        }
+      }
+
+      // Start spans that begin on this token.
+      while (next < spans.length && spans[next].begin == index) {
+        let span = spans[next];
+        nesting.push(span);
+        next++;
+
+        let depth = nesting.length;
+        let fidx = span.frame.toString();
+        let phrase = doc.Phrase(span.begin, span.end);
+        if (depth > 3) depth = 3;
+        h.push('<span id="s');
+        h.push(docno);
+        h.push('-');
+        h.push(fidx);
+        h.push('" frame="');
+        h.push(fidx);
+        h.push('" class="b');
+        h.push(depth);
+        h.push('" phrase="');
+        h.push(phrase);
+        h.push('">');
+      }
+
+      // Render token word.
+      let word = Component.escape(doc.Word(index));
+      if (word == "``") {
+        word = "“";
+      } else if (word == "''") {
+        word = "”";
+      } else if (word == "--") {
+        word = "–";
+      } else if (word == "...") {
+        word = "…";
+      }
+      h.push(word);
+
+      // End spans that end on this token.
+      while (nesting.length > 0 &&
+             nesting[nesting.length - 1].end == index + 1) {
+        nesting.pop();
+        h.push('</span>');
+      }
+    }
+
+    // Terminate remaining styles.
+    for (let ts of end_styles) {
+      if (ts.mask & stylebits) {
+        h.push(ts.tag);
+      }
+    }
+
+    // Add container for theme chips.
+    h.push('<div id="themes');
+    h.push(docno);
+    h.push('" class="themes"></div>');
+    h.push('</div>');
+
+    // Add panel container.
+    h.push('<div class="docspacer"></div>');
+    h.push('<div id="panels');
+    h.push(docno);
+    h.push('" class="docpanels"></div>');
+
+    return h.join("");
   }
 
   TypeColor(type) {
@@ -853,4 +852,321 @@ export class DocumentViewer extends Component {
       box.setAttribute("collapsed", 1);
     }
   }
+
+  static stylesheet() {
+    return `
+      @import url('https://fonts.googleapis.com/css?family=Lato|Lora:400,400i,700,700i');
+
+      $ {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        height: 100%;
+      }
+
+      .doctext {
+        flex: 1;
+        height: 100%;
+        overflow-y: auto;
+        padding: 5px 5px 5px 10px;
+        background: white;
+        border: 2px solid #cccccc;
+        box-sizing: border-box;
+        font: 13pt lora, georgia, serif;
+      }
+
+      .docspacer {
+        flex: 0 0 10px;
+      }
+
+      .docpanels {
+        flex: 1;
+        height: 100%;
+        overflow-y: auto;
+      }
+
+      .docref {
+        font-size: 14pt;
+        color: #888888;
+        margin-left: 10px;
+      }
+
+      .title {
+        font: 24pt lato, helvetica, sans-serif;
+        margin-top: 10px;
+        margin-bottom: 20px;
+      }
+
+      .titlelink {
+        color: black;
+        text-decoration: none;
+      }
+
+      .titlelink:link {
+        color: black;
+        text-decoration: none;
+      }
+
+      .titlelink:visited {
+        color: black;
+        text-decoration: none;
+      }
+
+      .topiclink {
+        color: #888888;
+        text-decoration: none;
+      }
+
+      .topiclink:link {
+        color: #888888;
+        text-decoration: none;
+      }
+
+      .topiclink:visited {
+        color: #888888;
+        text-decoration: none;
+      }
+
+      $ a {
+        color: black;
+        font-weight: normal;
+      }
+
+      $ a:link {
+        text-decoration: underline;
+      }
+
+      $ a:visited {
+        text-decoration: underline;
+      }
+
+      $ h2 {
+        font: 16pt lato, helvetica, sans-serif;
+        margin-top: 20px;
+        margin-bottom: 10px;
+      }
+
+      $ ul {
+        font-size: 13pt;
+      }
+
+      $ blockquote {
+        font: 12pt lora, georgia, serif;
+        line-height: normal;
+        letter-spacing: normal;
+      }
+
+      .themes {
+        margin-top: 10px;
+      }
+
+      .panel {
+        margin: 0px 5px 10px 5px;
+        padding: 5px;
+        box-shadow: 1px 1px 1px 0px #808080;
+        background: white;
+      }
+
+      .panel-titlebar {
+        text-align: left;
+        font:  bold 11pt arial;
+        padding: 3px;
+      }
+
+      .panel-title {
+        width: 100%;
+        text-align: left;
+        padding: 3px;
+      }
+
+      .panel-icon {
+        text-align: center;
+        float: right;
+        cursor: default;
+        user-select: none;
+      }
+
+      .panel-content {
+        padding: 10px;
+      }
+
+      .chip {
+        text-align: center;
+        padding: 5px;
+        margin: 4px;
+        border-radius: 10px;
+        background-color: #E0E0E0;
+        box-shadow: 1px 1px 1px 0px #808080;
+        white-space: nowrap;
+        cursor: pointer;
+        display: inline-block;
+      }
+
+      .type-label {
+        font: bold 8pt arial;
+        margin: 4px;
+        padding: 4px;
+        border-radius: 4px;
+        background-color: #909090;
+        color: white;
+        vertical-align: baseline;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .boxed {
+        border: 1px solid black;
+        text-align: center;
+        font-size: 7pt;
+        line-height: 1;
+        padding: 1px 1px 1px 1px;
+        margin-right: 5px;
+        cursor: pointer;
+      }
+
+      .tfs {
+        position: relative;
+        margin-right: 3px;
+      }
+
+      .tfs:before {
+        content: "";
+        position: absolute;
+        left: -5px;
+        top: 0;
+        border: 1px solid #e0e0e0;
+        border-right: 0px;
+        width: 5px;
+        height: 100%;
+      }
+
+      .tfs:after {
+        content: "";
+        position: absolute;
+        right: -5px;
+        top: 0;
+        border: 1px solid #e0e0e0;
+        border-left: 0px;
+        width: 5px;
+        height: 100%;
+      }
+
+      .tfs td {
+        font-family: arial;
+        font-size: 10pt;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .tfs th {
+        font-family: arial;
+        font-size: 10pt;
+        font-weight: bold;
+        text-align: left;
+        padding-bottom: 5px;
+        line-height: 18pt;
+      }
+
+      .tfs-collapsed {
+        font-weight: bold;
+        font-style: italic;
+        color: #909090;
+      }
+
+      .tfs-collapsed:after {
+        content: " ...";
+        color: #909090;
+        font-weight: bold;
+        font-style: italic;
+      }
+
+      .label {
+        color: white;
+        font-size: 8pt;
+        line-height: 90%;
+        white-space: nowrap;
+        overflow: hidden;
+        background: rgba(120,120,120,0.75);
+        position: absolute;
+        top: -10px;
+        left: -1px;
+        padding: 1px;
+        border: 1px solid #808080;
+        border-radius: 3px;
+        z-index: 10;
+      }
+
+      .b1 {
+        background-color: #F8F8F8;
+        border: 1px solid #D0D0D0;
+        border-radius: 4px;
+        margin: 1px;
+        display: inline-block;
+        position: relative;
+        padding: 0px 2px 0px 2px;
+        cursor: pointer;
+        word-wrap: break-word;
+      }
+
+      .b2 {
+        background-color: #F0F0F0;
+        border: 1px solid #D0D0D0;
+        border-radius: 4px;
+        margin: 1px;
+        display: inline-block;
+        position: relative;
+        padding: 0px 2px 0px 2px;
+        cursor: pointer;
+        word-wrap: break-word;
+      }
+
+      .b3 {
+        background-color: #E8E8E8;
+        border: 1px solid #D0D0D0;
+        border-radius: 4px;
+        margin: 1px;
+        display: inline-block;
+        position: relative;
+        padding: 0px 2px 0px 2px;
+        cursor: pointer;
+        word-wrap: break-word;
+      }
+
+      .callout {
+        display: inline;
+        z-index: 20;
+        padding: 10px 10px;
+
+        position: fixed;
+        border:1px solid #dca;
+        background: #fffAF0;
+        border-radius: 4px;
+        box-shadow: 5px 5px 8px #ccc;
+      }
+
+      .notch {
+        width: 12px;
+        height: 22px;
+        position: absolute;
+        top: 20px;
+        left: -12px;
+      }
+
+      a[tooltip]:hover:before, span[tooltip]:hover:before {
+        content: attr(tooltip);
+        font:  11pt arial;
+        position: absolute;
+        color: #fff;
+        padding: 8px;
+        border-radius: 5px;
+        z-index: 1;
+        margin-top: 25px;
+        background: #666;
+        white-space: pre-wrap;
+      }
+    `;
+  }
 }
+
+Component.register(DocumentViewer);
+

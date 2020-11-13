@@ -1,13 +1,30 @@
-<!doctype html>
-<html style="height: 100%; width: 100%;">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8">
-  <meta name=viewport content="width=device-width, initial-scale=1">
-  <title>Corpus browser</title>
-</head>
-<body style="height: 100%; width: 100%; visibility: hidden;"
-      onload="document.body.style.visibility='visible'">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SLING Corpus browser</title>
+  <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
+  <script type="module" src="/common/lib/material.js"></script>
   <script type="module" src="corpus.js"></script>
+</head>
+<body>
+  <corpus-app id="app">
+    <md-column-layout>
+
+      <md-toolbar>
+        <md-toolbar-logo></md-toolbar-logo>
+        <div>Corpus Browser</div>
+        <md-spacer></md-spacer>
+        <corpus-navigation></corpus-navigation>
+      </md-toolbar>
+
+      <md-content>
+        <document-viewer></document-viewer>
+      </md-content>
+
+    </md-column-layout>
+  </corpus-app>
 </body>
 </html>
 

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <signal.h>
+
 #include "sling/base/flags.h"
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
@@ -158,6 +160,15 @@ class CorpusBrowser : public DocumentService {
   Mutex mu_;
 };
 
+// HTTP server.
+HTTPServer *httpd = nullptr;
+
+// Termination handler.
+void terminate(int signum) {
+  LOG(INFO) << "Shutdown requested";
+  if (httpd != nullptr) httpd->Shutdown();
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
@@ -186,14 +197,15 @@ int main(int argc, char *argv[]) {
   CorpusBrowser browser(&commons, &db, &annotators);
   commons.Freeze();
 
+  // Start HTTP server.
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
-  SocketServerOptions httpopts;
-  HTTPServer http(httpopts, FLAGS_port);
+  SocketServerOptions sockopts;
+  httpd = new HTTPServer(sockopts, FLAGS_port);
 
-  browser.Register(&http);
-  if (FLAGS_kb) kb.Register(&http);
+  browser.Register(httpd);
+  if (FLAGS_kb) kb.Register(httpd);
 
-  http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
+  httpd->Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
     if (strcmp(req->path(), "/") == 0) {
       rsp->TempRedirectTo("/doc/corpus.html");
     } else {
@@ -201,15 +213,19 @@ int main(int argc, char *argv[]) {
     }
   });
 
-  http.Register("/favicon.ico", [](HTTPRequest *req, HTTPResponse *rsp) {
-    rsp->RedirectTo("/common/image/appicon.ico");
-  });
-
-  CHECK(http.Start());
+  CHECK(httpd->Start());
 
   LOG(INFO) << "HTTP server running";
-  http.Wait();
+  signal(SIGTERM, terminate);
+  signal(SIGINT, terminate);
+  httpd->Wait();
+
+  // Shut down.
+  LOG(INFO) << "Shutting down HTTP server";
+  delete httpd;
+  httpd = nullptr;
 
   LOG(INFO) << "HTTP server done";
   return 0;
 }
+
