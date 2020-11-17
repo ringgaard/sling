@@ -5,17 +5,10 @@ load("//tools:embed.bzl", "embed_data")
 embed_data(
   name = "app",
   srcs = [
-    "external/material.js",
-    "external/material.css",
-    "external/material-icons.css",
-    "external/material-icons.woff2",
-    "external/preact.js",
     "image/appicon.ico",
     "image/rr-logo.svg",
     "lib/component.js",
     "lib/docview.js",
     "lib/material.js",
-    "lib/mdl.js",
-    "lib/util.js",
   ],
 )
