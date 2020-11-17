@@ -272,7 +272,6 @@ embed_data(
   srcs = [
     "app/analyzer.html",
     "app/analyzer.js",
-    "app/analyzer.css",
   ],
 )
 

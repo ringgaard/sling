@@ -1,13 +1,36 @@
-<!doctype html>
-<html style="height: 100%; width: 100%;">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8">
-  <meta name=viewport content="width=device-width, initial-scale=1">
-  <title>SLING document analyzer</title>
-</head>
-<body style="height: 100%; width: 100%; visibility: hidden;"
-      onload="document.body.style.visibility='visible'">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SLING Document Analyzer</title>
+  <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
+  <script type="module" src="/common/lib/material.js"></script>
   <script type="module" src="analyzer.js"></script>
+</head>
+<body>
+  <analyzer-app id="app">
+    <md-column-layout>
+
+      <md-toolbar>
+        <md-toolbar-logo></md-toolbar-logo>
+        <div>Document Analyzer</div>
+        <md-spacer></md-spacer>
+        <one-of id="action" selected="#analyze">
+          <md-icon-button id="edit" icon="edit" shortcut="g"></md-icon-button>
+          <md-icon-button id="analyze" icon="send" shortcut="g"></md-icon-button>
+        </one-of>
+      </md-toolbar>
+
+      <md-content>
+        <one-of id="main" selected="#editor">
+          <document-editor id="editor"></document-editor>
+          <document-viewer id="viewer"></document-viewer>
+        </one-of>
+      </md-content>
+
+    </md-column-layout>
+  </analyzer-app>
 </body>
 </html>
 

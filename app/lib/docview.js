@@ -265,7 +265,7 @@ export class DocumentViewer extends Component {
       }
 
       // Render token word.
-      let word = Component.escape(doc.Word(index));
+      let word = doc.Word(index);
       if (word == "``") {
         word = "“";
       } else if (word == "''") {
@@ -275,7 +275,7 @@ export class DocumentViewer extends Component {
       } else if (word == "...") {
         word = "…";
       }
-      h.push(word);
+      h.push(Component.escape(word));
 
       // End spans that end on this token.
       while (nesting.length > 0 &&

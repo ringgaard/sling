@@ -1,41 +1,54 @@
-import {Component, h, render} from "/common/external/preact.js";
-import {Layout, Button, Icon} from "/common/lib/mdl.js";
-import {Document, DocumentViewer} from "/common/lib/docview.js";
-import {stylesheet} from "/common/lib/util.js";
+// Document analyzer app.
 
-stylesheet("/doc/analyzer.css");
+import {Component} from "/common/lib/component.js";
+import {Document} from "/common/lib/docview.js";
 
 class DocumentEditor extends Component {
-  constructor(props) {
-    super(props);
+  render() {
+    return `<textarea autofocus>${Component.escape(this.state)}</textarea>`;
   }
 
-  render(props, state) {
-    return (
-      h("textarea", {
-          id: "text",
-          class: "editor",
-          oninput: props.oninput,
-        },
-        props.text)
-    );
+  onupdated() {
+    this.find("textarea").focus();
   }
 
-  componentDidMount() {
-    document.getElementById("text").focus();
+  text() {
+    return this.find("textarea").value;
+  }
+
+  static stylesheet() {
+    return `
+      $ textarea {
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        resize: none;
+        border: 2px solid;
+      }
+    `;
   }
 }
 
-class App extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {document: null, editmode: true};
-    this.text = "";
+Component.register(DocumentEditor);
+
+class AnalyzerApp extends Component {
+  constructor() {
+    super();
+    this.document = null;
+    this.text = null;
   }
 
-  annotate(e) {
-    console.log("annotate", e);
-    var self = this;
+  onconnected() {
+    let action = this.find("#action");
+    action.bind("#edit", "click", e => this.onedit(e));
+    action.bind("#analyze", "click", e => this.onanalyze(e));
+  }
+
+  onanalyze(e) {
+    let main = this.find("#main");
+    this.text = this.find("#editor").text();
+
     let headers = new Headers({
       "Content-Type": "text/lex",
     });
@@ -49,53 +62,26 @@ class App extends Component {
         }
       })
       .then(response => {
-        self.setState({document: new Document(response), editmode: false});
+        this.document = new Document(response);
+        main.update("#viewer", this.document);
+        this.find("#action").update("#edit");
       });
   }
 
-  edit(e) {
-    this.setState({document: null, editmode: true});
+  onedit(e) {
+    let main = this.find("#main");
+    main.update("#editor", this.text);
+    this.find("#action").update("#analyze");
   }
 
-  oninput(e) {
-    this.text = e.target.value;
-  }
-
-  render(props, state) {
-    var action, content;
-    if (state.editmode) {
-      let icon = h(Icon, {icon: "send"});
-      action = h(Button,
-                 {icon: true, onclick: e => this.annotate(e), accesskey: "g"},
-                 icon);
-      content = h(DocumentEditor,
-                  {text: this.text, oninput: e => this.oninput(e)});
-    } else {
-      let icon = h(Icon, {icon: "edit"});
-      action = h(Button,
-                 {icon: true, onclick: e => this.edit(e), accesskey: "g"},
-                 icon);
-      content = h(DocumentViewer, {document: state.document});
-    }
-
-    return (
-      h("div", {id: "app"},
-        h(Layout, null,
-          h(Layout.Header, null,
-            h(Layout.HeaderRow, null,
-              h(Layout.Title, null, "SLING document analyzer"),
-              h(Layout.Spacer),
-              action
-            ),
-          ),
-          h(Layout.Drawer, null, h(Layout.Title, null, "Menu")),
-          h(Layout.DrawerButton),
-
-          h(Layout.Content, {id: "main"}, content)
-        )
-      )
-    );
+  static stylesheet() {
+    return `
+      $ md-content {
+        overflow: hidden;
+      }
+    `;
   }
 }
 
-render(h(App), document.body);
+Component.register(AnalyzerApp);
+

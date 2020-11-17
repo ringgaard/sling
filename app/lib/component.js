@@ -12,7 +12,7 @@ export class Component extends HTMLElement {
   }
 
   // Connect web component to DOM.
-  connectedCallback () {
+  connectedCallback() {
     // Add attributes to properties.
     for (const attr of this.attributes) {
       let name = attr.name.replaceAll("-", "_");
@@ -120,6 +120,7 @@ export class Component extends HTMLElement {
   }
 
   static escape(s) {
+    if (s == undefined) return "";
     return s.replace(/["&'<>`/]/g, c => Component.htmlmap[c]);
   }
 
@@ -149,6 +150,55 @@ export class Component extends HTMLElement {
   // Registered style sheet functions.
   static stylesheets = [];
 }
+
+// Switch tag for selecting active subcomponent.
+export class OneOf extends HTMLElement {
+  constructor() {
+    super();
+    this.elements = [...this.children];
+    this.active = this.find(this.getAttribute("selected"));
+  }
+
+  connectedCallback() {
+    this.innerHTML = "";
+    if (this.active) this.appendChild(this.active);
+  }
+
+  update(state, substate) {
+    let selected = this.find(state);
+    if (selected != this.active) {
+      if (this.active && this.active.update) this.active.update(null);
+      this.innerHTML = "";
+
+      this.active = selected;
+      if (this.active) {
+        this.appendChild(this.active);
+        if (substate && this.active.update) this.active.update(substate);
+      }
+    }
+  }
+
+  find(selector) {
+    if (selector == null) return null;
+    if (this.matches(selector)) return this;
+    for (let elem of this.elements) {
+      if (elem.matches(selector)) return elem;
+      let child = elem.querySelector(selector);
+      if (child) return child;
+    }
+    return null;
+  }
+
+  bind(selector, event, handler) {
+    let elem = this.find(selector);
+    if (!elem) {
+      throw new Error(`element '${selector}' not found`);
+    }
+    elem.addEventListener(event, handler);
+  }
+}
+
+window.customElements.define("one-of", OneOf);
 
 // Add global style sheet to document.
 export function stylesheet(css) {

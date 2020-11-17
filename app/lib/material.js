@@ -241,10 +241,10 @@ Component.register(MdToolbarLogo);
 
 export class MdIconButton extends Component {
   render() {
-    return this.html`
-      <button ${this.props.disabled ? "disabled" : ""}>
-        <i>${this.props.icon}</i>
-      </button>`;
+    let attrs = [];
+    if (this.props.disabled) attrs.push(' disabled');
+    if (this.props.shortcut) attrs.push(` accesskey="${this.props.shortcut}"`);
+    return `<button ${attrs.join("")}><i>${this.props.icon}</i></button>`;
   }
 
   disable() {
@@ -727,27 +727,27 @@ export class MdDataTable extends Component {
   }
 
   render() {
-    let out = [];
-    out.push("<table><thead><tr>");
+    let h = [];
+    h.push("<table><thead><tr>");
     for (const fld of this.fields) {
       if (fld.style) {
-        out.push(`<th style="${fld.style}">`);
+        h.push(`<th style="${fld.style}">`);
       } else {
-        out.push("<th>");
+        h.push("<th>");
       }
-      out.push(fld.header);
-      out.push("</th>");
+      h.push(fld.header);
+      h.push("</th>");
     }
-    out.push("</tr></thead><tbody>");
+    h.push("</tr></thead><tbody>");
 
     if (this.state) {
       for (const row of this.state) {
-        out.push("<tr>");
+        h.push("<tr>");
         for (const fld of this.fields) {
           if (fld.style) {
-            out.push(`<td style="${fld.style}">`);
+            h.push(`<td style="${fld.style}">`);
           } else {
-            out.push("<td>");
+            h.push("<td>");
           }
 
           let value = row[fld.name];
@@ -755,16 +755,16 @@ export class MdDataTable extends Component {
           value = value.toString();
 
           if (fld.escape) value = Component.escape(value);
-          out.push(value);
-          out.push("</td>");
+          h.push(value);
+          h.push("</td>");
         }
-        out.push("</tr>");
+        h.push("</tr>");
       }
     }
 
-    out.push("</tbody></table>");
+    h.push("</tbody></table>");
 
-    return out.join("");
+    return h.join("");
   }
 
   static stylesheet() {
