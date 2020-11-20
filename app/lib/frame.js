@@ -4,14 +4,21 @@
 // SLING frame store implementation for JavaScript.
 
 var strdecoder = new TextDecoder("utf8");
+var strencoder = new TextEncoder();
 var numbuf = new ArrayBuffer(4);
 var intbuf = new Int32Array(numbuf);
 var fltbuf = new Float32Array(numbuf);
 
 // Convert binary 32-bit IEEE-754 float to number.
-function IEEE754(bits) {
+function bitsToFloat(bits) {
   intbuf[0] = bits;
   return fltbuf[0];
+}
+
+// Convert number to binary 32-bit IEEE-754 float.
+function FloatToBits(num) {
+  fltbuf[0] = num;
+  return intbuf[0];
 }
 
 // Frame store.
@@ -147,6 +154,13 @@ export class Frame {
   // Convert frame to string.
   toString() {
     return this.text();
+  }
+
+  // Binary encoding of frame.
+  encode() {
+    let encoder = new Encoder(this.store);
+    encoder.encode(this);
+    return encoder.output();
   }
 
   // Iterator over all slots.
@@ -292,7 +306,7 @@ class Decoder {
 
       case 6:
         // FLOAT.
-        object = IEEE754(arg << 2);
+        object = bitsToFloat(arg << 2);
         break;
 
       case 7:
@@ -310,7 +324,7 @@ class Decoder {
 
           case 6:
             // INDEX.
-            object = IEEE754((this.readVarint32() << 2) | 0xffc00003)
+            object = bitsToFloat((this.readVarint32() << 2) | 0xffc00003)
             break;
 
           case 7:
@@ -401,7 +415,199 @@ class Decoder {
   }
 }
 
+// Object encoding status.
+const Status = Object.freeze({
+  // Object has not been encoded in the output.
+  UNRESOLVED: Symbol("UNRESOLVED"),
+  // Only a link to the object has been encoded in the output.
+  LINKED: Symbol("LINKED"),
+  // Object has been encoded in the output.
+  ENCODED: Symbol("ENCODED"),
+  // Object has been encoded as a string in the output.
+  STRING: Symbol("STRING"),
+});
+
+// Binary SLING decoder.
 class Encoder {
+  constructor(store) {
+    // Allocate output buffer.
+    this.buffer = new Uint8Array(4096);
+    this.capacity = this.buffer.byteLength;
+    this.pos = 0;
+
+    // Insert special values in reference mapping.
+    this.refs = new Map();
+    this.next = 0;
+    this.id = store.id;
+    this.refs.set(null, {status: Status.ENCODED, index: -1});
+    this.refs.set(store.id, {status: Status.ENCODED, index: -2});
+    this.refs.set(store.isa, {status: Status.ENCODED, index: -3});
+    this.refs.set(store.is, {status: Status.ENCODED, index: -4});
+
+    // Output binary encoding mark.
+    this.writeByte(0);
+  }
+
+  // Encode object.
+  encode(obj) {
+    if (typeof obj === 'number') {
+      // TODO: handle integer overlow.
+      if (Number.isInteger(obj)) {
+        this.writeTag(5, obj);
+      } else {
+        this.writeTag(6, FloatToBits(obj) >> 2);
+      }
+    } else {
+      let ref = this.refs.get(obj);
+      if (!ref) {
+        ref = {status: Status.UNRESOLVED, index: this.next++};
+        this.refs.set(obj, ref);
+      }
+
+      if (typeof obj === 'string') {
+        if (ref.status == Status.STRING) {
+          this.EncodeRef(ref);
+        } else {
+          this.encodeString(obj, 2);
+        }
+      } else if (obj instanceof Frame) {
+        if (ref.status == Status.ENCODED) {
+          this.encodeRef(ref);
+        } else if (ref.status == Status.LINKED) {
+          // A link to this frame has already been encoded.
+          if (obj.proxy) {
+            this.encodeRef(ref);
+          } else {
+            // Encode a resolved frame which points back to the link reference.
+            ref.status = Status.ENCODED;
+            this.writeTag(7, 7);
+            this.writeVarInt(obj.length);
+            this.writeVarInt(ref.index);
+            this.encodeSlots(obj.slots);
+          }
+        } else if (obj.proxy) {
+            // Output SYMBOL for the proxy.
+            this.encodeString(obj.id, 4);
+        } else {
+          // Output frame slots.
+          ref.status = Status.ENCODED;
+          this.writeTag(1, obj.length);
+          this.encodeSlots(obj.slots);
+        }
+      } else if (obj instanceof Array) {
+        // Output array tag followed by array size and the elements.
+        ref.status = ENCODED;
+        this.writeTag(7, 5);
+        this.writeVarInt(obj.length);
+        for (let n = 0; n < obj.length; ++n) {
+          this.encodeLink(obj[n]);
+        }
+      } else {
+        throw "Object type cannot be encoded";
+      }
+    }
+  }
+
+  // Encode frame slots.
+  encodeSlots(slots) {
+    for (let n = 0; n < slots.length; n += 2) {
+      let name = slots[n];
+      let value = slots[n + 1];
+      if (name === this.id) {
+        // Encode SYMBOL.
+        this.encodeString(value, 3);
+      } else {
+        this.encodeLink(name);
+      }
+      this.encodeLink(value);
+    }
+  }
+
+  // Encode link.
+  encodeLink(link) {
+    // Only output link to public frames.
+    if (link instanceof Frame) {
+      if (!link.anonymous) {
+        // Just output link to public frame.
+        let ref = this.refs.get(link);
+        if (ref) {
+          this.encodeRef(ref);
+        } else {
+          // Encode LINK.
+          this.encodeString(link.id, 4);
+        }
+        return;
+      }
+    }
+    this.encode(link);
+  }
+
+  // Encode string with length.
+  encodeString(str, type) {
+    let utf8 = strencoder.encode(str);
+    let len = utf8.byteLength;
+    this.writeTag(type, len);
+    this.ensure(len);
+    this.buffer.subarray(this.pos, this.pos + len).set(utf8);
+    this.pos += len;
+  }
+
+  // Encode reference to previous object.
+  encodeRef(ref) {
+    if (ref.index < 0) {
+      // Special handles are stored with negative reference numbers.
+      this.writeTag(7, -ref.index);
+    } else {
+      // Output reference to previous object.
+      this.writeTag(0, ref.index);
+    }
+  }
+
+  // Ensure that there is room for n more bytes in the output buffer.
+  ensure(n) {
+    let minsize = this.pos + n;
+    if (minsize > this.capacity) {
+      let cap = this.capacity * 2;
+      while (cap < minsize) cap *= 2;
+      let newbuf = new Uint8Array(cap);
+      newbuf.set(this.buffer);
+      this.buffer = newbuf;
+      this.capacity = cap;
+    }
+  }
+
+  // Return output buffer.
+  output() {
+    return this.buffer.subarray(0, this.pos);
+  }
+
+  // Write a single byte to output.
+  writeByte(byte) {
+    this.ensure(1);
+    this.buffer[this.pos++] = byte;
+  }
+
+  // Write varint-encoded integer to output.
+  writeVarInt(num) {
+    if (num > Number.MAX_SAFE_INTEGER) {
+      throw new RangeError("Could not encode varint");
+    }
+    this.ensure(8);
+    while(num >= 0x80000000) {
+      this.buffer[this.pos++] = (num & 0xFF) | 0x80;
+      num /= 128;
+    }
+    while(num & ~0x7F) {
+      this.buffer[this.pos++] = (num & 0xFF) | 0x80;
+      num >>>= 7;
+    }
+    this.buffer[this.pos++] = num | 0;
+  }
+
+  // Write varint-encoded tag and argument to output.
+  writeTag(tag, arg) {
+    this.writeVarInt(tag | (arg << 3));
+  }
 }
 
 class Reader {
