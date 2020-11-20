@@ -250,7 +250,7 @@ PyObject *PyArray::Data(PyObject *args, PyObject *kw) {
     flags.InitEncoder(encoder.encoder());
     encoder.Encode(h);
     const string &buffer = encoder.buffer();
-    return PyUnicode_FromStringAndSize(buffer.data(), buffer.size());
+    return PyBytes_FromStringAndSize(buffer.data(), buffer.size());
   } else {
     StringPrinter printer(pystore->store);
     flags.InitPrinter(printer.printer());

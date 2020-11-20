@@ -10,5 +10,6 @@ embed_data(
     "lib/component.js",
     "lib/docview.js",
     "lib/material.js",
+    "lib/frame.js",
   ],
 )
