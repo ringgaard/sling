@@ -83,8 +83,14 @@ blocked_urls = [
   "youtu.be/",
   "www.youtube.com/",
   "news.google.com/",
+  "www.tiktok.com/",
+  "www.instagram.com/",
   "video.foxnews.com/",
   "www.facebook.com/",
+  "www.pscp.tv/",
+  "video.repubblica.it/",
+  "www.foxtv.com/",
+  "bangla.dhakatribune.com/",
 ]
 
 # Sites that should never be ignored because of too many errors.
