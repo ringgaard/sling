@@ -119,6 +119,7 @@ export class Frame {
 
   // Return id for frame.
   get id() {
+    if (this.anonymous) return undefined;
     return this.get(this.store.id);
   }
 

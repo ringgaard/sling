@@ -66,7 +66,7 @@ def fetch_submission(id):
     r = session.get("https://api.reddit.com/api/info/?id=" + id, headers=headers)
     r.raise_for_status()
     root = r.json()
-    data = root["data"]["children"][0]
+    data = root["data"]["children"][0]["data"]
 
     # Save submission in database.
     dburl = flags.arg.redditdb + "/" + urllib.parse.quote(id)
