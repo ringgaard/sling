@@ -657,7 +657,7 @@ class WikiWorkflow:
     with self.wf.namespace("fused-items"):
       return self.wf.mapreduce(input=items,
                                output=output,
-                               mapper=None,
+                               mapper="item-reconciler",
                                reducer="item-merger",
                                format="message/frame",
                                params={"indexed": flags.arg.index})
