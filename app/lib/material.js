@@ -359,6 +359,14 @@ Component.register(MdLink);
 //-----------------------------------------------------------------------------
 
 export class MdIcon extends Component {
+  onconnected() {
+    this.state = true;
+  }
+
+  visible() {
+    return this.state;
+  }
+
   render() {
     return `<i>${this.props.icon}</i>`;
   }

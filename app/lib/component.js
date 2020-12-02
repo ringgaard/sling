@@ -34,44 +34,49 @@ export class Component extends HTMLElement {
 
     // Render component.
     this.onconnect && this.onconnect();
-    this.generate();
+    if (this.visible) {
+      if (this.visible()) {
+        this.generate();
+      } else {
+        this.style.display = "none";
+      }
+    } else {
+      this.generate();
+    }
     this.onconnected && this.onconnected();
   }
 
   // Update component state.
   update(state) {
     this.state = state;
-    let show = true;
-    if (this.visible) show = this.visible();
-    if (show) {
-      this.onupdate && this.onupdate();
-      this.generate();
-      this.onupdated && this.onupdated();
+
+    this.onupdate && this.onupdate();
+    if (this.visible) {
+      if (this.visible()) {
+        this.style.display = "";
+        this.generate();
+      } else {
+        this.style.display = "none";
+      }
     } else {
-      this.style.display = "none";
+      this.generate();
     }
+    this.onupdated && this.onupdated();
   }
 
   // Generate component content.
   generate() {
-    let show = true;
-    if (this.visible) show = this.visible();
-    if (show) {
-      this.style.display = "";
-      if (this.render) {
-        let content = this.render();
-        if (content instanceof Array) {
-          while (this.firstChild) this.removeChild(this.lastChild);
-          for (let n of content) this.appendChild(n);
-        } else if (content instanceof Node) {
-          while (this.firstChild) this.removeChild(this.lastChild);
-          this.appendChild(content);
-        } else {
-          this.innerHTML = content;
-        }
+    if (this.render) {
+      let content = this.render();
+      if (content instanceof Array) {
+        while (this.firstChild) this.removeChild(this.lastChild);
+        for (let n of content) this.appendChild(n);
+      } else if (content instanceof Node) {
+        while (this.firstChild) this.removeChild(this.lastChild);
+        this.appendChild(content);
+      } else {
+        this.innerHTML = content;
       }
-    } else {
-      this.style.display = "none";
     }
   }
 

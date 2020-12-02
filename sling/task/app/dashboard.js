@@ -45,6 +45,8 @@ class DashboardApp extends Component {
     this.bind("#pause", "click", (e) => this.onpause(e));
     this.bind("#refresh", "click", (e) => this.onrefresh(e));
     this.find("#title").innerHTML = "Job status for " + this.host();
+    this.find("#done").update(false);
+    this.find("#error").update(false);
     this.reload();
     setInterval(() => this.tick(), 1000);
   }
@@ -108,10 +110,10 @@ class DashboardApp extends Component {
   done(success) {
     if (success) {
       this.updateTitle("Done");
-      this.find("#done").style.display = "";
+      this.find("#done").update(true);
     } else {
       this.updateTitle("Error");
-      this.find("#error").style.display = "";
+      this.find("#error").update(true);
     }
 
     this.auto = false;
