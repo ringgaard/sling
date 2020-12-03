@@ -75,7 +75,6 @@ def fetch_submission(id):
   except:
     traceback.print_exc(file=sys.stdout)
 
-
 # Monitor live Reddit submission stream for news articles.
 crawler = news.Crawler("reddit")
 while True:

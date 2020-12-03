@@ -10,16 +10,23 @@ flags.define("--subreddit",
              help="Subreddit to retrieve submissions from")
 
 flags.define("--outdir",
-             default=".",
+             default=None,
              help="Output directory")
+
+flags.define("--redditdb",
+             default=None,
+             help="Reddit submission database")
 
 flags.parse()
 
 session = requests.Session()
 baseurl = "http://api.pushshift.io/reddit/search/submission"
 batchsize = 100
+if flags.arg.outdir != None:
+  fout = open(flags.arg.outdir + "/" + flags.arg.subreddit.lower(), "w")
+else:
+  fout = None
 
-fout = open(flags.arg.outdir + "/" + flags.arg.subreddit.lower(), "w")
 num_submissions = 0
 dt = None
 after = 0
@@ -44,8 +51,16 @@ while True:
   created = 0
   for submission in result["data"]:
     created = submission["created_utc"]
-    fout.write(json.dumps(submission))
-    fout.write("\n")
+    if fout != None:
+      fout.write(json.dumps(submission))
+      fout.write("\n")
+    if flags.arg.redditdb != None:
+      key = "t3_" + submission["id"]
+      dburl = flags.arg.redditdb + "/" + key
+      r = session.put(dburl,
+                      headers={"Mode": "add"},
+                      data=json.dumps(submission))
+      r.raise_for_status()
     num_submissions += 1
 
   dt =  datetime.datetime.fromtimestamp(created)
@@ -54,5 +69,6 @@ while True:
   # Resume at the creation time for last retrieved submission.
   after = created
 
+if fout != None: fout.close()
 print(flags.arg.subreddit, dt, num_submissions, "submissions")
 

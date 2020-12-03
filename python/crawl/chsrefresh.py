@@ -8,6 +8,7 @@ import requests
 import json
 import io
 import os
+import sys
 import sling.flags as flags
 
 flags.define("--dump",
@@ -112,6 +113,8 @@ for row in reader:
     print(num_refresh, "/", num_companies, company_no, company_name, latest)
   else:
     print(company_no)
+  sys.stdout.flush()
+
   if fout: fout.write(company_no + "\n")
 
   if num_refresh >= flags.arg.max: break
