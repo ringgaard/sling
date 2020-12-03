@@ -35,6 +35,26 @@ struct sig_ucontext_t {
   sigset_t uc_sigmask;
 };
 
+
+// Context for current thread.
+__thread ThreadContext *thread_context = nullptr;
+
+ThreadContext::ThreadContext(const char *type,
+                             const char *context, size_t size)
+    : type(type),  context(context), size(size) {
+  prev = thread_context;
+  thread_context = this;
+}
+
+ThreadContext::~ThreadContext() {
+  thread_context = prev;
+}
+
+// Output buffer.
+static int OutputBuffer(int fd, const char *buffer, size_t size) {
+  return write(fd, buffer, size);
+}
+
 // Output string.
 static int OutputString(int fd, const char *str) {
   return write(fd, str, strlen(str));
@@ -142,6 +162,16 @@ static void FailureSignalHandler(int signum, siginfo_t *info, void *ucontext) {
     OutputAddress(fd, info->si_addr);
   }
   OutputString(fd, "\n");
+
+  // Output contexts.
+  ThreadContext *ctxt = thread_context;
+  while (ctxt != nullptr) {
+    OutputString(fd, ctxt->type);
+    OutputString(fd, " context: ");
+    OutputBuffer(fd, ctxt->context, ctxt->size);
+    OutputString(fd, "\n");
+    ctxt = ctxt->prev;
+  }
 
   // Dump stack trace.
   DumpStackTrace(fd, caller);

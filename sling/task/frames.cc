@@ -69,6 +69,9 @@ void FrameProcessor::Start(Task *task) {
 }
 
 void FrameProcessor::Receive(Channel *channel, Message *message) {
+  // Register task context.
+  TaskContext ctxt("Frame", message);
+
   // Create store for frame.
   Store store(commons_);
 

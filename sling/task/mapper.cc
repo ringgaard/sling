@@ -15,6 +15,7 @@
 #include "sling/task/mapper.h"
 
 #include "sling/base/logging.h"
+#include "sling/base/stacktrace.h"
 
 namespace sling {
 namespace task {
@@ -29,6 +30,9 @@ void Mapper::Start(Task *task) {
 }
 
 void Mapper::Receive(Channel *channel, Message *message) {
+  // Register task context.
+  TaskContext ctxt("Mapper", message);
+
   // Call Map() method on each input message.
   MapInput input(message->key(), message->value());
   Map(input);

@@ -19,6 +19,18 @@
 
 namespace sling {
 
+// A thread context keeps track of the current element being processed by
+// the thread.
+struct ThreadContext {
+  ThreadContext(const char *type, const char *context, size_t size);
+  ~ThreadContext();
+
+  const char *type;
+  const char *context;
+  size_t size;
+  ThreadContext *prev;
+};
+
 // Dump stack trace to output file.
 void DumpStackTrace(int fd, void *address = nullptr);
 

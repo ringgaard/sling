@@ -50,6 +50,7 @@ void Reducer::ReduceShard(int shard) {
   Shard *s = shards_[shard];
   if (s->messages.empty()) return;
 
+  TaskContext ctxt("Reduce", s->key);
   ReduceInput input(shard, s->key, s->messages);
   Reduce(input);
   s->clear();

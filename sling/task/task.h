@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "sling/base/registry.h"
+#include "sling/base/stacktrace.h"
 #include "sling/base/types.h"
 #include "sling/task/environment.h"
 #include "sling/task/message.h"
@@ -468,6 +469,16 @@ class Task : public AssetManager {
 
   // Reference count for keeping task alive.
   std::atomic<int> refs_{0};
+};
+
+// A task context tracks which element is being by each thread.
+struct TaskContext : public ThreadContext {
+  TaskContext(const char *type, Message *message)
+    : ThreadContext(type,
+                    message->key_buffer()->data(),
+                    message->key_buffer()->size()) {}
+  TaskContext(const char *type, Slice key)
+    : ThreadContext(type, key.data(), key.size()) {}
 };
 
 }  // namespace task
