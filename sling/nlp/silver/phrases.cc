@@ -121,7 +121,7 @@ class PhraseStructureAnnotator : public Annotator {
     Store *store = phrase->store();
     Handle item = store->LookupExisting(id);
     if (item.IsNil()) return Handle::nil();
-    CHECK(item.IsGlobalRef());
+    if (store->IsProxy(item)) return Handle::nil();
     Facts facts(&catalog_);
     facts.Extract(item);
     HandleSet targets;
