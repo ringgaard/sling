@@ -36,3 +36,12 @@ CASE_UPPER=api.CASE_UPPER
 CASE_LOWER=api.CASE_LOWER
 CASE_TITLE=api.CASE_TITLE
 
+# Print out version and location of SLING Python API.
+def which():
+  import os
+  import time
+  location = __path__[0]
+  if (os.path.islink(location)): location += " -> " + os.readlink(location)
+  ts = time.ctime(os.path.getmtime(sling.api.__file__))
+  print("SLING API version %s (%s) in %s" % (VERSION, ts, location))
+

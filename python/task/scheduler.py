@@ -579,7 +579,7 @@ job_template = """<!DOCTYPE html>
   <div>SLING Job Scheduler on %s</div>
   <div class="mdt-spacer"></div>
   <button class="mdt-icon-button">
-    <i class="mdt-icon" onclick="window.location.reload()">refresh</i>
+    <i class="mdt-icon" onclick="window.location=location">refresh</i>
   </button>
 </div>
 
@@ -651,15 +651,17 @@ job_template = """<!DOCTYPE html>
 """
 
 class SchedulerService(BaseHTTPRequestHandler):
+  protocol_version = "HTTP/1.1"
+
   def do_GET(self):
     url = urlsplit(self.path)
 
     if url.path == '/favicon.ico':
-      self.reply(404, "no fav icon")
+      self.reply(404, "no fav icon", cache=True)
       return
 
     if url.path == '/style.css':
-      self.reply(200, stylesheet, "text/css")
+      self.reply(200, stylesheet, "text/css", cache=True)
       return
 
     if url.path.startswith("/log/"):
@@ -699,10 +701,6 @@ class SchedulerService(BaseHTTPRequestHandler):
       return
 
     hostname = self.headers["Host"].split(':')[0]
-
-    self.send_response(200)
-    self.send_header("Content-type", "text/html")
-    self.end_headers()
 
     running = []
     pending = []
@@ -785,7 +783,8 @@ class SchedulerService(BaseHTTPRequestHandler):
       "".join(pending),
       "".join(terminated)
     )
-    self.out(job_template % fillers)
+
+    self.reply(200, job_template % fillers, "text/html")
     return
 
 
@@ -841,17 +840,18 @@ class SchedulerService(BaseHTTPRequestHandler):
     f.close()
     self.send_response(200)
     if mimetype: self.send_header("Content-type", mimetype)
+    self.send_header("Content-Length", len(content))
     self.end_headers()
     self.wfile.write(content)
 
-  def out(self, text):
-    self.wfile.write(text.encode("utf8"))
-
-  def reply(self, code, message, ct="text/plain"):
+  def reply(self, code, content, ct="text/plain", cache=False):
+    body = content.encode("utf8")
     self.send_response(code)
     self.send_header("Content-type", ct)
+    self.send_header("Content-Length", len(body))
+    self.send_header("Cache-Control", "max-age=3600" if cache else "no-cache")
     self.end_headers()
-    self.out(message)
+    self.wfile.write(body)
 
 if __name__ == "__main__":
   # Parse command line flags.
