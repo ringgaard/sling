@@ -145,9 +145,9 @@ export class Frame {
   }
 
   // Convert frame to human-readable representation.
-  text(indent) {
+  text(pretty) {
     let printer = new Printer(this.store);
-    if (indent) printer.indent = "  ";
+    if (pretty) printer.indent = "  ";
     printer.print(this);
     return printer.output;
   }
@@ -461,14 +461,16 @@ class Encoder {
     } else {
       let ref = this.refs.get(obj);
       if (!ref) {
-        ref = {status: Status.UNRESOLVED, index: this.next++};
+        ref = {status: Status.UNRESOLVED, index: 0};
         this.refs.set(obj, ref);
       }
 
       if (typeof obj === 'string') {
         if (ref.status == Status.STRING) {
-          this.EncodeRef(ref);
+          this.encodeRef(ref);
         } else {
+          ref.status == Status.STRING
+          ref.index = this.next++;
           this.encodeString(obj, 2);
         }
       } else if (obj instanceof Frame) {
@@ -488,16 +490,20 @@ class Encoder {
           }
         } else if (obj.proxy) {
             // Output SYMBOL for the proxy.
+            ref.status = Status.LINKED;
+            ref.index = this.next++;
             this.encodeString(obj.id, 4);
         } else {
           // Output frame slots.
           ref.status = Status.ENCODED;
+          ref.index = this.next++;
           this.writeTag(1, obj.length);
           this.encodeSlots(obj.slots);
         }
       } else if (obj instanceof Array) {
         // Output array tag followed by array size and the elements.
         ref.status = ENCODED;
+        ref.index = this.next++;
         this.writeTag(7, 5);
         this.writeVarInt(obj.length);
         for (let n = 0; n < obj.length; ++n) {
@@ -514,13 +520,20 @@ class Encoder {
     for (let n = 0; n < slots.length; n += 2) {
       let name = slots[n];
       let value = slots[n + 1];
+      this.encodeLink(name);
       if (name === this.id) {
-        // Encode SYMBOL.
-        this.encodeString(value, 3);
+        let ref = this.refs.get(value);
+        if (ref && ref.status != Status.ENCODED) {
+          this.encodeRef(ref);
+        } else {
+          // Encode SYMBOL.
+          ref = {status: Status.ENCODED, index: this.next++};
+          this.refs.set(value, ref);
+          this.encodeString(value, 3);
+        }
       } else {
-        this.encodeLink(name);
+        this.encodeLink(value);
       }
-      this.encodeLink(value);
     }
   }
 
@@ -535,6 +548,8 @@ class Encoder {
           this.encodeRef(ref);
         } else {
           // Encode LINK.
+          ref = {status: Status.LINKED, index: this.next++};
+          this.refs.set(link, ref);
           this.encodeString(link.id, 4);
         }
         return;
@@ -611,10 +626,18 @@ class Encoder {
   }
 }
 
+// Read objects in text format and convert these to the internal object format.
 class Reader {
+  // Initialize reader.
+  constructor(store, data) {
+    this.store = store ? store : new Store();
+    this.input = data.toString();
+    this.pos = 0;
+    this.refs = [];
+  }
 }
 
-// Outputs objects in human-readable text format which can be read by a reader.
+// Output objects in human-readable text format which can be read by a reader.
 class Printer {
   constructor(store) {
     this.store = store;
