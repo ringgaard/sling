@@ -42,7 +42,10 @@ while True:
     time.sleep(60)
     print(" resume...")
     continue
-  r.raise_for_status()
+  if not r.ok:
+    print("\nHTTP error", r.status_code)
+    time.sleep(5)
+    continue
 
   # Write batch to file.
   result = r.json()

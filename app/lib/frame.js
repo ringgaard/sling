@@ -21,6 +21,16 @@ function FloatToBits(num) {
   return intbuf[0];
 }
 
+// Check for binary marker.
+function hasBinaryMarker(data) {
+  if (data instanceof ArrayBuffer) {
+    let bytes = new Uint8Array(data);
+    return bytes[0] == 0;
+  } else {
+    return false;
+  }
+}
+
 // Frame store.
 export class Store {
   // Initialize new frame store.
@@ -94,8 +104,13 @@ export class Store {
       return data.arrayBuffer().then(data => this.parse(data));
     }
 
-    let decoder = new Decoder(this, data);
-    return decoder.readAll();
+    if (hasBinaryMarker(data)) {
+      let decoder = new Decoder(this, data);
+      return decoder.readAll();
+    } else {
+      let reader = new Reader(this, data);
+      return reader.parse();
+    }
   }
 }
 
@@ -626,14 +641,342 @@ class Encoder {
   }
 }
 
+// Keywords.
+const keywords = new Map([
+  ["null",  -2],
+  ["nil",   -2],
+  ["false", -3],
+  ["true",  -4],
+
+]);
+
+// Token types:
+//  >0: ASCII code for character token
+//  -1: end of input
+//  -2: nil
+//  -3: false
+//  -4: true
+//  -5: string
+//  -6: number
+//  -7: index
+//  -8: symbol
+
 // Read objects in text format and convert these to the internal object format.
 class Reader {
   // Initialize reader.
   constructor(store, data) {
     this.store = store ? store : new Store();
     this.input = data.toString();
+    this.size = this.input.length;
     this.pos = 0;
+    this.ch = -1;
+    this.token = 0;
+    this.value = null;
     this.refs = [];
+    this.read();
+    this.next();
+  }
+
+  // Get next character in input.
+  read() {
+    if (this.pos < this.size) {
+      this.ch = this.input.charCodeAt(this.pos++);
+    } else {
+      this.ch = -1;
+    }
+  }
+
+  // Read next token from input.
+  next() {
+    // Keep reading until we either read a token or reach the end of the input.
+    this.value = null;
+    for (;;) {
+      // Skip whitespace.
+      while (this.ch == 32 ||  // space
+             this.ch == 9 ||   // tab
+             this.ch == 13 ||  // return
+             this.ch == 10) {  // newline
+        this.read();
+      }
+
+      // Check for end of input.
+      if (this.ch == -1) {
+        this.token = -1;
+        return;
+      }
+
+      // Parse next token (or comment).
+      switch (this.ch) {
+        case 58: case 43:    // ':' '+'
+        case 44: case 61:    // ',' '='
+        case 91: case 93:    // '[' ']'
+        case 123: case 125:  // '{' '}'
+          this.token = this.ch;
+          this.read();
+          return;
+
+        case 34:  // '"'
+          // Parse string.
+          this.parseString();
+          return;
+
+        case 48: case 49: case 50: case 51: case 52:  // '0' '1' '2' '3' '4'
+        case 53: case 54: case 55: case 56: case 57:  // '5' '6' '7' '8' '9'
+        case 46: case 45:  // '.' '-'
+          // Parse number.
+          this.parseNumber();
+          return;
+
+        case 35:  // '#'
+          // Parse index reference.
+          this.read();
+          this.parseIndex();
+          return;
+
+        case 59:  // ';'
+          // Skip comment.
+          this.read();
+          while (this.ch != -1 && this.ch != 13) this.read();
+          break;
+
+        default:
+          // Parse keyword or symbol.
+          this.parseName();
+          return;
+      }
+    }
+  }
+
+  // Parse string literal.
+  parseString() {
+    let start = this.pos;
+    this.read();
+    while (this.ch != -1 && this.ch != 34) {  // '"'
+      if (this.ch == 92) this.read();  // '\'
+      this.read();
+    }
+    if (this.ch == -1) throw "Unterminated string";
+    this.read();
+    this.value = JSON.parse(this.input.slice(start - 1, this.pos - 1));
+    this.token = -5;
+  }
+
+  // Parse number literal.
+  parseNumber() {
+    let start = this.pos;
+    let integer = true;
+
+    // Parse sign.
+    if (this.ch == 45) this.read();  // '-'
+
+    // Parse integer part.
+    while (this.ch >= 48 && this.ch <= 57) this.read();
+
+    // Parse decimal part.
+    if (this.ch == 46) {  // '.'
+      integer = false;
+      this.read();
+      while (this.ch >= 48 && this.ch <= 57) this.read();
+    }
+
+    // Parse exponent part.
+    if (this.ch == 69 || this.ch == 101) {  // 'e' 'E'
+      integer = false;
+      this.read();
+      if (this.ch == 43 || this.ch == 45) this.read();  // '+' '-'
+      while (this.ch >= 48 && this.ch <= 57) this.read();
+    }
+
+    let str = this.input.slice(start - 1, this.pos - 1);
+    this.value = integer ? parseInt(str) : parseFloat(str);
+    this.token = -6;
+  }
+
+  // Parse symbol index.
+  parseIndex() {
+    let start = this.pos;
+    while (this.ch >= 48 && this.ch <= 57) this.read();
+    this.value = parseInt(this.input.slice(start - 1, this.pos - 1));
+    this.token = -7;
+  }
+
+  // Parse symbol or keyword.
+  parseName() {
+    let start = this.pos;
+    let done = false;
+    while (!done) {
+      switch (this.ch) {
+        case -1:
+          done = true;
+          break;
+
+        case 95:  // '_'
+        case 47:  // '/'
+        case 45:  // '-'
+        case 46:  // '.'
+        case 33:  // '!'
+          this.read();
+          break;
+
+        case 92:  // '\'
+          // TODO: handle escapes.
+          this.read();
+          this.read();
+          break;
+
+        default:
+          if ((this.ch >= 48 && this.ch <= 57) ||   // 0-9
+              (this.ch >= 65 && this.ch <= 90) ||   // A-Z
+              (this.ch >= 97 && this.ch <= 122) ||  // a-z
+              this.ch >= 128) {                     // unicode
+            this.read();
+          } else {
+            done = true;
+          }
+      }
+    }
+    this.value = this.input.slice(start - 1, this.pos - 1);
+    let kw = keywords.get(this.value);
+    if (kw) {
+      this.token = kw;
+    } else {
+      this.token = -8;
+    }
+  }
+
+  // Parse next object.
+  parse() {
+    switch (this.token) {
+      case -1:  // end of input
+        return undefined;
+
+      case -2:  // nil
+        this.next();
+        return null;
+
+      case -3:  // false
+        this.next();
+        return false;
+
+      case -4:  // true
+        this.next();
+        return true;
+
+      case -5:  // string
+      case -6:  // number
+        let v = this.value;
+        this.next();
+        return v;
+
+      case -7:  // index
+        let obj = this.refs[this.value];
+        if (!obj) {
+          obj = new Frame(this.store);
+          this.refs[this.value] = obj;
+        }
+        this.next();
+        return obj;
+
+      case -8:  // symbol
+        let sym = this.store.lookup(this.value);
+        this.next();
+        return sym;
+
+      case 123: // '{'
+        return this.parseFrame();
+
+      case 91: // '['
+        return this.parseArray();
+
+      default:
+        throw "syntax error";
+    }
+  }
+
+  // Parse frame.
+  parseFrame() {
+    // Skip open bracket.
+    this.next();
+
+    // Parse slots.
+    let slots = new Array();
+    let frame = null;
+    let index = -1;
+    while (this.token != 125) {  // '}'
+      switch (this.token) {
+        case -1:
+          throw "syntax error";
+
+        case 61:  // '='
+          this.next();
+          if (this.token == -7) {
+            if (!frame) frame = this.refs[this.value];
+            index = this.value;
+          } else if (this.token == -8) {
+            if (!frame) frame = this.store.frames.get(this.value);
+            slots.push(this.store.id);
+            slots.push(this.value);
+          } else {
+            throw "frame id expected";
+          }
+          this.next();
+          break;
+
+        case 58:  // ':'
+          this.next();
+          slots.push(this.store.isa);
+          slots.push(this.parse());
+          break;
+
+        case 43:  // '+'
+          this.next();
+          slots.push(this.store.is);
+          slots.push(this.parse());
+          break;
+
+        default:
+          slots.push(this.parse());
+          if (this.token != 58) throw "missing colon";
+          this.next();
+          slots.push(this.parse());
+      }
+
+      // Skip commas between slots.
+      if (this.token == 44) this.next();
+    }
+
+    // Skip closing bracket.
+    this.next();
+
+    // Add frame to store.
+    if (frame == null) {
+      frame = this.store.frame(slots);
+      if (index != -1) this.refs[index] = frame;
+    } else {
+      frame.slots = slots;
+      frame.proxy = false;
+      this.store.add(frame);
+    }
+
+    // Return parsed frame.
+    return frame;
+  }
+
+  // Parse array.
+  parseArray() {
+    // Skip open bracket.
+    this.next();
+
+    // Allocate array.
+    var array = new Array();
+
+    // Read array elements.
+    while (this.token != 93) {  // ']'
+      array.push(this.parse());
+      if (this.token == 44) this.next();
+    }
+
+    return array;
   }
 }
 
