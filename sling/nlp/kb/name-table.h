@@ -32,10 +32,10 @@ class NameTable {
   // Load name repository from file.
   void Load(const string &filename);
 
-  // Look up entities with names matching a prefix. The matches are sorted
+  // Look up entities with names matching a query. The matches are sorted
   // by decreasing entity frequency.
-  void LookupPrefix(Text prefix, int limit, int boost,
-                    std::vector<Text> *matches) const;
+  void Lookup(Text query, bool prefix, int limit, int boost,
+              std::vector<Text> *matches) const;
 
  private:
   // Entity name with offset and frequency.

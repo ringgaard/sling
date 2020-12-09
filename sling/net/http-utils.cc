@@ -23,6 +23,29 @@
 
 namespace sling {
 
+// File extension to MIME type mapping.
+struct MIMEMapping {
+  const char *ext;
+  const char *mime;
+};
+
+static const MIMEMapping mimetypes[] = {
+  {"html", "text/html; charset=utf-8"},
+  {"htm", "text/html; charset=utf-8"},
+  {"xml", "text/xml; charset=utf-8"},
+  {"jpeg", "image/jpeg"},
+  {"jpg", "image/jpeg"},
+  {"gif", "image/gif"},
+  {"png", "image/png"},
+  {"ico", "image/x-icon"},
+  {"ttf", "font/ttf"},
+  {"css", "text/css; charset=utf-8"},
+  {"svg", "image/svg+xml; charset=utf-8"},
+  {"js", "text/javascript; charset=utf-8"},
+  {"zip", "application/zip"},
+  {nullptr, nullptr},
+};
+
 // Returns value for ASCII hex digit.
 static int HexDigit(int c) {
   return (c <= '9') ? c - '0' : (c & 7) + 9;
@@ -183,6 +206,28 @@ time_t ParseRFCTime(const char *timestr) {
   } else {
     return -1;
   }
+}
+
+// Find MIME type from extension.
+const char *GetMimeType(const char *ext) {
+  if (ext == nullptr) return nullptr;
+  for (const MIMEMapping *m = mimetypes; m->ext; ++m) {
+    if (strcmp(ext, m->ext) == 0) return m->mime;
+  }
+  return nullptr;
+}
+
+// Get extension for file name.
+const char *GetExtension(const char *filename) {
+  const char *ext = nullptr;
+  for (const char *p = filename; *p; ++p) {
+    if (*p == '/') {
+      ext = nullptr;
+    } else if (*p == '.') {
+      ext = p + 1;
+    }
+  }
+  return ext;
 }
 
 }  // namespace sling

@@ -93,6 +93,12 @@ char *RFCTime(time_t t, char *buf);
 // Parse RFC date as time stamp.
 time_t ParseRFCTime(const char *timestr);
 
+// Find MIME type from extension.
+const char *GetMimeType(const char *ext);
+
+// Get extension for file name.
+const char *GetExtension(const char *filename);
+
 }  // namespace sling
 
 #endif  // SLING_NET_HTTP_UTILS_H_

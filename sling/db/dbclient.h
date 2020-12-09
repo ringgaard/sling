@@ -82,6 +82,9 @@ class DBClient {
   // value for reading new records from the database.
   Status Epoch(uint64 *epoch);
 
+  // Check if client is connected to database server.
+  bool connected() const { return sock_ != -1; }
+
  private:
   // Write key to request.
   void WriteKey(const Slice &key);

@@ -42,13 +42,12 @@ void NameTable::Load(const string &filename) {
   }
 }
 
-void NameTable::LookupPrefix(Text prefix,
-                             int limit, int boost,
-                             std::vector<Text> *matches) const {
+void NameTable::Lookup(Text query, bool prefix, int limit, int boost,
+                       std::vector<Text> *matches) const {
   // Normalize prefix.
   string normalized;
-  UTF8::Normalize(prefix.data(), prefix.size(), normalization_, &normalized);
-  Text normalized_prefix(normalized);
+  UTF8::Normalize(query.data(), query.size(), normalization_, &normalized);
+  Text normalized_query(normalized);
 
   // Find first name that is greater than or equal to the prefix.
   int lo = 0;
@@ -56,7 +55,7 @@ void NameTable::LookupPrefix(Text prefix,
   while (lo < hi) {
     int mid = (lo + hi) / 2;
     const NameItem *item = name_index_.GetName(mid);
-    if (item->name() < normalized_prefix) {
+    if (item->name() < normalized_query) {
       lo = mid + 1;
     } else {
       hi = mid;
@@ -70,13 +69,17 @@ void NameTable::LookupPrefix(Text prefix,
     // Check if we have reached the limit.
     if (entities.size() > limit) break;
 
-    // Stop if the current name does not match the prefix.
+    // Stop if the current name does not match (the prefix).
     const NameItem *item = name_index_.GetName(index);
-    if (!item->name().starts_with(normalized_prefix)) break;
+    if (prefix) {
+      if (!item->name().starts_with(normalized_query)) break;
+    } else {
+      if (item->name() != normalized_query) break;
+    }
 
     // Add boost for exact match.
     int extra = 0;
-    if (item->name().size() == normalized_prefix.size()) extra = boost;
+    if (item->name().size() == normalized_query.size()) extra = boost;
 
     // Add matching entities.
     const EntityName *entity_names =  item->entities();

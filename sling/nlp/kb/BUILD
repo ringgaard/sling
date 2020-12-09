@@ -206,6 +206,7 @@ cc_binary(
     "//sling/file:embed",
     "//sling/file:posix",
     "//sling/net:http-server",
+    "//sling/net:media-service",
     "//sling/net:web-service",
     "//sling/string:text",
     "//sling/string:strcat",

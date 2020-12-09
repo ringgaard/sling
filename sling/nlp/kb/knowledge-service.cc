@@ -607,15 +607,16 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
 
   // Get query
   Text query = ws.Get("q");
+  bool fullmatch = ws.Get("fullmatch", false);
   int window = ws.Get("window", 5000);
   int limit = ws.Get("limit", 50);
   int boost = ws.Get("boost", 1000);
-  LOG(INFO) << "Name query: " << query;
+  VLOG(1) << "Name query: " << query;
 
   // Lookup name in name table.
   std::vector<Text> matches;
   if (!query.empty()) {
-    aliases_.LookupPrefix(query, window, boost, &matches);
+    aliases_.Lookup(query, !fullmatch, window, boost, &matches);
   }
 
   // Check for exact match with id.
@@ -652,7 +653,7 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
 
   // Look up item in knowledge base.
   Text itemid = ws.Get("id");
-  LOG(INFO) << "Look up item '" << itemid << "'";
+  VLOG(1) << "Look up item '" << itemid << "'";
   Handle handle = kb_->LookupExisting(itemid);
   if (handle.IsNil()) {
     response->SendError(404, nullptr, "Item not found");

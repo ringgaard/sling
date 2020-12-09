@@ -45,8 +45,22 @@ cc_library(
   hdrs = ["static-content.h"],
   deps = [
     ":http-server",
+    ":http-utils",
     "//sling/base",
     "//sling/file",
+  ],
+)
+
+cc_library(
+  name = "media-service",
+  srcs = ["media-service.cc"],
+  hdrs = ["media-service.h"],
+  deps = [
+    ":http-server",
+    ":http-utils",
+    "//sling/base",
+    "//sling/db:dbclient",
+    "//sling/util:mutex",
   ],
 )
 

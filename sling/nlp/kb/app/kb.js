@@ -3,6 +3,8 @@
 import {Component} from "/common/lib/component.js";
 import {MdCard} from "/common/lib/material.js";
 
+const mediadb = true;
+
 function wikiurl(id) {
   if (id[0] == "Q") {
     return `https://www.wikidata.org/wiki/${id}`
@@ -115,9 +117,11 @@ class KbSearchBox extends Component {
     if (this.populating) return;
     this.populating = true;
 
+    let params = "fmt=cjson";
     let query = e.detail.trimStart();
+    if (query.endsWith(".")) params += "&fullmatch=1";
     let target = e.target;
-    fetch("/kb/query?fmt=cjson&q=" + encodeURIComponent(query))
+    fetch("/kb/query?" + params + "&q=" + encodeURIComponent(query))
       .then(response => response.json())
       .then((data) => {
         let items = [];
@@ -526,6 +530,7 @@ class KbPictureCard extends MdCard {
 
   render() {
     let url = this.state.thumbnail.replaceAll('"', '&quot;');
+    if (mediadb) url = "/media/" + url;
     return `<a href="${url}" target="_blank" rel="noreferrer" tabindex="-1">
               <img src="${url}" rel="noreferrer">
             </a>`;

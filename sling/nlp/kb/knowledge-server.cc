@@ -17,11 +17,13 @@
 #include "sling/base/logging.h"
 #include "sling/frame/serialization.h"
 #include "sling/net/http-server.h"
+#include "sling/net/media-service.h"
 #include "sling/nlp/kb/knowledge-service.h"
 
 DEFINE_int32(port, 8080, "HTTP server port");
 DEFINE_string(kb, "data/e/wiki/kb.sling", "Knowledge base");
 DEFINE_string(names, "data/e/wiki/en/name-table.repo", "Name table");
+DEFINE_string(mediadb, "", "Media database");
 
 using namespace sling;
 using namespace sling::nlp;
@@ -40,6 +42,10 @@ int main(int argc, char *argv[]) {
   KnowledgeService kb;
   kb.Load(&commons, FLAGS_names);
   commons.Freeze();
+
+  MediaService media("/media", FLAGS_mediadb);
+  media.set_redirect(true);
+  media.Register(&http);
 
   kb.Register(&http);
   http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
