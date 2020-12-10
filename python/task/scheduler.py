@@ -651,8 +651,6 @@ job_template = """<!DOCTYPE html>
 """
 
 class SchedulerService(BaseHTTPRequestHandler):
-  protocol_version = "HTTP/1.1"
-
   def do_GET(self):
     url = urlsplit(self.path)
 
