@@ -15,6 +15,7 @@
 #ifndef SLING_DB_DBCLIENT_H_
 #define SLING_DB_DBCLIENT_H_
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -86,6 +87,9 @@ class DBClient {
   bool connected() const { return sock_ != -1; }
 
  private:
+  // Database transaction.
+  typedef std::function<Status()> Transaction;
+
   // Write key to request.
   void WriteKey(const Slice &key);
 
@@ -95,8 +99,14 @@ class DBClient {
   // Read record from response.
   Status ReadRecord(DBRecord *record);
 
+  // Execute database operation, reconnecting if connection has been closed.
+  Status Transact(Transaction tx);
+
   // Send request to server and receive reply.
   Status Do(DBVerb verb);
+
+  // Database name.
+  string database_;
 
   // Socket for connection.
   int sock_ = -1;

@@ -32,7 +32,14 @@ static Status Truncated() {
 }
 
 Status DBClient::Connect(const string &database) {
+  // Close existing connection.
+  if (sock_ != -1) {
+    close(sock_);
+    sock_ = -1;
+  }
+
   // Parse database specification.
+  database_ = database;
   string hostname = "localhost";
   string portname = "7070";
   string dbname;
@@ -126,102 +133,120 @@ Status DBClient::Use(const string &dbname) {
 }
 
 Status DBClient::Bulk(bool enable) {
-  uint32 value = enable;
-  request_.Clear();
-  request_.Write(&value, 4);
-  return Do(DBBULK);
+  return Transact([&]() -> Status {
+    uint32 value = enable;
+    request_.Clear();
+    request_.Write(&value, 4);
+    return Do(DBBULK);
+  });
 }
 
 Status DBClient::Get(const Slice &key, DBRecord *record) {
-  request_.Clear();
-  WriteKey(key);
-  Status st = Do(DBGET);
-  if (!st.ok()) return st;
-  return ReadRecord(record);
+  return Transact([&]() -> Status {
+    request_.Clear();
+    WriteKey(key);
+    Status st = Do(DBGET);
+    if (!st.ok()) return st;
+    return ReadRecord(record);
+  });
 }
 
 Status DBClient::Get(const std::vector<Slice> &keys,
                      std::vector<DBRecord> *records) {
-  request_.Clear();
-  for (auto &key : keys) WriteKey(key);
-  Status st = Do(DBGET);
-  if (!st.ok()) return st;
-  records->resize(keys.size());
-  for (int i = 0; i < keys.size(); ++i) {
-    Status st = ReadRecord(&records->at(i));
+  return Transact([&]() -> Status {
+    request_.Clear();
+    for (auto &key : keys) WriteKey(key);
+    Status st = Do(DBGET);
     if (!st.ok()) return st;
-  }
-  return Status::OK;
+    records->resize(keys.size());
+    for (int i = 0; i < keys.size(); ++i) {
+      Status st = ReadRecord(&records->at(i));
+      if (!st.ok()) return st;
+    }
+    return Status::OK;
+  });
 }
 
 Status DBClient::Put(DBRecord *record, DBMode mode) {
-  request_.Clear();
-  request_.Write(&mode, 4);
-  WriteRecord(record);
-  Status st = Do(DBPUT);
-  if (!st.ok()) return st;
-  if (!response_.Read(&record->result, 4)) return Truncated();
-  return Status::OK;
+  return Transact([&]() -> Status {
+    request_.Clear();
+    request_.Write(&mode, 4);
+    WriteRecord(record);
+    Status st = Do(DBPUT);
+    if (!st.ok()) return st;
+    if (!response_.Read(&record->result, 4)) return Truncated();
+    return Status::OK;
+  });
 }
 
 Status DBClient::Put(std::vector<DBRecord> *records, DBMode mode) {
-  request_.Clear();
-  request_.Write(&mode, 4);
-  for (auto &record : *records) WriteRecord(&record);
-  Status st = Do(DBPUT);
-  if (!st.ok()) return st;
-  for (int i = 0; i < records->size(); ++i) {
-    if (!response_.Read(&records->at(i).result, 4)) return Truncated();
-  }
-  return Status::OK;
+  return Transact([&]() -> Status {
+    request_.Clear();
+    request_.Write(&mode, 4);
+    for (auto &record : *records) WriteRecord(&record);
+    Status st = Do(DBPUT);
+    if (!st.ok()) return st;
+    for (int i = 0; i < records->size(); ++i) {
+      if (!response_.Read(&records->at(i).result, 4)) return Truncated();
+    }
+    return Status::OK;
+  });
 }
 
 Status DBClient::Delete(const Slice &key) {
-  request_.Clear();
-  WriteKey(key);
-  return Do(DBDELETE);
+  return Transact([&]() -> Status {
+    request_.Clear();
+    WriteKey(key);
+    return Do(DBDELETE);
+  });
 }
 
 Status DBClient::Next(uint64 *iterator, DBRecord *record) {
-  uint32 num = 1;
-  request_.Clear();
-  request_.Write(iterator, 8);
-  request_.Write(&num, 4);
-  Status st = Do(DBNEXT);
-  if (!st.ok()) return st;
-  if (reply_ == DBDONE) return Status(ENOENT, "No more records");
-  st = ReadRecord(record);
-  if (!st.ok()) return st;
-  if (!response_.Read(iterator, 8)) return Truncated();
-  return Status::OK;
+  return Transact([&]() -> Status {
+    uint32 num = 1;
+    request_.Clear();
+    request_.Write(iterator, 8);
+    request_.Write(&num, 4);
+    Status st = Do(DBNEXT);
+    if (!st.ok()) return st;
+    if (reply_ == DBDONE) return Status(ENOENT, "No more records");
+    st = ReadRecord(record);
+    if (!st.ok()) return st;
+    if (!response_.Read(iterator, 8)) return Truncated();
+    return Status::OK;
+  });
 }
 
 Status DBClient::Next(uint64 *iterator, int num,
                       std::vector<DBRecord> *records) {
-  records->clear();
-  request_.Clear();
-  request_.Write(iterator, 8);
-  request_.Write(&num, 4);
-  Status st = Do(DBNEXT);
-  if (!st.ok()) return st;
-  if (reply_ == DBDONE) return Status(ENOENT, "No more records");
-  DBRecord record;
-  while (response_.available() > 8) {
-    st = ReadRecord(&record);
+  return Transact([&]() -> Status {
+    records->clear();
+    request_.Clear();
+    request_.Write(iterator, 8);
+    request_.Write(&num, 4);
+    Status st = Do(DBNEXT);
     if (!st.ok()) return st;
-    records->push_back(record);
-  }
-  if (!response_.Read(iterator, 8)) return Truncated();
-  return Status::OK;
+    if (reply_ == DBDONE) return Status(ENOENT, "No more records");
+    DBRecord record;
+    while (response_.available() > 8) {
+      st = ReadRecord(&record);
+      if (!st.ok()) return st;
+      records->push_back(record);
+    }
+    if (!response_.Read(iterator, 8)) return Truncated();
+    return Status::OK;
+  });
 }
 
 Status DBClient::Epoch(uint64 *epoch) {
-  request_.Clear();
-  Status st = Do(DBEPOCH);
-  if (!st.ok()) return st;
-  if (reply_ != DBRECID) return Status(ENOSYS, "Not supported");
-  if (!response_.Read(epoch, 8)) return Truncated();
-  return Status::OK;
+  return Transact([&]() -> Status {
+    request_.Clear();
+    Status st = Do(DBEPOCH);
+    if (!st.ok()) return st;
+    if (reply_ != DBRECID) return Status(ENOSYS, "Not supported");
+    if (!response_.Read(epoch, 8)) return Truncated();
+    return Status::OK;
+  });
 }
 
 void DBClient::WriteKey(const Slice &key) {
@@ -274,6 +299,20 @@ Status DBClient::ReadRecord(DBRecord *record) {
   return Status::OK;
 }
 
+Status DBClient::Transact(Transaction tx) {
+  // Execute operation.
+  Status st = tx();
+
+  // Reconnect if connection closed.
+  if (st.code() == EPIPE) {
+    VLOG(1) << "Reconnect to " << database_;
+    st = Connect(database_);
+    if (st.ok()) st = tx();
+  }
+
+  return st;
+}
+
 Status DBClient::Do(DBVerb verb) {
   // Send request.
   DBHeader reqhdr;
@@ -289,7 +328,7 @@ Status DBClient::Do(DBVerb verb) {
   buf[1].iov_len = reqsize;
 
   int rc = writev(sock_, buf, 2);
-  if (rc == 0) return Status(EIO, "Connection closed");
+  if (rc == 0) return Status(EPIPE, "Connection closed");
   if (rc < 0) return Error("send");
   if (rc != bufsize) return Status(EMSGSIZE, "Send truncated");
 
@@ -299,8 +338,8 @@ Status DBClient::Do(DBVerb verb) {
   int size = -1;
   while (size < 0 || response_.available() < size) {
     int rc = recv(sock_, response_.end(), response_.remaining(), 0);
+    if (rc == 0) return Status(EPIPE, "Connection closed");
     if (rc < 0) return Error("recv");
-    if (rc == 0) return Status(EIO, "Connection closed");
     response_.Append(rc);
     if (size < 0 && response_.available() >= sizeof(DBHeader)) {
       auto *hdr = DBHeader::from(response_.begin());

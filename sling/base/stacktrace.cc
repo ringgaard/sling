@@ -145,6 +145,9 @@ void DumpStackTrace(int fd, void *address) {
 }
 
 static void FailureSignalHandler(int signum, siginfo_t *info, void *ucontext) {
+  // Install default handler to handle signals during stack dump.
+  signal(signum, SIG_DFL);
+
   // Get the address at the time the signal was raised.
   sig_ucontext_t *uc = reinterpret_cast<sig_ucontext_t *>(ucontext);
   void *caller = reinterpret_cast<void *>(uc->uc_mcontext.rip);
@@ -177,7 +180,6 @@ static void FailureSignalHandler(int signum, siginfo_t *info, void *ucontext) {
   DumpStackTrace(fd, caller);
 
   // Raise to default signal handler.
-  signal(signum, SIG_DFL);
   raise(signum);
 }
 
@@ -193,12 +195,16 @@ static void InstallSignalHandler(
 }
 
 void InstallFailureSignalHandlers() {
+  // Install crash handlers.
   InstallSignalHandler(SIGSEGV, FailureSignalHandler);
   InstallSignalHandler(SIGILL, FailureSignalHandler);
   InstallSignalHandler(SIGFPE, FailureSignalHandler);
   InstallSignalHandler(SIGABRT, FailureSignalHandler);
   InstallSignalHandler(SIGBUS, FailureSignalHandler);
   InstallSignalHandler(SIGTRAP, FailureSignalHandler);
+
+  // Prevent SIGPIPE in I/O operations.
+  signal(SIGPIPE, SIG_IGN);
 }
 
 }  // namespace sling

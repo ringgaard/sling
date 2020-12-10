@@ -57,20 +57,21 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
     return;
   }
   path.erase(0, 1);
-  LOG(INFO) << "media url: " << path;
 
   // Retrieve media from database.
   MutexLock lock(&mu_);
   DBRecord media;
   Status st = db_.Get(path, &media);
-  if (!st.ok()) {
+  if (!st) {
     response->SendError(500, "Internal Server Error", st.message());
+    return;
   }
 
   // Return error or redirect if file not found.
   size_t size = media.value.size();
   if (size == 0) {
     if (redirect_) {
+      VLOG(1) << "redirect media: " << path;
       response->TempRedirectTo(path.c_str());
     } else {
       response->SendError(404, "File Not Found");
@@ -107,6 +108,7 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
   if (method == HTTP_HEAD) return;
 
   // Return media content.
+  VLOG(1) << "media: " << path << " (" << size << " bytes)";
   response->Append(media.value.data(), size);
   response->set_content_length(size);
 }

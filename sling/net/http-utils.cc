@@ -212,7 +212,7 @@ time_t ParseRFCTime(const char *timestr) {
 const char *GetMimeType(const char *ext) {
   if (ext == nullptr) return nullptr;
   for (const MIMEMapping *m = mimetypes; m->ext; ++m) {
-    if (strcmp(ext, m->ext) == 0) return m->mime;
+    if (strcasecmp(ext, m->ext) == 0) return m->mime;
   }
   return nullptr;
 }

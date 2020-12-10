@@ -151,6 +151,7 @@ void AuxFilter::Init(Store *store) {
     "Q13442814",  // scholarly article
     "Q17329259",  // encyclopedic article
     "Q17633526",  // Wikinews article
+    "Q17362920",  // Wikimedia duplicated page
     "Q732577",    // publication
     "Q7187",      // gene
     "Q16521",     // taxon
