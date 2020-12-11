@@ -65,6 +65,19 @@ cc_library(
 )
 
 cc_library(
+  name = "proxy-service",
+  srcs = ["proxy-service.cc"],
+  hdrs = ["proxy-service.h"],
+  deps = [
+    ":http-server",
+    "//sling/base",
+  ],
+  linkopts = [
+    "-lcurl",
+  ],
+)
+
+cc_library(
   name = "web-service",
   srcs = ["web-service.cc"],
   hdrs = ["web-service.h"],

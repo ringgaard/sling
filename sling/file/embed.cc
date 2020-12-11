@@ -68,11 +68,11 @@ class InternalFile : public File {
   }
 
   Status PWrite(uint64 pos, const void *buffer, size_t size) override {
-    return Status(EACCES, "File read-only", file_->name);
+    return Status(EROFS, "File read-only", file_->name);
   }
 
   Status Write(const void *buffer, size_t size) override {
-    return Status(EACCES, "File read only", file_->name);
+    return Status(EROFS, "File read only", file_->name);
   }
 
   Status Seek(uint64 pos) override {
@@ -185,7 +185,7 @@ class InternalDirectory : public File {
   }
 
   Status Resize(uint64 size) override {
-    return Status(EACCES, "Directory read-only", name_);
+    return Status(EROFS, "Directory read-only", name_);
   }
 
   string filename() const override { return name_; }

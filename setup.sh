@@ -12,8 +12,9 @@ echo
 echo "=== Install SLING dependencies"
 PYVER=3.6
 PYPKGS="python${PYVER} python${PYVER}-dev python3-pip"
-PKGS="pkg-config zip g++ zlib1g-dev unzip lbzip2 ${PYPKGS}"
-sudo apt-get install ${PKGS}
+CLIBS="lbzip2 libcurl4-openssl-dev"
+PKGS="g++ ${CLIBS} ${PYPKGS}"
+sudo apt install ${PKGS}
 
 # Install bazel.
 BAZELVER=1.0.0

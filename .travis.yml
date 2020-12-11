@@ -14,6 +14,7 @@ addons:
       - pkg-config
       - g++-7
       - python3.6-dev
+      - libcurl4-openssl-dev
 
 before_install:
   - wget https://github.com/bazelbuild/bazel/releases/download/1.0.0/bazel_1.0.0-linux-x86_64.deb
