@@ -16,6 +16,10 @@
 
 #include <curl/curl.h>
 
+#include "sling/base/flags.h"
+
+DEFINE_string(proxy_dns, "8.8.8.8", "DNS servers for proxy");
+
 namespace sling {
 
 std::unordered_set<string> ProxyService::blocked_headers = {
@@ -61,15 +65,31 @@ void ProxyService::Handle(HTTPRequest *request, HTTPResponse *response) {
   if (user_agent != nullptr) {
     curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent);
   }
+  if (!FLAGS_proxy_dns.empty()) {
+    curl_easy_setopt(curl, CURLOPT_DNS_SERVERS, FLAGS_proxy_dns.c_str());
+  }
+
   CURLcode res = curl_easy_perform(curl);
   if (res != CURLE_OK) {
     LOG(ERROR) << "CURL error: " << curl_easy_strerror(res);
     response->SendError(503, "Service Not Available", curl_easy_strerror(res));
   } else {
-    // Return HTTP status code.
-    int status = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
-    if (status != 0) response->set_status(status);
+    // Prevent proxy from accesing local network (10.x.x.x and 192.168.x.x)
+    char *ipaddr = nullptr;
+    curl_easy_getinfo(curl, CURLINFO_PRIMARY_IP, &ipaddr);
+    LOG(INFO) << "Proxy retrieved from IP " << ipaddr;
+    Text ip(ipaddr);
+    if (ip.empty() ||
+        ip.starts_with("10.") ||
+        ip.starts_with("192.168.") ||
+        ip.starts_with("127.")) {
+      response->SendError(403, "Forbidden", "Blocked address");
+    } else {
+      // Return HTTP status code.
+      int status = 0;
+      curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+      if (status != 0) response->set_status(status);
+    }
   }
   curl_easy_cleanup(curl);
 }
@@ -86,13 +106,13 @@ size_t ProxyService::Header(char *buffer, size_t size, size_t n,
   while (p < end && *p != ':') p++;
   if (p != end) {
     string name(data, p - data);
-    p++;
-    while (p < end && *p == ' ') p++;
-    const char *value = p;
-    while (p < end && *p != '\n') p++;
-    size_t vlen = p - value;
-
     if (blocked_headers.count(name) == 0) {
+      p++;
+      while (p < end && *p == ' ') p++;
+      const char *value = p;
+      while (p < end && *p != '\n') p++;
+      size_t vlen = p - value;
+
       // Add header to response.
       response->Add(name.c_str(), value, vlen);
       VLOG(2) << "  Header: " << name << ": " << string(value, vlen);

@@ -401,6 +401,7 @@ void HTTPResponse::SendError(int status, const char *title, const char *msg) {
   set_content_type("text/html");
   set_status(status);
 
+  buffer()->Clear();
   Append("<html><head>\n");
   Append("<title>");
   if (title != nullptr) {
