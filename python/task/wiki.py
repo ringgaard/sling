@@ -586,6 +586,12 @@ class WikiWorkflow:
                             dir=corpora.wikidir(),
                             format="store/frame")
 
+  def wikimedia(self):
+    """Resource for media files extracted from Wikipedia."""
+    return self.wf.resource("*wiki-media.sling",
+                            dir=flags.arg.workdir + "/media",
+                            format="text/frame")
+
   def fused_items(self):
     """Resource for merged items. This is a set of record files where each
     item is represented as a frame.
@@ -609,19 +615,18 @@ class WikiWorkflow:
 
   def standard_item_sources(self, items=None):
     if items == None:
-      items = self.wikidata_items() + self.wikilinks() + [
+      items = self.bundle(
+                self.wikidata_items(),
+                self.wikilinks(),
                 self.popularity(),
                 self.fanin(),
                 self.wikipedia_items(),
-                self.wikipedia_members()
-              ]
+                self.wikipedia_members(),
+                self.wikimedia())
 
     if flags.arg.extra_items:
       extra = self.wf.resource(flags.arg.extra_items, format="records/frame")
-      if isinstance(extra, list):
-        items.extend(extra)
-      else:
-        items.append(extra)
+      items = self.bundle(items, extra)
 
     return items
 
@@ -706,14 +711,13 @@ class WikiWorkflow:
 
   def schema_defs(self):
     """Resources for schemas included in knowledge base."""
-    return [
+    self.wf.bundle(
       self.language_defs(),
       self.calendar_defs(),
       self.country_defs(),
       self.unit_defs(),
       self.wikidata_defs(),
-      self.wikipedia_defs()
-    ]
+      self.wikipedia_defs())
 
   def build_knowledge_base(self,
                            items=None,

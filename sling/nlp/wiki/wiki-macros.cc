@@ -515,6 +515,65 @@ class MeasureTemplate : public WikiMacro {
 
 REGISTER_WIKI_MACRO("measure", MeasureTemplate);
 
+// Sink for collecting media files.
+class MediaSink : public WikiSink {
+ public:
+  void Content(const char *begin, const char *end) override {
+    if (begin != end && *begin == '<') return;
+    for (const char *p = begin; p < end; ++p) {
+      if (*p == '\n') {
+        line_break_ = true;
+      } else {
+        if (line_break_) {
+          text_.push_back('\n');
+          line_break_ = false;
+        }
+        text_.push_back(*p);
+      }
+    }
+  }
+
+  // Font change starts a new alias.
+  void Font(int font) override {
+    line_break_ = true;
+  }
+
+  // Output media link.
+  void Media(const Node &node, WikiExtractor *extractor) override {
+    if (node.named()) {
+      files_.push_back(node.name().str());
+    }
+  }
+
+  // Return extracted text.
+  const string &text() const { return text_; }
+
+  // Return extracted files.
+  const std::vector<string> &files() const { return files_; }
+
+ protected:
+  // Extracted text.
+  string text_;
+
+  // Media files.
+  std::vector<string> files_;
+
+  // Pending line breaks.
+  bool line_break_ = false;
+};
+
+// Template macro for photo montage.
+class PhotoMontageTemplate : public WikiMacro {
+ public:
+  void Init(const Frame &config) override {
+  }
+
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+  }
+};
+
+REGISTER_WIKI_MACRO("photomontage", PhotoMontageTemplate);
+
 // Template macro for info boxes.
 class InfoboxTemplate : public WikiMacro {
  public:
@@ -527,7 +586,9 @@ class InfoboxTemplate : public WikiMacro {
     Handle n_fields = store->Lookup("fields");
     Handle n_group = store->Lookup("group");
     Handle n_alias = store->Lookup("alias");
+    Handle n_media = store->Lookup("media");
     n_infobox_ = store->Lookup("/wp/infobox");
+    n_media_ = store->Lookup("/wp/media");
     for (const Slot &s : config) {
       if (s.name == n_class) {
         classes_.push_back(s.value);
@@ -545,10 +606,12 @@ class InfoboxTemplate : public WikiMacro {
             field.key = key.GetHandle(Handle::is());
             field.group = key.GetHandle(n_group);
             field.alias = key.GetInt(n_alias, -1);
+            field.media = key.GetBool(n_media, false);
           } else {
             field.key = f.value;
             field.group = Handle::nil();
             field.alias = -1;
+            field.media = false;
           }
         }
       }
@@ -603,28 +666,52 @@ class InfoboxTemplate : public WikiMacro {
       }
 
       // Extract field using a sub-annotator.
-      WikiAnnotator value(annotator);
-      templ.extractor()->Enter(&value);
-      templ.extractor()->ExtractNode(*arg);
-      templ.extractor()->Leave(&value);
+      string value;
+      if (field->media) {
+        MediaSink media_annotator;
+        templ.extractor()->Enter(&media_annotator);
+        templ.extractor()->ExtractNode(*arg);
+        templ.extractor()->Leave(&media_annotator);
+        if (!media_annotator.files().empty()) {
+          Document document(store, docnames_);
+          for (auto &file : media_annotator.files()) {
+            Builder theme(store);
+            theme.AddIsA(n_media_);
+            theme.AddIs(String(store, file));
+            document.AddTheme(theme.Create());
+          }
+          document.Update();
+          value = ToLex(document);
+        } else {
+          value = media_annotator.text();
+        }
+      } else {
+        WikiAnnotator value_annotator(annotator);
+        templ.extractor()->Enter(&value_annotator);
+        templ.extractor()->ExtractNode(*arg);
+        templ.extractor()->Leave(&value_annotator);
 
-      // Convert field value to LEX format.
-      Document document(store, docnames_);
-      document.SetText(value.text());
-      GetTokenizer()->Tokenize(&document);
-      value.AddToDocument(&document);
-      document.Update();
-      string lex = ToLex(document);
+        // Convert field value to LEX format.
+        Document document(store, docnames_);
+        document.SetText(value_annotator.text());
+        GetTokenizer()->Tokenize(&document);
+        value_annotator.AddToDocument(&document);
+        document.Update();
+        value = ToLex(document);
+      }
+
+      // Skip if no value extracted.
+      if (value.empty()) continue;
 
       // Add field to infobox frame.
       if (field->group.IsNil()) {
-        main.Add(field->key, lex);
+        main.Add(field->key, value);
       } else {
         auto &group = groups[field->group];
         if (group.size() < index + 1) group.resize(index + 1);
         Builder *&element = group[index];
         if (element == nullptr) element = new Builder(store);
-        element->Add(field->key, lex);
+        element->Add(field->key, value);
       }
 
       // Extract alias.
@@ -734,6 +821,7 @@ class InfoboxTemplate : public WikiMacro {
     Handle key;     // slot name for field
     Handle group;   // group for repeated field
     int alias;      // alias type or -1 if it is not an alias field
+    bool media;     // extract field as media file name(s)
   };
 
   // Types added to thematic frame for infobox.
@@ -745,8 +833,9 @@ class InfoboxTemplate : public WikiMacro {
   // Document names.
   DocumentNames *docnames_ = nullptr;
 
-  // Infobox type.
+  // Symbols.
   Handle n_infobox_;
+  Handle n_media_;
 };
 
 REGISTER_WIKI_MACRO("infobox", InfoboxTemplate);
@@ -876,7 +965,7 @@ class FlagTemplate : public WikiMacro {
       for (const Slot &s : country_codes) {
         if (!store->IsString(s.name)) continue;
         string code = String(store, s.name).value();
-        countries_[code] = s	.value;
+        countries_[code] = s.value;
       }
     }
   }

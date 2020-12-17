@@ -38,14 +38,14 @@
     description: "Mention phrase"
     source: document
     target: phrase
-    multi: 1
+    multi: true
   }
 
   role: {=theme :slot
     name: "theme"
     description: "Thematic frame"
     source: document
-    multi: 1
+    multi: true
   }
 }
 
@@ -113,7 +113,7 @@
     name: "evokes"
     description: "Frame evoked by phrase"
     source: phrase
-    multi: 1
+    multi: true
   }
 }
 
@@ -126,13 +126,12 @@
     name: "alias"
     description: "Entity name"
     source: profile
-    target: alias
-    multi: 1
+    target: nomen
+    multi: true
   }
 }
 
-# TODO: 'alias' conflicts with profile.alias
-{=alias +named :schema
+{=nomen +named :schema
   name: "Alias"
   family: /schema/document
 
@@ -161,13 +160,13 @@
 ; Document schema family
 {=/schema/document :schema_family
   name: "Document schemas"
-  precompute_ancestors: 1
+  precompute_ancestors: true
 
   member_schema: document
   member_schema: token
   member_schema: phrase
 
   member_schema: profile
-  member_schema: alias
+  member_schema: nomen
 }
 

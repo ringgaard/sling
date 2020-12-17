@@ -96,6 +96,8 @@ pyfiles = [
   'task/embedding.py',
   'task/wiki.py',
   'task/workflow.py',
+
+  'media/wikimedia.py',
 ]
 
 for f in pyfiles:
@@ -132,7 +134,7 @@ Platform: UNKNOWN
 Classifier: Programming Language :: Python
 Classifier: Programming Language :: Python :: $PYVERSION$
 
-Google SLING frame semantic parsing framework
+SLING frame semantic parsing framework
 """
 package_metadata = package_metadata.replace("$VERSION$", version)
 package_metadata = package_metadata.replace("$PYVERSION$", pyversion)

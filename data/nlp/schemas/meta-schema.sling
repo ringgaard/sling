@@ -54,29 +54,29 @@
     name: "role"
     source: schema
     target: slot
-    multi: 1
+    multi: true
   }
   role: {=value :slot
     name: "value"
     source: schema
-    multi: 1
+    multi: true
   }
   role: {=binding :slot
     name: "binding"
     source: schema
-    multi: 1
+    multi: true
   }
   role: {=projection :slot
     name: "projection"
     source: schema
     target: construction
-    multi: 1
+    multi: true
   }
   role: {=trigger :slot
     name: "trigger"
     source: schema
     target: predicate
-    multi: 1
+    multi: true
   }
   role: {=family :slot
     name: "family"
@@ -144,12 +144,12 @@
 {=self :named name: "Self" description: "Self"}
 
 ; Schemas for value types.
-{=string :schema name: "String" simple: 1 family: /schema/meta}
-{=number :schema name: "Number" simple: 1 family: /schema/meta}
-{=int +number :schema name: "Integer" simple: 1 family: /schema/meta}
-{=float +number :schema name: "Float" simple: 1 family: /schema/meta}
-{=bool +int :schema name: "Boolean" simple: 1 family: /schema/meta}
-{=date +string :schema name: "Date" simple: 1 family: /schema/meta}
+{=string :schema name: "String" simple: true family: /schema/meta}
+{=number :schema name: "Number" simple: true family: /schema/meta}
+{=int +number :schema name: "Integer" simple: true family: /schema/meta}
+{=float +number :schema name: "Float" simple: true family: /schema/meta}
+{=bool +int :schema name: "Boolean" simple: true family: /schema/meta}
+{=date +string :schema name: "Date" simple: true family: /schema/meta}
 
 ; Specialized schema for mappings.
 {=mapping +schema
@@ -201,7 +201,7 @@
   role: {=sense :slot
     name: "Sense"
     source: predicate
-    multi: 1
+    multi: true
   }
 }
 
@@ -209,7 +209,7 @@
 {=part_of_speech +named :schema
   name: "Part of speech"
   family: /schema/meta
-  simple: 1
+  simple: true
 
   value: {=verb :part_of_speech name: "Verb"}
   value: {=noun :part_of_speech name: "Noun"}
@@ -220,6 +220,19 @@
 ; Knowledge source.
 {=knowledge +named :schema
   name: "Knowledge"
+  family: /schema/meta
+
+  role: {=media :slot
+    name: "Media file"
+    source: knowledge
+    target: file
+    multi: true
+  }
+}
+
+; Knowledge source.
+{=file +named :schema
+  name: "File"
   family: /schema/meta
 }
 
@@ -264,15 +277,15 @@
     name: "schema family"
     source: catalog
     target: schema_family
-    multi: 1
+    multi: true
   }
 }
 
 ; Meta schema family
 {=/schema/meta :schema_family
   name: "Meta schemas"
-  precompute_rolemaps: 1
-  precompute_ancestors: 1
+  precompute_rolemaps: true
+  precompute_ancestors: true
 
   member_schema: named
   member_schema: language
@@ -288,6 +301,7 @@
   member_schema: predicate
   member_schema: part_of_speech
   member_schema: knowledge
+  member_schema: file
   member_schema: schema_family
   member_schema: catalog
 }

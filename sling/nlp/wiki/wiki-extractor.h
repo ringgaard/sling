@@ -53,6 +53,9 @@ class WikiSink {
   virtual void Category(const Node &node,
                         WikiExtractor *extractor,
                         bool unanchored);
+
+  // Output media link.
+  virtual void Media(const Node &node, WikiExtractor *extractor);
 };
 
 // Extract text and annotations from Wikipedia page. The text and annotations
@@ -98,7 +101,7 @@ class WikiExtractor {
   void ExtractFont(const Node &node);
   void ExtractTemplate(const Node &node);
   void ExtractLink(const Node &node);
-  void ExtractImage(const Node &node);
+  void ExtractMedia(const Node &node);
   void ExtractCategory(const Node &node);
   void ExtractUrl(const Node &node);
   void ExtractComment(const Node &node);

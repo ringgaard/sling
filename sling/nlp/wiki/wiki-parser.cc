@@ -35,7 +35,7 @@ namespace {
 // AST node names.
 static const char *node_names[] = {
   "DOCUMENT", "ARG", "ATTR",
-  "TEXT", "FONT", "TEMPLATE", "LINK", "IMAGE", "CATEGORY", "URL", "COMMENT",
+  "TEXT", "FONT", "TEMPLATE", "LINK", "MEDIA", "CATEGORY", "URL", "COMMENT",
   "TAG", "BTAG", "ETAG", "MATH", "TIMELINE", "GALLERY", "REF", "NOWIKI",
   "HEADING", "INDENT", "TERM", "UL", "OL", "HR", "SWITCH",
   "TABLE", "CAPTION", "ROW", "HEADER", "CELL", "BREAK",
@@ -46,29 +46,29 @@ typedef std::unordered_map<string, WikiParser::Special> TemplatePrefixMap;
 
 // Link prefixes for images and categories.
 static const LinkPrefixMap link_prefix = {
-  {"Archivo",    WikiParser::IMAGE},       // es
-  {"Attēls",     WikiParser::IMAGE},       // lv
-  {"Bestand",    WikiParser::IMAGE},       // nl
-  {"Berkas",     WikiParser::IMAGE},       // id
+  {"Archivo",    WikiParser::MEDIA},       // es
+  {"Attēls",     WikiParser::MEDIA},       // lv
+  {"Bestand",    WikiParser::MEDIA},       // nl
+  {"Berkas",     WikiParser::MEDIA},       // id
   {"Categoría",  WikiParser::CATEGORY},    // es
   {"Categoria",  WikiParser::CATEGORY},    // it, pt, ca, la
   {"Catégorie",  WikiParser::CATEGORY},    // fr
   {"Categorie",  WikiParser::CATEGORY},    // nl, ro
   {"Category",   WikiParser::CATEGORY},    // en
-  {"Datei",      WikiParser::IMAGE},       // de
-  {"Datoteka",   WikiParser::IMAGE},       // sh, hr
-  {"Dosiero",    WikiParser::IMAGE},       // eo
-  {"Fájl",       WikiParser::IMAGE},       // hu
-  {"Fasciculus", WikiParser::IMAGE},       // la
-  {"Ficheiro",   WikiParser::IMAGE},       // pt
-  {"Fichier",    WikiParser::IMAGE},       // fr
-  {"File",       WikiParser::IMAGE},       // en, el, ms, et
-  {"Fil",        WikiParser::IMAGE},       // da, no, sv
-  {"Fișier",     WikiParser::IMAGE},       // ro
-  {"Fitxategi",  WikiParser::IMAGE},       // eu
-  {"Fitxer",     WikiParser::IMAGE},       // ca
-  {"Image",      WikiParser::IMAGE},       // en
-  {"Immagine",   WikiParser::IMAGE},       // it
+  {"Datei",      WikiParser::MEDIA},       // de
+  {"Datoteka",   WikiParser::MEDIA},       // sh, hr
+  {"Dosiero",    WikiParser::MEDIA},       // eo
+  {"Fájl",       WikiParser::MEDIA},       // hu
+  {"Fasciculus", WikiParser::MEDIA},       // la
+  {"Ficheiro",   WikiParser::MEDIA},       // pt
+  {"Fichier",    WikiParser::MEDIA},       // fr
+  {"File",       WikiParser::MEDIA},       // en, el, ms, et
+  {"Fil",        WikiParser::MEDIA},       // da, no, sv
+  {"Fișier",     WikiParser::MEDIA},       // ro
+  {"Fitxategi",  WikiParser::MEDIA},       // eu
+  {"Fitxer",     WikiParser::MEDIA},       // ca
+  {"Image",      WikiParser::MEDIA},       // en
+  {"Immagine",   WikiParser::MEDIA},       // it
   {"Kategória",  WikiParser::CATEGORY},    // hu, sk
   {"Kategoria",  WikiParser::CATEGORY},    // pl, eu
   {"Kategorie",  WikiParser::CATEGORY},    // de, cs, af
@@ -76,20 +76,20 @@ static const LinkPrefixMap link_prefix = {
   {"Kategorija", WikiParser::CATEGORY},    // sh, hr, lt, lv
   {"Kategorio",  WikiParser::CATEGORY},    // eo
   {"Kategori",   WikiParser::CATEGORY},    // da, no, sv, id, ms
-  {"Lêer",       WikiParser::IMAGE},       // af
+  {"Lêer",       WikiParser::MEDIA},       // af
   {"Luokka",     WikiParser::CATEGORY},    // fi
-  {"Media",      WikiParser::IMAGE},       // en
-  {"Plik",       WikiParser::IMAGE},       // pl
-  {"Soubor",     WikiParser::IMAGE},       // cs
-  {"Súbor",      WikiParser::IMAGE},       // sk
-  {"Tiedosto",   WikiParser::IMAGE},       // fi
-  {"Vaizdas",    WikiParser::IMAGE},       // lt
+  {"Media",      WikiParser::MEDIA},       // en
+  {"Plik",       WikiParser::MEDIA},       // pl
+  {"Soubor",     WikiParser::MEDIA},       // cs
+  {"Súbor",      WikiParser::MEDIA},       // sk
+  {"Tiedosto",   WikiParser::MEDIA},       // fi
+  {"Vaizdas",    WikiParser::MEDIA},       // lt
   {"Κατηγορία",  WikiParser::CATEGORY},    // el
-  {"Датотека",   WikiParser::IMAGE},       // sr
+  {"Датотека",   WikiParser::MEDIA},       // sr
   {"Категорија", WikiParser::CATEGORY},    // sr
   {"Категория",  WikiParser::CATEGORY},    // bg, ru
   {"Категорія",  WikiParser::CATEGORY},    // uk
-  {"Файл",       WikiParser::IMAGE},       // bg, ru, uk
+  {"Файл",       WikiParser::MEDIA},       // bg, ru, uk
 };
 
 // Link prefixes for templates.
@@ -319,8 +319,8 @@ void WikiParser::ParseNewLine() {
       ParseGallery();
       return;
     }
-    if (Inside(IMAGE, GALLERY)) {
-      UnwindUntil(IMAGE);
+    if (Inside(MEDIA, GALLERY)) {
+      UnwindUntil(MEDIA);
       ParseGallery();
       return;
     }

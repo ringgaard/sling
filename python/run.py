@@ -134,6 +134,10 @@ commands = [
     help="Extract link graph from Wikipedias",
     package="sling.task.wiki",
   ),
+  Command("extract_wikimedia",
+    help="Extract Wikimedia files from Wikipedia infoboxes",
+    package="sling.media.wikimedia",
+  ),
 
   # Knowledge base.
   Command("compute_fanin",

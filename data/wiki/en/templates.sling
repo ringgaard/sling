@@ -452,10 +452,14 @@
 "flagu": {type: "flag"}
 "flagteam": {type: "flag"}
 
+"Photomontage": {type: "photomontage"}
+
 "Infobox person": {
   type: "infobox"
   class: /wp/infobox/person
   fields: {=/wp/infobox/person/fields
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "pre-nominals": /wp/info/pre_nominals
     "honorific_prefix": /wp/info/pre_nominals
     "honorific-prefix": /wp/info/pre_nominals
@@ -674,7 +678,6 @@
     "doctoral_advisor": /wp/info/doctoral_advisor
     "academic_advisors": /wp/info/academic_advisors
     "influences": /wp/info/influences
-    "era": /wp/info/era
     "discipline": /wp/info/discipline
     "sub_discipline": /wp/info/sub_discipline
     "workplaces": /wp/info/workplaces
@@ -690,10 +693,11 @@
   type: "infobox"
   class: /wp/infobox/musical_artist
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "honorific_prefix": /wp/info/honorific_prefix
     "name": {+/wp/info/name  alias: 12}
     "honorific_suffix": /wp/info/honorific_suffix
-    "caption": /wp/info/caption
     "background": /wp/info/background
     "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
@@ -720,6 +724,8 @@
   type: "infobox"
   class: /wp/infobox/sportsperson
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "honorific_prefix": /wp/info/honorific_prefix
     "name": {+/wp/info/name alias: 12}
     "honorific_suffix": /wp/info/honorific_suffix
@@ -792,10 +798,378 @@
   }
 }
 
+"Infobox architect": {
+  type: "infobox"
+  class: /wp/infobox/architect
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "birth_name": /wp/info/birth_name
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "other_names": /wp/info/other_names
+    "nationality": /wp/info/nationality
+    "alma_mater": /wp/info/alma_mater
+    "spouse": /wp/info/spouse
+    "partner": /wp/info/partner
+    "children": /wp/info/children
+    "parents": /wp/info/parents
+    "awards": /wp/info/awards
+    "practice": /wp/info/practice
+    "significant_buildings": /wp/info/significant_buildings
+    "significant_projects": /wp/info/significant_projects
+    "significant_design": /wp/info/significant_design
+    "signature": /wp/info/signature
+    "website": /wp/info/website
+    "embedded": /wp/info/embedded
+  }
+}
+
+"Infobox artist": {
+  type: "infobox"
+  class: /wp/infobox/artist
+  fields: {
+    "honorific_prefix": /wp/info/honorific_prefix
+    "name": /wp/info/name
+    "honorific_suffix": /wp/info/honorific_suffix
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "native_name": /wp/info/native_name
+    "native_name_lang": /wp/info/native_name_lang
+    "birth_name": /wp/info/birth_name
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "baptised": /wp/info/baptised
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "resting_place": /wp/info/resting_place
+    "resting_place_coordinates": /wp/info/resting_place_coordinates
+    "nationality": /wp/info/nationality
+    "education": /wp/info/education
+    "alma_mater": /wp/info/alma_mater
+    "known_for": /wp/info/known_for
+    "notable_works": /wp/info/notable_works
+    "style": /wp/info/style
+    "home_town": /wp/info/home_town
+    "movement": /wp/info/movement
+    "spouse": /wp/info/spouse
+    "partner": /wp/info/partner
+    "parents": /wp/info/parents
+    "father": /wp/info/father
+    "mother": /wp/info/mother
+    "relatives": /wp/info/relatives
+    "family": /wp/info/family
+    "awards": /wp/info/awards
+    "elected": /wp/info/elected
+    "patrons": /wp/info/patrons
+    "memorials": /wp/info/memorials
+    "website": /wp/info/website
+    "module": /wp/info/module
+  }
+}
+
+"Infobox philosopher": {
+  type: "infobox"
+  class: /wp/infobox/philosopher
+  fields: {
+    "honorific_prefix": /wp/info/honorific_prefix
+    "name": /wp/info/name
+    "native_name": /wp/info/native_name
+    "honorific_suffix": /wp/info/honorific_suffix
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "other_names": /wp/info/other_names
+    "birth_name": /wp/info/birth_name
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "death_cause": /wp/info/death_cause
+    "residence": /wp/info/residence
+    "nationality": /wp/info/nationality
+    "spouse": /wp/info/spouse
+    "partner": /wp/info/partner
+    "education": /wp/info/education
+    "alma_mater": /wp/info/alma_mater
+    "notable_works": /wp/info/notable_works
+    "awards": /wp/info/awards
+    "signature": /wp/info/signature
+    "signature_size": /wp/info/signature_size
+    "signature_alt": /wp/info/signature_alt
+    "era": /wp/info/era
+    "region": /wp/info/region
+    "school_tradition": /wp/info/school_tradition
+    "institutions": /wp/info/institutions
+    "thesis_title": /wp/info/thesis_title
+    "thesis_url": /wp/info/thesis_url
+    "thesis_year": /wp/info/thesis_year
+    "doctoral_advisor": /wp/info/doctoral_advisor
+    "academic_advisors": /wp/info/academic_advisors
+    "doctoral_students": /wp/info/doctoral_students
+    "notable_students": /wp/info/notable_students
+    "language": /wp/info/language
+    "main_interests": /wp/info/main_interests
+    "notable_ideas": /wp/info/notable_ideas
+    "influences": /wp/info/influences
+    "influenced": /wp/info/influenced
+    "website": /wp/info/website
+  }
+}
+
+"Infobox writer": {
+  type: "infobox"
+  class: /wp/infobox/writer
+  fields: {
+    "embed": /wp/info/embed
+    "honorific_prefix": /wp/info/honorific_prefix
+    "name": /wp/info/name
+    "honorific_suffix": /wp/info/honorific_suffix
+    "image": {+/wp/info/image media: true}
+    "image_upright": /wp/info/image_upright
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "native_name": /wp/info/native_name
+    "native_name_lang": /wp/info/native_name_lang
+    "pseudonym": /wp/info/pseudonym
+    "birth_name": /wp/info/birth_name
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "resting_place": /wp/info/resting_place
+    "occupation": /wp/info/occupation
+    "language": /wp/info/language
+    "nationality": /wp/info/nationality
+    "citizenship": /wp/info/citizenship
+    "education": /wp/info/education
+    "alma_mater": /wp/info/alma_mater
+    "period": /wp/info/period
+    "genre": /wp/info/genre
+    "subject": /wp/info/subject
+    "movement": /wp/info/movement
+    "notable_works": /wp/info/notable_works
+    "spouse": /wp/info/spouse
+    "partner": /wp/info/partner
+    "children": /wp/info/children
+    "relatives": /wp/info/relatives
+    "awards": /wp/info/awards
+    "signature": /wp/info/signature
+    "signature_alt": /wp/info/signature_alt
+    "years_active": /wp/info/years_active
+    "module": /wp/info/module
+    "website": /wp/info/website
+    "portaldisp": /wp/info/portaldisp
+  }
+}
+
+"Infobox college coach": {
+  type: "infobox"
+  class: /wp/infobox/college_coach
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "current_title": /wp/info/current_title
+    "current_team": /wp/info/current_team
+    "current_conference": /wp/info/current_conference
+    "current_record": /wp/info/current_record
+    "contract": /wp/info/contract
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "alma_mater": /wp/info/alma_mater
+    "player_years1": /wp/info/player_years1
+    "player_team1": /wp/info/player_team1
+    "player_positions": /wp/info/player_positions
+    "coach_years1": /wp/info/coach_years1
+    "coach_team1": /wp/info/coach_team1
+    "admin_years1": /wp/info/admin_years1
+    "admin_team1": /wp/info/admin_team1
+    "overall_record": /wp/info/overall_record
+    "bowl_record": /wp/info/bowl_record
+    "tournament_record": /wp/info/tournament_record
+    "championships": /wp/info/championships
+    "awards": /wp/info/awards
+    "coaching_records": /wp/info/coaching_records
+    "CFBHOF_year": /wp/info/cfbhof_year
+    "CFBHOF_id": /wp/info/cfbhof_id
+    "BASKHOF_year": /wp/info/baskhof_year
+    "BASKHOF_id": /wp/info/baskhof_id
+    "CBBASKHOF_year": /wp/info/cbbaskhof_year
+    "CBASEHOF_year": /wp/info/cbasehof_year
+    "WBHOF": /wp/info/wbhof
+    "FIBA_HOF_player": /wp/info/fiba_hof_player
+    "uslaxhof_year": /wp/info/uslaxhof_year
+    "canlaxhof": /wp/info/canlaxhof
+    "nllhof": /wp/info/nllhof
+    "medaltemplates": /wp/info/medaltemplates
+    "show-medals": /wp/info/show-medals
+  }
+}
+
+"Infobox cricketer": {
+  type: "infobox"
+  class: /wp/infobox/cricketer
+  fields: {
+    "child": /wp/info/child
+    "headerstyle": /wp/info/headerstyle
+    "name": /wp/info/name
+    "honorific_prefix": /wp/info/honorific_prefix
+    "honorific_suffix": /wp/info/honorific_suffix
+    "female": /wp/info/female
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "full_name": /wp/info/full_name
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "nickname": /wp/info/nickname
+    "height": /wp/info/height
+    "heightft": /wp/info/heightft
+    "heightinch": /wp/info/heightinch
+    "heightcm": /wp/info/heightcm
+    "heightm": /wp/info/heightm
+    "batting": /wp/info/batting
+    "bowling": /wp/info/bowling
+    "role": /wp/info/role
+    "family": /wp/info/family
+    "website": /wp/info/website
+    "international": /wp/info/international
+    "country": /wp/info/country
+    "country2": /wp/info/country2
+    "country3": /wp/info/country3
+    "internationalspan": /wp/info/internationalspan
+    "internationalspan2": /wp/info/internationalspan2
+    "internationalspan3": /wp/info/internationalspan3
+    "onetest": /wp/info/onetest
+    "testdebutdate": /wp/info/testdebutdate
+    "testdebutyear": /wp/info/testdebutyear
+    "testdebutfor": /wp/info/testdebutfor
+    "testdebutagainst": /wp/info/testdebutagainst
+    "testcap": /wp/info/testcap
+    "testcap2": /wp/info/testcap2
+    "lasttestdate": /wp/info/lasttestdate
+    "lasttestyear": /wp/info/lasttestyear
+    "lasttestfor": /wp/info/lasttestfor
+    "lasttestagainst": /wp/info/lasttestagainst
+    "oneodi": /wp/info/oneodi
+    "odidebutdate": /wp/info/odidebutdate
+    "odidebutyear": /wp/info/odidebutyear
+    "odidebutfor": /wp/info/odidebutfor
+    "odidebutagainst": /wp/info/odidebutagainst
+    "odicap": /wp/info/odicap
+    "odicap2": /wp/info/odicap2
+    "lastodidate": /wp/info/lastodidate
+    "lastodiyear": /wp/info/lastodiyear
+    "lastodifor": /wp/info/lastodifor
+    "lastodiagainst": /wp/info/lastodiagainst
+    "odishirt": /wp/info/odishirt
+    "oneT20I": /wp/info/onet20i
+    "T20Idebutdate": /wp/info/t20idebutdate
+    "T20Idebutyear": /wp/info/t20idebutyear
+    "T20Idebutfor": /wp/info/t20idebutfor
+    "T20Idebutagainst": /wp/info/t20idebutagainst
+    "T20Icap": /wp/info/t20icap
+    "T20Icap2": /wp/info/t20icap2
+    "lastT20Idate": /wp/info/lastt20idate
+    "lastT20Iyear": /wp/info/lastt20iyear
+    "lastT20Ifor": /wp/info/lastt20ifor
+    "lastT20Iagainst": /wp/info/lastt20iagainst
+    "T20Ishirt": /wp/info/t20ishirt
+
+    "club": {+/wp/info/name group: /wp/info/club}
+    "year": {+/wp/info/year group: /wp/info/club}
+    "years": {+/wp/info/years group: /wp/info/club}
+    "clubnumber": {+/wp/info/clubnumber  group: /wp/info/club}
+
+    "type1": /wp/info/type1
+    "onetype1": /wp/info/onetype1
+    "debutdate1": /wp/info/debutdate1
+    "debutyear1": /wp/info/debutyear1
+    "debutfor1": /wp/info/debutfor1
+    "debutagainst1": /wp/info/debutagainst1
+    "lastdate1": /wp/info/lastdate1
+    "lastyear1": /wp/info/lastyear1
+    "lastfor1": /wp/info/lastfor1
+    "lastagainst1": /wp/info/lastagainst1
+
+    "type2": /wp/info/type2
+    "onetype2": /wp/info/onetype2
+    "debutdate2": /wp/info/debutdate2
+    "debutyear2": /wp/info/debutyear2
+    "debutfor2": /wp/info/debutfor2
+    "debutagainst2": /wp/info/debutagainst2
+    "lastdate2": /wp/info/lastdate2
+    "lastyear2": /wp/info/lastyear2
+    "lastfor2": /wp/info/lastfor2
+    "lastagainst2": /wp/info/lastagainst2
+
+    "umpire": /wp/info/umpire
+    "testsumpired": /wp/info/testsumpired
+    "umptestdebutyr": /wp/info/umptestdebutyr
+    "umptestlastyr": /wp/info/umptestlastyr
+    "odisumpired": /wp/info/odisumpired
+    "umpodidebutyr": /wp/info/umpodidebutyr
+    "umpodilastyr": /wp/info/umpodilastyr
+    "t20isumpired": /wp/info/t20isumpired
+    "umpt20idebutyr": /wp/info/umpt20idebutyr
+    "umpt20ilastyr": /wp/info/umpt20ilastyr
+    "wtestsumpired": /wp/info/wtestsumpired
+    "umpwtestdebutyr": /wp/info/umpwtestdebutyr
+    "umpwtestlastyr": /wp/info/umpwtestlastyr
+    "wodisumpired": /wp/info/wodisumpired
+    "umpwodidebutyr": /wp/info/umpwodidebutyr
+    "umpwodilastyr": /wp/info/umpwodilastyr
+    "wt20isumpired": /wp/info/wt20isumpired
+    "wt20idebutyr": /wp/info/wt20idebutyr
+    "wt20ilastyr": /wp/info/wt20ilastyr
+    "fcumpired": /wp/info/fcumpired
+    "umpfcdebutyr": /wp/info/umpfcdebutyr
+    "umpfclastyr": /wp/info/umpfclastyr
+    "listaumpired": /wp/info/listaumpired
+    "umplistadebutyr": /wp/info/umplistadebutyr
+    "umplistalastyr": /wp/info/umplistalastyr
+    "t20umpired": /wp/info/t20umpired
+    "umpt20debutyr": /wp/info/umpt20debutyr
+    "umpt20lastyr": /wp/info/umpt20lastyr
+    "hidedeliveries": /wp/info/hidedeliveries
+    "columns": /wp/info/columns
+
+    "column": {+/wp/info/columnno group: /wp/info/column}
+    "matches": {+/wp/info/matches group: /wp/info/column}
+    "runs": {+/wp/info/runs group: /wp/info/column}
+    "bat avg": {+/wp/info/bat_avg group: /wp/info/column}
+    "100s/50s": {+/wp/info/100s/50s group: /wp/info/column}
+    "top score": {+/wp/info/top_score group: /wp/info/column}
+    "deliveries": {+/wp/info/deliveries group: /wp/info/column}
+    "wickets": {+/wp/info/wickets group: /wp/info/column}
+    "bowl avg": {+/wp/info/bowl_avg group: /wp/info/column}
+    "fivefor": {+/wp/info/fivefor group: /wp/info/column}
+    "tenfor": {+/wp/info/tenfor group: /wp/info/column}
+    "best bowling": {+/wp/info/best_bowling group: /wp/info/column}
+    "catches/stumpings": {+/wp/info/catches_stumpings group: /wp/info/column}
+
+    "source": /wp/info/source
+    "date": /wp/info/date
+  }
+}
+
 "Infobox military person": {
   type: "infobox"
   class: /wp/infobox/military_person
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "honorific_prefix": /wp/info/honorific_prefix
     "name": {+/wp/info/name alias: 12}
     "honorific_suffix": /wp/info/honorific_suffix
@@ -834,10 +1208,155 @@
   }
 }
 
+"Infobox character": {
+  type: "infobox"
+  class: /wp/infobox/character
+  fields: {
+    "color": /wp/info/color
+    "name": /wp/info/name
+    "series": /wp/info/series
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "first_major": /wp/info/first_major
+    "first_minor": /wp/info/first_minor
+    "first_date": /wp/info/first_date
+    "last_major": /wp/info/last_major
+    "last_minor": /wp/info/last_minor
+    "last_date": /wp/info/last_date
+    "creator": /wp/info/creator
+    "based_on": /wp/info/based_on
+    "adapted_by": /wp/info/adapted_by
+    "designer": /wp/info/designer
+    "portrayer": /wp/info/portrayer
+    "voice": /wp/info/voice
+    "motion_actor": /wp/info/motion_actor
+    "full_name": /wp/info/full_name
+    "nickname": /wp/info/nickname
+    "alias": /wp/info/alias
+    "species": /wp/info/species
+    "gender": /wp/info/gender
+    "title": /wp/info/title
+    "occupation": /wp/info/occupation
+    "affiliation": /wp/info/affiliation
+    "fighting_style": /wp/info/fighting_style
+    "weapon": /wp/info/weapon
+    "family": /wp/info/family
+    "spouse": /wp/info/spouse
+    "significant_other": /wp/info/significant_other
+    "children": /wp/info/children
+    "relatives": /wp/info/relatives
+    "religion": /wp/info/religion
+    "origin": /wp/info/origin
+    "nationality": /wp/info/nationality
+  }
+}
+
+"Infobox comics character": {
+  type: "infobox"
+  class: /wp/infobox/comics_character
+  fields: {
+    "character_name": /wp/info/character_name
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "publisher": /wp/info/publisher
+    "debut": /wp/info/debut
+    "creators": /wp/info/creators
+    "voiced_by": /wp/info/voiced_by
+    "first_series": /wp/info/first_series
+    "first_episode": /wp/info/first_episode
+    "first_comic": /wp/info/first_comic
+    "real_name": /wp/info/real_name
+    "alter ego": /wp/info/alter_ego
+    "alter_ego": /wp/info/alter_ego
+    "full_name": /wp/info/full_name
+    "full name": /wp/info/full_name
+    "species": /wp/info/species
+    "homeworld": /wp/info/homeworld
+    "alliances": /wp/info/alliances
+    "affiliations": /wp/info/affiliations
+    "previous_alliances": /wp/info/previous_alliances
+    "supports": /wp/info/supports
+    "aliases": /wp/info/aliases
+    "powers": /wp/info/powers
+    "partners": /wp/info/partners
+    "IOM_alter_ego": /wp/info/iom_alter_ego
+    "IOM_full_name": /wp/info/iom_full_name
+    "IOM_alliances": /wp/info/iom_alliances
+    "IOM_partners": /wp/info/iom_partners
+    "IOM_aliases": /wp/info/iom_aliases
+    "IOM_powers": /wp/info/iom_powers
+    "sortkey": /wp/info/sortkey
+    "subcat": /wp/info/subcat
+    "cat": /wp/info/cat
+    "hero": /wp/info/hero
+    "villain": /wp/info/villain
+    "altcat": /wp/info/altcat
+    "addcharcat1": /wp/info/addcharcat1
+    "addcharcat2": /wp/info/addcharcat2
+    "addcharcat3": /wp/info/addcharcat3
+    "addcharcat4": /wp/info/addcharcat4
+    "addcharcat5": /wp/info/addcharcat5
+    "addcharcat6": /wp/info/addcharcat6
+    "noimage": /wp/info/noimage
+    "converted": /wp/info/converted
+  }
+}
+
+"Infobox soap character": {
+  type: "infobox"
+  class: /wp/infobox/soap_character
+  fields: {
+    "name": /wp/info/name
+    "series": /wp/info/series
+    "portrayer": /wp/info/portrayer
+    "years": /wp/info/years
+    "first": /wp/info/first
+    "last": /wp/info/last
+    "creator": /wp/info/creator
+    "introducer": /wp/info/introducer
+    "books": /wp/info/books
+    "spinoffs": /wp/info/spinoffs
+    "crossover": /wp/info/crossover
+    "classification": /wp/info/classification
+
+    "image": {+/wp/info/file group: /wp/info/image media: true}
+    "imagesize": {+/wp/info/size group: /wp/info/image}
+    "imagealt": {+/wp/info/alt group: /wp/info/image}
+    "caption": {+/wp/info/caption group: /wp/info/image}
+
+    "alias": /wp/info/alias
+    "species": /wp/info/species
+    "breed": /wp/info/breed
+    "occupation": /wp/info/occupation
+    "residence": /wp/info/residence
+    "family": /wp/info/family
+    "owner": /wp/info/owner
+    "parents": /wp/info/parents
+    "adoptiveparents": /wp/info/adoptiveparents
+    "stepparents": /wp/info/stepparents
+    "siblings": /wp/info/siblings
+    "spouse": /wp/info/spouse
+    "civilpartner": /wp/info/civilpartner
+    "children": /wp/info/children
+    "adoptivechildren": /wp/info/adoptivechildren
+    "stepchildren": /wp/info/stepchildren
+    "grandchildren": /wp/info/grandchildren
+    "grandparents": /wp/info/grandparents
+    "aunts/uncles": /wp/info/aunts/uncles
+    "nieces/nephews": /wp/info/nieces/nephews
+    "cousins": /wp/info/cousins
+    "relatives": /wp/info/relatives
+  }
+}
+
 "Infobox official post": {
   type: "infobox"
   class: /wp/infobox/official_post
   fields: {
+    "image": {+/wp/info/image media: true}
+    "imagecaption": /wp/info/caption
     "post": /wp/info/post
     "body": /wp/info/body
     "native_name": {+/wp/info/native_name alias: 12}
@@ -876,6 +1395,8 @@
   type: "infobox"
   class: /wp/infobox/military_rank
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "country": /wp/info/country
     "service branch": /wp/info/service_branch
@@ -896,6 +1417,8 @@
   type: "infobox"
   class: /wp/template:infobox/military_gear
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "origin": /wp/info/origin
     "type": /wp/info/type
@@ -922,6 +1445,8 @@
   type: "infobox"
   class: /wp/infobox/family
   fields: {
+    "image": {+/wp/info/image media: true}
+    "image_caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
@@ -962,9 +1487,10 @@
   type: "infobox"
   class: /wp/infobox/football_biography
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "alt": /wp/info/alt
-    "caption": /wp/info/caption
     "fullname": {+/wp/info/fullname alias: 12}
     "birth_date": /wp/info/birth_date
     "birth_place": /wp/info/birth_place
@@ -1004,6 +1530,10 @@
   type: "infobox"
   class: /wp/infobox/organization
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
@@ -1058,6 +1588,12 @@
   type: "infobox"
   class: /wp/infobox/government_agency
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
+    "seal": /wp/info/seal
+    "seal_caption": /wp/info/seal_caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "native_name_a": {+/wp/info/native_name_a alias: 12}
@@ -1104,6 +1640,8 @@
   type: "infobox"
   class: /wp/infobox/political_party
   fields: {
+    "logo": {+/wp/info/logo media: true}
+    "caption": /wp/info/logo_caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
@@ -1172,7 +1710,7 @@
     "slogan": /wp/info/slogan
     "anthem": /wp/info/anthem
     "symbol": /wp/info/symbol
-    "flag": /wp/info/flag
+    "flag": {+/wp/info/flag_image media: true}
     "website": /wp/info/website
     "state": /wp/info/state
     "country": /wp/info/country
@@ -1191,6 +1729,8 @@
   type: "infobox"
   class: /wp/infobox/law_enforcement_agency
   fields: {
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "agencyname": {+/wp/info/agencyname alias: 12}
     "nativename": {+/wp/info/nativename alias: 12}
     "nativenamea": {+/wp/info/nativenamea alias: 12}
@@ -1293,9 +1833,10 @@
   class: /wp/infobox/fire_department
   fields: {
     "name": {+/wp/info/name alias: 12}
-    "logo": /wp/info/logo
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "patch": /wp/info/patch
-    "flag": /wp/info/flag
+    "flag": {+/wp/info/flag_image media: true}
     "motto": /wp/info/motto
     "country": /wp/info/country
     "subdivision_type": {+/wp/info/type group: /wp/info/subdivision}
@@ -1347,6 +1888,10 @@
   type: "infobox"
   class: /wp/infobox/space_agency
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "acronym": {+/wp/info/acronym alias: 12}
@@ -1367,6 +1912,8 @@
   type: "infobox"
   class: /wp/infobox/military_unit
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "unit_name": {+/wp/info/unit_name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "dates": /wp/info/dates
@@ -1451,6 +1998,8 @@
   type: "infobox"
   class: /wp/infobox/christian_denomination
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
@@ -1505,7 +2054,7 @@
     "publications": /wp/info/publications
     "website": /wp/info/website
     "slogan": /wp/info/slogan
-    "logo": /wp/info/logo
+    "logo": {+/wp/info/logo media: true}
     "footnotes": /wp/info/footnotes
   }
 }
@@ -1514,6 +2063,8 @@
   type: "infobox"
   class: /wp/infobox/church
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "fullname": {+/wp/info/fullname alias: 12}
     "other name": {+/wp/info/other_name alias: 13}
@@ -1660,6 +2211,8 @@
   type: "infobox"
   class: /wp/infobox/diocese
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "jurisdiction": /wp/info/jurisdiction
     "name": {+/wp/info/name alias: 12}
     "latin": /wp/info/latin
@@ -1724,6 +2277,8 @@
   type: "infobox"
   class: /wp/infobox/monastery
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
@@ -1767,6 +2322,8 @@
   type: "infobox"
   class: /wp/infobox/accounting_body
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "abbreviation": {+/wp/info/abbreviation alias: 12}
@@ -1809,6 +2366,8 @@
   type: "infobox"
   class: /wp/infobox/hospital
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "org/group": /wp/info/org_group
     "coordinates": /wp/info/coordinates
@@ -1845,6 +2404,8 @@
   type: "infobox"
   class: /wp/infobox/institute
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "latin_name": {+/wp/info/latin_name alias: 12}
     "motto": /wp/info/motto
@@ -1885,6 +2446,10 @@
   type: "infobox"
   class: /wp/infobox/laboratory
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "latin_name": {+/wp/info/latin_name alias: 12}
@@ -1919,7 +2484,6 @@
     "operating_agency": /wp/info/operating_agency
     "nobel_laureates": /wp/info/nobel_laureates
     "website": /wp/info/website
-    "logo": /wp/info/logo
     "footnotes": /wp/info/footnotes
   }
 }
@@ -1928,6 +2492,10 @@
   type: "infobox"
   class: /wp/infobox/museum
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
@@ -1967,6 +2535,10 @@
   type: "infobox"
   class: /wp/infobox/observatory
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "name": {+/wp/info/name alias: 12}
     "organization": /wp/info/organization
     "code": /wp/info/code
@@ -1993,6 +2565,9 @@
   type: "infobox"
   class: /wp/infobox/school
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "latin_name": {+/wp/info/latin_name alias: 12}
@@ -2173,6 +2748,10 @@
   type: "infobox"
   class: /wp/infobox/university
   fields: {
+    "image": {+/wp/info/image media: true}
+    "image_name": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
     "name": {+/wp/info/name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
     "native_name_lang": /wp/info/native_name_lang
@@ -2248,6 +2827,8 @@
   type: "infobox"
   class: /wp/infobox/journal
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "title": {+/wp/info/title alias: 12}
     "former_name": {+/wp/info/former_name alias: 12}
     "abbreviation": {+/wp/info/abbreviation alias: 12}
@@ -2280,10 +2861,14 @@
     "link2-name": /wp/info/link2-name
   }
 }
+
 "Infobox magazine": {
   type: "infobox"
   class: /wp/infobox/magazine
   fields: {
+    "image_file": {+/wp/info/image media: true}
+    "image_caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
     "title": {+/wp/info/title alias: 12}
     "editor": {+/wp/info/name group: /wp/info/editor}
     "editor_title": {+/wp/info/title group: /wp/info/editor}
@@ -2318,6 +2903,9 @@
   type: "infobox"
   class: /wp/infobox/newspaper
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
     "name": {+/wp/info/name alias: 12}
     "school": /wp/info/school
     "motto": /wp/info/motto
@@ -2370,6 +2958,8 @@
   type: "infobox"
   class: /wp/infobox/publisher
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "parent": /wp/info/parent
     "status": /wp/info/status
@@ -2397,6 +2987,8 @@
   type: "infobox"
   class: /wp/infobox/website
   fields: {
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "name": {+/wp/info/name alias: 12}
     "url": /wp/info/url
     "areas": /wp/info/areas
@@ -2427,6 +3019,10 @@
   type: "infobox"
   class: /wp/infobox/brewery
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "name": {+/wp/info/name alias: 12}
     "type": /wp/info/type
     "location": /wp/info/location
@@ -2464,6 +3060,10 @@
   type: "infobox"
   class: /wp/infobox/company
   fields: {
+    "image": {+/wp/info/image media: true}
+    "image_caption": /wp/info/caption
+    "logo": {+/wp/info/logo media: true}
+    "logo_caption": /wp/info/logo_caption
     "name": {+/wp/info/name alias: 12}
     "trading_name": {+/wp/info/trading_name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
@@ -2525,6 +3125,7 @@
   type: "infobox"
   class: /wp/infobox/law_firm
   fields: {
+    "logo": {+/wp/info/logo media: true}
     "name": {+/wp/info/name alias: 12}
     "headquarters": /wp/info/headquarters
     "num_offices": /wp/info/num_offices
@@ -2549,6 +3150,8 @@
   type: "infobox"
   class: /wp/infobox/union
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "full_name": {+/wp/info/full_name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
@@ -2578,6 +3181,8 @@
   type: "infobox"
   class: /wp/infobox/order
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "title": /wp/info/title
     "awarded_by": /wp/info/awarded_by
@@ -2666,6 +3271,8 @@
   type: "infobox"
   class: /wp/infobox/grand_lodge
   fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
     "name": {+/wp/info/name alias: 12}
     "motto-latin": /wp/info/motto-latin
     "motto-english": /wp/info/motto-english
@@ -2679,10 +3286,846 @@
   }
 }
 
+"Infobox book": {
+  type: "infobox"
+  class: /wp/infobox/book
+  fields: {
+    "italic title": /wp/info/italic_title
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "border": /wp/info/border
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "author": /wp/info/author
+    "audio_read_by": /wp/info/audio_read_by
+    "title_orig": /wp/info/title_orig
+    "orig_lang_code": /wp/info/orig_lang_code
+    "title_working": /wp/info/title_working
+    "translator": /wp/info/translator
+    "illustrator": /wp/info/illustrator
+    "cover_artist": /wp/info/cover_artist
+    "country": /wp/info/country
+    "language": /wp/info/language
+    "series": /wp/info/series
+    "release_number": /wp/info/release_number
+    "subject": /wp/info/subject
+    "genre": /wp/info/genre
+    "set_in": /wp/info/set_in
+    "publisher": /wp/info/publisher
+    "publisher2": /wp/info/publisher2
+    "pub_date": /wp/info/pub_date
+    "english_pub_date": /wp/info/english_pub_date
+    "published": /wp/info/published
+    "media_type": /wp/info/media_type
+    "pages": /wp/info/pages
+    "awards": /wp/info/awards
+    "isbn": /wp/info/isbn
+    "isbn_note": /wp/info/isbn_note
+    "oclc": /wp/info/oclc
+    "dewey": /wp/info/dewey
+    "congress": /wp/info/congress
+    "preceded_by": /wp/info/preceded_by
+    "followed_by": /wp/info/followed_by
+    "native_wikisource": /wp/info/native_wikisource
+    "wikisource": /wp/info/wikisource
+    "notes": /wp/info/notes
+    "exclude_cover": /wp/info/exclude_cover
+    "website": /wp/info/website
+  }
+}
+
+"Infobox journal": {
+  type: "infobox"
+  class: /wp/infobox/journal
+  fields: {
+    "title": /wp/info/title
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "former_name": /wp/info/former_name
+    "abbreviation": /wp/info/abbreviation
+    "discipline": /wp/info/discipline
+    "peer-reviewed": /wp/info/peer-reviewed
+    "language": /wp/info/language
+    "editor": /wp/info/editor
+    "publisher": /wp/info/publisher
+    "country": /wp/info/country
+    "history": /wp/info/history
+    "frequency": /wp/info/frequency
+    "openaccess": /wp/info/openaccess
+    "license": /wp/info/license
+    "impact": /wp/info/impact
+    "impact-year": /wp/info/impact-year
+    "bluebook": /wp/info/bluebook
+    "mathscinet": /wp/info/mathscinet
+    "nlm": /wp/info/nlm
+    "ISSN": /wp/info/issn
+    "ISSNlabel": /wp/info/issnlabel
+    "eISSN": /wp/info/eissn
+    "CODEN": /wp/info/coden
+    "JSTOR": /wp/info/jstor
+    "LCCN": /wp/info/lccn
+    "OCLC": /wp/info/oclc
+    "website": /wp/info/website
+    "link1": /wp/info/link1
+    "link1-name": /wp/info/link1-name
+  }
+}
+
+"Infobox magazine": {
+  type: "infobox"
+  class: /wp/infobox/magazine
+  fields: {
+    "title": /wp/info/title
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "image_file": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "image_caption": /wp/info/caption
+    "editor": /wp/info/editor
+    "editor_title": /wp/info/editor_title
+    "previous_editor": /wp/info/previous_editor
+    "staff_writer": /wp/info/staff_writer
+    "photographer": /wp/info/photographer
+    "category": /wp/info/category
+    "frequency": /wp/info/frequency
+    "format": /wp/info/format
+    "circulation": /wp/info/circulation
+    "publisher": /wp/info/publisher
+    "paid_circulation": /wp/info/paid_circulation
+    "unpaid_circulation": /wp/info/unpaid_circulation
+    "circulation_year": /wp/info/circulation_year
+    "total_circulation": /wp/info/total_circulation
+    "founder": /wp/info/founder
+    "founded": /wp/info/founded
+    "firstdate": /wp/info/firstdate
+    "finaldate": /wp/info/finaldate
+    "finalnumber": /wp/info/finalnumber
+    "company": /wp/info/company
+    "country": /wp/info/country
+    "based": /wp/info/based
+    "language": /wp/info/language
+    "website": /wp/info/website
+    "issn": /wp/info/issn
+    "eissn": /wp/info/eissn
+    "oclc": /wp/info/oclc
+  }
+}
+
+"Infobox newspaper": {
+  type: "infobox"
+  class: /wp/infobox/newspaper
+  fields: {
+    "name": /wp/info/name
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_border": /wp/info/logo_border
+    "logo_alt": /wp/info/logo_alt
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_border": /wp/info/image_border
+    "image_alt": /wp/info/image_alt
+    "caption": /wp/info/caption
+    "motto": /wp/info/motto
+    "type": /wp/info/type
+    "format": /wp/info/format
+    "school": /wp/info/school
+    "owner": /wp/info/owner
+    "founder": /wp/info/founder
+    "publisher": /wp/info/publisher
+    "president": /wp/info/president
+    "chiefeditor": /wp/info/chiefeditor
+    "editor": /wp/info/editor
+    "depeditor": /wp/info/depeditor
+    "assoceditor": /wp/info/assoceditor
+    "maneditor": /wp/info/maneditor
+    "generalmanager": /wp/info/generalmanager
+    "newseditor": /wp/info/newseditor
+    "managingeditordesign": /wp/info/managingeditordesign
+    "dirinteractive": /wp/info/dirinteractive
+    "campuseditor": /wp/info/campuseditor
+    "campuschief": /wp/info/campuschief
+    "metroeditor": /wp/info/metroeditor
+    "metrochief": /wp/info/metrochief
+    "opeditor": /wp/info/opeditor
+    "sportseditor": /wp/info/sportseditor
+    "photoeditor": /wp/info/photoeditor
+    "staff": /wp/info/staff
+    "custom_label": /wp/info/custom_label
+    "custom": /wp/info/custom
+    "foundation": /wp/info/foundation
+    "political": /wp/info/political
+    "language": /wp/info/language
+    "ceased publication": /wp/info/ceased_publication
+    "relaunched": /wp/info/relaunched
+    "headquarters": /wp/info/headquarters
+    "publishing_city": /wp/info/publishing_city
+    "publishing_country": /wp/info/publishing_country
+    "circulation": /wp/info/circulation
+    "circulation_date": /wp/info/circulation_date
+    "circulation_ref": /wp/info/circulation_ref
+    "readership": /wp/info/readership
+    "sister newspapers": /wp/info/sister_newspapers
+    "ISSN": /wp/info/issn
+    "eISSN": /wp/info/eissn
+    "oclc": /wp/info/oclc
+    "RNI": /wp/info/rni
+    "website": /wp/info/website
+    "free": /wp/info/free
+  }
+}
+
+"Infobox play": {
+  type: "infobox"
+  class: /wp/infobox/play
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "writer": /wp/info/writer
+    "chorus": /wp/info/chorus
+    "characters": /wp/info/characters
+    "mute": /wp/info/mute
+    "setting": /wp/info/setting
+    "premiere": /wp/info/premiere
+    "place": /wp/info/place
+    "orig_lang": /wp/info/orig_lang
+    "series": /wp/info/series
+    "subject": /wp/info/subject
+    "genre": /wp/info/genre
+    "web": /wp/info/web
+  }
+}
+
+"Infobox artwork": {
+  type: "infobox"
+  class: /wp/infobox/artwork
+  fields: {
+    "title": /wp/info/title
+    "painting_alignment": /wp/info/painting_alignment
+    "other_language_1": /wp/info/other_language_1
+    "other_title_1": /wp/info/other_title_1
+    "other_language_2": /wp/info/other_language_2
+    "other_title_2": /wp/info/other_title_2
+    "wikidata": /wp/info/wikidata
+    "image": {+/wp/info/image media: true}
+    "image_upright": /wp/info/image_upright
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "artist": /wp/info/artist
+    "year": /wp/info/year
+    "completion_date": /wp/info/completion_date
+    "catalogue": /wp/info/catalogue
+    "medium": /wp/info/medium
+    "movement": /wp/info/movement
+    "subject": /wp/info/subject
+    "height_metric": /wp/info/height_metric
+    "width_metric": /wp/info/width_metric
+    "length_metric": /wp/info/length_metric
+    "diameter_metric": /wp/info/diameter_metric
+    "height_imperial": /wp/info/height_imperial
+    "width_imperial": /wp/info/width_imperial
+    "length_imperial": /wp/info/length_imperial
+    "diameter_imperial": /wp/info/diameter_imperial
+    "dimensions": /wp/info/dimensions
+    "dimensions_ref": /wp/info/dimensions_ref
+    "metric_unit": /wp/info/metric_unit
+    "imperial_unit": /wp/info/imperial_unit
+    "weight": /wp/info/weight
+    "designation": /wp/info/designation
+    "condition": /wp/info/condition
+    "museum": /wp/info/museum
+    "city": /wp/info/city
+    "coordinates": /wp/info/coordinates
+    "owner": /wp/info/owner
+    "accession": /wp/info/accession
+    "preceded_by": /wp/info/preceded_by
+    "followed_by": /wp/info/followed_by
+    "module": /wp/info/module
+    "website": /wp/info/website
+  }
+}
+
+"Infobox album": {
+  type: "infobox"
+  class: /wp/infobox/album
+  fields: {
+    "italic_title": /wp/info/italic_title
+    "name": /wp/info/name
+    "type": /wp/info/type
+    "longtype": /wp/info/longtype
+    "artist": /wp/info/artist
+    "cover": {+/wp/info/cover media: true}
+    "border": /wp/info/border
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "released": /wp/info/released
+    "recorded": /wp/info/recorded
+    "venue": /wp/info/venue
+    "studio": /wp/info/studio
+    "genre": /wp/info/genre
+    "length": /wp/info/length
+    "language": /wp/info/language
+    "label": /wp/info/label
+    "director": /wp/info/director
+    "producer": /wp/info/producer
+    "compiler": /wp/info/compiler
+    "chronology": /wp/info/chronology
+    "prev_title": /wp/info/prev_title
+    "prev_year": /wp/info/prev_year
+    "year": /wp/info/year
+    "next_title": /wp/info/next_title
+    "next_year": /wp/info/next_year
+    "misc": /wp/info/misc
+  }
+}
+
+"Infobox song": {
+  type: "infobox"
+  class: /wp/infobox/song
+  fields: {
+    "name": /wp/info/name
+    "cover": {+/wp/info/cover media: true}
+    "cover_size": /wp/info/cover_size
+    "alt": /wp/info/alt
+    "border": /wp/info/border
+    "caption": /wp/info/caption
+    "type": /wp/info/type
+    "artist": /wp/info/artist
+    "album": /wp/info/album
+    "EP": /wp/info/ep
+    "language": /wp/info/language
+    "English_title": /wp/info/english_title
+    "A-side": /wp/info/a-side
+    "B-side": /wp/info/b-side
+    "written": /wp/info/written
+    "published": /wp/info/published
+    "released": /wp/info/released
+    "recorded": /wp/info/recorded
+    "studio": /wp/info/studio
+    "venue": /wp/info/venue
+    "genre": /wp/info/genre
+    "length": /wp/info/length
+    "label": /wp/info/label
+    "writer": /wp/info/writer
+    "composer": /wp/info/composer
+    "lyricist": /wp/info/lyricist
+    "producer": /wp/info/producer
+    "chronology": /wp/info/chronology
+    "prev_title": /wp/info/prev_title
+    "prev_year": /wp/info/prev_year
+    "next_title": /wp/info/next_title
+    "next_year": /wp/info/next_year
+    "tracks": /wp/info/tracks
+    "misc": /wp/info/misc
+  }
+}
+
+"Infobox song contest entry": {
+  type: "infobox"
+  class: /wp/infobox/song_contest_entry
+  fields: {
+    "song": /wp/info/song
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "year": /wp/info/year
+    "country": /wp/info/country
+    "artist": /wp/info/artist
+    "genre": /wp/info/genre
+    "language": /wp/info/language
+    "languages": /wp/info/languages
+    "composer": /wp/info/composer
+    "lyricist": /wp/info/lyricist
+    "conductor": /wp/info/conductor
+    "place": /wp/info/place
+    "points": /wp/info/points
+    "place_semi": /wp/info/place_semi
+    "points_semi": /wp/info/points_semi
+    "prev": /wp/info/prev
+    "prev_year": /wp/info/prev_year
+    "prev_link": /wp/info/prev_link
+    "next": /wp/info/next
+    "next_year": /wp/info/next_year
+    "next_link": /wp/info/next_link
+  }
+}
+
+"Infobox film": {
+  type: "infobox"
+  class: /wp/infobox/film
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "native_name": /wp/info/native_name
+    "director": /wp/info/director
+    "producer": /wp/info/producer
+    "writer": /wp/info/writer
+    "screenplay": /wp/info/screenplay
+    "story": /wp/info/story
+    "based_on": /wp/info/based_on
+    "starring": /wp/info/starring
+    "narrator": /wp/info/narrator
+    "music": /wp/info/music
+    "cinematography": /wp/info/cinematography
+    "editing": /wp/info/editing
+    "studio": /wp/info/studio
+    "distributor": /wp/info/distributor
+    "released": /wp/info/released
+    "runtime": /wp/info/runtime
+    "country": /wp/info/country
+    "language": /wp/info/language
+    "budget": /wp/info/budget
+    "gross": /wp/info/gross
+  }
+}
+
+"Infobox film or theatre festival": {
+  type: "infobox"
+  class: /wp/infobox/film_or_theatre_festival
+  fields: {
+    "name": /wp/info/name
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "caption": /wp/info/caption
+    "opening": /wp/info/opening
+    "closing": /wp/info/closing
+    "location": /wp/info/location
+    "predecessor": /wp/info/predecessor
+    "established": /wp/info/established
+    "founded": /wp/info/founded
+    "first": /wp/info/first
+    "founders": /wp/info/founders
+    "disestablished": /wp/info/disestablished
+    "last": /wp/info/last
+    "successor": /wp/info/successor
+    "awardsreceived": /wp/info/awardsreceived
+    "awards": /wp/info/awards
+    "films": /wp/info/films
+    "directors": /wp/info/directors
+    "producers": /wp/info/producers
+    "writers": /wp/info/writers
+    "starring": /wp/info/starring
+    "host": /wp/info/host
+    "artistic_director": /wp/info/artistic_director
+    "selector": /wp/info/selector
+    "editor_in_chief": /wp/info/editor_in_chief
+    "play_type": /wp/info/play_type
+    "number": /wp/info/number
+    "date": /wp/info/date
+    "language": /wp/info/language
+    "website": /wp/info/website
+    "preceded_by": /wp/info/preceded_by
+    "previous": /wp/info/previous
+    "followed_by": /wp/info/followed_by
+    "next": /wp/info/next
+    "main": /wp/info/main
+    "chronology": /wp/info/chronology
+  }
+}
+
+"Infobox video game": {
+  type: "infobox"
+  class: /wp/infobox/video_game
+  fields: {
+    "collapsible": /wp/info/collapsible
+    "state": /wp/info/state
+    "italic title": /wp/info/italic_title
+    "title": /wp/info/title
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "developer": /wp/info/developer
+    "publisher": /wp/info/publisher
+    "series": /wp/info/series
+    "engine": /wp/info/engine
+    "platforms": /wp/info/platforms
+    "released": /wp/info/released
+    "genre": /wp/info/genre
+    "modes": /wp/info/modes
+    "arcade system": /wp/info/arcade_system
+    "director": /wp/info/director
+    "producer": /wp/info/producer
+    "designer": /wp/info/designer
+    "programmer": /wp/info/programmer
+    "artist": /wp/info/artist
+    "writer": /wp/info/writer
+    "composer": /wp/info/composer
+  }
+}
+
+"Infobox award": {
+  type: "infobox"
+  class: /wp/infobox/award
+  fields: {
+    "name": /wp/info/name
+    "subheader": /wp/info/subheader
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "awarded_for": /wp/info/awarded_for
+    "sponsor": /wp/info/sponsor
+    "date": /wp/info/date
+    "location": /wp/info/location
+    "country": /wp/info/country
+    "presenter": /wp/info/presenter
+    "host": /wp/info/host
+    "former name": /wp/info/former_name
+    "preshow_host": /wp/info/preshow_host
+    "acts": /wp/info/acts
+    "campaign": /wp/info/campaign
+    "motto": /wp/info/motto
+    "clasps": /wp/info/clasps
+    "reward": /wp/info/reward
+    "year": /wp/info/year
+    "year2": /wp/info/year2
+    "holder_label": /wp/info/holder_label
+    "holder": /wp/info/holder
+    "most_awards": /wp/info/most_awards
+    "most_nominations": /wp/info/most_nominations
+    "award_type": {+/wp/info/type group: /wp/info/award}
+    "award_winner": {+/wp/info/winner group: /wp/info/award}
+    "website": /wp/info/website
+    "network": /wp/info/network
+    "runtime": /wp/info/runtime
+    "viewership": /wp/info/viewership
+    "producer": /wp/info/producer
+    "director": /wp/info/director
+    "image2": /wp/info/image2
+    "image2_size": /wp/info/image2_size
+    "alt2": /wp/info/alt2
+    "caption2": /wp/info/caption2
+    "precedence_label": /wp/info/precedence_label
+    "individual": /wp/info/individual
+    "higher": /wp/info/higher
+    "same": /wp/info/same
+    "lower": /wp/info/lower
+    "related": /wp/info/related
+    "previous": /wp/info/previous
+    "main": /wp/info/main
+    "next": /wp/info/next
+  }
+}
+
+"Infobox television": {
+  type: "infobox"
+  class: /wp/infobox/television
+  fields: {
+    "italic_title": /wp/info/italic_title
+    "image": {+/wp/info/image media: true}
+    "image_upright": /wp/info/image_upright
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "caption": /wp/info/caption
+    "alt_name": /wp/info/alt_name
+    "native_name": /wp/info/native_name
+    "genre": /wp/info/genre
+    "creator": /wp/info/creator
+    "based_on": /wp/info/based_on
+    "inspired_by": /wp/info/inspired_by
+    "developer": /wp/info/developer
+    "writer": /wp/info/writer
+    "screenplay": /wp/info/screenplay
+    "story": /wp/info/story
+    "director": /wp/info/director
+    "creative_director": /wp/info/creative_director
+    "presenter": /wp/info/presenter
+    "starring": /wp/info/starring
+    "judges": /wp/info/judges
+    "voices": /wp/info/voices
+    "narrated": /wp/info/narrated
+    "theme_music_composer": /wp/info/theme_music_composer
+    "opentheme": /wp/info/opentheme
+    "endtheme": /wp/info/endtheme
+    "composer": /wp/info/composer
+    "country": /wp/info/country
+    "language": /wp/info/language
+    "num_seasons": /wp/info/num_seasons
+    "num_episodes": /wp/info/num_episodes
+    "list_episodes": /wp/info/list_episodes
+    "executive_producer": /wp/info/executive_producer
+    "producer": /wp/info/producer
+    "news_editor": /wp/info/news_editor
+    "location": /wp/info/location
+    "cinematography": /wp/info/cinematography
+    "animator": /wp/info/animator
+    "editor": /wp/info/editor
+    "camera": /wp/info/camera
+    "runtime": /wp/info/runtime
+    "company": /wp/info/company
+    "distributor": /wp/info/distributor
+    "budget": /wp/info/budget
+    "network": /wp/info/network
+    "picture_format": /wp/info/picture_format
+    "audio_format": /wp/info/audio_format
+    "first_run": /wp/info/first_run
+    "first_aired": /wp/info/first_aired
+    "last_aired": /wp/info/last_aired
+    "preceded_by": /wp/info/preceded_by
+    "followed_by": /wp/info/followed_by
+    "related": /wp/info/related
+    "website": /wp/info/website
+    "production_website": /wp/info/production_website
+  }
+}
+
+"Infobox television season": {
+  type: "infobox"
+  class: /wp/infobox/television_season
+  fields: {
+    "bg_colour": /wp/info/bg_colour
+    "image": {+/wp/info/image media: true}
+    "image_alt": /wp/info/image_alt
+    "caption": /wp/info/caption
+    "starring": /wp/info/starring
+    "country": /wp/info/country
+    "num_episodes": /wp/info/num_episodes
+    "network": /wp/info/network
+    "released": /wp/info/released
+    "first_aired": /wp/info/first_aired
+    "last_aired": /wp/info/last_aired
+    "episode_list": /wp/info/episode_list
+  }
+}
+
+"Infobox television station": {
+  type: "infobox"
+  class: /wp/infobox/television_station
+  fields: {
+    "location": /wp/info/location
+    "city": /wp/info/city
+    "country": /wp/info/country
+    "above": /wp/info/above
+    "callsign": /wp/info/callsign
+    "name": /wp/info/name
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "logo_caption": /wp/info/logo_caption
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "caption": /wp/info/caption
+    "analog": /wp/info/analog
+    "digital": /wp/info/digital
+    "virtual": /wp/info/virtual
+    "branding": /wp/info/branding
+    "slogan": /wp/info/slogan
+    "language": /wp/info/language
+    "subchannels": /wp/info/subchannels
+    "network": /wp/info/network
+    "affiliations": /wp/info/affiliations
+    "owner": /wp/info/owner
+    "licensee": /wp/info/licensee
+    "operator": /wp/info/operator
+    "sister_stations": /wp/info/sister_stations
+    "founded": /wp/info/founded
+    "airdate": /wp/info/airdate
+    "last_airdate": /wp/info/last_airdate
+    "former_callsigns": /wp/info/former_callsigns
+    "former_names": /wp/info/former_names
+    "former_channel_numbers": /wp/info/former_channel_numbers
+    "former_affiliations": /wp/info/former_affiliations
+    "callsign_meaning": /wp/info/callsign_meaning
+    "licensing_authority": /wp/info/licensing_authority
+    "facility_id": /wp/info/facility_id
+    "class": /wp/info/class
+    "power": /wp/info/power
+    "erp": /wp/info/erp
+    "haat": /wp/info/haat
+    "coordinates": /wp/info/coordinates
+    "translator": /wp/info/translator
+    "translators": /wp/info/translators
+    "repeater": /wp/info/repeater
+    "repeaters": /wp/info/repeaters
+    "webcast": /wp/info/webcast
+    "website": /wp/info/website
+    "child": /wp/info/child
+    "embed_header": /wp/info/embed_header
+    "embedded": /wp/info/embedded
+  }
+}
+
+"Infobox television channel": {
+  type: "infobox"
+  class: /wp/infobox/television_channel
+  fields: {
+    "name": /wp/info/name
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "logo_caption": /wp/info/logo_caption
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "type": /wp/info/type
+    "country": /wp/info/country
+    "area": /wp/info/area
+    "network": /wp/info/network
+    "tv_stations": /wp/info/tv_stations
+    "tv_transmitters": /wp/info/tv_transmitters
+    "affiliates": /wp/info/affiliates
+    "slogan": /wp/info/slogan
+    "headquarters": /wp/info/headquarters
+    "language": /wp/info/language
+    "languages": /wp/info/languages
+    "picture_format": /wp/info/picture_format
+    "timeshift_service": /wp/info/timeshift_service
+    "owner": /wp/info/owner
+    "parent": /wp/info/parent
+    "key_people": /wp/info/key_people
+    "sister_channels": /wp/info/sister_channels
+    "founded": /wp/info/founded
+    "founder": /wp/info/founder
+    "launch_date": /wp/info/launch_date
+    "replaced": /wp/info/replaced
+    "closed_date": /wp/info/closed_date
+    "replaced_by": /wp/info/replaced_by
+    "former_names": /wp/info/former_names
+
+    "terr_serv_": {+/wp/info/serv group: /wp/info/terr}
+    "terr_chan_": {+/wp/info/chan group: /wp/info/terr}
+
+    "sat_serv_": {+/wp/info/serv group: /wp/info/sat}
+    "sat_chan_": {+/wp/info/chan group: /wp/info/sat}
+
+    "cable_serv_": {+/wp/info/serv group: /wp/info/cable}
+    "cable_chan_": {+/wp/info/chan group: /wp/info/cable}
+
+    "satradio_serv_": {+/wp/info/serv group: /wp/info/satradio}
+    "satradio_chan_": {+/wp/info/chan group: /wp/info/satradio}
+
+    "iptv_serv_": {+/wp/info/serv group: /wp/info/iptv}
+    "iptv_chan_": {+/wp/info/chan group: /wp/info/iptv}
+
+    "online_serv_": {+/wp/info/serv group: /wp/info/online}
+    "online_chan_": {+/wp/info/chan group: /wp/info/online}
+
+    "availability_note": /wp/info/availability_note
+    "website": /wp/info/website
+    "webcast": /wp/info/webcast
+    "child": /wp/info/child
+    "embed_header": /wp/info/embed_header
+    "embedded": /wp/info/embedded
+  }
+}
+
+"Infobox radio station": {
+  type: "infobox"
+  class: /wp/infobox/radio_station
+  fields: {
+    "name": /wp/info/name
+    "city": /wp/info/city
+    "above": /wp/info/above
+    "callsign": /wp/info/callsign
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "logo_caption": /wp/info/logo_caption
+    "image_alt": /wp/info/image_alt
+    "caption": /wp/info/caption
+    "area": /wp/info/area
+    "frequency": /wp/info/frequency
+    "rds": /wp/info/rds
+    "branding": /wp/info/branding
+    "slogan": /wp/info/slogan
+    "languages": /wp/info/languages
+    "format": /wp/info/format
+    "subchannels": /wp/info/subchannels
+    "network": /wp/info/network
+    "affiliations": /wp/info/affiliations
+    "owner": /wp/info/owner
+    "licensee": /wp/info/licensee
+    "operator": /wp/info/operator
+    "sister_stations": /wp/info/sister_stations
+    "founded": /wp/info/founded
+    "airdate": /wp/info/airdate
+    "last_airdate": /wp/info/last_airdate
+    "former_callsigns": /wp/info/former_callsigns
+    "former_names": /wp/info/former_names
+    "former_frequencies": /wp/info/former_frequencies
+    "callsign_meaning": /wp/info/callsign_meaning
+    "licensing_authority": /wp/info/licensing_authority
+    "facility_id": /wp/info/facility_id
+    "class": /wp/info/class
+    "power": /wp/info/power
+    "erp": /wp/info/erp
+    "haat": /wp/info/haat
+    "coordinates": /wp/info/coordinates
+    "translators": /wp/info/translators
+    "repeaters": /wp/info/repeaters
+    "webcast": /wp/info/webcast
+    "website": /wp/info/website
+    "child": /wp/info/child
+    "embed_header": /wp/info/embed_header
+    "embedded": /wp/info/embedded
+  }
+}
+
+"Infobox game": {
+  type: "infobox"
+  class: /wp/infobox/game
+  fields: {
+    "name": /wp/info/name
+    "subtitle": /wp/info/subtitle
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "caption": /wp/info/caption
+    "width": /wp/info/width
+    "label_width": /wp/info/label_width
+    "other_names": /wp/info/other_names
+    "AKA": /wp/info/aka
+    "manufacturer": /wp/info/manufacturer
+    "designer": /wp/info/designer
+    "illustrator": /wp/info/illustrator
+    "writer": /wp/info/writer
+    "actor": /wp/info/actor
+    "voice_over": /wp/info/voice_over
+    "publisher": /wp/info/publisher
+    "date": /wp/info/date
+    "years": /wp/info/years
+    "genre": /wp/info/genre
+    "language": /wp/info/language
+    "system": /wp/info/system
+    "parent_game": /wp/info/parent_game
+    "series": /wp/info/series
+    "players": /wp/info/players
+    "setup_time": /wp/info/setup_time
+    "playing_time": /wp/info/playing_time
+    "random_chance": /wp/info/random_chance
+    "ages": /wp/info/ages
+    "skills": /wp/info/skills
+    "materials": /wp/info/materials
+    "media_type": /wp/info/media_type
+    "blank_label": /wp/info/blank_label
+    "blank_data": /wp/info/blank_data
+    "website": /wp/info/website
+    "isbn": /wp/info/isbn
+    "isbn_note": /wp/info/isbn_note
+    "footnotes": /wp/info/footnotes
+  }
+}
+
 "Infobox settlement": {
   type: "infobox"
   class: /wp/infobox/settlement
   fields: {
+    "image_skyline": {+/wp/info/image media: true}
+    "image_caption": /wp/info/caption
+    "image_blank_emblem": {+/wp/info/image media: true}
     "name": {+/wp/info/name alias: 12}
     "official_name": {+/wp/info/official_name alias: 12}
     "native_name": {+/wp/info/native_name alias: 12}
@@ -2879,6 +4322,3230 @@
     "registration_plate": /wp/info/registration_plate
     "website": /wp/info/website
     "footnotes": /wp/info/footnotes
+  }
+}
+
+"Infobox building": {
+  type: "infobox"
+  class: /wp/infobox/building
+  fields: {
+    "name": /wp/info/name
+    "native_name": /wp/info/native_name
+    "native_name_lang": /wp/info/native_name_lang
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "logo_caption": /wp/info/logo_caption
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "image_caption": /wp/info/caption
+    "map_type": /wp/info/map_type
+    "map_alt": /wp/info/map_alt
+    "map_caption": /wp/info/map_caption
+    "map_size": /wp/info/map_size
+    "map_dot_label": /wp/info/map_dot_label
+    "map_dot_mark": /wp/info/map_dot_mark
+    "relief": /wp/info/relief
+    "former_names": /wp/info/former_names
+    "alternate_names": /wp/info/alternate_names
+    "etymology": /wp/info/etymology
+    "status": /wp/info/status
+    "cancelled": /wp/info/cancelled
+    "topped_out": /wp/info/topped_out
+    "building_type": /wp/info/building_type
+    "architectural_style": /wp/info/architectural_style
+    "classification": /wp/info/classification
+    "location": /wp/info/location
+    "address": /wp/info/address
+    "location_city": /wp/info/location_city
+    "location_country": /wp/info/location_country
+    "coordinates": /wp/info/coordinates
+    "altitude": /wp/info/altitude
+    "current_tenants": /wp/info/current_tenants
+    "namesake": /wp/info/namesake
+    "groundbreaking_date": /wp/info/groundbreaking_date
+    "start_date": /wp/info/start_date
+    "stop_date": /wp/info/stop_date
+    "est_completion": /wp/info/est_completion
+    "topped_out_date": /wp/info/topped_out_date
+    "completion_date": /wp/info/completion_date
+    "opened_date": /wp/info/opened_date
+    "inauguration_date": /wp/info/inauguration_date
+    "relocated_date": /wp/info/relocated_date
+    "renovation_date": /wp/info/renovation_date
+    "closing_date": /wp/info/closing_date
+    "demolition_date": /wp/info/demolition_date
+    "cost": /wp/info/cost
+    "ren_cost": /wp/info/ren_cost
+    "client": /wp/info/client
+    "owner": /wp/info/owner
+    "landlord": /wp/info/landlord
+    "affiliation": /wp/info/affiliation
+    "height": /wp/info/height
+    "architectural": /wp/info/architectural
+    "tip": /wp/info/tip
+    "antenna_spire": /wp/info/antenna_spire
+    "roof": /wp/info/roof
+    "top_floor": /wp/info/top_floor
+    "observatory": /wp/info/observatory
+    "diameter": /wp/info/diameter
+    "circumference": /wp/info/circumference
+    "weight": /wp/info/weight
+    "other_dimensions": /wp/info/other_dimensions
+    "structural_system": /wp/info/structural_system
+    "material": /wp/info/material
+    "size": /wp/info/size
+    "floor_count": /wp/info/floor_count
+    "floor_area": /wp/info/floor_area
+    "elevator_count": /wp/info/elevator_count
+    "grounds_area": /wp/info/grounds_area
+    "architect": /wp/info/architect
+    "architecture_firm": /wp/info/architecture_firm
+    "developer": /wp/info/developer
+    "engineer": /wp/info/engineer
+    "structural_engineer": /wp/info/structural_engineer
+    "services_engineer": /wp/info/services_engineer
+    "civil_engineer": /wp/info/civil_engineer
+    "other_designers": /wp/info/other_designers
+    "quantity_surveyor": /wp/info/quantity_surveyor
+    "main_contractor": /wp/info/main_contractor
+    "awards": /wp/info/awards
+    "designations": /wp/info/designations
+    "known_for": /wp/info/known_for
+    "ren_architect": /wp/info/ren_architect
+    "ren_firm": /wp/info/ren_firm
+    "ren_engineer": /wp/info/ren_engineer
+    "ren_str_engineer": /wp/info/ren_str_engineer
+    "ren_serv_engineer": /wp/info/ren_serv_engineer
+    "ren_civ_engineer": /wp/info/ren_civ_engineer
+    "ren_oth_designers": /wp/info/ren_oth_designers
+    "ren_qty_surveyor": /wp/info/ren_qty_surveyor
+    "ren_contractor": /wp/info/ren_contractor
+    "ren_awards": /wp/info/ren_awards
+    "rooms": /wp/info/rooms
+    "parking": /wp/info/parking
+    "public_transit": /wp/info/public_transit
+    "website": /wp/info/website
+    "embed": /wp/info/embed
+    "embedded": /wp/info/embedded
+    "references": /wp/info/references
+    "footnotes": /wp/info/footnotes
+  }
+}
+
+"Infobox road": {
+  type: "infobox"
+  class: /wp/infobox/road
+  fields: {
+    "country": /wp/info/country
+    "type": /wp/info/type
+    "route": /wp/info/route
+    "map": /wp/info/map
+    "length_mi": /wp/info/length_mi
+    "length_km": /wp/info/length_km
+    "length_round": /wp/info/length_round
+    "length_ref": /wp/info/length_ref
+    "established": /wp/info/established
+    "direction_a": /wp/info/direction_a
+    "terminus_a": /wp/info/terminus_a
+    "junction": /wp/info/junction
+    "direction_b": /wp/info/direction_b
+    "terminus_b": /wp/info/terminus_b
+    "previous_type": /wp/info/previous_type
+    "previous_route": /wp/info/previous_route
+    "next_type": /wp/info/next_type
+    "next_route": /wp/info/next_route
+    "name": /wp/info/name
+    "marker_image": /wp/info/marker_image
+    "allocation": /wp/info/allocation
+  }
+}
+
+"Infobox amusement park": {
+  type: "infobox"
+  class: /wp/infobox/amusement_park
+  fields: {
+    "name": /wp/info/name
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "alt": /wp/info/alt
+    "logo_caption": /wp/info/logo_caption
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "caption": /wp/info/caption
+    "slogan": /wp/info/slogan
+    "resort": /wp/info/resort
+    "location": /wp/info/location
+    "location2": /wp/info/location2
+    "location3": /wp/info/location3
+    "theme": /wp/info/theme
+    "owner": /wp/info/owner
+    "operator": /wp/info/operator
+    "general_manager": /wp/info/general_manager
+    "opening_date": /wp/info/opening_date
+    "closing_date": /wp/info/closing_date
+    "previous_names": /wp/info/previous_names
+    "season": /wp/info/season
+    "visitors": /wp/info/visitors
+    "area": /wp/info/area
+    "area_ha": /wp/info/area_ha
+    "area_acre": /wp/info/area_acre
+    "rides": /wp/info/rides
+    "coasters": /wp/info/coasters
+    "water_rides": /wp/info/water_rides
+    "other_rides": /wp/info/other_rides
+    "shows": /wp/info/shows
+    "homepage": /wp/info/homepage
+    "footnotes": /wp/info/footnotes
+
+    "park": {+/wp/info/name group: /wp/info/park}
+    "coordinates": {+/wp/info/coordinates  group: /wp/info/park}
+    "status": {+/wp/info/status  group: /wp/info/park}
+    "opened": {+/wp/info/opened  group: /wp/info/park}
+    "closed": {+/wp/info/closed  group: /wp/info/park}
+    "replaced": {/wp/info/replaced  group: /wp/info/park}
+    "replacement": {+/wp/info/replacement  group: /wp/info/park}
+  }
+}
+
+"Infobox airline": {
+  type: "infobox"
+  class: /wp/infobox/airline
+  fields: {
+    "airline": /wp/info/airline
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "image2": /wp/info/image2
+    "image2-width": /wp/info/image2-width
+    "image2_alt": /wp/info/image2_alt
+    "caption2": /wp/info/caption2
+    "IATA": /wp/info/iata
+    "ICAO": /wp/info/icao
+    "callsign": /wp/info/callsign
+    "founded": /wp/info/founded
+    "commenced": /wp/info/commenced
+    "ceased": /wp/info/ceased
+    "aoc": /wp/info/aoc
+    "bases": /wp/info/bases
+    "hubs": /wp/info/hubs
+    "secondary_hubs": /wp/info/secondary_hubs
+    "focus_cities": /wp/info/focus_cities
+    "frequent_flyer": /wp/info/frequent_flyer
+    "alliance": /wp/info/alliance
+    "subsidiaries": /wp/info/subsidiaries
+    "fleet_size": /wp/info/fleet_size
+    "destinations": /wp/info/destinations
+    "parent": /wp/info/parent
+    "traded_as": /wp/info/traded_as
+    "ISIN": /wp/info/isin
+    "headquarters": /wp/info/headquarters
+    "key_people": /wp/info/key_people
+    "revenue": /wp/info/revenue
+    "operating_income": /wp/info/operating_income
+    "net_income": /wp/info/net_income
+    "profit": /wp/info/profit
+    "assets": /wp/info/assets
+    "equity": /wp/info/equity
+    "num_employees": /wp/info/num_employees
+    "website": /wp/info/website
+    "notes": /wp/info/notes
+  }
+}
+
+"Infobox bus company": {
+  type: "infobox"
+  class: /wp/infobox/bus_company
+  fields: {
+    "name": /wp/info/name
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "image_caption": /wp/info/caption
+    "company_slogan": /wp/info/company_slogan
+    "parent": /wp/info/parent
+    "founded": /wp/info/founded
+    "commenced": /wp/info/commenced
+    "ceased": /wp/info/ceased
+    "defunct": /wp/info/defunct
+    "headquarters": /wp/info/headquarters
+    "locale": /wp/info/locale
+    "service_area": /wp/info/service_area
+    "service_type": /wp/info/service_type
+    "alliance": /wp/info/alliance
+    "routes": /wp/info/routes
+    "stops": /wp/info/stops
+    "destinations": /wp/info/destinations
+    "hubs": /wp/info/hubs
+    "stations": /wp/info/stations
+    "lounge": /wp/info/lounge
+    "depots": /wp/info/depots
+    "fleet": /wp/info/fleet
+    "ridership": /wp/info/ridership
+    "annual_ridership": /wp/info/annual_ridership
+    "fuel_type": /wp/info/fuel_type
+    "operator": /wp/info/operator
+    "ceo": /wp/info/ceo
+    "leader_type": /wp/info/leader_type
+    "leader": /wp/info/leader
+    "website": /wp/info/website
+    "map": /wp/info/map
+    "map_name": /wp/info/map_name
+    "map_state": /wp/info/map_state
+  }
+}
+
+"Infobox school district": {
+  type: "infobox"
+  class: /wp/infobox/school_district
+  fields: {
+    "name": /wp/info/name
+    "native_name": /wp/info/native_name
+    "logo": {+/wp/info/logo media: true}
+    "logo_alt": /wp/info/logo_alt
+    "logo_size": /wp/info/logo_size
+    "image2": /wp/info/image2
+    "image2_alt": /wp/info/image2_alt
+    "caption2": /wp/info/caption2
+    "address": /wp/info/address
+    "location": /wp/info/location
+    "region": /wp/info/region
+    "city": /wp/info/city
+    "state": /wp/info/state
+    "province": /wp/info/province
+    "county": /wp/info/county
+    "postcode": /wp/info/postcode
+    "zipcode": /wp/info/zipcode
+    "country": /wp/info/country
+    "country1": /wp/info/country1
+    "coordinates": /wp/info/coordinates
+    "type": /wp/info/type
+    "motto": /wp/info/motto
+    "grades": /wp/info/grades
+    "established": /wp/info/established
+    "closed": /wp/info/closed
+    "president": /wp/info/president
+    "vice-president": /wp/info/vice-president
+    "superintendent_type": /wp/info/superintendent_type
+    "superintendent": /wp/info/superintendent
+    "deputy_superintendent": /wp/info/deputy_superintendent
+    "businessadmin": /wp/info/businessadmin
+    "school_board": /wp/info/school_board
+    "chair_of_the_board": /wp/info/chair_of_the_board
+    "director_of_education": /wp/info/director_of_education
+    "governing_agency": /wp/info/governing_agency
+    "accreditations": /wp/info/accreditations
+    "schools": /wp/info/schools
+    "budget": /wp/info/budget
+    "us_nces_district_id": /wp/info/us_nces_district_id
+    "district_id": /wp/info/district_id
+    "affiliations": /wp/info/affiliations
+    "students": /wp/info/students
+    "faculty": /wp/info/faculty
+    "teachers": /wp/info/teachers
+    "staff": /wp/info/staff
+    "ratio": /wp/info/ratio
+    "conference": /wp/info/conference
+    "mascot": /wp/info/mascot
+    "colors": /wp/info/colors
+    "schedule": /wp/info/schedule
+    "website": /wp/info/website
+    "module": /wp/info/module
+  }
+}
+
+"Infobox law enforcement agency": {
+  type: "infobox"
+  class: /wp/infobox/law_enforcement_agency
+  fields: {
+    "agencyname": /wp/info/agencyname
+    "nativename": /wp/info/nativename
+    "nativenamea": /wp/info/nativenamea
+    "nativenamer": /wp/info/nativenamer
+    "fictional": /wp/info/fictional
+    "patch": /wp/info/patch
+    "patchcaption": /wp/info/patchcaption
+    "logo": {+/wp/info/logo media: true}
+    "logocaption": /wp/info/logocaption
+    "badge": /wp/info/badge
+    "badgecaption": /wp/info/badgecaption
+    "flag": {+/wp/info/flag_image media: true}
+    "flagcaption": /wp/info/flag_caption
+    "image_size": /wp/info/image_size
+    "commonname": /wp/info/commonname
+    "abbreviation": /wp/info/abbreviation
+    "motto": /wp/info/motto
+    "mottotranslated": /wp/info/mottotranslated
+    "formedmonthday": /wp/info/formedmonthday
+    "formedyear": /wp/info/formedyear
+    "preceding1": /wp/info/preceding1
+    "dissolved": /wp/info/dissolved
+    "superseding": /wp/info/superseding
+    "employees": /wp/info/employees
+    "volunteers": /wp/info/volunteers
+    "budget": /wp/info/budget
+    "legalpersonality": /wp/info/legalpersonality
+    "legaljuris": /wp/info/legaljuris
+    "national": /wp/info/national
+    "country": /wp/info/country
+    "countryabbr": /wp/info/countryabbr
+    "federal": /wp/info/federal
+    "international": /wp/info/international
+    "divname": /wp/info/divname
+    "subdivname": /wp/info/subdivname
+    "map": /wp/info/map
+    "mapcaption": /wp/info/mapcaption
+    "dmap": /wp/info/dmap
+    "sizearea": /wp/info/sizearea
+    "sizepopulation": /wp/info/sizepopulation
+    "governingbody": /wp/info/governingbody
+    "governingbodyscnd": /wp/info/governingbodyscnd
+    "constitution1": /wp/info/constitution1
+    "provost": /wp/info/provost
+    "gendarmerie": /wp/info/gendarmerie
+    "military": /wp/info/military
+    "police": /wp/info/police
+    "local": /wp/info/local
+    "secret": /wp/info/secret
+    "religious": /wp/info/religious
+    "speciality1": /wp/info/speciality1
+    "overviewtype": /wp/info/overviewtype
+    "overviewbody": /wp/info/overviewbody
+    "headquarters": /wp/info/headquarters
+    "hqlocmap": /wp/info/hqlocmap
+    "hqlocmapsize": /wp/info/hqlocmapsize
+    "hqlocmappoptitle": /wp/info/hqlocmappoptitle
+    "sworntype": /wp/info/sworntype
+    "sworn": /wp/info/sworn
+    "unsworntype": /wp/info/unsworntype
+    "unsworn": /wp/info/unsworn
+    "multinational": /wp/info/multinational
+    "electeetype": /wp/info/electeetype
+    "minister1name": /wp/info/minister1name
+    "minister1pfo": /wp/info/minister1pfo
+    "chief1name": /wp/info/chief1name
+    "chief1position": /wp/info/chief1position
+    "parentagency": /wp/info/parentagency
+    "child1agency": /wp/info/child1agency
+    "unittype": /wp/info/unittype
+    "unitname": /wp/info/unitname
+    "officetype": /wp/info/officetype
+    "officename": /wp/info/officename
+    "provideragency": /wp/info/provideragency
+    "uniformedas": /wp/info/uniformedas
+    "stationtype": /wp/info/stationtype
+    "stations": /wp/info/stations
+    "airbases": /wp/info/airbases
+    "lockuptype": /wp/info/lockuptype
+    "lockups": /wp/info/lockups
+    "vehicle1type": /wp/info/vehicle1type
+    "vehicles1": /wp/info/vehicles1
+    "boat1type": /wp/info/boat1type
+    "boats1": /wp/info/boats1
+    "aircraft1type": /wp/info/aircraft1type
+    "aircraft1": /wp/info/aircraft1
+    "animal1type": /wp/info/animal1type
+    "animals1": /wp/info/animals1
+    "person1name": /wp/info/person1name
+    "person1reason": /wp/info/person1reason
+    "person1type": /wp/info/person1type
+    "programme1": /wp/info/programme1
+    "activitytype": /wp/info/activitytype
+    "activity1name": /wp/info/activity1name
+    "anniversary1": /wp/info/anniversary1
+    "award1": /wp/info/award1
+    "website": /wp/info/website
+    "footnotes": /wp/info/footnotes
+  }
+}
+
+"Infobox legislature": {
+  type: "infobox"
+  class: /wp/infobox/legislature
+  fields: {
+    "name": /wp/info/name
+    "native_name": /wp/info/native_name
+    "native_name_lang": /wp/info/native_name_lang
+    "transcription_name": /wp/info/transcription_name
+    "legislature": /wp/info/legislature
+    "coa_pic": /wp/info/coa_pic
+    "coa_res": /wp/info/coa_res
+    "coa_alt": /wp/info/coa_alt
+    "coa_caption": /wp/info/coa_caption
+    "logo_pic": {+/wp/info/logo media: true}
+    "logo_res": /wp/info/logo_res
+    "logo_alt": /wp/info/logo_alt
+    "logo_caption": /wp/info/logo_caption
+    "house_type": /wp/info/house_type
+    "houses": /wp/info/houses
+    "chambers": /wp/info/chambers
+    "body": /wp/info/body
+    "jurisdiction": /wp/info/jurisdiction
+    "term_limits": /wp/info/term_limits
+    "foundation": /wp/info/foundation
+    "disbanded": /wp/info/disbanded
+    "preceded_by": /wp/info/preceded_by
+    "succeeded_by": /wp/info/succeeded_by
+    "new_session": /wp/info/new_session
+
+    "leader1_type": /wp/info/leader1_type
+    "leader1": /wp/info/leader1
+    "leader1_term": /wp/info/leader1_term
+    "party1": /wp/info/party1
+    "election1": /wp/info/election1
+
+    "leader2_type": /wp/info/leader2_type
+    "leader2": /wp/info/leader2
+    "party2": /wp/info/party2
+    "election2": /wp/info/election2
+    "leader2_term": /wp/info/leader2_term
+
+    "leader3_type": /wp/info/leader3_type
+    "leader3": /wp/info/leader3
+    "party3": /wp/info/party3
+    "election3": /wp/info/election3
+    "leader3_term": /wp/info/leader3_term
+
+    "leader4_type": /wp/info/leader4_type
+    "leader4": /wp/info/leader4
+    "party4": /wp/info/party4
+    "election4": /wp/info/election4
+    "leader4_term": /wp/info/leader4_term
+
+    "leader5_type": /wp/info/leader5_type
+    "leader5": /wp/info/leader5
+    "party5": /wp/info/party5
+    "election5": /wp/info/election5
+    "leader5_term": /wp/info/leader5_term
+
+    "leader6_type": /wp/info/leader6_type
+    "leader6": /wp/info/leader6
+    "party6": /wp/info/party6
+    "election6": /wp/info/election6
+    "leader6_term": /wp/info/leader6_term
+
+    "leader7_type": /wp/info/leader7_type
+    "leader7": /wp/info/leader7
+    "party7": /wp/info/party7
+    "election7": /wp/info/election7
+    "leader7_term": /wp/info/leader7_term
+
+    "seats": /wp/info/seats
+
+    "structure1": /wp/info/structure1
+    "structure1_res": /wp/info/structure1_res
+    "structure1_alt": /wp/info/structure1_alt
+
+    "structure2": /wp/info/structure2
+    "structure2_res": /wp/info/structure2_res
+    "structure2_alt": /wp/info/structure2_alt
+
+    "house1": /wp/info/house1
+    "political_groups1": /wp/info/political_groups1
+    "committees1": /wp/info/committees1
+    "house2": /wp/info/house2
+    "political_groups2": /wp/info/political_groups2
+    "committees2": /wp/info/committees2
+    "joint_committees": /wp/info/joint_committees
+    "term_length": /wp/info/term_length
+    "authority": /wp/info/authority
+    "salary": /wp/info/salary
+    "seats1_title": /wp/info/seats1_title
+    "seats1": /wp/info/seats1
+    "seats2_title": /wp/info/seats2_title
+    "seats2": /wp/info/seats2
+    "seats3_title": /wp/info/seats3_title
+    "seats3": /wp/info/seats3
+    "seats4_title": /wp/info/seats4_title
+    "seats4": /wp/info/seats4
+    "seats5_title": /wp/info/seats5_title
+    "seats5": /wp/info/seats5
+    "seats6_title": /wp/info/seats6_title
+    "seats6": /wp/info/seats6
+    "seats7_title": /wp/info/seats7_title
+    "seats7": /wp/info/seats7
+    "seats8_title": /wp/info/seats8_title
+    "seats8": /wp/info/seats8
+
+    "voting_system1": /wp/info/voting_system1
+    "voting_system2": /wp/info/voting_system2
+
+    "first_election1": /wp/info/first_election1
+    "first_election2": /wp/info/first_election2
+    "first_election3": /wp/info/first_election3
+
+    "last_election1": /wp/info/last_election1
+    "last_election2": /wp/info/last_election2
+    "last_election3": /wp/info/last_election3
+
+    "next_election1": /wp/info/next_election1
+    "next_election2": /wp/info/next_election2
+    "next_election3": /wp/info/next_election3
+
+    "redistricting": /wp/info/redistricting
+    "motto": /wp/info/motto
+    "session_room": /wp/info/session_room
+    "session_res": /wp/info/session_res
+    "session_alt": /wp/info/session_alt
+    "meeting_place": /wp/info/meeting_place
+    "session_room2": /wp/info/session_room2
+    "session_res2": /wp/info/session_res2
+    "session_alt2": /wp/info/session_alt2
+    "meeting_place2": /wp/info/meeting_place2
+    "session_room3": /wp/info/session_room3
+    "session_res3": /wp/info/session_res3
+    "session_alt3": /wp/info/session_alt3
+    "meeting_place3": /wp/info/meeting_place3
+    "website": /wp/info/website
+    "constitution": /wp/info/constitution
+    "footnotes": /wp/info/footnotes
+  }
+}
+
+"Infobox military installation": {
+  type: "infobox"
+  class: /wp/infobox/military_installation
+  fields: {
+    "name": /wp/info/name
+    "ensign": /wp/info/ensign
+    "ensign_size": /wp/info/ensign_size
+    "native_name": /wp/info/native_name
+    "partof": /wp/info/partof
+    "location": /wp/info/location
+    "nearest_town": /wp/info/nearest_town
+    "country": /wp/info/country
+    "image": {+/wp/info/image media: true}
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "image2": /wp/info/image2
+    "alt2": /wp/info/alt2
+    "caption2": /wp/info/caption2
+    "type": /wp/info/type
+    "coordinates": /wp/info/coordinates
+    "gridref": /wp/info/gridref
+    "image_map": /wp/info/image_map
+    "image_mapsize": /wp/info/image_mapsize
+    "image_map_alt": /wp/info/image_map_alt
+    "image_map_caption": /wp/info/image_map_caption
+    "pushpin_map": /wp/info/pushpin_map
+    "pushpin_mapsize": /wp/info/pushpin_mapsize
+    "pushpin_map_alt": /wp/info/pushpin_map_alt
+    "pushpin_map_caption": /wp/info/pushpin_map_caption
+    "pushpin_relief": /wp/info/pushpin_relief
+    "pushpin_image": /wp/info/pushpin_image
+    "pushpin_label": /wp/info/pushpin_label
+    "pushpin_label_position": /wp/info/pushpin_label_position
+    "pushpin_mark": /wp/info/pushpin_mark
+    "pushpin_marksize": /wp/info/pushpin_marksize
+    "ownership": /wp/info/ownership
+    "operator": /wp/info/operator
+    "controlledby": /wp/info/controlledby
+    "open_to_public": /wp/info/open_to_public
+    "site_other_label": /wp/info/site_other_label
+    "site_other": /wp/info/site_other
+    "site_area": /wp/info/site_area
+    "code": /wp/info/code
+    "built": /wp/info/built
+    "used": /wp/info/used
+    "builder": /wp/info/builder
+    "materials": /wp/info/materials
+    "height": /wp/info/height
+    "length": /wp/info/length
+    "fate": /wp/info/fate
+    "condition": /wp/info/condition
+    "battles": /wp/info/battles
+    "events": /wp/info/events
+    "current_commander": /wp/info/current_commander
+    "past_commanders": /wp/info/past_commanders
+    "garrison": /wp/info/garrison
+    "occupants": /wp/info/occupants
+    "designations": /wp/info/designations
+    "website": /wp/info/website
+    "footnotes": /wp/info/footnotes
+  }
+}
+
+"Infobox military unit": {
+  type: "infobox"
+  class: /wp/infobox/military_unit
+  fields: {
+    "unit_name": /wp/info/unit_name
+    "native_name": /wp/info/native_name
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "dates": /wp/info/dates
+    "disbanded": /wp/info/disbanded
+    "country": /wp/info/country
+    "allegiance": /wp/info/allegiance
+    "branch": /wp/info/branch
+    "type": /wp/info/type
+    "role": /wp/info/role
+    "size": /wp/info/size
+    "command_structure": /wp/info/command_structure
+    "garrison": /wp/info/garrison
+    "garrison_label": /wp/info/garrison_label
+    "nickname": /wp/info/nickname
+    "patron": /wp/info/patron
+    "motto": /wp/info/motto
+    "colors": /wp/info/colors
+    "colors_label": /wp/info/colors_label
+    "march": /wp/info/march
+    "mascot": /wp/info/mascot
+    "anniversaries": /wp/info/anniversaries
+    "equipment": /wp/info/equipment
+    "equipment_label": /wp/info/equipment_label
+    "battles": /wp/info/battles
+    "battles_label": /wp/info/battles_label
+    "decorations": /wp/info/decorations
+    "battle_honours": /wp/info/battle_honours
+    "battle_honours_label": /wp/info/battle_honours_label
+    "flying_hours": /wp/info/flying_hours
+    "website": /wp/info/website
+    "current_commander": /wp/info/current_commander
+    "commander1": /wp/info/commander1
+    "commander1_label": /wp/info/commander1_label
+    "commander2": /wp/info/commander2
+    "commander2_label": /wp/info/commander2_label
+    "commander3": /wp/info/commander3
+    "commander3_label": /wp/info/commander3_label
+    "commander4": /wp/info/commander4
+    "commander4_label": /wp/info/commander4_label
+    "commander5": /wp/info/commander5
+    "commander5_label": /wp/info/commander5_label
+    "commander6": /wp/info/commander6
+    "commander6_label": /wp/info/commander6_label
+    "commander7": /wp/info/commander7
+    "commander7_label": /wp/info/commander7_label
+    "commander8": /wp/info/commander8
+    "commander8_label": /wp/info/commander8_label
+    "commander9": /wp/info/commander9
+    "commander9_label": /wp/info/commander9_label
+    "notable_commanders": /wp/info/notable_commanders
+    "identification_symbol": /wp/info/identification_symbol
+    "identification_symbol_label": /wp/info/identification_symbol_label
+    "identification_symbol_2": /wp/info/identification_symbol_2
+    "identification_symbol_2_label": /wp/info/identification_symbol_2_label
+    "identification_symbol_3": /wp/info/identification_symbol_3
+    "identification_symbol_3_label": /wp/info/identification_symbol_3_label
+    "identification_symbol_4": /wp/info/identification_symbol_4
+    "identification_symbol_4_label": /wp/info/identification_symbol_4_label
+    "identification_symbol_5": /wp/info/identification_symbol_5
+    "identification_symbol_5_label": /wp/info/identification_symbol_5_label
+    "identification_symbol_6": /wp/info/identification_symbol_6
+    "identification_symbol_6_label": /wp/info/identification_symbol_6_label
+    "aircraft_attack": /wp/info/aircraft_attack
+    "aircraft_bomber": /wp/info/aircraft_bomber
+    "aircraft_electronic": /wp/info/aircraft_electronic
+    "aircraft_fighter": /wp/info/aircraft_fighter
+    "aircraft_helicopter": /wp/info/aircraft_helicopter
+    "aircraft_helicopter_attack": /wp/info/aircraft_helicopter_attack
+    "aircraft_helicopter_cargo": /wp/info/aircraft_helicopter_cargo
+    "aircraft_helicopter_multirole": /wp/info/aircraft_helicopter_multirole
+    "aircraft_helicopter_observation": /wp/info/aircraft_helicopter_observation
+    "aircraft_helicopter_trainer": /wp/info/aircraft_helicopter_trainer
+    "aircraft_helicopter_utility": /wp/info/aircraft_helicopter_utility
+    "aircraft_interceptor": /wp/info/aircraft_interceptor
+    "aircraft_patrol": /wp/info/aircraft_patrol
+    "aircraft_recon": /wp/info/aircraft_recon
+    "aircraft_trainer": /wp/info/aircraft_trainer
+    "aircraft_transport": /wp/info/aircraft_transport
+    "aircraft_tanker": /wp/info/aircraft_tanker
+    "aircraft_general": /wp/info/aircraft_general
+  }
+}
+
+"Infobox venue": {
+  type: "infobox"
+  class: /wp/infobox/venue
+  fields: {
+    "name": /wp/info/name
+    "native_name": /wp/info/native_name
+    "native_name_lang": /wp/info/native_name_lang
+    "nickname": /wp/info/nickname
+    "logo_image": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "logo_caption": /wp/info/logo_caption
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_upright": /wp/info/image_upright
+    "image_alt": /wp/info/image_alt
+    "caption": /wp/info/caption
+    "image_map": /wp/info/image_map
+    "map_size": /wp/info/map_size
+    "map_alt": /wp/info/map_alt
+    "map_caption": /wp/info/map_caption
+    "pushpin_map": /wp/info/pushpin_map
+    "pushpin_mapsize": /wp/info/pushpin_mapsize
+    "pushpin_map_caption": /wp/info/pushpin_map_caption
+    "pushpin_label_position": /wp/info/pushpin_label_position
+    "pushpin_relief": /wp/info/pushpin_relief
+    "fullname": /wp/info/fullname
+    "former names": /wp/info/former_names
+    "address": /wp/info/address
+    "city": /wp/info/city
+    "country": /wp/info/country
+    "location": /wp/info/location
+    "coordinates": /wp/info/coordinates
+    "elevation": /wp/info/elevation
+    "publictransit": /wp/info/publictransit
+    "parking": /wp/info/parking
+    "owner": /wp/info/owner
+    "operator": /wp/info/operator
+    "designation": /wp/info/designation
+    "type": /wp/info/type
+    "genre": /wp/info/genre
+    "seating_type": /wp/info/seating_type
+    "suites": /wp/info/suites
+    "capacity": /wp/info/capacity
+    "record_attendance": /wp/info/record_attendance
+    "dimensions": /wp/info/dimensions
+    "field_shape": /wp/info/field_shape
+    "acreage": /wp/info/acreage
+    "surface": /wp/info/surface
+    "scoreboard": /wp/info/scoreboard
+    "screens": /wp/info/screens
+    "currentuse": /wp/info/currentuse
+    "production": /wp/info/production
+    "broke_ground": /wp/info/broke_ground
+    "built": /wp/info/built
+    "opened": /wp/info/opened
+    "renovated": /wp/info/renovated
+    "expanded": /wp/info/expanded
+    "closed": /wp/info/closed
+    "demolished": /wp/info/demolished
+    "rebuilt": /wp/info/rebuilt
+    "yearsactive": /wp/info/yearsactive
+    "cost": /wp/info/cost
+    "architect": /wp/info/architect
+    "builder": /wp/info/builder
+    "project_manager": /wp/info/project_manager
+    "structural engineer": /wp/info/structural_engineer
+    "services engineer": /wp/info/services_engineer
+    "general_contractor": /wp/info/general_contractor
+    "main_contractors": /wp/info/main_contractors
+    "tenants": /wp/info/tenants
+    "website": /wp/info/website
+    "embedded": /wp/info/embedded
+  }
+}
+
+"Infobox racecourse": {
+  type: "infobox"
+  class: /wp/infobox/racecourse
+  fields: {
+    "name": /wp/info/name
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "logo_caption": /wp/info/logo_caption
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "location": /wp/info/location
+    "coordinates": /wp/info/coordinates
+    "owner": /wp/info/owner
+    "operator": /wp/info/operator
+    "opened": /wp/info/opened
+    "closed": /wp/info/closed
+    "capacity": /wp/info/capacity
+    "channel": /wp/info/channel
+    "racetype": /wp/info/racetype
+    "coursetype": /wp/info/coursetype
+    "notableraces": /wp/info/notableraces
+    "handle": /wp/info/handle
+    "attendance": /wp/info/attendance
+    "website": /wp/info/website
+  }
+}
+
+"Infobox glacier": {
+  type: "infobox"
+  class: /wp/infobox/glacier
+  fields: {
+    "child": /wp/info/child
+    "name": /wp/info/name
+    "other_name": /wp/info/other_name
+    "photo": /wp/info/photo
+    "photo_width": /wp/info/photo_width
+    "photo_alt": /wp/info/photo_alt
+    "photo_caption": /wp/info/photo_caption
+    "map": /wp/info/map
+    "map_width": /wp/info/map_width
+    "map_alt": /wp/info/map_alt
+    "map_caption": /wp/info/map_caption
+    "type": /wp/info/type
+    "location": /wp/info/location
+    "coordinates": /wp/info/coordinates
+    "coords_ref": /wp/info/coords_ref
+    "area": /wp/info/area
+    "length": /wp/info/length
+    "width": /wp/info/width
+    "thickness": /wp/info/thickness
+    "elevation_max": /wp/info/elevation_max
+    "elevation_min": /wp/info/elevation_min
+    "terminus": /wp/info/terminus
+    "status": /wp/info/status
+    "embedded": /wp/info/embedded
+  }
+}
+
+"Infobox former subdivision": {
+  type: "infobox"
+  class: /wp/infobox/former_subdivision
+  fields: {
+    "_noautocat": /wp/info/_noautocat
+    "native_name": /wp/info/native_name
+    "conventional_long_name": /wp/info/conventional_long_name
+    "common_name": /wp/info/common_name
+    "subdivision": /wp/info/subdivision
+    "nation": /wp/info/nation
+    "demonym": /wp/info/demonym
+    "status_text": /wp/info/status_text
+    "government_type": /wp/info/government_type
+    "title_leader": /wp/info/title_leader
+    "title_deputy": /wp/info/title_deputy
+    "leader1": /wp/info/leader1
+    "year_leader1": /wp/info/year_leader1
+    "deputy1": /wp/info/deputy1
+    "year_deputy1": /wp/info/year_deputy1
+    "legislature": /wp/info/legislature
+    "house1": /wp/info/house1
+    "house2": /wp/info/house2
+    "type_house1": /wp/info/type_house1
+    "type_house2": /wp/info/type_house2
+    "capital": /wp/info/capital
+    "coordinates": /wp/info/coordinates
+    "motto": /wp/info/motto
+    "anthem": /wp/info/anthem
+    "political_subdiv": /wp/info/political_subdiv
+    "today": /wp/info/today
+    "year_start": /wp/info/year_start
+    "year_end": /wp/info/year_end
+    "event_start": /wp/info/event_start
+    "date_start": /wp/info/date_start
+    "event_end": /wp/info/event_end
+    "date_end": /wp/info/date_end
+
+    "event": {+/wp/info/name event group: /wp/info/name}
+    "date_event": {+/wp/info/date group: /wp/info/name}
+
+    "life_span": /wp/info/life_span
+    "era": /wp/info/era
+    "event_pre": /wp/info/event_pre
+    "date_pre": /wp/info/date_pre
+    "event_post": /wp/info/event_post
+    "date_post": /wp/info/date_post
+    "image_flag": {+/wp/info/flag_image media: true}
+    "image_border": /wp/info/image_border
+    "flag_type": /wp/info/flag_type
+    "flag": /wp/info/flag
+    "image_coat": /wp/info/image_coat
+    "symbol_type": /wp/info/symbol_type
+    "symbol": /wp/info/symbol
+    "image_map": /wp/info/image_map
+    "image_map_caption": /wp/info/image_map_caption
+    "p1": /wp/info/p1
+    "flag_p1": /wp/info/flag_p1
+    "border_p1": /wp/info/border_p1
+    "image_p1": /wp/info/image_p1
+    "s1": /wp/info/s1
+    "flag_s1": /wp/info/flag_s1
+    "border_s1": /wp/info/border_s1
+    "image_s1": /wp/info/image_s1
+    "stat_year1": /wp/info/stat_year1
+    "stat_area1": /wp/info/stat_area1
+    "stat_pop1": /wp/info/stat_pop1
+    "area_lost1": /wp/info/area_lost1
+    "lost_to1": /wp/info/lost_to1
+    "area_lost_year1": /wp/info/area_lost_year1
+    "area_gained1": /wp/info/area_gained1
+    "gained_from1": /wp/info/gained_from1
+    "area_gained_year1": /wp/info/area_gained_year1
+    "Status": /wp/info/status
+    "Government": /wp/info/government
+    "Arms": /wp/info/arms
+    "arms_caption": /wp/info/arms_caption
+    "Civic": /wp/info/civic
+    "civic_caption": /wp/info/civic_caption
+    "HQ": /wp/info/hq
+    "CodeName": /wp/info/codename
+    "Code": /wp/info/code
+    "Divisions": /wp/info/divisions
+    "DivisionsNames": /wp/info/divisionsnames
+    "DivisionsMap": /wp/info/divisionsmap
+    "divisions_map_caption": /wp/info/divisions_map_caption
+
+    "membership": {+/wp/info/name group: /wp/info/membership}
+    "membership_title": {+/wp/info/title  group: /wp/info/membership}
+
+    "footnotes": /wp/info/footnotes
+  }
+}
+
+"Infobox U.S. county": {
+  type: "infobox"
+  class: /wp/infobox/u.s._county
+  fields: {
+    "county": /wp/info/county
+    "state": /wp/info/state
+    "type": /wp/info/type
+    "official_name": /wp/info/official_name
+    "ex image": /wp/info/ex_image
+    "ex image size": /wp/info/ex_image_size
+    "ex image cap": /wp/info/ex_image_cap
+    "flag": {+/wp/info/flag_image media: true}
+    "flag size": /wp/info/flag_size
+    "flag border": /wp/info/flag_border
+    "flag wl": /wp/info/flag_wl
+    "seal": /wp/info/seal
+    "seal size": /wp/info/seal_size
+    "seal wl": /wp/info/seal_wl
+    "logo": {+/wp/info/logo media: true}
+    "map_county": /wp/info/map_county
+    "nickname": /wp/info/nickname
+    "motto": /wp/info/motto
+    "demonym": /wp/info/demonym
+    "ZIP codes": /wp/info/zip_codes
+    "area codes": /wp/info/area_codes
+    "founded date": /wp/info/founded_date
+    "founded year": /wp/info/founded_year
+    "named for": /wp/info/named_for
+    "leader type": /wp/info/leader_type
+    "leader name": /wp/info/leader_name
+    "seat": /wp/info/seat
+    "seat wl": /wp/info/seat_wl
+    "city type": /wp/info/city_type
+    "largest city": /wp/info/largest_city
+    "largest city wl": /wp/info/largest_city_wl
+    "area_total_sq_mi": /wp/info/area_total_sq_mi
+    "area_land_sq_mi": /wp/info/area_land_sq_mi
+    "area_water_sq_mi": /wp/info/area_water_sq_mi
+    "area percentage": /wp/info/area_percentage
+    "pop": /wp/info/pop
+    "census yr": /wp/info/census_yr
+    "census estimate yr": /wp/info/census_estimate_yr
+    "density_sq_mi": /wp/info/density_sq_mi
+    "district": /wp/info/district
+    "district2": /wp/info/district2
+    "district3": /wp/info/district3
+    "time zone": /wp/info/time_zone
+    "UTC offset": /wp/info/utc_offset
+    "DST offset": /wp/info/dst_offset
+    "tz note": /wp/info/tz_note
+    "time zone 2": /wp/info/time_zone_2
+    "UTC offset 2": /wp/info/utc_offset_2
+    "DST offset 2": /wp/info/dst_offset_2
+    "tz note 2": /wp/info/tz_note_2
+    "web": /wp/info/web
+    "footnotes": /wp/info/footnotes
+    "coordinates": /wp/info/coordinates
+  }
+}
+
+"Infobox Italian comune": {
+  type: "infobox"
+  class: /wp/infobox/italian_comune
+  fields: {
+    "name": /wp/info/name
+    "official_name": /wp/info/official_name
+    "native_name": /wp/info/native_name
+    "settlement_type": /wp/info/settlement_type
+    "image_skyline": {+/wp/info/image media: true}
+    "image_caption": /wp/info/caption
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "image_flag": {+/wp/info/flag_image media: true}
+    "flag_size": /wp/info/flag_size
+    "flag_alt": /wp/info/flag_alt
+    "image_shield": /wp/info/image_shield
+    "shield_size": /wp/info/shield_size
+    "shield_alt": /wp/info/shield_alt
+    "nickname": /wp/info/nickname
+    "nicknames": /wp/info/nickname
+    "motto": /wp/info/motto
+    "mottos": /wp/info/motto
+    "map": /wp/info/map
+    "map_caption": /wp/info/map_caption
+    "mapsize": /wp/info/mapsize
+    "map_alt": /wp/info/map_alt
+    "pushpin_map": /wp/info/pushpin_map
+    "pushpin_mapsize": /wp/info/pushpin_mapsize
+    "pushpin_label_position": /wp/info/pushpin_label_position
+    "pushpin_map_alt": /wp/info/pushpin_map_alt
+    "coordinates": /wp/info/coordinates
+    "coordinates_footnotes": /wp/info/coordinates_footnotes
+    "region": /wp/info/region
+    "metropolitan_city": /wp/info/metropolitan_city
+    "province": /wp/info/province
+    "established_title": /wp/info/established_title
+    "established_date": /wp/info/established_date
+    "frazioni": /wp/info/frazioni
+    "mayor": /wp/info/mayor
+    "mayor_party": /wp/info/mayor_party
+    "area_total_km2": /wp/info/area_total_km2
+    "area_footnotes": /wp/info/area_footnotes
+    "elevation_m": /wp/info/elevation_m
+    "elevation_max_m": /wp/info/elevation_max_m
+    "elevation_min_m": /wp/info/elevation_min_m
+    "elevation_footnotes": /wp/info/elevation_footnotes
+    "population_total": /wp/info/population_total
+    "population_as_of": /wp/info/population_as_of
+    "population_footnotes": /wp/info/population_footnotes
+    "population_demonym": /wp/info/population_demonym
+    "population_demonyms": /wp/info/population_demonym
+    "gentilic": /wp/info/population_demonym
+    "postal_code": /wp/info/postal_code
+    "postalcode": /wp/info/postal_code
+    "area_code": /wp/info/area_code
+    "telephone": /wp/info/area_code
+    "istat": /wp/info/istat
+    "saint": /wp/info/saint
+    "day": /wp/info/day
+    "website": /wp/info/website
+    "footnotes": /wp/info/footnotes
+  }
+}
+
+"Infobox UNESCO World Heritage Site": {
+  type: "infobox"
+  class: /wp/infobox/unesco_world_heritage_site
+  fields: {
+    "WHS": /wp/info/whs
+    "Official_name": /wp/info/official_name
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "caption": /wp/info/caption
+    "Part_of": /wp/info/part_of
+    "Includes": /wp/info/includes
+    "Location": /wp/info/location
+    "Criteria": /wp/info/criteria
+    "ID": /wp/info/id
+    "Coordinates": /wp/info/coordinates
+    "Year": /wp/info/year
+    "Extension": /wp/info/extension
+    "Danger": /wp/info/danger
+    "Area": /wp/info/area
+    "Buffer_zone": /wp/info/buffer_zone
+    "Website": /wp/info/website
+    "locmapin": /wp/info/locmapin
+    "map_caption": /wp/info/map_caption
+    "map_width": /wp/info/map_width
+    "relief": /wp/info/relief
+    "child": /wp/info/child
+    "embedded": /wp/info/embedded
+  }
+}
+
+"Infobox national political convention": {
+  type: "infobox"
+  class: /wp/infobox/national_political_convention
+  fields: {
+    "year": /wp/info/year
+    "party": /wp/info/party
+    "election_year": /wp/info/election_year
+    "logo": {+/wp/info/logo media: true}
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image2": /wp/info/image2
+    "image_size2": /wp/info/image_size2
+    "caption": /wp/info/caption
+    "date": /wp/info/date
+    "city": /wp/info/city
+    "venue": /wp/info/venue
+    "convention_chair": /wp/info/convention_chair
+    "keynote_speaker": /wp/info/keynote_speaker
+    "presidential_nominee": /wp/info/presidential_nominee
+    "presidential_nominee_state": /wp/info/presidential_nominee_state
+    "vice_presidential_nominee": /wp/info/vice_presidential_nominee
+    "vice_presidential_nominee_state": /wp/info/vice_presidential_nominee_state
+    "othercandidates": /wp/info/othercandidates
+    "totaldelegates": /wp/info/totaldelegates
+    "votesneeded": /wp/info/votesneeded
+    "ballots": /wp/info/ballots
+  }
+}
+
+"Infobox football club": {
+  type: "infobox"
+  class: /wp/infobox/football_club
+  fields: {
+    "clubname": /wp/info/clubname
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "upright": /wp/info/upright
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "fullname": /wp/info/fullname
+    "nickname": /wp/info/nickname
+    "short name": /wp/info/short_name
+    "founded": /wp/info/founded
+    "dissolved": /wp/info/dissolved
+    "American": /wp/info/american
+    "ground": /wp/info/ground
+    "capacity": /wp/info/capacity
+    "coordinates": /wp/info/coordinates
+    "owntitle": /wp/info/owntitle
+    "owner": /wp/info/owner
+    "chrtitle": /wp/info/chrtitle
+    "chairman": /wp/info/chairman
+    "mgrtitle": /wp/info/mgrtitle
+    "manager": /wp/info/manager
+    "coach": /wp/info/coach
+    "league": /wp/info/league
+    "season": /wp/info/season
+    "position": /wp/info/position
+    "website": /wp/info/website
+    "kit_alt1": /wp/info/kit_alt1
+    "pattern_la1": /wp/info/pattern_la1
+    "pattern_b1": /wp/info/pattern_b1
+    "pattern_ra1": /wp/info/pattern_ra1
+    "pattern_sh1": /wp/info/pattern_sh1
+    "pattern_so1": /wp/info/pattern_so1
+    "leftarm1": /wp/info/leftarm1
+    "body1": /wp/info/body1
+    "rightarm1": /wp/info/rightarm1
+    "shorts1": /wp/info/shorts1
+    "socks1": /wp/info/socks1
+    "pattern_name1": /wp/info/pattern_name1
+    "kit_alt2": /wp/info/kit_alt2
+    "pattern_la2": /wp/info/pattern_la2
+    "pattern_b2": /wp/info/pattern_b2
+    "pattern_ra2": /wp/info/pattern_ra2
+    "pattern_sh2": /wp/info/pattern_sh2
+    "pattern_so2": /wp/info/pattern_so2
+    "leftarm2": /wp/info/leftarm2
+    "body2": /wp/info/body2
+    "rightarm2": /wp/info/rightarm2
+    "shorts2": /wp/info/shorts2
+    "socks2": /wp/info/socks2
+    "pattern_name2": /wp/info/pattern_name2
+    "kit_alt3": /wp/info/kit_alt3
+    "pattern_la3": /wp/info/pattern_la3
+    "pattern_b3": /wp/info/pattern_b3
+    "pattern_ra3": /wp/info/pattern_ra3
+    "pattern_sh3": /wp/info/pattern_sh3
+    "pattern_so3": /wp/info/pattern_so3
+    "leftarm3": /wp/info/leftarm3
+    "body3": /wp/info/body3
+    "rightarm3": /wp/info/rightarm3
+    "shorts3": /wp/info/shorts3
+    "socks3": /wp/info/socks3
+    "pattern_name3": /wp/info/pattern_name3
+    "current": /wp/info/current
+  }
+}
+
+"Infobox basketball club": {
+  type: "infobox"
+  class: /wp/infobox/basketball_club
+  fields: {
+    "name": /wp/info/name
+    "color1": /wp/info/color1
+    "color2": /wp/info/color2
+    "color3": /wp/info/color3
+    "logo": {+/wp/info/logo media: true}
+    "nickname": /wp/info/nickname
+    "leagues": /wp/info/leagues
+    "conference": /wp/info/conference
+    "division": /wp/info/division
+    "founded": /wp/info/founded
+    "dissolved": /wp/info/dissolved
+    "history": /wp/info/history
+    "arena": /wp/info/arena
+    "capacity": /wp/info/capacity
+    "location": /wp/info/location
+    "colors": /wp/info/colors
+    "current": /wp/info/current
+    "sponsor": /wp/info/sponsor
+    "media": /wp/info/media
+    "chairman": /wp/info/chairman
+    "president": /wp/info/president
+    "vice-presidents": /wp/info/vice-presidents
+    "manager": /wp/info/manager
+    "coach": /wp/info/coach
+    "captain": /wp/info/captain
+    "ownership": /wp/info/ownership
+    "championships": /wp/info/championships
+    "conf_champs": /wp/info/conf_champs
+    "div_champs": /wp/info/div_champs
+    "season": /wp/info/season
+    "position": /wp/info/position
+    "website": /wp/info/website
+    "1_title": /wp/info/1_title
+    "1_body": /wp/info/1_body
+    "1_pattern_b": /wp/info/1_pattern_b
+    "1_shorts": /wp/info/1_shorts
+    "1_pattern_s": /wp/info/1_pattern_s
+    "2_title": /wp/info/2_title
+    "2_body": /wp/info/2_body
+    "2_pattern_b": /wp/info/2_pattern_b
+    "2_shorts": /wp/info/2_shorts
+    "2_pattern_s": /wp/info/2_pattern_s
+  }
+}
+
+"Infobox college ice hockey team": {
+  type: "infobox"
+  class: /wp/infobox/college_ice_hockey_team
+  fields: {
+    "team_name": /wp/info/team_name
+    "current": /wp/info/current
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "university": /wp/info/university
+    "conference": /wp/info/conference
+    "conference_short": /wp/info/conference_short
+    "division": /wp/info/division
+    "governing_body": /wp/info/governing_body
+    "first_year": /wp/info/first_year
+    "athletic_director": /wp/info/athletic_director
+    "coach": /wp/info/coach
+    "coach_year": /wp/info/coach_year
+    "coach_wins": /wp/info/coach_wins
+    "coach_losses": /wp/info/coach_losses
+    "coach_ties": /wp/info/coach_ties
+    "assistant_coaches": /wp/info/assistant_coaches
+    "captains": /wp/info/captains
+    "a_captains": /wp/info/a_captains
+    "arena": /wp/info/arena
+    "capacity": /wp/info/capacity
+    "surface": /wp/info/surface
+    "location": /wp/info/location
+    "studentsection": /wp/info/studentsection
+    "color1": /wp/info/color1
+    "color2": /wp/info/color2
+    "color3": /wp/info/color3
+    "hex1": /wp/info/hex1
+    "hex2": /wp/info/hex2
+    "hex3": /wp/info/hex3
+    "fontcolor": /wp/info/fontcolor
+    "fight_song": /wp/info/fight_song
+    "mascot": /wp/info/mascot
+    "NCAAchampion": /wp/info/ncaachampion
+    "NCAArunnerup": /wp/info/ncaarunnerup
+    "NCAAfrozenfour": /wp/info/ncaafrozenfour
+    "NCAAtourneys": /wp/info/ncaatourneys
+    "USportschampion": /wp/info/usportschampion
+    "USportstourneys": /wp/info/usportstourneys
+    "ACHAchampion": /wp/info/achachampion
+    "ACHAtourneys": /wp/info/achatourneys
+    "clubchampion": /wp/info/clubchampion
+    "clubtourneys": /wp/info/clubtourneys
+    "NAIAchampion": /wp/info/naiachampion
+    "NAIAtourneys": /wp/info/naiatourneys
+    "conference_tournament": /wp/info/conference_tournament
+    "conference_season": /wp/info/conference_season
+    "ivy_championship": /wp/info/ivy_championship
+    "uniform_image": /wp/info/uniform_image
+  }
+}
+
+"Infobox Christian denomination": {
+  type: "infobox"
+  class: /wp/infobox/christian_denomination
+  fields: {
+    "icon": /wp/info/icon
+    "icon_width": /wp/info/icon_width
+    "icon_alt": /wp/info/icon_alt
+    "name": /wp/info/name
+    "native_name": /wp/info/native_name
+    "native_name_lang": /wp/info/native_name_lang
+    "image": {+/wp/info/image media: true}
+    "imagewidth": /wp/info/imagewidth
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "abbreviation": /wp/info/abbreviation
+    "type": /wp/info/type
+    "main_classification": /wp/info/main_classification
+    "orientation": /wp/info/orientation
+    "scripture": /wp/info/scripture
+    "theology": /wp/info/theology
+    "polity": /wp/info/polity
+    "governance": /wp/info/governance
+    "structure": /wp/info/structure
+    "leader_title": {+/wp/info/title group: /wp/info/leader}
+    "leader_name": {+/wp/info/name group: /wp/info/leader}
+
+    "fellowships_type": {+/wp/info/type group: /wp/info/fellowship}
+    "fellowships": {+/wp/info/name group: /wp/info/fellowship}
+
+    "division_type": {+/wp/info/type group: /wp/info/division}
+    "division": {+/wp/info/name group: /wp/info/division}
+
+    "associations": /wp/info/associations
+    "full_communion": /wp/info/full_communion
+    "area": /wp/info/area
+    "language": /wp/info/language
+    "liturgy": /wp/info/liturgy
+    "headquarters": /wp/info/headquarters
+    "territory": /wp/info/territory
+    "possessions": /wp/info/possessions
+    "founder": /wp/info/founder
+    "founded_date": /wp/info/founded_date
+    "founded_place": /wp/info/founded_place
+    "independence": /wp/info/independence
+    "reunion": /wp/info/reunion
+    "recognition": /wp/info/recognition
+    "separated_from": /wp/info/separated_from
+    "branched_from": /wp/info/branched_from
+    "merger": /wp/info/merger
+    "absorbed": /wp/info/absorbed
+    "separations": /wp/info/separations
+    "merged_into": /wp/info/merged_into
+    "defunct": /wp/info/defunct
+    "congregations_type": /wp/info/congregations_type
+    "congregations": /wp/info/congregations
+    "members": /wp/info/members
+    "ministers_type": /wp/info/ministers_type
+    "ministers": /wp/info/ministers
+    "missionaries": /wp/info/missionaries
+    "churches": /wp/info/churches
+    "hospitals": /wp/info/hospitals
+    "nursing_homes": /wp/info/nursing_homes
+    "aid": /wp/info/aid
+    "primary_schools": /wp/info/primary_schools
+    "secondary_schools": /wp/info/secondary_schools
+    "tax_status": /wp/info/tax_status
+    "tertiary": /wp/info/tertiary
+    "other_names": /wp/info/other_names
+    "publications": /wp/info/publications
+    "website": /wp/info/website
+    "website_title1": /wp/info/website_title1
+    "slogan": /wp/info/slogan
+    "logo": {+/wp/info/logo media: true}
+    "module": /wp/info/module
+    "footnotes": /wp/info/footnotes
+  }
+}
+
+"Infobox building": {
+  type: "infobox"
+  class: /wp/infobox/building
+  fields: {
+    "name": /wp/info/name
+    "native_name": /wp/info/native_name
+    "native_name_lang": /wp/info/native_name_lang
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "logo_caption": /wp/info/logo_caption
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "image_caption": /wp/info/image_caption
+    "map_type": /wp/info/map_type
+    "map_alt": /wp/info/map_alt
+    "map_caption": /wp/info/map_caption
+    "map_size": /wp/info/map_size
+    "map_dot_label": /wp/info/map_dot_label
+    "map_dot_mark": /wp/info/map_dot_mark
+    "relief": /wp/info/relief
+    "former_names": /wp/info/former_names
+    "alternate_names": /wp/info/alternate_names
+    "etymology": /wp/info/etymology
+    "status": /wp/info/status
+    "cancelled": /wp/info/cancelled
+    "topped_out": /wp/info/topped_out
+    "building_type": /wp/info/building_type
+    "architectural_style": /wp/info/architectural_style
+    "classification": /wp/info/classification
+    "location": /wp/info/location
+    "address": /wp/info/address
+    "location_city": /wp/info/location_city
+    "location_country": /wp/info/location_country
+    "coordinates": /wp/info/coordinates
+    "altitude": /wp/info/altitude
+    "current_tenants": /wp/info/current_tenants
+    "namesake": /wp/info/namesake
+    "groundbreaking_date": /wp/info/groundbreaking_date
+    "start_date": /wp/info/start_date
+    "stop_date": /wp/info/stop_date
+    "est_completion": /wp/info/est_completion
+    "topped_out_date": /wp/info/topped_out_date
+    "completion_date": /wp/info/completion_date
+    "opened_date": /wp/info/opened_date
+    "inauguration_date": /wp/info/inauguration_date
+    "relocated_date": /wp/info/relocated_date
+    "renovation_date": /wp/info/renovation_date
+    "closing_date": /wp/info/closing_date
+    "demolition_date": /wp/info/demolition_date
+    "cost": /wp/info/cost
+    "ren_cost": /wp/info/ren_cost
+    "client": /wp/info/client
+    "owner": /wp/info/owner
+    "landlord": /wp/info/landlord
+    "affiliation": /wp/info/affiliation
+    "height": /wp/info/height
+    "architectural": /wp/info/architectural
+    "tip": /wp/info/tip
+    "antenna_spire": /wp/info/antenna_spire
+    "roof": /wp/info/roof
+    "top_floor": /wp/info/top_floor
+    "observatory": /wp/info/observatory
+    "diameter": /wp/info/diameter
+    "circumference": /wp/info/circumference
+    "weight": /wp/info/weight
+    "other_dimensions": /wp/info/other_dimensions
+    "structural_system": /wp/info/structural_system
+    "material": /wp/info/material
+    "size": /wp/info/size
+    "floor_count": /wp/info/floor_count
+    "floor_area": /wp/info/floor_area
+    "elevator_count": /wp/info/elevator_count
+    "grounds_area": /wp/info/grounds_area
+    "architect": /wp/info/architect
+    "architecture_firm": /wp/info/architecture_firm
+    "developer": /wp/info/developer
+    "engineer": /wp/info/engineer
+    "structural_engineer": /wp/info/structural_engineer
+    "services_engineer": /wp/info/services_engineer
+    "civil_engineer": /wp/info/civil_engineer
+    "other_designers": /wp/info/other_designers
+    "quantity_surveyor": /wp/info/quantity_surveyor
+    "main_contractor": /wp/info/main_contractor
+    "awards": /wp/info/awards
+    "designations": /wp/info/designations
+    "known_for": /wp/info/known_for
+    "ren_architect": /wp/info/ren_architect
+    "ren_firm": /wp/info/ren_firm
+    "ren_engineer": /wp/info/ren_engineer
+    "ren_str_engineer": /wp/info/ren_str_engineer
+    "ren_serv_engineer": /wp/info/ren_serv_engineer
+    "ren_civ_engineer": /wp/info/ren_civ_engineer
+    "ren_oth_designers": /wp/info/ren_oth_designers
+    "ren_qty_surveyor": /wp/info/ren_qty_surveyor
+    "ren_contractor": /wp/info/ren_contractor
+    "ren_awards": /wp/info/ren_awards
+    "rooms": /wp/info/rooms
+    "parking": /wp/info/parking
+    "public_transit": /wp/info/public_transit
+    "website": /wp/info/website
+    "embed": /wp/info/embed
+    "embedded": /wp/info/embedded
+    "references": /wp/info/references
+    "footnotes": /wp/info/footnotes
+  }
+}
+
+"Infobox constellation": {
+  type: "infobox"
+  class: /wp/infobox/constellation
+  fields: {
+    "name": /wp/info/name
+    "abbreviation": /wp/info/abbreviation
+    "genitive": /wp/info/genitive
+    "pronounce": /wp/info/pronounce
+    "symbolism": /wp/info/symbolism
+    "RA": /wp/info/ra
+    "dec": /wp/info/dec
+    "areatotal": /wp/info/areatotal
+    "arearank": /wp/info/arearank
+    "numbermainstars": /wp/info/numbermainstars
+    "numberbfstars": /wp/info/numberbfstars
+    "numberstarsplanets": /wp/info/numberstarsplanets
+    "numberbrightstars": /wp/info/numberbrightstars
+    "numbernearbystars": /wp/info/numbernearbystars
+    "brighteststarname": /wp/info/brighteststarname
+    "starmagnitude": /wp/info/starmagnitude
+    "neareststarname": /wp/info/neareststarname
+    "stardistance": /wp/info/stardistance
+    "numbermessierobjects": /wp/info/numbermessierobjects
+    "meteorshowers": /wp/info/meteorshowers
+    "bordering": /wp/info/bordering
+    "latmax": /wp/info/latmax
+    "latmin": /wp/info/latmin
+    "month": /wp/info/month
+    "notes": /wp/info/notes
+  }
+}
+
+"Infobox automobile": {
+  type: "infobox"
+  class: /wp/infobox/automobile
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "manufacturer": /wp/info/manufacturer
+    "aka": /wp/info/aka
+    "production": /wp/info/production
+    "model_years": /wp/info/model_years
+    "assembly": /wp/info/assembly
+    "designer": /wp/info/designer
+    "class": /wp/info/class
+    "body_style": /wp/info/body_style
+    "layout": /wp/info/layout
+    "platform": /wp/info/platform
+    "related": /wp/info/related
+    "engine": /wp/info/engine
+    "transmission": /wp/info/transmission
+    "wheelbase": /wp/info/wheelbase
+    "length": /wp/info/length
+    "width": /wp/info/width
+    "height": /wp/info/height
+    "weight": /wp/info/weight
+    "predecessor": /wp/info/predecessor
+    "successor": /wp/info/successor
+    "sp": /wp/info/sp
+  }
+}
+
+"Infobox sports league": {
+  type: "infobox"
+  class: /wp/infobox/sports_league
+  fields: {
+    "title": /wp/info/title
+    "current_season": /wp/info/current_season
+    "current_season2": /wp/info/current_season2
+    "last_season": /wp/info/last_season
+    "upcoming_season": /wp/info/upcoming_season
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "caption": /wp/info/caption
+    "formerly": /wp/info/formerly
+    "sport": /wp/info/sport
+    "game": /wp/info/game
+    "founded": /wp/info/founded
+    "folded": /wp/info/folded
+    "replaced": /wp/info/replaced
+    "owner": /wp/info/owner
+    "ceo": /wp/info/ceo
+    "coo": /wp/info/coo
+    "director": /wp/info/director
+    "president": /wp/info/president
+    "commissioner": /wp/info/commissioner
+    "fame": /wp/info/fame
+    "motto": /wp/info/motto
+    "inaugural": /wp/info/inaugural
+    "teams": /wp/info/teams
+    "singles": /wp/info/singles
+    "country": /wp/info/country
+    "venue": /wp/info/venue
+    "confed": /wp/info/confed
+    "champion": /wp/info/champion
+    "champ_season": /wp/info/champ_season
+    "most_champs": /wp/info/most_champs
+    "classification": /wp/info/classification
+    "qualification": /wp/info/qualification
+    "tv": /wp/info/tv
+    "sponsor": /wp/info/sponsor
+    "investor": /wp/info/investor
+    "related_comps": /wp/info/related_comps
+    "founder": /wp/info/founder
+    "levels": /wp/info/levels
+    "promotion": /wp/info/promotion
+    "relegation": /wp/info/relegation
+    "domestic_cup": /wp/info/domestic_cup
+    "website": /wp/info/website
+    "footnotes": /wp/info/footnotes
+    "current": /wp/info/current
+  }
+}
+
+"Infobox national handball team": {
+  type: "infobox"
+  class: /wp/infobox/national_handball_team
+  fields: {
+    "Name": /wp/info/name
+    "Type": /wp/info/type
+    "Badge": {+/wp/info/image media: true}
+    "Badge_size": /wp/info/badge_size
+    "Nickname": /wp/info/nickname
+    "Association": /wp/info/association
+    "Coach": /wp/info/coach
+    "Assistant coach": /wp/info/assistant_coach
+    "Captain": /wp/info/captain
+    "Most caps": /wp/info/most_caps
+    "Most goals": /wp/info/most_goals
+    "Ranking": /wp/info/ranking
+    "Points": /wp/info/points
+    "pattern_la1": /wp/info/pattern_la1
+    "pattern_b1": /wp/info/pattern_b1
+    "pattern_ra1": /wp/info/pattern_ra1
+    "pattern_sh1": /wp/info/pattern_sh1
+    "leftarm1": /wp/info/leftarm1
+    "body1": /wp/info/body1
+    "rightarm1": /wp/info/rightarm1
+    "shorts1": /wp/info/shorts1
+    "pattern_la2": /wp/info/pattern_la2
+    "pattern_b2": /wp/info/pattern_b2
+    "pattern_ra2": /wp/info/pattern_ra2
+    "pattern_sh2": /wp/info/pattern_sh2
+    "leftarm2": /wp/info/leftarm2
+    "body2": /wp/info/body2
+    "rightarm2": /wp/info/rightarm2
+    "shorts2": /wp/info/shorts2
+    "Summer Olympics apps": /wp/info/summer_olympics_apps
+    "Summer Olympics first": /wp/info/summer_olympics_first
+    "Summer Olympics best": /wp/info/summer_olympics_best
+    "World cup apps": /wp/info/world_cup_apps
+    "World cup first": /wp/info/world_cup_first
+    "World cup best": /wp/info/world_cup_best
+    "Regional name": /wp/info/regional_name
+    "Regional cup apps": /wp/info/regional_cup_apps
+    "Regional cup first": /wp/info/regional_cup_first
+    "Regional cup best": /wp/info/regional_cup_best
+    "updated": /wp/info/updated
+  }
+}
+
+"Infobox aircraft begin": {
+  type: "infobox"
+  class: /wp/infobox/aircraft_begin
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "image_border": /wp/info/image_border
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "long caption": /wp/info/long_caption
+  }
+}
+
+"Infobox aircraft occurrence": {
+  type: "infobox"
+  class: /wp/infobox/aircraft_occurrence
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "image_upright": /wp/info/image_upright
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "occurrence_type": /wp/info/occurrence_type
+    "date": /wp/info/date
+    "summary": /wp/info/summary
+    "site": /wp/info/site
+    "coordinates": /wp/info/coordinates
+    "total_fatalities": /wp/info/total_fatalities
+    "total_injuries": /wp/info/total_injuries
+    "total_missing": /wp/info/total_missing
+    "total_survivors": /wp/info/total_survivors
+    "ground_fatalities": /wp/info/ground_fatalities
+    "ground_injuries": /wp/info/ground_injuries
+    "aircraft_type": /wp/info/aircraft_type
+    "aircraft_name": /wp/info/aircraft_name
+    "operator": /wp/info/operator
+    "IATA": /wp/info/iata
+    "ICAO": /wp/info/icao
+    "callsign": /wp/info/callsign
+    "tail_number": /wp/info/tail_number
+    "origin": /wp/info/origin
+    "stopover": /wp/info/stopover
+    "stopover0": /wp/info/stopover0
+    "stopover1": /wp/info/stopover1
+    "stopover2": /wp/info/stopover2
+    "stopover3": /wp/info/stopover3
+    "stopover4": /wp/info/stopover4
+    "stopover5": /wp/info/stopover5
+    "last_stopover": /wp/info/last_stopover
+    "destination": /wp/info/destination
+    "occupants": /wp/info/occupants
+    "passengers": /wp/info/passengers
+    "crew": /wp/info/crew
+    "fatalities": /wp/info/fatalities
+    "injuries": /wp/info/injuries
+    "missing": /wp/info/missing
+    "survivors": /wp/info/survivors
+    "plane1_image": /wp/info/plane1_image
+    "plane1_image_upright": /wp/info/plane1_image_upright
+    "plane1_alt": /wp/info/plane1_alt
+    "plane1_caption": /wp/info/plane1_caption
+    "plane1_type": /wp/info/plane1_type
+    "plane1_name": /wp/info/plane1_name
+    "plane1_operator": /wp/info/plane1_operator
+    "plane1_IATA": /wp/info/plane1_iata
+    "plane1_ICAO": /wp/info/plane1_icao
+    "plane1_callsign": /wp/info/plane1_callsign
+    "plane1_tailnum": /wp/info/plane1_tailnum
+    "plane1_origin": /wp/info/plane1_origin
+    "plane1_stopover": /wp/info/plane1_stopover
+    "plane1_stopover0": /wp/info/plane1_stopover0
+    "plane1_stopover1": /wp/info/plane1_stopover1
+    "plane1_stopover2": /wp/info/plane1_stopover2
+    "plane1_stopover3": /wp/info/plane1_stopover3
+    "plane1_stopover4": /wp/info/plane1_stopover4
+    "plane1_stopover5": /wp/info/plane1_stopover5
+    "plane1_laststopover": /wp/info/plane1_laststopover
+    "plane1_destination": /wp/info/plane1_destination
+    "plane1_occupants": /wp/info/plane1_occupants
+    "plane1_passengers": /wp/info/plane1_passengers
+    "plane1_crew": /wp/info/plane1_crew
+    "plane1_fatalities": /wp/info/plane1_fatalities
+    "plane1_injuries": /wp/info/plane1_injuries
+    "plane1_missing": /wp/info/plane1_missing
+    "plane1_survivors": /wp/info/plane1_survivors
+    "plane2_image": /wp/info/plane2_image
+    "plane2_image_upright": /wp/info/plane2_image_upright
+    "plane2_alt": /wp/info/plane2_alt
+    "plane2_caption": /wp/info/plane2_caption
+    "plane2_type": /wp/info/plane2_type
+    "plane2_name": /wp/info/plane2_name
+    "plane2_operator": /wp/info/plane2_operator
+    "plane2_IATA": /wp/info/plane2_iata
+    "plane2_ICAO": /wp/info/plane2_icao
+    "plane2_callsign": /wp/info/plane2_callsign
+    "plane2_tailnum": /wp/info/plane2_tailnum
+    "plane2_origin": /wp/info/plane2_origin
+    "plane2_stopover": /wp/info/plane2_stopover
+    "plane2_stopover0": /wp/info/plane2_stopover0
+    "plane2_stopover1": /wp/info/plane2_stopover1
+    "plane2_stopover2": /wp/info/plane2_stopover2
+    "plane2_stopover3": /wp/info/plane2_stopover3
+    "plane2_stopover4": /wp/info/plane2_stopover4
+    "plane2_stopover5": /wp/info/plane2_stopover5
+    "plane2_laststopover": /wp/info/plane2_laststopover
+    "plane2_destination": /wp/info/plane2_destination
+    "plane2_occupants": /wp/info/plane2_occupants
+    "plane2_passengers": /wp/info/plane2_passengers
+    "plane2_crew": /wp/info/plane2_crew
+    "plane2_fatalities": /wp/info/plane2_fatalities
+    "plane2_injuries": /wp/info/plane2_injuries
+    "plane2_missing": /wp/info/plane2_missing
+    "plane2_survivors": /wp/info/plane2_survivors
+    "plane3_image": /wp/info/plane3_image
+    "plane3_image_upright": /wp/info/plane3_image_upright
+    "plane3_alt": /wp/info/plane3_alt
+    "plane3_caption": /wp/info/plane3_caption
+    "plane3_type": /wp/info/plane3_type
+    "plane3_name": /wp/info/plane3_name
+    "plane3_operator": /wp/info/plane3_operator
+    "plane3_IATA": /wp/info/plane3_iata
+    "plane3_ICAO": /wp/info/plane3_icao
+    "plane3_callsign": /wp/info/plane3_callsign
+    "plane3_tailnum": /wp/info/plane3_tailnum
+    "plane3_origin": /wp/info/plane3_origin
+    "plane3_stopover": /wp/info/plane3_stopover
+    "plane3_stopover0": /wp/info/plane3_stopover0
+    "plane3_stopover1": /wp/info/plane3_stopover1
+    "plane3_stopover2": /wp/info/plane3_stopover2
+    "plane3_stopover3": /wp/info/plane3_stopover3
+    "plane3_stopover4": /wp/info/plane3_stopover4
+    "plane3_stopover5": /wp/info/plane3_stopover5
+    "plane3_laststopover": /wp/info/plane3_laststopover
+    "plane3_destination": /wp/info/plane3_destination
+    "plane3_occupants": /wp/info/plane3_occupants
+    "plane3_passengers": /wp/info/plane3_passengers
+    "plane3_crew": /wp/info/plane3_crew
+    "plane3_fatalities": /wp/info/plane3_fatalities
+    "plane3_injuries": /wp/info/plane3_injuries
+    "plane3_missing": /wp/info/plane3_missing
+    "plane3_survivors": /wp/info/plane3_survivors
+  }
+}
+
+"Infobox Athletics Championships": {
+  type: "infobox"
+  class: /wp/infobox/athletics_championships
+  fields: {
+    "Colour": /wp/info/colour
+    "Name": /wp/info/name
+    "Logo": {+/wp/info/logo media: true}
+    "Size": /wp/info/size
+    "Optional caption": /wp/info/optional_caption
+    "Organisers": /wp/info/organisers
+    "Edition": /wp/info/edition
+    "Dates": /wp/info/dates
+    "Start date": /wp/info/start_date
+    "End date": /wp/info/end_date
+    "Host city": /wp/info/host_city
+    "Location": /wp/info/location
+    "Stadium image": {+/wp/info/image media: true}
+    "Level": /wp/info/level
+    "Type": /wp/info/type
+    "Events": /wp/info/events
+    "Distances": /wp/info/distances
+    "Meetings": /wp/info/meetings
+    "Athletes participating": /wp/info/athletes_participating
+    "Nations participating": /wp/info/nations_participating
+    "Records set": /wp/info/records_set
+    "Individualprize": /wp/info/individualprize
+    "Teamprize": /wp/info/teamprize
+    "Website": /wp/info/website
+    "Previous": /wp/info/previous
+    "Next": /wp/info/next
+    "Games": /wp/info/games
+  }
+}
+
+"Infobox Australian rules football season": {
+  type: "infobox"
+  class: /wp/infobox/australian_rules_football_season
+  fields: {
+    "competition": /wp/info/competition
+    "year": /wp/info/year
+    "image": {+/wp/info/image media: true}
+    "imagesize": /wp/info/imagesize
+    "caption": /wp/info/caption
+    "date": /wp/info/date
+    "teams": /wp/info/teams
+    "premiers": /wp/info/premiers
+    "count": /wp/info/count
+    "minor premiers": /wp/info/minor_premiers
+    "mpcount": /wp/info/mpcount
+    "pre-season name": /wp/info/pre-season_name
+    "pre-season cup": /wp/info/pre-season_cup
+    "pscount": /wp/info/pscount
+    "matches": /wp/info/matches
+    "attendance": /wp/info/attendance
+    "highattend": /wp/info/highattend
+    "top goal scorer": /wp/info/top_goal_scorer
+    "liston trophy": /wp/info/liston_trophy
+    "brownlow medal": /wp/info/brownlow_medal
+    "magarey medal": /wp/info/magarey_medal
+    "sandover medal": /wp/info/sandover_medal
+    "grogan medal": /wp/info/grogan_medal
+    "mulrooney medal": /wp/info/mulrooney_medal
+    "neafl mvp": /wp/info/neafl_mvp
+    "lynch medal": /wp/info/lynch_medal
+    "nwfl map": /wp/info/nwfl_map
+    "stillwell medal": /wp/info/stillwell_medal
+    "bestandfairest": /wp/info/bestandfairest
+    "wooden spooners": /wp/info/wooden_spooners
+    "prevseason": /wp/info/prevseason
+    "nextseason": /wp/info/nextseason
+  }
+}
+
+"Infobox badminton event": {
+  type: "infobox"
+  class: /wp/infobox/badminton_event
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "size": /wp/info/size
+    "dates": /wp/info/dates
+    "number_edition": /wp/info/number_edition
+    "level": /wp/info/level
+    "prize_money": /wp/info/prize_money
+    "competitors": /wp/info/competitors
+    "nations": /wp/info/nations
+    "other": /wp/info/other
+    "venue": /wp/info/venue
+    "location": /wp/info/location
+    "MS": /wp/info/ms
+    "country_MS": /wp/info/country_ms
+    "WS": /wp/info/ws
+    "country_WS": /wp/info/country_ws
+    "MD1": /wp/info/md1
+    "country_MD1": /wp/info/country_md1
+    "MD2": /wp/info/md2
+    "country_MD2": /wp/info/country_md2
+    "WD1": /wp/info/wd1
+    "country_WD1": /wp/info/country_wd1
+    "WD2": /wp/info/wd2
+    "country_WD2": /wp/info/country_wd2
+    "XD1": /wp/info/xd1
+    "country_XD1": /wp/info/country_xd1
+    "XD2": /wp/info/xd2
+    "country_XD2": /wp/info/country_xd2
+    "website": /wp/info/website
+    "previous": /wp/info/previous
+    "next": /wp/info/next
+  }
+}
+
+"Infobox school athletics": {
+  type: "infobox"
+  class: /wp/infobox/school_athletics
+  fields: {
+    "name": /wp/info/name
+    "logo": {+/wp/info/logo media: true}
+    "logo_width": /wp/info/logo_width
+    "university": /wp/info/university
+    "association": /wp/info/association
+    "conference": /wp/info/conference
+    "division": /wp/info/division
+    "director": /wp/info/director
+    "location": /wp/info/location
+    "teams": /wp/info/teams
+    "stadium": /wp/info/stadium
+    "basketballarena": /wp/info/basketballarena
+    "icehockeyarena": /wp/info/icehockeyarena
+    "baseballfield": /wp/info/baseballfield
+    "softballstadium": /wp/info/softballstadium
+    "soccerstadium": /wp/info/soccerstadium
+    "lacrossestadium": /wp/info/lacrossestadium
+    "natatorium": /wp/info/natatorium
+    "tenniscourt": /wp/info/tenniscourt
+    "sailingvenue": /wp/info/sailingvenue
+    "rowingvenue": /wp/info/rowingvenue
+    "trackvenue": /wp/info/trackvenue
+    "arena2": /wp/info/arena2
+    "symbol": /wp/info/symbol
+    "mascot": /wp/info/mascot
+    "nickname": /wp/info/nickname
+    "fightsong": /wp/info/fightsong
+    "cheer": /wp/info/cheer
+    "color1": /wp/info/color1
+    "color2": /wp/info/color2
+    "color3": /wp/info/color3
+    "color4": /wp/info/color4
+    "hex1": /wp/info/hex1
+    "hex2": /wp/info/hex2
+    "hex3": /wp/info/hex3
+    "hex4": /wp/info/hex4
+    "pageurl": /wp/info/pageurl
+    "altlogo": /wp/info/altlogo
+  }
+}
+
+"Infobox cricket tournament": {
+  type: "infobox"
+  class: /wp/infobox/cricket_tournament
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "fromdate": /wp/info/fromdate
+    "todate": /wp/info/todate
+    "caption": /wp/info/caption
+    "administrator": /wp/info/administrator
+    "cricket format": /wp/info/cricket_format
+    "tournament format": /wp/info/tournament_format
+    "host": /wp/info/host
+    "champions": /wp/info/champions
+    "runner up": /wp/info/runner_up
+    "count": /wp/info/count
+    "participants": /wp/info/participants
+    "matches": /wp/info/matches
+    "attendance": /wp/info/attendance
+    "player of the series": /wp/info/player_of_the_series
+    "most runs": /wp/info/most_runs
+    "most wickets": /wp/info/most_wickets
+    "website": /wp/info/website
+    "drs": /wp/info/drs
+    "previous_year": /wp/info/previous_year
+    "previous_tournament": /wp/info/previous_tournament
+    "next_year": /wp/info/next_year
+    "next_tournament": /wp/info/next_tournament
+  }
+}
+
+"Infobox cycling championships": {
+  type: "infobox"
+  class: /wp/infobox/cycling_championships
+  fields: {
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "venue": /wp/info/venue
+    "date": /wp/info/date
+    "velodrome": /wp/info/velodrome
+    "stadium": /wp/info/stadium
+    "coordinates": /wp/info/coordinates
+    "nations": /wp/info/nations
+    "cyclists": /wp/info/cyclists
+    "events": /wp/info/events
+    "previous": /wp/info/previous
+    "next": /wp/info/next
+  }
+}
+
+"Infobox FIBA tourney": {
+  type: "infobox"
+  class: /wp/infobox/fiba_tourney
+  fields: {
+    "gender": /wp/info/gender
+    "type": /wp/info/type
+    "year": /wp/info/year
+    "logo": {+/wp/info/logo media: true}
+    "size": /wp/info/size
+    "caption": /wp/info/caption
+    "host": /wp/info/host
+    "host2": /wp/info/host2
+    "dates": /wp/info/dates
+    "motto": /wp/info/motto
+    "teams": /wp/info/teams
+    "federations": /wp/info/federations
+    "venues": /wp/info/venues
+    "cities": /wp/info/cities
+    "games": /wp/info/games
+    "attendance": /wp/info/attendance
+    "champions": /wp/info/champions
+    "champions-flagvar": /wp/info/champions-flagvar
+    "title_number": /wp/info/title_number
+    "mvp": /wp/info/mvp
+    "ppg_p": /wp/info/ppg_p
+    "ppg_t": /wp/info/ppg_t
+    "rpg_p": /wp/info/rpg_p
+    "rpg_t": /wp/info/rpg_t
+    "apg_p": /wp/info/apg_p
+    "apg_t": /wp/info/apg_t
+    "website": /wp/info/website
+    "prevseason": /wp/info/prevseason
+    "nextseason": /wp/info/nextseason
+  }
+}
+
+"Infobox field hockey": {
+  type: "infobox"
+  class: /wp/infobox/field_hockey
+  fields: {
+    "tournament": /wp/info/tournament
+    "other_titles": /wp/info/other_titles
+    "image": {+/wp/info/image media: true}
+    "size": /wp/info/size
+    "caption": /wp/info/caption
+    "country": /wp/info/country
+    "city": /wp/info/city
+    "dates": /wp/info/dates
+    "venues": /wp/info/venues
+    "cities": /wp/info/cities
+    "teams": /wp/info/teams
+    "confederations": /wp/info/confederations
+    "associations": /wp/info/associations
+    "champions": /wp/info/champions
+    "second": /wp/info/second
+    "third": /wp/info/third
+    "count": /wp/info/count
+    "matches": /wp/info/matches
+    "goals": /wp/info/goals
+    "top_scorer": /wp/info/top_scorer
+    "top_scorer_goals": /wp/info/top_scorer_goals
+    "best_player": /wp/info/best_player
+    "previous_year": /wp/info/previous_year
+    "previous_tournament": /wp/info/previous_tournament
+    "next_year": /wp/info/next_year
+    "next_tournament": /wp/info/next_tournament
+    "update": /wp/info/update
+  }
+}
+
+"Infobox Figure Skating Competition": {
+  type: "infobox"
+  class: /wp/infobox/figure_skating_competition
+  fields: {
+    "title": /wp/info/title
+    "image": {+/wp/info/image media: true}
+    "imagesize": /wp/info/imagesize
+    "caption": /wp/info/caption
+    "comptype": /wp/info/comptype
+    "startdate": /wp/info/startdate
+    "enddate": /wp/info/enddate
+    "skatingseason": /wp/info/skatingseason
+    "location": /wp/info/location
+    "host": /wp/info/host
+    "venue": /wp/info/venue
+    "prizemoney": /wp/info/prizemoney
+    "reignmen": /wp/info/reignmen
+    "reignladies": /wp/info/reignladies
+    "reignpairs": /wp/info/reignpairs
+    "reigndance": /wp/info/reigndance
+    "reignsynchro": /wp/info/reignsynchro
+    "defendmen": /wp/info/defendmen
+    "defendladies": /wp/info/defendladies
+    "defendpairs": /wp/info/defendpairs
+    "defenddance": /wp/info/defenddance
+    "defendsynchro": /wp/info/defendsynchro
+    "championmen": /wp/info/championmen
+    "championladies": /wp/info/championladies
+    "championpairs": /wp/info/championpairs
+    "championdance": /wp/info/championdance
+    "championsynchro": /wp/info/championsynchro
+    "previouscomp": /wp/info/previouscomp
+    "nextcomp": /wp/info/nextcomp
+    "previousgp": /wp/info/previousgp
+    "nextgp": /wp/info/nextgp
+  }
+}
+
+"Infobox FILA wrestling event": {
+  type: "infobox"
+  class: /wp/infobox/fila_wrestling_event
+  fields: {
+    "name": /wp/info/name
+    "year": /wp/info/year
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_caption": /wp/info/logo_caption
+    "host_city": /wp/info/host_city
+    "dates": /wp/info/dates
+    "stadium": /wp/info/stadium
+    "freestyle": /wp/info/freestyle
+    "Greco-Roman": /wp/info/greco-roman
+    "women": /wp/info/women
+    "previous": /wp/info/previous
+    "next": /wp/info/next
+    "games": /wp/info/games
+  }
+}
+
+"Infobox FIVB tournament": {
+  type: "infobox"
+  class: /wp/infobox/fivb_tournament
+  fields: {
+    "competition": /wp/info/competition
+    "gender": /wp/info/gender
+    "continent": /wp/info/continent
+    "year": /wp/info/year
+    "logo": {+/wp/info/logo media: true}
+    "size": /wp/info/size
+    "caption": /wp/info/caption
+    "host": /wp/info/host
+    "city": /wp/info/city
+    "dates": /wp/info/dates
+    "teams": /wp/info/teams
+    "confederations": /wp/info/confederations
+    "venues": /wp/info/venues
+    "cities": /wp/info/cities
+    "champions": /wp/info/champions
+    "title_number": /wp/info/title_number
+    "second": /wp/info/second
+    "third": /wp/info/third
+    "fourth": /wp/info/fourth
+    "mvp": /wp/info/mvp
+    "setter": /wp/info/setter
+    "outside_spikers": /wp/info/outside_spikers
+    "middle_blockers": /wp/info/middle_blockers
+    "opposite_spiker": /wp/info/opposite_spiker
+    "libero": /wp/info/libero
+    "matches": /wp/info/matches
+    "attendance": /wp/info/attendance
+    "best_scorer": /wp/info/best_scorer
+    "best_spiker": /wp/info/best_spiker
+    "best_blocker": /wp/info/best_blocker
+    "best_server": /wp/info/best_server
+    "best_setter": /wp/info/best_setter
+    "best_digger": /wp/info/best_digger
+    "best_receiver": /wp/info/best_receiver
+    "website": /wp/info/website
+    "last": /wp/info/last
+    "next": /wp/info/next
+  }
+}
+
+"Infobox football match": {
+  type: "infobox"
+  class: /wp/infobox/football_match
+  fields: {
+    "title": /wp/info/title
+    "other_titles": /wp/info/other_titles
+    "image": {+/wp/info/image media: true}
+    "event": /wp/info/event
+    "caption": /wp/info/caption
+    "team1": /wp/info/team1
+    "team1association": /wp/info/team1association
+    "team1score": /wp/info/team1score
+    "team2": /wp/info/team2
+    "team2association": /wp/info/team2association
+    "team2score": /wp/info/team2score
+    "details": /wp/info/details
+    "date": /wp/info/date
+    "stadium": /wp/info/stadium
+    "city": /wp/info/city
+    "man_of_the_match1a": /wp/info/man_of_the_match1a
+    "man_of_the_match1atitle": /wp/info/man_of_the_match1atitle
+    "man_of_the_match1b": /wp/info/man_of_the_match1b
+    "man_of_the_match1btitle": /wp/info/man_of_the_match1btitle
+    "fair_player1": /wp/info/fair_player1
+    "fair_player1title": /wp/info/fair_player1title
+    "woman_player1": /wp/info/woman_player1
+    "woman_player1title": /wp/info/woman_player1title
+    "referee": /wp/info/referee
+    "attendance": /wp/info/attendance
+    "weather": /wp/info/weather
+    "previous": /wp/info/previous
+    "next": /wp/info/next
+  }
+}
+
+"Infobox games": {
+  type: "infobox"
+  class: /wp/infobox/games
+  fields: {
+    "name": /wp/info/name
+    "logo": {+/wp/info/logo media: true}
+    "size": /wp/info/size
+    "caption": /wp/info/caption
+    "host city": /wp/info/host_city
+    "country": /wp/info/country
+    "motto": /wp/info/motto
+    "organizer": /wp/info/organizer
+    "edition": /wp/info/edition
+    "nations participating": /wp/info/nations_participating
+    "teams participating": /wp/info/teams_participating
+    "debuting countries": /wp/info/debuting_countries
+    "athletes participating": /wp/info/athletes_participating
+    "sports": /wp/info/sports
+    "events": /wp/info/events
+    "dates": /wp/info/dates
+    "opening ceremony": /wp/info/opening_ceremony
+    "closing ceremony": /wp/info/closing_ceremony
+    "officially opened by": /wp/info/officially_opened_by
+    "athlete's oath": /wp/info/athlete's_oath
+    "judge's oath": /wp/info/judge's_oath
+    "torch lighter": /wp/info/torch_lighter
+    "Paralympic torch": /wp/info/paralympic_torch
+    "Queen's Baton": /wp/info/queen's_baton
+    "stadium": /wp/info/stadium
+    "Paralympic stadium": /wp/info/paralympic_stadium
+    "length": /wp/info/length
+    "indprize": /wp/info/indprize
+    "tmprize": /wp/info/tmprize
+    "website": /wp/info/website
+    "previous": /wp/info/previous
+    "next": /wp/info/next
+    "SpreviousS": /wp/info/spreviouss
+    "SnextS": /wp/info/snexts
+    "Sprevious": /wp/info/sprevious
+    "Snext": /wp/info/snext
+  }
+}
+
+"Infobox hockey team": {
+  type: "infobox"
+  class: /wp/infobox/hockey_team
+  fields: {
+    "team": /wp/info/team
+    "colour": /wp/info/colour
+    "colour text": /wp/info/colour_text
+    "logo": {+/wp/info/logo media: true}
+    "logosize": /wp/info/logosize
+    "city": /wp/info/city
+    "league": /wp/info/league
+    "conference": /wp/info/conference
+    "division": /wp/info/division
+    "founded": /wp/info/founded
+    "operated": /wp/info/operated
+    "folded": /wp/info/folded
+    "arena": /wp/info/arena
+    "colours": /wp/info/colours
+    "owner": /wp/info/owner
+    "GM": /wp/info/gm
+    "coach": /wp/info/coach
+    "captain": /wp/info/captain
+    "affiliates": /wp/info/affiliates
+    "parentclub": /wp/info/parentclub
+    "farmclub": /wp/info/farmclub
+    "website": /wp/info/website
+    "name1": /wp/info/name1
+    "dates1": /wp/info/dates1
+    "name2": /wp/info/name2
+    "dates2": /wp/info/dates2
+    "name3": /wp/info/name3
+    "dates3": /wp/info/dates3
+    "name4": /wp/info/name4
+    "dates4": /wp/info/dates4
+    "name5": /wp/info/name5
+    "dates5": /wp/info/dates5
+    "name6": /wp/info/name6
+    "dates6": /wp/info/dates6
+    "name7": /wp/info/name7
+    "dates7": /wp/info/dates7
+    "name8": /wp/info/name8
+    "dates8": /wp/info/dates8
+    "name9": /wp/info/name9
+    "dates9": /wp/info/dates9
+    "name10": /wp/info/name10
+    "dates10": /wp/info/dates10
+    "altname1": /wp/info/altname1
+    "altdates1": /wp/info/altdates1
+    "altname2": /wp/info/altname2
+    "altdates2": /wp/info/altdates2
+    "altname3": /wp/info/altname3
+    "altdates3": /wp/info/altdates3
+    "altname4": /wp/info/altname4
+    "altdates4": /wp/info/altdates4
+    "altname5": /wp/info/altname5
+    "altdates5": /wp/info/altdates5
+    "altname6": /wp/info/altname6
+    "altdates6": /wp/info/altdates6
+    "altname7": /wp/info/altname7
+    "altdates7": /wp/info/altdates7
+    "altname8": /wp/info/altname8
+    "altdates8": /wp/info/altdates8
+  }
+}
+
+"Infobox hurling championship": {
+  type: "infobox"
+  class: /wp/infobox/hurling_championship
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "imagesize": /wp/info/imagesize
+    "caption": /wp/info/caption
+    "dates": /wp/info/dates
+    "teams": /wp/info/teams
+    "sponsor": /wp/info/sponsor
+    "champions": /wp/info/champions
+    "count": /wp/info/count
+    "champions captain": /wp/info/champions_captain
+    "champions manager": /wp/info/champions_manager
+    "runners-up": /wp/info/runners-up
+    "runners-up captain": /wp/info/runners-up_captain
+    "runners-up manager": /wp/info/runners-up_manager
+    "promoted": /wp/info/promoted
+    "relegated": /wp/info/relegated
+    "matches": /wp/info/matches
+    "goals": /wp/info/goals
+    "points": /wp/info/points
+    "top scorer": /wp/info/top_scorer
+    "previous year": /wp/info/previous_year
+    "previous tournament": /wp/info/previous_tournament
+    "next year": /wp/info/next_year
+    "next tournament": /wp/info/next_tournament
+  }
+}
+
+"Infobox international basketball competition": {
+  type: "infobox"
+  class: /wp/infobox/international_basketball_competition
+  fields: {
+    "tourney_name": /wp/info/tourney_name
+    "year": /wp/info/year
+    "other_titles": /wp/info/other_titles
+    "image": {+/wp/info/image media: true}
+    "size": /wp/info/size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "city": /wp/info/city
+    "country": /wp/info/country
+    "dates": /wp/info/dates
+    "num_teams": /wp/info/num_teams
+    "confederations": /wp/info/confederations
+    "sub-confederations": /wp/info/sub-confederations
+    "associations": /wp/info/associations
+    "federations": /wp/info/federations
+    "venues": /wp/info/venues
+    "cities": /wp/info/cities
+    "champion": /wp/info/champion
+    "champion-flagvar": /wp/info/champion-flagvar
+    "champion_other": /wp/info/champion_other
+    "count": /wp/info/count
+    "second": /wp/info/second
+    "second-flagvar": /wp/info/second-flagvar
+    "second_other": /wp/info/second_other
+    "third": /wp/info/third
+    "third-flagvar": /wp/info/third-flagvar
+    "third_other": /wp/info/third_other
+    "fourth": /wp/info/fourth
+    "fourth-flagvar": /wp/info/fourth-flagvar
+    "fourth_other": /wp/info/fourth_other
+    "semifinal1": /wp/info/semifinal1
+    "semifinal1_other": /wp/info/semifinal1_other
+    "semifinal2": /wp/info/semifinal2
+    "semifinal2_other": /wp/info/semifinal2_other
+    "games": /wp/info/games
+    "attendance": /wp/info/attendance
+    "mvp": /wp/info/mvp
+    "top_scorer": /wp/info/top_scorer
+    "ppg": /wp/info/ppg
+    "prevseason": /wp/info/prevseason
+    "nextseason": /wp/info/nextseason
+    "updated": /wp/info/updated
+  }
+}
+
+"Infobox international football competition": {
+  type: "infobox"
+  class: /wp/infobox/international_football_competition
+  fields: {
+    "tourney_name": /wp/info/tourney_name
+    "year": /wp/info/year
+    "yearr": /wp/info/yearr
+    "other_titles": /wp/info/other_titles
+    "image": {+/wp/info/image media: true}
+    "size": /wp/info/size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "city": /wp/info/city
+    "country": /wp/info/country
+    "dates": /wp/info/dates
+    "num_teams": /wp/info/num_teams
+    "confederations": /wp/info/confederations
+    "sub-confederations": /wp/info/sub-confederations
+    "associations": /wp/info/associations
+    "venues": /wp/info/venues
+    "cities": /wp/info/cities
+    "champion": /wp/info/champion
+    "champion-flagvar": /wp/info/champion-flagvar
+    "champion_other": /wp/info/champion_other
+    "count": /wp/info/count
+    "second": /wp/info/second
+    "second-flagvar": /wp/info/second-flagvar
+    "second_other": /wp/info/second_other
+    "third": /wp/info/third
+    "third-flagvar": /wp/info/third-flagvar
+    "third_other": /wp/info/third_other
+    "fourth": /wp/info/fourth
+    "fourth-flagvar": /wp/info/fourth-flagvar
+    "fourth_other": /wp/info/fourth_other
+    "matches": /wp/info/matches
+    "goals": /wp/info/goals
+    "attendance": /wp/info/attendance
+    "top_scorer": /wp/info/top_scorer
+    "player": /wp/info/player
+    "young_player": /wp/info/young_player
+    "goalkeeper": /wp/info/goalkeeper
+    "fair_play": /wp/info/fair_play
+    "prevseason": /wp/info/prevseason
+    "nextseason": /wp/info/nextseason
+    "updated": /wp/info/updated
+  }
+}
+
+"Infobox international handball competition": {
+  type: "infobox"
+  class: /wp/infobox/international_handball_competition
+  fields: {
+    "tourney_name": /wp/info/tourney_name
+    "year": /wp/info/year
+    "yearr": /wp/info/yearr
+    "other_titles": /wp/info/other_titles
+    "image": {+/wp/info/image media: true}
+    "size": /wp/info/size
+    "caption": /wp/info/caption
+    "country": /wp/info/country
+    "city": /wp/info/city
+    "num_teams": /wp/info/num_teams
+    "venues": /wp/info/venues
+    "country2": /wp/info/country2
+    "country-flagvar": /wp/info/country-flagvar
+    "country2-flagvar": /wp/info/country2-flagvar
+    "country3": /wp/info/country3
+    "country3-flagvar": /wp/info/country3-flagvar
+    "country4": /wp/info/country4
+    "country4-flagvar": /wp/info/country4-flagvar
+    "dates": /wp/info/dates
+    "confederations": /wp/info/confederations
+    "cities": /wp/info/cities
+    "champion": /wp/info/champion
+    "champion_other": /wp/info/champion_other
+    "American": /wp/info/american
+    "champion-flagvar": /wp/info/champion-flagvar
+    "count": /wp/info/count
+    "second": /wp/info/second
+    "second-flagvar": /wp/info/second-flagvar
+    "second_other": /wp/info/second_other
+    "third": /wp/info/third
+    "third-flagvar": /wp/info/third-flagvar
+    "third_other": /wp/info/third_other
+    "fourth": /wp/info/fourth
+    "fourth-flagvar": /wp/info/fourth-flagvar
+    "fourth_other": /wp/info/fourth_other
+    "matches": /wp/info/matches
+    "goals": /wp/info/goals
+    "attendance": /wp/info/attendance
+    "top_scorer": /wp/info/top_scorer
+    "player": /wp/info/player
+    "goalkeeper": /wp/info/goalkeeper
+    "previous": /wp/info/previous
+    "next": /wp/info/next
+  }
+}
+
+"Infobox international hockey competition": {
+  type: "infobox"
+  class: /wp/infobox/international_hockey_competition
+  fields: {
+    "tourney_name": /wp/info/tourney_name
+    "year": /wp/info/year
+    "yearr": /wp/info/yearr
+    "other_titles": /wp/info/other_titles
+    "image": {+/wp/info/image media: true}
+    "size": /wp/info/size
+    "caption": /wp/info/caption
+    "country": /wp/info/country
+    "country-flagvar": /wp/info/country-flagvar
+    "country2": /wp/info/country2
+    "country2-flagvar": /wp/info/country2-flagvar
+    "country3": /wp/info/country3
+    "country3-flagvar": /wp/info/country3-flagvar
+    "country4": /wp/info/country4
+    "country4-flagvar": /wp/info/country4-flagvar
+    "country5": /wp/info/country5
+    "country5-flagvar": /wp/info/country5-flagvar
+    "country6": /wp/info/country6
+    "country6-flagvar": /wp/info/country6-flagvar
+    "country7": /wp/info/country7
+    "country7-flagvar": /wp/info/country7-flagvar
+    "country8": /wp/info/country8
+    "country8-flagvar": /wp/info/country8-flagvar
+    "dates": /wp/info/dates
+    "tournament_format": /wp/info/tournament_format
+    "num_teams": /wp/info/num_teams
+    "arenas": /wp/info/arenas
+    "cities": /wp/info/cities
+    "host_cities": /wp/info/host_cities
+    "winners": /wp/info/winners
+    "winners_women": /wp/info/winners_women
+    "winners_other": /wp/info/winners_other
+    "count": /wp/info/count
+    "second": /wp/info/second
+    "second_other": /wp/info/second_other
+    "third": /wp/info/third
+    "third_other": /wp/info/third_other
+    "fourth": /wp/info/fourth
+    "fourth_other": /wp/info/fourth_other
+    "games": /wp/info/games
+    "goals": /wp/info/goals
+    "attendance": /wp/info/attendance
+    "scoring_leader": /wp/info/scoring_leader
+    "points": /wp/info/points
+    "mvp": /wp/info/mvp
+    "prevseason": /wp/info/prevseason
+    "nextseason": /wp/info/nextseason
+    "note": /wp/info/note
+  }
+}
+
+"Infobox baseball league division series": {
+  type: "infobox"
+  class: /wp/infobox/baseball_league_division_series
+  fields: {
+    "alds": /wp/info/alds
+    "image": {+/wp/info/image media: true}
+    "year": /wp/info/year
+    "champion1": /wp/info/champion1
+    "champion1_manager": /wp/info/champion1_manager
+    "champion1_games": /wp/info/champion1_games
+    "runnerup1": /wp/info/runnerup1
+    "runnerup1_manager": /wp/info/runnerup1_manager
+    "runnerup1_games": /wp/info/runnerup1_games
+    "champion2": /wp/info/champion2
+    "champion2_manager": /wp/info/champion2_manager
+    "champion2_games": /wp/info/champion2_games
+    "runnerup2": /wp/info/runnerup2
+    "runnerup2_manager": /wp/info/runnerup2_manager
+    "runnerup2_games": /wp/info/runnerup2_games
+    "date1": /wp/info/date1
+    "date2": /wp/info/date2
+    "television1": /wp/info/television1
+    "announcers1": /wp/info/announcers1
+    "television2": /wp/info/television2
+    "announcers2": /wp/info/announcers2
+    "radio1": /wp/info/radio1
+    "radio_announcers1": /wp/info/radio_announcers1
+    "radio2": /wp/info/radio2
+    "radio_announcers2": /wp/info/radio_announcers2
+    "umpires1": /wp/info/umpires1
+    "umpires2": /wp/info/umpires2
+    "WC": /wp/info/wc
+  }
+}
+
+"Infobox MLB All-Star Game": {
+  type: "infobox"
+  class: /wp/infobox/mlb_all-star_game
+  fields: {
+    "image": {+/wp/info/image media: true}
+    "year": /wp/info/year
+    "visitor": /wp/info/visitor
+    "top1": /wp/info/top1
+    "top2": /wp/info/top2
+    "top3": /wp/info/top3
+    "top4": /wp/info/top4
+    "top5": /wp/info/top5
+    "top6": /wp/info/top6
+    "top7": /wp/info/top7
+    "top8": /wp/info/top8
+    "top9": /wp/info/top9
+    "visitor_r": /wp/info/visitor_r
+    "visitor_h": /wp/info/visitor_h
+    "visitor_e": /wp/info/visitor_e
+    "home": /wp/info/home
+    "bot1": /wp/info/bot1
+    "bot2": /wp/info/bot2
+    "bot3": /wp/info/bot3
+    "bot4": /wp/info/bot4
+    "bot5": /wp/info/bot5
+    "bot6": /wp/info/bot6
+    "bot7": /wp/info/bot7
+    "bot8": /wp/info/bot8
+    "bot9": /wp/info/bot9
+    "home_r": /wp/info/home_r
+    "home_h": /wp/info/home_h
+    "home_e": /wp/info/home_e
+    "date": /wp/info/date
+    "venue": /wp/info/venue
+    "city": /wp/info/city
+    "VisitorManager": /wp/info/visitormanager
+    "VisitorManagerTeam": /wp/info/visitormanagerteam
+    "HomeManager": /wp/info/homemanager
+    "HomeManagerTeam": /wp/info/homemanagerteam
+    "MVP": /wp/info/mvp
+    "MVPTeam": /wp/info/mvpteam
+    "TVstation": /wp/info/tvstation
+    "TVcommentators": /wp/info/tvcommentators
+    "attendance": /wp/info/attendance
+    "firstpitch": /wp/info/firstpitch
+  }
+}
+
+"Infobox sports competition event": {
+  type: "infobox"
+  class: /wp/infobox/sports_competition_event
+  fields: {
+    "event": /wp/info/event
+    "competition": /wp/info/competition
+    "governing_body": /wp/info/governing_body
+    "year": /wp/info/year
+    "type": /wp/info/type
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "venue": /wp/info/venue
+    "location": /wp/info/location
+    "date": /wp/info/date
+    "competitors": /wp/info/competitors
+    "nations": /wp/info/nations
+    "teams": /wp/info/teams
+    "win_label": /wp/info/win_label
+    "win_value": /wp/info/win_value
+    "prize_money": /wp/info/prize_money
+    "website": /wp/info/website
+    "longnames": /wp/info/longnames
+    "gold": /wp/info/gold
+    "gold_nation": /wp/info/gold_nation
+    "gold2": /wp/info/gold2
+    "gold2_nation": /wp/info/gold2_nation
+    "gold3": /wp/info/gold3
+    "gold3_nation": /wp/info/gold3_nation
+    "silver": /wp/info/silver
+    "silver_nation": /wp/info/silver_nation
+    "silver2": /wp/info/silver2
+    "silver2_nation": /wp/info/silver2_nation
+    "silver3": /wp/info/silver3
+    "silver3_nation": /wp/info/silver3_nation
+    "bronze": /wp/info/bronze
+    "bronze_nation": /wp/info/bronze_nation
+    "bronze2": /wp/info/bronze2
+    "bronze2_nation": /wp/info/bronze2_nation
+    "bronze3": /wp/info/bronze3
+    "bronze3_nation": /wp/info/bronze3_nation
+    "champion": /wp/info/champion
+    "men": /wp/info/men
+    "men_win_value": /wp/info/men_win_value
+    "women": /wp/info/women
+    "women_win_value": /wp/info/women_win_value
+    "team": /wp/info/team
+    "team_win_value": /wp/info/team_win_value
+    "wheelchair_men": /wp/info/wheelchair_men
+    "wheelchair_men_win_value": /wp/info/wheelchair_men_win_value
+    "wheelchair_women": /wp/info/wheelchair_women
+    "wheelchair_women_win_value": /wp/info/wheelchair_women_win_value
+    "previous": /wp/info/previous
+    "next": /wp/info/next
+  }
+}
+
+"Infobox NBA All-Star Game": {
+  type: "infobox"
+  class: /wp/infobox/nba_all-star_game
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "visitor": /wp/info/visitor
+    "visitor_qtr1": /wp/info/visitor_qtr1
+    "visitor_qtr2": /wp/info/visitor_qtr2
+    "visitor_qtr3": /wp/info/visitor_qtr3
+    "visitor_qtr4": /wp/info/visitor_qtr4
+    "visitor_total": /wp/info/visitor_total
+    "home": /wp/info/home
+    "home_qtr1": /wp/info/home_qtr1
+    "home_qtr2": /wp/info/home_qtr2
+    "home_qtr3": /wp/info/home_qtr3
+    "home_qtr4": /wp/info/home_qtr4
+    "home_total": /wp/info/home_total
+    "date": /wp/info/date
+    "arena": /wp/info/arena
+    "city": /wp/info/city
+    "MVP": /wp/info/mvp
+    "anthem": /wp/info/anthem
+    "referee": /wp/info/referee
+    "halftime": /wp/info/halftime
+    "attendance": /wp/info/attendance
+    "network": /wp/info/network
+    "announcers": /wp/info/announcers
+    "west_pattern_b": /wp/info/west_pattern_b
+    "west_body": /wp/info/west_body
+    "west_shorts": /wp/info/west_shorts
+    "east_pattern_b": /wp/info/east_pattern_b
+    "east_body": /wp/info/east_body
+    "east_shorts": /wp/info/east_shorts
+    "prev_year": /wp/info/prev_year
+    "next_year": /wp/info/next_year
+  }
+}
+
+"Infobox NCAA Basketball Conference Tournament": {
+  type: "infobox"
+  class: /wp/infobox/ncaa_basketball_conference_tournament
+  fields: {
+    "Year": /wp/info/year
+    "Conference": /wp/info/conference
+    "Division": /wp/info/division
+    "Gender": /wp/info/gender
+    "Image": {+/wp/info/image media: true}
+    "ImageSize": /wp/info/imagesize
+    "Caption": /wp/info/caption
+    "Teams": /wp/info/teams
+    "Arena": /wp/info/arena
+    "City": /wp/info/city
+    "1stRoundArena": /wp/info/1stroundarena
+    "1stRoundCity": /wp/info/1stroundcity
+    "QuarterArena": /wp/info/quarterarena
+    "QuarterCity": /wp/info/quartercity
+    "SemiArena": /wp/info/semiarena
+    "SemiCity": /wp/info/semicity
+    "FinalArena": /wp/info/finalarena
+    "FinalCity": /wp/info/finalcity
+    "Champions": /wp/info/champions
+    "TitleCount": /wp/info/titlecount
+    "Coach": /wp/info/coach
+    "CoachCount": /wp/info/coachcount
+    "MVP": /wp/info/mvp
+    "MVPTeam": /wp/info/mvpteam
+    "Attendance": /wp/info/attendance
+    "TopScorer": /wp/info/topscorer
+    "TopScorerTeam": /wp/info/topscorerteam
+    "TopScorer2": /wp/info/topscorer2
+    "TopScorer2Team": /wp/info/topscorer2team
+    "Points": /wp/info/points
+    "Television": /wp/info/television
+  }
+}
+
+"Infobox NCAA Basketball Tournament": {
+  type: "infobox"
+  class: /wp/infobox/ncaa_basketball_tournament
+  fields: {
+    "Type": /wp/info/type
+    "Gender": /wp/info/gender
+    "Year": /wp/info/year
+    "Image": {+/wp/info/image media: true}
+    "ImageSize": /wp/info/imagesize
+    "ImageUpright": /wp/info/imageupright
+    "Caption": /wp/info/caption
+    "Teams": /wp/info/teams
+    "FinalFourArena": /wp/info/finalfourarena
+    "FinalFourCity": /wp/info/finalfourcity
+    "Champions": /wp/info/champions
+    "TitleCount": /wp/info/titlecount
+    "RunnerUp": /wp/info/runnerup
+    "GameCount": /wp/info/gamecount
+    "Semifinal1": /wp/info/semifinal1
+    "FinalFourCount": /wp/info/finalfourcount
+    "Semifinal2": /wp/info/semifinal2
+    "FinalFourCount2": /wp/info/finalfourcount2
+    "Coach": /wp/info/coach
+    "CoachCount": /wp/info/coachcount
+    "MOP": /wp/info/mop
+    "MOPTeam": /wp/info/mopteam
+    "Attendance": /wp/info/attendance
+    "TopScorer": /wp/info/topscorer
+    "TopScorerTeam": /wp/info/topscorerteam
+    "TopScorer2": /wp/info/topscorer2
+    "TopScorer2Team": /wp/info/topscorer2team
+    "Points": /wp/info/points
+    "Canceled": /wp/info/canceled
+  }
+}
+
+"Infobox NCAA conference tournament": {
+  type: "infobox"
+  class: /wp/infobox/ncaa_conference_tournament
+  fields: {
+    "name": /wp/info/name
+    "optional_subheader": /wp/info/optional_subheader
+    "defunct": /wp/info/defunct
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "sport": /wp/info/sport
+    "conference": /wp/info/conference
+    "number_of_teams": /wp/info/number_of_teams
+    "format": /wp/info/format
+    "current_stadium": /wp/info/current_stadium
+    "current_location": /wp/info/current_location
+    "years": /wp/info/years
+    "most_recent": /wp/info/most_recent
+    "current_champion_label": /wp/info/current_champion_label
+    "current_champion": /wp/info/current_champion
+    "most_championships": /wp/info/most_championships
+    "trophy": /wp/info/trophy
+    "television": /wp/info/television
+    "website": /wp/info/website
+    "sponsors": /wp/info/sponsors
+    "all_stadiums": /wp/info/all_stadiums
+    "all_locations": /wp/info/all_locations
+  }
+}
+
+"Infobox NCAA Division I Women's Volleyball Tournament": {
+  type: "infobox"
+  class: /wp/infobox/ncaa_division_i_women's_volleyball_tournament
+  fields: {
+    "Year": /wp/info/year
+    "FinalFourArena": /wp/info/finalfourarena
+    "FinalFourCity": /wp/info/finalfourcity
+    "Champions": /wp/info/champions
+    "TitleCount": /wp/info/titlecount
+    "RunnerUp": /wp/info/runnerup
+    "GameCount": /wp/info/gamecount
+    "Semifinal1": /wp/info/semifinal1
+    "FinalFourCount": /wp/info/finalfourcount
+    "Semifinal2": /wp/info/semifinal2
+    "FinalFourCount2": /wp/info/finalfourcount2
+    "Coach": /wp/info/coach
+    "CoachCount": /wp/info/coachcount
+    "MOP": /wp/info/mop
+    "MOPTeam": /wp/info/mopteam
+    "AllTournamentTeam": /wp/info/alltournamentteam
+  }
+}
+
+"Infobox NCAA football yearly game": {
+  type: "infobox"
+  class: /wp/infobox/ncaa_football_yearly_game
+  fields: {
+    "Game Name": /wp/info/game_name
+    "Optional Subheader": /wp/info/optional_subheader
+    "Title Sponsor": /wp/info/title_sponsor
+    "Image": {+/wp/info/image media: true}
+    "Image_Size": /wp/info/image_size
+    "Image_Upright": /wp/info/image_upright
+    "Alt": /wp/info/alt
+    "Caption": /wp/info/caption
+    "Date Game Played": /wp/info/date_game_played
+    "Year Game Played": /wp/info/year_game_played
+    "Football Season": /wp/info/football_season
+    "Stadium": /wp/info/stadium
+    "City": /wp/info/city
+    "Visitor School": /wp/info/visitor_school
+    "Visitor Name Short": /wp/info/visitor_name_short
+    "Visitor Nickname": /wp/info/visitor_nickname
+    "Visitor Record": /wp/info/visitor_record
+    "Visitor Conference": /wp/info/visitor_conference
+    "Visitor AP": /wp/info/visitor_ap
+    "Visitor Coaches": /wp/info/visitor_coaches
+    "Visitor BCS": /wp/info/visitor_bcs
+    "Visitor Bowl Alliance": /wp/info/visitor_bowl_alliance
+    "Visitor Bowl Coalition": /wp/info/visitor_bowl_coalition
+    "Visitor CFP": /wp/info/visitor_cfp
+    "Visitor Coach": /wp/info/visitor_coach
+    "Visitor1": /wp/info/visitor1
+    "Visitor2": /wp/info/visitor2
+    "Visitor3": /wp/info/visitor3
+    "Visitor4": /wp/info/visitor4
+    "Visitor5": /wp/info/visitor5
+    "Visitor6": /wp/info/visitor6
+    "Visitor7": /wp/info/visitor7
+    "Visitor8": /wp/info/visitor8
+    "Visitor9": /wp/info/visitor9
+    "Visitor10": /wp/info/visitor10
+    "Visitor11": /wp/info/visitor11
+    "Home School": /wp/info/home_school
+    "Home Name Short": /wp/info/home_name_short
+    "Home Nickname": /wp/info/home_nickname
+    "Home Record": /wp/info/home_record
+    "Home Conference": /wp/info/home_conference
+    "Home AP": /wp/info/home_ap
+    "Home Coaches": /wp/info/home_coaches
+    "Home BCS": /wp/info/home_bcs
+    "Home Bowl Coalition": /wp/info/home_bowl_coalition
+    "Home Bowl Alliance": /wp/info/home_bowl_alliance
+    "Home CFP": /wp/info/home_cfp
+    "Home Coach": /wp/info/home_coach
+    "Home1": /wp/info/home1
+    "Home2": /wp/info/home2
+    "Home3": /wp/info/home3
+    "Home4": /wp/info/home4
+    "Home5": /wp/info/home5
+    "Home6": /wp/info/home6
+    "Home7": /wp/info/home7
+    "Home8": /wp/info/home8
+    "Home9": /wp/info/home9
+    "Home10": /wp/info/home10
+    "Home11": /wp/info/home11
+    "MVP": /wp/info/mvp
+    "Odds": /wp/info/odds
+    "Anthem": /wp/info/anthem
+    "Referee": /wp/info/referee
+    "Halftime": /wp/info/halftime
+    "Attendance": /wp/info/attendance
+    "Payout": /wp/info/payout
+    "US Network": /wp/info/us_network
+    "US Announcers": /wp/info/us_announcers
+    "Ratings": /wp/info/ratings
+    "Intl Network": /wp/info/intl_network
+    "Intl Announcers": /wp/info/intl_announcers
+    "Different Previous": /wp/info/different_previous
+    "Different Next": /wp/info/different_next
+    "game link": /wp/info/game_link
+    "FirstGameEverPlayed": /wp/info/firstgameeverplayed
+    "LastGameEverPlayed": /wp/info/lastgameeverplayed
+    "Navigation 2": /wp/info/navigation_2
+    "Different Previous 2": /wp/info/different_previous_2
+    "Different Next 2": /wp/info/different_next_2
+  }
+}
+
+"Infobox college sports team season": {
+  type: "infobox"
+  class: /wp/infobox/college_sports_team_season
+  fields: {
+    "year": /wp/info/year
+    "team": /wp/info/team
+    "sport": /wp/info/sport
+    "logo": {+/wp/info/logo media: true}
+    "logo_size": /wp/info/logo_size
+    "logo_alt": /wp/info/logo_alt
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "image_alt": /wp/info/image_alt
+    "conference": /wp/info/conference
+    "division": /wp/info/division
+    "short_conf": /wp/info/short_conf
+    "BCSRank": /wp/info/bcsrank
+    "CFPRank": /wp/info/cfprank
+    "CoachRank": /wp/info/coachrank
+    "APRank": /wp/info/aprank
+    "record": /wp/info/record
+    "conf_record": /wp/info/conf_record
+    "wins_vacated": /wp/info/wins_vacated
+    "ties_forfeited": /wp/info/ties_forfeited
+    "wins_forfeited": /wp/info/wins_forfeited
+    "conf_wins_vacated": /wp/info/conf_wins_vacated
+    "conf_wins_forfeited": /wp/info/conf_wins_forfeited
+    "head_coach": /wp/info/head_coach
+    "hc_year": /wp/info/hc_year
+    "off_coach": /wp/info/off_coach
+    "oc_year": /wp/info/oc_year
+    "def_coach": /wp/info/def_coach
+    "dc_year": /wp/info/dc_year
+    "off_scheme": /wp/info/off_scheme
+    "def_scheme": /wp/info/def_scheme
+    "stadium": /wp/info/stadium
+    "champion": /wp/info/champion
+    "bowl": /wp/info/bowl
+    "bowl_result": /wp/info/bowl_result
+    "conf_champ": /wp/info/conf_champ
+    "conf_champ_result": /wp/info/conf_champ_result
+  }
+}
+
+"Infobox NFL season": {
+  type: "infobox"
+  class: /wp/infobox/nfl_season
+  fields: {
+    "team": /wp/info/team
+    "year": /wp/info/year
+    "record": /wp/info/record
+    "division_place": /wp/info/division_place
+    "conference place": /wp/info/conference_place
+    "league place": /wp/info/league_place
+    "coach": /wp/info/coach
+    "off_coach": /wp/info/off_coach
+    "def_coach": /wp/info/def_coach
+    "general manager": /wp/info/general_manager
+    "owner": /wp/info/owner
+    "stadium": /wp/info/stadium
+    "playoffs": /wp/info/playoffs
+    "pro bowlers": /wp/info/pro_bowlers
+    "AP All-pros": /wp/info/ap_all-pros
+    "AFL allstars": /wp/info/afl_allstars
+    "MVP": /wp/info/mvp
+    "ROY": /wp/info/roy
+    "uniform": /wp/info/uniform
+  }
+}
+
+"Infobox Olympic games": {
+  type: "infobox"
+  class: /wp/infobox/olympic_games
+  fields: {
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "host_city": /wp/info/host_city
+    "motto": /wp/info/motto
+    "nations": /wp/info/nations
+    "athletes": /wp/info/athletes
+    "events": /wp/info/events
+    "opening": /wp/info/opening
+    "closing": /wp/info/closing
+    "opened_by": /wp/info/opened_by
+    "cauldron": /wp/info/cauldron
+    "stadium": /wp/info/stadium
+    "summer_prev": /wp/info/summer_prev
+    "summer_next": /wp/info/summer_next
+    "winter_prev": /wp/info/winter_prev
+    "winter_next": /wp/info/winter_next
+    "prev": /wp/info/prev
+    "next": /wp/info/next
+  }
+}
+
+"Infobox Pan American Games": {
+  type: "infobox"
+  class: /wp/infobox/pan_american_games
+  fields: {
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "host_city": /wp/info/host_city
+    "motto": /wp/info/motto
+    "nations": /wp/info/nations
+    "athletes": /wp/info/athletes
+    "events": /wp/info/events
+    "opening": /wp/info/opening
+    "closing": /wp/info/closing
+    "opened_by": /wp/info/opened_by
+    "cauldron": /wp/info/cauldron
+    "stadium": /wp/info/stadium
+    "prev": /wp/info/prev
+    "next": /wp/info/next
+  }
+}
+
+"Infobox Rugby World Cup": {
+  type: "infobox"
+  class: /wp/infobox/rugby_world_cup
+  fields: {
+    "tourney_name": /wp/info/tourney_name
+    "year": /wp/info/year
+    "other_titles": /wp/info/other_titles
+    "logo": {+/wp/info/logo media: true}
+    "datefrom": /wp/info/datefrom
+    "dateto": /wp/info/dateto
+    "host": /wp/info/host
+    "nations": /wp/info/nations
+    "champion": /wp/info/champion
+    "runnerup": /wp/info/runnerup
+    "third": /wp/info/third
+    "matches": /wp/info/matches
+    "attendance": /wp/info/attendance
+    "top scorer": /wp/info/top_scorer
+    "most tries": /wp/info/most_tries
+    "preceded by": /wp/info/preceded_by
+    "succeeded by": /wp/info/succeeded_by
+  }
+}
+
+"Infobox sports competition event": {
+  type: "infobox"
+  class: /wp/infobox/sports_competition_event
+  fields: {
+    "event": /wp/info/event
+    "competition": /wp/info/competition
+    "governing_body": /wp/info/governing_body
+    "year": /wp/info/year
+    "type": /wp/info/type
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "venue": /wp/info/venue
+    "location": /wp/info/location
+    "date": /wp/info/date
+    "competitors": /wp/info/competitors
+    "nations": /wp/info/nations
+    "teams": /wp/info/teams
+    "win_label": /wp/info/win_label
+    "win_value": /wp/info/win_value
+    "prize_money": /wp/info/prize_money
+    "website": /wp/info/website
+    "longnames": /wp/info/longnames
+    "gold": /wp/info/gold
+    "gold_nation": /wp/info/gold_nation
+    "gold2": /wp/info/gold2
+    "gold2_nation": /wp/info/gold2_nation
+    "gold3": /wp/info/gold3
+    "gold3_nation": /wp/info/gold3_nation
+    "silver": /wp/info/silver
+    "silver_nation": /wp/info/silver_nation
+    "silver2": /wp/info/silver2
+    "silver2_nation": /wp/info/silver2_nation
+    "silver3": /wp/info/silver3
+    "silver3_nation": /wp/info/silver3_nation
+    "bronze": /wp/info/bronze
+    "bronze_nation": /wp/info/bronze_nation
+    "bronze2": /wp/info/bronze2
+    "bronze2_nation": /wp/info/bronze2_nation
+    "bronze3": /wp/info/bronze3
+    "bronze3_nation": /wp/info/bronze3_nation
+    "champion": /wp/info/champion
+    "men": /wp/info/men
+    "men_win_value": /wp/info/men_win_value
+    "women": /wp/info/women
+    "women_win_value": /wp/info/women_win_value
+    "team": /wp/info/team
+    "team_win_value": /wp/info/team_win_value
+    "wheelchair_men": /wp/info/wheelchair_men
+    "wheelchair_men_win_value": /wp/info/wheelchair_men_win_value
+    "wheelchair_women": /wp/info/wheelchair_women
+    "wheelchair_women_win_value": /wp/info/wheelchair_women_win_value
+    "previous": /wp/info/previous
+    "next": /wp/info/next
+  }
+}
+
+"Infobox swimming meet": {
+  type: "infobox"
+  class: /wp/infobox/swimming_meet
+  fields: {
+    "name": /wp/info/name
+    "image": {+/wp/info/image media: true}
+    "imagesize": /wp/info/imagesize
+    "hostcity": /wp/info/hostcity
+    "dates": /wp/info/dates
+    "venues": /wp/info/venues
+    "teams": /wp/info/teams
+    "nations": /wp/info/nations
+    "athletes": /wp/info/athletes
+    "events": /wp/info/events
+    "officially opened by": /wp/info/officially_opened_by
+    "website": /wp/info/website
+    "footnotes": /wp/info/footnotes
+    "previous": /wp/info/previous
+    "next": /wp/info/next
+  }
+}
+
+"Infobox baseball championship series": {
+  type: "infobox"
+  class: /wp/infobox/baseball_championship_series
+  fields: {
+    "country": /wp/info/country
+    "year": /wp/info/year
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "champion": /wp/info/champion
+    "champion_manager": /wp/info/champion_manager
+    "champion_games": /wp/info/champion_games
+    "runnerup": /wp/info/runnerup
+    "runnerup_manager": /wp/info/runnerup_manager
+    "runnerup_games": /wp/info/runnerup_games
+    "date": /wp/info/date
+    "MVP": /wp/info/mvp
+    "FSA": /wp/info/fsa
+    "OP": /wp/info/op
+    "MOY": /wp/info/moy
+    "umpires": /wp/info/umpires
+    "HOFers": /wp/info/hofers
+    "ALCS": /wp/info/alcs
+    "NLCS": /wp/info/nlcs
+    "television": /wp/info/television
+    "announcers": /wp/info/announcers
+    "radio_network": /wp/info/radio_network
+    "radio_announcers": /wp/info/radio_announcers
+    "image2": /wp/info/image2
+    "image_size2": /wp/info/image_size2
+    "alt2": /wp/info/alt2
   }
 }
 

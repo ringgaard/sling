@@ -42,6 +42,10 @@ void WikiSink::Category(const Node &node,
   extractor->ExtractSkip(node);
 }
 
+void WikiSink::Media(const Node &node, WikiExtractor *extractor) {
+  extractor->ExtractSkip(node);
+}
+
 void WikiExtractor::Extract(WikiSink *sink) {
   Enter(sink);
   ExtractNode(parser_.node(0));
@@ -58,7 +62,7 @@ void WikiExtractor::ExtractNode(const Node &node) {
     case WikiParser::FONT: ExtractFont(node); break;
     case WikiParser::TEMPLATE: ExtractTemplate(node); break;
     case WikiParser::LINK: ExtractLink(node); break;
-    case WikiParser::IMAGE: ExtractImage(node); break;
+    case WikiParser::MEDIA: ExtractMedia(node); break;
     case WikiParser::CATEGORY: ExtractCategory(node); break;
     case WikiParser::URL: ExtractUrl(node); break;
     case WikiParser::COMMENT: ExtractComment(node); break;
@@ -132,8 +136,8 @@ void WikiExtractor::ExtractLink(const Node &node) {
   sink()->Link(node, this, false);
 }
 
-void WikiExtractor::ExtractImage(const Node &node) {
-  ExtractSkip(node);
+void WikiExtractor::ExtractMedia(const Node &node) {
+  sink()->Media(node, this);
 }
 
 void WikiExtractor::ExtractCategory(const Node &node) {

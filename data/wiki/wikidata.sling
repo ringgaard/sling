@@ -9,7 +9,7 @@
 ;   role: Pxxx (one for each property)
 ; }
 
-{=/w/item +/s/profile +/w/entity :schema
+{=/w/item +profile +/w/entity :schema
   name: "Wikidata item"
   family: /schema/wikidata
 
@@ -91,7 +91,7 @@
 {=/w/type :schema
   name: "Data type"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 
   value: /w/string
   value: /w/time
@@ -115,13 +115,13 @@
 {=/w/string +string :schema
   name: "String"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/w/time :schema
   name: "Time"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/w/quantity :schema
@@ -167,25 +167,25 @@
 {=/w/text :schema
   name: "Text"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/w/media :schema
   name: "Media"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/w/xref :schema
   name: "Cross reference"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/w/url :schema
   name: "URL"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/w/geo :schema
@@ -217,25 +217,25 @@
 {=/w/math :schema
   name: "Math"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/w/table :schema
   name: "Table"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/w/shape :schema
   name: "Shape"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/w/music :schema
   name: "Musical notation"
   family: /schema/wikidata
-  simple: 1
+  simple: true
 }
 
 {=/schema/wikidata :schema_family

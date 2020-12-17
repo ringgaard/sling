@@ -1,6 +1,6 @@
 ; Wikipedia schemas.
 
-{=/wp/page +/s/document :schema
+{=/wp/page +document :schema
   name: "Wikipedia page"
   family: /schema/wikipedia
 
@@ -37,7 +37,7 @@
     description: "Wikipedia category"
     source: /wp/page
     target: /wp/category
-    multi: 1
+    multi: true
   }
 }
 
@@ -72,6 +72,11 @@
   family: /schema/wikipedia
 }
 
+{=/wp/media :schema
+  name: "Wikipedia media"
+  family: /schema/wikipedia
+}
+
 {=/wp/category :schema
   name: "Wikipedia category"
   family: /schema/wikipedia
@@ -83,6 +88,7 @@
   member_schema: /wp/page
   member_schema: /wp/redirect
   member_schema: /wp/link
+  member_schema: /wp/media
   member_schema: /wp/category
 }
 

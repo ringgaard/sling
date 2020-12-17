@@ -40,7 +40,7 @@ class WikiParser {
     FONT,        // ''italics'', '''bold''', and '''''both'''''
     TEMPLATE,    // {{name | args... }}
     LINK,        // [[link | text]]
-    IMAGE,       // [[File:link | text]]
+    MEDIA,       // [[File:link | text]]
     CATEGORY,    // [[Category:...]]
     URL,         // [url text]
     COMMENT,     // <!-- comment -->

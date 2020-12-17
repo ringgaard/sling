@@ -41,6 +41,7 @@ class KnowledgeService {
     Handles xrefs;
     Handles categories;
     Handle image = Handle::nil();
+    Handle media = Handle::nil();
     Handle alternate_image = Handle::nil();
   };
 
@@ -112,6 +113,7 @@ class KnowledgeService {
   Names names_;
   Name n_name_{names_, "name"};
   Name n_description_{names_, "description"};
+  Name n_media_{names_, "media"};
   Name n_role_{names_, "role"};
   Name n_target_{names_, "target"};
   Name n_properties_{names_, "properties"};

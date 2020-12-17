@@ -53,6 +53,13 @@ void ProxyService::Handle(HTTPRequest *request, HTTPResponse *response) {
     response->SendError(400, "Bad Request", "Location missing");
     return;
   }
+
+  // Proxy only supports GET requests.
+  HTTPMethod method = GetHTTPMethod(request->method());
+  if (method != HTTP_GET) {
+    response->SendError(405, "Method Not Allowed", nullptr);
+    return;
+  }
   VLOG(1) << "Proxy request: " << location;
 
   // Fetch page using curl. The callbacks populate the response object.
@@ -77,7 +84,6 @@ void ProxyService::Handle(HTTPRequest *request, HTTPResponse *response) {
     // Prevent proxy from accesing local network (10.x.x.x and 192.168.x.x)
     char *ipaddr = nullptr;
     curl_easy_getinfo(curl, CURLINFO_PRIMARY_IP, &ipaddr);
-    LOG(INFO) << "Proxy retrieved from IP " << ipaddr;
     Text ip(ipaddr);
     if (ip.empty() ||
         ip.starts_with("10.") ||

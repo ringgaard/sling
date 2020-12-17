@@ -556,18 +556,39 @@ class Workflow(object):
     output = self.channel(reader, format=format.as_message())
     return output
 
+  def bundle(self, *args):
+    """Return list of resources from all the arguments. The arguments can be
+    resources or lists of resources."""
+    resources = []
+    for arg in args:
+      if arg is None: continue
+      if isinstance(arg, Resource):
+        resources.append(arg)
+      elif isinstance(arg, list):
+        for elem in arg:
+          if elem is None: continue
+          if isinstance(elem, Resource):
+            resources.append(elem)
+          else:
+            raise Exception("illegal element")
+      else:
+        raise Exception("illegal argument")
+    return resources if len(resources) > 1 else resources[0]
+
   def collect(self, *args):
     """Return list of channels that collects the input from all the arguments.
     The arguments can be channels, resources, or lists of channels or
     resources."""
     channels = []
     for arg in args:
+      if arg is None: continue
       if isinstance(arg, Channel):
         channels.append(arg)
       elif isinstance(arg, Resource):
         channels.append(self.read(arg))
       elif isinstance(arg, list):
         for elem in arg:
+          if elem is None: continue
           if isinstance(elem, Channel):
             channels.append(elem)
           elif isinstance(elem, Resource):

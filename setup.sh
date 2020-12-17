@@ -79,6 +79,7 @@ if [ ! -f  "$CMD" ]; then
 fi
 
 # Extra Python packages:
+#   requests (http download)
 #   numpy (myelin tests)
 #   tweepy (twitter)
 #   praw (reddit)

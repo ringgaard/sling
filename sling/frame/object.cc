@@ -637,7 +637,7 @@ Frame &Frame::AddIsA(Text type) {
 }
 
 Frame &Frame::AddIsA(const String &type) {
-  store_->Add(handle_, Handle::isa(), store_->Lookup(type.handle()));
+  store_->Add(handle_, Handle::isa(), type.handle());
   return *this;
 }
 
@@ -662,7 +662,7 @@ Frame &Frame::AddIs(Text type) {
 }
 
 Frame &Frame::AddIs(const String &type) {
-  store_->Add(handle_, Handle::is(), store_->Lookup(type.handle()));
+  store_->Add(handle_, Handle::is(), type.handle());
   return *this;
 }
 
@@ -1410,7 +1410,7 @@ Builder &Builder::AddIsA(Text type) {
 Builder &Builder::AddIsA(const String &type) {
   Slot *slot = NewSlot();
   slot->name = Handle::isa();
-  slot->value = store_->Lookup(type.handle());
+  slot->value = type.handle();
   return *this;
 }
 
@@ -1445,7 +1445,7 @@ Builder &Builder::AddIs(Text type) {
 Builder &Builder::AddIs(const String &type) {
   Slot *slot = NewSlot();
   slot->name = Handle::is();
-  slot->value = store_->Lookup(type.handle());
+  slot->value = type.handle();
   return *this;
 }
 

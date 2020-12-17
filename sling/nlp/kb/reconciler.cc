@@ -34,8 +34,10 @@ class ItemReconciler : public task::FrameProcessor {
 
   void Process(Slice key, const Frame &frame) override {
     // Lookup the key in the store to get the reconciled id for the frame.
-    Handle mapped = commons_->LookupExisting(key);
     Text id = key;
+    if (id.empty()) id = frame.Id();
+    CHECK(!id.empty());
+    Handle mapped = commons_->LookupExisting(id);
     if (!mapped.IsNil()) {
       id = commons_->FrameId(mapped);
       num_mapped_ids_->Increment();

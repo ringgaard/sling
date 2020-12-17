@@ -684,14 +684,13 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   b.Add(n_categories_, Array(ws.store(), info.categories));
 
   // Set item image.
-  Handle thumbnail = Handle::nil();
   if (!info.image.IsNil()) {
-    thumbnail = info.image;
+    Text filename = String(item.store(), info.image).text();
+    b.Add(n_thumbnail_, CommonsUrl(filename));
+  } else if (!info.media.IsNil()) {
+    b.Add(n_thumbnail_, item.store()->Resolve(info.media));
   } else if (!info.alternate_image.IsNil()) {
-    thumbnail = info.alternate_image;
-  }
-  if (!thumbnail.IsNil()) {
-    Text filename = String(item.store(), thumbnail).text();
+    Text filename = String(item.store(), info.alternate_image).text();
     b.Add(n_thumbnail_, CommonsUrl(filename));
   }
 
@@ -711,6 +710,11 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       GetStandardProperties(cat, &b);
       info->categories.push_back(b.Create().handle());
       continue;
+    }
+
+    // Get external media for representative image.
+    if (s.name == n_media_) {
+      if (info->media.IsNil()) info->media = s.value;
     }
 
     // Look up property. Skip non-property slots.
