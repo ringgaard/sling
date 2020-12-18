@@ -615,7 +615,7 @@ class WikiWorkflow:
 
   def standard_item_sources(self, items=None):
     if items == None:
-      items = self.bundle(
+      items = self.wf.bundle(
                 self.wikidata_items(),
                 self.wikilinks(),
                 self.popularity(),
@@ -626,7 +626,7 @@ class WikiWorkflow:
 
     if flags.arg.extra_items:
       extra = self.wf.resource(flags.arg.extra_items, format="records/frame")
-      items = self.bundle(items, extra)
+      items = self.wf.bundle(items, extra)
 
     return items
 
