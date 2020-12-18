@@ -711,7 +711,7 @@ class WikiWorkflow:
 
   def schema_defs(self):
     """Resources for schemas included in knowledge base."""
-    self.wf.bundle(
+    return self.wf.bundle(
       self.language_defs(),
       self.calendar_defs(),
       self.country_defs(),
