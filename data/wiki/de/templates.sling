@@ -5,5 +5,841 @@
 "datum": {type: "date" year: 3 month: 2 day: 1 yearn: "jahr" monthn: "monat" dayn: "tag" format: /w/dates/de}
 "FormatDate": {type: "date" full: 1 format: /w/dates/de}
 
+"Infobox Fußballliga": {
+  type: "infobox"
+  class: /wp/infobox/fussballliga
+  fields: {
+    "Bild": {+/wp/info/image media: true}
+    "Liganame": /wp/info/liganame
+    "Langname": /wp/info/langname
+    "Abkürzung": /wp/info/abkurzung
+    "Verband": /wp/info/verband
+    "Gegründet": /wp/info/gegrundet
+    "Beendet": /wp/info/beendet
+    "Hierarchie": /wp/info/hierarchie
+    "Mannschaften": /wp/info/mannschaften
+    "Aktueller Meister": /wp/info/aktueller_meister
+    "Rekordmeister": /wp/info/rekordmeister
+    "Rekordspieler": /wp/info/rekordspieler
+    "Rekordtorschütze": /wp/info/rekordtorschutze
+    "Aktuelle Saison": /wp/info/aktuelle_saison
+    "Website": /wp/info/website
+    "Qualifikation": /wp/info/qualifikation
+    "Region": /wp/info/region
+    "Übergeordnete Liga": /wp/info/ubergeordnete_liga
+    "Untergeordnete Liga": /wp/info/untergeordnete_liga
+  }
+}
+
+"Infobox Fußballsaison": {
+  type: "infobox"
+  class: /wp/infobox/fussballsaison
+  fields: {
+    "Name": /wp/info/name
+    "Bild": {+/wp/info/image media: true}
+    "Meister": /wp/info/meister
+    "Herbstmeister": /wp/info/herbstmeister
+    "UEFA Champions League": /wp/info/uefa_champions_league
+    "UEFA Champions League Quali": /wp/info/uefa_champions_league_quali
+    "Europapokal der Landesmeister": /wp/info/europapokal_der_landesmeister
+    "Europa League": /wp/info/europa_league
+    "Europa League Quali": /wp/info/europa_league_quali
+    "UEFA Cup": /wp/info/uefa_cup
+    "UEFA Cup Quali": /wp/info/uefa_cup_quali
+    "Messepokal": /wp/info/messepokal
+    "Europapokal der Pokalsieger": /wp/info/europapokal_der_pokalsieger
+    "UI-Cup": /wp/info/ui-cup
+    "Copa Libertadores GP": /wp/info/copa_libertadores_gp
+    "Copa Libertadores ER": /wp/info/copa_libertadores_er
+    "Copa Sudamericana": /wp/info/copa_sudamericana
+    "AFC Champions League": /wp/info/afc_champions_league
+    "AFC Cup": /wp/info/afc_cup
+    "AFC President’s Cup": /wp/info/afc_presidents_cup
+    "CAF Champions League": /wp/info/caf_champions_league
+    "CAF Konföderationspokal": /wp/info/caf_konfoderationspokal
+    "CAF Cup Winners’ Cup": /wp/info/caf_cup_winners_cup
+    "CAF Cup Qualifizierte": /wp/info/caf_cup_qualifizierte
+    "OFC Champions League": /wp/info/ofc_champions_league
+    "Pokal-Sieger": /wp/info/pokal-sieger
+    "DFB-Pokal": /wp/info/dfb-pokal
+    "Meisterschafts Endrunde": /wp/info/meisterschafts_endrunde
+    "Meisterschafts Endrunde Quali": /wp/info/meisterschafts_endrunde_quali
+    "UEFA Women’s Champions League": /wp/info/uefa_womens_champions_league
+    "UEFA Women’s Cup": /wp/info/uefa_womens_cup
+    "Aufsteiger": /wp/info/aufsteiger
+    "Relegation ↑": /wp/info/relegation_up
+    "Relegation ↓": /wp/info/relegation_down
+    "Absteiger": /wp/info/absteiger
+    "Mannschaften": /wp/info/mannschaften
+    "Spiele": /wp/info/spiele
+    "Relegationsspiele": /wp/info/relegationsspiele
+    "Play-off-Spiele": /wp/info/play-off-spiele
+    "strafverifizierte Spiele": /wp/info/strafverifizierte_spiele
+    "gespielte Spiele": /wp/info/gespielte_spiele
+    "geschossene Tore": /wp/info/geschossene_tore
+    "Zuschauer": /wp/info/zuschauer
+    "CH": /wp/info/ch
+    "Torschützenkönig": /wp/info/torschutzenkonig
+    "Gelbe Karten": /wp/info/gelbe_karten
+    "Gelb-rote Karten": /wp/info/gelb-rote_karten
+    "Rote Karten": /wp/info/rote_karten
+    "Platzverweis": /wp/info/platzverweis
+    "vorherige Saison": /wp/info/vorherige_saison
+    "vorherige Saison2": /wp/info/vorherige_saison2
+    "vorherige Saison3": /wp/info/vorherige_saison3
+    "nachfolgende Saison": /wp/info/nachfolgende_saison
+    "nachfolgende Saison2": /wp/info/nachfolgende_saison2
+    "nachfolgende Saison3": /wp/info/nachfolgende_saison3
+    "nachfolgende Saison4": /wp/info/nachfolgende_saison4
+    "übergeordnete Liga": /wp/info/ubergeordnete_liga
+    "nachgeordnete Liga": /wp/info/nachgeordnete_liga
+  }
+}
+
+"Infobox Sportverein": {
+  type: "infobox"
+  class: /wp/infobox/sportverein
+  fields: {
+    "image": {+/wp/info/image media: true}
+    "kurzname": /wp/info/kurzname
+    "langname": /wp/info/langname
+    "abteilung von": /wp/info/abteilung_von
+    "sportart": /wp/info/sportart
+    "vereinsfarben": /wp/info/vereinsfarben
+    "gegründet": /wp/info/gegrundet
+    "gründungsort": /wp/info/grundungsort
+    "aufgelöst": /wp/info/aufgelost
+    "spielort": /wp/info/spielort
+    "vereinssitz": /wp/info/vereinssitz
+    "mitglieder": /wp/info/mitglieder
+    "abteilungen": /wp/info/abteilungen
+    "vorsitzender": /wp/info/vorsitzender
+    "sport_dachverband": /wp/info/sport_dachverband
+    "zvr-zahl": /wp/info/zvr-zahl
+    "homepage": /wp/info/homepage
+    "pattern_la1": /wp/info/pattern_la1
+    "pattern_b1": /wp/info/pattern_b1
+    "pattern_ra1": /wp/info/pattern_ra1
+    "pattern_sh1": /wp/info/pattern_sh1
+    "pattern_so1": /wp/info/pattern_so1
+    "leftarm1": /wp/info/leftarm1
+    "body1": /wp/info/body1
+    "rightarm1": /wp/info/rightarm1
+    "shorts1": /wp/info/shorts1
+    "socks1": /wp/info/socks1
+    "pattern_la2": /wp/info/pattern_la2
+    "pattern_b2": /wp/info/pattern_b2
+    "pattern_ra2": /wp/info/pattern_ra2
+    "pattern_sh2": /wp/info/pattern_sh2
+    "pattern_so2": /wp/info/pattern_so2
+    "leftarm2": /wp/info/leftarm2
+    "body2": /wp/info/body2
+    "rightarm2": /wp/info/rightarm2
+    "shorts2": /wp/info/shorts2
+    "socks2": /wp/info/socks2
+  }
+}
+
+"Infobox Fluggesellschaft": {
+  type: "infobox"
+  class: /wp/infobox/fluggesellschaft
+  fields: {
+    "Name": /wp/info/name
+    "Logo": {+/wp/info/logo media: true}
+    "Bild": {+/wp/info/image media: true}
+    "Jahr": /wp/info/jahr
+    "Jahr_Ende": /wp/info/jahr_ende
+    "IATA": /wp/info/iata
+    "ICAO": /wp/info/icao
+    "Rufzeichen": /wp/info/rufzeichen
+    "Sitz": /wp/info/sitz
+    "Unternehmensform": /wp/info/unternehmensform
+    "ISIN": /wp/info/isin
+    "IATA-Prefixcode": /wp/info/iata-prefixcode
+    "Leitung": /wp/info/leitung
+    "Mitarbeiterzahl": /wp/info/mitarbeiterzahl
+    "Umsatz": /wp/info/umsatz
+    "Bilanzsumme": /wp/info/bilanzsumme
+    "Fluggastaufkommen": /wp/info/fluggastaufkommen
+    "Frachtaufkommen": /wp/info/frachtaufkommen
+    "Operative_Basis": /wp/info/operative_basis
+    "Drehkreuz": /wp/info/drehkreuz
+    "Homebase": /wp/info/homebase
+    "Allianz": /wp/info/allianz
+    "Vielfliegerprogramm": /wp/info/vielfliegerprogramm
+    "Flugzeuge": /wp/info/flugzeuge
+    "Ziele": /wp/info/ziele
+    "Website": /wp/info/website
+  }
+}
+
+"Infobox Fußballspieler": {
+  type: "infobox"
+  class: /wp/infobox/fussballspieler
+  fields: {
+    "kurzname": /wp/info/kurzname
+    "bildname": {+/wp/info/image media: true}
+    "bildbreite": /wp/info/bildbreite
+    "bildunterschrift": /wp/info/caption
+    "langname": /wp/info/langname
+    "geburtstag": /wp/info/geburtstag
+    "geburtsort": /wp/info/geburtsort
+    "geburtsland": /wp/info/geburtsland
+    "sterbedatum": /wp/info/sterbedatum
+    "sterbeort": /wp/info/sterbeort
+    "sterbeland": /wp/info/sterbeland
+    "größe": /wp/info/grosse
+    "position": /wp/info/position
+    "jugendvereine_tabelle": /wp/info/jugendvereine_tabelle
+    "vereine_tabelle": /wp/info/vereine_tabelle
+    "indoor_tabelle": /wp/info/indoor_tabelle
+    "nationalmannschaft_tabelle": /wp/info/nationalmannschaft_tabelle
+    "trainer_tabelle": /wp/info/trainer_tabelle
+    "lgupdate": /wp/info/lgupdate
+    "nmupdate": /wp/info/nmupdate
+  }
+}
+
+"Infobox Fußballklub": {
+  type: "infobox"
+  class: /wp/infobox/fussballklub
+  fields: {
+    "kurzname": /wp/info/kurzname
+    "image": {+/wp/info/image media: true}
+    "langname": /wp/info/langname
+    "fußballabteilung": /wp/info/fussballabteilung
+    "ort": /wp/info/ort
+    "gegründet": /wp/info/gegrundet
+    "aufgelöst": /wp/info/aufgelost
+    "vereinsfarben": /wp/info/vereinsfarben
+    "mitglieder": /wp/info/mitglieder
+    "eigentümer": /wp/info/eigentumer
+    "präsident": /wp/info/president
+    "vorstand": /wp/info/vorstand
+    "ev-präsident": /wp/info/ev-president
+    "ev-vorstand": /wp/info/ev-vorstand
+    "chefbezeichnung": /wp/info/chefbezeichnung
+    "chefname": /wp/info/chefname
+    "zvr-zahl": /wp/info/zvr-zahl
+    "homepage": /wp/info/homepage
+    "trainer": /wp/info/trainer
+    "stadion": /wp/info/stadion
+    "plätze": /wp/info/platze
+    "liga": /wp/info/liga
+    "saison": /wp/info/saison
+    "rang": /wp/info/rang
+    "pattern_la1": /wp/info/pattern_la1
+    "pattern_b1": /wp/info/pattern_b1
+    "pattern_ra1": /wp/info/pattern_ra1
+    "pattern_sh1": /wp/info/pattern_sh1
+    "pattern_so1": /wp/info/pattern_so1
+    "leftarm1": /wp/info/leftarm1
+    "body1": /wp/info/body1
+    "rightarm1": /wp/info/rightarm1
+    "shorts1": /wp/info/shorts1
+    "socks1": /wp/info/socks1
+    "pattern_la2": /wp/info/pattern_la2
+    "pattern_b2": /wp/info/pattern_b2
+    "pattern_ra2": /wp/info/pattern_ra2
+    "pattern_sh2": /wp/info/pattern_sh2
+    "pattern_so2": /wp/info/pattern_so2
+    "leftarm2": /wp/info/leftarm2
+    "body2": /wp/info/body2
+    "rightarm2": /wp/info/rightarm2
+    "shorts2": /wp/info/shorts2
+    "socks2": /wp/info/socks2
+    "pattern_la3": /wp/info/pattern_la3
+    "pattern_b3": /wp/info/pattern_b3
+    "pattern_ra3": /wp/info/pattern_ra3
+    "pattern_sh3": /wp/info/pattern_sh3
+    "pattern_so3": /wp/info/pattern_so3
+    "leftarm3": /wp/info/leftarm3
+    "body3": /wp/info/body3
+    "rightarm3": /wp/info/rightarm3
+    "shorts3": /wp/info/shorts3
+    "socks3": /wp/info/socks3
+  }
+}
+
+"Infobox Sportliga": {
+  type: "infobox"
+  class: /wp/infobox/sportliga
+  fields: {
+    "aktuelle Saison": /wp/info/aktuelle_saison
+    "bild": {+/wp/info/image media: true}
+    "liganame": /wp/info/liganame
+    "langname": /wp/info/langname
+    "Sportart": /wp/info/sportart
+    "Abkürzung": /wp/info/abkurzung
+    "Verband": /wp/info/verband
+    "gegründet": /wp/info/gegrundet
+    "aufgelöst": /wp/info/aufgelost
+    "Mannschaften": /wp/info/mannschaften
+    "Länder": /wp/info/lander
+    "Aktueller Meister": /wp/info/aktueller_meister
+    "Rekordmeister": /wp/info/rekordmeister
+    "Rekordspieler": /wp/info/rekordspieler
+    "Rekordschütze": /wp/info/rekordschutze
+    "TV Partner": /wp/info/tv_partner
+    "Website": /wp/info/website
+    "Qualifikation zu": /wp/info/qualifikation_zu
+    "übergeordnete Liga": /wp/info/ubergeordnete_liga
+    "untergeordnete Liga": /wp/info/untergeordnete_liga
+  }
+}
+
+"Infobox Unternehmen": {
+  type: "infobox"
+  class: /wp/infobox/unternehmen
+  fields: {
+    "Name": /wp/info/name
+    "Logo": {+/wp/info/logo media: true}
+    "Unternehmensform": /wp/info/unternehmensform
+    "ISIN": /wp/info/isin
+    "Gründungsdatum": /wp/info/grundungsdatum
+    "Auflösungsdatum": /wp/info/auflosungsdatum
+    "Auflösungsgrund": /wp/info/auflosungsgrund
+    "Sitz": /wp/info/sitz
+    "Leitung": /wp/info/leitung
+    "Mitarbeiterzahl": /wp/info/mitarbeiterzahl
+    "Umsatz": /wp/info/umsatz
+    "Stand": /wp/info/stand
+    "Branche": /wp/info/branche
+    "Website": /wp/info/website
+  }
+}
+
+"Infobox Behörde": {
+  type: "infobox"
+  class: /wp/infobox/behorde
+  fields: {
+    "Staat": /wp/info/staat
+    "Behörden-Bezeichnung": /wp/info/behorden-bezeichnung
+    "Keine-Behörde": /wp/info/keine-behorde
+    "Behörden-Abkürzung": /wp/info/behorden-abkurzung
+    "Behörden-Logo": {+/wp/info/logo media: true}
+    "Staatliche-Ebene": /wp/info/staatliche-ebene
+    "Stellung": /wp/info/stellung
+    "Rechtsform": /wp/info/rechtsform
+    "Aufsicht": /wp/info/aufsicht
+    "Periode": /wp/info/periode
+    "Vorläufer": /wp/info/vorlaufer
+    "VorläuferOpt": /wp/info/vorlauferopt
+    "Nachfolger": /wp/info/nachfolger
+    "Hauptsitz": /wp/info/hauptsitz
+    "Haushalt": /wp/info/haushalt
+    "Breitengrad": /wp/info/breitengrad
+    "Längengrad": /wp/info/langengrad
+    "ISO-Region": /wp/info/iso-region
+    "Leitungstitel": /wp/info/leitungstitel
+    "Behördenleiter": /wp/info/behordenleiter
+    "Anzahl-Mitarbeiter": /wp/info/anzahl-mitarbeiter
+    "Homepage": /wp/info/homepage
+  }
+}
+
+"Infobox Verkehrsbetrieb": {
+  type: "infobox"
+  class: /wp/infobox/verkehrsbetrieb
+  fields: {
+    "Bild": {+/wp/info/image media: true}
+    "Name": /wp/info/name
+    "Stadt": /wp/info/stadt
+    "Homepage": /wp/info/homepage
+    "Eigentümer": /wp/info/eigentumer
+    "Rechtsform": /wp/info/rechtsform
+    "ISIN": /wp/info/isin
+    "Sitz": /wp/info/sitz
+    "Gründung": /wp/info/grundung
+    "Auflösung": /wp/info/auflosung
+    "Vorstand": /wp/info/vorstand
+    "Aufsichtsrat": /wp/info/aufsichtsrat
+    "Geschäftsführer": /wp/info/geschaftsfuhrer
+    "Betriebsleiter": /wp/info/betriebsleiter
+    "Verbund": /wp/info/verbund
+    "Bezugsjahr": /wp/info/bezugsjahr
+    "Angestellte": /wp/info/angestellte
+    "Umsatz": /wp/info/umsatz
+    "Währung": /wp/info/wahrung
+    "Tochtergesellschaften": /wp/info/tochtergesellschaften
+    "Spurweite": /wp/info/spurweite
+    "Eisenbahnlinien": /wp/info/eisenbahnlinien
+    "Straßenbahnlinien": /wp/info/strassenbahnlinien
+    "Tramlinien": /wp/info/tramlinien
+    "Stadtbahnlinien": /wp/info/stadtbahnlinien
+    "U-Bahnlinien": /wp/info/u-bahnlinien
+    "Obuslinien": /wp/info/obuslinien
+    "Trolleybuslinien": /wp/info/trolleybuslinien
+    "Buslinien": /wp/info/buslinien
+    "Sonstige_Linien": /wp/info/sonstige_linien
+    "Lokomotiven": /wp/info/lokomotiven
+    "Triebwagen": /wp/info/triebwagen
+    "U-Bahn-Wagen": /wp/info/u-bahn-wagen
+    "Straßenbahnwagen": /wp/info/strassenbahnwagen
+    "Tramwagen": /wp/info/tramwagen
+    "Stadtbahnwagen": /wp/info/stadtbahnwagen
+    "Obusse": /wp/info/obusse
+    "Busse": /wp/info/busse
+    "Autobusse": /wp/info/autobusse
+    "Sonstige": /wp/info/sonstige
+    "Fahrgäste": /wp/info/fahrgaste
+    "Fahrleistung": /wp/info/fahrleistung
+    "Haltestellen": /wp/info/haltestellen
+    "Länge_Eisenbahn": /wp/info/lsnge_eisenbahn
+    "Länge_U-Bahn": /wp/info/lsnge_u-bahn
+    "Länge_Stadtbahn": /wp/info/lsnge_stadtbahn
+    "Länge_Straßenbahn": /wp/info/lange_strassenbahn
+    "Länge_Tram": /wp/info/lange_tram
+    "Länge_Obus": /wp/info/lange_obus
+    "Länge_Trolleybus": /wp/info/lange_trolleybus
+    "Länge_Bus": /wp/info/lange_bus
+    "Einzugsgebiet": /wp/info/einzugsgebiet
+    "EinzugEinwohner": /wp/info/einzugeinwohner
+    "Betriebshöfe": /wp/info/betriebshofe
+    "Sonstige_Betriebseinrichtungen": /wp/info/sonstige_betriebseinrichtungen
+    "Gleisanlagen": /wp/info/gleisanlagen
+    "Weichen": /wp/info/weichen
+    "Netzplan": /wp/info/netzplan
+    "LegendeNetzplan": /wp/info/legendenetzplan
+  }
+}
+
+"Infobox Versicherung": {
+  type: "infobox"
+  class: /wp/infobox/versicherung
+  fields: {
+    "Titel": /wp/info/titel
+    "Logo": {+/wp/info/logo media: true}
+    "Logobreite": /wp/info/logobreite
+    "Sozialversicherung": /wp/info/sozialversicherung
+    "Rechtsform": /wp/info/rechtsform
+    "Gründungsdatum": /wp/info/grundungsdatum
+    "Auflösungsdatum": /wp/info/auflosungsdatum
+    "Zuständigkeit": /wp/info/zustandigkeit
+    "Sitz": /wp/info/sitz
+    "Vorstand": /wp/info/vorstand
+    "Verwaltungsrat": /wp/info/verwaltungsrat
+    "Aufsichtsbehörde": /wp/info/aufsichtsbehorde
+    "Versicherte": /wp/info/versicherte
+    "Rentner": /wp/info/rentner
+    "Haushaltsvolumen": /wp/info/haushaltsvolumen
+    "Geschäftsstellen": /wp/info/geschaftsstellen
+    "Mitarbeiter": /wp/info/mitarbeiter
+    "Website": /wp/info/website
+  }
+}
+
+"Infobox Deutsche Behörde": {
+  type: "infobox"
+  class: /wp/infobox/deutsche_behorde
+  fields: {
+    "behörden_bezeichnung": /wp/info/behorden_bezeichnung
+    "behörden_abkürzung": /wp/info/behorden_abkurzung
+    "behörden_logo": {+/wp/info/logo media: true}
+    "staatliche_ebene": /wp/info/staatliche_ebene
+    "stellung": /wp/info/stellung
+    "Rechtsform": /wp/info/rechtsform
+    "geschäftsbereich": /wp/info/geschaftsbereich
+    "aufsicht": /wp/info/aufsicht
+    "gründungsdatum": /wp/info/grundungsdatum
+    "auflösungsdatum": /wp/info/auflosungsdatum
+    "vorgänger": /wp/info/vorganger
+    "nachfolger": /wp/info/nachfolger
+    "hauptsitz": /wp/info/hauptsitz
+    "behördenleiter": /wp/info/behordenleiter
+    "leiter_bezeichnung": /wp/info/leiter_bezeichnung
+    "leitung_vertreter": /wp/info/leitung_vertreter
+    "vertreter_bezeichnung": /wp/info/vertreter_bezeichnung
+    "anz_mitarbeiter": /wp/info/anz_mitarbeiter
+    "Haushaltsvolumen": /wp/info/haushaltsvolumen
+    "homepage": /wp/info/homepage
+  }
+}
+
+"Infobox Hochschule": {
+  type: "infobox"
+  class: /wp/infobox/hochschule
+  fields: {
+    "Name": /wp/info/name
+    "Logo": {+/wp/info/logo media: true}
+    "Motto": /wp/info/motto
+    "Gründungsdatum": /wp/info/grundungsdatum
+    "Auflösungsdatum": /wp/info/auflosungsdatum
+    "Trägerschaft": /wp/info/tragerschaft
+    "Ort": /wp/info/ort
+    "Leitung": /wp/info/leitung
+    "Leitungstitel": /wp/info/leitungstitel
+    "Studentenzahl": /wp/info/studentenzahl
+    "Mitarbeiterzahl": /wp/info/mitarbeiterzahl
+    "davon Professoren": /wp/info/davon_professoren
+    "Jahresetat": /wp/info/jahresetat
+    "Netzwerke": /wp/info/netzwerke
+    "Website": /wp/info/website
+  }
+}
+
+"Infobox Hotel": {
+  type: "infobox"
+  class: /wp/infobox/hotel
+  fields: {
+    "Nebenbox": /wp/info/nebenbox
+    "Logo": {+/wp/info/logo media: true}
+    "Logobreite": /wp/info/logobreite
+    "Name": /wp/info/name
+    "Kette": /wp/info/kette
+    "Allianz": /wp/info/allianz
+    "Stadt": /wp/info/stadt
+    "Adresse": /wp/info/adresse
+    "Region-Iso": /wp/info/region-iso
+    "Breitengrad": /wp/info/breitengrad
+    "Längengrad": /wp/info/langengrad
+    "Homepage": /wp/info/homepage
+    "Eröffnung": /wp/info/eroffnung
+    "Schließung": /wp/info/schliessung
+    "Gebäude": /wp/info/gebaude
+    "Besitzer": /wp/info/besitzer
+    "Leitung": /wp/info/leitung
+    "Sterne": /wp/info/sterne
+    "Auszeichnungen": /wp/info/auszeichnungen
+    "Mitarbeiter": /wp/info/mitarbeiter
+    "Umsatz": /wp/info/umsatz
+    "Zimmer": /wp/info/zimmer
+    "Restaurants": /wp/info/restaurants
+    "Bars": /wp/info/bars
+    "Bild": /wp/info/bild
+    "Bildbreite": /wp/info/bildbreite
+  }
+}
+
+"Infobox Kammer": {
+  type: "infobox"
+  class: /wp/infobox/kammer
+  fields: {
+    "Name": /wp/info/name
+    "Logo": {+/wp/info/logo media: true}
+    "Organisationsform": /wp/info/organisationsform
+    "Gründungsjahr": /wp/info/grundungsjahr
+    "Sitz": /wp/info/sitz
+    "Homepage": /wp/info/homepage
+    "Präsident": /wp/info/president
+    "Hauptgeschäftsführer": /wp/info/hauptgeschaftsfuhrer
+    "Zugehörige": /wp/info/zugehorige
+    "Vollversammlung": /wp/info/vollversammlung
+    "Präsidium": /wp/info/prasidium
+    "Wahlbeteiligung": /wp/info/wahlbeteiligung
+    "Geschäftsführeranzahl": /wp/info/geschaftsfuhreranzahl
+    "Mitarbeiteranzahl": /wp/info/mitarbeiteranzahl
+    "Beitragssumme": /wp/info/beitragssumme
+    "Hebesatz": /wp/info/hebesatz
+    "Bilanzsumme": /wp/info/bilanzsumme
+  }
+}
+
+"Infobox Kommunalverband": {
+  type: "infobox"
+  class: /wp/infobox/kommunalverband
+  fields: {
+    "Name": /wp/info/name
+    "Genitiv": /wp/info/genitiv
+    "Genitivartikel": /wp/info/genitivartikel
+    "Gegründet": /wp/info/gegrundet
+    "Aufgelöst": /wp/info/aufgelost
+    "Wappen": {+/wp/info/image media: true}
+    "Karte": /wp/info/karte
+    "Breitengrad": /wp/info/breitengrad
+    "Längengrad": /wp/info/langengrad
+    "Lageplan": /wp/info/lageplan
+    "Bundesland": /wp/info/bundesland
+    "Regierungsbezirk": /wp/info/regierungsbezirk
+    "Direktionsbezirk": /wp/info/direktionsbezirk
+    "Landschaftsverband": /wp/info/landschaftsverband
+    "Region": /wp/info/region
+    "Verwaltungssitz": /wp/info/verwaltungssitz
+    "Fläche": /wp/info/flache
+    "Einwohner": /wp/info/einwohner
+    "Stand": /wp/info/stand
+    "Kfz": /wp/info/kfz
+    "Kreisschlüssel": /wp/info/kreisschlussel
+    "NUTS": /wp/info/nuts
+    "Gliederung": /wp/info/gliederung
+    "Adresse": /wp/info/adresse
+    "Website": /wp/info/website
+    "Organwalter": /wp/info/organwalter
+    "Organwaltertitel": /wp/info/organwaltertitel
+    "Partei": /wp/info/partei
+  }
+}
+
+"Infobox Krankenhaus": {
+  type: "infobox"
+  class: /wp/infobox/krankenhaus
+  fields: {
+    "Name": /wp/info/name
+    "Logo": {+/wp/info/logo media: true}
+    "Logogrösse": /wp/info/logogrosse
+    "Bild": {+/wp/info/image media: true}
+    "Bildtext": /wp/info/bildtext
+    "Zugehörigkeit": /wp/info/zugehorigkeit
+    "Trägerschaft": /wp/info/tragerschaft
+    "Versorgungsstufe": /wp/info/versorgungsstufe
+    "Bettenzahl": /wp/info/bettenzahl
+    "Ort": /wp/info/ort
+    "Breitengrad": /wp/info/breitengrad
+    "Längengrad": /wp/info/langengrad
+    "Region-ISO": /wp/info/region-iso
+    "Nebenbox": /wp/info/nebenbox
+    "Bundesland": /wp/info/bundesland
+    "Kanton": /wp/info/kanton
+    "Staat": /wp/info/staat
+    "Leitung": /wp/info/leitung
+    "Leitungstitel": /wp/info/leitungstitel
+    "Mitarbeiterzahl": /wp/info/mitarbeiterzahl
+    "davon Ärzte": /wp/info/davon_arzte
+    "Fachgebiete": /wp/info/fachgebiete
+    "Jahresetat": /wp/info/jahresetat
+    "Gründungsdatum": /wp/info/grundungsdatum
+    "Auflösungsdatum": /wp/info/auflosungsdatum
+    "Website": /wp/info/website
+    "Poskarte": /wp/info/poskarte
+  }
+}
+
+"Infobox Kreditinstitut": {
+  type: "infobox"
+  class: /wp/infobox/kreditinstitut
+  fields: {
+    "Name": /wp/info/name
+    "Typ": /wp/info/typ
+    "Logo": {+/wp/info/logo media: true}
+    "Bild": {+/wp/info/image media: true}
+    "Land": /wp/info/land
+    "Rechtsform": /wp/info/rechtsform
+    "ISIN": /wp/info/isin
+    "PAN/FirmenbuchNr/ID": /wp/info/pan/firmenbuchnr/id
+    "Gründungsdatum": /wp/info/grundungsdatum
+    "Auflösungsdatum": /wp/info/auflosungsdatum
+    "Sitz": /wp/info/sitz
+    "Verband": /wp/info/verband
+    "Jahr": /wp/info/jahr
+    "GeschäftsdatenRef": /wp/info/geschaftsdatenref
+    "Bilanzsumme": /wp/info/bilanzsumme
+    "Einlagen": /wp/info/einlagen
+    "Kundenkredite": /wp/info/kundenkredite
+    "Mitarbeiterzahl": /wp/info/mitarbeiterzahl
+    "Geschäftsstellen": /wp/info/geschaftsstellen
+    "Mitglieder": /wp/info/mitglieder
+    "Verwaltungsrat": /wp/info/verwaltungsrat
+    "Vorstand": /wp/info/vorstand
+    "Aufsichtsrat": /wp/info/aufsichtsrat
+    "Leitung": /wp/info/leitung
+    "Homepage": /wp/info/homepage
+  }
+}
+
+"Infobox Museum": {
+  type: "infobox"
+  class: /wp/infobox/museum
+  fields: {
+    "Name": /wp/info/name
+    "Bild": {+/wp/info/image media: true}
+    "Bildbeschreibung": /wp/info/bildbeschreibung
+    "Ort": /wp/info/ort
+    "Breitengrad": /wp/info/breitengrad
+    "Längengrad": /wp/info/langengrad
+    "ISO-Region": /wp/info/iso-region
+    "Art": /wp/info/art
+    "Architekt": /wp/info/architekt
+    "Eröffnung": /wp/info/eroffnung
+    "Besucheranzahl": /wp/info/besucheranzahl
+    "Betreiber": /wp/info/betreiber
+    "Leitung": /wp/info/leitung
+    "ISIL": /wp/info/isil
+    "Website": /wp/info/website
+  }
+}
+
+"Infobox Organisation": {
+  type: "infobox"
+  class: /wp/infobox/organisation
+  fields: {
+    "Name": /wp/info/name
+    "Abkürzung": /wp/info/abkurzung
+    "Logo": {+/wp/info/logo media: true}
+    "Rechtsform": /wp/info/rechtsform
+    "ZVR-Zahl": /wp/info/zvr-zahl
+    "Gründungsdatum": /wp/info/grundungsdatum
+    "Gründungsort": /wp/info/grundungsort
+    "Gründer": /wp/info/grunder
+    "Sitz": /wp/info/sitz
+    "Breitengrad": /wp/info/breitengrad
+    "Längengrad": /wp/info/langengrad
+    "ISO-Region": /wp/info/iso-region
+    "Geschäftsstelle": /wp/info/geschaftsstelle
+    "Vorläufer": /wp/info/vorlaufer
+    "Nachfolger": /wp/info/nachfolger
+    "Auflösungsdatum": /wp/info/auflosungsdatum
+    "Motto": /wp/info/motto
+    "Zweck": /wp/info/zweck
+    "Schwerpunkt": /wp/info/schwerpunkt
+    "Methode": /wp/info/methode
+    "Aktionsraum": /wp/info/aktionsraum
+    "Vorsitz": /wp/info/vorsitz
+    "Geschäftsführung": /wp/info/geschaftsfuhrung
+    "Personen": /wp/info/personen
+    "Eigentümer": /wp/info/eigentumer
+    "Umsatz": /wp/info/umsatz
+    "Stiftungskapital": /wp/info/stiftungskapital
+    "Beschäftigtenzahl": /wp/info/beschaftigtenzahl
+    "Freiwilligenzahl": /wp/info/freiwilligenzahl
+    "Mitgliederzahl": /wp/info/mitgliederzahl
+    "Website": /wp/info/website
+    "Fußnoten": /wp/info/fussnoten
+    "Wikidata": /wp/info/wikidata
+  }
+}
+
+"Infobox Parlament": {
+  type: "infobox"
+  class: /wp/infobox/parlament
+  fields: {
+    "Überschrift": /wp/info/uberschrift
+    "Logo": {+/wp/info/logo media: true}
+    "LogoBeschreibung": /wp/info/logo_caption
+    "Foto": {+/wp/info/image media: true}
+    "FotoBeschreibung": /wp/info/caption
+    "Sitz": /wp/info/sitz
+    "Legislaturperiode": /wp/info/legislaturperiode
+    "Erste Sitzung": /wp/info/erste_sitzung
+    "Abgeordnetenanzahl": /wp/info/abgeordnetenanzahl
+    "Letzte Wahl": /wp/info/letzte_wahl
+    "Nächste Wahl": /wp/info/nachste_wahl
+    "Vorsitz": /wp/info/vorsitz
+    "GrafikSitzverteilung": /wp/info/grafiksitzverteilung
+    "Sitzverteilung": /wp/info/sitzverteilung
+    "Webseite": /wp/info/webseite
+  }
+}
+
+"Infobox Partei": {
+  type: "infobox"
+  class: /wp/infobox/partei
+  fields: {
+    "Infoboxbreite": /wp/info/infoboxbreite
+    "Partei": /wp/info/partei
+    "Parteilogo": {+/wp/info/logo media: true}
+    "Parteivorsitzender": /wp/info/parteivorsitzender
+    "Bundesvorstand": /wp/info/bundesvorstand
+    "Bild Parteivorsitz": /wp/info/bild_parteivorsitz
+    "Generalsekretär": /wp/info/generalsekretar
+    "Stellvertretender Vorsitzender": /wp/info/stellvertretender_vorsitzender
+    "Sprecher": /wp/info/sprecher
+    "Bundesgeschäftsführer": /wp/info/bundesgeschaftsfuhrer
+    "Landesgeschäftsführer": /wp/info/landesgeschaftsfuhrer
+    "Hauptgeschäftsführer": /wp/info/hauptgeschaftsfuhrer
+    "Bundesschatzmeister": /wp/info/bundesschatzmeister
+    "Landesschatzmeister": /wp/info/landesschatzmeister
+    "Schatzmeister": /wp/info/schatzmeister
+    "Ehrenvorsitzender": /wp/info/ehrenvorsitzender
+    "Entstehung": /wp/info/entstehung
+    "Gründung": /wp/info/grundung
+    "Gründungsort": /wp/info/grundungsort
+    "Auflösung": /wp/info/auflosung
+    "Auflösungsgrund": /wp/info/auflosungsgrund
+    "Neue_Partei": /wp/info/neue_partei
+    "Hauptsitz": /wp/info/hauptsitz
+    "Jugendorganisation": /wp/info/jugendorganisation
+    "Zeitung": /wp/info/zeitung
+    "Stiftung": /wp/info/stiftung
+    "Ausrichtung": /wp/info/ausrichtung
+    "Farben": /wp/info/farben
+    "Parlamentsmandate": /wp/info/parlamentsmandate
+    "Landtagsmandate": /wp/info/landtagsmandate
+    "Zuschüsse": /wp/info/zuschusse
+    "Mitglieder": /wp/info/mitglieder
+    "Mindestalter": /wp/info/mindestalter
+    "Durchschnittsalter": /wp/info/durchschnittsalter
+    "Frauenanteil": /wp/info/frauenanteil
+    "International": /wp/info/international
+    "EP-Mandate": /wp/info/ep-mandate
+    "Europa": /wp/info/europa
+    "EU-Parlament": /wp/info/eu-parlament
+    "Website": /wp/info/website
+  }
+}
+
+"Infobox Politische Organisation": {
+  type: "infobox"
+  class: /wp/infobox/politische_organisation
+  fields: {
+    "Vorsitzender": /wp/info/vorsitzender
+    "Logo": {+/wp/info/logo media: true}
+    "Logo Größe": /wp/info/logo_grosse
+    "Bild Vorsitzender": /wp/info/bild_vorsitzender
+    "Bild Vorsitzender 2": /wp/info/bild_vorsitzender_2
+    "Art": /wp/info/art
+    "Ausrichtung": /wp/info/ausrichtung
+    "Verbreitung": /wp/info/verbreitung
+    "Gründungsdatum": /wp/info/grundungsdatum
+    "Gründungsort": /wp/info/grundungsort
+    "Auflösungsdatum": /wp/info/auflosungsdatum
+    "Vorstand": /wp/info/vorstand
+    "Ehrenvorsitzender": /wp/info/ehrenvorsitzender
+    "Stellvertreter": /wp/info/stellvertreter
+    "Schatzmeister": /wp/info/schatzmeister
+    "Generalsekretär": /wp/info/generalsekretar
+    "Sprecher": /wp/info/sprecher
+    "Geschäftsführer": /wp/info/geschaftsfuhrer
+    "Adresse": /wp/info/adresse
+    "Website": /wp/info/website
+    "Mitglieder": /wp/info/mitglieder
+    "Gliederung": /wp/info/gliederung
+    "Frauenanteil": /wp/info/frauenanteil
+    "Jugendorganisation": /wp/info/jugendorganisation
+    "Mitgliedschaften": /wp/info/mitgliedschaften
+  }
+}
+
+"Infobox Schule": {
+  type: "infobox"
+  class: /wp/infobox/schule
+  fields: {
+    "Schulname": /wp/info/schulname
+    "Bild": {+/wp/info/image media: true}
+    "Bildbeschriftung": /wp/info/image_caption
+    "Schultyp": /wp/info/schultyp
+    "Schulnummer": /wp/info/schulnummer
+    "Anschrift": /wp/info/anschrift
+    "Ort": /wp/info/ort
+    "Breitengrad": /wp/info/breitengrad
+    "Längengrad": /wp/info/langengrad
+    "Region-ISO": /wp/info/region-iso
+    "Koordinatenregion": /wp/info/koordinatenregion
+    "Nebenbox": /wp/info/nebenbox
+    "Schulträger": /wp/info/schultrager
+    "Gründungsjahr": /wp/info/grundungsjahr
+    "Schließungsjahr": /wp/info/schliessungsjahr
+    "Schülerzahl": /wp/info/schulerzahl
+    "Lehrerzahl": /wp/info/lehrerzahl
+    "Leitung": /wp/info/leitung
+    "Website": /wp/info/website
+    "Wiki": /wp/info/wiki
+  }
+}
+
+"Infobox Marke": {
+  type: "infobox"
+  class: /wp/infobox/marke
+  fields: {
+    "Name": /wp/info/name
+    "Logo": {+/wp/info/logo media: true}
+    "Besitzer": /wp/info/besitzer
+    "Inhaber": /wp/info/inhaber
+    "Einfuehrungsjahr": /wp/info/einfuehrungsjahr
+    "Produkte": /wp/info/produkte
+    "Maerkte": /wp/info/maerkte
+    "Website": /wp/info/website
+  }
+}
+
 }
 

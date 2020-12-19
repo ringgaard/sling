@@ -5293,7 +5293,7 @@
 
 "Infobox U.S. county": {
   type: "infobox"
-  class: /wp/infobox/u.s._county
+  class: /wp/infobox/us_county
   fields: {
     "county": /wp/info/county
     "state": /wp/info/state

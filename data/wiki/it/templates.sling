@@ -13,5 +13,531 @@
 
 "data": {type: "date" year: 3 month: 2 day: 1 yearn: "A" monthn: "M" dayn: "G" format: /w/dates/it}
 
+"Sportivo": {
+  type: "infobox"
+  class: /wp/infobox/sportivo
+  fields: {
+    "Nome": /wp/info/name
+    "Immagine": {+/wp/info/image media: true}
+    "Didascalia": /wp/info/caption
+    "Sesso": /wp/info/sesso
+    "CodiceNazione": /wp/info/codicenazione
+    "Altezza": /wp/info/altezza
+    "Peso": /wp/info/peso
+
+    "Disciplina": {+/wp/info/name group: /wp/info/disciplina}
+    "Specialità": {+/wp/info/specialita group: /wp/info/disciplina}
+    "Categoria": {+/wp/info/categoria group: /wp/info/disciplina}
+    "Ruolo": {+/wp/info/ruolo group: /wp/info/disciplina}
+    "Record": {+/wp/info/record group: /wp/info/disciplina}
+    "Ranking": {+/wp/info/ranking group: /wp/info/disciplina}
+    "BestRanking": {+/wp/info/bestranking group: /wp/info/disciplina}
+    "Società": {+/wp/info/societa group: /wp/info/disciplina}
+    "Squadra": {+/wp/info/squadra group: /wp/info/disciplina}
+    "TermineCarriera": {+/wp/info/terminecarriera group: /wp/info/disciplina}
+    "SquadreGiovanili": {+/wp/info/squadregiovanili group: /wp/info/disciplina}
+    "Squadre": {+/wp/info/squadre group: /wp/info/disciplina}
+    "SquadreNazionali": {+/wp/info/squadrenazionali group: /wp/info/disciplina}
+    "Allenatore": {+/wp/info/allenatore group: /wp/info/disciplina}
+    "Incontri": {+/wp/info/incontri group: /wp/info/disciplina}
+    "RigaVuota": {+/wp/info/rigavuota group: /wp/info/disciplina}
+    "Palmares": {+/wp/info/palmares group: /wp/info/disciplina}
+    "Vittorie": {+/wp/info/vittorie group: /wp/info/disciplina}
+    "Aggiornato": {+/wp/info/aggiornato group: /wp/info/disciplina}
+  }
+}
+
+"Carica pubblica": {
+  type: "infobox"
+  class: /wp/infobox/carica_pubblica
+  fields: {
+    "nome": /wp/info/nome
+    "immagine": {+/wp/info/image media: true}
+    "didascalia": /wp/info/caption
+    "carica": /wp/info/carica
+    "mandatoinizio": /wp/info/mandatoinizio
+    "mandatofine": /wp/info/mandatofine
+    "mandato": /wp/info/mandato
+    "vice di": /wp/info/vice_di
+    "cotitolare": /wp/info/cotitolare
+    "capo di stato": /wp/info/capo_di_stato
+    "presidente": /wp/info/presidente
+    "vicepresidente": /wp/info/vicepresidente
+    "primoministro": /wp/info/primoministro
+    "viceprimoministro": /wp/info/viceprimoministro
+    "vice": /wp/info/vice
+    "predecessore": /wp/info/predecessore
+    "successore": /wp/info/successore
+    "legislatura": /wp/info/legislatura
+    "gruppo parlamentare": /wp/info/gruppo_parlamentare
+    "coalizione": /wp/info/coalizione
+    "circoscrizione": /wp/info/circoscrizione
+    "collegio": /wp/info/collegio
+    "tipo nomina": /wp/info/tipo_nomina
+    "incarichi": /wp/info/incarichi
+    "sito": /wp/info/sito
+    "prefisso onorifico": /wp/info/prefisso_onorifico
+    "suffisso onorifico": /wp/info/suffisso_onorifico
+    "partito": /wp/info/partito
+    "titolo di studio": /wp/info/titolo_di_studio
+    "alma mater": /wp/info/alma_mater
+    "professione": /wp/info/professione
+    "firma": /wp/info/firma
+  }
+}
+
+"Artista musicale": {
+  type: "infobox"
+  class: /wp/infobox/artista_musicale
+  fields: {
+    "nome": /wp/info/nome
+    "nome alfa": /wp/info/nome_alfa
+    "tipo artista": /wp/info/tipo_artista
+    "nazione": /wp/info/nazione
+    "nazione2": /wp/info/nazione2
+    "post nazione": /wp/info/post_nazione
+    "genere": /wp/info/genere
+    "genere2": /wp/info/genere2
+    "genere3": /wp/info/genere3
+    "genere4": /wp/info/genere4
+    "genere5": /wp/info/genere5
+    "genere6": /wp/info/genere6
+    "genere7": /wp/info/genere7
+    "genere8": /wp/info/genere8
+    "genere9": /wp/info/genere9
+    "nota genere": /wp/info/nota_genere
+    "nota genere2": /wp/info/nota_genere2
+    "nota genere3": /wp/info/nota_genere3
+    "nota genere4": /wp/info/nota_genere4
+    "nota genere5": /wp/info/nota_genere5
+    "nota genere6": /wp/info/nota_genere6
+    "nota genere7": /wp/info/nota_genere7
+    "nota genere8": /wp/info/nota_genere8
+    "nota genere9": /wp/info/nota_genere9
+    "genere altro": /wp/info/genere_altro
+    "categorizza per genere": /wp/info/categorizza_per_genere
+    "anno inizio attività": /wp/info/anno_inizio_attivita
+    "anno fine attività": /wp/info/anno_fine_attivita
+    "note periodo attività": /wp/info/note_periodo_attivita
+    "etichetta": /wp/info/etichetta
+    "immagine": {+/wp/info/image media: true}
+    "didascalia": /wp/info/caption
+    "url": /wp/info/url
+    "strumento": /wp/info/strumento
+    "band attuale": /wp/info/band_attuale
+    "band precedenti": /wp/info/band_precedenti
+    "numero totale album pubblicati": /wp/info/numero_totale_album_pubblicati
+    "numero album studio": /wp/info/numero_album_studio
+    "numero album live": /wp/info/numero_album_live
+    "numero colonne sonore": /wp/info/numero_colonne_sonore
+    "numero raccolte": /wp/info/numero_raccolte
+    "numero opere audiovisive": /wp/info/numero_opere_audiovisive
+    "logo": /wp/info/logo
+  }
+}
+
+"Arbitro": {
+  type: "infobox"
+  class: /wp/infobox/arbitro
+  fields: {
+    "nome": /wp/info/nome
+    "sport": /wp/info/sport
+    "immagine": {+/wp/info/image media: true}
+    "didascalia": /wp/info/caption
+    "altezza": /wp/info/altezza
+    "peso": /wp/info/peso
+    "federazione": /wp/info/federazione
+    "nomefederazione": /wp/info/nomefederazione
+    "sezione": /wp/info/sezione
+    "altraprofessione": /wp/info/altraprofessione
+    "annidanazionale": /wp/info/annidanazionale
+    "campionato": /wp/info/campionato
+    "ruolo": /wp/info/ruolo
+    "annidainternazionale": /wp/info/annidainternazionale
+    "confederazione": /wp/info/confederazione
+    "ruolodirigenziale": /wp/info/ruolodirigenziale
+    "ruolointernazionale": /wp/info/ruolointernazionale
+    "esordiointernazionale": /wp/info/esordiointernazionale
+    "anno": /wp/info/anno
+    "premio": /wp/info/premio
+  }
+}
+
+"Aristocratico": {
+  type: "infobox"
+  class: /wp/infobox/aristocratico
+  fields: {
+    "nome": /wp/info/nome
+    "immagine": {+/wp/info/image media: true}
+    "legenda": /wp/info/caption
+    "stemma": /wp/info/stemma
+    "titolo": /wp/info/titolo
+    "sottotitolo": /wp/info/sottotitolo
+    "periodo": /wp/info/periodo
+    "inizio reggenza": /wp/info/inizio_reggenza
+    "fine reggenza": /wp/info/fine_reggenza
+    "investitura": /wp/info/investitura
+    "sistema nobiliare": /wp/info/sistema_nobiliare
+    "predecessore": /wp/info/predecessore
+    "erede": /wp/info/erede
+    "successore": /wp/info/successore
+    "nome completo": /wp/info/nome_completo
+    "prefisso onorifico": /wp/info/prefisso_onorifico
+    "suffisso onorifico": /wp/info/suffisso_onorifico
+    "altrititoli": /wp/info/altrititoli
+    "data di nascita": /wp/info/data_di_nascita
+    "luogo di nascita": /wp/info/luogo_di_nascita
+    "data di morte": /wp/info/data_di_morte
+    "luogo di morte": /wp/info/luogo_di_morte
+    "sepoltura": /wp/info/sepoltura
+    "luogo di sepoltura": /wp/info/luogo_di_sepoltura
+    "dinastia": /wp/info/dinastia
+    "padre": /wp/info/padre
+    "madre": /wp/info/madre
+    "consorte": /wp/info/consorte
+    "consortedi": /wp/info/consortedi
+    "coniuge 1": /wp/info/coniuge_1
+    "coniuge 2": /wp/info/coniuge_2
+    "coniuge 3": /wp/info/coniuge_3
+    "coniuge 4": /wp/info/coniuge_4
+    "coniuge 5": /wp/info/coniuge_5
+    "figli": /wp/info/figli
+    "religione": /wp/info/religione
+    "motto": /wp/info/motto
+    "firma": /wp/info/firma
+  }
+}
+
+"Astronauta": {
+  type: "infobox"
+  class: /wp/infobox/astronauta
+  fields: {
+    "nome": /wp/info/nome
+    "foto": {+/wp/info/image media: true}
+    "tipo": /wp/info/tipo
+    "nazionalita": /wp/info/nazionalita
+    "status": /wp/info/status
+    "nascita": /wp/info/nascita
+    "morte": /wp/info/morte
+    "scelta": /wp/info/scelta
+    "primo_lancio": /wp/info/primo_lancio
+    "ultimo_atterraggio": /wp/info/ultimo_atterraggio
+    "altra_occupazione": /wp/info/altra_occupazione
+    "tempo": /wp/info/tempo
+    "N_EVA": /wp/info/n_eva
+    "durata_EVA": /wp/info/durata_eva
+    "missioni": /wp/info/missioni
+    "ritiro": /wp/info/ritiro
+  }
+}
+
+"Cardinale": {
+  type: "infobox"
+  class: /wp/infobox/cardinale
+  fields: {
+    "nome": /wp/info/nome
+    "immagine": {+/wp/info/image media: true}
+    "larghezza": /wp/info/larghezza
+    "didascalia": /wp/info/caption
+    "stemma": /wp/info/stemma
+    "motto": /wp/info/motto
+    "pseudocardinale": /wp/info/pseudocardinale
+    "titolocard": /wp/info/titolocard
+    "ruoliattuali": /wp/info/ruoliattuali
+    "ruoliricoperti": /wp/info/ruoliricoperti
+    "nato": /wp/info/nato
+    "diacordinato": /wp/info/diacordinato
+    "ordinato": /wp/info/ordinato
+    "creatoprima": /wp/info/creatoprima
+    "nomvescovo": /wp/info/nomvescovo
+    "nomarcivescovo": /wp/info/nomarcivescovo
+    "nompatriarca": /wp/info/nompatriarca
+    "nomepa": /wp/info/nomepa
+    "nomarciepa": /wp/info/nomarciepa
+    "nomabate": /wp/info/nomabate
+    "consacrato": /wp/info/consacrato
+    "arcconsacrato": /wp/info/arcconsacrato
+    "patrconsacrato": /wp/info/patrconsacrato
+    "epaconsacrato": /wp/info/epaconsacrato
+    "arciepaconsacrato": /wp/info/arciepaconsacrato
+    "arcelevato": /wp/info/arcelevato
+    "epaelevato": /wp/info/epaelevato
+    "arciepaelevato": /wp/info/arciepaelevato
+    "patrelevato": /wp/info/patrelevato
+    "creato": /wp/info/creato
+    "pubblicato": /wp/info/pubblicato
+    "creatopseudo": /wp/info/creatopseudo
+    "confermato": /wp/info/confermato
+    "deceduto": /wp/info/deceduto
+    "firma": /wp/info/firma
+  }
+}
+
+"Pornostar": {
+  type: "infobox"
+  class: /wp/infobox/pornostar
+  fields: {
+    "Nome": /wp/info/nome
+    "Sesso": /wp/info/sesso
+    "Nome nascita": /wp/info/nome_nascita
+    "Immagine": {+/wp/info/image media: true}
+    "Didascalia": /wp/info/caption
+    "Nazionalità": /wp/info/nazionalita
+    "Altezza": /wp/info/altezza
+    "Peso": /wp/info/peso
+    "Etnia": /wp/info/etnia
+    "Colore occhi": /wp/info/colore_occhi
+    "Colore capelli": /wp/info/colore_capelli
+    "Seno naturale": /wp/info/seno_naturale
+    "Misure": /wp/info/misure
+    "Note misure": /wp/info/note_misure
+    "Lunghezza pene": /wp/info/lunghezza_pene
+    "Note lunghezza pene": /wp/info/note_lunghezza_pene
+    "Pseudonimi": /wp/info/pseudonimi
+    "Numero film": /wp/info/numero_film
+    "Sito": /wp/info/sito
+  }
+}
+
+"Santo": {
+  type: "infobox"
+  class: /wp/infobox/santo
+  fields: {
+    "nome": /wp/info/nome
+    "sesso": /wp/info/sesso
+    "immagine": {+/wp/info/image media: true}
+    "didascalia": /wp/info/caption
+    "dimensione immagine": /wp/info/dimensione_immagine
+    "note": /wp/info/note
+    "nato": /wp/info/nato
+    "morto": /wp/info/morto
+    "venerato da": /wp/info/venerato_da
+    "beatificazione": /wp/info/beatificazione
+    "canonizzazione": /wp/info/canonizzazione
+    "santuario principale": /wp/info/santuario_principale
+    "ricorrenza": /wp/info/ricorrenza
+    "attributi": /wp/info/attributi
+    "patrono di": /wp/info/patrono_di
+  }
+}
+
+"Vescovo": {
+  type: "infobox"
+  class: /wp/infobox/vescovo
+  fields: {
+    "tipo": /wp/info/tipo
+    "chiesa": /wp/info/chiesa
+    "nome": /wp/info/nome
+    "immagine": {+/wp/info/image media: true}
+    "larghezza": /wp/info/larghezza
+    "didascalia": /wp/info/caption
+    "stemma": /wp/info/stemma
+    "motto": /wp/info/motto
+    "titolo": /wp/info/titolo
+    "ruoliattuali": /wp/info/ruoliattuali
+    "ruoliricoperti": /wp/info/ruoliricoperti
+    "nato": /wp/info/nato
+    "diacordinato": /wp/info/diacordinato
+    "ordinato": /wp/info/ordinato
+    "nomvescovo": /wp/info/nomvescovo
+    "nomarcivescovo": /wp/info/nomarcivescovo
+    "nompatriarca": /wp/info/nompatriarca
+    "nomepa": /wp/info/nomepa
+    "nomarciepa": /wp/info/nomarciepa
+    "nomabate": /wp/info/nomabate
+    "consacrato": /wp/info/consacrato
+    "arcconsacrato": /wp/info/arcconsacrato
+    "patrconsacrato": /wp/info/patrconsacrato
+    "epaconsacrato": /wp/info/epaconsacrato
+    "arciepaconsacrato": /wp/info/arciepaconsacrato
+    "arcelevato": /wp/info/arcelevato
+    "epaelevato": /wp/info/epaelevato
+    "arciepaelevato": /wp/info/arciepaelevato
+    "patrelevato": /wp/info/patrelevato
+    "deceduto": /wp/info/deceduto
+    "firma": /wp/info/firma
+  }
+}
+
+"Papa della Chiesa cattolica": {
+  type: "infobox"
+  class: /wp/infobox/papa_della_chiesa_cattolica
+  fields: {
+    "nome": /wp/info/nome
+    "immagine": {+/wp/info/image media: true}
+    "didascalia": /wp/info/caption
+    "stemma": /wp/info/stemma
+    "titolo": /wp/info/titolo
+    "elezione": /wp/info/elezione
+    "insediamento": /wp/info/insediamento
+    "consacrazione": /wp/info/consacrazione
+    "incoronazione": /wp/info/incoronazione
+    "fine pontificato": /wp/info/fine_pontificato
+    "motto": /wp/info/motto
+    "cardinali": /wp/info/cardinali
+    "predecessore": /wp/info/predecessore
+    "successore": /wp/info/successore
+    "nome nascita": /wp/info/nome_nascita
+    "data di nascita": /wp/info/data_di_nascita
+    "luogo di nascita": /wp/info/luogo_di_nascita
+    "diacordinato": /wp/info/diacordinato
+    "ordinato": /wp/info/ordinato
+    "nomvescovo": /wp/info/nomvescovo
+    "nomarcivescovo": /wp/info/nomarcivescovo
+    "nompatriarca": /wp/info/nompatriarca
+    "consacrato": /wp/info/consacrato
+    "arcconsacrato": /wp/info/arcconsacrato
+    "patrconsacrato": /wp/info/patrconsacrato
+    "arcelevato": /wp/info/arcelevato
+    "patrelevato": /wp/info/patrelevato
+    "creato": /wp/info/creato
+    "pubblicato": /wp/info/pubblicato
+    "data di morte": /wp/info/data_di_morte
+    "luogo di morte": /wp/info/luogo_di_morte
+    "sepoltura": /wp/info/sepoltura
+    "firma": /wp/info/firma
+  }
+}
+
+"Magistrato romano": {
+  type: "infobox"
+  class: /wp/infobox/magistrato_romano
+  fields: {
+    "nome": /wp/info/nome
+    "titolo": /wp/info/titolo
+    "immagine": {+/wp/info/image media: true}
+    "dimensione": /wp/info/dimensione
+    "legenda": /wp/info/legenda
+    "nome completo": /wp/info/nome_completo
+    "inizio regno": /wp/info/inizio_regno
+    "fine regno": /wp/info/fine_regno
+    "tribunicia potestas": /wp/info/tribunicia_potestas
+    "cognomina ex virtute": /wp/info/cognomina_ex_virtute
+    "altrititoli": /wp/info/altrititoli
+    "salutatio imperatoria": /wp/info/salutatio_imperatoria
+    "data di nascita": /wp/info/data_di_nascita
+    "luogo di nascita": /wp/info/luogo_di_nascita
+    "data di morte": /wp/info/data_di_morte
+    "luogo di morte": /wp/info/luogo_di_morte
+    "sepoltura": /wp/info/sepoltura
+    "predecessore": /wp/info/predecessore
+    "erede": /wp/info/erede
+    "successore": /wp/info/successore
+    "consorte": /wp/info/consorte
+    "coniuge 1": /wp/info/coniuge_1
+    "coniuge 2": /wp/info/coniuge_2
+    "coniuge 3": /wp/info/coniuge_3
+    "coniuge 4": /wp/info/coniuge_4
+    "coniuge 5": /wp/info/coniuge_5
+    "figli": /wp/info/figli
+    "Gens": /wp/info/gens
+    "Gens2": /wp/info/gens2
+    "dinastia": /wp/info/dinastia
+    "padre": /wp/info/padre
+    "madre": /wp/info/madre
+    "tribuno militare": /wp/info/tribuno_militare
+    "questura": /wp/info/questura
+    "tribunato consolare": /wp/info/tribunato_consolare
+    "vigintivirato": /wp/info/vigintivirato
+    "edilità": /wp/info/edilita
+    "tribunato della plebe": /wp/info/tribunato_della_plebe
+    "pretura": /wp/info/pretura
+    "legatus_legionis": /wp/info/legatus_legionis
+    "propretura": /wp/info/propretura
+    "consolato": /wp/info/consolato
+    "proconsolato": /wp/info/proconsolato
+    "procurator_augusti": /wp/info/procurator_augusti
+    "legatus_augusti": /wp/info/legatus_augusti
+    "censura": /wp/info/censura
+    "dittatura": /wp/info/dittatura
+    "magister equitum": /wp/info/magister_equitum
+    "princeps senatus": /wp/info/princeps_senatus
+    "curatore": /wp/info/curatore
+    "prefetto": /wp/info/prefetto
+    "procuratore": /wp/info/procuratore
+    "pontificato massimo": /wp/info/pontificato_massimo
+    "carica religiosa": /wp/info/carica_religiosa
+  }
+}
+
+"Monarca": {
+  type: "infobox"
+  class: /wp/infobox/monarca
+  fields: {
+    "nome": /wp/info/nome
+    "immagine": {+/wp/info/image media: true}
+    "legenda": /wp/info/legenda
+    "stemma": /wp/info/stemma
+    "titolo": /wp/info/titolo
+    "sottotitolo": /wp/info/sottotitolo
+    "regno": /wp/info/regno
+    "inizio regno": /wp/info/inizio_regno
+    "fine regno": /wp/info/fine_regno
+    "incoronazione": /wp/info/incoronazione
+    "investitura": /wp/info/investitura
+    "predecessore": /wp/info/predecessore
+    "erede": /wp/info/erede
+    "successore": /wp/info/successore
+    "nome completo": /wp/info/nome_completo
+    "trattamento": /wp/info/trattamento
+    "onorificenze": /wp/info/onorificenze
+    "nome templare": /wp/info/nome_templare
+    "nomi postumi": /wp/info/nomi_postumi
+    "altrititoli": /wp/info/altrititoli
+    "data di nascita": /wp/info/data_di_nascita
+    "luogo di nascita": /wp/info/luogo_di_nascita
+    "data di morte": /wp/info/data_di_morte
+    "luogo di morte": /wp/info/luogo_di_morte
+    "sepoltura": /wp/info/sepoltura
+    "luogo di sepoltura": /wp/info/luogo_di_sepoltura
+    "casa reale": /wp/info/casa_reale
+    "dinastia": /wp/info/dinastia
+    "padre": /wp/info/padre
+    "madre": /wp/info/madre
+    "consorte": /wp/info/consorte
+    "consortedi": /wp/info/consortedi
+    "consorte1": /wp/info/consorte1
+    "consorte2": /wp/info/consorte2
+    "consorte3": /wp/info/consorte3
+    "consorte4": /wp/info/consorte4
+    "consorte5": /wp/info/consorte5
+    "consortedi1": /wp/info/consortedi1
+    "consortedi2": /wp/info/consortedi2
+    "consortedi3": /wp/info/consortedi3
+    "consortedi4": /wp/info/consortedi4
+    "consortedi5": /wp/info/consortedi5
+    "figli": /wp/info/figli
+    "religione": /wp/info/religione
+    "motto reale": /wp/info/motto_reale
+    "firma": /wp/info/firma
+  }
+}
+
+"Titolo nobiliare": {
+  type: "infobox"
+  class: /wp/infobox/titolo_nobiliare
+  fields: {
+    "titolo": /wp/info/titolo
+    "stemma": /wp/info/stemma
+    "didascalia": /wp/info/didascalia
+    "data creazione": /wp/info/data_creazione
+    "creato da": /wp/info/creato_da
+    "parìa": /wp/info/paria
+    "primo detentore": /wp/info/primo_detentore
+    "attuale detentore": /wp/info/attuale_detentore
+    "ultimo detentore": /wp/info/ultimo_detentore
+    "cronologia": /wp/info/cronologia
+    "data estinzione": /wp/info/data_estinzione
+    "confluito in": /wp/info/confluito_in
+    "trasmissione": /wp/info/trasmissione
+    "titoli sussidiari": /wp/info/titoli_sussidiari
+    "predicato d'onore": /wp/info/predicato_d_onore
+    "origine famiglia": /wp/info/origine_famiglia
+    "rami": /wp/info/rami
+    "feudi": /wp/info/feudi
+    "dimore": /wp/info/dimore
+  }
+}
+
 }
 

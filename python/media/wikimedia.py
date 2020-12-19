@@ -271,7 +271,7 @@ class WikiMediaWorkflow:
 def extract_wikimedia():
   for language in flags.arg.languages:
     log.info("Extract " + language + " Wikipedia images")
-    wf = WikiMediaWorkflow(language + "wikimedia")
+    wf = WikiMediaWorkflow(language + "-wikimedia")
     wf.extract_media(language=language)
     run(wf.wf)
 

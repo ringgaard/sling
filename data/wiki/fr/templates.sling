@@ -27,5 +27,2793 @@
 "date de décès-": {type: "date" year: 3 month: 2 day: 1 qual: 4 format: /w/dates/fr}
 "existe depuis": {type: "date" year: 3 month: 2 day: 1 format: /w/dates/fr}
 
+"Infobox Biographie": {
+  type: "infobox"
+  class: /wp/infobox/biographie
+  fields: {
+    "entete": /wp/info/entete
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "upright": /wp/info/upright
+    "graphie originale": /wp/info/graphie_originale
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "qualificatif date": /wp/info/qualificatif_date
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "pays de résidence": /wp/info/pays_de_residence
+    "diplôme": /wp/info/diplome
+    "profession": /wp/info/profession
+    "activités": /wp/info/activites
+    "autres activités": /wp/info/autres_activites
+    "formation": /wp/info/formation
+    "hommage": /wp/info/hommage
+    "ascendants": /wp/info/ascendants
+    "conjoint": /wp/info/conjoint
+    "descendants": /wp/info/descendants
+    "famille": /wp/info/famille
+    "notes": /wp/info/notes
+    "signature": /wp/info/signature
+    "emblème": /wp/info/embleme
+    "légende emblème": /wp/info/legende_embleme
+  }
+}
+
+"Infobox Artiste": {
+  type: "infobox"
+  class: /wp/infobox/artiste
+  fields: {
+    "nom": /wp/info/nom
+    "autres noms": /wp/info/autres_noms
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "activités": /wp/info/activites
+    "autres activités": /wp/info/autres_activites
+    "formation": /wp/info/formation
+    "maîtres": /wp/info/maitres
+    "élèves": /wp/info/eleves
+    "mouvement": /wp/info/mouvement
+    "mécènes": /wp/info/mecenes
+    "parentèle": /wp/info/parentele
+    "influencé par": /wp/info/influence_par
+    "influence de": /wp/info/influence_de
+    "récompenses": /wp/info/recompenses
+    "œuvres principales": /wp/info/auvres_principales
+    "compléments": /wp/info/complements
+    "signature": /wp/info/signature
+    "distinction": /wp/info/distinction
+  }
+}
+
+"Infobox Animateur audiovisuel": {
+  type: "infobox"
+  class: /wp/infobox/animateur_audiovisuel
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "prononciation": /wp/info/prononciation
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "lieu de résidence": /wp/info/lieu_de_residence
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "langues": /wp/info/langues
+    "conjoint": /wp/info/conjoint
+    "période active": /wp/info/periode_active
+    "émissions": /wp/info/emissions
+    "radio": /wp/info/radio
+    "chaînes": /wp/info/chaines
+    "site web": /wp/info/site_web
+  }
+}
+
+"Infobox Architecte": {
+  type: "infobox"
+  class: /wp/infobox/architecte
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "mouvement": /wp/info/mouvement
+    "diplôme": /wp/info/diplome
+    "formation": /wp/info/formation
+    "élèves": /wp/info/eleves
+    "activités": /wp/info/activites
+    "agence": /wp/info/agence
+    "réalisations": /wp/info/realisations
+    "projets": /wp/info/projets
+    "distinctions": /wp/info/distinctions
+    "publications": /wp/info/publications
+    "père": /wp/info/pere
+    "mère": /wp/info/mere
+    "famille": /wp/info/famille
+    "complément": /wp/info/complement
+  }
+}
+
+"Infobox Cinéma (personnalité)": {
+  type: "infobox"
+  class: /wp/infobox/cinema_personnalite
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "upright": /wp/info/upright
+    "légende": /wp/info/caption
+    "alternative": /wp/info/alternative
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "profession": /wp/info/profession
+    "films notables": /wp/info/films_notables
+    "séries notables": /wp/info/series_notables
+    "site web": /wp/info/site_web
+  }
+}
+
+"Infobox Écrivain": {
+  type: "infobox"
+  class: /wp/infobox/ecrivain
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "activités": /wp/info/activites
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "langue": /wp/info/langue
+    "mouvement": /wp/info/mouvement
+    "genre": /wp/info/genre
+    "distinctions": /wp/info/distinctions
+    "adjectifs dérivés": /wp/info/adjectifs_derives
+    "œuvres principales": /wp/info/auvres_principales
+    "complément": /wp/info/complement
+    "signature": /wp/info/signature
+  }
+}
+
+"Infobox Musique (artiste)": {
+  type: "infobox"
+  class: /wp/infobox/musique_artiste
+  fields: {
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "upright": /wp/info/upright
+    "légende": /wp/info/caption
+    "alt": /wp/info/alt
+    "surnom": /wp/info/surnom
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "profession": /wp/info/profession
+    "profession autre": /wp/info/profession_autre
+    "genre": /wp/info/genre
+    "instrument": /wp/info/instrument
+    "années actives": /wp/info/annees_actives
+    "label": /wp/info/label
+    "influences": /wp/info/influences
+    "site web": /wp/info/site_web
+    "logo": /wp/info/logo
+    "alternative logo": /wp/info/alternative_logo
+    "pays d'origine": /wp/info/pays_d_origine
+    "membres actuels": /wp/info/membres_actuels
+    "membres additionnels": /wp/info/membres_additionnels
+    "ex membres": /wp/info/ex_membres
+  }
+}
+
+"Infobox Musique classique (personnalité)": {
+  type: "infobox"
+  class: /wp/infobox/musique_classique_personnalite
+  fields: {
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "nom autre": /wp/info/nom_autre
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "alt": /wp/info/alt
+    "surnom": /wp/info/surnom
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "lieux de résidence": /wp/info/lieux_de_residence
+    "activité principale": /wp/info/activite_principale
+    "tessiture": /wp/info/tessiture
+    "style": /wp/info/style
+    "genre": /wp/info/genre
+    "activités autres": /wp/info/activites_autres
+    "lieux d'activité": /wp/info/lieux_d'activite
+    "années actives": /wp/info/annees_actives
+    "collaborations": /wp/info/collaborations
+    "éditeurs": /wp/info/editeurs
+    "formation": /wp/info/formation
+    "maîtres": /wp/info/maitres
+    "enseignement": /wp/info/enseignement
+    "élèves": /wp/info/eleves
+    "ascendants": /wp/info/ascendants
+    "conjoints": /wp/info/conjoints
+    "descendants": /wp/info/descendants
+    "famille": /wp/info/famille
+    "récompenses": /wp/info/recompenses
+    "distinctions": /wp/info/distinctions
+    "web": /wp/info/web
+    "œuvres": /wp/info/auvres
+    "répertoire": /wp/info/repertoire
+    "scènes": /wp/info/scenes
+    "signature": /wp/info/signature
+    "légende signature": /wp/info/legende_signature
+  }
+}
+
+"Infobox Playboy Playmate": {
+  type: "infobox"
+  class: /wp/infobox/playboy_playmate
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "mois": /wp/info/mois
+    "précédente": /wp/info/precedente
+    "précédente lien": /wp/info/precedente_lien
+    "suivante": /wp/info/suivante
+    "suivante lien": /wp/info/suivante_lien
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "pda-année": /wp/info/pda-annee
+    "pda-précédente": /wp/info/pda-precedente
+    "pda-précédente lien": /wp/info/pda-precedente_lien
+    "pda-suivante": /wp/info/pda-suivante
+    "pda-suivante lien": /wp/info/pda-suivante_lien
+  }
+}
+
+"Infobox Pornographie (personnalité)": {
+  type: "infobox"
+  class: /wp/infobox/pornographie_personnalite
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "nationalité": /wp/info/nationalite
+    "date de mort": /wp/info/date_de_mort
+    "lieu de mort": /wp/info/lieu_de_mort
+    "profession(s)": /wp/info/profession
+    "années d'activité": /wp/info/annees_d_activite
+    "nombre de films": /wp/info/nombre_de_films
+    "films notables": /wp/info/films_notables
+    "conjoint": /wp/info/conjoint
+    "signe(s) particulier(s)": /wp/info/signe_particulier
+    "récompense": /wp/info/recompense
+  }
+}
+
+"Infobox Scientifique": {
+  type: "infobox"
+  class: /wp/infobox/scientifique
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "alt": /wp/info/alt
+    "upright": /wp/info/upright
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "pays de naissance": /wp/info/pays_de_naissance
+    "pays de décès": /wp/info/pays_de_deces
+    "actif": /wp/info/actif
+    "domicile": /wp/info/domicile
+    "domaines": /wp/info/domaines
+    "institutions": /wp/info/institutions
+    "diplôme": /wp/info/diplome
+    "formation": /wp/info/formation
+    "directeur thèse": /wp/info/directeur_these
+    "étudiants thèse": /wp/info/etudiants_these
+    "influencé par": /wp/info/influence_par
+    "a influencé": /wp/info/a_influence
+    "renommé pour": /wp/info/renomme_pour
+    "prix": /wp/info/prix
+    "notes": /wp/info/notes
+    "signature": /wp/info/signature
+    "site": /wp/info/site
+  }
+}
+
+"Infobox Archéologue": {
+  type: "infobox"
+  class: /wp/infobox/archeologue
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "activités": /wp/info/activites
+    "a travaillé pour": /wp/info/a_travaille_pour
+    "responsabilité": /wp/info/responsabilite
+    "domaines": /wp/info/domaines
+    "découvertes": /wp/info/decouvertes
+    "fouilles": /wp/info/fouilles
+    "activités autres": /wp/info/activites_autres
+    "hommage": /wp/info/hommage
+    "distinction": /wp/info/distinction
+    "ascendants": /wp/info/ascendants
+    "conjoint": /wp/info/conjoint
+    "descendants": /wp/info/descendants
+    "famille": /wp/info/famille
+  }
+}
+
+"Infobox Égyptologue": {
+  type: "infobox"
+  class: /wp/infobox/egyptologue
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "surnom": /wp/info/surnom
+    "origine": /wp/info/origine
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "nationalité": /wp/info/nationalite
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "ascendants": /wp/info/ascendants
+    "conjoint": /wp/info/conjoint
+    "descendants": /wp/info/descendants
+    "famille": /wp/info/famille
+    "hommage": /wp/info/hommage
+    "découvertes": /wp/info/decouvertes
+    "expéditions": /wp/info/expeditions
+    "activités autres": /wp/info/activites_autres
+  }
+}
+
+"Infobox Linguiste": {
+  type: "infobox"
+  class: /wp/infobox/linguiste
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "formation": /wp/info/formation
+    "profession": /wp/info/profession
+    "employeur": /wp/info/employeur
+    "tradition linguistique": /wp/info/tradition_linguistique
+    "principaux intérêts": /wp/info/principaux_interets
+    "idées remarquables": /wp/info/idees_remarquables
+    "œuvres principales": /wp/info/auvres_principales
+    "influencé par": /wp/info/influence_par
+    "influence de": /wp/info/influence_de
+    "adjectifs dérivés": /wp/info/adjectifs_derives
+    "signature": /wp/info/signature
+  }
+}
+
+"Infobox Papyrologue": {
+  type: "infobox"
+  class: /wp/infobox/papyrologue
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "surnom": /wp/info/surnom
+    "origine": /wp/info/origine
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "ascendants": /wp/info/ascendants
+    "conjoint": /wp/info/conjoint
+    "descendants": /wp/info/descendants
+    "famille": /wp/info/famille
+    "hommage": /wp/info/hommage
+    "découvertes": /wp/info/decouvertes
+    "activités autres": /wp/info/activites_autres
+  }
+}
+
+"Infobox Personnalité des sciences humaines et sociales": {
+  type: "infobox"
+  class: /wp/infobox/personnalite_des_sciences_humaines_et_sociales
+  fields: {
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "upright": /wp/info/upright
+    "légende": /wp/info/caption
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "qualificatif date": /wp/info/qualificatif_date
+    "nationalité": /wp/info/nationalite
+    "études": /wp/info/etudes
+    "formation": /wp/info/formation
+    "titre": /wp/info/titre
+    "profession": /wp/info/profession
+    "approche": /wp/info/approche
+    "principaux intérêts": /wp/info/principaux_interets
+    "travaux": /wp/info/travaux
+    "idées remarquables": /wp/info/idees_remarquables
+    "œuvres principales": /wp/info/auvres_principales
+    "influencé par": /wp/info/influence_par
+    "partisan": /wp/info/partisan
+    "détracteur": /wp/info/detracteur
+  }
+}
+
+"Infobox Philosophe": {
+  type: "infobox"
+  class: /wp/infobox/philosophe
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "tradition philosophique": /wp/info/tradition_philosophique
+    "principaux intérêts": /wp/info/principaux_interets
+    "œuvres principales": /wp/info/auvres_principales
+    "influencé par": /wp/info/influence_par
+    "a influencé": /wp/info/a_influence
+    "idées remarquables": /wp/info/idees_remarquables
+    "célèbre pour": /wp/info/celebre_pour
+    "citation": /wp/info/citation
+    "adjectifs dérivés": /wp/info/adjectifs_derives
+    "wikidata": /wp/info/wikidata
+    "couleur infobox": /wp/info/couleur_infobox
+  }
+}
+
+"Infobox Personnalité politique": {
+  type: "infobox"
+  class: /wp/infobox/personnalite_politique
+  fields: {
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "fonction1": /wp/info/fonction1
+    "depuis le fonction1": /wp/info/depuis_le_fonction1
+    "à partir du fonction1": /wp/info/a_partir_du_fonction1
+    "jusqu'au fonction1": /wp/info/jusqu_au_fonction1
+    "élection1": /wp/info/election1
+    "réélection1": /wp/info/reelection1
+    "président 1": /wp/info/president_1
+    "premier ministre 1": /wp/info/premier_ministre_1
+    "gouvernement 1": /wp/info/gouvernement_1
+    "circonscription 1": /wp/info/circonscription_1
+    "législature 1": /wp/info/legislature_1
+    "coalition 1": /wp/info/coalition_1
+    "groupe parlementaire 1": /wp/info/groupe_parlementaire_1
+    "commission 1": /wp/info/commission_1
+    "prédécesseur 1": /wp/info/predecesseur_1
+    "successeur 1": /wp/info/successeur_1
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "qualificatif date": /wp/info/qualificatif_date
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nature du décès": /wp/info/nature_du_deces
+    "sépulture": /wp/info/sepulture
+    "nationalité": /wp/info/nationalite
+    "parti": /wp/info/parti
+    "syndicat": /wp/info/syndicat
+    "surnom": /wp/info/surnom
+    "père": /wp/info/pere
+    "mère": /wp/info/mere
+    "fratrie": /wp/info/fratrie
+    "conjoint": /wp/info/conjoint
+    "enfants": /wp/info/enfants
+    "famille": /wp/info/famille
+    "entourage": /wp/info/entourage
+    "université": /wp/info/universite
+    "profession": /wp/info/profession
+    "hommage": /wp/info/hommage
+    "religion": /wp/info/religion
+    "résidence": /wp/info/residence
+    "site web": /wp/info/site_web
+    "signature": /wp/info/signature
+    "taille signature": /wp/info/taille_signature
+    "emblème": /wp/info/embleme
+    "taille emblème": /wp/info/taille_embleme
+    "liste": /wp/info/liste
+    "féminin": /wp/info/feminin
+  }
+}
+
+"Infobox Aristocrate": {
+  type: "infobox"
+  class: /wp/infobox/aristocrate
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "alternative": /wp/info/alternative
+    "dynastie": /wp/info/dynastie
+    "titre1": /wp/info/titre1
+    "début de règne": /wp/info/debut_de_regne
+    "fin de règne": /wp/info/fin_de_regne
+    "prédécesseur": /wp/info/predecesseur
+    "successeur": /wp/info/successeur
+    "titre2": /wp/info/titre2
+    "arme": /wp/info/arme
+    "allégeance": /wp/info/allegeance
+    "grade militaire": /wp/info/grade_militaire
+    "début de carrière": /wp/info/debut_de_carriere
+    "fin de carrière": /wp/info/fin_de_carriere
+    "commandement": /wp/info/commandement
+    "gouvernement militaire": /wp/info/gouvernement_militaire
+    "conflits": /wp/info/conflits
+    "faits d'armes": /wp/info/faits_d'armes
+    "distinctions": /wp/info/distinctions
+    "autres fonctions": /wp/info/autres_fonctions
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "qualificatif date": /wp/info/qualificatif_date
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "père": /wp/info/pere
+    "mère": /wp/info/mere
+    "conjoint": /wp/info/conjoint
+    "liaisons": /wp/info/liaisons
+    "enfants": /wp/info/enfants
+    "signature": /wp/info/signature
+    "ornements extérieurs": /wp/info/ornements_exterieurs
+    "blason": /wp/info/blason
+    "coef blason": /wp/info/coef_blason
+    "taille blason": /wp/info/taille_blason
+  }
+}
+
+"Infobox Aristocrate médiéval": {
+  type: "infobox"
+  class: /wp/infobox/aristocrate_medieval
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "autres noms": /wp/info/autres_noms
+    "dynastie": /wp/info/dynastie
+    "titre1": /wp/info/titre1
+    "début de règne": /wp/info/debut_de_regne
+    "fin de règne": /wp/info/fin_de_regne
+    "prédécesseur": /wp/info/predecesseur
+    "successeur": /wp/info/successeur
+    "titre2": /wp/info/titre2
+    "arme": /wp/info/arme
+    "allégeance": /wp/info/allegeance
+    "souverain": /wp/info/souverain
+    "suzerain": /wp/info/suzerain
+    "grade militaire": /wp/info/grade_militaire
+    "début de carrière": /wp/info/debut_de_carriere
+    "fin de carrière": /wp/info/fin_de_carriere
+    "commandement": /wp/info/commandement
+    "investiture": /wp/info/investiture
+    "conflits": /wp/info/conflits
+    "faits d'armes": /wp/info/faits_d'armes
+    "distinctions": /wp/info/distinctions
+    "autres fonctions": /wp/info/autres_fonctions
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "âge au décès": /wp/info/age_au_deces
+    "père": /wp/info/pere
+    "mère": /wp/info/mere
+    "conjoint": /wp/info/conjoint
+    "liaisons": /wp/info/liaisons
+    "enfants": /wp/info/enfants
+    "famille": /wp/info/famille
+    "vassaux": /wp/info/vassaux
+    "alliés": /wp/info/allies
+    "adversaires": /wp/info/adversaires
+    "signature": /wp/info/signature
+    "ornements extérieurs": /wp/info/ornements_exterieurs
+    "blason": /wp/info/blason
+    "coef blason": /wp/info/coef_blason
+    "taille blason": /wp/info/taille_blason
+    "commentaire": /wp/info/commentaire
+  }
+}
+
+"Infobox Conjoint politique": {
+  type: "infobox"
+  class: /wp/infobox/conjoint_politique
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "statut": /wp/info/statut
+    "début": /wp/info/debut
+    "fin": /wp/info/fin
+    "conjoint": /wp/info/conjoint
+    "prédécesseur": /wp/info/predecesseur
+    "successeur": /wp/info/successeur
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "père": /wp/info/pere
+    "mère": /wp/info/mere
+    "descendance": /wp/info/descendance
+    "université": /wp/info/universite
+    "profession": /wp/info/profession
+    "religion": /wp/info/religion
+  }
+}
+
+"Infobox Militant": {
+  type: "infobox"
+  class: /wp/infobox/militant
+  fields: {
+    "nom": /wp/info/nom
+    "autres noms": /wp/info/autres_noms
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "première incarcération": /wp/info/premiere_incarceration
+    "lieu d'incarcération": /wp/info/lieu_d'incarceration
+    "origine": /wp/info/origine
+    "allégeance": /wp/info/allegeance
+    "cause défendue": /wp/info/cause_defendue
+    "type de militance": /wp/info/type_de_militance
+    "début de carrière": /wp/info/debut_de_carriere
+    "fin de carrière": /wp/info/fin_de_carriere
+    "conflit": /wp/info/conflit
+    "commandement": /wp/info/commandement
+    "hommages": /wp/info/hommages
+    "autres fonctions": /wp/info/autres_fonctions
+    "famille": /wp/info/famille
+  }
+}
+
+"Infobox Explorateur": {
+  type: "infobox"
+  class: /wp/infobox/explorateur
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "alternative": /wp/info/alternative
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "âge au décès": /wp/info/age_au_deces
+    "nationalité": /wp/info/nationalite
+    "famille": /wp/info/famille
+    "découvertes": /wp/info/decouvertes
+    "pays employeurs": /wp/info/pays_employeurs
+    "bâtiments": /wp/info/batiments
+    "première expédition": /wp/info/premiere_expedition
+    "dernière expédition": /wp/info/derniere_expedition
+    "distinctions": /wp/info/distinctions
+    "hommage": /wp/info/hommage
+    "activités autres": /wp/info/activites_autres
+  }
+}
+
+"Infobox Joueur de go": {
+  type: "infobox"
+  class: /wp/infobox/joueur_de_go
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "surnom": /wp/info/surnom
+    "kanji": /wp/info/kanji
+    "kana": /wp/info/kana
+    "hangul": /wp/info/hangul
+    "hanja": /wp/info/hanja
+    "chinois": /wp/info/chinois
+    "pinyin": /wp/info/pinyin
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "lieu de résidence": /wp/info/lieu_de_residence
+    "maîtres": /wp/info/maitres
+    "élèves": /wp/info/eleves
+    "1ere partie pro": /wp/info/1ere_partie_pro
+    "retraite": /wp/info/retraite
+    "classement": /wp/info/classement
+    "affiliation": /wp/info/affiliation
+  }
+}
+
+"Infobox Joueur de poker": {
+  type: "infobox"
+  class: /wp/infobox/joueur_de_poker
+  fields: {
+    "prénom": /wp/info/prenom
+    "nom": /wp/info/nom
+    "surnom": /wp/info/surnom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "lieu de résidence": /wp/info/lieu_de_residence
+    "meilleur gain": /wp/info/meilleur_gain
+    "total gains": /wp/info/total_gains
+    "nombre de bracelets wsop": /wp/info/nombre_de_bracelets_wsop
+    "nombre de ITM wsop": /wp/info/nombre_de_itm_wsop
+    "meilleur rang atteint au main event wsop": /wp/info/meilleur_rang_atteint_au_main_event_wsop
+    "meilleur année atteint au main event wsop": /wp/info/meilleur_annee_atteint_au_main_event_wsop
+    "meilleure année multiple wsop": /wp/info/meilleure_annee_multiple_wsop
+    "année de victoire multiple wsop": /wp/info/annee_de_victoire_multiple_wsop
+    "titres wpt": /wp/info/titres_wpt
+    "nombre de table finale wpt": /wp/info/nombre_de_table_finale_wpt
+    "nombre de ITM wpt": /wp/info/nombre_de_itm_wpt
+    "titres ept": /wp/info/titres_ept
+    "nombre de table finale ept": /wp/info/nombre_de_table_finale_ept
+    "nombre de ITM ept": /wp/info/nombre_de_itm_ept
+    "date de mise à jour": /wp/info/date_de_mise_a_jour
+  }
+}
+
+"Infobox Journaliste": {
+  type: "infobox"
+  class: /wp/infobox/journaliste
+  fields: {
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "alternative": /wp/info/alternative
+    "surnom": /wp/info/surnom
+    "prononciation": /wp/info/prononciation
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "profession": /wp/info/profession
+    "spécialité": /wp/info/specialite
+    "autres activités": /wp/info/autres_activites
+    "années actives": /wp/info/annees_actives
+    "récompenses": /wp/info/recompenses
+    "distinctions": /wp/info/distinctions
+    "web": /wp/info/web
+    "pays": /wp/info/pays
+    "média": /wp/info/media
+    "fonction": /wp/info/fonction
+    "presse écrite": /wp/info/presse_ecrite
+    "radio": /wp/info/radio
+    "télévision": /wp/info/television
+    "autres médias": /wp/info/autres_medias
+  }
+}
+
+"Infobox Mannequin": {
+  type: "infobox"
+  class: /wp/infobox/mannequin
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "nationalité": /wp/info/nationalite
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "cheveux": /wp/info/cheveux
+    "yeux": /wp/info/yeux
+    "taille": /wp/info/taille
+    "mensurations": /wp/info/mensurations
+    "poids": /wp/info/poids
+    "vêtements": /wp/info/vetements
+    "pointure": /wp/info/pointure
+    "formation": /wp/info/formation
+    "période active": /wp/info/periode_active
+    "agence": /wp/info/agence
+    "marques": /wp/info/marques
+    "distinctions": /wp/info/distinctions
+    "site officiel": /wp/info/site_officiel
+  }
+}
+
+"Infobox Miss": {
+  type: "infobox"
+  class: /wp/infobox/miss
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "pays": /wp/info/pays
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "formation": /wp/info/formation
+    "site web": /wp/info/site_web
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "cheveux": /wp/info/cheveux
+    "yeux": /wp/info/yeux
+    "vêtements": /wp/info/vetements
+    "pointure": /wp/info/pointure
+    "concours1": /wp/info/concours1
+    "date1": /wp/info/date1
+    "prédécesseur1": /wp/info/predecesseur1
+    "successeur1": /wp/info/successeur1
+    "concours10": /wp/info/concours10
+    "date10": /wp/info/date10
+    "prédécesseur10": /wp/info/predecesseur10
+    "successeur10": /wp/info/successeur10
+  }
+}
+
+"Infobox Personnalité militaire": {
+  type: "infobox"
+  class: /wp/infobox/personnalite_militaire
+  fields: {
+    "nom": /wp/info/nom
+    "nom autre": /wp/info/nom_autre
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "surnom": /wp/info/surnom
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "date mort au combat": /wp/info/date_mort_au_combat
+    "lieu mort au combat": /wp/info/lieu_mort_au_combat
+    "âge au décès": /wp/info/age_au_deces
+    "origine": /wp/info/origine
+    "allégeance": /wp/info/allegeance
+    "grade": /wp/info/grade
+    "arme": /wp/info/arme
+    "unité": /wp/info/unite
+    "début de carrière": /wp/info/debut_de_carriere
+    "fin de carrière": /wp/info/fin_de_carriere
+    "commandement": /wp/info/commandement
+    "conflit": /wp/info/conflit
+    "faits d'armes": /wp/info/faits_d'armes
+    "distinctions": /wp/info/distinctions
+    "hommages": /wp/info/hommages
+    "autres fonctions": /wp/info/autres_fonctions
+    "famille": /wp/info/famille
+    "signature": /wp/info/signature
+    "emblème": /wp/info/embleme
+    "liste": /wp/info/liste
+  }
+}
+
+"Infobox Vidéaste web": {
+  type: "infobox"
+  class: /wp/infobox/videaste_web
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "genre": /wp/info/genre
+    "créateur": /wp/info/createur
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "nationalité": /wp/info/nationalite
+    "vidéos populaires": /wp/info/videos_populaires
+    "abonnés": /wp/info/abonnes
+    "autres activités": /wp/info/autres_activites
+    "site internet": /wp/info/site_internet
+    "chaîne": /wp/info/chaine
+    "chaîne secondaire": /wp/info/chaine_secondaire
+  }
+}
+
+"Infobox Société": {
+  type: "infobox"
+  class: /wp/infobox/societe
+  fields: {
+    "couleur boîte": /wp/info/couleur_boite
+    "titre blanc": /wp/info/titre_blanc
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "taille logo": /wp/info/taille_logo
+    "alt": /wp/info/alt
+    "légende logo": /wp/info/logo_caption
+    "logo 2": /wp/info/logo_2
+    "taille logo 2": /wp/info/taille_logo_2
+    "alt 2": /wp/info/alt_2
+    "légende logo 2": /wp/info/legende_logo_2
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "alt image": /wp/info/alt_image
+    "légende image": /wp/info/caption
+    "slogan": /wp/info/slogan
+    "forme juridique": /wp/info/forme_juridique
+    "action": /wp/info/action
+    "date de création": /wp/info/date_de_creation
+    "date de disparition": /wp/info/date_de_disparition
+    "dates-clés": /wp/info/dates-cles
+    "fondateur": /wp/info/fondateur
+    "personnages-clés": /wp/info/personnages-cles
+    "drapeau": /wp/info/drapeau
+    "siège (ville)": /wp/info/siege_ville
+    "siège (pays)": /wp/info/siege_pays
+    "direction actuelle": /wp/info/direction_actuelle
+    "Présidents": /wp/info/presidents
+    "Directeurs": /wp/info/directeurs
+    "secteurs d'activités": /wp/info/secteurs_d_activites
+    "produits": /wp/info/produits
+    "société mère": /wp/info/societe_mere
+    "société sœur": /wp/info/societe_saur
+    "filiales": /wp/info/filiales
+    "Partenaires": /wp/info/partenaires
+    "actionnaires": /wp/info/actionnaires
+    "sociétaires": /wp/info/societaires
+    "effectif": /wp/info/effectif
+    "SIREN": /wp/info/siren
+    "chiffre d'affaires": /wp/info/chiffre_d'affaires
+    "évolution du CA": /wp/info/evolution_du_ca
+    "actifs sous gestion (banques)": /wp/info/actifs_sous_gestion_banques
+    "somme du bilan (banques)": /wp/info/somme_du_bilan_banques
+    "primes brut (assurances)": /wp/info/primes_brut_assurances
+    "résultat net": /wp/info/resultat_net
+    "évolution du résultat net": /wp/info/evolution_du_resultat_net
+    "fonds propres": /wp/info/fonds_propres
+    "dette": /wp/info/dette
+    "capitalisation boursière": /wp/info/capitalisation_boursiere
+    "site web": /wp/info/site_web
+    "rémunération": /wp/info/remuneration
+    "société précédente": /wp/info/societe_precedente
+    "société suivante": /wp/info/societe_suivante
+  }
+}
+"Infobox Organisation": {
+  type: "infobox"
+  class: /wp/infobox/organisation
+  fields: {
+    "entête": /wp/info/entete
+    "couleur boîte": /wp/info/couleur_boite
+    "texte noir": /wp/info/texte_noir
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "alt": /wp/info/alt
+    "carte": /wp/info/carte
+    "taille carte": /wp/info/taille_carte
+    "légende carte": /wp/info/legende_carte
+    "devise": /wp/info/devise
+    "région": /wp/info/region
+    "création": /wp/info/creation
+    "dissolution": /wp/info/dissolution
+    "changement de nom": /wp/info/changement_de_nom
+    "ancien nom": /wp/info/ancien_nom
+    "type": /wp/info/type
+    "domaine": /wp/info/domaine
+    "siège": /wp/info/siege
+    "titre siège": /wp/info/titre_siege
+    "latitude": /wp/info/latitude
+    "longitude": /wp/info/longitude
+    "géolocalisation": /wp/info/geolocalisation
+    "langue": /wp/info/langue
+    "budget": /wp/info/budget
+    "membre": /wp/info/membre
+    "effectifs": /wp/info/effectifs
+    "dirigeant": /wp/info/dirigeant
+    "titre dirigeant": /wp/info/titre_dirigeant
+    "dirigeant2": /wp/info/dirigeant2
+    "titre dirigeant2": /wp/info/titre_dirigeant2
+    "dirigeant3": /wp/info/dirigeant3
+    "titre dirigeant3": /wp/info/titre_dirigeant3
+    "personne clé": /wp/info/personne_cle
+    "option-1": /wp/info/option-1
+    "valeur-1": /wp/info/valeur-1
+    "option-2": /wp/info/option-2
+    "valeur-2": /wp/info/valeur-2
+    "option-3": /wp/info/option-3
+    "valeur-3": /wp/info/valeur-3
+    "option-4": /wp/info/option-4
+    "valeur-4": /wp/info/valeur-4
+    "option-5": /wp/info/option-5
+    "valeur-5": /wp/info/valeur-5
+    "option-6": /wp/info/option-6
+    "valeur-6": /wp/info/valeur-6
+    "affiliation": /wp/info/affiliation
+    "dépend de": /wp/info/depend_de
+    "site web": /wp/info/site_web
+    "a remplacé": /wp/info/a_remplace
+    "remplacé par": /wp/info/remplace_par
+  }
+}
+
+"Infobox Association": {
+  type: "infobox"
+  class: /wp/infobox/association
+  fields: {
+    "couleur boîte": /wp/info/couleur_boite
+    "texte noir": /wp/info/texte_noir
+    "association_nom": /wp/info/association_nom
+    "association_logo": {+/wp/info/logo media: true}
+    "légende": /wp/info/logo_caption
+    "upright": /wp/info/upright
+    "association_type": /wp/info/association_type
+    "but": /wp/info/but
+    "zone d'influence": /wp/info/zone_d'influence
+    "date_de_fondation": /wp/info/date_de_fondation
+    "fondateur": /wp/info/fondateur
+    "fondatrice": /wp/info/fondatrice
+    "fondateurs": /wp/info/fondateurs
+    "origine": /wp/info/origine
+    "scission de": /wp/info/scission_de
+    "fusion de": /wp/info/fusion_de
+    "siege": /wp/info/siege
+    "structure": /wp/info/structure
+    "personnage_clef": /wp/info/personnage_clef
+    "president": /wp/info/president
+    "presidente": /wp/info/presidente
+    "vice-president": /wp/info/vice-president
+    "vice-presidente": /wp/info/vice-presidente
+    "vice-presidents": /wp/info/vice-presidents
+    "secretaire_general": /wp/info/secretaire_general
+    "secretaire_generale": /wp/info/secretaire_generale
+    "directeur_general": /wp/info/directeur_general
+    "secretaire": /wp/info/secretaire
+    "delegue_general": /wp/info/delegue_general
+    "tresorier": /wp/info/tresorier
+    "tresoriere": /wp/info/tresoriere
+    "membre_bureau": /wp/info/membre_bureau
+    "intitule_fonction1": /wp/info/intitule_fonction1
+    "fonction1": /wp/info/fonction1
+    "intitule_fonction2": /wp/info/intitule_fonction2
+    "fonction2": /wp/info/fonction2
+    "intitule_fonction3": /wp/info/intitule_fonction3
+    "fonction3": /wp/info/fonction3
+    "intitule_fonction4": /wp/info/intitule_fonction4
+    "fonction4": /wp/info/fonction4
+    "intitule_fonction5": /wp/info/intitule_fonction5
+    "fonction5": /wp/info/fonction5
+    "affiliation": /wp/info/affiliation
+    "affiliation_europeenne": /wp/info/affiliation_europeenne
+    "affiliation_internationale": /wp/info/affiliation_internationale
+    "methode": /wp/info/methode
+    "financement": /wp/info/financement
+    "fonds_de_dotation": /wp/info/fonds_de_dotation
+    "nombre_volontaires": /wp/info/nombre_volontaires
+    "nombre_membres": /wp/info/nombre_membres
+    "nombre_benevoles": /wp/info/nombre_benevoles
+    "nombre_employes": /wp/info/nombre_employes
+    "representativite": /wp/info/representativite
+    "publication": /wp/info/publication
+    "publications": /wp/info/publications
+    "association_slogan": /wp/info/association_slogan
+    "site": /wp/info/site
+    "dissolution": /wp/info/dissolution
+    "fusionne_dans": /wp/info/fusionne_dans
+    "notes": /wp/info/notes
+    "date de mise à jour": /wp/info/date_de_mise_a_jour
+  }
+}
+
+"Infobox Organisation criminelle": {
+  type: "infobox"
+  class: /wp/infobox/organisation_criminelle
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "date fondation": /wp/info/date_fondation
+    "fondé par": /wp/info/fonde_par
+    "lieu": /wp/info/lieu
+    "territoire": /wp/info/territoire
+    "année active": /wp/info/annee_active
+    "ethnies": /wp/info/ethnies
+    "nbre membres": /wp/info/nbre_membres
+    "activités criminelles": /wp/info/activites_criminelles
+    "alliés": /wp/info/allies
+    "rivaux": /wp/info/rivaux
+    "siteweb": /wp/info/siteweb
+  }
+}
+
+"Infobox Faction armée": {
+  type: "infobox"
+  class: /wp/infobox/faction_armee
+  fields: {
+    "nom": /wp/info/nom
+    "alias": /wp/info/alias
+    "image": {+/wp/info/image media: true}
+    "devise": /wp/info/devise
+    "conflit": /wp/info/conflit
+    "idéologie": /wp/info/ideologie
+    "positionnement": /wp/info/positionnement
+    "objectifs": /wp/info/objectifs
+    "statut": /wp/info/statut
+    "site web": /wp/info/site_web
+    "date_formation": /wp/info/date_formation
+    "origine": /wp/info/origine
+    "pays_origine": /wp/info/pays_origine
+    "fondé par": /wp/info/fonde_par
+    "scission de": /wp/info/scission_de
+    "fusion de": /wp/info/fusion_de
+    "date_dissolution": /wp/info/date_dissolution
+    "causes_dissolution": /wp/info/causes_dissolution
+    "scission dans": /wp/info/scission_dans
+    "fusionné dans": /wp/info/fusionne_dans
+    "mode opératoire": /wp/info/mode_operatoire
+    "nombre d'attaques imputées": /wp/info/nombre_d_attaques_imputees
+    "victimes": /wp/info/victimes
+    "zone_operation": /wp/info/zone_operation
+    "période d'activité": /wp/info/periode_d_activite
+    "chefs": /wp/info/chefs
+    "nombre": /wp/info/nombre
+    "allégeance": /wp/info/allegeance
+    "faitpartie": /wp/info/faitpartie
+    "enfaitpartie": /wp/info/enfaitpartie
+    "branche politique": /wp/info/branche_politique
+    "sources-financières": /wp/info/sources-financieres
+    "sanctuaire": /wp/info/sanctuaire
+    "groupes-reliés": /wp/info/groupes-relies
+    "soutenu par": /wp/info/soutenu_par
+    "nombre de prisonniers": /wp/info/nombre_de_prisonniers
+    "considéré comme terroriste par": /wp/info/considere_comme_terroriste_par
+    "emblème": /wp/info/embleme
+    "drapeau": /wp/info/drapeau
+  }
+}
+
+"Infobox Fédération sportive": {
+  type: "infobox"
+  class: /wp/infobox/federation_sportive
+  fields: {
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "nom officiel": /wp/info/nom_officiel
+    "sigle": /wp/info/sigle
+    "logo": {+/wp/info/logo media: true}
+    "taille logo": /wp/info/taille_logo
+    "légende": /wp/info/logo_caption
+    "alternative": /wp/info/alternative
+    "noms précédents": /wp/info/noms_precedents
+    "sport": /wp/info/sport
+    "création": /wp/info/creation
+    "disparition": /wp/info/disparition
+    "président": /wp/info/president
+    "siège": /wp/info/siege
+    "affiliation": /wp/info/affiliation
+    "nations": /wp/info/nations
+    "clubs": /wp/info/clubs
+    "licenciés": /wp/info/licencies
+    "siteweb": /wp/info/siteweb
+  }
+}
+
+"Infobox Parlement": {
+  type: "infobox"
+  class: /wp/infobox/parlement
+  fields: {
+    "nom": /wp/info/nom
+    "date de début": /wp/info/date_de_debut
+    "date de fin": /wp/info/date_de_fin
+    "durée": /wp/info/duree
+    "drapeau": /wp/info/drapeau
+    "blason": /wp/info/blason
+    "légende": /wp/info/legende
+    "upright": /wp/info/upright
+    "titre infos": /wp/info/titre_infos
+    "type": /wp/info/type
+    "créateur": /wp/info/createur
+    "règne": /wp/info/regne
+    "convocateur": /wp/info/convocateur
+    "date de convocation": /wp/info/date_de_convocation
+    "cause création": /wp/info/cause_creation
+    "titre autre organe": /wp/info/titre_autre_organe
+    "autre organe": /wp/info/autre_organe
+    "titre parlement": /wp/info/titre_parlement
+    "parlement": /wp/info/parlement
+    "lieu": /wp/info/lieu
+    "type texte": /wp/info/type_texte
+    "texte fondamental": /wp/info/texte_fondamental
+    "type régime": /wp/info/type_regime
+    "régime": /wp/info/regime
+    "type chef état": /wp/info/type_chef_etat
+    "chef de l'état": /wp/info/chef_de_l_etat
+    "titre élections": /wp/info/titre_elections
+    "cause": /wp/info/cause
+    "type mode": /wp/info/type_mode
+    "mode élection": /wp/info/mode_election
+    "nom datelec1": /wp/info/nom_datelec1
+    "datelec1": /wp/info/datelec1
+    "": /wp/info/
+    "type lég": /wp/info/type_leg
+    "nlégislatures": /wp/info/nlegislatures
+    "nomlistepdt": /wp/info/nomlistepdt
+    "nompdt1": /wp/info/nompdt1
+    "pdt1": /wp/info/pdt1
+    "titre composition": /wp/info/titre_composition
+    "type pdéputés": /wp/info/type_pdeputes
+    "pdéputés": /wp/info/pdeputes
+    "nom nb": /wp/info/nom_nb
+    "ndéputés": /wp/info/ndeputes
+    "section": /wp/info/section
+    "imagech": /wp/info/imagech
+    "légendech": /wp/info/legendech
+    "groupes": /wp/info/groupes
+    "titre chambre basse": /wp/info/titre_chambre_basse
+    "type chambre basse": /wp/info/type_chambre_basse
+    "chambre basse": /wp/info/chambre_basse
+    "nom pdt chambre basse": /wp/info/nom_pdt_chambre_basse
+    "pdt chambre basse": /wp/info/pdt_chambre_basse
+    "nom nb chambre basse": /wp/info/nom_nb_chambre_basse
+    "nb chambre basse": /wp/info/nb_chambre_basse
+    "nom mode chambre basse": /wp/info/nom_mode_chambre_basse
+    "mode chambre basse": /wp/info/mode_chambre_basse
+    "nom liste chambre basse": /wp/info/nom_liste_chambre_basse
+    "liste chambre basse": /wp/info/liste_chambre_basse
+    "titre chambre haute": /wp/info/titre_chambre_haute
+    "type chambre haute": /wp/info/type_chambre_haute
+    "chambre haute": /wp/info/chambre_haute
+    "nom pdt chambre haute": /wp/info/nom_pdt_chambre_haute
+    "pdt chambre haute": /wp/info/pdt_chambre_haute
+    "nom nb chambre haute": /wp/info/nom_nb_chambre_haute
+    "nb chambre haute": /wp/info/nb_chambre_haute
+    "nom mode chambre haute": /wp/info/nom_mode_chambre_haute
+    "mode chambre haute": /wp/info/mode_chambre_haute
+    "nom liste chambre haute": /wp/info/nom_liste_chambre_haute
+    "liste chambre haute": /wp/info/liste_chambre_haute
+    "titre autre chambre": /wp/info/titre_autre_chambre
+    "type autre chambre": /wp/info/type_autre_chambre
+    "autre chambre": /wp/info/autre_chambre
+    "type gvt": /wp/info/type_gvt
+    "liste gvt": /wp/info/liste_gvt
+    "date1": /wp/info/date1
+    "evt1": /wp/info/evt1
+    "date2": /wp/info/date2
+    "evt2": /wp/info/evt2
+    "date39": /wp/info/date39
+    "evt39": /wp/info/evt39
+    "date40": /wp/info/date40
+    "evt40": /wp/info/evt40
+    "nomliste": /wp/info/nomliste
+    "précédé par": /wp/info/precede_par
+    "suivi par": /wp/info/suivi_par
+  }
+}
+
+"Infobox Société secrète": {
+  type: "infobox"
+  class: /wp/infobox/societe_secrete
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "taille image": /wp/info/taille_image
+    "autres appellations": /wp/info/autres_appellations
+    "première mention historique": /wp/info/premiere_mention_historique
+    "dernière mention historique": /wp/info/derniere_mention_historique
+    "création": /wp/info/creation
+    "dissolution": /wp/info/dissolution
+    "créateur": /wp/info/createur
+    "pers": /wp/info/pers
+    "siège": /wp/info/siege
+    "nombre de membres": /wp/info/nombre_de_membres
+    "influence": /wp/info/influence
+    "objectif": /wp/info/objectif
+    "publications": /wp/info/publications
+    "web": /wp/info/web
+  }
+}
+
+"Infobox Zone de secours": {
+  type: "infobox"
+  class: /wp/infobox/zone_de_secours
+  fields: {
+    "nom": /wp/info/nom
+    "nom nl": /wp/info/nom_nl
+    "nom de": /wp/info/nom_de
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "logo": /wp/info/logo
+    "région": /wp/info/region
+    "communauté": /wp/info/communaute
+    "province": /wp/info/province
+    "état-major": /wp/info/etat-major
+    "communes protégées": /wp/info/communes_protegees
+    "superficie": /wp/info/superficie
+    "population": /wp/info/population
+    "casernes": /wp/info/casernes
+    "chef de zone": /wp/info/chef_de_zone
+    "pompiers": /wp/info/pompiers
+    "employés": /wp/info/employes
+    "site internet": /wp/info/site_internet
+    "géolocalisation": /wp/info/geolocalisation
+    "latitude": /wp/info/latitude
+    "longitude": /wp/info/longitude
+  }
+}
+
+"Infobox Compagnie aérienne": {
+  type: "infobox"
+  class: /wp/infobox/compagnie_aerienne
+  fields: {
+    "couleur boîte": /wp/info/couleur_boite
+    "logo": {+/wp/info/logo media: true}
+    "upright": /wp/info/upright
+    "nom": /wp/info/nom
+    "nom_po": /wp/info/nom_po
+    "slogan": /wp/info/slogan
+    "AITA": /wp/info/aita
+    "OACI": /wp/info/oaci
+    "callsign": /wp/info/callsign
+    "création": /wp/info/creation
+    "faillite": /wp/info/faillite
+    "dates clés": /wp/info/dates_cles
+    "fondateurs": /wp/info/fondateurs
+    "hub": /wp/info/hub
+    "hub2": /wp/info/hub2
+    "fidélité": /wp/info/fidelite
+    "alliance": /wp/info/alliance
+    "flotte": /wp/info/flotte
+    "destinations": /wp/info/destinations
+    "siège": /wp/info/siege
+    "société": /wp/info/societe
+    "société sœur": /wp/info/societe_saur
+    "filiales": /wp/info/filiales
+    "nb_employés": /wp/info/nb_employes
+    "chiffre d'affaires": /wp/info/chiffre_d'affaires
+    "bénéfice": /wp/info/benefice
+    "dirigeants": /wp/info/dirigeants
+    "website": /wp/info/website
+  }
+}
+
+"Infobox Banque": {
+  type: "infobox"
+  class: /wp/infobox/banque
+  fields: {
+    "couleur boîte": /wp/info/couleur_boite
+    "code banque": /wp/info/code_banque
+    "code établissement": /wp/info/code_etablissement
+  }
+}
+
+"Infobox Brasserie": {
+  type: "infobox"
+  class: /wp/infobox/brasserie
+  fields: {
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "pays": /wp/info/pays
+    "ville": /wp/info/ville
+    "latitude": /wp/info/latitude
+    "longitude": /wp/info/longitude
+    "référence": /wp/info/reference
+    "fondée en": /wp/info/fondee_en
+    "dates clés": /wp/info/dates_cles
+    "fermée en": /wp/info/fermee_en
+    "Société mère": /wp/info/societe_mere
+    "chiffre d'affaires": /wp/info/chiffre_d_affaires
+    "directeur": /wp/info/directeur
+    "effectif": /wp/info/effectif
+    "brasseurs": /wp/info/brasseurs
+    "bières": /wp/info/bieres
+    "production": /wp/info/production
+    "site web": /wp/info/site_web
+  }
+}
+
+"Infobox Opéra (compagnie)": {
+  type: "infobox"
+  class: /wp/infobox/opera_compagnie
+  fields: {
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "nom autre": /wp/info/nom_autre
+    "logo": {+/wp/info/logo media: true}
+    "taille logo": /wp/info/taille_logo
+    "alt": /wp/info/alt
+    "légende logo": /wp/info/logo_caption
+    "logo 2": /wp/info/logo_2
+    "taille logo 2": /wp/info/taille_logo_2
+    "alt 2": /wp/info/alt_2
+    "légende logo 2": /wp/info/legende_logo_2
+    "image": {+/wp/info/image media: true}
+    "taille": /wp/info/taille
+    "légende": /wp/info/caption
+    "surnom": /wp/info/surnom
+    "lieu": /wp/info/lieu
+    "statut": /wp/info/statut
+    "gestion": /wp/info/gestion
+    "structure-mère": /wp/info/structure-mere
+    "tutelle": /wp/info/tutelle
+    "création": /wp/info/creation
+    "direction": /wp/info/direction
+    "direction artistique": /wp/info/direction_artistique
+    "composante": /wp/info/composante
+    "web": /wp/info/web
+    "résidence": /wp/info/residence
+    "latitude": /wp/info/latitude
+    "longitude": /wp/info/longitude
+    "type": /wp/info/type
+    "architecte": /wp/info/architecte
+    "inauguration": /wp/info/inauguration
+    "fermeture": /wp/info/fermeture
+    "capacité": /wp/info/capacite
+    "anciens noms": /wp/info/anciens_noms
+  }
+}
+
+"Infobox Distillerie": {
+  type: "infobox"
+  class: /wp/infobox/distillerie
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "ville": /wp/info/ville
+    "région": /wp/info/region
+    "pays": /wp/info/pays
+    "latitude": /wp/info/latitude
+    "longitude": /wp/info/longitude
+    "statut": /wp/info/statut
+    "fondée en": /wp/info/fondee_en
+    "détenue par": /wp/info/detenue_par
+    "alcools": /wp/info/alcools
+    "marques": /wp/info/marques
+    "adresse": /wp/info/adresse
+    "nombre d'employés": /wp/info/nombre_d_employes
+    "site web": /wp/info/site_web
+    "maître distillateur": /wp/info/maitre_distillateur
+    "maître mélangeur": /wp/info/maitre_melangeur
+    "provenance de l'orge": /wp/info/provenance_de_l_orge
+    "source d'eau": /wp/info/source_d'eau
+    "cuves de brassage": /wp/info/cuves_de_brassage
+    "cuves de fermentation": /wp/info/cuves_de_fermentation
+    "alambics de distillation": /wp/info/alambics_de_distillation
+    "maturation": /wp/info/maturation
+    "capacité de production": /wp/info/capacite_de_production
+    "géolocalisation": /wp/info/geolocalisation
+  }
+}
+
+"Infobox Maison d'édition": {
+  type: "infobox"
+  class: /wp/infobox/maison_d_edition
+  fields: {
+    "entete": /wp/info/entete
+    "couleur boîte": /wp/info/couleur_boite
+    "nom complet": /wp/info/nom_complet
+    "logo": {+/wp/info/logo media: true}
+    "taille logo": /wp/info/taille_logo
+    "légende logo": /wp/info/logo_caption
+    "date de création": /wp/info/date_de_creation
+    "dates-clés": /wp/info/dates-cles
+    "date de disparition": /wp/info/date_de_disparition
+    "fondateur(s)": /wp/info/fondateur
+    "forme juridique": /wp/info/forme_juridique
+    "statut": /wp/info/statut
+    "slogan": /wp/info/slogan
+    "siège (ville)": /wp/info/siege_ville
+    "siège (pays)": /wp/info/siege_pays
+    "direction actuelle": /wp/info/direction_actuelle
+    "personnes-clés": /wp/info/personnes-cles
+    "spécialité(s)": /wp/info/specialite
+    "collections": /wp/info/collections
+    "titres phares": /wp/info/titres_phares
+    "langue de publication": /wp/info/langue_de_publication
+    "diffuseur(s)": /wp/info/diffuseur
+    "partenaire(s)": /wp/info/partenaire
+    "société mère": /wp/info/societe_mere
+    "filiales": /wp/info/filiales
+    "effectif": /wp/info/effectif
+    "site web": /wp/info/site_web
+    "chiffre d'affaires": /wp/info/chiffre_d_affaires
+    "résultat net": /wp/info/resultat_net
+    "concurrents": /wp/info/concurrents
+    "date de mise à jour": /wp/info/date_de_mise_a_jour
+  }
+}
+
+"Infobox Compagnie ferroviaire": {
+  type: "infobox"
+  class: /wp/infobox/compagnie_ferroviaire
+  fields: {
+    "couleur boîte": /wp/info/couleur_boite
+    "nom et logo": /wp/info/nom_et_logo
+    "logo": {+/wp/info/logo media: true}
+    "taille logo": /wp/info/taille_logo
+    "légende logo": /wp/info/logo_caption
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "alt": /wp/info/alt
+    "taille image": /wp/info/taille_image
+    "date de création": /wp/info/date_de_creation
+    "date de faillite": /wp/info/date_de_faillite
+    "date de disparition": /wp/info/date_de_disparition
+    "dates-clés": /wp/info/dates-cles
+    "personnages-clés": /wp/info/personnages-cles
+    "fondateur": /wp/info/fondateur
+    "prédécesseur": /wp/info/predecesseur
+    "successeur": /wp/info/successeur
+    "forme juridique": /wp/info/forme_juridique
+    "sigle": /wp/info/sigle
+    "slogan": /wp/info/slogan
+    "siège (ville)": /wp/info/siege_ville
+    "siège (pays)": /wp/info/siege_pays
+    "actionnaires": /wp/info/actionnaires
+    "direction actuelle": /wp/info/direction_actuelle
+    "effectifs": /wp/info/effectifs
+    "nom identifiant": /wp/info/nom_identifiant
+    "identifiant": /wp/info/identifiant
+    "mère": /wp/info/mere
+    "filiales": /wp/info/filiales
+    "sœurs": /wp/info/saurs
+    "site web": /wp/info/site_web
+    "action": /wp/info/action
+    "fonds propres": /wp/info/fonds_propres
+    "chiffre d'affaires": /wp/info/chiffre_d_affaires
+    "somme du bilan (banques)": /wp/info/somme_du_bilan_banques
+    "résultat net": /wp/info/resultat_net
+    "localisation": /wp/info/localisation
+    "longueur": /wp/info/longueur
+    "électrifiés": /wp/info/electrifies
+    "écartement": /wp/info/ecartement
+    "voyageurs": /wp/info/voyageurs
+    "fret": /wp/info/fret
+    "plan": /wp/info/plan
+    "taille plan": /wp/info/taille_plan
+    "légende plan": /wp/info/legende_plan
+  }
+}
+
+"Infobox Manade": {
+  type: "infobox"
+  class: /wp/infobox/manade
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "cocarde": /wp/info/cocarde
+    "légende cocarde": /wp/info/legende_cocarde
+    "couleurs": /wp/info/couleurs
+    "date création": /wp/info/date_creation
+    "fondateur": /wp/info/fondateur
+    "proprietaire": /wp/info/proprietaire
+    "adresse": /wp/info/adresse
+    "commune": /wp/info/commune
+    "lien commune": /wp/info/lien_commune
+    "département": /wp/info/departement
+    "latitude": /wp/info/latitude
+    "longitude": /wp/info/longitude
+    "géolocalisation": /wp/info/geolocalisation
+    "siteweb": /wp/info/siteweb
+  }
+}
+"Infobox Musique (label)": {
+  type: "infobox"
+  class: /wp/infobox/musique_label
+  fields: {
+    "titre": /wp/info/titre
+    "logo": {+/wp/info/logo media: true}
+    "filiale": /wp/info/filiale
+    "fondé en": /wp/info/fonde_en
+    "disparu en": /wp/info/disparu_en
+    "fondateur": /wp/info/fondateur
+    "statut": /wp/info/statut
+    "maison de disques": /wp/info/maison_de_disques
+    "genre": /wp/info/genre
+    "pays d'origine": /wp/info/pays_d'origine
+    "siège": /wp/info/siege
+    "site web": /wp/info/site_web
+  }
+}
+
+"Infobox Parfum": {
+  type: "infobox"
+  class: /wp/infobox/parfum
+  fields: {
+    "nom": /wp/info/nom
+    "marque": /wp/info/marque
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "lancement": /wp/info/lancement
+    "créateur": /wp/info/createur
+    "égéries": /wp/info/egeries
+    "composition": /wp/info/composition
+    "notes": /wp/info/notes
+    "cible": /wp/info/cible
+  }
+}
+
+"Infobox Pipeline": {
+  type: "infobox"
+  class: /wp/infobox/pipeline
+  fields: {
+    "nom": /wp/info/nom
+    "nom original": /wp/info/nom_original
+    "image": {+/wp/info/image media: true}
+    "largeur image": /wp/info/largeur_image
+    "légende": /wp/info/caption
+    "pays": /wp/info/pays
+    "nom subdivision 1": /wp/info/nom_subdivision_1
+    "subdivision 1": /wp/info/subdivision_1
+    "nom subdivision 2": /wp/info/nom_subdivision_2
+    "subdivision 2": /wp/info/subdivision_2
+    "nom subdivision 3": /wp/info/nom_subdivision_3
+    "subdivision 3": /wp/info/subdivision_3
+    "tracé": /wp/info/trace
+    "carte": /wp/info/carte
+    "légende carte": /wp/info/legende_carte
+    "type": /wp/info/type
+    "dateouverture": /wp/info/dateouverture
+    "datefermeture": /wp/info/datefermeture
+    "longueur": /wp/info/longueur
+    "diamètre": /wp/info/diametre
+    "capacité": /wp/info/capacite
+    "propriétaire": /wp/info/proprietaire
+  }
+}
+"Infobox Producteur": {
+  type: "infobox"
+  class: /wp/infobox/producteur
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "width": /wp/info/width
+    "pays": /wp/info/pays
+    "année": /wp/info/annee
+    "production totale": /wp/info/production_totale
+    "produits": /wp/info/produits
+    "produit1": /wp/info/produit1
+    "produit2": /wp/info/produit2
+    "produit3": /wp/info/produit3
+    "produit4": /wp/info/produit4
+    "production produit1": /wp/info/production_produit1
+    "production produit2": /wp/info/production_produit2
+    "production produit3": /wp/info/production_produit3
+    "production produit4": /wp/info/production_produit4
+    "méthode": /wp/info/methode
+    "surface": /wp/info/surface
+    "emploi": /wp/info/emploi
+    "exportations": /wp/info/exportations
+    "exportations produit1": /wp/info/exportations_produit1
+    "exportations produit2": /wp/info/exportations_produit2
+    "exportations produit3": /wp/info/exportations_produit3
+    "exportations produit4": /wp/info/exportations_produit4
+    "pourcentage exportations": /wp/info/pourcentage_exportations
+    "pourcentage PIB": /wp/info/pourcentage_pib
+    "sources": /wp/info/sources
+  }
+}
+
+"Infobox Sportif": {
+  type: "infobox"
+  class: /wp/infobox/sportif
+  fields: {
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "alternative": /wp/info/alternative
+    "largeur initiale": /wp/info/largeur_initiale
+    "largeur détail": /wp/info/largeur_detail
+    "hauteur détail": /wp/info/hauteur_detail
+    "point haut": /wp/info/point_haut
+    "point gauche": /wp/info/point_gauche
+    "légende": /wp/info/caption
+    "sport pratiqué": /wp/info/sport_pratique
+    "période active": /wp/info/periode_active
+    "site officiel": /wp/info/site_officiel
+    "nationalité": /wp/info/nationalite
+    "nationalité administrative": /wp/info/nationalite_administrative
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "pays de naissance": /wp/info/pays_de_naissance
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "surnom": /wp/info/surnom
+    "club(s)": /wp/info/club
+    "équipe(s)": /wp/info/equipe
+    "entraîneur(s)": /wp/info/entraineur
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "jeux olympiques": /wp/info/jeux_olympiques
+    "or JO": /wp/info/or_jo
+    "argent JO": /wp/info/argent_jo
+    "bronze JO": /wp/info/bronze_jo
+    "compétition mondiale": /wp/info/competition_mondiale
+    "or CM": /wp/info/or_cm
+    "argent CM": /wp/info/argent_cm
+    "bronze CM": /wp/info/bronze_cm
+    "compétition mondiale 2": /wp/info/competition_mondiale_2
+    "or CM2": /wp/info/or_cm2
+    "argent CM2": /wp/info/argent_cm2
+    "bronze CM2": /wp/info/bronze_cm2
+    "compétition continentale": /wp/info/competition_continentale
+    "or CC": /wp/info/or_cc
+    "argent CC": /wp/info/argent_cc
+    "bronze CC": /wp/info/bronze_cc
+    "compétition nationale": /wp/info/competition_nationale
+    "or CN": /wp/info/or_cn
+    "argent CN": /wp/info/argent_cn
+    "bronze CN": /wp/info/bronze_cn
+    "date de mise à jour": /wp/info/date_de_mise_a_jour
+  }
+}
+
+"Infobox Arbitre": {
+  type: "infobox"
+  class: /wp/infobox/arbitre
+  fields: {
+    "charte": /wp/info/charte
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "pays": /wp/info/pays
+    "grade": /wp/info/grade
+    "taille": /wp/info/taille
+    "sport": /wp/info/sport
+    "surnom": /wp/info/surnom
+    "désignations nationales": /wp/info/designations_nationales
+    "désignations intracontinentales": /wp/info/designations_intracontinentales
+    "désignations internationales": /wp/info/designations_internationales
+  }
+}
+
+"Infobox Athlète": {
+  type: "infobox"
+  class: /wp/infobox/athlete
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "discipline": /wp/info/discipline
+    "période active": /wp/info/periode_active
+    "nationalité": /wp/info/nationalite
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "surnom": /wp/info/surnom
+    "club(s)": /wp/info/club
+    "entraîneur(s)": /wp/info/entraineur
+    "dirigeant": /wp/info/dirigeant
+    "records": /wp/info/records
+    "distinctions": /wp/info/distinctions
+    "jeux olympiques": /wp/info/jeux_olympiques
+    "or JO": /wp/info/or_jo
+    "argent JO": /wp/info/argent_jo
+    "bronze JO": /wp/info/bronze_jo
+    "compétition mondiale": /wp/info/competition_mondiale
+    "or CM": /wp/info/or_cm
+    "argent CM": /wp/info/argent_cm
+    "bronze CM": /wp/info/bronze_cm
+    "compétition mondiale 2": /wp/info/competition_mondiale_2
+    "or CM2": /wp/info/or_cm2
+    "argent CM2": /wp/info/argent_cm2
+    "bronze CM2": /wp/info/bronze_cm2
+    "compétition continentale": /wp/info/competition_continentale
+    "or CC": /wp/info/or_cc
+    "argent CC": /wp/info/argent_cc
+    "bronze CC": /wp/info/bronze_cc
+    "compétition continentale 2": /wp/info/competition_continentale_2
+    "or CC2": /wp/info/or_cc2
+    "argent CC2": /wp/info/argent_cc2
+    "bronze CC2": /wp/info/bronze_cc2
+    "compétition nationale": /wp/info/competition_nationale
+    "or CN": /wp/info/or_cn
+    "argent CN": /wp/info/argent_cn
+    "bronze CN": /wp/info/bronze_cn
+  }
+}
+
+"Infobox Joueur de badminton": {
+  type: "infobox"
+  class: /wp/infobox/joueur_de_badminton
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "handisport": /wp/info/handisport
+    "premier match pro": /wp/info/premier_match_pro
+    "dernier match pro": /wp/info/dernier_match_pro
+    "nationalité": /wp/info/nationalite
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "surnom": /wp/info/surnom
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "prise de raquette": /wp/info/prise_de_raquette
+    "entraîneur(s)": /wp/info/entraineur
+    "gains en tournois": /wp/info/gains_en_tournois
+    "titres en simple": /wp/info/titres_en_simple
+    "finales perdues en simple": /wp/info/finales_perdues_en_simple
+    "meilleur classement en simple": /wp/info/meilleur_classement_en_simple
+    "titres en double": /wp/info/titres_en_double
+    "finales perdues en double": /wp/info/finales_perdues_en_double
+    "meilleur classement en double": /wp/info/meilleur_classement_en_double
+    "médaille d'or simple": /wp/info/medaille_d_or_simple
+    "médaille d'argent simple": /wp/info/medaille_d_argent_simple
+    "médaille de bronze simple": /wp/info/medaille_de_bronze_simple
+    "médaille d'or double": /wp/info/medaille_d_or_double
+    "médaille d'argent double": /wp/info/medaille_d_argent_double
+    "médaille de bronze double": /wp/info/medaille_de_bronze_double
+    "médaille d'or mixte": /wp/info/medaille_d_or_mixte
+    "médaille d'argent mixte": /wp/info/medaille_d_argent_mixte
+    "médaille de bronze mixte": /wp/info/medaille_de_bronze_mixte
+    "titre d'or simple": /wp/info/titre_d_or_simple
+    "titre d'argent simple": /wp/info/titre_d_argent_simple
+    "titre de bronze simple": /wp/info/titre_de_bronze_simple
+    "titre d'or double": /wp/info/titre_d_or_double
+    "titre d'argent double": /wp/info/titre_d_argent_double
+    "titre de bronze double": /wp/info/titre_de_bronze_double
+    "titre d'or mixte": /wp/info/titre_d_or_mixte
+    "titre d'argent mixte": /wp/info/titre_d_argent_mixte
+    "titre de bronze mixte": /wp/info/titre_de_bronze_mixte
+    "Thomas Cup d'or": /wp/info/thomas_cup_d_or
+    "Thomas Cup d'argent": /wp/info/thomas_cup_d_argent
+    "Thomas Cup de bronze": /wp/info/thomas_cup_de_bronze
+    "Uber Cup d'or": /wp/info/uber_cup_d_or
+    "Uber Cup d'argent": /wp/info/uber_cup_d_argent
+    "Uber Cup de bronze": /wp/info/uber_cup_de_bronze
+    "Sudirman Cup d'or": /wp/info/sudirman_cup_d_or
+    "Sudirman Cup d'argent": /wp/info/sudirman_cup_d_argent
+    "Sudirman Cup de bronze": /wp/info/sudirman_cup_de_bronze
+  }
+}
+
+"Infobox Joueur de baseball": {
+  type: "infobox"
+  class: /wp/infobox/joueur_de_baseball
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "équipe": /wp/info/equipe
+    "numéro": /wp/info/numero
+    "position": /wp/info/position
+    "frappe": /wp/info/frappe
+    "lance": /wp/info/lance
+    "date début": /wp/info/date_debut
+    "année début": /wp/info/annee_debut
+    "date fin": /wp/info/date_fin
+    "année fin": /wp/info/annee_fin
+    "stat1": /wp/info/stat1
+    "stat1v": /wp/info/stat1v
+    "stat2": /wp/info/stat2
+    "stat2v": /wp/info/stat2v
+    "stat3": /wp/info/stat3
+    "stat3v": /wp/info/stat3v
+    "stat4": /wp/info/stat4
+    "stat4v": /wp/info/stat4v
+    "stat5": /wp/info/stat5
+    "stat5v": /wp/info/stat5v
+    "stat6": /wp/info/stat6
+    "stat6v": /wp/info/stat6v
+    "date début manager": /wp/info/date_debut_manager
+    "année début manager": /wp/info/annee_debut_manager
+    "date fin manager": /wp/info/date_fin_manager
+    "année fin manager": /wp/info/annee_fin_manager
+    "victoires manager": /wp/info/victoires_manager
+    "défaites manager": /wp/info/defaites_manager
+    "pourcentage manager": /wp/info/pourcentage_manager
+    "équipes": /wp/info/equipes
+    "HOF année": /wp/info/hof_annee
+  }
+}
+
+"Infobox Joueur de basket-ball": {
+  type: "infobox"
+  class: /wp/infobox/joueur_de_basket-ball
+  fields: {
+    "nom": /wp/info/nom
+    "joueuse": /wp/info/joueuse
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "alternative image": /wp/info/alternative_image
+    "nom de naissance": /wp/info/nom_de_naissance
+    "nationalité": /wp/info/nationalite
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "surnom": /wp/info/surnom
+    "club actuel": /wp/info/club_actuel
+    "numéro en club": /wp/info/numero_en_club
+    "position": /wp/info/position
+    "saison junior": /wp/info/saison_junior
+    "club junior": /wp/info/club_junior
+    "année draft": /wp/info/annee_draft
+    "position draft": /wp/info/position_draft
+    "franchise draft": /wp/info/franchise_draft
+    "saison": /wp/info/saison
+    "club": /wp/info/club
+    "points club": /wp/info/points_club
+    "année sélection": /wp/info/annee_selection
+    "équipe nationale": /wp/info/equipe_nationale
+    "points sélection": /wp/info/points_selection
+    "saison entraîneur": /wp/info/saison_entraineur
+    "club entraîneur": /wp/info/club_entraineur
+    "NCBHOF année": /wp/info/ncbhof_annee
+    "HOF année": /wp/info/hof_annee
+    "WHOF année": /wp/info/whof_annee
+    "FIBAHOF année": /wp/info/fibahof_annee
+  }
+}
+
+"Infobox Boxeur": {
+  type: "infobox"
+  class: /wp/infobox/boxeur
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "alternative": /wp/info/alternative
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "nationalité": /wp/info/nationalite
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "catégorie": /wp/info/categorie
+    "style": /wp/info/style
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "activité": /wp/info/activite
+    "distinction": /wp/info/distinction
+    "taille": /wp/info/taille
+    "carrière": /wp/info/carriere
+    "combats": /wp/info/combats
+    "victoires": /wp/info/victoires
+    "KO": /wp/info/ko
+    "défaites": /wp/info/defaites
+    "matchs nuls": /wp/info/matchs_nuls
+    "sans décision": /wp/info/sans_decision
+    "titres": /wp/info/titres
+    "carrière amateurs": /wp/info/carriere_amateurs
+    "combats amateurs": /wp/info/combats_amateurs
+    "victoires amateurs": /wp/info/victoires_amateurs
+    "KO amateurs": /wp/info/ko_amateurs
+    "défaites amateurs": /wp/info/defaites_amateurs
+    "matchs nuls amateurs": /wp/info/matchs_nuls_amateurs
+    "sans décision amateurs": /wp/info/sans_decision_amateurs
+    "titres amateurs": /wp/info/titres_amateurs
+  }
+}
+
+"Infobox Cycliste": {
+  type: "infobox"
+  class: /wp/infobox/cycliste
+  fields: {
+    "équipe": /wp/info/equipe
+    "années amateur": /wp/info/annees_amateur
+    "équipes amateur": /wp/info/equipes_amateur
+    "années pro": /wp/info/annees_pro
+    "équipes pro": /wp/info/equipes_pro
+    "années direction": /wp/info/annees_direction
+    "équipes dirigées": /wp/info/equipes_dirigees
+    "victoires principales": /wp/info/victoires_principales
+  }
+}
+
+"Infobox Footballeur": {
+  type: "infobox"
+  class: /wp/infobox/footballeur
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "alternative": /wp/info/alternative
+    "club actuel": /wp/info/club_actuel
+    "numéro en club": /wp/info/numero_en_club
+    "période pro": /wp/info/periode_pro
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "nationalité": /wp/info/nationalite
+    "nation sportive": /wp/info/nation_sportive
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "taille": /wp/info/taille
+    "position": /wp/info/position
+    "pied": /wp/info/pied
+    "parcours junior": /wp/info/parcours_junior
+    "parcours senior": /wp/info/parcours_senior
+    "sélection nationale": /wp/info/selection_nationale
+    "carrière entraîneur": /wp/info/carriere_entraineur
+    "date de mise à jour": /wp/info/date_de_mise_a_jour
+  }
+}
+"Infobox Golfeur": {
+  type: "infobox"
+  class: /wp/infobox/golfeur
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "nationalité": /wp/info/nationalite
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "pro": /wp/info/pro
+    "circuit": /wp/info/circuit
+    "victoires": /wp/info/victoires
+    "masters": /wp/info/masters
+    "us open": /wp/info/us_open
+    "british open": /wp/info/british_open
+    "pga": /wp/info/pga
+    "titleholders": /wp/info/titleholders
+    "western": /wp/info/western
+    "kraft nabisco": /wp/info/kraft_nabisco
+    "ana inspiration": /wp/info/ana_inspiration
+    "lpga": /wp/info/lpga
+    "us open féminin": /wp/info/us_open_feminin
+    "british open féminin": /wp/info/british_open_feminin
+    "dumaurier": /wp/info/dumaurier
+    "evian": /wp/info/evian
+    "jeux olympiques": /wp/info/jeux_olympiques
+  }
+}
+
+"Infobox Sauteur à ski": {
+  type: "infobox"
+  class: /wp/infobox/sauteur_a_ski
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "sport pratiqué": /wp/info/sport_pratique
+    "période active": /wp/info/periode_active
+    "entraîneur": /wp/info/entraineur
+    "nationalité": /wp/info/nationalite
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "surnom": /wp/info/surnom
+    "date de décès": /wp/info/date_de_deces
+    "jeux olympiques": /wp/info/jeux_olympiques
+    "or JO": /wp/info/or_jo
+    "argent JO": /wp/info/argent_jo
+    "bronze JO": /wp/info/bronze_jo
+    "championnats du monde": /wp/info/championnats_du_monde
+    "or ChM": /wp/info/or_chm
+    "argent ChM": /wp/info/argent_chm
+    "bronze ChM": /wp/info/bronze_chm
+    "championnats du monde vol": /wp/info/championnats_du_monde_vol
+    "or ChMv": /wp/info/or_chmv
+    "argent ChMv": /wp/info/argent_chmv
+    "bronze ChMv": /wp/info/bronze_chmv
+    "coupe du monde globe": /wp/info/coupe_du_monde_globe
+    "or CpMg": /wp/info/or_cpmg
+    "argent CpMg": /wp/info/argent_cpmg
+    "bronze CpMg": /wp/info/bronze_cpmg
+    "coupe du monde": /wp/info/coupe_du_monde
+    "or CpM": /wp/info/or_cpm
+    "argent CpM": /wp/info/argent_cpm
+    "bronze CpM": /wp/info/bronze_cpm
+    "date de mise à jour": /wp/info/date_de_mise_a_jour
+  }
+}
+
+"Infobox Surfeur": {
+  type: "infobox"
+  class: /wp/infobox/surfeur
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "alternative": /wp/info/alternative
+    "surnom": /wp/info/surnom
+    "nationalité": /wp/info/nationalite
+    "nationalité sportive": /wp/info/nationalite_sportive
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "résidence": /wp/info/residence
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "style": /wp/info/style
+    "sponsors": /wp/info/sponsors
+    "site officiel": /wp/info/site_officiel
+    "début WQS": /wp/info/debut_wqs
+    "début WCT": /wp/info/debut_wct
+    "Victoires CT": /wp/info/victoires_ct
+    "Finales CT": /wp/info/finales_ct
+    "Titres CT": /wp/info/titres_ct
+    "Victoires QS": /wp/info/victoires_qs
+    "Finales QS": /wp/info/finales_qs
+    "Titres QS": /wp/info/titres_qs
+    "Victoires junior": /wp/info/victoires_junior
+    "Finales junior": /wp/info/finales_junior
+    "Titres junior": /wp/info/titres_junior
+    "Victoires spécialité": /wp/info/victoires_specialite
+    "Finales spécialité": /wp/info/finales_specialite
+    "Titres spécialité": /wp/info/titres_specialite
+  }
+}
+
+"Infobox Skateur professionnel": {
+  type: "infobox"
+  class: /wp/infobox/skateur_professionnel
+  fields: {
+    "nom": /wp/info/nom
+    "nom d'épouse": /wp/info/nom_d_epouse
+    "image": {+/wp/info/image media: true}
+    "légende": /wp/info/caption
+    "nationalité": /wp/info/nationalite
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "skate": /wp/info/skate
+    "genre": /wp/info/genre
+    "palmares": /wp/info/palmares
+    "entourage": /wp/info/entourage
+    "sponsors": /wp/info/sponsors
+    "siteweb": /wp/info/siteweb
+  }
+}
+"Infobox Joueur de snooker": {
+  type: "infobox"
+  class: /wp/infobox/joueur_de_snooker
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "nom de naissance": /wp/info/nom_de_naissance
+    "surnom": /wp/info/surnom
+    "nationalité": /wp/info/nationalite
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "professionnel": /wp/info/professionnel
+    "classement maximum": /wp/info/classement_maximum
+    "gains": /wp/info/gains
+    "break maximum": /wp/info/break_maximum
+    "centuries": /wp/info/centuries
+    "champion du monde": /wp/info/champion_du_monde
+    "tournois classés": /wp/info/tournois_classes
+    "tournois classés mineurs": /wp/info/tournois_classes_mineurs
+    "tournois non classés": /wp/info/tournois_non_classes
+    "jeux mondiaux": /wp/info/jeux_mondiaux
+    "jeux asiatiques": /wp/info/jeux_asiatiques
+    "date de mise à jour": /wp/info/date_de_mise_a_jour
+  }
+}
+
+"Infobox Joueur de tennis": {
+  type: "infobox"
+  class: /wp/infobox/joueur_de_tennis
+  fields: {
+    "nom": /wp/info/nom
+    "nom d'épouse": /wp/info/nom_d_epouse
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "alternative image": /wp/info/alternative_image
+    "handisport": /wp/info/handisport
+    "premier match pro": /wp/info/premier_match_pro
+    "dernier match pro": /wp/info/dernier_match_pro
+    "nationalité": /wp/info/nationalite
+    "pays": /wp/info/pays
+    "nom de naissance": /wp/info/nom_de_naissance
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "taille": /wp/info/taille
+    "prise de raquette": /wp/info/prise_de_raquette
+    "revers": /wp/info/revers
+    "entraîneur(s)": /wp/info/entraineur
+    "gains en tournois": /wp/info/gains_en_tournois
+    "date d'entrée à l'ITHF": /wp/info/date_d_entree_a_l_ithf
+    "site web": /wp/info/site_web
+    "titres simple": /wp/info/titres_simple
+    "finales perdues simple": /wp/info/finales_perdues_simple
+    "meilleur classement simple": /wp/info/meilleur_classement_simple
+    "titres double": /wp/info/titres_double
+    "finales perdues double": /wp/info/finales_perdues_double
+    "meilleur classement double": /wp/info/meilleur_classement_double
+    "Open d'Australie simple": /wp/info/open_d_australie_simple
+    "Roland-Garros simple": /wp/info/roland-garros_simple
+    "Wimbledon simple": /wp/info/wimbledon_simple
+    "US Open simple": /wp/info/us_open_simple
+    "Open d'Australie double": /wp/info/open_d_australie_double
+    "Roland-Garros double": /wp/info/roland-garros_double
+    "Wimbledon double": /wp/info/wimbledon_double
+    "US Open double": /wp/info/us_open_double
+    "Open d'Australie mixte": /wp/info/open_d_australie_mixte
+    "Roland-Garros mixte": /wp/info/roland-garros_mixte
+    "Wimbledon mixte": /wp/info/wimbledon_mixte
+    "US Open mixte": /wp/info/us_open_mixte
+    "médaille d'or simple": /wp/info/medaille_d_or_simple
+    "médaille d'argent simple": /wp/info/medaille_d_argent_simple
+    "médaille de bronze simple": /wp/info/medaille_de_bronze_simple
+    "médaille d'or double": /wp/info/medaille_d_or_double
+    "médaille d'argent double": /wp/info/medaille_d_argent_double
+    "médaille de bronze double": /wp/info/medaille_de_bronze_double
+    "médaille d'or mixte": /wp/info/medaille_d_or_mixte
+    "médaille d'argent mixte": /wp/info/medaille_d_argent_mixte
+    "médaille de bronze mixte": /wp/info/medaille_de_bronze_mixte
+    "Coupe Davis": /wp/info/coupe_davis
+    "Fed Cup": /wp/info/fed_cup
+    "World Team Cup": /wp/info/world_team_cup
+    "Hopman Cup": /wp/info/hopman_cup
+    "date de mise à jour": /wp/info/date_de_mise_a_jour
+  }
+}
+
+"Infobox Archer": {
+  type: "infobox"
+  class: /wp/infobox/archer
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "handisport": /wp/info/handisport
+    "période active": /wp/info/periode_active
+    "nationalité": /wp/info/nationalite
+    "date de naissance": /wp/info/date_de_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "taille": /wp/info/taille
+    "surnom": /wp/info/surnom
+    "club(s)": /wp/info/club
+    "entraîneur(s)": /wp/info/entraineur
+    "type d'arc": /wp/info/type_d'arc
+    "prise en main": /wp/info/prise_en_main
+    "records": /wp/info/records
+    "jeux olympiques": /wp/info/jeux_olympiques
+    "or JO": /wp/info/or_jo
+    "argent JO": /wp/info/argent_jo
+    "bronze JO": /wp/info/bronze_jo
+    "coupe monde": /wp/info/coupe_monde
+    "or coupe monde": /wp/info/or_coupe_monde
+    "argent coupe monde": /wp/info/argent_coupe_monde
+    "bronze coupe monde": /wp/info/bronze_coupe_monde
+    "compétition mondiale": /wp/info/competition_mondiale
+    "or CM": /wp/info/or_cm
+    "argent CM": /wp/info/argent_cm
+    "bronze CM": /wp/info/bronze_cm
+    "compétition continentale": /wp/info/competition_continentale
+    "or CC": /wp/info/or_cc
+    "argent CC": /wp/info/argent_cc
+    "bronze CC": /wp/info/bronze_cc
+    "compétition continentale 2": /wp/info/competition_continentale_2
+    "or CC2": /wp/info/or_cc2
+    "argent CC2": /wp/info/argent_cc2
+    "bronze CC2": /wp/info/bronze_cc2
+    "compétition nationale": /wp/info/competition_nationale
+    "or CN": /wp/info/or_cn
+    "argent CN": /wp/info/argent_cn
+    "bronze CN": /wp/info/bronze_cn
+    "compétition nationale 2": /wp/info/competition_nationale_2
+    "or CN2": /wp/info/or_cn2
+    "argent CN2": /wp/info/argent_cn2
+    "bronze CN2": /wp/info/bronze_cn2
+  }
+}
+
+"Infobox Joueur de volley-ball": {
+  type: "infobox"
+  class: /wp/infobox/joueur_de_volley-ball
+  fields: {
+    "nom": /wp/info/nom
+    "image": {+/wp/info/image media: true}
+    "taille image": /wp/info/taille_image
+    "légende": /wp/info/caption
+    "alternative": /wp/info/alternative
+    "nom de naissance": /wp/info/nom_de_naissance
+    "nationalité": /wp/info/nationalite
+    "date de naissance": /wp/info/date_de_naissance
+    "préposition naissance": /wp/info/preposition_naissance
+    "lieu de naissance": /wp/info/lieu_de_naissance
+    "date de décès": /wp/info/date_de_deces
+    "préposition décès": /wp/info/preposition_deces
+    "lieu de décès": /wp/info/lieu_de_deces
+    "taille": /wp/info/taille
+    "poids": /wp/info/poids
+    "surnom": /wp/info/surnom
+    "hauteur attaque": /wp/info/hauteur_attaque
+    "hauteur contre": /wp/info/hauteur_contre
+    "latéralité": /wp/info/lateralite
+    "club actuel": /wp/info/club_actuel
+    "": /wp/info/
+    "numéro en club": /wp/info/numero_en_club
+    "position": /wp/info/position
+    "club junior": /wp/info/club_junior
+    "club": /wp/info/club
+    "équipe nationale -23 ans": /wp/info/equipe_nationale_-23_ans
+    "club entraîneur": /wp/info/club_entraineur
+  }
+}
+
+"Infobox Club sportif": {
+  type: "infobox"
+  class: /wp/infobox/club_sportif
+  fields: {
+    "charte": /wp/info/charte
+    "couleur cadre": /wp/info/couleur_cadre
+    "couleur écriture": /wp/info/couleur_ecriture
+    "personnage blanc": /wp/info/personnage_blanc
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "upright logo": /wp/info/upright_logo
+    "légende logo": /wp/info/logo_caption
+    "nom complet": /wp/info/nom_complet
+    "surnoms": /wp/info/surnoms
+    "noms précédents": /wp/info/noms_precedents
+    "slogan": /wp/info/slogan
+    "mascotte": /wp/info/mascotte
+    "date de fondation": /wp/info/date_de_fondation
+    "date de disparition": /wp/info/date_de_disparition
+    "statut professionnel": /wp/info/statut_professionnel
+    "couleurs": /wp/info/couleurs
+    "équipement sportif": /wp/info/equipement_sportif
+    "capacité": /wp/info/capacite
+    "siège": /wp/info/siege
+    "propriétaire": /wp/info/proprietaire
+    "président": /wp/info/president
+    "entraîneur": /wp/info/entraineur
+    "capitaine": /wp/info/capitaine
+    "championnat actuel": /wp/info/championnat_actuel
+    "joueur le plus capé": /wp/info/joueur_le_plus_cape
+    "meilleur buteur": /wp/info/meilleur_buteur
+    "site web": /wp/info/site_web
+    "palmarès national": /wp/info/palmares_national
+    "palmarès international": /wp/info/palmares_international
+    "note": /wp/info/note
+    "note (minuscule)": /wp/info/note__minuscule
+    "actualité": /wp/info/actualite
+  }
+}
+
+"Infobox Club de baseball": {
+  type: "infobox"
+  class: /wp/infobox/club_de_baseball
+  fields: {
+    "couleur cadre": /wp/info/couleur_cadre
+    "couleur écriture": /wp/info/couleur_ecriture
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "upright logo": /wp/info/upright_logo
+    "légende logo": /wp/info/logo_caption
+    "nom complet": /wp/info/nom_complet
+    "surnoms": /wp/info/surnoms
+    "noms précédents": /wp/info/noms_precedents
+    "date de fondation": /wp/info/date_de_fondation
+    "date de disparition": /wp/info/date_de_disparition
+    "fondateur": /wp/info/fondateur
+    "co-fondateur": /wp/info/co-fondateur
+    "couleurs": /wp/info/couleurs
+    "équipement sportif": /wp/info/equipement_sportif
+    "capacité": /wp/info/capacite
+    "siège": /wp/info/siege
+    "championnat actuel": /wp/info/championnat_actuel
+    "président": /wp/info/president
+    "entraîneur": /wp/info/entraineur
+    "site web": /wp/info/site_web
+    "palmarès national": /wp/info/palmares_national
+    "palmarès international": /wp/info/palmares_international
+    "casquette": /wp/info/casquette
+    "bras gauche": /wp/info/bras_gauche
+    "corps": /wp/info/corps
+    "bras droit": /wp/info/bras_droit
+    "pantalon": /wp/info/pantalon
+    "chaussures": /wp/info/chaussures
+    "casquette2": /wp/info/casquette2
+    "bras gauche2": /wp/info/bras_gauche2
+    "corps2": /wp/info/corps2
+    "bras droit2": /wp/info/bras_droit2
+    "pantalon2": /wp/info/pantalon2
+    "chaussures2": /wp/info/chaussures2
+  }
+}
+
+"Infobox Club de football": {
+  type: "infobox"
+  class: /wp/infobox/club_de_football
+  fields: {
+    "couleur cadre": /wp/info/couleur_cadre
+    "couleur écriture": /wp/info/couleur_ecriture
+    "personnage blanc": /wp/info/personnage_blanc
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "upright logo": /wp/info/upright_logo
+    "légende logo": /wp/info/logo_caption
+    "nom complet": /wp/info/nom_complet
+    "surnoms": /wp/info/surnoms
+    "noms précédents": /wp/info/noms_precedents
+    "date de fondation": /wp/info/date_de_fondation
+    "date de disparition": /wp/info/date_de_disparition
+    "statut professionnel": /wp/info/statut_professionnel
+    "couleurs": /wp/info/couleurs
+    "équipement sportif": /wp/info/equipement_sportif
+    "capacité": /wp/info/capacite
+    "siège": /wp/info/siege
+    "propriétaire": /wp/info/proprietaire
+    "président": /wp/info/president
+    "entraîneur": /wp/info/entraineur
+    "championnat actuel": /wp/info/championnat_actuel
+    "joueur le plus capé": /wp/info/joueur_le_plus_cape
+    "meilleur buteur": /wp/info/meilleur_buteur
+    "site web": /wp/info/site_web
+    "palmarès national": /wp/info/palmares_national
+    "palmarès international": /wp/info/palmares_international
+    "note": /wp/info/note
+    "note (minuscule)": /wp/info/note_minuscule
+    "actualité": /wp/info/actualite
+    "pattern_la1": /wp/info/pattern_la1
+    "pattern_b1": /wp/info/pattern_b1
+    "pattern_ra1": /wp/info/pattern_ra1
+    "pattern_sh1": /wp/info/pattern_sh1
+    "pattern_so1": /wp/info/pattern_so1
+    "leftarm1": /wp/info/leftarm1
+    "body1": /wp/info/body1
+    "rightarm1": /wp/info/rightarm1
+    "shorts1": /wp/info/shorts1
+    "socks1": /wp/info/socks1
+    "pattern_la2": /wp/info/pattern_la2
+    "pattern_b2": /wp/info/pattern_b2
+    "pattern_ra2": /wp/info/pattern_ra2
+    "pattern_sh2": /wp/info/pattern_sh2
+    "pattern_so2": /wp/info/pattern_so2
+    "leftarm2": /wp/info/leftarm2
+    "body2": /wp/info/body2
+    "rightarm2": /wp/info/rightarm2
+    "shorts2": /wp/info/shorts2
+    "socks2": /wp/info/socks2
+    "pattern_la3": /wp/info/pattern_la3
+    "pattern_b3": /wp/info/pattern_b3
+    "pattern_ra3": /wp/info/pattern_ra3
+    "pattern_sh3": /wp/info/pattern_sh3
+    "pattern_so3": /wp/info/pattern_so3
+    "leftarm3": /wp/info/leftarm3
+    "body3": /wp/info/body3
+    "rightarm3": /wp/info/rightarm3
+    "shorts3": /wp/info/shorts3
+    "socks3": /wp/info/socks3
+  }
+}
+
+"Infobox Club de gymnastique": {
+  type: "infobox"
+  class: /wp/infobox/club_de_gymnastique
+  fields: {
+    "couleur cadre": /wp/info/couleur_cadre
+    "couleur écriture": /wp/info/couleur_ecriture
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "upright logo": /wp/info/upright_logo
+    "légende logo": /wp/info/logo_caption
+    "nom complet": /wp/info/nom_complet
+    "surnoms": /wp/info/surnoms
+    "noms précédents": /wp/info/noms_precedents
+    "date de fondation": /wp/info/date_de_fondation
+    "date de disparition": /wp/info/date_de_disparition
+    "statut professionnel": /wp/info/statut_professionnel
+    "couleurs": /wp/info/couleurs
+    "gymnase": /wp/info/gymnase
+    "siège": /wp/info/siege
+    "président": /wp/info/president
+    "entraîneur": /wp/info/entraineur
+    "affiliations": /wp/info/affiliations
+    "meilleure division": /wp/info/meilleure_division
+    "site web": /wp/info/site_web
+    "pattern_b1": /wp/info/pattern_b1
+    "pattern_s1": /wp/info/pattern_s1
+    "body1": /wp/info/body1
+    "shorts1": /wp/info/shorts1
+    "pattern_b2": /wp/info/pattern_b2
+    "pattern_s2": /wp/info/pattern_s2
+    "body2": /wp/info/body2
+    "shorts2": /wp/info/shorts2
+  }
+}
+
+"Infobox Club de handball": {
+  type: "infobox"
+  class: /wp/infobox/club_de_handball
+  fields: {
+    "couleur cadre": /wp/info/couleur_cadre
+    "couleur écriture": /wp/info/couleur_ecriture
+    "personnage blanc": /wp/info/personnage_blanc
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "upright logo": /wp/info/upright_logo
+    "légende logo": /wp/info/logo_caption
+    "nom complet": /wp/info/nom_complet
+    "surnoms": /wp/info/surnoms
+    "noms précédents": /wp/info/noms_precedents
+    "date de fondation": /wp/info/date_de_fondation
+    "date de disparition": /wp/info/date_de_disparition
+    "statut professionnel": /wp/info/statut_professionnel
+    "couleurs": /wp/info/couleurs
+    "équipement sportif": /wp/info/equipement_sportif
+    "capacité": /wp/info/capacite
+    "siège": /wp/info/siege
+    "championnat actuel": /wp/info/championnat_actuel
+    "président": /wp/info/president
+    "entraîneur": /wp/info/entraineur
+    "capitaine": /wp/info/capitaine
+    "joueur le plus capé": /wp/info/joueur_le_plus_cape
+    "meilleur buteur": /wp/info/meilleur_buteur
+    "site web": /wp/info/site_web
+    "palmarès national": /wp/info/palmares_national
+    "palmarès international": /wp/info/palmares_international
+    "actualité": /wp/info/actualite
+    "maj": /wp/info/maj
+    "pattern_la1": /wp/info/pattern_la1
+    "pattern_b1": /wp/info/pattern_b1
+    "pattern_ra1": /wp/info/pattern_ra1
+    "pattern_sh1": /wp/info/pattern_sh1
+    "pattern_so1": /wp/info/pattern_so1
+    "leftarm1": /wp/info/leftarm1
+    "body1": /wp/info/body1
+    "rightarm1": /wp/info/rightarm1
+    "shorts1": /wp/info/shorts1
+    "pattern_la2": /wp/info/pattern_la2
+    "pattern_b2": /wp/info/pattern_b2
+    "pattern_ra2": /wp/info/pattern_ra2
+    "pattern_sh2": /wp/info/pattern_sh2
+    "pattern_so2": /wp/info/pattern_so2
+    "leftarm2": /wp/info/leftarm2
+    "body2": /wp/info/body2
+    "rightarm2": /wp/info/rightarm2
+    "shorts2": /wp/info/shorts2
+    "pattern_la3": /wp/info/pattern_la3
+    "pattern_b3": /wp/info/pattern_b3
+    "pattern_ra3": /wp/info/pattern_ra3
+    "pattern_sh3": /wp/info/pattern_sh3
+    "pattern_so3": /wp/info/pattern_so3
+    "leftarm3": /wp/info/leftarm3
+    "body3": /wp/info/body3
+    "rightarm3": /wp/info/rightarm3
+    "shorts3": /wp/info/shorts3
+  }
+}
+
+"Infobox Club de natation": {
+  type: "infobox"
+  class: /wp/infobox/club_de_natation
+  fields: {
+    "couleur cadre": /wp/info/couleur_cadre
+    "couleur écriture": /wp/info/couleur_ecriture
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "nom complet": /wp/info/nom_complet
+    "surnoms": /wp/info/surnoms
+    "noms précédents": /wp/info/noms_precedents
+    "date de fondation": /wp/info/date_de_fondation
+    "date de disparition": /wp/info/date_de_disparition
+    "couleurs": /wp/info/couleurs
+    "équipement sportif": /wp/info/equipement_sportif
+    "nageurs": /wp/info/nageurs
+    "siège": /wp/info/siege
+    "championnat actuel": /wp/info/championnat_actuel
+    "président": /wp/info/president
+    "entraîneur": /wp/info/entraineur
+    "site web": /wp/info/site_web
+    "palmarès national": /wp/info/palmares_national
+    "palmarès international": /wp/info/palmares_international
+    "maj": /wp/info/maj
+  }
+}
+
+"Infobox Club de volley-ball": {
+  type: "infobox"
+  class: /wp/infobox/club_de_volley-ball
+  fields: {
+    "couleur cadre": /wp/info/couleur_cadre
+    "couleur écriture": /wp/info/couleur_ecriture
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "upright logo": /wp/info/upright_logo
+    "nom complet": /wp/info/nom_complet
+    "surnoms": /wp/info/surnoms
+    "noms précédents": /wp/info/noms_precedents
+    "date de fondation": /wp/info/date_de_fondation
+    "date de refondation": /wp/info/date_de_refondation
+    "date de disparition": /wp/info/date_de_disparition
+    "statut professionnel": /wp/info/statut_professionnel
+    "couleurs": /wp/info/couleurs
+    "équipement sportif": /wp/info/equipement_sportif
+    "capacité": /wp/info/capacite
+    "siège": /wp/info/siege
+    "championnat actuel": /wp/info/championnat_actuel
+    "président": /wp/info/president
+    "manager": /wp/info/manager
+    "entraîneur": /wp/info/entraineur
+    "site web": /wp/info/site_web
+    "palmarès national": /wp/info/palmares_national
+    "palmarès international": /wp/info/palmares_international
+    "actualité": /wp/info/actualite
+    "maj": /wp/info/maj
+    "pattern_la1": /wp/info/pattern_la1
+    "pattern_b1": /wp/info/pattern_b1
+    "pattern_ra1": /wp/info/pattern_ra1
+    "pattern_sh1": /wp/info/pattern_sh1
+    "pattern_so1": /wp/info/pattern_so1
+    "leftarm1": /wp/info/leftarm1
+    "body1": /wp/info/body1
+    "rightarm1": /wp/info/rightarm1
+    "shorts1": /wp/info/shorts1
+    "socks1": /wp/info/socks1
+    "pattern_la2": /wp/info/pattern_la2
+    "pattern_b2": /wp/info/pattern_b2
+    "pattern_ra2": /wp/info/pattern_ra2
+    "pattern_sh2": /wp/info/pattern_sh2
+    "pattern_so2": /wp/info/pattern_so2
+    "leftarm2": /wp/info/leftarm2
+    "body2": /wp/info/body2
+    "rightarm2": /wp/info/rightarm2
+    "shorts2": /wp/info/shorts2
+    "socks2": /wp/info/socks2
+    "pattern_la3": /wp/info/pattern_la3
+    "pattern_b3": /wp/info/pattern_b3
+    "pattern_ra3": /wp/info/pattern_ra3
+    "pattern_sh3": /wp/info/pattern_sh3
+    "pattern_so3": /wp/info/pattern_so3
+    "leftarm3": /wp/info/leftarm3
+    "body3": /wp/info/body3
+    "rightarm3": /wp/info/rightarm3
+    "shorts3": /wp/info/shorts3
+    "socks3": /wp/info/socks3
+  }
+}
+
+"Infobox Club de basket-ball": {
+  type: "infobox"
+  class: /wp/infobox/club_de_basket-ball
+  fields: {
+    "couleur cadre": /wp/info/couleur_cadre
+    "couleur écriture": /wp/info/couleur_ecriture
+    "personnage blanc": /wp/info/personnage_blanc
+    "nom": /wp/info/nom
+    "logo": {+/wp/info/logo media: true}
+    "upright logo": /wp/info/upright_logo
+    "légende logo": /wp/info/logo_caption
+    "nom complet": /wp/info/nom_complet
+    "surnoms": /wp/info/surnoms
+    "noms précédents": /wp/info/noms_precedents
+    "date de fondation": /wp/info/date_de_fondation
+    "date de disparition": /wp/info/date_de_disparition
+    "statut professionnel": /wp/info/statut_professionnel
+    "couleurs": /wp/info/couleurs
+    "équipement sportif": /wp/info/equipement_sportif
+    "capacité": /wp/info/capacite
+    "siège": /wp/info/siege
+    "championnat actuel": /wp/info/championnat_actuel
+    "propriété": /wp/info/propriete
+    "président": /wp/info/president
+    "manager": /wp/info/manager
+    "entraîneur": /wp/info/entraineur
+    "site web": /wp/info/site_web
+    "note": /wp/info/note
+    "note (minuscule)": /wp/info/note_minuscule
+    "palmarès national": /wp/info/palmares_national
+    "palmarès international": /wp/info/palmares_international
+    "actualité": /wp/info/actualite
+    "maj": /wp/info/maj
+    "pattern_b1": /wp/info/pattern_b1
+    "pattern_s1": /wp/info/pattern_s1
+    "body1": /wp/info/body1
+    "shorts1": /wp/info/shorts1
+    "pattern_b2": /wp/info/pattern_b2
+    "pattern_s2": /wp/info/pattern_s2
+    "body2": /wp/info/body2
+    "shorts2": /wp/info/shorts2
+  }
+}
+
 }
 
