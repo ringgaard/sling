@@ -105,7 +105,6 @@ string Wiki::URL(const string &lang, const string &title) {
   return "http://" + lang + ".wikipedia.org/wiki/" + t;
 }
 
-
 void WikimediaTypes::Init(Store *store) {
   CHECK(names_.Bind(store));
 }

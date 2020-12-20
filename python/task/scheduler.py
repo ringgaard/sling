@@ -845,7 +845,7 @@ class SchedulerService(BaseHTTPRequestHandler):
   def reply(self, code, content, ct="text/plain", cache=False):
     body = content.encode("utf8")
     self.send_response(code)
-    self.send_header("Content-type", ct)
+    self.send_header("Content-Type", ct)
     self.send_header("Content-Length", len(body))
     self.send_header("Cache-Control", "max-age=3600" if cache else "no-cache")
     self.end_headers()

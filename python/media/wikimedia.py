@@ -175,7 +175,7 @@ class WikiMediaExtract:
           colon = image.find(':')
           if colon > 0 and colon < 10: image = image[colon + 1:]
           image = titlecase(image.strip()).replace('_', ' ')
-          if len(image) == 0:
+          if len(image) == 0 or image == "Defaut.svg":
             task.increment("empty_images")
             continue
 
