@@ -25,7 +25,9 @@ import threading
 import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
-from SocketServer import ThreadingMixIn
+from socketserver import ThreadingMixIn
+
+import threading
 
 import sling
 import sling.flags as flags
