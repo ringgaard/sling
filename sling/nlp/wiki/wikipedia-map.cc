@@ -173,6 +173,26 @@ Text WikipediaMap::LookupLink(Text lang, Text prefix, Text link,
   return Lookup(id, type);
 }
 
+Text WikipediaMap::ResolveRedirect(Text lang, Text prefix, Text link) {
+  string id = Wiki::Id(lang.str(), prefix.str(), link.str());
+
+  // Lookup id in mapping.
+  Frame item(&store_, id);
+  if (item.invalid() || item.IsProxy()) return link;
+
+  // Resolve redirects.
+  if (item.IsA(n_redirect_)) {
+   item = Frame(&store_, Resolve(item.handle()));
+   Text target = item.Id();
+
+   // Remove "/wp/<lang>/" prefix.
+   CHECK_GE(target.size(), 5);
+   return target.substr(lang.size() + 5);
+  } else {
+    return link;
+  }
+}
+
 }  // namespace nlp
 }  // namespace sling
 

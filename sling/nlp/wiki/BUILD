@@ -8,6 +8,8 @@ cc_library(
     "//sling/base",
     "//sling/frame:object",
     "//sling/frame:store",
+    "//sling/string:strcat",
+    "//sling/string:text",
     "//sling/util:unicode",
   ],
 )

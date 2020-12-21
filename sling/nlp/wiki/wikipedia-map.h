@@ -84,6 +84,9 @@ class WikipediaMap {
   Text LookupLink(Text lang, Text link, PageType type = UNKNOWN);
   Text LookupLink(Text lang, Text prefix, Text link, PageType type = UNKNOWN);
 
+  // Resolve redirect for link.
+  Text ResolveRedirect(Text lang, Text prefix, Text link);
+
  private:
   // Resolve redirects.
   Handle Resolve(Handle);

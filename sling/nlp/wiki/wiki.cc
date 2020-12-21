@@ -16,6 +16,7 @@
 
 #include <string>
 
+#include "sling/string/strcat.h"
 #include "sling/util/unicode.h"
 
 namespace sling {
@@ -78,31 +79,31 @@ void Wiki::SplitTitle(const string &title,
   }
 }
 
-string Wiki::Id(const string &lang, const string &title) {
+string Wiki::Id(Text lang, Text title) {
   string t;
-  UTF8::ToTitleCase(title, &t);
+  UTF8::ToTitleCase(title.data(), title.size(), &t);
   for (char &c : t) {
     if (c == ' ') c = '_';
   }
-  return "/wp/" + lang + "/" + t;
+  return StrCat("/wp/", lang, "/", t);
 }
 
-string Wiki::Id(const string &lang, const string &prefix, const string &title) {
+string Wiki::Id(Text lang, Text prefix, Text title) {
   string t;
-  UTF8::ToTitleCase(title, &t);
+  UTF8::ToTitleCase(title.data(), title.size(), &t);
   for (char &c : t) {
     if (c == ' ') c = '_';
   }
-  return "/wp/" + lang + "/" + prefix + ":" + t;
+  return StrCat("/wp/", lang, "/", prefix, ":", t);
 }
 
-string Wiki::URL(const string &lang, const string &title) {
+string Wiki::URL(Text lang, Text title) {
   string t;
-  UTF8::ToTitleCase(title, &t);
+  UTF8::ToTitleCase(title.data(), title.size(), &t);
   for (char &c : t) {
     if (c == ' ') c = '_';
   }
-  return "http://" + lang + ".wikipedia.org/wiki/" + t;
+  return StrCat("http://", lang, ".wikipedia.org/wiki/", t);
 }
 
 void WikimediaTypes::Init(Store *store) {

@@ -16,6 +16,7 @@
 
 import gzip
 import hashlib
+import html
 import urllib.request
 from datetime import date, timedelta
 
@@ -28,13 +29,14 @@ from sling.task.wiki import WikiWorkflow
 
 # Known file extensions for media files.
 known_extensions = set([
-  ".jpg", ".jpeg", ".gif", ".png", ".svg", ".webp",
+  ".jpg", ".jpeg", ".gif", ".png", ".svg", ".webp", ".bmp",
 ])
 ignored_extensions = set([
-  ".tif", ".tiff", ".pdf", ".webm", ".ogv", ".xcf", ".ogg",
+  ".tif", ".tiff", ".pdf", ".webm", ".ogv", ".xcf", ".ogg", ".djvu",
 ])
 
 # Wikipedia item for language.
+# TODO: remove when settings in languages.sling has propagated.
 wikipedia_ids = {
   "en": "Q328",
   "da": "Q181163",
@@ -97,7 +99,12 @@ class WikiMediaExtract:
       kb["P41"],   # flag image
     ]
 
-    wikipedia_item = kb[wikipedia_ids[language]]
+    lang = kb["/lang/" + language]
+    wikipedia_item = None
+    media_prefix = "File"
+    if lang != None: wikipedia_item = lang["/lang/wikilang/wikipedia"]
+    if wikipedia_item is None: wikipedia_item = kb[wikipedia_ids[language]]
+
     docschema = sling.DocumentSchema(kb)
 
     kb.freeze()
@@ -171,18 +178,19 @@ class WikiMediaExtract:
             task.increment("url_images")
             continue
 
-          # Trim image name. Remove File:/Image prefix.
+          # Trim image name. Remove File: prefix.
           colon = image.find(':')
           if colon > 0 and colon < 10: image = image[colon + 1:]
           image = titlecase(image.strip()).replace('_', ' ')
           if len(image) == 0 or image == "Defaut.svg":
             task.increment("empty_images")
             continue
+          if image.endswith("&lrm;"): image = image[:-5]
+          image = html.unescape(image)
+          frag = image.find('#')
+          if frag > 0: image = image[:frag]
 
           # Discard media files with unknown or ignored extensions.
-          if image.endswith("border"): image = image[:-6]
-          if image.endswith("frameless"): image = image[:-9]
-          if image.endswith("center"): image = image[:-6]
           dot = image.rfind('.')
           ext = image[dot:].lower() if dot > 0 else None
           if ext in ignored_extensions:
@@ -214,6 +222,7 @@ class WikiMediaExtract:
           else:
             urlbase = "https://upload.wikimedia.org/wikipedia/commons"
             task.increment("commons_images")
+            if known_images == 0: task.increment("commons_imaged_items")
 
           # Compute URL for image.
           md5 = md5hash(fn)

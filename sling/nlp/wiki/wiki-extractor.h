@@ -50,9 +50,10 @@ class WikiSink {
                         bool unanchored);
 
   // Output category.
-  virtual void Category(const Node &node,
-                        WikiExtractor *extractor,
-                        bool unanchored);
+  virtual void Category(const Node &node, WikiExtractor *extractor);
+
+  // Output URL link.
+  virtual void Url(const Node &node, WikiExtractor *extractor);
 
   // Output media link.
   virtual void Media(const Node &node, WikiExtractor *extractor);

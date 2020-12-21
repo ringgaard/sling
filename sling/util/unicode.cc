@@ -458,20 +458,23 @@ void UTF8::Normalize(const char *s, int len, int flags, string *normalized) {
   }
 }
 
-void UTF8::ToTitleCase(const string &str, string *titlecased) {
-  titlecased->clear();
-  if (str.empty()) return;
-  const char *s = str.data();
+void UTF8::ToTitleCase(const char *s, int len, string *titlecased) {
+  if (len == 0) {
+    titlecased->clear();
+    return;
+  }
+
   int initial = Decode(s);
   if (Unicode::IsLower(initial)) {
     // Convert first character to upper case.
     Encode(Unicode::ToUpper(initial), titlecased);
 
     // Copy rest of string.
-    titlecased->append(str, CharLen(s), -1);
+    int l = CharLen(s);
+    titlecased->append(s + l, len - l);
   } else {
     // Just copy string.
-    titlecased->assign(str);
+    titlecased->assign(s, len);
   }
 }
 

@@ -25,10 +25,11 @@
     target: string
   }
 
-  role: {=/lang/wikilang/stop_words :slot
-    name: "stop words"
-    description: "List of stop words"
+  role: {=/lang/wikilang/wikipedia :slot
+    name: "wikipedia"
+    description: "Item for Wikipedia"
     source: /lang/wikilang
+    target: item
   }
 
   value: /lang/af
@@ -74,6 +75,7 @@
   /lang/wikilang/wiki_category: "Kategorie"
   /lang/wikilang/wiki_image: "Sjabloon"
   /lang/wikilang/wiki_template: "Lêer"
+  /lang/wikilang/wikipedia: Q766705
 }
 
 {=/lang/bg
@@ -84,6 +86,7 @@
   /lang/wikilang/wiki_category: "Категория"
   /lang/wikilang/wiki_image: "Файл"
   /lang/wikilang/wiki_template: "Шаблон"
+  /lang/wikilang/wikipedia: Q11913
 }
 
 {=/lang/ca
@@ -94,6 +97,7 @@
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Fitxer"
   /lang/wikilang/wiki_template: "Plantilla"
+  /lang/wikilang/wikipedia: Q199693
 }
 
 {=/lang/cs
@@ -104,6 +108,7 @@
   /lang/wikilang/wiki_category: "Kategorie"
   /lang/wikilang/wiki_image: "Soubor"
   /lang/wikilang/wiki_template: "Šablona"
+  /lang/wikilang/wikipedia: Q191168
 }
 
 {=/lang/da
@@ -114,6 +119,7 @@
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fil"
   /lang/wikilang/wiki_template: "Skabelon"
+  /lang/wikilang/wikipedia: Q181163
 }
 
 {=/lang/de
@@ -124,6 +130,7 @@
   /lang/wikilang/wiki_category: "Kategorie"
   /lang/wikilang/wiki_image: "Datei"
   /lang/wikilang/wiki_template: "Vorlage"
+  /lang/wikilang/wikipedia: Q48183
 }
 
 {=/lang/el
@@ -134,6 +141,7 @@
   /lang/wikilang/wiki_category: "Κατηγορία"
   /lang/wikilang/wiki_image: "File"
   /lang/wikilang/wiki_template: "Πρότυπο"
+  /lang/wikilang/wikipedia: Q11918
 }
 
 {=/lang/en
@@ -144,6 +152,7 @@
   /lang/wikilang/wiki_category: "Category"
   /lang/wikilang/wiki_image: "File"
   /lang/wikilang/wiki_template: "Template"
+  /lang/wikilang/wikipedia: Q328
 }
 
 {=/lang/es
@@ -154,6 +163,7 @@
   /lang/wikilang/wiki_category: "Categoría"
   /lang/wikilang/wiki_image: "Archivo"
   /lang/wikilang/wiki_template: "Plantilla"
+  /lang/wikilang/wikipedia: Q8449
 }
 
 {=/lang/eo
@@ -164,6 +174,7 @@
   /lang/wikilang/wiki_category: "Kategorio"
   /lang/wikilang/wiki_image: "Dosiero"
   /lang/wikilang/wiki_template: "Ŝablono"
+  /lang/wikilang/wikipedia: Q190551
 }
 
 {=/lang/eu
@@ -174,6 +185,7 @@
   /lang/wikilang/wiki_category: "Kategoria"
   /lang/wikilang/wiki_image: "Fitxategi"
   /lang/wikilang/wiki_template: "Txantiloi"
+  /lang/wikilang/wikipedia: Q207260
 }
 
 {=/lang/fi
@@ -184,6 +196,7 @@
   /lang/wikilang/wiki_category: "Luokka"
   /lang/wikilang/wiki_image: "Tiedosto"
   /lang/wikilang/wiki_template: "Malline"
+  /lang/wikilang/wikipedia: Q175482
 }
 
 {=/lang/fr
@@ -194,6 +207,7 @@
   /lang/wikilang/wiki_category: "Catégorie"
   /lang/wikilang/wiki_image: "Fichier"
   /lang/wikilang/wiki_template: "Modèle"
+  /lang/wikilang/wikipedia: Q8447
 }
 
 {=/lang/hu
@@ -204,6 +218,7 @@
   /lang/wikilang/wiki_category: "Kategória"
   /lang/wikilang/wiki_image: "Fájl"
   /lang/wikilang/wiki_template: "Sablon"
+  /lang/wikilang/wikipedia: Q53464
 }
 
 {=/lang/id
@@ -214,6 +229,7 @@
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Berkas"
   /lang/wikilang/wiki_template: "Templat"
+  /lang/wikilang/wikipedia: Q155214
 }
 
 {=/lang/it
@@ -224,6 +240,7 @@
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Immagine"
   /lang/wikilang/wiki_template: "Template"
+  /lang/wikilang/wikipedia: Q11920
 }
 
 {=/lang/la
@@ -234,6 +251,7 @@
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Fasciculus"
   /lang/wikilang/wiki_template: "Formula"
+  /lang/wikilang/wikipedia: Q12237
 }
 
 {=/lang/lt
@@ -244,6 +262,7 @@
   /lang/wikilang/wiki_category: "Kategorija"
   /lang/wikilang/wiki_image: "Vaizdas"
   /lang/wikilang/wiki_template: "Šablonas"
+  /lang/wikilang/wikipedia: Q202472
 }
 
 {=/lang/ms
@@ -254,6 +273,7 @@
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fail"
   /lang/wikilang/wiki_template: "Templat"
+  /lang/wikilang/wikipedia: Q845993
 }
 
 {=/lang/nl
@@ -264,6 +284,7 @@
   /lang/wikilang/wiki_category: "Categorie"
   /lang/wikilang/wiki_image: "Bestand"
   /lang/wikilang/wiki_template: "Sjabloon"
+  /lang/wikilang/wikipedia: Q10000
 }
 
 {=/lang/no
@@ -274,6 +295,7 @@
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fil"
   /lang/wikilang/wiki_template: "Mal"
+  /lang/wikilang/wikipedia: Q191769
 }
 
 {=/lang/pl
@@ -284,6 +306,7 @@
   /lang/wikilang/wiki_category: "Kategoria"
   /lang/wikilang/wiki_image: "Plik"
   /lang/wikilang/wiki_template: "Szablon"
+  /lang/wikilang/wikipedia: Q1551807
 }
 
 {=/lang/pt
@@ -294,6 +317,7 @@
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Ficheiro"
   /lang/wikilang/wiki_template: "Predefinição"
+  /lang/wikilang/wikipedia: Q11921
 }
 
 {=/lang/ro
@@ -304,6 +328,7 @@
   /lang/wikilang/wiki_category: "Categorie"
   /lang/wikilang/wiki_image: "Fișier"
   /lang/wikilang/wiki_template: "Format"
+  /lang/wikilang/wikipedia: Q199864
 }
 
 {=/lang/ru
@@ -314,6 +339,7 @@
   /lang/wikilang/wiki_category: "Категория"
   /lang/wikilang/wiki_image: "Файл"
   /lang/wikilang/wiki_template: "Шаблон"
+  /lang/wikilang/wikipedia: Q206855
 }
 
 {=/lang/sh
@@ -324,6 +350,7 @@
   /lang/wikilang/wiki_category: "Kategorija"
   /lang/wikilang/wiki_image: "Datoteka"
   /lang/wikilang/wiki_template: "Šablon"
+  /lang/wikilang/wikipedia: Q58679
 }
 
 {=/lang/sk
@@ -334,6 +361,7 @@
   /lang/wikilang/wiki_category: "Kategória"
   /lang/wikilang/wiki_image: "Súbor"
   /lang/wikilang/wiki_template: "Šablóna"
+  /lang/wikilang/wikipedia: Q192582
 }
 
 {=/lang/sr
@@ -344,6 +372,7 @@
   /lang/wikilang/wiki_category: "Категорија"
   /lang/wikilang/wiki_image: "Датотека"
   /lang/wikilang/wiki_template: "Шаблон"
+  /lang/wikilang/wikipedia: Q200386
 }
 
 {=/lang/sv
@@ -354,6 +383,7 @@
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fil"
   /lang/wikilang/wiki_template: "Mall"
+  /lang/wikilang/wikipedia: Q169514
 }
 
 {=/lang/uk
@@ -364,6 +394,7 @@
   /lang/wikilang/wiki_category: "Категорія"
   /lang/wikilang/wiki_image: "Файл"
   /lang/wikilang/wiki_template: "Шаблон"
+  /lang/wikilang/wikipedia: Q199698
 }
 
 {=/lang/mul

@@ -21,9 +21,11 @@ import threading
 import time
 import requests
 import queue
+import threading
 import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
+from SocketServer import ThreadingMixIn
 
 import sling
 import sling.flags as flags
@@ -837,7 +839,7 @@ class SchedulerService(BaseHTTPRequestHandler):
     content = f.read()
     f.close()
     self.send_response(200)
-    if mimetype: self.send_header("Content-type", mimetype)
+    if mimetype: self.send_header("Content-Type", mimetype)
     self.send_header("Content-Length", len(content))
     self.end_headers()
     self.wfile.write(content)
@@ -847,9 +849,12 @@ class SchedulerService(BaseHTTPRequestHandler):
     self.send_response(code)
     self.send_header("Content-Type", ct)
     self.send_header("Content-Length", len(body))
-    self.send_header("Cache-Control", "max-age=3600" if cache else "no-cache")
+    self.send_header("Cache-Control", "public" if cache else "no-cache")
     self.end_headers()
     self.wfile.write(body)
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+  """Handle requests in a separate threads."""
 
 if __name__ == "__main__":
   # Parse command line flags.
@@ -859,7 +864,7 @@ if __name__ == "__main__":
   refresh_task_list()
 
   # Start web server for submitting and monitoring jobs.
-  httpd = HTTPServer(("", flags.arg.port), SchedulerService)
+  httpd = ThreadedHTTPServer(("", flags.arg.port), SchedulerService)
   log.info('job scheduler running: http://localhost:%d/' % flags.arg.port)
   try:
     httpd.serve_forever()

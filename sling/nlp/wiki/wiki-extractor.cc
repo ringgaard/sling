@@ -36,10 +36,12 @@ void WikiSink::Template(const Node &node,
   extractor->ExtractSkip(node);
 }
 
-void WikiSink::Category(const Node &node,
-                        WikiExtractor *extractor,
-                        bool unanchored) {
+void WikiSink::Category(const Node &node, WikiExtractor *extractor) {
   extractor->ExtractSkip(node);
+}
+
+void WikiSink::Url(const Node &node, WikiExtractor *extractor) {
+  extractor->ExtractChildren(node);
 }
 
 void WikiSink::Media(const Node &node, WikiExtractor *extractor) {
@@ -141,11 +143,11 @@ void WikiExtractor::ExtractMedia(const Node &node) {
 }
 
 void WikiExtractor::ExtractCategory(const Node &node) {
-  sink()->Category(node, this, false);
+  sink()->Category(node, this);
 }
 
 void WikiExtractor::ExtractUrl(const Node &node) {
-  ExtractChildren(node);
+  sink()->Url(node, this);
 }
 
 void WikiExtractor::ExtractComment(const Node &node) {
@@ -310,7 +312,9 @@ void WikiExtractor::ExtractSkip(const Node &node) {
     } else if (n.type == WikiParser::TEMPLATE) {
       sink()->Template(n, this, true);
     } else if (n.type == WikiParser::CATEGORY) {
-      sink()->Category(n, this, true);
+      sink()->Category(n, this);
+    } else if (n.type == WikiParser::MEDIA) {
+      sink()->Media(n, this);
     } else {
       ExtractSkip(n);
     }

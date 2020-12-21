@@ -1375,8 +1375,8 @@
   type: "infobox"
   class: /wp/infobox/choir
   fields: {
-    "name": {+/wp/info/image media: true}
-    "image": /wp/info/image
+    "name": {+/wp/info/name alias: 12}
+    "image": {+/wp/info/image media: true}
     "image_size": /wp/info/image_size
     "alt": /wp/info/alt
     "caption": /wp/info/caption

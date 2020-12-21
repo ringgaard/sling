@@ -305,7 +305,10 @@ class UTF8 {
   }
 
   // Convert string to title case, i.e. make the first letter uppercase.
-  static void ToTitleCase(const string &str, string *titlecased);
+  static void ToTitleCase(const char *s, int len, string *titlecased);
+  static void ToTitleCase(const string &str, string *titlecased) {
+    ToTitleCase(str.data(), str.size(), titlecased);
+  }
 
   // Check if all characters belong to character mask.
   static bool All(const char *s, int len, int mask);

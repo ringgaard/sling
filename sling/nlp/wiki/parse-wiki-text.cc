@@ -67,6 +67,10 @@ class Resolver : public WikiLinkResolver {
                                WikipediaMap::CATEGORY);
   }
 
+  Text ResolveMedia(Text link) override {
+    return wikimap_.ResolveRedirect(FLAGS_lang, "File", link);
+  }
+
   Store *store() { return wikimap_.store(); }
 
  private:

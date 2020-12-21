@@ -20,6 +20,7 @@
 #include "sling/base/types.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
+#include "sling/string/text.h"
 
 namespace sling {
 namespace nlp {
@@ -75,13 +76,11 @@ class Wiki {
                          string *disambiguation);
 
   // Return id for Wikipedia page.
-  static string Id(const string &lang, const string &title);
-  static string Id(const string &lang,
-                   const string &prefix,
-                   const string &title);
+  static string Id(Text lang, Text title);
+  static string Id(Text lang, Text prefix, Text title);
 
   // Return URL for Wikipedia page.
-  static string URL(const string &lang, const string &title);
+  static string URL(Text lang, Text title);
 
   // Language priority order.
   static const char *language_priority[];

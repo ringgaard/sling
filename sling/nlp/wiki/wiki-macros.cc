@@ -518,48 +518,103 @@ REGISTER_WIKI_MACRO("measure", MeasureTemplate);
 // Sink for collecting media files.
 class MediaSink : public WikiSink {
  public:
+  struct Image {
+    Image(const string &file, const string &caption)
+      : file(file), caption(caption) {}
+
+    string file;
+    string caption;
+  };
+
   void Content(const char *begin, const char *end) override {
+    if (stop_) return;
     if (begin != end && *begin == '<') return;
     for (const char *p = begin; p < end; ++p) {
       if (*p == '\n') {
-        line_break_ = true;
+        text_.push_back(' ');
       } else {
-        if (line_break_) {
-          text_.push_back('\n');
-          line_break_ = false;
-        }
         text_.push_back(*p);
       }
     }
   }
 
-  // Font change starts a new alias.
-  void Font(int font) override {
-    line_break_ = true;
-  }
-
   // Output media link.
   void Media(const Node &node, WikiExtractor *extractor) override {
     if (node.named()) {
-      files_.push_back(node.name().str());
+      images_.emplace_back(node.name().str(), "");
+    }
+  }
+
+  // Output URL link.
+  void Url(const Node &node, WikiExtractor *extractor) override {
+    if (node.named()) {
+      images_.emplace_back(node.name().str(), "");
+    }
+  }
+
+  // Process templates.
+  void Template(const Node &node,
+                WikiExtractor *extractor,
+                bool unachored) override {
+    if (node.name() == "!") {
+      // Stop processing text after first |.
+      stop_ = true;
+    } else if (node.name() == "Photomontage") {
+      int child = node.first_child;
+      while (child != -1) {
+        const Node &n = extractor->parser().node(child);
+        if (n.type == WikiParser::ARG && n.name().starts_with("photo")) {
+          Sub(n, extractor);
+        }
+        child = n.next_sibling;
+      }
+    } else if (node.name() == "multiple image") {
+      int child = node.first_child;
+      while (child != -1) {
+        const Node &n = extractor->parser().node(child);
+        if (n.type == WikiParser::ARG &&
+            n.name().starts_with("image") &&
+            !n.name().starts_with("image_")) {
+          Sub(n, extractor);
+        }
+        child = n.next_sibling;
+      }
+    }
+  }
+
+  // Collect media from sub-field.
+  void Sub(const Node &node, WikiExtractor *extractor) {
+    // Extract media using sub-annotator.
+    MediaSink sub;
+    extractor->Enter(&sub);
+    extractor->ExtractNode(node);
+    extractor->Leave(&sub);
+
+    // Add extracted media to this sink.
+    if (!sub.images().empty()) {
+      for (auto &image : sub.images()) {
+        images_.emplace_back(image.file, image.caption);
+      }
+    } else if (!sub.text().empty()) {
+      images_.emplace_back(sub.text(), "");
     }
   }
 
   // Return extracted text.
   const string &text() const { return text_; }
 
-  // Return extracted files.
-  const std::vector<string> &files() const { return files_; }
+  // Return extracted media files.
+  const std::vector<Image> &images() const { return images_; }
 
- protected:
+ private:
   // Extracted text.
   string text_;
 
   // Media files.
-  std::vector<string> files_;
+  std::vector<Image> images_;
 
-  // Pending line breaks.
-  bool line_break_ = false;
+  // Stop extracting text.
+  bool stop_ = false;
 };
 
 // Template macro for photo montage.
@@ -672,9 +727,11 @@ class InfoboxTemplate : public WikiMacro {
         templ.extractor()->Enter(&media_annotator);
         templ.extractor()->ExtractNode(*arg);
         templ.extractor()->Leave(&media_annotator);
-        if (!media_annotator.files().empty()) {
+
+        if (!media_annotator.images().empty()) {
           Document document(store, docnames_);
-          for (auto &file : media_annotator.files()) {
+          for (auto &image : media_annotator.images()) {
+            Text file = annotator->resolver()->ResolveMedia(image.file);
             Builder theme(store);
             theme.AddIsA(n_media_);
             theme.AddIs(String(store, file));
@@ -683,7 +740,8 @@ class InfoboxTemplate : public WikiMacro {
           document.Update();
           value = ToLex(document);
         } else {
-          value = media_annotator.text();
+          Text file = media_annotator.text();
+          value = annotator->resolver()->ResolveMedia(file).str();
         }
       } else {
         WikiAnnotator value_annotator(annotator);

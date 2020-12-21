@@ -259,9 +259,7 @@ void WikiAnnotator::Template(const Node &node,
   extractor->ExtractSkip(node);
 }
 
-void WikiAnnotator::Category(const Node &node,
-                             WikiExtractor *extractor,
-                             bool unanchored) {
+void WikiAnnotator::Category(const Node &node, WikiExtractor *extractor) {
   // Resolve link.
   Text link = resolver_->ResolveCategory(node.name());
   if (link.empty()) return;

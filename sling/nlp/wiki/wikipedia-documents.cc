@@ -53,6 +53,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     CHECK(langinfo.valid());
     category_prefix_ = langinfo.GetString(n_lang_category_);
     template_prefix_ = langinfo.GetString(n_lang_template_);
+    image_prefix_ = langinfo.GetString(n_lang_image_);
     task->Fetch("skip_tables", &skip_tables_);
 
     // Load redirects.
@@ -88,6 +89,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     num_unknown_categories_ = task->GetCounter("unknown_categories");
     num_templates_ = task->GetCounter("wiki_templates");
     num_unknown_templates_ = task->GetCounter("unknown_templates");
+    num_media_redirects_ =task->GetCounter("media_redirects");
     for (int i = 0; i < kNumAliasSources; ++i) {
       num_aliases_[i] =
           task->GetCounter(StrCat(kAliasSourceName[i], "_aliases"));
@@ -316,12 +318,23 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     return qid;
   }
 
+  Text ResolveMedia(Text link) override {
+    link = link.trim();
+    if (link.starts_with(image_prefix_)) {
+      link.remove_prefix(image_prefix_.size());
+    }
+    Text redirected = wikimap_.ResolveRedirect(language_, image_prefix_, link);
+    if (redirected != link) num_media_redirects_->Increment();
+    return redirected;
+  }
+
  private:
   // Language.
   string language_;
   Handle lang_;
   string category_prefix_;
   string template_prefix_;
+  string image_prefix_;
 
   // Mapping from Wikipedia ids to Wikidata ids.
   WikipediaMap wikimap_;
@@ -343,6 +356,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
   Name n_name_{names_, "name"};
   Name n_lang_category_{names_, "/lang/wikilang/wiki_category"};
   Name n_lang_template_{names_, "/lang/wikilang/wiki_template"};
+  Name n_lang_image_{names_, "/lang/wikilang/wiki_image"};
 
   Name n_page_text_{names_, "/wp/page/text"};
   Name n_page_title_{names_, "/wp/page/title"};
@@ -371,6 +385,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
   task::Counter *num_unknown_categories_;
   task::Counter *num_templates_;
   task::Counter *num_unknown_templates_;
+  task::Counter *num_media_redirects_;
 
   task::Counter *num_aliases_[kNumAliasSources];
   task::Counter *num_discarded_aliases_[kNumAliasSources];

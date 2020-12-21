@@ -44,6 +44,9 @@ class WikiLinkResolver {
 
   // Resolve link to Wikipedia category returning Wikidata QID for item.
   virtual Text ResolveCategory(Text link) = 0;
+
+  // Resolve redirects for media files.
+  virtual Text ResolveMedia(Text link) = 0;
 };
 
 // Wrapper around wiki template node.
@@ -187,9 +190,7 @@ class WikiAnnotator : public WikiTextSink {
   void Template(const Node &node,
                 WikiExtractor *extractor,
                 bool unanchored) override;
-  void Category(const Node &node,
-                WikiExtractor *extractor,
-                bool unanchored) override;
+  void Category(const Node &node, WikiExtractor *extractor) override;
 
   // Add annotations to tokenized document.
   void AddToDocument(Document *document);
