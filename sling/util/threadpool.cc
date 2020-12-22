@@ -18,31 +18,33 @@
 namespace sling {
 
 ThreadPool::ThreadPool(int num_workers, int queue_size)
-    : num_workers_(num_workers), queue_size_(queue_size) {}
+    : num_workers_(num_workers), queue_size_(queue_size) {
+}
 
 ThreadPool::~ThreadPool() {
   // Wait until all tasks have been completed.
   Shutdown();
 
   // Wait until all workers have terminated.
-  for (auto &t : workers_) t.Join();
+  for (auto *t : workers_) t->Join();
 }
 
 void ThreadPool::StartWorkers() {
   // Create worker threads.
   CHECK(workers_.empty());
   for (int i = 0; i < num_workers_; ++i) {
-    workers_.emplace_back([this]() {
+    ClosureThread *t = new ClosureThread([this]() {
       // Keep processing tasks until done.
       Task task;
       while (FetchTask(&task)) task();
     });
+    workers_.push_back(t);
   }
 
   // Start worker threads.
-  for (auto &t : workers_) {
-    t.SetJoinable(true);
-    t.Start();
+  for (auto *t : workers_) {
+    t->SetJoinable(true);
+    t->Start();
   }
 }
 

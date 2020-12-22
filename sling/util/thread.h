@@ -47,6 +47,10 @@ class Thread {
   virtual void Run() = 0;
 
  private:
+  // Disallow copy and assign.
+  Thread(const Thread &) = delete;
+  void operator =(const Thread &) = delete;
+
   // Thread handle.
   pthread_t thread_;
 
@@ -74,12 +78,18 @@ class ClosureThread : public Thread {
   void Run() override;
 
  private:
+  // Disallow copy and assign.
+  ClosureThread(const ClosureThread &) = delete;
+  void operator =(const ClosureThread &) = delete;
+
   Closure closure_;
 };
 
 // A worker pool runs a closure in a set of worker threads.
 class WorkerPool {
  public:
+  ~WorkerPool();
+
   // A worker is a functional that takes the worker index as an argument.
   typedef std::function<void(int index)> Worker;
 
@@ -94,7 +104,7 @@ class WorkerPool {
 
  private:
   // Worker threads.
-  std::vector<ClosureThread> workers_;
+  std::vector<ClosureThread *> workers_;
 };
 
 }  // namespace sling

@@ -35,23 +35,6 @@ ignored_extensions = set([
   ".tif", ".tiff", ".pdf", ".webm", ".ogv", ".xcf", ".ogg", ".djvu",
 ])
 
-# Wikipedia item for language.
-# TODO: remove when settings in languages.sling has propagated.
-wikipedia_ids = {
-  "en": "Q328",
-  "da": "Q181163",
-  "sv": "Q169514",
-  "no": "Q191769",
-  "de": "Q48183",
-  "fr": "Q8447",
-  "es": "Q8449",
-  "it": "Q11920",
-  "nl": "Q10000",
-  "pt": "Q11921",
-  "pl": "Q1551807",
-  "fi": "Q175482",
-}
-
 # Compute MD5 hash for string.
 def md5hash(s):
   md5 = hashlib.md5()
@@ -100,10 +83,7 @@ class WikiMediaExtract:
     ]
 
     lang = kb["/lang/" + language]
-    wikipedia_item = None
-    media_prefix = "File"
-    if lang != None: wikipedia_item = lang["/lang/wikilang/wikipedia"]
-    if wikipedia_item is None: wikipedia_item = kb[wikipedia_ids[language]]
+    wikipedia_item = lang["/lang/wikilang/wikipedia"]
 
     docschema = sling.DocumentSchema(kb)
 
@@ -116,7 +96,7 @@ class WikiMediaExtract:
       "%swiki-%s-all-media-titles.gz" % (yesterday, language, yesterday)
     r = urllib.request.urlopen(mediaurl)
     mediatitles = set(gzip.decompress(r.read()).decode().split('\n'))
-    log.info(len(mediatitles), "local media files")
+    task.increment("local_media_files", len(mediatitles))
 
     # Open output file.
     fout = open(task.output("output").name, "w")

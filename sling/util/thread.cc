@@ -63,23 +63,28 @@ void ClosureThread::Run() {
   closure_();
 }
 
+WorkerPool::~WorkerPool() {
+  for (auto *t : workers_) delete t;
+}
+
 void WorkerPool::Start(int num_workers, const Worker &worker) {
   // Create worker threads.
   int first = workers_.size();
   for (int i = 0; i < num_workers; ++i) {
     int index = first + i;
-    workers_.emplace_back([worker, index]() { worker(index); });
+    ClosureThread *t = new ClosureThread([worker, index]() { worker(index); });
+    workers_.push_back(t);
   }
 
   // Start worker threads.
   for (int i = first; i < workers_.size(); ++i) {
-    workers_[i].SetJoinable(true);
-    workers_[i].Start();
+    workers_[i]->SetJoinable(true);
+    workers_[i]->Start();
   }
 }
 
 void WorkerPool::Join() {
-  for (auto &t : workers_) t.Join();
+  for (auto *t : workers_) t->Join();
 }
 
 }  // namespace sling

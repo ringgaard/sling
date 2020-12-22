@@ -52,7 +52,7 @@ class ThreadPool {
 
   // Worker threads.
   int num_workers_;
-  std::vector<ClosureThread> workers_;
+  std::vector<ClosureThread *> workers_;
 
   // Task queue.
   int queue_size_;
