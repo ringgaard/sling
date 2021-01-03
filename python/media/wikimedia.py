@@ -36,7 +36,7 @@ ignored_extensions = set([
 ])
 
 # Default images for missing images.
-default_images = set({
+default_images = set([
   "Defaut.svg",
   "Défaut-mannequin_(s).png",
   "Null.png",
