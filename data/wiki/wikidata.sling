@@ -3,13 +3,13 @@
 ; The schema for /w/entity contains all the Wikidata properties and is defined
 ; by the property collector, and has the following form:
 ;
-; {=/w/entity  :schema
+; {=/w/entity :schema
 ;   name: "Wikidata entity"
 ;   family: /schema/wikidata
 ;   role: Pxxx (one for each property)
 ; }
 
-{=/w/item +profile +/w/entity :schema
+{=/w/item +knowledge +/w/entity :schema
   name: "Wikidata item"
   family: /schema/wikidata
 

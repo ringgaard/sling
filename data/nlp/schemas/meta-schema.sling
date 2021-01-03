@@ -15,11 +15,6 @@
     source: named
     target: string
   }
-  role: {=qua :slot
-    name: "qua"
-    source: named
-    target: knowledge
-  }
   role: {=lang :slot
     name: "language"
     source: named
@@ -222,17 +217,53 @@
   name: "Knowledge"
   family: /schema/meta
 
+  role: {=alias :slot
+    name: "alias"
+    description: "Entity name"
+    source: profile
+    target: nomen
+    multi: true
+  }
+
   role: {=media :slot
-    name: "Media file"
-    source: knowledge
+    name: "media"
+    description: "Media file for entity"
+    source: profile
     target: file
     multi: true
   }
 }
 
-; Knowledge source.
+; Entity alias.
+{=nomen +named :schema
+  name: "Alias"
+  family: /schema/document
+
+  role: {=sources :slot
+    name: "Alias sources"
+    description: "Bitmask for sources of alias"
+    source: profile
+    target: int
+  }
+
+  role: {=count :slot
+    name: "Alias count"
+    description: "Number of alias occurences"
+    source: profile
+    target: int
+  }
+
+  role: {=form :slot
+    name: "Case form"
+    description: "Most common case variant for alias"
+    source: profile
+    target: int
+  }
+}
+
+; Media file.
 {=file +named :schema
-  name: "File"
+  name: "Media file"
   family: /schema/meta
 }
 
@@ -301,6 +332,7 @@
   member_schema: predicate
   member_schema: part_of_speech
   member_schema: knowledge
+  member_schema: nomen
   member_schema: file
   member_schema: schema_family
   member_schema: catalog

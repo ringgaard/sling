@@ -35,6 +35,13 @@ ignored_extensions = set([
   ".tif", ".tiff", ".pdf", ".webm", ".ogv", ".xcf", ".ogg", ".djvu",
 ])
 
+# Default images for missing images.
+default_images = set({
+  "Defaut.svg",
+  "Défaut-mannequin_(s).png",
+  "Null.png",
+])
+
 # Compute MD5 hash for string.
 def md5hash(s):
   md5 = hashlib.md5()
@@ -162,7 +169,7 @@ class WikiMediaExtract:
           colon = image.find(':')
           if colon > 0 and colon < 10: image = image[colon + 1:]
           image = titlecase(image.strip()).replace('_', ' ')
-          if len(image) == 0 or image == "Defaut.svg":
+          if len(image) == 0 or image in default_images:
             task.increment("empty_images")
             continue
           if image.endswith("&lrm;"): image = image[:-5]

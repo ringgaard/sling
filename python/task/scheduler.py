@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # Copyright 2020 Ringgaard Research ApS
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -798,6 +800,8 @@ class SchedulerService(BaseHTTPRequestHandler):
       self.reply(500, "no command\n")
     elif path[0] == "submit":
       self.do_submit(path, url.query)
+    elif path[0] == "restart":
+      self.do_restart()
     else:
       self.reply(500, "unknown command\n")
 
@@ -835,6 +839,12 @@ class SchedulerService(BaseHTTPRequestHandler):
     else:
       self.reply(200,
                  "job %s submitted to %s queue\n" % (job.id, job.queue.name))
+
+  def do_restart(self):
+    self.reply(200, "restarting job scheduler...\n")
+    self.wfile.flush()
+    log.info("Restarting scheduler")
+    os.execv(sys.argv[0], sys.argv)
 
   def return_file(self, filename, mimetype):
     f = open(filename, "rb")

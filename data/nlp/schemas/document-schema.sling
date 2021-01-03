@@ -117,46 +117,6 @@
   }
 }
 
-; Profile schema.
-{=profile +knowledge :schema
-  name: "Profile"
-  family: /schema/document
-
-  role: {=alias :slot
-    name: "alias"
-    description: "Entity name"
-    source: profile
-    target: nomen
-    multi: true
-  }
-}
-
-{=nomen +named :schema
-  name: "Alias"
-  family: /schema/document
-
-  role: {=sources :slot
-    name: "Alias sources"
-    description: "Bitmask for sources of alias"
-    source: profile
-    target: int
-  }
-
-  role: {=count :slot
-    name: "Alias count"
-    description: "Number of alias occurences"
-    source: profile
-    target: int
-  }
-
-  role: {=form :slot
-    name: "Case form"
-    description: "Most common case variant for alias"
-    source: profile
-    target: int
-  }
-}
-
 ; Document schema family
 {=/schema/document :schema_family
   name: "Document schemas"
@@ -165,8 +125,5 @@
   member_schema: document
   member_schema: token
   member_schema: phrase
-
-  member_schema: profile
-  member_schema: nomen
 }
 

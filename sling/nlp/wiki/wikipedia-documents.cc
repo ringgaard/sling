@@ -321,7 +321,11 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
   Text ResolveMedia(Text link) override {
     link = link.trim();
     if (link.starts_with(image_prefix_)) {
-      link.remove_prefix(image_prefix_.size());
+      int n = image_prefix_.size();
+      if (link.size() > n && link[n] == ':') {
+        link.remove_prefix(n + 1);
+        link = link.trim();
+      }
     }
     Text redirected = wikimap_.ResolveRedirect(language_, image_prefix_, link);
     if (redirected != link) num_media_redirects_->Increment();
