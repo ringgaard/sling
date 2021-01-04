@@ -755,7 +755,8 @@ class Workflow(object):
     checked = set()
     for task in self.tasks:
       for output in task.outputs:
-        if output.resource.format.file == "db": continue
+        format = output.resource.format.file
+        if format == "db" or format == "url": continue
         directory = os.path.dirname(output.resource.name)
         if directory in checked: continue
         if not os.path.exists(directory): os.makedirs(directory)

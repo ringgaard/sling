@@ -586,9 +586,9 @@ class WikiWorkflow:
                             dir=corpora.wikidir(),
                             format="store/frame")
 
-  def wikimedia(self):
-    """Resource for media files extracted from Wikipedia."""
-    return self.wf.resource("*wiki-media.sling",
+  def media(self):
+    """Resource for media files."""
+    return self.wf.resource("*-media.sling",
                             dir=flags.arg.workdir + "/media",
                             format="text/frame")
 
@@ -622,7 +622,7 @@ class WikiWorkflow:
                 self.fanin(),
                 self.wikipedia_items(),
                 self.wikipedia_members(),
-                self.wikimedia())
+                self.media())
 
     if flags.arg.extra_items:
       extra = self.wf.resource(flags.arg.extra_items, format="records/frame")

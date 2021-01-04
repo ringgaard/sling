@@ -98,6 +98,7 @@ pyfiles = [
   'task/workflow.py',
 
   'media/wikimedia.py',
+  'media/twitterpic.py',
 ]
 
 for f in pyfiles:

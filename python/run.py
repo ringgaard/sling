@@ -224,6 +224,12 @@ commands = [
     help="Train parser on silver data",
     package="sling.task.silver",
   ),
+
+  # Media.
+  Command("extract_twitter",
+    help="Extract twitter profiles",
+    package="sling.media.twitterpic",
+  ),
 ]
 
 def main():
