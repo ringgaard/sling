@@ -126,8 +126,8 @@ class TwitterWorkflow:
 
 # Commands.
 
-def extract_twitter():
-  log.info("Extract twitter images")
+def twitter_profiles():
+  log.info("Extract twitter profiles")
   wf = TwitterWorkflow("twitter-profiles")
   wf.extract_twitter()
   run(wf.wf)

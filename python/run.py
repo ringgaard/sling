@@ -226,9 +226,9 @@ commands = [
   ),
 
   # Media.
-  Command("extract_twitter",
+  Command("twitter_profiles",
     help="Extract twitter profiles",
-    package="sling.media.twitterpic",
+    package="sling.media.twitterprofiles",
   ),
 ]
 
