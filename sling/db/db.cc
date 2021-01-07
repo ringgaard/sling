@@ -40,6 +40,7 @@ Status Database::Open(const string &dbdir, bool recover) {
     return Status(E_DB_NOT_FOUND, "Database not found: ", dbdir);
   }
   dbdir_ = dbdir;
+  datadir_ = dbdir;
 
   // Read configuration.
   if (File::Exists(ConfigFile())) {
@@ -51,24 +52,36 @@ Status Database::Open(const string &dbdir, bool recover) {
     }
   }
 
-  // Get data shards.
+  // Open reader for all data shards.
   std::vector<string> datafiles;
+  string last;
   File::Match(dbdir_ + "/data-*", &datafiles);
-  if (datafiles.empty()) {
-    return Status(E_NO_DATA_FILES, "No data files for database: ", dbdir);
-  }
-  std::sort(datafiles.begin(), datafiles.end());
-
-  // Open readers for all data files.
-  for (int i = 0; i < datafiles.size(); ++i) {
-    RecordReader *reader = new RecordReader(datafiles[i], config_.record);
+  for (const string &datafile : datafiles) {
+    RecordReader *reader = new RecordReader(datafile, config_.record);
     readers_.push_back(reader);
+    last = datafile;
+  }
+  for (const string &partition : config_.partitions) {
+    if (!File::Exists(partition)) {
+      return Status(E_NO_DATA_FILES, "Data partition missing: ", partition);
+    }
+    datafiles.clear();
+    File::Match(partition + "/data-*", &datafiles);
+    for (const string &datafile : datafiles) {
+      RecordReader *reader = new RecordReader(datafile, config_.record);
+      readers_.push_back(reader);
+      last = datafile;
+    }
+    datadir_ = partition;
+  }
+  if (readers_.empty()) {
+    return Status(E_NO_DATA_FILES, "No data files for database: ", dbdir);
   }
 
   // The last shard also has a writer for adding records to the database.
   if (!config_.read_only) {
     config_.record.append = true;
-    writer_ = new RecordWriter(datafiles.back(), config_.record);
+    writer_ = new RecordWriter(last, config_.record);
   }
 
   // Open database index.
@@ -112,6 +125,15 @@ Status Database::Create(const string &dbdir, const string &config) {
   // Parse database configuration.
   if (!ParseConfig(config)) {
     return Status(E_CONFIG, "Invalid database configuration");
+  }
+
+  // Set up data directory.
+  datadir_ = dbdir_;
+  if (!config_.partitions.empty()) {
+    datadir_ = config_.partitions.back();
+    if (!File::Exists(datadir_)) {
+      return Status(E_NO_DATA_FILES, "Data partition missing: ", datadir_);
+    }
   }
 
   // Create database directory.
@@ -418,11 +440,15 @@ string Database::IndexBackupFile() const {
 }
 
 string Database::DataFile(int shard) const {
-  string fn = dbdir_ + "/data-";
-  string number = std::to_string(shard);
-  for (int z = 0; z < 8 - number.size(); ++z) fn.push_back('0');
-  fn.append(number);
-  return fn;
+  if (shard < readers_.size()) {
+    return readers_[shard]->file()->filename();
+  } else {
+    string fn = datadir_ + "/data-";
+    string number = std::to_string(shard);
+    for (int z = 0; z < 8 - number.size(); ++z) fn.push_back('0');
+    fn.append(number);
+    return fn;
+  }
 }
 
 Status Database::ReadRecord(uint64 recid, Record *record, bool with_value) {
@@ -695,7 +721,9 @@ bool Database::ParseConfig(Text config) {
     }
 
     // Update configuration parameter.
-    if (key == "initial_index_capacity") {
+    if (key == "data") {
+      config_.partitions.push_back(value.str());
+    } else if (key == "initial_index_capacity") {
       uint64 n = ParseNumber(value);
       if (n <= 0) {
         LOG(ERROR) << "Invalid capacity: " << line;

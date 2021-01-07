@@ -37,10 +37,16 @@ ignored_extensions = set([
 
 # Default images for missing images.
 default_images = set([
+  "Null.png",
   "Defaut.svg",
   "Défaut.svg",
   "Défaut-mannequin (s).png",
-  "Null.png",
+  "Défaut-Acteur(s).png",
+  "Défaut-Chanteur(s).png",
+  "Défaut-Journaliste(s).png",
+  "Défaut- Homme Politique(s).png",
+  "Défaut-Personnalité(s).png",
+  "Défaut-youtuber(s).png",
 ])
 
 # Compute MD5 hash for string.

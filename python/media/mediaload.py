@@ -58,7 +58,9 @@ def read_urls(filename):
   if filename != None:
     with open(filename, "r") as f:
       for line in f.readlines():
-        url = line.strip();
+        url = line.strip()
+        tab = url.find('\t')
+        if tab != -1: url = url[:tab]
         list.add(url);
   return list
 

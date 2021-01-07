@@ -42,6 +42,9 @@ class Database {
     // Data file configuration.
     RecordFileOptions record;
 
+    // Directories for data partitions.
+    std::vector<string> partitions;
+
     // Initial index capacity (default 1M).
     uint64 initial_index_capacity = 1 << 20;
 
@@ -169,7 +172,7 @@ class Database {
   // Return filename for index backup.
   string IndexBackupFile() const;
 
-  // Return filename for data shard.
+  // Return filename for (new) data shard.
   string DataFile(int shard) const;
 
   // Read data record (key).
@@ -189,6 +192,9 @@ class Database {
 
   // Database directory.
   string dbdir_;
+
+  // Directory for new shards.
+  string datadir_;
 
   // Database configuration.
   Config config_;
