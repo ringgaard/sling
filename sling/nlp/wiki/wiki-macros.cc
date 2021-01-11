@@ -521,7 +521,6 @@ class MediaSink : public WikiSink {
   struct Image {
     Image(const string &file, const string &caption)
       : file(file), caption(caption) {}
-
     string file;
     string caption;
   };

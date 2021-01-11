@@ -32,7 +32,18 @@ flags.define("--twitterdb",
              default="http://localhost:7070/twitter",
              metavar="DBURL")
 
+flags.define("--mediadb",
+             help="database for storing Twitter profiles pictures",
+             default=None,
+             metavar="DBURL")
+
+flags.define("--update",
+             help="Refresh all updated profiles",
+             default=False,
+             action="store_true")
+
 flags.parse()
+session = requests.Session()
 
 # Find all twitter users in knowledge base.
 def get_twitter_usernames():
@@ -49,6 +60,28 @@ def get_twitter_usernames():
 
   return users
 
+# Load profile image into media database.
+def cache_profile_image(profile):
+  if "error" in profile: return
+  if profile["default_profile_image"]: return
+
+  imageurl = profile["profile_image_url"]
+  imageurl = ''.join(imageurl.rsplit("_normal", 1))
+  print("Fetch", imageurl)
+  r = session.get(imageurl)
+  if not r.ok:
+    print("error fetching", r.status_code, url)
+    return
+
+  mediaurl = flags.arg.mediadb + "/" + urllib.parse.quote(imageurl)
+  last_modified = r.headers["Last-Modified"]
+  image = r.content
+  r = session.put(mediaurl, data=image, headers={
+    "Last-Modified": last_modified,
+    "Mode": "newer",
+  })
+  r.raise_for_status()
+
 # Connect to Twitter.
 with open(flags.arg.apikeys, "r") as f:
   apikeys = json.load(f)
@@ -64,17 +97,25 @@ print(len(users), "twitter usernames")
 # Refresh twitter profiles.
 num_users = 0
 num_fetched = 0
-dbsession = requests.Session()
+num_updated = 0
 for username in users:
   # Check if twitter user is already known.
   num_users += 1
   dburl = flags.arg.twitterdb + "/" + urllib.parse.quote(username)
-  r = dbsession.head(dburl)
-  if r.status_code == 200 or r.status_code == 204:
-    # Known profile.
-    continue
-  if r.status_code != 404:
-    r.raise_for_status()
+  current = None
+  if flags.arg.update:
+    # Get current profile.
+    r = session.get(dburl)
+    if r.status_code == 200 or r.status_code == 204:
+      # Known profile.
+      current = r.json()
+      if "error" in current: continue
+  else:
+    # Skip if known.
+    r = session.head(dburl)
+    if r.status_code == 200 or r.status_code == 204: continue
+
+  if r.status_code != 404: r.raise_for_status()
 
   # Fetch twitter profile for item.
   profile = None
@@ -84,13 +125,27 @@ for username in users:
   except tweepy.TweepError as e:
     print("Error fetching twitter profile", username, ":", e)
     profile = {"error": e.api_code, "message": e.reason}
+    if current: continue
+
+  # Check if profile has been updated.
+  if flags.arg.update:
+    updated = False
+    if profile["profile_image_url"] != current["profile_image_url"]:
+      updated = True
+    if updated:
+      print("Update", username)
+    else:
+      continue
 
   # Write profile information to database.
-  r = dbsession.put(dburl, json=profile, headers={
+  r = session.put(dburl, json=profile, headers={
     "Version": str(int(time.time())),
-    "Mode": "add"
+    "Mode": "overwrite" if flags.arg.update else "add"
   })
   r.raise_for_status()
+
+  # Optionally store profile image in media db.
+  if flags.arg.mediadb: cache_profile_image(profile)
 
   num_fetched += 1
   print(num_fetched, num_users, username)

@@ -177,7 +177,6 @@
 "HKG-CHN": {type: "text" text: "Hong Kong, China" link: Q8646}
 "HMD": {type: "text" text: "Heard Island and McDonald Islands" link: Q131198}
 "HND": {type: "text" text: "Honduras" link: Q783}
-"HPR": {type: "text" text: "Hungarian People's Republic" link: Q16410}
 "HRV": {type: "text" text: "Croatia" link: Q224}
 "HTI": {type: "text" text: "Haiti" link: Q790}
 "HUN": {type: "text" text: "Hungary" link: Q28}
@@ -230,7 +229,6 @@
 "MCO": {type: "text" text: "Monaco" link: Q235}
 "MD": {type: "text" text: "Republic of Moldova" link: Q217}
 "MDA": {type: "text" text: "Moldova" link: Q217}
-"MDA-PMR": {type: "text" text: "Transnistria" link: Q907112}
 "MDG": {type: "text" text: "Madagascar" link: Q1019}
 "MDV": {type: "text" text: "Maldives" link: Q826}
 "MENA": {type: "text" text: "Middle East and North Africa" link: Q984212}
@@ -245,7 +243,6 @@
 "MNG": {type: "text" text: "Mongolia" link: Q711}
 "MNP": {type: "text" text: "Northern Mariana Islands" link: Q16644}
 "MOZ": {type: "text" text: "Mozambique" link: Q1029}
-"MPR": {type: "text" text: "Mongolian People's Republic" link: Q212056}
 "MRT": {type: "text" text: "Mauritania" link: Q1025}
 "MSR": {type: "text" text: "Montserrat" link: Q13353}
 "MT": {type: "text" text: "Malta" link: Q233}
@@ -279,7 +276,6 @@
 "PLW": {type: "text" text: "Palau" link: Q695}
 "PNG": {type: "text" text: "Papua New Guinea" link: Q691}
 "POL": {type: "text" text: "Poland" link: Q36}
-"PRB": {type: "text" text: "People's Republic of Bulgaria" link: Q121932}
 "PRI": {type: "text" text: "Puerto Rico" link: Q1183}
 "PRK": {type: "text" text: "North Korea" link: Q423}
 "PRT": {type: "text" text: "Portugal" link: Q45}
@@ -400,7 +396,7 @@
 "huge": {type: "tag" argnum: 1 open: "<div style=\"font-size:180%;\">" close: "</div>"}
 
 "frac": {type: "frac"}
-"quote": {type: "tag" arg: "text" argnum: 1 open: "<blockquote>" close: "</blockquote>"}
+"blockquote": {type: "tag" arg: "text" argnum: 1 open: "<blockquote>" close: "</blockquote>"}
 "nowrap": {type: "tag" argnum: 1 open: "<span class=\"nowrap\">" close: "</span>"}
 "define": {type: "define"}
 "cn span": {type: "tag" argnum: 1 argname: "text"}

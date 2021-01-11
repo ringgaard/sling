@@ -17,6 +17,7 @@
 import gzip
 import hashlib
 import html
+import urllib.parse
 import urllib.request
 from datetime import date, timedelta
 
@@ -180,9 +181,10 @@ class WikiMediaExtract:
             task.increment("empty_images")
             continue
           if image.endswith("&lrm;"): image = image[:-5]
-          image = html.unescape(image)
           frag = image.find('#')
           if frag > 0: image = image[:frag]
+          image = html.unescape(image)
+          image = urllib.parse.unquote(image)
 
           # Discard media files with unknown or ignored extensions.
           dot = image.rfind('.')
@@ -220,6 +222,9 @@ class WikiMediaExtract:
 
           # Compute URL for image.
           md5 = md5hash(fn)
+          fn = fn.replace("?", "%3F")
+          fn = fn.replace("+", "%2B")
+          fn = fn.replace("&", "%26")
           url = "%s/%s/%s/%s" % (urlbase, md5[0], md5[0:2], fn)
 
           # Create frame for item with media image.

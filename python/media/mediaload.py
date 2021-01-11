@@ -49,6 +49,7 @@ flags.define("--whitelist",
 flags.parse()
 
 commons_base_url = "https://upload.wikimedia.org/wikipedia/commons"
+commons_redirect = "https://commons.wikimedia.org/wiki/Special:Redirect/file/"
 user_agent = "SLING/1.0 bot (https://github.com/ringgaard/sling)"
 session = requests.Session()
 
@@ -152,10 +153,22 @@ for url in media:
   if r.status_code != 404: r.raise_for_status()
 
   # Download image.
-  r = session.get(url, headers={"User-Agent": user_agent}, timeout=60)
-  if not r.ok:
+  try:
+    r = session.get(url, headers={"User-Agent": user_agent}, timeout=60)
+    if r.status_code == 404 and url.startswith(commons_base_url):
+      # Try to get image through the Special:Redirect service.
+      slash = url.rfind('/')
+      if slash != -1:
+        redir = commons_redirect + url[slash + 1:]
+        r = session.get(redir, headers={"User-Agent": user_agent}, timeout=60)
+        if r.ok: print("redirect", url, "->", r.url)
+    if not r.ok:
+      num_errors += 1
+      print("error", r.status_code, url)
+      continue
+  except Exception as e:
+    print("fail", e, url)
     num_errors += 1
-    print("error", r.status_code, url)
     continue
 
   last_modified = r.headers["Last-Modified"]
@@ -179,5 +192,7 @@ for url in media:
 print(num_known, "known,",
       num_retrieved, "retrieved,",
       num_errors, "errors,",
-      num_toobig, "too big")
+      num_toobig, "too big",
+      num_blacklist, "blacklisted",
+      num_whitelist, "whitelisted")
 
