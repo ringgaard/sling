@@ -677,7 +677,7 @@ class SchedulerService(BaseHTTPRequestHandler):
       if job.stdout is None:
         self.send_response(404)
         return
-      self.return_file(job.stdout, "text/plain")
+      self.return_file(job.stdout, "text/plain; charset=utf-8")
       return
 
     if url.path.startswith("/errors/"):
@@ -689,7 +689,7 @@ class SchedulerService(BaseHTTPRequestHandler):
       if job.stderr is None:
         self.send_response(404)
         return
-      self.return_file(job.stderr, "text/plain")
+      self.return_file(job.stderr, "text/plain; charset=utf-8")
       return
 
     if url.path.startswith("/status/"):

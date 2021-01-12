@@ -29,6 +29,10 @@ flags.define("--twitterdb",
              default="http://localhost:7070/twitter",
              metavar="DBURL")
 
+bad_images = set([
+  "http://pbs.twimg.com/profile_images/1302121919014207490/KaYYEC8b.jpg"
+])
+
 # Task for extracting images from Twitter profiles.
 class TwitterExtract:
   def run(self, task):
@@ -87,6 +91,11 @@ class TwitterExtract:
 
       # Get url for original image url by removing "_normal".
       imageurl = ''.join(imageurl.rsplit("_normal", 1))
+
+      # Ignore known bad images.
+      if imageurl in bad_images:
+        task.increment("bad_profile_images")
+        continue
 
       # Create item frame with twitter profile.
       store = sling.Store(kb)

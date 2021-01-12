@@ -48,6 +48,7 @@ flags.define("--whitelist",
 
 flags.parse()
 
+wiki_base_url = "https://upload.wikimedia.org/wikipedia/"
 commons_base_url = "https://upload.wikimedia.org/wikipedia/commons"
 commons_redirect = "https://commons.wikimedia.org/wiki/Special:Redirect/file/"
 user_agent = "SLING/1.0 bot (https://github.com/ringgaard/sling)"
@@ -155,7 +156,7 @@ for url in media:
   # Download image.
   try:
     r = session.get(url, headers={"User-Agent": user_agent}, timeout=60)
-    if r.status_code == 404 and url.startswith(commons_base_url):
+    if r.status_code == 404 and url.startswith(wiki_base_url):
       # Try to get image through the Special:Redirect service.
       slash = url.rfind('/')
       if slash != -1:

@@ -38,12 +38,21 @@ flags.define("--mediadb",
              metavar="DBURL")
 
 flags.define("--update",
-             help="Refresh all updated profiles",
+             help="refresh all updated profiles",
              default=False,
              action="store_true")
 
+flags.define("--missing_images",
+             help="file with images which needs to be refreshed",
+             default=None,
+             metavar="FILE")
+
 flags.parse()
 session = requests.Session()
+
+bad_images = set([
+  "http://pbs.twimg.com/profile_images/1302121919014207490/KaYYEC8b.jpg"
+])
 
 # Find all twitter users in knowledge base.
 def get_twitter_usernames():
@@ -67,7 +76,8 @@ def cache_profile_image(profile):
 
   imageurl = profile["profile_image_url"]
   imageurl = ''.join(imageurl.rsplit("_normal", 1))
-  print("Fetch", imageurl)
+  if imageurl in bad_images: return
+
   r = session.get(imageurl)
   if not r.ok:
     print("error fetching", r.status_code, url)
@@ -94,6 +104,15 @@ api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 users = get_twitter_usernames()
 print(len(users), "twitter usernames")
 
+# Read list of missing profile images.
+missing_images = set()
+if flags.arg.missing_images:
+  with open(flags.arg.missing_images, "r") as f:
+    for line in f.readlines():
+      url = line.strip()
+      missing_images.add(url)
+  print(len(missing_images), "missing images")
+
 # Refresh twitter profiles.
 num_users = 0
 num_fetched = 0
@@ -110,6 +129,10 @@ for username in users:
       # Known profile.
       current = r.json()
       if "error" in current: continue
+      if len(missing_images) > 0:
+        imageurl = current["profile_image_url"]
+        imageurl = ''.join(imageurl.rsplit("_normal", 1))
+        if imageurl not in missing_images: continue
   else:
     # Skip if known.
     r = session.head(dburl)
