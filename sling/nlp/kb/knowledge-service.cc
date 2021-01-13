@@ -440,7 +440,6 @@ const char *property_order[] = {
   "P263",    // official residence
   "P669",    // located on street
   "P6375",   // located at street address
-  "P969",    // located at street address (DEPRECATED)
   "P670",    // street number
   "P281",    // postal code
   "P276",    // location
@@ -525,7 +524,14 @@ static string CommonsUrl(Text filename) {
   url.push_back(d1);
   url.push_back(d2);
   url.push_back('/');
-  url.append(fn);
+  for (char &c : fn) {
+    switch (c) {
+      case '?': url.append("%3F"); break;
+      case '+': url.append("%2B"); break;
+      case '&': url.append("%26"); break;
+      default: url.push_back(c);
+    }
+  }
 
   return url;
 }
@@ -536,6 +542,7 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
   CHECK(names_.Bind(kb_));
 
   // Get meta data for properties.
+  std::vector<PropName> xref_properties;
   for (const Slot &s : Frame(kb, kb->Lookup("/w/entity"))) {
     if (s.name != n_role_) continue;
     Frame property(kb, s.value);
@@ -547,6 +554,12 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
 
     // Property data type.
     p.datatype = property.GetHandle(n_target_);
+
+    // Collect xref properties.
+    if (p.datatype == n_xref_type_) {
+      Text name = kb->GetString(p.name)->str();
+      xref_properties.emplace_back(name, p.id);
+    }
 
     // Get URL formatter for property.
     Handle formatter = property.Resolve(n_formatter_url_);
@@ -571,6 +584,9 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
     properties_[p.id] = p;
   }
 
+  // Order xref properties in alphabetical order.
+  std::sort(xref_properties.begin(), xref_properties.end());
+
   // Set up property order.
   int order = 0;
   for (const char **p = property_order; *p != nullptr; ++p) {
@@ -579,6 +595,13 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
       f->second.order = order++;
     } else {
       LOG(WARNING) << "Property not know: " << *p;
+    }
+  }
+  for (auto &pn : xref_properties) {
+    auto f = properties_.find(pn.id);
+    CHECK(f != properties_.end());
+    if (f->second.order == kint32max) {
+      f->second.order = order++;
     }
   }
 

@@ -48,15 +48,14 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
 
   // Get path.
   string path;
-  if (!DecodeURLComponent(request->path(), &path)) {
+  if (!DecodeURLComponent(request->path() + 1, &path)) {
     response->SendError(400, "Bad Request", nullptr);
     return;
   }
-  if (path.empty() || path[0] != '/') {
+  if (path.empty()) {
     response->SendError(404, "Index Browsing Not Supported");
     return;
   }
-  path.erase(0, 1);
 
   // Retrieve media from database.
   MutexLock lock(&mu_);
@@ -71,8 +70,8 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
   size_t size = media.value.size();
   if (size == 0) {
     if (redirect_) {
-      VLOG(1) << "redirect media: " << path;
-      response->TempRedirectTo(path.c_str());
+      VLOG(1) << "redirect media: " << request->path() + 1;
+      response->TempRedirectTo(request->path() + 1);
     } else {
       response->SendError(404, "File Not Found");
     }

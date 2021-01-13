@@ -103,15 +103,10 @@ class Text {
   }
 
   // Compare text to another text. Returns {-1, 0, 1}
-  int compare(Text t) const {
-    const ssize_t min_size = length_ < t.length_ ? length_ : t.length_;
-    int r = memcmp(ptr_, t.ptr_, min_size);
-    if (r < 0) return -1;
-    if (r > 0) return 1;
-    if (length_ < t.length_) return -1;
-    if (length_ > t.length_) return 1;
-    return 0;
-  }
+  int compare(Text t) const;
+
+  // Compare text to another text ignoring the case of the characters.
+  int casecompare(Text t) const;
 
   // Return text as string.
   string str() const {

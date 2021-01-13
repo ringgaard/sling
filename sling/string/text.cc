@@ -43,6 +43,16 @@ static const char *memmatch(const char *haystack, size_t hlen,
   return nullptr;
 }
 
+static int memcasecmp(const char *s1, const char *s2, size_t n) {
+  while (n-- > 0) {
+    unsigned char u1 = ascii_toupper(*s1++);
+    unsigned char u2 = ascii_toupper(*s2++);
+    int diff = u1 - u2;
+    if (diff) return diff;
+  }
+  return 0;
+}
+
 Text::Text(Text other, ssize_t pos)
     : ptr_(other.ptr_ + pos), length_(other.length_ - pos) {
   DCHECK_LE(0, pos);
@@ -54,6 +64,26 @@ Text::Text(Text other, ssize_t pos, ssize_t len)
   DCHECK_LE(0, pos);
   DCHECK_LE(pos, other.length_);
   DCHECK_GE(len, 0);
+}
+
+int Text::compare(Text t) const {
+  const ssize_t min_size = length_ < t.length_ ? length_ : t.length_;
+  int r = memcmp(ptr_, t.ptr_, min_size);
+  if (r < 0) return -1;
+  if (r > 0) return 1;
+  if (length_ < t.length_) return -1;
+  if (length_ > t.length_) return 1;
+  return 0;
+}
+
+int Text::casecompare(Text t) const {
+  const ssize_t min_size = length_ < t.length_ ? length_ : t.length_;
+  int r = memcasecmp(ptr_, t.ptr_, min_size);
+  if (r < 0) return -1;
+  if (r > 0) return 1;
+  if (length_ < t.length_) return -1;
+  if (length_ > t.length_) return 1;
+  return 0;
 }
 
 void Text::CopyToString(string *target) const {

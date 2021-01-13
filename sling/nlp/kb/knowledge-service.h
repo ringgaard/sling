@@ -93,6 +93,19 @@ class KnowledgeService {
     int order = kint32max;
   };
 
+  // Property name and id for sorting xref properties.
+  struct PropName {
+    PropName(Text name, Handle id) : name(name), id(id) {}
+
+    // Sort predicate for case-insensitive ordering.
+    bool operator<(const PropName &other) const {
+      return name.casecompare(other.name) < 0;
+    }
+
+    Text name;
+    Handle id;
+  };
+
   // Knowledge base store.
   Store *kb_ = nullptr;
 
