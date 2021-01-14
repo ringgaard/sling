@@ -87,16 +87,21 @@ pyfiles = [
 
   'nlp/__init__.py',
   'nlp/document.py',
+  'nlp/embedding.py',
   'nlp/parser.py',
+  'nlp/silver.py',
 
   'task/__init__.py',
+  'task/alias.py',
   'task/corpora.py',
+  'task/data.py',
   'task/download.py',
-  'task/silver.py',
-  'task/embedding.py',
-  'task/wiki.py',
+  'task/kb.py',
+  'task/wikidata.py',
+  'task/wikipedia.py',
   'task/workflow.py',
 
+  'media/__init__.py',
   'media/wikimedia.py',
   'media/twitterprofiles.py',
 ]

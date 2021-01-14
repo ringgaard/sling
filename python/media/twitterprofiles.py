@@ -21,8 +21,8 @@ import urllib
 import sling
 import sling.flags as flags
 import sling.log as log
+import sling.task.data as data
 from sling.task.workflow import *
-from sling.task.wiki import WikiWorkflow
 
 flags.define("--twitterdb",
              help="database for storing Twitter profiles",
@@ -112,10 +112,9 @@ class TwitterExtract:
 register_task("twitter-extract", TwitterExtract)
 
 class TwitterWorkflow:
-  def __init__(self, name=None, wf=None):
-    if wf == None: wf = Workflow(name)
-    self.wf = wf
-    self.wiki = WikiWorkflow(wf=wf)
+  def __init__(self, name=None):
+    self.wf = Workflow(name)
+    self.data = data.Datasets(self.wf)
 
   def twitterdb(self):
     """Resource for Twitter database."""
@@ -129,7 +128,7 @@ class TwitterWorkflow:
 
   def extract_twitter(self):
     extractor = self.wf.task("twitter-extract")
-    extractor.attach_input("kb", self.wiki.knowledge_base())
+    extractor.attach_input("kb", self.data.knowledge_base())
     extractor.attach_input("twitterdb", self.twitterdb())
     extractor.attach_output("output", self.twitter_frames())
 

@@ -70,6 +70,7 @@ This is equivalent to running each of the step separately:
 ```
 sling import_wikidata
       import_wikipedia
+      map_wikipedia
       parse_wikipedia
       extract_wikilinks
       merge_categories

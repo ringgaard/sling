@@ -17,8 +17,8 @@
 import os
 import sling.flags as flags
 import sling.task.corpora as corpora
+import sling.task.data as data
 from sling.task import *
-from sling.task.wiki import WikiWorkflow
 
 flags.define("--silver_corpus_size",
              help="maximum number of documents in silver corpus",
@@ -46,10 +46,9 @@ flags.define("--gpu_friendly",
              action="store_true")
 
 class SilverWorkflow:
-  def __init__(self, name=None, wf=None):
-    if wf == None: wf = Workflow(name)
-    self.wf = wf
-    self.wiki = WikiWorkflow(wf=wf)
+  def __init__(self, name=None):
+    self.wf = Workflow(name)
+    self.data = data.Datasets(self.wf)
 
   def workdir(self, language=None):
     if language == None:
@@ -71,7 +70,7 @@ class SilverWorkflow:
   def build_idf(self, language=None):
     # Build IDF table from Wikipedia.
     if language == None: language = flags.arg.language
-    documents = self.wiki.wikipedia_documents(language)
+    documents = self.data.wikipedia_documents(language)
 
     with self.wf.namespace(language + "-idf"):
       # Collect words.
@@ -108,7 +107,7 @@ class SilverWorkflow:
 
   def silver_annotation(self, docs=None, language=None):
     if language == None: language = flags.arg.language
-    if docs == None: docs = self.wiki.wikipedia_documents(language)
+    if docs == None: docs = self.data.wikipedia_documents(language)
     train_docs = self.training_documents(language)
     eval_docs = self.evaluation_documents(language)
     phrases = corpora.repository("data/wiki/" + language) + "/phrases.txt"
@@ -134,8 +133,8 @@ class SilverWorkflow:
       mapper.add_param("definite_reference", False)
       mapper.add_param("split_ratio", split_ratio)
 
-      mapper.attach_input("commons", self.wiki.knowledge_base())
-      mapper.attach_input("aliases", self.wiki.phrase_table(language))
+      mapper.attach_input("commons", self.data.knowledge_base())
+      mapper.attach_input("aliases", self.data.phrase_table(language))
       mapper.attach_input("dictionary", self.idftable(language))
 
       config = corpora.repository("data/wiki/" + language + "/silver.sling")
@@ -296,7 +295,7 @@ class SilverWorkflow:
       if flags.arg.simple_types:
         kb = self.wf.resource("data/dev/types.sling", format="store/frame")
       else:
-        kb = self.wiki.knowledge_base()
+        kb = self.data.knowledge_base()
 
       trainer.attach_input("commons", kb)
       trainer.attach_input("training_corpus",

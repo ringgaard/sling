@@ -135,6 +135,7 @@ num_known = 0
 num_retrieved = 0
 num_errors = 0
 num_toobig = 0
+num_bytes = 0
 for url in media:
   # Discard blacklisted images.
   num_urls += 1
@@ -187,6 +188,7 @@ for url in media:
   r.raise_for_status()
 
   num_retrieved += 1
+  num_bytes += len(image)
   print(num_retrieved, "/", num_urls, r.headers["Result"], url)
   sys.stdout.flush()
 
@@ -195,5 +197,6 @@ print(num_known, "known,",
       num_errors, "errors,",
       num_toobig, "too big",
       num_blacklist, "blacklisted",
-      num_whitelist, "whitelisted")
+      num_whitelist, "whitelisted",
+      num_bytes, "bytes")
 

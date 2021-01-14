@@ -16,14 +16,13 @@
 
 import sling.flags as flags
 import sling.task.corpora as corpora
+import sling.task.data as data
 from sling.task.workflow import *
-from sling.task.wiki import WikiWorkflow
 
 class EmbeddingWorkflow:
-  def __init__(self, name=None, wf=None):
-    if wf == None: wf = Workflow(name)
-    self.wf = wf
-    self.wiki = WikiWorkflow(wf=wf)
+  def __init__(self, name=None):
+    self.wf = Workflow(name)
+    self.data = data.Datasets(self.wf)
 
   #---------------------------------------------------------------------------
   # Word embeddings
@@ -47,7 +46,7 @@ class EmbeddingWorkflow:
 
   def extract_vocabulary(self, documents=None, output=None, language=None):
     if language == None: language = flags.arg.language
-    if documents == None: documents = self.wiki.wikipedia_documents(language)
+    if documents == None: documents = self.data.wikipedia_documents(language)
     if output == None: output = self.vocabulary(language)
 
     with self.wf.namespace(language + "-vocabulary"):
@@ -61,7 +60,7 @@ class EmbeddingWorkflow:
                             language=None):
     """Train word embeddings."""
     if language == None: language = flags.arg.language
-    if documents == None: documents = self.wiki.wikipedia_documents(language)
+    if documents == None: documents = self.data.wikipedia_documents(language)
     if vocabulary == None: vocabulary = self.vocabulary(language)
     if output == None: output = self.word_embeddings(language)
 
@@ -120,7 +119,7 @@ class EmbeddingWorkflow:
 
   def extract_fact_lexicon(self):
     """Build fact and category lexicons."""
-    kb = self.wiki.knowledge_base()
+    kb = self.data.knowledge_base()
     factmap = self.fact_lexicon()
     catmap = self.category_lexicon()
     with self.wf.namespace("fact-embeddings"):
@@ -132,7 +131,7 @@ class EmbeddingWorkflow:
 
   def extract_facts(self):
     """Extract facts for items in the knowledge base."""
-    kb = self.wiki.knowledge_base()
+    kb = self.data.knowledge_base()
     factmap = self.fact_lexicon()
     catmap = self.category_lexicon()
     output = self.facts()

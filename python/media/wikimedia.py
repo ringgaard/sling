@@ -25,8 +25,8 @@ import sling
 import sling.task.corpora as corpora
 import sling.flags as flags
 import sling.log as log
+import sling.task.data as data
 from sling.task.workflow import *
-from sling.task.wiki import WikiWorkflow
 
 # Known file extensions for media files.
 known_extensions = set([
@@ -252,10 +252,9 @@ class WikiMediaExtract:
 register_task("wikimedia-extract", WikiMediaExtract)
 
 class WikiMediaWorkflow:
-  def __init__(self, name=None, wf=None):
-    if wf == None: wf = Workflow(name)
-    self.wf = wf
-    self.wiki = WikiWorkflow(wf=wf)
+  def __init__(self, name=None):
+    self.wf = Workflow(name)
+    self.data = data.Datasets(self.wf)
 
   def image_frames(self, language=None):
     """Resource for media image frames."""
@@ -270,8 +269,8 @@ class WikiMediaWorkflow:
     extractor.add_params({
       "language": language,
     })
-    extractor.attach_input("kb", self.wiki.knowledge_base())
-    extractor.attach_input("input", self.wiki.wikipedia_documents(language))
+    extractor.attach_input("kb", self.data.knowledge_base())
+    extractor.attach_input("input", self.data.wikipedia_documents(language))
     extractor.attach_output("output", self.image_frames(language))
 
 # Commands.
