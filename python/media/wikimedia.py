@@ -169,7 +169,9 @@ class WikiMediaExtract:
         if item is None: continue
         for image, caption in imagelist:
           # Disregard direct URLs for now.
-          if image.startswith("http://") or image.startswith("https://"):
+          if image.startswith("http://") or \
+             image.startswith("https://") or \
+             image.startswith("//"):
             task.increment("url_images")
             continue
 

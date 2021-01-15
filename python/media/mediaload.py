@@ -46,6 +46,11 @@ flags.define("--whitelist",
              default="local/media-whitelist.txt",
              help="List of already cached media files")
 
+flags.define("--auto_blacklist",
+             help="add large images to blacklist",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 wiki_base_url = "https://upload.wikimedia.org/wikipedia/"
@@ -126,6 +131,7 @@ blacklist = read_urls(flags.arg.blacklist)
 whitelist = read_urls(flags.arg.whitelist)
 print(len(blacklist), "blacklisted media files")
 print(len(whitelist), "whitelisted media files")
+fblack = open(flags.arg.blacklist, "a") if flags.arg.auto_blacklist else None
 
 # Fetch all missing media files.
 num_urls = 0
@@ -178,6 +184,7 @@ for url in media:
   if len(image) > flags.arg.max_media_size:
     print("too big", len(image), url)
     num_toobig += 1
+    if fblack: fblack.write(url + "\n")
     continue
 
   # Save image in media database.
@@ -191,6 +198,8 @@ for url in media:
   num_bytes += len(image)
   print(num_retrieved, "/", num_urls, r.headers["Result"], url)
   sys.stdout.flush()
+
+if fblack: fblack.close()
 
 print(num_known, "known,",
       num_retrieved, "retrieved,",
