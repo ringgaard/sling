@@ -141,7 +141,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     }
 
     // Convert article to document.
-    ProcessArticle(frame, page.qid);
+    ProcessArticle(frame, page.qid, page.type == WikipediaMap::ARTICLE);
     Document document(frame, docnames_);
 
     // Handle the different page types.
@@ -184,7 +184,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     }
   }
 
-  void ProcessArticle(const Frame &page, Text qid) {
+  void ProcessArticle(const Frame &page, Text qid, bool collect_aliases) {
     // Parse Wikipedia article.
     string wikitext = page.GetString(n_page_text_);
     WikiParser parser(wikitext.c_str());
@@ -218,8 +218,10 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     document.Update();
 
     // Output aliases from extractor.
-    for (const auto &alias : annotator.aliases()) {
-      OutputAlias(qid, alias.name, alias.source);
+    if (collect_aliases) {
+      for (const auto &alias : annotator.aliases()) {
+        OutputAlias(qid, alias.name, alias.source);
+      }
     }
   }
 
