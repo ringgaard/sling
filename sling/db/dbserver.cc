@@ -776,6 +776,9 @@ class DBService {
     // Return protocol name.
     const char *Name() override { return "DB"; }
 
+    // Allow long timeout (24 hours) for DB connections.
+    int IdleTimeout() override { return 86400; }
+
     // Process SLINGDB database request.
     Continuation Process(SocketConnection *conn) override {
       // Check if we have received a complete header.

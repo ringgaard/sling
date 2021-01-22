@@ -266,12 +266,11 @@ void SocketServer::RemoveConnection(SocketConnection *conn) {
 }
 
 void SocketServer::ShutdownIdleConnections() {
-  if (options_.max_idle <= 0) return;
   MutexLock lock(&mu_);
-  time_t expire = time(0) - options_.max_idle;
+  time_t now = time(0);
   SocketConnection *conn = connections_;
   while (conn != nullptr) {
-    if (conn->last_ < expire) {
+    if (now - conn->last_ > conn->idle_timeout_) {
       conn->Shutdown();
       VLOG(5) << "Shut down idle connection";
     }
@@ -393,8 +392,10 @@ SocketConnection::SocketConnection(SocketServer *server, int sock,
     : server_(server), sock_(sock) {
   next_ = prev_ = nullptr;
   state_ = SOCKET_STATE_IDLE;
-  last_ = time(0);
   session_ = protocol->NewSession(this);
+  last_ = time(0);
+  idle_timeout_ = session_->IdleTimeout();
+  if (idle_timeout_ == -1) idle_timeout_ = server->options().max_idle;
 }
 
 SocketConnection::~SocketConnection() {

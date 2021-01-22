@@ -208,6 +208,9 @@ class SocketConnection {
   // Last time event was received on connection.
   time_t last_;
 
+  // Idle timeout in seconds.
+  int idle_timeout_;
+
   // Connection list.
   SocketConnection *next_;
   SocketConnection *prev_;
@@ -262,6 +265,9 @@ class SocketSession {
 
   // Return protocol name for session.
   virtual const char *Name() = 0;
+
+  // Return idle timeout in seconds for session.
+  virtual int IdleTimeout() { return -1; }
 
   // Process the request in the request buffer and return the response header
   // and body. Return false to terminate the session.
