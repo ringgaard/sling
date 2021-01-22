@@ -62,50 +62,57 @@ class TwitterExtract:
     for item in kb:
       # Find twitter username for item.
       task.increment("items")
-      twitter = item[p_twitter]
-      if twitter is None: continue
-      username = kb.resolve(twitter)
-      task.increment("twitter_users")
+      imageurls = []
+      for twitter in item(p_twitter):
+        username = kb.resolve(twitter)
+        task.increment("twitter_users")
 
-      # Fetch twitter profile from database.
-      dburl = twitterdb + "/" + urllib.parse.quote(username)
-      r = dbsession.get(dburl)
-      if r.status_code == 404:
-        task.increment("unknown_users")
-        continue
-      r.raise_for_status()
-      profile = r.json()
+        # Fetch twitter profile from database.
+        dburl = twitterdb + "/" + urllib.parse.quote(username)
+        r = dbsession.get(dburl)
+        if r.status_code == 404:
+          task.increment("unknown_users")
+          continue
+        r.raise_for_status()
+        profile = r.json()
 
-      # Ignore if twitter profile does not exist.
-      if "error" in profile:
-        task.increment("deleted_users")
-        continue
+        # Ignore if twitter profile does not exist.
+        if "error" in profile:
+          task.increment("deleted_users")
+          continue
 
-      # Ignore if there is no profile image.
-      if profile["default_profile_image"]:
-        task.increment("missing_profile_images")
-        continue
+        # Ignore if there is no profile image.
+        if profile["default_profile_image"]:
+          task.increment("missing_profile_images")
+          continue
 
-      # Get profile image url.
-      imageurl = profile["profile_image_url"]
+        # Get profile image url.
+        imageurl = profile["profile_image_url"]
 
-      # Get url for original image url by removing "_normal".
-      imageurl = ''.join(imageurl.rsplit("_normal", 1))
+        # Get url for original image url by removing "_normal".
+        imageurl = ''.join(imageurl.rsplit("_normal", 1))
 
-      # Ignore known bad images.
-      if imageurl in bad_images:
-        task.increment("bad_profile_images")
-        continue
+        # Ignore known bad images.
+        if imageurl in bad_images:
+          task.increment("bad_profile_images")
+          continue
 
-      # Create item frame with twitter profile.
-      store = sling.Store(kb)
-      image = store.frame([(p_is, imageurl), (p_stated_in, n_twitter)])
-      frame = store.frame([(p_id, item.id), (p_media, image)])
-      fout.write(frame.data(utf8=True))
-      fout.write("\n")
+        # Add twiter profile image to item.
+        imageurls.append(imageurl)
 
-      task.increment("profile_images")
-      if p_image not in item: task.increment("imaged_items")
+      if len(imageurls) > 0:
+        # Create item frame with twitter profile.
+        store = sling.Store(kb)
+        slots = [(p_id, item.id)]
+        for imageurl in imageurls:
+          image = store.frame([(p_is, imageurl), (p_stated_in, n_twitter)])
+          slots.append(image)
+        frame = store.frame(slots)
+        fout.write(frame.data(utf8=True))
+        fout.write("\n")
+
+        task.increment("profile_images")
+        if p_image not in item: task.increment("imaged_items")
 
     fout.close()
 

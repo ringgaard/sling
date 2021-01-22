@@ -48,6 +48,7 @@ default_images = set([
   "Défaut- Homme Politique(s).png",
   "Défaut-Personnalité(s).png",
   "Défaut-youtuber(s).png",
+  "Remplacez l'image de cette personne.jpg",
 ])
 
 # Compute MD5 hash for string.

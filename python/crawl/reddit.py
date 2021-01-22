@@ -32,6 +32,7 @@ news_reddits = [
 ignored_reddits = [
   "u_toronto_news",
   "newsokur",
+  "newsokuexp",
 ]
 
 # Load news site list.

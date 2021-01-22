@@ -64,8 +64,9 @@ def get_twitter_usernames():
   # Find twitter usernames for items.
   users = []
   for item in kb:
-    username = kb.resolve(item[p_twitter])
-    if username is not None: users.append(username)
+    for username in item(p_twitter):
+      username = kb.resolve(username)
+      if username is not None: users.append(username)
 
   return users
 
@@ -80,7 +81,7 @@ def cache_profile_image(profile):
 
   r = session.get(imageurl)
   if not r.ok:
-    print("error fetching", r.status_code, url)
+    print("error fetching", r.status_code, imageurl)
     return
 
   mediaurl = flags.arg.mediadb + "/" + urllib.parse.quote(imageurl)
