@@ -106,7 +106,7 @@ class TwitterExtract:
         slots = [(p_id, item.id)]
         for imageurl in imageurls:
           image = store.frame([(p_is, imageurl), (p_stated_in, n_twitter)])
-          slots.append(image)
+          slots.append((p_media, image))
         frame = store.frame(slots)
         fout.write(frame.data(utf8=True))
         fout.write("\n")
