@@ -31,155 +31,2818 @@
 
 "Infoboks Wikidata person": {
   type: "infobox"
-  class: /wp/infobox/person
-  fields: {
-    "navn": /wp/info/name
-    "fødselsnavn": /wp/info/birth_name
-    "fødselsdato": /wp/info/birth_date
-    "fødested": /wp/info/birth_place
-    "dødsdato": /wp/info/death_date
-    "dødssted": /wp/info/death_place
-    "bopæl": /wp/info/residence
-    "hvilested": /wp/info/resting_place
-    "nationalitet": /wp/info/nationality
-    "beskæftigelse": /wp/info/occupation
-    "politik": /wp/info/politics
+  class: /wp/infoboks/person
+  fields: {=/wp/infobox/person/fields
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "navn": {+/wp/info/name alias: 12}
+    "Navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "Billede": {+/wp/info/image media: true}
+    "image": {+/wp/info/image media: true}
+    "billede_navn": /wp/info/caption
+    "billedtekst": /wp/info/caption
+    "billedetekst": /wp/info/caption
+    "billede_note": /wp/info/caption
+    "caption": /wp/info/caption
+    "billedstørrelse": /wp/info/billedstoerrelse
+    "billedesize": /wp/info/billedstoerrelse
+    "imagesize": /wp/info/billedstoerrelse
+    "billedbredde": /wp/info/billedstoerrelse
+    "Size": /wp/info/billedstoerrelse
+    "fødselsdato": /wp/info/foedselsdato
+    "født": /wp/info/foedselsdato
+    "fødested": /wp/info/foedested
+    "fsted": /wp/info/foedested
+    "fødselssted": /wp/info/foedested
+    "fødsels_sted": /wp/info/foedested
+    "dødsdato": /wp/info/doedsdato
+    "død": /wp/info/doedsdato
+    "dødsdag": /wp/info/doedsdato
+    "døds_dato": /wp/info/doedsdato
+    "dødssted": /wp/info/doedssted
+    "dødsted": /wp/info/doedssted
+    "dødested": /wp/info/doedssted
+    "døds_sted": /wp/info/doedssted
+    "dsted": /wp/info/doedssted
+    "bopæl": /wp/info/bopael
+    "hvilested": /wp/info/hvilested
+    "gravsted": /wp/info/hvilested
+    "nationalitet": /wp/info/nationalitet
+    "beskæftigelse": /wp/info/beskaeftigelse
+    "arbejde": /wp/info/beskaeftigelse
+    "politik": /wp/info/politik
     "religion": /wp/info/religion
-    "forældre": /wp/info/parents
-    "ægtefælle": /wp/info/spouse
+    "forældre": /wp/info/foraeldre
+    "ægtefælle": /wp/info/aegtefaelle
+    "ægtefæller": /wp/info/aegtefaelle
+    "ægtefælle(r)": /wp/info/aegtefaelle
     "partner": /wp/info/partner
     "partnertype": /wp/info/partnertype
-    "børn": /wp/info/children
-    "kendtfor": /wp/info/known_for
-    "hæder": /wp/info/awards
-    "hjemmeside": /wp/info/website
-    "q": /wp/info/qid
-    "fulde navn": /wp/info/native_name
-    "fødenavn": /wp/info/birth_name
-    "andre navne": /wp/info/other_names
-    "dødsårsag": /wp/info/death_cause
-    "hvilestedkoordinater": /wp/info/resting_place_coordinates
-    "aktive år": /wp/info/years_active
+    "børn": /wp/info/boern
+    "kendtfor": /wp/info/kendtfor
+    "kendt_for": /wp/info/kendtfor
+    "hæder": /wp/info/haeder
+    "hjemmeside": /wp/info/hjemmeside
+    "webside": /wp/info/hjemmeside
+    "website": /wp/info/hjemmeside
+    "signatur": /wp/info/signatur
+    "q": /wp/info/q
+    "imagealt": /wp/info/imagealt
+    "fulde navn": {+/wp/info/full_name alias: 12}
+    "fulde_navn": {+/wp/info/full_name alias: 12}
+    "fødenavn": {+/wp/info/birth_name alias: 12}
+    "fnavn": {+/wp/info/birth_name alias: 12}
+    "fødselsnavn": {+/wp/info/birth_name alias: 12}
+    "andre navne": {+/wp/info/other_names alias: 13}
+    "andre_navne": {+/wp/info/other_names alias: 13}
+    "dødsårsag": /wp/info/doedsaarsag
+    "hvilestedkoordinater": /wp/info/hvilestedkoordinater
+    "aktive år": /wp/info/aktive_aar
+    "aktive_år": /wp/info/aktive_aar
     "uddannelsessted": /wp/info/alma_mater
-    "institution": /wp/info/organization
-    "løn": /wp/info/salary
-    "højde": /wp/info/height
-    "vægt": /wp/info/weight
-    "formue": /wp/info/net_worth
-    "sambo": /wp/info/cohabitant
-    "kæreste": /wp/info/domestic_partner
-    "mor": /wp/info/mother
-    "far": /wp/info/father
-    "familie": /wp/info/relatives
-    "profession": /wp/info/occupation
-    "præsteembeder": /wp/info/priesthoods
-    "professorater": /wp/info/professorships
-    "berømtfor": /wp/info/known_for
-    "påvirket af": /wp/info/influenced
-    "har påvirket": /wp/info/influences
-    "honorific-prefix": /wp/info/honorific_prefix
-    "honorific-suffix": /wp/info/honorific_suffix
+    "mater": /wp/info/alma_mater
+    "alma_mater": /wp/info/alma_mater
+    "institution": /wp/info/institution
+    "løn": /wp/info/loen
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "formue": /wp/info/formue
+    "sambo": /wp/info/sambo
+    "kæreste": /wp/info/kaereste
+    "mor": /wp/info/mor
+    "far": /wp/info/far
+    "stedfar": /wp/info/stedfar
+    "stedmor": /wp/info/stedmor
+    "adoptivfar": /wp/info/adoptivfar
+    "adoptivmor": /wp/info/adoptivmor
+    "familie": /wp/info/familie
+    "profession": /wp/info/profession
+    "præsteembeder": /wp/info/praesteembeder
+    "professorater": /wp/info/professorater
+    "berømtfor": /wp/info/beroemtfor
+    "påvirket af": /wp/info/paavirket_af
+    "inspirationer": /wp/info/paavirket_af
+    "påvirket": /wp/info/paavirket_af
+    "påvirket_af": /wp/info/paavirket_af
+    "indflydelse_af": /wp/info/paavirket_af
+    "har påvirket": /wp/info/har_paavirket
+    "har_påvirket": /wp/info/har_paavirket
+    "indflydelse_på": /wp/info/har_paavirket
+    "honorific-prefix": /wp/info/honorific-prefix
+    "honorific-suffix": /wp/info/honorific-suffix
+    "udtale": /wp/info/udtale
     "status": /wp/info/status
-    "forsvundet_status": /wp/info/disappeared_status
-    "lig_fundet": /wp/info/body_dound
-    "monumenter": /wp/info/monuments
-    "embede": /wp/info/term
-    "embedsperiode": /wp/info/term_period
-    "forgænger": /wp/info/predecessor
-    "efterfølger": /wp/info/successor
-    "andet": /wp/info/other
+    "forsvundet_status": /wp/info/forsvundet_status
+    "lig_fundet": /wp/info/lig_fundet
+    "monumenter": /wp/info/monumenter
+    "embedsperiode": /wp/info/embedsperiode
+    "signaturstørrelse": /wp/info/signaturstoerrelse
+    "signaturesize": /wp/info/signaturstoerrelse
+    "signatur_alt": /wp/info/signatur_alt
+    "andet": /wp/info/andet
+    "noter": /wp/info/andet
+    "fodnoter": /wp/info/andet
     "color": /wp/info/color
+    "bgcolour": /wp/info/color
     "region": /wp/info/region
-    "æra": /wp/info/era
-    "pseudonym": /wp/info/pseudonym
+    "æra": /wp/info/aera
+    "pseudonym": {+/wp/info/pseudonym alias: 12}
+    "pseudonym(er)": {+/wp/info/pseudonym alias: 12}
     "genre": /wp/info/genre
-    "kendte værker": /wp/info/notable_works
-    "litterære bevægelse": /wp/info/literary_movement
-    "kendte roller": /wp/info/notable_roles
-
-    "oscarpriser": /wp/info/oscar_awards
-    "emmypriser": /wp/info/emmy_awards
-    "tonypriser": /wp/info/tony_awards
-    "goldenglobepriser": /wp/info/golden_globe_awards
-    "baftapriser": /wp/info/bafta_awards
-    "People's Choicepriser": /wp/info/peoples_choice_awards
-    "fagpriser": /wp/info/awards
-    "cesarpriser": /wp/info/cesar_awards
-    "goyapriser": /wp/info/goya_awards
-    "afipriser": /wp/info/afi_awards
-    "filmfarepriser": /wp/info/filmfare_awards
-    "olivierpriser": /wp/info/olivier_awards
-    "geminipriser": /wp/info/gemini_awards
-    "grammypriser": /wp/info/grammy_awards
-    "Screen Actors Guild": /wp/info/screen_actors_guild_awards
-    "teenchoiceadwardspriser": /wp/info/teenchoice_adwards
-    "bodilpriser": /wp/info/bodil_awards
-    "robertpriser": /wp/info/robert_awards
-
-    "forskningsområde": /wp/info/research_area
-    "hovedværk": /wp/info/notable_work
-    "hovedværk_udgivelsesår": /wp/info/masterpiece_year
-    "akademisk_vejleder": /wp/info/adviser
-    "arbejdssted": /wp/info/employer
-    "betydningsfulde_elever": /wp/info/notable_students
-
-    "nobelpris": /wp/info/nobel_price
-    "nobeltype": /wp/info/nobel_type
-    "nobelår": /wp/info/nobel_year
-
-    "skole_tradition": /wp/info/school_tradition
-    "fagområde": /wp/info/field_of_work
-    "betydningsfulde idéer": /wp/info/important_ideas
-    "elever": /wp/info/students
-    "felt": /wp/info/field
+    "genrer": /wp/info/genre
+    "genre(r)": /wp/info/genre
+    "kendte værker": /wp/info/kendte_vaerker
+    "kendte_værker": /wp/info/kendte_vaerker
+    "berømte_værker": /wp/info/kendte_vaerker
+    "berømte værker": /wp/info/kendte_vaerker
+    "kendt(e) værk(er)": /wp/info/kendte_vaerker
+    "kendte roller": /wp/info/kendte_roller
+    "kendte_roller": /wp/info/kendte_roller
+    "optræder": /wp/info/kendte_roller
+    "oscarpriser": /wp/info/oscarpriser
+    "emmypriser": /wp/info/emmypriser
+    "tonypriser": /wp/info/tonypriser
+    "goldenglobepriser": /wp/info/goldenglobepriser
+    "baftapriser": /wp/info/baftapriser
+    "People's Choicepriser": /wp/info/people's_choicepriser
+    "fagpriser": /wp/info/fagpriser
+    "cesarpriser": /wp/info/cesarpriser
+    "goyapriser": /wp/info/goyapriser
+    "afipriser": /wp/info/afipriser
+    "filmfarepriser": /wp/info/filmfarepriser
+    "olivierpriser": /wp/info/olivierpriser
+    "geminipriser": /wp/info/geminipriser
+    "grammypriser": /wp/info/grammypriser
+    "Screen Actors Guild": /wp/info/screen_actors_guild
+    "teenchoiceadwardspriser": /wp/info/teenchoiceadwardspriser
+    "bodilpriser": /wp/info/bodilpriser
+    "robertpriser": /wp/info/robertpriser
+    "forskningsområde": /wp/info/forskningsomraade
+    "hovedværk": /wp/info/hovedvaerk
+    "hovedværker": /wp/info/hovedvaerk
+    "hovedværk_udgivelsesår": /wp/info/hovedvaerk_udgivelsesaar
+    "akademisk_vejleder": /wp/info/akademisk_vejleder
+    "arbejdssted": /wp/info/arbejdssted
+    "arbejdsplads": /wp/info/arbejdssted
+    "arbejdspladser": /wp/info/arbejdssted
+    "betydningsfulde_elever": /wp/info/betydningsfulde_elever
+    "studerende": /wp/info/betydningsfulde_elever
+    "nobelpris": /wp/info/nobelpris
+    "nobeltype": /wp/info/nobeltype
+    "nobelår": /wp/info/nobelaar
+    "skole_tradition": /wp/info/skole_tradition
+    "fagområde": /wp/info/fagomraade
+    "arbejdsfelt": /wp/info/fagomraade
+    "område": /wp/info/fagomraade
+    "betydningsfulde idéer": /wp/info/betydningsfulde_ideer
+    "betydningsfulde_idéer": /wp/info/betydningsfulde_ideer
+    "elever": /wp/info/elever
+    "felt": /wp/info/felt
     "periode": /wp/info/periode
-    "beskyttere": /wp/info/protectors
-    "inspireret af": /wp/info/inspired_by
-    "inspirerede": /wp/info/inspired
-    "udstilling": /wp/info/exhibition
-    "offentlig": /wp/info/public
-    "indkøbt": /wp/info/bought
-    "højeste_auktionspris": /wp/info/highest_bid
-    "Antal_ofre": /wp/info/casualties
-    "Ofre": /wp/info/victims
-    "Offer": /wp/info/victim
-    "Forbrydelse": /wp/info/crime
-    "Periode": /wp/info/period
-    "Land": /wp/info/country
+    "beskyttere": /wp/info/beskyttere
+    "inspireret af": /wp/info/inspireret_af
+    "inspirerede": /wp/info/inspirerede
+    "udstilling": /wp/info/udstilling
+    "offentlig": /wp/info/offentlig
+    "indkøbt": /wp/info/indkoebt
+    "højeste_auktionspris": /wp/info/hoejeste_auktionspris
+    "Antal_ofre": /wp/info/antal_ofre
+    "Ofre": /wp/info/ofre
+    "Offer": /wp/info/offer
+    "Forbrydelse": /wp/info/forbrydelse
+    "Periode": /wp/info/periode
+    "Land": /wp/info/land
+    "Arresteret": /wp/info/arresteret
+    "Straf": /wp/info/straf
+    "Fængslet_i": /wp/info/faengslet_i
+    "Kriminel_status": /wp/info/kriminel_status
+    "Sigtelse": /wp/info/sigtelse
+    "Anklaget": /wp/info/anklaget
+    "Benådet": /wp/info/benaadet
+    "Løsladt": /wp/info/loesladt
+    "dåbsdato": /wp/info/daabsdato
+    "døbt": /wp/info/daabsdato
+    "dåbsdag": /wp/info/daabsdato
+    "øgenavn": {+/wp/info/nickname alias: 13}
+    "forsvundet": /wp/info/forsvundet
+    "medicinsk tilstand": /wp/info/medicinsk_tilstand
+    "dødsmåde": /wp/info/doedsmaade
+    "dræbt af": /wp/info/draebt_af
+    "statsborgerskab": /wp/info/statsborgerskab
+    "sprog": /wp/info/sprog
+    "politiskparti": /wp/info/politiskparti
+    "politisk parti": /wp/info/politiskparti
+    "søskende": /wp/info/soeskende
+    "elev af": /wp/info/elev_af
+    "elev_af": /wp/info/elev_af
+    "tilknyttet": /wp/info/tilknyttet
+    "hovedfag": /wp/info/hovedfag
+    "universitetsretning": /wp/info/hovedfag
+    "akademisk grad": /wp/info/akademisk_grad
+    "medlem": /wp/info/medlem
+    "arbejdsgiver": /wp/info/arbejdsgiver
+    "interesse": /wp/info/interesse
+    "bevægelse": /wp/info/bevaegelse
+    "litterære bevægelse": /wp/info/litteraere_bevaegelse
+    "litterære_bevægelse": /wp/info/litteraere_bevaegelse
+    "deltog": /wp/info/deltog
+    "filmografi": /wp/info/filmografi
+    "bibliografi": /wp/info/bibliografi
+    "nomineringer": /wp/info/nomineringer
+    "hædret for": /wp/info/haedret_for
+    "beskrevet": /wp/info/beskrevet
+  }
+}
 
-    "Arresteret": /wp/info/arrested
-    "Straf": /wp/info/criminal_penalty
-    "Fængslet_i": /wp/info/imprisoned_at
-    "Kriminel_status": /wp/info/criminal_status
-    "Sigtelse": /wp/info/criminal_charge
-    "Anklaget": /wp/info/charged
-    "Benådet": /wp/info/pardoned
-    "Løsladt": /wp/info/released
+"Infoboks skuespiller": {
+  type: "infobox"
+  class: /wp/infobox/actor
+  fields: /wp/infobox/person/fields
+}
 
-    "dåbsdato": /wp/info/baptised
-    "øgenavn": /wp/info/nickname
-    "forsvundet": /wp/info/disappeared
-    "medicinsk tilstand": /wp/info/medical_condition
-    "dødsmåde": /wp/info/death_cause
-    "dræbt af": /wp/info/killed_by
-    "statsborgerskab": /wp/info/citizenship
-    "sprog": /wp/info/language
-    "politiskparti": /wp/info/party
-    "søskende": /wp/info/siblings
-    "elev af": /wp/info/student_of
-    "tilknyttet": /wp/info/affiliation
-    "hovedfag": /wp/info/major
-    "akademisk grad": /wp/info/academic_degree
-    "medlem": /wp/info/membership
-    "arbejdsgiver": /wp/info/employer
-    "interesse": /wp/info/interest
-    "bevægelse": /wp/info/movement
-    "deltog": /wp/info/participant_of
-    "filmografi": /wp/info/filmography
-    "bibliografi": /wp/info/bibliography
-    "nomineringer": /wp/info/nominations
-    "hædret for": /wp/info/for_work
-    "beskrevet": /wp/info/described_in
+"Infoboks leder": {
+  type: "infobox"
+  class: /wp/infobox/leder
+  fields: /wp/infobox/person/fields
+  fields: {
+    "lokalt_navn": {+/wp/info/native-name alias: 12}
+    "lokalt_navn_sprog": /wp/info/native-name-lang
+    "lillebillede": /wp/info/lillebillede
+    "alt": /wp/info/alt
+
+    "embede": {+/wp/info/embede group: /wp/info/position}
+    "embede_start": {+/wp/info/embede_start group: /wp/info/position}
+    "embede_slut": {+/wp/info/embede_slut group: /wp/info/position}
+    "sammenmed": {+/wp/info/sammenmed group: /wp/info/position}
+    "monark": {+/wp/info/monark group: /wp/info/position}
+    "præsident": {+/wp/info/praesident group: /wp/info/position}
+    "generalguvernør": {+/wp/info/generalguvernoer group: /wp/info/position}
+    "generalsekretær": {+/wp/info/generalsekretaer group: /wp/info/position}
+    "premierminister": {+/wp/info/premierminister group: /wp/info/position}
+    "borgmester": {+/wp/info/borgmester group: /wp/info/position}
+    "statsminister": {+/wp/info/statsminister group: /wp/info/position}
+    "kansler": {+/wp/info/kansler group: /wp/info/position}
+    "minister": {+/wp/info/minister group: /wp/info/position}
+    "taoiseach": {+/wp/info/taoiseach group: /wp/info/position}
+    "guvernør": {+/wp/info/guvernoer group: /wp/info/position}
+    "formand": {+/wp/info/formand group: /wp/info/position}
+    "vicepræsident": {+/wp/info/vicepraesident group: /wp/info/position}
+    "vicepremierminister": {+/wp/info/vicepremierminister group: /wp/info/position}
+    "viceguvernør": {+/wp/info/viceguvernoer group: /wp/info/position}
+    "vicekansler": {+/wp/info/vicekansler group: /wp/info/position}
+    "vicestatsminister": {+/wp/info/vicestatsminister group: /wp/info/position}
+    "næstformand": {+/wp/info/naestformand group: /wp/info/position}
+    "stedfortræder": {+/wp/info/stedfortraeder group: /wp/info/position}
+    "leder": {+/wp/info/leder group: /wp/info/position}
+    "nominerer": {+/wp/info/nominerer group: /wp/info/position}
+    "udnævner": {+/wp/info/udnaevner group: /wp/info/position}
+    "delafregering": {+/wp/info/delafregering group: /wp/info/position}
+    "valgtved": {+/wp/info/valgtved group: /wp/info/position}
+    "ordfører": {+/wp/info/ordfoerer group: /wp/info/position}
+    "parlamentariskkarriere": {+/wp/info/parlamentariskkarriere group: /wp/info/position}
+    "udvalg": {+/wp/info/udvalg group: /wp/info/position}
+    "runningmate": {+/wp/info/runningmate group: /wp/info/position}
+    "modstander": {+/wp/info/modstander group: /wp/info/position}
+    "efterfølge": {+/wp/info/efterfoelge group: /wp/info/position}
+    "valgkreds": {+/wp/info/valgkreds group: /wp/info/position}
+    "flertal": {+/wp/info/flertal group: /wp/info/position}
+    "personligestemmer": {+/wp/info/personligestemmer group: /wp/info/position}
+    "forgænger": {+/wp/info/forgaenger group: /wp/info/position}
+    "efterfølger": {+/wp/info/efterfoelger group: /wp/info/position}
+    "tidligere_periode": {+/wp/info/tidligere_periode group: /wp/info/position}
+
+    "valgkreds_MF": {+/wp/info/valgkreds_mf group: /wp/info/position}
+    "valgkreds_MEP": {+/wp/info/valgkreds_mep group: /wp/info/position}
+    "valgskreds_AM": {+/wp/info/valgkreds_am group: /wp/info/position}
+    "forsamling": {+/wp/info/forsamling group: /wp/info/position}
+
+    "rækkefølge": {+/wp/info/raekkefoelge group: /wp/info/position}
+    "ambassadør_fra": {+/wp/info/ambassadoer_fra group: /wp/info/position}
+    "land": {+/wp/info/ambassadoer_til group: /wp/info/position}
+
+    "fødtnavn": {+/wp/info/birth_name alias: 12}
+    "fødselsdag": /wp/info/foedselsdato
+    "fuldenavn": {+/wp/info/full_name alias: 12}
+    "parti": /wp/info/parti
+    "andetparti": /wp/info/andetparti
+    "pårørende": /wp/info/paaroerende
+    "slægtning": /wp/info/slaegtning
+    "hjem": /wp/info/hjem
+    "uddannelse": /wp/info/uddannelse
+    "regering": /wp/info/regering
+    "komiteer": /wp/info/komiteer
+    "civ_udmærkelser": /wp/info/civ_udmaerkelser
+    "folketingets side": /wp/info/folketingets_side
+
+    "kaldenavn": {+/wp/info/callsign alias: 13}
+    "troskab": /wp/info/troskab
+    "værn": /wp/info/vaern
+    "tjenestetid": /wp/info/tjenestetid
+    "rang": /wp/info/rang
+    "enhed": /wp/info/enhed
+    "chef": /wp/info/chef
+    "slag": /wp/info/slag
+    "udmærkelser": /wp/info/udmaerkelser
+  }
+}
+
+"Infoboks monark": {
+  type: "infobox"
+  class: /wp/infoboks/monark
+  fields: {
+    "navn": /wp/info/navn
+    "valgsprog": /wp/info/valgsprog
+    "billede": {+/wp/info/image media: true}
+    "imgw": /wp/info/imgw
+    "alt": /wp/info/alt
+    "billedtekst": /wp/info/caption
+
+    "titel": {+/wp/info/titel group: /wp/info/indsaettelse}
+    "land": {+/wp/info/land group: /wp/info/indsaettelse}
+    "regeret": {+/wp/info/regeret group: /wp/info/indsaettelse}
+    "regeret-type": {+/wp/info/regeret-type group: /wp/info/indsaettelse}
+    "kroning": {+/wp/info/kroning group: /wp/info/indsaettelse}
+    "kroning-type": {+/wp/info/kroning-type group: /wp/info/indsaettelse}
+    "forgænger": {+/wp/info/forgaenger group: /wp/info/indsaettelse}
+    "forgænger-type": {+/wp/info/forgaenger-type group: /wp/info/indsaettelse}
+    "tronfølger": {+/wp/info/tronfoelger group: /wp/info/indsaettelse}
+    "tronfølger-type": {+/wp/info/tronfoelger-type group: /wp/info/indsaettelse}
+    "regent": {+/wp/info/regent group: /wp/info/indsaettelse}
+    "reg-type": {+/wp/info/reg-type group: /wp/info/indsaettelse}
+    "regent-e": {+/wp/info/regent-e group: /wp/info/indsaettelse}
+    "reg-type-e": {+/wp/info/reg-type-e group: /wp/info/indsaettelse}
+
+    "type": /wp/info/type
+    "ægtefælle": /wp/info/aegtefaelle
+    "ægtefælle-type": /wp/info/aegtefaelle-type
+    "gemal": /wp/info/gemal
+    "ægtefæller": /wp/info/aegtefaeller
+    "ægtefæller-type": /wp/info/aegtefaeller-type
+    "børn": /wp/info/boern
+    "børn-typer": /wp/info/boern-typer
+    "fulde navn": {/wp/info/full_name alias: 12}
+    "posthumt navn": {+/wp/info/posthumous_name alias: 12}
+    "tempelnavn": /wp/info/tempelnavn
+    "hus": /wp/info/hus
+    "hus-type": /wp/info/hus-type
+    "far": /wp/info/far
+    "mor": /wp/info/mor
+    "født": /wp/info/foedt
+    "fødested": /wp/info/foedested
+    "død": /wp/info/doed
+    "dødested": /wp/info/doedested
+    "begravet": /wp/info/begravet
+    "gravsted": /wp/info/gravsted
+    "beskæftigelse": /wp/info/beskaeftigelse
+    "signatur": /wp/info/signatur
+    "signatur_alt": /wp/info/signatur_alt
+    "religion": /wp/info/religion
+  }
+}
+
+"Infoboks militær person": {
+  type: "infobox"
+  class: /wp/infoboks/militaer_person
+  fields: {
+    "honorific_prefix": /wp/info/honorific_prefix
+    "navn": {+/wp/info/name alias: 12}
+    "honorific_suffix": /wp/info/honorific_suffix
+    "levede": /wp/info/levede
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "kaldenavn": {+/wp/info/nickname name: 13}
+    "lokalt_navn": {+/wp/info/native_name alias: 12}
+    "lokalt_navn_lang": /wp/info/native_name_lang
+    "fødtnavn": {+/wp/info/birth_name alias: 12}
+    "andre_navne": {+/wp/info/other_names alias: 12}
+    "født": /wp/info/foedt
+    "fsted": /wp/info/fsted
+    "død": /wp/info/doed
+    "dsted": /wp/info/dsted
+    "hvilested": /wp/info/hvilested
+    "hvilestedkoordinater": /wp/info/hvilestedkoordinater
+    "troskab": /wp/info/troskab
+    "værn": /wp/info/vaern
+    "tjenestetid": /wp/info/tjenestetid
+    "tjenestenummer": /wp/info/tjenestenummer
+    "rang": /wp/info/rang
+    "enhed": /wp/info/enhed
+    "chef": /wp/info/chef
+    "slag": /wp/info/slag
+    "udmærkelser": /wp/info/udmaerkelser
+    "mindesmærker": /wp/info/mindesmaerker
+    "ægtefælle": /wp/info/aegtefaelle
+    "relationer": /wp/info/relationer
+    "senere": /wp/info/senere
+    "signatur": /wp/info/signatur
+    "hjemmeside": /wp/info/hjemmeside
+    "hvilested_label": /wp/info/hvilested_label
+    "slag_label": /wp/info/slag_label
+  }
+}
+
+"Infoboks Adelsslægt": {
+  type: "infobox"
+  class: /wp/infoboks/adelsslaegt
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "Navn": {+/wp/info/name alias: 12}
+    "våbenskjold": /wp/info/vaabenskjold
+    "våbentekst": /wp/info/vaabentekst
+    "billede": {+/wp/info/image media: true}
+    "billed_tekst": /wp/info/caption
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "oprindelse": /wp/info/oprindelse
+    "grundlagt": /wp/info/grundlagt
+    "først_nævnt": /wp/info/foerst_naevnt
+    "gren_af": /wp/info/gren_af
+    "ophøjet": /wp/info/ophoejet
+    "forfader": /wp/info/forfader
+    "sædegård": /wp/info/saedegaard
+    "adlet": /wp/info/adlet
+    "andre_navne": {/wp/info/other_name alias: 12}
+    "fremtrædende": /wp/info/fremtraedende
+    "motto": /wp/info/motto
+    "yngre_grene": /wp/info/yngre_grene
+    "nuværende_familiehoved": /wp/info/nuvaerende_familiehoved
+    "nationalitet": /wp/info/nationalitet
+    "naturaliseret_dk": /wp/info/naturaliseret_dk
+    "værdighed_dk": /wp/info/vaerdighed_dk
+    "nr_dk": /wp/info/nr_dk
+    "uddød_dk": /wp/info/uddoed_dk
+    "sidste_mandlige_medlem_dk": /wp/info/sidste_mandlige_medlem_dk
+    "sidste_kvindelige_medlem_dk": /wp/info/sidste_kvindelige_medlem_dk
+    "beskrevet": /wp/info/beskrevet
+    "adelsforeningenurl_dk": /wp/info/adelsforeningenurl_dk
+    "url": /wp/info/url
+  }
+}
+
+"Infoboks pave": {
+  type: "infobox"
+  class: /wp/infoboks/pave
+  fields: {
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "navn": {+/wp/info/name alias: 12}
+    "latin": {+/wp/info/latin alias: 12}
+    "fødenavn": {+/wp/info/birth_name alias: 12}
+    "født": /wp/info/foedt
+    "fsted": /wp/info/fsted
+    "valgt": /wp/info/valgt
+    "indsat": /wp/info/indsat
+    "afsat": /wp/info/afsat
+    "abdiceret": /wp/info/abdiceret
+    "død": /wp/info/doed
+    "dsted": /wp/info/dsted
+    "salig": /wp/info/salig
+    "hellig": /wp/info/hellig
+    "fest": /wp/info/fest
+    "før": /wp/info/foer
+    "efter": /wp/info/efter
+    "q": /wp/info/q
+    "bgcolour": /wp/info/bgcolour
+    "imagealt": /wp/info/imagealt
+    "bopæl": /wp/info/bopael
+    "nationalitet": /wp/info/nationalitet
+    "statsborgerskab": /wp/info/statsborgerskab
+    "sprog": /wp/info/sprog
+    "hvilested": /wp/info/hvilested
+    "far": /wp/info/far
+    "mor": /wp/info/mor
+    "børn": /wp/info/boern
+    "beskrevet": /wp/info/beskrevet
+    "andet": /wp/info/andet
+  }
+}
+
+"Infoboks arkitekt": {
+  type: "infobox"
+  class: /wp/infoboks/arkitekt
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "billede": {+/wp/info/image media: true}
+    "billedstørrelse": /wp/info/caption
+    "billedtekst": /wp/info/billedtekst
+    "navn": {+/wp/info/name alias: 12}
+    "nationalitet": /wp/info/nationalitet
+    "fødselsdato": /wp/info/foedselsdato
+    "fødested": /wp/info/foedested
+    "dødsdato": /wp/info/doedsdato
+    "dødssted": /wp/info/doedssted
+    "uddannelsessted": /wp/info/uddannelsessted
+    "praksisnavn": /wp/info/praksisnavn
+    "betydelige_bygninger": /wp/info/betydelige_bygninger
+    "betydelige_projekter": /wp/info/betydelige_projekter
+    "betydelige_design": /wp/info/betydelige_design
+    "udmærkelser": /wp/info/udmaerkelser
+    "fødenavn": {+/wp/info/birth_name alias: 12}
+    "fulde navn": {+/wp/info/full_name alias: 12}
+    "hvilested": /wp/info/hvilested
+    "hvilestedkoordinater": /wp/info/hvilestedkoordinater
+    "statsborgerskab": /wp/info/statsborgerskab
+    "land": /wp/info/land
+    "beskæftigelse": /wp/info/beskaeftigelse
+    "arbejdsgiver": /wp/info/arbejdsgiver
+    "bevægelse": /wp/info/bevaegelse
+    "kendte_værker": /wp/info/kendte_vaerker
+    "signatur": /wp/info/signatur
+    "signaturstørrelse": /wp/info/signaturstoerrelse
+    "signatur_alt": /wp/info/signatur_alt
+    "hjemmeside": /wp/info/hjemmeside
+  }
+}
+
+"Infoboks astronaut": {
+  type: "infobox"
+  class: /wp/infoboks/astronaut
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "lokalt_navn": {+/wp/info/native_name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "type": /wp/info/type
+    "nationalitet": /wp/info/nationalitet
+    "status": /wp/info/status
+    "fødtnavn": {+/wp/info/birth_name alias: 12}
+    "fødselsdato": /wp/info/foedselsdato
+    "dødsdato": /wp/info/doedsdato
+    "fødested": /wp/info/foedested
+    "dødssted": /wp/info/doedssted
+    "hvilested": /wp/info/hvilested
+    "andre_navne": {+/wp/info/other_names alias: 12}
+    "nuværende_arbejde": /wp/info/nuvaerende_arbejde
+    "tidligere_arbejde": /wp/info/tidligere_arbejde
+    "andet_arbejde": /wp/info/andet_arbejde
+    "rang": /wp/info/rang
+    "udvælgelse": /wp/info/udvaelgelse
+    "tid": /wp/info/tid
+    "mission": /wp/info/mission
+    "pension": /wp/info/pension
+    "hjemmeside": /wp/info/hjemmeside
+    "mindemærker": /wp/info/mindemaerker
+    "udmærkelser": /wp/info/udmaerkelser
+    "emblemer": /wp/info/emblemer
+  }
+}
+
+"Infoboks musiker": {
+  type: "infobox"
+  class: /wp/infoboks/musiker
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "navn": {+/wp/info/name alias: 12}
+    "Navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "Billede": {+/wp/info/image media: true}
+    "image": {+/wp/info/image media: true}
+    "Image": {+/wp/info/image media: true}
+    "billede note": /wp/info/caption
+    "Billede note": /wp/info/caption
+    "billedstørrelse": /wp/info/billedstoerrelse
+    "farve": /wp/info/farve
+    "Farve": /wp/info/farve
+    "logo": /wp/info/logo
+    "Logo": /wp/info/logo
+    "fødselsnavn": {+/wp/info/birth_name alias: 12}
+    "Fødselsnavn": {+/wp/info/birth_name alias: 12}
+    "pseudonym": {+/wp/info/pseudonym alias: 12}
+    "Pseudonym": {+/wp/info/pseudonym alias: 12}
+    "pseudonym(er)": {+/wp/info/pseudonym alias: 12}
+    "Pseudonym(er)": {+/wp/info/pseudonym alias: 12}
+    "fødselsdag": /wp/info/foedselsdag
+    "fødselsdato": /wp/info/foedselsdag
+    "Fødselsdato": /wp/info/foedselsdag
+    "Født": /wp/info/foedselsdag
+    "født": /wp/info/foedselsdag
+    "fødested": /wp/info/foedested
+    "Fødested": /wp/info/foedested
+    "fødselssted": /wp/info/foedested
+    "Fødselssted": /wp/info/foedested
+    "død": /wp/info/doed
+    "Død": /wp/info/doed
+    "dødsdato": /wp/info/doed
+    "Dødsdato": /wp/info/doed
+    "dødssted": /wp/info/doedssted
+    "Dødssted": /wp/info/doedssted
+    "dødested": /wp/info/doedssted
+    "Dødested": /wp/info/doedssted
+    "dødsmåde": /wp/info/doedsmaade
+    "dødsårsag": /wp/info/doedsaarsag
+    "gravsted": /wp/info/gravsted
+    "Gravsted": /wp/info/gravsted
+    "statsborgerskab": /wp/info/statsborgerskab
+    "Statsborgerskab": /wp/info/statsborgerskab
+    "oprindelse": /wp/info/oprindelse
+    "Oprindelse": /wp/info/oprindelse
+    "bosat": /wp/info/bosat
+    "Bosat": /wp/info/bosat
+    "bopæl": /wp/info/bopael
+    "Bopæl": /wp/info/bopael
+    "sprog": /wp/info/sprog
+    "Sprog": /wp/info/sprog
+    "genre": /wp/info/genre
+    "Genre": /wp/info/genre
+    "genre(r)": /wp/info/genre
+    "Genre(r)": /wp/info/genre
+    "beskæftigelse": /wp/info/beskaeftigelse
+    "Beskæftigelse": /wp/info/beskaeftigelse
+    "tilknyttet": /wp/info/tilknyttet
+    "Tilknyttet": /wp/info/tilknyttet
+    "medlem af": /wp/info/medlem_af
+    "Medlem af": /wp/info/medlem_af
+    "deltog": /wp/info/deltog
+    "Deltog": /wp/info/deltog
+    "år aktiv": /wp/info/aar_aktiv
+    "År aktiv": /wp/info/aar_aktiv
+    "aktiveår": /wp/info/aar_aktiv
+    "aktive_år": /wp/info/aar_aktiv
+    "pladeselskab": /wp/info/pladeselskab
+    "Pladeselskab": /wp/info/pladeselskab
+    "associeret med": /wp/info/associeret_med
+    "Associeret med": /wp/info/associeret_med
+    "Associerede acts": /wp/info/associeret_med
+    "medlemmer": /wp/info/medlemmer
+    "Medlemmer": /wp/info/medlemmer
+    "tidligere medlemmer": /wp/info/tidligere_medlemmer
+    "Tidligere medlemmer": /wp/info/tidligere_medlemmer
+    "instrument": /wp/info/instrument
+    "Instrument": /wp/info/instrument
+    "instrument(er)": /wp/info/instrument
+    "Instrument(er)": /wp/info/instrument
+    "påvirket af": /wp/info/paavirket_af
+    "Påvirket af": /wp/info/paavirket_af
+    "inspiratorer": /wp/info/paavirket_af
+    "Inspiratorer": /wp/info/paavirket_af
+    "har påvirket": /wp/info/har_paavirket
+    "Har påvirket": /wp/info/har_paavirket
+    "påvirket": /wp/info/har_paavirket
+    "Påvirket": /wp/info/har_paavirket
+    "hovedværker": /wp/info/hovedvaerker
+    "Hovedværker": /wp/info/hovedvaerker
+    "kendte værker": /wp/info/kendte_vaerker
+    "Kendte værker": /wp/info/kendte_vaerker
+    "kendte_værker": /wp/info/kendte_vaerker
+    "Kendte_værker": /wp/info/kendte_vaerker
+    "signatur": /wp/info/signatur
+    "Signatur": /wp/info/signatur
+    "hjemmeside": /wp/info/hjemmeside
+    "Hjemmeside": /wp/info/hjemmeside
+    "webside": /wp/info/hjemmeside
+    "website": /wp/info/hjemmeside
+    "fodnoter": /wp/info/fodnoter
+    "Fodnoter": /wp/info/fodnoter
+  }
+}
+
+"Infoboks fiktiv person": {
+  type: "infobox"
+  class: /wp/infoboks/fiktiv_person
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "navn": {+/wp/info/name alias: 12}
+    "fuldt navn": {+/wp/info/full_name alias: 12}
+    "serie": /wp/info/serie
+    "billede": {+/wp/info/image media: true}
+    "billedstørrelse": /wp/info/billedstoerrelse
+    "billedtekst": /wp/info/caption
+    "første gang set": /wp/info/foerste_gang_set
+    "sidste gang set": /wp/info/sidste_gang_set
+    "optræden": /wp/info/optraeden
+    "skabt af": /wp/info/skabt_af
+    "spillet af": /wp/info/spillet_af
+    "stemmelægger": /wp/info/stemmelaegger
+    "kaldenavn": {+/wp/info/nickname alias: 13}
+    "alias": {+/wp/info/alias alias: 12}
+    "født": /wp/info/foedt
+    "død": /wp/info/doed
+    "alder": /wp/info/alder
+    "race": /wp/info/race
+    "arbejde": /wp/info/arbejde
+    "status": /wp/info/status
+    "køn": /wp/info/koen
+    "familie": /wp/info/familie
+    "ægtefælle": /wp/info/aegtefaelle
+    "kæreste": /wp/info/kaereste
+    "børn": /wp/info/boern
+    "nationalitet": /wp/info/nationalitet
+    "franchise": /wp/info/franchise
+    "motioncap": /wp/info/motioncap
+    "tilhørsforhold": /wp/info/tilhoersforhold
+    "far": /wp/info/far
+    "mor": /wp/info/mor
+    "søskende": /wp/info/soeskende
+    "sprog": /wp/info/sprog
+    "religion": /wp/info/religion
+    "politik": /wp/info/politik
+    "statsborgerskab": /wp/info/statsborgerskab
+  }
+}
+
+"Infoboks håndboldspiller": {
+  type: "infobox"
+  class: /wp/infoboks/haandboldspiller
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "spillernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedbredde": /wp/info/billedbredde
+    "billedtekst": /wp/info/caption
+    "fuldenavn": {+/wp/info/full_name alias: 12}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødeby": /wp/info/foedeby
+    "fødeland": /wp/info/foedeland
+    "dødsdato": /wp/info/doedsdato
+    "dødssted": /wp/info/doedssted
+    "dødsland": /wp/info/doedsland
+    "statsborger": /wp/info/statsborger
+    "bopæl": /wp/info/bopael
+    "sprog": /wp/info/sprog
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "kælenavn": {+/wp/info/nickname alias: 13}
+    "position": /wp/info/position
+    "klub": /wp/info/klub
+    "trøjenummer": /wp/info/troejenummer
+    "tidligere klubber": /wp/info/tidligere_klubber
+
+    "ungdomsår1": {+/wp/info/aar group: /wp/info/ungdom}
+    "ungdomshold1": {+/wp/info/hold group: /wp/info/ungdom}
+
+    "år": {+/wp/info/aar group: /wp/info/senior}
+    "klubber": {+/wp/info/hold group: /wp/info/senior}
+    "kampe": {+/wp/info/kampe group: /wp/info/senior}
+    "mål": {+/wp/info/maal group: /wp/info/senior}
+
+    "klubopdateret": /wp/info/klubopdateret
+
+    "landshold": {+/wp/info/hold group: /wp/info/national}
+    "landsholdskampe(mål)": {+/wp/info/goals group: /wp/info/national}
+    "landsholdsår": {+/wp/info/years group: /wp/info/national}
+
+    "landsholdopdateret": /wp/info/landsholdopdateret
+
+    "trænerår": {+/wp/info/year group: /wp/info/coach}
+    "trænerhold": {+/wp/info/hold group: /wp/info/coach}
+
+    "webside": /wp/info/webside
+    "signatur": /wp/info/signatur
+  }
+}
+
+"Infoboks cykelrytter": {
+  type: "infobox"
+  class: /wp/infoboks/cykelrytter
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "rytternavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "fuldenavn": {+/wp/info/full_name alias: 12}
+    "kælenavne": {+/wp/info/nickname alias: 13}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødested": /wp/info/foedested
+    "dødsdato": /wp/info/doedsdato
+    "dødsted": /wp/info/doedsted
+    "land": /wp/info/land
+    "højde": /wp/info/hoejde
+    "nuværendehold": /wp/info/nuvaerendehold
+    "disciplin": /wp/info/disciplin
+    "rolle": /wp/info/rolle
+    "ryttertype": /wp/info/ryttertype
+    "amatørår": /wp/info/amatoeraar
+    "amatørhold": /wp/info/amatoerhold
+    "proår": /wp/info/proaar
+    "prohold": /wp/info/prohold
+    "hold wd": /wp/info/hold_wd
+    "trænerår": /wp/info/traeneraar
+    "trænerhold": /wp/info/traenerhold
+    "storesejre": /wp/info/storesejre
+    "signatur": /wp/info/signatur
+    "signaturstørrelse": /wp/info/signaturstoerrelse
+    "hjemmeside": /wp/info/hjemmeside
+    "andet": /wp/info/andet
+    "noter": /wp/info/noter
+  }
+}
+
+"Infobox cyclist": {
+  type: "infobox"
+  class: /wp/infobox/cyclist
+  fields: {
+    "name": {+/wp/info/name alias: 12}
+    "image": {+/wp/info/image media: true}
+    "picture": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "fullname": {+/wp/info/full_name alias: 12}
+    "nickname": {+/wp/info/nickname alias: 13}
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "height": /wp/info/height
+    "weight": /wp/info/weight
+    "currentteam": /wp/info/currentteam
+    "discipline": /wp/info/discipline
+    "role": /wp/info/role
+    "ridertype": /wp/info/ridertype
+
+    "amateuryears": {+/wp/info/years group: /wp/info/amateur}
+    "amateurteam": {+/wp/info/team group: /wp/info/amateur}
+
+    "proyears": {+/wp/info/years group: /wp/info/pro}
+    "proteam": {+/wp/info/team group: /wp/info/pro}
+
+    "manageyears": {+/wp/info/years group: /wp/info/manager}
+    "manageteam": {+/wp/info/team group: /wp/info/manager}
+
+    "majorwins": /wp/info/majorwins
+    "medaltemplates": /wp/info/medaltemplates
+    "show-medals": /wp/info/show-medals
+    "updated": /wp/info/updated
+  }
+}
+
+"Infoboks NFL-spiller": {
+  type: "infobox"
+  class: /wp/infoboks/nfl-spiller
+  fields: {
+    "spillernavn": {+/wp/info/name alias: 12}
+    "kælenavne": {+/wp/info/nickname alias: 13}
+    "billede": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "billedtekst": /wp/info/caption
+    "fuldenavn": {+/wp/info/full_name alias: 12}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødested": /wp/info/foedested
+    "fødeland": /wp/info/foedeland
+    "dødsdato": /wp/info/doedsdato
+    "dødested": /wp/info/doedested
+    "dødeland": /wp/info/doedeland
+    "hvilested": /wp/info/hvilested
+    "statsborger": /wp/info/statsborger
+    "bopæl": /wp/info/bopael
+    "sprog": /wp/info/sprog
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "hold": /wp/info/hold
+    "position": /wp/info/position
+    "status": /wp/info/status
+    "college": /wp/info/college
+    "draft": /wp/info/draft
+    "proår": /wp/info/proaar
+    "prohold": /wp/info/prohold
+    "trænerår": /wp/info/traeneraar
+    "trænerhold": /wp/info/traenerhold
+    "meritter": /wp/info/meritter
+    "signatur": /wp/info/signatur
+    "webside": /wp/info/webside
+  }
+}
+
+"infoboks basketballspiller": {
+  type: "infobox"
+  class: /wp/infoboks/basketballspiller
+  fields: {
+    "spillernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "billedtekst": /wp/info/caption
+    "fuldenavn": {/wp/info/full_name alias: 12}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødeby": /wp/info/foedeby
+    "dødsdato": /wp/info/doedsdato
+    "dødsby": /wp/info/doedsby
+    "dødsland": /wp/info/doedsland
+    "hvilested": /wp/info/hvilested
+    "nationalitet": /wp/info/nationalitet
+    "bopæl": /wp/info/bopael
+    "sprog": /wp/info/sprog
+    "højde": /wp/info/hoejde
+    "kælenavn": {+/wp/info/nickname alias: 13}
+    "position": /wp/info/position
+    "nuværendeklub": /wp/info/nuvaerendeklub
+    "trøjenummer": /wp/info/troejenummer
+    "college": /wp/info/college
+    "draft_nr": /wp/info/draft_nr
+    "draft_år": /wp/info/draft_aar
+    "draft_NBA-klub": /wp/info/draft_nba-klub
+    "år": /wp/info/aar
+    "klubber": /wp/info/klubber
+    "kampe": /wp/info/kampe
+    "klubopdateret": /wp/info/klubopdateret
+    "landsholdsår": /wp/info/landsholdsaar
+    "landshold": /wp/info/landshold
+    "landsholdskampe": /wp/info/landsholdskampe
+    "landsholdopdateret": /wp/info/landsholdopdateret
+    "webside": /wp/info/webside
+    "signatur": /wp/info/signatur
+  }
+}
+
+"Infoboks tennisspiller": {
+  type: "infobox"
+  class: /wp/infoboks/tennisspiller
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "spillernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "billedstørrelse": /wp/info/billedstoerrelse
+    "kaldenavn": {+/wp/info/nickname alias: 13}
+    "nationalitet": /wp/info/nationalitet
+    "fødselsdato": /wp/info/foedselsdato
+    "fødested": /wp/info/foedested
+    "bopæl": /wp/info/bopael
+    "dødsdato": /wp/info/doedsdato
+    "dødssted": /wp/info/doedssted
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "prodato": /wp/info/prodato
+    "karriereslut": /wp/info/karriereslut
+    "spillehånd": /wp/info/spillehaand
+    "pengepræmier": /wp/info/pengepraemier
+    "singlekarriere": /wp/info/singlekarriere
+    "singletitler": /wp/info/singletitler
+    "singlerangering": /wp/info/singlerangering
+    "australianresultat": /wp/info/australianresultat
+    "frenchresultat": /wp/info/frenchresultat
+    "wimbledonresultat": /wp/info/wimbledonresultat
+    "usopenresultat": /wp/info/usopenresultat
+    "doublekarriere": /wp/info/doublekarriere
+    "doubletitler": /wp/info/doubletitler
+    "doublerangering": /wp/info/doublerangering
+    "australiandoubleresultat": /wp/info/australiandoubleresultat
+    "frenchdoubleresultat": /wp/info/frenchdoubleresultat
+    "wimbledondoubleresultat": /wp/info/wimbledondoubleresultat
+    "usopendoubleresultat": /wp/info/usopendoubleresultat
+    "opdateret": /wp/info/opdateret
+    "q": /wp/info/q
+    "dødsårsag": /wp/info/doedsaarsag
+    "gravsted": /wp/info/gravsted
+    "statsborgerskab": /wp/info/statsborgerskab
+    "far": /wp/info/far
+    "mor": /wp/info/mor
+    "søskende": /wp/info/soeskende
+    "ægtefælle": /wp/info/aegtefaelle
+    "partner": /wp/info/partner
+    "partnertype": /wp/info/partnertype
+    "børn": /wp/info/boern
+    "deltog i": /wp/info/deltog_i
+    "hæder": /wp/info/haeder
+    "hjemmeside": /wp/info/hjemmeside
+  }
+}
+
+"Infoboks F1 kører": {
+  type: "infobox"
+  class: /wp/infoboks/f1_koerer
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "bgcolour": /wp/info/bgcolour
+    "navn":  {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedstørrelse": /wp/info/billedstoerrelse
+    "billedtekst": /wp/info/caption
+    "fulde navn": {+/wp/info/full_name alias: 12}
+    "andre navne": {+/wp/info/other_names alias: 13}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødselssted": /wp/info/foedselssted
+    "dødsdato": /wp/info/doedsdato
+    "dødssted": /wp/info/doedssted
+    "dødsmåde": /wp/info/doedsmaade
+    "dødsårsag": /wp/info/doedsaarsag
+    "dræbt af": /wp/info/draebt_af
+    "gravsted": /wp/info/gravsted
+    "statsborgerskab": /wp/info/statsborgerskab
+    "bopæl": /wp/info/bopael
+    "sprog": /wp/info/sprog
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "forældre": /wp/info/foraeldre
+    "far": /wp/info/far
+    "mor": /wp/info/mor
+    "søskende": /wp/info/soeskende
+    "familie": /wp/info/familie
+    "partnertype": /wp/info/partnertype
+    "partner": /wp/info/partner
+    "ægtefælle": /wp/info/aegtefaelle
+    "børn": /wp/info/boern
+    "beskæftigelse": /wp/info/beskaeftigelse
+    "arbejdsgiver": /wp/info/arbejdsgiver
+    "aktiveår": /wp/info/aktiveaar
+    "nuværende år": /wp/info/nuvaerende_aar
+    "bilnummer": /wp/info/bilnummer
+    "år": /wp/info/aar
+    "team": /wp/info/team
+    "løb": /wp/info/loeb
+    "tidligere teams": /wp/info/tidligere_teams
+    "mesterskab": /wp/info/mesterskab
+    "sejre": /wp/info/sejre
+    "podiet": /wp/info/podiet
+    "point": /wp/info/point
+    "poles": /wp/info/poles
+    "hurtigste": /wp/info/hurtigste
+    "bedste resultat": /wp/info/bedste_resultat
+    "første sæson": /wp/info/foerste_saeson
+    "første løb": /wp/info/foerste_loeb
+    "første sejre": /wp/info/foerste_sejre
+    "sidste sæson": /wp/info/sidste_saeson
+    "sidste løb": /wp/info/sidste_loeb
+    "seneste sejre": /wp/info/seneste_sejre
+    "opdateret": /wp/info/opdateret
+    "signatur": /wp/info/signatur
+    "nomineringer": /wp/info/nomineringer
+    "hæder": /wp/info/haeder
+    "beskrevet": /wp/info/beskrevet
+    "hjemmeside": /wp/info/hjemmeside
+    "andet": /wp/info/andet
+    "noter": /wp/info/noter
+  }
+}
+
+"infoboks baseballspiller": {
+  type: "infobox"
+  class: /wp/infoboks/baseballspiller
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "spillernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedbredde": /wp/info/billedbredde
+    "billedtekst": /wp/info/caption
+    "fuldenavn": {+/wp/info/full_name alias: 12}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødeby": /wp/info/foedeby
+    "fødeland": /wp/info/foedeland
+    "dødsdato": /wp/info/doedsdato
+    "dødsby": /wp/info/doedsby
+    "dødsland": /wp/info/doedsland
+    "hvilested": /wp/info/hvilested
+    "nationalitet": /wp/info/nationalitet
+    "bopæl": /wp/info/bopael
+    "sprog": /wp/info/sprog
+    "højde": /wp/info/hoejde
+    "kælenavne": {+/wp/info/nickname alias: 13}
+    "position": /wp/info/position
+    "batterkaster": /wp/info/batterkaster
+    "trøjenummer": /wp/info/troejenummer
+    "år": /wp/info/aar
+    "hold": /wp/info/hold
+    "webside": /wp/info/webside
+    "signatur": /wp/info/signatur
+    "HOF": /wp/info/hof
+  }
+}
+
+"Infoboks ishockeyspiller": {
+  type: "infobox"
+  class: /wp/infoboks/ishockeyspiller
+  fields: {
+    "spillernavn": {+/wp/info/name alias: 12}
+    "kælenavn": {+/wp/info/nickname alias: 13}
+    "billede": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "billedtekst": /wp/info/caption
+    "fuldenavn": {+/wp/info/full_name alias: 12}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødeby": /wp/info/foedeby
+    "fødeland": /wp/info/foedeland
+    "dødsdato": /wp/info/doedsdato
+    "dødsby": /wp/info/doedsby
+    "dødsland": /wp/info/doedsland
+    "hvilested": /wp/info/hvilested
+    "statsborger": /wp/info/statsborger
+    "bopæl": /wp/info/bopael
+    "sprog": /wp/info/sprog
+    "højde": /wp/info/hoejde
+    "position": /wp/info/position
+    "nuværendeklub": /wp/info/nuvaerendeklub
+    "trøjenummer": /wp/info/troejenummer
+    "år": /wp/info/aar
+    "klubber": /wp/info/klubber
+    "kampe": /wp/info/kampe
+    "mål": /wp/info/maal
+    "assist": /wp/info/assist
+    "pim": /wp/info/pim
+    "klubopdateret": /wp/info/klubopdateret
+    "landsholdsår": /wp/info/landsholdsaar
+    "landshold": /wp/info/landshold
+    "landsholdskampe": /wp/info/landsholdskampe
+    "landsholdopdateret": /wp/info/landsholdopdateret
+    "webside": /wp/info/webside
+    "signatur": /wp/info/signatur
+  }
+}
+
+"Svømmer infoboks": {
+  type: "infobox"
+  class: /wp/svoemmer/infoboks
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "svømmer": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedbredde": /wp/info/billedbredde
+    "billedtekst": /wp/info/caption
+    "navn": {+/wp/info/full_name alias: 12}
+    "født": /wp/info/foedt
+    "fødested": /wp/info/foedested
+    "fødeland": /wp/info/foedeland
+    "dødsdato": /wp/info/doedsdato
+    "dødsby": /wp/info/doedsby
+    "dødsland": /wp/info/doedsland
+    "hvilested": /wp/info/hvilested
+    "nationalitet": /wp/info/nationalitet
+    "bopæl": /wp/info/bopael
+    "sprog": /wp/info/sprog
+    "klub": /wp/info/klub
+    "svømmeart": /wp/info/svoemmeart
+    "distance": /wp/info/distance
+    "mesterskab": /wp/info/mesterskab
+    "mesterår": /wp/info/mesteraar
+    "mesterdistance": /wp/info/mesterdistance
+    "stævne": /wp/info/staevne
+    "stævneår": /wp/info/staevneaar
+    "medalje": /wp/info/medalje
+    "medaljeart": /wp/info/medaljeart
+    "webside": /wp/info/webside
+    "signatur": /wp/info/signatur
+  }
+}
+
+"Infobox swimmer": {
+  type: "infobox"
+  class: /wp/infobox/swimmer
+  fields: {
+    "name": {+/wp/info/name alias: 12}
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "alt": /wp/info/alt
+    "caption": /wp/info/caption
+    "fullname": {/wp/info/full_name alias: 12}
+    "nicknames": {+/wp/info/nicknames alias: 13}
+    "nationality": /wp/info/nationality
+    "national_team": /wp/info/national_team
+    "birth_name": /wp/info/birth_name
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "height": /wp/info/height
+    "weight": /wp/info/weight
+    "strokes": /wp/info/strokes
+    "classification": /wp/info/classification
+    "club": /wp/info/club
+    "collegeteam": /wp/info/collegeteam
+    "coach": /wp/info/coach
+    "medaltemplates": /wp/info/medaltemplates
+    "show-medals": /wp/info/show-medals
+  }
+}
+
+"infoboks cricketspiller": {
+  type: "infobox"
+  class: /wp/infoboks/cricketspiller
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "spillernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "fuldenavn": {/wp/info/full_name alias: 12}
+    "fødselsnavn": {/wp/info/birth_name alias: 12}
+    "kælenavne": {+/wp/info/nickname alias: 13}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødeby": /wp/info/foedeby
+    "fødeland": /wp/info/foedeland
+    "dødsdato": /wp/info/doedsdato
+    "dødsby": /wp/info/doedsby
+    "dødsland": /wp/info/doedsland
+    "gravsted": /wp/info/gravsted
+    "hvilestedkoordinater": /wp/info/hvilestedkoordinater
+    "bopæl": /wp/info/bopael
+    "statsborgerskab": /wp/info/statsborgerskab
+    "sprog": /wp/info/sprog
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "batting": /wp/info/batting
+    "bowling": /wp/info/bowling
+    "rolle": /wp/info/rolle
+    "landshold": /wp/info/landshold
+    "testdebut": /wp/info/testdebut
+    "sidstetest": /wp/info/sidstetest
+    "odidebut": /wp/info/odidebut
+    "sidsteodi": /wp/info/sidsteodi
+    "t20idebut": /wp/info/t20idebut
+    "sidstet20i": /wp/info/sidstet20i
+    "trøjenummer": /wp/info/troejenummer
+  }
+}
+
+"Infobox sailor": {
+  type: "infobox"
+  class: /wp/infobox/sailor
+  fields: {
+    "name": {+/wp/info/name alias: 12}
+    "image": {+/wp/info/image media: true}
+    "image_size": /wp/info/image_size
+    "caption": /wp/info/caption
+    "native_name": {+/wp/info/native_name alias: 12}
+    "native_name_lang": /wp/info/native_name_lang
+    "birth_name": {+/wp/info/birth_name alias: 12}
+    "fullname": {/wp/info/fullname alias: 12}
+    "nickname": {/wp/info/nickname alias: 13}
+    "nationality": /wp/info/nationality
+    "birth_date": /wp/info/birth_date
+    "birth_place": /wp/info/birth_place
+    "death_date": /wp/info/death_date
+    "death_place": /wp/info/death_place
+    "height": /wp/info/height
+    "weight": /wp/info/weight
+    "classes": /wp/info/classes
+    "club": /wp/info/club
+    "collegeteam": /wp/info/collegeteam
+    "coach": /wp/info/coach
+    "medaltemplates": /wp/info/medaltemplates
+    "show-medals": /wp/info/show-medals
+    "updated": /wp/info/updated
+  }
+}
+
+"Infoboks sportsperson": {
+  type: "infobox"
+  class: /wp/infoboks/sportsperson
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "image": {/wp/info/image media: true}
+    "imagesize": /wp/info/imagesize
+    "caption": /wp/info/caption
+    "fulde navn": {/wp/info/full_name alias: 12}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødselssted": /wp/info/foedselssted
+    "dødsdato": /wp/info/doedsdato
+    "dødssted": /wp/info/doedssted
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "nationalitet": /wp/info/nationalitet
+    "aktiveår": /wp/info/aktiveaar
+    "andre navne": {+/wp/info/other_names alias: 13}
+    "kæreste": /wp/info/kaereste
+    "ægtefælle": /wp/info/aegtefaelle
+    "børn": /wp/info/boern
+    "forældre": /wp/info/foraeldre
+    "bopæl": /wp/info/bopael
+    "beskæftigelse": /wp/info/beskaeftigelse
+    "hjemmeside": /wp/info/hjemmeside
+    "land": /wp/info/land
+    "sport": /wp/info/sport
+    "position": /wp/info/position
+    "disability": /wp/info/disability
+    "disability_class": /wp/info/disability_class
+    "weight_class": /wp/info/weight_class
+    "weight_class_type": /wp/info/weight_class_type
+    "rank": /wp/info/rank
+    "event": /wp/info/event
+    "event_type": /wp/info/event_type
+    "universityteam": /wp/info/universityteam
+    "collegeteam": /wp/info/collegeteam
+    "league": /wp/info/league
+    "league_type": /wp/info/league_type
+    "club": /wp/info/club
+    "team": /wp/info/team
+    "turnedpro": /wp/info/turnedpro
+    "turnedpro_type": /wp/info/turnedpro_type
+    "partner": /wp/info/partner
+    "former_partner": /wp/info/former_partner
+    "coach": /wp/info/coach
+    "retired": /wp/info/retired
+    "coaching": /wp/info/coaching
+    "module2": /wp/info/module2
+    "worlds": /wp/info/worlds
+    "regionals": /wp/info/regionals
+    "nationals": /wp/info/nationals
+    "olympics": /wp/info/olympics
+    "paralympics": /wp/info/paralympics
+    "commonwealth": /wp/info/commonwealth
+    "highestranking": /wp/info/highestranking
+    "pb": /wp/info/pb
+    "show-medals": /wp/info/show-medals
+    "medaltemplates": /wp/info/medaltemplates
+    "medaltemplates-title": /wp/info/medaltemplates-title
+    "module3": /wp/info/module3
+    "updated": /wp/info/updated
+    "pro": /wp/info/pro
+    "klub": /wp/info/klub
+    "tpartner": /wp/info/tpartner
+    "træner": /wp/info/traener
+    "ttræner": /wp/info/ttraener
+    "pension": /wp/info/pension
+    "ol": /wp/info/ol
+  }
+}
+
+"Infoboks fodboldbiografi": {
+  type: "infobox"
+  class: /wp/infoboks/fodboldbiografi
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "embed": /wp/info/embed
+    "name": {+/wp/info/name alias: 12}
+    "spillernavn": {+/wp/info/name alias: 12}
+    "playername": {+/wp/info/name alias: 12}
+    "image": {+/wp/info/image media: true}
+    "billede": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/image_size
+    "image_size": /wp/info/image_size
+    "imagesize": /wp/info/image_size
+    "Size": /wp/info/image_size
+    "caption": /wp/info/caption
+    "billedtekst": /wp/info/caption
+    "billedetekst": /wp/info/caption
+    "fullname": /wp/info/fullname
+    "fuldenavn": {+/wp/info/fullname alias: 12}
+    "fødselsdato": /wp/info/birth_date
+    "birth_date": /wp/info/birth_date
+    "fødselsdag": /wp/info/birth_date
+    "fødested": /wp/info/birth_place
+    "fødeby": /wp/info/birth_place
+    "fødeland": /wp/info/foedeland
+    "statsborger": /wp/info/statsborger
+    "bopæl": /wp/info/bopael
+    "sprog": /wp/info/sprog
+    "height": /wp/info/height
+    "højde": /wp/info/height
+    "position": /wp/info/position
+    "rolle": /wp/info/position
+    "currentclub": /wp/info/currentclub
+    "nuværende klub": /wp/info/currentclub
+    "nuværendeklub": /wp/info/currentclub
+    "clubnumber": /wp/info/clubnumber
+    "klubnummer": /wp/info/clubnumber
+    "trøjenummer": /wp/info/clubnumber
+
+    "youthyears": {+/wp/info/year group: /wp/info/youth}
+    "ungdomsår": {+/wp/info/year group: /wp/info/youth}
+    "youthclubs": {+/wp/info/club group: /wp/info/youth}
+    "ungdomshold": {+/wp/info/club group: /wp/info/youth}
+
+    "years": {+/wp/info/year group: /wp/info/senior}
+    "år": {+/wp/info/year group: /wp/info/senior}
+    "clubs": {+/wp/info/club group: /wp/info/senior}
+    "klubber": {+/wp/info/club group: /wp/info/senior}
+    "caps": {+/wp/info/caps group: /wp/info/senior}
+    "goals": {+/wp/info/goals group: /wp/info/senior}
+
+    "nationalyears": {+/wp/info/year group: /wp/info/national}
+    "nationalteam": {+/wp/info/team group: /wp/info/national}
+    "nationalcaps": {+/wp/info/caps group: /wp/info/national}
+    "nationalgoals": {+/wp/info/goals group: /wp/info/national}
+
+    "manageryears": {+/wp/info/year group: /wp/info/manager}
+    "managerclubs": {+/wp/info/club group: /wp/info/manager}
+
+    "club-update": /wp/info/club-update
+    "nationalteam-update": /wp/info/nationalteam-update
+    "webside": /wp/info/webside
+  }
+}
+
+"Infoboks badmintonspiller": {
+  type: "infobox"
+  class: /wp/infoboks/badmintonspiller
+  fields: {
+    "spillernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "størrelse": /wp/info/stoerrelse
+    "billedtekst": /wp/info/caption
+    "kælenavn": {+/wp/info/nickname alias: 13}
+    "navn": {+/wp/info/fullname alias: 12}
+    "fødselsdag": /wp/info/foedselsdag
+    "fødested": /wp/info/foedested
+    "død": /wp/info/doed
+    "dødssted": /wp/info/doedssted
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "begivenhed": /wp/info/begivenhed
+    "land": /wp/info/land
+    "aktive år": /wp/info/aktive_aar
+    "ketcherhånd": /wp/info/ketcherhaand
+    "træner": /wp/info/traener
+    "højeste rangering": /wp/info/hoejeste_rangering
+    "dato for højeste rangering": /wp/info/dato_for_hoejeste_rangering
+    "aktuel rangering": /wp/info/aktuel_rangering
+    "dato for aktuel rangering": /wp/info/dato_for_aktuel_rangering
+    "Spillet": /wp/info/spillet
+    "Titler": /wp/info/titler
+    "bwf id": /wp/info/bwf_id
+  }
+}
+
+"Infoboks bokser": {
+  type: "infobox"
+  class: /wp/infoboks/bokser
+  fields: {
+    "boksernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "billedtekst": /wp/info/caption
+    "fuldnavn": {+/wp/info/fullname alias: 12}
+    "fighternavn": {+/wp/info/fightername alias: 12}
+    "land": /wp/info/land
+    "fødselsdato": /wp/info/foedselsdato
+    "fødeby": /wp/info/foedeby
+    "død": /wp/info/doed
+    "dødsby": /wp/info/doedsby
+    "vægtklasse": /wp/info/vaegtklasse
+    "højde": /wp/info/hoejde
+    "kampe": /wp/info/kampe
+    "vundne": /wp/info/vundne
+    "uafgjorte": /wp/info/uafgjorte
+    "KO's": /wp/info/kos
+    "tabte": /wp/info/tabte
+  }
+}
+
+"Infoboks designer": {
+  type: "infobox"
+  class: /wp/infoboks/designer
+  fields: {
+    "billede": {+/wp/info/image media: true}
+    "billedstr": /wp/info/billedstr
+    "billedtekst": /wp/info/caption
+    "navn": {+/wp/info/name alias: 12}
+    "nationalitet": /wp/info/nationalitet
+    "bopæl": /wp/info/bopael
+    "fødselsdag": /wp/info/foedselsdag
+    "fødested": /wp/info/foedested
+    "død": /wp/info/doed
+    "dødssted": /wp/info/doedssted
+    "begravet": /wp/info/begravet
+    "uddannelse": /wp/info/uddannelse
+    "skole_tradition": /wp/info/skole_tradition
+    "fagområde": /wp/info/fagomraade
+    "betydningsfulde_idéer": /wp/info/betydningsfulde_ideer
+    "brandnavn": /wp/info/brandnavn
+    "kendt_design": /wp/info/kendt_design
+    "priser": /wp/info/priser
+    "inspirationer": /wp/info/inspirationer
+    "påvirket": /wp/info/paavirket
+    "fodnoter": /wp/info/fodnoter
+    "signatur": /wp/info/signatur
+  }
+}
+
+"Infoboks Harry Potter-figur": {
+  type: "infobox"
+  class: /wp/infoboks/harry_potter-figur
+  fields: {
+    "Billede": {+/wp/info/image media: true}
+    "navn": {/wp/info/name alias: 12}
+    "køn": /wp/info/koen
+    "hår": /wp/info/haar
+    "øjne": /wp/info/oejne
+    "hjem": /wp/info/hjem
+    "kollegium": /wp/info/kollegium
+    "skole": /wp/info/skole
+    "fag": /wp/info/fag
+    "blod": /wp/info/blod
+    "race": /wp/info/race
+    "familie": /wp/info/familie
+    "ejer": /wp/info/ejer
+    "krafter": /wp/info/krafter
+    "loyalitet": /wp/info/loyalitet
+    "skuespiller": /wp/info/skuespiller
+    "stemme": /wp/info/stemme
+    "først set i": /wp/info/foerst_set_i
+  }
+}
+
+"Infoboks helgen": {
+  type: "infobox"
+  class: /wp/infoboks/helgen
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "beskrivelse": /wp/info/beskrivelse
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "dåbsnavn": {+/wp/info/birth_name alias: 12}
+    "født": /wp/info/foedt
+    "fsted": /wp/info/fsted
+    "død": /wp/info/doed
+    "dsted": /wp/info/dsted
+    "saligkåring": /wp/info/saligkaaring
+    "kanonisering": /wp/info/kanonisering
+    "anerkendt": /wp/info/anerkendt
+    "festdag": /wp/info/festdag
+    "kontroverser": /wp/info/kontroverser
+    "se": /wp/info/se
+    "for": /wp/info/for
+    "kunst": /wp/info/kunst
+  }
+}
+
+"Simpsonsfigur": {
+  type: "infobox"
+  class: /wp/simpsonsfigur
+  fields: {
+    "image": {+/wp/info/image media: true}
+    "name": {+/wp/info/name alias: 12}
+    "gender": /wp/info/gender
+    "hair": /wp/info/hair
+    "job": /wp/info/job
+    "relatives": /wp/info/relatives
+    "appearance": /wp/info/appearance
+    "voiceactor": /wp/info/voiceactor
+  }
+}
+
+"Skiskytte": {
+  type: "infobox"
+  class: /wp/skiskytte
+  fields: {
+    "spillernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedbredde": /wp/info/billedbredde
+    "billedtekst": /wp/info/caption
+    "fuldenavn": {+/wp/info/fullname alias: 12}
+    "fødselsdato": /wp/info/foedselsdato
+    "fødeby": /wp/info/foedeby
+    "fødeland": /wp/info/foedeland
+    "statsborger": /wp/info/statsborger
+    "dødsdato": /wp/info/doedsdato
+    "dødsland": /wp/info/doedsland
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "kælenavn": {+/wp/info/nickname alias: 13}
+    "klub": /wp/info/klub
+    "klubopdateret": /wp/info/klubopdateret
+    "landsholdsår": /wp/info/landsholdsaar
+    "landshold": /wp/info/landshold
+    "landsholdstræner": /wp/info/landsholdstraener
+    "landsholdopdateret": /wp/info/landsholdopdateret
+  }
+}
+
+"Warcraftfigur": {
+  type: "infobox"
+  class: /wp/warcraftfigur
+  fields: {
+    "image": {+/wp/info/image media: true}
+    "navn": {+/wp/info/name alias: 12}
+    "Titler": /wp/info/titler
+    "Race": /wp/info/race
+    "Klasse": /wp/info/klasse
+    "Level": /wp/info/level
+    "Køn": /wp/info/koen
+    "Fraktion": /wp/info/fraktion
+    "Stilling": /wp/info/stilling
+    "Lokation": /wp/info/lokation
+    "Status": /wp/info/status
+    "Familie": /wp/info/familie
+    "Børn": /wp/info/boern
+    "Mentor": /wp/info/mentor
+    "Lærling": /wp/info/laerling
+  }
+}
+
+"Kvindelig pornostjerne": {
+  type: "infobox"
+  class: /wp/kvindelig/pornostjerne
+  fields: {
+    "": /wp/info/
+    "Billede": {+/wp/info/image media: true}
+    "fødselsdag": /wp/info/foedselsdag
+    "sted": /wp/info/sted
+    "fødenavn": {+/wp/info/birthname alias: 12}
+    "død": /wp/info/doed
+    "mål": /wp/info/maal
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "øjenfarve": /wp/info/oejenfarve
+    "hårfarve": /wp/info/haarfarve
+    "brystimplantat": /wp/info/brystimplantat
+    "etnicitet": /wp/info/etnicitet
+    "alias": {+/wp/info/alias alias: 13}
+    "film": /wp/info/film
+    "hjemmeside": /wp/info/hjemmeside
+    "imdb": /wp/info/imdb
+    "iafd": /wp/info/iafd
+    "afdb": /wp/info/afdb
+  }
+}
+
+"Infoboks mma-udøver": {
+  type: "infobox"
+  class: /wp/infoboks/mma-udoever
+  fields: {
+    "mma-udøvernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "billedtekst": /wp/info/caption
+    "fuldnavn": {+/wp/info/fullname alias: 12}
+    "fighternavn": {+/wp/info/fightername alias: 13}
+    "land": /wp/info/land
+    "fødselsdato": /wp/info/foedselsdato
+    "fødeby": /wp/info/foedeby
+    "død": /wp/info/doed
+    "dødsby": /wp/info/doedsby
+    "vægtklasse": /wp/info/vaegtklasse
+    "højde": /wp/info/hoejde
+    "teknik": /wp/info/teknik
+    "team": /wp/info/team
+    "aktive år": /wp/info/aktive_aar
+    "kampe": /wp/info/kampe
+    "vundne": /wp/info/vundne
+    "vundne på KO": /wp/info/vundne_paa_ko
+    "vundne på submission": /wp/info/vundne_paa_submission
+    "vundne på point": /wp/info/vundne_paa_point
+    "uafgjorte": /wp/info/uafgjorte
+    "tabte": /wp/info/tabte
+    "tabte på KO": /wp/info/tabte_paa_ko
+    "tabte på submission": /wp/info/tabte_paa_submission
+    "tabte på point": /wp/info/tabte_paa_point
+  }
+}
+
+"Infoboks model": {
+  type: "infobox"
+  class: /wp/infoboks/model
+  fields: {
+    "bgcolour": /wp/info/bgcolour
+    "name": {+/wp/info/name alias: 12}
+    "image": {+/wp/info/image media: true}
+    "imagesize": /wp/info/imagesize
+    "caption": /wp/info/caption
+    "birthname": {+/wp/info/birthname alias: 12}
+    "birthdate": /wp/info/birthdate
+    "nationality": /wp/info/nationality
+    "citizenship": /wp/info/citizenship
+    "occupation": /wp/info/occupation
+    "yearsactive": /wp/info/yearsactive
+    "location": /wp/info/location
+    "deathdate": /wp/info/deathdate
+    "deathplace": /wp/info/deathplace
+    "height": /wp/info/height
+    "haircolor": /wp/info/haircolor
+    "eyecolor": /wp/info/eyecolor
+    "measurements": /wp/info/measurements
+    "weight": /wp/info/weight
+    "dress size": /wp/info/dress_size
+    "shoesize": /wp/info/shoesize
+    "homepage": /wp/info/homepage
+    "spouse": /wp/info/spouse
+  }
+}
+
+"Infoboks Naruto-figur": {
+  type: "infobox"
+  class: /wp/infoboks/naruto-figur
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "alder": /wp/info/alder
+    "født": /wp/info/foedt
+    "køn": /wp/info/koen
+    "blodtype": /wp/info/blodtype
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "ID": /wp/info/id
+    "hjemby": /wp/info/hjemby
+    "medlem af": /wp/info/medlem_af
+    "rang": /wp/info/rang
+    "genin": /wp/info/genin
+    "chunin": /wp/info/chunin
+    "jonin": /wp/info/jonin
+    "teknikker": /wp/info/teknikker
+    "d-rang": /wp/info/d-rang
+    "c-rang": /wp/info/c-rang
+    "b-rang": /wp/info/b-rang
+    "a-rang": /wp/info/a-rang
+    "s-rang": /wp/info/s-rang
+  }
+}
+
+"Infoboks South Park-figur": {
+  type: "infobox"
+  class: /wp/infoboks/south_park-figur
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "alder": /wp/info/alder
+    "køn": /wp/info/koen
+    "familie": /wp/info/familie
+    "hårfarve": /wp/info/haarfarve
+    "stilling": /wp/info/stilling
+    "religion": /wp/info/religion
+    "første_optræden": /wp/info/foerste_optraeden
+    "normal_beklædning": /wp/info/normal_beklaedning
+    "stemme": /wp/info/stemme
+  }
+}
+
+"Infoboks speedwaykører": {
+  type: "infobox"
+  class: /wp/infoboks/speedwaykoerer
+  fields: {
+    "kørernavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedbredde": /wp/info/billedbredde
+    "fuldenavn": {+/wp/info/fullname alias: 12}
+    "nationalitet": /wp/info/nationalitet
+    "fødselsdato": /wp/info/foedselsdato
+    "fødeby": /wp/info/foedeby
+    "fødeland": /wp/info/foedeland
+    "webside": /wp/info/webside
+    "klubkarriere": /wp/info/klubkarriere
+    "hold": /wp/info/hold
+    "år": /wp/info/aar
+    "grandprixsejre": /wp/info/grandprixsejre
+    "år1": /wp/info/aar1
+    "grandprix": /wp/info/grandprix
+  }
+}
+
+"Infoboks spilfigur": {
+  type: "infobox"
+  class: /wp/infoboks/spilfigur
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedstørrelse": /wp/info/billedstoerrelse
+    "billedtekst": /wp/info/caption
+    "serie": /wp/info/serie
+    "førsteoptræden": /wp/info/foersteoptraeden
+    "førstespil": /wp/info/foerstespil
+    "skaber": /wp/info/skaber
+    "kunstner": /wp/info/kunstner
+    "stemme": /wp/info/stemme
+    "japanskstemme": /wp/info/japanskstemme
+    "motionskuespiller": /wp/info/motionskuespiller
+    "skuespiller": /wp/info/skuespiller
+    "iunivers": /wp/info/iunivers
+  }
+}
+
+"Star Wars Karakter": {
+  type: "infobox"
+  class: /wp/star/wars_karakter
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "gender": /wp/info/gender
+    "race": /wp/info/race
+    "eye": /wp/info/eye
+    "hair": /wp/info/hair
+    "birth": /wp/info/birth
+    "alliance": /wp/info/alliance
+    "skuespiller": /wp/info/skuespiller
+  }
+}
+
+"Superhelteboks": {
+  type: "infobox"
+  class: /wp/superhelteboks
+  fields: {
+    "Karakter_navn": {+/wp/info/name alias: 12}
+    "dansk_navn": {+/wp/info/dansk_navn alias: 12}
+    "udgiver": /wp/info/udgiver
+    "debut": /wp/info/debut
+    "dansk_debut": /wp/info/dansk_debut
+    "skabere": /wp/info/skabere
+    "identitet": /wp/info/identitet
+    "status": /wp/info/status
+    "forbindelse": /wp/info/forbindelse
+    "tidligere_forbindelser": /wp/info/tidligere_forbindelser
+    "alias": {+/wp/info/alias alias: 13}
+    "slægtninge": /wp/info/slaegtninge
+    "kræfter": /wp/info/kraefter
+  }
+}
+
+"Infoboks tekkenfigur": {
+  type: "infobox"
+  class: /wp/infoboks/tekkenfigur
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "spilserie": /wp/info/spilserie
+    "første gang set": /wp/info/foerste_gang_set
+    "stemme af": /wp/info/stemme_af
+    "land": /wp/info/land
+    "blodtype": /wp/info/blodtype
+    "kampsport": /wp/info/kampsport
+    "alder": /wp/info/alder
+    "vægt": /wp/info/vaegt
+    "højde": /wp/info/hoejde
+    "beskæftigelse": /wp/info/beskaeftigelse
+    "tekkenpedia": /wp/info/tekkenpedia
+  }
+}
+
+"infoboks Transformers person": {
+  type: "infobox"
+  class: /wp/infoboks/transformers_person
+  fields: {
+    "name": {+/wp/info/name alias: 12}
+    "image": {+/wp/info/image media: true}
+    "caption": /wp/info/caption
+    "tilknytning": /wp/info/tilknytning
+    "japannavn": /wp/info/japannavn
+    "katakana": /wp/info/katakana
+    "romaji": /wp/info/romaji
+    "undergruppe": /wp/info/undergruppe
+    "funktion": /wp/info/funktion
+    "partner": /wp/info/partner
+    "motto": /wp/info/motto
+    "andenmode": /wp/info/andenmode
+    "serier": /wp/info/serier
+    "stemme": /wp/info/stemme
+    "engstemme": /wp/info/engstemme
+    "japanstemme": /wp/info/japanstemme
+  }
+}
+
+"Infoboks triatlet": {
+  type: "infobox"
+  class: /wp/infoboks/triatlet
+  fields: {
+    "triatletnavn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "billedtekst": /wp/info/caption
+    "fuldnavn": {+/wp/info/fullname alias: 12}
+    "kælenavn": {+/wp/info/nickname alias: 13}
+    "fødselsdag": /wp/info/foedselsdag
+    "død": /wp/info/doed
+    "land": /wp/info/land
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "klub": /wp/info/klub
+    "atlettype": /wp/info/atlettype
+    "storesejre": /wp/info/storesejre
+  }
+}
+
+"Infoboks wrestler": {
+  type: "infobox"
+  class: /wp/infoboks/wrestler
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "ringnavne": {+/wp/info/ringnavne alias: 13}
+    "højde": /wp/info/hoejde
+    "vægt": /wp/info/vaegt
+    "født": /wp/info/foedt
+    "fødtsted": /wp/info/foedtsted
+    "død": /wp/info/doed
+    "dødsted": /wp/info/doedsted
+    "bor": /wp/info/bor
+    "trænetaf": /wp/info/traenetaf
+    "debut": /wp/info/debut
+    "pensioneret": /wp/info/pensioneret
+  }
+}
+
+"Infoboks politisk embede": {
+  type: "infobox"
+  class: /wp/infoboks/politisk_embede
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "lokaltnavn": {/wp/info/native_name alias: 12}
+    "emblem": /wp/info/emblem
+    "insigniasize": /wp/info/insigniasize
+    "emblemtekst": /wp/info/emblemtekst
+    "flag": /wp/info/flag
+    "flagsize": /wp/info/flagsize
+    "flagborder": /wp/info/flagborder
+    "flagtekst": /wp/info/flagtekst
+    "billede": {+/wp/info/image media: true}
+    "imagesize": /wp/info/imagesize
+    "alt": /wp/info/alt
+    "billedetekst": /wp/info/caption
+    "afdeling": /wp/info/afdeling
+    "nuværende": /wp/info/nuvaerende
+    "nuværende_siden": /wp/info/nuvaerende_siden
+    "tiltaleform": /wp/info/tiltaleform
+    "type": /wp/info/type
+    "status": /wp/info/status
+    "forkortelse": /wp/info/forkortelse
+    "medlem_af": /wp/info/medlem_af
+    "rapporterer_til": /wp/info/rapporterer_til
+    "bolig": /wp/info/bolig
+    "sæde": /wp/info/saede
+    "nominator": /wp/info/nominator
+    "udpeger": /wp/info/udpeger
+    "udpegerstilling": /wp/info/udpegerstilling
+    "terminslængde": /wp/info/terminslaengde
+    "grundlæggende_dokument": /wp/info/grundlaeggende_dokument
+    "tidligere": /wp/info/tidligere
+    "tilblivelse": /wp/info/tilblivelse
+    "grundlægger": /wp/info/grundlaegger
+    "opkaldt_efter": /wp/info/opkaldt_efter
+    "første_embedsholder": /wp/info/foerste_embedsholder
+    "sidste": /wp/info/sidste
+    "slut": /wp/info/slut
+    "rækkefølge": /wp/info/raekkefoelge
+    "uofficielle_navne": /wp/info/uofficielle_navne
+    "stedfortræder": /wp/info/stedfortraeder
+    "løn": /wp/info/loen
+    "hjemmeside": /wp/info/hjemmeside
+    "fodnoter": /wp/info/fodnoter
+  }
+}
+
+"Infoboks undervisningsinstitution": {
+  type: "infobox"
+  class: /wp/infoboks/undervisningsinstitution
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "delaf": /wp/info/delaf
+    "logo": {+/wp/info/logo media: true}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "type": /wp/info/type
+    "sted": /wp/info/sted
+    "Land": /wp/info/land
+    "grundlagt": /wp/info/grundlagt
+    "indviet": /wp/info/indviet
+    "nedlagt": /wp/info/nedlagt
+    "grundlægger": /wp/info/grundlaegger
+    "arkitekt": /wp/info/arkitekt
+    "tidligere_navn": {+/wp/info/former_name alias: 12}
+    "leder": /wp/info/leder
+    "ledertype": /wp/info/ledertype
+    "brugertype": /wp/info/brugertype
+    "brugere": /wp/info/brugere
+    "bruger_år": /wp/info/bruger_aar
+    "klassetrin": /wp/info/klassetrin
+    "ansatte": /wp/info/ansatte
+    "ansatte_år": /wp/info/ansatte_aar
+    "undervisere": /wp/info/undervisere
+    "undervisere_år": /wp/info/undervisere_aar
+    "motto": /wp/info/motto
+    "Budget": /wp/info/budget
+    "Rektor": /wp/info/rektor
+    "Bestyrelsesformand": /wp/info/bestyrelsesformand
+    "cvr": /wp/info/cvr
+    "websted": /wp/info/websted
+    "landkort": /wp/info/landkort
+    "label": /wp/info/label
+    "position": /wp/info/position
+    "korttekst": /wp/info/korttekst
+    "coordinates": /wp/info/coordinates
+  }
+}
+
+"Infoboks universitet": {
+  type: "infobox"
+  class: /wp/infoboks/universitet
+  fields: {
+    "Navn": {+/wp/info/name alias: 12}
+    "Lokalt_navn": {+/wp/info/native_name alias: 12}
+    "Billede": {+/wp/info/image media: true}
+    "Billedtekst": /wp/info/caption
+    "Billede_størrelse": /wp/info/billede_stoerrelse
+    "Latinske navn": {+/wp/info/latin_name alias: 12}
+    "Grundlagt": /wp/info/grundlagt
+    "By": /wp/info/by
+    "Land": /wp/info/land
+    "Sted": /wp/info/sted
+    "Fakulteter": /wp/info/fakulteter
+    "Institutter": /wp/info/institutter
+    "Studerende": /wp/info/studerende
+    "Ansatte": /wp/info/ansatte
+    "Akademisk personale": /wp/info/akademisk_personale
+    "Administrativt personale": /wp/info/administrativt_personale
+    "Budget": /wp/info/budget
+    "Rektor": /wp/info/rektor
+    "Ledertype": /wp/info/ledertype
+    "Leder": /wp/info/leder
+    "Bestyrelsesformand": /wp/info/bestyrelsesformand
+    "Motto": /wp/info/motto
+    "Mottoda": /wp/info/mottoda
+    "Websted": /wp/info/websted
+  }
+}
+
+"Infoboks virksomhed": {
+  type: "infobox"
+  class: /wp/infoboks/virksomhed
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "Navn": {+/wp/info/name alias: 12}
+    "Logo": {+/wp/info/logo media: true}
+    "Logo_size": /wp/info/logo_size
+    "Logotekst": /wp/info/logo_caption
+    "Billede": {+/wp/info/image media: true}
+    "Billede_tekst": /wp/info/caption
+    "Billede_størrelse": /wp/info/billede_stoerrelse
+    "Drives_under": /wp/info/drives_under
+    "Lokalt_navn": {+/wp/info/native_name alias: 12}
+    "Lokalt_navn_sprog": /wp/info/native_name_lang
+    "Romaniseret_navn": {+/wp/info/romanized_name alias: 12}
+    "Tidligere_kaldt": {+/wp/info/former_name alias: 12}
+    "Type": /wp/info/type
+    "Handlet_som": /wp/info/handlet_som
+    "ISIN": /wp/info/isin
+    "ISIN2": /wp/info/isin2
+    "Industri": /wp/info/industri
+    "Genre": /wp/info/genre
+    "Skæbne": /wp/info/skaebne
+    "Forgænger": /wp/info/forgaenger
+    "Efterfølger": /wp/info/efterfoelger
+    "Grundlagt": /wp/info/grundlagt
+    "Grundlægger": /wp/info/grundlaegger
+    "Etableringssted": /wp/info/etableringssted
+    "Opløst": /wp/info/oploest
+    "Åbnet": /wp/info/aabnet
+    "Lukket": /wp/info/lukket
+    "Lokation": /wp/info/lokation
+    "Antal_salgssteder": /wp/info/antal_salgssteder
+    "Område": /wp/info/omraade
+    "Nøglepersoner": /wp/info/noeglepersoner
+    "Produkter": /wp/info/produkter
+    "Tjenester": /wp/info/tjenester
+    "Brands": /wp/info/brands
+    "Produktion": /wp/info/produktion
+    "Produktion_år": /wp/info/produktion_aar
+    "Slogan": /wp/info/slogan
+    "Omsætning": /wp/info/omsaetning
+    "EBIT": /wp/info/ebit
+    "Resultat": /wp/info/resultat
+    "aum": /wp/info/aum
+    "Aktiver": /wp/info/aktiver
+    "Egenkapital": /wp/info/egenkapital
+    "Selskabsskat": /wp/info/selskabsskat
+    "Andreal": /wp/info/andreal
+    "Medlemmer": /wp/info/medlemmer
+    "AntalMedarbejdere": /wp/info/antalmedarbejdere
+    "Ejer": /wp/info/ejer
+    "Moderselskab": /wp/info/moderselskab
+    "Datterselskaber": /wp/info/datterselskaber
+    "Divisioner": /wp/info/divisioner
+    "module": /wp/info/module
+    "ratio": /wp/info/ratio
+    "rating": /wp/info/rating
+    "Netside": /wp/info/netside
+    "Cvr": /wp/info/cvr
+    "opencorporates": /wp/info/opencorporates
+    "Fodnote": /wp/info/fodnote
+  }
+}
+
+"Infoboks destilleri": {
+  type: "infobox"
+  class: /wp/infoboks/destilleri
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "land": /wp/info/land
+    "region": /wp/info/region
+    "type": /wp/info/type
+    "grundlagt": /wp/info/grundlagt
+    "grundlægger": /wp/info/grundlaegger
+    "lagring": /wp/info/lagring
+    "hjemmeside": /wp/info/hjemmeside
+  }
+}
+
+"Infoboks festival": {
+  type: "infobox"
+  class: /wp/infoboks/festival
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "billedstørrelse": /wp/info/billedstoerrelse
+    "imagealt": /wp/info/imagealt
+    "sted": /wp/info/sted
+    "aktive år": /wp/info/aktive_aar
+    "år": /wp/info/aar
+    "dato": /wp/info/dato
+    "genrer": /wp/info/genrer
+    "antal musikgrupper": /wp/info/antal_musikgrupper
+    "antal publikum": /wp/info/antal_publikum
+    "billetpris": /wp/info/billetpris
+    "scener": /wp/info/scener
+    "regnmængde": /wp/info/regnmaengde
+  }
+}
+
+"Infoboks forening": {
+  type: "infobox"
+  class: /wp/infoboks/forening
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "del af": /wp/info/del_af
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "grundlagt": /wp/info/grundlagt
+    "nedlagt": /wp/info/nedlagt
+    "type": /wp/info/type
+    "interesse": /wp/info/interesse
+    "hjemsted": /wp/info/hjemsted
+    "land": /wp/info/land
+    "grundlægger": /wp/info/grundlaegger
+    "leder": /wp/info/leder
+    "ledertype": /wp/info/ledertype
+    "nøglepersoner": /wp/info/noeglepersoner
+    "nøgleperson_type": /wp/info/noegleperson_type
+    "antal_medlemmer": /wp/info/antal_medlemmer
+    "medlemmer_år": /wp/info/medlemmer_aar
+    "tidligere_navn": /wp/info/tidligere_navn
+    "medlem_af": /wp/info/medlem_af
+    "medlemsblad": /wp/info/medlemsblad
+    "cvr": /wp/info/cvr
+    "hjemmeside": /wp/info/hjemmeside
+    "fodnoter": /wp/info/fodnoter
+    "landkort": /wp/info/landkort
+    "label": /wp/info/label
+    "position": /wp/info/position
+    "korttekst": /wp/info/korttekst
+    "bredde_grad": /wp/info/bredde_grad
+    "bredde_min": /wp/info/bredde_min
+    "bredde_sek": /wp/info/bredde_sek
+    "bredde_ret": /wp/info/bredde_ret
+    "længde_grad": /wp/info/laengde_grad
+    "længde_min": /wp/info/laengde_min
+    "længde_sek": /wp/info/laengde_sek
+    "længde_ret": /wp/info/laengde_ret
+    "landiso": /wp/info/landiso
+  }
+}
+
+"Infoboks franchise": {
+  type: "infobox"
+  class: /wp/infoboks/franchise
+  fields: {
+    "titel": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billede_bredde": /wp/info/billede_bredde
+    "billede_beskrivelse": /wp/info/caption
+    "skaber(e)": /wp/info/skabere
+    "originalt værk": /wp/info/originalt_vaerk
+    "bøger": /wp/info/boeger
+    "romaner": /wp/info/romaner
+    "noveller": /wp/info/noveller
+    "tegneserier": /wp/info/tegneserier
+    "grafiske_noveller": /wp/info/grafiske_noveller
+    "tegneseriestriper": /wp/info/tegneseriestriper
+    "magasiner": /wp/info/magasiner
+    "film": /wp/info/film
+    "kortfilm": /wp/info/kortfilm
+    "tv": /wp/info/tv
+    "tegnefilm": /wp/info/tegnefilm
+    "tv_specials": /wp/info/tv_specials
+    "tv_film": /wp/info/tv_film
+    "dtv": /wp/info/dtv
+    "teater": /wp/info/teater
+    "musicals": /wp/info/musicals
+    "brætspil": /wp/info/braetspil
+    "rpg": /wp/info/rpg
+    "videospil": /wp/info/videospil
+    "radio": /wp/info/radio
+    "soundtracks": /wp/info/soundtracks
+    "musik": /wp/info/musik
+    "legetøj": /wp/info/legetoej
+    "andetlabel1": /wp/info/andetlabel1
+    "andetdata1": /wp/info/andetdata1
+    "andetlabel2": /wp/info/andetlabel2
+    "andetdata2": /wp/info/andetdata2
+    "andetlabel3": /wp/info/andetlabel3
+    "andetdata3": /wp/info/andetdata3
+  }
+}
+
+"Infoboks fængsel": {
+  type: "infobox"
+  class: /wp/infoboks/faengsel
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "sted": /wp/info/sted
+    "klassifikation": /wp/info/klassifikation
+    "indviet": /wp/info/indviet
+    "nedlagt": /wp/info/nedlagt
+    "tidligere_navn": /wp/info/tidligere_navn
+    "drives_af": /wp/info/drives_af
+    "kapacitet": /wp/info/kapacitet
+    "antal_indsatte": /wp/info/antal_indsatte
+    "indsatte_år": /wp/info/indsatte_aar
+    "hjemmeside": /wp/info/hjemmeside
+  }
+}
+
+"Infoboks gymnasium": {
+  type: "infobox"
+  class: /wp/infoboks/gymnasium
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "navn_lokalt": {+/wp/info/native_name alias: 12}
+    "billede_navn": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "billedtekst": /wp/info/caption
+    "navn_latin": {/wp/info/latin_name alias: 12}
+    "motto_dansk": /wp/info/motto_dansk
+    "motto": /wp/info/motto
+    "nedlagt": /wp/info/nedlagt
+    "grundlagt": /wp/info/grundlagt
+    "religion": /wp/info/religion
+    "dotation": /wp/info/dotation
+    "budget": /wp/info/budget
+    "forældreforening": /wp/info/foraeldreforening
+    "øverste_myndighed": /wp/info/oeverste_myndighed
+    "bestyrelsesformand": /wp/info/bestyrelsesformand
+    "forstander": /wp/info/forstander
+    "rektor": /wp/info/rektor
+    "skoleinspektør": /wp/info/skoleinspektoer
+    "titel1": /wp/info/titel1
+    "person1": /wp/info/person1
+    "titel2": /wp/info/titel2
+    "person2": /wp/info/person2
+    "titel3": /wp/info/titel3
+    "person3": /wp/info/person3
+    "titel4": /wp/info/titel4
+    "person4": /wp/info/person4
+    "elevrådsformand": /wp/info/elevraadsformand
+    "nøglepersoner": /wp/info/noeglepersoner
+    "antal_ansatte": /wp/info/antal_ansatte
+    "antal_elever": /wp/info/antal_elever
+    "tidligere_navne": /wp/info/tidligere_navne
+    "land": /wp/info/land
+    "stat": /wp/info/stat
+    "provins": /wp/info/provins
+    "by": /wp/info/by
+    "coor": /wp/info/coor
+    "felt1": /wp/info/felt1
+    "tekst1": /wp/info/tekst1
+    "felt2": /wp/info/felt2
+    "tekst2": /wp/info/tekst2
+    "felt3": /wp/info/felt3
+    "tekst3": /wp/info/tekst3
+    "felt4": /wp/info/felt4
+    "tekst4": /wp/info/tekst4
+    "farver": /wp/info/farver
+    "sport": /wp/info/sport
+    "tilhørsforhold": /wp/info/tilhoersforhold
+    "hjemmeside": /wp/info/hjemmeside
+    "logo": /wp/info/logo
+    "fodnoter": /wp/info/fodnoter
+  }
+}
+
+"Infoboks_hospital": {
+  type: "infobox"
+  class: /wp/infoboks_hospital
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "navn": {+/wp/info/name alias: 12}
+    "enhed": /wp/info/enhed
+    "billede": {/wp/info/image media: true}
+    "billede alt": /wp/info/billede_alt
+    "billedtekst": /wp/info/caption
+    "sted": /wp/info/sted
+    "region": /wp/info/region
+    "land": /wp/info/land
+    "indviet": /wp/info/indviet
+    "nedlagt": /wp/info/nedlagt
+    "ansatte": /wp/info/ansatte
+    "senge": /wp/info/senge
+    "årlige_patienter": /wp/info/aarlige_patienter
+    "budget": /wp/info/budget
+    "websted": /wp/info/websted
+    "landkort": /wp/info/landkort
+    "label": /wp/info/label
+    "position": /wp/info/position
+    "korttekst": /wp/info/korttekst
+    "coordinates": /wp/info/coordinates
+  }
+}
+
+"Infoboks hotel": {
+  type: "infobox"
+  class: /wp/infoboks/hotel
+  fields: {
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "navn": {+/wp/info/name alias: 12}
+    "sted": /wp/info/sted
+    "bygget": /wp/info/bygget
+    "bygning opført": /wp/info/bygning_opfoert
+    "indviet": /wp/info/indviet
+    "lukket": /wp/info/lukket
+    "tidligere_navn": {+/wp/info/former_name alias: 12}
+    "arkitekt": /wp/info/arkitekt
+    "grundlægger": /wp/info/grundlaegger
+    "ejer": /wp/info/ejer
+    "nøglepersoner": /wp/info/noeglepersoner
+    "nøglepersoner_type": /wp/info/noeglepersoner_type
+    "ansatte": /wp/info/ansatte
+    "ansatte_år": /wp/info/ansatte_aar
+    "værelser": /wp/info/vaerelser
+    "højde": /wp/info/hoejde
+    "etager": /wp/info/etager
+    "stjerner": /wp/info/stjerner
+    "cvr": /wp/info/cvr
+    "hjemmeside": /wp/info/hjemmeside
+    "landkort": /wp/info/landkort
+    "label": /wp/info/label
+    "position": /wp/info/position
+    "korttekst": /wp/info/korttekst
+    "coordinates": /wp/info/coordinates
+  }
+}
+
+"Infoboks indkøbscenter": {
+  type: "infobox"
+  class: /wp/infoboks/indkoebscenter
+  fields: {
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "sted": /wp/info/sted
+    "indviet": /wp/info/indviet
+    "arkitekt": /wp/info/arkitekt
+    "ejer": /wp/info/ejer
+    "administrator": /wp/info/administrator
+    "butikker": /wp/info/butikker
+    "areal": /wp/info/areal
+    "parkering": /wp/info/parkering
+    "station": /wp/info/station
+    "buslinje": /wp/info/buslinje
+    "hovedvej": /wp/info/hovedvej
+    "cvr": /wp/info/cvr
+    "hjemmeside": /wp/info/hjemmeside
+    "landkort": /wp/info/landkort
+    "label": /wp/info/label
+    "position": /wp/info/position
+    "korttekst": /wp/info/korttekst
+    "coordinates": /wp/info/coordinates
+  }
+}
+
+"Infoboks grønlandsk kommune": {
+  type: "infobox"
+  class: /wp/infoboks/groenlandsk_kommune
+  fields: {
+    "background_color": /wp/info/background_color
+    "text_color": /wp/info/text_color
+    "navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedestørrelse": /wp/info/billedestoerrelse
+    "logo": {/wp/info/logo media: true}
+    "logo_størrelse": /wp/info/logo_stoerrelse
+    "kommunesæde": /wp/info/kommunesaede
+    "kommunekode": /wp/info/kommunekode
+    "region": /wp/info/region
+    "indbyggertal": /wp/info/indbyggertal
+    "indbygger_år": /wp/info/indbygger_aar
+    "forhænværende_2009": /wp/info/forhaenvaerende_2009
+    "borgmester": /wp/info/borgmester
+    "parti": /wp/info/parti
+    "kommunaldirektør": /wp/info/kommunaldirektoer
+    "ansættelse": /wp/info/ansaettelse
+    "pladser_i_byråd": /wp/info/pladser_i_byraad
+    "politisk_partier_1": /wp/info/politisk_partier_1
+    "rådhus_billede": /wp/info/raadhus_billede
+    "rådhus_størrelse": /wp/info/raadhus_stoerrelse
+    "adresse_rådhus": /wp/info/adresse_raadhus
+    "hjemmeside": /wp/info/hjemmeside
+    "fodnoter": /wp/info/fodnoter
+    "motto": /wp/info/motto
+  }
+}
+
+"Infoboks pastorat": {
+  type: "infobox"
+  class: /wp/infoboks/pastorat
+  fields: {
+    "pastorat": {+/wp/info/name alias: 12}
+    "præst": /wp/info/praest
+    "stift": /wp/info/stift
+    "provsti": /wp/info/provsti
+    "sogne": /wp/info/sogne
+    "kommune": /wp/info/kommune
+    "medlemmer": /wp/info/medlemmer
+    "årmedlemmer": /wp/info/aarmedlemmer
+    "indbyggere": /wp/info/indbyggere
+    "årindbyggere": /wp/info/aarindbyggere
+  }
+}
+
+"Infoboks tv": {
+  type: "infobox"
+  class: /wp/infoboks/tv
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "titel": {+/wp/info/title alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "billedstørrelse": /wp/info/billedstoerrelse
+    "budget": /wp/info/budget
+    "imagealt": /wp/info/imagealt
+    "dansk_titel": {+/wp/info/danish_title alias: 12}
+    "originaltitel": {+/wp/info/original_title alias: 12}
+    "alias": {/wp/info/alias alias: 13}
+    "genre": /wp/info/genre
+    "skaber": /wp/info/skaber
+    "manuskriptforfatter": /wp/info/manuskriptforfatter
+    "skuespillere": /wp/info/skuespillere
+    "gæsteskuespillere": /wp/info/gaesteskuespillere
+    "filmholdsmedlem": /wp/info/filmholdsmedlem
+    "år": /wp/info/aar
+    "længde": /wp/info/laengde
+    "sprog": /wp/info/sprog
+    "serie": /wp/info/serie
+    "sæson": /wp/info/saeson
+    "episoder": /wp/info/episoder
+    "afsnitliste": /wp/info/afsnitliste
+    "sæsonliste": /wp/info/saesonliste
+    "før": /wp/info/foer
+    "efter": /wp/info/efter
+    "relateret": /wp/info/relateret
+    "selskab": /wp/info/selskab
+    "location": /wp/info/location
+    "land": /wp/info/land
+    "producent": /wp/info/producent
+    "producerDK": /wp/info/producerdk
+    "lederproducer": /wp/info/lederproducer
+    "instruktør": /wp/info/instruktoer
+    "redaktør": /wp/info/redaktoer
+    "forløb": /wp/info/forloeb
+    "opsætning": /wp/info/opsaetning
+    "billedformat": /wp/info/billedformat
+    "lydformat": /wp/info/lydformat
+    "oprindelig_kanal_dk": /wp/info/oprindelig_kanal_dk
+    "oprindelig_kanal": /wp/info/oprindelig_kanal
+    "først sendt": /wp/info/foerst_sendt
+    "sidst sendt": /wp/info/sidst_sendt
+    "først sendt dk": /wp/info/foerst_sendt_dk
+    "sidst sendt dk": /wp/info/sidst_sendt_dk
+    "oprindeligt_sendt": /wp/info/oprindeligt_sendt
+    "sidst_sendt": /wp/info/sidst_sendt
+    "oprindeligt_sendt_dk": /wp/info/oprindeligt_sendt_dk
+    "sidst_sendt_dk": /wp/info/sidst_sendt_dk
+    "kendingsmelodi": /wp/info/kendingsmelodi
+    "kendingsmelodikomponist": /wp/info/kendingsmelodikomponist
+    "åbningstema": /wp/info/aabningstema
+    "sluttema": /wp/info/sluttema
+    "komponist": /wp/info/komponist
+    "soundtrack": /wp/info/soundtrack
+    "status": /wp/info/status
+    "official_hjemmeside": /wp/info/official_hjemmeside
+    "dansk_hjemmeside": /wp/info/dansk_hjemmeside
+    "allmovie": /wp/info/allmovie
+    "imdb": /wp/info/imdb
+    "dk-filmografi": /wp/info/dk-filmografi
+    "scope": /wp/info/scope
+  }
+}
+
+"Infoboks kirke": {
+  type: "infobox"
+  class: /wp/infoboks/kirke
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "billedtekst": /wp/info/caption
+    "bygget": /wp/info/bygget
+    "indviet": /wp/info/indviet
+    "stift": /wp/info/stift
+    "provsti": /wp/info/provsti
+    "pastorat": /wp/info/pastorat
+    "sogn": /wp/info/sogn
+    "trosretning": /wp/info/trosretning
+    "menighed": /wp/info/menighed
+    "kommune": /wp/info/kommune
+    "adresse": /wp/info/adresse
+    "websted": /wp/info/websted
+    "commonscat-navn": /wp/info/commonscat-navn
+    "landkort": /wp/info/landkort
+    "label": /wp/info/label
+    "position": /wp/info/position
+    "korttekst": /wp/info/korttekst
+    "coordinates": /wp/info/coordinates
+  }
+}
+
+"Infoboks kollegium": {
+  type: "infobox"
+  class: /wp/infoboks/kollegium
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "billedstørrelse": /wp/info/billedstoerrelse
+    "imagealt": /wp/info/imagealt
+    "arkitekt": /wp/info/arkitekt
+    "adresse": /wp/info/adresse
+    "antal værelser": /wp/info/antal_vaerelser
+    "ledelse": /wp/info/ledelse
+    "hjemmeside": /wp/info/hjemmeside
+  }
+}
+
+"Infoboks magasin": {
+  type: "infobox"
+  class: /wp/infoboks/magasin
+  fields: {
+    "titel": {+/wp/info/title alias: 12}
+    "billede_fil": {+/wp/info/image media: true}
+    "billede_størrelse": /wp/info/billede_stoerrelse
+    "billede_tekst": /wp/info/caption
+    "redaktør_titel": /wp/info/redaktoer_titel
+    "redaktør": /wp/info/redaktoer
+    "kategori": /wp/info/kategori
+    "hyppighed": /wp/info/hyppighed
+    "oplag": /wp/info/oplag
+    "forlægger": /wp/info/forlaegger
+    "grundlagt": /wp/info/grundlagt
+    "første": /wp/info/foerste
+    "selskab": /wp/info/selskab
+    "land": /wp/info/land
+    "sprog": /wp/info/sprog
+    "webside": /wp/info/webside
+    "sidsteudgave": /wp/info/sidsteudgave
+    "sidstedato": /wp/info/sidstedato
+  }
+}
+
+"Infoboks museum": {
+  type: "infobox"
+  class: /wp/infoboks/museum
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "lokalt_navn": {+/wp/info/native_name alias: 12}
+    "logo": {+/wp/info/logo media: true}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "type": /wp/info/type
+    "fusion": /wp/info/fusion
+    "sted": /wp/info/sted
+    "adresse": /wp/info/adresse
+    "enheder": /wp/info/enheder
+    "grundlagt": /wp/info/grundlagt
+    "nedlagt": /wp/info/nedlagt
+    "grundlægger": /wp/info/grundlaegger
+    "arkitekt": /wp/info/arkitekt
+    "antal_ansatte": /wp/info/antal_ansatte
+    "antal_frivillige": /wp/info/antal_frivillige
+    "ledertype": /wp/info/ledertype
+    "direktør": /wp/info/direktoer
+    "kurator": /wp/info/kurator
+    "ejer": /wp/info/ejer
+    "besøgende": /wp/info/besoegende
+    "besøgende_år": /wp/info/besoegende_aar
+    "off_transport": /wp/info/off_transport
+    "hjemmeside": /wp/info/hjemmeside
+    "cvr": /wp/info/cvr
+    "landkort": /wp/info/landkort
+    "label": /wp/info/label
+    "position": /wp/info/position
+    "korttekst": /wp/info/korttekst
+    "coordinates": /wp/info/coordinates
+  }
+}
+
+"Infoboks mølle": {
+  type: "infobox"
+  class: /wp/infoboks/moelle
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "lokalitet": /wp/info/lokalitet
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "map_type": /wp/info/map_type
+    "bygget år": /wp/info/bygget_aar
+    "nedlagt": /wp/info/nedlagt
+    "type": /wp/info/type
+    "adresse": /wp/info/adresse
+    "forening": /wp/info/forening
+    "status": /wp/info/status
+    "off_transport": /wp/info/off_transport
+    "hjemmeside": /wp/info/hjemmeside
+    "landkort": /wp/info/landkort
+    "label": /wp/info/label
+    "position": /wp/info/position
+    "korttekst": /wp/info/korttekst
+    "coordinates": /wp/info/coordinates
+  }
+}
+
+"Infoboks organisation": {
+  type: "infobox"
+  class: /wp/infoboks/organisation
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "name": {+/wp/info/name alias: 12}
+    "image": {+/wp/info/image media: true}
+    "image_border": /wp/info/image_border
+    "size": /wp/info/size
+    "caption": /wp/info/caption
+    "map": /wp/info/map
+    "msize": /wp/info/msize
+    "mcaption": /wp/info/mcaption
+    "forkortelse": {+/wp/info/abbreviation name: 13}
+    "motto": /wp/info/motto
+    "oprindelse": /wp/info/oprindelse
+    "grundlæggelse": /wp/info/grundlaeggelse
+    "opløsning": /wp/info/oploesning
+    "type": /wp/info/type
+    "status": /wp/info/status
+    "formål": /wp/info/formaal
+    "hovedkontor": /wp/info/hovedkontor
+    "beliggenhed": /wp/info/beliggenhed
+    "kortdi": /wp/info/kortdi
+    "religion": /wp/info/religion
+    "medlemmer": /wp/info/medlemmer
+    "sprog": /wp/info/sprog
+    "general": /wp/info/general
+    "leders_titel": /wp/info/leders_titel
+    "leders_navn": /wp/info/leders_navn
+    "leders_titel2": /wp/info/leders_titel2
+    "leders_navn2": /wp/info/leders_navn2
+    "leders_titel3": /wp/info/leders_titel3
+    "leders_navn3": /wp/info/leders_navn3
+    "leders_titel4": /wp/info/leders_titel4
+    "leders_navn4": /wp/info/leders_navn4
+    "øverste_organ": /wp/info/oeverste_organ
+    "hovedorganisation": /wp/info/hovedorganisation
+    "beslægtede": /wp/info/beslaegtede
+    "antal_ansatte": /wp/info/antal_ansatte
+    "antal_frivillige": /wp/info/antal_frivillige
+    "budget": /wp/info/budget
+    "webside": /wp/info/webside
+    "bemærkninger": /wp/info/bemaerkninger
+  }
+}
+
+"Infoboks trossamfund": {
+  type: "infobox"
+  class: /wp/infoboks/trossamfund
+  fields: {
+    "wikidata": /wp/info/wikidata
+    "ingen_wikidata": /wp/info/ingen_wikidata
+    "Navn": {+/wp/info/name alias: 12}
+    "Officielt navn": {+/wp/info/official_name alias: 12}
+    "Kort navn": {+/wp/info/short_name alias: 12}
+    "Tidligere navn": {+/wp/info/former_name alias: 12}
+    "Billede": {+/wp/info/image media: true}
+    "Tekst": /wp/info/tekst
+    "Motto": /wp/info/motto
+    "Geografi": /wp/info/geografi
+    "Medlemstal": /wp/info/medlemstal
+    "Missionærer": /wp/info/missionaerer
+    "Menigheder": /wp/info/menigheder
+    "Sprog": /wp/info/sprog
+    "Oprindelse": /wp/info/oprindelse
+    "Grundlæggelsessted": /wp/info/grundlaeggelsessted
+    "Grundlæggelse": /wp/info/grundlaeggelse
+    "Grundlægger": /wp/info/grundlaegger
+    "Stiftelsesgrundlag": /wp/info/stiftelsesgrundlag
+    "Sekter": /wp/info/sekter
+    "Opløsning": /wp/info/oploesning
+    "Klassifikation": /wp/info/klassifikation
+    "Opbygning": /wp/info/opbygning
+    "Status": /wp/info/status
+    "Hovedkontor": /wp/info/hovedkontor
+    "Beliggenhed": /wp/info/beliggenhed
+    "Koordinater": /wp/info/koordinater
+    "Nøglepersoner": /wp/info/noeglepersoner
+    "Øverste_organ": /wp/info/oeverste_organ
+    "Beskrevet": /wp/info/beskrevet
+    "Webside": /wp/info/webside
+    "Fodnote": /wp/info/fodnote
+  }
+}
+
+"Infoboks park": {
+  type: "infobox"
+  class: /wp/infoboks/park
+  fields: {
+    "Billede": {+/wp/info/image media: true}
+    "Billedtekst": /wp/info/caption
+    "Anlagt": /wp/info/anlagt
+    "Ejer": /wp/info/ejer
+    "By": /wp/info/by
+    "Land": /wp/info/land
+    "Arkitekt": /wp/info/arkitekt
+    "Areal": /wp/info/areal
+    "Renovering": /wp/info/renovering
+    "Lukning": /wp/info/lukning
+    "Websted": /wp/info/websted
+  }
+}
+
+"Infoboks religiøs bygning": {
+  type: "infobox"
+  class: /wp/infoboks/religioes_bygning
+  fields: {
+    "billede": {+/wp/info/image media: true}
+    "tekst": /wp/info/tekst
+    "religiøst tilhørsforhold": /wp/info/religioest_tilhoersforhold
+    "land": /wp/info/land
+    "by": /wp/info/by
+    "arkitektonisk stil": /wp/info/arkitektonisk_stil
+    "bygherre": /wp/info/bygherre
+    "år færdigt": /wp/info/aar_faerdigt
+  }
+}
+
+"Infoboks restaurant": {
+  type: "infobox"
+  class: /wp/infoboks/restaurant
+  fields: {
+    "navn": {+/wp/info/name alias: 12}
+    "billede": {+/wp/info/image media: true}
+    "billedtekst": /wp/info/caption
+    "by": /wp/info/by
+    "land": /wp/info/land
+    "indviet": /wp/info/indviet
+    "lukket": /wp/info/lukket
+    "grundlægger": /wp/info/grundlaegger
+    "arkitekt": /wp/info/arkitekt
+    "tidligere_navn": {+/wp/info/former_name alias: 12}
+    "ejer": /wp/info/ejer
+    "tidligere_ejer": /wp/info/tidligere_ejer
+    "køkkenchef": /wp/info/koekkenchef
+    "sommelier": /wp/info/sommelier
+    "madtype": /wp/info/madtype
+    "rating": /wp/info/rating
+    "kapacitet": /wp/info/kapacitet
+    "ansatte": /wp/info/ansatte
+    "ansatte_år": /wp/info/ansatte_aar
+    "cvr": /wp/info/cvr
+    "hjemmeside": /wp/info/hjemmeside
+    "status": /wp/info/status
+    "fodnoter": /wp/info/fodnoter
+    "landkort": /wp/info/landkort
+    "label": /wp/info/label
+    "position": /wp/info/position
+    "korttekst": /wp/info/korttekst
+    "coordinates": /wp/info/coordinates
+  }
+}
+
+"Infoboks rummission": {
+  type: "infobox"
+  class: /wp/infoboks/rummission
+  fields: {
+    "missionsnavn": {+/wp/info/mission_name alias: 12}
+    "rumagentur": /wp/info/rumagentur
+    "rumfartøjets_navn": /wp/info/rumfartoejets_navn
+    "rumfærge": /wp/info/rumfaerge
+    "kommandomodul": /wp/info/kommandomodul
+    "servicemodul": /wp/info/servicemodul
+    "månemodul": /wp/info/maanemodul
+    "løfteraket": /wp/info/loefteraket
+    "missionsemblem": /wp/info/missionsemblem
+    "emblemstørrelse": /wp/info/emblemstoerrelse
+    "stats_ref": /wp/info/stats_ref
+    "besætningsmedlemmer": /wp/info/besaetningsmedlemmer
+    "affyringsrampe": /wp/info/affyringsrampe
+    "opsendelse": /wp/info/opsendelse
+    "rumvandring_begyndt": /wp/info/rumvandring_begyndt
+    "rumvandring_afsluttet": /wp/info/rumvandring_afsluttet
+    "månelanding": /wp/info/maanelanding
+    "månevandringslængde": /wp/info/maanevandringslaengde
+    "månebil": /wp/info/maanebil
+    "tid_på_månens_overflade": /wp/info/tid_paa_maanens_overflade
+    "indsamlede_månesten": /wp/info/indsamlede_maanesten
+    "landing": /wp/info/landing
+    "landingssted": /wp/info/landingssted
+    "varighed": /wp/info/varighed
+    "antal_kredsløb_om_månen": /wp/info/antal_kredsloeb_om_maanen
+    "tid_i_kredsløb_om_månen": /wp/info/tid_i_kredsloeb_om_maanen
+    "antal_kredsløb": /wp/info/antal_kredsloeb
+    "apogæum": /wp/info/apogaeum
+    "perigæum": /wp/info/perigaeum
+    "period": /wp/info/period
+    "højde": /wp/info/hoejde
+    "inklination": /wp/info/inklination
+    "afstand": /wp/info/afstand
+    "masse": /wp/info/masse
+    "foto": {+/wp/info/image media: true}
+    "crew_caption": /wp/info/crew_caption
+    "tidligere": /wp/info/tidligere
+    "næste": /wp/info/naeste
   }
 }
 
