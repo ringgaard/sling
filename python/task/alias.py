@@ -67,22 +67,37 @@ class NamesWorkflow:
                                        name="wikipedia-alias-reader")
       aliases = wikipedia_aliases + [wikidata_aliases]
 
-    # Merge alias sources.
-    names = self.item_names(language)
-    merged_aliases = self.wf.shuffle(aliases, len(names))
+    with self.wf.namespace("select"):
+      # Group aliases on item id.
+      output = self.item_names(language)
+      num_shards = length_of(output)
+      aliases_by_item = self.wf.shuffle(aliases, 10)
 
-    # Filter and select aliases.
-    selector = self.wf.reduce(merged_aliases, names, "alias-reducer",
-                              params={
-                                "language": language,
-                                "anchor_threshold": 30,
-                                "min_prefix": 1,
-                                "max_edit_distance": {
-                                  "fi": 5, "pl": 5
-                                }.get(language, 3)
-                              })
-    selector.attach_input("commons", self.alias_corrections())
-    return names
+      # Filter and select aliases.
+      selector = self.wf.task("alias-selector")
+      selector.add_param("language", language)
+      selector.add_param("anchor_threshold", 30)
+      selector.add_param("min_prefix", 1)
+      edit_distance = {
+        "fi": 5,
+        "pl": 5
+      }.get(language, 3)
+      selector.add_param("max_edit_distance", edit_distance)
+      selector.attach_input("corrections", self.alias_corrections())
+      self.wf.connect(aliases_by_item, selector)
+      item_aliases = self.wf.channel(selector,
+                                     shards=num_shards,
+                                     format=format_of(output).as_message())
+
+    with self.wf.namespace("merge"):
+      # Group aliases by alias fingerprint.
+      aliases_by_fp = self.wf.shuffle(item_aliases, num_shards)
+
+      # Merge all aliases for fingerprint.
+      merger = self.wf.reduce(aliases_by_fp, output, "alias-merger",
+                              auxin={"kb": self.data.knowledge_base()})
+
+    return output
 
   def build_name_table(self, names=None, language=None):
     """Build name table for all items."""
@@ -91,7 +106,6 @@ class NamesWorkflow:
 
     with self.wf.namespace("name-table"):
       builder = self.wf.task("name-table-builder")
-      builder.add_param("language", language)
       self.wf.connect(self.wf.read(names, name="name-reader"), builder)
       repo = self.data.name_table(language)
       builder.attach_output("repository", repo)
@@ -104,15 +118,10 @@ class NamesWorkflow:
 
     with self.wf.namespace("phrase-table"):
       builder = self.wf.task("phrase-table-builder")
-      builder.add_param("language", language)
-      builder.add_param("transfer_aliases", True)
       self.wf.connect(self.wf.read(names, name="name-reader"), builder)
-      kb = self.data.knowledge_base()
       repo = self.data.phrase_table(language)
-      builder.attach_input("commons", kb)
       builder.attach_output("repository", repo)
     return repo
-
 
 def extract_names():
   for language in flags.arg.languages:

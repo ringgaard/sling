@@ -66,7 +66,6 @@ void Reducer::Done(Task *task) {
 
 void Reducer::Output(int shard, Message *message) {
   DCHECK_GE(shard, 0);
-  DCHECK_LT(shard, outputs_.size());
   outputs_[shard % outputs_.size()]->Send(message);
 }
 

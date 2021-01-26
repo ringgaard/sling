@@ -34,9 +34,7 @@ void FrameProcessor::Start(Task *task) {
   commons_ = new Store();
 
   // Load commons store from file.
-  for (Binding *binding : task->GetInputs("commons")) {
-    LoadStore(binding->resource()->name(), commons_);
-  }
+  LoadStore(commons_, task, "commons");
 
   // Get output channel (optional).
   output_ = task->GetSink("output");
@@ -152,6 +150,12 @@ Frame DecodeMessage(Store *store, Message *message) {
   } else {
     Reader reader(store, &input);
     return reader.Read().AsFrame();
+  }
+}
+
+void LoadStore(Store *store, Task *task, const string &input) {
+  for (Binding *binding : task->GetInputs(input)) {
+    LoadStore(binding->resource()->name(), store);
   }
 }
 

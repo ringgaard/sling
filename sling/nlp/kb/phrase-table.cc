@@ -28,10 +28,7 @@ void PhraseTable::Load(Store *store, const string &filename) {
   entity_index_.Initialize(repository_);
 
   // Get text normalization flags.
-  const char *norm = repository_.GetBlock("normalization");
-  if (norm) {
-    normalization_.assign(norm, repository_.GetBlockSize("normalization"));
-  }
+  normalization_ = repository_.GetBlockString("normalization");
 
   // Allocate handle array for resolved entities.
   store_ = store;

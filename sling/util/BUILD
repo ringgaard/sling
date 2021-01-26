@@ -57,6 +57,9 @@ cc_library(
 cc_library(
   name = "arena",
   hdrs = ["arena.h"],
+  deps = [
+    "//sling/string:text",
+  ],
 )
 
 cc_library(

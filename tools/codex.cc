@@ -228,6 +228,10 @@ int main(int argc, char *argv[]) {
       File::Match(argv[i], &files);
     }
   }
+  if (files.empty()) {
+    std::cerr << "No input files\n";
+    return 1;
+  }
 
   if (FLAGS_key.empty()) {
     for (const string &file : files) {

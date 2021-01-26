@@ -99,6 +99,7 @@ class Message {
 
   // Create message with uninitialized content.
   Message(int key_size, int value_size) : key_(key_size), value_(value_size) {}
+  Message() : key_(0), value_(0) {}
 
   // Return key buffer.
   Slice key() const { return key_.slice(); }

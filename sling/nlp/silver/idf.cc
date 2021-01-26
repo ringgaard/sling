@@ -201,9 +201,9 @@ class IDFTableBuilder : public SumReducer {
       : fingerprint(fingerprint), count(count) {}
 
     // Write word to repository.
-    int Write(File *file) const override {
-      file->WriteOrDie(&fingerprint, sizeof(uint64));
-      file->WriteOrDie(&idf, sizeof(float));
+    int Write(OutputBuffer *output) const override {
+      output->Write(&fingerprint, sizeof(uint64));
+      output->Write(&idf, sizeof(float));
       return sizeof(uint64) + sizeof(float);
     }
 

@@ -20,6 +20,7 @@
 
 #include "sling/base/types.h"
 #include "sling/base/logging.h"
+#include "sling/file/buffered.h"
 #include "sling/file/file.h"
 
 namespace sling {
@@ -74,6 +75,9 @@ class Repository {
 
   // Add memory block to repository store.
   void AddBlock(const string &name, const void *data, size_t size);
+  void AddBlock(const string &name, const string &data) {
+    AddBlock(name, data.data(), data.size());
+  }
 
   // Add block and return a temporary file for writing the block.
   File *AddBlock(const string &name);
@@ -86,6 +90,9 @@ class Repository {
                                     const T **data) const {
     *data = reinterpret_cast<const T *>(GetBlock(name));
   }
+
+  // Get block data as string.
+  string GetBlockString(const string &name) const;
 
   // Write hash map to repository. This creates two blocks in the repository,
   // a map item block ("<name>Items"), which contains all the items, and a
@@ -201,7 +208,7 @@ class RepositoryMapItem {
   virtual ~RepositoryMapItem() {}
 
   // Write item to file and return the number of bytes written.
-  virtual int Write(File *file) const = 0;
+  virtual int Write(OutputBuffer *output) const = 0;
 
   // Return hash value for item.
   virtual uint64 Hash() const = 0;

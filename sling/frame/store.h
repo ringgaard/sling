@@ -593,6 +593,9 @@ struct Slot {
   // Assigns new name and value to slot.
   void assign(Handle n, Handle v) { name = n; value = v; }
 
+  // Copy name and value from other slot.
+  void copy(const Slot *other) { *this = *other; }
+
   // Swaps slot with another slot.
   void swap(Slot *other) {
     Handle tmp;

@@ -179,6 +179,8 @@ cc_library(
     "//sling/file:textmap",
     "//sling/frame",
     "//sling/nlp/document:phrase-tokenizer",
+    "//sling/nlp/kb:facts",
+    "//sling/string:numbers",
     "//sling/task",
     "//sling/task:frames",
     "//sling/task:reducer",

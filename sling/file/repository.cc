@@ -276,6 +276,13 @@ size_t Repository::GetBlockSize(const string &name) const {
   return 0;
 }
 
+string Repository::GetBlockString(const string &name) const {
+  for (const Block &block : blocks_) {
+    if (block.name == name) return string(block.data, block.size);
+  }
+  return "";
+}
+
 void Repository::WriteMap(const string &name,
                           std::vector<RepositoryMapItem *> *items,
                           int num_buckets) {
@@ -289,7 +296,7 @@ void Repository::WriteMap(const string &name,
       });
 
   // Create item block.
-  File *data = AddBlock(name + "Items");
+  OutputBuffer data(AddBlock(name + "Items"));
 
   // Allocate bucket array. We allocate one extra bucket to mark the end of the
   // map items. This ensures that all items in a bucket b are in the range
@@ -299,7 +306,7 @@ void Repository::WriteMap(const string &name,
   int bucket = -1;
   for (const RepositoryMapItem *item : *items) {
     // Write item to block.
-    int size = item->Write(data);
+    int size = item->Write(&data);
 
     // Update bucket table.
     while (bucket < item->bucket()) buckets[++bucket] = offset;

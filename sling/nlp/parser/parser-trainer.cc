@@ -28,6 +28,7 @@
 #include "sling/nlp/document/document-corpus.h"
 #include "sling/nlp/parser/parser-codec.h"
 #include "sling/nlp/parser/frame-evaluation.h"
+#include "sling/task/frames.h"
 #include "sling/task/learner.h"
 #include "sling/util/mutex.h"
 
@@ -66,9 +67,7 @@ class ParserTrainer : public task::LearnerTask {
     num_documents_ = task->GetCounter("documents");
 
     // Load commons store from file.
-    for (Binding *binding : task->GetInputs("commons")) {
-      LoadStore(binding->filename(), &commons_);
-    }
+    LoadStore(&commons_, task, "commons");
 
     // Initialize preprocessing pipeline.
     pipeline_.Init(task, &commons_);

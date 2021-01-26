@@ -1488,6 +1488,24 @@ Builder &Builder::Delete(Text name) {
   return *this;
 }
 
+Builder &Builder::Remove(const std::vector<int> &indices) {
+  Slot *slot = slots_.base();
+  Slot *src = slot;
+  Slot *dst = slot;
+  int next = 0;
+  for (int i = 0; i < slots_.length(); ++i, ++src) {
+    if (next < indices.size() && i == indices[next]) {
+      // Skip slot.
+      next++;
+    } else {
+      if (dst != src) dst->copy(src);
+      dst++;
+    }
+  }
+  slots_.set_end(dst);
+  return *this;
+}
+
 Builder &Builder::Set(Handle name, Handle value) {
   NamedSlot(name)->value = value;
   return *this;

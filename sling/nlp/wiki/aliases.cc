@@ -21,7 +21,9 @@
 #include "sling/file/textmap.h"
 #include "sling/frame/serialization.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
+#include "sling/nlp/kb/facts.h"
 #include "sling/nlp/wiki/wiki.h"
+#include "sling/string/numbers.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
 #include "sling/task/reducer.h"
@@ -66,7 +68,7 @@ static int LevenshteinDistance(const int *s, int m, const int *t, int n) {
   return prev[n];
 }
 
-// Extract aliases for items.
+// Extract aliases from items.
 class AliasExtractor : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
@@ -78,6 +80,20 @@ class AliasExtractor : public task::FrameProcessor {
     // Initialize filter.
     if (skip_aux_) filter_.Init(commons_);
     num_aux_items_ = task->GetCounter("num_aux_items");
+
+    // Initialize skipped item types.
+    const char *skipped_item_types[] = {
+      "Q273057",     // discography
+      "Q1371849",    // filmography
+      "Q17438413",   // videography
+      "Q1075660",    // artist discography
+      "Q59191021",   // Wikimedia albums discography
+      nullptr,
+    };
+    for (const char **type = skipped_item_types; *type; ++type) {
+      skipped_types_.insert(commons_->Lookup(*type));
+    }
+    num_skipped_items_ = task->GetCounter("num_skipped_items");
   }
 
   void Process(Slice key, const Frame &frame) override {
@@ -90,6 +106,7 @@ class AliasExtractor : public task::FrameProcessor {
     // Create frame with all aliases matching language.
     Store *store = frame.store();
     Builder a(store);
+    bool skip = false;
     for (const Slot &s : frame) {
       if (s.name == n_name_) {
         // Add item name as alias.
@@ -145,7 +162,17 @@ class AliasExtractor : public task::FrameProcessor {
             wikitypes_.IsDuplicate(type)) {
           return;
         }
+
+        // Check if all aliases for this item should be skipped.
+        if (skipped_types_.count(type) > 0) skip = true;
       }
+    }
+
+    // Add skip type to frame if it all aliases for the item should be skipped.
+    // This will filter out all aliases for the item in the alias selector.
+    if (skip) {
+      a.AddIsA(n_skip_);
+      num_skipped_items_->Increment();
     }
 
     // Output aliases matching language.
@@ -179,12 +206,17 @@ class AliasExtractor : public task::FrameProcessor {
   AuxFilter filter_;
   task::Counter *num_aux_items_;
 
+  // Item types that are skipped in the alias extraction.
+  HandleSet skipped_types_;
+  task::Counter *num_skipped_items_;
+
   // Symbols.
   Name n_lang_{names_, "lang"};
   Name n_name_{names_, "name"};
   Name n_alias_{names_, "alias"};
   Name n_count_{names_, "count"};
   Name n_sources_{names_, "sources"};
+  Name n_skip_{names_, "skip"};
 
   Name n_native_name_{names_, "P1559"};
   Name n_native_label_{names_, "P1705"};
@@ -207,14 +239,15 @@ class AliasExtractor : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("alias-extractor", AliasExtractor);
 
-class AliasReducer : public task::Reducer {
+// Select aliases for item.
+class AliasSelector : public task::Reducer {
  public:
   // Group of aliases with same fingerprint.
   struct Alias {
     // Most common variant.
     string name;
 
-    // Map of alias variants with same fingerprint with frequency counts.
+    // Map of alias variants with frequency counts.
     std::unordered_map<string, int> variants;
 
     // Unicode representation for normalized version of most common variant.
@@ -274,11 +307,10 @@ class AliasReducer : public task::Reducer {
 
   void Start(task::Task *task) override {
     Reducer::Start(task);
+    output_ = task->GetSink("output");
 
     // Load commons store.
-    for (task::Binding *binding : task->GetInputs("commons")) {
-      LoadStore(binding->resource()->name(), &commons_);
-    }
+    task::LoadStore(&commons_, task, "corrections");
     names_.Bind(&commons_);
 
     // Get parameters.
@@ -302,6 +334,7 @@ class AliasReducer : public task::Reducer {
         }
       }
     }
+
     commons_.Freeze();
   }
 
@@ -356,6 +389,12 @@ class AliasReducer : public task::Reducer {
 
       // Get all aliases for item.
       for (const Slot &slot : batch) {
+        // Check if all aliases for item should be skipped.
+        if (slot.name == Handle::isa() && slot.value == n_skip_) {
+          for (auto it : aliases) delete it.second;
+          return;
+        }
+
         if (slot.name != n_alias_) continue;
         Frame alias(&store, slot.value);
         string name = alias.GetString(n_name_);
@@ -450,9 +489,10 @@ class AliasReducer : public task::Reducer {
       }
     }
 
-    // Build new set of selected aliases.
-    Builder merged(&store);
+    // Output selected aliases.
+    Handle id = store.Lookup(qid);
     for (auto it : aliases) {
+      uint64 fp = it.first;
       Alias *alias = it.second;
       if (!alias->selected) continue;
       if (alias->name.empty()) continue;
@@ -467,18 +507,16 @@ class AliasReducer : public task::Reducer {
       }
       if (form == CASE_INVALID) continue;
 
-      // Add alias to output.
+      // Output alias.
       Builder a(&store);
-      a.Add(n_name_, alias->name);
-      a.Add(n_lang_, language_);
       a.Add(n_count_, alias->count);
       a.Add(n_sources_, alias->sources);
       if (form != CASE_NONE) a.Add(n_form_, form);
-      merged.Add(n_alias_, a.Create());
+      Builder b(&store);
+      b.Add(Handle::is(), alias->name);
+      b.Add(id, a.Create());
+      output_->Send(task::CreateMessage(SimpleItoa(fp), b.Create()));
     }
-
-    // Output selected aliases.
-    Output(input.shard(), task::CreateMessage(qid, merged.Create()));
 
     // Delete alias table.
     for (auto it : aliases) delete it.second;
@@ -554,6 +592,8 @@ class AliasReducer : public task::Reducer {
   Name n_sources_{names_, "sources"};
   Name n_form_{names_, "form"};
   Name n_blacklist_{names_, "blacklist"};
+  Name n_skip_{names_, "skip"};
+  Name n_instance_of_{names_, "P31"};
 
   // Language.
   Handle language_;
@@ -576,9 +616,300 @@ class AliasReducer : public task::Reducer {
 
   // Mapping from item id to corrections for item.
   HandleMap<Handle> item_corrections_;
+
+  // Output channel.
+  task::Channel *output_ = nullptr;
 };
 
-REGISTER_TASK_PROCESSOR("alias-reducer", AliasReducer);
+REGISTER_TASK_PROCESSOR("alias-selector", AliasSelector);
+
+// Merge item aliases for alias fingerprint.
+class AliasMerger : public task::Reducer {
+ public:
+  void Start(task::Task *task) override {
+    Reducer::Start(task);
+    task->Fetch("reliable_alias_sources", &reliable_alias_sources_);
+
+    num_missing_items_ = task->GetCounter("num_missing_items");
+    num_unique_aliases_ = task->GetCounter("num_unique_aliases");
+    num_transfers_ = task->GetCounter("alias_transfers");
+    num_zero_transfers_ = task->GetCounter("alias_zero_transfers");
+    num_instance_transfers_ = task->GetCounter("alias_instance_transfers");
+
+    // Load commons store.
+    task::LoadStore(&commons_, task, "kb");
+    names_.Bind(&commons_);
+
+    // Initialize alias transfer exceptions.
+    static const char *exceptions[] = {
+      "P1889",  // different from
+      "P460",   // said to be the same as
+      "P1533",  // identical to this given name
+      "P138",   // named after
+      "P2959",  // permanent duplicated item
+      "P734",   // family name
+      "P735",   // given name
+      "P112",   // founded by
+      "P115",   // home venue
+      "P144",   // based on
+      "P1950",  // second family name in Spanish name
+      "P2359",  // Roman nomen gentilicium
+      "P2358",  // Roman praenomen
+      "P2365",  // Roman cognomen
+      "P2366",  // Roman agnomen
+      "P941",   // inspired by
+      "P629",   // edition or translation of
+      "P747",   // has edition or translation
+      "P37",    // official language
+      "P103",   // native language
+      "P566",   // basionym
+      "P487",   // Unicode character
+
+      nullptr
+    };
+    for (const char **p = exceptions; *p != nullptr; ++p) {
+      transfer_exceptions_.insert(commons_.LookupExisting(*p));
+    }
+
+    // Initialize fact catalog.
+    catalog_.Init(&commons_);
+
+    commons_.Freeze();
+  }
+
+  void Reduce(const task::ReduceInput &input) override {
+    // Pass-through unique aliases.
+    if (input.messages().size() == 1) {
+      Output(input.shard(), input.release(0));
+      num_unique_aliases_->Increment();
+      return;
+    }
+
+    // Merge all items for alias fingerprint.
+    Store store(&commons_);
+    Builder aliases(&store);
+
+    // Collect all the aliases for the item.
+    std::unordered_map<string, int> names;
+    for (task::Message *message : input.messages()) {
+      Frame batch = DecodeMessage(&store, message);
+      string name;
+      int count = 0;
+      for (const Slot &slot : batch) {
+        if (slot.name == Handle::is()) {
+          name = store.GetString(slot.value)->str().str();
+        } else {
+          aliases.Add(slot.name, slot.value);
+          Frame alias(&store, slot.value);
+          count += alias.GetInt(n_count_);
+        }
+      }
+      if (!name.empty()) names[name] += count;
+    }
+
+    // Transfer aliases.
+    TransferAliases(aliases);
+
+    // Add representative name.
+    string name;
+    int maxcount = -1;
+    for (auto &it : names) {
+      if (it.second > maxcount) {
+        name = it.first;
+        maxcount = it.second;
+      }
+    }
+    if (!name.empty()) aliases.Add(Handle::is(), name);
+
+    // Output merged alias cluster.
+    Output(input.shard(), task::CreateMessage(input.key(), aliases.Create()));
+  }
+
+ private:
+  // Alias for item.
+  struct ItemAlias {
+    Handle handle;  // item handle
+    Handle alias;   // alias frame for item
+    int count;      // alias frequency
+    bool reliable;  // reliable alias flag
+    int form;       // alias case form
+  };
+
+  // Transfer alias counts from source to target.
+  bool Transfer(ItemAlias *source, ItemAlias *target) {
+    // Check for conflicting case forms.
+    if (source->form != CASE_NONE &&
+        target->form != CASE_NONE &&
+        source->form != target->form) {
+      return false;
+    }
+
+    // Check for zero transfers.
+    if (source->count == 0) {
+      num_zero_transfers_->Increment();
+      return false;
+    }
+
+    // Transfer alias counts from source to target.
+    num_transfers_->Increment();
+    num_instance_transfers_->Increment(source->count);
+    target->count += source->count;
+    source->count = 0;
+    return true;
+  }
+
+  // Exchange aliases between items.
+  bool Exchange(ItemAlias *a, ItemAlias *b) {
+    if (a->reliable && !b->reliable) {
+      return Transfer(b, a);
+    } else if (b->reliable && !a->reliable) {
+      return Transfer(a, b);
+    } else {
+      return false;
+    }
+  }
+
+  // Transfer unreliable aliases between related items.
+  void TransferAliases(Builder &aliases) {
+    // Build item index.
+    Store *store = aliases.store();
+    int num_items = aliases.size();
+    std::vector<ItemAlias> items(num_items);
+    HandleMap<int> item_index;
+    for (int i = 0; i < num_items; ++i) {
+      Slot &slot = aliases[i];
+      Frame alias(store, slot.value);
+
+      ItemAlias &item = items[i];
+      item.handle = slot.name;
+      item.alias = slot.value;
+      item.count = alias.GetInt(n_count_);
+      int sources = alias.GetInt(n_sources_);
+      item.reliable = (sources & reliable_alias_sources_) != 0;
+      item.form = alias.GetInt(n_form_);
+
+      // Disregard items that are not in the knowledge base.
+      if (item.handle.IsGlobalRef()) {
+        item_index[item.handle] = i;
+      } else {
+        item.handle = Handle::nil();
+        num_missing_items_->Increment();
+      }
+    }
+
+    // Find potential targets for alias transfer.
+    bool pruned = false;
+    std::set<int> numbers;
+    std::set<int> years;
+    for (int source = 0; source < num_items; ++source) {
+      // Skip item if it is not in the knowledge base.
+      if (items[source].handle.IsNil()) continue;
+
+      // Get set of facts for item.
+      Facts facts(&catalog_);
+      facts.Extract(items[source].handle);
+      for (int i = 0; i < facts.size(); ++i) {
+        // Get base property and target value.
+        Handle p = facts.first(i);
+        Handle t = facts.last(i);
+        if (!t.IsGlobalRef()) continue;
+        CHECK(!t.IsNil());
+
+        // Collect numbers and years.
+        if (p == n_instance_of_) {
+          if (t == n_natural_number_) {
+            numbers.insert(source);
+          }
+          if (t == n_year_ || t == n_year_bc_ || t == n_decade_) {
+            years.insert(source);
+          }
+        }
+
+        // Check for property exceptions.
+        if (transfer_exceptions_.count(p) > 0) continue;
+
+        // Check if target has the phrase as an alias.
+        auto f = item_index.find(t);
+        if (f == item_index.end()) continue;
+        int target = f->second;
+        if (target == source) continue;
+
+        // Transfer alias from unreliable to reliable alias.
+        if (Exchange(&items[source], &items[target])) pruned = true;
+      }
+    }
+
+    // Transfer aliases for years.
+    if (!years.empty()) {
+      for (int source  : years) {
+        for (int target : years) {
+          if (source == target) continue;
+          if (Exchange(&items[source], &items[target])) pruned = true;
+        }
+      }
+    }
+
+    // Transfer aliases for numbers.
+    if (!numbers.empty()) {
+      for (int source : numbers) {
+        for (int target : numbers) {
+          if (source == target) continue;
+          if (Exchange(&items[source], &items[target])) pruned = true;
+        }
+      }
+    }
+
+    // Prune aliases with zero count.
+    if (pruned) {
+      std::vector<int> removed;
+      for (int i = 0; i < num_items; ++i) {
+        ItemAlias &item = items[i];
+        Frame f(store, item.alias);
+        f.Set(n_count_, item.count);
+        if (item.count == 0) removed.push_back(i);
+      }
+      aliases.Remove(removed);
+    }
+  }
+
+  // Commons store.
+  Store commons_;
+
+  // Fact catalog for alias transfer.
+  FactCatalog catalog_;
+
+  // Property exceptions for alias transfer.
+  HandleSet transfer_exceptions_;
+
+  // Reliable alias sources.
+  int reliable_alias_sources_ =
+    (1 << SRC_WIKIDATA_LABEL) |
+    (1 << SRC_WIKIDATA_ALIAS) |
+    (1 << SRC_WIKIDATA_NAME) |
+    (1 << SRC_WIKIDATA_DEMONYM) |
+    (1 << SRC_WIKIPEDIA_NAME);
+
+  // Symbols.
+  Names names_;
+  Name n_count_{names_, "count"};
+  Name n_sources_{names_, "sources"};
+  Name n_form_{names_, "form"};
+
+  Name n_instance_of_{names_, "P31"};
+  Name n_natural_number_{names_, "Q21199"};
+  Name n_year_{names_, "Q577"};
+  Name n_year_bc_{names_, "Q29964144"};
+  Name n_decade_{names_, "Q39911"};
+
+  // Statistics.
+  task::Counter *num_missing_items_ = nullptr;
+  task::Counter *num_unique_aliases_ = nullptr;
+  task::Counter *num_transfers_ = nullptr;
+  task::Counter *num_zero_transfers_ = nullptr;
+  task::Counter *num_instance_transfers_ = nullptr;
+};
+
+REGISTER_TASK_PROCESSOR("alias-merger", AliasMerger);
 
 }  // namespace nlp
 }  // namespace sling

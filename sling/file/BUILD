@@ -40,6 +40,16 @@ cc_library(
 # File utility libraries.
 
 cc_library(
+  name = "buffered",
+  srcs = ["buffered.cc"],
+  hdrs = ["buffered.h"],
+  deps = [
+    ":file",
+    "//sling/base",
+  ],
+)
+
+cc_library(
   name = "recordio",
   srcs = ["recordio.cc"],
   hdrs = ["recordio.h"],
@@ -69,6 +79,7 @@ cc_library(
   srcs = ["repository.cc"],
   hdrs = ["repository.h"],
   deps = [
+    ":buffered",
     ":file",
     "//sling/base",
   ],

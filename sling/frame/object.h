@@ -888,6 +888,9 @@ class Builder : public External {
   Builder &Delete(const Name &name);
   Builder &Delete(Text name);
 
+  // Remove slots by index. Indices must be in ascending order.
+  Builder &Remove(const std::vector<int> &indices);
+
   // Sets slot to handle value.
   Builder &Set(Handle name, Handle value);
   Builder &Set(const Object &name, Handle value);
@@ -971,6 +974,12 @@ class Builder : public External {
   // Returns the range of slots.
   Slot *begin() const { return slots_.base(); }
   Slot *end() const { return slots_.end(); }
+
+  // Returns the number of slots.
+  int size() const { return slots_.length(); }
+
+  // Access to existing slot in builder.
+  Slot &operator[](int index) { return *(slots_.base() + index); }
 
  private:
   // Initial number of slots reserved.

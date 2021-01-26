@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <map>
+#include <algorithm>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
+#include "sling/file/buffered.h"
 #include "sling/file/repository.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
+#include "sling/util/arena.h"
 #include "sling/util/mutex.h"
 #include "sling/util/unicode.h"
 
@@ -31,12 +34,8 @@ namespace nlp {
 class NameTableBuilder : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
-    // Get language for names.
-    string lang = task->Get("language", "en");
-    language_ = commons_->Lookup("/lang/" + lang);
-
     // Set name normalization.
-    normalization_ = ParseNormalization(task->Get("normalization", "lcp"));
+    normalization_ = ParseNormalization(task->Get("normalization", "lcn"));
 
     // Statistics.
     num_aliases_ = task->GetCounter("aliases");
@@ -47,60 +46,83 @@ class NameTableBuilder : public task::FrameProcessor {
 
   void Process(Slice key, const Frame &frame) override {
     MutexLock lock(&mu_);
+    Store *store = frame.store();
 
-    // Get index for entity.
-    int index;
-    string id(key.data(), key.size());
-    auto fe = entity_mapping_.find(id);
-    if (fe == entity_mapping_.end()) {
-      index = entity_table_.size();
-      entity_table_.emplace_back(id);
-      num_entities_->Increment();
-      entity_mapping_[id] = index;
-    } else {
-      index = fe->second;
-    }
-
-    // Add aliases.
+    // Get all entities for alias. Assume that all slots are entities for alias
+    // except for the is: slot for the alias name.
+    int num_entities = frame.size() - 1;
+    EntityName *entities = entity_name_arena_.alloc(num_entities);
+    int i = 0;
     for (const Slot &s : frame) {
-      if (s.name == n_alias_) {
-        // Check language.
-        Frame alias(frame.store(), s.value);
-        if (alias.GetHandle(n_lang_) != language_) continue;
-        num_aliases_->Increment();
+      // Skip alias name.
+      if (s.name == Handle::is()) continue;
 
-        // Normalize name.
-        Text name = alias.GetText(n_name_);
-        int count = alias.GetInt(n_count_, 1);
-        string normalized;
-        UTF8::Normalize(name.data(), name.size(), normalization_, &normalized);
-        if (normalized.empty()) continue;
-        if (normalized.size() > 127) continue;
-
-        // Add alias for entity to name table.
-        std::vector<EntityName> &entities = name_table_[normalized];
-        if (entities.empty()) num_names_->Increment();
-        entities.emplace_back(index, count);
-
-        // Add alias count to entity frequency.
-        entity_table_[index].count += count;
-        num_instances_->Increment(count);
+      // Get index for entity.
+      int index;
+      Text id = store->FrameId(s.name);
+      auto fe = entity_mapping_.find(id);
+      if (fe == entity_mapping_.end()) {
+        index = entity_table_.size();
+        id = string_arena_.dup(id);
+        entity_table_.emplace_back(id);
+        num_entities_->Increment();
+        entity_mapping_[id] = index;
+      } else {
+        index = fe->second;
       }
+
+      // Add entity to name.
+      Frame alias(store, s.value);
+      int count = alias.GetInt(n_count_, 1);
+      entities[i].index = index;
+      entities[i].count = count;
+      i++;
+      num_names_->Increment();
+
+      // Add alias count to entity frequency.
+      entity_table_[index].count += count;
+      num_instances_->Increment(count);
     }
+    CHECK_EQ(i, num_entities);
+
+    // Sort entities in decreasing order.
+    std::sort(entities, entities + num_entities,
+        [](const EntityName &a, const EntityName &b) {
+          return a.count > b.count;
+        });
+
+    // Get normalized alias for cluster.
+    Text alias = frame.GetText(Handle::is());
+    string normalized;
+    UTF8::Normalize(alias.data(), alias.size(), normalization_, &normalized);
+    if (normalized.empty()) return;
+    if (normalized.size() > 127) return;
+    Text name = string_arena_.dup(normalized);
+
+    // Add new entry to name table.
+    name_table_.emplace_back(name, num_entities, entities);
+    num_aliases_->Increment();
   }
 
   void Flush(task::Task *task) override {
     // Build name repository.
     Repository repository;
 
+    // Sort names.
+    LOG(INFO) << "Sort names";
+    std::sort(name_table_.begin(), name_table_.end(),
+        [](const NameEntry &a, const NameEntry &b) {
+          return a.name < b.name;
+        });
+
     // Add normalization flags to repository.
     string norm = NormalizationString(normalization_);
-    repository.AddBlock("normalization", norm.data(), norm.size());
+    repository.AddBlock("normalization", norm);
 
     // Get name repository blocks.
-    File *index_block = repository.AddBlock("Index");
-    File *name_block = repository.AddBlock("Names");
-    File *entity_block = repository.AddBlock("Entities");
+    OutputBuffer index_block(repository.AddBlock("Index"));
+    OutputBuffer name_block(repository.AddBlock("Names"));
+    OutputBuffer entity_block(repository.AddBlock("Entities"));
 
     // Write entity block.
     LOG(INFO) << "Build entity block";
@@ -111,45 +133,42 @@ class NameTableBuilder : public task::FrameProcessor {
       // Write count and id to entity entry.
       CHECK_LT(entity.id.size(), 256);
       uint8 idlen = entity.id.size();
-      entity_block->WriteOrDie(&entity.count, sizeof(uint32));
-      entity_block->WriteOrDie(&idlen, sizeof(uint8));
-      entity_block->WriteOrDie(entity.id.data(), idlen);
+      entity_block.Write(&entity.count, sizeof(uint32));
+      entity_block.Write(&idlen, sizeof(uint8));
+      entity_block.Write(entity.id.data(), idlen);
 
       // Compute offset of next entry.
       offset += sizeof(uint32) + sizeof(uint8) + idlen;
     }
+    entity_block.Flush();
 
-    // Write name and index blocks. The names in the map are already sorted.
+    // Write name and index blocks.
     LOG(INFO) << "Build name and index blocks";
     offset = 0;
-    std::vector<uint32> entity_array;
-    for (const auto &it : name_table_) {
-      const string &name = it.first;
-      const std::vector<EntityName> &entities = it.second;
-
+    for (const NameEntry &entry : name_table_) {
       // Write name offset to index.
-      index_block->WriteOrDie(&offset, sizeof(uint32));
+      index_block.Write(&offset, sizeof(uint32));
 
       // Write name to name block.
-      CHECK_LT(name.size(), 256);
-      uint8 namelen = name.size();
-      name_block->WriteOrDie(&namelen, sizeof(uint8));
-      name_block->WriteOrDie(name.data(), namelen);
+      CHECK_LT(entry.name.size(), 256);
+      uint8 namelen = entry.name.size();
+      name_block.Write(&namelen, sizeof(uint8));
+      name_block.Write(entry.name.data(), namelen);
 
       // Write entity list to name block.
-      uint32 entlen = entities.size();
-      name_block->WriteOrDie(&entlen, sizeof(uint32));
-      entity_array.clear();
-      for (const EntityName &entity : entities) {
-        entity_array.push_back(entity_table_[entity.index].offset);
-        entity_array.push_back(entity.count);
+      name_block.Write(&entry.num_entities, sizeof(uint32));
+      for (int i = 0; i < entry.num_entities; ++i) {
+        const EntityName &entity = entry.entities[i];
+        name_block.Write(&entity_table_[entity.index].offset, sizeof(uint32));
+        name_block.Write(&entity.count, sizeof(uint32));
       }
-      int entity_array_size = entity_array.size() * sizeof(uint32);
-      name_block->WriteOrDie(entity_array.data(), entity_array_size);
 
       // Compute offset of next entry.
-      offset += sizeof(uint8) + namelen + sizeof(uint32) + entity_array_size;
+      int arraylen = 2 * entry.num_entities * sizeof(uint32);
+      offset += sizeof(uint8) + namelen + sizeof(uint32) + arraylen;
     }
+    index_block.Flush();
+    name_block.Flush();
 
     // Write repository to file.
     const string &filename = task->GetOutput("repository")->resource()->name();
@@ -161,44 +180,52 @@ class NameTableBuilder : public task::FrameProcessor {
     name_table_.clear();
     entity_table_.clear();
     entity_mapping_.clear();
+    entity_name_arena_.clear();
+    string_arena_.clear();
   }
 
  private:
   // Entity with id and frequency.
   struct Entity {
-    Entity(const string &id) : id(id) {}
-    string id;
+    Entity(Text id) : id(id) {}
+    Text id;
     uint32 count = 0;
     uint32 offset;
   };
 
   // Entity name with index and frequency.
   struct EntityName {
-    EntityName(int index, uint32 count) : index(index), count(count) {}
     uint32 index;
     uint32 count;
   };
 
-  // Symbols.
-  Name n_lang_{names_, "lang"};
-  Name n_name_{names_, "name"};
-  Name n_alias_{names_, "alias"};
-  Name n_count_{names_, "count"};
+  // Name entry with normalized phrase and list of entities.
+  struct NameEntry {
+    NameEntry(Text name, int num_entities, EntityName *entities)
+      : name(name), num_entities(num_entities), entities(entities) {}
+    Text name;
+    uint32 num_entities;
+    EntityName *entities;
+  };
 
-  // Language for aliases.
-  Handle language_;
+  // Symbols.
+  Name n_count_{names_, "count"};
 
   // Text normalization flags.
   Normalization normalization_;
 
-  // Sorted name table mapping normalized strings to entities with that name.
-  std::map<string, std::vector<EntityName>> name_table_;
+  // Memory arenas.
+  Arena<EntityName> entity_name_arena_;
+  StringArena string_arena_;
+
+  // Name table.
+  std::vector<NameEntry> name_table_;
 
   // Entity table with id and frequency count.
   std::vector<Entity> entity_table_;
 
   // Mapping of entity id to entity index in entity table.
-  std::unordered_map<string, int> entity_mapping_;
+  std::unordered_map<Text, int> entity_mapping_;
 
   // Statistics.
   task::Counter *num_names_ = nullptr;

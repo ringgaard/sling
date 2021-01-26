@@ -20,6 +20,8 @@
 #include <string>
 #include <vector>
 
+#include "sling/string/text.h"
+
 namespace sling {
 
 // Arena allocator for allocating memory from larger memory regions. Arena
@@ -99,6 +101,11 @@ class StringArena : public Arena<char> {
   // Allocate nul-terminated string from string object.
   char *dup(const std::string &str) {
     return dup(str.data(), str.size());
+  }
+
+  // Allocate space for text object.
+  Text dup(Text str) {
+    return Text(dup(str.data(), str.size()), str.size());
   }
 };
 

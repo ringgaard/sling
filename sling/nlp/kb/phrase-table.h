@@ -184,7 +184,7 @@ class PhraseTable : public Asset {
   Handles *entity_table_ = nullptr;
 
   // Text normalization flags.
-  string normalization_ = "lcn";
+  string normalization_;
 };
 
 }  // namespace nlp

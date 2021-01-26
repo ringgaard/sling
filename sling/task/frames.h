@@ -84,6 +84,9 @@ Message *CreateMessage(const Frame &frame, bool shallow = false);
 // Decode message as frame.
 Frame DecodeMessage(Store *store, Message *message);
 
+// Load store from task input.
+void LoadStore(Store *store, Task *task, const string &input);
+
 }  // namespace task
 }  // namespace sling
 

@@ -75,6 +75,7 @@ cc_library(
     "//sling/nlp/document:document",
     "//sling/nlp/document:annotator",
     "//sling/nlp/document:document-corpus",
+    "//sling/task:frames",
     "//sling/task:learner",
     "//sling/util:mutex",
   ],

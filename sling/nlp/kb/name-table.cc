@@ -35,11 +35,8 @@ void NameTable::Load(const string &filename) {
   repository_.FetchBlock("Entities", &entity_table_);
 
   // Get text normalization flags.
-  const char *norm = repository_.GetBlock("normalization");
-  if (norm) {
-    string normalization(norm, repository_.GetBlockSize("normalization"));
-    normalization_ = ParseNormalization(normalization);
-  }
+  string norm = repository_.GetBlockString("normalization");
+  normalization_ = ParseNormalization(norm);
 }
 
 void NameTable::Lookup(Text query, bool prefix, int limit, int boost,
