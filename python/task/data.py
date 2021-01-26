@@ -238,6 +238,12 @@ class Datasets:
                             dir=flags.arg.workdir + "/media",
                             format="text/frame")
 
+  def photos(self):
+    """Resource for manual profile photo."""
+    return self.wf.resource("photos.sling",
+                            dir=flags.arg.corpora + "/media",
+                            format="text/frame")
+
   def standard_item_sources(self):
     items = self.wf.bundle(
               self.wikidata_items(),
@@ -246,7 +252,8 @@ class Datasets:
               self.fanin(),
               self.wikipedia_items(),
               self.wikipedia_members(),
-              self.media())
+              self.media(),
+              self.photos())
 
     if flags.arg.extra_items:
       extra = self.wf.resource(flags.arg.extra_items, format="records/frame")
