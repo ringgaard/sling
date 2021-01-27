@@ -87,6 +87,7 @@ class AliasExtractor : public task::FrameProcessor {
       "Q1371849",    // filmography
       "Q17438413",   // videography
       "Q1075660",    // artist discography
+      "Q59248059",   // singles discography
       "Q59191021",   // Wikimedia albums discography
       nullptr,
     };

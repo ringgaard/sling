@@ -179,7 +179,11 @@ for url in media:
     num_errors += 1
     continue
 
-  last_modified = r.headers["Last-Modified"]
+  if "Last-Modified" in r.headers:
+    last_modified = r.headers["Last-Modified"]
+  else:
+    last_modified = r.headers["Date"]
+
   image = r.content
   if len(image) > flags.arg.max_media_size:
     print("too big", len(image), url)
