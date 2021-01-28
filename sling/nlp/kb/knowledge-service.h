@@ -163,6 +163,7 @@ class KnowledgeService {
   Name n_formatter_url_{names_, "P1630"};
   Name n_representative_image_{names_, "Q26940804"};
   Name n_image_{names_, "P18"};
+  Name n_inverse_label_item_{names_, "P7087"};
 
   Name n_unit_symbol_{names_, "P558"};
   Name n_writing_system_{names_, "P282"};

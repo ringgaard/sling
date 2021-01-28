@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "sling/base/types.h"
+#include "sling/frame/serialization.h"
 #include "sling/task/frames.h"
 #include "sling/task/reducer.h"
 
@@ -28,12 +29,28 @@ namespace nlp {
 class ItemReconciler : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
+    // Read reconciler configuration.
+    FileReader reader(commons_, task->GetInputFile("config"));
+    Frame config = reader.Read().AsFrame();
+    CHECK(config.valid());
+
+    // Get property inversions.
+    if (config.Has("inversions")) {
+      Frame inversions = config.Get("inversions").AsFrame();
+      CHECK(inversions.valid());
+      for (const Slot &slot : inversions) {
+        inversion_map_[slot.name] = slot.value;
+      }
+    }
+
     // Statistics.
     num_mapped_ids_ = task->GetCounter("mapped_ids");
+    num_inverse_properties_ = task->GetCounter("inverse_properties");
   }
 
   void Process(Slice key, const Frame &frame) override {
     // Lookup the key in the store to get the reconciled id for the frame.
+    Store *store = frame.store();
     Text id = key;
     if (id.empty()) id = frame.Id();
     CHECK(!id.empty());
@@ -50,13 +67,39 @@ class ItemReconciler : public task::FrameProcessor {
       b.Update();
     }
 
+    // Output inverted property frames.
+    for (const Slot &slot : frame) {
+      // Check for inverted property.
+      auto f = inversion_map_.find(slot.name);
+      if (f == inversion_map_.end()) continue;
+      Handle inverse_property = f->second;
+
+      // Do not invert non-items and self-relations.
+      Handle target = store->Resolve(slot.value);
+      if (!target.IsRef()) continue;
+      Text target_id = store->FrameId(target);
+      if (target_id.empty()) continue;
+
+      // Output inverted property frame.
+      Builder inverted(store);
+      inverted.AddLink(inverse_property, id);
+      Frame fi = inverted.Create();
+      //LOG(INFO) << ToText(fi);
+      Output(target_id, fi);
+      num_inverse_properties_->Increment();
+    }
+
     // Output frame with the reconciled id as key.
     Output(id, frame);
   }
 
  private:
+  // Property inversion map.
+  HandleMap<Handle> inversion_map_;
+
   // Statistics.
   task::Counter *num_mapped_ids_ = nullptr;
+  task::Counter *num_inverse_properties_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("item-reconciler", ItemReconciler);

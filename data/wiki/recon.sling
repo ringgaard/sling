@@ -1,0 +1,9 @@
+{
+  ; Property inversion.
+  inversions: {
+    P162: Q65994327 ; producer -> producer of
+    P57:  Q65971570 ; director -> director of
+    P161: Q66318312 ; cast member -> cast member of
+  }
+}
+

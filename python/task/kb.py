@@ -24,9 +24,15 @@ class KnowledgeBaseWorkflow:
     self.wf = Workflow(name)
     self.data = data.Datasets(self.wf)
 
-  def xref_properties(self):
-    """Resource for properties tracked for cross-references."""
+  def xref_config(self):
+    """Resource for cross-references configuration."""
     return self.wf.resource("xrefs.sling",
+                            dir=corpora.repository("data/wiki"),
+                            format="store/frame")
+
+  def recon_config(self):
+    """Resource for reconciler configuration."""
+    return self.wf.resource("recon.sling",
                             dir=corpora.repository("data/wiki"),
                             format="store/frame")
 
@@ -45,7 +51,7 @@ class KnowledgeBaseWorkflow:
     with self.wf.namespace("xrefs"):
       builder = self.wf.task("xref-builder")
       self.wf.connect(self.wf.read(items), builder)
-      builder.attach_input("config", self.xref_properties())
+      builder.attach_input("config", self.xref_config())
       xrefs = self.xrefs()
       builder.attach_output("output", xrefs)
     return xrefs
@@ -66,6 +72,7 @@ class KnowledgeBaseWorkflow:
                                },
                                auxin={
                                  "commons": self.xrefs(),
+                                 "config": self.recon_config(),
                                })
 
   def fuse_items(self, items=None, extras=None, output=None):

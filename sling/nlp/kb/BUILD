@@ -42,6 +42,7 @@ cc_library(
   srcs = ["reconciler.cc"],
   deps = [
     "//sling/base",
+    "//sling/frame",
     "//sling/task:frames",
     "//sling/task:reducer",
   ],

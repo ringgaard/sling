@@ -26,9 +26,8 @@ class XRefBuilder : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     // Read xref configuration.
-    FileInputStream stream(task->GetInputFile("config"));
-    InputParser parser(commons_, &stream);
-    Frame config = parser.Read().AsFrame();
+    FileReader reader(commons_, task->GetInputFile("config"));
+    Frame config = reader.Read().AsFrame();
     CHECK(config.valid());
 
     // Get property priority list.
