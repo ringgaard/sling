@@ -247,6 +247,7 @@ class Datasets:
   def standard_item_sources(self):
     items = self.wf.bundle(
               self.wikidata_items(),
+              self.wikidata_properties(),
               self.wikilinks(),
               self.popularity(),
               self.fanin(),
@@ -261,8 +262,8 @@ class Datasets:
 
     return items
 
-  def fused_items(self):
-    """Resource for merged items. This is a set of record files where each
+  def items(self):
+    """Resource for reconciled items. This is a set of record files where each
     item is represented as a frame.
     """
     return self.wf.resource("items@10.rec",

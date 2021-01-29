@@ -287,7 +287,6 @@ const char *property_order[] = {
   "P1317",      // floruit
 
   "P800",       // notable work
-  "P166",       // award received
   "P1411",      // nominated for
   "P2650",      // interested in
 
@@ -457,6 +456,9 @@ const char *property_order[] = {
   "P706",       // located on terrain feature
   "P206",       // located in or next to body of water
   "P421",       // located in time zone
+
+  // Low priority properties.
+  "P166",       // award received
 
   // Categories.
   "P910",       // topic's main category

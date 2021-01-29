@@ -427,15 +427,12 @@ class WikidataPruner : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("wikidata-pruner", WikidataPruner);
 
-// Collect Wikidata properties.
+// Collect Wikidata properties and output schema frame.
 class WikidataPropertyCollector : public task::FrameProcessor {
  public:
   void Process(Slice key, const Frame &frame) override {
     // Save property id.
     properties_.push_back(frame.Id().str());
-
-    // Output property.
-    Output(frame);
   }
 
   // Output property catalog.

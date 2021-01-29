@@ -59,7 +59,7 @@ class KnowledgeBaseWorkflow:
   def reconcile_items(self, items=None, output=None):
     """Reconcile items."""
     items = self.wf.bundle(self.data.standard_item_sources(), items)
-    if output == None: output = self.data.fused_items()
+    if output == None: output = self.data.items()
 
     with self.wf.namespace("reconciled-items"):
       return self.wf.mapreduce(input=items,
@@ -78,7 +78,7 @@ class KnowledgeBaseWorkflow:
   def fuse_items(self, items=None, extras=None, output=None):
     """Fuse items."""
     items = self.wf.bundle(self.data.standard_item_sources(), items, extras)
-    if output == None: output = self.data.fused_items()
+    if output == None: output = self.data.items()
 
     with self.wf.namespace("fused-items"):
       return self.wf.mapreduce(input=items,
@@ -91,7 +91,7 @@ class KnowledgeBaseWorkflow:
   def build_knowledge_base(self):
     """Task for building knowledge base store with items, properties, and
     schemas."""
-    items = self.data.fused_items()
+    items = self.data.items()
     properties = self.data.wikidata_properties()
     schemas = self.data.schema_defs()
 

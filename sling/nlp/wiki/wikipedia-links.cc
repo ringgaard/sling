@@ -208,26 +208,12 @@ REGISTER_TASK_PROCESSOR("wikipedia-link-merger", WikipediaLinkMerger);
 class ItemPopularityReducer : public task::SumReducer {
  public:
   void Aggregate(int shard, const Slice &key, uint64 sum) override {
-    // Skip popularity counts for properties to prevent properties appearing
-    // in the reconciliation pipeline.
-    if (IsProperty(key)) return;
-
     // Output popularity frame for item.
     Store store;
     Builder b(&store);
     int popularity = sum;
     b.Add("/w/item/popularity", popularity);
     Output(shard, task::CreateMessage(key, b.Create()));
-  }
-
-  // Check if key is a property id, i.e. has the form 'P9+'.
-  static bool IsProperty(const Slice &key) {
-    if (key.size() < 2) return false;
-    if (key[0] != 'P') return false;
-    for (int i = 1; i < key.size(); ++i) {
-      if (key[i] < '0' || key[i] > '9') return false;
-    }
-    return true;
   }
 };
 

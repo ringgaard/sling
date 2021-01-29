@@ -129,7 +129,7 @@ class WikidataWorkflow:
     a relation."""
     return self.wf.mapreduce(input=self.data.wikidata_items(),
                              output=self.data.fanin(),
-                             mapper="fact-target-extractor",
+                             mapper="item-fanin-mapper",
                              reducer="item-fanin-reducer",
                              format="message/int")
 

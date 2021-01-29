@@ -30,6 +30,7 @@ void Accumulator::Init(Channel *output, int num_buckets) {
 
   Task *task = output->producer().task();
   num_slots_used_ = task->GetCounter("accumulator_slots_used");
+  num_hits_ = task->GetCounter("accumulator_hits");
   num_collisions_ = task->GetCounter("accumulator_collisions");
 }
 
@@ -49,6 +50,8 @@ void Accumulator::Increment(Text key, int64 count) {
     bucket.hash = fp;
     bucket.key.assign(key.data(), key.size());
 
+  } else {
+    num_hits_->Increment();
   }
   bucket.count += count;
 }

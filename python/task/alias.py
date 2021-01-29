@@ -55,7 +55,7 @@ class NamesWorkflow:
 
     if aliases == None:
       # Get language-dependent aliases from Wikidata and Wikpedia.
-      wikidata_aliases = self.wf.map(self.data.fused_items(),
+      wikidata_aliases = self.wf.map(self.data.items(),
                                      "alias-extractor",
                                      params={
                                        "language": language,

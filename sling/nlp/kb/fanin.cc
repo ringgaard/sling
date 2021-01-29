@@ -20,7 +20,7 @@ namespace sling {
 namespace nlp {
 
 // Collect fact targets from items and output aggregate target counts.
-class FactTargetExtractor : public task::FrameProcessor {
+class ItemFaninMapper : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     accumulator_.Init(output());
@@ -55,32 +55,18 @@ class FactTargetExtractor : public task::FrameProcessor {
   Name n_lang_{names_, "lang"};
 };
 
-REGISTER_TASK_PROCESSOR("fact-target-extractor", FactTargetExtractor);
+REGISTER_TASK_PROCESSOR("item-fanin-mapper", ItemFaninMapper);
 
 // Aggregate fan-in for each item.
 class ItemFaninReducer : public task::SumReducer {
  public:
   void Aggregate(int shard, const Slice &key, uint64 sum) override {
-    // Skip fan-in counts for properties to prevent properties appearing
-    // in the reconciliation pipeline.
-    if (IsProperty(key)) return;
-
     // Output fan-in for item.
     Store store;
     Builder b(&store);
     int fanin = sum;
     b.Add("/w/item/fanin", fanin);
     Output(shard, task::CreateMessage(key, b.Create()));
-  }
-
-  // Check if key is a property id, i.e. has the form 'P9+'.
-  static bool IsProperty(const Slice &key) {
-    if (key.size() < 2) return false;
-    if (key[0] != 'P') return false;
-    for (int i = 1; i < key.size(); ++i) {
-      if (key[i] < '0' || key[i] > '9') return false;
-    }
-    return true;
   }
 };
 

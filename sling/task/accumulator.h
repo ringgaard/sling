@@ -57,6 +57,7 @@ class Accumulator {
 
   // Statistics.
   Counter *num_slots_used_ = nullptr;
+  Counter *num_hits_ = nullptr;
   Counter *num_collisions_ = nullptr;
 
   // Mutex for serializing access to accumulator.
