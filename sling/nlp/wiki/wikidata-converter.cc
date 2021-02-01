@@ -286,14 +286,14 @@ Frame WikidataConverter::Convert(const Frame &item,
       Frame site = sitelinks.GetFrame(it.second.wikisite);
       if (site.valid()) {
         string title = site.GetString(s_title_);
-        string lang = Frame(store, it.first).Id().str();
         if (!title.empty()) {
-          string wiki_id = Wiki::Id(lang, title);
-          sites.AddLink(it.second.language, wiki_id);
+          sites.AddLink(it.second.language, title);
         }
       }
     }
-    builder.Add(n_wikipedia_, sites.Create());
+    if (!sites.empty()) {
+      builder.Add(n_wikipedia_, sites.Create());
+    }
   }
 
   // Return SLING frame for item.

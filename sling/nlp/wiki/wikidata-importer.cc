@@ -202,6 +202,30 @@ class WikidataSplitter : public task::Processor {
     Frame frame = DecodeMessage(&store, message);
     CHECK(frame.valid());
 
+    // Transformations. These are temporary until the converter has been
+    // updated. First convert wikipedia ids to strings.
+    bool converted = false;
+    if (frame.Has(n_wikipedia_)) {
+      Builder wikipedia(&store, frame.GetHandle(n_wikipedia_));
+      for (int i = 0; i < wikipedia.size(); ++i) {
+        if (store.IsFrame(wikipedia[i].value)) {
+          Text wid = store.FrameId(wikipedia[i].value);
+          CHECK_EQ(wid[0], '/') << wid;
+          CHECK_EQ(wid[3], '/') << wid;
+          CHECK_EQ(wid[6], '/') << wid;
+          Text title = wid.substr(7);
+          wikipedia[i].value = store.AllocateString(title);
+        }
+      }
+      wikipedia.Update();
+      converted = true;
+    }
+
+    if (converted) {
+      delete message;
+      message = task::CreateMessage(frame);
+    }
+
     // Output frame to appropriate channel.
     if (frame.IsA(n_property_)) {
       property_channel_->Send(message);
@@ -239,6 +263,8 @@ class WikidataSplitter : public task::Processor {
   Store commons_;
   Names names_;
   Name n_property_{names_, "/w/property"};
+
+  Name n_wikipedia_{names_, "/w/item/wikipedia"};
 };
 
 REGISTER_TASK_PROCESSOR("wikidata-splitter", WikidataSplitter);
@@ -248,8 +274,8 @@ class WikipediaMapping : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     // Get language for mapping.
-    string lang = task->Get("language", "en");
-    language_ = commons_->Lookup(StrCat("/lang/" + lang));
+    lang_ = task->Get("language", "en");
+    language_ = commons_->Lookup(StrCat("/lang/" + lang_));
     wikitypes_.Init(commons_);
 
     // Statistics.
@@ -271,8 +297,8 @@ class WikipediaMapping : public task::FrameProcessor {
       return;
     }
     num_items_->Increment();
-    Frame article = wikipedia.GetFrame(language_);
-    if (article.invalid()) return;
+    Text title = wikipedia.GetText(language_);
+    if (title.empty()) return;
 
     // Determine page type.
     bool is_category = false;
@@ -298,7 +324,7 @@ class WikipediaMapping : public task::FrameProcessor {
 
     // Output mapping.
     Builder builder(frame.store());
-    builder.AddId(article.id());
+    builder.AddId(Wiki::Id(lang_, title));
     builder.Add(n_qid_, frame);
     if (is_list) {
       builder.Add(n_kind_, n_kind_list_);
@@ -325,6 +351,7 @@ class WikipediaMapping : public task::FrameProcessor {
 
  private:
   // Language.
+  string lang_;
   Handle language_;
 
   // Wiki page types.

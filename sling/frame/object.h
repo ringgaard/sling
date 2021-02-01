@@ -977,6 +977,7 @@ class Builder : public External {
 
   // Returns the number of slots.
   int size() const { return slots_.length(); }
+  bool empty() const { return slots_.empty(); }
 
   // Access to existing slot in builder.
   Slot &operator[](int index) { return *(slots_.base() + index); }
