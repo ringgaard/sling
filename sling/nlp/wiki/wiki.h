@@ -63,9 +63,9 @@ enum AliasSource {
   SRC_VARIATION                = 14,  // 16384  0x4000
 };
 
-static const int kNumAliasSources = 15;
+static const int NUM_ALIAS_SOURCES = 15;
 
-extern const char *kAliasSourceName[kNumAliasSources];
+extern const char *alias_source_name[NUM_ALIAS_SOURCES];
 
 // Utility functions for Wikidata and Wikipedia.
 class Wiki {

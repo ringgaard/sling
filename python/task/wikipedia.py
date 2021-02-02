@@ -39,8 +39,7 @@ class WikipediaWorkflow:
   def wikipedia_articles(self, language=None):
     """Resource for wikipedia articles. This is a set of record files where each
     Wikipedia article is encoded as a SLING document.
-      <wid>: {
-        =<wid>
+      <wikipedia article title>: {
         :/wp/page
         /wp/page/pageid: ...
         /wp/page/title: "..."

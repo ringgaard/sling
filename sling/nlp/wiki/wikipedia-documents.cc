@@ -61,7 +61,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     LOG(INFO) << "Loading redirects from " << redir->resource()->name();
     wikimap_.LoadRedirects(redir->resource()->name());
 
-    // Load id mapping.
+    // Load wikipedia->wikidata mapping.
     task::Binding *wikimap = CHECK_NOTNULL(task->GetInput("wikimap"));
     LOG(INFO) << "Loading wikimap from " << wikimap->resource()->name();
     wikimap_.LoadMapping(wikimap->resource()->name());
@@ -90,11 +90,11 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     num_templates_ = task->GetCounter("wiki_templates");
     num_unknown_templates_ = task->GetCounter("unknown_templates");
     num_media_redirects_ =task->GetCounter("media_redirects");
-    for (int i = 0; i < kNumAliasSources; ++i) {
+    for (int i = 0; i < NUM_ALIAS_SOURCES; ++i) {
       num_aliases_[i] =
-          task->GetCounter(StrCat(kAliasSourceName[i], "_aliases"));
+          task->GetCounter(StrCat(alias_source_name[i], "_aliases"));
       num_discarded_aliases_[i] =
-          task->GetCounter(StrCat(kAliasSourceName[i], "_discarded_aliases"));
+          task->GetCounter(StrCat(alias_source_name[i], "_discarded_aliases"));
     }
 
     // Load template repository configuration.
@@ -133,7 +133,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
   void Process(Slice key, const Frame &frame) override {
     // Look up Wikidata page information in mapping.
     WikipediaMap::PageInfo page;
-    if (!wikimap_.GetPageInfo(frame.Id(), &page) ||
+    if (!wikimap_.GetPageInfo(language_, key, &page) ||
         page.type == WikipediaMap::UNKNOWN) {
       VLOG(4) << "Unknown page: " << frame.Id();
       num_unknown_pages_->Increment();
@@ -393,8 +393,8 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
   task::Counter *num_unknown_templates_;
   task::Counter *num_media_redirects_;
 
-  task::Counter *num_aliases_[kNumAliasSources];
-  task::Counter *num_discarded_aliases_[kNumAliasSources];
+  task::Counter *num_aliases_[NUM_ALIAS_SOURCES];
+  task::Counter *num_discarded_aliases_[NUM_ALIAS_SOURCES];
 };
 
 REGISTER_TASK_PROCESSOR("wikipedia-document-builder", WikipediaDocumentBuilder);

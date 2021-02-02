@@ -133,7 +133,6 @@ class WikidataConverter {
   Name n_low_{names_, "/w/low"};
   Name n_high_{names_, "/w/high"};
   Name n_precision_{names_, "/w/precision"};
-  Name n_amount_{names_, "/w/amount"};
   Name n_unit_{names_, "/w/unit"};
   Name n_geo_{names_, "/w/geo"};
   Name n_lat_{names_, "/w/lat"};

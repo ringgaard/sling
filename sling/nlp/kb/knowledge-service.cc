@@ -92,6 +92,7 @@ const char *property_order[] = {
   "P1619",      // date of official opening
   "P36",        // capital
   "P159",       // headquarters location
+  "P577",       // publication date
   "P291",       // place of publication
   "P115",       // home venue
   "P1001",      // applies to jurisdiction
@@ -378,7 +379,6 @@ const char *property_order[] = {
   "P580",       // start time
   "P582",       // end time
   "P1619",      // date of official opening
-  "P577",       // publication date
   "P729",       // service entry
   "P2047",      // duration
 
@@ -872,7 +872,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         string text;
         if (kb_->IsFrame(value)) {
           Frame quantity(kb_, value);
-          text = AsText(quantity.GetHandle(n_amount_));
+          text = AsText(quantity.GetHandle(Handle::is()));
 
           // Get unit symbol, preferably in latin script.
           Frame unit = quantity.GetFrame(n_unit_);

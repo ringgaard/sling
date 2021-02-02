@@ -157,8 +157,6 @@ class WikipediaXMLParser : public XMLParser {
     if (!fields_[ID].empty()) {
       CHECK(safe_strto32(fields_[ID], &pageid));
     }
-    string id = Wiki::Id(lang_, title);
-
     if (redirect_.empty()) {
       // Only keep articles in main and category namespaces.
       task::Counter *&ctr = num_namespace_pages_[ns];
@@ -174,7 +172,6 @@ class WikipediaXMLParser : public XMLParser {
       // Build article frame.
       Store store(&commons_);
       Builder builder(&store);
-      builder.AddId(id);
       builder.AddIsA(n_page_);
       if (ns == WIKIPEDIA_NAMESPACE_CATEGORY) builder.AddIsA(n_category_);
       builder.Add(n_page_pageid_, pageid);
@@ -188,12 +185,12 @@ class WikipediaXMLParser : public XMLParser {
       Frame frame = builder.Create();
       if (ns == WIKIPEDIA_NAMESPACE_MAIN) {
         if (articles_channel_) {
-          articles_channel_->Send(task::CreateMessage(frame));
+          articles_channel_->Send(task::CreateMessage(title, frame));
         }
         num_articles_->Increment();
       } else if (ns == WIKIPEDIA_NAMESPACE_CATEGORY) {
         if (categories_channel_) {
-          categories_channel_->Send(task::CreateMessage(frame));
+          categories_channel_->Send(task::CreateMessage(title, frame));
         }
         num_categories_->Increment();
       }
@@ -206,7 +203,7 @@ class WikipediaXMLParser : public XMLParser {
         // Build redirect frame.
         Store store(&commons_);
         Builder builder(&store);
-        builder.AddId(id);
+        builder.AddId(Wiki::Id(lang_, title));
         builder.AddIsA(n_redirect_);
         builder.Add(n_redirect_pageid_, pageid);
         builder.Add(n_redirect_title_, title);
@@ -217,7 +214,7 @@ class WikipediaXMLParser : public XMLParser {
         // Output frame on redirect channel.
         if (redirects_channel_) {
           Frame frame = builder.Create();
-          redirects_channel_->Send(task::CreateMessage(frame));
+          redirects_channel_->Send(task::CreateMessage(title, frame));
         }
         num_redirects_->Increment();
       }

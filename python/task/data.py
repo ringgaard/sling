@@ -97,7 +97,7 @@ class Datasets:
         }
         ...
         /w/wikipedia: {
-          /lang/<lang>: <wid>
+          /lang/<lang>: "<wikipedia article title>"
           ...
        }
        ... properties
@@ -105,7 +105,6 @@ class Datasets:
 
       <qid>: Wikidata item id (Q<item number>, e.g. Q35)
       <pid>: Wikidata property id (P<property number>, e.g. P31)
-      <wid>: Wikipedia page id (/wp/<lang>/<pageid>, /wp/en/76972)
     """
     return self.wf.resource("wikidata-items@10.rec",
                             dir=corpora.wikidir(),
@@ -156,8 +155,7 @@ class Datasets:
     wiki markup and tokenized. The documents also contain additional
     structured information (e.g. categories and infoboxes) and mentions for
     links to other Wikipedia pages:
-      <wid>: {
-        =<wid>
+      <title>: {
         :/wp/page
         /wp/page/pageid: ...
         /wp/page/title: "..."

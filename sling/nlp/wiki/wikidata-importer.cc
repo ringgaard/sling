@@ -202,6 +202,7 @@ class WikidataSplitter : public task::Processor {
     Frame frame = DecodeMessage(&store, message);
     CHECK(frame.valid());
 
+#if 1
     // Transformations. These are temporary until the converter has been
     // updated. First convert wikipedia ids to strings.
     bool converted = false;
@@ -221,10 +222,24 @@ class WikidataSplitter : public task::Processor {
       converted = true;
     }
 
+    // Convert quantities.
+    for (const Slot &slot : frame) {
+      if (!slot.value.IsLocalRef()) continue;
+      if (!store.IsFrame(slot.value)) continue;
+      FrameDatum *f = store.GetFrame(slot.value);
+      if (f->IsPublic()) continue;
+      if (!f->has(n_amount_.handle())) continue;
+      for (Slot *slot = f->begin(); slot < f->end(); ++slot) {
+        if (slot->name == n_amount_) slot->name = Handle::is();
+      }
+      converted = true;
+    }
+
     if (converted) {
       delete message;
       message = task::CreateMessage(frame);
     }
+#endif
 
     // Output frame to appropriate channel.
     if (frame.IsA(n_property_)) {
@@ -264,7 +279,10 @@ class WikidataSplitter : public task::Processor {
   Names names_;
   Name n_property_{names_, "/w/property"};
 
+#if 1
   Name n_wikipedia_{names_, "/w/item/wikipedia"};
+  Name n_amount_{names_, "/w/amount"};
+#endif
 };
 
 REGISTER_TASK_PROCESSOR("wikidata-splitter", WikidataSplitter);

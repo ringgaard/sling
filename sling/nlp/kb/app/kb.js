@@ -241,9 +241,9 @@ class KbPropertyTable extends Component {
         out.push('</a>');
       }
       if (val.lang) {
-        out.push(' <span class="prop-lang">(');
+        out.push(' <span class="prop-lang">[');
         out.push(Component.escape(val.lang));
-        out.push(')</span>');
+        out.push(']</span>');
       }
     }
 

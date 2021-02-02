@@ -128,13 +128,6 @@
   name: "Quantity"
   family: /schema/wikidata
 
-  role: {=/w/amount :slot
-    name: "amount"
-    description: "Quantity value"
-    source: /w/quantity
-    target: /w/item
-  }
-
   role: {=/w/unit :slot
     name: "unit"
     description: "Unit of measurement"

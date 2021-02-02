@@ -199,7 +199,7 @@ Frame WikidataConverter::Convert(const Frame &item,
 
   // Parse labels and aliases.
   Frame aliases = item.GetFrame(s_aliases_);
-  if (kind != WIKIDATA_PROPERTY) {
+  if (aliases.valid()) {
     for (auto &it : languages_) {
       // Get label for language.
       if (labels.valid()) {
@@ -374,7 +374,7 @@ Handle WikidataConverter::ConvertQuantity(const Frame &value) {
   // Create quantity frame if needed.
   if (!unit.IsNil() || !lower.IsNil() || !upper.IsNil()) {
     Builder quantity(store);
-    quantity.Add(n_amount_, amount);
+    quantity.Add(Handle::is(), amount);
     if (!unit.IsNil()) quantity.Add(n_unit_, unit);
     if (!precision.IsNil()) {
       quantity.Add(n_precision_, precision);

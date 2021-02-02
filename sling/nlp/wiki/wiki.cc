@@ -34,7 +34,7 @@ const char *Wiki::language_priority[] = {
 };
 
 // Alias source names.
-const char *kAliasSourceName[kNumAliasSources] = {
+const char *alias_source_name[NUM_ALIAS_SOURCES] = {
   "generic",
   "wikidata_label",
   "wikidata_alias",
@@ -147,7 +147,7 @@ bool WikimediaTypes::IsDuplicate(Handle type) {
 }
 
 void AuxFilter::Init(Store *store) {
-  const char *kAuxItemtypes[] = {
+  const char *aux_item_types[] = {
     "Q13442814",  // scholarly article
     "Q17329259",  // encyclopedic article
     "Q17633526",  // Wikinews article
@@ -162,7 +162,7 @@ void AuxFilter::Init(Store *store) {
     "Q318",       // galaxy
     nullptr,
   };
-  for (const char **type = kAuxItemtypes; *type; ++type) {
+  for (const char **type = aux_item_types; *type; ++type) {
     aux_types_.insert(store->Lookup(*type));
   }
   names_.Bind(store);
