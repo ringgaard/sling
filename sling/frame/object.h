@@ -286,12 +286,12 @@ class String : public Object {
   String &operator =(const String &other);
 
   // Returns the size of the string.
-  int size() const { return str()->size(); }
+  int size() const { return str()->length(); }
 
   // Returns string contents of string object.
   string value() const {
     StringDatum *s = str();
-    return string(s->data(), s->size());
+    return string(s->data(), s->length());
   }
 
   // Returns string buffer.
@@ -301,6 +301,9 @@ class String : public Object {
   bool equals(Text other) const {
     return str()->equals(other);
   }
+
+  // Returns qualifier for string, or nil if it is not qualified.
+  Handle qualifier() const { return str()->qualifier(); }
 
  private:
   // Dereferences string reference.

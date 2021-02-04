@@ -43,7 +43,7 @@ class Snapshot {
  private:
   // Current magic and version for snapshots.
   static const int MAGIC = 0x50414e53;
-  static const int VERSION = 2;
+  static const int VERSION = 3;
 
   // Snapshot file header.
   struct Header {

@@ -119,7 +119,7 @@ Status Snapshot::Read(Store *store, const string &filename) {
     Datum *object = heap->base();
     Datum *end = heap->end();
     while (object < end) {
-      if (!object->IsInvalid()) {
+      if (!object->invalid()) {
         // Update handle table from self handle.
         store->Assign(object->self, object);
         DCHECK(store->IsValidReference(object->self));

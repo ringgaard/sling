@@ -69,6 +69,9 @@ class Scanner {
   // Gets the next input character.
   void NextChar();
 
+  // Skip whitespace.
+  void SkipWhitespace();
+
   // Sets current token and returns it.
   int Token(int token) { token_ = token; return token; }
 

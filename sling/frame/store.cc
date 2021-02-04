@@ -239,6 +239,12 @@ Handle Store::AllocateString(Word size) {
   return AllocateHandle(object);
 }
 
+Handle Store::AllocateString(Word size, Handle qual) {
+  StringDatum *object = AllocateDatum(QSTRING, size + sizeof(Word))->AsString();
+  object->set_qualifier(qual);
+  return AllocateHandle(object);
+}
+
 Handle Store::AllocateString(Text str) {
   size_t size = str.size();
   StringDatum *object = AllocateDatum(STRING, size)->AsString();
@@ -595,7 +601,6 @@ void Store::Delete(Handle frame, Handle name) {
   Datum *remainder = reinterpret_cast<Datum *>(current);
   remainder->invalidate();
   remainder->resize(limit - remainder->payload());
-  remainder->self = Handle::nil();
 }
 
 Handle Store::Hash(Text str) {
@@ -962,7 +967,8 @@ bool Store::Equal(Handle x, Handle y, bool byref) const {
         }
         return true;
       }
-      case STRING: {
+      case STRING:
+      case QSTRING: {
         // Compare string content.
         const StringDatum *xstr = xdatum->AsString();
         const StringDatum *ystr = ydatum->AsString();
@@ -1034,7 +1040,13 @@ uint64 Store::Fingerprint(Handle handle, bool byref, uint64 seed) const {
         case STRING: {
           // Hash string content.
           const StringDatum *str = datum->AsString();
-          return HashMix(str->data(), str->size(), seed, FP_STRING);
+          return HashMix(str->data(), str->length(), seed, FP_STRING);
+        }
+        case QSTRING: {
+          // Hash string content and qualifier.
+          const StringDatum *str = datum->AsString();
+          uint64 fp = HashMix(str->data(), str->length(), seed, FP_STRING);
+          return Fingerprint(str->qualifier(), byref, fp);
         }
         case SYMBOL: {
           // Use pre-computed symbol hash for fingerprint.
@@ -1319,9 +1331,16 @@ void Store::Mark() {
         if (!object->marked()) {
           object->mark();
 
-          // Unless this is a binary object (i.e. string), we add the payload of
-          // the object as a range that needs to be traversed and marked.
-          if (!object->IsBinary()) object->range(stack.push());
+          // Add the payload of the object as a range that needs to be traversed
+          // and marked. For strings only the qualifier is traversed.
+          Type type = object->typebits();
+          if (type == QSTRING) {
+            Range *r = stack.push();
+            r->begin = object->AsString()->qaddr();
+            r->end = r->begin + 1;
+          } else if (type != STRING) {
+            object->range(stack.push());
+          }
         }
       }
     }
@@ -1345,7 +1364,7 @@ void Store::Compact() {
     Datum *unused = object;
     while (object < end) {
       Datum *next = object->next();
-      if (!object->IsInvalid()) {
+      if (!object->invalid()) {
         if (object->marked()) {
           // Object survived. Clear the mark.
           object->unmark();
@@ -1470,11 +1489,16 @@ void Store::ReplaceHandle(Handle handle, Handle replacement) {
     Datum *object = heap->base();
     Datum *end = heap->end();
     while (object < end) {
-      if (!object->IsInvalid() && !object->IsBinary()) {
-        Handle *begin = reinterpret_cast<Handle *>(object->payload());
-        Handle *end = reinterpret_cast<Handle *>(object->limit());
-        for (Handle *h = begin; h < end; ++h) {
-          if (*h == handle) *h = replacement;
+      if (!object->invalid()) {
+        if (object->IsString()) {
+          StringDatum *str = object->AsString();
+          if (str->qualifier() == handle) str->set_qualifier(replacement);
+        } else {
+          Handle *begin = reinterpret_cast<Handle *>(object->payload());
+          Handle *end = reinterpret_cast<Handle *>(object->limit());
+          for (Handle *h = begin; h < end; ++h) {
+            if (*h == handle) *h = replacement;
+          }
         }
       }
       object = object->next();
@@ -1525,7 +1549,7 @@ void Store::Freeze() {
         Datum *object = heap->base();
         Datum *end = heap->end();
         while (object < end) {
-          if (!object->IsInvalid()) Assign(object->self, object);
+          if (!object->invalid()) Assign(object->self, object);
           object = object->next();
         }
       }
@@ -1587,6 +1611,8 @@ void Store::CoalesceStrings() {
     while (object < end) {
       if (object->IsString()) {
         // Assign string to hash bucket in cache if it is not already used.
+        // The hash is computed using the entire string object including the
+        // optional qualifier.
         StringDatum *str = object->AsString();
         Word b = HashBytes(str->data(), str->size()) % num_buckets;
         if (cache[b] == nullptr) cache[b] = str;
@@ -1602,7 +1628,7 @@ void Store::CoalesceStrings() {
     Datum *object = heap->base();
     Datum *end = heap->end();
     while (object < end) {
-      if (!object->IsInvalid() && !object->IsBinary()) {
+      if (!object->invalid() && !object->IsString()) {
         // Replace all string matches in the object values.
         Handle *begin = reinterpret_cast<Handle *>(object->payload());
         Handle *end = reinterpret_cast<Handle *>(object->limit());

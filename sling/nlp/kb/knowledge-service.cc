@@ -800,11 +800,12 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       bool qualified = false;
       if (kb_->IsFrame(h)) {
         // Handle the ambiguity between qualified frames and mono-lingual text
-        // by checking for the presence of a language slot.
+        // by checking for the presence of a language slot. Same for unit.
         Frame f(kb_, h);
         Handle qua = f.GetHandle(Handle::is());
         Handle lang = f.GetHandle(n_lang_);
-        if (!qua.IsNil() && lang.IsNil()) {
+        Handle unit = f.GetHandle(n_unit_);
+        if (!qua.IsNil() && lang.IsNil() && unit.IsNil()) {
           value = qua;
           qualified = true;
         }

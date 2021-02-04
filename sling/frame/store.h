@@ -416,11 +416,11 @@ const Word kMapSizeLimit = kObjectSizeLimit / sizeof(Handle);
 
 // Types.
 enum Type : Word {
-  // Heap object types.
+  // Heap object types. NB: type checking relies on STRING=0 and QSTRING=1.
   STRING  = 0x0UL << kTypeShift,
-  SYMBOL  = 0x1UL << kTypeShift,
-  ARRAY   = 0x2UL << kTypeShift,
-  INVALID = 0x3UL << kTypeShift,
+  QSTRING = 0x1UL << kTypeShift,
+  SYMBOL  = 0x2UL << kTypeShift,
+  ARRAY   = 0x3UL << kTypeShift,
   FRAME   = 0x4UL << kTypeShift,
 
   // Simple value types. These types are never stored in the heaps and are only
@@ -482,8 +482,11 @@ struct Datum {
   void mark() { info |= kMarkMask; }
   void unmark() { info &= ~kMarkMask; }
 
-  // Invalidate heap object by setting the type to INVALID.
-  void invalidate() { info = (info & ~kTypeMask) | INVALID; }
+  // Check if object is invalid.
+  bool invalid() const { return self.IsNil(); }
+
+  // Invalidate heap object by setting self handle to nil.
+  void invalidate() { self = Handle::nil(); }
 
   // Resize object.
   void resize(int size) { info = (info & ~kSizeMask) | size; }
@@ -494,17 +497,14 @@ struct Datum {
   }
 
   // Object type checking.
-  bool IsString() const { return typebits() == STRING; }
+  bool IsString() const { return typebits() <= QSTRING; }
+  bool IsQString() const { return typebits() == QSTRING; }
   bool IsArray() const { return typebits() == ARRAY; }
   bool IsSymbol() const { return typebits() == SYMBOL; }
-  bool IsInvalid() const { return typebits() == INVALID; }
   bool IsFrame() const { return (info & FRAME) != 0; }
   bool IsProxy() const {
     return ((info & (FRAME | PROXY)) == (FRAME | PROXY));
   }
-
-  // Only strings contain binary data. All other types have handles as payload.
-  bool IsBinary() const { return IsString(); }
 
   // Type casting.
   StringDatum *AsString() {
@@ -560,27 +560,67 @@ struct Datum {
   Handle self;  // handle for heap object
 };
 
-// The payload of a string object contains the string. The size field is the
-// exact size of the object, although the actual size of the string object
-// is aligned. The strings are not zero-terminated.
+// The payload of a string object contains the string and an optional qualifier.
+// The size field is the exact size of the object including the optional
+// qualifier, although the actual size of the string object is aligned. The
+// strings are not zero-terminated. If the type is QSTRING, the string data is
+// followed by the qualifier.
+//
+//   +--------------------------------+
+//   | preamble (8 bytes)             |
+//   +--------------------------------+
+//   | string data ('length' bytes)   |
+//   +--------------------------------+
+//   | qualifier (0 or 4 bytes)       |
+//   +--------------------------------+
+//   | padding (0-3 bytes)            |
+//   +--------------------------------+
+//
 struct StringDatum : public Datum {
   // Returns pointer to string.
   char *data() { return reinterpret_cast<char *>(payload()); }
   const char *data() const { return reinterpret_cast<const char *>(payload()); }
 
+  // Checks if string is qualified.
+  bool qualified() const { return IsQString(); }
+
+  // Returns the length of the string.
+  int length() const {
+    int len = Datum::size();
+    if (qualified()) len -= sizeof(Word);
+    return len;
+  }
+
+  // Returns address of qualifier for string.
+  Handle *qaddr() const {
+    DCHECK(qualified());
+    return reinterpret_cast<Handle *>(payload() + Datum::size() - sizeof(Word));
+  }
+
+  // Returns qualifier or nil if string is not qualified.
+  Handle qualifier() const {
+    return qualified() ? *qaddr() : Handle::nil();
+  }
+
+  // Sets qualifier for string.
+  void set_qualifier(Handle qual) {
+    *qaddr() = qual;
+  }
+
   // Returns string as a Text.
-  Text str() const { return Text(data(), size()); }
+  Text str() const { return Text(data(), length()); }
 
   // Compares this string to a string buffer.
   bool equals(Text other) const {
-    if (size() != other.size()) return false;
+    if (length() != other.size()) return false;
     return memcmp(data(), other.data(), other.size()) == 0;
   }
 
-  // Compares this string to another string.
+  // Compares this string to another string, including qualifier.
   bool equals(const StringDatum &other) const {
     if (size() != other.size()) return false;
-    return memcmp(data(), other.data(), other.size()) == 0;
+    if (typebits() != other.typebits()) return false;
+    return memcmp(data(), other.data(), size()) == 0;
   }
 };
 
@@ -1145,6 +1185,9 @@ class Store {
 
   // Allocates uninitialized string object.
   Handle AllocateString(Word size);
+
+  // Allocates uninitialized qualified string object.
+  Handle AllocateString(Word size, Handle qual);
 
   // Allocates and initializes string object.
   Handle AllocateString(Text str);

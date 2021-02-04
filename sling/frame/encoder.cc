@@ -81,8 +81,20 @@ void Encoder::EncodeObject(Handle handle) {
           ref.index = next_index_++;
           ref.status = ENCODED;
           const StringDatum *str = datum->AsString();
-          WriteTag(WIRE_STRING, str->size());
-          output_->Write(str->data(), str->size());
+          WriteTag(WIRE_STRING, str->length());
+          output_->Write(str->data(), str->length());
+          break;
+        }
+
+        case QSTRING: {
+          // Output qualified string.
+          ref.index = next_index_++;
+          ref.status = ENCODED;
+          const StringDatum *str = datum->AsString();
+          WriteTag(WIRE_SPECIAL, WIRE_QSTRING);
+          output_->WriteVarint32(str->length());
+          output_->Write(str->data(), str->length());
+          EncodeLink(str->qualifier());
           break;
         }
 
@@ -185,8 +197,8 @@ void Encoder::EncodeLink(Handle handle) {
 
 void Encoder::EncodeSymbol(const SymbolDatum *symbol, int type) {
   const StringDatum *name = store_->GetString(symbol->name);
-  WriteTag(type, name->size());
-  output_->Write(name->data(), name->size());
+  WriteTag(type, name->length());
+  output_->Write(name->data(), name->length());
 }
 
 void Encoder::WriteReference(const Reference &ref) {

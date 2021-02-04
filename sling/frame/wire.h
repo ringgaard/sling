@@ -38,6 +38,7 @@ enum WireSpecial {
   WIRE_ARRAY    = 5,  // array, followed by array size and the arguments
   WIRE_INDEX    = 6,  // index value, followed by varint32 encoded integer
   WIRE_RESOLVE  = 7,  // resolve link, followed by slots and replacement index
+  WIRE_QSTRING  = 8,  // qstring, followed by length, data, and qualifier
 };
 
 // The binary marker (i.e. a nul character) is used for prefixing serialized

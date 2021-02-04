@@ -35,6 +35,10 @@ Scanner::Scanner(Input *input) : input_(input) {
   NextChar();
 }
 
+void Scanner::SkipWhitespace() {
+  while (current_ != -1 && ascii_isspace(current_)) NextChar();
+}
+
 void Scanner::NextChar() {
   char ch;
 

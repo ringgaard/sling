@@ -75,7 +75,7 @@ Type Object::type() const {
 }
 
 String Object::AsString() const {
-  return String(store(), store()->Cast(handle(), STRING));
+  return String(store(), IsString() ? handle() : Handle::nil());
 }
 
 Frame Object::AsFrame() const {

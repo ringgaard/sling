@@ -33,7 +33,7 @@ int Tokenizer::NextToken() {
   // Keep reading until we either read a token or reach the end of the input.
   for (;;) {
     // Skip whitespace.
-    while (current_ != -1 && ascii_isspace(current_)) NextChar();
+    SkipWhitespace();
 
     // Parse next token (or comment).
     switch (current_) {

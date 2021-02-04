@@ -37,6 +37,7 @@ void Printer::Print(Handle handle, bool reference) {
     const Datum *datum = store_->GetObject(handle);
     switch (datum->type()) {
       case STRING:
+      case QSTRING:
         PrintString(datum->AsString());
         break;
 
@@ -52,12 +53,8 @@ void Printer::Print(Handle handle, bool reference) {
         PrintArray(datum->AsArray());
         break;
 
-      case INVALID:
-        output_->Write("<<<invalid object>>>");
-        break;
-
       default:
-        output_->Write("<<<unknown object type>>>");
+        LOG(FATAL) << "object type";
     }
   } else if (handle.IsInt()) {
     PrintInt(handle.AsInt());
@@ -69,7 +66,7 @@ void Printer::Print(Handle handle, bool reference) {
       PrintFloat(handle.AsFloat());
     }
   } else {
-    output_->Write("<<<unknown handle type>>>");
+    LOG(FATAL) << "unknown handle type";
   }
 }
 
@@ -259,7 +256,7 @@ void Printer::PrintSymbol(const SymbolDatum *symbol, bool reference) {
 
   const StringDatum *name = store_->GetString(symbol->name);
   const char *p = name->data();
-  const char *end = p + name->size();
+  const char *end = p + name->length();
   DCHECK(p != end);
   if (utf8_) {
     if (*p & 0x80) {

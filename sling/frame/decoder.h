@@ -53,6 +53,9 @@ class Decoder {
   // Decodes string from input.
   Handle DecodeString(int size);
 
+  // Decodes qualified string from input.
+  Handle DecodeQString();
+
   // Decodes array from input.
   Handle DecodeArray();
 

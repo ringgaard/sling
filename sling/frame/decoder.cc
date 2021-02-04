@@ -111,6 +111,9 @@ Handle Decoder::DecodeObject() {
           handle = DecodeFrame(slots, replace);
           break;
         }
+        case WIRE_QSTRING:
+          handle = DecodeQString();
+          break;
         default: LOG(FATAL) << "Invalid tag value: " << tag;
       }
   }
@@ -218,6 +221,27 @@ Handle Decoder::DecodeString(int size) {
   CHECK(input_->Read(store_->GetString(handle)->data(), size));
 
   return handle;
+}
+
+Handle Decoder::DecodeQString() {
+  // Get string length.
+  Word mark = Mark();
+  uint32 length;
+  CHECK(input_->ReadVarint32(&length));
+
+  // Allocate string object.
+  Handle str = store_->AllocateString(length, Handle::nil());
+  Push(str);
+
+  // Read string from input.
+  CHECK(input_->Read(store_->GetString(str)->data(), length));
+
+  // Read qualifier from input.
+  Handle qual = DecodeObject();
+  store_->GetString(str)->set_qualifier(qual);
+
+  Release(mark);
+  return str;
 }
 
 Handle Decoder::DecodeArray() {

@@ -51,19 +51,15 @@ void JSONWriter::Write(Handle handle) {
         WriteArray(datum->AsArray());
         break;
 
-      case INVALID:
-        output_->Write("<<<invalid object>>>");
-        break;
-
       default:
-        output_->Write("<<<unknown object type>>>");
+        LOG(FATAL) << "unknown object type";
     }
   } else if (handle.IsInt()) {
     WriteInt(handle.AsInt());
   } else if (handle.IsFloat()) {
     WriteFloat(handle.AsFloat());
   } else {
-    output_->Write("<<<unknown handle type>>>");
+    LOG(FATAL) << "unknown handle type";
   }
 }
 

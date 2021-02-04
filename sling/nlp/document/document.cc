@@ -235,7 +235,7 @@ Document::Document(const Frame &top, const DocumentNames *names)
       }
       if (!word.IsNil()) {
         StringDatum *str = store()->GetString(word);
-        t.word_.assign(str->data(), str->size());
+        t.word_.assign(str->data(), str->length());
       } else if (t.begin_ != -1 && t.end_ != -1) {
         t.word_ = text_.substr(t.begin_, t.end_ - t.begin_);
       }
