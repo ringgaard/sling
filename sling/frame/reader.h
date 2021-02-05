@@ -48,14 +48,17 @@ class Reader : public Tokenizer {
   void set_json(bool json) { json_ = json; }
 
  protected:
-  // Parses the next object from input.
+  // Parse the next object from input.
   Handle ParseObject();
 
-  // Parses frame from input.
+  // Parse frame from input.
   Handle ParseFrame();
 
-  // Parses array from input.
+  // Parse array from input.
   Handle ParseArray();
+
+  // Parse qualified string from input.
+  Handle ParseQString();
 
   // Parse id symbol from input.
   Handle ParseId();

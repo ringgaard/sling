@@ -320,6 +320,10 @@ class Shell {
   // Dumps encoded input.
   void Dump(Input *input) {
     int index = 0;
+    if (input->Peek() == WIRE_BINARY_MARKER) {
+      std::cout << "(skip binary marker)\n";
+      input->Skip(1);
+    }
     while (!input->done()) {
       uint64 tag;
       string str;
@@ -419,6 +423,21 @@ class Shell {
                 return;
               }
               std::cout << "RESOLVE " << slots << ", " << replace << "\n";
+              break;
+            }
+
+            case WIRE_QSTRING: {
+              uint32 length;
+              if (!input->ReadVarint32(&length)) {
+                std::cout << "Error qstring length\n";
+                return;
+              }
+              if (!input->ReadString(length, &str)) {
+                std::cout << "Error reading string, length " << length << "\n";
+                return;
+              }
+              std::cout << "QSTRING  " << str << " (" << index << ")\n";
+              index++;
               break;
             }
 

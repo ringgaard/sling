@@ -268,7 +268,15 @@ int Tokenizer::ParseString() {
 
   // Skip end quote character.
   NextChar();
-  return Token(STRING_TOKEN);
+
+  // Check for qualified string.
+  SkipWhitespace();
+  if (current_ == '@') {
+    NextChar();
+    return Token(QSTRING_TOKEN);
+  } else {
+    return Token(STRING_TOKEN);
+  }
 }
 
 int Tokenizer::ParseNumber(bool negative, bool fractional) {

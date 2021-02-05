@@ -23,6 +23,7 @@
 #include "sling/pyapi/pyphrase.h"
 #include "sling/pyapi/pyrecordio.h"
 #include "sling/pyapi/pystore.h"
+#include "sling/pyapi/pystring.h"
 #include "sling/pyapi/pywiki.h"
 #include "sling/pyapi/pymisc.h"
 #include "sling/pyapi/pytask.h"
@@ -59,6 +60,7 @@ static PyObject *RegisterPythonModule() {
   PyObject *module = PyModule_Create(&py_module);
 
   PyStore::Define(module);
+  PyString::Define(module);
   PySymbols::Define(module);
   PyFrame::Define(module);
   PySlots::Define(module);

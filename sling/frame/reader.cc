@@ -150,6 +150,10 @@ Handle Reader::ParseObject() {
       handle = ParseArray();
       break;
 
+    case QSTRING_TOKEN:
+      handle = ParseQString();
+      break;
+
     case ERROR:
       return Handle::error();
 
@@ -313,6 +317,27 @@ Handle Reader::ParseArray() {
   Release(mark);
 
   // Return handle to parsed array.
+  return handle;
+}
+
+Handle Reader::ParseQString() {
+  // Allocate qualified string.
+  Handle handle = store_->AllocateString(token_text(), Handle::nil());
+  NextToken();
+
+  // Put string on the stack while parsing qualifier.
+  Word mark = Mark();
+  Push(handle);
+
+  // Parse qualifier.
+  Handle qual = ParseObject();
+  if (error()) return Handle::error();
+  store_->GetString(handle)->set_qualifier(qual);
+
+  // Remove string from stack.
+  Release(mark);
+
+  // Return handle to qualified string.
   return handle;
 }
 

@@ -28,6 +28,7 @@ class Tokenizer : public Scanner {
   enum TokenType {
     // Literal types.
     STRING_TOKEN = FIRST_AVAILABLE_TOKEN_TYPE,
+    QSTRING_TOKEN,
     INTEGER_TOKEN,
     FLOAT_TOKEN,
     SYMBOL_TOKEN,

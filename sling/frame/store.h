@@ -573,7 +573,7 @@ struct Datum {
 //   +--------------------------------+
 //   | qualifier (0 or 4 bytes)       |
 //   +--------------------------------+
-//   | padding (0-3 bytes)            |
+//   | padding (0-7 bytes)            |
 //   +--------------------------------+
 //
 struct StringDatum : public Datum {
@@ -1191,6 +1191,7 @@ class Store {
 
   // Allocates and initializes string object.
   Handle AllocateString(Text str);
+  Handle AllocateString(Text str, Handle qual);
 
   // Allocates frame optionally replacing an existing frame.
   Handle AllocateFrame(Slot *begin, Slot *end, Handle original);

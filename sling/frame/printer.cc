@@ -128,7 +128,7 @@ void Printer::PrintString(const StringDatum *str) {
   WriteChar('"');
   bool done = false;
   unsigned char *s = str->payload();
-  unsigned char *end = str->limit();
+  unsigned char *end = s + str->length();
   while (!done) {
     // Search forward until first character that needs escaping.
     unsigned char *t = s;
@@ -167,6 +167,12 @@ void Printer::PrintString(const StringDatum *str) {
     s = t;
   }
   WriteChar('"');
+
+  // Output optional qualifier.
+  if (str->qualified()) {
+    WriteChar('@');
+    PrintLink(str->qualifier());
+  }
 }
 
 void Printer::PrintFrame(const FrameDatum *frame) {

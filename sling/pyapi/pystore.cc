@@ -19,6 +19,7 @@
 #include "sling/frame/xml.h"
 #include "sling/pyapi/pyarray.h"
 #include "sling/pyapi/pyframe.h"
+#include "sling/pyapi/pystring.h"
 #include "sling/stream/file.h"
 
 namespace sling {
@@ -389,7 +390,12 @@ PyObject *PyStore::PyValue(Handle handle, bool binary) {
       } else if (datum->IsString()) {
         StringDatum *str = datum->AsString();
         PyObject *pystr;
-        if (binary) {
+        if (str->qualified()) {
+          // Return new frame wrapper for qualified string.
+          PyString *qstr = PyObject_New(PyString, &PyString::type);
+          qstr->Init(this, handle);
+          pystr = qstr->AsObject();
+        } else if (binary) {
           // Return string as bytes.
           pystr = PyBytes_FromStringAndSize(str->data(), str->size());
         } else {
