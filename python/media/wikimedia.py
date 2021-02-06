@@ -41,6 +41,7 @@ default_images = set([
   "Null.png",
   "Defaut.svg",
   "Défaut.svg",
+  "Defaut 2.svg",
   "Défaut-mannequin (s).png",
   "Défaut-Acteur(s).png",
   "Défaut-Chanteur(s).png",
@@ -48,6 +49,7 @@ default_images = set([
   "Défaut- Homme Politique(s).png",
   "Défaut-Personnalité(s).png",
   "Défaut-youtuber(s).png",
+  "Defaut-Youtuber.png",
   "Remplacez l'image de cette personne.jpg",
 ])
 
