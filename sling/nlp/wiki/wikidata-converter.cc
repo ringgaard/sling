@@ -287,7 +287,7 @@ Frame WikidataConverter::Convert(const Frame &item,
       if (site.valid()) {
         string title = site.GetString(s_title_);
         if (!title.empty()) {
-          sites.AddLink(it.second.language, title);
+          sites.Add(it.second.language, title);
         }
       }
     }

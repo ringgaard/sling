@@ -48,6 +48,7 @@ void PyStore::Define(PyObject *module) {
   methods.Add("globals", &PyStore::Globals);
   methods.Add("lockgc", &PyStore::LockGC);
   methods.Add("unlockgc", &PyStore::UnlockGC);
+  methods.Add("coalesce", &PyStore::Coalesce);
   type.tp_methods = methods.table();
 
   type.tp_as_mapping = &mapping;
@@ -368,6 +369,20 @@ PyObject *PyStore::LockGC() {
 
 PyObject *PyStore::UnlockGC() {
   store->UnlockGC();
+  Py_RETURN_NONE;
+}
+
+PyObject *PyStore::Coalesce(PyObject *args, PyObject *kw) {
+  // Get optional argument.
+  int buckets = store->options()->string_buckets;
+  if (!PyArg_ParseTuple(args, "|i", &buckets)) return nullptr;
+
+  // Check that store is writable.
+  if (!Writable()) return nullptr;
+
+  // Coalesce strings.
+  store->CoalesceStrings(buckets);
+
   Py_RETURN_NONE;
 }
 

@@ -69,8 +69,11 @@ struct PyStore : public PyBase {
   PyObject *LockGC();
   PyObject *UnlockGC();
 
+  // Merges occurrences of the same string in the store.
+  PyObject *Coalesce(PyObject *args, PyObject *kw);
+
   // Create new Python object for handle value.
-  PyObject *PyValue(Handle handle, bool binary=false);
+  PyObject *PyValue(Handle handle, bool binary = false);
 
   // Check if store can be modified.
   bool Writable();

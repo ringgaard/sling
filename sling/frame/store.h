@@ -1119,7 +1119,8 @@ class Store {
   // Merges occurrences of the same string. This saves memory by only keeping
   // one copy of each string value. This uses hashing, so it is not guaranteed
   // to find all identical strings.
-  void CoalesceStrings();
+  void CoalesceStrings(Word buckets);
+  void CoalesceStrings() { CoalesceStrings(options_->string_buckets); }
 
   // Computes memory usage for store.
   void GetMemoryUsage(MemoryUsage *usage, bool quick = false) const;
@@ -1129,6 +1130,9 @@ class Store {
 
   // Global store for this store, or null if this is a global store.
   const Store *globals() const { return globals_; }
+
+  // Return store options.
+  const Options *options() const { return options_; }
 
   // Returns handle for symbol table.
   Handle symbols() const { return symbols_; }

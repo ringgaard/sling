@@ -268,7 +268,6 @@ class WikidataSplitter : public task::Processor {
 
 #if 1
   Name n_wikipedia_{names_, "/w/item/wikipedia"};
-  Name n_amount_{names_, "/w/amount"};
 #endif
 };
 

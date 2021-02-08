@@ -1604,13 +1604,12 @@ void Store::Freeze() {
   frozen_ = true;
 }
 
-void Store::CoalesceStrings() {
+void Store::CoalesceStrings(Word buckets) {
   // Do not coalesce strings in frozen store.
   if (frozen_) return;
 
   // Allocate cache for matching strings.
-  Word num_buckets = options_->string_buckets;
-  StringDatum **cache = new StringDatum *[num_buckets]();
+  StringDatum **cache = new StringDatum *[buckets]();
 
   // Scan the heaps to find all strings.
   for (Heap *heap = first_heap_; heap != nullptr; heap = heap->next()) {
@@ -1622,7 +1621,7 @@ void Store::CoalesceStrings() {
         // The hash is computed using the entire string object including the
         // optional qualifier.
         StringDatum *str = object->AsString();
-        Word b = HashBytes(str->data(), str->size()) % num_buckets;
+        Word b = HashBytes(str->data(), str->size()) % buckets;
         if (cache[b] == nullptr) cache[b] = str;
       }
       object = object->next();
@@ -1651,7 +1650,7 @@ void Store::CoalesceStrings() {
           // Check if string is equal to the one in the cache. If it is the
           // string in the cache we leave it, but if it is a different string
           // with the same contents we replace it with the string in the cache.
-          Word b = HashBytes(str->data(), str->size()) % num_buckets;
+          Word b = HashBytes(str->data(), str->size()) % buckets;
           StringDatum *intern = cache[b];
           DCHECK(intern != nullptr);
           if (intern == str) continue;
