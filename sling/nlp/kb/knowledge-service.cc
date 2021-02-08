@@ -804,8 +804,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         Frame f(kb_, h);
         Handle qua = f.GetHandle(Handle::is());
         Handle lang = f.GetHandle(n_lang_);
-        Handle unit = f.GetHandle(n_unit_);
-        if (!qua.IsNil() && lang.IsNil() && unit.IsNil()) {
+        if (!qua.IsNil() && lang.IsNil()) {
           value = qua;
           qualified = true;
         }
@@ -873,7 +872,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         string text;
         if (kb_->IsFrame(value)) {
           Frame quantity(kb_, value);
-          text = AsText(quantity.GetHandle(Handle::is()));
+          text = AsText(quantity.GetHandle(n_amount_));
 
           // Get unit symbol, preferably in latin script.
           Frame unit = quantity.GetFrame(n_unit_);

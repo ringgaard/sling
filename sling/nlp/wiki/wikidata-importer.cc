@@ -222,31 +222,6 @@ class WikidataSplitter : public task::Processor {
       converted = true;
     }
 
-    // Convert quantities.
-    for (const Slot &slot : frame) {
-      if (!slot.value.IsLocalRef()) continue;
-      if (!store.IsFrame(slot.value)) continue;
-      FrameDatum *f = store.GetFrame(slot.value);
-      if (f->IsPublic()) continue;
-      if (f->has(n_amount_.handle())) {
-        for (Slot *slot = f->begin(); slot < f->end(); ++slot) {
-          if (slot->name == n_amount_) slot->name = Handle::is();
-        }
-        converted = true;
-      }
-      Handle r = f->get(Handle::is());
-      if (store.IsFrame(r)) {
-        FrameDatum *fr = store.GetFrame(r);
-        if (fr->IsPublic()) continue;
-        if (fr->has(n_amount_.handle())) {
-          for (Slot *slot = fr->begin(); slot < fr->end(); ++slot) {
-            if (slot->name == n_amount_) slot->name = Handle::is();
-          }
-          converted = true;
-        }
-      }
-    }
-
     if (converted) {
       delete message;
       message = task::CreateMessage(frame);

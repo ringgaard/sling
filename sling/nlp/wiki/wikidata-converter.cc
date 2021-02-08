@@ -374,7 +374,7 @@ Handle WikidataConverter::ConvertQuantity(const Frame &value) {
   // Create quantity frame if needed.
   if (!unit.IsNil() || !lower.IsNil() || !upper.IsNil()) {
     Builder quantity(store);
-    quantity.Add(Handle::is(), amount);
+    quantity.Add(n_amount_, amount);
     if (!unit.IsNil()) quantity.Add(n_unit_, unit);
     if (!precision.IsNil()) {
       quantity.Add(n_precision_, precision);

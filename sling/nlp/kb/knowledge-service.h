@@ -155,6 +155,7 @@ class KnowledgeService {
   Name n_string_type_{names_, "/w/string"};
   Name n_lat_{names_, "/w/lat"};
   Name n_lng_{names_, "/w/lng"};
+  Name n_amount_{names_, "/w/amount"};
   Name n_unit_{names_, "/w/unit"};
   Name n_category_{names_, "/w/item/category"};
 
