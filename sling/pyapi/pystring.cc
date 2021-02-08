@@ -26,6 +26,7 @@ void PyString::Define(PyObject *module) {
   type.tp_str = method_cast<reprfunc>(&PyString::Str);
   type.tp_hash = method_cast<hashfunc>(&PyString::Hash);
 
+  methods.Add("text", &PyString::Str);
   methods.Add("qualifier", &PyString::Qualifier);
   type.tp_methods = methods.table();
 

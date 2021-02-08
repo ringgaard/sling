@@ -16,11 +16,6 @@ function wikiurl(id) {
 }
 
 class KbApp extends Component {
-  constructor() {
-    super();
-    this.item = null;
-  }
-
   onconnected() {
     this.bind("#websearch", "click", e => this.onwebsearch(e));
 
@@ -33,16 +28,24 @@ class KbApp extends Component {
   }
 
   navigate(id) {
+    let state = history.state;
+    if (state) {
+      let item = state.item;
+      state.pos = this.find("md-content").scrollTop;
+      history.replaceState(state, item.text, "/kb/" + item.ref);
+    }
+
     fetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id))
       .then(response => response.json())
       .then((item) => {
-        history.pushState(item, item.text, "/kb/" + item.ref);
+        let state = {item: item, pos: 0};
+        history.pushState(state, item.text, "/kb/" + item.ref);
         this.display(item);
+        this.find("md-content").scrollTop = 0;
       });
   }
 
   display(item) {
-    this.find("md-content").scrollTop = 0;
     this.find("#item").update(item);
     this.find("#properties").update(item);
     this.find("#categories").update(item);
@@ -52,7 +55,11 @@ class KbApp extends Component {
   }
 
   onpopstate(e) {
-    this.display(e.state);
+    let state = e.state;
+    if (state) {
+      this.display(state.item);
+      this.find("md-content").scrollTop = state.pos;
+    }
   }
 
   onwebsearch(e) {
