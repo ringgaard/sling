@@ -52,6 +52,7 @@ class WikidataImporter : public task::Processor {
     CHECK(item_channel_ != nullptr);
     property_channel_ = task->GetSink("properties");
     CHECK(property_channel_ != nullptr);
+    task->Fetch("string_buckets", &string_buckets_);
 
     // Initialize counters.
     num_items_ = task->GetCounter("items");
@@ -98,6 +99,9 @@ class WikidataImporter : public task::Processor {
 
     // Keep track of the lastest modification.
     UpdateRevision(revision, profile.Id().str());
+
+    // Coalesce strings.
+    store.CoalesceStrings(string_buckets_);
 
     // Output property or item.
     if (is_lexeme) {
@@ -153,6 +157,9 @@ class WikidataImporter : public task::Processor {
   // Wikidata converter.
   WikidataConverter *converter_ = nullptr;
 
+  // Number of buckets for string coalescing.
+  int string_buckets_ = 64 * 1024;
+
   // Latest revision for item seen in items. Updates to these are serialized
   // through a mutex.
   uint64 latests_revision_ = 0;
@@ -201,32 +208,6 @@ class WikidataSplitter : public task::Processor {
     Store store(&commons_);
     Frame frame = DecodeMessage(&store, message);
     CHECK(frame.valid());
-
-#if 1
-    // Transformations. These are temporary until the converter has been
-    // updated. First convert wikipedia ids to strings.
-    bool converted = false;
-    if (frame.Has(n_wikipedia_)) {
-      Builder wikipedia(&store, frame.GetHandle(n_wikipedia_));
-      for (int i = 0; i < wikipedia.size(); ++i) {
-        if (store.IsFrame(wikipedia[i].value)) {
-          Text wid = store.FrameId(wikipedia[i].value);
-          CHECK_EQ(wid[0], '/') << wid;
-          CHECK_EQ(wid[3], '/') << wid;
-          CHECK_EQ(wid[6], '/') << wid;
-          Text title = wid.substr(7);
-          wikipedia[i].value = store.AllocateString(title);
-        }
-      }
-      wikipedia.Update();
-      converted = true;
-    }
-
-    if (converted) {
-      delete message;
-      message = task::CreateMessage(frame);
-    }
-#endif
 
     // Output frame to appropriate channel.
     if (frame.IsA(n_property_)) {
@@ -312,15 +293,16 @@ class WikipediaMapping : public task::FrameProcessor {
     bool is_template = false;
     for (const Slot &s : frame) {
       if (s.name == n_instance_of_) {
-        if (wikitypes_.IsCategory(s.value)) {
+        Handle type = frame.store()->Resolve(s.value);
+        if (wikitypes_.IsCategory(type)) {
           is_category = true;
-        } else if (wikitypes_.IsDisambiguation(s.value)) {
+        } else if (wikitypes_.IsDisambiguation(type)) {
           is_disambiguation = true;
-        } else if (wikitypes_.IsList(s.value)) {
+        } else if (wikitypes_.IsList(type)) {
           is_list = true;
-        } else if (wikitypes_.IsInfobox(s.value)) {
+        } else if (wikitypes_.IsInfobox(type)) {
           is_infobox = true;
-        } else if (wikitypes_.IsTemplate(s.value)) {
+        } else if (wikitypes_.IsTemplate(type)) {
           is_template = true;
         }
       }
@@ -391,6 +373,7 @@ class WikidataPruner : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     // Get parameters.
+    task->Fetch("prune_aliases", &prune_names_);
     task->Fetch("prune_aliases", &prune_aliases_);
     task->Fetch("prune_wiki_links", &prune_wiki_links_);
     task->Fetch("prune_wiki_maps", &prune_wiki_maps_);
@@ -410,8 +393,32 @@ class WikidataPruner : public task::FrameProcessor {
     // item is pruned.
     bool aux = filter_.IsAux(frame);
 
-    // Optionally, remove aliases, wikilinks, and categories from item.
+    // Optionally, remove names, aliases, wikilinks, and categories from item.
+    Store *store = frame.store();
     Builder item(frame);
+    if (prune_names_) {
+      // Only keep first name.
+      bool name_found = false;
+      Handle lang = Handle::nil();
+      for (int i = 0; i < item.size(); ++i) {
+        if (item[i].name != n_name_) continue;
+        if (name_found) {
+          item[i].name = Handle::nil();
+        } else {
+          String name(store, store->Resolve(item[i].value));
+          lang = name.qualifier();
+          name_found = true;
+        }
+      }
+
+      // Only keep description matching the language of the first name.
+      for (int i = 0; i < item.size(); ++i) {
+        if (item[i].name != n_description_) continue;
+        String descrption(store, store->Resolve(item[i].value));
+        if (descrption.qualifier() != lang) item[i].name = Handle::nil();
+      }
+      item.Prune();
+    }
     if (prune_aliases_) item.Delete(n_alias_);
     if (prune_wiki_links_) item.Delete(n_links_);
     if (prune_wiki_maps_) item.Delete(n_wikipedia_);
@@ -434,6 +441,8 @@ class WikidataPruner : public task::FrameProcessor {
 
  private:
   // Symbols.
+  Name n_name_{names_, "name"};
+  Name n_description_{names_, "description"};
   Name n_alias_{names_, "alias"};
   Name n_wikipedia_{names_, "/w/item/wikipedia"};
   Name n_links_{names_, "/w/item/links"};
@@ -446,6 +455,7 @@ class WikidataPruner : public task::FrameProcessor {
   task::Channel *aux_output_;
 
   // Parameters.
+  bool prune_names_ = true;
   bool prune_aliases_ = true;
   bool prune_wiki_links_ = true;
   bool prune_wiki_maps_ = true;

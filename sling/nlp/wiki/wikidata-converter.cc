@@ -89,6 +89,11 @@ WikidataConverter::WikidataConverter(Store *commons, const string &language) {
   languages_[primary_language_].priority = 0;
   language_map_["mul"] = n_lang_mul_.handle();
   language_map_["zxx"] = n_lang_none_.handle();
+
+  language_order_.resize(priority + 1);
+  for (auto &it : languages_) {
+    language_order_[it.second.priority] = it.second.language;
+  }
 }
 
 Frame WikidataConverter::Convert(const Frame &item,
@@ -138,53 +143,59 @@ Frame WikidataConverter::Convert(const Frame &item,
     builder.AddIsA(n_item_);
   }
 
-  // Pick label with highest language priority.
-  Handle label_language = Handle::nil();
+  // Get label and description in all supported languages.
+  int num_languages = language_order_.size();
+  Slots names(store);
+  names.resize(num_languages);
+  Handle other_name = Handle::nil();
   if (labels.valid()) {
-    int priority = 999;
-    Handle label = Handle::nil();
     for (const Slot &l : labels) {
-      bool pick = false;
-      if (only_primary_language_) {
-        // Pick label if it is in the primary language.
-        if (l.name == primary_language_) pick = true;
-      } else {
-        // Pick label language if it is top priority.
-        auto f = languages_.find(l.name);
-        if (f != languages_.end()) {
-          if (f->second.priority < priority) {
-            pick = true;
-            priority = f->second.priority;
-          }
-        } else if (label.IsNil() && !only_known_languages_) {
-          // Unknown language; pick if no other options.
-          pick = true;
-        }
-      }
-
-      if (pick) {
-        label = Frame(store, l.value).GetHandle(s_value_);
-        label_language = l.name;
+      // Get language.
+      auto f = languages_.find(l.name);
+      if (f != languages_.end()) {
+        int priority = f->second.priority;
+        CHECK_LT(priority, num_languages);
+        names[priority].name = l.value;
+      } else if (other_name.IsNil()) {
+        other_name = l.value;
       }
     }
-    if (!label.IsNil()) builder.Add(n_name_, label);
-    if (!label_language.IsNil()) {
-      auto f = languages_.find(label_language);
+  }
+  if (descriptions.valid()) {
+    for (const Slot &l : descriptions) {
+      // Get language.
+      auto f = languages_.find(l.name);
       if (f != languages_.end()) {
-        builder.Add(n_lang_, f->second.language);
+        int priority = f->second.priority;
+        CHECK_LT(priority, num_languages);
+        names[priority].value = l.value;
       }
     }
   }
 
-  // Pick description matching label language.
-  if (!label_language.IsNil() && descriptions.valid()) {
-    for (const Slot &l : descriptions) {
-      if (l.name == label_language) {
-        Handle description = Frame(store, l.value).GetHandle(s_value_);
-        if (!description.IsNil()) builder.Add(n_description_, description);
-        break;
+  bool name_found = false;
+  for (int i = 0; i < num_languages; ++i) {
+    Slot &s = names[i];
+    if (!s.name.IsNil()) {
+      Text name = Frame(store, s.name).GetText(s_value_);
+      builder.Add(n_name_, name, language_order_[i]);
+      name_found = true;
+
+      if (!s.value.IsNil()) {
+        Text description = Frame(store, s.value).GetText(s_value_);
+        builder.Add(n_description_, description, language_order_[i]);
       }
     }
+
+    // Skip the remaining languages if only primary language (priority 0) is
+    // allowed.
+    if (only_primary_language_) break;
+  }
+  if (!name_found && !other_name.IsNil() &&
+      !(only_primary_language_ || only_known_languages_)) {
+    // Add fallback name.
+    Text name = Frame(store, other_name).GetText(s_value_);
+    builder.Add(n_name_, name);
   }
 
   // Add data type for property.
@@ -197,35 +208,18 @@ Frame WikidataConverter::Convert(const Frame &item,
     builder.Add(n_target_, f->second);
   }
 
-  // Parse labels and aliases.
+  // Parse aliases.
   Frame aliases = item.GetFrame(s_aliases_);
   if (aliases.valid()) {
     for (auto &it : languages_) {
-      // Get label for language.
-      if (labels.valid()) {
-        Frame label = labels.Get(it.first).AsFrame();
-        if (label.valid()) {
-          Builder alias(store);
-          alias.Add(n_name_, label.GetHandle(s_value_));
-          alias.Add(n_lang_, it.second.language);
-          alias.Add(n_sources_, 1 << SRC_WIKIDATA_LABEL);
-          builder.Add(n_alias_, alias.Create());
-        }
-      }
-
       // Get aliases for language.
-      if (aliases.valid()) {
-        Array alias_list = aliases.Get(it.first).AsArray();
-        if (alias_list.valid()) {
-          for (int i = 0; i < alias_list.length(); ++i) {
-            Handle name =
-                Frame(store, alias_list.get(i)).GetHandle(s_value_);
-            Builder alias(store);
-            alias.Add(n_name_, name);
-            alias.Add(n_lang_, it.second.language);
-            alias.Add(n_sources_, 1 << SRC_WIKIDATA_ALIAS);
-            builder.Add(n_alias_, alias.Create());
-          }
+      Handle lang = it.second.language;
+      if (only_primary_language_ && it.second.priority != 0) continue;
+      Array alias_list = aliases.Get(it.first).AsArray();
+      if (alias_list.valid()) {
+        for (int i = 0; i < alias_list.length(); ++i) {
+          Text name = Frame(store, alias_list.get(i)).GetText(s_value_);
+          builder.Add(n_alias_, name, lang);
         }
       }
     }
@@ -397,13 +391,10 @@ Handle WikidataConverter::ConvertText(const Frame &value) {
   if (f == language_map_.end()) return Handle::nil();
   if (f->second == n_lang_mul_ || f->second == n_lang_none_) {
     return text.handle();
+  } else {
+    // Convert text to string qualified by language.
+    return store->AllocateString(text.AsString().text(), f->second);
   }
-
-  // Convert text to string qualified by language.
-  Builder monoling(store);
-  monoling.AddIs(text);
-  monoling.Add(n_lang_, f->second);
-  return monoling.Create().handle();
 }
 
 Handle WikidataConverter::ConvertTime(const Frame &value) {

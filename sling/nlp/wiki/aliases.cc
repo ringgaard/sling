@@ -88,6 +88,7 @@ class AliasExtractor : public task::FrameProcessor {
       "Q17438413",   // videography
       "Q1075660",    // artist discography
       "Q59248059",   // singles discography
+      "Q20054355",   // career statistics
       "Q59191021",   // Wikimedia albums discography
       nullptr,
     };
@@ -108,52 +109,64 @@ class AliasExtractor : public task::FrameProcessor {
     Store *store = frame.store();
     Builder a(store);
     bool skip = false;
+    bool has_primary_name = false;
+    Handle fallback_name = Handle::nil();
     for (const Slot &s : frame) {
-      if (s.name == n_name_) {
-        // Add item name as alias.
-        AddAlias(&a, s.value, SRC_WIKIDATA_LABEL);
-      } else if (s.name == n_alias_) {
-        Frame alias(store, s.value);
-        if (alias.GetHandle(n_lang_) == language_) {
-          a.Add(n_alias_, alias);
+      Handle property = s.name;
+      Handle value = store->Resolve(s.value);
+      if (!store->IsString(value)) continue;
+      Handle lang = store->GetString(value)->qualifier();
+      bool foreign = !lang.IsNil() && lang != language_;
+
+      if (property == n_name_) {
+        if (!foreign) {
+          AddAlias(&a, value, SRC_WIKIDATA_LABEL);
+          has_primary_name = true;
         } else {
-          // Add aliases in other languages as foreign alias.
-          AddAlias(&a, alias.GetHandle(n_name_), SRC_WIKIDATA_FOREIGN,
-                   alias.GetHandle(n_lang_), alias.GetInt(n_count_));
+          AddAlias(&a, value, SRC_WIKIDATA_FOREIGN);
+          if (fallback_name.IsNil()) fallback_name = value;
         }
-      } else if (s.name == n_native_name_ || s.name == n_native_label_) {
-        // Output native names/labels as native aliases.
-        AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NATIVE);
-      } else if (s.name == n_iso3166_country_code_2_ ||
-                 s.name == n_iso3166_country_code_3_) {
-        // Output country codes as alternative names.
-        AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NAME);
-      } else if (s.name == n_nickname_ || s.name == n_pseudonym_) {
-        // Output nicknames and pseudonyms as alternative names.
-        AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_NAME);
-      } else if (s.name == n_short_name_ ||
-                 s.name == n_generic_name_ ||
-                 s.name == n_birth_name_ ||
-                 s.name == n_married_name_ ||
-                 s.name == n_official_name_ ||
-                 s.name == n_female_form_ ||
-                 s.name == n_male_form_ ||
-                 s.name == n_unit_symbol_ ||
-                 s.name == n_demonym_) {
-        // Output names as alternative or foreign names.
-        Handle lang = Handle::nil();
+      } else if (property == n_alias_) {
         if (store->IsFrame(s.value)) {
-          Frame f(store, s.value);
-          lang = f.GetHandle(n_lang_);
-        }
-        if (lang.IsNil() || lang == language_) {
-          AliasSource source = SRC_WIKIDATA_NAME;
-          if (s.name == n_demonym_) source = SRC_WIKIDATA_DEMONYM;
-          AddAlias(&a, store->Resolve(s.value), source);
+          Frame alias(store, s.value);
+          if (!foreign) {
+            // Pass-through alias definition.
+            a.Add(n_alias_, alias);
+          } else {
+            // Add aliases in other languages as foreign alias.
+            AddAlias(&a, value, SRC_WIKIDATA_FOREIGN, alias.GetInt(n_count_));
+          }
         } else {
-          AddAlias(&a, store->Resolve(s.value), SRC_WIKIDATA_FOREIGN);
+          // Add simple (foreign) Wikidata alias.
+          AliasSource source = SRC_WIKIDATA_LABEL;
+          if (foreign) source = SRC_WIKIDATA_FOREIGN;
+          AddAlias(&a, value, source);
         }
-      } else if (s.name == n_instance_of_) {
+      } else if (property == n_native_name_ ||
+                 property == n_native_label_) {
+        // Output native names/labels as native aliases.
+        AddAlias(&a, value, SRC_WIKIDATA_NATIVE);
+      } else if (property == n_nickname_ ||
+                 property == n_pseudonym_ ||
+                 property == n_iso3166_country_code_2_ ||
+                 property == n_iso3166_country_code_3_) {
+        // Output nicknames, pseudonyms, and country codes as alternative names.
+        AddAlias(&a, value, SRC_WIKIDATA_NAME);
+      } else if (property == n_short_name_ ||
+                 property == n_generic_name_ ||
+                 property == n_birth_name_ ||
+                 property == n_married_name_ ||
+                 property == n_official_name_ ||
+                 property == n_female_form_ ||
+                 property == n_male_form_ ||
+                 property == n_unit_symbol_ ||
+                 property == n_demonym_) {
+        // Output names as alternative or foreign names.
+        AliasSource source = SRC_WIKIDATA_NAME;
+        if (property == n_demonym_) source = SRC_WIKIDATA_DEMONYM;
+        if (foreign) source = SRC_WIKIDATA_FOREIGN;
+        AddAlias(&a, value, source);
+      } else if (property == n_instance_of_) {
         // Discard alias for non-entity items.
         Handle type = store->Resolve(s.value);
         if (wikitypes_.IsCategory(type) ||
@@ -167,6 +180,11 @@ class AliasExtractor : public task::FrameProcessor {
         // Check if all aliases for this item should be skipped.
         if (skipped_types_.count(type) > 0) skip = true;
       }
+    }
+
+    // Add fallback alias if no primary name has been found.
+    if (!has_primary_name && !fallback_name.IsNil()) {
+      AddAlias(&a, fallback_name, SRC_WIKIDATA_LABEL);
     }
 
     // Add skip type to frame if it all aliases for the item should be skipped.
@@ -184,12 +202,12 @@ class AliasExtractor : public task::FrameProcessor {
   }
 
   // Add alias.
-  void AddAlias(Builder *aliases, Handle name, AliasSource source,
-                Handle lang = Handle::nil(), int count = 0) {
-    if (name.IsNil()) return;
+  void AddAlias(Builder *aliases,
+                Handle name,
+                AliasSource source,
+                int count = 0) {
     Builder alias(aliases->store());
-    alias.Add(n_name_, name);
-    if (!lang.IsNil()) alias.Add(n_lang_, lang);
+    alias.Add(Handle::is(), name);
     if (count > 0) alias.Add(n_count_, count);
     alias.Add(n_sources_, 1 << source);
     aliases->Add(n_alias_, alias.Create());
@@ -212,7 +230,6 @@ class AliasExtractor : public task::FrameProcessor {
   task::Counter *num_skipped_items_;
 
   // Symbols.
-  Name n_lang_{names_, "lang"};
   Name n_name_{names_, "name"};
   Name n_alias_{names_, "alias"};
   Name n_count_{names_, "count"};
@@ -398,7 +415,7 @@ class AliasSelector : public task::Reducer {
 
         if (slot.name != n_alias_) continue;
         Frame alias(&store, slot.value);
-        string name = alias.GetString(n_name_);
+        string name = alias.GetString(Handle::is());
         int count = alias.GetInt(n_count_, 1);
         int sources = alias.GetInt(n_sources_);
 
@@ -586,8 +603,6 @@ class AliasSelector : public task::Reducer {
 
   // Symbols.
   Names names_;
-  Name n_name_{names_, "name"};
-  Name n_lang_{names_, "lang"};
   Name n_alias_{names_, "alias"};
   Name n_count_{names_, "count"};
   Name n_sources_{names_, "sources"};

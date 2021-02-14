@@ -58,12 +58,19 @@ class WikidataWorkflow:
       input = self.wf.read(dump)
     return self.wf.parallel(input, threads=10, queue=1000)
 
+  def wikidata_latest(self):
+    """Resource for latest Wikidata update. This contains the the QID and
+    revision of the latest update."""
+    return self.wf.resource("latest", dir=corpora.wikidir(), format="text")
+
   def wikidata_convert(self, input, name=None):
     """Convert Wikidata JSON to SLING items and properties."""
     task = self.wf.task("wikidata-importer", name=name)
     task.add_param("primary_language", flags.arg.language)
     task.add_param("only_primary_language", flags.arg.only_primary_language)
     task.add_param("only_known_languages", flags.arg.only_known_languages)
+    task.attach_output("latest", self.wikidata_latest())
+
     self.wf.connect(input, task)
     items = self.wf.channel(task, name="items", format="message/frame")
     properties = self.wf.channel(task, name="properties",

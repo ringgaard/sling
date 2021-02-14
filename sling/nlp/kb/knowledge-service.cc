@@ -796,19 +796,8 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
     Handles values(item.store());
     for (Handle h : *group->second) {
       // Resolve value.
-      Handle value = h;
-      bool qualified = false;
-      if (kb_->IsFrame(h)) {
-        // Handle the ambiguity between qualified frames and mono-lingual text
-        // by checking for the presence of a language slot. Same for unit.
-        Frame f(kb_, h);
-        Handle qua = f.GetHandle(Handle::is());
-        Handle lang = f.GetHandle(n_lang_);
-        if (!qua.IsNil() && lang.IsNil()) {
-          value = qua;
-          qualified = true;
-        }
-      }
+      Handle value = item.store()->Resolve(h);
+      bool qualified = value != h;
 
       // Add property value based on property type.
       Builder v(item.store());
@@ -833,7 +822,19 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         v.Add(n_text_, value);
       } else if (property->datatype == n_text_type_) {
         // Add text value with language.
-        if (kb_->IsFrame(value)) {
+        if (kb_->IsString(value)) {
+          String monotext(kb_, value);
+          Handle qual = monotext.qualifier();
+          if (qual.IsNil()) {
+            v.Add(n_text_, value);
+          } else {
+            v.Add(n_text_, monotext.text());
+            Frame lang(kb_, qual);
+            if (lang.valid()) {
+              v.Add(n_lang_, lang.GetHandle(n_name_));
+            }
+          }
+        } else if (kb_->IsFrame(value)) {
           Frame monotext(kb_, value);
           v.Add(n_text_, monotext.GetHandle(Handle::is()));
           Frame lang = monotext.GetFrame(n_lang_);

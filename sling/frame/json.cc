@@ -36,6 +36,7 @@ void JSONWriter::Write(Handle handle) {
     const Datum *datum = store_->GetObject(handle);
     switch (datum->type()) {
       case STRING:
+      case QSTRING:
         WriteString(datum->AsString());
         break;
 
@@ -66,7 +67,7 @@ void JSONWriter::Write(Handle handle) {
 void JSONWriter::WriteString(const StringDatum *str) {
   WriteChar('"');
   unsigned char *s = str->payload();
-  unsigned char *end = str->limit();
+  unsigned char *end = s + str->length();
   while (s < end) {
     switch (*s) {
       case '"': WriteChars('\\', '"'); s++; break;

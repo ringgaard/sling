@@ -40,6 +40,12 @@ flags.define("--checkpoint_interval",
              type=int,
              metavar="NUM")
 
+flags.define("--string_buckets",
+             help="number of buckets for for string coalescing",
+             default=1000,
+             type=int,
+             metavar="NUM")
+
 flags.define("--threads",
              help="number of thread for worker pool",
              default=10,
@@ -117,6 +123,9 @@ def process_change(change):
       except Exception as e:
         print("Error converting item:", e, reply.text)
         return
+
+    # Coalese strings.
+    store.coalesce(flags.arg.string_buckets)
 
     # Save item in database.
     saved = False

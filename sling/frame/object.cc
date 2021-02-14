@@ -376,11 +376,6 @@ Frame &Frame::Add(Text name, Handle value) {
   return *this;
 }
 
-Frame &Frame::Add(Handle value) {
-  store_->Add(handle_, Handle::nil(), value);
-  return *this;
-}
-
 Frame &Frame::Add(Handle name, const Object &value) {
   store_->Add(handle_, name, value.handle());
   return *this;
@@ -441,11 +436,6 @@ Frame &Frame::Add(Text name, int value) {
   return *this;
 }
 
-Frame &Frame::Add(int value) {
-  store_->Add(handle_, Handle::nil(), Handle::Integer(value));
-  return *this;
-}
-
 Frame &Frame::Add(Handle name, bool value) {
   store_->Add(handle_, name, Handle::Bool(value));
   return *this;
@@ -463,11 +453,6 @@ Frame &Frame::Add(const Name &name, bool value) {
 
 Frame &Frame::Add(Text name, bool value) {
   store_->Add(handle_, store_->Lookup(name), Handle::Bool(value));
-  return *this;
-}
-
-Frame &Frame::Add(bool value) {
-  store_->Add(handle_, Handle::nil(), Handle::Bool(value));
   return *this;
 }
 
@@ -491,11 +476,6 @@ Frame &Frame::Add(Text name, float value) {
   return *this;
 }
 
-Frame &Frame::Add(float value) {
-  store_->Add(handle_, Handle::nil(), Handle::Float(value));
-  return *this;
-}
-
 Frame &Frame::Add(Handle name, double value) {
   store_->Add(handle_, name, Handle::Float(value));
   return *this;
@@ -513,11 +493,6 @@ Frame &Frame::Add(const Name &name, double value) {
 
 Frame &Frame::Add(Text name, double value) {
   store_->Add(handle_, store_->Lookup(name), Handle::Float(value));
-  return *this;
-}
-
-Frame &Frame::Add(double value) {
-  store_->Add(handle_, Handle::nil(), Handle::Float(value));
   return *this;
 }
 
@@ -545,13 +520,6 @@ Frame &Frame::Add(const Name &name, Text value) {
 Frame &Frame::Add(Text name, Text value) {
   store_->LockGC();
   store_->Add(handle_, store_->Lookup(name), store_->AllocateString(value));
-  store_->UnlockGC();
-  return *this;
-}
-
-Frame &Frame::Add(Text value) {
-  store_->LockGC();
-  store_->Add(handle_, Handle::nil(), store_->AllocateString(value));
   store_->UnlockGC();
   return *this;
 }
@@ -584,9 +552,32 @@ Frame &Frame::Add(Text name, const char *value) {
   return *this;
 }
 
-Frame &Frame::Add(const char *value) {
+Frame &Frame::Add(Handle name, Text value, Handle qual) {
   store_->LockGC();
-  store_->Add(handle_, Handle::nil(), store_->AllocateString(value));
+  store_->Add(handle_, name, store_->AllocateString(value, qual));
+  store_->UnlockGC();
+  return *this;
+}
+
+Frame &Frame::Add(const Object &name, Text value, Handle qual) {
+  store_->LockGC();
+  store_->Add(handle_, name.handle(), store_->AllocateString(value, qual));
+  store_->UnlockGC();
+  return *this;
+}
+
+Frame &Frame::Add(const Name &name, Text value, Handle qual) {
+  store_->LockGC();
+  store_->Add(handle_, name.Lookup(store_),
+              store_->AllocateString(value, qual));
+  store_->UnlockGC();
+  return *this;
+}
+
+Frame &Frame::Add(Text name, Text value, Handle qual) {
+  store_->LockGC();
+  store_->Add(handle_, store_->Lookup(name),
+              store_->AllocateString(value, qual));
   store_->UnlockGC();
   return *this;
 }
@@ -608,11 +599,6 @@ Frame &Frame::AddLink(const Name &name, Text symbol) {
 
 Frame &Frame::AddLink(Text name, Text symbol) {
   store_->Add(handle_, store_->Lookup(name), store_->Lookup(symbol));
-  return *this;
-}
-
-Frame &Frame::AddLink(Text symbol) {
-  store_->Add(handle_, Handle::nil(), store_->Lookup(symbol));
   return *this;
 }
 
@@ -1007,13 +993,6 @@ Builder &Builder::Add(Text name, Handle value) {
   return *this;
 }
 
-Builder &Builder::Add(Handle value) {
-  Slot *slot = NewSlot();
-  slot->name = Handle::nil();
-  slot->value = value;
-  return *this;
-}
-
 Builder &Builder::Add(Handle name, const Object &value) {
   Slot *slot = NewSlot();
   slot->name = name;
@@ -1098,13 +1077,6 @@ Builder &Builder::Add(Text name, int value) {
   return *this;
 }
 
-Builder &Builder::Add(int value) {
-  Slot *slot = NewSlot();
-  slot->name = Handle::nil();
-  slot->value = Handle::Integer(value);
-  return *this;
-}
-
 Builder &Builder::Add(Handle name, bool value) {
   Slot *slot = NewSlot();
   slot->name = name;
@@ -1129,13 +1101,6 @@ Builder &Builder::Add(const Name &name, bool value) {
 Builder &Builder::Add(Text name, bool value) {
   Slot *slot = NewSlot();
   slot->name = store_->Lookup(name);
-  slot->value = Handle::Bool(value);
-  return *this;
-}
-
-Builder &Builder::Add(bool value) {
-  Slot *slot = NewSlot();
-  slot->name = Handle::nil();
   slot->value = Handle::Bool(value);
   return *this;
 }
@@ -1168,13 +1133,6 @@ Builder &Builder::Add(Text name, float value) {
   return *this;
 }
 
-Builder &Builder::Add(float value) {
-  Slot *slot = NewSlot();
-  slot->name = Handle::nil();
-  slot->value = Handle::Float(value);
-  return *this;
-}
-
 Builder &Builder::Add(Handle name, double value) {
   Slot *slot = NewSlot();
   slot->name = name;
@@ -1199,13 +1157,6 @@ Builder &Builder::Add(const Name &name, double value) {
 Builder &Builder::Add(Text name, double value) {
   Slot *slot = NewSlot();
   slot->name = store_->Lookup(name);
-  slot->value = Handle::Float(value);
-  return *this;
-}
-
-Builder &Builder::Add(double value) {
-  Slot *slot = NewSlot();
-  slot->name = Handle::nil();
   slot->value = Handle::Float(value);
   return *this;
 }
@@ -1238,13 +1189,6 @@ Builder &Builder::Add(Text name, Text value) {
   return *this;
 }
 
-Builder &Builder::Add(Text value) {
-  Slot *slot = NewSlot();
-  slot->name = Handle::nil();
-  slot->value = store_->AllocateString(value);
-  return *this;
-}
-
 Builder &Builder::Add(Handle name, const char *value) {
   Slot *slot = NewSlot();
   slot->name = name;
@@ -1273,10 +1217,31 @@ Builder &Builder::Add(Text name, const char *value) {
   return *this;
 }
 
-Builder &Builder::Add(const char *value) {
+Builder &Builder::Add(Handle name, Text value, Handle qual) {
   Slot *slot = NewSlot();
-  slot->name = Handle::nil();
-  slot->value = store_->AllocateString(value);
+  slot->name = name;
+  slot->value = store_->AllocateString(value, qual);
+  return *this;
+}
+
+Builder &Builder::Add(const Object &name, Text value, Handle qual) {
+  Slot *slot = NewSlot();
+  slot->name = name.handle();
+  slot->value = store_->AllocateString(value, qual);
+  return *this;
+}
+
+Builder &Builder::Add(const Name &name, Text value, Handle qual) {
+  Slot *slot = NewSlot();
+  slot->name = name.Lookup(store_);
+  slot->value = store_->AllocateString(value, qual);
+  return *this;
+}
+
+Builder &Builder::Add(Text name, Text value, Handle qual) {
+  Slot *slot = NewSlot();
+  slot->name = store_->Lookup(name);
+  slot->value = store_->AllocateString(value, qual);
   return *this;
 }
 
@@ -1340,13 +1305,6 @@ Builder &Builder::AddLink(const Name &name, Text symbol) {
 Builder &Builder::AddLink(Text name, Text symbol) {
   Slot *slot = NewSlot();
   slot->name = store_->Lookup(name);
-  slot->value = store_->Lookup(symbol);
-  return *this;
-}
-
-Builder &Builder::AddLink(Text symbol) {
-  Slot *slot = NewSlot();
-  slot->name = Handle::nil();
   slot->value = store_->Lookup(symbol);
   return *this;
 }
@@ -1503,6 +1461,24 @@ Builder &Builder::Remove(const std::vector<int> &indices) {
     }
   }
   slots_.set_end(dst);
+  return *this;
+}
+
+Builder &Builder::Prune() {
+  Slot *slot = slots_.base();
+  Slot *end = slots_.end();
+  while (slot < end && !slot->name.IsNil()) slot++;
+  if (slot != end) {
+    Slot *current = slot;
+    while (slot < end) {
+      if (slot->name.IsNil()) {
+        slot++;
+      } else {
+        *current++ = *slot++;
+      }
+    }
+    slots_.set_end(current);
+  }
   return *this;
 }
 

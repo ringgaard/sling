@@ -527,7 +527,6 @@ class Frame : public Object {
   Frame &Add(const Object &name, Handle value);
   Frame &Add(const Name &name, Handle value);
   Frame &Add(Text name, Handle value);
-  Frame &Add(Handle value);
 
   // Adds slot to frame.
   Frame &Add(Handle name, const Object &value);
@@ -544,40 +543,39 @@ class Frame : public Object {
   Frame &Add(const Object &name, int value);
   Frame &Add(const Name &name, int value);
   Frame &Add(Text name, int value);
-  Frame &Add(int value);
 
   // Adds boolean slot to frame.
   Frame &Add(Handle name, bool value);
   Frame &Add(const Object &name, bool value);
   Frame &Add(const Name &name, bool value);
   Frame &Add(Text name, bool value);
-  Frame &Add(bool value);
 
   // Adds floating point slot to frame.
   Frame &Add(Handle name, float value);
   Frame &Add(const Object &name, float value);
   Frame &Add(const Name &name, float value);
   Frame &Add(Text name, float value);
-  Frame &Add(float value);
 
   Frame &Add(Handle name, double value);
   Frame &Add(const Object &name, double value);
   Frame &Add(const Name &name, double value);
   Frame &Add(Text name, double value);
-  Frame &Add(double value);
 
   // Adds string slot to frame.
   Frame &Add(Handle name, Text value);
   Frame &Add(const Object &name, Text value);
   Frame &Add(const Name &name, Text value);
   Frame &Add(Text name, Text value);
-  Frame &Add(Text value);
 
   Frame &Add(Handle name, const char *value);
   Frame &Add(const Object &name, const char *value);
   Frame &Add(const Name &name, const char *value);
   Frame &Add(Text name, const char *value);
-  Frame &Add(const char *value);
+
+  Frame &Add(Handle name, Text value, Handle qual);
+  Frame &Add(const Object &name, Text value, Handle qual);
+  Frame &Add(const Name &name, Text value, Handle qual);
+  Frame &Add(Text name, Text value, Handle qual);
 
   // Adds slot with symbol link to frame. This will link to a proxy if the
   // symbol is not already defined.
@@ -585,7 +583,6 @@ class Frame : public Object {
   Frame &AddLink(const Object &name, Text symbol);
   Frame &AddLink(const Name &name, Text symbol);
   Frame &AddLink(Text name, Text symbol);
-  Frame &AddLink(Text symbol);
 
   // Adds isa: slot to frame.
   Frame &AddIsA(Handle type);
@@ -795,7 +792,6 @@ class Builder : public External {
   Builder &Add(const Object &name, Handle value);
   Builder &Add(const Name &name, Handle value);
   Builder &Add(Text name, Handle value);
-  Builder &Add(Handle value);
 
   // Adds slot to frame.
   Builder &Add(Handle name, const Object &value);
@@ -812,40 +808,39 @@ class Builder : public External {
   Builder &Add(const Object &name, int value);
   Builder &Add(const Name &name, int value);
   Builder &Add(Text name, int value);
-  Builder &Add(int value);
 
   // Adds boolean slot to frame.
   Builder &Add(Handle name, bool value);
   Builder &Add(const Object &name, bool value);
   Builder &Add(const Name &name, bool value);
   Builder &Add(Text name, bool value);
-  Builder &Add(bool value);
 
   // Adds floating point slot to frame.
   Builder &Add(Handle name, float value);
   Builder &Add(const Object &name, float value);
   Builder &Add(const Name &name, float value);
   Builder &Add(Text name, float value);
-  Builder &Add(float value);
 
   Builder &Add(Handle name, double value);
   Builder &Add(const Object &name, double value);
   Builder &Add(const Name &name, double value);
   Builder &Add(Text name, double value);
-  Builder &Add(double value);
 
   // Adds string slot to frame.
   Builder &Add(Handle name, Text value);
   Builder &Add(const Object &name, Text value);
   Builder &Add(const Name &name, Text value);
   Builder &Add(Text name, Text value);
-  Builder &Add(Text value);
 
   Builder &Add(Handle name, const char *value);
   Builder &Add(const Object &name, const char *value);
   Builder &Add(const Name &name, const char *value);
   Builder &Add(Text name, const char *value);
-  Builder &Add(const char *value);
+
+  Builder &Add(Handle name, Text value, Handle qual);
+  Builder &Add(const Object &name, Text value, Handle qual);
+  Builder &Add(const Name &name, Text value, Handle qual);
+  Builder &Add(Text name, Text value, Handle qual);
 
   // Adds array slot to frame.
   Builder &Add(Handle name, const Handles &value);
@@ -859,7 +854,6 @@ class Builder : public External {
   Builder &AddLink(const Object &name, Text symbol);
   Builder &AddLink(const Name &name, Text symbol);
   Builder &AddLink(Text name, Text symbol);
-  Builder &AddLink(Text symbol);
 
   // Adds id: slot to frame.
   Builder &AddId(Handle id);
@@ -893,6 +887,9 @@ class Builder : public External {
 
   // Remove slots by index. Indices must be in ascending order.
   Builder &Remove(const std::vector<int> &indices);
+
+  // Remove all empty slot, i.e. all slots where the name is nil.
+  Builder &Prune();
 
   // Sets slot to handle value.
   Builder &Set(Handle name, Handle value);

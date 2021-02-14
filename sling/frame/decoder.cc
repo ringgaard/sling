@@ -236,6 +236,9 @@ Handle Decoder::DecodeQString() {
   // Read string from input.
   CHECK(input_->Read(store_->GetString(str)->data(), length));
 
+  // Add reference.
+  *references_.push() = str;
+
   // Read qualifier from input.
   Handle qual = DecodeObject();
   store_->GetString(str)->set_qualifier(qual);

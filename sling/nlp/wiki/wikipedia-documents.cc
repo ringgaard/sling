@@ -435,8 +435,7 @@ class WikipediaAliasReducer : public task::Reducer {
     Builder profile(&store);
     for (auto &a : aliases) {
       Builder alias(&store);
-      alias.Add(n_name_, a.first);
-      alias.Add(n_lang_, language_);
+      alias.Add(Handle::is(), a.first, language_);
       alias.Add(n_sources_, a.second.second);
       alias.Add(n_count_, a.second.first);
       profile.Add(n_alias_, alias.Create());
@@ -453,8 +452,6 @@ class WikipediaAliasReducer : public task::Reducer {
 
   // Symbols.
   Names names_;
-  Name n_name_{names_, "name"};
-  Name n_lang_{names_, "lang"};
   Name n_alias_{names_, "alias"};
   Name n_count_{names_, "count"};
   Name n_sources_{names_, "sources"};

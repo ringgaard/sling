@@ -116,6 +116,7 @@ class WikidataConverter {
   };
   HandleMap<LanguageInfo> languages_;
   std::unordered_map<string, Handle> language_map_;
+  std::vector<Handle> language_order_;
 
   Name n_name_{names_, "name"};
   Name n_description_{names_, "description"};
