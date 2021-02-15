@@ -1245,6 +1245,34 @@ Builder &Builder::Add(Text name, Text value, Handle qual) {
   return *this;
 }
 
+Builder &Builder::Add(Handle name, Handle str, Handle qual) {
+  Slot *slot = NewSlot();
+  slot->name = name;
+  slot->value = store_->AllocateString(str, qual);
+  return *this;
+}
+
+Builder &Builder::Add(const Object &name, Handle str, Handle qual) {
+  Slot *slot = NewSlot();
+  slot->name = name.handle();
+  slot->value = store_->AllocateString(str, qual);
+  return *this;
+}
+
+Builder &Builder::Add(const Name &name, Handle str, Handle qual) {
+  Slot *slot = NewSlot();
+  slot->name = name.Lookup(store_);
+  slot->value = store_->AllocateString(str, qual);
+  return *this;
+}
+
+Builder &Builder::Add(Text name, Handle str, Handle qual) {
+  Slot *slot = NewSlot();
+  slot->name = store_->Lookup(name);
+  slot->value = store_->AllocateString(str, qual);
+  return *this;
+}
+
 Builder &Builder::Add(Handle name, const Handles &value) {
   Slot *slot = NewSlot();
   slot->name = name;

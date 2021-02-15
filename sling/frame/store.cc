@@ -260,6 +260,16 @@ Handle Store::AllocateString(Text str, Handle qual) {
   return AllocateHandle(object);
 }
 
+Handle Store::AllocateString(Handle str, Handle qual) {
+  DCHECK(IsString(str));
+  size_t length = GetString(str)->length();
+  size_t size = length + sizeof(Word);
+  StringDatum *object = AllocateDatum(QSTRING, size)->AsString();
+  memcpy(object->data(), GetString(str)->data(), length);
+  object->set_qualifier(qual);
+  return AllocateHandle(object);
+}
+
 Handle Store::AllocateFrame(Slot *begin, Slot *end, Handle original) {
   // Determine the handle for the new frame. The handle for the new frame can
   // be supplied as an argument, but if this is nil, we look at the id slots

@@ -26,7 +26,7 @@ void PyString::Define(PyObject *module) {
   type.tp_str = method_cast<reprfunc>(&PyString::Str);
   type.tp_hash = method_cast<hashfunc>(&PyString::Hash);
 
-  methods.Add("text", &PyString::Str);
+  methods.Add("text", &PyString::Text);
   methods.Add("qualifier", &PyString::Qualifier);
   type.tp_methods = methods.table();
 
@@ -63,6 +63,18 @@ long PyString::Hash() {
 
 PyObject *PyString::Str() {
   return AllocateString(string()->str());
+}
+
+PyObject *PyString::Text() {
+  // Return unicode string object.
+  StringDatum *str = string();
+  PyObject *pystr = PyUnicode_FromStringAndSize(str->data(), str->length());
+  if (pystr == nullptr) {
+    // Fall back to bytes if string is not valid UTF8.
+    PyErr_Clear();
+    pystr = PyBytes_FromStringAndSize(str->data(), str->length());
+  }
+  return pystr;
 }
 
 PyObject *PyString::Qualifier() {

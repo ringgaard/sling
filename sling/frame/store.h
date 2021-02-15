@@ -1196,6 +1196,7 @@ class Store {
   // Allocates and initializes string object.
   Handle AllocateString(Text str);
   Handle AllocateString(Text str, Handle qual);
+  Handle AllocateString(Handle str, Handle qual);
 
   // Allocates frame optionally replacing an existing frame.
   Handle AllocateFrame(Slot *begin, Slot *end, Handle original);

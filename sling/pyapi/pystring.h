@@ -35,6 +35,9 @@ struct PyString : public PyBase, public Root {
   // Return string as Python string.
   PyObject *Str();
 
+  // Return string text as Python string.
+  PyObject *Text();
+
   // Return string qualifier.
   PyObject *Qualifier();
 

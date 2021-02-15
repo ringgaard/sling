@@ -842,6 +842,11 @@ class Builder : public External {
   Builder &Add(const Name &name, Text value, Handle qual);
   Builder &Add(Text name, Text value, Handle qual);
 
+  Builder &Add(Handle name, Handle str, Handle qual);
+  Builder &Add(const Object &name, Handle str, Handle qual);
+  Builder &Add(const Name &name, Handle str, Handle qual);
+  Builder &Add(Text name, Handle str, Handle qual);
+
   // Adds array slot to frame.
   Builder &Add(Handle name, const Handles &value);
   Builder &Add(const Object &name, const Handles &value);

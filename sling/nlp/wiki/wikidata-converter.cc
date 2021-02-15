@@ -177,12 +177,12 @@ Frame WikidataConverter::Convert(const Frame &item,
   for (int i = 0; i < num_languages; ++i) {
     Slot &s = names[i];
     if (!s.name.IsNil()) {
-      Text name = Frame(store, s.name).GetText(s_value_);
+      Handle name = Frame(store, s.name).GetHandle(s_value_);
       builder.Add(n_name_, name, language_order_[i]);
       name_found = true;
 
       if (!s.value.IsNil()) {
-        Text description = Frame(store, s.value).GetText(s_value_);
+        Handle description = Frame(store, s.value).GetHandle(s_value_);
         builder.Add(n_description_, description, language_order_[i]);
       }
     }
@@ -194,7 +194,7 @@ Frame WikidataConverter::Convert(const Frame &item,
   if (!name_found && !other_name.IsNil() &&
       !(only_primary_language_ || only_known_languages_)) {
     // Add fallback name.
-    Text name = Frame(store, other_name).GetText(s_value_);
+    string name = Frame(store, other_name).GetString(s_value_);
     builder.Add(n_name_, name);
   }
 
@@ -218,7 +218,7 @@ Frame WikidataConverter::Convert(const Frame &item,
       Array alias_list = aliases.Get(it.first).AsArray();
       if (alias_list.valid()) {
         for (int i = 0; i < alias_list.length(); ++i) {
-          Text name = Frame(store, alias_list.get(i)).GetText(s_value_);
+          Handle name = Frame(store, alias_list.get(i)).GetHandle(s_value_);
           builder.Add(n_alias_, name, lang);
         }
       }
@@ -385,15 +385,15 @@ Handle WikidataConverter::ConvertQuantity(const Frame &value) {
 Handle WikidataConverter::ConvertText(const Frame &value) {
   // Get text and language. Only keep values for supported langages.
   Store *store = value.store();
-  Object text = value.Get(s_text_);
+  Handle text = value.GetHandle(s_text_);
   string langid = value.GetString(s_language_);
   auto f = language_map_.find(langid);
   if (f == language_map_.end()) return Handle::nil();
   if (f->second == n_lang_mul_ || f->second == n_lang_none_) {
-    return text.handle();
+    return text;
   } else {
     // Convert text to string qualified by language.
-    return store->AllocateString(text.AsString().text(), f->second);
+    return store->AllocateString(text, f->second);
   }
 }
 

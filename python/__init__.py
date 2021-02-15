@@ -9,6 +9,7 @@ VERSION="3.0.0"
 Store=api.Store
 Frame=api.Frame
 Array=api.Array
+String=api.String
 
 RecordReader=api.RecordReader
 RecordDatabase=api.RecordDatabase
