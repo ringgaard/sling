@@ -1,3 +1,19 @@
+# Copyright 2021 Ringgaard Research ApS
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http:#www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Monitor Wikimedia change stream and update Wikidata database."""
+
 import json
 import re
 import sys
@@ -42,7 +58,7 @@ flags.define("--checkpoint_interval",
 
 flags.define("--string_buckets",
              help="number of buckets for for string coalescing",
-             default=1000,
+             default=4096,
              type=int,
              metavar="NUM")
 

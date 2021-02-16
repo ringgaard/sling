@@ -155,6 +155,8 @@ class KbSearchBox extends Component {
           items.push(elem);
         }
         target.populate(items);
+      })
+      .finally(() => {
         this.populating = false;
       });
   }
