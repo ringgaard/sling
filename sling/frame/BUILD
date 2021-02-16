@@ -131,6 +131,7 @@ cc_library(
     "//sling/base",
     "//sling/stream:output",
     "//sling/string:numbers",
+    "//sling/util:unicode",
   ],
 )
 

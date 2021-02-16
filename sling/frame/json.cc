@@ -19,6 +19,7 @@
 #include "sling/base/logging.h"
 #include "sling/frame/store.h"
 #include "sling/string/numbers.h"
+#include "sling/util/unicode.h"
 
 namespace sling {
 
@@ -65,22 +66,27 @@ void JSONWriter::Write(Handle handle) {
 }
 
 void JSONWriter::WriteString(const StringDatum *str) {
-  WriteChar('"');
-  unsigned char *s = str->payload();
-  unsigned char *end = s + str->length();
-  while (s < end) {
-    switch (*s) {
-      case '"': WriteChars('\\', '"'); s++; break;
-      case '\\': WriteChars('\\', '\\'); s++; break;
-      case '\n': WriteChars('\\', 'n'); s++; break;
-      case '\t': WriteChars('\\', 't'); s++; break;
-      case '\b': WriteChars('\\', 'b'); s++; break;
-      case '\f': WriteChars('\\', 'f'); s++; break;
-      case '\r': WriteChars('\\', 'r'); s++; break;
-      default:   WriteChar(*s++);
+  if (UTF8::Valid(str->data(), str->length())) {
+    unsigned char *s = str->payload();
+    unsigned char *end = s + str->length();
+    WriteChar('"');
+    while (s < end) {
+      switch (*s) {
+        case '"': WriteChars('\\', '"'); s++; break;
+        case '\\': WriteChars('\\', '\\'); s++; break;
+        case '\n': WriteChars('\\', 'n'); s++; break;
+        case '\t': WriteChars('\\', 't'); s++; break;
+        case '\b': WriteChars('\\', 'b'); s++; break;
+        case '\f': WriteChars('\\', 'f'); s++; break;
+        case '\r': WriteChars('\\', 'r'); s++; break;
+        default:   WriteChar(*s++);
+      }
     }
+    WriteChar('"');
+  } else {
+    // Output null for invalid strings.
+    output_->Write("null");
   }
-  WriteChar('"');
 }
 
 void JSONWriter::WriteFrame(const FrameDatum *frame) {
