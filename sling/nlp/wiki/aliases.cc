@@ -79,13 +79,15 @@ class AliasExtractor : public task::FrameProcessor {
 
     // Initialize filter.
     if (skip_aux_) filter_.Init(commons_);
-    num_aux_items_ = task->GetCounter("num_aux_items");
+    num_aux_items_ = task->GetCounter("aux_items");
+    num_non_entity_items_ = task->GetCounter("non-entity_items");
 
     // Initialize skipped item types.
     const char *skipped_item_types[] = {
       "Q273057",     // discography
       "Q1371849",    // filmography
       "Q17438413",   // videography
+      "Q1631107",    // bibliography
       "Q1075660",    // artist discography
       "Q59248059",   // singles discography
       "Q20054355",   // career statistics
@@ -95,7 +97,7 @@ class AliasExtractor : public task::FrameProcessor {
     for (const char **type = skipped_item_types; *type; ++type) {
       skipped_types_.insert(commons_->Lookup(*type));
     }
-    num_skipped_items_ = task->GetCounter("num_skipped_items");
+    num_skipped_items_ = task->GetCounter("skipped_items");
   }
 
   void Process(Slice key, const Frame &frame) override {
@@ -114,6 +116,23 @@ class AliasExtractor : public task::FrameProcessor {
     for (const Slot &s : frame) {
       Handle property = s.name;
       Handle value = store->Resolve(s.value);
+
+      // Do not extract aliases from non-entity items.
+      if (property == n_instance_of_) {
+        // Discard alias for non-entity items.
+        if (wikitypes_.IsCategory(value) ||
+            wikitypes_.IsDisambiguation(value) ||
+            wikitypes_.IsInfobox(value) ||
+            wikitypes_.IsTemplate(value) ||
+            wikitypes_.IsDuplicate(value)) {
+          num_non_entity_items_->Increment();
+          return;
+        }
+
+        // Check if all aliases for this item should be skipped.
+        if (skipped_types_.count(value) > 0) skip = true;
+      }
+
       if (!store->IsString(value)) continue;
       Handle lang = store->GetString(value)->qualifier();
       bool foreign = !lang.IsNil() && lang != language_;
@@ -166,19 +185,6 @@ class AliasExtractor : public task::FrameProcessor {
         if (property == n_demonym_) source = SRC_WIKIDATA_DEMONYM;
         if (foreign) source = SRC_WIKIDATA_FOREIGN;
         AddAlias(&a, value, source);
-      } else if (property == n_instance_of_) {
-        // Discard alias for non-entity items.
-        Handle type = store->Resolve(s.value);
-        if (wikitypes_.IsCategory(type) ||
-            wikitypes_.IsDisambiguation(type) ||
-            wikitypes_.IsInfobox(type) ||
-            wikitypes_.IsTemplate(type) ||
-            wikitypes_.IsDuplicate(type)) {
-          return;
-        }
-
-        // Check if all aliases for this item should be skipped.
-        if (skipped_types_.count(type) > 0) skip = true;
       }
     }
 
@@ -224,6 +230,7 @@ class AliasExtractor : public task::FrameProcessor {
   bool skip_aux_ = false;
   AuxFilter filter_;
   task::Counter *num_aux_items_;
+  task::Counter *num_non_entity_items_;
 
   // Item types that are skipped in the alias extraction.
   HandleSet skipped_types_;
@@ -646,8 +653,8 @@ class AliasMerger : public task::Reducer {
     Reducer::Start(task);
     task->Fetch("reliable_alias_sources", &reliable_alias_sources_);
 
-    num_missing_items_ = task->GetCounter("num_missing_items");
-    num_unique_aliases_ = task->GetCounter("num_unique_aliases");
+    num_missing_items_ = task->GetCounter("missing_items");
+    num_unique_aliases_ = task->GetCounter("unique_aliases");
     num_transfers_ = task->GetCounter("alias_transfers");
     num_zero_transfers_ = task->GetCounter("alias_zero_transfers");
     num_instance_transfers_ = task->GetCounter("alias_instance_transfers");

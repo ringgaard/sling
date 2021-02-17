@@ -127,7 +127,8 @@ enum Normalization {
   NORMALIZE_DIGITS      = 0x04,  // replace all digits with 9
   NORMALIZE_PUNCTUATION = 0x08,  // remove punctuation
   NORMALIZE_WHITESPACE  = 0x10,  // remove whitespace
-  NORMALIZE_NAME   =      0x20,  // remove name punctuation (periods and dashes)
+  NORMALIZE_NAME        = 0x20,  // remove name punctuation (periods and dashes)
+  NORMALIZE_PHRASE      = 0x40,  // replace normalized characters with spaces
 
   // Default normalization.
   NORMALIZE_DEFAULT = NORMALIZE_CASE | NORMALIZE_LETTERS | NORMALIZE_NAME
@@ -141,6 +142,7 @@ enum Normalization {
 //   p: NORMALIZE_PUNCTUATION
 //   w: NORMALIZE_WHITESPACE
 //   n: NORMALIZE_NAME
+//   P: NORMALIZE_PHRASE
 Normalization ParseNormalization(const string &spec);
 
 // Return string with normalization specifiers for flags.

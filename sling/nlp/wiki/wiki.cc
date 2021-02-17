@@ -115,13 +115,16 @@ bool WikimediaTypes::IsCategory(Handle type) {
          type == n_disambiguation_category_ ||
          type == n_list_category_ ||
          type == n_set_category_ ||
+         type == n_films_by_language_category_ ||
          type == n_topic_category_ ||
          type == n_template_category_ ||
          type == n_admin_category_ ||
          type == n_user_category_ ||
-         type == n_user_language_category_ ||
-         type == n_stub_category_ ||
          type == n_meta_category_ ||
+         type == n_user_language_category_ ||
+         type == n_unknown_parameters_category_;
+         type == n_tracking_category_ ||
+         type == n_stub_category_ ||
          type == n_navbox_category_ ||
          type == n_infobox_templates_category_;
 }

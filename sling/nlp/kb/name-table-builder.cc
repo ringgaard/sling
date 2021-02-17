@@ -34,8 +34,8 @@ namespace nlp {
 class NameTableBuilder : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
-    // Set name normalization.
-    normalization_ = ParseNormalization(task->Get("normalization", "lcn"));
+    // Set name normalization. Use phrase normalization for name table.
+    normalization_ = ParseNormalization(task->Get("normalization", "lcnP"));
 
     // Statistics.
     num_aliases_ = task->GetCounter("aliases");

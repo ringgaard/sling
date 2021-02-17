@@ -2346,7 +2346,7 @@ altinget.dk,Q12301201,Altinget,@altingetdk
 amtsavisen.dk,Q59659232,Randers Amts Avis,@Amtsavisendk
 arbejderen.dk,Q55215862,Arbejderen
 avisendanmark.dk,Q63057803,Avisen Danmark,@AvisenDanmark
-avisen.dk,Q12302548,Avisen
+avisen.dk,Q12302548,Avisen,@avisen_dk
 ballerupbladet.dk,Q4851622,Ballerup Bladet,@BallerupBladet
 berlingske.dk,Q59055,Berlingske,@berlingske,b.dk
 billedbladet.dk,Q12303437,Billed-Bladet,@billedbladetdk

@@ -50,6 +50,7 @@ Normalization ParseNormalization(const string &spec) {
       case 'p': flags |= NORMALIZE_PUNCTUATION; break;
       case 'w': flags |= NORMALIZE_WHITESPACE; break;
       case 'n': flags |= NORMALIZE_NAME; break;
+      case 'P': flags |= NORMALIZE_PHRASE; break;
       default:
         LOG(FATAL) << "Unknown normalization specifier: " << spec;
     }
@@ -65,6 +66,7 @@ string NormalizationString(Normalization normalization) {
   if (normalization & NORMALIZE_PUNCTUATION) str.push_back('p');
   if (normalization & NORMALIZE_WHITESPACE) str.push_back('w');
   if (normalization & NORMALIZE_NAME) str.push_back('n');
+  if (normalization & NORMALIZE_PHRASE) str.push_back('P');
   return str;
 }
 
@@ -440,12 +442,27 @@ void UTF8::Normalize(const char *s, int len, int flags, string *normalized) {
 
   // Try fast conversion where all characters are below 128. All characters
   // below 128 are normalized to one byte codes.
+  bool brk = false;
   const char *end = s + len;
   while (s < end) {
     uint8 c = *reinterpret_cast<const uint8 *>(s);
     if (c & 0x80) break;
     int ch = Unicode::Normalize(c, flags);
-    if (ch > 0) normalized->push_back(ch);
+    if (ch > 0) {
+      if (ch == ' ') {
+        brk = true;
+      } else {
+        if (brk) {
+          if ((flags & NORMALIZE_WHITESPACE) == 0) {
+            normalized->push_back(' ');
+          }
+          brk = false;
+        }
+        normalized->push_back(ch);
+      }
+    } else if (flags & NORMALIZE_PHRASE) {
+      brk = true;
+    }
     s++;
   }
 
@@ -453,7 +470,21 @@ void UTF8::Normalize(const char *s, int len, int flags, string *normalized) {
   // characters.
   while (s < end) {
     int ch = Unicode::Normalize(Decode(s), flags);
-    if (ch > 0) Encode(ch, normalized);
+    if (ch > 0) {
+      if (ch == ' ') {
+        brk = true;
+      } else {
+        if (brk) {
+          if ((flags & NORMALIZE_WHITESPACE) == 0) {
+            normalized->push_back(' ');
+          }
+          brk = false;
+        }
+        Encode(ch, normalized);
+      }
+    } else if (flags & NORMALIZE_PHRASE) {
+      brk = true;
+    }
     s = Next(s);
   }
 }

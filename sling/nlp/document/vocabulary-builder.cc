@@ -107,7 +107,7 @@ class WordVocabularyReducer : public SumReducer {
     num_words_ = task->GetCounter("words");
     num_subwords_ = task->GetCounter("subwords");
     word_count_ = task->GetCounter("word_count");
-    num_words_discarded_ = task->GetCounter("num_words_discarded");
+    num_words_discarded_ = task->GetCounter("words_discarded");
   }
 
   void Aggregate(int shard, const Slice &key, uint64 sum) override {
