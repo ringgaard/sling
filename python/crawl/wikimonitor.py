@@ -58,7 +58,7 @@ flags.define("--checkpoint_interval",
 
 flags.define("--string_buckets",
              help="number of buckets for for string coalescing",
-             default=4096,
+             default=64*1024,
              type=int,
              metavar="NUM")
 

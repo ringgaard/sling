@@ -145,6 +145,7 @@ class WikidataConverter {
 
   Name n_alias_{names_, "alias"};
   Name n_sources_{names_, "sources"};
+  Name n_rank_{names_, "rank"};
 
   // Wikidata attribute names.
   Name s_id_{names_, "_id"};
@@ -175,6 +176,7 @@ class WikidataConverter {
   Name s_title_{names_, "title"};
   Name s_lastrevid_{names_, "lastrevid"};
   Name s_modified_{names_, "modified"};
+  Name s_rank_{names_, "rank"};
 
   // Wikidata types.
   Name s_string_{names_, "string"};

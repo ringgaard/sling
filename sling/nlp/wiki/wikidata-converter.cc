@@ -240,6 +240,14 @@ Frame WikidataConverter::Convert(const Frame &item,
         Frame datavalue = snak.GetFrame(s_datavalue_);
         if (datavalue.invalid()) continue;
 
+        // Get statement rank, 0=deprecated, 1=normal, 2=preferred.
+        int ranking = 1;
+        Text rank = statement.GetText(s_rank_);
+        if (!rank.empty() && rank != "normal") {
+          if (rank == "preferred") ranking = 2;
+          if (rank == "deprecated") ranking = 0;
+        }
+
         Object value(store, ConvertValue(datavalue));
         if (!value.IsNil()) {
           // Add qualifiers.
@@ -261,7 +269,13 @@ Frame WikidataConverter::Convert(const Frame &item,
                 }
               }
             }
-
+            if (ranking != 1) qualified.Add(n_rank_, ranking);
+            value = qualified.Create();
+          } else if (ranking != 1) {
+            // Add rank to primitive value.
+            Builder qualified(store);
+            qualified.AddIs(value);
+            qualified.Add(n_rank_, ranking);
             value = qualified.Create();
           }
 

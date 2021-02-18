@@ -110,20 +110,12 @@ class KbLink extends Component {
 Component.register(KbLink);
 
 class KbSearchBox extends Component {
-  constructor() {
-    super();
-    this.populating = false;
-  }
-
   onconnected() {
     this.bind("md-search", "query", e => this.onquery(e));
     this.bind("md-search", "item", e => this.onitem(e));
   }
 
   onquery(e) {
-    if (this.populating) return;
-    this.populating = true;
-
     let params = "fmt=cjson";
     let query = e.detail.trimStart();
     if (query.endsWith(".")) {
@@ -155,9 +147,6 @@ class KbSearchBox extends Component {
           items.push(elem);
         }
         target.populate(items);
-      })
-      .finally(() => {
-        this.populating = false;
       });
   }
 
@@ -448,6 +437,10 @@ class KbItemList extends Component {
 Component.register(KbItemList);
 
 class KbItemCard extends MdCard {
+  onconnected() {
+    this.bind("#code", "click", e => this.oncode(e));
+  }
+
   visible() {
     let item = this.state;
     return item;
@@ -463,6 +456,12 @@ class KbItemCard extends MdCard {
     });
     this.find("#description").update(item.description);
     this.find("#datatype").update(item.type ? "Datatype: " + item.type : "");
+  }
+
+  oncode(e) {
+    let item = this.state;
+    let url = "/kb/frame?fmt=txt&id=" + encodeURIComponent(item.ref);
+    window.open(url,'_blank');
   }
 
   static stylesheet() {
