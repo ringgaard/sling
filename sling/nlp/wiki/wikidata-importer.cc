@@ -373,7 +373,7 @@ class WikidataPruner : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     // Get parameters.
-    task->Fetch("prune_aliases", &prune_names_);
+    task->Fetch("prune_names", &prune_names_);
     task->Fetch("prune_aliases", &prune_aliases_);
     task->Fetch("prune_wiki_links", &prune_wiki_links_);
     task->Fetch("prune_wiki_maps", &prune_wiki_maps_);

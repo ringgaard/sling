@@ -1,5 +1,19 @@
 // Web component framework.
 
+// HTML string escape.
+const htmlmap = {
+  '"': '&quot;',
+  '&': '&amp;',
+  '\'': '&#x27;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '`': '&#x60;',
+  '/': '&#x2F;'
+}
+
+// Registered style sheet functions.
+var stylesheets = [];
+
 // Base class for web components.
 export class Component extends HTMLElement {
   // Initialize new web component.
@@ -15,7 +29,7 @@ export class Component extends HTMLElement {
   connectedCallback() {
     // Add attributes to properties.
     for (const attr of this.attributes) {
-      let name = attr.name.replaceAll("-", "_");
+      let name = attr.name.replace(/-/g, "_");
       let value = attr.value;
 
       if (value == "null") {
@@ -113,20 +127,9 @@ export class Component extends HTMLElement {
     elem.addEventListener(event, handler);
   }
 
-  // HTML string escape.
-  static htmlmap = {
-    '"': '&quot;',
-    '&': '&amp;',
-    '\'': '&#x27;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '`': '&#x60;',
-    '/': '&#x2F;'
-  }
-
   static escape(s) {
     if (s == undefined) return "";
-    return s.replace(/["&'<>`/]/g, c => Component.htmlmap[c]);
+    return s.replace(/["&'<>`/]/g, c => htmlmap[c]);
   }
 
   // Register class as a HTML web component.
@@ -136,7 +139,7 @@ export class Component extends HTMLElement {
       tagname = cls.name.match(/[A-Z][a-z]*/g).join("-").toLowerCase();
     }
 
-    // Check is tag name has already been registered.
+    // Check if tag name has already been registered.
     if (window.customElements.get(tagname)) return;
 
     // Register custom element.
@@ -144,16 +147,13 @@ export class Component extends HTMLElement {
 
     // Register style sheet for web component.
     if (cls.stylesheet) {
-      if (!Component.stylesheets.includes(cls.stylesheet)) {
-        Component.stylesheets.push(cls.stylesheet);
-        let css = cls.stylesheet().replaceAll("$", tagname);
+      if (!stylesheets.includes(cls.stylesheet)) {
+        stylesheets.push(cls.stylesheet);
+        let css = cls.stylesheet().replace(/\$/g, tagname);
         stylesheet(css);
       }
     }
   }
-
-  // Registered style sheet functions.
-  static stylesheets = [];
 }
 
 // Switch tag for selecting active subcomponent.

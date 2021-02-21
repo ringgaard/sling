@@ -225,7 +225,7 @@ class KbPropertyTable extends Component {
         out.push('">');
       } else if (val.url) {
         out.push('<a href="');
-        out.push(val.url.replaceAll('"', '&quot;'));
+        out.push(val.url.replace(/"/g, '&quot;'));
         out.push('" target="_blank" rel="noreferrer" tabindex="-1">');
       }
       if (val.text) {
@@ -540,7 +540,7 @@ class KbPictureCard extends MdCard {
   }
 
   render() {
-    let url = this.state.thumbnail.replaceAll('"', '&quot;');
+    let url = this.state.thumbnail.replace(/"/g, '&quot;');
     if (mediadb) url = "/media/" + url;
     return `<a href="${url}" target="_blank" rel="noreferrer" tabindex="-1">
               <img src="${url}" rel="noreferrer">

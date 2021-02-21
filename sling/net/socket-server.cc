@@ -604,6 +604,9 @@ void SocketConnection::Upgrade(SocketSession *session) {
   CHECK_EQ(state_, SOCKET_STATE_PROCESS)
       << "Socket protocol upgrade only allowed in PROCESS state";
   session_ = session;
+  if (session_->IdleTimeout() != -1) {
+    idle_timeout_ = session_->IdleTimeout();
+  }
 }
 
 void SocketConnection::Shutdown() {

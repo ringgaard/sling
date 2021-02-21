@@ -157,7 +157,7 @@ class AliasExtractor : public task::FrameProcessor {
           }
         } else {
           // Add simple (foreign) Wikidata alias.
-          AliasSource source = SRC_WIKIDATA_LABEL;
+          AliasSource source = SRC_WIKIDATA_ALIAS;
           if (foreign) source = SRC_WIKIDATA_FOREIGN;
           AddAlias(&a, value, source);
         }
@@ -616,7 +616,6 @@ class AliasSelector : public task::Reducer {
   Name n_form_{names_, "form"};
   Name n_blacklist_{names_, "blacklist"};
   Name n_skip_{names_, "skip"};
-  Name n_instance_of_{names_, "P31"};
 
   // Language.
   Handle language_;
@@ -711,8 +710,6 @@ class AliasMerger : public task::Reducer {
     // Merge all items for alias fingerprint.
     Store store(&commons_);
     Builder aliases(&store);
-
-    // Collect all the aliases for the item.
     std::unordered_map<string, int> names;
     for (task::Message *message : input.messages()) {
       Frame batch = DecodeMessage(&store, message);
