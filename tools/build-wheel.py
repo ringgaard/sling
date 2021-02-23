@@ -61,7 +61,7 @@ purelib_dir = package + "-" + version + ".data/purelib"
 scripts_dir = package + "-" + version + ".data/scripts"
 record_filename = dist_dir + "/RECORD"
 
-wheel_dir = "dist"
+wheel_dir = "data/e/dist"
 wheel_basename = package + "-" + version + "-" + tag + ".whl"
 wheel_filename = wheel_dir + "/" + wheel_basename
 

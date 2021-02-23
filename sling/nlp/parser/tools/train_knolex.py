@@ -12,7 +12,7 @@ wf = workflow.Workflow("knolex-training")
 
 # Parser trainer inputs and outputs.
 kb = wf.resource(
-  "data/e/wiki/kb.sling",
+  "data/e/kb/kb.sling",
   format="store/frame"
 )
 

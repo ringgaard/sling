@@ -21,9 +21,8 @@ import re
 class ExtractWikipediaDates:
   def __init__(self):
     self.kb = sling.Store()
-    self.kb.lockgc()
     print("loading kb")
-    self.kb.load("data/e/wiki/kb.sling")
+    self.kb.load("data/e/kb/kb.sling")
     print("kb loaded")
     self.instanceof = self.kb['P31']
     self.date_of_birth = self.kb['P569']

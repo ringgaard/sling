@@ -58,7 +58,7 @@ bad_images = set([
 def get_twitter_usernames():
   # Load knowledge base.
   kb = sling.Store()
-  kb.load("data/e/wiki/kb.sling")
+  kb.load("data/e/kb/kb.sling")
   p_twitter = kb["P2002"]
 
   # Find twitter usernames for items.

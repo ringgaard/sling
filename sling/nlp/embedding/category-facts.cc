@@ -20,7 +20,7 @@ DEFINE_string(fact_embeddings,
 DEFINE_string(category_embeddings,
               "data/e/fact/category-embeddings.vec",
               "Category embeddings");
-DEFINE_string(kb, "data/e/wiki/kb.sling", "Knowledge base");
+DEFINE_string(kb, "data/e/kb/kb.sling", "Knowledge base");
 DEFINE_string(similarity_flow, "", "Flow file for similarity model");
 DEFINE_int32(topk, 15, "Number of similar fact to list");
 DEFINE_string(source, "c", "source embeddings (c=category, f=facts)");

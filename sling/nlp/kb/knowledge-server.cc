@@ -21,8 +21,8 @@
 #include "sling/nlp/kb/knowledge-service.h"
 
 DEFINE_int32(port, 8080, "HTTP server port");
-DEFINE_string(kb, "data/e/wiki/kb.sling", "Knowledge base");
-DEFINE_string(names, "data/e/wiki/en/name-table.repo", "Name table");
+DEFINE_string(kb, "data/e/kb/kb.sling", "Knowledge base");
+DEFINE_string(names, "data/e/kb/en/name-table.repo", "Name table");
 DEFINE_string(mediadb, "", "Media database");
 
 using namespace sling;

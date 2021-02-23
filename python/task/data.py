@@ -265,7 +265,7 @@ class Datasets:
     item is represented as a frame.
     """
     return self.wf.resource("items@10.rec",
-                            dir=corpora.wikidir(),
+                            dir=corpora.kbdir(),
                             format="records/frame")
 
   def knowledge_base(self):
@@ -273,7 +273,7 @@ class Datasets:
     each Wikidata item and property plus additional schema information.
     """
     return self.wf.resource("kb.sling",
-                            dir=corpora.wikidir(),
+                            dir=corpora.kbdir(),
                             format="store/frame")
 
   #---------------------------------------------------------------------------
@@ -285,7 +285,7 @@ class Datasets:
     and the items they are aliases for."""
     if language == None: language = flags.arg.language
     return self.wf.resource("name-table.repo",
-                            dir=corpora.wikidir(language),
+                            dir=corpora.kbdir(language),
                             format="repository")
 
   def phrase_table(self, language=None):
@@ -293,6 +293,6 @@ class Datasets:
     fingerprints of the item names."""
     if language == None: language = flags.arg.language
     return self.wf.resource("phrase-table.repo",
-                            dir=corpora.wikidir(language),
+                            dir=corpora.kbdir(language),
                             format="repository")
 

@@ -50,6 +50,7 @@ const char *alias_source_name[NUM_ALIAS_SOURCES] = {
   "wikipedia_name",
   "wikipedia_nickname",
   "variation",
+  "transfer",
 };
 
 void Wiki::SplitTitle(const string &title,

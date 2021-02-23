@@ -76,9 +76,8 @@ class StoreFactsBot:
     self.status_file = sling.RecordWriter(status_file_name)
 
     self.store = sling.Store()
-    self.store.lockgc()
     print("loading kb")
-    self.store.load("data/e/wiki/kb.sling")
+    self.store.load("data/e/kb/kb.sling")
     print("kb loaded")
 
     self.page_cat = self.store["/wp/page/category"]

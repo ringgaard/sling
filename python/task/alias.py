@@ -40,7 +40,7 @@ class NamesWorkflow:
     """
     if language == None: language = flags.arg.language
     return self.wf.resource("names@10.rec",
-                            dir=corpora.wikidir(language),
+                            dir=corpora.kbdir(language),
                             format="records/alias")
 
   def alias_corrections(self):

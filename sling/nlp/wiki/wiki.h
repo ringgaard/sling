@@ -61,9 +61,10 @@ enum AliasSource {
   SRC_WIKIPEDIA_NAME           = 12,  //  4096  0x1000
   SRC_WIKIPEDIA_NICKNAME       = 13,  //  8192  0x2000
   SRC_VARIATION                = 14,  // 16384  0x4000
+  SRC_TRANSFER                 = 15,  // 32768  0x8000
 };
 
-static const int NUM_ALIAS_SOURCES = 15;
+static const int NUM_ALIAS_SOURCES = 16;
 
 extern const char *alias_source_name[NUM_ALIAS_SOURCES];
 

@@ -93,6 +93,13 @@ def wikidir(language=None):
   else:
     return flags.arg.workdir + "/wiki/" + language
 
+def kbdir(language=None):
+  """Location of knowledge base datasets."""
+  if language == None:
+    return flags.arg.workdir + "/kb"
+  else:
+    return flags.arg.workdir + "/kb/" + language
+
 def repository(path):
   """Location of file in Git repository."""
   return flags.arg.repository + "/" + path

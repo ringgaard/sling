@@ -48,12 +48,12 @@ int main(int argc, char *argv[]) {
   commons.LockGC();
 
   SpanAnnotator::Resources resources;
-  resources.kb = "data/e/wiki/kb.sling";
+  resources.kb = "data/e/kb/kb.sling";
   resources.dictionary = "data/e/silver/" + FLAGS_lang + "/idf.repo";
   resources.language = FLAGS_lang;
   resources.resolve = FLAGS_resolve;
 
-  string alias_file = "data/e/wiki/" + FLAGS_lang + "/phrase-table.repo";
+  string alias_file = "data/e/kb/" + FLAGS_lang + "/phrase-table.repo";
   PhraseTable aliases;
   aliases.Load(&commons, alias_file);
   resources.aliases = &aliases;

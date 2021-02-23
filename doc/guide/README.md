@@ -7,8 +7,3 @@
   * [Myelin neural network JIT compiler](myelin.md)
   * [Wikipedia and Wikidata processing](wikiflow.md)
 
-## Out-dated guides
-
-  * [Training a SLING parser](training.md)
-  * [Parsing with SLING](parsing.md)
-

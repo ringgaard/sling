@@ -12,8 +12,7 @@ if not os.path.exists(output_dir): os.makedirs(output_dir)
 # Read knowledge base.
 print "Load KB"
 commons = sling.Store()
-commons.lockgc()
-commons.load("data/e/wiki/kb.sling", snapshot=True)
+commons.load("data/e/kb/kb.sling")
 n_id = commons["id"]
 n_isa = commons["isa"]
 n_name = commons["name"]

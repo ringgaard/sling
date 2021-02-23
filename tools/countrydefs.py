@@ -11,9 +11,8 @@ flags.parse()
 
 # Initialize knowledge base.
 kb = sling.Store()
-kb.load("data/e/wiki/kb.sling")
+kb.load("data/e/kb/kb.sling")
 n_country_code = kb["P298"]
-
 
 # Find all ISO 3166 country codes in the knowledge base.
 for item in kb:

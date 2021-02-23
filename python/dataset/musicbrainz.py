@@ -34,8 +34,7 @@ class Builder:
 
 print "Read KB"
 commons = sling.Store()
-commons.lockgc()
-commons.load("data/e/wiki/kb.sling")
+commons.load("data/e/kb/kb.sling")
 n_id = commons["id"]
 n_name = commons["name"]
 n_artist_mbid = commons["P434"]

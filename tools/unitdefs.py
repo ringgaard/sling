@@ -10,7 +10,7 @@ flags.parse()
 
 # Initialize knowledge base.
 kb = sling.Store()
-kb.load("data/e/wiki/kb.sling")
+kb.load("data/e/kb/kb.sling")
 n_qua = kb["is"]
 n_lang = kb["lang"]
 n_instance_of = kb["P31"]
@@ -40,7 +40,7 @@ unit_types = {
   kb["Q2360980"],    # unit of amount
 }
 
-# Black-listed unknown that conflict with other more important units.
+# Black-listed units that conflict with other more important units.
 blacklist = [
   kb["Q27949241"],  # R vs Réaumur
   kb["Q1396128"],   # faraday (F) vs Fahrenheit

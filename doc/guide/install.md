@@ -1,7 +1,7 @@
 # SLING Installation and Building
 
 Operating system: Linux<br>
-Languages: C++ (gcc or clang), Python 3.5+, assembler<br>
+Languages: C++ (gcc or clang), Python 3.6+, assembler<br>
 CPU: Intel x64 or compatible<br>
 Build system: Bazel<br>
 
@@ -11,21 +11,22 @@ If you just want to use SLING from Python, e.g. want to try out the parser on a
 pre-trained model, you can install the SLING wheel with pip. On a Linux machine
 with Python 3 you can install a pre-built wheel:
 
-```
-sudo -H pip3 install http://www.jbox.dk/sling/sling-3.0.0-py3-none-linux_x86_64.whl
+```shell
+sudo -H pip3 install https://ringgaard.com/data/dist/sling-3.0.0-py3-none-linux_x86_64.whl
 ```
 
 You can test the installation by trying to import the `sling` package:
-```
-python3 -c "import sling; print(sling)"
+```shell
+python3 -c "import sling; sling.which()"
 ```
 
-If you want to try out the SLING parser you can download a pre-trained model:
-```
-wget http://www.jbox.dk/sling/caspar.flow
+If you want to try out the SLING parser you can download a
+[pre-trained model](https://ringgaard.com/data/caspar/caspar.flow):
+```shell
+wget https://ringgaard.com/data/caspar/caspar.flow
 ```
 You can then use the parser in Python:
-```
+```python
 import sling
 
 parser = sling.Parser("caspar.flow")
@@ -78,12 +79,4 @@ sling Python module directly to the Python source directory to use it in
 ```shell
 sudo ln -s $(realpath python) /usr/lib/python3/dist-packages/sling
 ```
-
-**NOTE:**
-* We currently do not support OSX, but you can check out
-  [issue #189](https://github.com/google/sling/issues/189) for help on building
-  on OSX.
-* Similarly, we do not support Windows, but you can check out
-  [issue #296](https://github.com/google/sling/issues/296) for help on
-  building SLING on Windows Subsystem for Linux (WSL).
 

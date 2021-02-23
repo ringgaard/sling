@@ -57,11 +57,11 @@ A more detailed description of the SLING parser can be found in this paper:
 ## More information ...
 
   * [Installation and building](doc/guide/install.md)
-  * [CASPAR frame semantics parser](doc/guide/caspar.md)
-  * [Semantic frames](doc/guide/frames.md)
-  * [SLING Python API](doc/guide/pyapi.md)
-  * [Myelin neural network JIT compiler](doc/guide/myelin.md)
   * [Wikipedia and Wikidata processing](doc/guide/wikiflow.md)
+  * [SLING Python API](doc/guide/pyapi.md)
+  * [CASPAR frame semantics parser](doc/guide/caspar.md)
+  * [Myelin neural network JIT compiler](doc/guide/myelin.md)
+  * [Semantic frames](doc/guide/frames.md)
 
 ## Credits
 

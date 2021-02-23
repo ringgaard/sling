@@ -39,7 +39,7 @@ class KnowledgeBaseWorkflow:
   def xrefs(self):
     """Resource for store with cross-reference items."""
     return self.wf.resource("xrefs.sling",
-                            dir=corpora.wikidir(),
+                            dir=corpora.kbdir(),
                             format="store/frame")
 
   def collect_xrefs(self):

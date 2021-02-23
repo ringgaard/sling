@@ -28,8 +28,7 @@ flags.define("--prop",
 class ExtractDates:
   def __init__(self):
     self.kb = sling.Store()
-    self.kb.lockgc()
-    self.kb.load("data/e/wiki/kb.sling", snapshot=True)
+    self.kb.load("data/e/kb/kb.sling")
     self.instanceof = self.kb['P31']
     self.has_part = self.kb['P527']
     self.part_of = self.kb['P361']

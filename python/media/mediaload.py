@@ -25,7 +25,7 @@ import sling
 import sling.flags as flags
 
 flags.define("--kb",
-             default="data/e/wiki/kb.sling",
+             default="data/e/kb/kb.sling",
              help="Knowledge base with media references")
 
 flags.define("--mediadb",

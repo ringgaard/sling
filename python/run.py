@@ -41,6 +41,11 @@ flags.define("--spawn",
              default=False,
              action="store_true")
 
+flags.define("--version",
+             help="print version information",
+             default=False,
+             action="store_true")
+
 class Command:
   def __init__(self, name,
                help=None,
@@ -240,6 +245,11 @@ def main():
         importlib.import_module(cmd.package)
         break
   flags.parse()
+
+  # Output version information.
+  if flags.arg.version:
+    sling.which()
+    sys.exit(0)
 
   # List commands.
   if flags.arg.list:

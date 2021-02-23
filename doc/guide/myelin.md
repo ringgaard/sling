@@ -64,7 +64,7 @@ f = myelin.Builder(flow, "f")
 
 The weights in W and b can be initialized from NumPy arrays or any other
 objects that support the
-[Python buffer protocol](https://docs.python.org/2/c-api/buffer.html):
+[Python buffer protocol](https://docs.python.org/3.6/c-api/buffer.html):
 
 ```python
 # Initialize weights.

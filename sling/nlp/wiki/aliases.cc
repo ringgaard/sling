@@ -650,6 +650,7 @@ class AliasMerger : public task::Reducer {
  public:
   void Start(task::Task *task) override {
     Reducer::Start(task);
+    task->Fetch("transfer_aliases", &transfer_aliases_);
     task->Fetch("reliable_alias_sources", &reliable_alias_sources_);
 
     num_missing_items_ = task->GetCounter("missing_items");
@@ -659,42 +660,46 @@ class AliasMerger : public task::Reducer {
     num_instance_transfers_ = task->GetCounter("alias_instance_transfers");
 
     // Load commons store.
-    task::LoadStore(&commons_, task, "kb");
+    if (transfer_aliases_) {
+      task::LoadStore(&commons_, task, "kb");
+    }
     names_.Bind(&commons_);
 
     // Initialize alias transfer exceptions.
-    static const char *exceptions[] = {
-      "P1889",  // different from
-      "P460",   // said to be the same as
-      "P1533",  // identical to this given name
-      "P138",   // named after
-      "P2959",  // permanent duplicated item
-      "P734",   // family name
-      "P735",   // given name
-      "P112",   // founded by
-      "P115",   // home venue
-      "P144",   // based on
-      "P1950",  // second family name in Spanish name
-      "P2359",  // Roman nomen gentilicium
-      "P2358",  // Roman praenomen
-      "P2365",  // Roman cognomen
-      "P2366",  // Roman agnomen
-      "P941",   // inspired by
-      "P629",   // edition or translation of
-      "P747",   // has edition or translation
-      "P37",    // official language
-      "P103",   // native language
-      "P566",   // basionym
-      "P487",   // Unicode character
+    if (transfer_aliases_) {
+      static const char *exceptions[] = {
+        "P1889",  // different from
+        "P460",   // said to be the same as
+        "P1533",  // identical to this given name
+        "P138",   // named after
+        "P2959",  // permanent duplicated item
+        "P734",   // family name
+        "P735",   // given name
+        "P112",   // founded by
+        "P115",   // home venue
+        "P144",   // based on
+        "P1950",  // second family name in Spanish name
+        "P2359",  // Roman nomen gentilicium
+        "P2358",  // Roman praenomen
+        "P2365",  // Roman cognomen
+        "P2366",  // Roman agnomen
+        "P941",   // inspired by
+        "P629",   // edition or translation of
+        "P747",   // has edition or translation
+        "P37",    // official language
+        "P103",   // native language
+        "P566",   // basionym
+        "P487",   // Unicode character
 
-      nullptr
-    };
-    for (const char **p = exceptions; *p != nullptr; ++p) {
-      transfer_exceptions_.insert(commons_.LookupExisting(*p));
+        nullptr
+      };
+      for (const char **p = exceptions; *p != nullptr; ++p) {
+        transfer_exceptions_.insert(commons_.LookupExisting(*p));
+      }
+
+      // Initialize fact catalog.
+      catalog_.Init(&commons_);
     }
-
-    // Initialize fact catalog.
-    catalog_.Init(&commons_);
 
     commons_.Freeze();
   }
@@ -728,7 +733,7 @@ class AliasMerger : public task::Reducer {
     }
 
     // Transfer aliases.
-    TransferAliases(aliases);
+    if (transfer_aliases_) TransferAliases(aliases);
 
     // Add representative name.
     string name;
@@ -751,6 +756,7 @@ class AliasMerger : public task::Reducer {
     Handle handle;  // item handle
     Handle alias;   // alias frame for item
     int count;      // alias frequency
+    int sources;    // alias sources
     bool reliable;  // reliable alias flag
     int form;       // alias case form
   };
@@ -774,6 +780,7 @@ class AliasMerger : public task::Reducer {
     num_transfers_->Increment();
     num_instance_transfers_->Increment(source->count);
     target->count += source->count;
+    target->sources |= 1 << SRC_TRANSFER;
     source->count = 0;
     return true;
   }
@@ -804,8 +811,8 @@ class AliasMerger : public task::Reducer {
       item.handle = slot.name;
       item.alias = slot.value;
       item.count = alias.GetInt(n_count_);
-      int sources = alias.GetInt(n_sources_);
-      item.reliable = (sources & reliable_alias_sources_) != 0;
+      item.sources = alias.GetInt(n_sources_);
+      item.reliable = (item.sources & reliable_alias_sources_) != 0;
       item.form = alias.GetInt(n_form_);
 
       // Disregard items that are not in the knowledge base.
@@ -886,6 +893,7 @@ class AliasMerger : public task::Reducer {
         ItemAlias &item = items[i];
         Frame f(store, item.alias);
         f.Set(n_count_, item.count);
+        f.Set(n_sources_, item.sources);
         if (item.count == 0) removed.push_back(i);
       }
       aliases.Remove(removed);
@@ -897,6 +905,9 @@ class AliasMerger : public task::Reducer {
 
   // Fact catalog for alias transfer.
   FactCatalog catalog_;
+
+  // Transfer aliases.
+  bool transfer_aliases_ = true;
 
   // Property exceptions for alias transfer.
   HandleSet transfer_exceptions_;

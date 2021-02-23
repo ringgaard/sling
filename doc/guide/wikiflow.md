@@ -5,7 +5,8 @@ SLING has a task processing pipeline for downloading and processing
 dumps. All Wikipedia pages and the Wikidata knowledge base are freely
 available as dump files from [Wikimedia](https://www.wikimedia.org/). These
 dumps are processed using the SLING workflow task system to convert the dumps
-into SLING frame format.
+into SLING frame format. You can [browse](https://ringgaard.com/kb) a pre-built
+knowledge base on [ringgaard.com](https://ringgaard.com).
 
 ## Processing overview
 
@@ -110,34 +111,13 @@ for the Wikidata properties in SLING frame schema format. After this, the
 `wikipedia-mapping` task produces a frame store that maps from Wikipedia article
 ids to Wikidata QIDs.
 
-This is an example of the SLING frame for Wikidata item [Q2534120](https://www.wikidata.org/wiki/Q2534120):
+This is an example of the SLING frame for Wikidata item [Q2534120](https://ringgaard.com/kb/Q2534120):
 ```
 Q2534120: {
   =Q2534120
   :/w/item
-  name: "Annette Vadim"
-  description: "Danish actress"
-  alias: { name: "Annette Strøyberg" lang: /lang/pl sources: 2 }
-  alias: { name: "Annette Stroyberg" lang: /lang/pl sources: 4 }
-  alias: { name: "Annette Vadim" lang: /lang/pl sources: 4 }
-  alias: { name: "Annette Strøyberg" lang: /lang/sv sources: 2 }
-  alias: { name: "Annette Vadim" lang: /lang/sv sources: 4 }
-  alias: { name: "Annette Ströyberg" lang: /lang/sv sources: 4 }
-  alias: { name: "Annette Stroyberg" lang: /lang/sv sources: 4 }
-  alias: { name: "Ströyberg" lang: /lang/sv sources: 4 }
-  alias: { name: "Annette Strøyberg" lang: /lang/da sources: 2 }
-  alias: { name: "Annette Stroyberg" lang: /lang/de sources: 2 }
-  alias: { name: "Annette Vadim" lang: /lang/de sources: 4 }
-  alias: { name: "Annette Susanne Strøyberg" lang: /lang/de sources: 4 }
-  alias: { name: "Annette Stroyberg" lang: /lang/fr sources: 2 }
-  alias: { name: "Annette Vadim" lang: /lang/fr sources: 4 }
-  alias: { name: "Annette Ströyberg" lang: /lang/fr sources: 4 }
-  alias: { name: "Annette Vadim" lang: /lang/es sources: 2 }
-  alias: { name: "Annette Vadim" lang: /lang/en sources: 2 }
-  alias: { name: "Annette Strøyberg" lang: /lang/it sources: 2 }
-  alias: { name: "Annette Stroyberg" lang: /lang/it sources: 4 }
-  alias: { name: "Annette Vadim" lang: /lang/it sources: 4 }
-  alias: { name: "Annette Vadim" lang: /lang/nl sources: 2 }
+  name: "Annette Vadim"@/lang/en
+  description: "Danish actress"@/lang/en
   P26: {
     +Q383420
     P580: 1958
@@ -178,13 +158,13 @@ Q2534120: {
   P3786: "11568"
   P2949: "Strøyberg-5"
   /w/item/wikipedia: {
-    /lang/pl: /wp/pl/Annette_Strøyberg
-    /lang/sv: /wp/sv/Annette_Strøyberg
-    /lang/da: /wp/da/Annette_Strøyberg
-    /lang/de: /wp/de/Annette_Stroyberg
-    /lang/fr: /wp/fr/Annette_Stroyberg
-    /lang/en: /wp/en/Annette_Stroyberg
-    /lang/it: /wp/it/Annette_Strøyberg
+    /lang/pl: "Annette Strøyberg"
+    /lang/sv: "Annette Strøyberg"
+    /lang/da: "Annette Strøyberg"
+    /lang/de: "Annette Stroyberg"
+    /lang/fr: "Annette Stroyberg"
+    /lang/en: "Annette Stroyberg"
+    /lang/it: "Annette Strøyberg"
   }
 }
 ```
@@ -197,8 +177,8 @@ _statement_ for the item, e.g.
 ```
   P27: Q35
 ```
-means [country of citizenship](https://www.wikidata.org/wiki/Property:P27) is
-[Denmark](https://www.wikidata.org/wiki/Q35). Qualified statements are output
+means [country of citizenship](https://ringgaard.com/kb/P27) is
+[Denmark](https://ringgaard.com/kb/Q35). Qualified statements are output
 using '+' notation, e.g.
 ```
   P26: {
@@ -207,10 +187,10 @@ using '+' notation, e.g.
     P582: 1960
   }
 ```
-means [spouse](https://www.wikidata.org/wiki/Property:P26) is
-[Roger Vadim](https://www.wikidata.org/wiki/Q383420) with
-[start time](https://www.wikidata.org/wiki/Property:P580) 1958 and
-[end time](https://www.wikidata.org/wiki/Property:P582) 1960.
+means [spouse](https://ringgaard.com/kb/P26) is
+[Roger Vadim](https://ringgaard.com/kb/Q383420) with
+[start time](https://ringgaard.com/kb/P580) 1958 and
+[end time](https://ringgaard.com/kb/P582) 1960.
 
 Schema frames for Wikidata properties are encoded in a similar format:
 ```
@@ -357,28 +337,28 @@ you can search for entities by name or id:
 
 # Data sets
 
-The Wiki processing pipeline produces the following data sets in `data/e/wiki`:
+The Wiki processing pipeline produces the following data sets in:
 
-  * `wikidata-items-?????-of-?????.rec` (produced by `wikidata-import` task)
-  * `properties.rec` (produced by `wikidata-import` task)
-  * `wikipedia-items.rec` (produced by `category-merging` task)
-  * `wikipedia-members.rec` (produced by `category-inversion` task)
-  * `links-?????-of-?????.rec` (produced by `link-graph` task)
-  * `popularity.rec` (produced by `link-graph` task)
-  * `fanin.rec` (produced by `item-fanin` task)
-  * `items-?????-of-?????.rec` (produced by `item-fusing` task)
-  * `kb.sling` (produced by `knowledge-base` task)
+  * `data/e/wiki/wikidata-items-?????-of-?????.rec` (produced by `wikidata-import` task)
+  * `data/e/wiki/properties.rec` (produced by `wikidata-import` task)
+  * `data/e/wiki/wikipedia-items.rec` (produced by `category-merging` task)
+  * `data/e/wiki/wikipedia-members.rec` (produced by `category-inversion` task)
+  * `data/e/wiki/links-?????-of-?????.rec` (produced by `link-graph` task)
+  * `data/e/wiki/popularity.rec` (produced by `link-graph` task)
+  * `data/e/wiki/fanin.rec` (produced by `item-fanin` task)
+  * `data/e/kb/items-?????-of-?????.rec` (produced by `item-fusing` task)
+  * `data/e/kb/kb.sling` (produced by `knowledge-base` task)
 
 For each language, the following data sets are produced:
 
-  * `<lang>/articles-?????-of-?????.rec` (produced by `wikipedia-import` task)
-  * `<lang>/redirects.sling` (produced by `wikipedia-import` task)
-  * `<lang>/categories-?????-of-?????.rec` (produced by `wikipedia-import` task)
-  * `<lang>/mapping.sling` (produced by `wikipedia-mapping` task)
-  * `<lang>/documents-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
-  * `<lang>/category-documents-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
-  * `<lang>/aliases-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
-  * `<lang>/names-?????-of-?????.rec` (produced by `name-extraction` task)
-  * `<lang>/name-table.repo` (produced by `name-table` task)
-  * `<lang>/phrase-table.repo` (produced by `phrase-table` task)
+  * `data/e/wiki/<lang>/articles-?????-of-?????.rec` (produced by `wikipedia-import` task)
+  * `data/e/wiki/<lang>/redirects.sling` (produced by `wikipedia-import` task)
+  * `data/e/wiki/<lang>/categories-?????-of-?????.rec` (produced by `wikipedia-import` task)
+  * `data/e/wiki/<lang>/mapping.sling` (produced by `wikipedia-mapping` task)
+  * `data/e/wiki/<lang>/documents-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
+  * `data/e/wiki/<lang>/category-documents-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
+  * `data/e/wiki/<lang>/aliases-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
+  * `data/e/kb/<lang>/names-?????-of-?????.rec` (produced by `name-extraction` task)
+  * `data/e/kb/<lang>/name-table.repo` (produced by `name-table` task)
+  * `data/e/kb/<lang>/phrase-table.repo` (produced by `phrase-table` task)
 
