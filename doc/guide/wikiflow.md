@@ -341,9 +341,9 @@ you can search for entities by name or id:
 
 ![SLING knowledge base browser.](kb-browser.png)
 
-# Data sets
+# Datasets
 
-The Wiki processing pipeline produces the following data sets in:
+The Wiki processing pipeline produces the following datasets in:
 
   * `data/e/wiki/wikidata-items-?????-of-?????.rec` (produced by `wikidata-import` task)
   * `data/e/wiki/properties.rec` (produced by `wikidata-import` task)
@@ -355,7 +355,7 @@ The Wiki processing pipeline produces the following data sets in:
   * `data/e/kb/items-?????-of-?????.rec` (produced by `item-fusing` task)
   * `data/e/kb/kb.sling` (produced by `knowledge-base` task)
 
-For each language, the following data sets are produced:
+For each language, the following datasets are produced:
 
   * `data/e/wiki/<lang>/articles-?????-of-?????.rec` (produced by `wikipedia-import` task)
   * `data/e/wiki/<lang>/redirects.sling` (produced by `wikipedia-import` task)

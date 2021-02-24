@@ -88,7 +88,7 @@ evaluation_corpus = wf.resource(
 )
 
 word_embeddings = wf.resource(
-  "data/c/caspar/word2vec-32-embeddings.bin",
+  "data/e/caspar/word2vec-32-embeddings.bin",
   format="embeddings"
 )
 

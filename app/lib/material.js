@@ -198,9 +198,11 @@ M257.94,57.87c-16,22.9-37.86,45.41-62.54,60a60.83,60.83,0,0,0,7.66-29.64,61.\
 export class MdLogo extends Component {
   render() {
     return `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 283.46 176.46">
-        <g><path d="${logo}"/></g>
-      </svg>`;
+      <a href="/">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 283.46 176.46">
+          <g><path d="${logo}"/></g>
+        </svg>
+      </a>`;
   }
 
   static stylesheet() {

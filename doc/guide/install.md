@@ -30,7 +30,7 @@ You can then use the parser in Python:
 ```python
 import sling
 
-parser = sling.Parser("caspar.flow")
+parser = sling.Parser("data/e/caspar/caspar.flow")
 
 text = input("text: ")
 doc = parser.parse(text)
