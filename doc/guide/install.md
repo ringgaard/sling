@@ -21,10 +21,11 @@ python3 -c "import sling; sling.which()"
 ```
 
 If you want to try out the SLING parser you can download a
-[pre-trained model](https://ringgaard.com/data/caspar/caspar.flow):
-```shell
-wget https://ringgaard.com/data/caspar/caspar.flow
+pre-trained model from [Ringgaard Research](https://ringgaard.com):
 ```
+sling fetch --dataset caspar
+```
+
 You can then use the parser in Python:
 ```python
 import sling

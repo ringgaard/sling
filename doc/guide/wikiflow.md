@@ -8,6 +8,12 @@ dumps are processed using the SLING workflow task system to convert the dumps
 into SLING frame format. You can [browse](https://ringgaard.com/kb) a pre-built
 knowledge base on [ringgaard.com](https://ringgaard.com).
 
+If you only need the final knowledge base and alias tables, you can download
+pre-built versions that are updated every night from [Ringgaard Research](https://ringgaard.com):
+```
+sling fetch --dataset kb,nametab,phrasetab
+```
+
 ## Processing overview
 
 ![SLING Wikipedia and Wikidata processing flow.](wikiflow.svg)

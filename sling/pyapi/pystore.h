@@ -72,6 +72,9 @@ struct PyStore : public PyBase {
   // Merges occurrences of the same string in the store.
   PyObject *Coalesce(PyObject *args, PyObject *kw);
 
+  // Save store snapshot.
+  PyObject *Snapshot(PyObject *arg);
+
   // Create new Python object for handle value.
   PyObject *PyValue(Handle handle, bool binary = false);
 

@@ -39,10 +39,9 @@ This will put the training and evaluation data into `data/c/caspar`:
 ## Pre-trained word embeddings
 
 The CASPAR parser uses pre-trained word embeddings which can be
-[downloaded](https://ringgaard.com/data/caspar/word2vec-32-embeddings.bin) from
-here:
+downloaded from [Ringgaard Research](https://ringgaard.com):
 ```
-curl https://ringgaard.com/data/caspar/word2vec-32-embeddings.bin
+sling fetch --dataset word2vec32
 ```
 
 These are 32 dimensional word embeddings trained on news text in
@@ -135,7 +134,10 @@ to `data/e/caspar/caspar.flow`. You can train a slightly more accurate,
 but much slower parser by using the `--accurate` flag.
 
 If you don't have access to OntoNotes 5, you can download a pre-trained model
-from [here](https://ringgaard.com/data/caspar/caspar.flow).
+downloaded from [Ringgaard Research](https://ringgaard.com):
+```
+sling fetch --dataset caspar
+```
 
 ## Testing the CASPAR parser
 

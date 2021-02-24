@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Workflow builder for downloading wiki dumps"""
+"""Workflows for downloading wiki dumps and datasets"""
 
 import os
 from urllib.request import urlopen
-import _strptime
 import time
 
 import sling
@@ -25,58 +24,90 @@ import sling.flags as flags
 import sling.log as log
 from sling.task.workflow import *
 
+flags.define("--dataurl",
+             help="data set site",
+             default="https://ringgaard.com/data",
+             metavar="URL")
+
+flags.define("--dataset",
+             help="list of datasets to fetch",
+             default="",
+             metavar="LIST")
+
 # Number of concurrent downloads.
 download_concurrency = 0
 
-# Task for downloading wiki dumps.
+# Task for downloading files.
 class UrlDownload:
   def run(self, task):
     # Get task parameters.
     name = task.param("shortname")
-    url = task.param("url")
+    baseurl = task.param("url")
     ratelimit = task.param("ratelimit", 0)
     chunksize = task.param("chunksize", 64 * 1024)
     priority = task.param("priority", 0)
-    output = task.output("output")
-    log.info("Download " + name + " from " + url)
+    outputs = task.outputs("output")
 
-    # Make sure directory exists.
-    directory = os.path.dirname(output.name)
-    if not os.path.exists(directory): os.makedirs(directory)
+    log.info("Download " + name + " from " + baseurl)
+    for output in outputs:
+      # Make sure directory exists.
+      directory = os.path.dirname(output.name)
+      if not os.path.exists(directory): os.makedirs(directory)
 
-    # Do not overwrite existing file unless flag is set.
-    if not flags.arg.overwrite and os.path.exists(output.name):
-      raise Exception("file already exists: " + output.name + \
-                      " (use --overwrite to overwrite existing files)")
+      # Do not overwrite existing file unless flag is set.
+      if not flags.arg.overwrite and os.path.exists(output.name):
+        raise Exception("file already exists: " + output.name + \
+                        " (use --overwrite to overwrite existing files)")
 
-    # Hold-off on low-prio tasks
-    if priority > 0: time.sleep(priority)
+      # Hold-off on low-prio tasks
+      if priority > 0: time.sleep(priority)
 
-    # Wait until we are below the rate limit.
-    global download_concurrency
-    if ratelimit > 0:
-      while download_concurrency >= ratelimit: time.sleep(10)
-      download_concurrency += 1
+      # Wait until we are below the rate limit.
+      global download_concurrency
+      if ratelimit > 0:
+        while download_concurrency >= ratelimit: time.sleep(10)
+        download_concurrency += 1
 
-    # Download from url to file.
-    if ratelimit > 0: log.info("Start download of " + url)
-    conn = urlopen(url)
-    last_modified = time.mktime(time.strptime(conn.headers['last-modified'],
-                                              "%a, %d %b %Y %H:%M:%S GMT"))
-    total_bytes = "bytes_downloaded"
-    bytes = name + "_bytes_downloaded"
-    with open(output.name, 'wb') as f:
-      while True:
-        chunk = conn.read(chunksize)
-        if not chunk: break
-        f.write(chunk)
-        task.increment(total_bytes, len(chunk))
-        task.increment(bytes, len(chunk))
-    os.utime(output.name, (last_modified, last_modified))
-    if ratelimit > 0: download_concurrency -= 1
+      # Compute url.
+      if len(outputs) > 1:
+        url = baseurl + "/" + os.path.basename(output.name)
+      else:
+        url = baseurl
+
+      # Download from url to file.
+      if ratelimit > 0: log.info("Start download of " + output.name)
+      conn = urlopen(url)
+      last_modified = time.mktime(time.strptime(conn.headers['last-modified'],
+                                                "%a, %d %b %Y %H:%M:%S GMT"))
+      total_bytes = "bytes_downloaded"
+      bytes = name + "_bytes_downloaded"
+      with open(output.name, 'wb') as f:
+        while True:
+          chunk = conn.read(chunksize)
+          if not chunk: break
+          f.write(chunk)
+          task.increment(total_bytes, len(chunk))
+          task.increment(bytes, len(chunk))
+      os.utime(output.name, (last_modified, last_modified))
+      if ratelimit > 0: download_concurrency -= 1
+
     log.info(name + " downloaded")
 
 register_task("url-download", UrlDownload)
+
+# Task for making snapshot of frame store.
+class StoreSnapshot:
+  def run(self, task):
+    filename = task.input("input").name
+    store = sling.Store()
+    log.info("Load store from", filename)
+    store.load(filename)
+    log.info("Coalesce store")
+    store.coalesce()
+    log.info("Snapshot store")
+    store.snapshot(filename)
+
+register_task("store-snapshot", StoreSnapshot)
 
 class DownloadWorkflow:
   def __init__(self, name=None, wf=None):
@@ -105,7 +136,6 @@ class DownloadWorkflow:
     with self.wf.namespace(language + "-wikipedia-download"):
       download = self.wf.task("url-download")
       download.add_params({
-        "language": language,
         "url": url,
         "shortname": language + "wiki",
         "ratelimit": 2,
@@ -136,6 +166,44 @@ class DownloadWorkflow:
       download.attach_output("output", dump)
       return dump
 
+  #---------------------------------------------------------------------------
+  # Datasets
+  #---------------------------------------------------------------------------
+
+  def dataset(self, path):
+    return self.wf.resource(path, dir=flags.arg.workdir, format="file")
+
+  def download_dataset(self, name, path, files):
+    download = self.wf.task("url-download")
+    if type(files) is list:
+      url = flags.arg.dataurl + "/" + path[:path.rfind("/")]
+    else:
+      url = flags.arg.dataurl + "/" + path
+    download.add_params({
+      "url": url,
+      "shortname": name,
+      "ratelimit": 5,
+    })
+    download.attach_output("output", files)
+
+  def snapshot(self, store):
+    snap = self.wf.task("store-snapshot")
+    snap.attach_input("input", store)
+
+# Datasets.
+datasets = {
+  "kb": "kb/kb.sling",
+  "items": "kb/items@10.rec",
+  "xrefs": "kb/xrefs.sling",
+
+  "nametab": "kb/$LANG$/name-table.repo",
+  "phrasetab": "kb/$LANG$/phrase-table.repo",
+  "names": "kb/$LANG$/names@10.rec",
+
+  "caspar": "caspar/caspar.flow",
+  "word2vec32": "caspar/word2vec-32-embeddings.bin",
+}
+
 # Commands.
 
 wikidata_download = False
@@ -162,6 +230,27 @@ def download_wiki():
   if wikipedia_download:
     for language in flags.arg.languages:
       wf.download_wikipedia(language=language)
+
+  run(wf.wf)
+
+def fetch():
+  wf = DownloadWorkflow("data-download")
+  for name in flags.arg.dataset.split(","):
+    if len(name) == 0: continue
+    path = datasets.get(name)
+    if path is None:
+      log.error("unknown dataset:", name)
+      return
+    if "$LANG$" in path:
+      for language in flags.arg.languages:
+        langpath = path.replace("$LANG$", language)
+        res = wf.dataset(langpath)
+        wf.download_dataset(name, langpath, res)
+    else:
+      res = wf.dataset(path)
+      wf.download_dataset(name, path, res)
+
+    if name == "kb": wf.snapshot(res)
 
   run(wf.wf)
 

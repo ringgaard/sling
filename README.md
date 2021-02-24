@@ -1,4 +1,5 @@
 # SLING - A natural language frame semantics parser
+by [Ringgaard Research](https://ringgaard.com)
 
 [![Build Status](https://travis-ci.com/ringgaard/sling.svg?branch=dev)](https://travis-ci.com/ringgaard/sling)
 

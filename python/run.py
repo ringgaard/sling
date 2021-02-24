@@ -97,6 +97,10 @@ commands = [
     package="sling.task.download",
     internal=True,
   ),
+  Command("fetch",
+    help="Download pre-built datasets",
+    package="sling.task.download",
+  ),
 
   # Wikidata.
   Command("import_wikidata",

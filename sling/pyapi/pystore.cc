@@ -49,6 +49,7 @@ void PyStore::Define(PyObject *module) {
   methods.Add("lockgc", &PyStore::LockGC);
   methods.Add("unlockgc", &PyStore::UnlockGC);
   methods.Add("coalesce", &PyStore::Coalesce);
+  methods.AddO("snapshot", &PyStore::Snapshot);
   type.tp_methods = methods.table();
 
   type.tp_as_mapping = &mapping;
@@ -382,6 +383,20 @@ PyObject *PyStore::Coalesce(PyObject *args, PyObject *kw) {
 
   // Coalesce strings.
   store->CoalesceStrings(buckets);
+
+  Py_RETURN_NONE;
+}
+
+PyObject *PyStore::Snapshot(PyObject *arg) {
+  // Get snapshot filename.
+  const char *filename = GetString(arg);
+  if (filename == nullptr) return nullptr;
+
+  // Snapshot frame store.
+  if (!Writable()) return nullptr;
+  store->AllocateSymbolHeap();
+  store->GC();
+  CHECK(Snapshot::Write(store, filename));
 
   Py_RETURN_NONE;
 }
