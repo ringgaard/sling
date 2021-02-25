@@ -167,22 +167,28 @@ class AliasExtractor : public task::FrameProcessor {
         AddAlias(&a, value, SRC_WIKIDATA_NATIVE);
       } else if (property == n_nickname_ ||
                  property == n_pseudonym_ ||
-                 property == n_iso3166_country_code_2_ ||
-                 property == n_iso3166_country_code_3_) {
-        // Output nicknames, pseudonyms, and country codes as alternative names.
-        AddAlias(&a, value, SRC_WIKIDATA_NAME);
-      } else if (property == n_short_name_ ||
+                 property == n_short_name_ ||
                  property == n_generic_name_ ||
                  property == n_birth_name_ ||
                  property == n_married_name_ ||
-                 property == n_official_name_ ||
-                 property == n_female_form_ ||
+                 property == n_official_name_) {
+        // Output alternative names without regards to language.
+        AddAlias(&a, value, SRC_WIKIDATA_NAME);
+      } else if (property == n_female_form_ ||
                  property == n_male_form_ ||
-                 property == n_unit_symbol_ ||
-                 property == n_demonym_) {
-        // Output names as alternative or foreign names.
+                 property == n_unit_symbol_) {
+        // Output units and forms as alternative or foreign names.
         AliasSource source = SRC_WIKIDATA_NAME;
         if (property == n_demonym_) source = SRC_WIKIDATA_DEMONYM;
+        if (foreign) source = SRC_WIKIDATA_FOREIGN;
+        AddAlias(&a, value, source);
+      } else if (property == n_iso3166_country_code_2_ ||
+                 property == n_iso3166_country_code_3_) {
+        // Output country codes as alternative names.
+        AddAlias(&a, value, SRC_WIKIDATA_NAME);
+      } else if (property == n_demonym_) {
+        // Output (foreign) demonyms.
+        AliasSource source = SRC_WIKIDATA_DEMONYM;
         if (foreign) source = SRC_WIKIDATA_FOREIGN;
         AddAlias(&a, value, source);
       }

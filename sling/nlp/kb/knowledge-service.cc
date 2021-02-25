@@ -457,6 +457,20 @@ const char *property_order[] = {
   "P206",       // located in or next to body of water
   "P421",       // located in time zone
 
+  // Taxon.
+  "P225",       // taxon name
+  "P1843",      // taxon common name
+  "P1420",      // taxon synonym
+  "P694",       // replaced synonym
+  "P105",       // taxon rank
+  "P171",       // parent taxon
+  "P427",       // taxonomic type
+  "P574",       // year of taxon publication
+  "P405",       // taxon author
+  "P697",       // ex taxon author
+  "P6507",      // taxon author citation
+
+
   // Low priority properties.
   "P166",       // award received
 
