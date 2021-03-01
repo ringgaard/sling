@@ -69,14 +69,6 @@ class KbApp extends Component {
       window.open(url,'_blank');
     }
   }
-
-  static stylesheet() {
-    return `
-      #websearch {
-        padding-left: 12px;
-      }
-    `;
-  }
 }
 
 Component.register(KbApp);
@@ -477,7 +469,6 @@ class KbItemCard extends MdCard {
         color: #808080;
         text-decoration: none;
         width: fit-content;
-        margin-top: 5px;
         outline: none;
       }
 
@@ -526,10 +517,6 @@ class KbCategoryCard extends MdCard {
 }
 
 Component.register(KbCategoryCard);
-
-const commons_service = "https://commons.wikimedia.org/w/api.php?" +
-                        "action=query&prop=imageinfo&iiprop=url&redirects&" +
-                        "format=json&iiurlwidth=640&origin=*&titles=File:"
 
 const commons_url = "https://commons.wikimedia.org/wiki/File:";
 

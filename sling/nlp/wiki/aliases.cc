@@ -179,7 +179,6 @@ class AliasExtractor : public task::FrameProcessor {
                  property == n_unit_symbol_) {
         // Output units and forms as alternative or foreign names.
         AliasSource source = SRC_WIKIDATA_NAME;
-        if (property == n_demonym_) source = SRC_WIKIDATA_DEMONYM;
         if (foreign) source = SRC_WIKIDATA_FOREIGN;
         AddAlias(&a, value, source);
       } else if (property == n_iso3166_country_code_2_ ||
@@ -561,14 +560,14 @@ class AliasSelector : public task::Reducer {
                           WIKIPEDIA_REDIRECT |
                           WIKIPEDIA_NAME |
                           WIKIDATA_ALIAS |
-                          WIKIDATA_NAME)) {
+                          WIKIDATA_NAME |
+                          WIKIDATA_NATIVE)) {
       return true;
     }
 
-    // Keep foreign, native and demonym, and nickname aliases supported by
+    // Keep foreign, demonym, and nickname aliases supported by
     // Wikipedia aliases.
     if (alias->sources & (WIKIDATA_FOREIGN |
-                          WIKIDATA_NATIVE |
                           WIKIDATA_DEMONYM |
                           WIKIPEDIA_NICKNAME)) {
       if (alias->sources & (WIKIPEDIA_ANCHOR |

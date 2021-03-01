@@ -27,7 +27,6 @@ body {
   font-family: Roboto,Helvetica,sans-serif;
   font-size: 14px;
   font-weight: 400;
-  line-height: 20px;
   padding: 0;
   margin: 0;
   box-sizing: border-box;
@@ -170,8 +169,6 @@ export class MdCardToolbar extends Component {
         align-items: center;
         background-color: #FFFFFF;
         color: #000000;
-        height: 56px;
-        max-height: 56px;
         font-size: 24px;
         margin: 0;
       }
@@ -266,12 +263,13 @@ export class MdIconButton extends Component {
   static stylesheet() {
     return `
       $ button {
+        display: flex;
         border-radius: 50%;
         border: 0;
         height: 40px;
         width: 40px;
-        margin: 0 6px;
-        padding: 8px;
+        justify-content: center;
+        align-items: center;
         background: transparent;
         user-select: none;
         cursor: pointer;
@@ -591,11 +589,10 @@ export class MdSearch extends Component {
       $ input {
         outline: none;
         border: none;
-        line-height: 40px;
-        height: 40px;
         width: 100%;
         padding: 10px;
         border-radius: 5px;
+        font-size: 16px;
       }
     `;
   }
