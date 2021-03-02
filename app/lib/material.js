@@ -170,7 +170,7 @@ export class MdCardToolbar extends Component {
         background-color: #FFFFFF;
         color: #000000;
         font-size: 24px;
-        margin: 0;
+        margin-bottom: 10px;
       }
     `;
   }

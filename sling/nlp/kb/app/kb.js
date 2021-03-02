@@ -167,8 +167,10 @@ class KbSearchBox extends Component {
     return `
       $ {
         display: block;
-        width: 800px;
+        width: 100%;
+        max-width: 800px;
         padding-left: 10px;
+        padding-right: 3px;
       }
 
       $ form {
@@ -237,17 +239,16 @@ class KbPropertyTable extends Component {
       }
     }
 
-    out.push('<table class="prop-tab">');
     for (const prop of properties) {
-      out.push('<tr class="prop-row">');
+      out.push('<div class="prop-row">');
 
       // Property name.
-      out.push('<td class="prop-name">');
+      out.push('<div class="prop-name">');
       propname(prop);
-      out.push('</td>');
+      out.push('</div>');
 
       // Property value(s).
-      out.push('<td class="prop-values">');
+      out.push('<div class="prop-values">');
       for (const val of prop.values) {
         out.push('<div class="prop-value">');
         propval(val);
@@ -255,34 +256,32 @@ class KbPropertyTable extends Component {
 
         // Property qualifiers.
         if (val.qualifiers) {
-          out.push('<table class="qual-tab">');
+          out.push('<div class="qual-tab">');
           for (const qual of val.qualifiers) {
-            out.push('<tr class="qual-row">');
+            out.push('<div class="qual-row">');
 
             // Qualifier name.
-            out.push('<td class="qprop-name">');
+            out.push('<div class="qprop-name">');
             propname(qual);
-            out.push('</td>');
+            out.push('</div>');
 
             // Qualifier value(s).
-            out.push('<td class="qprop-values">');
+            out.push('<div class="qprop-values">');
             for (const qval of qual.values) {
               out.push('<div class="qprop-value">');
               propval(qval);
               out.push('</div>');
             }
-            out.push('</td>');
+            out.push('</div>');
 
-            out.push('</tr>');
+            out.push('</div>');
           }
-          out.push('</table>');
+          out.push('</div>');
         }
-
-
       }
-      out.push('</td>');
+      out.push('</div>');
+      out.push('</div>');
     }
-    out.push('</table>');
 
     return out.join("");
   }
@@ -290,24 +289,24 @@ class KbPropertyTable extends Component {
   static stylesheet() {
     return `
       $ {
-        display: flex;
+        display: table;
         font-size: 16px;
-      }
-
-      $ .prop-tab {
         border-collapse: collapse;
         width: 100%;
       }
 
       $ .prop-row {
+        display: table-row;
         border-top: 1px solid lightgrey;
       }
 
       $ .prop-row:first-child {
+        display: table-row;
         border-top: none;
       }
 
       $ .prop-name {
+        display: table-cell;
         font-weight: bold;
         width: 20%;
         padding: 8px;
@@ -315,11 +314,13 @@ class KbPropertyTable extends Component {
       }
 
       $ .prop-values {
+        display: table-cell;
         vertical-align: top;
+        padding-bottom: 8px;
       }
 
       $ .prop-value {
-        padding: 8px;
+        padding: 8px 8px 0px 8px;
       }
 
       $ .prop-lang {
@@ -335,26 +336,31 @@ class KbPropertyTable extends Component {
       }
 
       $ .qual-tab {
+        display: table;
         border-collapse: collapse;
       }
 
       $ .qual-row {
+        display: table-row;
       }
 
       $ .qprop-name {
+        display: table-cell;
         font-size: 13px;
         vertical-align: top;
-        padding-left: 30px;
+        padding: 1px 3px 1px 30px;
         width: 150px;
       }
 
       $ .qprop-values {
+        display: table-cell;
         vertical-align: top;
       }
 
       $ .qprop-value {
         font-size: 13px;
         vertical-align: top;
+        padding: 1px 1px 1px 1px;
       }
 
       $ .qprop-value a {
@@ -375,9 +381,8 @@ class KbItemList extends Component {
     let items = this.state;
     let out = [];
 
-    out.push('<table>');
     for (const item of items) {
-      out.push('<tr><td>');
+      out.push('<div class="row">');
       if (item.ref) {
         out.push('<kb-link ref="');
         out.push(item.ref);
@@ -392,9 +397,8 @@ class KbItemList extends Component {
       if (item.ref) {
         out.push('</kb-link>');
       }
-      out.push('</td></tr>');
+      out.push('</div>');
     }
-    out.push('</table>');
 
     return out.join("");
   }
@@ -403,23 +407,17 @@ class KbItemList extends Component {
     return `
       $ {
         display: flex;
+        flex-direction: column;
         font-size: 16px;
       }
 
-      $ table {
-        border-collapse: collapse;
-        width: 100%;
-      }
-
-      $ tr {
+      $ .row {
         border-top: 1px solid lightgrey;
+        padding: 8px;
       }
 
-      $ tr:first-child {
+      $ .row:first-child {
         border-top: none;
-      }
-
-      $ td {
         padding: 8px;
       }
     `;
@@ -568,13 +566,8 @@ class KbXrefCard extends MdCard {
 
   static stylesheet() {
     return MdCard.stylesheet() + `
-      $ .prop-tab {
-        border-collapse: collapse;
-        table-layout: fixed;
-        font-size: 13px;
-      }
-
       $ .prop-name {
+        font-size: 13px;
         font-weight: normal;
         width: 40%;
         padding: 8px;
@@ -582,6 +575,7 @@ class KbXrefCard extends MdCard {
       }
 
       $ .prop-values {
+        font-size: 13px;
         max-width: 0;
         white-space: nowrap;
         overflow: hidden;
@@ -591,12 +585,13 @@ class KbXrefCard extends MdCard {
       $ .qprop-name {
         font-size: 11px;
         vertical-align: top;
-        padding-left: 20px;
+        padding: 1px 3px 1px 20px;
         width: 100px;
       }
 
       $ .qprop-value {
         font-size: 11px;
+        padding: 1px 1px 1px 1px;
       }
     `;
   }
