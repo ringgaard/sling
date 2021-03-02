@@ -10,18 +10,89 @@
 </head>
 <body>
   <kb-app id="app">
-    <md-column-layout>
+    <one-of id="layout" selected=".desktop">
 
-      <md-toolbar>
-        <md-toolbar-logo></md-toolbar-logo>
-        <div>Knowledge</div>
-        <kb-search-box id="search"></kb-search-box>
-        <md-icon-button id="websearch" icon="search"></md-icon-button>
-      </md-toolbar>
+      <!------------------------------------------------------------------->
+      <!-- Desktop layout                                                -->
+      <!------------------------------------------------------------------->
 
-      <md-content>
-        <md-row-layout>
-          <md-column-layout style="flex: 1 1 66%;">
+      <md-column-layout class="desktop">
+        <md-toolbar>
+          <md-toolbar-logo></md-toolbar-logo>
+          <div>Knowledge</div>
+          <kb-search-box id="search"></kb-search-box>
+          <md-icon-button id="websearch" icon="search"></md-icon-button>
+        </md-toolbar>
+
+        <md-content>
+          <md-row-layout>
+            <md-column-layout style="flex: 1 1 66%;">
+
+              <!-- Item card -->
+              <kb-item-card id="item">
+                <md-card-toolbar>
+                  <div>
+                    <md-text id="title"></md-text>
+                    <md-link id="ref" notab="1" newtab="1" external="1"></md-link>
+                  </div>
+                  <md-spacer></md-spacer>
+                  <md-icon-button id="code" icon="code"></md-icon-button>
+                </md-card-toolbar>
+                <div><md-text id="description"></md-text></div>
+                <div><md-text id="datatype"></md-text></div>
+              </kb-item-card>
+
+              <!-- Item properties card -->
+              <kb-property-card id="properties">
+                <kb-property-table id="property-table">
+                </kb-property-table>
+              </kb-property-card>
+
+              <!-- Item categories card -->
+              <kb-category-card id="categories">
+                <md-card-toolbar>
+                  <div>Categories</div>
+                </md-card-toolbar>
+
+                <kb-item-list id="category-list">
+                </kb-item-list>
+              </kb-category-card>
+
+            </md-column-layout>
+
+            <md-column-layout style="flex: 1 1 33%;">
+
+              <!-- Item picture card -->
+              <kb-picture-card id="picture">
+              </kb-picture-card>
+
+              <!-- Item references card -->
+              <kb-xref-card id="xrefs">
+                <md-card-toolbar>
+                  <div>References</div>
+                </md-card-toolbar>
+                <kb-property-table id="xref-table">
+                </kb-property-table>
+              </kb-xref-card>
+
+            </md-column-layout>
+
+          </md-row-layout>
+        </md-content>
+      </md-column-layout>
+
+      <!------------------------------------------------------------------->
+      <!-- Mobile layout                                                 -->
+      <!------------------------------------------------------------------->
+
+      <md-column-layout class="mobile">
+        <md-toolbar>
+          <md-toolbar-logo></md-toolbar-logo>
+          <kb-search-box id="search"></kb-search-box>
+        </md-toolbar>
+
+        <md-content>
+          <md-column-layout>
 
             <!-- Item card -->
             <kb-item-card id="item">
@@ -30,18 +101,29 @@
                   <md-text id="title"></md-text>
                   <md-link id="ref" notab="1" newtab="1" external="1"></md-link>
                 </div>
-                <md-spacer></md-spacer>
-                <md-icon-button id="code" icon="code"></md-icon-button>
               </md-card-toolbar>
               <div><md-text id="description"></md-text></div>
               <div><md-text id="datatype"></md-text></div>
             </kb-item-card>
+
+            <!-- Item picture card -->
+            <kb-picture-card id="picture">
+            </kb-picture-card>
 
             <!-- Item properties card -->
             <kb-property-card id="properties">
               <kb-property-table id="property-table">
               </kb-property-table>
             </kb-property-card>
+
+            <!-- Item references card -->
+            <kb-xref-card id="xrefs">
+              <md-card-toolbar>
+                <div>References</div>
+              </md-card-toolbar>
+              <kb-property-table id="xref-table">
+              </kb-property-table>
+            </kb-xref-card>
 
             <!-- Item categories card -->
             <kb-category-card id="categories">
@@ -54,28 +136,9 @@
             </kb-category-card>
 
           </md-column-layout>
-
-          <md-column-layout style="flex: 1 1 33%;">
-
-            <!-- Item picture card -->
-            <kb-picture-card id="picture">
-            </kb-picture-card>
-
-            <!-- Item references card -->
-            <kb-xref-card id="xrefs">
-              <md-card-toolbar>
-                <div>References</div>
-              </md-card-toolbar>
-              <kb-property-table id="xref-table">
-              </kb-property-table>
-            </kb-reference-card>
-
-          </md-column-layout>
-
-        </md-row-layout>
-      </md-content>
-
-    </md-column-layout>
+        </md-content>
+      </md-column-layout>
+    </one-of>
   </kb-app>
 </body>
 </html>

@@ -5,6 +5,23 @@ import {MdCard} from "/common/lib/material.js";
 
 const mediadb = true;
 
+var mobile_ckecked = false;
+var is_mobile = false;
+
+function isMobile() {
+  if (mobile_ckecked) return is_mobile;
+  let qs = new URLSearchParams(window.location.search);
+  if (qs.get("mobile") == "1") {
+    is_mobile = true;
+  } else if (qs.get("desktop") == "1") {
+    is_mobile = false;
+  } else if (/iPhone|Android/i.test(navigator.userAgent)) {
+    is_mobile = true;
+  }
+  mobile_ckecked = true;
+  return is_mobile;
+}
+
 function wikiurl(id) {
   if (id[0] == "Q") {
     return `https://www.wikidata.org/wiki/${id}`
@@ -17,7 +34,10 @@ function wikiurl(id) {
 
 class KbApp extends Component {
   onconnected() {
-    this.bind("#websearch", "click", e => this.onwebsearch(e));
+    if (isMobile()) this.find("#layout").update(".mobile");
+    if (this.find("#websearch")) {
+      this.bind("#websearch", "click", e => this.onwebsearch(e));
+    }
 
     window.onpopstate = e => this.onpopstate(e);
     let path = window.location.pathname;
@@ -369,6 +389,39 @@ class KbPropertyTable extends Component {
         cursor: pointer;
         outline: none
       }
+
+      .mobile $ {
+        display: flex;
+        flex-direction: column;
+        font-size: 16px;
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      .mobile $ .prop-row {
+        display: flex;
+        flex-direction: column;
+        border-top: 1px solid lightgrey;
+      }
+
+      .mobile $ .prop-row:first-child {
+        display: flex;
+        flex-direction: column;
+        border-top: none;
+      }
+
+      .mobile $ .prop-name {
+        display: block;
+        font-weight: 300;
+        font-size: 14px;
+        width: auto;
+        padding: 1px;
+        vertical-align: top;
+      }
+
+      .mobile $ .prop-value:first-child {
+        padding: 2px 8px 0px 8px;
+      }
     `;
   }
 }
@@ -428,7 +481,9 @@ Component.register(KbItemList);
 
 class KbItemCard extends MdCard {
   onconnected() {
-    this.bind("#code", "click", e => this.oncode(e));
+    if (this.find("#code")) {
+      this.bind("#code", "click", e => this.oncode(e));
+    }
   }
 
   visible() {
@@ -592,6 +647,23 @@ class KbXrefCard extends MdCard {
       $ .qprop-value {
         font-size: 11px;
         padding: 1px 1px 1px 1px;
+      }
+
+      .mobile $ .prop-name {
+        width: auto;
+        padding: 1px;
+      }
+
+      .mobile $ .prop-values {
+        font-size: inherit;
+        max-width: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .mobile $ .prop-value:first-child {
+        padding: 2px 8px 0px 8px;
       }
     `;
   }

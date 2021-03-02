@@ -497,6 +497,7 @@ export class MdSearch extends Component {
   onconnected() {
     this.bind("input", "input", e => this.oninput(e));
     this.bind("input", "keydown", e => this.onkeydown(e));
+    this.bind("input", "search", e => this.onsearch(e));
     this.bind(null, "focusin", e => this.onfocus(e));
     this.bind(null, "focusout", e => this.onunfocus(e));
     this.bind(null, "click", e => this.onclick(e));
@@ -529,6 +530,11 @@ export class MdSearch extends Component {
   onclick(e) {
     let item = e.target.closest("md-search-item");
     if (item) this.select(item, e.ctrlKey);
+  }
+
+  onsearch(e) {
+    let list = this.find("md-search-list");
+    if (list) list.select();
   }
 
   onfocus(e) {
@@ -636,6 +642,7 @@ export class MdSearchList extends Component {
   }
 
   select(keep) {
+    if (!this.active) this.next();
     this.match("md-search").select(this.active, keep);
   }
 
@@ -658,6 +665,7 @@ export class MdSearchList extends Component {
   render() {
     if (!this.state || !this.state.items || this.state.items.length == 0) {
       this.expand(false);
+      return null;
     } else {
       this.expand(true);
       return this.state.items;
