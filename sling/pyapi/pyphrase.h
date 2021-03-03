@@ -69,6 +69,9 @@ struct PyPhraseTable : public PyBase {
   // Compute phrase case form.
   PyObject *Form(PyObject *obj);
 
+  // Return normalized phrase.
+  PyObject *Normalized(PyObject *obj);
+
   // Phrase tokenizer.
   nlp::PhraseTokenizer *tokenizer;
 

@@ -549,8 +549,8 @@ import sling
 
 # Load knowledge base and phrase table.
 kb = sling.Store()
-kb.load("data/e/wiki/kb.sling")
-names = sling.PhraseTable(kb, "data/e/wiki/en/phrase-table.repo")
+kb.load("data/e/kb/kb.sling")
+names = sling.PhraseTable(kb, "data/e/kb/en/phrase-table.repo")
 kb.freeze()
 
 # Lookup entities with name 'Annette Stroyberg'.

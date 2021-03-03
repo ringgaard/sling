@@ -87,6 +87,7 @@ void PyPhraseTable::Define(PyObject *module) {
   methods.AddO("query", &PyPhraseTable::Query);
   methods.AddO("fingerprint", &PyPhraseTable::Fingerprint);
   methods.AddO("form", &PyPhraseTable::Form);
+  methods.AddO("normalized", &PyPhraseTable::Normalized);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "PhraseTable");
@@ -186,6 +187,18 @@ PyObject *PyPhraseTable::Form(PyObject *obj) {
 
   // Return case form.
   return PyLong_FromLong(form);
+}
+
+PyObject *PyPhraseTable::Normalized(PyObject *obj) {
+  // Get phrase.
+  const char *phrase = GetString(obj);
+  if (phrase == nullptr) return nullptr;
+
+  // Normalize phrase.
+  string normalized = tokenizer->Normalize(phrase);
+
+  // Return normalized phrase.
+  return AllocateString(normalized);
 }
 
 }  // namespace sling

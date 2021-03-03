@@ -40,6 +40,7 @@ const char *property_order[] = {
   // Types.
   "P31",        // instance of
   "P279",       // subclass of
+  "P642",       // of
 
   "P17",        // country
   "P495",       // country of origin

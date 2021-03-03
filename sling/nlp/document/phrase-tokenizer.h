@@ -40,6 +40,9 @@ class PhraseTokenizer {
   // Compute fingerprint and case form for phrase.
   void FingerprintAndForm(Text text, uint64 *fingerprint, CaseForm *form) const;
 
+  // Normalize phrase.
+  string Normalize(Text text) const;
+
   // Set/get phrase normalization flags.
   Normalization normalization() const { return normalization_; }
   void set_normalization(Normalization normalization) {

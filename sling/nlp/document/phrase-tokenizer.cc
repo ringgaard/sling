@@ -86,5 +86,11 @@ void PhraseTokenizer::FingerprintAndForm(Text text,
   );
 }
 
+string PhraseTokenizer::Normalize(Text text) const {
+  string normalized;
+  UTF8::Normalize(text.data(), text.size(), normalization_, &normalized);
+  return normalized;
+}
+
 }  // namespace nlp
 }  // namespace sling
