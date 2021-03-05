@@ -42,6 +42,37 @@ class KnowledgeBaseWorkflow:
                             dir=corpora.kbdir(),
                             format="store/frame")
 
+  def media(self):
+    """Resource for media file items."""
+    return self.wf.resource("*-media.sling",
+                            dir=flags.arg.workdir + "/media",
+                            format="text/frame")
+
+  def photos(self):
+    """Resource for manual profile photo items."""
+    return self.wf.resource("photos.sling",
+                            dir=flags.arg.corpora + "/media",
+                            format="text/frame")
+
+  def elf(self):
+    """Resource for ISO 20275 ELF items."""
+    return self.wf.resource("elf.rec",
+                            dir=flags.arg.workdir + "/lei",
+                            format="records/frame")
+
+  def gleif(self):
+    """Resource for GLEIF items."""
+    return self.wf.resource("gleif.rec",
+                            dir=flags.arg.workdir + "/lei",
+                            format="records/frame")
+
+  def extended_item_sources(self):
+    return self.wf.bundle(
+      self.media(),
+      self.photos(),
+      self.elf(),
+      self.gleif())
+
   def collect_xrefs(self):
     """Collect and cluster item identifiers."""
     items = self.wf.bundle(
@@ -58,7 +89,11 @@ class KnowledgeBaseWorkflow:
 
   def reconcile_items(self, items=None, output=None):
     """Reconcile items."""
-    items = self.wf.bundle(self.data.standard_item_sources(), items)
+    items = self.wf.bundle(
+      self.data.standard_item_sources(),
+      self.extended_item_sources(),
+      items)
+
     if output == None: output = self.data.items()
 
     with self.wf.namespace("reconciled-items"):
@@ -92,7 +127,7 @@ class KnowledgeBaseWorkflow:
     """Task for building knowledge base store with items, properties, and
     schemas."""
     items = self.data.items()
-    properties = self.data.wikidata_properties()
+    properties = self.data.properties()
     schemas = self.data.schema_defs()
 
     with self.wf.namespace("kb"):

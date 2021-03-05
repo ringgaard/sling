@@ -78,6 +78,12 @@ class Datasets:
       self.wikidata_defs(),
       self.wikipedia_defs())
 
+  def custom_properties(self):
+    """Resource for custom SLING knowledge base properties."""
+    return self.wf.resource("custom-properties.sling",
+                            dir=corpora.repository("data/nlp/schemas"),
+                            format="store/frame")
+
   #---------------------------------------------------------------------------
   # Wikidata
   #---------------------------------------------------------------------------
@@ -230,29 +236,21 @@ class Datasets:
   # Knowledge base
   #---------------------------------------------------------------------------
 
-  def media(self):
-    """Resource for media files."""
-    return self.wf.resource("*-media.sling",
-                            dir=flags.arg.workdir + "/media",
-                            format="text/frame")
-
-  def photos(self):
-    """Resource for manual profile photo."""
-    return self.wf.resource("photos.sling",
-                            dir=flags.arg.corpora + "/media",
-                            format="text/frame")
+  def properties(self):
+    """Resources for knowledge base properties."""
+    return self.wf.bundle(
+      self.wikidata_properties(),
+      self.custom_properties())
 
   def standard_item_sources(self):
     items = self.wf.bundle(
+              self.properties(),
               self.wikidata_items(),
-              self.wikidata_properties(),
               self.wikilinks(),
               self.popularity(),
               self.fanin(),
               self.wikipedia_items(),
-              self.wikipedia_members(),
-              self.media(),
-              self.photos())
+              self.wikipedia_members())
 
     if flags.arg.extra_items:
       extra = self.wf.resource(flags.arg.extra_items, format="records/frame")

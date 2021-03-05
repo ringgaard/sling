@@ -44,6 +44,7 @@ void PyStore::Define(PyObject *module) {
   methods.Add("parse", &PyStore::Parse);
   methods.AddO("frame", &PyStore::NewFrame);
   methods.AddO("array", &PyStore::NewArray);
+  methods.Add("qstr", &PyStore::NewString);
   methods.AddO("resolve", &PyStore::Resolve);
   methods.Add("globals", &PyStore::Globals);
   methods.Add("lockgc", &PyStore::LockGC);
@@ -113,13 +114,16 @@ PyObject *PyStore::Freeze() {
 
 PyObject *PyStore::Load(PyObject *args, PyObject *kw) {
   // Parse arguments.
-  static const char *kwlist[] = {"filename", "binary", "snapshot", nullptr};
+  static const char *kwlist[] = {
+    "filename", "binary", "snapshot", "json", nullptr
+  };
   char *filename = nullptr;
   bool force_binary = false;
   bool snapshot = true;
+  bool json = false;
   bool ok = PyArg_ParseTupleAndKeywords(
-                args, kw, "s|bb", const_cast<char **>(kwlist),
-                &filename, &force_binary, &snapshot);
+                args, kw, "s|bbb", const_cast<char **>(kwlist),
+                &filename, &force_binary, &snapshot, &json);
   if (!ok) return nullptr;
 
   // Check that store is writable.
@@ -145,7 +149,7 @@ PyObject *PyStore::Load(PyObject *args, PyObject *kw) {
 
     // Load frames from file.
     FileInputStream stream(f);
-    InputParser parser(store, &stream, force_binary);
+    InputParser parser(store, &stream, force_binary, json);
     store->LockGC();
     Object result = parser.ReadAll();
     store->UnlockGC();
@@ -347,6 +351,25 @@ PyObject *PyStore::NewArray(PyObject *arg) {
   return array->AsObject();
 }
 
+PyObject *PyStore::NewString(PyObject *args, PyObject *kw) {
+  // Get arguments.
+  char *text;
+  PyObject *qual;
+  if (!PyArg_ParseTuple(args, "sO", &text, &qual)) return nullptr;
+  Handle qualifier = Value(qual);
+  if (qualifier.IsError()) return nullptr;
+
+  // Allocate qualified string in store.
+  if (!Writable()) return nullptr;
+  GCLock lock(store);
+  Handle handle = store->AllocateString(text, qualifier);
+
+  // Return wrapper for qualified string.
+  PyString *str = PyObject_New(PyString, &PyString::type);
+  str->Init(this, handle);
+  return str->AsObject();
+}
+
 bool PyStore::Writable() {
   if (store->frozen()) {
     PyErr_SetString(PyExc_ValueError, "Frame store is not writable");
@@ -507,6 +530,16 @@ Handle PyStore::Value(PyObject *object) {
       return Handle::error();
     }
     return array->AsValue();
+
+  } else if (PyObject_TypeCheck(object, &PyString::type)) {
+    // Return handle for qualified string.
+    PyString *str = reinterpret_cast<PyString *>(object);
+    if (str->pystore->store != store &&
+        str->pystore->store != store->globals()) {
+      PyErr_SetString(PyExc_ValueError, "String does not belong to this store");
+      return Handle::error();
+    }
+    return str->handle();
   } else if (PyDict_Check(object)) {
     // Build frame from dictionary.
     if (!Writable()) return Handle::error();

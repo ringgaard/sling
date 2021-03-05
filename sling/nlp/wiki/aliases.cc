@@ -93,6 +93,7 @@ class AliasExtractor : public task::FrameProcessor {
       "Q20054355",   // career statistics
       "Q59191021",   // Wikimedia albums discography
       "Q104635718",  // Wikimedia artist discography
+      "Q17362920",   // Wikimedia duplicated page
       nullptr,
     };
     for (const char **type = skipped_item_types; *type; ++type) {

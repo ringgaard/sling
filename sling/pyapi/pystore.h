@@ -62,6 +62,9 @@ struct PyStore : public PyBase {
   // Create new array.
   PyObject *NewArray(PyObject *arg);
 
+  // Create new qualified string.
+  PyObject *NewString(PyObject *args, PyObject *kw);
+
   // Return global store for local store.
   PyObject *Globals();
 

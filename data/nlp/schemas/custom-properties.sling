@@ -1,0 +1,22 @@
+; Custom SLING knowledge base properties.
+
+{
+  =PELF
+  :/w/property
+  name: "ISO 20275 entity legal form ID"@/lang/en
+  description: "unique identifier to identify distinct entity legal form in a jurisdiction"@/lang/en
+  source: /w/entity
+  target: /w/xref
+
+  P31: Q190087 ; data type
+  P31: Q6545185 ; unique identifier
+
+  P2378: Q15028 ; issued by: ISO
+  P2429: Q47169297 ; expected completeness: is complete, but new values may exist in the future
+
+  P1793: {
+    +"[A-Z0-9]{8}"
+    P2916: "four alpha-numeric characters"@/lang/en
+  }
+}
+
