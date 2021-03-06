@@ -7901,6 +7901,7 @@
   owner: Q2983190
   native_owner_name: "Ministerstvo spravodlivosti"
   url: "http://www.orsr.sk/Default.asp?lan=en"
+  company_property: P8174
   opencorporates_jurisdiction: "sk"
   format: "\\d{8}"
 }

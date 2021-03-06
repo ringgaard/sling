@@ -76,7 +76,7 @@ elffn = "data/c/lei/2020-11-19_elf-code-list-v1.3.csv"
 elffile = open(elffn, "r")
 elfreader = csv.reader(elffile)
 elfreader.__next__()  # skip header
-recout = sling.RecordWriter("data/e/lei/elf.rec");
+elfs = {}
 for row in elfreader:
   elf_code = row[0]
   if elf_code == "8888" or elf_code == "9999": continue
@@ -99,19 +99,30 @@ for row in elfreader:
 
   jurisdiction = region if region != None else country
 
-  slots = [
-    (n_id, elf_id),
-    (n_name, kb.qstr(name, lang)),
-    (n_instance_of, n_type_of_business_entity),
-    (n_applies_to_jurisdiction, jurisdiction),
-    (n_country, country),
-    (n_elf, elf_code),
-  ]
-  for a in abbrevs: slots.append((n_short_name, a))
-
-  f = kb.frame(slots)
-  recout.write(elf_id, f.data(binary=True))
+  existing = elfs.get(elf_id)
+  if existing is None:
+    slots = [
+      (n_id, elf_id),
+      (n_name, kb.qstr(name, lang)),
+      (n_instance_of, n_type_of_business_entity),
+      (n_applies_to_jurisdiction, jurisdiction),
+      (n_country, country),
+      (n_elf, elf_code),
+    ]
+    for a in abbrevs: slots.append((n_short_name, a))
+    elfs[elf_id] = kb.frame(slots)
+  else:
+    slots = [
+      (n_name, kb.qstr(name, lang)),
+    ]
+    for a in abbrevs: slots.append((n_short_name, a))
+    elfs[elf_id].extend(slots)
 
 elffile.close()
+
+# Write output.
+recout = sling.RecordWriter("data/e/lei/elf.rec");
+for elf_id, elf in elfs.items():
+  recout.write(elf_id, elf.data(binary=True))
 recout.close()
 

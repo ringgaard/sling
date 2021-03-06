@@ -42,10 +42,6 @@ const char *property_order[] = {
   "P279",       // subclass of
   "P642",       // of
 
-  "P17",        // country
-  "P495",       // country of origin
-  "P30",        // continent
-
   // Names.
   "P2561",      // name
   "P7407",      // name (image)
@@ -447,6 +443,9 @@ const char *property_order[] = {
   "P670",       // street number
   "P281",       // postal code
   "P276",       // location
+  "P17",        // country
+  "P495",       // country of origin
+  "P30",        // continent
   "P625",       // coordinate location
   "P5140",      // coordinates of geographic center
   "P1332",      // coordinates of northernmost point
