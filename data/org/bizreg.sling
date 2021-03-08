@@ -922,7 +922,6 @@
   owner_name: "Registry Agency (Ministry of Justice)"
   native_owner_name: "Търговски регистър"
   url: "http://www.brra.bg/Default.ra"
-  company_property: P2619
   opencorporates_jurisdiction: "bg"
   format: "([01]\\d|20)-([01]\\d|2[0-3])-\\d{6}"
   opencorporates_format: "20\\d{7}"
@@ -5787,6 +5786,7 @@
   owner_name: "National Company Register and Company Information System"
   native_owner_name: "Országos Cégnyilvántartó és Céginformációs Rendszer"
   url: "http://www.e-cegjegyzek.hu/index.html"
+  company_property: P2619
 }
 {
   registration_authority_code: "RA000392"
@@ -6308,6 +6308,7 @@
   owner_name: "Supreme Court Registry"
   native_owner_name: "대법원"
   url: "www.iros.go.kr"
+  company_property: P6859
 }
 {
   registration_authority_code: "RA000657"
@@ -6381,6 +6382,7 @@
   owner: Q16361579
   native_owner_name: "Latvijas Republikas Uzņēmumu Reģistrs"
   url: "www.ur.gov.lv"
+  company_property: P8053
   opencorporates_jurisdiction: "lv"
   format: "\\d{11}"
 }
@@ -8091,6 +8093,7 @@
   owner_name: "Companies and Intellectual Property Commission"
   owner: Q39086117
   url: "www.cipc.co.za"
+  company_property: P8182
   opencorporates_jurisdiction: "za"
 }
 {
@@ -8876,6 +8879,7 @@
   owner_name: "The Charity Commission for Northern Ireland"
   native_owner_name: "The Charity Commission for Northern Ireland"
   url: "https://www.charitycommissionni.org.uk/"
+  company_property: P3200
 }
 {
   registration_authority_code: "RA000587"

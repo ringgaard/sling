@@ -107,6 +107,11 @@ void FrameProcessor::Output(Text key, const Object &value) {
   output_->Send(CreateMessage(key, value));
 }
 
+void FrameProcessor::Output(Text key, uint64 serial, const Object &value) {
+  CHECK(output_ != nullptr);
+  output_->Send(CreateMessage(key, serial, value));
+}
+
 void FrameProcessor::Output(const Frame &value) {
   CHECK(output_ != nullptr);
   output_->Send(CreateMessage(value));
@@ -135,6 +140,15 @@ Message *CreateMessage(Text key, const Object &object, bool shallow) {
   encoder.Encode(object);
   output.Flush();
   return new Message(Slice(key.data(), key.size()), stream.data());
+}
+
+Message *CreateMessage(Text key, uint64 serial, const Object &object) {
+  ArrayOutputStream stream;
+  Output output(&stream);
+  Encoder encoder(object.store(), &output);
+  encoder.Encode(object);
+  output.Flush();
+  return new Message(Slice(key.data(), key.size()), serial, stream.data());
 }
 
 Message *CreateMessage(const Frame &frame, bool shallow) {

@@ -77,7 +77,8 @@ class KnowledgeBaseWorkflow:
     """Collect and cluster item identifiers."""
     items = self.wf.bundle(
       self.data.wikidata_redirects(),
-      self.data.wikidata_items())
+      self.data.wikidata_items(),
+      self.gleif())
 
     with self.wf.namespace("xrefs"):
       builder = self.wf.task("xref-builder")

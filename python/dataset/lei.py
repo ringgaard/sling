@@ -26,6 +26,7 @@ kb.load("data/e/kb/kb.sling")
 
 n_id = kb["id"]
 n_is = kb["is"]
+n_isa = kb["isa"]
 n_name = kb["name"]
 n_instance_of = kb["P31"]
 n_country_code = kb["P297"]
@@ -42,9 +43,15 @@ n_lei = kb["P1278"]
 n_swift_bic_code = kb["P2627"]
 n_subsidiary = kb["P355"]
 n_parent = kb["P749"]
+n_owned_by = kb["P127"]
+n_owner_of = kb["P1830"]
 n_starttime = kb["P580"]
 n_endtime = kb["P582"]
 n_legal_form = kb["P1454"]
+n_coord_location = kb["P625"]
+n_geo = kb["/w/geo"]
+n_lat = kb["/w/lat"]
+n_lng = kb["/w/lng"]
 
 aliases = sling.PhraseTable(kb, "data/e/kb/en/phrase-table.repo")
 factex = sling.FactExtractor(kb)
@@ -91,6 +98,12 @@ x_registration_authority_entity_id = kb["lei:RegistrationAuthorityEntityID"]
 x_legal_jurisdiction = kb["lei:LegalJurisdiction"]
 x_legal_form = kb["lei:LegalForm"]
 x_legal_form_code = kb["lei:EntityLegalFormCode"]
+x_entity_category = kb["lei:EntityCategory"]
+x_extension = kb["lei:Extension"]
+x_geocoding = kb["gleif:Geocoding"]
+x_original_address = kb["gleif:original_address"]
+x_lat = kb["gleif:lat"]
+x_lng = kb["gleif:lng"]
 x_relationship_record = kb["rr:RelationshipRecord"]
 x_relationship = kb["rr:Relationship"]
 x_relationship_type = kb["rr:RelationshipType"]
@@ -162,6 +175,28 @@ def get_address(store, elem):
   if country != None: slots.append((n_country, country))
   return store.frame(slots)
 
+def get_coord(rec, addr):
+  address_prefix = trim(addr[x_first_address_line])
+  if address_prefix is None:
+    print("No address prefix", addr)
+    return None
+  ext = rec[x_extension]
+  if ext is None: return None
+  for geocode in ext(x_geocoding):
+    original_address = geocode[x_original_address]
+    if original_address is None: continue
+    if not original_address.startswith(address_prefix): continue
+    lat = geocode[x_lat]
+    lng = geocode[x_lng]
+    if lat is None or lng is None: continue
+    store = rec.store()
+    return rec.store().frame([
+      (n_isa, n_geo),
+      (n_lat, float(lat)),
+      (n_lng, float(lng))
+    ])
+  return None
+
 store = sling.Store(kb)
 
 # LEI company data (level 1).
@@ -173,6 +208,7 @@ lines = []
 num_companies = 0
 companies = []
 unknown_regauth = {}
+unknown_categories = {}
 for line in leifile:
   if line.startswith(b"<lei:LEIRecord"):
     # Start new block.
@@ -186,8 +222,6 @@ for line in leifile:
   # Parse XML record.
   xmldata = b"".join(lines)
   root = store.parse(xmldata, xml=True)
-  num_companies += 1
-  #if num_companies % 1000 == 0: print(num_companies, "companies")
 
   # Build company frame.
   slots = []
@@ -198,6 +232,11 @@ for line in leifile:
   slots.append((n_lei, lei_number))
   slots.append((n_instance_of, n_organization))
   entity = rec[x_entity]
+
+  # Organization type.
+  category = entity[x_entity_category]
+  if category != None:
+    unknown_categories[category] = unknown_categories.get(category, 0) + 1
 
   # Company name.
   legal_name = entity[x_legal_name]
@@ -214,9 +253,13 @@ for line in leifile:
   legal_address = entity[x_legal_address]
   if hq != None:
     addr = get_address(store, hq)
+    coord = get_coord(rec, hq)
+    if coord != None: addr.append(n_coord_location, coord)
     slots.append((n_headquarters, addr))
   elif legal_address != None:
-    addr = get_address(store, hq)
+    addr = get_address(store, legal_address)
+    coord = get_coord(rec, legal_address)
+    if coord != None: addr.append(n_coord_location, coord)
     slots.append((n_location, addr))
 
   # Country and region for jurisdiction.
@@ -259,74 +302,92 @@ for line in leifile:
   # Create item frame for company.
   f = store.frame(slots)
   companies.append(f)
+  num_companies += 1
 
 leifile.close()
 lei.close()
 print(num_companies, "companies")
 
-"""
 # Read entity relationships (level 2).
 print("Reading GLEIF relationships")
 lines = []
-rr = zipfile.ZipFile(date + "/rr.zip", "r")
-rrfile = rr.open(date + "-gleif-concatenated-file-rr.xml", "r")
+rr = zipfile.ZipFile("data/c/lei/rr.xml.zip", "r")
+rrfile = rr.open(rr.namelist()[0], "r")
 num_relations = 0
 for line in rrfile:
-  if line.startswith("    <rr:RelationshipRecord"):
+  if line.startswith(b"<rr:RelationshipRecord"):
     # Start new block.
     lines = [line]
+    continue
   else:
+    # Add line and continue until end tag found.
     lines.append(line)
-    if line == "    </rr:RelationshipRecord>\n":
-      # Parse XML record.
-      xmldata = "".join(lines)
-      root = store.parse(xmldata, xml=True)
-      num_relations += 1
+    if line != b"</rr:RelationshipRecord>\n": continue
 
-      rec = root[x_relationship_record]
-      relationship = rec[x_relationship]
-      start = relationship[x_start_node]
-      end = relationship[x_end_node]
-      start_lei = start[x_node_id]
-      end_lei = end[x_node_id]
-      reltype = relationship[x_relationship_type]
-      starttime = None
-      endtime = None
+  # Parse XML record.
+  xmldata = b"".join(lines)
+  root = store.parse(xmldata, xml=True)
 
-      periods = relationship[x_relationship_periods]
-      if periods != None:
-        for period in periods(x_relationship_period):
-          if period[x_period_type] == "RELATIONSHIP_PERIOD":
-            period_start = period[x_start_date]
-            period_end = period[x_end_date]
-            if period_start: starttime = sling.Date(period_start).value()
-            if period_end: endtime = sling.Date(period_end).value()
+  rec = root[x_relationship_record]
+  relationship = rec[x_relationship]
+  start = relationship[x_start_node]
+  end = relationship[x_end_node]
+  start_lei = start[x_node_id]
+  end_lei = end[x_node_id]
+  reltype = relationship[x_relationship_type]
+  starttime = None
+  endtime = None
 
-      # Only add direct ownership for now.
-      if reltype != "IS_ULTIMATELY_CONSOLIDATED_BY": continue
+  periods = relationship[x_relationship_periods]
+  if periods != None:
+    for period in periods(x_relationship_period):
+      if period[x_period_type] == "RELATIONSHIP_PERIOD":
+        period_start = period[x_start_date]
+        period_end = period[x_end_date]
+        if period_start: starttime = sling.Date(period_start).value()
+        if period_end: endtime = sling.Date(period_end).value()
 
-      subsidiary = store["P1278/" + start_lei]
-      parent = store["P1278/" + end_lei]
-      if starttime == None and endtime == None:
-        subsidiary.append(n_parent, parent)
-        parent.append(n_subsidiary, subsidiary)
-      else:
-        # Parent company.
-        slots = [(n_is, parent)]
-        if starttime != None: slots.append((n_starttime, starttime))
-        if endtime != None: slots.append((n_endtime, endtime))
-        subsidiary.append(n_parent, store.frame(slots))
+  # Dertermine relationship type.
+  if reltype == "IS_ULTIMATELY_CONSOLIDATED_BY":
+    parent_rel = n_owned_by
+    child_rel = n_owner_of
+  elif reltype == "IS_DIRECTLY_CONSOLIDATED_BY":
+    parent_rel = n_parent
+    child_rel = n_subsidiary
+  else:
+    continue
 
-        # Subsidiary.
-        slots = [(n_is, subsidiary)]
-        if starttime != None: slots.append((n_starttime, starttime))
-        if endtime != None: slots.append((n_endtime, endtime))
-        parent.append(n_subsidiary, store.frame(slots))
+  # Get related organizations.
+  subsidiary = store["P1278/" + start_lei]
+  if subsidiary.isglobal():
+    print("Missing subsidiary:", start_lei)
+    continue
+  parent = store["P1278/" + end_lei]
+  if parent.isglobal():
+    print("Missing parent:", end_lei)
+    continue
+
+  if starttime == None and endtime == None:
+    subsidiary.append(parent_rel, parent)
+    parent.append(child_rel, subsidiary)
+  else:
+    # Parent company.
+    slots = [(n_is, parent)]
+    if starttime != None: slots.append((n_starttime, starttime))
+    if endtime != None: slots.append((n_endtime, endtime))
+    subsidiary.append(parent_rel, store.frame(slots))
+
+    # Subsidiary.
+    slots = [(n_is, subsidiary)]
+    if starttime != None: slots.append((n_starttime, starttime))
+    if endtime != None: slots.append((n_endtime, endtime))
+    parent.append(child_rel, store.frame(slots))
+
+  num_relations += 1
 
 rrfile.close()
 rr.close()
 print(num_relations, "relations")
-"""
 
 """
 # Add SWIFT BIC codes to companies.
@@ -356,6 +417,10 @@ recout.close()
 # Output unknown registers.
 for ra, count in unknown_regauth.items():
   print("Unknown RA", ra, ",", count, "companies")
+
+# Output unknown categories.
+for category, count in unknown_categories.items():
+  print("Unknown category", category, ",", count, "companies")
 
 print("Done.")
 

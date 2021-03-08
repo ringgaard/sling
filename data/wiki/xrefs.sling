@@ -1,15 +1,37 @@
 {
   ; Properties that are cross-referenced in knowledge base in priority order.
   properties: [
-    P1059, ; CVR number
-    P7972, ; CVR person ID
-    P2814, ; CVR P-number
-    P2622, ; Companies House ID
-    P5297, ; Companies House officer ID
-    P1278, ; Legal Entity Identifier
+    P1059, ; Danish CVR company number
+    P7972, ; Danish CVR person ID
+    P2814, ; Danish CVR branch P-number
+    P2622, ; UK Companies House ID
+    P5297, ; UK Companies House officer ID
+    P3200, ; Northern Ireland charity number
+    P5531, ; US SEC Central Index Key
+    P1297, ; US IRS Employer Identification Number
+    P3548, ; Australian Business Number
+    P3549, ; Australian Company Number
+    P5285, ; Austrian company register ID
+    P3376, ; Belgian Enterprise number
+    P6204, ; Brazilian CNPJ
+    P4156, ; Czech Registration ID
+    P1616, ; French SIREN number
+    P2619, ; Hungarian company ID
+    P4031, ; Hungarian NGO ID
+    P3225, ; Japanese Corporate Number
+    P3220, ; Dutch KvK company ID
+    P5687, ; New Zealand Business Number
+    P2333, ; Norwegian organisation number
+    P2391, ; Russian OKPO ID
+    P8174, ; Slovak Registration ID
+    P6460, ; Swedish Organization Number
+    P4829, ; Swiss Enterprise Identification Number
+    P6859, ; South Korean Corporate Number
+    P8053, ; Latvian unified registration number
+    P8182, ; South African Company Registration Number
+
     P1320, ; OpenCorporates ID
-    P5531, ; Central Index Key
-    P1297, ; IRS Employer Identification Number
+    P1278, ; Legal Entity Identifier
   ]
 
   ; Pre-resolved reference mappings for ambiguous references.

@@ -34,6 +34,15 @@ class ItemReconciler : public task::FrameProcessor {
     Frame config = reader.Read().AsFrame();
     CHECK(config.valid());
 
+    // Get item sources order.
+    if (config.Has("sources")) {
+      Array sources = config.Get("sources").AsArray();
+      CHECK(sources.valid());
+      for (int i = 0; i < sources.length(); ++i) {
+        source_order_.push_back(sources.get(i));
+      }
+    }
+
     // Get property inversions.
     if (config.Has("inversions")) {
       Frame inversions = config.Get("inversions").AsFrame();
@@ -84,16 +93,26 @@ class ItemReconciler : public task::FrameProcessor {
       Builder inverted(store);
       inverted.AddLink(inverse_property, id);
       Frame fi = inverted.Create();
-      //LOG(INFO) << ToText(fi);
-      Output(target_id, fi);
+      Output(target_id, ItemSourceOrder(fi), fi);
       num_inverse_properties_->Increment();
     }
 
     // Output frame with the reconciled id as key.
-    Output(id, frame);
+    Output(id, ItemSourceOrder(frame), frame);
   }
 
  private:
+  // Get source order for frame.
+  int ItemSourceOrder(const Frame &frame) {
+    for (int i = 0; i < source_order_.size(); ++i) {
+      if (frame.Has(source_order_[i])) return i;
+    }
+    return source_order_.size();
+  }
+
+  // Item source ordering.
+  std::vector<Handle> source_order_;
+
   // Property inversion map.
   HandleMap<Handle> inversion_map_;
 

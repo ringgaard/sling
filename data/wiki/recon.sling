@@ -1,9 +1,23 @@
 {
+  ; Item sources ordering.
+  sources: [
+    /w/item/fanin,       ; item fan-in from Wikidata
+    /w/item/popularity,  ; Wikipedia popularity counts
+    isa,                 ; Wikidata item
+    media,               ; Twitter and Wikidata photos
+    P1278,               ; GLEIF
+    /w/item/links,       ; Wikipedia link graph
+    /w/item/category,    ; Wikipedia categories
+    /w/item/member,      ; Wikipedia category members
+  ]
+
   ; Property inversion.
   inversions: {
     P162: Q65994327 ; producer -> producer of
     P57:  Q65971570 ; director -> director of
     P161: Q66318312 ; cast member -> cast member of
+    P58:  Q65971578 ; screenwriter -> wrote script of
+    P166: Q66796038 ; award received -> award received by
   }
 }
 

@@ -46,6 +46,7 @@ class FrameProcessor : public Processor {
 
   // Output object to output.
   void Output(Text key, const Object &value);
+  void Output(Text key, uint64 serial, const Object &value);
 
   // Output frame to output using frame id as key.
   void Output(const Frame &frame);
@@ -77,6 +78,7 @@ class FrameProcessor : public Processor {
 
 // Create message from object.
 Message *CreateMessage(Text key, const Object &Object, bool shallow = false);
+Message *CreateMessage(Text key, uint64 serial, const Object &Object);
 
 // Create message with encoded frame using frame id as key.
 Message *CreateMessage(const Frame &frame, bool shallow = false);
