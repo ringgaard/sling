@@ -39,6 +39,7 @@ n_postal_code = kb["P281"]
 n_headquarters = kb["P159"]
 n_located_in = kb["P131"]
 n_location = kb["P276"]
+n_location_of_creation = kb["P1071"]
 n_lei = kb["P1278"]
 n_swift_bic_code = kb["P2627"]
 n_subsidiary = kb["P355"]
@@ -57,8 +58,9 @@ aliases = sling.PhraseTable(kb, "data/e/kb/en/phrase-table.repo")
 factex = sling.FactExtractor(kb)
 
 city_types = factex.taxonomy([
-  "Q486972", # human settlement
-  "Q56061",  # administrative territorial entity
+  "Q486972",   # human settlement
+  "Q56061",    # administrative territorial entity
+  "Q2983893",  # quarter
 ])
 
 # Read registers.
@@ -269,7 +271,7 @@ for line in leifile:
     if country == None:
       region = regions.get(jurisdiction)
       if region != None:
-        slots.append((n_located_in, region))
+        slots.append((n_location_of_creation, region))
         country = region[n_country]
     if country != None:
       slots.append((n_country, country))

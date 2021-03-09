@@ -123,6 +123,80 @@ class ItemReconciler : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("item-reconciler", ItemReconciler);
 
+// Set of item statements implemented as a hash table for fast checking of
+// duplicates.
+class Statements {
+ public:
+  Statements(Store *store) : store_(store), slots_(store) {
+    limit_ = INITIAL_CAPACITY;
+    mask_ = limit_ - 1;
+    size_ = 0;
+    slots_.resize(limit_);
+  }
+
+  // Ensure capacity for inserting up to 'n' statements.
+  void Ensure(int n) {
+    // Check if there is enough space with a fill factor of 50%.
+    int needed = (size_ + n) * 2;
+    if (needed <= limit_) return;
+
+    // Expand hash table.
+    Slots slots(store_);
+    slots.swap(slots_);
+    while (limit_ < needed) limit_ *= 2;
+    mask_ = limit_ - 1;
+    slots_.resize(limit_);
+    for (int i = 0; i < slots.size(); ++i) {
+      int pos = NameHash(slots[i].name) & mask_;
+      for (;;) {
+        Slot &s = slots_[pos];
+        if (s.name.IsNil()) {
+          s = slots[i];
+          break;
+        }
+        pos = (pos + 1) & mask_;
+      }
+    }
+  }
+
+  // Insert statement. Return false if the statement is already in the table.
+  bool Insert(Handle name, Handle value) {
+    int pos = NameHash(name) & mask_;
+    for (;;) {
+      Slot &s = slots_[pos];
+      if (s.name == name && store_->Equal(s.value, value)) {
+        // Match found.
+        return false;
+      } else if (s.name.IsNil()) {
+        // Insert new slot.
+        s.name = name;
+        s.value = value;
+        size_++;
+        return true;
+      }
+      pos = (pos + 1) & mask_;
+    }
+  }
+
+ private:
+  // Initial size for hash hable. Must be power of two.
+  static const uint64 INITIAL_CAPACITY = 1024;
+
+  // Compute hash for name.
+  static Word NameHash(Handle name) {
+    return name.raw() >> Handle::kTagBits;
+  }
+
+  // Store for table.
+  Store *store_;
+
+  // Hash table with linear probing.
+  Slots slots_;
+  uint64 size_;
+  uint64 limit_;
+  uint64 mask_;
+};
+
 // Merge items with the same ids.
 class ItemMerger : public task::Reducer {
  public:
@@ -140,16 +214,27 @@ class ItemMerger : public task::Reducer {
     Builder builder(&store);
     builder.AddId(id);
 
-    // Merge all items. Since the merged frames are anonymous, self-references
-    // need to be updated to the reconciled frame.
+    // Merge all item sources.
+    Statements statements(&store);
     for (task::Message *message : input.messages()) {
+      // Decode item.
       Frame item = DecodeMessage(&store, message);
-      Handle h = item.handle();
-      item.TraverseSlots([h, id](Slot *s) {
-        if (s->name == h) s->name = id;
-        if (s->value == h) s->value = id;
+
+      // Since the merged frames are anonymous, self-references need to be
+      // updated to the reconciled frame.
+      Handle self = item.handle();
+      item.TraverseSlots([self, id](Slot *s) {
+        if (s->name == self) s->name = id;
+        if (s->value == self) s->value = id;
       });
-      builder.AddFrom(item);
+
+      // Add new statements skipping duplicates.
+      statements.Ensure(item.size());
+      for (const Slot &s : item) {
+        if (statements.Insert(s.name, s.value)) {
+         builder.Add(s.name, s.value);
+        }
+      }
     }
 
     // Output merged frame for item.

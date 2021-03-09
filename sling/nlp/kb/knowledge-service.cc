@@ -269,6 +269,7 @@ const char *property_order[] = {
 
   "Q65994327",  // producer of
   "Q65971570",  // director of
+  "Q65971578",  // wrote script of
   "Q66318312",  // cast member of
 
   "P1595",      // charge
@@ -581,16 +582,27 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
       xref_properties.emplace_back(name, p.id);
     }
 
-    // Get URL formatter for property.
-    Handle formatter = property.Resolve(n_formatter_url_);
-    if (kb->IsString(formatter)) {
-      p.url = String(kb, formatter).value();
-    }
-
-    // Check if property is a representative image for the item.
     p.image = false;
     p.alternate_image = false;
     for (const Slot &ps : property) {
+      // Get URL formatter for property.
+      if (ps.name == n_formatter_url_) {
+        Handle formatter = ps.value;
+        bool deprecated = false;
+        if (kb->IsFrame(formatter)) {
+          // Resolve qualified formatter url.
+          Frame fq(kb, formatter);
+          formatter = fq.GetHandle(Handle::is());
+
+          // Skip deprecated services.
+          if (fq.Has(n_reason_for_deprecation_)) deprecated = true;
+        }
+        if (!deprecated && kb->IsString(formatter)) {
+          p.url = String(kb, formatter).value();
+        }
+      }
+
+      // Check if property is a representative image for the item.
       if (ps.name == n_instance_of_ && ps.value == n_representative_image_) {
         if (property == n_image_) {
           p.image = true;

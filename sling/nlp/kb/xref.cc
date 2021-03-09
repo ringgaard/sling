@@ -119,7 +119,7 @@ bool XRef::Merge(Identifier *a, Identifier *b) {
   bool has_main = false;
   Identifier *id = a;
   do {
-    if (id == b) return false;
+    if (id == b) return true;
     if (id->type == main_ && !id->redirect) has_main = true;
     id = id->ring;
   } while (id != a);
