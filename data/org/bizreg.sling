@@ -416,6 +416,7 @@
   opencorporates_jurisdiction: "be"
   format: "0?\\d{3}\\.?\\d{3}\\.?\\d{3}"
   opencorporates_format: "0\\d{9}"
+  transform: {".": ""}
 }
 {
   registration_authority_code: "RA000026"
@@ -2775,6 +2776,7 @@
   native_owner_name: "Amtsgericht Aachen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R3101"
 }
 {
   registration_authority_code: "RA000198"
@@ -2789,6 +2791,7 @@
   native_owner_name: "Amtsgericht Ahlen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2702"
 }
 {
   registration_authority_code: "RA000199"
@@ -2803,6 +2806,7 @@
   native_owner_name: "Amtsgericht Altenburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1201"
 }
 {
   registration_authority_code: "RA000200"
@@ -2817,6 +2821,7 @@
   native_owner_name: "Amtsgericht Amberg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D3101"
 }
 {
   registration_authority_code: "RA000201"
@@ -2831,6 +2836,7 @@
   native_owner_name: "Amtsgericht Ansbach"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D3201"
 }
 {
   registration_authority_code: "RA000202"
@@ -2845,6 +2851,7 @@
   native_owner_name: "Amtsgericht Apolda"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1101"
 }
 {
   registration_authority_code: "RA000203"
@@ -2859,6 +2866,7 @@
   native_owner_name: "Amtsgericht Arnsberg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1901"
 }
 {
   registration_authority_code: "RA000204"
@@ -2873,6 +2881,7 @@
   native_owner_name: "Amtsgericht Arnstadt"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1102"
 }
 {
   registration_authority_code: "RA000205"
@@ -2887,6 +2896,7 @@
   native_owner_name: "Amtsgericht Aschaffenburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D4102"
 }
 {
   registration_authority_code: "RA000206"
@@ -2901,6 +2911,7 @@
   native_owner_name: "Amtsgericht Augsburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D2102"
 }
 {
   registration_authority_code: "RA000207"
@@ -2915,6 +2926,7 @@
   native_owner_name: "Amtsgericht Aurich"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P3101"
 }
 {
   registration_authority_code: "RA000208"
@@ -2929,6 +2941,7 @@
   native_owner_name: "Amtsgericht Bad Hersfeld"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1305"
 }
 {
   registration_authority_code: "RA000209"
@@ -2943,6 +2956,7 @@
   native_owner_name: "Amtsgericht Bad Homburg v. d. Höhe"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1202"
 }
 {
   registration_authority_code: "RA000210"
@@ -2957,6 +2971,7 @@
   native_owner_name: "Amtsgericht Bad Kreuznach"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "T2101"
 }
 {
   registration_authority_code: "RA000211"
@@ -2971,6 +2986,7 @@
   native_owner_name: "Amtsgericht Bad Langensalza"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1104"
 }
 {
   registration_authority_code: "RA000212"
@@ -2985,6 +3001,7 @@
   native_owner_name: "Amtsgericht Bad Lobenstein"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1208"
 }
 {
   registration_authority_code: "RA000213"
@@ -2999,6 +3016,7 @@
   native_owner_name: "Amtsgericht Bad Oeynhausen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2108"
 }
 {
   registration_authority_code: "RA000214"
@@ -3013,6 +3031,7 @@
   native_owner_name: "Amtsgericht Bad Salzungen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1301"
 }
 {
   registration_authority_code: "RA000724"
@@ -3040,6 +3059,7 @@
   native_owner_name: "Amtsgericht Bamberg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D4201"
 }
 {
   registration_authority_code: "RA000216"
@@ -3054,6 +3074,7 @@
   native_owner_name: "Amtsgericht Bayreuth"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D4301"
 }
 {
   registration_authority_code: "RA000727"
@@ -3082,6 +3103,7 @@
   native_owner_name: "Amtsgericht Berlin-Charlottenburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "F1103"
 }
 {
   registration_authority_code: "RA000218"
@@ -3096,6 +3118,7 @@
   native_owner_name: "Amtsgericht Bielefeld"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2101"
 }
 {
   registration_authority_code: "RA000219"
@@ -3110,6 +3133,7 @@
   native_owner_name: "Amtsgericht Bochum"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2201"
 }
 {
   registration_authority_code: "RA000220"
@@ -3124,6 +3148,7 @@
   native_owner_name: "Amtsgericht Bonn"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R3201"
 }
 {
   registration_authority_code: "RA000733"
@@ -3151,6 +3176,7 @@
   native_owner_name: "Amtsgericht Braunschweig"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P1103"
 }
 {
   registration_authority_code: "RA000222"
@@ -3165,6 +3191,7 @@
   native_owner_name: "Amtsgericht Bremen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "H1101"
 }
 {
   registration_authority_code: "RA000742"
@@ -3192,6 +3219,7 @@
   native_owner_name: "Amtsgericht Bünde"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2102"
 }
 {
   registration_authority_code: "RA000224"
@@ -3206,6 +3234,7 @@
   native_owner_name: "Amtsgericht Chemnitz"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "U1206"
 }
 {
   registration_authority_code: "RA000225"
@@ -3220,6 +3249,7 @@
   native_owner_name: "Amtsgericht Coburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D4401"
 }
 {
   registration_authority_code: "RA000226"
@@ -3234,6 +3264,7 @@
   native_owner_name: "Amtsgericht Coesfeld"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2707"
 }
 {
   registration_authority_code: "RA000227"
@@ -3248,6 +3279,7 @@
   native_owner_name: "Amtsgericht Cottbus"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "G1103"
 }
 {
   registration_authority_code: "RA000228"
@@ -3262,6 +3294,7 @@
   native_owner_name: "Amtsgericht Darmstadt"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1103"
 }
 {
   registration_authority_code: "RA000229"
@@ -3276,6 +3309,7 @@
   native_owner_name: "Amtsgericht Deggendorf"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D2201"
 }
 {
   registration_authority_code: "RA000230"
@@ -3290,6 +3324,7 @@
   native_owner_name: "Amtsgericht Dortmund"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2402"
 }
 {
   registration_authority_code: "RA000231"
@@ -3304,6 +3339,7 @@
   native_owner_name: "Amtsgericht Dresden"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "U1104"
 }
 {
   registration_authority_code: "RA000232"
@@ -3318,6 +3354,7 @@
   native_owner_name: "Amtsgericht Duisburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1202"
 }
 {
   registration_authority_code: "RA000233"
@@ -3332,6 +3369,7 @@
   native_owner_name: "Amtsgericht Düren"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R3103"
 }
 {
   registration_authority_code: "RA000234"
@@ -3346,6 +3384,7 @@
   native_owner_name: "Amtsgericht Düsseldorf"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1101"
 }
 {
   registration_authority_code: "RA000235"
@@ -3360,6 +3399,7 @@
   native_owner_name: "Amtsgericht Eisenach"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1105"
 }
 {
   registration_authority_code: "RA000236"
@@ -3374,6 +3414,7 @@
   native_owner_name: "Amtsgericht Erfurt"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1106"
 }
 {
   registration_authority_code: "RA000237"
@@ -3388,6 +3429,7 @@
   native_owner_name: "Amtsgericht Erkelenz"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1502"
 }
 {
   registration_authority_code: "RA000238"
@@ -3402,6 +3444,7 @@
   native_owner_name: "Amtsgericht Eschwege"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1602"
 }
 {
   registration_authority_code: "RA000239"
@@ -3416,6 +3459,7 @@
   native_owner_name: "Amtsgericht Essen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2503"
 }
 {
   registration_authority_code: "RA000240"
@@ -3430,6 +3474,7 @@
   native_owner_name: "Amtsgericht Flensburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "X1112"
 }
 {
   registration_authority_code: "RA000241"
@@ -3444,6 +3489,7 @@
   native_owner_name: "Amtsgericht Frankfurt (Oder)"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "G1207"
 }
 {
   registration_authority_code: "RA000242"
@@ -3458,6 +3504,7 @@
   native_owner_name: "Amtsgericht Frankfurt am Main"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1201"
 }
 {
   registration_authority_code: "RA000243"
@@ -3472,6 +3519,7 @@
   native_owner_name: "Amtsgericht Freiburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "B1204"
 }
 {
   registration_authority_code: "RA000244"
@@ -3486,6 +3534,7 @@
   native_owner_name: "Amtsgericht Friedberg (Hessen)"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1405"
 }
 {
   registration_authority_code: "RA000245"
@@ -3500,6 +3549,7 @@
   native_owner_name: "Amtsgericht Fritzlar"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1603"
 }
 {
   registration_authority_code: "RA000246"
@@ -3514,6 +3564,7 @@
   native_owner_name: "Amtsgericht Fulda"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1301"
 }
 {
   registration_authority_code: "RA000247"
@@ -3528,6 +3579,7 @@
   native_owner_name: "Amtsgericht Fürth"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D3304"
 }
 {
   registration_authority_code: "RA000248"
@@ -3542,6 +3594,7 @@
   native_owner_name: "Amtsgericht Geldern"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1302"
 }
 {
   registration_authority_code: "RA000249"
@@ -3556,6 +3609,7 @@
   native_owner_name: "Amtsgericht Gelsenkirchen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2507"
 }
 {
   registration_authority_code: "RA000250"
@@ -3570,6 +3624,7 @@
   native_owner_name: "Amtsgericht Gera"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1203"
 }
 {
   registration_authority_code: "RA000251"
@@ -3584,6 +3639,7 @@
   native_owner_name: "Amtsgericht Gießen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1406"
 }
 {
   registration_authority_code: "RA000252"
@@ -3598,6 +3654,7 @@
   native_owner_name: "Amtsgericht Gotha"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1108"
 }
 {
   registration_authority_code: "RA000253"
@@ -3612,6 +3669,7 @@
   native_owner_name: "Amtsgericht Göttingen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P2204"
 }
 {
   registration_authority_code: "RA000254"
@@ -3626,6 +3684,7 @@
   native_owner_name: "Amtsgericht Greifswald"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1202"
 }
 {
   registration_authority_code: "RA000255"
@@ -3640,6 +3699,7 @@
   native_owner_name: "Amtsgericht Greiz"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1205"
 }
 {
   registration_authority_code: "RA000256"
@@ -3654,6 +3714,7 @@
   native_owner_name: "Amtsgericht Güstrow"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1303"
 }
 {
   registration_authority_code: "RA000257"
@@ -3668,6 +3729,7 @@
   native_owner_name: "Amtsgericht Gütersloh"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2103"
 }
 {
   registration_authority_code: "RA000258"
@@ -3682,6 +3744,7 @@
   native_owner_name: "Amtsgericht Hagen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2602"
 }
 {
   registration_authority_code: "RA000259"
@@ -3696,6 +3759,7 @@
   native_owner_name: "Amtsgericht Hamburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "K1101"
 }
 {
   registration_authority_code: "RA000738"
@@ -3723,6 +3787,7 @@
   native_owner_name: "Amtsgericht Hamm"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2404"
 }
 {
   registration_authority_code: "RA000261"
@@ -3737,6 +3802,7 @@
   native_owner_name: "Amtsgericht Hanau"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1502"
 }
 {
   registration_authority_code: "RA000262"
@@ -3751,6 +3817,7 @@
   native_owner_name: "Amtsgericht Hannover"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P2305"
 }
 {
   registration_authority_code: "RA000263"
@@ -3765,6 +3832,7 @@
   native_owner_name: "Amtsgericht Heilbad Heiligenstadt"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1109"
 }
 {
   registration_authority_code: "RA000264"
@@ -3779,6 +3847,7 @@
   native_owner_name: "Amtsgericht Herford"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2105"
 }
 {
   registration_authority_code: "RA000265"
@@ -3793,6 +3862,7 @@
   native_owner_name: "Amtsgericht Herne"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2203"
 }
 {
   registration_authority_code: "RA000722"
@@ -3820,6 +3890,7 @@
   native_owner_name: "Amtsgericht Hildburghausen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1302"
 }
 {
   registration_authority_code: "RA000267"
@@ -3834,6 +3905,7 @@
   native_owner_name: "Amtsgericht Hildesheim"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P2408"
 }
 {
   registration_authority_code: "RA000268"
@@ -3848,6 +3920,7 @@
   native_owner_name: "Amtsgericht Hof"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D4501"
 }
 {
   registration_authority_code: "RA000269"
@@ -3862,6 +3935,7 @@
   native_owner_name: "Amtsgericht Homburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1102"
 }
 {
   registration_authority_code: "RA000270"
@@ -3876,6 +3950,7 @@
   native_owner_name: "Amtsgericht Ilmenau"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1303"
 }
 {
   registration_authority_code: "RA000271"
@@ -3890,6 +3965,7 @@
   native_owner_name: "Amtsgericht Ingolstadt"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D5701"
 }
 {
   registration_authority_code: "RA000272"
@@ -3904,6 +3980,7 @@
   native_owner_name: "Amtsgericht Iserlohn"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2604"
 }
 {
   registration_authority_code: "RA000273"
@@ -3918,6 +3995,7 @@
   native_owner_name: "Amtsgericht Jena"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1206"
 }
 {
   registration_authority_code: "RA000274"
@@ -3932,6 +4010,7 @@
   native_owner_name: "Amtsgericht Kaiserslautern"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "T3201"
 }
 {
   registration_authority_code: "RA000275"
@@ -3946,6 +4025,7 @@
   native_owner_name: "Amtsgericht Kassel"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1607"
 }
 {
   registration_authority_code: "RA000276"
@@ -3960,6 +4040,7 @@
   native_owner_name: "Amtsgericht Kempten"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D2304"
 }
 {
   registration_authority_code: "RA000277"
@@ -3974,6 +4055,7 @@
   native_owner_name: "Amtsgericht Kiel"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "X1517"
 }
 {
   registration_authority_code: "RA000278"
@@ -3988,6 +4070,7 @@
   native_owner_name: "Amtsgericht Kleve"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1304"
 }
 {
   registration_authority_code: "RA000279"
@@ -4002,6 +4085,7 @@
   native_owner_name: "Amtsgericht Koblenz"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "T2210"
 }
 {
   registration_authority_code: "RA000280"
@@ -4016,6 +4100,7 @@
   native_owner_name: "Amtsgericht Köln"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R3306"
 }
 {
   registration_authority_code: "RA000281"
@@ -4030,6 +4115,7 @@
   native_owner_name: "Amtsgericht Königstein im Taunus"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1203"
 }
 {
   registration_authority_code: "RA000282"
@@ -4044,6 +4130,7 @@
   native_owner_name: "Amtsgericht Korbach"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1608"
 }
 {
   registration_authority_code: "RA000283"
@@ -4058,6 +4145,7 @@
   native_owner_name: "Amtsgericht Krefeld"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1402"
 }
 {
   registration_authority_code: "RA000284"
@@ -4072,6 +4160,7 @@
   native_owner_name: "Amtsgericht Landau in der Pfalz"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "T3304"
 }
 {
   registration_authority_code: "RA000285"
@@ -4086,6 +4175,7 @@
   native_owner_name: "Amtsgericht Landshut"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D2404"
 }
 {
   registration_authority_code: "RA000286"
@@ -4100,6 +4190,7 @@
   native_owner_name: "Amtsgericht Lebach"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1103"
 }
 {
   registration_authority_code: "RA000287"
@@ -4114,6 +4205,7 @@
   native_owner_name: "Amtsgericht Leipzig"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "U1308"
 }
 {
   registration_authority_code: "RA000288"
@@ -4128,6 +4220,7 @@
   native_owner_name: "Amtsgericht Lemgo"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2307"
 }
 {
   registration_authority_code: "RA000289"
@@ -4142,6 +4235,7 @@
   native_owner_name: "Amtsgericht Limburg a. d. Lahn"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1706"
 }
 {
   registration_authority_code: "RA000755"
@@ -4169,6 +4263,7 @@
   native_owner_name: "Amtsgericht Lübeck"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "X1721"
 }
 {
   registration_authority_code: "RA000291"
@@ -4183,6 +4278,7 @@
   native_owner_name: "Amtsgericht Ludwigshafen am Rhein"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "T3104"
 }
 {
   registration_authority_code: "RA000292"
@@ -4197,6 +4293,7 @@
   native_owner_name: "Amtsgericht Ludwigslust"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1305"
 }
 {
   registration_authority_code: "RA000293"
@@ -4211,6 +4308,7 @@
   native_owner_name: "Amtsgericht Lüneburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P2507"
 }
 {
   registration_authority_code: "RA000294"
@@ -4225,6 +4323,7 @@
   native_owner_name: "Amtsgericht Lünen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2406"
 }
 {
   registration_authority_code: "RA000295"
@@ -4239,6 +4338,7 @@
   native_owner_name: "Amtsgericht Mainz"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "T2304"
 }
 {
   registration_authority_code: "RA000296"
@@ -4253,6 +4353,7 @@
   native_owner_name: "Amtsgericht Mannheim"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "B1601"
 }
 {
   registration_authority_code: "RA000297"
@@ -4267,6 +4368,7 @@
   native_owner_name: "Amtsgericht Marburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1809"
 }
 {
   registration_authority_code: "RA000743"
@@ -4294,6 +4396,7 @@
   native_owner_name: "Amtsgericht Meiningen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1304"
 }
 {
   registration_authority_code: "RA000299"
@@ -4308,6 +4411,7 @@
   native_owner_name: "Amtsgericht Memmingen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D2505"
 }
 {
   registration_authority_code: "RA000300"
@@ -4322,6 +4426,7 @@
   native_owner_name: "Amtsgericht Merzig"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1104"
 }
 {
   registration_authority_code: "RA000301"
@@ -4336,6 +4441,7 @@
   native_owner_name: "Amtsgericht Mönchengladbach"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1504"
 }
 {
   registration_authority_code: "RA000302"
@@ -4350,6 +4456,7 @@
   native_owner_name: "Amtsgericht Montabaur"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "T2214"
 }
 {
   registration_authority_code: "RA000303"
@@ -4364,6 +4471,7 @@
   native_owner_name: "Amtsgericht Mühlhausen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1110"
 }
 {
   registration_authority_code: "RA000304"
@@ -4378,6 +4486,8 @@
   native_owner_name: "Amtsgericht München"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D2601V"   ; V=Vereinsregister
+  ; http://www.firmendb.de/adressdatenbank/gericht-5086.php
 }
 {
   registration_authority_code: "RA000305"
@@ -4392,6 +4502,7 @@
   native_owner_name: "Amtsgericht Münster"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2713"
 }
 {
   registration_authority_code: "RA000306"
@@ -4406,6 +4517,7 @@
   native_owner_name: "Amtsgericht Neubrandenburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1105"
 }
 {
   registration_authority_code: "RA000307"
@@ -4420,6 +4532,7 @@
   native_owner_name: "Amtsgericht Neunkirchen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1105"
 }
 {
   registration_authority_code: "RA000308"
@@ -4434,6 +4547,7 @@
   native_owner_name: "Amtsgericht Neuruppin"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "G1309"
 }
 {
   registration_authority_code: "RA000309"
@@ -4448,6 +4562,7 @@
   native_owner_name: "Amtsgericht Neuss"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1102"
 }
 {
   registration_authority_code: "RA000310"
@@ -4462,6 +4577,7 @@
   native_owner_name: "Amtsgericht Nordhausen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1111"
 }
 {
   registration_authority_code: "RA000311"
@@ -4476,6 +4592,7 @@
   native_owner_name: "Amtsgericht Nürnberg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D3310"
 }
 {
   registration_authority_code: "RA000312"
@@ -4490,6 +4607,7 @@
   native_owner_name: "Amtsgericht Oberhausen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R6324"
 }
 {
   registration_authority_code: "RA000313"
@@ -4504,6 +4622,7 @@
   native_owner_name: "Amtsgericht Offenbach am Main"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1114"
 }
 {
   registration_authority_code: "RA000314"
@@ -4518,6 +4637,7 @@
   native_owner_name: "Amtsgericht Oldenburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P3210"
 }
 {
   registration_authority_code: "RA000315"
@@ -4532,6 +4652,7 @@
   native_owner_name: "Amtsgericht Osnabrück"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P3313"
 }
 {
   registration_authority_code: "RA000316"
@@ -4546,6 +4667,7 @@
   native_owner_name: "Amtsgericht Ottweiler"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1107"
 }
 {
   registration_authority_code: "RA000317"
@@ -4560,6 +4682,7 @@
   native_owner_name: "Amtsgericht Paderborn"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2809"
 }
 {
   registration_authority_code: "RA000318"
@@ -4574,6 +4697,7 @@
   native_owner_name: "Amtsgericht Pasewalk"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1107"
 }
 {
   registration_authority_code: "RA000319"
@@ -4588,6 +4712,7 @@
   native_owner_name: "Amtsgericht Passau"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D2803"
 }
 {
   registration_authority_code: "RA000320"
@@ -4602,6 +4727,9 @@
   native_owner_name: "Amtsgericht Pinneberg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "X1321"
+  ; NB: Some OC companies have suffixes for companies previously registered
+  ; with Ellerbek (EL), Itzerhoe (IZ), Meldorf (ME) & Pinneberg (PI)
 }
 {
   registration_authority_code: "RA000321"
@@ -4616,6 +4744,7 @@
   native_owner_name: "Amtsgericht Pößneck"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1209"
 }
 {
   registration_authority_code: "RA000322"
@@ -4630,6 +4759,7 @@
   native_owner_name: "Amtsgericht Potsdam"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "G1312"
 }
 {
   registration_authority_code: "RA000323"
@@ -4644,6 +4774,7 @@
   native_owner_name: "Amtsgericht Ratingen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1104"
 }
 {
   registration_authority_code: "RA000324"
@@ -4658,6 +4789,7 @@
   native_owner_name: "Amtsgericht Recklinghausen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2204"
 }
 {
   registration_authority_code: "RA000325"
@@ -4672,6 +4804,7 @@
   native_owner_name: "Amtsgericht Regensburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D3410"
 }
 {
   registration_authority_code: "RA000737"
@@ -4699,6 +4832,7 @@
   native_owner_name: "Amtsgericht Remscheid"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1603"
 }
 {
   registration_authority_code: "RA000327"
@@ -4713,6 +4847,7 @@
   native_owner_name: "Amtsgericht Ribnitz"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1205"
 }
 {
   registration_authority_code: "RA000328"
@@ -4727,6 +4862,7 @@
   native_owner_name: "Amtsgericht Rostock"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1206"
 }
 {
   registration_authority_code: "RA000329"
@@ -4741,6 +4877,7 @@
   native_owner_name: "Amtsgericht Rudolstadt"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1210"
 }
 {
   registration_authority_code: "RA000330"
@@ -4755,6 +4892,7 @@
   native_owner_name: "Amtsgericht Saalfeld"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1211"
 }
 {
   registration_authority_code: "RA000331"
@@ -4769,6 +4907,7 @@
   native_owner_name: "Amtsgericht Saarbrücken"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1109"
 }
 {
   registration_authority_code: "RA000741"
@@ -4796,6 +4935,7 @@
   native_owner_name: "Amtsgericht Saarlouis"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1110"
 }
 {
   registration_authority_code: "RA000333"
@@ -4810,6 +4950,7 @@
   native_owner_name: "Amtsgericht Sankt Ingbert"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1111"
 }
 {
   registration_authority_code: "RA000334"
@@ -4824,6 +4965,7 @@
   native_owner_name: "Amtsgericht Sankt Wendel"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1112"
 }
 {
   registration_authority_code: "RA000739"
@@ -4864,6 +5006,7 @@
   native_owner_name: "Amtsgericht Schleiden"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R3106"
 }
 {
   registration_authority_code: "RA000723"
@@ -4891,6 +5034,7 @@
   native_owner_name: "Amtsgericht Schweinfurt"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D4608"
 }
 {
   registration_authority_code: "RA000337"
@@ -4905,6 +5049,7 @@
   native_owner_name: "Amtsgericht Schwerin"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1308"
 }
 {
   registration_authority_code: "RA000338"
@@ -4919,6 +5064,7 @@
   native_owner_name: "Amtsgericht Siegburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R3208"
 }
 {
   registration_authority_code: "RA000339"
@@ -4933,6 +5079,7 @@
   native_owner_name: "Amtsgericht Siegen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2909"
 }
 {
   registration_authority_code: "RA000340"
@@ -4947,6 +5094,7 @@
   native_owner_name: "Amtsgericht Soest"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1911"
 }
 {
   registration_authority_code: "RA000341"
@@ -4961,6 +5109,7 @@
   native_owner_name: "Amtsgericht Solingen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1605"
 }
 {
   registration_authority_code: "RA000342"
@@ -4975,6 +5124,7 @@
   native_owner_name: "Amtsgericht Sömmerda"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1112"
 }
 {
   registration_authority_code: "RA000343"
@@ -4989,6 +5139,7 @@
   native_owner_name: "Amtsgericht Sondershausen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1113"
 }
 {
   registration_authority_code: "RA000344"
@@ -5003,6 +5154,7 @@
   native_owner_name: "Amtsgericht Sonneberg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1307"
 }
 {
   registration_authority_code: "RA000345"
@@ -5017,6 +5169,7 @@
   native_owner_name: "Amtsgericht Stadthagen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P2106"
 }
 {
   registration_authority_code: "RA000346"
@@ -5031,6 +5184,7 @@
   native_owner_name: "Amtsgericht Stadtroda"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1214"
 }
 {
   registration_authority_code: "RA000347"
@@ -5045,6 +5199,7 @@
   native_owner_name: "Amtsgericht Steinfurt"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2706"
 }
 {
   registration_authority_code: "RA000348"
@@ -5059,6 +5214,7 @@
   native_owner_name: "Amtsgericht Stendal"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "W1215"
 }
 {
   registration_authority_code: "RA000349"
@@ -5073,6 +5229,7 @@
   native_owner_name: "Amtsgericht Stralsund"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1209"
 }
 {
   registration_authority_code: "RA000350"
@@ -5087,6 +5244,7 @@
   native_owner_name: "Amtsgericht Straubing"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D3413"
 }
 {
   registration_authority_code: "RA000351"
@@ -5101,6 +5259,7 @@
   native_owner_name: "Amtsgericht Stuttgart"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "B2609"
 }
 {
   registration_authority_code: "RA000352"
@@ -5115,6 +5274,7 @@
   native_owner_name: "Amtsgericht Suhl"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1308"
 }
 {
   registration_authority_code: "RA000736"
@@ -5142,6 +5302,7 @@
   native_owner_name: "Amtsgericht Tostedt"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P2613"
 }
 {
   registration_authority_code: "RA000354"
@@ -5156,6 +5317,7 @@
   native_owner_name: "Amtsgericht Traunstein"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D2910"
 }
 {
   registration_authority_code: "RA000355"
@@ -5170,6 +5332,7 @@
   native_owner_name: "Amtsgericht Ulm"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "B2805"
 }
 {
   registration_authority_code: "RA000356"
@@ -5184,6 +5347,7 @@
   native_owner_name: "Amtsgericht Völklingen"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1115"
 }
 {
   registration_authority_code: "RA000357"
@@ -5198,6 +5362,7 @@
   native_owner_name: "Amtsgericht Wadern"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "V1116"
 }
 {
   registration_authority_code: "RA000358"
@@ -5212,6 +5377,7 @@
   native_owner_name: "Amtsgericht Walsrode"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "P2716"
 }
 {
   registration_authority_code: "RA000359"
@@ -5226,6 +5392,7 @@
   native_owner_name: "Amtsgericht Warburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2813"
 }
 {
   registration_authority_code: "RA000360"
@@ -5240,6 +5407,7 @@
   native_owner_name: "Amtsgericht Waren"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1112"
 }
 {
   registration_authority_code: "RA000361"
@@ -5254,6 +5422,7 @@
   native_owner_name: "Amtsgericht Warstein"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1912"
 }
 {
   registration_authority_code: "RA000362"
@@ -5267,6 +5436,7 @@
   native_owner_name: "Amtsgericht Weiden i.d. OPf."
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D3508"
 }
 {
   registration_authority_code: "RA000363"
@@ -5281,6 +5451,7 @@
   native_owner_name: "Amtsgericht Weimar"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "Y1114"
 }
 {
   registration_authority_code: "RA000364"
@@ -5295,6 +5466,7 @@
   native_owner_name: "Amtsgericht Wetzlar"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1710"
 }
 {
   registration_authority_code: "RA000365"
@@ -5309,6 +5481,7 @@
   native_owner_name: "Amtsgericht Wiesbaden"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "M1906"
 }
 {
   registration_authority_code: "RA000366"
@@ -5323,6 +5496,7 @@
   native_owner_name: "Amtsgericht Wismar"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "N1210"
 }
 {
   registration_authority_code: "RA000367"
@@ -5337,6 +5511,7 @@
   native_owner_name: "Amtsgericht Witten"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R2207"
 }
 {
   registration_authority_code: "RA000368"
@@ -5351,6 +5526,7 @@
   native_owner_name: "Amtsgericht Wittlich"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "T2408"
 }
 {
   registration_authority_code: "RA000369"
@@ -5365,6 +5541,7 @@
   native_owner_name: "Amtsgericht Wuppertal"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "R1608"
 }
 {
   registration_authority_code: "RA000370"
@@ -5379,6 +5556,7 @@
   native_owner_name: "Amtsgericht Würzburg"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "D4708"
 }
 {
   registration_authority_code: "RA000371"
@@ -5393,6 +5571,7 @@
   native_owner_name: "Amtsgericht Zweibrücken"
   url: "www.handelsregister.de"
   opencorporates_jurisdiction: "de"
+  opencorporates_prefix: "T3403"
 }
 {
   registration_authority_code: "RA000372"
@@ -5787,6 +5966,7 @@
   native_owner_name: "Országos Cégnyilvántartó és Céginformációs Rendszer"
   url: "http://www.e-cegjegyzek.hu/index.html"
   company_property: P2619
+  format: "(0[1-9]|1\d|20)-(0[1-9]|1\d|2[0-3])-\d{6}"
 }
 {
   registration_authority_code: "RA000392"
@@ -6214,6 +6394,7 @@
   url: "http://www1.touki.or.jp/"
   company_property: P3225
   format: "[1-9]\\d{12}"
+  transform: {"-": ""}
 }
 {
   registration_authority_code: "RA000413"
@@ -8285,6 +8466,7 @@
   company_property: P6460
   opencorporates_jurisdiction: "se"
   format: "(\\d{6}\\-\\d{4})"
+  transform: {6: "-"}
 }
 {
   registration_authority_code: "RA000545"

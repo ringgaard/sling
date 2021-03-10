@@ -62,6 +62,9 @@ class KbApp extends Component {
         history.pushState(state, item.text, "/kb/" + item.ref);
         this.display(item);
         this.find("md-content").scrollTop = 0;
+      })
+      .catch(error => {
+        console.log("Item error", id, error.message);
       });
   }
 
@@ -159,6 +162,9 @@ class KbSearchBox extends Component {
           items.push(elem);
         }
         target.populate(items);
+      })
+      .catch(error => {
+        console.log("Query error", query, error.message);
       });
   }
 

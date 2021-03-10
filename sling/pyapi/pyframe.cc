@@ -56,6 +56,7 @@ void PyFrame::Define(PyObject *module) {
   methods.Add("isglobal", &PyFrame::IsGlobal);
   methods.Add("isanonymous", &PyFrame::IsAnonymous);
   methods.Add("ispublic", &PyFrame::IsPublic);
+  methods.Add("isproxy", &PyFrame::IsProxy);
   methods.Add("resolve", &PyFrame::Resolve);
   type.tp_methods = methods.table();
 
@@ -394,6 +395,10 @@ PyObject *PyFrame::IsAnonymous() {
 
 PyObject *PyFrame::IsPublic() {
   return PyBool_FromLong(frame()->IsPublic());
+}
+
+PyObject *PyFrame::IsProxy() {
+  return PyBool_FromLong(frame()->IsProxy());
 }
 
 PyObject *PyFrame::Resolve() {

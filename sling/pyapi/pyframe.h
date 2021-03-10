@@ -93,6 +93,9 @@ struct PyFrame : public PyBase, public Root {
   // Check if frame is public, i.e. has an id slot.
   PyObject *IsPublic();
 
+  // Check if frame is a proxy.
+  PyObject *IsProxy();
+
   // Resolve frame by following is: chain.
   PyObject *Resolve();
 

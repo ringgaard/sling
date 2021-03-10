@@ -32,7 +32,6 @@ n_instance_of = kb["P31"]
 n_country_code = kb["P297"]
 n_region_code = kb["P300"]
 n_organization = kb["Q43229"]
-n_opencorporates_id = kb["P1320"]
 n_country = kb["P17"]
 n_street_address = kb["P6375"]
 n_postal_code = kb["P281"]
@@ -46,6 +45,8 @@ n_subsidiary = kb["P355"]
 n_parent = kb["P749"]
 n_owned_by = kb["P127"]
 n_owner_of = kb["P1830"]
+n_part_of = kb["P361"]
+n_has_part = kb["P527"]
 n_starttime = kb["P580"]
 n_endtime = kb["P582"]
 n_legal_form = kb["P1454"]
@@ -147,9 +148,8 @@ def trim(s):
   return s if len(s) > 0 else None
 
 def get_address(store, elem):
-  addr1 = trim(elem[x_first_address_line])
-  addr2 = trim(elem[x_additional_address_line])
-  addr_parts = [addr1, addr2]
+  addr_parts = [trim(elem[x_first_address_line])]
+  for line in elem(x_additional_address_line): addr_parts.append(line)
   cityname = trim(elem[x_city])
   postal_code = elem[x_postal_code]
 
@@ -293,13 +293,8 @@ for line in leifile:
       if register is None:
         unknown_regauth[reg_auth_id] = unknown_regauth.get(reg_auth_id, 0) + 1
       else:
-        company_property = register[bizregs.n_company_property]
-        if company_property != None:
-          slots.append((company_property, entity_id))
-        opencorp_prefix = register[bizregs.n_opencorporates_jurisdiction]
-        if opencorp_prefix != None:
-          opencorp_id = opencorp_prefix + "/" + entity_id
-          slots.append((n_opencorporates_id, opencorp_id))
+        ids = bizregs.companyids(register, entity_id)
+        slots.extend(ids)
 
   # Create item frame for company.
   f = store.frame(slots)
@@ -356,16 +351,20 @@ for line in rrfile:
   elif reltype == "IS_DIRECTLY_CONSOLIDATED_BY":
     parent_rel = n_parent
     child_rel = n_subsidiary
+  elif reltype == "IS_INTERNATIONAL_BRANCH_OF":
+    parent_rel = n_part_of
+    child_rel = n_has_part
   else:
+    print("Unknown relationship:", reltype)
     continue
 
   # Get related organizations.
   subsidiary = store["P1278/" + start_lei]
-  if subsidiary.isglobal():
+  if subsidiary is None or subsidiary.isproxy() or subsidiary.isglobal():
     print("Missing subsidiary:", start_lei)
     continue
   parent = store["P1278/" + end_lei]
-  if parent.isglobal():
+  if parent is None or parent.isproxy() or parent.isglobal():
     print("Missing parent:", end_lei)
     continue
 
