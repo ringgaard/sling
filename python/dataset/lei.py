@@ -41,14 +41,10 @@ n_location = kb["P276"]
 n_location_of_creation = kb["P1071"]
 n_lei = kb["P1278"]
 n_swift_bic_code = kb["P2627"]
-n_subsidiary = kb["P355"]
 n_parent = kb["P749"]
-n_owned_by = kb["P127"]
+n_subsidiary = kb["P355"]
 n_owner_of = kb["P1830"]
-n_part_of = kb["P361"]
-n_has_part = kb["P527"]
-n_starttime = kb["P580"]
-n_endtime = kb["P582"]
+n_owned_by = kb["P127"]
 n_legal_form = kb["P1454"]
 n_coord_location = kb["P625"]
 n_geo = kb["/w/geo"]
@@ -149,7 +145,9 @@ def trim(s):
 
 def get_address(store, elem):
   addr_parts = [trim(elem[x_first_address_line])]
-  for line in elem(x_additional_address_line): addr_parts.append(line)
+  for line in elem(x_additional_address_line):
+    if line != addr_parts[-1]: addr_parts.append(line)
+    prev = line
   cityname = trim(elem[x_city])
   postal_code = elem[x_postal_code]
 
@@ -162,7 +160,8 @@ def get_address(store, elem):
 
   location = city
   if location == None:
-    if cityname != None: addr_parts.append(cityname)
+    if cityname != None and cityname != addr_parts[-1]:
+      addr_parts.append(cityname)
     location = region
   if location == None:
     location = country
@@ -200,6 +199,11 @@ def get_coord(rec, addr):
   return None
 
 store = sling.Store(kb)
+
+def find_lei(lei):
+  company = store["P1278/" + lei]
+  if company.isproxy() or company.isglobal(): return None
+  return company
 
 # LEI company data (level 1).
 print("Reading GLEIF entities")
@@ -310,7 +314,7 @@ print("Reading GLEIF relationships")
 lines = []
 rr = zipfile.ZipFile("data/c/lei/rr.xml.zip", "r")
 rrfile = rr.open(rr.namelist()[0], "r")
-num_relations = 0
+relations = []
 for line in rrfile:
   if line.startswith(b"<rr:RelationshipRecord"):
     # Start new block.
@@ -332,62 +336,55 @@ for line in rrfile:
   start_lei = start[x_node_id]
   end_lei = end[x_node_id]
   reltype = relationship[x_relationship_type]
-  starttime = None
-  endtime = None
-
-  periods = relationship[x_relationship_periods]
-  if periods != None:
-    for period in periods(x_relationship_period):
-      if period[x_period_type] == "RELATIONSHIP_PERIOD":
-        period_start = period[x_start_date]
-        period_end = period[x_end_date]
-        if period_start: starttime = sling.Date(period_start).value()
-        if period_end: endtime = sling.Date(period_end).value()
 
   # Dertermine relationship type.
   if reltype == "IS_ULTIMATELY_CONSOLIDATED_BY":
-    parent_rel = n_owned_by
-    child_rel = n_owner_of
+    indirect = True
   elif reltype == "IS_DIRECTLY_CONSOLIDATED_BY":
-    parent_rel = n_parent
-    child_rel = n_subsidiary
+    indirect = False
   elif reltype == "IS_INTERNATIONAL_BRANCH_OF":
-    parent_rel = n_part_of
-    child_rel = n_has_part
+    indirect = False
   else:
     print("Unknown relationship:", reltype)
     continue
 
-  # Get related organizations.
-  subsidiary = store["P1278/" + start_lei]
-  if subsidiary is None or subsidiary.isproxy() or subsidiary.isglobal():
-    print("Missing subsidiary:", start_lei)
-    continue
-  parent = store["P1278/" + end_lei]
-  if parent is None or parent.isproxy() or parent.isglobal():
-    print("Missing parent:", end_lei)
-    continue
-
-  if starttime == None and endtime == None:
-    subsidiary.append(parent_rel, parent)
-    parent.append(child_rel, subsidiary)
-  else:
-    # Parent company.
-    slots = [(n_is, parent)]
-    if starttime != None: slots.append((n_starttime, starttime))
-    if endtime != None: slots.append((n_endtime, endtime))
-    subsidiary.append(parent_rel, store.frame(slots))
-
-    # Subsidiary.
-    slots = [(n_is, subsidiary)]
-    if starttime != None: slots.append((n_starttime, starttime))
-    if endtime != None: slots.append((n_endtime, endtime))
-    parent.append(child_rel, store.frame(slots))
-
-  num_relations += 1
+  relations.append((end_lei, start_lei, indirect))
 
 rrfile.close()
 rr.close()
+
+# Add relationships to companies.
+relations.sort()
+prev_parent = None
+prev_subsidiary = None
+num_relations = 0
+for rel in relations:
+  # Get related organizations.
+  parent = find_lei(rel[0])
+  if parent is None:
+    print("Missing parent:", rel[0])
+    continue
+  subsidiary = find_lei(rel[1])
+  if subsidiary is None:
+    print("Missing subsidiary:", rel[1])
+    continue
+  indirect = rel[2]
+
+  # Only include either direct or indirect ownership.
+  if parent == prev_parent and  subsidiary == prev_subsidiary: continue
+
+  # Add relationship to both parent and subsidiary.
+  if indirect:
+    parent.append(n_subsidiary, subsidiary)
+    subsidiary.append(n_parent, parent)
+  else:
+    parent.append(n_owner_of, subsidiary)
+    subsidiary.append(n_owned_by, parent)
+
+  prev_parent = parent
+  prev_subsidiary = subsidiary
+  num_relations += 1
+
 print(num_relations, "relations")
 
 """
