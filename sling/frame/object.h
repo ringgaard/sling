@@ -893,7 +893,7 @@ class Builder : public External {
   // Remove slots by index. Indices must be in ascending order.
   Builder &Remove(const std::vector<int> &indices);
 
-  // Remove all empty slot, i.e. all slots where the name is nil.
+  // Remove all empty slots, i.e. all slots where the name is nil.
   Builder &Prune();
 
   // Sets slot to handle value.

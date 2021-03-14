@@ -31,6 +31,24 @@ class Datasets:
   # Repository
   #---------------------------------------------------------------------------
 
+  def catalog_defs(self):
+    """Resource for global catalog definitions."""
+    return self.wf.resource("catalog.sling",
+                            dir=corpora.repository("data/nlp/schemas"),
+                            format="store/frame")
+
+  def meta_schema_defs(self):
+    """Resource for meta schema definitions."""
+    return self.wf.resource("meta-schema.sling",
+                            dir=corpora.repository("data/nlp/schemas"),
+                            format="store/frame")
+
+  def document_schema_defs(self):
+    """Resource for document schema definitions."""
+    return self.wf.resource("document-schema.sling",
+                            dir=corpora.repository("data/nlp/schemas"),
+                            format="store/frame")
+
   def language_defs(self):
     """Resource for language definitions. This defines the /lang/<lang>
     symbols and has meta information for each language."""
@@ -71,6 +89,9 @@ class Datasets:
   def schema_defs(self):
     """Resources for schemas included in knowledge base."""
     return self.wf.bundle(
+      self.catalog_defs(),
+      self.meta_schema_defs(),
+      self.document_schema_defs(),
       self.language_defs(),
       self.calendar_defs(),
       self.country_defs(),
@@ -191,12 +212,10 @@ class Datasets:
 
   def wikipedia_aliases(self, language=None):
     """Resource for wikipedia aliases. The aliases are extracted from the
-    Wiipedia pages from anchors, redirects, disambiguation pages etc. This is
+    Wikipedia pages from anchors, redirects, disambiguation pages etc. This is
     a set of record files with a SLING frame record for each item:
       <qid>: {
-        alias: {
-          name: "<alias>"
-          lang: /lang/<lang>
+        alias: {+"<alias>"@/lang/xx
           sources: ...
           count: ...
         }

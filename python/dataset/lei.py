@@ -375,11 +375,11 @@ for rel in relations:
 
   # Add relationship to both parent and subsidiary.
   if indirect:
-    parent.append(n_subsidiary, subsidiary)
-    subsidiary.append(n_parent, parent)
-  else:
     parent.append(n_owner_of, subsidiary)
     subsidiary.append(n_owned_by, parent)
+  else:
+    parent.append(n_subsidiary, subsidiary)
+    subsidiary.append(n_parent, parent)
 
   prev_parent = parent
   prev_subsidiary = subsidiary

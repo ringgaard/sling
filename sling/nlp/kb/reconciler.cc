@@ -159,6 +159,21 @@ class Statements {
     }
   }
 
+  // Check if unqualified statement is in table.
+  bool Has(Handle name, Handle value) {
+    int pos = NameHash(name) & mask_;
+    for (;;) {
+      Slot &s = slots_[pos];
+      if (s.name == name && store_->Equal(s.value, value)) {
+        // Match found.
+        return true;
+      } else if (s.name.IsNil()) {
+        return false;
+      }
+      pos = (pos + 1) & mask_;
+    }
+  }
+
   // Insert statement. Return false if the statement is already in the table.
   bool Insert(Handle name, Handle value) {
     int pos = NameHash(name) & mask_;
@@ -204,6 +219,10 @@ class ItemMerger : public task::Reducer {
     task::Reducer::Start(task);
 
     // Statistics.
+    num_orig_statements_ = task->GetCounter("original_statements");
+    num_final_statements_ = task->GetCounter("final_statements");
+    num_dup_statements_ = task->GetCounter("duplicate_statements");
+    num_pruned_statements_ = task->GetCounter("pruned_statements");
     num_merged_items_ = task->GetCounter("merged_items");
   }
 
@@ -219,6 +238,7 @@ class ItemMerger : public task::Reducer {
     for (task::Message *message : input.messages()) {
       // Decode item.
       Frame item = DecodeMessage(&store, message);
+      num_orig_statements_->Increment(item.size());
 
       // Since the merged frames are anonymous, self-references need to be
       // updated to the reconciled frame.
@@ -233,18 +253,51 @@ class ItemMerger : public task::Reducer {
       for (const Slot &s : item) {
         if (statements.Insert(s.name, s.value)) {
          builder.Add(s.name, s.value);
+        } else {
+          num_dup_statements_->Increment();
         }
       }
     }
+
+    // Remove unqualified statements which have qualified counterparts.
+    bool prune = false;
+    for (int i = 0; i < builder.size(); ++i) {
+      // Check if statement is qualified.
+      Handle value = builder[i].value;
+      Handle resolved = store.Resolve(value);
+      if (value == resolved) continue;
+
+      // Check if there is an unqualifed counterpart.
+      Handle property = builder[i].name;
+      if (statements.Has(property, resolved)) {
+        // Remove unqualifed counterpart.
+        for (int j = 0; j < builder.size(); ++j) {
+          Slot &s = builder[j];
+          if (s.name == property && store.Equal(s.value, resolved)) {
+            // Mark statement for deletion.
+            s.name = Handle::nil();
+            prune = true;
+            num_pruned_statements_->Increment();
+            break;
+          }
+        }
+      }
+    }
+    if (prune) builder.Prune();
 
     // Output merged frame for item.
     Frame merged = builder.Create();
     Output(input.shard(), task::CreateMessage(input.key(), merged));
     num_merged_items_->Increment();
+    num_final_statements_->Increment(merged.size());
   }
 
  private:
   // Statistics.
+  task::Counter *num_orig_statements_ = nullptr;
+  task::Counter *num_final_statements_ = nullptr;
+  task::Counter *num_dup_statements_ = nullptr;
+  task::Counter *num_pruned_statements_ = nullptr;
   task::Counter *num_merged_items_ = nullptr;
 };
 

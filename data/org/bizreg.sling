@@ -5821,6 +5821,7 @@
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "1"
   format: "1\\-\\d{5}"
+  transform: {"_": "-"}
 }
 {
   registration_authority_code: "RA000666"
@@ -5837,6 +5838,7 @@
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "7"
   format: "7\\-\\d+"
+  transform: {"_": "-"}
 }
 {
   registration_authority_code: "RA000667"
@@ -5853,6 +5855,7 @@
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "2"
   format: "2\\-\\d{4}"
+  transform: {"_": "-"}
 }
 {
   registration_authority_code: "RA000668"
@@ -5869,6 +5872,7 @@
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "6"
   format: "6\\-\\d+"
+  transform: {"_": "-"}
 }
 {
   registration_authority_code: "RA000384"
