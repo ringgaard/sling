@@ -8552,6 +8552,7 @@
   native_owner_name: "Eidg. Amt für das Handelsregister; Bundesamt für Justiz"
   opencorporates_jurisdiction: "ch"
   url: "www.zefix.ch/"
+  company_property: P4829
   format: "\\d{5,6}"
 }
 {

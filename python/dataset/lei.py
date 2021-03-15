@@ -28,6 +28,7 @@ n_id = kb["id"]
 n_is = kb["is"]
 n_isa = kb["isa"]
 n_name = kb["name"]
+n_official_name = kb["P1448"]
 n_instance_of = kb["P31"]
 n_country_code = kb["P297"]
 n_region_code = kb["P300"]
@@ -45,6 +46,8 @@ n_parent = kb["P749"]
 n_subsidiary = kb["P355"]
 n_owner_of = kb["P1830"]
 n_owned_by = kb["P127"]
+n_has_part = kb["P527"]
+n_part_of = kb["P361"]
 n_legal_form = kb["P1454"]
 n_coord_location = kb["P625"]
 n_geo = kb["/w/geo"]
@@ -59,6 +62,86 @@ city_types = factex.taxonomy([
   "Q56061",    # administrative territorial entity
   "Q2983893",  # quarter
 ])
+
+cover_addresses = [
+  "C/O The Corporation Trust Company", # Delaware
+  "C/O THE CORPORATION TRUST COMPANY", # Delaware
+]
+
+generic_legal_forms = {
+  "AKTIENGESELLSCHAFT": kb["Q22084735"],
+  "BESLOTEN VENNOOTSCHAP MET BEPERKTE AANSPRAKELIJKHEID": kb["Q18624259"],
+  "CHARITY": kb["Q708676"],
+  "COMPANY LIMITED": kb["Q33685"],
+  "CORPORATION": kb["Q167037"],
+  "CREDIT UNION": kb["Q745877"],
+  "DELAWARE STATUTORY TRUST (DST)": kb["Q5253463"],
+  "DELAWARE STATUTORY TRUST": kb["Q5253463"],
+  "DISCRETIONARY TRUST": kb["Q5282073"],
+  "FRIVILLIG FORENING": kb["Q48204"],
+  "FONDO COMUNE D'INVESTIMENTO": kb["Q4201895"],
+  "FONDO DE INVERSIÓN": kb["Q4201895"],
+  "FONDS COMMUN DE PLACEMENT": kb["Q1435714"],
+  "FORENING": kb["Q15911314"],
+  "FOUNDATION": kb["Q157031"],
+  "FUND": kb["Q4201895"],
+  "GESELLSCHAFT MIT BESCHRÄNKTER HAFTUNG": kb["Q15829892"],
+  "GMBH": kb["Q15829892"],
+  "INCORPORATED / INCORPOREE": kb["Q167037"],
+  "INCORPORATED": kb["Q167037"],
+  "JOINT STOCK COMPANY": kb["Q134161"],
+  "KIRCHLICHE STIFTUNG DES ÖFFENTLICHEN RECHTS": kb["Q105816093"],
+  "LEGAL ENTITY OF PUBLIC LAW": kb["Q294095"],
+  "LIMITED COMPANY": kb["Q33685"],
+  "LIMITED": kb["Q33685"],
+  "LIMITED LIABILITY COMPANY": kb["Q33685"],
+  "LIMITED LIABILITY COMPANY (LLC)": kb["Q33685"],
+  "LIMITED LIABILITY PARTNERSHIP": kb["Q1588658"],
+  "LIMITED PARTNERSHIP": kb["Q909695"],
+  "LLC": kb["Q33685"],
+  "LTD.": kb["Q33685"],
+  "LTD": kb["Q33685"],
+  "MUTUAL FUND": kb["Q791974"],
+  "PARTNERSHIP": kb["Q728646"],
+  "PENSION FUND": kb["Q182103"],
+  "PENSION SCHEME": kb["Q11863170"],
+  "PODÍLOVÝ, PENZIJNÍ FOND": kb["Q182103"],
+  "PRIVATE COMPANY LIMITED BY SHARES": kb["Q6832945"],
+  "PRIVATE LIMITED COMPANY": kb["Q18624259"],
+  "PUBLIC LIMITED COMPANY": kb["Q5225895"],
+  "S.A.": kb["Q166280"],
+  "SOCIEDAD ANONIMA": kb["Q166280"],
+  "SOCIEDAD ANÓNIMA": kb["Q166280"],
+  "SOCIEDAD DE INVERSIÓN DE CAPITAL VARIABLE": kb["Q752304"],
+  "SOCIETE ANONYME": kb["Q166280"],
+  "SOCIÉTÉ ANONYME": kb["Q166280"],
+  "SOCIETE A RESPONSABILITE LIMITEE": kb["Q17376040"],
+  "SOCIÉTÉ CIVILE": kb["Q33134075"],
+  "SOCIETE D'INVESTISSEMENT A CAPITAL VARIABLE": kb["Q752304"],
+  "SOCIÉTÉ D'INVESTISSEMENT À CAPITAL VARIABLE": kb["Q752304"],
+  "SOCIETE PAR ACTIONS SIMPLIFIEE": kb["Q654502"],
+  "SONDERVERMÖGEN NACH DEUTSCHEM RECHT": kb["Q43638408"],
+  "SPOLOCNOST S RUCENIM OBMEDZENYM": kb["Q15649019"],
+  "STIFTUNG": kb["Q18631225"],
+  "STIFTUNG ÖFFENTLICHEN RECHTS": kb["Q20050667"],
+  "TRUST": kb["Q854022"],
+  "UNIT TRUST": kb["Q1285859"],
+  "UNLIMITED LIABILITY COMPANY": kb["Q17152511"],
+}
+
+missing_legal_forms = set([
+  "OTHER",
+  "OTHERS",
+  "COMPANY",
+  "BANK",
+  "ØVRIGE VIRKSOMHEDSFORMER",
+])
+
+entity_categories = {
+  "FUND": kb["Q4201895"],
+  "BRANCH": kb["Q1410110"],
+  "SOLE_PROPRIETOR": kb["Q2912172"],
+}
 
 # Read registers.
 bizregs = sling.dataset.bizreg.BusinessRegistries(kb)
@@ -77,11 +160,14 @@ for item in kb:
 # XML tags.
 x_lang = kb["xml:lang"]
 x_content = kb["is"]
+x_type = kb["type"]
 
 x_record = kb["lei:LEIRecord"]
 x_lei = kb["lei:LEI"]
 x_entity = kb["lei:Entity"]
 x_legal_name = kb["lei:LegalName"]
+x_other_names = kb["lei:OtherEntityNames"]
+x_other_name = kb["lei:OtherEntityName"]
 x_legal_address = kb["lei:LegalAddress"]
 x_headquarters_address = kb["lei:HeadquartersAddress"]
 x_legal_address = kb["lei:LegalAddress"]
@@ -91,13 +177,20 @@ x_city = kb["lei:City"]
 x_region = kb["lei:Region"]
 x_country = kb["lei:Country"]
 x_postal_code = kb["lei:PostalCode"]
+x_registration = kb["lei:Registration"]
+x_registration_status = kb["lei:RegistrationStatus"]
 x_registration_authority = kb["lei:RegistrationAuthority"]
 x_registration_authority_id = kb["lei:RegistrationAuthorityID"]
 x_registration_authority_entity_id = kb["lei:RegistrationAuthorityEntityID"]
 x_legal_jurisdiction = kb["lei:LegalJurisdiction"]
 x_legal_form = kb["lei:LegalForm"]
 x_legal_form_code = kb["lei:EntityLegalFormCode"]
+x_other_legal_form = kb["lei:OtherLegalForm"]
 x_entity_category = kb["lei:EntityCategory"]
+x_successor = kb["lei:SuccessorEntity"]
+x_successor_lei = kb["lei:SuccessorLEI"]
+x_associated_entity = kb["lei:AssociatedEntity"]
+x_associated_lei = kb["lei:AssociatedLEI"]
 x_extension = kb["lei:Extension"]
 x_geocoding = kb["gleif:Geocoding"]
 x_original_address = kb["gleif:original_address"]
@@ -133,6 +226,7 @@ def closure(item, property):
 def city_in(cityname, region):
   for item in aliases.lookup(cityname):
     if item is None: continue
+    if item == region: continue
     if city_types.classify(item) == None: continue
     if region in closure(item, n_located_in): return item
   return None
@@ -143,8 +237,23 @@ def trim(s):
   s = s.strip()
   return s if len(s) > 0 else None
 
+def locale(name):
+  if type(name) is str: return None
+  return name[x_lang]
+
+def localized_name(name):
+  if type(name) is sling.Frame:
+    store = name.store()
+    lang = name[x_lang]
+    name = name[x_content]
+    if lang != None:
+      name = store.qstr(name, store["/lang/" + lang])
+  return name
+
 def get_address(store, elem):
-  addr_parts = [trim(elem[x_first_address_line])]
+  first_line = trim(elem[x_first_address_line])
+  if first_line in cover_addresses: return None
+  addr_parts = [first_line]
   for line in elem(x_additional_address_line):
     if line != addr_parts[-1]: addr_parts.append(line)
     prev = line
@@ -168,10 +277,13 @@ def get_address(store, elem):
     country = None
 
   addrline = ', '.join(filter(None, addr_parts))
+  lang = locale(elem)
+  if lang != None:
+    addrline = store.qstr(addrline, store["/lang/" + lang])
 
   slots = []
   if location != None: slots.append((n_is, location))
-  if len(addrline) > 0: slots.append((n_street_address, addrline))
+  if len(str(addrline)) > 0: slots.append((n_street_address, addrline))
   if postal_code != None: slots.append((n_postal_code, postal_code))
   if country != None: slots.append((n_country, country))
   return store.frame(slots)
@@ -212,9 +324,12 @@ leifile = lei.open(lei.namelist()[0], "r")
 
 lines = []
 num_companies = 0
+num_redirects = 0
 companies = []
 unknown_regauth = {}
 unknown_categories = {}
+unknown_forms = {}
+fund_families = []
 for line in leifile:
   if line.startswith(b"<lei:LEIRecord"):
     # Start new block.
@@ -228,45 +343,68 @@ for line in leifile:
   # Parse XML record.
   xmldata = b"".join(lines)
   root = store.parse(xmldata, xml=True)
+  rec = root[x_record]
+  entity = rec[x_entity]
+  reg = rec[x_registration]
+  lei_number = rec[x_lei]
+  lei_id = "P1278/" + lei_number
+
+  # Make redirects for duplicates.
+  if reg[x_registration_status] == "DUPLICATE":
+    successor = entity[x_successor]
+    if successor != None:
+      redirect = successor[x_successor_lei]
+      slots = [
+        (n_id, lei_id),
+        (n_lei, lei_number),
+        (n_lei, redirect),
+      ]
+      f = store.frame(slots)
+      companies.append(f)
+      num_redirects += 1
+    continue
 
   # Build company frame.
   slots = []
-  rec = root[x_record]
-  lei_number = rec[x_lei]
-  lei_id = "P1278/" + lei_number
   slots.append((n_id, lei_id))
   slots.append((n_lei, lei_number))
-  slots.append((n_instance_of, n_organization))
-  entity = rec[x_entity]
 
   # Organization type.
   category = entity[x_entity_category]
   if category != None:
-    unknown_categories[category] = unknown_categories.get(category, 0) + 1
+    entity_type = entity_categories.get(category)
+    if entity_type != None:
+      slots.append((n_instance_of, entity_type))
+    else:
+      unknown_categories[category] = unknown_categories.get(category, 0) + 1
+  else:
+    slots.append((n_instance_of, n_organization))
 
   # Company name.
   legal_name = entity[x_legal_name]
-  if type(legal_name) is sling.Frame:
-    name_lang = legal_name[x_lang]
-    name = legal_name[x_content]
-  else:
-    name_lang = None
-    name = legal_name
+  name = localized_name(legal_name)
   slots.append((n_name, name))
+  slots.append((n_official_name, name))
+  other_names = entity[x_other_names]
+  if other_names != None:
+    for other in other_names(x_other_name):
+      slots.append((n_name, localized_name(other)))
 
   # Address.
   hq = entity[x_headquarters_address]
   legal_address = entity[x_legal_address]
   if hq != None:
     addr = get_address(store, hq)
-    coord = get_coord(rec, hq)
-    if coord != None: addr.append(n_coord_location, coord)
-    slots.append((n_headquarters, addr))
+    if addr != None:
+      coord = get_coord(rec, hq)
+      if coord != None: addr.append(n_coord_location, coord)
+      slots.append((n_headquarters, addr))
   elif legal_address != None:
     addr = get_address(store, legal_address)
-    coord = get_coord(rec, legal_address)
-    if coord != None: addr.append(n_coord_location, coord)
-    slots.append((n_location, addr))
+    if addr != None:
+      coord = get_coord(rec, legal_address)
+      if coord != None: addr.append(n_coord_location, coord)
+      slots.append((n_location, addr))
 
   # Country and region for jurisdiction.
   jurisdiction = entity[x_legal_jurisdiction]
@@ -286,6 +424,25 @@ for line in leifile:
     elf = legal_form[x_legal_form_code]
     if elf != None and elf != "8888" and elf != "9999":
       slots.append((n_legal_form, store["PELF/" + elf]))
+    else:
+      other_form = legal_form[x_other_legal_form]
+      if other_form != None:
+        key = other_form.upper()
+        form = generic_legal_forms.get(key)
+        if form != None:
+          slots.append((n_legal_form, form))
+        elif key not in missing_legal_forms:
+          slots.append((n_legal_form, other_form))
+          unknown_forms[key] = unknown_forms.get(key, 0) + 1
+
+  # Associations.
+  association = entity[x_associated_entity]
+  if association != None:
+    reltype = association[x_type]
+    if reltype == "FUND_FAMILY":
+      family_lei = association[x_associated_lei]
+      if family_lei != None:
+        fund_families.append((lei_number, family_lei))
 
   # Company identifiers.
   reg_auth = entity[x_registration_authority]
@@ -307,7 +464,7 @@ for line in leifile:
 
 leifile.close()
 lei.close()
-print(num_companies, "companies")
+print(num_companies, "companies", num_redirects, "successors")
 
 # Read entity relationships (level 2).
 print("Reading GLEIF relationships")
@@ -385,25 +542,39 @@ for rel in relations:
   prev_subsidiary = subsidiary
   num_relations += 1
 
+print("Adding", len(fund_families), "fund family relationships")
+for rel in fund_families:
+  fund = find_lei(rel[0])
+  if fund is None:
+    print("Missing fund:", rel[0])
+    continue
+  family = find_lei(rel[1])
+  if family is None:
+    print("Missing fund family:", rel[1])
+    continue
+
+  family.append(n_has_part, fund)
+  fund.append(n_part_of, family)
+
 print(num_relations, "relations")
 
-"""
 # Add SWIFT BIC codes to companies.
 print("Adding SWITFT/BIC codes")
-bicfile = open("bic_lei_gleif_v1_monthly_full_" + bicdate + ".csv", "r")
+bicfile = open("data/c/lei/bic.csv", "r")
 bicreader = csv.reader(bicfile)
-bicreader.next()  # skip header
+bicreader.__next__()  # skip header
+num_bic = 0
 for row in bicreader:
   bic = row[0]
   lei = row[1]
-  lei_id = "P1278/" + lei
-  if lei_id not in store:
-    print("LEI not found:", lei)
+  company = find_lei(lei)
+  if company is None:
+    print("LEI not found:", lei, "for BIC", bic)
     continue
-  company = store[lei_id]
   company.append(n_swift_bic_code, bic)
+  num_bic += 1
 bicfile.close()
-"""
+print(num_bic, "BIC-to-LEI mappings")
 
 # Write companies to record file.
 print("Writing companies to file")
@@ -419,6 +590,11 @@ for ra, count in unknown_regauth.items():
 # Output unknown categories.
 for category, count in unknown_categories.items():
   print("Unknown category", category, ",", count, "companies")
+
+# Output unknown legal forms.
+for form, count in unknown_forms.items():
+  if count > 100:
+    print("Unknown legal form", form, ",", count, "companies")
 
 print("Done.")
 

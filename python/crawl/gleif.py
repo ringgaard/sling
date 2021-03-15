@@ -31,13 +31,28 @@ flags.define("--type",
              default="xml",
              help="File type (xml, json, csv)")
 
+flags.define("--bicdate",
+             default="20190830",
+             help="Date of latest BIC-to-LEI mapping file")
+
 flags.parse()
+
+# Newest BIC-to-LEI mapping can be found here (updated monthly):
+# https://www.gleif.org/en/lei-data/lei-mapping/download-bic-to-lei-relationship-files
+
+def download(url, fn):
+  r = requests.get(url, stream=True)
+  r.raise_for_status()
+  f = open(fn, "wb")
+  for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
+  f.close()
 
 # Get publishing list.
 r = requests.get(flags.arg.gleif + "/api/v2/golden-copies/publishes")
 latest = r.json()["data"][0]
-
 print("Published:", latest["publish_date"])
+
+# Download LEI data.
 for dataset in ["lei2", "rr", "repex"]:
   # Get url and filename.
   f = latest[dataset]["full_file"][flags.arg.type]
@@ -46,11 +61,15 @@ for dataset in ["lei2", "rr", "repex"]:
 
   # Download file.
   print("Download", url)
-  r = requests.get(url, stream=True)
-  r.raise_for_status()
-  f = open(fn, "wb")
-  for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
-  f.close()
+  download(url, fn)
+
+# Download BIC-to-LEI mapping file.
+bicurl = "https://www.gleif.org/content/4-lei-data/7-lei-mapping/" + \
+         "1-download-bic-to-lei-relationship-files/" + \
+         "bic_lei_gleif_v1_monthly_full_" + flags.arg.bicdate + ".csv"
+bicfn = flags.arg.dir + "/bic.csv"
+print("Download", bicurl)
+download(bicurl, bicfn)
 
 print("Done.")
 
