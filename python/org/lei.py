@@ -17,7 +17,7 @@
 import zipfile
 import csv
 import sling
-import sling.dataset.bizreg
+import sling.org.bizreg
 
 # Load KB.
 print("Loading KB")
