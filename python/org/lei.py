@@ -66,6 +66,8 @@ city_types = factex.taxonomy([
 cover_addresses = [
   "C/O The Corporation Trust Company", # Delaware
   "C/O THE CORPORATION TRUST COMPANY", # Delaware
+  "C/O Corporation Service Company", # Delaware
+  "C/O Intertrust Corporate Services (Cayman) Limited", # Cayman Islands
 ]
 
 generic_legal_forms = {
@@ -144,7 +146,7 @@ entity_categories = {
 }
 
 # Read registers.
-bizregs = sling.dataset.bizreg.BusinessRegistries(kb)
+bizregs = sling.org.bizreg.BusinessRegistries(kb)
 regauth = bizregs.by_auth_code()
 
 # Build country and region table.
@@ -454,7 +456,7 @@ for line in leifile:
       if register is None:
         unknown_regauth[reg_auth_id] = unknown_regauth.get(reg_auth_id, 0) + 1
       else:
-        ids = bizregs.companyids(register, entity_id)
+        ids = bizregs.companyids(register, entity_id, lei_number)
         slots.extend(ids)
 
   # Create item frame for company.
@@ -578,7 +580,7 @@ print(num_bic, "BIC-to-LEI mappings")
 
 # Write companies to record file.
 print("Writing companies to file")
-recout = sling.RecordWriter("data/e/lei/gleif.rec")
+recout = sling.RecordWriter("data/e/org/gleif.rec")
 for company in companies:
   recout.write(company.id, company.data(binary=True))
 recout.close()

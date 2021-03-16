@@ -14,41 +14,60 @@
 
 """Business registries."""
 
+import re
+
+def transform(companyid, transforms):
+  if transforms != None:
+    for pattern, formatter in transforms:
+      m = re.findall(pattern, companyid)
+      if len(m) == 1:
+        if formatter is None: return None
+        companyid = formatter % m[0]
+
+  return companyid
+
 class BusinessRegistries:
   def __init__(self, store):
     self.store = store
     self.n_registration_authority_code = store["registration_authority_code"]
+    self.n_jurisdiction_name = store["jurisdiction_name"]
     self.n_company_property = store["company_property"]
     self.n_opencorporates_jurisdiction = store["opencorporates_jurisdiction"]
     self.n_opencorporates_prefix = store["opencorporates_prefix"]
+    self.n_eu_vat_prefix = store["eu_vat_prefix"]
+    self.n_format = store["format"]
     self.n_transform = store["transform"]
 
     self.n_opencorporates_id = store["P1320"]
+    self.n_eu_vat_number = store["P3608"]
 
     self.registers = store.load("data/org/bizreg.sling")
-
-  def by_auth_code(self):
-    regauth = {}
+    self.regauth = {}
     for register in self.registers:
       regcode = register[self.n_registration_authority_code]
-      regauth[regcode] = register
-    return regauth
+      self.regauth[regcode] = register
 
-  def companyids(self, register, companyid):
-    slots = []
+  def by_auth_code(self):
+    return self.regauth
 
-    # Normalize company id.
-    companyid = companyid.replace(" " , "")
-    transform = register[self.n_transform]
-    if transform != None:
-      for old, new in transform:
-        if type(old) is int:
-          if companyid[old : old + len(new)] != new:
-            companyid = companyid[:old] + new + companyid[:old]
-        else:
-          companyid = companyid.replace(old, new)
+  def companyids(self, register, companyid, source = None):
+    # Transform company id.
+    companyid = transform(companyid, register[self.n_transform])
+    if companyid is None: return []
+
+    # Check company id format.
+    fmt = register[self.n_format]
+    if fmt != None:
+      m = re.fullmatch(fmt, companyid)
+      if m is None:
+        regname = register[self.n_registration_authority_code]
+        place = register[self.n_jurisdiction_name]
+        print("Invalid", regname, place, "company id:",
+              companyid, "for", source)
+        return []
 
     # Authoritative company register.
+    slots = []
     company_property = register[self.n_company_property]
     if company_property != None:
       slots.append((company_property, companyid))
@@ -67,6 +86,11 @@ class BusinessRegistries:
         print("Missing opencorporates prefix for", code, companyid)
       if opencorp_id != None:
         slots.append((self.n_opencorporates_id, opencorp_id))
+
+    # EU VAT number.
+    euvat_prefix = register[self.n_eu_vat_prefix]
+    if euvat_prefix != None:
+      slots.append((self.n_eu_vat_number, euvat_prefix + companyid))
 
     return slots
 

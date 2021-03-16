@@ -166,7 +166,7 @@
   owner: Q4056112
   url: "http://abr.business.gov.au/"
   company_property: P3548
-  format: "\\d{11}"
+  format: "[0-9]{11}" ; Australian Business Number (ABN)
 }
 {
   registration_authority_code: "RA000014"
@@ -183,7 +183,10 @@
   url: "www.asic.gov.au"
   company_property: P3549
   opencorporates_jurisdiction: "au"
-  format: "\\d{9}"
+  transform: {
+    "([0-9]{3}) ([0-9]{3}) ([0-9]{3})": "%s%s%s" ; remove spaces from 999 999 999
+  }
+  format: "[0-9]{9}" ; Australian Company Number (ACN)
 }
 {
   registration_authority_code: "RA000015"
@@ -416,7 +419,7 @@
   opencorporates_jurisdiction: "be"
   format: "0?\\d{3}\\.?\\d{3}\\.?\\d{3}"
   opencorporates_format: "0\\d{9}"
-  transform: {".": ""}
+  ;transform: {".": ""}
 }
 {
   registration_authority_code: "RA000026"
@@ -2263,7 +2266,11 @@
   owner_name: "Department of Registrar of Companies and Official Receiver"
   url: "http://www.mcit.gov.cy/mcit/drcor/drcor.nsf/index_en/index_en?OpenDocument"
   opencorporates_jurisdiction: "cy"
-  format: "HE\\d{6}"
+  transform: {
+    "ΗΕ(.*)": "HE%s" ; convert Eta Epsilon to HE
+    "HE ([0-9]+)": "HE%s" ; remove space
+  }
+  format: "HE[0-9]+"
 }
 {
   registration_authority_code: "RA000162"
@@ -2399,6 +2406,10 @@
   company_property: P1059
   branch_property: P2814
   opencorporates_jurisdiction: "dk"
+  transform: {
+    "DK(.*)": "%s"; remove DK prefix
+    "([0-9][0-9]) ([0-9][0-9]) ([0-9][0-9]) ([0-9][0-9])": "%s%s%s%s" ; remove spaces
+  }
   format: "\\d{8}"
 }
 {
@@ -2668,12 +2679,10 @@
   country: Q142
   jurisdiction_name: "France"
   jurisdiction: Q142
-  owner_name: "Autorité des marchés financiers"
+  owner_name: "Authority for the Financial Markets"
   owner: Q788606
-  native_owner_name: "Authority for the Financial Markets"
-  url: "http://www.amf-france.org/en_US/Recherche-avancee.html?isSearch=true&LANGUAGE=en&subFormId=dij&formId=GECO&DOC_TYPE=BDIF&langSwitch=true"
-  company_property: P1616
-  format: "\\d{9}"
+  native_owner_name: "Autorité des marchés financiers"
+  url: "http://www.amf-france.org/"
 }
 {
   registration_authority_code: "RA000189"
@@ -5821,7 +5830,7 @@
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "1"
   format: "1\\-\\d{5}"
-  transform: {"_": "-"}
+  ;transform: {"_": "-"}
 }
 {
   registration_authority_code: "RA000666"
@@ -5838,7 +5847,7 @@
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "7"
   format: "7\\-\\d+"
-  transform: {"_": "-"}
+  ;transform: {"_": "-"}
 }
 {
   registration_authority_code: "RA000667"
@@ -5855,7 +5864,7 @@
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "2"
   format: "2\\-\\d{4}"
-  transform: {"_": "-"}
+  ;transform: {"_": "-"}
 }
 {
   registration_authority_code: "RA000668"
@@ -5872,7 +5881,7 @@
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "6"
   format: "6\\-\\d+"
-  transform: {"_": "-"}
+  ;transform: {"_": "-"}
 }
 {
   registration_authority_code: "RA000384"
@@ -5970,7 +5979,7 @@
   native_owner_name: "Országos Cégnyilvántartó és Céginformációs Rendszer"
   url: "http://www.e-cegjegyzek.hu/index.html"
   company_property: P2619
-  format: "(0[1-9]|1\d|20)-(0[1-9]|1\d|2[0-3])-\d{6}"
+  format: "([01]\\d|20)-([01]\\d|2[0-3])-\\d{6}"
 }
 {
   registration_authority_code: "RA000392"
@@ -6322,7 +6331,7 @@
   owner: Q3798586
   native_owner_name: "Infocamere (La Società di Informatica delle Camere di Commercio Italiana)"
   url: "www.registroimprese.it"
-  format: "\\d{11}"
+  ;format: "\\d{11}"
 }
 {
   registration_authority_code: "RA000408"
@@ -6398,7 +6407,7 @@
   url: "http://www1.touki.or.jp/"
   company_property: P3225
   format: "[1-9]\\d{12}"
-  transform: {"-": ""}
+  ;transform: {"-": ""}
 }
 {
   registration_authority_code: "RA000413"
@@ -6641,7 +6650,7 @@
   native_owner_name: "Amt für Justiz"
   url: "http://www.oera.li/hrweb/ger/firmensuche_afj.htm"
   opencorporates_jurisdiction: "li"
-  format: "FL\\-\\d{4}\\-\\d{3}\\-\\d{3}\\-\\d"
+  format: "FL-\\d{4}\\.\\d{3}\\.\\d{3}\\-\\d"
 }
 {
   registration_authority_code: "RA000429"
@@ -7150,7 +7159,7 @@
   url: "www.kvk.nl/english"
   company_property: P3220
   opencorporates_jurisdiction: "nl"
-  format: "\\d{9}"
+  format: "[0-9]{7,8}"
 }
 {
   registration_authority_code: "RA000464"
@@ -8306,7 +8315,18 @@
   native_owner_name: "Registradores de España (Colegio de Registradores de la Propiedad, Mercantiles y de Bien Muebles de España)"
   url: "www.registradores.org"
   opencorporates_jurisdiction: "es"
-  format: "\\d{8}"
+  eu_vat_prefix: "ES"
+
+  ;transform: {
+  ;  "A([0-9]{8})": "%s"
+  ;  "B([0-9]{8})": "%s"
+  ;}
+
+  ; CIF (Certificado de Identificación Fiscal), NIF (national tax number)
+  ; This is the tax ID number for all companies. It consists of a letter
+  ; followed by 8 digits. The letter represents the type of company, the most
+  ; common being an 'A' for Sociedad Anónima or a 'B' for Sociedad Limitada.
+  ;format: "[0-9]{8}"
 }
 {
   registration_authority_code: "RA000534"
@@ -8469,8 +8489,10 @@
   url: "www.bolagsverket.se"
   company_property: P6460
   opencorporates_jurisdiction: "se"
-  format: "(\\d{6}\\-\\d{4})"
-  transform: {6: "-"}
+  format: "[0-9]{6}-[0-9]{4}"
+  transform: {
+    "([0-9]{6})([0-9]{4})": "%s-%s"   ; insert dash if missing
+  }
 }
 {
   registration_authority_code: "RA000545"
@@ -9193,6 +9215,14 @@
   native_owner_name: "Securities and Exchange Commission"
   url: "https://www.sec.gov/edgar/searchedgar/webusers.htm"
   company_property: P5531
+  transform: {
+    ; Missing CIK
+    "N/A": nil
+
+    ; Series ID instead of CIK
+    ; see https://www.sec.gov/open/datasets-investment_company.html
+    "S[0-9]{9}": nil
+  }
   format: "[0-9]{10}"
 }
 {

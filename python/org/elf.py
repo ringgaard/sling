@@ -121,7 +121,7 @@ for row in elfreader:
 elffile.close()
 
 # Write output.
-recout = sling.RecordWriter("data/e/lei/elf.rec");
+recout = sling.RecordWriter("data/e/org/elf.rec");
 for elf_id, elf in elfs.items():
   recout.write(elf_id, elf.data(binary=True))
 recout.close()

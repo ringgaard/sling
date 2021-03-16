@@ -828,10 +828,12 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       // Add property value based on property type.
       Builder v(item.store());
       if (property->datatype == n_item_type_) {
-        // Add reference to other item.
-        Frame ref(kb_, value);
-        if (ref.valid()) {
+        if (kb_->IsFrame(value)) {
+          // Add reference to other item.
+          Frame ref(kb_, value);
           GetStandardProperties(ref, &v);
+        } else {
+          v.Add(n_text_, value);
         }
       } else if (property->datatype == n_xref_type_) {
         // Add external reference.
