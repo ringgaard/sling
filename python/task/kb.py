@@ -51,7 +51,7 @@ class KnowledgeBaseWorkflow:
   def photos(self):
     """Resource for manual profile photo items."""
     return self.wf.resource("photos.sling",
-                            dir=corpora.workdir("media"),
+                            dir=corpora.corpusdir("media"),
                             format="text/frame")
 
   def elf(self):

@@ -56,6 +56,17 @@ def post_process_flags(arg):
 
 flags.hook(post_process_flags)
 
+def corpusdir(subdir):
+  """Location of corpora."""
+  return flags.arg.corpora + "/" + subdir
+
+def workdir(subdir, language=None):
+  """Location of datasets."""
+  if language == None:
+    return flags.arg.workdir + "/" + subdir
+  else:
+    return flags.arg.workdir + "/" + subdir + "/" + language
+
 def wikidata_url():
   """URL for downloading Wikidata dump."""
   mid = ""
@@ -66,7 +77,7 @@ def wikidata_url():
 
 def wikidata_dump():
   """WikiData dump location."""
-  return flags.arg.corpora + "/wikidata/wikidata-" + \
+  return corpusdir("wikidata") + "/wikidata-" + \
          flags.arg.wikidata + "-all.json.bz2"
 
 def wikipedia_url(language=None):
@@ -79,18 +90,12 @@ def wikipedia_url(language=None):
 def wikipedia_dump(language=None):
   """Wikipedia dump location."""
   if language == None: language = flags.arg.language
-  return flags.arg.corpora + "/wikipedia/" + language + "wiki-" + \
+  return corpusdir("wikipedia") + "/" + language + "wiki-" + \
          flags.arg.wikipedia + "-pages-articles.xml.bz2"
 
 def wikidatadb():
   """WikiData database."""
   return flags.arg.wikidatadb
-
-def workdir(subdir, language=None):
-  if language == None:
-    return flags.arg.workdir + "/" + subdir
-  else:
-    return flags.arg.workdir + "/" + subdir + "/" + language
 
 def wikidir(language=None):
   """Location of wiki datasets."""
