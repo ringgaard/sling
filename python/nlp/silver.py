@@ -51,10 +51,7 @@ class SilverWorkflow:
     self.data = data.Datasets(self.wf)
 
   def workdir(self, language=None):
-    if language == None:
-      return flags.arg.workdir + "/silver"
-    else:
-      return flags.arg.workdir + "/silver/" + language
+    return corpora.workdir("silver", language)
 
   #---------------------------------------------------------------------------
   # IDF table

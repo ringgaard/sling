@@ -21,6 +21,7 @@ import urllib
 import sling
 import sling.flags as flags
 import sling.log as log
+import sling.task.corpora as corpora
 import sling.task.data as data
 from sling.task.workflow import *
 
@@ -130,7 +131,7 @@ class TwitterWorkflow:
   def twitter_frames(self):
     """Resource for twitter frames."""
     return self.wf.resource("twitter-media.sling",
-                            dir=flags.arg.workdir + "/media",
+                            dir=corpora.workdir("media"),
                             format="text/frames")
 
   def extract_twitter(self):

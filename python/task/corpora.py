@@ -86,19 +86,19 @@ def wikidatadb():
   """WikiData database."""
   return flags.arg.wikidatadb
 
+def workdir(subdir, language=None):
+  if language == None:
+    return flags.arg.workdir + "/" + subdir
+  else:
+    return flags.arg.workdir + "/" + subdir + "/" + language
+
 def wikidir(language=None):
   """Location of wiki datasets."""
-  if language == None:
-    return flags.arg.workdir + "/wiki"
-  else:
-    return flags.arg.workdir + "/wiki/" + language
+  return workdir("wiki", language)
 
 def kbdir(language=None):
   """Location of knowledge base datasets."""
-  if language == None:
-    return flags.arg.workdir + "/kb"
-  else:
-    return flags.arg.workdir + "/kb/" + language
+  return workdir("kb", language)
 
 def repository(path):
   """Location of file in Git repository."""

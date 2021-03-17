@@ -45,25 +45,25 @@ class KnowledgeBaseWorkflow:
   def media(self):
     """Resource for media file items."""
     return self.wf.resource("*-media.sling",
-                            dir=flags.arg.workdir + "/media",
+                            dir=corpora.workdir("media"),
                             format="text/frame")
 
   def photos(self):
     """Resource for manual profile photo items."""
     return self.wf.resource("photos.sling",
-                            dir=flags.arg.corpora + "/media",
+                            dir=corpora.workdir("media"),
                             format="text/frame")
 
   def elf(self):
     """Resource for ISO 20275 ELF items."""
     return self.wf.resource("elf.rec",
-                            dir=flags.arg.workdir + "/lei",
+                            dir=corpora.workdir("org"),
                             format="records/frame")
 
   def gleif(self):
     """Resource for GLEIF items."""
     return self.wf.resource("gleif.rec",
-                            dir=flags.arg.workdir + "/lei",
+                            dir=corpora.workdir("org"),
                             format="records/frame")
 
   def extended_item_sources(self):

@@ -265,7 +265,7 @@ class WikiMediaWorkflow:
     """Resource for media image frames."""
     if language == None: language = flags.arg.language
     return self.wf.resource(language + "wiki-media.sling",
-                            dir=flags.arg.workdir + "/media",
+                            dir=corpora.workdir("media"),
                             format="text/frames")
 
   def extract_media(self, language=None):

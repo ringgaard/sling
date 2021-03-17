@@ -85,36 +85,36 @@ class EmbeddingWorkflow:
   # Fact and category embeddings
   #---------------------------------------------------------------------------
 
-  def fact_dir(self):
-    return flags.arg.workdir + "/fact"
+  def factdir(self):
+    return corpora.workdir("fact")
 
   def fact_lexicon(self):
     """Resource for fact vocabulary (text map with fact paths and counts."""
     return self.wf.resource("facts.map",
-                            dir=self.fact_dir(),
+                            dir=self.factdir(),
                             format="textmap/fact")
   def category_lexicon(self):
     """Resource for category vocabulary (text map with categories and counts."""
     return self.wf.resource("categories.map",
-                            dir=self.fact_dir(),
+                            dir=self.factdir(),
                             format="textmap/category")
 
   def facts(self):
     """Resource for resolved facts."""
     return self.wf.resource("facts.rec",
-                            dir=self.fact_dir(),
+                            dir=self.factdir(),
                             format="records/fact")
 
   def fact_embeddings(self):
     """Resource for fact embeddings in word2vec embedding format."""
     return self.wf.resource("fact-embeddings.vec",
-                            dir=self.fact_dir(),
+                            dir=self.factdir(),
                             format="embeddings")
 
   def category_embeddings(self):
     """Resource for category embeddings in word2vec embedding format."""
     return self.wf.resource("category-embeddings.vec",
-                            dir=self.fact_dir(),
+                            dir=self.factdir(),
                             format="embeddings")
 
   def extract_fact_lexicon(self):
@@ -179,7 +179,7 @@ class EmbeddingWorkflow:
   def fact_plausibility_model(self):
     """Resource for fact plausibility model."""
     return self.wf.resource("plausibility.flow",
-                            dir=self.fact_dir(),
+                            dir=self.factdir(),
                             format="flow")
 
   def train_fact_plausibility(self):
