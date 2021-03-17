@@ -50,9 +50,11 @@ n_has_part = kb["P527"]
 n_part_of = kb["P361"]
 n_legal_form = kb["P1454"]
 n_coord_location = kb["P625"]
+n_described_by_source = kb["P1343"]
 n_geo = kb["/w/geo"]
 n_lat = kb["/w/lat"]
 n_lng = kb["/w/lng"]
+n_gleif = kb["Q90175664"]
 
 aliases = sling.PhraseTable(kb, "data/e/kb/en/phrase-table.repo")
 factex = sling.FactExtractor(kb)
@@ -458,6 +460,9 @@ for line in leifile:
       else:
         ids = bizregs.companyids(register, entity_id, lei_number)
         slots.extend(ids)
+
+  # Add source.
+  slots.append((n_described_by_source, n_gleif))
 
   # Create item frame for company.
   f = store.frame(slots)

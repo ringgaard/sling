@@ -21,6 +21,7 @@
   owner_name: "National Registration Center"
   native_owner_name: "Qendra Kombetare e Regjistrimit"
   url: "http://www.qkr.gov.al/nrc/default1.aspx"
+
   opencorporates_jurisdiction: "al"
 }
 {
@@ -149,6 +150,7 @@
   owner_name: "Chamber of Commerce and Industry Aruba"
   native_owner_name: "Kamer van Koophandel en Nijverheid Aruba"
   url: "http://www.arubachamber.com/"
+
   opencorporates_jurisdiction: "aw"
 }
 {
@@ -165,6 +167,7 @@
   native_owner_name: "Australian Business Register of the Australian Taxation Office"
   owner: Q4056112
   url: "http://abr.business.gov.au/"
+
   company_property: P3548
   format: "[0-9]{11}" ; Australian Business Number (ABN)
 }
@@ -181,6 +184,7 @@
   owner: Q4056092
   native_owner_name: "The Australian Securities and Investment Commission (ASIC)"
   url: "www.asic.gov.au"
+
   company_property: P3549
   opencorporates_jurisdiction: "au"
   transform: {
@@ -264,6 +268,7 @@
   owner_name: "Federal Ministry for Digitization and Business Location"
   native_owner_name: "Bundesministerium für Digitalisierung und Wirtschaftsstandort"
   url: "www.gisa.gv.at"
+
   company_property: P5285
   format: "[1-9][0-9]{4,5}[a-z]"
 }
@@ -345,6 +350,7 @@
   owner_name: "Registrar General Department of the Bahamas"
   native_owner_name: "Registrar General Department of the Bahamas"
   url: "www.bahamas.gov.bs"
+
   opencorporates_jurisdiction: "bs"
   format: "\\d{6}[A-Z]"
 }
@@ -359,6 +365,7 @@
   owner_name: "Bahrain Ministry Of Industry And Commerce"
   native_owner_name: "وزارة الصناعة والتجارة"
   url: "https://www.business.gov.bh/"
+
   opencorporates_jurisdiction: "bh"
 }
 {
@@ -372,6 +379,7 @@
   owner_name: "Office of the Registrar of Joint Stock Companies and Firms"
   owner: Q55631392
   url: "www.roc.gov.bd"
+
   opencorporates_jurisdiction: "bd"
 }
 {
@@ -385,6 +393,7 @@
   owner: Q5172394
   native_owner_name: "Corporate Affairs and Intellectual Property Office"
   url: "http://www.caipo.gov.bb/site/index.php"
+
   opencorporates_jurisdiction: "bb"
 }
 {
@@ -399,6 +408,7 @@
   owner_name: "Ministry of Justice of the Republic of Belarus"
   owner: Q3918962
   url: "http://www.minjust.by/ru/site_menu/edin_gos_register/subj_hoz/perechen"
+
   opencorporates_jurisdiction: "by"
 }
 {
@@ -415,9 +425,10 @@
   native_owner_name: "Federale Overheidsdienst Economie / Service Public Fédéral Economie"
   owner: Q1479660
   url: "http://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=en"
+
   company_property: P3376
-  opencorporates_jurisdiction: "be"
   format: "0?\\d{3}\\.?\\d{3}\\.?\\d{3}"
+  opencorporates_jurisdiction: "be"
   opencorporates_format: "0\\d{9}"
   ;transform: {".": ""}
 }
@@ -470,6 +481,7 @@
   owner_name: "Registrar of Companies (Ministry of Economic Development)"
   native_owner_name: "Registrar of Companies (Ministry of Economic Development)"
   url: "http://www.roc.gov.bm/"
+
   opencorporates_jurisdiction: "bm"
 }
 {
@@ -506,6 +518,7 @@
   native_register_name: "Registro de Comercio de Bolivia"
   owner_name: "Fundempresa - Concesionaria del Registro de Comercio de Bolivia"
   url: "http://www.fundempresa.org.bo/directorio/index.php"
+
   opencorporates_jurisdiction: "bo"
 }
 {
@@ -582,6 +595,7 @@
   native_owner_name: "Receita Federal do Brasil"
   owner: Q10369254
   url: "http://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/cnpjreva_solicitacao2.asp."
+
   opencorporates_jurisdiction: "br"
   format: "(\\d{14}|\\d{2}\\.\\d{3}\\.\\d{3}\\/\\d{4}\\-\\d{2})"
 }
@@ -888,6 +902,7 @@
   native_owner_name: "Secretaria da Receita Federal Do Brasil"
   owner: Q10369254
   url: "http://www.receita.fazenda.gov.br/PessoaJuridica/CNPJ/cnpjreva/Cnpjreva_Solicitacao.asp"
+
   company_property: P6204
   format: "\\d{2}\\.\\d{3}\\.\\d{3}\\/\\d{4}-\\d{2}"
 }
@@ -926,6 +941,7 @@
   owner_name: "Registry Agency (Ministry of Justice)"
   native_owner_name: "Търговски регистър"
   url: "http://www.brra.bg/Default.ra"
+
   opencorporates_jurisdiction: "bg"
   format: "([01]\\d|20)-([01]\\d|2[0-3])-\\d{6}"
   opencorporates_format: "20\\d{7}"
@@ -1053,6 +1069,7 @@
   owner: Q5172549
   native_owner_name: "Corporations Canada"
   url: "http://www.corporationscanada.ic.gc.ca/eic/site/cd-dgc.nsf/eng/home"
+
   opencorporates_jurisdiction: "ca"
   format: "\\d{7}"
 }
@@ -1068,6 +1085,7 @@
   owner_name: "Ministry of Service Alberta"
   native_owner_name: "Ministry of Service Alberta"
   url: "http://www.servicealberta.com/731.cfm"
+
   opencorporates_jurisdiction: "ca_ab"
 }
 {
@@ -1082,6 +1100,7 @@
   owner_name: "BC Registry Services"
   native_owner_name: "BC Registry Services"
   url: "http://www.bcregistryservices.gov.bc.ca/bcreg/corppg/index.page"
+
   opencorporates_jurisdiction: "ca_bc"
 }
 {
@@ -1096,6 +1115,7 @@
   owner_name: "Companies Office (Province of Manitoba)"
   native_owner_name: "Companies Office (Province of Manitoba)"
   url: "http://www.companiesoffice.gov.mb.ca/"
+
   opencorporates_jurisdiction: "ca_mb"
 }
 {
@@ -1111,6 +1131,7 @@
   owner: Q20859219
   native_owner_name: "Service New Brunswick"
   url: "http://www.snb.ca/e/6000/6600e.asp"
+
   opencorporates_jurisdiction: "ca_nb"
 }
 {
@@ -1125,6 +1146,7 @@
   owner_name: "Service Newfoundland and Labrador"
   native_owner_name: "Service Newfoundland and Labrador"
   url: "http://www.servicenl.gov.nl.ca/registries/companies.html"
+
   opencorporates_jurisdiction: "ca_nl"
   format: "\\d{5}"
 }
@@ -1140,6 +1162,7 @@
   owner_name: "Service Nova Scotia"
   native_owner_name: "Service Nova Scotia"
   url: "http://novascotia.ca/snsmr/access/business/registry-joint-stock-companies.asp"
+
   opencorporates_jurisdiction: "ca_ns"
 }
 {
@@ -1155,6 +1178,7 @@
   owner: Q6866698
   native_owner_name: "Ministry of Government and Consumer Services"
   url: "https://www.appmybizaccount.gov.on.ca/sodp/portal/osb/!ut/p/b0/04_Sj9CPykssy0xPLMnMz0vMAfIjCxLTU3My87Kt8ouT9Aryi0oSc_QKSpNyMpP1MvJzU_ULsh0VAfzzwt0!/"
+
   opencorporates_jurisdiction: "ca_on"
 }
 {
@@ -1169,6 +1193,7 @@
   owner_name: "Department of Justice and Public Safety"
   native_owner_name: "Department of Justice and Public Safety"
   url: "http://www.gov.pe.ca/corporations/index.php"
+
   opencorporates_jurisdiction: "ca_pe"
 }
 {
@@ -1183,6 +1208,7 @@
   owner_name: "Enterprise Register"
   native_owner_name: "Registraire des Entreprises"
   url: "https://www.registreentreprises.gouv.qc.ca/RQAnonymeGR/GR/GR03/GR03A2_19A_PIU_RechEnt_PC/PageRechSimple.aspx?T1.CodeService=S00436&Clng=F&WT.co_f=239df6a1f9ccfcd3b941438322839291"
+
   opencorporates_jurisdiction: "ca_qc"
   format: "\\d{10}"
 }
@@ -1199,6 +1225,7 @@
   owner: Q6030838
   native_owner_name: "Information Services Corporation"
   url: "https://www.isc.ca/corporateregistry/Pages/default.aspx"
+
   opencorporates_jurisdiction: "ca_sk"
 }
 {
@@ -1213,6 +1240,7 @@
   owner_name: "Corporate Registries"
   native_owner_name: "Corporate Registries"
   url: "https://cros-rsel.justice.gov.nt.ca/search"
+
   opencorporates_jurisdiction: "ca_nt"
 }
 {
@@ -1227,6 +1255,7 @@
   owner_name: "Corporate Registries"
   native_owner_name: "Corporate Registries"
   url: "http://nunavutlegalregistries.ca/cr_index_en.shtml"
+
   opencorporates_jurisdiction: "ca_nu"
 }
 {
@@ -1241,6 +1270,7 @@
   owner_name: "Corporate Affairs (Department of Community Services)"
   native_owner_name: "Corporate Affairs (Department of Community Services)"
   url: "http://www.community.gov.yk.ca/corp/index.html"
+
   opencorporates_jurisdiction: "ca_yt"
 }
 {
@@ -2253,6 +2283,7 @@
   owner_name: "Chamber of Commerce and Industry Curaçao"
   native_owner_name: "Kamer van Koophandel & Nijverheid Curaçao"
   url: "http://www.curacao-chamber.cw/services/registry/search-company"
+
   opencorporates_jurisdiction: "cw"
 }
 {
@@ -2265,6 +2296,7 @@
   register_name: "Companies Section"
   owner_name: "Department of Registrar of Companies and Official Receiver"
   url: "http://www.mcit.gov.cy/mcit/drcor/drcor.nsf/index_en/index_en?OpenDocument"
+
   opencorporates_jurisdiction: "cy"
   transform: {
     "ΗΕ(.*)": "HE%s" ; convert Eta Epsilon to HE
@@ -2308,6 +2340,7 @@
   jurisdiction: Q213
   register_name: "Federal Register"
   native_register_name: "Nadační rejstřík"
+
   company_property: P4156
   format: "[0-9]{8}"
 }
@@ -2320,6 +2353,7 @@
   jurisdiction: Q213
   register_name: "Register of Foundations"
   native_register_name: "Nadační rejstřík"
+
   company_property: P4156
   format: "[0-9]{8}"
 }
@@ -2332,6 +2366,7 @@
   jurisdiction: Q213
   register_name: "Register of Institutes"
   native_register_name: "Rejstřík ústavů"
+
   company_property: P4156
   format: "[0-9]{8}"
 }
@@ -2344,6 +2379,7 @@
   jurisdiction: Q213
   register_name: "Register of Public Service Companies"
   native_register_name: "Rejstřík obecně prospěšných společnost"
+
   company_property: P4156
   format: "[0-9]{8}"
 }
@@ -2359,6 +2395,7 @@
   owner_name: "Ministry of Finance"
   native_owner_name: "Ministerstvo financi"
   url: "http://wwwinfo.mfcr.cz/ares/ares_es.html.en"
+
   company_property: P4156
   format: "[0-9]{8}"
 }
@@ -2374,6 +2411,7 @@
   owner_name: "Ministry of Justice"
   native_owner_name: "Ministerstvo spravedlnosti"
   url: "https://isesf.justice.cz/"
+
   company_property: P4156
   format: "[0-9]{8}"
 }
@@ -2403,9 +2441,11 @@
   owner: Q12310258
   native_owner_name: "Erhvervsstyrelsen"
   url: "https://danishbusinessauthority.dk/"
+
   company_property: P1059
   branch_property: P2814
   opencorporates_jurisdiction: "dk"
+  eu_vat_prefix: "DK"
   transform: {
     "DK(.*)": "%s"; remove DK prefix
     "([0-9][0-9]) ([0-9][0-9]) ([0-9][0-9]) ([0-9][0-9])": "%s%s%s%s" ; remove spaces
@@ -2458,6 +2498,7 @@
   owner_name: "National Office of Industrial Property"
   native_owner_name: "Oficina Nacional de la Propiedad Industrial (ONAPI)"
   url: "http://www.onapi.gob.do/busqueda-consulta.html"
+
   opencorporates_jurisdiction: "do"
 }
 {
@@ -2636,6 +2677,7 @@
   owner: Q11886867
   native_owner_name: "Patentti- ja Rekisterihallitus"
   url: "http://www.prh.fi/en/kaupparekisteri.html"
+
   opencorporates_jurisdiction: "fi"
   format: "\\d{7}\\-\\d"
 }
@@ -2653,6 +2695,7 @@
   owner: Q156616
   native_owner_name: "Institut National de la Statistique et des Études Économiques"
   url: "http://sirene.fr/sirene/public/accueil?sirene_locale=en"
+
   company_property: P1616
   branch_property: P3215
   opencorporates_jurisdiction: "fr"
@@ -2683,51 +2726,6 @@
   owner: Q788606
   native_owner_name: "Autorité des marchés financiers"
   url: "http://www.amf-france.org/"
-}
-{
-  registration_authority_code: "RA000189"
-  country_name: "French Guiana"
-  country_code: "GF"
-  country: Q3769
-  jurisdiction_name: "French Guiana"
-  jurisdiction: Q3769
-  register_name: "Register of Companies (Sirene)"
-  native_register_name: "Sirene"
-  owner_name: "National Institute of Statistics and Economic Studies"
-  owner: Q156616
-  native_owner_name: "Institut National de la Statistique et des Études Économiques"
-  url: "http://sirene.fr/sirene/public/accueil?sirene_locale=en"
-  company_property: P1616
-  branch_property: P3215
-  format: "\\d{9}"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "French Guiana"
-  country_code: "GF"
-  country: Q3769
-  jurisdiction_name: "French Guiana"
-  jurisdiction: Q3769
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "French Polynesia"
-  country_code: "PF"
-  country: Q30971
-  jurisdiction_name: "French Polynesia"
-  jurisdiction: Q30971
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
 }
 {
   registration_authority_code: "RA000193"
@@ -2784,6 +2782,7 @@
   owner_name: "Local Court Aachen"
   native_owner_name: "Amtsgericht Aachen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3101"
 }
@@ -2799,6 +2798,7 @@
   owner_name: "Local Court Ahlen"
   native_owner_name: "Amtsgericht Ahlen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2702"
 }
@@ -2814,6 +2814,7 @@
   owner_name: "Local Court Altenburg"
   native_owner_name: "Amtsgericht Altenburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1201"
 }
@@ -2829,6 +2830,7 @@
   owner_name: "Local Court Amberg"
   native_owner_name: "Amtsgericht Amberg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3101"
 }
@@ -2844,6 +2846,7 @@
   owner_name: "Local Court Ansbach"
   native_owner_name: "Amtsgericht Ansbach"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3201"
 }
@@ -2859,6 +2862,7 @@
   owner_name: "Local Court Apolda"
   native_owner_name: "Amtsgericht Apolda"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1101"
 }
@@ -2874,6 +2878,7 @@
   owner_name: "Local Court Arnsberg"
   native_owner_name: "Amtsgericht Arnsberg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1901"
 }
@@ -2889,6 +2894,7 @@
   owner_name: "Local Court Arnstadt"
   native_owner_name: "Amtsgericht Arnstadt"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1102"
 }
@@ -2904,6 +2910,7 @@
   owner_name: "Local Court Aschaffenburg"
   native_owner_name: "Amtsgericht Aschaffenburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4102"
 }
@@ -2919,6 +2926,7 @@
   owner_name: "Local Court Augsburg"
   native_owner_name: "Amtsgericht Augsburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2102"
 }
@@ -2934,6 +2942,7 @@
   owner_name: "Local Court Aurich"
   native_owner_name: "Amtsgericht Aurich"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P3101"
 }
@@ -2949,6 +2958,7 @@
   owner_name: "Local Court Bad Hersfeld"
   native_owner_name: "Amtsgericht Bad Hersfeld"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1305"
 }
@@ -2964,6 +2974,7 @@
   owner_name: "Local Court Bad Homburg v. d. Höhe"
   native_owner_name: "Amtsgericht Bad Homburg v. d. Höhe"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1202"
 }
@@ -2979,6 +2990,7 @@
   owner_name: "Local Court Bad Kreuznach"
   native_owner_name: "Amtsgericht Bad Kreuznach"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2101"
 }
@@ -2994,6 +3006,7 @@
   owner_name: "Local Court Bad Langensalza"
   native_owner_name: "Amtsgericht Bad Langensalza"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1104"
 }
@@ -3009,6 +3022,7 @@
   owner_name: "Local Court Bad Lobenstein"
   native_owner_name: "Amtsgericht Bad Lobenstein"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1208"
 }
@@ -3024,6 +3038,7 @@
   owner_name: "Local Court Bad Oeynhausen"
   native_owner_name: "Amtsgericht Bad Oeynhausen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2108"
 }
@@ -3039,6 +3054,7 @@
   owner_name: "Local Court Bad Salzungen"
   native_owner_name: "Amtsgericht Bad Salzungen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1301"
 }
@@ -3067,6 +3083,7 @@
   owner_name: "Local Court Bamberg"
   native_owner_name: "Amtsgericht Bamberg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4201"
 }
@@ -3082,6 +3099,7 @@
   owner_name: "Local Court Bayreuth"
   native_owner_name: "Amtsgericht Bayreuth"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4301"
 }
@@ -3111,6 +3129,7 @@
   owner_name: "Local Court Berlin-Charlottenburg"
   native_owner_name: "Amtsgericht Berlin-Charlottenburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "F1103"
 }
@@ -3126,6 +3145,7 @@
   owner_name: "Local Court Bielefeld"
   native_owner_name: "Amtsgericht Bielefeld"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2101"
 }
@@ -3141,6 +3161,7 @@
   owner_name: "Local Court Bochum"
   native_owner_name: "Amtsgericht Bochum"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2201"
 }
@@ -3156,6 +3177,7 @@
   owner_name: "Local Court Bonn"
   native_owner_name: "Amtsgericht Bonn"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3201"
 }
@@ -3184,6 +3206,7 @@
   owner_name: "Local Court Braunschweig"
   native_owner_name: "Amtsgericht Braunschweig"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P1103"
 }
@@ -3199,6 +3222,7 @@
   owner_name: "Local Court Bremen"
   native_owner_name: "Amtsgericht Bremen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "H1101"
 }
@@ -3227,6 +3251,7 @@
   owner_name: "Local Court Bünde"
   native_owner_name: "Amtsgericht Bünde"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2102"
 }
@@ -3242,6 +3267,7 @@
   owner_name: "Local Court Chemnitz"
   native_owner_name: "Amtsgericht Chemnitz"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "U1206"
 }
@@ -3257,6 +3283,7 @@
   owner_name: "Local Court Coburg"
   native_owner_name: "Amtsgericht Coburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4401"
 }
@@ -3272,6 +3299,7 @@
   owner_name: "Local Court Coesfeld"
   native_owner_name: "Amtsgericht Coesfeld"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2707"
 }
@@ -3287,6 +3315,7 @@
   owner_name: "Local Court Cottbus"
   native_owner_name: "Amtsgericht Cottbus"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "G1103"
 }
@@ -3302,6 +3331,7 @@
   owner_name: "Local Court Darmstadt"
   native_owner_name: "Amtsgericht Darmstadt"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1103"
 }
@@ -3317,6 +3347,7 @@
   owner_name: "Local Court Deggendorf"
   native_owner_name: "Amtsgericht Deggendorf"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2201"
 }
@@ -3332,6 +3363,7 @@
   owner_name: "Local Court Dortmund"
   native_owner_name: "Amtsgericht Dortmund"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2402"
 }
@@ -3347,6 +3379,7 @@
   owner_name: "Local Court Dresden"
   native_owner_name: "Amtsgericht Dresden"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "U1104"
 }
@@ -3362,6 +3395,7 @@
   owner_name: "Local Court Duisburg"
   native_owner_name: "Amtsgericht Duisburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1202"
 }
@@ -3377,6 +3411,7 @@
   owner_name: "Local Court Düren"
   native_owner_name: "Amtsgericht Düren"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3103"
 }
@@ -3392,6 +3427,7 @@
   owner_name: "Local Court Düsseldorf"
   native_owner_name: "Amtsgericht Düsseldorf"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1101"
 }
@@ -3407,6 +3443,7 @@
   owner_name: "Local Court Eisenach"
   native_owner_name: "Amtsgericht Eisenach"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1105"
 }
@@ -3422,6 +3459,7 @@
   owner_name: "Local Court Erfurt"
   native_owner_name: "Amtsgericht Erfurt"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1106"
 }
@@ -3437,6 +3475,7 @@
   owner_name: "Local Court Erkelenz"
   native_owner_name: "Amtsgericht Erkelenz"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1502"
 }
@@ -3452,6 +3491,7 @@
   owner_name: "Local Court Eschwege"
   native_owner_name: "Amtsgericht Eschwege"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1602"
 }
@@ -3467,6 +3507,7 @@
   owner_name: "Local Court Essen"
   native_owner_name: "Amtsgericht Essen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2503"
 }
@@ -3482,6 +3523,7 @@
   owner_name: "Local Court Flensburg"
   native_owner_name: "Amtsgericht Flensburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "X1112"
 }
@@ -3497,6 +3539,7 @@
   owner_name: "Local Court Frankfurt (Oder)"
   native_owner_name: "Amtsgericht Frankfurt (Oder)"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "G1207"
 }
@@ -3512,6 +3555,7 @@
   owner_name: "Local Court Frankfurt am Main"
   native_owner_name: "Amtsgericht Frankfurt am Main"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1201"
 }
@@ -3527,6 +3571,7 @@
   owner_name: "Local Court Freiburg"
   native_owner_name: "Amtsgericht Freiburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "B1204"
 }
@@ -3542,6 +3587,7 @@
   owner_name: "Local Court Friedberg (Hessen)"
   native_owner_name: "Amtsgericht Friedberg (Hessen)"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1405"
 }
@@ -3557,6 +3603,7 @@
   owner_name: "Local Court Fritzlar"
   native_owner_name: "Amtsgericht Fritzlar"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1603"
 }
@@ -3572,6 +3619,7 @@
   owner_name: "Local Court Fulda"
   native_owner_name: "Amtsgericht Fulda"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1301"
 }
@@ -3587,6 +3635,7 @@
   owner_name: "Local Court Fürth"
   native_owner_name: "Amtsgericht Fürth"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3304"
 }
@@ -3602,6 +3651,7 @@
   owner_name: "Local Court Geldern"
   native_owner_name: "Amtsgericht Geldern"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1302"
 }
@@ -3617,6 +3667,7 @@
   owner_name: "Local Court Gelsenkirchen"
   native_owner_name: "Amtsgericht Gelsenkirchen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2507"
 }
@@ -3632,6 +3683,7 @@
   owner_name: "Local Court Gera"
   native_owner_name: "Amtsgericht Gera"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1203"
 }
@@ -3647,6 +3699,7 @@
   owner_name: "Local Court Gießen"
   native_owner_name: "Amtsgericht Gießen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1406"
 }
@@ -3662,6 +3715,7 @@
   owner_name: "Local Court Gotha"
   native_owner_name: "Amtsgericht Gotha"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1108"
 }
@@ -3677,6 +3731,7 @@
   owner_name: "Local Court Göttingen"
   native_owner_name: "Amtsgericht Göttingen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2204"
 }
@@ -3692,6 +3747,7 @@
   owner_name: "Local Court Greifswald"
   native_owner_name: "Amtsgericht Greifswald"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1202"
 }
@@ -3707,6 +3763,7 @@
   owner_name: "Local Court Greiz"
   native_owner_name: "Amtsgericht Greiz"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1205"
 }
@@ -3722,6 +3779,7 @@
   owner_name: "Local Court Güstrow"
   native_owner_name: "Amtsgericht Güstrow"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1303"
 }
@@ -3737,6 +3795,7 @@
   owner_name: "Local Court Gütersloh"
   native_owner_name: "Amtsgericht Gütersloh"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2103"
 }
@@ -3752,6 +3811,7 @@
   owner_name: "Local Court Hagen"
   native_owner_name: "Amtsgericht Hagen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2602"
 }
@@ -3767,6 +3827,7 @@
   owner_name: "Local Court Hamburg"
   native_owner_name: "Amtsgericht Hamburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "K1101"
 }
@@ -3795,6 +3856,7 @@
   owner_name: "Local Court Hamm"
   native_owner_name: "Amtsgericht Hamm"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2404"
 }
@@ -3810,6 +3872,7 @@
   owner_name: "Local Court Hanau"
   native_owner_name: "Amtsgericht Hanau"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1502"
 }
@@ -3825,6 +3888,7 @@
   owner_name: "Local Court Hannover"
   native_owner_name: "Amtsgericht Hannover"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2305"
 }
@@ -3840,6 +3904,7 @@
   owner_name: "Local Court Heilbad Heiligenstadt"
   native_owner_name: "Amtsgericht Heilbad Heiligenstadt"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1109"
 }
@@ -3855,6 +3920,7 @@
   owner_name: "Local Court Herford"
   native_owner_name: "Amtsgericht Herford"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2105"
 }
@@ -3870,6 +3936,7 @@
   owner_name: "Local Court Herne"
   native_owner_name: "Amtsgericht Herne"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2203"
 }
@@ -3898,6 +3965,7 @@
   owner_name: "Local Court Hildburghausen"
   native_owner_name: "Amtsgericht Hildburghausen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1302"
 }
@@ -3913,6 +3981,7 @@
   owner_name: "Local Court Hildesheim"
   native_owner_name: "Amtsgericht Hildesheim"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2408"
 }
@@ -3928,6 +3997,7 @@
   owner_name: "Local Court Hof"
   native_owner_name: "Amtsgericht Hof"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4501"
 }
@@ -3943,6 +4013,7 @@
   owner_name: "Local Court Homburg"
   native_owner_name: "Amtsgericht Homburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1102"
 }
@@ -3958,6 +4029,7 @@
   owner_name: "Local Court Ilmenau"
   native_owner_name: "Amtsgericht Ilmenau"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1303"
 }
@@ -3973,6 +4045,7 @@
   owner_name: "Local Court Ingolstadt"
   native_owner_name: "Amtsgericht Ingolstadt"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D5701"
 }
@@ -3988,6 +4061,7 @@
   owner_name: "Local Court Iserlohn"
   native_owner_name: "Amtsgericht Iserlohn"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2604"
 }
@@ -4003,6 +4077,7 @@
   owner_name: "Local Court Jena"
   native_owner_name: "Amtsgericht Jena"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1206"
 }
@@ -4018,6 +4093,7 @@
   owner_name: "Local Court Kaiserslautern"
   native_owner_name: "Amtsgericht Kaiserslautern"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T3201"
 }
@@ -4033,6 +4109,7 @@
   owner_name: "Local Court Kassel"
   native_owner_name: "Amtsgericht Kassel"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1607"
 }
@@ -4048,6 +4125,7 @@
   owner_name: "Local Court Kempten"
   native_owner_name: "Amtsgericht Kempten"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2304"
 }
@@ -4063,6 +4141,7 @@
   owner_name: "Local Court Kiel"
   native_owner_name: "Amtsgericht Kiel"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "X1517"
 }
@@ -4078,6 +4157,7 @@
   owner_name: "Local Court Kleve"
   native_owner_name: "Amtsgericht Kleve"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1304"
 }
@@ -4093,6 +4173,7 @@
   owner_name: "Local Court Koblenz"
   native_owner_name: "Amtsgericht Koblenz"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2210"
 }
@@ -4108,6 +4189,7 @@
   owner_name: "Local Court Köln"
   native_owner_name: "Amtsgericht Köln"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3306"
 }
@@ -4123,6 +4205,7 @@
   owner_name: "Local Court Königstein im Taunus"
   native_owner_name: "Amtsgericht Königstein im Taunus"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1203"
 }
@@ -4138,6 +4221,7 @@
   owner_name: "Local Court Korbach"
   native_owner_name: "Amtsgericht Korbach"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1608"
 }
@@ -4153,6 +4237,7 @@
   owner_name: "Local Court Krefeld"
   native_owner_name: "Amtsgericht Krefeld"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1402"
 }
@@ -4168,6 +4253,7 @@
   owner_name: "Local Court Landau in der Pfalz"
   native_owner_name: "Amtsgericht Landau in der Pfalz"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T3304"
 }
@@ -4183,6 +4269,7 @@
   owner_name: "Local Court Landshut"
   native_owner_name: "Amtsgericht Landshut"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2404"
 }
@@ -4198,6 +4285,7 @@
   owner_name: "Local Court Lebach"
   native_owner_name: "Amtsgericht Lebach"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1103"
 }
@@ -4213,6 +4301,7 @@
   owner_name: "Local Court Leipzig"
   native_owner_name: "Amtsgericht Leipzig"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "U1308"
 }
@@ -4228,6 +4317,7 @@
   owner_name: "Local Court Lemgo"
   native_owner_name: "Amtsgericht Lemgo"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2307"
 }
@@ -4243,6 +4333,7 @@
   owner_name: "Local Court Limburg a. d. Lahn"
   native_owner_name: "Amtsgericht Limburg a. d. Lahn"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1706"
 }
@@ -4271,6 +4362,7 @@
   owner_name: "Local Court Lübeck"
   native_owner_name: "Amtsgericht Lübeck"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "X1721"
 }
@@ -4286,6 +4378,7 @@
   owner_name: "Local Court Ludwigshafen am Rhein"
   native_owner_name: "Amtsgericht Ludwigshafen am Rhein"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T3104"
 }
@@ -4301,6 +4394,7 @@
   owner_name: "Local Court Ludwigslust"
   native_owner_name: "Amtsgericht Ludwigslust"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1305"
 }
@@ -4316,6 +4410,7 @@
   owner_name: "Local Court Lüneburg"
   native_owner_name: "Amtsgericht Lüneburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2507"
 }
@@ -4331,6 +4426,7 @@
   owner_name: "Local Court Lünen"
   native_owner_name: "Amtsgericht Lünen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2406"
 }
@@ -4346,6 +4442,7 @@
   owner_name: "Local Court Mainz"
   native_owner_name: "Amtsgericht Mainz"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2304"
 }
@@ -4361,6 +4458,7 @@
   owner_name: "Local Court Mannheim"
   native_owner_name: "Amtsgericht Mannheim"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "B1601"
 }
@@ -4376,6 +4474,7 @@
   owner_name: "Local Court Marburg"
   native_owner_name: "Amtsgericht Marburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1809"
 }
@@ -4404,6 +4503,7 @@
   owner_name: "Local Court Meiningen"
   native_owner_name: "Amtsgericht Meiningen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1304"
 }
@@ -4419,6 +4519,7 @@
   owner_name: "Local Court Memmingen"
   native_owner_name: "Amtsgericht Memmingen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2505"
 }
@@ -4434,6 +4535,7 @@
   owner_name: "Local Court Merzig"
   native_owner_name: "Amtsgericht Merzig"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1104"
 }
@@ -4449,6 +4551,7 @@
   owner_name: "Local Court Mönchengladbach"
   native_owner_name: "Amtsgericht Mönchengladbach"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1504"
 }
@@ -4464,6 +4567,7 @@
   owner_name: "Local Court Montabaur"
   native_owner_name: "Amtsgericht Montabaur"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2214"
 }
@@ -4479,6 +4583,7 @@
   owner_name: "Local Court Mühlhausen"
   native_owner_name: "Amtsgericht Mühlhausen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1110"
 }
@@ -4494,6 +4599,7 @@
   owner_name: "Local Court München"
   native_owner_name: "Amtsgericht München"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2601V"   ; V=Vereinsregister
   ; http://www.firmendb.de/adressdatenbank/gericht-5086.php
@@ -4510,6 +4616,7 @@
   owner_name: "Local Court Münster"
   native_owner_name: "Amtsgericht Münster"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2713"
 }
@@ -4525,6 +4632,7 @@
   owner_name: "Local Court Neubrandenburg"
   native_owner_name: "Amtsgericht Neubrandenburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1105"
 }
@@ -4540,6 +4648,7 @@
   owner_name: "Local Court Neunkirchen"
   native_owner_name: "Amtsgericht Neunkirchen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1105"
 }
@@ -4555,6 +4664,7 @@
   owner_name: "Local Court Neuruppin"
   native_owner_name: "Amtsgericht Neuruppin"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "G1309"
 }
@@ -4570,6 +4680,7 @@
   owner_name: "Local Court Neuss"
   native_owner_name: "Amtsgericht Neuss"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1102"
 }
@@ -4585,6 +4696,7 @@
   owner_name: "Local Court Nordhausen"
   native_owner_name: "Amtsgericht Nordhausen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1111"
 }
@@ -4600,6 +4712,7 @@
   owner_name: "Local Court Nürnberg"
   native_owner_name: "Amtsgericht Nürnberg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3310"
 }
@@ -4615,6 +4728,7 @@
   owner_name: "Local Court Oberhausen"
   native_owner_name: "Amtsgericht Oberhausen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R6324"
 }
@@ -4630,6 +4744,7 @@
   owner_name: "Local Court Offenbach am Main"
   native_owner_name: "Amtsgericht Offenbach am Main"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1114"
 }
@@ -4645,6 +4760,7 @@
   owner_name: "Local Court Oldenburg"
   native_owner_name: "Amtsgericht Oldenburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P3210"
 }
@@ -4660,6 +4776,7 @@
   owner_name: "Local Court Osnabrück"
   native_owner_name: "Amtsgericht Osnabrück"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P3313"
 }
@@ -4675,6 +4792,7 @@
   owner_name: "Local Court Ottweiler"
   native_owner_name: "Amtsgericht Ottweiler"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1107"
 }
@@ -4690,6 +4808,7 @@
   owner_name: "Local Court Paderborn"
   native_owner_name: "Amtsgericht Paderborn"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2809"
 }
@@ -4705,6 +4824,7 @@
   owner_name: "Local Court Pasewalk"
   native_owner_name: "Amtsgericht Pasewalk"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1107"
 }
@@ -4720,6 +4840,7 @@
   owner_name: "Local Court Passau"
   native_owner_name: "Amtsgericht Passau"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2803"
 }
@@ -4735,6 +4856,7 @@
   owner_name: "Local Court Pinneberg"
   native_owner_name: "Amtsgericht Pinneberg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "X1321"
   ; NB: Some OC companies have suffixes for companies previously registered
@@ -4752,6 +4874,7 @@
   owner_name: "Local Court Pößneck"
   native_owner_name: "Amtsgericht Pößneck"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1209"
 }
@@ -4767,6 +4890,7 @@
   owner_name: "Local Court Potsdam"
   native_owner_name: "Amtsgericht Potsdam"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "G1312"
 }
@@ -4782,6 +4906,7 @@
   owner_name: "Local Court Ratingen"
   native_owner_name: "Amtsgericht Ratingen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1104"
 }
@@ -4797,6 +4922,7 @@
   owner_name: "Local Court Recklinghausen"
   native_owner_name: "Amtsgericht Recklinghausen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2204"
 }
@@ -4812,6 +4938,7 @@
   owner_name: "Local Court Regensburg"
   native_owner_name: "Amtsgericht Regensburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3410"
 }
@@ -4840,6 +4967,7 @@
   owner_name: "Local Court Remscheid"
   native_owner_name: "Amtsgericht Remscheid"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1603"
 }
@@ -4855,6 +4983,7 @@
   owner_name: "Local Court Ribnitz"
   native_owner_name: "Amtsgericht Ribnitz"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1205"
 }
@@ -4870,6 +4999,7 @@
   owner_name: "Local Court Rostock"
   native_owner_name: "Amtsgericht Rostock"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1206"
 }
@@ -4885,6 +5015,7 @@
   owner_name: "Local Court Rudolstadt"
   native_owner_name: "Amtsgericht Rudolstadt"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1210"
 }
@@ -4900,6 +5031,7 @@
   owner_name: "Local Court Saalfeld"
   native_owner_name: "Amtsgericht Saalfeld"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1211"
 }
@@ -4915,6 +5047,7 @@
   owner_name: "Local Court Saarbrücken"
   native_owner_name: "Amtsgericht Saarbrücken"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1109"
 }
@@ -4943,6 +5076,7 @@
   owner_name: "Local Court Saarlouis"
   native_owner_name: "Amtsgericht Saarlouis"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1110"
 }
@@ -4958,6 +5092,7 @@
   owner_name: "Local Court Sankt Ingbert"
   native_owner_name: "Amtsgericht Sankt Ingbert"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1111"
 }
@@ -4973,6 +5108,7 @@
   owner_name: "Local Court Sankt Wendel"
   native_owner_name: "Amtsgericht Sankt Wendel"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1112"
 }
@@ -5014,6 +5150,7 @@
   owner_name: "Local Court Schleiden"
   native_owner_name: "Amtsgericht Schleiden"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3106"
 }
@@ -5042,6 +5179,7 @@
   owner_name: "Local Court Schweinfurt"
   native_owner_name: "Amtsgericht Schweinfurt"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4608"
 }
@@ -5057,6 +5195,7 @@
   owner_name: "Local Court Schwerin"
   native_owner_name: "Amtsgericht Schwerin"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1308"
 }
@@ -5072,6 +5211,7 @@
   owner_name: "Local Court Siegburg"
   native_owner_name: "Amtsgericht Siegburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3208"
 }
@@ -5087,6 +5227,7 @@
   owner_name: "Local Court Siegen"
   native_owner_name: "Amtsgericht Siegen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2909"
 }
@@ -5102,6 +5243,7 @@
   owner_name: "Local Court Soest"
   native_owner_name: "Amtsgericht Soest"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1911"
 }
@@ -5117,6 +5259,7 @@
   owner_name: "Local Court Solingen"
   native_owner_name: "Amtsgericht Solingen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1605"
 }
@@ -5132,6 +5275,7 @@
   owner_name: "Local Court Sömmerda"
   native_owner_name: "Amtsgericht Sömmerda"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1112"
 }
@@ -5147,6 +5291,7 @@
   owner_name: "Local Court Sondershausen"
   native_owner_name: "Amtsgericht Sondershausen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1113"
 }
@@ -5162,6 +5307,7 @@
   owner_name: "Local Court Sonneberg"
   native_owner_name: "Amtsgericht Sonneberg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1307"
 }
@@ -5177,6 +5323,7 @@
   owner_name: "Local Court Stadthagen"
   native_owner_name: "Amtsgericht Stadthagen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2106"
 }
@@ -5192,6 +5339,7 @@
   owner_name: "Local Court Stadtroda"
   native_owner_name: "Amtsgericht Stadtroda"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1214"
 }
@@ -5207,6 +5355,7 @@
   owner_name: "Local Court Steinfurt"
   native_owner_name: "Amtsgericht Steinfurt"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2706"
 }
@@ -5222,6 +5371,7 @@
   owner_name: "Local Court Stendal"
   native_owner_name: "Amtsgericht Stendal"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "W1215"
 }
@@ -5237,6 +5387,7 @@
   owner_name: "Local Court Stralsund"
   native_owner_name: "Amtsgericht Stralsund"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1209"
 }
@@ -5252,6 +5403,7 @@
   owner_name: "Local Court Straubing"
   native_owner_name: "Amtsgericht Straubing"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3413"
 }
@@ -5267,6 +5419,7 @@
   owner_name: "Local Court Stuttgart"
   native_owner_name: "Amtsgericht Stuttgart"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "B2609"
 }
@@ -5282,6 +5435,7 @@
   owner_name: "Local Court Suhl"
   native_owner_name: "Amtsgericht Suhl"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1308"
 }
@@ -5310,6 +5464,7 @@
   owner_name: "Local Court Tostedt"
   native_owner_name: "Amtsgericht Tostedt"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2613"
 }
@@ -5325,6 +5480,7 @@
   owner_name: "Local Court Traunstein"
   native_owner_name: "Amtsgericht Traunstein"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2910"
 }
@@ -5340,6 +5496,7 @@
   owner_name: "Local Court Ulm"
   native_owner_name: "Amtsgericht Ulm"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "B2805"
 }
@@ -5355,6 +5512,7 @@
   owner_name: "Local Court Völklingen"
   native_owner_name: "Amtsgericht Völklingen"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1115"
 }
@@ -5370,6 +5528,7 @@
   owner_name: "Local Court Wadern"
   native_owner_name: "Amtsgericht Wadern"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1116"
 }
@@ -5385,6 +5544,7 @@
   owner_name: "Local Court Walsrode"
   native_owner_name: "Amtsgericht Walsrode"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2716"
 }
@@ -5400,6 +5560,7 @@
   owner_name: "Local Court Warburg"
   native_owner_name: "Amtsgericht Warburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2813"
 }
@@ -5415,6 +5576,7 @@
   owner_name: "Local Court Waren"
   native_owner_name: "Amtsgericht Waren"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1112"
 }
@@ -5430,6 +5592,7 @@
   owner_name: "Local Court Warstein"
   native_owner_name: "Amtsgericht Warstein"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1912"
 }
@@ -5444,6 +5607,7 @@
   owner_name: "Local Court Weiden i.d. OPf."
   native_owner_name: "Amtsgericht Weiden i.d. OPf."
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3508"
 }
@@ -5459,6 +5623,7 @@
   owner_name: "Local Court Weimar"
   native_owner_name: "Amtsgericht Weimar"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1114"
 }
@@ -5474,6 +5639,7 @@
   owner_name: "Local Court Wetzlar"
   native_owner_name: "Amtsgericht Wetzlar"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1710"
 }
@@ -5489,6 +5655,7 @@
   owner_name: "Local Court Wiesbaden"
   native_owner_name: "Amtsgericht Wiesbaden"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1906"
 }
@@ -5504,6 +5671,7 @@
   owner_name: "Local Court Wismar"
   native_owner_name: "Amtsgericht Wismar"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1210"
 }
@@ -5519,6 +5687,7 @@
   owner_name: "Local Court Witten"
   native_owner_name: "Amtsgericht Witten"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2207"
 }
@@ -5534,6 +5703,7 @@
   owner_name: "Local Court Wittlich"
   native_owner_name: "Amtsgericht Wittlich"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2408"
 }
@@ -5549,6 +5719,7 @@
   owner_name: "Local Court Wuppertal"
   native_owner_name: "Amtsgericht Wuppertal"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1608"
 }
@@ -5564,6 +5735,7 @@
   owner_name: "Local Court Würzburg"
   native_owner_name: "Amtsgericht Würzburg"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4708"
 }
@@ -5579,6 +5751,7 @@
   owner_name: "Local Court Zweibrücken"
   native_owner_name: "Amtsgericht Zweibrücken"
   url: "www.handelsregister.de"
+
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T3403"
 }
@@ -5681,6 +5854,7 @@
   owner_name: "Companies House Gibraltar"
   native_owner_name: "Companies House Gibraltar"
   url: "www.companieshouse.gi"
+
   opencorporates_jurisdiction: "gi"
 }
 {
@@ -5716,6 +5890,7 @@
   register_name: "General Commercial Registry (G.E.MI.)"
   owner_name: "Union of Hellenic Chambers"
   url: "http://www.businessportal.gr/home/index_en"
+
   opencorporates_jurisdiction: "gr"
 }
 {
@@ -5732,6 +5907,7 @@
   owner: Q12310258
   native_owner_name: "Erhvervsstyrelsen"
   url: "https://danishbusinessauthority.dk/"
+
   company_property: P1059
   branch_property: P2814
   opencorporates_jurisdiction: "gl"
@@ -5759,37 +5935,6 @@
   owner_name: "Registrar of Companies and Intellectual Property (Supreme Courty Registry)"
   native_owner_name: "Registrar of Companies and Intellectual Property (Supreme Courty Registry)"
   url: "http://www.gov.gd/departments/supreme_court_registry.html"
-}
-{
-  registration_authority_code: "RA000189"
-  country_name: "Guadeloupe"
-  country_code: "GP"
-  country: Q17012
-  jurisdiction_name: "Guadeloupe"
-  jurisdiction: Q17012
-  register_name: "Register of Companies (Sirene)"
-  native_register_name: "Sirene"
-  owner_name: "National Institute of Statistics and Economic Studies"
-  owner: Q156616
-  native_owner_name: "Institut National de la Statistique et des Études Économiques"
-  url: "http://sirene.fr/sirene/public/accueil?sirene_locale=en"
-  company_property: P1616
-  branch_property: P3215
-  format: "\\d{9}"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "Guadeloupe"
-  country_code: "GP"
-  country: Q17012
-  jurisdiction_name: "Guadeloupe"
-  jurisdiction: Q17012
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
 }
 {
   registration_authority_code: "RA000381"
@@ -5827,6 +5972,7 @@
   owner_name: "Guernsey Registry"
   native_owner_name: "Guernsey Registry"
   url: "http://www.guernseyregistry.com/"
+
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "1"
   format: "1\\-\\d{5}"
@@ -5844,6 +5990,7 @@
   owner_name: "Guernsey Registry"
   native_owner_name: "Guernsey Registry"
   url: "http://www.guernseyregistry.com/"
+
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "7"
   format: "7\\-\\d+"
@@ -5861,6 +6008,7 @@
   owner_name: "Guernsey Registry"
   native_owner_name: "Guernsey Registry"
   url: "http://www.guernseyregistry.com/"
+
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "2"
   format: "2\\-\\d{4}"
@@ -5878,6 +6026,7 @@
   owner_name: "Guernsey Registry"
   native_owner_name: "Guernsey Registry"
   url: "http://www.guernseyregistry.com/"
+
   opencorporates_jurisdiction: "gg"
   opencorporates_prefix: "6"
   format: "6\\-\\d+"
@@ -5940,6 +6089,7 @@
   native_register_name: "公司註冊處"
   owner_name: "Companies Registry"
   url: "www.cr.gov.hk"
+
   opencorporates_jurisdiction: "hk"
   format: "\\d{7}"
 }
@@ -5978,6 +6128,7 @@
   owner_name: "National Company Register and Company Information System"
   native_owner_name: "Országos Cégnyilvántartó és Céginformációs Rendszer"
   url: "http://www.e-cegjegyzek.hu/index.html"
+
   company_property: P2619
   format: "([01]\\d|20)-([01]\\d|2[0-3])-\\d{6}"
 }
@@ -6007,6 +6158,7 @@
   owner_name: "National Office for the Judiciary"
   native_owner_name: "Országos Bírósági Hivatal"
   url: "http://www.birosag.hu/allampolgaroknak/civil-szervezetek/civil-szervezetek-nevjegyzeke-kereses"
+
   company_property: P4031
   format: "([01]\\d|20)-0[1-578]-\\d{7}"
 }
@@ -6048,6 +6200,7 @@
   native_register_name: "Fyrirtækjaskrá RSK"
   owner_name: "Directorate of Internal Revenue"
   url: "https://www.rsk.is/english"
+
   opencorporates_jurisdiction: "is"
   format: "\\d{10}"
 }
@@ -6063,6 +6216,7 @@
   owner_name: "Ministry of Corporate Affairs"
   owner: Q4294596
   url: "http://www.mca.gov.in/MCA21/"
+
   opencorporates_jurisdiction: "in"
   format: "U[0-9A-Z]{20}"
 }
@@ -6225,6 +6379,7 @@
   owner: Q1261157
   native_owner_name: "است†ايران†اسلامی†جمھوری†مرکزی†بانک"
   url: "https://www.cbi.ir/simplelist/1462.aspx"
+
   opencorporates_jurisdiction: "ir"
 }
 {
@@ -6250,6 +6405,7 @@
   owner: Q5155406
   native_owner_name: "Companies Registration Office"
   url: "http://www.cro.ie/"
+
   opencorporates_jurisdiction: "ie"
 }
 {
@@ -6264,6 +6420,7 @@
   owner_name: "Companies Registration Office"
   owner: Q5155406
   native_owner_name: "Companies Registration Office"
+
   url: "http://www.cro.ie/"
   format: "\\d{6}"
 }
@@ -6304,6 +6461,7 @@
   owner_name: "Companies Registry"
   native_owner_name: "Companies Registry"
   url: "http://www.gov.im/ded/companies/companiesregistry.xml"
+
   opencorporates_jurisdiction: "im"
 }
 {
@@ -6315,6 +6473,7 @@
   jurisdiction: Q801
   owner_name: "Israeli Corporations Authority (Department of Justice)"
   url: "http://www.justice.gov.il/En/Units/IsraeliCorporations/Pages/default.aspx"
+
   opencorporates_jurisdiction: "il"
   format: "\\d{9}"
 }
@@ -6331,6 +6490,7 @@
   owner: Q3798586
   native_owner_name: "Infocamere (La Società di Informatica delle Camere di Commercio Italiana)"
   url: "www.registroimprese.it"
+
   ;format: "\\d{11}"
 }
 {
@@ -6391,6 +6551,7 @@
   register_name: "Companies Register"
   owner_name: "Companies Office of Jamaica"
   url: "https://www.orcjamaica.com/"
+
   opencorporates_jurisdiction: "jm"
 }
 {
@@ -6405,6 +6566,7 @@
   owner_name: "Legal Affairs Bureaus"
   native_owner_name: "法務局"
   url: "http://www1.touki.or.jp/"
+
   company_property: P3225
   format: "[1-9]\\d{12}"
   ;transform: {"-": ""}
@@ -6433,6 +6595,7 @@
   owner_name: "Jersey Financial Services Commission Companies Registry"
   native_owner_name: "Jersey Financial Services Commission Companies Registry"
   url: "http://www.jerseyfsc.org/registry/"
+
   opencorporates_jurisdiction: "je"
 }
 {
@@ -6502,6 +6665,7 @@
   owner_name: "Supreme Court Registry"
   native_owner_name: "대법원"
   url: "www.iros.go.kr"
+
   company_property: P6859
 }
 {
@@ -6576,6 +6740,7 @@
   owner: Q16361579
   native_owner_name: "Latvijas Republikas Uzņēmumu Reģistrs"
   url: "www.ur.gov.lv"
+
   company_property: P8053
   opencorporates_jurisdiction: "lv"
   format: "\\d{11}"
@@ -6649,6 +6814,7 @@
   owner_name: "Office of Justice"
   native_owner_name: "Amt für Justiz"
   url: "http://www.oera.li/hrweb/ger/firmensuche_afj.htm"
+
   opencorporates_jurisdiction: "li"
   format: "FL-\\d{4}\\.\\d{3}\\.\\d{3}\\-\\d"
 }
@@ -6663,19 +6829,6 @@
   owner: Q1270586
   native_owner_name: "Finanzmarktaufsicht"
   url: "https://www.fma-li.li/en/"
-}
-{
-  registration_authority_code: "RA000548"
-  country_name: "Liechtenstein"
-  country_code: "LI"
-  country: Q347
-  jurisdiction_name: "Liechtenstein"
-  jurisdiction: Q347
-  register_name: "UID-Register"
-  native_register_name: "In French: Registre IDE; in German: UID-Register; in Italian: Registro IDI"
-  owner_name: "Federal Statistical Office"
-  native_owner_name: "In French: Office fédéral de la statistique; in German: Bundesamt für Statistik; in Italian: Ufficio federale di statistica"
-  url: "https://www.uid.admin.ch/"
 }
 {
   registration_authority_code: "RA000430"
@@ -6714,6 +6867,7 @@
   owner_name: "Luxembourg Business Registers"
   native_owner_name: "Luxembourg Business Registers"
   url: "www.lbr.lu"
+
   opencorporates_jurisdiction: "lu"
   format: "B\\d{5,6}"
 }
@@ -6809,6 +6963,7 @@
   owner: Q1121232
   native_owner_name: "Suruhanjaya Syarikat Malaysia (SSM)"
   url: "https://www.ssm-einfo.my/index.php"
+
   opencorporates_jurisdiction: "my"
 }
 {
@@ -6854,6 +7009,7 @@
   native_register_name: "Registru tal-Kumpaniji ta'Malta"
   owner_name: "Malta Financial Services Authority - Registry of Companies"
   url: "www.registry.mfsa.com.mt"
+
   opencorporates_jurisdiction: "mt"
   format: "C\\d{5}"
 }
@@ -6867,37 +7023,6 @@
   owner_name: "Marshall Islands Maritime and Corporate Administrators"
   native_owner_name: "Marshall Islands Maritime and Corporate Administrators"
   url: "https://www.register-iri.com/miCorporate/index.cfm/Corporate/search"
-}
-{
-  registration_authority_code: "RA000189"
-  country_name: "Martinique"
-  country_code: "MQ"
-  country: Q17054
-  jurisdiction_name: "Martinique"
-  jurisdiction: Q17054
-  register_name: "Register of Companies (Sirene)"
-  native_register_name: "Sirene"
-  owner_name: "National Institute of Statistics and Economic Studies"
-  owner: Q156616
-  native_owner_name: "Institut National de la Statistique et des Études Économiques"
-  url: "http://sirene.fr/sirene/public/accueil?sirene_locale=en"
-  company_property: P1616
-  branch_property: P3215
-  format: "\\d{9}"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "Martinique"
-  country_code: "MQ"
-  country: Q17054
-  jurisdiction_name: "Martinique"
-  jurisdiction: Q17054
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
 }
 {
   registration_authority_code: "RA000446"
@@ -6920,38 +7045,8 @@
   register_name: "Corporate and Business Registration"
   owner_name: "Corporate and Business Registration Department (of the Ministry of Finance and Economic Development)"
   url: "http://companies.govmu.org/English/Pages/default.aspx"
+
   opencorporates_jurisdiction: "mu"
-}
-{
-  registration_authority_code: "RA000189"
-  country_name: "Mayotte"
-  country_code: "YT"
-  country: Q17063
-  jurisdiction_name: "Mayotte"
-  jurisdiction: Q17063
-  register_name: "Register of Companies (Sirene)"
-  native_register_name: "Sirene"
-  owner_name: "National Institute of Statistics and Economic Studies"
-  owner: Q156616
-  native_owner_name: "Institut National de la Statistique et des Études Économiques"
-  url: "http://sirene.fr/sirene/public/accueil?sirene_locale=en"
-  company_property: P1616
-  branch_property: P3215
-  format: "\\d{9}"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "Mayotte"
-  country_code: "YT"
-  country: Q17063
-  jurisdiction_name: "Mayotte"
-  jurisdiction: Q17063
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
 }
 {
   registration_authority_code: "RA000449"
@@ -6978,6 +7073,7 @@
   owner_name: "Ministry of Economy"
   native_owner_name: "Secretaría de Economía"
   url: "http://www.siem.gob.mx/siem/portal/consultas/consulta.asp?q=1"
+
   opencorporates_jurisdiction: "mx"
 }
 {
@@ -7016,6 +7112,7 @@
   owner_name: "State Chamber of Registration"
   native_owner_name: "Camera Înregistrării de Stat"
   url: "www.cis.gov.md"
+
   opencorporates_jurisdiction: "md"
 }
 {
@@ -7063,6 +7160,7 @@
   native_register_name: "Centralni Registar Privrednih Subjekata"
   owner_name: "Central Registry of Business Entities of the Tax Administration (CRBE)"
   url: "www.crps.me"
+
   opencorporates_jurisdiction: "me"
 }
 {
@@ -7111,6 +7209,7 @@
   owner_name: "Directorate of Investment and Company Administration"
   owner: Q28231394
   url: "http://dica.gov.mm.x-aas.net/"
+
   opencorporates_jurisdiction: "mm"
 }
 {
@@ -7157,6 +7256,7 @@
   owner: Q17344314
   native_owner_name: "Kamer van Koophandel"
   url: "www.kvk.nl/english"
+
   company_property: P3220
   opencorporates_jurisdiction: "nl"
   format: "[0-9]{7,8}"
@@ -7187,20 +7287,6 @@
   url: "www.belastingdienst.nl"
 }
 {
-  registration_authority_code: "RA000192"
-  country_name: "New Caledonia"
-  country_code: "NC"
-  country: Q33788
-  jurisdiction_name: "New Caledonia"
-  jurisdiction: Q33788
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.nc"
-}
-{
   registration_authority_code: "RA000466"
   country_name: "New Zealand"
   country_code: "NZ"
@@ -7212,6 +7298,7 @@
   owner_name: "Companies Office (Ministry of Business Innovation and Employment)"
   native_owner_name: "Companies Office (Ministry of Business Innovation and Employment)"
   url: "www.business.govt.nz/companies"
+
   company_property: P5687
   opencorporates_jurisdiction: "nz"
   format: "\\d+"
@@ -7298,6 +7385,7 @@
   native_register_name: "Foretaksregisteret"
   owner_name: "The Brønnøysund Register Centre"
   url: "https://www.brreg.no/the-bronnoysund-register-centre/"
+
   opencorporates_jurisdiction: "no"
   format: "(\\d{9}|\\d{3} \\d{3} \\d{3})"
 }
@@ -7313,6 +7401,7 @@
   native_register_name: "Enhetsregisteret"
   owner_name: "The Brønnøysund Register Centre"
   url: "https://www.brreg.no/the-bronnoysund-register-centre/"
+
   company_property: P2333
   format: "(\\d{9}|\\d{3} \\d{3} \\d{3})"
 }
@@ -7338,6 +7427,7 @@
   register_name: "Corporate Registry"
   owner_name: "Securities and Exchange Commission"
   url: "www.secp.gov.pk"
+
   opencorporates_jurisdiction: "pk"
   format: "\\d{7}"
 }
@@ -7374,6 +7464,7 @@
   owner_name: "Public Registry of Panama"
   native_owner_name: "Registro Público de Panamá"
   url: "http://registro-publico.gob.pa"
+
   opencorporates_jurisdiction: "pa"
 }
 {
@@ -7457,6 +7548,7 @@
   owner: Q4294864
   native_owner_name: "Minsterstwo Sprawiedliwosci"
   url: "https://ekrs.ms.gov.pl/web/wyszukiwarka-krs/strona-glowna"
+
   opencorporates_jurisdiction: "pl"
   format: "\\d{10}"
 }
@@ -7549,6 +7641,7 @@
   owner: Q7258702
   native_owner_name: "Departamento de Estado de Puerto Rico"
   url: "https://prcorpfiling.f1hst.com/CorporationSearch.aspx"
+
   opencorporates_jurisdiction: "pr"
 }
 {
@@ -7576,37 +7669,6 @@
   url: "http://www.qfc.qa/en/thecompanyregister"
 }
 {
-  registration_authority_code: "RA000189"
-  country_name: "Réunion"
-  country_code: "RE"
-  country: Q17070
-  jurisdiction_name: "Réunion"
-  jurisdiction: Q17070
-  register_name: "Register of Companies (Sirene)"
-  native_register_name: "Sirene"
-  owner_name: "National Institute of Statistics and Economic Studies"
-  owner: Q156616
-  native_owner_name: "Institut National de la Statistique et des Études Économiques"
-  url: "http://sirene.fr/sirene/public/accueil?sirene_locale=en"
-  company_property: P1616
-  branch_property: P3215
-  format: "\\d{9}"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "Réunion"
-  country_code: "RE"
-  country: Q17070
-  jurisdiction_name: "Réunion"
-  jurisdiction: Q17070
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
-}
-{
   registration_authority_code: "RA000497"
   country_name: "Romania"
   country_code: "RO"
@@ -7618,6 +7680,7 @@
   owner_name: "National Trade Register Office"
   native_owner_name: "Oficiul National al Registrului Comertului"
   url: "www.onrc.ro"
+
   opencorporates_jurisdiction: "ro"
 }
 {
@@ -7701,6 +7764,7 @@
   native_register_name: "Единый Государственный Реестр Юридических Лиц, ЕГРЮЛ"
   owner_name: "Federal Tax Service (Ministry of Finance)"
   url: "https://www.nalog.ru/eng/"
+
   company_property: P2391
   format: "\\d{8}"
 }
@@ -7714,38 +7778,8 @@
   register_name: "Business Register"
   owner_name: "Office of the Registrar General"
   url: "http://org.rdb.rw/"
+
   opencorporates_jurisdiction: "rw"
-}
-{
-  registration_authority_code: "RA000189"
-  country_name: "Saint Barthélemy"
-  country_code: "BL"
-  country: Q25362
-  jurisdiction_name: "Saint Barthélemy"
-  jurisdiction: Q25362
-  register_name: "Register of Companies (Sirene)"
-  native_register_name: "Sirene"
-  owner_name: "National Institute of Statistics and Economic Studies"
-  owner: Q156616
-  native_owner_name: "Institut National de la Statistique et des Études Économiques"
-  url: "http://sirene.fr/sirene/public/accueil?sirene_locale=en"
-  company_property: P1616
-  branch_property: P3215
-  format: "\\d{9}"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "Saint Barthélemy"
-  country_code: "BL"
-  country: Q25362
-  jurisdiction_name: "Saint Barthélemy"
-  jurisdiction: Q25362
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
 }
 {
   registration_authority_code: "RA000502"
@@ -7781,68 +7815,6 @@
   owner_name: "International Financial Centre"
   native_owner_name: "International Financial Centre"
   url: "http://www.saintluciaifc.com/"
-}
-{
-  registration_authority_code: "RA000189"
-  country_name: "Saint Martin"
-  country_code: "MF"
-  country: Q25596
-  jurisdiction_name: "Saint Martin"
-  jurisdiction: Q25596
-  register_name: "Register of Companies (Sirene)"
-  native_register_name: "Sirene"
-  owner_name: "National Institute of Statistics and Economic Studies"
-  owner: Q156616
-  native_owner_name: "Institut National de la Statistique et des Études Économiques"
-  url: "http://sirene.fr/sirene/public/accueil?sirene_locale=en"
-  company_property: P1616
-  branch_property: P3215
-  format: "\\d{9}"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "Saint Martin"
-  country_code: "MF"
-  country: Q25596
-  jurisdiction_name: "Saint Martin"
-  jurisdiction: Q25596
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
-}
-{
-  registration_authority_code: "RA000189"
-  country_name: "Saint Pierre and Miquelon"
-  country_code: "PM"
-  country: Q34617
-  jurisdiction_name: "Saint Pierre and Miquelon"
-  jurisdiction: Q34617
-  register_name: "Register of Companies (Sirene)"
-  native_register_name: "Sirene"
-  owner_name: "National Institute of Statistics and Economic Studies"
-  owner: Q156616
-  native_owner_name: "Institut National de la Statistique et des Études Économiques"
-  url: "http://sirene.fr/sirene/public/accueil?sirene_locale=en"
-  company_property: P1616
-  branch_property: P3215
-  format: "\\d{9}"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "Saint Pierre and Miquelon"
-  country_code: "PM"
-  country: Q34617
-  jurisdiction_name: "Saint Pierre and Miquelon"
-  jurisdiction: Q34617
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
 }
 {
   registration_authority_code: "RA000508"
@@ -8045,6 +8017,7 @@
   register_name: "Business Registry"
   owner_name: "Accounting and Corporate Regulatory Authority (ACRA)"
   url: "www.acra.gov.sg"
+
   opencorporates_jurisdiction: "sg"
   format: "\\d{9}[A-Z]"
 }
@@ -8097,6 +8070,7 @@
   owner: Q2983190
   native_owner_name: "Ministerstvo spravodlivosti"
   url: "http://www.orsr.sk/Default.asp?lan=en"
+
   company_property: P8174
   opencorporates_jurisdiction: "sk"
   format: "\\d{8}"
@@ -8263,6 +8237,7 @@
   native_register_name: "Poslovni register"
   owner_name: "Agency of the Republic of Slovenia for Public Legal Records and Related Services (AJPES)"
   url: "http://www.ajpes.si/?language=english"
+
   opencorporates_jurisdiction: "si"
 }
 {
@@ -8287,6 +8262,7 @@
   owner_name: "Companies and Intellectual Property Commission"
   owner: Q39086117
   url: "www.cipc.co.za"
+
   company_property: P8182
   opencorporates_jurisdiction: "za"
 }
@@ -8314,6 +8290,7 @@
   owner: Q16550286
   native_owner_name: "Registradores de España (Colegio de Registradores de la Propiedad, Mercantiles y de Bien Muebles de España)"
   url: "www.registradores.org"
+
   opencorporates_jurisdiction: "es"
   eu_vat_prefix: "ES"
 
@@ -8487,6 +8464,7 @@
   owner: Q891249
   native_owner_name: "Bolagsverket"
   url: "www.bolagsverket.se"
+
   company_property: P6460
   opencorporates_jurisdiction: "se"
   format: "[0-9]{6}-[0-9]{4}"
@@ -8552,12 +8530,24 @@
   jurisdiction: Q39
   register_name: "UID-Register"
   register: Q2498375
-  native_register_name: "In French: Registre IDE; in German: UID-Register; in Italian: Registro IDI"
+  native_register_name: "Registre IDE"@/lang/fr
+  native_register_name: "UID-Register"@/lang/de
+  native_register_name: "Registro IDI"@/lang/it
   owner_name: "Federal Statistical Office"
   owner: Q285453
-  native_owner_name: "In French: Office fédéral de la statistique; in German: Bundesamt für Statistik; in Italian: Ufficio federale di statistica"
+  native_owner_name: "Office fédéral de la statistique"@/lang/fr
+  native_owner_name: "Bundesamt für Statistik"@/lang/de
+  native_owner_name: "Ufficio federale di statistica"@/lang/it
   url: "https://www.uid.admin.ch/"
+
+  ; see also https://opencorporates.com/registers/250
+  opencorporates_jurisdiction: "ch"
   company_property: P4829
+  transform: {
+    "(\\d{3})\\.(\\d{3})\\.(\\d{3})": "CHE-%s.%s.%s" ; 999.999.999
+    "CHE(\\d{3})(\\d{3})(\\d{3})": "CHE-%s.%s.%s"    ; CHE999999999
+    "CHE-(\\d{3}) (\\d{3}) (\\d{3})": "CHE-%s.%s.%s" ; CHE-999 999 999
+  }
   format: "CHE-\\d{3}\\.\\d{3}\\.\\d{3}"
 }
 {
@@ -8572,10 +8562,21 @@
   owner_name: "Ministry of Justice"
   owner: Q1005459
   native_owner_name: "Eidg. Amt für das Handelsregister; Bundesamt für Justiz"
-  opencorporates_jurisdiction: "ch"
   url: "www.zefix.ch/"
+
+  ; see also https://opencorporates.com/registers/250
+  opencorporates_jurisdiction: "ch"
   company_property: P4829
-  format: "\\d{5,6}"
+  transform: {
+    "CHE.*": ">RA000548" ; route UID numbers to UID-Register
+    "CH(\\d{3})(\\d{1})(\\d{3})(\\d{3})(\\d)": "CH-%s.%s.%s.%s-%s" ; CH99999999999
+  }
+
+  ; CH-RRR.X.XXX.XXX-P, where
+  ; RRR is the canton number,
+  ; X.XXX.XXX is the company number, and
+  ; P is a check-digit
+  format: "CH-\\d{3}\\.\\d{1}\\.\\d{3}.\\d{3}.\\d"
 }
 {
   registration_authority_code: "RA000550"
@@ -8585,7 +8586,7 @@
   jurisdiction_name: "Switzerland"
   jurisdiction: Q39
   owner_name: "Financial Market Supervisory Authority"
-  native_owner_name: "Eidgenössische Finanzmarktaufsicht FINMA "
+  native_owner_name: "Eidgenössische Finanzmarktaufsicht FINMA"
   url: "https://www.finma.ch/de/finma-public/bewilligte-institute-personen-und-produkte/ "
 }
 {
@@ -8617,8 +8618,9 @@
   country: Q863
   jurisdiction_name: "Tajikistan"
   jurisdiction: Q863
-  register_name: "Tajikistan State Register of Legal Entities and Individual Entrepreneurs (Tax Committee under the Government of Republic of Tajikistan)"
+  register_name: "Tajikistan State Register of Legal Entities and Individual Entrepreneurs"
   native_register_name: "Феҳристи андозсупорандагони ҳуқуқӣ"
+  owner_name: Tax "Committee under the Government of Republic of Tajikistan"
   url: "andoz.tj/index.php/ru/elektronnye-uslugi"
   opencorporates_jurisdiction: "tj"
 }
@@ -8632,6 +8634,7 @@
   register_name: "Business Register"
   owner_name: "Business Registrations and Licensing Agency (BRELA)"
   url: "www.brela.go.tz/"
+
   opencorporates_jurisdiction: "tz"
   format: "\\d+"
 }
@@ -8645,6 +8648,7 @@
   register_name: "Business Register"
   owner_name: "Department of Business Development (Ministry of Commerce)"
   url: "www.dbd.go.th/dbdweb_en/main.php?filename=index"
+
   opencorporates_jurisdiction: "th"
   format: "\\d{13}"
 }
@@ -8679,6 +8683,7 @@
   register_name: "Business Registry"
   owner_name: "Business Registries Office (Ministry of Commerce, Tourism and Labour)"
   url: "http://www.businessregistries.gov.to/"
+
   opencorporates_jurisdiction: "to"
 }
 {
@@ -8705,6 +8710,7 @@
   native_register_name: "Registre de Commerce"
   native_owner_name: "Institut national de la Normalisation et de la Propriété Industrielle"
   url: "www.registre-commerce.tn/accueil.html"
+
   opencorporates_jurisdiction: "tn"
 }
 {
@@ -8785,6 +8791,7 @@
   register_name: "Business Registry"
   owner_name: "Directorate of Business Registration of Uganda Registration Services Bureau"
   url: "ursb.go.ug/"
+
   opencorporates_jurisdiction: "ug"
 }
 {
@@ -8810,6 +8817,7 @@
   native_register_name: "Єдиний державний реєстр юридичних осіб та фізичних осіб - підприємців"
   owner_name: "State Enterprise Information Resource Centre"
   url: "irc.gov.ua/en/reestr_edr"
+
   opencorporates_jurisdiction: "ua"
   format: "\\d{8}"
 }
@@ -8824,6 +8832,7 @@
   native_register_name: "Abu Dhabi Commercial Directory"
   owner_name: "Abu Dhabi Department of Economic Development"
   url: "www.ded.abudhabi.ae"
+
   opencorporates_jurisdiction: "ae_az"
 }
 {
@@ -8876,6 +8885,7 @@
   jurisdiction: Q612
   owner_name: "Department of Economic Development - Dubai"
   url: "http://www.dubaided.gov.ae/Arabic/Pages/default.aspx"
+
   opencorporates_jurisdiction: "ae_du"
 }
 {
@@ -9054,10 +9064,26 @@
   owner: Q257303
   native_owner_name: "Companies House"
   url: "www.companieshouse.gov.uk"
+
   company_property: P2622
   officer_property: P5297
   opencorporates_jurisdiction: "gb"
-  format: "(RC|IP|SP|[0-9]{2})[0-9RS]{6}"
+  transform: {
+    "(SC|SG|GS|SA|SF|SI|SL|SO|SP|SR|SZ).+": ">RA000587"  ; Scottish company
+    "(NI|NC|GN|NA|NF|NL|NO|NP|NR|NZ).+": ">RA000586"     ; Northern Ireland company
+  }
+
+  ; AC Assurance Company England and Wales
+  ; BR Branch of foreign company
+  ; FC Foreign Company England and Wales
+  ; GE European Economic Interest Grouping (EEIG) England and Wales
+  ; IC Investment Company with Variable Capital (ICVC) England and Wales
+  ; IP Industrial and Provident England and Wales
+  ; LP Limited Partnership England and Wales
+  ; OC Other England and Wales
+  ; RC Royal Charter England and Wales
+  ; ZC Not Companies Act England and Wales
+  format: "(AC|BR|FC|GE|IC|IP|LP|OC|RC|ZC|[0-9]{2})[0-9RS]{6}"
 }
 {
   registration_authority_code: "RA000586"
@@ -9072,9 +9098,27 @@
   owner: Q257303
   native_owner_name: "Companies House"
   url: "www.companieshouse.gov.uk"
+
   company_property: P2622
   officer_property: P5297
-  format: "(RC|IP|SP|[0-9]{2})[0-9RS]{6}"
+  opencorporates_jurisdiction: "gb"
+
+  transform: {
+    "(AC|BR|FC|GE|IC|IP|LP|OC|RC|ZC|[0-9]{2}).+": ">RA000585" ; English company
+    "(SC|SG|GS|SA|SF|SI|SL|SO|SP|SR|SZ).+": ">RA000587" ; Scottish company
+  }
+
+  ; NI Northern Ireland Company
+  ; NC Northern Ireland LLP
+  ; GN EEIG Northern Ireland
+  ; NA Assurance Company Northern Ireland
+  ; NF Foreign Company Northern Ireland
+  ; NL Limited Partnership Northern Ireland
+  ; NO Other Northern Ireland
+  ; NP Industrial and Provident Northern Ireland
+  ; NR Royal Charter Northern Ireland
+  ; NZ Not Companies Act Northern Ireland
+  format: "(NI|NC|GN|NA|NF|NL|NO|NP|NR|NZ)[0-9RS]{6}"
 }
 {
   registration_authority_code: "RA000701"
@@ -9088,6 +9132,7 @@
   owner_name: "The Charity Commission for Northern Ireland"
   native_owner_name: "The Charity Commission for Northern Ireland"
   url: "https://www.charitycommissionni.org.uk/"
+
   company_property: P3200
 }
 {
@@ -9103,9 +9148,28 @@
   owner: Q257303
   native_owner_name: "Companies House"
   url: "www.companieshouse.gov.uk"
+
   company_property: P2622
   officer_property: P5297
-  format: "(RC|IP|SP|[0-9]{2})[0-9RS]{6}"
+  opencorporates_jurisdiction: "gb"
+
+  transform: {
+    "(AC|BR|FC|GE|IC|IP|LP|OC|RC|ZC|[0-9]{2}).+": ">RA000585" ; English company
+    "(NI|NC|GN|NA|NF|NL|NO|NP|NR|NZ).+": ">RA000586" ; Northern Ireland company
+  }
+
+  ; SC Scottish Company
+  ; SG Scottish partnership
+  ; GS EEIG Scotland
+  ; SA Assurance Company Scotland
+  ; SF Foreign Company Scotland
+  ; SI Investment Company with Variable Capital (ICVC) Scotland
+  ; SL Limited Partnership Scotland
+  ; SO Other Scotland
+  ; SP Industrial / Provident Scotland
+  ; SR Royal Charter Scotland
+  ; SZ Not Companies Act Scotland
+  format: "(SC|SG|GS|SA|SF|SI|SL|SO|SP|SR|SZ)[0-9RS]{6}"
 }
 {
   registration_authority_code: "RA000588"
@@ -9214,6 +9278,7 @@
   owner: Q953944
   native_owner_name: "Securities and Exchange Commission"
   url: "https://www.sec.gov/edgar/searchedgar/webusers.htm"
+
   company_property: P5531
   transform: {
     ; Missing CIK
@@ -9305,6 +9370,7 @@
   native_register_name: "State of Alaska Corporations Registry"
   owner_name: "Division of Corporations, Business and Professional Licensing of the Department of Commerce, Community and Economic Development"
   url: "http://commerce.alaska.gov/CBP/Main/CBPLSearch.aspx?mode=Corp"
+
   opencorporates_jurisdiction: "us_ak"
 }
 {
@@ -9320,6 +9386,7 @@
   owner: Q14213
   native_owner_name: "Secretary of State"
   url: "http://www.sos.alabama.gov/vb/inquiry/inquiry.aspx?area=Business%20Entity"
+
   opencorporates_jurisdiction: "us_al"
 }
 {
@@ -9332,6 +9399,7 @@
   owner_name: "Business & Commercial Services"
   native_owner_name: "Business & Commercial Services"
   url: "http://www.sos.arkansas.gov/corps/search_all.php"
+
   opencorporates_jurisdiction: "us_ar"
 }
 {
@@ -9345,6 +9413,7 @@
   owner: Q4791280
   native_owner_name: "Arizona Corporation Commission"
   url: "http://ecorp.azcc.gov/Search"
+
   opencorporates_jurisdiction: "us_az"
 }
 {
@@ -9359,6 +9428,7 @@
   owner_name: "Secretary of State"
   owner: Q14213
   url: "https://businesssearch.sos.ca.gov/"
+
   opencorporates_jurisdiction: "us_ca"
 }
 {
@@ -9371,6 +9441,7 @@
   owner_name: "Business Division of the Secretary of State’s office"
   native_owner_name: "Business Division of the Secretary of State’s office"
   url: "https://www.sos.state.co.us/biz/BusinessEntityCriteriaExt.do"
+
   opencorporates_jurisdiction: "us_co"
 }
 {
@@ -9383,6 +9454,7 @@
   owner_name: "Secretary of the State's Commercial Recording Division"
   native_owner_name: "Secretary of the State's Commercial Recording Division"
   url: "http://www.concord-sots.ct.gov/CONCORD/online?sn=InquiryServlet&eid=99"
+
   opencorporates_jurisdiction: "us_ct"
 }
 {
@@ -9396,6 +9468,7 @@
   owner: Q5283412
   native_owner_name: "Department of Consumer and Regulatory Affairs"
   url: "https://corp.dcra.dc.gov/Account.aspx/LogOn?ReturnUrl=%2f"
+
   opencorporates_jurisdiction: "us_dc"
 }
 {
@@ -9408,6 +9481,7 @@
   owner_name: "Division of Corporations, Department of State"
   native_owner_name: "Division of Corporations, Department of State"
   url: "https://delecorp.delaware.gov/tin/GINameSearch.jsp"
+
   opencorporates_jurisdiction: "us_de"
 }
 {
@@ -9420,6 +9494,7 @@
   owner_name: "Florida Division of Corporations"
   native_owner_name: "Florida Department of Corporations"
   url: "http://www.sunbiz.org/"
+
   opencorporates_jurisdiction: "us_fl"
 }
 {
@@ -9432,6 +9507,7 @@
   owner_name: "Georgia Secretary of State Corporations Division"
   native_owner_name: "Georgia Secretary of State Corporations Division"
   url: "https://ecorp.sos.ga.gov/BusinessSearch"
+
   opencorporates_jurisdiction: "us_ga"
 }
 {
@@ -9443,6 +9519,7 @@
   jurisdiction: Q782
   owner_name: "Business Registration Division (Department of Commerce & Consumer Affairs)"
   url: "https://hbe.ehawaii.gov/documents/search.html"
+
   opencorporates_jurisdiction: "us_hi"
 }
 {
@@ -9467,6 +9544,7 @@
   owner_name: "Business Services (Secretary of State)"
   native_owner_name: "Business Services (Secretary of State)"
   url: "http://www.accessidaho.org/public/sos/corp/search.html"
+
   opencorporates_jurisdiction: "us_id"
 }
 {
@@ -9479,6 +9557,7 @@
   owner_name: "Business Services (Office of the Secretary of State)"
   native_owner_name: "Business Services (Office of the Secretary of State)"
   url: "https://www.cyberdriveillinois.com/departments/business_services/corp.html"
+
   opencorporates_jurisdiction: "us_il"
 }
 {
@@ -9491,6 +9570,7 @@
   owner_name: "Business Services Division (Secretary of State)"
   native_owner_name: "Business Services Division (Secretary of State)"
   url: "https://bsd.sos.in.gov/publicbusinesssearch"
+
   opencorporates_jurisdiction: "us_in"
 }
 {
@@ -9504,6 +9584,7 @@
   owner: Q5001686
   native_owner_name: "Business Center"
   url: "https://www.kansas.gov/bess/flow/main?execution=e1s1"
+
   opencorporates_jurisdiction: "us_ks"
 }
 {
@@ -9516,6 +9597,7 @@
   owner_name: "Business Services (Office of the Secretary of State)"
   native_owner_name: "Business Services (Office of the Secretary of State)"
   url: "https://app.sos.ky.gov/ftsearch/"
+
   opencorporates_jurisdiction: "us_ky"
 }
 {
@@ -9528,6 +9610,7 @@
   owner_name: "Corporations Section (Office of the Secretary of State)"
   native_owner_name: "Corporations Section (Office of the Secretary of State)"
   url: "https://coraweb.sos.la.gov/CommercialSearch/CommercialSearch.aspx"
+
   opencorporates_jurisdiction: "us_la"
 }
 {
@@ -9540,6 +9623,7 @@
   owner_name: "Corporations Division (Secretary of the Commonwealth's Office)"
   native_owner_name: "Corporations Division (Secretary of the Commonwealth's Office)"
   url: "https://corp.sec.state.ma.us/corpweb/CorpSearch/CorpSearch.aspx"
+
   opencorporates_jurisdiction: "us_ma"
 }
 {
@@ -9552,6 +9636,7 @@
   owner_name: "Business Services (Maryland Department of Assessments and Taxation)"
   native_owner_name: "Business Services (Maryland Department of Assessments and Taxation)"
   url: "http://sdat.resiusa.org/ucc-charter/Pages/CharterSearch/default.aspx"
+
   opencorporates_jurisdiction: "us_md"
 }
 {
@@ -9564,6 +9649,7 @@
   owner_name: "Division of Corporations, UCC and Commissions, Bureau of Corporations, Elections & Commissions, Department of the Secretary of State"
   native_owner_name: "Division of Corporations, UCC and Commissions, Bureau of Corporations, Elections & Commissions, Department of the Secretary of State"
   url: "https://icrs.informe.org/nei-sos-icrs/ICRS?MainPage"
+
   opencorporates_jurisdiction: "us_me"
 }
 {
@@ -9576,6 +9662,7 @@
   owner_name: "Corporations Division (Department of Licensing and Regulatory Affairs)"
   native_owner_name: "Corporations Division (Department of Licensing and Regulatory Affairs)"
   url: "http://www.dleg.state.mi.us/bcs_corp/sr_corp.asp"
+
   opencorporates_jurisdiction: "us_mi"
 }
 {
@@ -9588,6 +9675,7 @@
   owner_name: "Office of the Minnesota Secretary of State Business & Lien system"
   native_owner_name: "Office of the Minnesota Secretary of State Business & Lien system"
   url: "http://mblsportal.sos.state.mn.us/"
+
   opencorporates_jurisdiction: "us_mn"
 }
 {
@@ -9600,6 +9688,7 @@
   owner_name: "Corporations Unit, Business Services (Office of the Secretary of State)"
   native_owner_name: "Corporations Unit, Business Services (Office of the Secretary of State)"
   url: "https://bsd.sos.mo.gov/BusinessEntity/BESearch.aspx"
+
   opencorporates_jurisdiction: "us_mo"
 }
 {
@@ -9612,6 +9701,7 @@
   owner_name: "Business Services, Office of the Secretary of State"
   native_owner_name: "Business Services, Office of the Secretary of State"
   url: "https://corp.sos.ms.gov/corp/portal/c/page/corpBusinessIdSearch/portal.aspx?#clear=1"
+
   opencorporates_jurisdiction: "us_ms"
 }
 {
@@ -9624,6 +9714,7 @@
   owner_name: "Secretary of State Corporate Records"
   native_owner_name: "Secretary of State Corporate Records"
   url: "https://app.mt.gov/bes/"
+
   opencorporates_jurisdiction: "us_mt"
 }
 {
@@ -9636,6 +9727,7 @@
   owner_name: "Corporations Division (Department of the Secretary of State)"
   native_owner_name: "Corporations Division (Department of the Secretary of State)"
   url: "https://www.secretary.state.nc.us/corporations/CSearch.aspx"
+
   opencorporates_jurisdiction: "us_nc"
 }
 {
@@ -9648,6 +9740,7 @@
   owner_name: "Business Services (Secretary of State's Office)"
   native_owner_name: "Business Services (Secretary of State's Office)"
   url: "https://apps.nd.gov/sc/busnsrch/busnSearch.htm"
+
   opencorporates_jurisdiction: "us_nd"
 }
 {
@@ -9660,6 +9753,7 @@
   owner_name: "Secretary of State Business Services Division"
   native_owner_name: "Secretary of State Business Services Division"
   url: "https://www.nebraska.gov/sos/corp/corpsearch.cgi"
+
   opencorporates_jurisdiction: "us_ne"
 }
 {
@@ -9672,6 +9766,7 @@
   owner_name: "Corporation Division (Secretary of State's Office)"
   native_owner_name: "Corporation Division (Secretary of State's Office)"
   url: "https://www.sos.nh.gov/corporate/soskb/csearch.asp"
+
   opencorporates_jurisdiction: "us_nh"
 }
 {
@@ -9684,6 +9779,7 @@
   owner_name: "Business Records Service (Division of Revenue & Enterprise Services)"
   native_owner_name: "Business Records Service (Division of Revenue & Enterprise Services)"
   url: "https://www.njportal.com/DOR/businessrecords/"
+
   opencorporates_jurisdiction: "us_nj"
 }
 {
@@ -9696,6 +9792,7 @@
   owner_name: "Business Services Center (Office of the Secretary of State)"
   native_owner_name: "Business Services Center (Office of the Secretary of State)"
   url: "https://portal.sos.state.nm.us/corps/(S(dn5r5vgd133h0bjusmwofzat))/Corplookup/Lookdn.aspx"
+
   opencorporates_jurisdiction: "us_nm"
 }
 {
@@ -9708,6 +9805,7 @@
   owner_name: "Business Center (Secretary of State)"
   native_owner_name: "Business Center (Secretary of State)"
   url: "https://nvsos.gov/sosentitysearch/"
+
   opencorporates_jurisdiction: "us_nv"
 }
 {
@@ -9720,6 +9818,7 @@
   owner_name: "Corporation and Business Entity Database (Division of Corporations, State Records and UCC, Department of State)"
   native_owner_name: "Corporation and Business Entity Database (Division of Corporations, State Records and UCC, Department of State)"
   url: "http://www.dos.ny.gov/corps/bus_entity_search.html"
+
   opencorporates_jurisdiction: "us_ny"
 }
 {
@@ -9732,6 +9831,7 @@
   owner_name: "Corporation Database (Ohio Secretary of State)"
   native_owner_name: "Corporation Database (Ohio Secretary of State)"
   url: "http://www2.sos.state.oh.us/pls/bsqry/f?p=100:1:0:::::"
+
   opencorporates_jurisdiction: "us_oh"
 }
 {
@@ -9744,6 +9844,7 @@
   owner_name: "Business Filing Department (Oklahoma Secretary of State)"
   native_owner_name: "Business Filing Department (Oklahoma Secretary of State)"
   url: "https://www.sos.ok.gov/corp/corpInquiryFind.aspx"
+
   opencorporates_jurisdiction: "us_ok"
 }
 {
@@ -9756,6 +9857,7 @@
   owner_name: "Corporation Division (Oregon Secretary of State)"
   native_owner_name: "Corporation Division (Oregon Secretary of State)"
   url: "http://egov.sos.state.or.us/br/pkg_web_name_srch_inq.login"
+
   opencorporates_jurisdiction: "us_or"
 }
 {
@@ -9769,6 +9871,7 @@
   owner: Q7163719
   native_owner_name: "Pennsylvania Department of State"
   url: "https://www.corporations.state.pa.us/corp/soskb/csearch.asp"
+
   opencorporates_jurisdiction: "us_pa"
 }
 {
@@ -9781,6 +9884,7 @@
   owner_name: "Division Of Business Services (Rhode Island Office of the Secretary of State)"
   native_owner_name: "Division Of Business Services (Rhode Island Office of the Secretary of State)"
   url: "http://ucc.state.ri.us/CorpSearch/CorpSearchInput.asp"
+
   opencorporates_jurisdiction: "us_ri"
 }
 {
@@ -9793,6 +9897,7 @@
   owner_name: "Business Filings database (South Carolina Secretary of State)"
   native_owner_name: "Business Filings database (South Carolina Secretary of State)"
   url: "http://www.sos.sc.gov/Search%20Business%20Filings"
+
   opencorporates_jurisdiction: "us_sc"
 }
 {
@@ -9805,6 +9910,7 @@
   owner_name: "Business Services Division (Office of the Secretary of State)"
   native_owner_name: "Business Services Division (Office of the Secretary of State)"
   url: "https://sos.sd.gov/business/search.aspx"
+
   opencorporates_jurisdiction: "us_sd"
 }
 {
@@ -9817,6 +9923,7 @@
   owner_name: "Business Services (Department of State)"
   native_owner_name: "Business Services (Department of State)"
   url: "https://tnbear.tn.gov/ECommerce/FilingSearch.aspx"
+
   opencorporates_jurisdiction: "us_tn"
 }
 {
@@ -9829,6 +9936,7 @@
   owner_name: "Corporations Section (Texas Secretary of State)"
   native_owner_name: "Corporations Section (Texas Secretary of State)"
   url: "https://direct.sos.state.tx.us/acct/acct-login.asp"
+
   opencorporates_jurisdiction: "us_tx"
 }
 {
@@ -9854,6 +9962,7 @@
   owner_name: "Utah Division of Corporations & Commercial Code (Department of Commerce)"
   native_owner_name: "Utah Division of Corporations & Commercial Code (Department of Commerce)"
   url: "https://secure.utah.gov/bes/"
+
   opencorporates_jurisdiction: "us_ut"
 }
 {
@@ -9867,6 +9976,7 @@
   owner: Q7603136
   native_owner_name: "State Corporation Commission"
   url: "https://sccefile.scc.virginia.gov/Find/Business"
+
   opencorporates_jurisdiction: "us_va"
 }
 {
@@ -9879,6 +9989,7 @@
   owner_name: "Corporations Division (Vermont Secretary of State)"
   native_owner_name: "Corporations Division (Vermont Secretary of State)"
   url: "https://www.vtsosonline.com/online/BusinessInquire/"
+
   opencorporates_jurisdiction: "us_vt"
 }
 {
@@ -9891,6 +10002,7 @@
   owner_name: "Corporations Division (Office of the Secretary of State)"
   native_owner_name: "Corporations Division (Office of the Secretary of State)"
   url: "https://www.sos.wa.gov/corps/corps_search.aspx"
+
   opencorporates_jurisdiction: "us_wa"
 }
 {
@@ -9903,6 +10015,7 @@
   owner_name: "Corporation Section (Division of Corporate & Consumer Services, Department of Financial Institutions)"
   native_owner_name: "Corporation Section (Division of Corporate & Consumer Services, Department of Financial Institutions)"
   url: "https://www.wdfi.org/apps/CorpSearch/Search.aspx"
+
   opencorporates_jurisdiction: "us_wi"
 }
 {
@@ -9915,6 +10028,7 @@
   owner_name: "Business and Licensing (West Virginia Secretary of State)"
   native_owner_name: "Business and Licensing (West Virginia Secretary of State)"
   url: "http://apps.sos.wv.gov/business/corporations/"
+
   opencorporates_jurisdiction: "us_wv"
 }
 {
@@ -9927,6 +10041,7 @@
   owner_name: "Business Center (Wyoming Secretary of State)"
   native_owner_name: "Business Center (Wyoming Secretary of State)"
   url: "https://wyobiz.wy.gov/Business/FilingSearch.aspx"
+
   opencorporates_jurisdiction: "us_wy"
 }
 {
@@ -9975,6 +10090,7 @@
   owner_name: "Vanuatu Financial Services Commission"
   owner: Q40890164
   url: "www.vfsc.vu"
+
   opencorporates_jurisdiction: "vu"
 }
 {
@@ -9998,6 +10114,7 @@
   register_name: "Business Registration"
   owner_name: "Agency of Business Registration (Ministry of Planning and Investment)"
   url: "https://dangkykinhdoanh.gov.vn/en-gb/home.aspx"
+
   opencorporates_jurisdiction: "vn"
 }
 {
@@ -10009,20 +10126,6 @@
   jurisdiction: Q35555
   native_owner_name: "Service de la Réglementation et des Élections (SRE)"
   url: "http://www.wallis-et-futuna.pref.gouv.fr/Vos-demarches/Declaration-de-Societes"
-}
-{
-  registration_authority_code: "RA000192"
-  country_name: "Wallis and Futuna"
-  country_code: "WF"
-  country: Q35555
-  jurisdiction_name: "Wallis and Futuna"
-  jurisdiction: Q35555
-  register_name: "Register of Commerce and Companies"
-  native_register_name: "Registre du Commerce et des Sociétés"
-  owner_name: "Infogreffe"
-  owner: Q19544830
-  native_owner_name: "Infogreffe"
-  url: "www.infogreffe.com"
 }
 {
   registration_authority_code: "RA000651"

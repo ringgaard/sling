@@ -19,10 +19,20 @@ import re
 def transform(companyid, transforms):
   if transforms != None:
     for pattern, formatter in transforms:
-      m = re.findall(pattern, companyid)
-      if len(m) == 1:
-        if formatter is None: return None
-        companyid = formatter % m[0]
+      m = re.fullmatch(pattern, companyid)
+      if m != None:
+        if formatter is None:
+          # Discard company number.
+          return None
+        if formatter[0] == ">":
+          # Redirect to another register.
+          return formatter[1:], companyid
+        else:
+          try:
+            companyid = formatter % m.groups()
+          except Exception as e:
+            raise Exception("Error converting " + companyid + " with " +
+                            formatter)
 
   return companyid
 
@@ -31,6 +41,10 @@ class BusinessRegistries:
     self.store = store
     self.n_registration_authority_code = store["registration_authority_code"]
     self.n_jurisdiction_name = store["jurisdiction_name"]
+    self.n_register = store["register"]
+    self.n_register_name = store["register_name"]
+    self.n_owner = store["owner"]
+    self.n_owner_name = store["owner_name"]
     self.n_company_property = store["company_property"]
     self.n_opencorporates_jurisdiction = store["opencorporates_jurisdiction"]
     self.n_opencorporates_prefix = store["opencorporates_prefix"]
@@ -38,13 +52,17 @@ class BusinessRegistries:
     self.n_format = store["format"]
     self.n_transform = store["transform"]
 
+    self.n_is = store["is"]
     self.n_opencorporates_id = store["P1320"]
     self.n_eu_vat_number = store["P3608"]
+    self.n_catalog = store["P972"]
+    self.n_catalog_code = store["P528"]
 
     self.registers = store.load("data/org/bizreg.sling")
     self.regauth = {}
     for register in self.registers:
       regcode = register[self.n_registration_authority_code]
+      if regcode in self.regauth: print("Duplicate RA:", regcode)
       self.regauth[regcode] = register
 
   def by_auth_code(self):
@@ -53,12 +71,21 @@ class BusinessRegistries:
   def companyids(self, register, companyid, source = None):
     # Transform company id.
     companyid = transform(companyid, register[self.n_transform])
+    if type(companyid) is tuple:
+      # Redirected to another register.
+      register = self.regauth[companyid[0]]
+      companyid = transform(companyid[1], register[self.n_transform])
     if companyid is None: return []
 
     # Check company id format.
     fmt = register[self.n_format]
     if fmt != None:
-      m = re.fullmatch(fmt, companyid)
+      try:
+        m = re.fullmatch(fmt, companyid)
+      except Exception as e:
+        print("fmt", fmt)
+        print("companyid", companyid)
+        raise Exception("Error matching " + companyid + " with " + fmt)
       if m is None:
         regname = register[self.n_registration_authority_code]
         place = register[self.n_jurisdiction_name]
@@ -91,6 +118,18 @@ class BusinessRegistries:
     euvat_prefix = register[self.n_eu_vat_prefix]
     if euvat_prefix != None:
       slots.append((self.n_eu_vat_number, euvat_prefix + companyid))
+
+    # Add company id as catalog code.
+    if len(slots) == 0:
+      catalog = register[self.n_register]
+      if catalog is None: catalog = register[self.n_owner]
+      if catalog is None: catalog = register[self.n_register_name]
+      if catalog is None: catalog = register[self.n_owner_name]
+      if catalog != None:
+        slots.append((self.n_catalog_code, {
+          self.n_is: companyid,
+          self.n_catalog: catalog,
+        }))
 
     return slots
 
