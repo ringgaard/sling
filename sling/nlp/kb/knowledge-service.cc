@@ -586,18 +586,19 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
     p.alternate_image = false;
     for (const Slot &ps : property) {
       // Get URL formatter for property.
-      if (ps.name == n_formatter_url_) {
+      if (ps.name == n_formatter_url_ && p.url.empty()) {
         Handle formatter = ps.value;
-        bool deprecated = false;
+        bool ignore = false;
         if (kb->IsFrame(formatter)) {
           // Resolve qualified formatter url.
           Frame fq(kb, formatter);
           formatter = fq.GetHandle(Handle::is());
 
-          // Skip deprecated services.
-          if (fq.Has(n_reason_for_deprecation_)) deprecated = true;
+          // Skip deprecated and special services.
+          if (fq.Has(n_reason_for_deprecation_)) ignore = true;
+          if (fq.Has(n_applies_if_regex_matches_)) ignore = true;
         }
-        if (!deprecated && kb->IsString(formatter)) {
+        if (!ignore && kb->IsString(formatter)) {
           p.url = String(kb, formatter).value();
         }
       }
@@ -973,23 +974,27 @@ void KnowledgeService::SortChronologically(Store *store,
     if (!store->IsFrame(a)) return false;
 
     Frame a_frame(store, a);
+    int a_order = GetCanonicalOrder(a_frame);
+    bool a_ordered = a_order != kint32max;
     Date a_date = GetCanonicalDate(a_frame);
     bool a_dated = a_date.precision != Date::NONE;
 
     Frame b_frame(store, b);
+    int b_order = GetCanonicalOrder(b_frame);
+    bool b_ordered = b_order != kint32max;
     Date b_date = GetCanonicalDate(b_frame);
     bool b_dated = b_date.precision != Date::NONE;
 
-    if (a_dated || b_dated) {
+    if (a_ordered && b_ordered) {
+      // Compare by series ordinal.
+      return a_order < b_order;
+    } else if (a_dated || b_dated) {
       // Compare by date.
       if (!b_dated) return true;
       if (!a_dated) return false;
       return a_date < b_date;
     } else {
-      // Compare by series ordinal.
-      int64 a_series = GetCanonicalOrder(a_frame);
-      int64 b_series = GetCanonicalOrder(b_frame);
-      return a_series < b_series;
+      return false;
     }
   });
 }

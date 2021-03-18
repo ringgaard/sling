@@ -165,6 +165,7 @@ class KnowledgeService {
   Name n_image_{names_, "P18"};
   Name n_inverse_label_item_{names_, "P7087"};
   Name n_reason_for_deprecation_{names_, "P2241"};
+  Name n_applies_if_regex_matches_{names_, "P8460"};
 
   Name n_unit_symbol_{names_, "P558"};
   Name n_writing_system_{names_, "P282"};

@@ -40,12 +40,6 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
     return;
   }
 
-  // Bail out if there is no media database.
-  if (!db_.connected()) {
-    response->SendError(404, "No Media Database");
-    return;
-  }
-
   // Get path.
   string path;
   if (!DecodeURLComponent(request->path() + 1, &path)) {
@@ -54,6 +48,16 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
   }
   if (path.empty()) {
     response->SendError(404, "Index Browsing Not Supported");
+    return;
+  }
+
+  // Bail out if there is no media database.
+  if (!db_.connected()) {
+    if (redirect_) {
+      response->TempRedirectTo(request->path() + 1);
+    } else {
+      response->SendError(404, "No Media Database");
+    }
     return;
   }
 
