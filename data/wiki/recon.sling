@@ -18,6 +18,7 @@
     P161: Q66318312 ; cast member -> cast member of
     P58:  Q65971578 ; screenwriter -> wrote script of
     P166: Q66796038 ; award received -> award received by
+    P26: P26        ; spouse -> spouse
   }
 }
 

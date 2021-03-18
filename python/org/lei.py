@@ -149,7 +149,6 @@ entity_categories = {
 
 # Read registers.
 bizregs = sling.org.bizreg.BusinessRegistries(kb)
-regauth = bizregs.by_auth_code()
 
 # Build country and region table.
 countries = {}
@@ -454,7 +453,7 @@ for line in leifile:
     reg_auth_id = reg_auth[x_registration_authority_id]
     entity_id = reg_auth[x_registration_authority_entity_id]
     if reg_auth_id != None and reg_auth_id != "RA888888" and entity_id != None:
-      register = regauth.get(reg_auth_id)
+      register = bizregs.get_regauth(reg_auth_id)
       if register is None:
         unknown_regauth[reg_auth_id] = unknown_regauth.get(reg_auth_id, 0) + 1
       else:

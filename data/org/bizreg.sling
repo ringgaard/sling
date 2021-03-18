@@ -168,8 +168,15 @@
   owner: Q4056112
   url: "http://abr.business.gov.au/"
 
+  transform: {
+    "(\\d{2}) (\\d{3}) (\\d{3}) (\\d{3})": "%s%s%s%s"  ; remove spaces
+
+    "\\d{3} \\d{3} \\d{3}": ">RA000014"  ; ACN number
+    "\\d{9}": ">RA000014"  ; ACN number
+  }
+
   company_property: P3548
-  format: "[0-9]{11}" ; Australian Business Number (ABN)
+  format: "\\d{11}" ; Australian Business Number (ABN)
 }
 {
   registration_authority_code: "RA000014"
@@ -352,7 +359,12 @@
   url: "www.bahamas.gov.bs"
 
   opencorporates_jurisdiction: "bs"
-  format: "\\d{6}[A-Z]"
+  transform: {
+    "(\\d{5,6}) ([A-Z])": "%s%s"  ; 99999 X
+    "(\\d{2,3}),(\\d{3})\s?([A-Z])": "%s%s%s"  ; 999,999X and 999,999 X
+    "(\\d{5,6})": "%sB"         ; 99999 and 999999
+  }
+  format: "\\d+[A-Z]"
 }
 {
   registration_authority_code: "RA000021"
@@ -943,8 +955,11 @@
   url: "http://www.brra.bg/Default.ra"
 
   opencorporates_jurisdiction: "bg"
-  format: "([01]\\d|20)-([01]\\d|2[0-3])-\\d{6}"
-  opencorporates_format: "20\\d{7}"
+  transform: {
+    "BG(\\d{9})": "%s" ; remove BG prefix
+    "BG (\\d{9})": "%s" ; remove BG prefix
+  }
+  format: "\\d{9}"
 }
 {
   registration_authority_code: "RA000066"
@@ -1071,7 +1086,10 @@
   url: "http://www.corporationscanada.ic.gc.ca/eic/site/cd-dgc.nsf/eng/home"
 
   opencorporates_jurisdiction: "ca"
-  format: "\\d{7}"
+  transform: {
+    "(\\d{6,7})-(\\d)": "%s%s" ; remove slash
+  }
+  format: "\\d{7,8}"
 }
 {
   registration_authority_code: "RA000073"
@@ -2699,6 +2717,9 @@
   company_property: P1616
   branch_property: P3215
   opencorporates_jurisdiction: "fr"
+  transform: {
+    "(\\d{3}) (\\d{3}) (\\d{3})": "%s%s%s" ; remove spaces
+  }
   format: "\\d{9}"
 }
 {
@@ -5973,10 +5994,13 @@
   native_owner_name: "Guernsey Registry"
   url: "http://www.guernseyregistry.com/"
 
+  ; see https://wiki.opencorporates.com/qa/qa_public/register_problems/guernsey
   opencorporates_jurisdiction: "gg"
-  opencorporates_prefix: "1"
-  format: "1\\-\\d{5}"
-  ;transform: {"_": "-"}
+  transform: {
+    "(\\d{5})": "1-%s"
+    "N/A": nil
+  }
+  format: "1-\\d{5}"
 }
 {
   registration_authority_code: "RA000666"
@@ -5992,9 +6016,10 @@
   url: "http://www.guernseyregistry.com/"
 
   opencorporates_jurisdiction: "gg"
-  opencorporates_prefix: "7"
-  format: "7\\-\\d+"
-  ;transform: {"_": "-"}
+  transform: {
+    "(\\d+)": "7-%s"
+  }
+  format: "7-\\d+"
 }
 {
   registration_authority_code: "RA000667"
@@ -6010,9 +6035,10 @@
   url: "http://www.guernseyregistry.com/"
 
   opencorporates_jurisdiction: "gg"
-  opencorporates_prefix: "2"
-  format: "2\\-\\d{4}"
-  ;transform: {"_": "-"}
+  transform: {
+    "(\\d+)": "2-%s"
+  }
+  format: "2-\\d+"
 }
 {
   registration_authority_code: "RA000668"
@@ -6028,9 +6054,10 @@
   url: "http://www.guernseyregistry.com/"
 
   opencorporates_jurisdiction: "gg"
-  opencorporates_prefix: "6"
-  format: "6\\-\\d+"
-  ;transform: {"_": "-"}
+  transform: {
+    "(\\d+)": "6-%s"
+  }
+  format: "6-\\d+"
 }
 {
   registration_authority_code: "RA000384"
@@ -6218,7 +6245,11 @@
   url: "http://www.mca.gov.in/MCA21/"
 
   opencorporates_jurisdiction: "in"
-  format: "U[0-9A-Z]{20}"
+  ; L: listed company (CIN)
+  ; U: unlisted company (CIN)
+  ; XXX-9999: limited liability partnership (LLPIN)
+  ; see https://www.corporate-cases.com/2012/01/Corporate-Identity-Number.html
+  format: "([LU][0-9A-Z]{20}|[A-Z]{3}-[0-9]{4})"
 }
 {
   registration_authority_code: "RA000395"
@@ -6228,7 +6259,9 @@
   jurisdiction_name: "India"
   jurisdiction: Q668
   register_name: "Securities Commission"
+  register: Q5779171
   owner_name: "Securities and Exchange Board of India (SEBI)"
+  owner: Q2615692
   url: "http://www.sebi.gov.in/sebiweb/"
 }
 {
@@ -6568,8 +6601,12 @@
   url: "http://www1.touki.or.jp/"
 
   company_property: P3225
+  opencorporates_jurisdiction: "jp"
+  transform: {
+    "(\\d{4})-(\\d{2})-(\\d{6})": "%s%s%s" ; remove dashes
+    "\\d{12}" : jcn_check_digit ; add check digit
+  }
   format: "[1-9]\\d{12}"
-  ;transform: {"-": ""}
 }
 {
   registration_authority_code: "RA000413"
@@ -7011,7 +7048,12 @@
   url: "www.registry.mfsa.com.mt"
 
   opencorporates_jurisdiction: "mt"
-  format: "C\\d{5}"
+  transform: {
+    "C (\\d+)": "C%s"  ; C 99999
+    "C-(\\d+)": "C%s"  ; C-99999
+    "n\.a\.": nil
+  }
+  format: "C\\d+"
 }
 {
   registration_authority_code: "RA000444"
@@ -7765,8 +7807,9 @@
   owner_name: "Federal Tax Service (Ministry of Finance)"
   url: "https://www.nalog.ru/eng/"
 
-  company_property: P2391
-  format: "\\d{8}"
+  ; P2391 is for OKPO IDs and not INN IDs
+  ;company_property: P2391
+  format: "\\d{10,13}"
 }
 {
   registration_authority_code: "RA000500"

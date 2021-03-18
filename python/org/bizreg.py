@@ -16,26 +16,6 @@
 
 import re
 
-def transform(companyid, transforms):
-  if transforms != None:
-    for pattern, formatter in transforms:
-      m = re.fullmatch(pattern, companyid)
-      if m != None:
-        if formatter is None:
-          # Discard company number.
-          return None
-        if formatter[0] == ">":
-          # Redirect to another register.
-          return formatter[1:], companyid
-        else:
-          try:
-            companyid = formatter % m.groups()
-          except Exception as e:
-            raise Exception("Error converting " + companyid + " with " +
-                            formatter)
-
-  return companyid
-
 class BusinessRegistries:
   def __init__(self, store):
     self.store = store
@@ -51,6 +31,7 @@ class BusinessRegistries:
     self.n_eu_vat_prefix = store["eu_vat_prefix"]
     self.n_format = store["format"]
     self.n_transform = store["transform"]
+    self.n_jcn_check_digit = store["jcn_check_digit"]
 
     self.n_is = store["is"]
     self.n_opencorporates_id = store["P1320"]
@@ -65,19 +46,20 @@ class BusinessRegistries:
       if regcode in self.regauth: print("Duplicate RA:", regcode)
       self.regauth[regcode] = register
 
-  def by_auth_code(self):
-    return self.regauth
+  def get_regauth(self, ra):
+    return self.regauth.get(ra)
 
-  def companyids(self, register, companyid, source = None):
+  def companyids(self, register, companyid, source=None):
     # Transform company id.
-    companyid = transform(companyid, register[self.n_transform])
+    companyid = self.transform(companyid, register[self.n_transform])
     if type(companyid) is tuple:
       # Redirected to another register.
       register = self.regauth[companyid[0]]
-      companyid = transform(companyid[1], register[self.n_transform])
+      companyid = self.transform(companyid[1], register[self.n_transform])
     if companyid is None: return []
 
     # Check company id format.
+    valid = True
     fmt = register[self.n_format]
     if fmt != None:
       try:
@@ -85,39 +67,39 @@ class BusinessRegistries:
       except Exception as e:
         print("fmt", fmt)
         print("companyid", companyid)
-        raise Exception("Error matching " + companyid + " with " + fmt)
+        raise Exception("Error matching " + companyid + " with " + str(fmt))
       if m is None:
+        valid = False
         regname = register[self.n_registration_authority_code]
         place = register[self.n_jurisdiction_name]
-        print("Invalid", regname, place, "company id:",
-              companyid, "for", source)
-        return []
+        print("Invalid", regname, place, "id:", companyid, "for", source)
 
-    # Authoritative company register.
     slots = []
-    company_property = register[self.n_company_property]
-    if company_property != None:
-      slots.append((company_property, companyid))
+    if valid:
+      # Authoritative company register.
+      company_property = register[self.n_company_property]
+      if company_property != None:
+        slots.append((company_property, companyid))
 
-    # OpenCorporates company number.
-    jurisdiction = register[self.n_opencorporates_jurisdiction]
-    if jurisdiction != None:
-      prefix = register[self.n_opencorporates_prefix]
-      if prefix is None:
-        opencorp_id = jurisdiction + "/" + companyid
-      elif len(prefix) > 0:
-        opencorp_id = jurisdiction + "/" + prefix + "_" + companyid
-      else:
-        opencorp_id = None
-        code = register[self.n_registration_authority_code]
-        print("Missing opencorporates prefix for", code, companyid)
-      if opencorp_id != None:
-        slots.append((self.n_opencorporates_id, opencorp_id))
+      # OpenCorporates company number.
+      jurisdiction = register[self.n_opencorporates_jurisdiction]
+      if jurisdiction != None:
+        prefix = register[self.n_opencorporates_prefix]
+        if prefix is None:
+          opencorp_id = jurisdiction + "/" + companyid
+        elif len(prefix) > 0:
+          opencorp_id = jurisdiction + "/" + prefix + "_" + companyid
+        else:
+          opencorp_id = None
+          code = register[self.n_registration_authority_code]
+          print("Missing opencorporates prefix for", code, companyid)
+        if opencorp_id != None:
+          slots.append((self.n_opencorporates_id, opencorp_id))
 
-    # EU VAT number.
-    euvat_prefix = register[self.n_eu_vat_prefix]
-    if euvat_prefix != None:
-      slots.append((self.n_eu_vat_number, euvat_prefix + companyid))
+      # EU VAT number.
+      euvat_prefix = register[self.n_eu_vat_prefix]
+      if euvat_prefix != None:
+        slots.append((self.n_eu_vat_number, euvat_prefix + companyid))
 
     # Add company id as catalog code.
     if len(slots) == 0:
@@ -132,4 +114,37 @@ class BusinessRegistries:
         }))
 
     return slots
+
+  def transform(self, companyid, transforms):
+    if transforms != None:
+      for pattern, formatter in transforms:
+        # Check if pattern matches.
+        m = re.fullmatch(pattern, companyid)
+        if m is None: continue
+
+        if formatter is None:
+          # Discard company number.
+          return None
+        elif formatter == self.n_jcn_check_digit:
+          # Compute Japanese Corporate Number check digit
+          if len(companyid) == 12:
+            sum = 0
+            for i in range(0, 12):
+              p = ord(companyid[i]) - ord('0')
+              q = (i + 1) % 2 + 1
+              sum += p * q
+            check = 9 - sum % 9
+            if check == 0: check = 1
+            companyid = str(check) + companyid
+        elif formatter[0] == ">":
+          # Redirect to another register.
+          return formatter[1:], companyid
+        else:
+          try:
+            companyid = formatter % m.groups()
+          except Exception as e:
+            raise Exception("Error converting " + str(companyid) + " with " +
+                            str(formatter))
+
+    return companyid
 
