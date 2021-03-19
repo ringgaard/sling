@@ -7,8 +7,8 @@
   country: Q889
   jurisdiction_name: "Afghanistan"
   jurisdiction: Q889
-  register_name: "Afghanistan Central Business Registry (Ministry of Commerce and Industries)"
-  owner_name: "Afghanistan Central Business Registry (Ministry of Commerce and Industries)"
+  register_name: "Afghanistan Central Business Registry"
+  owner_name: "Ministry of Commerce and Industries"
   url: "http://www.acbr.gov.af/"
 }
 {
@@ -31,7 +31,7 @@
   country: Q262
   jurisdiction_name: "Algeria"
   jurisdiction: Q262
-  register_name: "Trade Register"
+  register_name: "Algeria Trade Register"
   native_register_name: "Registre du Commerce"
   owner_name: "National Center of the Trade Register"
   native_owner_name: "Centre National du Registre du Commerce (CNRC)"
@@ -44,7 +44,7 @@
   country: Q228
   jurisdiction_name: "Andorra"
   jurisdiction: Q228
-  register_name: "Register of Commerce"
+  register_name: "Andorra Register of Commerce"
   native_register_name: "Registre de Societats Mercantils"
   url: "http://www.comerc.ad/la-unitat-comerc"
 }
@@ -55,7 +55,7 @@
   country: Q228
   jurisdiction_name: "Andorra"
   jurisdiction: Q228
-  register_name: "Register of Supervised Entities"
+  register_name: "Andorra Register of Supervised Entities"
   native_owner_name: "Institut Nacional Andorrà de Finances (INAF)"
   url: "https://www.inaf.ad/"
 }
@@ -66,7 +66,7 @@
   country: Q916
   jurisdiction_name: "Angola"
   jurisdiction: Q916
-  register_name: "Central Registry of Business Names"
+  register_name: "Angola Central Registry of Business Names"
   native_register_name: "Ficheiro Central de Denominações Sociais"
 }
 {
@@ -76,7 +76,7 @@
   country: Q25228
   jurisdiction_name: "Anguilla"
   jurisdiction: Q25228
-  register_name: "Commercial Registry"
+  register_name: "Anguilla Commercial Registry"
   native_register_name: "Commercial Registry"
   owner_name: "Anguilla Commercial Registry"
   native_owner_name: "Anguilla Commercial Registry"
@@ -89,7 +89,7 @@
   country: Q781
   jurisdiction_name: "Antigua and Barbuda"
   jurisdiction: Q781
-  owner_name: "Intellectual Property and Commerce Office"
+  owner_name: "Antigua and Barbuda Intellectual Property and Commerce Office"
   native_owner_name: "Intellectual Property and Commerce Office"
   url: "http://www.legalaffairs.gov.ag/detail_page.php?page=coming_soon.php"
 }
@@ -100,7 +100,7 @@
   country: Q781
   jurisdiction_name: "Antigua and Barbuda"
   jurisdiction: Q781
-  owner_name: "Financial Services Regulatory Commission"
+  owner_name: "Antigua and Barbuda Financial Services Regulatory Commission"
   native_owner_name: "Financial Services Regulatory Commission"
   url: "http://www.fsrc.gov.ag/"
 }
@@ -113,6 +113,7 @@
   jurisdiction: Q414
   owner_name: "Federal Administration of Public Revenues (AFIP)"
   native_owner_name: "Administración Federal de Ingresos Públicos (AFIP)"
+  owner: Q830277
   url: "http://www.afip.gob.ar/home/index.html"
 }
 {
@@ -122,6 +123,7 @@
   country: Q414
   jurisdiction_name: "Argentina"
   jurisdiction: Q414
+  register_name: "Argentina Registro Nacional de Sociedades"
   native_register_name: "Registro Nacional de Sociedades"
   native_owner_name: "Ministerio de Justicia y Derechos Humanos (Dirección del Registro Nacional de Sociedades)"
   url: "http://www.jus.gob.ar/igj/competencias-de-igj/sociedades-comerciales.aspx"
@@ -133,7 +135,7 @@
   country: Q399
   jurisdiction_name: "Armenia"
   jurisdiction: Q399
-  register_name: "State Register of Legal Entities"
+  register_name: "Armenia State Register of Legal Entities"
   native_register_name: "Հայաստանի Հանրապետության արդարադատության նախարարության իրավաբանական անձանց պետական ռեգիստրի"
   owner_name: "Ministry of Justice of the Republic of Armenia"
   url: "https://www.e-register.am/"
@@ -145,7 +147,7 @@
   country: Q21203
   jurisdiction_name: "Aruba"
   jurisdiction: Q21203
-  register_name: "Trade Register"
+  register_name: "Aruba Trade Register"
   native_register_name: "Handelsregister"
   owner_name: "Chamber of Commerce and Industry Aruba"
   native_owner_name: "Kamer van Koophandel en Nijverheid Aruba"
@@ -185,11 +187,11 @@
   country: Q408
   jurisdiction_name: "Australia"
   jurisdiction: Q408
-  register_name: "Register of Companies"
+  register_name: "Australian Register of Companies"
   native_register_name: "Register of Companies"
   owner_name: "The Australian Securities and Investment Commission"
-  owner: Q4056092
   native_owner_name: "The Australian Securities and Investment Commission (ASIC)"
+  owner: Q4056092
   url: "www.asic.gov.au"
 
   company_property: P3549
@@ -206,7 +208,7 @@
   country: Q408
   jurisdiction_name: "Australia"
   jurisdiction: Q408
-  register_name: "Register of Financial Services Licensees"
+  register_name: "Australian Register of Financial Services Licensees"
   native_register_name: "Register of Financial Services Licensees"
   owner_name: "The Australian Securities and Investment Commission"
   owner: Q4056092
@@ -220,7 +222,7 @@
   country: Q408
   jurisdiction_name: "Australia"
   jurisdiction: Q408
-  register_name: "Register of Indigenous Corporations"
+  register_name: "Australian Register of Indigenous Corporations"
   native_register_name: "Register of Indigenous Corporations"
   owner_name: "Office of the Registrar of Indigenous Corporations (ORIC)"
   native_owner_name: "Office of the Registrar of Indigenous Corporations (ORIC)"
@@ -233,10 +235,11 @@
   country: Q408
   jurisdiction_name: "Australia"
   jurisdiction: Q408
-  register_name: "Registrable Superannuation Entities (RSE) Register"
+  register_name: "Australian Registrable Superannuation Entities (RSE) Register"
   native_register_name: "Registrable Superannuation Entities (RSE) Register"
   owner_name: "Australian Prudential Regulation Authority (APRA)"
   native_owner_name: "Australian Prudential Regulation Authority (APRA)"
+  owner: Q4056088
   url: "https://www.apra.gov.au/register-superannuation"
 }
 {
@@ -246,11 +249,16 @@
   country: Q40
   jurisdiction_name: "Austria"
   jurisdiction: Q40
-  register_name: "Commercial Register"
+  register_name: "Commercial Register of Austria"
   native_register_name: "Firmenbuch"
+  register: Q1419112
   owner_name: "Federal Ministry of Justice"
   native_owner_name: "Bundesministerium für Justiz"
+  owner: Q872203
   url: "https://www.justiz.gv.at/web2013/html/default/2c9484852308c2a601240b693e1c0860.de.html"
+
+  company_property: P5285
+  format: "[1-9][0-9]{4,5}[a-z]"
 }
 {
   registration_authority_code: "RA000018"
@@ -259,8 +267,9 @@
   country: Q40
   jurisdiction_name: "Austria"
   jurisdiction: Q40
-  owner_name: "Financial Market Authority"
+  owner_name: "Financial Market Authority of Austria"
   native_owner_name: "Finanzmarktaufsicht"
+  owner: P1278/529900UTJ8SZV8VFTQ77
   url: "https://www.fma.gv.at/en/"
 }
 {
@@ -300,10 +309,11 @@
   country: Q40
   jurisdiction_name: "Austria"
   jurisdiction: Q40
-  register_name: "Register of Associations"
+  register_name: "Austrian Register of Associations"
   native_register_name: "Zentralen Vereinsregister (ZVR)"
   owner_name: "Ministry of the Interior"
   native_owner_name: "Bundesministerium für Inneres"
+  owner: Q358589
   url: "https://citizen.bmi.gv.at/at.gv.bmi.fnsweb-p/zvn/public/Registerauszug"
 }
 {
@@ -313,7 +323,7 @@
   country: Q40
   jurisdiction_name: "Austria"
   jurisdiction: Q40
-  register_name: "Parishes"
+  register_name: "Austrian Parishes"
   native_register_name: "Pfarrgemeinden"
   owner_name: "Evangelical Church of Austria"
   native_owner_name: "Evangelische Kirche in Österreich"
@@ -326,7 +336,7 @@
   country: Q40
   jurisdiction_name: "Austria"
   jurisdiction: Q40
-  register_name: "Funds register"
+  register_name: "Austria Funds register"
   native_register_name: "Bundes-Fondsregister"
   owner_name: "Federal Ministry of the Interior"
   owner: Q358589
@@ -340,7 +350,7 @@
   country: Q227
   jurisdiction_name: "Azerbaijan"
   jurisdiction: Q227
-  register_name: "State Register of Commercial Entities"
+  register_name: "State Register of Commercial Entities of Azerbaijan"
   native_register_name: "Kommersiya qurumlarının dövlət reyestri"
   owner_name: "Ministry of Taxes of the Republic of Azerbaijan"
   url: "www.taxes.gov.az"
@@ -352,7 +362,7 @@
   country: Q778
   jurisdiction_name: "Bahamas"
   jurisdiction: Q778
-  register_name: "Companies Register"
+  register_name: "Bahamas Companies Register"
   native_register_name: "Companies Register"
   owner_name: "Registrar General Department of the Bahamas"
   native_owner_name: "Registrar General Department of the Bahamas"
@@ -373,8 +383,8 @@
   country: Q398
   jurisdiction_name: "Bahrain"
   jurisdiction: Q398
-  register_name: "Commercial Registration"
-  owner_name: "Bahrain Ministry Of Industry And Commerce"
+  register_name: "Bahrain Commercial Registration"
+  owner_name: "Bahrain Ministry of Industry and Commerce"
   native_owner_name: "وزارة الصناعة والتجارة"
   url: "https://www.business.gov.bh/"
 
@@ -387,7 +397,7 @@
   country: Q902
   jurisdiction_name: "Bangladesh"
   jurisdiction: Q902
-  register_name: "Companies Register"
+  register_name: "Bangladesh Companies Register"
   owner_name: "Office of the Registrar of Joint Stock Companies and Firms"
   owner: Q55631392
   url: "www.roc.gov.bd"
@@ -415,7 +425,7 @@
   country: Q184
   jurisdiction_name: "Belarus"
   jurisdiction: Q184
-  register_name: "United State Register of Legal Entities and Individual Entrepreneurs"
+  register_name: "Belarus United State Register of Legal Entities and Individual Entrepreneurs"
   native_register_name: "Единый государственный регистр юридических лиц и индивидуальных предпринимателей"
   owner_name: "Ministry of Justice of the Republic of Belarus"
   owner: Q3918962
@@ -430,19 +440,23 @@
   country: Q31
   jurisdiction_name: "Belgium"
   jurisdiction: Q31
-  register_name: "Crossroad Bank of Enterprises"
+  register_name: "Belgian Crossroad Bank of Enterprises"
   register: Q16626729
-  native_register_name: "in Dutch: Kruispuntbank van Ondernemingen; in French: Banque-Carrefour des  Entreprises; in German: Zentrale Unternehmensdatenbank"
+  native_register_name: "Kruispuntbank van Ondernemingen"@/lang/nl
+  native_register_name: "Banque-Carrefour des  Entreprises"@/lang/fr
+  native_register_name: "Zentrale Unternehmensdatenbank"@/lang/de
   owner_name: "Federal Public Service Economy (Ministry of Economy)"
-  native_owner_name: "Federale Overheidsdienst Economie / Service Public Fédéral Economie"
+  native_owner_name: "Federale Overheidsdienst Economie"@/lang/de
+  native_owner_name: "Service Public Fédéral Economie"@/lang/fr
   owner: Q1479660
   url: "http://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=en"
 
   company_property: P3376
-  format: "0?\\d{3}\\.?\\d{3}\\.?\\d{3}"
   opencorporates_jurisdiction: "be"
-  opencorporates_format: "0\\d{9}"
-  ;transform: {".": ""}
+  transform: {
+    "(\\d{3})\\.(\\d{3})\\.(\\d{3})": "%s%s%s" ; remove periods
+  }
+  format: "0\\d{9}"
 }
 {
   registration_authority_code: "RA000026"
@@ -464,7 +478,7 @@
   country: Q242
   jurisdiction_name: "Belize"
   jurisdiction: Q242
-  register_name: "International Business Companies Registry"
+  register_name: "International Business Companies Registry of Belize"
   native_register_name: "International Business Companies Registry"
   owner_name: "International Business Companies Registry of Belize"
   native_owner_name: "International Business Companies Registry of Belize"
@@ -477,7 +491,7 @@
   country: Q962
   jurisdiction_name: "Benin"
   jurisdiction: Q962
-  owner_name: "Chamber of Commerce and Industry of Benin"
+  owner_name: "Benin Chamber of Commerce and Industry of Benin"
   native_owner_name: "La Chambre de Commerce et d’Industrie du Bénin (CCIB)"
   url: "http://www.ccibenin.org/"
 }
@@ -488,7 +502,7 @@
   country: Q23635
   jurisdiction_name: "Bermuda"
   jurisdiction: Q23635
-  register_name: "Companies Register"
+  register_name: "Bermuda Companies Register"
   native_register_name: "Companies Register"
   owner_name: "Registrar of Companies (Ministry of Economic Development)"
   native_owner_name: "Registrar of Companies (Ministry of Economic Development)"
@@ -515,7 +529,7 @@
   country: Q917
   jurisdiction_name: "Bhutan"
   jurisdiction: Q917
-  register_name: "Company Registry"
+  register_name: "Bhutan Company Registry"
   owner_name: "Company Registry Division, Department of Industry, Ministry of Economic Affairs"
   url: "http://www.moea.gov.bt/content/index.php"
 }
@@ -540,7 +554,7 @@
   country: Q27561
   jurisdiction_name: "Bonaire"
   jurisdiction: Q25396
-  register_name: "Trade Register"
+  register_name: "Trade Register of Bonaire, Sint Eustatius and Saba"
   native_register_name: "Handelsregister"
   owner_name: "Chamber of Commerce and Industry Bonaire"
   native_owner_name: "Kamer van Koophandel en Nijverheid Bonaire"
@@ -552,7 +566,7 @@
   country_code: "BQ"
   country: Q27561
   jurisdiction_name: "Sint Eustatius and Saba"
-  register_name: "Trade Register"
+  register_name: "Trade Register of Bonaire, Sint Eustatius and Saba"
   native_register_name: "Handelsregister"
   owner_name: "Chamber of Commerce and Industry Sint Eustatius and Saba"
   native_owner_name: "Kamer van Koophandel en Nijverheid Sint Eustatius en Saba"
@@ -577,7 +591,7 @@
   country: Q225
   jurisdiction_name: "Republic of Srpska"
   jurisdiction: Q11196
-  register_name: "Register of Business Entities"
+  register_name: "Srpska Register of Business Entities"
   native_register_name: "Registar poslovnih subjekata u Republici Srpskoj"
   owner_name: "Agency for financial, IT and intermediary services (APIF)"
   native_owner_name: "Agencija za posredničke, informatičke i finansijske usluge"
@@ -590,7 +604,7 @@
   country: Q963
   jurisdiction_name: "Botswana"
   jurisdiction: Q963
-  owner_name: "Registrar of Companies and Intellectual Property"
+  owner_name: "Botswana Registrar of Companies and Intellectual Property"
   url: "www.mti.gov.bw"
 }
 {
@@ -606,7 +620,7 @@
   owner_name: "Brazilian Internal Revenue Service"
   native_owner_name: "Receita Federal do Brasil"
   owner: Q10369254
-  url: "http://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/cnpjreva_solicitacao2.asp."
+  url: "http://www.receita.fazenda.gov.br/pessoajuridica/cnpj/cnpjreva/cnpjreva_solicitacao2.asp"
 
   opencorporates_jurisdiction: "br"
   format: "(\\d{14}|\\d{2}\\.\\d{3}\\.\\d{3}\\/\\d{4}\\-\\d{2})"
@@ -925,7 +939,7 @@
   country: Q25305
   jurisdiction_name: "British Virgin Islands"
   jurisdiction: Q25305
-  register_name: "Register of Companies"
+  register_name: "British Virgin Islands Register of Companies"
   native_register_name: "Register of Companies"
   owner_name: "Registry of Corporate Affairs (British Virgin Islands Financial Services Commission)"
   native_owner_name: "Registry of Corporate Affairs (British Virgin Islands Financial Services Commission)"
@@ -938,7 +952,7 @@
   country: Q921
   jurisdiction_name: "Brunei Darussalam"
   jurisdiction: Q921
-  register_name: "Registry of Companies and Business Names"
+  register_name: "Brunei Darussalam Registry of Companies and Business Names"
   owner_name: "Registry of Companies and Business Names (Ministry of Finance)"
 }
 {
@@ -948,7 +962,7 @@
   country: Q219
   jurisdiction_name: "Bulgaria"
   jurisdiction: Q219
-  register_name: "Commercial Register"
+  register_name: "Bulgarian Commercial Register"
   register: Q12297114
   owner_name: "Registry Agency (Ministry of Justice)"
   native_owner_name: "Търговски регистър"
@@ -968,7 +982,7 @@
   country: Q219
   jurisdiction_name: "Bulgaria"
   jurisdiction: Q219
-  owner_name: "Financial Supervision Commission "
+  owner_name: "Bulgarian Financial Supervision Commission"
   native_owner_name: "Financial Supervision Commission "
   url: "http://www.fsc.bg/en/"
 }
@@ -993,7 +1007,7 @@
   country: Q219
   jurisdiction_name: "Bulgaria"
   jurisdiction: Q219
-  register_name: "Register of non-profit legal entities for public benefit"
+  register_name: "Bulgarian Register of non-profit legal entities for public benefit"
   native_register_name: "Портал за електронни административни услуги за юридическите лица с нестопанска цел в обществена полза"
   owner_name: "Ministry of Justice"
   native_owner_name: "Министерство на правосъдието"
@@ -1017,7 +1031,7 @@
   country: Q967
   jurisdiction_name: "Burundi"
   jurisdiction: Q967
-  register_name: "Commercial Registry"
+  register_name: "Burundi Commercial Registry"
   owner_name: "Burundi Investment Promotion Agency (API)"
   native_owner_name: "Agence de promotion de l'investissement au Burundi"
   url: "http://www.investburundi.com/en/"
@@ -1040,7 +1054,7 @@
   country: Q1011
   jurisdiction_name: "Cabo Verde"
   jurisdiction: Q1011
-  register_name: "Funds registration"
+  register_name: "Cabo Verde Funds registration"
   native_register_name: "Organismos de investimento Coletivo"
   owner_name: "Central Bank of Cabo Verde"
   native_owner_name: "Banco de Cabo Verde"
@@ -1053,7 +1067,7 @@
   country: Q424
   jurisdiction_name: "Cambodia"
   jurisdiction: Q424
-  register_name: "Commercial Register"
+  register_name: "Cambodia Commercial Register"
   owner_name: "Ministry of Commerce"
   native_owner_name: "ក្រសួងពាណិជ្ជកម្ម"
   url: "http://www.moc.gov.kh/en-us/"
@@ -1078,7 +1092,7 @@
   country: Q16
   jurisdiction_name: "Canada"
   jurisdiction: Q16
-  register_name: "Corporate Registry"
+  register_name: "Corporate Registry of Canada"
   native_register_name: "Corporate Registry"
   owner_name: "Corporations Canada"
   owner: Q5172549
@@ -1268,7 +1282,7 @@
   country: Q16
   jurisdiction_name: "Nunavut"
   jurisdiction: Q2023
-  register_name: "Corporate Registry (Department of Justice)"
+  register_name: "Nunavut Corporate Registry (Department of Justice)"
   native_register_name: "Corporate Registry (Department of Justice)"
   owner_name: "Corporate Registries"
   native_owner_name: "Corporate Registries"
@@ -1283,7 +1297,7 @@
   country: Q16
   jurisdiction_name: "Yukon"
   jurisdiction: Q2009
-  register_name: "Corporate Registry"
+  register_name: "Yukon Corporate Registry"
   native_register_name: "Corporate Registry"
   owner_name: "Corporate Affairs (Department of Community Services)"
   native_owner_name: "Corporate Affairs (Department of Community Services)"
@@ -1298,7 +1312,7 @@
   country: Q5785
   jurisdiction_name: "Cayman Islands"
   jurisdiction: Q5785
-  register_name: "Registry of Companies"
+  register_name: "Cayman Islands Registry of Companies"
   native_register_name: "Registry of Companies"
   owner_name: "General Registry"
   native_owner_name: "General Registry"
@@ -1322,7 +1336,7 @@
   country: Q929
   jurisdiction_name: "Central African Republic"
   jurisdiction: Q929
-  register_name: "Commercial Registry (Tribunal)"
+  register_name: "Central African Republic Commercial Registry (Tribunal)"
   native_owner_name: "Guichet Unique de Formalite des Enterprises (GUFE)"
 }
 {
@@ -1332,7 +1346,7 @@
   country: Q657
   jurisdiction_name: "Chad"
   jurisdiction: Q657
-  register_name: "Registry of Commerce and Real Estate"
+  register_name: "Chad Registry of Commerce and Real Estate"
   native_register_name: "Registre du Commerce et du Immobilier"
   owner_name: "Registration Service, Company Register (Ministry of Finance)"
   native_owner_name: "Service d'Enregistrement, des Domaines et du Timbre"
@@ -1344,7 +1358,7 @@
   country: Q298
   jurisdiction_name: "Chile"
   jurisdiction: Q298
-  register_name: "Registry of Commerce"
+  register_name: "Chile Registry of Commerce"
   native_register_name: "Registro de Comercio"
   owner_name: "Directorate General of Taxation (Ministry of Finance)"
   native_owner_name: "Dirección General de Tributación (Ministerio de Hacienda)"
@@ -1357,6 +1371,7 @@
   country: Q298
   jurisdiction_name: "Santiago"
   jurisdiction: Q2887
+  register_name: "Santiago Registro de Comercio"
   native_register_name: "Registro de Comercio"
   native_owner_name: "Conservador de Bienes Raíces de Santiago"
   url: "https://www.conservador.cl/portal/"
@@ -1381,7 +1396,7 @@
   country: Q739
   jurisdiction_name: "Colombia"
   jurisdiction: Q739
-  register_name: "Single Business Register"
+  register_name: "Colombia Single Business Register"
   native_register_name: "Registro Único Empresarial (RUE)"
   url: "http://www.rues.org.co/RUES_Web"
 }
@@ -1390,9 +1405,9 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Aburrá Sur "
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  jurisdiction_name: "Aburrá Sur"
+  register_name: "Aburrá Sur Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Aburra Sur Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Aburrá Sur - Itaguí - Antioquia"
   url: "www.ccas.org.co"
@@ -1404,8 +1419,8 @@
   country: Q739
   jurisdiction_name: "Aguachica"
   jurisdiction: Q2309010
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Aguachica Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Aguachica Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Aguachica - Cesar"
   url: "www.camaraaguachica.org.co"
@@ -1417,8 +1432,8 @@
   country: Q739
   jurisdiction_name: "Amazonas"
   jurisdiction: Q40040
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Amazonas Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Amazonas Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Amazonas"
   url: "www.ccamazonas.org.co"
@@ -1428,10 +1443,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Arauca "
+  jurisdiction_name: "Arauca"
   jurisdiction: Q626543
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Arauca Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Arauca Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Arauca"
   url: "www.camaracomercioarauca.com"
@@ -1442,8 +1457,8 @@
   country_code: "CO"
   country: Q739
   jurisdiction_name: "Armenia y del Quindío"
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Armenia y del Quindío Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Armenia y del Quindío Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Armenia y del Quindío"
   url: "www.camaraarmenia.org.co"
@@ -1453,10 +1468,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Barrancabermeja "
+  jurisdiction_name: "Barrancabermeja"
   jurisdiction: Q808830
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Barrancabermeja Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Barrancabermeja  Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Barrancabermeja - Santander"
   url: "www.ccbarranca.org.co"
@@ -1466,10 +1481,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Barranquilla "
+  jurisdiction_name: "Barranquilla"
   jurisdiction: Q62823
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Barranquilla Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Barranquilla Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Barranquilla"
   url: "www.camarabaq.org.co"
@@ -1481,8 +1496,8 @@
   country: Q739
   jurisdiction_name: "Bogotá"
   jurisdiction: Q2841
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Bogotá Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Bogotá Chamber of Commerce"
   owner: Q5795735
   native_owner_name: "Cámara de Comercio de Bogotá"
@@ -1493,10 +1508,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Bucaramanga "
+  jurisdiction_name: "Bucaramanga"
   jurisdiction: Q243766
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Bucaramanga Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Bucaramanga Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Bucaramanga"
   url: "www.camaradirecta.com"
@@ -1506,10 +1521,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Buenaventura "
+  jurisdiction_name: "Buenaventura"
   jurisdiction: Q996581
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Buenaventura Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Buenaventura Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Buenaventura"
   url: "www.ccbun.org"
@@ -1521,8 +1536,8 @@
   country: Q739
   jurisdiction_name: "Buga"
   jurisdiction: Q934753
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Buga Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Buga Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Buga"
   url: "www.ccbuga.org.co"
@@ -1534,8 +1549,8 @@
   country: Q739
   jurisdiction_name: "Cali "
   jurisdiction: Q51103
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Cali Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Cali Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Cali"
   url: "www.ccc.org.co"
@@ -1547,8 +1562,8 @@
   country: Q739
   jurisdiction_name: "Cartagena"
   jurisdiction: Q657461
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Cartagena Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Cartagena Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Cartagena"
   url: "www.cccartagena.org.co"
@@ -1560,8 +1575,8 @@
   country: Q739
   jurisdiction_name: "Cartago"
   jurisdiction: Q30617
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Cartago Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Cartago Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Cartago"
   url: "www.camaracartago.org"
@@ -1573,8 +1588,8 @@
   country: Q739
   jurisdiction_name: "Casanare"
   jurisdiction: Q51090995
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Casanare Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Casanare Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Casanare"
   url: "www.cccasanare.co"
@@ -1584,10 +1599,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Cauca "
+  jurisdiction_name: "Cauca"
   jurisdiction: Q51091018
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Cauca Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Cauca Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Cauca"
   url: "www.cccauca.org.co"
@@ -1599,8 +1614,8 @@
   country: Q739
   jurisdiction_name: "Cúcuta"
   jurisdiction: Q216847
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Cúcuta Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Cúcuta  Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Cúcuta"
   url: "www.cccucuta.org.co"
@@ -1612,8 +1627,8 @@
   country: Q739
   jurisdiction_name: "Chinchiná"
   jurisdiction: Q1073678
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Chinchiná Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Chinchiná Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Chinchiná"
   url: "www.camaradecomerciochinchina.org.co"
@@ -1625,8 +1640,8 @@
   country: Q739
   jurisdiction_name: "Dosquebradas"
   jurisdiction: Q1093584
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Dosquebradas Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Dosquebradas Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Dosquebradas - Risaralda"
   url: "www.camado.org.co"
@@ -1636,10 +1651,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Duitama "
+  jurisdiction_name: "Duitama"
   jurisdiction: Q1011125
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Duitama Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Duitama Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Duitama"
   url: "www.ccduitama.org.co"
@@ -1651,8 +1666,8 @@
   country: Q739
   jurisdiction_name: "Facatativá"
   jurisdiction: Q1947594
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Facatativá Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Facatativá Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Facatativá"
   url: "www.ccfacatativa.org.co"
@@ -1662,10 +1677,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Florencia "
+  jurisdiction_name: "Florencia"
   jurisdiction: Q849859
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Florencia Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Florencia Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Florencia"
   url: "www.ccflorencia.org.co"
@@ -1675,10 +1690,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Girardot "
+  jurisdiction_name: "Girardot"
   jurisdiction: Q186193
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Girardot Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Girardot Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Girardot"
   url: "www.ccgirardot.org"
@@ -1688,10 +1703,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Honda "
+  jurisdiction_name: "Honda"
   jurisdiction: Q9584
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Honda Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Honda Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Honda"
   url: "www.camarahonda.org.co"
@@ -1701,10 +1716,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Ibagué "
+  jurisdiction_name: "Ibagué"
   jurisdiction: Q222755
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Ibagué Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Ibagué Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Ibagué"
   url: "www.ccibague.org"
@@ -1714,10 +1729,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Ipiales "
+  jurisdiction_name: "Ipiales"
   jurisdiction: Q1010094
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Ipiales Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Ipiales Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Ipiales"
   url: "www.ccipiales.org.co"
@@ -1728,8 +1743,8 @@
   country_code: "CO"
   country: Q739
   jurisdiction_name: "La Dorada, Puerto Boyaca, Puerto Salgar y Oriente De Caldas"
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "La Dorada Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "La Dorada, Puerto Boyaca, Puerto Salgar y Oriente De Caldas Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de La Dorada, Puerto Boyaca, Puerto Salgar y Oriente De Caldas"
   url: "www.camaradorada.org.co"
@@ -1739,10 +1754,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "La Guajira "
+  jurisdiction_name: "La Guajira"
   jurisdiction: Q51091047
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "La Guajira Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "La Guajira Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de La Guajira"
   url: "www.camaraguajira.org"
@@ -1754,8 +1769,8 @@
   country: Q739
   jurisdiction_name: "Magangué"
   jurisdiction: Q1011196
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Magangué Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Magangué Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Magangué"
   url: "www.ccmagangue.org.co"
@@ -1766,8 +1781,8 @@
   country_code: "CO"
   country: Q739
   jurisdiction_name: "Magdalena Medio y Nordeste Antioqueño "
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Magdalena Medio Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Magdalena Medio y Nordeste Antioqueño Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Magdalena Medio y Nordeste Antioqueño "
   url: "www.ccmagdalenamedio.org.co"
@@ -1777,9 +1792,9 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Manizales Por Caldas "
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  jurisdiction_name: "Manizales Por Caldas"
+  register_name: "Manizales Por Caldas Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Manizales Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Manizales"
   url: "www.ccmpc.org.co/"
@@ -1790,8 +1805,8 @@
   country_code: "CO"
   country: Q739
   jurisdiction_name: "Medellín Para Antioquia"
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Medellín Para Antioquia Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Medellín Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Medellín"
   url: "www.camaramedellin.com.co"
@@ -1801,10 +1816,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Monteria "
+  jurisdiction_name: "Monteria"
   jurisdiction: Q852725
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Monteria Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Montería Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Monteria"
   url: "www.ccmonteria.org.co"
@@ -1814,10 +1829,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Neiva "
+  jurisdiction_name: "Neiva"
   jurisdiction: Q638260
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Neiva Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Neiva Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Neiva"
   url: "www.ccneiva.org"
@@ -1829,8 +1844,8 @@
   country: Q739
   jurisdiction_name: "Ocaña"
   jurisdiction: Q2283773
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Ocaña Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Ocaña Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Ocaña"
   url: "www.camaraocana.com"
@@ -1841,8 +1856,8 @@
   country_code: "CO"
   country: Q739
   jurisdiction_name: "Oriente Antioqueño"
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Oriente Antioqueño Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Oriente Antioqueño Chamber of Commerce"
   native_owner_name: "Cámara de Comercio del Oriente Antioqueño"
   url: "www.ccoa.org.co"
@@ -1852,10 +1867,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Palmira "
+  jurisdiction_name: "Palmira"
   jurisdiction: Q989858
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Palmira Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Palmira Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Palmira"
   url: "www.ccpalmira.org.co"
@@ -1865,10 +1880,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Pamplona "
+  jurisdiction_name: "Pamplona"
   jurisdiction: Q10282
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Pamplona Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Pamplona Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Pamplona"
   url: "www.camarapamplona.org.co"
@@ -1878,10 +1893,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Pasto "
+  jurisdiction_name: "Pasto"
   jurisdiction: Q320015
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Pasto Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Pasto Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Pasto"
   url: "www.ccpasto.org.co"
@@ -1891,10 +1906,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Pereira "
+  jurisdiction_name: "Pereira"
   jurisdiction: Q51111
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Pereira Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Pereira Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Pereira"
   url: "www.camarapereira.org.co"
@@ -1905,8 +1920,8 @@
   country_code: "CO"
   country: Q739
   jurisdiction_name: "Piedemonte Araucano"
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Piedemonte Araucano Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Piedemonte Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Piedemonte"
   url: "www.camarapiedemonte.com"
@@ -1918,8 +1933,8 @@
   country: Q739
   jurisdiction_name: "Putumayo"
   jurisdiction: Q51091026
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Putumayo Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Putumayo Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Putumayo"
   url: "www.ccputumayo.org.co"
@@ -1931,8 +1946,8 @@
   country: Q739
   jurisdiction_name: "Chocó"
   jurisdiction: Q51091015
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Chocó Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Chocó  Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Chocó"
   url: "www.ccq.org.co"
@@ -1943,8 +1958,8 @@
   country_code: "CO"
   country: Q739
   jurisdiction_name: "San Andrés Islas"
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "San Andrés Islas Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "San Andrés Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de San Andrés"
   url: "www.camarasai.org"
@@ -1956,8 +1971,8 @@
   country: Q739
   jurisdiction_name: "San José"
   jurisdiction: Q16553
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "San José Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "San José Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de San José"
   url: "www.camarasanjose.org.co"
@@ -1969,8 +1984,8 @@
   country: Q739
   jurisdiction_name: "Santa Marta"
   jurisdiction: Q209016
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Santa Marta Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Santa Marta Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Santa Marta"
   url: "www.ccsm.org.co"
@@ -1980,10 +1995,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Santa Rosa de Cabal "
+  jurisdiction_name: "Santa Rosa de Cabal"
   jurisdiction: Q955068
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Santa Rosa de Cabal Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Santa Rosa de Cabal Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Santa Rosa de Cabal"
   url: "www.camarasantarosa.org"
@@ -1993,10 +2008,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Sevilla "
+  jurisdiction_name: "Sevilla"
   jurisdiction: Q8717
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Sevilla Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Sevilla Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Sevilla"
   url: "www.camcciosevilla.org.co"
@@ -2008,8 +2023,8 @@
   country: Q739
   jurisdiction_name: "Sincelejo"
   jurisdiction: Q1043513
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Sincelejo Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Sincelejo Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Sincelejo"
   url: "www.ccsincelejo.org"
@@ -2019,10 +2034,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Sogamoso "
+  jurisdiction_name: "Sogamoso"
   jurisdiction: Q989996
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Sogamoso Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Sogamoso Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Sogamoso"
   url: "www.camarasogamoso.org"
@@ -2032,9 +2047,9 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Sur y Oriente del Tolima "
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  jurisdiction_name: "Sur y Oriente del Tolima"
+  register_name: "Sur y Oriente del Tolima Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Sur y Oriente del Tolima Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Sur y Oriente del Tolima"
   url: "www.ccsurortolima.org.co"
@@ -2044,10 +2059,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Tuluá "
+  jurisdiction_name: "Tuluá"
   jurisdiction: Q1002577
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Tuluá Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Tuluá Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Tuluá"
   url: "www.camaratulua.org"
@@ -2057,10 +2072,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Tumaco "
+  jurisdiction_name: "Tumaco"
   jurisdiction: Q1005555
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Tumaco Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Tumaco Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Tumaco"
   url: "www.cctumaco.org"
@@ -2070,10 +2085,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Tunja "
+  jurisdiction_name: "Tunja"
   jurisdiction: Q236744
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Tunja Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Tunja  Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Tunja"
   url: "www.ccomerciotunja.org.co"
@@ -2083,10 +2098,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Urabá "
+  jurisdiction_name: "Urabá"
   jurisdiction: Q2361249
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Urabá Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Urabá Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Urabá"
   url: "www.ccuraba.org.co"
@@ -2096,10 +2111,10 @@
   country_name: "Colombia"
   country_code: "CO"
   country: Q739
-  jurisdiction_name: "Valledupar "
+  jurisdiction_name: "Valledupar"
   jurisdiction: Q376903
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Valledupar Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Valledupar Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Valledupar"
   url: "www.ccvalledupar.org.co"
@@ -2111,8 +2126,8 @@
   country: Q739
   jurisdiction_name: "Villavicencio"
   jurisdiction: Q749224
-  register_name: "Business register, the single bidders register, the non-profit organizations register"
-  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro."
+  register_name: "Villavicencio Business register"
+  native_register_name: "Registro Mercantil, Registro único de proponentes y Registro de entidades sin ánimo de lucro"
   owner_name: "Villavicencio Chamber of Commerce"
   native_owner_name: "Cámara de Comercio de Villavicencio"
   url: "www.ccv.org.co"
@@ -2124,7 +2139,7 @@
   country: Q3503
   jurisdiction_name: "Congo"
   jurisdiction: Q3503
-  register_name: "Business Formalities Centre"
+  register_name: "Congo Business Formalities Centre"
   native_register_name: "Centre de formalités des entreprises (CFE)"
 }
 {
@@ -2134,7 +2149,7 @@
   country: Q26988
   jurisdiction_name: "Cook Islands"
   jurisdiction: Q26988
-  register_name: "Registry of Companies"
+  register_name: "Cook Islands Registry of Companies"
   owner_name: "Financial Supervisory Commission"
   url: "www.fsc.gov.ck"
 }
@@ -2145,7 +2160,7 @@
   country: Q26988
   jurisdiction_name: "Cook Islands"
   jurisdiction: Q26988
-  register_name: "Companies Register"
+  register_name: "Cook Islands Companies Register"
   owner_name: "Ministry of Justice"
   url: "http://www.justice.gov.ck/registry/company-registration"
 }
@@ -2156,7 +2171,7 @@
   country: Q800
   jurisdiction_name: "Costa Rica"
   jurisdiction: Q800
-  register_name: "Register of Legal Persons"
+  register_name: "Costa Rica Register of Legal Persons"
   native_register_name: "Registro de Personas Jurídicas"
   owner_name: "National Register of Costa Rica"
   native_owner_name: "Registro Nacional República de Costa Rica"
@@ -2169,6 +2184,7 @@
   country: Q1008
   jurisdiction_name: "Côte d'Ivoire"
   jurisdiction: Q1008
+  register_name: "Côte d'Ivoire Registre du Commerce et du Crédit Mobilier"
   native_register_name: "Registre du Commerce et du Crédit Mobilier"
   native_owner_name: "Greffe du Tribunal de Commerce"
   url: "http://www.cepici.gouv.ci/en/"
@@ -2182,7 +2198,7 @@
   jurisdiction: Q224
   register_name: "Croatian Court Registry"
   native_register_name: "Sudski registrar"
-  owner_name: "Croatian Court Registry (Ministry of Justice)"
+  owner_name: "Ministry of Justice"
   native_owner_name: "Sudski registar Ministarstva pravosuđa Republike Hrvatske"
   url: "https://sudreg.pravosudje.hr/registar/f?p=150:1"
 }
@@ -2205,7 +2221,7 @@
   country: Q224
   jurisdiction_name: "Croatia"
   jurisdiction: Q224
-  register_name: "Crafts Register"
+  register_name: "Croatian Crafts Register"
   native_register_name: "Obrtni Registar"
   owner_name: "Ministry of the Economy, Entrepreneurship and Crafts"
   native_owner_name: "Ministarstvo gospodarstva poduzetništva i obrta"
@@ -2218,7 +2234,7 @@
   country: Q224
   jurisdiction_name: "Croatia"
   jurisdiction: Q224
-  register_name: "Register of Business Entities"
+  register_name: "Croatian Register of Business Entities"
   native_register_name: "Registar poslovnih subjekata"
   owner_name: "Croatian bureau of statistics"
   owner: Q3513788
@@ -2233,7 +2249,7 @@
   country: Q224
   jurisdiction_name: "Croatia"
   jurisdiction: Q224
-  register_name: "Register of legal persons of the Catholic Church"
+  register_name: "Croatian Register of legal persons of the Catholic Church"
   native_register_name: "Evidencija pravnih osoba Katoličke Crkve"
   owner_name: "Ministry of Public Administration"
   native_owner_name: "Ministarstvo uprave Republike Hrvatske"
@@ -2246,7 +2262,7 @@
   country: Q224
   jurisdiction_name: "Croatia"
   jurisdiction: Q224
-  register_name: "Register of Non-profit Organizations"
+  register_name: "Croatian Register of Non-profit Organizations"
   native_register_name: "Registar neprofitnih organizacija"
   owner_name: "Ministry of Finance"
   native_owner_name: "Ministarstvo financija Republike Hrvatske"
@@ -2259,7 +2275,7 @@
   country: Q224
   jurisdiction_name: "Croatia"
   jurisdiction: Q224
-  register_name: "Register of Budget Users"
+  register_name: "Croatian Register of Budget Users"
   native_register_name: "Popis proračunskih korisnika"
   owner_name: "Ministry of Finance"
   native_owner_name: "Ministarstvo financija Republike Hrvatske"
@@ -2272,6 +2288,7 @@
   country: Q241
   jurisdiction_name: "Cuba"
   jurisdiction: Q241
+  native_register_name: "Cuba Registro Estatal de Empresas y Unidades Presupuestadas"
   native_register_name: "Registro Estatal de Empresas y Unidades Presupuestadas"
   owner_name: "Statistics and Information National Office"
   native_owner_name: "Oficina Nacional de Estadística e Información"
@@ -2284,6 +2301,7 @@
   country: Q241
   jurisdiction_name: "Cuba"
   jurisdiction: Q241
+  native_register_name: "Cuba Registro Mercantil"
   native_register_name: "Registro Mercantil"
   owner_name: "Ministry of Justice"
   native_owner_name: "Ministerio de Justicia"
@@ -2296,7 +2314,7 @@
   country: Q25279
   jurisdiction_name: "Curaçao"
   jurisdiction: Q25279
-  register_name: "Trade Register"
+  register_name: "Curaçao Trade Register"
   native_register_name: "Handelsregister"
   owner_name: "Chamber of Commerce and Industry Curaçao"
   native_owner_name: "Kamer van Koophandel & Nijverheid Curaçao"
@@ -2311,7 +2329,7 @@
   country: Q229
   jurisdiction_name: "Cyprus"
   jurisdiction: Q229
-  register_name: "Companies Section"
+  register_name: "Cyprus Companies Section"
   owner_name: "Department of Registrar of Companies and Official Receiver"
   url: "http://www.mcit.gov.cy/mcit/drcor/drcor.nsf/index_en/index_en?OpenDocument"
 
@@ -2340,10 +2358,10 @@
   country: Q213
   jurisdiction_name: "Czech Republic"
   jurisdiction: Q213
-  register_name: "Commercial Register"
+  register_name: "Czech Commercial Register"
   native_register_name: "Obchodní rejstřík"
   owner_name: "Ministry of Justice"
-  owner: Q2983190
+  owner: Q1661653
   native_owner_name: "Ministerstvo spravedlnosti"
   url: "https://or.justice.cz/ias/ui/rejstrik"
   company_property: P4156
@@ -2356,7 +2374,7 @@
   country: Q213
   jurisdiction_name: "Czech Republic"
   jurisdiction: Q213
-  register_name: "Federal Register"
+  register_name: "Czech Federal Register"
   native_register_name: "Nadační rejstřík"
 
   company_property: P4156
@@ -2369,7 +2387,7 @@
   country: Q213
   jurisdiction_name: "Czech Republic"
   jurisdiction: Q213
-  register_name: "Register of Foundations"
+  register_name: "Czech Register of Foundations"
   native_register_name: "Nadační rejstřík"
 
   company_property: P4156
@@ -2382,7 +2400,7 @@
   country: Q213
   jurisdiction_name: "Czech Republic"
   jurisdiction: Q213
-  register_name: "Register of Institutes"
+  register_name: "Czech Register of Institutes"
   native_register_name: "Rejstřík ústavů"
 
   company_property: P4156
@@ -2395,7 +2413,7 @@
   country: Q213
   jurisdiction_name: "Czech Republic"
   jurisdiction: Q213
-  register_name: "Register of Public Service Companies"
+  register_name: "Czech Register of Public Service Companies"
   native_register_name: "Rejstřík obecně prospěšných společnost"
 
   company_property: P4156
@@ -2408,7 +2426,7 @@
   country: Q213
   jurisdiction_name: "Czech Republic"
   jurisdiction: Q213
-  register_name: "Register of Economic Entities"
+  register_name: "Czech Register of Economic Entities"
   native_register_name: "Registr ekonomických subjektů"
   owner_name: "Ministry of Finance"
   native_owner_name: "Ministerstvo financi"
@@ -2424,7 +2442,7 @@
   country: Q213
   jurisdiction_name: "Czech Republic"
   jurisdiction: Q213
-  register_name: "Evidence of trust funds"
+  register_name: "Czech Evidence of trust funds"
   native_register_name: "Evidence svěřenských fondů"
   owner_name: "Ministry of Justice"
   native_owner_name: "Ministerstvo spravedlnosti"
@@ -2440,7 +2458,7 @@
   country: Q974
   jurisdiction_name: "Democratic Republic of the Congo"
   jurisdiction: Q974
-  register_name: "Business Registry"
+  register_name: "Congo Business Registry"
   native_register_name: "Registre du Commerce et du Crédit Mobilier (RCCM)"
   native_owner_name: "Guichet Unique de Création d’Entreprise (Ministere de la Justice et Droits Humains)"
   url: "http://fr.guichetunique.cd/"
@@ -2452,7 +2470,7 @@
   country: Q35
   jurisdiction_name: "Denmark"
   jurisdiction: Q35
-  register_name: "Central Business Register"
+  register_name: "Danish Central Business Register"
   register: Q795419
   native_register_name: "Centrale Virksomhedsregister"
   owner_name: "Danish Business Authority"
@@ -2489,7 +2507,7 @@
   country: Q977
   jurisdiction_name: "Djibouti"
   jurisdiction: Q977
-  owner_name: "Chamber of Commerce"
+  owner_name: "Djibouti Chamber of Commerce"
   native_owner_name: "Chambre de Commerce"
   url: "http://www.ccd.dj/"
 }
@@ -2500,7 +2518,7 @@
   country: Q784
   jurisdiction_name: "Dominica"
   jurisdiction: Q784
-  register_name: "National Companies and Intellectual Property Registry"
+  register_name: "Dominica National Companies and Intellectual Property Registry"
   native_register_name: "National Companies and Intellectual Property Registry"
   owner_name: "Companies & Intellectual Property Office (CIPO)"
   native_owner_name: "Companies & Intellectual Property Office (CIPO)"
@@ -2513,7 +2531,7 @@
   country: Q786
   jurisdiction_name: "Dominican Republic"
   jurisdiction: Q786
-  owner_name: "National Office of Industrial Property"
+  owner_name: "Dominican National Office of Industrial Property"
   native_owner_name: "Oficina Nacional de la Propiedad Industrial (ONAPI)"
   url: "http://www.onapi.gob.do/busqueda-consulta.html"
 
@@ -2526,6 +2544,7 @@
   country: Q786
   jurisdiction_name: "Dominican Republic"
   jurisdiction: Q786
+  register_name: "Dominican Registro Mercantil"
   native_register_name: "Registro Mercantil"
   owner_name: "Chamber of Commerce and Production of Santo Domingo"
   native_owner_name: "Cámara de Comercio y Producción Santo Domingo"
@@ -2550,7 +2569,7 @@
   country: Q736
   jurisdiction_name: "Ecuador"
   jurisdiction: Q736
-  register_name: "National Registry of Statistics and Census"
+  register_name: "Ecuador National Registry of Statistics and Census"
   native_register_name: "Registro Nacional de Estadística y Censos"
   native_owner_name: "Instituto Nacional de Estadística y Censos"
   url: "http://www.ecuadorencifras.gob.ec/sistema-integrado-de-consultas-redatam/"
@@ -2562,7 +2581,7 @@
   country: Q736
   jurisdiction_name: "Ecuador"
   jurisdiction: Q736
-  owner_name: "Superintendence of Companies and Securities"
+  owner_name: "Ecuador Superintendence of Companies and Securities"
   native_owner_name: "Superintendencia de Compañias, Valores y Seguros"
   url: "http://www.supercias.gob.ec/portalinformacion/portal/"
 }
@@ -2573,6 +2592,7 @@
   country: Q736
   jurisdiction_name: "Ecuador"
   jurisdiction: Q736
+  native_register_name: "Ecuador Registro Único de Contribuyentes"
   native_register_name: "Registro Único de Contribuyentes (RUC)"
   native_owner_name: "Servicio de Rentas Internas (SRI)"
   url: "https://declaraciones.sri.gob.ec/sri-en-linea/#/SriRucWeb/ConsultaRuc/Consultas/consultaRuc"
@@ -2584,7 +2604,7 @@
   country: Q79
   jurisdiction_name: "Egypt"
   jurisdiction: Q79
-  register_name: "Commercial Register"
+  register_name: "Commercial Register of Egypt"
   owner_name: "Cairo Chamber of Commerce"
   url: "http://en.cairochamber.org.eg/"
 }
@@ -2595,6 +2615,7 @@
   country: Q792
   jurisdiction_name: "El Salvador"
   jurisdiction: Q792
+  register_name: "El Salvador Registro de Comercio"
   native_register_name: "Registro de Comercio"
   owner_name: "National Registers Center"
   native_owner_name: "Centro Nacional de Registros"
@@ -2607,7 +2628,7 @@
   country: Q191
   jurisdiction_name: "Estonia"
   jurisdiction: Q191
-  register_name: "Commercial Register"
+  register_name: "Estonia Commercial Register"
   native_register_name: "Äriregister"
   owner_name: "Centre of Registers and Information Systems"
   native_owner_name: "Registrite ja Infosüsteemide Keskus"
@@ -2620,8 +2641,9 @@
   country: Q191
   jurisdiction_name: "Estonia"
   jurisdiction: Q191
-  owner_name: "Financial Supervision Authority "
+  owner_name: "Estonia Financial Supervision Authority"
   native_owner_name: "FINANTSINSPEKTSIOON"
+  owner: Q12362644
   url: "http://www.fi.ee/index.php?id=769"
 }
 {
@@ -2631,7 +2653,7 @@
   country: Q115
   jurisdiction_name: "Ethiopia"
   jurisdiction: Q115
-  register_name: "Commercial Registration"
+  register_name: "Ethiopia Commercial Registration"
   owner_name: "Ministry of Trade"
   url: "http://www.mot.gov.et/business-registration"
 }
@@ -2642,7 +2664,7 @@
   country: Q9648
   jurisdiction_name: "Falkland Islands (Malvinas)"
   jurisdiction: Q9648
-  register_name: "Companies Register"
+  register_name: "Falkland Companies Register"
   native_register_name: "Companies Register"
   owner_name: "Registrar of Companies"
   native_owner_name: "Registrar of Companies"
@@ -2655,7 +2677,7 @@
   country: Q4628
   jurisdiction_name: "Faroe Islands"
   jurisdiction: Q4628
-  register_name: "Company Register"
+  register_name: "Faroe Islands Company Register"
   owner_name: "Company Registration Authority"
   native_owner_name: "Skráseting Føroya"
   url: "http://www.skraseting.fo/en/companies/search-companies/"
@@ -2667,7 +2689,7 @@
   country: Q702
   jurisdiction_name: "Federated States of Micronesia"
   jurisdiction: Q702
-  register_name: "Corporate Registry"
+  register_name: "Micronesia Corporate Registry"
   owner_name: "Registrar of Corporations"
   url: "https://www.roc.doj.gov.fm/"
 }
@@ -2678,7 +2700,7 @@
   country: Q712
   jurisdiction_name: "Fiji"
   jurisdiction: Q712
-  register_name: "Companies and Business Names Registry"
+  register_name: "Fiji Companies and Business Names Registry"
   owner_name: "Office of the Registrar of Companies (Ministry of Finance)"
   url: "https://www.egov.gov.fj/"
 }
@@ -2689,7 +2711,7 @@
   country: Q33
   jurisdiction_name: "Finland"
   jurisdiction: Q33
-  register_name: "The Business Information System (BIS)"
+  register_name: "Finland Business Information System"
   native_register_name: "Yritys- ja yhteisötietojärjestelmä (YTJ)"
   owner_name: "Finnish Patent and Registration Office"
   owner: Q11886867
@@ -2706,7 +2728,7 @@
   country: Q142
   jurisdiction_name: "France"
   jurisdiction: Q142
-  register_name: "Register of Companies (Sirene)"
+  register_name: "Sirene Register of Companies"
   register: Q15817081
   native_register_name: "Sirene"
   owner_name: "National Institute of Statistics and Economic Studies"
@@ -2729,12 +2751,16 @@
   country: Q142
   jurisdiction_name: "France"
   jurisdiction: Q142
-  register_name: "Register of Commerce and Companies"
+  register_name: "French Register of Commerce and Companies"
   native_register_name: "Registre du Commerce et des Sociétés"
   owner_name: "Infogreffe"
   owner: Q19544830
   native_owner_name: "Infogreffe"
   url: "www.infogreffe.com"
+  transform: {
+    "(\\d{3}) (\\d{3}) (\\d{3})": "%s%s%s" ; remove spaces
+    "\\d{9}": ">RA000189" ; SIREN number
+  }
 }
 {
   registration_authority_code: "RA000190"
@@ -2743,7 +2769,7 @@
   country: Q142
   jurisdiction_name: "France"
   jurisdiction: Q142
-  owner_name: "Authority for the Financial Markets"
+  owner_name: "French Authority for the Financial Markets"
   owner: Q788606
   native_owner_name: "Autorité des marchés financiers"
   url: "http://www.amf-france.org/"
@@ -2755,6 +2781,7 @@
   country: Q1000
   jurisdiction_name: "Gabon"
   jurisdiction: Q1000
+  register_name: "Gabon Registre du Commerce et du Crédit Mobilier (RCCM)"
   native_register_name: "Registre du Commerce et du Crédit Mobilier (RCCM)"
   native_owner_name: "Centre de Développement des Entreprises "
   url: "http://www.cdegabon.com/"
@@ -2766,7 +2793,7 @@
   country: Q1005
   jurisdiction_name: "Gambia"
   jurisdiction: Q1005
-  register_name: "Company Registry"
+  register_name: "Gambia iCommerce Company Registry"
   owner_name: "iCommerce Registry"
   url: "http://www.icommerceregistry.com/"
 }
@@ -2777,7 +2804,7 @@
   country: Q1005
   jurisdiction_name: "Gambia"
   jurisdiction: Q1005
-  register_name: "Companies Register"
+  register_name: "Gambia Companies Division Register"
   owner_name: "Companies Division (Ministry of Justice)"
   url: "http://www.moj.gov.gm/companies"
 }
@@ -2789,6 +2816,7 @@
   jurisdiction_name: "Georgia"
   jurisdiction: Q1428
   owner_name: "National Agency of Public Registry (Ministry of Justice of Georgia)"
+  owner: Q3651856
   url: "www.napr.gov.ge"
 }
 {
@@ -2798,7 +2826,7 @@
   country: Q183
   jurisdiction_name: "Aachen"
   jurisdiction: Q1017
-  register_name: "Commercial Register"
+  register_name: "Aachen Commercial Register"
   native_register_name: "Handelsregister"
   owner_name: "Local Court Aachen"
   native_owner_name: "Amtsgericht Aachen"
@@ -2806,6 +2834,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3101"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000198"
@@ -2822,6 +2851,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2702"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000199"
@@ -2838,6 +2868,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1201"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000200"
@@ -2854,6 +2885,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3101"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000201"
@@ -2870,6 +2902,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3201"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000202"
@@ -2886,6 +2919,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1101"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000203"
@@ -2902,6 +2936,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1901"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000204"
@@ -2918,6 +2953,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1102"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000205"
@@ -2934,6 +2970,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4102"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000206"
@@ -2950,6 +2987,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2102"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000207"
@@ -2966,6 +3004,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P3101"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000208"
@@ -2982,6 +3021,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1305"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000209"
@@ -2998,6 +3038,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1202"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000210"
@@ -3014,6 +3055,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2101"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000211"
@@ -3030,6 +3072,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1104"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000212"
@@ -3046,6 +3089,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1208"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000213"
@@ -3062,6 +3106,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2108"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000214"
@@ -3078,6 +3123,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1301"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000724"
@@ -3107,6 +3153,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4201"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000216"
@@ -3123,6 +3170,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4301"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000727"
@@ -3152,7 +3200,8 @@
   url: "www.handelsregister.de"
 
   opencorporates_jurisdiction: "de"
-  opencorporates_prefix: "F1103"
+  opencorporates_prefix: "F1103R"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000218"
@@ -3169,6 +3218,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2101"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000219"
@@ -3185,6 +3235,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2201"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000220"
@@ -3201,6 +3252,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3201"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000733"
@@ -3230,6 +3282,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P1103"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000222"
@@ -3246,6 +3299,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "H1101"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000742"
@@ -3275,6 +3329,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2102"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000224"
@@ -3291,6 +3346,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "U1206"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000225"
@@ -3307,6 +3363,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4401"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000226"
@@ -3323,6 +3380,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2707"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000227"
@@ -3339,6 +3397,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "G1103"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000228"
@@ -3355,6 +3414,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1103"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000229"
@@ -3371,6 +3431,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2201"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000230"
@@ -3387,6 +3448,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2402"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000231"
@@ -3403,6 +3465,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "U1104"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000232"
@@ -3419,6 +3482,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1202"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000233"
@@ -3435,6 +3499,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3103"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000234"
@@ -3451,6 +3516,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1101"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000235"
@@ -3467,6 +3533,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1105"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000236"
@@ -3483,6 +3550,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1106"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000237"
@@ -3499,6 +3567,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1502"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000238"
@@ -3515,6 +3584,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1602"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000239"
@@ -3531,6 +3601,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2503"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000240"
@@ -3547,6 +3618,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "X1112"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000241"
@@ -3563,6 +3635,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "G1207"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000242"
@@ -3579,6 +3652,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1201"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000243"
@@ -3595,6 +3669,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "B1204"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000244"
@@ -3611,6 +3686,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1405"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000245"
@@ -3627,6 +3703,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1603"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000246"
@@ -3643,6 +3720,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1301"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000247"
@@ -3659,6 +3737,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3304"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000248"
@@ -3675,6 +3754,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1302"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000249"
@@ -3691,6 +3771,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2507"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000250"
@@ -3707,6 +3788,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1203"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000251"
@@ -3723,6 +3805,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1406"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000252"
@@ -3739,6 +3822,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1108"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000253"
@@ -3755,6 +3839,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2204"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000254"
@@ -3771,6 +3856,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1202"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000255"
@@ -3787,6 +3873,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1205"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000256"
@@ -3803,6 +3890,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1303"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000257"
@@ -3819,6 +3907,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2103"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000258"
@@ -3835,6 +3924,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2602"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000259"
@@ -3851,6 +3941,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "K1101"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000738"
@@ -3880,6 +3971,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2404"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000261"
@@ -3896,6 +3988,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1502"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000262"
@@ -3912,6 +4005,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2305"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000263"
@@ -3928,6 +4022,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1109"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000264"
@@ -3944,6 +4039,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2105"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000265"
@@ -3960,6 +4056,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2203"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000722"
@@ -3989,6 +4086,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1302"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000267"
@@ -4005,6 +4103,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2408"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000268"
@@ -4021,6 +4120,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4501"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000269"
@@ -4037,6 +4137,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1102"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000270"
@@ -4053,6 +4154,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1303"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000271"
@@ -4069,6 +4171,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D5701"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000272"
@@ -4085,6 +4188,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2604"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000273"
@@ -4101,6 +4205,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1206"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000274"
@@ -4117,6 +4222,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T3201"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000275"
@@ -4133,6 +4239,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1607"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000276"
@@ -4149,6 +4256,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2304"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000277"
@@ -4165,6 +4273,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "X1517"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000278"
@@ -4181,6 +4290,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1304"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000279"
@@ -4197,6 +4307,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2210"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000280"
@@ -4213,6 +4324,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3306"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000281"
@@ -4229,6 +4341,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1203"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000282"
@@ -4245,6 +4358,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1608"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000283"
@@ -4261,6 +4375,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1402"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000284"
@@ -4277,6 +4392,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T3304"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000285"
@@ -4293,6 +4409,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2404"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000286"
@@ -4309,6 +4426,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1103"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000287"
@@ -4325,6 +4443,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "U1308"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000288"
@@ -4341,6 +4460,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2307"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000289"
@@ -4357,6 +4477,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1706"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000755"
@@ -4386,6 +4507,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "X1721"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000291"
@@ -4401,7 +4523,8 @@
   url: "www.handelsregister.de"
 
   opencorporates_jurisdiction: "de"
-  opencorporates_prefix: "T3104"
+  opencorporates_prefix: "T3104V"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000292"
@@ -4418,6 +4541,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1305"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000293"
@@ -4434,6 +4558,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2507"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000294"
@@ -4450,6 +4575,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2406"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000295"
@@ -4466,6 +4592,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2304"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000296"
@@ -4482,6 +4609,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "B1601"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000297"
@@ -4498,6 +4626,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1809"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000743"
@@ -4527,6 +4656,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1304"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000299"
@@ -4543,6 +4673,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2505"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000300"
@@ -4559,6 +4690,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1104"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000301"
@@ -4575,6 +4707,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1504"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000302"
@@ -4591,6 +4724,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2214"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000303"
@@ -4607,6 +4741,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1110"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000304"
@@ -4623,6 +4758,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2601V"   ; V=Vereinsregister
+  transform: {"HRB (\\d+)": "HRB%s"}
   ; http://www.firmendb.de/adressdatenbank/gericht-5086.php
 }
 {
@@ -4640,6 +4776,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2713"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000306"
@@ -4656,6 +4793,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1105"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000307"
@@ -4672,6 +4810,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1105"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000308"
@@ -4688,6 +4827,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "G1309"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000309"
@@ -4704,6 +4844,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1102"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000310"
@@ -4720,6 +4861,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1111"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000311"
@@ -4736,6 +4878,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3310"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000312"
@@ -4752,6 +4895,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R6324"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000313"
@@ -4768,6 +4912,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1114"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000314"
@@ -4784,6 +4929,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P3210"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000315"
@@ -4800,6 +4946,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P3313"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000316"
@@ -4816,6 +4963,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1107"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000317"
@@ -4832,6 +4980,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2809"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000318"
@@ -4848,6 +4997,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1107"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000319"
@@ -4864,6 +5014,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2803"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000320"
@@ -4880,6 +5031,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "X1321"
+  transform: {"HRB (\\d+)": "HRB%s"}
   ; NB: Some OC companies have suffixes for companies previously registered
   ; with Ellerbek (EL), Itzerhoe (IZ), Meldorf (ME) & Pinneberg (PI)
 }
@@ -4898,6 +5050,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1209"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000322"
@@ -4914,6 +5067,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "G1312"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000323"
@@ -4930,6 +5084,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1104"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000324"
@@ -4946,6 +5101,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2204"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000325"
@@ -4962,6 +5118,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3410"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000737"
@@ -4991,6 +5148,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1603"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000327"
@@ -5007,6 +5165,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1205"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000328"
@@ -5023,6 +5182,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1206"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000329"
@@ -5039,6 +5199,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1210"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000330"
@@ -5055,6 +5216,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1211"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000331"
@@ -5071,6 +5233,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1109"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000741"
@@ -5100,6 +5263,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1110"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000333"
@@ -5116,6 +5280,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1111"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000334"
@@ -5132,6 +5297,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1112"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000739"
@@ -5174,6 +5340,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3106"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000723"
@@ -5203,6 +5370,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4608"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000337"
@@ -5219,6 +5387,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1308"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000338"
@@ -5235,6 +5404,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R3208"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000339"
@@ -5251,6 +5421,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2909"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000340"
@@ -5267,6 +5438,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1911"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000341"
@@ -5283,6 +5455,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1605"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000342"
@@ -5299,6 +5472,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1112"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000343"
@@ -5315,6 +5489,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1113"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000344"
@@ -5331,6 +5506,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1307"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000345"
@@ -5347,6 +5523,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2106"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000346"
@@ -5363,6 +5540,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1214"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000347"
@@ -5379,6 +5557,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2706"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000348"
@@ -5395,6 +5574,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "W1215"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000349"
@@ -5411,6 +5591,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1209"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000350"
@@ -5427,6 +5608,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3413"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000351"
@@ -5443,6 +5625,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "B2609"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000352"
@@ -5459,6 +5642,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1308"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000736"
@@ -5488,6 +5672,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2613"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000354"
@@ -5504,6 +5689,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2910"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000355"
@@ -5520,6 +5706,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "B2805"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000356"
@@ -5536,6 +5723,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1115"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000357"
@@ -5552,6 +5740,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "V1116"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000358"
@@ -5568,6 +5757,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2716"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000359"
@@ -5584,6 +5774,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2813"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000360"
@@ -5600,6 +5791,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1112"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000361"
@@ -5616,6 +5808,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1912"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000362"
@@ -5631,6 +5824,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D3508"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000363"
@@ -5647,6 +5841,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1114"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000364"
@@ -5663,6 +5858,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1710"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000365"
@@ -5679,6 +5875,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "M1906"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000366"
@@ -5695,6 +5892,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "N1210"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000367"
@@ -5711,6 +5909,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R2207"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000368"
@@ -5727,6 +5926,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T2408"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000369"
@@ -5743,6 +5943,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "R1608"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000370"
@@ -5759,6 +5960,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D4708"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000371"
@@ -5775,6 +5977,7 @@
 
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "T3403"
+  transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
   registration_authority_code: "RA000372"
@@ -5783,7 +5986,7 @@
   country: Q183
   jurisdiction_name: "Germany"
   jurisdiction: Q183
-  register_name: "Company Register"
+  register_name: "German Company Register"
   native_register_name: "Unternehmensregister"
   register: Q1727022
   owner_name: "Bundesanzeiger"
@@ -5861,7 +6064,7 @@
   country: Q117
   jurisdiction_name: "Ghana"
   jurisdiction: Q117
-  owner_name: "Registrar General's Department"
+  owner_name: "Ghana Registrar General's Department"
   owner: Q7309428
   url: "https://egovonline.gegov.gov.gh/RGDPortalWeb/portal/RGDHome/eghana.portal"
 }
@@ -5908,7 +6111,8 @@
   country: Q41
   jurisdiction_name: "Greece"
   jurisdiction: Q41
-  register_name: "General Commercial Registry (G.E.MI.)"
+  register_name: "Greece General Commercial Registry (G.E.MI.)"
+  register: Q19828189
   owner_name: "Union of Hellenic Chambers"
   url: "http://www.businessportal.gr/home/index_en"
 
@@ -5953,7 +6157,7 @@
   country: Q769
   jurisdiction_name: "Grenada"
   jurisdiction: Q769
-  owner_name: "Registrar of Companies and Intellectual Property (Supreme Courty Registry)"
+  owner_name: "Grenada Registrar of Companies and Intellectual Property (Supreme Courty Registry)"
   native_owner_name: "Registrar of Companies and Intellectual Property (Supreme Courty Registry)"
   url: "http://www.gov.gd/departments/supreme_court_registry.html"
 }
@@ -5964,7 +6168,7 @@
   country: Q16635
   jurisdiction_name: "Guam"
   jurisdiction: Q16635
-  register_name: "Company Registry"
+  register_name: "Guam Company Registry"
   owner_name: "Department of Revenue and Taxation"
   url: "https://www.guamtax.com/index.jsp"
 }
@@ -5975,7 +6179,7 @@
   country: Q774
   jurisdiction_name: "Guatemala"
   jurisdiction: Q774
-  register_name: "Commerce Register"
+  register_name: "Guatemala Commerce Register"
   native_register_name: "Registro Mercantil General"
   owner_name: "Commerce Register of The Republic of Guatemala"
   native_owner_name: "Registro Mercantil General de la República de Guatemala"
@@ -5988,7 +6192,7 @@
   country: Q3311985
   jurisdiction_name: "Guernsey"
   jurisdiction: Q3311985
-  register_name: "Limited Companies Register"
+  register_name: "Guernsey Limited Companies Register"
   native_register_name: "Limited Companies Register"
   owner_name: "Guernsey Registry"
   native_owner_name: "Guernsey Registry"
@@ -6009,7 +6213,7 @@
   country: Q3311985
   jurisdiction_name: "Guernsey"
   jurisdiction: Q3311985
-  register_name: "Foundations Register"
+  register_name: "Guernsey Foundations Register"
   native_register_name: "Foundations Register"
   owner_name: "Guernsey Registry"
   native_owner_name: "Guernsey Registry"
@@ -6028,7 +6232,7 @@
   country: Q3311985
   jurisdiction_name: "Guernsey"
   jurisdiction: Q3311985
-  register_name: "Limited Partnerships Register"
+  register_name: "Guernsey Limited Partnerships Register"
   native_register_name: "Limited Partnerships Register"
   owner_name: "Guernsey Registry"
   native_owner_name: "Guernsey Registry"
@@ -6047,7 +6251,7 @@
   country: Q3311985
   jurisdiction_name: "Guernsey"
   jurisdiction: Q3311985
-  register_name: "Limited Liability Partnerships Register"
+  register_name: "Guernsey Limited Liability Partnerships Register"
   native_register_name: "Limited Liability Partnerships Register"
   owner_name: "Guernsey Registry"
   native_owner_name: "Guernsey Registry"
@@ -6066,6 +6270,7 @@
   country: Q1006
   jurisdiction_name: "Guinea"
   jurisdiction: Q1006
+  owner_name: "Guinea Agence de promotion des investissements privés"
   native_owner_name: "Agence de promotion des investissements privés"
   url: "http://apiguinee.gov.gn"
 }
@@ -6087,7 +6292,7 @@
   country: Q790
   jurisdiction_name: "Haiti"
   jurisdiction: Q790
-  register_name: "Commerce Register"
+  register_name: "Commerce Register of Haiti"
   native_register_name: "Registre du Commerce"
   owner_name: "Ministry of Commerce and Industry"
   native_owner_name: "Ministère du Commerce et de l'Industrie"
@@ -6100,6 +6305,7 @@
   country: Q783
   jurisdiction_name: "Honduras"
   jurisdiction: Q783
+  register_name: "Honduras Registro Mercantil"
   native_register_name: "Registro Mercantil"
   owner_name: "Chamber of Commerce and Industry of Tegucigalpa"
   native_owner_name: "Cámara de Comercio y la Industria de Tegucigalpa"
@@ -6112,9 +6318,9 @@
   country: Q8646
   jurisdiction_name: "Hong Kong"
   jurisdiction: Q8646
-  register_name: "Companies Registry"
+  register_name: "Hong Kong Companies Registry"
   native_register_name: "公司註冊處"
-  owner_name: "Companies Registry"
+  owner_name: "Hong Kong Companies Registry"
   url: "www.cr.gov.hk"
 
   opencorporates_jurisdiction: "hk"
@@ -6150,7 +6356,7 @@
   country: Q28
   jurisdiction_name: "Hungary"
   jurisdiction: Q28
-  register_name: "National Company Register and Company Information System"
+  register_name: "Hungary National Company Register and Company Information System"
   native_register_name: "Országos Cégnyilvántartó és Céginformációs Rendszer"
   owner_name: "National Company Register and Company Information System"
   native_owner_name: "Országos Cégnyilvántartó és Céginformációs Rendszer"
@@ -6166,7 +6372,7 @@
   country: Q28
   jurisdiction_name: "Hungary"
   jurisdiction: Q28
-  register_name: "Register of Financial Service Providers"
+  register_name: "Hungary Register of Financial Service Providers"
   native_register_name: "Pénzügyi szolgáltatók nyilvántartása"
   owner_name: "Central Bank of Hungary"
   owner: Q774636
@@ -6180,7 +6386,7 @@
   country: Q28
   jurisdiction_name: "Hungary"
   jurisdiction: Q28
-  register_name: "Registry of civil society organisations"
+  register_name: "Hungary Registry of civil society organisations"
   native_register_name: "Civil szervezetek névjegyzéke"
   owner_name: "National Office for the Judiciary"
   native_owner_name: "Országos Bírósági Hivatal"
@@ -6196,7 +6402,7 @@
   country: Q28
   jurisdiction_name: "Hungary"
   jurisdiction: Q28
-  register_name: "Public Education Information System"
+  register_name: "Hungary Public Education Information System"
   native_register_name: "köznevelés információs rendszerének"
   owner_name: "Education Office"
   native_owner_name: "Oktatási Hivatal"
@@ -6209,7 +6415,7 @@
   country: Q28
   jurisdiction_name: "Hungary"
   jurisdiction: Q28
-  register_name: "National Lawyers Register"
+  register_name: "Hungary National Lawyers Register"
   native_register_name: "Országos Ügyvédi Nyilvántartás"
   owner_name: "Hungarian Bar Association"
   owner: Q87460911
@@ -6223,7 +6429,7 @@
   country: Q189
   jurisdiction_name: "Iceland"
   jurisdiction: Q189
-  register_name: "Register of Enterprises"
+  register_name: "Iceland Register of Enterprises"
   native_register_name: "Fyrirtækjaskrá RSK"
   owner_name: "Directorate of Internal Revenue"
   url: "https://www.rsk.is/english"
@@ -6271,7 +6477,7 @@
   country: Q668
   jurisdiction_name: "India"
   jurisdiction: Q668
-  register_name: "Housing Finance Company Regulator"
+  register_name: "Housing Finance Company Regulator of India"
   owner_name: "National Housing Bank (NHB)"
   url: "http://www.nhb.org.in/"
 }
@@ -6282,7 +6488,7 @@
   country: Q668
   jurisdiction_name: "India"
   jurisdiction: Q668
-  register_name: "Tax Registry"
+  register_name: "Tax Registry of India"
   native_register_name: "Tax Information Network (TIN NSDL)"
   owner_name: "NSDL e-Governance Infrastructure Limited"
   native_owner_name: "NSDL e-Governance Infrastructure Limited"
@@ -6306,7 +6512,7 @@
   country: Q668
   jurisdiction_name: "India"
   jurisdiction: Q668
-  register_name: "Government Gazette"
+  register_name: "Government Gazette of India"
   owner_name: "Directorate of Printing and Department of Publications - Gazette of India"
   url: "http://www.egazette.nic.in/"
 }
@@ -6317,7 +6523,7 @@
   country: Q668
   jurisdiction_name: "India"
   jurisdiction: Q668
-  register_name: "Register of National Securities Depository Limited"
+  register_name: "Indian Register of National Securities Depository Limited"
   native_register_name: "Register of National Securities Depository Limited"
   owner_name: "National Securities Depository Limited"
   owner: Q2721407
@@ -6331,7 +6537,7 @@
   country: Q668
   jurisdiction_name: "India"
   jurisdiction: Q668
-  register_name: "Distinctive Number Database"
+  register_name: "Distinctive Number Database of India"
   native_register_name: "Distinctive Number Database"
   owner_name: "Central Depository Services Limited"
   owner: Q5060704
@@ -6345,10 +6551,11 @@
   country: Q668
   jurisdiction_name: "India"
   jurisdiction: Q668
-  register_name: "Database of Importer Exporter Code (IEC)"
+  register_name: "Database of Importer Exporter Code (IEC) of India"
   native_register_name: "Database of Importer Exporter Code (IEC)"
   owner_name: "Directorate General of Foreign Trade (DGFT) of the Ministry of Commerce and Industry"
   native_owner_name: "Directorate General of Foreign Trade (DGFT) of the Ministry of Commerce and Industry"
+  owner: Q5280620
   url: "www.dgft.gov.in"
 }
 {
@@ -6362,6 +6569,7 @@
   native_register_name: "ICEGATE (Indian Customs Electronic Commerce/Electronic Data interchange (EC/EDI) Gateway)"
   owner_name: "Central Board of Excise and Customs (CBEC), Department of Revenue, Ministry of Finance"
   native_owner_name: "Central Board of Excise and Customs (CBEC), Department of Revenue, Ministry of Finance"
+  owner: Q5060461
   url: "https://www.icegate.gov.in/EnqMod/"
 }
 {
@@ -6375,6 +6583,7 @@
   native_register_name: "NGO Directory (NGO-DARPAN)"
   owner_name: "National Institution for Transforming India (NITI Aayog)"
   native_owner_name: "National Institution for Transforming India (NITI Aayog)"
+  owner: Q18704255
   url: "https://ngodarpan.gov.in/index.php/search/"
 }
 {
@@ -6388,6 +6597,7 @@
   native_register_name: "GST Portal"
   owner_name: "Goods and Services Tax Network (Ministry of Finance)"
   native_owner_name: "Goods and Services Tax Network (Ministry of Finance)"
+  owner: P1320/in/U72200DL2013NPL249988
   url: "https://www.gst.gov.in/ "
 }
 {
@@ -6398,6 +6608,7 @@
   jurisdiction_name: "Indonesia"
   jurisdiction: Q252
   owner_name: "Ministry of Trade"
+  owner: Q13093886
   url: "http://www.kemendag.go.id/en/perdagangan-kita/company-directory/data-center-collection/"
 }
 {
@@ -6407,7 +6618,7 @@
   country: Q794
   jurisdiction_name: "Iran"
   jurisdiction: Q794
-  register_name: "Register for banks and credit institutions"
+  register_name: "Iranian Register for banks and credit institutions"
   owner_name: "Central Bank of Iran"
   owner: Q1261157
   native_owner_name: "است†ايران†اسلامی†جمھوری†مرکزی†بانک"
@@ -6422,7 +6633,7 @@
   country: Q796
   jurisdiction_name: "Iraq"
   jurisdiction: Q796
-  owner_name: "Registrar of Companies"
+  owner_name: "Iraqi Registrar of Companies"
   url: "http://tasjeel.mot.gov.iq/en/index.html"
 }
 {
@@ -6432,7 +6643,7 @@
   country: Q27
   jurisdiction_name: "Ireland"
   jurisdiction: Q27
-  register_name: "Companies Register"
+  register_name: "Irish Companies Register"
   native_register_name: "Companies Register"
   owner_name: "Companies Registration Office"
   owner: Q5155406
@@ -6464,7 +6675,7 @@
   country: Q27
   jurisdiction_name: "Ireland"
   jurisdiction: Q27
-  register_name: "Registers for financial service providers and collective investment schemes"
+  register_name: "Irish Registers for financial service providers and collective investment schemes"
   owner_name: "Central Bank of Ireland"
   owner: Q283785
   url: "registers.centralbank.ie"
@@ -6476,10 +6687,11 @@
   country: Q27
   jurisdiction_name: "Ireland"
   jurisdiction: Q27
-  register_name: "Charities Register"
+  register_name: "Irish Charities Register"
   native_register_name: "Charities Register"
   owner_name: "Charities Regulator"
   native_owner_name: "Charities Regulator/An Rialálaí Carthanas"
+  owner: Q96622072
   url: "https://www.charitiesregulator.ie/"
 }
 {
@@ -6489,7 +6701,7 @@
   country: Q9676
   jurisdiction_name: "Isle of Man"
   jurisdiction: Q9676
-  register_name: "Companies Registry"
+  register_name: "Isle of Man Companies Registry"
   native_register_name: "Companies Registry"
   owner_name: "Companies Registry"
   native_owner_name: "Companies Registry"
@@ -6517,7 +6729,7 @@
   country: Q38
   jurisdiction_name: "Italy"
   jurisdiction: Q38
-  register_name: "Business Register"
+  register_name: "Italian Business Register"
   native_register_name: "Registro Delle Imprese"
   owner_name: "Infocamere"
   owner: Q3798586
@@ -6533,7 +6745,7 @@
   country: Q38
   jurisdiction_name: "Italy"
   jurisdiction: Q38
-  register_name: "List of collective investment schemes (UCITS)"
+  register_name: "List of collective investment schemes (UCITS) of Italy"
   native_register_name: "Elenco degli organismi di investimento collettivo del risparmio (OICR)"
   owner_name: "Bank of Italy"
   owner: Q806176
@@ -6547,6 +6759,7 @@
   country: Q38
   jurisdiction_name: "Italy"
   jurisdiction: Q38
+  owner_name: "Italy Commissione di vigilanza sui fondi pensione"
   native_owner_name: "Commissione di vigilanza sui fondi pensione"
   url: "http://www.covip.it/"
 }
@@ -6559,6 +6772,7 @@
   jurisdiction: Q38
   owner_name: "The Italian Companies and Stock Exchange Commission"
   native_owner_name: "Commissione Nazionale per le Società e la Borsa (CONSOB)"
+  owner: Q1115638
   url: "http://www.consob.it/mainen/intermediares/investments_firms/index.html "
 }
 {
@@ -6568,10 +6782,11 @@
   country: Q38
   jurisdiction_name: "Italy"
   jurisdiction: Q38
-  register_name: "Index of Public Administrations (IPA)"
+  register_name: "Italian Index of Public Administrations (IPA)"
   native_register_name: "Indice delle Pubbliche Amministrazioni (IPA)"
   owner_name: "Agency for Digital Italy (AgID)"
   native_owner_name: "Agenzia per l’Italia Digitale (AgID)"
+  owner: Q3606484
   url: "http://www.indicepa.gov.it/"
 }
 {
@@ -6581,7 +6796,7 @@
   country: Q766
   jurisdiction_name: "Jamaica"
   jurisdiction: Q766
-  register_name: "Companies Register"
+  register_name: "Jamaica Companies Register"
   owner_name: "Companies Office of Jamaica"
   url: "https://www.orcjamaica.com/"
 
@@ -6594,10 +6809,11 @@
   country: Q17
   jurisdiction_name: "Japan"
   jurisdiction: Q17
-  register_name: "Companies Registration"
+  register_name: "Japan Companies Registration"
   native_register_name: "登記"
   owner_name: "Legal Affairs Bureaus"
   native_owner_name: "法務局"
+  owner: Q11555049
   url: "http://www1.touki.or.jp/"
 
   company_property: P3225
@@ -6615,7 +6831,7 @@
   country: Q17
   jurisdiction_name: "Japan"
   jurisdiction: Q17
-  register_name: "Register of public funds"
+  register_name: "Japan Register of public funds"
   owner_name: "Financial Services Agency"
   owner: Q615316
   url: "http://disclosure.edinet-fsa.go.jp/"
@@ -6627,7 +6843,7 @@
   country: Q785
   jurisdiction_name: "Jersey"
   jurisdiction: Q785
-  register_name: "Company Registry"
+  register_name: "Jersey Company Registry"
   native_register_name: "Company Registry"
   owner_name: "Jersey Financial Services Commission Companies Registry"
   native_owner_name: "Jersey Financial Services Commission Companies Registry"
@@ -6642,7 +6858,7 @@
   country: Q810
   jurisdiction_name: "Jordan"
   jurisdiction: Q810
-  owner_name: "Companies Control Department"
+  owner_name: "Jordan Companies Control Department"
   url: " http://www.ccd.gov.jo/"
 }
 {
@@ -6652,7 +6868,7 @@
   country: Q810
   jurisdiction_name: "Amman"
   jurisdiction: Q3805
-  register_name: "Business Directory"
+  register_name: "Amman Business Directory"
   owner_name: "Amman Chamber of Commerce"
   url: "http://www.ammanchamber.org.jo/default_en.aspx?lang=en"
 }
@@ -6663,7 +6879,7 @@
   country: Q232
   jurisdiction_name: "Kazakhstan"
   jurisdiction: Q232
-  register_name: "National Register of Business Identification Codes"
+  register_name: "Kazakhstan National Register of Business Identification Codes"
   native_register_name: "Бизнес-сәйкестендiру нөмiрлерiнiң ұлттық тiзiлiмi"
   owner_name: "Ministry of Justice of the Republic of Kazakhstan"
   owner: Q973886
@@ -6676,7 +6892,7 @@
   country: Q114
   jurisdiction_name: "Kenya"
   jurisdiction: Q114
-  owner_name: "Registrar General Office of the Attorney General and Department of Justice"
+  owner_name: "Kenya Registrar General Office of the Attorney General and Department of Justice"
   url: "http://www.attorney-general.go.ke/index.php/registrar/"
 }
 {
@@ -6686,7 +6902,7 @@
   country: Q710
   jurisdiction_name: "Kiribati"
   jurisdiction: Q710
-  register_name: "Companies Office"
+  register_name: "Kiribati Companies Office"
   owner_name: "Business and Companies Regulatory Division (Ministry of Commerce, Industry and Cooperatives)"
   url: "www.mcic.gov.ki"
 }
@@ -6697,8 +6913,9 @@
   country: Q884
   jurisdiction_name: "Republic of Korea"
   jurisdiction: Q884
-  register_name: "Corporation registration"
+  register_name: "Korean Corporation registration"
   native_register_name: "등기"
+  register: Q100704934
   owner_name: "Supreme Court Registry"
   native_owner_name: "대법원"
   url: "www.iros.go.kr"
@@ -6712,7 +6929,7 @@
   country: Q884
   jurisdiction_name: "Republic of Korea"
   jurisdiction: Q884
-  register_name: "Business registration"
+  register_name: "Korean Business registration"
   native_register_name: "사업자등록"
   owner_name: "National Tax Service"
   owner: Q624717
@@ -6726,7 +6943,7 @@
   country: Q884
   jurisdiction_name: "Republic of Korea"
   jurisdiction: Q884
-  register_name: "Funds Registration"
+  register_name: "Korea Funds Registration"
   native_register_name: "펀드코드"
   owner_name: "Korea Securities Depository"
   owner: Q23044844
@@ -6750,7 +6967,7 @@
   country: Q813
   jurisdiction_name: "Kyrgyzstan"
   jurisdiction: Q813
-  register_name: "United State Register of Legal Entities and Branches (Ministry of Justice of Kyrgyz Republic)"
+  register_name: "Kyrgyzstan United State Register of Legal Entities and Branches (Ministry of Justice of Kyrgyz Republic)"
   native_register_name: "Юридикалык жактардын, филиалдардын (өкүлчүлүктөрдүн) бирдиктүү мамлекеттик реестри"
   url: "http://minjust.gov.kg/?page_id=1009&lang=kg"
 }
@@ -6761,7 +6978,7 @@
   country: Q819
   jurisdiction_name: "Laos"
   jurisdiction: Q819
-  register_name: "Enterprise Registration"
+  register_name: "Laos Enterprise Registration"
   owner_name: "Ministry of Industry and Commerce"
   url: "http://www.moic.gov.la/"
 }
@@ -6772,7 +6989,7 @@
   country: Q211
   jurisdiction_name: "Latvia"
   jurisdiction: Q211
-  register_name: "Commerce Register"
+  register_name: "Latvia Commerce Register"
   owner_name: "Register of Enterprises of the Republic of Latvia"
   owner: Q16361579
   native_owner_name: "Latvijas Republikas Uzņēmumu Reģistrs"
@@ -6789,8 +7006,9 @@
   country: Q211
   jurisdiction_name: "Latvia"
   jurisdiction: Q211
-  register_name: "Databases of enterprises"
+  register_name: "Latvia Databases of enterprises"
   owner_name: "Lursoft"
+  owner: Q105405364
   url: "https://www.lursoft.lv/?l=en"
 }
 {
@@ -6800,7 +7018,7 @@
   country: Q822
   jurisdiction_name: "Lebanon"
   jurisdiction: Q822
-  register_name: "Commercial register"
+  register_name: "Lebanon Commercial register"
   owner_name: "Ministry of Justice"
   url: "http://www.justice.gov.lb/CP/HTML_iFrameTree.aspx?id=549&language=2"
 }
@@ -6811,7 +7029,7 @@
   country: Q822
   jurisdiction_name: "Lebanon"
   jurisdiction: Q822
-  register_name: "Directory"
+  register_name: "Lebanon Directory"
   native_register_name: "دليل"
   owner_name: "Office of the Minister of State for Administrative Reform (OMSAR)"
   native_owner_name: "مكتب وزير الدولة لشؤون التنمية الإدارية"
@@ -6824,7 +7042,7 @@
   country: Q1013
   jurisdiction_name: "Lesotho"
   jurisdiction: Q1013
-  register_name: "Company Register"
+  register_name: "Lesotho Company Register"
   owner_name: "One Stop Business Facilitation Centre, Ministry of Trade and Industry"
   url: "http://www.obfc.org.ls/registry/default.php"
 }
@@ -6846,10 +7064,11 @@
   country: Q347
   jurisdiction_name: "Liechtenstein"
   jurisdiction: Q347
-  register_name: "Commercial Register"
+  register_name: "Liechtenstein Commercial Register"
   native_register_name: "Handelsregister"
   owner_name: "Office of Justice"
   native_owner_name: "Amt für Justiz"
+  owner: Q15791891
   url: "http://www.oera.li/hrweb/ger/firmensuche_afj.htm"
 
   opencorporates_jurisdiction: "li"
@@ -6874,8 +7093,9 @@
   country: Q37
   jurisdiction_name: "Lithuania"
   jurisdiction: Q37
-  register_name: "Register of Legal Entities"
+  register_name: "Lithuanian Register of Legal Entities"
   native_register_name: "Juridinių asmenų registras"
+  register: Q12658864
   owner_name: "State Enterprise Centre of Registers"
   owner: Q15867634
   native_owner_name: "Registru Centras"
@@ -6890,6 +7110,7 @@
   jurisdiction: Q37
   owner_name: "Central Bank of the Republic of Lithuania"
   native_owner_name: "Lietuvos Bankas"
+  owner: Q616849
   url: "http://www.lb.lt/markets_in_financial_instruments "
 }
 {
@@ -6899,8 +7120,9 @@
   country: Q32
   jurisdiction_name: "Luxembourg"
   jurisdiction: Q32
-  register_name: "Trade and Company Register"
+  register_name: "Luxembourg Trade and Company Register"
   native_register_name: "Registre de Commerce et des Sociétés"
+  register: Q56309099
   owner_name: "Luxembourg Business Registers"
   native_owner_name: "Luxembourg Business Registers"
   url: "www.lbr.lu"
@@ -6917,7 +7139,8 @@
   jurisdiction: Q32
   register_name: "CSSF - Supervised Entities"
   native_register_name: "CSSF - Entités Surveillées"
-  native_owner_name: "Commission de Surveillance du Secteur Financier "
+  native_owner_name: "Commission de Surveillance du Secteur Financier"
+  owner: Q202750
   url: "http://www.cssf.lu/en/documentation/supervised-entities/"
 }
 {
@@ -6950,7 +7173,7 @@
   country: Q14773
   jurisdiction_name: "Macao"
   jurisdiction: Q14773
-  owner_name: "Directorate of Justice Affairs Services"
+  owner_name: "Macao Directorate of Justice Affairs Services"
   native_owner_name: "Direcção dos Serviços de Assuntos Justiça"
   url: "http://www.dsaj.gov.mo/iis/ContentFrame_pt.aspx?ModuleName=SFT/CRCBM/CrcbmIntroSFT.ascx&DeptCode=CRCBM&Lang=pt"
 }
@@ -6961,7 +7184,7 @@
   country: Q221
   jurisdiction_name: "Macedonia (FYROM)"
   jurisdiction: Q221
-  register_name: "Central Register (Trade Register)"
+  register_name: "Macedonia Central Register (Trade Register)"
   owner_name: "Central Register of the Republic of Macedonia"
   native_owner_name: "Едношалтерски систем Ре-актив Централен Регистар Македонија"
   url: "www.crm.com.mk"
@@ -6973,10 +7196,11 @@
   country: Q1019
   jurisdiction_name: "Madagascar"
   jurisdiction: Q1019
-  register_name: "National Register of Commerce and Companies"
+  register_name: "Madagascar National Register of Commerce and Companies"
   native_register_name: "Registre National du Commerce et des Sociétés (RNCS)"
   owner_name: "Ministry of Justice"
   native_owner_name: "Ministère de la Justice"
+  owner: Q98666144
   url: "http://www.rcsmada.mg"
 }
 {
@@ -6986,7 +7210,7 @@
   country: Q1020
   jurisdiction_name: "Malawi"
   jurisdiction: Q1020
-  owner_name: "Registrar General of the Ministry of Justice"
+  owner_name: "Malawi Registrar General of the Ministry of Justice"
 }
 {
   registration_authority_code: "RA000439"
@@ -6995,7 +7219,7 @@
   country: Q833
   jurisdiction_name: "Malaysia"
   jurisdiction: Q833
-  register_name: "Corporate Registry"
+  register_name: "Malaysia Corporate Registry"
   owner_name: "Companies Commission of Malaysia"
   owner: Q1121232
   native_owner_name: "Suruhanjaya Syarikat Malaysia (SSM)"
@@ -7011,6 +7235,7 @@
   jurisdiction_name: "Labuan"
   jurisdiction: Q214504
   owner_name: "The Labuan International Business and Financial Centre (IBFC)"
+  owner: Q6467665
   url: "https://www.labuanibfc.com/"
 }
 {
@@ -7020,7 +7245,7 @@
   country: Q826
   jurisdiction_name: "Maldives"
   jurisdiction: Q826
-  owner_name: "Ministry of Economic Development"
+  owner_name: "Maldives Ministry of Economic Development"
   url: "http://www.trade.gov.mv/"
 }
 {
@@ -7030,7 +7255,7 @@
   country: Q912
   jurisdiction_name: "Mali"
   jurisdiction: Q912
-  owner_name: "Investment Promotion Agency"
+  owner_name: "Mali Investment Promotion Agency"
   owner: Q2826695
   native_owner_name: "Agence pour la Promotion des Investissements"
   url: "http://www.apimali.gov.ml/index.php?page=api-guichet-unique"
@@ -7042,9 +7267,10 @@
   country: Q233
   jurisdiction_name: "Malta"
   jurisdiction: Q233
-  register_name: "Registry of Companies"
+  register_name: "Malta Registry of Companies"
   native_register_name: "Registru tal-Kumpaniji ta'Malta"
-  owner_name: "Malta Financial Services Authority - Registry of Companies"
+  owner_name: "Malta Financial Services Authority"
+  owner: Q15833457
   url: "www.registry.mfsa.com.mt"
 
   opencorporates_jurisdiction: "mt"
@@ -7073,8 +7299,8 @@
   country: Q1025
   jurisdiction_name: "Mauritania"
   jurisdiction: Q1025
-  register_name: "Commercial Registry"
-  owner_name: "Commercial Registry"
+  register_name: "Mauritania Commercial Registry"
+  owner_name: "Mauritania Commercial Registry"
   native_owner_name: "Greffe du Tribunal de Commerce"
 }
 {
@@ -7084,7 +7310,7 @@
   country: Q1027
   jurisdiction_name: "Mauritius"
   jurisdiction: Q1027
-  register_name: "Corporate and Business Registration"
+  register_name: "Mauritius Corporate and Business Registration"
   owner_name: "Corporate and Business Registration Department (of the Ministry of Finance and Economic Development)"
   url: "http://companies.govmu.org/English/Pages/default.aspx"
 
@@ -7097,10 +7323,12 @@
   country: Q96
   jurisdiction_name: "Mexico"
   jurisdiction: Q96
-  register_name: "Taxpayer Register"
+  register_name: "Mexico Taxpayer Register"
   native_register_name: "Registro Federal de Contribuyentes"
+  register: Q9067649
   owner_name: "Tax Administration Agency"
   native_owner_name: "Servicio de Administración Tributaria (SAT)"
+  owner: Q6126093
   url: "https://portalsat.plataforma.sat.gob.mx/RecuperacionDeCertificados/"
 }
 {
@@ -7114,6 +7342,7 @@
   native_register_name: "Sistema de Información Empresarial Mexicano (SIEM)"
   owner_name: "Ministry of Economy"
   native_owner_name: "Secretaría de Economía"
+  owner: Q749484
   url: "http://www.siem.gob.mx/siem/portal/consultas/consulta.asp?q=1"
 
   opencorporates_jurisdiction: "mx"
@@ -7128,6 +7357,7 @@
   native_register_name: "Catálogo del Sistema Financiero Mexicano (CASFIM) "
   owner_name: "Ministry of Finance and Public Credit"
   native_owner_name: "Secretaría de Hacienda y Crédito Público"
+  owner: Q1506364
   url: "https://www.gob.mx/shcp/documentos/catalogo-del-sistema-financiero-mexicano"
 }
 {
@@ -7137,10 +7367,12 @@
   country: Q96
   jurisdiction_name: "Mexico"
   jurisdiction: Q96
-  register_name: "Public Register of Commerce"
+  register_name: "Mexican Public Register of Commerce"
   native_register_name: "Registro Público de Comercio"
+  register: Q56319006
   owner_name: "Ministry of Economy"
   native_owner_name: "Secretaría de Economía"
+  owner: Q749484
   url: "https://rpc.economia.gob.mx"
 }
 {
@@ -7150,7 +7382,7 @@
   country: Q217
   jurisdiction_name: "Moldova"
   jurisdiction: Q217
-  register_name: "State Register of Legal Entities"
+  register_name: "Moldova State Register of Legal Entities"
   owner_name: "State Chamber of Registration"
   native_owner_name: "Camera Înregistrării de Stat"
   url: "www.cis.gov.md"
@@ -7164,7 +7396,7 @@
   country: Q235
   jurisdiction_name: "Monaco"
   jurisdiction: Q235
-  register_name: "Registry of Commerce and Industry"
+  register_name: "Monaco Registry of Commerce and Industry"
   native_register_name: "Répertoire du Commerce et de l'Industrie"
   owner_name: "Registry of Commerce and Industry"
   native_owner_name: "Répertoire du Commerce et de l'Industrie"
@@ -7177,7 +7409,7 @@
   country: Q235
   jurisdiction_name: "Monaco"
   jurisdiction: Q235
-  owner_name: "Financial Activities Supervisory Commission"
+  owner_name: "Monaco Financial Activities Supervisory Commission"
   native_owner_name: "Commission de Contrôle des Activités Financières"
   url: "http://www.ccaf.mc/en/"
 }
@@ -7198,7 +7430,7 @@
   country: Q236
   jurisdiction_name: "Montenegro"
   jurisdiction: Q236
-  register_name: "Central Registry of Business Entities"
+  register_name: "Montenegro Central Registry of Business Entities"
   native_register_name: "Centralni Registar Privrednih Subjekata"
   owner_name: "Central Registry of Business Entities of the Tax Administration (CRBE)"
   url: "www.crps.me"
@@ -7223,10 +7455,11 @@
   country: Q1028
   jurisdiction_name: "Morocco"
   jurisdiction: Q1028
-  register_name: "Central Trade Register"
+  register_name: "Morocco Central Trade Register"
   native_register_name: "Registre Central du Commerce"
   owner_name: "Moroccan Industrial and Commercial Property Office"
   native_owner_name: "Office Marocain de la Propriété Industrielle et Commerciale (OMPIC)"
+  owner: Q3349637
   url: "http://www.ompic.org.ma/en/content/about-rcc"
 }
 {
@@ -7236,7 +7469,7 @@
   country: Q1029
   jurisdiction_name: "Mozambique"
   jurisdiction: Q1029
-  register_name: "Commercial Registry"
+  register_name: "Mozambique Commercial Registry"
   native_register_name: "Registo Comercial"
   url: "http://www.portaldogoverno.gov.mz/por/Empresas/Registos/Registo-de-Sociedades"
 }
@@ -7247,7 +7480,7 @@
   country: Q836
   jurisdiction_name: "Myanmar"
   jurisdiction: Q836
-  register_name: "Company Register"
+  register_name: "Myanmar Company Register"
   owner_name: "Directorate of Investment and Company Administration"
   owner: Q28231394
   url: "http://dica.gov.mm.x-aas.net/"
@@ -7261,8 +7494,8 @@
   country: Q1030
   jurisdiction_name: "Namibia"
   jurisdiction: Q1030
-  register_name: "Business Register"
-  owner_name: "Business and Intellectual Property Authority"
+  register_name: "Namibia Business Register"
+  owner_name: "Namibia Business and Intellectual Property Authority"
   url: "http://www.bipa.gov.na/"
 }
 {
@@ -7272,7 +7505,7 @@
   country: Q697
   jurisdiction_name: "Nauru"
   jurisdiction: Q697
-  owner_name: "Office of the Registrar of Corporations"
+  owner_name: "Nauru Office of the Registrar of Corporations"
 }
 {
   registration_authority_code: "RA000462"
@@ -7281,7 +7514,7 @@
   country: Q837
   jurisdiction_name: "Nepal"
   jurisdiction: Q837
-  register_name: "Company Register"
+  register_name: "Nepal Company Register"
   owner_name: "Office of Company Registrar"
   url: "http://www.ocr.gov.np/index.php/np/"
 }
@@ -7292,8 +7525,9 @@
   country: Q55
   jurisdiction_name: "Netherlands"
   jurisdiction: Q55
-  register_name: "Business Register"
+  register_name: "Dutch Business Register"
   native_register_name: "Handelsregister"
+  register: Q27207848
   owner_name: "The Netherlands Chamber of Commerce"
   owner: Q17344314
   native_owner_name: "Kamer van Koophandel"
@@ -7312,6 +7546,7 @@
   jurisdiction: Q55
   owner_name: "The Netherlands Authority for the Financial Markets"
   native_owner_name: "Autoriteit Financiële Markten"
+  owner: Q6999143
   url: "https://www.afm.nl/en/professionals/registers/alle-huidige-registers.aspx"
 }
 {
@@ -7321,7 +7556,7 @@
   country: Q55
   jurisdiction_name: "Netherlands"
   jurisdiction: Q55
-  register_name: "Public Benefit Organisation Register"
+  register_name: "Dutch Public Benefit Organisation Register"
   native_register_name: "ANBI-register"
   owner_name: "Tax and Customs Administration"
   owner: Q2793644
@@ -7335,7 +7570,7 @@
   country: Q664
   jurisdiction_name: "New Zealand"
   jurisdiction: Q664
-  register_name: "Companies Register"
+  register_name: "Companies Register of New Zealand"
   native_register_name: "Companies Register"
   owner_name: "Companies Office (Ministry of Business Innovation and Employment)"
   native_owner_name: "Companies Office (Ministry of Business Innovation and Employment)"
@@ -7365,6 +7600,7 @@
   country: Q811
   jurisdiction_name: "Nicaragua"
   jurisdiction: Q811
+  register_name: "Nicaragua Registro Público de la Propiedad Inmueble y Mercantil"
   native_register_name: "Registro Público de la Propiedad Inmueble y Mercantil"
   native_owner_name: "Direccion Nacional de Registros"
   url: "http://www.registropublico.gob.ni/"
@@ -7376,6 +7612,7 @@
   country: Q1032
   jurisdiction_name: "Niger"
   jurisdiction: Q1032
+  register_name: "Niger Registre du Commerce et du Crédit Mobilier (RCCM)"
   native_register_name: "Registre du Commerce et du Crédit Mobilier (RCCM)"
   native_owner_name: "Registre du Commerce et du Crédit Mobilier (RCCM)"
   url: "http://www.justice.gouv.ne/?q=node/103"
@@ -7387,7 +7624,7 @@
   country: Q1033
   jurisdiction_name: "Nigeria"
   jurisdiction: Q1033
-  register_name: "Company Registry"
+  register_name: "Nigeria Company Registry"
   native_register_name: "Company Registry"
   owner_name: "Corporate Affairs Commission"
   owner: Q18085690
@@ -7401,7 +7638,7 @@
   country: Q34020
   jurisdiction_name: "Niue"
   jurisdiction: Q34020
-  register_name: "Companies Register"
+  register_name: "Niue Companies Register"
   owner_name: "Companies Office"
   url: "http://www.companies.gov.nu/cms"
 }
@@ -7412,7 +7649,7 @@
   country: Q16644
   jurisdiction_name: "Northern Mariana Islands"
   jurisdiction: Q16644
-  owner_name: "Registrar of Corporations (Department of Commerce)"
+  owner_name: "Northern Mariana Islands Registrar of Corporations (Department of Commerce)"
   url: "http://commerce.gov.mp/divisions/registrar/"
 }
 {
@@ -7426,6 +7663,7 @@
   register: Q17773282
   native_register_name: "Foretaksregisteret"
   owner_name: "The Brønnøysund Register Centre"
+  owner: Q1770101
   url: "https://www.brreg.no/the-bronnoysund-register-centre/"
 
   opencorporates_jurisdiction: "no"
@@ -7442,6 +7680,7 @@
   register: Q5380556
   native_register_name: "Enhetsregisteret"
   owner_name: "The Brønnøysund Register Centre"
+  owner: Q1770101
   url: "https://www.brreg.no/the-bronnoysund-register-centre/"
 
   company_property: P2333
@@ -7454,9 +7693,10 @@
   country: Q842
   jurisdiction_name: "Oman"
   jurisdiction: Q842
-  register_name: "National Business Register"
+  register_name: "Oman National Business Register"
   owner_name: "Ministry of Commerce and Industry"
   native_owner_name: "وزارة التجارة والصناعة"
+  owner: Q15253454
   url: "https://www.business.gov.om/wps/portal/ecr/home"
 }
 {
@@ -7466,8 +7706,9 @@
   country: Q843
   jurisdiction_name: "Pakistan"
   jurisdiction: Q843
-  register_name: "Corporate Registry"
+  register_name: "Pakistan Corporate Registry"
   owner_name: "Securities and Exchange Commission"
+  owner: Q17018130
   url: "www.secp.gov.pk"
 
   opencorporates_jurisdiction: "pk"
@@ -7480,7 +7721,7 @@
   country: Q695
   jurisdiction_name: "Palau"
   jurisdiction: Q695
-  owner_name: "Corporate Registrar at the Office of the Attorney General"
+  owner_name: "Palau Corporate Registrar at the Office of the Attorney General"
   url: "http://palaugov.org/office-of-the-attorney-general/"
 }
 {
@@ -7490,8 +7731,8 @@
   country: Q23792
   jurisdiction_name: "Palestine"
   jurisdiction: Q23792
-  register_name: "Companies Registry"
-  owner_name: "Companies Registration Department"
+  register_name: "Palestine Companies Registry"
+  owner_name: "Palestine Companies Registration Department"
   url: "http://www.mne.gov.ps/compreg.aspx?lng=1&tabindex=100"
 }
 {
@@ -7516,8 +7757,8 @@
   country: Q691
   jurisdiction_name: "Papua New Guinea"
   jurisdiction: Q691
-  register_name: "Companies Office"
-  owner_name: "Registrar of Companies (Investment Promotion Authority )"
+  register_name: "Papua New Guinea Companies Office"
+  owner_name: "Registrar of Companies (Investment Promotion Authority)"
   url: "www.ipa.gov.pg"
 }
 {
@@ -7527,8 +7768,9 @@
   country: Q733
   jurisdiction_name: "Paraguay"
   jurisdiction: Q733
-  register_name: "Ministry of Industry and Commerce"
-  native_register_name: "Ministerio de Industria y Comercio"
+  owner_name: "Ministry of Industry and Commerce"
+  native_owner_name: "Ministerio de Industria y Comercio"
+  owner: Q84560497
   url: "http://www.mic.gov.py/GuiaIndustrial/faces/filtro.xhtml"
 }
 {
@@ -7538,7 +7780,7 @@
   country: Q733
   jurisdiction_name: "Paraguay"
   jurisdiction: Q733
-  owner_name: "Unified Business Opening System"
+  owner_name: "Paraguay Unified Business Opening System"
   native_owner_name: "Sistema Unificado de Apertura y Cierre de Empresas"
   url: "www.suace.gov.py"
 }
@@ -7549,7 +7791,7 @@
   country: Q419
   jurisdiction_name: "Peru"
   jurisdiction: Q419
-  register_name: "Public Register of Commerce"
+  register_name: "Peru Public Register of Commerce"
   owner_name: "National Public Registry"
   native_owner_name: "Superintendencia Nacional de Registros Públicos"
   url: "www.sunarp.gob.pe"
@@ -7561,8 +7803,9 @@
   country: Q419
   jurisdiction_name: "Peru"
   jurisdiction: Q419
+  register_name: "Peru Registro Único de Contribuyentes"
   native_register_name: "Registro Único de Contribuyentes (RUC)"
-  native_owner_name: "Superintendencia Nacional de Aduanas y de Administración Tributaria  (SUNAT)"
+  native_owner_name: "Superintendencia Nacional de Aduanas y de Administración Tributaria (SUNAT)"
   url: "http://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/jcrS00Alias"
 }
 {
@@ -7572,7 +7815,7 @@
   country: Q928
   jurisdiction_name: "Philippines"
   jurisdiction: Q928
-  register_name: "Companies Register"
+  register_name: "Philippines Companies Register"
   owner_name: "Securities and Exchange Commission"
   owner: Q7444918
   url: "www.sec.gov.ph"
@@ -7584,8 +7827,9 @@
   country: Q36
   jurisdiction_name: "Poland"
   jurisdiction: Q36
-  register_name: "National Court Register"
+  register_name: "Poland National Court Register"
   native_register_name: "Krajowy Rejestr Sądowy (KRS)"
+  register: Q16569346
   owner_name: "Ministry of Justice"
   owner: Q4294864
   native_owner_name: "Minsterstwo Sprawiedliwosci"
@@ -7601,8 +7845,8 @@
   country: Q36
   jurisdiction_name: "Poland"
   jurisdiction: Q36
-  register_name: "Investment Fund Management Companies,  Investment Funds and Pension Funds"
-  native_register_name: "Towarzystwa Funduszy Inwestycyjnych,  Fundusze Inwestycyjne oraz Fundusze Emerytalne"
+  register_name: "Polish Investment Fund Management Companies,  Investment Funds and Pension Funds"
+  native_register_name: "Towarzystwa Funduszy Inwestycyjnych, Fundusze Inwestycyjne oraz Fundusze Emerytalne"
   owner_name: "Polish Financial Supervision Authority"
   owner: Q773485
   native_owner_name: "Komisja Nadzoru Finansowego"
@@ -7615,7 +7859,7 @@
   country: Q36
   jurisdiction_name: "Poland"
   jurisdiction: Q36
-  register_name: "Central Registration and Information on Business"
+  register_name: "Poland Central Registration and Information on Business"
   native_register_name: "Centralna Ewidencja i Informacja o Działalności Gospodarczej (CEIDG)"
   owner_name: "Ministry of Enterprise and Technology"
   native_owner_name: "Ministerstwo Przedsiębiorczości i Technologii"
@@ -7630,6 +7874,7 @@
   jurisdiction: Q36
   register_name: "National Official Business Register (REGON)"
   native_register_name: "Krajowy rejestr urzędowy podmiotów gospodarki narodowej (REGON)"
+  register: Q1054100
   owner_name: "Central Statistical Office of Poland"
   owner: Q1547190
   native_owner_name: "Główny Urząd Statystyczny"
@@ -7642,7 +7887,7 @@
   country: Q45
   jurisdiction_name: "Portugal"
   jurisdiction: Q45
-  register_name: "Commercial Register"
+  register_name: "Commercial Register of Portugal"
   native_register_name: "Registo Comercial"
   owner_name: "Institute of Registries and Notary (Ministry of Justice)"
   native_owner_name: "Instituto dos Registos e do Notariado"
@@ -7657,6 +7902,7 @@
   jurisdiction: Q45
   owner_name: "Securities Market Commission"
   native_owner_name: "Comissão do mercado de valores mobiliários (CMVM)"
+  owner: Q7232685
   url: "http://www.cmvm.pt/en"
 }
 {
@@ -7666,8 +7912,9 @@
   country: Q45
   jurisdiction_name: "Portugal"
   jurisdiction: Q45
-  owner_name: "Insurance and pension funds supervisison autority"
+  owner_name: "Insurance and pension funds supervisison autority of Portugal"
   native_owner_name: "Autoridade de supervisão de seguros e fundos de pensões (ASF)"
+  owner: Q10302941
   url: "http://www.asf.com.pt/NR/exeres/3DCB6032-0C4A-4F1E-95CA-1502D724C4C8.htm"
 }
 {
@@ -7677,7 +7924,7 @@
   country: Q1183
   jurisdiction_name: "Puerto Rico"
   jurisdiction: Q1183
-  register_name: "Registry of Corporations and Entities"
+  register_name: "Puerto Rico Registry of Corporations and Entities"
   native_register_name: "Registro de Corporaciones y Entidades"
   owner_name: "Puerto Rico Department of State"
   owner: Q7258702
@@ -7693,7 +7940,7 @@
   country: Q846
   jurisdiction_name: "Qatar"
   jurisdiction: Q846
-  register_name: "Commercial Registration"
+  register_name: "Qatar Commercial Registration"
   owner_name: "Ministry of Economy and Commerce"
   native_owner_name: "وزارة الاقتصاد والتجارة"
   url: "http://portal.www.gov.qa/wps/portal/directory/agency/"
@@ -7705,7 +7952,7 @@
   country: Q846
   jurisdiction_name: "Qatar"
   jurisdiction: Q846
-  register_name: "Companies register"
+  register_name: "Qatar Companies register"
   owner_name: "Companies Registration Office (Qatar Financial Centre)"
   native_owner_name: "مركز قطر للمال"
   url: "http://www.qfc.qa/en/thecompanyregister"
@@ -7717,8 +7964,9 @@
   country: Q218
   jurisdiction_name: "Romania"
   jurisdiction: Q218
-  register_name: "Trade Register"
+  register_name: "Romanian Trade Register"
   native_register_name: "Registrul Comertului"
+  register: Q12737093
   owner_name: "National Trade Register Office"
   native_owner_name: "Oficiul National al Registrului Comertului"
   url: "www.onrc.ro"
@@ -7732,10 +7980,10 @@
   country: Q218
   jurisdiction_name: "Romania"
   jurisdiction: Q218
-  register_name: "Financial Instruments and Investments Registry"
+  register_name: "Romanian Financial Instruments and Investments Registry"
   owner_name: "Financial Supervisory Authority"
   owner: Q18537588
-  native_owner_name: "Autoritatea de Supraveghere Financiară (ASF) "
+  native_owner_name: "Autoritatea de Supraveghere Financiară (ASF)"
   url: "http://asfromania.ro/en/supervision/registries/financial-instruments-and-investments "
 }
 {
@@ -7745,7 +7993,7 @@
   country: Q218
   jurisdiction_name: "Romania"
   jurisdiction: Q218
-  register_name: "NGO register"
+  register_name: "Romanian NGO register"
   native_register_name: "Registrul Național ONG"
   owner_name: "Ministry of Justice"
   owner: Q4294873
@@ -7759,7 +8007,7 @@
   country: Q218
   jurisdiction_name: "Romania"
   jurisdiction: Q218
-  register_name: "Tax Payer Register"
+  register_name: "Romanian Tax Payer Register"
   native_register_name: "Registrul contribuabililor/plătitorilor"
   owner_name: "Ministry of Public Finance"
   owner: Q4294548
@@ -7773,7 +8021,7 @@
   country: Q218
   jurisdiction_name: "Romania"
   jurisdiction: Q218
-  register_name: "National Register of Public Institutions"
+  register_name: "Romanian National Register of Public Institutions"
   native_register_name: "Registrul Național al Instituțiilor Publice"
   owner_name: "Ministry of Public Finance"
   owner: Q4294548
@@ -7801,10 +8049,11 @@
   country: Q159
   jurisdiction_name: "Russia"
   jurisdiction: Q159
-  register_name: "Unified State Register of Legal Entities"
+  register_name: "Russian Unified State Register of Legal Entities"
   register: Q27890430
   native_register_name: "Единый Государственный Реестр Юридических Лиц, ЕГРЮЛ"
   owner_name: "Federal Tax Service (Ministry of Finance)"
+  owner: Q4481672
   url: "https://www.nalog.ru/eng/"
 
   ; P2391 is for OKPO IDs and not INN IDs
@@ -7818,7 +8067,7 @@
   country: Q1037
   jurisdiction_name: "Rwanda"
   jurisdiction: Q1037
-  register_name: "Business Register"
+  register_name: "Rwanda Business Register"
   owner_name: "Office of the Registrar General"
   url: "http://org.rdb.rw/"
 
@@ -7831,7 +8080,7 @@
   country: Q763
   jurisdiction_name: "Saint Kitts and Nevis"
   jurisdiction: Q763
-  register_name: "Companies Registry"
+  register_name: "Saint Kitts and Nevis Companies Registry"
   owner_name: "Registrar of Companies (Financial Services Regulatory Comission)"
   url: "http://www.fsrc.kn/"
 }
@@ -7842,7 +8091,7 @@
   country: Q760
   jurisdiction_name: "Saint Lucia"
   jurisdiction: Q760
-  register_name: "Registry of Companies"
+  register_name: "Saint Lucia Registry of Companies"
   owner_name: "Registry of Companies and Intellectual Property"
   url: "http://www.rocip.gov.lc/stlucia/"
 }
@@ -7853,7 +8102,7 @@
   country: Q760
   jurisdiction_name: "Saint Lucia"
   jurisdiction: Q760
-  register_name: "Registry of International Business Companies and International Trusts"
+  register_name: "Saint Lucia Registry of International Business Companies and International Trusts"
   native_register_name: "Registry of International Business Companies and International Trusts"
   owner_name: "International Financial Centre"
   native_owner_name: "International Financial Centre"
@@ -7898,7 +8147,7 @@
   country: Q238
   jurisdiction_name: "San Marino"
   jurisdiction: Q238
-  register_name: "Registry of Companies"
+  register_name: "San Marino Registry of Companies"
   native_register_name: "Registro imprese"
   owner_name: "Chamber of Commerce San Marino"
   native_owner_name: "Camera di Commercio della Repubblica di San Marino"
@@ -7911,6 +8160,7 @@
   country: Q1039
   jurisdiction_name: "Sao Tome and Principe"
   jurisdiction: Q1039
+  owner_name: "Sao Tome and Principe Guiché Único para Empresas"
   native_owner_name: "Guiché Único para Empresas (do Ministério da Justiça e Direitos Humanos)"
   url: "https://publicmanager-guenet.cloud-stp.net/publicmanager-guenet/pages/index.php5"
 }
@@ -7956,6 +8206,7 @@
   country: Q1041
   jurisdiction_name: "Senegal"
   jurisdiction: Q1041
+  register_name: "Senegal Registre du Commerce et du Crédit Mobilier"
   native_register_name: "Registre du Commerce et du Crédit Mobilier (RCCM)"
   native_owner_name: "Greffe du Tribunal"
   url: "http://www.servicepublic.gouv.sn/index.php/demarche_administrative/demarche/1/196"
@@ -7978,9 +8229,10 @@
   country: Q403
   jurisdiction_name: "Serbia"
   jurisdiction: Q403
-  register_name: "Business Entities Register - Companies"
+  register_name: "Serbia Business Entities Register - Companies"
   owner_name: "Serbian Business Registers Agency"
   native_owner_name: "Агенција за привредне регистре"
+  owner: Q16083426
   url: "www.apr.gov.rs/eng/home.aspx"
 }
 {
@@ -7990,7 +8242,7 @@
   country: Q403
   jurisdiction_name: "Serbia"
   jurisdiction: Q403
-  owner_name: "Central Securities Depository and Clearing House"
+  owner_name: "Serbia Central Securities Depository and Clearing House"
   native_owner_name: "Centralni registar, depo i kliring hartija od vrednosti"
   url: "http://www.crhov.rs/"
 }
@@ -8001,7 +8253,7 @@
   country: Q403
   jurisdiction_name: "Serbia"
   jurisdiction: Q403
-  register_name: "Register of Investment Funds"
+  register_name: "Serbia Register of Investment Funds"
   native_register_name: "Регистар друштава за управљање инвестиционим фондовима"
   owner_name: "Securities Commission"
   native_owner_name: "Комисија за хартије од вредности"
@@ -8014,7 +8266,7 @@
   country: Q403
   jurisdiction_name: "Kosovo-Metohija"
   jurisdiction: Q1255
-  register_name: "Registry of Business Organizations and Trade Names"
+  register_name: "Kosovo Registry of Business Organizations and Trade Names"
   owner_name: "Kosovo Business Registration Agency (KBRA)"
   url: "www.arbk.org"
 }
@@ -8046,7 +8298,7 @@
   country: Q1044
   jurisdiction_name: "Sierra Leone"
   jurisdiction: Q1044
-  register_name: "Business Registry"
+  register_name: "Sierra Leone Business Registry"
   owner_name: "Office of Administrator and Registrar General (OARG)"
   url: "http://www.oarg.gov.sl/Business%20Registry.html"
 }
@@ -8057,8 +8309,9 @@
   country: Q334
   jurisdiction_name: "Singapore"
   jurisdiction: Q334
-  register_name: "Business Registry"
+  register_name: "Singapore Business Registry"
   owner_name: "Accounting and Corporate Regulatory Authority (ACRA)"
+  owner: Q4672781
   url: "www.acra.gov.sg"
 
   opencorporates_jurisdiction: "sg"
@@ -8083,7 +8336,7 @@
   country: Q334
   jurisdiction_name: "Singapore"
   jurisdiction: Q334
-  register_name: "Register of Societies"
+  register_name: "Singapore Register of Societies"
   owner_name: "Registry of Societies"
   url: "www.ros.mha.gov.sg"
 }
@@ -8094,7 +8347,7 @@
   country: Q26273
   jurisdiction_name: "Sint Maarten"
   jurisdiction: Q26273
-  register_name: "Trade Register"
+  register_name: "Sint Maarten Trade Register"
   native_register_name: "Handelsregister"
   owner_name: "St. Maarten Chamber of Commerce & Industry"
   native_owner_name: "Kamer van Koophandel en Nijverheid"
@@ -8107,10 +8360,10 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Business Register"
+  register_name: "Slovakia Business Register"
   native_register_name: "Obchodný register"
   owner_name: "Ministry of Justice"
-  owner: Q2983190
+  owner: Q13450145
   native_owner_name: "Ministerstvo spravodlivosti"
   url: "http://www.orsr.sk/Default.asp?lan=en"
 
@@ -8125,7 +8378,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Evidence of Civil Associations"
+  register_name: "Slovakia Evidence of Civil Associations"
   native_register_name: "Evidencia občianskych združení"
   owner_name: "Ministry of Interior"
   owner: Q13450147
@@ -8139,7 +8392,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Register of Non-profit Organisations"
+  register_name: "Slovakia Register of Non-profit Organisations"
   native_register_name: "Register neziskových organizácií"
   owner_name: "Ministry of Interior"
   owner: Q13450147
@@ -8153,7 +8406,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Trade Register"
+  register_name: "Slovakia Trade Register"
   native_register_name: "Živnostenský register"
   owner_name: "Ministry of Interior"
   owner: Q13450147
@@ -8167,8 +8420,9 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  owner_name: "The Statistical Office"
+  owner_name: "The Statistical Office of Slovakia"
   native_owner_name: "Štatistický úrad"
+  owner: Q13371586
   url: "https://slovak.statistics.sk/wps/portal/ext/Databases/register_organizacii/"
 }
 {
@@ -8178,7 +8432,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Register of Foundations"
+  register_name: "Slovakia Register of Foundations"
   native_register_name: "Register nadácií"
   owner_name: "Ministry of Interior"
   owner: Q13450147
@@ -8192,7 +8446,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Register of the Interest Associations of Legal Persons"
+  register_name: "Slovakia Register of the Interest Associations of Legal Persons"
   native_register_name: "Register záujmových združení právnických osôb"
   owner_name: "Ministry of Interior"
   owner: Q13450147
@@ -8206,7 +8460,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Register of Associations of Municipalities"
+  register_name: "Slovakia Register of Associations of Municipalities"
   native_register_name: "Register združení obcí"
   owner_name: "Ministry of Interior"
   owner: Q13450147
@@ -8220,7 +8474,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Register of Non-investment Funds"
+  register_name: "Slovakia Register of Non-investment Funds"
   native_register_name: "Register neinvestičných fondov"
   owner_name: "Ministry of Interior"
   owner: Q13450147
@@ -8234,7 +8488,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Organisations with the International Element"
+  register_name: "Slovakia Organisations with the International Element"
   native_register_name: "Organizácie s medzinárodným prvkom"
   owner_name: "Ministry of Interior"
   owner: Q13450147
@@ -8248,7 +8502,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "Register of Political Parties and Political Movements"
+  register_name: "Slovakia Register of Political Parties and Political Movements"
   native_register_name: "Register politických strán a politických hnutí"
   owner_name: "Ministry of Interior"
   owner: Q13450147
@@ -8262,7 +8516,7 @@
   country: Q214
   jurisdiction_name: "Slovakia"
   jurisdiction: Q214
-  register_name: "List of Investment Funds"
+  register_name: "Slovakia List of Investment Funds"
   native_register_name: "Zoznam podielových fondov"
   owner_name: "National Bank of Slovakia"
   owner: Q1481791
@@ -8290,7 +8544,7 @@
   country: Q685
   jurisdiction_name: "Solomon Islands"
   jurisdiction: Q685
-  register_name: "Companies Register"
+  register_name: "Solomon Islands Companies Register"
   owner_name: "The Company Haus of Solomon Islands"
   url: "www.companyhaus.gov.sb"
 }
@@ -8301,7 +8555,7 @@
   country: Q258
   jurisdiction_name: "South Africa"
   jurisdiction: Q258
-  register_name: "Corporate Registers"
+  register_name: "South Africa Corporate Registers"
   owner_name: "Companies and Intellectual Property Commission"
   owner: Q39086117
   url: "www.cipc.co.za"
@@ -8316,7 +8570,7 @@
   country: Q958
   jurisdiction_name: "South Sudan"
   jurisdiction: Q958
-  register_name: "Business Registry"
+  register_name: "South Sudan Business Registry"
   owner_name: "Ministry of Justice Directorate of Registration of Businesses, Associations and NGOs"
   url: "http://www.registry.mojss.org/"
 }
@@ -8355,7 +8609,7 @@
   country: Q29
   jurisdiction_name: "Spain"
   jurisdiction: Q29
-  owner_name: "National Stock Market Commission"
+  owner_name: "Spanish National Stock Market Commission"
   owner: Q4894522
   native_owner_name: "Comisión Nacional del Mercado de Valores (CNMV)"
   url: "www.cnmv.es"
@@ -8367,7 +8621,7 @@
   country: Q29
   jurisdiction_name: "Spain"
   jurisdiction: Q29
-  owner_name: "Tax Agency"
+  owner_name: "Spanish Tax Agency"
   owner: Q4891205
   native_owner_name: "Agencia Tributaria (AEAT)"
   url: "www.agenciatributaria.es"
@@ -8379,7 +8633,7 @@
   country: Q29
   jurisdiction_name: "Spain"
   jurisdiction: Q29
-  register_name: "Register of Foundations"
+  register_name: "Spanish Register of Foundations"
   native_register_name: "Registro de Fundaciones"
   owner_name: "Register of Foundations"
   native_owner_name: "Registro de Fundaciones"
@@ -8392,7 +8646,7 @@
   country: Q29
   jurisdiction_name: "Spain"
   jurisdiction: Q29
-  register_name: "Register of Associations"
+  register_name: "Spanish Register of Associations"
   native_register_name: "Registro de Asociaciones"
   owner_name: "Register of Associations"
   native_owner_name: "Registro de Asociaciones"
@@ -8405,10 +8659,9 @@
   country: Q29
   jurisdiction_name: "Spain"
   jurisdiction: Q29
-  register_name: "Register of Cooperative Societies"
+  register_name: "Spanish Register of Cooperative Societies"
   native_register_name: "Registro de Sociedades Cooperativas, Sociedades Laborales y Fundaciones Laborales"
   owner_name: "Government of Spain"
-  owner: Q1194749
   native_owner_name: "Registro de Sociedades Cooperativas, Sociedades Laborales y Fundaciones Laborales"
   url: "www.empleo.gob.es"
 }
@@ -8419,8 +8672,9 @@
   country: Q29
   jurisdiction_name: "Spain"
   jurisdiction: Q29
-  owner_name: "Directorate General for Insurances and Pension Funds"
+  owner_name: "Spanish Directorate General for Insurances and Pension Funds"
   native_owner_name: "Dirección General de Seguros y Fondos de Pensiones (ministerio de Economía y Competitivitad)"
+  owner: Q5280205
   url: "http://www.dgsfp.mineco.es/index_in.asp"
 }
 {
@@ -8430,7 +8684,7 @@
   country: Q29
   jurisdiction_name: "Spain"
   jurisdiction: Q29
-  register_name: "Register of Religious Entities"
+  register_name: "Spanish Register of Religious Entities"
   native_register_name: "Registro Entidades Religiosas"
   owner_name: "Ministry of Justice"
   owner: Q3181035
@@ -8444,7 +8698,7 @@
   country: Q29
   jurisdiction_name: "Catalonia"
   jurisdiction: Q5705
-  register_name: "Inventory of Regional Institutions"
+  register_name: "Catalonia Inventory of Regional Institutions"
   native_register_name: "Cercador d'organismes"
   owner_name: "Government of Catalonia"
   owner: Q3112544
@@ -8458,7 +8712,7 @@
   country: Q854
   jurisdiction_name: "Sri Lanka"
   jurisdiction: Q854
-  owner_name: "Department of Registrar of Companies"
+  owner_name: "Sri Lanka Department of Registrar of Companies"
   url: "www.drc.gov.lk"
 }
 {
@@ -8468,7 +8722,7 @@
   country: Q1049
   jurisdiction_name: "Sudan"
   jurisdiction: Q1049
-  owner_name: "Ministry of Justice Commercial Registrations Department"
+  owner_name: "Ministry of Justice Commercial Registrations Department of Sudan"
   url: "www.crd.gov.sd/"
 }
 {
@@ -8478,7 +8732,7 @@
   country: Q730
   jurisdiction_name: "Suriname"
   jurisdiction: Q730
-  register_name: "Trade Register"
+  register_name: "Suriname Trade Register"
   native_register_name: "Handelsregister"
   owner_name: "Chamber of Commerce of Suriname"
   native_owner_name: "Kamer van Koophandel en Nijverheid"
@@ -8491,7 +8745,7 @@
   country: Q1050
   jurisdiction_name: "Swaziland"
   jurisdiction: Q1050
-  register_name: "Company Register"
+  register_name: "Swaziland Company Register"
   owner_name: "Registrar of Companies"
   url: "www.gov.sz/index.php?option=com_content&view=article&id=522"
 }
@@ -8502,7 +8756,7 @@
   country: Q34
   jurisdiction_name: "Sweden"
   jurisdiction: Q34
-  register_name: "Companies Register"
+  register_name: "Swedish Companies Register"
   owner_name: "Swedish Companies Registration Office"
   owner: Q891249
   native_owner_name: "Bolagsverket"
@@ -8600,7 +8854,7 @@
   country: Q39
   jurisdiction_name: "Switzerland"
   jurisdiction: Q39
-  register_name: "Commercial Register"
+  register_name: "Swiss Commercial Register"
   native_register_name: "Handelsregister"
   owner_name: "Ministry of Justice"
   owner: Q1005459
@@ -8630,6 +8884,7 @@
   jurisdiction: Q39
   owner_name: "Financial Market Supervisory Authority"
   native_owner_name: "Eidgenössische Finanzmarktaufsicht FINMA"
+  owner: Q681362
   url: "https://www.finma.ch/de/finma-public/bewilligte-institute-personen-und-produkte/ "
 }
 {
@@ -8639,7 +8894,7 @@
   country: Q39
   jurisdiction_name: "Switzerland"
   jurisdiction: Q39
-  owner_name: "Committee for the High Supervision of Pension Funds CHS PP"
+  owner_name: "Swiss Committee for the High Supervision of Pension Funds CHS PP"
   native_owner_name: "Commission de haute surveillance de la prévoyance professionnelle CHS PP"
   url: "http://www.oak-bv.admin.ch"
 }
@@ -8652,6 +8907,7 @@
   jurisdiction: Q865
   owner_name: "Ministry of Economic Affairs"
   native_owner_name: "經濟部"
+  owner: Q697113
   url: "https://findbiz.nat.gov.tw/fts/query/QueryBar/queryInit.do?request_locale=en"
 }
 {
@@ -8674,7 +8930,7 @@
   country: Q924
   jurisdiction_name: "Tanzania"
   jurisdiction: Q924
-  register_name: "Business Register"
+  register_name: "Tanzania Business Register"
   owner_name: "Business Registrations and Licensing Agency (BRELA)"
   url: "www.brela.go.tz/"
 
@@ -8688,8 +8944,9 @@
   country: Q869
   jurisdiction_name: "Thailand"
   jurisdiction: Q869
-  register_name: "Business Register"
+  register_name: "Thailand Business Register"
   owner_name: "Department of Business Development (Ministry of Commerce)"
+  owner: Q56651187
   url: "www.dbd.go.th/dbdweb_en/main.php?filename=index"
 
   opencorporates_jurisdiction: "th"
@@ -8702,6 +8959,7 @@
   country: Q574
   jurisdiction_name: "Timor-Leste"
   jurisdiction: Q574
+  owner_name: "Timor-Leste Serviço de Registo e Verificaçao Empresarial (SERVE)"
   native_owner_name: "Serviço de Registo e Verificaçao Empresarial (SERVE) (Ministério da Justiça)"
   url: "www.serve.gov.tl"
 }
@@ -8712,6 +8970,7 @@
   country: Q945
   jurisdiction_name: "Togo"
   jurisdiction: Q945
+  register_name: "Togo Registre du Commerce et du Crédit Mobilier (RCCM)"
   native_register_name: "Registre du Commerce et du Crédit Mobilier (RCCM)"
   native_owner_name: "Centre de Formalités des Entreprises (CFE) "
   url: "www.cfetogo.org/"
@@ -8723,7 +8982,7 @@
   country: Q678
   jurisdiction_name: "Tonga"
   jurisdiction: Q678
-  register_name: "Business Registry"
+  register_name: "Tonga Business Registry"
   owner_name: "Business Registries Office (Ministry of Commerce, Tourism and Labour)"
   url: "http://www.businessregistries.gov.to/"
 
@@ -8736,7 +8995,7 @@
   country: Q754
   jurisdiction_name: "Trinidad and Tobago"
   jurisdiction: Q754
-  register_name: "Companies Registry"
+  register_name: "Trinidad and Tobago Companies Registry"
   native_register_name: "Companies Registry"
   owner_name: "Registrar General's Department (Ministry of Legal Affairs)"
   native_owner_name: "Registrar General's Department (Ministry of Legal Affairs)"
@@ -8749,9 +9008,10 @@
   country: Q948
   jurisdiction_name: "Tunisia"
   jurisdiction: Q948
-  register_name: "Register of Commerce"
+  register_name: "Tunisia Register of Commerce"
   native_register_name: "Registre de Commerce"
   native_owner_name: "Institut national de la Normalisation et de la Propriété Industrielle"
+  owner: Q17630440
   url: "www.registre-commerce.tn/accueil.html"
 
   opencorporates_jurisdiction: "tn"
@@ -8763,7 +9023,7 @@
   country: Q43
   jurisdiction_name: "Turkey"
   jurisdiction: Q43
-  register_name: "Central Registry Number System (MERSIS)"
+  register_name: "Turkish Central Registry Number System (MERSIS)"
   owner_name: "Ministry of Customs and Trade, General Directorate of Domestic Trade"
   native_owner_name: "Gumruk ve Ticaret Bakanligi Ic Ticaret Genel Mudurlugu"
   url: "mersis.gumrukticaret.gov.tr/Login/tabid/110/Default.aspx?returnurl=%2fAnaSayfa.aspx"
@@ -8775,7 +9035,7 @@
   country: Q43
   jurisdiction_name: "Turkey"
   jurisdiction: Q43
-  register_name: "Trade Registry"
+  register_name: "Turkish  Trade Registry"
   owner_name: "Turkish Trade Registry Gazette (The Union of Chambers and Commodity Exchanges of Turkey)"
   url: "http://www.ticaretsicilgazetesi.gov.tr/english/sorgu_acik.php"
 }
@@ -8786,7 +9046,7 @@
   country: Q874
   jurisdiction_name: "Turkmenistan"
   jurisdiction: Q874
-  register_name: "Statistical Register of Economic Entities (State Committee of Statistics of Turkmenistan)"
+  register_name: "Turkmenistan Statistical Register of Economic Entities"
   native_register_name: "Statistical Register of Economic Entities (State Committee of Statistics of Turkmenistan)"
 }
 {
@@ -8796,7 +9056,7 @@
   country: Q18221
   jurisdiction_name: "Turks and Caicos Islands"
   jurisdiction: Q18221
-  register_name: "Companies Registry"
+  register_name: "Turks and Caicos Islands Companies Registry"
   native_register_name: "Companies Registry"
   owner_name: "Financial Services Commission"
   native_owner_name: "Financial Services Commission"
@@ -8809,7 +9069,7 @@
   country: Q672
   jurisdiction_name: "Tuvalu"
   jurisdiction: Q672
-  register_name: "Companies and Business Registration Register"
+  register_name: "Tuvalu Companies and Business Registration Register"
   owner_name: "Registrar of Companies"
   url: "www.tuvaluislands.com/gov_addresses.htm"
 }
@@ -8820,7 +9080,7 @@
   country: Q11703
   jurisdiction_name: "U.S. Virgin Islands"
   jurisdiction: Q11703
-  register_name: "Department of Licensing and Consumer Affairs"
+  register_name: "U.S. Virgin Islands Department of Licensing and Consumer Affairs"
   native_register_name: "Department of Licensing and Consumer Affairs"
   url: "https://secure.dlca.vi.gov/license/Asps/Search/License_search.aspx"
 }
@@ -8831,8 +9091,8 @@
   country: Q1036
   jurisdiction_name: "Uganda"
   jurisdiction: Q1036
-  register_name: "Business Registry"
-  owner_name: "Directorate of Business Registration of Uganda Registration Services Bureau"
+  register_name: "Uganda Business Registry"
+  owner_name: "Directorate of Business Registration of Uganda, Registration Services Bureau"
   url: "ursb.go.ug/"
 
   opencorporates_jurisdiction: "ug"
@@ -8844,7 +9104,7 @@
   country: Q1036
   jurisdiction_name: "Uganda"
   jurisdiction: Q1036
-  register_name: "Supervised Financial Institutions"
+  register_name: "Uganda Supervised Financial Institutions"
   owner_name: "Bank of Uganda"
   owner: Q487300
   url: "https://www.bou.or.ug/bou/supervision/financial_institutions.html"
@@ -8858,6 +9118,7 @@
   jurisdiction: Q212
   register_name: "United State Register of Legal Entities and Individual Entrepreneurs of Ukraine (State register service of Ukraine)"
   native_register_name: "Єдиний державний реєстр юридичних осіб та фізичних осіб - підприємців"
+  register: Q16157644
   owner_name: "State Enterprise Information Resource Centre"
   url: "irc.gov.ua/en/reestr_edr"
 
@@ -9001,7 +9262,7 @@
   country_code: "AE"
   country: Q878
   jurisdiction_name: "Ras Al Khaimah"
-  jurisdiction: Q2126436
+  jurisdiction: Q170024
   register_name: "RAK International Corporate Centre Registry"
   owner_name: "RAK International Corporate Centre (RAK ICC)"
   url: "https://www.rakicc.com/"
@@ -9012,6 +9273,7 @@
   country_code: "AE"
   country: Q878
   jurisdiction_name: "Ras Al Khamaih"
+  jurisdiction: Q170024
   register_name: "RAK Investment Authority: Business Directory"
   native_register_name: "RAK Investment Authority: Business Directory"
   owner_name: "Ras Al Khaimah Economic Zone"
@@ -9023,6 +9285,7 @@
   country_code: "AE"
   country: Q878
   jurisdiction_name: "Ras Al Khamaih"
+  jurisdiction: Q170024
   owner_name: "Department of Economic Development"
   url: "http://www.ded.rak.ae/en/Pages/default.aspx"
 }
@@ -9067,7 +9330,7 @@
   country: Q878
   jurisdiction_name: "Sharjah"
   jurisdiction: Q289693
-  owner_name: "Economic Development Department"
+  owner_name: "Sharjah Economic Development Department"
   url: "http://sedd.ae/"
 }
 {
@@ -9088,7 +9351,7 @@
   country: Q878
   jurisdiction_name: "United Arab Emirates"
   jurisdiction: Q878
-  register_name: "National Economic Register"
+  register_name: "United Arab Emirates National Economic Register"
   native_register_name: "السجل الاقتصادي الوطني"
   owner_name: "Ministry of Economy"
   native_owner_name: "وزارة الاقتصاد"
@@ -9174,6 +9437,7 @@
   native_register_name: "Register of Charities"
   owner_name: "The Charity Commission for Northern Ireland"
   native_owner_name: "The Charity Commission for Northern Ireland"
+  owner: Q5074502
   url: "https://www.charitycommissionni.org.uk/"
 
   company_property: P3200
@@ -9221,10 +9485,11 @@
   country: Q145
   jurisdiction_name: "United Kingdom"
   jurisdiction: Q145
-  register_name: "Mutuals Public Register"
+  register_name: "UK Mutuals Public Register"
   native_register_name: "Mutuals Public Register"
   owner_name: "Prudential Regulation Authority (Bank of England)"
   native_owner_name: "Prudential Regulation Authority (Bank of England)"
+  owner: Q7252987
   url: "https://mutuals.fsa.gov.uk/"
 }
 {
@@ -9372,6 +9637,7 @@
   native_register_name: "Registry of insurance companies"
   owner_name: "New York State Government, Department of Financial Services"
   native_owner_name: "New York State Government, Department of Financial Services"
+  owner: Q17018979
   url: "https://myportal.dfs.ny.gov/web/guest-applications/ins.-company-search"
 }
 {
@@ -10105,6 +10371,7 @@
   country: Q77
   jurisdiction_name: "Uruguay"
   jurisdiction: Q77
+  register_name: "Uruguay Registro Único Tributario (RUT)"
   native_register_name: "Registro Único Tributario (RUT)"
   native_owner_name: "Dirección General Impositiva (DGI)"
   url: "https://servicios.dgi.gub.uy/ServiciosEnLinea/dgi--servicios-en-linea--impresion-de-boletos-de-pago?es"
@@ -10116,10 +10383,9 @@
   country: Q265
   jurisdiction_name: "Uzbekistan"
   jurisdiction: Q265
-  register_name: "Register of Associations and Legal Entities"
+  register_name: "Uzbekistan Register of Associations and Legal Entities"
   native_register_name: "Юридик шахслар, бирлашмалар реестри"
   owner_name: "Ministry of Justice"
-  owner: Q2983190
   url: "http://minjust.uz/ru/interactive/registries/associations/"
 }
 {
@@ -10129,7 +10395,7 @@
   country: Q686
   jurisdiction_name: "Vanuatu"
   jurisdiction: Q686
-  register_name: "Companies Registry"
+  register_name: "Vanuatu Companies Registry"
   owner_name: "Vanuatu Financial Services Commission"
   owner: Q40890164
   url: "www.vfsc.vu"
@@ -10143,7 +10409,7 @@
   country: Q717
   jurisdiction_name: "Venezuela"
   jurisdiction: Q717
-  register_name: "National System Register of Enterprises and Business"
+  register_name: "Venezuela National System Register of Enterprises and Business"
   native_register_name: "Sistema de Registro Nacional de Empresas y Establecimientos"
   url: "http://app.rnee.minpptrass.gob.ve/gestion/login.php"
 }
@@ -10154,7 +10420,7 @@
   country: Q881
   jurisdiction_name: "Vietnam"
   jurisdiction: Q881
-  register_name: "Business Registration"
+  register_name: "Vietnam Business Registration"
   owner_name: "Agency of Business Registration (Ministry of Planning and Investment)"
   url: "https://dangkykinhdoanh.gov.vn/en-gb/home.aspx"
 
@@ -10167,6 +10433,7 @@
   country: Q35555
   jurisdiction_name: "Wallis and Futuna"
   jurisdiction: Q35555
+  owner_name: "Wallis and Futuna Service de la Réglementation et des Élections"
   native_owner_name: "Service de la Réglementation et des Élections (SRE)"
   url: "http://www.wallis-et-futuna.pref.gouv.fr/Vos-demarches/Declaration-de-Societes"
 }
@@ -10178,7 +10445,7 @@
   jurisdiction_name: "Yemen"
   jurisdiction: Q805
   owner_name: "Ministry of Industry and Trade"
-  owner: Q2028312
+  owner: Q22932835
   native_owner_name: "وزارة الصناعة والتجارة"
   url: "http://www.moit.gov.ye/moit/"
 }
@@ -10189,7 +10456,7 @@
   country: Q953
   jurisdiction_name: "Zambia"
   jurisdiction: Q953
-  register_name: "Companies Register"
+  register_name: "PACRA Companies Register"
   native_register_name: "Companies Register"
   owner_name: "Patents and Companies Registration Agency (PACRA)"
   native_owner_name: "Patents and Companies Registration Agency (PACRA)"
@@ -10202,7 +10469,7 @@
   country: Q954
   jurisdiction_name: "Zimbabwe"
   jurisdiction: Q954
-  register_name: "Companies Register"
+  register_name: "Zimbabwe Companies Register"
   owner_name: "Department of Deeds, Companies and Intellectual Property"
   url: "www.dcip.gov.zw"
 }

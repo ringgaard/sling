@@ -23,8 +23,12 @@ class BusinessRegistries:
     self.n_jurisdiction_name = store["jurisdiction_name"]
     self.n_register = store["register"]
     self.n_register_name = store["register_name"]
+    self.n_native_register_name = store["native_register_name"]
     self.n_owner = store["owner"]
     self.n_owner_name = store["owner_name"]
+    self.n_native_owner_name = store["native_owner_name"]
+    self.n_jurisdiction = store["jurisdiction"]
+    self.n_jurisdiction_name = store["jurisdiction_name"]
     self.n_company_property = store["company_property"]
     self.n_opencorporates_jurisdiction = store["opencorporates_jurisdiction"]
     self.n_opencorporates_prefix = store["opencorporates_prefix"]
@@ -38,6 +42,7 @@ class BusinessRegistries:
     self.n_eu_vat_number = store["P3608"]
     self.n_catalog = store["P972"]
     self.n_catalog_code = store["P528"]
+    self.n_applies_to_jurisdiction = store["P1001"]
 
     self.registers = store.load("data/org/bizreg.sling")
     self.regauth = {}
@@ -107,10 +112,18 @@ class BusinessRegistries:
       if catalog is None: catalog = register[self.n_owner]
       if catalog is None: catalog = register[self.n_register_name]
       if catalog is None: catalog = register[self.n_owner_name]
+      if catalog is None: catalog = register[self.n_native_register_name]
+      if catalog is None: catalog = register[self.n_native_owner_name]
+
+      jurisdiction = register[self.n_jurisdiction]
+      if jurisdiction is None: jurisdiction = register[self.n_jurisdiction_name]
+      if jurisdiction is None: jurisdiction = register[self.n_country]
+
       if catalog != None:
         slots.append((self.n_catalog_code, {
           self.n_is: companyid,
           self.n_catalog: catalog,
+          self.n_applies_to_jurisdiction: jurisdiction,
         }))
 
     return slots
