@@ -33,6 +33,11 @@ function wikiurl(id) {
 }
 
 class KbApp extends Component {
+  constructor() {
+    super();
+    this.pending = null;
+  }
+
   onconnected() {
     if (isMobile()) this.find("#layout").update(".mobile");
     if (this.find("#websearch")) {
@@ -47,6 +52,18 @@ class KbApp extends Component {
     }
   }
 
+  txbegin() {
+    if (this.pending) this.pending.abort();
+    this.pending = new AbortController();
+    this.style.cursor = "progress";
+    return this.pending.signal;
+  }
+
+  txend() {
+    this.pending = null;
+    this.style.cursor = "";
+  }
+
   navigate(id) {
     let state = history.state;
     if (state) {
@@ -55,16 +72,19 @@ class KbApp extends Component {
       history.replaceState(state, item.text, "/kb/" + item.ref);
     }
 
-    fetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id))
+    let signal = this.txbegin()
+    fetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id), {signal})
       .then(response => response.json())
       .then((item) => {
         let state = {item: item, pos: 0};
         history.pushState(state, item.text, "/kb/" + item.ref);
         this.display(item);
         this.find("md-content").scrollTop = 0;
+        this.txend();
       })
       .catch(error => {
         console.log("Item error", id, error.message);
+        this.txend();
       });
   }
 
@@ -138,7 +158,10 @@ class KbSearchBox extends Component {
       query = query.slice(0, -1);
     }
     let target = e.target;
-    fetch("/kb/query?" + params + "&q=" + encodeURIComponent(query))
+
+    let app = this.match("#app");
+    let signal = app.txbegin();
+    fetch("/kb/query?" + params + "&q=" + encodeURIComponent(query), {signal})
       .then(response => response.json())
       .then((data) => {
         let items = [];
@@ -162,9 +185,11 @@ class KbSearchBox extends Component {
           items.push(elem);
         }
         target.populate(items);
+        app.txend();
       })
       .catch(error => {
         console.log("Query error", query, error.message);
+        app.txend();
       });
   }
 
