@@ -19,6 +19,8 @@
     P58:  Q65971578 ; screenwriter -> wrote script of
     P166: Q66796038 ; award received -> award received by
     P26: P26        ; spouse -> spouse
+    P170: Q78522641 ; creator -> creator of
+    P199: Q67205181 ; business division -> business division of
   }
 }
 

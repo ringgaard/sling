@@ -286,7 +286,7 @@ Frame WikidataConverter::Convert(const Frame &item,
     }
   }
 
-  // Add Wikipedia links.
+  // Add site links.
   Frame sitelinks = item.GetFrame(s_sitelinks_);
   if (sitelinks.valid()) {
     Builder sites(store);
@@ -301,6 +301,15 @@ Frame WikidataConverter::Convert(const Frame &item,
     }
     if (!sites.empty()) {
       builder.Add(n_wikipedia_, sites.Create());
+    }
+
+    // Add Wikidata QID from sitelinks.
+    Frame wikisite = sitelinks.GetFrame(s_wikidatawiki_);
+    if (wikisite.valid()) {
+      string qid = wikisite.GetString(s_title_);
+      if (!qid.empty()) {
+        builder.Add(n_qid_, qid);
+      }
     }
   }
 
@@ -349,11 +358,14 @@ Handle WikidataConverter::ConvertQuantity(const Frame &value) {
     Text unitstr = store->GetString(unit)->str();
     if (unitstr == "1") {
       unit = Handle::nil();
-    } else if (unitstr.starts_with(entity_prefix_)) {
-      unitstr.remove_prefix(entity_prefix_.size());
-      unit = store->Lookup(unitstr);
     } else {
-      LOG(WARNING) << "Unknown unit: " << unitstr;
+      int pos = unitstr.rfind('/');
+      if (pos != -1) {
+        unitstr.remove_prefix(pos + 1);
+        unit = store->Lookup(unitstr);
+      } else {
+        LOG(WARNING) << "Unknown unit: " << unitstr;
+      }
     }
   }
 
@@ -454,8 +466,9 @@ Handle WikidataConverter::ConvertCoordinate(const Frame &value) {
   // Determine globe for coordinate, default to Earth.
   if (store->IsString(globe)) {
     Text globestr = store->GetString(globe)->str();
-    if (globestr.starts_with(entity_prefix_)) {
-      globestr.remove_prefix(entity_prefix_.size());
+    int pos = globestr.rfind('/');
+    if (pos != -1) {
+      globestr.remove_prefix(pos + 1);
     }
     if (globestr == "Q2") {
       globe = Handle::nil();

@@ -255,9 +255,14 @@
   owner_name: "Federal Ministry of Justice"
   native_owner_name: "Bundesministerium für Justiz"
   owner: Q872203
-  url: "https://www.justiz.gv.at/web2013/html/default/2c9484852308c2a601240b693e1c0860.de.html"
+  url: "https://firmenbuch.at/"
 
   company_property: P5285
+  transform: {
+    "FN ?(.+)": "%s" ; remove FN prefix
+    "([0-9]+) ([a-z]): "%s%s" ; remove space between digits and letter
+    "0([0-9]{4,5}[a-z])": "%s" ; remove 0 prefix
+  }
   format: "[1-9][0-9]{4,5}[a-z]"
 }
 {
@@ -454,7 +459,10 @@
   company_property: P3376
   opencorporates_jurisdiction: "be"
   transform: {
-    "(\\d{3})\\.(\\d{3})\\.(\\d{3})": "%s%s%s" ; remove periods
+    "BE(.+)": "%s" ; remove BE prefix
+    "(\\d{3,4})\\.(\\d{3})\\.(\\d{3})": "%s%s%s" ; remove periods
+    "(\\d{9})": "0%s" ; prepend 0
+    "n\.a\.": nil
   }
   format: "0\\d{9}"
 }

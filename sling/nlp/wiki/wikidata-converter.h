@@ -120,12 +120,12 @@ class WikidataConverter {
 
   Name n_name_{names_, "name"};
   Name n_description_{names_, "description"};
-  Name n_lang_{names_, "lang"};
   Name n_source_{names_, "source"};
   Name n_target_{names_, "target"};
 
   Name n_entity_{names_, "/w/entity"};
   Name n_item_{names_, "/w/item"};
+  Name n_qid_{names_, "/w/qid"};
   Name n_lexeme_{names_, "/w/lexeme"};
   Name n_form_{names_, "/w/form"};
   Name n_sense_{names_, "/w/sense"};
@@ -177,6 +177,7 @@ class WikidataConverter {
   Name s_lastrevid_{names_, "lastrevid"};
   Name s_modified_{names_, "modified"};
   Name s_rank_{names_, "rank"};
+  Name s_wikidatawiki_{names_, "wikidatawiki"};
 
   // Wikidata types.
   Name s_string_{names_, "string"};
@@ -201,9 +202,6 @@ class WikidataConverter {
   Name s_geo_shape_{names_, "geo-shape"};
   Name s_musical_notation_{names_, "musical-notation"};
   // ... plus string, time, quantity, monolingualtext
-
-  // Entity prefix.
-  Text entity_prefix_ = "http://www.wikidata.org/entity/";
 };
 
 }  // namespace nlp
