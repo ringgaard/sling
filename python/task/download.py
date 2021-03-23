@@ -198,7 +198,7 @@ datasets = {
 
   "nametab": "kb/$LANG$/name-table.repo",
   "phrasetab": "kb/$LANG$/phrase-table.repo",
-  "names": "kb/$LANG$/names@10.rec",
+  "aliases": "kb/$LANG$/aliases@10.rec",
 
   "caspar": "caspar/caspar.flow",
   "word2vec32": "caspar/word2vec-32-embeddings.bin",
@@ -237,20 +237,22 @@ def fetch():
   wf = DownloadWorkflow("data-download")
   for name in flags.arg.dataset.split(","):
     if len(name) == 0: continue
-    path = datasets.get(name)
-    if path is None:
+    paths = datasets.get(name)
+    if paths is None:
       log.error("unknown dataset:", name)
       return
-    if "$LANG$" in path:
-      for language in flags.arg.languages:
-        langpath = path.replace("$LANG$", language)
-        res = wf.dataset(langpath)
-        wf.download_dataset(name, langpath, res)
-    else:
-      res = wf.dataset(path)
-      wf.download_dataset(name, path, res)
+    if type(paths) != list: paths = [paths]
+    for path in paths:
+      if "$LANG$" in path:
+        for language in flags.arg.languages:
+          langpath = path.replace("$LANG$", language)
+          res = wf.dataset(langpath)
+          wf.download_dataset(name, langpath, res)
+      else:
+        res = wf.dataset(path)
+        wf.download_dataset(name, path, res)
 
-    if name == "kb": wf.snapshot(res)
+      if name == "kb": wf.snapshot(res)
 
   run(wf.wf)
 

@@ -19,13 +19,13 @@ import sling.task.corpora as corpora
 import sling.task.data as data
 from sling.task import *
 
-class NamesWorkflow:
+class AliasWorkflow:
   def __init__(self, name=None):
     self.wf = Workflow(name)
     self.data = data.Datasets(self.wf)
 
-  def item_names(self, language=None):
-    """Resource for item names in language. This is a set of record files with
+  def item_aliases(self, language=None):
+    """Resource for item aliases in language. This is a set of record files with
     one SLING frame per item.
       <qid>: {
         alias: {
@@ -39,7 +39,7 @@ class NamesWorkflow:
       }
     """
     if language == None: language = flags.arg.language
-    return self.wf.resource("names@10.rec",
+    return self.wf.resource("aliases@10.rec",
                             dir=corpora.kbdir(language),
                             format="records/alias")
 
@@ -49,8 +49,8 @@ class NamesWorkflow:
                             dir=corpora.repository("data/wiki"),
                             format="store/frame")
 
-  def extract_names(self, aliases=None, language=None):
-    "Task for selecting language-dependent names for items."""
+  def extract_aliases(self, aliases=None, language=None):
+    "Task for selecting language-dependent aliases for items."""
     if language == None: language = flags.arg.language
 
     if aliases == None:
@@ -69,7 +69,7 @@ class NamesWorkflow:
 
     with self.wf.namespace("select"):
       # Group aliases on item id.
-      output = self.item_names(language)
+      output = self.item_aliases(language)
       num_shards = length_of(output)
       aliases_by_item = self.wf.shuffle(aliases, 10)
 
@@ -99,48 +99,48 @@ class NamesWorkflow:
 
     return output
 
-  def build_name_table(self, names=None, language=None):
+  def build_name_table(self, aliases=None, language=None):
     """Build name table for all items."""
     if language == None: language = flags.arg.language
-    if names == None: names = self.item_names(language)
+    if aliases == None: aliases = self.item_aliases(language)
 
     with self.wf.namespace("name-table"):
       builder = self.wf.task("name-table-builder")
-      self.wf.connect(self.wf.read(names, name="name-reader"), builder)
+      self.wf.connect(self.wf.read(aliases, name="alias-reader"), builder)
       repo = self.data.name_table(language)
       builder.attach_output("repository", repo)
     return repo
 
-  def build_phrase_table(self, names=None, language=None):
+  def build_phrase_table(self, aliases=None, language=None):
     """Build phrase table for all items."""
     if language == None: language = flags.arg.language
-    if names == None: names = self.item_names(language)
+    if aliases == None: aliases = self.item_aliases(language)
 
     with self.wf.namespace("phrase-table"):
       builder = self.wf.task("phrase-table-builder")
-      self.wf.connect(self.wf.read(names, name="name-reader"), builder)
+      self.wf.connect(self.wf.read(aliases, name="alias-reader"), builder)
       repo = self.data.phrase_table(language)
       builder.attach_output("repository", repo)
     return repo
 
-def extract_names():
+def extract_aliases():
   for language in flags.arg.languages:
-    log.info("Extract " + language + " names")
-    wf = NamesWorkflow(language + "-name-extraction")
-    wf.extract_names(language=language)
+    log.info("Extract " + language + " aliases")
+    wf = AliasWorkflow(language + "-alias-extraction")
+    wf.extract_aliases(language=language)
     run(wf.wf)
 
 def build_nametab():
   for language in flags.arg.languages:
     log.info("Build " + language + " name table")
-    wf = NamesWorkflow(language + "-name-table")
+    wf = AliasWorkflow(language + "-name-table")
     wf.build_name_table(language=language)
     run(wf.wf)
 
 def build_phrasetab():
   for language in flags.arg.languages:
     log.info("Build " + language + " phrase table")
-    wf = NamesWorkflow(language + "-phrase-table")
+    wf = AliasWorkflow(language + "-phrase-table")
     wf.build_phrase_table(language=language)
     run(wf.wf)
 

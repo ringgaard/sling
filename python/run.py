@@ -76,7 +76,7 @@ commands = [
       "compute_fanin",
       "fuse_items",
       "build_kb",
-      "extract_names",
+      "extract_aliases",
       "build_nametab",
       "build_phrasetab",
     ]
@@ -165,8 +165,8 @@ commands = [
   ),
 
   # Aliases.
-  Command("extract_names",
-    help="Extract names for items",
+  Command("extract_aliases",
+    help="Extract aliases for items",
     package="sling.task.alias",
   ),
   Command("build_nametab",
