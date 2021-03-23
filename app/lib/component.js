@@ -14,6 +14,11 @@ const htmlmap = {
 // Registered style sheet functions.
 var stylesheets = [];
 
+// Defer showing page until loaded.
+window.addEventListener('load', (e) => {
+  document.body.style.display = "";
+});
+
 // Base class for web components.
 export class Component extends HTMLElement {
   // Initialize new web component.

@@ -343,7 +343,9 @@ export class MdLink extends Component {
     if (this.props.notab || this.state.notab) {
       attrs.push('tabindex="-1"');
     }
-    if (text) {
+    if (url == null) {
+      return `<a>${Component.escape(text)}</a>`;
+    } else if (text) {
       let extra = attrs.join(" ");
       return `<a href="${url}" ${extra}>${Component.escape(text)}</a>`;
     } else {
@@ -542,7 +544,7 @@ export class MdSearch extends Component {
   }
 
   onunfocus(e) {
-    this.find("md-search-list").expand(false);
+    //this.find("md-search-list").expand(false);
   }
 
   populate(items) {
@@ -589,7 +591,7 @@ export class MdSearch extends Component {
 
         color: black;
         font-family: Roboto,Helvetica,sans-serif;
-        font-size: 14px;
+        font-size: 15px;
       }
 
       $ input {
@@ -598,7 +600,7 @@ export class MdSearch extends Component {
         width: 100%;
         padding: 10px;
         border-radius: 5px;
-        font-size: 16px;
+        font-size: 15px;
       }
     `;
   }
@@ -710,6 +712,7 @@ export class MdSearchItem extends Component {
       $ {
         display: block;
         border-top: 1px solid #d4d4d4;
+        paddding-bottom: 1px;
       }
     `;
   }

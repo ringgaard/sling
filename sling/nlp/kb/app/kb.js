@@ -23,9 +23,9 @@ function isMobile() {
 }
 
 function wikiurl(id) {
-  if (id[0] == "Q") {
+  if (id.match(/^Q[0-9]+$/)) {
     return `https://www.wikidata.org/wiki/${id}`
-  } else if (id[0] == "P") {
+  } else if (id.match(/^P[0-9]+$/)) {
     return `https://www.wikidata.org/wiki/Property:${id}`
   } else {
     return null;
@@ -164,27 +164,32 @@ class KbSearchBox extends Component {
     fetch("/kb/query?" + params + "&q=" + encodeURIComponent(query), {signal})
       .then(response => response.json())
       .then((data) => {
-        let items = [];
-        for (let item of data.matches) {
-          let elem = document.createElement("md-search-item");
-          elem.setAttribute("name", item.text);
-          elem.setAttribute("value", item.ref);
+        let current = this.query();
+        if (query == current) {
+          let items = [];
+          for (let item of data.matches) {
+            let elem = document.createElement("md-search-item");
+            elem.setAttribute("name", item.text);
+            elem.setAttribute("value", item.ref);
 
-          let title = document.createElement("span");
-          title.className = "item-title";
-          title.appendChild(document.createTextNode(item.text));
-          elem.appendChild(title);
+            let title = document.createElement("span");
+            title.className = "item-title";
+            title.appendChild(document.createTextNode(item.text));
+            elem.appendChild(title);
 
-          if (item.description) {
-            let desciption = document.createElement("span");
-            desciption.className = "item-description";
-            desciption.appendChild(document.createTextNode(item.description));
-            elem.appendChild(desciption);
+            if (item.description) {
+              let desciption = document.createElement("span");
+              desciption.className = "item-description";
+              desciption.appendChild(document.createTextNode(item.description));
+              elem.appendChild(desciption);
+            }
+
+            items.push(elem);
           }
-
-          items.push(elem);
+          target.populate(items);
+        } else {
+          console.log("Stale query result for", query, "expected", current);
         }
-        target.populate(items);
         app.txend();
       })
       .catch(error => {
@@ -232,7 +237,7 @@ class KbSearchBox extends Component {
       $ .item-title {
         font-weight: bold;
         display: block;
-        padding: 3px 10px 0px 10px;
+        padding: 2px 10px 2px 10px;
       }
 
       $ .item-description {
@@ -344,6 +349,7 @@ class KbPropertyTable extends Component {
         font-size: 16px;
         border-collapse: collapse;
         width: 100%;
+        table-layout: fixed;
       }
 
       $ .prop-row {
@@ -358,10 +364,11 @@ class KbPropertyTable extends Component {
 
       $ .prop-name {
         display: table-cell;
-        font-weight: bold;
+        font-weight: 500;
         width: 20%;
         padding: 8px;
         vertical-align: top;
+        overflow-wrap: break-word;
       }
 
       $ .prop-values {
@@ -372,6 +379,7 @@ class KbPropertyTable extends Component {
 
       $ .prop-value {
         padding: 8px 8px 0px 8px;
+        overflow-wrap: break-word;
       }
 
       $ .prop-lang {

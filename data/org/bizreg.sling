@@ -260,7 +260,7 @@
   company_property: P5285
   transform: {
     "FN ?(.+)": "%s" ; remove FN prefix
-    "([0-9]+) ([a-z]): "%s%s" ; remove space between digits and letter
+    "([0-9]+) ([a-z])": "%s%s" ; remove space between digits and letter
     "0([0-9]{4,5}[a-z])": "%s" ; remove 0 prefix
   }
   format: "[1-9][0-9]{4,5}[a-z]"
