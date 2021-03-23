@@ -17,6 +17,7 @@
 #include "sling/base/logging.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
+#include "sling/string/printf.h"
 #include "sling/string/strcat.h"
 #include "sling/string/text.h"
 #include "sling/util/unicode.h"
@@ -302,9 +303,9 @@ string Calendar::DateAsString(const Date &date) const {
       if (!millennium.empty()) {
         return millennium.str();
       } else if (date.year > 0) {
-        return StrCat((date.year - 1) / 1000 + 1, ". millennium AD");
+        return StringPrintf("%d. millennium AD", (date.year - 1) / 1000 + 1);
       } else {
-        return StrCat(-((date.year + 1) / 1000 - 1), ". millennium BC");
+        return StringPrintf("%d. millennium BC",-((date.year + 1) / 1000 - 1));
       }
     }
 
@@ -313,9 +314,9 @@ string Calendar::DateAsString(const Date &date) const {
       if (!century.empty()) {
         return century.str();
       } else if (date.year > 0) {
-        return StrCat((date.year - 1) / 100 + 1, ". century AD");
+        return StringPrintf("%d. century AD", (date.year - 1) / 100 + 1);
       } else {
-        return StrCat(-((date.year + 1) / 100 - 1), ". century BC");
+        return StringPrintf("%d. century BC", -((date.year + 1) / 100 - 1));
       }
     }
 
@@ -324,7 +325,7 @@ string Calendar::DateAsString(const Date &date) const {
       if (!decade.empty()) {
         return decade.str();
       } else {
-        return StrCat(year, "s");
+        return StringPrintf("%ds", date.year);
       }
     }
 
@@ -332,9 +333,9 @@ string Calendar::DateAsString(const Date &date) const {
       if (!year.empty()) {
         return year.str();
       } else if (date.year > 0) {
-        return StrCat(date.year);
+        return StringPrintf("%d", date.year);
       } else {
-        return StrCat(-date.year, " BC");
+        return StringPrintf("%d BC", -date.year);
       }
     }
 
@@ -347,7 +348,7 @@ string Calendar::DateAsString(const Date &date) const {
           return StrCat(month, " ", date.year);
         }
       } else {
-        return StrCat(date.year, "-", date.month);
+        return StringPrintf("%04d-%02d", date.year, date.month);
       }
     }
 
@@ -360,7 +361,7 @@ string Calendar::DateAsString(const Date &date) const {
           return StrCat(day, ", ", date.year);
         }
       } else {
-        return StrCat(date.year, "-", date.month, "-", date.day);
+        return StringPrintf("%04d-%02d-%02d", date.year, date.month, date.day);
       }
     }
   }

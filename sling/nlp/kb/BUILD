@@ -9,8 +9,9 @@ cc_library(
   deps = [
     "//sling/frame:object",
     "//sling/frame:store",
-    "//sling/string:text",
     "//sling/string:strcat",
+    "//sling/string:text",
+    "//sling/string:printf",
     "//sling/util:unicode",
   ],
 )

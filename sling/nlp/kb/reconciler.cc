@@ -251,6 +251,7 @@ class ItemMerger : public task::Reducer {
       // Add new statements skipping duplicates.
       statements.Ensure(item.size());
       for (const Slot &s : item) {
+        if (s.name == Handle::is()) continue;
         if (statements.Insert(s.name, s.value)) {
          builder.Add(s.name, s.value);
         } else {

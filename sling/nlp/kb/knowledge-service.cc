@@ -271,6 +271,7 @@ const char *property_order[] = {
   "Q65971570",  // director of
   "Q65971578",  // wrote script of
   "Q66318312",  // cast member of
+  "Q78522641",  // creator of
 
   "P1595",      // charge
   "P1399",      // convicted of
@@ -640,7 +641,7 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
     if (f != properties_.end()) {
       f->second.order = order++;
     } else {
-      LOG(WARNING) << "Property not know: " << *p;
+      VLOG(1) << "Property not know: " << *p;
     }
   }
   for (auto &pn : xref_properties) {
