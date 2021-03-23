@@ -743,6 +743,14 @@ class DBService {
       if (mount_ != nullptr) mount_->mu.Unlock();
     }
 
+    // Yield database lock for long-running transactions.
+    void yield() {
+      if (mount_ != nullptr) {
+        mount_->mu.Unlock();
+        mount_->mu.Lock();
+      }
+    }
+
     DBMount *mount() { return mount_; }
     Database *db() { return &mount_->db; }
     const string &resource() { return resource_; }
@@ -862,6 +870,7 @@ class DBService {
 
         // Add record to response.
         WriteRecord(record);
+        l.yield();
       }
 
       return Response(DBRECORD);
@@ -895,6 +904,7 @@ class DBService {
 
         // Return result.
         rsp->Write(&result, 4);
+        l.yield();
       }
 
       l.mount()->last_update = time(0);
@@ -913,6 +923,7 @@ class DBService {
 
         // Delete record from database.
         if (!l.db()->Delete(key)) return Error("record not found");
+        l.yield();
       }
 
       l.mount()->last_update = time(0);
@@ -942,6 +953,7 @@ class DBService {
 
         // Add record to response.
         WriteRecord(record);
+        l.yield();
       }
 
       rsp->Write(&iterator, 8);
