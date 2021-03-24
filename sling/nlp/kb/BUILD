@@ -72,6 +72,7 @@ cc_library(
     "//sling/base",
     "//sling/frame:object",
     "//sling/frame:serialization",
+    "//sling/frame:snapshot",
     "//sling/frame:store",
     "//sling/task:frames",
     "//sling/util:mutex",

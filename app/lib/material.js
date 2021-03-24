@@ -523,8 +523,9 @@ export class MdSearch extends Component {
     let query = e.target.value;
     let min_length = this.props.min_length;
     if (min_length && query.length < min_length) {
-      this.populate(null);
+      this.populate(null, null);
     } else {
+      this.find("input").style.cursor = "wait";
       this.dispatchEvent(new CustomEvent("query", {detail: query}));
     }
   }
@@ -547,10 +548,14 @@ export class MdSearch extends Component {
     //this.find("md-search-list").expand(false);
   }
 
-  populate(items) {
+  populate(query, items) {
+    // Ignore stale updates where the query does match the current value of the
+    // search input box.
+    if (query != null && query != this.query()) return;
     let list = this.find("md-search-list");
     list.update({items: items});
     list.scrollTop = 0;
+    this.find("input").style.cursor = "";
   }
 
   select(item, keep) {

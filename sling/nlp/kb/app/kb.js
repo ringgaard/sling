@@ -52,18 +52,6 @@ class KbApp extends Component {
     }
   }
 
-  txbegin() {
-    if (this.pending) this.pending.abort();
-    this.pending = new AbortController();
-    this.style.cursor = "progress";
-    return this.pending.signal;
-  }
-
-  txend() {
-    this.pending = null;
-    this.style.cursor = "";
-  }
-
   navigate(id) {
     let state = history.state;
     if (state) {
@@ -72,19 +60,16 @@ class KbApp extends Component {
       history.replaceState(state, item.text, "/kb/" + item.ref);
     }
 
-    let signal = this.txbegin()
-    fetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id), {signal})
+    fetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id))
       .then(response => response.json())
       .then((item) => {
         let state = {item: item, pos: 0};
         history.pushState(state, item.text, "/kb/" + item.ref);
         this.display(item);
         this.find("md-content").scrollTop = 0;
-        this.txend();
       })
       .catch(error => {
         console.log("Item error", id, error.message);
-        this.txend();
       });
   }
 
@@ -151,50 +136,43 @@ class KbSearchBox extends Component {
   }
 
   onquery(e) {
+    let detail = e.detail
+    let target = e.target;
     let params = "fmt=cjson";
-    let query = e.detail.trimStart();
+    let query = detail.trimStart();
     if (query.endsWith(".")) {
       params += "&fullmatch=1";
       query = query.slice(0, -1);
     }
-    let target = e.target;
 
     let app = this.match("#app");
-    let signal = app.txbegin();
-    fetch("/kb/query?" + params + "&q=" + encodeURIComponent(query), {signal})
+    fetch("/kb/query?" + params + "&q=" + encodeURIComponent(query))
       .then(response => response.json())
       .then((data) => {
-        let current = this.query();
-        if (query == current) {
-          let items = [];
-          for (let item of data.matches) {
-            let elem = document.createElement("md-search-item");
-            elem.setAttribute("name", item.text);
-            elem.setAttribute("value", item.ref);
+        let items = [];
+        for (let item of data.matches) {
+          let elem = document.createElement("md-search-item");
+          elem.setAttribute("name", item.text);
+          elem.setAttribute("value", item.ref);
 
-            let title = document.createElement("span");
-            title.className = "item-title";
-            title.appendChild(document.createTextNode(item.text));
-            elem.appendChild(title);
+          let title = document.createElement("span");
+          title.className = "item-title";
+          title.appendChild(document.createTextNode(item.text));
+          elem.appendChild(title);
 
-            if (item.description) {
-              let desciption = document.createElement("span");
-              desciption.className = "item-description";
-              desciption.appendChild(document.createTextNode(item.description));
-              elem.appendChild(desciption);
-            }
-
-            items.push(elem);
+          if (item.description) {
+            let desciption = document.createElement("span");
+            desciption.className = "item-description";
+            desciption.appendChild(document.createTextNode(item.description));
+            elem.appendChild(desciption);
           }
-          target.populate(items);
-        } else {
-          console.log("Stale query result for", query, "expected", current);
+
+          items.push(elem);
         }
-        app.txend();
+        target.populate(detail, items);
       })
       .catch(error => {
         console.log("Query error", query, error.message);
-        app.txend();
       });
   }
 

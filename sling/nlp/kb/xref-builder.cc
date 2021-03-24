@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "sling/frame/snapshot.h"
 #include "sling/frame/serialization.h"
 #include "sling/nlp/kb/xref.h"
 #include "sling/task/frames.h"
@@ -117,16 +118,27 @@ class XRefBuilder : public task::FrameProcessor {
   }
 
   void Flush(task::Task *task) override {
+    // Get output file name.
+    task::Binding *file = task->GetOutput("output");
+    CHECK(file != nullptr);
+
     // Build xref frames.
+    bool snapshot = task->Get("snapshot", false);
     Store store(commons_);
     xref_.Build(&store);
+    if (snapshot) store.AllocateSymbolHeap();
     store.GC();
 
     // Save xref store to file.
-    FileEncoder encoder(&store, task->GetOutputFile("output"));
+    FileEncoder encoder(&store, file->resource()->name());
     encoder.encoder()->set_shallow(true);
     encoder.EncodeAll();
     CHECK(encoder.Close());
+
+    // Write snapshot if requested.
+    if (snapshot) {
+      CHECK(Snapshot::Write(&store, file->resource()->name()));
+    }
   }
 
  private:

@@ -81,7 +81,7 @@ class KnowledgeBaseWorkflow:
       self.gleif())
 
     with self.wf.namespace("xrefs"):
-      builder = self.wf.task("xref-builder")
+      builder = self.wf.task("xref-builder", params={"snapshot": True})
       self.wf.connect(self.wf.read(items), builder)
       builder.attach_input("config", self.xref_config())
       xrefs = self.xrefs()

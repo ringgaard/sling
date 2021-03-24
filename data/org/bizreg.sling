@@ -2373,6 +2373,9 @@
   native_owner_name: "Ministerstvo spravedlnosti"
   url: "https://or.justice.cz/ias/ui/rejstrik"
   company_property: P4156
+  transform: {
+    "([0-9]{3}) ([0-9]{2}) ([0-9]{3})": "%s%s%s" ; remove spaces
+  }
   format: "[0-9]{8}"
 }
 {
@@ -8377,6 +8380,9 @@
 
   company_property: P8174
   opencorporates_jurisdiction: "sk"
+  transform: {
+    "(\\d{2}) (\\d{3}) (\\d{3})": "%s%s%s" ; remove spaces
+  }
   format: "\\d{8}"
 }
 {
