@@ -85,7 +85,7 @@ sling import_wikidata
       compute_fanin
       fuse_items
       build_kb
-      extract_names
+      extract_aliases
       build_nametab
       build_phrasetab
 ```
@@ -364,7 +364,7 @@ For each language, the following datasets are produced:
   * `data/e/wiki/<lang>/documents-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
   * `data/e/wiki/<lang>/category-documents-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
   * `data/e/wiki/<lang>/aliases-?????-of-?????.rec` (produced by `wikipedia-parsing` task)
-  * `data/e/kb/<lang>/names-?????-of-?????.rec` (produced by `name-extraction` task)
+  * `data/e/kb/<lang>/aliases-?????-of-?????.rec` (produced by `alias-extraction` task)
   * `data/e/kb/<lang>/name-table.repo` (produced by `name-table` task)
   * `data/e/kb/<lang>/phrase-table.repo` (produced by `phrase-table` task)
 

@@ -37,8 +37,8 @@ fg_items = res(fgdir + "/factgrid-items.rec")
 items = res(fgdir + "/items.rec")
 properties = res(fgdir + "/properties.rec")
 xrefs = res(fgdir + "/xrefs.sling", "store/frame")
-xref_config = res("data/wiki/xrefs.sling", "store/frame")
-recon_config = res("data/wiki/recon.sling", "store/frame")
+xref_config = res("data/factgrid/xrefs.sling", "store/frame")
+recon_config = res("data/factgrid/recon.sling", "store/frame")
 fg_kb = res(fgdir + "/factgrid-kb.sling", "store/frame")
 
 # Collect xrefs.

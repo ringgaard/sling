@@ -32,8 +32,6 @@
 
     P1320, ; OpenCorporates ID
     P1278, ; Legal Entity Identifier
-
-    P8168, ; FactGrid item ID
   ]
 
   ; Pre-resolved reference mappings for ambiguous references.

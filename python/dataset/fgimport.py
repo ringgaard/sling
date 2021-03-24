@@ -32,7 +32,7 @@ n_pid = commons["P343"]
 n_property = commons["/w/property"]
 n_fg_item_id = commons["P8168"]
 
-wikiconv = sling.WikiConverter(commons, "de")
+wikiconv = sling.WikiConverter(commons, "en")
 
 commons.freeze()
 

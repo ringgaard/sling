@@ -1,0 +1,16 @@
+{
+  ; Properties that are cross-referenced in knowledge base in priority order.
+  properties: [
+    P8168, ; FactGrid item ID
+  ]
+
+  ; Pre-resolved reference mappings for ambiguous references.
+  mappings: {
+    ; after
+    P8168/P41: P1319
+
+    ; before
+    P8168/P43: P1326
+  }
+}
+

@@ -1,0 +1,17 @@
+{
+  ; Item sources ordering.
+  sources: [
+  ]
+
+  ; Property inversion.
+  inversions: {
+    P8168/P82:   P8168/Q245668       ; place of birth -> born here
+    P8168/P168:  P8168/Q245670       ; place of death -> died here
+    P8168/P83:   P8168/Q245671       ; place of home address -> lived here
+
+    ;P19: 	Q65933043       ; place of birth -> born here
+    ;P20: 	Q65964588       ; place of death -> died here
+    ;P551: P8168/Q245671   ; place of home address -> lived here
+  }
+}
+
