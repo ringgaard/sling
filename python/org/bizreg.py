@@ -78,6 +78,9 @@ class BusinessRegistries:
         regname = register[self.n_registration_authority_code]
         place = register[self.n_jurisdiction_name]
         print("Invalid", regname, place, "id:", companyid, "for", source)
+    if companyid.upper() == "N/A":
+      racode = register[self.n_registration_authority_code]
+      print("Missing company number", companyid, "for", racode, source)
 
     slots = []
     if valid:

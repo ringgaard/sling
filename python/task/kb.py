@@ -78,6 +78,7 @@ class KnowledgeBaseWorkflow:
     items = self.wf.bundle(
       self.data.wikidata_redirects(),
       self.data.wikidata_items(),
+      self.elf(),
       self.gleif())
 
     with self.wf.namespace("xrefs"):

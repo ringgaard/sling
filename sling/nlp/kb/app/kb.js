@@ -139,7 +139,7 @@ class KbSearchBox extends Component {
     let detail = e.detail
     let target = e.target;
     let params = "fmt=cjson";
-    let query = detail.trimStart();
+    let query = detail.trim();
     if (query.endsWith(".")) {
       params += "&fullmatch=1";
       query = query.slice(0, -1);

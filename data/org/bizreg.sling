@@ -347,6 +347,8 @@
   owner: Q358589
   native_owner_name: "Bundesministerium Inneres"
   url: "https://www.bmi.gv.at/409/start.aspx"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000019"
@@ -375,6 +377,7 @@
 
   opencorporates_jurisdiction: "bs"
   transform: {
+    "N/A": nil
     "(\\d{5,6}) ([A-Z])": "%s%s"  ; 99999 X
     "(\\d{2,3}),(\\d{3})\s?([A-Z])": "%s%s%s"  ; 999,999X and 999,999 X
     "(\\d{5,6})": "%sB"         ; 99999 and 999999
@@ -1325,6 +1328,8 @@
   owner_name: "General Registry"
   native_owner_name: "General Registry"
   url: "http://www.ciregistry.gov.ky/portal/page/portal/reghome/companies"
+
+  transform: {"N/A": nil}
 }
 {
   registration_authority_code: "RA000087"
@@ -1336,6 +1341,8 @@
   owner_name: "Cayman Islands Monetary Authority"
   owner: Q1774447
   url: "http://www.cimoney.com.ky/default.aspx"
+
+  transform: {"N/A": nil}
 }
 {
   registration_authority_code: "RA000088"
@@ -2328,6 +2335,7 @@
   native_owner_name: "Kamer van Koophandel & Nijverheid Curaçao"
   url: "http://www.curacao-chamber.cw/services/registry/search-company"
 
+  transform: {"n/a": nil}
   opencorporates_jurisdiction: "cw"
 }
 {
@@ -2510,6 +2518,11 @@
   owner: Q3437062
   native_owner_name: "Finanstilsynet"
   url: "http://vut.finanstilsynet.dk/en/Tal-og-fakta/Virksomheder-under-tilsyn/VUT-database.aspx"
+
+  transform: {
+    "n/a": nil
+    "N/A": nil
+  }
 }
 {
   registration_authority_code: "RA000172"
@@ -2656,6 +2669,8 @@
   native_owner_name: "FINANTSINSPEKTSIOON"
   owner: Q12362644
   url: "http://www.fi.ee/index.php?id=769"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000183"
@@ -3148,6 +3163,8 @@
   owner_name: "Administrative Region Baden-Württemberg"
   native_owner_name: "Regierungspräsidien Baden-Württemberg"
   url: "https://rp.baden-wuerttemberg.de/Themen/Stiftung/Seiten/Stiftungsverzeichnis.aspx#VERZEICHNIS"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000215"
@@ -3196,6 +3213,8 @@
   owner: Q27978804
   native_owner_name: "Senatsverwaltung für Justiz, Verbraucherschutz und Antidiskriminierung"
   url: "https://www.berlin.de/sen/justiz/service/stiftungsaufsicht/artikel.275316.php"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000217"
@@ -3966,6 +3985,8 @@
   owner_name: "Hamburg Service Portal"
   native_owner_name: "Hamburg Serviceportal"
   url: "https://gateway.hamburg.de/hamburggateway/fvp/fv/Justiz/Stiftungsdatenbank/?sid=55"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000260"
@@ -4081,6 +4102,8 @@
   owner_name: "Hessian Ministry of the Interior and Sports"
   native_owner_name: "Hessisches Ministerium des Innern und für Sport"
   url: "https://service.hessen.de/html/Einsicht-in-das-Stiftungsverzeichnis-9109.htm"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000266"
@@ -4502,6 +4525,8 @@
   owner_name: "Ministry for Internal Affairs and Sport"
   native_owner_name: "Ministerium für Inneres und Sport"
   url: "https://www.mi.niedersachsen.de/startseite/themen/allgemeine_angelegenheiten_des_inneren/stiftungsrecht/stiftungsrecht-61712.html"
+
+  transform: {"n/a": nil}
 }
 {
   registration_authority_code: "RA000290"
@@ -5143,6 +5168,8 @@
   owner_name: "Supervision and Services Directorate of Rhineland-Palatinate"
   native_owner_name: "Aufsichts- und Dienstleistungsdirektion Rheinland-Pfalz"
   url: "http://addinter.service24.rlp.de/cgi-bin-inter/stiftung1.mbr/start"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000326"
@@ -5322,6 +5349,8 @@
   owner_name: "State Directorate of Saxony"
   native_owner_name: "Landesdirektion Sachsen"
   url: "https://www.lds.sachsen.de/kommunal21/?ID=104&art_param=12"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000740"
@@ -5667,6 +5696,8 @@
   owner_name: "Thuringia State Administration"
   native_owner_name: "Thüringer Landesverwaltungsamt"
   url: "https://www.thueringen.de/th3/tlvwa/anwendungen/stiftungsverzeichnis/index.aspx"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000353"
@@ -6016,6 +6047,11 @@
   owner: Q314211
   native_owner_name: "Bundesanstalt für Finanzdienstleistungsaufsicht"
   url: "http://www.bafin.de/EN/DatenDokumente/Datenbanken/Datenbanken_node_en.html"
+
+  transform: {
+    "n/a": nil
+    "N/A": nil
+  }
 }
 {
   registration_authority_code: "RA000663"
@@ -6041,6 +6077,11 @@
   owner_name: "Bavarian State Office of Statistics"
   native_owner_name: "Bayerisches Landesamt für Statistik"
   url: "http://www.stiftungen.bayern.de/"
+
+  transform: {
+    "n/a": nil
+    "N/A": nil
+  }
 }
 {
   registration_authority_code: "RA000711"
@@ -6054,6 +6095,8 @@
   owner_name: "Ministry of the Interior of North Rhine-Westphalia"
   native_owner_name: "Ministerium des Innern des Landes Nordrhein-Westfalen"
   url: "https://www.im.nrw/themen/stiftungsverzeichnis"
+
+  transform: {"[Nn]/[Aa]": nil}
 }
 {
   registration_authority_code: "RA000712"
@@ -6432,6 +6475,8 @@
   owner: Q87460911
   native_owner_name: "Magyar Ügyvédi Kamara "
   url: "https://magyarugyvedikamara.hu/html/nyilvanos-kereso/"
+
+  transform: {"n/a": nil}
 }
 {
   registration_authority_code: "RA000393"
@@ -6661,6 +6706,10 @@
   native_owner_name: "Companies Registration Office"
   url: "http://www.cro.ie/"
 
+  transform: {
+    "n/a": nil
+    "N/A": nil
+  }
   opencorporates_jurisdiction: "ie"
 }
 {
@@ -6675,8 +6724,9 @@
   owner_name: "Companies Registration Office"
   owner: Q5155406
   native_owner_name: "Companies Registration Office"
-
   url: "http://www.cro.ie/"
+
+  transform: {"N/A": nil}
   format: "\\d{6}"
 }
 {
@@ -6690,6 +6740,8 @@
   owner_name: "Central Bank of Ireland"
   owner: Q283785
   url: "registers.centralbank.ie"
+
+  transform: {"N/A": nil}
 }
 {
   registration_authority_code: "RA000700"
@@ -6860,6 +6912,7 @@
   native_owner_name: "Jersey Financial Services Commission Companies Registry"
   url: "http://www.jerseyfsc.org/registry/"
 
+  transform: {"n/a": nil}
   opencorporates_jurisdiction: "je"
 }
 {
@@ -6882,6 +6935,8 @@
   register_name: "Amman Business Directory"
   owner_name: "Amman Chamber of Commerce"
   url: "http://www.ammanchamber.org.jo/default_en.aspx?lang=en"
+
+  transform: {"N/A": nil}
 }
 {
   registration_authority_code: "RA000416"
@@ -7559,6 +7614,8 @@
   native_owner_name: "Autoriteit Financiële Markten"
   owner: Q6999143
   url: "https://www.afm.nl/en/professionals/registers/alle-huidige-registers.aspx"
+
+  transform: {"N/A": nil}
 }
 {
   registration_authority_code: "RA000664"
@@ -7915,6 +7972,8 @@
   native_owner_name: "Comissão do mercado de valores mobiliários (CMVM)"
   owner: Q7232685
   url: "http://www.cmvm.pt/en"
+
+  transform: {"n/a": nil}
 }
 {
   registration_authority_code: "RA000489"
@@ -7982,6 +8041,7 @@
   native_owner_name: "Oficiul National al Registrului Comertului"
   url: "www.onrc.ro"
 
+  transform: {"N/A": nil}
   opencorporates_jurisdiction: "ro"
 }
 {
@@ -8187,6 +8247,8 @@
   owner_name: "Ministry of Commerce and Industry"
   owner: Q12250941
   url: "http://www.mci.gov.sa/en/ServicesDirectory/Pages/Services.aspx?Category=Commercial register"
+
+  transform: {"n/a": nil}
 }
 {
   registration_authority_code: "RA000702"
@@ -8290,6 +8352,8 @@
   jurisdiction: Q1042
   owner_name: "Seychelles Financial Services Authority"
   url: "http://www.fsaseychelles.sc/"
+
+  transform: {"N/A": nil}
 }
 {
   registration_authority_code: "RA000521"
@@ -8639,6 +8703,11 @@
   owner: Q4891205
   native_owner_name: "Agencia Tributaria (AEAT)"
   url: "www.agenciatributaria.es"
+
+  transform: {
+    "n/a": nil
+    "N/A": nil
+  }
 }
 {
   registration_authority_code: "RA000536"
@@ -8899,7 +8968,12 @@
   owner_name: "Financial Market Supervisory Authority"
   native_owner_name: "Eidgenössische Finanzmarktaufsicht FINMA"
   owner: Q681362
-  url: "https://www.finma.ch/de/finma-public/bewilligte-institute-personen-und-produkte/ "
+  url: "https://www.finma.ch/de/finma-public/bewilligte-institute-personen-und-produkte/"
+
+  transform: {
+    "n/a": nil
+    "N/A": nil
+  }
 }
 {
   registration_authority_code: "RA000678"
@@ -9216,6 +9290,8 @@
   owner_name: "Dubai Airport Free Zone"
   owner: Q17002310
   url: "http://www.dafz.ae/en"
+
+  transform: {"N/A": nil}
 }
 {
   registration_authority_code: "RA000575"
@@ -9805,6 +9881,7 @@
   native_owner_name: "Division of Corporations, Department of State"
   url: "https://delecorp.delaware.gov/tin/GINameSearch.jsp"
 
+  transform: {"N/A": nil}
   opencorporates_jurisdiction: "us_de"
 }
 {
@@ -9818,6 +9895,10 @@
   native_owner_name: "Florida Department of Corporations"
   url: "http://www.sunbiz.org/"
 
+  transform: {
+    "n/a": nil
+    "N/A": nil
+  }
   opencorporates_jurisdiction: "us_fl"
 }
 {
@@ -9881,6 +9962,7 @@
   native_owner_name: "Business Services (Office of the Secretary of State)"
   url: "https://www.cyberdriveillinois.com/departments/business_services/corp.html"
 
+  transform: {"[Nn]/[Aa]": nil}
   opencorporates_jurisdiction: "us_il"
 }
 {
@@ -10221,6 +10303,10 @@
   native_owner_name: "Business Filings database (South Carolina Secretary of State)"
   url: "http://www.sos.sc.gov/Search%20Business%20Filings"
 
+  transform: {
+    "N/A": nil
+    "n/a": nil
+  }
   opencorporates_jurisdiction: "us_sc"
 }
 {
@@ -10247,6 +10333,7 @@
   native_owner_name: "Business Services (Department of State)"
   url: "https://tnbear.tn.gov/ECommerce/FilingSearch.aspx"
 
+  transform: {"n/a": nil}
   opencorporates_jurisdiction: "us_tn"
 }
 {
@@ -10339,6 +10426,7 @@
   native_owner_name: "Corporation Section (Division of Corporate & Consumer Services, Department of Financial Institutions)"
   url: "https://www.wdfi.org/apps/CorpSearch/Search.aspx"
 
+  transform: {"N/A": nil}
   opencorporates_jurisdiction: "us_wi"
 }
 {

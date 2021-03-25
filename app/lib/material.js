@@ -545,7 +545,7 @@ export class MdSearch extends Component {
   }
 
   onunfocus(e) {
-    //this.find("md-search-list").expand(false);
+    this.find("md-search-list").expand(false);
   }
 
   populate(query, items) {

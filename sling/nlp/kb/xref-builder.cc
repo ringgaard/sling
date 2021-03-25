@@ -124,7 +124,7 @@ class XRefBuilder : public task::FrameProcessor {
 
     // Build xref frames.
     bool snapshot = task->Get("snapshot", false);
-    Store store(commons_);
+    Store store;
     xref_.Build(&store);
     if (snapshot) store.AllocateSymbolHeap();
     store.GC();
