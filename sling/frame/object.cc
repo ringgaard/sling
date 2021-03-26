@@ -279,7 +279,7 @@ bool Frame::GetBool(Text name, bool defval) const {
 
 float Frame::GetFloat(Handle name) const {
   Handle value = frame()->get(name);
-  return value.IsFloat() ? value.AsFloat() : 0.0;
+  return value.IsNumber() ? value.AsFloat() : 0.0;
 }
 
 float Frame::GetFloat(const Object &name) const {

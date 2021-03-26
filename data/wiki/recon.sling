@@ -1,14 +1,15 @@
 {
   ; Item sources ordering.
   sources: [
-    /w/item/fanin,       ; item fan-in from Wikidata
-    /w/item/popularity,  ; Wikipedia popularity counts
-    isa,                 ; Wikidata item
-    media,               ; Twitter and Wikidata photos
-    P1278,               ; GLEIF
-    /w/item/links,       ; Wikipedia link graph
-    /w/item/category,    ; Wikipedia categories
-    /w/item/member,      ; Wikipedia category members
+    /w/item/fanin       ; item fan-in from Wikidata
+    /w/item/popularity  ; Wikipedia popularity counts
+    isa                 ; Wikidata item
+    media               ; Twitter and Wikidata photos
+    P1278               ; GLEIF
+    PELF                ; ISO 20275 entity legal forms
+    /w/item/links       ; Wikipedia link graph
+    /w/item/category    ; Wikipedia categories
+    /w/item/member      ; Wikipedia category members
   ]
 
   ; Property inversion.

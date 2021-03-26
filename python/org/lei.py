@@ -49,6 +49,8 @@ n_owned_by = kb["P127"]
 n_has_part = kb["P527"]
 n_part_of = kb["P361"]
 n_legal_form = kb["P1454"]
+n_dissolved = kb["P576"]
+n_merged_into = kb["P7888"]
 n_coord_location = kb["P625"]
 n_described_by_source = kb["P1343"]
 n_geo = kb["/w/geo"]
@@ -190,6 +192,8 @@ x_legal_form = kb["lei:LegalForm"]
 x_legal_form_code = kb["lei:EntityLegalFormCode"]
 x_other_legal_form = kb["lei:OtherLegalForm"]
 x_entity_category = kb["lei:EntityCategory"]
+x_expiration_date = kb["lei:EntityExpirationDate"]
+x_expiration_reason = kb["lei:EntityExpirationReason"]
 x_successor = kb["lei:SuccessorEntity"]
 x_successor_lei = kb["lei:SuccessorLEI"]
 x_associated_entity = kb["lei:AssociatedEntity"]
@@ -227,6 +231,7 @@ def closure(item, property):
   return items
 
 def city_in(cityname, region):
+  if cityname is None: return None
   for item in aliases.lookup(cityname):
     if item is None: continue
     if item == region: continue
@@ -238,7 +243,12 @@ def trim(s):
   if s == None: return None
   if s.endswith(","): s = s[:-1]
   s = s.strip()
+  if s == "N/A": return None
   return s if len(s) > 0 else None
+
+def convert_date(date):
+  # ISO date: YYYY-MM-DDT00:00:00.000Z
+  return int(date[:10].replace("-", ""))
 
 def locale(name):
   if type(name) is str: return None
@@ -258,6 +268,7 @@ def get_address(store, elem):
   if first_line in cover_addresses: return None
   addr_parts = [first_line]
   for line in elem(x_additional_address_line):
+    line = trim(line)
     if line != addr_parts[-1]: addr_parts.append(line)
     prev = line
   cityname = trim(elem[x_city])
@@ -353,7 +364,8 @@ for line in leifile:
   lei_id = "P1278/" + lei_number
 
   # Make redirects for duplicates.
-  if reg[x_registration_status] == "DUPLICATE":
+  status = reg[x_registration_status]
+  if status == "DUPLICATE":
     successor = entity[x_successor]
     if successor != None:
       redirect = successor[x_successor_lei]
@@ -365,6 +377,8 @@ for line in leifile:
       f = store.frame(slots)
       companies.append(f)
       num_redirects += 1
+    continue
+  elif status == "ANNULLED":
     continue
 
   # Build company frame.
@@ -446,6 +460,21 @@ for line in leifile:
       family_lei = association[x_associated_lei]
       if family_lei != None:
         fund_families.append((lei_number, family_lei))
+
+  # Expiration and mergers.
+  expiration_date = entity[x_expiration_date]
+  if expiration_date != None:
+    reason = entity[x_expiration_reason]
+    date = convert_date(expiration_date)
+    if reason == "DISSOLVED":
+      slots.append((n_dissolved, date))
+    elif reason == "CORPORATE_ACTION":
+      slots.append((n_dissolved, date))
+      successor = entity[x_successor]
+      if successor != None:
+        merged_into = successor[x_successor_lei]
+        if merged_into != None:
+          slots.append((n_merged_into, store["P1278/" + merged_into]))
 
   # Company identifiers.
   reg_auth = entity[x_registration_authority]
