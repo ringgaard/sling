@@ -142,7 +142,8 @@ class AliasExtractor : public task::FrameProcessor {
 
       if (property == n_name_) {
         if (!foreign) {
-          AddAlias(&a, value, SRC_WIKIDATA_LABEL);
+          int fanin = frame.GetInt(n_fanin_);
+          AddAlias(&a, value, SRC_WIKIDATA_LABEL, fanin);
           has_primary_name = true;
         } else {
           AddAlias(&a, value, SRC_WIKIDATA_FOREIGN);
@@ -250,6 +251,7 @@ class AliasExtractor : public task::FrameProcessor {
   Name n_count_{names_, "count"};
   Name n_sources_{names_, "sources"};
   Name n_skip_{names_, "skip"};
+  Name n_fanin_{names_, "/w/item/fanin"};
 
   Name n_native_name_{names_, "P1559"};
   Name n_native_label_{names_, "P1705"};

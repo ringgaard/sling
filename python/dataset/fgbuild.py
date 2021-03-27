@@ -35,11 +35,21 @@ def res(files, fmt="records/frame"):
 fgdir = "data/e/factgrid"
 fg_items = res(fgdir + "/factgrid-items.rec")
 items = res(fgdir + "/items.rec")
+fanin = res(fgdir + "/fanin.rec")
 properties = res(fgdir + "/properties.rec")
 xrefs = res(fgdir + "/xrefs.sling", "store/frame")
 xref_config = res("data/factgrid/xrefs.sling", "store/frame")
 recon_config = res("data/factgrid/recon.sling", "store/frame")
 fg_kb = res(fgdir + "/factgrid-kb.sling", "store/frame")
+
+# Compute item fanin.
+def compute_fanin():
+  wf.mapreduce(
+    input=fg_items,
+    output=fanin,
+    mapper="item-fanin-mapper",
+    reducer="item-fanin-reducer",
+    format="message/int")
 
 # Collect xrefs.
 def collect_xrefs():
@@ -51,7 +61,7 @@ def collect_xrefs():
 # Map and reconcile items.
 def reconcile_items():
   wf.mapreduce(
-    input=fg_items,
+    input=wf.bundle(fg_items, fanin),
     output=items,
     mapper="item-reconciler",
     reducer="item-merger",
@@ -107,6 +117,7 @@ def build_name_table(aliases, language):
   builder.attach_output("repository", repo)
 
 # Run tasks.
+compute_fanin()
 collect_xrefs()
 reconcile_items()
 build_kb()

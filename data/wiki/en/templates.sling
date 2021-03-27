@@ -5195,6 +5195,7 @@
     "other_title_": {+/wp/info/title group: /wp/info/other_title alias: 12}
     "wikidata": /wp/info/wikidata
     "image": {+/wp/info/image media: true}
+    "image_file": {+/wp/info/image media: true}
     "image_upright": /wp/info/image_upright
     "alt": /wp/info/alt
     "caption": /wp/info/caption

@@ -116,6 +116,7 @@ const char *property_order[] = {
   "P156",       // followed by
   "P1365",      // replaces
   "P1366",      // replaced by
+  "P7888",      // merged into
   "P272",       // production company
   "P449",       // original network
   "P123",       // publisher
