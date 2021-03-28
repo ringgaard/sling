@@ -54,14 +54,14 @@ def compute_fanin():
 # Collect xrefs.
 def collect_xrefs():
   xref = wf.task("xref-builder")
-  wf.connect(wf.collect(fg_items, fanin), xref)
+  wf.connect(wf.collect(fg_items), xref)
   xref.attach_input("config", xref_config)
   xref.attach_output("output", xrefs)
 
 # Map and reconcile items.
 def reconcile_items():
   wf.mapreduce(
-    input=wf.bundle(fg_items, fanin),
+    input=fg_items,
     output=items,
     mapper="item-reconciler",
     reducer="item-merger",
