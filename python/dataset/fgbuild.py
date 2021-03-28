@@ -54,7 +54,7 @@ def compute_fanin():
 # Collect xrefs.
 def collect_xrefs():
   xref = wf.task("xref-builder")
-  wf.connect(wf.read(fg_items), xref)
+  wf.connect(wf.collect(fg_items, fanin), xref)
   xref.attach_input("config", xref_config)
   xref.attach_output("output", xrefs)
 
