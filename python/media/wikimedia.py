@@ -51,6 +51,8 @@ default_images = set([
   "Défaut-youtuber(s).png",
   "Defaut-Youtuber.png",
   "Remplacez l'image de cette personne.jpg",
+  "Replace this image male.svg",
+  "Replace this image female.svg",
 ])
 
 # Compute MD5 hash for string.

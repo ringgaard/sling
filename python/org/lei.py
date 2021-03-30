@@ -458,7 +458,7 @@ for line in leifile:
     reltype = association[x_type]
     if reltype == "FUND_FAMILY":
       family_lei = association[x_associated_lei]
-      if family_lei != None:
+      if family_lei != None and family_lei != lei_number:
         fund_families.append((lei_number, family_lei))
 
   # Expiration and mergers.

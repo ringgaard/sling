@@ -70,7 +70,7 @@ class XRef {
   // added in priority order. The property frames must be in a global store.
   const Property *AddProperty(const Frame &property);
 
-  // Look up property. Return null if properties is not found.
+  // Look up property. Return null if property is not found.
   const Property *LookupProperty(Handle handle) const;
   const Property *LookupProperty(Text name) const;
 

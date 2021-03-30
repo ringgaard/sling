@@ -4838,7 +4838,7 @@
   url: "www.handelsregister.de"
 
   opencorporates_jurisdiction: "de"
-  opencorporates_prefix: "N1105"
+  opencorporates_prefix: "N1105V"
   transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
