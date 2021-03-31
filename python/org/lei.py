@@ -473,7 +473,7 @@ for line in leifile:
       successor = entity[x_successor]
       if successor != None:
         merged_into = successor[x_successor_lei]
-        if merged_into != None:
+        if merged_into != None and merged_into != lei_number:
           slots.append((n_merged_into, store["P1278/" + merged_into]))
 
   # Company identifiers.
