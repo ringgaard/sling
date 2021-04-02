@@ -82,11 +82,13 @@ blocked_urls = [
   "youtube.com/",
   "youtu.be/",
   "www.youtube.com/",
+  "consent.youtube.com/",
   "news.google.com/",
   "www.tiktok.com/",
   "www.instagram.com/",
   "video.foxnews.com/",
   "www.facebook.com/",
+  "www.twitter.com/",
   "www.pscp.tv/",
   "video.repubblica.it/",
   "www.foxtv.com/",
@@ -105,6 +107,7 @@ noignore_sites = set([
   "ow.ly",
   "tinyurl.com",
   "trib.al",
+  "u.afp.com",
   "zpr.io",
 ])
 
