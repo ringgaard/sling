@@ -19,6 +19,11 @@ import sling.task.corpora as corpora
 import sling.task.data as data
 from sling.task import *
 
+flags.define("--wikipedia_summaries",
+             help="output summaries for Wikipedia articles",
+             default=False,
+             action='store_true')
+
 class WikipediaWorkflow:
   def __init__(self, name=None):
     self.wf = Workflow(name)
@@ -193,9 +198,17 @@ class WikipediaWorkflow:
                     params={"indexed": True})
 
       # Write Wikipedia category documents.
-      category_document_output = self.wikipedia_category_documents(language)
-      self.wf.write(catdocs, category_document_output, name="document-writer",
+      catdoc_output = self.wikipedia_category_documents(language)
+      self.wf.write(catdocs, catdoc_output, name="catdoc-writer",
                     params={"indexed": True})
+
+      # Write Wikipedia document summaries.
+      if flags.arg.wikipedia_summaries:
+        summaries = self.wf.channel(parser, "summaries",
+                                    format="message/document")
+        summary_output = self.data.wikipedia_summaries(language)
+        self.wf.write(summaries, summary_output, name="summary-writer",
+                      params={"indexed": True})
 
       # Collect aliases.
       alias_output = self.data.wikipedia_aliases(language)
@@ -204,7 +217,7 @@ class WikipediaWorkflow:
                      "wikipedia-alias-reducer",
                      params={'language': language})
 
-    return document_output, category_document_output, alias_output
+    return document_output, alias_output
 
   #---------------------------------------------------------------------------
   # Wikipedia items

@@ -121,6 +121,9 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
 
     // Get output channel for parsed category documents.
     categories_ = task->GetSink("categories");
+
+    // Get output channel for document summaries.
+    summaries_ = task->GetSink("summaries");
   }
 
   void Flush(task::Task *task) override {
@@ -184,7 +187,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     }
   }
 
-  void ProcessArticle(const Frame &page, Text qid, bool collect_aliases) {
+  void ProcessArticle(const Frame &page, Text qid, bool is_article) {
     // Parse Wikipedia article.
     string wikitext = page.GetString(n_page_text_);
     WikiParser parser(wikitext.c_str());
@@ -218,9 +221,27 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     document.Update();
 
     // Output aliases from extractor.
-    if (collect_aliases) {
+    if (is_article) {
       for (const auto &alias : annotator.aliases()) {
         OutputAlias(qid, alias.name, alias.source);
+      }
+    }
+
+    // Output document summary.
+    if (is_article && summaries_ != nullptr) {
+      // Extract first paragraph as summary.
+      int end = 0;
+      while (end < document.length()) {
+        if (document.token(end).brk() >= PARAGRAPH_BREAK) break;
+        end++;
+      }
+      if (end > 0) {
+        Document summary(document, 0, end, true);
+        summary.RemoveThemes();
+        summary.AddExtra(n_lang_, lang_);
+        summary.AddExtra(docnames_->n_url, Wiki::URL(language_, title));
+        summary.Update();
+        summaries_->Send(task::CreateMessage(qid, summary.top()));
       }
     }
   }
@@ -357,9 +378,13 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
   // Channel for categories.
   task::Channel *categories_ = nullptr;
 
+  // Channel for summaries.
+  task::Channel *summaries_ = nullptr;
+
   // Symbols.
   DocumentNames *docnames_ = nullptr;
   Name n_name_{names_, "name"};
+  Name n_lang_{names_, "lang"};
   Name n_lang_category_{names_, "/lang/wikilang/wiki_category"};
   Name n_lang_template_{names_, "/lang/wikilang/wiki_template"};
   Name n_lang_image_{names_, "/lang/wikilang/wiki_image"};

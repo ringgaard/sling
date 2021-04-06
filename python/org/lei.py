@@ -173,6 +173,8 @@ x_entity = kb["lei:Entity"]
 x_legal_name = kb["lei:LegalName"]
 x_other_names = kb["lei:OtherEntityNames"]
 x_other_name = kb["lei:OtherEntityName"]
+x_transliterated_names = kb["lei:TransliteratedOtherEntityNames"]
+x_transliterated_name = kb["lei:TransliteratedOtherEntityName"]
 x_legal_address = kb["lei:LegalAddress"]
 x_headquarters_address = kb["lei:HeadquartersAddress"]
 x_legal_address = kb["lei:LegalAddress"]
@@ -406,6 +408,10 @@ for line in leifile:
   if other_names != None:
     for other in other_names(x_other_name):
       slots.append((n_name, localized_name(other)))
+  transliterated_names = entity[x_transliterated_names]
+  if transliterated_names != None:
+    for transliterated in transliterated_names(x_transliterated_name):
+      slots.append((n_name, localized_name(transliterated)))
 
   # Address.
   hq = entity[x_headquarters_address]

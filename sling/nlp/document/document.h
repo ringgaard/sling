@@ -366,6 +366,7 @@ class Document {
   // Removes thematic frame from document.
   void RemoveTheme(Handle handle);
   void RemoveTheme(const Frame &frame) { RemoveTheme(frame.handle()); }
+  void RemoveThemes() { themes_.clear(); }
 
   // Returns list of thematic frames for document.
   const Handles &themes() const { return themes_; }

@@ -210,6 +210,13 @@ class Datasets:
                             dir=corpora.wikidir(language),
                             format="records/document")
 
+  def wikipedia_summaries(self, language=None):
+    """Resource for Wikipedia document summaries."""
+    if language == None: language = flags.arg.language
+    return self.wf.resource("summaries.rec",
+                            dir=corpora.wikidir(language),
+                            format="records/document")
+
   def wikipedia_aliases(self, language=None):
     """Resource for wikipedia aliases. The aliases are extracted from the
     Wikipedia pages from anchors, redirects, disambiguation pages etc. This is

@@ -104,7 +104,7 @@ string Wiki::URL(Text lang, Text title) {
   for (char &c : t) {
     if (c == ' ') c = '_';
   }
-  return StrCat("http://", lang, ".wikipedia.org/wiki/", t);
+  return StrCat("https://", lang, ".wikipedia.org/wiki/", t);
 }
 
 void WikimediaTypes::Init(Store *store) {
