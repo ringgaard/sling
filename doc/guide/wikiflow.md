@@ -5,7 +5,7 @@ SLING has a task processing pipeline for downloading and processing
 dumps. All Wikipedia pages and the Wikidata knowledge base are freely
 available as dump files from [Wikimedia](https://www.wikimedia.org/). These
 dumps are processed using the SLING workflow task system to convert the dumps
-into SLING frame format. You can [browse](https://ringgaard.com/kb) a pre-built
+into SLING frame format. You can [browse](https://ringgaard.com/kb/) a pre-built
 knowledge base on [ringgaard.com](https://ringgaard.com).
 
 If you only need the final knowledge base and alias tables, you can download

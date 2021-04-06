@@ -2174,6 +2174,7 @@ sg.news.yahoo.com,Q3044717,Yahoo! News,@YahooSG
 finance.yahoo.com,Q4053432,Yahoo! Finance,@YahooFinance,money.yahoo.com
 ca.finance.yahoo.com,Q4053432,Yahoo! Finance,@YahooFinanceCA
 uk.finance.yahoo.com,Q4053432,Yahoo! Finance,@YahooFinanceUK
+sg.finance.yahoo.com,Q4053432,Yahoo! Finance
 
 6abc.com,Q3564777,WPVI-TV,@6abc
 13abc.com,Q2386816,WTVG,@13abc
