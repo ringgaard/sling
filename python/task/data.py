@@ -212,7 +212,6 @@ class Datasets:
 
   def wikipedia_summaries(self, language=None):
     """Resource for Wikipedia document summaries."""
-    if language == None: language = flags.arg.language
     return self.wf.resource("summaries.rec",
                             dir=corpora.wikidir(language),
                             format="records/document")

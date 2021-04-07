@@ -38,9 +38,10 @@ commons.freeze()
 
 # Read all items from FactGrid dump.
 fin = gzip.open("data/c/wikidata/factgrid.json.gz")
-fout = sling.RecordWriter("data/e/factgrid/factgrid-items.rec")
-fprop = sling.RecordWriter("data/e/factgrid/properties.rec")
+fitem = sling.RecordWriter("data/e/factgrid/factgrid-items.rec")
+fprop = sling.RecordWriter("data/e/factgrid/factgrid-properties.rec")
 num_items = 0
+num_properties = 0
 for line in fin:
   # Trim line.
   if len(line) < 3: continue
@@ -84,19 +85,14 @@ for line in fin:
   # Add link to FactGrid.
   if fgid: slots.append((n_fg_item_id, fgid))
 
-  # Write mapped item to output.
+  # Write mapped item/property to output.
   mapped_item = store.frame(slots)
-  fout.write("P8168/%s" % fgid, mapped_item.data(binary=True))
-  num_items += 1
-
-  # Write property map.
   if mapped_item[n_isa] == n_property:
-    pid = mapped_item[n_is]
-    if pid is None:
-      pid = mapped_item[n_id]
-    else:
-      pid = pid.id
-    fprop.write("P8168/%s" % fgid, "{=%s}" % pid)
+    fprop.write("P8168/%s" % fgid, mapped_item.data(binary=True))
+    num_properties += 1
+  else:
+    fitem.write("P8168/%s" % fgid, mapped_item.data(binary=True))
+    num_items += 1
 
 # Add FactGrid xref property.
 store = sling.Store(commons)
@@ -111,11 +107,10 @@ fgprop = store.parse("""
   P31: P8168/Q21878
   P1630: "https://database.factgrid.de/wiki/Item:$1"
 }""")
-fout.write("P8168", fgprop.data(binary=True))
-fprop.write("P8168", "{=P8168}")
+fprop.write("P8168", fgprop.data(binary=True))
 
 fin.close()
-fout.close()
+fitem.close()
 fprop.close()
-print(num_items, "items")
+print(num_items, "items", num_properties, "properties")
 

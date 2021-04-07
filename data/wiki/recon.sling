@@ -4,6 +4,7 @@
     /w/item/fanin       ; item fan-in from Wikidata
     /w/item/popularity  ; Wikipedia popularity counts
     isa                 ; Wikidata item
+    lex                 ; Wikipedia summaries
     media               ; Twitter and Wikidata photos
     P1278               ; GLEIF
     PELF                ; ISO 20275 entity legal forms

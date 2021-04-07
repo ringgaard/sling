@@ -145,6 +145,10 @@ commands = [
     help="Extract link graph from Wikipedias",
     package="sling.task.wikipedia",
   ),
+  Command("generate_summaries",
+    help="Generate summaries for Wikipedia articles",
+    package="sling.task.wikipedia",
+  ),
 
   # Knowledge base.
   Command("collect_xrefs",

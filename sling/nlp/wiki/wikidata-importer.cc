@@ -468,36 +468,6 @@ class WikidataPruner : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("wikidata-pruner", WikidataPruner);
 
-// Collect Wikidata properties and output schema frame.
-class WikidataPropertyCollector : public task::FrameProcessor {
- public:
-  void Process(Slice key, const Frame &frame) override {
-    // Save property id.
-    properties_.push_back(frame.Id().str());
-  }
-
-  // Output property catalog.
-  void Flush(task::Task *task) override {
-    Store store;
-    Builder catalog(&store);
-    catalog.AddId("/w/entity");
-    catalog.AddIs("schema");
-    catalog.Add("name", "Wikidata entity");
-    catalog.AddLink("family", "/schema/wikidata");
-    for (const string &id : properties_) {
-      catalog.AddLink("role", id);
-    }
-    Output(catalog.Create());
-  }
-
- private:
-  // Property ids.
-  std::vector<string> properties_;
-};
-
-REGISTER_TASK_PROCESSOR("wikidata-property-collector",
-                        WikidataPropertyCollector);
-
 }  // namespace nlp
 }  // namespace sling
 

@@ -673,7 +673,7 @@ class Workflow(object):
     self.write(reduced, output, params=params)
     return reducer
 
-  def mapreduce(self, input, output, mapper, reducer=None, params=None,
+  def mapreduce(self, input, output, mapper=None, reducer=None, params=None,
                 auxin=None, format=None):
     """Map input files, shuffle, sort, reduce, and output to files."""
     # Determine the number of output shards.

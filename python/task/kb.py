@@ -70,6 +70,7 @@ class KnowledgeBaseWorkflow:
     return self.wf.bundle(
       self.media(),
       self.photos(),
+      self.data.wikipedia_summaries(),
       self.elf(),
       self.gleif())
 
@@ -92,6 +93,7 @@ class KnowledgeBaseWorkflow:
   def reconcile_items(self, items=None, output=None):
     """Reconcile items."""
     items = self.wf.bundle(
+      self.data.properties(),
       self.data.standard_item_sources(),
       self.extended_item_sources(),
       items)
@@ -126,10 +128,8 @@ class KnowledgeBaseWorkflow:
                                params={"indexed": True})
 
   def build_knowledge_base(self):
-    """Task for building knowledge base store with items, properties, and
-    schemas."""
+    """Task for building knowledge base store with items, and schemas."""
     items = self.data.items()
-    properties = self.data.properties()
     schemas = self.data.schema_defs()
 
     with self.wf.namespace("kb"):
@@ -139,11 +139,8 @@ class KnowledgeBaseWorkflow:
                 "prune_wiki_links": True,
                 "prune_category_members": True})
 
-      # Collect property catalog.
-      property_catalog = self.wf.map(properties, "wikidata-property-collector")
-
       # Collect frames into knowledge base store.
-      parts = self.wf.collect(pruned_items, property_catalog, schemas)
+      parts = self.wf.collect(pruned_items, schemas)
       return self.wf.write(parts, self.data.knowledge_base(),
                            params={"snapshot": True})
 

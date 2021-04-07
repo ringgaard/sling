@@ -145,6 +145,7 @@ cc_library(
     "//sling/frame",
     "//sling/nlp/document",
     "//sling/nlp/document:document-tokenizer",
+    "//sling/nlp/document:lex",
     "//sling/task",
     "//sling/task:frames",
     "//sling/task:reducer",

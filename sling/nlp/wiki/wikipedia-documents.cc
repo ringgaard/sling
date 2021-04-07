@@ -19,6 +19,7 @@
 #include "sling/base/types.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-tokenizer.h"
+#include "sling/nlp/document/lex.h"
 #include "sling/nlp/wiki/wikipedia-map.h"
 #include "sling/nlp/wiki/wiki-annotator.h"
 #include "sling/nlp/wiki/wiki-extractor.h"
@@ -616,6 +617,83 @@ class CategoryMemberMerger : public task::Reducer {
 };
 
 REGISTER_TASK_PROCESSOR("category-member-merger", CategoryMemberMerger);
+
+// Select document summary for item based on language priority.
+class SummarySelector : public task::Reducer {
+ public:
+  void Start(task::Task *task) override {
+    task::Reducer::Start(task);
+    CHECK(names_.Bind(&commons_));
+
+    // Initialize document schema.
+    docnames_ = new DocumentNames(&commons_);
+
+    // Build language priority map.
+    int priority = 1;
+    for (const char **lang = Wiki::language_priority; *lang; lang++) {
+      Handle language = commons_.Lookup(StrCat("/lang/", *lang));
+      language_priority_[language] = priority++;
+    }
+
+    commons_.Freeze();
+  }
+
+  void Reduce(const task::ReduceInput &input) override {
+    // Read summaries and select document with highest language priority.
+    Store store(&commons_);
+    Frame top;
+    int best = 0;
+    for (task::Message *message : input.messages()) {
+      Frame summary = DecodeMessage(&store, message);
+      Handle lang = summary.GetHandle(n_lang_);
+      int priority = GetLanguagePriority(lang);
+      if (best == 0 || priority < best) {
+        top = summary;
+        best = priority;
+      }
+    }
+
+    // Output compact document summary.
+    Document document(top);
+    string lex = ToLex(document);
+    Text url = document.url();
+
+    Builder b(&store);
+    if (!url.empty()) b.Add(docnames_->n_url, url);
+    b.Add(n_lex_, lex, top.GetHandle(n_lang_));
+
+    Output(input.shard(), task::CreateMessage(input.key(), b.Create()));
+  }
+
+  void Done(task::Task *task) override {
+    if (docnames_) {
+      docnames_->Release();
+      docnames_ = nullptr;
+    }
+  }
+
+ private:
+  // Get language priority.
+  int GetLanguagePriority(Handle lang) const {
+    auto f = language_priority_.find(lang);
+    if (f == language_priority_.end()) return 0;
+    return f->second;
+  }
+
+  // Commons store.
+  Store commons_;
+
+  // Language priority.
+  HandleMap<int> language_priority_;
+
+  // Symbols.
+  DocumentNames *docnames_ = nullptr;
+  Names names_;
+  Name n_lang_{names_, "lang"};
+  Name n_lex_{names_, "lex"};
+};
+
+REGISTER_TASK_PROCESSOR("summary-selector", SummarySelector);
 
 }  // namespace nlp
 }  // namespace sling

@@ -282,6 +282,21 @@ class WikipediaWorkflow:
 
     return wikilinks, popularity
 
+  #---------------------------------------------------------------------------
+  # Wikipedia article summaries
+  #---------------------------------------------------------------------------
+
+  def generate_summaries(self):
+    """Select Wikipedia article summaries based on language priority."""
+    documents = []
+    for l in flags.arg.languages:
+      documents.append(self.data.wikipedia_summaries(l))
+
+    return self.wf.mapreduce(input=documents,
+                             output=self.data.wikipedia_summaries(),
+                             reducer="summary-selector",
+                             format="message/document")
+
 def import_wikipedia():
   wf = WikipediaWorkflow("wikipedia-import")
   for language in flags.arg.languages:
@@ -319,5 +334,11 @@ def extract_wikilinks():
   log.info("Extract link graph")
   wf = WikipediaWorkflow("link-graph")
   wf.extract_links()
+  run(wf.wf)
+
+def generate_summaries():
+  log.info("Generate summaries")
+  wf = WikipediaWorkflow("summaries")
+  wf.generate_summaries()
   run(wf.wf)
 

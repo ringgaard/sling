@@ -288,12 +288,30 @@ class ItemMerger : public task::Reducer {
 
     // Output merged frame for item.
     Frame merged = builder.Create();
+    if (merged.IsA("/w/property")) properties_.push_back(merged.Id().str());
     Output(input.shard(), task::CreateMessage(input.key(), merged));
     num_merged_items_->Increment();
     num_final_statements_->Increment(merged.size());
   }
 
+  // Output property catalog.
+  void Done(task::Task *task) override {
+    Store store;
+    Builder catalog(&store);
+    catalog.AddId("/w/entity");
+    catalog.AddIs("schema");
+    catalog.Add("name", "Wikidata entity");
+    catalog.AddLink("family", "/schema/wikidata");
+    for (const string &id : properties_) {
+      catalog.AddLink("role", id);
+    }
+    Output(0, task::CreateMessage(catalog.Create()));
+  }
+
  private:
+  // Property ids.
+  std::vector<string> properties_;
+
   // Statistics.
   task::Counter *num_orig_statements_ = nullptr;
   task::Counter *num_final_statements_ = nullptr;

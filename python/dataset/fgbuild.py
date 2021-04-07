@@ -34,9 +34,9 @@ def res(files, fmt="records/frame"):
 
 fgdir = "data/e/factgrid"
 fg_items = res(fgdir + "/factgrid-items.rec")
+fg_properties = res(fgdir + "/factgrid-properties.rec")
 items = res(fgdir + "/items.rec")
 fanin = res(fgdir + "/fanin.rec")
-properties = res(fgdir + "/properties.rec")
 xrefs = res(fgdir + "/xrefs.sling", "store/frame")
 xref_config = res("data/factgrid/xrefs.sling", "store/frame")
 recon_config = res("data/factgrid/recon.sling", "store/frame")
@@ -54,14 +54,14 @@ def compute_fanin():
 # Collect xrefs.
 def collect_xrefs():
   xref = wf.task("xref-builder")
-  wf.connect(wf.collect(fg_items), xref)
+  wf.connect(wf.collect(fg_items, fg_properties), xref)
   xref.attach_input("config", xref_config)
   xref.attach_output("output", xrefs)
 
 # Map and reconcile items.
 def reconcile_items():
   wf.mapreduce(
-    input=fg_items,
+    input=wf.bundle(fg_items, fg_properties, fanin),
     output=items,
     mapper="item-reconciler",
     reducer="item-merger",
@@ -76,8 +76,7 @@ def reconcile_items():
 
 # Build knowledge base.
 def build_kb():
-  property_catalog = wf.map(properties, "wikidata-property-collector")
-  parts = wf.collect(items, property_catalog, datasets.schema_defs())
+  parts = wf.collect(items, datasets.schema_defs())
   wf.write(parts, fg_kb, params={"snapshot": True})
 
 # Extract aliases.

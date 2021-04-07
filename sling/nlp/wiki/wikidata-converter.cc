@@ -77,7 +77,7 @@ WikidataConverter::WikidataConverter(Store *commons, const string &language) {
   // Initialize per-language information.
   const char **lang = Wiki::language_priority;
   int priority = 1;
-  while (*lang != 0) {
+  while (*lang != nullptr) {
     LanguageInfo info;
     info.priority = priority++;
     info.language = commons->Lookup(StrCat("/lang/", *lang));

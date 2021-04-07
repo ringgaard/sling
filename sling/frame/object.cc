@@ -341,6 +341,12 @@ bool Frame::IsA(const Object &type) const {
   return IsA(type.handle());
 }
 
+bool Frame::IsA(Text type) const {
+  Handle h = store_->LookupExisting(type);
+  if (h.IsNil()) return false;
+  return IsA(h);
+}
+
 bool Frame::Is(Handle type) const {
   for (const Slot *slot = frame()->begin(); slot < frame()->end(); ++slot) {
     if (slot->name.IsIs() && slot->value == type) return true;
@@ -354,6 +360,12 @@ bool Frame::Is(const Name &type) const {
 
 bool Frame::Is(const Object &type) const {
   return Is(type.handle());
+}
+
+bool Frame::Is(Text type) const {
+  Handle h = store_->LookupExisting(type);
+  if (h.IsNil()) return false;
+  return Is(h);
 }
 
 Frame &Frame::Add(Handle name, Handle value) {
