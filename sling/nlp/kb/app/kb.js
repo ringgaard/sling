@@ -606,6 +606,7 @@ class KbDocumentCard extends MdCard {
       }
       $ #text {
         font: 16px lora, georgia, serif;
+        line-height: 1.4;
       }
       $ #text a {
         color: #0b0080;
