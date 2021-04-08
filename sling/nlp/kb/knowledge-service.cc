@@ -563,6 +563,7 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
   // Bind names and freeze store.
   kb_ = kb;
   CHECK(names_.Bind(kb_));
+  docnames_ = new DocumentNames(kb);
 
   // Get meta data for properties.
   std::vector<PropName> xref_properties;
@@ -753,6 +754,19 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   b.Add(n_properties_, Array(ws.store(), info.properties));
   b.Add(n_xrefs_, Array(ws.store(), info.xrefs));
   b.Add(n_categories_, Array(ws.store(), info.categories));
+
+  // Add summary.
+  if (item.Has(n_lex_)) {
+    // Add document URL.
+    Text url = item.GetText(n_url_);
+    if (!url.empty()) b.Add(n_url_, url);
+
+    // Add document text.
+    Document document(ws.store(), docnames_);
+    if (lexer_.Lex(&document, item.GetText(n_lex_))) {
+      b.Add(n_document_, ToHTML(document));
+    }
+  }
 
   // Set item image.
   if (!info.image.IsNil()) {

@@ -267,6 +267,100 @@ string ToLex(const Document &document) {
   return lex;
 }
 
+string ToHTML(const Document &document) {
+  // Set up HTML output.
+  string html;
+  StringOutputStream stream(&html);
+  Output output(&stream);
+
+  // Convert document to simplified HTML.
+  Store *store = document.store();
+  int styles = 0;
+  for (const Token &token : document.tokens()) {
+    // Add style end.
+    int style = token.style();
+    if (style != 0) {
+      int end_style = style & END_STYLE;
+      OutputStyle(end_style, &output);
+      styles &= ~end_style;
+    }
+
+    // Add token break.
+    if (token.index() > 0) {
+      switch (token.brk()) {
+        case NO_BREAK: break;
+        case SPACE_BREAK: output.WriteChar(' '); break;
+        case LINE_BREAK: output.Write("<br/>", 5); break;
+        case SENTENCE_BREAK: output.Write("  ", 2); break;
+        case PARAGRAPH_BREAK: output.Write("<p>", 3); break;
+        case SECTION_BREAK: output.Write("<center>***</center>"); break;
+        case CHAPTER_BREAK: output.Write("<hr>"); break;
+      }
+    }
+
+    // Add style begin.
+    if (style != 0) {
+      int begin_style = style & BEGIN_STYLE;
+      OutputStyle(begin_style, &output);
+      styles |= begin_style << 1;
+    }
+
+    // Add span start.
+    Span *span = document.GetSpanAt(token.index());
+    for (Span *s = span; s != nullptr; s = s->parent()) {
+      if (s->begin() == token.index()) {
+        output.Write("<a", 2);
+        Handle evoked = store->Resolve(span->evoked());
+        if (store->IsPublic(evoked)) {
+          output.Write(" ref=", 5);
+          output.WriteChar('"');
+          output.Write(store->FrameId(evoked));
+          output.WriteChar('"');
+        }
+        output.WriteChar('>');
+      }
+    }
+
+    // Add token word. Escape reserved characters.
+    const string &word = token.word();
+    if (word == "``") {
+      output.Write("“");
+    } else if (word == "''") {
+      output.Write("”");
+    } else if (word == "--") {
+      output.Write("–");
+    } else if (word == "...") {
+      output.Write("…");
+    } else {
+      for (char c : word) {
+        switch (c) {
+          case '&':  output.Write("&amp;", 5); break;
+          case '<':  output.Write("&lt;", 4); break;
+          case '>':  output.Write("&gt;", 4); break;
+          case '"':  output.Write("&quot;", 6); break;
+          case '\'': output.Write("&#39;", 5);  break;
+          default: output.WriteChar(c);
+        }
+      }
+    }
+
+    // Add span end.
+    for (Span *s = span; s != nullptr; s = s->parent()) {
+      if (s->end() == token.index() + 1) {
+        output.Write("</a>", 4);
+      }
+    }
+  }
+
+  // Terminate remaining styles.
+  if (styles != 0) {
+    OutputStyle(styles, &output);
+  }
+
+  output.Flush();
+  return html;
+}
+
 }  // namespace nlp
 }  // namespace sling
 

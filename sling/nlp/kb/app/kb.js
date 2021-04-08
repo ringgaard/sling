@@ -75,6 +75,7 @@ class KbApp extends Component {
 
   display(item) {
     this.find("#item").update(item);
+    this.find("#document").update(item);
     this.find("#properties").update(item);
     this.find("#categories").update(item);
     this.find("#xrefs").update(item);
@@ -554,6 +555,72 @@ class KbItemCard extends MdCard {
 }
 
 Component.register(KbItemCard);
+
+class KbDocumentCard extends MdCard {
+  onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
+  }
+
+  onclick(e) {
+    let ref = e.target.getAttribute("ref");
+    if (ref) {
+      if (e.ctrlKey) {
+        window.open("/kb/" + ref, '_blank');
+      } else {
+        this.match("#app").navigate(ref);
+      }
+    }
+  }
+
+  visible() {
+    let item = this.state;
+    return item && item.document;
+  }
+
+  onupdate() {
+    let item = this.state;
+    this.find("#url").update({
+      url: item.url,
+      text: item.url + ":",
+      external: true,
+    });
+    this.find("#text").innerHTML = item.document;
+  }
+
+  static stylesheet() {
+    return `
+      @import url('https://fonts.googleapis.com/css?family=Lato|Lora:400,400i,700,700i');
+
+      ${MdCard.stylesheet()}
+
+      $ #url {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      $ #url a {
+        font-size: 13px;
+        color: #808080;
+        text-decoration: none;
+        outline: none;
+      }
+      $ #text {
+        font: 16px lora, georgia, serif;
+      }
+      $ #text a {
+        color: #0b0080;
+        text-decoration: none;
+        cursor: pointer;
+        outline: none
+      }
+      $ #text a:hover{
+        text-decoration: underline;
+      }
+    `;
+  }
+}
+
+Component.register(KbDocumentCard);
 
 class KbPropertyCard extends MdCard {
   visible() {

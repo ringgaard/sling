@@ -22,6 +22,9 @@
 #include "sling/frame/store.h"
 #include "sling/net/http-server.h"
 #include "sling/net/static-content.h"
+#include "sling/nlp/document/document.h"
+#include "sling/nlp/document/document-tokenizer.h"
+#include "sling/nlp/document/lex.h"
 #include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/kb/name-table.h"
 
@@ -44,6 +47,10 @@ class KnowledgeService {
     Handle media = Handle::nil();
     Handle alternate_image = Handle::nil();
   };
+
+  ~KnowledgeService() {
+    if (docnames_) docnames_->Release();
+  }
 
   // Load and initialize knowledge base.
   void Load(Store *kb, const string &name_table);
@@ -122,8 +129,13 @@ class KnowledgeService {
   StaticContent common_{"/common", "app"};
   StaticContent app_{"/kb", "sling/nlp/kb/app"};
 
+  // Document tokenizer and lexer.
+  DocumentTokenizer tokenizer_;
+  DocumentLexer lexer_{&tokenizer_};
+
   // Symbols.
   Names names_;
+  DocumentNames *docnames_ = nullptr;
   Name n_name_{names_, "name"};
   Name n_description_{names_, "description"};
   Name n_media_{names_, "media"};
@@ -139,6 +151,8 @@ class KnowledgeService {
   Name n_text_{names_, "text"};
   Name n_ref_{names_, "ref"};
   Name n_url_{names_, "url"};
+  Name n_lex_{names_, "lex"};
+  Name n_document_{names_, "document"};
   Name n_thumbnail_{names_, "thumbnail"};
   Name n_matches_{names_, "matches"};
   Name n_lang_{names_, "lang"};

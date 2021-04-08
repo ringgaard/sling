@@ -51,6 +51,9 @@ class DocumentLexer {
 // Convert document to LEX format.
 string ToLex(const Document &document);
 
+// Convert document to HTML format.
+string ToHTML(const Document &document);
+
 }  // namespace nlp
 }  // namespace sling
 

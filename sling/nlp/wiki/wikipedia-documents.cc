@@ -229,21 +229,20 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     }
 
     // Output document summary.
-    if (is_article && summaries_ != nullptr) {
+    if (is_article && summaries_ != nullptr && document.length() > 0) {
       // Extract first paragraph as summary.
-      int end = 0;
+      int end = 1;
       while (end < document.length()) {
         if (document.token(end).brk() >= PARAGRAPH_BREAK) break;
         end++;
       }
-      if (end > 0) {
-        Document summary(document, 0, end, true);
-        summary.RemoveThemes();
-        summary.AddExtra(n_lang_, lang_);
-        summary.AddExtra(docnames_->n_url, Wiki::URL(language_, title));
-        summary.Update();
-        summaries_->Send(task::CreateMessage(qid, summary.top()));
-      }
+
+      Document summary(document, 0, end, true);
+      summary.RemoveThemes();
+      summary.AddExtra(n_lang_, lang_);
+      summary.AddExtra(docnames_->n_url, Wiki::URL(language_, title));
+      summary.Update();
+      summaries_->Send(task::CreateMessage(qid, summary.top()));
     }
   }
 

@@ -42,21 +42,17 @@
                 <div><md-text id="datatype"></md-text></div>
               </kb-item-card>
 
+              <!-- Document card -->
+              <kb-document-card id="document">
+                <md-link id="url" notab="1" newtab="1" external="1"></md-link>
+                <div id="text"></div>
+              </kb-document-card>
+
               <!-- Item properties card -->
               <kb-property-card id="properties">
                 <kb-property-table id="property-table">
                 </kb-property-table>
               </kb-property-card>
-
-              <!-- Item categories card -->
-              <kb-category-card id="categories">
-                <md-card-toolbar>
-                  <div>Categories</div>
-                </md-card-toolbar>
-
-                <kb-item-list id="category-list">
-                </kb-item-list>
-              </kb-category-card>
 
             </md-column-layout>
 
@@ -75,6 +71,15 @@
                 </kb-property-table>
               </kb-xref-card>
 
+              <!-- Item categories card -->
+              <kb-category-card id="categories">
+                <md-card-toolbar>
+                  <div>Categories</div>
+                </md-card-toolbar>
+
+                <kb-item-list id="category-list">
+                </kb-item-list>
+              </kb-category-card>
             </md-column-layout>
 
           </md-row-layout>
@@ -105,6 +110,12 @@
               <div><md-text id="description"></md-text></div>
               <div><md-text id="datatype"></md-text></div>
             </kb-item-card>
+
+            <!-- Document card -->
+            <kb-document-card id="document">
+              <md-link id="url" notab="1" newtab="1" external="1"></md-link>
+              <div id="text"></div>
+            </kb-document-card>
 
             <!-- Item picture card -->
             <kb-picture-card id="picture">
