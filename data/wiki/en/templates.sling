@@ -404,6 +404,7 @@
 "nts": {type: "tag" argnum: 1}
 "nihongo": {type: "tag" argnum: 1}
 "nihongo foot": {type: "tag" argnum: 1}
+"ill": {type: "tag" argnum: 1}
 
 "plainlist": {type: "tag" argnum: 1 open: "<div>" close: "</div>"}
 "flatlist": {type: "tag" argnum: 1 open: "<div>" close: "</div>"}
@@ -447,6 +448,7 @@
 "flagcountry": {type: "flag"}
 "flagu": {type: "flag"}
 "flagteam": {type: "flag"}
+"ushr": {type: "ushr"}
 
 "Photomontage": {type: "photomontage"}
 
@@ -1299,43 +1301,6 @@
   }
 }
 
-"Infobox bilibili personality": {
-  type: "infobox"
-  class: /wp/infobox/bilibili_personality
-  fields: {
-    "name": {+/wp/info/name alias: 12}
-    "logo": {+/wp/info/logo media: true}
-    "logo_caption": /wp/info/logo_caption
-    "image": {+/wp/info/image media: true}
-    "caption": /wp/info/caption
-    "birth_name": {+/wp/info/birth_name alias: 12}
-    "birth_date": /wp/info/birth_date
-    "birth_place": /wp/info/birth_place
-    "death_date": /wp/info/death_date
-    "death_place": /wp/info/death_place
-    "nationality": /wp/info/nationality
-    "occupation": /wp/info/occupation
-    "website": /wp/info/website
-    "pseudonym": {=/wp/info/pseudonym alias: 12}
-    "channel_url": /wp/info/channel_url
-    "channel_display_name": /wp/info/channel_display_name
-    "years_active": /wp/info/years_active
-    "genre": /wp/info/genre
-    "subscribers": /wp/info/subscribers
-    "subscriber_date": /wp/info/subscriber_date
-    "views": /wp/info/views
-    "view_date": /wp/info/view_date
-    "network": /wp/info/network
-    "associated_acts": /wp/info/associated_acts
-    "catchphrase(s)": /wp/info/catchphrase
-    "silver_TV": /wp/info/silver_tv
-    "silver_year": /wp/info/silver_year
-    "gold_TV": /wp/info/gold_tv
-    "gold_year": /wp/info/gold_year
-    "stats_update": /wp/info/stats_update
-  }
-}
-
 "Infobox chef": {
   type: "infobox"
   class: /wp/infobox/chef
@@ -2081,31 +2046,6 @@
     "child": /wp/info/child
     "module2": /wp/info/module2
     "signature": /wp/info/signature
-  }
-}
-
-"Infobox member of the Knesset": {
-  type: "infobox"
-  class: /wp/infobox/member_of_the_knesset
-  fields: {
-    "name": {+/wp/info/name alias: 12}
-    "image": {+/wp/info/image media: true}
-    "caption": /wp/info/caption
-    "birth_date": /wp/info/birth_date
-    "birth_place": /wp/info/birth_place
-    "Year of Aliyah": /wp/info/year_of_aliyah
-    "death_date": /wp/info/death_date
-    "death_place": /wp/info/death_place
-    "spouse": /wp/info/spouse
-    "Knesset(s)": /wp/info/knesset
-    "party1": /wp/info/party1
-    "partyyears1": /wp/info/partyyears1
-    "party2": /wp/info/party2
-    "partyyears2": /wp/info/partyyears2
-    "minister1": /wp/info/minister1
-    "ministeryears1": /wp/info/ministeryears1
-    "minister2": /wp/info/minister2
-    "ministeryears2": /wp/info/ministeryears2
   }
 }
 

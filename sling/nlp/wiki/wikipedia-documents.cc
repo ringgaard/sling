@@ -655,6 +655,7 @@ class SummarySelector : public task::Reducer {
     // Output compact document summary.
     Document document(top);
     string lex = ToLex(document);
+    TrimSummary(lex);
     Text url = document.url();
 
     Builder b(&store);
@@ -677,6 +678,31 @@ class SummarySelector : public task::Reducer {
     auto f = language_priority_.find(lang);
     if (f == language_priority_.end()) return 0;
     return f->second;
+  }
+
+  // Trim punctuation in summary.
+  static void TrimSummary(string &lex) {
+    // Find first parenthesis.
+    int paren = lex.find('(');
+    if (paren == -1) return;
+
+    // Find first non-punctuation character.
+    int p = paren + 1;
+    while (p < lex.size()) {
+      char ch = lex[p];
+      if (ch == ')') break;
+      if (ch != ' ' && ch != ',' && ch != ';') break;
+      p++;
+    }
+    if (p == lex.size()) return;
+
+    if (lex[p] == ')') {
+      // Remove empty parentheses.
+      lex.erase(paren, p - paren + 1);
+    } else if (p != paren + 1) {
+      // Remove initial punctuation in parentheses.
+      lex.erase(paren + 1, p - paren - 1);
+    }
   }
 
   // Commons store.

@@ -945,30 +945,36 @@ class CoordinateTemplate : public WikiMacro {
         break;
     }
 
+    // Do not output text for coordinate if display=title.
+    string display = templ.GetValue("display");
+    bool title = display == "title" || display == "t";
+
     // Output coordinate.
     int begin = annotator->position();
-    if (numargs == 8) {
-      // Latitude.
-      templ.Extract(1);
-      annotator->Content("°");
-      templ.Extract(2);
-      annotator->Content("′");
-      templ.Extract(3);
-      annotator->Content("″");
-      templ.Extract(4);
+    if (!title) {
+      if (numargs == 8) {
+        // Latitude.
+        templ.Extract(1);
+        annotator->Content("°");
+        templ.Extract(2);
+        annotator->Content("′");
+        templ.Extract(3);
+        annotator->Content("″");
+        templ.Extract(4);
 
-      // Longitude.
-      templ.Extract(5);
-      annotator->Content("°");
-      templ.Extract(6);
-      annotator->Content("′");
-      templ.Extract(7);
-      annotator->Content("″");
-      templ.Extract(8);
-    } else {
-      annotator->Content(GeoCoord(lat, true));
-      annotator->Content(" ");
-      annotator->Content(GeoCoord(lng, false));
+        // Longitude.
+        templ.Extract(5);
+        annotator->Content("°");
+        templ.Extract(6);
+        annotator->Content("′");
+        templ.Extract(7);
+        annotator->Content("″");
+        templ.Extract(8);
+      } else {
+        annotator->Content(GeoCoord(lat, true));
+        annotator->Content(" ");
+        annotator->Content(GeoCoord(lng, false));
+      }
     }
     int end = annotator->position();
 
@@ -977,7 +983,13 @@ class CoordinateTemplate : public WikiMacro {
     b.AddIsA("/w/geo");
     b.Add("/w/lat", lat);
     b.Add("/w/lng", lng);
-    annotator->AddMention(begin, end, b.Create().handle());
+
+    // Add annotation as theme if display=title.
+    if (title) {
+      annotator->AddTheme(b.Create().handle());
+    } else {
+      annotator->AddMention(begin, end, b.Create().handle());
+    }
   }
 
  private:
@@ -1062,6 +1074,109 @@ class FlagTemplate : public WikiMacro {
 };
 
 REGISTER_WIKI_MACRO("flag", FlagTemplate);
+
+// Template macro for district of the United States House of Representatives.
+class USRepresentativeTemplate : public WikiMacro {
+ public:
+  void Init(const Frame &config) override {
+    Store *store = config.store();
+    Frame state_codes(store, "/w/usstates");
+    if (state_codes.valid()) {
+      for (const Slot &s : state_codes) {
+        string name = String(store, s.name).value();
+        string abbrev = String(store, s.value).value();
+        states_names_[abbrev] = name;
+        states_names_[name] = name;
+        states_abbrevs_[abbrev] = abbrev;
+        states_names_[name] = abbrev;
+      }
+    }
+  }
+
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    // Look up state name and abbreviation.
+    string name = templ.GetValue(1);
+
+    string state_name = name;
+    auto fn = states_names_.find(name);
+    if (fn != states_names_.end()) state_name = fn->second;
+
+    string state_abbrev = name;
+    auto fa = states_abbrevs_.find(name);
+    if (fa != states_abbrevs_.end()) state_abbrev = fa->second;
+
+    // Look up district.
+    string district = templ.GetValue(2);
+    bool atlarge = false;
+    int district_number = 0;
+    if (safe_strto32(district, &district_number)) {
+      if (district_number % 10 == 1) {
+        district += "st";
+      } else if (district_number % 10 == 2) {
+        district += "nd";
+      } else if (district_number % 10 == 3) {
+        district += "rd";
+      } else {
+        district += "th";
+      }
+    } else if (district == "AL") {
+      district = "at-large";
+      atlarge = true;
+    }
+
+    // Get link name.
+    string link = templ.GetValue(3);
+    if (link.empty()) link = "A";
+    switch (link.length() == 1 ? link[0] : ' ') {
+      case 'A': case 'a':
+        link = StrCat(state_name, "'s ", district, " congressional district");
+        break;
+      case 'B': case 'b':
+        link = StrCat(state_abbrev, " ", district_number);
+        break;
+      case 'C': case 'c':
+        link = StrCat(district_number, " district");
+        break;
+      case 'D': case 'd':
+        link = StrCat(district_number, " congressional district");
+        break;
+      case 'E': case 'e':
+        if (atlarge) {
+          link = "At-large";
+        } else {
+          link = StrCat(district_number);
+        }
+        break;
+      case 'R': case 'r':
+        if (atlarge) {
+          link = "At-large";
+        } else {
+          link = district;
+        }
+        break;
+      case 'S': case 's':
+        link = StrCat(state_name, "'s ", district);
+        break;
+      case 'T': case 't':
+        link = StrCat(state_name, " ", district);
+        break;
+      case 'U': case 'u':
+        link = state_name;
+        break;
+      case 'X': case 'x':
+        link = StrCat(state_name, " ", district);
+        break;
+    }
+
+    annotator->Content(link);
+  }
+
+ private:
+  std::unordered_map<string, string> states_names_;
+  std::unordered_map<string, string> states_abbrevs_;
+};
+
+REGISTER_WIKI_MACRO("ushr", USRepresentativeTemplate);
 
 }  // namespace nlp
 }  // namespace sling
