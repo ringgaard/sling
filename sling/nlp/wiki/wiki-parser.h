@@ -50,6 +50,7 @@ class WikiParser {
     MATH,        // <math>...</math>
     TIMELINE,    // <timeline>...</timeline>
     GALLERY,     // <gallery>...</gallery>
+    MAPFRAME,    // <mapframe>...</mapframe>
     REF,         // <ref>...</ref>
     NOWIKI,      // <nowiki>...</nowiki>
 

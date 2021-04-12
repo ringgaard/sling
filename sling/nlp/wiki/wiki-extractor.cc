@@ -74,6 +74,7 @@ void WikiExtractor::ExtractNode(const Node &node) {
     case WikiParser::MATH: ExtractMath(node); break;
     case WikiParser::TIMELINE: ExtractTimeline(node); break;
     case WikiParser::GALLERY: ExtractGallery(node); break;
+    case WikiParser::MAPFRAME: ExtractSkip(node); break;
     case WikiParser::REF: ExtractReference(node); break;
     case WikiParser::NOWIKI: ExtractNoWiki(node); break;
     case WikiParser::HEADING: ExtractHeading(node); break;

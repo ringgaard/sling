@@ -36,8 +36,8 @@ namespace {
 static const char *node_names[] = {
   "DOCUMENT", "ARG", "ATTR",
   "TEXT", "FONT", "TEMPLATE", "LINK", "MEDIA", "CATEGORY", "URL", "COMMENT",
-  "TAG", "BTAG", "ETAG", "MATH", "TIMELINE", "GALLERY", "REF", "NOWIKI",
-  "HEADING", "INDENT", "TERM", "UL", "OL", "HR", "SWITCH",
+  "TAG", "BTAG", "ETAG", "MATH", "TIMELINE", "GALLERY", "MAPFRAME", "REF",
+  "NOWIKI", "HEADING", "INDENT", "TERM", "UL", "OL", "HR", "SWITCH",
   "TABLE", "CAPTION", "ROW", "HEADER", "CELL", "BREAK",
 };
 
@@ -667,6 +667,15 @@ void WikiParser::ParseTag() {
         SkipWhitespace();
       }
       txt_ = ptr_;
+    } else if (type == BTAG && nodes_[node].name() == "mapframe") {
+      while (*ptr_ != 0) {
+        if (*ptr_ == '<' && Matches("</mapframe>")) break;
+        ptr_++;
+      }
+      if (*ptr_ != 0) ptr_ += 11;
+      nodes_[node].end = ptr_;
+      txt_ = ptr_;
+      Pop();
     } else {
       UnwindUntil(type);
     }

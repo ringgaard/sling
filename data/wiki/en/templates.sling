@@ -12470,5 +12470,18 @@
   }
 }
 
+"Infobox clothing item": {
+  type: "infobox"
+  class: /wp/infobox/clothing_item
+  fields: {
+    "image_file": {+/wp/info/image media: true}
+    "designer": /wp/info/designer
+    "year": /wp/info/year
+    "type": /wp/info/type
+    "material": /wp/info/material
+    "on_display_at": /wp/info/on_display_at
+  }
+}
+
 }
 
