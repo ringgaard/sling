@@ -38,11 +38,13 @@ class KnowledgeService {
     Item(Store *store)
         : properties(store),
           xrefs(store),
-          categories(store) {}
+          categories(store),
+          gallery(store) {}
 
     Handles properties;
     Handles xrefs;
     Handles categories;
+    Handles gallery;
     Handle image = Handle::nil();
     Handle media = Handle::nil();
     Handle alternate_image = Handle::nil();
@@ -147,6 +149,7 @@ class KnowledgeService {
   Name n_property_{names_, "property"};
   Name n_values_{names_, "values"};
   Name n_categories_{names_, "categories"};
+  Name n_gallery_{names_, "gallery"};
   Name n_type_{names_, "type"};
   Name n_text_{names_, "text"};
   Name n_ref_{names_, "ref"};
@@ -191,6 +194,7 @@ class KnowledgeService {
   Name n_end_time_{names_, "P582"};
   Name n_point_in_time_{names_, "P585"};
   Name n_series_ordinal_{names_, "P1545"};
+  Name n_media_legend_{names_, "P2096"};
 };
 
 }  // namespace nlp

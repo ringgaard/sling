@@ -608,13 +608,13 @@ class KbDocumentCard extends MdCard {
         font: 16px lora, georgia, serif;
         line-height: 1.4;
       }
-      $ #text a {
+      $ #text a[ref] {
         color: #0b0080;
         text-decoration: none;
         cursor: pointer;
         outline: none
       }
-      $ #text a:hover{
+      $ #text a[ref]:hover{
         text-decoration: underline;
       }
     `;

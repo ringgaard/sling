@@ -473,9 +473,53 @@ const char *property_order[] = {
   "P697",       // ex taxon author
   "P6507",      // taxon author citation
 
-
   // Low priority properties.
   "P166",       // award received
+
+  // Media.
+  "P18",        // image
+  "P154",       // logo image
+  "P41",        // flag image
+  "P3383",      // film poster
+  "P8972",      // small logo or icon
+  "P1442",      // image of grave
+  "P1801",      // commemorative plaque image
+  "P6802",      // related image
+  "P2716",      // collage image
+  "P3451",      // nighttime view
+  "P5252",      // winter view
+  "P4291",      // panoramic view
+  "P8592",      // aerial view
+  "P3311",      // plan view image
+  "P2713",      // sectional view
+  "P8517",      // view
+  "P4640",      // photosphere image
+  "P5775",      // image of interior
+  "P2910",      // icon
+  "P109",       // signature
+  "P1543",      // monogram
+  "P94",        // coat of arms image
+  "P158",       // seal image
+  "P4004",      // escutcheon image
+  "P5962",      // sail emblem
+  "P2425",      // service ribbon image
+  "P117",       // chemical structure
+  "P8224",      // molecular model or crystal lattice model
+  "P692",       // Gene Atlas Image
+  "P181",       // taxon range map image
+  "P367",       // astronomic symbol image
+  "P1766",      // place name sign
+  "P8667",      // twin town sign
+  "P14",        // traffic sign
+  "P8505",      // traffic sign template image
+  "P1846",      // distribution map
+  "P1943",      // location map
+  "P242",       // locator map image
+  "P1944",      // relief location map
+  "P1621",      // detail map
+  "P15",        // route map
+  "P491",       // orbit diagram
+  "P207",       // bathymetry image
 
   // Categories.
   "P910",       // topic's main category
@@ -754,6 +798,7 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   b.Add(n_properties_, Array(ws.store(), info.properties));
   b.Add(n_xrefs_, Array(ws.store(), info.xrefs));
   b.Add(n_categories_, Array(ws.store(), info.categories));
+  b.Add(n_gallery_, Array(ws.store(), info.gallery));
 
   // Add summary.
   if (item.Has(n_lex_)) {
@@ -787,6 +832,8 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
   // Collect properties and values.
   typedef SortableMap<Property *, Handles *> GroupMap;
   GroupMap property_groups;
+  std::vector<Handle> external_media;
+  std::unordered_set<string> media_urls;
   for (const Slot &s : item) {
     // Collect categories.
     if (s.name == n_category_) {
@@ -800,6 +847,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
     // Get external media for representative image.
     if (s.name == n_media_) {
       if (info->media.IsNil()) info->media = s.value;
+      external_media.push_back(s.value);
     }
 
     // Look up property. Skip non-property slots.
@@ -956,6 +1004,21 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       }
 
       values.push_back(v.Create().handle());
+
+      // Collect media files for gallery.
+      if (property->image) {
+        Text filename = String(item.store(), value).text();
+        Builder m(item.store());
+        string url = CommonsUrl(filename);
+        media_urls.insert(url);
+        m.Add(n_url_, url);
+        if (qualified) {
+          Frame image(kb_, h);
+          Handle legend = image.GetHandle(n_media_legend_);
+          if (!legend.IsNil()) m.Add(n_text_, legend);
+        }
+        info->gallery.push_back(m.Create().handle());
+      }
     }
     p.Add(n_values_, Array(item.store(), values));
 
@@ -965,7 +1028,24 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
     } else {
       info->properties.push_back(p.Create().handle());
     }
+
     delete group->second;
+  }
+
+  // Add media to gallery.
+  for (Handle media : external_media) {
+    string url = kb_->GetString(kb_->Resolve(media))->str().str();
+    if (media_urls.count(url) > 0) continue;
+
+    Builder m(item.store());
+    m.Add(n_url_, url);
+    if (kb_->IsFrame(media)) {
+      Frame image(kb_, media);
+      Handle legend = image.GetHandle(n_media_legend_);
+      if (!legend.IsNil()) m.Add(n_text_, legend);
+    }
+    info->gallery.push_back(m.Create().handle());
+    media_urls.insert(url);
   }
 }
 
