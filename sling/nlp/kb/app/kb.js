@@ -82,8 +82,8 @@ class KbApp extends Component {
     if (this.find("#gallery")) {
       this.find("#gallery").update(item["gallery"]);
     }
-    if (this.find("#picture")) {
-      this.find("#picture").update(item);
+    if (this.find("#picturex")) {
+      this.find("#picturex").update(item);
     }
     window.document.title = item ? item.text : "SLING Knowledge base";
   }
