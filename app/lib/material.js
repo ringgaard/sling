@@ -316,6 +316,10 @@ Component.register(MdIconButton);
 //-----------------------------------------------------------------------------
 
 export class MdText extends Component {
+  visible() {
+    return this.state;
+  }
+
   render() {
     let text = this.state;
     if (text) {
@@ -360,8 +364,25 @@ Component.register(MdLink);
 // Icon
 //-----------------------------------------------------------------------------
 
+export class MdImage extends Component {
+  visible() {
+    return this.state;
+  }
+
+  render() {
+    return `<img src="${this.state}" rel="noreferrer">`;
+  }
+}
+
+Component.register(MdImage);
+
+//-----------------------------------------------------------------------------
+// Icon
+//-----------------------------------------------------------------------------
+
 export class MdIcon extends Component {
-  onconnected() {
+  constructor() {
+    super();
     this.state = true;
   }
 

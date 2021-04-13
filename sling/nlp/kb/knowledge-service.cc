@@ -1006,7 +1006,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       values.push_back(v.Create().handle());
 
       // Collect media files for gallery.
-      if (property->image) {
+      if (property->image || property->alternate_image) {
         Text filename = String(item.store(), value).text();
         Builder m(item.store());
         string url = CommonsUrl(filename);

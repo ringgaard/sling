@@ -184,6 +184,7 @@ worms = [
   ("cgi-bin", re.compile(r"^\/cgi-bin\/")),
   ("fbclid", re.compile(r"^\/\?fbclid\=")),
   ("xploidID", re.compile(r"^\/\?xploidID\=")),
+  ("author", re.compile(r"^\/\?author\=")),
 ]
 
 total_hits = 0

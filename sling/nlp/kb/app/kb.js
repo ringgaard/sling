@@ -79,7 +79,12 @@ class KbApp extends Component {
     this.find("#properties").update(item);
     this.find("#categories").update(item);
     this.find("#xrefs").update(item);
-    this.find("#picture").update(item);
+    if (this.find("#gallery")) {
+      this.find("#gallery").update(item["gallery"]);
+    }
+    if (this.find("#picture")) {
+      this.find("#picture").update(item);
+    }
     window.document.title = item ? item.text : "SLING Knowledge base";
   }
 
@@ -692,6 +697,138 @@ class KbPictureCard extends MdCard {
 }
 
 Component.register(KbPictureCard);
+
+class KbGalleryCard extends MdCard {
+  onconnected() {
+    this.bind(".photo", "click", e => this.onopen(e));
+    this.bind(".left", "click", e => this.onbackward(e));
+    this.bind(".right", "click", e =>this.onforward(e));
+    this.bind(null, "keydown", e =>this.onkeypress(e));
+  }
+
+  onupdate() {
+    this.images = this.state;
+    this.current = 0;
+    let navigate = this.images.length > 1;
+    this.find(".left").style.visibility = navigate ? "" : "hidden";
+    this.find(".right").style.visibility = navigate ? "" : "hidden";
+    this.display(this.images[this.current]);
+  }
+
+  onkeypress(e) {
+    if (e.keyCode == 37) {
+      this.onbackward(e);
+    } else if (e.keyCode == 39) {
+      this.onforward(e);
+    } else if (e.keyCode == 13) {
+      this.onopen(e);
+    }
+  }
+
+  onbackward(e) {
+    this.focus();
+    if (this.current > 0) {
+      this.current -= 1;
+      this.display(this.images[this.current]);
+    }
+  }
+
+  onforward(e) {
+    this.focus();
+    if (this.current < this.images.length - 1) {
+      this.current += 1;
+      this.display(this.images[this.current]);
+    }
+  }
+
+  onopen(e) {
+    let url = this.imageurl(this.images[this.current]);
+    window.open(url,'_blank');
+  }
+
+  visible() {
+    return this.images && this.images.length > 0;
+  }
+
+  display(image) {
+    if (image) {
+      let caption = image.text;
+      if (caption) {
+        caption = caption.replace(/\[\[|\]\]/g, '');
+      }
+      if (this.images.length > 1) {
+        if (!caption) caption = "";
+        caption += ` [${this.current + 1}/${this.images.length}]`;
+      }
+      this.find(".photo").update(this.imageurl(image));
+      this.find("#caption").update(caption);
+    } else {
+      this.find(".photo").update(null);
+      this.find("#caption").update(null);
+    }
+  }
+
+  imageurl(image) {
+    let url = image.url.replace(/"/g, '&quot;');
+    if (mediadb) url = "/media/" + url;
+    return url;
+  }
+
+  static stylesheet() {
+    return MdCard.stylesheet() + `
+      $ {
+        padding: 15px 2px 15px 2px;
+      }
+
+      $ #picture {
+        outline: none;
+        display: flex;
+        flex-direction: row;
+      }
+
+      $ #photo-box {
+        width:auto;
+        height:auto;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      $ .photo img {
+        cursor: pointer;
+        max-width: 400px;
+        max-height: 480px;
+        width:auto;
+        height:auto;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      $ .left, .right {
+        flex: 0 0 13px;
+        cursor: pointer;
+      }
+
+      $ .left:hover, .right:hover {
+        background-color: rgba(0,0,0,0.1);
+      }
+
+      $ md-icon {
+        color: white;
+      }
+
+      $ #caption {
+        display: block;
+        font-size: 13px;
+        text-align: center;
+        color: #808080;
+        padding: 5px;
+      }
+    `;
+  }
+}
+
+Component.register(KbGalleryCard);
 
 class KbXrefCard extends MdCard {
   visible() {
