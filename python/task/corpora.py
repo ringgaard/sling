@@ -47,6 +47,11 @@ flags.define("--wikidatadb",
              default="wikidata",
              metavar="DBURL")
 
+flags.define("--photodb",
+             help="photo database",
+             default="photo",
+             metavar="DBURL")
+
 def post_process_flags(arg):
   if arg.languages == None:
     arg.languages = arg.language
@@ -96,6 +101,10 @@ def wikipedia_dump(language=None):
 def wikidatadb():
   """WikiData database."""
   return flags.arg.wikidatadb
+
+def photodb():
+  """Photo database."""
+  return flags.arg.photodb
 
 def wikidir(language=None):
   """Location of wiki datasets."""

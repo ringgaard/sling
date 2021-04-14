@@ -7,6 +7,7 @@ const mediadb = true;
 
 var mobile_ckecked = false;
 var is_mobile = false;
+var allow_nsfw = false;
 
 function isMobile() {
   if (mobile_ckecked) return is_mobile;
@@ -19,6 +20,7 @@ function isMobile() {
     is_mobile = true;
   }
   mobile_ckecked = true;
+  if (qs.get("nsfw") == "1") allow_nsfw = true;
   return is_mobile;
 }
 
@@ -30,6 +32,16 @@ function wikiurl(id) {
   } else {
     return null;
   }
+}
+
+function filterGallery(gallery) {
+  if (allow_nsfw) return gallery;
+  let filtered = [];
+  for (let image of gallery) {
+    if (image.nsfw) continue;
+    filtered.push(image);
+  }
+  return filtered;
 }
 
 class KbApp extends Component {
@@ -707,7 +719,7 @@ class KbGalleryCard extends MdCard {
   }
 
   onupdate() {
-    this.images = this.state;
+    this.images = filterGallery(this.state);
     this.current = 0;
     let navigate = this.images.length > 1;
     this.find(".left").style.visibility = navigate ? "" : "hidden";
