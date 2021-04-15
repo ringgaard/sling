@@ -1043,6 +1043,8 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       Frame image(kb_, media);
       Handle legend = image.GetHandle(n_media_legend_);
       if (!legend.IsNil()) m.Add(n_text_, legend);
+      Handle sso = image.GetHandle(n_statement_subject_of_);
+      if (sso == n_not_safe_for_work_) m.Add(n_nsfw_, true);
     }
     info->gallery.push_back(m.Create().handle());
     media_urls.insert(url);

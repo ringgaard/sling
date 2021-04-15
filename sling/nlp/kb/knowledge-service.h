@@ -159,6 +159,7 @@ class KnowledgeService {
   Name n_thumbnail_{names_, "thumbnail"};
   Name n_matches_{names_, "matches"};
   Name n_lang_{names_, "lang"};
+  Name n_nsfw_{names_, "nsfw"};
 
   Name n_xref_type_{names_, "/w/xref"};
   Name n_item_type_{names_, "/w/item"};
@@ -195,6 +196,8 @@ class KnowledgeService {
   Name n_point_in_time_{names_, "P585"};
   Name n_series_ordinal_{names_, "P1545"};
   Name n_media_legend_{names_, "P2096"};
+  Name n_statement_subject_of_{names_, "P805"};
+  Name n_not_safe_for_work_{names_, "Q2716583"};
 };
 
 }  // namespace nlp

@@ -34,8 +34,26 @@ flags.define("--imgurkeys",
              default="local/keys/imgur.json",
              help="Imgur API key file")
 
+flags.define("--caption",
+             default=None,
+             help="photo caption")
+
+flags.define("--source",
+             default=None,
+             help="photo source")
+
 flags.define("--nsfw",
              help="mark photos as nsfw",
+             default=False,
+             action="store_true")
+
+flags.define("--overwrite",
+             help="overwrite existing photos",
+             default=False,
+             action="store_true")
+
+flags.define("--dryrun",
+             help="do not update database",
              default=False,
              action="store_true")
 
@@ -51,6 +69,7 @@ store = sling.Store()
 n_media = store["media"]
 n_is = store["is"]
 n_legend = store["P2096"]
+n_stated_in = store["P248"]
 n_statement_subject_of = store["P805"]
 n_nsfw = store["Q2716583"]
 
@@ -68,6 +87,15 @@ def write_profile(itemid, profile):
   r = session.put(flags.arg.photodb + "/" + itemid, data=content)
   r.raise_for_status()
 
+# Add photo to profile.
+def add_photo(profile, url, caption=None, source=None, nsfw=False):
+  slots = [(n_is, url)]
+  if caption: slots.append((n_legend, caption))
+  if source: slots.append((n_stated_in, store[source]))
+  if nsfw: slots.append((n_statement_subject_of, n_nsfw))
+  frame = store.frame(slots)
+  profile.append(n_media, frame)
+
 # Get API keys for Imgur.
 imgurkeys = None
 if os.path.exists(flags.arg.imgurkeys):
@@ -75,8 +103,15 @@ if os.path.exists(flags.arg.imgurkeys):
     imgurkeys = json.load(f)
 
 # Read photo profile for item.
+updated = False
 profile = read_profile(flags.arg.id)
-if profile is None: profile = store.frame({})
+if profile is None:
+  profile = store.frame({})
+
+if flags.arg.overwrite:
+  del profile[n_media]
+  updated = True
+
 #print("profile", profile)
 
 # Get existing set of photo urls.
@@ -86,13 +121,12 @@ for media in profile(n_media):
 if len(photos) > 0: print(len(photos), "exisiting photos")
 
 # Fetch photo urls.
-updated = False
 num_photos = 0
 for url in flags.arg.url:
   #print("URL", url)
 
   # Check for imgur album.
-  m = re.match("https://imgur.com/a/(\w+)", url)
+  m = re.match("https?://imgur.com/a/(\w+)", url)
   if m != None:
     albumid = m.group(1)
     print("Imgur album", albumid)
@@ -132,20 +166,30 @@ for url in flags.arg.url:
             "NSFW" if nsfw else "")
 
       # Add media frame to profile.
-      slots = [(n_is, link)]
-      if caption: slots.append((n_legend, caption))
-      if nsfw: slots.append((n_statement_subject_of, n_nsfw))
-      frame = store.frame(slots)
-      profile.append(n_media, frame)
+      add_photo(profile, link, caption, None, nsfw)
       photos.add(link)
 
       num_photos += 1
       serial += 1
       updated = True
+    continue
+
+  if url in photos:
+    print("Skip existing photo", url)
+    continue
+
+  # Add media to profile.
+  add_photo(profile, url, flags.arg.caption, flags.arg.source, flags.arg.nsfw)
+  photos.add(url)
+
+  updated = True
+  num_photos += 1
 
 # Write profile.
-if updated:
-  print("updating", flags.arg.id, num_photos, "photos added")
-  #print("updated", profile.data(pretty=True))
+if flags.arg.dryrun:
+  print(num_photos, "photos added;", flags.arg.id, "not updated")
+  print(profile.data(pretty=True))
+elif updated:
+  print(flags.arg.id, num_photos, "photos added")
   write_profile(flags.arg.id, profile)
 
