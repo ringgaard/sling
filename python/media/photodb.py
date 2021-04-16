@@ -70,7 +70,7 @@ n_media = store["media"]
 n_is = store["is"]
 n_legend = store["P2096"]
 n_stated_in = store["P248"]
-n_statement_subject_of = store["P805"]
+n_has_quality = store["P1552"]
 n_nsfw = store["Q2716583"]
 
 # Read item photo profile from database.
@@ -92,7 +92,7 @@ def add_photo(profile, url, caption=None, source=None, nsfw=False):
   slots = [(n_is, url)]
   if caption: slots.append((n_legend, caption))
   if source: slots.append((n_stated_in, store[source]))
-  if nsfw: slots.append((n_statement_subject_of, n_nsfw))
+  if nsfw: slots.append((n_has_quality, n_nsfw))
   frame = store.frame(slots)
   profile.append(n_media, frame)
 

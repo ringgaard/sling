@@ -34,6 +34,14 @@ function wikiurl(id) {
   }
 }
 
+function imageurl(image) {
+  //let url = image.url.replace(/"/g, '&quot;');
+  let url = image.url;
+  if (mediadb) url = "/media/" + url;
+  return encodeURI(url);
+}
+
+
 function filterGallery(gallery) {
   if (allow_nsfw) return gallery;
   let filtered = [];
@@ -43,6 +51,10 @@ function filterGallery(gallery) {
   }
   return filtered;
 }
+
+//-----------------------------------------------------------------------------
+// App
+//-----------------------------------------------------------------------------
 
 class KbApp extends Component {
   constructor() {
@@ -119,6 +131,10 @@ class KbApp extends Component {
 
 Component.register(KbApp);
 
+//-----------------------------------------------------------------------------
+// Link
+//-----------------------------------------------------------------------------
+
 class KbLink extends Component {
   onconnected() {
     this.bind(null, "click", e => this.onclick(e));
@@ -146,6 +162,10 @@ class KbLink extends Component {
 }
 
 Component.register(KbLink);
+
+//-----------------------------------------------------------------------------
+// Search box
+//-----------------------------------------------------------------------------
 
 class KbSearchBox extends Component {
   onconnected() {
@@ -245,6 +265,10 @@ class KbSearchBox extends Component {
 }
 
 Component.register(KbSearchBox);
+
+//-----------------------------------------------------------------------------
+// Property table
+//-----------------------------------------------------------------------------
 
 class KbPropertyTable extends Component {
   render() {
@@ -463,6 +487,10 @@ class KbPropertyTable extends Component {
 
 Component.register(KbPropertyTable);
 
+//-----------------------------------------------------------------------------
+// Item list
+//-----------------------------------------------------------------------------
+
 class KbItemList extends Component {
   render() {
     if (!this.state || this.state.length == 0) return "";
@@ -513,6 +541,10 @@ class KbItemList extends Component {
 }
 
 Component.register(KbItemList);
+
+//-----------------------------------------------------------------------------
+// Item card
+//-----------------------------------------------------------------------------
 
 class KbItemCard extends MdCard {
   onconnected() {
@@ -572,6 +604,10 @@ class KbItemCard extends MdCard {
 }
 
 Component.register(KbItemCard);
+
+//-----------------------------------------------------------------------------
+// Document card
+//-----------------------------------------------------------------------------
 
 class KbDocumentCard extends MdCard {
   onconnected() {
@@ -640,6 +676,10 @@ class KbDocumentCard extends MdCard {
 
 Component.register(KbDocumentCard);
 
+//-----------------------------------------------------------------------------
+// Property card
+//-----------------------------------------------------------------------------
+
 class KbPropertyCard extends MdCard {
   visible() {
     let item = this.state;
@@ -655,6 +695,10 @@ class KbPropertyCard extends MdCard {
 }
 
 Component.register(KbPropertyCard);
+
+//-----------------------------------------------------------------------------
+// Category card
+//-----------------------------------------------------------------------------
 
 class KbCategoryCard extends MdCard {
   visible() {
@@ -672,6 +716,10 @@ class KbCategoryCard extends MdCard {
 }
 
 Component.register(KbCategoryCard);
+
+//-----------------------------------------------------------------------------
+// Picture card
+//-----------------------------------------------------------------------------
 
 const commons_url = "https://commons.wikimedia.org/wiki/File:";
 
@@ -709,6 +757,10 @@ class KbPictureCard extends MdCard {
 }
 
 Component.register(KbPictureCard);
+
+//-----------------------------------------------------------------------------
+// Gallery card
+//-----------------------------------------------------------------------------
 
 class KbGalleryCard extends MdCard {
   onconnected() {
@@ -754,8 +806,8 @@ class KbGalleryCard extends MdCard {
   }
 
   onopen(e) {
-    let url = this.imageurl(this.images[this.current]);
-    window.open(url,'_blank');
+    let modal = document.getElementById("lightbox");
+    modal.open({images: this.state, current: this.current});
   }
 
   visible() {
@@ -772,18 +824,12 @@ class KbGalleryCard extends MdCard {
         if (!caption) caption = "";
         caption += ` [${this.current + 1}/${this.images.length}]`;
       }
-      this.find(".photo").update(this.imageurl(image));
+      this.find(".photo").update(imageurl(image));
       this.find("#caption").update(caption);
     } else {
       this.find(".photo").update(null);
       this.find("#caption").update(null);
     }
-  }
-
-  imageurl(image) {
-    let url = image.url.replace(/"/g, '&quot;');
-    if (mediadb) url = "/media/" + url;
-    return url;
   }
 
   static stylesheet() {
@@ -841,6 +887,10 @@ class KbGalleryCard extends MdCard {
 }
 
 Component.register(KbGalleryCard);
+
+//-----------------------------------------------------------------------------
+// Xref card
+//-----------------------------------------------------------------------------
 
 class KbXrefCard extends MdCard {
   visible() {
@@ -904,4 +954,167 @@ class KbXrefCard extends MdCard {
 }
 
 Component.register(KbXrefCard);
+
+//-----------------------------------------------------------------------------
+// Lightbox
+//-----------------------------------------------------------------------------
+
+class KbLightbox extends Component {
+  onconnected() {
+    this.bind(".photo", "click", e => this.onopen(e));
+    this.bind(".prev", "click", e => this.onprev(e));
+    this.bind(".next", "click", e => this.onnext(e));
+    this.bind(".close", "click", e => this.close());
+    this.bind(null, "keydown", e => this.onkeypress(e));
+  }
+
+  onupdate() {
+    this.images = filterGallery(this.state.images);
+    this.current = this.state.current % this.images.length;
+    this.display(this.images[this.current]);
+  }
+
+  onkeypress(e) {
+    if (e.keyCode == 37) {
+      this.onprev(e);
+    } else if (e.keyCode == 39) {
+      this.onnext(e);
+    } else if (e.keyCode == 27) {
+      this.close();
+    }
+  }
+
+  onprev(e) {
+    this.current -= 1;
+    if (this.current < 0) this.current = this.images.length - 1;
+    this.display(this.images[this.current]);
+  }
+
+  onnext(e) {
+    this.current += 1;
+    if (this.current > this.images.length - 1) this.current = 0;
+    this.display(this.images[this.current]);
+  }
+
+  onopen(e) {
+    let url = imageurl(this.images[this.current]);
+    window.open(url,'_blank');
+  }
+
+  open(state) {
+    this.update(state);
+    this.style.display = "block";
+    this.focus();
+  }
+
+  close() {
+    this.style.display = "none";
+  }
+
+  display(image) {
+    if (image) {
+      let caption = image.text;
+      if (caption) {
+        caption = caption.replace(/\[\[|\]\]/g, '');
+      }
+      this.find(".photo").src = imageurl(image);
+      this.find(".caption").update(caption);
+      let counter = `${this.current + 1} / ${this.images.length}`;
+      this.find(".counter").update(counter);
+    } else {
+      this.find(".photo").src = null;
+      this.find(".caption").update(null);
+    }
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: none;
+        position: fixed;
+        z-index: 100;
+        padding-top: 60px;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+      }
+
+      $ .close {
+        color: white;
+        position: absolute;
+        top: 10px;
+        right: 25px;
+        font-size: 35px;
+        font-weight: bold;
+      }
+
+      $ .close:hover, $ .close:focus {
+        color: #999;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      $ .content {
+        position: relative;
+        margin: auto;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      $ .prev, $ .next {
+        cursor: pointer;
+        position: absolute;
+        top: 50%;
+        width: auto;
+        padding: 16px;
+        margin-top: -50px;
+        color: white;
+        font-weight: bold;
+        font-size: 20px;
+        transition: 0.6s ease;
+        user-select: none;
+      }
+
+      $ .next {
+        right: 0;
+      }
+
+      $ .prev:hover, $ .next:hover {
+        background-color: rgba(0, 0, 0, 0.8);
+      }
+
+      $ .counter {
+        color: rgb(255, 255, 255);
+        mix-blend-mode: difference;
+        font-size: 12px;
+        padding: 8px 12px;
+        position: absolute;
+        top: 0;
+      }
+
+      $ .image {
+        height: 85%;
+        margin: auto;
+      }
+
+      $ .photo {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        margin: auto;
+      }
+
+      $ .legend {
+        text-align: center;
+        color: white;
+        padding: 5px;
+      }
+    `;
+  }
+}
+
+Component.register(KbLightbox);
 

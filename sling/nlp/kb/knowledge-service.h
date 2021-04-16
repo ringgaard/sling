@@ -196,6 +196,7 @@ class KnowledgeService {
   Name n_point_in_time_{names_, "P585"};
   Name n_series_ordinal_{names_, "P1545"};
   Name n_media_legend_{names_, "P2096"};
+  Name n_has_quality_{names_, "P1552"};
   Name n_statement_subject_of_{names_, "P805"};
   Name n_not_safe_for_work_{names_, "Q2716583"};
 };
