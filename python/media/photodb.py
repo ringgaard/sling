@@ -155,8 +155,12 @@ for url in flags.arg.url:
 
       # Image caption.
       caption = image["title"]
+      if caption is None:
+        caption = image["description"]
       if caption is None and title != None:
         caption = title + " (%d/%d)" % (serial, total)
+      if caption != None:
+        caption = caption.replace("\n", " ").strip()
 
       # NSFW flag.
       nsfw = flags.arg.nsfw or reply["nsfw"] or image["nsfw"]
@@ -174,11 +178,59 @@ for url in flags.arg.url:
       updated = True
     continue
 
+  # Check for single-image imgur.
+  m = re.match("https?://imgur.com/(\w+)", url)
+  if m != None:
+    imageid = m.group(1)
+    print("Imgur image", imageid)
+    auth = {
+      'Authorization': "Client-ID " + imgurkeys["clientid"]
+    }
+    r = session.get("https://api.imgur.com/3/image/" + imageid, headers=auth)
+    r.raise_for_status()
+    reply = r.json()["data"]
+
+    # Photo URL.
+    link = reply["link"]
+    if link in photos:
+      print("Skip existing photo", link)
+      continue
+
+    # Skip anmated GIFs.
+    if (reply["animated"]):
+      print("Skipping animated image", link);
+      continue
+
+    # Image caption.
+    caption = reply["title"]
+    if caption is None:
+      caption = reply["description"]
+    if caption != None:
+      caption = caption.replace("\n", " ").strip()
+
+    # NSFW flag.
+    nsfw = flags.arg.nsfw or reply["nsfw"] or reply["nsfw"]
+
+    print("Add", link,
+          caption if caption != None else "",
+          "NSFW" if nsfw else "")
+
+    # Add media frame to profile.
+    add_photo(profile, link, caption, None, nsfw)
+    photos.add(link)
+
+    num_photos += 1
+    updated = True
+    continue
+
   if url in photos:
     print("Skip existing photo", url)
     continue
 
   # Add media to profile.
+  print("Add", url,
+        flags.arg.caption if flags.arg.caption != None else "",
+        "NSFW" if flags.arg.nsfw else "")
   add_photo(profile, url, flags.arg.caption, flags.arg.source, flags.arg.nsfw)
   photos.add(url)
 

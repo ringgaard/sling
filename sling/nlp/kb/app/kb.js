@@ -985,20 +985,33 @@ class KbLightbox extends Component {
   }
 
   onprev(e) {
-    this.current -= 1;
-    if (this.current < 0) this.current = this.images.length - 1;
-    this.display(this.images[this.current]);
+    this.move(-this.stepsize(e));
   }
 
   onnext(e) {
-    this.current += 1;
-    if (this.current > this.images.length - 1) this.current = 0;
-    this.display(this.images[this.current]);
+    let n = 1;
+    if (e.shiftKey) n = 10;
+    if (e.ctrlKey) n = 30;
+    if (e.altKey) n = 100;
+    this.move(this.stepsize(e));
   }
 
   onopen(e) {
     let url = imageurl(this.images[this.current]);
     window.open(url,'_blank');
+  }
+
+  stepsize(e) {
+    if (e.shiftKey) return 10;
+    if (e.ctrlKey) return 30;
+    if (e.altKey) return 100;
+    return 1;
+  }
+
+  move(n) {
+    let size = this.images.length;
+    this.current = (((this.current + n) % size) + size) % size;
+    this.display(this.images[this.current]);
   }
 
   open(state) {

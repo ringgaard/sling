@@ -179,16 +179,23 @@ for url in media:
     num_errors += 1
     continue
 
+  # Get modification timestamp.
   if "Last-Modified" in r.headers:
     last_modified = r.headers["Last-Modified"]
   else:
     last_modified = r.headers["Date"]
 
+  # Check if image is too big.
   image = r.content
   if len(image) > flags.arg.max_media_size:
     print("too big", len(image), url)
     num_toobig += 1
     if fblack: fblack.write(url + "\n")
+    continue
+
+  # Check if image is HTML-like.
+  if image.startswith(b"<!doctype html>"):
+    print("non-image", url)
     continue
 
   # Save image in media database.
