@@ -19,7 +19,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "sling/base/flags.h"
 #include "sling/base/symbolize.h"
+
+DEFINE_bool(crashdebug, false, "Suspend process on crash for debugging");
 
 namespace sling {
 
@@ -174,6 +177,12 @@ static void FailureSignalHandler(int signum, siginfo_t *info, void *ucontext) {
     OutputBuffer(fd, ctxt->context, ctxt->size);
     OutputString(fd, "\n");
     ctxt = ctxt->prev;
+  }
+
+  // Pause process on crash if requsted.
+  if (FLAGS_crashdebug) {
+    OutputString(fd, "*** process suspended waiting for debugger.");
+    kill(getpid(), SIGSTOP);
   }
 
   // Dump stack trace.
