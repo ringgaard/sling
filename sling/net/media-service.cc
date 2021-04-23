@@ -54,7 +54,7 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
   // Bail out if there is no media database.
   if (!db_.connected()) {
     if (redirect_) {
-      response->TempRedirectTo(request->path() + 1);
+      response->TempRedirectTo(path.c_str());
     } else {
       response->SendError(404, "No Media Database");
     }
@@ -74,8 +74,8 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
   size_t size = media.value.size();
   if (size == 0) {
     if (redirect_) {
-      VLOG(1) << "redirect media: " << request->path() + 1;
-      response->TempRedirectTo(request->path() + 1);
+      VLOG(1) << "redirect media: " << path;
+      response->TempRedirectTo(path.c_str());
     } else {
       response->SendError(404, "File Not Found");
     }

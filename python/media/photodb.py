@@ -38,6 +38,11 @@ flags.define("--caption",
              default=None,
              help="photo caption")
 
+flags.define("--captionless",
+             help="no photo caption",
+             default=False,
+             action="store_true")
+
 flags.define("--source",
              default=None,
              help="photo source")
@@ -49,6 +54,16 @@ flags.define("--nsfw",
 
 flags.define("--overwrite",
              help="overwrite existing photos",
+             default=False,
+             action="store_true")
+
+flags.define("--remove",
+             help="remove photos",
+             default=False,
+             action="store_true")
+
+flags.define("--truncate",
+             help="truncate after first deleted photo",
              default=False,
              action="store_true")
 
@@ -87,32 +102,11 @@ def write_profile(itemid, profile):
   r = session.put(flags.arg.photodb + "/" + itemid, data=content)
   r.raise_for_status()
 
-# Add photo to profile.
-def add_photo(profile, url, caption=None, source=None, nsfw=False):
-  slots = [(n_is, url)]
-  if caption: slots.append((n_legend, caption))
-  if source: slots.append((n_stated_in, store[source]))
-  if nsfw: slots.append((n_has_quality, n_nsfw))
-  frame = store.frame(slots)
-  profile.append(n_media, frame)
-
-# Get API keys for Imgur.
-imgurkeys = None
-if os.path.exists(flags.arg.imgurkeys):
-  with open(flags.arg.imgurkeys, "r") as f:
-    imgurkeys = json.load(f)
-
-# Read photo profile for item.
+# Read existing photo profile for item.
 updated = False
 profile = read_profile(flags.arg.id)
 if profile is None:
   profile = store.frame({})
-
-if flags.arg.overwrite:
-  del profile[n_media]
-  updated = True
-
-#print("profile", profile)
 
 # Get existing set of photo urls.
 photos = set()
@@ -120,128 +114,190 @@ for media in profile(n_media):
   photos.add(store.resolve(media))
 if len(photos) > 0: print(len(photos), "exisiting photos")
 
-# Fetch photo urls.
-num_photos = 0
-for url in flags.arg.url:
-  #print("URL", url)
+# Get API keys for Imgur.
+imgurkeys = None
+if os.path.exists(flags.arg.imgurkeys):
+  with open(flags.arg.imgurkeys, "r") as f:
+    imgurkeys = json.load(f)
 
-  # Check for imgur album.
-  m = re.match("https?://imgur.com/a/(\w+)", url)
-  if m != None:
-    albumid = m.group(1)
-    print("Imgur album", albumid)
-    auth = {
-      'Authorization': "Client-ID " + imgurkeys["clientid"]
-    }
-    r = session.get("https://api.imgur.com/3/album/" + albumid, headers=auth)
-    r.raise_for_status()
-    reply = r.json()["data"]
-    #print(json.dumps(reply, indent=2))
+# Add photo to profile.
+def add_photo(profile, url, caption=None, source=None, nsfw=False):
+  global updated
+  if url in photos:
+    print("Skip existing photo", url)
+    return
+  photos.add(url)
 
-    serial = 1
-    total = len(reply["images"])
-    title = reply["title"]
-    for image in reply["images"]:
-      # Photo URL.
-      link = image["link"]
-      if link in photos:
-        print("Skip existing photo", link)
-        continue
+  print("Add", url,
+        caption if caption != None else "",
+        "NSFW" if nsfw else "")
 
-      # Skip anmated GIFs.
-      if (image["animated"]):
-        print("Skipping animated image", link);
-        continue
+  slots = [(n_is, url)]
+  if caption and not flags.arg.captionless: slots.append((n_legend, caption))
+  if source: slots.append((n_stated_in, store[source]))
+  if nsfw: slots.append((n_has_quality, n_nsfw))
+  if len(slots) == 1:
+    profile.append(n_media, url)
+  else:
+    frame = store.frame(slots)
+    profile.append(n_media, frame)
 
-      # Image caption.
-      caption = image["title"]
-      if caption is None:
-        caption = image["description"]
-      if caption is None and title != None:
-        caption = title + " (%d/%d)" % (serial, total)
-      if caption != None:
-        caption = caption.replace("\n", " ").strip()
+  updated = True
 
-      # NSFW flag.
-      nsfw = flags.arg.nsfw or reply["nsfw"] or image["nsfw"]
+# Add Imgur album.
+def add_imgur_album(albumid):
+  print("Imgur album", albumid)
+  auth = {'Authorization': "Client-ID " + imgurkeys["clientid"]}
+  r = session.get("https://api.imgur.com/3/album/" + albumid, headers=auth)
+  r.raise_for_status()
+  reply = r.json()["data"]
+  #print(json.dumps(reply, indent=2))
 
-      print("Add", link,
-            caption if caption != None else "",
-            "NSFW" if nsfw else "")
-
-      # Add media frame to profile.
-      add_photo(profile, link, caption, None, nsfw)
-      photos.add(link)
-
-      num_photos += 1
-      serial += 1
-      updated = True
-    continue
-
-  # Check for single-image imgur.
-  m = re.match("https?://imgur.com/(\w+)", url)
-  if m != None:
-    imageid = m.group(1)
-    print("Imgur image", imageid)
-    auth = {
-      'Authorization': "Client-ID " + imgurkeys["clientid"]
-    }
-    r = session.get("https://api.imgur.com/3/image/" + imageid, headers=auth)
-    r.raise_for_status()
-    reply = r.json()["data"]
-
-    # Photo URL.
-    link = reply["link"]
-    if link in photos:
-      print("Skip existing photo", link)
-      continue
+  serial = 1
+  total = len(reply["images"])
+  title = reply["title"]
+  for image in reply["images"]:
+    link = image["link"]
 
     # Skip anmated GIFs.
-    if (reply["animated"]):
+    if (image["animated"]):
       print("Skipping animated image", link);
       continue
 
     # Image caption.
-    caption = reply["title"]
+    caption = image["title"]
     if caption is None:
-      caption = reply["description"]
+      caption = image["description"]
+    if caption is None and title != None:
+      caption = title + " (%d/%d)" % (serial, total)
     if caption != None:
       caption = caption.replace("\n", " ").strip()
 
     # NSFW flag.
-    nsfw = flags.arg.nsfw or reply["nsfw"] or reply["nsfw"]
-
-    print("Add", link,
-          caption if caption != None else "",
-          "NSFW" if nsfw else "")
+    nsfw = flags.arg.nsfw or reply["nsfw"] or image["nsfw"]
 
     # Add media frame to profile.
     add_photo(profile, link, caption, None, nsfw)
-    photos.add(link)
+    serial += 1
 
-    num_photos += 1
-    updated = True
-    continue
+# Add Imgur image.
+def add_imgur_image(imageid):
+  print("Imgur image", imageid)
+  auth = {'Authorization': "Client-ID " + imgurkeys["clientid"]}
+  r = session.get("https://api.imgur.com/3/image/" + imageid, headers=auth)
+  r.raise_for_status()
+  reply = r.json()["data"]
 
-  if url in photos:
-    print("Skip existing photo", url)
-    continue
+  # Photo URL.
+  link = reply["link"]
 
-  # Add media to profile.
-  print("Add", url,
-        flags.arg.caption if flags.arg.caption != None else "",
-        "NSFW" if flags.arg.nsfw else "")
-  add_photo(profile, url, flags.arg.caption, flags.arg.source, flags.arg.nsfw)
-  photos.add(url)
+  # Skip anmated GIFs.
+  if (reply["animated"]):
+    print("Skipping animated image", link);
+    return
 
+  # Image caption.
+  caption = reply["title"]
+  if caption is None:
+    caption = reply["description"]
+  if caption != None:
+    caption = caption.replace("\n", " ").strip()
+
+  # NSFW flag.
+  nsfw = flags.arg.nsfw or reply["nsfw"] or reply["nsfw"]
+
+  # Add media frame to profile.
+  add_photo(profile, link, caption, None, nsfw)
+
+# Add Reddit gallery.
+def add_reddit_gallery(galleryid):
+  print("Redit gallery", galleryid)
+  r = session.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
+                  headers = {"User-agent": "SLING Bot 1.0"})
+  r.raise_for_status()
+  reply = r.json()["data"]["children"][0]["data"]
+  #print(json.dumps(reply, indent=2))
+
+  mediadata = reply["media_metadata"]
+  serial = 1
+  items = reply["gallery_data"]["items"]
+  for item in items:
+    mediaid = item["media_id"]
+    link = mediadata[mediaid]["s"]["u"]
+    m = re.match("https://preview.redd.it/(\w+\.\w+)\?", link)
+    if m != None: link = "https://i.redd.it/" + m.group(1)
+
+    # Image caption.
+    caption = reply["title"]
+    if caption != None:
+      caption = "%s (%d/%d)" % (caption, serial, len(items))
+
+    # NSFW flag.
+    nsfw = flags.arg.nsfw or reply["over_18"]
+
+    # Add media frame to profile.
+    add_photo(profile, link, caption, None, nsfw)
+    serial += 1
+
+if flags.arg.overwrite:
+  del profile[n_media]
+  photos = set()
   updated = True
-  num_photos += 1
+
+if flags.arg.remove:
+  # Remove media matching urls.
+  keep = []
+  truncating = False
+  for media in profile(n_media):
+    link = store.resolve(media)
+    if truncating or link in flags.arg.url:
+      print("Remove", link)
+      photos.remove(link)
+      if flags.arg.truncate: truncating = True
+    else:
+      keep.append((n_media, media))
+  del profile[n_media]
+  profile.extend(keep)
+  updated = True
+else:
+  # Fetch photo urls.
+  for url in flags.arg.url:
+    # Check for imgur album.
+    m = re.match("https?://imgur.com/a/(\w+)", url)
+    if m != None:
+      albumid = m.group(1)
+      add_imgur_album(albumid)
+      continue
+
+    # Check for imgur gallery.
+    m = re.match("https?://imgur.com/gallery/(\w+)", url)
+    if m != None:
+      galleryid = m.group(1)
+      add_imgur_album(galleryid)
+      continue
+
+    # Check for single-image imgur.
+    m = re.match("https?://imgur.com/(\w+)", url)
+    if m != None:
+      imageid = m.group(1)
+      add_imgur_image(imageid)
+      continue
+
+    # Check for Reddit gallery.
+    m = re.match("https://www.reddit.com/gallery/(\w+)", url)
+    if m != None:
+      galleryid = m.group(1)
+      add_reddit_gallery(galleryid)
+      continue
+
+    # Add media to profile.
+    add_photo(profile, url, flags.arg.caption, flags.arg.source, flags.arg.nsfw)
 
 # Write profile.
 if flags.arg.dryrun:
-  print(num_photos, "photos added;", flags.arg.id, "not updated")
+  print(len(photos), "photos;", flags.arg.id, "not updated")
   print(profile.data(pretty=True))
 elif updated:
-  print(flags.arg.id, num_photos, "photos added")
+  print(flags.arg.id, len(photos), "photos")
   write_profile(flags.arg.id, profile)
 

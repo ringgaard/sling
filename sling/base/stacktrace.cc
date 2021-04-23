@@ -179,7 +179,7 @@ static void FailureSignalHandler(int signum, siginfo_t *info, void *ucontext) {
     ctxt = ctxt->prev;
   }
 
-  // Pause process on crash if requsted.
+  // Pause process on crash if requested.
   if (FLAGS_crashdebug) {
     OutputString(fd, "*** process suspended waiting for debugger.");
     kill(getpid(), SIGSTOP);

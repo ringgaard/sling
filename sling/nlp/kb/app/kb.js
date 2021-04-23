@@ -9,6 +9,10 @@ var mobile_ckecked = false;
 var is_mobile = false;
 var allow_nsfw = false;
 
+function mod(m, n) {
+  return ((m % n) + n) % n;
+}
+
 function isMobile() {
   if (mobile_ckecked) return is_mobile;
   let qs = new URLSearchParams(window.location.search);
@@ -970,8 +974,10 @@ class KbLightbox extends Component {
 
   onupdate() {
     this.images = filterGallery(this.state.images);
-    this.current = this.state.current % this.images.length;
+    this.current = mod(this.state.current, this.images.length)
+    this.cache = Array(this.images).fill(null);
     this.display(this.images[this.current]);
+    this.preload(this.current, 1);
   }
 
   onkeypress(e) {
@@ -989,10 +995,6 @@ class KbLightbox extends Component {
   }
 
   onnext(e) {
-    let n = 1;
-    if (e.shiftKey) n = 10;
-    if (e.ctrlKey) n = 30;
-    if (e.altKey) n = 100;
     this.move(this.stepsize(e));
   }
 
@@ -1010,8 +1012,9 @@ class KbLightbox extends Component {
 
   move(n) {
     let size = this.images.length;
-    this.current = (((this.current + n) % size) + size) % size;
+    this.current = mod(this.current + n, size);
     this.display(this.images[this.current]);
+    this.preload(this.current, n);
   }
 
   open(state) {
@@ -1037,6 +1040,18 @@ class KbLightbox extends Component {
     } else {
       this.find(".photo").src = null;
       this.find(".caption").update(null);
+    }
+  }
+
+  preload(position, direction) {
+    for (var i = 1; i < 5; ++i) {
+      let n = mod(position + i * direction, this.images.length);
+      if (this.cache[n] == null) {
+        console.log("preload", n, imageurl(this.images[n]));
+        var image = new Image();
+        image.src = imageurl(this.images[n]);
+        this.cache[n] = image;
+      }
     }
   }
 
