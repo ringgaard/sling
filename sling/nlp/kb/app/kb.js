@@ -39,12 +39,12 @@ function wikiurl(id) {
 }
 
 function imageurl(image) {
-  //let url = image.url.replace(/"/g, '&quot;');
-  let url = image.url;
-  if (mediadb) url = "/media/" + url;
-  return encodeURI(url);
+  if (mediadb) {
+    return "/media/" + encodeURIComponent(image.url);
+  } else {
+    return image.url;
+  }
 }
-
 
 function filterGallery(gallery) {
   if (allow_nsfw) return gallery;
@@ -1025,6 +1025,7 @@ class KbLightbox extends Component {
 
   close() {
     this.style.display = "none";
+    this.cache = null;
   }
 
   display(image) {
