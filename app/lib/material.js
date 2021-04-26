@@ -111,6 +111,39 @@ export class MdSpacer extends Component {
 Component.register(MdSpacer);
 
 //-----------------------------------------------------------------------------
+// Modal
+//-----------------------------------------------------------------------------
+
+export class MdModal extends Component {
+  open(state) {
+    this.update(state);
+    this.style.display = "block";
+    this.focus();
+  }
+
+  close() {
+    this.style.display = "none";
+    if (this.onclose) this.onclose();
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: none;
+        position: fixed;
+        z-index: 100;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+      }
+    `;
+  }
+}
+
+Component.register(MdSpacer);
+
+//-----------------------------------------------------------------------------
 // Toolbar
 //-----------------------------------------------------------------------------
 

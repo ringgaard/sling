@@ -1,13 +1,13 @@
 // Knowledge base app.
 
 import {Component} from "/common/lib/component.js";
-import {MdCard} from "/common/lib/material.js";
+import {MdCard, MdModal} from "/common/lib/material.js";
 
 const mediadb = true;
 
 var mobile_ckecked = false;
 var is_mobile = false;
-var allow_nsfw = true; //false;
+var allow_nsfw = false;
 
 function mod(m, n) {
   return ((m % n) + n) % n;
@@ -963,7 +963,7 @@ Component.register(KbXrefCard);
 // Lightbox
 //-----------------------------------------------------------------------------
 
-class KbLightbox extends Component {
+class KbLightbox extends MdModal {
   onconnected() {
     this.bind(".photo", "click", e => this.onclick(e));
     this.bind(".prev", "click", e => this.onprev(e));
@@ -1019,14 +1019,7 @@ class KbLightbox extends Component {
     this.preload(this.current, n);
   }
 
-  open(state) {
-    this.update(state);
-    this.style.display = "block";
-    this.focus();
-  }
-
-  close() {
-    this.style.display = "none";
+  onclose() {
     this.cache = null;
   }
 
@@ -1059,16 +1052,9 @@ class KbLightbox extends Component {
   }
 
   static stylesheet() {
-    return `
+    return MdModal.stylesheet() + `
       $ {
-        display: none;
-        position: fixed;
-        z-index: 100;
         padding-top: 60px;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
         background-color: rgba(0, 0, 0, 0.9);
       }
 
