@@ -9,6 +9,13 @@ var mobile_ckecked = false;
 var is_mobile = false;
 var allow_nsfw = false;
 
+const photo_sources = {
+  "upload.wikimedia.org": "wikimedia.org",
+  "pbs.twimg.com": "twitter.com",
+  "i.imgur.com": "imgur.com",
+  "i.redd.it": "reddit.com",
+}
+
 function mod(m, n) {
   return ((m % n) + n) % n;
 }
@@ -40,7 +47,9 @@ function wikiurl(id) {
 
 function imageurl(image) {
   if (mediadb) {
-    return "/media/" + encodeURIComponent(image.url);
+    let escaped = encodeURIComponent(image.url);
+    escaped = escaped.replace(/%3A/g, ":").replace(/%2F/g, "/");
+    return "/media/" + escaped;
   } else {
     return image.url;
   }
@@ -965,11 +974,16 @@ Component.register(KbXrefCard);
 
 class KbLightbox extends MdModal {
   onconnected() {
+    this.bind(".photo", "load", e => this.onload(e));
     this.bind(".photo", "click", e => this.onclick(e));
     this.bind(".prev", "click", e => this.onprev(e));
     this.bind(".next", "click", e => this.onnext(e));
     this.bind(".close", "click", e => this.close());
     this.bind(null, "keydown", e => this.onkeypress(e));
+  }
+
+  onclose() {
+    this.cache = null;
   }
 
   onupdate() {
@@ -988,6 +1002,14 @@ class KbLightbox extends MdModal {
     } else if (e.keyCode == 27) {
       this.close();
     }
+  }
+
+  onload(e) {
+    let photo = this.find(".photo");
+    let width = photo.naturalWidth;
+    let height = photo.naturalHeight;
+    console.log("width", width, "height", height);
+    this.find(".size").update(width && height ? `${width} x ${height}`: null);
   }
 
   onclick(e) {
@@ -1019,10 +1041,6 @@ class KbLightbox extends MdModal {
     this.preload(this.current, n);
   }
 
-  onclose() {
-    this.cache = null;
-  }
-
   display(image) {
     if (image) {
       let caption = image.text;
@@ -1033,9 +1051,24 @@ class KbLightbox extends MdModal {
       this.find(".caption").update(caption);
       let counter = `${this.current + 1} / ${this.images.length}`;
       this.find(".counter").update(counter);
+      let domain = new URL(image.url).hostname;
+      if (domain.startsWith("www.")) domain = domain.slice(4);
+      if (domain in photo_sources) domain = photo_sources[domain];
+
+      if (domain == "wikimedia.org") {
+        let m = image.url.match(/https?:\/\/\w+.wikimedia.org\/\w+\/(\w+)\/.+/);
+        console.log("match", m);
+        if (m[1] && m[1] != "commons") {
+          domain += " (" + m[1] + ")";
+        }
+      }
+
+      this.find(".domain").update(domain);
+      this.find(".nsfw").update(image.nsfw ? "NSFW" : null);
     } else {
       this.find(".photo").src = null;
       this.find(".caption").update(null);
+      this.find(".source").update(null);
     }
   }
 
@@ -1054,23 +1087,7 @@ class KbLightbox extends MdModal {
   static stylesheet() {
     return MdModal.stylesheet() + `
       $ {
-        padding-top: 60px;
         background-color: rgba(0, 0, 0, 0.9);
-      }
-
-      $ .close {
-        color: white;
-        position: absolute;
-        top: 10px;
-        right: 25px;
-        font-size: 35px;
-        font-weight: bold;
-      }
-
-      $ .close:hover, $ .close:focus {
-        color: #999;
-        text-decoration: none;
-        cursor: pointer;
       }
 
       $ .content {
@@ -1081,13 +1098,86 @@ class KbLightbox extends MdModal {
         height: 100%;
       }
 
+      $ .image {
+        margin: auto;
+      }
+
+      $ .photo {
+        display: block;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-width: 100%;
+        max-height: 100%;
+        margin: auto;
+        user-select: none;
+      }
+
+      $ .counter {
+        position: absolute;
+        top: 0;
+        left: 0;
+
+        color: rgb(255, 255, 255);
+        mix-blend-mode: difference;
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+
+      $ .close {
+        position: absolute;
+        top: 0;
+        right: 0;
+
+        padding-right: 10px;
+        color: white;
+        font-size: 35px;
+        font-weight: bold;
+      }
+
+      $ .source {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+
+        color: rgb(255, 255, 255);
+        mix-blend-mode: difference;
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+
+      $ .nsfw {
+        border-radius: 3px;
+        border: 1px solid;
+        font-size: 12px;
+        padding: 2px 4px;
+        margin: 2px;
+        color: #d10023;
+      }
+
+      $ .size {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+
+        color: rgb(255, 255, 255);
+        mix-blend-mode: difference;
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+
+      $ .close:hover, $ .close:focus {
+        color: #999;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
       $ .prev, $ .next {
         cursor: pointer;
-        position: absolute;
-        top: 50%;
         width: auto;
         padding: 16px;
-        margin-top: -50px;
         color: white;
         font-weight: bold;
         font-size: 20px;
@@ -1096,38 +1186,29 @@ class KbLightbox extends MdModal {
       }
 
       $ .next {
+        position: absolute;
         right: 0;
+        top: 50%;
+      }
+
+      $ .prev {
+        position: absolute;
+        left: 0;
+        top: 50%;
       }
 
       $ .prev:hover, $ .next:hover {
         background-color: rgba(0, 0, 0, 0.8);
       }
 
-      $ .counter {
-        color: rgb(255, 255, 255);
-        mix-blend-mode: difference;
-        font-size: 12px;
-        padding: 8px 12px;
+      $ .caption {
         position: absolute;
-        top: 0;
-      }
-
-      $ .image {
-        height: 85%;
-        margin: auto;
-      }
-
-      $ .photo {
-        display: block;
-        max-width: 100%;
-        max-height: 100%;
-        margin: auto;
-      }
-
-      $ .legend {
-        text-align: center;
+        bottom: 0;
+        left: 50%;
+        transform: translate(-50%, -50%);
         color: white;
-        padding: 5px;
+        mix-blend-mode: difference;
+        padding: 10px;
       }
     `;
   }
