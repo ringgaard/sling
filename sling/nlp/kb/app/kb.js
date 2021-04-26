@@ -7,7 +7,7 @@ const mediadb = true;
 
 var mobile_ckecked = false;
 var is_mobile = false;
-var allow_nsfw = false;
+var allow_nsfw = true; //false;
 
 function mod(m, n) {
   return ((m % n) + n) % n;
@@ -128,7 +128,7 @@ class KbApp extends Component {
     let query = this.find("#search").query();
     if (query && query.length > 0) {
       let url = "https://www.google.com/search?q=" + encodeURIComponent(query);
-      window.open(url,'_blank');
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   }
 }
@@ -146,7 +146,7 @@ class KbLink extends Component {
 
   onclick(e) {
     if (e.ctrlKey) {
-      window.open("/kb/" + this.props.ref, '_blank');
+      window.open("/kb/" + this.props.ref, "_blank");
     } else {
       this.match("#app").navigate(this.props.ref);
     }
@@ -577,7 +577,7 @@ class KbItemCard extends MdCard {
   oncode(e) {
     let item = this.state;
     let url = "/kb/frame?fmt=txt&id=" + encodeURIComponent(item.ref);
-    window.open(url,'_blank');
+    window.open(url, "_blank");
   }
 
   static stylesheet() {
@@ -622,7 +622,7 @@ class KbDocumentCard extends MdCard {
     let ref = e.target.getAttribute("ref");
     if (ref) {
       if (e.ctrlKey) {
-        window.open("/kb/" + ref, '_blank');
+        window.open("/kb/" + ref, "_blank");
       } else {
         this.match("#app").navigate(ref);
       }
@@ -965,7 +965,7 @@ Component.register(KbXrefCard);
 
 class KbLightbox extends Component {
   onconnected() {
-    this.bind(".photo", "click", e => this.onopen(e));
+    this.bind(".photo", "click", e => this.onclick(e));
     this.bind(".prev", "click", e => this.onprev(e));
     this.bind(".next", "click", e => this.onnext(e));
     this.bind(".close", "click", e => this.close());
@@ -990,17 +990,19 @@ class KbLightbox extends Component {
     }
   }
 
+  onclick(e) {
+    let url = imageurl(this.images[this.current]);
+    if (e.ctrlKey) url = this.images[this.current].url;
+    console.log("open", url)
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   onprev(e) {
     this.move(-this.stepsize(e));
   }
 
   onnext(e) {
     this.move(this.stepsize(e));
-  }
-
-  onopen(e) {
-    let url = imageurl(this.images[this.current]);
-    window.open(url,'_blank');
   }
 
   stepsize(e) {
@@ -1032,7 +1034,7 @@ class KbLightbox extends Component {
     if (image) {
       let caption = image.text;
       if (caption) {
-        caption = caption.replace(/\[\[|\]\]/g, '');
+        caption = caption.replace(/\[\[|\]\]/g, "");
       }
       this.find(".photo").src = imageurl(image);
       this.find(".caption").update(caption);

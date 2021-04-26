@@ -67,6 +67,11 @@ flags.define("--truncate",
              default=False,
              action="store_true")
 
+flags.define("--check",
+             help="check that photo exists before adding",
+             default=False,
+             action="store_true")
+
 flags.define("--dryrun",
              help="do not update database",
              default=False,
@@ -122,16 +127,24 @@ if os.path.exists(flags.arg.imgurkeys):
 
 # Add photo to profile.
 def add_photo(profile, url, caption=None, source=None, nsfw=False):
-  global updated
+  # Check if photo is already in the profile.
   if url in photos:
     print("Skip existing photo", url)
     return
-  photos.add(url)
 
+  # Check if photo exists.
+  if flags.arg.check:
+    r = session.head(url)
+    if r.status_code != 200:
+      print("Skip removed photo:", url)
+      return
+
+  photos.add(url)
   print("Add", url,
         caption if caption != None else "",
         "NSFW" if nsfw else "")
 
+  # Add media to profile.
   slots = [(n_is, url)]
   if caption and not flags.arg.captionless: slots.append((n_legend, caption))
   if source: slots.append((n_stated_in, store[source]))
@@ -142,6 +155,8 @@ def add_photo(profile, url, caption=None, source=None, nsfw=False):
     frame = store.frame(slots)
     profile.append(n_media, frame)
 
+  # Mark profile as updated.
+  global updated
   updated = True
 
 # Add Imgur album.
@@ -210,7 +225,7 @@ def add_imgur_image(imageid):
   add_photo(profile, link, caption, None, nsfw)
 
 # Add Reddit gallery.
-def add_reddit_gallery(galleryid):
+def add_reddit_gallery(galleryid, posting=False):
   print("Redit gallery", galleryid)
   r = session.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
                   headers = {"User-agent": "SLING Bot 1.0"})
@@ -285,6 +300,13 @@ else:
 
     # Check for Reddit gallery.
     m = re.match("https://www.reddit.com/gallery/(\w+)", url)
+    if m != None:
+      galleryid = m.group(1)
+      add_reddit_gallery(galleryid)
+      continue
+
+    # Check for Reddit posting.
+    m = re.match("https://www.reddit.com/r/\w+/comments/(\w+)/", url)
     if m != None:
       galleryid = m.group(1)
       add_reddit_gallery(galleryid)
