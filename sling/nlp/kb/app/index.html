@@ -58,17 +58,11 @@
 
             <md-column-layout style="flex: 1 1 33%;">
 
-              <!-- Item photo gallery -->
-              <kb-gallery-card id="gallery">
-                <div id="picture" tabindex="0">
-                  <md-icon class="left" icon="navigate_before"></md-icon>
-                  <div id="photo-box">
-                    <md-image class="photo"></md-image>
-                    <md-text id="caption"></md-text>
-                  </div>
-                  <md-icon class="right" icon="navigate_next"></md-icon>
-                </div>
-              </kb-gallery-card>
+              <!-- Item picture card -->
+              <kb-picture-card id="picture">
+                <md-image class="photo"></md-image>
+                <md-text class="caption"></md-text>
+              </kb-picture-card>
 
               <!-- Item references card -->
               <kb-xref-card id="xrefs">
@@ -126,7 +120,9 @@
             </kb-document-card>
 
             <!-- Item picture card -->
-            <kb-picture-card id="picturex">
+            <kb-picture-card id="picture">
+              <md-image class="photo"></md-image>
+              <md-text class="caption"></md-text>
             </kb-picture-card>
 
             <!-- Item properties card -->

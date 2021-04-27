@@ -45,9 +45,6 @@ class KnowledgeService {
     Handles xrefs;
     Handles categories;
     Handles gallery;
-    Handle image = Handle::nil();
-    Handle media = Handle::nil();
-    Handle alternate_image = Handle::nil();
   };
 
   ~KnowledgeService() {
@@ -98,7 +95,6 @@ class KnowledgeService {
     Handle datatype;
     string url;
     bool image;
-    bool alternate_image;
     int order = kint32max;
   };
 
@@ -156,7 +152,6 @@ class KnowledgeService {
   Name n_url_{names_, "url"};
   Name n_lex_{names_, "lex"};
   Name n_document_{names_, "document"};
-  Name n_thumbnail_{names_, "thumbnail"};
   Name n_matches_{names_, "matches"};
   Name n_lang_{names_, "lang"};
   Name n_nsfw_{names_, "nsfw"};

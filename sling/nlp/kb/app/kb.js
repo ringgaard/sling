@@ -14,6 +14,11 @@ const photo_sources = {
   "pbs.twimg.com": "twitter.com",
   "i.imgur.com": "imgur.com",
   "i.redd.it": "reddit.com",
+  "gstatic.com": "google.com",
+  "encrypted-tbn0.gstatic.com": "google.com",
+  "encrypted-tbn1.gstatic.com": "google.com",
+  "encrypted-tbn2.gstatic.com": "google.com",
+  "encrypted-tbn3.gstatic.com": "google.com",
 }
 
 function mod(m, n) {
@@ -106,22 +111,17 @@ class KbApp extends Component {
         this.find("md-content").scrollTop = 0;
       })
       .catch(error => {
-        console.log("Item error", id, error.message);
+        console.log("Item error", id, error.message, error.stack);
       });
   }
 
   display(item) {
     this.find("#item").update(item);
     this.find("#document").update(item);
+    this.find("#picture").update(filterGallery(item.gallery));
     this.find("#properties").update(item);
     this.find("#categories").update(item);
     this.find("#xrefs").update(item);
-    if (this.find("#gallery")) {
-      this.find("#gallery").update(item["gallery"]);
-    }
-    if (this.find("#picturex")) {
-      this.find("#picturex").update(item);
-    }
     window.document.title = item ? item.text : "SLING Knowledge base";
   }
 
@@ -223,7 +223,7 @@ class KbSearchBox extends Component {
         target.populate(detail, items);
       })
       .catch(error => {
-        console.log("Query error", query, error.message);
+        console.log("Query error", query, error.message, error.stack);
       });
   }
 
@@ -734,26 +734,52 @@ Component.register(KbCategoryCard);
 // Picture card
 //-----------------------------------------------------------------------------
 
-const commons_url = "https://commons.wikimedia.org/wiki/File:";
-
 class KbPictureCard extends MdCard {
-  visible() {
-    let item = this.state;
-    return item && item.thumbnail;
+  onconnected() {
+    this.bind(".photo", "click", e => this.onopen(e));
   }
 
-  render() {
-    let url = this.state.thumbnail.replace(/"/g, '&quot;');
-    if (mediadb) url = "/media/" + url;
-    return `<a href="${url}" target="_blank" rel="noreferrer" tabindex="-1">
-              <img src="${url}" rel="noreferrer">
-            </a>`;
+  onupdated() {
+    let images = this.state;
+    if (images && images.length > 0) {
+      let image = images[0];
+      let caption = image.text;
+      if (caption) {
+        caption = caption.replace(/\[\[|\]\]/g, '');
+      }
+      if (images.length > 1) {
+        if (!caption) caption = "";
+        caption += ` [1/${images.length}]`;
+      }
+
+      this.find(".photo").update(imageurl(image));
+      this.find(".caption").update(caption);
+    } else {
+      this.find(".photo").update(null);
+      this.find(".caption").update(null);
+    }
+  }
+
+  visible() {
+    return this.state && this.state.length > 0;
+  }
+
+  onopen(e) {
+    let modal = document.getElementById("lightbox");
+    modal.open(this.state);
   }
 
   static stylesheet() {
     return MdCard.stylesheet() + `
       $ {
         text-align: center;
+      }
+
+      $ .caption {
+        display: block;
+        font-size: 13px;
+        color: #808080;
+        padding: 5px;
       }
 
       $ a {
@@ -770,136 +796,6 @@ class KbPictureCard extends MdCard {
 }
 
 Component.register(KbPictureCard);
-
-//-----------------------------------------------------------------------------
-// Gallery card
-//-----------------------------------------------------------------------------
-
-class KbGalleryCard extends MdCard {
-  onconnected() {
-    this.bind(".photo", "click", e => this.onopen(e));
-    this.bind(".left", "click", e => this.onbackward(e));
-    this.bind(".right", "click", e =>this.onforward(e));
-    this.bind(null, "keydown", e =>this.onkeypress(e));
-  }
-
-  onupdate() {
-    this.images = filterGallery(this.state);
-    this.current = 0;
-    let navigate = this.images.length > 1;
-    this.find(".left").style.visibility = navigate ? "" : "hidden";
-    this.find(".right").style.visibility = navigate ? "" : "hidden";
-    this.display(this.images[this.current]);
-  }
-
-  onkeypress(e) {
-    if (e.keyCode == 37) {
-      this.onbackward(e);
-    } else if (e.keyCode == 39) {
-      this.onforward(e);
-    } else if (e.keyCode == 13) {
-      this.onopen(e);
-    }
-  }
-
-  onbackward(e) {
-    this.focus();
-    if (this.current > 0) {
-      this.current -= 1;
-      this.display(this.images[this.current]);
-    }
-  }
-
-  onforward(e) {
-    this.focus();
-    if (this.current < this.images.length - 1) {
-      this.current += 1;
-      this.display(this.images[this.current]);
-    }
-  }
-
-  onopen(e) {
-    let modal = document.getElementById("lightbox");
-    modal.open({images: this.state, current: this.current});
-  }
-
-  visible() {
-    return this.images && this.images.length > 0;
-  }
-
-  display(image) {
-    if (image) {
-      let caption = image.text;
-      if (caption) {
-        caption = caption.replace(/\[\[|\]\]/g, '');
-      }
-      if (this.images.length > 1) {
-        if (!caption) caption = "";
-        caption += ` [${this.current + 1}/${this.images.length}]`;
-      }
-      this.find(".photo").update(imageurl(image));
-      this.find("#caption").update(caption);
-    } else {
-      this.find(".photo").update(null);
-      this.find("#caption").update(null);
-    }
-  }
-
-  static stylesheet() {
-    return MdCard.stylesheet() + `
-      $ {
-        padding: 15px 2px 15px 2px;
-      }
-
-      $ #picture {
-        outline: none;
-        display: flex;
-        flex-direction: row;
-      }
-
-      $ #photo-box {
-        width:auto;
-        height:auto;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      $ .photo img {
-        cursor: pointer;
-        max-width: 400px;
-        max-height: 480px;
-        width:auto;
-        height:auto;
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      $ .left, .right {
-        flex: 0 0 13px;
-        cursor: pointer;
-      }
-
-      $ .left:hover, .right:hover {
-        background-color: rgba(0,0,0,0.1);
-      }
-
-      $ md-icon {
-        color: white;
-      }
-
-      $ #caption {
-        display: block;
-        font-size: 13px;
-        text-align: center;
-        color: #808080;
-        padding: 5px;
-      }
-    `;
-  }
-}
-
-Component.register(KbGalleryCard);
 
 //-----------------------------------------------------------------------------
 // Xref card
@@ -987,9 +883,9 @@ class KbLightbox extends MdModal {
   }
 
   onupdate() {
-    this.images = filterGallery(this.state.images);
-    this.current = mod(this.state.current, this.images.length)
-    this.cache = Array(this.images).fill(null);
+    this.images = this.state;
+    this.current = 0;
+    this.cache = Array(this.images.length).fill(null);
     this.display(this.images[this.current]);
     this.preload(this.current, 1);
   }
@@ -1006,16 +902,15 @@ class KbLightbox extends MdModal {
 
   onload(e) {
     let photo = this.find(".photo");
+    photo.style.cursor = null;
     let width = photo.naturalWidth;
     let height = photo.naturalHeight;
-    console.log("width", width, "height", height);
     this.find(".size").update(width && height ? `${width} x ${height}`: null);
   }
 
   onclick(e) {
     let url = imageurl(this.images[this.current]);
     if (e.ctrlKey) url = this.images[this.current].url;
-    console.log("open", url)
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
@@ -1051,13 +946,14 @@ class KbLightbox extends MdModal {
       this.find(".caption").update(caption);
       let counter = `${this.current + 1} / ${this.images.length}`;
       this.find(".counter").update(counter);
-      let domain = new URL(image.url).hostname;
+
+      let url = new URL(image.url)
+      let domain = url.hostname;
       if (domain.startsWith("www.")) domain = domain.slice(4);
       if (domain in photo_sources) domain = photo_sources[domain];
 
       if (domain == "wikimedia.org") {
-        let m = image.url.match(/https?:\/\/\w+.wikimedia.org\/\w+\/(\w+)\/.+/);
-        console.log("match", m);
+        let m = url.pathname.match(/\/wikipedia\/(\w+)\/.+/);
         if (m[1] && m[1] != "commons") {
           domain += " (" + m[1] + ")";
         }
@@ -1065,6 +961,7 @@ class KbLightbox extends MdModal {
 
       this.find(".domain").update(domain);
       this.find(".nsfw").update(image.nsfw ? "NSFW" : null);
+      this.find(".photo").style.cursor = "wait";
     } else {
       this.find(".photo").src = null;
       this.find(".caption").update(null);
@@ -1076,7 +973,6 @@ class KbLightbox extends MdModal {
     for (var i = 1; i < 5; ++i) {
       let n = mod(position + i * direction, this.images.length);
       if (this.cache[n] == null) {
-        console.log("preload", n, imageurl(this.images[n]));
         var image = new Image();
         image.src = imageurl(this.images[n]);
         this.cache[n] = image;
@@ -1113,6 +1009,7 @@ class KbLightbox extends MdModal {
         max-height: 100%;
         margin: auto;
         user-select: none;
+        cursor: pointer;
       }
 
       $ .counter {
@@ -1207,7 +1104,7 @@ class KbLightbox extends MdModal {
         left: 50%;
         transform: translate(-50%, -50%);
         color: white;
-        mix-blend-mode: difference;
+        background: rgba(0, 0, 0, 0.5);
         padding: 10px;
       }
     `;

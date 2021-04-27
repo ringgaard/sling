@@ -630,7 +630,6 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
     }
 
     p.image = false;
-    p.alternate_image = false;
     for (const Slot &ps : property) {
       // Get URL formatter for property.
       if (ps.name == n_formatter_url_ && p.url.empty()) {
@@ -652,11 +651,7 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
 
       // Check if property is a representative image for the item.
       if (ps.name == n_instance_of_ && ps.value == n_representative_image_) {
-        if (property == n_image_) {
-          p.image = true;
-        } else {
-          p.alternate_image = true;
-        }
+        p.image = true;
       }
     }
 
@@ -672,7 +667,6 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
       ip.name = inverse_property.GetHandle(n_name_);
       ip.datatype = n_item_type_.handle();
       ip.image = false;
-      ip.alternate_image = false;
       properties_[ip.id] = ip;
     }
   }
@@ -813,17 +807,6 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
     }
   }
 
-  // Set item image.
-  if (!info.image.IsNil()) {
-    Text filename = String(item.store(), info.image).text();
-    b.Add(n_thumbnail_, CommonsUrl(filename));
-  } else if (!info.media.IsNil()) {
-    b.Add(n_thumbnail_, item.store()->Resolve(info.media));
-  } else if (!info.alternate_image.IsNil()) {
-    Text filename = String(item.store(), info.alternate_image).text();
-    b.Add(n_thumbnail_, CommonsUrl(filename));
-  }
-
   // Return response.
   ws.set_output(b.Create());
 }
@@ -844,9 +827,8 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       continue;
     }
 
-    // Get external media for representative image.
+    // Collect media files.
     if (s.name == n_media_) {
-      if (info->media.IsNil()) info->media = s.value;
       external_media.push_back(s.value);
     }
 
@@ -944,14 +926,6 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       } else if (property->datatype == n_media_type_) {
         // Add image.
         v.Add(n_text_, value);
-
-        // Set representative image for item.
-        if (property->image && info->image.IsNil()) {
-          info->image = value;
-        }
-        if (property->alternate_image && info->alternate_image.IsNil()) {
-          info->alternate_image = value;
-        }
       } else if (property->datatype == n_geo_type_) {
         // Add coordinate value.
         Frame coord(kb_, value);
@@ -1006,7 +980,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       values.push_back(v.Create().handle());
 
       // Collect media files for gallery.
-      if (property->image || property->alternate_image) {
+      if (property->image) {
         Text filename = String(item.store(), value).text();
         Builder m(item.store());
         string url = CommonsUrl(filename);
