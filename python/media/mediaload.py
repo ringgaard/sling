@@ -140,6 +140,7 @@ num_whitelist = 0
 num_known = 0
 num_retrieved = 0
 num_errors = 0
+num_missing = 0
 num_toobig = 0
 num_bytes = 0
 for url in media:
@@ -176,6 +177,11 @@ for url in media:
     if not r.ok:
       num_errors += 1
       print("error", r.status_code, url)
+      continue
+    if r.status_code == 302:
+      # Imgur returns redirect to removed.png for missing images.
+      num_missing += 1
+      print("missing", url)
       continue
   except Exception as e:
     print("fail", e, url)
@@ -218,6 +224,7 @@ if fblack: fblack.close()
 print(num_known, "known,",
       num_retrieved, "retrieved,",
       num_errors, "errors,",
+      num_missing, "missing",
       num_toobig, "too big",
       num_blacklist, "blacklisted",
       num_whitelist, "whitelisted",

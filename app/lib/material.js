@@ -257,6 +257,7 @@ export class MdToolbarLogo extends MdLogo {
     return `
       $ {
         margin: 5px 10px 0px 0px;
+        outline: none;
       }
       $ svg {
         width: 50px;

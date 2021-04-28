@@ -19,6 +19,7 @@ import requests
 import os
 import re
 import sling
+import urllib.parse
 import sling.flags as flags
 
 flags.define("--id",
@@ -277,40 +278,47 @@ if flags.arg.remove:
 else:
   # Fetch photo urls.
   for url in flags.arg.url:
-    # Check for imgur album.
+    # Imgur album.
     m = re.match("https?://imgur.com/a/(\w+)", url)
     if m != None:
       albumid = m.group(1)
       add_imgur_album(albumid)
       continue
 
-    # Check for imgur gallery.
+    # Imgur gallery.
     m = re.match("https?://imgur.com/gallery/(\w+)", url)
     if m != None:
       galleryid = m.group(1)
       add_imgur_album(galleryid)
       continue
 
-    # Check for single-image imgur.
+    # Single-image imgur.
     m = re.match("https?://imgur.com/(\w+)", url)
     if m != None:
       imageid = m.group(1)
       add_imgur_image(imageid)
       continue
 
-    # Check for Reddit gallery.
+    # Reddit gallery.
     m = re.match("https://www.reddit.com/gallery/(\w+)", url)
     if m != None:
       galleryid = m.group(1)
       add_reddit_gallery(galleryid)
       continue
 
-    # Check for Reddit posting.
+    # Reddit posting.
     m = re.match("https://www.reddit.com/r/\w+/comments/(\w+)/", url)
     if m != None:
       galleryid = m.group(1)
       add_reddit_gallery(galleryid)
       continue
+
+    # DR image scaler.
+    m = re.match("https://asset.dr.dk/ImageScaler/\?(.+)", url)
+    if m != None:
+      print(m.group(1))
+      q = urllib.parse.parse_qs(m.group(1))
+      url = "https://%s/%s" % (q["server"][0], q["file"][0])
 
     # Add media to profile.
     add_photo(profile, url, flags.arg.caption, flags.arg.source, flags.arg.nsfw)

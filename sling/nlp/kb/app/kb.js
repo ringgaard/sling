@@ -782,10 +782,6 @@ class KbPictureCard extends MdCard {
         padding: 5px;
       }
 
-      $ a {
-        outline: none;
-      }
-
       $ img {
         max-width: 100%;
         max-height: 480px;

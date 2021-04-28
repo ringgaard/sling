@@ -42,6 +42,11 @@ flags.define("--update",
              default=False,
              action="store_true")
 
+flags.define("--load",
+             help="load single twitter profile",
+             default=None,
+             metavar="twitter username")
+
 flags.define("--missing_images",
              help="file with images which needs to be refreshed",
              default=None,
@@ -102,7 +107,10 @@ auth.set_access_token(apikeys["access_key"], apikeys["access_secret"])
 api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
 # Collect twitter usernames.
-users = get_twitter_usernames()
+if flags.arg.load:
+  users = [flags.arg.load]
+else:
+  users = get_twitter_usernames()
 print(len(users), "twitter usernames")
 
 # Read list of missing profile images.
