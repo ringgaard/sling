@@ -61,11 +61,13 @@ function imageurl(image) {
 }
 
 function filterGallery(gallery) {
-  if (allow_nsfw) return gallery;
   let filtered = [];
+  let urls = new Set();
   for (let image of gallery) {
-    if (image.nsfw) continue;
+    if (!allow_nsfw && image.nsfw) continue;
+    if (urls.has(image.url)) continue;
     filtered.push(image);
+    urls.add(image.url);
   }
   return filtered;
 }
@@ -1001,8 +1003,8 @@ class KbLightbox extends MdModal {
         bottom: 0;
         left: 0;
         right: 0;
-        max-width: 100%;
-        max-height: 100%;
+        height: 100%;
+        width: auto;
         margin: auto;
         user-select: none;
         cursor: pointer;
@@ -1019,14 +1021,14 @@ class KbLightbox extends MdModal {
         padding: 8px 12px;
       }
 
-      $ .close {
+      $ .close i {
         position: absolute;
         top: 0;
         right: 0;
 
-        padding-right: 10px;
         color: white;
-        font-size: 35px;
+        padding: 16px;
+        font-size: 24px;
         font-weight: bold;
       }
 
@@ -1076,18 +1078,23 @@ class KbLightbox extends MdModal {
         font-size: 20px;
         transition: 0.6s ease;
         user-select: none;
+        background-color: rgba(0, 0, 0, 0.2);
       }
 
       $ .next {
         position: absolute;
         right: 0;
         top: 50%;
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
       }
 
       $ .prev {
         position: absolute;
         left: 0;
         top: 50%;
+        border-top-right-radius: 5px;
+        border-bottom-right-radius: 5px;
       }
 
       $ .prev:hover, $ .next:hover {

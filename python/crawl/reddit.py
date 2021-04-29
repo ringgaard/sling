@@ -41,7 +41,7 @@ news.init()
 # Read list of monitored subreddits.
 session = requests.Session()
 subreddits = set()
-if flags.arg.redditdb:
+if flags.arg.subreddits:
   with open(flags.arg.subreddits, "r") as f:
     for line in f.readlines():
       sr = line.strip().lower();

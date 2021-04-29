@@ -442,7 +442,6 @@ export class MdIcon extends Component {
         font-family: 'Material Icons';
         font-weight: normal;
         font-style: normal;
-        font-size: 24px;
         line-height: 1;
         letter-spacing: normal;
         text-transform: none;

@@ -44,6 +44,11 @@ flags.define("--captionless",
              default=False,
              action="store_true")
 
+flags.define("--numbering",
+             help="photo numbering for albums",
+             default=False,
+             action="store_true")
+
 flags.define("--source",
              default=None,
              help="photo source")
@@ -175,6 +180,10 @@ def add_imgur_album(albumid):
   for image in reply["images"]:
     link = image["link"]
 
+    # Remove query parameters.
+    qs = link.find("?")
+    if qs != -1: link = link[:qs]
+
     # Skip anmated GIFs.
     if (image["animated"]):
       print("Skipping animated image", link);
@@ -185,7 +194,10 @@ def add_imgur_album(albumid):
     if caption is None:
       caption = image["description"]
     if caption is None and title != None:
-      caption = title + " (%d/%d)" % (serial, total)
+      if flags.arg.numbering:
+        caption = title + " (%d/%d)" % (serial, total)
+      else:
+        caption = title
     if caption != None:
       caption = caption.replace("\n", " ").strip()
 
@@ -235,6 +247,10 @@ def add_reddit_gallery(galleryid, posting=False):
   #print(json.dumps(reply, indent=2))
 
   mediadata = reply["media_metadata"]
+  if mediadata is None:
+    print("Skipping empty gallery", galleryid);
+    return
+
   serial = 1
   items = reply["gallery_data"]["items"]
   for item in items:
@@ -245,7 +261,8 @@ def add_reddit_gallery(galleryid, posting=False):
 
     # Image caption.
     caption = reply["title"]
-    if caption != None:
+    if flags.arg.captionless: caption = None
+    if caption != None and flags.arg.numbering:
       caption = "%s (%d/%d)" % (caption, serial, len(items))
 
     # NSFW flag.
@@ -329,5 +346,6 @@ if flags.arg.dryrun:
   print(profile.data(pretty=True))
 elif updated:
   print(flags.arg.id, len(photos), "photos")
+  store.coalesce()
   write_profile(flags.arg.id, profile)
 
