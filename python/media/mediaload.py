@@ -193,6 +193,7 @@ for url in media:
     last_modified = r.headers["Last-Modified"]
   else:
     last_modified = r.headers["Date"]
+  last_modified = last_modified.replace("UTC", "GMT")
 
   # Check if image is too big.
   image = r.content
