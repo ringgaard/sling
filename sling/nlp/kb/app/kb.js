@@ -1003,8 +1003,10 @@ class KbLightbox extends MdModal {
         bottom: 0;
         left: 0;
         right: 0;
-        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
         width: auto;
+        height: auto;
         margin: auto;
         user-select: none;
         cursor: pointer;
