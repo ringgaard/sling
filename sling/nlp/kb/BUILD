@@ -46,6 +46,7 @@ cc_library(
     "//sling/frame",
     "//sling/task:frames",
     "//sling/task:reducer",
+    "//sling/util:mutex",
   ],
   alwayslink = 1,
 )

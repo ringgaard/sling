@@ -16,6 +16,7 @@
 #include "sling/frame/serialization.h"
 #include "sling/task/frames.h"
 #include "sling/task/reducer.h"
+#include "sling/util/mutex.h"
 
 namespace sling {
 namespace nlp {
@@ -288,10 +289,16 @@ class ItemMerger : public task::Reducer {
 
     // Output merged frame for item.
     Frame merged = builder.Create();
-    if (merged.IsA("/w/property")) properties_.push_back(merged.Id().str());
     Output(input.shard(), task::CreateMessage(input.key(), merged));
     num_merged_items_->Increment();
     num_final_statements_->Increment(merged.size());
+
+    // Add properties to property catalog.
+    if (merged.IsA("/w/property")) {
+      MutexLock lock(&mu_);
+      string pid = merged.Id().str();
+      properties_.push_back(pid);
+    }
   }
 
   // Output property catalog.
@@ -311,6 +318,7 @@ class ItemMerger : public task::Reducer {
  private:
   // Property ids.
   std::vector<string> properties_;
+  Mutex mu_;
 
   // Statistics.
   task::Counter *num_orig_statements_ = nullptr;

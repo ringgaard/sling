@@ -201,7 +201,7 @@ char *RFCTime(time_t t, char *buf) {
 
 time_t ParseRFCTime(const char *timestr) {
   struct tm tm;
-  if (strptime(timestr, "%a, %d %b %Y %H:%M:%S GMT", &tm) != nullptr) {
+  if (strptime(timestr, "%a, %d %b %Y %H:%M:%S %Z", &tm) != nullptr) {
     return timegm(&tm);
   } else {
     return -1;
