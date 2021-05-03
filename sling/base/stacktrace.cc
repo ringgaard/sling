@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/syscall.h>
 
 #include "sling/base/flags.h"
 #include "sling/base/symbolize.h"
@@ -184,7 +185,7 @@ static void FailureSignalHandler(int signum, siginfo_t *info, void *ucontext) {
     OutputString(fd, "*** process suspended waiting for debugger, PID=");
     OutputNumber(fd, getpid());
     OutputString(fd, " TID=");
-    OutputNumber(fd, gettid());
+    OutputNumber(fd, syscall(SYS_gettid));
     OutputString(fd, "...\n");
     kill(getpid(), SIGSTOP);
   }

@@ -189,11 +189,15 @@ for url in media:
     continue
 
   # Get modification timestamp.
-  if "Last-Modified" in r.headers:
-    last_modified = r.headers["Last-Modified"]
-  else:
-    last_modified = r.headers["Date"]
-  last_modified = last_modified.replace("UTC", "GMT")
+  try:
+    if "Last-Modified" in r.headers:
+      last_modified = r.headers["Last-Modified"]
+    else:
+      last_modified = r.headers["Date"]
+    last_modified = last_modified.replace("UTC", "GMT")
+  except Exception as e:
+    print("exception", e, url)
+    continue
 
   # Check if image is too big.
   image = r.content
