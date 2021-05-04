@@ -187,11 +187,28 @@ worms = [
   ("author", re.compile(r"^\/\?author\=")),
 ]
 
+spammers = set([
+  "lbuyem.fineblog.top",
+  "gye.fineblog.top",
+  "www.ecosia.org",
+  "ecosia.org",
+  "cbxw.boyddoherty.top",
+  "ffurp.boyddoherty.top",
+  "pacificdentalcenter.com",
+  "boj.johnnyhaley.top",
+  "zzta.joyceblog.top",
+  "gmue.sarahmilne.top",
+  "renfno.sarahmilne.top",
+  "yhamrj.joyceblog.top",
+  "embedded-preview.pardot.com",
+])
+
 total_hits = 0
 num_invalid = 0
 num_unknown = 0
 num_bots = 0
 num_worms = 0
+num_spammers = 0
 num_internal = 0
 num_errors = 0
 num_cached = 0
@@ -213,6 +230,7 @@ query_hits = defaultdict(int)
 http_codes = defaultdict(int)
 bot_hits = defaultdict(int)
 worm_hits = defaultdict(int)
+spam_hits = defaultdict(int)
 referrers = defaultdict(int)
 referring_domains = defaultdict(int)
 
@@ -302,6 +320,10 @@ for logfn in flags.arg.logfiles:
       if m != None:
         domain = m.group(1)
         if domain.startswith("www."): domain = domain[4:]
+        if domain in spammers:
+          spam_hits[domain] += 1
+          num_spammers += 1
+          continue
         if domain not in local_domains:
           referring_domains[domain] += 1
 
@@ -394,6 +416,7 @@ print("%6d favicons" % num_favicons)
 print("%6d robots.txt" % num_robotstxt)
 print("%6d bot requests" % num_bots)
 print("%6d worm requests" % num_worms)
+print("%6d spam hits" % num_spammers)
 print("%6d errors" % num_errors)
 print("%6d unknown requests" % num_unknown)
 print("%6d invalid requests" % num_invalid)
@@ -412,4 +435,5 @@ print_table("REFERRERS", "referrer", referrers)
 print_table("HTTP ERRORS", "HTTP status", http_codes)
 print_table("BOTS", "bot", bot_hits)
 print_table("WORMS", "worm", worm_hits)
+print_table("SPAM", "spam", spam_hits)
 

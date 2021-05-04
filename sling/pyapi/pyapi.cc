@@ -16,6 +16,7 @@
 
 #include "sling/pyapi/pyarray.h"
 #include "sling/pyapi/pybase.h"
+#include "sling/pyapi/pydatabase.h"
 #include "sling/pyapi/pydate.h"
 #include "sling/pyapi/pyframe.h"
 #include "sling/pyapi/pymyelin.h"
@@ -77,6 +78,9 @@ static PyObject *RegisterPythonModule() {
   PyRecordReader::Define(module);
   PyRecordWriter::Define(module);
   PyRecordDatabase::Define(module);
+
+  PyDatabase::Define(module);
+  PyCursor::Define(module);
 
   PyCalendar::Define(module);
   PyDate::Define(module);

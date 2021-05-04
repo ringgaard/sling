@@ -6,6 +6,7 @@ cc_library(
     "pyapi.cc",
     "pyarray.cc",
     "pybase.cc",
+    "pydatabase.cc",
     "pydate.cc",
     "pyframe.cc",
     "pymisc.cc",
@@ -22,6 +23,7 @@ cc_library(
   hdrs = [
     "pyarray.h",
     "pybase.h",
+    "pydatabase.h",
     "pydate.h",
     "pyframe.h",
     "pymisc.h",
@@ -37,6 +39,7 @@ cc_library(
   ],
   deps = [
     "//sling/base",
+    "//sling/db:dbclient",
     "//sling/file",
     "//sling/file:recordio",
     "//sling/frame",

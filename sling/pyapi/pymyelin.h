@@ -30,6 +30,7 @@ class PyBuffers {
   PyBuffers(myelin::Flow *flow) : flow_(flow) {}
   ~PyBuffers();
   char *GetData(PyObject *obj, myelin::Type type, size_t *size);
+
  private:
   myelin::Flow *flow_;
   std::vector<Py_buffer *> views_;

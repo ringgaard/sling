@@ -99,6 +99,10 @@ n_stated_in = store["P248"]
 n_has_quality = store["P1552"]
 n_nsfw = store["Q2716583"]
 
+# Check id.
+if flags.arg.id.startswith("http"):
+  raise Exception("invalid id: " + flags.arg.id)
+
 # Read item photo profile from database.
 def read_profile(itemid):
   r = session.get(flags.arg.photodb + "/" + itemid)
@@ -215,6 +219,7 @@ def add_imgur_image(imageid):
   r = session.get("https://api.imgur.com/3/image/" + imageid, headers=auth)
   r.raise_for_status()
   reply = r.json()["data"]
+  #print(json.dumps(reply, indent=2))
 
   # Photo URL.
   link = reply["link"]
@@ -246,9 +251,20 @@ def add_reddit_gallery(galleryid, posting=False):
   reply = r.json()["data"]["children"][0]["data"]
   #print(json.dumps(reply, indent=2))
 
-  mediadata = reply["media_metadata"]
+  mediadata = reply.get("media_metadata")
   if mediadata is None:
-    print("Skipping empty gallery", galleryid);
+    url = reply.get("url")
+    if url is None:
+      print("Skipping empty gallery", galleryid);
+      return
+
+    # Single image in Reddit posting.
+    caption = reply["title"]
+    if flags.arg.captionless: caption = None
+    nsfw = flags.arg.nsfw or reply["over_18"]
+
+    # Add media frame to profile.
+    add_photo(profile, url, caption, None, nsfw)
     return
 
   serial = 1
@@ -295,6 +311,13 @@ if flags.arg.remove:
 else:
   # Fetch photo urls.
   for url in flags.arg.url:
+    # Trim url.
+    m = re.match("(https?://i\.imgur\.com/.+)[\?#].*", url)
+    if m == None: m = re.match("(https?://imgur\.com/.+)[\?#].*", url)
+    if n != None:
+      url = m.group(1)
+      if url.endswith("/new"): url = url[:-4]
+
     # Imgur album.
     m = re.match("https?://imgur.com/a/(\w+)", url)
     if m != None:

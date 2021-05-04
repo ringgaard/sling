@@ -467,7 +467,11 @@ void PyProcessor::Run(Task *task) {
   // Call run() method to execute task.
   PyObject *ret = PyObject_CallMethod(pyproc, "run", "O", pytask->AsObject());
   if (ret == nullptr) {
-    if (PyErr_Occurred()) PyErr_Print();
+    if (PyErr_Occurred()) {
+      LOG(ERROR) << "Python exception:";
+      PyErr_Print();
+      fflush(stderr);
+    }
     LOG(FATAL) << "Error occured in task " << task->name();
   }
   Py_DECREF(ret);

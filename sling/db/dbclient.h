@@ -60,7 +60,9 @@ class DBClient {
 
   // Get record(s) form database.
   Status Get(const Slice &key, DBRecord *record);
-  Status Get(const std::vector<Slice> &keys, std::vector<DBRecord> *records);
+  Status Get(const std::vector<Slice> &keys,
+                   std::vector<DBRecord> *records,
+                   IOBuffer *buffer = nullptr);
 
   // Add or update record(s) in database. The records(s) are updated with the
   // outcome.
@@ -77,7 +79,9 @@ class DBClient {
   //   Record record;
   //   while (db->Next(&iterator, &record)) { ... }
   Status Next(uint64 *iterator, DBRecord *record);
-  Status Next(uint64 *iterator, int num, std::vector<DBRecord> *records);
+  Status Next(uint64 *iterator, int num,
+              std::vector<DBRecord> *records,
+              IOBuffer *buffer = nullptr);
 
   // Get current epoch for database. This can be used as the initial iterator
   // value for reading new records from the database.
@@ -97,13 +101,13 @@ class DBClient {
   void WriteRecord(DBRecord *record);
 
   // Read record from response.
-  Status ReadRecord(DBRecord *record);
+  Status ReadRecord(DBRecord *record, IOBuffer *buffer = nullptr);
 
   // Execute database operation, reconnecting if connection has been closed.
   Status Transact(Transaction tx);
 
   // Send request to server and receive reply.
-  Status Do(DBVerb verb);
+  Status Do(DBVerb verb, IOBuffer *buffer = nullptr);
 
   // Database name.
   string database_;

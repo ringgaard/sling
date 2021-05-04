@@ -14,12 +14,13 @@
 
 """Fetch media files and store in media cache database."""
 
-import requests
+import email.utils
 import hashlib
-import urllib
+import requests
 import sys
 import time
 import traceback
+import urllib
 
 import sling
 import sling.flags as flags
@@ -189,15 +190,13 @@ for url in media:
     continue
 
   # Get modification timestamp.
-  try:
-    if "Last-Modified" in r.headers:
-      last_modified = r.headers["Last-Modified"]
-    else:
-      last_modified = r.headers["Date"]
-    last_modified = last_modified.replace("UTC", "GMT")
-  except Exception as e:
-    print("exception", e, url)
-    continue
+  if "Last-Modified" in r.headers:
+    last_modified = r.headers["Last-Modified"]
+  elif "Date" in r.headers:
+    last_modified = r.headers["Date"]
+  else:
+    last_modified = email.utils.formatdate(time.time(), usegmt=True)
+  last_modified = last_modified.replace("UTC", "GMT")
 
   # Check if image is too big.
   image = r.content
