@@ -710,6 +710,15 @@ struct FrameDatum : public Datum {
     return false;
   }
 
+  // Count the number of slots with role.
+  int count(Handle name) const {
+    int n = 0;
+    for (const Slot *slot = begin(); slot < end(); ++slot) {
+      if (slot->name == name) n++;
+    }
+    return n;
+  }
+
   // Updates the public flag for frame.
   void AddFlags(Word flags) { info |= (flags & PUBLIC); }
 

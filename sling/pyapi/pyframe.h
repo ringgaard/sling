@@ -32,6 +32,9 @@ struct PyFrame : public PyBase, public Root {
   // Return the number of slots in the frame.
   Py_ssize_t Size();
 
+  // Return number of slots for role.
+  PyObject *Count(PyObject *obj);
+
   // Look up role value for frame.
   PyObject *Lookup(PyObject *key);
 

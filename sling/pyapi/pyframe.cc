@@ -58,6 +58,7 @@ void PyFrame::Define(PyObject *module) {
   methods.Add("ispublic", &PyFrame::IsPublic);
   methods.Add("isproxy", &PyFrame::IsProxy);
   methods.Add("resolve", &PyFrame::Resolve);
+  methods.AddO("count", &PyFrame::Count);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "Frame");
@@ -89,6 +90,15 @@ void PyFrame::Dealloc() {
 
 Py_ssize_t PyFrame::Size() {
   return frame()->slots();
+}
+
+PyObject *PyFrame::Count(PyObject *obj) {
+  Handle role = pystore->RoleValue(obj);
+  if (role.IsError()) return nullptr;
+
+  // Count the number of slot with the role.
+  int n = frame()->count(role);
+  return PyLong_FromLong(n);
 }
 
 long PyFrame::Hash() {
