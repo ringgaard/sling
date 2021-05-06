@@ -28,8 +28,8 @@ flags.define("--id",
 
 flags.define("--photodb",
              help="database for photo profiles",
-             default="http://vault:7070/photo",
-             metavar="DBURL")
+             default="vault/photo",
+             metavar="DB")
 
 flags.define("--imgurkeys",
              default="local/keys/imgur.json",
@@ -98,6 +98,7 @@ flags.parse()
 if flags.arg.id and flags.arg.id.startswith("http"):
   raise Exception("invalid id: " + flags.arg.id)
 
+photodb = sling.Database(flags.arg.photodb)
 session = requests.Session()
 
 store = sling.Store()
@@ -116,17 +117,15 @@ if os.path.exists(flags.arg.imgurkeys):
 
 # Read item photo profile from database.
 def read_profile(itemid):
-  r = session.get(flags.arg.photodb + "/" + itemid)
-  if r.status_code == 404: return None
-  r.raise_for_status()
-  profile = store.parse(r.content)
+  data = photodb[itemid]
+  if data is None: return None
+  profile = store.parse(data)
   return profile
 
 # Write item photo profile to database.
 def write_profile(itemid, profile):
-  content = profile.data(binary=True)
-  r = session.put(flags.arg.photodb + "/" + itemid, data=content)
-  r.raise_for_status()
+  data = profile.data(binary=True)
+  photodb[itemid] = data
 
 # Add photo to profile.
 def add_photo(profile, url, caption=None, source=None, nsfw=False):
@@ -139,6 +138,14 @@ def add_photo(profile, url, caption=None, source=None, nsfw=False):
       if redirect.endswith("/removed.png"):
         print("Skip removed photo:", url, r.status_code)
         return 0
+
+      # Check if redirect exists.
+      r = session.head(redirect)
+      if r.status_code != 200:
+        print("Skip missing redirect:", url, r.status_code)
+        return 0
+
+      # Use redirected url.
       url = redirect
     elif r.status_code != 200:
       print("Skip missing photo:", url, r.status_code)
@@ -315,6 +322,10 @@ def add_media(profile, url, nsfw):
   if m != None:
     albumid = m.group(1)
     return add_imgur_album(profile, albumid, nsfw)
+  m = re.match("https?://m.imgur.com/a/(\w+)", url)
+  if m != None:
+    albumid = m.group(1)
+    return add_imgur_album(profile, albumid, nsfw)
 
   # Imgur gallery.
   m = re.match("https?://imgur.com/gallery/(\w+)", url)
@@ -328,6 +339,10 @@ def add_media(profile, url, nsfw):
 
   # Single-image imgur.
   m = re.match("https?://imgur.com/(\w+)", url)
+  if m != None:
+    imageid = m.group(1)
+    return add_imgur_image(profile, imageid, nsfw)
+  m = re.match("https?://i.imgur.com/(\w+)", url)
   if m != None:
     imageid = m.group(1)
     return add_imgur_image(profile, imageid, nsfw)
@@ -433,11 +448,11 @@ else:
       if truncating or link in flags.arg.url:
         print("Remove", link)
         if flags.arg.truncate: truncating = True
+        updated = True
       else:
         keep.append((n_media, media))
     del profile[n_media]
     profile.extend(keep)
-    updated = True
   else:
     # Fetch photo urls.
     for url in flags.arg.url:

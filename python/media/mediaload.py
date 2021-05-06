@@ -206,6 +206,11 @@ for url in media:
     if fblack: fblack.write(url + "\n")
     continue
 
+  # Check if image is empty.
+  if len(image) == 0:
+    print("empty", url)
+    continue
+
   # Check if image is HTML-like.
   if image.startswith(b"<!doctype html>"):
     print("non-image", url)
