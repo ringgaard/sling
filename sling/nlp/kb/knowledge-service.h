@@ -27,6 +27,7 @@
 #include "sling/nlp/document/lex.h"
 #include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/kb/name-table.h"
+#include "sling/nlp/kb/xref.h"
 
 namespace sling {
 namespace nlp {
@@ -53,6 +54,9 @@ class KnowledgeService {
 
   // Load and initialize knowledge base.
   void Load(Store *kb, const string &name_table);
+
+  // Load cross-reference table.
+  void LoadXref(const string &xref_table);
 
   // Register knowledge base service.
   void Register(HTTPServer *http);
@@ -122,6 +126,9 @@ class KnowledgeService {
 
   // Name table.
   NameTable aliases_;
+
+  // Identifier cross-reference.
+  XRefMapping xref_;
 
   // Knowledge base browser app.
   StaticContent common_{"/common", "app"};

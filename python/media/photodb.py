@@ -39,6 +39,10 @@ flags.define("--caption",
              default=None,
              help="photo caption")
 
+flags.define("--fixedcaption",
+             default=None,
+             help="override photo caption")
+
 flags.define("--captionless",
              help="no photo caption",
              default=False,
@@ -117,6 +121,7 @@ if os.path.exists(flags.arg.imgurkeys):
 
 # Read item photo profile from database.
 def read_profile(itemid):
+  if itemid is None: return None
   data = photodb[itemid]
   if data is None: return None
   profile = store.parse(data)
@@ -134,7 +139,6 @@ def add_photo(profile, url, caption=None, source=None, nsfw=False):
     r = session.head(url)
     if r.status_code // 100 == 3:
       redirect = r.headers['Location']
-      #print("Moved photo", url, "->", redirect)
       if redirect.endswith("/removed.png"):
         print("Skip removed photo:", url, r.status_code)
         return 0
@@ -151,10 +155,21 @@ def add_photo(profile, url, caption=None, source=None, nsfw=False):
       print("Skip missing photo:", url, r.status_code)
       return 0
 
+    # Check content type.
+    ct = r.headers.get("Content-Type")
+    if ct != None and not ct.startswith("image/"):
+      print("Skip non-image content:", url, ct)
+      return 0
+
   # Check if photo is already in the profile.
+  alturl = None
+  if url.startswith("https://imgur.com/"):
+    alturl = "https://i.imgur.com/" + url[18:]
+  elif url.startswith("https://i.imgur.com/"):
+    alturl = "https://imgur.com/" + url[20:]
   for media in profile(n_media):
     media = store.resolve(media)
-    if url == media:
+    if media == url or media == alturl:
       print("Skip existing photo", url)
       return 0
 
@@ -164,6 +179,7 @@ def add_photo(profile, url, caption=None, source=None, nsfw=False):
 
   # Add media to profile.
   slots = [(n_is, url)]
+  if flags.arg.fixedcaption: caption = flags.arg.fixedcaption
   if caption and not flags.arg.captionless: slots.append((n_legend, caption))
   if source: slots.append((n_stated_in, store[source]))
   if nsfw: slots.append((n_has_quality, n_nsfw))
@@ -181,7 +197,10 @@ def add_imgur_album(profile, albumid, isnsfw=False):
   auth = {'Authorization': "Client-ID " + imgurkeys["clientid"]}
   r = session.get("https://api.imgur.com/3/album/" + albumid, headers=auth)
   if r.status_code == 404:
-    print("Skipping missing album", albumid, r.status_code)
+    print("Skipping missing album", albumid)
+    return 0
+  if r.status_code == 403:
+    print("Skipping unaccessible album", albumid)
     return 0
   r.raise_for_status()
   reply = r.json()["data"]
@@ -237,6 +256,8 @@ def add_imgur_image(profile, imageid, isnsfw=False):
 
   # Photo URL.
   link = reply["link"]
+  qs = link.find("?")
+  if qs != -1: link = link[:qs]
 
   # Skip anmated GIFs.
   if (reply["animated"]):
@@ -258,12 +279,28 @@ def add_imgur_image(profile, imageid, isnsfw=False):
 
 # Add Reddit gallery.
 def add_reddit_gallery(profile, galleryid, isnsfw=False):
-  print("Redit gallery", galleryid)
+  print("Redit posting", galleryid)
   r = session.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
                   headers = {"User-agent": "SLING Bot 1.0"})
   r.raise_for_status()
-  reply = r.json()["data"]["children"][0]["data"]
+  children = r.json()["data"]["children"]
+  if len(children) == 0:
+    print("Skipping empty post", galleryid);
+    return 0
+  reply = children[0]["data"]
   #print(json.dumps(reply, indent=2))
+
+  if reply["is_self"]:
+    print("Skipping self post", galleryid);
+    return 0
+  removed = reply["removed_by_category"]
+  if removed == "deleted" or removed == "moderator":
+    print("Skipping deleted post", galleryid);
+    return 0
+
+  if reply["is_video"]:
+    print("Skipping video", galleryid);
+    return 0
 
   mediadata = reply.get("media_metadata")
   if mediadata is None:
@@ -278,14 +315,19 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
     nsfw = isnsfw or reply["over_18"]
 
     # Add media frame to profile.
-    return add_photo(profile, url, caption, None, nsfw)
+    return add_media(profile, url, caption, nsfw)
 
-  serial = 1
   items = reply["gallery_data"]["items"]
   count = 0
+  serial = 1
   for item in items:
     mediaid = item["media_id"]
-    link = mediadata[mediaid]["s"]["u"]
+    media = mediadata[mediaid]["s"]
+    link = media.get("u")
+    if link is None:
+      print("Skipping missing image in gallery", mediaid);
+      return 0
+
     m = re.match("https://preview.redd.it/(\w+\.\w+)\?", link)
     if m != None: link = "https://i.redd.it/" + m.group(1)
 
@@ -304,31 +346,47 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
   return count
 
 # Add media.
-def add_media(profile, url, nsfw):
+def add_media(profile, url, caption, nsfw):
   # Trim url.
-  m = re.match("(https?://i\.imgur\.com/.+)[\?#].*", url)
-  if m == None: m = re.match("(https?://imgur\.com/.+)[\?#].*", url)
-  if m == None: m = re.match("(https?://www\.reddit\.com/.+)[\?#].*", url)
-  if m == None: m = re.match("(https?://old\.reddit\.com/.+)[\?#].*", url)
+  url = url.replace("/i.imgur.com/", "/imgur.com/")
+  url = url.replace("/www.imgur.com/", "/imgur.com/")
+  url = url.replace("/m.imgur.com/", "/imgur.com/")
+
+  url = url.replace("/www.reddit.com/", "/reddit.com/")
+  url = url.replace("/old.reddit.com/", "/reddit.com/")
+
+  if url.startswith("http://reddit.com"): url = "https" + url[4:]
+  if url.startswith("http://imgur.com"): url = "https" + url[4:]
+
+  m = re.match("(https://imgur\.com/.+)[\?#].*", url)
+  if m == None: m = re.match("(https?://reddit\.com/.+)[\?#].*", url)
+  if m == None: m = re.match("(https?://i\.redditmedia\.com/.+)[\?#].*", url)
   if m != None:
     url = m.group(1)
     if url.endswith("/new"): url = url[:-4]
 
-  m = re.match("(https?://i\.imgur\.com/.+\.jpe?g)-\w+", url)
+  m = re.match("(https://imgur\.com/.+\.jpe?g)-\w+", url)
   if m != None: url = m.group(1)
 
+  # Discard videos.
+  if url.endswith(".gif") or \
+     url.endswith(".gifv") or \
+     url.endswith(".mp4") or \
+     url.endswith(".webm") or \
+     url.startswith("https://gfycat.com/") or \
+     url.startswith("https://redgifs.com/") or \
+     url.startswith("https://v.redd.it/"):
+    print("Skipping video", url)
+    return 0
+
   # Imgur album.
-  m = re.match("https?://imgur.com/a/(\w+)", url)
-  if m != None:
-    albumid = m.group(1)
-    return add_imgur_album(profile, albumid, nsfw)
-  m = re.match("https?://m.imgur.com/a/(\w+)", url)
+  m = re.match("https://imgur\.com/a/(\w+)", url)
   if m != None:
     albumid = m.group(1)
     return add_imgur_album(profile, albumid, nsfw)
 
   # Imgur gallery.
-  m = re.match("https?://imgur.com/gallery/(\w+)", url)
+  m = re.match("https://imgur\.com/gallery/(\w+)", url)
   if m != None:
     galleryid = m.group(1)
     return  add_imgur_album(profile, galleryid, nsfw)
@@ -338,25 +396,21 @@ def add_media(profile, url, nsfw):
     return  add_imgur_album(profile, galleryid, nsfw)
 
   # Single-image imgur.
-  m = re.match("https?://imgur.com/(\w+)", url)
-  if m != None:
-    imageid = m.group(1)
-    return add_imgur_image(profile, imageid, nsfw)
-  m = re.match("https?://i.imgur.com/(\w+)", url)
+  m = re.match("https://imgur\.com/(\w+)$", url)
   if m != None:
     imageid = m.group(1)
     return add_imgur_image(profile, imageid, nsfw)
 
   # Reddit gallery.
-  m = re.match("https://www.reddit.com/gallery/(\w+)", url)
+  m = re.match("https://reddit\.com/gallery/(\w+)", url)
   if m != None:
     galleryid = m.group(1)
     return add_reddit_gallery(profile, galleryid, nsfw)
 
   # Reddit posting.
-  m = re.match("https://(www|old).reddit.com/r/\w+/comments/(\w+)/", url)
+  m = re.match("https://reddit\.com/r/\w+/comments/(\w+)/", url)
   if m != None:
-    galleryid = m.group(2)
+    galleryid = m.group(1)
     return add_reddit_gallery(profile, galleryid, nsfw)
 
   # DR image scaler.
@@ -367,7 +421,7 @@ def add_media(profile, url, nsfw):
     url = "https://%s/%s" % (q["server"][0], q["file"][0])
 
   # Add media to profile.
-  return add_photo(profile, url, flags.arg.caption, flags.arg.source, nsfw)
+  return add_photo(profile, url, caption, flags.arg.source, nsfw)
 
 # Bulk load photos from batch file.
 def bulk_load(batch):
@@ -399,7 +453,7 @@ def bulk_load(batch):
             (id, profile.count(n_media)))
 
     # Add media to profile
-    n = add_media(profile, url, nsfw or flags.arg.nsfw)
+    n = add_media(profile, url, flags.arg.caption, nsfw or flags.arg.nsfw)
     if n > 0:
       num_photos += n
       updated.add(id)
@@ -456,7 +510,8 @@ else:
   else:
     # Fetch photo urls.
     for url in flags.arg.url:
-      if add_media(profile, url, flags.arg.nsfw): updated = True
+      if add_media(profile, url, flags.arg.caption, flags.arg.nsfw):
+        updated = True
 
   # Write profile.
   if flags.arg.dryrun:

@@ -12,9 +12,8 @@ var allow_nsfw = false;
 const photo_sources = {
   "upload.wikimedia.org": "wikimedia.org",
   "pbs.twimg.com": "twitter.com",
-  "i.imgur.com": "imgur.com",
-  "i.redd.it": "reddit.com",
-  "i.pinimg.com": "pinterest.com",
+  "redd.it": "reddit.com",
+  "pinimg.com": "pinterest.com",
   "live.staticflickr.com": "flickr.com",
   "ilarge.lisimg.com": "listal.com",
   "gstatic.com": "google.com",
@@ -951,6 +950,7 @@ class KbLightbox extends MdModal {
       let url = new URL(image.url)
       let domain = url.hostname;
       if (domain.startsWith("www.")) domain = domain.slice(4);
+      if (domain.startsWith("i.")) domain = domain.slice(2);
       if (domain in photo_sources) domain = photo_sources[domain];
 
       if (domain == "wikimedia.org") {

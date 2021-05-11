@@ -127,6 +127,29 @@ class XRef {
   Identifier *buckets_[NUM_BUCKETS];
 };
 
+// Map identifiers to their main identifier. The cross-reference store consists
+// of frames with multiple ids for the same item. The first id is the main id.
+class XRefMapping {
+ public:
+  // Map id using cross-reference table. The id consists of a property name
+  // and identifier of the form <property id/mnemonic>[:/]<identifier>. Returns
+  // an empty string if no mapped id is found.
+  Text Map(Text id) const;
+
+  // Load cross-reference table.
+  void Load(const string &filename);
+
+  // The xref store is frozen after being loaded.
+  bool loaded() const { return xrefs_.frozen(); }
+
+ private:
+  // Cross-reference store.
+  Store xrefs_;
+
+  // Mnemonics for cross-referenced properties.
+  std::unordered_map<Text, Text> mnemonics_;
+};
+
 }  // namespace nlp
 }  // namespace sling
 

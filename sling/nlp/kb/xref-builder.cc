@@ -56,6 +56,9 @@ class XRefBuilder : public task::FrameProcessor {
       }
     }
 
+    // Get xref property mnemonics.
+    mnemonics_ = config.GetFrame("mnemonics");
+
     // Statistics.
     num_ids_ = task->GetCounter("ids");
     num_redirects_ = task->GetCounter("redirects");
@@ -126,6 +129,19 @@ class XRefBuilder : public task::FrameProcessor {
     bool snapshot = task->Get("snapshot", false);
     Store store;
     xref_.Build(&store);
+    if (mnemonics_.valid()) {
+      Builder b(&store);
+      b.AddId("/w/mnemonics");
+      Store *commons = mnemonics_.store();
+      for (const Slot &s : mnemonics_) {
+        CHECK(commons->IsString(s.name));
+        CHECK(commons->IsString(s.value));
+        Text mnemonic = commons->GetString(s.name)->str();
+        Text property = commons->GetString(s.value)->str();
+        b.Add(String(&store, mnemonic), property);
+      }
+      b.Create();
+    }
     if (snapshot) store.AllocateSymbolHeap();
     store.GC();
 
@@ -167,6 +183,9 @@ class XRefBuilder : public task::FrameProcessor {
 
   // Identifier cross-reference.
   XRef xref_;
+
+  // Property mnemonics.
+  Frame mnemonics_;
 
   // Statistics.
   task::Counter *num_ids_ = nullptr;

@@ -530,7 +530,6 @@ Handle PyStore::Value(PyObject *object) {
       return Handle::error();
     }
     return array->AsValue();
-
   } else if (PyObject_TypeCheck(object, &PyString::type)) {
     // Return handle for qualified string.
     PyString *str = reinterpret_cast<PyString *>(object);

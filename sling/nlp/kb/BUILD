@@ -58,7 +58,9 @@ cc_library(
   deps = [
     "//sling/base",
     "//sling/frame:object",
+    "//sling/frame:serialization",
     "//sling/frame:store",
+    "//sling/string:strcat",
     "//sling/string:text",
     "//sling/util:arena",
     "//sling/util:fingerprint",
@@ -193,6 +195,7 @@ cc_library(
     ":app",
     ":calendar",
     ":name-table",
+    ":xref",
     "//app",
     "//sling/frame:object",
     "//sling/frame:serialization",

@@ -702,6 +702,10 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
   }
 }
 
+void KnowledgeService::LoadXref(const string &filename) {
+  xref_.Load(filename);
+}
+
 void KnowledgeService::Register(HTTPServer *http) {
   http->Register("/kb/query", this, &KnowledgeService::HandleQuery);
   http->Register("/kb/item", this, &KnowledgeService::HandleGetItem);
@@ -732,6 +736,11 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
   // Check for exact match with id.
   Handles results(ws.store());
   Handle idmatch = kb_->Lookup(query);
+  if (idmatch.IsNil() and xref_.loaded()) {
+    // Try looking up in cross-reference.
+    Text id = xref_.Map(query);
+    if (!id.empty()) idmatch = kb_->Lookup(id);
+  }
   if (!idmatch.IsNil()) {
     Frame item(kb_, idmatch);
     if (item.valid()) {
@@ -765,6 +774,11 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   Text itemid = ws.Get("id");
   VLOG(1) << "Look up item '" << itemid << "'";
   Handle handle = kb_->LookupExisting(itemid);
+  if (handle.IsNil() and xref_.loaded()) {
+    // Try looking up in cross-reference.
+    itemid = xref_.Map(itemid);
+    if (!itemid.empty()) handle = kb_->LookupExisting(itemid);
+  }
   if (handle.IsNil()) {
     response->SendError(404, nullptr, "Item not found");
     return;

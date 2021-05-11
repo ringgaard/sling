@@ -17,6 +17,9 @@
 #include <algorithm>
 #include <vector>
 
+#include "sling/frame/serialization.h"
+#include "sling/string/strcat.h"
+
 namespace sling {
 namespace nlp {
 
@@ -204,6 +207,50 @@ string XRef::Identifier::ToString() const {
   str.push_back(']');
 
   return str;
+}
+
+Text XRefMapping::Map(Text id) const {
+  // Try to look up identifier in cross-reference.
+  Handle h = xrefs_.LookupExisting(id);
+  if (!h.IsNil()) return xrefs_.FrameId(h);
+
+  // Try to convert property mnemonic.
+  int sep = id.find('/');
+  if (sep == -1) sep = id.find(':');
+  if (sep != -1) {
+    Text domain = id.substr(0, sep).trim();
+    Text identifier = id.substr(sep + 1).trim();
+    if (!domain.empty() && !identifier.empty()) {
+      auto f = mnemonics_.find(domain);
+      if (f != mnemonics_.end()) domain = f->second;
+      string idstr = StrCat(domain, "/", identifier);
+      Handle h = xrefs_.LookupExisting(idstr);
+      if (!h.IsNil()) return xrefs_.FrameId(h);
+    }
+  }
+
+  // No mapping found.
+  return Text();
+}
+
+void XRefMapping::Load(const string &filename) {
+  // Load store with cross-references.
+  CHECK(!loaded());
+  LoadStore(filename, &xrefs_);
+  xrefs_.Freeze();
+
+  // Build mapping from mnemonics to property ids.
+  Frame mnemonics(&xrefs_, "/w/mnemonics");
+  if (mnemonics.valid()) {
+    for (const Slot &s : mnemonics) {
+      if (s.name.IsId()) continue;
+      CHECK(xrefs_.IsString(s.name));
+      CHECK(xrefs_.IsString(s.value));
+      Text mnemonic = xrefs_.GetString(s.name)->str();
+      Text property = xrefs_.GetString(s.value)->str();
+      mnemonics_[mnemonic] = property;
+    }
+  }
 }
 
 }  // namespace nlp

@@ -4,7 +4,7 @@
     P1059, ; Danish CVR company number
     P7972, ; Danish CVR person ID
     P2814, ; Danish CVR branch P-number
-    P2622, ; UK Companies House ID
+    P2622, ; UK Companies House company ID
     P5297, ; UK Companies House officer ID
     P3200, ; Northern Ireland charity number
     P5531, ; US SEC Central Index Key
@@ -37,7 +37,37 @@
     P2002, ; Twitter username
     P2013, ; Facebook ID
     P2003, ; Instagram username
+
+    P214,  ; VIAF ID
+    P646,  ; Freebase MID
+    P2671, ; Google Knowledge Graph ID
   ]
+
+  ; Mnemonics for cross-referenced properties.
+  mnemonics: {
+    "cvr": "P1059"      ; Danish CVR company number
+    "coh": "P2622"      ; UK Companies House company ID
+    "sec": "P5531"      ; US SEC Central Index Key
+    "irs": "P1297"      ; US IRS Employer Identification Number
+    "abn": "P3548"      ; Australian Business Number
+    "acn": "P3549"      ; Australian Company Number
+    "cnpj": "P6204"     ; Brazilian CNPJ
+    "siren": "P1616"    ; French SIREN number
+    "kvk": "P3220"      ; Dutch KvK company ID
+    "okpo": "P2391"     ; Russian OKPO ID
+    "ein": "P4829"      ; Swiss Enterprise Identification Number
+    "oc": "P1320"       ; OpenCorporates ID
+    "lei": "P1278"      ; Legal Entity Identifier
+
+    "twitter": "P2002"  ; Twitter username
+    "fb: "P2013"        ; Facebook ID
+    "ig": "P2003"       ; Instagram username
+
+    "viaf": "P214"      ; VIAF ID
+    "mid": "P646"       ; Freebase MID
+    "kbmid": "P2671"    ; Google Knowledge Graph ID
+
+  }
 
   ; Pre-resolved reference mappings for ambiguous references.
   mappings: {

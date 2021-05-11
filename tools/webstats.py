@@ -188,19 +188,15 @@ worms = [
 ]
 
 spammers = set([
-  "lbuyem.fineblog.top",
-  "gye.fineblog.top",
-  "www.ecosia.org",
+  "aucoinhomes.com",
+  "boyddoherty.top",
   "ecosia.org",
-  "cbxw.boyddoherty.top",
-  "ffurp.boyddoherty.top",
+  "fineblog.top",
+  "johnnyhaley.top",
+  "joyceblog.top",
   "pacificdentalcenter.com",
-  "boj.johnnyhaley.top",
-  "zzta.joyceblog.top",
-  "gmue.sarahmilne.top",
-  "renfno.sarahmilne.top",
-  "yhamrj.joyceblog.top",
-  "embedded-preview.pardot.com",
+  "pardot.com",
+  "sarahmilne.top",
 ])
 
 total_hits = 0
@@ -318,14 +314,23 @@ for logfn in flags.arg.logfiles:
       referrers[referrer] += 1
       m = url_pattern.match(referrer)
       if m != None:
-        domain = m.group(1)
-        if domain.startswith("www."): domain = domain[4:]
-        if domain in spammers:
-          spam_hits[domain] += 1
+        hostname = m.group(1)
+        if hostname.startswith("www."): hostname = hostname[4:]
+        if hostname in spammers:
+          spam_hits[hostname] += 1
           num_spammers += 1
           continue
-        if domain not in local_domains:
-          referring_domains[domain] += 1
+
+        dot = hostname.find(".")
+        if dot != 0:
+          domain = hostname[dot + 1:]
+          if domain in spammers:
+            spam_hits[domain] += 1
+            num_spammers += 1
+            continue
+
+        if hostname not in local_domains:
+          referring_domains[hostname] += 1
 
     # Downloads.
     if path.startswith("/data"):

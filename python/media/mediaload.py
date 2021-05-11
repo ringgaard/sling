@@ -212,7 +212,8 @@ for url in media:
     continue
 
   # Check if image is HTML-like.
-  if image.startswith(b"<!doctype html>"):
+  if image.startswith(b"<!doctype html>") or \
+     image.startswith(b"<!DOCTYPE html>")
     print("non-image", url)
     continue
 

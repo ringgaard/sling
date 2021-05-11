@@ -32,7 +32,8 @@ flags.define("--twitterdb",
 
 bad_images = set([
   "",
-  "http://pbs.twimg.com/profile_images/1302121919014207490/KaYYEC8b.jpg"
+  "http://pbs.twimg.com/profile_images/1302121919014207490/KaYYEC8b.jpg",
+  "https://pbs.twimg.com/static/dmca/dmca-med.jpg",
 ])
 
 # Task for extracting images from Twitter profiles.

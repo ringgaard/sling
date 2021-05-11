@@ -23,6 +23,7 @@
 DEFINE_int32(port, 8080, "HTTP server port");
 DEFINE_string(kb, "data/e/kb/kb.sling", "Knowledge base");
 DEFINE_string(names, "data/e/kb/en/name-table.repo", "Name table");
+DEFINE_string(xref, "", "Cross-reference table");
 DEFINE_string(mediadb, "", "Media database");
 
 using namespace sling;
@@ -41,6 +42,10 @@ int main(int argc, char *argv[]) {
 
   KnowledgeService kb;
   kb.Load(&commons, FLAGS_names);
+  if (!FLAGS_xref.empty()) {
+    LOG(INFO) << "Loading xref from " << FLAGS_xref;
+    kb.LoadXref(FLAGS_xref);
+  }
   commons.Freeze();
 
   MediaService media("/media", FLAGS_mediadb);

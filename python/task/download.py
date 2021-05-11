@@ -192,13 +192,31 @@ class DownloadWorkflow:
 
 # Datasets.
 datasets = {
+  "wikidata-items": "wiki/wikidata-items@10.rec",
+  "wikidata-redirects": "wiki/wikidata-redirects@10.rec",
+  "wikipedia-members": "wiki/wikipedia-members.rec",
+  "links": "wiki/links@10.rec",
+  "properties": "wiki/properties.rec",
+  "summaries": "wiki/summaries.rec",
+  "fanin": "wiki/fanin.rec",
+  "popularity": "wiki/popularity.rec",
+
   "kb": "kb/kb.sling",
   "items": "kb/items@10.rec",
   "xrefs": "kb/xrefs.sling",
 
+  "aliases": "kb/$LANG$/aliases@10.rec",
   "nametab": "kb/$LANG$/name-table.repo",
   "phrasetab": "kb/$LANG$/phrase-table.repo",
-  "aliases": "kb/$LANG$/aliases@10.rec",
+
+  "mapping": "wiki/$LANG$/mapping.sling",
+  "articles": "wiki/$LANG$/articles@10.rec",
+  "redirects": "wiki/$LANG$/redirects.sling",
+  "categories": "wiki/$LANG$/categories.sling",
+  "documents": "wiki/$LANG$/documents@10.rec",
+  "category-documents": "wiki/$LANG$/category-documents@10.rec",
+  "wikipedia-aliases": "wiki/$LANG$/aliases@10.rec",
+  "wikipedia-summaries": "wiki/$LANG$/summaries.rec",
 
   "caspar": "caspar/caspar.flow",
   "word2vec32": "caspar/word2vec-32-embeddings.bin",
