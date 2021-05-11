@@ -70,6 +70,7 @@ wheel_filename = wheel_dir + "/" + wheel_basename
 files = {
   'bazel-bin/sling/pyapi/pysling.so': '$PURELIB$/sling/pysling.so',
   'python/script': '$SCRIPTS$/sling',
+  'bin/codex': '$SCRIPTS$/codex',
 }
 
 pyfiles = [
