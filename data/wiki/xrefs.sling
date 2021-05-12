@@ -60,13 +60,12 @@
     "lei": "P1278"      ; Legal Entity Identifier
 
     "twitter": "P2002"  ; Twitter username
-    "fb: "P2013"        ; Facebook ID
+    "fb": "P2013"        ; Facebook ID
     "ig": "P2003"       ; Instagram username
 
-    "viaf": "P214"      ; VIAF ID
-    "mid": "P646"       ; Freebase MID
-    "kbmid": "P2671"    ; Google Knowledge Graph ID
-
+    ;"viaf": "P214"      ; VIAF ID
+    ;"mid": "P646"       ; Freebase MID
+    ;"kg": "P2671"       ; Google Knowledge Graph ID
   }
 
   ; Pre-resolved reference mappings for ambiguous references.

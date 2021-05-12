@@ -962,7 +962,16 @@ class KbLightbox extends MdModal {
 
       this.find(".domain").update(domain);
       this.find(".nsfw").update(image.nsfw ? "NSFW" : null);
-      this.find(".photo").style.cursor = "wait";
+
+      let photo = this.find(".photo");
+      photo.style.cursor = "wait";
+      if (url.pathname.endsWith(".svg")) {
+        photo.style.background = "white";
+        photo.style.padding = "10px";
+      } else {
+        photo.style.background =  null;
+        photo.style.padding = null;
+      }
     } else {
       this.find(".photo").src = null;
       this.find(".caption").update(null);
