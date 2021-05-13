@@ -15,10 +15,10 @@
 """Fetch media files and store in media cache database."""
 
 import email.utils
+import datetime
 import hashlib
 import requests
 import sys
-import time
 import traceback
 import urllib
 
@@ -175,6 +175,20 @@ for url in media:
         redir = commons_redirect + url[slash + 1:]
         r = session.get(redir, headers={"User-Agent": user_agent}, timeout=60)
         if r.ok: print("redirect", url, "->", r.url)
+    if r.status_code == 301:
+      redirect = r.headers['Location']
+      if redirect.endswith("/removed.png"):
+        print("removed", url)
+        continue
+
+      # Get redirected image.
+      r = session.get(redirect,
+                      headers={"User-Agent": user_agent},
+                      allow_redirects=False,
+                      timeout=60)
+      if r.status_code != 200:
+        print("missing", url, r.status_code)
+        continue
     if not r.ok:
       num_errors += 1
       print("error", r.status_code, url)
@@ -191,12 +205,13 @@ for url in media:
 
   # Get modification timestamp.
   if "Last-Modified" in r.headers:
-    last_modified = r.headers["Last-Modified"]
+    ts = email.utils.parsedate_to_datetime(r.headers["Last-Modified"])
   elif "Date" in r.headers:
-    last_modified = r.headers["Date"]
+    ts = email.utils.parsedate_to_datetime(r.headers["Date"])
   else:
-    last_modified = email.utils.formatdate(time.time(), usegmt=True)
-  last_modified = last_modified.replace("UTC", "GMT")
+    ts = datetime.datetime.now()
+  ts = ts.replace(tzinfo=datetime.timezone.utc)
+  last_modified = email.utils.format_datetime(ts, usegmt=True)
 
   # Check if image is too big.
   image = r.content

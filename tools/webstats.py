@@ -92,6 +92,7 @@ pages = [
   ("JSON name lookup",     re.compile(r"^\/kb/query\?fmt=cjson&q=(.+)$")),
   ("media file",           re.compile(r"^\/media\/.+")),
   ("common library",       re.compile(r"^\/common\/")),
+  ("CMS search",           re.compile(r"^\/query:.*$")),
   ("CMS user",             re.compile(r"^\/\/?user\/.+")),
   ("CMS system",           re.compile(r"^\/system\/.+")),
   ("CMS admin",            re.compile(r"^\/admin.*")),
@@ -194,6 +195,7 @@ spammers = set([
   "fineblog.top",
   "johnnyhaley.top",
   "joyceblog.top",
+  "meendoru.net",
   "pacificdentalcenter.com",
   "pardot.com",
   "sarahmilne.top",
@@ -229,6 +231,7 @@ worm_hits = defaultdict(int)
 spam_hits = defaultdict(int)
 referrers = defaultdict(int)
 referring_domains = defaultdict(int)
+searches = defaultdict(int)
 
 prev_query = {}
 for logfn in flags.arg.logfiles:
@@ -360,6 +363,11 @@ for logfn in flags.arg.logfiles:
          query_hits[query] = 0
       prev_query[ipaddr] = query
 
+    # Searches.
+    if path.startswith("/query:"):
+      query = urllib.parse.unquote(path[7:])
+      searches[query] += 1
+
     # Known pages.
     known = False
     for page_name, page_pattern in pages:
@@ -435,6 +443,7 @@ print_table("DOWNLOADS", "file", download_hits)
 print_table("MEDIA", "file", media_hits)
 print_table("ITEMS", "item", item_hits)
 print_table("QUERIES", "query", query_hits)
+print_table("SEARCHES", "query", searches)
 print_table("REFFERING DOMAINS", "domain", referring_domains)
 print_table("REFERRERS", "referrer", referrers)
 print_table("HTTP ERRORS", "HTTP status", http_codes)

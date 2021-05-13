@@ -38,9 +38,9 @@
     P2013, ; Facebook ID
     P2003, ; Instagram username
 
-    P214,  ; VIAF ID
-    P646,  ; Freebase MID
-    P2671, ; Google Knowledge Graph ID
+    ;P214,  ; VIAF ID
+    ;P646,  ; Freebase MID
+    ;P2671, ; Google Knowledge Graph ID
   ]
 
   ; Mnemonics for cross-referenced properties.
