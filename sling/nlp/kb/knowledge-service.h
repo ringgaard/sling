@@ -61,6 +61,9 @@ class KnowledgeService {
   // Register knowledge base service.
   void Register(HTTPServer *http);
 
+  // Handle KB item landing page.
+  void HandleLandingPage(HTTPRequest *request, HTTPResponse *response);
+
   // Handle KB name queries.
   void HandleQuery(HTTPRequest *request, HTTPResponse *response);
 
@@ -132,7 +135,7 @@ class KnowledgeService {
 
   // Knowledge base browser app.
   StaticContent common_{"/common", "app"};
-  StaticContent app_{"/kb", "sling/nlp/kb/app"};
+  StaticContent app_{"/kb/app", "sling/nlp/kb/app"};
 
   // Document tokenizer and lexer.
   DocumentTokenizer tokenizer_;

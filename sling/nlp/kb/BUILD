@@ -182,7 +182,6 @@ cc_library(
 embed_data(
   name = "app",
   srcs = [
-    "app/index.html",
     "app/kb.js",
   ],
 )

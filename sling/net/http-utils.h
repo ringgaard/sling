@@ -82,6 +82,10 @@ inline string HTMLEscape(const char *text) {
   return HTMLEscape(text, strlen(text));
 }
 
+inline string HTMLEscape(Text text) {
+  return HTMLEscape(text.data(), text.size());
+}
+
 inline string HTMLEscape(const string &text) {
   return HTMLEscape(text.data(), text.size());
 }

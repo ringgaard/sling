@@ -541,6 +541,25 @@ const char *property_order[] = {
   nullptr,
 };
 
+// HTML header and footer for landing page.
+static const char *html_landing_header =
+R"""(<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name=viewport content="width=device-width, initial-scale=1">
+<link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
+)""";
+
+static const char *html_landing_footer =
+R"""(<script type="module" src="/common/lib/material.js"></script>
+<script type="module" src="/kb/app/kb.js"></script>
+</head>
+<body style="display: none;">
+</body>
+</html>
+)""";
+
 // Convert geo coordinate from decimal to minutes and seconds.
 static string ConvertGeoCoord(double coord, bool latitude) {
   // Compute direction.
@@ -601,6 +620,15 @@ static string CommonsUrl(Text filename) {
   }
 
   return url;
+}
+
+// Add meta tag to output.
+static void AddMeta(HTTPResponse *response, const char *name, Text value) {
+  response->Append("<meta name=\"");
+  response->Append(name);
+  response->Append("\" content=\"");
+  response->Append(HTMLEscape(value));
+  response->Append("\">\n");
 }
 
 void KnowledgeService::Load(Store *kb, const string &name_table) {
@@ -707,12 +735,74 @@ void KnowledgeService::LoadXref(const string &filename) {
 }
 
 void KnowledgeService::Register(HTTPServer *http) {
+  http->Register("/kb", this, &KnowledgeService::HandleLandingPage);
   http->Register("/kb/query", this, &KnowledgeService::HandleQuery);
   http->Register("/kb/item", this, &KnowledgeService::HandleGetItem);
   http->Register("/kb/frame", this, &KnowledgeService::HandleGetFrame);
   common_.Register(http);
   app_.Register(http);
-  app_.set_index_fallback(true);
+}
+
+void KnowledgeService::HandleLandingPage(HTTPRequest *request,
+                                         HTTPResponse *response) {
+  // Get item id.
+  string itemid;
+  if (*request->path() != 0) {
+    if (!DecodeURLComponent(request->path() + 1, &itemid)) {
+      response->SendError(400, "Bad Request", nullptr);
+      return;
+    }
+  }
+
+  // Send header.
+  response->set_content_type("text/html");
+  response->Append(html_landing_header);
+
+  // Add social media tags.
+  if (itemid.empty()) {
+    response->Append("<title>SLING Knowledge base</title>");
+  } else {
+    // Look up item in knowledge base.
+    Handle handle = kb_->LookupExisting(itemid);
+    if (handle.IsNil() and xref_.loaded()) {
+      // Try looking up in cross-reference.
+      Text mapping = xref_.Map(itemid);
+      if (!mapping.empty()) handle = kb_->LookupExisting(mapping);
+    }
+    if (!handle.IsNil()) {
+      // Get name, description, and image.
+      Frame item(kb_, handle);
+      Text name = item.GetText(n_name_);
+      Text description = item.GetText(n_description_);
+      Handle image = item.Resolve(n_image_);
+
+      // Add page title.
+      if (!name.empty()) {
+        response->Append("<title>");
+        response->Append(HTMLEscape(name));
+        response->Append("</title>\n");
+      }
+
+      // Add meta tags for Twitter card.
+      AddMeta(response, "twitter:card", "summary");
+      if (!name.empty()) {
+        AddMeta(response, "twitter:title", name);
+      }
+      if (!description.empty()) {
+        AddMeta(response, "twitter:description", description);
+      }
+      if (kb_->IsString(image)) {
+        // TODO: Add FLAGS_media_prefix to use media server, e.g.
+        // MediaUrl(url) -> returns url for media sever with escaping.
+        Text filename = kb_->GetString(image)->str();
+        string url = CommonsUrl(filename);
+        AddMeta(response, "twitter:image", url);
+      }
+    }
+  }
+
+  // Send remaining header and body.
+  response->Append(html_landing_footer);
 }
 
 void KnowledgeService::HandleQuery(HTTPRequest *request,

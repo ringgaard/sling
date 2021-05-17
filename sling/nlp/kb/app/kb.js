@@ -75,6 +75,180 @@ function filterGallery(gallery) {
 }
 
 //-----------------------------------------------------------------------------
+// HTML template
+//-----------------------------------------------------------------------------
+
+document.body.innerHTML = `
+<kb-app id="app">
+  <one-of id="layout" selected=".desktop">
+
+    <!------------------------------------------------------------------->
+    <!-- Desktop layout                                                -->
+    <!------------------------------------------------------------------->
+
+    <md-column-layout class="desktop">
+      <md-toolbar>
+        <md-toolbar-logo></md-toolbar-logo>
+        <div>Knowledge</div>
+        <kb-search-box id="search"></kb-search-box>
+        <md-icon-button id="websearch" icon="search"></md-icon-button>
+      </md-toolbar>
+
+      <md-content>
+        <md-row-layout>
+          <md-column-layout style="flex: 1 1 66%;">
+
+            <!-- Item card -->
+            <kb-item-card id="item">
+              <md-card-toolbar>
+                <div>
+                  <md-text id="title"></md-text>
+                  <md-link id="ref" notab="1" newtab="1" external="1"></md-link>
+                </div>
+                <md-spacer></md-spacer>
+                <md-icon-button id="code" icon="code"></md-icon-button>
+              </md-card-toolbar>
+              <div><md-text id="description"></md-text></div>
+              <div><md-text id="datatype"></md-text></div>
+            </kb-item-card>
+
+            <!-- Document card -->
+            <kb-document-card id="document">
+              <md-link id="url" notab="1" newtab="1" external="1"></md-link>
+              <div id="text"></div>
+            </kb-document-card>
+
+            <!-- Item properties card -->
+            <kb-property-card id="properties">
+              <kb-property-table id="property-table">
+              </kb-property-table>
+            </kb-property-card>
+
+          </md-column-layout>
+
+          <md-column-layout style="flex: 1 1 33%;">
+
+            <!-- Item picture card -->
+            <kb-picture-card id="picture">
+              <md-image class="photo"></md-image>
+              <md-text class="caption"></md-text>
+            </kb-picture-card>
+
+            <!-- Item references card -->
+            <kb-xref-card id="xrefs">
+              <md-card-toolbar>
+                <div>References</div>
+              </md-card-toolbar>
+              <kb-property-table id="xref-table">
+              </kb-property-table>
+            </kb-xref-card>
+
+            <!-- Item categories card -->
+            <kb-category-card id="categories">
+              <md-card-toolbar>
+                <div>Categories</div>
+              </md-card-toolbar>
+
+              <kb-item-list id="category-list">
+              </kb-item-list>
+            </kb-category-card>
+          </md-column-layout>
+
+        </md-row-layout>
+      </md-content>
+    </md-column-layout>
+
+    <!------------------------------------------------------------------->
+    <!-- Mobile layout                                                 -->
+    <!------------------------------------------------------------------->
+
+    <md-column-layout class="mobile">
+      <md-toolbar>
+        <md-toolbar-logo></md-toolbar-logo>
+        <kb-search-box id="search"></kb-search-box>
+      </md-toolbar>
+
+      <md-content>
+        <md-column-layout>
+
+          <!-- Item card -->
+          <kb-item-card id="item">
+            <md-card-toolbar>
+              <div>
+                <md-text id="title"></md-text>
+                <md-link id="ref" notab="1" newtab="1" external="1"></md-link>
+              </div>
+            </md-card-toolbar>
+            <div><md-text id="description"></md-text></div>
+            <div><md-text id="datatype"></md-text></div>
+          </kb-item-card>
+
+          <!-- Document card -->
+          <kb-document-card id="document">
+            <md-link id="url" notab="1" newtab="1" external="1"></md-link>
+            <div id="text"></div>
+          </kb-document-card>
+
+          <!-- Item picture card -->
+          <kb-picture-card id="picture">
+            <md-image class="photo"></md-image>
+            <md-text class="caption"></md-text>
+          </kb-picture-card>
+
+          <!-- Item properties card -->
+          <kb-property-card id="properties">
+            <kb-property-table id="property-table">
+            </kb-property-table>
+          </kb-property-card>
+
+          <!-- Item references card -->
+          <kb-xref-card id="xrefs">
+            <md-card-toolbar>
+              <div>References</div>
+            </md-card-toolbar>
+            <kb-property-table id="xref-table">
+            </kb-property-table>
+          </kb-xref-card>
+
+          <!-- Item categories card -->
+          <kb-category-card id="categories">
+            <md-card-toolbar>
+              <div>Categories</div>
+            </md-card-toolbar>
+
+            <kb-item-list id="category-list">
+            </kb-item-list>
+          </kb-category-card>
+
+        </md-column-layout>
+      </md-content>
+    </md-column-layout>
+  </one-of>
+</kb-app>
+
+<!-- Lightbox -->
+<kb-lightbox id="lightbox">
+  <div class="content">
+    <div class="image">
+      <img class="photo" referrerpolicy="no-referrer">
+      <md-text class="size"></md-text>
+      <md-icon-button class="close" icon="close"></md-icon-button>
+
+      <div class="source">
+        <md-link class="domain" newtab="1" external="1"></md-link>
+        <kb-copyright class="copyright"></kb-copyright>
+        <md-text class="nsfw"></md-text>
+      </div>
+      <md-text class="counter"></md-text>
+      <a class="prev">&#10094;</a>
+      <a class="next">&#10095;</a>
+    </div>
+    <md-text class="caption"></md-text>
+  </div>
+</kb-lightbox>
+`;
+
+//-----------------------------------------------------------------------------
 // App
 //-----------------------------------------------------------------------------
 
@@ -89,12 +263,12 @@ class KbApp extends Component {
     if (this.find("#websearch")) {
       this.bind("#websearch", "click", e => this.onwebsearch(e));
     }
-
     window.onpopstate = e => this.onpopstate(e);
+
     let path = window.location.pathname;
-    let id = path.substring(path.indexOf('/', 1) + 1);
-    if (id.length > 0) {
-      this.navigate(id);
+    if (path.startsWith("/kb/")) {
+      let id = path.substring(4);
+      if (id.length > 0) this.navigate(id);
     }
   }
 
