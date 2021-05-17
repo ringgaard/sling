@@ -155,6 +155,13 @@ def add_photo(profile, url, caption=None, source=None, nsfw=False):
       print("Skip missing photo:", url, r.status_code)
       return 0
 
+    # Check content length.
+    if url.startswith("https://i.reddituploads.com/"):
+      length = r.headers.get("Content-Length")
+      if length == 0:
+        print("Skip empty photo:", url)
+        return 0
+
     # Check content type.
     ct = r.headers.get("Content-Type")
     if ct != None and not ct.startswith("image/"):
@@ -322,7 +329,10 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
   serial = 1
   for item in items:
     mediaid = item["media_id"]
-    media = mediadata[mediaid]["s"]
+    media = mediadata[mediaid].get("s")
+    if media is None:
+      print("Skipping missing media in gallery", mediaid);
+      return 0
     link = media.get("u")
     if link is None:
       print("Skipping missing image in gallery", mediaid);

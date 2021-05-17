@@ -740,7 +740,7 @@ Component.register(KbCategoryCard);
 
 class KbPictureCard extends MdCard {
   onconnected() {
-    this.bind(".photo", "click", e => this.onopen(e));
+    this.bind(null, "click", e => this.onopen(e));
   }
 
   onupdated() {
@@ -777,6 +777,7 @@ class KbPictureCard extends MdCard {
     return MdCard.stylesheet() + `
       $ {
         text-align: center;
+        cursor: pointer;
       }
 
       $ .caption {
@@ -910,7 +911,6 @@ class KbLightbox extends MdModal {
 
   onclick(e) {
     let url = imageurl(this.images[this.current]);
-    if (e.ctrlKey) url = this.images[this.current].url;
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
@@ -947,21 +947,24 @@ class KbLightbox extends MdModal {
       let counter = `${this.current + 1} / ${this.images.length}`;
       this.find(".counter").update(counter);
 
-      let url = new URL(image.url)
+      let url = new URL(image.url);
       let domain = url.hostname;
       if (domain.startsWith("www.")) domain = domain.slice(4);
       if (domain.startsWith("i.")) domain = domain.slice(2);
       if (domain in photo_sources) domain = photo_sources[domain];
 
+      let copyrighted = true;
       if (domain == "wikimedia.org") {
         let m = url.pathname.match(/\/wikipedia\/(\w+)\/.+/);
         if (m[1] && m[1] != "commons") {
           domain += " (" + m[1] + ")";
         }
+        copyrighted = false;
       }
 
-      this.find(".domain").update(domain);
+      this.find(".domain").update({url: image.url, text: domain});
       this.find(".nsfw").update(image.nsfw ? "NSFW" : null);
+      this.find(".copyright").update(copyrighted);
 
       let photo = this.find(".photo");
       photo.style.cursor = "wait";
@@ -976,6 +979,7 @@ class KbLightbox extends MdModal {
       this.find(".photo").src = null;
       this.find(".caption").update(null);
       this.find(".source").update(null);
+      this.find(".copyright").update(false);
     }
   }
 
@@ -1057,6 +1061,13 @@ class KbLightbox extends MdModal {
         padding: 8px 12px;
       }
 
+      $ a {
+        color: white;
+        text-decoration: none;
+        cursor: pointer;
+        outline: none
+      }
+
       $ .nsfw {
         border-radius: 3px;
         border: 1px solid;
@@ -1129,4 +1140,34 @@ class KbLightbox extends MdModal {
 }
 
 Component.register(KbLightbox);
+
+//-----------------------------------------------------------------------------
+// Copyright notice
+//-----------------------------------------------------------------------------
+
+class KbCopyright extends Component {
+  visible() {
+    return this.state;
+  }
+
+  render() {
+    return `<md-icon
+              icon="copyright"
+              title="Image may be subject to copyright">
+            </md-icon>`;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: inline-block;
+        vertical-align: middle;
+        font-size: 14px;
+        cursor: default;
+      }
+    `;
+  }
+}
+
+Component.register(KbCopyright);
 
