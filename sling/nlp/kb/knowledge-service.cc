@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "sling/base/flags.h"
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
 #include "sling/frame/object.h"
@@ -31,6 +32,8 @@
 #include "sling/string/strcat.h"
 #include "sling/util/md5.h"
 #include "sling/util/sortmap.h"
+
+DEFINE_string(thumbnails, "", "Thumbnail web service");
 
 namespace sling {
 namespace nlp {
@@ -610,7 +613,7 @@ static string CommonsUrl(Text filename) {
   url.push_back(d1);
   url.push_back(d2);
   url.push_back('/');
-  for (char &c : fn) {
+  for (char c : fn) {
     switch (c) {
       case '?': url.append("%3F"); break;
       case '+': url.append("%2B"); break;
@@ -622,9 +625,27 @@ static string CommonsUrl(Text filename) {
   return url;
 }
 
+// Return thumbnail url for media.
+static string Thumbnail(Text url) {
+  if (FLAGS_thumbnails.empty()) return url.str();
+  string thumb = FLAGS_thumbnails;
+  for (char c : url) {
+    switch (c) {
+      case '?': thumb.append("%3F"); break;
+      case '+': thumb.append("%2B"); break;
+      case '&': thumb.append("%26"); break;
+      default: thumb.push_back(c);
+    }
+  }
+  return thumb;
+}
+
 // Add meta tag to output.
-static void AddMeta(HTTPResponse *response, const char *name, Text value) {
-  response->Append("<meta name=\"");
+static void AddMeta(HTTPResponse *response,
+                    const char *name,
+                    Text value,
+                    bool property) {
+  response->Append(property ? "<meta property=\"" : "<meta name=\"");
   response->Append(name);
   response->Append("\" content=\"");
   response->Append(HTMLEscape(value));
@@ -783,20 +804,22 @@ void KnowledgeService::HandleLandingPage(HTTPRequest *request,
         response->Append("</title>\n");
       }
 
-      // Add meta tags for Twitter card.
-      AddMeta(response, "twitter:card", "summary");
+      // Add meta tags for Twitter card and Facebook Open Graph.
+      AddMeta(response, "twitter:card", "summary", false);
+      AddMeta(response, "og:type", "profile", true);
       if (!name.empty()) {
-        AddMeta(response, "twitter:title", name);
+        AddMeta(response, "twitter:title", name, false);
+        AddMeta(response, "og:title", name, true);
       }
       if (!description.empty()) {
-        AddMeta(response, "twitter:description", description);
+        AddMeta(response, "twitter:description", description, false);
+        AddMeta(response, "og:description", description, true);
       }
       if (kb_->IsString(image)) {
-        // TODO: Add FLAGS_media_prefix to use media server, e.g.
-        // MediaUrl(url) -> returns url for media sever with escaping.
         Text filename = kb_->GetString(image)->str();
         string url = CommonsUrl(filename);
-        AddMeta(response, "twitter:image", url);
+        AddMeta(response, "twitter:image", Thumbnail(url), false);
+        AddMeta(response, "og:image", Thumbnail(url), true);
       }
     }
   }

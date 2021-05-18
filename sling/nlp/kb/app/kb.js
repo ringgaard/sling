@@ -17,10 +17,6 @@ const photo_sources = {
   "live.staticflickr.com": "flickr.com",
   "ilarge.lisimg.com": "listal.com",
   "gstatic.com": "google.com",
-  "encrypted-tbn0.gstatic.com": "google.com",
-  "encrypted-tbn1.gstatic.com": "google.com",
-  "encrypted-tbn2.gstatic.com": "google.com",
-  "encrypted-tbn3.gstatic.com": "google.com",
 }
 
 function mod(m, n) {
@@ -1124,8 +1120,17 @@ class KbLightbox extends MdModal {
       let url = new URL(image.url);
       let domain = url.hostname;
       if (domain.startsWith("www.")) domain = domain.slice(4);
+      if (domain.startsWith("m.")) domain = domain.slice(2);
       if (domain.startsWith("i.")) domain = domain.slice(2);
-      if (domain in photo_sources) domain = photo_sources[domain];
+      if (domain in photo_sources) {
+        domain = photo_sources[domain];
+      } else {
+        let dot = domain.indexOf('.');
+        if (dot != -1) {
+          let top = domain.slice(dot + 1);
+          if (top in photo_sources) domain = photo_sources[top];
+        }
+      }
 
       let copyrighted = true;
       if (domain == "wikimedia.org") {

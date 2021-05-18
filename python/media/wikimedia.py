@@ -50,6 +50,7 @@ default_images = set([
   "Défaut-Personnalité(s).png",
   "Défaut-youtuber(s).png",
   "Defaut-Youtuber.png",
+  "Image manquante.jpg",
   "Remplacez l'image de cette personne.jpg",
   "Replace this image male.svg",
   "Replace this image female.svg",
