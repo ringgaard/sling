@@ -642,14 +642,26 @@ static string Thumbnail(Text url) {
 
 // Add meta tag to output.
 static void AddMeta(HTTPResponse *response,
+                    const char *property,
                     const char *name,
-                    Text value,
-                    bool property) {
-  response->Append(property ? "<meta property=\"" : "<meta name=\"");
-  response->Append(name);
-  response->Append("\" content=\"");
+                    Text value) {
+  response->Append("<meta");
+
+  if (property) {
+    response->Append(" property=\"");
+    response->Append(property);
+    response->Append("\"");
+  }
+
+  if (name) {
+    response->Append(" name=\"");
+    response->Append(name);
+    response->Append("\"");
+  }
+
+  response->Append(" content=\"");
   response->Append(HTMLEscape(value));
-  response->Append("\">\n");
+  response->Append("\" />\n");
 }
 
 void KnowledgeService::Load(Store *kb, const string &name_table) {
@@ -805,21 +817,18 @@ void KnowledgeService::HandleLandingPage(HTTPRequest *request,
       }
 
       // Add meta tags for Twitter card and Facebook Open Graph.
-      AddMeta(response, "twitter:card", "summary", false);
-      AddMeta(response, "og:type", "profile", true);
+      AddMeta(response, nullptr, "twitter:card", "summary");
+      AddMeta(response, "og:type", nullptr, "article");
       if (!name.empty()) {
-        AddMeta(response, "twitter:title", name, false);
-        AddMeta(response, "og:title", name, true);
+        AddMeta(response, "og:title", "twitter:title", name);
       }
       if (!description.empty()) {
-        AddMeta(response, "twitter:description", description, false);
-        AddMeta(response, "og:description", description, true);
+        AddMeta(response, "og:description", "twitter:description", description);
       }
       if (kb_->IsString(image)) {
         Text filename = kb_->GetString(image)->str();
-        string url = CommonsUrl(filename);
-        AddMeta(response, "twitter:image", Thumbnail(url), false);
-        AddMeta(response, "og:image", Thumbnail(url), true);
+        string url = Thumbnail(CommonsUrl(filename));
+        AddMeta(response, "og:image", "twitter:image", url);
       }
     }
   }
