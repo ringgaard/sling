@@ -179,6 +179,14 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "properties",
+  srcs = ["properties.cc"],
+  hdrs = ["properties.h"],
+  deps = [
+  ],
+)
+
 embed_data(
   name = "app",
   srcs = [
@@ -194,6 +202,7 @@ cc_library(
     ":app",
     ":calendar",
     ":name-table",
+    ":properties",
     ":xref",
     "//app",
     "//sling/frame:object",

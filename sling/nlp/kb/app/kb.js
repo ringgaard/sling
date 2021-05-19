@@ -598,7 +598,7 @@ class KbPropertyTable extends Component {
         color: #0b0080;
         text-decoration: none;
         cursor: pointer;
-        outline: none
+        outline: none;
       }
 
       $ .qual-tab {
@@ -633,7 +633,7 @@ class KbPropertyTable extends Component {
         color: #0b0080;
         text-decoration: none;
         cursor: pointer;
-        outline: none
+        outline: none;
       }
 
       .mobile $ {
@@ -852,7 +852,7 @@ class KbDocumentCard extends MdCard {
         color: #0b0080;
         text-decoration: none;
         cursor: pointer;
-        outline: none
+        outline: none;
       }
       $ #text a[ref]:hover{
         text-decoration: underline;
@@ -1069,6 +1069,7 @@ class KbLightbox extends MdModal {
     } else if (e.keyCode == 27) {
       this.close();
     }
+    this.focus();
   }
 
   onload(e) {
@@ -1244,7 +1245,8 @@ class KbLightbox extends MdModal {
         color: white;
         text-decoration: none;
         cursor: pointer;
-        outline: none
+        outline: none;
+        user-select: none;
       }
 
       $ .nsfw {

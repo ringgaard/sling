@@ -115,10 +115,8 @@ Component.register(MdSpacer);
 //-----------------------------------------------------------------------------
 
 export class MdModal extends Component {
-
   open(state) {
     this.update(state);
-    this.tabIndex = -1;
     this.style.display = "block";
     this.focus();
     if (this.onopen) this.onopen();

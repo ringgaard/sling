@@ -91,6 +91,7 @@ pages = [
   ("JSON item fetch",      re.compile(r"^\/kb/item\?fmt=cjson&id=(.+)$")),
   ("JSON name lookup",     re.compile(r"^\/kb/query\?fmt=cjson&q=(.+)$")),
   ("media file",           re.compile(r"^\/media\/.+")),
+  ("thumbnail",            re.compile(r"^\/thumb\/.+")),
   ("common library",       re.compile(r"^\/common\/")),
   ("CMS search",           re.compile(r"^\/query:.*$")),
   ("CMS user",             re.compile(r"^\/\/?user\/.+")),
@@ -342,6 +343,8 @@ for logfn in flags.arg.logfiles:
 
     # Media.
     if path.startswith("/media/"):
+      media_hits[path[7:]] += 1
+    elif path.startswith("/thumb/"):
       media_hits[path[7:]] += 1
 
     # Items.
