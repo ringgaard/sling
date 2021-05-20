@@ -271,6 +271,17 @@ void KnowledgeService::Register(HTTPServer *http) {
   app_.Register(http);
 }
 
+Handle KnowledgeService::GetItem(Text id) {
+  // Look up item in knowledge base.
+  Handle handle = kb_->LookupExisting(id);
+  if (handle.IsNil() and xref_.loaded()) {
+    // Try looking up in cross-reference.
+    Text mapping = xref_.Map(id);
+    if (!mapping.empty()) handle = kb_->LookupExisting(mapping);
+  }
+  return handle;
+}
+
 void KnowledgeService::HandleLandingPage(HTTPRequest *request,
                                          HTTPResponse *response) {
   // Get item id.
@@ -291,12 +302,9 @@ void KnowledgeService::HandleLandingPage(HTTPRequest *request,
     response->Append("<title>SLING Knowledge base</title>");
   } else {
     // Look up item in knowledge base.
-    Handle handle = kb_->LookupExisting(itemid);
-    if (handle.IsNil() and xref_.loaded()) {
-      // Try looking up in cross-reference.
-      Text mapping = xref_.Map(itemid);
-      if (!mapping.empty()) handle = kb_->LookupExisting(mapping);
-    }
+    Handle handle = GetItem(itemid);
+
+    // Add social media meta tags.
     if (!handle.IsNil()) {
       // Get name, description, and image.
       Frame item(kb_, handle);
@@ -390,12 +398,7 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   // Look up item in knowledge base.
   Text itemid = ws.Get("id");
   VLOG(1) << "Look up item '" << itemid << "'";
-  Handle handle = kb_->LookupExisting(itemid);
-  if (handle.IsNil() and xref_.loaded()) {
-    // Try looking up in cross-reference.
-    itemid = xref_.Map(itemid);
-    if (!itemid.empty()) handle = kb_->LookupExisting(itemid);
-  }
+  Handle handle = GetItem(itemid);
   if (handle.IsNil()) {
     response->SendError(404, nullptr, "Item not found");
     return;

@@ -74,6 +74,9 @@ class KnowledgeService {
   void HandleGetFrame(HTTPRequest *request, HTTPResponse *response);
 
  private:
+  // Get item from id. This also resolves cross-reference.
+  Handle GetItem(Text id);
+
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);
 

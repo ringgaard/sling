@@ -62,6 +62,7 @@ function filterGallery(gallery) {
   let filtered = [];
   let urls = new Set();
   for (let image of gallery) {
+    if (!image.url) continue;
     if (!allow_nsfw && image.nsfw) continue;
     if (urls.has(image.url)) continue;
     filtered.push(image);
@@ -1204,7 +1205,6 @@ class KbLightbox extends MdModal {
         width: auto;
         height: auto;
         margin: auto;
-        user-select: none;
         cursor: pointer;
       }
 
@@ -1246,7 +1246,6 @@ class KbLightbox extends MdModal {
         text-decoration: none;
         cursor: pointer;
         outline: none;
-        user-select: none;
       }
 
       $ .nsfw {
@@ -1283,7 +1282,6 @@ class KbLightbox extends MdModal {
         font-weight: bold;
         font-size: 20px;
         transition: 0.6s ease;
-        user-select: none;
         background-color: rgba(0, 0, 0, 0.2);
       }
 

@@ -24,7 +24,7 @@ import sling.flags as flags
 
 flags.define("--id",
              default=None,
-             help="Item id photo updates")
+             help="item id photo updates")
 
 flags.define("--photodb",
              help="database for photo profiles",
@@ -71,6 +71,10 @@ flags.define("--remove",
              help="remove photos",
              default=False,
              action="store_true")
+
+flags.define("--other",
+             default=None,
+             help="add photos from other profile")
 
 flags.define("--truncate",
              help="truncate after first deleted photo",
@@ -492,7 +496,8 @@ if flags.arg.batch:
 else:
   # Read existing photo profile for item.
   profile = read_profile(flags.arg.id)
-  updated = False
+  num_added = 0
+  num_removed = 0
   if profile is None:
     profile = store.frame({})
   else:
@@ -500,8 +505,20 @@ else:
 
   # Delete all existing maedia on overwrite mode.
   if flags.arg.overwrite:
+    num_removed += profile.count(n_media)
     del profile[n_media]
-    updated = True
+
+  if flags.arg.other:
+    # Add photos from other profile.
+    other = read_profile(flags.arg.other)
+    for media in other(n_media):
+      if type(media) is sling.Frame:
+        url = media[n_is]
+        caption = media[n_legend]
+        nsfw = media[n_has_quality] == n_nsfw
+        num_added += add_media(profile, url, caption, nsfw)
+      else:
+        num_added += add_media(profile, media, None, False)
 
   if flags.arg.remove:
     # Remove media matching urls.
@@ -512,7 +529,7 @@ else:
       if truncating or link in flags.arg.url:
         print("Remove", link)
         if flags.arg.truncate: truncating = True
-        updated = True
+        num_removed += 1
       else:
         keep.append((n_media, media))
     del profile[n_media]
@@ -520,15 +537,17 @@ else:
   else:
     # Fetch photo urls.
     for url in flags.arg.url:
-      if add_media(profile, url, flags.arg.caption, flags.arg.nsfw):
-        updated = True
+      num_added += add_media(profile, url, flags.arg.caption, flags.arg.nsfw)
 
   # Write profile.
   if flags.arg.dryrun:
     print(profile.count(n_media), "photos;", flags.arg.id, "not updated")
     print(profile.data(pretty=True))
-  elif updated:
-    print("Write", flags.arg.id, profile.count(n_media), "photos")
+  elif num_added > 0 or num_removed > 0:
+    print("Write", flags.arg.id,
+          profile.count(n_media), "photos,",
+          num_added, "added,",
+          num_removed, "removed")
     store.coalesce()
     write_profile(flags.arg.id, profile)
 

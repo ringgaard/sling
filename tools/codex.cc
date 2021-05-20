@@ -49,10 +49,12 @@ DEFINE_int32(poll, 1000, "Poll interval (in ms) for incremental fetching");
 DEFINE_string(field, "", "Only display a single field from frame");
 DEFINE_bool(timestamp, false, "Output version as timestamp");
 DEFINE_bool(position, false, "Output file position");
+DEFINE_string(output, "", "Output to record file");
 
 using namespace sling;
 using namespace sling::nlp;
 
+RecordWriter *output = nullptr;
 int records_output = 0;
 
 void DisplayObject(const Object &object) {
@@ -93,34 +95,39 @@ void DisplayRaw(const Slice &value) {
 }
 
 void DisplayRecord(const Slice &key, uint64 version, const Slice &value) {
-  // Display key.
-  if (!FLAGS_values) {
-    DisplayRaw(key);
-  }
-
-  // Display version.
-  if (FLAGS_version && version != 0) {
-    if (FLAGS_timestamp) {
-      char datebuf[32];
-      time_t time = version;
-      strftime(datebuf, sizeof(datebuf), "%FT%TZ", gmtime(&time));
-      std::cout << " [" << datebuf << "]";
-    } else {
-      std::cout << " [" << version << "]";
+  // Output to record file.
+  if (output != nullptr) {
+    CHECK(output->Write(key, version, value));
+  } else {
+    // Display key.
+    if (!FLAGS_values) {
+      DisplayRaw(key);
     }
-  }
 
-  // Display value.
-  if (!FLAGS_keys) {
-    if (!FLAGS_values && !key.empty()) std::cout << ": ";
-    if (FLAGS_raw) {
-      DisplayRaw(value);
-    } else {
-      DisplayObject(value);
+    // Display version.
+    if (FLAGS_version && version != 0) {
+      if (FLAGS_timestamp) {
+        char datebuf[32];
+        time_t time = version;
+        strftime(datebuf, sizeof(datebuf), "%FT%TZ", gmtime(&time));
+        std::cout << " [" << datebuf << "]";
+      } else {
+        std::cout << " [" << version << "]";
+      }
     }
-  }
 
-  std::cout << "\n";
+    // Display value.
+    if (!FLAGS_keys) {
+      if (!FLAGS_values && !key.empty()) std::cout << ": ";
+      if (FLAGS_raw) {
+        DisplayRaw(value);
+      } else {
+        DisplayObject(value);
+      }
+    }
+
+    std::cout << "\n";
+  }
   records_output++;
 }
 
@@ -220,6 +227,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  if (!FLAGS_output.empty()) {
+    output = new RecordWriter(FLAGS_output);
+  }
+
   std::vector<string> files;
   for (int i = 1; i < argc; ++i) {
     if (FLAGS_db) {
@@ -242,6 +253,13 @@ int main(int argc, char *argv[]) {
     uint64 fp = Fingerprint(FLAGS_key.data(), FLAGS_key.size());
     int shard = fp % files.size();
     DisplayFile(files[shard]);
+  }
+
+  if (output != nullptr) {
+    output->Close();
+    delete output;
+    std::cout << records_output << " records written to "
+              << FLAGS_output << "\n";
   }
 
   return 0;

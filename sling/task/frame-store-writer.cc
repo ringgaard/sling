@@ -75,6 +75,26 @@ class FrameStoreWriter : public Processor {
       CHECK(Snapshot::Write(store_, file->resource()->name()));
     }
 
+    // Output statistics.
+    MemoryUsage usage;
+    store_->GetMemoryUsage(&usage);
+
+    task->GetCounter("heap_used")->Increment(usage.used_heap_bytes());
+    task->GetCounter("heap_unused")->Increment(usage.unused_heap_bytes);
+    task->GetCounter("heap_total")->Increment(usage.total_heap_size);
+    task->GetCounter("heaps")->Increment(usage.num_heaps);
+
+    task->GetCounter("handles_used")->Increment(usage.used_handles());
+    task->GetCounter("handles_free")->Increment(usage.num_free_handles);
+    task->GetCounter("handles_dead")->Increment(usage.num_dead_handles);
+    task->GetCounter("handles_total")->Increment(usage.num_handles);
+
+    task->GetCounter("bound_symbols")->Increment(usage.num_bound_symbols);
+    task->GetCounter("proxy_symbols")->Increment(usage.num_proxy_symbols);
+    task->GetCounter("unbound_symbols")->Increment(usage.num_unbound_symbols);
+    task->GetCounter("total_symbols")->Increment(usage.num_symbols());
+    task->GetCounter("symbol_buckets")->Increment(usage.num_symbol_buckets);
+
     // Delete store.
     delete store_;
     store_ = nullptr;
