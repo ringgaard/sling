@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
   MediaService media("/media", FLAGS_mediadb);
   media.set_redirect(true);
   media.Register(&http);
+  http.Register("/thumb", &media, &MediaService::Handle);
 
   kb.Register(&http);
   http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {

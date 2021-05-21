@@ -728,7 +728,7 @@ export class MdSearchList extends Component {
   render() {
     if (!this.state || !this.state.items || this.state.items.length == 0) {
       this.expand(false);
-      return null;
+      return "";
     } else {
       this.expand(true);
       return this.state.items;

@@ -48,13 +48,13 @@ function wikiurl(id) {
   }
 }
 
-function imageurl(image) {
+function imageurl(url, thumb) {
   if (mediadb) {
-    let escaped = encodeURIComponent(image.url);
+    let escaped = encodeURIComponent(url);
     escaped = escaped.replace(/%3A/g, ":").replace(/%2F/g, "/");
-    return "/media/" + escaped;
+    return (thumb ? "/thumb/" : "/media/") + escaped;
   } else {
-    return image.url;
+    return url;
   }
 }
 
@@ -767,7 +767,7 @@ class KbPictureCard extends MdCard {
         caption += ` [1/${images.length}]`;
       }
 
-      this.find(".photo").update(imageurl(image));
+      this.find(".photo").update(imageurl(image.url, true));
       this.find(".caption").update(caption);
     } else {
       this.find(".photo").update(null);
@@ -882,8 +882,7 @@ Component.register(KbXrefCard);
 
 class KbLightbox extends MdModal {
   onconnected() {
-    this.bind(".photo", "load", e => this.onload(e));
-    this.bind(".photo", "click", e => this.onclick(e));
+    this.bind(".image", "click", e => this.onclick(e));
     this.bind(".prev", "click", e => this.onprev(e));
     this.bind(".next", "click", e => this.onnext(e));
     this.bind(".close", "click", e => this.close());
@@ -891,11 +890,21 @@ class KbLightbox extends MdModal {
   }
 
   onupdate() {
-    this.images = this.state;
     this.current = 0;
-    this.cache = Array(this.images.length).fill(null);
-    this.display(this.images[this.current]);
-    this.preload(this.current, 1);
+    this.photos = [];
+    for (let image of this.state) {
+      this.photos.push({
+        url: image.url,
+        caption: image.text,
+        nsfw: image.nsfw,
+        image: null
+      });
+    }
+
+    if (this.photos.length > 0) {
+      this.preload(this.current, 1);
+      this.display(this.current);
+    }
   }
 
   onkeypress(e) {
@@ -910,15 +919,21 @@ class KbLightbox extends MdModal {
   }
 
   onload(e) {
-    let photo = this.find(".photo");
-    photo.style.cursor = null;
-    let width = photo.naturalWidth;
-    let height = photo.naturalHeight;
-    this.find(".size").update(width && height ? `${width} x ${height}`: null);
+    let image = e.target;
+    image.style.cursor = null;
+    let n = image.serial;
+    let photo = this.photos[n];
+    photo.width = image.naturalWidth;
+    photo.height = image.naturalHeight;
+    if (n == this.current) {
+      let w = photo.width;
+      let h = photo.height;
+      this.find(".size").update(w && h ? `${w} x ${h}`: null);
+    }
   }
 
   onclick(e) {
-    let url = imageurl(this.images[this.current]);
+    let url = imageurl(this.photos[this.current].url, false);
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
@@ -938,75 +953,75 @@ class KbLightbox extends MdModal {
   }
 
   move(n) {
-    let size = this.images.length;
+    let size = this.photos.length;
     this.current = mod(this.current + n, size);
-    this.display(this.images[this.current]);
-    this.preload(this.current, n);
+    if (size > 0) {
+      this.preload(this.current, n);
+      this.display(this.current);
+    }
   }
 
-  display(image) {
-    if (image) {
-      let caption = image.text;
-      if (caption) {
-        caption = caption.replace(/\[\[|\]\]/g, "");
-      }
-      this.find(".photo").src = imageurl(image);
-      this.find(".caption").update(caption);
-      let counter = `${this.current + 1} / ${this.images.length}`;
-      this.find(".counter").update(counter);
+  display(n) {
+    let photo = this.photos[n];
+    let caption = photo.caption;
+    if (caption) {
+      caption = caption.replace(/\[\[|\]\]/g, "");
+    }
+    this.find(".image").replaceWith(photo.image);
+    this.find(".caption").update(caption);
+    let counter = `${this.current + 1} / ${this.photos.length}`;
+    this.find(".counter").update(counter);
 
-      let url = new URL(image.url);
-      let domain = url.hostname;
-      if (domain.startsWith("www.")) domain = domain.slice(4);
-      if (domain.startsWith("m.")) domain = domain.slice(2);
-      if (domain.startsWith("i.")) domain = domain.slice(2);
-      if (domain in photo_sources) {
-        domain = photo_sources[domain];
-      } else {
-        let dot = domain.indexOf('.');
-        if (dot != -1) {
-          let top = domain.slice(dot + 1);
-          if (top in photo_sources) domain = photo_sources[top];
-        }
-      }
-
-      let copyrighted = true;
-      if (domain == "wikimedia.org") {
-        let m = url.pathname.match(/\/wikipedia\/(\w+)\/.+/);
-        if (m[1] && m[1] != "commons") {
-          domain += " (" + m[1] + ")";
-        }
-        copyrighted = false;
-      }
-
-      this.find(".domain").update({url: image.url, text: domain});
-      this.find(".nsfw").update(image.nsfw ? "NSFW" : null);
-      this.find(".copyright").update(copyrighted);
-
-      let photo = this.find(".photo");
-      photo.style.cursor = "wait";
-      if (url.pathname.endsWith(".svg")) {
-        photo.style.background = "white";
-        photo.style.padding = "10px";
-      } else {
-        photo.style.background =  null;
-        photo.style.padding = null;
-      }
+    let url = new URL(photo.url);
+    let domain = url.hostname;
+    if (domain.startsWith("www.")) domain = domain.slice(4);
+    if (domain.startsWith("m.")) domain = domain.slice(2);
+    if (domain.startsWith("i.")) domain = domain.slice(2);
+    if (domain in photo_sources) {
+      domain = photo_sources[domain];
     } else {
-      this.find(".photo").src = null;
-      this.find(".caption").update(null);
-      this.find(".source").update(null);
-      this.find(".copyright").update(false);
+      let dot = domain.indexOf('.');
+      if (dot != -1) {
+        let top = domain.slice(dot + 1);
+        if (top in photo_sources) domain = photo_sources[top];
+      }
+    }
+
+    let copyrighted = true;
+    if (domain == "wikimedia.org") {
+      let m = url.pathname.match(/\/wikipedia\/(\w+)\/.+/);
+      if (m[1] && m[1] != "commons") {
+        domain += " (" + m[1] + ")";
+      }
+      copyrighted = false;
+    }
+
+    this.find(".domain").update({url: photo.url, text: domain});
+    this.find(".nsfw").update(photo.nsfw ? "NSFW" : null);
+    this.find(".copyright").update(copyrighted);
+    if (photo.width && photo.height) {
+      let w = photo.width;
+      let h = photo.height;
+      this.find(".size").update(w && h ? `${w} x ${h}`: null);
     }
   }
 
   preload(position, direction) {
-    for (var i = 1; i < 5; ++i) {
-      let n = mod(position + i * direction, this.images.length);
-      if (this.cache[n] == null) {
+    for (var i = 0; i < 5; ++i) {
+      let n = mod(position + i * direction, this.photos.length);
+      if (this.photos[n].image == null) {
         var image = new Image();
-        image.src = imageurl(this.images[n]);
-        this.cache[n] = image;
+        image.src = imageurl(this.photos[n].url, false);
+        image.classList.add("image");
+        image.referrerPolicy = "no-referrer";
+        image.addEventListener("load", e => this.onload(e));
+        image.serial = n;
+        image.style.cursor = "wait";
+        if (this.photos[n].url.endsWith(".svg")) {
+          image.style.background = "white";
+          image.style.padding = "10px";
+        }
+        this.photos[n].image = image;
       }
     }
   }
@@ -1015,8 +1030,8 @@ class KbLightbox extends MdModal {
     if (this.state) return null;
     return `
       <div class="content">
-        <div class="image">
-          <img class="photo" referrerpolicy="no-referrer">
+        <div class="photo">
+          <img class="image" referrerpolicy="no-referrer">
           <md-text class="size"></md-text>
           <md-icon-button class="close" icon="close"></md-icon-button>
 
@@ -1048,11 +1063,11 @@ class KbLightbox extends MdModal {
         height: 100%;
       }
 
-      $ .image {
+      $ .photo {
         margin: auto;
       }
 
-      $ .photo {
+      $ .image {
         display: block;
         position: absolute;
         top: 0;
