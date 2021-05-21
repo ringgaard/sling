@@ -93,7 +93,7 @@ export class Component extends HTMLElement {
       } else if (content instanceof Node) {
         while (this.firstChild) this.removeChild(this.lastChild);
         this.appendChild(content);
-      } else {
+      } else if (content != null) {
         this.innerHTML = content;
       }
     }

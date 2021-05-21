@@ -197,6 +197,7 @@ spammers = set([
   "johnnyhaley.top",
   "joyceblog.top",
   "meendoru.net",
+  "myra.top",
   "pacificdentalcenter.com",
   "pardot.com",
   "sarahmilne.top",

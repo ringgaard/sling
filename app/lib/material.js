@@ -116,22 +116,22 @@ Component.register(MdSpacer);
 
 export class MdModal extends Component {
   open(state) {
-    this.update(state);
+    document.body.appendChild(this);
     this.tabIndex = -1;
-    this.style.display = "block";
     this.focus();
     if (this.onopen) this.onopen();
+    this.update(state);
   }
 
   close() {
-    this.style.display = "none";
     if (this.onclose) this.onclose();
+    document.body.removeChild(this);
   }
 
   static stylesheet() {
     return `
       $ {
-        display: none;
+        display: block;
         position: fixed;
         z-index: 100;
         left: 0;
