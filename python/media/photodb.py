@@ -546,8 +546,8 @@ else:
   elif num_added > 0 or num_removed > 0:
     print("Write", flags.arg.id,
           profile.count(n_media), "photos,",
-          num_added, "added,",
-          num_removed, "removed")
+          num_removed, "removed,",
+          num_added, "added")
     store.coalesce()
     write_profile(flags.arg.id, profile)
 

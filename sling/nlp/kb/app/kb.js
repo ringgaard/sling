@@ -17,6 +17,7 @@ const photo_sources = {
   "live.staticflickr.com": "flickr.com",
   "ilarge.lisimg.com": "listal.com",
   "gstatic.com": "google.com",
+  "m.media-amazon.com": "imdb.com",
 }
 
 function mod(m, n) {
@@ -882,7 +883,7 @@ Component.register(KbXrefCard);
 
 class KbLightbox extends MdModal {
   onconnected() {
-    this.bind(".image", "click", e => this.onclick(e));
+    this.bind(".photo", "click", e => this.onclick(e));
     this.bind(".prev", "click", e => this.onprev(e));
     this.bind(".next", "click", e => this.onnext(e));
     this.bind(".close", "click", e => this.close());
