@@ -66,7 +66,7 @@ function filterGallery(gallery) {
     if (!image.url) continue;
     if (!allow_nsfw && image.nsfw) continue;
     if (urls.has(image.url)) continue;
-    if (url.endsWith(".tif") || url.endsWith(".tiff")) continue;
+    if (image.url.endsWith(".tif") || image.url.endsWith(".tiff")) continue;
     filtered.push(image);
     urls.add(image.url);
   }
