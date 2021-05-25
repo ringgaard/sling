@@ -68,12 +68,22 @@ the download with the following flags:
     12 "sanctioned" languages are downloaded (en,da,sv,no,de,fr,es,it,nl,pt,pl,fi).
 
 This will put the Wikipedia dump into `data/c/wikipedia` and
-the Wikidata dump into `data/c/wikipedia`. After the dumps have been
-downloaded, the remaining processing pipeline can be executed in one go:
+the Wikidata dump into `data/c/wikipedia`.
+
+If you have installed SLING using `pip` without cloning the SLING repository on
+GitHub, you need to download some additional files from the SLING repository:
+```
+mkdir sling
+cd sling
+sling fetch --dataset schemas,wikidefs,templates
+```
+
+After the dumps have been downloaded, the remaining processing pipeline can be
+executed in one go:
 ```
 sling --build_wiki
 ```
-This is equivalent to running each of the step separately:
+This is equivalent to running each of the steps separately:
 ```
 sling import_wikidata
       import_wikipedia

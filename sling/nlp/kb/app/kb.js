@@ -66,6 +66,7 @@ function filterGallery(gallery) {
     if (!image.url) continue;
     if (!allow_nsfw && image.nsfw) continue;
     if (urls.has(image.url)) continue;
+    if (url.endsWith(".tif") || url.endsWith(".tiff")) continue;
     filtered.push(image);
     urls.add(image.url);
   }
@@ -887,6 +888,7 @@ class KbLightbox extends MdModal {
     this.bind(".prev", "click", e => this.onprev(e));
     this.bind(".next", "click", e => this.onnext(e));
     this.bind(".close", "click", e => this.close());
+    this.bind(".domain", "click", e => this.onsource(e));
     this.bind(null, "keydown", e => this.onkeypress(e));
   }
 
@@ -938,24 +940,37 @@ class KbLightbox extends MdModal {
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
+  onsource(e) {
+    let url = this.photos[this.current].url;
+    window.open(url, "_blank", "noopener,noreferrer");
+    e.stopPropagation();
+  }
+
   onprev(e) {
-    this.move(-this.stepsize(e));
+    this.move(-this.stepsize(e), e.altKey);
   }
 
   onnext(e) {
-    this.move(this.stepsize(e));
+    this.move(this.stepsize(e), e.altKey);
   }
 
   stepsize(e) {
     if (e.shiftKey) return 10;
-    if (e.ctrlKey) return 30;
-    if (e.altKey) return 100;
+    if (e.ctrlKey) return 100;
     return 1;
   }
 
-  move(n) {
+  move(n, nsfw) {
     let size = this.photos.length;
     this.current = mod(this.current + n, size);
+    if (nsfw) {
+      let i = this.current;
+      while (!this.photos[i].nsfw) {
+        i = mod(i + (n > 0 ? 1 : -1), size);
+        if (i == this.current) break;
+      }
+      this.current = i;
+    }
     if (size > 0) {
       this.preload(this.current, n);
       this.display(this.current);
@@ -997,7 +1012,7 @@ class KbLightbox extends MdModal {
       copyrighted = false;
     }
 
-    this.find(".domain").update({url: photo.url, text: domain});
+    this.find(".domain").update(domain);
     this.find(".nsfw").update(photo.nsfw ? "NSFW" : null);
     this.find(".copyright").update(copyrighted);
     if (photo.width && photo.height) {
@@ -1037,7 +1052,7 @@ class KbLightbox extends MdModal {
           <md-icon-button class="close" icon="close"></md-icon-button>
 
           <div class="source">
-            <md-link class="domain" newtab="1" external="1"></md-link>
+            <md-text class="domain"></md-text>
             <kb-copyright class="copyright"></kb-copyright>
             <md-text class="nsfw"></md-text>
           </div>
@@ -1089,7 +1104,6 @@ class KbLightbox extends MdModal {
         left: 0;
 
         color: rgb(255, 255, 255);
-        mix-blend-mode: difference;
         font-size: 12px;
         padding: 8px 12px;
       }
@@ -1111,9 +1125,9 @@ class KbLightbox extends MdModal {
         left: 0;
 
         color: rgb(255, 255, 255);
-        mix-blend-mode: difference;
         font-size: 12px;
         padding: 8px 12px;
+        cursor: pointer;
       }
 
       $ a {
@@ -1138,7 +1152,6 @@ class KbLightbox extends MdModal {
         right: 0;
 
         color: rgb(255, 255, 255);
-        mix-blend-mode: difference;
         font-size: 12px;
         padding: 8px 12px;
       }

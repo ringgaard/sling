@@ -51,11 +51,13 @@ class Command:
                help=None,
                package=None,
                function=None,
+               load=None,
                triggers=None,
                internal=False):
     self.name = name
     self.help = help
     self.package = package
+    self.load = load
     self.function = function if function is not None else name
     self.triggers = triggers
     self.internal = internal
@@ -79,6 +81,13 @@ commands = [
       "extract_aliases",
       "build_nametab",
       "build_phrasetab",
+    ],
+    load=[
+      "sling.task.download",
+      "sling.task.wikidata",
+      "sling.task.wikipedia",
+      "sling.task.kb",
+      "sling.task.alias",
     ]
   ),
 
@@ -250,7 +259,11 @@ def main():
     if arg.startswith("-"): continue
     for cmd in commands:
       if arg == cmd.name:
-        importlib.import_module(cmd.package)
+        if cmd.package is not None:
+          importlib.import_module(cmd.package)
+        if cmd.load is not None:
+          for pkg in cmd.load:
+            importlib.import_module(pkg)
         break
   flags.parse()
 
@@ -297,13 +310,14 @@ def main():
   for cmd in commands:
     if cmd.name not in flags.arg.COMMAND: continue
 
-    # Load module with command.
     if cmd.package:
+      # Load module with command.
       module = importlib.import_module(cmd.package)
 
-    # Run command.
-    log.info("Execute command " + cmd.name)
-    getattr(module, cmd.function)()
+      # Run command.
+      if cmd.function is not None:
+        log.info("Execute command " + cmd.name)
+        getattr(module, cmd.function)()
 
     # Add triggered commands.
     if cmd.triggers is not None:

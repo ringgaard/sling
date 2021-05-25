@@ -201,6 +201,7 @@ spammers = set([
   "pacificdentalcenter.com",
   "pardot.com",
   "sarahmilne.top",
+  "sloopyjoes.com",
 ])
 
 total_hits = 0

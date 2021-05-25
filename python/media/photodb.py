@@ -67,10 +67,16 @@ flags.define("--overwrite",
              default=False,
              action="store_true")
 
-flags.define("--remove",
+flags.define("-r", "--remove",
              help="remove photos",
              default=False,
              action="store_true")
+
+flags.define("-x", "--exclude",
+             help="exclude photos",
+             action="append",
+             nargs="+",
+             metavar="URL")
 
 flags.define("--other",
              default=None,
@@ -106,6 +112,12 @@ flags.parse()
 if flags.arg.id and flags.arg.id.startswith("http"):
   raise Exception("invalid id: " + flags.arg.id)
 
+# Get excluded photos.
+excluded = set()
+if flags.arg.exclude != None:
+  for url in flags.arg.exclude:
+    excluded.add(url[0])
+
 photodb = sling.Database(flags.arg.photodb)
 session = requests.Session()
 
@@ -138,6 +150,11 @@ def write_profile(itemid, profile):
 
 # Add photo to profile.
 def add_photo(profile, url, caption=None, source=None, nsfw=False):
+  # Check if photo should be excluded.
+  if url in excluded:
+    print("Skip excluded photo:", url)
+    return 0
+
   # Check if photo exists.
   if flags.arg.check:
     r = session.head(url)

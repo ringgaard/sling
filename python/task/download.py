@@ -171,7 +171,11 @@ class DownloadWorkflow:
   #---------------------------------------------------------------------------
 
   def dataset(self, path):
-    return self.wf.resource(path, dir=flags.arg.workdir, format="file")
+    if path.startswith("repo/"):
+      return self.wf.resource(corpora.repository(path[5:]),
+                              format="file")
+    else:
+      return self.wf.resource(path, dir=flags.arg.workdir, format="file")
 
   def download_dataset(self, name, path, files):
     download = self.wf.task("url-download")
@@ -217,6 +221,23 @@ datasets = {
   "category-documents": "wiki/$LANG$/category-documents@10.rec",
   "wikipedia-aliases": "wiki/$LANG$/aliases@10.rec",
   "wikipedia-summaries": "wiki/$LANG$/summaries.rec",
+
+  "schemas": [
+    "repo/data/nlp/schemas/catalog.sling",
+    "repo/data/nlp/schemas/custom-properties.sling",
+    "repo/data/nlp/schemas/document-schema.sling",
+    "repo/data/nlp/schemas/meta-schema.sling",
+  ],
+  "wikidefs": [
+    "repo/data/wiki/aliases.sling",
+    "repo/data/wiki/calendar.sling",
+    "repo/data/wiki/countries.sling",
+    "repo/data/wiki/languages.sling",
+    "repo/data/wiki/units.sling",
+    "repo/data/wiki/wikidata.sling",
+    "repo/data/wiki/wikipedia.sling",
+  ],
+  "templates": "repo/data/wiki/$LANG$/templates.sling",
 
   "caspar": "caspar/caspar.flow",
   "word2vec32": "caspar/word2vec-32-embeddings.bin",
