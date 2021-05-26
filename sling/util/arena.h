@@ -40,7 +40,7 @@ template<typename T = char> class Arena {
     size_t bytes = size * sizeof(T);
     if (free_ < bytes) expand();
     T *ptr = heap_;
-    heap_ += bytes;
+    heap_ += size;
     free_ -= bytes;
     return ptr;
   }
@@ -65,7 +65,7 @@ template<typename T = char> class Arena {
   void expand() {
     T *memory = static_cast<T *>(malloc(chunk_ * sizeof(T)));
     heap_ = memory;
-    free_ = chunk_;
+    free_ = chunk_ * sizeof(T);
     regions_.push_back(memory);
   }
 

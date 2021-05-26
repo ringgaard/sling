@@ -38,10 +38,10 @@
     P2013, ; Facebook ID
     P2003, ; Instagram username
 
-    ;P214,  ; VIAF ID
-    ;P646,  ; Freebase MID
-    ;P2671, ; Google Knowledge Graph ID
-    ;P345,  ; IMDB ID
+    P214,  ; VIAF ID
+    P646,  ; Freebase MID
+    P2671, ; Google Knowledge Graph ID
+    P345,  ; IMDB ID
   ]
 
   ; Mnemonics for cross-referenced properties.
@@ -64,10 +64,10 @@
     "fb": "P2013"       ; Facebook ID
     "ig": "P2003"       ; Instagram username
 
-    ;"viaf": "P214"      ; VIAF ID
-    ;"mid": "P646"       ; Freebase MID
-    ;"kg": "P2671"       ; Google Knowledge Graph ID
-    ;"imdb": "P345"      ; IMDB ID
+    "viaf": "P214"      ; VIAF ID
+    "mid": "P646"       ; Freebase MID
+    "kg": "P2671"       ; Google Knowledge Graph ID
+    "imdb": "P345"      ; IMDB ID
   }
 
   ; Pre-resolved reference mappings for ambiguous references.

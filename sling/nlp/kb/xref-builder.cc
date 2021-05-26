@@ -60,6 +60,7 @@ class XRefBuilder : public task::FrameProcessor {
     mnemonics_ = config.GetFrame("mnemonics");
 
     // Statistics.
+    num_tracked_ = task->GetCounter("tracked");
     num_ids_ = task->GetCounter("ids");
     num_redirects_ = task->GetCounter("redirects");
     num_skipped_ = task->GetCounter("skipped");
@@ -87,6 +88,7 @@ class XRefBuilder : public task::FrameProcessor {
     // Skip frame unless it has multiple ids, is redirected, or it has one or
     // more tracked properties.
     if (num_ids < 2 && !redirect && num_props == 0) return;
+    num_tracked_->Increment();
 
     // Add all ids and tracked properties to cross reference.
     MutexLock lock(&mu_);
@@ -188,6 +190,7 @@ class XRefBuilder : public task::FrameProcessor {
   Frame mnemonics_;
 
   // Statistics.
+  task::Counter *num_tracked_ = nullptr;
   task::Counter *num_ids_ = nullptr;
   task::Counter *num_redirects_ = nullptr;
   task::Counter *num_skipped_ = nullptr;

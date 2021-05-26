@@ -76,7 +76,7 @@ XRef::Identifier *XRef::GetIdentifier(const Property *type,
 
   // Try to find existing identifier.
   uint64 hash = Hash(type, value);
-  uint64 bucket = hash % NUM_BUCKETS;
+  uint64 bucket = hash & (NUM_BUCKETS - 1);
   Identifier *id = buckets_[bucket];
   while (id != nullptr) {
     if (id->hash == hash && id->type == type && id->value == value) {
