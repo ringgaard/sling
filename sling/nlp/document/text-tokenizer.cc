@@ -807,7 +807,6 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
   AddTokenType(";", 0);
   AddTokenType(":", 0);
   AddTokenType("|", TOKEN_EOS | TOKEN_DISCARD);
-  AddTokenType(" * ", TOKEN_EOS | TOKEN_PARA | TOKEN_DISCARD);  // ASCII bullet
   AddTokenType("·", TOKEN_EOS | TOKEN_PARA | TOKEN_DISCARD);  // middle dot
   AddTokenType("...", TOKEN_CONDEOS);
   AddTokenType("…", TOKEN_CONDEOS, "...");

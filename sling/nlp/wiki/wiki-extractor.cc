@@ -357,30 +357,32 @@ void WikiPlainTextSink::Content(const char *begin, const char *end) {
 void WikiTextSink::Content(const char *begin, const char *end) {
   for (const char *p = begin; p < end; ++p) {
     if (*p == '\n') {
-      if (!text_.empty()) line_breaks_++;
-      word_break_ = false;
-
-      switch (font_) {
-        case 2: text_.append("</em>"); break;
-        case 3: text_.append("</b>"); break;
-        case 5: text_.append("</em></b>"); break;
+      if (!text_.empty()) {
+        if (brk_ < LINE) {
+          brk_ = LINE;
+        } else if (brk_ == LINE) {
+          brk_ = PARA;
+        }
       }
-      font_ = 0;
-    } else if (*p != ' ' || line_breaks_ == 0) {
-      if (line_breaks_ > 1) {
-        text_.append("\n<p>");
-        line_breaks_ = 0;
-        word_break_ = false;
-      } else if (line_breaks_ > 0) {
-        text_.push_back('\n');
-        line_breaks_ = 0;
-        word_break_ = false;
-      } else if (*p == ' ') {
-        word_break_ = false;
-      }
-      if (word_break_) {
-        text_.append("\xe2\x80\x8b");  // zero-width space
-        word_break_ = false;
+    } else if (*p == ' ') {
+      if (brk_ < SPACE) brk_ = SPACE;
+    } else {
+      switch (brk_) {
+        case NONE:
+          break;
+        case WORD:
+          text_.append("\xe2\x80\x8b");  // zero-width space
+          brk_ = NONE;
+          break;
+        case SPACE:
+        case LINE:
+          text_.push_back(' ');
+          brk_ = NONE;
+          break;
+        case PARA:
+          text_.append("\n<p>");
+          brk_ = NONE;
+          break;
       }
       text_.push_back(*p);
     }
@@ -388,7 +390,7 @@ void WikiTextSink::Content(const char *begin, const char *end) {
 }
 
 void WikiTextSink::WordBreak() {
-  word_break_ = true;
+  if (brk_ == NONE) brk_ = WORD;
 }
 
 void WikiTextSink::Font(int font) {

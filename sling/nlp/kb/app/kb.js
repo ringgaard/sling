@@ -84,9 +84,9 @@ class KbApp extends Component {
     }
     window.onpopstate = e => this.onpopstate(e);
 
-    let path = window.location.pathname;
-    if (path.startsWith("/kb/")) {
-      let id = path.substring(4);
+    let itemid = document.head.querySelector('meta[property="itemid"]');
+    if (itemid) {
+      let id = itemid.content;
       if (id.length > 0) this.navigate(id);
     }
   }
@@ -881,7 +881,7 @@ class KbLightbox extends MdModal {
     this.bind(".photo", "click", e => this.onclick(e));
     this.bind(".prev", "click", e => this.onprev(e));
     this.bind(".next", "click", e => this.onnext(e));
-    this.bind(".close", "click", e => this.close());
+    this.bind(".close", "click", e => this.close(e));
     this.bind(".domain", "click", e => this.onsource(e));
     this.bind(null, "keydown", e => this.onkeypress(e));
   }
@@ -910,7 +910,7 @@ class KbLightbox extends MdModal {
     } else if (e.keyCode == 39) {
       this.onnext(e);
     } else if (e.keyCode == 27) {
-      this.close();
+      this.close(e);
     }
     this.focus();
   }
@@ -947,6 +947,10 @@ class KbLightbox extends MdModal {
 
   onnext(e) {
     this.move(this.stepsize(e), e.altKey);
+    e.stopPropagation();
+  }
+
+  onclose(e) {
     e.stopPropagation();
   }
 

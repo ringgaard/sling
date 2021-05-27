@@ -8,6 +8,7 @@
     P8168/P33: P8168/Q245690     ; persons mentioned -> mentioned in
     P8168/P21: P8168/Q245691     ; author -> author of
     P8168/P503: P8168/Q245692    ; received by -> receiver of
+    P734: Q66310627              ; family name -> bears this family name
   }
 }
 

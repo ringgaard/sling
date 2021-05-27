@@ -308,6 +308,7 @@ void KnowledgeService::HandleLandingPage(HTTPRequest *request,
     if (!handle.IsNil()) {
       // Get name, description, and image.
       Frame item(kb_, handle);
+      Text id = item.Id();
       Text name = item.GetText(n_name_);
       Text description = item.GetText(n_description_);
       Handle image = item.Resolve(n_image_);
@@ -317,6 +318,11 @@ void KnowledgeService::HandleLandingPage(HTTPRequest *request,
         response->Append("<title>");
         response->Append(HTMLEscape(name));
         response->Append("</title>\n");
+      }
+
+      // Add item id.
+      if (!id.empty()) {
+        AddMeta(response, "itemid", nullptr, id);
       }
 
       // Add meta tags for Twitter card and Facebook Open Graph.

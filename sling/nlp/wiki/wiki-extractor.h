@@ -187,23 +187,28 @@ class WikiTextSink : public WikiSink {
   // Return extracted text.
   const string &text() const { return text_; }
 
-  // Return current text position.
+  // Return current text position adjusted for pending breaks.
   int position() const {
     int pos = text_.size();
-    if (line_breaks_ > 0) pos += 1;  // pending \n
-    if (line_breaks_ > 1) pos += 3;  // pending <p>
+    switch (brk_) {
+      case NONE: break;
+      case WORD: pos += 3; break;    // pending zero-width space
+      case SPACE: pos += 1; break;   // pending space
+      case LINE: pos += 1; break;    // pending space
+      case PARA: pos += 4; break;    // pending \n<p>
+    }
     return pos;
   }
 
  protected:
+  // Break type.
+  enum Break {NONE, WORD, SPACE, LINE, PARA};
+
   // Extracted text.
   string text_;
 
-  // Number of pending line breaks.
-  int line_breaks_ = 0;
-
-  // Pending word break.
-  bool word_break_ = false;
+  // Current pending break.
+  Break brk_ = NONE;
 
   // Current font.
   int font_ = 0;

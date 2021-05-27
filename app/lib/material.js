@@ -123,8 +123,8 @@ export class MdModal extends Component {
     this.update(state);
   }
 
-  close() {
-    if (this.onclose) this.onclose();
+  close(e) {
+    if (this.onclose) this.onclose(e);
     document.body.removeChild(this);
   }
 
