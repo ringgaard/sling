@@ -215,8 +215,9 @@ Text XRefMapping::Map(Text id) const {
   if (!h.IsNil()) return xrefs_.FrameId(h);
 
   // Try to convert property mnemonic.
-  int sep = id.find('/');
-  if (sep == -1) sep = id.find(':');
+  int slash = id.find('/');
+  int colon = id.find(':');
+  int sep = slash < colon ? slash : colon;
   if (sep != -1) {
     Text domain = id.substr(0, sep).trim();
     Text identifier = id.substr(sep + 1).trim();

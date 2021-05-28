@@ -53,7 +53,7 @@ function imageurl(url, thumb) {
   if (mediadb) {
     let escaped = encodeURIComponent(url);
     escaped = escaped.replace(/%3A/g, ":").replace(/%2F/g, "/");
-    return (thumb ? "/thumb/" : "/media/") + escaped;
+    return (thumb && url.endsWith(".svg") ? "/thumb/" : "/media/") + escaped;
   } else {
     return url;
   }
