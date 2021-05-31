@@ -217,7 +217,7 @@ Text XRefMapping::Map(Text id) const {
   // Try to convert property mnemonic.
   int slash = id.find('/');
   int colon = id.find(':');
-  int sep = slash < colon ? slash : colon;
+  int sep = slash != -1 && slash < colon ? slash : colon;
   if (sep != -1) {
     Text domain = id.substr(0, sep).trim();
     Text identifier = id.substr(sep + 1).trim();

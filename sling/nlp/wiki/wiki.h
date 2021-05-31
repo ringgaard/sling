@@ -94,24 +94,27 @@ class WikimediaTypes {
   void Init(Store *store);
 
   // Check if item is a Wikipedia category.
-  bool IsCategory(Handle type);
+  bool IsCategory(Handle type) const;
 
   // Check if item is a Wikipedia disambiguation page.
-  bool IsDisambiguation(Handle type);
+  bool IsDisambiguation(Handle type) const;
 
   // Check if item is a Wikipedia list article.
-  bool IsList(Handle type);
+  bool IsList(Handle type) const;
 
   // Check if item is a Wikipedia template.
-  bool IsTemplate(Handle type);
+  bool IsTemplate(Handle type) const;
 
   // Check if item is a Wikipedia infobox.
-  bool IsInfobox(Handle type);
+  bool IsInfobox(Handle type) const;
 
   // Check if item is a duplicate.
-  bool IsDuplicate(Handle type);
+  bool IsDuplicate(Handle type) const;
 
  private:
+  // Category types.
+  HandleSet category_types_;
+
   // Names.
   Names names_;
   Name n_disambiguation_{names_, "Q4167410"};
@@ -119,24 +122,7 @@ class WikimediaTypes {
   Name n_list_{names_, "Q13406463"};
   Name n_template_{names_, "Q11266439"};
   Name n_infobox_{names_, "Q19887878"};
-  Name n_infobox_templates_category_{names_, "Q23894246"};
   Name n_permanent_duplicate_item_{names_, "Q21286738"};
-
-  Name n_category_{names_, "Q4167836"};
-  Name n_disambiguation_category_{names_, "Q15407973"};
-  Name n_list_category_{names_, "Q56428020"};
-  Name n_set_category_{names_, "Q59542487"};
-  Name n_tracking_category_{names_, "Q67131190"};
-  Name n_films_by_language_category_{names_, "Q104370472"};
-  Name n_unknown_parameters_category_{names_, "Q30330522"};
-  Name n_meta_category_{names_, "Q30432511"};
-  Name n_topic_category_{names_, "Q59541917"};
-  Name n_template_category_{names_, "Q23894233"};
-  Name n_stub_category_{names_, "Q24046192"};
-  Name n_admin_category_{names_, "Q15647814"};
-  Name n_user_category_{names_, "Q20769287"};
-  Name n_user_language_category_{names_, "Q20010800"};
-  Name n_navbox_category_{names_, "Q13331174"};
 };
 
 // Filter for auxiliary items. The auxiliary items in the knowledge base are
@@ -148,7 +134,7 @@ class AuxFilter {
   void Init(Store *store);
 
   // Check if item is an auxiliary item.
-  bool IsAux(const Frame &frame);
+  bool IsAux(const Frame &frame) const;
 
  private:
   // Auxiliary item types.

@@ -108,45 +108,63 @@ string Wiki::URL(Text lang, Text title) {
 }
 
 void WikimediaTypes::Init(Store *store) {
+  static const char *category_types[] = {
+    "Q4167836",    // Wikimedia category
+    "Q13331174",   // Wikimedia navboxes category
+    "Q13331174",   // Wikimedia navboxes category
+    "Q15407973",   // Wikimedia disambiguation category
+    "Q15647814",   // Wikimedia administration category
+    "Q20010800",   // Wikimedia user language category
+    "Q20769287",   // Wikimedia user category
+    "Q23894233",   // Wikimedia templates category
+    "Q23894246",   // Wikimedia infobox templates category
+    "Q24046192",   // Wikimedia category of stubs
+    "Q24046192",   // Wikimedia category of stubs
+    "Q24571879",   // category by name in Wikimedia
+    "Q30330522",   // Wikimedia unknown parameters category
+    "Q30432511",   // metacategory in Wikimedia projects
+    "Q56428020",   // Wikimedia lists category
+    "Q59541917",   // Wikimedia topic category
+    "Q59542487",   // Wikimedia set category
+    "Q67131190",   // Wikimedia tracking category
+    "Q105653689",  // Editnotice category
+    "Q106574913",  // Wikimedia albums-by-language category
+    "Q106575300",  // Wikimedia albums-by-genre category
+    "Q106612246",  // Wikimedia albums-by-performer category
+    nullptr
+  };
+
+
+
+  for (const char **c = category_types; *c != nullptr; ++c) {
+    Handle type = store->Lookup(*c);
+    category_types_.insert(type);
+  }
+
   CHECK(names_.Bind(store));
 }
 
-bool WikimediaTypes::IsCategory(Handle type) {
-  return type == n_category_ ||
-         type == n_disambiguation_category_ ||
-         type == n_list_category_ ||
-         type == n_set_category_ ||
-         type == n_films_by_language_category_ ||
-         type == n_topic_category_ ||
-         type == n_template_category_ ||
-         type == n_admin_category_ ||
-         type == n_user_category_ ||
-         type == n_meta_category_ ||
-         type == n_user_language_category_ ||
-         type == n_unknown_parameters_category_;
-         type == n_tracking_category_ ||
-         type == n_stub_category_ ||
-         type == n_navbox_category_ ||
-         type == n_infobox_templates_category_;
+bool WikimediaTypes::IsCategory(Handle type) const {
+  return category_types_.count(type) > 0;
 }
 
-bool WikimediaTypes::IsDisambiguation(Handle type) {
+bool WikimediaTypes::IsDisambiguation(Handle type) const {
   return type == n_disambiguation_ || type == n_human_name_disambiguation_;
 }
 
-bool WikimediaTypes::IsList(Handle type) {
+bool WikimediaTypes::IsList(Handle type) const {
   return type == n_list_;
 }
 
-bool WikimediaTypes::IsTemplate(Handle type) {
+bool WikimediaTypes::IsTemplate(Handle type) const {
   return type == n_template_;
 }
 
-bool WikimediaTypes::IsInfobox(Handle type) {
+bool WikimediaTypes::IsInfobox(Handle type) const {
   return type == n_infobox_;
 }
 
-bool WikimediaTypes::IsDuplicate(Handle type) {
+bool WikimediaTypes::IsDuplicate(Handle type) const {
   return type == n_permanent_duplicate_item_;
 }
 
@@ -172,7 +190,7 @@ void AuxFilter::Init(Store *store) {
   names_.Bind(store);
 }
 
-bool AuxFilter::IsAux(const Frame &frame) {
+bool AuxFilter::IsAux(const Frame &frame) const {
   // Never mark items in Wikipedia as aux.
   Frame wikipedia = frame.GetFrame(n_wikipedia_);
   if (wikipedia.valid() && wikipedia.size() > 0) return false;
