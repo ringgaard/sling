@@ -205,6 +205,9 @@ cc_library(
     ":properties",
     ":xref",
     "//app",
+    "//sling/base",
+    "//sling/db:dbclient",
+    "//sling/file:recordio",
     "//sling/frame:object",
     "//sling/frame:serialization",
     "//sling/frame:store",
@@ -215,6 +218,7 @@ cc_library(
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:lex",
     "//sling/util:md5",
+    "//sling/util:mutex",
     "//sling/util:sortmap",
   ],
 )

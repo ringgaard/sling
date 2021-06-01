@@ -54,6 +54,14 @@ class DatabaseWriter : public Processor {
     // Switch database to bulk mode to avoid excessive checkpointing during
     // loading of large datasets.
     CHECK(db_.Bulk(true));
+
+    // Statistics.
+    num_dbresults[DBNEW] = task->GetCounter("new_records");
+    num_dbresults[DBUPDATED] = task->GetCounter("updated_records");
+    num_dbresults[DBUNCHANGED] = task->GetCounter("unchanged_records");
+    num_dbresults[DBEXISTS] = task->GetCounter("existing_records");
+    num_dbresults[DBSTALE] = task->GetCounter("stale_records");
+    num_dbresults[DBFAULT] = task->GetCounter("failure_records");
   }
 
   void Receive(Channel *channel, Message *message) override {
@@ -105,6 +113,11 @@ class DatabaseWriter : public Processor {
     Status st = db_.Put(&recs, mode_);
     if (!st.ok()) LOG(FATAL) << "Error writing to database: " << st;
 
+    // Update statistics.
+    for (int i = 0; i < batch->size(); ++i) {
+      num_dbresults[recs[i].result]->Increment();
+    }
+
     // Clear batch.
     for (Message *message : *batch) delete message;
     batch->clear();
@@ -126,6 +139,9 @@ class DatabaseWriter : public Processor {
   // Mutex for queue and database writer.
   Mutex queue_mu_;
   Mutex db_mu_;
+
+  // Counters for database update results.
+  Counter *num_dbresults[6];
 };
 
 REGISTER_TASK_PROCESSOR("database-writer", DatabaseWriter);

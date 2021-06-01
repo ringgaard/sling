@@ -18,6 +18,8 @@
 #include <string>
 
 #include "sling/base/types.h"
+#include "sling/db/dbclient.h"
+#include "sling/file/recordio.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/net/http-server.h"
@@ -28,6 +30,7 @@
 #include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/kb/name-table.h"
 #include "sling/nlp/kb/xref.h"
+#include "sling/util/mutex.h"
 
 namespace sling {
 namespace nlp {
@@ -49,6 +52,8 @@ class KnowledgeService {
   };
 
   ~KnowledgeService() {
+    delete itemdb_;
+    delete items_;
     if (docnames_) docnames_->Release();
   }
 
@@ -57,6 +62,12 @@ class KnowledgeService {
 
   // Load cross-reference table.
   void LoadXref(const string &xref_table);
+
+  // Open item record set for off-line items.
+  void OpenItems(const string &filename);
+
+  // Open item database for off-line items.
+  void OpenItemDatabase(const string &db);
 
   // Register knowledge base service.
   void Register(HTTPServer *http);
@@ -74,8 +85,9 @@ class KnowledgeService {
   void HandleGetFrame(HTTPRequest *request, HTTPResponse *response);
 
  private:
-  // Get item from id. This also resolves cross-reference.
-  Handle GetItem(Text id);
+  // Get item from id. This also resolves cross-reference and loads off-lines
+  // items from the item database.
+  Handle RetrieveItem(Store *store, Text id);
 
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);
@@ -96,7 +108,7 @@ class KnowledgeService {
   string UnitName(const Frame &unit);
 
   // Convert value to readable text.
-  string AsText(Handle value);
+  string AsText(Store *store, Handle value);
 
   // Property information.
   struct Property {
@@ -135,6 +147,11 @@ class KnowledgeService {
 
   // Identifier cross-reference.
   XRefMapping xref_;
+
+  // Record database for looking up items that are not in the knowledge base.
+  RecordDatabase *items_ = nullptr;
+  DBClient *itemdb_ = nullptr;
+  Mutex mu_;
 
   // Knowledge base browser app.
   StaticContent common_{"/common", "app"};
@@ -179,6 +196,7 @@ class KnowledgeService {
   Name n_media_type_{names_, "/w/media"};
   Name n_time_type_{names_, "/w/time"};
   Name n_string_type_{names_, "/w/string"};
+  Name n_lexeme_type_{names_, "/w/lexeme"};
   Name n_lat_{names_, "/w/lat"};
   Name n_lng_{names_, "/w/lng"};
   Name n_amount_{names_, "/w/amount"};

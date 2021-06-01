@@ -176,6 +176,10 @@ commands = [
     help="Build knowledge base repository",
     package="sling.task.kb",
   ),
+  Command("load_items",
+    help="Load items into database",
+    package="sling.task.kb",
+  ),
 
   # Aliases.
   Command("extract_aliases",

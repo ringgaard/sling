@@ -64,6 +64,10 @@ class KnowledgeBaseWorkflow:
                             dir=corpora.workdir("org"),
                             format="records/frame")
 
+  def kbdb(self):
+    """Resource for knowledge base database."""
+    return self.wf.resource(corpora.kbdb(), format="db/frames")
+
   def extended_item_sources(self):
     return self.wf.bundle(
       self.media(),
@@ -142,6 +146,10 @@ class KnowledgeBaseWorkflow:
       return self.wf.write(parts, self.data.knowledge_base(),
                            params={"snapshot": True})
 
+  def load_items(self):
+    """Task for loading items into database."""
+    self.wf.write(self.wf.read(self.data.items()), self.kbdb())
+
 def collect_xrefs():
   log.info("Build cross references")
   wf = KnowledgeBaseWorkflow("xref-builder")
@@ -164,5 +172,11 @@ def build_kb():
   log.info("Build knowledge base repository")
   wf = KnowledgeBaseWorkflow("knowledge-base")
   wf.build_knowledge_base()
+  run(wf.wf)
+
+def load_items():
+  log.info("Load items into database")
+  wf = KnowledgeBaseWorkflow("knowledge-base")
+  wf.load_items()
   run(wf.wf)
 

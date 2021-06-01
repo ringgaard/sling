@@ -47,6 +47,11 @@ flags.define("--wikidatadb",
              default="wikidata",
              metavar="DBURL")
 
+flags.define("--kbdb",
+             help="knowledge base database",
+             default="kb",
+             metavar="DBURL")
+
 flags.define("--photodb",
              help="photo database",
              default="photo",
@@ -101,6 +106,10 @@ def wikipedia_dump(language=None):
 def wikidatadb():
   """WikiData database."""
   return flags.arg.wikidatadb
+
+def kbdb():
+  """Knowledge base database."""
+  return flags.arg.kbdb
 
 def photodb():
   """Photo database."""

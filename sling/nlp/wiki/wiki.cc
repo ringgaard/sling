@@ -172,14 +172,17 @@ void AuxFilter::Init(Store *store) {
   const char *aux_item_types[] = {
     "Q13442814",  // scholarly article
     "Q17329259",  // encyclopedic article
+    "Q732577",    // publication
+
     "Q17633526",  // Wikinews article
     "Q17362920",  // Wikimedia duplicated page
-    "Q732577",    // publication
+
     "Q7187",      // gene
     "Q16521",     // taxon
     "Q8054",      // protein
     "Q11173",     // chemical compound
     "Q30612",     // clinical trial
+
     "Q523",       // star
     "Q318",       // galaxy
     nullptr,
