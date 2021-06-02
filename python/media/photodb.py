@@ -322,7 +322,7 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
     print("Skipping self post", galleryid);
     return 0
   removed = reply["removed_by_category"]
-  if removed == "deleted" or removed == "moderator":
+  if removed in ["deleted", "moderator", "anti_evil_ops"]:
     print("Skipping deleted post", galleryid);
     return 0
 

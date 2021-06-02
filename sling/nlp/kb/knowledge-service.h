@@ -87,13 +87,13 @@ class KnowledgeService {
  private:
   // Get item from id. This also resolves cross-reference and loads off-lines
   // items from the item database.
-  Handle RetrieveItem(Store *store, Text id);
+  Handle RetrieveItem(Store *store, Text id) const;
 
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);
 
   // Get standard properties (ref, name, and description).
-  void GetStandardProperties(const Frame &item, Builder *builder) const;
+  void GetStandardProperties(Frame &item, Builder *builder) const;
 
   // Sort items in cronological order.
   void SortChronologically(Store *store, Handles *values) const;
@@ -151,7 +151,7 @@ class KnowledgeService {
   // Record database for looking up items that are not in the knowledge base.
   RecordDatabase *items_ = nullptr;
   DBClient *itemdb_ = nullptr;
-  Mutex mu_;
+  mutable Mutex mu_;
 
   // Knowledge base browser app.
   StaticContent common_{"/common", "app"};

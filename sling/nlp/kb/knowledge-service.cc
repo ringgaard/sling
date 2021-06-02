@@ -283,7 +283,7 @@ void KnowledgeService::Register(HTTPServer *http) {
   app_.Register(http);
 }
 
-Handle KnowledgeService::RetrieveItem(Store *store, Text id) {
+Handle KnowledgeService::RetrieveItem(Store *store, Text id) const {
   // Look up item in knowledge base.
   Handle handle = store->LookupExisting(id);
   if (!handle.IsNil() && store->IsProxy(handle)) handle = Handle::nil();
@@ -710,15 +710,27 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
   }
 }
 
-void KnowledgeService::GetStandardProperties(const Frame &item,
+void KnowledgeService::GetStandardProperties(Frame &item,
                                              Builder *builder) const {
+  // Try to retrieve item from off-line storage if it is a proxy.
+  if (item.IsProxy()) {
+    Store *store = item.store();
+    Handle h = RetrieveItem(store, item.Id());
+    if (!h.IsNil()) item = Frame(store, h);
+  }
+
+  // Get reference.
   builder->Add(n_ref_, item.Id());
+
+  // Get name.
   Handle name = item.GetHandle(n_name_);
   if (!name.IsNil()) {
     builder->Add(n_text_, name);
   } else {
     builder->Add(n_text_, item.Id());
   }
+
+  // Get description.
   Handle description = item.GetHandle(n_description_);
   if (!description.IsNil()) builder->Add(n_description_, description);
 }
