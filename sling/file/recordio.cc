@@ -228,9 +228,9 @@ Status RecordReader::Fill(uint64 needed) {
   DCHECK_LE(needed, input_.capacity());
   uint64 requested;
   if (readahead_) {
-    requested = needed - input_.available();
-  } else {
     requested = input_.remaining();
+  } else {
+    requested = needed - input_.available();
   }
   DCHECK_GT(requested, 0);
 
