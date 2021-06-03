@@ -660,7 +660,7 @@ class Frame : public Object {
   // Traverse all slots in this frame and all anonymous frames reachable from
   // this frame.
   typedef std::function<void(Slot *slot)> SlotIterator;
-  void TraverseSlots(SlotIterator iterator);
+  void TraverseSlots(SlotIterator iterator) const;
 
   // Iterator for iterating over all slots in a frame.
   class iterator {

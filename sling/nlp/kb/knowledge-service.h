@@ -63,10 +63,10 @@ class KnowledgeService {
   // Load cross-reference table.
   void LoadXref(const string &xref_table);
 
-  // Open item record set for off-line items.
+  // Open item record set for offline items.
   void OpenItems(const string &filename);
 
-  // Open item database for off-line items.
+  // Open item database for offline items.
   void OpenItemDatabase(const string &db);
 
   // Register knowledge base service.
@@ -85,12 +85,15 @@ class KnowledgeService {
   void HandleGetFrame(HTTPRequest *request, HTTPResponse *response);
 
  private:
-  // Get item from id. This also resolves cross-reference and loads off-lines
+  // Get item from id. This also resolves cross-reference and loads offline
   // items from the item database.
-  Handle RetrieveItem(Store *store, Text id) const;
+  Handle RetrieveItem(Store *store, Text id, bool offline = true) const;
 
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);
+
+  // Pre-load proxies into store from offline database.
+  void Preload(const Frame &item, Store *store);
 
   // Get standard properties (ref, name, and description).
   void GetStandardProperties(Frame &item, Builder *builder) const;

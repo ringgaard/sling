@@ -283,7 +283,8 @@ void KnowledgeService::Register(HTTPServer *http) {
   app_.Register(http);
 }
 
-Handle KnowledgeService::RetrieveItem(Store *store, Text id) const {
+Handle KnowledgeService::RetrieveItem(Store *store, Text id,
+                                      bool offline) const {
   // Look up item in knowledge base.
   Handle handle = store->LookupExisting(id);
   if (!handle.IsNil() && store->IsProxy(handle)) handle = Handle::nil();
@@ -294,8 +295,8 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id) const {
     if (!mapping.empty()) handle = store->LookupExisting(mapping);
   }
 
-  if (handle.IsNil() && items_ != nullptr) {
-    // Try looking up item in the off-line item records.
+  if (handle.IsNil() && offline && items_ != nullptr) {
+    // Try looking up item in the offline item records.
     MutexLock lock(&mu_);
     Record rec;
     if (items_->Lookup(id.slice(), &rec)) {
@@ -305,8 +306,8 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id) const {
     }
   }
 
-  if (handle.IsNil() && itemdb_ != nullptr) {
-    // Try looking up item in the off-line item database.
+  if (handle.IsNil() && offline && itemdb_ != nullptr) {
+    // Try looking up item in the offline item database.
     MutexLock lock(&mu_);
     DBRecord rec;
     Status st = itemdb_->Get(id.slice(), &rec);
@@ -318,6 +319,35 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id) const {
   }
 
   return handle;
+}
+
+void KnowledgeService::Preload(const Frame &item, Store *store) {
+  // Skip preloading if there is no item database.
+  if (itemdb_ == nullptr) return;
+
+  // Find proxies.
+  std::vector<Slice> keys;
+  item.TraverseSlots([store, &keys](Slot *s) {
+    if (store->IsProxy(s->value)) {
+      keys.push_back(store->FrameId(s->value).slice());
+    }
+  });
+
+  // Prefetch items for proxies into store.
+  if (!keys.empty()) {
+    MutexLock lock(&mu_);
+    std::vector<DBRecord> recs;
+    Status st = itemdb_->Get(keys, &recs);
+    if (st.ok()) {
+      for (auto &rec : recs) {
+        ArrayInputStream stream(rec.value);
+        InputParser parser(store, &stream);
+        parser.Read();
+      }
+    } else {
+      LOG(WARNING) << "Error fetching items: " << st;
+    }
+  }
 }
 
 void KnowledgeService::HandleLandingPage(HTTPRequest *request,
@@ -405,7 +435,7 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
 
   // Check for exact match with id.
   Handles results(ws.store());
-  Handle idmatch = RetrieveItem(ws.store(), query);
+  Handle idmatch = RetrieveItem(ws.store(), query, fullmatch);
   if (!idmatch.IsNil()) {
     Frame item(ws.store(), idmatch);
     if (item.valid()) {
@@ -459,6 +489,9 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
       b.Add(n_type_, dt.GetHandle(n_name_));
     }
   }
+
+  // Pre-load offline proxies.
+  Preload(item, ws.store());
 
   // Fetch properties.
   Item info(ws.store());
@@ -712,7 +745,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
 
 void KnowledgeService::GetStandardProperties(Frame &item,
                                              Builder *builder) const {
-  // Try to retrieve item from off-line storage if it is a proxy.
+  // Try to retrieve item from offline storage if it is a proxy.
   if (item.IsProxy()) {
     Store *store = item.store();
     Handle h = RetrieveItem(store, item.Id());

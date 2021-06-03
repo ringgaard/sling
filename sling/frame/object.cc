@@ -880,7 +880,7 @@ Frame &Frame::SetLink(Text name, Text symbol) {
   return *this;
 }
 
-void Frame::TraverseSlots(SlotIterator iterator) {
+void Frame::TraverseSlots(SlotIterator iterator) const {
   Handles closure(store());
   closure.push_back(handle());
   int current = 0;

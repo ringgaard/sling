@@ -322,7 +322,7 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
     print("Skipping self post", galleryid);
     return 0
   removed = reply["removed_by_category"]
-  if removed in ["deleted", "moderator", "anti_evil_ops"]:
+  if removed in ["deleted", "reddit", "moderator", "anti_evil_ops"]:
     print("Skipping deleted post", galleryid);
     return 0
 
@@ -391,6 +391,7 @@ def add_media(profile, url, caption, nsfw):
 
   m = re.match("(https://imgur\.com/.+)[\?#].*", url)
   if m == None: m = re.match("(https?://reddit\.com/.+)[\?#].*", url)
+  if m == None: m = re.match("(https?://i\.redd\.it/.+)[\?#].*", url)
   if m == None: m = re.match("(https?://i\.redditmedia\.com/.+)[\?#].*", url)
   if m != None:
     url = m.group(1)
