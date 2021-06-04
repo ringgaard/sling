@@ -43,6 +43,9 @@ struct PyDatabase : public PyBase {
   // Delete record.
   PyObject *Delete(PyObject *key);
 
+  // Check if database has record for key.
+  int Contains(PyObject *key);
+
   // Fetch record for key.
   PyObject *Lookup(PyObject *key);
 
@@ -80,6 +83,7 @@ struct PyDatabase : public PyBase {
   static PyTypeObject type;
   static PyMethodTable methods;
   static PyMappingMethods mapping;
+  static PySequenceMethods sequence;
   static void Define(PyObject *module);
 };
 

@@ -20,6 +20,7 @@ namespace sling {
 PyTypeObject PyDatabase::type;
 PyMethodTable PyDatabase::methods;
 PyMappingMethods PyDatabase::mapping;
+PySequenceMethods PyDatabase::sequence;
 PyTypeObject PyCursor::type;
 
 // Check status.
@@ -40,6 +41,9 @@ void PyDatabase::Define(PyObject *module) {
   type.tp_as_mapping = &mapping;
   mapping.mp_subscript = method_cast<binaryfunc>(&PyDatabase::Lookup);
   mapping.mp_ass_subscript = method_cast<objobjargproc>(&PyDatabase::Assign);
+
+  type.tp_as_sequence = &sequence;
+  sequence.sq_contains = method_cast<objobjproc>(&PyDatabase::Contains);
 
   methods.Add("close", &PyDatabase::Close);
   methods.AddO("get", &PyDatabase::Get);
@@ -161,6 +165,19 @@ PyObject *PyDatabase::Delete(PyObject *key) {
   if (!GetData(key, &k)) return nullptr;
   if (!CheckIO(db->Delete(k))) return nullptr;
   Py_RETURN_NONE;
+}
+
+int PyDatabase::Contains(PyObject *key) {
+  // Get key.
+  Slice k;
+  if (!GetData(key, &k)) return -1;
+
+  // Check record in database.
+  DBRecord record;
+  if (!CheckIO(db->Head(k, &record))) return -1;
+
+  // Record exists if size is not zero.
+  return !record.value.empty();
 }
 
 PyObject *PyDatabase::Lookup(PyObject *key) {

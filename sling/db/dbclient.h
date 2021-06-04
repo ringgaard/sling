@@ -64,6 +64,13 @@ class DBClient {
                    std::vector<DBRecord> *records,
                    IOBuffer *buffer = nullptr);
 
+  // Check record(s) in database. Returns version and length or zero for missing
+  // records.
+  Status Head(const Slice &key, DBRecord *record);
+  Status Head(const std::vector<Slice> &keys,
+                    std::vector<DBRecord> *records,
+                    IOBuffer *buffer = nullptr);
+
   // Add or update record(s) in database. The records(s) are updated with the
   // outcome.
   Status Put(DBRecord *record, DBMode mode = DBOVERWRITE);
@@ -102,6 +109,9 @@ class DBClient {
 
   // Read record from response.
   Status ReadRecord(DBRecord *record, IOBuffer *buffer = nullptr);
+
+  // Read record information from response.
+  Status ReadRecordInfo(DBRecord *record, IOBuffer *buffer = nullptr);
 
   // Execute database operation, reconnecting if connection has been closed.
   Status Transact(Transaction tx);

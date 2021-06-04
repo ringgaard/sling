@@ -169,6 +169,36 @@ Status DBClient::Get(const std::vector<Slice> &keys,
   });
 }
 
+Status DBClient::Head(const Slice &key, DBRecord *record) {
+  return Transact([&]() -> Status {
+    request_.Clear();
+    WriteKey(key);
+    Status st = Do(DBHEAD);
+    if (!st.ok()) return st;
+    record->key = key;
+    return ReadRecordInfo(record);
+  });
+}
+
+Status DBClient::Head(const std::vector<Slice> &keys,
+                      std::vector<DBRecord> *records,
+                      IOBuffer *buffer) {
+  if (buffer == nullptr) buffer = &response_;
+  return Transact([&]() -> Status {
+    request_.Clear();
+    for (auto &key : keys) WriteKey(key);
+    Status st = Do(DBHEAD, buffer);
+    if (!st.ok()) return st;
+    records->resize(keys.size());
+    for (int i = 0; i < keys.size(); ++i) {
+      records->at(i).key = keys[i];
+      Status st = ReadRecordInfo(&records->at(i), buffer);
+      if (!st.ok()) return st;
+    }
+    return Status::OK;
+  });
+}
+
 Status DBClient::Put(DBRecord *record, DBMode mode) {
   return Transact([&]() -> Status {
     request_.Clear();
@@ -302,6 +332,23 @@ Status DBClient::ReadRecord(DBRecord *record, IOBuffer *buffer) {
   // Read value.
   if (buffer->available() < vsize) return Truncated();
   record->value = Slice(buffer->Consume(vsize), vsize);
+
+  return Status::OK;
+}
+
+Status DBClient::ReadRecordInfo(DBRecord *record, IOBuffer *buffer) {
+  // Use internal reponse buffer if none has been supplied.
+  if (buffer == nullptr) buffer = &response_;
+
+  // Read version.
+  if (!buffer->Read(&record->version, 8)) return Truncated();
+
+  // Read size.
+  int32 vsize;
+  if (!buffer->Read(&vsize, 4)) return Truncated();
+
+  char *bad = reinterpret_cast<char *>(0xDECADE0FABBABABE);
+  record->value = Slice(bad, vsize);
 
   return Status::OK;
 }

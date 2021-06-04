@@ -809,6 +809,7 @@ class DBService {
         case DBNEXT: cont = Next(); break;
         case DBBULK: cont = Bulk(); break;
         case DBEPOCH: cont = Epoch(); break;
+        case DBHEAD: cont = Head(); break;
         default: return Error("command verb not supported");
       }
 
@@ -874,6 +875,33 @@ class DBService {
       }
 
       return Response(DBRECORD);
+    }
+
+    // Check record(s) in database.
+    Continuation Head() {
+      if (mount_ == nullptr) return Error("no database");
+      DBLock l(mount_);
+      auto *req = conn_->request();
+      auto *rsp = conn_->response_body();
+      while (!req->empty()) {
+        // Read key for next record.
+        Slice key;
+        if (!ReadKey(&key)) return TERMINATE;
+
+        // Get record information from database.
+        Record record;
+        uint32 vsize = 0;
+        if (l.db()->Get(key, &record, false)) {
+          vsize = record.value.size();
+        }
+
+        // Write record information.
+        rsp->Write(&record.version, 8);
+        rsp->Write(&vsize, 4);
+        l.yield();
+      }
+
+      return Response(DBRECINFO);
     }
 
     // Add or update database record(s).

@@ -33,6 +33,7 @@ enum DBVerb : uint32 {
   DBNEXT      = 4,     // retrieve the next record(s) from database
   DBBULK      = 5,     // enable/disable bulk mode for database
   DBEPOCH     = 6,     // get epoch for database
+  DBHEAD      = 7,     // check for existence of key(s)
 
   // Reply verbs.
   DBOK        = 128,   // success reply
@@ -40,7 +41,8 @@ enum DBVerb : uint32 {
   DBRECORD    = 130,   // reply with record(s)
   DBRESULT    = 131,   // reply with update result(s)
   DBDONE      = 132,   // no more records
-  DBRECID     = 133,   // reply recid for current epoch
+  DBRECID     = 133,   // reply with recid for current epoch
+  DBRECINFO   = 134,   // reply with record information
 };
 
 // Update mode for DBPUT.
@@ -101,6 +103,16 @@ struct DBHeader {
 //     {version:uint64};     (if ksize & 1)
 //     vsize:uint32;
 //     value:byte[vsize];
+//   }
+//
+// DBHEAD {key}* -> DBRECINFO {recinfo}*
+//
+// Checks if record(s) exists and returns the version and value size for each
+// record. The value size is zero if the record does not exist.
+//
+//   recinfo: {
+//     version:uint64;
+//     vsize:uint32;         (vsize is 0 if record does not exist)
 //   }
 //
 // DBPUT mode:uint32 {record}* -> DBRESULT {result:uint32}*
