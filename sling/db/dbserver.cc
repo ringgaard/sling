@@ -806,10 +806,11 @@ class DBService {
         case DBGET: cont = Get(); break;
         case DBPUT: cont = Put(); break;
         case DBDELETE: cont = Delete(); break;
-        case DBNEXT: cont = Next(); break;
+        case DBNEXT: cont = Next(false); break;
         case DBBULK: cont = Bulk(); break;
         case DBEPOCH: cont = Epoch(); break;
         case DBHEAD: cont = Head(); break;
+        case DBNEXTDEL: cont = Next(true); break;
         default: return Error("command verb not supported");
       }
 
@@ -959,7 +960,7 @@ class DBService {
     }
 
     // Retrieve the next record(s) for a cursor.
-    Continuation Next() {
+    Continuation Next(bool deletions) {
       if (mount_ == nullptr) return Error("no database");
       DBLock l(mount_);
       auto *req = conn_->request();
@@ -973,7 +974,7 @@ class DBService {
       Record record;
       for (int n = 0; n < num; ++n) {
         // Fetch next record.
-        if (!l.db()->Next(&record, &iterator)) {
+        if (!l.db()->Next(&record, &iterator, deletions)) {
           if (n == 0) return Response(DBDONE);
           break;
         }

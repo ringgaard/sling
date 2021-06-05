@@ -34,6 +34,7 @@ enum DBVerb : uint32 {
   DBBULK      = 5,     // enable/disable bulk mode for database
   DBEPOCH     = 6,     // get epoch for database
   DBHEAD      = 7,     // check for existence of key(s)
+  DBNEXTDEL   = 8,     // retrieve the next record(s) including deletions
 
   // Reply verbs.
   DBOK        = 128,   // success reply
@@ -125,11 +126,13 @@ struct DBHeader {
 // Delete record(s) from database. Returns DBOK if all records were deleted.
 //
 // DBNEXT recid:uint64 num:uint32 -> DBRECORD {record}* next:uint64 | DBDONE
+// DBNEXTDEL recid:uint64 num:uint32 -> DBRECORD {record}* next:uint64 | DBDONE
 //
 // Retrieves the next record(s) for a cursor. The recid is the initial cursor
 // value, which should be zero to start retrieving from the begining of the
 // database, and next is the next cursor value for retrieving more records.
-// Returns DBDONE when there are no more records to retrieve.
+// Returns DBDONE when there are no more records to retrieve. The DBNEXTDEL
+// also returns deleted records with zero size.
 //
 // DBBULK enable:uint32 -> DBOK
 //

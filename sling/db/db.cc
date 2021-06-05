@@ -361,7 +361,7 @@ bool Database::Delete(const Slice &key) {
   return true;
 }
 
-bool Database::Next(Record *record, uint64 *iterator) {
+bool Database::Next(Record *record, uint64 *iterator, bool deletions) {
   uint64 shard = Shard(*iterator);
   uint64 pos = Position(*iterator);
   for (;;) {
@@ -399,13 +399,15 @@ bool Database::Next(Record *record, uint64 *iterator) {
     if (!st) return false;
     pos = reader->Tell();
 
-    // Check for deleted record.
-    if (record->value.empty()) continue;
-
-    // Check for stale record.
-    uint64 recid = RecordID(shard, record->position);
-    uint64 fp = Fingerprint(record->key.data(), record->key.size());
-    if (!index_->Exists(fp, recid)) continue;
+    if (record->value.empty()) {
+      // Skip deleted record.
+      if (!deletions) continue;
+    } else {
+      // Check for stale record.
+      uint64 recid = RecordID(shard, record->position);
+      uint64 fp = Fingerprint(record->key.data(), record->key.size());
+      if (!index_->Exists(fp, recid)) continue;
+    }
 
     // Return next record.
     *iterator = RecordID(shard, pos);

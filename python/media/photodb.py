@@ -78,6 +78,11 @@ flags.define("-x", "--exclude",
              nargs="+",
              metavar="URL")
 
+flags.define("--delete",
+             default=None,
+             help="delete photos with match description",
+             metavar="DESCRIPTION")
+
 flags.define("--other",
              default=None,
              help="add photos from other profile")
@@ -89,6 +94,11 @@ flags.define("--truncate",
 
 flags.define("--check",
              help="check that photo exists before adding",
+             default=False,
+             action="store_true")
+
+flags.define("--video",
+             help="allow video clips",
              default=False,
              action="store_true")
 
@@ -246,7 +256,7 @@ def add_imgur_album(profile, albumid, isnsfw=False):
     if qs != -1: link = link[:qs]
 
     # Skip anmated GIFs.
-    if (image["animated"]):
+    if (not flags.arg.video and image["animated"]):
       print("Skipping animated image", link);
       continue
 
@@ -288,7 +298,7 @@ def add_imgur_image(profile, imageid, isnsfw=False):
   if qs != -1: link = link[:qs]
 
   # Skip anmated GIFs.
-  if (reply["animated"]):
+  if (not flags.arg.video and reply["animated"]):
     print("Skipping animated image", link);
     return 0
 
@@ -401,15 +411,16 @@ def add_media(profile, url, caption, nsfw):
   if m != None: url = m.group(1)
 
   # Discard videos.
-  if url.endswith(".gif") or \
-     url.endswith(".gifv") or \
-     url.endswith(".mp4") or \
-     url.endswith(".webm") or \
-     url.startswith("https://gfycat.com/") or \
-     url.startswith("https://redgifs.com/") or \
-     url.startswith("https://v.redd.it/"):
-    print("Skipping video", url)
-    return 0
+  if not flags.arg.video:
+    if url.endswith(".gif") or \
+       url.endswith(".gifv") or \
+       url.endswith(".mp4") or \
+       url.endswith(".webm") or \
+       url.startswith("https://gfycat.com/") or \
+       url.startswith("https://redgifs.com/") or \
+       url.startswith("https://v.redd.it/"):
+      print("Skipping video", url)
+      return 0
 
   # Imgur album.
   m = re.match("https://imgur\.com/a/(\w+)", url)
@@ -538,13 +549,23 @@ else:
       else:
         num_added += add_media(profile, media, None, False)
 
-  if flags.arg.remove:
+  if flags.arg.remove or flags.arg.delete:
     # Remove media matching urls.
     keep = []
     truncating = False
     for media in profile(n_media):
       link = store.resolve(media)
-      if truncating or link in flags.arg.url:
+
+      remove = False
+      if truncating:
+        remove = True
+      elif link in flags.arg.url:
+        remove = True
+      elif flags.arg.delete and type(media) is sling.Frame:
+        caption = str(media[n_legend])
+        if caption and flags.arg.delete in caption: remove = True
+
+      if remove:
         print("Remove", link)
         if flags.arg.truncate: truncating = True
         num_removed += 1

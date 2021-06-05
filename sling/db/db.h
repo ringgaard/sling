@@ -97,7 +97,7 @@ class Database {
   //   uint64 iterator = 0;
   //   Record record;
   //   while (db->Next(&record, &iterator)) { ... }
-  bool Next(Record *record, uint64 *iterator);
+  bool Next(Record *record, uint64 *iterator, bool deletions = false);
 
   // Check if record id is valid.
   bool Valid(uint64 recid);
