@@ -284,7 +284,7 @@ void WikiAnnotator::AddToDocument(Document *document) {
 
     // Add span to document and evoke frame annotation.
     Span *span = document->AddSpan(begin, end);
-    if (!a.evoked.IsNil()) {
+    if (span != nullptr && !a.evoked.IsNil()) {
       span->Evoke(a.evoked);
     }
   }

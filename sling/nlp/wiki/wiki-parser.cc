@@ -68,6 +68,7 @@ static const LinkPrefixMap link_prefix = {
   {"Fitxategi",  WikiParser::MEDIA},       // eu
   {"Fitxer",     WikiParser::MEDIA},       // ca
   {"Image",      WikiParser::MEDIA},       // en
+  {"Imagen",     WikiParser::MEDIA},       // es
   {"Immagine",   WikiParser::MEDIA},       // it
   {"Kategória",  WikiParser::CATEGORY},    // hu, sk
   {"Kategoria",  WikiParser::CATEGORY},    // pl, eu
