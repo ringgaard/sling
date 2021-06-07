@@ -167,6 +167,7 @@ for url in media:
     r = session.get(url,
                     headers={"User-Agent": user_agent},
                     allow_redirects=False,
+                    verify=False,
                     timeout=60)
     if r.status_code == 404 and url.startswith(wiki_base_url):
       # Try to get image through the Special:Redirect service.

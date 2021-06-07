@@ -1026,18 +1026,30 @@ class KbLightbox extends MdModal {
     for (var i = 0; i < 5; ++i) {
       let n = mod(position + i * direction, this.photos.length);
       if (this.photos[n].image == null) {
-        var image = new Image();
-        image.src = imageurl(this.photos[n].url, false);
-        image.classList.add("image");
-        image.referrerPolicy = "no-referrer";
-        image.addEventListener("load", e => this.onload(e));
-        image.serial = n;
-        image.style.cursor = "wait";
-        if (this.photos[n].url.endsWith(".svg")) {
-          image.style.background = "white";
-          image.style.padding = "10px";
+        let url = this.photos[n].url;
+        if (url.endsWith(".mp4") || url.endsWith(".webm")) {
+          var video = document.createElement('video');
+          video.src = imageurl(url, false);
+          video.controls = true;
+          video.classList.add("image");
+          video.referrerPolicy = "no-referrer";
+          video.addEventListener("load", e => this.onload(e));
+          video.serial = n;
+          this.photos[n].image = video;
+        } else {
+          var image = new Image();
+          image.src = imageurl(url, false);
+          image.classList.add("image");
+          image.referrerPolicy = "no-referrer";
+          image.addEventListener("load", e => this.onload(e));
+          image.serial = n;
+          image.style.cursor = "wait";
+          if (url.endsWith(".svg")) {
+            image.style.background = "white";
+            image.style.padding = "10px";
+          }
+          this.photos[n].image = image;
         }
-        this.photos[n].image = image;
       }
     }
   }
