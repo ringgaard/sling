@@ -40,10 +40,10 @@ flags.define("--wiki_fetch_url",
              default="https://www.wikidata.org/wiki/Special:EntityData",
              metavar="URL")
 
-flags.define("--dburl",
-             help="wiki database url for collecting changes",
-             default="http://localhost:7070/wikidata",
-             metavar="URL")
+flags.define("--wikidatadb",
+             help="wikidata database for collecting changes",
+             default="wikidata",
+             metavar="DB")
 
 flags.define("--checkpoint",
              help="file with latest checkpoint",
@@ -82,10 +82,11 @@ wikiconv = sling.WikiConverter(commons)
 commons.freeze()
 
 # Global variables.
-dbsession = requests.Session()
+db = sling.Database(flags.arg.wikidatadb)
 wdsession = requests.Session()
 redir_pat = re.compile("\/\* wbcreateredirect:\d+\|\|(Q\d+)\|(Q\d+) \*\/")
 num_changes = 0
+dbresults = ["new", "updated", "unchanged", "exists", "stale", "fault"]
 
 # Fetch changed item and update database.
 def process_change(change):
@@ -98,8 +99,7 @@ def process_change(change):
     # Delete item/property from database.
     try:
       print("[%d] %s DELETE" % (queue.qsize(), qid))
-      reply = dbsession.delete(flags.arg.dburl + "/" + qid)
-      reply.raise_for_status()
+      db.delete(qid)
     except Exception as e:
       print("DB delete error:", e)
   elif kind == "edit":
@@ -147,27 +147,18 @@ def process_change(change):
     saved = False
     while not saved:
       try:
-        reply = None
-        reply = dbsession.put(
-          flags.arg.dburl + "/" + qid,
-          data=item.data(binary=True),
-          headers={
-            "Version": str(revision),
-            "Mode": "ordered",
-          }
-        )
-        reply.raise_for_status()
-        result = reply.headers["Result"]
+        result = db.put(qid, item.data(binary=True), version=revision,
+                        mode=sling.DBORDERED)
         saved = True
       except Exception as e:
-        print("DB error:", e, ":", reply.text if reply != None else "")
+        print("DB error:", e)
         time.sleep(30)
 
     if redir:
       print("[%d] %s REDIR %s" % (queue.qsize(), qid, redir))
     else:
       print("[%d] %d %s %s (%s)" % (queue.qsize(), revision, item["id"],
-            item["name"], result))
+            item["name"], dbresults[result]))
 
   # Update checkpoint.
   global num_changes

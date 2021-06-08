@@ -5,6 +5,7 @@ import requests
 import sys
 import time
 import urllib
+import sling
 import sling.crawl.news as news
 import sling.flags as flags
 
@@ -13,7 +14,7 @@ flags.define("--apikeys",
              help="Reddit API key file")
 
 flags.define("--redditdb",
-             default="http://localhost:7070/reddit",
+             default="reddit",
              help="Reddit submissions database")
 
 flags.define("--subreddits",
@@ -49,6 +50,11 @@ if flags.arg.subreddits:
       subreddits.add(sr);
   print("Crawl", len(subreddits), "subreddits")
 
+# Connect to reddit submission database.
+redditdb = None
+if len(subreddits) > 0:
+  redditdb = sling.Database(flags.arg.redditdb)
+
 # Connect to Reddit.
 with open(flags.arg.apikeys, "r") as f:
   apikeys = json.load(f)
@@ -70,9 +76,7 @@ def fetch_submission(id):
     data = root["data"]["children"][0]["data"]
 
     # Save submission in database.
-    dburl = flags.arg.redditdb + "/" + urllib.parse.quote(id)
-    r = session.put(dburl, data=json.dumps(data));
-    r.raise_for_status()
+    redditdb[id] = json.dumps(data)
   except:
     traceback.print_exc(file=sys.stdout)
 

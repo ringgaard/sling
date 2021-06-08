@@ -20,8 +20,8 @@ flags.define("--chskeys",
 
 flags.define("--chsdb",
              help="database for storing Companies House records",
-             default="http://localhost:7070/chs",
-             metavar="DBURL")
+             default="chs",
+             metavar="DB")
 
 flags.define("--checkpoint",
              help="File with latest checkpoint",
@@ -53,7 +53,7 @@ flags.define("--confirmations",
 flags.parse()
 
 chs.init(flags.arg.chskeys)
-dbsession = requests.Session()
+chsdb = sling.Database(flags.arg.chsdb)
 num_changes = 0
 checkpoint = None
 
@@ -84,13 +84,9 @@ def get_confirmation(company):
 
 # Look up company in database.
 def lookup_company(company_no):
-  r = dbsession.get(flags.arg.chsdb + "/" + company_no)
-  if r.status_code == 200:
-    return json.loads(r.text)
-  elif r.status_code == 404:
-    return None
-  else:
-    r.raise_for_status()
+  data = chsdb[company_no]
+  if data is None: return None
+  return json.loads(data)
 
 # Event handler.
 def process_message(msg):
@@ -126,16 +122,8 @@ def process_message(msg):
     chs.retrieve_owners(company)
 
     # Write company record to database.
-    r = dbsession.put(
-      flags.arg.chsdb + "/" + company_no,
-      json=company,
-      headers={
-        "Version": str(version),
-        "Mode": "ordered",
-      }
-    )
-    r.raise_for_status()
-    result = r.headers["Result"]
+    result = chsdb.put(company_no, json.dumps(company),
+                       version=version, mode=sling.DBORDERED)
 
   print(timepoint, ts, company_no, company_name, result, chs.quota_left)
   sys.stdout.flush()
