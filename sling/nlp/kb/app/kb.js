@@ -1027,29 +1027,24 @@ class KbLightbox extends MdModal {
       let n = mod(position + i * direction, this.photos.length);
       if (this.photos[n].image == null) {
         let url = this.photos[n].url;
+        var viewer;
         if (url.endsWith(".mp4") || url.endsWith(".webm")) {
-          var video = document.createElement('video');
-          video.src = imageurl(url, false);
-          video.controls = true;
-          video.classList.add("image");
-          video.referrerPolicy = "no-referrer";
-          video.addEventListener("load", e => this.onload(e));
-          video.serial = n;
-          this.photos[n].image = video;
+          viewer = document.createElement('video');
+          viewer.controls = true;
         } else {
-          var image = new Image();
-          image.src = imageurl(url, false);
-          image.classList.add("image");
-          image.referrerPolicy = "no-referrer";
-          image.addEventListener("load", e => this.onload(e));
-          image.serial = n;
-          image.style.cursor = "wait";
+          viewer = new Image();
+          viewer.style.cursor = "wait";
           if (url.endsWith(".svg")) {
-            image.style.background = "white";
-            image.style.padding = "10px";
+            viewer.style.background = "white";
+            viewer.style.padding = "10px";
           }
-          this.photos[n].image = image;
         }
+        viewer.src = imageurl(url, false);
+        viewer.classList.add("image");
+        viewer.referrerPolicy = "no-referrer";
+        viewer.addEventListener("load", e => this.onload(e));
+        viewer.serial = n;
+        this.photos[n].image = viewer;
       }
     }
   }

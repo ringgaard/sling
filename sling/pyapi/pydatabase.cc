@@ -75,9 +75,10 @@ int PyDatabase::Init(PyObject *args, PyObject *kwds) {
   // Initialize defaults.
   this->batchsize = 128;
   this->position = 0;
+  this->mu = new Mutex();
 
   // Get arguments.
-  static const char *kwlist[] = {"batch", nullptr};
+  static const char *kwlist[] = {"database", "batch", nullptr};
   char *dbname;
   bool ok = PyArg_ParseTupleAndKeywords(
                 args, kwds, "s|i", const_cast<char **>(kwlist),
@@ -92,8 +93,25 @@ int PyDatabase::Init(PyObject *args, PyObject *kwds) {
 }
 
 void PyDatabase::Dealloc() {
+  delete mu;
   delete db;
   Free();
+}
+
+Status PyDatabase::Transact(Transaction tx) {
+  // Release Python GIL to allow other Python threads to execute concurrently
+  // with the database operation.
+  PyThreadState *state = PyEval_SaveThread();
+
+  // Execute operation.
+  mu->Lock();
+  Status st = tx();
+  mu->Unlock();
+
+  // Acquire Python GIL again.
+  PyEval_RestoreThread(state);
+
+  return st;
 }
 
 PyObject *PyDatabase::Close() {
@@ -107,8 +125,12 @@ PyObject *PyDatabase::Get(PyObject *obj) {
   if (!GetData(obj, &key)) return nullptr;
 
   // Fetch record.
+  IOBuffer buffer;
   DBRecord record;
-  if (!CheckIO(db->Get(key, &record))) return nullptr;
+  Status st = Transact([&]() -> Status {
+    return db->Get(key, &record, &buffer);
+  });
+  if (!CheckIO(st)) return nullptr;
 
   // Return tuple with value and version.
   PyObject *value = PyValue(record.value);
@@ -121,7 +143,7 @@ PyObject *PyDatabase::Get(PyObject *obj) {
 
 PyObject *PyDatabase::Put(PyObject *args, PyObject *kw) {
   // Parse arguments.
-  static const char *kwlist[] = {"version", "mode", nullptr};
+  static const char *kwlist[] = {"key", "value", "version", "mode", nullptr};
   DBRecord record;
   PyObject *key = nullptr;
   PyObject *value = nullptr;
@@ -134,7 +156,10 @@ PyObject *PyDatabase::Put(PyObject *args, PyObject *kw) {
   if (!GetData(value, &record.value)) return nullptr;
 
   // Update record in database.
-  if (!CheckIO(db->Put(&record, mode))) return nullptr;
+  Status st = Transact([&]() -> Status {
+    return db->Put(&record, mode);
+  });
+  if (!CheckIO(st)) return nullptr;
 
   // Return outcome.
   return PyLong_FromLong(record.result);
@@ -142,7 +167,7 @@ PyObject *PyDatabase::Put(PyObject *args, PyObject *kw) {
 
 PyObject *PyDatabase::Add(PyObject *args, PyObject *kw) {
   // Parse arguments.
-  static const char *kwlist[] = {"version", nullptr};
+  static const char *kwlist[] = {"key", "value", "version", nullptr};
   DBRecord record;
   PyObject *key = nullptr;
   PyObject *value = nullptr;
@@ -154,7 +179,10 @@ PyObject *PyDatabase::Add(PyObject *args, PyObject *kw) {
   if (!GetData(value, &record.value)) return nullptr;
 
   // Update record in database.
-  if (!CheckIO(db->Add(&record))) return nullptr;
+  Status st = Transact([&]() -> Status {
+    return db->Add(&record);
+  });
+  if (!CheckIO(st)) return nullptr;
 
   // Return outcome.
   return PyLong_FromLong(record.result);
@@ -163,7 +191,12 @@ PyObject *PyDatabase::Add(PyObject *args, PyObject *kw) {
 PyObject *PyDatabase::Delete(PyObject *key) {
   Slice k;
   if (!GetData(key, &k)) return nullptr;
-  if (!CheckIO(db->Delete(k))) return nullptr;
+
+  Status st = Transact([&]() -> Status {
+    return db->Delete(k);
+  });
+  if (!CheckIO(st)) return nullptr;
+
   Py_RETURN_NONE;
 }
 
@@ -174,10 +207,16 @@ int PyDatabase::Contains(PyObject *key) {
 
   // Check record in database.
   DBRecord record;
-  if (!CheckIO(db->Head(k, &record))) return -1;
+  bool exists = false;
+  Status st = Transact([&]() -> Status {
+    Status s = db->Head(k, &record);
+    exists = !record.value.empty();
+    return s;
+  });
+  if (!CheckIO(st)) return -1;
 
   // Record exists if size is not zero.
-  return !record.value.empty();
+  return exists;
 }
 
 PyObject *PyDatabase::Lookup(PyObject *key) {
@@ -186,7 +225,11 @@ PyObject *PyDatabase::Lookup(PyObject *key) {
   if (!GetData(key, &record.key)) return nullptr;
 
   // Fetch record.
-  if (!CheckIO(db->Get(record.key, &record))) return nullptr;
+  IOBuffer buffer;
+  Status st = Transact([&]() -> Status {
+    return db->Get(record.key, &record, &buffer);
+  });
+  if (!CheckIO(st)) return nullptr;
 
   // Return record value.
   return PyValue(record.value);
@@ -197,8 +240,11 @@ int PyDatabase::Assign(PyObject *key, PyObject *v) {
   if (!GetData(key, &record.key)) return -1;
   if (!GetData(v, &record.value)) return -1;
 
-  // Update record in database.
-  if (!CheckIO(db->Put(&record))) return -1;
+  // Update/add record in database.
+  Status st = Transact([&]() -> Status {
+    return db->Put(&record);
+  });
+  if (!CheckIO(st)) return -1;
 
   return 0;
 }
@@ -286,7 +332,6 @@ void PyCursor::Init(PyDatabase *pydb, uint64 start, Fields fields) {
 }
 
 void PyCursor::Dealloc() {
-  pydb->position = iterator;
   Py_DECREF(pydb);
   delete records;
   delete buffer;
@@ -297,7 +342,9 @@ PyObject *PyCursor::Next() {
   // Fetch next batch of records if needed.
   if (next == records->size()) {
     records->clear();
-    Status st = pydb->db->Next(&iterator, pydb->batchsize, records, buffer);
+    Status st = pydb->Transact([&]() -> Status {
+      return pydb->db->Next(&iterator, pydb->batchsize, records, buffer);
+    });
     if (!st.ok()) {
       if (st.code() == ENOENT) {
         PyErr_SetNone(PyExc_StopIteration);
@@ -307,6 +354,7 @@ PyObject *PyCursor::Next() {
       return nullptr;
     }
     next = 0;
+    pydb->position = iterator;
   }
 
   // Return next record in batch.

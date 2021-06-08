@@ -15,13 +15,19 @@
 #ifndef SLING_PYAPI_PYDATABASE_H_
 #define SLING_PYAPI_PYDATABASE_H_
 
+#include <functional>
+
 #include "sling/db/dbclient.h"
 #include "sling/pyapi/pybase.h"
+#include "sling/util/mutex.h"
 
 namespace sling {
 
 // Python wrapper for database client.
 struct PyDatabase : public PyBase {
+  // Database transaction.
+  typedef std::function<Status()> Transaction;
+
   // Initialize record reader wrapper.
   int Init(PyObject *args, PyObject *kwds);
 
@@ -70,6 +76,10 @@ struct PyDatabase : public PyBase {
   // Get data as Python object.
   static PyObject *PyValue(const Slice &slice, bool binary = true);
 
+  // Perform database operation. This will release the Python GIL and ensure
+  // exclusive access to the database connection.
+  Status Transact(Transaction tx);
+
   // Database client.
   DBClient *db;
 
@@ -78,6 +88,9 @@ struct PyDatabase : public PyBase {
 
   // Current postion in database.
   int position;
+
+  // Mutex for serializing access to the database connection.
+  Mutex *mu;
 
   // Registration.
   static PyTypeObject type;

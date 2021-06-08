@@ -141,13 +141,14 @@ Status DBClient::Bulk(bool enable) {
   });
 }
 
-Status DBClient::Get(const Slice &key, DBRecord *record) {
+Status DBClient::Get(const Slice &key, DBRecord *record, IOBuffer *buffer) {
+  if (buffer == nullptr) buffer = &response_;
   return Transact([&]() -> Status {
     request_.Clear();
     WriteKey(key);
-    Status st = Do(DBGET);
+    Status st = Do(DBGET, buffer);
     if (!st.ok()) return st;
-    return ReadRecord(record);
+    return ReadRecord(record, buffer);
   });
 }
 

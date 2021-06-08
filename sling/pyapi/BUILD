@@ -73,6 +73,7 @@ cc_library(
     "//sling/stream:input",
     "//sling/stream:memory",
     "//sling/string:text",
+    "//sling/util:mutex",
     "//sling/web:web-archive",
   ],
   copts = [

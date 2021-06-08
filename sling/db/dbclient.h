@@ -59,7 +59,7 @@ class DBClient {
   Status Bulk(bool enable);
 
   // Get record(s) form database.
-  Status Get(const Slice &key, DBRecord *record);
+  Status Get(const Slice &key, DBRecord *record, IOBuffer *buffer = nullptr);
   Status Get(const std::vector<Slice> &keys,
                    std::vector<DBRecord> *records,
                    IOBuffer *buffer = nullptr);

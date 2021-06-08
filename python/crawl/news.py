@@ -16,8 +16,8 @@ import sling.flags as flags
 
 flags.define("--crawldb",
              help="database for crawled news articles",
-             default="http://localhost:7070/crawl",
-             metavar="URL")
+             default="crawl",
+             metavar="DB")
 
 flags.define("--newssites",
              default="data/crawl/newssites.txt",
@@ -57,9 +57,9 @@ flags.define("--max_article_size",
              type=int,
              metavar="SIZE")
 
-# URL request sessions.
-dbsession = requests.Session()
+# Connection pool for fetching news.
 crawlsession = requests.Session()
+crawldb = None
 
 # Blocked sites.
 blocked_urls = [
@@ -255,6 +255,10 @@ def init_sites():
           sites[altdomain] = sites[domain]
 
 def init():
+  # Connect to crawl database.
+  global crawldb
+  crawldb = sling.Database(flags.arg.crawldb)
+
   # Load cookies.
   init_cookies()
 
@@ -346,40 +350,16 @@ def iso2ts(date):
 def store(url, date, content):
   """Store article in database."""
   if type(date) is str: date = iso2ts(date)
-  r = dbsession.put(
-    flags.arg.crawldb + "/" + urllib.parse.quote(url),
-    headers={
-      "Version": str(date),
-      "Mode": "add",
-    },
-    data=content
-  )
-  r.raise_for_status()
-  return r.headers["Result"]
+  return crawldb.add(url, content, version=date)
 
 def redirect(url, canonical):
   """Add redirect from url to canonical url to database."""
   content = "#REDIRECT " + canonical
-  r = dbsession.put(
-    flags.arg.crawldb + "/" + urllib.parse.quote(url),
-    headers={
-      "Version": "0",
-      "Mode": "add",
-    },
-    data=content.encode("utf8")
-  )
-  if r.status_code == 400: print(r.text)
-  r.raise_for_status()
-  return r.headers["Result"]
+  return crawldb.add(url, content)
 
 def known(url):
   """Check if article is already in database."""
-  r = dbsession.head(
-    flags.arg.crawldb + "/" + urllib.parse.quote(url))
-  if r.status_code == 200 or r.status_code == 204: return True
-  if r.status_code == 404: return False
-  r.raise_for_status()
-  return False
+  return url in crawldb
 
 class Worker(Thread):
   """Worker thread for fetching articles."""
@@ -524,7 +504,7 @@ class Crawler:
     # Save article in database.
     now = int(time.time())
     result = store(canonical_url, now, headers + content)
-    if result == "new":
+    if result == sling.DBNEW:
       self.num_retrieved += 1
     else:
       self.num_known += 1
@@ -533,7 +513,7 @@ class Crawler:
     # Add redirect if original url is different from the canonical url.
     if trimmed_url != canonical_url:
       result = redirect(trimmed_url, canonical_url)
-      if result == "new":
+      if result == sling.DBNEW:
         self.num_redirects += 1
 
     # Clear site error counter.
