@@ -943,11 +943,13 @@ class KbLightbox extends MdModal {
   onprev(e) {
     this.move(-this.stepsize(e), e.altKey);
     e.stopPropagation();
+    if (e.altKey) e.preventDefault();
   }
 
   onnext(e) {
     this.move(this.stepsize(e), e.altKey);
     e.stopPropagation();
+    if (e.altKey) e.preventDefault();
   }
 
   onclose(e) {
