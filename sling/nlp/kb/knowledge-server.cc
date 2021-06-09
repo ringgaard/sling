@@ -20,6 +20,7 @@
 #include "sling/net/media-service.h"
 #include "sling/nlp/kb/knowledge-service.h"
 
+DEFINE_string(host, "", "HTTP server host address");
 DEFINE_int32(port, 8080, "HTTP server port");
 DEFINE_string(kb, "data/e/kb/kb.sling", "Knowledge base");
 DEFINE_string(names, "data/e/kb/en/name-table.repo", "Name table");
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) {
 
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   SocketServerOptions options;
-  HTTPServer http(options, FLAGS_port);
+  HTTPServer http(options, FLAGS_host.c_str(), FLAGS_port);
 
   KnowledgeService kb;
   kb.Load(&commons, FLAGS_names);

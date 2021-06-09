@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   SocketServerOptions options;
-  HTTPServer http(options, FLAGS_port);
+  HTTPServer http(options, nullptr, FLAGS_port);
 
   ParserService service;
   service.Init(FLAGS_parser);

@@ -34,6 +34,19 @@ static Status Error(const char *context) {
   return Status(errno, context, strerror(errno));
 }
 
+SocketServer::Endpoint::Endpoint(const char *addr,
+                                 int port,
+                                 SocketProtocol *protocol)
+    : protocol(protocol) {
+  sin.sin_family = AF_INET;
+  if (addr && *addr) {
+    inet_aton(addr, &sin.sin_addr);
+  } else {
+    sin.sin_addr.s_addr = htonl(INADDR_ANY);
+  }
+  sin.sin_port = htons(port);
+}
+
 SocketServer::~SocketServer() {
   // Close poll descriptor.
   LOG(INFO) << "Stop event polling";
@@ -60,8 +73,9 @@ SocketServer::~SocketServer() {
   LOG(INFO) << "Socket server shut down";
 }
 
-void SocketServer::Listen(int port, SocketProtocol *protocol) {
-  Endpoint *endpoint = new Endpoint(port, protocol);
+void SocketServer::Listen(const char *addr, int port,
+                          SocketProtocol *protocol) {
+  Endpoint *endpoint = new Endpoint(addr, port, protocol);
   endpoint->next = endpoints_;
   endpoints_ = endpoint;
 }
@@ -84,11 +98,8 @@ Status SocketServer::Start() {
     if (rc < 0) return Error("setsockopt");
 
     // Bind listen socket.
-    struct sockaddr_in sin;
-    sin.sin_addr.s_addr = htonl(INADDR_ANY);
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(ep->port);
-    rc = bind(ep->sock, reinterpret_cast<struct sockaddr *>(&sin), sizeof(sin));
+    rc = bind(ep->sock, reinterpret_cast<struct sockaddr *>(&ep->sin),
+              sizeof(ep->sin));
     if (rc < 0) return Error("bind");
 
     // Start listening on socket.
@@ -362,7 +373,8 @@ void SocketServer::OutputSocketZ(IOBuffer *out) const {
   out->Write("</tr>\n");
   for (auto *ep = endpoints_; ep != nullptr; ep = ep->next) {
     // Port.
-    out->Write("<td>" + std::to_string(ep->port) + "</td>");
+    int port = ntohl(ep->sin.sin_port);
+    out->Write("<td>" + std::to_string(port) + "</td>");
 
     // Socket.
     out->Write("<td>" + std::to_string(ep->sock) + "</td>");

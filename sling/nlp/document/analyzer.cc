@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
 
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   SocketServerOptions httpopts;
-  HTTPServer http(httpopts, FLAGS_port);
+  HTTPServer http(httpopts, nullptr, FLAGS_port);
 
   analyzer.Register(&http);
   if (FLAGS_kb) kb.Register(&http);

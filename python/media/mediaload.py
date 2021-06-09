@@ -30,8 +30,9 @@ flags.define("--kb",
              help="Knowledge base with media references")
 
 flags.define("--mediadb",
-             default="http://localhost:7070/media",
-             help="Media database")
+             default="media",
+             help="Media database",
+             metavar="DB")
 
 flags.define("--max_media_size",
              help="Maximum media file size",
@@ -134,6 +135,9 @@ print(len(blacklist), "blacklisted media files")
 print(len(whitelist), "whitelisted media files")
 fblack = open(flags.arg.blacklist, "a") if flags.arg.auto_blacklist else None
 
+# Connect to media database.
+mediadb = sling.Database(flags.arg.mediadb)
+
 # Fetch all missing media files.
 num_urls = 0
 num_blacklist = 0
@@ -155,12 +159,9 @@ for url in media:
     continue
 
   # Check if url is already in media database.
-  dburl = flags.arg.mediadb + "/" + urllib.parse.quote(url)
-  r = session.head(dburl)
-  if r.status_code == 200 or r.status_code == 204:
+  if url in mediadb:
     num_known += 1
     continue
-  if r.status_code != 404: r.raise_for_status()
 
   # Download image.
   try:
@@ -211,8 +212,7 @@ for url in media:
     ts = email.utils.parsedate_to_datetime(r.headers["Date"])
   else:
     ts = datetime.datetime.now()
-  ts = ts.replace(tzinfo=datetime.timezone.utc)
-  last_modified = email.utils.format_datetime(ts, usegmt=True)
+  last_modified = time.mktime(ts.timetuple())
 
   # Check if image is too big.
   image = r.content
@@ -234,11 +234,7 @@ for url in media:
     continue
 
   # Save image in media database.
-  r = session.put(dburl, data=image, headers={
-    "Last-Modified": last_modified,
-    "Mode": "newer",
-  })
-  r.raise_for_status()
+  mediadb.put(url, image, version=last_modified, mode=sling.DBNEWER)
 
   num_retrieved += 1
   num_bytes += len(image)

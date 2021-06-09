@@ -35,7 +35,7 @@ cc_library(
 )
 
 cc_binary(
-  name = "dbserver",
+  name = "slingdb",
   srcs = ["dbserver.cc"],
   deps = [
     ":db",

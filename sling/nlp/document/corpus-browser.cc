@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
   // Start HTTP server.
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   SocketServerOptions sockopts;
-  httpd = new HTTPServer(sockopts, FLAGS_port);
+  httpd = new HTTPServer(sockopts, nullptr, FLAGS_port);
 
   browser.Register(httpd);
   if (FLAGS_kb) kb.Register(httpd);

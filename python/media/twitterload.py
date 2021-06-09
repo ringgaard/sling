@@ -14,6 +14,7 @@
 
 """Fetch profile information from Twitter"""
 
+import email.utils
 import json
 import requests
 import sys
@@ -35,7 +36,7 @@ flags.define("--twitterdb",
 flags.define("--mediadb",
              help="database for storing Twitter profiles pictures",
              default=None,
-             metavar="DBURL")
+             metavar="DB")
 
 flags.define("--update",
              help="refresh all updated profiles",
@@ -54,6 +55,8 @@ flags.define("--missing_images",
 
 flags.parse()
 session = requests.Session()
+mediadb = None
+if flags.arg.mediadb: mediadb = sling.Database(flags.arg.mediadb)
 
 bad_images = set([
   "http://pbs.twimg.com/profile_images/1302121919014207490/KaYYEC8b.jpg"
@@ -77,6 +80,7 @@ def get_twitter_usernames():
 
 # Load profile image into media database.
 def cache_profile_image(profile):
+  # Get image url from profile.
   if "error" in profile: return
   if profile["default_profile_image"]: return
 
@@ -84,19 +88,17 @@ def cache_profile_image(profile):
   imageurl = ''.join(imageurl.rsplit("_normal", 1))
   if imageurl in bad_images: return
 
+  # Fetch image.
   r = session.get(imageurl)
   if not r.ok:
     print("error fetching", r.status_code, imageurl)
     return
 
-  mediaurl = flags.arg.mediadb + "/" + urllib.parse.quote(imageurl)
-  last_modified = r.headers["Last-Modified"]
+  # Save image in media database.
   image = r.content
-  r = session.put(mediaurl, data=image, headers={
-    "Last-Modified": last_modified,
-    "Mode": "newer",
-  })
-  r.raise_for_status()
+  ts = email.utils.parsedate_to_datetime(r.headers["Last-Modified"])
+  last_modified = time.mktime(ts.timetuple())
+  mediadb.put(imageurl, image, version=last_modified, mode=sling.DBNEWER)
 
 # Connect to Twitter.
 with open(flags.arg.apikeys, "r") as f:
@@ -177,7 +179,7 @@ for username in users:
   r.raise_for_status()
 
   # Optionally store profile image in media db.
-  if flags.arg.mediadb: cache_profile_image(profile)
+  if mediadb: cache_profile_image(profile)
 
   num_fetched += 1
   print(num_fetched, num_users, username)

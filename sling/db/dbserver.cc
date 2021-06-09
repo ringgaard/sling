@@ -28,6 +28,7 @@
 #include "sling/util/fingerprint.h"
 #include "sling/util/thread.h"
 
+DEFINE_string(addr, "", "HTTP server address");
 DEFINE_int32(port, 7070, "HTTP server port");
 DEFINE_string(dbdir, "db", "Database directory");
 DEFINE_bool(recover, false, "Recover databases when loading");
@@ -1194,7 +1195,7 @@ int main(int argc, char *argv[]) {
   // Start HTTP server.
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   SocketServerOptions sockopts;
-  httpd = new HTTPServer(sockopts, FLAGS_port);
+  httpd = new HTTPServer(sockopts, FLAGS_addr.c_str(), FLAGS_port);
   dbservice->Register(httpd);
   CHECK(httpd->Start());
   LOG(INFO) << "Database server running";

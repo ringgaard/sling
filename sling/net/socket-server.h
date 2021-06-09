@@ -18,6 +18,7 @@
 #include <time.h>
 #include <atomic>
 #include <vector>
+#include <netinet/in.h>
 
 #include "sling/base/status.h"
 #include "sling/base/types.h"
@@ -72,8 +73,9 @@ class SocketServer {
   SocketServer(const SocketServerOptions &options) : options_(options) {}
   ~SocketServer();
 
-  // Add listener for protocol on port.
-  void Listen(int port, SocketProtocol *protocol);
+  // Add listener for protocol on port. If addr is null, it will listen on all
+  // interfaces.
+  void Listen(const char *addr, int port, SocketProtocol *protocol);
 
   // Start socket server listening on the port.
   Status Start();
@@ -93,10 +95,9 @@ class SocketServer {
  private:
   // Endpoint for listening for new connections for protocol.
   struct Endpoint {
-    Endpoint(int port, SocketProtocol *protocol)
-        : port(port), protocol(protocol) {}
+    Endpoint(const char *addr, int port, SocketProtocol *protocol);
 
-    int port;                  // port for listening for new connections.
+    struct sockaddr_in sin;    // port and address for listening
     SocketProtocol *protocol;  // protocol handler for endpoint
     int sock = -1;             // listen socket
     uint64 num_connects = 0;   // number of connections accepted

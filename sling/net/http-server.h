@@ -84,9 +84,9 @@ class HTTPServer : public SocketServer {
  public:
   typedef HTTPProtocol::Handler Handler;
 
-  HTTPServer(const SocketServerOptions &options, int port)
+  HTTPServer(const SocketServerOptions &options, const char *addr, int port)
       : SocketServer(options) {
-    Listen(port, &http_);
+    Listen(addr, port, &http_);
   }
 
   // Register handler for requests.
