@@ -173,6 +173,7 @@ HTTPSession::HTTPSession(HTTPProtocol *http, SocketConnection *conn)
 }
 
 HTTPSession::~HTTPSession() {
+  free(agent_);
   delete request_;
   delete response_;
 }
@@ -194,6 +195,12 @@ SocketSession::Continuation HTTPSession::Process(SocketConnection *conn) {
     delete request_;
     request_ = new HTTPRequest(this, &request_header_);
     if (!request_->valid()) return TERMINATE;
+
+    // Get user agent if not already set.
+    if (agent_ == nullptr) {
+      const char *ua = request_->Get("User-Agent");
+      if (ua) agent_ = strdup(ua);
+    }
   }
 
   // Check if request body has been received.
@@ -211,6 +218,14 @@ SocketSession::Continuation HTTPSession::Process(SocketConnection *conn) {
 
   // Dispatch request to handler.
   Dispatch();
+
+  // HEAD requests are not allowed to have a response body.
+  if (strcmp(request_->method(), "HEAD") == 0) {
+    if (response_buffer()->available() > 0) {
+      LOG(WARNING) << "HEAD response body must be empty";
+      response_buffer()->Clear();
+    }
+  }
 
   // The request and response objects are no longer needed.
   delete request_;
@@ -405,12 +420,12 @@ void HTTPResponse::SendError(int status, const char *title, const char *msg) {
   Append("<html><head>\n");
   Append("<title>");
   if (title != nullptr) {
-    Append(std::to_string(status));
+    AppendNumber(status);
     Append(" ");
     Append(title);
   } else {
     Append("Error ");
-    Append(title);
+    AppendNumber(status);
   }
   Append("</title>\n");
   Append("</head><body>\n");
@@ -418,7 +433,7 @@ void HTTPResponse::SendError(int status, const char *title, const char *msg) {
     Append(msg);
   } else {
     Append("<p>Error ");
-    Append(std::to_string(status));
+    AppendNumber(status);
     if (title != nullptr) {
       Append(": ");
       Append(title);

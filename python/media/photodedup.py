@@ -45,8 +45,8 @@ flags.define("--dedup",
 
 flags.parse()
 
-photodb = sling.Database(flags.arg.photodb)
-mediadb = sling.Database(flags.arg.mediadb)
+photodb = sling.Database(flags.arg.photodb, "photodedup.py/photo")
+mediadb = sling.Database(flags.arg.mediadb, "photodedup.py/media")
 
 store = sling.Store()
 n_media = store["media"]

@@ -271,7 +271,7 @@ void KnowledgeService::OpenItems(const string &filename) {
 void KnowledgeService::OpenItemDatabase(const string &db) {
   delete itemdb_;
   itemdb_ = new DBClient();
-  CHECK(itemdb_->Connect(db));
+  CHECK(itemdb_->Connect(db, "kb"));
 }
 
 void KnowledgeService::Register(HTTPServer *http) {

@@ -117,6 +117,7 @@ class HTTPSession : public SocketSession {
 
   // Socket session interface.
   const char *Name() override { return "HTTP"; }
+  const char *Agent() override { return agent_ ? agent_ : ""; }
   Continuation Process(SocketConnection *conn) override;
 
   // Parse header. Returns true when header has been parsed.
@@ -167,6 +168,9 @@ class HTTPSession : public SocketSession {
 
   // HTTP request header buffer.
   IOBuffer request_header_;
+
+  // User agent for session.
+  char *agent_ = nullptr;
 
   // Action taken after request has been processed.
   Continuation action_ = CLOSE;

@@ -45,7 +45,7 @@ class DatabaseReader : public Process {
     // Connect to database.
     DBClient db;
     string dbname = input->resource()->name();
-    Status st = db.Connect(dbname);
+    Status st = db.Connect(dbname, task->name());
     if (!st.ok()) {
       LOG(FATAL) << "Error connecting to database " << dbname << ": " << st;
     }

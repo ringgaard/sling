@@ -305,6 +305,7 @@ void SocketServer::OutputSocketZ(IOBuffer *out) const {
   out->Write("<td>Socket status</td>");
   out->Write("<td>State</td>");
   out->Write("<td>Idle</td>");
+  out->Write("<td>Agent</td>");
   out->Write("</tr>\n");
 
   time_t now = time(0);
@@ -360,6 +361,11 @@ void SocketServer::OutputSocketZ(IOBuffer *out) const {
     // Idle time.
     out->Write("<td>" + std::to_string(now - conn->last_) + "</td>");
 
+    // User agent.
+    out->Write("<td>");
+    out->Write(conn->session()->Agent());
+    out->Write("</td>");
+
     out->Write("</tr>\n");
   }
   out->Write("</table>\n");
@@ -373,7 +379,7 @@ void SocketServer::OutputSocketZ(IOBuffer *out) const {
   out->Write("</tr>\n");
   for (auto *ep = endpoints_; ep != nullptr; ep = ep->next) {
     // Port.
-    int port = ntohl(ep->sin.sin_port);
+    int port = ntohs(ep->sin.sin_port);
     out->Write("<td>" + std::to_string(port) + "</td>");
 
     // Socket.

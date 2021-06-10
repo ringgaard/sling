@@ -53,7 +53,7 @@ flags.define("--confirmations",
 flags.parse()
 
 chs.init(flags.arg.chskeys)
-chsdb = sling.Database(flags.arg.chsdb)
+chsdb = sling.Database(flags.arg.chsdb, "chsmonitor")
 num_changes = 0
 checkpoint = None
 

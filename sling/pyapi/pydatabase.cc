@@ -78,16 +78,17 @@ int PyDatabase::Init(PyObject *args, PyObject *kwds) {
   this->mu = new Mutex();
 
   // Get arguments.
-  static const char *kwlist[] = {"database", "batch", nullptr};
+  static const char *kwlist[] = {"database", "agent", "batch", nullptr};
   char *dbname;
+  char *agent = "";
   bool ok = PyArg_ParseTupleAndKeywords(
-                args, kwds, "s|i", const_cast<char **>(kwlist),
-                &dbname, &this->batchsize);
+                args, kwds, "s|si", const_cast<char **>(kwlist),
+                &dbname, &agent, &this->batchsize);
   if (!ok) return -1;
 
   // Open connection to database.
   db = new DBClient();
-  if (!CheckIO(db->Connect(dbname))) return -1;
+  if (!CheckIO(db->Connect(dbname, agent))) return -1;
 
   return 0;
 }

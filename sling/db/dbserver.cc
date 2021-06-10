@@ -120,12 +120,12 @@ class DBService {
         if (strcmp(request->path(), "/") == 0) {
           Upgrade(request, response);
         } else {
-          Get(request, response, true);
+          Get(request, response);
         }
         break;
 
       case HTTP_HEAD:
-        Get(request, response, false);
+        Head(request, response);
         break;
 
       case HTTP_PUT:
@@ -175,7 +175,8 @@ class DBService {
     }
 
     // Upgrade to SLINGDB protocol.
-    DBClient *client = new DBClient(this, request->conn());
+    const char *ua = request->Get("User-Agent");
+    DBClient *client = new DBClient(this, request->conn(), ua);
     response->Upgrade(client);
     response->set_status(101);
     response->Set("Connection", "upgrade");
@@ -183,7 +184,7 @@ class DBService {
   }
 
   // Get database record.
-  void Get(HTTPRequest *request, HTTPResponse *response, bool body) {
+  void Get(HTTPRequest *request, HTTPResponse *response) {
     // Get database and resource from request.
     DBLock l(this, request->path());
     if (l.mount() == nullptr) {
@@ -195,13 +196,13 @@ class DBService {
     Record record;
     if (!l.resource().empty()) {
       // Fetch record from database.
-      if (!l.db()->Get(l.resource(), &record, body)) {
+      if (!l.db()->Get(l.resource(), &record)) {
         response->SendError(404, nullptr, "Record not found");
         return;
       }
 
       // Return record.
-      ReturnSingle(response, record, body, false, timestamped, -1);
+      ReturnSingle(response, record, false, timestamped, -1);
     } else {
       // Read first/next record in iterator.
       URLQuery query(request->query());
@@ -234,10 +235,10 @@ class DBService {
         }
 
         // Return record.
-        ReturnSingle(response, record, body, true, timestamped, recid);
+        ReturnSingle(response, record, true, timestamped, recid);
       } else {
         // Fetch multiple records.
-        ReturnMultiple(response, l.db(), recid, batch, body);
+        ReturnMultiple(response, l.db(), recid, batch);
       }
     }
   }
@@ -245,7 +246,7 @@ class DBService {
   // Return single record.
   void ReturnSingle(HTTPResponse *response,
                     const Record &record,
-                    bool body, bool key, bool timestamp, uint64 next) {
+                    bool key, bool timestamp, uint64 next) {
     // Add revision/timestamp if available.
     if (record.version != 0) {
       if (timestamp) {
@@ -267,14 +268,12 @@ class DBService {
     }
 
     // Return record value.
-    if (body) {
-      response->Append(record.value.data(), record.value.size());
-    }
+    response->Append(record.value.data(), record.value.size());
   }
 
   // Return multiple records.
   void ReturnMultiple(HTTPResponse *response, Database *db,
-                      uint64 recid, int batch, bool body) {
+                      uint64 recid, int batch) {
     string boundary = std::to_string(FingerprintCat(db->epoch(), time(0)));
     Record record;
     uint64 next = -1;
@@ -311,9 +310,7 @@ class DBService {
       }
 
       response->Append("\r\n");
-      if (body) {
-        response->Append(record.value.data(), record.value.size());
-      }
+      response->Append(record.value.data(), record.value.size());
     }
 
     if (next == -1) {
@@ -328,6 +325,34 @@ class DBService {
       response->Set("Content-Type", ct.c_str());
       response->Set("Records", num_recs);
       response->Set("Next", next);
+    }
+  }
+
+  // Get information about database record.
+  void Head(HTTPRequest *request, HTTPResponse *response) {
+    // Get database and resource from request.
+    DBLock l(this, request->path());
+    if (l.mount() == nullptr) {
+      response->set_status(404);
+      return;
+    }
+
+    // Fetch record information from database.
+    Record record;
+    if (!l.db()->Get(l.resource(), &record, false)) {
+      response->set_status(404);
+      return;
+    }
+
+    // Return record information.
+    response->set_content_length(record.value.size());
+    if (record.version != 0) {
+      if (l.db()->timestamped()) {
+        char datebuf[RFCTIME_SIZE];
+        response->Set("Last-Modified", RFCTime(record.version, datebuf));
+      } else {
+        response->Set("Version", record.version);
+      }
     }
   }
 
@@ -764,7 +789,7 @@ class DBService {
   // Database client connection that uses the binary SLINGDB protocol.
   class DBClient : public SocketSession {
    public:
-    DBClient(DBService *dbs, SocketConnection *conn)
+    DBClient(DBService *dbs, SocketConnection *conn, const char *ua)
         : dbs_(dbs), conn_(conn) {
       // Add client to client list.
       MutexLock lock(&dbs_->mu_);
@@ -772,6 +797,7 @@ class DBService {
       prev_ = nullptr;
       if (dbs_->clients_ != nullptr) dbs_->clients_->prev_ = this;
       dbs_->clients_ = this;
+      if (ua) agent_ = strdup(ua);
    }
 
     ~DBClient() override {
@@ -780,10 +806,18 @@ class DBService {
       if (prev_ != nullptr) prev_->next_ = next_;
       if (next_ != nullptr) next_->prev_ = prev_;
       if (this == dbs_->clients_) dbs_->clients_ = next_;
+      free(agent_);
     }
 
     // Return protocol name.
     const char *Name() override { return "DB"; }
+
+    // Return user name.
+    const char *Agent() override {
+      if (agent_) return agent_;
+      if (mount_) return mount_->name.c_str();
+      return "";
+    }
 
     // Allow long timeout (24 hours) for DB connections.
     int IdleTimeout() override { return 86400; }
@@ -1082,6 +1116,7 @@ class DBService {
     DBService *dbs_;                // database server
     SocketConnection *conn_;        // client connection
     DBMount *mount_ = nullptr;      // active database for client
+    char *agent_ = nullptr;         // user agent
 
     // Client list.
     DBClient *next_;

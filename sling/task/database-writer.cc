@@ -46,7 +46,7 @@ class DatabaseWriter : public Processor {
     mode_ = static_cast<DBMode>(mode);
 
     // Open database connection.
-    Status st = db_.Connect(dbname);
+    Status st = db_.Connect(dbname, task->name());
     if (!st.ok()) {
       LOG(FATAL) << "Error connecting to database " << dbname << ": " << st;
     }

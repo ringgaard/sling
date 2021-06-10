@@ -257,7 +257,7 @@ def init_sites():
 def init():
   # Connect to crawl database.
   global crawldb
-  crawldb = sling.Database(flags.arg.crawldb)
+  crawldb = sling.Database(flags.arg.crawldb, sys.argv[0])
 
   # Load cookies.
   init_cookies()

@@ -23,7 +23,7 @@ namespace sling {
 MediaService::MediaService(const string &url, const string &dbname)
     : url_(url) {
   if (!dbname.empty()) {
-    CHECK(db_.Connect(dbname));
+    CHECK(db_.Connect(dbname, "mediasvc"));
     LOG(INFO) << "Serve " << url << " from database " << dbname;
   }
 }

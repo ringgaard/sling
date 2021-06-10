@@ -27,8 +27,8 @@ from sling.task.workflow import *
 
 flags.define("--twitterdb",
              help="database for storing Twitter profiles",
-             default="http://localhost:7070/twitter",
-             metavar="DBURL")
+             default="twitter",
+             metavar="DB")
 
 bad_images = set([
   "",
@@ -40,7 +40,7 @@ bad_images = set([
 class TwitterExtract:
   def run(self, task):
     # Get parameters.
-    twitterdb = task.input("twitterdb").name
+    twitterdb = sling.Database(task.input("twitterdb").name, "twitter-extract")
 
     # Load knowledge base.
     log.info("Load knowledge base")
@@ -71,13 +71,11 @@ class TwitterExtract:
         task.increment("twitter_users")
 
         # Fetch twitter profile from database.
-        dburl = twitterdb + "/" + urllib.parse.quote(username)
-        r = dbsession.get(dburl)
-        if r.status_code == 404:
+        data = twitterdb[username]
+        if data is None:
           task.increment("unknown_users")
           continue
-        r.raise_for_status()
-        profile = r.json()
+        profile = json.loads(data)
 
         # Ignore if twitter profile does not exist.
         if "error" in profile:
@@ -128,7 +126,7 @@ class TwitterWorkflow:
 
   def twitterdb(self):
     """Resource for Twitter database."""
-    return self.wf.resource(flags.arg.twitterdb, format="url/json")
+    return self.wf.resource(flags.arg.twitterdb, format="db/json")
 
   def twitter_frames(self):
     """Resource for twitter frames."""

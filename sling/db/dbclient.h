@@ -46,7 +46,7 @@ class DBClient {
   // Connect to database server. The format of the database name is:
   // [<hostname>[:<port>]/]<database name>. The default server is localhost and
   // the default port is 7070.
-  Status Connect(const string &database);
+  Status Connect(const string &database, const string &agent);
 
   // Close connection to server.
   Status Close();
@@ -121,6 +121,9 @@ class DBClient {
 
   // Database name.
   string database_;
+
+  // User agent.
+  string agent_;
 
   // Socket for connection.
   int sock_ = -1;

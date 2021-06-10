@@ -128,7 +128,7 @@ if flags.arg.exclude != None:
   for url in flags.arg.exclude:
     excluded.add(url[0])
 
-photodb = sling.Database(flags.arg.photodb)
+photodb = sling.Database(flags.arg.photodb, "photodb")
 session = requests.Session()
 
 store = sling.Store()

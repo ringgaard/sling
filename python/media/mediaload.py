@@ -15,7 +15,7 @@
 """Fetch media files and store in media cache database."""
 
 import email.utils
-import datetime
+import time
 import hashlib
 import requests
 import sys
@@ -136,7 +136,7 @@ print(len(whitelist), "whitelisted media files")
 fblack = open(flags.arg.blacklist, "a") if flags.arg.auto_blacklist else None
 
 # Connect to media database.
-mediadb = sling.Database(flags.arg.mediadb)
+mediadb = sling.Database(flags.arg.mediadb, "mediaload")
 
 # Fetch all missing media files.
 num_urls = 0
@@ -168,7 +168,6 @@ for url in media:
     r = session.get(url,
                     headers={"User-Agent": user_agent},
                     allow_redirects=False,
-                    verify=False,
                     timeout=60)
     if r.status_code == 404 and url.startswith(wiki_base_url):
       # Try to get image through the Special:Redirect service.
@@ -206,13 +205,16 @@ for url in media:
     continue
 
   # Get modification timestamp.
+  date = None
   if "Last-Modified" in r.headers:
-    ts = email.utils.parsedate_to_datetime(r.headers["Last-Modified"])
+    date = r.headers["Last-Modified"]
   elif "Date" in r.headers:
-    ts = email.utils.parsedate_to_datetime(r.headers["Date"])
+    date = r.headers["Date"]
+  if date:
+    ts = email.utils.parsedate_tz(date)
+    last_modified = int(email.utils.mktime_tz(ts))
   else:
-    ts = datetime.datetime.now()
-  last_modified = time.mktime(ts.timetuple())
+    last_modified = int(time.time())
 
   # Check if image is too big.
   image = r.content
@@ -238,7 +240,7 @@ for url in media:
 
   num_retrieved += 1
   num_bytes += len(image)
-  print(num_retrieved, "/", num_urls, r.headers["Result"], url)
+  print(num_retrieved, "/", num_urls, url)
   sys.stdout.flush()
 
 if fblack: fblack.close()

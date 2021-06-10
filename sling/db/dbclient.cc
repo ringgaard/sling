@@ -31,7 +31,7 @@ static Status Truncated() {
   return Status(EBADMSG, "packet truncated");
 }
 
-Status DBClient::Connect(const string &database) {
+Status DBClient::Connect(const string &database, const string &agent) {
   // Close existing connection.
   if (sock_ != -1) {
     close(sock_);
@@ -40,6 +40,7 @@ Status DBClient::Connect(const string &database) {
 
   // Parse database specification.
   database_ = database;
+  agent_ = agent;
   string hostname = "localhost";
   string portname = "7070";
   string dbname;
@@ -88,6 +89,7 @@ Status DBClient::Connect(const string &database) {
   request_.Write(
     "GET / HTTP/1.1\r\n"
     "Host: " + hostname + "\r\n"
+    "User-Agent: " + agent + "\r\n"
     "Connection: upgrade\r\n"
     "Upgrade: slingdb\r\n"
     "\r\n");
@@ -361,7 +363,7 @@ Status DBClient::Transact(Transaction tx) {
   // Reconnect if connection closed.
   if (st.code() == EPIPE) {
     VLOG(1) << "Reconnect to " << database_;
-    st = Connect(database_);
+    st = Connect(database_, agent_);
     if (st.ok()) st = tx();
   }
 

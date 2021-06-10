@@ -142,7 +142,7 @@ void DisplayStore(const string &filename) {
 
 void DisplayDatabase(const string &filename) {
   DBClient db;
-  CHECK(db.Connect(filename));
+  CHECK(db.Connect(filename, "codex"));
   if (FLAGS_key.empty()) {
     std::vector<DBRecord> records;
     uint64 iterator = 0;

@@ -82,7 +82,7 @@ wikiconv = sling.WikiConverter(commons)
 commons.freeze()
 
 # Global variables.
-db = sling.Database(flags.arg.wikidatadb)
+db = sling.Database(flags.arg.wikidatadb, "wikimonitor")
 wdsession = requests.Session()
 redir_pat = re.compile("\/\* wbcreateredirect:\d+\|\|(Q\d+)\|(Q\d+) \*\/")
 num_changes = 0

@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
 
   // Read keys.
   DBClient db;
-  CHECK(db.Connect(FLAGS_db));
+  CHECK(db.Connect(FLAGS_db, "dbkeys"));
   std::vector<DBRecord> records;
   int num_keys = 0;
   for (;;) {

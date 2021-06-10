@@ -30,8 +30,8 @@ flags.define("--apikeys",
 
 flags.define("--twitterdb",
              help="database for storing Twitter profiles",
-             default="http://localhost:7070/twitter",
-             metavar="DBURL")
+             default="twitter",
+             metavar="DB")
 
 flags.define("--mediadb",
              help="database for storing Twitter profiles pictures",
@@ -55,8 +55,9 @@ flags.define("--missing_images",
 
 flags.parse()
 session = requests.Session()
+twitterdb = sling.Database(flags.arg.twitterdb, "twitterload")
 mediadb = None
-if flags.arg.mediadb: mediadb = sling.Database(flags.arg.mediadb)
+if flags.arg.mediadb: mediadb = sling.Database(flags.arg.mediadb, "twitterpic")
 
 bad_images = set([
   "http://pbs.twimg.com/profile_images/1302121919014207490/KaYYEC8b.jpg"
@@ -96,9 +97,9 @@ def cache_profile_image(profile):
 
   # Save image in media database.
   image = r.content
-  ts = email.utils.parsedate_to_datetime(r.headers["Last-Modified"])
-  last_modified = time.mktime(ts.timetuple())
-  mediadb.put(imageurl, image, version=last_modified, mode=sling.DBNEWER)
+  ts = email.utils.parsedate_tz(r.headers["Last-Modified"])
+  last_modified = int(email.utils.mktime_tz(ts))
+  mediadb.put(imageurl, image, last_modified, sling.DBNEWER)
 
 # Connect to Twitter.
 with open(flags.arg.apikeys, "r") as f:
@@ -131,14 +132,14 @@ num_updated = 0
 for username in users:
   # Check if twitter user is already known.
   num_users += 1
-  dburl = flags.arg.twitterdb + "/" + urllib.parse.quote(username)
+
   current = None
   if flags.arg.update:
     # Get current profile.
-    r = session.get(dburl)
-    if r.status_code == 200 or r.status_code == 204:
+    data = twitterdb[username]
+    if data != None:
       # Known profile.
-      current = r.json()
+      current = json.loads(data)
       if "error" in current: continue
       if len(missing_images) > 0:
         imageurl = current["profile_image_url"]
@@ -146,10 +147,7 @@ for username in users:
         if imageurl not in missing_images: continue
   else:
     # Skip if known.
-    r = session.head(dburl)
-    if r.status_code == 200 or r.status_code == 204: continue
-
-  if r.status_code != 404: r.raise_for_status()
+    if username in twitterdb: continue
 
   # Fetch twitter profile for item.
   profile = None
@@ -172,11 +170,9 @@ for username in users:
       continue
 
   # Write profile information to database.
-  r = session.put(dburl, json=profile, headers={
-    "Version": str(int(time.time())),
-    "Mode": "overwrite" if flags.arg.update else "add"
-  })
-  r.raise_for_status()
+  mode = sling.DBOVERWRITE if flags.arg.update else sling.DBADD
+  version = int(time.time())
+  twitterdb.put(username, json.dumps(profile), version, mode)
 
   # Optionally store profile image in media db.
   if mediadb: cache_profile_image(profile)

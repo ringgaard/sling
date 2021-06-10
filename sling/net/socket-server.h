@@ -267,6 +267,9 @@ class SocketSession {
   // Return protocol name for session.
   virtual const char *Name() = 0;
 
+  // Return user agent for session.
+  virtual const char *Agent() { return ""; }
+
   // Return idle timeout in seconds for session.
   virtual int IdleTimeout() { return -1; }
 
